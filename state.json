@@ -14937,15 +14937,6 @@
       "failures": 0,
       "feedback_since": "2026-11-21T18:35:27Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-22T01:53:12Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\nPass 2 of #4419. Review finding: Shadowstep's definition-only read broke R383 (Animated card dying as a Unit). Held.\nFix: new engine event field `Destroyed.animated` (Some(true) only for a non-Unit-def card that died in a unit zone), R4395001;\nShadowstep `is_unit` = animated || def type Unit. Files: engine wire/events.rs, state_check.rs, view_for.rs; c014 test r4395001_*;\nspec: R4395001.md, pending/4395.md, R4395000.md (Animated bullet), 08-catalog row 14, 10-*.md payload note.\nNext: run cards tests, `cargo test -p jackioh-engine --features testkit,ts` (regen wire types in apps/web/src/wire, commit diff), fmt, clippy workspace, spec check, patches check, golden, fuzz, classify (fragment may need --rule?).\n## Log\n- ran cargo test c014_shadowstep in background (slow first build)\n- cards/engine/shared tests green, spec/patches/golden/fuzz/clippy green; next: classify via ../jackioh-wt/parent (remove after)\n- switched: animated stripped in as_rules_read (state hash!), Shadowstep reads raw ctx.events; fragment plays list widened to classify's 34; classify reads committed HEAD fragments so can't verify claims until commit; parent bin at /tmp/parent-target/release/jackioh (shared CARGO_TARGET_DIR clobbers: touch sources)\n- pass 3: golden strip_destroyed_animated, names comments, plays back to 4; running clippy+tests\n- pass 5: resolved merge conflicts in history.rs (3 hunks) and spec/10-engine-guide.md; main shipped v0.6.9f, so kept key moved to v0.6.9f (script_v0_6_9f). cards tests, spec/patches check, clippy cards+engine, golden green.\n",
-        "provider": "claude-7",
-        "reason": "used its 4 review rounds with this owner; the work is kept for its final audit, another subscription's when one is free",
-        "trail": ""
-      },
       "interruptions": 0,
       "issue": 4395,
       "kind": "review",
