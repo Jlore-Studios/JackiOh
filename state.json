@@ -15647,7 +15647,7 @@
         "by": "`gemini` (medium)",
         "sha": "09402ad0d3050ca15c9b342d40ee4f119c1263e7"
       },
-      "died": 1,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T19:57:20Z",
