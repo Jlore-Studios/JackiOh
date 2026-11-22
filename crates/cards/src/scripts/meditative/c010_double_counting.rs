@@ -3,15 +3,15 @@
 //!   Base:    "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}.\nActivate:
 //!            Discover a Cry or Death card." (extra 1)
 //!   Radiant: "Aura: …\nActivate: Discover a Cry or Death card." (extra 2)
-//!   Through v0.6.9m the base face's Activate read "Pay ({price}) to Discover a Cry or Death card." (price 1,
-//!   `script_v0_6_9m`, kept, R767000; issue #4440 made it free and took the `price` off).
+//!   Through v0.6.9n the base face's Activate read "Pay ({price}) to Discover a Cry or Death card." (price 1,
+//!   `script_v0_6_9n`, kept, R767000; issue #4440 made it free and took the `price` off).
 //!
 //! The engine's Cry and Death multiplier (`Script.cry_death_extra`), Hearthstone's Brann Bronzebeard and
 //! Baron Rivendare in one card: while this acts on its controller's field, the Cry of a permanent they
 //! play or cast (§10.5 step 5) or trigger (C #54 Rewind) runs extra more times with the same choices,
 //! and the Death of a card that died under their control runs extra more times on its snapshot (§4.5
 //! step 3). A Spell's resolution is no Cry (R822). Several multipliers do not add: the highest holds (R820).
-//! Issue #4154 added the Activate (R384, once a turn; through v0.6.9m the base face's price the declared
+//! Issue #4154 added the Activate (R384, once a turn; through v0.6.9n the base face's price the declared
 //! `price`, R386, free on both faces since issue #4440):
 //! a Discover (§6.3) of the shipped cards that print a Cry or a Death, read off each one's base face's
 //! script — a Death on any card, a Cry on a Unit or a Field Spell, since a Spell's resolution is no Cry
@@ -26,7 +26,7 @@ pub const ID: &str = "meditative-010";
 /// The Activate's id, and the resume step the Discover's answer comes back to (§10.6).
 const TALLY: &str = "tally";
 const PICKED: &str = "picked";
-/// "Pay (1)": the base face's price as written through v0.6.9m; the declared `price` was what was paid (R386).
+/// "Pay (1)": the base face's price as written through v0.6.9n; the declared `price` was what was paid (R386).
 const PRICE: i32 = 1;
 
 /// R4154211: the shipped cards that print a Cry or a Death, off their base face's script.
@@ -106,9 +106,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.6.6h through v0.6.9m the base face paid (`price`) to activate (issue #4440).
+/// R767000: after v0.6.6h through v0.6.9n the base face paid (`price`) to activate (issue #4440).
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9m() -> CardScripts {
+pub fn script_v0_6_9n() -> CardScripts {
     CardScripts {
         base: counting(true, true),
         radiant: counting(true, false),
@@ -361,10 +361,10 @@ mod tests {
         assert_eq!(keys, ["extra"]);
     }
 
-    /// R767000: after v0.6.6h through v0.6.9m the base face paid (1), and with no mana could not activate.
+    /// R767000: after v0.6.6h through v0.6.9n the base face paid (1), and with no mana could not activate.
     #[test]
-    fn r767000_the_script_kept_for_v0_6_9m_pays_1_on_the_base_face() {
-        crate::under_kept(ID, super::script_v0_6_9m(), || {
+    fn r767000_the_script_kept_for_v0_6_9n_pays_1_on_the_base_face() {
+        crate::under_kept(ID, super::script_v0_6_9n(), || {
             let mut s = tallying(false, 0);
             s.expect_refused(|s| s.activate(ID, json!({})));
             let mut s = tallying(false, 5);

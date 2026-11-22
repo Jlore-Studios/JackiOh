@@ -3,9 +3,9 @@
 //!   Base:    "Aura: Your Start of turn and End of turn effects trigger {extra|additional time|additional
 //!            times}. / Activate: Discover a card with a Start of turn or End of turn effect." (extra 1)
 //!   Radiant: the same, extra 2.
-//!   Through v0.6.9m: "Cry: Add a random card with a Start of turn or an End of turn effect to your hand."
+//!   Through v0.6.9n: "Cry: Add a random card with a Start of turn or an End of turn effect to your hand."
 //!   (Radiant: "Cry: Add a random card with a Start of turn effect and a random card with an End of turn
-//!   effect to your hand.") and the Aura (`script_v0_6_9m`, kept, R767000; issue #4440).
+//!   effect to your hand.") and the Aura (`script_v0_6_9n`, kept, R767000; issue #4440).
 //!   Through v0.5.11r: the Aura alone (`script_v0_5_11o`, kept).
 //!
 //! R4440055: the Activate, once a turn (R384) and free, is a Discover (§6.3) of the catalog pool the
@@ -91,9 +91,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.5.11r through v0.6.9m the faces had a Cry that added the random cards, and no Activate
+/// R767000: after v0.5.11r through v0.6.9n the faces had a Cry that added the random cards, and no Activate
 /// (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9m() -> CardScripts {
+pub fn script_v0_6_9n() -> CardScripts {
     CardScripts {
         base: Script {
             cry: Some(hook(|_ctx| vec![add_with_turn_hook("either")])),
@@ -120,7 +120,7 @@ pub fn script_v0_5_11o() -> CardScripts {
 // the registered scripts, over a run of seeds.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script_v0_5_11o, script_v0_6_9m};
+    use super::{ID, script_v0_5_11o, script_v0_6_9n};
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -265,8 +265,8 @@ mod tests {
         (base.start_of_turn.is_some(), base.end_of_turn.is_some())
     }
 
-    /// p1 plays Joint Filing from a hand of it and a Stockpile, under a seed (the Cry is v0.6.9m's: the
-    /// callers run under `script_v0_6_9m`).
+    /// p1 plays Joint Filing from a hand of it and a Stockpile, under a seed (the Cry is v0.6.9n's: the
+    /// callers run under `script_v0_6_9n`).
     fn played(seed: &str, hand: Value) -> Scenario {
         let mut s = scenario(json!({
             "seed": seed,
@@ -345,7 +345,7 @@ mod tests {
         }
     }
 
-    /// R767000: the Cry kept for v0.6.9m (issue #4440), the R3134001 pool it drew.
+    /// R767000: the Cry kept for v0.6.9n (issue #4440), the R3134001 pool it drew.
     mod cry {
         use super::*;
 
@@ -353,7 +353,7 @@ mod tests {
         fn r3134001_the_base_cry_adds_one_card_with_a_start_of_turn_or_an_end_of_turn_effect() {
             let mut kinds = (false, false);
             for n in 0..30 {
-                let s = crate::under_kept(ID, script_v0_6_9m(), || played(&format!("filing-either-{n}"), filing_hand(false)));
+                let s = crate::under_kept(ID, script_v0_6_9n(), || played(&format!("filing-either-{n}"), filing_hand(false)));
                 let cards = added(&s);
                 assert_eq!(cards.len(), 1, "seed {n}");
                 let (start, end) = hooks_of(&cards[0].def_id);
@@ -367,7 +367,7 @@ mod tests {
         #[test]
         fn r3134001_the_radiant_cry_adds_one_of_each_a_start_of_turn_card_then_an_end_of_turn_card() {
             for n in 0..30 {
-                let s = crate::under_kept(ID, script_v0_6_9m(), || played(&format!("filing-both-{n}"), filing_hand(true)));
+                let s = crate::under_kept(ID, script_v0_6_9n(), || played(&format!("filing-both-{n}"), filing_hand(true)));
                 let cards = added(&s);
                 assert_eq!(cards.len(), 2, "seed {n}");
                 assert!(hooks_of(&cards[0].def_id).0, "seed {n}: {} has no Start of turn effect", cards[0].def_id);
@@ -420,7 +420,7 @@ mod tests {
             // The Radiant Cry adds two: with 9 cards left in hand after the play, the second burns.
             let mut hand = vec![json!({ "def": ID, "radiant": true })];
             hand.extend((0..9).map(|_| json!(FILLER)));
-            let s = crate::under_kept(ID, script_v0_6_9m(), || played("filing-burn", json!(hand)));
+            let s = crate::under_kept(ID, script_v0_6_9n(), || played("filing-burn", json!(hand)));
             assert_eq!(s.hand(P1).len(), 10);
             let burned = s.last_events().iter().filter(|event| matches!(event, GameEvent::Burned { .. })).count();
             assert_eq!(burned, 1);
@@ -440,7 +440,7 @@ mod tests {
         #[test]
         fn the_cry_is_not_multiplied_by_the_aura() {
             // R821 multiplies Start of turn and End of turn effects, and a Cry is neither.
-            let s = crate::under_kept(ID, script_v0_6_9m(), || played("filing-once", filing_hand(false)));
+            let s = crate::under_kept(ID, script_v0_6_9n(), || played("filing-once", filing_hand(false)));
             assert_eq!(added(&s).len(), 1);
         }
     }

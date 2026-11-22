@@ -9,14 +9,14 @@
 //! sets, face down in the leftmost open backrow zone (R3567001), Radiant on the Radiant face. The Death:
 //! `shuffle_into` its controller's deck of one S+ #4.1 Profe Yates Prime, Radiant on the Radiant face (M #45
 //! Knowledge Breaker's shape; a full deck takes none, R80). The Prime carries the exile Yates lost, the
-//! text it printed through v0.6.9m (R4440004), built by `exile_then` and `exile_traps` here, which this
+//! text it printed through v0.6.9n (R4440004), built by `exile_then` and `exile_traps` here, which this
 //! card's kept script shares.
-//! Kept for replays (R767000): through v0.6.9m a (4) 6/6 (Radiant 12/12) whose Cry exiled one declared
+//! Kept for replays (R767000): through v0.6.9n a (4) 6/6 (Radiant 12/12) whose Cry exiled one declared
 //! permanent of either side, a Unit or a backrow card (R81, TG #26 Path of Exile's pick, R3996000), that
 //! was face-up, carried no CN tag, and whose name and the text of the face it wore held each of M, O, U,
 //! S and E in either case (R4154100), a face-down card never offered (R33), with none such the play naming
 //! none and the traps coming all the same (R90), then summoned one random Trap, three on the Radiant
-//! face, none of them Radiant (`script_v0_6_9m`, issue #4285); through v0.6.7k a 7/7 (Radiant 14/14) whose
+//! face, none of them Radiant (`script_v0_6_9n`, issue #4285); through v0.6.7k a 7/7 (Radiant 14/14) whose
 //! Cry summoned two random Traps, three random Radiant Traps on the Radiant face (`script_v0_6_7k`);
 //! through v0.6.6h the Cry exiled any declared permanent and Yates had three Activates of its own, each
 //! offered while its target stood and spent on its own uses (R3996000, R1751000): Overwhelm froze every
@@ -60,7 +60,7 @@ const CHOSEN_KEY: &str = "yatesActivate";
 const OVERWHELM_USES: i32 = 1;
 const WOLFS_MAW_USES: i32 = 3;
 const IRON_MANDATE_USES: i32 = 1;
-/// The Traps after the exile, through v0.6.9m Yates's and since issue #4440 its Prime's: one, three on the
+/// The Traps after the exile, through v0.6.9n Yates's and since issue #4440 its Prime's: one, three on the
 /// Radiant face, none of them Radiant (issue #4285).
 const EXILE_BASE_TRAPS: i32 = 1;
 const EXILE_RADIANT_TRAPS: i32 = 3;
@@ -195,7 +195,7 @@ fn summon_traps(count: i32, radiant_traps: bool) -> Vec<Effect> {
 }
 
 /// R3567001, R4440004: the traps after the exile, a random Trap, three on the Radiant face, none of them
-/// Radiant: Yates's through v0.6.9m, and S+ #4.1 Profe Yates Prime's since issue #4440.
+/// Radiant: Yates's through v0.6.9n, and S+ #4.1 Profe Yates Prime's since issue #4440.
 pub(crate) fn exile_traps(radiant: bool) -> Vec<Effect> {
     summon_traps(if radiant { EXILE_RADIANT_TRAPS } else { EXILE_BASE_TRAPS }, false)
 }
@@ -234,7 +234,7 @@ fn holds_mouse(state: &GameState, card: &CardInstance) -> bool {
 
 /// R4154100: "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are immune). Then
 /// summon a random Trap." (three on the Radiant face, `exile_traps`; through v0.6.7k `summon`'s two, three
-/// Radiant ones), and no Activate: Yates's through v0.6.9m, and since issue #4440 S+ #4.1 Profe Yates
+/// Radiant ones), and no Activate: Yates's through v0.6.9n, and since issue #4440 S+ #4.1 Profe Yates
 /// Prime's (R4440004), whose script builds its faces here.
 pub(crate) fn exile_then(radiant: bool, summon: fn(bool) -> Vec<Effect>) -> Script {
     Script {
@@ -341,10 +341,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.6.7k through v0.6.9m, the exile of a permanent with M, O, U, S and E in its name and
+/// R767000: after v0.6.7k through v0.6.9n, the exile of a permanent with M, O, U, S and E in its name and
 /// text, then a random Trap, three on the Radiant face (issue #4285), and no Tribute or Death; since issue
 /// #4440 the Prime's text. `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9m() -> CardScripts {
+pub fn script_v0_6_9n() -> CardScripts {
     CardScripts {
         base: exile_then(false, exile_traps),
         radiant: exile_then(true, exile_traps),
@@ -607,8 +607,8 @@ mod tests {
         }
     }
 
-    /// Yates's definition through v0.6.9m: a (4) 6/6, Radiant 12/12.
-    fn v0_6_9m_def(def: &mut CardDef) {
+    /// Yates's definition through v0.6.9n: a (4) 6/6, Radiant 12/12.
+    fn v0_6_9n_def(def: &mut CardDef) {
         def.cost = CardCost::Fixed(4);
         def.base.attack = Some(6);
         def.base.health = Some(6);
@@ -616,15 +616,15 @@ mod tests {
         def.radiant.health = Some(12);
     }
 
-    /// R767000: the script kept for the replays after v0.6.7k through v0.6.9m: a (4) 6/6 (Radiant 12/12)
+    /// R767000: the script kept for the replays after v0.6.7k through v0.6.9n: a (4) 6/6 (Radiant 12/12)
     /// whose Cry exiled a permanent with M, O, U, S and E in its name and text, then summoned a random Trap,
     /// three on the Radiant face, none of them Radiant, with no Tribute and no Death: since issue #4440 the
     /// Prime's text (R4440004), whose own tests prove the exile's reach.
-    mod v0_6_9m {
+    mod v0_6_9n {
         use super::*;
 
         fn kept<T>(run: impl FnOnce() -> T) -> T {
-            crate::under_kept_as(ID, script_v0_6_9m(), v0_6_9m_def, run)
+            crate::under_kept_as(ID, script_v0_6_9n(), v0_6_9n_def, run)
         }
 
         #[test]

@@ -1289,35 +1289,35 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c087_siva_1::ID, "v0.6.9k", c087_siva_1::script_v0_6_9j),
     // #4440 Stinkyscape+ Balance Changes VI (R4440003): the last script before it, Profe Yates's exile,
     // its Prime's text since (R4440004).
-    (c004_profe_yates::ID, "v0.6.9m", c004_profe_yates::script_v0_6_9m),
+    (c004_profe_yates::ID, "v0.6.9n", c004_profe_yates::script_v0_6_9n),
     // #4440 (R4440050 to R4440055): the other last scripts before it.
-    (c109_xxfreshjack::ID, "v0.6.9m", c109_xxfreshjack::script_v0_6_9m),
-    (c159_raven::ID, "v0.6.9m", c159_raven::script_v0_6_9m),
-    (c077_black_hole::ID, "v0.6.9m", c077_black_hole::script_v0_6_9m),
-    (c026_zolarketh::ID, "v0.6.9m", c026_zolarketh::script_v0_6_9m),
+    (c109_xxfreshjack::ID, "v0.6.9n", c109_xxfreshjack::script_v0_6_9n),
+    (c159_raven::ID, "v0.6.9n", c159_raven::script_v0_6_9n),
+    (c077_black_hole::ID, "v0.6.9n", c077_black_hole::script_v0_6_9n),
+    (c026_zolarketh::ID, "v0.6.9n", c026_zolarketh::script_v0_6_9n),
     (
         c158_stratos_swarm::ID,
-        "v0.6.9m",
-        c158_stratos_swarm::script_v0_6_9m,
+        "v0.6.9n",
+        c158_stratos_swarm::script_v0_6_9n,
     ),
-    (c080_galaxy::ID, "v0.6.9m", c080_galaxy::script_v0_6_9m),
-    (c037_last_hurrah::ID, "v0.6.9m", c037_last_hurrah::script_v0_6_9m),
-    (c028_second_wind::ID, "v0.6.9m", c028_second_wind::script_v0_6_9m),
+    (c080_galaxy::ID, "v0.6.9n", c080_galaxy::script_v0_6_9n),
+    (c037_last_hurrah::ID, "v0.6.9n", c037_last_hurrah::script_v0_6_9n),
+    (c028_second_wind::ID, "v0.6.9n", c028_second_wind::script_v0_6_9n),
     (
         c080_the_last_voyage::ID,
-        "v0.6.9m",
-        c080_the_last_voyage::script_v0_6_9m,
+        "v0.6.9n",
+        c080_the_last_voyage::script_v0_6_9n,
     ),
-    (c026_tommy_tempo::ID, "v0.6.9m", c026_tommy_tempo::script_v0_6_9m),
+    (c026_tommy_tempo::ID, "v0.6.9n", c026_tommy_tempo::script_v0_6_9n),
     (
         c010_double_counting::ID,
-        "v0.6.9m",
-        c010_double_counting::script_v0_6_9m,
+        "v0.6.9n",
+        c010_double_counting::script_v0_6_9n,
     ),
     (
         c009_joint_filing::ID,
-        "v0.6.9m",
-        c009_joint_filing::script_v0_6_9m,
+        "v0.6.9n",
+        c009_joint_filing::script_v0_6_9n,
     ),
 ];
 
@@ -1957,11 +1957,11 @@ mod tests {
         );
     }
 
-    /// Issue #4440: v0.6.9g to v0.6.9m shipped while it was built, so its rows are keyed at v0.6.9m, the
+    /// Issue #4440: v0.6.9g to v0.6.9n shipped while it was built, so its rows are keyed at v0.6.9n, the
     /// newest version that ran the scripts they keep; Profe Yates's exile ran from v0.6.7l, after its
     /// v0.6.7k row, through it.
     #[test]
-    fn r767000_issue_4440_scripts_are_kept_through_v0_6_9m_the_newest_version_that_ran_them() {
+    fn r767000_issue_4440_scripts_are_kept_through_v0_6_9n_the_newest_version_that_ran_them() {
         assert_kept_through(
             &[
                 c109_xxfreshjack::ID,
@@ -1979,17 +1979,18 @@ mod tests {
             ],
             &[
                 "v0.6.9f", "v0.6.9g", "v0.6.9h", "v0.6.9i", "v0.6.9j", "v0.6.9k", "v0.6.9l", "v0.6.9m",
+                "v0.6.9n",
             ],
-            "v0.6.9n",
+            "v0.6.9o",
         );
         assert_kept_through(
             &[c004_profe_yates::ID],
             &[
                 "v0.6.7l", "v0.6.7m", "v0.6.8", "v0.6.8b", "v0.6.8c", "v0.6.8d", "v0.6.8e", "v0.6.9",
                 "v0.6.9b", "v0.6.9c", "v0.6.9d", "v0.6.9e", "v0.6.9f", "v0.6.9g", "v0.6.9h", "v0.6.9i",
-                "v0.6.9j", "v0.6.9k", "v0.6.9l", "v0.6.9m",
+                "v0.6.9j", "v0.6.9k", "v0.6.9l", "v0.6.9m", "v0.6.9n",
             ],
-            "v0.6.9n",
+            "v0.6.9o",
         );
     }
 

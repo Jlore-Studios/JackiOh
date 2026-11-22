@@ -3,14 +3,14 @@
 //! Stinkyscape+ set.
 //!   Base:    "Open a Black Hole in midlane. At the end of each player's turn, it draws their permanents
 //!            one lane closer. It closes after swallowing {permanents} permanents." (7; 10 through v0.6.7k,
-//!            issue #4285; "At the start of each player's turn" through v0.6.9m, issue #4440)
+//!            issue #4285; "At the start of each player's turn" through v0.6.9n, issue #4440)
 //!   Radiant: "Open a Black Hole in midlane. At the start of the opponent's turn, it draws their
 //!            permanents one lane closer."
 //!
 //! Its Cry (R1) is `open_black_hole`, the engine's: the hole stands in lane 3 of 5, exiles what stood
 //! there and swallows what later enters, and draws each player's permanents one lane closer (R3554000,
 //! R3554001): on the base face `atEnd`, at the end of their turn, its caster's own first (R4440050), and
-//! through v0.6.9m at the start (`script_v0_6_9m`, kept, R767000). The Radiant face is `opponentOnly`: it
+//! through v0.6.9n at the start (`script_v0_6_9n`, kept, R767000). The Radiant face is `opponentOnly`: it
 //! pulls only the opponent's permanents, at the start of their turn, as it always has. The hole closes after `permanents` swallowed, the number the
 //! Spell resolved with, so a Degrade or an Upgrade of it moves the closing (R3561000, R386, R482). The
 //! Radiant text leaves the closing out, but its face opens the same hole and closes at the printed 10,
@@ -42,9 +42,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.9m the base face's hole pulled at the start of each player's turn (issue #4440);
+/// R767000: through v0.6.9n the base face's hole pulled at the start of each player's turn (issue #4440);
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9m() -> CardScripts {
+pub fn script_v0_6_9n() -> CardScripts {
     CardScripts {
         base: black_hole(false, false),
         radiant: black_hole(true, false),
@@ -57,7 +57,7 @@ mod tests {
     use jackioh_engine::subsystems::ai_policy::choose_action;
     use jackioh_engine::testkit::*;
 
-    use super::{ID, script_v0_6_9m};
+    use super::{ID, script_v0_6_9n};
     use crate::{filler, scenario};
 
     const P1: PlayerId = PlayerId::P1;
@@ -166,10 +166,10 @@ mod tests {
         assert_eq!(s.pile(P1, "exile").iter().filter(|card| card.id == left || card.id == right).count(), 2);
     }
 
-    /// R767000: through v0.6.9m the base face's hole pulled at the start of each player's turn.
+    /// R767000: through v0.6.9n the base face's hole pulled at the start of each player's turn.
     #[test]
-    fn r767000_the_script_kept_for_v0_6_9m_pulls_at_each_players_turn_start() {
-        crate::under_kept(ID, script_v0_6_9m(), || {
+    fn r767000_the_script_kept_for_v0_6_9n_pulls_at_each_players_turn_start() {
+        crate::under_kept(ID, script_v0_6_9n(), || {
             let mut s = board(false, "c077-pull-kept", vec![lane(1), lane(5)], vec![lane(2)]);
             let (left, right) = (s.unit_at(P1, 1).id, s.unit_at(P1, 5).id);
             let theirs = s.unit_at(P2, 2).id;

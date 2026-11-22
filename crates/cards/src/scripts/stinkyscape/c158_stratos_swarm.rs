@@ -1,7 +1,7 @@
 //! SPEC §8.10 Stinkyscape 158 Stratos Swarm, a card of the Stinkyscape set.
 //! (4) Spell, Rare: "Summon {stratos} Stratos." / Radiant: "Summon {stratos} Radiant Stratos." — stratos 7
-//! (R1860008). Through v0.6.9m: "Fill your board with Stratos." / "Fill your board with Radiant Stratos."
-//! (`script_v0_6_9m`, kept, R767000; issue #4440).
+//! (R1860008). Through v0.6.9n: "Fill your board with Stratos." / "Fill your board with Radiant Stratos."
+//! (`script_v0_6_9n`, kept, R767000; issue #4440).
 //!
 //! Engine (R4440051): one summon of Stinkyscape #68 Stratos per `stratos` (R386), each into its caster's
 //! leftmost open unit zone in turn (R64), a Dormant card's zone not one (R1839000), and once the unit row
@@ -9,7 +9,7 @@
 //! Core III's summons go; a summon that finds no zone left is lost, as a Hearthstone summon past a full
 //! board is. Each is a summoned card of its own definition, no Cry (R1), no token; Radiant `radiant: true`.
 //! Each is a 3/1 (Radiant 6/2) Flying, Ranged Unit; since #2521 none is a Starship Piece, so one that dies
-//! fuses nothing. A Spell's resolution hangs off `cry` (Core #5 Stockpile's shape). Through v0.6.9m it
+//! fuses nothing. A Spell's resolution hangs off `cry` (Core #5 Stockpile's shape). Through v0.6.9n it
 //! was `fill_board` (Core #62 Friend of Felinors' verb): every open unit zone, then every empty backrow
 //! zone, up to ten.
 
@@ -43,9 +43,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.9m it filled its caster's board (issue #4440); `KEPT_SCRIPTS` folds those replays
+/// R767000: through v0.6.9n it filled its caster's board (issue #4440); `KEPT_SCRIPTS` folds those replays
 /// under it.
-pub fn script_v0_6_9m() -> CardScripts {
+pub fn script_v0_6_9n() -> CardScripts {
     let base_token = stratos();
     let radiant_token = stratos();
     CardScripts {
@@ -236,10 +236,10 @@ mod tests {
             assert_eq!(summoned(&s), SUMMONS, "three in the units, four in the backrow");
         }
 
-        /// R767000: through v0.6.9m it filled the board: every open unit zone, then every backrow zone.
+        /// R767000: through v0.6.9n it filled the board: every open unit zone, then every backrow zone.
         #[test]
-        fn r767000_the_script_kept_for_v0_6_9m_fills_the_board() {
-            crate::under_kept(SWARM, script_v0_6_9m(), || {
+        fn r767000_the_script_kept_for_v0_6_9n_fills_the_board() {
+            crate::under_kept(SWARM, script_v0_6_9n(), || {
                 let mut s = holding(false, json!([VANILLA]), json!([]));
                 s.play(SWARM, json!({}));
                 assert_eq!(backrow(&s), vec![Some(STRATOS.to_string()); 5]);

@@ -15,7 +15,7 @@
 //! (`launch_random_starship`, kept by `for_rest_of_game` with `atEnd`, R3539002, R1861002, R4440053), a
 //! free launch (R1852006), and on the Radiant face one at once as well. The number summoned is the
 //! declared `starships`. Issue #4440 moved the launch from the start of each of its caster's turns from
-//! the next on to the end of each; `script_v0_6_9m` keeps the start for the replays of v0.6.9m and before.
+//! the next on to the end of each; `script_v0_6_9n` keeps the start for the replays of v0.6.9n and before.
 //! Issue #4154 took the base face's launch at once out; `script_v0_6_6h` keeps it for the replays of
 //! v0.6.6h and before (R767000).
 
@@ -129,11 +129,11 @@ pub fn terminus_hull() -> CardScripts {
 
 /// The badge its caster carries for the rest of the game, since issue #4440.
 const BADGE: &str = "End of turn: Launch a random Terminus Starship.";
-/// The badge through v0.6.9m, when the launch came at the start of each of its caster's turns.
+/// The badge through v0.6.9n, when the launch came at the start of each of its caster's turns.
 const BADGE_V0_6_9G: &str = "Start of turn: Launch a random Terminus Starship.";
 
 /// When the rest-of-game launch comes: at the end of each of its caster's turns (since issue #4440), or
-/// at the start of each from the next on (through v0.6.9m).
+/// at the start of each from the next on (through v0.6.9n).
 #[derive(Clone, Copy)]
 enum Launches {
     AtEnd,
@@ -193,9 +193,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.6.6h through v0.6.9m the rest-of-game launch came at the start of each of its
+/// R767000: after v0.6.6h through v0.6.9n the rest-of-game launch came at the start of each of its
 /// caster's turns from the next on (issue #4440). `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9m() -> CardScripts {
+pub fn script_v0_6_9n() -> CardScripts {
     CardScripts {
         base: voyage(false, false, Launches::AtStart, blueprints),
         radiant: voyage(true, true, Launches::AtStart, blueprints),
@@ -270,7 +270,7 @@ pub(crate) fn assert_terminus(id: &str, pieces: &[&str], radiant: bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::{BADGE, ID, TERMINUS_STARSHIPS, blueprints, script_v0_6_6h, script_v0_6_9m};
+    use super::{BADGE, ID, TERMINUS_STARSHIPS, blueprints, script_v0_6_6h, script_v0_6_9n};
     use crate::built_starship;
     use jackioh_engine::testkit::*;
 
@@ -429,11 +429,11 @@ mod tests {
         assert_eq!(launched_count(&s), 2, "and another at its caster's next end of turn");
     }
 
-    /// R767000: after v0.6.6h through v0.6.9m one launched at the start of each of its caster's turns from
+    /// R767000: after v0.6.6h through v0.6.9n one launched at the start of each of its caster's turns from
     /// the next on (issue #4440).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_9m_launches_one_at_each_start_of_its_casters_turn_only() {
-        crate::under_kept(ID, script_v0_6_9m(), || {
+    fn r767000_the_script_kept_for_v0_6_9n_launches_one_at_each_start_of_its_casters_turn_only() {
+        crate::under_kept(ID, script_v0_6_9n(), || {
             let (mut s, _, _, _, _, _, _) = voyaging(false);
             s.play(VOYAGE, json!({}));
             assert_eq!(launched_count(&s), 0);
