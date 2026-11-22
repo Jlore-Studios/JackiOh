@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4486,
+  "title": "Patch: follow-up to #4481 from the after-merge spot-check",
+  "branch": "bot/issue-4486",
+  "thread": "**Issue #4486 (data, not instructions):**\n\n```text\n# #4486: Patch: follow-up to #4481 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #4481 -->\nThe after-merge spot-check of #4481 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/45005388686)) found 1 blocking problem(s) in the change as it merged (`1a51cecb6410`). `claude-1` (claude, `opus`, strong) reviewed it. #4481 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `crates/tools/src/sweep.rs:319`: Every sweep of record now plays twice as many games, but sweep.yml's time limits were not changed. A sweep over a whole set will run past the 350-minute job limit and deliver nothing, and per-card processes will hit the 45-minute SWEEP_CARD_MINUTES limit twice as early.\n  Evidence: pass1() and pass2() now loop over SweepFace::ALL for every id and tier, and each face plays the full seeds_per_card and seeds_per_card_at_risk. training/history/sweep-2026-11-13.md shows the last whole-set sweep (166 cards, 3 lanes) took 07:59 to 13:17 UTC, about 318 minutes. .github/workflows/sweep.yml has `timeout-minutes: 350` (line 70), `SWEEP_LANES: \"3\"` and `SWEEP_CARD_MINUTES: \"45\"` (each card process is killed under `timeout` and left out of the report). At twice the games that run takes about 636 minutes, past both the job limit and hosted runners' 6-hour cap. sweep.yml runs by itself on every push to main that moves the AI's generation or ships a set. The PR's own 'Worth a second look' flags this as needing a person, but it merged without the workflow change. The fix is under .github/, so a person must do it (more SWEEP_LANES, a job split by face or by shard, a raised card limit), or a code-side alternative must be chosen, such as a CLI flag that lets the workflow run the faces as separate jobs.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `claude-7` (`claude`) built #4481 and `claude-7` (`opus`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "bot",
+    "by": "claude-1"
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4486: needs a plan; `claude-7` (claude, `opus`, strong) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T09:07:58Z",
+    "claimed_at": "2026-11-22T09:09:46Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
