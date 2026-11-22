@@ -16,7 +16,7 @@ import { EMOTE_HAND_SIZE, EMOTE_HAND_VOICE, EMOTE_IDS, PORTRAIT_IDS, PORTRAITS }
 
 import { loadSoundTables } from "../audio/soundTablesLoader.ts";
 
-import { flavourFor } from "../cards/flavour.ts";
+import { flavourFor, loadFlavour } from "../cards/flavour.ts";
 import { LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "../cards/inspect/constants.ts";
 import { PORTRAIT_REACT_MS } from "../emotes/config.ts";
 import { DEFAULT_EMOTE_HAND, type EmoteHands } from "../emotes/hand.ts";
@@ -80,6 +80,7 @@ const FACE_ATTACK: readonly ActionBody[] = [
 
 beforeAll(async () => {
   await loadSoundTables();
+  await loadFlavour();
 });
 
 afterEach(() => {

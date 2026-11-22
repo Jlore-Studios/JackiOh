@@ -14,7 +14,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 
 import { costPhrase, faceDownLabel } from "./cards/faceDown.ts";
-import { CARD_FLAVOUR } from "./cards/flavour.ts";
+import { flavourNow, loadFlavour } from "./cards/flavour.ts";
 
 const SRC = dirname(fileURLToPath(import.meta.url));
 
@@ -95,7 +95,8 @@ function wordsIn(path: string): { at: string; text: string }[] {
 
 // The one pass over every source is setup, not an assertion, as in writing.test.ts: it runs here, once, so a loaded
 // runner does not spend the first guard's own budget on it (#3439: R373's, the first, overran its 5 s in CI).
-beforeAll(() => {
+beforeAll(async () => {
+  await loadFlavour();
   for (const path of sources(SRC)) wordsIn(path);
 }, SCAN_TIMEOUT_MS);
 
@@ -274,7 +275,7 @@ describe("R1320 players read Nerf and Buff", () => {
   });
 
   it("R1320 no flavour line and no voice line says Degrade or Upgrade in any form", () => {
-    const flavour = Object.entries(CARD_FLAVOUR).flatMap(([id, entry]) =>
+    const flavour = Object.entries(flavourNow() ?? {}).flatMap(([id, entry]) =>
       entry.flavour !== undefined && OLD_TUNING_WORDS.test(entry.flavour) ? [`${id}: ${entry.flavour}`] : [],
     );
     expect(flavour).toEqual([]);
@@ -365,7 +366,7 @@ describe("R781000 players read Equip, the keyword Magnetic became", () => {
     );
     expect(cards).toEqual([]);
     expect(CATALOG["meditative-067"]?.base.text).toMatch(/^Equip\n/);
-    const flavour = Object.entries(CARD_FLAVOUR).flatMap(([id, entry]) =>
+    const flavour = Object.entries(flavourNow() ?? {}).flatMap(([id, entry]) =>
       entry.flavour !== undefined && OLD_EQUIP_WORD.test(entry.flavour) ? [`${id}: ${entry.flavour}`] : [],
     );
     expect(flavour).toEqual([]);
@@ -402,7 +403,7 @@ describe("R278 the faction is Jlockeed", () => {
     );
     expect(cards).toEqual([]);
     expect(CATALOG["classicplus-048"]?.name).toBe("Jlockeed's Lobbyist");
-    const flavour = Object.entries(CARD_FLAVOUR).flatMap(([id, entry]) =>
+    const flavour = Object.entries(flavourNow() ?? {}).flatMap(([id, entry]) =>
       entry.flavour !== undefined && OLD_JLOCK.test(entry.flavour) ? [`${id}: ${entry.flavour}`] : [],
     );
     expect(flavour).toEqual([]);
