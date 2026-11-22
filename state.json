@@ -17063,6 +17063,13 @@
     "4470": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44993922368",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-22T06:38:13Z",
+        "until": "2026-11-22T07:08:13Z"
+      },
       "difficulty_by": {
         "at": "2026-11-22T06:38:03Z",
         "difficulty": "medium",
