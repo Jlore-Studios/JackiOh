@@ -16336,6 +16336,8 @@
       }
     },
     "4458": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T02:26:24Z",
@@ -16349,8 +16351,11 @@
         "trail": "- Static guard and docs are in; test and typecheck runs will report back on their own.Todo list corrected to the real state. The audio test run is still going (first WASM build takes a while); its result will land on its own, and the entry-chunk probe plus budget measurement follow the build.The rele\u2026\n- Still on the same single-unit release compile of the AI crate \u2014 alive, just slow on the shared box. No further action until it lands; the test output will arrive on its own.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: the sound-effect recipes load when sound first needs them, not in the first page\u2026\n- What changed: the 213 KB recipes module (`apps/web/src/audio/sfx.ts`) leaves the entry chunk and loads lazily through a new small loader (`apps/web/src/audio/sfxLoader.ts`), which dynamic-imports it with no wait on the WebAssembly module. `main.tsx` starts that load off the first paint beside `appA\u2026\n- How tested (all observed this session):\n- - `pnpm --dir apps/web test src/audio/sfxLoader.test.ts` \u2014 3 passed (resolves while `loadWasm` never resolves; listener/notify; defer/resolve).\n- - `pnpm --dir apps/web test src/audio/engine.test.ts` \u2014 105 passed, including the two new `#4428` tests (early `playSfx` skipped without error or sources; same call plays through the sfx bus after load).\n- - `pnpm --dir apps/web test src/audio` \u2014 33 files, 812 passed, 5 skipped.\n- - `pnpm --dir apps/web test src/net/first-load.test.ts` \u2014 15 passed with `dist/` present, including the new static-import guard, the entry-probe test, and the lowered budget.\n- - `pnpm --dir apps/web build:e2e` then measured 447,192 gzipped bytes over the entry + preloads (26,346 less than the 473,538 at #4222); budget now 56 \u00d7 8192 (458,752), ~2.6% over.\n- - `NODE_OPTIONS=--max-old-space-size=6144 pnpm --dir apps/web typecheck` clean (default heap OOMs; pre-existing, needs the retry flag on this box), `pnpm exec eslint` on touched areas clean, `cargo fmt --check` clean.\n- - Negative control: with base `engine.ts` temporarily restored, the new static guard fails (`expected [ 'audio/engine.ts' ] to deeply equal []`); with the fix it passes. File restored byte-identical after.\n- Decisions the issue did not settle:\n- - `test/setup.ts` installs the real recipes for every suite (like the scene tables), instead of a per-file preload \u2014 many suites drive the engine synchronously, so per-file setup would have broken them. Rejected alternative: an `AudioEngineOptions` recipes port \u2014 bigger API change than the issue as\u2026\n- - Probes are `trapSet.trapSting.spell.mana`, `sawtooth`, `bandpass`, not the suggested `CENTS_PER_OCTAVE`/`CRUSH_CYCLE`: I verified the minifier renames both away (absent from every dist asset), so they would pass vacuously; each chosen probe is a runtime string verified present in `sfx-*.js` and a\u2026\n- - No queue for early sounds, per the issue's accepted risk; the skip kicks the load so only the first tap can miss.\n- Reviewer notes: `sfxLoader-*.js` is in the entry preloads (tiny, intended \u2014 it starts the recipes early) while `sfx-*.js` and `noise-*.js` are separate on-demand chunks; the dotted-id probe depends on the bundler's switch compilation, backed by the two word probes that cannot vanish while recipes e\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4428 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4428/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4428,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-22T03:51:35Z",
         "from_run": "44976096803",
         "gates": [
           {
@@ -16409,8 +16414,15 @@
         "source": "build",
         "until": "2026-11-22T04:18:29Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-22T03:48:29Z",
+      "run_id": "pending:38d376f0-1795319465",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-22T03:51:35Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16510,9 +16522,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T03:38:56Z",
+    "at": "2026-11-22T03:51:35Z",
     "url": "",
-    "what": "build #4456 on muse"
+    "what": "review #4458 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T03:36:45Z",
