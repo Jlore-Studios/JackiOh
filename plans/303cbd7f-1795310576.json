@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4426,
+  "title": "Patch: CI holds the dungeon run's and the shared logic's generated TypeScript types to the Rust on every pull request",
+  "branch": "bot/issue-4426",
+  "thread": "**Issue #4426 (data, not instructions):**\n\n```text\n# #4426: Patch: CI holds the dungeon run's and the shared logic's generated TypeScript types to the Rust on every pull request\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe browser client reads the dungeon run and the shared match logic through TypeScript type files generated from the Rust code. For the main engine's types, CI fails a pull request that changes the Rust without rewriting those files. For the dungeon run's and the shared logic's roughly 300 types, nothing checks. A pull request can change one of those Rust types, forget to rewrite the TypeScript, and still pass every check, while the client expects data in a shape the Rust no longer sends.\n\nThe dungeon run's notes say only a person editing the workflows can close this. A few lines in a test-only dependency list close it inside a test job that already runs on every relevant pull request. Once built, a stale type file fails the pull request that left it stale, and the separate command every builder has to remember today goes away.\n\n## Why\n- `crates/run/README.md:54-56`: \"CI does not hold the generated `Run*.ts` to the Rust until `ci.yml` runs `cargo test -p jackioh-run --features ts` and fails on its diff, which only a person can add.\"\n- CLAUDE.md, Commands, says these types are written by a command of their own, `cargo test -p jackioh-run --features ts && cargo test -p jackioh-shared --features ts,jackioh-engine/testkit`, \"which neither the line above nor CI rewrites (commit any diff)\". `crates/shared/README.md:789` says the same. Today this relies on every builder remembering.\n- Nothing turns those features on. No `Cargo.toml` names `jackioh-run/ts` or `jackioh-shared/ts` outside the crates' own feature tables (`crates/shared/Cargo.toml:35`).\n- What depends on it: 312 `#[ts(export\u2026)]` lines, 282 in `crates/shared/src` and 30 in `crates/run/src`, all writing into `apps/web/src/wire/generated/`.\n- These types change often: 8 commits changed `apps/web/src/wire/generated/Run*.ts` between 2026-11-02 and 2026-11-11.\n- The check already exists:\n  - ci.yml's V20 step (line 446) runs in every Rust test group and fails when `git status --porcelain -- apps/web/src/wire` is not empty.\n  - The `tools, wasm` group (`.github/ci/rust-test.toml:171`) already runs the run's and the shared logic's own tests, in one `cargo test --workspace --exclude \u2026` build.\n  - Under the workspace's resolver 3, features are unified across that build. So a dev-dependency that turns on `jackioh-run/ts` and `jackioh-shared/ts` makes their ts-rs export tests run there and write the files, and V20 then fails on any difference.\n  - `scripts/ci-scope.sh:350` already runs `rust_tools_wasm` for any change under `crates/run/` or `crates/shared/`. An engine change runs it too, since the tools build on the engine.\n\n## Proposal\n1. Turn the two features on from a test-only dependency list of a crate the `tools, wasm` group tests:\n   - Recommended: `crates/wasm/core/Cargo.toml`. `jackioh-wasm-core` already depends on both crates, so no crate joins any build. Its `[dev-dependencies]` would gain `jackioh-run = { workspace = true, features = [\"ts\"] }` and `jackioh-shared = { workspace = true, features = [\"ts\"] }`.\n   - Dev-dependency features never reach the WebAssembly builds (`scripts/build-wasm.sh` builds no tests) or the release binaries.\n   - The alternative is the same lines in `crates/tools/Cargo.toml`. That also works, but it adds `jackioh-shared` and ts-rs to the build of the `tools fuzz` and `tools duos, selfplay` groups, which compile the tools' tests.\n2. Run the regeneration once and commit whatever it rewrites. If the files are stale today, that is the proof the hole was real.\n3. Hold it in place with a check in `crates/tools/tests/acceptance.rs`: the chosen crate's dev-dependencies keep both features on, so a later edit cannot quietly drop the check. Give it a negative case, as the file's other scans have.\n4. Update the docs that say CI does not check these types:\n   - the \"What it does not do yet\" paragraph of `crates/run/README.md`;\n   - the `ts` paragraph of `crates/shared/README.md`;\n   - the second line in CLAUDE.md's Commands, which `cargo test --workspace` now covers;\n   - any other doc that names the separate command (grep `jackioh-run --features ts`).\n\n## Where it lands\n- `crates/wasm/core/Cargo.toml` (or `crates/tools/Cargo.toml`)\n- `crates/tools/tests/acceptance.rs`\n- `apps/web/src/wire/generated/` (any stale file, regenerated)\n- `crates/run/README.md`, `crates/shared/README.md`, `CLAUDE.md` (Commands)\n\n## Acceptance criteria\n- [ ] On the branch, the `tools, wasm` group's command, `cargo test --workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai`, writes the run's and the shared logic's types into `apps/web/src/wire/generated/` and leaves `git status --porcelain -- apps/web/src/wire` empty.\n- [ ] Shown in the pull request and then reverted: renaming one field of a `#[ts(export)]` type in `crates/run` without regenerating makes that command leave a diff under `apps/web/src/wire/generated/`, which is exactly what V20 fails on.\n- [ ] `cargo build --release -p jackioh-tools` and `sh scripts/build-wasm.sh` compile no ts-rs.\n- [ ] An `acceptance.rs` test fails when the chosen crate's dev-dependencies drop either feature, with a negative case.\n- [ ] `cargo clippy --workspace --all-targets -- -D warnings` passes with the features on.\n- [ ] The two READMEs and CLAUDE.md no longer say CI leaves these types unchecked or that they need a command of their own.\n\n## Size and risks\nSmall: a few manifest lines, one acceptance test and doc edits, plus whatever regeneration diff exists today.\n\nRisks:\n- Clippy's `--all-targets` run will see ts-gated code it has never compiled, which may surface lints to fix in the same pull request.\n- The `tools, wasm` group compiles ts-rs's derives for two more crates. That costs some seconds against its eight-minute budget; measure it in the pull request.\n- Nothing reaches the shipped client or server, since dev-dependency features apply only to test builds.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-22T01:18:26Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4426: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T01:18:48Z",
+    "claimed_at": "2026-11-22T01:23:13Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
