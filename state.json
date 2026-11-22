@@ -41633,14 +41633,6 @@
         "run_id": "45058714138",
         "taken_asks": []
       },
-      "2": {
-        "area": "server",
-        "count": 2,
-        "last_run": "2026-11-22T19:06:22Z",
-        "provider": "claude-8",
-        "run_id": "45058843327",
-        "taken_asks": []
-      },
       "3": {
         "area": "client",
         "count": 2,
