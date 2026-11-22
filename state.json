@@ -16753,10 +16753,14 @@
         "approvals": [],
         "builder": "muse",
         "built_by": "muse",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "058b481ec15e474a3319426a1e9dcb7d9a4a59b8",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "4460": {
