@@ -17515,6 +17515,13 @@
     "4477": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T16:35:45Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Python loader, notebook, fixture and tests only (6 files): none of the five hard lines holds (no engine, no crates/ai/src change, no cross-crate contract, no migration, far under 40 files)."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
