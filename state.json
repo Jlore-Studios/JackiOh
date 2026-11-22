@@ -15184,6 +15184,7 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-22T00:33:41Z",
       "stop_requested": false,
+      "suggestion": true,
       "taken_asks": []
     },
     "4429": {
