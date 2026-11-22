@@ -362,6 +362,10 @@ describe("R3334001 the launch", () => {
       expect(phone.cameraFrom).toEqual(cameraPoint(phone.cameraFrom, phone.zoom));
       expect(phone.cameraTo).toEqual(cameraPoint(phone.cameraTo, phone.zoom));
       expect(phone.cameraFrom.x).toBeLessThanOrEqual(phone.cameraTo.x);
+      // A phone on its side (wider than FX_MOBILE_WIDTH, its narrower side under it) caps the zoom too, its sparks a desktop's.
+      const side = cinematicOf(planStarship(launchEntry(held, view, "full"), view, env({ phone: true }))?.cues ?? []);
+      expect(side?.zoom, `${String(n)} pieces on its side`).toBe(STARSHIP_CINEMATIC.phoneZoom);
+      expect(side?.sparks, `${String(n)} pieces on its side`).toBe(full.sparks);
     }
   });
 

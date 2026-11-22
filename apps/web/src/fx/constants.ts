@@ -242,7 +242,7 @@ export const FX_MOTIF_MIN_CARDS = 3;
 export const FX_PHONE_FRAME_BUDGET_MS = 50;
 // R4493001: the layer memory the director lets its mounted DOM cues hold on a phone (or a device with
 // little memory), each promoted element's box at its largest scale times the device's pixels: past it, a
-// takeover sheds its optional parts in order (its slices merged, its art, its stage), never a main beat.
+// takeover sheds its optional parts in order (its slices merged, its art, its stage, its rays and wave), never a main beat.
 export const FX_PHONE_LAYER_BUDGET_MB = 200;
 // R4493000: the most layers a takeover's stage draws on a phone: adjacent slices (or planes) merge into
 // one picture each, far, middle and near.

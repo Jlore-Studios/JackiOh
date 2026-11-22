@@ -25,7 +25,7 @@ import {
 } from "./constants.ts";
 import { dropPointOfTestid } from "../game/drag/landing.ts";
 import { landingBox, mountDomEffect, mountHold, type DomEffect } from "./dom.ts";
-import { budgetTakeover, cueScreens, hasLayerBudget, type FxDevice } from "./layers.ts";
+import { budgetTakeover, cueScreens, hasLayerBudget, takeoverForm, TAKEOVER_DARK, type FxDevice } from "./layers.ts";
 import { createFrameLoop, type FxFrame } from "./loop.ts";
 import { createParticleSystem } from "./particles.ts";
 import { artBoxOf, atOf, pointIn } from "./anchors.ts";
@@ -621,7 +621,8 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
   /**
    * R4493001: a frame's due cues with each takeover in the form the device's layer budget holds (layers.ts
    * `budgetTakeover`), in their order: what it holds besides is every mounted effect still up, this frame's other DOM
-   * cues (an earlier takeover in its chosen form) and the pending ones due before it ends. A frame with no takeover, or a
+   * cues (an earlier takeover in its chosen form) and the pending ones due before it ends, a later takeover at the least
+   * it will mount (its dark and its sweep), since it takes its own form when it fires. A frame with no takeover, or a
    * device with no budget, fires as it is; every other cue, a set piece's main beats among them, is never touched.
    */
   const budgetDue = (due: readonly PendingCue[], at: number): readonly PendingCue[] => {
@@ -630,6 +631,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     if (device === undefined || !hasLayerBudget(device)) return due;
     const up = mounted.reduce((sum, item) => (item.expiresAt > at ? sum + item.screens : sum), 0);
     const screensOf = (cue: FxCue): number => (isDomCue(cue) ? cueScreens(cue) : 0);
+    const leastOf = (cue: FxCue): number => (cue.kind === "takeover" ? cueScreens(takeoverForm(cue, TAKEOVER_DARK)) : screensOf(cue));
     const out: PendingCue[] = [];
     due.forEach((item, index) => {
       const { cue } = item;
@@ -639,8 +641,8 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       }
       const ends = item.due + cue.durationMs;
       const before = out.reduce((sum, earlier) => sum + screensOf(earlier.cue), 0);
-      const after = due.slice(index + 1).reduce((sum, later) => sum + screensOf(later.cue), 0);
-      const coming = pending.reduce((sum, later) => (later.due < ends ? sum + screensOf(later.cue) : sum), 0);
+      const after = due.slice(index + 1).reduce((sum, later) => sum + leastOf(later.cue), 0);
+      const coming = pending.reduce((sum, later) => (later.due < ends ? sum + leastOf(later.cue) : sum), 0);
       const form = budgetTakeover(cue, up + before + after + coming, device);
       out.push(form === cue ? item : { cue: form, due: item.due });
     });

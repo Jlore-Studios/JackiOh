@@ -305,7 +305,7 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect(shown[2]?.style.backgroundImage).toBe('url("nearest"), url("near")');
   });
 
-  it("R4493001 an artless takeover draws no look art", () => {
+  it("R4493001 an artless takeover draws no look art, and a sweep-only one no rays and no wave", () => {
     const parts = Object.keys(TAKEOVER_ART_PARTS)[0] as TakeoverLook;
     const drawn = Object.keys(TAKEOVER_ART_DRAWINGS)[0] as TakeoverLook;
     for (const look of [parts, drawn]) {
@@ -318,6 +318,11 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
       const bare = expectMounted(mountDomEffect(root, artless, { at: AT }), artless);
       expect([...bare.children].map((child) => child.className), look).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
       bare.remove();
+      // Its least: the dark and the sweep alone.
+      const dark: FxTakeoverCue = { ...artless, sweepOnly: true };
+      const least = expectMounted(mountDomEffect(root, dark, { at: AT }), dark);
+      expect([...least.children].map((child) => child.className), look).toEqual(["fx-takeover-dark", "fx-takeover-sweep"]);
+      least.remove();
     }
   });
 

@@ -17,9 +17,10 @@ import { keyframeBodies, parseDecls, parseSheet, type Sheet } from "../test/cssS
 import { estimateLayers, layerProblems, type LayerPart, type LayerView } from "../test/layerEstimate.ts";
 import { readSheet } from "../test/setup.ts";
 import { mountDomEffect, type DomEffectBoxes } from "./dom.ts";
-import { FX_FIGURES } from "./figures.ts";
+import { FX_FIGURES, type FxFigure } from "./figures.ts";
 import {
   cueScreens,
+  FX_BOARD_CUE_LAYER_SCREENS,
   FX_CUE_LAYER_SCREENS,
   FX_SET_PIECE_LAYER_SCREENS,
   FX_TAKEOVER_DOLLY_SCALES,
@@ -41,7 +42,7 @@ const DPR = 3;
 const AT: FxBox = { x: 161, y: 470, width: 68, height: 94 };
 const FROM: FxBox = { x: 20, y: 140, width: 68, height: 94 };
 const TO: FxBox = { x: 300, y: 620, width: 68, height: 94 };
-/** The board, for a cue over all of it (Crushing Walls). */
+/** The board, for a cue over all of it (Crushing Walls, a set piece, a fan or a sheen over the whole board). */
 const BOARD: FxBox = { x: 0, y: 96, width: 390, height: 620 };
 const BOXES: DomEffectBoxes = { at: AT, from: FROM, to: TO };
 
@@ -67,6 +68,8 @@ const SHAPE_BEATS: Readonly<Record<SetPieceShape, number>> = {
   doom: MOST_BEATS,
 };
 const SHAPES = Object.keys(SHAPE_BEATS) as SetPieceShape[];
+/** The figures a recipe lands on the whole board rather than a card (fx/cards: cnFleaMarket, chaosCalls, megabase, seance). */
+const BOARD_FIGURES: readonly FxFigure[] = ["lanterns", "dusk"];
 
 /** The diorama with the most slices, each its own picture. */
 const DEEPEST = [...DIORAMAS.values()].reduce((a, b) => (b.slices.length > a.slices.length ? b : a));
@@ -90,11 +93,15 @@ const takeover = (look: TakeoverLook, extra: Partial<FxTakeoverCue>): FxTakeover
   ...extra,
 });
 
-/** A takeover's three cases: bare of its art, as it plays without a set piece, and as a phone draws it holding the deepest diorama. */
+/**
+ * A takeover's four cases: bare of its art, as it plays without a set piece, as a phone draws it holding the deepest
+ * diorama, and its dark and its sweep alone, the least the budget leaves it.
+ */
 const takeoverCases = (look: TakeoverLook): FxTakeoverCue[] => [
   takeover(look, { artless: true }),
   takeover(look, {}),
   takeover(look, { stage: mergeStage(DIORAMA_STAGE, FX_PHONE_STAGE_LAYERS), ...(TAKEOVER_ART_LOOKS.has(look) ? { art: "data:," } : {}) }),
+  takeover(look, { artless: true, sweepOnly: true }),
 ];
 
 const cinematic = (size: StarshipSize, still: boolean): Extract<FxDomCue, { kind: "cinematic" }> => ({
@@ -125,8 +132,9 @@ const cinematic = (size: StarshipSize, still: boolean): Extract<FxDomCue, { kind
 /** Every DOM cue kind, at its largest cases. */
 const CASES: { readonly [K in FxDomCue["kind"]]: readonly Extract<FxDomCue, { kind: K }>[] } = {
   splat: (["damage", "heal", "loss", "absorb"] as const).map((tone) => ({ kind: "splat", tone, amount: 88, at: card, delayMs: 0, durationMs: 950 })),
-  rays: (["legendary", "mythic", "radiant", "holy", "victory"] as const).map((tone) => ({ kind: "rays", tone, at: card, delayMs: 0, durationMs: 850 })),
-  sheen: [{ kind: "sheen", at: card, delayMs: 0, durationMs: 400 }],
+  // A fan lands on a card, or on the whole board (a set piece's centre, a radiant set with no tracker), its largest case.
+  rays: (["legendary", "mythic", "radiant", "holy", "victory"] as const).flatMap((tone) => [card, board].map((at) => ({ kind: "rays" as const, tone, at, delayMs: 0, durationMs: 850 }))),
+  sheen: [card, board].map((at) => ({ kind: "sheen", at, delayMs: 0, durationMs: 400 })),
   ghost: [
     { kind: "ghost", from: card, to: other, delayMs: 0, durationMs: 400 },
     { kind: "ghost", from: card, to: other, delayMs: 0, durationMs: 400, spin: true },
@@ -192,10 +200,14 @@ const CASES: { readonly [K in FxDomCue["kind"]]: readonly Extract<FxDomCue, { ki
   doctrine: (["land", "sea", "air", "space"] as const).map((doctrine) => ({ kind: "doctrine", doctrine, text: "Space Doctrine", tint: TINT, at: card, delayMs: 0, durationMs: 1100 })),
   wreck: [{ kind: "wreck", art: "data:,", at: card, breakMs: 210, turn: 24, delayMs: 0, durationMs: 1150 }],
   scorch: [{ kind: "scorch", at: card, delayMs: 0, durationMs: 885 }],
-  figure: FX_FIGURES.flatMap((figure) => [
-    { kind: "figure" as const, figure, at: card, tint: TINT, delayMs: 0, durationMs: 700 },
-    { kind: "figure" as const, figure, at: card, tint: TINT, delayMs: 0, durationMs: 700, side: "opponent" as const },
-  ]),
+  figure: [
+    ...FX_FIGURES.flatMap((figure) => [
+      { kind: "figure" as const, figure, at: card, tint: TINT, delayMs: 0, durationMs: 700 },
+      { kind: "figure" as const, figure, at: card, tint: TINT, delayMs: 0, durationMs: 700, side: "opponent" as const },
+    ]),
+    // The figures a card's recipe draws over the whole board (CN Flea Market's lanterns, the dusk of a starfield).
+    ...BOARD_FIGURES.map((figure) => ({ kind: "figure" as const, figure, at: board, tint: TINT, delayMs: 0, durationMs: 700 })),
+  ],
 };
 
 const fx = parseSheet(readSheet("src/fx/fx.css"));
@@ -224,7 +236,8 @@ function layersOf(cue: FxDomCue, sheet: Sheet = fx): LayerPart[] {
   dom.className = "fx-dom";
   layer.appendChild(dom);
   document.body.appendChild(layer);
-  const effect = mountDomEffect(dom, cue, cue.kind === "walls" ? { at: BOARD } : BOXES);
+  // A cue on the board lands on the board's box, every other on a card's.
+  const effect = mountDomEffect(dom, cue, "at" in cue && cue.at === board ? { ...BOXES, at: BOARD } : BOXES);
   if (effect === null) throw new Error(`${cue.kind} mounted nothing`);
   const parts = estimateLayers(sheet, effect.el, VIEW);
   layer.remove();
@@ -277,15 +290,34 @@ describe("R4493000 R4493001 every DOM cue's layers on a phone (390x844 at 3x)", 
       if (!(table >= most - 1e-9 && table < most + 0.05)) wrong.push(`${label}: counted ${table.toFixed(3)}, estimated ${most.toFixed(3)}`);
     };
     for (const shape of SHAPES) held(`setPiece ${shape}`, FX_SET_PIECE_LAYER_SCREENS[shape], CASES.setPiece.filter((cue) => cue.shape === shape));
-    for (const kind of Object.keys(FX_CUE_LAYER_SCREENS) as (keyof typeof FX_CUE_LAYER_SCREENS)[]) held(kind, FX_CUE_LAYER_SCREENS[kind], CASES[kind]);
+    // A kind the board table counts there is held to its board cases there and to the rest elsewhere; every case counts as the director counts it.
+    for (const kind of Object.keys(FX_CUE_LAYER_SCREENS) as (keyof typeof FX_CUE_LAYER_SCREENS)[]) {
+      const cases: readonly FxDomCue[] = CASES[kind];
+      const onBoard = (cue: FxDomCue): boolean => "at" in cue && cue.at === board;
+      const there = FX_BOARD_CUE_LAYER_SCREENS[kind];
+      if (there === undefined) {
+        held(kind, FX_CUE_LAYER_SCREENS[kind], cases);
+        continue;
+      }
+      held(`${kind} on the board`, there, cases.filter(onBoard));
+      held(kind, FX_CUE_LAYER_SCREENS[kind], cases.filter((cue) => !onBoard(cue)));
+      for (const cue of cases) expect(cueScreens(cue), nameOf(cue)).toBe(onBoard(cue) ? there : FX_CUE_LAYER_SCREENS[kind]);
+    }
+    // Only a kind that lands on the board has a board count.
+    for (const kind of Object.keys(FX_BOARD_CUE_LAYER_SCREENS) as (keyof typeof FX_CUE_LAYER_SCREENS)[]) {
+      expect(CASES[kind].some((cue) => "at" in cue && cue.at === board), kind).toBe(true);
+    }
     expect(wrong).toEqual([]);
   });
 
   it("R4493001 a takeover the budget leaves artless and bare counts less, and the phone's merged stage draws FX_PHONE_STAGE_LAYERS pictures", () => {
     for (const look of LOOKS) {
-      const [artless, plain, phone] = takeoverCases(look).map((cue) => screensOf(estimate(cue)));
+      const [artless, plain, phone, dark] = takeoverCases(look).map((cue) => screensOf(estimate(cue)));
+      expect(dark!, look).toBeLessThan(artless!);
       expect(artless!, look).toBeLessThanOrEqual(plain! + 1e-9);
       expect(plain!, look).toBeLessThan(phone!);
+      // The darkest form draws no rays and no wave.
+      expect(estimate(takeoverCases(look)[3]!).map((part) => part.label).filter((label) => /fx-takeover-(rays|wave)/.test(label)), look).toEqual([]);
     }
     const phone = takeoverCases("void")[2]!;
     expect(phone.stage?.slices).toHaveLength(FX_PHONE_STAGE_LAYERS);

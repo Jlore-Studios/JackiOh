@@ -5,7 +5,8 @@
 // takeover's look may draw its art (takeoverArt.ts; R3399002: its parts or a drawing of its own, R3402000 a Core
 // Mythic's a scene of shapes); R3400001: a signature's figures (figures.ts), each a shape over its box, never a card.
 // R4493000: a phone's merged stage (layers.ts `mergeStage`) draws a merged slice's pictures as one element's backgrounds and
-// mounts no element for a plane left empty; R4493001: a takeover the layer budget made `artless` draws no art of its look.
+// mounts no element for a plane left empty; R4493001: a takeover the layer budget made `artless` draws no art of its look,
+// and one it left `sweepOnly` no rays and no wave.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { ART_PLANES } from "../cards/art/pictures.ts";
@@ -509,6 +510,8 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       const stage = cue.stage === null ? null : takeoverStage(doc, cue.stage);
 
       for (const part of TAKEOVER_PARTS) {
+        // R4493001: a takeover the budget left its dark and its sweep draws no rays and no wave.
+        if (cue.sweepOnly === true && (part === "rays" || part === "wave")) continue;
         const child = doc.createElement("div");
         child.className = `fx-takeover-${part}`;
         el.appendChild(child);

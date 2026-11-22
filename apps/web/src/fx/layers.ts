@@ -3,11 +3,13 @@
 // device's full pixel density; a phone's browser kills the tab past its memory, with no error to catch. So a phone's
 // takeover stage merges its slices into at most FX_PHONE_STAGE_LAYERS pictures (`mergeStage`, R4493000), and the director
 // holds what its mounted cues cover within FX_PHONE_LAYER_BUDGET_MB (`budgetTakeover`, R4493001), reducing a takeover's
-// optional parts in a fixed order (its slices merged, its art, its stage) and never a set piece's main beat (R3351000).
+// optional parts in a fixed order (its slices merged, its art, its stage, then its rays and wave, down to its dark and its
+// sweep) and never a set piece's main beat (R3351000).
 // The screens each cue covers are the tables below, at 390x844: `layerBudget.test.ts` estimates every cue from fx.css
 // and holds the tables to it, so a cue that grows fails there first. Presentation only (CLAUDE.md rule 7).
 
 import { ART_PLANES, type ArtPlane } from "../cards/art/pictures.ts";
+import { testid } from "../game/contract.ts";
 import { FX_BYTES_PER_MB, FX_LAYER_BYTES_PER_PX, FX_LOW_DEVICE_MEMORY_GB, FX_MOBILE_WIDTH, FX_PHONE_LAYER_BUDGET_MB, FX_PHONE_STAGE_LAYERS } from "./constants.ts";
 import type { FxDomCue, FxTakeoverCue, FxTakeoverSlice, FxTakeoverStage, SetPieceShape, TakeoverLook } from "./types.ts";
 
@@ -94,6 +96,8 @@ export const TAKEOVER_MERGED = 1;
 export const TAKEOVER_ARTLESS = 2;
 /** R4493001: no stage either: the dark, the sweep, the rays and the wave, as a takeover with no set piece plays (R3345000). */
 export const TAKEOVER_BARE = 3;
+/** R4493001: the dark and the sweep alone, no rays and no wave: the least a takeover mounts, a main beat still (R3351000). */
+export const TAKEOVER_DARK = 4;
 
 /** R4493001: `cue` at the form `level` names, each level dropping what the one before it kept. */
 export function takeoverForm(cue: FxTakeoverCue, level: number): FxTakeoverCue {
@@ -104,66 +108,71 @@ export function takeoverForm(cue: FxTakeoverCue, level: number): FxTakeoverCue {
     form = { ...rest, artless: true };
   }
   if (level >= TAKEOVER_BARE) form = { ...form, stage: null };
+  if (level >= TAKEOVER_DARK) form = { ...form, sweepOnly: true };
   return form;
 }
 
 /**
  * R4493001: the form of `cue` the device's budget holds while the mounted and coming DOM cues cover `held` screens: the
- * cue itself on a device with no budget; else the fullest form, from merged on a phone (full elsewhere) to artless, that
- * keeps `held` and it within the budget; failing every one, the bare form, which always mounts (a main beat, R3351000).
+ * cue itself on a device with no budget; else the fullest form, from merged on a phone (full elsewhere) to bare, that
+ * keeps `held` and it within the budget; failing every one, its dark and its sweep, which always mount (a main beat,
+ * R3351000).
  */
 export function budgetTakeover(cue: FxTakeoverCue, held: number, d: FxDevice): FxTakeoverCue {
   if (!hasLayerBudget(d)) return cue;
   const budget = layerBudgetScreens(d);
-  for (let level = isPhoneViewport(d) ? TAKEOVER_MERGED : TAKEOVER_FULL; level <= TAKEOVER_ARTLESS; level += 1) {
+  for (let level = isPhoneViewport(d) ? TAKEOVER_MERGED : TAKEOVER_FULL; level <= TAKEOVER_BARE; level += 1) {
     const form = takeoverForm(cue, level);
     if (held + cueScreens(form) <= budget) return form;
   }
-  return takeoverForm(cue, TAKEOVER_BARE);
+  return takeoverForm(cue, TAKEOVER_DARK);
 }
 
 /* The screens each cue covers at 390x844: its promoted elements' boxes at their largest scale, summed (layerBudget.test.ts). */
 
-/** R4493001: each takeover look's own layers: `bare`, the root, the dark, the sweep, the rays and the wave; `art`, its art layer's (`.takeover-art`), or 0. */
-export const FX_TAKEOVER_LOOK_SCREENS: Readonly<Record<TakeoverLook, { bare: number; art: number }>> = {
-  prismatic: { bare: 8.28, art: 0 },
-  void: { bare: 10.36, art: 0 },
-  pawn: { bare: 8.16, art: 1 },
-  genie: { bare: 8.06, art: 1 },
-  ai: { bare: 7.5, art: 0.46 },
-  rotunda: { bare: 8.16, art: 1 },
-  crystalForge: { bare: 8.16, art: 1 },
-  summit: { bare: 7.5, art: 0.13 },
-  canvas: { bare: 7.5, art: 0.09 },
-  napkin: { bare: 7.5, art: 0.37 },
-  abyss: { bare: 8.53, art: 0 },
-  freshJack: { bare: 7.87, art: 0 },
-  ikwzki: { bare: 8.06, art: 0 },
-  shockwave: { bare: 7.73, art: 0 },
-  alteran: { bare: 7.8, art: 0 },
-  edge: { bare: 7.8, art: 0 },
-  redNarcor: { bare: 8.16, art: 0 },
-  ascent: { bare: 7.5, art: 0.67 },
-  workshop: { bare: 7.5, art: 0.79 },
-  brush: { bare: 7.5, art: 0.43 },
-  mine: { bare: 7.5, art: 1.05 },
-  quarry: { bare: 7.5, art: 0.39 },
-  pavilion: { bare: 7.5, art: 1.11 },
-  virus: { bare: 7.5, art: 1.02 },
-  dojo: { bare: 7.5, art: 1.26 },
-  studyHall: { bare: 7.5, art: 0.28 },
-  caneRack: { bare: 7.5, art: 0.22 },
-  warRoom: { bare: 7.5, art: 1.64 },
-  fortress: { bare: 7.5, art: 0.1 },
-  zealot: { bare: 8.16, art: 1 },
-  portal: { bare: 8.16, art: 1 },
-  stair: { bare: 8.16, art: 1 },
-  vineyard: { bare: 8.16, art: 1 },
-  vault: { bare: 7.5, art: 0.79 },
-  rod: { bare: 7.5, art: 0.14 },
-  wire: { bare: 7.5, art: 1.31 },
-  whiteDwarf: { bare: 7.5, art: 2.19 },
-  forge: { bare: 7.5, art: 0.83 },
+/**
+ * R4493001: each takeover look's own layers: `sweep`, the root, the dark and the sweep (what its darkest form keeps);
+ * `burst`, its rays and its wave; `art`, its art layer's (`.takeover-art`), or 0.
+ */
+export const FX_TAKEOVER_LOOK_SCREENS: Readonly<Record<TakeoverLook, { sweep: number; burst: number; art: number }>> = {
+  prismatic: { sweep: 2.78, burst: 5.5, art: 0 },
+  void: { sweep: 4.86, burst: 5.5, art: 0 },
+  pawn: { sweep: 2.66, burst: 5.5, art: 1 },
+  genie: { sweep: 2.56, burst: 5.5, art: 1 },
+  ai: { sweep: 2, burst: 5.5, art: 0.46 },
+  rotunda: { sweep: 2.66, burst: 5.5, art: 1 },
+  crystalForge: { sweep: 2.66, burst: 5.5, art: 1 },
+  summit: { sweep: 2, burst: 5.5, art: 0.13 },
+  canvas: { sweep: 2, burst: 5.5, art: 0.09 },
+  napkin: { sweep: 2, burst: 5.5, art: 0.37 },
+  abyss: { sweep: 3.03, burst: 5.5, art: 0 },
+  freshJack: { sweep: 2.37, burst: 5.5, art: 0 },
+  ikwzki: { sweep: 2.56, burst: 5.5, art: 0 },
+  shockwave: { sweep: 2.23, burst: 5.5, art: 0 },
+  alteran: { sweep: 2.3, burst: 5.5, art: 0 },
+  edge: { sweep: 2.3, burst: 5.5, art: 0 },
+  redNarcor: { sweep: 2.66, burst: 5.5, art: 0 },
+  ascent: { sweep: 2, burst: 5.5, art: 0.67 },
+  workshop: { sweep: 2, burst: 5.5, art: 0.79 },
+  brush: { sweep: 2, burst: 5.5, art: 0.43 },
+  mine: { sweep: 2, burst: 5.5, art: 1.05 },
+  quarry: { sweep: 2, burst: 5.5, art: 0.39 },
+  pavilion: { sweep: 2, burst: 5.5, art: 1.11 },
+  virus: { sweep: 2, burst: 5.5, art: 1.02 },
+  dojo: { sweep: 2, burst: 5.5, art: 1.26 },
+  studyHall: { sweep: 2, burst: 5.5, art: 0.28 },
+  caneRack: { sweep: 2, burst: 5.5, art: 0.22 },
+  warRoom: { sweep: 2, burst: 5.5, art: 1.64 },
+  fortress: { sweep: 2, burst: 5.5, art: 0.1 },
+  zealot: { sweep: 2.66, burst: 5.5, art: 1 },
+  portal: { sweep: 2.66, burst: 5.5, art: 1 },
+  stair: { sweep: 2.66, burst: 5.5, art: 1 },
+  vineyard: { sweep: 2.66, burst: 5.5, art: 1 },
+  vault: { sweep: 2, burst: 5.5, art: 0.79 },
+  rod: { sweep: 2, burst: 5.5, art: 0.14 },
+  wire: { sweep: 2, burst: 5.5, art: 1.31 },
+  whiteDwarf: { sweep: 2, burst: 5.5, art: 2.19 },
+  forge: { sweep: 2, burst: 5.5, art: 0.83 },
 };
 
 /** R4493001: a takeover's picture over the dark (R3407000, `img.fx-takeover-art`): the window. */
@@ -189,7 +198,7 @@ export const FX_SET_PIECE_LAYER_SCREENS: Readonly<Record<SetPieceShape, number>>
   doom: 2.03,
 };
 
-/** R4493001: every other DOM cue's layers, its largest case's. */
+/** R4493001: every other DOM cue's layers, its largest case's on a card (or on the board, where it always lands there). */
 export const FX_CUE_LAYER_SCREENS: Readonly<Record<Exclude<FxDomCue["kind"], "takeover" | "setPiece">, number>> = {
   splat: 0.03,
   rays: 0.67,
@@ -221,6 +230,22 @@ export const FX_CUE_LAYER_SCREENS: Readonly<Record<Exclude<FxDomCue["kind"], "ta
   figure: 0.37,
 };
 
+/**
+ * R4493001: the layers of the cues that grow with the box they land on, landed on the whole board (`testid.board`): a fan
+ * (2.8 times the board's longer side, capped at 100vmax), a sheen across it and a figure over it. Every other anchor is a
+ * card's, a tile's, a hero's or a pile's, which FX_CUE_LAYER_SCREENS counts.
+ */
+export const FX_BOARD_CUE_LAYER_SCREENS: Readonly<Partial<Record<keyof typeof FX_CUE_LAYER_SCREENS, number>>> = {
+  rays: 2.82,
+  sheen: 1.14,
+  figure: 0.81,
+};
+
+/** Whether `cue` lands on the whole board. */
+function onBoard(cue: FxDomCue): boolean {
+  return "at" in cue && cue.at.kind === "testid" && cue.at.testid === testid.board;
+}
+
 /** R4493001: a takeover stage's layers: the stage, and each slice or picture at its largest scale. */
 function stageScreens(stage: FxTakeoverStage): number {
   const pictures =
@@ -239,7 +264,8 @@ export function cueScreens(cue: FxDomCue): number {
     case "takeover": {
       const look = FX_TAKEOVER_LOOK_SCREENS[cue.look];
       return (
-        look.bare +
+        look.sweep +
+        (cue.sweepOnly === true ? 0 : look.burst) +
         (cue.artless === true ? 0 : look.art) +
         (cue.art === undefined ? 0 : FX_TAKEOVER_PICTURE_SCREENS) +
         (cue.stage === null ? 0 : stageScreens(cue.stage))
@@ -248,6 +274,6 @@ export function cueScreens(cue: FxDomCue): number {
     case "setPiece":
       return FX_SET_PIECE_LAYER_SCREENS[cue.shape];
     default:
-      return FX_CUE_LAYER_SCREENS[cue.kind];
+      return (onBoard(cue) ? FX_BOARD_CUE_LAYER_SCREENS[cue.kind] : undefined) ?? FX_CUE_LAYER_SCREENS[cue.kind];
   }
 }

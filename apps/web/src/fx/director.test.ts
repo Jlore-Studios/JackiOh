@@ -23,7 +23,7 @@ import {
   FX_SHAKE_MAX_PX,
 } from "./constants.ts";
 import { capacityFor, createFxDirector, type FxDirector, type FxDirectorOptions } from "./director.ts";
-import { cueScreens, layerBudgetScreens, takeoverForm, TAKEOVER_ARTLESS, type FxDevice } from "./layers.ts";
+import { cueScreens, layerBudgetScreens, takeoverForm, TAKEOVER_ARTLESS, TAKEOVER_BARE, TAKEOVER_DARK, type FxDevice } from "./layers.ts";
 import { PARTICLE_PRESETS } from "./presets.ts";
 import { resetShedForTests } from "./shed.ts";
 import type { FxSurface } from "./surface.ts";
@@ -1289,6 +1289,36 @@ describe("R4493001 the director's layer budget", () => {
     later.director.play([takeover(), ...Array.from({ length: n }, () => crunch(TAKEOVER_MS + 100))]);
     later.pumpTo(T0 + 20);
     expect(slicesOf(later)).toBe(FX_PHONE_STAGE_LAYERS);
+  });
+
+  it("R4493001 a budget too full even for the stageless takeover leaves it its dark and its sweep, and the set pieces all mount", () => {
+    const budget = layerBudgetScreens(PHONE);
+    const n = Math.floor((budget - cueScreens(takeoverForm(takeover(), TAKEOVER_BARE))) / cueScreens(crunch(0))) + 1;
+    const h = harness({ device: () => PHONE });
+    h.director.play(Array.from({ length: n }, () => crunch(0)));
+    h.pumpTo(T0 + 20);
+    h.director.play([takeover()]);
+    h.pumpTo(T0 + 40);
+    const mounted = h.root.querySelector('[data-fx="takeover"]');
+    expect([...(mounted?.children ?? [])].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-sweep"]);
+    expect(h.root.querySelectorAll('[data-fx="setPiece"]')).toHaveLength(n);
+  });
+
+  it("R4493001 a takeover still to come counts at its dark and its sweep, and takes its own form when it fires", () => {
+    const h = harness({ device: () => PHONE });
+    const second = { ...takeover(), delayMs: 100 };
+    h.director.play([takeover(), second]);
+    h.pumpTo(T0 + 20);
+    // The first keeps its rays and wave beside the least the second will hold, though not its stage.
+    const [first] = h.root.querySelectorAll('[data-fx="takeover"]');
+    const own = (el: Element | undefined): string[] => [...(el?.children ?? [])].map((child) => child.className);
+    expect(own(first)).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+    expect(cueScreens(takeoverForm(takeover(), TAKEOVER_BARE)) + cueScreens(takeoverForm(second, TAKEOVER_DARK))).toBeLessThanOrEqual(layerBudgetScreens(PHONE));
+    h.pumpTo(T0 + 120);
+    // The second, beside the first as it mounted, has room for its dark and its sweep alone.
+    const both = h.root.querySelectorAll('[data-fx="takeover"]');
+    expect(both).toHaveLength(2);
+    expect(own(both[1])).toEqual(["fx-takeover-dark", "fx-takeover-sweep"]);
   });
 
   it("R4493001 a low-memory 1280x800 device keeps every slice", () => {

@@ -16,6 +16,7 @@ import {
   takeoverForm,
   TAKEOVER_ARTLESS,
   TAKEOVER_BARE,
+  TAKEOVER_DARK,
   TAKEOVER_FULL,
   TAKEOVER_MERGED,
   type FxDevice,
@@ -110,12 +111,13 @@ describe("R4493001 the layer budget", () => {
     expect(readDevice().memoryGb).toBeNull();
   });
 
-  it("R4493001 the budget reduces a takeover in order: merged, artless, bare", () => {
+  it("R4493001 the budget reduces a takeover in order: merged, artless, bare, its dark and its sweep", () => {
     const full = cue(voidStage(), "data:,");
     const budget = layerBudgetScreens(PHONE);
     const merged = takeoverForm(full, TAKEOVER_MERGED);
     const artless = takeoverForm(full, TAKEOVER_ARTLESS);
     const bare = takeoverForm(full, TAKEOVER_BARE);
+    const dark = takeoverForm(full, TAKEOVER_DARK);
     expect(takeoverForm(full, TAKEOVER_FULL)).toBe(full);
     expect(merged.stage?.slices).toHaveLength(FX_PHONE_STAGE_LAYERS);
     expect(merged.art).toBe("data:,");
@@ -124,22 +126,31 @@ describe("R4493001 the layer budget", () => {
     expect(artless.artless).toBe(true);
     expect(bare.stage).toBeNull();
     expect(bare.artless).toBe(true);
+    expect(bare.sweepOnly).toBeUndefined();
+    expect(dark.stage).toBeNull();
+    expect(dark.artless).toBe(true);
+    expect(dark.sweepOnly).toBe(true);
     // Each form holds less than the one before it.
     expect(cueScreens(merged)).toBeLessThan(cueScreens(full));
     expect(cueScreens(artless)).toBeLessThan(cueScreens(merged));
     expect(cueScreens(bare)).toBeLessThan(cueScreens(artless));
+    expect(cueScreens(dark)).toBeLessThan(cueScreens(bare));
     // A phone always merges; then each step goes only when what is held leaves no room for the one before it.
     expect(budgetTakeover(full, 0, PHONE)).toEqual(merged);
     expect(budgetTakeover(full, budget - cueScreens(merged), PHONE)).toEqual(merged);
     expect(budgetTakeover(full, budget - cueScreens(merged) + 0.01, PHONE)).toEqual(artless);
     expect(budgetTakeover(full, budget - cueScreens(artless), PHONE)).toEqual(artless);
     expect(budgetTakeover(full, budget - cueScreens(artless) + 0.01, PHONE)).toEqual(bare);
-    // Never less than bare: the takeover's dark, sweep, rays and wave always mount, however full the budget is.
+    expect(budgetTakeover(full, budget - cueScreens(bare), PHONE)).toEqual(bare);
+    expect(budgetTakeover(full, budget - cueScreens(bare) + 0.01, PHONE)).toEqual(dark);
+    // Never less than its dark and its sweep: the takeover always mounts, however full the budget is.
     const over = budgetTakeover(full, budget * 10, PHONE);
-    expect(over).toEqual(bare);
+    expect(over).toEqual(dark);
     expect(over.kind).toBe("takeover");
-    // A takeover with no set piece has no stage to merge or drop: only its art goes.
-    expect(budgetTakeover(cue(null, "data:,"), budget, PHONE)).toEqual(takeoverForm(cue(null, "data:,"), TAKEOVER_ARTLESS));
+    // A takeover with no set piece has no stage to merge or drop: its art goes, then its rays and wave.
+    const plain = cue(null, "data:,");
+    expect(budgetTakeover(plain, budget - cueScreens(takeoverForm(plain, TAKEOVER_ARTLESS)), PHONE)).toEqual(takeoverForm(plain, TAKEOVER_ARTLESS));
+    expect(budgetTakeover(plain, budget, PHONE)).toEqual(takeoverForm(plain, TAKEOVER_DARK));
   });
 
   it("R4493001 a low-memory desktop keeps every slice until the budget is passed", () => {

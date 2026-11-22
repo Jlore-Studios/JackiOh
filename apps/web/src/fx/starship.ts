@@ -726,7 +726,7 @@ function planDoctrine(event: Extract<GameEvent, { type: "cardPlayed" }>, view: P
   };
 }
 
-type StarshipEnv = Pick<FxPlanEnv, "intensity"> & Partial<Pick<FxPlanEnv, "bigMoments" | "compact" | "next">>;
+type StarshipEnv = Pick<FxPlanEnv, "intensity"> & Partial<Pick<FxPlanEnv, "bigMoments" | "compact" | "phone" | "next">>;
 
 /**
  * R2801000, R3334000–R3334003: the Starship's cues for a fuse run, a launch, a launched Starship's
@@ -738,8 +738,10 @@ export function planStarship(entry: AnimationEntry, view: PlayerView, env: Stars
   const i = env.intensity;
   const D = entry.durationMs;
   if (!(i > 0) || !(D > 0)) return null;
-  const phone = env.compact === true;
-  const c: Ctx = { i, D, share: phone ? STARSHIP_CINEMATIC.phoneShare : 1, zoomMax: phone ? STARSHIP_CINEMATIC.phoneZoom : Number.POSITIVE_INFINITY };
+  const compact = env.compact === true;
+  // R4493000: a phone either way up (a compact layer is one) caps the cinematic's zoom; only a compact one throws fewer particles.
+  const phone = compact || env.phone === true;
+  const c: Ctx = { i, D, share: compact ? STARSHIP_CINEMATIC.phoneShare : 1, zoomMax: phone ? STARSHIP_CINEMATIC.phoneZoom : Number.POSITIVE_INFINITY };
   if (entry.fuse !== undefined) return planFuse(entry.fuse, entry, view, env.next, c);
   if (entry.launch !== undefined) return planLaunch(entry.launch, entry, view, env, c);
   const first = entry.events[0];

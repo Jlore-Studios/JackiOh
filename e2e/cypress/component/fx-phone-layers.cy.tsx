@@ -39,12 +39,16 @@ const FX_DOM = '[data-testid="fx-dom"]';
 const GAME = '[data-testid="game"]';
 /** The longest a scene is read for: past its set piece's hold and its tail. */
 const SAMPLE_MAX_MS = 8_000;
+/** How long Cypress waits on the frames' read: the whole sample and a margin for the last frame. */
+const READ_TIMEOUT_MS = SAMPLE_MAX_MS + 4_000;
+/** How many of the fullest frame's parts a scene's log names, largest first. */
+const PEAK_PARTS_SHOWN = 6;
 
-/** What the frames read of a scene: each part's largest cover in screens, the fullest frame's bytes and the most planes a stage drew. */
-type Layers = { parts: { label: string; screens: number }[]; peakBytes: number; planes: number };
+/** What the frames read of a scene: each part's largest cover in screens, the fullest frame's bytes and its parts, and the most planes a stage drew. */
+type Layers = { parts: { label: string; screens: number }[]; peakBytes: number; peakParts: { label: string; screens: number }[]; planes: number };
 
 /** A part's scale this frame: its transform's largest column times its `scale` property's largest factor. */
-function scaleOf(win: Window, style: CSSStyleDeclaration): number {
+function scaleOf(win: Cypress.AUTWindow, style: CSSStyleDeclaration): number {
   const matrix = style.transform === "none" || style.transform === "" ? new win.DOMMatrix() : new win.DOMMatrix(style.transform);
   const transform = Math.max(Math.hypot(matrix.a, matrix.b), Math.hypot(matrix.c, matrix.d));
   const own = style.scale === "none" || style.scale === "" ? [1] : style.scale.split(/\s+/).map((v) => Math.abs(Number(v)));
@@ -52,7 +56,7 @@ function scaleOf(win: Window, style: CSSStyleDeclaration): number {
 }
 
 /** A part's border box, CSS px: an element's offset box (an svg's client box), a pseudo-element's used size with its edges. */
-function areaOf(win: Window, el: Element, pseudo: string): number {
+function areaOf(win: Cypress.AUTWindow, el: Element, pseudo: string): number {
   if (pseudo === "") {
     if (el instanceof win.HTMLElement) return el.offsetWidth * el.offsetHeight;
     return el.clientWidth * el.clientHeight;
@@ -66,6 +70,7 @@ function areaOf(win: Window, el: Element, pseudo: string): number {
 /** Reads the effects' layers on every frame until the layer has drawn and emptied again, or SAMPLE_MAX_MS. */
 function measureLayers(): Cypress.Chainable<Layers> {
   return cy.window().then(
+    { timeout: READ_TIMEOUT_MS },
     (win) =>
       new Cypress.Promise<Layers>((resolve) => {
         const doc = win.document;
@@ -73,6 +78,7 @@ function measureLayers(): Cypress.Chainable<Layers> {
         const most = new Map<string, number>();
         const labels = new Map<Element, number>();
         let peak = 0;
+        let peakParts: { label: string; screens: number }[] = [];
         let planes = 0;
         let drawn = false;
         const start = win.performance.now();
@@ -90,6 +96,7 @@ function measureLayers(): Cypress.Chainable<Layers> {
           }
           for (const el of root?.querySelectorAll("*") ?? []) if (win.getComputedStyle(el).willChange !== "auto") add(el, "");
           let frame = 0;
+          const read: { label: string; screens: number }[] = [];
           for (const [key, { el, pseudo }] of parts) {
             const style = win.getComputedStyle(el, pseudo === "" ? null : pseudo);
             const scale = scaleOf(win, style);
@@ -97,13 +104,18 @@ function measureLayers(): Cypress.Chainable<Layers> {
             frame += covered;
             const label = `${el.localName}.${[...el.classList].join(".")}${pseudo} #${key}`;
             most.set(label, Math.max(most.get(label) ?? 0, covered));
+            read.push({ label, screens: covered });
           }
-          peak = Math.max(peak, frame * screen * DPR * DPR * FX_LAYER_BYTES_PER_PX);
+          const bytes = frame * screen * DPR * DPR * FX_LAYER_BYTES_PER_PX;
+          if (bytes > peak) {
+            peak = bytes;
+            peakParts = read;
+          }
           planes = Math.max(planes, root?.querySelectorAll(".fx-takeover-plane").length ?? 0);
           const busy = (root?.childElementCount ?? 0) > 0;
           drawn ||= busy;
           if ((drawn && !busy) || win.performance.now() - start >= SAMPLE_MAX_MS) {
-            resolve({ parts: [...most].map(([label, screens]) => ({ label, screens })), peakBytes: peak, planes });
+            resolve({ parts: [...most].map(([label, screens]) => ({ label, screens })), peakBytes: peak, peakParts, planes });
             return;
           }
           win.requestAnimationFrame(tick);
@@ -115,7 +127,12 @@ function measureLayers(): Cypress.Chainable<Layers> {
 
 /** A scene's layers held to the budget: every part within FX_LAYER_MAX_SCREENS, every frame within FX_PHONE_LAYER_BUDGET_MB. */
 function holdsLayers(label: string, layers: Layers): void {
-  const line = `${label}: ${(layers.peakBytes / FX_BYTES_PER_MB).toFixed(1)} MB at its fullest frame over ${String(layers.parts.length)} parts`;
+  const largest = [...layers.peakParts]
+    .sort((a, b) => b.screens - a.screens)
+    .slice(0, PEAK_PARTS_SHOWN)
+    .map((part) => `${part.label} ${part.screens.toFixed(2)}`)
+    .join(", ");
+  const line = `${label}: ${(layers.peakBytes / FX_BYTES_PER_MB).toFixed(1)} MB at its fullest frame over ${String(layers.parts.length)} parts (largest, in screens: ${largest})`;
   cy.log(line);
   Cypress.log({ name: "layers", message: line });
   expect(layers.parts.length, `${label}: parts read`).to.be.greaterThan(0);
