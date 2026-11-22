@@ -32,7 +32,8 @@ use jackioh_engine::PlayerId::{self, P1, P2};
 use jackioh_engine::duos::{DuosState, duos_fold, duos_fold_from, duos_hash};
 use jackioh_engine::wire::{DuosAction, DuosActionBody, DuosCreateOptions, DuosSeat};
 use jackioh_engine::{
-    Action, ActionBody, Aim, AimEnd, DECK_SIZE, GameState, PerPlayer, ReplayInput, Rng, hash_state,
+    Action, ActionBody, Aim, AimEnd, DECK_SIZE, GameState, PerPlayer, PlayerView, ReplayInput, Rng,
+    hash_state,
 };
 use jackioh_shared::bots::decide::BotChoice;
 use jackioh_shared::config::PersonaName;
@@ -44,7 +45,7 @@ use jackioh_shared::host::snapshot::snapshot;
 use jackioh_shared::host::timer::{TimerCommand, TimerKey};
 use jackioh_shared::host::{
     ActionBy, DecideRequest, DuelEvent, DuelHost, DuelOutput, DuelSetup, DuosHost, DuosHostEvent,
-    DuosHostOutput, DuosSetup, DuosTeamB, LetGo, LogOutcome, SERVER_NONCE_PREFIX,
+    DuosHostOutput, DuosSetup, DuosTeamB, LetGo, LogOutcome, SERVER_NONCE_PREFIX, SeatMessage,
 };
 
 const EPOCH: i64 = 1_700_000_000_000;
@@ -97,6 +98,7 @@ enum Invariant {
     RestartHolds,
     Panicked,
     Floor,
+    PushedViews,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -722,9 +724,29 @@ impl DuelRig {
     /// answers at once would run it.
     fn drive(&mut self, outputs: Vec<DuelOutput>) {
         let mut queue: VecDeque<DuelOutput> = outputs.into();
+        // The view last sent each home since the last `Pushed`: what the next one must hand over.
+        let mut sent: PerPlayer<Option<PlayerView>> = PerPlayer::new(None, None);
         while let Some(output) = queue.pop_front() {
             let mut next: Vec<DuelOutput> = Vec::new();
             match output {
+                DuelOutput::Send {
+                    home,
+                    message: SeatMessage::View { view, .. },
+                } => sent[home] = Some(*view),
+                DuelOutput::Pushed { views, .. } => {
+                    for home in [P1, P2] {
+                        let pushed = views[home].as_deref();
+                        if pushed != sent[home].as_ref() {
+                            self.bad_flag.get_or_insert_with(|| {
+                                violation(
+                                    Invariant::PushedViews,
+                                    format!("a push's view for {home:?} is not the one it sent"),
+                                )
+                            });
+                        }
+                        sent[home] = None;
+                    }
+                }
                 DuelOutput::Timer { command } => self.timers.apply(command),
                 DuelOutput::PersistClocks { clocks } => self.store.clocks = clocks,
                 DuelOutput::Decide { request } => self.decides.push(request),

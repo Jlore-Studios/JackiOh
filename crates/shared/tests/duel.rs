@@ -6,7 +6,8 @@
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::PlayerId::{self, P1, P2};
 use jackioh_engine::{
-    Action, ActionBody, Aim, AimEnd, DECK_SIZE, EmoteId, GameOverReason, GameState, PerPlayer, Rng, Winner,
+    Action, ActionBody, Aim, AimEnd, DECK_SIZE, EmoteId, GameOverReason, GameState, PerPlayer, PlayerView,
+    Rng, Winner,
 };
 use jackioh_shared::bots::decide::BotChoice;
 use jackioh_shared::bots::signals::{aim_lead_ms, idles_turn, rematch_plan};
@@ -88,6 +89,8 @@ struct Table {
     timers: Vec<(TimerKey, u32, i64)>,
     log: Vec<(i64, Action)>,
     sent: PerPlayer<Vec<SeatMessage>>,
+    /// The views each `Pushed` carried, in order.
+    pushed: Vec<PerPlayer<Option<Box<PlayerView>>>>,
     persisted: Vec<MatchClocks>,
     answers: Vec<(String, ActionAnswer)>,
     records: Vec<RecordRequest>,
@@ -123,6 +126,7 @@ impl Table {
             timers: Vec::new(),
             log: Vec::new(),
             sent: PerPlayer::new(Vec::new(), Vec::new()),
+            pushed: Vec::new(),
             persisted: Vec::new(),
             answers: Vec::new(),
             records: Vec::new(),
@@ -193,8 +197,8 @@ impl Table {
                 DuelOutput::Panicked { .. }
                 | DuelOutput::Applied { .. }
                 | DuelOutput::SeatsSwapped { .. }
-                | DuelOutput::Changed { .. }
-                | DuelOutput::Pushed { .. } => {}
+                | DuelOutput::Changed { .. } => {}
+                DuelOutput::Pushed { views, .. } => self.pushed.push(views),
             }
         }
     }
@@ -2614,5 +2618,155 @@ mod the_sequence {
                 .server_actions_for(ClockExpiry::Sequence { player: P2 })
                 .is_empty()
         );
+    }
+}
+
+mod the_kept_views {
+    use super::*;
+
+    fn begun(seed: &str, connect: &[PlayerId]) -> Table {
+        let mut table = Table::new(setup(opening(seed)));
+        for home in connect {
+            table.connect(*home);
+        }
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        table
+    }
+
+    fn end_turn(table: &mut Table, nonce: &str) {
+        let home = table.active();
+        let answer = table.act(home, nonce, ActionBody::EndTurn);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+    }
+
+    fn last_view(table: &Table, home: PlayerId) -> PlayerView {
+        table.sent[home]
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                SeatMessage::View { view, .. } => Some((**view).clone()),
+                _ => None,
+            })
+            .expect("a view was sent")
+    }
+
+    #[test]
+    fn pushed_hands_over_the_views_it_sent() {
+        let mut table = begun("kept-1", &[P1, P2]);
+        end_turn(&mut table, "end-1");
+        let views = table.pushed.last().expect("a change was pushed");
+        for home in [P1, P2] {
+            let pushed = views[home].as_ref().expect("a connected seat is pushed its view");
+            assert_eq!(**pushed, last_view(&table, home));
+            assert_eq!(**pushed, table.host.view_for(table.host.playing(home), table.now));
+        }
+    }
+
+    #[test]
+    fn an_unconnected_seat_is_pushed_no_view() {
+        let mut table = begun("kept-2", &[P1]);
+        end_turn(&mut table, "end-1");
+        let views = table.pushed.last().expect("a change was pushed");
+        assert!(views[P1].is_some());
+        assert!(views[P2].is_none());
+    }
+
+    #[test]
+    fn a_change_builds_each_seat_view_once() {
+        let mut table = begun("kept-3", &[P1, P2]);
+        let before = table.host.views_built();
+        end_turn(&mut table, "end-1");
+        assert_eq!(table.host.views_built() - before, 2);
+    }
+
+    #[test]
+    fn aim_and_hover_relays_build_no_view() {
+        let mut table = begun("kept-4", &[P1, P2]);
+        end_turn(&mut table, "end-1");
+        let before = table.host.views_built();
+        let aim = Aim {
+            source: AimEnd::Hero { player: P1 },
+            target: Some(AimEnd::Hero { player: P2 }),
+        };
+        table.feed(DuelEvent::Aim {
+            home: P1,
+            aim: Some(aim),
+        });
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        table.feed(DuelEvent::Aim { home: P1, aim: None });
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(0),
+        });
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: None,
+        });
+        assert_eq!(table.host.views_built(), before);
+        assert!(
+            table
+                .sent
+                .p2
+                .iter()
+                .any(|message| matches!(message, SeatMessage::Aim { .. })),
+            "the aim was relayed"
+        );
+        // The next change builds its views afresh.
+        end_turn(&mut table, "end-2");
+        assert_eq!(table.host.views_built(), before + 2);
+    }
+
+    #[test]
+    fn an_unconnected_receivers_relays_share_one_view() {
+        let mut table = begun("kept-5", &[P1]);
+        end_turn(&mut table, "end-1");
+        let aim = |target| DuelEvent::Aim {
+            home: P1,
+            aim: Some(Aim {
+                source: AimEnd::Hero { player: P1 },
+                target,
+            }),
+        };
+        let before = table.host.views_built();
+        table.feed(aim(Some(AimEnd::Hero { player: P2 })));
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        let after_first = table.host.views_built();
+        assert!(after_first - before <= 1);
+        table.feed(aim(None));
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        assert_eq!(table.host.views_built(), after_first);
+    }
+
+    #[test]
+    fn a_restored_checkpoint_equals_and_repushes_the_same_views() {
+        let mut table = begun("kept-6", &[P1, P2]);
+        end_turn(&mut table, "end-1");
+        let json = serde_json::to_value(&table.host).expect("the host serializes");
+        assert!(json.get("views").is_none(), "the cache is not in the checkpoint");
+        let mut resumed: DuelHost = serde_json::from_value(json).expect("the host reads back");
+        assert_eq!(resumed, table.host);
+        assert_eq!(resumed.views_built(), 0);
+        let event = DuelEvent::Action {
+            by: ActionBy::Home { home: table.active() },
+            nonce: "end-2".to_string(),
+            body: ActionBody::EndTurn,
+        };
+        let mut original = table.host.clone();
+        // The row is written, and the change is pushed.
+        let mut theirs = resumed.step(event.clone(), table.now);
+        let mut ours = original.step(event, table.now);
+        let written = DuelEvent::Logged {
+            outcome: LogOutcome::Written,
+        };
+        theirs.extend(resumed.step(written.clone(), table.now));
+        ours.extend(original.step(written, table.now));
+        assert_eq!(theirs, ours);
+        let pushed = theirs.iter().find_map(|output| match output {
+            DuelOutput::Pushed { views, .. } => Some(views),
+            _ => None,
+        });
+        assert!(pushed.is_some_and(|views| views.p1.is_some() && views.p2.is_some()));
     }
 }

@@ -34,7 +34,11 @@ Every Part B issue follows it, and review holds each one to it.
 3. **The caller owns the state.** A long-lived thing (a match, a practice session) is a serializable
    value the caller holds and hands back on every call, like `GameState`. A Roblox server can then
    checkpoint it to MemoryStore and resume it on another server (#2898, risk 4). This crate keeps
-   nothing between calls: no static, no cache.
+   nothing between calls: no static, no cache. (What a machine keeps inside its own value is another matter:
+   the duel machine keeps each seat's engine view until the game next changes, so a change builds each view
+   once and the prompt, aim and hover relays read it. That copy is skipped by serde and the exported types,
+   ignored by equality and empty after a restore. `Pushed` carries the views it sent, for a host in the same
+   process: it is not serialized, and a caller handed none builds its own.)
 4. **Everything impure comes in as an argument:** the time (`now_ms`, or the `now` of the first move,
    in epoch milliseconds), random seeds (drawn through the engine's `Rng`, the same 32-bit generator),
    the locale, and whatever the store read.

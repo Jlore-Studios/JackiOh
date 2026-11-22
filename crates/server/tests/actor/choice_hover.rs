@@ -224,6 +224,7 @@ mod r2739001_the_opponents_choice_hover_9_5 {
         let h = harness().await;
         h.open_the_prompt().await;
         let rows = match_actions(&h.app).await;
+        let built = h.actor.seat_views_built();
 
         h.hover(&h.p1, json!(1));
         h.idle().await;
@@ -238,6 +239,8 @@ mod r2739001_the_opponents_choice_hover_9_5 {
         assert_eq!(h.p1.of_type("view"), Vec::<Value>::new());
         assert_eq!(h.p2.of_type("view"), Vec::<Value>::new());
         assert_eq!(match_actions(&h.app).await, rows);
+        // Nothing changed the game since the prompt opened: the relay read the view p2 has.
+        assert_eq!(h.actor.seat_views_built(), built);
     }
 
     #[tokio::test(start_paused = true)]

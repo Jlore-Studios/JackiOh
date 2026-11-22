@@ -496,7 +496,8 @@ holds, with four seats:
 A friend watches at `/ws/watch`, authenticated as `/ws/match` is: `hello {matchId, friendId}` for a
 friend's live match, ranked or unranked, that has fewer than `SPECTATORS_PER_MATCH` watchers; no setting of the
 friend's refuses it, and unfriending or a block ends a watch already running (R2615000). The watcher gets `view {view, legal: []}`, the friend's seat's
-`view_for`, each `SPECTATE_DELAY_MS` after the state it shows; anything else is `error forbidden` and a
+`view_for`, each `SPECTATE_DELAY_MS` after the state it shows (the record keeps the view the seat was sent and
+encodes it when a watcher is first due it, so a match nobody watches encodes nothing); anything else is `error forbidden` and a
 close. It is sent `loadouts` as it attaches and a `cardLoadouts` after each delayed view that newly
 shows a dealt card, by the match sockets' rule (R1834003). Before its hello the socket waits behind the same `actor::guard::HelloGate` as `/ws/duos`: a
 frame that is not the hello is answered `malformed`, past `MALFORMED_FRAMES_PER_WINDOW` of them it is
