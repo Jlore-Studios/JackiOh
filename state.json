@@ -40979,7 +40979,9 @@
           "provider": "claude-6"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-22T19:38:23Z",
         "every": 5,
+        "findings": 0,
         "head": "60977538878c48fc0a4129d521099ec73561c776",
         "issue": 4493,
         "merged_at": "2026-11-22T19:15:37Z",
@@ -40992,12 +40994,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:2c290f3b-1795375667",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45060920603",
         "sha": "cd440dcb0ff9deabc49681ecea0107b33d2f91f3",
         "started_at": "2026-11-22T19:28:09Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: big set pieces fit a phone's memory, and a layer budget keeps every future animation inside it",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 456
