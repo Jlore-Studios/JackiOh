@@ -535,6 +535,16 @@ difference. The control's tap band (up to
 zone's placeholder (`.zone::before`) is sized to the box a field card takes there less a 2px inset, so
 the unit's picture (#3341: its art runs up to the frame) and the backrow's outline keep a card's shape.
 
+**A short phone held upright** (#4427) keeps the same layout. Measured in Cypress's Chrome, the upright board
+needs no scrolling down to a window 491px tall with nothing above it and 537px tall with the top strip's rail,
+and End turn stays on the screen down to 484px and 530px (in the practice frame, which hides what overflows,
+down to 484px). So End turn and the whole hand stay on the screen of an iPhone SE in Safari (375x548), a
+320x568 phone and a 360x560 Android in Chrome, with every field row at its 44px floor or above;
+`e2e/cypress/component/board-layout.cy.tsx` holds those three sizes (its `#2876` and `#4427` rows). The Duos
+board, the only one that draws its rail in the control bar on an upright phone, budgets its cards in
+`duos.css` and is not measured here. A phone shorter than these would need a peek of the hand, as a phone on
+its side has.
+
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
 (`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
