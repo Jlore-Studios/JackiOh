@@ -17098,15 +17098,20 @@
     "what": "plan #4466 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-22T06:14:45Z",
+    "at": "2026-11-22T06:24:20Z",
     "notes": [
-      "delivered suggest on claude-4 (run 44991651188): suggested",
-      "delivered suggest on claude-8 (run 44991563656): suggested",
-      "started review #4458 on claude-4 (run 44993024179)",
+      "#4466 needs a plan",
+      "#4468 needs a plan",
+      "#4469 needs a plan",
+      "delivered review #4458 on claude-4 (run 44993024179): reviewed",
+      "delivered plan #4427 on agy (run 44982640312): failed",
+      "started plan #4427 on agy (run 44993773547)",
+      "started plan #4468 on muse (run 44993824168)",
+      "started plan #4469 on claude-4 (run 44993871218)",
+      "started plan #4470 on claude-8 (run 44993922368)",
+      "started plan #4466 on claude-3 (run 44993976438)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "#4469: typed it Task",
-      "#4468: typed it Task"
+      "#4470: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17812,7 +17817,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T06:14:45Z",
+  "loop_tick": "2026-11-22T06:24:20Z",
   "machine_disk": {
     "issue": null,
     "reading": {
