@@ -16989,6 +16989,13 @@
     "4466": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T06:49:19Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule 3 (and 2): changes crates/ai/src/sweep.rs, crates/tools, the analysis loader and the spec, which must agree on a new `face` field in the sweep's JSON lines; torn, so hard."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
