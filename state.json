@@ -16490,13 +16490,13 @@
     "what": "plan #4510 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-22T23:19:41Z",
+    "at": "2026-11-22T23:27:55Z",
     "notes": [
-      "delivered build #4512 on muse (run 45078727153): built",
-      "started review #4528 on muse (run 45082831483)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
+      "#4510 needs a plan",
+      "delivered plan #4508 on claude-4 (run 45080638831): planned",
+      "started build #4508 on claude-4 (run 45083522837)",
+      "started plan #4510 on claude-6 (run 45083563867)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17202,7 +17202,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T23:19:41Z",
+  "loop_tick": "2026-11-22T23:27:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
