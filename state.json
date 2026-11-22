@@ -39507,7 +39507,8 @@
       "2026-11-22T06:46:53Z,claude-8,stream,call,44994756884,77,2026-11-22T09:10:00Z,,,allowed,85,,"
     ],
     "runs": [
-      "2026-11-22T07:17:07Z,44995819658,claude-1,sonnet+opus,review,4474,medium,approved,,19.2,49,14537,2094809,1.359,93,96,,,1.9,,none,,1"
+      "2026-11-22T07:17:07Z,44995819658,claude-1,sonnet+opus,review,4474,medium,approved,,19.2,49,14537,2094809,1.359,93,96,,,1.9,,none,,1",
+      "2026-11-22T07:23:46Z,44994756884,claude-8,sonnet+opus,build,4470,medium,built,,3.7,12,1971,222600,0.1273,76,77,,,14.9,claude-8,fresh,,1"
     ]
   },
   "version": 1
