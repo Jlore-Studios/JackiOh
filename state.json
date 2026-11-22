@@ -17639,13 +17639,14 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-1",
       "queued_at": "2026-11-22T08:17:42Z",
-      "run_id": "45002456664",
+      "run_id": "pending:ca0f8d8b-1795337982",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 445,
-      "started_at": "2026-11-22T08:21:46Z",
+      "started_at": "2026-11-22T09:00:02Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17788,9 +17789,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T08:44:38Z",
+    "at": "2026-11-22T09:00:02Z",
     "url": "",
-    "what": "review #4476 on claude-1"
+    "what": "spot-check #4481 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-22T08:51:06Z",
@@ -39328,7 +39329,15 @@
         "n": 445,
         "pr": 4481,
         "queued_at": "2026-11-22T08:59:54Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:ca0f8d8b-1795337982",
         "sha": "1a51cecb641054e727cef7b4254e6f550a999a51",
+        "started_at": "2026-11-22T09:00:02Z",
         "status": "queued",
         "title": "Patch: the shadow-ban sweep plays each swept card Radiant too",
         "tries": 0
