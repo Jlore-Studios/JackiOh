@@ -16034,6 +16034,13 @@
     "4448": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T04:06:13Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Rule 2: it changes the AI's evaluation weights in crates/ai/src (decisions), and the keep/revert call rests on two long fork screens."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
