@@ -17033,6 +17033,13 @@
     "4469": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T08:26:54Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Cards crate only: five card scripts, their kept scripts, a fragment and a ruling note. None of rule lines 1-5 holds: no engine, AI, migration, cross-crate design or ~40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
