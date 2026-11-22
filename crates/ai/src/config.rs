@@ -156,6 +156,10 @@ pub struct AiSearch {
     pub position_switches: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
+    /// R4447000: the most steps a finalist's replay on another determinization plays past the first step
+    /// that world does not offer (`search::fill_turn`), on a slice of `steps × (branching + 1)` nodes that
+    /// `decide` keeps back per world. 0 keeps the cut: the line ends its turn where it stands.
+    pub replay_fill_steps: i32,
     /// Answers tried for each auto-answered prompt before the answerer's best is committed
     /// (`simulate`'s, the opponent's reply's and `own_prompt_score`'s auto-answers, #891): each one
     /// node. A prompt with more answers tries this many drawn from all of them (#1382,
@@ -219,6 +223,10 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
     position_switches: 2,
     max_auto_answers: 8,
+    // #4447: 0. Its fork screen (3 against the control at 0, built from 3af8296300; 50 trunk deals on
+    // improve-dev) did not finish in the bot's run: stopped after 2 hours, nothing printed (training/
+    // improve.md, A screen).
+    replay_fill_steps: 0,
     max_auto_answer_options: 4,
     auto_answer_seed: "ai:answers",
     lethal_max_depth: 10,

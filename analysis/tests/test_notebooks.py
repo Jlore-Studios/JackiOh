@@ -27,9 +27,21 @@ INPUTS = ("JACKIOH_RECORDS", "JACKIOH_CATALOG", "JACKIOH_SWEEP", "JACKIOH_REPO",
 
 
 def sweep_line(
-    card, tier, flags=(), games=8, drawn=4, affordable=6, plays=3, errors=0, timeouts=0, delta=10.0, unswept=False
+    card,
+    tier,
+    flags=(),
+    games=8,
+    drawn=4,
+    affordable=6,
+    plays=3,
+    errors=0,
+    timeouts=0,
+    delta=10.0,
+    unswept=False,
+    face="base",
 ):
-    return {
+    """A pass-1 line; a Radiant one names its face (#4466), a base one writes none, as the sweep does."""
+    line = {
         "defId": card,
         "games": games,
         "drawnGames": drawn,
@@ -43,11 +55,15 @@ def sweep_line(
         "flags": list(flags),
         "unswept": unswept,
     }
+    if face != "base":
+        line["face"] = face
+    return line
 
 
 @pytest.fixture
 def flagged_sweep(tmp_path):
-    """Pass-1 lines with each flag, a card never affordable, a card the catalog lacks and a pass-2 line."""
+    """Pass-1 lines with each flag, a card never affordable, a card the catalog lacks, two Radiant lines (one
+    flagged where its base line is not, one clean where its base line is flagged) and a pass-2 line."""
     lines = [
         sweep_line("core-002", "easy", ["error"], errors=1),
         sweep_line("core-002", "hard", ["timeout"], timeouts=2),
@@ -58,6 +74,8 @@ def flagged_sweep(tmp_path):
         sweep_line("classicplus-005", "easy", drawn=0, affordable=0, plays=0, unswept=True),
         sweep_line("classicplus-005", "hard", drawn=0, affordable=0, plays=0, unswept=True),
         sweep_line("gone-001", "easy"),
+        sweep_line("core-011", "hard", ["timeout"], timeouts=1, face="radiant"),
+        sweep_line("core-002", "easy", face="radiant"),
         {"forced": "core-002", "tier": "easy", "games": 24, "cards": [], "suspects": []},
     ]
     path = tmp_path / "flagged.jsonl"
@@ -133,9 +151,12 @@ def test_the_sweep_notebook_runs_on_a_sweep_with_flags(monkeypatch, flagged_swee
     outputs = outputs_of(executed)
     assert not [output for output in outputs if output.output_type == "error"]
     text = "".join(output.text for output in outputs if output.output_type == "stream")
-    assert "9 lines: 5 cards at 2 tiers" in text
-    assert "5 flagged, 2 unswept" in text
+    assert "11 lines: 5 cards at 2 tiers" in text
+    assert "6 flagged, 2 unswept" in text
     assert "Never affordable at any swept tier (no evidence either way): Guy Att" in text
+    assert "faces: base 9, radiant 2" in text
+    assert "Tempo Timmy (hard): flagged on the Radiant face only" in text
+    assert "Speciesist (easy): flagged on the base face only" in text
 
 
 def test_the_win_rates_notebook_says_what_it_cannot_compare_with_one_patch_and_no_live_games(monkeypatch):

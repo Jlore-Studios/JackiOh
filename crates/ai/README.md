@@ -393,6 +393,18 @@ run on until `should_stop`. `SearchStats.replied` and `worldsScored` say how far
 `Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
 clock, or a wrap-up that never fires, a decision is node for node what it was.
 
+R4447000: `decide` replays each finalist's world-0 line on the other determinizations with
+`replay_line`, which says whether the line was cut there: whether it met a step that world does not
+offer (a card the line drew is another card there, since each world shuffles the seat's own library,
+or a random effect rolled otherwise), an answer to the seat's own prompt (#1636) aside.
+`SearchStats.replaysCut` counts those cuts over the worlds every finalist was scored on. With
+`AI_SEARCH.replay_fill_steps` above 0, a cut replay drops the rest of its line and plays that world's
+turn on greedily (`fill_turn`: up to that many steps, each the best by `static_score` of the first
+`branching` candidates that are not endTurn, taken only when it beats standing still, never one that
+leaves the seat's own prompt open), on a slice of `steps × (branching + 1)` nodes, which `decide` keeps
+back beside each other world's reserve. At 0, as shipped, a cut replay ends its turn where it stands
+and a decision is node for node what it was; `score_line` keeps the cut whatever the switch.
+
 ## Decks and the shadow ban (R184, R186, R390, R1370, R1390, R817000, R976000)
 
 `build_ai_deck(rng, size, &AiDeckOptions)` deals `size` distinct non-token ids from every set by
@@ -493,7 +505,9 @@ the same way, and the skill-to-Elo curve is measured with the arena.
 the config's other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps
 (R433, R417, R564, R678, R2702000), and `MatchConfig::fold_args` folds a record with all of them
 (#1697). Unset, a game is created, played and folded exactly as before. No gate sets it;
-`SweepOptions.setup` opts a sweep in, the same inputs in seat order in every game. `cargo jackioh
+`SweepOptions.setup` opts a sweep in, the same inputs in seat order in every game. `SweepOptions.face`
+(`SweepFace`, base when absent) picks the face the forced card is dealt on: the Radiant one adds a `deckMarks`
+entry for it on the AI's seat (R2702000), and `cargo jackioh sweep` plays both (#4466). `cargo jackioh
 run-sim` sets `deckMarks` for a dungeon run's fight (#3065).
 
 ## Development runs for the card statistics (R378)

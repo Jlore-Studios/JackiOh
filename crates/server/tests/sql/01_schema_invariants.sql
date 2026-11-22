@@ -1478,4 +1478,134 @@ begin
   raise notice 'OK (CHECK 25): % SECURITY DEFINER function(s) in public/app, none executable by a client role outside the allowlist', measured;
 end $$;
 
+\echo '=== CHECK 26 (#4468): the public players list walks player_stats_public_games_idx in order and sorts no row ==='
+-- GET /api/stats/players, open to anyone, reads player_stats_list_public (src/db/pg.rs): unbanned players'
+-- public rows, most games first (R654, R3911000), optionally matched on the username key (R1436). Over
+-- 2,000 analysed public rows of several KB of stats, some private and one banned, with sequential scans
+-- priced out, the default page and a search must walk player_stats_public_games_idx (migration 0098) and
+-- sort nothing; without 0098 the planner reads player_stats_pkey whole and sorts every public row. The
+-- probes are pg.rs's query with its binds as literals (no search, then a username key; `limit`
+-- PLAYER_STATS_PAGE_LIMIT, `offset` 0): an edit of pg.rs's `order by` edits this probe too. Rolled back, as CHECK 21.
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+  select gen_random_uuid(), format('check-26-%s@example.test', n), now() from generate_series(1, 2000) as n;
+insert into public.player_stats (profile_id, stats, is_private, updated_at)
+  select u.id,
+         jsonb_build_object('games', (row_number() over (order by u.id)) % 500, 'cards', repeat('x', 4000)),
+         (row_number() over (order by u.id)) % 50 = 0,
+         now() - make_interval(mins => (row_number() over (order by u.id))::integer)
+    from auth.users u
+   where u.email like 'check-26-%';
+update public.profiles set status = 'banned'
+ where id = (select id from auth.users where email = 'check-26-1@example.test');
+analyze public.player_stats;
+analyze public.profiles;
+do $$
+declare
+  probes    text[];
+  plan_text text;
+  line      text;
+begin
+  probes := array[array['the default page', 'null'], array['a search', '''player#12''']];
+  -- Local to this file's transaction, which the rollback below ends.
+  perform set_config('enable_seqscan', 'off', true);
+  for i in 1 .. array_length(probes, 1) loop
+    plan_text := '';
+    for line in execute format(
+      'explain select ps.profile_id, p.username_base, p.username_tag, ps.stats, ps.updated_at
+         from public.player_stats ps
+         join public.profiles p on p.id = ps.profile_id
+        where ps.is_private = false
+          and p.status <> ''banned''
+          and (%1$s::text is null
+               or position(%1$s::text in (p.username_key || coalesce(''#'' || p.username_tag::text, ''''))) > 0)
+        order by
+          case when (ps.stats->>''games'') ~ ''^[0-9]+$'' then (ps.stats->>''games'')::bigint else 0 end desc,
+          ps.updated_at desc,
+          ps.profile_id asc
+        limit 50::int offset 0::int', probes[i][2]) loop
+      plan_text := plan_text || line || E'\n';
+    end loop;
+    if plan_text ~ 'Seq Scan on player_stats\M' then
+      raise exception E'FAIL (CHECK 26): % of player_stats_list_public reads player_stats whole:\n%', probes[i][1], plan_text;
+    end if;
+    if plan_text !~ '\mplayer_stats_public_games_idx\M' or plan_text ~ '\mSort\M' then
+      raise exception E'FAIL (CHECK 26): % of player_stats_list_public sorts player_stats instead of walking player_stats_public_games_idx:\n%', probes[i][1], plan_text;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 26): the players list''s default page and its search walk player_stats_public_games_idx in order, sort no row and read no player_stats whole';
+end $$;
+rollback;
+
+\echo '=== CHECK 27 (#4468): the daily pay sums read one day of one account''s game rows, each through its own index ==='
+-- A paid game's payout (economy/rewards.rs) and the daily-cap reads (api/results.rs, duos/mod.rs) sum an
+-- account's `game` rows of one UTC day: game_jlore_totals over jlore_grants and fleet_get, which GET
+-- /api/economy also runs, over fleet_track_grants (src/economy/store.rs; R1483000). Over 20 accounts of
+-- 2,000 analysed rows each, spread over 400 days, with sequential scans priced out, both day bounds must
+-- be an Index Cond of jlore_grants_profile_reason_at_idx and fleet_track_grants_profile_reason_at_idx
+-- (migration 0098), never a Filter; without 0098 each sum reads the account's rows through (profile_id,
+-- id) (0045, 0086) and filters the day. The probes are store.rs's queries with their binds as literals.
+-- Rolled back, as CHECK 21.
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+  select gen_random_uuid(), format('check-27-%s@example.test', n), now() from generate_series(1, 20) as n;
+insert into public.jlore_grants (profile_id, delta, reason, ref, at)
+  select u.id, 10, case when n % 5 = 0 then 'quest' else 'game' end, format('check-27-%s', n),
+         now() - make_interval(hours => n * 5)
+    from auth.users u cross join generate_series(1, 2000) as n
+   where u.email like 'check-27-%';
+insert into public.fleet_track_grants (profile_id, xp, reason, ref, at)
+  select u.id, 10, 'game', format('check-27-%s', n), now() - make_interval(hours => n * 5)
+    from auth.users u cross join generate_series(1, 2000) as n
+   where u.email like 'check-27-%';
+analyze public.jlore_grants;
+analyze public.fleet_track_grants;
+do $$
+declare
+  day_ms    constant bigint := 24 * 3600 * 1000;
+  from_ms   constant bigint :=
+    (extract(epoch from date_trunc('day', clock_timestamp() at time zone 'utc')) * 1000)::bigint;
+  until_ms  constant bigint := from_ms + day_ms;
+  profile   uuid;
+  probes    text[];
+  plan_text text;
+  line      text;
+begin
+  select id into profile from auth.users where email = 'check-27-1@example.test';
+  probes := array[
+    array['jlore_grants_profile_reason_at_idx', 'game_jlore_totals', format(
+      'select coalesce(sum(delta), 0)::bigint,
+              coalesce(sum(delta) filter (where ref = %L::text), 0)::bigint
+         from public.jlore_grants
+        where profile_id = %L::uuid and reason = ''game''::text
+          and at >= to_timestamp(%s::double precision / 1000.0)
+          and at < to_timestamp(%s::double precision / 1000.0)', 'check-27-1', profile, from_ms, until_ms)],
+    array['fleet_track_grants_profile_reason_at_idx', 'fleet_get', format(
+      'select coalesce(sum(xp), 0)::bigint from public.fleet_track_grants
+        where profile_id = %L::uuid and reason = ''game''::text
+          and at >= to_timestamp(%s::double precision / 1000.0)
+          and at < to_timestamp(%s::double precision / 1000.0)', profile, from_ms, until_ms)]];
+  -- Local to this file's transaction, which the rollback below ends.
+  perform set_config('enable_seqscan', 'off', true);
+  for i in 1 .. array_length(probes, 1) loop
+    plan_text := '';
+    for line in execute 'explain ' || probes[i][3] loop
+      plan_text := plan_text || line || E'\n';
+    end loop;
+    if plan_text ~ 'Seq Scan on (jlore_grants|fleet_track_grants)\M' then
+      raise exception E'FAIL (CHECK 27): % reads its ledger whole:\n%', probes[i][2], plan_text;
+    end if;
+    if plan_text !~ ('\m' || probes[i][1] || '\M')
+       or plan_text !~ 'Index Cond: [^\n]*\mat >= '
+       or plan_text !~ 'Index Cond: [^\n]*\mat < '
+       or plan_text ~ 'Filter: [^\n]*\mat [<>]' then
+      raise exception E'FAIL (CHECK 27): % filters the account''s rows by day instead of reading the day through %:\n%',
+        probes[i][2], probes[i][1], plan_text;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 27): game_jlore_totals and fleet_get read one day of one account''s game rows through % and %, and filter no day',
+    'jlore_grants_profile_reason_at_idx', 'fleet_track_grants_profile_reason_at_idx';
+end $$;
+rollback;
+
 \echo '=== ALL CHECKS RAN ==='

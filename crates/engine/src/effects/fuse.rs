@@ -108,7 +108,8 @@ pub struct FuseCardsArgs {
 ///
 /// It fizzles silently and the card still resolves (§6.3): an unresolved `instanceIds` entry drops out,
 /// and the subsystem changes nothing for fewer than `FUSE_MIN_INGREDIENTS`, a target off the field or
-/// Immutable (R23), or a call that names neither a target nor a hand.
+/// Immutable (R23), or a call that names neither a target nor a hand. A Dormant card, named as an
+/// ingredient or a target, is passed by as a Transform passes it by (§6.1 Dormant, R1839000, R4454003).
 pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
     Effect::new("fuseCards", move |ctx| {
         // ME-FUSE-RANDOM alone: its ingredient is drawn inside `apply` from the match rng.
@@ -119,7 +120,9 @@ pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
         // Resolved ONCE: every fusion below reuses these, consumed or not.
         let mut ingredients: Vec<CardInstance> = Vec::new();
         for instance_id in args.instance_ids.iter().flatten() {
-            if let Some(found) = find_instance(ctx.sink.state, instance_id) {
+            if let Some(found) = find_instance(ctx.sink.state, instance_id)
+                && !crate::slumber::is_slumbering(found)
+            {
                 ingredients.push(found.clone());
             }
         }
@@ -135,7 +138,9 @@ pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
         };
         let mut targets: Vec<CardInstance> = Vec::new();
         for instance_id in &target_ids {
-            if let Some(found) = find_instance(ctx.sink.state, instance_id) {
+            if let Some(found) = find_instance(ctx.sink.state, instance_id)
+                && !crate::slumber::is_slumbering(found)
+            {
                 targets.push(found.clone());
             }
         }
