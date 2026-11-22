@@ -18868,6 +18868,14 @@
         "sha": "cc5685dde787e9f9f7c597476382f1461ffcf863",
         "tiers": {}
       }
+    },
+    "4501": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-22T16:41:54Z",
+      "issue": 4472,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
