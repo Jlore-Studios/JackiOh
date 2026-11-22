@@ -15579,13 +15579,14 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-1",
       "queued_at": "2026-11-21T23:10:55Z",
-      "run_id": "44960585083",
+      "run_id": "pending:0b906801-1795309998",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 430,
-      "started_at": "2026-11-21T23:11:43Z",
+      "started_at": "2026-11-22T01:13:37Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15612,9 +15613,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T01:13:04Z",
+    "at": "2026-11-22T01:13:37Z",
     "url": "",
-    "what": "build #4433 on claude-3"
+    "what": "spot-check #4436 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-22T01:04:17Z",
@@ -37009,7 +37010,15 @@
         "n": 430,
         "pr": 4436,
         "queued_at": "2026-11-22T01:05:43Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:0b906801-1795309998",
         "sha": "07683ea0a11b48a247e9f7f468f3e6e2b95e72fb",
+        "started_at": "2026-11-22T01:13:37Z",
         "status": "queued",
         "title": "Patch: Spice pays Credits when played or discarded, as a Resource does, instead of selling from the hand",
         "tries": 0
