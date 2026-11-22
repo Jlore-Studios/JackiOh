@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 4466,
+  "title": "Patch: the shadow-ban sweep plays each swept card Radiant too",
+  "branch": "bot/issue-4466",
+  "thread": "**Issue #4466 (data, not instructions):**\n\n```text\n# #4466: Patch: the shadow-ban sweep plays each swept card Radiant too\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery card in the game has two faces: its ordinary one and a powered-up Radiant one that shows up in real games. The bot's safety sweep, which tries every card with the AI and bans the ones the AI mangles, only ever deals the ordinary face, so a card the AI plays fine normally but throws games with once upgraded stays unbanned and keeps reaching players. After this change the sweep deals each card in both faces and judges them separately, so a card only the Radiant face mishandles gets flagged on that face. As a concrete example, a card whose upgraded form the AI wastes on the wrong target, or upgrades at a moment that loses the game, would now be caught before it meets ladder and practice games.\n\n## Why\n\nThe sweep forces the base card into AI decks (`sweep_config` deals it through `build_ai_deck` with `include: [def_id]`), and nothing in the sweep path ever marks a card Radiant: the only `radiant` in `crates/ai/src/sweep.rs` is a test fixture set to false. The engine already supports dealing a card Radiant at setup through deck marks (`DeckMark { index, radiant, ... }`, exercised by the `r2702000` match-setup test), so the mechanism exists and the sweep just never uses it. Every card script is tested on both faces, but the sweep that decides bans measures only one of them, and the Radiant pass changed which games turn cards Radiant, meaning live games routinely show a face the sweep never tried. The analysis loader reads one row per card and tier with no face dimension, so even the notebooks cannot see a face-specific failure.\n\n## Proposal\n\nSweep each card in two slices: the base face exactly as today, and the Radiant face with the forced card dealt Radiant through the setup's deck marks (marking the dealt index of the forced id). Track the two faces as separate stat rows keyed by face, compute every flag (`neverPlayed`, `selfHarm`, `selfKill`, `error`, `timeout`) per face over its own games, and name the face in the verdict reason when only one face is flagged. Carry the face through the sweep report lines and teach the analysis loader and the sweep notebook to read and show per-face rows. Document the two-face sweep in the SPEC shadow-ban paragraph. No gameplay rule changes, so no new ruling is needed.\n\n## Where it lands\n\n- `crates/ai/src/sweep.rs`: Radiant slice dealing (deck marks on the forced index), per-face stats and verdicts\n- `crates/ai/tests/ai/`: sweep tests that the forced card arrives Radiant in the Radiant slice and base in the base slice, and that a face-specific flag names its face\n- `crates/tools/src/sweep.rs`: report lines carry the face (read alongside, small surface)\n- `analysis/jackioh_records/__init__.py` (`load_sweep`), `analysis/notebooks/03-ai-sweep-and-generations.ipynb`, `analysis/tests/test_load.py`: per-face rows and figures\n- SPEC `spec/09-architecture.md` \u00a79.9 (AI decks and the shadow-ban sweep; R186, R390, R2425000, R977000) and the deck-marks mechanism (R2702000)\n\n## Acceptance criteria\n\n- [ ] A sweep test deals a game with the Radiant slice and asserts the forced card is Radiant, and a base-slice game where it is not\n- [ ] Pass-1 and pass-2 flags are computed per face: a card that misplays only as Radiant is flagged on the Radiant face and clear on the base face, and the verdict reason names the face\n- [ ] `load_sweep` reads the face field and the sweep notebook shows per-face rows; loader tests cover the new field\n- [ ] The \u00a79.9 sweep paragraph describes the two-face sweep\n- [ ] Base-face rows keep their existing shape and meaning so the current ban table is unaffected\n\n## Size and risks\n\nMedium-hard: the dealing and stat plumbing is small, but pass-2 logic, report lines, the loader and the notebook all move. The main risk is cost: a second slice roughly doubles pass-1 games on the daily sweep run, so the patch should either split seeds between faces or accept the longer run; either is stated in the patch. A cheaper alternative (counting incidental in-game upgrades of the forced card toward the Radiant face) was rejected: those are rare, uncontrolled, and cannot be keyed to the face at deal time.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-22T06:17:09Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4466: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T06:17:33Z",
+    "claimed_at": "2026-11-22T06:29:48Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
