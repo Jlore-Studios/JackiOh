@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4479,
+  "title": "Patch: the after-move notice and the hourly sweep never send the same 'your move' twice",
+  "branch": "bot/issue-4479",
+  "thread": "**Issue #4479 (data, not instructions):**\n\n```text\n# #4479: Patch: the after-move notice and the hourly sweep never send the same 'your move' twice\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA daily game tells you it is your move by email and by phone push. Today two parts of the server can each decide you are due at the same moment: the task that answers a move, and the sweep that runs every hour. When a move lands while a sweep is sending, you get the same \"Your move\" email twice and the same push on every device twice, and two of the day's shared emails are burned for one event. After this change you get one of each, however the two collide.\n\n## Why\n\n`decide_notify` (the pure decision in `crates/shared`) promises an email at most one per `DAILY_EMAIL_MIN_GAP_HOURS` (6) and a push only when something new waits since the last send, both read off the account's stored `last_email_at` / `last_push_at`. But the promise only holds if one decision runs at a time per account, and two callers run `notify_one` with no exclusion between them:\n\n- the after-move task (`NotifyQueue`, started by `after_move` from `daily/games.rs` and `daily/invites.rs`), and\n- the sweep (`sweep()` in `daily/notify.rs`, run by the in-process `run_sweeper` and the Worker's hourly `POST /daily-sweep`, which exclude each other via `DailyState::begin_sweep` but not the queue task).\n\nBoth read the same `last_*`, both decide due, both take from the shared `DAILY_PLAYER_EMAILS_PER_DAY` cap (the take is atomic, so the cap holds, but two takes go to one event), both send with fresh random Resend idempotency keys (`daily/{profile}/{new_uuid()}`, so Resend cannot dedupe), and both mark sent. The queue even dedupes within itself (`queued`: two moves before the task reaches a profile decide once), which shows the one-decision-per-wake-up intent; the sweep bypasses that set. The existing tests always drain the queue (`notifier_idle`) before sweeping, so the overlap is untested. The sweep's notify phase walks every holder sequentially with network sends in it, so the window is seconds wide whenever games are active.\n\n## Proposal\n\nGive `notify_one` one per-profile exclusion shared by both callers, held across decide, send and mark-sent (e.g. a per-profile async mutex in `DailyState`, beside `sweeping`). The second caller to arrive for an account waits, then re-reads fresh `last_*` and decides nothing is due, so exactly one email and one push go out. Keep `after_move` enqueue-and-return so a move's answer never waits on mail or push. No migration (in-memory guard is enough: the site runs one server instance), no spec change, no new ruling (an operational race, not a rules decision). Any new number (e.g. a lock wait bound, if one is added) goes in `crates/server/src/config.rs` per rule 9.\n\n## Where it lands\n\n- `crates/server/src/daily/notify.rs` (`notify_one`, `NotifyQueue`, `sweep`)\n- `crates/server/src/daily/mod.rs` (`DailyState`, beside `begin_sweep`)\n- `crates/server/tests/api/daily.rs` (forced-overlap test; existing cap/gap/release tests stay)\n- SPEC \u00a79.13 and \u00a79.8 (the \"at most one per `DAILY_EMAIL_MIN_GAP_HOURS`\" row); decision logic in `crates/shared/src/notify.rs` is untouched\n\n## Acceptance criteria\n\n- [ ] A new test forces the overlap (e.g. a paused fake mail/push endpoint, or the guard held open) with an after-move notice and a sweep deciding for the same profile concurrently, and counts exactly one email request and one push per device.\n- [ ] The sequential tests keep passing unchanged: queue and sweep share the daily cap, the gap holds, a refused email gives its cap place back.\n- [ ] A move's HTTP answer still returns before any mail/push send (enqueue-and-return preserved; the test asserts on ordering or timing).\n- [ ] The exclusion is per profile: a stalled send for one account never delays another's (test with two profiles, one stalled).\n- [ ] `cargo test -p jackioh-server`, `cargo fmt --check`, and `cargo clippy -p jackioh-server --all-targets -- -D warnings` are green.\n\n## Size and risks\n\nSize: medium, a day or two: one guard plus tests. Main risk is holding exclusion across network I/O; it is per profile and both paths already send sequentially per profile today, so worst case matches today's latency. Alternative rejected: routing the sweep's notices through `NotifyQueue` and waiting for idle \u2014 it would tangle the `/daily-sweep` handler's `Swept` counts and put network sends on the cron's critical path. Alternative rejected: a Postgres advisory lock \u2014 heavier and needs lock-semantics tests, for a server that runs as one instance.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-22T16:07:06Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4479: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T16:07:31Z",
+    "claimed_at": "2026-11-22T16:11:38Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4444 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
