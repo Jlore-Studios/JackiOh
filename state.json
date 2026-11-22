@@ -19083,8 +19083,16 @@
     "what": "review #4501 on gpt"
   },
   "last_sweep": {
-    "at": "2026-11-22T18:02:22Z",
-    "notes": [],
+    "at": "2026-11-22T18:09:13Z",
+    "notes": [
+      "delivered revise #4464 on muse (run 45045346324): built",
+      "delivered build #4472 on gpt (run 45045284261): built",
+      "delivered build #4444 on muse (run 45045130494): built",
+      "started review #4502 on muse (run 45053780097)",
+      "started review #4464 on muse (run 45053833507)",
+      "started review #4501 on gpt (run 45053882187)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -19789,7 +19797,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T18:02:22Z",
+  "loop_tick": "2026-11-22T18:09:13Z",
   "machine_disk": {
     "issue": null,
     "reading": {
