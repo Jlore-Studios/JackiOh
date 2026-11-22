@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 import { landingFanCardTestid, landingTestid } from "../auth/testids.ts";
+import { cardDetailChunk, resetCardDetailPrefetchForTests } from "../cards/inspect/cardDetailChunk.ts";
 import { LONG_PRESS_MS } from "../cards/inspect/constants.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../cards/settings.ts";
 import { INSPECT_DETAIL, INSPECT_HOVER } from "../cards/inspect/testids.ts";
@@ -117,6 +118,7 @@ beforeEach(() => {
   window.localStorage.clear();
   dropPlayerStatsCache();
   setReducedMotion(false);
+  resetCardDetailPrefetchForTests();
   serve("active");
   at("/");
 });
@@ -125,6 +127,7 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   setReducedMotion(false);
+  Reflect.deleteProperty(navigator, "connection");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -636,6 +639,25 @@ describe("R639 a fan card opens at full size", () => {
     expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
     fireEvent.keyDown(face, { key: "Enter" });
     expect(await screen.findByTestId(INSPECT_DETAIL, undefined, SLOW)).toBeInTheDocument();
+  });
+
+  it("R639 pointer, touch or focus intent on a fan card starts the dialog's chunk once, never while saving data", () => {
+    // A pass-through spy: stubbing the import would poison the chunk's cache for later tests.
+    const load = vi.spyOn(cardDetailChunk, "load");
+    render(<LandingRoute random={seeded(3)} />);
+    const face = screen.getByTestId(landingFanCardTestid(0));
+    fireEvent.pointerEnter(face);
+    fireEvent.focus(face);
+    fireEvent.touchStart(face);
+    expect(load).toHaveBeenCalledTimes(1);
+
+    resetCardDetailPrefetchForTests();
+    load.mockClear();
+    Object.defineProperty(navigator, "connection", { value: { saveData: true }, configurable: true });
+    fireEvent.pointerEnter(face);
+    fireEvent.focus(face);
+    fireEvent.touchStart(face);
+    expect(load).not.toHaveBeenCalled();
   });
 });
 

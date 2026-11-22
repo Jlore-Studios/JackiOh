@@ -94,8 +94,9 @@ import { NotificationToast } from "./inbox/NotificationToast.tsx";
 import { usePresenceHeartbeat } from "./together/presence.ts";
 import { watchCoopOf, watchFriendOf } from "./together/watchLink.ts";
 // Static, not lazy: the gate's own panels offer "Sign out", which must work synchronously from a
-// screen that failed to load anything else, so account.tsx is in the entry chunk either way.
-import AccountRoute, { signOut, signOutLabel, useSigningOut } from "./routes/account.tsx";
+// screen that failed to load anything else, so `auth/signOut.ts` is in the entry chunk on purpose
+// while the account screen itself rides `routeChunks.account`.
+import { signOut, signOutLabel, useSigningOut } from "./auth/signOut.ts";
 import CommandMenu from "./routes/CommandMenu.tsx";
 import { QueueFound } from "./routes/GameBanner.tsx";
 import { routeChunks, startScreen, watchRouteIntent } from "./routes/chunks.tsx";
@@ -137,6 +138,7 @@ const AlmanacRoute = routeChunks.almanac.Screen;
 const LeaderboardRoute = routeChunks.leaderboard.Screen;
 const CollectionRoute = routeChunks.collection.Screen;
 const ShopRoute = routeChunks.shop.Screen;
+const AccountRoute = routeChunks.account.Screen;
 const StatsRoute = routeChunks.stats.Screen;
 const TogetherRoute = routeChunks.together.Screen;
 const DailyRoute = routeChunks.daily.Screen;
@@ -190,7 +192,7 @@ function HomeLink({ testId, label }: { testId: string; label?: string }): ReactE
   );
 }
 
-/** "Sign out": `routes/account.tsx` clears the device, revokes the session and reloads `/`. */
+/** "Sign out": `auth/signOut.ts` clears the device, revokes the session and reloads `/`. */
 function SignOutButton(): ReactElement {
   const leaving = useSigningOut();
   return (

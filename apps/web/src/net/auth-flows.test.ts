@@ -7,7 +7,7 @@ import {
   AUTH_PROVIDER_TIMEOUT_SECONDS,
   AUTH_SIGN_OUT_WAIT_SECONDS,
 } from "@jackioh/server-config";
-import { signOut } from "../routes/account.tsx";
+import { signOut } from "../auth/signOut.ts";
 import {
   AUTH_MESSAGES,
   AUTH_UNCONFIGURED_MESSAGE,

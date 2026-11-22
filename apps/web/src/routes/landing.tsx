@@ -3,7 +3,7 @@
 // shell, Home, it draws the shell's status row under its corner (R3728002), and Friends is the shell's
 // navigation's (R3728000).
 
-import { Suspense, lazy, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactElement, type RefObject } from "react";
+import { Suspense, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactElement, type RefObject } from "react";
 
 import { ECONOMY_LIVE, GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 
@@ -11,6 +11,7 @@ import type { CardDef } from "@jackioh/shared";
 
 import { landingFanCardTestid, landingTestid } from "../auth/testids.ts";
 import { CardBack } from "../cards/CardBack.tsx";
+import { cardDetailChunk, prefetchCardDetail } from "../cards/inspect/cardDetailChunk.ts";
 import { CardFace } from "../cards/CardFace.tsx";
 import { useInspectTrigger } from "../cards/inspect/useInspectTrigger.tsx";
 import { faceModel } from "../cards/model.ts";
@@ -57,7 +58,7 @@ import "./top-bar.css";
 const DEV_ONLY = import.meta.env.MODE !== "production";
 
 /** R639: the card's detail dialog, loaded when a fan card is first opened, so the first screen stays light. */
-const CardDetail = lazy(() => import("../cards/inspect/CardDetail.tsx").then((module) => ({ default: module.CardDetail })));
+const CardDetailDialog = cardDetailChunk.Screen;
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
@@ -232,6 +233,16 @@ function LandingFanCard({
         tabIndex={0}
         aria-label={t("Read {name}", { name: readerName(def) })}
         {...inspect.handlers}
+        onPointerEnter={(event) => {
+          prefetchCardDetail();
+          inspect.handlers.onPointerEnter(event);
+        }}
+        onFocus={() => {
+          prefetchCardDetail();
+        }}
+        onTouchStart={() => {
+          prefetchCardDetail();
+        }}
         onClick={() => {
           onOpen(def);
         }}
@@ -695,7 +706,7 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
 
         {open === null ? null : (
           <Suspense fallback={null}>
-            <CardDetail
+            <CardDetailDialog
               def={open}
               onClose={() => {
                 setOpen(null);

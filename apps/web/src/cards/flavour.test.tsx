@@ -14,7 +14,8 @@ import { deferFlavourForTests, flavourNow, flavourFor, loadFlavour } from "./fla
 import { Flavour } from "./inspect/Flavour.tsx";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { InspectSheet } from "./inspect/InspectSheet.tsx";
-import { CardDetail, closeInspect } from "./inspect/index.ts";
+import { closeInspect } from "./inspect/index.ts";
+import { CardDetail } from "./inspect/CardDetail.tsx";
 import { INSPECT_ARTIST, INSPECT_DETAIL, INSPECT_FLAVOUR, INSPECT_HOVER, INSPECT_SHEET } from "./inspect/testids.ts";
 import { faceModel } from "./model.ts";
 
