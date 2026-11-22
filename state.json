@@ -17644,6 +17644,7 @@
       "run_id": "45002456664",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 445,
       "started_at": "2026-11-22T08:21:46Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -39307,9 +39308,33 @@
         "title": "Patch: the sound-effect recipes load when sound first needs them, not in the first page load",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "787a4851a7376d44fece5b7e83b594ef25e7ad2e",
+        "issue": 4466,
+        "merged_at": "2026-11-22T08:59:54Z",
+        "n": 445,
+        "pr": 4481,
+        "queued_at": "2026-11-22T08:59:54Z",
+        "sha": "1a51cecb641054e727cef7b4254e6f550a999a51",
+        "status": "queued",
+        "title": "Patch: the shadow-ban sweep plays each swept card Radiant too",
+        "tries": 0
       }
     ],
-    "count": 444
+    "count": 445
   },
   "statistics": {
     "at": "2026-11-22T08:51:45Z"
