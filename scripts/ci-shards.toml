@@ -56,8 +56,9 @@ unit = 8
 # WEIGHTS. A dispatch with `e2e: all` runs every spec in super.yml's eight shards instead.
 # With 2 shards they ran 8m 7s and 8m 57s (#3764), and 8m 13s and 7m 32s on bot/issue-3777 (#3803). At 4
 # (#3765), specs 46 and 47 each sat alone in a shard and ran 7.1-7.7 and 5.6-6.0 minutes, the slowest chain
-# through CI; #4092 moved both to the daily run. Now shardSpecs deals the six as 1: 19; 2: 51; 3: 01;
-# 4: 06, 10, 13, at most 99 s by WEIGHTS. A count of 3 would deal 10, 19 / 06, 51 / 01, 13 (at most 131 s)
+# through CI; #4092 moved both to the daily run. Specs 10 and 19 then reseed before each test, and 51 shoots
+# only with --expose shots=1 (#4485). Now shardSpecs deals the six as 1: 01; 2: 51; 3: 10, 13; 4: 06, 19,
+# at most 82 s by WEIGHTS (99 s before). A count of 3 would deal 01, 10 / 06, 51 / 13, 19 (at most 90 s)
 # and save a runner, but it needs bot/tests/test_ci_matrix.py's pin of the live count ([1, 2, 3, 4])
 # changed. The count may not exceed the 6 SMOKE specs (a shard with no specs fails: shard-specs.mjs exits
 # 1), and 8 is the most any count may be (matrix.py's MAX_SHARDS). Any count other than 4 also needs

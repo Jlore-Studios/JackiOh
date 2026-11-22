@@ -911,7 +911,7 @@ mod r783008_leaving_unrevealed {
     }
 
     /// Apply one effect for p1 and settle, as a resolving card's would.
-    fn cast_now_effect(state: &mut GameState, effect: Effect) {
+    fn cast_now_effect(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
         {
@@ -930,6 +930,43 @@ mod r783008_leaving_unrevealed {
             settle(&mut sink, SettleOptions::default());
         }
         state.rng_cursor = rng.cursor();
+        events
+    }
+
+    /// R4423000: destroyed while set by its Cloaked, the card died as the Field Trap it was set as
+    /// (R3777000), which its `destroyed` says and the rules keep, though its definition prints a Unit.
+    #[test]
+    fn r4423000_a_set_cloaked_unit_destroyed_unrevealed_died_as_a_field_trap() {
+        let mut state = playing("r4423000-destroy");
+        let unit = in_hand(&mut state, &cloaked_mourner().id, P1);
+        let set = cloak(&mut state, &unit.id, 2);
+        let events = cast_now_effect(
+            &mut state,
+            jackioh_engine::effects::destroy(json_as(
+                json!({ "target": { "of": "instance", "instanceId": set.id } }),
+            )),
+        );
+        let died = must(
+            events
+                .iter()
+                .find(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == set.id))
+                .cloned(),
+            "the set card's destroyed",
+        );
+        assert!(
+            matches!(
+                died,
+                GameEvent::Destroyed {
+                    died_as: Some(CardType::FieldTrap),
+                    ..
+                }
+            ),
+            "{died:?}"
+        );
+        assert!(!jackioh_engine::query::is_unit_death(
+            &state,
+            &died.as_rules_read()
+        ));
     }
 }
 

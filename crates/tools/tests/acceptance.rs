@@ -2608,6 +2608,30 @@ fn split_table_row(row: &str) -> Vec<&str> {
     cells
 }
 
+/// The e2e spec files in `e2e_dir` whose names start with `number-` (#4287): the number as
+/// written, or zero-padded to two digits.
+fn e2e_spec_files(e2e_dir: &Path, number: &str) -> Vec<PathBuf> {
+    let mut matching_files: Vec<PathBuf> = Vec::new();
+    if let Ok(entries) = fs::read_dir(e2e_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                let alt = number.parse::<u32>().ok().map(|n| format!("{n:02}-"));
+                if file_name.starts_with(&format!("{number}-"))
+                    || alt.as_deref().is_some_and(|prefix| file_name.starts_with(prefix))
+                {
+                    matching_files.push(path);
+                }
+            }
+        }
+    }
+    matching_files.sort();
+    matching_files
+}
+
 /// Find problems where a table row in `crates/tools/README.md` cites an e2e spec that does not exist
 /// or does not invoke the command (#4287).
 fn table_e2e_citation_problems(readme: &str, e2e_dir: &Path) -> Vec<String> {
@@ -2636,24 +2660,7 @@ fn table_e2e_citation_problems(readme: &str, e2e_dir: &Path) -> Vec<String> {
         let does_cell = cells[2..].join("|");
         let cited_specs = parse_e2e_spec_citations(&does_cell);
         for number in cited_specs {
-            let mut matching_files: Vec<PathBuf> = Vec::new();
-            if let Ok(entries) = fs::read_dir(e2e_dir) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if !path.is_file() {
-                        continue;
-                    }
-                    if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
-                        let alt = number.parse::<u32>().ok().map(|n| format!("{n:02}-"));
-                        if file_name.starts_with(&format!("{number}-"))
-                            || alt.as_deref().is_some_and(|prefix| file_name.starts_with(prefix))
-                        {
-                            matching_files.push(path);
-                        }
-                    }
-                }
-            }
-            matching_files.sort();
+            let matching_files = e2e_spec_files(e2e_dir, &number);
             if matching_files.is_empty() {
                 problems.push(format!(
                     "row `{cmd}` cites e2e spec {number}, but no spec file matching `{number}-*` exists in e2e/cypress/e2e"
@@ -2675,6 +2682,48 @@ fn table_e2e_citation_problems(readme: &str, e2e_dir: &Path) -> Vec<String> {
                     problems.push(format!(
                         "row `{cmd}` cites e2e spec {number}, but `{}` does not invoke the command or its task",
                         names.join(", ")
+                    ));
+                }
+            }
+        }
+    }
+    problems
+}
+
+/// Find cited e2e spec numbers whose files `scripts/ci-scope.sh` leaves `rust_tools_wasm` off
+/// for (#4449): renaming a cited spec, or deleting its command call, must still run
+/// `rust (test tools, wasm)`, whose README check reads it. Numbers with no files are the
+/// existing check's to report, so this one skips them.
+fn cited_specs_missing_tools_scope(readme: &str, e2e_dir: &Path) -> Vec<String> {
+    let mut problems = Vec::new();
+    let rows: Vec<&str> = readme
+        .lines()
+        .skip_while(|line| !line.starts_with("| Command |"))
+        .skip(2)
+        .take_while(|line| line.starts_with('|'))
+        .collect();
+
+    let mut seen: Vec<String> = Vec::new();
+    for row in rows {
+        let cells = split_table_row(row);
+        if cells.len() < 3 {
+            continue;
+        }
+        let does_cell = cells[2..].join("|");
+        for number in parse_e2e_spec_citations(&does_cell) {
+            if seen.contains(&number) {
+                continue;
+            }
+            seen.push(number.clone());
+            for path in e2e_spec_files(e2e_dir, &number) {
+                let rel = path
+                    .strip_prefix(repo())
+                    .unwrap_or(&path)
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                if !line_is(&scope_of(&[rel.as_str()]), "rust_tools_wasm") {
+                    problems.push(format!(
+                        "row cites e2e spec {number}, but scripts/ci-scope.sh leaves rust_tools_wasm off for {rel}: name its file in the crate map (#4449)"
                     ));
                 }
             }
@@ -2726,6 +2775,39 @@ fn readme_the_command_table_cites_existing_e2e_specs_that_use_the_command() {
     assert!(
         problems.is_empty(),
         "crates/tools/README.md's command table cites stale, missing or unused e2e specs (#4287): {problems:#?}"
+    );
+}
+
+#[test]
+fn readme_cited_e2e_specs_scope_the_tools_group() {
+    let e2e_dir = repo().join("e2e/cypress/e2e");
+    let readme = fs::read_to_string(repo().join("crates/tools/README.md")).expect("the tools README");
+    let problems = cited_specs_missing_tools_scope(&readme, &e2e_dir);
+    assert!(
+        problems.is_empty(),
+        "a cited e2e spec's file leaves rust_tools_wasm off in scripts/ci-scope.sh (#4449): {problems:#?}"
+    );
+
+    // The specs the README cites today stay scoped.
+    let cited = "\
+| Command | Module | Does |
+| --- | --- | --- |
+| `replay` | `replay.rs` | e2e specs 01 and 13 check the browser's hash with it. |
+";
+    let problems = cited_specs_missing_tools_scope(cited, &e2e_dir);
+    assert!(problems.is_empty(), "unexpected problems: {problems:#?}");
+
+    // Spec 02 exists (02-prompts.cy.ts) but stays unmapped, so citing it fails.
+    let unmapped = "\
+| Command | Module | Does |
+| --- | --- | --- |
+| `replay` | `replay.rs` | e2e spec 02 checks the browser's hash with it. |
+";
+    assert_eq!(
+        cited_specs_missing_tools_scope(unmapped, &e2e_dir),
+        [
+            "row cites e2e spec 02, but scripts/ci-scope.sh leaves rust_tools_wasm off for e2e/cypress/e2e/02-prompts.cy.ts: name its file in the crate map (#4449)"
+        ]
     );
 }
 

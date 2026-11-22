@@ -369,6 +369,25 @@ pub fn played_type_of(state: &GameState, event: &GameEvent) -> Option<CardType> 
     Some(crate::faces::card_type_of_face(state, def_id, radiant))
 }
 
+/// R4423000: whether a `destroyed` is a Unit's death, by what the card was on the field as it died: its
+/// face's type off the event's definition, unless the event's `diedAs` says otherwise (a card set by its
+/// Cloaked died as the Field Trap or Trap it was set as, R3777000, R783008; an Animated Field Spell or
+/// Trap killed in a unit zone died as a Unit, R383). Scripts typing a death read this, never
+/// `def_of(..).type_`, since the card has left the field by then; `false` for other events.
+pub fn is_unit_death(state: &GameState, event: &GameEvent) -> bool {
+    let GameEvent::Destroyed {
+        def_id,
+        radiant,
+        died_as,
+        ..
+    } = event
+    else {
+        return false;
+    };
+    died_as.unwrap_or_else(|| crate::faces::card_type_of_face(state, def_id, *radiant == Some(true)))
+        == CardType::Unit
+}
+
 /// R174, R2199007: the field's departures so far, a mark to ask `left_field_since_mark` with later
 /// (Training Grounds #31 Level Up!: a Unit that left and came back is a new arrival).
 pub fn field_exit_mark(state: &GameState) -> u32 {

@@ -1,7 +1,7 @@
 {
   "title": "Patch: Arcane Missiles never aims at a Unit immune to Spells, and Unlicensed Experimentation and an Embiggened Transmogulate leave Dormant cards alone",
   "sources": "#4424",
-  "notes": "R4424000: Arcane Missiles draws each missile from cards_in_scope, Unlicensed Experimentation matches no Dormant card in when or run, and an Embiggened Transmogulate leaves Dormant board cards out of its walk; the pre-fix scripts are kept through v0.6.9l (script_v0_6_9l; Arcane Missiles also script_v0_6_9k and script_v0_6_9j)",
+  "notes": "R4424000: Arcane Missiles draws each missile from cards_in_scope, Unlicensed Experimentation matches no Dormant card in when or run, and an Embiggened Transmogulate leaves Dormant board cards out of its walk; the pre-fix scripts are kept through v0.6.9m (script_v0_6_9l; Arcane Missiles also script_v0_6_9k and script_v0_6_9j)",
   "player": {
     "title": "Dormant cards and spell-immune Units keep what is theirs",
     "new": [],

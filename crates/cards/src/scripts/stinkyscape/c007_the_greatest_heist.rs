@@ -11,7 +11,10 @@
 //!
 //! Staged Quest (R1854000, next_stage). Cry: Discover Acclaimed/Jelly Bean pool (R1873001, R380).
 //! Stage 1: unitsMadeRadiant (R1854002); reward summons random Acclaimed Unit (R64, R1).
-//! Stage 2: unitsDied; reward rolls Anomaly Found! or Resource (R1873002, §2.4, R1840002, R1840000).
+//! Stage 2: unitsDied; reward rolls Anomaly Found! or Resource (R1873002, §2.4, R1840002, R1840000). A Unit
+//! by what the card was on the field as it died (R4423000): an Acclaimed Unit set face-down by its Cloaked and
+//! destroyed before it reveals is not counted; through v0.6.9k the goal read the card where it lay after the
+//! death, its printed card (`byPrint`, `script_v0_6_9i`, kept, R767000).
 //! Stage 3: cardsStolen; reward steal_mana_crystals past the cap (R1854003, R4331001), then the Heist,
 //! spent, goes to the graveyard (end_quest_line, R4331000). Through v0.6.9c the steal stopped at the
 //! cap, its reward read without "even past 4", and the Heist stayed (`script_v0_6_9c`, kept, R767000).
@@ -46,7 +49,12 @@ fn vaults_reward(kept: bool) -> String {
     if kept { STEAL.to_string() } else { format!("{STEAL}, even past {MAX_MANA}") }
 }
 
-fn stages(kept: bool) -> Vec<QuestStage> {
+/// `by_print`: Stage 2 reads a death off the dead card where it lies, as v0.6.9k and before (R767000).
+fn stages(kept: bool, by_print: bool) -> Vec<QuestStage> {
+    let mut deaths = json!({ "kind": "unitsDied", "count": DEATHS, "tag": Tag::Acclaimed });
+    if by_print {
+        deaths["byPrint"] = json!(true);
+    }
     json_as(json!([
         {
             "name": "Initiation",
@@ -56,8 +64,7 @@ fn stages(kept: bool) -> Vec<QuestStage> {
         },
         {
             "name": "Comradery",
-            "goals": [{ "id": "deaths", "text": "Have 2 Acclaimed Units you control die",
-                        "goal": { "kind": "unitsDied", "count": DEATHS, "tag": Tag::Acclaimed } }],
+            "goals": [{ "id": "deaths", "text": "Have 2 Acclaimed Units you control die", "goal": deaths }],
             "reward": { "id": "comradery",
                         "text": "At random, add an Anomaly Found! to your hand or gain a random Stinkyscape Resource" },
         },
@@ -141,9 +148,9 @@ fn add_the_pick(radiant: bool) -> Hook {
     })
 }
 
-fn heist(radiant: bool, kept: bool) -> Script {
+fn heist(radiant: bool, kept: bool, by_print: bool) -> Script {
     Script {
-        stages: stages(kept),
+        stages: stages(kept, by_print),
         triggers: vec![rewards(radiant, kept)],
         cry: Some(hook(|_ctx| vec![discover()])),
         resume: IndexMap::from([(PICKED, add_the_pick(radiant))]),
@@ -153,8 +160,17 @@ fn heist(radiant: bool, kept: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: heist(false, false),
-        radiant: heist(true, false),
+        base: heist(false, false, false),
+        radiant: heist(true, false, false),
+    }
+}
+
+/// R767000: the scripts v0.6.9k and before ran back to v0.6.9d, kept for their replays: Stage 2 read a death
+/// off the dead card where it lay (R4423000).
+pub fn script_v0_6_9i() -> CardScripts {
+    CardScripts {
+        base: heist(false, false, true),
+        radiant: heist(true, false, true),
     }
 }
 
@@ -162,8 +178,8 @@ pub fn script() -> CardScripts {
 /// thief's cap (R1854003) and the Heist stayed on the field (issue #4331).
 pub fn script_v0_6_9c() -> CardScripts {
     CardScripts {
-        base: heist(false, true),
-        radiant: heist(true, true),
+        base: heist(false, true, true),
+        radiant: heist(true, true, true),
     }
 }
 
@@ -351,6 +367,51 @@ mod tests {
         assert_eq!(stage(&s), Some(COMRADERY));
         s.play(HIT_JOB, json!({ "targets": pick::id(&acclaimed[1]) }));
         assert_eq!(stage(&s), Some(VAULTS));
+    }
+
+    const MAGIC_JAMMED: &str = "core-036"; // Magic Jammed: Destroy a backrow card.
+
+    /// The Heist at Stage 2, then two Tylannts (Acclaimed Units) given Cloaked, set face-down by it into
+    /// backrow lanes 2 and 3 (no Cry, R3806000) and destroyed there with Magic Jammed before they reveal.
+    fn set_and_jam(seed: &str) -> Scenario {
+        let mut s = holding(false, seed, &[TYLANNT, TYLANNT, TYLANNT, MAGIC_JAMMED, MAGIC_JAMMED]);
+        played(&mut s);
+        tylannt(&mut s, 1);
+        assert_eq!(stage(&s), Some(COMRADERY));
+        let held: Vec<String> = s
+            .hand(P1)
+            .into_iter()
+            .filter(|card| card.def_id == TYLANNT)
+            .map(|card| card.id)
+            .take(2)
+            .collect();
+        assert_eq!(held.len(), 2, "two Tylannts still in hand");
+        let mut set = Vec::new();
+        for (lane, id) in [2, 3].into_iter().zip(&held) {
+            crate::give_cloaked(&mut s, id);
+            set.push(crate::set_cloaked(&mut s, P1, id, lane));
+        }
+        for id in &set {
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(id) }));
+            assert_eq!(crate::died_as_of(&s, id), Some(CardType::FieldTrap));
+        }
+        s
+    }
+
+    /// R4423000: an Acclaimed Unit set face-down by its Cloaked died as a Field Trap, no Unit.
+    #[test]
+    fn r4423000_acclaimed_units_destroyed_while_set_by_cloaked_do_not_meet_stage_2() {
+        let s = set_and_jam("heist-stage-2");
+        assert_eq!(stage(&s), Some(COMRADERY));
+    }
+
+    /// R767000: through v0.6.9k Stage 2 read the dead card in its graveyard, a Unit there.
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_9i_counts_set_cloaked_deaths_toward_stage_2() {
+        crate::under_kept(ID, script_v0_6_9i(), || {
+            let s = set_and_jam("heist-stage-2");
+            assert_eq!(stage(&s), Some(VAULTS));
+        });
     }
 
     #[test]
