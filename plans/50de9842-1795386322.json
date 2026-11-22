@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4518,
+  "title": "Patch: joining a game checks the deck against the cards the server already holds, instead of copying all 978 cards through JSON first",
+  "branch": "bot/issue-4518",
+  "thread": "**Issue #4518 (data, not instructions):**\n\n```text\n# #4518: Patch: joining a game checks the deck against the cards the server already holds, instead of copying all 978 cards through JSON first\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe server checks that a player's deck is legal every time they join the queue, open or join a room, pick a deck in a lobby, or send, post or accept a daily challenge. To do that check, it first writes a full text copy of every card in the game (all 978) and reads it straight back, and only then looks at the deck itself. The check alone takes about a hundredth of a millisecond. The copying takes about 9 milliseconds on a fast machine, and the live server runs on a quarter of one processor, shared with every match being played. Once this is built, the server checks the deck against the cards it already holds in memory. Players get exactly the same answers, refusal messages included, a little sooner, and live matches stop waiting behind it.\n\n## Why\n\n- `crates/server/src/api/decks.rs:1166` `assert_legal` builds a `serde_json::Value` of the whole catalog (`to_json(&app.catalog.defs)?`, line 1178). It wraps that in a second `json!` value, parses it back into `validator::DeckInput` or `LoadoutInput` with `serde_json::from_value` (1188, 1194), turns the typed `LoadoutResult` back into JSON (1191, 1199), and then walks that JSON by key to rebuild the refusal (1202 to 1229).\n- The validator needs no owned copy. `check` in `crates/engine/src/validator.rs:229` takes references and reads only `catalog.cards` and `catalog.banned`. Only the public `validate_deck(&DeckInput)` and `validate_loadout(&LoadoutInput)` (185, 211) wrap an owned `CatalogSnapshot`, and they exist for the browser module's JSON entry points (`crates/wasm/core/src/lib.rs:761-766`).\n- The catalog is 978 cards, 575,855 bytes as minified JSON (`crates/cards/catalog.json`).\n- Measured with a scratch release build (thin LTO, as the workspace's release profile has it) on a 4-core CI runner, 50 calls per run, three runs:\n  - today's path: 8.70 to 8.77 ms per call\n  - a typed call that clones the catalog: 0.38 ms\n  - the engine's check alone: 0.012 ms\n- It runs on every `freeze_choice` (`decks.rs:1279`, `1296`). The callers are `api/queue.rs:333` (queue join), `actor/rooms.rs:396, 483` (room create and join), `lobby/mod.rs:803` (every lobby pick), `daily/invites.rs:200, 286, 419` (daily challenge, seek, accept) and `duos/rooms.rs:119` (co-op room).\n- It runs inline on a tokio worker, unlike the engine's other heavy calls (`engine::off_runtime` in `api/practice.rs:201` and `daily/games.rs:184`). The server is one `basic` container (`wrangler.jsonc:40-41`, `max_instances: 1`), so the sockets and match actors on that worker wait for it.\n\n## Proposal\n\n1. **Engine.** `check` takes the card list and the ban list as borrows. Add two public entry points that borrow them, for example `validate_deck_in(deck: &LoadoutDeck, cards: &CardDefs, banned: &[CardId], collection: &Collection) -> LoadoutResult` and `validate_loadout_in(decks: &[LoadoutDeck], ...)`; the names are the builder's choice. `validate_deck` and `validate_loadout` delegate to them unchanged, so the browser module and the bot pool (`crates/shared/src/bots/pool.rs`) behave as before.\n2. **Server.** `assert_legal` builds each `LoadoutDeck` as `deck_at` does today (`name: Some(deck.name.clone())`, the saved cards), turns the owned counts into a `Collection`, and calls the new entry points with `&app.catalog.defs`. It reads the typed result: `ok` decides; otherwise the message is the first error's and `details` is `serde_json::to_value(&result.errors)`. `LoadoutError` serializes to exactly the keys the JSON walk copies today (`rule`, `message`, and `deck` and `cardId` when present), so the 409 `loadout_invalid` body stays byte for byte the same.\n3. **Ban list.** Keep today's list: the catalog ids `Catalog::is_banned` marks, in catalog order, as line 1172 builds it. Do not switch to `Catalog::snapshot()`'s raw list, so the L6 messages cannot change.\n4. **Owned counts.** The store answers `i64` and the validator's `Collection` holds `i32`. Today a count above `i32::MAX` fails the JSON parse and answers 500. Decision: saturate (`i32::try_from(n).unwrap_or(i32::MAX)`), since a count that large already owns every copy L5 can ask for. Rejected alternative: keep the 500. No real account reaches this case.\n5. At 0.012 ms the check needs no `off_runtime`.\n\nRejected alternatives:\n- Build a typed `DeckInput` from `app.catalog.snapshot()`. It needs no engine change, but it still clones all 978 card definitions per call (0.38 ms measured).\n- Keep a second `CatalogSnapshot` on `App`. That holds a second copy of every card definition for the life of the process.\n\n## Where it lands\n\n- `crates/engine/src/validator.rs` (`check` and the two new entry points); `crates/engine/tests/rules/validator.rs`\n- `crates/server/src/api/decks.rs` (`assert_legal`, lines 1166 to 1239, which get shorter); `crates/server/src/api/catalog.rs` only if the ban list is computed once at boot\n- SPEC \u00a79.4 is unchanged: one validator, shared by client and server, still runs at queue time. No ruling, since no rules decision is made. If `docs/v0.3.0/SURFACE.md` \u00a76 or `crates/engine/README.md` lists the validator's entry points, the new ones join that list.\n\n## Acceptance criteria\n\n- [ ] `crates/server/src/api/decks.rs` no longer turns the catalog into a `serde_json::Value`: no `to_json(&app.catalog.defs)`, and no `serde_json::from_value` into `DeckInput` or `LoadoutInput`.\n- [ ] The engine has the borrowing entry points, and `validate_deck` and `validate_loadout` delegate to them. An engine test shows both forms answer the same `LoadoutResult` for a legal deck, a legal trio, each of L1 to L6 failing, a banned card and an unowned card.\n- [ ] A server test calls `freeze_choice` (or the queue route) with a legal deck, a legal trio, and decks and trios failing each rule, a banned and an unowned card among them. It holds each refusal's message and `details` (rules, messages, `deck`, `cardId`, their order) to today's answers.\n- [ ] The existing loadout tests pass unchanged: `crates/server/tests/api/decks.rs`, `tests/api/catalog.rs` and `tests/api/queue.rs`.\n- [ ] The pull request gives the time per call before and after, from a release build. This is a one-off measurement, not a checked-in timing test.\n- [ ] `cargo test -p jackioh-engine --features testkit --test 'rules*' validator`, `cargo test -p jackioh-server`, `cargo clippy -p jackioh-engine -p jackioh-server --all-targets -- -D warnings` and `cargo fmt --check` pass, and so does the web's WebAssembly size test (`apps/web/src/wasm/size.test.ts`).\n\n## Size and risks\n\nSmall: about 40 to 80 lines across two crates, with fewer lines in `decks.rs` than today. `difficulty:medium`: it adds to the engine's public validator surface but decides no rule.\n\nRisks:\n- A refusal's `details` could change shape. The equivalence test and the existing loadout tests guard against that.\n- The validator also ships in the browser module. Two thin delegating functions barely move its size, and the size test holds it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-22T22:16:42Z:\n\napprove\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4518: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it in a lane of `gpt`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T22:18:15Z",
+    "claimed_at": "2026-11-22T22:25:37Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
