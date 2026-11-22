@@ -163,6 +163,11 @@ pub struct SearchStats {
     /// the decision never reached step 6's finalists.
     #[serde(default)]
     pub worlds_scored: usize,
+    /// R4447000: the finalist replays on determinizations 1 and on, over the worlds every finalist was
+    /// scored on, that met a step their world does not offer; an answer to the seat's own prompt there
+    /// (#1636) is not one. 0 when the decision never reached its finalists.
+    #[serde(default)]
+    pub replays_cut: usize,
     /// Mean score of the chosen line across determinizations (0 for forced/mulligan/draw-offer).
     pub score: f64,
 }
