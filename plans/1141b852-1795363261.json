@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4449,
+  "title": "Patch: a pull request runs every test that reads a file it changes, the Worker's and the dev dashboard's tests included",
+  "branch": "bot/issue-4449",
+  "thread": "**Issue #4449 (data, not instructions):**\n\n```text\n# #4449: Patch: a pull request runs every test that reads a file it changes, the Worker's and the dev dashboard's tests included\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nTo save time, CI runs only the tests that a pull request's changes could affect, using a map from files to jobs. A test already checks that map against every file the web app's tests open. It does not check the files opened by the tests of the site's Cloudflare Worker or of the dev dashboard, though all three run in the same job. So today a pull request that edits the site's Cloudflare settings file skips the one test that reads that file: the test that makes sure nothing caches the game's API. The pull request goes green and lands, and only the next full run on main turns red. Once this is built, the map check covers all three apps, the missing line is added, and the next gap of this kind fails the pull request that opens it instead of main. One check in the tools' own suite, which reads two browser-test files, gets the same fix.\n\n## Why\n\n- `apps/edge/src/config.test.ts:120-123` (#4011) reads `infra/cloudflare.tf` and fails on any cache rule in it.\n- `scripts/ci-scope.sh` turns only `infra` on for `infra/*` (line 322) and leaves `web` off for it (line 380, `docs/* | training/* | reviews/* | analysis/* | infra/*) ;;`). Its header says `infra/, which nothing else reads (no web or e2e line turns on for it)` (line 82), and `apps/web/src/net/ci-scope.test.ts:585-588` holds infra files to `full` and `infra` alone.\n- The Worker's and the dashboard's tests run in `web (unit k/4)`: `vitest run --project web --project edge --project admin` (`.github/workflows/ci.yml:1065`, root `vitest.config.ts:10`). But the scan that holds `web` to every path its tests name reads only apps/web (`ci-scope.test.ts:813-816`: `apps/web/src`, `apps/web/scripts` and three apps/web configs). The script's header says it holds `web` to every repository path their sources name (`ci-scope.sh:177-178`).\n- So a pull request that adds a cache rule to `infra/cloudflare.tf` runs only the terraform steps, and the merge queue scopes it the same way. That is exactly the change #4011's test exists to refuse. The push to main that follows runs what the queue skipped (`ci-scope.sh:185-187`), and it goes red after the change has landed (CLAUDE.md rule 12).\n- The same hole exists on the Rust side. `crates/tools/tests/acceptance.rs:873` leaves acceptance.rs itself out of the scan of outside reads. Its `readme_the_command_table_cites_existing_e2e_specs_that_use_the_command` (lines 2720-2726, #4287) reads the e2e specs the tools README cites, 01 and 13 today. No line of the crate map (`ci-scope.sh:342-366`) maps `e2e/cypress/e2e/`, and the backstop (`ci-scope.sh:410-413`) fires only on *added* lines that call a reader. So renaming spec 13, or deleting its `replayHash` call, skips `rust (test tools, wasm)`.\n- Every other file the Worker's and the dashboard's tests read already turns `web` on: `wrangler.jsonc`, `apps/web/public/_headers`, `crates/server/src/app.rs` and their own sources. `infra/cloudflare.tf` is the only miss today; the point of the change is to catch the next one.\n\n## Proposal\n\n1. `apps/web/src/net/ci-scope.test.ts`: the `WEB` scan also reads `apps/edge` and `apps/admin`, meaning their `src/` and the tests and configs at each app's root (`apps/admin/headers.test.ts`, `build.test.ts`, `wrangler.test.ts`). `DATA_ONLY` grows only for a file that names a path as data. The wider scan fails today on `infra/cloudflare.tf`.\n2. `scripts/ci-scope.sh`: `infra/cloudflare.tf` turns `web` on, through one line before `infra/*) ;;` in the web case (it still runs `infra`). The header's lines 82 and 177-178 are corrected to say what is now true.\n3. `crates/tools/tests/acceptance.rs`: for each spec file the README check reads, it asks `scope_of` (line 631) and fails unless `rust_tools_wasm` is on for it. `ci-scope.sh`'s crate map turns `rust_tools_wasm` on for the spec files the README cites (`e2e/cypress/e2e/01-*` and `13-*`), so a new citation fails until the map names its file.\n\nRejected: mapping all of `e2e/cypress/e2e/*`, which would run the six tools and wasm jobs (`scripts/ci-shards.toml:38-40`) on every e2e spec edit. Also rejected: moving the README check into TypeScript, which moves code for no gain.\n\n## Where it lands\n\n- `apps/web/src/net/ci-scope.test.ts`: the `WEB` scan roots, and the self-check of what the scan finds.\n- `scripts/ci-scope.sh`: one web line, one crate-map line, the header.\n- `crates/tools/tests/acceptance.rs`: the README e2e check consults the scope.\n- No SPEC section or ruling: CI scoping is #751's, written in the script's header.\n\n## Acceptance criteria\n\n- [ ] With only step 1 applied, `pnpm --dir apps/web test src/net/ci-scope.test.ts` fails naming `infra/cloudflare.tf` and `apps/edge/src/config.test.ts`; with step 2 applied too, it passes.\n- [ ] `scripts/ci-scope.sh` on a diff of only `infra/cloudflare.tf` prints `web=true` and `infra=true`; on a diff of only `infra/versions.tf` it still prints `web=false`.\n- [ ] The scan's self-check expects at least one path that only an apps/edge or apps/admin test names, so a scan that stopped reading those apps cannot pass empty.\n- [ ] A diff of only `e2e/cypress/e2e/13-practice-vs-ai.cy.ts` prints `rust_tools_wasm=true`; a diff of only another e2e spec leaves it `false`.\n- [ ] A self-test shows the README check failing when a cited spec's file leaves `rust_tools_wasm` off.\n- [ ] `cargo test -p jackioh-tools --test acceptance`, `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings` and `pnpm exec eslint apps/web` are green.\n\n## Size and risks\n\nSmall: about 40 changed lines across three files, a few hours of work. The `changes` job runs main's copy of the script (`ci-scope.sh:30-34`), so the new lines scope only the pull requests after this one lands. Risk: the wider scan may find paths that a Worker or dashboard test names only as data. Each such file goes on `DATA_ONLY` with a reason, as the three already there have. A pull request that edits spec 01 or 13 runs six more Rust jobs, and those specs change rarely.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-22T03:55:17Z:\n\n@MaxGoetzmann look\n\n---\nComment by @MaxGoetzmann at 2026-11-22T15:59:36Z:\n\nApprove\n\n---\nComment by @MaxGoetzmann at 2026-11-22T15:59:50Z:\n\nBut abandon if runs start taking too long\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4449: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T16:00:00Z",
+    "claimed_at": "2026-11-22T16:01:19Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
