@@ -17669,6 +17669,13 @@
     "4479": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T16:38:42Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "single-crate server change (guard + tests), no engine rules, AI, migration, or cross-crate design"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
