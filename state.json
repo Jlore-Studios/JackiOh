@@ -16700,7 +16700,16 @@
       "feedback_since": "2026-11-22T22:49:03Z",
       "issue": 4511,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "085211bcf714aea0b5e548bd9ccc637d01e12c94",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
