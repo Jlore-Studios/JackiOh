@@ -16735,13 +16735,14 @@
     "what": "plan #4462 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-22T04:56:22Z",
+    "at": "2026-11-22T05:06:23Z",
     "notes": [
-      "delivered plan #4454 on claude-3 (run 44985202007): planned",
-      "started build #4454 on claude-3 (run 44987353538)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "#4462: typed it Task"
+      "#4462 needs a plan",
+      "delivered plan #4448 on claude-8 (run 44984316561): blocked",
+      "delivered build #4423 on claude-4 (run 44974743485): infra (its model job left no upload)",
+      "started build #4423 on claude-3 (run 44988143709)",
+      "started plan #4462 on muse (run 44988193993)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17447,7 +17448,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T04:56:22Z",
+  "loop_tick": "2026-11-22T05:06:23Z",
   "machine_disk": {
     "issue": null,
     "reading": {
