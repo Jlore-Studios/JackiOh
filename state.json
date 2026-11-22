@@ -17064,11 +17064,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-22T06:25:17Z",
+        "at": "2026-11-22T06:38:03Z",
         "difficulty": "medium",
-        "provider": "claude-4",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4458, a medium change"
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Not engine, AI, cross-crate, migration or big: one constant and one comment block in a single web test file."
       },
       "failures": 0,
       "forced": false,
