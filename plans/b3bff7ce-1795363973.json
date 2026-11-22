@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4472,
+  "title": "Patch: the perf check times the combat forecast that every host computes beside each view",
+  "branch": "bot/issue-4472",
+  "thread": "**Issue #4472 (data, not instructions):**\n\n```text\n# #4472: Patch: the perf check times the combat forecast that every host computes beside each view\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEach time the board changes, the game works out what every attack you could make would do: the preview a player sees before attacking. It does this for each player, on the server and, in practice games, in the player's browser. The repository's speed check times most of the engine's work but not this preview. A change that made it ten times slower would pass every check and show up only as a slower board. Once this is built, the daily speed check also times the preview and fails when it slows past its budget.\n\n## Why\n\n- **What it costs.** `combat_forecast` (`crates/engine/src/query.rs:1140`) runs `legal_actions`, then forecasts every listed attack. For each attack with a destroying hit on a board whose layers read the board, `forecast_attack`'s `settle_deaths` (`query.rs:1474`) clones the whole `GameState` (R4379000).\n- **Recent growth.** That clone landed on 2026-11-21 (#4379, commit 0cd6b9dfb3), the day after `perf.rs`'s budgets were measured (2026-11-20, `crates/tools/src/perf.rs:73`).\n- **Every host calls it with each view:**\n  - the server's match actor (`crates/server/src/actor/engine.rs:144`), sent as R3477000's `forecast` beside the view (`actor/protocol.rs:227`);\n  - daily games (`crates/server/src/daily/games.rs:603`);\n  - the practice host on every snapshot, in the browser's WebAssembly (`crates/shared/src/host/practice/host.rs:605`);\n  - the duel and Duos hosts (`crates/shared/src/host/duel.rs:538`, `duos.rs:810`, once per seat);\n  - the WebAssembly export (`crates/wasm/core/src/lib.rs:417`).\n- **What perf times today.** `cargo jackioh perf` times `reduce`, `view_for`, `legal_actions`, `hash_state`, the folds and their Duos versions, and `view_for`'s bytes (`MEASURES` in `crates/tools/tests/perf.rs`). It never times the forecast.\n- **Measured for this survey,** with a scratch program outside the repo (the engine and the cards, release build without the workspace's thin LTO) on 2,507 states of 60 random-policy games:\n  - the forecast cost 0.22 times `view_for` at the median and 0.61 times at the 95th percentile;\n  - on the 27 states listing 10 or more attacks, its median was 3.5 ms and its worst 20.9 ms.\n- **The existing check passes.** `target/release/jackioh perf` on the same 4-core machine took 21 s, and all ten measures were within their release budgets (`view_for` median 338.9 \u00b5s, p95 4,496 \u00b5s over its 78 states).\n\n## Proposal\n\n- **Two new measures** in `perf.rs`, timed in each pass beside `view_for`:\n  - `combat_forecast`: each seat on each 1v1 corpus state;\n  - `duos_combat_forecast`: each seat's duel on each Duos state, as `duos.rs` calls it.\n- **Budgets.** Each gets a median budget at both profiles (`COMBAT_FORECAST_US_BUDGET_TEST` and `_RELEASE`, and the Duos pair), measured the way `perf.rs:73-79` says: three runs of each profile, 5 times the largest median, rounded up to two significant figures. Each constant's doc comment gives its three medians.\n- **Reporting.** The table, `--json` and `MEASURES` in `tests/perf.rs` gain both rows.\n  - The daily `perf_holds_every_budget` judges them.\n  - `--smoke` times them in its one pass and judges only the work budget, as today.\n  - The table's header line also counts the forecast's listed attacks, so a corpus that lists none is visible.\n- **Docs.** The `perf` row of `crates/tools/README.md` names the new measures.\n\n## Where it lands\n\n- `crates/tools/src/perf.rs`, `crates/tools/tests/perf.rs` and `crates/tools/README.md`.\n- SPEC: R3100000 and R3477000 (the forecast, and the hosts sending it), \u00a79.9 (the perf gate's place beside the AI's).\n\n## Acceptance criteria\n\n- [ ] `jackioh perf` and `jackioh perf --json` print `combat_forecast` and `duos_combat_forecast` rows with median, p95 and budget, and `tests/perf.rs`'s `MEASURES` lists them.\n- [ ] `every_measure_over_its_budget_fails_naming_its_median_p95_and_budget` covers the two new measures: a median over budget fails, naming the constant.\n- [ ] A test shows the corpus holds at least one state whose forecast lists 10 or more attacks. If none does, the pull request adds one, for example from the AI gate's wide boards.\n- [ ] The four budget constants carry the three medians of each profile that set them, measured as `perf.rs:73-79` says.\n- [ ] `cargo test -p jackioh-tools --test perf` passes, and so does the daily `cargo test -p jackioh-tools --test perf perf_holds_every_budget -- --ignored`.\n\n## Size and risks\n\nSmall: about 80 lines and four constants in one module and its test, medium difficulty.\n\n- **Coarse guard.** At 5 times headroom, the budget catches a large slowdown, not a 20% drift. That is how every other measure here is held.\n- **Native only.** It times the native build, not the browser's WebAssembly, as the other measures do.\n- **Longer runs.** The daily perf test grows by about the forecast's share of `view_for`'s time, and the per-pull-request smoke grows by one more pass of it, a few seconds.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-22T16:03:06Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4472: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it in a lane of `gpt`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T16:03:26Z",
+    "claimed_at": "2026-11-22T16:13:12Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
