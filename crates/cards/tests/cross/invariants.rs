@@ -3335,3 +3335,96 @@ mod i16_every_card_s_record_agrees_with_the_pile_that_holds_it {
         );
     }
 }
+
+// I19 (§6.1 Dormant, R1839000; #4454): the real board sweeps exile Dormant cards lawfully (R3539002,
+// R3554002), so the monitor's `BOARD_SWEEPS` names each by the id its card runs as; a renamed id fails here.
+mod i19_the_board_sweeps_of_s_plus_78_to_81 {
+    use super::*;
+
+    const SLASH: &str = "stinkyscapeplus-078";
+    const GLIMPSE: &str = "stinkyscapeplus-079";
+    const VOYAGE: &str = "stinkyscapeplus-080";
+    const DOOMSAYER: &str = "stinkyscapeplus-081";
+    const ECHO: &str = "classic-057";
+    const STAND_IN: &str = "stand-in (1) 4/4 R12/12";
+
+    fn dormant(lane: i32) -> Value {
+        json!({ "def": STAND_IN, "lane": lane, "slumber": { "turns": 2 } })
+    }
+
+    fn library() -> Value {
+        json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA])
+    }
+
+    /// The step `act` takes on `s`, through the monitor as the fuzz runs it: no I19, and the Dormant
+    /// stand-in on `side`'s lane `lane` ends in its exile pile.
+    fn swept(mut s: Scenario, side: PlayerId, lane: i32, act: impl FnOnce(&mut Scenario)) {
+        for player in [PlayerId::P1, PlayerId::P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        let id = s.unit_at(side, lane).id;
+        let before = s.state().clone();
+        let mut monitor = create_invariant_monitor(&before);
+        monitor.before(&before, before.active, &ActionBody::EndTurn);
+        act(&mut s);
+        let found: Vec<String> = monitor
+            .after(s.last_events(), s.state())
+            .into_iter()
+            .filter(|finding| finding.starts_with("I19"))
+            .collect();
+        assert_eq!(found, no_violations());
+        assert!(
+            s.state().players[side].exile.iter().any(|card| card.id == id),
+            "the Dormant stand-in is exiled"
+        );
+    }
+
+    #[test]
+    fn i19_the_board_sweeps_of_s_plus_78_to_81_exile_dormant_cards_lawfully() {
+        // S+ #80 The Last Voyage, on its caster's own board.
+        let voyage = scenario(json!({
+            "p1": { "hand": [VOYAGE], "mana": 4, "field": [dormant(1)], "library": library() },
+            "p2": { "library": library() },
+        }));
+        swept(voyage, PlayerId::P1, 1, |s| {
+            s.play(VOYAGE, json!({}));
+        });
+        // S+ #79 A Glimpse into the Endless Sea, on the opponent's board.
+        let glimpse = scenario(json!({
+            "p1": { "hand": [GLIMPSE], "mana": 4, "library": library() },
+            "p2": { "field": [dormant(1)], "library": library() },
+        }));
+        swept(glimpse, PlayerId::P2, 1, |s| {
+            s.play(GLIMPSE, json!({}));
+        });
+        // S+ #78 Slashed Dream Cries in Red, the opponent's lane 3.
+        let slash = scenario(json!({
+            "p1": { "hand": [SLASH], "mana": 4, "library": library() },
+            "p2": { "field": [dormant(3)], "library": library() },
+        }));
+        swept(slash, PlayerId::P2, 3, |s| {
+            s.play(SLASH, json!({}));
+        });
+        // S+ #81 Doomsayer, at the start of its controller's turn.
+        let doomsayer = scenario(json!({
+            "active": "p2",
+            "p1": { "field": [{ "def": DOOMSAYER, "lane": 1 }, dormant(2)], "library": library() },
+            "p2": { "library": library() },
+        }));
+        swept(doomsayer, PlayerId::P1, 2, |s| {
+            s.end_turn();
+        });
+        // C #57 Echo running The Last Voyage's text, the last Spell played (R399, R546).
+        let mut echo = scenario(json!({
+            "p1": { "hand": [ECHO], "mana": 4, "field": [dormant(1)], "library": library() },
+            "p2": { "library": library() },
+        }));
+        echo.state_mut().last_spell = Some(jackioh_engine::state::PlayRecord {
+            def_id: VOYAGE.to_string(),
+            radiant: false,
+        });
+        swept(echo, PlayerId::P1, 1, |s| {
+            s.play(ECHO, json!({}));
+        });
+    }
+}
