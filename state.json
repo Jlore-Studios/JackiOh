@@ -15916,15 +15916,8 @@
       "verdict_rounds": 0
     },
     "4516": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45065365588",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-22T22:08:23Z",
-        "until": "2026-11-22T22:38:23Z"
-      },
       "handoff": {
         "at": "2026-11-22T22:07:06Z",
         "family": "claude",
@@ -15934,9 +15927,8 @@
         "reason": "planned on opus",
         "trail": "7-9]|[345])|^22:/' /t\u2026\n- Bash: {\"command\": \"end=$(( $(date +%s) + 540 )); while [ $(date +%s) -lt $end ] && ! grep -qE \\\"Initial test run succeeded|ERROR|^exit\\\" /tmp/mut-probe/settings-stryker3.log; do sleep 15; done; date +%H:%M\u2026\n- Bash: {\"command\": \"end=$(( $(date +%s) + 560 )); while [ $(date +%s) -lt $end ] && ! grep -qE \\\"Initial test run succeeded|ERROR|^exit\\\" /tmp/mut-probe/settings-stryker3.log; do sleep 15; done; date +%H:%M\u2026\n- Bash: {\"command\": \"end=$(( $(date +%s) + 570 )); while [ $(date +%s) -lt $end ] && ! grep -q \\\"^exit\\\" /tmp/mut-probe/settings-stryker3.log; do sleep 15; done; date +%H:%M; awk '/^21:(4[2-9]|5)|^22:/' /tmp\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4516; grep -n \\\"WEB_HEAP_MB\\\" scripts/mutants.sh; grep -n \\\"^## \\\\|^### \\\" apps/web/README.md | grep -i -n \\\"audio\\\\|sound\\\" | head\", \"description\": \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4516; grep -n -i \\\"audio\\\\|sfx\\\" apps/web/README.md | head -10\", \"description\": \"Find the audio part of the web README\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4516; sed -n 404,410p apps/web/README.md; grep -n \\\"tune them by ear\\\\|by ear\\\" docs/polish/2-sound.md | head -3\", \"description\": \"Read README sfx me\u2026\n- Bash: {\"command\": \"end=$(( $(date +%s) + 400 )); while [ $(date +%s) -lt $end ] && ! grep -q \\\"^exit\\\" /tmp/mut-probe/settings-stryker3.log; do sleep 15; done; tail -1 /tmp/mut-probe/settings-stryker3.log;\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4516/.bot-plan.md\", \"content\": \"## Goal\\n\\nOne pull request, `Closes #4516`, that gives every week-2968 survivor one of #3490's verdicts. Each of thes\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4516; wc -w .bot-plan.md; wc -c .bot-plan.md; tail -1 /tmp/mut-probe/settings-stryker3.log; awk '/^21:(4[2-9]|5)|^22:/' /tmp/mut-probe/settings-mem.l\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4516/.bot-plan.md\", \"old_string\": \"One pull request, `Closes #4516`, that gives every week-2968 survivor one of #3490's verdicts\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4516/.bot-plan.md\", \"old_string\": \"1. **Engine.** I measured this on main 35540a5 with mutants.toml's flags.\\n - `tests/rules.rs\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4516/.bot-plan.md\", \"old_string\": \"2. **Tools.** Replace \\\"The tools' are an estimate until a weekly run times them: about four \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4516; wc -w .bot-plan.md; tail -1 /tmp/mut-probe/settings-stryker3.log\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4516/.bot-plan.md\", \"old_string\": \" - **`introspection.ts`:**\\n - `const look = FLAVOR_LOOKS.Holy` at 66 and 83, and delete `INT\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4516/.bot-plan.md\", \"old_string\": \"- **Memory and time.** Two engine binaries at 6 GiB plus a build fit 16 GB. The leak grows ab\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4516; wc -w .bot-plan.md; until grep -q \\\"^exit\\\" /tmp/mut-probe/settings-stryker3.log; do sleep 10; done; tail -1 /tmp/mut-probe/settings-stryker3.l\u2026\n- Bash: {\"command\": \"pkill -f /tmp/mut-probe/sampler.sh; pkill -f \\\"settings-mem.log\\\" ; sleep 1; pgrep -fl sampler || true; rm -rf /tmp/settings-probe; cd /home/runner/work/_temp/work/item-4516 && git statu\u2026\n- tool error: Exit code 144\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4516; ls /tmp/settings-probe 2>&1 | head -2; ps -eo pid,args | grep -E \\\"sampler|while :\\\" | grep -v grep | head; git status --porcelain | head\", \"de\u2026\n- Bash: {\"command\": \"rm -rf /tmp/settings-probe && echo removed; cd /home/runner/work/_temp/work/item-4516 && git status --porcelain | wc -l\", \"description\": \"Remove the probe copy of the tree\"}\n- said: Now trim the last ~60 words.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4516/.bot-plan.md\", \"old_string\": \" - At 3072 MB the dry run still passed (14 min, its runner at 4.6 GB) and each runner stayed \u2026\n- tool error: <tool_use_error>String to replace not found in file. String: - At 3072 MB the dry run still passed (14 min, its runner at 4.6 GB) and each runner stayed under 3.8 GB, the four still 14.4 GB.</tool_us\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4516; grep -n \\\"3072 MB\\\" .bot-plan.md; grep -n \\\"^- \\\\`sh -n\\\\|^- \\\\`pnpm --dir apps/web typecheck\\\\|Copy the style\\\" .bot-plan.md\", \"description\": \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4516/.bot-plan.md\", \"old_string\": \"at 3072 MB the dry run still passed (14 min, its runner at 4.6 GB) and each runner stayed und\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4516; sed -n 95,120p .bot-plan.md\", \"description\": \"Review step 8 text for trimming\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4516; python3 -I - <<'EOF'\\np = \\\".bot-plan.md\\\"\\ns = open(p).read()\\npairs = [\\n(\\\"- `sh -n scripts/mutants.sh` and `pnpm --dir apps/web test src/ne\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4516/.bot-plan.md\", \"offset\": 28, \"limit\": 70}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4516; python3 -I - <<'EOF'\\np = \\\".bot-plan.md\\\"\\ns = open(p).read()\\npairs = [\\n(\\\"Each test below was checked on a copy: it passes, and it fails un\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4516; python3 -I - <<'EOF'\\np = \\\".bot-plan.md\\\"\\ns = open(p).read()\\npairs = [\\n(\\\" - `CardBack.tsx` line 17: `data-card-back={back === DEFAULT_CARD\u2026\n- said: ## Goal One pull request, `Closes #4516`, giving every week-2968 survivor a #3490 verdict: a killing test, or an equivalent-code rewrite or Stryker disable with its reason (c049, `rewards.rs`, `fuzz.rs`, `wasm/core/src/lib.rs`, `alerts.ts`, `json.ts`, `CardBack.tsx`, five Meditative fx files, `sfx.\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-22T20:15:06Z",
       "owner_why": "it plans it",
@@ -15947,9 +15939,9 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-3",
-      "run_id": "45065365588",
+      "run_id": "pending:8185cb52-1795385327",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-22T20:15:06Z",
+      "started_at": "2026-11-22T22:08:59Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16054,9 +16046,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T21:54:02Z",
+    "at": "2026-11-22T22:08:59Z",
     "url": "",
-    "what": "review #4520 on muse"
+    "what": "build #4516 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-22T22:01:05Z",
