@@ -17165,6 +17165,8 @@
       }
     },
     "4474": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T04:14:07Z",
@@ -17178,8 +17180,11 @@
         "trail": "eout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/ws.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/ws.out | cut -c1-150; grep -c \\\"FAILED\\\" /tmp/ws.out\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/ws.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/ws.out | cut -c1-150; grep -c \\\"FAILED\\\" /tmp/ws.out\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/ws.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/ws.out | cut -c1-150; grep -c \\\"FAILED\\\" /tmp/ws.out\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/ws.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/ws.out | cut -c1-150; grep -c \\\"FAILED\\\" /tmp/ws.out\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/ws.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/ws.out | cut -c1-150; grep -c \\\"FAILED\\\" /tmp/ws.out\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/ws.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/ws.out | cut -c1-150; grep -c \\\"FAILED\\\" /tmp/ws.out\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/ws.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/ws.out | cut -c1-150; grep -c \\\"FAILED\\\" /tmp/ws.out\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; cat /tmp/wire.out; git status --short | grep -v \\\"^ M crates\\\" ; cargo jackioh spec check 2>&1 | tail -3\", \"timeout\": 300000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; git diff apps/web/src/wire\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; sed -n 1,40p crates/server/tests/actor/perf.rs; grep -n \\\"fn \\\\|println\\\" crates/server/tests/actor/perf.rs | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; (cargo test --release -p jackioh-server --test server actor::perf -- --nocapture --include-ignored --test-threads=1 > /tmp/perf_branch.out 2>&1\u2026\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_branch.out 2>/dev/null; do sleep 5; done'; tail -5 /tmp/perf_branch.out | cut -c1-200; head -8 /home/runner/work/_temp/work/item-44\u2026\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_branch.out 2>/dev/null; do sleep 5; done'; tail -3 /tmp/perf_branch.out | cut -c1-200\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_branch.out 2>/dev/null; do sleep 5; done'; tail -3 /tmp/perf_branch.out | cut -c1-200\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_branch.out 2>/dev/null; do sleep 5; done'; tail -3 /tmp/perf_branch.out | cut -c1-200\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_branch.out 2>/dev/null; do sleep 5; done'; tail -3 /tmp/perf_branch.out | cut -c1-200\"}\n- Bash: {\"command\": \"for i in 1; do timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_branch.out 2>/dev/null; do sleep 5; done'; done; tail -3 /tmp/perf_branch.out | cut -c1-200\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_branch.out 2>/dev/null; do sleep 5; done'; tail -3 /tmp/perf_branch.out | cut -c1-200\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_branch.out 2>/dev/null; do sleep 5; done'; tail -3 /tmp/perf_branch.out | cut -c1-200\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_branch.out 2>/dev/null; do sleep 5; done'; tail -3 /tmp/perf_branch.out | cut -c1-200\"}\n- Bash: {\"command\": \"grep -v \\\"Compiling\\\\|^$\\\" /tmp/perf_branch.out | tail -25 | cut -c1-200\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; echo $CARGO_TARGET_DIR; cat scripts/worktree.sh | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; scripts/worktree.sh perf-main 6459c02cd6 2>&1 | tail -3; cd ../jackioh-wt/perf-main && git log --oneline -1 && (cargo test --release -p jackioh\u2026\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_main.out 2>/dev/null; do sleep 5; done'; tail -3 /tmp/perf_main.out | cut -c1-200; ls /home/runner/work/_temp/work/jackioh-wt 2>/de\u2026\n- said: Compiling now; poll.\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_main.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/perf_main.out | cut -c1-200\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_main.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/perf_main.out | cut -c1-200\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_main.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/perf_main.out | cut -c1-200\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_main.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/perf_main.out | cut -c1-200\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_main.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/perf_main.out | cut -c1-200\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_main.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/perf_main.out | cut -c1-200\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_main.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/perf_main.out | cut -c1-200\"}\n- Bash: {\"command\": \"timeout 119 bash -c 'until grep -q \\\"^DONE\\\" /tmp/perf_main.out 2>/dev/null; do sleep 5; done'; tail -2 /tmp/perf_main.out | cut -c1-200\"}\n- Bash: {\"command\": \"grep -v \\\"Compiling\\\\|^$\\\" /tmp/perf_main.out | tail -15 | cut -c1-200\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; git worktree remove --force ../jackioh-wt/perf-main; git worktree prune; git branch -D wt/perf-main 2>&1 | tail -1; ls ../jackioh-wt 2>&1 | hea\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the match host builds each seat's view once per change, and the watch record and the aim, hover and prompt relays reuse it\"} --> The duel machine now builds each seat's view once per change and reuses it. With both seats connected and no watcher, a chan\u2026"
       },
       "issue": 4445,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-22T06:54:27Z",
         "from_run": "44984146653",
         "gates": [
           {
@@ -17271,7 +17276,11 @@
         "source": "build",
         "until": "2026-11-22T07:22:32Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-22T06:52:32Z",
+      "run_id": "pending:c0108365-1795330438",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17290,6 +17299,9 @@
         "provider": "claude-1",
         "run": "44984146653"
       },
+      "started_at": "2026-11-22T06:54:27Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17303,9 +17315,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T06:53:44Z",
+    "at": "2026-11-22T06:54:27Z",
     "url": "",
-    "what": "review #4473 on muse"
+    "what": "review #4474 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-22T06:37:09Z",
