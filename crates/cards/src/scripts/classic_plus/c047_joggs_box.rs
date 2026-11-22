@@ -752,7 +752,7 @@ mod tests {
     }
 
     /// R767000: the script kept for the replays of v0.5.11r and before: no End the turn, and Echo 1 on the
-    /// Radiant face, whose `casts` was 10, as the base face's was through v0.6.9i (issue #4440).
+    /// Radiant face, whose `casts` was 10, as the base face's was through v0.6.9m (issue #4440).
     mod v0_5_11o {
         use super::*;
 

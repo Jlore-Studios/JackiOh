@@ -6,7 +6,7 @@
 //!   Radiant: "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are immune).
 //!            Then summon three random Traps."
 //!
-//! Engine: Profe Yates's text through v0.6.9i, as its card printed it (R4440004), so its faces are built
+//! Engine: Profe Yates's text through v0.6.9m, as its card printed it (R4440004), so its faces are built
 //! by #4's `exile_then` and `exile_traps`, which #4's kept script shares. The Cry exiles one declared
 //! permanent of either side, a Unit or a backrow card (R81, TG #26 Path of Exile's pick, R3996000), that
 //! is face-up, carries no CN tag, and whose name and the text of the face it wears hold each of M, O, U,

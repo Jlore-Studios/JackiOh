@@ -3,7 +3,7 @@
 //! uncast (R560). "Cry: Lose all your mana. Gain +{per}/+{per} per mana lost" (#831, issue #4440): played
 //! or cast on draw (R1), it loses the mana left once its price is paid, all of it on a free cast, and
 //! gains that much Attack and Health times `per` (R831010, R4440054; Radiant +2/+2 a mana). After v0.6.5b
-//! through v0.6.9i it gained +{per} Health alone a mana (issue #3996, R3996202), which `script_v0_6_9i`
+//! through v0.6.9m it gained +{per} Health alone a mana (issue #3996, R3996202), which `script_v0_6_9m`
 //! keeps for those replays (R767000); through v0.6.5b it gained +{per}/+{per}, as it does again, which
 //! `script_v0_6_5b` keeps.
 
@@ -14,7 +14,7 @@ pub const ID: &str = "classicplus-026";
 
 /// The Cry: the mana left once the play's price is paid, on a cast on draw too (R831010), lost for
 /// `per` Health a mana; `attack` also gives as much Attack, as the Cry does since issue #4440 (R4440054)
-/// and did through v0.6.5b, not after it through v0.6.9i (R3996202).
+/// and did through v0.6.5b, not after it through v0.6.9m (R3996202).
 fn tempo(ctx: &EffectContext<'_>, attack: bool) -> Vec<Effect> {
     let lost = unspent_mana_of(&*ctx.state, ctx.controller);
     if lost <= 0 {
@@ -71,15 +71,15 @@ pub fn script() -> CardScripts {
     tommy(true)
 }
 
-/// R767000: after v0.6.5b through v0.6.9i the Cry gave +{per} Health alone a mana lost (issue #4440,
+/// R767000: after v0.6.5b through v0.6.9m the Cry gave +{per} Health alone a mana lost (issue #4440,
 /// R3996202); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9i() -> CardScripts {
+pub fn script_v0_6_9m() -> CardScripts {
     tommy(false)
 }
 
 /// R767000: through v0.6.5b the Cry gave +{per}/+{per} a mana lost (issue #3996, R3996202), as it does again
 /// since issue #4440; `KEPT_SCRIPTS` folds those replays under it, so the kept row between them
-/// (`script_v0_6_9i`) never reaches them.
+/// (`script_v0_6_9m`) never reaches them.
 pub fn script_v0_6_5b() -> CardScripts {
     tommy(true)
 }
@@ -510,11 +510,11 @@ mod tests {
             }
         }
 
-        /// R767000, R3996202: after v0.6.5b through v0.6.9i the Cry gave +{per} Health alone a mana lost, on both
+        /// R767000, R3996202: after v0.6.5b through v0.6.9m the Cry gave +{per} Health alone a mana lost, on both
         /// faces; its Attack stayed as printed.
         #[test]
-        fn r3996202_r767000_the_script_kept_for_v0_6_9i_gains_health_alone_for_each_mana_lost() {
-            crate::under_kept(TOMMY, script_v0_6_9i(), || {
+        fn r3996202_r767000_the_script_kept_for_v0_6_9m_gains_health_alone_for_each_mana_lost() {
+            crate::under_kept(TOMMY, script_v0_6_9m(), || {
                 for (radiant, attack, health) in [(false, 3, 4), (true, 6, 8)] {
                     let mut s = scenario(json!({
                         "p1": { "hand": [{ "def": TOMMY, "radiant": radiant }, FILLER], "library": DECK },

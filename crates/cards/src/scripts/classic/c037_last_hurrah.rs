@@ -1,8 +1,8 @@
 //! C #37 Last Hurrah (SPEC §8.6 row 37). Spell, cost 0, Epic.
 //!   Base:    "Tradable\nDraw your deck. Give {flashback} random cards in your hand Flashback." (flashback 4)
 //!   Radiant: "Tradable\nDraw your deck. Give all cards in your hand Flashback."
-//!   Through v0.6.9i: "Draw your deck." (Radiant: "Draw your deck. Give {flashback} random cards in your
-//!   hand Flashback."), not Tradable (`script_v0_6_9i`, kept, R767000; issue #4440).
+//!   Through v0.6.9m: "Draw your deck." (Radiant: "Draw your deck. Give {flashback} random cards in your
+//!   hand Flashback."), not Tradable (`script_v0_6_9m`, kept, R767000; issue #4440).
 //!   Through v0.6.6h: "Draw your deck. At the end of this turn (Radiant: of your next turn), discard
 //!   {discard|card|cards}." (`script_v0_6_6h`, kept, R767000; discard 4, 6 until issue #3951).
 //!   Through v0.5.11r: "… discard your hand." (`script_v0_5_11o`, kept, R767000).
@@ -53,9 +53,9 @@ fn flashback_picks(c: &mut EffectContext<'_>, count: usize) -> Vec<String> {
 /// Which cards of the hand gain Flashback once the deck is drawn (R4154202).
 #[derive(Clone, Copy)]
 enum Grant {
-    /// None: the base face after v0.6.6h through v0.6.9i.
+    /// None: the base face after v0.6.6h through v0.6.9m.
     Nothing,
-    /// `flashback` random cards: the Radiant face through v0.6.9i, the base face since issue #4440.
+    /// `flashback` random cards: the Radiant face through v0.6.9m, the base face since issue #4440.
     Random,
     /// Every card: the Radiant face since issue #4440.
     All,
@@ -97,9 +97,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.6.6h through v0.6.9i the base face gave no Flashback and the Radiant face `flashback`
+/// R767000: after v0.6.6h through v0.6.9m the base face gave no Flashback and the Radiant face `flashback`
 /// random cards (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9i() -> CardScripts {
+pub fn script_v0_6_9m() -> CardScripts {
     CardScripts {
         base: last_hurrah(Grant::Nothing),
         radiant: last_hurrah(Grant::Random),
@@ -138,7 +138,7 @@ pub fn script_v0_5_11o() -> CardScripts {
 // cards past 10 burning (§2.4, R317) and a draw limit stopping the rest; an empty deck takes no
 // fatigue; nothing is discarded since issue #4154 (R4154201); `flashback` random cards of the hand gain
 // Flashback for good, kept into the graveyard (R4154202), and on the Radiant face every card (issue #4440);
-// both faces are Tradable (R1838000). The script kept for v0.6.9i gives the base face none and the Radiant
+// both faces are Tradable (R1838000). The script kept for v0.6.9m gives the base face none and the Radiant
 // face `flashback` random ones. The script kept for v0.6.6h discards
 // `discard` random cards at the end of this turn (radiant: the controller's next, R62, R682, R3134000),
 // and the one kept for v0.5.11r the whole hand (R767000).
@@ -146,7 +146,7 @@ pub fn script_v0_5_11o() -> CardScripts {
 mod tests {
     use std::collections::BTreeSet;
 
-    use super::{script_v0_5_11o, script_v0_6_6h, script_v0_6_9i};
+    use super::{script_v0_5_11o, script_v0_6_6h, script_v0_6_9m};
     use crate::def_ids;
     use crate::merged;
     use crate::scenario;
@@ -520,15 +520,15 @@ mod tests {
             }
         }
 
-        /// R767000: the scripts kept for v0.6.9i: the base face gave no Flashback, and the Radiant face
+        /// R767000: the scripts kept for v0.6.9m: the base face gave no Flashback, and the Radiant face
         /// `flashback` random cards (issue #4440).
-        mod through_v0_6_9i {
+        mod through_v0_6_9m {
             use super::*;
 
             #[test]
             fn r767000_the_kept_base_face_gives_none_and_the_kept_radiant_face_4_random() {
                 for (radiant, given) in [(false, 0), (true, FLASHBACK)] {
-                    crate::under_kept(HURRAH, script_v0_6_9i(), || {
+                    crate::under_kept(HURRAH, script_v0_6_9m(), || {
                         let mut s = setup(json!({}), json!({}), radiant);
                         s.play(HURRAH, json!({}));
                         assert_eq!(s.hand(PlayerId::P1).len(), DECK.len() + 1);

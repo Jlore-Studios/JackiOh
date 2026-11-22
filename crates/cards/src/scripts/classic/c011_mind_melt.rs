@@ -3,7 +3,7 @@
 //!   Base:    "Tradable\nLook at your opponent's hand. Exile {cards|card|cards} from it."
 //!   Radiant: "Tradable\nLook at your opponent's hand. Choose a cost. Exile every card of that cost from it."
 //!   Tradable since issue #4440 (R1838000): catalog data the engine reads in the hand (`trade.rs`), so
-//!   nothing here runs for it, and the shipped catalogs keep it off through v0.6.9i (R767000).
+//!   nothing here runs for it, and the shipped catalogs keep it off through v0.6.9m (R767000).
 //!
 //! LOOKING AT THE HAND is the prompt itself (B5 E17): `chooseFromHand({ of: "enemy" })` offers the
 //! opponent's hand cards to you, and `viewFor` shows an open prompt's options to the player it is for

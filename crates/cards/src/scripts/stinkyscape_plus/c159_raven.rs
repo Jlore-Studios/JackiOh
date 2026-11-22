@@ -7,8 +7,8 @@
 //!
 //! Tribute 2 since issue #4440 (Tribute 1 before it) is the play validator's (§6.3, R101), read off
 //! `staticFlags.tribute`, the keyword line's printed Tribute (R366): two Units of the player's are destroyed
-//! to pay it, and the Cry runs once it has landed. `script_v0_6_9i` keeps Tribute 1 for the replays of
-//! v0.6.9i and before (R767000).
+//! to pay it, and the Cry runs once it has landed. `script_v0_6_9m` keeps Tribute 1 for the replays of
+//! v0.6.9m and before (R767000).
 //! R1862002: the Cry is `equip_picks` (R1841002), one Discover of three from the Weapon-tagged cards of the
 //! printed rarity (the readings: Rare, Radiant Epic), the pool naming its set so that it reaches them while
 //! the set is held (R1420). The pick is a fresh copy, not made Radiant, fused into this with its Activate
@@ -23,7 +23,7 @@ pub const ID: &str = "stinkyscapeplus-159";
 
 /// "Tribute 2" (R101), since issue #4440.
 const TRIBUTE: i32 = 2;
-/// "Tribute 1", through v0.6.9i.
+/// "Tribute 1", through v0.6.9m.
 const TRIBUTE_V0_6_9G: i32 = 1;
 
 /// R1862002: "Discover `rare` `rarity` Weapons; Equip them into this", played for `tribute` Units.
@@ -50,8 +50,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.9i it was Tribute 1 (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9i() -> CardScripts {
+/// R767000: through v0.6.9m it was Tribute 1 (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9m() -> CardScripts {
     CardScripts {
         base: arm(Rarity::Rare, TRIBUTE_V0_6_9G),
         radiant: arm(Rarity::Epic, TRIBUTE_V0_6_9G),
@@ -148,10 +148,10 @@ mod tests {
             s.expect_refused(|s| s.play(ID, json!({ "zone": 4, "tributes": all })));
         }
 
-        /// R767000: through v0.6.9i one Unit paid it (issue #4440).
+        /// R767000: through v0.6.9m one Unit paid it (issue #4440).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_9i_needs_tribute_1() {
-            crate::under_kept(ID, script_v0_6_9i(), || {
+        fn r767000_the_script_kept_for_v0_6_9m_needs_tribute_1() {
+            crate::under_kept(ID, script_v0_6_9m(), || {
                 let mut s = weapon_board(
                     "s159-kept",
                     json!({ "hand": [ID], "field": [VANILLA, VANILLA] }),

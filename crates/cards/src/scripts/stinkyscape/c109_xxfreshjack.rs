@@ -9,8 +9,8 @@
 //! Tribute 2 since issue #4440 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the
 //! keyword line's printed Tribute (R366), lowered 1 by each of its owner's Floats while it waits in hand,
 //! never in the deck (R2657002), never below 0 (`float_lowers_tribute`, R1841003, as S+ #21 Jlockeed
-//! Shredder-12's). After v0.6.6h through v0.6.9i it was Tribute 1 with no Float line (issue #4154,
-//! `script_v0_6_9i`, kept, R767000), and through v0.6.6h it took none (`script_v0_6_6h`, kept).
+//! Shredder-12's). After v0.6.6h through v0.6.9m it was Tribute 1 with no Float line (issue #4154,
+//! `script_v0_6_9m`, kept, R767000), and through v0.6.6h it took none (`script_v0_6_6h`, kept).
 //!
 //! Cry (R1): the pool is `{ tier: "S", everySet: true, past: "also" }` (R3538005): every S-tier card
 //! of the sets that ship and the single-player sets, current or past, never this card (R387). The
@@ -34,7 +34,7 @@ fn busted_anywhere() -> CatalogQueryArgs {
 
 /// "Tribute 2" (R101, R366: printed, declared nowhere), since issue #4440.
 const TRIBUTE: i32 = 2;
-/// "Tribute 1", after v0.6.6h through v0.6.9i (issue #4154).
+/// "Tribute 1", after v0.6.6h through v0.6.9m (issue #4154).
 const TRIBUTE_V0_6_9G: i32 = 1;
 
 /// `script_v0_6_6h`'s faces played for `tribute` Units; `float`: whether "Float reduces Tribute
@@ -57,9 +57,9 @@ pub fn script() -> CardScripts {
     tributed(TRIBUTE, true)
 }
 
-/// R767000: after v0.6.6h through v0.6.9i it was Tribute 1 with no Float line (issue #4440); `KEPT_SCRIPTS`
+/// R767000: after v0.6.6h through v0.6.9m it was Tribute 1 with no Float line (issue #4440); `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_9i() -> CardScripts {
+pub fn script_v0_6_9m() -> CardScripts {
     tributed(TRIBUTE_V0_6_9G, false)
 }
 
@@ -154,7 +154,7 @@ mod tests {
 
     const FILLER: &str = "core-005"; // Stockpile: a Spell
     /// The units its Tribute 2 takes (issue #4440), in lanes 2 and 3; the first alone paid the Tribute 1 of
-    /// v0.6.9i and before.
+    /// v0.6.9m and before.
     const BODY: &str = "stand-in (1) 1/1";
     const SECOND: &str = "stand-in (1) 2/2";
     /// Both of them, as a play's `tributes`.
@@ -349,10 +349,10 @@ mod tests {
         }
     }
 
-    /// R767000: after v0.6.6h through v0.6.9i one unit paid it and a Float lowered nothing (issue #4440).
+    /// R767000: after v0.6.6h through v0.6.9m one unit paid it and a Float lowered nothing (issue #4440).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_9i_needs_tribute_1_and_no_float_lowers_it() {
-        let kept = script_v0_6_9i();
+    fn r767000_the_script_kept_for_v0_6_9m_needs_tribute_1_and_no_float_lowers_it() {
+        let kept = script_v0_6_9m();
         assert!(kept.base.hand_triggers.is_empty() && kept.radiant.hand_triggers.is_empty(), "no Float");
         crate::under_kept(ID, kept, || {
             let mut s = board(false, "xxfreshjack-fold-9g");
