@@ -51,9 +51,9 @@ constant in `src/config.rs` (rule 9), named by the plan's section.
 
 A ghost's deck is random until snapshots exist (M7),
 and the extended campaign is not built (M8). The starting cards, the enemies, the artifacts, the
-blessings, the events and the curses are placeholders until the designer's lists land (M9). CI does not
-hold the generated `Run*.ts` to the Rust until `ci.yml` runs `cargo test -p jackioh-run --features ts`
-and fails on its diff, which only a person can add.
+blessings, the events and the curses are placeholders until the designer's lists land (M9). CI holds the
+generated `Run*.ts` to the Rust: `jackioh-wasm-core`'s dev-dependencies turn on `ts`, so the `tools, wasm`
+group's `cargo test --workspace` writes them and `ci.yml`'s V20 step fails on a diff (#4426).
 
 ## Tests
 
@@ -73,7 +73,8 @@ checking each refusal leaves the state untouched, each acceptance keeps the boun
 replays. `cargo jackioh run-sim` (#3065) plays whole runs' fights to
 the end with the AI. The `ts` feature writes the public types to
 `apps/web/src/wire/generated/`, which `apps/web/src/wire/run.ts` re-exports as `@jackioh/run`; commit
-any diff.
+any diff. `cargo test --workspace` writes them too (`jackioh-wasm-core`'s dev-dependencies turn the feature on),
+so a stale file fails CI.
 
 ```
 cargo test -p jackioh-run
