@@ -16053,6 +16053,13 @@
     "4444": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T16:38:00Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "client-only split plus a scroll trigger in one component across about eight web files; none of the hard lines (engine rules, AI, cross-crate design, migration, 40+ files) holds"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
