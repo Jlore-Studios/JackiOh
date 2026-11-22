@@ -60,7 +60,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// v0.6.9j and before: the Death drew among every enemy permanent, across a slash too (R3554003);
+/// v0.6.9k and before: the Death drew among every enemy permanent, across a slash too (R3554003);
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_9j() -> CardScripts {
     CardScripts {
