@@ -1015,7 +1015,7 @@ pub(crate) fn finish_from(mut state: GameState, mut ctx: FinishCtx) -> PlayTail 
     p2.finish();
     let (points, probe_faults) = ctx
         .probe
-        .map(|probe| (probe.points, probe.faults))
+        .map(crate::fork_screen::Probe::finish)
         .unwrap_or_default();
 
     PlayTail {

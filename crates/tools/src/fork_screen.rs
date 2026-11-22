@@ -90,6 +90,15 @@ pub(crate) struct Probe {
 }
 
 impl Probe {
+    /// Finishes the probe's candidate agent at the trunk game's end, mirroring `Live::finish`:
+    /// a `bin:` child gets its `quit`, so no agent process outlives its game (R4397000).
+    pub(crate) fn finish(mut self) -> (Vec<ForkPoint>, Vec<String>) {
+        if let Some(live) = self.live.take() {
+            live.finish();
+        }
+        (self.points, self.faults)
+    }
+
     /// A probe of `candidate` at `budget` for trunk deal `deal`. Spawning a `bin:` candidate that
     /// cannot start fails the run before any game is counted, as a seated agent's does.
     pub(crate) fn for_game(candidate: &AgentSpec, budget: SearchBudget, deal: i32) -> anyhow::Result<Probe> {
