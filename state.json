@@ -15855,16 +15855,12 @@
     "what": "review #4419 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-22T01:37:21Z",
+    "at": "2026-11-22T01:48:16Z",
     "notes": [
-      "delivered plan #4426 on claude-6 (run 44971227173): planned",
-      "delivered plan #4423 on claude-4 (run 44971190206): planned",
-      "delivered build #4430 on muse (run 44969158857): built",
-      "started review #4439 on muse (run 44972567339)",
-      "started build #4426 on claude-6 (run 44972607921)",
-      "started plan #4423 on claude-4 (run 44972651224)",
+      "delivered review #4419 on claude-7 (run 44946916469): interrupted",
+      "started review #4419 on claude-7 (run 44973278631)",
       "nothing more to start: nothing is queued",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
+      "runner gate: started 1 of 1 waiting run(s) (run 44973217310 on bot/issue-4395)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16570,7 +16566,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T01:37:21Z",
+  "loop_tick": "2026-11-22T01:48:16Z",
   "machine_disk": {
     "issue": null,
     "reading": {
