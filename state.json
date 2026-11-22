@@ -35567,6 +35567,10 @@
         {
           "at": "2026-11-17T01:58:39Z",
           "minutes": 52.5
+        },
+        {
+          "at": "2026-11-22T16:36:24Z",
+          "minutes": 8.0
         }
       ],
       "tokens_spent": [
@@ -35842,13 +35846,20 @@
           "cost": 0.0,
           "input": 24331367,
           "output": 58966
+        },
+        {
+          "at": "2026-11-22T16:36:24Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 1555635,
+          "output": 19645
         }
       ],
       "usage": {
-        "observed_at": "2026-11-17T01:58:39Z",
+        "observed_at": "2026-11-22T16:36:24Z",
         "seven_day": {
-          "resets_at": "2026-11-22T11:42:02Z",
-          "utilization": 0.99
+          "resets_at": "2026-11-29T16:16:12Z",
+          "utilization": 0.02
         },
         "status": "allowed"
       }
@@ -40496,7 +40507,8 @@
       "2026-11-22T16:23:07Z,claude-4,stream,call,45042744211,7,2026-11-22T17:00:00Z,,,allowed,100,,",
       "2026-11-22T16:25:22Z,claude-4,stream,call,45042744211,8,2026-11-22T17:00:00Z,,,allowed,100,,",
       "2026-11-22T16:26:37Z,claude-4,stream,call,45042744211,9,2026-11-22T17:00:00Z,,,allowed,100,,",
-      "2026-11-22T16:27:50Z,claude-4,stream,call,45042744211,10,2026-11-22T17:00:00Z,,,allowed,100,,"
+      "2026-11-22T16:27:50Z,claude-4,stream,call,45042744211,10,2026-11-22T17:00:00Z,,,allowed,100,,",
+      "2026-11-22T16:23:56Z,gpt,stream,call,45042592793,,,2,2026-11-29T16:16:12Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-22T16:02:44Z,45040808994,muse,muse-spark-1.3-contributor,review,4459,medium,reviewed,,5.5,0,0,0,,,,,,0.6,agy,none,,1",
