@@ -71,14 +71,14 @@ const US_PER_SECOND: f64 = 1_000_000.0;
 const MEDIAN: f64 = 0.5;
 const P95: f64 = 0.95;
 
-// The existing budgets were measured on 2026-11-20 on a 4-vCPU GitHub Actions ubuntu runner (AMD
-// EPYC 7763); the forecast budgets were measured on 2026-11-22 on the night bot's runner. Each uses
-// three runs of its profile. Remeasure with `cargo test -p jackioh-tools --test perf
-// perf_holds_every_budget -- --ignored` for `cargo test`'s and `target/release/jackioh perf` for
-// release's. Each time budget is 5x the largest of its three medians, rounded up to two significant
-// figures, so a runner several times slower still passes and a slowdown of that size fails; each work
-// budget is 2x its value, rounded up the same way. A budget crossed by a change that meant to cost more
-// is measured again the same way.
+// The budgets, measured on 4-vCPU GitHub Actions ubuntu runners by three runs of each profile:
+// `cargo test -p jackioh-tools --test perf perf_holds_every_budget -- --ignored` for `cargo test`'s,
+// `target/release/jackioh perf` for release's. The two forecasts' on 2026-11-22, `cargo test`'s on an
+// Intel Xeon 6975P-C and release's on an AMD EPYC 7763; the rest on 2026-11-20, on an AMD EPYC 7763.
+// Each time budget is 5x the largest of its three medians, rounded up to two significant figures, so a
+// runner several times slower still passes and a slowdown of that size fails; each work budget is 2x
+// its value, rounded up the same way. A budget crossed by a change that meant to cost more is measured
+// again the same way.
 
 /// `reduce` of one listed action, in microseconds, at `cargo test`'s profile: medians 1811.0, 1849.9
 /// and 1840.5, 5x headroom.
@@ -86,9 +86,9 @@ pub const REDUCE_US_BUDGET_TEST: f64 = 9_300.0;
 /// `view_for` of one seat, in microseconds, at `cargo test`'s profile: medians 2921.8, 2971.5 and
 /// 2923.5, 5x headroom.
 pub const VIEW_FOR_US_BUDGET_TEST: f64 = 15_000.0;
-/// `combat_forecast` of one seat, in microseconds, at `cargo test`'s profile: medians 57.1, 56.8 and
-/// 58.1, 5x headroom.
-pub const COMBAT_FORECAST_US_BUDGET_TEST: f64 = 300.0;
+/// `combat_forecast` of one seat, in microseconds, at `cargo test`'s profile: medians 7.5, 7.6 and
+/// 8.2, 5x headroom.
+pub const COMBAT_FORECAST_US_BUDGET_TEST: f64 = 41.0;
 /// `legal_actions` of one seat, in microseconds, at `cargo test`'s profile: medians 95.8, 104.5 and
 /// 104.0, 5x headroom.
 pub const LEGAL_ACTIONS_US_BUDGET_TEST: f64 = 530.0;
@@ -104,9 +104,8 @@ pub const FOLD_US_PER_ACTION_BUDGET_TEST: f64 = 30_000.0;
 pub const REDUCE_US_BUDGET_RELEASE: f64 = 1_600.0;
 /// `view_for` of one seat, in microseconds, at release: medians 306.8, 305.7 and 431.3, 5x headroom.
 pub const VIEW_FOR_US_BUDGET_RELEASE: f64 = 2_200.0;
-/// `combat_forecast` of one seat, in microseconds, at release: medians 51.7, 53.6 and 54.0, 5x
-/// headroom.
-pub const COMBAT_FORECAST_US_BUDGET_RELEASE: f64 = 270.0;
+/// `combat_forecast` of one seat, in microseconds, at release: medians 8.3, 9.1 and 8.0, 5x headroom.
+pub const COMBAT_FORECAST_US_BUDGET_RELEASE: f64 = 46.0;
 /// `legal_actions` of one seat, in microseconds, at release: medians 38.5, 38.4 and 45.6, 5x
 /// headroom.
 pub const LEGAL_ACTIONS_US_BUDGET_RELEASE: f64 = 230.0;
@@ -126,14 +125,14 @@ pub const DUOS_REDUCE_US_BUDGET_RELEASE: f64 = 2_200.0;
 /// and 10367.1, 5x headroom.
 pub const DUOS_VIEW_FOR_US_BUDGET_TEST: f64 = 53_000.0;
 /// `combat_forecast` of one Duos seat's underlying duel, in microseconds, at `cargo test`'s profile:
-/// medians 502.0, 99.2 and 89.0, 5x headroom.
-pub const DUOS_COMBAT_FORECAST_US_BUDGET_TEST: f64 = 2_600.0;
+/// medians 29.8, 28.4 and 12.4, 5x headroom.
+pub const DUOS_COMBAT_FORECAST_US_BUDGET_TEST: f64 = 150.0;
 /// `duos_view_for` of one seat, in microseconds, at release: medians 1455.7, 1601.6 and 1988.9, 5x
 /// headroom.
 pub const DUOS_VIEW_FOR_US_BUDGET_RELEASE: f64 = 10_000.0;
-/// `combat_forecast` of one Duos seat's underlying duel, in microseconds, at release: medians 423.9,
-/// 381.5 and 386.2, 5x headroom.
-pub const DUOS_COMBAT_FORECAST_US_BUDGET_RELEASE: f64 = 2_200.0;
+/// `combat_forecast` of one Duos seat's underlying duel, in microseconds, at release: medians 21.5,
+/// 12.5 and 25.9, 5x headroom.
+pub const DUOS_COMBAT_FORECAST_US_BUDGET_RELEASE: f64 = 130.0;
 /// `duos_legal_actions` of one seat, in microseconds, at `cargo test`'s profile: medians 77.7, 80.5
 /// and 79.9, 5x headroom.
 pub const DUOS_LEGAL_ACTIONS_US_BUDGET_TEST: f64 = 410.0;
