@@ -16971,11 +16971,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-22T06:38:56Z",
+        "at": "2026-11-22T07:05:03Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Rule 4: the change is a database migration (crates/server/migrations/), which is hard by definition."
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 4: it adds a database migration (crates/server/migrations/0098_*.sql)"
       },
       "failures": 0,
       "forced": false,
