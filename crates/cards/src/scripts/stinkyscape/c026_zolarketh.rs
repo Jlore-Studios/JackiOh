@@ -7,8 +7,8 @@
 //!            Cry: Choose one: summon a Radiant University, or this gains 'End of turn: Summon a random
 //!            Radiant Starship Piece.'"
 //! Tribute 2 since issue #4440, the play validator's (§6.3, R101), read off `staticFlags.tribute`, the
-//! keyword line's printed Tribute (R366); after v0.6.5b through v0.6.9m it was Tribute 1 (issue #3996,
-//! `script_v0_6_9m`, kept, R767000), and through v0.6.5b it took none (`script_v0_6_5b`, kept).
+//! keyword line's printed Tribute (R366); after v0.6.5b through v0.6.9n it was Tribute 1 (issue #3996,
+//! `script_v0_6_9n`, kept, R767000), and through v0.6.5b it took none (`script_v0_6_5b`, kept).
 //! Engine since #2657: the Cry's two modes are declared at play (R81, R1). `university` summons an
 //! M #97.6 University (R64), Radiant from the Radiant face, whose own Activate is its own to use; a full
 //! unit row summons nothing. `piece` has ZolarKeth remember its new ability (`memory`), so the End of turn
@@ -43,7 +43,7 @@ const CRY_PIECE: &str = "piece";
 const GAINED_KEY: &str = "gainedPieceActivate";
 /// "Tribute 2" (R101, R366: printed, declared nowhere), since issue #4440.
 const TRIBUTE: i32 = 2;
-/// "Tribute 1", after v0.6.5b through v0.6.9m (issue #3996).
+/// "Tribute 1", after v0.6.5b through v0.6.9n (issue #3996).
 const TRIBUTE_V0_6_9G: i32 = 1;
 
 /// R1876000: the Universities this Cry summoned.
@@ -224,9 +224,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.6.5b through v0.6.9m it was Tribute 1 (issue #4440); `KEPT_SCRIPTS` folds those replays
+/// R767000: after v0.6.5b through v0.6.9n it was Tribute 1 (issue #4440); `KEPT_SCRIPTS` folds those replays
 /// under it.
-pub fn script_v0_6_9m() -> CardScripts {
+pub fn script_v0_6_9n() -> CardScripts {
     CardScripts {
         base: chooses(false, true, Some(TRIBUTE_V0_6_9G)),
         radiant: chooses(true, true, Some(TRIBUTE_V0_6_9G)),
@@ -285,7 +285,7 @@ mod tests {
 
     use super::{
         CRY_PIECE, CRY_UNIVERSITY, ID, PIECE, TRIBUTE, TRIBUTE_V0_6_9G, UNIVERSITIES, UNIVERSITY, script_v0_5_11,
-        script_v0_5_11o, script_v0_5_9f, script_v0_6_5b, script_v0_6_9m,
+        script_v0_5_11o, script_v0_5_9f, script_v0_6_5b, script_v0_6_9n,
     };
     use crate::{filler, scenario};
 
@@ -370,10 +370,10 @@ mod tests {
         }
     }
 
-    /// R767000: after v0.6.5b through v0.6.9m one Unit paid it (issue #4440).
+    /// R767000: after v0.6.5b through v0.6.9n one Unit paid it (issue #4440).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_9m_takes_tribute_1() {
-        crate::under_kept(ID, script_v0_6_9m(), || {
+    fn r767000_the_script_kept_for_v0_6_9n_takes_tribute_1() {
+        crate::under_kept(ID, script_v0_6_9n(), || {
             let mut s = paying(false, json!([]));
             assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_9G);
             let first = s.unit_at(P1, TRIBUTE_LANES[0]).id;

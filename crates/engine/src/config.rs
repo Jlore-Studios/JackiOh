@@ -1654,7 +1654,7 @@ pub const MARKETPLACE_FIXED_LOT_STOCK: i32 = 1;
 /// discard makes while the Marketplace is closed: "its price is determined like all other Resources", a
 /// Rare Resource's (Gellium's 3 to 10) through v0.6.6h, and since issue #4154 ("sells for ~25% more")
 /// that range's ends a quarter higher, rounded to the nearest Credit, a half up (4 to 13 through
-/// v0.6.9m); since issue #4440 ("sells for ~15% more", R4440001) each end of that 15% higher, rounded the
+/// v0.6.9n); since issue #4440 ("sells for ~15% more", R4440001) each end of that 15% higher, rounded the
 /// same way: 5 to 15. Named for the hand sale it priced until issue #4410 (R1861000). `buy` is never
 /// read: such a card is no Resource and its lot, if any, is priced as a card.
 pub const HAND_SALE_PRICE: ResourcePrice = ResourcePrice {

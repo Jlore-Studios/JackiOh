@@ -5,8 +5,8 @@
 //!   Radiant: "Tribute 3, Flying
 //!            Cry: Equip a Radiant copy of every Miner into this."
 //!
-//! Tribute 3 since issue #4440 (Tribute 2 before it, which `script_v0_6_9m` keeps for the replays of
-//! v0.6.9m and before, R767000) is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the
+//! Tribute 3 since issue #4440 (Tribute 2 before it, which `script_v0_6_9n` keeps for the replays of
+//! v0.6.9n and before, R767000) is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the
 //! keyword line's printed Tribute (R366). R1872003: the Cry is `equip_picks` (R1841002) from the Miners (`query::miners`,
 //! R3869002), S #62 Miner v1 to S #66 Miner v5 today (named by id through v0.6.2b),
 //! each pick a fresh copy on its Radiant face (R469) fused straight into this (R1086, R77), its Activate
@@ -22,7 +22,7 @@ pub const ID: &str = "stinkyscape-080";
 
 /// "Tribute 3" (R101), since issue #4440.
 const TRIBUTE: i32 = 3;
-/// "Tribute 2", through v0.6.9m.
+/// "Tribute 2", through v0.6.9n.
 const TRIBUTE_V0_6_9G: i32 = 2;
 
 /// "Discover 2".
@@ -39,8 +39,8 @@ pub fn script() -> CardScripts {
     galaxy(TRIBUTE)
 }
 
-/// R767000: through v0.6.9m it was Tribute 2 (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9m() -> CardScripts {
+/// R767000: through v0.6.9n it was Tribute 2 (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9n() -> CardScripts {
     galaxy(TRIBUTE_V0_6_9G)
 }
 
@@ -148,10 +148,10 @@ mod tests {
         s.expect_in_zone(ID, "field");
     }
 
-    /// R767000: through v0.6.9m two Units paid it (issue #4440).
+    /// R767000: through v0.6.9n two Units paid it (issue #4440).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_9m_needs_tribute_2() {
-        crate::under_kept(ID, script_v0_6_9m(), || {
+    fn r767000_the_script_kept_for_v0_6_9n_needs_tribute_2() {
+        crate::under_kept(ID, script_v0_6_9n(), || {
             let mut s = weapon_board(
                 "s080-kept",
                 json!({ "hand": [ID], "field": [VANILLA, VANILLA, VANILLA] }),

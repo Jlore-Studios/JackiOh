@@ -13,8 +13,8 @@
 //!            aura off it for good (R783013). With no deck left, every draw is fatigue (§2.4). "You have
 //!            +{mana} mana per turn" (issue #4440) is the engine's `mana_per_turn` flag (R4440052): while
 //!            this acts face-up on its controller's field, each of their refreshes gives `mana` more, on
-//!            top of max mana, as Hearthstone's Overload in reverse; through v0.6.9m it gave none
-//!            (`script_v0_6_9m`, kept, R767000).
+//!            top of max mana, as Hearthstone's Overload in reverse; through v0.6.9n it gave none
+//!            (`script_v0_6_9n`, kept, R767000).
 //!   Issue #3951 gave it this text. Through v0.6.4c its Cry exiled the deck and then discarded the
 //!   hand, and its Aura let its controller play (1)+ Cost cards from their graveyard (`minCost`) any
 //!   number of times, the base face exiling every card of theirs that would go there; `script_v0_6_4c`
@@ -55,7 +55,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R3951001: one face's Cry and Flashback Aura, as v0.6.9m ran them.
+/// R3951001: one face's Cry and Flashback Aura, as v0.6.9n ran them.
 fn wind(radiant: bool) -> Script {
     Script {
         cry: Some(cry(radiant)),
@@ -64,9 +64,9 @@ fn wind(radiant: bool) -> Script {
     }
 }
 
-/// R767000: after v0.6.4c through v0.6.9m it gave no mana per turn (issue #4440); `KEPT_SCRIPTS` folds those
+/// R767000: after v0.6.4c through v0.6.9n it gave no mana per turn (issue #4440); `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_9m() -> CardScripts {
+pub fn script_v0_6_9n() -> CardScripts {
     CardScripts {
         base: wind(false),
         radiant: wind(true),
@@ -262,10 +262,10 @@ mod tests {
         s.expect_mana(P1, MAX_MANA);
     }
 
-    /// R767000: through v0.6.9m it gave no mana per turn (issue #4440).
+    /// R767000: through v0.6.9n it gave no mana per turn (issue #4440).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_9m_gives_no_mana_per_turn() {
-        crate::under_kept(WIND, script_v0_6_9m(), || {
+    fn r767000_the_script_kept_for_v0_6_9n_gives_no_mana_per_turn() {
+        crate::under_kept(WIND, script_v0_6_9n(), || {
             let mut s = standing(true);
             s.start_turn();
             s.expect_mana(P1, MAX_MANA);
