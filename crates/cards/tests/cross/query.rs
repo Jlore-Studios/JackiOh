@@ -1120,7 +1120,8 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
     /// 2/2; none of its tokens prints 1/1), which the pool takes since its release (#1884, R1857000).
     const STINKYSCAPE_ONE_ONES: &[&str] = &["stinkyscape-038", "stinkyscape-081", "stinkyscape-098"];
     /// The Stinkyscape+ release (#3573): its printed 1/1 Units, its two tokens (#26.1 Conscript and #27.1
-    /// Imp) among them, last in the catalog order. S+ #37 Scorch left it as a 1/5 (issue #3951).
+    /// Imp) among them, last in the catalog order. S+ #37 Scorch left it as a 1/5 (issue #3951), and S+ #159
+    /// Raven as a 2/2 (issue #4440).
     const STINKYSCAPE_PLUS_ONE_ONES: &[&str] = &[
         "stinkyscapeplus-011",
         "stinkyscapeplus-012",
@@ -1130,7 +1131,6 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         "stinkyscapeplus-101",
         "stinkyscapeplus-115",
         "stinkyscapeplus-153",
-        "stinkyscapeplus-159",
     ];
 
     #[test]

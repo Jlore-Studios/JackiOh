@@ -654,6 +654,12 @@ pub struct StaticFlags {
     /// next-turn rider only (Meditative #26).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub no_natural_mana: Option<bool>,
+    /// R4440052 (Classic #28 Second Wind): "You have +N mana per turn": while this card acts face-up on
+    /// its controller's field, each of their refreshes gives N more mana, on top of max mana as the
+    /// next-turn rider is (`mana::mana_per_turn_of`). N is the card's declared `mana` where it declares one
+    /// (R386), the flag's otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mana_per_turn: Option<i32>,
     // Meditative
     /// R981–R984, Meditative #40 Feng Shui: while this card acts on the field, it judges every face-up
     /// play at §10.5 step 3 by its element against its player's last (`subsystems::feng_shui`). On its

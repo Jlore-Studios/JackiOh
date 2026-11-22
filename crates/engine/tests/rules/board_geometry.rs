@@ -216,6 +216,7 @@ mod r3554000_black_hole {
             swallowed: Some(9),
             pulls: None,
             capacity: None,
+            at_end: None,
         });
         let first = id_at(&s, P1, 3);
         let second = id_at(&s, P2, 3);
@@ -314,6 +315,36 @@ mod r3554001_pull {
         // My turn began: the Radiant hole pulls nothing of mine.
         assert_eq!(where_is(s.state(), &mine), "p1 units 2");
         assert_eq!(where_is(s.state(), &near), "p2 units 2");
+    }
+
+    /// R4440050: a hole opened `atEnd` pulls each player's permanents at the end of their turn, after the
+    /// Burn tick, and never at a start.
+    #[test]
+    fn r4440050_a_hole_opened_at_end_pulls_at_each_turns_end_never_its_start() {
+        let mut s = board(
+            "r4440050-at-end",
+            json!({ "field": [field_unit(PLAIN, 1), field_unit(PLAIN, 5)] }),
+            json!({ "field": [field_unit(PLAIN, 4)] }),
+        );
+        run_effect(
+            s.state_mut(),
+            effects::open_black_hole(json_as(json!({ "atEnd": true }))),
+            P1,
+        );
+        assert!(s.state().black_hole.is_some_and(|hole| hole.pulls_at_end()));
+        let (one, five) = (id_at(&s, P1, 1), id_at(&s, P1, 5));
+        let theirs = id_at(&s, P2, 4);
+        s.end_turn();
+        // p1's turn ended: theirs stepped; p2's began and pulled nothing.
+        assert_eq!(where_is(s.state(), &one), "p1 units 2");
+        assert_eq!(where_is(s.state(), &five), "p1 units 4");
+        assert_eq!(where_is(s.state(), &theirs), "p2 units 4");
+        s.end_turn();
+        // p2's turn ended: its lane 4 unit was swallowed; p1's began and pulled nothing.
+        assert_eq!(where_is(s.state(), &theirs), "exile");
+        assert_eq!(where_is(s.state(), &one), "p1 units 2");
+        assert_eq!(where_is(s.state(), &five), "p1 units 4");
+        assert_eq!(s.state().black_hole.map(|hole| hole.swallowed_count()), Some(1));
     }
 
     #[test]

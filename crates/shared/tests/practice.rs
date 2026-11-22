@@ -642,43 +642,56 @@ fn r3100000_a_lessons_every_snapshot_holds_the_forecast() {
     assert_eq!(forecast, jackioh_engine::combat_forecast(lesson.state(), P2));
 }
 
+/// R3477000: the games its test plays, `practice-r3477000-<n>`: seed "practice-r3477000" until #3837 and
+/// "-8" until #4440 dealt games that ended before the human had an attack to forecast, so the test plays
+/// them from the 8th up to the first that forecasts one.
+const R3477000_SEEDS: std::ops::Range<u32> = 8..40;
+
 #[test]
 fn r3477000_a_free_games_every_snapshot_holds_the_forecast_of_the_humans_attacks() {
-    // Seed "practice-r3477000" until #3837, whose costs and stats dealt a game there that ended before the
-    // human had an attack to forecast.
-    let mut session = started("practice-r3477000-8", P2);
-    let mut human = Rng::new("practice-r3477000-8:human", 0);
     let mut forecast_attacks = 0;
-    for _ in 0..MOVE_CAP {
-        if session.host.is_over() {
+    for n in R3477000_SEEDS {
+        let seed = format!("practice-r3477000-{n}");
+        let mut session = started(&seed, P2);
+        let mut human = Rng::new(&format!("{seed}:human"), 0);
+        for _ in 0..MOVE_CAP {
+            if session.host.is_over() {
+                break;
+            }
+            if !session.ai_turn() {
+                let seat = session.host.human_seat();
+                let body =
+                    random_action(session.state(), seat, &mut human).expect("the human owes an action");
+                session.act(body);
+            }
+            let forecast = session
+                .snapshot()
+                .forecast
+                .clone()
+                .expect("every snapshot holds one");
+            assert_eq!(
+                forecast,
+                jackioh_engine::combat_forecast(session.state(), session.host.human_seat())
+            );
+            forecast_attacks += forecast.attacks.len();
+        }
+        assert!(
+            session.host.is_over(),
+            "{seed}: the game ends within {MOVE_CAP} actions"
+        );
+        assert!(
+            session
+                .snapshots
+                .iter()
+                .all(|snapshot| snapshot.forecast.is_some())
+        );
+        if forecast_attacks > 0 {
             break;
         }
-        if !session.ai_turn() {
-            let seat = session.host.human_seat();
-            let body = random_action(session.state(), seat, &mut human).expect("the human owes an action");
-            session.act(body);
-        }
-        let forecast = session
-            .snapshot()
-            .forecast
-            .clone()
-            .expect("every snapshot holds one");
-        assert_eq!(
-            forecast,
-            jackioh_engine::combat_forecast(session.state(), session.host.human_seat())
-        );
-        forecast_attacks += forecast.attacks.len();
     }
-    assert!(session.host.is_over(), "the game ends within {MOVE_CAP} actions");
-    assert!(
-        session
-            .snapshots
-            .iter()
-            .all(|snapshot| snapshot.forecast.is_some())
-    );
     assert!(
         forecast_attacks > 0,
-        "the premise: some snapshot forecast an attack"
+        "the premise: some snapshot of the games played forecast an attack"
     );
 }
 
@@ -702,19 +715,43 @@ fn r1705005_a_lesson_seats_the_human_under_the_tutorial_handicap_and_the_pool_ho
 
 // R668: the save and its resume
 
-#[test]
-fn r668_a_new_session_folds_the_saved_log_back_to_the_same_state_and_ai_stream() {
-    // Seed "practice-r668" until #3837, whose costs and stats dealt a game there that ended inside the
-    // six steps it plays on after the resume.
-    let mut session = started("practice-r668-6", P2);
-    session.answer_mulligans();
-    let mut human = Rng::new("practice-r668-6:human", 0);
-    for _ in 0..24 {
+/// R668: the games its save test may play, `practice-r668-<n>`: seed "practice-r668" until #3837 and "-6"
+/// until #4440 dealt games that ended inside its steps, so it plays the first from the 6th that lasts them.
+const R668_SEEDS: std::ops::Range<u32> = 6..40;
+/// The steps its save test plays before the save, and on both sessions after the resume.
+const R668_BEFORE_SAVE: usize = 24;
+const R668_AFTER_SAVE: usize = 6;
+
+/// `steps` steps of `session`, the AI's turns and the human's random actions from `human`; false once the
+/// human has none, the game over.
+fn played(session: &mut Session, human: &mut Rng, steps: usize) -> bool {
+    for _ in 0..steps {
         if !session.ai_turn() {
-            let body = random_action(session.state(), P2, &mut human).expect("an action");
+            let Some(body) = random_action(session.state(), session.host.human_seat(), human) else {
+                return false;
+            };
             session.act(body);
         }
     }
+    true
+}
+
+#[test]
+fn r668_a_new_session_folds_the_saved_log_back_to_the_same_state_and_ai_stream() {
+    let deal = |seed: &str| {
+        let mut session = started(seed, P2);
+        session.answer_mulligans();
+        (session, Rng::new(&format!("{seed}:human"), 0))
+    };
+    let seed = R668_SEEDS
+        .map(|n| format!("practice-r668-{n}"))
+        .find(|seed| {
+            let (mut trial, mut human) = deal(seed.as_str());
+            played(&mut trial, &mut human, R668_BEFORE_SAVE + R668_AFTER_SAVE)
+        })
+        .expect("a game that lasts the test's steps");
+    let (mut session, mut human) = deal(seed.as_str());
+    assert!(played(&mut session, &mut human, R668_BEFORE_SAVE));
     let save = session
         .save
         .clone()
@@ -737,7 +774,7 @@ fn r668_a_new_session_folds_the_saved_log_back_to_the_same_state_and_ai_stream()
     assert_eq!(resumed.snapshot(), session.snapshot());
     // Plays on exactly as it would have.
     let mut same = |one: &mut Session, other: &mut Session| {
-        for _ in 0..6 {
+        for _ in 0..R668_AFTER_SAVE {
             let a = one.ai_turn();
             let b = other.ai_turn();
             assert_eq!(a, b);

@@ -16,7 +16,8 @@
 //! reach (`float_credit`, #3695). The Burn and Toxic still to come on a unit or a hero count by the ticks
 //! they will deal (`afflicted`, `coming_hero_ticks`, R3822000). While a Feng Shui acts, the seat's next
 //! face-up play counts by the verdict its last element gives it (`feng_shui_outlook`, R3951100). An own
-//! dead Tradable card counts less than its price (`dead_in_hand`, R4154400), and a permanent a Living Bomb
+//! dead Tradable card counts less than its price (`dead_in_hand`, R4154400), so does an own card that pays
+//! Credits as a Resource does, Spice (`credits_card_discount`, R4440002), and a permanent a Living Bomb
 //! destroys at its controller's next turn start as a Brittle 1 one (`plague_doomed`, R4154402).
 //! It reads only what the seat may know or what a determinization sampled, and nothing here reads a
 //! handicap or a difficulty (R180).
@@ -45,10 +46,10 @@ use jackioh_engine::{
     hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep, is_dormant_starship, is_extra_turn_card, is_giga,
     is_sick, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card, is_tradable,
     left_field_after, legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of,
-    own_cost, pierces, pile_at, plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance,
-    script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back,
-    toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view, units_on_field_of,
-    why_sandbox_refused, with_pool_hold, yard_at_turn_start,
+    own_cost, pays_credits_like_a_resource, pierces, pile_at, plague_on, playable_from_graveyard, query_cost,
+    queue_hook, reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems,
+    sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has,
+    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
@@ -893,8 +894,10 @@ pub fn dead_in_hand(state: &GameState, seat: PlayerId, card: &CardInstance) -> b
 
 /// An own hand card's place in `material`: `doomed_hand_card_value`, but a dead Tradable card at
 /// `dead_tradable_discount` off (`dead_in_hand`, R4154400; no reading at a zero share). R4410001:
-/// Stinkyscape #89 Spice is priced as any hand card, the Credits it pays counted once its play or discard
-/// gains them.
+/// Stinkyscape #89 Spice is priced as a hand card, the Credits it pays counted once its play or discard
+/// gains them; R4440002: at `credits_card_discount` off, as any card that pays Credits as a Resource does
+/// (`pays_credits_like_a_resource`), so its play, the sale, reads as a gain more often (no reading at a
+/// zero share).
 fn own_hand_card_value(
     state: &GameState,
     seat: PlayerId,
@@ -903,8 +906,13 @@ fn own_hand_card_value(
     w: &EvalWeights,
 ) -> f64 {
     let value = doomed_hand_card_value(state, card, doomed, w);
-    if w.dead_tradable_discount != 0.0 && dead_in_hand(state, seat, card) {
+    let value = if w.dead_tradable_discount != 0.0 && dead_in_hand(state, seat, card) {
         value * (1.0 - w.dead_tradable_discount)
+    } else {
+        value
+    };
+    if w.credits_card_discount != 0.0 && pays_credits_like_a_resource(card) {
+        value * (1.0 - w.credits_card_discount)
     } else {
         value
     }

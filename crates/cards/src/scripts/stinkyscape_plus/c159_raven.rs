@@ -1,11 +1,14 @@
-//! SPEC §8.12 S+ #159 Raven (Unit 1/1 → 2/2, cost 0, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    "Tribute 1
+//! SPEC §8.12 S+ #159 Raven (Unit 2/2 → 4/4, 1/1 → 2/2 until issue #4440, cost 0, Rare), a card of the
+//! Stinkyscape+ set (R1420, R3535000).
+//!   Base:    "Tribute 2
 //!            Cry: Discover 1 Rare Weapon; Equip it into this."
-//!   Radiant: "Tribute 1
+//!   Radiant: "Tribute 2
 //!            Cry: Discover 1 Epic Weapon; Equip it into this."
 //!
-//! Tribute 1 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's printed
-//! Tribute (R366): one Unit of the player's is destroyed to pay it, and the Cry runs once it has landed.
+//! Tribute 2 since issue #4440 (Tribute 1 before it) is the play validator's (§6.3, R101), read off
+//! `staticFlags.tribute`, the keyword line's printed Tribute (R366): two Units of the player's are destroyed
+//! to pay it, and the Cry runs once it has landed. `script_v0_6_9m` keeps Tribute 1 for the replays of
+//! v0.6.9m and before (R767000).
 //! R1862002: the Cry is `equip_picks` (R1841002), one Discover of three from the Weapon-tagged cards of the
 //! printed rarity (the readings: Rare, Radiant Epic), the pool naming its set so that it reaches them while
 //! the set is held (R1420). The pick is a fresh copy, not made Radiant, fused into this with its Activate
@@ -18,14 +21,16 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-159";
 
-/// "Tribute 1" (R101).
-const TRIBUTE: i32 = 1;
+/// "Tribute 2" (R101), since issue #4440.
+const TRIBUTE: i32 = 2;
+/// "Tribute 1", through v0.6.9m.
+const TRIBUTE_V0_6_9G: i32 = 1;
 
-/// R1862002: "Discover `rare` `rarity` Weapons; Equip them into this".
-fn arm(rarity: Rarity) -> Script {
+/// R1862002: "Discover `rare` `rarity` Weapons; Equip them into this", played for `tribute` Units.
+fn arm(rarity: Rarity, tribute: i32) -> Script {
     Script {
         static_flags: Some(StaticFlags {
-            tribute: Some(TRIBUTE),
+            tribute: Some(tribute),
             ..StaticFlags::default()
         }),
         cry: Some(hook(move |ctx| {
@@ -40,8 +45,16 @@ fn arm(rarity: Rarity) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: arm(Rarity::Rare),
-        radiant: arm(Rarity::Epic),
+        base: arm(Rarity::Rare, TRIBUTE),
+        radiant: arm(Rarity::Epic, TRIBUTE),
+    }
+}
+
+/// R767000: through v0.6.9m it was Tribute 1 (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9m() -> CardScripts {
+    CardScripts {
+        base: arm(Rarity::Rare, TRIBUTE_V0_6_9G),
+        radiant: arm(Rarity::Epic, TRIBUTE_V0_6_9G),
     }
 }
 
@@ -62,15 +75,15 @@ mod tests {
     const RARE: [&str; 3] = ["stinkyscapeplus-008", "stinkyscapeplus-143", "stinkyscapeplus-146"];
     const EPIC: [&str; 3] = ["stinkyscapeplus-009", "stinkyscapeplus-144", "stinkyscapeplus-147"];
 
-    /// Plays the card and answers its one Discover with the first offer.
+    /// Plays the card, two Units paying its Tribute 2, and answers its one Discover with the first offer.
     fn arms(radiant: bool, pool: &[&str]) -> (Scenario, String, String) {
         let mut s = weapon_board(
             "s159",
-            json!({ "hand": [{ "def": ID, "radiant": radiant }], "field": [VANILLA] }),
+            json!({ "hand": [{ "def": ID, "radiant": radiant }], "field": [VANILLA, VANILLA] }),
             json!({ "field": [VANILLA] }),
         );
-        let tribute = s.unit_at(P1, 1).id;
-        s.play(ID, json!({ "zone": 1, "tributes": [tribute.as_str()] }));
+        let tributes = [1, 2].map(|lane| s.unit_at(P1, lane).id);
+        s.play(ID, json!({ "zone": 1, "tributes": tributes }));
         let host = s.unit_at(P1, 1).id;
         let pending = s.state().pending.clone().expect("a Discover is open");
         assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
@@ -99,32 +112,57 @@ mod tests {
             assert!(!unit_has(s.state(), &card, KeywordKind::StarshipPiece));
         }
 
+        /// Issue #4440: Tribute 2 on both faces, 2/2 (Radiant 4/4).
         #[test]
-        fn r101_it_needs_tribute_1() {
-            let mut s = weapon_board(
-                "s159-tribute",
-                json!({ "hand": [ID], "field": [VANILLA] }),
-                json!({}),
-            );
-            assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE);
-            // No tribute, or a Unit that is not the card's tribute, is refused; one Unit pays it.
-            s.expect_refused(|s| s.play(ID, json!({ "zone": 2 })));
-            assert!(s.state().pending.is_none());
-            let first = s.unit_at(P1, 1).id;
-            s.play(ID, json!({ "zone": 1, "tributes": [first.as_str()] }));
-            assert!(s.state().pending.is_some(), "the Cry opens its Discover");
-            s.expect_in_zone(first.as_str(), "graveyard");
+        fn r101_it_needs_tribute_2_on_both_faces() {
+            for radiant in [false, true] {
+                let mut s = weapon_board(
+                    "s159-tribute",
+                    json!({ "hand": [{ "def": ID, "radiant": radiant }], "field": [VANILLA, VANILLA] }),
+                    json!({}),
+                );
+                assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE);
+                // No tribute, or one Unit, is refused; two Units pay it.
+                let [first, second] = [1, 2].map(|lane| s.unit_at(P1, lane).id);
+                s.expect_refused(|s| s.play(ID, json!({ "zone": 3 })));
+                s.expect_refused(|s| s.play(ID, json!({ "zone": 3, "tributes": [first.as_str()] })));
+                assert!(s.state().pending.is_none());
+                s.play(ID, json!({ "zone": 1, "tributes": [first.as_str(), second.as_str()] }));
+                assert!(s.state().pending.is_some(), "radiant {radiant}: the Cry opens its Discover");
+                s.expect_in_zone(first.as_str(), "graveyard");
+                s.expect_in_zone(second.as_str(), "graveyard");
+                let raven = s.unit_at(P1, 1).id;
+                let stats = s.stats(raven.as_str());
+                assert_eq!((stats.attack, stats.health), if radiant { (4, 4) } else { (2, 2) });
+            }
         }
 
         #[test]
-        fn r101_a_second_tribute_is_refused() {
+        fn r101_a_third_tribute_is_refused() {
             let mut s = weapon_board(
                 "s159-over",
-                json!({ "hand": [ID], "field": [VANILLA, VANILLA] }),
+                json!({ "hand": [ID], "field": [VANILLA, VANILLA, VANILLA] }),
                 json!({}),
             );
-            let both = [1, 2].map(|lane| s.unit_at(P1, lane).id);
-            s.expect_refused(|s| s.play(ID, json!({ "zone": 3, "tributes": both })));
+            let all = [1, 2, 3].map(|lane| s.unit_at(P1, lane).id);
+            s.expect_refused(|s| s.play(ID, json!({ "zone": 4, "tributes": all })));
+        }
+
+        /// R767000: through v0.6.9m one Unit paid it (issue #4440).
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_9m_needs_tribute_1() {
+            crate::under_kept(ID, script_v0_6_9m(), || {
+                let mut s = weapon_board(
+                    "s159-kept",
+                    json!({ "hand": [ID], "field": [VANILLA, VANILLA] }),
+                    json!({}),
+                );
+                assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_9G);
+                let first = s.unit_at(P1, 1).id;
+                s.play(ID, json!({ "zone": 1, "tributes": [first.as_str()] }));
+                s.expect_in_zone(first.as_str(), "graveyard");
+                assert!(s.unit(P1, 2).is_some(), "the second Unit stays");
+            });
         }
     }
 

@@ -1,15 +1,18 @@
 //! Meditative #10 Double Counting (SPEC §8.8 row 10; docs/meditative-set.md M6 #10; ME-TRIG (b); R820,
-//! R822, R823, R4154211). (2) Field Spell, Epic.
+//! R822, R823, R4154211). (3) Field Spell, Epic ((2) until issue #4440).
 //!   Base:    "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}.\nActivate:
-//!            Pay ({price}) to Discover a Cry or Death card." (extra 1, price 1)
+//!            Discover a Cry or Death card." (extra 1)
 //!   Radiant: "Aura: …\nActivate: Discover a Cry or Death card." (extra 2)
+//!   Through v0.6.9m the base face's Activate read "Pay ({price}) to Discover a Cry or Death card." (price 1,
+//!   `script_v0_6_9m`, kept, R767000; issue #4440 made it free and took the `price` off).
 //!
 //! The engine's Cry and Death multiplier (`Script.cry_death_extra`), Hearthstone's Brann Bronzebeard and
 //! Baron Rivendare in one card: while this acts on its controller's field, the Cry of a permanent they
 //! play or cast (§10.5 step 5) or trigger (C #54 Rewind) runs extra more times with the same choices,
 //! and the Death of a card that died under their control runs extra more times on its snapshot (§4.5
 //! step 3). A Spell's resolution is no Cry (R822). Several multipliers do not add: the highest holds (R820).
-//! Issue #4154 added the Activate (R384, once a turn; the base face's price the declared `price`, R386):
+//! Issue #4154 added the Activate (R384, once a turn; through v0.6.9m the base face's price the declared
+//! `price`, R386, free on both faces since issue #4440):
 //! a Discover (§6.3) of the shipped cards that print a Cry or a Death, read off each one's base face's
 //! script — a Death on any card, a Cry on a Unit or a Field Spell, since a Spell's resolution is no Cry
 //! (R822) — its pick to the hand on its base face (R4154211). Through v0.6.6h it had the Aura alone,
@@ -23,7 +26,7 @@ pub const ID: &str = "meditative-010";
 /// The Activate's id, and the resume step the Discover's answer comes back to (§10.6).
 const TALLY: &str = "tally";
 const PICKED: &str = "picked";
-/// "Pay (1)": the base face's price as written; the declared `price` is what is paid (R386).
+/// "Pay (1)": the base face's price as written through v0.6.9m; the declared `price` was what was paid (R386).
 const PRICE: i32 = 1;
 
 /// R4154211: the shipped cards that print a Cry or a Death, off their base face's script.
@@ -97,6 +100,15 @@ fn counting(activate: bool, paid: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
+    CardScripts {
+        base: counting(true, false),
+        radiant: counting(true, false),
+    }
+}
+
+/// R767000: after v0.6.6h through v0.6.9m the base face paid (`price`) to activate (issue #4440).
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9m() -> CardScripts {
     CardScripts {
         base: counting(true, true),
         radiant: counting(true, false),
@@ -311,11 +323,12 @@ mod tests {
             || (scripts.base.cry.is_some() && matches!(def.type_, CardType::Unit | CardType::FieldSpell))
     }
 
+    /// Issue #4440: the base face's Activate is free, as the Radiant face's.
     #[test]
-    fn r4154211_the_base_face_pays_1_to_discover_a_cry_or_death_card_once_a_turn() {
+    fn r4154211_the_base_face_discovers_a_cry_or_death_card_for_free_once_a_turn() {
         let mut s = tallying(false, 5);
         s.activate(ID, json!({}));
-        assert_eq!(s.state().players.p1.mana.current, 4, "it pays (1)");
+        assert_eq!(s.state().players.p1.mana.current, 5, "it pays nothing");
         let options = s.prompt_modes();
         assert_eq!(options.len(), 3);
         for option in &options {
@@ -333,9 +346,31 @@ mod tests {
     }
 
     #[test]
-    fn r4154211_the_base_face_needs_its_mana() {
+    fn r4154211_the_base_face_needs_no_mana() {
         let mut s = tallying(false, 0);
-        s.expect_refused(|s| s.activate(ID, json!({})));
+        s.activate(ID, json!({}));
+        assert_eq!(s.prompt_modes().len(), 3);
+    }
+
+    /// Issue #4440: (3), and the `price` is gone.
+    #[test]
+    fn it_costs_3_and_declares_extra_alone() {
+        let def = crate::card_def(ID);
+        assert_eq!(def.cost, CardCost::Fixed(3));
+        let keys: Vec<&str> = def.params.iter().flatten().map(|param| param.key.as_str()).collect();
+        assert_eq!(keys, ["extra"]);
+    }
+
+    /// R767000: after v0.6.6h through v0.6.9m the base face paid (1), and with no mana could not activate.
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_9m_pays_1_on_the_base_face() {
+        crate::under_kept(ID, super::script_v0_6_9m(), || {
+            let mut s = tallying(false, 0);
+            s.expect_refused(|s| s.activate(ID, json!({})));
+            let mut s = tallying(false, 5);
+            s.activate(ID, json!({}));
+            assert_eq!(s.state().players.p1.mana.current, 4, "it pays (1)");
+        });
     }
 
     #[test]

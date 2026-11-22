@@ -1,16 +1,17 @@
 //! SPEC §8.12 S+ #77 Black Hole (§3.1, §3.2, §6.3 Open a Black Hole; R1, R386, R482, R1431, R1420,
 //! R3535000, R3554000, R3554001, R3561000): (4) Spell, Mythic, Terminus, a card of the held
 //! Stinkyscape+ set.
-//!   Base:    "Open a Black Hole in midlane. At the start of each player's turn, it draws their permanents
+//!   Base:    "Open a Black Hole in midlane. At the end of each player's turn, it draws their permanents
 //!            one lane closer. It closes after swallowing {permanents} permanents." (7; 10 through v0.6.7k,
-//!            issue #4285)
+//!            issue #4285; "At the start of each player's turn" through v0.6.9m, issue #4440)
 //!   Radiant: "Open a Black Hole in midlane. At the start of the opponent's turn, it draws their
 //!            permanents one lane closer."
 //!
 //! Its Cry (R1) is `open_black_hole`, the engine's: the hole stands in lane 3 of 5, exiles what stood
-//! there and swallows what later enters, and draws each player's permanents one lane closer at the start
-//! of their turn (R3554000, R3554001). The Radiant face is `opponentOnly`: it pulls only the opponent's
-//! permanents, at the start of their turn. The hole closes after `permanents` swallowed, the number the
+//! there and swallows what later enters, and draws each player's permanents one lane closer (R3554000,
+//! R3554001): on the base face `atEnd`, at the end of their turn, its caster's own first (R4440050), and
+//! through v0.6.9m at the start (`script_v0_6_9m`, kept, R767000). The Radiant face is `opponentOnly`: it
+//! pulls only the opponent's permanents, at the start of their turn, as it always has. The hole closes after `permanents` swallowed, the number the
 //! Spell resolved with, so a Degrade or an Upgrade of it moves the closing (R3561000, R386, R482). The
 //! Radiant text leaves the closing out, but its face opens the same hole and closes at the printed 10,
 //! which nothing moves: `permanents` is tuned on the base face only (R1431).
@@ -19,12 +20,15 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-077";
 
-fn black_hole(opponent_only: bool) -> Script {
+/// One face: `opponent_only` pulls only the opponent's permanents, and `at_end` pulls at the end of each
+/// pulled player's turn rather than the start (R4440050).
+fn black_hole(opponent_only: bool, at_end: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             vec![open_black_hole(json_as(json!({
                 "opponentOnly": opponent_only.then_some(true),
                 "capacity": param(ctx, "permanents"),
+                "atEnd": at_end.then_some(true),
             })))]
         })),
         ..Script::default()
@@ -33,8 +37,17 @@ fn black_hole(opponent_only: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: black_hole(false),
-        radiant: black_hole(true),
+        base: black_hole(false, true),
+        radiant: black_hole(true, false),
+    }
+}
+
+/// R767000: through v0.6.9m the base face's hole pulled at the start of each player's turn (issue #4440);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9m() -> CardScripts {
+    CardScripts {
+        base: black_hole(false, false),
+        radiant: black_hole(true, false),
     }
 }
 
@@ -44,7 +57,7 @@ mod tests {
     use jackioh_engine::subsystems::ai_policy::choose_action;
     use jackioh_engine::testkit::*;
 
-    use super::ID;
+    use super::{ID, script_v0_6_9m};
     use crate::{filler, scenario};
 
     const P1: PlayerId = PlayerId::P1;
@@ -101,6 +114,7 @@ mod tests {
         let hole = s.state().black_hole.expect("the hole is open");
         assert_eq!(hole.lane, BLACK_HOLE_LANE);
         assert_eq!(hole.pulls, None);
+        assert!(hole.pulls_at_end(), "the base face pulls at the end of turns (R4440050)");
         assert_eq!(hole.swallowed_count(), 3);
         assert_eq!(exiled(&s, P1), 1);
         assert_eq!(exiled(&s, P2), 2);
@@ -127,20 +141,49 @@ mod tests {
         assert!(!offered.contains(&BLACK_HOLE_LANE), "{offered:?}");
     }
 
+    /// R4440050: the base face's hole pulls at the end of each player's turn, its caster's first, and never
+    /// at a turn's start.
     #[test]
-    fn r3554001_each_players_turn_start_pulls_their_permanents_one_lane_closer() {
+    fn r4440050_each_players_turn_end_pulls_their_permanents_one_lane_closer() {
         let mut s = board(false, "c077-pull", vec![lane(1), lane(5)], vec![lane(2)]);
         let (left, right) = (s.unit_at(P1, 1).id, s.unit_at(P1, 5).id);
         let theirs = s.unit_at(P2, 2).id;
         s.play(ID, json!({}));
+        assert_eq!((lane_of(&s, &left), lane_of(&s, &right)), (Some(1), Some(5)), "nothing as it opens");
         s.end_turn();
-        // p2's turn began: its lane 2 unit reached the hole and was swallowed; p1's stand still.
+        // p1's turn ended: their permanents stepped one lane closer; p2's turn began and pulled nothing.
+        assert_eq!((lane_of(&s, &left), lane_of(&s, &right)), (Some(2), Some(4)));
+        assert_eq!(lane_of(&s, &theirs), Some(2));
+        assert_eq!(s.state().black_hole.map(|hole| hole.swallowed_count()), Some(0));
+        s.end_turn();
+        // p2's turn ended: its lane 2 unit reached the hole and was swallowed; p1's turn began and pulled
+        // nothing.
         assert_eq!(s.pile(P2, "exile").iter().filter(|card| card.id == theirs).count(), 1);
         assert_eq!(s.state().black_hole.map(|hole| hole.swallowed_count()), Some(1));
-        assert_eq!((lane_of(&s, &left), lane_of(&s, &right)), (Some(1), Some(5)));
-        s.end_turn();
-        // p1's turn began: their permanents stepped one lane closer.
         assert_eq!((lane_of(&s, &left), lane_of(&s, &right)), (Some(2), Some(4)));
+        s.end_turn();
+        // p1's turn ended again: lanes 2 and 4 reached the hole.
+        assert_eq!(s.pile(P1, "exile").iter().filter(|card| card.id == left || card.id == right).count(), 2);
+    }
+
+    /// R767000: through v0.6.9m the base face's hole pulled at the start of each player's turn.
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_9m_pulls_at_each_players_turn_start() {
+        crate::under_kept(ID, script_v0_6_9m(), || {
+            let mut s = board(false, "c077-pull-kept", vec![lane(1), lane(5)], vec![lane(2)]);
+            let (left, right) = (s.unit_at(P1, 1).id, s.unit_at(P1, 5).id);
+            let theirs = s.unit_at(P2, 2).id;
+            s.play(ID, json!({}));
+            assert!(s.state().black_hole.is_some_and(|hole| !hole.pulls_at_end()));
+            s.end_turn();
+            // p2's turn began: its lane 2 unit reached the hole and was swallowed; p1's stand still.
+            assert_eq!(s.pile(P2, "exile").iter().filter(|card| card.id == theirs).count(), 1);
+            assert_eq!(s.state().black_hole.map(|hole| hole.swallowed_count()), Some(1));
+            assert_eq!((lane_of(&s, &left), lane_of(&s, &right)), (Some(1), Some(5)));
+            s.end_turn();
+            // p1's turn began: their permanents stepped one lane closer.
+            assert_eq!((lane_of(&s, &left), lane_of(&s, &right)), (Some(2), Some(4)));
+        });
     }
 
     #[test]
@@ -190,6 +233,7 @@ mod tests {
         let (mine, theirs) = (s.unit_at(P1, 1).id, s.unit_at(P2, 1).id);
         s.play(ID, json!({}));
         assert_eq!(s.state().black_hole.and_then(|hole| hole.pulls), Some(P2));
+        assert!(s.state().black_hole.is_some_and(|hole| !hole.pulls_at_end()), "at the start, as before");
         s.end_turn();
         assert_eq!(lane_of(&s, &theirs), Some(2));
         s.end_turn();

@@ -1996,6 +1996,8 @@ const INTRO_CARDS = [
   // ---- Stinkyscape+ (R3572000) ----
   { card: "stinkyscapeplus-003", name: "High Evolutionary", set: "Stinkyscape+", type: "Unit", tags: ["Swarm"], rarity: "Legendary" },
   { card: "stinkyscapeplus-004", name: "Profe Yates", set: "Stinkyscape+", type: "Unit", tags: ["Human", "Felinor", "Catalyst", "Acclaimed"], rarity: "Legendary" },
+  // Issue #4440 (R4440004): its Prime, printed Legendary; rendered by gen:music on a machine with FluidSynth.
+  { card: "stinkyscapeplus-004-1", name: "Profe Yates Prime", set: "Stinkyscape+", type: "Unit", tags: ["Human", "Felinor", "Acclaimed", "Prime", "Token"], rarity: "Legendary" },
   { card: "stinkyscapeplus-005", name: "Dingleberry Droat", set: "Stinkyscape+", type: "Unit", tags: ["Human", "Acclaimed"], rarity: "Legendary" },
   { card: "stinkyscapeplus-007", name: "Churnwalker", set: "Stinkyscape+", type: "Unit", tags: [], rarity: "Legendary" },
   { card: "stinkyscapeplus-010", name: "Drone Assembler v5", set: "Stinkyscape+", type: "Unit", tags: ["Weapon"], rarity: "Legendary" },

@@ -74,22 +74,23 @@ use crate::scripts::stinkyscape::{
     c035_drone_core_ix, c036_drone_core_x, c042_core_researcher, c045_drone_commander,
     c046_circadian_halfcycler, c049_spacemine, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3,
     c054_beam_v4, c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5,
-    c060_cannon_v5, c061_flak_v5, c070_zzoth, c074_paragon_x, c083_halo, c086_prototype_x2, c087_siva_1,
-    c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447, c112_job_application,
-    c115_scornboi, c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod,
+    c060_cannon_v5, c061_flak_v5, c070_zzoth, c074_paragon_x, c080_galaxy, c083_halo, c086_prototype_x2,
+    c087_siva_1, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447,
+    c112_job_application, c115_scornboi, c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod,
     c134_felinor_containment_chamber, c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach,
-    c149_wildar, c153_stimmycheck, c154_dice_of_doom, c163_swear_loyalities, c165_the_trade_union,
-    c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
-    c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
+    c149_wildar, c153_stimmycheck, c154_dice_of_doom, c158_stratos_swarm, c163_swear_loyalities,
+    c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
+    c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor,
+    t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
     c025_snom_bunny, c037_scorch, c039_mindustrial_cross_over, c041_mend_projector, c046_phase_fabric,
     c061_1_shawarma_law, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall, c067_phase_wall,
-    c076_ayys_lmao, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition,
-    c093_recessive_replicators, c097_selective_enrollment, c104_tireless_cultivation, c119_eclipse,
-    c120_crawler, c121_1_toxopid_leg, c121_toxopid, c145_fire_beam_v5, c155_the_far_vagabond,
-    c166_mindustrial_revolution,
+    c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage,
+    c082_endless_expedition, c093_recessive_replicators, c097_selective_enrollment,
+    c104_tireless_cultivation, c119_eclipse, c120_crawler, c121_1_toxopid_leg, c121_toxopid,
+    c145_fire_beam_v5, c155_the_far_vagabond, c159_raven, c166_mindustrial_revolution,
 };
 use crate::scripts::training_grounds::{
     c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
@@ -117,8 +118,10 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #4154 (R4154001, R4154100 to R4154105, R4154200 to R4154213, R4154300 to R4154305), #4238 (R4238000),
 /// #4285 (R4285001 to R4285005), #4327 (R4327002), #4331 (R4331000, R4331001), #4353 (R4353020,
 /// R4353021, R4353022, R4353024, R4353025, and Medina Enforcer's and Repeater v5's numbers of uses and
-/// hooks), #4350 (R4350000), #4395 (R4395000), #4469 (R3554003), and #4382's sweep of the carried catalogs (R4382001: Adaptive UI's Rush
-/// Token through v0.1.0d), #4396 (R4396000), #4423 (R4423000), and #4424 (R4424000).
+/// hooks), #4350 (R4350000), #4395 (R4395000), #4469 (R3554003), #4382's sweep of the carried catalogs
+/// (R4382001: Adaptive UI's Rush Token through v0.1.0d), #4396 (R4396000), #4423 (R4423000), #4424
+/// (R4424000), and #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
+/// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c074_adaptive_ui::ID, "v0.1.0d", c074_adaptive_ui::script_v0_1_0d),
@@ -1284,6 +1287,38 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c025_snom_bunny::ID, "v0.6.9k", c025_snom_bunny::script_v0_6_9j),
     (c018_3_casper::ID, "v0.6.9k", c018_3_casper::script_v0_6_9j),
     (c087_siva_1::ID, "v0.6.9k", c087_siva_1::script_v0_6_9j),
+    // #4440 Stinkyscape+ Balance Changes VI (R4440003): the last script before it, Profe Yates's exile,
+    // its Prime's text since (R4440004).
+    (c004_profe_yates::ID, "v0.6.9m", c004_profe_yates::script_v0_6_9m),
+    // #4440 (R4440050 to R4440055): the other last scripts before it.
+    (c109_xxfreshjack::ID, "v0.6.9m", c109_xxfreshjack::script_v0_6_9m),
+    (c159_raven::ID, "v0.6.9m", c159_raven::script_v0_6_9m),
+    (c077_black_hole::ID, "v0.6.9m", c077_black_hole::script_v0_6_9m),
+    (c026_zolarketh::ID, "v0.6.9m", c026_zolarketh::script_v0_6_9m),
+    (
+        c158_stratos_swarm::ID,
+        "v0.6.9m",
+        c158_stratos_swarm::script_v0_6_9m,
+    ),
+    (c080_galaxy::ID, "v0.6.9m", c080_galaxy::script_v0_6_9m),
+    (c037_last_hurrah::ID, "v0.6.9m", c037_last_hurrah::script_v0_6_9m),
+    (c028_second_wind::ID, "v0.6.9m", c028_second_wind::script_v0_6_9m),
+    (
+        c080_the_last_voyage::ID,
+        "v0.6.9m",
+        c080_the_last_voyage::script_v0_6_9m,
+    ),
+    (c026_tommy_tempo::ID, "v0.6.9m", c026_tommy_tempo::script_v0_6_9m),
+    (
+        c010_double_counting::ID,
+        "v0.6.9m",
+        c010_double_counting::script_v0_6_9m,
+    ),
+    (
+        c009_joint_filing::ID,
+        "v0.6.9m",
+        c009_joint_filing::script_v0_6_9m,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -1919,6 +1954,42 @@ mod tests {
             kept_at("v0.6.9h"),
             Some("v0.6.9g"),
             "v0.6.9h ran the units-only trigger"
+        );
+    }
+
+    /// Issue #4440: v0.6.9g to v0.6.9m shipped while it was built, so its rows are keyed at v0.6.9m, the
+    /// newest version that ran the scripts they keep; Profe Yates's exile ran from v0.6.7l, after its
+    /// v0.6.7k row, through it.
+    #[test]
+    fn r767000_issue_4440_scripts_are_kept_through_v0_6_9m_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[
+                c109_xxfreshjack::ID,
+                c159_raven::ID,
+                c077_black_hole::ID,
+                c026_zolarketh::ID,
+                c158_stratos_swarm::ID,
+                c080_galaxy::ID,
+                c037_last_hurrah::ID,
+                c028_second_wind::ID,
+                c080_the_last_voyage::ID,
+                c026_tommy_tempo::ID,
+                c010_double_counting::ID,
+                c009_joint_filing::ID,
+            ],
+            &[
+                "v0.6.9f", "v0.6.9g", "v0.6.9h", "v0.6.9i", "v0.6.9j", "v0.6.9k", "v0.6.9l", "v0.6.9m",
+            ],
+            "v0.6.9n",
+        );
+        assert_kept_through(
+            &[c004_profe_yates::ID],
+            &[
+                "v0.6.7l", "v0.6.7m", "v0.6.8", "v0.6.8b", "v0.6.8c", "v0.6.8d", "v0.6.8e", "v0.6.9",
+                "v0.6.9b", "v0.6.9c", "v0.6.9d", "v0.6.9e", "v0.6.9f", "v0.6.9g", "v0.6.9h", "v0.6.9i",
+                "v0.6.9j", "v0.6.9k", "v0.6.9l", "v0.6.9m",
+            ],
+            "v0.6.9n",
         );
     }
 
