@@ -15289,17 +15289,8 @@
       "taken_asks": []
     },
     "4431": {
-      "action": "plan",
-      "asks": [
-        "c:7071632869"
-      ],
-      "build_next": {
-        "from_run": "44968195323",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-22T00:55:10Z",
-        "until": "2026-11-22T01:25:10Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T00:55:01Z",
         "difficulty": "medium",
@@ -15318,10 +15309,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Test-only addition in one crate's tests directory: no engine rules, no AI, no cross-crate design, no migration, far under 40 files.\"} -->\n- # Plan\n- ## Goal\n- Add a seeded randomized invariant suite for the daily game clock in `crates/shared`, proving across thousands of random daily sequences that holds never shrink under the same move key (R3727003), `daily_expired` fires at the exact deadline millisecond (R3727000), `daily_legal`/`daily_allows` agree \u2026\n- ## Files to touch\n- | File | New / change | What changes |\n- |---|---|---|\n- | `crates/shared/tests/daily_invariants.rs` | new | Whole suite: helpers, seeded runner, four invariant checkers, checker unit tests, PR/sweep/repro entry points (~300 lines) |\n- Do not touch: `.github/`, `.harness/`, `.squishy/`, `bot/` (forbidden paths); `spec/` (no new ruling: R3727000\u2013R3727006 notes exist, so citing them and naming tests after them already passes `spec check`); `crates/shared/src/host/daily.rs` and every other source file (pure test addition); `apps/web\u2026\n- ## Steps\n- 1. **Create `crates/shared/tests/daily_invariants.rs` with header and imports.** Header comment cites SPEC \u00a79.13, #4431, R3727000/R3727001/R3727002/R3727003/R3727006, and notes purity (all draws through `jackioh_engine::Rng`, no clock/env/IO) plus the naming rule (no `fuzz`/`selfplay`/`positions` i\u2026\n- 2. **Copy the eight helpers verbatim from `crates/shared/tests/daily.rs`:** `NOW`, `deck`, `begun`, `act`, `mulligan`, `clock_over`, `window`, `first_turn`, `competition_cast` (daily.rs lines 18\u201376 and 235\u2013265). Add file consts in the `host_fuzz.rs` style: `DAILY_INVARIANTS_SEEDS: u64 = 24`, `DAILY\u2026\n- 3. **Write `play_daily_game(seed: u64) -> String`.** Build `Rng::new(&format!(\"daily-invariants:{seed}\"), 0)`; pick `per_move_days` via `rng.pick(&DAILY_TIME_PER_MOVE_DAYS)`; start `begun(&format!(\"daily-invariants-{seed}\"), true)` (sandbox, so Competition prompts are reachable) with both mulligans\u2026\n- 4. **Write `check_all(state, prev: Option<&DailyClock>, clock, now)`.** Compute `holders = daily_holders(state)`. If `result.is_some()`: assert holders and `clock.holds` are empty and `daily_expired(&clock, now)` and `daily_expired(&clock, now + clock.window_ms())` are `None` (completion, R3727000)\u2026\n- 5. **Write four checker unit tests in the `host_fuzz.rs` tail style,** each hand-breaking one property on a real `first_turn` game: a shortened `deadline` under the same key fails monotonicity; `daily_expired` at `deadline - 1` returning non-`None` fails timeliness; a non-empty hold after a Concede\u2026\n- 6. **Write the entry points:** `daily_games_keep_clock_invariants` (plays all `DAILY_INVARIANTS_SEEDS` seeds, panicking as `daily invariants: seed {s} step {n}: {detail}; rerun: set REPRO = Some({s}) in crates/shared/tests/daily_invariants.rs`), `the_same_seed_plays_the_same_daily_game` (seed 0 twi\u2026\n- 7. **Run the checks:** `cargo test -p jackioh-shared --test daily_invariants`, `cargo fmt --check`, `cargo clippy -p jackioh-shared --all-targets -- -D warnings`, `cargo jackioh spec check`.\n- ## Tests\n- - `crates/shared/tests/daily_invariants.rs`: `daily_games_keep_clock_invariants` (24 seeded full games through mulligans, prompts, draw offers, swaps, completions; fails on any invariant break or panic); the four `the_*_checker_fails_*` unit tests (each asserts its checker rejects exactly one hand-\u2026\n- - Commands: `cargo test -p jackioh-shared --test daily_invariants`; `cargo test -p jackioh-shared --test daily_invariants daily_clock_sweep -- --ignored` for the sweep; `cargo fmt --check`; `cargo clippy -p jackioh-shared --all-targets -- -D warnings`; `cargo jackioh spec check`.\n- ## Done when\n- - [ ] Random games run through mulligans, prompts, draw offers and completions with no panic or invariant violation.\n- - [ ] Hold monotonicity, exact-millisecond expiry, legal/allows parity and post-game emptiness are each checked every step and each has a unit test that fails when broken.\n- - [ ] A failure reruns deterministically through the `REPRO` const.\n- - [ ] No test name contains `fuzz`/`selfplay`/`positions`; the suite runs under `cargo test -p jackioh-shared`.\n- - [ ] `cargo test -p jackioh-shared --test daily_invariants`, `cargo fmt --check`, `cargo clippy -p jackioh-shared --all-targets -- -D warnings` and `cargo jackioh spec check` all pass.\n- ## Risks\n- - Seed/step budget overrunning CI time: 24 seeds \u00d7 150 steps of cheap queries is sized like the existing daily tests; shrink `DAILY_INVARIANTS_SEEDS` first if slow, never the checks.\n- - Sandbox `SandboxOp` bodies appearing in random picks and stalling games: random play skips them (step 3); only the scripted Competition cast uses them.\n- - Direct `seat_swaps` mutation making unengine-like states: same trick as the existing `r3727001` test; invariants are state-relative so it stays valid.\n- - Nondeterminism: every draw goes through the file's single `Rng`; `legal_actions` returns a `Vec` in stable order, never a hash-ordered map.\n- ## Open questions\n- None. Two calls the task left open were settled against the repo: single-seed rerun uses a `const REPRO` (not the `REPRO=` env variable the issue text suggests) because `crates/shared/clippy.toml` bans `std::env::var` in tests and `host_fuzz.rs`'s actual convention is the const; no `spec/pending/44\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4431 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4431/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-22T00:45:38Z",
       "owner_why": "it plans it",
@@ -15334,12 +15324,14 @@
       "provider": "muse",
       "queued_at": "2026-11-22T00:34:11Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44968195323",
+      "run_id": "pending:f7a874fe-1795309011",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-22T00:45:38Z",
+      "started_at": "2026-11-22T00:57:09Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7071632869"
+      ]
     },
     "4432": {
       "action": "build",
@@ -15621,9 +15613,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T00:56:38Z",
+    "at": "2026-11-22T00:57:09Z",
     "url": "",
-    "what": "build #4424 on muse"
+    "what": "build #4431 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T00:40:17Z",
