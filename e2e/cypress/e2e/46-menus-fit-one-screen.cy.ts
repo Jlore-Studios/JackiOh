@@ -50,6 +50,9 @@ const ONE_SCREEN = 1;
 
 /** A box's edge may sit this far past the window's (a sub-pixel border) and still be inside it. */
 const EDGE_SLACK_PX = 1;
+/** How many of the elements past an edge an overflow names, and how much of each one's text (#4375). */
+const PAST_EDGE_NAMED = 5;
+const PAST_EDGE_TEXT_CHARS = 40;
 
 /** #4349: Chrome's select arrow and the gap before it, measured (Inter at 16 px: whole at a 218 px select with 8 px of padding, cut at 214, so 18 to 19.6); 20 rounds up. */
 const SELECT_ARROW_PX = 20;
@@ -142,7 +145,24 @@ function expectComparePickerWhole(select: HTMLSelectElement, where: string): voi
   expect(sidebar.scrollWidth, `the sidebar does not scroll sideways at ${where}`).to.be.at.most(sidebar.clientWidth + EDGE_SLACK_PX);
   expect(Math.ceil(selectBox.right), `the select ends inside the sidebar at ${where}`).to.be.at.most(Math.ceil(sidebar.getBoundingClientRect().right));
   const editor = doc.querySelector<HTMLElement>(ts(DECK_EDITOR));
-  expect(editor?.scrollWidth, `the editor does not overflow sideways at ${where}`).to.be.at.most((editor?.clientWidth ?? 0) + EDGE_SLACK_PX);
+  const past = editor === null ? "" : pastRightEdge(editor);
+  expect(editor?.scrollWidth, `the editor does not overflow sideways at ${where}${past}`).to.be.at.most((editor?.clientWidth ?? 0) + EDGE_SLACK_PX);
+}
+
+/** The widest of `box`'s descendants that reach past its right edge, so an overflow names what overflows (#4375). */
+function pastRightEdge(box: HTMLElement): string {
+  const right = box.getBoundingClientRect().right;
+  const past = [...box.querySelectorAll<HTMLElement>("*")]
+    .map((element) => ({ element, over: element.getBoundingClientRect().right - right }))
+    .filter(({ over }) => over > EDGE_SLACK_PX)
+    .sort((a, b) => b.over - a.over)
+    .slice(0, PAST_EDGE_NAMED)
+    .map(({ element, over }) => {
+      const classes = [...element.classList].map((name) => `.${name}`).join("");
+      const text = (element.textContent ?? "").trim().slice(0, PAST_EDGE_TEXT_CHARS);
+      return `${element.tagName.toLowerCase()}${classes} +${over.toFixed(1)}px "${text}"`;
+    });
+  return past.length === 0 ? "" : ` (past its edge: ${past.join("; ")})`;
 }
 
 /**

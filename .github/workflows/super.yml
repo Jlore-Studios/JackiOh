@@ -8,7 +8,8 @@
 #   ai gates        `jackioh gate --full` in shards, held together by `gate merge` (V10)
 #   golden          `jackioh golden check`: every recorded TypeScript trace replays identically (V4)
 #   daily tests     every Rust test `#[ignore = "daily: …"]` leaves out of a pull request's cargo test:
-#                   the many-game sweeps, whose rule a cheaper test holds per pull request
+#                   the many-game sweeps, whose rule a cheaper test holds per pull request, in three
+#                   legs: every crate but the tools, the tools, and the tools' pool probe (#4375)
 #   coverage        cargo llvm-cov over engine, cards and ai, failing under .github/coverage-floor.txt
 #                   (90% at the start, raised by hand as it climbs toward #306's 99%)
 #   e2e             all 35 e2e specs on Chrome, in shards, and the component specs in three (V21)
@@ -297,13 +298,33 @@ jobs:
   # The Rust tests too slow or too statistical for every pull request: each `#[ignore = "daily: …"]`
   # in the workspace, its reason naming what holds the same rule per pull request (acceptance.rs
   # holds every ignore to that form), and nothing else. `--tests` leaves out the doc-tests, whose
-  # `ignore` blocks are not tests at all. Most of the job is compiling the workspace.
+  # `ignore` blocks are not tests at all. Three legs that together run each ignored test once
+  # (#4375): as one job they ran past its 60 minutes once the pool probe took the AI's, the server's
+  # and the tools' suites too (#4249). The tools leg leaves the probe's four tests to their own leg.
+  # That leg builds only jackioh-tools, which does not depend on the server, so it fetches every
+  # crate first for the probe's nested `cargo test --offline` builds.
   daily-tests:
-    name: daily tests (cargo test -- --ignored)
+    name: daily tests (${{ matrix.leg }})
     if: github.event_name != 'schedule'
     environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: every crate but the tools
+            key: crates
+            targets: "--workspace --exclude jackioh-tools --tests"
+            skip: ""
+          - leg: tools
+            key: tools
+            targets: "-p jackioh-tools --tests"
+            skip: "--skip _passes_with_every_random_pool_rotated"
+          - leg: pool probe
+            key: pool-probe
+            targets: "-p jackioh-tools --test pool_probe"
+            skip: ""
     env:
       CARGO_PROFILE_TEST_DEBUG: "0"
     steps:
@@ -311,9 +332,17 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node: "false"
-          cache-key: daily-tests
-      - name: every test a pull request leaves to the daily run
-        run: cargo test --workspace --tests --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored
+          cache-key: daily-tests-${{ matrix.key }}
+      - name: every crate in Cargo.lock, for the probe's offline builds
+        if: ${{ matrix.key == 'pool-probe' }}
+        run: cargo fetch
+      - name: this leg's tests a pull request leaves to the daily run
+        env:
+          TARGETS: ${{ matrix.targets }}
+          SKIP: ${{ matrix.skip }}
+        run: |
+          # shellcheck disable=SC2086 # TARGETS and SKIP are several arguments on purpose.
+          cargo test $TARGETS --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored $SKIP
 
   coverage:
     name: coverage (engine, cards, ai)

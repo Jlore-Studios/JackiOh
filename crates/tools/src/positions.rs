@@ -563,37 +563,45 @@ mod tests {
     #[test]
     #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn r4070000_a_row_whose_root_prices_nothing_keeps_the_hand_it_had() {
-        let (game, live) = played(3);
-        let rows = fold_game(game, Every::Decision, jackioh_cards::catalog_version()).expect("it replays");
+        // Every row of the four test games, so the unpriced rows the claim needs are searched for
+        // rather than pinned to one game's deal (#4375: since #4353's cards, game 3 alone priced every
+        // one of its 97 rows).
         let mut unpriced = 0usize;
-        for row in &rows {
-            let (state, _) = live
-                .iter()
-                .find(|(_, step)| *step == row.step)
-                .expect("a live state at every row's step");
-            let next = if state.active == row.seat {
-                NextSwing::Seat
-            } else {
-                NextSwing::Enemy
-            };
-            let prices = decision_prices_at(state, row.seat);
-            assert_eq!(
-                row.hand,
-                evaluate_priced(state, row.seat, next, &AI_EVAL, &prices),
-                "step {}",
-                row.step
-            );
-            if prices_nothing(&prices) {
+        let mut seen = 0usize;
+        for n in 1..=4 {
+            let (game, live) = played(n);
+            let rows =
+                fold_game(game, Every::Decision, jackioh_cards::catalog_version()).expect("it replays");
+            seen += rows.len();
+            for row in &rows {
+                let (state, _) = live
+                    .iter()
+                    .find(|(_, step)| *step == row.step)
+                    .expect("a live state at every row's step");
+                let next = if state.active == row.seat {
+                    NextSwing::Seat
+                } else {
+                    NextSwing::Enemy
+                };
+                let prices = decision_prices_at(state, row.seat);
                 assert_eq!(
                     row.hand,
-                    evaluate(state, row.seat, next, &AI_EVAL),
+                    evaluate_priced(state, row.seat, next, &AI_EVAL, &prices),
                     "step {}",
                     row.step
                 );
-                unpriced += 1;
+                if prices_nothing(&prices) {
+                    assert_eq!(
+                        row.hand,
+                        evaluate(state, row.seat, next, &AI_EVAL),
+                        "step {}",
+                        row.step
+                    );
+                    unpriced += 1;
+                }
             }
         }
-        assert!(unpriced > 0, "every one of {} rows priced something", rows.len());
+        assert!(unpriced > 0, "every one of {seen} rows priced something");
     }
 
     /// R4159000, R1171000, R3112002: with the policy prior and the learned network retired, a positions
