@@ -195,7 +195,7 @@ function countsOf(count: (file: string) => number): Record<string, number> {
 /** The dialogs #3221 moved onto Dialog, each drawn through it. */
 const MOVED = [
   "settings/SettingsPanel.tsx",
-  "together/FriendsButton.tsx",
+  "together/FriendsDrawer.tsx",
   "together/ChatPanel.tsx",
   "together/ChallengeDialog.tsx",
   "collection/TokenOffer.tsx",

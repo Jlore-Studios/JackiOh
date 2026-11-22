@@ -23,6 +23,7 @@ import { must, stubServer, type StubServer } from "../test/stubServer.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { FRIENDS_POLL_MS, HIDDEN_QUIET_MS, SOCIAL_POLL_MS } from "./config.ts";
 import { FriendsButton } from "./FriendsButton.tsx";
+import { friendsDrawerChunk } from "./friendsDrawerChunk.ts";
 import { setSocialSocketFactory } from "./socialSocket.ts";
 import { TogetherRoute } from "./TogetherRoute.tsx";
 import { challengeToastTestid, friendsTestid, togetherTestid } from "./testids.ts";
@@ -146,6 +147,9 @@ describe("#936 the social reads' cadences", () => {
     expect(reads(server).friends, "a board being played asks for no friends list").toBe(0);
     expect(reads(server).social).toBe(closed.social + Math.floor((FRIENDS_POLL_MS * 2) / SOCIAL_POLL_MS));
 
+    // #4444: the drawer arrives in its own chunk; warmed here so the cadence below measures the
+    // reads, not the code's arrival.
+    await friendsDrawerChunk.load();
     fireEvent.click(screen.getByTestId(friendsTestid.button));
     await settle({ advance: 0 });
     expect(reads(server).friends).toBe(1);
@@ -283,6 +287,9 @@ describe("R3205000 a hidden tab's social reads", () => {
       </>,
     );
     await settle({ advance: 0 });
+    // #4444: the drawer arrives in its own chunk; warmed here so the cadence below measures the
+    // reads, not the code's arrival.
+    await friendsDrawerChunk.load();
     fireEvent.click(screen.getByTestId(friendsTestid.button));
     await settle({ advance: 0 });
     expect(reads(server).friends).toBe(1);
@@ -515,6 +522,9 @@ describe("R3214000 the social socket stands in for the polls", () => {
     await settle({ advance: 0 });
     expect(reads(server).friends, "closed, the panel reads nothing").toBe(0);
 
+    // #4444: the drawer arrives in its own chunk; warmed here so the reads below measure the
+    // panel, not the code's arrival.
+    await friendsDrawerChunk.load();
     fireEvent.click(screen.getByTestId(friendsTestid.button));
     await settle({ advance: 0 });
     expect(reads(server).friends).toBe(1);
