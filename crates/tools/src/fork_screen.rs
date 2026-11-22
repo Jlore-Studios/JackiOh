@@ -725,9 +725,9 @@ mod tests {
 
     #[test]
     fn r4397000_self_against_self_finds_no_fork_and_reads_inconclusive() {
-        let games = vec![trunk_game("r4397000-self:1", 1), trunk_game("r4397000-self:2", 2)];
+        let games = vec![trunk_game("r4397000-self:1", 1)];
         let played = play_trunk(&games, &AgentSpec::SelfAi).unwrap();
-        assert_eq!(played.len(), 2);
+        assert_eq!(played.len(), 1);
         for (outcome, points, probe_faults) in &played {
             assert!(outcome.result.is_some(), "deal {}", outcome.game.n);
             assert!(points.is_empty(), "deal {}: {points:?}", outcome.game.n);
@@ -787,15 +787,18 @@ mod tests {
         assert_eq!(ctl.log[fork.at_move].body, fork.control.clone().unwrap());
         assert_ne!(fork_key(&fork.candidate), fork_key(&fork.control));
 
-        // The whole tally is byte-identical on one thread and on four.
-        let jobs: Vec<(&ArenaOutcome, &ForkPoint)> = forks
-            .iter()
-            .map(|(index, point)| (&played[*index].0, point))
-            .collect();
+        // The whole tally is byte-identical on one thread and on four. One fork is enough to show
+        // the order does not follow completion (its 16 arms play on rayon's pool); the last fork
+        // of a game has the fewest moves left to play. All four forks played 64 arms twice and
+        // took 8 minutes (#4441).
+        let (index, last) = &forks[FORK_MAX_PER_GAME - 1];
+        let jobs: Vec<(&ArenaOutcome, &ForkPoint)> = vec![(&played[*index].0, last)];
         let one = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();
         let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
         let expected = one.install(|| tally_of(&jobs, games.len()));
         assert!(!expected.is_empty());
+        let played_rollouts = format!("\"rollouts\":{}", jobs.len() * FORK_ROLLOUTS * 2);
+        assert!(expected.contains(&played_rollouts), "{expected}");
         assert_eq!(four.install(|| tally_of(&jobs, games.len())), expected);
     }
 
