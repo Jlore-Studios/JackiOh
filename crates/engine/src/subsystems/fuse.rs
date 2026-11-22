@@ -1077,7 +1077,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
             Some(StaticFlags {
                 cast_on_draw: flags(|f| f.cast_on_draw),
                 quickdraw: flags(|f| f.quickdraw),
-                hand_sale: flags(|f| f.hand_sale),
+                pays_credits: flags(|f| f.pays_credits),
                 infinite_reserves: flags(|f| f.infinite_reserves),
                 warhero_draws: flags(|f| f.warhero_draws),
                 never_defense: flags(|f| f.never_defense),

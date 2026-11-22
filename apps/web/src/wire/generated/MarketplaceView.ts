@@ -4,12 +4,18 @@ import type { MarketSaleView } from "./MarketSaleView";
 
 /**
  * R1853000–R1853003, R2250002, §10.8: the open Marketplace as the viewer reads it
- * (`marketplace::marketplace_view`): the lots offered to them and the sale prices of their own hand
- * sales (R1861000). Which buys and sales are offered stays `legal_actions`' answer.
+ * (`marketplace::marketplace_view`): the lots offered to them. Which buys are offered stays
+ * `legal_actions`' answer.
  */
 export type MarketplaceView = { 
 /**
  * The viewer's own offers (R2250002, R3047000): the four rolled at the start of their turn, then
  * the lots an effect added for them (R1853005).
  */
-offers: Array<MarketOfferView>, sales: Array<MarketSaleView>, };
+offers: Array<MarketOfferView>, 
+/**
+ * R4410000: always empty since issue #4410, nothing selling at the Marketplace. Kept on the wire,
+ * as `marketSell` and `marketSold` are, so every view that holds the Marketplace reads as it did
+ * and an older client that reads it still finds it.
+ */
+sales: Array<MarketSaleView>, };

@@ -1218,7 +1218,7 @@ must share an engine version: an `ai/*` branch differs from `main` only under `c
 ### 14.2 `arena` and `promote`
 
 ```
-cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> (--set improve-dev [--games N] [--extend] | --seed <base> --games N [--paired]) [--out <dir>]
+cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> (--set improve-dev [--games N] [--extend] [--forks] | --seed <base> --games N [--paired]) [--out <dir>]
 cargo jackioh promote --lane improve|unban --parent-bin <path to main's jackioh> [--dry-run] [--verify]
 ```
 
@@ -1241,6 +1241,15 @@ screen (`--set`) with fewer than `SCREEN_MIN_DECIDED` (20) decided deals prints
 `inconclusive: true` and says nothing: it neither keeps nor drops the change (R4319000).
 `--extend` plays a screen on in 100-deal batches until `SCREEN_MIN_DECIDED` deals are decided or
 `SCREEN_MAX_GAMES` (2,000) games are played, reading the edge only at the end.
+
+`--forks` is the fork screen (R4397000): the trunk plays each deal of the set once with the
+control on both seats, and at each trunk decision the candidate gets the same request the
+control's seat got, never the true state. When its action differs that decision is a fork (at most
+`FORK_MAX_PER_GAME`, 2, per game); each fork plays `FORK_ROLLOUTS` (8) pairs from the fork's state,
+once after each action, both arms on to the end with the control on both seats. The tally adds
+`trunkGames`, `forks`, `liveForks`, `forksPerGame`, `rollouts` and `forkEdge` with its 95% interval
+`forkEdgeLow` and `forkEdgeHigh`, keeps a change when `forkEdgeLow` is above 0, and reads
+`inconclusive: true` below `SCREEN_MIN_DECIDED` live forks.
 
 `promote` plays the lane's deals against the parent, seeds `"<lane>:<tree>:<d>"` where `<tree>` is
 `git rev-parse HEAD:crates/ai/src` (so committing `generation.json` does not change the seeds), each

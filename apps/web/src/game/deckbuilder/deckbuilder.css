@@ -529,12 +529,14 @@
 
 /* The "+" that adds the card to the open deck in one tap. It is drawn 28 px round in the card's
    top-right corner, and its ::before widens the hit area to --hit-min (task 7's touch-target floor)
-   without covering more of the face. */
+   without covering more of the face. That hit area is centered on it (R2122000), so the "+" sits
+   at least its reach, (--hit-min - 28 px) / 2, in from the card's right edge: at 3% alone a phone's
+   last column laid it 2.9 px past the deck editor's edge, which then panned sideways (#4375). */
 .deckbuilder.app-shell .db-add {
   position: absolute;
   z-index: 1;
   top: 2.5%;
-  right: 3%;
+  right: max(3%, (var(--hit-min) - 28px) / 2);
   display: grid;
   place-items: center;
   width: 28px;

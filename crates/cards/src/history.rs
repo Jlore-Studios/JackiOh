@@ -115,7 +115,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #4154 (R4154001, R4154100 to R4154105, R4154200 to R4154213, R4154300 to R4154305), #4238 (R4238000),
 /// #4285 (R4285001 to R4285005), #4327 (R4327002), #4331 (R4331000, R4331001), #4353 (R4353020,
 /// R4353021, R4353022, R4353024, R4353025, and Medina Enforcer's and Repeater v5's numbers of uses and
-/// hooks), #4350 (R4350000), and #4382's sweep of the carried catalogs (R4382001: Adaptive UI's Rush
+/// hooks), #4350 (R4350000), #4395 (R4395000), and #4382's sweep of the carried catalogs (R4382001: Adaptive UI's Rush
 /// Token through v0.1.0d), #4396 (R4396000), and #4424 (R4424000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -1177,6 +1177,8 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.9c",
         c007_the_greatest_heist::script_v0_6_9c,
     ),
+    // #4395 (R4395000): the last Shadowstep trigger that answered any card of yours that was destroyed.
+    (c014_shadowstep::ID, "v0.6.9f", c014_shadowstep::script_v0_6_9f),
     // #4396 (R4396000): the last scripts before a Death read its stats with the auras on.
     (c049_spacemine::ID, "v0.6.9e", c049_spacemine::script_v0_6_9e),
     (
@@ -1187,18 +1189,18 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     // #4424 (R4424000): the last scripts that still drew a Dormant or Spell-immune card.
     (
         c011_2_arcane_missiles::ID,
-        "v0.6.9f",
-        c011_2_arcane_missiles::script_v0_6_9f,
+        "v0.6.9i",
+        c011_2_arcane_missiles::script_v0_6_9i,
     ),
     (
         c083_transmogulate::ID,
-        "v0.6.9f",
-        c083_transmogulate::script_v0_6_9f,
+        "v0.6.9i",
+        c083_transmogulate::script_v0_6_9i,
     ),
     (
         c085_unlicensed_experimentation::ID,
-        "v0.6.9f",
-        c085_unlicensed_experimentation::script_v0_6_9f,
+        "v0.6.9i",
+        c085_unlicensed_experimentation::script_v0_6_9i,
     ),
 ];
 
@@ -1810,6 +1812,26 @@ mod tests {
         );
     }
 
+    /// Issue #4395: Shadowstep's base trigger answered any card of yours that was destroyed through
+    /// v0.6.9f, the newest version shipped as it was built, so its row is keyed there; v0.4.12b and before
+    /// keep their own.
+    #[test]
+    fn r767000_issue_4395_shadowstep_is_kept_through_v0_6_9f_the_newest_version_that_ran_it() {
+        crate::register_all();
+        let kept_at = |version: &str| {
+            covering_at(&HISTORY.order, KEPT_SCRIPTS, version, c014_shadowstep::ID)
+                .map(|at| KEPT_SCRIPTS[at].1)
+        };
+        assert_eq!(kept_at("v0.4.12b"), Some("v0.4.12b"));
+        for version in ["v0.4.12c", "v0.4.12d", "v0.5.0", "v0.6.9", "v0.6.9e", "v0.6.9f"] {
+            assert_eq!(
+                kept_at(version),
+                Some("v0.6.9f"),
+                "{version} ran the script kept at v0.6.9f"
+            );
+        }
+    }
+
     /// Issue #4396: v0.6.9e was the newest shipped version as it was built.
     #[test]
     fn r767000_issue_4396_scripts_are_kept_through_v0_6_9e_the_newest_version_that_ran_them() {
@@ -1820,17 +1842,18 @@ mod tests {
         );
     }
 
-    /// Issue #4424: v0.6.9f was the newest shipped version as it was built.
+    /// Issue #4424: v0.6.9g to v0.6.9i shipped while it was built, so its rows are keyed at
+    /// v0.6.9i, the newest version that ran the scripts they keep.
     #[test]
-    fn r767000_issue_4424_scripts_are_kept_through_v0_6_9f_the_newest_version_that_ran_them() {
+    fn r767000_issue_4424_scripts_are_kept_through_v0_6_9i_the_newest_version_that_ran_them() {
         assert_kept_through(
             &[
                 c011_2_arcane_missiles::ID,
                 c083_transmogulate::ID,
                 c085_unlicensed_experimentation::ID,
             ],
-            &["v0.6.9f"],
-            "v0.6.9g",
+            &["v0.6.9f", "v0.6.9g", "v0.6.9h", "v0.6.9i"],
+            "v0.6.9j",
         );
     }
 

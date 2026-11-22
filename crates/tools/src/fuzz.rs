@@ -2074,8 +2074,10 @@ fn check_serial_restart_with_options(
 /// the whole live state.
 pub const CHECKPOINT_TIME_BOUND_MS: u128 = 5_000;
 
-/// The most events one action may emit. Bounds runaway growth before settle cap (§10.3),
-/// leaving margin for R58's full-library draw chain.
+/// The most events one turn of one action may emit. Bounds runaway growth before settle cap (§10.3),
+/// leaving margin for R58's full-library draw chain. An action that plays several turns, nobody asked
+/// anything between them (S+ T-the-enigmata's self-playing turns, R3569004), is weighed a turn at a
+/// time (`most_events_in_a_turn`, #4375).
 pub const GROWTH_EVENTS_BOUND: i64 = 10_000;
 
 /// The largest number any card instance may carry after one action (attack, health, cost, counter),
@@ -2272,10 +2274,22 @@ pub(crate) fn weigh(events: &[GameEvent], state: &GameState) -> [i64; 3] {
             (largest.max(largest_number(card)), count + 1)
         });
     [
-        i64::try_from(events.len()).unwrap_or(i64::MAX),
+        i64::try_from(most_events_in_a_turn(events)).unwrap_or(i64::MAX),
         largest,
         instances,
     ]
+}
+
+/// The most of one action's events that fall within one turn: the stretches between its `turnStarted`
+/// events. Runaway growth is growth inside a turn; an action that plays turn after turn with nobody
+/// asked anything (R3569004) emits each turn's events in it, and no one of those turns is runaway
+/// (#4375: seed 2096 played The Enigmata's turns past 10,000 events in one action).
+fn most_events_in_a_turn(events: &[GameEvent]) -> usize {
+    events
+        .split(|event| matches!(event, GameEvent::TurnStarted { .. }))
+        .map(<[GameEvent]>::len)
+        .max()
+        .unwrap_or(0)
 }
 
 /// The def id of the card an action is by, read in the state it was chosen in: the instance a
@@ -4864,6 +4878,34 @@ pub(crate) mod tests {
             });
             assert_eq!(largest_number(card), 33_724);
             assert_eq!(weigh(&[], &state)[1], 33_724);
+        }
+
+        #[test]
+        fn an_action_that_plays_several_turns_is_weighed_a_turn_at_a_time() {
+            // #4375, R3569004: The Enigmata's turns play themselves inside one action; each turn's
+            // events are weighed alone, and one turn past the bound still fails.
+            let ended = |turn: i32| GameEvent::TurnEnded {
+                player: PlayerId::P1,
+                turn,
+                unspent_mana: 0,
+            };
+            let started = |turn: i32| GameEvent::TurnStarted {
+                player: PlayerId::P2,
+                turn,
+                extra: None,
+            };
+            let per_turn = usize::try_from(GROWTH_EVENTS_BOUND).expect("a count");
+            let mut events: Vec<GameEvent> = Vec::new();
+            for turn in 1..=3 {
+                events.extend((0..per_turn).map(|_| ended(turn)));
+                events.push(started(turn + 1));
+            }
+            assert!(events.len() > per_turn * 3);
+            assert_eq!(most_events_in_a_turn(&events), per_turn);
+            events.push(ended(4));
+            events.extend((0..per_turn).map(|_| ended(4)));
+            assert_eq!(most_events_in_a_turn(&events), per_turn + 1);
+            assert_eq!(most_events_in_a_turn(&[]), 0);
         }
 
         #[test]

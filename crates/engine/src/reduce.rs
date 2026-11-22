@@ -330,9 +330,8 @@ pub(crate) fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result
         ActionBody::MarketBuy { offer } => {
             crate::marketplace::apply_market_buy(sink, action.player_id, *offer)
         }
-        ActionBody::MarketSell { instance_id } => {
-            crate::marketplace::apply_market_sell(sink, action.player_id, instance_id)
-        }
+        // R4410000: kept on the wire so an older client's or log's action reads; always refused.
+        ActionBody::MarketSell { .. } => Err(EngineError::new(crate::marketplace::NOTHING_SELLS)),
         ActionBody::SetAutoEndTurn { enabled } => {
             // R345: a preference, not a move, emitting nothing; `end_due_turns` reads it after this
             // reduction too, so turning it back on with nothing left to do ends the turn at once.
@@ -962,25 +961,14 @@ pub(crate) fn each_legal_action(
             })?;
         }
     }
-    // R1853003: a buy of each lot offered to the player, in offer order (R2250002), then a sale of each
-    // hand card that sells from there (R1861000), in hand order, while `marketplace.rs`'s refusals (the
-    // view's `reason`) pass them. A closed Marketplace lists neither.
+    // R1853003: a buy of each lot offered to the player, in offer order (R2250002), while
+    // `marketplace.rs`'s refusal (the view's `reason`) passes it. A closed Marketplace lists none, and
+    // nothing sells, so no `marketSell` is listed (R4410000).
     if let Some(market) = &state.marketplace {
         let offered = crate::marketplace::offered_to(market, player).count() as i32;
         for offer in 0..offered {
             if crate::marketplace::why_market_buy_refused(state, player, offer).is_ok() {
                 visit(ActionBody::MarketBuy { offer })?;
-            }
-        }
-        let hand_sales = side
-            .hand
-            .iter()
-            .filter(|card| crate::marketplace::sells_from_hand(state, card));
-        for card in hand_sales {
-            if crate::marketplace::why_market_sell_refused(state, player, &card.id).is_ok() {
-                visit(ActionBody::MarketSell {
-                    instance_id: card.id.clone(),
-                })?;
             }
         }
     }

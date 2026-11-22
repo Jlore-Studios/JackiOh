@@ -12,7 +12,6 @@
 //! attached, once `REMATCH_OFFER_TTL_MS` has passed since the end, closing its sockets with
 //! `MATCH_OVER_CLOSE_CODE` (R3694000).
 
-use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, Weak};
 
@@ -25,7 +24,8 @@ use jackioh_engine::duos::{DuosReplayInput, DuosState};
 use jackioh_engine::wire::{DuosAction, DuosSeat};
 
 use crate::actor::contracts::one_tx;
-use crate::actor::registry::{AttachError, panic_text};
+use crate::actor::engine as actor_engine;
+use crate::actor::registry::AttachError;
 use crate::actor::ws_server::Socket;
 use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
@@ -185,28 +185,26 @@ impl DuosRegistry {
         let pinned = pinned_for(&row);
         let saved_seq = saved.as_ref().map(|saved| saved.seq);
         let (checked_row, checked_log) = (row.clone(), log.clone());
-        // Off the runtime, as the AI's decisions are: a long log is a long fold.
-        let (folded, from) = tokio::task::spawn_blocking(move || {
-            catch_unwind(AssertUnwindSafe(|| {
-                // #4169: a verified checkpoint folds only the rows after it; otherwise the whole log.
-                let verified = saved.map(|saved| {
-                    checkpoint::verify(&saved, &checked_row, &checked_log).map(|body| (saved.seq, body))
-                });
-                if let Some(Ok((seq, body))) = verified {
-                    let skipped = usize::try_from(seq)
-                        .unwrap_or(input.log.len())
-                        .min(input.log.len());
-                    return (
-                        engine::fold_tail(pinned, body.state, &input.log[skipped..], skipped),
-                        Ok(seq),
-                    );
-                }
-                (engine::fold(pinned, &input), Err(verified.and_then(Result::err)))
-            }))
+        // #1035: the fold in one job off the runtime, as a 1v1 rebuild folds: a long log is a
+        // long fold. A panic in it is the rebuild's internal error.
+        let (folded, from) = actor_engine::off_runtime(app.engine_thread, move || {
+            // #4169: a verified checkpoint folds only the rows after it; otherwise the whole log.
+            let verified = saved.map(|saved| {
+                checkpoint::verify(&saved, &checked_row, &checked_log).map(|body| (saved.seq, body))
+            });
+            if let Some(Ok((seq, body))) = verified {
+                let skipped = usize::try_from(seq)
+                    .unwrap_or(input.log.len())
+                    .min(input.log.len());
+                return (
+                    engine::fold_tail(pinned, body.state, &input.log[skipped..], skipped),
+                    Ok(seq),
+                );
+            }
+            (engine::fold(pinned, &input), Err(verified.and_then(Result::err)))
         })
         .await
-        .map_err(|error| DuosAttachError::Internal(error.to_string()))?
-        .map_err(|payload| DuosAttachError::Internal(panic_text(payload)))?;
+        .map_err(DuosAttachError::Internal)?;
         // #4169: only the reason, never the body, which holds all four hands and libraries.
         if let Err(Some(reason)) = from {
             tracing::warn!(

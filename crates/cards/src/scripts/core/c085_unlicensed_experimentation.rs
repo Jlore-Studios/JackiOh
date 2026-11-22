@@ -173,8 +173,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.6.9f a Dormant card matched in `when` and `run` (issue #4424).
-pub fn script_v0_6_9f() -> CardScripts {
+/// R767000: through v0.6.9i a Dormant card matched in `when` and `run` (issue #4424).
+pub fn script_v0_6_9i() -> CardScripts {
     let condition_met = condition_met();
     let base = Script {
         triggers: vec![experimentation(false, true)],

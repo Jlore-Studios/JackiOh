@@ -431,8 +431,7 @@ Each is proved by a test that names it in a comment (`// B7`).
 
 The Campaign (accounts' unlocks and Embers, checked runs, Jlore rewards, online leaderboards); ghosts
 from real players; Combat artifacts and curses acting inside a fight; the extended campaign; the
-designer's content; an e2e spec; and CI holding the run's generated types to the Rust, which needs a
-person to add `-p jackioh-run --features ts` to `ci.yml` (the bot cannot edit `.github/`).
+designer's content; and an e2e spec.
 
 ### The parts
 

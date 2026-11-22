@@ -490,10 +490,11 @@ their counts alone, each name staying in its chip's title and label and in that 
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
 a toggle (`marketplace-button`) in the board's control bar (the pill at the bottom left where the board has
 its sidebar; #2645) that opens its panel (`marketplace-panel`), upward from the bar's top edge: the viewer's
-Credits, the turn the offering re-rolls on, each lot on its face with the price and the copies left
-the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-<instanceId>`) for each
-sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
-`marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
+Credits, the turn the offering re-rolls on, and each lot on its face with the price and the copies left
+the view gives and its "Buy" (`market-buy-<offer>`), live exactly when `legal` lists its `marketBuy` and
+sending that body; otherwise it is greyed, its tooltip the engine's `reason`. There is no "Sell": a
+Resource or Spice pays its Credits as it is played or discarded, and shows its quote in braces in the hand
+while the Marketplace is open (R3047004, R4410000).
 
 **The match menu** (#2645). On a phone (`game/phoneBar.ts`, board.css's two phone layouts) the control bar
 keeps to one row: End turn, the Marketplace toggle while the view carries a marketplace, the log toggle,
@@ -1369,6 +1370,8 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   sample-exact even for a decoder that keeps AAC's 48 ms of encoder priming.
 - `node apps/web/scripts/gen-music.mjs --check` needs no renderer, runs anywhere, and is what
   `music-assets.test.ts` calls.
+- Each track is fetched under its manifest hash (`/audio/music/<id>.m4a?v=<hash>`), so Cloudflare caches
+  it for a year (`/audio/*`, #4393) and a browser returns to it without re-validating.
 - Record a new track's source in `assets/music/LICENSES.md`. A station switch or a card's intro is an entry in
   `src/audio/music-cards.json`, and the music system needs no change for it. No card plays a theme (R822000).
   A Legendary's or Mythic's intro is also its play sting (R3332002): with dynamic music off or the music at zero, its
@@ -1418,7 +1421,9 @@ each committing what it rendered back to the branch, and a Linux job runs `--che
 asset test calls; `--catalog <file>` checks the lines against another catalog. A line must stay
 flavour text: `voice-lines.test.ts` enforces the word limits and bans rules words. At runtime a file
 missing from the manifest falls back to the browser's `speechSynthesis`, with the voice's `web`
-pitch and rate. The sound tables load with the first sound, not with the page.
+pitch and rate. The sound tables load with the first sound, not with the page. Each voice line is
+fetched under its manifest hash (`/audio/voice/<key>.m4a?v=<hash>`), so Cloudflare caches it for a
+year (`/audio/*`, #4393) and a returning player's browser keeps it without conditional requests.
 
 ## The engine as WebAssembly
 
@@ -1439,7 +1444,12 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   the shop's pack reveal do; `routes/engine-gate.test.tsx` holds the landing to it with a played game's stats.
   The scene kits and both recipe tables load in a chunk beside the module (#4222:
   `src/cards/art/sceneLoader.ts`): `EngineGate` and `useEngineReady` wait for both before a face draws,
-  and `test/setup.ts` installs the tables synchronously.
+  and `test/setup.ts` installs the tables synchronously. The sound-effect recipes load the same way
+  (#4428: `src/audio/sfxLoader.ts`): `main.tsx` starts them off the first paint beside the page-wide
+  sound, and the engine's `unlock()` is the backstop, never behind the module; a sound asked for
+  before they land is skipped silently, and `test/setup.ts` installs them synchronously. The
+  flavour sidecar loads in a chunk beside the module too (#4435, `src/cards/flavour.ts`): no screen
+  waits for it, and an inspect view opened before it arrives gains its line when it does.
 - `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
   `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
   buttons and prefetches each route's code once per page load, and the Practice, Play and match

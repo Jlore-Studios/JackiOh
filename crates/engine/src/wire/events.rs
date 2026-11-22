@@ -463,6 +463,13 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         radiant: Option<bool>,
+        /// R4395001: set when a Field Spell, Trap or Field Trap died standing in a unit zone, as a Unit
+        /// (Animated, R383), which its definition alone does not tell. Only ever `Some(true)`; left out
+        /// of the events the trigger loop holds (`as_rules_read`), so a script reads it off the action's
+        /// own `events`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        animated: Option<bool>,
         /// R2783001: the keyword behind this event — Poisonous when a Poisonous hit marked the unit, else
         /// First Strike when it fell to the strike §4.3 moved ahead and so struck nothing back — for the
         /// client's cue; the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5). No
@@ -1148,7 +1155,7 @@ pub enum GameEvent {
     },
     /// R1853003, R1861000: `player` sold a card that sells from the hand at the Marketplace for
     /// `credits` Credits, and it ceased to exist; the `marketCreditsChanged` after it says the new
-    /// count. Public, as a discarded card is.
+    /// count. Public, as a discarded card is. Nothing emits it since issue #4410 (R4410000).
     MarketSold {
         player: PlayerId,
         instance_id: String,
@@ -1455,6 +1462,8 @@ impl GameEvent {
     /// did before any of them existed (D14), and a recorded game's replay keeps its final hash (R768).
     /// R2783001: a `damage`, a `damageAbsorbed`, a `healed`, a `destroyed` and a `summoned` without their
     /// `via`, the client's cue (the `hookResolving` marker never reaches the loop at all, R2783000).
+    /// R4395001: a `destroyed` without its `animated`, which only a script reading the action's own
+    /// `events` consults, so no state hash moves for it either.
     /// Every other event is itself.
     pub fn as_rules_read(&self) -> GameEvent {
         match self {
@@ -1506,6 +1515,7 @@ impl GameEvent {
                 max_health,
                 killer_id,
                 radiant,
+                animated: _,
                 via: _,
             } => GameEvent::Destroyed {
                 instance_id: instance_id.clone(),
@@ -1516,6 +1526,7 @@ impl GameEvent {
                 max_health: *max_health,
                 killer_id: killer_id.clone(),
                 radiant: *radiant,
+                animated: None,
                 via: None,
             },
             GameEvent::ControlChanged {
@@ -1959,6 +1970,7 @@ mod tests {
                 max_health: 1,
                 killer_id: Some("c4".into()),
                 radiant: None,
+                animated: None,
                 via: Some(KeywordKind::Poisonous),
             },
             GameEvent::Summoned {

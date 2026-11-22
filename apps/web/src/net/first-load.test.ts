@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { soundTablesNow } from "../audio/soundTablesLoader.ts";
+import { flavourNow } from "../cards/flavour.ts";
 import "../audio/engine.ts";
 import "../routes/landing.tsx";
 
@@ -60,8 +61,18 @@ const SOURCE = join(SRC, "patches/source.ts");
  * `vite build --mode development`, as CI builds it, measured 473,538 bytes
  * (360,749 less). The budget is now 59 × 8192 (483,328), about 10 KB (2.1%)
  * over that: putting the scene data back would cross it.
+ *
+ * #4428 lowered it: the sound-effect recipes ride their own lazy chunk beside the module rather
+ * than with the entry chunk. `vite build --mode development`, as CI builds it, measured 447,192
+ * bytes (26,346 less). The budget is now 56 × 8192 (458,752), about 11 KB (2.6%)
+ * over that: putting the recipes back would cross it.
+ *
+ * #4435 lowered it: the flavour sidecar (every card's flavour line and artist credit) loads in a
+ * chunk beside the engine module rather than with the entry chunk. `vite build --mode development`,
+ * as CI builds it, measured 445,874 bytes (27,664 less). The budget is now 56 × 8192 (458,752),
+ * about 13 KB (2.9%) over that: putting the sidecar back would cross it.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 483_328;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 458_752;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -127,6 +138,44 @@ it("#4130 no non-test module imports sound tables or raw sound data files static
 
 it("#4130 importing engine.ts and the landing does not run parseCardAudioText", () => {
   expect(soundTablesNow()).toBeNull();
+});
+
+it("#4428 no non-test module statically imports sfx.ts", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const staticFrom = /from\s+["']([^"']+)["']/gu;
+  const importsSfx = (specifier: string): boolean => (specifier.split("/").pop() ?? "") === "sfx.ts";
+  const offenders = files.filter((path) => {
+    const rel = relative(SRC, path);
+    // The sound tables' lazy chunk reads the recipes' ids and timbres (#4428): it is itself reached
+    // only through a dynamic import, never the entry chunk.
+    if (rel === "audio/soundTables.ts") return false;
+    // `import type` lines emit no bytes: only a value import joins the chunk.
+    const text = readFileSync(path, "utf8")
+      .split("\n")
+      .filter((line) => !/^\s*import\s+type\b/.test(line))
+      .join("\n");
+    return [...text.matchAll(staticFrom)].some((match) => importsSfx(match[1] ?? ""));
+  });
+  expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
+  // The one module allowed to pull the recipes in, dynamically, is their loader.
+  const dynamicSfx = /import\(\s*["'][^"']*sfx\.ts["']\s*\)/u;
+  const holders = files.filter((path) => dynamicSfx.test(readFileSync(path, "utf8")));
+  expect(holders.map((path) => relative(SRC, path))).toEqual(["audio/sfxLoader.ts"]);
+});
+
+it("#4435 no non-test module names flavour.json except cards/flavour.ts, which never imports it statically", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const namers = files.filter((path) => /flavour\.json/u.test(readFileSync(path, "utf8")));
+  expect(namers.map((path) => relative(SRC, path))).toEqual(["cards/flavour.ts"]);
+  const loader = readFileSync(join(SRC, "cards/flavour.ts"), "utf8");
+  expect(loader).not.toMatch(/from\s+["'][^"']*flavour\.json["']/u);
+  expect(loader).toContain("import(");
+});
+
+it("#4435 importing landing and engine leaves flavourNow() null", () => {
+  expect(flavourNow()).toBeNull();
 });
 
 it("#4222 no non-test module statically imports scene data", () => {
@@ -227,12 +276,51 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     }
   });
 
+  it("#4435 the entry chunk and its preloads hold no flavour line or artist credit", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    const catalogText = readFileSync(join(WEB, "../../crates/cards/catalog.json"), "utf8");
+    const chineseText = readFileSync(join(WEB, "../../crates/cards/chinese.json"), "utf8");
+    const sidecar = JSON.parse(readFileSync(join(WEB, "../../crates/cards/flavour.json"), "utf8")) as Record<
+      string,
+      { flavour?: unknown; artist?: unknown }
+    >;
+    const ids = Object.keys(sidecar).filter((id) => id !== "//");
+    expect(ids.length).toBeGreaterThan(0);
+    // A probe string that also occurs in the catalog or the Chinese tables proves nothing.
+    const unique = (value: unknown): value is string =>
+      typeof value === "string" && value.length > 0 && !catalogText.includes(value) && !chineseText.includes(value);
+    const flavours = ids.map((id) => sidecar[id]?.flavour).filter(unique);
+    const artists = ids.map((id) => sidecar[id]?.artist).filter(unique);
+    expect(flavours.length).toBeGreaterThan(0);
+    // No shipped entry names an artist yet, so a third flavour line stands in until one does.
+    const probes = [flavours[0], flavours.at(-1), artists[0] ?? flavours[Math.floor(flavours.length / 2)]];
+    expect(probes.every((probe) => typeof probe === "string" && probe.length > 0)).toBe(true);
+    for (const probe of probes) {
+      for (const text of texts) expect(text).not.toContain(probe as string);
+    }
+  });
+
   it("#4222 the entry chunk and its preloads hold no scene kit or recipe text", () => {
     const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
     // Each occurs in `src` only in the scene data files, their tests, or `ART.md`: a kit part, a
     // figure pose, and a figure item each a recipe places.
     const sceneProbes = ["bone-scarecrow", "pose-genuflect", "item-trunk-club"];
     for (const probe of sceneProbes) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4428 the entry chunk and its preloads hold no sfx recipes", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    // Each probe is a runtime string, so minification keeps it, and each is absent from the entry
+    // once the recipes leave it: a dotted run of recipe ids out of the id switch the bundler
+    // compiles (never dotted in `src`, and never dotted in the entry's cue map), and two
+    // oscillator/filter words the entry's own audio code never uses (`crowd.ts` reads them too, but
+    // only through the lazy `noise.ts` leaf). The issue's suggested `CENTS_PER_OCTAVE` and
+    // `CRUSH_CYCLE` cannot serve: the minifier renames them away, so they are absent from every
+    // built asset and would pass vacuously.
+    const sfxProbes = ["trapSet.trapSting.spell.mana", "sawtooth", "bandpass"];
+    for (const probe of sfxProbes) {
       for (const text of texts) expect(text).not.toContain(probe);
     }
   });

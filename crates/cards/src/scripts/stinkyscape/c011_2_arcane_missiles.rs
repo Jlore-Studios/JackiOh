@@ -57,8 +57,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.9f a missile could be drawn onto a Unit immune to Spells (issue #4424).
-pub fn script_v0_6_9f() -> CardScripts {
+/// R767000: through v0.6.9i a missile could be drawn onto a Unit immune to Spells (issue #4424).
+pub fn script_v0_6_9i() -> CardScripts {
     CardScripts {
         base: arcane_missiles(2, true),
         radiant: arcane_missiles(5, true),

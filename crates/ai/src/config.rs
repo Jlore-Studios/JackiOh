@@ -498,10 +498,6 @@ pub struct EvalWeights {
     /// buys: the Marketplace asks `MARKETPLACE_CREDITS_PER_MANA` a mana, which the hand prices at
     /// `hand_per_cost`. Own side only (#2389).
     pub market_credit: f64,
-    /// R4154401: whether an own hand card that sells from the hand (Stinkyscape #89 Spice, R1861000)
-    /// counts, while the Marketplace quotes it, as the Credits its sale brings now at `market_credit`
-    /// (`evaluate::hand_sale_worth`) in place of its hand price. Off, it is priced as any hand card.
-    pub hand_sale_credits: bool,
     /// R458: per rest-of-game start-of-turn effect a side holds (`ModifierKind::StartOfTurnEffect`:
     /// Classic+ #52's card each turn, Call to Chaos's eternal cast, R1241), an annuity paid at each of
     /// its holder's turn starts. Every shipped one pays its holder.
@@ -719,7 +715,6 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     extra_turn_in_hand: 0.5,
     anomaly_miss: 0.2,
     market_credit: AI_HAND_PER_COST / MARKETPLACE_CREDITS_PER_MANA as f64,
-    hand_sale_credits: true,
     // #1722: untuned starts for the training lanes, as #1086's are. A start-of-turn effect as about
     // the two cards it adds over its holder's next two turns (2 × (hand_card + hand_per_cost ×
     // opponent_hand_cost)), an alternative win at its threshold as three lethal pressures, a doomed
@@ -886,7 +881,7 @@ pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
 /// `affliction_kills_before_swing`, `frozen_sick_before_swing`, `static_attack_flags_read`,
 /// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`,
-/// `giga_cleave_read`, `strike_back_survival_read`, `hand_sale_credits`) is off.
+/// `giga_cleave_read`, `strike_back_survival_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -954,7 +949,6 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     extra_turn_in_hand: 0.0,
     anomaly_miss: 0.0,
     market_credit: 0.0,
-    hand_sale_credits: false,
     start_of_turn_effect: 0.0,
     alt_win: 0.0,
     doomed_hand_discount: 0.0,
@@ -1027,6 +1021,10 @@ pub struct AiReply {
     /// of the opponent's units in Attack Position whose switch `legal_actions` lists, in that order.
     /// R4187000: also the most walls (`wall_switches`) a step facing lethal weighs against its best attack.
     pub defense_switches: i32,
+    /// R4433000: switches back to Attack Position that one reply step tries once no attack is worth
+    /// making, of the opponent's units in Defense Position without Deft whose switch `legal_actions`
+    /// lists, in that order, after the `defense_switches` tries and weighed with them; 0 turns them off.
+    pub attack_switches: i32,
     /// #1995: per turn a countdown (R1181000) still waits past its owner's next turn start, the share
     /// of a line's second score, the one with every countdown fired at the seat's next turn start, that
     /// `reply_score` blends in: `first + share^wait · (second − first)`.
@@ -1051,6 +1049,11 @@ pub const AI_REPLY: AiReply = AiReply {
     // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean
     // (training/improve.md, A screen); about 34 decided (17-17, R4319000); 0 turns it off.
     defense_switches: 4,
+    // R4433000: on. Its screen, 400 games on improve-dev against the control at 7201a2687e, read 198-202,
+    // edge -0.01 (-0.044 to 0.024); inconclusive (R4319000): 12 decided of 200 (won 5, lost 7), 66
+    // diverged, every game clean; its scene tests settle it (training/improve.md, A screen). 0 turns it
+    // off.
+    attack_switches: 4,
     // #1995: 0.5. #4286's screens (training/improve.md, A screen), each 400 games on improve-dev against
     // the 0.5 control at ae977ece3e, kept no other value: 0 read 200-200, edge 0.0 (-0.02 to 0.02),
     // inconclusive (R4319000), 4 decided of 200 (won 2, lost 2); 0.25 read 200-200, edge 0.0

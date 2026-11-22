@@ -740,7 +740,10 @@ The rule, one step at a time, each step one `reduce` (one node):
 4. **Defense.** When no attack is worth making, it tries up to `AI_REPLY.defenseSwitches` switches
    to Defense Position of its units in Attack Position whose switch is unspent (a unit that
    attacked has spent it, unless it has Deft, R49), one node each, and keeps the one its own
-   `evaluate` likes best, if that beats standing still (#1696). Facing lethal (`faceThreat` of the
+   `evaluate` likes best, if that beats standing still (#1696). Among those tries, after them, are up
+   to `AI_REPLY.attackSwitches` switches back to Attack Position of its units in Defense Position
+   without Deft (a Deft unit's is step 3's), each of which spends the unit's exertion, so it attacks
+   nothing that turn and threatens from the next (R4433000). Facing lethal (`faceThreat` of the
    seat's board at least the opponent's life, so `wallSwitches`, R2976000, offers any), it also tries
    the attack step 3 picked and up to `AI_REPLY.defenseSwitches` of those walls together, one node
    each, and keeps a wall only when its `evaluate` beats both standing still and that attack; an

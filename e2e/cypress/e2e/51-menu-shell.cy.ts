@@ -20,9 +20,12 @@ import { COLLECTION_SCREEN, FRIENDS_BUTTON, FRIENDS_CLOSE, FRIENDS_PANEL, PLAY_H
 /**
  * R109 refuses an account past 300 requests a minute, and each size here opens about ten screens, so the sizes
  * sign in as the four players in turn, one a size, as 38's shell block does. Seven sizes as p1 alone ran it past
- * its minute inside 51 and left it spent for the spec after 51 on its server: 55, which signs in as all four,
- * met a 429 on its first read in the daily shard 8 (#4079). In turn, no account here takes more than two sizes
- * a minute. 46 (p1 and p3) and 47 (p2 and p4) can share 51's server too.
+ * its minute inside 51 itself: with 51 alone on its server, as in `e2e smoke`, the screenshots test's Play or
+ * Collection root still timed out at 1366x1024 for want of the gate's answer, so keep the turns even where 51
+ * runs alone (#3982). A spent p1 also failed the spec after 51 on its server: 55, which signs in as all four,
+ * met a 429 on its first read in the daily shard 8 (#4079). In turn, no account here takes more than two sizes a
+ * minute, at most 78 requests in any 60 s when measured (#3982). 46 (p1 and p3) and 47 (p2 and p4) can share
+ * 51's server too.
  */
 const SIGNED_IN = [accounts.p1, accounts.p2, accounts.p3, accounts.p4] as const;
 

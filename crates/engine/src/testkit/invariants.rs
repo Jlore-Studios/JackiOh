@@ -1783,9 +1783,9 @@ pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBod
     }
     // I8's forged deals (§10.2, §6.3; #4143): a `trade` and a `marketSell` for every hand card, whatever it
     // is, and a `marketBuy` for every offer index the Marketplace holds, the other seat's lots among them.
-    // `why_trade_refused`, `why_market_buy_refused` and `why_market_sell_refused` are the reducer's own
-    // refusals (the limit, the Credits, the stock, the phase) and the listing's, so these fire only where
-    // the reducer's acceptance and the listing part ways.
+    // `why_trade_refused` and `why_market_buy_refused` are the reducer's own refusals (the limit, the
+    // Credits, the stock, the phase) and the listing's, so these fire only where the reducer's acceptance
+    // and the listing part ways; a `marketSell` is always refused (R4410000), so it stays silent.
     for card in &state.players[player].hand {
         if accepts(ActionBody::Trade {
             instance_id: card.id.clone(),

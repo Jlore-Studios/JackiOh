@@ -793,6 +793,25 @@ mod b41_the_finished_replay {
         );
     }
 
+    /// #4430: a finished match whose setup panics the fold opens through `off_runtime`, so the
+    /// replay is a 500 `internal`, not a 422 `rules_changed`; nothing is kept and the match it was
+    /// copied from still opens.
+    #[tokio::test]
+    async fn b41_a_replay_whose_setup_panics_is_a_500_internal_error() {
+        let t = three().await;
+        let match_id = t.finished().await;
+        let bad = copied(&t.app, &match_id, 904, |row, _| {
+            row["options"]["decks"]["a1"] = json!(["not-a-card"]);
+        })
+        .await;
+
+        let (status, body) = replay(&t.app, &t.host, &bad).await;
+        assert_eq!(status, 500, "{body}");
+        assert!(code_is(&body, "internal"), "{body}");
+        assert!(body["steps"].is_null(), "{body}");
+        assert_eq!(replay(&t.app, &t.host, &match_id).await.0, 200);
+    }
+
     #[tokio::test]
     async fn b41_a_log_that_folds_to_another_end_than_the_recorded_result_is_refused_rules_changed() {
         let t = three().await;

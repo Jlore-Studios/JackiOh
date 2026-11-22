@@ -1648,17 +1648,19 @@ pub const MARKETPLACE_NERF_PRICE_PERCENT: i32 = 85;
 /// R1853005, R2250002: the copies a lot an effect added for the rest of the game holds, renewed at its
 /// owner's turn start.
 pub const MARKETPLACE_FIXED_LOT_STOCK: i32 = 1;
-/// R1861000, R4154206: the quote range a card that sells from the hand (`handSale`, Stinkyscape #89 Spice)
-/// draws each turn, its base face's: "its price is determined like all other Resources", a Rare
-/// Resource's (Gellium's 3 to 10) through v0.6.6h, and since issue #4154 ("sells for ~25% more") that
-/// range's ends a quarter higher, rounded to the nearest Credit, a half up. `buy` is never read: such a
-/// card is no Resource and its lot, if any, is priced as a card.
+/// R4410000, R4154206: the range of the quote a card that pays Credits as a Resource does
+/// (`paysCredits`, Stinkyscape #89 Spice) draws each turn, its base face's, and of the draw its play or
+/// discard makes while the Marketplace is closed: "its price is determined like all other Resources", a
+/// Rare Resource's (Gellium's 3 to 10) through v0.6.6h, and since issue #4154 ("sells for ~25% more")
+/// that range's ends a quarter higher, rounded to the nearest Credit, a half up. Named for the hand sale
+/// it priced until issue #4410 (R1861000). `buy` is never read: such a card is no Resource and its lot,
+/// if any, is priced as a card.
 pub const HAND_SALE_PRICE: ResourcePrice = ResourcePrice {
     sell_min: 4,
     sell_max: 13,
     buy: 0,
 };
-/// R1861000, R4154206: `HAND_SALE_PRICE` on the Radiant face, a Radiant Rare Resource's 6 to 20 a quarter
+/// R4410000, R4154206: `HAND_SALE_PRICE` on the Radiant face, a Radiant Rare Resource's 6 to 20 a quarter
 /// higher.
 pub const HAND_SALE_RADIANT_PRICE: ResourcePrice = ResourcePrice {
     sell_min: 8,

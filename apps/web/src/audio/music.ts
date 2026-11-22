@@ -326,9 +326,11 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
       bytes.set(id, cached);
       return cached;
     }
+    const track = loadedManifest?.files[id];
+    if (track === undefined) return Promise.resolve(null);
     const pending = (async (): Promise<ArrayBuffer | null> => {
       try {
-        return await fetchBytes(musicUrl(id));
+        return await fetchBytes(musicUrl(id, track.hash));
       } catch {
         return null;
       }
@@ -569,9 +571,11 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
       introBytes.set(id, cached);
       return cached;
     }
+    const track = loadedManifest?.files[id];
+    if (track === undefined) return Promise.resolve(null);
     const pending = (async (): Promise<ArrayBuffer | null> => {
       try {
-        return await fetchBytes(musicUrl(id));
+        return await fetchBytes(musicUrl(id, track.hash));
       } catch {
         return null;
       }

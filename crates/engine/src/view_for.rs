@@ -2224,6 +2224,8 @@ fn redact_event(
             let killer_hidden = nullable_at(&shown, "killerId").is_some_and(|killer| hidden(&killer));
             if hidden(&instance) {
                 shown.remove("radiant");
+                // R4395001: what it stood as is the card's too.
+                shown.remove("animated");
                 // R2783001: the keyword it died by is the card's.
                 shown.remove("via");
                 hide(&mut shown, &["instanceId", "defId"]);

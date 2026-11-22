@@ -32955,5 +32955,101 @@
       "stinkyscape-134"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.9g",
+    "date": "2026-11-22",
+    "title": "Spice pays Credits when played or discarded",
+    "source": "#4410",
+    "notes": "Issue #4410: S #89 Spice pays its quote as a Resource does when played or discarded, the hand sale gone (R4410000); the AI prices it as any (1) card (R4410001). The view's Marketplace keeps its sales, always empty, so a game with no Spice in it reads as before. The plays are the cards classify finds playing differently through Spice: S #173 Abandoned Spice Tower, which adds Spice, and C+ #65, C+ #67, S+ #18 and the Drone Interceptor token in the games a Spice changes. No script kept: replays that played, discarded or sold Spice are refused by their hash (R767000).",
+    "player": {
+      "title": "Spice gives Credits when played",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Spice no longer sells from your hand at the Marketplace: it gives you Credits like a Resource when you play it or discard it, 4–13 (Radiant 8–25).",
+        "While the Marketplace is open, Spice in your hand shows in braces how many Credits it gives.",
+        "The Marketplace no longer has a Sell section."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "07683ea0a11b48a247e9f7f468f3e6e2b95e72fb"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-065",
+      "classicplus-067",
+      "stinkyscape-173",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscapeplus-018"
+    ],
+    "changes": [
+      {
+        "id": "stinkyscape-089",
+        "name": "Spice",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.9h",
+    "date": "2026-11-22",
+    "title": "Shadowstep answers only your Units that die",
+    "source": "#4395",
+    "notes": "R4395000: Shadowstep's base face answers only Units of yours that die, not a destroyed Field Spell, Trap or Field Trap; its v0.6.9f script is kept for replays (R767000).",
+    "player": {
+      "title": "Shadowstep answers only your Units",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Shadowstep also sprang when a Field Spell or Trap of yours was destroyed, and handed it back for (0) Cost although no Unit of yours had died.",
+        "It now waits for a Unit of yours to die and brings back only Units; a Field Spell or Trap destroyed beside them stays in your graveyard."
+      ]
+    },
+    "commits": [
+      "dd441f06baa7462cff6cdbd2eacdf0f203859229"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-014",
+      "classicplus-042",
+      "classicplus-074",
+      "meditative-039"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.9i",
+    "date": "2026-11-22",
+    "title": "Card flavour lines load beside the engine",
+    "source": "#4435",
+    "notes": "The cards' flavour lines and artist credits (flavour.json, about 98 KB raw) no longer ride the entry chunk: apps/web/src/cards/flavour.ts serves the sidecar through loadFlavour(), one shared dynamic import in a chunk beside the engine module that main.tsx starts at boot, and HoverPreview, Flavour, HeroInspect and NotFoundPlay's LostCard read it through useFlavour(), so a view opened early gains its line when the table lands. How cards look only: no card plays differently.",
+    "player": {
+      "title": "Card flavour lines load beside the engine",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "The home page no longer downloads every card's flavour line before it can start, so the first screen is ready sooner on slow connections."
+      ]
+    },
+    "commits": [
+      "2ec3005287077253bba95e409bdbae378313a1c7"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

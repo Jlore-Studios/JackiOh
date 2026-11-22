@@ -148,8 +148,6 @@ export const testid = {
   matchMenuPanel: "match-menu-panel",
   /** R1853003: "Buy" under the Marketplace's lot `offer` (its index, which `marketBuy` names). */
   marketBuy: (offer: number): string => `market-buy-${offer}`,
-  /** R1853003: the sale of a Resource in the viewer's own tray, at the Marketplace's quote. */
-  marketSell: (instanceId: string): string => `market-sell-${instanceId}`,
   /**
    * R3477000: the attack outcome on a legal target of the aimed attack (AttackOutcome.tsx), `target` its
    * `card-…` or `hero-…` testid. No drag target reads it (drag/targets.ts), so a press walks up to the target.
