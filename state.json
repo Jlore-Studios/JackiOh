@@ -17242,6 +17242,13 @@
     "4472": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45042592793",
+        "model": "gpt-5.6-sol",
+        "provider": "gpt",
+        "since": "2026-11-22T16:36:39Z",
+        "until": "2026-11-22T17:06:39Z"
+      },
       "difficulty_by": {
         "at": "2026-11-22T16:36:31Z",
         "difficulty": "medium",
