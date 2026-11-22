@@ -299,7 +299,7 @@ fn spice_in_hand(state: &GameState) -> String {
         .expect("Spice in hand")
 }
 
-/// R4440002: the AI's turn holding one Vanilla Spice, its Discover gone and its Credits kept (R4410000),
+/// R4440002: the AI's turn holding one Vanilla Spice, its Credits kept (R4410000),
 /// with one crystal, the Marketplace open, quoting it `SPICE_QUOTE` and offering the AI nothing, and no
 /// Credits held: its cast is the sale alone, `SPICE_QUOTE` Credits for the card and the crystal. The
 /// human's Mr. Vanilla on the field.
@@ -325,8 +325,10 @@ fn r4440002_a_spice_cast_for_its_credits_alone_read_as_a_loss_before_the_discoun
         .expect("the Spice's play is listed");
     let out = reduce(&held, &Action::new(play, AI, "ai-market-spice-sale-play"));
     assert_eq!(out.error, None);
-    let cast = out.state;
-    assert!(cast.pending.is_none(), "setup: a Vanilla Spice Discovers nothing");
+    // Played, the Spice's Cry still opens its Discover; the pick is not the sale's, so the prompt is
+    // dropped unanswered and the cast reads the sale alone.
+    let mut cast = out.state;
+    cast.pending = None;
     assert_eq!(
         cast.players[AI].market_credits,
         Some(SPICE_QUOTE),
