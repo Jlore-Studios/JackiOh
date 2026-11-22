@@ -17728,17 +17728,18 @@
       "merge_owner": "claude-3",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-6",
       "question": "",
       "queued_at": "2026-11-22T14:27:29Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "45032976570",
+      "run_id": "pending:16d49e26-1795366370",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 450,
-      "started_at": "2026-11-22T14:28:08Z",
+      "started_at": "2026-11-22T16:53:12Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -18385,9 +18386,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T16:52:38Z",
+    "at": "2026-11-22T16:53:12Z",
     "url": "",
-    "what": "review #4494 on muse"
+    "what": "spot-check #4480 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-22T16:34:22Z",
@@ -40044,7 +40045,15 @@
         "n": 450,
         "pr": 4480,
         "queued_at": "2026-11-22T16:52:02Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:16d49e26-1795366370",
         "sha": "8ca254f1a9fd9867870086ca76c42f59970658b9",
+        "started_at": "2026-11-22T16:53:12Z",
         "status": "queued",
         "title": "Patch: the cards that count a Unit's death read what the card was as it died, so a Cloaked card destroyed while set is no Unit and an animated Field Spell or Trap is one",
         "tries": 0
