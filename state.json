@@ -16731,10 +16731,14 @@
         "approvals": [],
         "builder": "gemini",
         "built_by": "agy",
-        "rejections": [],
+        "rejections": [
+          "muse"
+        ],
         "reviews": [],
         "sha": "ffeda78ad27be25c078d35f221cce21d19297399",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "4460": {
