@@ -16769,15 +16769,6 @@
       "failures": 0,
       "feedback_since": "2026-11-22T04:13:24Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-22T06:48:32Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\nPass 3: only red check was web (unit 6/8) art.test.ts B1 5000ms timeout; change touches no apps/ file. Passes locally. No code change made (no timeout raised, no skip).\n## Log\n- ran art.test.ts locally: 32 passed.\n",
-        "provider": "claude-7",
-        "reason": "used its 3 review rounds with this owner; the work is kept for its final audit, another subscription's when one is free",
-        "trail": "- Bash: {\"command\": \"git status --short | head; git diff 81abc3232634775f471448c08416144435270cc2...HEAD --stat -- apps | tail -2; (timeout 500 pnpm --dir apps/web test src/cards/art/art.test.ts 2>&1 | tail \u2026\n- Bash: {\"command\": \"cat > .bot-notes.md <<'EOF'\\n## State\\nPass 3: only red check was web (unit 6/8) art.test.ts B1 5000ms timeout; change touches no apps/ file. Passes locally. No code change made (no time\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the hourly purge deletes cancelled queue tickets, each a copy of its player's deck that nothing reads again\"} --> Closes #4446 The hourly retention pass now deletes cancelled queue tickets once they were enqueued more than an hour ago. Queued and claime\u2026"
-      },
       "interruptions": 0,
       "issue": 4446,
       "kind": "review",
