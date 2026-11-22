@@ -17831,8 +17831,12 @@
     "what": "revise #4459 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-22T14:04:28Z",
-    "notes": [],
+    "at": "2026-11-22T14:11:19Z",
+    "notes": [
+      "started revise #4459 on agy (run 45031554033)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18537,7 +18541,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T14:04:28Z",
+  "loop_tick": "2026-11-22T14:11:19Z",
   "machine_disk": {
     "issue": null,
     "reading": {
