@@ -41618,14 +41618,6 @@
         "run_id": "45058714138",
         "taken_asks": []
       },
-      "3": {
-        "area": "client",
-        "count": 2,
-        "last_run": "2026-11-22T19:07:31Z",
-        "provider": "claude-4",
-        "run_id": "45058959364",
-        "taken_asks": []
-      },
       "4": {
         "area": "tests",
         "count": 2,
