@@ -32955,5 +32955,47 @@
       "stinkyscape-134"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.9g",
+    "date": "2026-11-22",
+    "title": "Spice pays Credits when played or discarded",
+    "source": "#4410",
+    "notes": "Issue #4410: S #89 Spice pays its quote as a Resource does when played or discarded, the hand sale gone (R4410000); the AI prices it as any (1) card (R4410001). The view's Marketplace keeps its sales, always empty, so a game with no Spice in it reads as before. The plays are the cards classify finds playing differently through Spice: S #173 Abandoned Spice Tower, which adds Spice, and C+ #65, C+ #67, S+ #18 and the Drone Interceptor token in the games a Spice changes. No script kept: replays that played, discarded or sold Spice are refused by their hash (R767000).",
+    "player": {
+      "title": "Spice gives Credits when played",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Spice no longer sells from your hand at the Marketplace: it gives you Credits like a Resource when you play it or discard it, 4–13 (Radiant 8–25).",
+        "While the Marketplace is open, Spice in your hand shows in braces how many Credits it gives.",
+        "The Marketplace no longer has a Sell section."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "07683ea0a11b48a247e9f7f468f3e6e2b95e72fb"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-065",
+      "classicplus-067",
+      "stinkyscape-173",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscapeplus-018"
+    ],
+    "changes": [
+      {
+        "id": "stinkyscape-089",
+        "name": "Spice",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
