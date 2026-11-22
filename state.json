@@ -18848,10 +18848,17 @@
     "what": "review #4499 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-22T17:42:24Z",
+    "at": "2026-11-22T17:50:51Z",
     "notes": [
-      "delivered review #4498 on claude-8 (run 45050277707): approved",
-      "delivered review #4494 on muse (run 45046265243): approved"
+      "delivered build #4477 on claude-4 (run 45045395949): built",
+      "delivered build #4484 on agy (run 45045237459): built",
+      "delivered revise #4459 on claude-3 (run 45045185077): built",
+      "started review #4500 on agy (run 45052038496)",
+      "started review #4459 on claude-3 (run 45052085307)",
+      "started review #4499 on claude-4 (run 45052139953)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days",
+      "#4494: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19557,7 +19564,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T17:42:24Z",
+  "loop_tick": "2026-11-22T17:50:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
