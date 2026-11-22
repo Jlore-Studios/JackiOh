@@ -16702,13 +16702,8 @@
     "what": "review #4529 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-22T23:45:06Z",
-    "notes": [
-      "delivered build #4509 on muse (run 45078806682): built",
-      "started review #4529 on muse (run 45085079648)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-22T23:53:29Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
