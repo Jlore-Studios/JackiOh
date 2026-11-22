@@ -15959,6 +15959,13 @@
     "4445": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T04:07:42Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Rule 3 does not hold beyond a call site: one serde- and ts-skipped field on `DuelOutput::Pushed` and `DuosHostOutput::Pushed`, plus a private cache in `DuelHost`. No engine, AI, migration or ~40-file change."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
