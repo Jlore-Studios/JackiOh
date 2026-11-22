@@ -15902,6 +15902,13 @@
     "4508": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T22:34:07Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Engine rules: the resolution loop, the keyword layers and the fuzz monitor (crates/engine/src) decide it"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
