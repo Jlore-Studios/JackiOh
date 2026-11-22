@@ -59,6 +59,7 @@ import {
 } from "./test/fakeAudio.ts";
 import { deferSoundTablesForTests, setSoundTablesForTests } from "./soundTablesLoader.ts";
 import type { AudioEngine, PlayedCue, SfxId, SfxParams, VoiceKey, CardAudioTable, PlayableLineKind, VoiceManifest } from "./types.ts";
+import { voiceUrl } from "./voiceData.ts";
 import { must } from "../test/stubServer.ts";
 
 /* Fixtures */
@@ -108,7 +109,7 @@ const MANY_MANIFEST: VoiceManifest = {
   files: { ...MANIFEST.files, ...Object.fromEntries(MANY_KEYS.map((key) => [key, FILE])) },
 };
 
-const url = (key: string): string => `/audio/voice/${key}.m4a`;
+const url = (key: string, hash = FILE.hash): string => voiceUrl(key as VoiceKey, hash);
 
 /* The rig */
 
@@ -719,6 +720,22 @@ describe("B8 voice files", () => {
     expect(audio.violations).toEqual([]);
   });
 
+  it("#4393 voice fetches carry the manifest hash, and changing the hash changes the fetched URL", async () => {
+    const manifestA: VoiceManifest = { ...MANIFEST, files: { "core-004-play": { hash: "hash-v1", bytes: 1000 } } };
+    const rA = rig({ engine: { manifest: manifestA } });
+    unlocked(rA);
+    expect(rA.engine.playVoice("core-004", "play", 0)).toBe(true);
+    await settle();
+    expect(rA.fetch.urls()).toEqual(["/audio/voice/core-004-play.m4a?v=hash-v1"]);
+
+    const manifestB: VoiceManifest = { ...MANIFEST, files: { "core-004-play": { hash: "hash-v2", bytes: 1000 } } };
+    const rB = rig({ engine: { manifest: manifestB } });
+    unlocked(rB);
+    expect(rB.engine.playVoice("core-004", "play", 0)).toBe(true);
+    await settle();
+    expect(rB.fetch.urls()).toEqual(["/audio/voice/core-004-play.m4a?v=hash-v2"]);
+  });
+
   it("B8 the log entry reads pending until the line starts, then file", async () => {
     const r = rig();
     unlocked(r);
@@ -881,13 +898,13 @@ describe("B11 preloadVoices", () => {
     const first = r.fetch.urls();
     expect(first).toHaveLength(VOICE_PRELOAD_MAX);
     expect(new Set(first).size).toBe(VOICE_PRELOAD_MAX);
-    for (const u of first) expect(PRELOAD_KEYS.map(url)).toContain(u);
+    for (const u of first) expect(PRELOAD_KEYS.map((key) => url(key))).toContain(u);
 
     r.engine.preloadVoices(keys);
     await settle();
     const all = r.fetch.urls();
     expect(all).toHaveLength(PRELOAD_KEYS.length);
-    expect(new Set(all)).toEqual(new Set(PRELOAD_KEYS.map(url)));
+    expect(new Set(all)).toEqual(new Set(PRELOAD_KEYS.map((key) => url(key))));
 
     r.engine.preloadVoices(keys);
     await settle();
