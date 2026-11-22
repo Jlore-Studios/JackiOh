@@ -16925,11 +16925,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-22T06:49:19Z",
+        "at": "2026-11-22T07:15:16Z",
         "difficulty": "hard",
-        "provider": "claude-3",
-        "tier": "medium",
-        "why": "Rule 3 (and 2): changes crates/ai/src/sweep.rs, crates/tools, the analysis loader and the spec, which must agree on a new `face` field in the sweep's JSON lines; torn, so hard."
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "Design across crates: the sweep's face is a JSON contract crates/ai/src, crates/tools and analysis/ must agree on; already rated hard"
       },
       "failures": 0,
       "forced": false,
