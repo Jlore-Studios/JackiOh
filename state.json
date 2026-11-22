@@ -16227,13 +16227,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-8",
       "queued_at": "2026-11-22T21:53:23Z",
-      "run_id": "45074657895",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:e7778bbc-1795387085",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 460,
-      "started_at": "2026-11-22T21:54:02Z",
+      "started_at": "2026-11-22T22:38:19Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16260,9 +16261,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T22:37:53Z",
+    "at": "2026-11-22T22:38:19Z",
     "url": "",
-    "what": "build #4509 on muse"
+    "what": "spot-check #4520 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-22T22:22:24Z",
@@ -38049,7 +38050,15 @@
         "n": 460,
         "pr": 4520,
         "queued_at": "2026-11-22T22:30:28Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:e7778bbc-1795387085",
         "sha": "561d6943d5f42d6edda04c8a1ba3c4c3e529b2e5",
+        "started_at": "2026-11-22T22:38:19Z",
         "status": "queued",
         "title": "Patch: remove the accessibility statement page (/accessibility)",
         "tries": 0
