@@ -1322,9 +1322,8 @@
 
   /* Eight crystals share one row, so at 390 px each is drawn about 38 px wide. Its hit area reaches
      the middle of the group's 4 px gap (2 px past its 1 px border), as R2122000 splits a gap, and the
-     first reaches out to --hit-min where nothing is beside it, which keeps X on the row (integration
-     QA). The last stops at its own border: the row ends at the editor's edge, so a reach past it
-     widened the editor by 2 px and let the page pan sideways at 390x844 (R4349000's check, #4375). */
+     first and the last reach out to --hit-min where nothing is beside them, which keeps X on the
+     row (integration QA). */
   .deckbuilder.app-shell .db-filter-row--cost .db-chip::before {
     content: "";
     position: absolute;
@@ -1336,7 +1335,7 @@
   }
 
   .deckbuilder.app-shell .db-filter-row--cost .db-chip:last-of-type::before {
-    right: -1px;
+    right: min(-3px, (100% - var(--hit-min)) / 2);
   }
 }
 

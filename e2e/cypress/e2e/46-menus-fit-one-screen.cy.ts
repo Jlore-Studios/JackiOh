@@ -52,6 +52,8 @@ const ONE_SCREEN = 1;
 const EDGE_SLACK_PX = 1;
 /** How many of the boxes an overflow starts in its message names (#4375). */
 const PAST_EDGE_NAMED = 5;
+/** How far past the editor's edge a box must reach for that message to name it: more than rounding. */
+const PAST_EDGE_MIN_PX = 0.5;
 
 /** #4349: Chrome's select arrow and the gap before it, measured (Inter at 16 px: whole at a 218 px select with 8 px of padding, cut at 214, so 18 to 19.6); 20 rounds up. */
 const SELECT_ARROW_PX = 20;
@@ -149,31 +151,30 @@ function expectComparePickerWhole(select: HTMLSelectElement, where: string): voi
 }
 
 /**
- * Where `box`'s sideways overflow starts (#4375): the deepest of its descendants that lay their overflow
- * out (`overflow-x: visible`) and are wider inside than out, each with the child that reaches furthest
- * right, its right margin included, so an overflow names the box it comes from rather than a clipped picture.
+ * Where `box`'s sideways overflow comes from (#4375): the deepest of its descendants that reach past its
+ * right padding edge, by their own box or by what they lay out past it (`overflow-x: visible`, so a
+ * positioned `::before` or `::after` counts), the furthest first, each with its parent's name and how far
+ * past the edge it reaches.
  */
 function pastRightEdge(box: HTMLElement): string {
-  const widened = [box, ...box.querySelectorAll<HTMLElement>("*")].filter(
-    (element) => element.clientWidth > 0 && element.scrollWidth > element.clientWidth + EDGE_SLACK_PX && getComputedStyle(element).overflowX === "visible",
-  );
-  const deepest = widened.filter((element) => !widened.some((other) => other !== element && element.contains(other))).slice(0, PAST_EDGE_NAMED);
-  const named = (element: Element): string => `${element.tagName.toLowerCase()}${[...element.classList].map((name) => `.${name}`).join("")}`;
-  const parts = deepest.map((element) => {
-    const right = element.getBoundingClientRect().left + element.clientWidth;
-    let reach = "none";
-    let most = -Infinity;
-    for (const child of element.children) {
-      const end = child.getBoundingClientRect().right + parseFloat(getComputedStyle(child).marginRight || "0");
-      if (end > most) {
-        most = end;
-        reach = `${named(child)} ${(end - right).toFixed(1)}px (margin-right ${getComputedStyle(child).marginRight})`;
-      }
-    }
-    const style = getComputedStyle(element);
-    return `${named(element)} scroll ${element.scrollWidth} > client ${element.clientWidth} (display ${style.display}, padding-right ${style.paddingRight}); furthest child ${reach}`;
+  const boxRect = box.getBoundingClientRect();
+  const edge = boxRect.left + box.clientLeft + box.clientWidth;
+  const reachOf = (element: HTMLElement): number => {
+    const rect = element.getBoundingClientRect();
+    const laidOut = getComputedStyle(element).overflowX === "visible" ? rect.left + element.clientLeft + element.scrollWidth : -Infinity;
+    return Math.max(rect.right, laidOut);
+  };
+  const past = [...box.querySelectorAll<HTMLElement>("*")].filter((element) => reachOf(element) > edge + PAST_EDGE_MIN_PX);
+  const deepest = past.filter((element) => !past.some((other) => other !== element && element.contains(other)));
+  deepest.sort((a, b) => reachOf(b) - reachOf(a));
+  const named = (element: Element | null): string =>
+    element === null ? "none" : `${element.tagName.toLowerCase()}${[...element.classList].map((name) => `.${name}`).join("")}`;
+  const parts = deepest.slice(0, PAST_EDGE_NAMED).map((element) => {
+    const rect = element.getBoundingClientRect();
+    return `${named(element)} in ${named(element.parentElement)}: box ${(rect.right - edge).toFixed(1)}px, laid out ${(reachOf(element) - edge).toFixed(1)}px past (scroll ${element.scrollWidth}, client ${element.clientWidth})`;
   });
-  return parts.length === 0 ? "" : ` (widened by: ${parts.join("; ")})`;
+  const style = getComputedStyle(box);
+  return ` (the editor's overflow-x ${style.overflowX}, padding-right ${style.paddingRight}; ${deepest.length} box(es) past its edge${parts.length === 0 ? "" : `: ${parts.join("; ")}`})`;
 }
 
 /**
