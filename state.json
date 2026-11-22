@@ -15141,6 +15141,13 @@
     "4424": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T00:55:44Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "no engine, AI, cross-crate, or migration change and about 9 files, far under the 40-file line, so medium by the rule"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
