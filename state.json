@@ -16233,6 +16233,7 @@
     "4453": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-22T04:08:31Z",
         "difficulty": "hard",
