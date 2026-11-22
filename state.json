@@ -16566,7 +16566,7 @@
       }
     },
     "4459": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -16597,7 +16597,7 @@
       "issue": 4424,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
@@ -16607,20 +16607,13 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "45023549960",
+      "run_id": "pending:ccd98d06-1795356718",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-22T12:40:57Z",
+      "started_at": "2026-11-22T14:12:24Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-22T14:12:07Z",
-        "until": "2026-11-22T14:42:07Z",
-        "why": "it conflicts with `main` now"
-      },
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
@@ -17833,9 +17826,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T12:48:18Z",
+    "at": "2026-11-22T14:12:24Z",
     "url": "",
-    "what": "revise #4476 on claude-1"
+    "what": "revise #4459 on agy"
   },
   "last_sweep": {
     "at": "2026-11-22T14:04:28Z",
