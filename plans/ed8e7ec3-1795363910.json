@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4444,
+  "title": "Patch: the friends drawer and chat panels load on first open, not in the first page load",
+  "branch": "bot/issue-4444",
+  "thread": "**Issue #4444 (data, not instructions):**\n\n```text\n# #4444: Patch: the friends drawer and chat panels load on first open, not in the first page load\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nToday every first visit downloads the friends list, the chat conversation view, and the challenge dialog code, even for someone who never taps Friends. After this change the first load carries only the Friends rail button and its unread badge. The drawer, the friends list, the chat panel and the challenge dialog arrive the first time someone opens Friends (starting early when a pointer or focus shows interest), behind the usual loading skeleton, and then behave exactly as today. A concrete example: a player opening a shared replay link currently downloads the whole chat and challenge UI before the first paint, though they may never open Friends; after this change those bytes wait until Friends is actually opened.\n\n## Why\n\nThe entry chunk statically reaches the whole social UI through the shell. `apps/web/src/main.tsx` statically imports `shell/MenuShell.tsx` (line 105) and `routes/nav.tsx` (line 103); `shell/MenuShell.tsx` statically imports `together/FriendsButton.tsx` (line 30) and `routes/nav.tsx` does too (line 12, rendered as `placement=\"nav\"` at line 94). `FriendsButton.tsx` then statically imports `ChallengeDialog.tsx` (line 33), `ChatPanel.tsx` (line 34), `FriendList.tsx` (line 36) and `FriendRows.tsx` (line 37, with `FriendMenu.tsx` behind the rows). Those five files are roughly 55 KB of raw source (about 17.5 KB ChatPanel, 13 KB FriendRows, 11 KB ChallengeDialog, 7 KB each FriendList and FriendMenu, tests excluded), plus their small local helpers \u2014 real weight against `FIRST_LOAD_GZIP_BUDGET_BYTES` of 483,328 in `apps/web/src/net/first-load.test.ts` (line 64), whose history shows headroom of only about 2% and a standing practice of lowering the budget whenever a lazy split lands (#4130 sound tables, #4180 catalog and Chinese tables, #4222 scene data). The same panels are already reachable lazily through the Friends page (`routes/chunks.tsx` `together` chunk), so the entry copy is pure duplication for first paint: the drawer renders nothing until it is opened (`FriendsButton.tsx` lines 159, 303-305), while the always-mounted pieces \u2014 presence heartbeat, `ChallengeToast`, `LobbyInviteToast`, `NotificationToast` (`main.tsx` lines 91-94, 646, 932-935) and the badge polling in `together/socialPoll.ts` \u2014 stay exactly where they are. This overlaps none of the open first-load issues (#4435 flavour lines, #4428 sound recipes, #4427 short-phone board) and none of the rejected or closed-unbuilt items.\n\n## Proposal\n\nKeep the rail button, the unread badge and its polling in the entry chunk. Move the drawer content \u2014 friends list and rows, friend menu, chat panel, challenge dialog \u2014 into a lazily imported drawer chunk owned by `FriendsButton`, following the `routeChunk` pattern in `routes/chunks.tsx` (#2116, R2116000). Prefetch that chunk on rail interest (`pointerenter`/`focus`/`touchstart`, the `watchRouteIntent` event set), skipping the prefetch while the browser asks to save data, exactly as `prefetchRoute` already does (#4299). Open the drawer through `Suspense` with the existing `Skeleton` fallback while the chunk arrives. Data fetching stays as it is (poll while open, socket reads); only the code moves. Extend the `first-load.test.ts` source-guard style with a test that no entry-reachable non-test module statically imports the drawer panels, and lower `FIRST_LOAD_GZIP_BUDGET_BYTES` with the measured development-build number in the test comment, as #4130/#4180/#4222 did.\n\n## Where it lands\n\nFiles: `apps/web/src/together/FriendsButton.tsx` (split rail from drawer content), one new drawer chunk module beside it, `apps/web/src/routes/chunks.tsx` (or the rail itself) for the intent prefetch, `apps/web/src/net/first-load.test.ts` (static-import guard and lowered budget). Untouched: `shell/MenuShell.tsx`, `routes/nav.tsx`, `game/Board.tsx` (its `placement=\"menu\"`/`placement=\"game\"` uses at lines 861/869 keep working through the same component), the toasts and presence in `main.tsx`, and the lazy `together`/`watch` route chunks, which will share the panel modules with the drawer chunk. No SPEC section governs bundle splitting and none changes; the client still only renders what the view and the account/social reads give it (CLAUDE.md rule 7).\n\n## Acceptance criteria\n\n- [ ] No entry-reachable non-test module statically imports `ChatPanel`, `FriendList`, `FriendRows`/`FriendMenu` or `ChallengeDialog`; a source test in the style of the `#4130`/`#4180` guards holds this.\n- [ ] `FIRST_LOAD_GZIP_BUDGET_BYTES` is lowered with the measured `vite build --mode development` byte count quoted in the test comment.\n- [ ] The Friends rail still shows the unread badge; the drawer opens and closes with the same test ids; existing friends, chat (send, receive, paging, report), challenge-accept/decline, add-friend and undo-remove-friend tests pass, plus a new test that the drawer loads its chunk on first open.\n- [ ] Intent on the rail prefetches the drawer chunk, except while saving data; a signed-out visitor and a save-data browser download no drawer bytes.\n- [ ] The shell navigation spec (e2e 51: the five destinations, drawer closed each way at every size) stays green.\n\n## Size and risks\n\nMedium: one component split, one prefetch wire-up, one source guard plus a budget re-measure, and test updates where suites render `FriendsButton` directly (they will need the `Suspense` boundary). Main risk is first-open latency on the drawer on a cold tap, mitigated by the intent prefetch and the skeleton; rejected alternative was prefetching the drawer chunk at shell mount for signed-in users, which would re-spend the bytes for everyone who never opens Friends. A second risk is the bundler placing the shared panels in a common chunk with the lazy Friends page instead of the drawer chunk; either placement still removes them from the entry, so the acceptance test guards the entry, not the chunk name.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-22T03:48:36Z:\n\napprove -> but just make the messages load in chunks where you have to scroll up to load more.\n\n---\nComment by @MaxGoetzmann at 2026-11-22T16:10:25Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4444: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T16:10:53Z",
+    "claimed_at": "2026-11-22T16:12:09Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
