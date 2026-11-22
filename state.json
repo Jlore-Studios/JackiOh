@@ -16963,10 +16963,14 @@
     "what": "suggestions (server) on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-22T05:46:22Z",
+    "at": "2026-11-22T05:54:51Z",
     "notes": [
-      "delivered review #4458 on muse (run 44982509003): approved",
-      "runner gate: started 1 of 1 waiting run(s) (run 44990913125 on bot/issue-4428)"
+      "started suggest on claude-8 (run 44991519562)",
+      "started suggest on claude-8 (run 44991563656)",
+      "started suggest on muse (run 44991607866)",
+      "started suggest on claude-4 (run 44991651188)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17672,7 +17676,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T05:46:22Z",
+  "loop_tick": "2026-11-22T05:54:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
