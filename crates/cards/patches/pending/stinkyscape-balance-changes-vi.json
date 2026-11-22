@@ -5,7 +5,7 @@
   "player": {
     "title": "Stinkyscape+ Balance Changes VI",
     "new": [
-      "Profe Yates Prime, a token Profe Yates shuffles into your deck when it dies: (2) 6/6 (Radiant 12/12), with Profe Yates's old Cry: exile a permanent with M, O, U, S and E in its name and text, then summon a random Trap (Radiant: three)."
+      "Profe Yates Prime, a token Profe Yates shuffles into your deck when it dies: (2) 6/6 (Radiant 12/12) with Yates's old Cry, the exile and one random Trap (Radiant: three)."
     ],
     "balance": [
       "Axnit sells for 3–13 Credits (Radiant 6–26), down from 4–14 (Radiant 8–28).",
@@ -13,7 +13,8 @@
       "Red Narcor sells for 14–30 Credits (Radiant 28–60), down from 16–32 (Radiant 32–64).",
       "Spice gives 5–15 Credits (Radiant 9–29), up from 4–13 (Radiant 8–25).",
       "Abandoned Spice Tower's Activate deals you 2 damage, down from 4.",
-      "Profe Yates costs (2), down from (4), and is 3/7 (Radiant 6/14), from 6/6 (Radiant 12/12); it gains Tribute 1, its Cry summons a random Trap (Radiant: a random Radiant Trap), and its new Death shuffles a Profe Yates Prime (Radiant: a Radiant one) into your deck. It no longer exiles.",
+      "Profe Yates costs (2), down from (4), and is 3/7 (Radiant 6/14), from 6/6 (Radiant 12/12), with Tribute 1; its Cry summons a random Trap (Radiant: a Radiant one) and exiles nothing.",
+      "Profe Yates's new Death shuffles a Profe Yates Prime (Radiant: a Radiant one) into your deck.",
       "Selective Enrollment costs (6), up from (5).",
       "xxFreshJack has Tribute 2, up from Tribute 1, and gains \"Float reduces Tribute requirement by 1.\" on both faces.",
       "Jogg's Box casts 8 random Spells (Radiant 16), down from 10 (Radiant 20).",
