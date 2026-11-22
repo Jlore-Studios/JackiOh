@@ -25654,10 +25654,6 @@
       "refused_until": "2026-11-13T11:30:00Z",
       "spent": [
         {
-          "at": "2026-11-08T20:26:05Z",
-          "minutes": 64.3
-        },
-        {
           "at": "2026-11-08T21:12:50Z",
           "minutes": 50.7
         },
@@ -26452,16 +26448,13 @@
         {
           "at": "2026-11-22T10:30:48Z",
           "minutes": 19.5
+        },
+        {
+          "at": "2026-11-22T14:19:45Z",
+          "minutes": 23.1
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-07T20:52:30Z",
-          "cache": 780888,
-          "cost": 0.5587,
-          "input": 15,
-          "output": 10398
-        },
         {
           "at": "2026-11-07T21:47:50Z",
           "cache": 1930609,
@@ -27854,14 +27847,21 @@
           "cost": 1.0767,
           "input": 6,
           "output": 1856
+        },
+        {
+          "at": "2026-11-22T14:19:45Z",
+          "cache": 1703377,
+          "cost": 1.5818,
+          "input": 55,
+          "output": 15445
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-22T11:00:00Z",
-          "utilization": 0.37
+          "resets_at": "2026-11-22T17:00:00Z",
+          "utilization": 0.03
         },
-        "observed_at": "2026-11-22T10:30:48Z",
+        "observed_at": "2026-11-22T14:19:45Z",
         "status": "allowed"
       }
     },
@@ -40008,6 +40008,15 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-22T12:36:18Z,claude-4,ping,before,45022873638,0,2026-11-22T17:00:00Z,,,allowed,70,,",
+      "2026-11-22T13:19:39Z,claude-4,stream,call,45022873638,1,2026-11-22T17:00:00Z,,,allowed,70,,",
+      "2026-11-22T13:27:58Z,claude-4,stream,call,45022873638,2,2026-11-22T17:00:00Z,,,allowed,70,,",
+      "2026-11-22T13:38:46Z,claude-4,stream,call,45022873638,2,2026-11-22T17:00:00Z,,,allowed,70,,",
+      "2026-11-22T14:15:36Z,claude-4,stream,call,45022873638,3,2026-11-22T17:00:00Z,,,allowed,70,,"
+    ]
   },
   "version": 1
 }
