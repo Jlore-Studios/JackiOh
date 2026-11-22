@@ -17997,9 +17997,10 @@
     "what": "review #4459 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-22T10:07:03Z",
+    "at": "2026-11-22T10:14:12Z",
     "notes": [
-      "started revise #4459 on muse (run 45010911192)",
+      "delivered revise #4459 on muse (run 45010911192): built",
+      "started review #4459 on agy (run 45011563227)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -18706,7 +18707,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T10:07:03Z",
+  "loop_tick": "2026-11-22T10:14:12Z",
   "machine_disk": {
     "issue": null,
     "reading": {
