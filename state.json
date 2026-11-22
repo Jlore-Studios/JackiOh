@@ -17406,7 +17406,16 @@
       "feedback_since": "2026-11-22T05:09:09Z",
       "issue": 4423,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-3",
+        "rejections": [],
+        "reviews": [],
+        "sha": "99e09e4a815cceefbb853fc33d2d72fa861af200",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
