@@ -1994,6 +1994,13 @@ impl Tx<'_> {
         dispatch!(self, tickets_cancel(ticket_id, at))
     }
 
+    /// R4446000: deletes every cancelled ticket enqueued before `cutoff` (epoch ms), each a copy of its
+    /// player's deck that nothing reads again, and answers how many. A queued ticket and a claimed one
+    /// stay: the claimed one is where `matches_mode_of` reads its match's mode.
+    pub async fn tickets_purge(&mut self, cutoff: i64) -> StoreResult<i64> {
+        dispatch!(self, tickets_purge(cutoff))
+    }
+
     // results
 
     /// One row per match (§9.5). Rejects a second row for the same match with

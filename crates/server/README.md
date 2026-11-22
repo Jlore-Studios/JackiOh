@@ -809,7 +809,7 @@ has failed on at least `LOOP_FAILING_ALERT_PASSES` passes in a row over at least
 pass), with the failure's text in the line's `message` (the issue shows only the event name, the email every
 field); `ALERT_WINDOW_MS` then holds the event to one notice an hour. The steps are `matchmaker`,
 `matches.reaper`, `matches.open_reaper`, `seats.reconcile`, `series.sweeper`, `duos.sweeper`, `challenges.sweeper`, `daily.sweeper` and the retention
-purge's ten, `game_records.fold`, `game_records.refile`, `retention.purge`, `shares.purge`, `chat.purge`, `duos.logs.purge`,
+purge's eleven, `game_records.fold`, `game_records.refile`, `retention.purge`, `shares.purge`, `tickets.purge`, `chat.purge`, `duos.logs.purge`,
 `idempotency.sweep`, `lobbies.sweep`, `practice.sweep` and `practice.prune`. Each step's text in `alerts::meaning` names its job and what
 players notice while it fails (for the matchmaker, that nobody who queues gets a game), and says that the
 email's `message` field holds the error. A reaper pass in which any match would not reap counts as failed,
@@ -1156,7 +1156,9 @@ the server's alone, as a 1v1 match's are: a room's host and guest may read it (b
 choices), and no client role reads a co-op match or its log (no grant, no policy). The retention
 loop deletes a co-op match's log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a 1v1
 match's (`duos::purge_expired_logs`); the match row and its result stay. The loop also deletes a replay
-share whose match's log is gone (`shares.purge`, R4390001).
+share whose match's log is gone (`shares.purge`, R4390001). It also deletes a cancelled queue ticket
+enqueued more than `QUEUE_TICKET_CANCELLED_KEEP_SECONDS` ago (`tickets.purge`, R4446000); queued and
+claimed tickets stay, as a queue match's mode is read from its claimed ticket (`matches_mode_of`).
 
 Migration 0041 adds the card statistics' totals (R1044000): `record_totals`, `card_totals` and
 `decklist_totals`, server-only like `game_records` (RLS on, no policy, no grant), and

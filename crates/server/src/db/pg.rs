@@ -3988,6 +3988,23 @@ pub async fn tickets_cancel(t: &mut PgTx<'_>, ticket_id: &str, _at: i64) -> Resu
     Ok(())
 }
 
+/// R4446000: every cancelled ticket enqueued before `cutoff`. No index, no migration:
+/// `tickets_pairing_scan_idx` leads with `status`, and once the first pass has run the table holds
+/// about an hour of cancelled rows. Nothing references `tickets` by foreign key. A claimed ticket stays:
+/// `matches_mode_of` and `replays_list_with_modes` read a queue match's mode from it.
+pub async fn tickets_purge(t: &mut PgTx<'_>, cutoff: i64) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query(concat!(
+        "delete from public.tickets where status = 'cancelled' and enqueued_at < ",
+        ts!("$1")
+    ))
+    .bind(cutoff)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
+}
+
 // Results (SPEC §2.5, §9.5)
 
 /// A profile's finished-match record, counted in one pass over `results`. A draw is a row with no winner

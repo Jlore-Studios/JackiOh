@@ -1875,6 +1875,15 @@ pub fn tickets_cancel(f: &mut FakeTx<'_>, ticket_id: &str, _at: i64) -> Result<(
     Ok(())
 }
 
+/// R4446000: every cancelled ticket enqueued before `cutoff`.
+pub fn tickets_purge(f: &mut FakeTx<'_>, cutoff: i64) -> Result<i64, StoreError> {
+    call(f, "tickets.purge")?;
+    let gone = keep_only(&mut f.tables().tickets, |row| {
+        row.status != TicketStatus::Canceled || row.enqueued_at >= cutoff
+    });
+    Ok(gone as i64)
+}
+
 // Results (§9.5)
 
 pub fn results_insert(f: &mut FakeTx<'_>, row: &ResultRow) -> Result<(), StoreError> {

@@ -30,8 +30,8 @@ use jackioh_server::db::store::{
     PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
     ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayWithMode, ResultRow,
     RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, StatsTotalsQuery,
-    StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UnreadableGameRecord,
-    UsernameClaim, UsernameClaimOutcome,
+    StoreError, TermsSource, Ticket, TicketStatus, TutorialMergeInput, TutorialProgressRow, Tx,
+    UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{
@@ -4714,6 +4714,93 @@ mod tickets {
         assert!(q!(harness, t => t.tickets_recent_waits(now + 1)).is_empty());
     }
 
+    /// R4446000: the purge deletes a cancelled ticket enqueued before its cutoff and nothing else: a
+    /// ticket enqueued at the cutoff or after it stays (so does a queued one, and a claimed one, whose
+    /// match still reads its mode from it).
+    async fn r4446000_purges_only_the_cancelled_tickets_enqueued_before_the_cutoff(harness: &StoreHarness) {
+        let cutoff = harness.now();
+        let queuer = active_profile(harness, None).await;
+        let first = active_profile(harness, None).await;
+        let second = active_profile(harness, None).await;
+        let leaver = active_profile(harness, None).await;
+        let old = cutoff - 9_000;
+
+        let queued = ticket(harness, &queuer.id, json!({ "enqueuedAt": old }));
+        q!(harness, t => t.tickets_insert(&queued));
+
+        let claimers: Vec<Ticket> = [&first, &second]
+            .iter()
+            .map(|profile| {
+                ticket(
+                    harness,
+                    &profile.id,
+                    json!({ "mode": "random", "deck": [], "enqueuedAt": old }),
+                )
+            })
+            .collect();
+        for row in &claimers {
+            q!(harness, t => t.tickets_insert(row));
+        }
+        let match_id = id();
+        assert!(
+            q!(harness, t => t.tickets_claim_pair(&claimers[0].id, &claimers[1].id, &match_id, cutoff)),
+            "{}",
+            harness.name
+        );
+        q!(harness, t => t.matches_create(&match_row(&match_id, &first.id, &second.id, harness, cutoff)));
+
+        // One at a time: a profile holds one queued ticket at once.
+        let mut cancelled = Vec::new();
+        for enqueued_at in [cutoff - 1, cutoff, cutoff + 1] {
+            let row = ticket(harness, &leaver.id, json!({ "enqueuedAt": enqueued_at }));
+            q!(harness, t => t.tickets_insert(&row));
+            q!(harness, t => t.tickets_cancel(&row.id, cutoff));
+            cancelled.push(row);
+        }
+
+        assert_eq!(q!(harness, t => t.tickets_purge(cutoff)), 1, "{}", harness.name);
+        assert!(
+            q!(harness, t => t.tickets_get(&cancelled[0].id)).is_none(),
+            "{}",
+            harness.name
+        );
+        for row in &cancelled[1..] {
+            assert_eq!(
+                q!(harness, t => t.tickets_get(&row.id)).map(|held| held.status),
+                Some(TicketStatus::Canceled),
+                "{}",
+                harness.name
+            );
+        }
+        assert_eq!(q!(harness, t => t.tickets_get(&queued.id)), Some(queued.clone()));
+        for row in &claimers {
+            assert_eq!(
+                q!(harness, t => t.tickets_get(&row.id)).map(|held| held.status),
+                Some(TicketStatus::Matched),
+                "{}",
+                harness.name
+            );
+        }
+        assert_eq!(
+            j(&q!(harness, t => t.matches_mode_of(&match_id))),
+            json!("random")
+        );
+
+        assert_eq!(q!(harness, t => t.tickets_purge(cutoff)), 0, "{}", harness.name);
+        assert_eq!(
+            q!(harness, t => t.tickets_purge(cutoff + 2)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(q!(harness, t => t.tickets_get(&queued.id)), Some(queued));
+        assert!(q!(harness, t => t.tickets_get(&claimers[0].id)).is_some());
+        assert_eq!(
+            j(&q!(harness, t => t.matches_mode_of(&match_id))),
+            json!("random")
+        );
+    }
+
     both_stores!(
         inserts_a_ticket_and_finds_the_profile_s_open_one,
         r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode,
@@ -4726,6 +4813,7 @@ mod tickets {
         becomes_a_live_match_once_the_pair_is_claimed_and_the_match_created,
         r1450_reaps_a_pair_s_reservation_claimed_before_the_cutoff_and_lets_both_players_go,
         r640002_lists_the_waits_of_tickets_claimed_since_and_no_others,
+        r4446000_purges_only_the_cancelled_tickets_enqueued_before_the_cutoff,
     );
 }
 

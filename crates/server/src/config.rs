@@ -626,6 +626,10 @@ pub const QUEUE_TICKET_STALE_MS: i64 = 12_000;
 /// before the client stops waiting with a rejoin message. Two, so one failed or slow read cannot
 /// end a live queue.
 pub const QUEUE_ENDED_AFTER_READS: usize = 2;
+/// R4446000: seconds a cancelled queue ticket is kept, counted from its enqueue, before the hourly
+/// retention purge may delete it. An hour: the enqueue's read-back and the pairing's re-read both
+/// happen inside one request, long before.
+pub const QUEUE_TICKET_CANCELLED_KEEP_SECONDS: i64 = 3600;
 
 /// SPEC §11 R640002: the window the queue readout counts over, in seconds: the waits of the tickets
 /// claimed in it and the games that ended in it.
