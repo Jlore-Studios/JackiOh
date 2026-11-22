@@ -2502,6 +2502,179 @@ async fn an_email_the_mail_service_refused_spends_none_of_the_days_cap() {
     tx.commit().await.expect("commit");
 }
 
+/// §9.13: the after-move task and the sweep deciding for one profile at once send one email and
+/// one push, not one each. The task's send holds the profile's lock across decide, send and
+/// mark-sent; the sweep waits on it, then re-reads fresh state and finds nothing due.
+#[tokio::test]
+async fn the_after_move_task_and_the_sweep_send_one_profile_one_email_and_push() {
+    let (mail_api, mail_seen, mail_gate) = held_service(StatusCode::OK).await;
+    let (push_api, push_seen) = fake_service(StatusCode::OK).await;
+    let app = app_with(
+        None,
+        TestAppOptions {
+            mail_api: Some(format!("{mail_api}/emails")),
+            push_keys: Some(vapid_pair()),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let ada = person(&app, 1, "Ada").await;
+    let bo = person(&app, 2, "Bo").await;
+    befriend(&app, &ada, &bo).await;
+    subscribe(&app, &ada, 1, format!("{push_api}/push/1/ada")).await;
+    subscribe(&app, &bo, 2, format!("{push_api}/push/2/bo")).await;
+
+    // Ada challenges, Bo accepts: both owe the mulligan, so both are due. The accept answers
+    // before any send (enqueue-and-return), and the task takes the acceptor first.
+    answers_at_once("the accept", daily_game(&app, &ada, &bo, 1)).await;
+    eventually("Bo's mail reached the service", || {
+        mail_seen.lock().expect("the requests").len() == 1
+    })
+    .await;
+
+    // The sweep starts while that send is still held: it collides with the task on Bo.
+    let sweep = tokio::spawn({
+        let app = Arc::clone(&app);
+        async move { sweep(&app, app.daily.now()).await }
+    });
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    // The sweep cannot finish while the gate is closed: its sends stall, or it waits on the
+    // acceptor's lock without sending. Which holder it reaches first is the seats' coin toss, so
+    // the challenger's mail may or may not have gone too.
+    assert!(!sweep.is_finished(), "the sweep collides instead of finishing");
+    assert!(
+        (1..=2).contains(&mail_seen.lock().expect("the requests").len()),
+        "one or two mails while gated: {:?}",
+        mail_seen.lock().expect("the requests").len()
+    );
+
+    mail_gate.add_permits(1);
+    let swept = sweep.await.expect("the sweep").expect("a sweep");
+    notifier_idle(&app).await;
+
+    // Exactly one email per recipient and one push per device, however the two collided: the
+    // sweep sent the challenger's notices, or waited on the queue's locks and sent none.
+    assert_eq!(mail_seen.lock().expect("the requests").len(), 2);
+    let mut to: Vec<String> = mail_seen
+        .lock()
+        .expect("the requests")
+        .iter()
+        .map(|(_, _, body)| {
+            serde_json::from_slice::<Value>(body).expect("a JSON mail")["to"][0]
+                .as_str()
+                .unwrap_or_default()
+                .to_string()
+        })
+        .collect();
+    to.sort();
+    assert_eq!(
+        to,
+        vec![
+            format!("{}@example.test", ada.id),
+            format!("{}@example.test", bo.id)
+        ]
+    );
+    let mut paths: Vec<String> = push_seen
+        .lock()
+        .expect("the requests")
+        .iter()
+        .map(|(path, _, _)| path.clone())
+        .collect();
+    paths.sort();
+    assert_eq!(paths, vec!["/push/1/ada".to_string(), "/push/2/bo".to_string()]);
+    for who in [&ada, &bo] {
+        let row = notify_row(&app, who).await;
+        assert!(row.last_email_at.is_some(), "{}", who.name);
+        assert!(row.last_push_at.is_some(), "{}", who.name);
+    }
+    assert!(
+        swept.emailed <= 1,
+        "the sweep emailed at most one: {}",
+        swept.emailed
+    );
+    assert_eq!(
+        swept.pushed, swept.emailed,
+        "the sweep pushed for each profile it emailed"
+    );
+}
+
+/// §9.13: the exclusion is per profile: a stalled send for one account never delays another's.
+/// Ada's push is held; Bo's goes while it is still held, and Ada is pushed exactly once total.
+#[tokio::test]
+async fn a_stalled_send_for_one_account_never_delays_another() {
+    let (held_api, held_seen, held_gate) = held_service(StatusCode::CREATED).await;
+    let (quick_api, quick_seen) = fake_service(StatusCode::OK).await;
+    let app = app_with(
+        None,
+        TestAppOptions {
+            push_keys: Some(vapid_pair()),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let ada = person(&app, 1, "Ada").await;
+    let bo = person(&app, 2, "Bo").await;
+    let cy = person(&app, 3, "Cy").await;
+    let dan = person(&app, 5, "Dan").await;
+    befriend(&app, &bo, &dan).await;
+    befriend(&app, &cy, &ada).await;
+
+    // Bo and Dan's game, created first, is past the mulligan with Bo holding the move. Nothing is
+    // sent for any of it: no devices yet, and no mailer at all.
+    let first = daily_game(&app, &bo, &dan, 7).await;
+    past_the_mulligan(&app, [&bo, &dan], &first).await;
+    for n in 0..8 {
+        let (on_move, _) = holder(&app, [&bo, &dan], &first).await;
+        if on_move.id == bo.id {
+            break;
+        }
+        one_move(&app, [&bo, &dan], &first, n).await;
+    }
+    let (on_move, _) = holder(&app, [&bo, &dan], &first).await;
+    assert_eq!(on_move.id, bo.id, "Bo holds the first game's move");
+    notifier_idle(&app).await;
+
+    subscribe(&app, &ada, 1, format!("{held_api}/push/ada")).await;
+    subscribe(&app, &bo, 2, format!("{quick_api}/push/bo")).await;
+
+    // Cy challenges, Ada accepts: both owe the mulligan, so Ada is due. The accept answers before
+    // any send, and the task takes Ada first and stalls in her push's send.
+    answers_at_once("the accept", daily_game(&app, &cy, &ada, 7)).await;
+    eventually("Ada's push reached the service", || {
+        held_seen.lock().expect("the requests").len() == 1
+    })
+    .await;
+
+    // The sweep starts while Ada's send is still held. Bo's game was created first, so the sweep
+    // reaches him without touching Ada's lock.
+    let sweep = tokio::spawn({
+        let app = Arc::clone(&app);
+        async move { sweep(&app, app.daily.now()).await }
+    });
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    assert_eq!(
+        quick_seen.lock().expect("the requests").len(),
+        1,
+        "Bo is pushed while Ada's send is held"
+    );
+    assert_eq!(
+        held_seen.lock().expect("the requests").len(),
+        1,
+        "Ada is pushed once, not once per caller"
+    );
+    assert!(!sweep.is_finished(), "the sweep waits on Ada's lock");
+
+    held_gate.add_permits(1);
+    let swept = sweep.await.expect("the sweep").expect("a sweep");
+    notifier_idle(&app).await;
+
+    // Ada's push went exactly once, from the queue's task; the sweep sent Bo's alone.
+    assert_eq!(held_seen.lock().expect("the requests").len(), 1);
+    assert_eq!((swept.emailed, swept.pushed), (0, 1));
+    assert!(notify_row(&app, &bo).await.last_push_at.is_some());
+    assert!(notify_row(&app, &ada).await.last_push_at.is_some());
+}
+
 #[tokio::test]
 async fn the_social_read_counts_the_daily_games_waiting_on_you() {
     let (app, ada, bo) = two_friends().await;

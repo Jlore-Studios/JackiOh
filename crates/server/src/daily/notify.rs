@@ -12,6 +12,8 @@
 //!   keys unset none is sent.
 //! - After a move the decision runs on one task (`NotifyQueue`), once the move has been answered: a slow or
 //!   failing mail or push service delays only the notifications behind it, never a player's move.
+//!   The task and the sweep decide for one profile at a time under its `DailyState::notify_lock`,
+//!   so a move landing while a sweep sends notifies once, not twice.
 //! - The sweep (`POST /daily-sweep`, the Worker's hourly cron, and `run_sweeper` while the server is
 //!   awake) lapses old invites, ends every game whose move ran out (R3727000), decides for every
 //!   player a game waits on, and deletes the notification feed's rows past `NOTIFICATIONS_KEEP_DAYS`
@@ -67,7 +69,13 @@ struct Sent {
 }
 
 /// Decides for `profile_id` at `now` and sends what is due, marking each channel that went.
+///
+/// Holds the profile's exclusion (`DailyState::notify_lock`) across decide, send and mark-sent, so
+/// the after-move task and the sweep never decide for one account at once: the second to arrive
+/// waits, then re-reads fresh `last_email_at`/`last_push_at` and finds nothing due (§9.13).
 async fn notify_one(app: &Arc<App>, profile_id: &str, now: i64) -> Result<Sent, ApiError> {
+    let guard = app.daily.notify_lock(profile_id);
+    let _held = guard.lock().await;
     let mut tx = app.db.begin(None).await?;
     let rows = tx.daily_games_of(profile_id, 0).await?;
     // R3727000: a move past its deadline is lost, settled or not yet, so it waits on nobody.
