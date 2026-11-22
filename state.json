@@ -19301,6 +19301,7 @@
       "run_id": "45057279017",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 455,
       "started_at": "2026-11-22T18:49:45Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -41048,9 +41049,33 @@
         "title": "Patch: the cards that count a Unit's death read what the card was as it died, so a Cloaked card destroyed while set is no Unit and an animated Field Spell or Trap is one",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "60977538878c48fc0a4129d521099ec73561c776",
+        "issue": 4493,
+        "merged_at": "2026-11-22T19:15:37Z",
+        "n": 455,
+        "pr": 4506,
+        "queued_at": "2026-11-22T19:15:37Z",
+        "sha": "cd440dcb0ff9deabc49681ecea0107b33d2f91f3",
+        "status": "queued",
+        "title": "Patch: big set pieces fit a phone's memory, and a layer budget keeps every future animation inside it",
+        "tries": 0
       }
     ],
-    "count": 454
+    "count": 455
   },
   "statistics": {
     "at": "2026-11-22T19:07:14Z"
