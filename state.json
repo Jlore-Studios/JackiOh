@@ -40021,16 +40021,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-22T12:41:18Z,agy,usage-command,before,45023549960,3,2026-11-22T16:14:46Z,11,2026-11-28T18:09:17Z,allowed,100,100,",
-      "2026-11-22T12:51:28Z,agy,usage-command,call,45023549960,5,2026-11-22T16:14:46Z,11,2026-11-28T18:09:17Z,allowed,100,100,",
-      "2026-11-22T13:01:35Z,agy,usage-command,call,45023549960,5,2026-11-22T16:14:46Z,12,2026-11-28T18:09:17Z,allowed,100,100,",
-      "2026-11-22T13:09:49Z,agy,usage-command,after,45023549960,6,2026-11-22T16:14:46Z,12,2026-11-28T18:09:17Z,allowed,100,100,"
-    ],
-    "runs": [
-      "2026-11-22T13:09:54Z,45023549960,agy,gemini-3.8-flash-high,review,4459,medium,approved,,28.4,297821,24293,0,,3,6,11,12,0.5,agy,none,,1"
-    ]
-  },
   "version": 1
 }
