@@ -16015,6 +16015,13 @@
     "4512": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T22:36:12Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: one gate line in apps/web audio plus a test and a ruling note \u2014 not engine rules, AI, cross-crate design, a migration, or a big change."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
