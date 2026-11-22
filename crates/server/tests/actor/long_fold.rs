@@ -4,12 +4,17 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 
+use jackioh_engine::config::Difficulty;
+use jackioh_engine::duos::DuosReplayInput;
 use jackioh_engine::{Action, GameState, PlayerId, reduce};
 use jackioh_server::actor::clock::initial_clocks;
 use jackioh_server::actor::engine::hash_state;
 use jackioh_server::actor::registry::AttachError;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::db::store::{Db, MatchActionRow, MatchRow};
+use jackioh_server::duos::engine::{self as duos_engine, Pinned, TeamBChoices};
+use jackioh_server::duos::registry::{DuosAttachError, registry as duos_registry};
+use jackioh_server::duos::store::{DuosChoice, DuosMatch};
 
 use crate::support::deps::{call, empty_test_app};
 use crate::support::engine::{
@@ -19,6 +24,9 @@ use crate::support::engine::{
 use crate::support::store::from;
 
 const MATCH_ID: &str = "match-long-fold";
+
+/// The co-op match `#4430`'s tests rebuild.
+const DUOS_MATCH_ID: &str = "match-duos-long-fold";
 
 /// How many seeds `gate_seed` tries before it gives up.
 const SEED_SEARCH: usize = 5_000;
@@ -162,4 +170,88 @@ async fn a_rebuild_whose_fold_panics_is_an_internal_error_and_registers_no_actor
     assert!(app.matches.live().is_empty());
     let (status, _headers, _body) = call(&app, "GET", "/healthz", None, Value::Null).await;
     assert_eq!(status, 200);
+}
+
+/// A live co-op match row as a join writes one: two people against the easy AI team, its decks as
+/// given.
+fn duos_row(seed: &str, a1: Vec<String>, a2: Vec<String>) -> DuosMatch {
+    let random = DuosChoice::Random { lean: None };
+    let mut options = duos_engine::match_options(
+        Pinned::default(),
+        jackioh_cards::catalog_version(),
+        seed,
+        TeamBChoices::Ai(Difficulty::Easy),
+        &random,
+        &random,
+    );
+    options.decks.a1 = a1;
+    options.decks.a2 = a2;
+    DuosMatch {
+        id: DUOS_MATCH_ID.to_string(),
+        seed: seed.to_string(),
+        a1: "profile-1".to_string(),
+        a2: "profile-2".to_string(),
+        b1: String::new(),
+        b2: String::new(),
+        difficulty: Difficulty::Easy,
+        options,
+        created_at: now_ms(),
+        ended_at: None,
+        result: None,
+    }
+}
+
+/// The co-op row written straight into the fake store.
+async fn write_duos_match(app: &App, row: &DuosMatch) {
+    let mut tx = app.db.begin(None).await.expect("begin");
+    tx.duos_matches_create(row).await.expect("duos_matches_create");
+    tx.commit().await.expect("commit");
+}
+
+/// #4430: a co-op rebuild folds off the runtime (#1035), so a panic in the fold is an internal
+/// error and registers no actor, as a 1v1 rebuild's is.
+#[tokio::test]
+async fn a_duos_rebuild_whose_fold_panics_is_an_internal_error_and_registers_no_actor() {
+    install_test_cards();
+    let app = empty_test_app().await;
+    let bad = vec!["not-a-card".to_string()];
+    write_duos_match(&app, &duos_row("duos-long-fold-panics", bad.clone(), bad)).await;
+
+    match duos_registry(&app).actor_for(&app, DUOS_MATCH_ID).await {
+        Err(DuosAttachError::Internal(message)) => {
+            assert!(message.contains("deck must hold exactly"), "{message}");
+        }
+        Err(other) => panic!("an internal error was expected, not {other}"),
+        Ok(_) => panic!("a fold that panics registered an actor"),
+    }
+    assert!(duos_registry(&app).live().is_empty());
+    let (status, _headers, _body) = call(&app, "GET", "/healthz", None, Value::Null).await;
+    assert_eq!(status, 200);
+}
+
+/// #4430: a co-op rebuild runs its fold through `app.engine_thread`, so the test harness's card
+/// overrides apply on the worker thread: decks of test-only cards fold to what a direct fold
+/// reads. On bare `spawn_blocking` the worker thread holds no overrides and the fold panics.
+#[tokio::test]
+async fn a_duos_rebuild_installs_the_test_cards_before_folding() {
+    install_test_cards();
+    let app = empty_test_app().await;
+    let row = duos_row("duos-long-fold-test-cards", fake_deck(&[]), fake_deck(&[]));
+    write_duos_match(&app, &row).await;
+
+    let actor = duos_registry(&app)
+        .actor_for(&app, DUOS_MATCH_ID)
+        .await
+        .expect("the rebuilt actor");
+    actor.idle().await;
+    assert_eq!(actor.next_seq(), 1);
+    let folded = duos_engine::fold(
+        Pinned::default(),
+        &DuosReplayInput {
+            options: duos_engine::create_options(&row),
+            log: Vec::new(),
+        },
+    );
+    assert_eq!(folded.refused_at, None, "the empty log folds whole");
+    assert_eq!(actor.hash(), duos_engine::hash(&folded.state));
 }

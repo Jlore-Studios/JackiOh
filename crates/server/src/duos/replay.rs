@@ -10,7 +10,6 @@
 //! too), shares one fold with a concurrent opening of its match, and is 429 with `retryAfterMs`
 //! past `REPLAY_FOLD_WAIT_MS`.
 
-use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
 
 use serde::Serialize;
@@ -20,7 +19,7 @@ use jackioh_engine::ReplayRefusal;
 use jackioh_engine::wire::{DuosAction, DuosSeat, DuosView};
 
 use crate::actor::contracts::one_tx;
-use crate::actor::registry::panic_text;
+use crate::actor::engine as actor_engine;
 use crate::api::collection::caller_profile;
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, Req, account_key, log_warn, now_ms, ok_of, rate_limited,
@@ -66,24 +65,17 @@ fn check_rate(app: &App, profile_id: &str) -> Result<(), ApiError> {
 }
 
 /// The match folded under the catalog it was played on (R767000) and held to the result it
-/// recorded. A setup the catalog refuses (a panic in `duos_create`) is `rules_changed`, as the 1v1
-/// replay's is.
+/// recorded. A setup or log the engine refuses is `rules_changed`, as the 1v1 replay's is; a
+/// panicking setup or fold propagates to the caller, which answers `internal` (`get_replay`).
 fn open(row: &DuosMatch, log: Vec<DuosAction>) -> DuosOpened {
     let pinned = match Pinned::of(&row.options.catalog_version) {
         Ok(pinned) => pinned,
         Err(reason) => return DuosOpened::Refused(reason),
     };
     let options = engine::create_options(row);
-    let folded = catch_unwind(AssertUnwindSafe(|| {
-        engine::steps_for(pinned, &options, &log, row.team_b())
-    }));
-    let steps = match folded {
-        Ok(Ok(steps)) => steps,
-        Ok(Err(reason)) => return DuosOpened::Refused(reason),
-        Err(payload) => {
-            tracing::error!(event = "duos.replay.panicked", matchId = %row.id, message = %panic_text(payload));
-            return DuosOpened::Refused(ReplayRefusal::RulesChanged);
-        }
+    let steps = match engine::steps_for(pinned, &options, &log, row.team_b()) {
+        Ok(steps) => steps,
+        Err(reason) => return DuosOpened::Refused(reason),
     };
     let ended_as_recorded = match (&steps.result, &row.result) {
         (Some(result), Some(recorded)) => serde_json::to_value(result).ok().as_ref() == Some(recorded),
@@ -130,14 +122,22 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
                 .map(|entry| action_of(&entry.action))
                 .collect::<Result<_, _>>()?;
             let folding = row.clone();
+            let engine_thread = app.engine_thread;
+            let match_id = row.id.clone();
+            let panicked_id = match_id.clone();
+            // #1035: the open in one job off the runtime, as a 1v1 replay opens: a long log is a
+            // long fold. R3500000: the job holds `permit` until it ends.
             replays
-                .open(&app.replays.folds, &row.id, |permit| async move {
-                    tokio::task::spawn_blocking(move || {
+                .open(&app.replays.folds, &match_id, |permit| async move {
+                    actor_engine::off_runtime(engine_thread, move || {
                         let _permit = permit;
                         open(&folding, actions)
                     })
                     .await
-                    .map_err(|error| ApiError::internal(error.to_string()))
+                    .map_err(|message| {
+                        tracing::error!(event = "duos.replay.panicked", matchId = %panicked_id, message = %message);
+                        ApiError::internal(message)
+                    })
                 })
                 .await?
         }
