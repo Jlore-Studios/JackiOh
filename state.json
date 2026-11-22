@@ -18847,7 +18847,7 @@
       "provider": "gpt",
       "question": "Please choose whether to rerun with the locked Cargo dependencies available or explicitly waive the exact local calibration requirement.",
       "queued_at": "2026-11-22T19:05:19Z",
-      "run_id": "pending:ea23b0ae-1795374318",
+      "run_id": "45058789545",
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
       "source": "decision",
