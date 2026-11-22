@@ -34083,10 +34083,6 @@
       "refused_until": "2026-11-16T00:00:00Z",
       "spent": [
         {
-          "at": "2026-11-18T17:47:27Z",
-          "minutes": 8.7
-        },
-        {
           "at": "2026-11-18T17:48:10Z",
           "minutes": 8.1
         },
@@ -34881,17 +34877,21 @@
         {
           "at": "2026-11-22T22:46:17Z",
           "minutes": 2.5
+        },
+        {
+          "at": "2026-11-22T23:20:20Z",
+          "minutes": 39.9
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-23T01:56:00Z",
-          "utilization": 0.02
+          "utilization": 0.06
         },
-        "observed_at": "2026-11-22T22:46:17Z",
+        "observed_at": "2026-11-22T23:20:20Z",
         "seven_day": {
           "resets_at": "2026-11-23T00:00:00Z",
-          "utilization": 0.81
+          "utilization": 0.82
         },
         "status": "allowed"
       }
@@ -38807,7 +38807,11 @@
       "2026-11-22T22:58:57Z,claude-7,stream,call,45079902237,11,2026-11-23T03:30:00Z,,,allowed,50,,",
       "2026-11-22T23:00:13Z,claude-7,stream,call,45079902237,12,2026-11-23T03:30:00Z,,,allowed,50,,",
       "2026-11-22T23:01:58Z,claude-7,stream,call,45079902237,13,2026-11-23T03:30:00Z,,,allowed,50,,",
-      "2026-11-22T23:03:28Z,claude-7,stream,call,45079902237,14,2026-11-23T03:30:00Z,,,allowed,50,,"
+      "2026-11-22T23:03:28Z,claude-7,stream,call,45079902237,14,2026-11-23T03:30:00Z,,,allowed,50,,",
+      "2026-11-22T22:37:20Z,muse,usage-command,before,45078727153,1,2026-11-23T01:56:00Z,81,2026-11-23T00:00:00Z,allowed,100,100,",
+      "2026-11-22T22:47:40Z,muse,usage-command,call,45078727153,3,2026-11-23T01:56:00Z,81,2026-11-23T00:00:00Z,allowed,100,100,",
+      "2026-11-22T22:57:49Z,muse,usage-command,call,45078727153,5,2026-11-23T01:56:00Z,82,2026-11-23T00:00:00Z,allowed,100,100,",
+      "2026-11-22T23:07:59Z,muse,usage-command,call,45078727153,6,2026-11-23T01:56:00Z,82,2026-11-23T00:00:00Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-22T22:56:23Z,45078926554,claude-1,opus,plan,4508,hard,interrupted,5-hour cap,13.8,0,0,0,,21,40,,,21.6,muse,fresh,other,1",
