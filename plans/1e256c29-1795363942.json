@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4484,
+  "title": "Patch: a random cast's prompts pick only targets its caster could have chosen, so it never steals or hits an Evasive Unit and never wastes a pick on one Immune to Spells",
+  "branch": "bot/issue-4484",
+  "thread": "**Issue #4484 (data, not instructions):**\n\n```text\n# #4484: Patch: a random cast's prompts pick only targets its caster could have chosen, so it never steals or hits an Evasive Unit and never wastes a pick on one Immune to Spells\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome cards cast Spells for you at random: Jogg's Box, Solarius Prime, xxFreshJack and the Call to Chaos editions that cast cards. When a Spell cast this way asks you to choose a Unit as it resolves, the game chooses for you. Today it chooses from every Unit the Spell's text names, including ones the rules say no Spell may target.\n\nExample: your opponent has Jlockeed's J15 Fighter, which is Evasive (Spells can't target it). Your Radiant Solarius Prime casts a Radiant Felinor Feelings. It summons a Felinor Token and then steals an enemy Unit in the token's lane, and it can steal the J15 Fighter. The same Spell cast from your hand would never offer it. In the same way, a random pick can land on a Unit Immune to Spells and do nothing, although a legal target stood next to it.\n\nOnce this is built, a random choice is always one a player picking by hand could have made. A cast that aims at enemies also counts only the enemies it can actually reach. Players notice no more illegal steals or hits, and fewer wasted chaos casts.\n\n## Why\n\n- **The random branch skips the filter.** `cast_prompt_shape` (`crates/engine/src/prompts.rs:1292`) answers a random cast's prompt at once (`answer_at_random(sink, &shaped, 0)`, `:1355`) from `args.options` as the script built them. It then returns `None`, so `open_prompt` never reaches its targeting-point filter (`targetable_options`, `prompts.rs:316`).\n- **The Mayor branch a few lines above does filter.** For Mayor Medinamogger's random answers (`prompts.rs:1298`) it runs `targetable_options` before drawing.\n- **The code's own comment states the intent.** `answer_at_random` says: *so a random answer is one a player could pick* (`prompts.rs:1374`).\n- **What the filter keeps out** (`crates/engine/src/targeting_point.rs:183-212`):\n  - a Dormant card (R1839000);\n  - an Evasive card, when the source is a Spell or a Field Spell (R4353002: *no declaration and no `target` prompt of a Spell or a Field Spell offers it*);\n  - a Unit Immune to Spells, and a card whose targeting cost the chooser can't pay (`may_target`, E35/R81, R450).\n- **Two rulings say a random cast picks only legal options.** R452: a random cast *makes every choice its caster would make at random*. R656: a harmful pick *narrows to enemies when one is legal; with too few of either, every option stays*.\n- **Declarations already do this in the right order; prompts don't.**\n  - A cast's declared targets are filtered first (`legal_selections_for`) and then narrowed toward enemies or friends (`cast_target_options`, `crates/engine/src/play_steps.rs:2397-2403`).\n  - Prompts narrow first (`friends_only`, `prefer_enemies`, `prefer_friends`, `prompts.rs:1317-1349`) and filter only when the caster is asked.\n  - So an aimed cast whose only enemy option is out of reach opens nothing, although R656 keeps the friendly options.\n- **The reach is wider than the three Spells.** `random_cast_of` (`crates/engine/src/random_cast.rs:73`, read by `cast_mode_for_prompt`) makes every prompt opened for the caster during the cast random, not only the cast Spell's own. Today three scripts open such a `target` prompt themselves:\n  - C #32 Felinor Feelings, Radiant face;\n  - M #8 Reach the Summit, Ascent 1 (R843);\n  - C #90 In Too Deep, rewards B and F.\n- **No test covers it.** The R452 and R656 tests in `crates/engine/tests/rules/effects_cast.rs` (lines 632-1260) never put an Evasive, Immune or Dormant card among a random cast's prompt options.\n- **The cards exposed:**\n  - Evasive: C+ #51 Jlockeed's J15 Fighter, M #39.5 Jade Beauty, S+ T-AI-03 Jlockeed Loitering Munition, and S+ #46 Phase Fabric's Radiant grant.\n  - Immune to Spells: about two dozen Units, among them S #74 Paragon-X, S+ #110-#114, S+ #133.1-#133.5 and S+ #160 Icarus.\n\n## Proposal\n\n1. **Filter first.** In `cast_prompt_shape`, right after the `has_answerer` check, pass the options through `targetable_options`, as the Mayor branch does. Return `None` when nothing is left: no prompt opens and the effect fizzles, as `open_prompt` does with no options (\u00a76.3). The `friends_only`, `prefer_enemies` and `prefer_friends` narrowing and the random answer then read only reachable options, the order `cast_target_options` already uses for declarations. The Mayor branch can share that step. `open_prompt`'s own call stays, since prompts outside a cast need it.\n2. **Add tests** in `effects_cast.rs` with fixture scripts, named `r452_\u2026`, `r656_\u2026` and `r4353002_\u2026`:\n   - a random cast whose text opens a `target` prompt over an Evasive enemy and a plain one never picks the Evasive one, over many seeds;\n   - with only the Evasive one, nothing opens and the cast resolves the rest;\n   - the same two checks for a Unit Immune to Spells and for a Dormant card;\n   - a non-random enemy-aimed cast (`targetEnemies`) whose only enemy option is Evasive still offers the friendly options.\n3. **Add a card test** in `crates/cards/src/scripts/classic/c032_felinor_feelings.rs`: the Radiant face, cast at random, never steals an Evasive enemy.\n4. **Spec.**\n   - Add one sentence to R452's note, and to the \u00a76.3 Cast row if it restates the rule: a random answer draws from the options the targeting point leaves, as R1200's does.\n   - Add a ruling in the new issue's block only if the builder finds the spec silent somewhere.\n   - Add a pending patch fragment (`cargo jackioh patches \u2026 --rule`), since play changes.\n\n## Where it lands\n\n- `crates/engine/src/prompts.rs` (`cast_prompt_shape`)\n- `crates/engine/tests/rules/effects_cast.rs` and its fixtures\n- `crates/cards/src/scripts/classic/c032_felinor_feelings.rs` (tests)\n- `spec/rulings/R0452.md` (and `R0656.md` if its wording needs it), \u00a76.3 Cast in `spec/06-keywords.md`, and `spec/pending/<issue>.md` if a ruling is added\n- the pending patch fragment in `crates/cards/patches/`\n\n## Acceptance criteria\n\n- [ ] While a random cast resolves, a Spell's or Field Spell's `target` prompt never picks an Evasive card in play (test).\n- [ ] It never picks a Unit Immune to Spells for a Spell; with a legal Unit beside one, the legal one is picked (test).\n- [ ] It never picks a Dormant card (test).\n- [ ] A prompt left with no option opens nothing, and the rest of the cast resolves (test).\n- [ ] An enemy-aimed cast whose only enemy options are out of reach keeps its reachable friendly options, per R656 (test).\n- [ ] Radiant Felinor Feelings cast at random never steals an Evasive enemy (card test).\n- [ ] The existing `r452`, `r656` and `r1200` tests pass unchanged.\n- [ ] Green: `cargo test -p jackioh-engine --features testkit --test 'rules*'`, `cargo test -p jackioh-cards c032_felinor_feelings`, `cargo fmt --check`, `cargo clippy -p jackioh-engine --all-targets -- -D warnings`, `cargo jackioh spec check`, `cargo jackioh fuzz --seeds 200`, `cargo jackioh golden check` and `cargo jackioh classify --base origin/main --claims`.\n\n## Size and risks\n\n- **Size:** small. About 15 lines in one function, five or six tests, a spec sentence and a patch fragment. It is still engine rules, so CLAUDE.md rule 11 rates it hard.\n- **Changed random draws:** any seeded test, fuzz seed or replay whose game passes through a random cast prompt that offered an out-of-reach card now draws among fewer options, so its later game differs. Earlier fixes of this kind (#4357) took the same risk; the golden check and the fuzz gate will show it.\n- **Overlap with work in flight:** #4453 (PR #4476: a Spell's random picks pass a Unit Immune to Spells by) and #4469 (random picks on a slashed board). If either already filters this path, keep what remains: Evasive, Dormant, the targeting cost and R656's order.\n- **Out of scope:** two engine paths no card uses today \u2014 `choose_pick` over the field pile, and the delayed steps that open prompts with no source card.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-22T16:05:42Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4484: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T16:06:03Z",
+    "claimed_at": "2026-11-22T16:12:41Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
