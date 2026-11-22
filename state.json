@@ -16376,17 +16376,14 @@
     "what": "plan #4508 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-22T22:45:41Z",
+    "at": "2026-11-22T22:56:23Z",
     "notes": [
-      "delivered plan #4511 on muse (run 45078885612): planned",
-      "delivered review #4520 on claude-8 (run 45078845556): reviewed",
-      "delivered plan #4515 on claude-7 (run 45077704959): planned",
-      "delivered plan #4518 on gpt (run 45077662363): planned",
-      "started build #4511 on muse (run 45079818176)",
-      "started build #4518 on gpt (run 45079861233)",
-      "started plan #4515 on claude-7 (run 45079902237)",
+      "#4524 needs a plan",
+      "delivered plan #4508 on claude-1 (run 45078926554): interrupted",
+      "started plan #4524 on claude-8 (run 45080597766)",
+      "started plan #4508 on claude-4 (run 45080638831)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "#4524: typed it Bug"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17092,7 +17089,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T22:45:41Z",
+  "loop_tick": "2026-11-22T22:56:23Z",
   "machine_disk": {
     "issue": null,
     "reading": {
