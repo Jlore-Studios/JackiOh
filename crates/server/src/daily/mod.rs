@@ -15,7 +15,9 @@ pub mod invites;
 pub mod notify;
 pub mod webpush;
 
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
+use std::sync::{Arc, Mutex};
 
 use crate::app::now_ms;
 use crate::config::PLAYER_EMAIL_API_URL;
@@ -53,6 +55,10 @@ pub struct DailyState {
     sweeping: AtomicBool,
     /// §9.13: the profiles a move told that wait for their notification (`notify::after_move`).
     pub notifier: notify::NotifyQueue,
+    /// §9.13: one async exclusion per profile ever notified, so the after-move task and the sweep
+    /// never decide for one account at once (`notify::notify_one`). In memory only, which is
+    /// enough for one server instance; an entry is never pruned.
+    notify_locks: Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>,
     /// #3843: the UTC day (its start, epoch ms) the cap last held an email back on in this process
     /// (`i64::MIN` before any), so `daily.email.capped` is logged once a day, not once a player.
     capped_day: AtomicI64,
@@ -80,8 +86,23 @@ impl DailyState {
             offset_ms: AtomicI64::new(0),
             sweeping: AtomicBool::new(false),
             notifier: notify::NotifyQueue::default(),
+            notify_locks: Mutex::new(HashMap::new()),
             capped_day: AtomicI64::new(i64::MIN),
         }
+    }
+
+    /// §9.13: one profile's notify exclusion, shared by the after-move task and the sweep
+    /// (`notify::notify_one` holds it across decide, send and mark-sent). The map mutex is never
+    /// held across `.await`; the per-profile mutex is, so a stalled send for one account never
+    /// delays another's.
+    pub(crate) fn notify_lock(&self, profile_id: &str) -> Arc<tokio::sync::Mutex<()>> {
+        let mut locks = crate::api::http::lock(&self.notify_locks);
+        if let Some(held) = locks.get(profile_id) {
+            return Arc::clone(held);
+        }
+        let held = Arc::new(tokio::sync::Mutex::new(()));
+        locks.insert(profile_id.to_string(), Arc::clone(&held));
+        held
     }
 
     /// §9.13: one sweep at a time. The Worker's hourly cron and the loop of a server that stays awake
