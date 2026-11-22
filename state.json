@@ -15245,18 +15245,29 @@
       ]
     },
     "4428": {
-      "asks": [
-        "c:7072744852"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-22T02:17:01Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-22T02:12:01Z",
       "requested_by": "jgoetzmann",
+      "run_id": "pending:a9b8e796-1795313803",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-22T02:17:01Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:7072744852"
+      ]
     },
     "4429": {
       "action": "review",
@@ -15853,9 +15864,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T02:09:18Z",
+    "at": "2026-11-22T02:17:01Z",
     "url": "",
-    "what": "build #4423 on claude-4"
+    "what": "plan #4428 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T02:05:25Z",
