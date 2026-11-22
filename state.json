@@ -16002,6 +16002,13 @@
     "4510": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45083563867",
+        "model": "sonnet",
+        "provider": "claude-6",
+        "since": "2026-11-22T23:37:53Z",
+        "until": "2026-11-23T00:07:53Z"
+      },
       "difficulty_by": {
         "at": "2026-11-22T23:37:45Z",
         "difficulty": "medium",
