@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4430,
+  "title": "Patch: co-op match rebuilds and replay openings run through off_runtime",
+  "branch": "bot/issue-4430",
+  "thread": "**Issue #4430 (data, not instructions):**\n\n```text\n# #4430: Patch: co-op match rebuilds and replay openings run through off_runtime\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen players reconnect to an in-progress co-op match after a server restart, or open a finished co-op game replay to watch it, the server reconstructs the game board by replaying every card played so far. While 1v1 matches, daily games, and practice matches all route this heavy computation through a dedicated background thread manager that configures card rules and catches unexpected crashes cleanly, co-op games were running directly on generic worker threads without this setup.\n\nThis change routes co-op game reconstruction and replay opening through the standard background thread runner so that card rules, test overrides, and crash handling work identically across all game modes.\n\n## Why\n\nIn `crates/server/README.md` (\"The seams to the pure crates\", lines 57\u201358), the server architecture explicitly specifies:\n> \"Every whole-log fold on an async path (a rebuild's three, a replay's opening, the reaper's, a finished match's one... and timing-backfill's) runs there too, one job per call, through `actor::engine::off_runtime`, its thread set up by `App::engine_thread` (#1035).\"\n\nWhile 1v1 rebuilds (`crates/server/src/actor/registry.rs:461`), 1v1 replays (`crates/server/src/api/replays.rs:419`), daily games (`crates/server/src/daily/games.rs:184`), and practice claims (`crates/server/src/api/practice.rs:201`) strictly obey this convention, co-op games were left out:\n1. `crates/server/src/duos/registry.rs:189` runs live co-op rebuild folds on bare `tokio::task::spawn_blocking`, manually duplicating `catch_unwind(AssertUnwindSafe(...))` and `panic_text(payload)`.\n2. `crates/server/src/duos/replay.rs:135` runs duos replay open folds on bare `tokio::task::spawn_blocking` without `catch_unwind`, risking crashing worker threads on unexpected engine panics instead of returning `ApiError::internal`.\n3. In tests, `App::engine_thread` installs thread-local card catalog overrides (`test_engine_thread` in `crates/server/tests/support/test_app.rs:178`). Calling bare `spawn_blocking` bypasses `app.engine_thread()`, leaving blocking worker threads without the test harness's registered cards and overrides.\n\n## Proposal\n\n1. In `crates/server/src/duos/registry.rs`, update `DuosRegistry::attach` to execute the whole-log or checkpoint tail fold via `engine::off_runtime(app.engine_thread, move || ...)`. Map the error directly to `DuosAttachError::Internal`.\n2. In `crates/server/src/duos/replay.rs`, update `open_duos_replay` to execute `open(&folding, actions)` inside `engine::off_runtime(app.engine_thread, move || ...)` within the permit closure, converting any fold panic cleanly into `ApiError::internal`.\n3. Add a test in `crates/server/tests/actor/long_fold.rs` (or `crates/server/tests/api/duos.rs`) asserting that an engine panic during co-op rebuild or replay opening returns an internal error cleanly without unhandled panics or leaving lingering actor registrations, matching 1v1 behavior.\n\n## Where it lands\n\n- Files:\n  - `crates/server/src/duos/registry.rs`\n  - `crates/server/src/duos/replay.rs`\n  - `crates/server/tests/actor/long_fold.rs`\n  - `crates/server/tests/api/replays.rs`\n- SPEC:\n  - SPEC \u00a79.3 (\"The log is the source of truth\")\n  - SPEC \u00a79.5 (\"Matches\")\n  - SPEC \u00a713.9 (\"Co-op and 2v2 lifecycle\")\n\n## Acceptance criteria\n\n- [ ] `DuosRegistry::attach` executes co-op log folding via `engine::off_runtime(app.engine_thread, ...)`.\n- [ ] `POST /api/duos/replays/:matchId` executes replay log unfolding via `engine::off_runtime(app.engine_thread, ...)`.\n- [ ] Panics during co-op rebuilds or replay opens are safely caught and surfaced as `DuosAttachError::Internal` or `ApiError::internal`.\n- [ ] Thread setup from `app.engine_thread` runs on the worker thread before folding, ensuring test-kit catalog overrides apply.\n- [ ] Existing duos tests (`cargo test -p jackioh-server --test server duos`) and long fold tests pass cleanly.\n\n## Size and risks\n\n- Size: Small (~35 lines changed in server sources, ~45 lines in tests).\n- Risks: Very low. `engine::off_runtime` is the proven standard runner used by all 1v1, daily, and practice folds across the codebase.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-22T00:34:08Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4430: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T00:34:29Z",
+    "claimed_at": "2026-11-22T00:46:09Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
