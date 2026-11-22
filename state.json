@@ -16644,6 +16644,19 @@
         "tiers": {
           "gemini": "medium"
         }
+      },
+      "waiting_turn": {
+        "behind": [
+          4489,
+          4480,
+          4476
+        ],
+        "ends": "2026-11-22T15:15:05Z",
+        "from_run": "45023549960",
+        "head": "2d9a952bf8a196df9a34c4a61f0083f314661419",
+        "model": "gemini-3.8-flash-high",
+        "provider": "agy",
+        "since": "2026-11-22T13:15:05Z"
       }
     },
     "4460": {
