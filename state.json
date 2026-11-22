@@ -17241,7 +17241,9 @@
     },
     "4472": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7081773479"
+      ],
       "build_next": {
         "from_run": "45042592793",
         "model": "gpt-5.6-sol",
@@ -17288,9 +17290,7 @@
       "started_at": "2026-11-22T16:13:12Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7081773479"
-      ]
+      "taken_asks": []
     },
     "4473": {
       "action": "review",
