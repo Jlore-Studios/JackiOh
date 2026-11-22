@@ -786,7 +786,8 @@ run on every pull request and `daily_host_fuzz_sweep` plays `HOST_FUZZ_DAILY_SEE
 jackioh-shared --features jackioh-engine/testkit --test host_fuzz repro`; the practice session's, `tests/practice.rs` (played on the real catalog with a `Session`
 standing in for a host). The ranked ladder's: `tests/glicko2.rs`, `tests/ladder.rs` and `tests/season.rs` (moved from the server's API tests
 with the maths), `tests/board.rs` (the sort key) and `tests/ranked_game.rs` (`decide` and its JSON calls). The `ts` feature writes the types that cross to
-`apps/web/src/wire/generated/`; commit any diff.
+`apps/web/src/wire/generated/`; commit any diff. `cargo test --workspace` writes them too (`jackioh-wasm-core`'s
+dev-dependencies turn the feature on, #4426), so `ci.yml`'s V20 step fails a pull request that leaves one stale.
 
 ```
 cargo test -p jackioh-shared --features jackioh-engine/testkit

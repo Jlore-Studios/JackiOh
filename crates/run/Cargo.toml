@@ -12,7 +12,8 @@ jackioh-engine = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 # Off by default, as the engine's `ts` is: the run's types are written to `apps/web/src/wire/generated/`
-# by `cargo test -p jackioh-run --features ts` (DR14), and nothing else derives types.
+# by `cargo test -p jackioh-run --features ts` (DR14), and nothing else derives types. `jackioh-wasm-core`'s
+# dev-dependencies turn it on for the workspace test build (#4426).
 ts-rs = { workspace = true, optional = true }
 
 [features]

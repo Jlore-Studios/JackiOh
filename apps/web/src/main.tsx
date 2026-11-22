@@ -106,6 +106,7 @@ import { MenuShell, menuShellOn } from "./shell/MenuShell.tsx";
 import { Skeleton, useShownAfterDelay, type SkeletonVariant } from "./skeleton/Skeleton.tsx";
 import { loadSceneData, sceneDataReady } from "./cards/art/sceneLoader.ts";
 import { loadCardTables } from "./cards/chinese.ts";
+import { loadFlavour } from "./cards/flavour.ts";
 import { loadWasm, wasmLoaded } from "./wasm/index.ts";
 
 import "./index.css";
@@ -962,8 +963,11 @@ if (import.meta.env.MODE !== "test") {
   const localeReady = initLocale();
   // #778: see THE ENGINE LOADS ALONGSIDE above. #4222: the scene tables start beside it, so the
   // first cards wait on both in `EngineGate` and `useEngineReady`, never on the entry chunk's bytes.
+  // #4435: the flavour sidecar starts beside it too, best-effort, as the Chinese card tables do (#4180):
+  // no screen waits on it, and a failed load shows no flavour and breaks nothing.
   void loadWasm().catch(() => undefined);
   void loadSceneData().catch(() => undefined);
+  void loadFlavour().catch(() => undefined);
   void localeReady.then(() => {
     createRoot(host).render(
       <StrictMode>

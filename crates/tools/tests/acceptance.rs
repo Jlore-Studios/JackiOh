@@ -35,6 +35,9 @@
 //!    a bare `let _ = <identifier>;`.
 //!  - Statics (#3063): the pure crates' sources declare no `thread_local!`, `static mut` or static holding a
 //!    `Cell`, `RefCell`, `UnsafeCell` or `Atomic*` but the ones CLAUDE.md rule 4 names (`RULE_4_STATICS`).
+//!  - TS (#4426): `crates/wasm/core/Cargo.toml`'s `[dev-dependencies]` name `jackioh-run` and `jackioh-shared`
+//!    with the `ts` feature, so the `tools, wasm` CI group writes their generated types and ci.yml's V20 step
+//!    holds them to the Rust.
 //!  - No network (R4159000): `crates/ai` compiles no trained weights, no learned evaluation and no policy
 //!    prior, and the WebAssembly modules export no `learned_parity`.
 
@@ -3317,5 +3320,72 @@ fn r4159000_r1010000_r1010001_r1011000_r1171001_r3112001_the_ai_compiles_no_netw
     assert!(
         found.is_empty(),
         "the retired network is named again (R4159000): {found:?}"
+    );
+}
+
+/// The crates among `jackioh-run` and `jackioh-shared` that the manifest's `[dev-dependencies]` do not
+/// name, on one line, with the `ts` feature (#4426).
+fn dev_dependencies_missing_ts(manifest: &str) -> Vec<&'static str> {
+    let mut in_dev = false;
+    let mut entries: Vec<&str> = Vec::new();
+    for raw in manifest.lines() {
+        let line = raw.split('#').next().unwrap_or("").trim();
+        if line.starts_with('[') {
+            in_dev = line == "[dev-dependencies]";
+        } else if in_dev && !line.is_empty() {
+            entries.push(line);
+        }
+    }
+    ["jackioh-run", "jackioh-shared"]
+        .into_iter()
+        .filter(|name| {
+            !entries.iter().any(|entry| {
+                entry
+                    .strip_prefix(name)
+                    .and_then(|rest| rest.trim_start().strip_prefix('='))
+                    .is_some_and(|rest| rest.contains("features") && rest.contains("\"ts\""))
+            })
+        })
+        .collect()
+}
+
+/// #4426: nothing but these dev-dependencies turns the run's and the shared logic's `ts` features on, so the
+/// `tools, wasm` group's test build is what writes their types for ci.yml's V20 step to hold.
+#[test]
+fn ts_the_generated_types_are_written_by_the_ci_test_build() {
+    let path = repo().join("crates/wasm/core/Cargo.toml");
+    let manifest = fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+    let missing = dev_dependencies_missing_ts(&manifest);
+    assert!(
+        missing.is_empty(),
+        "crates/wasm/core/Cargo.toml's [dev-dependencies] no longer turn on `ts` for {missing:?}: CI no longer \
+         holds `Run*.ts` and the shared types to the Rust (#4426); restore the `features = [\"ts\"]` lines"
+    );
+}
+
+#[test]
+fn ts_the_dev_dependency_scan_finds_a_dropped_feature() {
+    let ok = "[dependencies]\njackioh-run = { workspace = true }\n\n[dev-dependencies]\n\
+              # a comment\njackioh-run = { workspace = true, features = [\"ts\"] }\n\
+              jackioh-shared = { workspace = true, features = [\"ts\"] }\n";
+    assert!(dev_dependencies_missing_ts(ok).is_empty());
+    let no_features = "[dev-dependencies]\njackioh-run = { workspace = true, features = [\"ts\"] }\n\
+                       jackioh-shared = { workspace = true }\n";
+    assert_eq!(dev_dependencies_missing_ts(no_features), ["jackioh-shared"]);
+    let other_feature = "[dev-dependencies]\njackioh-run = { workspace = true, features = [\"serde\"] }\n\
+                         jackioh-shared = { workspace = true, features = [\"ts\"] }\n";
+    assert_eq!(dev_dependencies_missing_ts(other_feature), ["jackioh-run"]);
+    let linked = "[dependencies]\njackioh-run = { workspace = true, features = [\"ts\"] }\n\
+                  jackioh-shared = { workspace = true, features = [\"ts\"] }\n\n[dev-dependencies]\n";
+    assert_eq!(
+        dev_dependencies_missing_ts(linked),
+        ["jackioh-run", "jackioh-shared"]
+    );
+    let commented = "[dev-dependencies]\n# jackioh-run = { workspace = true, features = [\"ts\"] }\n\
+                     jackioh-shared = { workspace = true, features = [\"ts\"] }\n";
+    assert_eq!(dev_dependencies_missing_ts(commented), ["jackioh-run"]);
+    assert_eq!(
+        dev_dependencies_missing_ts("[package]\nname = \"x\"\n"),
+        ["jackioh-run", "jackioh-shared"]
     );
 }

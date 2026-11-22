@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { soundTablesNow } from "../audio/soundTablesLoader.ts";
+import { flavourNow } from "../cards/flavour.ts";
 import "../audio/engine.ts";
 import "../routes/landing.tsx";
 
@@ -65,6 +66,11 @@ const SOURCE = join(SRC, "patches/source.ts");
  * than with the entry chunk. `vite build --mode development`, as CI builds it, measured 447,192
  * bytes (26,346 less). The budget is now 56 × 8192 (458,752), about 11 KB (2.6%)
  * over that: putting the recipes back would cross it.
+ *
+ * #4435 lowered it: the flavour sidecar (every card's flavour line and artist credit) loads in a
+ * chunk beside the engine module rather than with the entry chunk. `vite build --mode development`,
+ * as CI builds it, measured 445,874 bytes (27,664 less). The budget is now 56 × 8192 (458,752),
+ * about 13 KB (2.9%) over that: putting the sidecar back would cross it.
  */
 export const FIRST_LOAD_GZIP_BUDGET_BYTES = 458_752;
 
@@ -156,6 +162,20 @@ it("#4428 no non-test module statically imports sfx.ts", () => {
   const dynamicSfx = /import\(\s*["'][^"']*sfx\.ts["']\s*\)/u;
   const holders = files.filter((path) => dynamicSfx.test(readFileSync(path, "utf8")));
   expect(holders.map((path) => relative(SRC, path))).toEqual(["audio/sfxLoader.ts"]);
+});
+
+it("#4435 no non-test module names flavour.json except cards/flavour.ts, which never imports it statically", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const namers = files.filter((path) => /flavour\.json/u.test(readFileSync(path, "utf8")));
+  expect(namers.map((path) => relative(SRC, path))).toEqual(["cards/flavour.ts"]);
+  const loader = readFileSync(join(SRC, "cards/flavour.ts"), "utf8");
+  expect(loader).not.toMatch(/from\s+["'][^"']*flavour\.json["']/u);
+  expect(loader).toContain("import(");
+});
+
+it("#4435 importing landing and engine leaves flavourNow() null", () => {
+  expect(flavourNow()).toBeNull();
 });
 
 it("#4222 no non-test module statically imports scene data", () => {
@@ -250,6 +270,30 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     const terms = JSON.parse(readFileSync(join(WEB, "../../crates/cards/chinese-terms.json"), "utf8")) as { radiant?: unknown };
     const probes = [first?.name, last?.name, terms.radiant];
     expect(ids.length).toBeGreaterThan(0);
+    expect(probes.every((probe) => typeof probe === "string" && probe.length > 0)).toBe(true);
+    for (const probe of probes) {
+      for (const text of texts) expect(text).not.toContain(probe as string);
+    }
+  });
+
+  it("#4435 the entry chunk and its preloads hold no flavour line or artist credit", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    const catalogText = readFileSync(join(WEB, "../../crates/cards/catalog.json"), "utf8");
+    const chineseText = readFileSync(join(WEB, "../../crates/cards/chinese.json"), "utf8");
+    const sidecar = JSON.parse(readFileSync(join(WEB, "../../crates/cards/flavour.json"), "utf8")) as Record<
+      string,
+      { flavour?: unknown; artist?: unknown }
+    >;
+    const ids = Object.keys(sidecar).filter((id) => id !== "//");
+    expect(ids.length).toBeGreaterThan(0);
+    // A probe string that also occurs in the catalog or the Chinese tables proves nothing.
+    const unique = (value: unknown): value is string =>
+      typeof value === "string" && value.length > 0 && !catalogText.includes(value) && !chineseText.includes(value);
+    const flavours = ids.map((id) => sidecar[id]?.flavour).filter(unique);
+    const artists = ids.map((id) => sidecar[id]?.artist).filter(unique);
+    expect(flavours.length).toBeGreaterThan(0);
+    // No shipped entry names an artist yet, so a third flavour line stands in until one does.
+    const probes = [flavours[0], flavours.at(-1), artists[0] ?? flavours[Math.floor(flavours.length / 2)]];
     expect(probes.every((probe) => typeof probe === "string" && probe.length > 0)).toBe(true);
     for (const probe of probes) {
       for (const text of texts) expect(text).not.toContain(probe as string);
