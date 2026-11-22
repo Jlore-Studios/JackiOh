@@ -20902,10 +20902,6 @@
       "refused_until": "2026-11-20T07:00:00Z",
       "spent": [
         {
-          "at": "2026-11-07T04:50:33Z",
-          "minutes": 40.0
-        },
-        {
           "at": "2026-11-07T09:16:52Z",
           "minutes": 20.5
         },
@@ -21700,16 +21696,13 @@
         {
           "at": "2026-11-22T13:41:59Z",
           "minutes": 12.8
+        },
+        {
+          "at": "2026-11-22T16:22:13Z",
+          "minutes": 3.2
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-06T09:11:46Z",
-          "cache": 144690,
-          "cost": 0.181,
-          "input": 6,
-          "output": 2107
-        },
         {
           "at": "2026-11-06T09:12:50Z",
           "cache": 10587720,
@@ -23102,14 +23095,21 @@
           "cost": 1.3629,
           "input": 55,
           "output": 9417
+        },
+        {
+          "at": "2026-11-22T16:22:13Z",
+          "cache": 1770768,
+          "cost": 0.7876,
+          "input": 44,
+          "output": 23873
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-22T13:40:00Z",
-          "utilization": 0.17
+          "resets_at": "2026-11-22T21:10:00Z",
+          "utilization": 0.02
         },
-        "observed_at": "2026-11-22T13:41:59Z",
+        "observed_at": "2026-11-22T16:22:13Z",
         "status": "allowed"
       }
     },
@@ -40465,7 +40465,11 @@
     "pinned": true
   },
   "usage_spool": {
-    "readings": [],
+    "readings": [
+      "2026-11-22T16:17:03Z,claude-1,ping,before,45042694359,0,2026-11-22T21:10:00Z,,,allowed,40,,",
+      "2026-11-22T16:17:21Z,claude-1,stream,call,45042694359,1,2026-11-22T21:10:00Z,,,allowed,40,,",
+      "2026-11-22T16:19:06Z,claude-1,stream,call,45042694359,2,2026-11-22T21:10:00Z,,,allowed,40,,"
+    ],
     "runs": [
       "2026-11-22T16:02:44Z,45040808994,muse,muse-spark-1.3-contributor,review,4459,medium,reviewed,,5.5,0,0,0,,,,,,0.6,agy,none,,1"
     ]
