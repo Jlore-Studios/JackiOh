@@ -16607,6 +16607,7 @@
         "by": "`muse` (medium)",
         "sha": "fd5e4e5be319ef127f88f4c96545c7d4fd5aab84"
       },
+      "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
