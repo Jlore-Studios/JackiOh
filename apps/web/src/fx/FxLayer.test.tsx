@@ -36,7 +36,7 @@ import { HINDERED_ATTR, applyManaMarks, manaMarks } from "./manaMarks.ts";
 import { resetFxSettingsForTests, setFxSettings, useFxSettings } from "./settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { resetShedForTests, shedPointer, subscribeShed } from "./shed.ts";
-import { starshipClaim } from "./starship.ts";
+import { STARSHIP_CINEMATIC, starshipClaim } from "./starship.ts";
 import type { FxSurface } from "./surface.ts";
 import type { FxAnchor, FxBox, FxFrameSource, FxShakeSink, FxVisibility } from "./types.ts";
 import { ROOT_VARS_ATTRIBUTE, readRootVar } from "../game/rootVars.ts";
@@ -189,6 +189,8 @@ function fakeSeams() {
     catalog: () => undefined,
     viewportWidth: () => 1280,
     element: () => null,
+    // R4493001: a desktop, which holds no layer budget.
+    device: () => ({ width: 1280, height: 800, dpr: 1, memoryGb: null }),
   };
   function runFrames(): void {
     const due = [...pending.values()];
@@ -709,6 +711,23 @@ describe("B37 — when the layer draws, and what it never renders", () => {
     const cinematic = m.game.querySelector<HTMLElement>('[data-fx="cinematic"]');
     expect(cinematic?.hasAttribute("data-still")).toBe(false);
     expect(cinematic?.querySelectorAll(".fx-cinematic-stop").length).toBeGreaterThan(0);
+  });
+
+  it("R4493000 a phone on its side draws the cinematic's camera no closer than its phone zoom; a desktop's goes closer", () => {
+    const zoomOf = (device: () => { width: number; height: number; dpr: number; memoryGb: number | null }): string | undefined => {
+      const view = shipView();
+      const fx = fakeSeams();
+      const queue = createAnimationQueue({ schedule: fakeSchedule().schedule, reducedMotion: false, setPieceOf: starshipClaim });
+      const m = mountLayer(queue, view, { ...fx, seams: { ...fx.seams, device } });
+      act(() => queue.enqueue([SHIP_LAUNCH], view));
+      fx.pump(50);
+      const zoom = m.game.querySelector<HTMLElement>('[data-fx="cinematic"] .fx-cinematic-camera')?.style.getPropertyValue("--fx-zoom");
+      cleanup();
+      return zoom;
+    };
+    // Wider than FX_MOBILE_WIDTH (so no compact layer), but its narrower side under it.
+    expect(zoomOf(() => ({ width: 844, height: 390, dpr: 3, memoryGb: null }))).toBe(String(STARSHIP_CINEMATIC.phoneZoom));
+    expect(Number(zoomOf(() => ({ width: 1280, height: 800, dpr: 1, memoryGb: null })))).toBeGreaterThan(STARSHIP_CINEMATIC.phoneZoom);
   });
 
   it("R3334001 a skip removes the cinematic", () => {
