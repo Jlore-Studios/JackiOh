@@ -39025,7 +39025,7 @@
         "why": "the bot could not build it: run the issue's two fork screens on a machine of your own (Part P below). Then post, in one comment on #4448, each screen's closing tally line, its wall time, the control's commit and the machine. Then take `human required` off and put `bot:build` back. No bot run can fin"
       }
     ],
-    "idle_since": "2026-11-22T05:58:22Z",
+    "idle_since": null,
     "last_area": "server",
     "last_run": "2026-11-22T05:58:22Z",
     "provider": null,
