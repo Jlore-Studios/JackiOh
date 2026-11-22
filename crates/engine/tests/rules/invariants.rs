@@ -17,6 +17,9 @@
 //! And its I18 (#4111): a plain attack does what the combat forecast its seat was shown said
 //! (R3100000, R4111000). Each check is proved by tampering with one payload of a real attack's events;
 //! the untampered events are clean, and a step or a board the forecast cannot foretell is not judged.
+//!
+//! And its I20 (#4478): a field card's stored damage moves only with its `damage` and `healed` events
+//! (§4.4, §10.3, R78), proved on synthetic events, edited states, real effects and a planted bump.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -300,6 +303,7 @@ fn destroyed_by(instance_id: &str, killer_id: &str) -> GameEvent {
         killer_id: Some(killer_id.to_string()),
         radiant: None,
         animated: None,
+        died_as: None,
         via: None,
     }
 }
@@ -3065,5 +3069,207 @@ mod i19 {
         assert!(events.iter().any(
             |event| matches!(event, GameEvent::PositionSwitched { instance_id, .. } if *instance_id == id)
         ));
+    }
+}
+
+mod i20 {
+    use super::*;
+    use jackioh_engine::effects;
+    use jackioh_engine::zones::{MoveToZoneOptions, OffFieldZone, move_to_zone};
+
+    use crate::rules::fixtures::harness::run_effect;
+
+    fn i20(start: &GameState, events: &[GameEvent], state: &GameState) -> Vec<String> {
+        invariant("I20", create_invariant_monitor(start).after(events, state))
+    }
+
+    /// `state` with `id`'s stored damage set to `damage`.
+    fn with_damage(state: &GameState, id: &str, damage: i32) -> GameState {
+        let mut out = state.clone();
+        find_instance_mut(&mut out, id).expect("the unit").damage = damage;
+        out
+    }
+
+    fn healed(id: &str, amount: i32) -> GameEvent {
+        json_as(json!({ "type": "healed", "targetId": id, "amount": amount }))
+    }
+
+    fn summoned(id: &str, via: Value) -> GameEvent {
+        json_as(json!({
+            "type": "summoned", "player": "p1", "instanceId": id, "defId": "fx-1",
+            "row": "units", "lane": 1, "via": via,
+        }))
+    }
+
+    #[test]
+    fn i20_a_unit_s_damage_and_heal_events_with_their_moves_are_clean() {
+        let (start, id) = hurt("i20-clean", 2);
+        let mut monitor = create_invariant_monitor(&start);
+        let hit = with_damage(&start, &id, 3);
+        assert!(invariant("I20", monitor.after(&[damage_event(&id, 1)], &hit)).is_empty());
+        let mended = with_damage(&start, &id, 1);
+        assert!(invariant("I20", monitor.after(&[healed(&id, 2)], &mended)).is_empty());
+    }
+
+    #[test]
+    fn i20_stored_damage_that_moves_with_no_event_is_flagged_once() {
+        let (start, id) = hurt("i20-silent", 0);
+        let bumped = with_damage(&start, &id, 1);
+        let mut monitor = create_invariant_monitor(&start);
+        only(
+            &invariant("I20", monitor.after(&[], &bumped)),
+            &id,
+            &["I20 silent card damage", "§4.4", "R78"],
+        );
+        // Reported once: the tally then follows the state.
+        assert!(invariant("I20", monitor.after(&[], &bumped)).is_empty());
+        // An event with no move is as silent.
+        only(
+            &i20(&start, &[damage_event(&id, 1)], &start),
+            &id,
+            &["I20 silent card damage"],
+        );
+    }
+
+    #[test]
+    fn i20_an_overheal_that_emits_no_healed_and_changes_nothing_is_clean() {
+        let (mut state, id) = hurt("i20-overheal", 1);
+        let start = state.clone();
+        assert!(i20(&start, &[], &start).is_empty());
+        let events = run_effect(
+            &mut state,
+            effects::heal(json_as(json!({
+                "target": { "of": "instance", "instanceId": id },
+                "amount": 20,
+            }))),
+            P1,
+        );
+        assert_eq!(find_instance(&state, &id).expect("the unit").damage, 0);
+        assert!(i20(&start, &events, &state).is_empty());
+        // Healed again at 0 damage: no `healed`, no move.
+        let again = state.clone();
+        let events = run_effect(
+            &mut state,
+            effects::heal(json_as(json!({
+                "target": { "of": "instance", "instanceId": id },
+                "amount": 20,
+            }))),
+            P1,
+        );
+        assert!(events.is_empty(), "{events:?}");
+        assert!(i20(&again, &events, &state).is_empty());
+    }
+
+    #[test]
+    fn i20_a_fresh_summon_anchors_at_zero() {
+        let start = playing("i20-summon");
+        let mut state = start.clone();
+        let id = put(&mut state, "fx-1", slot(P1, Row::Units, 1), json!({})).id;
+        let arrival = summoned(&id, Value::Null);
+        assert!(i20(&start, std::slice::from_ref(&arrival), &state).is_empty());
+        let hurt_on_arrival = with_damage(&state, &id, 2);
+        only(
+            &i20(&start, std::slice::from_ref(&arrival), &hurt_on_arrival),
+            &id,
+            &["I20 silent card damage"],
+        );
+        let hit = with_damage(&state, &id, 1);
+        assert!(i20(&start, &[arrival, damage_event(&id, 1)], &hit).is_empty());
+    }
+
+    #[test]
+    fn i20_vanilla_s_one_health_write_passes_through_the_transformed_re_anchor() {
+        let (mut state, id) = hurt("i20-vanilla", 3);
+        find_instance_mut(&mut state, &id).expect("the unit").buffs.health = 2;
+        let start = state.clone();
+        let events = run_effect(
+            &mut state,
+            effects::vanilla(json_as(json!({ "instanceId": id }))),
+            P1,
+        );
+        assert_eq!(find_instance(&state, &id).expect("the unit").damage, 1);
+        assert!(
+            events
+                .iter()
+                .any(|event| matches!(event, GameEvent::Transformed { .. }))
+        );
+        assert!(i20(&start, &events, &state).is_empty());
+        only(&i20(&start, &[], &state), &id, &["I20 silent card damage"]);
+    }
+
+    #[test]
+    fn i20_a_card_that_leaves_the_field_drops_its_entry() {
+        let (start, id) = hurt("i20-leaves", 2);
+        let mut gone = start.clone();
+        let mut card = find_instance(&gone, &id).expect("the unit").clone();
+        move_to_zone(
+            &mut gone,
+            &mut card,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
+        assert!(find_instance(&gone, &id).is_some_and(|c| c.zone.z() != ZoneName::Field));
+        let mut monitor = create_invariant_monitor(&start);
+        assert!(invariant("I20", monitor.after(&[], &gone)).is_empty());
+        // Back on the field at 0 with no event: the old tally of 2 did not survive.
+        assert!(
+            invariant(
+                "I20",
+                monitor.after(&[], &{
+                    let mut back = start.clone();
+                    find_instance_mut(&mut back, &id).expect("the unit").damage = 0;
+                    back
+                })
+            )
+            .is_empty()
+        );
+    }
+
+    #[test]
+    fn i20_set_stats_a_reborn_return_a_flicker_a_rollback_and_a_glitch_reset_re_anchor() {
+        let (start, id) = hurt("i20-anchors", 2);
+        let cleared = with_damage(&start, &id, 0);
+        let number: GameEvent = json_as(json!({
+            "type": "numberChanged", "instanceId": id, "defId": "fx-1", "key": "health", "value": 5,
+        }));
+        let rolled: GameEvent = json_as(json!({
+            "type": "rolledBack", "player": "p1", "turnsAgo": 1, "sides": ["p1"],
+        }));
+        let flicker: GameEvent = json_as(json!({
+            "type": "flickered", "player": "p1", "instanceId": id, "defId": "fx-1",
+            "row": "units", "lane": 1,
+        }));
+        for (name, events) in [
+            ("numberChanged", vec![number]),
+            ("rolledBack", vec![rolled]),
+            ("flickered", vec![flicker]),
+        ] {
+            assert!(i20(&start, &events, &cleared).is_empty(), "{name}");
+            assert_eq!(i20(&start, &[], &cleared).len(), 1, "{name} without its event");
+        }
+        // Reborn returns a card with its maximum health less 1 as damage, announced by its `summoned`.
+        let (fresh, id) = hurt("i20-reborn", 0);
+        let reborn = with_damage(&fresh, &id, 1);
+        assert!(i20(&fresh, &[summoned(&id, json!("Reborn"))], &reborn).is_empty());
+        assert_eq!(i20(&fresh, &[summoned(&id, Value::Null)], &reborn).len(), 1);
+        // A Glitch's reset (R676) starts every tally again.
+        let mut reset = cleared.clone();
+        reset.resets = Some(start.resets.unwrap_or(0) + 1);
+        assert!(i20(&start, &[], &reset).is_empty());
+    }
+
+    #[test]
+    fn i20_a_planted_stored_damage_bump_is_caught_on_a_real_step() {
+        let (start, id) = hurt("i20-plant", 1);
+        let result = reduce(&start, &Action::new(ActionBody::EndTurn, P1, "i20-end"));
+        assert!(result.error.is_none(), "{:?}", result.error);
+        assert!(i20(&start, &result.events, &result.state).is_empty());
+        let mut planted = result.state.clone();
+        find_instance_mut(&mut planted, &id).expect("the unit").damage += 1;
+        only(
+            &i20(&start, &result.events, &planted),
+            &id,
+            &["I20 silent card damage", "§4.4"],
+        );
     }
 }

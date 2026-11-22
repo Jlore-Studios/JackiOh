@@ -5,10 +5,11 @@
 // The drawer closes on Escape, on a press outside it (its ✕ at 600 px and under, where it takes the whole
 // width) and on Back. Chrome has `CloseWatcher`, and on a computer Back is no close request there (Escape
 // is, and Android's back; R2127000), so Back is pressed on a page loaded without it, as a browser without
-// one has it. Each size also shoots Home, Play and Collection for the pull request
+// one has it. With `--expose shots=1` each size also shoots Home, Play and Collection
 // (`3728-<screen>-<size>.png`; a whole shot wants a window larger than the size, `E2E_WINDOW_SIZE` in
-// e2e/README.md). Per pull request: SMOKE in scripts/shard-specs.mjs holds 51. Networked: it needs
-// `E2E=1 cargo run --release -p jackioh-server`.
+// e2e/README.md); a pull request's run takes none, as the shard keeps shots only when it fails and 21 more
+// page loads past R109's limit cost it more than they showed (#4485). Per pull request: SMOKE in
+// scripts/shard-specs.mjs holds 51. Networked: it needs `E2E=1 cargo run --release -p jackioh-server`.
 
 import { landingTestid } from "../../../apps/web/src/auth/testids.ts";
 import { BREAKPOINT_PX } from "../../../apps/web/src/breakpoints.ts";
@@ -46,8 +47,11 @@ const DESTINATIONS = [
   { item: menuShellTestid.home, path: routes.landing, root: landingTestid.root },
 ] as const;
 
+/** The screenshot pass runs only with `--expose shots=1`, as spec 25's does. */
+const SHOTS = ["1", "true"].includes(String(Cypress.expose("shots") ?? ""));
+
 /** The screens shot at every size. */
-const SHOTS = [
+const SHOT_SCREENS = [
   { screen: "home", path: routes.landing, root: landingTestid.root },
   { screen: "play", path: routes.play, root: PLAY_HUB },
   { screen: "collection", path: routes.collection, root: COLLECTION_SCREEN },
@@ -58,7 +62,7 @@ function navItem(testid: string): Cypress.Chainable<JQuery> {
   return cy.get(ts(menuShellTestid.nav), { timeout: timeouts.view }).find(ts(testid), { timeout: timeouts.view });
 }
 
-/** The landing's fan is dealt in (R704): Home is shot once every card is drawn. */
+/** The landing's fan is dealt in (R704): the first test and the Home shot both wait until every card is drawn. */
 function fanDealt(): void {
   cy.get(`${ts(landingTestid.fan)} .landing-fan-card--face`, { timeout: timeouts.view }).should(($cards) => {
     expect($cards.length, "the fan holds its cards").to.be.greaterThan(0);
@@ -96,6 +100,7 @@ describe("51 — the menus' shell (issue #3728)", () => {
       it("R3728000 Home, Play, Collection, Shop are one tap away and Friends opens in place", () => {
         cy.visitAs(signedIn(), routes.landing());
         cy.get(ts(landingTestid.root), { timeout: timeouts.view }).should("be.visible");
+        fanDealt();
         expectShellNav(true);
         for (const { item, path, root } of DESTINATIONS) {
           navItem(item).click();
@@ -137,15 +142,17 @@ describe("51 — the menus' shell (issue #3728)", () => {
         });
       });
 
-      it("R3728000 screenshots", () => {
-        for (const { screen, path, root } of SHOTS) {
-          cy.visitAs(signedIn(), path());
-          cy.get(ts(root), { timeout: timeouts.view }).should("be.visible");
-          if (screen === "home") fanDealt();
-          expectShellNav(true);
-          cy.screenshot(`3728-${screen}-${size.label}`, { capture: "viewport", overwrite: true });
-        }
-      });
+      if (SHOTS) {
+        it("R3728000 screenshots", () => {
+          for (const { screen, path, root } of SHOT_SCREENS) {
+            cy.visitAs(signedIn(), path());
+            cy.get(ts(root), { timeout: timeouts.view }).should("be.visible");
+            if (screen === "home") fanDealt();
+            expectShellNav(true);
+            cy.screenshot(`3728-${screen}-${size.label}`, { capture: "viewport", overwrite: true });
+          }
+        });
+      }
     });
   }
 });
