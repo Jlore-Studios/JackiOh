@@ -9,7 +9,7 @@
     "changes": [],
     "text": [],
     "fixes": [
-      "Shadowstep also sprang when a Field Spell or Trap of yours was destroyed, and handed it back at cost 0 although no Unit of yours had died.",
+      "Shadowstep also sprang when a Field Spell or Trap of yours was destroyed, and handed it back for (0) Cost although no Unit of yours had died.",
       "It now waits for a Unit of yours to die and brings back only Units; a Field Spell or Trap destroyed beside them stays in your graveyard."
     ]
   },

@@ -185,7 +185,7 @@ mod tests {
     const FELINORS: &str = "core-012"; // Duplicating Felinors: a Felinor Big Felinor spares
     const STOCKPILE: &str = "core-005"; // Stockpile: a Spell, a spare card (§2.5)
     const SUPPRESSIVE_AURA: &str = "core-046"; // Suppressive Aura: "Aura: All Units get a stat penalty."
-    const WALLS: &str = "classicplus-024"; // Crushing Walls: destroy every card in lanes 1 and 5
+    const WALLS: &str = "classicplus-024"; // Crushing Walls: destroy every card in two lanes
     const FIRE: &str = "classicplus-t-ai-06"; // Datacenter Fire: destroy all Field Spells
     const FIELD_SPELL: &str = "core-064"; // Gifted Program: a Field Spell
     const TRAP: &str = "core-060"; // Bear Honeypot: a Trap
