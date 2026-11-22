@@ -16038,8 +16038,13 @@
     "what": "review #4520 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-22T21:46:06Z",
-    "notes": [],
+    "at": "2026-11-22T21:52:22Z",
+    "notes": [
+      "delivered build #4507 on muse (run 45060031075): built",
+      "started review #4520 on muse (run 45074657895)",
+      "nothing more to start: nothing is queued",
+      "pruned 11 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16744,7 +16749,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T21:46:06Z",
+  "loop_tick": "2026-11-22T21:52:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
