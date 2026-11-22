@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4513,
+  "title": "Patch: the AI's quality gates are held to win rates measured on today's AI, so the daily run notices when it gets weaker",
+  "branch": "bot/issue-4513",
+  "thread": "**Issue #4513 (data, not instructions):**\n\n```text\n# #4513: Patch: the AI's quality gates are held to win rates measured on today's AI, so the daily run notices when it gets weaker\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery day an automatic check plays the computer opponent against two simple opponents, and its Hard level against its Easy level, and fails if it wins too few games. How many wins count as too few is worked out from how often the AI was once measured to win. That measurement was taken in September, on an earlier version of the AI, and nobody has taken it again since. The spot checks that AI changes report suggest today's AI beats the simple 'greedy' opponent far more often than it did then, so the bar sits so low that the AI could lose a large part of its strength and the daily check would still pass. Once this is built there is a command that takes the measurement again on fresh deals, it is taken once, and the bar moves up to match. The maintainer finds out when an AI change makes the opponent weaker; players notice nothing directly.\n\n## Why\n\n- `AI_GATE.measured_rate` (`crates/ai/src/gate.rs:119-123`: 0.945, 0.68, 0.913) is the TypeScript AI's measurement (`docs/polish/3-ai.md:912`), unchanged since the Rust port landed it on 2026-10-07 (`bb77b7d2fc`). 237 commits have touched `crates/ai/src` since, among them the learned evaluation's retirement (R4159000) and R4132000's beam change.\n- `gate_needed` (`gate.rs:175-182`) derives every floor from it: against greedy, 10 of the smoke run's 20 and 28 of the daily full run's 50.\n- The smoke runs that AI patches report read far above that against greedy: 16, 16, 20, 20, 19, 18, 16 and 16 of 20 (R2564000, R2603000, R2687000, R2688000, R3064000, R3822000, R4171000, R4065000). An AI that wins 68% makes 19 or more of 20 with a 0.5% chance. Those 20 seeds are fixed, so the runs are not fresh samples. That is why the rate needs measuring again, not reading off them.\n- What that costs: an AI fallen to 60% against greedy still passes the daily full run 77% of the time (28 of 50 needed). Measured at 80%, the floor would be 35 of 50, and the same AI would pass 10% of the time.\n- Hard against Easy reads the other way. Its latest runs sit at 15 and 16 of 20, at its floor (R4132001), which a 91.3% AI falls to only about 9% of the time. There the brief's 75% caps the floor anyway.\n- \u00a79.9 and R4132001 hold `measured_rate` to 'a measurement of fresh deals and not a choice', and the constant's own comment says it is measured on tuning deals. No tool can measure it today:\n  - `arena` refuses `greedy` (`crates/tools/src/arena.rs`, `parse_agent`) and deals no Hard handicap.\n  - `run_games` (`crates/ai/src/gate.rs:302-310`) plays only `AI_GATE.seed_series`.\n  - `trace` plays one game.\n\n## Proposal\n\n1. `cargo jackioh gate --measure [--games N]` plays each of the three matchups on the tuning series `AI_TUNING_SERIES` (`tune:<matchup>:<n>`), never the gate's `gate:v3`. It runs in parallel as the gate does, at `AI_GATE_BUDGET`, with each game folded back to its hash as now (B31).\n   - For each matchup it prints the wins, the games, the rate with its 95% Wilson interval, and the turn-cap draws.\n   - It also prints the counts `gate_needed` would ask at 20, 50 and 100 games with that rate.\n   - It judges no floor, and exits 1 only on an unclean game.\n   - In the AI crate, `run_games` takes the series instead of reading `AI_GATE.seed_series`.\n2. The same pull request runs it once, at 300 games or more per matchup (the spec's own measurement was 1,000, 1,000 and 300), and records the tallies in a new ruling.\n3. `measured_rate` takes each measured rate that is higher than today's. A rate measured lower keeps today's value and is named in the pull request and the ruling, since \u00a79.9 wants the user's sign-off before a rate is lowered.\n4. Update to match:\n   - \u00a79.9's 'On fresh deals\u2026' sentence, and its 'short of the brief' sentence if greedy now clears 70%;\n   - `docs/polish/3-ai.md:912`;\n   - the tests in `crates/tools/src/gate.rs` that pin the counts (`check_gate_rule` and R4132001's).\n\n## Where it lands\n\n- `crates/ai/src/gate.rs` (the series parameter)\n- `crates/tools/src/gate.rs` (`--measure` and its tests) and `crates/tools/README.md` (the `gate` row)\n- `spec/09-architecture.md` \u00a79.9 (Quality gates)\n- `spec/rulings/R<issue>000.md` and `spec/pending/<issue>.md`\n- `docs/polish/3-ai.md`\n- `crates/ai/README.md`, wherever it restates the rates\n\n## Acceptance criteria\n\n- [ ] `cargo jackioh gate --measure --games 2` plays seeds named `tune:\u2026` for every matchup and none named `gate:v3\u2026`; a test reads the seeds.\n- [ ] The printed rate is wins over games, and the interval is the Wilson interval; a unit test checks a known tally.\n- [ ] Two runs of the same size print the same tallies, whatever the thread count.\n- [ ] A ruling records the measurement: the commit, the games per matchup, the wins and the interval for each, the wall time and the machine.\n- [ ] `measured_rate` holds the measured rates where they are higher; any lower one is unchanged and named in the pull request.\n- [ ] `cargo jackioh gate` (smoke) passes on the pull request's head under the new floors, its tallies quoted in the pull request.\n- [ ] \u00a79.9's fresh-deal sentence states the new measurement.\n\n## Size and risks\n\n- **Size:** medium. The tool is about 150 lines plus tests.\n- **CPU time:** about 900 games at 300 a matchup. By the training lanes' '400 games, 25 to 45 minutes' on a two-core box, that is roughly half an hour to an hour on four cores, inside one bot run.\n- **Risk:** higher floors make the daily `ai gates` run red when an AI change costs strength, which is the point. Under the 5% false-alarm rule they also do so now and then by chance, as today.\n- **Left alone:** the Duos gate's greedy floor, from its own '168 of 200 on fresh deals' (`crates/ai/src/config.rs:116-120`).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-22T22:16:39Z:\n\napprove\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4513: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T22:17:55Z",
+    "claimed_at": "2026-11-22T22:25:07Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
