@@ -17976,16 +17976,8 @@
     "what": "plan #4486 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-22T09:07:22Z",
-    "notes": [
-      "delivered review #4481 on claude-1 (run 45005388686): reviewed",
-      "delivered build #4454 on claude-3 (run 44987353538): built",
-      "started review #4487 on claude-3 (run 45006149461)",
-      "started plan #4486 on claude-7 (run 45006183126)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days",
-      "#4486: typed it Task"
-    ],
+    "at": "2026-11-22T09:16:13Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18690,7 +18682,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T09:07:22Z",
+  "loop_tick": "2026-11-22T09:16:13Z",
   "machine_disk": {
     "issue": null,
     "reading": {
