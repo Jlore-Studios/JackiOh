@@ -15301,7 +15301,7 @@
     "4427": {
       "action": "plan",
       "asks": [],
-      "failures": 1,
+      "failures": 2,
       "forced": false,
       "handoff": {
         "at": "2026-11-22T03:45:06Z",
