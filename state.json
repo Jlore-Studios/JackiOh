@@ -17242,6 +17242,13 @@
     "4472": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T16:36:31Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "Only the tools crate's perf command, its tests, and its README change; no engine rules, AI decisions/search, cross-crate design, migration, or large file set is involved."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
