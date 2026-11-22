@@ -37580,7 +37580,10 @@
           "provider": "claude-7"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-22T03:27:21Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 4456,
         "head": "fcf37b48c939dcd17ca8eb3d758f1a82464ba2ec",
         "issue": 4395,
         "merged_at": "2026-11-22T03:09:07Z",
@@ -37593,12 +37596,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:5bed43ae-1795317470",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44980007181",
         "sha": "dd441f06baa7462cff6cdbd2eacdf0f203859229",
         "started_at": "2026-11-22T03:18:13Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: Shadowstep answers only your Units that die, not your destroyed Field Spells and Traps",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 435
