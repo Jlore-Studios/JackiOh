@@ -15961,17 +15961,8 @@
       }
     },
     "4445": {
-      "action": "plan",
-      "asks": [
-        "c:7073801099"
-      ],
-      "build_next": {
-        "from_run": "44982793002",
-        "model": "sonnet",
-        "provider": "claude-1",
-        "since": "2026-11-22T04:07:52Z",
-        "until": "2026-11-22T04:37:52Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T04:07:42Z",
         "difficulty": "medium",
@@ -15990,10 +15981,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"ls .bot-plan.md 2>/dev/null; wc -l crates/shared/src/host/duel.rs crates/shared/src/host/duos.rs crates/server/src/actor/match_actor.rs crates/server/src/duos/actor.rs; grep -n \\\"push_vi\u2026\n- Bash: {\"command\": \"cd crates/shared/src/host; sed -n 150,300p duel.rs; sed -n 370,400p duel.rs; sed -n 455,640p duel.rs\"}\n- Bash: {\"command\": \"cd crates/shared/src/host; sed -n 1190,1330p duel.rs; sed -n 1700,1740p duel.rs; sed -n 1795,1830p duel.rs; sed -n 1895,1925p duel.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; grep -n \\\"self.game\\\\b\\\\|self.game =\\\\|game:\\\" crates/shared/src/host/duel.rs | head -60; grep -n \\\"fn open_prompt_of\\\" -A15 crates/shared/src/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; grep -n \\\"self.game\\\\.[a-z_.]* = \\\\|&mut self.game\\\\|game: GameState\\\\|PerPlayer<\\\" crates/shared/src/host/duel.rs | head -20; sed -n 1070,1100\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; grep -n \\\"Pushed\\\\|enum DuelOutput\\\" -B3 -A12 crates/shared/src/host/duel.rs | sed -n 1,80p; sed -n 2360,2410p crates/server/src/actor/match_ac\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; grep -n \\\"enum DuelOutput\\\" -A80 crates/shared/src/host/*.rs | grep -n \\\"Pushed\\\\|Send\\\\|View\\\" ; grep -n \\\"fn view_of\\\\|fn send_seat\\\\|fn show\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; grep -rn \\\"Pushed\\\" --include=*.rs crates apps 2>/dev/null | grep -v \\\"^crates/shared/src/host/duel.rs\\\" | head -40; sed -n 300,380p crates/sha\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; sed -n 570,620p crates/shared/src/host/duos.rs; sed -n 980,1030p crates/shared/src/host/duos.rs; sed -n 1395,1430p crates/shared/src/host/duos.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; sed -n 235,262p crates/shared/src/host/duos.rs; sed -n 415,432p crates/shared/src/host/duos.rs; sed -n 785,915p crates/shared/src/host/duos.rs;\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; sed -n 2410,2523p crates/server/src/actor/match_actor.rs; grep -n \\\"fn view_message\\\" -A30 crates/server/src/actor/*.rs | head -50; grep -n \\\"\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; sed -n 2200,2262p crates/server/src/actor/match_actor.rs; grep -rn \\\"pub struct PerPlayer\\\" -B4 -A12 crates/ | head -40; grep -n \\\"fn shown_def\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; sed -n 405,430p crates/shared/src/host/duos.rs | head -5; grep -n \\\"enum DuosHostOutput\\\" -B10 crates/shared/src/host/duos.rs | head -14; grep \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; grep -n \\\"doc(hidden)\\\\|cfg(test)\\\\|testkit\\\\|pub fn watchers\\\\|pub fn .*_for_test\\\" crates/server/src/actor/match_actor.rs crates/server/src/d\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; cat crates/shared/clippy.toml | head -50; grep -n \\\"view_for\\\\|reuse\\\\|cache\\\" crates/shared/README.md | head -20; grep -n \\\"watch\\\\|record\\\" c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; sed -n 28,56p crates/shared/README.md | cut -c1-600; grep -n \\\"Pushed\\\" crates/shared/README.md | cut -c1-500\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; grep -rln \\\"DuelOutput\\\\|DuosHostOutput\\\" --include=*.rs --include=*.ts --include=*.md . 2>/dev/null | grep -v target | grep -v node_modules | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4445; ls crates/server/tests/actor/ | head -50; ls crates/server/tests/actor/watch* 2>/dev/null; grep -rn \\\"async fn\\\\|^fn \\\" crates/server/tests/act\u2026\n- Write: {\"path\": \"/home/runner/work/_temp/work/item-4445/.bot-plan.md\", \"content\": \"# Draft plan #4445 (short; the final message is the full plan)\\nRead: duel.rs (DuelHost, push_view, push_prompts, flush_aim\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Rule 3 does not hold beyond a call site: one serde- and ts-skipped field on `DuelOutput::Pushed` and `DuosHostOutput::Pushed`, plus a private cache in `DuelHost`. No engine, AI, migration or ~40-file change.\"} --> ## Goal Each seat's view is built once per\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-22T03:55:42Z",
       "owner_why": "it plans it",
@@ -16006,12 +15996,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-22T03:49:30Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44982793002",
+      "run_id": "pending:7cc07544-1795320819",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-22T03:55:42Z",
+      "started_at": "2026-11-22T04:14:07Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7073801099"
+      ]
     },
     "4446": {
       "action": "build",
@@ -16874,9 +16866,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T04:13:24Z",
+    "at": "2026-11-22T04:14:07Z",
     "url": "",
-    "what": "build #4446 on claude-7"
+    "what": "build #4445 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-22T03:46:20Z",
