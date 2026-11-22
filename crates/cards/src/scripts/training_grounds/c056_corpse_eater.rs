@@ -10,7 +10,7 @@
 //! meant for both (R2195003), reads a death as the Core card does since: by what the card was on the field
 //! as it died (R4423000, `is_unit_death`), so a Unit set face-down by its Cloaked and destroyed before it
 //! reveals feeds nothing and an Animated Field Spell or Trap killed in a unit zone feeds it;
-//! `script_v0_6_9i` keeps the definition's type for v0.6.9i and before (R767000). The Core file's notes,
+//! `script_v0_6_9i` keeps the definition's type for v0.6.9j and before (R767000). The Core file's notes,
 //! as they stood:
 //!
 //! #89 Corpse Eater (SPEC §8.5, §6.2, §10.3, §10.4, R11, R38, R68, R78, R89).
@@ -31,7 +31,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "traininggrounds-056";
 
 /// `factor` is the whole of the radiant text: 1 gains its stats, 2 gains double (§8 Conventions).
-/// `by_print` reads a death by the dead card's definition, as v0.6.9i and before did (R767000).
+/// `by_print` reads a death by the dead card's definition, as v0.6.9j and before did (R767000).
 fn feed(factor: i32, by_print: bool) -> TriggerDef {
     TriggerDef::new(
         "corpse-eater-feed",
@@ -456,7 +456,7 @@ mod tests {
             }
         }
 
-        /// R767000: v0.6.9i and before fed it on the set card's death, by the definition's type.
+        /// R767000: v0.6.9j and before fed it on the set card's death, by the definition's type.
         #[test]
         fn r767000_the_script_kept_for_v0_6_9i_counts_a_set_cloaked_unit_s_death() {
             crate::under_kept(ID, script_v0_6_9i(), || {

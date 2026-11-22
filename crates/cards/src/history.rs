@@ -1216,6 +1216,37 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c007_the_greatest_heist::script_v0_6_9i,
     ),
     (c014_shadowstep::ID, "v0.6.9i", c014_shadowstep::script_v0_6_9i),
+    // #4423: v0.6.9j shipped on `main` (#4488) after this branch's base and ran the same scripts, so they
+    // are kept under it too. On a tree whose history stops at v0.6.9i these rows cover nothing
+    // (`covering_at` skips a version the history lacks); merged with `main`, which no run merges when it
+    // merges cleanly (bot/README.md, The own review run), they cover v0.6.9j and the rows above the rest.
+    (
+        c089_corpse_eater::ID,
+        "v0.6.9j",
+        c089_corpse_eater::script_v0_6_9i,
+    ),
+    (
+        c056_legacy_corpse_eater::ID,
+        "v0.6.9j",
+        c056_legacy_corpse_eater::script_v0_6_9i,
+    ),
+    (
+        c035_corpse_recycler::ID,
+        "v0.6.9j",
+        c035_corpse_recycler::script_v0_6_9i,
+    ),
+    (
+        c093_recessive_replicators::ID,
+        "v0.6.9j",
+        c093_recessive_replicators::script_v0_6_9i,
+    ),
+    (c060_eschews::ID, "v0.6.9j", c060_eschews::script_v0_6_9i),
+    (
+        c007_the_greatest_heist::ID,
+        "v0.6.9j",
+        c007_the_greatest_heist::script_v0_6_9i,
+    ),
+    (c014_shadowstep::ID, "v0.6.9j", c014_shadowstep::script_v0_6_9i),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -1882,6 +1913,39 @@ mod tests {
             "v0.6.9j",
         );
         assert_kept_through(&[c014_shadowstep::ID], &["v0.6.9h", "v0.6.9i"], "v0.6.9j");
+    }
+
+    /// Issue #4423: v0.6.9j (#4488) shipped on `main` after this branch's base, still running the scripts
+    /// kept above. Where the history holds it, it is kept under its own row; where it does not, nothing
+    /// covers it; either way v0.6.9k, the first that can ship with the change, runs the new scripts.
+    #[test]
+    fn r767000_issue_4423_scripts_are_kept_through_v0_6_9j_once_it_shipped() {
+        crate::register_all();
+        let shipped = HISTORY.order.iter().any(|version| version == "v0.6.9j");
+        for id in [
+            c089_corpse_eater::ID,
+            c056_legacy_corpse_eater::ID,
+            c035_corpse_recycler::ID,
+            c093_recessive_replicators::ID,
+            c060_eschews::ID,
+            c007_the_greatest_heist::ID,
+            c014_shadowstep::ID,
+        ] {
+            let kept_at = |version: &str| {
+                covering_at(&HISTORY.order, KEPT_SCRIPTS, version, id).map(|at| KEPT_SCRIPTS[at].1)
+            };
+            assert_eq!(
+                kept_at("v0.6.9i"),
+                Some("v0.6.9i"),
+                "{id}: v0.6.9i keeps its own row"
+            );
+            assert_eq!(
+                kept_at("v0.6.9j"),
+                shipped.then_some("v0.6.9j"),
+                "{id}: v0.6.9j ran the script kept at v0.6.9i"
+            );
+            assert_eq!(kept_at("v0.6.9k"), None, "{id}: v0.6.9k runs its replacement");
+        }
     }
 
     /// Issue #4086: each block below was once keyed at a version older than the newest shipped as it

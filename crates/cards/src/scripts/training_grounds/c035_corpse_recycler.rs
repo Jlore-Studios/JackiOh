@@ -7,7 +7,7 @@
 //! R89), none on a full row (§3.2); a Token's death gives nothing (§7). R4423000: a Unit's death is read by
 //! what the card was on the field as it died (`is_unit_death`), so a Unit set face-down by its Cloaked and
 //! destroyed before it reveals gives nothing and an Animated Field Spell or Trap killed in a unit zone gives
-//! a token; `script_v0_6_9i` keeps the definition's type for v0.6.9i and before (R767000).
+//! a token; `script_v0_6_9i` keeps the definition's type for v0.6.9j and before (R767000).
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::summon;
@@ -19,7 +19,7 @@ pub const ID: &str = "traininggrounds-035";
 const RUSH_TOKEN: &str = "core-t-rush";
 
 /// A non-Token Unit's death (R2199006): the player who controlled it as it died (R172), or nothing. A Unit
-/// by what the card was as it died (R4423000), or `by_print` by its definition, as v0.6.9i and before.
+/// by what the card was as it died (R4423000), or `by_print` by its definition, as v0.6.9j and before.
 fn died_unit(ctx: &EffectContext<'_>, event: &GameEvent, by_print: bool) -> Option<PlayerId> {
     let GameEvent::Destroyed { def_id, controller, .. } = event else {
         return None;
@@ -58,7 +58,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: a Unit's death read by the dead card's definition (R4423000), through v0.6.9i; `KEPT_SCRIPTS`
+/// R767000: a Unit's death read by the dead card's definition (R4423000), through v0.6.9j; `KEPT_SCRIPTS`
 /// folds those replays under it.
 pub fn script_v0_6_9i() -> CardScripts {
     CardScripts {
@@ -301,7 +301,7 @@ mod tests {
             assert_eq!(tokens(&s, P2), 0);
         }
 
-        /// R767000: v0.6.9i and before gave a token for the set card's death, by the definition's type.
+        /// R767000: v0.6.9j and before gave a token for the set card's death, by the definition's type.
         #[test]
         fn r767000_the_script_kept_for_v0_6_9i_counts_a_set_cloaked_unit_s_death() {
             crate::under_kept(RECYCLER, super::super::script_v0_6_9i(), || {

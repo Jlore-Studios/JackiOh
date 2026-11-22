@@ -1782,7 +1782,7 @@ pub type TargetedReplacement = ReplacementDef;
 ///   are: each `radiantSet` reported on one.
 /// - `unitsDied`: Units with `tag` (any when absent) that died under your control (R172), a Unit by what
 ///   the card was on the field as it died (R4423000); `byPrint: true` reads the card where it lies after
-///   the death instead, as v0.6.9i and before did (R767000).
+///   the death instead, as v0.6.9j and before did (R767000).
 /// - `cardsStolen`: enemy cards you stole, into your hand or onto your side of the field.
 /// - `playCosting`: a card of yours played whose cost paid (R56, a cast's 0 included, R70) is `cost`,
 ///   or the number the quest card remembers under `remembered` while it holds one (goal 1).
@@ -1831,7 +1831,7 @@ pub enum QuestGoal {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         tag: Option<Tag>,
-        /// R767000: only ever `Some(true)`, set by the scripts kept for v0.6.9i and before.
+        /// R767000: only ever `Some(true)`, set by the scripts kept for v0.6.9j and before.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         by_print: Option<bool>,

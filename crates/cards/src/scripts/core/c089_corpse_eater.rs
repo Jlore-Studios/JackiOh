@@ -21,14 +21,14 @@
 //! R4423000: a Unit's death is read by what the card was on the field as it died (`is_unit_death`): a Unit
 //! set face-down by its Cloaked and destroyed before it reveals died as a Field Trap and feeds nothing, and
 //! an Animated Field Spell or Trap killed in a unit zone died as a Unit and feeds it. `script_v0_6_9i` keeps
-//! the definition's type for v0.6.9i and before (R767000).
+//! the definition's type for v0.6.9j and before (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-089";
 
 /// `factor` is the whole of the radiant text: 1 gains its stats, 2 gains double (§8 Conventions).
-/// `by_print` reads a death by the dead card's definition, as v0.6.9i and before did (R767000).
+/// `by_print` reads a death by the dead card's definition, as v0.6.9j and before did (R767000).
 fn feed(factor: i32, by_print: bool) -> TriggerDef {
     TriggerDef::new("corpse-eater-feed", &[GameEventType::Destroyed], move |ctx, event| {
         // `on` already narrows this, and the check is what gives the payload its type.
@@ -636,7 +636,7 @@ mod tests {
             }
         }
 
-        /// R767000: v0.6.9i and before fed it on the set card's death, by the definition's type.
+        /// R767000: v0.6.9j and before fed it on the set card's death, by the definition's type.
         #[test]
         fn r767000_the_script_kept_for_v0_6_9i_counts_a_set_cloaked_unit_s_death() {
             crate::under_kept(ID, script_v0_6_9i(), || {
