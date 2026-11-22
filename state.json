@@ -16713,6 +16713,13 @@
     "4462": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T05:17:58Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Not engine rules, AI, cross-crate design, migration, or ~40 files: a CI shard count plus a test trim in one crate."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
