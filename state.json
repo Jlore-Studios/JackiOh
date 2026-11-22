@@ -15247,6 +15247,13 @@
     "4428": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T02:24:42Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "CLAUDE.md rule 11: no engine rules, no AI, single-app client change, no migration, ~11 files \u2014 no hard trigger holds"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
