@@ -16375,13 +16375,8 @@
     "what": "build #4515 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-22T23:05:08Z",
-    "notes": [
-      "delivered plan #4515 on claude-7 (run 45079902237): planned",
-      "started build #4515 on claude-7 (run 45081436181)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-22T23:13:05Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17086,7 +17081,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T23:05:08Z",
+  "loop_tick": "2026-11-22T23:13:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
