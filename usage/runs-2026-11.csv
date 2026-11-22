@@ -3227,3 +3227,5 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-22T14:19:09Z,45022873638,claude-4,sonnet+opus,revise,4489,medium,approved,,23.1,55,15445,1703377,1.5818,0,3,,,1.1,claude-4,fresh,,3
 2026-11-22T14:22:49Z,45022832244,claude-3,opus,revise,4480,hard,built,,68.3,136,36499,11957464,6.7668,13,20,,,1.2,claude-3,resumed,,1
 2026-11-22T14:46:26Z,45031554033,agy,gemini-3.8-flash-high,revise,4459,medium,approved,,31.9,391286,36010,0,,5,9,11,12,0.3,agy,none,,2
+2026-11-22T15:44:34Z,45034952926,agy,gemini-3.8-flash-high,revise,4459,medium,built,,53.7,986011,93021,0,,9,16,12,15,0.2,agy,none,,2
+2026-11-22T16:05:03Z,45041485720,muse,muse-spark-1.3-contributor,plan,4449,medium,planned,,1.9,0,0,0,,1,2,77,77,1.3,,none,,1
