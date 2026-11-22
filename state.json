@@ -18807,6 +18807,7 @@
       "died": 0,
       "difficulty": "medium",
       "feedback_since": "2026-11-22T16:41:54Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-22T18:22:34Z",
         "family": "gpt",
@@ -18819,6 +18820,7 @@
       "interruptions": 0,
       "issue": 4472,
       "live": "revising",
+      "pending_request": false,
       "provider": "gpt",
       "question": "Pre-populate Cargo\u2019s cache with ryu 1.0.23, yaml_serde 0.10.7, and libyaml-rs 0.3.0, or rerun this job with crates.io access.",
       "run_id": "45058789545",
