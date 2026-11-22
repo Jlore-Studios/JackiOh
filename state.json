@@ -15639,15 +15639,15 @@
       "ci_sha": "09402ad0d3050ca15c9b342d40ee4f119c1263e7",
       "cleared": {
         "approver": {
-          "family": "gemini",
-          "model": "gemini-3.8-flash-high",
-          "provider": "agy",
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
           "tier": "medium"
         },
-        "at": "2026-11-22T19:27:16Z",
-        "built_by": "agy",
-        "by": "`gemini` (medium)",
-        "sha": "09402ad0d3050ca15c9b342d40ee4f119c1263e7"
+        "at": "2026-11-22T21:11:58Z",
+        "built_by": "muse",
+        "by": "`muse` (medium)",
+        "sha": "554779ae97e241af0fccdbd6595c163a99e6ea39"
       },
       "died": 0,
       "difficulty": "medium",
@@ -15668,7 +15668,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "agy",
+      "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
       "question": "",
