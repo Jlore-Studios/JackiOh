@@ -33274,5 +33274,728 @@
       "stinkyscape-111"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.9o",
+    "date": "2026-11-22",
+    "title": "Stinkyscape+ Balance Changes VI",
+    "source": "#4440",
+    "notes": "The designer's sixth Stinkyscape+ balance pass (#4440). Resources: Axnit, Narcor and Red Narcor sell for 1, 2 and 2 less at each end of their base range, Radiant twice that (R4440000); Spice pays about 15% more, 5 to 15, Radiant 9 to 29 (R4440001), and the AI holds a card that pays Credits at half its hand price, so it sells Spice more often (R4440002); Abandoned Spice Tower's Activate deals 2. Profe Yates is (2) 3/7 Tribute 1, its Cry summons a random Trap, its Death shuffles in Profe Yates Prime, and it exiles nothing (R4440003); the Prime, S+ #4.1, is a token with Yates's old text at (2) 6/6 (R4440004). Cards: Selective Enrollment (6), xxFreshJack Tribute 2 with Float reduces Tribute requirement, Jogg's Box 8 casts, Raven Tribute 2 2/2, Honey Badger 2/5, Black Hole's base face pulling at the end of each turn (R4440050), Chaos Accelerator (3), ZolarKeth Tribute 2, the Beams 2%4, 4%8 and 6%12, Crawler 2/1, Otherworldly Nightmare (4), Starfleet Commander 7/7, Jlockeed's Weapons +1%+3, Stratos Swarm summoning 7 (R4440051), Galaxy Tribute 3, Mind Melt and Last Hurrah Tradable with Last Hurrah's base face giving 4 cards Flashback, Operation Omega (1) Embiggened (3), Second Wind's +1%+2 mana per turn (R4440052), The Last Voyage launching at the end of each turn (R4440053), Tommy Tempo's +1/+1 per mana lost (R4440054), Double Counting (3) with a free Activate, Joint Filing's Activate Discover (R4440055); each changed script keeps its v0.6.9m one (R767000). Rulings R4440000-R4440004 and R4440050-R4440055.",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes VI",
+      "new": [
+        "Profe Yates Prime, a token Profe Yates shuffles into your deck when it dies: (2) 6/6 (Radiant 12/12) with Yates's old Cry, the exile and one random Trap (Radiant: three)."
+      ],
+      "balance": [
+        "Axnit sells for 3–13 Credits (Radiant 6–26), down from 4–14 (Radiant 8–28).",
+        "Narcor sells for 8–19 Credits (Radiant 16–38), down from 10–21 (Radiant 20–42).",
+        "Red Narcor sells for 14–30 Credits (Radiant 28–60), down from 16–32 (Radiant 32–64).",
+        "Spice gives 5–15 Credits (Radiant 9–29), up from 4–13 (Radiant 8–25).",
+        "Abandoned Spice Tower's Activate deals you 2 damage, down from 4.",
+        "Profe Yates costs (2), down from (4), and is 3/7 (Radiant 6/14), from 6/6 (Radiant 12/12), with Tribute 1; its Cry summons a random Trap (Radiant: a Radiant one) and exiles nothing.",
+        "Profe Yates's new Death shuffles a Profe Yates Prime (Radiant: a Radiant one) into your deck.",
+        "Selective Enrollment costs (6), up from (5).",
+        "xxFreshJack has Tribute 2, up from Tribute 1, and gains \"Float reduces Tribute requirement by 1.\" on both faces.",
+        "Jogg's Box casts 8 random Spells (Radiant 16), down from 10 (Radiant 20).",
+        "Raven has Tribute 2, up from Tribute 1, and is 2/2 (Radiant 4/4), up from 1/1 (Radiant 2/2).",
+        "Honey Badger is 2/5 (Radiant 4/10), down from 4/6 (Radiant 8/12).",
+        "Black Hole draws each player's permanents closer at the end of their turn instead of the start; its Radiant face still pulls your opponent's at the start of theirs.",
+        "Chaos Accelerator costs (3), up from (2).",
+        "ZolarKeth has Tribute 2, up from Tribute 1.",
+        "Beam v5 deals 6 damage (Radiant 12), down from 7 (Radiant 14); Beam v4 deals 4 (Radiant 8), down from 5 (Radiant 10); Beam v3 deals 2 (Radiant 4), down from 3 (Radiant 6).",
+        "Crawler is 2/1 (Radiant 4/2), down from 3/1 (Radiant 6/2).",
+        "Otherworldly Nightmare costs (4), up from (3).",
+        "Starfleet Commander is 7/7 (Radiant 14/14), down from 9/9 (Radiant 18/18).",
+        "Jlockeed's Weapons gives your Units +1 Attack (Radiant +3), down from +2 (Radiant +4).",
+        "Stratos Swarm summons 7 Stratos instead of filling your board.",
+        "Galaxy has Tribute 3, up from Tribute 2.",
+        "Mind Melt is Tradable.",
+        "Last Hurrah is Tradable; its base face now gives 4 random cards in your hand Flashback, and its Radiant face gives every card in your hand Flashback.",
+        "Operation Omega costs (1), down from (2), and its Embiggened price is (3), down from (4).",
+        "Second Wind also gives you +1 mana per turn (Radiant +2).",
+        "The Last Voyage launches a random Starship at the end of each of your turns instead of the start.",
+        "Tommy Tempo's Cry gives +1/+1 (Radiant +2/+2) per mana lost, up from +1 Health (Radiant +2 Health).",
+        "Double Counting costs (3), up from (2), and its Activate is free on both faces.",
+        "Joint Filing's Cry is replaced with \"Activate: Discover a card with a Start of turn or End of turn effect.\""
+      ],
+      "changes": [
+        "The computer opponent plays Spice for its Credits more often."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "8af3d865f00bd01f3c5a567b68a667dbe1acdc04"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-011",
+      "classic-016",
+      "classic-028",
+      "classic-029",
+      "classic-037",
+      "classicplus-003",
+      "classicplus-011",
+      "classicplus-014",
+      "classicplus-021",
+      "classicplus-023",
+      "classicplus-029",
+      "classicplus-030",
+      "classicplus-031",
+      "classicplus-047",
+      "classicplus-077",
+      "core-003",
+      "core-007",
+      "core-014",
+      "core-023",
+      "core-033",
+      "core-044",
+      "core-054",
+      "core-083",
+      "core-t-felinor",
+      "meditative-010",
+      "meditative-031",
+      "meditative-039",
+      "meditative-045",
+      "meditative-055",
+      "meditative-066",
+      "meditative-088",
+      "meditativeplus-023",
+      "stinkyscape-012",
+      "stinkyscape-038",
+      "stinkyscape-050",
+      "stinkyscape-054",
+      "stinkyscape-058",
+      "stinkyscape-062",
+      "stinkyscape-063",
+      "stinkyscape-064",
+      "stinkyscape-065",
+      "stinkyscape-066",
+      "stinkyscape-075",
+      "stinkyscape-076",
+      "stinkyscape-078",
+      "stinkyscape-079",
+      "stinkyscape-082",
+      "stinkyscape-089",
+      "stinkyscape-106",
+      "stinkyscape-111",
+      "stinkyscape-112",
+      "stinkyscape-116",
+      "stinkyscape-134",
+      "stinkyscape-137",
+      "stinkyscape-156",
+      "stinkyscape-158",
+      "stinkyscape-162",
+      "stinkyscape-169",
+      "stinkyscape-170",
+      "stinkyscape-171",
+      "stinkyscape-172",
+      "stinkyscape-173",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscape-t-narcor",
+      "stinkyscape-t-red-narcor",
+      "stinkyscapeplus-002",
+      "stinkyscapeplus-004",
+      "stinkyscapeplus-017",
+      "stinkyscapeplus-026",
+      "stinkyscapeplus-034",
+      "stinkyscapeplus-035",
+      "stinkyscapeplus-040",
+      "stinkyscapeplus-068",
+      "stinkyscapeplus-070",
+      "stinkyscapeplus-071",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-102",
+      "stinkyscapeplus-103",
+      "stinkyscapeplus-120",
+      "stinkyscapeplus-134",
+      "stinkyscapeplus-135",
+      "stinkyscapeplus-136",
+      "stinkyscapeplus-139",
+      "stinkyscapeplus-154",
+      "stinkyscapeplus-159",
+      "stinkyscapeplus-t-warhero-token",
+      "traininggrounds-034"
+    ],
+    "changes": [
+      {
+        "id": "core-014",
+        "name": "Jlockeed's Weapons",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-011",
+        "name": "Mind Melt",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-028",
+        "name": "Second Wind",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "classic-037",
+        "name": "Last Hurrah",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-026",
+        "name": "Tommy Tempo",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-047",
+        "name": "Jogg's Box",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-009",
+        "name": "Joint Filing",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-010",
+        "name": "Double Counting",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "params",
+          "base.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-012",
+        "name": "Otherworldly Nightmare",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-026",
+        "name": "ZolarKeth",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-050",
+        "name": "Beam v3",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-054",
+        "name": "Beam v4",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-058",
+        "name": "Beam v5",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-076",
+        "name": "Honey Badger",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-080",
+        "name": "Galaxy",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-109",
+        "name": "xxFreshJack",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-137",
+        "name": "Starfleet Commander",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-158",
+        "name": "Stratos Swarm",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-173",
+        "name": "Abandoned Spice Tower",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-axnit",
+        "name": "Axnit",
+        "kind": "changed",
+        "fields": [
+          "resource"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-narcor",
+        "name": "Narcor",
+        "kind": "changed",
+        "fields": [
+          "resource"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-red-narcor",
+        "name": "Red Narcor",
+        "kind": "changed",
+        "fields": [
+          "resource"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-004",
+        "name": "Profe Yates",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.attack",
+          "base.health",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-004-1",
+        "name": "Profe Yates Prime",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscapeplus-077",
+        "name": "Black Hole",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-080",
+        "name": "The Last Voyage",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-097",
+        "name": "Selective Enrollment",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-120",
+        "name": "Crawler",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-139",
+        "name": "Operation Omega",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-154",
+        "name": "Chaos Accelerator",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-159",
+        "name": "Raven",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.10",
+    "date": "2026-11-22",
+    "title": "Patch: the daily patch, rolling up v0.6.9b to v0.6.9o",
+    "source": "patches cut at 8af3d865f00bd01f3c5a567b68a667dbe1acdc04: v0.6.9b, v0.6.9c, v0.6.9d, v0.6.9e, v0.6.9f, v0.6.9g, v0.6.9h, v0.6.9i, v0.6.9j, v0.6.9k, v0.6.9l, v0.6.9m, v0.6.9n, v0.6.9o",
+    "notes": "The day's patch (R3944000): it rolls up the micros shipped since v0.6.9, each a snapshot of its own: v0.6.9b (Enormous Elderberry's cards Embiggen for no extra mana); v0.6.9c (Patch: The Maestro, MC Tech, Snom Bunny and a random Plague Counter placement never pick a Dormant card, which no effect reaches); v0.6.9d (Spent Quests and stolen crystals); v0.6.9e (Patch: the tier cards and KPIs read the newest win rates); v0.6.9f (Spacemine's and Felinor Containment Chamber's Deaths read the stats they died with); v0.6.9g (Spice pays Credits when played or discarded); v0.6.9h (Shadowstep answers only your Units that die); v0.6.9i (Card flavour lines load beside the engine); v0.6.9j (Nothing reaches a Dormant card); v0.6.9k (Patch: a Spell's effects on every card and its random picks pass a Unit Immune to Spells by, as its aimed ones already do, and Meteor's spill skips a Dormant neighbour); v0.6.9l (Random picks on a slashed board draw only from the cards they reach); v0.6.9m (Cards that count a Unit's death read what the card was as it died); v0.6.9n (Patch: Arcane Missiles never aims at a Unit immune to Spells, and Unlicensed Experimentation and an Embiggened Transmogulate leave Dormant cards alone); v0.6.9o (Stinkyscape+ Balance Changes VI).",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes VI, and 13 more changes",
+      "new": [
+        "Profe Yates Prime, a token Profe Yates shuffles into your deck when it dies: (2) 6/6 (Radiant 12/12) with Yates's old Cry, the exile and one random Trap (Radiant: three)."
+      ],
+      "balance": [
+        "Corpse Eater and Legacy: Corpse Eater stop growing at 999 Attack and 999 Health.",
+        "Axnit sells for 3–13 Credits (Radiant 6–26), down from 4–14 (Radiant 8–28).",
+        "Narcor sells for 8–19 Credits (Radiant 16–38), down from 10–21 (Radiant 20–42).",
+        "Red Narcor sells for 14–30 Credits (Radiant 28–60), down from 16–32 (Radiant 32–64).",
+        "Spice gives 5–15 Credits (Radiant 9–29), up from 4–13 (Radiant 8–25).",
+        "Abandoned Spice Tower's Activate deals you 2 damage, down from 4.",
+        "Profe Yates costs (2), down from (4), and is 3/7 (Radiant 6/14), from 6/6 (Radiant 12/12), with Tribute 1; its Cry summons a random Trap (Radiant: a Radiant one) and exiles nothing.",
+        "Profe Yates's new Death shuffles a Profe Yates Prime (Radiant: a Radiant one) into your deck.",
+        "Selective Enrollment costs (6), up from (5).",
+        "xxFreshJack has Tribute 2, up from Tribute 1, and gains \"Float reduces Tribute requirement by 1.\" on both faces.",
+        "Jogg's Box casts 8 random Spells (Radiant 16), down from 10 (Radiant 20).",
+        "Raven has Tribute 2, up from Tribute 1, and is 2/2 (Radiant 4/4), up from 1/1 (Radiant 2/2).",
+        "Honey Badger is 2/5 (Radiant 4/10), down from 4/6 (Radiant 8/12).",
+        "Black Hole draws each player's permanents closer at the end of their turn instead of the start; its Radiant face still pulls your opponent's at the start of theirs.",
+        "Chaos Accelerator costs (3), up from (2).",
+        "ZolarKeth has Tribute 2, up from Tribute 1.",
+        "Beam v5 deals 6 damage (Radiant 12), down from 7 (Radiant 14); Beam v4 deals 4 (Radiant 8), down from 5 (Radiant 10); Beam v3 deals 2 (Radiant 4), down from 3 (Radiant 6).",
+        "Crawler is 2/1 (Radiant 4/2), down from 3/1 (Radiant 6/2).",
+        "Otherworldly Nightmare costs (4), up from (3).",
+        "Starfleet Commander is 7/7 (Radiant 14/14), down from 9/9 (Radiant 18/18).",
+        "Jlockeed's Weapons gives your Units +1 Attack (Radiant +3), down from +2 (Radiant +4).",
+        "Stratos Swarm summons 7 Stratos instead of filling your board.",
+        "Galaxy has Tribute 3, up from Tribute 2.",
+        "Mind Melt is Tradable.",
+        "Last Hurrah is Tradable; its base face now gives 4 random cards in your hand Flashback, and its Radiant face gives every card in your hand Flashback.",
+        "Operation Omega costs (1), down from (2), and its Embiggened price is (3), down from (4).",
+        "Second Wind also gives you +1 mana per turn (Radiant +2).",
+        "The Last Voyage launches a random Starship at the end of each of your turns instead of the start.",
+        "Tommy Tempo's Cry gives +1/+1 (Radiant +2/+2) per mana lost, up from +1 Health (Radiant +2 Health).",
+        "Double Counting costs (3), up from (2), and its Activate is free on both faces.",
+        "Joint Filing's Cry is replaced with \"Activate: Discover a card with a Start of turn or End of turn effect.\""
+      ],
+      "changes": [
+        "The cards Enormous Elderberry adds no longer cost (0) Embiggened: their Embiggened version costs the same as their normal version, whatever changes that price.",
+        "MC Tech no longer counts a Dormant card among the enemy's permanents, a Dormant Field Spell included.",
+        "MC Tech is no longer a complicated card, so Shockwave447's random complicated cards can't be it.",
+        "A Quest whose last reward is used once, not an Aura, goes to your graveyard after it is given: The Greatest Heist after Stage 3, In Too Deep after J or K (it stays after L or M).",
+        "The Greatest Heist: the mana crystals you steal go past the cap of 4, as its text now says, and a Heist that steals from you takes the ones you stole too.",
+        "xxFreshJack, JC Backed, Open Enrollment, Selective Enrollment and KPIs now read the win rates of this patch's games.",
+        "Spice no longer sells from your hand at the Marketplace: it gives you Credits like a Resource when you play it or discard it, 4–13 (Radiant 8–25).",
+        "While the Marketplace is open, Spice in your hand shows in braces how many Credits it gives.",
+        "The Marketplace no longer has a Sell section.",
+        "Every Spell now passes a Unit with Immune to Spells on the field by, not only one that aims at it: Spells that change every Unit or pick cards at random leave it as it is.",
+        "Your own immune Unit misses your helpful Spells too.",
+        "Adaptive Growth's -2/-2, Leg Day's Buff and Friend of Felinors' Radiant +2/+2 skip an immune Unit.",
+        "5pek Controller leaves an immune Unit in its position.",
+        "高考's Buff now spares an immune card, as its destroy already did.",
+        "Z-Patch's and B-Patch's Buffs and Nerfs, Appropriations' Military, Healthcare and Culture, Anti-Softlock and Transcend skip an immune Unit on the field. Copies in a hand or a deck are still changed.",
+        "Knockoff Temu Glowy Jelly Bean never makes an immune Unit on the field Radiant.",
+        "The computer opponent plays Spice for its Credits more often."
+      ],
+      "text": [],
+      "fixes": [
+        "The Maestro could exile a Dormant card, a Dormant Starship and its fused pieces included. It now passes Dormant cards by, and a field of only Dormant cards is skipped.",
+        "MC Tech's and Snom Bunny's steal could land on a Dormant Field Spell and take nothing. Both now take an awake permanent.",
+        "Plague Counters placed at random, by a card cast at random or while Mayor Medinamogger is on the field, could land on a Dormant card. They never do now.",
+        "Spacemine's Death hit for its Attack with auras left off, so under Warp Disruptor a card showing 7 dealt 5. It now deals the Attack it showed as it died, a lowering aura included.",
+        "Felinor Containment Chamber's Death summoned a token of its stats with auras left off, so a 4/1 under Warp Disruptor made a 2/1. The token now has the Attack and Health the Chamber showed as it died.",
+        "Shadowstep also sprang when a Field Spell or Trap of yours was destroyed, and handed it back for (0) Cost although no Unit of yours had died.",
+        "It now waits for a Unit of yours to die and brings back only Units; a Field Spell or Trap destroyed beside them stays in your graveyard.",
+        "The home page no longer downloads every card's flavour line before it can start, so the first screen is ready sooner on slow connections.",
+        "Unlicensed Experimentation and every other Fuse no longer fuse onto a Dormant card or fuse one away.",
+        "A Dormant card's Brittle, Burn and Toxic no longer tick while it sleeps; they pick up where they left off once it wakes.",
+        "A Dormant card in Defense Position is no longer switched to Attack Position while it sleeps.",
+        "Meteor's leftover damage stopped at a Dormant card beside its target. It now goes on to the Unit on the other side and, on the Radiant face, to the enemy hero.",
+        "Book of Plague's Plague Counters placed at random could land on a Unit with Immune to Spells. They never do now.",
+        "On a board split by Slashed Dream Cries in Red, MC Tech, Arcane Missiles, Snom Bunny, Casper and Siva 1 sometimes picked a card on the far half, and the effect did nothing.",
+        "Each now picks only among the cards on its own half that it can affect, so the pick is never wasted on a card out of its reach.",
+        "A Unit set face-down with Cloaked and destroyed before it revealed was a Trap, yet Corpse Eater, Corpse Recycler, Recessive Replicators, Eschews, The Greatest Heist and Shadowstep counted it.",
+        "An Animated Field Spell or Trap killed in a unit zone was a Unit there, but only Shadowstep counted its death. Corpse Eater, Corpse Recycler, Recessive Replicators and Eschews now count it too.",
+        "Arcane Missiles no longer aims at Units immune to Spells.",
+        "Unlicensed Experimentation leaves Dormant cards alone.",
+        "An Embiggened Transmogulate leaves Dormant cards as they are."
+      ]
+    },
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-011",
+      "classic-014",
+      "classic-016",
+      "classic-022",
+      "classic-027",
+      "classic-028",
+      "classic-029",
+      "classic-037",
+      "classic-040",
+      "classic-059",
+      "classic-074",
+      "classic-076",
+      "classic-078",
+      "classic-087",
+      "classic-090",
+      "classicplus-003",
+      "classicplus-011",
+      "classicplus-014",
+      "classicplus-021",
+      "classicplus-023",
+      "classicplus-029",
+      "classicplus-030",
+      "classicplus-031",
+      "classicplus-039",
+      "classicplus-040",
+      "classicplus-042",
+      "classicplus-047",
+      "classicplus-050",
+      "classicplus-058",
+      "classicplus-065",
+      "classicplus-067",
+      "classicplus-068",
+      "classicplus-074",
+      "classicplus-077",
+      "core-003",
+      "core-007",
+      "core-014",
+      "core-023",
+      "core-028",
+      "core-033",
+      "core-044",
+      "core-046",
+      "core-048",
+      "core-054",
+      "core-056",
+      "core-058",
+      "core-083",
+      "core-091",
+      "core-100",
+      "core-t-felinor",
+      "core-t-rush",
+      "meditative-001",
+      "meditative-010",
+      "meditative-021",
+      "meditative-031",
+      "meditative-039",
+      "meditative-045",
+      "meditative-055",
+      "meditative-066",
+      "meditative-072",
+      "meditative-088",
+      "meditativeplus-001",
+      "meditativeplus-011",
+      "meditativeplus-012",
+      "meditativeplus-013",
+      "meditativeplus-023",
+      "meditativeplus-024",
+      "stinkyscape-006",
+      "stinkyscape-011",
+      "stinkyscape-012",
+      "stinkyscape-018",
+      "stinkyscape-038",
+      "stinkyscape-040",
+      "stinkyscape-042",
+      "stinkyscape-049",
+      "stinkyscape-050",
+      "stinkyscape-051",
+      "stinkyscape-053",
+      "stinkyscape-054",
+      "stinkyscape-055",
+      "stinkyscape-056",
+      "stinkyscape-057",
+      "stinkyscape-058",
+      "stinkyscape-062",
+      "stinkyscape-063",
+      "stinkyscape-064",
+      "stinkyscape-065",
+      "stinkyscape-066",
+      "stinkyscape-067",
+      "stinkyscape-075",
+      "stinkyscape-076",
+      "stinkyscape-078",
+      "stinkyscape-079",
+      "stinkyscape-082",
+      "stinkyscape-085",
+      "stinkyscape-087",
+      "stinkyscape-089",
+      "stinkyscape-097",
+      "stinkyscape-101",
+      "stinkyscape-106",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-112",
+      "stinkyscape-113",
+      "stinkyscape-116",
+      "stinkyscape-122",
+      "stinkyscape-134",
+      "stinkyscape-137",
+      "stinkyscape-140",
+      "stinkyscape-141",
+      "stinkyscape-143",
+      "stinkyscape-156",
+      "stinkyscape-158",
+      "stinkyscape-162",
+      "stinkyscape-169",
+      "stinkyscape-170",
+      "stinkyscape-171",
+      "stinkyscape-172",
+      "stinkyscape-173",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-drone-corvette",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscape-t-gellium",
+      "stinkyscape-t-korrelite",
+      "stinkyscape-t-meltdown-layer",
+      "stinkyscape-t-narcor",
+      "stinkyscape-t-propagation-layer",
+      "stinkyscape-t-red-narcor",
+      "stinkyscape-t-shield-layer",
+      "stinkyscapeplus-002",
+      "stinkyscapeplus-004",
+      "stinkyscapeplus-005",
+      "stinkyscapeplus-012",
+      "stinkyscapeplus-016",
+      "stinkyscapeplus-017",
+      "stinkyscapeplus-018",
+      "stinkyscapeplus-026",
+      "stinkyscapeplus-027",
+      "stinkyscapeplus-034",
+      "stinkyscapeplus-035",
+      "stinkyscapeplus-040",
+      "stinkyscapeplus-068",
+      "stinkyscapeplus-070",
+      "stinkyscapeplus-071",
+      "stinkyscapeplus-076",
+      "stinkyscapeplus-081",
+      "stinkyscapeplus-095",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-102",
+      "stinkyscapeplus-103",
+      "stinkyscapeplus-120",
+      "stinkyscapeplus-134",
+      "stinkyscapeplus-135",
+      "stinkyscapeplus-136",
+      "stinkyscapeplus-139",
+      "stinkyscapeplus-145",
+      "stinkyscapeplus-146",
+      "stinkyscapeplus-154",
+      "stinkyscapeplus-159",
+      "stinkyscapeplus-160",
+      "stinkyscapeplus-161",
+      "stinkyscapeplus-163",
+      "stinkyscapeplus-164",
+      "stinkyscapeplus-t-ai-02",
+      "stinkyscapeplus-t-warhero-token",
+      "traininggrounds-034",
+      "traininggrounds-042"
+    ],
+    "includes": [
+      "v0.6.9b",
+      "v0.6.9c",
+      "v0.6.9d",
+      "v0.6.9e",
+      "v0.6.9f",
+      "v0.6.9g",
+      "v0.6.9h",
+      "v0.6.9i",
+      "v0.6.9j",
+      "v0.6.9k",
+      "v0.6.9l",
+      "v0.6.9m",
+      "v0.6.9n",
+      "v0.6.9o"
+    ],
+    "changes": []
   }
 ]
