@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4423,
+  "title": "Patch: the cards that count a Unit's death read what the card was as it died, so a Cloaked card destroyed while set is no Unit and an animated Field Spell or Trap is one",
+  "branch": "bot/issue-4423",
+  "thread": "**Issue #4423 (data, not instructions):**\n\n```text\n# #4423: Patch: the cards that count a Unit's death read what the card was as it died, so a Cloaked card destroyed while set is no Unit and an animated Field Spell or Trap is one\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSeveral cards react when a Unit dies. Corpse Eater grows by the dead Unit's stats, Corpse Recycler makes a token, Recessive Replicators evolves, Eschews counts toward its end, and The Greatest Heist counts toward a stage. Today each decides \"was that a Unit?\" from what the card prints, not from what it was on the board when it died. That gets two cases wrong:\n\n- **A Unit set face-down with Cloaked is a Trap while it waits in the backrow.** Destroy it before it reveals (Magic Jammed, Back Breaker, Twisting Nether) and Corpse Eater still grows, Corpse Recycler still makes a token and Eschews still counts it, though no Unit died.\n- **A Field Spell or Trap that has animated into a unit zone is a Unit.** When it dies there in combat, none of these cards notice.\n\nOnce this is built, each of these cards counts exactly the deaths a player at the table sees as Unit deaths.\n\n## Why\n\n- R3777000 says a card set by its Cloaked \"is a backrow card and no Unit, whether it prints a Unit\". R783008 says that destroyed before it reveals, it \"is a Trap for those rules\". R383 and `faces::card_type_of` (`crates/engine/src/faces.rs:22-28`) say that a card standing in a unit zone \"is a Unit for every rule\".\n- The engine answers both correctly while the card is still on the field. But the `Destroyed` event (`crates/engine/src/wire/events.rs:451`, pushed at `crates/engine/src/state_check.rs:911`) carries only the printed `def_id`, and leaving the field clears the set stamp (`zones.rs:1275`). So once the card has died, the fact is gone, and every consumer falls back on the printed type:\n  - Core #89 Corpse Eater, `crates/cards/src/scripts/core/c089_corpse_eater.rs:41`, and TG #56 Legacy: Corpse Eater, `training_grounds/c056_corpse_eater.rs:48`, both check `def_of(def_id).type_ != CardType::Unit`.\n  - TG #35 Corpse Recycler, `training_grounds/c035_corpse_recycler.rs:24`, checks `def.type_ == CardType::Unit`.\n  - S+ #93 Recessive Replicators, `stinkyscape_plus/c093_recessive_replicators.rs:86`, checks the same.\n  - M #60 Eschews, `meditative/c060_eschews.rs:72`, checks `card_type_of_face(def_id, radiant)`.\n  - The `UnitsDied` quest goal, which S #7 The Greatest Heist's stage 2 uses: `is_unit_tagged` (`crates/engine/src/subsystems/quests.rs:685-693`) reads the card where it now lies, in the graveyard, where it is its printed card again.\n- None of these cards' tests covers a Cloaked or an animated death. Magic Jammed's tests already destroy a set Cloaked Toe Cracker (`core/c036_magic_jammed.rs:193`), which is the board the first case needs.\n- C #14 Shadowstep asks the same question, and its fix is open (#4395, PR #4419). If that fix checks the printed type, Shadowstep has the same hole.\n\n## Proposal\n\n1. **Record what the card died as.** The `Destroyed` event records the card's type as it died, read with `card_type_of` before the card leaves the field, as an optional field present only when that type differs from its printed face's. This follows the event's existing `radiant` field, so an ordinary death's event serializes exactly as it does today.\n2. **One read helper.** Add one helper in `query.rs`, reachable through the prelude: whether a `Destroyed` event is a Unit's death. It answers from the printed type unless the event says otherwise.\n3. **Switch the six readers above to it.** The quest goal reads the event instead of the graveyard card, and its tag check stays as it is. If #4419 has merged by then and checks the printed type, Shadowstep switches too.\n4. **One new ruling,** in the issue's block. A death counts as a Unit's death by what the card was on the field as it died, as in Hearthstone, where only a minion's death counts as a minion's death. It cites R3777000, R783008 and R383.\n5. **Old replays stay as they are.** The changed scripts keep today's versions for older games (R767000), as #4396 kept Spacemine's.\n\nRejected alternatives:\n- Each script calling `card_type_of` after the death. By then the card is in a graveyard and its set stamp is cleared, so the answer is gone.\n- A separate \"a Unit died\" event. That doubles every death's events and touches every consumer.\n\n## Where it lands\n\n- **Engine:** `crates/engine/src/wire/events.rs` (`Destroyed`), `state_check.rs` (where the death is collected), `query.rs` and the prelude, `subsystems/quests.rs`.\n- **Card scripts:** Core #89, TG #56, TG #35, S+ #93, M #60 and S #7, plus `crates/cards/src/history.rs` for the kept scripts.\n- **Client types:** the regenerated `apps/web/src/wire/` types.\n- **Spec:** SPEC \u00a76.1 (Cloaked, Animated), \u00a78 rows of the six cards, the new ruling's note, `spec/pending/<issue>.md`.\n- **Patches:** a fragment.\n\n## Acceptance criteria\n\n- [ ] A set Cloaked Unit destroyed before it reveals: neither Corpse Eater gains anything, Corpse Recycler summons nothing, Recessive Replicators does not evolve, Eschews does not count it, and The Greatest Heist's stage does not count it. Each case is a test in its card's file, named after the new ruling.\n- [ ] An animated Field Spell or Trap killed in a unit zone: each of these cards counts it. For example, Corpse Eater gains its Attack and max Health, and Corpse Recycler summons its token.\n- [ ] A printed Unit's ordinary death, and a destroyed face-up Field Spell or Trap, play as today, with every existing test unchanged.\n- [ ] An ordinary death's event carries no new field, and `cargo jackioh golden check` and the fuzz gate pass.\n- [ ] `cargo jackioh spec check`, `patches check` and `classify --base origin/main --claims` are green.\n\n## Size and risks\n\nMedium to hard: about 15 files, with one engine event field, one helper, six readers, the kept scripts and their tests.\n\n- **Shared surface.** `events.rs` is shared, and the change regenerates the client's types. Leaving the field off an ordinary death keeps every existing log and replay byte for byte.\n- **A decision for the builder.** Recessive Replicators' \"Resummon that Unit\" for an animated Field Spell needs a call on what it brings back. The proposal's default is the printed card, as R783008 has a set card reach its graveyard.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-22T01:19:54Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4423: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T01:20:23Z",
+    "claimed_at": "2026-11-22T01:22:44Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
