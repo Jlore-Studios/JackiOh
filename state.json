@@ -15679,9 +15679,11 @@
         "by": "`muse` (medium)",
         "sha": "8d52cf3aecfaf304059566526fb8e520593deb22"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T00:57:42Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-22T01:37:01Z",
         "family": "muse",
@@ -15691,6 +15693,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: co-op match rebuilds and replay openings run through off_runtime\"} -->\n- ## What changed and why\n- Co-op rebuilds and replay opens ran their whole-log folds on bare `tokio::task::spawn_blocking`, bypassing the `actor::engine::off_runtime` runner every other game mode uses. That skipped `app.engine_thread` setup (so test-kit card overrides never reached the worker thread) and, on the replay path,\u2026\n- - [registry.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4430/crates/server/src/duos/registry.rs): `DuosRegistry::rebuild` now folds via `actor_engine::off_runtime(app.engine_thread, \u2026)`. Manual `catch_unwind`/`panic_text` and the two-stage error mapping collapsed to `.map_err(DuosAtta\u2026\n- - [replay.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4430/crates/server/src/duos/replay.rs): `open` no longer catches panics (they propagate); `get_replay` runs `open` inside `off_runtime` within the permit closure, mapping a panic to `ApiError::internal` with the existing `duos.repl\u2026\n- - Tests: two in [long_fold.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4430/crates/server/tests/actor/long_fold.rs) (panicking rebuild \u2192 `Internal` + no actor + `/healthz` 200; test-card decks rebuild to the directly-folded hash with `next_seq() == 1`), one in [duos_rooms.rs](/home/ag\u2026\n- ## How it was tested\n- - `cargo test -p jackioh-server --test server actor::long_fold` \u2014 4 passed.\n- - `cargo test -p jackioh-server --test server api::duos_rooms::b41` \u2014 11 passed.\n- - `cargo test -p jackioh-server --test server duos` \u2014 140 passed, 0 failed.\n- - `cargo fmt --check` clean; `cargo clippy -p jackioh-server --all-targets -- -D warnings` clean.\n- - Failing-first proof: ran the 3 new tests in an isolated worktree at the base commit with only the test files copied in. Observed: the test-card rebuild test and the b41 500 test failed there (replay answered 422 `rules_changed`), while the panic-\u2192`Internal` test passed \u2014 exactly the behavior chan\u2026\n- ## Decisions the issue did not settle\n- - Kept the `duos.replay.panicked` error log on the 500 path rather than dropping it: panics in production remain observable. Rejected silent conversion.\n- - New tests live in `long_fold.rs` / `duos_rooms.rs` rather than a new file, following the existing layout for #1035 and B41 coverage.\n- - No ruling note or spec edit: this is a pure refactor to the already-specified seams behavior (`crates/server/README.md`, #1035), so no `spec check` run was needed.\n- ## For the reviewer\n- Look twice at the deliberate contract change: a replay whose setup/fold panics moves from 422 `rules_changed` to 500 `internal`, per the issue. The three existing 422 tests cover the non-panic refusal paths and stay green. Also note the `engine` name in both files is `duos::engine`, so the runner i\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4430 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4430/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4430,
       "kind": "review",
       "live": "reviewing",
