@@ -19256,15 +19256,8 @@
       }
     },
     "4507": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45058900368",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-22T19:16:25Z",
-        "until": "2026-11-22T19:46:25Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -19276,10 +19269,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "ls in `accessibility.tsx` except `\"Last updated\"` (still used by `privacy.tsx`, `terms.tsx`, `copyright.tsx`), plus `\"Accessibility\"` (unused once steps 2\u20134 are done; verify with grep first). Also delete the stal\u2026\n- 6. Delete `apps/web/src/routes/accessibility.tsx`. Its CSS imports (`../auth/tavern.css`, `./privacy.css`) are shared files; keep them.\n- 7. In `apps/web/static-pages.ts`, delete the `PUBLIC_PAGES` accessibility entry, the `PAGE_TEXT[paths.accessibility]` block, and `/accessibility` from the line-90 comment. In `apps/web/public/_redirects`, delete the `/accessibility` rule.\n- 8. In `apps/web/src/routes/chunks.test.tsx`, repoint the `\"R2116000 intent toward engine-free screens loads only their chunk\"` test: replace the `routeChunks.accessibility` spy, the `/accessibility` link, its `fireEvent`, and its expectation with another engine-free screen not already in that test \u2026\n- 9. In `apps/web/src/routes/privacy.test.tsx`: update the file header comment; delete the `accessibility.tsx` import; shrink the updated-dates test to terms only (rename to `\"serves terms with its updated date\"`); drop `\"accessibility.tsx\"` from the draft-lines file loop; drop the `/accessibility` s\u2026\n- 10. In `apps/web/src/static-pages.test.ts`, delete the import and the `[AccessibilityRoute, paths.accessibility]` row and retitle the test `\"quote /privacy, /terms and /copyright word for word from their own pages\"`. In `page-titles.test.tsx`, delete the import and row. In `engine-gate.test.tsx`, d\u2026\n- 11. In `e2e/cypress/e2e/38-accessibility.cy.ts`, delete the `accessibility` key from `SCREEN` and the `it(\"/accessibility\", \u2026)` block; leave every other `it` untouched so axe still covers all remaining routes. In `e2e/support/axe-exceptions.ts`, reword lines 3\u20134 to e.g. `// fails, and spec 38 fails\u2026\n- 12. In `docs/compliance.md` \u00a71, change the contact-email sentence to list `/terms`, `/privacy`, `/copyright` (drop `/accessibility`). Rewrite \u00a73 as: keep the axe-core bullet verbatim; replace the two page bullets with `Lighthouse is run by hand: Chrome's DevTools, Lighthouse, Accessibility only, on\u2026\n- 13. Write `spec/rulings/R4507000.md` copying `R4037000.md`'s frontmatter shape (`id`, `title`, `cards: \"issue #4507\"`, `proven_in: [apps/web/src/routes/accessibility-removed.test.tsx]`): owner asked for removal; lists what went (route, chunk, title, footer link, command-menu entry, sitemap/static-p\u2026\n- 14. Write `apps/web/src/routes/accessibility-removed.test.tsx` copying `ai-removed.test.tsx` line for line with `/ai`\u2192`/accessibility`, `site-footer-ai`\u2192`site-footer-accessibility`, `\"How JackiOh uses AI\"`\u2192`\"Accessibility\"`, `R4037000`\u2192`R4507000` (including the `R2631000`-amending phrase dropped \u2014 \u2026\n- ## Tests\n- - New `apps/web/src/routes/accessibility-removed.test.tsx`, test `R4507000 removes /accessibility: no footer link, sitemap, static page or command entry, and the path draws NotFound like any unknown path`: asserts `/accessibility` absent from `PUBLIC_PAGES` paths and `PAGE_TEXT`, absent from `sitem\u2026\n- - `apps/web/src/routes/privacy.test.tsx`, `apps/web/src/static-pages.test.ts`, `apps/web/src/routes/page-titles.test.tsx`, `apps/web/src/routes/engine-gate.test.tsx`, `apps/web/src/routes/chunks.test.tsx`, `apps/web/src/routes/command-menu.test.tsx`: existing tests as edited in steps 8\u201310. Run each\u2026\n- - `apps/web/src/net/deploy-routes.test.ts`: covers `_redirects` vs `paths`; run `pnpm --dir apps/web test src/net/deploy-routes.test.ts`.\n- - `cargo jackioh spec check` (new ruling vs `R4507000` test titles and `proven_in`); `pnpm --dir apps/web typecheck`; `pnpm --dir apps/web test` (full web suite at the end); `pnpm exec eslint apps/web apps/edge apps/admin e2e`; e2e `pnpm --dir e2e typecheck`; `cargo jackioh classify --base origin/m\u2026\n- ## Done when\n- - [ ] `/accessibility` renders `NotFound` with the same title as any unknown path\n- - [ ] No Accessibility entry in footer or command menu\n- - [ ] `/accessibility` in none of the sitemap, `static-pages.ts`, `_redirects`, `zh-CN.json`\n- - [ ] `docs/compliance.md` no longer points at the page and still describes the axe-core check\n- - [ ] `38-accessibility.cy.ts` still axes every remaining route; keyboard-play test untouched\n- - [ ] New `R4507000` proving test and all edited test files pass; `spec check`, web `typecheck`, web tests, `eslint`, e2e `typecheck` pass; `classify --claims` confirms no fragment\n- - [ ] No `#[ignore]`/`.skip`/weakened check; `R2631000.md` unchanged\n- ## Risks\n- - `deploy-routes.test.ts` derives expectations from `paths`, so the `_redirects` line and the `paths` entry must go together; removing only one fails it.\n- - `chunkAt` iterates `routeChunks` keys against `paths[name]`; deleting the chunk and the path together keeps it total.\n- - `zh-CN.json` shared keys (`\"Last updated\"`) must stay; every removed key needs its grep evidence or another locale-tested screen breaks (`command-menu.test.tsx` switches to `zh-CN`).\n- - The `chunks.test.tsx` replacement page must be engine-free or the `loadWasm`-not-called assertion fails; confirm outside `EngineGate` in `main.tsx`.\n- - `spec check` requires the proving test title to contain `R4507000` as a word and `proven_in` to name the exact file; copy `R4037000.md`/`ai-removed.test.tsx` exactly.\n- ## Open questions\n- - `apps/web/README.md:228` still cites \"the accessibility statement's \u2026 sentences\" as prose exempt from skeleton rules. It names no route, so it is outside this removal's file list; confirm whether a person wants it reworded (e.g. \"the invite page's sentences\") or left as historical prose.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4507 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4507/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-22T19:06:57Z",
       "owner_why": "it plans it",
@@ -19292,18 +19284,18 @@
       "provider": "muse",
       "queued_at": "2026-11-22T19:06:45Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45058900368",
+      "run_id": "pending:e34d026b-1795375102",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-22T19:06:57Z",
+      "started_at": "2026-11-22T19:18:44Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T19:08:41Z",
+    "at": "2026-11-22T19:18:44Z",
     "url": "",
-    "what": "suggestions (rules) on claude-1"
+    "what": "build #4507 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T19:03:27Z",
