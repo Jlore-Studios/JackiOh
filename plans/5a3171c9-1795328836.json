@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4468,
+  "title": "Patch: the public players list and each game's daily pay sums read through an index, not every player's stats or every grant an account ever got",
+  "branch": "bot/issue-4468",
+  "thread": "**Issue #4468 (data, not instructions):**\n\n```text\n# #4468: Patch: the public players list and each game's daily pay sums read through an index, not every player's stats or every grant an account ever got\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe public Players list on the stats page gets slower with every player who joins. Anyone can open it, signed in or not. To pick the 50 players with the most games, the database opens every public player's whole saved statistics, up to about 130 KB each, on every visit, search and page turn.\n\nPaying out a finished game has a smaller version of the same problem. To check today's earnings against the daily cap, it reads every reward the player has ever been paid, so a player with a year of games makes every game end a little slower than a new player does.\n\nAfter this change, both reads go straight to the rows they need: the list reads 50 players and the pay step reads today's rewards. Players see the same answers, and these screens stay fast as the game grows. The one database that every match, account and purchase shares stops doing work it throws away.\n\n## Why\n\n**The players list sorts every public player on every request.**\n- `GET /api/stats/players` is open to anyone (`AuthLevel::None`, `crates/server/src/app.rs:730`). `get_players` (`crates/server/src/api/stats.rs:1667-1690`) reads straight from `player_stats_list_public` (`crates/server/src/db/pg.rs:6792-6841`).\n- That query sorts by `case when (ps.stats->>'games') ~ '^[0-9]+$' then (ps.stats->>'games')::bigint else 0 end desc, ps.updated_at desc, ps.profile_id asc limit $2 offset $3`.\n- `player_stats` has only its primary key (`crates/server/migrations/0021_player_stats.sql:13-20`). No later migration touches the table.\n- So every request works out that expression for every public row, which unpacks each row's `stats` jsonb, and then sorts them all to return 50. The jsonb is capped at `PLAYER_STATS_BYTES_MAX` (131,072 bytes). An active player's was measured at 67,445 bytes (`crates/server/src/config.rs:1192-1196`), so it is stored compressed outside the row.\n- The `Cache-Control: public, max-age=60` from `cached_ok` only helps a browser that asks again.\n- The site Worker passes `/api/*` through without caching (`apps/edge/src/index.ts:268`).\n- An in-process cache would break two rulings, each held by a test in `crates/server/tests/api/stats.rs`: R1436 (a rename shows on the next read, `:922`) and R3911000 (a ban drops the player off at once, `:970`).\n- The route takes up to `API_REQUESTS_PER_MINUTE` (300) requests per address.\n\n**The daily pay sums read an account's whole history.**\n- Every finished game pays through `economy/rewards.rs:49` and `:55`. The daily-cap reads before it (`api/results.rs:589`, `duos/mod.rs:135`) run the same sum.\n- `game_jlore_totals` (`crates/server/src/economy/store.rs:1296-1324`) sums `public.jlore_grants where profile_id = $1 and reason = $2 and at >= \u2026 and at < \u2026`.\n- `fleet_get` (`:1805-1810`) runs the same sum over `public.fleet_track_grants`. The economy read at `api/economy.rs:40` calls it too.\n- The only indexes on these tables are `(profile_id, id)` (`migrations/0045_economy.sql:101`, `migrations/0086_fleet_track.sql:143`). So each sum fetches every row the account was ever granted and filters by day afterwards.\n- That is about three such scans per human seat per game. The payout's scan runs while the account's economy lock is held (R1483000).\n- Both ledgers are append-only and gain about one row per paid game, so the cost grows with each player's whole history.\n- Other ledgers already have the time index this needs: `collection_grants_profile_at_idx` (0002) and `rating_grants_profile_idx (profile_id, format, at)` (0080).\n\n**The repository already has checks that hold a query to its index.** CHECK 20 and CHECK 21 (#2022) in `crates/server/tests/sql/01_schema_invariants.sql` seed rows, run `analyze`, `explain` the pg.rs query with its binds written as literals, and fail on a sequential scan.\n\n## Proposal\n\n1. **One migration with three indexes and nothing else**, numbered the next free one after 0097:\n   - `player_stats_public_games_idx on public.player_stats ((case when (stats->>'games') ~ '^[0-9]+$' then (stats->>'games')::bigint else 0 end) desc, updated_at desc, profile_id) where is_private = false`. Its expression is exactly the query's `order by`. The default page then walks the index in order, joins `profiles` by its key and stops after 50 rows. A search walks the index in the same order and filters on the username without unpacking any stats.\n   - `jlore_grants_profile_reason_at_idx on public.jlore_grants (profile_id, reason, at)`.\n   - `fleet_track_grants_profile_reason_at_idx on public.fleet_track_grants (profile_id, reason, at)`.\n\n   No query, handler or fake-store change is needed, because the queries already have the shape these indexes serve. The migration's header says which query each index serves, as 0062's and 0064's do.\n2. **Register the migration** in `db/migrate.rs` and pin its checksum in `tests/store/migrations_pinned.rs`.\n3. **Add two plan checks** after CHECK 25 in `01_schema_invariants.sql`, built the way CHECK 21 is:\n   - Seed about 2,000 public `player_stats` rows with stats of several KB each, plus some private rows and one banned profile.\n   - Seed one profile's 2,000 or so grants in each ledger, spread over many days.\n   - Run `analyze`, price sequential scans out as CHECK 21 does, and `explain` each pg.rs query with its binds as literals.\n   - Fail unless the plan names the new index. The players check must also show no `Sort` above a scan of `player_stats`, and the ledger checks must have `at` in an `Index Cond`, not a `Filter`.\n   - Roll everything back afterwards, as CHECK 21 does.\n4. **Update the docs and one comment:**\n   - Change the doc comment on `game_jlore_totals` (`jlore_grants_profile_idx leads it`) to name the index it now reads through.\n   - Add a paragraph to the README's migration notes, like the ones for 0096 and 0097.\n   - Add the migration to the chain in `docs/architecture.md`.\n\n## Where it lands\n\n- `crates/server/migrations/<next>_*.sql` (new)\n- `crates/server/src/db/migrate.rs`, `crates/server/tests/store/migrations_pinned.rs`\n- `crates/server/tests/sql/01_schema_invariants.sql` (two new CHECKs)\n- `crates/server/src/economy/store.rs` (one doc comment)\n- `crates/server/README.md`, `docs/architecture.md`\n- SPEC \u00a79.11 (public player statistics: R654, R1436, R3911000) and \u00a714.8 (the reward hook's daily cap: R1483000) stay as they are. No rule changes and no ruling is needed.\n\n## Acceptance criteria\n\n- [ ] One new migration adds exactly these three indexes.\n- [ ] The players index's expression is character for character the `order by` of `player_stats_list_public`, and the index is partial on `is_private = false`.\n- [ ] Each new CHECK names its index and its query, and fails if the plan uses a sequential scan or a sort over `player_stats`, or filters the ledgers by day outside the index.\n- [ ] CI's `db` job passes with the new CHECKs (`sh crates/server/tests/sql/run.sh` and `sh crates/server/tests/db/run.sh`).\n- [ ] `migrations_pinned.rs` pins the new file.\n- [ ] `cargo test -p jackioh-server --test server api::stats` passes unchanged. The R654, R1436 and R3911000 tests and the reward and daily-cap tests are not edited.\n- [ ] No query text, handler or fake-store code changes. The only Rust change is the one doc comment.\n\n## Size and risks\n\n**Size:** small. About 25 lines of migration, about 120 lines of SQL checks, one comment and two doc paragraphs. It is a migration, so it is `difficulty:hard` under CLAUDE.md rule 11.\n\n**Risks:**\n- An expression index only serves a query whose `order by` matches it exactly. The new CHECK keeps a later edit of the query from silently losing the index.\n- On today's small tables the planner may still pick a sequential scan, which is cheap at that size. The index matters as the tables grow, which is why the CHECK prices sequential scans out, as CHECK 21 does.\n- Building each index holds writes to its table for as long as a plain `create index` takes on today's sizes.\n- Each index adds a little to every insert into its table: one row per paid game or per stats save.\n\n**Considered and left out:**\n- An in-process cache of the list, which would break R1436 and R3911000.\n- Caching the list at the Worker, which would keep showing a banned player.\n- An index for the day count in `quest_grants` (`quests_removed_count`, `economy/store.rs:1974`), which runs only when a player replaces a quest.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-22T06:19:04Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4468: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T06:19:24Z",
+    "claimed_at": "2026-11-22T06:27:42Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
