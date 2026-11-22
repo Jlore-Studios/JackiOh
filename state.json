@@ -14947,15 +14947,16 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-8",
       "queued_at": "2026-11-22T01:57:25Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "44973883719",
-      "runs_on": "night-vm-muse-fill",
+      "run_id": "pending:5bed43ae-1795317470",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 435,
-      "started_at": "2026-11-22T01:58:10Z",
+      "started_at": "2026-11-22T03:18:13Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16142,9 +16143,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T03:17:35Z",
+    "at": "2026-11-22T03:18:13Z",
     "url": "",
-    "what": "review #4455 on muse"
+    "what": "spot-check #4419 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-22T03:02:59Z",
@@ -37589,7 +37590,15 @@
         "n": 435,
         "pr": 4419,
         "queued_at": "2026-11-22T03:09:07Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:5bed43ae-1795317470",
         "sha": "dd441f06baa7462cff6cdbd2eacdf0f203859229",
+        "started_at": "2026-11-22T03:18:13Z",
         "status": "queued",
         "title": "Patch: Shadowstep answers only your Units that die, not your destroyed Field Spells and Traps",
         "tries": 0
