@@ -37537,7 +37537,6 @@
   },
   "usage_spool": {
     "readings": [
-      "2026-11-22T00:33:38Z,muse,usage-command,before,44967185485,0,2026-11-22T04:12:00Z,65,2026-11-23T00:00:00Z,allowed,100,100,",
       "2026-11-21T23:14:34Z,claude-8,ping,before,44960585083,0,2026-11-22T04:10:00Z,,,allowed,85,,",
       "2026-11-21T23:15:08Z,claude-8,stream,call,44960585083,1,2026-11-22T04:10:00Z,,,allowed,85,,",
       "2026-11-21T23:15:23Z,claude-8,stream,call,44960585083,2,2026-11-22T04:10:00Z,,,allowed,85,,",
@@ -37548,8 +37547,6 @@
       "2026-11-22T00:28:44Z,claude-8,stream,call,44960585083,6,2026-11-22T04:10:00Z,,,allowed,85,,"
     ],
     "runs": [
-      "2026-11-22T00:37:53Z,44967185485,muse,muse-spark-1.3-contributor,plan,4433,medium,planned,,4.1,0,0,0,,0,0,65,65,2.1,,none,,1",
-      "2026-11-22T00:38:55Z,44967144428,muse,muse-spark-1.3-contributor,plan,4435,medium,planned,,2.8,0,0,0,,,,,,1.8,,none,,1",
       "2026-11-22T00:34:16Z,44960585083,claude-8,opus,review,4436,hard,approved,,26.5,90,23778,4092253,3.0333,0,6,,,0.8,,fresh,,3"
     ]
   },
