@@ -13,8 +13,8 @@
 //! Stage 1: unitsMadeRadiant (R1854002); reward summons random Acclaimed Unit (R64, R1).
 //! Stage 2: unitsDied; reward rolls Anomaly Found! or Resource (R1873002, §2.4, R1840002, R1840000). A Unit
 //! by what the card was on the field as it died (R4423000): an Acclaimed Unit set face-down by its Cloaked and
-//! destroyed before it reveals is not counted; through v0.6.9h the goal read the card where it lay after the
-//! death, its printed card (`byPrint`, `script_v0_6_9h`, kept, R767000).
+//! destroyed before it reveals is not counted; through v0.6.9i the goal read the card where it lay after the
+//! death, its printed card (`byPrint`, `script_v0_6_9i`, kept, R767000).
 //! Stage 3: cardsStolen; reward steal_mana_crystals past the cap (R1854003, R4331001), then the Heist,
 //! spent, goes to the graveyard (end_quest_line, R4331000). Through v0.6.9c the steal stopped at the
 //! cap, its reward read without "even past 4", and the Heist stayed (`script_v0_6_9c`, kept, R767000).
@@ -49,7 +49,7 @@ fn vaults_reward(kept: bool) -> String {
     if kept { STEAL.to_string() } else { format!("{STEAL}, even past {MAX_MANA}") }
 }
 
-/// `by_print`: Stage 2 reads a death off the dead card where it lies, as v0.6.9h and before (R767000).
+/// `by_print`: Stage 2 reads a death off the dead card where it lies, as v0.6.9i and before (R767000).
 fn stages(kept: bool, by_print: bool) -> Vec<QuestStage> {
     let mut deaths = json!({ "kind": "unitsDied", "count": DEATHS, "tag": Tag::Acclaimed });
     if by_print {
@@ -165,9 +165,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.6.9h and before ran back to v0.6.9d, kept for their replays: Stage 2 read a death
+/// R767000: the scripts v0.6.9i and before ran back to v0.6.9d, kept for their replays: Stage 2 read a death
 /// off the dead card where it lay (R4423000).
-pub fn script_v0_6_9h() -> CardScripts {
+pub fn script_v0_6_9i() -> CardScripts {
     CardScripts {
         base: heist(false, false, true),
         radiant: heist(true, false, true),
@@ -405,10 +405,10 @@ mod tests {
         assert_eq!(stage(&s), Some(COMRADERY));
     }
 
-    /// R767000: through v0.6.9h Stage 2 read the dead card in its graveyard, a Unit there.
+    /// R767000: through v0.6.9i Stage 2 read the dead card in its graveyard, a Unit there.
     #[test]
-    fn r767000_the_script_kept_for_v0_6_9h_counts_set_cloaked_deaths_toward_stage_2() {
-        crate::under_kept(ID, script_v0_6_9h(), || {
+    fn r767000_the_script_kept_for_v0_6_9i_counts_set_cloaked_deaths_toward_stage_2() {
+        crate::under_kept(ID, script_v0_6_9i(), || {
             let s = set_and_jam("heist-stage-2");
             assert_eq!(stage(&s), Some(VAULTS));
         });

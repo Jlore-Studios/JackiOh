@@ -7,8 +7,8 @@
 //! BASE: a `destroyed` of a Unit of yours, read by what the card was on the field as it died (R4423000,
 //! `is_unit_death`; R4395000: a Field Spell, Trap or Field Trap of yours is none, alone or beside Units, unless
 //! it died standing as a Unit, Animated, R4395001; a Unit standing in the backrow is one, R1081000; a Unit set
-//! face-down by its Cloaked and destroyed before it reveals died as a Field Trap, none; `script_v0_6_9h` keeps
-//! v0.6.9g's and v0.6.9h's read, the definition's type unless the action's own `destroyed` says Animated,
+//! face-down by its Cloaked and destroyed before it reveals died as a Field Trap, none; `script_v0_6_9i` keeps
+//! v0.6.9g's to v0.6.9i's read, the definition's type unless the action's own `destroyed` says Animated,
 //! R767000). R99: the condition is its `when`, so an enemy's death leaves it
 //! set. One firing reads the whole §4.5 step 1 pass it stands in and takes every Unit of yours (the
 //! event's `controller`, R172). A token is gone by then (R11), a Reborn unit is back; the cards still in
@@ -50,7 +50,7 @@ fn pass_of(ctx: &EffectContext<'_>, answered: &GameEvent, answered_id: &str) -> 
 }
 
 /// R4423000: a `destroyed` event whose card died as a Unit (`is_unit_death`). `by_print` is the read of
-/// v0.6.9h and before (R767000): R4395000, by its definition's type on the face it died on, or, R4395001, an
+/// v0.6.9i and before (R767000): R4395000, by its definition's type on the face it died on, or, R4395001, an
 /// Animated Field Spell or Trap that died standing in a unit zone. The trigger loop holds the event without
 /// its `animated`, so that is read off the action's own `destroyed` of the same card.
 fn is_unit(ctx: &EffectContext<'_>, died: &GameEvent, by_print: bool) -> bool {
@@ -165,10 +165,10 @@ pub fn script_v0_6_9f() -> CardScripts {
     scripts(true, false, true)
 }
 
-/// R4423000: v0.6.9h and the versions before it back to v0.6.9g read a death by the definition's type unless
+/// R4423000: v0.6.9i and the versions before it back to v0.6.9g read a death by the definition's type unless
 /// the action's own `destroyed` said Animated, so a Unit set face-down by its Cloaked and destroyed before it
 /// reveals answered it; `KEPT_SCRIPTS` folds those replays under it (R767000).
-pub fn script_v0_6_9h() -> CardScripts {
+pub fn script_v0_6_9i() -> CardScripts {
     scripts(true, true, true)
 }
 
@@ -767,10 +767,10 @@ mod tests {
         assert!(s.pile(P1, "graveyard").iter().any(|card| card.id == set));
     }
 
-    /// R767000: v0.6.9h's script read the set card by its definition's type, a Unit, and handed it back.
+    /// R767000: v0.6.9i's script read the set card by its definition's type, a Unit, and handed it back.
     #[test]
-    fn r767000_the_script_kept_for_v0_6_9h_answers_a_set_cloaked_unit_s_death() {
-        crate::under_kept(SHADOWSTEP, script_v0_6_9h(), || {
+    fn r767000_the_script_kept_for_v0_6_9i_answers_a_set_cloaked_unit_s_death() {
+        crate::under_kept(SHADOWSTEP, script_v0_6_9i(), || {
             let (s, set) = cloaked_jammed();
             assert_eq!(s.count(GameEventType::TrapFired), 1);
             let back = s.hand(P1).into_iter().find(|card| card.id == set).expect("the Toe Cracker in hand");

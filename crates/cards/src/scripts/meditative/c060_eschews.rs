@@ -10,8 +10,8 @@
 //! since entry (R78 resets it); `tribute_when` Tributes it at the next state check once the count
 //! reaches `{deaths}` (C #88, R403). R4423000: a Unit's death is read by what the card was on the field as
 //! it died (`is_unit_death`), so a Unit set face-down by its Cloaked and destroyed before it reveals is not
-//! counted and an Animated Field Spell or Trap killed in a unit zone is; `script_v0_6_9h` keeps the face's
-//! printed type for v0.6.9h and before (R767000).
+//! counted and an Animated Field Spell or Trap killed in a unit zone is; `script_v0_6_9i` keeps the face's
+//! printed type for v0.6.9i and before (R767000).
 
 use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random};
 use jackioh_engine::prelude::*;
@@ -43,7 +43,7 @@ fn preview() -> PreviewHook {
     })
 }
 
-/// `by_print` reads a death by the dead card's printed face, as v0.6.9h and before did (R767000).
+/// `by_print` reads a death by the dead card's printed face, as v0.6.9i and before did (R767000).
 fn eschews(radiant: bool, by_print: bool) -> Script {
     Script {
         end_of_turn: Some(hook(move |ctx| {
@@ -101,9 +101,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: a Unit's death read by the dead card's printed face (R4423000), through v0.6.9h;
+/// R767000: a Unit's death read by the dead card's printed face (R4423000), through v0.6.9i;
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9h() -> CardScripts {
+pub fn script_v0_6_9i() -> CardScripts {
     CardScripts {
         base: eschews(false, true),
         radiant: eschews(true, true),
@@ -328,10 +328,10 @@ mod tests {
             assert_eq!(counted(&s), 1);
         }
 
-        /// R767000: v0.6.9h and before counted the set card's death, by the printed face's type.
+        /// R767000: v0.6.9i and before counted the set card's death, by the printed face's type.
         #[test]
-        fn r767000_the_script_kept_for_v0_6_9h_counts_a_set_cloaked_unit_s_death() {
-            crate::under_kept(ID, script_v0_6_9h(), || {
+        fn r767000_the_script_kept_for_v0_6_9i_counts_a_set_cloaked_unit_s_death() {
+            crate::under_kept(ID, script_v0_6_9i(), || {
                 let (s, _) = jammed();
                 assert_eq!(counted(&s), 1);
             });

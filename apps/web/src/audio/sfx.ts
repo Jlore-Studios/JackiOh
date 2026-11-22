@@ -9,7 +9,9 @@ import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP, IMPACT_HEADROOM } from "./constant
 import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";
 import { isAnomalyCode, type AnomalyCode } from "../cards/anomalies.ts";
 import { damageTier, PLAY_IMPACT_TIERS, SLAM_PITCH_SPREAD, UNIT_SLAM } from "../game/damageFeel.ts";
-import { createRng } from "../fx/rng.ts";
+import { noiseBuffer } from "./noise.ts";
+
+export { noiseBuffer };
 
 export const SFX_IDS: readonly SfxId[] = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
@@ -56,24 +58,6 @@ export const SFX_TIMBRES: readonly SfxTimbre[] = [
 /** Schedules one sound starting at `at` (context seconds) into `out`; returns its length in seconds. */
 export type SfxRecipe = (ctx: BaseAudioContext, out: AudioNode, at: number, params: SfxParams) => number;
 export type SfxSpec = { recipe: SfxRecipe; /** upper bound over all params */ durationMs: number; gain: number };
-
-// Noise
-
-const NOISE_SEED = 0x4a41434b; // "JACK"
-const noiseCache = new WeakMap<BaseAudioContext, AudioBuffer>();
-
-/** 1 s of mono white noise, cached per context (WeakMap), filled from a fixed-seed mulberry32 so every run is identical. */
-export function noiseBuffer(ctx: BaseAudioContext): AudioBuffer {
-  const cached = noiseCache.get(ctx);
-  if (cached !== undefined) return cached;
-  const length = Math.round(ctx.sampleRate);
-  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-  const random = createRng(NOISE_SEED);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < length; i += 1) data[i] = random() * 2 - 1;
-  noiseCache.set(ctx, buffer);
-  return buffer;
-}
 
 // The bit-crushed wavetable (the AI family, R506)
 

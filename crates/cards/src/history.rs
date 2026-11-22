@@ -1190,31 +1190,31 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     // #4423 (R4423000): the last scripts before a death counted as a Unit's by what the card was as it died.
     (
         c089_corpse_eater::ID,
-        "v0.6.9h",
-        c089_corpse_eater::script_v0_6_9h,
+        "v0.6.9i",
+        c089_corpse_eater::script_v0_6_9i,
     ),
     (
         c056_legacy_corpse_eater::ID,
-        "v0.6.9h",
-        c056_legacy_corpse_eater::script_v0_6_9h,
+        "v0.6.9i",
+        c056_legacy_corpse_eater::script_v0_6_9i,
     ),
     (
         c035_corpse_recycler::ID,
-        "v0.6.9h",
-        c035_corpse_recycler::script_v0_6_9h,
+        "v0.6.9i",
+        c035_corpse_recycler::script_v0_6_9i,
     ),
     (
         c093_recessive_replicators::ID,
-        "v0.6.9h",
-        c093_recessive_replicators::script_v0_6_9h,
+        "v0.6.9i",
+        c093_recessive_replicators::script_v0_6_9i,
     ),
-    (c060_eschews::ID, "v0.6.9h", c060_eschews::script_v0_6_9h),
+    (c060_eschews::ID, "v0.6.9i", c060_eschews::script_v0_6_9i),
     (
         c007_the_greatest_heist::ID,
-        "v0.6.9h",
-        c007_the_greatest_heist::script_v0_6_9h,
+        "v0.6.9i",
+        c007_the_greatest_heist::script_v0_6_9i,
     ),
-    (c014_shadowstep::ID, "v0.6.9h", c014_shadowstep::script_v0_6_9h),
+    (c014_shadowstep::ID, "v0.6.9i", c014_shadowstep::script_v0_6_9i),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -1855,10 +1855,11 @@ mod tests {
         );
     }
 
-    /// Issue #4423: v0.6.9h was the newest shipped version as it was built. Shadowstep's row before it is
-    /// v0.6.9f's (#4395), so it ran the kept script from v0.6.9g.
+    /// Issue #4423: v0.6.9h, then v0.6.9i, shipped while it was built, so its rows are keyed at v0.6.9i, the
+    /// newest version that ran the scripts they keep. Shadowstep's row before it is v0.6.9f's (#4395), so it
+    /// ran the kept script from v0.6.9g.
     #[test]
-    fn r767000_issue_4423_scripts_are_kept_through_v0_6_9h_the_newest_version_that_ran_them() {
+    fn r767000_issue_4423_scripts_are_kept_through_v0_6_9i_the_newest_version_that_ran_them() {
         assert_kept_through(
             &[
                 c089_corpse_eater::ID,
@@ -1868,10 +1869,14 @@ mod tests {
                 c060_eschews::ID,
                 c007_the_greatest_heist::ID,
             ],
-            &["v0.6.9d", "v0.6.9e", "v0.6.9f", "v0.6.9g", "v0.6.9h"],
-            "v0.6.9i",
+            &["v0.6.9d", "v0.6.9e", "v0.6.9f", "v0.6.9g", "v0.6.9h", "v0.6.9i"],
+            "v0.6.9j",
         );
-        assert_kept_through(&[c014_shadowstep::ID], &["v0.6.9g", "v0.6.9h"], "v0.6.9i");
+        assert_kept_through(
+            &[c014_shadowstep::ID],
+            &["v0.6.9g", "v0.6.9h", "v0.6.9i"],
+            "v0.6.9j",
+        );
     }
 
     /// Issue #4086: each block below was once keyed at a version older than the newest shipped as it

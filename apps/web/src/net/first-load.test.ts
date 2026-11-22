@@ -66,8 +66,15 @@ const SOURCE = join(SRC, "patches/source.ts");
  * chunk beside the engine module rather than with the entry chunk. `vite build --mode development`,
  * as CI builds it, measured 445,874 bytes (27,664 less). The budget is now 56 × 8192 (458,752),
  * about 13 KB (2.9%) over that: putting the sidecar back would cross it.
+ *
+ * #4428 lowered it, and merged after #4435: the sound-effect recipes ride their own lazy chunk beside
+ * the module rather than with the entry chunk. Its own build, which lacked #4435's change, measured
+ * 447,192 bytes (26,346 less than #4222's 473,538); #4435's own build, which lacked this one, measured
+ * 445,874. With both merged, `vite build --mode development`, as CI builds it, measured 420,381 bytes
+ * on `main` at 59c8529162: 25,493 less than #4435's 445,874. The budget is now 53 × 8192 (434,176),
+ * about 13 KB (3.3%) over that: putting the recipes, the sidecar or the scene data back would cross it.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 458_752;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 434_176;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -133,6 +140,30 @@ it("#4130 no non-test module imports sound tables or raw sound data files static
 
 it("#4130 importing engine.ts and the landing does not run parseCardAudioText", () => {
   expect(soundTablesNow()).toBeNull();
+});
+
+it("#4428 no non-test module statically imports sfx.ts", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const staticFrom = /from\s+["']([^"']+)["']/gu;
+  const importsSfx = (specifier: string): boolean => (specifier.split("/").pop() ?? "") === "sfx.ts";
+  const offenders = files.filter((path) => {
+    const rel = relative(SRC, path);
+    // The sound tables' lazy chunk reads the recipes' ids and timbres (#4428): it is itself reached
+    // only through a dynamic import, never the entry chunk.
+    if (rel === "audio/soundTables.ts") return false;
+    // `import type` lines emit no bytes: only a value import joins the chunk.
+    const text = readFileSync(path, "utf8")
+      .split("\n")
+      .filter((line) => !/^\s*import\s+type\b/.test(line))
+      .join("\n");
+    return [...text.matchAll(staticFrom)].some((match) => importsSfx(match[1] ?? ""));
+  });
+  expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
+  // The one module allowed to pull the recipes in, dynamically, is their loader.
+  const dynamicSfx = /import\(\s*["'][^"']*sfx\.ts["']\s*\)/u;
+  const holders = files.filter((path) => dynamicSfx.test(readFileSync(path, "utf8")));
+  expect(holders.map((path) => relative(SRC, path))).toEqual(["audio/sfxLoader.ts"]);
 });
 
 it("#4435 no non-test module names flavour.json except cards/flavour.ts, which never imports it statically", () => {
@@ -277,6 +308,21 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     // figure pose, and a figure item each a recipe places.
     const sceneProbes = ["bone-scarecrow", "pose-genuflect", "item-trunk-club"];
     for (const probe of sceneProbes) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4428 the entry chunk and its preloads hold no sfx recipes", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    // Each probe is a runtime string, so minification keeps it, and each is absent from the entry
+    // once the recipes leave it: a dotted run of recipe ids out of the id switch the bundler
+    // compiles (never dotted in `src`, and never dotted in the entry's cue map), and two
+    // oscillator/filter words the entry's own audio code never uses (`crowd.ts` reads them too, but
+    // only through the lazy `noise.ts` leaf). The issue's suggested `CENTS_PER_OCTAVE` and
+    // `CRUSH_CYCLE` cannot serve: the minifier renames them away, so they are absent from every
+    // built asset and would pass vacuously.
+    const sfxProbes = ["trapSet.trapSting.spell.mana", "sawtooth", "bandpass"];
+    for (const probe of sfxProbes) {
       for (const text of texts) expect(text).not.toContain(probe);
     }
   });

@@ -7,7 +7,7 @@
 //! the card's own trigger evolving itself, R3536001). A Unit set face-down by its Cloaked and destroyed before
 //! it reveals died as a Field Trap and evolves nothing; an Animated Field Spell or Trap killed in a unit zone
 //! died as a Unit and evolves it, and is resummoned as its printed card, which a summon places in the backrow.
-//! `script_v0_6_9h` keeps the definition's type for v0.6.9h and before (R767000).
+//! `script_v0_6_9i` keeps the definition's type for v0.6.9i and before (R767000).
 //! One that is already evolved, or that dies in the same pass as the Unit, remembers nothing more. Its Evolve
 //! text gains one Death each run (`gainedDeaths`, a list in its memory): under High Evolutionary's Aura it
 //! gains two or three, and the Death, read as it dies (R78), resummons a fresh copy of that Unit for each
@@ -63,7 +63,7 @@ fn preview() -> PreviewHook {
     })
 }
 
-/// `by_print` reads a death by the dead card's definition, as v0.6.9h and before did (R767000).
+/// `by_print` reads a death by the dead card's definition, as v0.6.9i and before did (R767000).
 fn replicators(radiant: bool, by_print: bool) -> Script {
     Script {
         triggers: vec![TriggerDef::new(
@@ -134,9 +134,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: a Unit's death read by the dead card's definition (R4423000), through v0.6.9h; `KEPT_SCRIPTS`
+/// R767000: a Unit's death read by the dead card's definition (R4423000), through v0.6.9i; `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_9h() -> CardScripts {
+pub fn script_v0_6_9i() -> CardScripts {
     CardScripts {
         base: replicators(false, true),
         radiant: replicators(true, true),
@@ -404,10 +404,10 @@ mod tests {
             assert!(back.is_some_and(|card| card.id != catnip), "a fresh Catnip in p1's backrow");
         }
 
-        /// R767000: v0.6.9h and before evolved it on the set card's death, by the definition's type.
+        /// R767000: v0.6.9i and before evolved it on the set card's death, by the definition's type.
         #[test]
-        fn r767000_the_script_kept_for_v0_6_9h_counts_a_set_cloaked_unit_s_death() {
-            crate::under_kept(ID, super::super::script_v0_6_9h(), || {
+        fn r767000_the_script_kept_for_v0_6_9i_counts_a_set_cloaked_unit_s_death() {
+            crate::under_kept(ID, super::super::script_v0_6_9i(), || {
                 let (s, replicators, _) = jammed();
                 assert_eq!(s.card(replicators.as_str()).evolved, Some(true));
             });
