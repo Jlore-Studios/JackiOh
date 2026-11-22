@@ -460,6 +460,7 @@ mod surface_sweep_cards_clock {
                 tier: None,
                 banned: None,
                 setup: None,
+                face: None,
             },
         );
         let result = js(&result);

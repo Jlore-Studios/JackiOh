@@ -493,7 +493,9 @@ the same way, and the skill-to-Elo curve is measured with the arena.
 the config's other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps
 (R433, R417, R564, R678, R2702000), and `MatchConfig::fold_args` folds a record with all of them
 (#1697). Unset, a game is created, played and folded exactly as before. No gate sets it;
-`SweepOptions.setup` opts a sweep in, the same inputs in seat order in every game. `cargo jackioh
+`SweepOptions.setup` opts a sweep in, the same inputs in seat order in every game. `SweepOptions.face`
+(`SweepFace`, base when absent) picks the face the forced card is dealt on: the Radiant one adds a `deckMarks`
+entry for it on the AI's seat (R2702000), and `cargo jackioh sweep` plays both (#4466). `cargo jackioh
 run-sim` sets `deckMarks` for a dungeon run's fight (#3065).
 
 ## Development runs for the card statistics (R378)
