@@ -82,9 +82,9 @@ pub fn script() -> CardScripts {
     scripts(true)
 }
 
-/// v0.6.9i and before: the base Cry drew among every enemy permanent, across a slash too
+/// v0.6.9j and before: the base Cry drew among every enemy permanent, across a slash too
 /// (R3554003); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9i() -> CardScripts {
+pub fn script_v0_6_9j() -> CardScripts {
     scripts(false)
 }
 

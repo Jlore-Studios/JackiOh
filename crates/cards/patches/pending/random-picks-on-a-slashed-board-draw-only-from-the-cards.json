@@ -1,7 +1,7 @@
 {
   "title": "Random picks on a slashed board draw only from the cards they reach",
   "sources": "#4469",
-  "notes": "R3554003: MC Tech's base Cry, Arcane Missiles, Snom Bunny's Death, Casper's Activate and Siva 1's Cry draw their random pick only among the cards they reach on a slashed board; their v0.6.9i scripts are kept for replays (R767000).",
+  "notes": "R3554003: MC Tech's base Cry, Arcane Missiles, Snom Bunny's Death, Casper's Activate and Siva 1's Cry draw their random pick only among the cards they reach on a slashed board; their v0.6.9j scripts are kept for replays (R767000).",
   "player": {
     "title": "Random picks respect the slash",
     "new": [],

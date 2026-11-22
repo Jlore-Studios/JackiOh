@@ -1186,15 +1186,15 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c134_felinor_containment_chamber::script_v0_6_9e,
     ),
     // #4469 (R3554003): the last scripts that drew a random pick among cards across a slash.
-    (c040_mc_tech::ID, "v0.6.9i", c040_mc_tech::script_v0_6_9i),
+    (c040_mc_tech::ID, "v0.6.9j", c040_mc_tech::script_v0_6_9j),
     (
         c011_2_arcane_missiles::ID,
-        "v0.6.9i",
-        c011_2_arcane_missiles::script_v0_6_9i,
+        "v0.6.9j",
+        c011_2_arcane_missiles::script_v0_6_9j,
     ),
-    (c025_snom_bunny::ID, "v0.6.9i", c025_snom_bunny::script_v0_6_9i),
-    (c018_3_casper::ID, "v0.6.9i", c018_3_casper::script_v0_6_9i),
-    (c087_siva_1::ID, "v0.6.9i", c087_siva_1::script_v0_6_9i),
+    (c025_snom_bunny::ID, "v0.6.9j", c025_snom_bunny::script_v0_6_9j),
+    (c018_3_casper::ID, "v0.6.9j", c018_3_casper::script_v0_6_9j),
+    (c087_siva_1::ID, "v0.6.9j", c087_siva_1::script_v0_6_9j),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -1835,10 +1835,10 @@ mod tests {
         );
     }
 
-    /// Issue #4469: v0.6.9i was the newest shipped version as it was built, and no later one has shipped,
+    /// Issue #4469: v0.6.9j was the newest shipped version as it was built, and no later one had shipped,
     /// so `assert_kept_through` (which needs one) cannot hold these.
     #[test]
-    fn r767000_issue_4469_scripts_are_kept_through_v0_6_9i_the_newest_version_that_ran_them() {
+    fn r767000_issue_4469_scripts_are_kept_through_v0_6_9j_the_newest_version_that_ran_them() {
         crate::register_all();
         for id in [
             c040_mc_tech::ID,
@@ -1847,13 +1847,13 @@ mod tests {
             c018_3_casper::ID,
             c087_siva_1::ID,
         ] {
-            for version in ["v0.6.9", "v0.6.9h", "v0.6.9i"] {
+            for version in ["v0.6.9", "v0.6.9h", "v0.6.9i", "v0.6.9j"] {
                 let kept =
                     covering_at(&HISTORY.order, KEPT_SCRIPTS, version, id).map(|at| KEPT_SCRIPTS[at].1);
                 assert_eq!(
                     kept,
-                    Some("v0.6.9i"),
-                    "{id} on {version} runs the script kept at v0.6.9i"
+                    Some("v0.6.9j"),
+                    "{id} on {version} runs the script kept at v0.6.9j"
                 );
             }
         }

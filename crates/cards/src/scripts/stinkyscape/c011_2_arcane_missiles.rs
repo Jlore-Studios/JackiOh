@@ -48,9 +48,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// v0.6.9i and before: each missile drew among every enemy Unit, across a slash too (R3554003);
+/// v0.6.9j and before: each missile drew among every enemy Unit, across a slash too (R3554003);
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9i() -> CardScripts {
+pub fn script_v0_6_9j() -> CardScripts {
     CardScripts {
         base: arcane_missiles(2, false),
         radiant: arcane_missiles(5, false),
