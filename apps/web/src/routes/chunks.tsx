@@ -1,8 +1,4 @@
 // #2116, R2116000: every lazy screen's `import()` in one map, so a prefetch and the route make one request.
-// `Screen` exists because a plain `lazy()` shows the fallback even over a resolved import. Only code is
-// fetched, never game state (CLAUDE.md rule 7).
-
-import { lazy, useState, type ComponentType, type ReactElement } from "react";
 
 import { dailyIdOf, duosIdOf, lobbyCodeOf, matchIdOf, paths, seriesIdOf, stripTrailingSlashes, watchIdOf } from "../net/navigate.ts";
 import type { DecksRouteProps } from "./decks.tsx";
@@ -10,42 +6,12 @@ import type { InviteRouteProps } from "./invite.tsx";
 import { loadSoundTables } from "../audio/soundTablesLoader.ts";
 import { loadSceneData } from "../cards/art/sceneLoader.ts";
 import { savingData } from "../net/saveData.ts";
+import { routeChunk } from "./routeChunk.tsx";
+
+export type { RouteChunk } from "./routeChunk.tsx";
+export { routeChunk };
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
-
-type ScreenModule<P> = { default: ComponentType<P> };
-
-export type RouteChunk<P extends object> = {
-  /** One import, shared; a failed one is forgotten, so the next call asks again. */
-  load: () => Promise<ScreenModule<P>>;
-  /** Drawn at once when its code is in, else through `lazy()`. */
-  Screen: (props: P) => ReactElement;
-};
-
-export function routeChunk<P extends object>(importScreen: () => Promise<ScreenModule<P>>): RouteChunk<P> {
-  let pending: Promise<ScreenModule<P>> | null = null;
-  let arrived: ComponentType<P> | null = null;
-  const load = (): Promise<ScreenModule<P>> => {
-    pending ??= importScreen().then(
-      (module) => {
-        arrived = module.default;
-        return module;
-      },
-      (cause: unknown) => {
-        pending = null;
-        throw cause;
-      },
-    );
-    return pending;
-  };
-  const Lazy = lazy(load);
-  function Screen(props: P): ReactElement {
-    // Chosen once per mount: a screen that swapped from `Lazy` to its module mid-life would remount.
-    const [Shown] = useState<ComponentType<P>>(() => arrived ?? Lazy);
-    return <Shown {...props} />;
-  }
-  return { load, Screen };
-}
 
 export const routeChunks = {
   // Behind DEV_ONLY, the bundler leaves the hotseat chunk (and its developer text) out of production.

@@ -4,7 +4,7 @@
 // (CLAUDE.md rule 7). This module never value-imports a panel file, so the entry keeps only
 // the button, its badge and its polling.
 
-import { routeChunk } from "../routes/chunks.tsx";
+import { routeChunk } from "../routes/routeChunk.tsx";
 import { readSession } from "../net/session.ts";
 import { savingData } from "../net/saveData.ts";
 import type { FriendsDrawerProps } from "./FriendsDrawer.tsx";
