@@ -220,6 +220,52 @@ describe("R1384000 earlier pages", () => {
       FIRST,
     ]);
   });
+
+  it("#4444 a failed earlier-page read arms no scroll restore for the next read", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    serve(conversation(), (call) => {
+      if (call.method !== "GET" || call.path !== `/api/chat/${ANN.profileId}`) return undefined;
+      switch (call.query.get("before")) {
+        case null:
+          return { status: 200, body: { messages: conversation(), nextCursor: FIRST } };
+        default:
+          return refusal(503, "unavailable", "Try again later.");
+      }
+    });
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(shown()).toHaveLength(2);
+    }, SLOW);
+
+    // jsdom has no layout, so stand in fixed geometry: the list is 1000 high
+    // with its top 400 down, and every scrollTop write is recorded.
+    const list = must(document.querySelector("ol.chat-panel__messages"), "the message list");
+    Object.defineProperty(list, "scrollHeight", { value: 1000, configurable: true });
+    let top = 400;
+    const writes: number[] = [];
+    Object.defineProperty(list, "scrollTop", {
+      get: () => top,
+      set: (value: number) => {
+        writes.push(value);
+        top = value;
+      },
+      configurable: true,
+    });
+
+    fireEvent.scroll(list, { target: { scrollTop: 0 } });
+    await screen.findByTestId("chat-error", undefined, SLOW);
+    await waitFor(() => {
+      expect(screen.getByTestId("chat-earlier")).toBeEnabled();
+    }, SLOW);
+
+    // The failed read settled: the next poll re-reads the same newest page,
+    // whose newest id is unchanged, so neither the bottom scroll nor a stale
+    // restore may move the list.
+    writes.length = 0;
+    await settle({ advance: CHAT_POLL_MS + 1 });
+    expect(shown()).toHaveLength(2);
+    expect(writes).toEqual([]);
+  });
 });
 
 describe("B58 the conversation", () => {

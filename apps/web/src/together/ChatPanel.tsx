@@ -195,6 +195,9 @@ export function ChatPanel({
           setEarlier(page.nextCursor);
         },
         (cause: unknown) => {
+          // The earlier page never arrived, so no restore is owed: a later
+          // read must not apply this attempt's gap as a scroll jump.
+          anchor.current = null;
           setError(messageOf(cause));
         },
       )
