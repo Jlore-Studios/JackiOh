@@ -111,8 +111,8 @@ pub fn hashed_state_text(state: &GameState) -> String {
 
 /// The canonical text of both seats' views, p1 first, without a Created card's `createdBy`
 /// (R1956001), a prompt's asking card (`sourceDefId`, `sourceRadiant`, R2646000), the `hookResolving`
-/// markers (R2783000) and the `armorGained` reports (R3857000), an event's `via` (R2783001), the
-/// other seat's count of a card picker's options (`optionCount`, R2739000), the card an ability is
+/// markers (R2783000) and the `armorGained` reports (R3857000), an event's `via` (R2783001), a
+/// `destroyed`'s `animated` (R4395001), the other seat's count of a card picker's options (`optionCount`, R2739000), the card an ability is
 /// printed on (`printedOn`, R3291000), the zones of
 /// the viewer's hidden targets (`hiddenTargets`, R3777001, read off `legal_actions`, which `legal_text`
 /// records) or a unit's switch refusal (`switchReason`, R3821000, read off the state `legal_actions`
@@ -129,6 +129,7 @@ pub fn view_texts(state: &GameState) -> [String; 2] {
         strip_key(&mut value, "sourceDefId");
         strip_key(&mut value, "sourceRadiant");
         strip_key(&mut value, "via");
+        strip_destroyed_animated(&mut value);
         strip_key(&mut value, "optionCount");
         strip_key(&mut value, "printedOn");
         strip_key(&mut value, "hiddenTargets");
@@ -141,6 +142,27 @@ pub fn view_texts(state: &GameState) -> [String; 2] {
 /// marker or an `armorGained` report.
 fn is_marker(event: &Value) -> bool {
     matches!(event["type"].as_str(), Some("hookResolving" | "armorGained"))
+}
+
+/// R4395001: `value` with the `animated` of every `destroyed` event in it taken out, at any depth
+/// (a card view's own `animated` stays).
+fn strip_destroyed_animated(value: &mut Value) {
+    match value {
+        Value::Object(object) => {
+            if object.get("type").and_then(Value::as_str) == Some("destroyed") {
+                object.remove("animated");
+            }
+            for child in object.values_mut() {
+                strip_destroyed_animated(child);
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                strip_destroyed_animated(item);
+            }
+        }
+        _ => {}
+    }
 }
 
 /// `value` with `key` taken out of every object in it, at any depth.
@@ -165,7 +187,7 @@ fn strip_key(value: &mut Value, key: &str) {
 /// a `transformed` names (R2089000): the game record's bookkeeping, which no rule reads and no view
 /// forwards, as `view_texts` leaves out `createdBy`, so a trace recorded before it replays as it did.
 /// Nor the `hookResolving` markers (R2783000) and the `armorGained` reports (R3857000) or an event's
-/// `via` (R2783001), which are presentation only, so a trace recorded on this build replays on the
+/// `via` (R2783001) and a `destroyed`'s `animated` (R4395001), which are presentation only, so a trace recorded on this build replays on the
 /// build before it too (R1956001's way).
 pub fn events_text(events: &[GameEvent]) -> String {
     let mut value = serde_json::to_value(events).expect("GameEvents serialize");
@@ -175,6 +197,7 @@ pub fn events_text(events: &[GameEvent]) -> String {
             if let Value::Object(event) = item {
                 event.remove("creator");
                 event.remove("via");
+                strip_destroyed_animated(item);
             }
         }
     }

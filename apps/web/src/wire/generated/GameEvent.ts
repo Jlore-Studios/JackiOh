@@ -136,6 +136,13 @@ controller: PlayerId, attack: number, maxHealth: number, killerId: string | null
  */
 radiant?: true, 
 /**
+ * R4395001: set when a Field Spell, Trap or Field Trap died standing in a unit zone, as a Unit
+ * (Animated, R383), which its definition alone does not tell. Only ever `Some(true)`; left out
+ * of the events the trigger loop holds (`as_rules_read`), so a script reads it off the action's
+ * own `events`.
+ */
+animated?: true, 
+/**
  * R2783001: the keyword behind this event — Poisonous when a Poisonous hit marked the unit, else
  * First Strike when it fell to the strike §4.3 moved ahead and so struck nothing back — for the
  * client's cue; the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5). No

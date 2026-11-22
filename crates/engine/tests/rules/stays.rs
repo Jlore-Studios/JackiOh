@@ -30,6 +30,7 @@ fn destroyed(id: &str) -> GameEvent {
         max_health: 1,
         killer_id: None,
         radiant: None,
+        animated: None,
         via: None,
     }
 }
