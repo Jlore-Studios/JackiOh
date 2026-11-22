@@ -1,0 +1,270 @@
+{
+  "seed": 2096,
+  "catalogVersion": "v0.6.9f",
+  "decks": [
+    [
+      "meditative-063",
+      "stinkyscapeplus-090",
+      "meditative-042",
+      "classic-083",
+      "classic-051",
+      "stinkyscape-118",
+      "stinkyscapeplus-052",
+      "stinkyscapeplus-130",
+      "meditative-013",
+      "classic-004",
+      "meditativeplus-023",
+      "stinkyscapeplus-002",
+      "classic-028",
+      "stinkyscapeplus-072",
+      "meditativeplus-011",
+      "stinkyscapeplus-124",
+      "classic-040",
+      "stinkyscape-062",
+      "classic-005",
+      "classic-070",
+      "classicplus-063",
+      "core-065",
+      "stinkyscape-043",
+      "stinkyscape-126",
+      "classic-044",
+      "core-062",
+      "core-090",
+      "traininggrounds-052",
+      "stinkyscape-004",
+      "classic-081",
+      "stinkyscapeplus-159",
+      "stinkyscape-034",
+      "traininggrounds-024",
+      "classicplus-066",
+      "core-043",
+      "stinkyscapeplus-038",
+      "stinkyscape-051",
+      "stinkyscapeplus-047",
+      "classicplus-068",
+      "classic-006",
+      "classic-025",
+      "stinkyscapeplus-082",
+      "classicplus-010"
+    ],
+    [
+      "traininggrounds-012",
+      "classicplus-055",
+      "stinkyscapeplus-160",
+      "classicplus-030",
+      "stinkyscape-073",
+      "stinkyscape-079",
+      "stinkyscape-005",
+      "stinkyscapeplus-029",
+      "core-013",
+      "meditative-072",
+      "stinkyscape-083",
+      "stinkyscape-149",
+      "stinkyscapeplus-157",
+      "meditative-004",
+      "stinkyscapeplus-059",
+      "stinkyscape-136",
+      "stinkyscape-143",
+      "classicplus-069",
+      "stinkyscape-166",
+      "traininggrounds-003",
+      "stinkyscape-104",
+      "meditative-050",
+      "stinkyscapeplus-035",
+      "stinkyscapeplus-094",
+      "classic-033",
+      "classic-055",
+      "core-030",
+      "classicplus-061",
+      "meditative-057",
+      "stinkyscape-106",
+      "core-041",
+      "meditative-046",
+      "stinkyscapeplus-042",
+      "classicplus-023",
+      "core-019",
+      "core-091",
+      "meditative-094",
+      "meditativeplus-001",
+      "stinkyscape-045",
+      "traininggrounds-032",
+      "meditative-093",
+      "meditative-085",
+      "stinkyscapeplus-096",
+      "classicplus-045",
+      "traininggrounds-055",
+      "classicplus-031",
+      "classic-034",
+      "core-008"
+    ]
+  ],
+  "start": "run",
+  "handicaps": {
+    "p1": {
+      "deckSize": 43,
+      "extraDrawsPerTurn": 0,
+      "extraOpeningCards": 1,
+      "heroArmor": 1,
+      "heroHealth": 39,
+      "manaBonus": 1,
+      "manaCap": 5
+    },
+    "p2": {
+      "deckSize": 48,
+      "extraDrawsPerTurn": 0,
+      "extraOpeningCards": 3,
+      "heroArmor": 1,
+      "heroHealth": 34,
+      "manaBonus": 2,
+      "manaCap": 6
+    }
+  },
+  "deckMarks": {
+    "p1": [
+      {
+        "index": 3,
+        "radiant": false,
+        "upgrades": 2
+      },
+      {
+        "index": 5,
+        "radiant": true,
+        "upgrades": 2
+      },
+      {
+        "index": 7,
+        "radiant": false,
+        "upgrades": 1
+      },
+      {
+        "index": 11,
+        "radiant": false,
+        "upgrades": 2
+      },
+      {
+        "index": 14,
+        "radiant": true,
+        "upgrades": 3
+      },
+      {
+        "index": 18,
+        "radiant": true,
+        "upgrades": 0
+      },
+      {
+        "index": 24,
+        "radiant": false,
+        "upgrades": 2
+      },
+      {
+        "index": 25,
+        "radiant": true,
+        "upgrades": 2
+      },
+      {
+        "index": 36,
+        "radiant": false,
+        "upgrades": 3
+      },
+      {
+        "index": 39,
+        "radiant": false,
+        "upgrades": 1
+      }
+    ],
+    "p2": [
+      {
+        "index": 3,
+        "radiant": false,
+        "upgrades": 1
+      },
+      {
+        "index": 5,
+        "radiant": false,
+        "upgrades": 3
+      },
+      {
+        "index": 15,
+        "radiant": false,
+        "upgrades": 3
+      },
+      {
+        "index": 16,
+        "radiant": false,
+        "upgrades": 3
+      },
+      {
+        "index": 22,
+        "radiant": false,
+        "upgrades": 3
+      },
+      {
+        "index": 24,
+        "radiant": true,
+        "upgrades": 3
+      },
+      {
+        "index": 26,
+        "radiant": true,
+        "upgrades": 0
+      },
+      {
+        "index": 28,
+        "radiant": false,
+        "upgrades": 1
+      },
+      {
+        "index": 29,
+        "radiant": false,
+        "upgrades": 2
+      },
+      {
+        "index": 30,
+        "radiant": false,
+        "upgrades": 1
+      },
+      {
+        "index": 31,
+        "radiant": false,
+        "upgrades": 3
+      },
+      {
+        "index": 33,
+        "radiant": true,
+        "upgrades": 2
+      },
+      {
+        "index": 34,
+        "radiant": true,
+        "upgrades": 0
+      },
+      {
+        "index": 35,
+        "radiant": true,
+        "upgrades": 0
+      },
+      {
+        "index": 38,
+        "radiant": true,
+        "upgrades": 1
+      },
+      {
+        "index": 39,
+        "radiant": true,
+        "upgrades": 3
+      },
+      {
+        "index": 42,
+        "radiant": false,
+        "upgrades": 2
+      },
+      {
+        "index": 44,
+        "radiant": false,
+        "upgrades": 2
+      }
+    ]
+  },
+  "endings": false,
+  "found": "super run 44970687127 (fuzz 1/4, the M4 gate's run wave) on branch claude/charming-bell-p8etig (main 07683ea0a1 + #4438): step 61 by stinkyscapeplus-t-the-enigmata emitted more than GROWTH_EVENTS_BOUND events in one action, its self-playing turns (R3569004) each in it; #4375 weighs an action's events a turn at a time"
+}

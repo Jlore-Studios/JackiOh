@@ -14,7 +14,7 @@
 //!   4. FAILURE DETAIL: every card id in the failing seed's two decks is named in the report, because
 //!      a bare seed number is useless against a 100-card pool.
 //!
-//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I18 hold on every applicable state or action
+//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I19 hold on every applicable state or action
 //! (stage "invariant"); I11 finds Unit tokens left in the graveyards, exile piles or held cards (R11), I12
 //! shadows chosen switches and declared attacks through each turn and stint (R49, R636), I13 holds every
 //! hand card and admitted graveyard card `legalActions` lists no play of to a `playReason` (§10.8, R979000,
@@ -31,6 +31,8 @@
 //! `damage` of 0 (R63).
 //! I18 holds each plain attack to the forecast its seat was shown (R3100000, R4111000); the summary's
 //! `forecast attacks judged:` (`--json`'s `forecastJudged`) shows a filter that judges nothing.
+//! I19 holds every card Dormant as a step begins untouched until it wakes (§6.1 Dormant, R1839000; #4454),
+//! on the played path, on I14's branches and in each Duos duel.
 //! I9 holds the wire to the state: each `turnStarted`, `turnEnded`, `gameOver` and `manaChanged` to the
 //! state it left, each `fatigue` to its seat's count, and each 1v1 hero's health to a tally kept from
 //! `damage`, `healthLost`, `healed`, `healthSet` and `swapped` alone (§10.3).
@@ -2074,8 +2076,10 @@ fn check_serial_restart_with_options(
 /// the whole live state.
 pub const CHECKPOINT_TIME_BOUND_MS: u128 = 5_000;
 
-/// The most events one action may emit. Bounds runaway growth before settle cap (§10.3),
-/// leaving margin for R58's full-library draw chain.
+/// The most events one turn of one action may emit. Bounds runaway growth before settle cap (§10.3),
+/// leaving margin for R58's full-library draw chain. An action that plays several turns, nobody asked
+/// anything between them (S+ T-the-enigmata's self-playing turns, R3569004), is weighed a turn at a
+/// time (`most_events_in_a_turn`, #4375).
 pub const GROWTH_EVENTS_BOUND: i64 = 10_000;
 
 /// The largest number any card instance may carry after one action (attack, health, cost, counter),
@@ -2272,10 +2276,22 @@ pub(crate) fn weigh(events: &[GameEvent], state: &GameState) -> [i64; 3] {
             (largest.max(largest_number(card)), count + 1)
         });
     [
-        i64::try_from(events.len()).unwrap_or(i64::MAX),
+        i64::try_from(most_events_in_a_turn(events)).unwrap_or(i64::MAX),
         largest,
         instances,
     ]
+}
+
+/// The most of one action's events that fall within one turn: the stretches between its `turnStarted`
+/// events. Runaway growth is growth inside a turn; an action that plays turn after turn with nobody
+/// asked anything (R3569004) emits each turn's events in it, and no one of those turns is runaway
+/// (#4375: seed 2096 played The Enigmata's turns past 10,000 events in one action).
+fn most_events_in_a_turn(events: &[GameEvent]) -> usize {
+    events
+        .split(|event| matches!(event, GameEvent::TurnStarted { .. }))
+        .map(<[GameEvent]>::len)
+        .max()
+        .unwrap_or(0)
 }
 
 /// The def id of the card an action is by, read in the state it was chosen in: the instance a
@@ -4864,6 +4880,34 @@ pub(crate) mod tests {
             });
             assert_eq!(largest_number(card), 33_724);
             assert_eq!(weigh(&[], &state)[1], 33_724);
+        }
+
+        #[test]
+        fn an_action_that_plays_several_turns_is_weighed_a_turn_at_a_time() {
+            // #4375, R3569004: The Enigmata's turns play themselves inside one action; each turn's
+            // events are weighed alone, and one turn past the bound still fails.
+            let ended = |turn: i32| GameEvent::TurnEnded {
+                player: PlayerId::P1,
+                turn,
+                unspent_mana: 0,
+            };
+            let started = |turn: i32| GameEvent::TurnStarted {
+                player: PlayerId::P2,
+                turn,
+                extra: None,
+            };
+            let per_turn = usize::try_from(GROWTH_EVENTS_BOUND).expect("a count");
+            let mut events: Vec<GameEvent> = Vec::new();
+            for turn in 1..=3 {
+                events.extend((0..per_turn).map(|_| ended(turn)));
+                events.push(started(turn + 1));
+            }
+            assert!(events.len() > per_turn * 3);
+            assert_eq!(most_events_in_a_turn(&events), per_turn);
+            events.push(ended(4));
+            events.extend((0..per_turn).map(|_| ended(4)));
+            assert_eq!(most_events_in_a_turn(&events), per_turn + 1);
+            assert_eq!(most_events_in_a_turn(&[]), 0);
         }
 
         #[test]

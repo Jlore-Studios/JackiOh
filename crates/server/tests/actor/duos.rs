@@ -2995,6 +2995,37 @@ mod r2881000_watching_a_coop_game {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn a_coop_game_nobody_watches_encodes_no_watcher_frame_and_a_newcomer_is_sent_the_newest_due_view()
+    {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let _a2 = h.seat(&h.guest).await;
+        h.ai_mulligans_answered(&a1).await;
+        h.keep(&a1, "a1-keep").await;
+        tokio::time::sleep(ms(SPECTATE_DELAY_MS) + DELAY_SLACK).await;
+        settle().await;
+        let actor = jackioh_server::duos::registry(&h.app)
+            .get(&h.match_id)
+            .expect("the live co-op match");
+        assert_eq!(actor.spectate_frames_encoded(), 0);
+
+        let fan = account(&h.app, 4, "Fay").await;
+        befriend(&h.app, &fan, &h.host).await;
+        let watcher = watch(&h, &fan, &h.host).await;
+        assert_admitted(&watcher);
+
+        let views = watcher.of_type("view");
+        assert_eq!(views.len(), 1, "{:?}", watcher.frames());
+        assert_eq!(views[0]["legal"], json!([]), "{}", views[0]);
+        assert!(
+            mulligan_answered(&views[0]["view"]["own"]),
+            "the newest due view: {}",
+            views[0]
+        );
+        assert_eq!(actor.spectate_frames_encoded(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn r3477000_a_duos_seats_view_frames_carry_a_forecast_and_its_watchers_none() {
         let h = duos("easy").await;
         let a1 = h.seat(&h.host).await;

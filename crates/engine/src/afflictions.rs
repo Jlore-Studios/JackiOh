@@ -264,12 +264,14 @@ pub fn tick_burn_at_turn_end(sink: &mut EngineSink<'_>, active: PlayerId) {
 }
 
 /// `player`'s hero and then each of their Units acting among the units in R68's order that carries a
-/// `kind` count, read once before a tick's first hit.
+/// `kind` count, read once before a tick's first hit. A Dormant card's count waits until it awakens, as
+/// no damage reaches it (§6.1 Dormant, R1839000, R4454004).
 fn carrying(state: &GameState, player: PlayerId, kind: Affliction) -> Vec<DamageTarget> {
     let mut targets = vec![DamageTarget::Hero { player }];
     targets.extend(
         crate::zones::acting_on(state, player, StandingAt::AmongUnits)
             .into_iter()
+            .filter(|card| !crate::slumber::is_slumbering(card))
             .filter(|card| match kind {
                 Affliction::Burn => burn_on(card) > 0,
                 Affliction::Toxic => toxic_on(card) > 0,

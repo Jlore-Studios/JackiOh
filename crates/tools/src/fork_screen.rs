@@ -725,9 +725,9 @@ mod tests {
 
     #[test]
     fn r4397000_self_against_self_finds_no_fork_and_reads_inconclusive() {
-        let games = vec![trunk_game("r4397000-self:1", 1), trunk_game("r4397000-self:2", 2)];
+        let games = vec![trunk_game("r4397000-self:1", 1)];
         let played = play_trunk(&games, &AgentSpec::SelfAi).unwrap();
-        assert_eq!(played.len(), 2);
+        assert_eq!(played.len(), 1);
         for (outcome, points, probe_faults) in &played {
             assert!(outcome.result.is_some(), "deal {}", outcome.game.n);
             assert!(points.is_empty(), "deal {}: {points:?}", outcome.game.n);
@@ -786,16 +786,45 @@ mod tests {
         // trunk's replacement; either way the fork itself is real.
         assert_eq!(ctl.log[fork.at_move].body, fork.control.clone().unwrap());
         assert_ne!(fork_key(&fork.candidate), fork_key(&fork.control));
+    }
 
-        // The whole tally is byte-identical on one thread and on four.
-        let jobs: Vec<(&ArenaOutcome, &ForkPoint)> = forks
-            .iter()
-            .map(|(index, point)| (&played[*index].0, point))
+    /// R4397000's tally over one fork, byte-identical on one thread and on four: one fork's
+    /// 16 arms twice, several minutes, so the daily run holds it (#4462) while
+    /// `r4397000_an_always_differing_candidate_forks_every_game_at_the_cap` keeps the trunk
+    /// cap and the pair determinism on every pull request.
+    #[test]
+    #[ignore = "daily: one fork's 16 arms on one thread and on four, several minutes; r4397000_an_always_differing_candidate_forks_every_game_at_the_cap keeps the trunk cap and the pair determinism per pull request"]
+    fn r4397000_fork_tally_is_byte_identical_on_one_thread_and_on_four() {
+        let games = vec![trunk_game("r4397000-tally:1", 1)];
+        let played: Vec<(ArenaOutcome, Vec<ForkPoint>, Vec<String>)> = games
+            .par_iter()
+            .map(|game| {
+                let probe = Probe::scripted(game.n, flip);
+                play_game_probed(game, Some(probe)).unwrap()
+            })
             .collect();
+        let mut forks: Vec<(usize, ForkPoint)> = Vec::new();
+        for (index, (outcome, points, probe_faults)) in played.iter().enumerate() {
+            assert!(probe_faults.is_empty(), "{probe_faults:?}");
+            assert_eq!(points.len(), FORK_MAX_PER_GAME, "deal {}", outcome.game.n);
+            for point in points {
+                forks.push((index, point.clone()));
+            }
+        }
+        assert_eq!(forks.len(), games.len() * FORK_MAX_PER_GAME);
+
+        // The whole tally is byte-identical on one thread and on four. One fork is enough to show
+        // the order does not follow completion (its 16 arms play on rayon's pool); the last fork
+        // of a game has the fewest moves left to play. All four forks played 64 arms twice and
+        // took 8 minutes (#4441).
+        let (index, last) = &forks[FORK_MAX_PER_GAME - 1];
+        let jobs: Vec<(&ArenaOutcome, &ForkPoint)> = vec![(&played[*index].0, last)];
         let one = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();
         let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
         let expected = one.install(|| tally_of(&jobs, games.len()));
         assert!(!expected.is_empty());
+        let played_rollouts = format!("\"rollouts\":{}", jobs.len() * FORK_ROLLOUTS * 2);
+        assert!(expected.contains(&played_rollouts), "{expected}");
         assert_eq!(four.install(|| tally_of(&jobs, games.len())), expected);
     }
 

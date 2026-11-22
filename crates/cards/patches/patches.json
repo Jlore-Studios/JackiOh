@@ -33027,5 +33027,59 @@
       "meditative-039"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.9i",
+    "date": "2026-11-22",
+    "title": "Card flavour lines load beside the engine",
+    "source": "#4435",
+    "notes": "The cards' flavour lines and artist credits (flavour.json, about 98 KB raw) no longer ride the entry chunk: apps/web/src/cards/flavour.ts serves the sidecar through loadFlavour(), one shared dynamic import in a chunk beside the engine module that main.tsx starts at boot, and HoverPreview, Flavour, HeroInspect and NotFoundPlay's LostCard read it through useFlavour(), so a view opened early gains its line when the table lands. How cards look only: no card plays differently.",
+    "player": {
+      "title": "Card flavour lines load beside the engine",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "The home page no longer downloads every card's flavour line before it can start, so the first screen is ready sooner on slow connections."
+      ]
+    },
+    "commits": [
+      "2ec3005287077253bba95e409bdbae378313a1c7"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.6.9j",
+    "date": "2026-11-22",
+    "title": "Nothing reaches a Dormant card",
+    "source": "#4454",
+    "notes": "The fuzz monitor's new I19 fails any step in which something reaches a Dormant card, and its 1,000-seed waves found four engine paths that did: the Fuse verb (fuseCards) now passes a Dormant ingredient or target by, as a Transform does (R4454003; Core #85 Unlicensed Experimentation fused onto a Dormant Starship); the Brittle tick and the Burn and Toxic ticks pass a Dormant card by, its counts waiting until it awakens (R4454004); and the state check's switch out of Defense Position passes a Dormant card by until it awakens (R4454005). The cards claimed are those classify's forced games found playing differently.",
+    "player": {
+      "title": "Dormant cards stay out of reach",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Unlicensed Experimentation and every other Fuse no longer fuse onto a Dormant card or fuse one away.",
+        "A Dormant card's Brittle, Burn and Toxic no longer tick while it sleeps; they pick up where they left off once it wakes.",
+        "A Dormant card in Defense Position is no longer switched to Attack Position while it sleeps."
+      ]
+    },
+    "commits": [
+      "77e6ef9230ea211df04b826b19911fb95b818017"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-022",
+      "stinkyscape-t-drone-corvette",
+      "stinkyscape-t-drone-interceptor"
+    ],
+    "changes": []
   }
 ]

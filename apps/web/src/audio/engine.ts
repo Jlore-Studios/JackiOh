@@ -41,7 +41,7 @@ import {
 } from "./constants.ts";
 import { buildMix, mixLevels, type Mix } from "./mix.ts";
 import { readAudioSettings, subscribeAudioSettings } from "./settings.ts";
-import { SFX, renderSfx } from "./sfx.ts";
+import { loadSfx, onSfxLoaded, sfxNow, type SfxRecipes } from "./sfxLoader.ts";
 import type {
   AudioEngine,
   AudioSettings,
@@ -260,6 +260,9 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   const saveData = options.saveData ?? savingData;
   let loadedLines: CardAudioTable | null = options.lines ?? soundTablesNow()?.cardAudio ?? null;
   let loadedManifest: VoiceManifest | null = options.manifest ?? soundTablesNow()?.voiceManifest ?? null;
+  // #4428: the sound-effect recipes arrive lazily (sfxLoader.ts), so a sound asked for before they
+  // land is skipped, never built. `SFX` and `renderSfx` below read through this, never the module.
+  let loadedSfx: SfxRecipes | null = sfxNow();
   const random = options.random ?? Math.random;
 
   type WaitingVoice = {
@@ -295,8 +298,15 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
+  function setSfx(recipes: SfxRecipes): void {
+    if (disposed) return;
+    if (loadedSfx === null) loadedSfx = recipes;
+  }
+
   onSoundTablesLoaded(onTablesLoaded);
   void loadSoundTables().catch(() => {});
+  const unsubscribeSfx = onSfxLoaded(setSfx);
+  void loadSfx().catch(() => {});
 
   let ctx: AudioContext | null = null;
   let buses: Mix | null = null;
@@ -442,6 +452,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   function unlock(): void {
     if (factory === null || broken || disposed) return;
     void loadSoundTables().then(onTablesLoaded).catch(() => {});
+    // #4428: the first gesture is the backstop that starts the recipes no earlier kick did.
+    void loadSfx().then(setSfx).catch(() => {});
     if (ctx !== null && ctx.state === "closed") teardownClosed();
     if (ctx === null) createFresh();
     if (ctx === null || ctx.state === "running") return;
@@ -532,7 +544,15 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   function playSfx(id: SfxId, params?: SfxParams, delayMs?: number): boolean {
     try {
       if (!accepting() || ctx === null || buses === null) return false;
-      const spec = SFX[id];
+      // #4428: before the recipes land the cue is skipped, never built or logged; the kick keeps
+      // one tap behind the chunk, not behind silence. A late click is dropped, not queued: an sfx
+      // is timed to an animation entry, so sounding late is worse than staying silent.
+      const recipes = loadedSfx;
+      if (recipes === null) {
+        void loadSfx().then(setSfx).catch(() => {});
+        return false;
+      }
+      const spec = recipes.SFX[id];
       const t = now();
       const delay = delayMs ?? 0;
       const logged = (): Extract<PlayedCue, { kind: "sfx" }> =>
@@ -588,7 +608,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     try {
       if (!accepting() || ctx === null || buses === null) return false;
       if (defId === HIDDEN_DEF_ID) return false;
-      if (loadedLines === null) return false;
+      const recipes = loadedSfx;
+      if (loadedLines === null || recipes === null) {
+        if (recipes === null) void loadSfx().then(setSfx).catch(() => {});
+        return false;
+      }
       const found = effectFor(loadedLines, defId, hook);
       if (found === null) return false;
       const t = now();
@@ -606,11 +630,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
       const { effect } = found;
       const cue = ctx.createGain();
-      cue.gain.value = SFX[effect.sfx].gain * effect.gain;
+      cue.gain.value = recipes.SFX[effect.sfx].gain * effect.gain;
       cue.connect(buses.sfx);
       const startAt = ctx.currentTime + delay / 1000;
       const pitch = effect.pitch * (1 + (random() * 2 - 1) * EFFECT_PITCH_JITTER);
-      const lengthMs = renderSfx(effect.sfx, ctx, cue, startAt, effect.params ?? {}, pitch) * 1000;
+      const lengthMs = recipes.renderSfx(effect.sfx, ctx, cue, startAt, effect.params ?? {}, pitch) * 1000;
 
       lastEffectAt.set(found.name, t);
       sfxEnds.push(t + delay + lengthMs);
@@ -1106,6 +1130,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     for (const id of timers) clearTimeout(id);
     timers.clear();
     unsubscribeLifecycle?.();
+    unsubscribeSfx();
     unsubscribe?.();
     unsubscribe = null;
     if (channel?.phase === "speaking") {
