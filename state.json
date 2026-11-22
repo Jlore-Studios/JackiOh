@@ -39914,14 +39914,6 @@
         "provider": "claude-6",
         "run_id": "45003592518",
         "taken_asks": []
-      },
-      "2": {
-        "area": "rules",
-        "count": 1,
-        "last_run": "2026-11-22T08:36:43Z",
-        "provider": "claude-7",
-        "run_id": "45003630200",
-        "taken_asks": []
       }
     },
     "taken_asks": []
