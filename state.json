@@ -17785,6 +17785,24 @@
           "claude": "strong"
         }
       }
+    },
+    "4486": {
+      "difficulty_by": {
+        "at": "2026-11-22T09:07:58Z",
+        "difficulty": "hard",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "the after-merge spot-check's follow-up of #4481, a hard change"
+      },
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-22T09:07:58Z",
+      "requested_by": "jgoetzmann-bot",
+      "spot_check_of": 4481,
+      "stop_requested": false
     }
   },
   "labels_synced": "e752b3263433d01e",
