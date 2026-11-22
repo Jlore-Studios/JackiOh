@@ -16621,16 +16621,24 @@
         ],
         "builder": "gemini",
         "built_by": "agy",
+        "carried": {
+          "by": "`gemini` (medium)",
+          "conflicts": [
+            "spec/06-keywords.md"
+          ],
+          "from": "2d9a952bf8a196df9a34c4a61f0083f314661419",
+          "main": "3de2d02ce519dd27590d14371b55d27034b6b5e8"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "gemini",
             "provider": "agy",
-            "run": "45023549960",
+            "run": "45031554033",
             "tier": "medium"
           }
         ],
-        "sha": "2d9a952bf8a196df9a34c4a61f0083f314661419",
+        "sha": "9bc8102411daf77db3d9a62110f575e40629b2c6",
         "tiers": {
           "gemini": "medium"
         }
