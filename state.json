@@ -17667,17 +17667,8 @@
       ]
     },
     "4479": {
-      "action": "plan",
-      "asks": [
-        "c:7081826138"
-      ],
-      "build_next": {
-        "from_run": "45042445322",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-22T16:38:50Z",
-        "until": "2026-11-22T17:08:50Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T16:38:42Z",
         "difficulty": "medium",
@@ -17696,10 +17687,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- <!-- bot: {\"difficulty\": \"medium\", \"why\": \"single-crate server change (guard + tests), no engine rules, AI, migration, or cross-crate design\"} -->\n- ## Goal\n- Give `notify_one` in `crates/server/src/daily/notify.rs` one per-profile async exclusion, shared by the after-move `NotifyQueue` task and the hourly `sweep`, held across decide, send and mark-sent. The second caller for an account waits, re-reads fresh `last_email_at`/`last_push_at`, and decides no\u2026\n- ## Files to touch\n- | File | New / change | What changes |\n- |---|---|---|\n- | `crates/server/src/daily/mod.rs` | change | `DailyState`: new `notify_locks` field, its init in `new()`, and a `notify_lock()` accessor |\n- | `crates/server/src/daily/notify.rs` | change | `notify_one()` acquires the per-profile guard first; doc comments on `notify_one` and the module header |\n- | `crates/server/tests/api/daily.rs` | change | Two new tests (overlap exactly-once; per-profile isolation), reusing existing helpers |\n- Must not touch: `crates/shared/src/notify.rs` (decision logic untouched), `crates/server/src/config.rs` (no new number), anything under `spec/`, `crates/engine`, `crates/cards`, `crates/ai`, `.github/`, `.harness/`, `.squishy/`, `bot/`. Governing spec: \u00a79.13 (notifications) and \u00a79.8 (push abuse sur\u2026\n- ## Steps\n- 1. **`crates/server/src/daily/mod.rs` \u2014 add the lock map.** Add imports `std::collections::HashMap`, `std::sync::{Arc, Mutex}` (keep the existing `atomic` import). Add field `notify_locks: Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>` to `DailyState` with a \u00a79.13 comment (one decision at a t\u2026\n- 2. **`crates/server/src/daily/mod.rs` \u2014 add the accessor.** Add `pub(crate) fn notify_lock(&self, profile_id: &str) -> Arc<tokio::sync::Mutex<()>>`: clone the `Arc` under a brief std-mutex hold using the existing `crate::api::http::lock` helper (as `NotifyQueue::enqueue` does), inserting `Arc::new(\u2026\n- 3. **`crates/server/src/daily/notify.rs` \u2014 guard `notify_one`.** As the first two lines of `notify_one`, acquire `let guard = app.daily.notify_lock(profile_id);` then `let _held = guard.lock().await;`, so the whole body (reading `waiting`/settings/subs, `decide_notify`, email/push sends, `daily_not\u2026\n- 4. **`crates/server/tests/api/daily.rs` \u2014 overlap test** `the_after_move_task_and_the_sweep_send_one_profile_one_email_and_push`. Build the app with a `held_service(StatusCode::OK)` mail endpoint (gate closed) plus an immediate `fake_service` push endpoint; one push device each for Ada and Bo (adde\u2026\n- 5. **`crates/server/tests/api/daily.rs` \u2014 per-profile test** `a_stalled_send_for_one_account_never_delays_another`. No devices during setup. Game 1 (Bo vs Dan, created first) played past the mulligan until Bo holds; `notifier_idle`. Subscribe Ada's device at a `held_service(StatusCode::CREATED)` pu\u2026\n- 6. **Run the checks** listed in Tests; fix only by changing the new code (never weaken existing tests).\n- ## Tests\n- - New: `api::daily::the_after_move_task_and_the_sweep_send_one_profile_one_email_and_push` \u2014 forces queue/sweep overlap on one profile via a held mail service; asserts 2 mails while gated (one per profile), then exactly one email per recipient and one push per device after the drain.\n- - New: `api::daily::a_stalled_send_for_one_account_never_delays_another` \u2014 Ada's push held, Bo's immediate; asserts Bo's push lands while Ada's send is still held, and Ada is pushed exactly once total.\n- - Existing (unchanged, must stay green): `api::daily::the_after_move_queue_and_the_sweep_share_the_days_player_email_cap`, `api::daily::an_email_the_mail_service_refused_spends_none_of_the_days_cap`, `api::daily::past_the_days_player_email_cap_the_sweep_still_pushes_and_the_next_day_emails`, `api::\u2026\n- - Commands: `cargo test -p jackioh-server --test server api::daily::`, `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`.\n- ## Done when\n- - [ ] Overlap test proves one email and one push per device under a forced queue/sweep collision.\n- - [ ] All sequential cap/gap/release/ordering tests pass unchanged.\n- - [ ] A move's HTTP answer returns before any send (asserted via `answers_at_once` in the new tests).\n- - [ ] Per-profile test proves a stalled account never delays another's notice.\n- - [ ] `cargo test -p jackioh-server --test server api::daily::`, `cargo fmt --check`, and the clippy command above are green.\n- ## Risks\n- - Holding the guard across network I/O serializes one account's notices for up to the send timeouts (`PLAYER_EMAIL_TIMEOUT_MS`, `PUSH_TIMEOUT_MS`); accepted per the issue \u2014 both paths already send sequentially per profile, so worst case matches today's latency, and failure paths never mark (gap/rel\u2026\n- - The lock map grows one entry per notified profile and is never pruned; accepted (in-memory only, one instance), noted on the field.\n- - No deadlock: one leaf-level lock per profile, never nested; `begin_sweep` is an atomic flag, not a mutex, so no lock ordering exists.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4479 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4479/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-22T16:11:38Z",
       "owner_why": "it plans it",
@@ -17712,12 +17702,14 @@
       "provider": "muse",
       "queued_at": "2026-11-22T16:07:31Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45042445322",
+      "run_id": "pending:2f3a7d43-1795365558",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-22T16:11:38Z",
+      "started_at": "2026-11-22T16:39:38Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7081826138"
+      ]
     },
     "4480": {
       "action": "review",
@@ -18336,9 +18328,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T16:27:42Z",
+    "at": "2026-11-22T16:39:38Z",
     "url": "",
-    "what": "review #4459 on claude-3"
+    "what": "build #4479 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T16:21:33Z",
