@@ -17847,9 +17847,7 @@
       "started_at": "2026-11-22T16:39:38Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7081826138"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "4480": {
