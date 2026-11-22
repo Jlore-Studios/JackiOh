@@ -17994,6 +17994,13 @@
     "4485": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T16:22:55Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "No rule 1-5 line holds: three e2e spec files, a weights table, a TOML comment and one README paragraph, about 40 lines, no engine, AI, cross-crate or migration change."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
