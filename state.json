@@ -16751,16 +16751,12 @@
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
-        "builder": "gemini",
-        "built_by": "agy",
-        "rejections": [
-          "muse"
-        ],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
         "reviews": [],
-        "sha": "ffeda78ad27be25c078d35f221cce21d19297399",
-        "tiers": {
-          "muse": "medium"
-        }
+        "sha": "058b481ec15e474a3319426a1e9dcb7d9a4a59b8",
+        "tiers": {}
       }
     },
     "4460": {
