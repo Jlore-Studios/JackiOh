@@ -2396,7 +2396,9 @@ mod i19 {
     #[test]
     fn i19_a_record_change_with_no_event_is_one_finding_naming_the_field() {
         let (state, id) = dormant_board("i19-record");
-        let edits: Vec<(&str, fn(&mut CardInstance))> = vec![
+        /// A record field's JSON name and an edit that changes only it.
+        type RecordEdit = (&'static str, fn(&mut CardInstance));
+        let edits: Vec<RecordEdit> = vec![
             ("damage", |card| card.damage = 1),
             ("buffs", |card| card.buffs = AttackHealth { attack: 1, health: 1 }),
             ("grantedKeywords", |card| {
