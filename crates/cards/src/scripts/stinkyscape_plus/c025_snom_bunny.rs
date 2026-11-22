@@ -14,10 +14,11 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-025";
 
-fn snom_bunny() -> Script {
+fn snom_bunny(slash_aware: bool) -> Script {
     Script {
-        death: Some(hook(|ctx| {
-            let enemies = enemy_permanents(ctx.state, ctx.controller);
+        death: Some(hook(move |ctx| {
+            let mut enemies = enemy_permanents(ctx.state, ctx.controller);
+            enemies.retain(|card| !slash_aware || reaches(ctx.state, ctx.self_.as_ref(), card));
             if enemies.is_empty() {
                 return Vec::new();
             }
@@ -54,8 +55,17 @@ fn snom_bunny() -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: snom_bunny(),
-        radiant: snom_bunny(),
+        base: snom_bunny(true),
+        radiant: snom_bunny(true),
+    }
+}
+
+/// v0.6.9j and before: the Death drew among every enemy permanent, across a slash too (R3554003);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9j() -> CardScripts {
+    CardScripts {
+        base: snom_bunny(false),
+        radiant: snom_bunny(false),
     }
 }
 
@@ -165,6 +175,36 @@ mod tests {
             json!({ "targets": [{ "pick": "instance", "instanceId": bunny }] }),
         );
         s
+    }
+
+    /// R3554003: on a slashed board the Death's pick stops at the slash: the Bunny in lane 1 takes the
+    /// permanent on its own half, never the dearer one across it, whatever the draw.
+    #[test]
+    fn r3554003_its_death_draws_only_among_the_permanents_of_its_own_half() {
+        for cursor in 0..16u32 {
+            let mut s = weapon_board(
+                "s025-slashed",
+                json!({
+                    "mana": 10,
+                    "hand": [HIT_JOB],
+                    "field": [ID],
+                    "library": filler(4),
+                }),
+                json!({
+                    "field": [{ "def": CHEAP, "lane": 2 }, { "def": DEAR, "lane": 4 }],
+                    "library": filler(4),
+                }),
+            );
+            s.state_mut().slashed_lane = Some(3);
+            s.state_mut().rng_cursor = cursor;
+            let bunny = s.unit_at(P1, 1).id;
+            s.play(
+                HIT_JOB,
+                json!({ "targets": [{ "pick": "instance", "instanceId": bunny }] }),
+            );
+            assert_eq!(s.card(CHEAP).controller, P1, "cursor {cursor}: the permanent on its half is taken");
+            assert_eq!(s.card(DEAR).controller, P2, "cursor {cursor}: the one across the slash stays");
+        }
     }
 
     #[test]
