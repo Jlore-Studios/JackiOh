@@ -15187,6 +15187,17 @@
       "taken_asks": []
     },
     "4427": {
+      "asks": [
+        "c:7072029531"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-22T01:10:41Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false,
       "suggestion": true
     },
     "4429": {
