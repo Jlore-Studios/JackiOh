@@ -19539,6 +19539,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "gpt",
       "owner_since": "2026-11-23T19:28:22Z",
@@ -19549,9 +19550,12 @@
       "planned_by_id": "gpt",
       "planned_model": "gpt-5.6-sol",
       "planned_tier": "medium",
+      "pr": 4628,
       "provider": "gpt",
+      "question": "",
       "queued_at": "2026-11-23T19:18:32Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "medium",
       "run_id": "45251639913",
       "runs_on": "night-vm-gpt",
       "started_at": "2026-11-23T19:41:57Z",
@@ -19559,7 +19563,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:7111395974"
-      ]
+      ],
+      "verdict_rounds": 0
     },
     "4623": {
       "action": "plan",
