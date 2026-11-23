@@ -16015,11 +16015,6 @@
       "owner_since": "2026-11-23T20:12:29Z",
       "owner_why": "handed off from `claude-4`: it could not take it",
       "part_of": 4601,
-      "paused": {
-        "at": "2026-11-23T20:05:44Z",
-        "interrupt": "usage",
-        "provider": "claude-4"
-      },
       "pending_request": false,
       "planned_at": "2026-11-23T19:55:08Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
