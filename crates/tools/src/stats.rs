@@ -38,19 +38,21 @@ use rayon::prelude::*;
 use serde_json::Value;
 
 use jackioh_ai::{AI_DEV_RUN, DevRunOptions, MatchSetup, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
+use jackioh_engine::config::SWING_FIELD_MIN_ROWS;
 use jackioh_engine::{
     CardStats, CardStatsFilter, CardStatsReport, CardWindow, CreatedStats, DEFAULT_CARD_STATS_FILTER,
     DEV_RECORD_ID_PREFIX, FORCED_SERIES_PREFIX, GAME_MODES, GameFigures, GameGroup, GameMode, GameRecord,
     GameReport, ModeFilter, PILOT_FILTERS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals,
-    Tally, WindowQuery, WindowRequest, WindowedCard, WindowedCreated, WindowedReport, Winner, card_stats,
-    created_played_delta, describe_filter, drawn_delta, format_card_stats, format_delta, format_tally,
-    game_report, not_drawn, windowed_card_stats,
+    SwingFigures, SwingReport, Tally, WindowQuery, WindowRequest, WindowedCard, WindowedCreated,
+    WindowedReport, Winner, adjusted_win_rate, card_stats, card_stats_of, created_played_delta,
+    describe_filter, drawn_delta, format_card_stats, format_delta, format_swing, format_tally, game_report,
+    not_drawn, record_matches, stats_field, swing_baseline, swing_report, swing_rows_of, windowed_card_stats,
 };
 use serde::Serialize;
 
 use crate::arena::{paired_interval, wilson_interval};
 use crate::selfplay_records::SELFPLAY_SERIES_PREFIX;
-use crate::{dealt_fit, golden, sample_size, selfplay_records};
+use crate::{dealt_fit, golden, sample_size, selfplay_records, win_probability};
 
 const SECONDS_DECIMALS: usize = 1;
 
@@ -135,6 +137,9 @@ pub enum Command {
     FromSelfplay(selfplay_records::Args),
     /// #2888: the games a gather run needs for the card win rates at this build's deal pool.
     SampleSize(sample_size::Args),
+    /// R4552000: the win probability's weights fit over record files' turn rows, to paste into
+    /// crates/engine/src/config.rs.
+    Calibrate(win_probability::Args),
 }
 
 /// `cargo jackioh stats compare --before <file>… --after <file>… --card <id>`: two runs of
@@ -189,6 +194,12 @@ pub struct ReportArgs {
     /// The report as JSON, as `stats-cards --json` prints it.
     #[arg(long)]
     pub json: bool,
+    /// R4552001: each card's play term, Board swing, Swing, raw RMS and Decisiveness (`swing_report`),
+    /// each figure's split-half reliability (odd records against even ones) and the correlation of the
+    /// deck cards' Swing with their adjusted win rate, after the table. Not with --games, --window or
+    /// --json.
+    #[arg(long, conflicts_with_all = ["games", "window", "json"])]
+    pub swing: bool,
 }
 
 /// One of `allowed`, by the literal it is written as.
@@ -544,13 +555,122 @@ fn run_report(args: &ReportArgs) -> Result<()> {
     }
     jackioh_cards::register_all();
     let report = report(args)?;
-    println!(
-        "{}",
-        render(&report, args, |card| jackioh_cards::CATALOG
-            .get(card)
-            .map(|def| def.name.clone()))
-    );
+    let name_of = |card: &str| jackioh_cards::CATALOG.get(card).map(|def| def.name.clone());
+    println!("{}", render(&report, args, name_of));
+    if args.swing {
+        println!(
+            "\n{}",
+            swing_text(&read_records(&args.files)?, &filter_of(args), name_of)
+        );
+    }
     Ok(())
+}
+
+/// R4552001: one report's figures of Swing and Decisiveness over some records (`swing_report`), each
+/// field read off every card of the report as `GET /api/stats/cards` reads it.
+fn swing_of(records: &[GameRecord], filter: &CardStatsFilter) -> (CardStatsReport, SwingReport) {
+    let mut totals = StatsTotals::default();
+    for record in records.iter().filter(|record| record_matches(record, filter)) {
+        totals.fold(record, false);
+    }
+    let report = card_stats_of(&totals, filter);
+    let swing = swing_report(
+        report
+            .cards
+            .iter()
+            .map(|stats| (stats.card.as_str(), &stats.swing)),
+        report
+            .created
+            .iter()
+            .map(|stats| (stats.card.as_str(), &stats.swing)),
+        &swing_baseline(&swing_rows_of(&totals, filter)),
+    );
+    (report, swing)
+}
+
+/// R654's floor (`jackioh_shared::config::CARD_STATS_MIN_SAMPLE`, which this crate does not take): the
+/// drawn games a card's lift needs to count toward the field `--swing` reads the adjusted win rate
+/// against, as `GET /api/stats/cards` reads it.
+const ADJUSTED_FIELD_FLOOR: i32 = 20;
+
+/// Pearson's r over pairs; `None` below three or with no spread.
+fn pearson(pairs: &[(f64, f64)]) -> Option<f64> {
+    if pairs.len() < 3 {
+        return None;
+    }
+    let n = pairs.len() as f64;
+    let (mx, my) = (
+        pairs.iter().map(|(x, _)| x).sum::<f64>() / n,
+        pairs.iter().map(|(_, y)| y).sum::<f64>() / n,
+    );
+    let (mut xy, mut xx, mut yy) = (0.0, 0.0, 0.0);
+    for (x, y) in pairs {
+        xy += (x - mx) * (y - my);
+        xx += (x - mx) * (x - mx);
+        yy += (y - my) * (y - my);
+    }
+    (xx > 0.0 && yy > 0.0).then(|| xy / (xx * yy).sqrt())
+}
+
+fn shown_r(r: Option<f64>, cards: usize) -> String {
+    match r {
+        Some(r) => format!("r = {r:.2} over {cards} cards"),
+        None => format!("unknown over {cards} cards"),
+    }
+}
+
+/// R4552001: `stats report --swing`'s text: the figures (`format_swing`), each figure's split-half
+/// reliability (the records at odd places against those at even ones, over the cards with
+/// `SWING_FIELD_MIN_ROWS` turns of the figure's kind in both halves) and the correlation of the deck
+/// cards' Swing with their adjusted win rate (R2777000).
+pub fn swing_text(
+    records: &[GameRecord],
+    filter: &CardStatsFilter,
+    name_of: impl Fn(&str) -> Option<String>,
+) -> String {
+    let (report, swing) = swing_of(records, filter);
+    let mut lines = vec![format_swing(&swing, name_of)];
+    let halves: Vec<Vec<GameRecord>> = (0..2)
+        .map(|half| records.iter().skip(half).step_by(2).cloned().collect())
+        .collect();
+    let (_, odd) = swing_of(&halves[0], filter);
+    let (_, even) = swing_of(&halves[1], filter);
+    lines.push(String::new());
+    lines.push("Split-half reliability (odd records against even ones):".to_string());
+    type Figure = fn(&SwingFigures) -> Option<f64>;
+    let figures: [(&str, Figure, Figure); 3] = [
+        ("Swing", |f| f.swing, |f| Some(f.plays as f64)),
+        ("Board swing", |f| f.board, |f| Some(f.acting as f64)),
+        ("Decisiveness", |f| f.decisiveness, |f| Some(f.plays as f64)),
+    ];
+    for (name, figure, turns) in figures {
+        let floor = SWING_FIELD_MIN_ROWS as f64;
+        let pairs: Vec<(f64, f64)> = odd
+            .cards
+            .iter()
+            .filter_map(|(card, first)| {
+                let second = even.cards.get(card)?;
+                (turns(first)? >= floor && turns(second)? >= floor).then_some(())?;
+                Some((figure(first)?, figure(second)?))
+            })
+            .collect();
+        lines.push(format!("  {name}: {}", shown_r(pearson(&pairs), pairs.len())));
+    }
+    let field = stats_field(report.cards.iter(), ADJUSTED_FIELD_FLOOR);
+    let pairs: Vec<(f64, f64)> = report
+        .cards
+        .iter()
+        .filter_map(|stats| {
+            let figures = swing.cards.get(&stats.card)?;
+            (figures.plays >= SWING_FIELD_MIN_ROWS).then_some(())?;
+            Some((figures.swing?, adjusted_win_rate(stats, &field)?))
+        })
+        .collect();
+    lines.push(format!(
+        "Deck cards' Swing against their adjusted win rate: {}",
+        shown_r(pearson(&pairs), pairs.len())
+    ));
+    lines.join("\n")
 }
 
 /// R1284000: whether the seat whose deck alone holds `card` won; `None` when no seat or both seats hold it.
@@ -878,6 +998,7 @@ pub fn run(args: Args) -> Result<()> {
         Some(Command::Compare(compared)) => return run_compare(compared),
         Some(Command::FromSelfplay(from)) => return selfplay_records::run(from),
         Some(Command::SampleSize(sized)) => return sample_size::run(sized),
+        Some(Command::Calibrate(calibrate)) => return win_probability::run(calibrate),
         None => {}
     }
     let games = args.games.unwrap_or(AI_DEV_RUN.games);
@@ -1063,6 +1184,7 @@ mod tests {
                 games: false,
                 window: None,
                 json: false,
+                swing: false,
             }
         );
         let all = report_args(&[

@@ -14,8 +14,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
     Action, ActionBody, CombatForecast, CreateGameOptions, DECK_SIZE, GameState, GameSummary, LastBoardEntry,
-    LeanPick, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, ReplayRefusal,
-    Rng, SetName, ShippedCatalog, WinRateTable,
+    LeanPick, PerPlayer, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord,
+    ReplayRefusal, Rng, SetName, ShippedCatalog, SwingTurn, WinRateTable,
 };
 
 pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
@@ -289,4 +289,11 @@ pub fn last_boards(state: &EngineState) -> LastBoards {
 pub fn summarize_game(pinned: Pinned, args: &FoldArgs) -> Option<GameSummary> {
     registered();
     pinned.run(|| jackioh_engine::summarize_game(args))
+}
+
+/// R4552000: the game's turn rows (`jackioh_ai::swing_turns`), the data Decisiveness is read off,
+/// replayed under the same pin as `summarize_game`; `None` without a result.
+pub fn swing_turns(pinned: Pinned, args: &FoldArgs) -> Option<PerPlayer<Vec<SwingTurn>>> {
+    registered();
+    pinned.run(|| jackioh_ai::swing_turns(args))
 }

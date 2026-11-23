@@ -58,6 +58,8 @@ struct RecordOptions {
     /// R2777002: the cards of p1's deck that reached its hand (the first three its opening hand, the
     /// rest drawn); by default the whole deck, so no card goes unseen.
     p1_hand: Option<Vec<&'static str>>,
+    /// R4552000: p1's turn rows (`swingTurns`), absent by default as from a record written before them.
+    p1_swing_turns: Option<Value>,
 }
 
 /// One seat's summary: the first three cards of `hand` are the opening hand, the rest drawn.
@@ -118,6 +120,9 @@ fn make_game_record(id: &str, options: RecordOptions) -> Value {
     }
     if let Some(unused) = options.p1_created_unused {
         p1["createdUnused"] = json!(unused);
+    }
+    if let Some(rows) = options.p1_swing_turns {
+        p1["swingTurns"] = rows;
     }
 
     json!({
@@ -612,6 +617,7 @@ mod r654_public_card_and_player_stats {
                     "adjustedLow",
                     "adjustedWinRate",
                     "cost",
+                    "decisiveness",
                     "games",
                     "hasEnoughGames",
                     "id",
@@ -3034,6 +3040,7 @@ mod r2089000_created_card_stats {
                     "adjustedLow",
                     "adjustedWinRate",
                     "cost",
+                    "decisiveness",
                     "games",
                     "hasEnoughGames",
                     "id",
@@ -3058,7 +3065,8 @@ mod r2089000_created_card_stats {
             .map(String::as_str)
             .collect();
         field.sort_unstable();
-        assert_eq!(field, ["baseline", "cards", "center", "spread"]);
+        // R4552003: and the typical Created card's Decisiveness.
+        assert_eq!(field, ["baseline", "cards", "center", "decisiveness", "spread"]);
     }
 }
 
@@ -3253,5 +3261,87 @@ mod cache_poisoning {
         .await;
         let responses = seven_ways(&app, "/api/stats/players").await;
         assert_same_bytes(&responses, PLAYER_STATS_CACHE_TTL_SECONDS);
+    }
+}
+
+// R4552003: `GET /api/stats/cards` sends each card's Decisiveness and each field's typical value, and
+// nothing else of R4552001's: no Swing, no Board swing, no play term, no raw RMS.
+mod r4552003_decisiveness {
+    use super::*;
+
+    /// Every key of a JSON value, at any depth.
+    fn keys_of(value: &Value, out: &mut Vec<String>) {
+        match value {
+            Value::Object(map) => {
+                for (key, inner) in map {
+                    out.push(key.clone());
+                    keys_of(inner, out);
+                }
+            }
+            Value::Array(items) => items.iter().for_each(|item| keys_of(item, out)),
+            _ => {}
+        }
+    }
+
+    #[tokio::test]
+    async fn r4552003_cards_answer_decisiveness_and_the_typical_value_and_no_swing() {
+        let app = test_app().await;
+        // 40 games: p1 plays core-001 on its first turn and its chance then swings far one way or the
+        // other; a Rush Token core-015 made acts on its second turn. core-002 is never played.
+        let mut records = Vec::new();
+        for i in 0..40 {
+            let won = i % 2 == 0;
+            let after = if won { 5_000_000 } else { -5_000_000 };
+            records.push(make_game_record(
+                &format!("rec-swing-{i}"),
+                RecordOptions {
+                    source: Some("live"),
+                    p1_deck: Some(vec!["core-001", "core-002", "core-015"]),
+                    p1_played: Some(vec!["core-001"]),
+                    winner: Some(if won { "p1" } else { "p2" }),
+                    p1_swing_turns: Some(json!([
+                        { "turn": 1, "eval": 0 },
+                        {
+                            "turn": 3,
+                            "eval": after,
+                            "acting": ["core-001", { "card": "core-t-rush", "maker": "core-015" }],
+                        },
+                    ])),
+                    p1_created_used: Some(json!([{ "card": "core-t-rush", "turn": 1, "radiant": false }])),
+                    ..RecordOptions::default()
+                },
+            ));
+        }
+        insert_records(&app, records).await;
+
+        let (status, _, data) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+        let played = find(&data["cards"], "id", &json!("core-001")).expect("core-001 is listed");
+        let decisive = played["decisiveness"].as_f64().expect("a Decisiveness");
+        assert!(decisive > 0.0 && decisive <= 1.0, "{decisive}");
+        // Never played and never acting: no turn of its own to read.
+        let quiet = find(&data["cards"], "id", &json!("core-002")).expect("core-002 is listed");
+        assert_eq!(quiet["decisiveness"], Value::Null);
+        // The typical card's value of each field, beside the tiers' centres.
+        assert!(
+            data["tiers"]["decisiveness"]
+                .as_f64()
+                .is_some_and(|typical| typical > 0.0)
+        );
+        assert!(
+            data["tiers"]["created"]["decisiveness"]
+                .as_f64()
+                .is_some_and(|typical| typical > 0.0)
+        );
+        // The token its maker put onto the field reads its acting turns.
+        let token = find(&data["created"], "id", &json!("core-t-rush")).expect("the Rush Token is listed");
+        assert!(token["decisiveness"].as_f64().is_some(), "{token}");
+        // No key of the response names a swing.
+        let mut keys = Vec::new();
+        keys_of(&data, &mut keys);
+        assert!(
+            keys.iter().all(|key| !key.to_lowercase().contains("swing")),
+            "{keys:?}"
+        );
     }
 }

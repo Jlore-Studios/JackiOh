@@ -523,6 +523,15 @@ banned, and the holder's card at the slot `${seed}:force` picks is replaced by i
 `DevRunOptions.setup` creates every game of a run with the same setup inputs (`dev_run_config`), so a
 record stays a pure function of its number.
 
+R4552000, R4552002: `swing_turns` (`src/swing_turns.rs`) replays a finished game's log from the engine's
+own start and steps (`recorded_start`, `read_steps`, as `summarize_game` does) and writes, at the start of
+every turn, one row for its seat: the turn counter, `evaluate` of the seat (`NextSwing::Seat`) less its
+opponent's (`NextSwing::Enemy`) in thousandths, read off the true state, and the cards acting on each
+field, a Created card with the card that made it (none when a hand held it). `attach_swing_turns` files
+the rows in the record (`SeatSummary.swing_turns`); `dev_game_record`, `stats from-selfplay` and the
+server's record filing (`crates/server/src/api/game_records.rs`) all call it. Decisiveness is read off
+them (`crates/engine/src/wire/stats/swing.rs`).
+
 ## The features (#466, #1006)
 
 `src/features.rs` turns a position into the rows `cargo jackioh positions` writes for the learn lane's

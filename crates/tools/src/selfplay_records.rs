@@ -17,7 +17,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
-use jackioh_ai::dev_record_id;
+use jackioh_ai::{attach_swing_turns, dev_record_id, swing_turns};
 use jackioh_engine::{
     FoldArgs, GameMode, GameRecord, GameSource, PerPlayer, Pilot, RecordBuild, catalog_for, fold, hash_state,
     summarize_game, with_shipped,
@@ -95,7 +95,13 @@ pub(crate) fn record_of(game: &SelfplayGame, build_catalog: &str) -> Result<Game
             let reached = replay.errors.is_empty()
                 && hash_state(&replay.state) == game.hash
                 && replay.state.result == game.result;
-            if reached { summarize_game(&args) } else { None }
+            if !reached {
+                return None;
+            }
+            // R4552000: the turn rows beside the summary, under the same catalog.
+            let mut game = summarize_game(&args)?;
+            attach_swing_turns(&mut game, swing_turns(&args)?);
+            Some(game)
         })
     }));
     let summary = summary.ok().flatten().ok_or(Dropped::NotReplayed)?;
@@ -396,6 +402,7 @@ mod tests {
             games: false,
             window: None,
             json: false,
+            swing: false,
         };
         let cards = report(&args).unwrap();
         assert_eq!((cards.games, cards.decks), (2, 4));

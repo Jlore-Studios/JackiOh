@@ -407,6 +407,9 @@ pub fn seat_played_by(state: &GameState, home: PlayerId) -> PlayerId;
 pub fn mulligan_owed(state: &GameState) -> Vec<PlayerId>;
 pub fn seats_swapped(state: &GameState) -> bool;
 pub fn summarize_game(args: &FoldArgs) -> Option<GameSummary>;
+pub fn recorded_start(args: &FoldArgs) -> GameState;                // R4552000: the start summarize_game replays from
+pub fn read_steps(start: &GameState, log: &[Action], step: impl FnMut(&GameState, &[GameEvent], &GameState)) -> GameState;
+                                                                    // R4552000: its steps; jackioh_ai::swing_turns reads the same
 pub fn registered_catalog() -> &'static CardDefs;                   // after jackioh_cards::register_all()
 
 pub struct ReduceResult {                                           // serializes as { state, events, error? }

@@ -75,6 +75,7 @@ describe("CreatedPanel", () => {
       "Games",
       "Tier",
       "Adjusted ↓",
+      "Decisiveness",
     ]);
     expect(screen.getByRole("region", { name: "Tokens" })).toContainElement(table);
     expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
@@ -126,7 +127,9 @@ describe("CreatedPanel", () => {
     expect(within(row("ember")).getByTestId(statsTestid.createdAdjustedCell)).toHaveTextContent("—");
     expect(row("ember").querySelector(".stats-confidence-bar")).toBeNull();
     expect(row("ember").querySelector(".stats-td--winrate")).toBeNull();
-    expect(row("ember")).not.toHaveTextContent("not enough games");
+    // R4552004: only the Decisiveness cell reads "not enough games" below the floor; Adjusted keeps its "—".
+    expect(within(row("ember")).getByTestId(statsTestid.createdDecisivenessCell)).toHaveTextContent("not enough games");
+    expect(within(row("ember")).getByTestId(statsTestid.createdAdjustedCell)).not.toHaveTextContent("not enough games");
     // The thumbnail badge reads the cost, coloured by rarity.
     const badge = row("rush").querySelector(".stats-card-thumb-badge") as HTMLElement;
     expect(badge).toHaveTextContent("0");
@@ -142,7 +145,7 @@ describe("R4155000 the Created tables show the deck table's columns", () => {
     return screen.getByTestId(statsTestid.tokensTable);
   }
 
-  it("R4155000 R4083000 the headers are exactly Card, Name, Games, Tier and Adjusted", () => {
+  it("R4155000 R4083000 the headers are exactly Card, Name, Games, Tier, Adjusted and Decisiveness", () => {
     const table = renderTable();
     expect(within(table).getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
       "Card",
@@ -150,6 +153,7 @@ describe("R4155000 the Created tables show the deck table's columns", () => {
       "Games",
       "Tier",
       "Adjusted ↓",
+      "Decisiveness",
     ]);
     // The Card header is the deck table's thumbnail header: no sort.
     const thumb = within(table).getAllByRole("columnheader")[0]!;
@@ -164,11 +168,13 @@ describe("R4155000 the Created tables show the deck table's columns", () => {
       "Name",
       "Tier",
       "Adjusted ↓",
+      "Decisiveness",
     ]);
     const row = table.querySelector("tbody tr") as HTMLElement;
     expect(row.querySelector(".stats-td--thumb")).toBeNull();
     expect([...row.querySelectorAll("td")].map((td) => td.className)).toEqual([
       "stats-td stats-td--name",
+      "stats-td",
       "stats-td",
       "stats-td",
     ]);
@@ -217,6 +223,28 @@ describe("R3184002 the Created cards table sorts by every column", () => {
       order: () => [...table.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-card-id")),
     };
   }
+
+  it("R4552004 the Created tables show Decisiveness after Adjusted", () => {
+    const TYPICAL = { bandLow: 0.45, bandHigh: 0.55, created: { center: 0, spread: 0.02, cards: 5, baseline: 0.5, decisiveness: 0.11 } };
+    const A: PublicCreatedStat = { ...COIN, id: "a", name: "A", adjustedWinRate: 0.52, tier: "B", decisiveness: 0.142 };
+    const B: PublicCreatedStat = { ...COIN, id: "b", name: "B", adjustedWinRate: 0.51, tier: "B", decisiveness: 0.25 };
+    const FEW_GAMES: PublicCreatedStat = { ...A, id: "few", name: "Few", games: 5, hasEnoughGames: false, decisiveness: 0.9 };
+    render(<Sorted {...props({ kind: "tokens", created: [A, B, FEW_GAMES], tiers: TYPICAL })} />);
+    const table = screen.getByTestId(statsTestid.tokensTable);
+    const heads = within(table).getAllByRole("columnheader");
+    const names = heads.map((th) => th.textContent?.replace(/[↑↓]/g, "").trim());
+    expect(names.indexOf("Decisiveness")).toBe(names.indexOf("Adjusted") + 1);
+    const head = heads[names.indexOf("Decisiveness")]!;
+    expect(head.getAttribute("title")).toContain("not a margin of error");
+    expect(head.getAttribute("title")).toContain("A typical card: ±11.0%.");
+    const cells = (): (string | null)[] =>
+      within(table).getAllByTestId(statsTestid.createdDecisivenessCell).map((cell) => cell.textContent);
+    expect(cells()).toEqual(["±14.2%", "±25.0%", "not enough games"]);
+    // Sortable: highest first, a card below the floor last.
+    fireEvent.click(head);
+    expect(cells()).toEqual(["±25.0%", "±14.2%", "not enough games"]);
+    expect(head).toHaveAttribute("aria-sort", "descending");
+  });
 
   it("R4082000 opens on Adjusted, best first, a row below the floor last, every other header unsorted", () => {
     const { headers, order } = renderTable();
@@ -302,8 +330,8 @@ describe("R4083000 the Created tables show Tier and Adjusted alone, sorted, view
     render(<CreatedPanel {...props({ created: [W, X, FEW] })} />);
     const table = screen.getByTestId(statsTestid.createdTable);
     for (const tr of table.querySelectorAll("tbody tr")) {
-      // Card, Name, Games, Tier and Adjusted.
-      expect(tr.querySelectorAll("td")).toHaveLength(5);
+      // Card, Name, Games, Tier, Adjusted and Decisiveness.
+      expect(tr.querySelectorAll("td")).toHaveLength(6);
     }
     expect(table.querySelector(".stats-td--winrate")).toBeNull();
     expect(table.textContent).not.toMatch(/Win rate|Used/);
@@ -390,7 +418,7 @@ describe("R4083000 the Created tables show Tier and Adjusted alone, sorted, view
     expect(within(x).getByTestId("face-x")).toBeInTheDocument();
     expect(within(x).getByTestId(statsTestid.createdTierCell)).toHaveTextContent("B");
     expect(within(x).getByTestId(statsTestid.createdAdjustedCell)).toHaveTextContent("51.0%");
-    expect([...x.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual(["Tier", "Adjusted", "Games"]);
+    expect([...x.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual(["Tier", "Adjusted", "Decisiveness", "Games"]);
     expect(x.querySelector("dl")).toHaveTextContent("40");
     expect(x).not.toHaveTextContent("Win rate");
     expect(within(row("few")).getByTestId(statsTestid.createdTierCell)).toHaveTextContent("—");

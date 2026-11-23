@@ -41,6 +41,7 @@ mod sweep;
 mod technical;
 mod think;
 mod trace;
+mod win_probability;
 mod winrates;
 
 use std::process::ExitCode;

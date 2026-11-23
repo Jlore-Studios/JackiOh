@@ -3,8 +3,8 @@
 
 use jackioh_ai::{
     AI_BUDGET, AI_DEV_RUN, AiDeckOptions, DevRunOptions, MatchConfig, MatchHooks, MatchSetup, SearchBudget,
-    SeatController, build_ai_deck, dev_game_config, dev_game_record, dev_record_id, dev_run_config,
-    forced_dev_game_config, play_match,
+    SeatController, attach_swing_turns, build_ai_deck, dev_game_config, dev_game_record, dev_record_id,
+    dev_run_config, forced_dev_game_config, play_match, swing_turns,
 };
 use jackioh_engine::testkit::{
     CardStatsFilter, DECK_SIZE, DEFAULT_CARD_STATS_FILTER, FoldArgs, GameRecord, LastBoardEntry, PerPlayer,
@@ -123,6 +123,37 @@ mod the_ais_development_run_9_11 {
     }
 
     #[test]
+    fn r4552000_a_development_record_carries_one_row_per_turn() {
+        register_cards();
+        let options = DevRunOptions {
+            series: "dev-test".to_string(),
+            patch: "v0.2.3".to_string(),
+            budget: Some(QUICK),
+            force: None,
+            commit: None,
+            setup: MatchSetup::default(),
+        };
+        let record = dev_game_record(1, &options).expect("the game finished");
+        let mut turns: Vec<i32> = Vec::new();
+        for (seat, summary) in record.game.seats.iter() {
+            let rows = summary.swing_turns.as_ref().expect("each seat carries its rows");
+            assert!(!rows.is_empty(), "{seat:?} took a turn");
+            // One row per turn the seat took, in the order taken.
+            assert!(
+                rows.windows(2).all(|pair| pair[0].turn < pair[1].turn),
+                "{rows:?}"
+            );
+            turns.extend(rows.iter().map(|row| row.turn));
+        }
+        // No turn is two seats', and the game's counter ends at or past every row.
+        turns.sort_unstable();
+        assert!(turns.windows(2).all(|pair| pair[0] < pair[1]), "{turns:?}");
+        assert!(turns.last().is_some_and(|turn| *turn <= record.game.turns));
+        // Seeded: the same game writes the same rows.
+        assert_eq!(dev_game_record(1, &options), Some(record));
+    }
+
+    #[test]
     fn r378_files_each_finished_game_as_a_development_record_of_the_patch_it_tests() {
         register_cards();
         let options = DevRunOptions {
@@ -152,13 +183,18 @@ mod the_ais_development_run_9_11 {
                     "pilots": { "p1": "ai", "p2": "ai" },
                 }),
             );
-            // The game half is the engine's own reading of the game the AI played.
+            // The game half is the engine's own reading of the game the AI played, with the AI's turn
+            // rows beside it (R4552000).
             let played = play_match(&config, &mut MatchHooks::default());
-            let summary = summarize_game(&json_as::<FoldArgs>(json!({
+            let args = json_as::<FoldArgs>(json!({
                 "seed": config.seed,
                 "decks": config.decks,
                 "log": played.log,
-            })));
+            }));
+            let mut summary = summarize_game(&args);
+            if let Some(game) = summary.as_mut() {
+                attach_swing_turns(game, swing_turns(&args).expect("a finished game has rows"));
+            }
             assert_eq!(Some(record.game.clone()), summary);
             assert_eq!(
                 Some(record.game.winner),

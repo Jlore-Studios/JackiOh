@@ -377,9 +377,9 @@ describe("R654 public statistics route", () => {
     expect(screen.getByText("Spark Pup")).toBeInTheDocument();
     expect(screen.getByText("60%")).toBeInTheDocument();
 
-    // core-002 has 10 games (< 20) -> displays "not enough games"
+    // core-002 has 10 games (< 20) -> displays "not enough games" under Decisiveness and under Win rate
     expect(screen.getByText("Lava Hound")).toBeInTheDocument();
-    expect(screen.getByText("not enough games")).toBeInTheDocument();
+    expect(screen.getAllByText("not enough games")).toHaveLength(2);
   });
 
   it("R654 sorts cards by column on header click and keyboard activation", async () => {
@@ -655,16 +655,16 @@ describe("R654 public statistics route", () => {
     for (const figure of ["+25%", "(40 / 10)", "65%", "70%", "40%"]) {
       expect(within(pupRow).queryByText(figure)).toBeNull();
     }
-    // Lava Hound, below the floor, reads "—" for its Tier and Adjusted alone, and no "not enough data".
+    // Lava Hound, below the floor, reads "—" for its Tier and Adjusted alone (Decisiveness and Win rate read "not enough games"), and no "not enough data".
     const houndRow = within(table).getByText("Lava Hound").closest("tr")!;
     expect(within(houndRow).getAllByText("—")).toHaveLength(2);
     expect(screen.queryByText("not enough data")).toBeNull();
 
-    // The grid shows Tier, Adjusted, Win rate and Games, and no face rates.
+    // The grid shows Tier, Adjusted, Decisiveness, Win rate and Games, and no face rates.
     await user.click(screen.getByTestId(statsTestid.viewGrid));
     const grid = await screen.findByTestId(statsTestid.cardsGrid);
     const item = grid.querySelector<HTMLElement>('[data-card-id="core-001"]')!;
-    expect([...item.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual(["Tier", "Adjusted", "Win rate", "Games"]);
+    expect([...item.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual(["Tier", "Adjusted", "Decisiveness", "Win rate", "Games"]);
   });
 
   it("R654 keyword filter", async () => {
@@ -892,6 +892,92 @@ describe("R377 public statistics match type", () => {
     // The raw win rate is still a column, and sorting by it puts Spark Pup back on top.
     await user.click(within(table).getByRole("columnheader", { name: /^Win rate/ }));
     expect(order()).toEqual(["core-001", "core-003", "core-002"]);
+  });
+
+  /** R4552001: the provisional fixture with each card's decisiveness and the typical deck card's. */
+  function stubDecisiveness(): void {
+    const swing: Record<string, number> = { "core-001": 0.142, "core-002": 0.3, "core-003": 0.2 };
+    const cards = MOCK_CARD_STATS_PROVISIONAL.cards.map((card) => ({ ...card, decisiveness: swing[card.id] }));
+    const tiers = { center: 0.02, spread: 0.034, cards: 412, bandLow: 0.45, bandHigh: 0.55, decisiveness: 0.137 };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, cards, tiers }), { status: 200 })),
+      ),
+    );
+  }
+
+  it("R4552001 Decisiveness shows ±X.X% after Adjusted and before Win rate", async () => {
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const heads = within(table).getAllByRole("columnheader").map((th) => th.textContent?.replace(/[↑↓]/g, "").trim());
+    expect(heads.indexOf("Decisiveness")).toBe(heads.indexOf("Adjusted") + 1);
+    expect(heads.indexOf("Win rate")).toBe(heads.indexOf("Decisiveness") + 1);
+    const cells = within(table).getAllByTestId(statsTestid.decisivenessCell);
+    expect(cells.map((cell) => cell.textContent)).toEqual(["±14.2%", "±20.0%", "not enough games"]);
+  });
+
+  it("R4552001 Decisiveness sorts highest first and reads not enough games below the floor", async () => {
+    const user = userEvent.setup();
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const order = (): (string | null)[] =>
+      [...table.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-card-id"));
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("adjustedWinRate");
+    await user.selectOptions(screen.getByTestId(statsTestid.sortSelect), "decisiveness");
+    const header = within(table).getByRole("columnheader", { name: /^Decisiveness/ });
+    expect(header).toHaveAttribute("aria-sort", "descending");
+    // Lava Hound swings most but is below the floor: last, reading "not enough games".
+    expect(order()).toEqual(["core-003", "core-001", "core-002"]);
+    expect(within(table).getAllByTestId(statsTestid.decisivenessCell).map((cell) => cell.textContent)).toEqual([
+      "±20.0%",
+      "±14.2%",
+      "not enough games",
+    ]);
+    await user.click(header);
+    expect(order()).toEqual(["core-001", "core-003", "core-002"]);
+  });
+
+  it("R4552001 the Decisiveness header names the typical card", async () => {
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const title = within(table).getByRole("columnheader", { name: /^Decisiveness/ }).getAttribute("title") ?? "";
+    expect(title).toContain("±");
+    expect(title).toContain("not a margin of error");
+    expect(title).toContain("A typical card: ±13.7%.");
+  });
+
+  it("R4552001 the grid shows Decisiveness after Adjusted", async () => {
+    const user = userEvent.setup();
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    const grid = await screen.findByTestId(statsTestid.cardsGrid);
+    const item = grid.querySelector<HTMLElement>('[data-card-id="core-001"]')!;
+    const labels = [...item.querySelectorAll("dt")].map((dt) => dt.textContent);
+    expect(labels.indexOf("Decisiveness")).toBe(labels.indexOf("Adjusted") + 1);
+    const value = [...item.querySelectorAll("dt")].find((dt) => dt.textContent === "Decisiveness")!.nextElementSibling;
+    expect(value?.textContent).toBe("±14.2%");
+  });
+
+  it("R4552003 no Swing or Board swing is rendered", async () => {
+    const user = userEvent.setup();
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(document.body.textContent).not.toMatch(/swing/i);
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    await screen.findByTestId(statsTestid.cardsGrid);
+    expect(document.body.textContent).not.toMatch(/swing/i);
   });
 
   it("R3022000 R4155000 shows each enough-games card's tier and sorts by tier with S first, with no tiers note", async () => {
@@ -2350,6 +2436,7 @@ describe("R2446000 the Cards table's columns", () => {
       "Games",
       "Tier",
       "Adjusted",
+      "Decisiveness",
       "Win rate",
       "Play rate",
     ]);
@@ -2361,7 +2448,7 @@ describe("R2446000 the Cards table's columns", () => {
       within(screen.getByTestId(statsTestid.sortSelect))
         .getAllByRole("option")
         .map((option) => option.getAttribute("value")),
-    ).toEqual(["name", "games", "tier", "adjustedWinRate", "winRate", "playRate"]);
+    ).toEqual(["name", "games", "tier", "adjustedWinRate", "decisiveness", "winRate", "playRate"]);
   });
 
   it("R2446000 R2777000 R3184000 an old address's sort by cost, rarity, keyword, When drawn, Drawn vs not drawn, Radiant or Normal opens on the default sort, adjusted win rate descending", async () => {
@@ -2462,7 +2549,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     };
   }
 
-  const COLUMNS = ["Card", "Name", "Games", "Tier", "Adjusted ↓"];
+  const COLUMNS = ["Card", "Name", "Games", "Tier", "Adjusted ↓", "Decisiveness"];
 
   it("R3887000 the Tokens and Other created cards list a catalog card as plain text, The Coin among them", async () => {
     window.localStorage.setItem(PLAIN_TEXT_KEY, "1");
@@ -2523,15 +2610,15 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(rowsOf(tokenTable)).toEqual({
       ids: ["core-t-sheep", "core-t-rush", "core-t-coin", "core-t-ghoul"],
       cells: [
-        ["1", "Sheep Token", "40", "A", "53.3%"],
-        ["1", "Rush Token", "55", "B", "52.1%"],
-        ["0", "The Coin", "40", "D", "47.1%"],
-        ["1", "Ghoul Token", "12", "—", "—"],
+        ["1", "Sheep Token", "40", "A", "53.3%", "—"],
+        ["1", "Rush Token", "55", "B", "52.1%", "—"],
+        ["0", "The Coin", "40", "D", "47.1%", "—"],
+        ["1", "Ghoul Token", "12", "—", "—", "not enough games"],
       ],
     });
     expect(rowsOf(otherTable)).toEqual({
       ids: ["core-001"],
-      cells: [["1", "Spark Pup", "30", "C", "49.0%"]],
+      cells: [["1", "Spark Pup", "30", "C", "49.0%", "—"]],
     });
 
     // A header sorts both tables (R4083000). Rush has 55 games; Sheep and The Coin tie at 40 and
@@ -2704,8 +2791,8 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(headersOf(statsTestid.tokensTable)).toContain("Games");
 
     await user.click(screen.getByTestId(statsTestid.columnGames));
-    expect(headersOf(statsTestid.tokensTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓"]);
-    expect(headersOf(statsTestid.createdTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓"]);
+    expect(headersOf(statsTestid.tokensTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Decisiveness"]);
+    expect(headersOf(statsTestid.createdTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Decisiveness"]);
 
     await user.click(screen.getByTestId(statsTestid.columnGames));
     expect(headersOf(statsTestid.tokensTable)).toEqual(COLUMNS);
@@ -2727,6 +2814,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
       ["games", "Games"],
       ["tier", "Tier"],
       ["adjustedWinRate", "Adjusted"],
+      ["decisiveness", "Decisiveness"],
     ]);
     expect(select).toHaveValue("adjustedWinRate");
     expect(screen.getByTestId(statsTestid.sortDir)).toHaveTextContent("↓");

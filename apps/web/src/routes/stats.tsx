@@ -70,7 +70,7 @@ import { RangeText, TierFitText } from "../stats/RangeText.tsx";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
-import { TierChip, adjustedText, tierRank } from "../stats/TierChip.tsx";
+import { TierChip, adjustedText, decisivenessText, tierRank } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
 import { CardTextButton, CardTextFaces, cardTextTestid, useCardText, type CardText } from "./cardText.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -201,16 +201,17 @@ function setPercent(rate: number, signed = false): string {
 
 type TabKey = "cards" | "tokens" | "sets" | "players";
 type ViewKey = "table" | "grid";
-type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "winRate" | "playRate";
+type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness" | "winRate" | "playRate";
 type SortDirection = "asc" | "desc";
 
-const SORT_COLUMNS: readonly SortColumn[] = ["name", "games", "tier", "adjustedWinRate", "winRate", "playRate"] as const;
+const SORT_COLUMNS: readonly SortColumn[] = ["name", "games", "tier", "adjustedWinRate", "decisiveness", "winRate", "playRate"] as const;
 
 const SORT_LABELS: Record<SortColumn, string> = {
   name: "Name",
   games: "Games",
   tier: "Tier",
   adjustedWinRate: "Adjusted",
+  decisiveness: "Decisiveness",
   winRate: "Win rate",
   playRate: "Play rate",
 };
@@ -641,12 +642,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         const aRate = a.adjustedWinRate ?? null;
         const bRate = b.adjustedWinRate ?? null;
         if (aRate !== null && bRate !== null && aRate !== bRate) return (aRate - bRate) * flip;
-      } else if (sortCol === "adjustedWinRate") {
-        // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one.
+      } else if (sortCol === "adjustedWinRate" || sortCol === "decisiveness") {
+        // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one;
+        // R4552001: Decisiveness sorts the same way.
         if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
         if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        const aRate = a.adjustedWinRate ?? null;
-        const bRate = b.adjustedWinRate ?? null;
+        const aRate = (sortCol === "decisiveness" ? a.decisiveness : a.adjustedWinRate) ?? null;
+        const bRate = (sortCol === "decisiveness" ? b.decisiveness : b.adjustedWinRate) ?? null;
         if (aRate !== null && bRate === null) return -1;
         if (aRate === null && bRate !== null) return 1;
         if (aRate !== null && bRate !== null && aRate !== bRate) {
@@ -1041,6 +1043,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                             <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
                           )}
                         </dd>
+                        <dt>{t("Decisiveness")}</dt>
+                        <dd>{card.hasEnoughGames ? decisivenessText(card.decisiveness) : t("not enough games")}</dd>
                         <dt>{t("Win rate")}</dt>
                         <dd>
                           {card.hasEnoughGames && card.winRate !== null
@@ -1130,6 +1134,25 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
+                        title={t(
+                          "Decisiveness: how far playing a card typically moves your chance of winning, one way or the other; ± is the swing itself, not a margin of error. A typical card: {typical}.",
+                          { typical: decisivenessText(tiers?.decisiveness) },
+                        )}
+                        aria-sort={sortCol === "decisiveness" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        onClick={() => handleSort("decisiveness")}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSort("decisiveness");
+                          }
+                        }}
+                        tabIndex={0}
+                      >
+                        {t("Decisiveness")} {sortCol === "decisiveness" && (sortDir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th
+                        scope="col"
+                        className="stats-th stats-th--sortable"
                         aria-sort={sortCol === "winRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("winRate")}
                         onKeyDown={(e) => {
@@ -1211,6 +1234,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                               </div>
                             ) : (
                               "—"
+                            )}
+                          </td>
+                          <td className="stats-td" data-testid={statsTestid.decisivenessCell}>
+                            {card.hasEnoughGames ? (
+                              decisivenessText(card.decisiveness)
+                            ) : (
+                              <span className="stats-not-enough">{t("not enough games")}</span>
                             )}
                           </td>
                           <td className="stats-td stats-td--winrate">

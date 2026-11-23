@@ -38,11 +38,12 @@ use jackioh_engine::config::{TIER_BAND_HIGH, TIER_BAND_LOW};
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardTier, CardWindow, CreatedStats, GameFigures,
     GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter,
-    StatsField, StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated,
-    WindowedGames, WindowedReport, add_created, add_stats, adjusted_interval, adjusted_win_rate,
-    card_drills_of, card_family, card_stats_of, card_window, collapse_gameless, created_adjusted,
-    created_field, held_adjusted, patch_windows, seen, sources_of, stats_field, tier_of, wilson_interval,
-    win_rate, windowed_card_stats, windowed_game_figures,
+    StatsField, StatsTotals, SwingReport, SwingRows, Tally, TotalsKey, WindowQuery, WindowRequest,
+    WindowSource, WindowedCreated, WindowedGames, WindowedReport, add_created, add_stats, adjusted_interval,
+    adjusted_win_rate, card_drills_of, card_family, card_stats_of, card_window, collapse_gameless,
+    created_adjusted, created_field, held_adjusted, patch_windows, seen, sources_of, stats_field,
+    swing_baseline, swing_report, tier_of, wilson_interval, win_rate, windowed_card_stats,
+    windowed_game_figures, windowed_swing_rows,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -85,6 +86,10 @@ pub struct PublicCardStat {
     /// R2895000: the 95% interval of `adjusted_win_rate` (`adjusted_interval`); null where it is.
     pub adjusted_low: Option<f64>,
     pub adjusted_high: Option<f64>,
+    /// R4552001, R4552003: how far a play of the card typically moves its player's chance of winning,
+    /// either way, as a fraction, shrunk toward the typical card's (`swing_report`); null with no turn
+    /// rows. The only figure of R4552001's a client reads: no Swing and no Board swing.
+    pub decisiveness: Option<f64>,
     /// R3022000: the card's balance tier (`tier_of` its adjusted rate and range); null below R654's
     /// floor, as its rate is shown only from it.
     pub tier: Option<CardTier>,
@@ -115,6 +120,8 @@ pub struct PublicCreatedStat {
     /// R4082000: the 95% range of `adjusted_win_rate`, R2895000's.
     pub adjusted_low: Option<f64>,
     pub adjusted_high: Option<f64>,
+    /// R4552002, R4552004: its Decisiveness, read against the Created cards' (`PublicCardStat`'s).
+    pub decisiveness: Option<f64>,
     /// R4082000: the card's balance tier (`tier_of` its adjusted rate and range, R3022000); null below
     /// R654's floor, as its rate is shown only from it.
     pub tier: Option<CardTier>,
@@ -129,6 +136,7 @@ impl PublicCreatedStat {
         row: &WindowedCreated,
         created: &StatsField,
         deck: &StatsField,
+        swing: &SwingReport,
     ) -> PublicCreatedStat {
         let stats = &row.stats;
         let games = i64::from(stats.games());
@@ -144,6 +152,10 @@ impl PublicCreatedStat {
             adjusted_win_rate: adjusted.map(|(rate, _)| rate),
             adjusted_low: adjusted.map(|(_, (low, _))| low),
             adjusted_high: adjusted.map(|(_, (_, high))| high),
+            decisiveness: swing
+                .created
+                .get(&stats.card)
+                .and_then(|figures| figures.decisiveness),
             tier: adjusted
                 .filter(|_| has_enough_games)
                 .map(|(rate, (low, high))| tier_of(rate, low, high)),
@@ -432,6 +444,9 @@ pub struct PublicStatsTiers {
     /// The band: tier S is above `band_high`, tier F below `band_low` (`TIER_BAND_HIGH`, `TIER_BAND_LOW`).
     pub band_low: f64,
     pub band_high: f64,
+    /// R4552001: the typical deck card's Decisiveness (`DecisivenessField::typical`), which the page
+    /// names beside each card's.
+    pub decisiveness: f64,
     /// R4082000: the field the Created cards a card's text makes are read against.
     pub created: PublicCreatedTiers,
 }
@@ -450,6 +465,8 @@ pub struct PublicCreatedTiers {
     /// The win rate of the seats that make an average Created card, which reads an even game: the average
     /// deck's plus `center`.
     pub baseline: f64,
+    /// R4552002: the typical Created card's Decisiveness.
+    pub decisiveness: f64,
 }
 
 /// R1994000: `GET /api/stats/games`'s body: counts and shares only, naming no game and no player.
@@ -808,6 +825,8 @@ impl KeptReports {
 struct KeptWindow {
     report: WindowedReport,
     games: WindowedGames,
+    /// R4552001: every turn of the counted records, which an ordinary turn's gain is read off.
+    swing_rows: SwingRows,
     live_games: IndexMap<String, i64>,
     history: Vec<PatchStep>,
     patches: Vec<PatchWindow>,
@@ -853,6 +872,7 @@ fn window_over(
         },
     );
     let figures = windowed_game_figures(totals, history, at, mode.filter(), source.request());
+    let swing_rows = windowed_swing_rows(totals, history, at, mode.filter(), source.request());
     let mut live_games: IndexMap<String, i64> = IndexMap::new();
     for key in totals.records.keys() {
         live_games
@@ -863,6 +883,7 @@ fn window_over(
     KeptWindow {
         report,
         games: figures,
+        swing_rows,
         live_games,
         history: collapse_gameless(history, games),
         patches: patch_windows(history, games, |version| totals.live_games(version)),
@@ -1207,6 +1228,22 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             .map(|row| &row.stats),
         &field,
     );
+    // R4552001, R4552002: every card's Decisiveness, read off the same cards as the two fields above,
+    // beside the turns of the records the window counts.
+    let swing = swing_report(
+        app.catalog
+            .defs
+            .iter()
+            .filter(|(_, def)| !def.token)
+            .filter_map(|(id, _)| report.card(id))
+            .map(|card| (card.stats.card.as_str(), &card.stats.swing)),
+        report
+            .created
+            .iter()
+            .filter(|row| app.catalog.defs.contains_key(&row.stats.card))
+            .map(|row| (row.stats.card.as_str(), &row.stats.swing)),
+        &swing_baseline(&kept.swing_rows),
+    );
 
     let mut cards: Vec<PublicCardStat> = Vec::new();
     for (id, def) in &app.catalog.defs {
@@ -1244,6 +1281,13 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
                 stat.and_then(|stat| adjusted_interval(stat, &field)),
             ),
         };
+        // R4552002: a card a rule makes reads its Created copies' turns, as its adjusted rate does.
+        let figures = if made.is_some() {
+            swing.created.get(id.as_str())
+        } else {
+            swing.cards.get(id.as_str())
+        };
+        let decisiveness = figures.and_then(|figures| figures.decisiveness);
         // R3022000: the tier, from R654's floor as the rate is shown.
         let tier = adjusted
             .zip(adjusted_range)
@@ -1263,6 +1307,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             win_rate_high: rate_range.map(|(_, high)| high),
             adjusted_low: adjusted_range.map(|(low, _)| low),
             adjusted_high: adjusted_range.map(|(_, high)| high),
+            decisiveness,
             tier,
             play_rate,
             has_enough_games,
@@ -1315,7 +1360,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         .iter()
         .filter_map(|row| {
             let def = app.catalog.defs.get(&row.stats.card)?;
-            shown(&row.stats.card, def).then(|| PublicCreatedStat::of(def, row, &made_field, &field))
+            shown(&row.stats.card, def).then(|| PublicCreatedStat::of(def, row, &made_field, &field, &swing))
         })
         .collect();
     created.sort_by(|a, b| {
@@ -1350,11 +1395,13 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             baseline: field.baseline,
             band_low: TIER_BAND_LOW,
             band_high: TIER_BAND_HIGH,
+            decisiveness: swing.deck_field.typical,
             created: PublicCreatedTiers {
                 center: made_field.center,
                 spread: made_field.spread,
                 cards: made_field.cards,
                 baseline: made_field.baseline,
+                decisiveness: swing.created_field.typical,
             },
         },
         patches: kept.patches.clone(),

@@ -8,6 +8,7 @@ use serde_json::{Value, json};
 use jackioh_engine::wire::{GameRecord, GameSource, SourceFilter, StatsTotals, parse_game_record_lines};
 use jackioh_server::cli::card_stats::{
     CardStatsOptions, card_stats_report, card_stats_window, parse_card_stats_args, render_card_stats,
+    swing_text,
 };
 use jackioh_server::cli::export_records::{
     ExportOptions, export_records, parse_export_args, read_claim_counts, read_records, render_claim_counts,
@@ -164,6 +165,36 @@ mod stats_cards_options {
         assert!(refusal(&["--deck=1"]).contains("Unrecognized option --deck"));
         assert!(refusal(&["--patch"]).contains("Unrecognized argument"));
         assert!(refusal(&["v0.2.3"]).contains("Unrecognized argument"));
+    }
+
+    #[test]
+    fn r4552001_swing_prints_the_figures_after_the_table_and_never_with_json_or_window() {
+        let options = parse_card_stats_args(&args(&["--swing"])).expect("--swing parses");
+        assert!(options.swing);
+        assert!(
+            !parse_card_stats_args(&args(&[]))
+                .expect("no arguments parse")
+                .swing
+        );
+        assert!(refusal(&["--swing", "--json"]).contains("--swing prints a table"));
+        assert!(refusal(&["--swing", "--window"]).contains("--swing prints a table"));
+        // A live record whose p1 played core-001 on a turn its chance moved: the text names the card and
+        // the typical card's Decisiveness.
+        let mut record = game_record_json("swing-1", json!({}));
+        record["game"]["seats"]["p1"]["swingTurns"] = json!([
+            { "turn": 1, "eval": 0 },
+            { "turn": 3, "eval": 2_000_000 },
+        ]);
+        record["game"]["seats"]["p1"]["playedTurns"] = json!([1]);
+        let mut totals = StatsTotals::default();
+        totals.fold(
+            &jackioh_engine::wire::parse_game_record(&record).expect("a record"),
+            false,
+        );
+        let text = swing_text(&totals, &options, &|_| None);
+        assert!(text.contains("Decisiveness"), "{text}");
+        assert!(text.contains("a typical card \u{b1}"), "{text}");
+        assert!(text.contains("core-001"), "{text}");
     }
 }
 

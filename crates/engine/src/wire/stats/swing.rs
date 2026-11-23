@@ -26,15 +26,16 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CardStatsFilter, CardTotal, GameRecord, Outcome, RecordsKey, StatsTotals, TotalsKey, made_by_the_rules,
-    outcome_for, pilot_counts, random_effects, sources_of, table, to_fixed,
+    CardStatsFilter, CardTotal, GameRecord, GameSummary, Outcome, RecordsKey, StatsTotals, TotalsKey,
+    made_by_the_rules, outcome_for, pilot_counts, random_effects, sources_of, table, to_fixed,
 };
 use crate::config::{
     ADJUSTED_FIELD_MIN_CARDS, DECISIVENESS_PRIOR_CENTER, DECISIVENESS_PRIOR_SPREAD, SWING_EVAL_SCALE,
-    SWING_FIELD_MIN_ROWS, SWING_PERMILLE, SWING_PRIOR_BOARD_SPREAD, SWING_PRIOR_PLAY_SPREAD, SWING_TURN_BUCKETS,
-    WIN_PROBABILITY_EVAL, WIN_PROBABILITY_FIRST, WIN_PROBABILITY_INTERCEPT, WIN_PROBABILITY_TURN,
+    SWING_FIELD_MIN_ROWS, SWING_PERMILLE, SWING_PRIOR_BOARD_SPREAD, SWING_PRIOR_PLAY_SPREAD,
+    SWING_TURN_BUCKETS, WIN_PROBABILITY_EVAL, WIN_PROBABILITY_FIRST, WIN_PROBABILITY_INTERCEPT,
+    WIN_PROBABILITY_TURN,
 };
-use crate::wire::catalog_types::{PLAYER_IDS, PerPlayer};
+use crate::wire::catalog_types::{PLAYER_IDS, PerPlayer, PlayerId};
 
 // ---------------------------------------------------------------------------
 // The record (R4552000)
@@ -155,12 +156,25 @@ pub struct SwingTally {
     pub facing: SwingSums,
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     pub made_acting: IndexMap<String, i64>,
+    /// R4552002: of a Created card's acting turns, those of a copy a hand held (and so was played, not
+    /// made onto the field): what its own Swing counts per play. A deck card's acting turns all follow
+    /// its plays, so it keeps none.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub held_acting: i64,
+}
+
+fn is_zero(turns: &i64) -> bool {
+    *turns == 0
 }
 
 impl SwingTally {
     /// No turns of any kind.
     pub fn is_empty(&self) -> bool {
-        self.played.is_empty() && self.acting.is_empty() && self.facing.is_empty() && self.made_acting.is_empty()
+        self.played.is_empty()
+            && self.acting.is_empty()
+            && self.facing.is_empty()
+            && self.made_acting.is_empty()
+            && self.held_acting == 0
     }
 
     /// Adds `other`'s sums into these.
@@ -171,6 +185,7 @@ impl SwingTally {
         for (card, turns) in &other.made_acting {
             *self.made_acting.entry(card.clone()).or_default() += turns;
         }
+        self.held_acting += other.held_acting;
     }
 
     fn close_game(&mut self) {
@@ -222,9 +237,11 @@ fn quantum(delta: f64) -> i64 {
     (delta * SWING_PERMILLE).round() as i64
 }
 
-/// R4552001: what the seat's result is worth at its last turn's end: a win 1, a loss 0, a draw ½.
-fn result_value(outcome: Outcome) -> f64 {
-    match outcome {
+/// R4552000, R4552001: what the seat's result is worth at its last turn's end, and what the win
+/// probability is fit to (`cargo jackioh stats calibrate`): a win 1, a loss 0, a draw ½ (R1843004's
+/// reading: a fled game is the fleer's win).
+pub fn seat_result(game: &GameSummary, seat: PlayerId) -> f64 {
+    match outcome_for(game, seat) {
         Outcome::Win => 1.0,
         Outcome::Draw => 0.5,
         Outcome::Loss => 0.0,
@@ -272,7 +289,7 @@ impl StatsTotals {
             let summary = &seats[seat];
             let opponent = seat.opponent();
             let first = record.game.first == seat;
-            let end = result_value(outcome_for(&record.game, seat));
+            let end = seat_result(&record.game, seat);
             let deck: IndexSet<&str> = summary.deck.iter().map(String::as_str).collect();
             let opponent_deck: IndexSet<&str> = seats[opponent].deck.iter().map(String::as_str).collect();
 
@@ -322,6 +339,7 @@ impl StatsTotals {
                 }
                 let mut seen: IndexSet<(bool, &str)> = IndexSet::new();
                 let mut made: IndexSet<(&str, &str)> = IndexSet::new();
+                let mut held: IndexSet<&str> = IndexSet::new();
                 for acting in &row.acting {
                     match acting {
                         ActingCard::Dealt(card) => {
@@ -333,15 +351,22 @@ impl StatsTotals {
                             if seen.insert((true, created.card.as_str())) {
                                 mine.created(&created.card).acting.count(bucket, q);
                             }
-                            if let Some(maker) = created.maker.as_deref()
-                                && made.insert((maker, created.card.as_str()))
-                            {
-                                let tally = if deck.contains(maker) {
-                                    mine.deck(maker)
-                                } else {
-                                    mine.created(maker)
-                                };
-                                *tally.made_acting.entry(created.card.clone()).or_default() += 1;
+                            match created.maker.as_deref() {
+                                Some(maker) => {
+                                    if made.insert((maker, created.card.as_str())) {
+                                        let tally = if deck.contains(maker) {
+                                            mine.deck(maker)
+                                        } else {
+                                            mine.created(maker)
+                                        };
+                                        *tally.made_acting.entry(created.card.clone()).or_default() += 1;
+                                    }
+                                }
+                                None => {
+                                    if held.insert(created.card.as_str()) {
+                                        mine.created(&created.card).held_acting += 1;
+                                    }
+                                }
                             }
                         }
                     }
@@ -670,14 +695,16 @@ struct Terms {
 
 /// R4552001: the root mean square of `r = y − ȳ + term` over a kind's turns, `√(Var y + term²)`, and its
 /// sampling variance by the delta method, `Var(r²) / (4 · mean r² · n_eff)`, read off the raw moments of
-/// `d = Δ − E[Δ] + term` (`α` varies little across buckets, so `d` is `r` but for it). Infinite at 0.
+/// `d = Δ − E[Δ] + term` (`α` varies little across buckets, so `d` is `r` but for it). `Var(r²)` is at
+/// least a normal distribution's, `2 · RMS⁴`: a few turns that happen to swing alike (two plays, each
+/// ±40 points) measure no spread of `r²` at all, and are not read as certain for it. Infinite at 0.
 fn rms_of(read: &Read, term: f64) -> (f64, f64) {
     let rms = (read.variance() + term * term).sqrt();
     let shift = read.raw[0] - term;
     let [m1, m2, m3, m4] = read.raw;
     let second = m2 - 2.0 * shift * m1 + shift * shift;
     let fourth = m4 - 4.0 * shift * m3 + 6.0 * shift * shift * m2 - 4.0 * shift.powi(3) * m1 + shift.powi(4);
-    let spread = (fourth - second * second).max(0.0);
+    let spread = (fourth - second * second).max(2.0 * rms.powi(4));
     let noise = if rms > 0.0 {
         spread / (4.0 * rms * rms * read.effective)
     } else {
@@ -743,7 +770,11 @@ fn decisiveness_of(terms: &Terms, field: &DecisivenessField) -> Option<f64> {
     let noise = terms.noise?;
     let prior = field.spread * field.spread;
     let weight = if noise.is_finite() {
-        if prior + noise > 0.0 { prior / (prior + noise) } else { 1.0 }
+        if prior + noise > 0.0 {
+            prior / (prior + noise)
+        } else {
+            1.0
+        }
     } else {
         0.0
     };
@@ -751,13 +782,20 @@ fn decisiveness_of(terms: &Terms, field: &DecisivenessField) -> Option<f64> {
 }
 
 /// R4552001, R4552002: Swing, what a play is worth: `b`, plus per play the turns it then acts times its
-/// board term, plus per play the turns each Created card it made acts times that card's (its Created
+/// board term (a Created card's, only the turns of its copies a hand held: the others follow their
+/// makers' plays), plus per play the turns each Created card it made acts times that card's (its Created
 /// figure). `None` with no play.
-fn swing_of(terms: &Terms, made_acting: &IndexMap<String, i64>, made_board: &IndexMap<&str, f64>) -> Option<f64> {
+fn swing_of(
+    terms: &Terms,
+    tally: &SwingTally,
+    created: bool,
+    made_board: &IndexMap<&str, f64>,
+) -> Option<f64> {
     let play = terms.play?;
     let plays = terms.plays as f64;
-    let mut swing = play + terms.board.unwrap_or(0.0) * terms.acting as f64 / plays;
-    let mut made: Vec<(&String, &i64)> = made_acting.iter().collect();
+    let own = if created { tally.held_acting } else { terms.acting };
+    let mut swing = play + terms.board.unwrap_or(0.0) * own as f64 / plays;
+    let mut made: Vec<(&String, &i64)> = tally.made_acting.iter().collect();
     made.sort_unstable();
     for (card, turns) in made {
         swing += made_board.get(card.as_str()).copied().unwrap_or(0.0) * *turns as f64 / plays;
@@ -812,20 +850,21 @@ pub fn swing_report<'a>(
         .iter()
         .filter_map(|(card, _, terms)| Some((*card, terms.board?)))
         .collect();
-    let figures = |tally: &SwingTally, terms: &Terms, field: &DecisivenessField| SwingFigures {
-        plays: terms.plays,
-        acting: terms.acting,
-        play: terms.play,
-        board: terms.board,
-        swing: swing_of(terms, &tally.made_acting, &made_board),
-        rms: terms.rms,
-        noise: terms.noise,
-        decisiveness: decisiveness_of(terms, field),
-    };
+    let figures =
+        |tally: &SwingTally, terms: &Terms, field: &DecisivenessField, created: bool| SwingFigures {
+            plays: terms.plays,
+            acting: terms.acting,
+            play: terms.play,
+            board: terms.board,
+            swing: swing_of(terms, tally, created, &made_board),
+            rms: terms.rms,
+            noise: terms.noise,
+            decisiveness: decisiveness_of(terms, field),
+        };
     SwingReport {
         cards: deck_terms
             .iter()
-            .map(|(card, tally, terms)| (card.to_string(), figures(tally, terms, &deck_field)))
+            .map(|(card, tally, terms)| (card.to_string(), figures(tally, terms, &deck_field, false)))
             .collect(),
         created: created_terms
             .iter()
@@ -835,7 +874,7 @@ pub fn swing_report<'a>(
                 } else {
                     &created_field
                 };
-                (card.to_string(), figures(tally, terms, field))
+                (card.to_string(), figures(tally, terms, field, true))
             })
             .collect(),
         deck_field,
@@ -856,7 +895,10 @@ fn points(value: Option<f64>) -> String {
 
 /// R4552001: Decisiveness as the page shows it, "±14.2%", or "—".
 pub fn format_decisiveness(value: Option<f64>) -> String {
-    value.map_or_else(|| "—".to_string(), |value| format!("±{}%", to_fixed(value * 100.0, 1)))
+    value.map_or_else(
+        || "—".to_string(),
+        |value| format!("±{}%", to_fixed(value * 100.0, 1)),
+    )
 }
 
 /// R4552001: the report as plain text, `stats report --swing` and `stats-cards --swing`: each field's
@@ -933,7 +975,6 @@ pub fn format_swing(report: &SwingReport, name_of: impl Fn(&str) -> Option<Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::catalog_types::PlayerId;
     use crate::wire::events::{GameOverReason, Winner};
     use crate::wire::stats::{
         CardStatsReport, CreatedUse, GameMode, GameSource, GameSummary, Pilot, PilotFilter, SeatSummary,
@@ -1018,8 +1059,14 @@ mod tests {
         let report = card_stats_of(totals, &EVERY);
         let baseline = swing_baseline(&swing_rows_of(totals, &EVERY));
         let swing = swing_report(
-            report.cards.iter().map(|stats| (stats.card.as_str(), &stats.swing)),
-            report.created.iter().map(|stats| (stats.card.as_str(), &stats.swing)),
+            report
+                .cards
+                .iter()
+                .map(|stats| (stats.card.as_str(), &stats.swing)),
+            report
+                .created
+                .iter()
+                .map(|stats| (stats.card.as_str(), &stats.swing)),
             &baseline,
         );
         (report, swing)
@@ -1032,10 +1079,12 @@ mod tests {
     }
 
     /// Game `n`: p1 plays `quiet` on its first turn, which changes nothing, and `wild` on its second,
-    /// which moves its chance 40 points one way or the other; p2 plays sixteen of `FILLERS` cards, each
-    /// a turn of modest swing, so the field has a typical card to read.
+    /// which moves its chance 40 points one way or the other. p2 plays sixteen of `FILLERS` cards, each
+    /// on a turn of its own that moves p2's chance by the filler's own size (2 to 16 points) one way or
+    /// the other, a quiet turn after it bringing it back, so the field's typical card and spread are
+    /// read off real spread.
     fn swing_game(n: usize, wild: &str, quiet: &str) -> GameRecord {
-        let won = n % 2 == 0;
+        let won = n.is_multiple_of(2);
         let after = if won { 0.9 } else { 0.1 };
         let p1 = seat(
             &[wild, quiet],
@@ -1046,16 +1095,18 @@ mod tests {
                 (after, vec![], vec![]),
             ],
         );
-        let steps = [0.03, 0.09, 0.06, 0.12, 0.045, 0.075];
-        let mut p = 1.0 - after;
-        let fillers: Vec<String> = (0..16).map(|i| filler((n * 16 + i) % FILLERS)).collect();
+        let fillers: Vec<usize> = (0..16).map(|i| (n * 16 + i) % FILLERS).collect();
+        let names: Vec<String> = fillers.iter().map(|index| filler(*index)).collect();
         let mut turns = Vec::new();
-        for (i, card) in fillers.iter().enumerate() {
-            turns.push((p, vec![card.as_str()], vec![]));
-            let step = steps[(n + i) % steps.len()];
-            p = if i % 2 == 0 { p + step } else { p - step }.clamp(0.02, 0.98);
+        for (i, (index, card)) in fillers.iter().zip(&names).enumerate() {
+            let size = 0.02 * (1 + index % 8) as f64;
+            let sign = if (n + i).is_multiple_of(2) { 1.0 } else { -1.0 };
+            turns.push((0.5, vec![card.as_str()], vec![]));
+            turns.push((0.5 + sign * size, vec![], vec![]));
         }
-        let deck: Vec<&str> = fillers.iter().map(String::as_str).collect();
+        // A last, empty turn ends at the result.
+        turns.push((0.5, vec![], vec![]));
+        let deck: Vec<&str> = names.iter().map(String::as_str).collect();
         let p2 = seat(&deck, false, &turns);
         record(
             &format!("g{n:03}"),
@@ -1066,7 +1117,10 @@ mod tests {
     }
 
     fn figures<'a>(report: &'a SwingReport, card: &str) -> &'a SwingFigures {
-        report.cards.get(card).unwrap_or_else(|| panic!("no figures for {card}"))
+        report
+            .cards
+            .get(card)
+            .unwrap_or_else(|| panic!("no figures for {card}"))
     }
 
     #[test]
@@ -1113,7 +1167,10 @@ mod tests {
         let value = serde_json::to_value(&written).unwrap();
         let row = &value["game"]["seats"]["p1"]["swingTurns"][1];
         assert_eq!(row["acting"][0], json!("core-015"));
-        assert_eq!(row["acting"][1], json!({ "card": "core-t-rush", "maker": "core-015" }));
+        assert_eq!(
+            row["acting"][1],
+            json!({ "card": "core-t-rush", "maker": "core-015" })
+        );
         assert_eq!(row["facing"][0], json!({ "card": "core-coin" }));
         assert_eq!(parse_game_record(&value).unwrap(), written);
         // A record written before the rows reads none, and a malformed one is refused by its path.
@@ -1128,16 +1185,28 @@ mod tests {
 
     #[test]
     fn r4552001_a_card_swinging_either_way_reads_well_above_the_typical_card() {
-        let records: Vec<GameRecord> = (0..40).map(|n| swing_game(n, "wild", "quiet")).collect();
+        let records: Vec<GameRecord> = (0..80).map(|n| swing_game(n, "wild", "quiet")).collect();
         let (_, report) = report_of(&totals_of(&records));
         // The fillers make a field of its own, not the named prior.
-        assert!(report.deck_field.cards >= ADJUSTED_FIELD_MIN_CARDS, "{:?}", report.deck_field);
+        assert!(
+            report.deck_field.cards >= ADJUSTED_FIELD_MIN_CARDS,
+            "{:?}",
+            report.deck_field
+        );
         let typical = report.deck_field.typical;
-        assert!(typical > 0.02 && typical < 0.2, "typical {typical}");
+        assert!(
+            typical > 0.0 && typical < 0.1 && typical != DECISIVENESS_PRIOR_CENTER,
+            "typical {typical}"
+        );
         let wild = figures(&report, "wild");
-        assert_eq!(wild.plays, 40);
+        assert_eq!(wild.plays, 80);
+        // Its raw RMS is its 40 points; shrunk by 80 plays' noise, it still reads twice the typical card.
+        assert!((wild.rms.unwrap() - 0.4).abs() < 0.01, "{wild:?}");
         let decisive = wild.decisiveness.unwrap();
-        assert!(decisive > 2.0 * typical && decisive > 0.35, "{decisive} against {typical}");
+        assert!(
+            decisive > 2.0 * typical && decisive > typical + 0.1,
+            "{decisive} against {typical}"
+        );
         assert!(wild.swing.unwrap().abs() < 0.02, "{:?}", wild.swing);
         let quiet = figures(&report, "quiet");
         assert!(quiet.decisiveness.unwrap() <= typical + 1e-12, "{quiet:?}");
@@ -1155,13 +1224,21 @@ mod tests {
                     seat(
                         &["ahead"],
                         true,
-                        &[(0.5, vec![], vec![]), (0.85, vec!["ahead"], vec![]), (0.85, vec![], vec![])],
+                        &[
+                            (0.5, vec![], vec![]),
+                            (0.85, vec!["ahead"], vec![]),
+                            (0.85, vec![], vec![]),
+                        ],
                     )
                 } else {
                     seat(
                         &["ahead"],
                         true,
-                        &[(0.5, vec![], vec![]), (0.5, vec![], vec![]), (0.5, vec![], vec![])],
+                        &[
+                            (0.5, vec![], vec![]),
+                            (0.5, vec![], vec![]),
+                            (0.5, vec![], vec![]),
+                        ],
                     )
                 };
                 p1.drawn = vec!["ahead".to_string()];
@@ -1181,12 +1258,19 @@ mod tests {
         let ahead = figures(&report, "ahead");
         assert_eq!(ahead.plays, 30);
         assert!(ahead.swing.unwrap().abs() < 0.01, "{:?}", ahead.swing);
-        assert!(ahead.decisiveness.unwrap() <= report.deck_field.typical + 1e-12, "{ahead:?}");
+        assert!(
+            ahead.decisiveness.unwrap() <= report.deck_field.typical + 1e-12,
+            "{ahead:?}"
+        );
     }
 
     /// A seat that plays `card` on its only turn and moves its chance by `delta` from an even game.
     fn one_swing(n: usize, card: &str, delta: f64) -> GameRecord {
-        let p1 = seat(&[card], true, &[(0.5, vec![card], vec![]), (0.5 + delta, vec![], vec![])]);
+        let p1 = seat(
+            &[card],
+            true,
+            &[(0.5, vec![card], vec![]), (0.5 + delta, vec![], vec![])],
+        );
         let p2 = seat(&["other"], false, &[(0.5, vec![], vec![])]);
         let winner = if delta > 0.0 { Winner::P1 } else { Winner::P2 };
         // The last turn ends at the result, from 0.5 + delta: its move is no part of `card`'s.
@@ -1238,7 +1322,10 @@ mod tests {
         let (_, first) = report_of(&forward);
         for other in [&reverse, &halves] {
             let (_, again) = report_of(other);
-            assert_eq!(first.deck_field.typical.to_bits(), again.deck_field.typical.to_bits());
+            assert_eq!(
+                first.deck_field.typical.to_bits(),
+                again.deck_field.typical.to_bits()
+            );
             assert_eq!(first.cards.len(), again.cards.len());
             for (card, figures) in &first.cards {
                 assert_eq!(bits(figures), bits(&again.cards[card]), "{card}");
@@ -1248,39 +1335,67 @@ mod tests {
 
     #[test]
     fn r4552002_a_token_put_onto_the_field_is_credited_to_its_maker() {
-        // p1 plays core-015, whose Cry puts a core-t-rush onto the field; the token acts on p1's next
-        // two turns, each of which gains 20 points.
+        // In even games p1 plays core-015, whose Cry puts a core-t-rush onto the field; the token acts on
+        // p1's next two turns, each of which gains 20 points. In odd games p1 plays nothing and its
+        // chance stands still, so an ordinary second and third turn gain 10 points and the token's 20.
         let rush = || {
             ActingCard::Created(CreatedActing {
                 card: "core-t-rush".to_string(),
                 maker: Some("core-015".to_string()),
             })
         };
-        let records: Vec<GameRecord> = (0..30)
+        let records: Vec<GameRecord> = (0..60)
             .map(|n| {
-                let mut p1 = seat(
-                    &["core-015"],
-                    true,
-                    &[
-                        (0.3, vec!["core-015"], vec![]),
-                        (0.4, vec![], vec![rush()]),
-                        (0.6, vec![], vec![rush()]),
-                        (0.8, vec![], vec![]),
-                    ],
-                );
-                p1.created_used = Some(vec![CreatedUse {
-                    card: "core-t-rush".to_string(),
-                    turn: 1,
-                    radiant: false,
-                }]);
-                let p2 = seat(&["other"], false, &[(0.6, vec![], vec![]), (0.4, vec![], vec![])]);
-                record(&format!("t{n:03}"), Winner::P1, p1, p2)
+                let mut p1 = if n % 2 == 0 {
+                    seat(
+                        &["core-015"],
+                        true,
+                        &[
+                            (0.5, vec!["core-015"], vec![]),
+                            (0.5, vec![], vec![rush()]),
+                            (0.7, vec![], vec![rush()]),
+                            (0.9, vec![], vec![]),
+                        ],
+                    )
+                } else {
+                    seat(
+                        &["core-015"],
+                        true,
+                        &[
+                            (0.5, vec![], vec![]),
+                            (0.5, vec![], vec![]),
+                            (0.5, vec![], vec![]),
+                            (0.5, vec![], vec![]),
+                        ],
+                    )
+                };
+                if n % 2 == 0 {
+                    p1.created_used = Some(vec![CreatedUse {
+                        card: "core-t-rush".to_string(),
+                        turn: 1,
+                        radiant: false,
+                    }]);
+                }
+                let p2 = seat(&["other"], false, &[(0.5, vec![], vec![]), (0.5, vec![], vec![])]);
+                record(
+                    &format!("t{n:03}"),
+                    if n % 2 == 0 { Winner::P1 } else { Winner::P2 },
+                    p1,
+                    p2,
+                )
             })
             .collect();
         let totals = totals_of(&records);
         let (cards, report) = report_of(&totals);
-        let token = cards.created.iter().find(|made| made.card == "core-t-rush").unwrap();
-        assert!(token.swing.played.is_empty(), "a token put onto the field has no play of its own");
+        let token = cards
+            .created
+            .iter()
+            .find(|made| made.card == "core-t-rush")
+            .unwrap();
+        assert!(
+            token.swing.played.is_empty(),
+            "a token put onto the field has no play of its own"
+        );
         assert_eq!(token.swing.acting.rows(), 60);
         let maker = cards.cards.iter().find(|stats| stats.card == "core-015").unwrap();
         assert_eq!(maker.swing.played.rows(), 30);
@@ -1293,8 +1408,92 @@ mod tests {
         assert!(board > 0.0);
         // The maker's Swing: its own play term and two turns of its token's board term per play.
         let from_token = maker.swing.unwrap() - maker.play.unwrap();
-        assert!((from_token - 2.0 * board).abs() < 1e-12, "{from_token} against {board}");
+        assert!(
+            (from_token - 2.0 * board).abs() < 1e-12,
+            "{from_token} against {board}"
+        );
         // A token no hand held reads the turns it acts.
         assert!(token.decisiveness.is_some());
+        assert_eq!(
+            cards
+                .created
+                .iter()
+                .find(|made| made.card == "core-t-rush")
+                .unwrap()
+                .swing
+                .held_acting,
+            0
+        );
+    }
+
+    #[test]
+    fn r4552002_a_created_card_a_hand_held_counts_its_own_acting_turns_in_its_swing() {
+        // In even games p1 plays a Created copy from its hand on its first turn, which then acts on its
+        // next two turns, each gaining 20 points; in odd games p1 plays nothing and stands still.
+        let held = || {
+            ActingCard::Created(CreatedActing {
+                card: "core-008".to_string(),
+                maker: None,
+            })
+        };
+        let records: Vec<GameRecord> = (0..60)
+            .map(|n| {
+                let played = n % 2 == 0;
+                let mut p1 = if played {
+                    seat(
+                        &["other"],
+                        true,
+                        &[
+                            (0.5, vec![], vec![]),
+                            (0.5, vec![], vec![held()]),
+                            (0.7, vec![], vec![held()]),
+                            (0.9, vec![], vec![]),
+                        ],
+                    )
+                } else {
+                    seat(
+                        &["other"],
+                        true,
+                        &[
+                            (0.5, vec![], vec![]),
+                            (0.5, vec![], vec![]),
+                            (0.5, vec![], vec![]),
+                            (0.5, vec![], vec![]),
+                        ],
+                    )
+                };
+                if played {
+                    let used = CreatedUse {
+                        card: "core-008".to_string(),
+                        turn: 1,
+                        radiant: false,
+                    };
+                    p1.created_used = Some(vec![used.clone()]);
+                    p1.created_played = Some(vec![used]);
+                }
+                let p2 = seat(&["other"], false, &[(0.5, vec![], vec![]), (0.5, vec![], vec![])]);
+                record(
+                    &format!("h{n:03}"),
+                    if played { Winner::P1 } else { Winner::P2 },
+                    p1,
+                    p2,
+                )
+            })
+            .collect();
+        let (cards, report) = report_of(&totals_of(&records));
+        let tally = &cards
+            .created
+            .iter()
+            .find(|made| made.card == "core-008")
+            .unwrap()
+            .swing;
+        assert_eq!(
+            (tally.played.rows(), tally.acting.rows(), tally.held_acting),
+            (30, 60, 60)
+        );
+        let copy = &report.created["core-008"];
+        let from_board = copy.swing.unwrap() - copy.play.unwrap();
+        assert!(copy.board.unwrap() > 0.0);
+        assert!((from_board - 2.0 * copy.board.unwrap()).abs() < 1e-12, "{copy:?}");
     }
 }

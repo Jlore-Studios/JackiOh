@@ -2418,18 +2418,20 @@ pub const TIER_C_FROM: f64 = (TIER_BAND_LOW + ADJUSTED_WIN_RATE_CENTER) / 2.0;
 
 /// R4552000: the win probability's intercept, `β₀` of `P = σ(β₀ + β₁·eval + β₂·turn + β₃·first)`, fit by
 /// `cargo jackioh stats calibrate` over development records against `WIN_PROBABILITY_AI_GENERATION`'s
-/// evaluation.
-pub const WIN_PROBABILITY_INTERCEPT: f64 = 0.0;
+/// evaluation: the four weights are the fit of `crates/tools/tests/fixtures/win_probability.txt`, the
+/// 1,990 turn rows of 120 development games (`stats --games 120 --series calibration`), whose Brier score
+/// is 0.216 against the turn and first player's 0.249.
+pub const WIN_PROBABILITY_INTERCEPT: f64 = 0.05715243020315099;
 
 /// R4552000: `β₁`, the weight of the seat's evaluation less its opponent's, in the AI's own units (a
 /// record keeps it in thousandths, `SWING_EVAL_SCALE`).
-pub const WIN_PROBABILITY_EVAL: f64 = 0.001;
+pub const WIN_PROBABILITY_EVAL: f64 = 0.011583154111302998;
 
 /// R4552000: `β₂`, the weight of the turn counter (§2.5) at the turn's start.
-pub const WIN_PROBABILITY_TURN: f64 = 0.0;
+pub const WIN_PROBABILITY_TURN: f64 = 0.013101763295514636;
 
 /// R4552000: `β₃`, the weight of having taken the first turn.
-pub const WIN_PROBABILITY_FIRST: f64 = 0.0;
+pub const WIN_PROBABILITY_FIRST: f64 = 0.1472779464267806;
 
 /// R4552000: the AI generation (`crates/ai/generation.json`, R1367000) whose evaluation the four weights
 /// above were fit against. A change to the AI's evaluation moves the raw scale a record keeps, so a refit
@@ -2461,11 +2463,15 @@ pub const SWING_PRIOR_PLAY_SPREAD: f64 = 0.02;
 pub const SWING_PRIOR_BOARD_SPREAD: f64 = 0.01;
 
 /// R4552001: the typical card's Decisiveness assumed below `ADJUSTED_FIELD_MIN_CARDS` read cards, as a
-/// fraction of win chance (±8 points).
-pub const DECISIVENESS_PRIOR_CENTER: f64 = 0.08;
+/// fraction of win chance (±12 points): the median raw RMS of the 90 deck cards played 10 times or more
+/// in 200 development games (12.4 points; issue #4552's run, the calibration fixture's 120 games and 40
+/// forced games each of S #120 Wild System and S+ #61 Jayaad).
+pub const DECISIVENESS_PRIOR_CENTER: f64 = 0.12;
 
-/// R4552001: the spread of real cards' Decisiveness assumed below `ADJUSTED_FIELD_MIN_CARDS` read cards.
-pub const DECISIVENESS_PRIOR_SPREAD: f64 = 0.03;
+/// R4552001: the spread of real cards' Decisiveness assumed below `ADJUSTED_FIELD_MIN_CARDS` read cards:
+/// the same 90 cards' raw RMS spread 5.1 points, of which about 2.4 is the sampling noise of 10 to 20
+/// plays, which leaves about 4.5.
+pub const DECISIVENESS_PRIOR_SPREAD: f64 = 0.045;
 
 // ---------------------------------------------------------------------------------------------
 // The weapon kit (#1841, R1841000–R1841003; SPEC §4.4, §6.2, §6.3)
