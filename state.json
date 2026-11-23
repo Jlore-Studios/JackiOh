@@ -18378,6 +18378,52 @@
         "sha": "0ba87e9fb4b26f29610ca52a993b1bb677956f90",
         "tiers": {}
       }
+    },
+    "4578": {
+      "closeout": false,
+      "tree": {
+        "adopted": true,
+        "at": "2026-11-23T08:52:35Z",
+        "children": [
+          4579,
+          4580,
+          4581,
+          4582,
+          4583,
+          4584,
+          4585
+        ],
+        "mode": "fullsend",
+        "onto": "bot/issue-4578"
+      }
+    },
+    "4579": {
+      "onto": "bot/issue-4578",
+      "part_of": 4578
+    },
+    "4580": {
+      "onto": "bot/issue-4578",
+      "part_of": 4578
+    },
+    "4581": {
+      "onto": "bot/issue-4578",
+      "part_of": 4578
+    },
+    "4582": {
+      "onto": "bot/issue-4578",
+      "part_of": 4578
+    },
+    "4583": {
+      "onto": "bot/issue-4578",
+      "part_of": 4578
+    },
+    "4584": {
+      "onto": "bot/issue-4578",
+      "part_of": 4578
+    },
+    "4585": {
+      "onto": "bot/issue-4578",
+      "part_of": 4578
     }
   },
   "labels_synced": "e752b3263433d01e",
