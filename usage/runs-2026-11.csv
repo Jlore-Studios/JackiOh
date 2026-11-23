@@ -3448,3 +3448,10 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-23T21:07:40Z,45260223081,muse,muse-spark-1.3-contributor,review,4620,medium,approved,,35.6,0,0,0,,31,39,18,21,2.8,muse,none,,1
 2026-11-23T21:11:01Z,45248786696,muse,muse-spark-1.3-contributor,review,4626,medium,approved,,102.3,0,0,0,,15,40,13,21,1,,none,,3
 2026-11-23T21:11:49Z,45233836151,muse,muse-spark-1.3-contributor,build,4607,medium,built,,150,0,0,0,,1,31,8,18,18.3,muse,none,,1
+2026-11-23T21:19:23Z,45266800033,claude-3,opus,plan,4632,medium,planned,,7.3,45,31968,1728927,0.851,4,16,,,18.4,,fresh,,1
+2026-11-23T21:22:22Z,45266678184,claude-3,opus,plan,4621,hard,planned,,9.8,194,54824,13764589,5.2925,6,19,,,90.6,claude-4,fresh,cap,1
+2026-11-23T21:23:43Z,45260481178,gpt,gpt-5.6-sol,build,4610,medium,built,,49.9,13373475,33494,0,,,,94,94,53.9,claude-6,none,cap,1
+2026-11-23T21:46:04Z,45272233980,muse,muse-spark-1.3-contributor,suggest,,,suggested,,3.7,0,0,0,,41,41,22,22,,,none,,1
+2026-11-23T21:54:54Z,45273902602,claude-1,opus,build,4621,hard,interrupted,5-hour cap,0,0,0,0,,55,55,,,133.1,claude-3,none,other,0
+2026-11-23T21:54:25Z,45273798499,claude-1,opus,review,4629,hard,interrupted,5-hour cap,0,0,0,0,,55,55,,,81.5,claude-1,none,,0
+2026-11-23T21:57:57Z,45249038713,agy,gemini-3.8-flash-high,plan,4619,medium,failed,,150.3,266567,53283,0,,0,0,29,0,8.1,,none,,1
