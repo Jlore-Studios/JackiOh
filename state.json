@@ -39443,14 +39443,6 @@
         "provider": "claude-3",
         "run_id": "45087566880",
         "taken_asks": []
-      },
-      "4": {
-        "area": "server",
-        "count": 2,
-        "last_run": "2026-11-23T00:15:12Z",
-        "provider": "gpt",
-        "run_id": "45087673868",
-        "taken_asks": []
       }
     },
     "taken_asks": []
