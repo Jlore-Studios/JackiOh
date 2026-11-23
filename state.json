@@ -39713,7 +39713,9 @@
           "provider": "claude-7"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-23T04:10:54Z",
         "every": 5,
+        "findings": 0,
         "head": "afc2cae8afc8626d9f650f5eb6408e70f58ecd06",
         "issue": 4448,
         "merged_at": "2026-11-23T03:59:48Z",
@@ -39726,12 +39728,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:451cbf4c-1795406557",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45109490482",
         "sha": "0bf5057480fd2f1280fe772f17537b00d233e833",
         "started_at": "2026-11-23T04:02:59Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the AI's turn-hook and Activate shares are fork-screened at a whole use and set where the screen keeps them",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 470
