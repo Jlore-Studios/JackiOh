@@ -40726,6 +40726,12 @@
         "number": 4536,
         "title": "Patch: Recently played reads its opponents in one query",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T07:55:25Z",
+        "number": 4559,
+        "title": "Patch: handicap-wave fuzz failures are pinned in the regression corpus",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": "2026-11-23T07:42:49Z",
