@@ -2952,41 +2952,31 @@ mod i19 {
 
     /// R4524002: a Unit that runs a copied board sweep's text (Stinkyscape #20 Tnack Trav, R1850000)
     /// sweeps as the card it copies, Dormant cards included (R3539002), though the sweep exiles the
-    /// copier with its copy (R78): its copy is read as the step began. A copier of no sweep reaches
-    /// the Dormant card.
+    /// copier with its copy (R78), so I19 reads each field card's copy as the step begins. A copy of no
+    /// sweep, or none, is no sweep. (Read alone: the copied card is no fixture, and the other invariants
+    /// would read its text.)
     #[test]
-    fn r4524002_a_unit_running_a_copied_board_sweep_exiles_a_dormant_card_with_the_board() {
-        let (mut before, dormant) = dormant_board("r4524002");
-        let copier = put(&mut before, "fx-22", slot(P2, Row::Units, 2), json!({})).id;
-        find_instance_mut(&mut before, &copier)
-            .expect("the copier")
-            .memory
-            .insert(
-                jackioh_engine::subsystems::unit_text::UNIT_TEXT_KEY.to_string(),
-                json!({ "defId": "stinkyscapeplus-081", "radiant": false }),
-            );
-        let hook: GameEvent = json_as(json!({
-            "type": "hookResolving", "sourceId": copier, "defId": "fx-22", "controller": "p2",
-            "hook": "startOfTurn",
-        }));
-        let exiled: GameEvent = json_as(json!({
-            "type": "exiled", "instanceId": dormant, "defId": "fx-21", "owner": "p2",
-        }));
-        // Its own sweep took the copier, and its copy with it.
-        let mut after = before.clone();
-        find_instance_mut(&mut after, &copier)
-            .expect("the copier")
-            .memory
-            .clear();
-        assert_eq!(
-            i19(&before, &[hook.clone(), exiled.clone()], &after),
-            Vec::<String>::new()
+    fn r4524002_a_unit_running_a_copied_board_sweep_is_read_as_a_sweep_as_the_step_begins() {
+        let (mut state, _) = dormant_board("r4524002");
+        let copier = put(&mut state, "fx-22", slot(P2, Row::Units, 2), json!({})).id;
+        let copying = |state: &mut GameState, copy: Option<&str>| -> bool {
+            let card = find_instance_mut(state, &copier).expect("the copier");
+            card.memory.clear();
+            if let Some(def_id) = copy {
+                card.memory.insert(
+                    jackioh_engine::subsystems::unit_text::UNIT_TEXT_KEY.to_string(),
+                    json!({ "defId": def_id, "radiant": false }),
+                );
+            }
+            let card = find_instance(state, &copier).expect("the copier").clone();
+            runs_a_copied_sweep(state, &card)
+        };
+        assert!(!copying(&mut state, None), "no copy");
+        assert!(
+            copying(&mut state, Some("stinkyscapeplus-081")),
+            "S+ #81 Doomsayer's sweep"
         );
-        only(
-            &i19(&after, &[hook, exiled], &after),
-            &dormant,
-            &["I19 reached Dormant", "exiled"],
-        );
+        assert!(!copying(&mut state, Some("fx-21")), "a copy of no sweep");
     }
 
     #[test]

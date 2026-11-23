@@ -1053,11 +1053,7 @@ fn slumber_step(state: &GameState) -> SlumberStep {
     let sweepers = placed_cards(state)
         .into_iter()
         .filter(|placed| matches!(placed.zone, Zone::Field { .. }))
-        .filter(|placed| {
-            copies_a_sweep(state, &placed.card.id)
-                || crate::subsystems::unit_text::unit_text_of(placed.card)
-                    .is_some_and(|copy| is_board_sweep(state, &copy.def_id))
-        })
+        .filter(|placed| runs_a_copied_sweep(state, placed.card))
         .map(|placed| placed.card.id.clone())
         .collect();
     let resume = state.pending.as_ref().map(|pending| &pending.resume);
@@ -1075,6 +1071,13 @@ fn is_board_sweep(state: &GameState, def_id: &str) -> bool {
     BOARD_SWEEPS.iter().any(|(sweep, _)| *sweep == def_id)
         || crate::subsystems::fuse::fused_ingredients(state, def_id)
             .is_some_and(|parts| parts.iter().any(|part| is_board_sweep(state, part)))
+}
+
+/// I19 (R4524002): whether `card` runs a copied board sweep's text, a copied Unit's (Stinkyscape #20
+/// Tnack Trav, R1850000) or a copied Spell's (`copies_a_sweep`), so that a hook it resolves is a sweep.
+pub fn runs_a_copied_sweep(state: &GameState, card: &CardInstance) -> bool {
+    crate::subsystems::unit_text::unit_text_of(card).is_some_and(|copy| is_board_sweep(state, &copy.def_id))
+        || copies_a_sweep(state, &card.id)
 }
 
 /// I19: whether the card `source_id` runs a copied Spell's text that is a board sweep (C #57 Echo
