@@ -10155,7 +10155,11 @@ mod catalog_membership_build_m4_t1_b2_1 {
             .values()
             .filter(|card| card.set == SetName::InfiniteAssault)
             .collect();
-        assert!(entries.len() >= INFINITE_ASSAULT.len(), "{} entries", entries.len());
+        assert!(
+            entries.len() >= INFINITE_ASSAULT.len(),
+            "{} entries",
+            entries.len()
+        );
         for card in entries {
             assert!(card.tags.contains(&Tag::Ai), "{} carries AI", card.id);
             assert_eq!(card.tags.contains(&Tag::Token), card.token, "{}", card.id);

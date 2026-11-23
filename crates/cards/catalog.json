@@ -37149,7 +37149,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 1,
+    "loc": 19,
     "base": {
       "attack": 2,
       "health": 2,
@@ -37186,7 +37186,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 28,
     "base": {
       "attack": 1,
       "health": 2,
@@ -37213,7 +37213,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 3,
       "health": 2,
@@ -37254,7 +37254,7 @@
     "refs": [
       "infiniteassault-004-1"
     ],
-    "loc": 1,
+    "loc": 29,
     "base": {
       "attack": 3,
       "health": 4,
@@ -37282,7 +37282,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 1,
       "health": 1,
@@ -37320,14 +37320,14 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 1,
+    "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Add two random (1)-Cost Infinite Assault Units to your hand. They're Temporary."
+      "text": "Add two random (1) Cost Infinite Assault Units to your hand. They're Temporary."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add two random (1)-Cost Infinite Assault Units to your hand. They cost ({setCost}) and are Temporary."
+      "text": "Add two random (1) Cost Infinite Assault Units to your hand. They cost ({setCost}) and are Temporary."
     }
   },
   "infiniteassault-006": {
@@ -37353,7 +37353,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 37,
     "base": {
       "keywords": [],
       "text": "Give a friendly Unit +{buff}/+{buff}. If it's Created, draw a card."
@@ -37379,7 +37379,7 @@
     "refs": [
       "infiniteassault-004-1"
     ],
-    "loc": 1,
+    "loc": 26,
     "base": {
       "keywords": [],
       "text": "Summon three Drones."
@@ -37413,7 +37413,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 1,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to a Unit. If it dies, add a random Infinite Assault Spell to your hand."
@@ -37447,7 +37447,7 @@
         "read": "cry"
       }
     ],
-    "loc": 1,
+    "loc": 22,
     "base": {
       "attack": 5,
       "health": 7,
@@ -37486,7 +37486,7 @@
       "infiniteassault-004-1",
       "infiniteassault-010-1"
     ],
-    "loc": 1,
+    "loc": 19,
     "base": {
       "attack": 7,
       "health": 8,
@@ -37514,7 +37514,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 2,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 3,
       "health": 3,
@@ -37551,7 +37551,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 27,
     "base": {
       "attack": 2,
       "health": 5,
@@ -37596,14 +37596,14 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 27,
     "base": {
       "keywords": [],
-      "text": "Transform a friendly Unit into a random Infinite Assault Unit that costs ({step}) more."
+      "text": "Transform a friendly Unit into a random Infinite Assault Unit whose Cost is ({step}) higher."
     },
     "radiant": {
       "keywords": [],
-      "text": "Transform a friendly Unit into a random Infinite Assault Unit that costs ({step}) more."
+      "text": "Transform a friendly Unit into a random Infinite Assault Unit whose Cost is ({step}) higher."
     }
   },
   "infiniteassault-013": {
@@ -37629,7 +37629,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 44,
     "base": {
       "keywords": [],
       "text": "Discover an Infinite Assault card. It costs ({discount}) less."
@@ -37662,7 +37662,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 39,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays their third card in a turn: Deal {damage} damage to their hero. They discard a random card."
@@ -37706,7 +37706,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 45,
     "base": {
       "keywords": [],
       "text": "Start of turn: Summon a Drone. Then, if you have {drones} or more Drones, give your Drones +{buff}/+{buff}."
@@ -37729,7 +37729,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 1,
+    "loc": 42,
     "base": {
       "keywords": [],
       "text": "Set a friendly Unit's Attack to the highest Attack and its Health to the highest Health among enemy Units."
@@ -37762,7 +37762,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 11,
     "base": {
       "attack": 3,
       "health": 2,
@@ -37808,7 +37808,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 1,
+    "loc": 44,
     "base": {
       "attack": 2,
       "health": 4,
@@ -37854,7 +37854,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 1,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Draw {draw|card|cards}. Shuffle a copy of this into your deck."
@@ -37888,7 +37888,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 1,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Fill your hand with random Infinite Assault cards. They're Temporary."
@@ -37911,14 +37911,14 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 1,
+    "loc": 26,
     "base": {
       "keywords": [],
-      "text": "End of turn: Summon a random Infinite Assault Unit that costs (2) or less."
+      "text": "End of turn: Summon a random (2) Cost or less Infinite Assault Unit."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Summon two random Infinite Assault Units that cost (2) or less."
+      "text": "End of turn: Summon two random (2) Cost or less Infinite Assault Units."
     }
   },
   "infiniteassault-022": {
@@ -37944,7 +37944,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 24,
     "base": {
       "attack": 6,
       "health": 10,
@@ -37989,7 +37989,7 @@
         "min": 0
       }
     ],
-    "loc": 1,
+    "loc": 22,
     "base": {
       "attack": 4,
       "health": 6,
@@ -38016,7 +38016,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 1,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Summon a random Infinite Assault Unit of each Cost from (1) to (3). They have Rush."

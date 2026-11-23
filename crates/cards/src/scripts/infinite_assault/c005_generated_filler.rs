@@ -1,9 +1,9 @@
 //! SPEC §8.13 IA #5 Generated Filler ((1) Spell, Common), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Add two random (1)-Cost Infinite Assault Units to your hand. They're Temporary."
-//!   Radiant: "Add two random (1)-Cost Infinite Assault Units to your hand. They cost ({setCost}) and are
+//!   Base:    "Add two random (1) Cost Infinite Assault Units to your hand. They're Temporary."
+//!   Radiant: "Add two random (1) Cost Infinite Assault Units to your hand. They cost ({setCost}) and are
 //!             Temporary." (setCost 0)
 //!
-//! C+ #54 Book of Books' adds over a set-named pool of (1)-Cost Units (R1846001, R4577000; R387 and §5.1 leave
+//! C+ #54 Book of Books' adds over a set-named pool of (1) Cost Units (R1846001, R4577000; R387 and §5.1 leave
 //! this card and the tokens out), Temporary (R637); the Radiant face's price is its declared `setCost` (R386). The
 //! (1) is a price the pool's filter names (R1748003).
 
@@ -18,7 +18,7 @@ const SET: &str = "Infinite Assault";
 /// "two random … Units".
 const UNITS: i32 = 2;
 
-/// "(1)-Cost": the printed price the pool keeps to.
+/// "(1) Cost": the printed price the pool keeps to.
 const PRICE: i32 = 1;
 
 fn filler(radiant: bool) -> Script {

@@ -328,7 +328,11 @@ pub fn cost_rule_text(rule: &CostRule, next: bool) -> String {
         "{}{}{}{}",
         if next { "Your next " } else { "Your " },
         threshold,
-        if rule.created == Some(true) { "Created " } else { "" },
+        if rule.created == Some(true) {
+            "Created "
+        } else {
+            ""
+        },
         types_text(rule.types.as_deref(), plural)
     );
     let verb = if plural { "cost" } else { "costs" };

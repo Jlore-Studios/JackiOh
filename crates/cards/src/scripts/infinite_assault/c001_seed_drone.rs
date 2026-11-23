@@ -87,7 +87,7 @@ mod tests {
         fn is_a_2_2() {
             let mut s = board(false, "seed-drone");
             s.play(ID, json!({}));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 2, "health": 2 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 2, "health": 2 }));
         }
     }
 
@@ -103,7 +103,7 @@ mod tests {
         fn is_a_4_4() {
             let mut s = board(true, "seed-drone");
             s.play(ID, json!({}));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 4, "health": 4 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 4, "health": 4 }));
         }
     }
 }

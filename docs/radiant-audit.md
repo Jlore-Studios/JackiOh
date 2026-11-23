@@ -1197,7 +1197,7 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | infiniteassault-003 | Assault Trooper | Meets | Stats double 3/2 → 6/4, and the Radiant face adds First Strike to Rush: one keyword more on a keyword-only unit, which meets R275. |
 | infiniteassault-004 | Wave Spawner | Meets | Stats double 3/4 → 6/8, and the End of turn summons two Drones instead of one (2×) after a Created play, so both halves meet R275. |
 | infiniteassault-004-1 | Drone | Designer's word (effect half) | A textless token: its stats double 1/1 → 2/2, the stat half exactly, but it has no text to scale and its Radiant face adds no keyword, so the effect half is the designer's printed word. |
-| infiniteassault-005 | Generated Filler | Meets | The same two (1)-Cost Temporary Units, which the Radiant face makes cost (0): a tangential rider, free bodies instead of (1) ones. |
+| infiniteassault-005 | Generated Filler | Meets | The same two (1) Cost Temporary Units, which the Radiant face makes cost (0): a tangential rider, free bodies instead of (1) ones. |
 | infiniteassault-006 | Hotfix | Meets | The buff rises +2/+2 → +4/+4 (2×) and the Radiant face adds Divine Shield; the draw for a Created Unit is the same, so it meets R275. |
 | infiniteassault-007 | Bulk Order | Meets | Three Radiant Drones (twice the stats) with Rush instead of three plain ones: about 2× the bodies plus a rider. |
 | infiniteassault-008 | Firing Solution | Meets | The damage rises 3 → 6 (2×); the Spell it adds on a kill is the same on both faces, and the larger hit makes the kill likelier. |

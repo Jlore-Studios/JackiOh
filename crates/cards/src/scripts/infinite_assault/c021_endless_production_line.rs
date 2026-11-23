@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #21 Endless Production Line ((4) Field Spell, Epic), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "End of turn: Summon a random Infinite Assault Unit that costs (2) or less."
-//!   Radiant: "End of turn: Summon two random Infinite Assault Units that cost (2) or less."
+//!   Base:    "End of turn: Summon a random (2) Cost or less Infinite Assault Unit."
+//!   Radiant: "End of turn: Summon two random (2) Cost or less Infinite Assault Units."
 //!
 //! M #16 Trenful Trickster's end-of-turn `summonRandom` over the set-named pool of Units printed at
 //! (2) or less (R65, R1846001, R4577000; this card and the tokens left out, R387, §5.1), one draw per summon; a full board

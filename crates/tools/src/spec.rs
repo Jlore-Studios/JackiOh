@@ -130,11 +130,8 @@ fn set_prefixes() -> Vec<(&'static str, &'static str)> {
         .map(|row| row.set)
         .flat_map(|set| {
             let name = set.as_str();
-            std::iter::once((name, name)).chain(
-                set_row(set)
-                    .abbreviation
-                    .map(|abbreviation| (abbreviation, name)),
-            )
+            std::iter::once((name, name))
+                .chain(set_row(set).abbreviation.map(|abbreviation| (abbreviation, name)))
         })
         .collect()
 }

@@ -9,4 +9,15 @@ import type { CardType } from "./CardType";
  * (below 0 a discount, above 0 a surcharge); `setTo` is "costs (N)", which wins over every add.
  * (TS `costRules.ts`; here because `PlayerModifier` holds one.)
  */
-export type CostRule = { types?: Array<CardType>, minCost?: number, amount?: number, setTo?: number, };
+export type CostRule = { types?: Array<CardType>, minCost?: number, amount?: number, setTo?: number, 
+/**
+ * R4577003 (Infinite Assault #18 Prompt Engineer, "your Created cards"): the rule reaches only
+ * a Created card (`query::is_created`, R943). Absent, it reaches dealt and Created cards alike.
+ */
+created?: boolean, 
+/**
+ * R4577003 ("but not less than (1)"): the rule's `amount` stops at this price, on the number
+ * every flat and threshold rung left, and never lifts a card already below it. Absent, the add
+ * has no floor of its own.
+ */
+floor?: number, };

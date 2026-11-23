@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #12 Recompile ((1) Spell, Rare), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Transform a friendly Unit into a random Infinite Assault Unit that costs ({step}) more." (step 1)
-//!   Radiant: "Transform a friendly Unit into a random Infinite Assault Unit that costs ({step}) more." (step 2)
+//!   Base:    "Transform a friendly Unit into a random Infinite Assault Unit whose Cost is ({step}) higher." (step 1)
+//!   Radiant: "Transform a friendly Unit into a random Infinite Assault Unit whose Cost is ({step}) higher." (step 2)
 //!
 //! C+ #73.1 Classic Golem's `transformRandom` over the set-named pool of Units (R1846001, R4577000)
 //! at the chosen Unit's printed cost plus `step` (R65), keeping its face (R4577006). With no such
