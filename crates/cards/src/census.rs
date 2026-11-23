@@ -260,17 +260,21 @@ pub const CENSUS: &[SetCensus] = &[
         ],
     },
     // R4577000: the Infinite Assault (tracker #4576, docs/infinite-assault.md IA11), a single-player set
-    // held while it is built card by card. Its counts are the cards that have landed, each card part
-    // raising them (C1, issue #4577: the Assault Core, #1 to #24, and the tokens #4.1 Drone and #10.1
-    // Drone Escort); it ships in no total and no tag count.
+    // held while it is built card by card. Its counts are IA11's table: C1 (issue #4577) wrote the Assault
+    // Core, #1 to #24, and the tokens #4.1 Drone and #10.1 Drone Escort, and CF (issue #4602) wrote every
+    // other entry, #25 to #240, and their 13 tokens (the doctrines' and the Commanders'); each card part
+    // then corrects its own rows. It ships in no total and no tag count.
     SetCensus {
         set: "Infinite Assault",
         segment: "infiniteassault",
-        cards: 24,
+        cards: 240,
         shared_cards: &[],
-        card_defined_tokens: &["4.1", "10.1"],
+        card_defined_tokens: &[
+            "4.1", "10.1", "25.1", "34.1", "35.1", "40.1", "41.1", "74.1", "78.1", "82.1", "143.1", "154.1",
+            "200.1", "216.1", "235.1",
+        ],
         shared_tokens: &[],
-        rarities: &[("Common", 10), ("Rare", 8), ("Epic", 4), ("Legendary", 2)],
+        rarities: &[("Common", 82), ("Rare", 64), ("Epic", 50), ("Legendary", 30), ("Mythic", 14)],
     },
 ];
 
