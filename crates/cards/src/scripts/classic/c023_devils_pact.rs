@@ -1,14 +1,16 @@
-//! C #23 Devil's Pact (SPEC §8.6 row 23). Field Spell, cost 2, Rare.
-//!   Base:    "Indestructible, Spell Damage +1
+//! C #23 Devil's Pact (SPEC §8.6 row 23; R1838000). Field Spell, cost 2, Rare.
+//!   Base:    "Indestructible, Spell Damage +1, Tradable
 //!             Cry: Discard {discards|random card|random cards}.
 //!             Activate: This turn, each card you play is replaced by a Book of Flame."
-//!   Radiant: Spell Damage +2, and the same Book of Flame (a Radiant one through v0.5.2,
+//!   Radiant: Spell Damage +2, Tradable, and the same Book of Flame (a Radiant one through v0.5.2,
 //!            `script_v0_5_2`, R767000, issue #2179). Discards: 666 base (the whole hand, the joke),
 //!            6 Radiant.
 //!
 //! Indestructible and Spell Damage are catalog keywords (#1563): Indestructible keeps it on the field
 //! through a destroy, as it keeps any Field Spell (§6.1), and its Spell Damage is its controller's,
-//! summed with their Units' (R1563002), so each Book of Flame it makes is raised too.
+//! summed with their Units' (R1563002), so each Book of Flame it makes is raised too. Tradable since
+//! issue #4440 (R1838000) is catalog data the engine reads in the hand (`trade.rs`), so nothing here runs
+//! for it, and the shipped catalogs keep it off through v0.6.11b (R767000).
 //!
 //! The Cry discards {discards} random cards (R682); a hand holding that many or fewer all goes, a
 //! discard all the same, so C #64 sees each card. Activate (R384), once per turn, installs a this-turn
@@ -114,6 +116,26 @@ mod tests {
     const WIND: &str = "classic-028"; // Second Wind: Radiant Aura lets you play cards from your graveyard.
 
     const EIGHT: [&str; 8] = [VANILLA, VANILLA, TIMMY, TIMMY, STOCKPILE, STOCKPILE, FILLER, BEAR];
+
+    /// R1838000: Devil's Pact is Tradable on both faces since issue #4440 — Traded from the hand into the
+    /// deck for a draw, at no mana — and a Trade is no play of it (R1838002): its Cry discards nothing.
+    #[test]
+    fn r1838000_both_faces_trade_into_the_deck_for_a_draw_at_no_mana_and_discard_nothing() {
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": PACT, "radiant": radiant }, VANILLA, STOCKPILE], "library": [FILLER, FILLER] },
+                "p2": { "hand": [FILLER], "library": [FILLER] },
+            }));
+            let pact = s.card(PACT).clone();
+            assert!(is_tradable(s.state(), &pact), "radiant {radiant}: the face prints Tradable");
+            let mana = s.state().players.p1.mana.current;
+            s.trade(&pact.id);
+            s.expect_events(json!(["traded", "shuffledIn", "drawn"]));
+            assert_eq!(s.hand(P1).len(), 3, "one card went in and one came out");
+            assert_eq!(s.state().players.p1.mana.current, mana, "at no mana");
+            assert!(s.pile(P1, "graveyard").is_empty(), "radiant {radiant}: no Cry, so no discard");
+        }
+    }
 
     fn on_field(p1: Value, radiant_face: bool, p2: Value) -> Scenario {
         scenario(json!({

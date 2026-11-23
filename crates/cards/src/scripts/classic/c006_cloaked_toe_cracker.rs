@@ -1,21 +1,21 @@
-//! C #6 Cloaked Toe Cracker (SPEC §8.6 row 6, §6.3 Cost, §6.3 Mana; R33, R65, R70, R783005). Unit,
-//! Human, cost 2, Common, 3/4 → 6/8. Base "Cloaked\nAura: Your Traps cost (0)."; Radiant adds "After you
-//! play a Trap, gain {mana} mana."
+//! C #6 Cloaked Toe Cracker (SPEC §8.6 row 6, §6.3 Cost, §6.3 Mana; R33, R65, R70, R455, R783005). Unit,
+//! Human, cost 2, Common, 3/6 → 6/12. Base "Cloaked\nAura: Your Traps cost ({discount}) less."; Radiant
+//! "Cloaked\nAura: Your Traps cost (0)."
+//!
+//! Issue #4440 (Stinkyscape+ Balance Changes VI) made it 3/6 (Radiant 6/12), from 3/4 (Radiant 6/8),
+//! its base Aura (2) less, from (0), and took the Radiant face's "After you play a Trap, gain {mana}
+//! mana." `script_v0_6_11b` keeps the script before it for the replays of v0.6.11b and before (R767000).
 //!
 //! CLOAKED is printed on both faces (since patch v0.3.7): it may be set face-down from hand at its own
 //! (2) and revealed by its Reveal (`alt_play`, R783004–R783006). Set, it is a Field Trap whose text is
-//! dormant, so neither its Aura nor its trigger acts until it reveals.
+//! dormant, so its Aura does not act until it reveals.
 //!
-//! THE AURA is a price rule the card lays while it acts on the field (B5 E15, `Script.costAura`): "costs
-//! (0)" on its controller's Traps and Field Traps ("Trap" names "Field Trap" too). A price is a play's,
-//! so it reaches the cards a play takes (the hand, R65) and lasts only while the card stands. A card set
-//! by its Cloaked is priced as the card it is in hand (R783005), so the Aura never makes one free.
-//!
-//! THE RADIANT TRIGGER answers every `cardPlayed` of a Trap or Field Trap by its controller, a cast
-//! included (R70), and gains the card's declared mana (`param(ctx, "mana")`) for this turn (§6.3 Mana).
-//! The play is read as it counts (`played_type_of`), so a Cloaked card's face-down play, a Trap play
-//! (R783005), answers it. The `manaChanged` it makes names no card, so a face-down trap stays unnamed
-//! to the opponent (R33, R97).
+//! THE AURA is a price rule the card lays while it acts on the field (B5 E15, `Script.costAura`) on its
+//! controller's Traps and Field Traps ("Trap" names "Field Trap" too): on the base face an add of
+//! −`discount` (R455's order, a price never below (0)), on the Radiant face "costs (0)", which wins
+//! over every add. A price is a play's, so it reaches the cards a play takes (the hand, R65) and lasts
+//! only while the card stands. A card set by its Cloaked is priced as the card it is in hand (R783005),
+//! so the Aura never lowers one.
 
 use jackioh_engine::effects::gain_mana;
 use jackioh_engine::prelude::*;
@@ -24,23 +24,56 @@ pub const ID: &str = "classic-006";
 
 const TRAP_TYPES: &[CardType] = &[CardType::Trap, CardType::FieldTrap];
 
-fn aura() -> CostAuraHook {
-    read_hook(|_args| {
-        vec![CostAura {
-            rule: CostRule {
-                types: Some(vec![CardType::Trap, CardType::FieldTrap]),
-                set_to: Some(0),
-                ..CostRule::default()
-            },
-            whose: CostAuraWhose::Yours,
-            ban: None,
-        }]
+/// The Aura's reach: its controller's Traps and Field Traps.
+fn your_traps(rule: CostRule) -> Vec<CostAura> {
+    vec![CostAura {
+        rule: CostRule {
+            types: Some(TRAP_TYPES.to_vec()),
+            ..rule
+        },
+        whose: CostAuraWhose::Yours,
+        ban: None,
+    }]
+}
+
+/// The base face's "cost ({discount}) less", the declared number (R386).
+fn discount_aura() -> CostAuraHook {
+    read_hook(|args| {
+        your_traps(CostRule {
+            amount: Some(-param(&args, "discount")),
+            ..CostRule::default()
+        })
     })
 }
 
-/// After you play a Trap or a Field Trap (a cast is a play, R70), gain the card's mana. A permanent's
-/// trigger reads its condition in `run` (a `when` predicate is a trap's, R99): any other play answers
-/// with nothing.
+/// "cost (0)": the Radiant face's since issue #4440, both faces' before it.
+fn free_aura() -> CostAuraHook {
+    read_hook(|_args| {
+        your_traps(CostRule {
+            set_to: Some(0),
+            ..CostRule::default()
+        })
+    })
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cost_aura: Some(discount_aura()),
+            ..Script::default()
+        },
+        radiant: Script {
+            cost_aura: Some(free_aura()),
+            ..Script::default()
+        },
+    }
+}
+
+/// Through v0.6.11b: after you play a Trap or a Field Trap (a cast is a play, R70), the Radiant face
+/// gained the card's mana. A permanent's trigger reads its condition in `run` (a `when` predicate is a
+/// trap's, R99): any other play answers with nothing. The play is read as it counts (`played_type_of`),
+/// so a Cloaked card's face-down play, a Trap play (R783005), answered it; the `manaChanged` it made
+/// names no card, so a face-down trap stayed unnamed to the opponent (R33, R97).
 fn after_you_play_a_trap() -> TriggerDef {
     TriggerDef::new("toe-cracker-mana", &[GameEventType::CardPlayed], |ctx, event| {
         let GameEvent::CardPlayed { player, .. } = event else {
@@ -57,24 +90,23 @@ fn after_you_play_a_trap() -> TriggerDef {
     })
 }
 
-pub fn script() -> CardScripts {
-    let cost_aura = aura();
-    let base = Script {
-        cost_aura: Some(cost_aura.clone()),
-        ..Script::default()
-    };
-
-    let radiant = Script {
-        cost_aura: Some(cost_aura),
-        triggers: vec![after_you_play_a_trap()],
-        ..Script::default()
-    };
-
-    CardScripts { base, radiant }
+/// R767000: through v0.6.11b both faces' Traps cost (0) and the Radiant face gained its mana after a
+/// Trap (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_11b() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cost_aura: Some(free_aura()),
+            ..Script::default()
+        },
+        radiant: Script {
+            cost_aura: Some(free_aura()),
+            triggers: vec![after_you_play_a_trap()],
+            ..Script::default()
+        },
+    }
 }
 
 // C #6 Cloaked Toe Cracker — SPEC §8.6 row 6, BUILD M9 Classic row C 6 (R65, R177, R70, R33, R97, R386).
-// The cast case uses Classic+ #37 Wardrum, whose end-of-turn copy is a cast Trap.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,12 +119,12 @@ mod tests {
 
     const CRACKER: &str = "classic-006";
     const TWO_TRAP: &str = "classic-052"; // Final Gambit: Trap that answers nothing these tests do (Unlicensed Experimentation, core-085 since issue #3136)
+    const THREE_TRAP: &str = "core-085"; // Unlicensed Experimentation: a Trap dearer than the discount, held in hand here
     const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
     const TESLA: &str = "classic-005"; // Tesla: a Field Trap
     const FIELD_SPELL: &str = "stand-in (3) Field Spell";
     const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
     const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
-    const WARDRUM: &str = "classicplus-037"; // Wardrum: Divine Shield, "End of turn: Cast a copy of a random Spell, Field Spell or Trap you played this turn."
 
     use crate::js;
 
@@ -104,29 +136,29 @@ mod tests {
         use super::*;
 
         #[test]
-        fn declares_its_one_number_the_radiant_face_s_mana_r386() {
+        fn declares_its_one_number_the_base_face_s_discount_r386() {
             crate::register_all();
             assert_eq!(
                 js(&crate::card_def(CRACKER).params),
-                json!([{ "key": "mana", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }])
+                json!([{ "key": "discount", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }])
             );
             let scripts = script();
             assert!(scripts.base.triggers.is_empty());
-            let ons: Vec<Vec<GameEventType>> = scripts.radiant.triggers.iter().map(|trigger| trigger.on.clone()).collect();
-            assert_eq!(ons, vec![vec![GameEventType::CardPlayed]]);
+            assert!(scripts.radiant.triggers.is_empty(), "issue #4440 took the Radiant mana");
         }
 
         mod base {
             use super::*;
 
             #[test]
-            fn r65_aura_your_traps_and_field_traps_in_hand_cost_0_while_it_is_on_the_field() {
+            fn issue_4440_aura_your_traps_and_field_traps_in_hand_cost_2_less_while_it_is_on_the_field() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [TWO_TRAP, SHEEPISH, TESLA], "field": [CRACKER] },
+                    "p1": { "hand": [TWO_TRAP, SHEEPISH, TESLA, THREE_TRAP], "field": [CRACKER] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
+                assert_eq!(cost_of(&s, THREE_TRAP), 1, "(3) less 2");
                 assert_eq!(cost_of(&s, TWO_TRAP), 0);
-                assert_eq!(cost_of(&s, SHEEPISH), 0);
+                assert_eq!(cost_of(&s, SHEEPISH), 0, "(1) less 2 is no price below (0)");
                 assert_eq!(cost_of(&s, TESLA), 0);
                 s.play(TWO_TRAP, json!({ "zone": 1 }));
                 s.play(TESLA, json!({ "zone": 2 }));
@@ -134,11 +166,21 @@ mod tests {
             }
 
             #[test]
-            fn played_from_hand_the_trap_costs_0_at_once() {
-                let mut s = scenario(json!({ "p1": { "hand": [CRACKER, TWO_TRAP, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
-                assert_eq!(cost_of(&s, TWO_TRAP), 2);
+            fn played_from_hand_the_trap_costs_2_less_at_once() {
+                let mut s = scenario(json!({ "p1": { "hand": [CRACKER, THREE_TRAP, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
+                assert_eq!(cost_of(&s, THREE_TRAP), 3);
                 s.play(CRACKER, json!({}));
-                assert_eq!(cost_of(&s, TWO_TRAP), 0);
+                assert_eq!(cost_of(&s, THREE_TRAP), 1);
+            }
+
+            #[test]
+            fn r386_an_upgrade_of_the_discount_takes_3() {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [THREE_TRAP, STOCKPILE], "field": [CRACKER] },
+                    "p2": { "hand": [STOCKPILE] },
+                }));
+                step_param(s.card_mut(CRACKER), "discount", 1);
+                assert_eq!(cost_of(&s, THREE_TRAP), 0);
             }
 
             #[test]
@@ -232,8 +274,10 @@ mod tests {
                 let def = crate::card_def(CRACKER);
                 for face in [&def.base, &def.radiant] {
                     assert_eq!(face.keywords, vec![Keyword::Cloaked]);
-                    assert!(face.text.starts_with("Cloaked\nAura: Your Traps cost (0)."), "{}", face.text);
+                    assert!(face.text.starts_with("Cloaked\nAura: Your Traps cost ("), "{}", face.text);
                 }
+                assert!(def.base.text.ends_with("cost ({discount}) less."), "{}", def.base.text);
+                assert!(def.radiant.text.ends_with("cost (0)."), "{}", def.radiant.text);
             }
 
             #[test]
@@ -257,7 +301,7 @@ mod tests {
             }
 
             #[test]
-            fn r783006_set_its_aura_is_dormant_revealed_it_is_a_3_4_and_the_aura_starts() {
+            fn r783006_set_its_aura_is_dormant_revealed_it_is_a_3_6_and_the_aura_starts() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRACKER, TWO_TRAP, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
@@ -268,7 +312,7 @@ mod tests {
                 reveal(&mut s, &set);
                 let unit = s.unit(P1, 1).expect("it animated into its own lane");
                 assert_eq!(unit.def_id, CRACKER);
-                s.expect_stats(unit.id.as_str(), json!({ "attack": 3, "health": 4, "maxHealth": 4 }));
+                s.expect_stats(unit.id.as_str(), json!({ "attack": 3, "health": 6, "maxHealth": 6 }));
                 assert_eq!(cost_of(&s, TWO_TRAP), 0, "revealed, its Aura acts");
             }
         }
@@ -277,25 +321,18 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r783005_a_set_toe_cracker_is_a_trap_play_another_radiant_one_gains_mana_its_own_trigger_sleeps() {
+            fn issue_4440_is_a_6_12_whose_traps_cost_0() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [{ "def": CRACKER, "radiant": true }, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true, "lane": 3 }] },
+                    "p1": { "hand": [TWO_TRAP, THREE_TRAP], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
-                set_cracker(&mut s);
-                s.expect_mana(P1, 3);
-                let mut s = scenario(json!({
-                    "p1": { "hand": [{ "def": CRACKER, "radiant": true }, TWO_TRAP, STOCKPILE] },
-                    "p2": { "hand": [STOCKPILE] },
-                }));
-                set_cracker(&mut s);
-                s.expect_mana(P1, 2);
-                s.play(TWO_TRAP, json!({ "zone": 2 }));
-                s.expect_mana(P1, 0);
+                s.expect_stats(CRACKER, json!({ "attack": 6, "health": 12, "maxHealth": 12 }));
+                assert_eq!(cost_of(&s, TWO_TRAP), 0);
+                assert_eq!(cost_of(&s, THREE_TRAP), 0);
             }
 
             #[test]
-            fn r783006_revealed_it_is_a_6_8_its_traps_cost_0_and_a_trap_gains_1() {
+            fn r783006_revealed_it_is_a_6_12_its_traps_cost_0_and_a_trap_gains_no_mana() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": CRACKER, "radiant": true }, TWO_TRAP, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
@@ -303,145 +340,64 @@ mod tests {
                 let set = set_cracker(&mut s);
                 reveal(&mut s, &set);
                 let unit = s.unit(P1, 1).expect("revealed").id;
-                s.expect_stats(unit.as_str(), json!({ "attack": 6, "health": 8, "maxHealth": 8 }));
+                s.expect_stats(unit.as_str(), json!({ "attack": 6, "health": 12, "maxHealth": 12 }));
                 assert_eq!(cost_of(&s, TWO_TRAP), 0);
                 s.play(TWO_TRAP, json!({ "zone": 2 }));
-                s.expect_mana(P1, 3);
+                s.expect_mana(P1, 2);
             }
 
             #[test]
-            fn is_a_6_8_with_the_same_aura() {
-                let mut s = scenario(json!({
-                    "p1": { "hand": [TWO_TRAP], "field": [{ "def": CRACKER, "radiant": true }] },
-                    "p2": { "hand": [STOCKPILE] },
-                }));
-                s.expect_stats(CRACKER, json!({ "attack": 6, "health": 8, "maxHealth": 8 }));
-                assert_eq!(cost_of(&s, TWO_TRAP), 0);
-            }
-
-            #[test]
-            fn after_you_play_a_trap_gain_1_mana_this_turn() {
-                let mut s = scenario(json!({
-                    "p1": { "hand": [TWO_TRAP, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
-                    "p2": { "hand": [STOCKPILE] },
-                }));
-                s.play(TWO_TRAP, json!({ "zone": 1 }));
-                s.expect_mana(P1, 5);
-            }
-
-            #[test]
-            fn a_field_trap_counts_as_a_trap() {
+            fn issue_4440_a_trap_or_a_field_trap_gains_no_mana() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [TESLA, SHEEPISH, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 s.play(TESLA, json!({ "zone": 1 }));
                 s.play(SHEEPISH, json!({ "zone": 2 }));
-                s.expect_mana(P1, 6);
-            }
-
-            #[test]
-            fn a_spell_a_field_spell_or_the_opponent_s_trap_gains_nothing() {
-                let mut s = scenario(json!({
-                    "p1": { "hand": [STOCKPILE, FIELD_SPELL], "field": [{ "def": CRACKER, "radiant": true }], "library": [STOCKPILE, STOCKPILE] },
-                    "p2": { "hand": [SHEEPISH, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
-                }));
-                s.play(STOCKPILE, json!({}));
-                s.expect_mana(P1, 3);
-                s.play(FIELD_SPELL, json!({ "zone": 1 }));
-                s.expect_mana(P1, 0);
-                s.end_turn();
-                s.play(SHEEPISH, json!({ "zone": 1 }));
-                s.expect_mana(P2, 3);
-                assert_eq!(s.view(P1).you.mana.current, 0);
-            }
-
-            #[test]
-            fn the_mana_is_this_turn_s_it_is_gone_at_your_next_refresh() {
-                let mut s = scenario(json!({
-                    "p1": { "hand": [TWO_TRAP, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }], "library": [STOCKPILE, STOCKPILE] },
-                    "p2": { "hand": [STOCKPILE, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
-                }));
-                s.play(TWO_TRAP, json!({ "zone": 1 }));
-                s.expect_mana(P1, 5);
-                s.end_turn();
-                s.end_turn();
                 s.expect_mana(P1, 4);
             }
+        }
 
-            #[test]
-            fn r33_r97_the_gain_never_names_the_face_down_trap_in_the_opponent_s_view() {
-                let mut s = scenario(json!({
-                    "p1": { "hand": [TWO_TRAP, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
-                    "p2": { "hand": [STOCKPILE] },
-                }));
-                s.play(TWO_TRAP, json!({ "zone": 1 }));
-                let Some(trap) = s.backrow(P1, 1) else {
-                    panic!("the Trap should be set");
-                };
-                let theirs = js(&s.view(P2));
-                assert_eq!(theirs["opponent"]["backrow"][0], json!({ "faceDown": true, "cost": 2 }));
-                let text = theirs.to_string();
-                assert!(!text.contains(&format!("\"{}\"", trap.id)));
-                assert!(!text.contains(TWO_TRAP));
-                let mana_changes: Vec<Value> = theirs["events"]
-                    .as_array()
-                    .map(|events| events.iter().filter(|event| event["type"] == "manaChanged").cloned().collect())
-                    .unwrap_or_default();
-                assert!(mana_changes.contains(&json!({ "type": "manaChanged", "player": "p1", "current": 5, "max": 4 })));
-            }
+        /// R767000: the script kept for v0.6.11b, with the `mana` its Radiant face declared then.
+        mod kept_v0_6_11b {
+            use super::*;
 
-            #[test]
-            fn r70_a_cast_trap_counts_wardrum_s_copy_of_the_trap_you_played_gains_mana_too() {
-                let mut s = scenario(json!({
-                    "p1": {
-                        "hand": [SHEEPISH, STOCKPILE],
-                        "field": [{ "def": CRACKER, "radiant": true }, WARDRUM],
-                        "library": [STOCKPILE, STOCKPILE],
+            fn kept<T>(run: impl FnOnce() -> T) -> T {
+                crate::under_kept_as(
+                    CRACKER,
+                    script_v0_6_11b(),
+                    |def| {
+                        def.params = serde_json::from_value(json!([
+                            { "key": "mana", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }
+                        ]))
+                        .expect("the v0.6.11b params");
                     },
-                    "p2": { "hand": [STOCKPILE, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
-                }));
-                s.play(SHEEPISH, json!({ "zone": 1 }));
-                s.expect_mana(P1, 5);
-                s.end_turn(); // Wardrum casts a copy of the Sheepish at the end of p1's turn
-                let gains = s
-                    .events()
-                    .iter()
-                    .filter(|event| matches!(event, GameEvent::ManaChanged { player, current, .. } if *player == P1 && *current == 6))
-                    .count();
-                assert_eq!(gains, 1);
+                    run,
+                )
             }
 
             #[test]
-            fn r386_a_degrade_of_mana_never_goes_below_1() {
-                let mut s = scenario(json!({
-                    "p1": { "hand": [TWO_TRAP, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
-                    "p2": { "hand": [STOCKPILE] },
-                }));
-                step_param(s.card_mut(CRACKER), "mana", -1);
-                s.play(TWO_TRAP, json!({ "zone": 1 }));
-                s.expect_mana(P1, 5);
+            fn r767000_through_v0_6_11b_the_base_face_s_traps_cost_0() {
+                kept(|| {
+                    let s = scenario(json!({
+                        "p1": { "hand": [THREE_TRAP, STOCKPILE], "field": [CRACKER] },
+                        "p2": { "hand": [STOCKPILE] },
+                    }));
+                    assert_eq!(cost_of(&s, THREE_TRAP), 0);
+                });
             }
 
             #[test]
-            fn r13_dormant_under_a_stack_pile_it_gains_nothing() {
-                let mut s = scenario(json!({
-                    "p1": { "hand": [SHEEPISH, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }, { "def": "core-092", "stack": true }] },
-                    "p2": { "hand": [STOCKPILE] },
-                }));
-                s.play(SHEEPISH, json!({ "zone": 1 }));
-                s.expect_mana(P1, 3);
-            }
-
-            #[test]
-            fn r386_an_upgrade_of_mana_gains_2() {
-                let mut s = scenario(json!({
-                    "p1": { "hand": [TWO_TRAP, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
-                    "p2": { "hand": [STOCKPILE] },
-                }));
-                step_param(s.card_mut(CRACKER), "mana", 1);
-                s.play(TWO_TRAP, json!({ "zone": 1 }));
-                s.expect_mana(P1, 6);
+            fn r767000_through_v0_6_11b_a_radiant_one_gained_1_mana_after_a_trap_or_a_field_trap() {
+                kept(|| {
+                    let mut s = scenario(json!({
+                        "p1": { "hand": [TESLA, SHEEPISH, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
+                        "p2": { "hand": [STOCKPILE] },
+                    }));
+                    s.play(TESLA, json!({ "zone": 1 }));
+                    s.play(SHEEPISH, json!({ "zone": 2 }));
+                    s.expect_mana(P1, 6);
+                });
             }
         }
     }

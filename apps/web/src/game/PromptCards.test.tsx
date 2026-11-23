@@ -371,7 +371,7 @@ describe("R1183005: Meditative+ #25 KY's Intuition's Discover offers code", () =
 });
 
 describe("#492 one card picker, front and center, for every short choice", () => {
-  const AURA = "core-046"; // Suppressive Aura, "2 embiggen 4"
+  const AURA = "core-059"; // Unbiased Immigration, "2 embiggen 4" (Suppressive Aura was until issue #4440 made it "1 embiggen 3")
   const APPROPRIATIONS = "classicplus-040"; // an X Spell with a "Choose one" of four
 
   function handView(defId: string, over: { cost?: number; embiggenCost?: number; radiant?: boolean } = {}): PlayerView {
