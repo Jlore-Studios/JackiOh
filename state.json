@@ -16988,11 +16988,19 @@
     "what": "spot-check #4531 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-23T00:57:02Z",
+    "at": "2026-11-23T01:00:52Z",
     "notes": [
-      "#4516 is held for `claude-3` until 19:00 (it refused a call)",
-      "delivered review #4532 on muse (run 45085990073): approved",
-      "runner gate: started 0 of 1 waiting run(s); run 45091822814 on bot/issue-4517: could not approve it (POST /repos/Jlore-Studios/JackiOh/actions/runs/45091822814/pending_deployments: HTTP 422: Validation Failed)"
+      "#4516: `claude-3` can start again, so its hold is lifted",
+      "delivered build #4510 on claude-6 (run 45084353816): built",
+      "delivered plan #4513 on agy (run 45077612973): failed",
+      "started review #4543 on claude-6 (run 45092370872)",
+      "started build #4516 on claude-3 (run 45092422898)",
+      "started plan #4513 on agy (run 45092477152)",
+      "started revise #4532 on muse (run 45092546905)",
+      "started review #4531 on claude-3 (run 45092593831)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17698,7 +17706,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T00:57:02Z",
+  "loop_tick": "2026-11-23T01:00:52Z",
   "machine_disk": {
     "issue": null,
     "reading": {
