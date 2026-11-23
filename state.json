@@ -18729,13 +18729,8 @@
     "what": "build #4604 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-23T12:53:58Z",
-    "notes": [
-      "#4599: `claude-1` can start again, so its hold is lifted",
-      "started plan #4599 on claude-1 (run 45178900691)",
-      "started build #4604 on claude-1 (run 45179018259)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-11-23T13:03:54Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -19440,7 +19435,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T12:53:58Z",
+  "loop_tick": "2026-11-23T13:03:54Z",
   "machine_disk": {
     "issue": null,
     "reading": {
