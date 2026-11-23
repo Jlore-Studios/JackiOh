@@ -16787,10 +16787,12 @@
           "provider": "muse",
           "tier": "medium"
         },
-        "at": "2026-11-23T00:57:59Z",
+        "at": "2026-11-23T01:38:43Z",
         "built_by": "muse",
         "by": "`muse` (medium)",
-        "sha": "e9515b777923ad1938c3c01625ed94cbca8dcb93"
+        "carried_from": "e9515b777923ad1938c3c01625ed94cbca8dcb93",
+        "resolved_by": "`muse` (medium)",
+        "sha": "48a52ee9cd32cba2150bd6b713e93d4e49ad9dd0"
       },
       "died": 0,
       "difficulty": "medium",
