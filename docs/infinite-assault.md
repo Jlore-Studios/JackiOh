@@ -2,7 +2,7 @@
 
 2026-11-23 · written in a Claude session from the owner's request of the same day
 
-> **Status: the plan of record for the issues.** SPEC is still the only source of rules (CLAUDE.md). This
+> **Status: the plan of record for the issues** (tracker #4576). SPEC is still the only source of rules (CLAUDE.md). This
 > file is the mode's design and the set's card list until the mode's spec section (§16) and the set's
 > catalog section (§8.13) hold them; when the two disagree, the spec wins and this file is the bug. The
 > part that builds a rule or a card may change a default here, and records its choice as a ruling note in
@@ -686,7 +686,10 @@ card parts need no fragment and move no golden trace.
 | Id | Title (`Patch: the Infinite Assault, …`) | Scope | Blocked by | Difficulty |
 | --- | --- | --- | --- | --- |
 | C1 | `C1, the set, its tags and the Assault Core` | the set row with its hold, the nine tags (and the server's migration if a tag needs one), the census entry, §8.13's heading and rows, this plan onto `main`, #1–#24 and their tokens | — | hard |
-| M | `M, the mode` (fullsend) | the mode tree: parts A–G below | C1 | hard |
+| M | `M, the mode` (fullsend) | the mode tree: parts A–D below; its parts build at once, its reconcile after C1 | C1 | hard |
+| E | `E, assault-sim and the difficulty bands` | `crates/tools/` (the command, its band test), `crates/tools/README.md` | M | medium |
+| F | `F, the spec: §16` | `spec/16-infinite-assault.md`, `spec/README.md`, §1.1's line, §9.9's pointer | M | medium |
+| G | `G, the e2e spec` | `e2e/cypress/e2e/<nn>-assault.cy.ts` and its fixtures | M | medium |
 | C2 | `C2, Hallucination` | #25–#48 and tokens | C1 | hard |
 | C3 | `C3, Overclock` | #49–#72 | C2 | hard |
 | C4 | `C4, Batch` | #73–#96 and tokens | C3 | hard |
@@ -698,16 +701,23 @@ card parts need no fragment and move no golden trace.
 | C10 | `C10, the Commanders` | #217–#240 and tokens; the Commanders' entries in `crates/run/src/assault.json` | C9, M | hard |
 | AI | `AI, the AI plays the Assault` | IA8: the determinization pool, the sweep over the set, the fixes | C10 | hard |
 | L | `L, the set's look and sound` | set mark, chips, card FX, intro music for its Legendaries and Mythics if single-player sets take them, voice lines rendered, every face read in the browser | C10 | medium |
-| R | `R, the release` | IA13, the release below | AI, L | hard |
+| R | `R, the release` | IA13, the release below | AI, L, E, F, G | hard |
+
+**Opened on 2026-11-23:** the tracker #4576; C1 #4577; the mode's tree M #4578 with its parts A #4579, B
+#4580, C #4581 and D #4582; E #4583, F #4584, G #4585; C2 to C9 #4586 to #4593; C10 #4594; AI #4595; L
+#4596; R #4597.
 
 The card parts form one chain, since each adds rows to the same shared files (`catalog.json`, the census,
 the fixture rows, the radiant audit, `card-text.yaml`, `card-audio.json5`, the FX table, §8.13). The
 mode's tree builds beside the chain, on its own integration branch, and meets the cards only through the
 content (IA4) and the surface below.
 
-**The mode's tree, M.** Its parts build blind on `bot/issue-<M>` and are reconciled once; they meet only
-at the surface below, which is frozen: a part that needs a name from another uses it exactly as written
-here, and the reconcile settles any seam.
+**The mode's tree, M.** Its parts, A to D, build blind on `bot/issue-<M>` and are reconciled once; they
+meet only at the surface below, which is frozen: a part that needs a name from another uses it exactly as
+written here, and the reconcile settles any seam. The integration branch was cut from `main` before C1, so
+A to D read the set and its tags by name, and the reconcile, held by M's `Blocked by` until C1 is on `main`,
+merges `main` and wires them to C1's variants. E, F and G read A's code as it lands, so each builds on `main`
+after M as its own pull request (the bot adopted A to D as the tree's parts when M was labelled).
 
 | Part | Title (`Patch: the Infinite Assault, …`) | Owns | Difficulty |
 | --- | --- | --- | --- |
@@ -715,9 +725,6 @@ here, and the reconcile settles any seam.
 | B | `B, the Assault in the WebAssembly module` | `crates/wasm/`, `apps/web/src/wasm/` (the `assault*` wrappers), the day's Assault deck's export | medium |
 | C | `C, the Assault screen` | `apps/web/src/assault/` but `fight/`; `main.tsx`, the route chunks, `net/navigate.ts`, both `vercel.json`, `routes/playModes.ts`, `routes/PlayHub.tsx`, `routes/commandEntries.ts`, `i18n/zh-CN.json` | medium |
 | D | `D, the Assault's fights` | `apps/web/src/assault/fight/`, the practice worker's hooks it needs (`apps/web/src/practice/`) | hard |
-| E | `E, assault-sim and the difficulty bands` | `crates/tools/` (the `assault-sim` command, its band test), `crates/tools/README.md` | medium |
-| F | `F, the spec: §16` | `spec/16-infinite-assault.md`, `spec/README.md`, §1.1's line, §9.9's pointer | medium |
-| G | `G, the e2e spec` | `e2e/cypress/e2e/<nn>-assault.cy.ts` and its fixtures | medium |
 
 **The surface (frozen).** Rust, in `jackioh_run` (serde camelCase; `ts` exports to
 `apps/web/src/wire/generated/`; JSON in and out through the WebAssembly module, one export per function,
