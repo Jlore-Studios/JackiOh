@@ -39274,14 +39274,6 @@
         "run_id": "45087566880",
         "taken_asks": []
       },
-      "3": {
-        "area": "ai",
-        "count": 2,
-        "last_run": "2026-11-23T00:14:40Z",
-        "provider": "muse",
-        "run_id": "45087618318",
-        "taken_asks": []
-      },
       "4": {
         "area": "server",
         "count": 2,
