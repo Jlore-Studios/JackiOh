@@ -15,7 +15,7 @@ use std::fmt::Write as _;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use jackioh_engine::config::SWING_EVAL_SCALE;
+use jackioh_engine::config::{SWING_EVAL_SCALE, WIN_PROBABILITY_AI_GENERATION};
 use jackioh_engine::{GameRecord, PLAYER_IDS, seat_result};
 
 use crate::stats::read_records;
@@ -254,6 +254,15 @@ pub fn format_rows(rows: &[CalibrationRow]) -> String {
     out
 }
 
+/// The one AI generation every record was built under, if they share one (R4552000): the generation a
+/// fit of them names in `WIN_PROBABILITY_AI_GENERATION`.
+fn generation_of(generations: &[Option<i32>]) -> Option<i32> {
+    match generations {
+        [only] => *only,
+        _ => None,
+    }
+}
+
 /// The fit as `calibrate` prints it.
 pub fn format_fit(rows: &[CalibrationRow], games: usize, generations: &[Option<i32>]) -> String {
     let weights = fit_rows(rows);
@@ -266,15 +275,28 @@ pub fn format_fit(rows: &[CalibrationRow], games: usize, generations: &[Option<i
     for (name, weight) in named.iter().zip(&weights) {
         let _ = writeln!(out, "pub const WIN_PROBABILITY_{name}: f64 = {weight:?};");
     }
-    let generations: Vec<String> = generations
+    let fitted = generation_of(generations);
+    if let Some(generation) = fitted {
+        let _ = writeln!(
+            out,
+            "pub const WIN_PROBABILITY_AI_GENERATION: i32 = {generation};"
+        );
+    }
+    let named: Vec<String> = generations
         .iter()
         .map(|generation| generation.map_or_else(|| "none".to_string(), |n| n.to_string()))
         .collect();
     let _ = writeln!(
         out,
-        "AI generation of the records' builds: {}",
-        generations.join(", ")
+        "AI generation of the records' builds: {}; the weights in config.rs were fit against {WIN_PROBABILITY_AI_GENERATION}.",
+        named.join(", ")
     );
+    if fitted != Some(WIN_PROBABILITY_AI_GENERATION) {
+        let _ = writeln!(
+            out,
+            "warning: these records are not all of AI generation {WIN_PROBABILITY_AI_GENERATION}, so their evaluations are on another scale than the weights in config.rs; paste this fit and its generation only from one generation's records."
+        );
+    }
     let _ = writeln!(
         out,
         "Brier score: {:.5}; the turn and first player alone: {:.5}.",
@@ -396,6 +418,34 @@ mod tests {
                 "{fit:?} against {constants:?}"
             );
         }
+    }
+
+    #[test]
+    fn r4552000_calibrate_names_the_generation_and_warns_on_another() {
+        let rows = fixture();
+        let same = format_fit(&rows, 120, &[Some(WIN_PROBABILITY_AI_GENERATION)]);
+        assert!(
+            same.contains(&format!(
+                "pub const WIN_PROBABILITY_AI_GENERATION: i32 = {WIN_PROBABILITY_AI_GENERATION};"
+            )),
+            "{same}"
+        );
+        assert!(!same.contains("warning"), "{same}");
+        let other = format_fit(&rows, 120, &[Some(WIN_PROBABILITY_AI_GENERATION + 1)]);
+        assert!(other.contains("warning"), "{other}");
+        let mixed = format_fit(
+            &rows,
+            120,
+            &[
+                Some(WIN_PROBABILITY_AI_GENERATION),
+                Some(WIN_PROBABILITY_AI_GENERATION + 1),
+            ],
+        );
+        assert!(
+            !mixed.contains("pub const WIN_PROBABILITY_AI_GENERATION"),
+            "{mixed}"
+        );
+        assert!(mixed.contains("warning"), "{mixed}");
     }
 
     #[test]
