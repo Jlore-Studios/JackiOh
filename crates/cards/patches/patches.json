@@ -34104,5 +34104,29 @@
       "v0.6.10d"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.11b",
+    "date": "2026-11-23",
+    "title": "Patch: the Infinite Assault, C1, the set, its tags and the Assault Core",
+    "source": "#4577",
+    "notes": "Issue #4577 (part of #4576): the held single-player Infinite Assault set (R4577000), its nine tags (R4577001) and its Assault Core, IA #1-#24 with the tokens #4.1 Drone and #10.1 Drone Escort. No pool deals the set while it is held, so no card players can reach plays differently. Claims --visual because the change touches apps/web/src/cards/ (R2529000): the set's mark in setMark.ts and placeholder scene and motion recipes keyed to infiniteassault- ids only (R4577009); no shipped card's picture moves.",
+    "player": {
+      "title": "Behind the scenes",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Groundwork for future content. No card you can play looks or plays any differently."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "8fea5765571c1259a5b1f90fe260d6e9fa729ab5"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
