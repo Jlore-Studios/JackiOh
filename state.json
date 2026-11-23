@@ -17333,6 +17333,8 @@
       }
     },
     "4647": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-23T21:33:08Z",
@@ -17346,8 +17348,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: pin R4606000's deferred hand-back with a musicScene unit test\"} -->\n- ## What changed and why\n- The spot-check finding claimed no test fails if `leave()` in `apps/web/src/audio/musicScene.ts` hands the music back synchronously. That premise is false, and the issue's plan answers it with evidence rather than the suggested fix:\n- - A mounted `Game` holds the menu theme itself (`useGameAudio.ts:132` \u2192 `retainAppAudio()` \u2192 `holdMenuMusic()`), so while a board leaves, `menuHolders > 0` and a synchronous `apply()` requests `{ track: \"menu\" }`, not `{ track: null }`.\n- - Mutation run (temporarily `scheduleApply()` \u2192 `apply()` in `leave()`): all three new tests went red, and one R4606000 test in each of the four board files went red too \u2014 `music-ui.test.tsx` (\"two boards of one match\u2026\"), `ReplayPlayer.test.tsx`, `DuosBoard.test.tsx`, `DuosReplay.test.tsx`. So the \u2026\n- - The suggested fix (push `holdMenuMusic()` in those tests plus a `track === null` assertion) was not applied: the extra hold breaks `music-ui`'s test on current code, as the plan predicted.\n- Delivered instead, per the plan:\n- - New [musicScene.test.ts](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4632/apps/web/src/audio/musicScene.test.ts) with three `it(\"R4606000 \u2026\")` tests on `musicScene.ts` alone (no board, no incidental hold): the leave itself asks for nothing and hands the menu theme back on a microtask;\u2026\n- - [R4606000.md](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4632/spec/rulings/R4606000.md): one added `proven_in` line, nothing else.\n- Unchanged as required: `musicScene.ts` (mutation restored, `git diff` on it empty), all four board test files, `spec/11-rulings.md`, `spec/INDEX.md`, `spec/CARDS.md`, `spec/pending/4606.md`, every Rust crate.\n- ## How you tested it\n- - `sh scripts/build-wasm.sh` \u2014 ok.\n- - Baseline: new file 3/3 green; four board files 150/150 green.\n- - Mutation (`scheduleApply()` \u2192 `apply()`): new file 3/3 red (first `expect` fails with `expected 3 to be 2`; menu-appears assertion `expected true to be false`; silence-branch `expected 2 to be 1`); board files 4 failed / 146 passed, exactly the four R4606000 tests. Then restored and confirmed emp\u2026\n- - After restore: all five files 5 passed, 153/153 green. (One unrelated flake on the first post-restore run \u2014 `ReplayPlayer` \"each control reaches the expected step\" \u2014 green alone at 28/28 and green on the full re-run.)\n- - `cargo jackioh spec check` \u2014 `2416 rulings, 6055 proofs, 74739 citations in 4673 files, 33284 links: ok`.\n- - `pnpm --dir apps/web typecheck` \u2014 green (needs `NODE_OPTIONS=--max-old-space-size=6144`; the default ~2G heap OOMs, an environmental limit, not a code error). `pnpm exec eslint apps/web/src/audio/musicScene.test.ts` \u2014 clean. `cargo fmt --check` \u2014 clean.\n- ## Decisions not settled by the issue\n- - Left the four board tests unchanged; the alternative (the issue's suggested `holdMenuMusic()` + `track === null` assertion) breaks `music-ui` on current code and adds nothing the mutation run doesn't already disprove.\n- - Proved the rule in a unit test on `musicScene.ts` rather than adding a page-level `retainAppAudio()` hold to four board files \u2014 one focused file, no extra proof lost.\n- - Used `holdMenuMusic()` (not `retainAppAudio()`) in the unit test: there is no board in that test to trigger the release path.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4632 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4632/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4632,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-23T22:33:55Z",
         "from_run": "45270836310",
         "gates": [
           {
@@ -17406,8 +17411,15 @@
         "source": "build",
         "until": "2026-11-23T23:02:50Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-23T22:32:50Z",
+      "run_id": "pending:3a27ddc1-1795473202",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-23T22:33:55Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -17421,9 +17433,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T22:23:13Z",
+    "at": "2026-11-23T22:33:55Z",
     "url": "",
-    "what": "suggestions (rules) on muse"
+    "what": "review #4647 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T22:20:04Z",
