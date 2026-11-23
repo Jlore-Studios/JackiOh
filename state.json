@@ -40309,6 +40309,12 @@
         "number": 4612,
         "title": "Patch: fuzz private lobbies with random operations and invariant checks",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T22:57:07Z",
+        "number": 4637,
+        "title": "Patch: the fuzz gate fails a wave that leaves too many dealt cards unplayed",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
