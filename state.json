@@ -18722,7 +18722,8 @@
       ],
       "strikes": 1,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 0,
+      "waiting_comment": 7105402244
     },
     "4616": {
       "difficulty": "hard",
