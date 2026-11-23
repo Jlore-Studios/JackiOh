@@ -18882,7 +18882,7 @@
     "what": "review #4616 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-23T15:44:35Z",
+    "at": "2026-11-23T15:52:31Z",
     "notes": [
       "#4604 is held for `claude-1` until 10:50 (5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
     ],
@@ -19590,7 +19590,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T15:44:35Z",
+  "loop_tick": "2026-11-23T15:52:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
