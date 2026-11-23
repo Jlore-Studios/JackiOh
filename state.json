@@ -16918,15 +16918,9 @@
     "what": "review #4530 on gpt"
   },
   "last_sweep": {
-    "at": "2026-11-22T23:53:16Z",
+    "at": "2026-11-23T00:04:11Z",
     "notes": [
-      "delivered build #4518 on gpt (run 45079861233): built",
-      "delivered build #4511 on muse (run 45079818176): built",
-      "delivered build #4517 on muse (run 45078767338): built",
-      "started review #4531 on muse (run 45085949973)",
-      "started review #4532 on muse (run 45085990073)",
-      "started review #4530 on gpt (run 45086029586)",
-      "nothing more to start: nothing is queued"
+      "#4531: `rust (classify)`, `rust` red in CI run 45085788943; its other early jobs have until 2026-11-23T00:07:00Z to report"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17632,7 +17626,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T23:53:16Z",
+  "loop_tick": "2026-11-23T00:04:11Z",
   "machine_disk": {
     "issue": null,
     "reading": {
