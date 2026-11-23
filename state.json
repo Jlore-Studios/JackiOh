@@ -17447,6 +17447,13 @@
     "4648": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-23T23:09:04Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "The AI rule decides it: the change is the AI's decisions and search in crates/ai/src/."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
