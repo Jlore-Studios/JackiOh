@@ -17848,13 +17848,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "gemini"
+        ],
         "builder": "gemini",
         "built_by": "agy",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "gemini",
+            "provider": "agy",
+            "run": "45115779152",
+            "tier": "medium"
+          }
+        ],
         "sha": "1ec764eed0267be6590594a8b5e68f103771dcce",
-        "tiers": {}
+        "tiers": {
+          "gemini": "medium"
+        }
       }
     }
   },
