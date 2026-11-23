@@ -40744,6 +40744,12 @@
         "number": 4560,
         "title": "Patch: every e2e spec carries a measured shard weight",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T07:55:31Z",
+        "number": 4565,
+        "title": "Patch: the matchmaker pairs from light ticket stubs and reads the full tickets only for the pair it starts",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": "2026-11-23T07:42:49Z",
