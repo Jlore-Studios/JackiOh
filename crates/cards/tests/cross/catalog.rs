@@ -517,7 +517,7 @@ const CORE: &[SpecRow] = &[
     row(
         "46",
         "Suppressive Aura",
-        emb(2, 4),
+        emb(1, 3),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -842,8 +842,8 @@ const CORE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Rare,
-        st(3, 3),
-        st(6, 6),
+        st(4, 5),
+        st(8, 10),
     ),
     row(
         "78",
@@ -1207,8 +1207,8 @@ const CLASSIC: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Common,
-        st(3, 4),
-        st(6, 8),
+        st(3, 6),
+        st(6, 12),
     ),
     row(
         "7",
@@ -8399,7 +8399,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "84",
         "Bogos Binted",
-        c(3),
+        c(2),
         T::Unit,
         &[],
         R::Legendary,
@@ -9164,8 +9164,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Epic,
-        st(1, 1),
-        st(2, 2),
+        st(3, 1),
+        st(6, 2),
     ),
     row(
         "154",

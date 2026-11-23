@@ -100,6 +100,9 @@ export default function ReplayPlayer({
 }: ReplayPlayerProps): ReactElement {
   useLocale();
   const cache = useMemo(() => createStepCache(source), [source]);
+  // R4606000: one music key per replay, so remounting steps keep the match's music; a different
+  // replay is a different key, so it moves the rotation on.
+  const musicKey = useMemo(() => ({}), [source]);
   const total = cache.total;
   const last = Math.max(0, total - 1);
   const [at, setAt] = useState<Shown | null>(null);
@@ -277,6 +280,7 @@ export default function ReplayPlayer({
         onAction={IGNORE}
         replay
         replayPrompt
+        musicKey={musicKey}
         enemyLabel={opponentLabel}
         resultForm="chip"
         loadouts={source.loadouts?.() ?? null}

@@ -75,6 +75,11 @@ export type DuosBoardProps = {
   /** #965: a finished game's step to look at (`DuosReplay.tsx`): nothing is offered, and nothing is sent. */
   replay?: boolean;
   /**
+   * R4606000: one object per match; remounts under the same key keep the match's music. Absent, the
+   * board mints one per mount (a live co-op match, where only the inner `Game` remounts).
+   */
+  musicKey?: object;
+  /**
    * R3497000: a live co-op board drains its animation queue while the page is hidden, as the 1v1
    * board does. The teammate's `silent` board and replay boards never drain.
    */
@@ -358,6 +363,7 @@ export function DuosBoard({
   economy = null,
   forecast = null,
   replay = false,
+  musicKey: musicKeyProp,
   sideline,
   drainWhenHidden,
 }: DuosBoardProps): ReactElement {
@@ -387,6 +393,10 @@ export function DuosBoard({
     if (boardAfterResult) reopen.current?.focus({ preventScroll: true });
   }, [boardAfterResult]);
 
+  // R4606000: one music key per mounted co-op match, so portal flips keep the match's music. A
+  // co-op replay passes its own key down, outliving this board's remounts on every backward step.
+  const ownMusicKey = useMemo(() => ({}), []);
+  const musicKey = musicKeyProp ?? ownMusicKey;
   const seat = view.seat;
   const mate = teammateOf(seat);
   const slot = duelOf(seat);
@@ -544,6 +554,7 @@ export function DuosBoard({
               onAction={replay ? ignore : sendDuel}
               forecast={ownForecast}
               replay={replay}
+              musicKey={musicKey}
               drainWhenHidden={drainWhenHidden ?? !replay}
               wearCosmetics
               error={error ?? null}
@@ -577,6 +588,7 @@ export function DuosBoard({
               onAction={ignore}
               replay
               silent
+              musicKey={musicKey}
               resultForm="chip"
               turnClock={showing === "teammate" ? chrome?.clock : undefined}
               matchStatus={showing === "teammate" ? chrome?.status : undefined}
@@ -604,6 +616,7 @@ export function DuosBoard({
           onAction={replay ? ignore : sendDuel}
           forecast={ownForecast}
           replay={replay}
+          musicKey={musicKey}
           drainWhenHidden={drainWhenHidden ?? !replay}
           wearCosmetics
           error={error ?? null}
@@ -622,6 +635,7 @@ export function DuosBoard({
           legal={NOTHING}
           onAction={ignore}
           replay
+          musicKey={musicKey}
           resultForm="chip"
           turnClock={chrome?.clock}
           matchStatus={chrome?.status}
