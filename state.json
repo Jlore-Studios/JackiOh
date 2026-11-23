@@ -41480,16 +41480,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "1": {
-        "area": "client",
-        "count": 1,
-        "last_run": "2026-11-23T11:11:43Z",
-        "provider": "muse",
-        "run_id": "45162947593",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
