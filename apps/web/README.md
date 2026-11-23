@@ -1190,14 +1190,15 @@ src/practice/
   controller.ts       one request in flight, and the pacing loop that plays the AI's turn one
                       visible action at a time (think indicator, gaps from config.ts)
   aiTable.ts          the hooks that pace the AI at a table (controller state, board busy, the voice and
-                      showcase holds), shared by the route and a dungeon fight's screen
+                      showcase holds), shared by the route, a dungeon fight's screen and an Infinite Assault fight's screen
   config.ts testids.ts PracticeSetup.tsx ThinkIndicator.tsx PracticeLeave.tsx PracticeResult.tsx practice.css
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
   saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
-                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and the last
-                      PRACTICE_REPLAYS_KEPT finished free games (R768)
+                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and a dungeon
+                      run's fight and an Infinite Assault fight each in a slot of its own (R3476000, R4582001),
+                      and the last PRACTICE_REPLAYS_KEPT finished free games (R768)
   resume.ts           the page's half (R668): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   todaysDeal.ts       today's deal (R2882000): the UTC day's seed daily-YYYY-MM-DD and seat, on a random deck
