@@ -40683,6 +40683,12 @@
         "number": 4563,
         "title": "Patch: the Duos host builds each seat's view once per change, as the 1v1 host already does",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T08:12:33Z",
+        "number": 4567,
+        "title": "Patch: the run fuzz fails a run that holds a card, artifact, blessing or curse its content does not know",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
