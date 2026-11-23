@@ -16873,19 +16873,10 @@
     "what": "suggestions (rules) on muse"
   },
   "last_sweep": {
-    "at": "2026-11-23T00:39:46Z",
+    "at": "2026-11-23T00:49:54Z",
     "notes": [
-      "delivered suggest on muse (run 45089461731): suggested",
-      "delivered suggest on muse (run 45089413839): suggested",
-      "delivered review #4535 on claude-7 (run 45088534405): approved",
-      "delivered suggest on claude-8 (run 45087519036): suggested",
-      "delivered review #4531 on muse (run 45085949973): approved",
-      "delivered build #4516 on claude-3 (run 45076071431): interrupted",
-      "#4542: typed it Task",
-      "#4541: typed it Task",
-      "#4540: typed it Bug",
-      "#4539: typed it Feature",
-      "#4538: typed it Bug"
+      "#4516 is held for `claude-3` until 19:00 (it refused a call)",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17591,7 +17582,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T00:39:46Z",
+  "loop_tick": "2026-11-23T00:49:54Z",
   "machine_disk": {
     "issue": null,
     "reading": {
