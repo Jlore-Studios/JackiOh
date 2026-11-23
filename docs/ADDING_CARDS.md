@@ -55,6 +55,11 @@ BUILD's must-pass tables take no row for a new card; its own tests are the recor
   Its intro (row 10) is the release's too: the intros' totality test reads the sets that ship. (The Stinkyscape set's intros
   came early, with its look-and-sound part, issue #1883, R1883000, and the Stinkyscape+ set's with its own, issue #3572,
   R3572000, so neither's release owes any.)
+- Its picture is not the release's: the web's art tests hold every catalog entry, a held set's included, to its rarity's
+  detail floor (R3331001) and every Legendary and Mythic to a motion recipe of its own (R3340000), so a held set's cards draw
+  placeholder scenes from the day they land (`apps/web/src/cards/art/infiniteAssaultRecipes.ts`, R4577009; Stinkyscape+'s,
+  R3572001), its set has its mark (`apps/web/src/cards/setMark.ts`, R2718000), and no default look reaches it until it ships
+  (R3535000).
 - Tests that count the catalog count the sets that ship (`set_is_open` in Rust, `setShips` in the web), never every entry, and a
   test that pins a list of cards reads the shipped sets or the held set's entries that have landed (`landed()` in
   `tests/cross/catalog.rs`, R1857000). `docs/training-grounds-set.md` TG3 says the rest (`docs/stinkyscape-set.md`,
