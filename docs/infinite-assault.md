@@ -690,27 +690,33 @@ card parts need no fragment and move no golden trace.
 | E | `E, assault-sim and the difficulty bands` | `crates/tools/` (the command, its band test), `crates/tools/README.md` | M | medium |
 | F | `F, the spec: §16` | `spec/16-infinite-assault.md`, `spec/README.md`, §1.1's line, §9.9's pointer | M | medium |
 | G | `G, the e2e spec` | `e2e/cypress/e2e/<nn>-assault.cy.ts` and its fixtures | M | medium |
-| C2 | `C2, Hallucination` | #25–#48 and tokens | C1 | hard |
-| C3 | `C3, Overclock` | #49–#72 | C2 | hard |
-| C4 | `C4, Batch` | #73–#96 and tokens | C3 | hard |
-| C5 | `C5, Recursion` | #97–#120 | C4 | hard |
-| C6 | `C6, Jailbreak` | #121–#144 and tokens | C5 | hard |
-| C7 | `C7, Firewall` | #145–#168 and tokens | C6 | hard |
-| C8 | `C8, Scraper` | #169–#192 | C7 | hard |
-| C9 | `C9, Singularity` | #193–#216 and tokens | C8 | hard |
-| C10 | `C10, the Commanders` | #217–#240 and tokens; the Commanders' entries in `crates/run/src/assault.json` | C9, M | hard |
-| AI | `AI, the AI plays the Assault` | IA8: the determinization pool, the sweep over the set, the fixes | C10 | hard |
-| L | `L, the set's look and sound` | set mark, chips, card FX, intro music for its Legendaries and Mythics if single-player sets take them, voice lines rendered, every face read in the browser | C10 | medium |
-| R | `R, the release` | IA13, the release below | AI, L, E, F, G | hard |
+| K | `the cards, IA-25 to IA-240` (fullsend) | the cards' tree: CF, then C2–C10 side by side; labelled once C1 has merged | C1 | hard |
+| CF | `CF, the card foundation` | every entry, stub and shared row of #25–#240 and their tokens (the Stinkyscape+ foundation's way, #3535) | — (K's first part) | hard |
+| C2 | `C2, Hallucination` | #25–#48: the scripts and tests, replacing CF's stubs | CF | hard |
+| C3 | `C3, Overclock` | #49–#72: the scripts and tests, replacing CF's stubs | CF | hard |
+| C4 | `C4, Batch` | #73–#96: the scripts and tests, replacing CF's stubs | CF | hard |
+| C5 | `C5, Recursion` | #97–#120: the scripts and tests, replacing CF's stubs | CF | hard |
+| C6 | `C6, Jailbreak` | #121–#144: the scripts and tests, replacing CF's stubs | CF | hard |
+| C7 | `C7, Firewall` | #145–#168: the scripts and tests, replacing CF's stubs | CF | hard |
+| C8 | `C8, Scraper` | #169–#192: the scripts and tests, replacing CF's stubs | CF | hard |
+| C9 | `C9, Singularity` | #193–#216: the scripts and tests, replacing CF's stubs | CF | hard |
+| C10 | `C10, the Commanders` | #217–#240: the scripts and tests, replacing CF's stubs | CF | hard |
+| AI | `AI, the AI plays the Assault` | IA8: the determinization pool, the sweep over the set, the fixes | K, M | hard |
+| L | `L, the set's look and sound` | set mark, chips, card FX, intro music for its Legendaries and Mythics if single-player sets take them, voice lines rendered, every face read in the browser | K | medium |
+| R | `R, the release` | IA13, the release below, and the Commanders' entries in `crates/run/src/assault.json` | AI, L, E, F, G | hard |
 
 **Opened on 2026-11-23:** the tracker #4576; C1 #4577; the mode's tree M #4578 with its parts A #4579, B
-#4580, C #4581 and D #4582; E #4583, F #4584, G #4585; C2 to C9 #4586 to #4593; C10 #4594; AI #4595; L
+#4580, C #4581 and D #4582; E #4583, F #4584, G #4585; the cards' tree K #4601 with CF #4602 and C2 to C10 #4586 to #4594; AI #4595; L
 #4596; R #4597.
 
-The card parts form one chain, since each adds rows to the same shared files (`catalog.json`, the census,
-the fixture rows, the radiant audit, `card-text.yaml`, `card-audio.json5`, the FX table, §8.13). The
-mode's tree builds beside the chain, on its own integration branch, and meets the cards only through the
-content (IA4) and the surface below.
+**The cards' tree, K.** The card parts first made one chain of pull requests, since each added rows to the same
+shared files (`catalog.json`, the census, the fixture rows, the radiant audit, `card-text.yaml`, `card-audio.json5`,
+the FX table, §8.13). They are one fullsend tree instead, as Stinkyscape+'s cards were (#3596): CF writes every
+entry and shared row once with a stub per card, then each card part touches only its own scripts, so the nine
+build side by side and one reconcile opens one pull request. K is labelled `bot:fullsend` only once C1 has merged,
+since a tree's integration branch is cut at adoption and must hold the set's row; every part is linked before the
+label goes on, since adoption takes the sub-issues it finds then. The Commanders' `assault.json` entries moved to R,
+since that file is the mode's tree's.
 
 **The mode's tree, M.** Its parts, A to D, build blind on `bot/issue-<M>` and are reconciled once; they
 meet only at the surface below, which is frozen: a part that needs a name from another uses it exactly as
