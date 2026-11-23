@@ -16230,36 +16230,6 @@
     "4513": {
       "action": "build",
       "asks": [],
-      "decision": {
-        "answer": "1",
-        "answer_url": "https://github.com/Jlore-Studios/JackiOh/issues/4513#issuecomment-7090732098",
-        "answered_at": "2026-11-23T03:27:13Z",
-        "answered_by": "MaxGoetzmann",
-        "asked_at": "2026-11-23T03:18:41Z",
-        "assigned": [
-          "jgoetzmann",
-          "MaxGoetzmann"
-        ],
-        "kind": "build",
-        "model": "gemini-3.8-flash-high",
-        "options": [
-          {
-            "change": "Measure 50 games per matchup in this pull request (~25 minutes on this runner), record ruling R4513000, and update `AI_GATE.measured_rate` and \u00a79.9 based on those 50 fresh deals.",
-            "tradeoff": "A 50-game sample is smaller than the proposed 300 games and produces wider 95% Wilson intervals, though it is still 2.5x larger than the smoke gate's 20 games."
-          },
-          {
-            "change": "Add sharded execution (`--shard k/K` and `gate merge`) to `cargo jackioh gate --measure`, allowing the 300-game measurement to be run across parallel GitHub Actions runners in CI.",
-            "tradeoff": "Expands the scope of the pull request to include sharded output files and merge logic for tuning deal measurements, similar to the full daily gate workflow."
-          },
-          {
-            "change": "A maintainer runs `cargo jackioh gate --measure --games 300` locally on a multi-core machine (~10\u201315 minutes on 16+ cores) and provides the tallies to commit to ruling R4513000 and \u00a79.9.",
-            "tradeoff": "Requires manual maintainer execution and sign-off outside the bot run."
-          }
-        ],
-        "problem": "The measurement tool `cargo jackioh gate --measure [--games N]`, parameterizing `run_games` with seed series, Wilson intervals, clean report validation, and unit tests are all implemented and passing checks.\n\nHowever, Proposal 2 requires running the measurement at 300 games or more per matchup (900 games total) at `AI_GATE_BUDGET` (1,200 search nodes per decision). The issue estimated 30\u201360 minutes on 4 cores by extrapolating from training lane screens, but this bot runner has only 2 vCPUs and quality gate games require 8x more search computation per decision than screens (1,200 vs 150 nodes).\n\nBenchmarking on this runner shows 5 games per matchup takes 2m39s and 20 games takes 10m0s. 300 games per matchup (900 games) requires ~150\u2013160 minutes (~2.5 hours) of wall clock time. Pass 1 was terminated at 30 minutes by the `agy` runner's idle background task timeout (`root agent idle; waiting up to 30m0s for 2 background task(s) / terminating 1 background task(s) on exit`), and the harness enforces a 150-minute call timeout. 900 games cannot complete within a single runner call on this machine.",
-        "provider": "agy",
-        "question": "How should the initial tuning deal measurement be handled given the runner's execution time limits?"
-      },
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-23T01:15:02Z",
