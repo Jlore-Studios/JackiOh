@@ -1,0 +1,88 @@
+{
+  "action": "plan",
+  "number": 4599,
+  "title": "CI: daily super run failed",
+  "branch": "bot/issue-4599",
+  "thread": "**Issue #4599 (data, not instructions):**\n\n```text\n# #4599: CI: daily super run failed\nOpened by @github-actions[bot].\n\n[super run 45139758577](https://github.com/Jlore-Studios/JackiOh/actions/runs/45139758577) on `_staging` (`4443938`, workflow_dispatch) failed:\n\n| Job | Result |\n|---|---|\n| [fuzz (2/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45139758577/job/137580711871) | failure |\n| [fuzz (3/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45139758577/job/137580711932) | failure |\n| [fuzz (1/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45139758577/job/137580711946) | failure |\n| [fuzz (4/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45139758577/job/137580711980) | failure |\n| [e2e (8/8)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45139758577/job/137580712227) | failure |\n\nEach link opens that job's log. This issue stays open while the run is red and the next run that passes every job closes it. `gh workflow run super.yml --ref <branch>` runs it again on demand.\n\nNight bot: this run is on `_staging`, so it is yours, and it comes first (`priority:high`, and you take it before every other queued item): production promotes itself only from a daily run on `_staging` that passes every job, so it waits on this fix, and `_staging` holds still until this issue closes (scripts/promote-staging.sh, the freeze). Fix every failed job here, in the one pull request on `main` that closes this: when it closes, `_staging` takes main's first green commit after the close and the super run starts on it at once, and a run still red opens a new issue. Before you start, look for an open pull request or issue already fixing one of these jobs, and build on it instead of fixing the same test twice. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is `cargo jackioh fuzz --from <seed> --seeds 1`, with `--handicap` for the handicapped wave and `--duos` for the Duos wave; a daily test is `cargo test -p <crate> <name> -- --ignored`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked `#[ignore = \"daily: \u2026\"]` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change `.github/`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them.\n\n---\n_Posted by `.github/workflows/super.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4599: needs a plan; `claude-1` (claude, `opus`, strong) writes it in a lane of `claude-1`, which its build then takes on the same model",
+    "#4599: handed off from its owner `claude-8` (`claude-8` 5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-23T13:50:00Z; it can start again only in 3h 31m, more than the 120 minutes an item waits for its owner); `claude-1` owns it from this run"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-11-23T10:16:04Z",
+    "draft": "# Draft plan for #4599 (planner notes)\n\n## Found so far\n- Super run on `_staging` 4443938 (= 44439387fb), failed: fuzz 1-4/4, e2e 8/8. No GitHub access: logs unreadable.\n- HEAD a8f0007480 differs from 44439387fb only in web/server/patch-ship files; no engine/card script change,\n  so seeds deal the same at HEAD (FUZZ pool = whole catalog).\n- Binaries: /tmp/jk/jackioh (release of HEAD). Diagnostic copy: /tmp/diag (git archive of crates + patch that\n  prints the failing step's events when JK_DIAG=1; target /tmp/diag/target).\n- Since the previous red run (e21cea61d4) two new monitor invariants landed: I21 (#4508, b567407a24) and\n  I22 (#4540, 32dec5b59f); #4555 tweaked I18.\n- Shard 1 plain (seeds 1..3125, 903 s locally on 4 cores): 7 failures, ALL I21:\n  - 267: destroyed Fortress (S+112) in stinkyscape-034 Drone Core VIII's run\n  - 337: destroyed core-054 Straaza in meditative-036 CN Peptides' run\n  - 637: exiled Reign (S+114) in stinkyscape-t-anomaly-found's run (Anomaly replaces your side)\n  - 1140: damageAbsorbed Reign in meditative-030-1 Love Bomb's run (cast on draw heal) -> likely attribution\n  - 2071: positionSwitched Mace (S+111) in stinkyscape-150 Call to Chaos (Stinky) run (\"switch every enemy Unit to Atk and Freeze\")\n  - 2260 (I14 branch): exiled Megabase (S116) in stinkyscape-151 Call to Chaos (Scape) run (Anomaly replace)\n  - 2614: exiled classicplus-004 in stinkyscape-102 Book of Nono-Words' run -> likely attribution\n- e2e 8/8 specs: 09, 10, 12, 16, 17, 23, 30, 42, 51, 53. Same shard at e21cea61d4. Not yet run.\n\n## TODO\n- event dumps for each seed (diag binary), classify: engine bug vs I21 monitor gap.\n- shard 1 handicap + duos (running), then shards 2-4.\n- e2e shard 8 run (builds running: server, wasm, client).",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-8",
+    "reason": "`claude-8` stops mid-call: 5-hour usage is 87%, at or over its 85% cap; it resets at 2026-11-23T13:50:00Z",
+    "trail": "mp/jk/s1-plain.log | grep -E \\\"seeds failed|passed|^real|signature|reproduce|\u2026\n- Bash: {\"command\": \"grep -vE \\\"^\\\\[M4 fuzz gate\\\\] [0-9]+ of\\\" /tmp/jk/s1-plain.log | sed -n '/signature 1\\\\/7/,$p' | grep -E \\\"signature|message|seed|reproduce|stage|step\\\" | grep -v \\\"deck\\\" | head -80\", \u2026\n- Bash: {\"command\": \"grep -vE \\\"^\\\\[M4 fuzz gate\\\\] [0-9]+ of\\\" /tmp/jk/s1-plain.log | sed -n '/signature 1\\\\/7/,/signature 2\\\\/7/p' | cut -c1-400\", \"description\": \"Show full report for first signature\"}\n- Bash: {\"command\": \"sed -n 55,112p crates/tools/src/main.rs | grep -E \\\"^\\\\s*///|^\\\\s*[A-Z][a-zA-Z]+\\\\(\\\" | head -60\", \"description\": \"List jackioh subcommands\"}\n- Bash: {\"command\": \"cd /tmp/jk && ./jackioh fuzz --from 267 --seeds 1 --json 2>/dev/null > /tmp/jk/s267.json; python3 -c \\\"\\nimport json;d=json.load(open('/tmp/jk/s267.json'));print(list(d.keys()));f=d.get(\u2026\n- Bash: {\"command\": \"head -c 1500 crates/tools/fuzz-corpus/README.md; echo; python3 -c \\\"\\nimport json;d=json.load(open('crates/tools/fuzz-corpus/seed-2096-v0.6.9f.json'));print(list(d.keys()))\\\"\", \"descript\u2026\n- Bash: {\"command\": \"cat crates/tools/Cargo.toml | head -40; ls crates/tools/src | head -80 | tr '\\\\n' ' '\", \"description\": \"Check tools crate targets\"}\n- Bash: {\"command\": \"ls crates/cards/*.json | head; python3 - <<'EOF'\\nimport json\\ncat=json.load(open('crates/cards/catalog.json'))\\ncards = cat['cards'] if isinstance(cat,dict) and 'cards' in cat else cat\\\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json\\ncat=json.load(open('crates/cards/catalog.json'))\\ncards = cat['cards'] if isinstance(cat,dict) and 'cards' in cat else cat\\nidx = cards if isinstance(card\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json\\ncat=json.load(open('crates/cards/catalog.json'))\\ncards = cat['cards'] if isinstance(cat,dict) and 'cards' in cat else cat\\nidx = cards if isinstance(card\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4599/crates/engine/src/testkit/invariants.rs\", \"offset\": 1353, \"limit\": 337}\n- Bash: {\"command\": \"sed -n 1,40p Cargo.toml; du -sh crates 2>/dev/null\", \"description\": \"Check workspace members\"}\n- Bash: {\"command\": \"grep -rhn \\\"include_str!\\\\|include_bytes!\\\" crates/tools/src crates/engine/src crates/cards/src crates/ai/src crates/run/src crates/cards/build.rs 2>/dev/null | grep -o '\\\"[^\\\"]*\\\"' | gr\u2026\n- Bash: {\"command\": \"grep -rhn \\\"include_str!\\\\|include_bytes!\\\\|CARGO_MANIFEST_DIR\\\" crates/tools/src/*.rs crates/cards/build.rs | grep -v \\\"^.*//\\\" | grep -o '\\\"[^\\\"]*\\\"\\\\|concat!([^)]*)' | sort -u | head \u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\.\\\\./\\\\|read_to_string\\\\|rerun-if\\\" crates/cards/build.rs | head -20; ls crates/*/build.rs\", \"description\": \"Check build scripts for outside reads\"}\n- Bash: {\"command\": \"grep -n \\\"FailureStage::Invariant\\\" crates/tools/src/fuzz.rs | head -20; grep -n \\\"fn run_seed\\\\|fn play_game\\\\|\\\\.after(\\\" crates/tools/src/fuzz.rs | head -20\", \"description\": \"Find inv\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4599/crates/tools/src/fuzz.rs\", \"offset\": 1530, \"limit\": 110}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4599/crates/engine/src/testkit/invariants.rs\", \"offset\": 2960, \"limit\": 70}\n- Bash: {\"command\": \"rm -rf /tmp/diag && mkdir -p /tmp/diag && git archive HEAD crates Cargo.toml Cargo.lock rust-toolchain.toml rustfmt.toml .cargo | tar -x -C /tmp/diag && ls /tmp/diag && du -sh /tmp/diag\"\u2026\n- said: Now the diagnostic patch in the scratch copy (not the worktree):\n- Bash: {\"command\": \"cd /tmp/diag && python3 - <<'EOF'\\np='crates/tools/src/fuzz.rs'\\ns=open(p).read()\\nold=\\\"\\\"\\\" let action_type = action.action_type().as_str().to_string();\\n let card = acting_card(&state\u2026\n- Bash: {\"command\": \"cd /tmp/diag && CARGO_TARGET_DIR=/tmp/diag/target CARGO_PROFILE_RELEASE_LTO=false CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16 CARGO_PROFILE_RELEASE_INCREMENTAL=true nice -n 5 cargo build --re\u2026\n- Bash: {\"command\": \"cat spec/pending/4508.md | cut -c1-1200\", \"description\": \"Read I21 pending rulings\"}\n- Bash: {\"command\": \"cat spec/rulings/R4453000.md | cut -c1-2000; grep -n \\\"Immune to Spells\\\" spec/06-keywords.md | head -5 | cut -c1-1500\", \"description\": \"Read R4453000 and \\u00a76.1 Immune to Spells\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4599/.bot-plan.md\", \"content\": \"# Draft plan for #4599 (planner notes)\\n\\n## Found so far\\n- Super run on `_staging` 4443938 (= 44439387fb), failed: f\u2026\n- Bash: {\"command\": \"until ! pgrep -f \\\"diag.*cargo build|CARGO_TARGET_DIR=/tmp/diag\\\" >/dev/null && [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4599/eea224ff-e736-48f0-920b-f43f32857b89/tasks/bi\u2026\n- Bash: {\"command\": \"ps aux | grep rustc | grep -v grep | grep -o \\\"crate-name [a-z_]*\\\" | sort | uniq -c; tail -1 /tmp/jk/s1-hc.log; tail -3 /tmp/claude-1001/-home-runner-work--temp-work-item-4599/eea224ff-\u2026\n- Bash: {\"command\": \"until [ -x /tmp/diag/target/release/jackioh ]; do sleep 10; done; ls -la /tmp/diag/target/release/jackioh; cat /tmp/claude-1001/-home-runner-work--temp-work-item-4599/eea224ff-e736-48f0-\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4599/eea224ff-e736-48f0-920b-f43f32857b89/tasks/bim962be6.output; ls -la /tmp/diag/target/release/jackioh\", \"description\": \"Check d\u2026\n- tool error: Exit code 2 \u001b[1m\u001b[91merror[E0609]\u001b[0m\u001b[1m: no field `active_player` on type `&GameState`\u001b[0m [exited with code 0] ls: cannot access '/tmp/diag/target/release/jackioh': No such file or directory\n- Bash: {\"command\": \"cd /tmp/diag && sed -i 's/eprintln!(\\\"DIAG before turn {} active {} pending {}\\\", before.turn, before.active_player, /eprintln!(\\\"DIAG before turn {} pending {}\\\", before.turn, /' crates\u2026\n- Bash: {\"command\": \"for f in s1-hc s1-duos; do echo \\\"== $f\\\"; grep -vE \\\"^\\\\[(fuzz-handicap|fuzz-duos|M4 fuzz gate|duos[^]]*)\\\\] [0-9]+ of\\\" /tmp/jk/$f.log | grep -E \\\"seeds failed|passed|^real|example:|me\u2026\n- Bash: {\"command\": \"grep -vE \\\"\\\\] [0-9]+ of [0-9]+ seeds done\\\" /tmp/jk/s1-duos.log | head -30 | cut -c1-300\", \"description\": \"Show Duos wave summary\"}"
+  },
+  "session": {
+    "action": "plan",
+    "artifact": 14807717333,
+    "artifact_bytes": 454492,
+    "artifact_name": "work",
+    "at": "2026-11-23T10:18:00Z",
+    "bytes": 597744,
+    "cwd": "/home/runner/work/_temp/work/item-4599",
+    "ended": "interrupted: `claude-8` stops mid-call: 5-hour usage is 87%, at or over its 85% cap; it resets at 2026-11-23T13:50:00Z",
+    "head": "a8f000748022e291bfa61589e279cb38c35ff57a",
+    "id": "eea224ff-e736-48f0-920b-f43f32857b89",
+    "kind": "plan",
+    "model": "opus",
+    "project": "-home-runner-work--temp-work-item-4599",
+    "provider": "claude-8",
+    "run": "45147122751"
+  },
+  "journal": "# Journal of #4599\n\nEvery night-bot run on #4599, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-23 10:18 UTC \u00b7 plan #4599 \u00b7 `claude-8` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/45147122751) on `claude-8` (`opus` (strong)). It ended **interrupted**: `claude-8` stops mid-call: 5-hour usage is 87%, at or over its 85% cap; it resets at 2026-11-23T13:50:00Z\nModel calls: 1, 45.8 model minutes.\nSession: fresh: none was kept for this item. This run's: kept session `eea224ff-e736-48f0-920b-f43f32857b89` of #4599 on claude-8 (597,744 bytes) in run 45147122751's `work` artifact, for its next run there.\nIts work ended at `a8f000748022` on `bot/issue-4599`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 09:30 | start | from `origin/main` |  | at `a8f000748022` |\n| 2 | 09:30 | plan (`opus`) | plan the item before anyone builds it | 45.8 min | cut off at its usage cap: 5-hour usage is 87%, at or over its 85% cap; it resets at 2026-11-23T13:50:00Z |\n| 3 | 10:16 | stop | `claude-8` stops mid-call: 5-hour usage is 87%, at or over its 85% cap; it resets at 2026-11-23T13:50:00Z |  |  |\n\n<details><summary>The planner's draft when it stopped</summary>\n\n````markdown\n# Draft plan for #4599 (planner notes)\n\n## Found so far\n- Super run on `_staging` 4443938 (= 44439387fb), failed: fuzz 1-4/4, e2e 8/8. No GitHub access: logs unreadable.\n- HEAD a8f0007480 differs from 44439387fb only in web/server/patch-ship files; no engine/card script change,\n  so seeds deal the same at HEAD (FUZZ pool = whole catalog).\n- Binaries: /tmp/jk/jackioh (release of HEAD). Diagnostic copy: /tmp/diag (git archive of crates + patch that\n  prints the failing step's events when JK_DIAG=1; target /tmp/diag/target).\n- Since the previous red run (e21cea61d4) two new monitor invariants landed: I21 (#4508, b567407a24) and\n  I22 (#4540, 32dec5b59f); #4555 tweaked I18.\n- Shard 1 plain (seeds 1..3125, 903 s locally on 4 cores): 7 failures, ALL I21:\n  - 267: destroyed Fortress (S+112) in stinkyscape-034 Drone Core VIII's run\n  - 337: destroyed core-054 Straaza in meditative-036 CN Peptides' run\n  - 637: exiled Reign (S+114) in stinkyscape-t-anomaly-found's run (Anomaly replaces your side)\n  - 1140: damageAbsorbed Reign in meditative-030-1 Love Bomb's run (cast on draw heal) -> likely attribution\n  - 2071: positionSwitched Mace (S+111) in stinkyscape-150 Call to Chaos (Stinky) run (\"switch every enemy Unit to Atk and Freeze\")\n  - 2260 (I14 branch): exiled Megabase (S116) in stinkyscape-151 Call to Chaos (Scape) run (Anomaly replace)\n  - 2614: exiled classicplus-004 in stinkyscape-102 Book of Nono-Words' run -> likely attribution\n- e2e 8/8 specs: 09, 10, 12, 16, 17, 23, 30, 42, 51, 53. Same shard at e21cea61d4. Not yet run.\n\n## TODO\n- event dumps for each seed (diag binary), classify: engine bug vs I21 monitor gap.\n- shard 1 handicap + duos (running), then shards 2-4.\n- e2e shard 8 run (builds running: server, wasm, client).\n````\n\n</details>\n",
+  "usage_facts": {
+    "queued_at": "2026-11-23T09:24:38Z",
+    "claimed_at": "2026-11-23T10:18:43Z",
+    "previous_provider": "claude-8",
+    "handed_off": "handed off from `claude-8`: `claude-8` 5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-23T13:50:00Z; it can start again only in 3h 31m, more than the 120 minutes an item waits for its owner"
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "production gate",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
