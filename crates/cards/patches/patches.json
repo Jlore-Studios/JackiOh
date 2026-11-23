@@ -34048,5 +34048,29 @@
       "traininggrounds-039"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.10d",
+    "date": "2026-11-23",
+    "title": "The card back's attribute test drops a redundant check",
+    "source": "#4516",
+    "notes": "apps/web/src/cards/CardBack.tsx: data-card-back now tests only back === DEFAULT_CARD_COSMETICS.cardBack; the dropped back === undefined arm gave undefined either way, so it was an equivalent mutant Stryker could not kill (week 2968's web-cards survivor). How cards look only, and no back renders differently: no card plays differently.",
+    "player": {
+      "title": "Card backs tidied",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Card backs look exactly as before; a check behind how they pick their design was simplified."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "077254d4b1f5bad7d0814dbe9ce6d6562c228fb6"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
