@@ -629,10 +629,21 @@ pub fn read_steps(
 /// R376: what each seat's cards did in a finished game, and how it ended; `None` with no result. The
 /// fold is `replay::fold`'s, so an action the log holds and the engine refuses is skipped as there.
 pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
+    summarize_game_with(input, |_, _, _| {})
+}
+
+/// R4552000: `summarize_game`, handing each step of its one fold to `step` as well, as `read_steps`
+/// does, so another reading of the game (the AI's turn rows, `jackioh_ai::summarize_with_swing_turns`)
+/// shares the fold rather than replay the log again (#2213: a finished game's log is folded once).
+pub fn summarize_game_with(
+    input: &FoldArgs,
+    mut step: impl FnMut(&GameState, &[GameEvent], &GameState),
+) -> Option<GameSummary> {
     let start = recorded_start(input);
     let mut reader = SummaryReader::new(&start);
     let state = read_steps(&start, &input.log, |before, events, after| {
-        reader.step(before, events, after)
+        reader.step(before, events, after);
+        step(before, events, after);
     });
 
     let outcome = state.result?;

@@ -407,6 +407,9 @@ pub fn seat_played_by(state: &GameState, home: PlayerId) -> PlayerId;
 pub fn mulligan_owed(state: &GameState) -> Vec<PlayerId>;
 pub fn seats_swapped(state: &GameState) -> bool;
 pub fn summarize_game(args: &FoldArgs) -> Option<GameSummary>;
+pub fn summarize_game_with(args: &FoldArgs, step: impl FnMut(&GameState, &[GameEvent], &GameState)) -> Option<GameSummary>;
+                                                                    // R4552000: the same one fold, each step handed to `step` too
+                                                                    // (jackioh_ai::summarize_with_swing_turns, #2213)
 pub fn recorded_start(args: &FoldArgs) -> GameState;                // R4552000: the start summarize_game replays from
 pub fn read_steps(start: &GameState, log: &[Action], step: impl FnMut(&GameState, &[GameEvent], &GameState)) -> GameState;
                                                                     // R4552000: its steps; jackioh_ai::swing_turns reads the same

@@ -527,10 +527,12 @@ R4552000, R4552002: `swing_turns` (`src/swing_turns.rs`) replays a finished game
 own start and steps (`recorded_start`, `read_steps`, as `summarize_game` does) and writes, at the start of
 every turn, one row for its seat: the turn counter, `evaluate` of the seat (`NextSwing::Seat`) less its
 opponent's (`NextSwing::Enemy`) in thousandths, read off the true state, and the cards acting on each
-field, a Created card with the card that made it (none when a hand held it). `attach_swing_turns` files
-the rows in the record (`SeatSummary.swing_turns`); `dev_game_record`, `stats from-selfplay` and the
-server's record filing (`crates/server/src/api/game_records.rs`) all call it. Decisiveness is read off
-them (`crates/engine/src/wire/stats/swing.rs`).
+field, a Created card with the card that made it (none when a hand held it; a copy an effect cast names
+the card that cast it). `attach_swing_turns` files the rows in the record (`SeatSummary.swing_turns`).
+The writers read the summary and the rows off one fold of the log (#2213), `summarize_with_swing_turns`
+(the engine's `summarize_game_with` with a `SwingReader` beside it): `dev_game_record`, `stats
+from-selfplay` and the server's record filing (`crates/server/src/api/game_records.rs`) all call it.
+Decisiveness is read off them (`crates/engine/src/wire/stats/swing.rs`).
 
 ## The features (#466, #1006)
 

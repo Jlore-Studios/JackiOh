@@ -100,3 +100,40 @@ fn r4552002_a_created_card_a_hand_held_names_no_maker() {
         row.acting
     );
 }
+
+#[test]
+fn r4552002_a_copy_an_effect_casts_names_the_card_that_cast_it() {
+    const WARDRUM: &str = "classicplus-037"; // End of turn: cast a copy of a random non-Unit you played this turn.
+    const MANA_WELL: &str = "core-006"; // a Field Spell
+    const FILLER: &str = "core-005";
+    register_cards();
+    let library = [FILLER; 8];
+    let mut s = scenario(json!({
+        "p1": { "hand": [MANA_WELL], "field": [WARDRUM], "library": library, "mana": 6 },
+        "p2": { "hand": [FILLER], "library": library },
+    }));
+    let mut reader = SwingReader::new();
+    step(&mut reader, &mut s, |s| {
+        s.play(MANA_WELL, json!({}));
+    });
+    // p1's end of turn: Wardrum casts a copy of the Mana Well, its only non-Unit, into the backrow.
+    while reader.turns()[PlayerId::P1].is_empty() {
+        step(&mut reader, &mut s, |s| {
+            s.end_turn();
+        });
+    }
+    let row = &reader.turns()[PlayerId::P1][0];
+    assert!(
+        row.acting.contains(&ActingCard::Created(CreatedActing {
+            card: MANA_WELL.to_string(),
+            maker: Some(WARDRUM.to_string()),
+        })),
+        "{:?}",
+        row.acting
+    );
+    assert!(
+        row.acting.contains(&ActingCard::Dealt(MANA_WELL.to_string())),
+        "{:?}",
+        row.acting
+    );
+}

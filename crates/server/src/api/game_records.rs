@@ -138,13 +138,8 @@ async fn fold_log(
     let args = fold_args_of(row, entries).map_err(message_of)?;
     let pinned = pinned_for(row);
     engine::off_runtime(app.engine_thread, move || {
-        let mut game = engine::summarize_game(pinned, &args);
-        // R4552000: the turn rows beside the summary, under the same pin.
-        if let Some(game) = game.as_mut()
-            && let Some(turns) = engine::swing_turns(pinned, &args)
-        {
-            jackioh_ai::attach_swing_turns(game, turns);
-        }
+        // R4552000: the turn rows beside the summary, from the same fold under the same pin.
+        let game = engine::summarize_with_swing_turns(pinned, &args);
         let swapped =
             game.is_some() && read_swap && engine::snapshot(&engine::fold(pinned, &args).state).seats_swapped;
         let refused = if game.is_none() {

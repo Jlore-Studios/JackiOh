@@ -697,14 +697,19 @@ struct Terms {
 /// sampling variance by the delta method, `Var(r²) / (4 · mean r² · n_eff)`, read off the raw moments of
 /// `d = Δ − E[Δ] + term` (`α` varies little across buckets, so `d` is `r` but for it). `Var(r²)` is at
 /// least a normal distribution's, `2 · RMS⁴`: a few turns that happen to swing alike (two plays, each
-/// ±40 points) measure no spread of `r²` at all, and are not read as certain for it. Infinite at 0.
-fn rms_of(read: &Read, term: f64) -> (f64, f64) {
+/// ±40 points) measure no spread of `r²` at all, and are not read as certain for it. It is at least an
+/// ordinary turn's too, `2 · σ⁴` (`row_variance`, the baseline's): one turn has no spread, so its RMS is
+/// its shrunk term, near 0, and would read as certainly near 0 (S+ #61.1 Shawarma Law's one play among
+/// its 152 acting turns read ±0.3%). Infinite at 0.
+fn rms_of(read: &Read, term: f64, row_variance: f64) -> (f64, f64) {
     let rms = (read.variance() + term * term).sqrt();
     let shift = read.raw[0] - term;
     let [m1, m2, m3, m4] = read.raw;
     let second = m2 - 2.0 * shift * m1 + shift * shift;
     let fourth = m4 - 4.0 * shift * m3 + 6.0 * shift * shift * m2 - 4.0 * shift.powi(3) * m1 + shift.powi(4);
-    let spread = (fourth - second * second).max(2.0 * rms.powi(4));
+    let spread = (fourth - second * second)
+        .max(2.0 * rms.powi(4))
+        .max(2.0 * row_variance * row_variance);
     let noise = if rms > 0.0 {
         spread / (4.0 * rms * rms * read.effective)
     } else {
@@ -721,12 +726,12 @@ fn terms_of(tally: &SwingTally, baseline: &SwingBaseline, spreads: &TermSpreads,
     // R4552002: a Created card no hand held reads the turns it acts, its board term in place of a play's.
     let (rms, noise, rms_rows) = match (played, play) {
         (Some(read), Some(play)) => {
-            let (rms, noise) = rms_of(&read, play);
+            let (rms, noise) = rms_of(&read, play, baseline.row_variance);
             (Some(rms), Some(noise), read.rows)
         }
         _ if created => match (Read::of(&tally.acting, baseline), board) {
             (Some(read), Some(board)) => {
-                let (rms, noise) = rms_of(&read, board);
+                let (rms, noise) = rms_of(&read, board, baseline.row_variance);
                 (Some(rms), Some(noise), read.rows)
             }
             _ => (None, None, 0),
@@ -1194,8 +1199,9 @@ mod tests {
             report.deck_field
         );
         let typical = report.deck_field.typical;
+        // Within the fillers' own swings, 2 to 16 points (`swing_game`).
         assert!(
-            typical > 0.0 && typical < 0.1 && typical != DECISIVENESS_PRIOR_CENTER,
+            typical > 0.02 && typical < 0.16 && typical != DECISIVENESS_PRIOR_CENTER,
             "typical {typical}"
         );
         let wild = figures(&report, "wild");
@@ -1294,6 +1300,24 @@ mod tests {
         let (thin, thick) = (kept("thin"), kept("thick"));
         assert!(thin < 0.5, "thin keeps {thin}");
         assert!(thick > 0.95, "thick keeps {thick}");
+    }
+
+    #[test]
+    fn r4552001_one_play_is_read_as_the_typical_card_not_as_certainly_quiet() {
+        // One turn has no spread, so its RMS is its play term, shrunk near 0: the 40 points it moved
+        // must not read as a certainly quiet card. The thick card gives the turns their spread.
+        let moves = [0.05, -0.45, 0.25, -0.35, 0.15, -0.3, 0.4];
+        let mut records = vec![one_swing(0, "once", 0.4)];
+        records.extend((0..2000).map(|n| one_swing(n, "thick", moves[n % moves.len()])));
+        let (_, report) = report_of(&totals_of(&records));
+        let typical = report.deck_field.typical;
+        let once = figures(&report, "once");
+        assert!(once.rms.unwrap() < 0.01, "{once:?}");
+        let decisiveness = once.decisiveness.unwrap();
+        assert!(
+            decisiveness <= typical && typical - decisiveness < 0.001,
+            "{once:?} against {typical}"
+        );
     }
 
     fn bits(figures: &SwingFigures) -> Vec<Option<u64>> {

@@ -14,14 +14,13 @@
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::{
     DEV_RECORD_ID_PREFIX, GameMode, GameRecord, GameSource, PerPlayer, Pilot, PlayerId, RecordBuild, Rng,
-    summarize_game,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::config::AI_BUDGET;
 use crate::deck::{AiDeckOptions, build_ai_deck};
 use crate::match_::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match};
-use crate::swing_turns::{attach_swing_turns, swing_turns};
+use crate::swing_turns::summarize_with_swing_turns;
 use crate::types::SearchBudget;
 
 /// `AI_DEV_RUN`'s shape.
@@ -168,10 +167,8 @@ pub fn dev_game_record(n: i32, options: &DevRunOptions) -> Option<GameRecord> {
     let config = dev_run_config(n, options);
     let played = play_match(&config, &mut MatchHooks::default());
     played.result?;
-    let args = config.fold_args(played.log);
-    let mut game = summarize_game(&args)?;
-    // R4552000: the turn rows Decisiveness is read off.
-    attach_swing_turns(&mut game, swing_turns(&args)?);
+    // R4552000: with the turn rows Decisiveness is read off.
+    let game = summarize_with_swing_turns(&config.fold_args(played.log))?;
     Some(GameRecord {
         id: dev_record_id(&options.patch, &config.seed),
         source: GameSource::Dev,
