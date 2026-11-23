@@ -3389,3 +3389,13 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-23T10:10:52Z,45149691428,claude-4,opus,build,4577,hard,interrupted,5-hour cap,23,0,0,0,,0,70,,,51.3,claude-7,fresh,cap,1
 2026-11-23T10:16:04Z,45147122751,claude-8,opus,plan,4599,hard,interrupted,5-hour cap,45.8,0,0,0,,12,87,,,2.3,,fresh,,1
 2026-11-23T10:20:33Z,45152366233,claude-1,opus,suggest,,,suggested,,15.3,25,18125,2107555,17.7912,47,86,,,,,none,,1
+2026-11-23T10:23:48Z,45152171569,claude-6,opus,suggest,,,suggested,,20.8,4,6366,317549,16.7308,0,62,,,,,none,,1
+2026-11-23T10:20:32Z,45151989125,claude-6,opus,suggest,,,suggested,,17.3,32,33027,2825482,12.7423,1,61,,,,,none,,1
+2026-11-23T10:23:13Z,45144373253,gpt,gpt-5.6-sol,build,4581,medium,part,,73.9,26177271,86603,0,,,,78,78,15.7,muse,none,other,1
+2026-11-23T10:30:32Z,45147209333,muse,muse-spark-1.3-contributor,build,4582,hard,part,,62.1,0,0,0,,3,9,3,6,35.2,claude-7,none,other,1
+2026-11-23T10:40:45Z,45144288085,agy,gemini-3.8-flash-high,build,4580,medium,part,,92.2,550847,92870,0,,0,10,27,30,15.1,muse,none,other,1
+2026-11-23T10:50:28Z,45159048530,muse,muse-spark-1.3-contributor,suggest,,,suggested,,4.1,0,0,0,,9,10,6,6,,,none,,1
+2026-11-23T10:50:39Z,45158952792,claude-6,opus,suggest,,,interrupted,5-hour cap,2,0,0,0,,64,70,,,,,none,,1
+2026-11-23T10:47:48Z,45158857214,claude-1,opus,suggest,,,interrupted,refusal,0.5,8,2287,236365,0.5479,99,100,,,,,none,,1
+2026-11-23T10:50:48Z,45156452897,claude-6,opus,plan,4604,hard,interrupted,5-hour cap,18.5,0,0,0,,62,70,,,9,,fresh,,1
+2026-11-23T10:49:19Z,45154929894,claude-1,opus,plan,4599,hard,interrupted,5-hour cap,27.1,0,0,0,,86,100,,,54.1,claude-8,fresh,cap,1
