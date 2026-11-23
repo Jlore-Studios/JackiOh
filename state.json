@@ -22656,12 +22656,8 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-21T10:10:00Z",
+      "refused_until": "2026-11-23T01:00:00Z",
       "spent": [
-        {
-          "at": "2026-11-11T18:37:10Z",
-          "minutes": 11.6
-        },
         {
           "at": "2026-11-11T19:16:15Z",
           "minutes": 54.7
@@ -23457,6 +23453,10 @@
         {
           "at": "2026-11-22T22:08:14Z",
           "minutes": 109.6
+        },
+        {
+          "at": "2026-11-23T00:31:26Z",
+          "minutes": 6.8
         }
       ],
       "tokens_spent": [
@@ -24864,10 +24864,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-23T01:00:00Z",
-          "utilization": 0.62
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-22T22:08:14Z",
-        "status": "allowed"
+        "observed_at": "2026-11-23T00:31:26Z",
+        "rejected_resets_at": "2026-11-23T01:00:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -39472,7 +39473,13 @@
       "2026-11-22T23:20:57Z,claude-7,stream,call,45081436181,22,2026-11-23T03:30:00Z,,,allowed,50,,",
       "2026-11-22T23:30:42Z,claude-7,stream,call,45081436181,23,2026-11-23T03:30:00Z,,,allowed,50,,",
       "2026-11-23T00:00:58Z,claude-7,stream,call,45081436181,24,2026-11-23T03:30:00Z,,,allowed,50,,",
-      "2026-11-23T00:25:11Z,gpt,stream,call,45087673868,,,50,2026-11-29T16:16:12Z,allowed,100,100,"
+      "2026-11-23T00:25:11Z,gpt,stream,call,45087673868,,,50,2026-11-29T16:16:12Z,allowed,100,100,",
+      "2026-11-23T00:16:39Z,claude-3,stream,call,45087566880,94,2026-11-23T01:00:00Z,,,allowed_warning,,,",
+      "2026-11-23T00:17:39Z,claude-3,stream,call,45087566880,95,2026-11-23T01:00:00Z,,,allowed_warning,,,",
+      "2026-11-23T00:17:54Z,claude-3,stream,call,45087566880,98,2026-11-23T01:00:00Z,,,allowed_warning,,,",
+      "2026-11-23T00:18:09Z,claude-3,stream,call,45087566880,99,2026-11-23T01:00:00Z,,,allowed_warning,,,",
+      "2026-11-23T00:18:24Z,claude-3,stream,call,45087566880,100,2026-11-23T01:00:00Z,,,rejected,,,",
+      "2026-11-23T00:23:14Z,claude-3,refusal,call,45087566880,100,2026-11-23T01:00:00Z,,,rejected,,,2026-11-23T01:00:00Z"
     ],
     "runs": [
       "2026-11-23T00:10:14Z,45086029586,gpt,gpt-5.6-sol,review,4530,medium,approved,,12,5497781,10694,0,,,,41,41,3.6,,none,,1",
