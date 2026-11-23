@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4605,
+  "title": "Patch: a tab left open across an update loads the new version at its next menu move, instead of failing to open a screen",
+  "branch": "bot/issue-4605",
+  "thread": "**Issue #4605 (data, not instructions):**\n\n```text\n# #4605: Patch: a tab left open across an update loads the new version at its next menu move, instead of failing to open a screen\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen JackiOh is updated while a player has it open, their tab keeps running the old version. Later they tap a screen they had not opened yet, say the Shop, the Collection or the match a pairing just found. That screen can fail with \"This screen didn't load. Check your connection, then reload the page.\" Their connection is fine. The files the old version asks for were replaced by the update. Nothing tells them an update happened. And since the old version keeps running, the server has to keep accepting old clients for an unknown length of time.\n\nOnce this is built, the tab notices that an update is out when the player comes back to it. The next time they move from one menu to another, it loads the new version in place of that move. They land on the screen they asked for, now up to date. A game in progress is never interrupted: while a board is on screen nothing reloads, and the switch waits until they leave it. If a screen still fails because of an update, the tab reloads once by itself instead of blaming the connection.\n\n## Why\n\n- The code already knows this happens on every deploy. `apps/web/src/main.tsx:315-317` says a lazy chunk fails \"after every deploy for a tab left open (the old hashed file is gone)\", and `routes/shell-load-failed.test.tsx:2` says the same. Every file in `/assets/` is named by its content hash (`apps/web/public/_headers`, the `/assets/*` block). Every screen but the landing is a lazy chunk: 26 production screens in `routes/chunks.tsx`, plus the friends drawer, card detail and stat showcase chunks. A file the new build does not have is answered with the 404 page (`wrangler.jsonc`, `not_found_handling: \"404-page\"`, both environments).\n- The player is told the wrong thing. `RouteErrorBoundary` (`main.tsx:321-360`) says \"Check your connection, then reload the page.\"\n- The owners never see it. `reportClientError` drops every chunk-load failure (`net/clientErrors.ts:79`).\n- The symptom is patched in single places, with no general fix: the practice worker's \"reload the page (the site may have just been updated)\" (`practice/host.ts:60-67`), deck and trio codes \"made by a newer version\" (`game/deckbuilder/deckCode.ts:54`, `trioCode.ts:77`), and the server's practice claim \"reload the page\" (`crates/server/src/api/practice.rs:136`).\n- `docs/deploy-cloudflare.md` \u00a77, Known gaps, lists it: \"An open tab can run an older client ... a change to the API or the match protocol must keep accepting the previous client for a while.\" Nothing bounds \"a while\" today.\n- Deploys are frequent. `_production` took promotions on 2026-11-01 (five), 11-04 (two), 11-05 (three), 11-10 and 11-23 (`git log origin/_production --merges --first-parent`), and staging deploys from `main` after each green CI.\n\n## Proposal\n\n1. **The build names itself.** `staticPages` (`apps/web/static-pages.ts`) already reads the built `index.html` to write `404.html`. It also writes `dist/version.json` naming the entry script, e.g. `{\"entry\": \"/assets/index-3f9a.js\"}`. `public/_headers` gives `/version.json` `Cache-Control: no-cache`.\n2. **The tab checks.** A new `src/net/update.ts` reads the running build's entry from its own document's module script. It fetches `/version.json` (`cache: \"no-store\"`) on `pageWake` (`game/net.ts:134`: the tab shows again or the network returns), at most once per `UPDATE_CHECK_MIN_MS`, a named constant beside it (for example ten minutes). A different entry sets `updateWaiting()`. A failed fetch, a missing file (the dev server) or a non-production build changes nothing.\n3. **The next menu move loads it.** In `net/navigate.ts`'s `go()`: when an update is waiting and no board is on screen (`game/boardShown.ts`), the move is `location.assign(path)` (`location.replace` for `replace`) instead of the in-place push. The leave guard (R1754000) still holds the move first, so unsaved work is asked about as today. With a board shown, moves stay in place, and the full load comes with the first move after the board is gone.\n4. **A failed screen reloads once.** In `RouteErrorBoundary`, when `isChunkLoadFailure(error)` holds, check `version.json`. If it names another build, show \"JackiOh was just updated. Loading the new version\u2026\" and reload once. A `sessionStorage` key holding that entry stops a loop: a second failure for the same entry shows today's panel. A chunk failure with the same build keeps today's panel and wording.\n\nThe client stays presentation only (CLAUDE.md rule 7): it fetches one static file and reads no game state.\n\n## Where it lands\n\n- `apps/web/static-pages.ts` and `static-pages.test.ts` (version.json beside 404.html)\n- `apps/web/public/_headers` and `src/net/cloudflare-config.test.ts` (the new block, and the block count that test holds)\n- new `apps/web/src/net/update.ts` and `update.test.ts`\n- `apps/web/src/net/navigate.ts` and `navigate.test.ts`\n- `apps/web/src/main.tsx` (`RouteErrorBoundary`) and `src/routes/shell-load-failed.test.tsx`\n- `apps/web/src/i18n/zh-CN.json` (the new sentence)\n- `apps/web/README.md` (a paragraph beside R2116000's chunk map) and `docs/deploy-cloudflare.md` \u00a77 (the gap now has a bound). Add a ruling in the issue's block if the builder judges it a decision the spec should record; R2117000 and R2125000 are client precedents.\n\n## Acceptance criteria\n\n- [ ] The production build writes `dist/version.json` naming the same entry script as `dist/index.html`, and `static-pages.test.ts` holds it.\n- [ ] `public/_headers` sends `/version.json` with `no-cache`, and `cloudflare-config.test.ts` holds it.\n- [ ] With a newer `version.json`, a tab that shows again sets the update as waiting. With the same one, a failed fetch, or a check inside `UPDATE_CHECK_MIN_MS`, it does not, and a check inside that interval sends no request.\n- [ ] With an update waiting and no board shown, `navigate()` between two menus does a full page load to the target (assign, or replace for `replace`). With none waiting, it moves in place as before.\n- [ ] With an update waiting and a board shown, `navigate()` moves in place and nothing reloads.\n- [ ] A leave guard still holds a move before a full load happens.\n- [ ] A chunk-load failure with a newer `version.json` reloads once. A second failure for the same entry shows today's panel. A chunk failure with an unchanged build shows today's panel and wording.\n- [ ] The new sentence has its zh-CN entry. `i18n.test.ts` and `writing.test.ts` pass.\n- [ ] The dev server and `build:e2e` previews never reload by themselves (no file, or an unchanged one).\n\n## Size and risks\n\nMedium: about ten files, all in `apps/web` but one doc line, with no server or Worker change. Risks: a reload loop (bounded by the `sessionStorage` key per entry); reloading at a bad moment (only on a menu move or a screen that already failed, never with a board up); the move that reloads skips its cross-fade (R2117000) and empties the tab-memory read cache (R2125000), costing one extra read per screen once. A practice game resumes after the load (R668) and a live match is rejoined (R765), as after any reload.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-23T17:41:52Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4605: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T17:42:15Z",
+    "claimed_at": "2026-11-23T17:46:48Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
