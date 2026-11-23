@@ -2108,7 +2108,7 @@ fn discards_the_check_refuses_a_planted_let_in_each_covered_tree() {
     assert_eq!(found, expected);
 }
 
-/// The Rust files directly under `crates/shared/tests` that no `shared*.rs` entry point declares (#4610).
+/// The Rust files directly under `crates/shared/tests` that `shared.rs` does not declare (#4610).
 fn undeclared_shared_tests(root: &Path) -> Vec<String> {
     let tests = root.join("crates/shared/tests");
     let mut files = Vec::new();
@@ -2126,23 +2126,21 @@ fn undeclared_shared_tests(root: &Path) -> Vec<String> {
     }
     files.sort();
 
-    let is_entry = |name: &str| name == "shared.rs" || name.starts_with("shared_");
     let mut declared = BTreeSet::new();
-    for entry in files.iter().filter(|name| is_entry(name)) {
-        let path = tests.join(entry);
-        let text = fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
-        for line in text.lines() {
-            if let Some(rest) = line.trim().strip_prefix("#[path = \"")
-                && let Some((name, _)) = rest.split_once('"')
-            {
-                declared.insert(name.to_string());
-            }
+    let entry = "shared.rs";
+    let path = tests.join(entry);
+    let text = fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+    for line in text.lines() {
+        if let Some(rest) = line.trim().strip_prefix("#[path = \"")
+            && let Some((name, _)) = rest.split_once('"')
+        {
+            declared.insert(name.to_string());
         }
     }
 
     files
         .into_iter()
-        .filter(|name| !is_entry(name) && !declared.contains(name))
+        .filter(|name| name != entry && !declared.contains(name))
         .map(|name| format!("crates/shared/tests/{name}"))
         .collect()
 }
@@ -2193,12 +2191,19 @@ fn shared_tests_the_check_refuses_a_planted_undeclared_file() {
     fs::write(tests.join("shared.rs"), "#[path = \"a.rs\"]\nmod a;\n").expect("the shared test entry point");
     fs::write(tests.join("a.rs"), "").expect("the declared test");
     fs::write(tests.join("planted.rs"), "").expect("the planted test");
+    fs::write(tests.join("shared_planted.rs"), "").expect("the planted prefixed test");
 
-    assert_eq!(undeclared_shared_tests(root), ["crates/shared/tests/planted.rs"]);
+    assert_eq!(
+        undeclared_shared_tests(root),
+        [
+            "crates/shared/tests/planted.rs",
+            "crates/shared/tests/shared_planted.rs",
+        ]
+    );
 
     fs::write(
         tests.join("shared.rs"),
-        "#[path = \"a.rs\"]\nmod a;\n#[path = \"planted.rs\"]\nmod planted;\n",
+        "#[path = \"a.rs\"]\nmod a;\n#[path = \"planted.rs\"]\nmod planted;\n#[path = \"shared_planted.rs\"]\nmod shared_planted;\n",
     )
     .expect("the shared test entry point");
     assert!(undeclared_shared_tests(root).is_empty());
