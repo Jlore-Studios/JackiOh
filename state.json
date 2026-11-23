@@ -18050,9 +18050,11 @@
         "by": "`muse` (medium)",
         "sha": "244825cc4a1b827cb1e28c9790c02d1d3d070f20"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-23T08:05:43Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-23T08:27:21Z",
         "family": "muse",
@@ -18062,6 +18064,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: sound the clock alarm for the player's own prompt countdown\"} -->\n- ## What changed\n- `apps/web/src/game/Clock.tsx` now feeds the viewer's own prompt countdown into the existing clock-alarm planner with a second `useTurnClockAlarm` call, gated on `readout.prompt.side === \"you\"` and `kind === \"prompt\"`. The existing turn call gained a `kind === \"turn\"` gate, since `readout.turn` alia\u2026\n- ## How I tested it\n- - `pnpm --dir apps/web test src/audio/clockAlarm.test.ts` \u2014 17/17 pass, including the new `R4562000` test pinning the 30 s prompt window to the full 30-beat schedule.\n- - `pnpm --dir apps/web test src/game/Clock.test.tsx` \u2014 39/39 pass, including four new `R4562000` wiring tests (own prompt beats; opponent prompt silent over a full countdown; answer resets with no stray beat and the next prompt starts afresh at second 30; own-turn prompt sounds exactly once per sec\u2026\n- - Fail-without-change check: stashed only `Clock.tsx` and reran \u2014 the own-prompt tests fail with `[]` beats; popped the stash and all pass again.\n- - `pnpm --dir apps/web typecheck` clean, `pnpm exec eslint` on all six touched files clean, `cargo fmt --check` clean, `cargo jackioh spec check` ok (2401 rulings, 6027 proofs).\n- ## Decisions the issue did not settle\n- - Mutually exclusive kind gates instead of relying on the engine's 40 ms retrigger guard to swallow double beats \u2014 the guard is fragile and the once-per-second test now pins single sounding.\n- - A new ruling R4562000 instead of stretching R506, whose note says \"turn clock\".\n- - No change to `useFrameFor`/`turnKeyOf` pairing: prompt frames share the turn key, so a turn advance nulls the frame and resets both hooks.\n- ## Reviewer look-twice\n- - The typecheck OOMs at Node's default ~2 GB heap on this machine (`NODE_OPTIONS=--max-old-space-size=6144` passes); that is environmental, not a type error.\n- - The opponent-prompt-silence test passes with and without the wiring (it is a guard, not a regression pin); the other three fail without it.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4562 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4562/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4562,
       "kind": "review",
       "live": "reviewing",
