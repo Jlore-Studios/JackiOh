@@ -39304,6 +39304,9 @@
   "usage_spool": {
     "readings": [
       "2026-11-23T00:10:09Z,gpt,stream,call,45086029586,,,41,2026-11-29T16:16:12Z,allowed,100,100,"
+    ],
+    "runs": [
+      "2026-11-23T00:10:14Z,45086029586,gpt,gpt-5.6-sol,review,4530,medium,approved,,12,5497781,10694,0,,,,41,41,3.6,,none,,1"
     ]
   },
   "version": 1
