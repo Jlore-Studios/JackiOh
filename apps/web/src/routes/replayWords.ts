@@ -1,5 +1,5 @@
 // How a listed online game is worded, shared by `/replays` and the account's match history (#3733). Kept in
-// a module of its own so the account, which is in the entry chunk, need not import `replays.tsx`.
+// a module of its own so the account screen need not import `replays.tsx`.
 
 import { t } from "../i18n/i18n.ts";
 import type { OnlineReplayListing, QueueMode } from "../net/api.ts";

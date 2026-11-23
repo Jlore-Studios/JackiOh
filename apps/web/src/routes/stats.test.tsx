@@ -13,8 +13,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readerName } from "../cards/chinese.ts";
 import { readCardPicks } from "../cards/cosmetics.ts";
 import { faceModel } from "../cards/model.ts";
+import type { FaceCall } from "../wire/generated/FaceCall.ts";
 import { readCardSettings, writeCardSettings } from "../cards/settings.ts";
 import { resetLocaleForTests, setLocale, t } from "../i18n/i18n.ts";
+
+/** Every `face` call the page made since the calls were last cleared, in order. */
+const faceCalls = vi.hoisted(() => [] as FaceCall[]);
+
+vi.mock("../wasm/index.ts", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../wasm/index.ts")>();
+  return {
+    ...real,
+    face: (request: FaceCall) => {
+      faceCalls.push(request);
+      return real.face(request);
+    },
+  };
+});
 import { cardStatsPath } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { clearReadCache, expireRead, rememberRead } from "../net/readCache.ts";
@@ -2921,5 +2936,39 @@ describe("R2125000 the Cards tab opens on its last table", () => {
     await waitFor(() => expect(held).toHaveLength(2), SLOW);
 
     expect(screen.getByText("Loading card statistics…")).toBeInTheDocument();
+  });
+});
+
+describe("#4511 the statistics grid builds each card's face once", () => {
+  afterEach(() => {
+    faceCalls.length = 0;
+    resetLocaleForTests();
+  });
+
+  it("#4511 typing a letter into the grid search builds no face for a card that was already listed, and a language switch rebuilds every face", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    await screen.findByTestId(statsTestid.cardsGrid, undefined, SLOW);
+
+    const listed = ["core-001", "core-002", "core-003"];
+    const gridCalls = (id: string): number =>
+      faceCalls.filter((request) => request.call === "card" && request.source.defId === id).length;
+    for (const id of listed) expect(gridCalls(id)).toBeGreaterThan(0);
+    faceCalls.length = 0;
+
+    // Every mock card's name holds an "a", so all three stay listed.
+    await user.type(screen.getByTestId(statsTestid.searchInput), "a");
+    for (const id of listed) {
+      expect(screen.getByTestId(statsTestid.cardsGrid).querySelector(`[data-card-id="${id}"]`)).not.toBeNull();
+    }
+    expect(faceCalls.filter((request) => request.call === "card")).toHaveLength(0);
+
+    await act(async () => {
+      await setLocale("zh-CN");
+    });
+    for (const id of listed) expect(gridCalls(id)).toBeGreaterThan(0);
   });
 });

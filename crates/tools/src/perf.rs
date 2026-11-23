@@ -71,82 +71,81 @@ const US_PER_SECOND: f64 = 1_000_000.0;
 const MEDIAN: f64 = 0.5;
 const P95: f64 = 0.95;
 
-// The budgets, measured on 4-vCPU GitHub Actions ubuntu runners by three runs of each profile:
-// `cargo test -p jackioh-tools --test perf perf_holds_every_budget -- --ignored` for `cargo test`'s,
-// `target/release/jackioh perf` for release's. The two forecasts' on 2026-11-22, `cargo test`'s on an
-// Intel Xeon 6975P-C and release's on an AMD EPYC 7763; the rest on 2026-11-20, on an AMD EPYC 7763.
-// Each time budget is 5x the largest of its three medians, rounded up to two significant figures, so a
-// runner several times slower still passes and a slowdown of that size fails; each work budget is 2x
-// its value, rounded up the same way. A budget crossed by a change that meant to cost more is measured
-// again the same way.
+// The time budgets, measured on 2026-11-22 on 4-vCPU GitHub Actions ubuntu runners by twelve runs of
+// each profile: `cargo test -p jackioh-tools --test perf perf_holds_every_budget -- --ignored` for
+// `cargo test`'s, `target/release/jackioh perf` for release's. Six ran on #4501's branch, over main's
+// corpus at v0.6.9l (99a9c84d), and six on main at 98bb1823, after v0.6.9m, v0.6.9n and #4465: a card
+// change deals the corpus's games again, and between those two corpora the 1v1 medians moved by up to
+// 1.8x and the Duos ones, three states of one co-op game, by up to 5.6x. The runners' CPUs (Intel Xeon
+// 6975P-C, 8370C and 8573C, AMD EPYC 7763 and 9V74) moved them by up to 1.3x more. Each time budget is
+// 5x the largest of its twelve medians, rounded up to two significant figures, so a runner several
+// times slower still passes and a slowdown of that size fails; each work budget is 2x its value,
+// rounded up the same way. A budget crossed by a change that meant to cost more, or by a card change
+// that made the corpus heavier, is measured again the same way.
 
-/// `reduce` of one listed action, in microseconds, at `cargo test`'s profile: medians 1811.0, 1849.9
-/// and 1840.5, 5x headroom.
-pub const REDUCE_US_BUDGET_TEST: f64 = 9_300.0;
-/// `view_for` of one seat, in microseconds, at `cargo test`'s profile: medians 2921.8, 2971.5 and
-/// 2923.5, 5x headroom.
-pub const VIEW_FOR_US_BUDGET_TEST: f64 = 15_000.0;
-/// `combat_forecast` of one seat, in microseconds, at `cargo test`'s profile: medians 7.5, 7.6 and
-/// 8.2, 5x headroom.
-pub const COMBAT_FORECAST_US_BUDGET_TEST: f64 = 41.0;
-/// `legal_actions` of one seat, in microseconds, at `cargo test`'s profile: medians 95.8, 104.5 and
-/// 104.0, 5x headroom.
-pub const LEGAL_ACTIONS_US_BUDGET_TEST: f64 = 530.0;
-/// `hash_state`, in microseconds, at `cargo test`'s profile: medians 2049.9, 2107.1 and 2076.9, 5x
+/// `reduce` of one listed action, in microseconds, at `cargo test`'s profile: twelve medians from 185.6 to
+/// 298.3, 5x headroom.
+pub const REDUCE_US_BUDGET_TEST: f64 = 1_500.0;
+/// `view_for` of one seat, in microseconds, at `cargo test`'s profile: twelve medians from 268.7 to 438.5, 5x
 /// headroom.
-pub const HASH_STATE_US_BUDGET_TEST: f64 = 11_000.0;
-/// The fold of the longest corpus game and its hash, per folded action, in microseconds per
-/// action, at `cargo test`'s profile: the largest recorded median is 5802.8 us over 279 actions
-/// (fuzz seed 34; medians 5734.8/5797.1/5802.8), 5x headroom.
-pub const FOLD_US_PER_ACTION_BUDGET_TEST: f64 = 30_000.0;
-/// `reduce` of one listed action, in microseconds, at release: medians 241.4, 237.5 and 303.3, 5x
-/// headroom.
-pub const REDUCE_US_BUDGET_RELEASE: f64 = 1_600.0;
-/// `view_for` of one seat, in microseconds, at release: medians 306.8, 305.7 and 431.3, 5x headroom.
-pub const VIEW_FOR_US_BUDGET_RELEASE: f64 = 2_200.0;
-/// `combat_forecast` of one seat, in microseconds, at release: medians 8.3, 9.1 and 8.0, 5x headroom.
-pub const COMBAT_FORECAST_US_BUDGET_RELEASE: f64 = 46.0;
-/// `legal_actions` of one seat, in microseconds, at release: medians 38.5, 38.4 and 45.6, 5x
-/// headroom.
-pub const LEGAL_ACTIONS_US_BUDGET_RELEASE: f64 = 230.0;
-/// `hash_state`, in microseconds, at release: medians 186.9, 189.0 and 265.0, 5x headroom.
-pub const HASH_STATE_US_BUDGET_RELEASE: f64 = 1_400.0;
-/// The fold of the longest corpus game and its hash, per folded action, in microseconds per
-/// action, at release: the largest recorded median is 1197.5 us over 279 actions (fuzz seed 34;
-/// medians 830.5/828.1/1197.5), 5x headroom.
-pub const FOLD_US_PER_ACTION_BUDGET_RELEASE: f64 = 6_000.0;
-/// `duos_reduce` of one listed action, in microseconds, at `cargo test`'s profile: medians 1077.0,
-/// 965.9 and 938.9, 5x headroom.
-pub const DUOS_REDUCE_US_BUDGET_TEST: f64 = 5_400.0;
-/// `duos_reduce` of one listed action, in microseconds, at release: medians 256.8, 263.0 and 422.1,
+pub const VIEW_FOR_US_BUDGET_TEST: f64 = 2_200.0;
+/// `combat_forecast` of one seat, in microseconds, at `cargo test`'s profile: twelve medians from 7.3 to
+/// 11.7, 5x headroom.
+pub const COMBAT_FORECAST_US_BUDGET_TEST: f64 = 59.0;
+/// `legal_actions` of one seat, in microseconds, at `cargo test`'s profile: twelve medians from 9.3 to 13.5,
 /// 5x headroom.
-pub const DUOS_REDUCE_US_BUDGET_RELEASE: f64 = 2_200.0;
-/// `duos_view_for` of one seat, in microseconds, at `cargo test`'s profile: medians 9977.2, 10486.5
-/// and 10367.1, 5x headroom.
-pub const DUOS_VIEW_FOR_US_BUDGET_TEST: f64 = 53_000.0;
-/// `combat_forecast` of one Duos seat's underlying duel, in microseconds, at `cargo test`'s profile:
-/// medians 29.8, 28.4 and 12.4, 5x headroom.
-pub const DUOS_COMBAT_FORECAST_US_BUDGET_TEST: f64 = 150.0;
-/// `duos_view_for` of one seat, in microseconds, at release: medians 1455.7, 1601.6 and 1988.9, 5x
+pub const LEGAL_ACTIONS_US_BUDGET_TEST: f64 = 68.0;
+/// `hash_state`, in microseconds, at `cargo test`'s profile: twelve medians from 176.9 to 236.3, 5x headroom.
+pub const HASH_STATE_US_BUDGET_TEST: f64 = 1_200.0;
+/// The fold of the longest corpus game and its hash, per folded action, in microseconds per action, at
+/// `cargo test`'s profile: twelve medians from 1002.0 to 1533.6, 5x headroom.
+pub const FOLD_US_PER_ACTION_BUDGET_TEST: f64 = 7_700.0;
+/// `reduce` of one listed action, in microseconds, at release: twelve medians from 233.7 to 252.3, 5x
 /// headroom.
-pub const DUOS_VIEW_FOR_US_BUDGET_RELEASE: f64 = 10_000.0;
-/// `combat_forecast` of one Duos seat's underlying duel, in microseconds, at release: medians 21.5,
-/// 12.5 and 25.9, 5x headroom.
+pub const REDUCE_US_BUDGET_RELEASE: f64 = 1_300.0;
+/// `view_for` of one seat, in microseconds, at release: twelve medians from 311.3 to 349.1, 5x headroom.
+pub const VIEW_FOR_US_BUDGET_RELEASE: f64 = 1_800.0;
+/// `combat_forecast` of one seat, in microseconds, at release: twelve medians from 7.7 to 10.2, 5x headroom.
+pub const COMBAT_FORECAST_US_BUDGET_RELEASE: f64 = 51.0;
+/// `legal_actions` of one seat, in microseconds, at release: twelve medians from 10.0 to 12.4, 5x headroom.
+pub const LEGAL_ACTIONS_US_BUDGET_RELEASE: f64 = 62.0;
+/// `hash_state`, in microseconds, at release: twelve medians from 203.2 to 212.4, 5x headroom.
+pub const HASH_STATE_US_BUDGET_RELEASE: f64 = 1_100.0;
+/// The fold of the longest corpus game and its hash, per folded action, in microseconds per action, at
+/// release: twelve medians from 916.5 to 1677.4, 5x headroom.
+pub const FOLD_US_PER_ACTION_BUDGET_RELEASE: f64 = 8_400.0;
+/// `duos_reduce` of one listed action, in microseconds, at `cargo test`'s profile: twelve medians from 289.1
+/// to 1089.8, 5x headroom.
+pub const DUOS_REDUCE_US_BUDGET_TEST: f64 = 5_500.0;
+/// `duos_reduce` of one listed action, in microseconds, at release: twelve medians from 256.9 to 1209.7, 5x
+/// headroom.
+pub const DUOS_REDUCE_US_BUDGET_RELEASE: f64 = 6_100.0;
+/// `duos_view_for` of one seat, in microseconds, at `cargo test`'s profile: twelve medians from 2037.9 to
+/// 2729.7, 5x headroom.
+pub const DUOS_VIEW_FOR_US_BUDGET_TEST: f64 = 14_000.0;
+/// `combat_forecast` of one Duos seat's underlying duel, in microseconds, at `cargo test`'s profile: twelve
+/// medians from 11.1 to 33.7, 5x headroom.
+pub const DUOS_COMBAT_FORECAST_US_BUDGET_TEST: f64 = 170.0;
+/// `duos_view_for` of one seat, in microseconds, at release: twelve medians from 2214.0 to 2568.7, 5x
+/// headroom.
+pub const DUOS_VIEW_FOR_US_BUDGET_RELEASE: f64 = 13_000.0;
+/// `combat_forecast` of one Duos seat's underlying duel, in microseconds, at release: twelve medians from 9.0
+/// to 25.9, 5x headroom.
 pub const DUOS_COMBAT_FORECAST_US_BUDGET_RELEASE: f64 = 130.0;
-/// `duos_legal_actions` of one seat, in microseconds, at `cargo test`'s profile: medians 77.7, 80.5
-/// and 79.9, 5x headroom.
-pub const DUOS_LEGAL_ACTIONS_US_BUDGET_TEST: f64 = 410.0;
-/// `duos_legal_actions` of one seat, in microseconds, at release: medians 38.2, 35.9 and 43.3, 5x
+/// `duos_legal_actions` of one seat, in microseconds, at `cargo test`'s profile: twelve medians from 6.8 to
+/// 24.9, 5x headroom.
+pub const DUOS_LEGAL_ACTIONS_US_BUDGET_TEST: f64 = 130.0;
+/// `duos_legal_actions` of one seat, in microseconds, at release: twelve medians from 5.8 to 33.8, 5x
 /// headroom.
-pub const DUOS_LEGAL_ACTIONS_US_BUDGET_RELEASE: f64 = 220.0;
+pub const DUOS_LEGAL_ACTIONS_US_BUDGET_RELEASE: f64 = 170.0;
 /// The fold of the Duos co-op game, per folded action, in microseconds per action, at `cargo test`'s profile:
-/// medians 3570.7, 3606.4 and 3663.8 over 200 actions, 5x headroom.
-pub const DUOS_FOLD_US_PER_ACTION_BUDGET_TEST: f64 = 19_000.0;
-/// The fold of the Duos co-op game, per folded action, in microseconds per action, at release:
-/// medians 653.6, 653.5 and 984.7 over 200 actions, 5x headroom.
-pub const DUOS_FOLD_US_PER_ACTION_BUDGET_RELEASE: f64 = 5_000.0;
-/// The JSON size of one seat's `view_for`, in bytes, at either profile: a median of 7,381 in all six
-/// runs, 2x headroom.
+/// twelve medians from 660.5 to 866.9, 5x headroom.
+pub const DUOS_FOLD_US_PER_ACTION_BUDGET_TEST: f64 = 4_400.0;
+/// The fold of the Duos co-op game, per folded action, in microseconds per action, at release: twelve medians
+/// from 739.6 to 772.8, 5x headroom.
+pub const DUOS_FOLD_US_PER_ACTION_BUDGET_RELEASE: f64 = 3_900.0;
+/// The JSON size of one seat's `view_for`, in bytes, at either profile: a median of 7,381 over v0.6.9l's
+/// corpus and 7,386 over 98bb1823's, in every run, 2x headroom.
 pub const VIEW_FOR_BYTES_BUDGET: f64 = 15_000.0;
 
 /// The profile this binary was built at, which picks the time budgets.

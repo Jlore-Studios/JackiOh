@@ -368,7 +368,9 @@ token, no socket, no cookie and no engine in the client, so any client can play 
 
 One socket per player per match, at `/ws/match` on the same port. A second socket of the same account
 takes the seat and the first is closed with `SEAT_TAKEN_CLOSE_CODE` (4412, R3767000), which no client
-reconnects on; a watcher's replacement stays 1000. The token comes from an offered
+reconnects on; a watcher's replacement stays 1000. A socket already closed when it reaches a seat
+(`/ws/match` or `/ws/duos`) takes none — the seat keeps what it held and no other socket is closed —
+and one that drops while it is being seated starts the seat's grace like any other drop (R744, R3767000). The token comes from an offered
 `jackioh.bearer.` subprotocol, its UTF-8 in base64url without padding (R1379000; `?token=` only when
 none is offered, for the previous day's client); only `jackioh.v1` is echoed, and `/ws/duos`,
 `/ws/watch` and `/ws/social` read the token the same way. The message union is `actor/protocol.rs`:
@@ -1538,8 +1540,8 @@ the helpers every file shares (the fake store: `fake`, `fake_ref`, `fake_lock`, 
 `fake_read`, its faults `fail_on` and `stop_failing`; one store call in its own transaction: `q!`, `store!`,
 `try_store!`; `to_json`, `from`, `uuid`, `hmac_sha256_hex`); time is `tokio::time::pause()` and that
 module's steps (`advance`, `advance_and_yield`, `sleep_settled`). `support/engine.rs` also gives the
-catalog's playable ids (`playable`). `crates/tools/tests/acceptance.rs` (`SHARED_TEST_HELPERS`, #2385)
-fails a file under `actor/`, `api/`, `bots/`, `loops/` or `support/` that defines its own copy of one.
+catalog's playable ids (`playable`). `tests/support/shared_helpers.rs` (#2385) fails a file under
+`actor/`, `api/`, `bots/`, `loops/` or `support/` that defines its own copy of one.
 The fake store is strict where Postgres is strict (a
 transaction restores every table when it fails, claims are single-shot). `tests/store/contract.rs`
 runs every case against `Db::Fake` always and against `Db::Pg` when `DATABASE_URL` is set, which is

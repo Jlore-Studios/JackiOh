@@ -97,11 +97,15 @@ fn replayed(world: &GameState, line: &[ActionBody], fill: ReplayFill) -> (LineRe
 /// count and the fill existed: its action, its line and its nodes are the base's.
 #[test]
 fn r4447000_a_pinned_decision_keeps_its_action_line_and_nodes() {
-    let decision = decide(
-        &draw_turn(&[VANILLA]),
-        AI,
-        &mut ai_options("replay-fill-decide", AI_BUDGET),
-    )
+    // A recorded decision, so it reads the pools as they are, not as the pool probe (#3117) rotates them:
+    // each determinization samples the hidden cards from them, and a rotation deals another search.
+    let decision = with_pool_shift(0, || {
+        decide(
+            &draw_turn(&[VANILLA]),
+            AI,
+            &mut ai_options("replay-fill-decide", AI_BUDGET),
+        )
+    })
     .unwrap_or_else(|| panic!("the AI has no decision"));
     let pinned = (
         action_key(&decision.action),

@@ -558,6 +558,23 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
         assert!(refused.error.is_some());
     }
 
+    /// R4524003: a carried Unit uses no Activate (R446): the reducer refuses one before it looks for the
+    /// ability, as the listing, which walks each zone's own card, offers none. The fuzz's handicapped
+    /// seed 1186 had a Dormant Starship hull carried, its launch accepted and never listed.
+    #[test]
+    fn r4524003_a_carried_unit_uses_no_ability_the_reducer_refuses_one_and_the_listing_offers_none() {
+        let TowerGame { state, rider, .. } = tower_game("carrier-activate");
+        assert_eq!(
+            refusal(why_cannot_activate_ability(&state, P1, &rider, None)),
+            Some("a carried Unit uses no ability".to_string())
+        );
+        assert!(!legal_actions(&state, P1).iter().any(|action| matches!(
+            action,
+            ActionBody::Activate { instance_id, .. } | ActionBody::ActivatePower { instance_id, .. }
+                if *instance_id == rider
+        )));
+    }
+
     #[test]
     fn r446_a_carried_unit_can_neither_attack_nor_be_attacked_and_its_taunt_binds_no_attacker() {
         let TowerGame { mut state, rider, .. } = tower_game("carrier-combat");

@@ -11,7 +11,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   CARD_SETTINGS_DEFAULTS,
-  CardDetail,
   INSPECT_DETAIL,
   INSPECT_FACE_BASE,
   INSPECT_FACE_RADIANT,
@@ -20,6 +19,7 @@ import {
   closeInspect,
   writeCardSettings,
 } from "../cards/index.ts";
+import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";

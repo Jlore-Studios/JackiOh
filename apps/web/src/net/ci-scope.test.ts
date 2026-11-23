@@ -610,8 +610,8 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_ai_slow", "rust_tools_wasm"]],
     ["crates/server/src/api/queue.rs", ["rust_server"]],
     ["crates/server/migrations/0068_v0_5_retcon.sql", ["rust_server", "rust_tools_wasm"]],
-    // acceptance.rs holds the server tests' helpers to tests/support/ (#2385); tests/store/ is not scanned.
-    ["crates/server/tests/api/queue.rs", ["rust_server", "rust_tools_wasm"]],
+    // The server binary holds these tests' helpers to tests/support/ (#2385); tests/store/ is not scanned.
+    ["crates/server/tests/api/queue.rs", ["rust_server"]],
     ["crates/server/tests/store/contract.rs", ["rust_server"]],
     ["crates/tools/src/fuzz.rs", ["rust_tools_wasm"]],
     ["crates/wasm/src/lib.rs", ["rust_tools_wasm"]],
@@ -677,7 +677,7 @@ describe("scripts/ci-scope.sh", () => {
     };
     expect(tools({ "crates/server/src/x.rs": 'const X: &str = include_str!("x.json");\n' })).toBe(true);
     expect(tools({ "crates/server/src/x.rs": 'const X: &[u8] = include_bytes!("x.bin");\n' })).toBe(true);
-    expect(tools({ "crates/server/src/x.rs": "let s = std::fs::read_to_string(path);\n" })).toBe(true);
+    expect(tools({ "crates/server/tests/api/x.rs": "let s = std::fs::read_to_string(path);\n" })).toBe(true);
     expect(tools({ "crates/server/src/x.rs": 'const X: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/x.json");\n' })).toBe(true);
     expect(tools({ "apps/web/src/x.test.ts": 'const t = readFileSync(join(ROOT, "x.json"), "utf8");\n' })).toBe(true);
     // acceptance.rs holds every ignore to the daily form (super.yml's daily tests).

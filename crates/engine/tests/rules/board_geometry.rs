@@ -375,6 +375,44 @@ mod r3554001_pull {
         );
     }
 
+    /// R4524000: a Stack card may top a Dormant one (R1839003), and the hole passes that whole pile by:
+    /// neither card steps or goes, while the lane on the hole's other side is swallowed.
+    #[test]
+    fn r4524000_pull_passes_a_pile_holding_a_dormant_card_by() {
+        let mut s = board(
+            "r4524000-pile",
+            json!({
+                "hand": [HOLE],
+                "field": [field_unit(PLAIN, 4)],
+            }),
+            json!({}),
+        );
+        // A Dormant card in lane 2, stamped Slumber by hand (white-box), then topped by a Stack card.
+        let at = slot(P1, Row::Units, 2);
+        let dormant = put(s.state_mut(), PLAIN, at, json!({}));
+        find_instance_mut(s.state_mut(), &dormant.id)
+            .expect("the unit")
+            .slumber = Some(Slumber { turns: Some(2) });
+        let mut top = new_instance(s.state_mut(), PLAIN, P1, Zone::Hand { player: P1 });
+        assert!(place_on_field(
+            s.state_mut(),
+            &mut top,
+            at,
+            PlaceOnFieldOptions { stack: Some(true) }
+        ));
+        let beside = id_at(&s, P1, 4);
+        s.play(HOLE, json!({}));
+        s.end_turn();
+        s.end_turn();
+        assert_eq!(where_is(s.state(), &beside), "exile", "lane 4 was swallowed");
+        assert_eq!(where_is(s.state(), &top.id), "p1 units 2", "the pile's top stays");
+        assert_eq!(
+            where_is(s.state(), &dormant.id),
+            "p1 units 2",
+            "and so does the Dormant card beneath it"
+        );
+    }
+
     #[test]
     fn r3554001_giga_steps_whole_or_is_swallowed() {
         let mut s = board(

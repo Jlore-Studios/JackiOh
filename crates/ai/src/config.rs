@@ -1022,9 +1022,13 @@ pub struct AiReply {
     pub reserve_steps: i32,
     /// Plays of cards the line put in the opponent's hand that one reply step tries, in move order.
     pub known_plays: i32,
-    /// Activations of cards the seat can see on the field that one reply step tries, those aimed at the
-    /// seat's hero first, then at a card it controls (reply.rs `aim_of`).
+    /// Activations of cards the seat can see on the field that one reply step tries, in reply.rs
+    /// `ordered_tries`' order.
     pub visible_activations: i32,
+    /// R4515000: the tries aimed at a card of the seat's are dealt out one per pick over every visible
+    /// source and ability, each one's at the seat's most valuable Unit first (reply.rs `ordered_tries`);
+    /// false sorts them by `aim_of` alone, the first ones `legal_actions` lists.
+    pub spread_activations: bool,
     /// The opponent's value per point of damage its attack would deal the seat's hero.
     pub face_per_damage: f64,
     /// Per point an attack deals a unit it does not kill.
@@ -1059,6 +1063,9 @@ pub const AI_REPLY: AiReply = AiReply {
     reserve_steps: 5,
     known_plays: 8,
     visible_activations: 4,
+    // R4515000: on. No screen was played; its scene tests settle it, as R4433000's were. false gives back
+    // the order before it.
+    spread_activations: true,
     face_per_damage: 1.0,
     chip_per_damage: 0.3,
     cleave_share: 1.0,

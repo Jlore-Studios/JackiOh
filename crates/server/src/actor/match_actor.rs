@@ -1652,6 +1652,14 @@ impl MatchActor {
     /// Hands a connection to the account that began in `home` (`seat_of`). Replaces (and closes, with
     /// `SEAT_TAKEN_CLOSE_CODE`, R3767000) a socket that account already held.
     pub fn attach(&self, home: PlayerId, socket: Socket) {
+        // A socket that went before its handler was in has no close left to run: it takes no seat,
+        // steps nothing and closes nothing. The seat keeps what it held, `socket_generation`, the
+        // rematch push and `Task::Attach` are left alone, and `Registry::attach` still answers `Ok`.
+        // An empty seat stays empty, so R744's absent grace starts as the other seat attaches (R744,
+        // R3767000).
+        if !socket.is_open() {
+            return;
+        }
         let previous = {
             let mut core = self.lock();
             if core.host.is_voided() {
@@ -1705,6 +1713,12 @@ impl MatchActor {
                 }
             }),
         });
+        // The socket may have dropped while it was being seated; its close handler was not in yet, so
+        // nothing will report it. `on_socket_gone` acts only when the seat holds a closed socket, so
+        // this starts the grace exactly as any other drop does (§9.5).
+        if !socket.is_open() {
+            self.on_socket_gone(home);
+        }
         if let Some(previous) = previous
             && previous != socket
         {
