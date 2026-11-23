@@ -387,6 +387,8 @@ export function DuosBoard({
     if (boardAfterResult) reopen.current?.focus({ preventScroll: true });
   }, [boardAfterResult]);
 
+  // R4606000: one music key per mounted co-op match, so portal flips keep the match's music.
+  const musicKey = useMemo(() => ({}), []);
   const seat = view.seat;
   const mate = teammateOf(seat);
   const slot = duelOf(seat);
@@ -544,6 +546,7 @@ export function DuosBoard({
               onAction={replay ? ignore : sendDuel}
               forecast={ownForecast}
               replay={replay}
+              musicKey={musicKey}
               drainWhenHidden={drainWhenHidden ?? !replay}
               wearCosmetics
               error={error ?? null}
@@ -577,6 +580,7 @@ export function DuosBoard({
               onAction={ignore}
               replay
               silent
+              musicKey={musicKey}
               resultForm="chip"
               turnClock={showing === "teammate" ? chrome?.clock : undefined}
               matchStatus={showing === "teammate" ? chrome?.status : undefined}
@@ -604,6 +608,7 @@ export function DuosBoard({
           onAction={replay ? ignore : sendDuel}
           forecast={ownForecast}
           replay={replay}
+          musicKey={musicKey}
           drainWhenHidden={drainWhenHidden ?? !replay}
           wearCosmetics
           error={error ?? null}
@@ -622,6 +627,7 @@ export function DuosBoard({
           legal={NOTHING}
           onAction={ignore}
           replay
+          musicKey={musicKey}
           resultForm="chip"
           turnClock={chrome?.clock}
           matchStatus={chrome?.status}
