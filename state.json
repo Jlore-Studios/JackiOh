@@ -17282,9 +17282,11 @@
         "by": "`muse` (medium)",
         "sha": "8dea6137b12605f7ff532b2ec258ec4f20171deb"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-23T01:27:48Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-23T02:10:10Z",
         "family": "muse",
@@ -17294,6 +17296,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #4531 from the after-merge spot-check\"} -->\n- ## What changed and why\n- One test-only fix in [PromptCards.test.tsx](/apps/web/src/game/PromptCards.test.tsx): the `#4511` board re-render assertion called `rerender(tree)` with the same JSX element object it first rendered. React bails out at the root on identical element identity and the unchanged provider value, so `Pro\u2026\n- ## How I tested it\n- - `pnpm --dir apps/web test src/game/PromptCards.test.tsx` with the fix and the `useMemo` in place: **23/23 pass**, including the fixed `#4511` test and the unchanged language-switch half.\n- - Negative control (local only, fully reverted): temporarily replaced `CardOption`'s `useMemo` with a per-render IIFE and reran the file \u2014 the fixed `#4511` test **fails** (22/23, only that test red), proving the test now exercises the memo. Restored [Prompt.tsx](/apps/web/src/game/Prompt.tsx) afte\u2026\n- - Final rerun with the memo restored: **23/23 green**. `git status --porcelain` shows only `apps/web/src/game/PromptCards.test.tsx` modified.\n- ## Decisions\n- - Kept the `tree` variable for the initial `render(tree)` and only replaced the `rerender` argument, per the plan \u2014 the smallest diff that fixes the bail-out. Rejected inlining both renders since it would touch more lines for no benefit.\n- - Reverted the memo as an IIFE rather than deleting logic, so the negative control changed recomputation timing only and restoration was a two-line inverse.\n- ## For the reviewer\n- The spot-check's other two call-outs (collection hover, stats keystroke) were already real re-renders and are untouched. Worth a second look: the diff is five lines in one test; everything elsehanded back is verification evidence in `.bot-notes.md`.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4544 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4544/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4544,
       "kind": "review",
       "live": "reviewing",
