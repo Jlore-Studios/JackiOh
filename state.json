@@ -16918,6 +16918,13 @@
     "4541": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-23T01:36:59Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "It moves an internal test invariant and narrows CI scope across six files, without engine rules, AI decisions, cross-crate product design, a migration, or broad file churn."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
