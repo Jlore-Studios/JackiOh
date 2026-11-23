@@ -17333,9 +17333,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T22:12:35Z",
+    "at": "2026-11-23T22:23:13Z",
     "url": "",
-    "what": "review #4635 on muse"
+    "what": "suggestions (rules) on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T22:08:51Z",
@@ -40195,13 +40195,22 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-23T22:22:34Z",
-    "last_area": "tests",
-    "last_run": "2026-11-23T21:41:28Z",
+    "idle_since": "2026-11-23T22:23:13Z",
+    "last_area": "rules",
+    "last_run": "2026-11-23T22:23:13Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {},
+    "running": {
+      "1": {
+        "area": "rules",
+        "count": 3,
+        "last_run": "2026-11-23T22:23:13Z",
+        "provider": "muse",
+        "run_id": "pending:adf4502f-1795472559",
+        "taken_asks": []
+      }
+    },
     "taken_asks": []
   },
   "usage": null,
