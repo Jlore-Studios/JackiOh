@@ -333,13 +333,14 @@ mod c7_r41_r57_what_a_copy_keeps {
         g.end_turn();
         let bread = g.unit_at(PlayerId::P1, 1).id;
         assert_eq!(g.card(bread.as_str()).def_id, BREAD);
-        g.expect_stats(bread.as_str(), json!({ "attack": 3, "health": 3 }));
+        // Issue #4440: a Float of 3 and the bonus of 1.
+        g.expect_stats(bread.as_str(), json!({ "attack": 4, "health": 4 }));
 
         g.play(COIN, json!({}));
         g.play(HIT_JOB, json!({ "targets": pick::id(&saintess) }));
         g.play(JILLIAX, json!({}));
         assert!(g.card(bread.as_str()).radiant);
-        assert_eq!(g.stats(bread.as_str()).armor, 3);
+        assert_eq!(g.stats(bread.as_str()).armor, 4);
         g.end_turn();
 
         assert_eq!(g.state().active, PlayerId::P1);
@@ -467,7 +468,7 @@ mod r77_r175_fusing_onto_a_token_summoned_x_x {
             "p2": { "hand": [SEVEN_SEVEN, STOCKPILE], "library": LIBRARY },
         }));
         let bread = g.unit_at(PlayerId::P1, 1).id;
-        g.expect_stats(bread.as_str(), json!({ "attack": 3, "maxHealth": 3 }));
+        g.expect_stats(bread.as_str(), json!({ "attack": 4, "maxHealth": 4 }));
 
         g.play(SEVEN_SEVEN, json!({ "zone": 1 }));
 
@@ -475,7 +476,7 @@ mod r77_r175_fusing_onto_a_token_summoned_x_x {
         let fused = g.card(bread.as_str()).clone();
         assert_ne!(fused.def_id, BREAD);
         assert!(g.unit(PlayerId::P2, 1).is_none());
-        g.expect_stats(fused.id.as_str(), json!({ "attack": 10, "maxHealth": 10 }));
+        g.expect_stats(fused.id.as_str(), json!({ "attack": 11, "maxHealth": 11 }));
     }
 
     #[test]
@@ -493,7 +494,8 @@ mod r77_r175_fusing_onto_a_token_summoned_x_x {
         g.end_turn();
         let bread = g.unit_at(PlayerId::P1, 1);
         assert_eq!(bread.def_id, BREAD);
-        g.expect_stats(bread.id.as_str(), json!({ "attack": 4, "maxHealth": 4 }));
+        // Issue #4440: a Float of 4 and the bonus of 1.
+        g.expect_stats(bread.id.as_str(), json!({ "attack": 5, "maxHealth": 5 }));
         assert_eq!(g.stats(bread.id.as_str()).armor, 0);
 
         g.play(SEVEN_SEVEN, json!({ "zone": 1 }));

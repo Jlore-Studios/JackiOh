@@ -409,9 +409,10 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         let (meditative, shipped): (Vec<String>, Vec<String>) = base_only
             .into_iter()
             .partition(|entry| entry.starts_with("meditative-"));
-        // #2657's Bear Honeypot `tokens`, the base face's "Summon 2" (its Radiant face fills the board), and
-        // #3140's C+ #16 Conjure Rush Token+ `tails`, the base face's coin flip, "2 on tails".
-        assert_eq!(shipped.len(), 18, "{shipped:#?}");
+        // #2657's Bear Honeypot `tokens`, the base face's "Summon 2" (its Radiant face fills the board),
+        // #3140's C+ #16 Conjure Rush Token+ `tails`, the base face's coin flip, "2 on tails", and C #6's
+        // `discount`, the base face's "(2) less" since issue #4440 (its Radiant face's Traps cost (0)).
+        assert_eq!(shipped.len(), 19, "{shipped:#?}");
         assert_eq!(
             meditative,
             vec![
@@ -502,10 +503,11 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             })
             .count();
         // #2657's Anti-oneshot Armor `armor`, its Radiant face's "Your hero has Armor 1", and less
-        // M #49.1's `radiants`, gone with its start-of-turn text.
+        // M #49.1's `radiants`, gone with its start-of-turn text, and C #6's `mana`, gone with its Radiant
+        // face's gain since issue #4440.
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
-            (42, 19),
+            (41, 19),
             "{radiant_only:#?}"
         );
     }

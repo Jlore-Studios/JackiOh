@@ -437,23 +437,25 @@ mod c18_bread_and_butter_previews_the_bread_tokens_x_r280 {
     }
 
     #[test]
-    fn r280_base_3_unspent_mana_on_its_controllers_turn_previews_3_and_the_turns_end_makes_a_3_3() {
+    fn r280_base_3_unspent_mana_on_its_controllers_turn_previews_4_and_the_turns_end_makes_a_4_4() {
         jackioh_cards::register_all();
         let mut s = trap(FaceKind::Base, PlayerId::P1, Some(3), None, false);
-        assert_eq!(value_of(&s.view(PlayerId::P1).you.backrow[0]), 3);
+        // Issue #4440: the Float and the bonus of 1.
+        assert_eq!(value_of(&s.view(PlayerId::P1).you.backrow[0]), 4);
 
         s.end_turn();
 
         let token = must(s.unit(PlayerId::P1, 2), "the Bread Token");
         assert_eq!(token.def_id, "core-t-bread");
-        s.expect_stats(token.id.as_str(), json!({ "attack": 3, "health": 3 }));
+        s.expect_stats(token.id.as_str(), json!({ "attack": 4, "health": 4 }));
     }
 
     #[test]
-    fn r280_radiant_2_unspent_mana_previews_3_2_6_and_the_turns_end_makes_a_6_6() {
+    fn r280_radiant_2_unspent_mana_previews_3_2_3_9_and_the_turns_end_makes_a_9_9() {
         jackioh_cards::register_all();
         let mut s = trap(FaceKind::Radiant, PlayerId::P1, Some(2), None, false);
-        assert_eq!(value_of(&s.view(PlayerId::P1).you.backrow[0]), 6);
+        // Issue #4440: 3 × the Float and the bonus of 3.
+        assert_eq!(value_of(&s.view(PlayerId::P1).you.backrow[0]), 9);
 
         s.end_turn();
 
@@ -461,23 +463,23 @@ mod c18_bread_and_butter_previews_the_bread_tokens_x_r280 {
             s.unit(PlayerId::P1, 2).map(|card| card.id.clone()),
             "the Bread Token",
         );
-        s.expect_stats(token.as_str(), json!({ "attack": 6, "health": 6 }));
+        s.expect_stats(token.as_str(), json!({ "attack": 9, "health": 9 }));
     }
 
     #[test]
     fn r280_on_the_opponents_turn_it_reads_the_active_players_mana_not_its_controllers() {
         jackioh_cards::register_all();
         let mut s = trap(FaceKind::Base, PlayerId::P2, Some(1), Some(4), false);
-        assert_eq!(value_of(&s.view(PlayerId::P1).you.backrow[0]), 4);
+        assert_eq!(value_of(&s.view(PlayerId::P1).you.backrow[0]), 5);
 
         s.end_turn();
 
-        // R52: p2 ended with 4, and the 4/4 is the trap's controller's.
+        // R52: p2 ended with 4, and the 5/5 (issue #4440's + 1) is the trap's controller's.
         let token = must(
             s.unit(PlayerId::P1, 2).map(|card| card.id.clone()),
             "the Bread Token",
         );
-        s.expect_stats(token.as_str(), json!({ "attack": 4, "health": 4 }));
+        s.expect_stats(token.as_str(), json!({ "attack": 5, "health": 5 }));
     }
 
     #[test]
@@ -485,7 +487,7 @@ mod c18_bread_and_butter_previews_the_bread_tokens_x_r280 {
         jackioh_cards::register_all();
         let s = trap(FaceKind::Base, PlayerId::P1, Some(3), None, false);
 
-        assert_eq!(value_of(&s.view(PlayerId::P1).you.backrow[0]), 3);
+        assert_eq!(value_of(&s.view(PlayerId::P1).you.backrow[0]), 4);
         let theirs = s.view(PlayerId::P2);
         assert_eq!(
             json_of(&theirs.opponent.backrow[0]),
@@ -499,8 +501,9 @@ mod c18_bread_and_butter_previews_the_bread_tokens_x_r280 {
         jackioh_cards::register_all();
         let s = trap(FaceKind::Radiant, PlayerId::P1, Some(1), None, true);
 
-        assert_eq!(value_of(&s.view(PlayerId::P1).you.backrow[0]), 3);
-        assert_eq!(value_of(&s.view(PlayerId::P2).opponent.backrow[0]), 3);
+        // Issue #4440: 3 × a Float of 1, and the bonus of 3.
+        assert_eq!(value_of(&s.view(PlayerId::P1).you.backrow[0]), 6);
+        assert_eq!(value_of(&s.view(PlayerId::P2).opponent.backrow[0]), 6);
     }
 }
 

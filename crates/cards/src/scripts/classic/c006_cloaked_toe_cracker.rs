@@ -119,7 +119,7 @@ mod tests {
 
     const CRACKER: &str = "classic-006";
     const TWO_TRAP: &str = "classic-052"; // Final Gambit: Trap that answers nothing these tests do (Unlicensed Experimentation, core-085 since issue #3136)
-    const THREE_TRAP: &str = "core-085"; // Unlicensed Experimentation: a (3) Trap, held in hand here
+    const THREE_TRAP: &str = "core-085"; // Unlicensed Experimentation: a Trap dearer than the discount, held in hand here
     const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
     const TESLA: &str = "classic-005"; // Tesla: a Field Trap
     const FIELD_SPELL: &str = "stand-in (3) Field Spell";

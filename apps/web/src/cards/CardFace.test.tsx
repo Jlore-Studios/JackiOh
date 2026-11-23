@@ -412,14 +412,15 @@ describe("B8: the cost gem renders the model's cost", () => {
   });
 
   it("B8 an embiggen card's gem shows its base price and a .cf-cost-alt with the embiggen price", () => {
-    const gem = one(catalogFace("core-046"), ".cost-gem");
+    // Unbiased Immigration, "2 embiggen 4".
+    const gem = one(catalogFace("core-059"), ".cost-gem");
     expect(gemText(gem)).toBe("2");
     expect(gem.getAttribute("data-cost")).toBe("2");
     expect(one(gem, ".cf-cost-alt").textContent).toContain("4");
   });
 
   it("B8 R1175000 the second cost badge is named for the Embiggened version, for a screen reader and on hover", () => {
-    for (const [id, cost] of [["core-046", "4"], ["core-056", "3"], ["meditative-021", "1"], ["meditative-081", "1"]] as const) {
+    for (const [id, cost] of [["core-046", "3"], ["core-059", "4"], ["core-056", "3"], ["meditative-021", "1"], ["meditative-081", "1"]] as const) {
       const alt = one(one(catalogFace(id), ".cost-gem"), ".cf-cost-alt");
       expect(alt.textContent, id).toBe(cost);
       expect(alt.getAttribute("role"), id).toBe("img");
