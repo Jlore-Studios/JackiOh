@@ -16728,11 +16728,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-23T20:06:18Z",
+        "at": "2026-11-23T22:31:47Z",
         "difficulty": "hard",
         "provider": "claude-8",
-        "tier": "medium",
-        "why": "Rule 1: it changes the engine's rules in crates/engine/src (state_check.rs's death collect step and combat.rs's forced-attack path)."
+        "tier": "strong",
+        "why": "Engine rules: the change is to the state check and the attack pipeline in crates/engine/src/ (rule line 1)"
       },
       "failures": 0,
       "forced": false,
