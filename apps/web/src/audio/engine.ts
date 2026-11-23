@@ -1183,7 +1183,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     },
     musicOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.music }),
     sfxOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.sfx }),
-    crowdOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, crowd: buses.crowd }),
+    // R4512000: the crowd bus is closed while the page is hidden, as effects and voices are.
+    crowdOutput: () =>
+      ctx === null || buses === null || disposed || visibility() === "hidden"
+        ? null
+        : { context: ctx, crowd: buses.crowd },
     subscribeState: (listener) => {
       stateListeners.add(listener);
       return () => {
