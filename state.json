@@ -42257,6 +42257,12 @@
         "number": 4611,
         "title": "Patch: the generations notebook shows a dash past the gate's retired random leg",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T19:38:31Z",
+        "number": 4613,
+        "title": "Patch: the daily pair, era, run and gate sweeps name the unit they stall on, as the fuzz waves do",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
