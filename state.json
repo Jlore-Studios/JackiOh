@@ -18712,6 +18712,7 @@
       "owner_why": "handed off from `claude-6`: `claude-6` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-23T15:00:00Z; it can start again only in 3h 03m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "provider": "claude-3",
+      "round_tier": "",
       "run_id": "45160642635",
       "runs_on": "ubuntu-latest",
       "session": {
@@ -18737,7 +18738,8 @@
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     }
   },
   "labels_synced": "e752b3263433d01e",
