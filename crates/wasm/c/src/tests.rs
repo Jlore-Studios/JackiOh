@@ -671,6 +671,108 @@ fn r3496000_run_content_at_answers_the_carried_and_current_versions_and_null_for
 }
 
 #[test]
+fn assault_exports_answer_what_the_core_bodies_answer() {
+    init();
+    let date = "\"2026-11-23\"";
+    let seed = call!(assault_day_seed; date;);
+    assert_eq!(seed, expect(wasm_core::assault_day_seed(date)));
+    let _seed_val: Value = serde_json::from_str(&ok(seed)).expect("JSON");
+
+    let deck = call!(assault_day_deck; date;);
+    assert_eq!(deck, expect(wasm_core::assault_day_deck(date)));
+    let deck_text = ok(deck);
+    let deck_cards: Vec<String> = serde_json::from_str(&deck_text).expect("JSON");
+
+    let content = call!(assault_content;;);
+    assert_eq!(content, expect(wasm_core::assault_content()));
+    let content = ok(content);
+
+    let numbers = call!(assault_constants;;);
+    assert_eq!(numbers, expect(wasm_core::assault_constants()));
+
+    let day = call!(assault_day; date, content;);
+    assert_eq!(day, expect(wasm_core::assault_day(date, &content)));
+    let day = ok(day);
+
+    let catalog_raw = ok(call!(catalog;;));
+    let cat_content = call!(assault_catalog_content; catalog_raw;);
+    assert_eq!(
+        cat_content,
+        expect(wasm_core::assault_catalog_content(&catalog_raw))
+    );
+    let ph_content = call!(assault_placeholder_content; catalog_raw;);
+    assert_eq!(
+        ph_content,
+        expect(wasm_core::assault_placeholder_content(&catalog_raw))
+    );
+
+    let setup = json!({
+        "date": "2026-11-23",
+        "deck": deck_cards,
+        "source": "dayDeck",
+        "startLevel": 1,
+        "attempt": 1,
+    })
+    .to_string();
+    let record = json!({
+        "date": "2026-11-23",
+        "best": 0,
+        "checkpoints": [],
+        "attempts": 1,
+        "repelledOn": null,
+    })
+    .to_string();
+
+    let created = call!(assault_create; setup, record, day;);
+    assert_eq!(created, expect(wasm_core::assault_create(&setup, &record, &day)));
+    let created: Value = serde_json::from_str(&ok(created)).expect("JSON");
+    let state = created["state"].to_string();
+    assert_ne!(state, "null", "{created}");
+
+    let action = json!({ "kind": "fight" }).to_string();
+    let file = json!({
+        "version": ok(call!(catalog_version;;)),
+        "setup": serde_json::from_str::<Value>(&setup).expect("JSON"),
+        "record": serde_json::from_str::<Value>(&record).expect("JSON"),
+        "actions": [serde_json::from_str::<Value>(&action).expect("JSON")],
+    })
+    .to_string();
+
+    let folded = call!(assault_fold; file, day;);
+    assert_eq!(folded, expect(wasm_core::assault_fold(&file, &day)));
+
+    let reduced = call!(assault_reduce; state, day, action;);
+    assert_eq!(reduced, expect(wasm_core::assault_reduce(&state, &day, &action)));
+    let reduced: Value = serde_json::from_str(&ok(reduced)).expect("JSON");
+    let after = reduced["state"].to_string();
+    assert_ne!(after, "null", "{reduced}");
+
+    let fight = call!(assault_fight_setup; after, day;);
+    assert_eq!(fight, expect(wasm_core::assault_fight_setup(&after, &day)));
+    assert_ne!(ok(fight), "null", "fighting state meets a fight");
+
+    let rec = call!(assault_record; record, after;);
+    assert_eq!(rec, expect(wasm_core::assault_record(&record, &after)));
+
+    let human = "\"p1\"";
+    assert_eq!(
+        call!(assault_fight_report; "{}", human;),
+        expect(wasm_core::assault_fight_report("{}", human))
+    );
+
+    let version = serde_json::to_string(&ok(call!(catalog_version;;))).expect("JSON");
+    assert_eq!(
+        call!(assault_content_at; version;),
+        expect(wasm_core::assault_content_at(&version))
+    );
+    let unknown = "\"v0.0.0-unknown\"";
+    assert_eq!(
+        call!(assault_content_at; unknown;),
+        expect(wasm_core::assault_content_at(unknown))
+    );
+}
+
+#[test]
 fn duos_exports_play_a_game_through_the_core_bodies() {
     init();
     let deck = |seed: &str| -> Value {

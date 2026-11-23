@@ -46,6 +46,17 @@ hands back on every call; a run's `RunState` crosses the same way, as plain JSON
 | `run_score(state, content)`, `run_embers(score)`, `run_max_hp(state, content)`, `run_shop_prices(state, content)` | the run's score, the Embers a score pays, the run's max HP, what a shop's services cost |
 | `run_level_cost(level)`, `run_constants()` | the Embers one level costs (or `null` at the top), and the run's numbers the screens show |
 | `run_seed(source)`, `run_daily_seed(date, n)` | a seed of capital letters, or the daily run's seed |
+| `assault_day_seed(date)` | `"2026-11-23"` -> `"assault-2026-11-23"`, or refused |
+| `assault_catalog_content(catalog)`, `assault_placeholder_content(catalog)` | the set's cards by tag + assault.json, or shipped stand-ins until the release |
+| `assault_content()` | `AssaultContent`: `assault_placeholder_content` over the compiled-in catalog until the release |
+| `assault_content_at(version)` | R3496000: `AssaultContent` for a catalog version: the build's own, a carried version's, or `null` when this build carries it no longer |
+| `assault_day(date, content)` | `AssaultDay`: the day's deal (20 levels and their escalations), or refused |
+| `assault_create(setup, record, day)` | `{ state }` for an attempt started, `{ error }` for a setup the attempt refuses |
+| `assault_reduce(state, day, action)`, `assault_fold(file, day)` | the attempt after one action, or an attempt file folded from its start: `{ state }` |
+| `assault_fight_setup(state, day)` | the fight being played (`AssaultFightSetup`), or `null` outside one |
+| `assault_fight_report(game, human)` | the `FightOver` a finished fight sends: `{ action }` |
+| `assault_record(record, state)`, `assault_constants()` | the day's record folded with the attempt's progress, and the mode's numbers the screens show |
+| `assault_day_deck(date)` | `string[]`: practice's fresh random deck for a human (R258's draw, `banned: []`), seeded `{day seed}-deck`, no lean (IA5) |
 
 A binding returns `Err(JsError)`, which JavaScript sees as a thrown `Error` with the engine's message,
 where a JSON argument does not parse or the setup is refused (a deck or handicap `create_game` will
