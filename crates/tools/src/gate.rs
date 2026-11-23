@@ -1559,8 +1559,16 @@ mod tests {
             let run = play_measure_matchup(matchup, &played);
             assert_eq!(run.games.len(), 2);
             for game in &run.games {
-                assert!(game.seed.starts_with("tune:"), "seed {} does not start with tune:", game.seed);
-                assert!(!game.seed.contains("gate:v3"), "seed {} contains gate:v3", game.seed);
+                assert!(
+                    game.seed.starts_with("tune:"),
+                    "seed {} does not start with tune:",
+                    game.seed
+                );
+                assert!(
+                    !game.seed.contains("gate:v3"),
+                    "seed {} contains gate:v3",
+                    game.seed
+                );
             }
         }
     }
