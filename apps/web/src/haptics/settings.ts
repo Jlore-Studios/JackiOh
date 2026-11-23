@@ -4,6 +4,7 @@
 
 import { useSyncExternalStore } from "react";
 import { getStored, setStored } from "../net/storage.ts";
+import { isRecord } from "../wire/json.ts";
 
 export type HapticsSettings = { vibration: boolean };
 
@@ -13,8 +14,8 @@ export const DEFAULT_HAPTICS_SETTINGS: Readonly<HapticsSettings> = Object.freeze
 
 /** Field by field: a missing or mistyped value is its default. */
 export function parseHapticsSettings(raw: unknown): HapticsSettings {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return { ...DEFAULT_HAPTICS_SETTINGS };
-  const vibration = (raw as Record<string, unknown>).vibration;
+  if (!isRecord(raw)) return { ...DEFAULT_HAPTICS_SETTINGS };
+  const vibration = raw.vibration;
   return { vibration: typeof vibration === "boolean" ? vibration : DEFAULT_HAPTICS_SETTINGS.vibration };
 }
 

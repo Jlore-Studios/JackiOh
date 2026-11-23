@@ -995,6 +995,12 @@ impl DuelHost {
         if self.stopped || self.finished {
             return;
         }
+        // R268, R776000: a run still owing timeouts is not overwritten; this clock runs out again later.
+        if self.run.as_ref().is_some_and(|run| !run.queue.is_empty()) {
+            self.clock
+                .retry(expiry, MATCH_SERVER_ACTION_RETRY_MS, now, &mut self.fx);
+            return;
+        }
         let queue = self.server_actions_for(expiry);
         self.run = Some(ExpiryRun { expiry, queue });
         self.advance_run(now);

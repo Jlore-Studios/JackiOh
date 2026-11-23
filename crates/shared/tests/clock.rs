@@ -284,6 +284,30 @@ mod match_clock {
         );
     }
 
+    /// R79: a second prompt for the same non-active holder, met with no prompt-less sync between the two,
+    /// is one prompt to the clock: it keeps the first one's deadline, and only that clock runs out
+    /// (#4550, docs/implicit-states.md §13 T8; whether a second prompt should get a fresh clock is unspecified).
+    #[test]
+    fn a_second_prompt_for_the_same_non_active_holder_keeps_the_first_ones_deadline() {
+        let mut h = Sim::new(0);
+        h.sync(&view());
+        let asking_p2 = ClockView {
+            pending_for: Some(P2),
+            ..view()
+        };
+        h.sync(&asking_p2);
+        let first = h.deadline("promptDeadline");
+        assert_eq!(first, Some(h.now + h.prompt_ms));
+        h.sleep(20 * SECOND);
+        h.sync(&asking_p2);
+        assert_eq!(h.deadline("promptDeadline"), first);
+        h.sleep(h.prompt_ms - 20 * SECOND - 1);
+        assert_eq!(h.expiries, vec![]);
+        h.sleep(1);
+        assert_eq!(h.expiries, vec![ClockExpiry::Prompt { player: P2 }]);
+        assert_eq!(Some(h.now), first);
+    }
+
     #[test]
     fn does_not_pause_the_turn_clock_for_a_prompt_held_by_the_active_player() {
         let mut h = Sim::new(0);
@@ -884,6 +908,19 @@ mod r1563006_the_question_sequence_clock {
             h.now < EPOCH + h.turn_ms,
             "PREMISE: the turn clock has not run out"
         );
+    }
+
+    /// R1563006: a question met mid-sequence (its streak past 0) with no window open, as a host made after
+    /// the sequence's first question meets it, opens a full window from then (#4550, docs/implicit-states.md
+    /// §13 T15; what such a host should do is unspecified).
+    #[test]
+    fn a_question_met_mid_sequence_with_no_window_opens_a_full_one() {
+        let mut h = Sim::new(0);
+        h.sync(&asking(2, "q3"));
+        h.sleep(sequence_ms() - 1);
+        assert_eq!(h.expiries, vec![]);
+        h.sleep(1);
+        assert_eq!(h.expiries, vec![ClockExpiry::Sequence { player: P1 }]);
     }
 
     /// R776000, R1563006: a retry re-arms a sequence's window only while one is open.

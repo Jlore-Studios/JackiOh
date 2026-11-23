@@ -12,6 +12,7 @@
 
 import { useSyncExternalStore } from "react";
 import { setStored } from "../net/storage.ts";
+import { isRecord } from "../wire/json.ts";
 
 export type BoardNamesOption = "artFirst" | "always" | "never";
 
@@ -145,15 +146,14 @@ function parse(raw: string): CardSettings {
   } catch {
     return CARD_SETTINGS_DEFAULTS;
   }
-  if (typeof data !== "object" || data === null || Array.isArray(data)) return CARD_SETTINGS_DEFAULTS;
-  const record = data as Record<string, unknown>;
+  if (!isRecord(data)) return CARD_SETTINGS_DEFAULTS;
   const settings: CardSettings = { ...CARD_SETTINGS_DEFAULTS };
   for (const key of SETTING_KEYS) {
-    const value = record[key];
+    const value = data[key];
     if (typeof value === "boolean") (settings as Record<string, unknown>)[key] = value;
   }
-  if (isBoardNamesOption(record.boardNames)) {
-    settings.boardNames = record.boardNames;
+  if (isBoardNamesOption(data.boardNames)) {
+    settings.boardNames = data.boardNames;
   }
   return settings;
 }

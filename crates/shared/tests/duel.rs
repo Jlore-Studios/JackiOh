@@ -1920,6 +1920,32 @@ mod reads_and_stops {
         assert_eq!(expired(&table), 1, "{:?}", table.notes);
     }
 
+    /// R268, R776000: a seat's grace running out while the first mulligan timeout awaits its row does not
+    /// take the place of the timeouts still owed: the grace is tried again a retry later, and once the row
+    /// lands the second seat is timed out too (#4550, docs/implicit-states.md §13 T4).
+    #[test]
+    fn r268_a_grace_running_out_between_the_mulligan_timeouts_still_times_out_the_second_seat() {
+        let mut table = playing("grace-between-timeouts");
+        table.feed(DuelEvent::Left { home: P2 });
+        table.feed(DuelEvent::Disconnected { home: P2 });
+        table.holding_appends = true;
+        table.sleep(mulligan_ms());
+        table.sleep(grace_ms() - mulligan_ms());
+        assert_eq!(
+            table.timer(TimerKey::Grace { player: P2 }),
+            Some(table.now + MATCH_SERVER_ACTION_RETRY_MS),
+            "the grace that ran out behind the held row is tried again"
+        );
+        table.connect(P2);
+        table.holding_appends = false;
+        table.feed(DuelEvent::Logged {
+            outcome: LogOutcome::Written,
+        });
+        assert_eq!(table.nonces(), vec!["srv-mulligan-2"]);
+        assert!(table.host.game().turn >= 1, "{:?}", table.notes);
+        assert!(table.records.is_empty(), "{:?}", table.records);
+    }
+
     /// The host's reads for its own sends and its checkpoint: the match's id, the newest nonce in the log, and
     /// whether the match is finished, voided or stopped.
     #[test]

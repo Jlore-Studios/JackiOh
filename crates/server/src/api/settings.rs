@@ -13,7 +13,9 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::api::collection::caller_profile;
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, log_info, now_ms, ok_of};
+use crate::api::http::{
+    ApiError, ApiErrorCode, ApiResult, Req, bad_request, log_info, now_ms, ok_of, whole_number,
+};
 use crate::app::App;
 use crate::config::{
     PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PLAYER_SETTINGS_KEYS_MAX,
@@ -100,16 +102,6 @@ fn read_value(group: &str, name: &str, value: &Value) -> Result<PlayerSettingVal
     Ok(serde_json::from_value(value.clone())?)
 }
 
-/// A whole number of epoch milliseconds, or `None`.
-fn epoch_ms_of(value: Option<&Value>) -> Option<i64> {
-    const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
-    let number = value?.as_f64()?;
-    if number.fract() != 0.0 || !(0.0..=MAX_SAFE_INTEGER).contains(&number) {
-        return None;
-    }
-    Some(number as i64)
-}
-
 /// R633, R634: reads groups map (`PLAYER_SETTINGS_GROUPS_MAX`, `PLAYER_SETTINGS_KEYS_MAX`).
 /// Clamps future timestamps to server now (R320).
 pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSettingsGroup>, ApiError> {
@@ -141,7 +133,11 @@ pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSett
                 "\"{id}\" must be {{ at: epoch milliseconds, values: an object }}"
             )));
         };
-        let Some(at) = epoch_ms_of(group.get("at")) else {
+        let Some(at) = group
+            .get("at")
+            .and_then(whole_number)
+            .and_then(|at| i64::try_from(at).ok())
+        else {
             return Err(bad_request(format!(
                 "\"{id}.at\" must be a whole number of epoch milliseconds"
             )));

@@ -22,6 +22,7 @@ use tokio::sync::OnceCell;
 
 use jackioh_engine::duos::{DuosReplayInput, DuosState};
 use jackioh_engine::wire::{DuosAction, DuosSeat};
+use jackioh_shared::host::again::in_again_window;
 
 use crate::actor::contracts::one_tx;
 use crate::actor::engine as actor_engine;
@@ -30,7 +31,6 @@ use crate::actor::ws_server::Socket;
 use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
-use crate::config::REMATCH_OFFER_TTL_MS;
 use crate::duos::actor::{DuosActor, DuosActorInput, create_duos_actor};
 use crate::duos::checkpoint;
 use crate::duos::engine::{self, Pinned};
@@ -321,7 +321,7 @@ impl DuosRegistry {
                 let past_window = row
                     .as_ref()
                     .and_then(|row| row.ended_at)
-                    .is_some_and(|ended_at| now_ms() - ended_at > REMATCH_OFFER_TTL_MS);
+                    .is_some_and(|ended_at| !in_again_window(ended_at, now_ms()));
                 if past_window {
                     return Err(DuosAttachError::NotFound);
                 }
@@ -407,7 +407,7 @@ impl DuosRegistry {
                 .filter_map(|(match_id, actor)| {
                     let over = actor
                         .finished_at()
-                        .is_some_and(|finished_at| now - finished_at > REMATCH_OFFER_TTL_MS);
+                        .is_some_and(|finished_at| !in_again_window(finished_at, now));
                     let alone = !actor.has_open_socket() && actor.watcher_count() == 0;
                     (over || alone).then(|| (match_id.clone(), over))
                 })

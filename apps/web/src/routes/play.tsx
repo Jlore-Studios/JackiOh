@@ -7,7 +7,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
-import { DECK_SIZE } from "@jackioh/engine/config";
 import {
   validateDeck,
   validateTrio,
@@ -23,7 +22,6 @@ import {
   QUEUE_POPULATION_POLL_SECONDS,
   SERIES_POLL_SECONDS,
 } from "@jackioh/server-config";
-import type { LeanPick } from "@jackioh/shared";
 import {
   ApiRequestError,
   ApiUnreachableError,
@@ -38,7 +36,6 @@ import {
   type MeResponse,
   getPopulation,
   isQueueMode,
-  type ModeChoice,
   type OwnRankResponse,
   type PopulationResponse,
   type QueueMode,
@@ -68,6 +65,7 @@ import { attempt, messageOf } from "../net/errors.ts";
 import { waitWords } from "../net/queueReadout.ts";
 import { getStored, setStored } from "../net/storage.ts";
 import { useSocialReads } from "../together/socialPoll.ts";
+import { choiceOf, pickDeck, pickTrio } from "../together/challengeChoice.ts";
 import "../auth/tavern.css";
 import "./lobby.css";
 import "./play-hub.css";
@@ -182,43 +180,6 @@ export function useLobbyData(token: string): [LobbyLoad, () => void] {
     setRound((before) => before + 1);
   }, []);
   return [load, retry];
-}
-
-/** The remembered deck if it is still saved, else the first complete deck, else the first deck. */
-export function defaultDeck(decks: readonly SavedDeck[], remembered: string | null): SavedDeck | null {
-  return (
-    decks.find((deck) => deck.id === remembered) ??
-    decks.find((deck) => deck.cards.length === DECK_SIZE) ??
-    decks[0] ??
-    null
-  );
-}
-
-/** The remembered trio if it is still saved, else the first with three decks, else the first trio. */
-export function defaultTrio(trios: readonly SavedTrio[], remembered: string | null): SavedTrio | null {
-  return (
-    trios.find((trio) => trio.id === remembered) ??
-    trios.find((trio) => trio.deckIds.every((id) => id !== null)) ??
-    trios[0] ??
-    null
-  );
-}
-
-/** Queue/room choice; null when its required pick is absent. */
-export function choiceFor(
-  mode: QueueMode,
-  deck: SavedDeck | null,
-  trio: SavedTrio | null,
-  lean: LeanPick | null = null,
-): ModeChoice | null {
-  switch (mode) {
-    case "random":
-      return lean === null ? { mode: "random" } : { mode: "random", leanSet: lean };
-    case "bo1":
-      return deck === null ? null : { mode: "bo1", deckId: deck.id };
-    case "bo3":
-      return trio === null ? null : { mode: "bo3", trioId: trio.id };
-  }
 }
 
 /** R253 client-only verdict; missing input has no verdict. */
@@ -605,9 +566,9 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
 
   const [lobby, retryLobby] = useLobbyData(token);
   const data = lobby.kind === "ready" ? lobby.data : null;
-  const deck = data === null ? null : defaultDeck(data.decks, deckId);
-  const trio = data === null ? null : defaultTrio(data.trios, trioId);
-  const choice = choiceFor(mode, deck, trio, lean);
+  const deck = data === null ? null : pickDeck(data.decks, deckId);
+  const trio = data === null ? null : pickTrio(data.trios, trioId);
+  const choice = choiceOf(mode, deck?.id ?? null, trio?.id ?? null, lean);
   const verdict = data === null ? null : verdictFor(mode, deck, trio, data);
 
   // The readout is informational, never a blocker.

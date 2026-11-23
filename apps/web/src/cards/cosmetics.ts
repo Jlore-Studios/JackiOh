@@ -37,6 +37,7 @@ import { foilFor } from "./frame.ts";
 import type { FaceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, useCardSettings } from "./settings.ts";
 import { getStored, localStorageOrNull, setStored } from "../net/storage.ts";
+import { isRecord } from "../wire/json.ts";
 import { ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, FULL_ART_ID_PREFIX, VERSION_ID_PREFIX, isOfferedId, offeredOn } from "./versions.ts";
 
 export { ANIMATED_ART_ID_PREFIX };
@@ -104,7 +105,7 @@ export function resolveCosmetic(kind: CosmeticKind, id: unknown): CosmeticId {
 
 /** Kind by kind: a short text is kept, known or not; anything else is the kind's default. */
 export function normalizeCosmetics(raw: unknown): CardCosmetics {
-  const record = raw !== null && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const record = isRecord(raw) ? raw : {};
   const out: CardCosmetics = { ...DEFAULT_CARD_COSMETICS };
   for (const kind of COSMETIC_KINDS) {
     const value = record[kind];
@@ -228,7 +229,7 @@ function augmentPicks(value: unknown): string[] | undefined {
 }
 
 function normalizeStoredPicks(raw: unknown): StoredCardPicks {
-  const record = raw !== null && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const record = isRecord(raw) ? raw : {};
   const out: StoredCardPicks = {};
   for (const kind of CARD_SLOT_KINDS) {
     const value = record[kind];
@@ -261,7 +262,7 @@ function readStoredCardPicks(): Record<string, unknown> {
   try {
     const text = getStored(CARD_PICKS_SETTINGS_KEY);
     const parsed: unknown = text === null ? null : JSON.parse(text);
-    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+    if (isRecord(parsed)) return parsed;
   } catch {
     // Unparsable or blocked storage: no card has a pick of its own.
   }
@@ -372,7 +373,7 @@ function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void
     state.resolved.set(defId, resolveCardPicks(picks));
   }
   const raw = written[defId];
-  const entry: Record<string, unknown> = raw !== null && typeof raw === "object" && !Array.isArray(raw) ? { ...raw } : {};
+  const entry: Record<string, unknown> = isRecord(raw) ? { ...raw } : {};
   for (const field of CARD_PICK_FIELDS) {
     if (picks[field] === undefined) delete entry[field];
     else entry[field] = picks[field];

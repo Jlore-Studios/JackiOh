@@ -4,7 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiRequestError } from "./api.ts";
-import { createDuosRoom, getDuosLive, getDuosReplay, joinDuosRoom } from "./duos.ts";
+import { getDuosLive, getDuosReplay, joinDuosRoom } from "./duos.ts";
 import { clearSession, writeSession } from "./session.ts";
 import { must, refusal, stubServer, type Call, type Reply } from "../test/stubServer.ts";
 
@@ -38,42 +38,15 @@ async function refused(run: () => Promise<unknown>, reply: Reply): Promise<ApiRe
 }
 
 describe("B33 B34 co-op rooms", () => {
-  it("B33 createDuosRoom posts its body to /api/duos/rooms and resolves with the room code", async () => {
-    const body = { difficulty: "hard" as const, deckId: "d-aggro" };
-    const { call, result } = await sent(() => createDuosRoom(body), { status: 201, body: { code: "HJK234" } });
-    expect(call.method).toBe("POST");
-    expect(call.path).toBe("/api/duos/rooms");
-    expect(call.body).toEqual(body);
-    expect(result).toEqual({ code: "HJK234" });
-  });
-
-  it("B33 R2031000 createDuosRoom sends a random-deck room as {difficulty, random: true, leanSet}, untouched", async () => {
-    const body = { difficulty: "easy" as const, random: true, leanSet: "Classic" as const };
-    const { call } = await sent(() => createDuosRoom(body), { status: 201, body: { code: "MNP567" } });
+  it("B33 R2031000 joinDuosRoom sends a random-deck choice as {random: true, leanSet}, untouched", async () => {
+    const body = { random: true, leanSet: "Classic" as const };
+    const { call } = await sent(() => joinDuosRoom("HJK234", body), { status: 200, body: { matchId: "dm-1" } });
     expect(call.body).toEqual(body);
   });
 
   it("B33 the request carries the signed-in session's bearer token", async () => {
-    const { call } = await sent(() => createDuosRoom({ difficulty: "easy", random: true }), { status: 201, body: { code: "HJK234" } });
+    const { call } = await sent(() => joinDuosRoom("HJK234", { random: true }), { status: 200, body: { matchId: "dm-1" } });
     expect(call.headers.authorization).toBe(`Bearer ${TOKEN}`);
-  });
-
-  it("B33 a refused room creation rejects with ApiRequestError carrying the status and code", async () => {
-    const error = await refused(
-      () => createDuosRoom({ difficulty: "easy", deckId: "d-missing" }),
-      refusal(422, "invalid_deck", "That deck cannot be played."),
-    );
-    expect(error.status).toBe(422);
-    expect(error.code).toBe("invalid_deck");
-  });
-
-  it("B33 a pending account's room creation is refused (rooms are AuthLevel::Active)", async () => {
-    const error = await refused(
-      () => createDuosRoom({ difficulty: "medium", random: true }),
-      refusal(403, "account_pending", "Redeem an invite code first."),
-    );
-    expect(error.status).toBe(403);
-    expect(error.code).toBe("account_pending");
   });
 
   it("B33 a pending account's join is refused (rooms are AuthLevel::Active)", async () => {

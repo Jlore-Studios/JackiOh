@@ -23,6 +23,7 @@ import {
   type PoolSort,
 } from "./filters.ts";
 import type { StorageLike } from "./sync.ts";
+import { isRecord } from "../../wire/json.ts";
 
 export const SAVED_BROWSE_KEY = "jackioh.deckbuilder.browse.v1";
 
@@ -61,22 +62,21 @@ function parse(raw: string): SavedBrowse {
   } catch {
     return { filter: DEFAULT_FILTER, sort: DEFAULT_SORT };
   }
-  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+  if (!isRecord(data)) {
     return { filter: DEFAULT_FILTER, sort: DEFAULT_SORT };
   }
-  const record = data as Record<string, unknown>;
   return {
     filter: {
-      sets: pick<SetName>(record.sets, FILTER_SETS),
-      costs: pick<CostBucket>(record.costs, COST_BUCKETS),
-      types: pick<CardType>(record.types, FILTER_TYPES),
-      tags: pick<Tag>(record.tags, FILTER_TAGS),
-      keywords: pick<KeywordKind>(record.keywords, FILTER_KEYWORDS),
-      rarities: pick<Rarity>(record.rarities, FILTER_RARITIES),
-      search: typeof record.search === "string" ? record.search : DEFAULT_FILTER.search,
-      ownedOnly: typeof record.ownedOnly === "boolean" ? record.ownedOnly : DEFAULT_FILTER.ownedOnly,
+      sets: pick<SetName>(data.sets, FILTER_SETS),
+      costs: pick<CostBucket>(data.costs, COST_BUCKETS),
+      types: pick<CardType>(data.types, FILTER_TYPES),
+      tags: pick<Tag>(data.tags, FILTER_TAGS),
+      keywords: pick<KeywordKind>(data.keywords, FILTER_KEYWORDS),
+      rarities: pick<Rarity>(data.rarities, FILTER_RARITIES),
+      search: typeof data.search === "string" ? data.search : DEFAULT_FILTER.search,
+      ownedOnly: typeof data.ownedOnly === "boolean" ? data.ownedOnly : DEFAULT_FILTER.ownedOnly,
     },
-    sort: sortOf(record.sort),
+    sort: sortOf(data.sort),
   };
 }
 

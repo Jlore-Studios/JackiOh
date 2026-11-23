@@ -6,7 +6,7 @@
 import { useSyncExternalStore } from "react";
 
 import { localStorageOrNull } from "../net/storage.ts";
-import { isSafeKey } from "../wire/json.ts";
+import { isRecord, isSafeKey } from "../wire/json.ts";
 import { FX_INTENSITY_SCALE, FX_SETTINGS_KEY, FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN } from "./constants.ts";
 
 export type FxIntensity = "off" | "low" | "normal" | "high";
@@ -44,13 +44,12 @@ function normalizeBigMoments(value: unknown): FxBigMoments {
 }
 
 export function normalizeFxSettings(raw: unknown): FxSettings {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return DEFAULT_FX_SETTINGS;
-  const record = raw as Record<string, unknown>;
+  if (!isRecord(raw)) return DEFAULT_FX_SETTINGS;
   return {
-    speed: normalizeSpeed(record.speed),
-    intensity: normalizeIntensity(record.intensity),
-    motion: normalizeMotion(record.motion),
-    bigMoments: normalizeBigMoments(record.bigMoments),
+    speed: normalizeSpeed(raw.speed),
+    intensity: normalizeIntensity(raw.intensity),
+    motion: normalizeMotion(raw.motion),
+    bigMoments: normalizeBigMoments(raw.bigMoments),
   };
 }
 
