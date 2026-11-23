@@ -1019,6 +1019,10 @@ struct SlumberStep {
     marks: IndexMap<String, SlumberMark>,
     pending_def: Option<String>,
     pending_instance: Option<String>,
+    /// R4524002: the field cards that run a copied board sweep as the step begins, a copied Spell's
+    /// (`copies_a_sweep`) or a copied Unit's (Stinkyscape #20 Tnack Trav, R1850000): read before the
+    /// step, since a sweep of its own side exiles the copier with its copy (R78).
+    sweepers: IndexSet<String>,
 }
 
 /// I19: a Dormant card's `SLUMBER_KEPT` fields.
@@ -1046,11 +1050,22 @@ fn slumber_step(state: &GameState) -> SlumberStep {
             (placed.card.id.clone(), mark)
         })
         .collect();
+    let sweepers = placed_cards(state)
+        .into_iter()
+        .filter(|placed| matches!(placed.zone, Zone::Field { .. }))
+        .filter(|placed| {
+            copies_a_sweep(state, &placed.card.id)
+                || crate::subsystems::unit_text::unit_text_of(placed.card)
+                    .is_some_and(|copy| is_board_sweep(state, &copy.def_id))
+        })
+        .map(|placed| placed.card.id.clone())
+        .collect();
     let resume = state.pending.as_ref().map(|pending| &pending.resume);
     SlumberStep {
         marks,
         pending_def: resume.map(|resume| resume.def_id.clone()),
         pending_instance: resume.and_then(|resume| resume.instance_id.clone()),
+        sweepers,
     }
 }
 
@@ -1174,7 +1189,7 @@ fn slumber_reach_findings(step: &SlumberStep, events: &[GameEvent], after: &Game
         || step
             .pending_instance
             .as_deref()
-            .is_some_and(|id| copies_a_sweep(after, id));
+            .is_some_and(|id| copies_a_sweep(after, id) || step.sweepers.contains(id));
     let mut moving: Option<BoardMove> = None;
     // R4454001: under Tears of the Kwzki Tree every card is Radiant, the Dormant ones too (R3569000).
     let radiant_world = after.radiant_world == Some(true);
@@ -1184,7 +1199,9 @@ fn slumber_reach_findings(step: &SlumberStep, events: &[GameEvent], after: &Game
                 source_id, def_id, ..
             } => {
                 running = Some(def_id);
-                sweeping = is_board_sweep(after, def_id) || copies_a_sweep(after, source_id);
+                sweeping = is_board_sweep(after, def_id)
+                    || copies_a_sweep(after, source_id)
+                    || step.sweepers.contains(source_id.as_str());
                 moving = None;
                 continue;
             }
@@ -1209,8 +1226,10 @@ fn slumber_reach_findings(step: &SlumberStep, events: &[GameEvent], after: &Game
             }
             GameEvent::RolledBack { sides, .. } => {
                 moving = Some(BoardMove::Restore);
-                // R4454002: what stood on a restored side goes back as the snapshot holds it.
-                carried.extend(
+                // R4454002: what stood on a restored side goes back as the snapshot holds it, awake if
+                // it was then, so for the rest of the step it is no longer the Dormant card the step
+                // began with (R4524001); one the snapshot holds Dormant is marked again from the next.
+                released.extend(
                     step.marks
                         .iter()
                         .filter(|(_, mark)| sides.contains(&mark.side))
