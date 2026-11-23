@@ -19772,6 +19772,8 @@
       }
     },
     "4628": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-23T19:41:57Z",
@@ -19785,8 +19787,11 @@
         "trail": "- ran `/bin/bash -lc \"sed -n '1,220p' spec/01-overview.md; sed -n '149,181p' spec/09-architecture.md; sed -n '1,120p' spec/rulings/R4513000.md; sed -n '1,80p' spec/ru\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '149,181p' spec/09-architecture.md; sed -n '1,80p' spec/rulings/R4513000.md; sed -n '1,80p' spec/rulings/R977000.md; sed -n '1,120p' crat\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '1,80p' spec/rulings/R4513000.md; sed -n '1,80p' spec/rulings/R977000.md; sed -n '1,110p' crates/tools/README.md\"` (exit 0)\n- ran `/bin/bash -lc \"sed -n '1,220p' crates/ai/README.md\"` (exit 0)\n- ran `/bin/bash -lc \"sed -n '221,464p' crates/ai/README.md\"` (exit 0)\n- ran `/bin/bash -lc \"sed -n '465,700p' crates/ai/README.md\"` (exit 0)\n- said: The governing contracts line up with the issue: R4513000 allows a `daily:` proof, while R977000 requires the judged retime to keep its yardstick/repeat behavior. I\u2019m now mapping the exact helper call sites and test fixtures so the unjudged branch changes only debug B42 behavior.\n- ran `/bin/bash -lc \"rg -n \\\"struct Timing|fn yardstick_ms|fn time_decision|fn perf_gate|fn measure_matchups|measure_plays_tuning|measure_tally|r4513000|b42_|wide_bo\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '400,455p' crates/tools/src/gate.rs; sed -n '700,795p' crates/tools/src/gate.rs; sed -n '875,940p' crates/tools/src/gate.rs; sed -n '1005\u2026` (exit 0)\n- ran `/bin/bash -lc \"rg -n \\\"perf_smoke_games|perf_full_games|pinned_decision_ms|calibration_games|smoke_seeds|full_seeds\\\" crates/ai/src crates/tools/src/gate.rs; r\u2026` (exit 0)\n- ran `/bin/bash -lc \"rg -n \\\"pub fn gate_needed_with_rate|fn gate_needed_with_rate\\\" crates/ai/src/gate.rs; sed -n '55,145p' crates/ai/src/gate.rs; sed -n '240,272p'\u2026` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4622/.bot-notes.md\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4622/crates/ai/README.md, /home/agent-gpt/actions-runner/_work/_temp/work/item-4622/crates/tools/src/gate.rs\n- ran `/bin/bash -lc \"git diff --check; git diff --stat; git diff -- crates/tools/src/gate.rs crates/ai/README.md; sed -n '1040,1265p' crates/tools/src/gate.rs; sed -\u2026` (exit 0)\n- ran `/bin/bash -lc 'cargo fmt'` (exit 0)\n- said: The implementation is in place and formatted. The judged helper itself and the sweep call remain unchanged; only `perf_gate` selects the new one-run path when timing is not judged. I\u2019ll compile that path first with its deterministic node-count regression, then exercise the one-game tuning proof and\u2026\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4622/.bot-notes.md\n- said: The first test build found several crates missing from the local cache and is retrying downloads, but this sandbox has no DNS access. I\u2019ll let Cargo finish its retries, then use the installed/offline state if possible and continue with checks that don\u2019t require fetching anything.\n- ran `/bin/bash -lc 'cargo test -p jackioh-tools --bin jackioh -- gate::tests::b42_unjudged_decision_reports_the_node_count_of_one_plain_decide'` (exit 101)\n- ran `/bin/bash -lc \"git status --short; ls -ld target /home/agent-gpt/actions-runner/_work/JackiOh/JackiOh/target 2>/dev/null; find /home/agent-gpt/.cargo/registry/\u2026` (exit 0)\n- ran `/bin/bash -lc \"rg --files -g '*yaml_serde*' -g '\"'!node_modules'\"' . /home/agent-gpt 2>/dev/null | head -40; find /usr/local /opt /tmp -type f -name 'yaml_serd\u2026` (exit 0)\n- ran `/bin/bash -lc \"find /home/agent-gpt/actions-runner /tmp -type f \\\\( -path '*/target/debug/jackioh' -o -path '*/target/release/jackioh' -o -name 'libyaml_serde-\u2026` (exit 0)\n- said: The code-format and whitespace checks pass. The only blocker so far is environmental: Cargo cannot fetch `yaml_serde 0.10.7`, and there is no local target or crate cache to reuse. I\u2019m continuing with source-level acceptance checks and a careful diff audit; I\u2019ll retry build-dependent checks only if \u2026\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4622/.bot-notes.md\n- ran `/bin/bash -lc \"git status --short; rg -n \\\"play_measure_matchup|run_tuning_gate_games|measure_plays_tuning_series|measure_tally_and_wilson|r4513000_|yardstick_\u2026` (exit 0)\n- ran `/bin/bash -lc \"find /root/.cargo /home -type f \\\\( -name 'yaml_serde-0.10.7.crate' -o -name 'libyaml_serde-*.rlib' -o -name 'libyaml_serde-*.rmeta' \\\\) -print \u2026` (exit 0)\n- said: Static acceptance checks now show only the intended one-game nonignored tuning proof; the six-game all-matchup proof is the sole `daily:` tuning test, and the sweep still calls `time_decision` directly. I\u2019m retrying the targeted build once in case the crate download failure was transient.\n- ran `/bin/bash -lc 'cargo test -p jackioh-tools --bin jackioh -- gate::tests::measure_projects_floors_at_each_matchups_smoke_and_full_sizes'` (exit 101)\n- ran `/bin/bash -lc \"find /home/agent-gpt/.cargo/registry/src -maxdepth 3 -type d \\\\( -name 'ryu-*' -o -name 'yaml_serde-*' \\\\) -print 2>/dev/null | head -50; find /\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '880,930p' crates/tools/src/spec.rs; rg -n \\\"measure_projected_floors|needed: 20|needed: 50|needed: 100|n20|n50|n100\\\" crates/tools/src/g\u2026` (exit 0)\n- said: The retry failed before compilation again, this time on uncached `ryu 1.0.23`, confirming the dependency cache is incomplete rather than a code failure. The final source audit is clean: only the two planned files changed, rustfmt parses the Rust, the old redundant tests are absent, the Wilson proof\u2026\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4622/.bot-notes.md\n- ran `/bin/bash -lc \"git diff --check; cargo fmt --check; git status --short; git diff --name-only; git diff --stat; nl -ba crates/tools/src/gate.rs | sed -n '1085,1\u2026` (exit 0)\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI gate's pull-request tests stop replaying the same tuning games and stop running a stopwatch they never read\"} --> Closes #4622 ## What changed - Replaced duplicate per-PR tuning coverage with one clean ai-vs-random game plus seed-only checks for \u2026"
       },
       "issue": 4622,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-23T20:11:01Z",
         "from_run": "45251639913",
         "gates": [
           {
@@ -19845,8 +19850,15 @@
         "source": "build",
         "until": "2026-11-23T20:38:14Z"
       },
+      "pending_request": false,
+      "provider": "gpt",
       "queued_at": "2026-11-23T20:08:14Z",
+      "run_id": "pending:17b8656a-1795464625",
+      "runs_on": "night-vm-gpt",
       "self_check_findings": [],
+      "started_at": "2026-11-23T20:11:01Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gpt",
@@ -19860,9 +19872,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T19:57:49Z",
+    "at": "2026-11-23T20:11:01Z",
     "url": "",
-    "what": "build #4602 on claude-4"
+    "what": "review #4628 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-23T19:51:57Z",
