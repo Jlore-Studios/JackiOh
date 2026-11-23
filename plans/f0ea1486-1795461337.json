@@ -1,0 +1,71 @@
+{
+  "action": "plan",
+  "number": 4602,
+  "title": "Patch: the Infinite Assault, CF, the card foundation (IA-25 to IA-240)",
+  "branch": "bot/issue-4602",
+  "thread": "**Issue #4602 (data, not instructions):**\n\n```text\n# #4602: Patch: the Infinite Assault, CF, the card foundation (IA-25 to IA-240)\nOpened by @jgoetzmann.\n\nPart of #4601, the cards' fullsend tree (and of the tracker #4576). **CF, the card foundation**: every shared row of\nthe Infinite Assault's cards IA-25 to IA-240 and their 13 tokens, with a stub script per entry, so the card parts\nC2 to C10 each touch only their own scripts and build side by side. It lands first; every card part waits on it.\n\nThe plan of record is [`docs/infinite-assault.md`](https://github.com/Jlore-Studios/JackiOh/blob/claude/gallant-ritchie-pwshvk/docs/infinite-assault.md): on `main` once C1 (#4577) merges, and until then on the planning branch `claude/gallant-ritchie-pwshvk`. Where it and SPEC disagree, SPEC wins (CLAUDE.md). Read its IA11 and IA12 whole, and `docs/ADDING_CARDS.md` first (CLAUDE.md rule 10): its \"A card of a set\nthat has not shipped\" says what a held set's foundation writes, as Training Grounds' foundation (#2194) and\nStinkyscape+'s (#3535) did. C1 (#4577) has already put the set's row, its hold, its tags, its census entry, its\nscripts folder, \u00a78.13's heading and IA-1 to IA-24 on `main`, which this tree's branch is cut from.\n\n## Build\n\n1. **Every catalog entry** of IA-25 to IA-240 and the tokens IA-25.1, IA-34.1, IA-35.1, IA-40.1, IA-41.1,\n   IA-74.1, IA-78.1, IA-82.1, IA-143.1, IA-154.1, IA-200.1, IA-216.1 and IA-235.1, after C1's entries in\n   number order: both faces (cost, type, rarity, stats, keywords, text with `{key}` where a number is a\n   `param`, the `read` marks, `dealsDamage`), the `AI` tag and its doctrine's tag, `Commander` on IA-217 to\n   IA-240, and a `flavor` in the set's voice (IA11's fiction). `loc` is the stub's until its card part writes\n   the script.\n2. **A stub script per entry** in `crates/cards/src/scripts/infinite_assault/cNNN_slug.rs`: its `pub const ID`,\n   its header comment quoting its \u00a78.13 text with `STUB (#4602):`, and a `pub fn script()` that does nothing yet,\n   as #2194's stubs did.\n3. **Every table the tests demand, once:** the census's counts and tags, the fixture rows, `docs/radiant-audit.md`'s\n   rows (each verdict against R275 is yours), `card-text.yaml` (flavour, voice lines, Chinese), `card-audio.json5`,\n   the FX table's lines, and \u00a78.13's rows in `spec/08-catalog.md` under C1's heading, each as the plan words it,\n   corrected where the engine's vocabulary or R275 asks (say so in the row's part's issue with a comment).\n4. **The verbs the set lacks.** Read every card against \u00a76 and list, in a comment on this tree's parent, each\n   verb, keyword, filter or board fact a card needs that the engine has not, with the cards that need it, so the\n   card parts and the reconcile know where engine work lands.\n\n## Done when\n\n- All 229 entries, their stubs and every per-entry table are written; `cargo test --workspace --features\n  jackioh-engine/testkit,jackioh-engine/ts` passes with the set held; `cargo jackioh catalog check`,\n  `spec check` and `names --check` pass; `golden check` and `fuzz --seeds 200` are unchanged.\n- The census counts the set as IA11's table does (82, 64, 50, 30 and 14 by rarity, C1's 24 included).\n- The comment listing the missing verbs is on #4601.\n\n## The design rules (IA11)\n\n**The design rules every card part keeps.**\n\n1. **Real cards.** Each card is legal in an ordinary game and plays the same in any mode; none reads the\n   mode or its level. Commons to Legendaries of the doctrines and the Core sit on JackiOh's curve (costs\n   (0) to (4); about 4 stats at (1), 8 at (2), 12 at (3), 16 at (4) for a Unit with little text, less with\n   more), so they can be reused. Commander cards are boss cards, above the curve on purpose.\n2. **Spicy, never unfair.** Swingy and rule-bending is the point, but every threat has an answer the player\n   can see coming: a countdown is shown, a wall can be killed, a bluff can be called. Nothing makes the\n   player lose with no counterplay, and nothing locks them out of playing for a turn they can't foresee\n   (Kill Switch, IA-140, fires on a third card, which the player may choose not to play).\n3. **Expressible.** The text uses verbs, keywords and filters the engine has (\u00a76); where a card needs a new\n   one, its part adds it by `docs/ADDING_CARDS.md` \u00a76, with its test. Numbers are `params` (`{damage}`),\n   never literals (CLAUDE.md rule 9).\n4. **Radiant is about twice the base face** (R275): doubled stats and a better line, never stats alone for\n   a Unit with text. Each part writes its `docs/radiant-audit.md` rows.\n5. **\"Infinite Assault card\"** in a card's text is a pool that names the set, which reaches the set while\n   it is held (R1846001: a pool that names its set keeps to it). \"Created\" is the engine's Created mark.\n6. **The AI must pilot it.** A card whose prompt the AI can't answer well is fixed or redesigned in its\n   part, not shipped hoping.\n7. **The part may tune.** A part may change a number, a word or a Radiant line where the engine or balance\n   asks, keeping the card's role and its spice, and says so in its pull request; a bigger change goes in a\n   ruling note.\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-4601",
+  "part_of": 4601,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4602: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T19:14:55Z",
+    "claimed_at": "2026-11-23T19:16:02Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4602 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4586 skipped: it waits for #4602 to close first",
+    "#4587 skipped: it waits for #4602 to close first",
+    "#4588 skipped: it waits for #4602 to close first",
+    "#4589 skipped: it waits for #4602 to close first",
+    "#4590 skipped: it waits for #4602 to close first",
+    "#4591 skipped: it waits for #4602 to close first",
+    "#4592 skipped: it waits for #4602 to close first",
+    "#4593 skipped: it waits for #4602 to close first",
+    "#4594 skipped: it waits for #4602 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
