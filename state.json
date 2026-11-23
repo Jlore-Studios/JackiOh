@@ -40339,6 +40339,12 @@
         "number": 4638,
         "title": "Patch: a pull request replays the pinned fuzz failures its cards appear in",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T22:57:18Z",
+        "number": 4640,
+        "title": "Patch: every daily-only test's named per-PR stand-in must exist",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
