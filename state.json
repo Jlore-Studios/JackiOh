@@ -18948,6 +18948,8 @@
       }
     },
     "4620": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-23T18:00:22Z",
@@ -18961,8 +18963,11 @@
         "trail": "- Tests still building (WASM pretest takes a while). Waiting on their result before the remaining verification runs.The WASM pretest build is still compiling (first build in this worktree, genuinely busy). Waiting for the test result to arrive.\n- Spec check still building the tools binary; fmt and eslint are clean. Waiting on its result.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: a tab left open across an update loads the new version at its next menu move, instead of failing to open a screen\"} -->\n- ## What changed and why\n- A tab left open across a deploy now notices the new build when it wakes and loads it in place of the next menu-to-menu move, landing on the requested screen up to date. Boards are never interrupted, and a screen that still fails on a stale chunk reloads once by itself instead of blaming the connect\u2026\n- - Build names itself: `static-pages.ts` writes `dist/version.json` (`VERSION_FILE`, `versionEntryOf`) naming the entry script beside `404.html`; `/version.json` is served `no-cache` (`public/_headers`).\n- - New `src/net/update.ts` (import-free): `UPDATE_CHECK_MIN_MS` (10 min), `VERSION_PATH`, `UPDATE_RELOAD_KEY`, `runningEntry`, `readDeployedEntry` (never throws), `checkForUpdate` (production only, interval-gated, latching), `noteReloadedEntry` (sessionStorage loop guard), `resetUpdateForTests`, plu\u2026\n- - `navigate.ts` `go()`: update waiting + no board \u2192 full page load (assign, replace for `replace`); otherwise in place. Leave guard untouched, still holds first. `boardShown.ts` gained `boardShownNow()`.\n- - `RouteErrorBoundary`: chunk-load failure + newer build \u2192 \"JackiOh was just updated. Loading the new version\u2026\" + one reload; repeat entry or same build \u2192 today's panel and wording. Boot wires `pageWake(() => void checkForUpdate())`.\n- - zh-CN entry for the new sentence; ruling `R4605000` + `spec/pending/4605.md`; one paragraph in `apps/web/README.md`; `docs/deploy-cloudflare.md` \u00a77 first bullet now bounds \"a while\".\n- ## How it was tested\n- - `pnpm --dir apps/web test src/static-pages.test.ts src/net/cloudflare-config.test.ts src/net/update.test.ts src/net/navigate.test.ts src/net/navigate.test.tsx src/i18n/i18n.test.ts src/wording.test.ts src/in-app-links.test.ts` \u2014 8 files, 94 tests, all pass. `src/routes/shell-load-failed.test.tsx`\u2026\n- - `pnpm --dir apps/web typecheck` passes (needs `NODE_OPTIONS=--max-old-space-size=6144` on this 7 GB box; default 2 GB heap OOMs \u2014 environmental, also true without my change).\n- - `cargo jackioh spec check`: ok (2415 rulings, 6052 proofs, citations, links). `cargo fmt --check` clean. `eslint` on all changed files clean. No Rust or catalog touched, so no clippy/cargo-test/catelog gates apply; `apps/web/src/wire` has no diff.\n- ## Decisions the issue did not settle (alternative rejected)\n- - No `installUpdateCheck` in `update.ts`: its `pageWake` import dragged `game/net.ts` into the Vite config chain (`vite.config` \u2192 `static-pages` \u2192 `navigate`), which bundles without the `@jackioh/*` aliases and broke *every* web test at config load. `update.ts` imports nothing; `main.tsx` wires the\u2026\n- - `location.assign/replace/reload` are non-writable, non-configurable own properties in jsdom (probed), so unspyable: loads go through `fullLoadPage`/`reloadPage` seams, watched via the repo's `vi.mock`+`importOriginal` pattern. Rejected: redefining `window.location`.\n- - Boundary tests render `RouteErrorBoundary` with a child throwing the chunk message directly, because the file's import-throwing login mock makes Vitest reject with its own mock error instead of the chunk message. Rejected: changing the shared login mock (would touch B40/R193).\n- - `waiting` latches; storage errors fail closed to the panel; `checkForUpdate(now, mode)` params default to live values so tests drive it without env stubs.\n- ## Look twice\n- - The seams are one-liners verified at call sites only \u2014 jsdom cannot observe a real page load.\n- - The first menu move after an update skips the R2117000 cross-fade and starts with an empty R2125000 read cache (one extra read per screen, once), as the issue accepts.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4605 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4605/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4605,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-23T18:34:49Z",
         "from_run": "45233716796",
         "gates": [
           {
@@ -19021,8 +19026,15 @@
         "source": "build",
         "until": "2026-11-23T19:03:44Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-23T18:33:44Z",
+      "run_id": "pending:9bab9a09-1795458863",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-23T18:34:49Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -19036,9 +19048,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T18:17:55Z",
+    "at": "2026-11-23T18:34:49Z",
     "url": "",
-    "what": "suggestions (client) on claude-8"
+    "what": "review #4620 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T18:24:50Z",
