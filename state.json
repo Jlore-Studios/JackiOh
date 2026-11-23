@@ -39491,6 +39491,12 @@
         "number": 4514,
         "title": "Patch: the AI rules out the traps a face-down card cannot be, by the public events it has sat through without revealing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T01:09:57Z",
+        "number": 4533,
+        "title": "Patch: the AI's reply spends the opponent's Credits and Trades away its dead Tradables",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
