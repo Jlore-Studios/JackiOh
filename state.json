@@ -16296,6 +16296,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-23T01:04:13Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 2,
       "waiting_comment": 7088672989
