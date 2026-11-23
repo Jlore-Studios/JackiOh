@@ -23,15 +23,21 @@
 //! contributes no win and is counted and named by its deal, fork and pair. Arms assemble in
 //! `(deal, fork, pair, arm)` order, so the tally is byte-identical whatever the thread count.
 
+use std::collections::BTreeMap;
 use std::io::Write;
 use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::path::Path;
+use std::sync::Mutex;
 
-use anyhow::bail;
-use jackioh_ai::{AI_SKILL_MAX, SearchBudget};
-use jackioh_engine::{Action, ActionBody, GameState, PerPlayer, PlayerId, ReplayInput, Rng, fold};
+use anyhow::{Context, bail};
+use jackioh_ai::{AI_GATE_BUDGET, AI_SKILL_MAX, SearchBudget};
+use jackioh_engine::{
+    Action, ActionBody, GameRecord, GameState, PerPlayer, PlayerId, ReplayInput, Rng, fold,
+};
 use rayon::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
+use crate::agent::AgentInfo;
 use crate::arena::{
     AgentSpec, ArenaGame, ArenaOutcome, Entrant, FinishCtx, Live, SCREEN_EXTEND_DEALS, SCREEN_MAX_GAMES,
     SCREEN_MIN_DECIDED, accept, append_records, choose_for, duel_line, entrant_at, finish_from, game_setup,
@@ -47,6 +53,78 @@ pub(crate) const FORK_ROLLOUTS: usize = 8;
 /// R4397000: the trunk deals the fork screen plays by default, each once: the dev set's deals
 /// (`training/improve.md`, How you measure), the same deals the paired screen plays twice.
 pub(crate) const FORK_TRUNK_DEALS: i32 = 200;
+
+/// R4607000: the save file's format version, in its header: a save written by another version is
+/// refused, since its lines may read differently.
+pub(crate) const FORK_SAVE_VERSION: u32 = 1;
+
+/// R4607000: the save file's first line: what the run that wrote it screened, so running the same
+/// command again on the file refuses a run that would play something else, naming the field.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SaveHeader {
+    pub v: u32,
+    pub set: String,
+    pub games: i32,
+    pub extend: bool,
+    pub budget: SearchBudget,
+    pub fork_rollouts: usize,
+    pub fork_max_per_game: usize,
+    pub catalog: String,
+    pub a_label: String,
+    pub b_label: String,
+    /// The agents' `info` answers: `None` for `random`, which is no generation of the AI.
+    pub a_info: Option<AgentInfo>,
+    pub b_info: Option<AgentInfo>,
+}
+
+/// R4607000: one saved fork: where the candidate differed and the two actions it is played both
+/// ways from.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SavedFork {
+    pub seat: PlayerId,
+    pub at_move: usize,
+    pub candidate: Option<ActionBody>,
+    pub control: Option<ActionBody>,
+}
+
+/// R4607000: what one rollout arm came to, in its fork's `(pair, arm)` slot order (the
+/// candidate's arm then the control's, pair by pair). A faulted arm contributes no win.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SavedArm {
+    pub won: bool,
+    pub fault: Option<String>,
+}
+
+/// R4607000: one finished deal as the save file holds it: its number, its duel line (which
+/// carries the decision times, so the saved string is replayed, never recomputed), its record,
+/// its trunk hash, its forks and each arm's win and fault. `rollouts` counts the arms that
+/// played (faulted ones included), as the tally's `rollouts` does: slots that faulted before
+/// they could play are faults but no rollouts.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct DealLine {
+    pub deal: i32,
+    pub duel: String,
+    pub record: Option<GameRecord>,
+    pub hash: String,
+    pub forks: Vec<SavedFork>,
+    pub probe_faults: Vec<String>,
+    pub arms: Vec<SavedArm>,
+    pub rollouts: usize,
+}
+
+/// R4607000: what resuming a save played and read: the tally and the duel lines in deal
+/// order, and how many games this call played (none when the save was already finished). The
+/// records stay in the save file, which is the record store.
+#[derive(Debug)]
+pub(crate) struct SaveReport {
+    pub tally: String,
+    pub duels: Vec<String>,
+    pub games_played: usize,
+}
 
 /// What a scripted probe answers with: the deal, the move and the control's final played body.
 type ScriptedAnswer = fn(i32, usize, &ActionBody) -> Option<ActionBody>;
@@ -421,6 +499,16 @@ pub(crate) fn play_pair(
     Ok((arms.next().unwrap(), arms.next().unwrap()))
 }
 
+/// R4607000: what one rollout slot came to: whether its arm won and faulted, and whether it
+/// played at all. A slot that faulted before it could play (a refold error, no move, no legal
+/// replacement, a refused reduce) is a fault but no rollout; an arm that played and faulted on
+/// the way is both.
+struct SlotDone {
+    won: bool,
+    fault: Option<String>,
+    played: bool,
+}
+
 /// Plays every fork's pairs and reads each fork's edge (R4397000). Slots build sequentially in
 /// `(deal, fork, pair, arm)` order; arms play on rayon's pool but assemble in that same order, so
 /// completion order never reaches the output. Returns the edges in fork order, the faults in slot
@@ -429,6 +517,48 @@ pub(crate) fn play_pair(
 pub(crate) fn play_forks(
     jobs: &[(&ArenaOutcome, &ForkPoint)],
 ) -> anyhow::Result<(Vec<ForkEdge>, Vec<String>, usize)> {
+    let grid = play_arm_grid(jobs)?;
+    let mut edges = Vec::with_capacity(jobs.len());
+    let mut faults = Vec::new();
+    let mut rollouts = 0usize;
+    for (index, row) in grid.iter().enumerate() {
+        let (_, fork) = jobs[index];
+        edges.push(ForkEdge {
+            deal: fork.deal,
+            edge: edge_of_slots(&row.iter().map(|slot| slot.won).collect::<Vec<_>>()),
+        });
+        for slot in row {
+            if let Some(fault) = &slot.fault {
+                faults.push(fault.clone());
+            }
+            rollouts += usize::from(slot.played);
+        }
+    }
+    Ok((edges, faults, rollouts))
+}
+
+/// R4607000: one fork's edge from its arms' wins in `(pair, arm)` slot order: the forking seat's
+/// candidate-arm wins less its control-arm wins, over `FORK_ROLLOUTS` (-1 to 1). Slots run (cand,
+/// ctl) per pair, so even slots are the candidate's arms. Shared by the live tally and the saved
+/// one, so the two cannot diverge.
+fn edge_of_slots(won: &[bool]) -> f64 {
+    let (mut cand_wins, mut ctl_wins) = (0i32, 0i32);
+    for (slot, win) in won.iter().enumerate() {
+        if *win {
+            if slot % 2 == 0 {
+                cand_wins += 1;
+            } else {
+                ctl_wins += 1;
+            }
+        }
+    }
+    f64::from(cand_wins - ctl_wins) / FORK_ROLLOUTS as f64
+}
+
+/// Plays every fork's pairs into their slots: one `SlotDone` per `(pair, arm)` slot, in fork
+/// order. What assembly order the pool finishes in never reaches the grid. R4607000: the save
+/// path plays one deal's forks through this, so a saved arm is the arm the live tally read.
+fn play_arm_grid(jobs: &[(&ArenaOutcome, &ForkPoint)]) -> anyhow::Result<Vec<Vec<SlotDone>>> {
     let mut slots: Vec<Vec<ArmSlot>> = jobs
         .iter()
         .map(|(outcome, fork)| fork_slots(outcome, fork))
@@ -444,7 +574,6 @@ pub(crate) fn play_forks(
             }
         }
     }
-    let rollouts = runs.len();
     let mut grid: Vec<Vec<Option<ArmOutcome>>> = slots
         .iter()
         .map(|arms| arms.iter().map(|_| None).collect())
@@ -456,36 +585,33 @@ pub(crate) fn play_forks(
     for (fork, slot, done) in outcomes {
         grid[fork][slot] = Some(done);
     }
-    let mut edges = Vec::with_capacity(jobs.len());
-    let mut faults = Vec::new();
-    for (index, (arms, row)) in slots.iter_mut().zip(grid.iter()).enumerate() {
-        let (_, fork) = jobs[index];
-        // Slots run (cand, ctl) per pair, so even slots are the candidate's arms.
-        let (mut cand_wins, mut ctl_wins) = (0i32, 0i32);
-        for (slot, arm) in arms.iter_mut().enumerate() {
-            if let ArmSlot::Fault(fault) = arm
-                && !fault.is_empty()
-            {
-                faults.push(std::mem::take(fault));
-            }
-            if let Some(done) = &row[slot] {
-                if let Some(fault) = &done.fault {
-                    faults.push(fault.clone());
-                } else if done.won {
-                    if slot % 2 == 0 {
-                        cand_wins += 1;
-                    } else {
-                        ctl_wins += 1;
-                    }
-                }
+    let mut out = Vec::with_capacity(jobs.len());
+    for (arms, row) in slots.iter().zip(grid.iter()) {
+        let mut fork_done = Vec::with_capacity(arms.len());
+        for (arm, done) in arms.iter().zip(row.iter()) {
+            match (arm, done) {
+                (_, Some(done)) => fork_done.push(SlotDone {
+                    won: done.won,
+                    fault: done.fault.clone(),
+                    played: true,
+                }),
+                (ArmSlot::Fault(fault), None) if !fault.is_empty() => fork_done.push(SlotDone {
+                    won: false,
+                    fault: Some(fault.clone()),
+                    played: false,
+                }),
+                // No playable arm and no fault: no slot builder leaves this, but an empty
+                // placeholder must not read as a played arm.
+                _ => fork_done.push(SlotDone {
+                    won: false,
+                    fault: None,
+                    played: false,
+                }),
             }
         }
-        edges.push(ForkEdge {
-            deal: fork.deal,
-            edge: f64::from(cand_wins - ctl_wins) / FORK_ROLLOUTS as f64,
-        });
+        out.push(fork_done);
     }
-    Ok((edges, faults, rollouts))
+    Ok(out)
 }
 
 /// The fork screen's tally, closing its trunk duel lines: the trunk games and forks, the live
@@ -559,6 +685,402 @@ pub(crate) fn fork_tally(
     }
 }
 
+/// R4607000: plays one deal as a unit: its trunk game, then its forks' arms. Returns the
+/// deal's save line: the duel line with its decision times, the game record, the trunk hash,
+/// the forks and each arm's win and fault.
+pub(crate) fn play_deal(game: &ArenaGame, mut probe: Probe) -> anyhow::Result<DealLine> {
+    probe.deal = game.n;
+    let (outcome, points, probe_faults) = play_game_probed(game, Some(probe))?;
+    let jobs: Vec<(&ArenaOutcome, &ForkPoint)> = points.iter().map(|point| (&outcome, point)).collect();
+    let grid = play_arm_grid(&jobs)?;
+    let mut arms = Vec::new();
+    let mut rollouts = 0usize;
+    for row in &grid {
+        for slot in row {
+            arms.push(SavedArm {
+                won: slot.won,
+                fault: slot.fault.clone(),
+            });
+            rollouts += usize::from(slot.played);
+        }
+    }
+    Ok(DealLine {
+        deal: game.n,
+        duel: duel_line(&outcome, replays(&outcome)?)?,
+        record: crate::arena::game_record(&outcome)?,
+        hash: outcome.hash.clone(),
+        forks: points
+            .iter()
+            .map(|point| SavedFork {
+                seat: point.seat,
+                at_move: point.at_move,
+                candidate: point.candidate.clone(),
+                control: point.control.clone(),
+            })
+            .collect(),
+        probe_faults,
+        arms,
+        rollouts,
+    })
+}
+
+/// R4607000: appends one finished deal's line to the save file and flushes it, so a killed run
+/// loses at most its unfinished deals.
+fn append_deal_line(path: &Path, line: &DealLine) -> anyhow::Result<()> {
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .with_context(|| format!("arena: cannot open {}", path.display()))?;
+    writeln!(file, "{}", serde_json::to_string(line)?)?;
+    file.flush()
+        .with_context(|| format!("arena: cannot write {}", path.display()))?;
+    Ok(())
+}
+
+/// R4607000: reads a save file: its header and its deal lines by deal number. A last line that
+/// does not parse is the torn tail a killed run leaves and is dropped with a warning; a failing
+/// earlier line and a repeated deal number are errors naming the line, since the file is not the
+/// run's own torn tail.
+fn load_save(path: &Path) -> anyhow::Result<(SaveHeader, BTreeMap<i32, DealLine>, bool)> {
+    let text =
+        std::fs::read_to_string(path).with_context(|| format!("arena: cannot read {}", path.display()))?;
+    let mut lines = text.lines();
+    let header = lines
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("arena: save {} is empty", path.display()))?;
+    let header: SaveHeader = serde_json::from_str(header)
+        .with_context(|| format!("arena: save {}'s header does not parse", path.display()))?;
+    let rest: Vec<&str> = lines.collect();
+    let mut map = BTreeMap::new();
+    let mut torn = false;
+    for (index, line) in rest.iter().enumerate() {
+        // The header is line 1, so the first deal line is line 2.
+        let at = index + 2;
+        let is_last = index + 1 == rest.len();
+        match serde_json::from_str::<DealLine>(line) {
+            Ok(deal) => {
+                if map.insert(deal.deal, deal).is_some() {
+                    bail!("arena: save {} repeats a deal on line {at}", path.display());
+                }
+            }
+            Err(_) if is_last => {
+                eprintln!(
+                    "arena: save {}'s last line is torn and is played again",
+                    path.display()
+                );
+                torn = true;
+            }
+            Err(error) => {
+                bail!(
+                    "arena: save {}'s line {at} does not parse: {error}",
+                    path.display()
+                );
+            }
+        }
+    }
+    for (deal, line) in &map {
+        if line.arms.len() != line.forks.len() * FORK_ROLLOUTS * 2 {
+            bail!(
+                "arena: save {}'s deal {deal} holds {} arms for {} forks",
+                path.display(),
+                line.arms.len(),
+                line.forks.len()
+            );
+        }
+    }
+    Ok((header, map, torn))
+}
+
+/// R4607000: refuses a save that is not this run's, naming the first field that differs, before
+/// any game is played.
+fn check_header(saved: &SaveHeader, expected: &SaveHeader, path: &Path) -> anyhow::Result<()> {
+    let at = path.display();
+    if saved.v != expected.v {
+        bail!("arena: save {at} is version {}, not {}", saved.v, expected.v);
+    }
+    if saved.set != expected.set {
+        bail!("arena: save {at} is for set {}, not {}", saved.set, expected.set);
+    }
+    if saved.games != expected.games {
+        bail!(
+            "arena: save {at} is for --games {}, not {}",
+            saved.games,
+            expected.games
+        );
+    }
+    if saved.extend != expected.extend {
+        bail!(
+            "arena: save {at} is for --extend {}, not {}",
+            saved.extend,
+            expected.extend
+        );
+    }
+    if saved.budget != expected.budget {
+        bail!(
+            "arena: save {at} is for budget {:?}, not {:?}",
+            saved.budget,
+            expected.budget
+        );
+    }
+    if saved.fork_rollouts != expected.fork_rollouts {
+        bail!(
+            "arena: save {at} is for FORK_ROLLOUTS {}, not {}",
+            saved.fork_rollouts,
+            expected.fork_rollouts
+        );
+    }
+    if saved.fork_max_per_game != expected.fork_max_per_game {
+        bail!(
+            "arena: save {at} is for FORK_MAX_PER_GAME {}, not {}",
+            saved.fork_max_per_game,
+            expected.fork_max_per_game
+        );
+    }
+    if saved.catalog != expected.catalog {
+        bail!(
+            "arena: save {at} is for catalog {}, not {}",
+            saved.catalog,
+            expected.catalog
+        );
+    }
+    if saved.a_label != expected.a_label {
+        bail!(
+            "arena: save {at} is for candidate {}, not {}",
+            saved.a_label,
+            expected.a_label
+        );
+    }
+    if saved.b_label != expected.b_label {
+        bail!(
+            "arena: save {at} is for control {}, not {}",
+            saved.b_label,
+            expected.b_label
+        );
+    }
+    if saved.a_info != expected.a_info {
+        bail!("arena: save {at} is for another candidate's info, not this one's");
+    }
+    if saved.b_info != expected.b_info {
+        bail!("arena: save {at} is for another control's info, not this one's");
+    }
+    Ok(())
+}
+
+/// R4607000: the identity check: plays the first saved deal's trunk again and refuses the file
+/// unless its hash and its forks match. This is one game, and it catches a rebuilt binary of
+/// another AI behind the same labels.
+fn identity_check(game: &ArenaGame, probe: Probe, saved: &DealLine) -> anyhow::Result<()> {
+    let (outcome, points, _) = play_game_probed(game, Some(probe))?;
+    if outcome.hash != saved.hash {
+        bail!(
+            "arena: save: deal {}'s trunk hash is {}, not the saved {}",
+            saved.deal,
+            outcome.hash,
+            saved.hash
+        );
+    }
+    let same = points.len() == saved.forks.len()
+        && points.iter().zip(saved.forks.iter()).all(|(point, fork)| {
+            point.seat == fork.seat
+                && point.at_move == fork.at_move
+                && fork_key(&point.candidate) == fork_key(&fork.candidate)
+                && fork_key(&point.control) == fork_key(&fork.control)
+        });
+    if !same {
+        bail!(
+            "arena: save: deal {}'s forks differ from the saved ones",
+            saved.deal
+        );
+    }
+    Ok(())
+}
+
+/// R4607000: the saved deals' edges in deal order, recomputed from the saved arms through the
+/// same `edge_of_slots` the live tally reads.
+fn edges_of(lines: &[&DealLine]) -> Vec<ForkEdge> {
+    let mut edges = Vec::new();
+    for line in lines {
+        for fork in 0..line.forks.len() {
+            let arms = &line.arms[fork * FORK_ROLLOUTS * 2..(fork + 1) * FORK_ROLLOUTS * 2];
+            edges.push(ForkEdge {
+                deal: line.deal,
+                edge: edge_of_slots(&arms.iter().map(|arm| arm.won).collect::<Vec<_>>()),
+            });
+        }
+    }
+    edges
+}
+
+/// R4607000: the tally and the duel lines from the saved deals' lines in deal order: what
+/// one uninterrupted run prints. Probe faults read in deal order, then arm faults in slot
+/// order, as the live screen's single batch orders them; the duel lines are the saved strings,
+/// since they carry the decision times.
+fn tally_from_lines(header: &SaveHeader, lines: &[&DealLine]) -> anyhow::Result<(String, Vec<String>)> {
+    let edges = edges_of(lines);
+    let rollouts = lines.iter().map(|line| line.rollouts).sum();
+    let mut faults = Vec::new();
+    for line in lines {
+        faults.extend(line.probe_faults.iter().cloned());
+    }
+    for line in lines {
+        for arm in &line.arms {
+            if let Some(fault) = &arm.fault {
+                faults.push(fault.clone());
+            }
+        }
+    }
+    let tally = fork_tally(
+        &header.a_label,
+        &header.b_label,
+        lines.len(),
+        &edges,
+        rollouts,
+        faults,
+    );
+    Ok((
+        serde_json::to_string(&tally)?,
+        lines.iter().map(|line| line.duel.clone()).collect(),
+    ))
+}
+
+/// R4607000: the next batch after `games_done` games with `live` live forks, matching the live
+/// screen's stops: the first batch plays `initial_deals`, later batches only with `--extend`,
+/// none once the screen is decided or capped. `--extend` totals count the saved deals and the
+/// new ones together, since `games_done` covers both.
+fn next_batch(games_done: i32, live: usize, extend: bool, initial_deals: i32) -> Option<(i32, i32)> {
+    if games_done == 0 {
+        return Some((1, initial_deals));
+    }
+    if !extend {
+        return None;
+    }
+    if screen_done(live, games_done) {
+        return None;
+    }
+    let len = (SCREEN_MAX_GAMES - games_done).min(SCREEN_EXTEND_DEALS);
+    if len <= 0 {
+        return None;
+    }
+    Some((games_done + 1, len))
+}
+
+/// R4607000: resumes a save file: refuses a foreign file by field name, replays nothing when the
+/// save is finished (a finished save is never read a second time, R850001), else plays the first
+/// saved deal's trunk once as an identity check and then only the deals the file is missing, in
+/// batches the live screen would stop at. Each finished deal is appended and flushed at once;
+/// readers sort by deal, so completion order never reaches the output.
+pub(crate) fn resume_save(
+    path: &Path,
+    expected: &SaveHeader,
+    base: &str,
+    b: &Entrant,
+    initial_deals: i32,
+    extend: bool,
+    make_probe: &(dyn Fn(&ArenaGame) -> anyhow::Result<Probe> + Sync),
+) -> anyhow::Result<SaveReport> {
+    let mut map: BTreeMap<i32, DealLine> = if path.exists() {
+        let (header, map, torn) = load_save(path)?;
+        check_header(&header, expected, path)?;
+        if torn {
+            // Heal the file the killed run left: the torn tail is dropped and the kept
+            // lines are rewritten in deal order, so the next append lands on whole lines.
+            let mut healed = serde_json::to_string(&header)?;
+            healed.push('\n');
+            for line in map.values() {
+                healed.push_str(&serde_json::to_string(line)?);
+                healed.push('\n');
+            }
+            std::fs::write(path, healed)
+                .with_context(|| format!("arena: cannot write {}", path.display()))?;
+        }
+        map
+    } else {
+        if let Some(dir) = path.parent()
+            && !dir.as_os_str().is_empty()
+        {
+            std::fs::create_dir_all(dir)
+                .with_context(|| format!("arena: cannot create {}", dir.display()))?;
+        }
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(path)
+            .with_context(|| format!("arena: cannot open {}", path.display()))?;
+        writeln!(file, "{}", serde_json::to_string(expected)?)?;
+        file.flush()
+            .with_context(|| format!("arena: cannot write {}", path.display()))?;
+        BTreeMap::new()
+    };
+    let live_of = |map: &BTreeMap<i32, DealLine>| {
+        edges_of(&map.values().collect::<Vec<_>>())
+            .iter()
+            .filter(|edge| edge.edge != 0.0)
+            .count()
+    };
+    let mut target = initial_deals;
+    let mut games_played = 0usize;
+    // A finished save plays nothing and reprints its tally, without even the identity game.
+    if (1..=target).all(|deal| map.contains_key(&deal))
+        && next_batch(target, live_of(&map), extend, initial_deals).is_none()
+    {
+        let (tally, duels) = tally_from_lines(expected, &map.values().collect::<Vec<_>>())?;
+        return Ok(SaveReport {
+            tally,
+            duels,
+            games_played,
+        });
+    }
+    if let Some(first) = map.keys().next().copied() {
+        let mut game = trunk_setups(b, base, first, 1)?
+            .into_iter()
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("arena: save: deal {first} has no setup"))?;
+        game.self_budget = expected.budget;
+        let saved = map[&first].clone();
+        identity_check(&game, make_probe(&game)?, &saved)?;
+    }
+    loop {
+        let missing: Vec<i32> = (1..=target).filter(|deal| !map.contains_key(deal)).collect();
+        if !missing.is_empty() {
+            let played: Vec<(i32, DealLine)> = missing
+                .par_iter()
+                .map(|&deal| {
+                    let mut game = trunk_setups(b, base, deal, 1)?
+                        .into_iter()
+                        .next()
+                        .ok_or_else(|| anyhow::anyhow!("arena: save: deal {deal} has no setup"))?;
+                    game.self_budget = expected.budget;
+                    play_deal(&game, make_probe(&game)?).map(|line| (deal, line))
+                })
+                .collect::<anyhow::Result<Vec<_>>>()?;
+            // One writer at a time, each line flushed at once; readers sort by deal.
+            static APPEND: Mutex<()> = Mutex::new(());
+            let _guard = APPEND
+                .lock()
+                .map_err(|_| anyhow::anyhow!("arena: save: the save writer is poisoned"))?;
+            for (deal, line) in played {
+                append_deal_line(path, &line)?;
+                map.insert(deal, line);
+            }
+            games_played += missing.len();
+        }
+        match next_batch(target, live_of(&map), extend, initial_deals) {
+            None => break,
+            Some((_, len)) => {
+                target += len;
+            }
+        }
+    }
+    let (tally, duels) = tally_from_lines(expected, &map.values().collect::<Vec<_>>())?;
+    Ok(SaveReport {
+        tally,
+        duels,
+        games_played,
+    })
+}
+
 /// Trunk deal games `first..first+batch`, each played once with the control on both seats: the
 /// game `game_setup` deals for the control's shadow ban on each seat, with both record labels the
 /// control's, so the records read control-vs-control honestly (R4397000).
@@ -569,6 +1091,16 @@ fn trunk_setups(b: &Entrant, base: &str, first: i32, batch: i32) -> anyhow::Resu
             game_setup(format!("{base}:{n}"), n, false, b, b)
         })
         .collect()
+}
+
+/// R4607000: an entrant's `info` answer for the save header: `None` for `random`, which is no
+/// generation of the AI.
+fn info_of(entrant: &Entrant) -> Option<AgentInfo> {
+    Some(AgentInfo {
+        generation: entrant.generation?,
+        lane: entrant.lane.clone()?,
+        shadow_ban: entrant.shadow_ban.clone(),
+    })
 }
 
 /// Plays the trunk games in parallel, each with its own candidate probe, collecting outcomes and
@@ -606,6 +1138,35 @@ pub fn run(args: crate::arena::Args) -> anyhow::Result<()> {
     let base = set.base().to_string();
     let a = entrant_at(&args.a, args.a_skill)?;
     let b = entrant_at(&args.b, args.b_skill)?;
+    // R4607000: with `--save` each finished deal is appended to the file as soon as it is done,
+    // and a rerun plays only the deals still missing. `--out` names no records file here: the
+    // save file is the record store, so resuming never files a record twice.
+    if let Some(save) = args.save.as_deref() {
+        let expected = SaveHeader {
+            v: FORK_SAVE_VERSION,
+            set: set.base().to_string(),
+            games: deals,
+            extend: args.extend,
+            budget: AI_GATE_BUDGET,
+            fork_rollouts: FORK_ROLLOUTS,
+            fork_max_per_game: FORK_MAX_PER_GAME,
+            catalog: jackioh_cards::catalog_version().to_string(),
+            a_label: a.label.clone(),
+            b_label: b.label.clone(),
+            a_info: info_of(&a),
+            b_info: info_of(&b),
+        };
+        let report = resume_save(save, &expected, &base, &b, deals, args.extend, &|game| {
+            Probe::for_game(&args.a, game.self_budget, game.n)
+        })?;
+        let mut stdout = std::io::stdout().lock();
+        for line in &report.duels {
+            writeln!(stdout, "{line}")?;
+        }
+        writeln!(stdout, "{}", report.tally)?;
+        writeln!(stdout, "{} deals in {}", report.duels.len(), save.display())?;
+        return Ok(());
+    }
     let mut trunk: Vec<ArenaOutcome> = Vec::new();
     let mut forks: Vec<(usize, ForkPoint)> = Vec::new();
     let mut faults: Vec<String> = Vec::new();
@@ -917,6 +1478,431 @@ mod tests {
         assert!(!screen_done(0, SCREEN_MAX_GAMES - 2));
     }
 
+    /// R4607000: a path of its own in the temp dir, so the tests' saves never touch the
+    /// worktree (the builder deletes the save before finishing; the tests delete theirs).
+    fn save_path(name: &str) -> std::path::PathBuf {
+        std::env::temp_dir().join(format!("jackioh-fork-save-{}-{name}.jsonl", std::process::id()))
+    }
+
+    /// R4607000: the candidate differing only at `at_move == 1`, echoing the control elsewhere:
+    /// one fork a deal, late enough that its arms are cheap.
+    fn late_fork(deal: i32, at_move: usize, control: &ActionBody) -> Option<ActionBody> {
+        if (deal, at_move) == (deal, 1) {
+            flip(deal, at_move, control)
+        } else {
+            Some(control.clone())
+        }
+    }
+
+    /// R4607000: the candidate differing only at another move, for the identity check's refusal.
+    fn other_fork(deal: i32, at_move: usize, control: &ActionBody) -> Option<ActionBody> {
+        if at_move == 0 {
+            flip(deal, at_move, control)
+        } else {
+            Some(control.clone())
+        }
+    }
+
+    /// R4607000: the tests' header: two dev-set deals at the tests' budget, self against self.
+    fn test_header(games: i32) -> SaveHeader {
+        let own = crate::agent::own_info();
+        SaveHeader {
+            v: FORK_SAVE_VERSION,
+            set: "r4607000-dev".to_string(),
+            games,
+            extend: false,
+            budget: TEST_BUDGET,
+            fork_rollouts: FORK_ROLLOUTS,
+            fork_max_per_game: FORK_MAX_PER_GAME,
+            catalog: jackioh_cards::catalog_version().to_string(),
+            a_label: "self".to_string(),
+            b_label: "self".to_string(),
+            a_info: Some(own.clone()),
+            b_info: Some(own),
+        }
+    }
+
+    /// R4607000: one header line then one line per deal, as the save file holds them.
+    fn write_save(path: &std::path::Path, header: &SaveHeader, lines: &[DealLine]) {
+        let mut text = serde_json::to_string(header).unwrap();
+        text.push('\n');
+        for line in lines {
+            text.push_str(&serde_json::to_string(line).unwrap());
+            text.push('\n');
+        }
+        std::fs::write(path, text).unwrap();
+    }
+
+    /// R4607000: the save file's deal lines, parsed.
+    fn read_lines(path: &std::path::Path) -> Vec<DealLine> {
+        let text = std::fs::read_to_string(path).unwrap();
+        text.lines()
+            .skip(1)
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect()
+    }
+
+    /// R4607000: the tests' probe factory: scripted, answering `answered`, counting its calls.
+    fn scripted_factory(
+        calls: &std::sync::atomic::AtomicUsize,
+        answered: ScriptedAnswer,
+    ) -> impl Fn(&ArenaGame) -> anyhow::Result<Probe> + Sync + '_ {
+        move |game: &ArenaGame| {
+            calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Ok(Probe::scripted(game.n, answered))
+        }
+    }
+
+    /// R4607000: a deal line as the assertions compare it: everything but the duel line, whose
+    /// decision times a rerun never reproduces.
+    fn line_without_duel(line: &DealLine) -> serde_json::Value {
+        let mut value = serde_json::to_value(line).unwrap();
+        value.as_object_mut().unwrap().remove("duel");
+        value
+    }
+
+    #[test]
+    fn r4607000_resume_after_cut_prints_the_same_tally() {
+        jackioh_cards::register_all();
+        let control = entrant(&AgentSpec::SelfAi).unwrap();
+        let header = test_header(2);
+        let base = "r4607000-cut";
+        let full = save_path("cut-full");
+        let cut = save_path("cut-cut");
+        let _ = std::fs::remove_file(&full);
+        let _ = std::fs::remove_file(&cut);
+
+        // One uninterrupted run over both deals.
+        let fresh_calls = std::sync::atomic::AtomicUsize::new(0);
+        let report = resume_save(
+            &full,
+            &header,
+            base,
+            &control,
+            2,
+            false,
+            &scripted_factory(&fresh_calls, late_fork),
+        )
+        .unwrap();
+        assert_eq!(report.games_played, 2);
+        assert_eq!(fresh_calls.load(std::sync::atomic::Ordering::SeqCst), 2);
+        let full_lines = read_lines(&full);
+        assert_eq!(full_lines.len(), 2);
+        for line in &full_lines {
+            assert_eq!(line.forks.len(), 1, "deal {}", line.deal);
+        }
+
+        // The same file cut back to its first deal's line, as a killed run leaves it.
+        let text = std::fs::read_to_string(&full).unwrap();
+        let mut kept = text.lines().take(2).collect::<Vec<_>>().join("\n");
+        kept.push('\n');
+        std::fs::write(&cut, &kept).unwrap();
+        let resume_calls = std::sync::atomic::AtomicUsize::new(0);
+        let resumed = resume_save(
+            &cut,
+            &header,
+            base,
+            &control,
+            2,
+            false,
+            &scripted_factory(&resume_calls, late_fork),
+        )
+        .unwrap();
+        // The identity game plus the one missing deal, and nothing else.
+        assert_eq!(resumed.games_played, 1);
+        assert_eq!(resume_calls.load(std::sync::atomic::Ordering::SeqCst), 2);
+        assert_eq!(resumed.tally, report.tally);
+        // The resumed file ends with the same deal lines: the same deals with the same
+        // hashes, forks, arms and records. Only the duel lines differ, in their decision
+        // times, which no rerun reproduces.
+        let cut_lines = read_lines(&cut);
+        assert_eq!(cut_lines.len(), 2);
+        for (cut_line, full_line) in cut_lines.iter().zip(full_lines.iter()) {
+            assert_eq!(cut_line.deal, full_line.deal);
+            assert_eq!(line_without_duel(cut_line), line_without_duel(full_line));
+        }
+
+        let _ = std::fs::remove_file(&full);
+        let _ = std::fs::remove_file(&cut);
+    }
+
+    #[test]
+    fn r4607000_a_torn_last_line_is_played_again() {
+        jackioh_cards::register_all();
+        let control = entrant(&AgentSpec::SelfAi).unwrap();
+        let header = test_header(2);
+        let base = "r4607000-torn";
+        let full = save_path("torn-full");
+        let torn = save_path("torn-torn");
+        let _ = std::fs::remove_file(&full);
+        let _ = std::fs::remove_file(&torn);
+
+        let fresh_calls = std::sync::atomic::AtomicUsize::new(0);
+        let report = resume_save(
+            &full,
+            &header,
+            base,
+            &control,
+            2,
+            false,
+            &scripted_factory(&fresh_calls, late_fork),
+        )
+        .unwrap();
+        let text = std::fs::read_to_string(&full).unwrap();
+        let kept: Vec<&str> = text.lines().collect();
+        assert_eq!(kept.len(), 3);
+        // The first deal's line whole, then a torn fragment of the second's.
+        let mut torn_text = kept[..2].join("\n");
+        torn_text.push('\n');
+        torn_text.push_str(&kept[2][..kept[2].len().min(20)]);
+        std::fs::write(&torn, &torn_text).unwrap();
+
+        let resume_calls = std::sync::atomic::AtomicUsize::new(0);
+        let resumed = resume_save(
+            &torn,
+            &header,
+            base,
+            &control,
+            2,
+            false,
+            &scripted_factory(&resume_calls, late_fork),
+        )
+        .unwrap();
+        assert_eq!(resumed.games_played, 1);
+        assert_eq!(resumed.tally, report.tally);
+        let torn_lines = read_lines(&torn);
+        assert_eq!(torn_lines.len(), 2);
+        for (torn_line, full_line) in torn_lines.iter().zip(read_lines(&full).iter()) {
+            assert_eq!(torn_line.deal, full_line.deal);
+            assert_eq!(line_without_duel(torn_line), line_without_duel(full_line));
+        }
+
+        let _ = std::fs::remove_file(&full);
+        let _ = std::fs::remove_file(&torn);
+    }
+
+    #[test]
+    fn r4607000_resume_refuses_a_changed_header_before_any_game() {
+        jackioh_cards::register_all();
+        let control = entrant(&AgentSpec::SelfAi).unwrap();
+        let header = test_header(1);
+        let base = "r4607000-refuse";
+        let path = save_path("refuse");
+        let _ = std::fs::remove_file(&path);
+
+        let fresh_calls = std::sync::atomic::AtomicUsize::new(0);
+        resume_save(
+            &path,
+            &header,
+            base,
+            &control,
+            1,
+            false,
+            &scripted_factory(&fresh_calls, late_fork),
+        )
+        .unwrap();
+        let file = std::fs::read(&path).unwrap();
+        assert_eq!(read_lines(&path).len(), 1);
+
+        // Each mutation refuses the file by naming its field, plays nothing, and leaves the
+        // file byte-identical.
+        let own = crate::agent::own_info();
+        let mut other_info = own.clone();
+        other_info.generation += 1;
+        let mut mutated: Vec<(SaveHeader, &str)> = Vec::new();
+        let mut header = header.clone();
+        header.v += 1;
+        mutated.push((header.clone(), "version"));
+        header = test_header(1);
+        header.set = "other-set".to_string();
+        mutated.push((header.clone(), "set"));
+        header = test_header(1);
+        header.games = 99;
+        mutated.push((header.clone(), "--games"));
+        header = test_header(1);
+        header.extend = true;
+        mutated.push((header.clone(), "--extend"));
+        header = test_header(1);
+        header.budget = SearchBudget {
+            nodes: TEST_BUDGET.nodes + 1,
+            ..TEST_BUDGET
+        };
+        mutated.push((header.clone(), "budget"));
+        header = test_header(1);
+        header.fork_rollouts = FORK_ROLLOUTS + 1;
+        mutated.push((header.clone(), "FORK_ROLLOUTS"));
+        header = test_header(1);
+        header.fork_max_per_game = FORK_MAX_PER_GAME + 1;
+        mutated.push((header.clone(), "FORK_MAX_PER_GAME"));
+        header = test_header(1);
+        header.catalog = "0.0.0-test".to_string();
+        mutated.push((header.clone(), "catalog"));
+        header = test_header(1);
+        header.a_label = "other".to_string();
+        mutated.push((header.clone(), "candidate"));
+        header = test_header(1);
+        header.b_label = "other".to_string();
+        mutated.push((header.clone(), "control"));
+        header = test_header(1);
+        header.a_info = Some(other_info.clone());
+        mutated.push((header.clone(), "candidate"));
+        header = test_header(1);
+        header.b_info = Some(other_info.clone());
+        mutated.push((header.clone(), "control"));
+        for (saved, field) in mutated {
+            write_save(&path, &saved, &read_lines(&path));
+            // The refusal must leave the file as this mutation wrote it.
+            let before = std::fs::read(&path).unwrap();
+            let calls = std::sync::atomic::AtomicUsize::new(0);
+            let refused = resume_save(
+                &path,
+                &test_header(1),
+                base,
+                &control,
+                1,
+                false,
+                &scripted_factory(&calls, late_fork),
+            )
+            .unwrap_err();
+            assert!(refused.to_string().contains(field), "{field}: {refused}");
+            assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
+            assert_eq!(std::fs::read(&path).unwrap(), before);
+            // Restore the good header for the next mutation.
+            write_save(&path, &test_header(1), &read_lines(&path));
+        }
+        // The file ends as the uninterrupted run wrote it.
+        assert_eq!(std::fs::read(&path).unwrap(), file);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn r4607000_a_different_candidate_fails_the_identity_game() {
+        jackioh_cards::register_all();
+        let control = entrant(&AgentSpec::SelfAi).unwrap();
+        // A screen of two deals with only the first saved: not finished, so the resume runs
+        // the identity game on the saved deal.
+        let header = test_header(2);
+        let base = "r4607000-identity";
+        let path = save_path("identity");
+        let _ = std::fs::remove_file(&path);
+
+        let game = trunk_game(&format!("{base}:1"), 1);
+        let line = play_deal(&game, Probe::scripted(1, late_fork)).unwrap();
+        assert_eq!(line.forks.len(), 1, "deal {}", line.deal);
+        write_save(&path, &header, &[line]);
+
+        // The same header but a candidate that differs at another move: exactly one trunk
+        // game is played, then the file is refused for its forks.
+        let calls = std::sync::atomic::AtomicUsize::new(0);
+        let refused = resume_save(
+            &path,
+            &header,
+            base,
+            &control,
+            2,
+            false,
+            &scripted_factory(&calls, other_fork),
+        )
+        .unwrap_err();
+        assert!(refused.to_string().contains("forks"), "{refused}");
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn r4607000_a_rebuilt_trunk_fails_the_identity_game() {
+        jackioh_cards::register_all();
+        let control = entrant(&AgentSpec::SelfAi).unwrap();
+        // A screen of two deals with only the first saved: not finished, so the resume runs
+        // the identity game on the saved deal.
+        let header = test_header(2);
+        let base = "r4607000-rebuilt";
+        let path = save_path("rebuilt");
+        let _ = std::fs::remove_file(&path);
+
+        let game = trunk_game(&format!("{base}:1"), 1);
+        let line = play_deal(&game, Probe::scripted(1, late_fork)).unwrap();
+        assert_eq!(line.forks.len(), 1, "deal {}", line.deal);
+        write_save(&path, &header, &[line]);
+
+        // The same header on another seed base replays the trunk to another hash: exactly one
+        // trunk game is played, then the file is refused for its trunk hash.
+        let calls = std::sync::atomic::AtomicUsize::new(0);
+        let refused = resume_save(
+            &path,
+            &header,
+            "r4607000-rebuilt-elsewhere",
+            &control,
+            2,
+            false,
+            &scripted_factory(&calls, late_fork),
+        )
+        .unwrap_err();
+        assert!(refused.to_string().contains("trunk hash"), "{refused}");
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn r4607000_a_finished_save_plays_nothing_and_reprints_its_tally() {
+        jackioh_cards::register_all();
+        let control = entrant(&AgentSpec::SelfAi).unwrap();
+        let header = test_header(2);
+        let base = "r4607000-finished";
+        let path = save_path("finished");
+        let _ = std::fs::remove_file(&path);
+
+        let fresh_calls = std::sync::atomic::AtomicUsize::new(0);
+        let report = resume_save(
+            &path,
+            &header,
+            base,
+            &control,
+            2,
+            false,
+            &scripted_factory(&fresh_calls, late_fork),
+        )
+        .unwrap();
+        let file = std::fs::read(&path).unwrap();
+
+        // Run again on the finished save: no game is played, not even the identity game, and
+        // the tally is the same string.
+        let calls = std::sync::atomic::AtomicUsize::new(0);
+        let again = resume_save(
+            &path,
+            &header,
+            base,
+            &control,
+            2,
+            false,
+            &scripted_factory(&calls, late_fork),
+        )
+        .unwrap();
+        assert_eq!(again.games_played, 0);
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
+        assert_eq!(again.tally, report.tally);
+        assert_eq!(again.duels, report.duels);
+        assert_eq!(std::fs::read(&path).unwrap(), file);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn r4607000_extend_counts_saved_and_new_live_forks_together() {
+        assert_eq!(next_batch(0, 0, false, 200), Some((1, 200)));
+        // Saved 200 games with 19 live forks keep going at deal 201; the 20th stops.
+        assert_eq!(next_batch(200, 19, true, 200), Some((201, 100)));
+        assert_eq!(next_batch(200, 20, true, 200), None);
+        // Without `--extend` the first batch is the whole screen.
+        assert_eq!(next_batch(200, 0, false, 200), None);
+        // The cap is respected: 10 deals left, then nothing.
+        assert_eq!(next_batch(1990, 0, true, 200), Some((1991, 10)));
+        assert_eq!(next_batch(2000, 0, true, 200), None);
+    }
+
     #[test]
     fn r4397000_forks_needs_a_seed_set_full_skill_and_no_paired() {
         let args = |set: Option<crate::arena::SeedSet>, paired: bool, skill: f64| crate::arena::Args {
@@ -928,6 +1914,7 @@ mod tests {
             paired,
             extend: false,
             forks: true,
+            save: None,
             out: None,
             a_skill: skill,
             b_skill: AI_SKILL_MAX,

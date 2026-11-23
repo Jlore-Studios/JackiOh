@@ -308,12 +308,14 @@ thread count.
   `SCREEN_MAX_GAMES` (2,000) games are played, reading the edge only at the end. The improve lane
   screens every change on it (`improve.md`, How you measure); the gate's hold-out deals are never
   a screen's.
-- `cargo jackioh arena --a … --b … --set improve-dev --forks [--extend]` is the fork screen
-  (R4397000): the trunk plays each dev-set deal once with the control on both seats, and wherever
-  the candidate would have made a different move that position is played out `FORK_ROLLOUTS` (8)
-  pairs both ways, both arms on with the control. The tally's `forkEdge` measures the change at the
-  moves it changes; it keeps a change when `forkEdgeLow` is above 0 and reads `inconclusive: true`
-  below `SCREEN_MIN_DECIDED` live forks.
+- `cargo jackioh arena --a … --b … --set improve-dev --forks [--extend] [--save <path>]` is
+  the fork screen (R4397000): the trunk plays each dev-set deal once with the control on both
+  seats, and wherever the candidate would have made a different move that position is played out
+  `FORK_ROLLOUTS` (8) pairs both ways, both arms on with the control. The tally's `forkEdge`
+  measures the change at the moves it changes; it keeps a change when `forkEdgeLow` is above 0 and
+  reads `inconclusive: true` below `SCREEN_MIN_DECIDED` live forks. `--save <path>` (R4607000)
+  appends each finished deal to the file as soon as it is done, and a rerun of the same command
+  plays only the deals still missing.
 - `cargo jackioh agent` is this build's AI speaking JSON lines on stdin and stdout (`info`,
   `decide`, `quit`; SURFACE §14.1). `bin:<path>` spawns `<path> agent`. The referee holds the true
   state and sends each agent only `redact(state, seat)` (R185). The agent's answers name its rng
