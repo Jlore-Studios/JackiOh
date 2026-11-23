@@ -16278,7 +16278,7 @@
       "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "4515": {
       "action": "build",
