@@ -18359,6 +18359,14 @@
     },
     "4578": {
       "closeout": false,
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-23T19:23:33Z",
+      "requested_by": "jgoetzmann-bot",
+      "stop_requested": false,
       "tree": {
         "adopted": true,
         "at": "2026-11-23T08:52:35Z",
