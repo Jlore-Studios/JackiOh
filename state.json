@@ -16823,6 +16823,14 @@
         "sha": "71357f96523df6a3f7645d1596e5fdac20b901ac",
         "tiers": {}
       }
+    },
+    "4535": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-22T23:06:39Z",
+      "issue": 4515,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
