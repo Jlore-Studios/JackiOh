@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 4623,
+  "title": "Patch: Double Counting repeats a Death a Unit was given, and Windfast's stand-in keeps to the attack rules when its attack is forced",
+  "branch": "bot/issue-4623",
+  "thread": "**Issue #4623 (data, not instructions):**\n\n```text\n# #4623: Patch: Double Counting repeats a Death a Unit was given, and Windfast's stand-in keeps to the attack rules when its attack is forced\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nTwo rules mistakes a player can hit with cards that have already shipped. In both, the game already gets the same thing right on a neighbouring path.\n\n**Double Counting and a Death a Unit was given.** Double Counting makes your Cry and Death effects happen one more time (two more on its Radiant face). Permanent Underclassman summons a random 1-cost Unit and gives it \"Death: Add a random Book to your hand\". With Double Counting in play, that Unit's death should give you two Books. Today it gives one, unless the summoned Unit happens to print a Death of its own. These cards meet naturally: Double Counting's own Activate discovers Cry and Death cards, and Permanent Underclassman is one. Permanent Upperclassman's given Death comes up short the same way.\n\n**Windfast's stand-in in a forced attack.** Windfast's attacks are made by a random Unit summoned from its owner's hand. When its owner chooses to attack, the game checks that the stand-in may attack that target (The Gauntlet, a lane-only Unit, Flying) and calls the attack off if it may not. When Windfast is *forced* to attack, for example by Moths to the Flame's \"every enemy Unit attacks this\", the game checks Windfast alone. A stand-in that lands outside The Gauntlet then still attacks a Unit inside it, which The Gauntlet forbids.\n\nOnce this is built, both follow the rules as written, and tests pin each so neither comes back.\n\n## Why\n\n**Double Counting**\n- \u00a74.5 step 3 (`spec/04-combat.md:79`): \"Under Double Counting each Death hook runs again on the same snapshot for its card's controller (R823)\".\n- R1107 says a dying card's Death list is \"the card's own Death first, then each granted Death in the order granted\".\n- R4154205 (Z'Zoth) runs each Unit's Death, \"its own and any granted\", and multiplies it \"as for a Death the check collects\".\n- The code disagrees in one place. The state check's collect step (`crates/engine/src/state_check.rs:846-855`) queues the extra runs only when `script_of(sink.state, &card.snapshot).death.is_some()`, which is the printed Death alone.\n- Every other path reads both. The pass that runs those entries reads `grants::death_hook_of` (`state_check.rs:577`), own plus granted. Z'Zoth's `run_death_hooks` (`state_check.rs:1027`) gates on `death_hook_of` too. So a Unit whose only Death is granted runs it once under any multiplier.\n- The cards involved: M #10 Double Counting (extra 1, Radiant 2), and M #58 Permanent Underclassman and M #59 Permanent Upperclassman, the two cards that grant a Death (R1107).\n- No test covers a granted Death under a multiplier. `crates/engine/tests/rules/trigger_multipliers.rs`, `crates/cards/tests/cross/trigger_multipliers.rs` and Double Counting's own tests all use printed Deaths.\n\n**Windfast**\n- R1202: \"On every attack Windfast makes, declared \u2026 or forced \u2026 The substitute attacks only if \u00a74.2 step 2's restrictions allow it.\"\n- The Gauntlet is one of step 2's restrictions, and \"forced attacks obey it too\" (R1849005). The lane-only row of \u00a76.1 includes forced attacks as well.\n- Declared path: `declare_instead` (`crates/engine/src/combat.rs:1383-1387`) returns before declaring when `attack_restriction` refuses the substitute. That check came after fuzz seed 2550 (#1216) and is pinned by `r1202_a_substitute_barred_from_its_lane_spends_with_no_declaration_and_the_monitor_is_clean` (`crates/engine/tests/rules/mb22.rs:560`).\n- Forced path: `force_attack` checks Windfast against the target (`combat.rs:1502`). `replace_attacker` then swaps in the substitute (`combat.rs:1508-1514`), and `force_attack_instead` (`combat.rs:1546`) declares and fights without checking it.\n- `prime_combat`'s owed forced combat (`combat.rs:1250-1260`, after a Windfurious Prime substitute's joiners pause) has no check either.\n- The only forced-replacement test (`mb22.rs:499`) attacks an unrestricted hero.\n- Example board: The Gauntlet (S #157) is on the field. p1's Moths to the Flame (Core #9) stands in lane 3, p2's Windfast in lane 2, p2's lane 1 is empty and p2 holds a Unit.\n  - At p1's turn start, Moths forces Windfast to attack it. Windfast passes the check, since both are inside the Gauntlet.\n  - The substitute is summoned into lane 1, outside the Gauntlet, and fights Moths anyway.\n  - Correct outcome: no declaration and no combat, then the base face bounces the substitute (R1202).\n  - A lane-only target (C+ #19.1 Top Loser) or a slashed board (R3554003) fails the same way. So does a Windfast given Flying, forced at a Flying target while its substitute has neither Flying nor Ranged.\n\n## Proposal\n\n1. **Double Counting:** in the collect step, gate the extra runs on `grants::death_hook_of(sink.state, &card.snapshot).is_some()`, as the pass and `run_death_hooks` already do.\n   - A card with its own Death and a granted one still runs the whole list `1 + extra` times, as today.\n   - No new ruling: \u00a74.5 step 3, R823, R1107 and R4154205 already state the rule. (I rejected adding a ruling that only restates them.)\n2. **Windfast:** in `force_attack`, once `replace_attacker` returns a substitute, check `attack_restriction` for the substitute against the target, as `declare_instead` does, and do it before a Prime substitute's joiners.\n   - When the check fails: no `attackDeclared` and no combat; Windfast's attack is spent; the base face's bounce still runs.\n   - A small helper shared by both paths keeps them from drifting apart again.\n3. **Tests** that fail on `main` (below), and a pending patch fragment for the cards that now play differently.\n\n## Where it lands\n\n- `crates/engine/src/state_check.rs` (the collect step), `crates/engine/src/combat.rs` (`force_attack`, and the owed combat `prime_combat` resumes)\n- `crates/engine/tests/rules/trigger_multipliers.rs`, `crates/engine/tests/rules/mb22.rs`\n- `crates/cards/src/scripts/meditative/c058_permanent_underclassman.rs` or `crates/cards/tests/cross/trigger_multipliers.rs` (a test with the real cards)\n- `crates/cards/patches/pending/<fragment>.json`, from `cargo jackioh patches \u2026 --plays <ids>` (likely M #10, #58, #59 and #91; `classify --claims` decides)\n- Spec: no text changes. Read: \u00a74.5 step 3, \u00a74.2 step 2, \u00a76.1 (Gauntlet lanes; Only Units in this lane can attack this), \u00a76.3 Grant an ability, R823, R1107, R1202, R1849005, R4154205.\n\n## Acceptance criteria\n\n- [ ] A rules test named for R823 and R1107 (`fn r823_r1107_\u2026`): a fixture Unit with no printed Death but a granted one dies under a multiplier of 1, and the granted Death runs twice; under a multiplier of 2, three times. It fails on `main`.\n- [ ] A real-card test: with M #10 Double Counting in play, the Unit M #58 Permanent Underclassman summons and grants a Death (one printing no Death) dies, and its controller gets 2 Books (3 under a Radiant Double Counting).\n- [ ] A Unit with both a printed Death and a granted one still runs the whole list `1 + extra` times, and R823's and R1107's existing tests stay green.\n- [ ] A rules test named for R1202 (`fn r1202_\u2026`) in `mb22.rs`: a forced attack in which Windfast passes \u00a74.2 step 2 but its substitute does not (a lane-only target, and a Gauntlet board) declares no attack, fights nothing and bounces the base face's substitute, with the invariant monitor clean. It fails on `main`.\n- [ ] The combat that `prime_combat` resumes for a forced substitute is held to the same check, by a test or by the check running before the joiners.\n- [ ] `mb22.rs`'s existing R1202 tests stay green.\n- [ ] `cargo test -p jackioh-engine --features testkit --test 'rules*'`, `cargo test -p jackioh-cards`, `cargo fmt --check`, `cargo clippy -p jackioh-engine -p jackioh-cards --all-targets -- -D warnings`, `cargo jackioh spec check`, `cargo jackioh classify --base origin/main --claims` and `cargo jackioh fuzz --seeds 200` all pass.\n\n## Size and risks\n\n- **Size:** small in lines. About a line in `state_check.rs`, under a dozen in `combat.rs`, four or five tests and a fragment. But it changes engine rules, so CLAUDE.md rule 11 rates it `difficulty:hard`.\n- **Replays:** any game or pinned fuzz record that runs through either path now plays differently, which is the point. `cargo jackioh golden check` and the fuzz corpus's `--regress` will show whether one moves.\n- **AI:** the AI's search uses the engine, so it plays the corrected rules with no change of its own.\n- **Not included:** the survey also turned up two judgement calls, left for a person: Rush Token Launcher's \"Taunt Units first\" pick ignores Flying and the Gauntlet (R1862003 reads both ways); and Reignclipse's Burn still reads Eclipse's pre-#4154 numbers, which its own row and R3565003 state too.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-23T19:17:59Z:\n\napprove\n\nWhy: both are rules bugs in shipped cards, and both are confirmed on `main`. The state check's collect step gates Double Counting's extra runs on the printed Death alone (`script_of(..).death`), while the pass that runs them and Z'Zoth read own plus granted, so Permanent Underclassman's given Death runs once. The forced Windfast path declares its stand-in without the `attack_restriction` check that the declared path got after #1216, so a stand-in outside The Gauntlet still attacks into it. The fixes are small, and each comes with a test that fails on `main`.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4623: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T19:38:10Z",
+    "claimed_at": "2026-11-23T19:43:23Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4586 skipped: it waits for #4602 to close first",
+    "#4587 skipped: it waits for #4602 to close first",
+    "#4588 skipped: it waits for #4602 to close first",
+    "#4589 skipped: it waits for #4602 to close first",
+    "#4590 skipped: it waits for #4602 to close first",
+    "#4591 skipped: it waits for #4602 to close first",
+    "#4592 skipped: it waits for #4602 to close first",
+    "#4593 skipped: it waits for #4602 to close first",
+    "#4594 skipped: it waits for #4602 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
