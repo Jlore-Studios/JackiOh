@@ -16270,6 +16270,7 @@
         "provider": "agy",
         "question": "How should the initial tuning deal measurement be handled given the runner's execution time limits?"
       },
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-23T01:15:02Z",
         "difficulty": "medium",
