@@ -16958,19 +16958,12 @@
         "reason": "`claude-1` stops mid-call: 5-hour usage is 40%, at or over its 40% cap outside its hours; it resets at 2026-11-23T22:50:00Z",
         "trail": ""
       },
-      "hold": {
-        "ends": "2026-11-23T22:42:55Z",
-        "lifted": "2026-11-23T21:50:41Z",
-        "owner": "claude-1",
-        "since": "2026-11-23T20:42:55Z",
-        "until": "2026-11-23T21:50:00Z",
-        "why": "5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%)"
-      },
       "issue": 4604,
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-23T20:30:30Z",
+        "claimed": true,
+        "claimed_at": "2026-11-23T21:50:50Z",
         "from_run": "45222365252",
         "gates": [
           {
@@ -17066,7 +17059,7 @@
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-11-23T20:29:17Z",
-      "run_id": "45260090954",
+      "run_id": "pending:9efbc990-1795470618",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17086,7 +17079,7 @@
         "provider": "claude-1",
         "run": "45222365252"
       },
-      "started_at": "2026-11-23T20:30:30Z",
+      "started_at": "2026-11-23T21:50:50Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17353,9 +17346,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T21:41:28Z",
+    "at": "2026-11-23T21:50:50Z",
     "url": "",
-    "what": "suggestions (tests) on muse"
+    "what": "review #4629 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-23T21:40:04Z",
