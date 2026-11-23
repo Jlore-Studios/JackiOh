@@ -13961,13 +13961,6 @@
     },
     "4448": {
       "action": "plan",
-      "archived": {
-        "at": "2026-11-22T05:07:32Z",
-        "branch": "",
-        "head": "",
-        "pr": null,
-        "why": "run the issue's two fork screens on a machine of your own (Part P below). Then post, in one comment on #4448, each screen's closing tally line, its wall time, the control's commit and the machine. Then take `human required` off and put `bot:build` back. No bot run can finish one of these screens:"
-      },
       "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T05:07:16Z",
