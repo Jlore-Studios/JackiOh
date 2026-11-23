@@ -39453,6 +39453,12 @@
         "number": 4471,
         "title": "Patch: an e2e test that passes only on its retry is named in every run, and fails the daily run",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-23T01:08:53Z",
+        "number": 4514,
+        "title": "Patch: the AI rules out the traps a face-down card cannot be, by the public events it has sat through without revealing",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
