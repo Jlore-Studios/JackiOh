@@ -32446,3 +32446,7 @@ observed_at,subscription,source,during,run_id,util_5h,resets_5h,util_7d,resets_7
 2026-11-23T16:56:57Z,claude-3,stream,call,45204248055,15,2026-11-23T21:00:00Z,,,allowed,,,
 2026-11-23T16:58:42Z,claude-3,stream,call,45204248055,16,2026-11-23T21:00:00Z,,,allowed,,,
 2026-11-23T17:07:13Z,claude-3,stream,call,45204248055,17,2026-11-23T21:00:00Z,,,allowed,,,
+2026-11-23T17:49:12Z,muse,usage-command,before,45231445005,0,2026-11-23T22:48:00Z,8,2026-11-30T00:00:00Z,allowed,100,100,
+2026-11-23T17:51:25Z,muse,usage-command,after,45231328338,0,2026-11-23T22:48:00Z,8,2026-11-30T00:00:00Z,allowed,100,100,
+2026-11-23T17:51:40Z,muse,usage-command,after,45231221107,0,2026-11-23T22:48:00Z,8,2026-11-30T00:00:00Z,allowed,100,100,
+2026-11-23T17:50:45Z,muse,usage-command,after,45231104871,0,2026-11-23T22:48:00Z,8,2026-11-30T00:00:00Z,allowed,100,100,
