@@ -18607,11 +18607,17 @@
     "what": "plan #4577 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-23T08:46:07Z",
+    "at": "2026-11-23T08:54:21Z",
     "notes": [
-      "delivered build #4568 on muse (run 45138151014): built",
-      "started review #4575 on muse (run 45141522006)",
-      "nothing more to start: nothing is queued"
+      "#4577 needs a plan",
+      "delivered review #4573 on muse (run 45139396508): approved",
+      "started plan #4582 on claude-7 (run 45142656779)",
+      "started plan #4579 on claude-8 (run 45142739802)",
+      "started plan #4580 on muse (run 45142822291)",
+      "started plan #4581 on muse (run 45142902551)",
+      "started plan #4577 on claude-7 (run 45142986939)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19317,7 +19323,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T08:46:07Z",
+  "loop_tick": "2026-11-23T08:54:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
