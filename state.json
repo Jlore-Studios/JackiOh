@@ -17430,7 +17430,11 @@
       "issue": 4516,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "claude-3",
+      "merge_owner_gave_up": {
+        "at": "2026-11-23T05:14:43Z",
+        "provider": "claude-3",
+        "sha": "e3ccef4abf437abae2a6ceb3862988bf97a3c827"
+      },
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-23T02:45:24Z",
