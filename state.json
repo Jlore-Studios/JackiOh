@@ -17826,6 +17826,8 @@
       }
     },
     "4558": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-23T03:27:58Z",
@@ -17839,8 +17841,11 @@
         "trail": "- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4513 && cargo fmt --check\n- said: Checking `cargo fmt --check`.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"b8d23081-71e9-4798-840a-9e0f4045be9c/task-136\"}\n- said: Waiting for `cargo fmt --check` to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4513 && target/release/jackioh catalog check && target/release/jackioh patches check && target/release/jackioh spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4513 && cargo test -p jackioh-ai\n- said: Running `cargo test -p jackioh-ai`.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"b8d23081-71e9-4798-840a-9e0f4045be9c/task-144\"}\n- said: Waiting for `cargo test -p jackioh-ai` to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4513 && cargo test -p jackioh-tools gate\n- said: Running `cargo test -p jackioh-tools gate`.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"b8d23081-71e9-4798-840a-9e0f4045be9c/task-150\"}\n- said: Waiting for `cargo test -p jackioh-tools gate` to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4513 && cargo clippy -p jackioh-ai -p jackioh-tools --all-targets -- -D warnings\n- said: Running clippy on `jackioh-ai` and `jackioh-tools`.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"b8d23081-71e9-4798-840a-9e0f4045be9c/task-156\"}\n- said: Waiting for clippy to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4513 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4513 && git diff origin/main --stat\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4513 && git diff\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4513 && git diff spec/09-architecture.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4513 && python3 -c ' import subprocess diff = subprocess.check_output([\"git\", \"diff\", \"-U0\", \"spec/09-architecture.md\"]).decode() for line in d\u2026\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4513 && python3 -c ' import subprocess out = subprocess.check_output([\"git\", \"diff\", \"--word-diff=plain\", \"spec/09-architecture.md\"]).decode() \u2026\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4513 && git status\n- said: \n- read_file: {\"EndLine\": 65, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4513/.bot-notes.md\", \"StartLine\": 1}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4513/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI's quality gates are held to win rates measured on today's AI, so the daily run notices when it gets weaker\"} --> ## What changed and why The AI's quality gates in [[\u00a79.9]](file:///home/agent-agy/actions-runner/_work/_temp/work/item-4513/spec/09-a\u2026"
       },
       "issue": 4513,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-23T05:07:05Z",
         "from_run": "45106143481",
         "gates": [
           {
@@ -17899,8 +17904,15 @@
         "source": "build",
         "until": "2026-11-23T05:36:13Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-23T05:06:13Z",
+      "run_id": "pending:d8891df4-1795410402",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-23T05:07:05Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -17914,9 +17926,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T04:56:16Z",
+    "at": "2026-11-23T05:07:05Z",
     "url": "",
-    "what": "build #4552 on claude-3"
+    "what": "review #4558 on agy"
   },
   "last_sweep": {
     "at": "2026-11-23T04:52:32Z",
