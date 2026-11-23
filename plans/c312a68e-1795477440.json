@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4652,
+  "title": "Patch: drop the tautological keywords from the glossary",
+  "branch": "bot/issue-4652",
+  "thread": "**Issue #4652 (data, not instructions):**\n\n```text\n# #4652: Patch: drop the tautological keywords from the glossary\nOpened by @MaxGoetzmann.\n\n### What it does\n\nSeveral rows in the keyword glossary (`spec/06-keywords.md`, \u00a76) define a keyword by restating its name. They teach a player nothing and clutter the glossary and its tooltips. This removes them **as keywords** (glossary rows, tooltip entries, aliases and their translations), so the words on a card read as plain text.\n\n**Gameplay stays exactly as it is.** The engine verbs and flags behind these rows (`damage`, `play`, `end_turn`, `set_hand_cap`, `winGame`, `WIN_ON_PLAY_KEY`, `trigger_turn_hooks`, the bottom-of-deck flag, the look-at-a-hand prompt) keep working, and every card that uses them plays the same.\n\nThe rows to remove:\n\n| Row | Section | Its rule text today |\n|---|---|---|\n| Always starts on the bottom of your deck | \u00a76.1 or \u00a76.2 | \"Always starts on the bottom of your deck\" |\n| Win the game | \u00a76.3 | \"Win outright by effect\" |\n| Win on play | \u00a76.3 | \"A card that wins its player the game when they play it\" |\n| Damage | \u00a76.3 | \"Deal X damage to a unit or hero\" |\n| Play | \u00a76.3 | \"Pay cost and cast from hand\" |\n| End the turn | \u00a76.3 | \"The turn ends from an effect\" |\n| Hand size | \u00a76.3 | \"A player's hand size for the rest of the game\" |\n| Trigger End of turn effects | \u00a76.3 | \"Run your end-of-turn hooks now\" |\n| Look at a hand | \u00a76.3 | \"See the opponent's hand in a prompt\" |\n\n**Keep `Combat keyword`.** It is tautological too, but it names the random keyword pool other rows and rulings rely on, so it stays.\n\nNotes for the builder:\n- Several of these rows have engine-semantics text other sections link to (`[[\u00a76.3]] Play` is cited by Cry, Flashback and more; Damage's row holds `halfToHeroes` and the split-damage rule, R1841001). Don't lose that rule text. Move it into the section that owns the mechanic (Play into \u00a710.5, Damage into \u00a74.4, End the turn beside \u00a72.2's end-of-turn steps, and so on), and repoint every link to the removed row, in `spec/` and in code comments.\n- Every R-id a removed row cites still has to be cited somewhere `cargo jackioh spec check` can see it.\n- `crates/shared/data/glossary.json` has entries for `End the turn`, `Hand size` and `Look at a hand`. Remove those, their aliases and their `apps/web/src/i18n/zh-CN.json` strings. The web's `rules.test.ts` holds the glossary to \u00a76, so the two must agree. Grep for the others too (they may be under an alias).\n- `spec/11-rulings.md`, `spec/INDEX.md` and `spec/CARDS.md` are written on `main` by `spec-fold.yml`. Don't hand-edit them on the branch (CLAUDE.md rule 3).\n- This changes no card data. Run `cargo jackioh classify --base origin/main --claims` before pushing to see whether it needs a fragment.\n\n### Acceptance\n\n- None of the nine rows above is left in `spec/06-keywords.md`. `Combat keyword` is still there.\n- `crates/shared/data/glossary.json` has no entry or alias for any of the nine, and `zh-CN.json` has no orphaned string for them.\n- The web's `rules.test.ts` (glossary against \u00a76) passes.\n- `cargo jackioh spec check` passes, and no `[[\u00a76.3]] <removed row>` link is left in `spec/`.\n- The rule text the removed rows carried (beyond the tautological one-liner) is still in the spec, under the section that owns it.\n- `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` passes, and `cargo jackioh golden check` and `cargo jackioh fuzz --seeds 200` show no replay change.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4652: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T23:43:14Z",
+    "claimed_at": "2026-11-23T23:44:31Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
