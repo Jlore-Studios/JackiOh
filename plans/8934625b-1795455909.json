@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4614,
+  "title": "Patch: the game log renders only the lines near the view",
+  "branch": "bot/issue-4614",
+  "thread": "**Issue #4614 (data, not instructions):**\n\n```text\n# #4614: Patch: the game log renders only the lines near the view\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe list of what happened this game, the sidebar on a desktop and the popover behind the log toggle on a phone, draws every line of the whole game at once. In a long match that list grows into the hundreds of lines, and each new event lays the whole list out again, exactly while the phone is already busy animating the board. After this change the list draws only the lines around the part being read, about a screenful plus a safety margin, and holds the rest's place with blank space, so scrolling still reaches every line but the device only ever pays for the visible ones. A player in a forty-turn game on a phone feels the log open at once and the board stay smooth as new lines arrive. Nothing about what the log says, keeps, or offers changes.\n\n## Why\n\n- The log keeps the whole game now, not just the last stretch of events, so a long match accumulates hundreds of kept and window lines, capped at 1000 by the named constant in `apps/web/src/game/config.ts` (`LOG_HISTORY_LIMIT`). `apps/web/src/game/Log.tsx` maps every one of them to a `LogItem`, each carrying its own inspect hook and rich-text spans, with no windowing.\n- Every new event also sets `scrollTop = scrollHeight` over that full list (`Log.tsx`), forcing the page to lay out all rows at the busiest moment; the deferred render softens it but the node count stays.\n- The repository already solved this shape twice: the deck builder's pool (`apps/web/src/game/deckbuilder/poolWindow.ts`, `usePoolWindow.ts`, #2334) and the collection Cards tab (`apps/web/src/collection/CardGrid.tsx`, #3734) mount only the rows near the viewport with an overscan margin, and the almanac list is virtual too. The game log is the remaining long list without it.\n- It is none of the earlier log ideas under another name: #4561 was filtering by side and card (rejected), #1040 was scroll retention plus card links, #1692 was an unread badge on the phone toggle. This changes how many rows mount, not what the log holds or offers.\n\n## Proposal\n\n- Window the log's ordered list: mount the rows in and near the viewport with an overscan margin and keep the unmounted head and tail as sized spacers, so the scrollbar and every line's place stay the whole log's. Follow the pool's pattern: re-measure on scroll and resize, and draw everything where there is no layout to read (tests).\n- Log lines vary in height (wrapped rich text, turn dividers), unlike the pool's uniform rows, so use per-row estimates corrected on measure rather than the pool's fixed pitch; do not bend the pool's grid arithmetic to fit.\n- Keep today's behavior exactly: the newest line stays in view, the phone popover scrolls to the newest on open (`revealed`), turn dividers still draw, card lines still open their inspect overlay, and the always-mounted live announcer still speaks only the newest line. Presentation only (CLAUDE.md rule 7): no rule, view, or wording changes.\n\n## Where it lands\n\n- `apps/web/src/game/Log.tsx` (the windowing; keeps the deferred render, the memoised items and the announcer)\n- A small list-window hook next to `apps/web/src/game/deckbuilder/usePoolWindow.ts`, or local to `apps/web/src/game/`, reusing the pool's approach without touching its grid arithmetic\n- `apps/web/src/game/Log.test.tsx` and co-located tests for the hook\n- SPEC section: \u00a710.10 (the event feed the log draws). No spec change and no ruling: this makes no rules decision, it only draws the same lines cheaper.\n\n## Acceptance criteria\n\n- [ ] A log holding on the order of 1000 lines mounts only on the order of the viewport plus overscan rows in a real layout; a test with a mocked layout asserts the mounted row count stays bounded as the line count grows tenfold.\n- [ ] Arriving lines still keep the newest line in view on desktop and in the phone popover on open; no scroll-retention or unread-badge behavior is added (those are #1040's and #1692's ideas, not this one).\n- [ ] Turn dividers still render between turns, a line about a card still opens that card, and the live region still announces only the newest line.\n- [ ] Hidden information is unchanged: unmounted lines mount with the same precomputed faces as today (R97 redaction untouched; unmounted rows leak nothing and show nothing early).\n- [ ] `pnpm --dir apps/web test src/game/Log.test.tsx` and the new hook tests pass; `cargo fmt --check` and the web lint stay clean with no new suppressions.\n\n## Size and risks\n\n- Size: medium. One component change, one small hook, tests; a few hundred lines in `apps/web` only.\n- Risks: variable row heights make the spacer math fiddly (estimate, then correct on measure); new lines arriving while windowed must extend the tail spacer and re-pin the bottom without jitter; a row unmounted while its inspect sheet is open must close the sheet or stay mounted, following `CardGrid`'s precedent of keeping the interacted row mounted. Mitigate with a row-count assertion test rather than a timing test, since timings flake on shared runners.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-23T17:41:10Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4614: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T17:41:35Z",
+    "claimed_at": "2026-11-23T17:45:33Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
