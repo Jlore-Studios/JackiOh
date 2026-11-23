@@ -39404,14 +39404,6 @@
         "provider": "muse",
         "run_id": "45089413839",
         "taken_asks": []
-      },
-      "3": {
-        "area": "rules",
-        "count": 1,
-        "last_run": "2026-11-23T00:33:19Z",
-        "provider": "muse",
-        "run_id": "45089461731",
-        "taken_asks": []
       }
     },
     "taken_asks": []
