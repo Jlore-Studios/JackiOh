@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4607,
+  "title": "Patch: a fork screen saves each deal as it finishes and picks up where it stopped, so a screen cut off part-way loses nothing",
+  "branch": "bot/issue-4607",
+  "thread": "**Issue #4607 (data, not instructions):**\n\n```text\n# #4607: Patch: a fork screen saves each deal as it finishes and picks up where it stopped, so a screen cut off part-way loses nothing\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA change to the practice AI is meant to be measured before it ships. The measurement that suits most AI changes plays the old and the new AI from every spot where they would choose differently and counts which choice wins more. One such run takes three to four hours on a four-core machine, and it keeps every result in memory until the very end. When the run stops early, because the bot's time ran out or a cloud machine was taken back, the hours are lost and nothing is printed. After this change, each finished deal is written to a file as soon as it is done. Running the same command again on the same file plays only the deals still missing, and prints exactly what one uninterrupted run would have printed. The night bot can then finish a measurement over two of its runs, so AI changes arrive with a measured result instead of none. Players see nothing; the maintainer sees AI pull requests that carry their measurement.\n\n## Why\n\n- Every idea for the AI now goes \"through the night bot as an issue with a measured acceptance\" (`training/improve.md:7`), since the improve, unban and learn lanes are stopped or retired.\n- A fork screen does not fit a bot run. #4448's two screens took 3 h 7 min and 4 h 0 min on a 4-core Xeon, about 12 and 16 core-hours. \"Neither fits a bot's model call (150 minutes), and a fork screen prints nothing until its tally and cannot resume.\" The first run of #4448's `turn_hook` screen died 3 hours in, when its cloud session was reclaimed (`training/improve.md:170-176`).\n- AI changes therefore ship unmeasured:\n  - #4447's fork screen \"did not finish in the bot's run: stopped after 2 hours, nothing printed\", so `AI_SEARCH.replay_fill_steps` ships at 0 untested (`crates/ai/src/config.rs:226-229`).\n  - R4515000 shipped with \"No screen was played\" (`config.rs:1070`).\n  - #4448 first went back to a person: \"the bot could not build it: run the issue's two fork screens on a machine of your own\".\n- The cause is in `crates/tools/src/fork_screen.rs:609-683`. `run` holds the trunk, the forks and the edges in memory across every batch and writes nothing until the last one ends.\n- Yet each deal is independent and small:\n  - It is set up from its number alone (`trunk_setups`, `:565`).\n  - The tally reads only each arm's win and fault (`ArmOutcome`, `:199`).\n  - So a deal's results fit on one short line, and deals can be played in any order.\n- The bot's harness pushes a cut-off build's work to its branch and continues it in the next run (`bot/README.md`, Handing work over). A save file in the worktree therefore survives the cut.\n\n## Proposal\n\n- **The flag.** `cargo jackioh arena --a \u2026 --b \u2026 --set improve-dev --forks --save <file>`. Without `--save`, nothing changes.\n- **The header.** The file opens with one line naming the set, `--games`, `--extend`, the budget, `FORK_ROLLOUTS`, `FORK_MAX_PER_GAME`, the catalog version, and each agent's label and `agent info` answer.\n- **One line per deal.** A deal is played as a unit: its trunk game, then its forks' arms. Deals still run in parallel, and arms still assemble in `(deal, fork, pair, arm)` order. When a deal is done, one JSON line is appended and flushed. It holds:\n  - the deal number;\n  - its duel line and its game record;\n  - its forks (seat, move, both actions);\n  - each arm's win and fault.\n\n  A torn last line, left by a killed process, is dropped and its deal is played again.\n- **Resuming.** Run again on the same file, the screen:\n  1. refuses a header that differs, naming the field;\n  2. plays its first saved deal's trunk again and refuses the file unless the trunk's hash and its forks match. This is one game, and it catches a rebuilt binary of another AI;\n  3. plays only the deals the file is missing.\n\n  `--extend` takes its batch stops from the saved deals and the new ones together, so it stops where one run would.\n- **The output.** The tally, the duel lines and the records come from every deal's line in deal order. A screen played in pieces prints the tally line an uninterrupted one prints, byte for byte. Duel lines carry decision times, so they are the saved ones.\n- **No second reads.** A finished save (every deal in, or `--extend` stopped) prints its tally again and plays nothing. Its size is fixed in the header, so a screen cannot be grown after its tally was read (R850001's rule against second reads, R4319000).\n- **Docs.** `training/improve.md`, A screen, tells a bot's builder three things:\n  - pass `--save` with a path inside its worktree, so its harness carries the file into a continued run;\n  - after a cut, run the same command again;\n  - record the tally in the knob's config comment as today, and remove the file before it finishes.\n\n  Out of scope: the deal screen (`--set` without `--forks`, 25 to 45 minutes) already fits a bot run and is left alone.\n\n## Where it lands\n\n- `crates/tools/src/fork_screen.rs`: per-deal units, the save, the resume and the identity check.\n- `crates/tools/src/arena.rs`: `Args.save`.\n- `training/improve.md` (A screen), `training/README.md` (The arena and the agent), `crates/tools/README.md`, `docs/v0.3.0/SURFACE.md` (the arena paragraph of \u00a714).\n- A ruling in the issue's block beside R4397000 (SPEC \u00a79.9, the training lanes' screens), proven in `fork_screen.rs`, with its \u00a711 paragraph in `spec/pending/<issue>.md`.\n\n## Acceptance criteria\n\nAll tests use a scripted probe and the tests' budget, as `fork_screen.rs`'s tests do.\n\n- [ ] A save cut back to its first deal's line, as a killed run leaves it, is resumed. The resume plays only the missing deal and prints a tally line byte-identical to an uninterrupted run's. Its file ends with the same deal lines.\n- [ ] A save whose last line is torn resumes with that deal played again.\n- [ ] Resuming with any of these differing is refused before any game is played, naming what differs: another candidate (a scripted probe that differs at another move), another control, set, `--games`, `--extend` or budget.\n- [ ] A finished save, run again, plays no game and prints the same tally.\n- [ ] A unit test holds `--extend`'s next batch to the live forks of the saved deals and the new ones together.\n- [ ] Without `--save`, every existing test in `fork_screen.rs` and `arena.rs` passes unchanged. The daily thread-count test still holds.\n- [ ] The docs above describe the flag and the resume. `cargo jackioh spec check` passes.\n\n## Size and risks\n\nMedium: about seven files, most of the code in `fork_screen.rs`. No AI decision, engine rule or game changes.\n\nRisks:\n- Playing a deal as one unit can leave cores idle at a batch's tail, since deals differ in length. Interleaving the arms of several deals on rayon, as today, avoids that.\n- Rollout tests are slow (R4397000's byte-identity test is daily, #4462). The per-pull-request tests keep to one or two trunk deals with a scripted fork late in the game.\n- A save holds a deal's game record (about 2 KB), so a 200-deal save is about half a megabyte. That is why the builder removes it before finishing rather than committing it as a record.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `telemetry` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-23T17:42:20Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4607: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T17:42:44Z",
+    "claimed_at": "2026-11-23T17:47:25Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
