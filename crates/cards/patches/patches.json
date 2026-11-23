@@ -33997,5 +33997,29 @@
       "v0.6.9o"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.10b",
+    "date": "2026-11-23",
+    "title": "The card detail view loads when first opened",
+    "source": "#4517",
+    "notes": "The card detail dialog no longer rides the entry chunk: the cards barrels no longer re-export CardDetail, the landing prefetches the dialog's chunk on pointer, touch or focus intent on a fan card, and the account screen rides its own route chunk while the gate's sign-out helpers stay entry-static. How cards look only: no card plays differently.",
+    "player": {
+      "title": "The card detail view loads when first opened",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "The home page no longer downloads the card detail view before it can start, so the first screen is ready sooner on slow connections."
+      ]
+    },
+    "commits": [
+      "89f7ff61a89281dbdb3af6c3342fec47c27eaadf"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

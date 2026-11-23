@@ -20,6 +20,12 @@
 //!
 //! And its I20 (#4478): a field card's stored damage moves only with its `damage` and `healed` events
 //! (§4.4, §10.3, R78), proved on synthetic events, edited states, real effects and a planted bump.
+//!
+//! And its I22 (#4540): every `target` pick is one its source may aim at, no Dormant card (R1839000),
+//! no Evasive card in play from a Spell or Field Spell (R4353002), no card Immune to Spells from a Spell
+//! (R450). Proved on hand-made random draws (R452's cast, R1200's Mayor), on the record a real random
+//! cast and a Mayor's play leave between `before` and `after`, on a listed play or activation retargeted
+//! and on an open prompt given one more option; a random pick an effect makes is no targeting.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -3994,5 +4000,463 @@ mod i21 {
         let mut no_world = after.clone();
         no_world.radiant_world = None;
         only(&i21(&before, &events, &no_world), &id, &["I21", "radiantSet"]);
+    }
+}
+
+mod i22 {
+    use super::*;
+    use jackioh_engine::effects::{buff_random_unit, cast_random, trigger_cry};
+    use jackioh_engine::testkit::seams::{record_target_draw, start_target_draws, take_target_draws};
+
+    use crate::rules::fixtures::activate::{ACTIVATE_SCRIPTS, activate_catalog, pinger};
+    use crate::rules::fixtures::harness::{act_result, in_hand, run_effect};
+    use crate::rules::fixtures::mb22 as mb;
+    use crate::rules::fixtures::play_pipeline_a::{PA, register_play_a, with_play_a};
+
+    /// p1's first main phase over play pipeline A's fixtures, both seats at 8 mana with empty hands.
+    fn board(seed: &str) -> GameState {
+        let mut state = past_mulligans(&with_play_a(new_game(seed, None)));
+        for player in [P1, P2] {
+            state.players[player].mana.current = 8;
+            state.players[player].mana.max = 8;
+            state.players[player].hand = vec![];
+        }
+        state
+    }
+
+    /// An `fx-1` put at `player`'s unit zone `lane`, granted `keyword`.
+    fn granted(state: &mut GameState, player: PlayerId, lane: i32, keyword: Keyword) -> CardInstance {
+        let card = put(state, "fx-1", slot(player, Row::Units, lane), json!({}));
+        let live = find_instance_mut(state, &card.id).expect("the unit");
+        live.granted_keywords.push(keyword);
+        live.clone()
+    }
+
+    /// An `fx-21` put at p2's unit zone `lane`, Dormant with two turns left.
+    fn dormant(state: &mut GameState, lane: i32) -> CardInstance {
+        let card = put(state, "fx-21", slot(P2, Row::Units, lane), json!({}));
+        let live = find_instance_mut(state, &card.id).expect("the unit");
+        live.slumber = Some(Slumber { turns: Some(2) });
+        live.clone()
+    }
+
+    fn at(card: &CardInstance) -> Selection {
+        Selection::Instance {
+            instance_id: card.id.clone(),
+        }
+    }
+
+    /// One `def_id` in p1's hand.
+    fn one(state: &mut GameState, def_id: &str) -> CardInstance {
+        in_hand(state, def_id, P1, 1).remove(0)
+    }
+
+    /// I22 of one draw for p1 on `state`.
+    fn drawn(
+        state: &GameState,
+        source: Option<&CardInstance>,
+        by: TargetDrawBy,
+        picks: &[Selection],
+    ) -> Vec<String> {
+        target_draw_findings(&TargetDraw {
+            state: state.clone(),
+            source: source.cloned(),
+            seat: P1,
+            by,
+            picks: picks.to_vec(),
+        })
+    }
+
+    /// Apply effects as p1's own, then run the resolution loop as a Cry's list is; its events.
+    fn run(state: &mut GameState, effects: Vec<Effect>) -> Vec<GameEvent> {
+        let mut events = Vec::new();
+        let mut rng = Rng::new(&state.seed, state.rng_cursor);
+        {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            let mut ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..Default::default()
+                },
+            );
+            apply_effects(&effects, &mut ctx);
+            settle(&mut ctx.sink, Default::default());
+        }
+        state.rng_cursor = rng.cursor();
+        events
+    }
+
+    #[test]
+    fn i22_a_spell_draw_of_an_evasive_unit_in_play_is_flagged() {
+        let mut state = board("i22-evasive");
+        let evasive = granted(&mut state, P2, 1, Keyword::Evasive);
+        let bolt = one(&mut state, &PA.bolt.id);
+        let found = drawn(&state, Some(&bolt), TargetDrawBy::RandomCast, &[at(&evasive)]);
+        only(
+            &found,
+            &evasive.id,
+            &["I22 unlawful random target", &bolt.id, "R4353002", "R452"],
+        );
+    }
+
+    #[test]
+    fn i22_a_field_spell_draw_of_an_evasive_unit_is_flagged_and_of_an_immune_one_is_not() {
+        let mut state = board("i22-field-spell");
+        let evasive = granted(&mut state, P2, 1, Keyword::Evasive);
+        let immune = granted(&mut state, P2, 2, Keyword::ImmuneToSpells);
+        let field = put(&mut state, &PA.field.id, slot(P1, Row::Backrow, 1), json!({}));
+        let found = drawn(&state, Some(&field), TargetDrawBy::Mayor, &[at(&evasive)]);
+        only(&found, &evasive.id, &[&field.id, "R4353002", "R1200"]);
+        assert!(drawn(&state, Some(&field), TargetDrawBy::Mayor, &[at(&immune)]).is_empty());
+    }
+
+    #[test]
+    fn i22_a_spell_draw_of_a_card_immune_to_spells_is_flagged() {
+        let mut state = board("i22-immune");
+        let immune = granted(&mut state, P2, 1, Keyword::ImmuneToSpells);
+        let bolt = one(&mut state, &PA.bolt.id);
+        let found = drawn(&state, Some(&bolt), TargetDrawBy::RandomCast, &[at(&immune)]);
+        only(
+            &found,
+            &immune.id,
+            &["I22 unlawful random target", &bolt.id, "R450"],
+        );
+    }
+
+    #[test]
+    fn i22_a_draw_of_a_dormant_card_is_flagged_whatever_its_source() {
+        let mut state = board("i22-dormant");
+        let asleep = dormant(&mut state, 1);
+        let bolt = one(&mut state, &PA.bolt.id);
+        let zapper = one(&mut state, &PA.zapper.id);
+        for source in [Some(&bolt), Some(&zapper), None] {
+            let found = drawn(&state, source, TargetDrawBy::Mayor, &[at(&asleep)]);
+            only(&found, &asleep.id, &["I22 unlawful random target", "R1839000"]);
+        }
+    }
+
+    #[test]
+    fn i22_a_unit_or_trap_source_may_aim_at_an_evasive_card() {
+        let mut state = board("i22-unit-trap");
+        let evasive = granted(&mut state, P2, 1, Keyword::Evasive);
+        let immune = granted(&mut state, P2, 2, Keyword::ImmuneToSpells);
+        let zapper = one(&mut state, &PA.zapper.id);
+        let trap = put(
+            &mut state,
+            &PA.hidden_trap.id,
+            slot(P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let field_trap = put(
+            &mut state,
+            &PA.hidden_field_trap.id,
+            slot(P1, Row::Backrow, 2),
+            json!({}),
+        );
+        // An Animated Field Spell standing in a unit zone aims as the Unit it is there (R383).
+        let mut animated = put(&mut state, &PA.field.id, slot(P1, Row::Backrow, 3), json!({}));
+        animated.zone = Zone::Field {
+            player: P1,
+            row: Row::Units,
+            lane: 4,
+        };
+        for source in [&zapper, &trap, &field_trap, &animated] {
+            let found = drawn(&state, Some(source), TargetDrawBy::Mayor, &[at(&evasive)]);
+            assert!(found.is_empty(), "{}: {found:?}", source.def_id);
+        }
+        assert!(drawn(&state, Some(&zapper), TargetDrawBy::Mayor, &[at(&immune)]).is_empty());
+    }
+
+    #[test]
+    fn i22_a_lawful_draw_is_clean() {
+        let mut state = board("i22-lawful");
+        let bare = put(&mut state, "fx-1", slot(P2, Row::Units, 1), json!({}));
+        let bolt = one(&mut state, &PA.bolt.id);
+        // Out of play, Evasive protects nothing from targeting; face-down, its keywords sleep (R4353002).
+        let held = in_hand(&mut state, "fx-1", P2, 1).remove(0);
+        find_instance_mut(&mut state, &held.id)
+            .expect("the hand card")
+            .granted_keywords
+            .push(Keyword::Evasive);
+        let set = put(
+            &mut state,
+            &PA.hidden_trap.id,
+            slot(P2, Row::Backrow, 1),
+            json!({}),
+        );
+        find_instance_mut(&mut state, &set.id)
+            .expect("the set card")
+            .granted_keywords
+            .push(Keyword::Evasive);
+        let picks = [at(&bare), Selection::Hero { player: P2 }, at(&held), at(&set)];
+        for pick in picks {
+            let found = drawn(
+                &state,
+                Some(&bolt),
+                TargetDrawBy::RandomCast,
+                std::slice::from_ref(&pick),
+            );
+            assert!(found.is_empty(), "{pick:?}: {found:?}");
+        }
+    }
+
+    #[test]
+    fn i22_the_monitor_judges_only_the_draws_made_between_before_and_after() {
+        let mut state = board("i22-window");
+        let evasive = granted(&mut state, P2, 1, Keyword::Evasive);
+        let bolt = one(&mut state, &PA.bolt.id);
+        let record = |state: &GameState| {
+            record_target_draw(state, Some(&bolt), P1, TargetDrawBy::RandomCast, &[at(&evasive)]);
+        };
+        // No record is open: the draw is kept nowhere.
+        record(&state);
+        assert!(take_target_draws().is_empty());
+
+        let mut monitor = create_invariant_monitor(&state);
+        monitor.before(&state, P1, &ActionBody::EndTurn);
+        record(&state);
+        let found = invariant("I22", monitor.after(&[], &state));
+        only(&found, &evasive.id, &["I22 unlawful random target", "R4353002"]);
+        // `after` took the record and closed it.
+        record(&state);
+        assert!(invariant("I22", monitor.after(&[], &state)).is_empty());
+    }
+
+    #[test]
+    fn i22_a_random_pick_made_by_an_effect_is_not_judged() {
+        let mut state = board("i22-effect-pick");
+        let evasive = granted(&mut state, P2, 1, Keyword::Evasive);
+        let mut monitor = create_invariant_monitor(&state);
+        monitor.before(&state, P1, &ActionBody::EndTurn);
+        // "A random enemy Unit gets +1/+1" may land on an Evasive one (R4353002): no targeting.
+        let events = run_effect(
+            &mut state,
+            buff_random_unit(json_as(json!({ "player": "enemy", "attack": 1, "health": 1 }))),
+            P1,
+        );
+        assert!(
+            events.iter().any(
+                |event| matches!(event, GameEvent::Buffed { instance_id, .. } if *instance_id == evasive.id)
+            ),
+            "{events:?}"
+        );
+        assert!(invariant("I22", monitor.after(&events, &state)).is_empty());
+    }
+
+    #[test]
+    fn i22_a_random_casts_prompt_draw_is_recorded_and_lawful() {
+        for seed in 1..=6 {
+            let mut state = board(&format!("i22-cast-{seed}"));
+            granted(&mut state, P2, 1, Keyword::Evasive);
+            let bare = put(&mut state, "fx-1", slot(P2, Row::Units, 2), json!({}));
+            start_target_draws();
+            run(
+                &mut state,
+                vec![cast_random(json_as(
+                    json!({ "query": { "defId": PA.chooser.id }, "count": 1 }),
+                ))],
+            );
+            let draws = take_target_draws();
+            assert!(!draws.is_empty(), "seed {seed}: the cast's prompt drew");
+            for draw in &draws {
+                assert_eq!(draw.by, TargetDrawBy::RandomCast, "seed {seed}");
+                assert_eq!(
+                    draw.source.as_ref().map(|card| card.def_id.as_str()),
+                    Some(PA.chooser.id.as_str()),
+                    "seed {seed}"
+                );
+                assert_eq!(draw.picks, vec![at(&bare)], "seed {seed}");
+                assert!(target_draw_findings(draw).is_empty(), "seed {seed}");
+            }
+        }
+    }
+
+    /// The random `target` draws `effects`, run as p1's, make on `state`.
+    fn draws_of(state: &mut GameState, effects: Vec<Effect>) -> Vec<TargetDraw> {
+        start_target_draws();
+        run(state, effects);
+        take_target_draws()
+    }
+
+    /// There is a draw, and each of `draws` is `by`'s, from `source_def`, never names `barred` and is clean.
+    fn all_lawful(draws: &[TargetDraw], by: TargetDrawBy, source_def: &str, barred: &CardInstance) {
+        assert!(!draws.is_empty(), "{source_def} drew");
+        for draw in draws {
+            assert_eq!(draw.by, by, "{draw:?}");
+            assert_eq!(
+                draw.source.as_ref().map(|card| card.def_id.as_str()),
+                Some(source_def)
+            );
+            assert!(!draw.picks.contains(&at(barred)), "{:?}", draw.picks);
+            assert!(target_draw_findings(draw).is_empty(), "{:?}", draw.picks);
+        }
+    }
+
+    /// A random cast's declared targets (`play_steps`' cast choices) and a random Cry's (`cry_trigger`,
+    /// R1855001) are recorded: the Spell never draws the Evasive unit, and a Unit's draws are clean.
+    #[test]
+    fn i22_a_random_casts_and_a_random_crys_declared_draws_are_recorded_and_lawful() {
+        for seed in 1..=6 {
+            let mut state = board(&format!("i22-declared-{seed}"));
+            let evasive = granted(&mut state, P2, 1, Keyword::Evasive);
+            put(&mut state, "fx-1", slot(P2, Row::Units, 2), json!({}));
+            let cast = cast_random(json_as(json!({ "query": { "defId": PA.bolt.id }, "count": 1 })));
+            let draws = draws_of(&mut state, vec![cast]);
+            all_lawful(&draws, TargetDrawBy::RandomCast, &PA.bolt.id, &evasive);
+
+            let zapper = put(&mut state, &PA.zapper.id, slot(P1, Row::Units, 1), json!({}));
+            let cry = trigger_cry(json_as(json!({ "instanceId": zapper.id, "random": true })));
+            let draws = draws_of(&mut state, vec![cry]);
+            assert!(!draws.is_empty(), "seed {seed}: the Cry drew");
+            for draw in &draws {
+                assert_eq!(draw.by, TargetDrawBy::RandomCast, "seed {seed}");
+                assert_eq!(draw.source.as_ref().map(|card| &card.id), Some(&zapper.id));
+                assert!(target_draw_findings(draw).is_empty(), "seed {seed}");
+            }
+        }
+    }
+
+    /// A Mayor's draws (R1200) are recorded: a play's declared target, a cast's and a triggered Cry's,
+    /// each from the same board (a bolt may kill the Mayor).
+    #[test]
+    fn i22_a_mayors_declared_draws_are_recorded_and_lawful() {
+        for seed in 1..=6 {
+            let mut start = mb::playing(&format!("i22-mayor-{seed}"));
+            register_play_a();
+            put(&mut start, &mb::mayor.id, slot(P1, Row::Units, 1), json!({}));
+            let zapper = put(&mut start, &PA.zapper.id, slot(P1, Row::Units, 2), json!({}));
+            let bolt = one(&mut start, &mb::bolt.id);
+            let evasive = granted(&mut start, P2, 1, Keyword::Evasive);
+            put(&mut start, &mb::ally.id, slot(P2, Row::Units, 2), json!({}));
+
+            start_target_draws();
+            let result = act_result(
+                &start,
+                json!({ "type": "play", "instanceId": bolt.id, "playerId": "p1" }),
+            );
+            assert!(result.error.is_none(), "seed {seed}: {:?}", result.error);
+            all_lawful(&take_target_draws(), TargetDrawBy::Mayor, &mb::bolt.id, &evasive);
+
+            let cast = cast_random(json_as(json!({ "query": { "defId": mb::bolt.id }, "count": 1 })));
+            let draws = draws_of(&mut start.clone(), vec![cast]);
+            all_lawful(&draws, TargetDrawBy::Mayor, &mb::bolt.id, &evasive);
+
+            let cry = trigger_cry(json_as(json!({ "instanceId": zapper.id })));
+            let draws = draws_of(&mut start.clone(), vec![cry]);
+            assert!(!draws.is_empty(), "seed {seed}: the Cry drew");
+            assert!(
+                draws
+                    .iter()
+                    .all(|draw| draw.by == TargetDrawBy::Mayor && target_draw_findings(draw).is_empty()),
+                "seed {seed}: {draws:?}"
+            );
+        }
+    }
+
+    /// `board` with `pinger` (a Field Spell whose Activate deals 1 to a declared target) in p1's
+    /// backrow, a bolt and a zapper in p1's hand, and an Evasive and a bare unit on p2's side.
+    fn listing_board() -> (GameState, [CardInstance; 5]) {
+        let mut state = board("i22-listed");
+        register_catalog(activate_catalog(registered_catalog().clone()));
+        let mut scripts = registered_scripts().clone();
+        for (id, script) in ACTIVATE_SCRIPTS.clone() {
+            scripts.insert(id, script);
+        }
+        register_scripts(scripts);
+        let evasive = granted(&mut state, P2, 1, Keyword::Evasive);
+        let bare = put(&mut state, "fx-1", slot(P2, Row::Units, 2), json!({}));
+        let bolt = one(&mut state, &PA.bolt.id);
+        let zapper = one(&mut state, &PA.zapper.id);
+        let ping = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
+        (state, [evasive, bare, bolt, zapper, ping])
+    }
+
+    /// The listed action of `card` whose targets are exactly `[at(bare)]`, retargeted at `evasive`.
+    fn retargeted(
+        legal: &[ActionBody],
+        card: &CardInstance,
+        bare: &CardInstance,
+        evasive: &CardInstance,
+    ) -> ActionBody {
+        let mut action = legal
+            .iter()
+            .find(|body| match body {
+                ActionBody::Play {
+                    instance_id,
+                    targets: Some(targets),
+                    ..
+                }
+                | ActionBody::Activate {
+                    instance_id,
+                    targets: Some(targets),
+                    ..
+                } => *instance_id == card.id && *targets == vec![at(bare)],
+                _ => false,
+            })
+            .cloned()
+            .unwrap_or_else(|| panic!("{} is listed at {}: {legal:?}", card.def_id, bare.id));
+        match &mut action {
+            ActionBody::Play { targets, .. } | ActionBody::Activate { targets, .. } => {
+                *targets = Some(vec![at(evasive)]);
+            }
+            _ => unreachable!(),
+        }
+        action
+    }
+
+    #[test]
+    fn i22_a_listed_target_declaration_offering_an_unlawful_card_is_flagged() {
+        let (state, [evasive, bare, bolt, zapper, ping]) = listing_board();
+        let legal = legal_actions(&state, P1);
+        assert_eq!(listed_target_findings(&state, P1, &legal), Vec::<String>::new());
+        assert!(invariant("I22", create_invariant_monitor(&state).hidden(&state)).is_empty());
+
+        for (card, verb) in [(&bolt, "play"), (&ping, "activation")] {
+            let forged = retargeted(&legal, card, &bare, &evasive);
+            let found = listed_target_findings(&state, P1, &[forged]);
+            only(
+                &found,
+                &evasive.id,
+                &["I22 unlawful listed target", verb, &card.id, "R4353002"],
+            );
+        }
+        // A Unit's declaration may name an Evasive card (R4353002).
+        let forged = retargeted(&legal, &zapper, &bare, &evasive);
+        assert_eq!(
+            listed_target_findings(&state, P1, &[forged]),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn i22_an_open_target_prompt_offering_an_unlawful_card_is_flagged() {
+        let mut state = board("i22-offered");
+        let evasive = granted(&mut state, P2, 1, Keyword::Evasive);
+        let bare = put(&mut state, "fx-1", slot(P2, Row::Units, 2), json!({}));
+        let chooser = one(&mut state, &PA.chooser.id);
+        let mut state = act_ok(
+            &state,
+            json!({ "type": "play", "instanceId": chooser.id, "playerId": "p1" }),
+        )
+        .state;
+        let pending = state.pending.as_ref().expect("the chooser's prompt");
+        assert_eq!(pending.kind, PromptKind::Target);
+        let offered: Vec<&Selection> = pending.options.iter().map(|option| &option.selection).collect();
+        assert_eq!(offered, vec![&at(&bare)]);
+        assert!(invariant("I22", create_invariant_monitor(&state).hidden(&state)).is_empty());
+
+        let pending = state.pending.as_mut().expect("the chooser's prompt");
+        let mut forged = pending.options[0].clone();
+        forged.key = evasive.id.clone();
+        forged.selection = at(&evasive);
+        pending.options.push(forged);
+        let found = invariant("I22", create_invariant_monitor(&state).hidden(&state));
+        only(
+            &found,
+            &evasive.id,
+            &["I22 unlawful target offered", &chooser.id, "R4353002"],
+        );
     }
 }

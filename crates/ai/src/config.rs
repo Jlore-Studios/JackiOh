@@ -767,10 +767,14 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // R2424000: an untuned start for the training lanes, as R2380000's shares are.
     death: 0.5,
     // R2477000: an untuned start for the training lanes, as R2424000's is. At 0.5 the smoke gate read
-    // 20, 16 and 17 of 20; at 1.0, 19, 16 and 16, Hard against Easy on its floor of 16.
+    // 20, 16 and 17 of 20; at 1.0, 19, 16 and 16, Hard against Easy on its floor of 16. #4448's fork
+    // screen on improve-dev (--extend) at 1.0, against the control at 99a9c84d7f: 200 trunk games, 155
+    // forks, 59 live, edge -0.001 (-0.024 to 0.023); reverted (training/improve.md, A screen).
     turn_hook: 0.5,
     // R2564000: an untuned start for the training lanes, as R2477000's is. At 0.5 the smoke gate read
-    // 20, 16 and 20 of 20; at 0, 19, 16 and 20.
+    // 20, 16 and 20 of 20; at 0, 19, 16 and 20. #4448's fork screen on improve-dev (--extend) at 1.0,
+    // against the control at 99a9c84d7f, turn_hook at 0.5 as its screen left it: 200 trunk games, 205
+    // forks, 99 live, edge -0.002 (-0.032 to 0.027); reverted (training/improve.md, A screen).
     activation: 0.5,
     // R2688000: an untuned start for the training lanes, as R2564000's is. At 0.5 the smoke gate read
     // 20, 20 and 20 of 20; at 0, 20, 20 and 20.

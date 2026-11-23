@@ -1,5 +1,5 @@
 //! `jackioh_engine::testkit` (feature `testkit`, SURFACE §8): `scenario` (the harness), `invariants` (the
-//! I1–I21 monitor `cargo jackioh fuzz` runs) and `glow`, plus the whole engine (`pub use crate::*`).
+//! I1–I22 monitor `cargo jackioh fuzz` runs) and `glow`, plus the whole engine (`pub use crate::*`).
 //! `played_attack.rs` (#4111) is the one reading of what an attack did, which I18 and the combat
 //! forecast's rules tests both hold `combat_forecast` to (R3100000).
 //!

@@ -167,7 +167,13 @@ invisible to the fork screen and wants the deal screen.
    by its scene tests, and its config comment records the screen as inconclusive with its decided
    count. On the fork screen (`--forks`, 200 trunk games) keep the change only when `forkEdgeLow`
    is above 0; it reads `inconclusive: true` below `SCREEN_MIN_DECIDED` (20) live forks, and a change
-   whose gain compounds across moves reads low on it, never high (R4397000).
+   whose gain compounds across moves reads low on it, never high (R4397000). Size one by #4448's:
+   the screen of `AI_EVAL.turn_hook` played 200 trunk games and 155 forks in 3 h 7 min, and that of
+   `AI_EVAL.activation` 200 and 205 in 4 h 0 min, each on a 4-core Intel Xeon at 2.30 GHz, about 12
+   and 16 core-hours. Neither fits a bot's model call (150 minutes), and a fork screen prints nothing
+   until its tally and cannot resume, so a run that dies first reads nothing and is run again from
+   the same binaries: the first run of #4448's `turn_hook` screen died 3 hours in, when the idle
+   cloud session it ran in was reclaimed.
 4. Decide a screen's size before you start it. 400 games is the floor; a change you expect to gain
    only a point or two needs more to show it (`--games 800` plays deals 1 to 400). Never extend a
    screen because it came close, never screen the same change again to get a better read, and never

@@ -78,7 +78,10 @@ are missing. `apps/web/package.json`'s `predev`, `prebuild`, `prebuild:staging`,
 `JACKIOH_WASM_PREVIEW=0` and build without it. The `duos`
 feature (#936's Duos bindings, which only the development-only `/dev/duos` calls) is off by default
 and on only for `predev` (`JACKIOH_WASM_DUOS=1`), so no other module, the one a player loads
-included, carries them.
+included, carries them. Test and lint builds still compile the real bodies: `jackioh-wasm-c`'s
+dev-dependency on `jackioh-wasm-core`'s `duos` feature (`crates/wasm/c/Cargo.toml`, held by
+`crates/tools/tests/acceptance.rs`) turns it on for every test build, while every module
+`scripts/build-wasm.sh` makes still builds the stubs.
 
 It keeps nothing between builds itself: both deploys build on GitHub's runners, whose setup action
 restores `target/`, so cargo rebuilds only what changed.

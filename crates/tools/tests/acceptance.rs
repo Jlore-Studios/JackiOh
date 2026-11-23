@@ -3360,6 +3360,59 @@ fn ts_the_generated_types_are_written_by_the_ci_test_build() {
     );
 }
 
+/// Whether the manifest's `[dev-dependencies]` turn `jackioh-wasm-core`'s `duos` feature on (#4542):
+/// without it no test build compiles the real Duos bodies.
+fn dev_dependency_missing_duos(manifest: &str) -> bool {
+    let mut in_dev = false;
+    for raw in manifest.lines() {
+        let line = raw.split('#').next().unwrap_or("").trim();
+        if line.starts_with('[') {
+            in_dev = line == "[dev-dependencies]";
+        } else if in_dev
+            && !line.is_empty()
+            && line
+                .strip_prefix("jackioh-wasm-core")
+                .and_then(|rest| rest.trim_start().strip_prefix('='))
+                .is_some_and(|rest| rest.contains("features") && rest.contains("\"duos\""))
+        {
+            return false;
+        }
+    }
+    true
+}
+
+/// #4542: the C crate's dev-dependency turns `jackioh-wasm-core`'s `duos` feature on, so every
+/// test build compiles the real Duos bodies while the shipped modules keep their stubs.
+#[test]
+fn duos_the_c_test_build_compiles_the_duos_bodies() {
+    let path = repo().join("crates/wasm/c/Cargo.toml");
+    let manifest = fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+    assert!(
+        !dev_dependency_missing_duos(&manifest),
+        "crates/wasm/c/Cargo.toml's [dev-dependencies] no longer turn on `duos` for \
+         jackioh-wasm-core: no test build compiles the real Duos bodies (#4542); restore the \
+         `features = [\"duos\"]` line"
+    );
+}
+
+#[test]
+fn duos_the_dev_dependency_scan_finds_a_dropped_feature() {
+    let ok = "[dependencies]\njackioh-wasm-core = { path = \"../core\" }\n\n[dev-dependencies]\n\
+              # a comment\njackioh-wasm-core = { path = \"../core\", features = [\"duos\"] }\n";
+    assert!(!dev_dependency_missing_duos(ok));
+    let no_features = "[dev-dependencies]\njackioh-wasm-core = { path = \"../core\" }\n";
+    assert!(dev_dependency_missing_duos(no_features));
+    let other_feature =
+        "[dev-dependencies]\njackioh-wasm-core = { path = \"../core\", features = [\"serde\"] }\n";
+    assert!(dev_dependency_missing_duos(other_feature));
+    let commented =
+        "[dev-dependencies]\n# jackioh-wasm-core = { path = \"../core\", features = [\"duos\"] }\n";
+    assert!(dev_dependency_missing_duos(commented));
+    let linked = "[dependencies]\njackioh-wasm-core = { path = \"../core\", features = [\"duos\"] }\n\n[dev-dependencies]\n";
+    assert!(dev_dependency_missing_duos(linked));
+    assert!(dev_dependency_missing_duos("[package]\nname = \"x\"\n"));
+}
+
 #[test]
 fn ts_the_dev_dependency_scan_finds_a_dropped_feature() {
     let ok = "[dependencies]\njackioh-run = { workspace = true }\n\n[dev-dependencies]\n\

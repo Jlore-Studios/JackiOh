@@ -15,7 +15,7 @@
 //! `chosenExertion` snapshots the chosen attacker's or switcher's identity and layered Deft before
 //! reduction, since combat may take it off the field before its event.
 //!
-//! The twenty-one checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups
+//! The twenty-two checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups
 //! one bug):
 //!   I1 no sick attack is offered (§4.1, §6.1, R83, R171): not in `attack_targets`, not as the chosen
 //!      `attack`.
@@ -105,6 +105,17 @@
 //!      a barred Defense and a Burn or Toxic tick (R4508005). A Unit is judged only while still on the
 //!      field and immune after the step, or gone from it with its own keywords immune. Reads the events
 //!      and the catalog, never `restrictions::unaffected_by`; I14's branches and each Duos duel run it.
+//!   I22 every `target` pick is one its source may aim at (§10.5 step 1, R450; #4540): no Dormant card,
+//!      whatever the source or none (R1839000); no face-up Evasive card in play from a Spell or Field
+//!      Spell, the source read as R781001 reads it (R4353002); no face-up card Immune to Spells from a
+//!      Spell (R450). Read off the board (zones, `slumber`, face-down state, layered keywords), never
+//!      through `restrictions`, `targeting` or the targeting point; a face-down card's Immune to Spells,
+//!      which the engine also bars, is not read. `before` opens `seams`' record of the random `target`
+//!      draws nobody is asked for (a random cast's, R452; a Mayor's, R1200) and `after` judges each on
+//!      the state it was drawn on; `hidden` judges each `target` declaration of a listed play or
+//!      activation (none while a Mayor acts, whose plays name none) and each option of an open `target`
+//!      prompt. A random pick an effect makes is no targeting and is not recorded (R4353002: "a random
+//!      enemy" may land on an Evasive card). Each Duos duel runs it; I14's branches do not.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -124,6 +135,7 @@ use crate::reduce::ReduceResult;
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::subsystems::activate::ActivateAction;
 use crate::testkit::played_attack::PlayedAttack;
+use crate::testkit::seams::{TargetDraw, TargetDrawBy};
 use crate::wire::{
     Action, ActionBody, ActivationView, BackrowView, CardType, CardView, DUOS_DUELS, DUOS_SEATS,
     DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment, GameEvent, GameResult, HandView, KeywordKind,
@@ -1674,6 +1686,258 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
         }
     }
     found
+}
+
+/// I22: what bars a field card as a `target` pick, read off the board (§6.1, §10.5 step 1).
+#[derive(Clone, Copy, Debug)]
+struct PickBars {
+    /// Dormant: nothing targets it (R1839000).
+    dormant: bool,
+    /// Face-up and Evasive through the layers (R4353002).
+    evasive: bool,
+    /// Face-up and Immune to Spells through the layers (R450).
+    immune: bool,
+}
+
+/// I22 (R1487000, R4353002): a Trap or Field Trap, a card set face-down among them, neither flipped nor
+/// revealed. Its keywords sleep, so I22 reads neither Evasive nor Immune to Spells off it.
+fn face_down_now(state: &GameState, card: &CardInstance) -> bool {
+    matches!(
+        crate::faces::card_type_of(state, card),
+        CardType::Trap | CardType::FieldTrap
+    ) && card.face_up != Some(true)
+        && card.revealed != Some(true)
+}
+
+/// I22: the barred field cards among `picks` on `state`, by instance id, in pick order; each card read
+/// once, through one aura table built only when a pick names a field card. A hero, a zone, a mode or a
+/// card in a hand or a pile bars nothing.
+fn barred_picks<'p>(
+    state: &GameState,
+    picks: impl IntoIterator<Item = &'p Selection>,
+) -> IndexMap<String, PickBars> {
+    let named: IndexSet<&str> = picks
+        .into_iter()
+        .filter_map(|pick| match pick {
+            Selection::Instance { instance_id } => Some(instance_id.as_str()),
+            _ => None,
+        })
+        .collect();
+    let on_field: Vec<&CardInstance> = named
+        .into_iter()
+        .filter_map(|id| find_instance(state, id))
+        .filter(|card| matches!(card.zone, Zone::Field { .. }))
+        .collect();
+    if on_field.is_empty() {
+        return IndexMap::new();
+    }
+    let auras = AuraTable::new(state);
+    on_field
+        .into_iter()
+        .filter_map(|card| {
+            let face_up = !face_down_now(state, card);
+            let bars = PickBars {
+                dormant: crate::slumber::is_slumbering(card),
+                evasive: face_up && auras.unit_has(card, KeywordKind::Evasive),
+                immune: face_up && auras.unit_has(card, KeywordKind::ImmuneToSpells),
+            };
+            (bars.dormant || bars.evasive || bars.immune).then(|| (card.id.clone(), bars))
+        })
+        .collect()
+}
+
+/// I22: why `source`'s targeting may not aim at a card `bars` describes, with the ruling, or `None` when
+/// it may. A Dormant card bars every source, and no card at all (R1839000). Evasive bars a Spell and a
+/// Field Spell, the source read as R781001 reads it: a Unit while it stands in a unit zone, else its
+/// face's printed type, so a Spell set face-down still aims as one (R4353002). Immune to Spells bars a
+/// Spell read where it is (E35, R450): a Spell set face-down is a Trap there, and a Field Spell no Spell.
+fn source_barred(
+    state: &GameState,
+    source: Option<&CardInstance>,
+    bars: PickBars,
+) -> Option<(&'static str, &'static str)> {
+    if bars.dormant {
+        return Some(("a Dormant card, which nothing targets", "R1839000"));
+    }
+    let source = source?;
+    let aims_as = match source.zone {
+        Zone::Field { row: Row::Units, .. } => CardType::Unit,
+        _ => crate::faces::card_type_of_face(state, &source.def_id, source.radiant),
+    };
+    if bars.evasive && matches!(aims_as, CardType::Spell | CardType::FieldSpell) {
+        return Some((
+            "an Evasive card in play, which no Spell or Field Spell targets",
+            "R4353002",
+        ));
+    }
+    if bars.immune && crate::faces::card_type_of(state, source) == CardType::Spell {
+        return Some(("a card Immune to Spells, which no Spell targets", "R450"));
+    }
+    None
+}
+
+/// I22 (#4540): every pick of one random `target` draw (`testkit::seams`) is one its source may aim at,
+/// judged on the state it was drawn on: R452's random cast and R1200's Mayor draw only from what the
+/// targeting point leaves.
+pub fn target_draw_findings(draw: &TargetDraw) -> Vec<String> {
+    let (under, drawn_by) = match draw.by {
+        TargetDrawBy::RandomCast => ("a random cast", "R452"),
+        TargetDrawBy::Mayor => ("a Mayor", "R1200"),
+    };
+    let source = draw.source.as_ref();
+    barred_picks(&draw.state, &draw.picks)
+        .into_iter()
+        .filter_map(|(id, bars)| {
+            let (what, rule) = source_barred(&draw.state, source, bars)?;
+            Some(format!(
+                "I22 unlawful random target: {} drew {} for {} on turn {} under {under}: {what} ({rule}, {drawn_by})",
+                source.map_or_else(|| "no card".to_string(), name_of),
+                card_label(&draw.state, &id),
+                draw.seat,
+                draw.state.turn,
+            ))
+        })
+        .collect()
+}
+
+/// I22 (#4540): every `target` pick a listed play or activation of `viewer`'s declares is one its source
+/// may aim at (§10.5 step 1, R450). I8 and I14 hold the listing and the reducer to each other, so a
+/// filter both read passes both. A pick is matched to its declaration by the reducer's own reading
+/// (`play_choices::targeting_decls_of`), and only a `target` declaration's is judged: a Spell may Tribute
+/// its controller's own Evasive Unit. While a Mayor acts no listed action names a target (R1200), and
+/// the record judges the draws instead. A face-down play declares nothing (R1044).
+pub fn listed_target_findings(state: &GameState, viewer: PlayerId, legal: &[ActionBody]) -> Vec<String> {
+    if crate::random_targets::targets_random(state) {
+        return Vec::new();
+    }
+    let barred = barred_picks(
+        state,
+        legal.iter().flat_map(|body| match body {
+            ActionBody::Play {
+                targets: Some(targets),
+                face_down: None,
+                ..
+            }
+            | ActionBody::Activate {
+                targets: Some(targets),
+                ..
+            } => targets.as_slice(),
+            _ => &[],
+        }),
+    );
+    if barred.is_empty() {
+        return Vec::new();
+    }
+    let mut found: IndexSet<String> = IndexSet::new();
+    let names_barred = |targets: &[Selection]| {
+        targets.iter().any(
+            |pick| matches!(pick, Selection::Instance { instance_id } if barred.contains_key(instance_id)),
+        )
+    };
+    for body in legal {
+        let (verb, source, targets, decls) = match body {
+            ActionBody::Play {
+                instance_id,
+                targets: Some(targets),
+                modes,
+                face_down: None,
+                ..
+            } if names_barred(targets) => {
+                let (Some(card), Some(play)) =
+                    (find_instance(state, instance_id), PlayAction::from_body(body))
+                else {
+                    continue;
+                };
+                let face = crate::play_choices::face_for_action(state, viewer, card, &play);
+                let modes = modes.as_deref().unwrap_or(&[]);
+                let decls =
+                    crate::play_choices::targeting_decls_of(state, viewer, &face, targets, modes, None);
+                ("play", face, targets, decls)
+            }
+            ActionBody::Activate {
+                instance_id,
+                ability,
+                targets: Some(targets),
+                modes,
+                ..
+            } if names_barred(targets) => {
+                let Some(card) = find_instance(state, instance_id) else {
+                    continue;
+                };
+                let abilities = crate::subsystems::activate::abilities_of(state, card);
+                let Some(decl) = (match ability {
+                    Some(ability) => abilities.into_iter().find(|decl| decl.id == *ability),
+                    None => abilities.into_iter().next(),
+                }) else {
+                    continue;
+                };
+                let modes = modes.as_deref().unwrap_or(&[]);
+                let decls = crate::play_choices::targeting_decls_of(
+                    state,
+                    viewer,
+                    card,
+                    targets,
+                    modes,
+                    Some(decl.targets.as_slice()),
+                );
+                ("activation", card.clone(), targets, decls)
+            }
+            _ => continue,
+        };
+        for (pick, decl) in targets.iter().zip(decls) {
+            let (Selection::Instance { instance_id }, Some(_)) = (pick, decl) else {
+                continue;
+            };
+            let Some(bars) = barred.get(instance_id) else {
+                continue;
+            };
+            if let Some((what, rule)) = source_barred(state, Some(&source), *bars) {
+                found.insert(format!(
+                    "I22 unlawful listed target: {viewer}'s {verb} of {} offers {} on turn {}: {what} ({rule})",
+                    name_of(&source),
+                    card_label(state, instance_id),
+                    state.turn
+                ));
+            }
+        }
+    }
+    found.into_iter().collect()
+}
+
+/// I22 (#4540): every option an open `target` prompt offers is one its source may aim at (R450): the
+/// targeting point filters each such prompt as it opens (`prompts::open_prompt`). The source is the card
+/// the prompt's resume names, as the targeting point reads it.
+pub fn offered_target_findings(state: &GameState) -> Vec<String> {
+    let Some(pending) = state
+        .pending
+        .as_ref()
+        .filter(|pending| pending.kind == PromptKind::Target)
+    else {
+        return Vec::new();
+    };
+    let barred = barred_picks(state, pending.options.iter().map(|option| &option.selection));
+    if barred.is_empty() {
+        return Vec::new();
+    }
+    let source = pending
+        .resume
+        .instance_id
+        .as_deref()
+        .and_then(|id| find_instance(state, id));
+    barred
+        .into_iter()
+        .filter_map(|(id, bars)| {
+            let (what, rule) = source_barred(state, source, bars)?;
+            Some(format!(
+                "I22 unlawful target offered: prompt {} of {} offers {} to {} on turn {}: {what} ({rule})",
+                pending.id,
+                source.map_or_else(|| pending.resume.def_id.clone(), name_of),
+                card_label(state, &id),
+                pending.player_id,
+                state.turn
+            ))
+        })
+        .collect()
 }
 
 /// The events that take a card out of a zone and name the definition it left as (`Lineage::gone_as`).
@@ -3309,9 +3573,10 @@ fn plain_combat(events: &[GameEvent], state: &GameState, entry: &crate::query::A
 
 /// The monitor, made by `create_invariant_monitor`: the shadow of this file's header and the checks
 /// run against it. `before` is I1, I3, I12's chosen-action snapshot, I18's kept forecast, I19's
-/// Dormant cards and I21's immune Units, `after` feeds one action's events into the shadow and runs I2,
-/// I4, I5, I7, I9, I10, I11, I12, I16, I17, I18, I19, I20 and I21, `hidden` is I6, I13 and I15 for both
-/// seats, `unlisted` is I8 and `listed` is I14 (I19 and I21 on each branch).
+/// Dormant cards, I21's immune Units and I22's open record, `after` feeds one action's events into the
+/// shadow and runs I2, I4, I5, I7, I9, I10, I11, I12, I16, I17, I18, I19, I20, I21 and I22's recorded
+/// draws, `hidden` is I6, I13, I15 and I22's listed targets for both seats and I22's open prompt,
+/// `unlisted` is I8 and `listed` is I14 (I19 and I21 on each branch).
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -4040,8 +4305,11 @@ impl InvariantMonitor {
 
     /// I1 and I3 on the state the next action is chosen in, plus I12's chosen exertion snapshot, the
     /// forecast I18 holds a chosen attack to, the Dormant cards I19 holds untouched and the Units Immune
-    /// to Spells I21 does. Empty when clean.
+    /// to Spells I21 does; opens I22's record of random `target` draws (`testkit::seams`). Empty when
+    /// clean.
     pub fn before(&mut self, state: &GameState, player: PlayerId, action: &ActionBody) -> Vec<String> {
+        // I22: the random target draws from here to `after` are the step's (#4540).
+        crate::testkit::seams::start_target_draws();
         // I18: the forecast the seat was shown for the attack it chose, kept for `after` (R3100000).
         self.forecast_kept = None;
         self.note_slumber(state);
@@ -4169,12 +4437,14 @@ impl InvariantMonitor {
     }
 
     /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9–I12 and I16–I21 against the
-    /// resulting state.
+    /// resulting state, and I22 on each random `target` draw the step made, on the state it was drawn on.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
-        // I18: a kept forecast is this step's alone, and so are I19's Dormant cards and I21's immune Units.
+        // I18: a kept forecast is this step's alone, and so are I19's Dormant cards, I21's immune Units
+        // and I22's draws.
         let kept = self.forecast_kept.take();
         let slumber = self.slumber_step.take();
         let immune = self.immune_step.take();
+        let draws = crate::testkit::seams::take_target_draws();
         let mut found: Vec<String> = Vec::new();
         // R1829000: the turn the action began on; an uncovering inside it happened on a turn from here on.
         let began_on = self.turn;
@@ -4736,6 +5006,8 @@ impl InvariantMonitor {
         if let Some(step) = &immune {
             found.extend(immune_reach_findings(step, events, state));
         }
+        // I22: every random target draw aimed where its source may (R452, R1200).
+        found.extend(draws.iter().flat_map(target_draw_findings));
         // I18: a plain attack did what its seat's forecast said (R3100000, R4111000).
         if let Some(kept) = kept
             && kept.foreseeable
@@ -4770,8 +5042,9 @@ impl InvariantMonitor {
         found
     }
 
-    /// I6, I13 and I15 for both seats on a state the fuzz reached, setup's included. Empty when clean. A
-    /// panic in `view_for` or `legal_actions` is reported, not raised.
+    /// I6, I13, I15 and I22's listed declarations for both seats on a state the fuzz reached, setup's
+    /// included, and I22's open prompt. Empty when clean. A panic in `view_for` or `legal_actions` is
+    /// reported, not raised.
     pub fn hidden(&self, state: &GameState) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
         for viewer in PLAYER_IDS {
@@ -4782,6 +5055,8 @@ impl InvariantMonitor {
                 let mut violations = hidden_information_violations(state, viewer, &view, &legal);
                 violations.extend(play_reason_violations(state, viewer, &view, &legal));
                 violations.extend(activation_reason_violations(state, viewer, &view, &legal));
+                // I22: and every target the listing declares (R450, #4540).
+                violations.extend(listed_target_findings(state, viewer, &legal));
                 violations
             }));
             match checked {
@@ -4795,6 +5070,8 @@ impl InvariantMonitor {
                 }
             }
         }
+        // I22: every option an open target prompt offers (R450, #4540).
+        found.extend(offered_target_findings(state));
         found
     }
 
@@ -4930,9 +5207,13 @@ impl DuosInvariantMonitor {
             .collect()
     }
 
-    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7, I9–I12, I16, I17, I19 and I21
-    /// against both duels, and checks pool bounds (§13.4) for both teams.
+    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7, I9–I12, I16, I17 and I19–I21
+    /// against both duels and I22 on each random `target` draw under the duel it was drawn in, and checks
+    /// pool bounds (§13.4) for both teams.
     pub fn after(&mut self, events: &[DuosEvent], state: &DuosState) -> Vec<String> {
+        // I22: the action's draws, taken before the duels' own `after`s, which would file them all under
+        // the first. A draw's state carries its duel's seed (`duos_duel_seed`), which names the duel.
+        let draws = crate::testkit::seams::take_target_draws();
         let mut found = Vec::new();
         let mut duel_events: [Vec<GameEvent>; DUOS_DUELS] = [Vec::new(), Vec::new()];
         for event in events {
@@ -4949,6 +5230,13 @@ impl DuosInvariantMonitor {
                 found.extend(violations.into_iter().map(|v| format!("duel {duel}: {v}")));
             }
         }
+        for draw in &draws {
+            let duel = state.duels.iter().position(|duel| duel.seed == draw.state.seed);
+            found.extend(target_draw_findings(draw).into_iter().map(|v| match duel {
+                Some(duel) => format!("duel {duel}: {v}"),
+                None => v,
+            }));
+        }
         for &team in Team::ALL {
             let pool = state.teams[team].pool;
             let cap = state.teams[team].rules.pool_health;
@@ -4964,7 +5252,8 @@ impl DuosInvariantMonitor {
         found
     }
 
-    /// I6, I13 and I15 for all seats: both duels' 1v1 checks, plus `duos_view_for` redaction for each seat.
+    /// I6, I13, I15 and I22's listed and offered targets for all seats: both duels' 1v1 checks, plus
+    /// `duos_view_for` redaction for each seat.
     pub fn hidden(&self, state: &DuosState) -> Vec<String> {
         let mut found = Vec::new();
         for (duel, monitor) in self.monitors.iter().enumerate() {
@@ -5311,5 +5600,54 @@ mod tests {
         );
         // The same bump with its `damage` event is clean.
         assert_eq!(i20(monitor.clone().after(&events, &state)), Vec::<String>::new());
+    }
+
+    /// I22 (#4540): a random target draw made while a Duos action runs is judged under the duel it was
+    /// drawn in, whichever duel the acting seat sits in, and once.
+    #[test]
+    fn i22_a_duos_draw_is_judged_under_the_duel_it_was_drawn_in() {
+        let mut state = crate::testkit::duos_scenario::duos_scenario("i22-duos", test_decks(), None);
+        let duel = &mut state.duels[1];
+        let def_id = duel.players[PlayerId::P1].hand[0].def_id.clone();
+        let at = Zone::Field {
+            player: PlayerId::P1,
+            row: Row::Units,
+            lane: 1,
+        };
+        let mut card = crate::state::new_instance(duel, &def_id, PlayerId::P1, at);
+        card.slumber = Some(crate::state::Slumber { turns: Some(2) });
+        let pick = Selection::Instance {
+            instance_id: card.id.clone(),
+        };
+        let id = card.id.clone();
+        duel.players[PlayerId::P1].units[0] = Some(vec![card]);
+        let i22 = |found: Vec<String>| -> Vec<String> {
+            found.into_iter().filter(|f| f.contains("I22 ")).collect()
+        };
+        let end_turn = DuosActionBody::Duel {
+            body: ActionBody::EndTurn,
+        };
+        let mut monitor = create_duos_invariant_monitor(&state);
+        monitor.before(&state, DuosSeat::A1, &end_turn);
+        crate::testkit::seams::record_target_draw(
+            &state.duels[1],
+            None,
+            PlayerId::P1,
+            TargetDrawBy::Mayor,
+            std::slice::from_ref(&pick),
+        );
+        let found = i22(monitor.after(&[], &state));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with("duel 1: I22 unlawful random target"),
+            "{}",
+            found[0]
+        );
+        assert!(
+            found[0].contains(&id) && found[0].contains("R1839000"),
+            "{}",
+            found[0]
+        );
+        assert_eq!(i22(monitor.after(&[], &state)), Vec::<String>::new());
     }
 }

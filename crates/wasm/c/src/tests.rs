@@ -671,24 +671,64 @@ fn r3496000_run_content_at_answers_the_carried_and_current_versions_and_null_for
 }
 
 #[test]
-fn duos_exports_answer_what_the_core_bodies_answer() {
+fn duos_exports_play_a_game_through_the_core_bodies() {
     init();
-    // Built without the `duos` feature each body answers the reason, which the status carries.
-    assert_eq!(call!(duos_create; "{}";), expect(wasm_core::duos_create("{}")));
-    assert_eq!(call!(duos_begin; "{}";), expect(wasm_core::duos_begin("{}")));
-    assert_eq!(
-        call!(duos_reduce; "{}", "{}";),
-        expect(wasm_core::duos_reduce("{}", "{}"))
+    let deck = |seed: &str| -> Value {
+        let options = json!({ "rngSeed": seed, "size": jackioh_engine::config::DECK_SIZE }).to_string();
+        let built: Value = serde_json::from_str(&ok(call!(build_ai_deck; options;))).expect("JSON");
+        built["deck"].clone()
+    };
+    let options = json!({
+        "seed": "duos-c-test",
+        "decks": {
+            "a1": deck("duos-c-a1"), "a2": deck("duos-c-a2"),
+            "b1": deck("duos-c-b1"), "b2": deck("duos-c-b2"),
+        },
+    })
+    .to_string();
+    let created = call!(duos_create; options;);
+    assert_eq!(created, expect(wasm_core::duos_create(&options)));
+    let created = ok(created);
+    let begun = call!(duos_begin; created;);
+    assert_eq!(begun, expect(wasm_core::duos_begin(&created)));
+    let begun = ok(begun);
+    let begun: Value = serde_json::from_str(&begun).expect("JSON");
+    let state = begun["state"].to_string();
+    let mut acted: Option<(String, Value)> = None;
+    for seat in ["a1", "a2", "b1", "b2"] {
+        let legal = call!(duos_legal_actions; state, seat;);
+        assert_eq!(legal, expect(wasm_core::duos_legal_actions(&state, seat)));
+        assert_eq!(legal.status, STATUS_OK, "{}", legal.text);
+        if acted.is_none() {
+            let bodies: Value = serde_json::from_str(&legal.text).expect("JSON");
+            if let Some(first) = bodies.as_array().and_then(|bodies| bodies.first()).cloned() {
+                acted = Some((seat.to_owned(), first));
+            }
+        }
+    }
+    let (seat, first) = acted.expect("a begun duos game offers an action");
+    let action = json!({ "seat": seat, "nonce": "duos-c-1", "body": first }).to_string();
+    let reduced = call!(duos_reduce; state, action;);
+    assert_eq!(reduced, expect(wasm_core::duos_reduce(&state, &action)));
+    assert_eq!(reduced.status, STATUS_OK, "{}", reduced.text);
+    assert!(
+        !reduced.text.contains("\"error\""),
+        "the legal action is taken: {}",
+        reduced.text
     );
-    assert_eq!(
-        call!(duos_legal_actions; "{}", "a1";),
-        expect(wasm_core::duos_legal_actions("{}", "a1"))
-    );
-    assert_eq!(
-        call!(duos_view_for; "{}", "a1";),
-        expect(wasm_core::duos_view_for("{}", "a1"))
-    );
-    assert_eq!(call!(duos_create; "{}";).status, STATUS_FAILED);
+    for seat in ["a1", "a2", "b1", "b2"] {
+        let viewed = call!(duos_view_for; state, seat;);
+        assert_eq!(viewed, expect(wasm_core::duos_view_for(&state, seat)));
+        assert_eq!(viewed.status, STATUS_OK, "{}", viewed.text);
+    }
+    // A bad deck is refused with its seat named (the setup check labels each deck by seat).
+    let mut bad: Value = serde_json::from_str(&options).expect("JSON");
+    bad["decks"]["b2"] = json!([]);
+    let bad = bad.to_string();
+    let refused = call!(duos_create; bad;);
+    assert_eq!(refused, expect(wasm_core::duos_create(&bad)));
+    assert_eq!(refused.status, STATUS_FAILED, "{}", refused.text);
+    assert!(refused.text.contains("b2"), "{}", refused.text);
 }
 
 #[test]
