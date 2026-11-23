@@ -18882,8 +18882,15 @@
     "what": "review #4616 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-23T15:07:54Z",
-    "notes": [],
+    "at": "2026-11-23T15:15:53Z",
+    "notes": [
+      "delivered review #4574 on claude-3 (run 45188580454): infra (its model job left no upload)",
+      "delivered build #4604 on claude-1 (run 45179018259): interrupted",
+      "delivered build #4577 on claude-3 (run 45155021062): built",
+      "started review #4574 on claude-3 (run 45204103464)",
+      "started review #4616 on claude-3 (run 45204248055)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is idle, but nothing queued is for it; `claude-8` is idle, but nothing queued is for it; `claude-1` 5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-23T17:50:00Z; it can start a build or a plan again in 1h 28m; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is idle, but nothing queued is for it; `gpt` is idle, but nothing queued is for it; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4604 held for `claude-1` until 10:50 (5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -19588,7 +19595,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T15:07:54Z",
+  "loop_tick": "2026-11-23T15:15:53Z",
   "machine_disk": {
     "issue": null,
     "reading": {
