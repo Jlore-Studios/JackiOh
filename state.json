@@ -351,102 +351,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6966618595": {
-      "at": "2026-11-18T01:53:53Z",
-      "lines": [
-        "/harness build Build this as R4131000 instead of the proposal above, and do not add the alert: there is no global circuit breaker anymore, only \u00a79.4 steps 2 and 3 blocking one profile or one address for its hour, plus the operator's `moderate redemption off`. The work is already done and green locally on `claude/relaxed-newton-zaa6kc` (commits 1f73d6ed and 45466cdb: migration 0095, server, tests, spec, R4131000; see the handoff above). Merge that branch into yours, check it against `main`, open the pull request and get its CI green."
-      ]
-    },
-    "c:6966622224": {
-      "at": "2026-11-18T01:54:05Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6966628593": {
-      "at": "2026-11-18T01:54:28Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6966662074": {
-      "at": "2026-11-18T01:56:42Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6966667209": {
-      "at": "2026-11-18T01:56:54Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6966954261": {
-      "at": "2026-11-18T02:14:44Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6966983901": {
-      "at": "2026-11-18T02:16:38Z",
-      "lines": [
-        "reject"
-      ]
-    },
-    "c:6967022861": {
-      "at": "2026-11-18T02:18:54Z",
-      "lines": [
-        "reject"
-      ]
-    },
-    "c:6969852082": {
-      "at": "2026-11-18T05:19:21Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6969858488": {
-      "at": "2026-11-18T05:19:42Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6969867657": {
-      "at": "2026-11-18T05:20:18Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6969872628": {
-      "at": "2026-11-18T05:20:36Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6969887133": {
-      "at": "2026-11-18T05:21:30Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6969891310": {
-      "at": "2026-11-18T05:21:45Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6969896929": {
-      "at": "2026-11-18T05:22:14Z",
-      "lines": [
-        "reject"
-      ]
-    },
-    "c:6969909637": {
-      "at": "2026-11-18T05:22:59Z",
-      "lines": [
-        "approve"
-      ]
-    },
     "c:6980572197": {
       "at": "2026-11-18T13:52:44Z",
       "lines": [
@@ -1145,6 +1049,12 @@
     },
     "c:7088921928": {
       "at": "2026-11-23T01:09:49Z",
+      "lines": [
+        "reject"
+      ]
+    },
+    "c:7094839698": {
+      "at": "2026-11-23T07:55:16Z",
       "lines": [
         "reject"
       ]
