@@ -17795,17 +17795,8 @@
       }
     },
     "4562": {
-      "action": "plan",
-      "asks": [
-        "c:7094840238"
-      ],
-      "build_next": {
-        "from_run": "45134804677",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-23T08:04:21Z",
-        "until": "2026-11-23T08:34:21Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-23T08:04:13Z",
         "difficulty": "medium",
@@ -17824,10 +17815,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- ```\n- Do not rename `useTurnClockAlarm` (`apps/web/src/audio/index.test.ts` pins the export; the planner is already kind-agnostic). Each call keeps its own `useRef` memory, so the two schedules are independent. No change to `useFrameFor`/`turnKeyOf` in `match.tsx`: prompt frames arrive under the same tur\u2026\n- 3. Update the stale turn-only header comments (wording only, no values): `useTurnClockAlarm.ts` (\"the turn clock's last 30 seconds\" \u2192 \"the viewer's own turn and prompt clocks' last 30 seconds\"), `clockAlarm.ts` (same), and the `CLOCK_ALARM_FROM_MS` / `CLOCK_ALARM_SHARP_FROM_MS` comments in `constan\u2026\n- 4. In `apps/web/src/audio/clockAlarm.test.ts`, import `PROMPT_CLOCK_MS` from `@jackioh/server-config` (the pattern `Clock.test.tsx` already uses) and add `it(\"R4562000 the prompt clock's 30 seconds cover the alarm's whole schedule\", \u2026)`: `countdown(PROMPT_CLOCK_MS, REPAINT_MS)` must yield seconds `\u2026\n- 5. In `apps/web/src/game/Clock.test.tsx`, add a `describe(\"R4562000 \u2014 the viewer's own prompt sounds the clock alarm\", \u2026)` block. Copy the recording-engine pattern from `clockAlarm.test.ts` (`recordingEngine(state)`, `setAudioEngineForTests`, fixed `monotonicAt({ms: 0})`, one fresh `frame()` object\u2026\n- 6. Write `spec/rulings/R4562000.md`, copied exactly:\n- ```markdown\n- ---\n- id: R4562000\n- title: The viewer's own prompt clock sounds the turn clock's alarm\n- cards: \"\u00a72.5, \u00a79.5, \u00a710.11, R79, R439, R506, issue #4562\"\n- proven_in:\n- - apps/web/src/audio/clockAlarm.test.ts\n- - apps/web/src/game/Clock.test.tsx\n- ---\n- The viewer's own open prompt clock ([[R79]]'s 30 seconds) counts down with the same beats as the last 30 seconds of the viewer's own running turn clock ([[R439]], [[R506]]): a heartbeat each second, then in the last 10 a tick sharper each second, through the effects bus; nothing while muted, at mas\u2026\n- ```\n- 7. Write `spec/pending/4562.md` with the \u00a711 paragraph in the style of the other pending files: `**[[R4562000]] The viewer's own prompt clock sounds the turn clock's alarm (issue #4562, <run date in YYYY-MM-DD>)**: \u2026` (one or two sentences summarizing the note).\n- 8. Run the Tests commands below plus `cargo jackioh spec check`; fix honestly, never by weakening a check.\n- ## Tests\n- - `apps/web/src/audio/clockAlarm.test.ts` \u2014 `it(\"R4562000 the prompt clock's 30 seconds cover the alarm's whole schedule\")`: full `PROMPT_CLOCK_MS` countdown yields all 30 beats in order. Guards schedule/window drift. Command: `pnpm --dir apps/web test src/audio/clockAlarm.test.ts`.\n- - `apps/web/src/game/Clock.test.tsx` \u2014 the four `R4562000` wiring tests from step 5 (own prompt beats; opponent prompt silent; answer resets with no stray beats; own-turn prompt sounds exactly once per second). These are the acceptance criteria, proved through the real component and hook. Command: \u2026\n- - Existing suites as regression guards: the `R439`/`R506` blocks in both files must pass unmodified (turn behavior unchanged). Type gate: `pnpm --dir apps/web typecheck`. Ruling gate: `cargo jackioh spec check` (fails if `R4562000` is cited without the note, or a `proven_in` file lacks a running te\u2026\n- ## Done when\n- - [ ] Own prompt under 30s heartbeats, ticking under 10s; opponent's prompt, mulligan, watches, replays silent.\n- - [ ] Answer/expiry/leave resets with no stray beats; background-tab and mute match the turn alarm.\n- - [ ] Turn-clock alarm audibly identical in every case (existing R439/R506 tests green unmodified).\n- - [ ] New `R4562000` tests fail without the `Clock.tsx` change and pass with it.\n- - [ ] The web's typecheck, both touched test files, and the spec check pass.\n- ## Risks\n- - Double-sounding an own-turn prompt (both hooks firing on the same countdown): avoided by the mutually exclusive kind gates, pinned by the once-per-second test. Rejected alternative: relying on the engine's 40 ms retrigger guard to swallow duplicates \u2014 fragile and log-polluting.\n- - Stale countdown sounding after a turn change: already handled by `useFrameFor` pairing (prompt frames share the turn key; a new turn nulls the frame and both hooks reset to idle). No new pairing code, so nothing new to break.\n- - Fallback path (no frame yet, `PlayerView.clockMs`): the prompt alarm follows `readout.prompt` exactly as the turn alarm follows `readout.turn` \u2014 consistent, not a new inference (rule 7).\n- - New ruling instead of stretching R506: R506's note says \"turn clock\"; citing it for prompt tests would leave the spec describing something it no longer bounds. The note keeps \u00a72.5/\u00a79.5 section text untouched (presentation-only rulings need none).\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4562 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4562/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-23T07:56:55Z",
       "owner_why": "it plans it",
@@ -17840,12 +17830,14 @@
       "provider": "muse",
       "queued_at": "2026-11-23T07:55:38Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45134804677",
+      "run_id": "pending:7c1be7f2-1795421127",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-23T07:56:55Z",
+      "started_at": "2026-11-23T08:05:43Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7094840238"
+      ]
     },
     "4569": {
       "action": "review",
@@ -17996,9 +17988,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T07:56:55Z",
+    "at": "2026-11-23T08:05:43Z",
     "url": "",
-    "what": "plan #4562 on muse"
+    "what": "build #4562 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T07:55:26Z",
