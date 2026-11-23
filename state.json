@@ -16020,7 +16020,9 @@
     "4599": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-23T19:39:58Z",
         "family": "claude",
