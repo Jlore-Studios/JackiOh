@@ -17580,14 +17580,8 @@
     "what": "build #4508 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-23T03:01:36Z",
-    "notes": [
-      "#4508: `claude-4` can start again, so its hold is lifted",
-      "delivered review #4548 on muse (run 45100260491): approved",
-      "started build #4508 on claude-4 (run 45103706012)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-23T03:10:31Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18292,7 +18286,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T03:01:36Z",
+  "loop_tick": "2026-11-23T03:10:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
