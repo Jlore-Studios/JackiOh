@@ -23,7 +23,7 @@ jobs:
         run: cp tmp/diag-4524.patch "$RUNNER_TEMP/diag.patch"
       - uses: actions/checkout@v4
         with:
-          ref: e21cea61d4ba4e7c7f92ef9b8ab0d3e3cf8a3c17
+          ref: e21cea61d46617c1b5a10df6f50ba078c8e2a44e
           fetch-depth: 0
       - uses: ./.github/actions/setup
         with:
