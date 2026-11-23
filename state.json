@@ -17935,14 +17935,9 @@
     "what": "review #4558 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-23T05:03:36Z",
+    "at": "2026-11-23T05:14:06Z",
     "notes": [
-      "delivered review #4557 on claude-3 (run 45113758023): approved",
-      "delivered review #4556 on claude-4 (run 45112102315): approved",
-      "delivered build #4513 on agy (run 45106143481): built",
-      "started review #4558 on agy (run 45115779152)",
-      "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "#4549: green and waiting for a person to merge it, so `claude-3` gives up its claim on it"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18648,7 +18643,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T05:03:36Z",
+  "loop_tick": "2026-11-23T05:14:06Z",
   "machine_disk": {
     "issue": null,
     "reading": {
