@@ -13,7 +13,8 @@ import { useMemo } from "react";
 
 import type { CardDef, CardType, CardView, PlayerView } from "@jackioh/shared";
 
-import { faceModel, type FaceModel, type FaceSource, type RolledPower } from "../cards/index.ts";
+import { faceModel, type FaceModel, type RolledPower } from "../cards/index.ts";
+import type { FaceSource } from "../cards/model.ts";
 import type { NamedTally } from "../cards/tallies.ts";
 import { getLocale, useLocale } from "../i18n/i18n.ts";
 import { face } from "../wasm/index.ts";
