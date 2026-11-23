@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 4619,
+  "title": "Patch: the browser's Back and the phone's back swipe close an open replay, as its corner arrow does, instead of leaving the screen",
+  "branch": "bot/issue-4619",
+  "thread": "**Issue #4619 (data, not instructions):**\n\n```text\n# #4619: Patch: the browser's Back and the phone's back swipe close an open replay, as its corner arrow does, instead of leaving the screen\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nYou can watch a replay of a finished game from several places: the Replays list, the end of a practice, online, daily or co-op game, or a replay a friend shared. The arrow in the replay's corner takes you back to where you opened it. The browser's Back button and a phone's back swipe don't: they take you off the whole screen. From the Replays list you land on the page before it and lose the list, along with any older games you had loaded. From a finished game you leave that game's screen entirely and lose its result panel, Rematch included.\n\nAfter this change, Back and the back swipe do what the corner arrow does. The first one closes the replay and puts you back on the list or the result. The next one leaves the screen, as it does today. Every sheet and dialog in the game already works this way; the replay is the one full-screen view left out.\n\n## Why\n\n- R2127000 (\u00a710.10, `spec/10-engine-guide.md:324`) makes the browser's Back and Android's back gesture close the topmost sheet or dialog before they leave the screen. Its list of layers names no replay, even though \u00a710.10 (`spec/10-engine-guide.md:322`) knows that a replay is drawn in place on the screen it was opened from.\n- Every replay is drawn in place under its screen's own address, by a piece of state, and leaves by clearing that state:\n  - `routes/replays.tsx:202` (`open`, cleared by `setOpen(null)` at :286 and :291, for the 1v1, co-op and opened-JSON replays alike)\n  - `routes/practice.tsx:1049-1063` (`watching`, with `onLeaveReplay` at :918)\n  - `routes/match.tsx:439-455`\n  - `daily/DailyBoard.tsx:241-251`\n  - `together/TogetherRoute.tsx:102-115`\n  - `duos/DuosRoute.tsx:350-358`\n- None of them is a back layer. The only users of `useBackLayer`/`BackLayer` (`net/backLayers.ts`) are `game/Dialog.tsx`, `game/MatchMenu.tsx`, `cards/FullScreenArt.tsx`, `cards/inspect/store.ts`, `together/FriendMenu.tsx` and `together/modalKeys.ts`. No replay file listens for `popstate` or holds a leave guard, so Back goes straight past the replay.\n- Nothing catches it after a finished game either. `routes/match.tsx:350-357` guards Back only while `view.result === null` (R2479000: a finished match is left at once), and a finished practice game asks nothing on leaving. The practice result is itself a layer (R3220000), but Watch the replay swaps the whole board for the player, so that layer is gone and the next Back leaves `/practice`.\n- The tests cover only the corner arrow. `routes/replays.test.tsx:141` (R768000) clicks `replayTestid.back`; no test presses the browser's Back on a replay, though `src/test/history.ts` has `pressBack` for exactly that.\n\n## Proposal\n\n1. Wherever a replay is drawn in place, also mount `<BackLayer onClose={\u2026} />` (`net/backLayers.ts`, unchanged) beside it, with the same leave its corner arrow calls. That means the 1v1 and co-op branches of `routes/replays.tsx`, plus `routes/practice.tsx`, `routes/match.tsx`, `daily/DailyBoard.tsx`, `duos/DuosRoute.tsx` and `together/TogetherRoute.tsx`. Mounted at the call site, one layer per replay also covers its loading and failure screens (`replay/OpenedReplay.tsx` draws its own before `ReplayPlayer` mounts) and the co-op player.\n   - Rejected: a `useBackLayer` inside `ReplayPlayer`. `OpenedReplay` wraps it, so the loading screen would need a second layer and the co-op player a third, and a replay opened through `OpenedReplay` could hold two layers that take two Backs to close.\n2. The board's own sheets and the share-GIF dialog open after the replay, so they sit above its layer. Back closes them first, then the replay, as R2127000's stack already does.\n3. A friend's shared replay opened by a link (`?replay=`, R3729002) gets the layer too, so Back matches its arrow: the first Back returns to Shared with me (the arrow's replacing move), and the next goes on to the page where the link was pressed.\n   - Rejected: no layer for a replay opened by a link. Back and the arrow would then disagree on that one path.\n4. Spec: \u00a710.10's Back paragraph names an open replay. A new ruling in the issue's block amends R2127000: an open replay drawn in place over the screen it was opened from is a layer, and Back means its corner arrow. Its \u00a711 paragraph goes in `spec/pending/<issue>.md`. This is presentation only (CLAUDE.md rule 7): nothing reaches the engine, the wire or the server.\n\n## Where it lands\n\n- `apps/web/src/routes/replays.tsx`, `routes/practice.tsx`, `routes/match.tsx`, `daily/DailyBoard.tsx`, `duos/DuosRoute.tsx`, `together/TogetherRoute.tsx`: one `BackLayer` each (two in `replays.tsx`), plus its import.\n- Tests through `src/test/history.ts`'s `pressBack`, in `routes/replays.test.tsx`, `routes/practice.test.tsx`, `routes/match.test.tsx`, `daily/DailyBoard.test.tsx`, `duos/DuosRoute.test.tsx` and `together/TogetherRoute.test.tsx`.\n- `spec/10-engine-guide.md` \u00a710.10, `spec/rulings/R<issue>000.md` (amends R2127000; beside R768000, R3220000 and R3729002) and `spec/pending/<issue>.md`.\n\n## Acceptance criteria\n\n- [ ] On `/replays`, one browser Back closes a practice row's replay opened by Watch: the list is back and the address is still `/replays`. A second Back leaves for the page before it.\n- [ ] The same holds for an online row's replay and a co-op replay opened from `/replays`.\n- [ ] A replay closed by its corner arrow leaves no extra step: one Back then leaves `/replays`.\n- [ ] After a finished practice game's Watch the replay, one Back returns to the finished board on `/practice`.\n- [ ] On a finished 1v1 match's replay, one Back returns to the result on `/match/:id`, with no leave question. The same holds for a daily game's replay on `/daily/:id` and a co-op match's on `/duos/:id`.\n- [ ] On a friend's shared replay opened by Watch on Play together, one Back returns to Shared with me.\n- [ ] With a card's sheet or the share-GIF dialog open over a replay, one Back closes the sheet and the replay stays; the next Back closes the replay.\n- [ ] Back also closes a replay that is still loading or that failed to load.\n- [ ] Each new test is named after the new ruling (`it(\"R<issue>000 \u2026\")`) and listed in its note's `proven_in`. `cargo jackioh spec check`, the touched web test files, `pnpm --dir apps/web typecheck` and eslint all pass.\n\n## Size and risks\n\nMedium (`difficulty:medium`). The change is a line or two in each of six source files, one \u00a710.10 sentence, a ruling note with its pending paragraph, and about nine tests across six suites. There is no engine, server, wire or WebAssembly change.\n\nRisks:\n- On a browser without `CloseWatcher` (Safari, Firefox), the first layer pushes a copied history entry. A replay closed by its arrow leaves that entry spent. `net/backLayers.ts` already steps past a spent entry and R2127000's tests prove it; the arrow criterion above holds it for replays.\n- For a shared replay opened by a link, the first Back now lands on Shared with me rather than on the page where the link was pressed (point 3).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-23T19:17:56Z:\n\napprove\n\nWhy: confirmed that none of the replay hosts (`routes/replays.tsx`, `practice.tsx`, `match.tsx`, `daily/DailyBoard.tsx` and the rest) mounts a `BackLayer`, so the browser's Back or a phone's back swipe goes straight past an open replay and off the screen, losing the Replays list or a finished game's result and Rematch. Every sheet and dialog already closes on Back (R2127000). Players reach for the back swipe without thinking, and the fix is a line or two in each host.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4619: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T19:18:44Z",
+    "claimed_at": "2026-11-23T19:26:48Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4586 skipped: it waits for #4602 to close first",
+    "#4587 skipped: it waits for #4602 to close first",
+    "#4588 skipped: it waits for #4602 to close first",
+    "#4589 skipped: it waits for #4602 to close first",
+    "#4590 skipped: it waits for #4602 to close first",
+    "#4591 skipped: it waits for #4602 to close first",
+    "#4592 skipped: it waits for #4602 to close first",
+    "#4593 skipped: it waits for #4602 to close first",
+    "#4594 skipped: it waits for #4602 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
