@@ -17485,7 +17485,9 @@
     "4550": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-23T04:44:08Z",
         "family": "claude",
