@@ -353,7 +353,10 @@ mod r280_the_core_cards_that_declare_preview {
                 .collect()
         };
         // Issue #4440: and the bonus a Float adds.
-        assert_eq!(labels(BREAD_AND_BUTTER, FaceKind::Base), vec!["X = the Float + 1"]);
+        assert_eq!(
+            labels(BREAD_AND_BUTTER, FaceKind::Base),
+            vec!["X = the Float + 1"]
+        );
         assert_eq!(
             labels(BREAD_AND_BUTTER, FaceKind::Radiant),
             vec!["X = 3 × the Float + 3"]

@@ -2014,7 +2014,9 @@ mod tests {
     fn r767000_issue_4440_part_2_scripts_are_kept_through_v0_6_11b_the_newest_version_that_ran_them() {
         assert_kept_through(
             &[c131_tetrative_reconstructor::ID, c006_cloaked_toe_cracker::ID],
-            &["v0.6.10", "v0.6.10b", "v0.6.10c", "v0.6.10d", "v0.6.11", "v0.6.11b"],
+            &[
+                "v0.6.10", "v0.6.10b", "v0.6.10c", "v0.6.10d", "v0.6.11", "v0.6.11b",
+            ],
             "v0.6.11c",
         );
     }

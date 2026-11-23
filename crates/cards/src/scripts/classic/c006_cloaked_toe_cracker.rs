@@ -322,7 +322,7 @@ mod tests {
 
             #[test]
             fn issue_4440_is_a_6_12_whose_traps_cost_0() {
-                let s = scenario(json!({
+                let mut s = scenario(json!({
                     "p1": { "hand": [TWO_TRAP, THREE_TRAP], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
