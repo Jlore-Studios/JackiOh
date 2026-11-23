@@ -1,0 +1,341 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>JackiOh — launch video composition</title>
+<style>
+  @font-face { font-family: "Alegreya"; src: url("assets/alegreya-5.3.0-latin-wght-normal.woff2") format("woff2"); font-weight: 400 900; }
+  @font-face { font-family: "Inter"; src: url("assets/inter-5.3.0-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+  html, body { margin: 0; padding: 0; background: #0c0704; }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: #0c0704; }
+  .scene { position: absolute; inset: 0; display: none; overflow: hidden; }
+  .abs { position: absolute; }
+  .full { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+
+  /* The tavern backdrop: .tavern.app-shell's gradients and its ::before planks (apps/web/src/auth/tavern.css). */
+  .tavern {
+    position: absolute; inset: 0; isolation: isolate; overflow: hidden;
+    background:
+      radial-gradient(ellipse 70% 40% at 50% 100%, rgba(255, 150, 60, 0.2), transparent 70%),
+      radial-gradient(ellipse 90% 55% at 50% 0%, rgba(90, 52, 27, 0.38), transparent 70%),
+      linear-gradient(180deg, #1c110a 0%, #120b07 55%, #0c0704 100%);
+  }
+  .tavern::before {
+    content: ""; position: absolute; z-index: -1; left: -20%; right: -20%; bottom: 0; height: 360px;
+    transform: perspective(700px) rotateX(58deg); transform-origin: 50% 100%;
+    background:
+      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0 3px, transparent 3px 12.5%),
+      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 17px),
+      linear-gradient(180deg, #2b170c 0%, #5a341b 60%, #8a5a33 100%);
+    opacity: 0.55;
+    -webkit-mask-image: linear-gradient(0deg, #000 25%, transparent 100%);
+    mask-image: linear-gradient(0deg, #000 25%, transparent 100%);
+  }
+
+  /* Gold display type: the wordmark's gradient clipped to the text, the dark engraved edge, hearth glow. */
+  .gold {
+    font-family: "Alegreya", serif; font-weight: 800; line-height: 1.0; letter-spacing: 0.01em;
+    padding: 0 0.06em 0.08em; white-space: nowrap;
+    background: linear-gradient(180deg, #fbe7b0 0%, #ffe39a 22%, #f3c969 44%, #c9953f 64%, #9b6423 84%, #d9a44c 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: var(--stroke, 2px) #3a1f0c;
+    filter: drop-shadow(0 0 var(--glow, 18px) rgba(255, 170, 60, 0.38)) drop-shadow(0 3px 0 #3a1f0c);
+  }
+  .body { font-family: "Inter", sans-serif; font-weight: 600; color: #efe0bf; text-shadow: 0 2px 12px rgba(0,0,0,0.7); }
+  .caps { font-family: "Alegreya", serif; font-weight: 700; color: #c9953f; letter-spacing: 0.28em; text-transform: uppercase; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+  .face { position: absolute; border-radius: 4.6% / 3.3%; overflow: hidden; }
+  .face img { width: 100%; height: 100%; display: block; }
+  #dip { position: absolute; inset: 0; background: #0c0704; pointer-events: none; z-index: 50; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- 1. LETHAL -->
+  <div class="scene" id="s1">
+    <img class="full" id="s1img" alt="">
+    <div class="abs" id="s1scrim" style="left:360px;top:560px;width:940px;height:320px;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(10,6,3,0.72), rgba(10,6,3,0.4) 55%, transparent 75%)"></div>
+    <div class="abs" id="s1flash" style="left:330px;top:500px;width:1000px;height:440px;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,214,120,0.55), rgba(255,150,60,0.15) 50%, transparent 72%)"></div>
+    <div class="abs gold" id="lethal" style="font-size:200px;--stroke:4px;--glow:26px;left:830px;top:722px;transform-origin:50% 50%">LETHAL.</div>
+  </div>
+
+  <!-- 2. My Pawn -->
+  <div class="scene" id="s2">
+    <img class="full" id="s2img" alt="">
+    <div class="full" id="s2scrim" style="background:linear-gradient(90deg, rgba(12,7,4,0.88) 0%, rgba(12,7,4,0.7) 36%, rgba(12,7,4,0.2) 60%, rgba(12,7,4,0.05) 100%)"></div>
+    <div class="abs" id="pawnGlow" style="left:1040px;top:90px;width:800px;height:900px;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(170,110,255,0.45), rgba(120,60,200,0.18) 45%, transparent 70%)"></div>
+    <div class="face" id="pawn" style="left:1148px;top:128px;width:588px;height:820px;box-shadow:0 30px 80px rgba(0,0,0,0.6), 0 0 40px rgba(170,110,255,0.35)"><img src="faces/core-096-base.png" alt=""></div>
+    <div class="abs caps" id="pawnCaps" style="left:150px;top:300px;font-size:30px">Trap · My Pawn</div>
+    <div class="abs gold" id="cancel" style="left:136px;top:352px;font-size:156px;--stroke:3px;transform-origin:0% 60%">Cancel it.</div>
+    <div class="abs body" id="random" style="left:150px;top:560px;width:800px;font-size:60px;line-height:1.18">The rest of their turn is played at random.</div>
+  </div>
+
+  <!-- 3. Wordmark + tagline -->
+  <div class="scene" id="s3">
+    <div class="tavern"></div>
+    <div class="abs" id="s3glow" style="left:360px;top:160px;width:1200px;height:560px;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,170,60,0.28), transparent 70%)"></div>
+    <img class="abs" id="s3logo" src="assets/jackioh-logo.svg" style="left:420px;top:270px;width:1080px;height:350px" alt="">
+    <div class="abs body" id="tagline" style="left:0;width:1920px;top:690px;text-align:center;font-size:54px">A duel of lanes, mana and hidden traps</div>
+  </div>
+
+  <!-- 4. Three boards -->
+  <div class="scene" id="s4">
+    <img class="full" id="s4img" alt="" style="transform-origin:0 0">
+    <div class="full" id="s4scrim" style="background:linear-gradient(0deg, rgba(10,6,3,0.94) 0%, rgba(10,6,3,0.75) 17%, rgba(10,6,3,0.0) 40%)"></div>
+    <div class="abs" id="s4flash" style="inset:0;background:#fff3d6"></div>
+    <div class="abs gold" id="cap1" style="left:110px;top:792px;font-size:92px;--stroke:2.5px">Summon units into lanes.</div>
+    <div class="abs gold" id="cap2" style="left:110px;top:910px;font-size:92px;--stroke:2.5px">Set traps face down.</div>
+  </div>
+
+  <!-- 5. Radiant -->
+  <div class="scene" id="s5">
+    <div class="tavern"></div>
+    <div class="abs" id="radGlow" style="left:830px;top:40px;width:1000px;height:1000px;background:radial-gradient(circle at 50% 50%, rgba(255,214,120,0.75), rgba(243,201,105,0.32) 32%, rgba(201,149,63,0.08) 55%, transparent 70%)"></div>
+    <div id="sparks" class="full"></div>
+    <div class="abs" id="flipper" style="left:1058px;top:150px;width:543px;height:760px;transform-style:preserve-3d">
+      <div class="face" id="vanBase" style="inset:0;width:543px;height:760px;backface-visibility:hidden;box-shadow:0 30px 70px rgba(0,0,0,0.65)"><img src="faces/core-008-base.png" alt=""></div>
+      <div class="face" id="vanRad" style="inset:0;width:543px;height:760px;backface-visibility:hidden;transform:rotateY(180deg);box-shadow:0 30px 70px rgba(0,0,0,0.55), 0 0 60px rgba(255,200,90,0.75)"><img src="faces/core-008-radiant.png" alt=""></div>
+    </div>
+    <div class="abs caps" id="lblBase" style="left:1058px;width:543px;top:942px;text-align:center;font-size:30px">Base</div>
+    <div class="abs caps" id="lblRad" style="left:1058px;width:543px;top:942px;text-align:center;font-size:30px;color:#f3c969">Radiant</div>
+    <div class="abs gold" id="radCap" style="left:150px;top:380px;font-size:112px;line-height:1.05;white-space:normal;width:820px;--stroke:2.5px">Every card has a Radiant form.</div>
+  </div>
+
+  <!-- 6. Wall -->
+  <div class="scene" id="s6">
+    <div class="full" style="perspective:1600px;z-index:0;isolation:isolate">
+      <div id="wall" class="abs" style="left:50%;top:50%;width:0;height:0;transform-style:preserve-3d"></div>
+    </div>
+    <div class="full" style="z-index:1;background:radial-gradient(ellipse 44% 38% at 50% 50%, rgba(12,7,4,0.9), rgba(12,7,4,0.66) 55%, rgba(12,7,4,0.3) 100%)"></div>
+    <div class="abs gold" id="c800" style="z-index:2;left:0;width:1920px;text-align:center;top:340px;font-size:220px;--stroke:4px;--glow:28px">800 cards.</div>
+    <div class="abs gold" id="c8" style="z-index:2;left:0;width:1920px;text-align:center;top:600px;font-size:130px;--stroke:3px">Eight sets.</div>
+  </div>
+
+  <!-- 7. Outro -->
+  <div class="scene" id="s7">
+    <div class="tavern"></div>
+    <div class="abs" id="s7glow" style="left:360px;top:110px;width:1200px;height:520px;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,170,60,0.25), transparent 70%)"></div>
+    <img class="abs" id="s7logo" src="assets/jackioh-logo.svg" style="left:500px;top:190px;width:920px;height:298px" alt="">
+    <div class="abs body" id="outro" style="left:0;width:1920px;top:560px;text-align:center;font-size:56px">Play hotseat, online or against the AI.</div>
+    <div class="abs gold" id="url" style="left:0;width:1920px;text-align:center;top:700px;font-size:170px;--stroke:3.5px;--glow:26px">jackioh.com</div>
+  </div>
+
+  <div id="dip"></div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eOut = (x) => 1 - Math.pow(1 - x, 3);
+const eIn = (x) => x * x * x;
+const eIO = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const eBack = (x) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+const lerp = (a, b, x) => a + (b - a) * x;
+const FPS_SEQ = 60;
+const seqSrc = (page) => `seq/${String(Math.max(0, Math.floor(page * FPS_SEQ + 1e-6))).padStart(4, "0")}.jpg`;
+const show = (id, on) => { $(id).style.display = on ? "block" : "none"; };
+const pending = [];
+function setSrc(img, src) {
+  if (img.getAttribute("src") !== src) { img.setAttribute("src", src); }
+  pending.push(img);
+}
+// Text in: fade and rise over `d` seconds from `at`.
+function textIn(el, t, at, d = 0.18, rise = 18) {
+  const x = eOut(seg(t, at, at + d));
+  el.style.opacity = x;
+  el.style.transform = `translateY(${(1 - x) * rise}px)`;
+}
+
+// The wall's faces: every set, base faces and a few Radiant ones, cycled so no two neighbours match.
+const FACES = ["classic-003-base","stinkyscape-001-base","meditative-002-base","core-041-base","traininggrounds-016-base","classicplus-012-radiant","stinkyscapeplus-102-base","meditativeplus-022-base","core-081-radiant","classic-059-base","stinkyscape-139-base","meditative-068-base","traininggrounds-008-base","classicplus-058-base","core-012-base","stinkyscapeplus-087-base","meditative-075-radiant","classic-077-base","meditativeplus-011-base","stinkyscape-003-radiant","core-043-base","traininggrounds-006-radiant","classicplus-064-base","meditative-004-base","stinkyscapeplus-001-base","classic-048-base","core-026-base","stinkyscape-114-base","meditative-088-base","traininggrounds-017-base","classicplus-070-base","meditativeplus-023-base","core-009-base","stinkyscapeplus-101-base","classic-012-base","meditative-030-base","stinkyscape-169-base","traininggrounds-007-base","core-035-base","classicplus-039-base","meditativeplus-008-base","stinkyscapeplus-002-base","classic-016-base","meditative-100-base","core-045-base","traininggrounds-003-base","stinkyscape-001-base","core-043-radiant","meditative-073-base","traininggrounds-032-base","classicplus-012-base","core-081-base","meditative-075-base","traininggrounds-006-base","stinkyscape-003-base","core-008-radiant"];
+const W_COLS = 12, W_ROWS = 6, FW = 232, FH = 325, GAP = 26;
+(function buildWall() {
+  const wall = $("wall");
+  for (let r = 0; r < W_ROWS; r++) {
+    const row = document.createElement("div");
+    row.className = "abs wall-row";
+    row.style.left = `${-(W_COLS * (FW + GAP)) / 2}px`;
+    row.style.top = `${(r - W_ROWS / 2) * (FH + GAP)}px`;
+    for (let c = 0; c < W_COLS; c++) {
+      const f = document.createElement("div");
+      f.className = "face";
+      f.style.left = `${c * (FW + GAP)}px`; f.style.top = "0px";
+      f.style.width = `${FW}px`; f.style.height = `${FH}px`;
+      f.style.boxShadow = "0 18px 40px rgba(0,0,0,0.55)";
+      const img = document.createElement("img");
+      img.src = `faces/${FACES[(r * 7 + c * 1) % FACES.length]}.png`;
+      f.appendChild(img);
+      row.appendChild(f);
+    }
+    wall.appendChild(row);
+  }
+})();
+
+// The Radiant flip's sparks: fixed by index, so a frame depends on t alone.
+const SPARKS = [];
+(function buildSparks() {
+  const box = $("sparks");
+  for (let i = 0; i < 26; i++) {
+    const s = document.createElement("div");
+    s.className = "abs";
+    const size = 6 + ((i * 37) % 9);
+    s.style.width = s.style.height = `${size}px`;
+    s.style.borderRadius = "50%";
+    s.style.background = "radial-gradient(circle, #fff6d6 0%, #f3c969 45%, rgba(243,201,105,0) 72%)";
+    box.appendChild(s);
+    SPARKS.push({ el: s, a: (i / 26) * Math.PI * 2 + ((i * 53) % 10) * 0.05, r: 260 + ((i * 71) % 190), size, d: 0.55 + ((i * 29) % 30) / 100 });
+  }
+})();
+
+window.renderAt = async function renderAt(t) {
+  pending.length = 0;
+  const scene = t < 2 ? 1 : t < 6 ? 2 : t < 9 ? 3 : t < 12 ? 4 : t < 15 ? 5 : t < 17 ? 6 : 7;
+  for (let i = 1; i <= 7; i++) show(`s${i}`, i === scene);
+
+  // Dips through the backdrop at the section joins; 1→2 is the client's own hard cut into the takeover.
+  let dip = 0;
+  for (const j of [6, 9, 12, 15, 17]) {
+    if (t >= j - 0.08 && t < j) dip = Math.max(dip, eIn(seg(t, j - 0.08, j)));
+    if (t >= j && t < j + 0.12) dip = Math.max(dip, 1 - eOut(seg(t, j, j + 0.12)));
+  }
+  $("dip").style.opacity = dip;
+
+  if (scene === 1) {
+    setSrc($("s1img"), seqSrc(t * 0.875));
+    const push = 1 + 0.07 * eIO(seg(t, 0, 2));
+    const slam = seg(t, 0.4, 0.5);
+    const shake = t >= 0.5 && t < 0.83 ? Math.sin((t - 0.5) * 90) * 7 * (1 - seg(t, 0.5, 0.83)) : 0;
+    $("s1img").style.transformOrigin = "790px 330px";
+    $("s1img").style.transform = `translate(${shake}px, ${shake * 0.4}px) scale(${push})`;
+    const el = $("lethal");
+    const s = t < 0.4 ? 2.4 : lerp(2.4, 1, eIn(slam));
+    el.style.opacity = t < 0.4 ? 0 : clamp(slam * 2.2);
+    el.style.transform = `translate(-50%, -50%) scale(${s * (1 + 0.012 * seg(t, 0.5, 2))})`;
+    $("s1scrim").style.opacity = t < 0.4 ? 0 : clamp(slam * 1.6);
+    $("s1flash").style.opacity = t < 0.5 ? 0 : 1 - eOut(seg(t, 0.5, 0.9));
+  }
+
+  if (scene === 2) {
+    const page = t < 3 ? 1.75 + (t - 2) : 2.75 + (t - 3) * 0.85;
+    setSrc($("s2img"), seqSrc(page));
+    const b = eIO(seg(t, 2.85, 3.12));
+    const img = $("s2img");
+    img.style.filter = b > 0 ? `blur(${12 * b}px) brightness(${lerp(1, 0.78, b)}) saturate(${lerp(1, 0.9, b)})` : "none";
+    img.style.transform = `scale(${1 + 0.06 * b + 0.02 * seg(t, 3, 6)})`;
+    $("s2scrim").style.opacity = b;
+    const p = eOut(seg(t, 2.95, 3.3));
+    const pawn = $("pawn");
+    const bob = Math.sin((t - 3) * 2.2) * 6 * seg(t, 3.3, 3.8);
+    pawn.style.opacity = clamp(p * 1.4);
+    pawn.style.transform = `translate(${(1 - p) * 300}px, ${bob}px) rotate(${lerp(7, -2.5, p)}deg)`;
+    $("pawnGlow").style.opacity = p * (0.85 + 0.15 * Math.sin((t - 3) * 3.1));
+    textIn($("pawnCaps"), t, 2.95, 0.2, 14);
+    const c = seg(t, 2.9, 3.0);
+    const cancel = $("cancel");
+    cancel.style.opacity = t < 2.9 ? 0 : clamp(c * 2);
+    cancel.style.transform = `scale(${lerp(1.18, 1, eIn(c))})`;
+    textIn($("random"), t, 3.25, 0.2, 20);
+  }
+
+  if (scene === 3) {
+    const r = eOut(seg(t, 6.0, 6.5));
+    const logo = $("s3logo");
+    logo.style.opacity = r;
+    const glow = 10 + 34 * Math.exp(-4 * Math.max(0, t - 6.45));
+    logo.style.filter = `blur(${(1 - r) * 10}px) drop-shadow(0 0 ${glow * r}px rgba(255,170,60,${0.55 * r})) drop-shadow(0 4px 0 #3a1f0c)`;
+    logo.style.transform = `translateY(${(1 - r) * 60}px) scale(${lerp(0.94, 1, r) * (1 + 0.015 * seg(t, 6.5, 9))})`;
+    $("s3glow").style.opacity = r * (0.8 + 0.2 * Math.exp(-3 * Math.max(0, t - 6.45)));
+    textIn($("tagline"), t, 6.5, 0.18, 16);
+  }
+
+  if (scene === 4) {
+    const img = $("s4img");
+    const k = t < 10 ? 0 : t < 11 ? 1 : 2;
+    const local = t - (9 + k);
+    if (k === 0) setSrc(img, "stills/board-t1.png");
+    if (k === 1) setSrc(img, "stills/board-t2.png");
+    if (k === 2) setSrc(img, seqSrc(4.62 + local * 0.93));
+    // Frame the lanes (the log panel and the hand fall away), each board drifting toward its subject.
+    const focus = [[830, 520], [990, 300], [560, 470]][k];
+    const s = 1.16 + 0.035 * eIO(seg(local, 0, 1)) + 0.04 * (1 - eOut(seg(local, 0, 0.18)));
+    const cx = 960 - 828 * s + (830 - focus[0]) * 0.06 * seg(local, 0, 1);
+    const cy = 500 - 440 * s + (480 - focus[1]) * 0.06 * seg(local, 0, 1);
+    img.style.transform = `translate(${cx}px, ${cy}px) scale(${s})`;
+    $("s4flash").style.opacity = local < 0.14 && k > 0 ? 0.16 * (1 - eOut(seg(local, 0, 0.14))) : 0;
+    textIn($("cap1"), t, 9.0, 0.18, 18);
+    textIn($("cap2"), t, 10.0, 0.18, 18);
+  }
+
+  if (scene === 5) {
+    const enter = eOut(seg(t, 12.0, 12.3));
+    const flip = eIO(seg(t, 12.86, 13.14));
+    const angle = 180 * flip;
+    const fl = $("flipper");
+    const lift = Math.sin(flip * Math.PI) * 0.06;
+    fl.style.opacity = enter;
+    fl.style.transform = `perspective(1500px) translateY(${(1 - enter) * 60 + Math.sin((t - 12) * 2.0) * 5}px) rotateY(${angle}deg) scale(${1 + lift})`;
+    const g = seg(t, 13.0, 13.25);
+    $("radGlow").style.opacity = t < 13 ? 0 : eOut(g) * (0.85 + 0.15 * Math.sin((t - 13.25) * 4.2)) + 0.35 * (1 - seg(t, 13.0, 13.6)) * (t < 13.6 ? 1 : 0);
+    $("radGlow").style.transform = `scale(${lerp(0.55, 1, eOut(g)) + 0.15 * (1 - seg(t, 13.0, 13.6))})`;
+    $("lblBase").style.opacity = enter * (1 - seg(t, 12.86, 13.0));
+    $("lblRad").style.opacity = eOut(seg(t, 13.1, 13.3));
+    textIn($("radCap"), t, 12.5, 0.2, 18);
+    for (const sp of SPARKS) {
+      const x = seg(t, 13.02, 13.02 + sp.d);
+      const on = t >= 13.02 && x < 1;
+      sp.el.style.display = on ? "block" : "none";
+      if (!on) continue;
+      const rr = sp.r * eOut(x);
+      sp.el.style.left = `${1330 + Math.cos(sp.a) * rr - sp.size / 2}px`;
+      sp.el.style.top = `${530 + Math.sin(sp.a) * rr * 0.9 - sp.size / 2}px`;
+      sp.el.style.opacity = (1 - x) * clamp(x * 6);
+    }
+  }
+
+  if (scene === 6) {
+    const local = t - 15;
+    const z = lerp(1.14, 1.0, eOut(seg(local, 0, 2)));
+    $("wall").style.transform = `translate(0, 0) rotateX(20deg) rotateZ(-13deg) scale(${z})`;
+    const rows = document.querySelectorAll(".wall-row");
+    rows.forEach((row, i) => {
+      const dir = i % 2 === 0 ? 1 : -1;
+      row.style.transform = `translateX(${dir * (-70 + 140 * seg(local, 0, 2))}px)`;
+    });
+    const c = seg(t, 15.0, 15.16);
+    $("c800").style.opacity = clamp(c * 2);
+    $("c800").style.transform = `scale(${lerp(1.22, 1, eOut(c))})`;
+    textIn($("c8"), t, 15.5, 0.18, 18);
+  }
+
+  if (scene === 7) {
+    const r = eOut(seg(t, 17.0, 17.4));
+    const logo = $("s7logo");
+    logo.style.opacity = r;
+    logo.style.filter = `blur(${(1 - r) * 8}px) drop-shadow(0 0 ${(12 + 26 * Math.exp(-4 * Math.max(0, t - 17.35))) * r}px rgba(255,170,60,${0.5 * r})) drop-shadow(0 4px 0 #3a1f0c)`;
+    logo.style.transform = `translateY(${(1 - r) * 50}px) scale(${lerp(0.95, 1, r)})`;
+    $("s7glow").style.opacity = r;
+    textIn($("outro"), t, 17.25, 0.18, 16);
+    const u = seg(t, 17.75, 17.93);
+    const url = $("url");
+    url.style.opacity = clamp(u * 2);
+    // A gentle swell on each beat once it's in.
+    const beat = t > 18 ? Math.exp(-6 * ((t - 18) % 0.5)) * 0.012 : 0;
+    url.style.transform = `scale(${lerp(1.2, 1, eOut(u)) + beat})`;
+  }
+
+  await Promise.all(pending.map((img) => (img.complete && img.naturalWidth ? img.decode().catch(() => {}) : new Promise((r) => { img.onload = img.onerror = () => r(); }).then(() => img.decode().catch(() => {})))));
+  await document.fonts.ready;
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  return scene;
+};
+window.ready = (async () => {
+  await document.fonts.load('800 100px "Alegreya"');
+  await document.fonts.load('700 30px "Alegreya"');
+  await document.fonts.load('600 50px "Inter"');
+  await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
+  return true;
+})();
+</script>
+</body>
+</html>
