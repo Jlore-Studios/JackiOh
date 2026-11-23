@@ -40073,7 +40073,9 @@
           "provider": "claude-7"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-23T08:22:06Z",
         "every": 5,
+        "findings": 0,
         "head": "87012745949d1710da6fb17be0b0a0c7ca905371",
         "issue": 4555,
         "merged_at": "2026-11-23T08:09:36Z",
@@ -40086,12 +40088,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:4fdbe0b5-1795421607",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45136912573",
         "sha": "44439387fb6afa3242ffb440cd1fca510d73ed71",
         "started_at": "2026-11-23T08:13:42Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: daily super run failed",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 475
