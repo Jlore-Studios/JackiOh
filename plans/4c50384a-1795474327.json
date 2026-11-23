@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 4586,
+  "title": "Patch: the Infinite Assault, C2, Hallucination",
+  "branch": "bot/issue-4586",
+  "thread": "**Issue #4586 (data, not instructions):**\n\n```text\n# #4586: Patch: the Infinite Assault, C2, Hallucination\nOpened by @jgoetzmann.\n\nPart of #4601, the cards' fullsend tree (and of the tracker #4576). Card part **C2**: replace the stub scripts\nCF (#4602) wrote for the cards below with their scripts and tests, base and Radiant, as cards of a held\nsingle-player set. It builds beside the other card parts on the tree's integration branch; players see nothing\nuntil the release (R).\n\nThe plan of record is [`docs/infinite-assault.md`](https://github.com/Jlore-Studios/JackiOh/blob/claude/gallant-ritchie-pwshvk/docs/infinite-assault.md): on `main` once C1 (#4577) merges, and until then on the planning branch `claude/gallant-ritchie-pwshvk`. Where it and SPEC disagree, SPEC wins (CLAUDE.md). Read its IA11 (the set, its ids, its hold, its tags and the design rules) and the comment CF leaves on\n#4601 listing the verbs the set lacks.\n\nRead `docs/ADDING_CARDS.md` first (CLAUDE.md rule 10), its rows for a card of a set that has not shipped above\nall, and `spec/README.md` with the sections and rulings the cards touch (rule 1).\n\n**Owns:** its cards' script files (`crates/cards/src/scripts/infinite_assault/cNNN_slug.rs`, IA-25 to IA-48\nand their tokens), each entry's `loc` (`cargo jackioh catalog loc <path>`), and its own cards' rows in the\nshared tables only where its build decides otherwise. CF wrote every other row. A verb, keyword or board fact the\nengine lacks goes in the engine by `docs/ADDING_CARDS.md` \u00a76, in a file of its own where it can, with as few lines\nin the shared engine files (`effects/mod.rs`, `script.rs`, `query.rs`, `wire/events.rs`) as possible, and its\ntest; the reconcile settles a seam with another part's.\n\n## The cards\n\nCard numbers are written `IA-n` here; in the spec and the catalog they are the set's own (`IA #25`,\n`infiniteassault-025`, its tokens `infiniteassault-025-1`).\n\n#### IA12.2 Hallucination, IA-25\u2013IA-48\n\nBluff and backrow: Figments (Traps that do nothing), Cloaked Units, copies that fade. The player\nlearns to read the backrow; the Assault punishes reading it wrong.\n\n- **IA-25 Mirage Weaver** \u2014 (1) Unit, Common, 1/3. Cry: Set a Figment. *Radiant:* 2/6. Cry: Set two Figments.\n  - **IA-25.1 Figment** \u2014 token, Trap. Set at a random cost from (1) to (4). Reveals when an enemy Unit attacks: Nothing happens.\n- **IA-26 Phantom Lancer** \u2014 (2) Unit, Common, 4/3. Cloaked. When this is revealed, deal 3 damage to an enemy Unit. *Radiant:* 8/6. \u2026 6 damage \u2026\n- **IA-27 Decoy Projector** \u2014 (2) Unit, Common, 0/7. Taunt. Cry: Set a Figment. *Radiant:* 0/14. Taunt, Divine Shield. Cry: Set a Figment.\n- **IA-28 Doppelganger Protocol** \u2014 (1) Spell, Common. Summon a copy of a random enemy Unit. It has Brittle 1. *Radiant:* \u2026 Brittle 3.\n- **IA-29 False Positive** \u2014 (1) Trap, Common. Reveals when an enemy Unit attacks: Cancel the attack. Freeze the attacker. *Radiant:* \u2026 Then set a Figment.\n- **IA-30 Smoke and Mirrors** \u2014 (2) Spell, Common. Set two Figments. Draw a card. *Radiant:* Set three Figments. Draw two cards.\n- **IA-31 Unreliable Narrator** \u2014 (2) Unit, Common, 3/4. Cry: Look at the top three cards of your opponent's deck. Put one of them on the bottom. *Radiant:* 6/8. \u2026 Put two of them on the bottom.\n- **IA-32 Glitch Specter** \u2014 (1) Unit, Common, 3/1. Evasive while you have a face-down card. *Radiant:* 6/2. Lifesteal. Evasive while you have a face-down card.\n- **IA-33 Uncanny Valley** \u2014 (3) Unit, Common, 5/6. Cry: Enemy Units have \u22122 Attack until your next turn. *Radiant:* 10/12. \u2026 \u22124 Attack \u2026\n- **IA-34 Mass Hallucination** \u2014 (2) Spell, Rare. Transform every enemy Unit that costs (1) or less into a Husk. *Radiant:* \u2026 (2) or less \u2026\n  - **IA-34.1 Husk** \u2014 token, (1) Unit, 1/1.\n- **IA-35 Fata Morgana** \u2014 (2) Unit, Rare, 3/5. Whenever a Figment of yours reveals, summon a Mirage. *Radiant:* 6/10. \u2026 summon a Radiant Mirage.\n  - **IA-35.1 Mirage** \u2014 token, (1) Unit, 2/2. Rush.\n- **IA-36 Deepfake** \u2014 (2) Spell, Rare. Choose an enemy Unit. Summon a copy of it for yourself with Brittle 2. *Radiant:* \u2026 a copy of it for yourself.\n- **IA-37 Bluff Called** \u2014 (2) Trap, Rare. Reveals when your opponent plays a Spell: Counter it. *Radiant:* Counter it, then set a Figment.\n- **IA-38 Imaginary Friend** \u2014 (1) Unit, Rare, 2/2. Divine Shield. Death: Set a Figment. *Radiant:* 4/4. \u2026 Death: Set two Figments.\n- **IA-39 Shell Game** \u2014 (1) Spell, Rare. Set a Figment. Then draw a card for each face-down card you have, up to three. *Radiant:* \u2026 up to five.\n- **IA-40 Hall of Mirrors** \u2014 (3) Field Spell, Rare. Whenever you set a card face-down, summon a Reflection. *Radiant:* \u2026 summon a Radiant Reflection.\n  - **IA-40.1 Reflection** \u2014 token, (1) Unit, 1/3. Taunt.\n- **IA-41 Phantom Army** \u2014 (3) Spell, Epic. Fill your empty unit zones with Phantoms. *Radiant:* \u2026 with Radiant Phantoms.\n  - **IA-41.1 Phantom** \u2014 token, (1) Unit, 3/1. Rush, Brittle 1.\n- **IA-42 Paranoia Engine** \u2014 (2) Unit, Epic, 2/6. Your opponent's cards can't destroy or reveal your face-down cards. End of turn: Set a Figment. *Radiant:* 4/12. \u2026 End of turn: Set two Figments.\n- **IA-43 Cognitive Dissonance** \u2014 (2) Trap, Epic. Reveals when your opponent plays a Unit: Transform it into a random Unit that costs (1) less. *Radiant:* \u2026 (2) less.\n- **IA-44 The Lie Detector** \u2014 (3) Unit, Epic, 4/8. Cry: Destroy every enemy face-down card. Set a Figment for each. *Radiant:* 8/16.\n- **IA-45 Dream Within a Dream** \u2014 (4) Spell, Epic. Summon a copy of every enemy Unit for yourself. They have Brittle 1. *Radiant:* \u2026 Brittle 2.\n- **IA-46 Mirage Sovereign** \u2014 (3) Unit, Legendary, 6/6. Cloaked. Whenever a Figment of yours reveals, summon a copy of the attacking Unit for yourself. *Radiant:* 12/12. \u2026 then destroy the attacking Unit.\n- **IA-47 Unreal Estate** \u2014 (2) Field Trap, Legendary. Reveals whenever an enemy Unit attacks: 50% chance to cancel the attack. *Radiant:* Lucky 1. \u2026\n- **IA-48 Ego Death** \u2014 (3) Spell, Mythic. Swap hands with your opponent. The cards you get cost (1) less. *Radiant:* \u2026 (2) less.\n\n## The design rules (IA11)\n\n**The design rules every card part keeps.**\n\n1. **Real cards.** Each card is legal in an ordinary game and plays the same in any mode; none reads the\n   mode or its level. Commons to Legendaries of the doctrines and the Core sit on JackiOh's curve (costs\n   (0) to (4); about 4 stats at (1), 8 at (2), 12 at (3), 16 at (4) for a Unit with little text, less with\n   more), so they can be reused. Commander cards are boss cards, above the curve on purpose.\n2. **Spicy, never unfair.** Swingy and rule-bending is the point, but every threat has an answer the player\n   can see coming: a countdown is shown, a wall can be killed, a bluff can be called. Nothing makes the\n   player lose with no counterplay, and nothing locks them out of playing for a turn they can't foresee\n   (Kill Switch, IA-140, fires on a third card, which the player may choose not to play).\n3. **Expressible.** The text uses verbs, keywords and filters the engine has (\u00a76); where a card needs a new\n   one, its part adds it by `docs/ADDING_CARDS.md` \u00a76, with its test. Numbers are `params` (`{damage}`),\n   never literals (CLAUDE.md rule 9).\n4. **Radiant is about twice the base face** (R275): doubled stats and a better line, never stats alone for\n   a Unit with text. Each part writes its `docs/radiant-audit.md` rows.\n5. **\"Infinite Assault card\"** in a card's text is a pool that names the set, which reaches the set while\n   it is held (R1846001: a pool that names its set keeps to it). \"Created\" is the engine's Created mark.\n6. **The AI must pilot it.** A card whose prompt the AI can't answer well is fixed or redesigned in its\n   part, not shipped hoping.\n7. **The part may tune.** A part may change a number, a word or a Radiant line where the engine or balance\n   asks, keeping the card's role and its spice, and says so in its pull request; a bigger change goes in a\n   ruling note.\n\n## Done when\n\n- Every card's script plays its base and Radiant faces by its \u00a78.13 row, with tests in the same file for both\n  (CLAUDE.md rule 6), and its `STUB (#4602)` header is gone; its entry's `loc` is the script's.\n- Each decision the spec doesn't make has a ruling note in this issue's block, a test named after it, and a\n  paragraph in `spec/pending/<this issue>.md` (rule 3).\n- Every new prompt is answered by the AI, the random policy and the timeout; `cargo jackioh fuzz --seeds 200\n  --cards <each of its ids>` is green; `cargo test -p jackioh-cards` passes for its cards.\n- Every number is a named constant or a card `param` (rule 9).\n\nBlocked by #4602\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-4601",
+  "part_of": 4601,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4586: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T19:14:58Z",
+    "claimed_at": "2026-11-23T22:52:33Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4623 is held for `claude-8` until 17:10 (5-hour usage is 92%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#4608 is held for `claude-8` until 17:10 (5-hour usage is 92%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#4609 is held for `claude-4` until 17:20 (5-hour usage is 71%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
