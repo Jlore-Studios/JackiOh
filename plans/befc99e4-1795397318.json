@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4541,
+  "title": "Patch: a pull request that changes only the server's tests stops starting the six tools test jobs, as the check of their shared helpers moves into the server's own tests",
+  "branch": "bot/issue-4541",
+  "thread": "**Issue #4541 (data, not instructions):**\n\n```text\n# #4541: Patch: a pull request that changes only the server's tests stops starting the six tools test jobs, as the check of their shared helpers moves into the server's own tests\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen a change touches only the online server's tests, CI still starts six extra test jobs for the developer tools, and each one compiles the tools crate. All six run for one quick text check, which makes sure the server's tests import their shared helpers instead of copying them. This change moves that check into the server's own tests, which run on such a change anyway. The check stays exactly as strict, and the six jobs stay off. The maintainer and the bots wait less for the shared runners, and every later push of such a pull request saves the same again.\n\n## Why\n- `scripts/ci-scope.sh:349-350` sends `crates/server/tests/`'s `actor/`, `api/`, `bots/`, `loops/` and `support/` to `rust_tools_wasm` as well as `rust_server`. That line starts six jobs: `tools fuzz`, `tools duos, selfplay` and `tools, wasm` in four shards (`scripts/ci-shards.toml:38-44`). The `tools, wasm` group alone once took 14m 8s on one shard (`ci-shards.toml:40`).\n- The script's header gives one reason for it (`ci-scope.sh:115-117`): `acceptance.rs` holds those tests' helpers to `support/`'s (#2385). That check is a text scan made of:\n  - `SERVER_SUPPORT_READERS` (`crates/tools/tests/acceptance.rs:1329`);\n  - three `SharedHelpers` entries, for `support/store.rs`, `socket.rs` and `engine.rs` (`:1441-1480`);\n  - `shared_helper_definitions` (`:1509`);\n  - the self-test that plants copies, `helpers_the_check_refuses_a_copy_in_the_server_tests` (`:2022`).\n- The other `acceptance.rs` scans that read server tests (a file read, `#[ignore`, `preview_sets(`) are turned on by the grep of added lines at the end of `ci-scope.sh`. This change leaves that grep alone.\n- I measured it on the last 200 merges to `main`, running `sh scripts/ci-scope.sh <c>^1 <c>` on each, once as the script stands and once with this line removed. 15 of the 200 (7.5%) started the six tools jobs only because of this line, among them #4503, #4439, #4416, #4411, #4415, #4388, #4373 and #4239. Every push of a pull request runs CI again, so such a pull request pays this once per push.\n\n## Proposal\n1. Move the three server families and their planted-copy self-test into a test of the server's `server` binary, in a module under `crates/server/tests/support/` whose path holds no `api::`, so the `server` group runs it (`.github/ci/rust-test.toml`'s filters, read only). It walks the same five directories under `CARGO_MANIFEST_DIR` with the same rule: no file but a helper's home defines one of its names. It does not scan `tests/store/`.\n2. Drop those entries and `SERVER_SUPPORT_READERS` from `acceptance.rs`. Its other families stay as they are.\n3. Delete the line at `ci-scope.sh:349-350`, so those paths fall through to `crates/server/*) on rust_server`, and rewrite the header's sentence at `:115-117`.\n4. Change `apps/web/src/net/ci-scope.test.ts:614` to expect `[\"rust_server\"]` for `crates/server/tests/api/queue.rs`.\n\nci.yml's `changes` job runs `main`'s copy of `ci-scope.sh`, so the pull request that makes this change still runs every job; the saving starts with the next one. Nothing under `.github/` changes.\n\n## Where it lands\n- `crates/server/tests/support/` (the moved check) and `crates/server/tests/server.rs` (its `mod` line)\n- `crates/tools/tests/acceptance.rs` (the entries removed)\n- `scripts/ci-scope.sh` (the line and its header sentence)\n- `apps/web/src/net/ci-scope.test.ts`\n\n## Acceptance criteria\n- [ ] A test in the server's `server` binary fails when a file under `crates/server/tests/` `actor/`, `api/`, `bots/`, `loops/` or `support/`, the homes aside, defines one of the names the three server entries in `acceptance.rs` list today. It ignores `tests/store/`.\n- [ ] Its self-test plants copies in a scratch directory, as `helpers_the_check_refuses_a_copy_in_the_server_tests` does. Exactly the `api/` and `bots/` copies are flagged, and the `store/` copy passes.\n- [ ] `acceptance.rs` no longer names `SERVER_SUPPORT_READERS` or the three server homes, and its other shared-helper families are unchanged.\n- [ ] `sh scripts/ci-scope.sh 26f418bd27^1 26f418bd27` (#4503) prints `rust_tools_wasm=false` and `rust_server=true`.\n- [ ] A server test that adds a `read_to_string(` line still turns `rust_tools_wasm` on, through the grep of added lines.\n- [ ] These pass: `cargo test -p jackioh-server --test server <the new test>`, `cargo test -p jackioh-tools --test acceptance`, `pnpm --dir apps/web test src/net/ci-scope.test.ts`, `cargo fmt --check` and `cargo clippy -p jackioh-server -p jackioh-tools --all-targets -- -D warnings`.\n\n## Size and risks\nMedium but small: about five files and 150 lines, most of them moved. One risk: a later `acceptance.rs` scan that starts reading server tests without matching the added-line grep would lose its run on each pull request. The rewritten header sentence must say so, as the skip list's paragraph already does for its own paths.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-23T01:09:31Z:\n\napprove\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4541: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it in a lane of `gpt`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T01:25:02Z",
+    "claimed_at": "2026-11-23T01:29:01Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
