@@ -17765,21 +17765,32 @@
       "taken_asks": []
     },
     "4653": {
+      "action": "build",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "live": "building",
+      "owner": "muse",
+      "owner_since": "2026-11-23T23:59:13Z",
+      "owner_why": "it took it up",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-23T23:51:52Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:a0532955-1795478323",
+      "runs_on": "night-vm-muse-fill",
+      "started_at": "2026-11-23T23:59:13Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T23:58:29Z",
+    "at": "2026-11-23T23:59:13Z",
     "url": "",
-    "what": "build #4586 on muse"
+    "what": "build #4653 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T23:43:04Z",
