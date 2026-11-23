@@ -19318,17 +19318,8 @@
       "suggestion": true
     },
     "4622": {
-      "action": "plan",
-      "asks": [
-        "c:7111395974"
-      ],
-      "build_next": {
-        "from_run": "45249303316",
-        "model": "gpt-5.6-sol",
-        "provider": "gpt",
-        "since": "2026-11-23T19:40:51Z",
-        "until": "2026-11-23T20:10:51Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-23T19:40:40Z",
         "difficulty": "medium",
@@ -19347,10 +19338,9 @@
         "reason": "planned on gpt-5.6-sol",
         "trail": "- said: I\u2019ll trace the repository contract, the governing spec/ruling, and the exact gate/test implementations before drafting. I\u2019ll keep the deliverable strictly read-only except for `.bot-plan.md`, as required.\n- ran `/bin/bash -lc \"pwd && rg --files -g 'CLAUDE.md' -g 'AGENTS.md' -g 'CONTRIBUTING.md' -g 'docs/issues-and-patches.md' -g 'SPEC.md' -g 'spec/**' -g 'crates/tools/\u2026` (exit 0)\n- ran `/bin/bash -lc \"ls -la | sed -n '1,120p'; test -f CLAUDE.md && sed -n '1,260p' CLAUDE.md; sed -n '1,220p' AGENTS.md; sed -n '1,180p' SPEC.md 2>/dev/null || true\"` (exit 0)\n- ran `/bin/bash -lc 'wc -l CLAUDE.md spec/README.md spec/09-architecture.md crates/tools/README.md crates/ai/README.md docs/issues-and-patches.md CONTRIBUTING.md; ta\u2026` (exit 0)\n- said: The scope is confirmed as medium under the repository\u2019s rubric: it changes tooling and documentation only, not engine rules, AI decision/search code, cross-crate design, migrations, or a large file set. I\u2019m now mapping the existing helper contracts and exact test names so the builder has no naming \u2026\n- ran `/bin/bash -lc \"sed -n '1,220p' spec/README.md; rg -n '\"'^### 9'\"\\\\.9|9\\\\.9|quality gate|performance gate|AI gate|pinned' spec/09-architecture.md spec/rulings/R\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '145,180p' spec/09-architecture.md; sed -n '1,80p' spec/rulings/R4513000.md; sed -n '465,495p' crates/ai/README.md; rg -n '\"'^'\"\\\\| \"'`ga\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '1,120p' spec/rulings/R4513000.md; sed -n '465,490p' crates/ai/README.md\"` (exit 0)\n- ran `/bin/bash -lc \"rg -n '\"'^(const |static |fn |pub fn |enum |struct )|time_decision|perf_gate|measure_matchups|measure_plays|measure_tally|r4513000|yardstick_ms|\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '1,180p' crates/tools/src/gate.rs; sed -n '400,820p' crates/tools/src/gate.rs\"` (exit 0)\n- ran `/bin/bash -lc \"sed -n '880,1245p' crates/tools/src/gate.rs\"` (exit 0)\n- ran `/bin/bash -lc \"sed -n '1270,1625p' crates/tools/src/gate.rs\"` (exit 0)\n- ran `/bin/bash -lc \"rg -n 'time_decision\\\\(|yardstick_ms\\\\(' crates -g '*.rs'; rg -n 'run_tuning_gate_games|fn game_config|AI_TUNING_SERIES|perf_full_games|perf_smo\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '230,280p' crates/tools/src/sweep.rs; sed -n '60,150p' crates/ai/src/gate.rs; sed -n '190,325p' crates/ai/src/gate.rs\"` (exit 0)\n- ran `/bin/bash -lc \"rg -n 'pub fn gate_needed_with_rate|fn gate_needed_with_rate' crates/ai/src/gate.rs; sed -n '350,405p' crates/ai/src/gate.rs; rg -n 'measure_mat\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '155,190p' crates/ai/src/gate.rs; git show cf502dd54b --stat --oneline; git show cf502dd54b -- crates/tools/src/gate.rs spec/rulings/R451\u2026` (exit 0)\n- said: The implementation shape is now clear. I\u2019m choosing a sibling one-decision helper for the unjudged path so `time_decision` and the sweep\u2019s R977000 retime remain untouched; the new helper will run `decide` once, report raw milliseconds, and avoid every yardstick/retry. I\u2019m also adding a pure project\u2026\n- ran `/bin/bash -lc \"sed -n '1,120p' CONTRIBUTING.md; rg -n 'pull request|PR body|benchmark|timing|checks|test plan|Issue closes|Closes' docs/issues-and-patches.md C\u2026` (exit 0)\n- ran `/bin/bash -lc \"git show --stat --oneline cf80f62323; git show cf80f62323 -- crates/tools/src/gate.rs CLAUDE.md | sed -n '1,260p'; sed -n '445,490p' docs/issues\u2026` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4622/.bot-plan.md\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4622/.bot-plan.md\n- ran `/bin/bash -lc \"sed -n '1,220p' crates/ai/README.md\"` (exit 0)\n- ran `/bin/bash -lc \"sed -n '221,465p' crates/ai/README.md\"` (exit 0)\n- ran `/bin/bash -lc \"sed -n '490,680p' crates/ai/README.md\"` (exit 0)\n- ran `/bin/bash -lc \"wc -w -c .bot-plan.md; sed -n '1,260p' .bot-plan.md; git status --short\"` (exit 0)\n- said: The draft is complete and under the requested size. One last tightening: I\u2019m making the test exercise the same selector that `perf_gate` uses, so it proves the false/unjudged branch rather than only testing its lower-level helper in isolation.\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4622/.bot-plan.md\n- ran `/bin/bash -lc \"sed -n '880,935p' crates/tools/src/spec.rs; rg -n '#\\\\[ignore = \\\"daily:.*keeps.*per pull request' crates/tools/src crates/ai/tests | sed -n '1,\u2026` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4622/.bot-plan.md\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4622/.bot-plan.md\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"No hard-rule line applies: this is a two-file tools-test and README change, not engine rules, AI decisions/search, cross-crate design, a migration, or about 40 files.\"} --> **Goal.** Remove duplicate per-pull-request tuning games and redundant Wilson cover\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "gpt",
       "owner_since": "2026-11-23T19:28:22Z",
       "owner_why": "it plans it",
@@ -19363,12 +19353,14 @@
       "provider": "gpt",
       "queued_at": "2026-11-23T19:18:32Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45249303316",
+      "run_id": "pending:afa70b81-1795462889",
       "runs_on": "night-vm-gpt",
-      "started_at": "2026-11-23T19:28:22Z",
+      "started_at": "2026-11-23T19:41:57Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7111395974"
+      ]
     },
     "4623": {
       "asks": [
@@ -19583,9 +19575,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T19:29:55Z",
+    "at": "2026-11-23T19:41:57Z",
     "url": "",
-    "what": "plan #4609 on claude-4"
+    "what": "build #4622 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-23T19:22:52Z",
