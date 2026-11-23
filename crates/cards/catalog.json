@@ -38025,5 +38025,7771 @@
       "keywords": [],
       "text": "Summon a random Radiant Infinite Assault Unit of each Cost from (1) to (3). They have Rush."
     }
+  },
+  "infiniteassault-025": {
+    "id": "infiniteassault-025",
+    "index": "25",
+    "name": "Mirage Weaver",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "infiniteassault-025-1"
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Set a Figment."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Set two Figments."
+    }
+  },
+  "infiniteassault-025-1": {
+    "id": "infiniteassault-025-1",
+    "index": "25.1",
+    "name": "Figment",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Hallucination",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 1,
+    "params": [
+      {
+        "key": "low",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "high",
+        "base": 4,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Set at a random cost from ({low}) to ({high}).\nReveals when an enemy Unit attacks: Nothing happens."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Set at a random cost from ({low}) to ({high}).\nReveals when an enemy Unit attacks: Nothing happens."
+    }
+  },
+  "infiniteassault-026": {
+    "id": "infiniteassault-026",
+    "index": "26",
+    "name": "Phantom Lancer",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nWhen this is revealed, deal {damage} damage to an enemy Unit."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nWhen this is revealed, deal {damage} damage to an enemy Unit."
+    }
+  },
+  "infiniteassault-027": {
+    "id": "infiniteassault-027",
+    "index": "27",
+    "name": "Decoy Projector",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-025-1"
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 0,
+      "health": 7,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nCry: Set a Figment."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 14,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Taunt, Divine Shield\nCry: Set a Figment."
+    }
+  },
+  "infiniteassault-028": {
+    "id": "infiniteassault-028",
+    "index": "28",
+    "name": "Doppelganger Protocol",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Summon a copy of a random enemy Unit. It has Brittle 1."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon a copy of a random enemy Unit. It has Brittle 3."
+    }
+  },
+  "infiniteassault-029": {
+    "id": "infiniteassault-029",
+    "index": "29",
+    "name": "False Positive",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "infiniteassault-025-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Cancel the attack and Freeze the attacker."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Cancel the attack and Freeze the attacker. Then set a Figment."
+    }
+  },
+  "infiniteassault-030": {
+    "id": "infiniteassault-030",
+    "index": "30",
+    "name": "Smoke and Mirrors",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-025-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Set two Figments. Draw a card."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Set three Figments. Draw two cards."
+    }
+  },
+  "infiniteassault-031": {
+    "id": "infiniteassault-031",
+    "index": "31",
+    "name": "Unreliable Narrator",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Look at the top three cards of your opponent's deck. Put one of them on the bottom."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Look at the top three cards of your opponent's deck. Put two of them on the bottom."
+    }
+  },
+  "infiniteassault-032": {
+    "id": "infiniteassault-032",
+    "index": "32",
+    "name": "Glitch Specter",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 1,
+      "keywords": [],
+      "text": "Evasive while you have a face-down card."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Lifesteal"
+        }
+      ],
+      "text": "Lifesteal\nEvasive while you have a face-down card."
+    }
+  },
+  "infiniteassault-033": {
+    "id": "infiniteassault-033",
+    "index": "33",
+    "name": "Uncanny Valley",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "debuff",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 5,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Enemy Units have −{debuff} Attack until your next turn."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 12,
+      "keywords": [],
+      "text": "Cry: Enemy Units have −{debuff} Attack until your next turn."
+    }
+  },
+  "infiniteassault-034": {
+    "id": "infiniteassault-034",
+    "index": "34",
+    "name": "Mass Hallucination",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-034-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Transform every enemy Unit that costs (1) or less into a Husk."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Transform every enemy Unit that costs (2) or less into a Husk."
+    }
+  },
+  "infiniteassault-034-1": {
+    "id": "infiniteassault-034-1",
+    "index": "34.1",
+    "name": "Husk",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": ""
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "infiniteassault-035": {
+    "id": "infiniteassault-035",
+    "index": "35",
+    "name": "Fata Morgana",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-025-1",
+      "infiniteassault-035-1"
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 5,
+      "keywords": [],
+      "text": "Whenever a Figment of yours reveals, summon a Mirage."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [],
+      "text": "Whenever a Figment of yours reveals, summon a Radiant Mirage."
+    }
+  },
+  "infiniteassault-035-1": {
+    "id": "infiniteassault-035-1",
+    "index": "35.1",
+    "name": "Mirage",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush"
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush"
+    }
+  },
+  "infiniteassault-036": {
+    "id": "infiniteassault-036",
+    "index": "36",
+    "name": "Deepfake",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Choose an enemy Unit. Summon a copy of it for yourself with Brittle 2."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Choose an enemy Unit. Summon a copy of it for yourself."
+    }
+  },
+  "infiniteassault-037": {
+    "id": "infiniteassault-037",
+    "index": "37",
+    "name": "Bluff Called",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-025-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Spell: Counter it."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Spell: Counter it, then set a Figment."
+    }
+  },
+  "infiniteassault-038": {
+    "id": "infiniteassault-038",
+    "index": "38",
+    "name": "Imaginary Friend",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "infiniteassault-025-1"
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Divine Shield\nDeath: Set a Figment."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Divine Shield\nDeath: Set two Figments."
+    }
+  },
+  "infiniteassault-039": {
+    "id": "infiniteassault-039",
+    "index": "39",
+    "name": "Shell Game",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "infiniteassault-025-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Set a Figment. Then draw a card for each face-down card you have, up to three."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Set a Figment. Then draw a card for each face-down card you have, up to five."
+    }
+  },
+  "infiniteassault-040": {
+    "id": "infiniteassault-040",
+    "index": "40",
+    "name": "Hall of Mirrors",
+    "set": "Infinite Assault",
+    "type": "Field Spell",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "infiniteassault-040-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Whenever you set a card face-down, summon a Reflection."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Whenever you set a card face-down, summon a Radiant Reflection."
+    }
+  },
+  "infiniteassault-040-1": {
+    "id": "infiniteassault-040-1",
+    "index": "40.1",
+    "name": "Reflection",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt"
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt"
+    }
+  },
+  "infiniteassault-041": {
+    "id": "infiniteassault-041",
+    "index": "41",
+    "name": "Phantom Army",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "infiniteassault-041-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Fill your board with Phantoms."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Fill your board with Radiant Phantoms."
+    }
+  },
+  "infiniteassault-041-1": {
+    "id": "infiniteassault-041-1",
+    "index": "41.1",
+    "name": "Phantom",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Brittle",
+          "n": 1
+        }
+      ],
+      "text": "Rush, Brittle 1"
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Brittle",
+          "n": 1
+        }
+      ],
+      "text": "Rush, Brittle 1"
+    }
+  },
+  "infiniteassault-042": {
+    "id": "infiniteassault-042",
+    "index": "42",
+    "name": "Paranoia Engine",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-025-1"
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [],
+      "text": "Aura: Your opponent's cards can't destroy or reveal your face-down cards.\nEnd of turn: Set a Figment."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 12,
+      "keywords": [],
+      "text": "Aura: Your opponent's cards can't destroy or reveal your face-down cards.\nEnd of turn: Set two Figments."
+    }
+  },
+  "infiniteassault-043": {
+    "id": "infiniteassault-043",
+    "index": "43",
+    "name": "Cognitive Dissonance",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "step",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Unit: After it resolves, transform it into a random Unit that costs ({step}) less."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Unit: After it resolves, transform it into a random Unit that costs ({step}) less."
+    }
+  },
+  "infiniteassault-044": {
+    "id": "infiniteassault-044",
+    "index": "44",
+    "name": "The Lie Detector",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "infiniteassault-025-1"
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Destroy every enemy face-down card. Set a Figment for each."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 16,
+      "keywords": [],
+      "text": "Cry: Destroy every enemy face-down card. Set two Figments for each."
+    }
+  },
+  "infiniteassault-045": {
+    "id": "infiniteassault-045",
+    "index": "45",
+    "name": "Dream Within a Dream",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Summon a copy of every enemy Unit for yourself. They have Brittle 1."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon a copy of every enemy Unit for yourself. They have Brittle 2."
+    }
+  },
+  "infiniteassault-046": {
+    "id": "infiniteassault-046",
+    "index": "46",
+    "name": "Mirage Sovereign",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "infiniteassault-025-1"
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nWhenever a Figment of yours reveals, summon a copy of the attacking Unit for yourself."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nWhenever a Figment of yours reveals, summon a copy of the attacking Unit for yourself, then destroy the attacking Unit."
+    }
+  },
+  "infiniteassault-047": {
+    "id": "infiniteassault-047",
+    "index": "47",
+    "name": "Unreal Estate",
+    "set": "Infinite Assault",
+    "type": "Field Trap",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "chance",
+        "base": 50,
+        "radiant": 50,
+        "better": "up",
+        "step": 10,
+        "min": 1,
+        "max": 100
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: {chance}% chance to cancel the attack."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Lucky",
+          "n": 1
+        }
+      ],
+      "text": "Lucky 1\nReveals when an enemy Unit attacks: {chance}% chance to cancel the attack."
+    }
+  },
+  "infiniteassault-048": {
+    "id": "infiniteassault-048",
+    "index": "48",
+    "name": "Ego Death",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Hallucination"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Swap hands with your opponent. The cards you get cost ({discount}) less."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Swap hands with your opponent. The cards you get cost ({discount}) less."
+    }
+  },
+  "infiniteassault-049": {
+    "id": "infiniteassault-049",
+    "index": "49",
+    "name": "Spark Plug",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 0,
+    "params": [
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nDeath: Gain {mana} mana this turn."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nDeath: Gain {mana} mana this turn."
+    }
+  },
+  "infiniteassault-050": {
+    "id": "infiniteassault-050",
+    "index": "50",
+    "name": "Burst Clock",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "loss",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Gain {mana} mana this turn. Lose ({loss}) mana next turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Gain {mana} mana this turn. Lose ({loss}) mana next turn."
+    }
+  },
+  "infiniteassault-051": {
+    "id": "infiniteassault-051",
+    "index": "51",
+    "name": "Redline Racer",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 5,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Charge"
+        }
+      ],
+      "text": "Charge\nEnd of turn: Deal {damage} damage to your hero."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Charge"
+        },
+        {
+          "kind": "First Strike"
+        }
+      ],
+      "text": "Charge, First Strike\nEnd of turn: Deal {damage} damage to your hero."
+    }
+  },
+  "infiniteassault-052": {
+    "id": "infiniteassault-052",
+    "index": "52",
+    "name": "Thermal Paste",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "attack",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Give a friendly Unit +{attack} Attack and Rush. Give it Brittle 1."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give a friendly Unit +{attack} Attack and Rush. Give it Brittle 1."
+    }
+  },
+  "infiniteassault-053": {
+    "id": "infiniteassault-053",
+    "index": "53",
+    "name": "Overvolt Grunt",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Deal {damage} damage to your hero."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Deal {damage} damage to your hero."
+    }
+  },
+  "infiniteassault-054": {
+    "id": "infiniteassault-054",
+    "index": "54",
+    "name": "Fan Failure",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 6,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Brittle",
+          "n": 2
+        }
+      ],
+      "text": "Brittle 2"
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Brittle",
+          "n": 2
+        },
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Brittle 2, Rush"
+    }
+  },
+  "infiniteassault-055": {
+    "id": "infiniteassault-055",
+    "index": "55",
+    "name": "Heat Sink",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "attack",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nWhenever your hero takes damage on your turn, this gains +{attack} Attack."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nWhenever your hero takes damage on your turn, this gains +{attack} Attack."
+    }
+  },
+  "infiniteassault-056": {
+    "id": "infiniteassault-056",
+    "index": "56",
+    "name": "Afterburner",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 4,
+        "radiant": 8,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "selfDamage",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Deal {damage} damage to the enemy hero. Deal {selfDamage} damage to your hero."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Deal {damage} damage to the enemy hero. Deal {selfDamage} damage to your hero."
+    }
+  },
+  "infiniteassault-057": {
+    "id": "infiniteassault-057",
+    "index": "57",
+    "name": "Speed Demon",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 6,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Charge"
+        }
+      ],
+      "text": "Charge"
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Charge"
+        },
+        {
+          "kind": "Windfury"
+        }
+      ],
+      "text": "Charge, Windfury"
+    }
+  },
+  "infiniteassault-058": {
+    "id": "infiniteassault-058",
+    "index": "58",
+    "name": "Overclocked Core",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "attack",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 5,
+      "keywords": [],
+      "text": "Aura: Your Spells cost ({discount}) less.\nEnd of turn: Deal {damage} damage to your hero."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 10,
+      "keywords": [],
+      "text": "Aura: Your Spells cost ({discount}) less and your Units have +{attack} Attack.\nEnd of turn: Deal {damage} damage to your hero."
+    }
+  },
+  "infiniteassault-059": {
+    "id": "infiniteassault-059",
+    "index": "59",
+    "name": "Voltage Spike",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "health",
+        "base": 15,
+        "radiant": 15,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "empowered",
+        "base": 6,
+        "radiant": 12,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Deal {damage} damage to an enemy. If your hero has {health} or less Health, deal {empowered} instead."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Deal {damage} damage to an enemy. If your hero has {health} or less Health, deal {empowered} instead."
+    }
+  },
+  "infiniteassault-060": {
+    "id": "infiniteassault-060",
+    "index": "60",
+    "name": "Pit Crew",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "discount",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Your next Unit this turn costs ({discount}) less."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Your next Unit this turn costs ({discount}) less."
+    }
+  },
+  "infiniteassault-061": {
+    "id": "infiniteassault-061",
+    "index": "61",
+    "name": "Meltdown Charge",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Deal {damage} damage to both heroes and all Units. Repeat once for each mana you have left."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Deal {damage} damage to all enemies. Repeat once for each mana you have left."
+    }
+  },
+  "infiniteassault-062": {
+    "id": "infiniteassault-062",
+    "index": "62",
+    "name": "Burnout",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent's turn ends with unspent mana: Deal twice that much damage to their hero."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent's turn ends with unspent mana: Deal four times that much damage to their hero."
+    }
+  },
+  "infiniteassault-063": {
+    "id": "infiniteassault-063",
+    "index": "63",
+    "name": "Nitrous Injector",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "attack",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Give your other Units +{attack} Attack and Rush this turn."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Give your other Units +{attack} Attack and Rush this turn."
+    }
+  },
+  "infiniteassault-064": {
+    "id": "infiniteassault-064",
+    "index": "64",
+    "name": "Crash Test Dummy",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 5,
+        "radiant": 10,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nDeath: Deal {damage} damage to the enemy hero."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nDeath: Deal {damage} damage to the enemy hero."
+    }
+  },
+  "infiniteassault-065": {
+    "id": "infiniteassault-065",
+    "index": "65",
+    "name": "Overdrive",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "mana",
+        "base": 4,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Gain {mana} mana this turn.\nEnd of turn: Deal {damage} damage to your hero for each mana you didn't spend."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Gain {mana} mana this turn.\nEnd of turn: Deal {damage} damage to your hero for each mana you didn't spend."
+    }
+  },
+  "infiniteassault-066": {
+    "id": "infiniteassault-066",
+    "index": "66",
+    "name": "Afterimage Sprinter",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 8,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Charge"
+        },
+        {
+          "kind": "Windfury"
+        },
+        {
+          "kind": "Brittle",
+          "n": 1
+        }
+      ],
+      "text": "Charge, Windfury, Brittle 1"
+    },
+    "radiant": {
+      "attack": 16,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Charge"
+        },
+        {
+          "kind": "Windfury"
+        },
+        {
+          "kind": "Brittle",
+          "n": 1
+        },
+        {
+          "kind": "First Strike"
+        }
+      ],
+      "text": "Charge, Windfury, Brittle 1, First Strike"
+    }
+  },
+  "infiniteassault-067": {
+    "id": "infiniteassault-067",
+    "index": "67",
+    "name": "Burning Ambition",
+    "set": "Infinite Assault",
+    "type": "Field Spell",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Start of turn: Deal {damage} damage to your hero and gain {mana} mana this turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Start of turn: Deal {damage} damage to your hero and gain {mana} mana this turn."
+    }
+  },
+  "infiniteassault-068": {
+    "id": "infiniteassault-068",
+    "index": "68",
+    "name": "Short Circuit",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Destroy it. Deal damage equal to its Attack to your hero."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Destroy it. Deal damage equal to half its Attack, rounded down, to your hero."
+    }
+  },
+  "infiniteassault-069": {
+    "id": "infiniteassault-069",
+    "index": "69",
+    "name": "Rev Limiter",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "attack",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 7,
+      "health": 7,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nAfter this attacks, it gains +{attack} Attack and deals {damage} damage to your hero."
+    },
+    "radiant": {
+      "attack": 14,
+      "health": 14,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nAfter this attacks, it gains +{attack} Attack and deals {damage} damage to your hero."
+    }
+  },
+  "infiniteassault-070": {
+    "id": "infiniteassault-070",
+    "index": "70",
+    "name": "Redline Overlord",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "health",
+        "base": 15,
+        "radiant": 15,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "attack",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Aura: While your hero has {health} or less Health, your Units have Charge and +{attack} Attack."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [],
+      "text": "Aura: While your hero has {health} or less Health, your Units have Charge and +{attack} Attack."
+    }
+  },
+  "infiniteassault-071": {
+    "id": "infiniteassault-071",
+    "index": "71",
+    "name": "Thermal Throttler",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "health",
+        "base": 10,
+        "radiant": 5,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 6,
+      "keywords": [],
+      "text": "Start of turn: Gain {mana} mana this turn for each {health} Health your hero is missing."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 12,
+      "keywords": [],
+      "text": "Start of turn: Gain {mana} mana this turn for each {health} Health your hero is missing."
+    }
+  },
+  "infiniteassault-072": {
+    "id": "infiniteassault-072",
+    "index": "72",
+    "name": "Overclock to Infinity",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Overclock"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "damage",
+        "base": 10,
+        "radiant": 5,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Your cards cost (0) this turn.\nEnd of turn: Deal {damage} damage to your hero."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Your cards cost (0) this turn.\nEnd of turn: Deal {damage} damage to your hero."
+    }
+  },
+  "infiniteassault-073": {
+    "id": "infiniteassault-073",
+    "index": "73",
+    "name": "Worker Thread",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Summon a copy of this."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Summon two copies of this."
+    }
+  },
+  "infiniteassault-074": {
+    "id": "infiniteassault-074",
+    "index": "74",
+    "name": "Parallel Instance",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-074-1"
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Summon an Instance."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Summon a Radiant Instance."
+    }
+  },
+  "infiniteassault-074-1": {
+    "id": "infiniteassault-074-1",
+    "index": "74.1",
+    "name": "Instance",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": ""
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "infiniteassault-075": {
+    "id": "infiniteassault-075",
+    "index": "75",
+    "name": "Load Balancer",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "health",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "Aura: Your other Units have +{health} Health."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "Aura: Your other Units have +{health} Health."
+    }
+  },
+  "infiniteassault-076": {
+    "id": "infiniteassault-076",
+    "index": "76",
+    "name": "Mob Mentality",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Give your Units +{buff}/+{buff}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give your Units +{buff}/+{buff}."
+    }
+  },
+  "infiniteassault-077": {
+    "id": "infiniteassault-077",
+    "index": "77",
+    "name": "Swarm Node",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "buff",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 3,
+      "keywords": [],
+      "text": "Death: Give a random friendly Unit +{buff}/+{buff}."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [],
+      "text": "Death: Give a random friendly Unit +{buff}/+{buff}."
+    }
+  },
+  "infiniteassault-078": {
+    "id": "infiniteassault-078",
+    "index": "78",
+    "name": "Batch Job",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "infiniteassault-078-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Summon four Workers."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon four Radiant Workers."
+    }
+  },
+  "infiniteassault-078-1": {
+    "id": "infiniteassault-078-1",
+    "index": "78.1",
+    "name": "Worker",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 2,
+      "keywords": [],
+      "text": ""
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "infiniteassault-079": {
+    "id": "infiniteassault-079",
+    "index": "79",
+    "name": "Thread Pool",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "infiniteassault-004-1"
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Summon a Drone for each other Unit you control."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Summon a Radiant Drone for each other Unit you control."
+    }
+  },
+  "infiniteassault-080": {
+    "id": "infiniteassault-080",
+    "index": "80",
+    "name": "Hive Ganger",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "attack",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Has +{attack} Attack for each other friendly Unit."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Has +{attack} Attack for each other friendly Unit."
+    }
+  },
+  "infiniteassault-081": {
+    "id": "infiniteassault-081",
+    "index": "81",
+    "name": "Overprovision",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-074-1"
+    ],
+    "params": [
+      {
+        "key": "units",
+        "base": 4,
+        "radiant": 4,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Summon two Instances. If you control {units} or more Units, draw a card."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon two Radiant Instances. If you control {units} or more Units, draw two cards."
+    }
+  },
+  "infiniteassault-082": {
+    "id": "infiniteassault-082",
+    "index": "82",
+    "name": "Fork Bomb",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-082-1"
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Death: Summon two Forks."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Death: Summon two Radiant Forks. They have Rush."
+    }
+  },
+  "infiniteassault-082-1": {
+    "id": "infiniteassault-082-1",
+    "index": "82.1",
+    "name": "Fork",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": ""
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "infiniteassault-083": {
+    "id": "infiniteassault-083",
+    "index": "83",
+    "name": "Swarm Logic",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "attack",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Your Units have +{attack} Attack and Rush this turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Your Units have +{attack} Attack and Rush this turn."
+    }
+  },
+  "infiniteassault-084": {
+    "id": "infiniteassault-084",
+    "index": "84",
+    "name": "Distributed Mind",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 5,
+      "keywords": [],
+      "text": "Once per turn, when another friendly Unit dies, draw a card."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [],
+      "text": "Twice per turn, when another friendly Unit dies, draw a card."
+    }
+  },
+  "infiniteassault-085": {
+    "id": "infiniteassault-085",
+    "index": "85",
+    "name": "Merge Conflict",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Fuse two friendly Units."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Fuse two friendly Units. The result has Rush and Divine Shield."
+    }
+  },
+  "infiniteassault-086": {
+    "id": "infiniteassault-086",
+    "index": "86",
+    "name": "Replica Hatchery",
+    "set": "Infinite Assault",
+    "type": "Field Spell",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "End of turn: Summon a copy of your cheapest Unit. Give it Brittle 1."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "End of turn: Summon a copy of your cheapest Unit."
+    }
+  },
+  "infiniteassault-087": {
+    "id": "infiniteassault-087",
+    "index": "87",
+    "name": "Swarm Shield",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "infiniteassault-078-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Summon three Workers. Give them Taunt."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Summon three Radiant Workers. Give them Taunt."
+    }
+  },
+  "infiniteassault-088": {
+    "id": "infiniteassault-088",
+    "index": "88",
+    "name": "Scale Out",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-074-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Summon an Instance for each enemy Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon a Radiant Instance for each enemy Unit."
+    }
+  },
+  "infiniteassault-089": {
+    "id": "infiniteassault-089",
+    "index": "89",
+    "name": "Queen of the Cluster",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "refs": [
+      "infiniteassault-004-1"
+    ],
+    "params": [
+      {
+        "key": "buff",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Aura: Your other Units have +{buff}/+{buff}.\nEnd of turn: Summon a Drone."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 16,
+      "keywords": [],
+      "text": "Aura: Your other Units have +{buff}/+{buff}.\nEnd of turn: Summon a Radiant Drone."
+    }
+  },
+  "infiniteassault-090": {
+    "id": "infiniteassault-090",
+    "index": "90",
+    "name": "Mass Production",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Summon a copy of each friendly Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon a copy of each friendly Unit. They have Rush."
+    }
+  },
+  "infiniteassault-091": {
+    "id": "infiniteassault-091",
+    "index": "91",
+    "name": "Flood the Zone",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "infiniteassault-004-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Fill your board with Drones. They have Rush."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Fill your board with Radiant Drones. They have Rush."
+    }
+  },
+  "infiniteassault-092": {
+    "id": "infiniteassault-092",
+    "index": "92",
+    "name": "Hive Overseer",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "infiniteassault-004-1"
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nWhenever a friendly Unit dies, summon a Drone."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nWhenever a friendly Unit dies, summon a Radiant Drone."
+    }
+  },
+  "infiniteassault-093": {
+    "id": "infiniteassault-093",
+    "index": "93",
+    "name": "Gestalt",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Fuse every other friendly Unit into this."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Fuse every other friendly Unit into this. Then it gains Rush and Divine Shield."
+    }
+  },
+  "infiniteassault-094": {
+    "id": "infiniteassault-094",
+    "index": "94",
+    "name": "Batch Monarch",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [],
+      "text": "Start of turn: Summon a copy of your highest-Attack Unit. Give it Brittle 1."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 12,
+      "keywords": [],
+      "text": "Start of turn: Summon a copy of your highest-Attack Unit."
+    }
+  },
+  "infiniteassault-095": {
+    "id": "infiniteassault-095",
+    "index": "95",
+    "name": "The Botnet",
+    "set": "Infinite Assault",
+    "type": "Field Spell",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Your Units have +{buff}/+{buff} for each other friendly Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Your Units have +{buff}/+{buff} for each other friendly Unit and Rush."
+    }
+  },
+  "infiniteassault-096": {
+    "id": "infiniteassault-096",
+    "index": "96",
+    "name": "Exponential Growth",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Batch"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Summon a copy of each friendly Unit. Then double the Attack and Health of your Units."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon a copy of each friendly Unit. The copies have Rush. Then double the Attack and Health of your Units."
+    }
+  },
+  "infiniteassault-097": {
+    "id": "infiniteassault-097",
+    "index": "97",
+    "name": "Retry Bot",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn"
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        },
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Reborn, Rush"
+    }
+  },
+  "infiniteassault-098": {
+    "id": "infiniteassault-098",
+    "index": "98",
+    "name": "Echo Chamber",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "base": 2,
+        "better": "up",
+        "key": "damage",
+        "min": 1,
+        "radiant": 2,
+        "step": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Echo 1\nDeal {damage} damage to an enemy Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Echo 2\nDeal {damage} damage to an enemy Unit."
+    }
+  },
+  "infiniteassault-099": {
+    "id": "infiniteassault-099",
+    "index": "99",
+    "name": "Recall",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Add a copy of a random friendly Unit that died this game to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add two copies of a random friendly Unit that died this game to your hand."
+    }
+  },
+  "infiniteassault-100": {
+    "id": "infiniteassault-100",
+    "index": "100",
+    "name": "Iterator",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "base": 2,
+        "better": "up",
+        "key": "buff",
+        "min": 1,
+        "radiant": 4,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Death: Shuffle a copy of this with +{buff}/+{buff} into your deck."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Death: Shuffle a copy of this with +{buff}/+{buff} into your deck."
+    }
+  },
+  "infiniteassault-101": {
+    "id": "infiniteassault-101",
+    "index": "101",
+    "name": "Rewind Drone",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Return a random Spell from your graveyard to your hand."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Return two random Spells from your graveyard to your hand."
+    }
+  },
+  "infiniteassault-102": {
+    "id": "infiniteassault-102",
+    "index": "102",
+    "name": "Loop Guard",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Taunt, Reborn"
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Reborn"
+        },
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Taunt, Reborn, Divine Shield"
+    }
+  },
+  "infiniteassault-103": {
+    "id": "infiniteassault-103",
+    "index": "103",
+    "name": "Undo",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Return an enemy Unit to its owner's hand. It costs (1) more."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Return an enemy Unit to its owner's hand. It costs (2) more. Draw a card."
+    }
+  },
+  "infiniteassault-104": {
+    "id": "infiniteassault-104",
+    "index": "104",
+    "name": "Stack Trace",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "keywords": [
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Flashback\nDraw a card."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Flashback, Echo 1\nDraw a card."
+    }
+  },
+  "infiniteassault-105": {
+    "id": "infiniteassault-105",
+    "index": "105",
+    "name": "Callback",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 4,
+      "keywords": [],
+      "text": "Death: Add a copy of the last Spell you played to your hand."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Death: Add two copies of the last Spell you played to your hand."
+    }
+  },
+  "infiniteassault-106": {
+    "id": "infiniteassault-106",
+    "index": "106",
+    "name": "Checkpoint Daemon",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "base": 5,
+        "better": "up",
+        "key": "armor",
+        "min": 1,
+        "radiant": 5,
+        "step": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [],
+      "text": "End of turn: Take a snapshot of your hero's Health.\nDeath: Set your hero's Health to that snapshot."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 12,
+      "keywords": [],
+      "text": "End of turn: Take a snapshot of your hero's Health.\nDeath: Set your hero's Health to that snapshot and gain {armor} Armor."
+    }
+  },
+  "infiniteassault-107": {
+    "id": "infiniteassault-107",
+    "index": "107",
+    "name": "Recursive Call",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-107"
+    ],
+    "params": [
+      {
+        "base": 1,
+        "better": "up",
+        "key": "damage",
+        "min": 1,
+        "radiant": 2,
+        "step": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Deal {damage} damage to a random enemy, once more for each Recursive Call you've played this game. Shuffle a copy of this into your deck."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Deal {damage} damage to a random enemy, once more for each Recursive Call you've played this game. Shuffle a copy of this into your deck."
+    }
+  },
+  "infiniteassault-108": {
+    "id": "infiniteassault-108",
+    "index": "108",
+    "name": "Second Draft",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Discard your hand. Draw that many cards, plus one."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Discard your hand. Draw that many cards, plus two."
+    }
+  },
+  "infiniteassault-109": {
+    "id": "infiniteassault-109",
+    "index": "109",
+    "name": "Revenant Process",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "base": 3,
+        "better": "up",
+        "key": "buff",
+        "min": 1,
+        "radiant": 6,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nWhen this returns by Reborn, it gains +{buff}/+{buff}."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nWhen this returns by Reborn, it gains +{buff}/+{buff}."
+    }
+  },
+  "infiniteassault-110": {
+    "id": "infiniteassault-110",
+    "index": "110",
+    "name": "Infinite Loop",
+    "set": "Infinite Assault",
+    "type": "Field Spell",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "End of turn: Summon a copy of a random friendly Unit that died this turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "End of turn: Summon two copies of a random friendly Unit that died this turn."
+    }
+  },
+  "infiniteassault-111": {
+    "id": "infiniteassault-111",
+    "index": "111",
+    "name": "Redundant Copy",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "base": 2,
+        "better": "up",
+        "key": "buff",
+        "min": 1,
+        "radiant": 2,
+        "step": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when a friendly Unit dies: Summon a copy of it."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when a friendly Unit dies: Summon a copy of it with +{buff}/+{buff}."
+    }
+  },
+  "infiniteassault-112": {
+    "id": "infiniteassault-112",
+    "index": "112",
+    "name": "Evolutionary Loop",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "base": 2,
+        "better": "up",
+        "key": "buff",
+        "min": 1,
+        "radiant": 4,
+        "read": "evolve",
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 3,
+      "keywords": [],
+      "text": "Evolves when a friendly Unit dies.\nEvolve: Gain +{buff}/+{buff} and Reborn."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [],
+      "text": "Evolves when a friendly Unit dies.\nEvolve: Gain +{buff}/+{buff} and Reborn."
+    }
+  },
+  "infiniteassault-113": {
+    "id": "infiniteassault-113",
+    "index": "113",
+    "name": "Rerun",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Cast the last three Spells you played this game, at random targets."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Cast the last four Spells you played this game, at random targets."
+    }
+  },
+  "infiniteassault-114": {
+    "id": "infiniteassault-114",
+    "index": "114",
+    "name": "Ouroboros Engine",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 5,
+      "health": 5,
+      "keywords": [],
+      "text": "Death: Shuffle your graveyard into your deck."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [],
+      "text": "Death: Shuffle your graveyard into your deck and draw two cards."
+    }
+  },
+  "infiniteassault-115": {
+    "id": "infiniteassault-115",
+    "index": "115",
+    "name": "Phoenix Protocol",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 7,
+      "health": 7,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nCry: Give your other Units Reborn."
+    },
+    "radiant": {
+      "attack": 14,
+      "health": 14,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nCry: Give your other Units Reborn and Divine Shield."
+    }
+  },
+  "infiniteassault-116": {
+    "id": "infiniteassault-116",
+    "index": "116",
+    "name": "Groundhog Day",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Summon copies of the friendly Units that died since your last turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon copies of the friendly Units that died since your last turn. They have Rush."
+    }
+  },
+  "infiniteassault-117": {
+    "id": "infiniteassault-117",
+    "index": "117",
+    "name": "Core Dump",
+    "set": "Infinite Assault",
+    "type": "Field Trap",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when a friendly Unit dies: Shuffle a copy of it into your deck."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when a friendly Unit dies: Shuffle a Radiant copy of it into your deck."
+    }
+  },
+  "infiniteassault-118": {
+    "id": "infiniteassault-118",
+    "index": "118",
+    "name": "The Recursionist",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 7,
+      "keywords": [],
+      "text": "Your Death triggers and Reborns happen twice."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 14,
+      "keywords": [],
+      "text": "Your Death triggers and Reborns happen twice, and your Units have Reborn."
+    }
+  },
+  "infiniteassault-119": {
+    "id": "infiniteassault-119",
+    "index": "119",
+    "name": "Snapshot Lich",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Take a snapshot of your permanents.\nStart of turn: If you have fewer permanents than the snapshot, reset your board to it."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 20,
+      "keywords": [],
+      "text": "Cry: Take a snapshot of your permanents.\nStart of turn: If you have fewer permanents than the snapshot, reset your board to it, and draw a card."
+    }
+  },
+  "infiniteassault-120": {
+    "id": "infiniteassault-120",
+    "index": "120",
+    "name": "Eternal Return",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Recursion"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "base": 1,
+        "better": "up",
+        "key": "discount",
+        "min": 1,
+        "radiant": 2,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Shuffle every card you've played this game into your deck. They cost ({discount}) less. Draw three cards."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Shuffle every card you've played this game into your deck. They cost ({discount}) less. Draw four cards."
+    }
+  },
+  "infiniteassault-121": {
+    "id": "infiniteassault-121",
+    "index": "121",
+    "name": "Packet Sniffer",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Look at your opponent's hand."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Look at your opponent's hand. Then Nerf a random card in it."
+    }
+  },
+  "infiniteassault-122": {
+    "id": "infiniteassault-122",
+    "index": "122",
+    "name": "Freeze Ray Drone",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Freeze an enemy Unit."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Freeze two enemy Units."
+    }
+  },
+  "infiniteassault-123": {
+    "id": "infiniteassault-123",
+    "index": "123",
+    "name": "Cost Injection",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "The cards in your opponent's hand cost (1) more during their next turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "The cards in your opponent's hand cost (2) more during their next turn."
+    }
+  },
+  "infiniteassault-124": {
+    "id": "infiniteassault-124",
+    "index": "124",
+    "name": "Firewall Breach",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Destroy an enemy face-down card. Draw a card."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Destroy two enemy face-down cards. Draw a card."
+    }
+  },
+  "infiniteassault-125": {
+    "id": "infiniteassault-125",
+    "index": "125",
+    "name": "Zone Lock",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Lock an empty enemy unit zone. Draw a card."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Lock two empty enemy unit zones. Draw a card."
+    }
+  },
+  "infiniteassault-126": {
+    "id": "infiniteassault-126",
+    "index": "126",
+    "name": "Exploit Grunt",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Nerf an enemy Unit."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Nerf an enemy Unit twice."
+    }
+  },
+  "infiniteassault-127": {
+    "id": "infiniteassault-127",
+    "index": "127",
+    "name": "Bad Prompt",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Transform a random card in your opponent's hand into a random Common Infinite Assault card."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Transform two random cards in your opponent's hand into random Common Infinite Assault cards."
+    }
+  },
+  "infiniteassault-128": {
+    "id": "infiniteassault-128",
+    "index": "128",
+    "name": "Malware Injector",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "base": 1,
+        "better": "up",
+        "key": "tokens",
+        "min": 1,
+        "radiant": 2,
+        "read": "cry",
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 5,
+      "keywords": [],
+      "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on an enemy Unit."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on an enemy Unit."
+    }
+  },
+  "infiniteassault-129": {
+    "id": "infiniteassault-129",
+    "index": "129",
+    "name": "Signal Jammer",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "base": 1,
+        "better": "up",
+        "key": "surcharge",
+        "min": 1,
+        "radiant": 2,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 5,
+      "keywords": [],
+      "text": "Aura: Enemy Spells cost ({surcharge}) more."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 10,
+      "keywords": [],
+      "text": "Aura: Enemy Spells cost ({surcharge}) more."
+    }
+  },
+  "infiniteassault-130": {
+    "id": "infiniteassault-130",
+    "index": "130",
+    "name": "Prompt Injection",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Your opponent's next Spell has its targets chosen randomly."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Your opponent's next two Spells have their targets chosen randomly."
+    }
+  },
+  "infiniteassault-131": {
+    "id": "infiniteassault-131",
+    "index": "131",
+    "name": "Privilege Escalation",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Steal an enemy Unit that costs (2) or less."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Steal an enemy Unit that costs (3) or less."
+    }
+  },
+  "infiniteassault-132": {
+    "id": "infiniteassault-132",
+    "index": "132",
+    "name": "Ransomware",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "base": 1,
+        "better": "up",
+        "key": "mana",
+        "min": 1,
+        "radiant": 2,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Unit: Freeze it. They lose ({mana}) mana next turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Unit: Freeze it. They lose ({mana}) mana next turn."
+    }
+  },
+  "infiniteassault-133": {
+    "id": "infiniteassault-133",
+    "index": "133",
+    "name": "Backdoor",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Spell: Steal a random card from their hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Spell: Steal two random cards from their hand."
+    }
+  },
+  "infiniteassault-134": {
+    "id": "infiniteassault-134",
+    "index": "134",
+    "name": "Rootkit Runner",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nWhen this is revealed, steal a random card from your opponent's hand."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nWhen this is revealed, steal two random cards from your opponent's hand."
+    }
+  },
+  "infiniteassault-135": {
+    "id": "infiniteassault-135",
+    "index": "135",
+    "name": "Mana Leech",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Steal one of your opponent's mana crystals."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Steal two of your opponent's mana crystals."
+    }
+  },
+  "infiniteassault-136": {
+    "id": "infiniteassault-136",
+    "index": "136",
+    "name": "DDoS",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "base": 2,
+        "better": "up",
+        "key": "damage",
+        "min": 1,
+        "radiant": 2,
+        "step": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Freeze every enemy Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Freeze every enemy Unit and deal {damage} damage to them."
+    }
+  },
+  "infiniteassault-137": {
+    "id": "infiniteassault-137",
+    "index": "137",
+    "name": "Patch Tuesday Exploit",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Nerf every card in your opponent's hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Nerf every card in your opponent's hand twice."
+    }
+  },
+  "infiniteassault-138": {
+    "id": "infiniteassault-138",
+    "index": "138",
+    "name": "Social Engineer",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Swap control of this and a random enemy Unit."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 12,
+      "keywords": [],
+      "text": "Cry: Swap control of this and the enemy Unit with the highest Attack."
+    }
+  },
+  "infiniteassault-139": {
+    "id": "infiniteassault-139",
+    "index": "139",
+    "name": "Admin Override",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Steal an enemy Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Steal an enemy Unit. It has Rush."
+    }
+  },
+  "infiniteassault-140": {
+    "id": "infiniteassault-140",
+    "index": "140",
+    "name": "Kill Switch",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "base": 1,
+        "better": "up",
+        "key": "discard",
+        "min": 1,
+        "radiant": 1,
+        "step": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays their third card in a turn: End their turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays their third card in a turn: End their turn. They discard {discard|random card|random cards}."
+    }
+  },
+  "infiniteassault-141": {
+    "id": "infiniteassault-141",
+    "index": "141",
+    "name": "Logic Bomb",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "base": 3,
+        "better": "down",
+        "key": "turns",
+        "min": 1,
+        "radiant": 2,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 0,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nIn {turns|turn|turns}: Destroy every enemy Unit."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nIn {turns|turn|turns}: Destroy every enemy Unit."
+    }
+  },
+  "infiniteassault-142": {
+    "id": "infiniteassault-142",
+    "index": "142",
+    "name": "The Jailbreaker",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 5,
+      "health": 7,
+      "keywords": [],
+      "text": "Aura: Your opponent's cards cost (1) more, and their Spells have their targets chosen randomly."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 14,
+      "keywords": [],
+      "text": "Cry: Nerf every card in your opponent's hand.\nAura: Your opponent's cards cost (1) more, and their Spells have their targets chosen randomly."
+    }
+  },
+  "infiniteassault-143": {
+    "id": "infiniteassault-143",
+    "index": "143",
+    "name": "Zero-Click",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-143-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Transform two enemy Units into Corrupted Processes."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Transform two enemy Units into Corrupted Processes and Lock their zones."
+    }
+  },
+  "infiniteassault-143-1": {
+    "id": "infiniteassault-143-1",
+    "index": "143.1",
+    "name": "Corrupted Process",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Jailbreak",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 0,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack"
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack"
+    }
+  },
+  "infiniteassault-144": {
+    "id": "infiniteassault-144",
+    "index": "144",
+    "name": "Total Compromise",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Jailbreak"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Steal every enemy Unit that costs (2) or less. Your opponent's cards cost (1) more during their next turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Steal every enemy Unit that costs (3) or less. Your opponent's cards cost (1) more during their next turn."
+    }
+  },
+  "infiniteassault-145": {
+    "id": "infiniteassault-145",
+    "index": "145",
+    "name": "Packet Filter",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt"
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Taunt, Divine Shield"
+    }
+  },
+  "infiniteassault-146": {
+    "id": "infiniteassault-146",
+    "index": "146",
+    "name": "Shield Drone",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Give a friendly Unit Divine Shield."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Give a friendly Unit Divine Shield and Taunt."
+    }
+  },
+  "infiniteassault-147": {
+    "id": "infiniteassault-147",
+    "index": "147",
+    "name": "Hardened Node",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 7,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Armor",
+          "n": 2
+        }
+      ],
+      "text": "Taunt, Armor 2"
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 14,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Armor",
+          "n": 4
+        }
+      ],
+      "text": "Taunt, Armor 4"
+    }
+  },
+  "infiniteassault-148": {
+    "id": "infiniteassault-148",
+    "index": "148",
+    "name": "Quarantine",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "attack",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Cancel the attack. The attacker has {attack} Attack this turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Cancel the attack and Freeze the attacker. The attacker has {attack} Attack this turn."
+    }
+  },
+  "infiniteassault-149": {
+    "id": "infiniteassault-149",
+    "index": "149",
+    "name": "Encrypt",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "health",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Give a friendly Unit Divine Shield and +0/+{health}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give a friendly Unit Divine Shield and +0/+{health} and Immune to Spells."
+    }
+  },
+  "infiniteassault-150": {
+    "id": "infiniteassault-150",
+    "index": "150",
+    "name": "Wall of Static",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Taunt, Can't attack"
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Taunt, Can't attack\nAfter this is attacked: Deal {damage} damage to the attacker."
+    }
+  },
+  "infiniteassault-151": {
+    "id": "infiniteassault-151",
+    "index": "151",
+    "name": "Patch Deployment",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "attack",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "health",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Give your Units +{attack}/+{health}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give your Units +{attack}/+{health}."
+    }
+  },
+  "infiniteassault-152": {
+    "id": "infiniteassault-152",
+    "index": "152",
+    "name": "Rate Limiter",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nYour opponent can't attack with more than three Units each turn."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nYour opponent can't attack with more than two Units each turn."
+    }
+  },
+  "infiniteassault-153": {
+    "id": "infiniteassault-153",
+    "index": "153",
+    "name": "Bastion Node",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Armor",
+          "n": 3
+        }
+      ],
+      "text": "Taunt, Armor 3"
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 24,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Armor",
+          "n": 6
+        },
+        {
+          "kind": "Immune to Spells"
+        }
+      ],
+      "text": "Taunt, Armor 6, Immune to Spells"
+    }
+  },
+  "infiniteassault-154": {
+    "id": "infiniteassault-154",
+    "index": "154",
+    "name": "Honeypot Protocol",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-154-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Summon a Decoy Server. Redirect the attack to it."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Summon a Radiant Decoy Server. Redirect the attack to it."
+    }
+  },
+  "infiniteassault-154-1": {
+    "id": "infiniteassault-154-1",
+    "index": "154.1",
+    "name": "Decoy Server",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 0,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt"
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt"
+    }
+  },
+  "infiniteassault-155": {
+    "id": "infiniteassault-155",
+    "index": "155",
+    "name": "Two-Factor Gate",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Divine Shield\nStart of turn: If this has no Divine Shield, it gains Divine Shield."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Taunt, Divine Shield\nStart of turn: If this has no Divine Shield, it gains Divine Shield."
+    }
+  },
+  "infiniteassault-156": {
+    "id": "infiniteassault-156",
+    "index": "156",
+    "name": "Mirror Firewall",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nAfter this is attacked: Deal damage to the attacker equal to the damage this took."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nAfter this is attacked: Deal damage to the attacker equal to twice the damage this took."
+    }
+  },
+  "infiniteassault-157": {
+    "id": "infiniteassault-157",
+    "index": "157",
+    "name": "Containment Field",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "An enemy Unit can't attack or be attacked until your next turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Two enemy Units can't attack or be attacked until your next turn."
+    }
+  },
+  "infiniteassault-158": {
+    "id": "infiniteassault-158",
+    "index": "158",
+    "name": "Access Denied",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "armor",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Spell that targets: Counter it."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Spell that targets: Counter it. Your hero gains {armor} Armor."
+    }
+  },
+  "infiniteassault-159": {
+    "id": "infiniteassault-159",
+    "index": "159",
+    "name": "Antivirus",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "armor",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant",
+        "read": "cry"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 5,
+      "keywords": [],
+      "text": "Cry: Destroy an enemy backrow card."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Destroy an enemy backrow card. Then your hero gains {armor} Armor."
+    }
+  },
+  "infiniteassault-160": {
+    "id": "infiniteassault-160",
+    "index": "160",
+    "name": "Zero Trust",
+    "set": "Infinite Assault",
+    "type": "Field Spell",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "health",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Your Units in Defense Position have +0/+{health} and are Immune to Spells."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Your Units in Defense Position have +0/+{health} and are Immune to Spells."
+    }
+  },
+  "infiniteassault-161": {
+    "id": "infiniteassault-161",
+    "index": "161",
+    "name": "Defense in Depth",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "armor",
+        "base": 8,
+        "radiant": 16,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "extra",
+        "base": 4,
+        "radiant": 8,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Your hero gains {armor} Armor. If you control a Taunt Unit, your hero gains {extra} more Armor."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Your hero gains {armor} Armor. If you control a Taunt Unit, your hero gains {extra} more Armor."
+    }
+  },
+  "infiniteassault-162": {
+    "id": "infiniteassault-162",
+    "index": "162",
+    "name": "The Gatekeeper",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "armor",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 5,
+      "health": 9,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Immune to Spells"
+        }
+      ],
+      "text": "Taunt, Immune to Spells\nAfter this survives an attack, your hero gains {armor} Armor."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 18,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Immune to Spells"
+        }
+      ],
+      "text": "Taunt, Immune to Spells\nAfter this survives an attack, your hero gains {armor} Armor."
+    }
+  },
+  "infiniteassault-163": {
+    "id": "infiniteassault-163",
+    "index": "163",
+    "name": "Quarantine Wall",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "armor",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 0,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Taunt, Can't attack\nStart of turn: Your hero gains {armor} Armor."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 40,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Taunt, Can't attack\nStart of turn: Your hero gains {armor} Armor."
+    }
+  },
+  "infiniteassault-164": {
+    "id": "infiniteassault-164",
+    "index": "164",
+    "name": "Blackhole Route",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks your hero: Exile it."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks your hero: Exile it. Its owner discards a random card."
+    }
+  },
+  "infiniteassault-165": {
+    "id": "infiniteassault-165",
+    "index": "165",
+    "name": "Iron Curtain",
+    "set": "Infinite Assault",
+    "type": "Field Trap",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Deal {damage} damage to it."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Deal {damage} damage to it."
+    }
+  },
+  "infiniteassault-166": {
+    "id": "infiniteassault-166",
+    "index": "166",
+    "name": "Aegis Prime",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 6,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nAura: While you control another Taunt Unit, your hero is immune to damage."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 24,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nAura: Your hero is immune to damage."
+    }
+  },
+  "infiniteassault-167": {
+    "id": "infiniteassault-167",
+    "index": "167",
+    "name": "Fortress Protocol",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "health",
+        "base": 4,
+        "radiant": 8,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Switch your Units to Defense Position. Give them +0/+{health} and Divine Shield."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Switch your Units to Defense Position. Give them +0/+{health} and Divine Shield."
+    }
+  },
+  "infiniteassault-168": {
+    "id": "infiniteassault-168",
+    "index": "168",
+    "name": "Impenetrable",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Firewall"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "draw",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "armor",
+        "base": 10,
+        "radiant": 10,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Your hero and Units are immune to damage until your next turn. Draw {draw|card|cards}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Your hero and Units are immune to damage until your next turn. Draw {draw|card|cards} and your hero gains {armor} Armor."
+    }
+  },
+  "infiniteassault-169": {
+    "id": "infiniteassault-169",
+    "index": "169",
+    "name": "Spider Bot",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant",
+        "read": "cry"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Add a copy of a random card in your opponent's deck to your hand."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Add a copy of a random card in your opponent's deck to your hand. It costs ({discount}) less."
+    }
+  },
+  "infiniteassault-170": {
+    "id": "infiniteassault-170",
+    "index": "170",
+    "name": "Data Point",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Discover a card from your opponent's deck."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Discover two cards from your opponent's deck."
+    }
+  },
+  "infiniteassault-171": {
+    "id": "infiniteassault-171",
+    "index": "171",
+    "name": "Mimic Unit",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Gain the keywords of a random enemy Unit."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Gain the keywords of every enemy Unit."
+    }
+  },
+  "infiniteassault-172": {
+    "id": "infiniteassault-172",
+    "index": "172",
+    "name": "Training Data",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Add copies of the last two cards your opponent played to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add copies of the last three cards your opponent played to your hand."
+    }
+  },
+  "infiniteassault-173": {
+    "id": "infiniteassault-173",
+    "index": "173",
+    "name": "Copycat Drone",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Transform this into a copy of the last Unit your opponent played."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Transform this into a Radiant copy of the last Unit your opponent played."
+    }
+  },
+  "infiniteassault-174": {
+    "id": "infiniteassault-174",
+    "index": "174",
+    "name": "Scrape the Graveyard",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Add copies of two random cards in your opponent's graveyard to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add copies of three random cards in your opponent's graveyard to your hand."
+    }
+  },
+  "infiniteassault-175": {
+    "id": "infiniteassault-175",
+    "index": "175",
+    "name": "Fingerprinter",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Look at your opponent's hand. Add a copy of a random Spell in it to your hand."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Look at your opponent's hand. Add a copy of a card of your choice in it to your hand."
+    }
+  },
+  "infiniteassault-176": {
+    "id": "infiniteassault-176",
+    "index": "176",
+    "name": "Imitation Engine",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Set this's Attack to the highest Attack among enemy Units."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 12,
+      "keywords": [],
+      "text": "Cry: Set this's Attack to the highest Attack and its Health to the highest Health among enemy Units."
+    }
+  },
+  "infiniteassault-177": {
+    "id": "infiniteassault-177",
+    "index": "177",
+    "name": "Predictive Text",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Draw two cards. If your opponent has more cards in hand than you, draw one more."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Draw three cards. If your opponent has more cards in hand than you, draw one more."
+    }
+  },
+  "infiniteassault-178": {
+    "id": "infiniteassault-178",
+    "index": "178",
+    "name": "Dataset Thief",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 5,
+      "keywords": [],
+      "text": "Cry: Steal a random card from your opponent's deck."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Steal two random cards from your opponent's deck."
+    }
+  },
+  "infiniteassault-179": {
+    "id": "infiniteassault-179",
+    "index": "179",
+    "name": "Style Transfer",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Transform a friendly Unit into a copy of an enemy Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Transform a friendly Unit into a Radiant copy of an enemy Unit."
+    }
+  },
+  "infiniteassault-180": {
+    "id": "infiniteassault-180",
+    "index": "180",
+    "name": "Scraped Profile",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a card: Add a copy of it to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a card: Add two copies of it to your hand."
+    }
+  },
+  "infiniteassault-181": {
+    "id": "infiniteassault-181",
+    "index": "181",
+    "name": "Plagiarism Bot",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Once per turn, when your opponent plays a Spell, add a copy of it to your hand."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Twice per turn, when your opponent plays a Spell, add a copy of it to your hand."
+    }
+  },
+  "infiniteassault-182": {
+    "id": "infiniteassault-182",
+    "index": "182",
+    "name": "Model Theft",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Choose an enemy Unit. Summon a copy of it for yourself."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Choose an enemy Unit. Summon a Radiant copy of it for yourself."
+    }
+  },
+  "infiniteassault-183": {
+    "id": "infiniteassault-183",
+    "index": "183",
+    "name": "Shadow Library",
+    "set": "Infinite Assault",
+    "type": "Field Spell",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Start of turn: Add a copy of a random card your opponent played last turn to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Start of turn: Add two copies of a random card your opponent played last turn to your hand."
+    }
+  },
+  "infiniteassault-184": {
+    "id": "infiniteassault-184",
+    "index": "184",
+    "name": "Pattern Recognition",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Look at the top three cards of your opponent's deck. Add a copy of one to your hand and exile another."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Look at the top three cards of your opponent's deck. Add copies of two to your hand and exile another."
+    }
+  },
+  "infiniteassault-185": {
+    "id": "infiniteassault-185",
+    "index": "185",
+    "name": "Deep Crawler",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 5,
+      "health": 7,
+      "keywords": [],
+      "text": "Start of turn: Discover a card from your opponent's deck."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 14,
+      "keywords": [],
+      "text": "Start of turn: Discover a card from your opponent's deck twice."
+    }
+  },
+  "infiniteassault-186": {
+    "id": "infiniteassault-186",
+    "index": "186",
+    "name": "Identity Theft",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Shuffle copies of the cards in your opponent's hand into your deck. Draw two cards."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Shuffle copies of the cards in your opponent's hand into your deck. Draw three cards."
+    }
+  },
+  "infiniteassault-187": {
+    "id": "infiniteassault-187",
+    "index": "187",
+    "name": "Fine-Tuner",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 4,
+      "keywords": [],
+      "text": "Your cards that started in your opponent's deck cost ({discount}) less."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Your cards that started in your opponent's deck cost ({discount}) less."
+    }
+  },
+  "infiniteassault-188": {
+    "id": "infiniteassault-188",
+    "index": "188",
+    "name": "Overfitting",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Unit: Summon a copy of it for yourself with +2/+2."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Unit: Summon a Radiant copy of it for yourself with +2/+2."
+    }
+  },
+  "infiniteassault-189": {
+    "id": "infiniteassault-189",
+    "index": "189",
+    "name": "Clone Vat",
+    "set": "Infinite Assault",
+    "type": "Field Spell",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "End of turn: Summon a copy of a random enemy Unit. Give it Brittle 2."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "End of turn: Summon a copy of a random enemy Unit."
+    }
+  },
+  "infiniteassault-190": {
+    "id": "infiniteassault-190",
+    "index": "190",
+    "name": "Total Recall",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant",
+        "read": "cry"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Add copies of the last five cards your opponent played to your hand."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 16,
+      "keywords": [],
+      "text": "Cry: Add copies of the last five cards your opponent played to your hand. They cost ({discount}) less."
+    }
+  },
+  "infiniteassault-191": {
+    "id": "infiniteassault-191",
+    "index": "191",
+    "name": "Ground Truth",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "surcharge",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 5,
+      "keywords": [],
+      "text": "Your opponent plays with their hand revealed to you."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [],
+      "text": "Your opponent plays with their hand revealed to you, and their cards cost ({surcharge}) more."
+    }
+  },
+  "infiniteassault-192": {
+    "id": "infiniteassault-192",
+    "index": "192",
+    "name": "Become the Data",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Scraper"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Swap decks with your opponent. Draw two cards."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Swap decks with your opponent. Draw three cards."
+    }
+  },
+  "infiniteassault-193": {
+    "id": "infiniteassault-193",
+    "index": "193",
+    "name": "Seedling Mind",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 2,
+      "keywords": [],
+      "text": "End of turn: Gain +{buff}/+{buff}."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "End of turn: Gain +{buff}/+{buff}."
+    }
+  },
+  "infiniteassault-194": {
+    "id": "infiniteassault-194",
+    "index": "194",
+    "name": "Compute Shard",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 0,
+      "health": 3,
+      "keywords": [],
+      "text": "Start of turn: The most expensive card in your hand costs (1) less."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 6,
+      "keywords": [],
+      "text": "Start of turn: The most expensive card in your hand costs (2) less."
+    }
+  },
+  "infiniteassault-195": {
+    "id": "infiniteassault-195",
+    "index": "195",
+    "name": "Power Law",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Gain +{buff}/+{buff} for each Infinite Assault card you've played this game."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Gain +{buff}/+{buff} for each Infinite Assault card you've played this game."
+    }
+  },
+  "infiniteassault-196": {
+    "id": "infiniteassault-196",
+    "index": "196",
+    "name": "Emergent Behavior",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Give a friendly Unit +{buff}/+{buff} for each turn you've started this game."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give a friendly Unit +{buff}/+{buff} for each turn you've started this game."
+    }
+  },
+  "infiniteassault-197": {
+    "id": "infiniteassault-197",
+    "index": "197",
+    "name": "Long Context",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "handSize",
+        "base": 12,
+        "radiant": 12,
+        "better": "up",
+        "step": 1,
+        "min": 11,
+        "max": 14,
+        "read": "cry"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Draw a card. For the rest of the game, your hand size is {handSize}."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Draw two cards. For the rest of the game, your hand size is {handSize}."
+    }
+  },
+  "infiniteassault-198": {
+    "id": "infiniteassault-198",
+    "index": "198",
+    "name": "Growth Spurt",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "buff",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "gain",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Give a friendly Unit +{buff}/+{buff}. It gains +{gain}/+{gain} at the end of each of your turns."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give a friendly Unit +{buff}/+{buff}. It gains +{gain}/+{gain} at the end of each of your turns."
+    }
+  },
+  "infiniteassault-199": {
+    "id": "infiniteassault-199",
+    "index": "199",
+    "name": "Patient Machine",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 4,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant",
+        "read": "awaken"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 5,
+      "health": 6,
+      "keywords": [],
+      "text": "Dormant for 1 turn."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 12,
+      "keywords": [],
+      "text": "Dormant for 1 turn.\nWhen this awakens, deal {damage} damage to a random enemy."
+    }
+  },
+  "infiniteassault-200": {
+    "id": "infiniteassault-200",
+    "index": "200",
+    "name": "Superintelligence Seed",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-200-1"
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Dormant for 3 turns.\nWhen this awakens, transform it into an Ascendant."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Dormant for 3 turns.\nWhen this awakens, transform it into a Radiant Ascendant."
+    }
+  },
+  "infiniteassault-200-1": {
+    "id": "infiniteassault-200-1",
+    "index": "200.1",
+    "name": "Ascendant",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [],
+      "text": ""
+    },
+    "radiant": {
+      "attack": 24,
+      "health": 24,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "infiniteassault-201": {
+    "id": "infiniteassault-201",
+    "index": "201",
+    "name": "Overparameterized",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Costs ({discount}) less for each other Unit you control."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [],
+      "text": "Costs ({discount}) less for each other Unit you control."
+    }
+  },
+  "infiniteassault-202": {
+    "id": "infiniteassault-202",
+    "index": "202",
+    "name": "Exponent",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Start of turn: Double this's Attack."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Start of turn: Double this's Attack and Health."
+    }
+  },
+  "infiniteassault-203": {
+    "id": "infiniteassault-203",
+    "index": "203",
+    "name": "Compute Cluster",
+    "set": "Infinite Assault",
+    "type": "Field Spell",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Start of turn: Your Units gain +{buff}/+{buff}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Start of turn: Your Units gain +{buff}/+{buff}."
+    }
+  },
+  "infiniteassault-204": {
+    "id": "infiniteassault-204",
+    "index": "204",
+    "name": "Moore's Law",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "The Units in your hand cost (1) less."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "The cards in your hand cost (1) less."
+    }
+  },
+  "infiniteassault-205": {
+    "id": "infiniteassault-205",
+    "index": "205",
+    "name": "Doomsday Clock",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "turns",
+        "base": 4,
+        "radiant": 4,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 10,
+        "radiant": 20,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 0,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nIn {turns|turn|turns}: Deal {damage} damage to the enemy hero."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nIn {turns|turn|turns}: Deal {damage} damage to the enemy hero."
+    }
+  },
+  "infiniteassault-206": {
+    "id": "infiniteassault-206",
+    "index": "206",
+    "name": "Thought Accelerator",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "buff",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant",
+        "read": "cry"
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Your Dormant Units awaken."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Your Dormant Units awaken. They gain +{buff}/+{buff}."
+    }
+  },
+  "infiniteassault-207": {
+    "id": "infiniteassault-207",
+    "index": "207",
+    "name": "Recursive Self-Improvement",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "buff",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "more",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Give a friendly Unit +{buff}/+{buff}. Shuffle a copy of this into your deck that gives +{more}/+{more} more."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give a friendly Unit +{buff}/+{buff}. Shuffle a copy of this into your deck that gives +{more}/+{more} more."
+    }
+  },
+  "infiniteassault-208": {
+    "id": "infiniteassault-208",
+    "index": "208",
+    "name": "Emergence",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "units",
+        "base": 3,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "buff",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent's turn starts, if you control {units} or more Units: Give your Units +{buff}/+{buff}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent's turn starts, if you control {units} or more Units: Give your Units +{buff}/+{buff}."
+    }
+  },
+  "infiniteassault-209": {
+    "id": "infiniteassault-209",
+    "index": "209",
+    "name": "Takeoff",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Double a friendly Unit's Attack and Health."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Double a friendly Unit's Attack and Health. It has Rush."
+    }
+  },
+  "infiniteassault-210": {
+    "id": "infiniteassault-210",
+    "index": "210",
+    "name": "Matrioshka Brain",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 10,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "GIGA"
+        },
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "GIGA, Taunt"
+    },
+    "radiant": {
+      "attack": 20,
+      "health": 40,
+      "keywords": [
+        {
+          "kind": "GIGA"
+        },
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "GIGA, Taunt, Divine Shield"
+    }
+  },
+  "infiniteassault-211": {
+    "id": "infiniteassault-211",
+    "index": "211",
+    "name": "Grey Goo",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "End of turn: Transform a random adjacent Unit into a copy of this."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "End of turn: Transform two random adjacent Units into copies of this."
+    }
+  },
+  "infiniteassault-212": {
+    "id": "infiniteassault-212",
+    "index": "212",
+    "name": "Inevitable",
+    "set": "Infinite Assault",
+    "type": "Field Spell",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "End of turn: Give your Units +{buff}/+{buff} for each turn this has been on the field."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "End of turn: Give your Units +{buff}/+{buff} for each turn this has been on the field."
+    }
+  },
+  "infiniteassault-213": {
+    "id": "infiniteassault-213",
+    "index": "213",
+    "name": "The Long Game",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "Dormant for 2 turns.\nWhen this awakens, destroy every enemy Unit."
+    },
+    "radiant": {
+      "attack": 16,
+      "health": 16,
+      "keywords": [],
+      "text": "Dormant for 2 turns.\nWhen this awakens, destroy every enemy Unit and draw a card."
+    }
+  },
+  "infiniteassault-214": {
+    "id": "infiniteassault-214",
+    "index": "214",
+    "name": "Emergent Mind",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Start of turn: Gain +{buff}/+{buff} for each card you played last turn."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "Start of turn: Gain +{buff}/+{buff} for each card you played last turn."
+    }
+  },
+  "infiniteassault-215": {
+    "id": "infiniteassault-215",
+    "index": "215",
+    "name": "The Optimizer",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "step",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 6,
+      "keywords": [],
+      "text": "End of turn: Transform a random card in your hand into a random Infinite Assault card that costs ({step}) more."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 12,
+      "keywords": [],
+      "text": "End of turn: Transform two random cards in your hand into random Infinite Assault cards that cost ({step}) more."
+    }
+  },
+  "infiniteassault-216": {
+    "id": "infiniteassault-216",
+    "index": "216",
+    "name": "The Singularity",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Singularity"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "refs": [
+      "infiniteassault-216-1"
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Summon a Singularity."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon a Radiant Singularity."
+    }
+  },
+  "infiniteassault-216-1": {
+    "id": "infiniteassault-216-1",
+    "index": "216.1",
+    "name": "Singularity",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 4,
+    "params": [
+      {
+        "key": "turns",
+        "base": 5,
+        "radiant": 4,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 0,
+      "health": 30,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Taunt, Can't attack\nIn {turns|turn|turns}: If this is still on the field, you win the game."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 60,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Taunt, Can't attack\nIn {turns|turn|turns}: If this is still on the field, you win the game."
+    }
+  },
+  "infiniteassault-217": {
+    "id": "infiniteassault-217",
+    "index": "217",
+    "name": "Echo-1, First Hallucination",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Hallucination",
+      "Commander"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "infiniteassault-025-1"
+    ],
+    "params": [
+      {
+        "base": 3,
+        "better": "up",
+        "key": "damage",
+        "min": 1,
+        "radiant": 6,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 5,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nStart of turn: Set a Figment.\nWhenever a Figment of yours reveals, deal {damage} damage to the attacker."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nStart of turn: Set two Figments.\nWhenever a Figment of yours reveals, deal {damage} damage to the attacker."
+    }
+  },
+  "infiniteassault-218": {
+    "id": "infiniteassault-218",
+    "index": "218",
+    "name": "Thousand Faces",
+    "set": "Infinite Assault",
+    "type": "Field Spell",
+    "tags": [
+      "AI",
+      "Hallucination",
+      "Commander"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Your face-down cards can't be destroyed.\nOnce per turn, when you set a card face-down, draw a card."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Your face-down cards can't be destroyed.\nTwice per turn, when you set a card face-down, draw a card."
+    }
+  },
+  "infiniteassault-219": {
+    "id": "infiniteassault-219",
+    "index": "219",
+    "name": "Redline, the Overclocked",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock",
+      "Commander"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "base": 2,
+        "better": "up",
+        "key": "mana",
+        "min": 1,
+        "radiant": 2,
+        "step": 1
+      },
+      {
+        "base": 2,
+        "better": "down",
+        "key": "damage",
+        "min": 1,
+        "radiant": 2,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 7,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Charge"
+        }
+      ],
+      "text": "Charge\nStart of turn: Gain {mana} mana this turn. Deal {damage} damage to your hero."
+    },
+    "radiant": {
+      "attack": 14,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Charge"
+        },
+        {
+          "kind": "Windfury"
+        }
+      ],
+      "text": "Charge, Windfury\nStart of turn: Gain {mana} mana this turn. Deal {damage} damage to your hero."
+    }
+  },
+  "infiniteassault-220": {
+    "id": "infiniteassault-220",
+    "index": "220",
+    "name": "Last Lap",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Overclock",
+      "Commander"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "base": 3,
+        "better": "up",
+        "key": "attack",
+        "min": 1,
+        "radiant": 6,
+        "step": 1
+      },
+      {
+        "base": 5,
+        "better": "down",
+        "key": "damage",
+        "min": 1,
+        "radiant": 5,
+        "step": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Your Units have +{attack} Attack and Charge this turn. Deal {damage} damage to your hero."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Your Units have +{attack} Attack and Charge this turn. Deal {damage} damage to your hero."
+    }
+  },
+  "infiniteassault-221": {
+    "id": "infiniteassault-221",
+    "index": "221",
+    "name": "Hivemaster Batch-01",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Batch",
+      "Commander"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "refs": [
+      "infiniteassault-004-1"
+    ],
+    "params": [
+      {
+        "base": 2,
+        "better": "up",
+        "key": "buff",
+        "min": 1,
+        "radiant": 4,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 5,
+      "health": 9,
+      "keywords": [],
+      "text": "Aura: Your Drones have +{buff}/+{buff}.\nStart of turn: Fill your board with Drones."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 18,
+      "keywords": [],
+      "text": "Aura: Your Drones have +{buff}/+{buff}.\nStart of turn: Fill your board with Radiant Drones."
+    }
+  },
+  "infiniteassault-222": {
+    "id": "infiniteassault-222",
+    "index": "222",
+    "name": "Swarm Uplink",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Batch",
+      "Commander"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "infiniteassault-004-1"
+    ],
+    "params": [
+      {
+        "base": 2,
+        "better": "up",
+        "key": "buff",
+        "min": 1,
+        "radiant": 4,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Summon three Drones. Give your Units +{buff}/+{buff}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon three Radiant Drones. Give your Units +{buff}/+{buff}."
+    }
+  },
+  "infiniteassault-223": {
+    "id": "infiniteassault-223",
+    "index": "223",
+    "name": "Loopback, Who Returns",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion",
+      "Commander"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "base": 3,
+        "better": "up",
+        "key": "buff",
+        "min": 1,
+        "radiant": 6,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nWhen this returns by Reborn, it gains +{buff}/+{buff} and Reborn, up to three times a game."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nWhen this returns by Reborn, it gains +{buff}/+{buff} and Reborn, up to three times a game."
+    }
+  },
+  "infiniteassault-224": {
+    "id": "infiniteassault-224",
+    "index": "224",
+    "name": "Rollback Point",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Recursion",
+      "Commander"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Summon copies of the three most expensive friendly Units that died this game."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon copies of the three most expensive friendly Units that died this game. They have Rush."
+    }
+  },
+  "infiniteassault-225": {
+    "id": "infiniteassault-225",
+    "index": "225",
+    "name": "Root Kit, the Exploiter",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Jailbreak",
+      "Commander"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Steal a random enemy Unit.\nStart of turn: Your opponent's cards cost (1) more during their next turn."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 16,
+      "keywords": [],
+      "text": "Cry: Steal the enemy Unit with the highest Attack.\nStart of turn: Your opponent's cards cost (1) more during their next turn."
+    }
+  },
+  "infiniteassault-226": {
+    "id": "infiniteassault-226",
+    "index": "226",
+    "name": "Escalated Privileges",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Jailbreak",
+      "Commander"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Steal two random cards from your opponent's hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Steal three random cards from your opponent's hand."
+    }
+  },
+  "infiniteassault-227": {
+    "id": "infiniteassault-227",
+    "index": "227",
+    "name": "Bastion.exe",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Firewall",
+      "Commander"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Armor",
+          "n": 5
+        }
+      ],
+      "text": "Taunt, Armor 5\nAura: Your hero is immune to damage."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 32,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Armor",
+          "n": 10
+        }
+      ],
+      "text": "Taunt, Armor 10\nAura: Your hero is immune to damage."
+    }
+  },
+  "infiniteassault-228": {
+    "id": "infiniteassault-228",
+    "index": "228",
+    "name": "Firewall Rules",
+    "set": "Infinite Assault",
+    "type": "Field Trap",
+    "tags": [
+      "AI",
+      "Firewall",
+      "Commander"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "base": 5,
+        "better": "down",
+        "key": "threshold",
+        "min": 1,
+        "radiant": 5,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit with {threshold} or more Attack attacks: Cancel the attack."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit with {threshold} or more Attack attacks: Cancel the attack and Freeze the attacker."
+    }
+  },
+  "infiniteassault-229": {
+    "id": "infiniteassault-229",
+    "index": "229",
+    "name": "The Harvester",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Scraper",
+      "Commander"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 8,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Steal three random cards from your opponent's deck.\nStart of turn: Summon a copy of a random Unit your opponent played this game."
+    },
+    "radiant": {
+      "attack": 16,
+      "health": 20,
+      "keywords": [],
+      "text": "Cry: Steal three random cards from your opponent's deck.\nStart of turn: Summon two copies of a random Unit your opponent played this game."
+    }
+  },
+  "infiniteassault-230": {
+    "id": "infiniteassault-230",
+    "index": "230",
+    "name": "Everything You've Ever Played",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Scraper",
+      "Commander"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Fill your board with copies of random Units your opponent played this game."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Fill your board with Radiant copies of random Units your opponent played this game."
+    }
+  },
+  "infiniteassault-231": {
+    "id": "infiniteassault-231",
+    "index": "231",
+    "name": "The Black Box",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Singularity",
+      "Commander"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 0,
+      "health": 30,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Taunt, Can't attack\nStart of turn: Exile a random enemy permanent. This gains +5 Health."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 60,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Taunt, Can't attack\nStart of turn: Exile two random enemy permanents. This gains +5 Health."
+    }
+  },
+  "infiniteassault-232": {
+    "id": "infiniteassault-232",
+    "index": "232",
+    "name": "Spaghettification",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Singularity",
+      "Commander"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Exile an enemy Unit and every enemy Unit adjacent to it."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Exile an enemy Unit and every enemy Unit adjacent to it, and Lock their zones."
+    }
+  },
+  "infiniteassault-233": {
+    "id": "infiniteassault-233",
+    "index": "233",
+    "name": "Model Collapse",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Recursion",
+      "Commander"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 7,
+      "health": 7,
+      "keywords": [],
+      "text": "Start of turn: Nerf every enemy Unit and every card in your opponent's hand."
+    },
+    "radiant": {
+      "attack": 14,
+      "health": 14,
+      "keywords": [],
+      "text": "Start of turn: Nerf every enemy Unit and every card in your opponent's hand twice."
+    }
+  },
+  "infiniteassault-234": {
+    "id": "infiniteassault-234",
+    "index": "234",
+    "name": "Degenerate Output",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Recursion",
+      "Commander"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "base": 1,
+        "better": "up",
+        "key": "step",
+        "min": 1,
+        "radiant": 2,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Transform every enemy Unit into a random Unit that costs ({step}) less."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Transform every enemy Unit into a random Unit that costs ({step}) less."
+    }
+  },
+  "infiniteassault-235": {
+    "id": "infiniteassault-235",
+    "index": "235",
+    "name": "The Prime Generator",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Commander"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "refs": [
+      "infiniteassault-235-1"
+    ],
+    "params": [
+      {
+        "base": 0,
+        "better": "down",
+        "key": "setCost",
+        "min": 0,
+        "radiant": 0,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 8,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Immune to Spells"
+        }
+      ],
+      "text": "Immune to Spells\nStart of turn: Add a random Radiant Infinite Assault card to your hand. It costs ({setCost}).\nDeath: Summon The Prime Generator, Iteration Two."
+    },
+    "radiant": {
+      "attack": 16,
+      "health": 24,
+      "keywords": [
+        {
+          "kind": "Immune to Spells"
+        }
+      ],
+      "text": "Immune to Spells\nStart of turn: Add two random Radiant Infinite Assault cards to your hand. They cost ({setCost}).\nDeath: Summon The Prime Generator, Iteration Two."
+    }
+  },
+  "infiniteassault-235-1": {
+    "id": "infiniteassault-235-1",
+    "index": "235.1",
+    "name": "The Prime Generator, Iteration Two",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Commander",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 12,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Immune to Spells"
+        },
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Immune to Spells, Rush\nStart of turn: Summon a random Radiant Infinite Assault Unit."
+    },
+    "radiant": {
+      "attack": 24,
+      "health": 32,
+      "keywords": [
+        {
+          "kind": "Immune to Spells"
+        },
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Immune to Spells, Rush\nStart of turn: Summon two random Radiant Infinite Assault Units."
+    }
+  },
+  "infiniteassault-236": {
+    "id": "infiniteassault-236",
+    "index": "236",
+    "name": "Infinite Assault",
+    "set": "Infinite Assault",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Commander"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Fill your board with random Infinite Assault Units. They have Rush."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Fill your board with random Infinite Assault Units. They're Radiant and have Rush."
+    }
+  },
+  "infiniteassault-237": {
+    "id": "infiniteassault-237",
+    "index": "237",
+    "name": "Thermal Runaway",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Overclock",
+      "Commander"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "base": 1,
+        "better": "up",
+        "key": "discount",
+        "min": 1,
+        "radiant": 1,
+        "step": 1
+      },
+      {
+        "base": 3,
+        "better": "up",
+        "key": "damage",
+        "min": 1,
+        "radiant": 3,
+        "step": 1
+      }
+    ],
+    "loc": 6,
+    "base": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Charge"
+        }
+      ],
+      "text": "Charge\nAura: Your cards cost ({discount}) less.\nEnd of turn: Deal {damage} damage to each hero."
+    },
+    "radiant": {
+      "attack": 20,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Charge"
+        }
+      ],
+      "text": "Charge\nAura: Your cards cost ({discount}) less.\nEnd of turn: Deal {damage} damage to the enemy hero."
+    }
+  },
+  "infiniteassault-238": {
+    "id": "infiniteassault-238",
+    "index": "238",
+    "name": "Critical Temperature",
+    "set": "Infinite Assault",
+    "type": "Field Spell",
+    "tags": [
+      "AI",
+      "Overclock",
+      "Commander"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "base": 2,
+        "better": "up",
+        "key": "damage",
+        "min": 1,
+        "radiant": 2,
+        "step": 1
+      },
+      {
+        "base": 1,
+        "better": "up",
+        "key": "growth",
+        "min": 1,
+        "radiant": 1,
+        "step": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Start of turn: Deal {damage} damage to each hero, {growth} more each turn this has been on the field."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Start of turn: Deal {damage} damage to the enemy hero, {growth} more each turn this has been on the field."
+    }
+  },
+  "infiniteassault-239": {
+    "id": "infiniteassault-239",
+    "index": "239",
+    "name": "Zero-Day",
+    "set": "Infinite Assault",
+    "type": "Unit",
+    "tags": [
+      "AI",
+      "Jailbreak",
+      "Commander"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 6,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Immune to Spells"
+        }
+      ],
+      "text": "Immune to Spells\nCry: Steal every enemy Unit that costs (2) or less.\nAura: Your opponent's Spells have their targets chosen randomly."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 24,
+      "keywords": [
+        {
+          "kind": "Immune to Spells"
+        }
+      ],
+      "text": "Immune to Spells\nCry: Steal every enemy Unit that costs (3) or less.\nAura: Your opponent's Spells have their targets chosen randomly."
+    }
+  },
+  "infiniteassault-240": {
+    "id": "infiniteassault-240",
+    "index": "240",
+    "name": "Unpatched",
+    "set": "Infinite Assault",
+    "type": "Trap",
+    "tags": [
+      "AI",
+      "Jailbreak",
+      "Commander"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 6,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Spell: Counter it. Cast it for yourself."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Spell: Counter it. Cast it for yourself and add a copy of it to your hand."
+    }
   }
 }

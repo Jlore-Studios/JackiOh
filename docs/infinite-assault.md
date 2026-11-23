@@ -37,6 +37,7 @@
 - [IA13. The issues](#ia13-the-issues)
 - [IA14. Out of scope](#ia14-out-of-scope)
 - [IA15. Open questions, with defaults](#ia15-open-questions-with-defaults)
+- [IA16. What the engine lacks (CF, #4602)](#ia16-what-the-engine-lacks-cf-4602)
 
 ---
 
@@ -328,10 +329,10 @@ Autocomplete among them).
    player lose with no counterplay, and nothing locks them out of playing for a turn they can't foresee
    (Kill Switch, #140, fires on a third card, which the player may choose not to play).
 3. **Expressible.** The text uses verbs, keywords and filters the engine has (§6); where a card needs a new
-   one, its part adds it by `docs/ADDING_CARDS.md` §6, with its test. Numbers are `params` (`{damage}`),
-   never literals (CLAUDE.md rule 9).
+   one, its part adds it by `docs/ADDING_CARDS.md` §6, with its test. CF (#4602) lists the verbs the set
+   still lacks in IA16. Numbers are `params` (`{damage}`), never literals (CLAUDE.md rule 9).
 4. **Radiant is about twice the base face** (R275): doubled stats and a better line, never stats alone for
-   a Unit with text. Each part writes its `docs/radiant-audit.md` rows.
+   a Unit with text. CF (#4602) wrote every `docs/radiant-audit.md` row; each part corrects its own.
 5. **"Infinite Assault card"** in a card's text is a pool that names the set, which reaches the set while
    it is held (R1846001: a pool that names its set keeps to it). "Created" is the engine's Created mark.
 6. **The AI must pilot it.** A card whose prompt the AI can't answer well is fixed or redesigned in its
@@ -805,6 +806,10 @@ with `rust`, `web`, `e2e smoke`, `db` and `bot selftest` green (rule 12).
 
 **Each card part is done when** (the Stinkyscape+ plan's SP10, for this set):
 
+CF (#4602) wrote every entry, row and `STUB (#4602)` script for #25–#240 first, so each card part
+replaces its own stubs with the scripts and their tests, and corrects its own rows where its build
+decided otherwise.
+
 - `docs/ADDING_CARDS.md` was read first (CLAUDE.md rule 10), and its files were touched row by row for a
   held set.
 - Every card's script (`crates/cards/src/scripts/infinite_assault/cNNN_slug.rs`) plays its base and
@@ -835,3 +840,107 @@ once the mode is live.
 3. **Draw at the turn cap.** Default: a loss.
 4. **Which seat?** Default: the human in P1 at every level, as a dungeon fight.
 5. **Tuning.** Every number of IA2 and IA3 is a strawman until `assault-sim` (E) and the release (R).
+
+## IA16. What the engine lacks (CF, #4602)
+
+CF read every card of #25–#240 against §6 while writing the foundation entries. Table A lists each
+verb, keyword, filter or board fact a card needs that the engine has not, with the cards that need
+it, so the card parts (C2–C10, #4586–#4594) and the reconcile know where engine work lands: each
+part adds what its cards need by `docs/ADDING_CARDS.md` §6, with its test. Table B lists every place
+CF's entry already departs from IA12's words, for that card's part to check. A person posts Table A
+as a comment on #4601 and each part's Table B rows on its own issue.
+
+### Table A: the missing verbs
+
+| Verb, keyword, filter or board fact | What | Cards | Where it lands |
+| --- | --- | --- | --- |
+| A Unit firing when it is itself revealed | Only c047 answers a reveal, Traps from the graveyard; nothing fires when a Cloaked Unit is revealed | #26, #134, #217 | C2 (#4586), C6 (#4590), C10 (#4594) |
+| A face-down count, filter or target | No count, filter or target reads face-down cards | #32, #39, #42, #44, #124 | C2 (#4586), C6 (#4590) |
+| A "set face-down" trigger | No trigger answers a card set face-down | #40 | C2 (#4586) |
+| A backrow destroy guard | No ward stops face-down cards being destroyed or revealed | #42, #218 | C2 (#4586), C10 (#4594) |
+| A top-N look at the opponent's deck | Opponent-deck scripts only exile or discard; no peek, reorder, or peek-and-pick copy | #31, #184 | C2 (#4586), C8 (#4592) |
+| Expiring "this turn" stats and keywords | One-shot verbs add fixed buffs; no expiring stat set or grant | #33, #63, #83, #148, #220 | C2 (#4586), C3 (#4587), C4 (#4588), C7 (#4591), C10 (#4594) |
+| Swapping hands, swapping control | swap.rs swaps Health, Board and Library only; steal.rs moves one card one way | #48, #138 | C2 (#4586), C6 (#4590) |
+| A next-Unit discount | No discount applies to the controller's next Unit this turn | #60 | C3 (#4587) |
+| An ordered play history | Per-turn playedIds rebuild each turn; the log keeps by-tag counts plus the single last Spell/play | #105, #113, #120, #172, #173, #183, #190, #214, #229, #230 | C5 (#4589), C8 (#4592), C9 (#4593), C10 (#4594) |
+| Per-name and per-set play counts | No count of cards played from one set or of one name this game | #107, #195 | C5 (#4589), C9 (#4593) |
+| A death log | No pool of the friendly Units that died this turn, since last turn, or this game | #99, #110, #116, #224 | C5 (#4589), C10 (#4594) |
+| Copies from a graveyard by type, and from the opponent's | Nothing pools typed graveyard cards or copies the opponent's graveyard | #99, #101, #174 | C5 (#4589), C8 (#4592) |
+| A Reborn-return hook, tally and doubling | No trigger fires when its own Unit returns by Reborn; no cap at three returns; no verb doubles a Reborn | #109, #118, #223 | C5 (#4589), C10 (#4594) |
+| A board reset by a standing card | No standing snapshot-and-reset of permanents | #119 | C5 (#4589) |
+| A hero-Health snapshot | No snapshot of hero Health to restore later | #106 | C5 (#4589) |
+| Scoped random targets | random_targets is a standing both-players flag; nothing scopes it to their Spells or next Spell(s) | #130, #142, #239 | C6 (#4590), C10 (#4594) |
+| An attack-count limit | attacks_per_turn is per-Unit; the only count gate ends the turn on the Nth play | #152 | C7 (#4591) |
+| A timed can't-attack-or-be-attacked | restrictions.rs reads a static flag only; no verb grants it until a turn | #157 | C7 (#4591) |
+| Unit damage immunity | makeHeroImmune is hero-only; conditionalKeywords covers keywords only | #166, #168 | C7 (#4591) |
+| An origin mark for stolen cards | CostRule scopes to types, min_cost, created and floor; no stolen-origin scope | #187 | C8 (#4592) |
+| A revealed hand | view_for hides the opponent's hand; Look effects are one-shot prompts, never standing | #191 | C8 (#4592) |
+| A granted End of turn ability | No effect grants an End of turn ability to another card | #198 | C9 (#4593) |
+| Library copies with a cost change on Radiant | shuffle_into carries buff, cost_mod and memory but nothing that strengthens the copy's effect | #169R, #207 | C8 (#4592), C9 (#4593) |
+| Steal by cost and steal N crystals | No steal capped by the victim's cost; no mana-crystal steal | #135, #144, #239 | C6 (#4590), C10 (#4594) |
+| A Discovered copy from the opponent's deck | No pool reads the opponent's hidden deck | #170, #185 | C8 (#4592) |
+| Repeat-per-mana and unspent-mana-scaled damage | No repeat once per mana left; turnEnded carries unspentMana but no effect scales damage by it | #61, #62, #65 | C3 (#4587) |
+| A health-gated aura and missing-health mana | No stat aura switches on hero health; no effect grants mana per missing Health | #70, #71 | C3 (#4587) |
+| Continuous per-unit scaling | No stat or aura scales continuously off the count of other friendly Units | #80, #95 | C4 (#4588) |
+| A per-turn trigger cap | Triggers answer every event; caps are once-a-game or once-per-turn Activate | #84, #181, #218 | C4 (#4588), C8 (#4592), C10 (#4594) |
+| Cheapest/highest field picks | query.rs reads costs and counts but picks no cheapest or highest-Attack Unit | #86, #94, #225 | C4 (#4588), C10 (#4594) |
+| A double-stats buff | buff.rs adds fixed amounts; no effect doubles field Units' current Attack and Health | #96 | C4 (#4588) |
+| A random set cost | No cost is set at a random value | #25.1 | C2 (#4586) |
+| A standing hero-immune Aura | makeHeroImmune is a one-shot with turn expiry | #227 | C10 (#4594) |
+| Gaining another Unit's keyword set | grant_to grants one keyword at a time; nothing takes a named Unit's set | #171 | C8 (#4592) |
+
+### Table B: the corrections CF already made
+
+| Part | Card | Correction |
+| --- | --- | --- |
+| C2 (#4586) | #29 | "Cancel the attack and Freeze the attacker." as one sentence (IA12 splits it) |
+| C2 (#4586) | #41 | "Fill your board with Phantoms" (IA12 "your empty unit zones") |
+| C2 (#4586) | #42 | "Aura:" added to the static ward |
+| C2 (#4586) | #43 | "After it resolves," added; offset key `step` mirrors Recompile |
+| C2 (#4586) | #44 | Radiant line raised: two Figments per destroyed card (R275; IA12 stats alone) |
+| C2 (#4586) | #47 | "Reveals when" (IA12 "whenever") |
+| C3 (#4587) | #50 | "Lose ({loss}) mana next turn", cost in parens |
+| C3 (#4587) | #51 | Radiant adds First Strike (R275 raise; IA12 stats alone) |
+| C3 (#4587) | #52 | "Give it Brittle 1" (IA12 "It has Brittle 1") |
+| C3 (#4587) | #53 | Radiant Cry deals 1, a lighter drawback (R275 raise; IA12 stats alone) |
+| C3 (#4587) | #61 | "both heroes and all Units" / "to all enemies" |
+| C3 (#4587) | #62 | "your opponent's turn ends" |
+| C3 (#4587) | #65, #72 | "End of turn:" on its own line |
+| C3 (#4587) | #66 | Radiant adds First Strike (R275 raise; IA12 stats alone) |
+| C4 (#4588) | #79 | "Summon a Drone" (IA12 "(#4.1)") |
+| C4 (#4588) | #86, #94 | "Give it Brittle 1" (IA12 "It has"/"with Brittle 1") |
+| C4 (#4588) | #87 | "Summon three Workers. Give them Taunt." |
+| C4 (#4588) | #91 | "Fill your board with Drones" (IA12 "your empty unit zones") |
+| C5 (#4589) | #103 | Tax (1) → (2) literal, no param |
+| C5 (#4589) | #115 | Radiant Cry also grants Divine Shield (R275 raise; IA12 stats alone) |
+| C5 (#4589) | #117 | "Reveals when" (IA12 "whenever") |
+| C5 (#4589) | #119 | Radiant reset also draws a card (R275 raise; IA12 stats alone) |
+| C6 (#4590) | #123, #144 | "during their next turn" (IA12 "until the end of their next turn"/"next turn") |
+| C6 (#4590) | #128 | "Place" a Plague Counter (IA12 "Put") |
+| C6 (#4590) | #131, #139, #144 | "Steal" (IA12 "Take control") |
+| C7 (#4591) | #148 | "Freeze the attacker" (IA12 "Freeze it") |
+| C7 (#4591) | #150, #156 | Colon after "attacked" |
+| C7 (#4591) | #156 | Radiant twice-the-damage line (R275 raise; IA12 stats alone) |
+| C7 (#4591) | #159 | "an enemy backrow card" (IA12 "an enemy Field Spell or Field Trap") |
+| C7 (#4591) | #165 | "Reveals when" (IA12 "whenever") |
+| C7 (#4591) | #166 | Radiant unconditional-immunity line (R275 raise; IA12 stats alone); "immune to damage" lower-case |
+| C7 (#4591) | #168 | "immune to damage" lower-case |
+| C8 (#4592) | #184 | Exile another (SPEC; IA12 "destroy another") |
+| C8 (#4592) | #185 | Radiant Discovers twice (R275 raise; IA12 stats alone) |
+| C8 (#4592) | #189 | "Give it Brittle 2" (IA12 "with Brittle 2") |
+| C9 (#4593) | #197 | "For the rest of the game, your hand size is {handSize}." (IA12 "Your hand holds 12 cards") |
+| C9 (#4593) | #201 | Radiant discount (2) less per other Unit (R275 raise; IA12 stats alone) |
+| C9 (#4593) | #208 | "Reveals when your opponent's turn starts, if you control {units} or more Units" |
+| C9 (#4593) | #210 | Radiant adds Divine Shield (R275 raise; IA12 stats alone) |
+| C9 (#4593) | #213 | Radiant awakening also draws a card (R275 raise; IA12 stats alone) |
+| C10 (#4594) | #217 | "the attacker" (IA12 "the attacking Unit") |
+| C10 (#4594) | #221, #230, #236 | "Fill your board with" (IA12 "empty unit zones") |
+| C10 (#4594) | #225, #239 | "Steal" (IA12 "Take control") |
+| C10 (#4594) | #225 | "during their next turn" (IA12 "this turn did nothing"); its (1) literal |
+| C10 (#4594) | #227 | "immune to damage" lower-case |
+| C10 (#4594) | #228 | "Reveals when" (IA12 "whenever"); Radiant "Cancel the attack and Freeze the attacker" |
+| C10 (#4594) | #229 | Radiant summons two copies (R275 raise; IA12 stats alone) |
+| C10 (#4594) | #235.1 | Radiant summons two Radiant Units (R275 raise; IA12 stats alone) |
+
+**Design flags for the parts:** #47's permanent cancel; #216.1's Radiant 0/60 win in 4 turns;
+#227's unconditional hero immunity; the AI never guesses a Figment (R762); #113 casting itself.

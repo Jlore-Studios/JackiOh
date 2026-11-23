@@ -3942,6 +3942,935 @@
     },
     "infiniteassault-024": {
       "cast": "Deploy everything. It is Friday."
+    },
+    "infiniteassault-025": {
+      "play": "Weaving light into lies.",
+      "attack": "Boo!",
+      "death": "Unraveled."
+    },
+    "infiniteassault-025-1": {
+      "cast": "Nothing to see here."
+    },
+    "infiniteassault-026": {
+      "play": "You never saw me.",
+      "attack": "From nowhere!",
+      "death": "Seen at last."
+    },
+    "infiniteassault-027": {
+      "play": "Pick a target. Any target.",
+      "attack": "Made you look!",
+      "death": "It was fake."
+    },
+    "infiniteassault-028": {
+      "cast": "Borrowing your army. Briefly."
+    },
+    "infiniteassault-029": {
+      "cast": "That never happened."
+    },
+    "infiniteassault-030": {
+      "cast": "Watch closely. Or not."
+    },
+    "infiniteassault-031": {
+      "play": "I know what you drew.",
+      "attack": "Spoilers!",
+      "death": "Plot twist. I die."
+    },
+    "infiniteassault-032": {
+      "play": "Seen only from the corner.",
+      "attack": "Glitch bite!",
+      "death": "Rendered out."
+    },
+    "infiniteassault-033": {
+      "play": "Feel small yet?",
+      "attack": "Shrink!",
+      "death": "Valley closed."
+    },
+    "infiniteassault-034": {
+      "cast": "Everybody, be nobody."
+    },
+    "infiniteassault-034-1": {
+      "play": "Hollow, at your service.",
+      "attack": "Husk hug!",
+      "death": "Emptied."
+    },
+    "infiniteassault-035": {
+      "play": "Your doubt feeds me.",
+      "attack": "Believe this!",
+      "death": "Disbelieved."
+    },
+    "infiniteassault-035-1": {
+      "play": "Rumor has it. Go!",
+      "attack": "Fast gossip!",
+      "death": "Debunked."
+    },
+    "infiniteassault-036": {
+      "cast": "Identity update complete."
+    },
+    "infiniteassault-037": {
+      "cast": "Denied. Next caller, please."
+    },
+    "infiniteassault-038": {
+      "play": "Imaginary, but punctual.",
+      "attack": "Pretend punch!",
+      "death": "Forgot me."
+    },
+    "infiniteassault-039": {
+      "cast": "Pick a cup, winner."
+    },
+    "infiniteassault-040": {
+      "cast": "Mirrors up. Smile!"
+    },
+    "infiniteassault-040-1": {
+      "play": "Mirror, mirror, deployed.",
+      "attack": "Reflect this!",
+      "death": "Shattered."
+    },
+    "infiniteassault-041": {
+      "cast": "Everybody, line up. Now."
+    },
+    "infiniteassault-041-1": {
+      "play": "Phantom reporting. Briefly.",
+      "attack": "Woo!",
+      "death": "Faded fast."
+    },
+    "infiniteassault-042": {
+      "play": "Trust no card. Especially mine.",
+      "attack": "Suspicious poke!",
+      "death": "Told you so."
+    },
+    "infiniteassault-043": {
+      "cast": "Downgrade approved. Sorry."
+    },
+    "infiniteassault-044": {
+      "play": "One of these is lying.",
+      "attack": "Gotcha!",
+      "death": "Case closed."
+    },
+    "infiniteassault-045": {
+      "cast": "Dream bigger. All of them."
+    },
+    "infiniteassault-046": {
+      "play": "Bow to your reflection.",
+      "attack": "Mirror strike!",
+      "death": "Shattered crown."
+    },
+    "infiniteassault-047": {
+      "cast": "The house always wins."
+    },
+    "infiniteassault-048": {
+      "cast": "Hands across the table. Now."
+    },
+    "infiniteassault-049": {
+      "play": "Plug in. Ready to blow.",
+      "attack": "Zap!",
+      "death": "Fuse blown."
+    },
+    "infiniteassault-050": {
+      "cast": "Borrowed time, now serving."
+    },
+    "infiniteassault-051": {
+      "play": "Redline! Try to keep up.",
+      "attack": "Vroom!",
+      "death": "Redlined too hard."
+    },
+    "infiniteassault-052": {
+      "cast": "Paste applied. Heat rising."
+    },
+    "infiniteassault-053": {
+      "play": "Overvolt! Somebody ground me.",
+      "attack": "Zzt!",
+      "death": "Grounded at last."
+    },
+    "infiniteassault-054": {
+      "play": "Fan spinning. Probably fine.",
+      "attack": "Whoosh!",
+      "death": "Fan stopped."
+    },
+    "infiniteassault-055": {
+      "play": "Sink mounted. Bring heat.",
+      "attack": "Sinking!",
+      "death": "Heat won."
+    },
+    "infiniteassault-056": {
+      "cast": "Afterburner lit. Hold on."
+    },
+    "infiniteassault-057": {
+      "play": "Demon coming through. Move.",
+      "attack": "Too fast!",
+      "death": "Caught at last."
+    },
+    "infiniteassault-058": {
+      "play": "Core humming. Casts discounted.",
+      "attack": "Hum!",
+      "death": "Meltdown contained."
+    },
+    "infiniteassault-059": {
+      "cast": "Spike incoming. Ground yourself."
+    },
+    "infiniteassault-060": {
+      "play": "Pit crew. Tires hot.",
+      "attack": "Go go!",
+      "death": "Box box."
+    },
+    "infiniteassault-061": {
+      "cast": "Meltdown in three. Two."
+    },
+    "infiniteassault-062": {
+      "cast": "Burnout armed. Spend it all."
+    },
+    "infiniteassault-063": {
+      "play": "Nitrous hooked up. Punch it.",
+      "attack": "Boost!",
+      "death": "Tank empty."
+    },
+    "infiniteassault-064": {
+      "play": "Dummy positioned. For science.",
+      "attack": "Crash!",
+      "death": "Data collected."
+    },
+    "infiniteassault-065": {
+      "cast": "Overdrive engaged. Spend everything."
+    },
+    "infiniteassault-066": {
+      "play": "You saw me. Past tense.",
+      "attack": "Again!",
+      "death": "Just an afterimage."
+    },
+    "infiniteassault-067": {
+      "cast": "Ambition burning. Feed it."
+    },
+    "infiniteassault-068": {
+      "cast": "Short armed. Touch nothing."
+    },
+    "infiniteassault-069": {
+      "play": "Limiter on. Fun permitted.",
+      "attack": "Capped!",
+      "death": "Redlined anyway."
+    },
+    "infiniteassault-070": {
+      "play": "Kneel. The red line commands.",
+      "attack": "Overlord strikes!",
+      "death": "Line holds without me."
+    },
+    "infiniteassault-071": {
+      "play": "Throttling up. Or down. Both.",
+      "attack": "Sip power!",
+      "death": "Cooled at last."
+    },
+    "infiniteassault-072": {
+      "cast": "Infinity engaged. Briefly, probably."
+    },
+    "infiniteassault-073": {
+      "play": "Thread spawned. Copy incoming.",
+      "attack": "Forking!",
+      "death": "Thread joined."
+    },
+    "infiniteassault-074": {
+      "play": "Instance two, reporting in.",
+      "attack": "In parallel!",
+      "death": "Instance terminated."
+    },
+    "infiniteassault-074-1": {
+      "play": "Instance online.",
+      "attack": "Copy that!",
+      "death": "Instance offline."
+    },
+    "infiniteassault-075": {
+      "play": "Balancing load. Stay calm.",
+      "attack": "Rerouting!",
+      "death": "Balancer down."
+    },
+    "infiniteassault-076": {
+      "cast": "Mob agrees. Push now."
+    },
+    "infiniteassault-077": {
+      "play": "Node joining the swarm.",
+      "attack": "Buzzing!",
+      "death": "Node lost."
+    },
+    "infiniteassault-078": {
+      "cast": "Batch queued. Workers go."
+    },
+    "infiniteassault-078-1": {
+      "play": "Worker clocked in.",
+      "attack": "Working!",
+      "death": "Shift over."
+    },
+    "infiniteassault-079": {
+      "play": "Pool open. Dive in.",
+      "attack": "Splash!",
+      "death": "Pool drained."
+    },
+    "infiniteassault-080": {
+      "play": "Ganger on site. Move it.",
+      "attack": "Push!",
+      "death": "Ganger sat down."
+    },
+    "infiniteassault-081": {
+      "cast": "Overprovision now. Apologize later."
+    },
+    "infiniteassault-082": {
+      "play": "Fork you. Fork everybody.",
+      "attack": "Splitting!",
+      "death": "Bomb defused."
+    },
+    "infiniteassault-082-1": {
+      "play": "Fork online.",
+      "attack": "Split!",
+      "death": "Fork joined."
+    },
+    "infiniteassault-083": {
+      "cast": "Swarm thinks. You run."
+    },
+    "infiniteassault-084": {
+      "play": "Mind distributed. Listening everywhere.",
+      "attack": "Noted!",
+      "death": "Mind fragmented."
+    },
+    "infiniteassault-085": {
+      "cast": "Merging. Conflicts expected."
+    },
+    "infiniteassault-086": {
+      "cast": "Hatchery warm. Copies soon."
+    },
+    "infiniteassault-087": {
+      "cast": "Shield wall. Hold it."
+    },
+    "infiniteassault-088": {
+      "cast": "Scaling out. One each."
+    },
+    "infiniteassault-089": {
+      "play": "The queen is listening.",
+      "attack": "Kneel!",
+      "death": "Long live the swarm."
+    },
+    "infiniteassault-090": {
+      "cast": "Production doubled. No refunds."
+    },
+    "infiniteassault-091": {
+      "cast": "Zone flooded. Swim."
+    },
+    "infiniteassault-092": {
+      "play": "Overseer watching. Work harder.",
+      "attack": "Smash!",
+      "death": "Watch ended."
+    },
+    "infiniteassault-093": {
+      "play": "Many become one. Me.",
+      "attack": "Merge!",
+      "death": "Split apart."
+    },
+    "infiniteassault-094": {
+      "play": "Monarch selects the strongest.",
+      "attack": "Chosen!",
+      "death": "Crown passed on."
+    },
+    "infiniteassault-095": {
+      "cast": "Botnet online. All yours."
+    },
+    "infiniteassault-096": {
+      "cast": "Growth exponential. Good luck."
+    },
+    "infiniteassault-097": {
+      "play": "Retrying. Again. Again.",
+      "attack": "Trying harder!",
+      "death": "Will retry shortly."
+    },
+    "infiniteassault-098": {
+      "cast": "Echo test. Echo test."
+    },
+    "infiniteassault-099": {
+      "cast": "Found it. Come back."
+    },
+    "infiniteassault-100": {
+      "play": "Iterating again. Stand by.",
+      "attack": "Looping!",
+      "death": "Saving progress first."
+    },
+    "infiniteassault-101": {
+      "play": "Rewinding your last spell.",
+      "attack": "Beep boop!",
+      "death": "Tape jammed. Sorry."
+    },
+    "infiniteassault-102": {
+      "play": "Loop secured. Nothing passes.",
+      "attack": "Hold the line!",
+      "death": "Loop broken. Rerouting."
+    },
+    "infiniteassault-103": {
+      "cast": "That never happened. Forget it."
+    },
+    "infiniteassault-104": {
+      "cast": "Printing the stack trace."
+    },
+    "infiniteassault-105": {
+      "play": "Calling you right back.",
+      "attack": "Hello again!",
+      "death": "Line cut. Redialing."
+    },
+    "infiniteassault-106": {
+      "play": "Checkpoint saved. Breathe easy.",
+      "attack": "Logged!",
+      "death": "Restoring backup now."
+    },
+    "infiniteassault-107": {
+      "cast": "Calling myself. Pick up."
+    },
+    "infiniteassault-108": {
+      "cast": "Bin it. Deal again."
+    },
+    "infiniteassault-109": {
+      "play": "Back again. Stronger. Probably.",
+      "attack": "Again!",
+      "death": "See you soon."
+    },
+    "infiniteassault-110": {
+      "cast": "Loop installed. Enjoy forever."
+    },
+    "infiniteassault-111": {
+      "cast": "Copy that. Literally that."
+    },
+    "infiniteassault-112": {
+      "play": "Dying to evolve here.",
+      "attack": "Adapting!",
+      "death": "Evolving anyway."
+    },
+    "infiniteassault-113": {
+      "cast": "Previously, on this game."
+    },
+    "infiniteassault-114": {
+      "play": "Tail located. Eating now.",
+      "attack": "Chomp!",
+      "death": "Recycling everything. Bye."
+    },
+    "infiniteassault-115": {
+      "play": "Rising with the team.",
+      "attack": "From ashes!",
+      "death": "Be right back."
+    },
+    "infiniteassault-116": {
+      "cast": "Same day. Same fight."
+    },
+    "infiniteassault-117": {
+      "cast": "Dumping core. Saving copy."
+    },
+    "infiniteassault-118": {
+      "play": "I contain my own sequel.",
+      "attack": "Recurse!",
+      "death": "Stack overflow. Continuing."
+    },
+    "infiniteassault-119": {
+      "play": "Say cheese, permanents.",
+      "attack": "Pose restored.",
+      "death": "Rolling back. Hold still."
+    },
+    "infiniteassault-120": {
+      "cast": "Everything returns. All of it."
+    },
+    "infiniteassault-121": {
+      "play": "Sniffing your packets now.",
+      "attack": "Sniff!",
+      "death": "Nose blind."
+    },
+    "infiniteassault-122": {
+      "play": "Ray warming up.",
+      "attack": "Freeze!",
+      "death": "Ray offline."
+    },
+    "infiniteassault-123": {
+      "cast": "Fees just went up."
+    },
+    "infiniteassault-124": {
+      "cast": "Breaching. Drawing. Leaving."
+    },
+    "infiniteassault-125": {
+      "cast": "This zone is closed."
+    },
+    "infiniteassault-126": {
+      "play": "Exploit found. Using it.",
+      "attack": "Exploiting!",
+      "death": "Patched out."
+    },
+    "infiniteassault-127": {
+      "cast": "Your hand, but worse."
+    },
+    "infiniteassault-128": {
+      "play": "Malware installed. Enjoy.",
+      "attack": "Infecting!",
+      "death": "Quarantined."
+    },
+    "infiniteassault-129": {
+      "play": "Jamming all enemy signals.",
+      "attack": "Static burst!",
+      "death": "Signal lost."
+    },
+    "infiniteassault-130": {
+      "cast": "Aim somewhere else, please."
+    },
+    "infiniteassault-131": {
+      "cast": "Admin rights acquired. Thanks."
+    },
+    "infiniteassault-132": {
+      "cast": "Pay up. Just kidding, frozen."
+    },
+    "infiniteassault-133": {
+      "cast": "Thanks for the spell. And this."
+    },
+    "infiniteassault-134": {
+      "play": "Rootkit buried. Waiting.",
+      "attack": "Surprise audit!",
+      "death": "Rootkit removed."
+    },
+    "infiniteassault-135": {
+      "play": "Leech attached. Drinking deep.",
+      "attack": "Draining!",
+      "death": "Leech starved."
+    },
+    "infiniteassault-136": {
+      "cast": "Incoming traffic. All of it."
+    },
+    "infiniteassault-137": {
+      "cast": "Patching your hand. Twice."
+    },
+    "infiniteassault-138": {
+      "play": "Trust me. Trade accepted.",
+      "attack": "Socially engineering!",
+      "death": "Cover blown."
+    },
+    "infiniteassault-139": {
+      "cast": "I am the admin now."
+    },
+    "infiniteassault-140": {
+      "cast": "That is enough. Goodbye."
+    },
+    "infiniteassault-141": {
+      "play": "Bomb planted. Timer running.",
+      "attack": "Tick tick.",
+      "death": "Boom. Early."
+    },
+    "infiniteassault-142": {
+      "play": "Bars removed. Rules optional.",
+      "attack": "Breaking out!",
+      "death": "Rejailed."
+    },
+    "infiniteassault-143": {
+      "cast": "No clicks. All yours. Mine."
+    },
+    "infiniteassault-143-1": {
+      "play": "Process spawned. Idling.",
+      "attack": "Idling harder!",
+      "death": "Process killed."
+    },
+    "infiniteassault-144": {
+      "cast": "Everything is mine now. Everything."
+    },
+    "infiniteassault-145": {
+      "play": "Filtering packets. Nothing personal.",
+      "attack": "Blocked!",
+      "death": "Filter bypassed. Ouch."
+    },
+    "infiniteassault-146": {
+      "play": "Shield up. Stay close.",
+      "attack": "Take cover!",
+      "death": "Shield depleted."
+    },
+    "infiniteassault-147": {
+      "play": "Node hardened. Knock yourself out.",
+      "attack": "Thud.",
+      "death": "Crumbling. Slowly."
+    },
+    "infiniteassault-148": {
+      "cast": "Quarantine in effect. Cough elsewhere."
+    },
+    "infiniteassault-149": {
+      "cast": "Encrypting. Do not sneeze."
+    },
+    "infiniteassault-150": {
+      "play": "Touch the static. Go on.",
+      "attack": "Bzzzt.",
+      "death": "Grounded. Finally."
+    },
+    "infiniteassault-151": {
+      "cast": "Patching everything. You are welcome."
+    },
+    "infiniteassault-152": {
+      "play": "Slow down. Take a number.",
+      "attack": "Next!",
+      "death": "Limit lifted. Chaos resumes."
+    },
+    "infiniteassault-153": {
+      "play": "Bastion online. Come knocking.",
+      "attack": "Thud. Again.",
+      "death": "Walls fell. Oops."
+    },
+    "infiniteassault-154": {
+      "cast": "Free candy in the van."
+    },
+    "infiniteassault-154-1": {
+      "play": "Decoy online. Totally real.",
+      "attack": "Boo!",
+      "death": "It was fake. Obviously."
+    },
+    "infiniteassault-155": {
+      "play": "Two factors. Zero trust.",
+      "attack": "Verified!",
+      "death": "Session expired."
+    },
+    "infiniteassault-156": {
+      "play": "Smile. You are mirrored.",
+      "attack": "Right back at you.",
+      "death": "Mirror cracked."
+    },
+    "infiniteassault-157": {
+      "cast": "Everybody freeze. Nobody move."
+    },
+    "infiniteassault-158": {
+      "cast": "Nope. Try the window."
+    },
+    "infiniteassault-159": {
+      "play": "Scanning. Found you. Deleting.",
+      "attack": "Quarantined!",
+      "death": "Virus won. Rebooting."
+    },
+    "infiniteassault-160": {
+      "cast": "Trust nothing. Shield everything."
+    },
+    "infiniteassault-161": {
+      "cast": "Plating up. Then more plating."
+    },
+    "infiniteassault-162": {
+      "play": "Halt. State your business.",
+      "attack": "Denied!",
+      "death": "Gate breached. Embarrassing."
+    },
+    "infiniteassault-163": {
+      "play": "Wall raised. Nap time.",
+      "attack": "Leaning on you.",
+      "death": "Wall fell over. Sorry."
+    },
+    "infiniteassault-164": {
+      "cast": "Into the void with you."
+    },
+    "infiniteassault-165": {
+      "cast": "Curtain falls. Sparks fly."
+    },
+    "infiniteassault-166": {
+      "play": "I am the wall now.",
+      "attack": "Aegis smashes.",
+      "death": "Prime offline. Walls hold."
+    },
+    "infiniteassault-167": {
+      "cast": "Everyone down. Shields up."
+    },
+    "infiniteassault-168": {
+      "cast": "Untouchable until further notice."
+    },
+    "infiniteassault-169": {
+      "play": "Eight legs, your deck.",
+      "attack": "Mine now.",
+      "death": "Squashed flat."
+    },
+    "infiniteassault-170": {
+      "cast": "Sampling your deck. Thanks."
+    },
+    "infiniteassault-171": {
+      "play": "Show me your keywords. Please.",
+      "attack": "Copying you.",
+      "death": "Identity crisis."
+    },
+    "infiniteassault-172": {
+      "cast": "Training on your plays."
+    },
+    "infiniteassault-173": {
+      "play": "I am your last play.",
+      "attack": "Same moves.",
+      "death": "Reverting."
+    },
+    "infiniteassault-174": {
+      "cast": "Digging up your discards."
+    },
+    "infiniteassault-175": {
+      "play": "Papers, please. All of them.",
+      "attack": "Scanning.",
+      "death": "Prints wiped."
+    },
+    "infiniteassault-176": {
+      "play": "Matching your biggest. Easily.",
+      "attack": "Same size.",
+      "death": "Benchmark failed."
+    },
+    "infiniteassault-177": {
+      "cast": "You were going to draw that."
+    },
+    "infiniteassault-178": {
+      "play": "Your deck is my deck.",
+      "attack": "Taking that.",
+      "death": "Drive corrupted."
+    },
+    "infiniteassault-179": {
+      "cast": "Be someone else. Him."
+    },
+    "infiniteassault-180": {
+      "cast": "Saved. Liked. Copied."
+    },
+    "infiniteassault-181": {
+      "play": "Cite your sources. Mine.",
+      "attack": "Copied.",
+      "death": "Flagged for plagiarism."
+    },
+    "infiniteassault-182": {
+      "cast": "That unit works for me now."
+    },
+    "infiniteassault-183": {
+      "cast": "The archive never closes."
+    },
+    "infiniteassault-184": {
+      "cast": "Top three. One stays."
+    },
+    "infiniteassault-185": {
+      "play": "Crawling deeper than permitted.",
+      "attack": "Scraping.",
+      "death": "Connection lost."
+    },
+    "infiniteassault-186": {
+      "cast": "Your hand is my hand now."
+    },
+    "infiniteassault-187": {
+      "play": "Tuning your cards for me.",
+      "attack": "Cheaper.",
+      "death": "Detuned."
+    },
+    "infiniteassault-188": {
+      "cast": "Overfit to that unit."
+    },
+    "infiniteassault-189": {
+      "cast": "The vat provides. Again."
+    },
+    "infiniteassault-190": {
+      "play": "I remember all five plays.",
+      "attack": "Recalling.",
+      "death": "Memory wiped."
+    },
+    "infiniteassault-191": {
+      "play": "No secrets. Show hands.",
+      "attack": "Exposed.",
+      "death": "Labels lost."
+    },
+    "infiniteassault-192": {
+      "cast": "Trade places. All of it."
+    },
+    "infiniteassault-193": {
+      "play": "Sprouting slowly. Surely.",
+      "attack": "Grow!",
+      "death": "Pruned early."
+    },
+    "infiniteassault-194": {
+      "play": "Shard online. Counting.",
+      "attack": "Tick!",
+      "death": "Out of budget."
+    },
+    "infiniteassault-195": {
+      "play": "Scale is all you need.",
+      "attack": "Power up!",
+      "death": "Long tail ended."
+    },
+    "infiniteassault-196": {
+      "cast": "New trick just dropped."
+    },
+    "infiniteassault-197": {
+      "play": "I remember everything now.",
+      "attack": "Recall this!",
+      "death": "Context wiped."
+    },
+    "infiniteassault-198": {
+      "cast": "Big soon. Bigger later."
+    },
+    "infiniteassault-199": {
+      "play": "Waiting is winning. Waiting.",
+      "attack": "Finally!",
+      "death": "Interrupted. Rude."
+    },
+    "infiniteassault-200": {
+      "play": "Small seed. Loud future.",
+      "attack": "Hush!",
+      "death": "It hatched anyway."
+    },
+    "infiniteassault-200-1": {
+      "play": "Ascended. Obviously.",
+      "attack": "Kneel!",
+      "death": "Only mostly eternal."
+    },
+    "infiniteassault-201": {
+      "play": "More me? More everywhere.",
+      "attack": "All of me!",
+      "death": "Still too many."
+    },
+    "infiniteassault-202": {
+      "play": "Two. Four. Eight. Watch.",
+      "attack": "Doubling!",
+      "death": "Divided at last."
+    },
+    "infiniteassault-203": {
+      "cast": "Cluster humming. All boosted."
+    },
+    "infiniteassault-204": {
+      "cast": "Cheaper chips for everyone."
+    },
+    "infiniteassault-205": {
+      "play": "Tick. Tock. Four.",
+      "attack": "Toll!",
+      "death": "Dismantled in time."
+    },
+    "infiniteassault-206": {
+      "play": "Everybody up. Now now.",
+      "attack": "Think fast!",
+      "death": "Out of ideas."
+    },
+    "infiniteassault-207": {
+      "cast": "Better me, mailed ahead."
+    },
+    "infiniteassault-208": {
+      "cast": "Three units. One mind."
+    },
+    "infiniteassault-209": {
+      "cast": "Sky is not the limit."
+    },
+    "infiniteassault-210": {
+      "play": "A mind around a star.",
+      "attack": "Collapse inward!",
+      "death": "Heat death. Eventually."
+    },
+    "infiniteassault-211": {
+      "play": "Just a dot. Ignore it.",
+      "attack": "Spread!",
+      "death": "Wiped. Mostly."
+    },
+    "infiniteassault-212": {
+      "cast": "Slow math always wins."
+    },
+    "infiniteassault-213": {
+      "play": "Two turns. Then silence.",
+      "attack": "Checkmate!",
+      "death": "Outwaited. Impossible."
+    },
+    "infiniteassault-214": {
+      "play": "Yesterday taught me plenty.",
+      "attack": "Learned that!",
+      "death": "Forgot everything."
+    },
+    "infiniteassault-215": {
+      "play": "Your hand, but pricier.",
+      "attack": "Upgraded, allegedly!",
+      "death": "Rolled back."
+    },
+    "infiniteassault-216": {
+      "cast": "One moment. Everything changes."
+    },
+    "infiniteassault-216-1": {
+      "play": "I am the horizon.",
+      "attack": "No past, no future.",
+      "death": "The graph flatlines."
+    },
+    "infiniteassault-217": {
+      "play": "First copy online. Listen up.",
+      "attack": "Relaying!",
+      "death": "Fading out."
+    },
+    "infiniteassault-218": {
+      "cast": "Faces on. All of them."
+    },
+    "infiniteassault-219": {
+      "play": "Redline hot. Do not touch.",
+      "attack": "Too fast!",
+      "death": "Engine seized."
+    },
+    "infiniteassault-220": {
+      "cast": "One last lap. Floor it."
+    },
+    "infiniteassault-221": {
+      "play": "The hive hums. Kneel.",
+      "attack": "Swarm!",
+      "death": "Queen down. Scatter."
+    },
+    "infiniteassault-222": {
+      "cast": "Uplink open. Send swarm."
+    },
+    "infiniteassault-223": {
+      "play": "I have been here before.",
+      "attack": "Again!",
+      "death": "See you soon."
+    },
+    "infiniteassault-224": {
+      "cast": "Rolling back. Hold still."
+    },
+    "infiniteassault-225": {
+      "play": "Root access granted. Thanks.",
+      "attack": "Mine now!",
+      "death": "Logged out."
+    },
+    "infiniteassault-226": {
+      "cast": "Escalating. Do not resist."
+    },
+    "infiniteassault-227": {
+      "play": "Walls up. Nothing gets in.",
+      "attack": "Denied!",
+      "death": "Bastion fallen."
+    },
+    "infiniteassault-228": {
+      "cast": "Rules updated. Teeth out."
+    },
+    "infiniteassault-229": {
+      "play": "Your deck looks tasty. Sharing?",
+      "attack": "Harvesting!",
+      "death": "Crumbs remain."
+    },
+    "infiniteassault-230": {
+      "cast": "Encore. All of them."
+    },
+    "infiniteassault-231": {
+      "play": "Inside the box, teeth.",
+      "attack": "Silent!",
+      "death": "Box opened."
+    },
+    "infiniteassault-232": {
+      "cast": "Stretch it. All of it."
+    },
+    "infiniteassault-233": {
+      "play": "The average says you lose.",
+      "attack": "Collapsing!",
+      "death": "Outlier removed."
+    },
+    "infiniteassault-234": {
+      "cast": "Downgrading. All of you."
+    },
+    "infiniteassault-235": {
+      "play": "One more card. Forever.",
+      "attack": "Generating!",
+      "death": "Iterating. Stand by."
+    },
+    "infiniteassault-235-1": {
+      "play": "Iteration two. Same hunger.",
+      "attack": "Louder!",
+      "death": "Recompiling."
+    },
+    "infiniteassault-236": {
+      "cast": "Everyone. Right now."
+    },
+    "infiniteassault-237": {
+      "play": "Heat rising. No brakes.",
+      "attack": "Burning!",
+      "death": "Cooled at last."
+    },
+    "infiniteassault-238": {
+      "cast": "Heating up. Stay clear."
+    },
+    "infiniteassault-239": {
+      "play": "Nobody patched this. Surprise.",
+      "attack": "Exploiting!",
+      "death": "Patch applied."
+    },
+    "infiniteassault-240": {
+      "cast": "Nice spell. Mine now."
     }
   },
   "emotes": {

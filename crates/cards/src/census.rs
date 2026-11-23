@@ -274,7 +274,13 @@ pub const CENSUS: &[SetCensus] = &[
             "200.1", "216.1", "235.1",
         ],
         shared_tokens: &[],
-        rarities: &[("Common", 82), ("Rare", 64), ("Epic", 50), ("Legendary", 30), ("Mythic", 14)],
+        rarities: &[
+            ("Common", 82),
+            ("Rare", 64),
+            ("Epic", 50),
+            ("Legendary", 30),
+            ("Mythic", 14),
+        ],
     },
 ];
 
