@@ -4350,17 +4350,26 @@ mod i21 {
     }
 
     #[test]
-    fn r4599010_after_a_restore_its_sides_immune_units_may_be_reached_for_the_rest_of_the_step() {
+    fn r4599010_after_a_restore_its_sides_immune_units_gone_by_the_step_s_end_may_be_reached() {
         let (state, id) = immune_board("r4599010");
+        let gone = moved(&state, &id, OffFieldZone::Exile);
         let restored = |side: &str| -> GameEvent {
             json_as(json!({ "type": "rolledBack", "player": "p1", "turnsAgo": 1, "sides": [side] }))
         };
-        // C+ #35 Rollback restores p2's side, and a later Spell reaches what stands there.
+        let transformed: GameEvent = json_as(json!({
+            "type": "transformed",
+            "instanceId": id,
+            "fromDefId": IMMUNE,
+            "toDefId": PLAIN,
+            "newInstanceId": "i21-new",
+        }));
+        // C+ #35 Rollback restores p2's side, and S+ #85 Body Snatch then transforms what stands there,
+        // gone by the step's end: its keywords as the step began no longer tell.
         assert_eq!(
             i21(
                 &state,
-                &[marker(SPELL), restored("p2"), marker(SPELL), buffed(&id)],
-                &state
+                &[marker(SPELL), restored("p2"), marker(SPELL), transformed.clone()],
+                &gone
             ),
             Vec::<String>::new()
         );
@@ -4368,7 +4377,17 @@ mod i21 {
         only(
             &i21(
                 &state,
-                &[marker(SPELL), restored("p1"), marker(SPELL), buffed(&id)],
+                &[marker(SPELL), restored("p1"), marker(SPELL), transformed],
+                &gone,
+            ),
+            &id,
+            &["I21", "transformed"],
+        );
+        // A Unit still immune on the field as the step ends is judged as it stands (R4508001).
+        only(
+            &i21(
+                &state,
+                &[marker(SPELL), restored("p2"), marker(SPELL), buffed(&id)],
                 &state,
             ),
             &id,
@@ -4440,6 +4459,71 @@ mod i21 {
             &i21(&state, &[marker(SPELL), destroyed], &dead),
             &id,
             &["I21", "destroyed"],
+        );
+    }
+
+    #[test]
+    fn r4599013_a_death_s_destroy_collected_inside_a_spell_s_run_is_the_death_s() {
+        let (state, id) = immune_board("r4599013");
+        let dead = moved(&state, &id, OffFieldZone::Graveyard);
+        let destroyed: GameEvent = json_as(json!({
+            "type": "destroyed",
+            "instanceId": id,
+            "defId": IMMUNE,
+            "owner": "p2",
+            "controller": "p2",
+            "attack": 4,
+            "maxHealth": 4,
+            "killerId": null,
+        }));
+        let death: GameEvent = json_as(json!({
+            "type": "hookResolving",
+            "sourceId": "i21-tribute",
+            "defId": PLAIN,
+            "controller": "p2",
+            "hook": "death",
+        }));
+        let resolved = |instance_id: &str| -> GameEvent {
+            json_as(json!({
+                "type": "cardResolved",
+                "player": "p1",
+                "instanceId": instance_id,
+                "defId": SPELL,
+                "permanent": false,
+                "costPaid": 0,
+            }))
+        };
+        // TG #30 Floodgates' Death runs as the Spell's tribute is paid, and the state check after the
+        // Spell's Cry collects its marks.
+        assert_eq!(
+            i21(&state, &[death.clone(), marker(SPELL), destroyed.clone()], &dead),
+            Vec::<String>::new()
+        );
+        // A card resolved since: the Death's marks are collected, and the destroy is the Spell's.
+        only(
+            &i21(
+                &state,
+                &[
+                    death.clone(),
+                    resolved("i21-earlier"),
+                    marker(SPELL),
+                    destroyed.clone(),
+                ],
+                &dead,
+            ),
+            &id,
+            &["I21", "destroyed"],
+        );
+        // No Death at all, and a Death's run lets no other change of the Spell's through.
+        only(
+            &i21(&state, &[marker(SPELL), destroyed], &dead),
+            &id,
+            &["I21", "destroyed"],
+        );
+        only(
+            &i21(&state, &[death, marker(SPELL), buffed(&id)], &state),
+            &id,
+            &["I21", "buffed"],
         );
     }
 

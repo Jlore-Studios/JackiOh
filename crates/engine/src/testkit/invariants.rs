@@ -106,9 +106,10 @@
 //!      barred Defense and a Burn or Toxic tick (R4508005), a `destroyed` naming a killer or after a tick on
 //!      it (R4599001), an exile while a lasting board rule exiles (R4599004), a Burn's removal after its tick
 //!      or on an Indestructible Unit and a shield the Burn took (R4599007), a killerless death its damage or
-//!      a kill deadline explains (R4599008, R4599012), and an `evolved` (R4599011). A Unit is judged only
-//!      while still on the field and immune after the step, or gone from it with its own keywords immune and
-//!      no `controlChanged` naming it (R4599009), and not on a side a `rolledBack` named (R4599010). Reads
+//!      a kill deadline explains (R4599008, R4599012) or one after a Death hook ran since the last card
+//!      resolved (R4599013), and an `evolved` (R4599011). A Unit is judged only while still on the field
+//!      and immune after the step, or gone from it with its own keywords immune, no `controlChanged` naming
+//!      it (R4599009) and its side not named by a `rolledBack` (R4599010). Reads
 //!      the events and the catalog, never `restrictions::unaffected_by`; I14's branches and each Duos duel
 //!      run it.
 //!   I22 every `target` pick is one its source may aim at (§10.5 step 1, R450; #4540): no Dormant card,
@@ -1589,7 +1590,8 @@ fn shield_ticks(event: &GameEvent, next: Option<&GameEvent>, id: &str) -> bool {
 /// - a Burn's removal after a tick on the Unit earlier in the step, or on an Indestructible Unit, whose
 ///   tick leaves no event, and a Divine Shield the Burn tick took (`shield_ticks`; R4599007);
 /// - a `destroyed` with no killer whose max health its damage already met, the layers' (R4599008), or
-///   right after its kill deadline's mark comes off, a delayed effect's (R4599012);
+///   right after its kill deadline's mark comes off, a delayed effect's (R4599012), or after a Death hook
+///   ran since the last `cardResolved`, a destroy it marked (R4599013);
 /// - an `evolved`, the Unit's own text (R4599011).
 ///
 /// A card announced face-down in the step runs as a Trap once it is played (R4599002), and a run begun
@@ -1599,7 +1601,7 @@ fn shield_ticks(event: &GameEvent, next: Option<&GameEvent>, id: &str) -> bool {
 /// A Unit is judged only when it is still on the field and still immune after the step (an aura that
 /// dropped mid-step, or a step that first took its immunity away, makes no finding), or when it is gone
 /// from the field and its own keywords held the immunity, until a `controlChanged` names it (R4599009);
-/// a `rolledBack` releases the Units of the sides it names for the rest of the step (R4599010). A
+/// a `rolledBack` releases such a gone Unit of the sides it names for the rest of the step (R4599010). A
 /// Spell's delayed effect, and its run after a nested marker, carry no marker of the Spell's, so I21
 /// cannot see them. Draws nothing.
 fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameState) -> Vec<String> {
@@ -1661,6 +1663,9 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
     // R4599004: a lasting board rule that exiles stood as the step began or stands as it ends, or a
     // card with an exile aura arrived on the field during it.
     let mut board_exile = step.board_exiles || board_exiles(after);
+    // R4599013: a Death hook ran since the last card resolved, so a destroy it marked may be collected
+    // by the state check inside a later Spell's run.
+    let mut death_marks = false;
     // R4599008: the damage each marked Unit holds so far in the step, by its `damage` and `healed`.
     let mut hurt: IndexMap<&str, i32> = step
         .marks
@@ -1720,8 +1725,12 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 continue;
             }
             GameEvent::HookResolving {
-                source_id, def_id, ..
+                source_id,
+                def_id,
+                hook,
+                ..
             } => {
+                death_marks |= *hook == crate::wire::HookKind::Death;
                 run = ImmuneRun {
                     running: Some(def_id),
                     source: Some(source_id),
@@ -1745,6 +1754,7 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
             | GameEvent::TurnEnded { .. }
             | GameEvent::AutopilotEngaged { .. } => {
                 run = ImmuneRun::NONE;
+                death_marks = false;
                 continue;
             }
             // A play begins its own run (its `onPlayHook`s and its arrival are no Spell's), and the run it
@@ -1782,6 +1792,8 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 {
                     run = ImmuneRun::NONE;
                 }
+                // R4599013: the play's state checks have collected every mark by its resolution.
+                death_marks = false;
                 continue;
             }
             GameEvent::Swapped {
@@ -1794,11 +1806,13 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
             GameEvent::RolledBack { sides, .. } => {
                 run.window = Some(ImmuneWindow::Restore);
                 // R4599010: a restored side stands as its snapshot holds it, so for the rest of the step
-                // what stood there is no longer the immune Unit the step began with (R4524001's I19).
+                // a Unit of it gone from the field by the step's end, judged by its keywords as the step
+                // began, may no longer have been the immune Unit (R4524001's I19); one still on the field
+                // is judged as it ends the step, as any other.
                 released.extend(
                     step.marks
                         .iter()
-                        .filter(|(_, mark)| sides.contains(&mark.side))
+                        .filter(|(id, mark)| sides.contains(&mark.side) && gone.contains(id.as_str()))
                         .map(|(id, _)| id.as_str()),
                 );
                 continue;
@@ -1852,6 +1866,10 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 } => {
                     killer_id.is_some()
                         || ticked.contains(id)
+                        // R4599013: a Death's destroy, marked in its own run (a tribute paid for the
+                        // Spell, TG #30 Floodgates' "Destroy all your Units"), collected by the next state
+                        // check, inside the Spell's run.
+                        || death_marks
                         || hurt.get(id).is_some_and(|held| *max_health <= *held)
                         // R4599012: a kill deadline's destroy, a delayed effect made before the step,
                         // its mark taken off right before it (S+ #94 PIP, R3550006).
