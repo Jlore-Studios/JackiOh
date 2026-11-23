@@ -17182,6 +17182,24 @@
         "tiers": {}
       },
       "waiting_comment": 7113455376
+    },
+    "4632": {
+      "difficulty_by": {
+        "at": "2026-11-23T20:51:14Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "the after-merge spot-check's follow-up of #4625, a medium change"
+      },
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-23T20:51:14Z",
+      "requested_by": "jgoetzmann-bot",
+      "spot_check_of": 4625,
+      "stop_requested": false
     }
   },
   "labels_synced": "e752b3263433d01e",
