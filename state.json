@@ -18668,9 +18668,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T10:00:44Z",
+    "at": "2026-11-23T10:01:21Z",
     "url": "",
-    "what": "suggestions (ai) on claude-6"
+    "what": "suggestions (server) on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-23T09:51:44Z",
@@ -41384,9 +41384,9 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-23T10:00:44Z",
-    "last_area": "ai",
-    "last_run": "2026-11-23T10:00:44Z",
+    "idle_since": "2026-11-23T10:01:21Z",
+    "last_area": "server",
+    "last_run": "2026-11-23T10:01:21Z",
     "provider": null,
     "requested": false,
     "run_id": null,
@@ -41413,6 +41413,14 @@
         "last_run": "2026-11-23T10:00:44Z",
         "provider": "claude-6",
         "run_id": "45152171569",
+        "taken_asks": []
+      },
+      "4": {
+        "area": "server",
+        "count": 2,
+        "last_run": "2026-11-23T10:01:21Z",
+        "provider": "claude-8",
+        "run_id": "pending:1026d000-1795428056",
         "taken_asks": []
       }
     },
