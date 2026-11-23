@@ -39615,6 +39615,12 @@
         "number": 4534,
         "title": "Patch: pin probe-heavy AI positions as node-budget regression tests",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T01:24:37Z",
+        "number": 4538,
+        "title": "Patch: the fuzz monitor fails a game that offers a Spell or Field Spell an Evasive target, and a test offers every Spell and Field Spell at one",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
