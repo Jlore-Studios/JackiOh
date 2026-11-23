@@ -1,0 +1,4001 @@
+{
+  "patch": "v0.6.11b",
+  "source": "provisional",
+  "cards": [
+    {
+      "id": "classic-001",
+      "wins": 281,
+      "games": 594
+    },
+    {
+      "id": "classic-002",
+      "wins": 646,
+      "games": 1280
+    },
+    {
+      "id": "classic-003",
+      "wins": 524,
+      "games": 994
+    },
+    {
+      "id": "classic-004",
+      "wins": 452,
+      "games": 937
+    },
+    {
+      "id": "classic-005",
+      "wins": 342,
+      "games": 706
+    },
+    {
+      "id": "classic-006",
+      "wins": 725,
+      "games": 1464
+    },
+    {
+      "id": "classic-007",
+      "wins": 297,
+      "games": 636
+    },
+    {
+      "id": "classic-008",
+      "wins": 272,
+      "games": 571
+    },
+    {
+      "id": "classic-009",
+      "wins": 317,
+      "games": 699
+    },
+    {
+      "id": "classic-010",
+      "wins": 374,
+      "games": 725
+    },
+    {
+      "id": "classic-011",
+      "wins": 275,
+      "games": 573
+    },
+    {
+      "id": "classic-012",
+      "wins": 496,
+      "games": 942
+    },
+    {
+      "id": "classic-013",
+      "wins": 638,
+      "games": 1242
+    },
+    {
+      "id": "classic-014",
+      "wins": 307,
+      "games": 605
+    },
+    {
+      "id": "classic-015",
+      "wins": 631,
+      "games": 1273
+    },
+    {
+      "id": "classic-016",
+      "wins": 515,
+      "games": 983
+    },
+    {
+      "id": "classic-017",
+      "wins": 358,
+      "games": 744
+    },
+    {
+      "id": "classic-018",
+      "wins": 439,
+      "games": 834
+    },
+    {
+      "id": "classic-019",
+      "wins": 309,
+      "games": 573
+    },
+    {
+      "id": "classic-020",
+      "wins": 455,
+      "games": 839
+    },
+    {
+      "id": "classic-021",
+      "wins": 676,
+      "games": 1386
+    },
+    {
+      "id": "classic-022",
+      "wins": 667,
+      "games": 1284
+    },
+    {
+      "id": "classic-023",
+      "wins": 311,
+      "games": 710
+    },
+    {
+      "id": "classic-024",
+      "wins": 535,
+      "games": 998
+    },
+    {
+      "id": "classic-025",
+      "wins": 319,
+      "games": 628
+    },
+    {
+      "id": "classic-026",
+      "wins": 284,
+      "games": 611
+    },
+    {
+      "id": "classic-027",
+      "wins": 717,
+      "games": 1420
+    },
+    {
+      "id": "classic-028",
+      "wins": 316,
+      "games": 629
+    },
+    {
+      "id": "classic-029",
+      "wins": 510,
+      "games": 903
+    },
+    {
+      "id": "classic-030",
+      "wins": 291,
+      "games": 584
+    },
+    {
+      "id": "classic-031",
+      "wins": 723,
+      "games": 1409
+    },
+    {
+      "id": "classic-032",
+      "wins": 462,
+      "games": 861
+    },
+    {
+      "id": "classic-033",
+      "wins": 623,
+      "games": 1259
+    },
+    {
+      "id": "classic-034",
+      "wins": 293,
+      "games": 578
+    },
+    {
+      "id": "classic-035",
+      "wins": 287,
+      "games": 580
+    },
+    {
+      "id": "classic-036",
+      "wins": 309,
+      "games": 610
+    },
+    {
+      "id": "classic-037",
+      "wins": 284,
+      "games": 624
+    },
+    {
+      "id": "classic-038",
+      "wins": 395,
+      "games": 759
+    },
+    {
+      "id": "classic-039",
+      "wins": 527,
+      "games": 1022
+    },
+    {
+      "id": "classic-040",
+      "wins": 633,
+      "games": 1273
+    },
+    {
+      "id": "classic-041",
+      "wins": 630,
+      "games": 1235
+    },
+    {
+      "id": "classic-042",
+      "wins": 508,
+      "games": 929
+    },
+    {
+      "id": "classic-043",
+      "wins": 491,
+      "games": 909
+    },
+    {
+      "id": "classic-044",
+      "wins": 328,
+      "games": 627
+    },
+    {
+      "id": "classic-045",
+      "wins": 682,
+      "games": 1365
+    },
+    {
+      "id": "classic-046",
+      "wins": 309,
+      "games": 602
+    },
+    {
+      "id": "classic-047",
+      "wins": 780,
+      "games": 1565
+    },
+    {
+      "id": "classic-048",
+      "wins": 734,
+      "games": 1402
+    },
+    {
+      "id": "classic-049",
+      "wins": 732,
+      "games": 1489
+    },
+    {
+      "id": "classic-050",
+      "wins": 677,
+      "games": 1385
+    },
+    {
+      "id": "classic-051",
+      "wins": 639,
+      "games": 1247
+    },
+    {
+      "id": "classic-052",
+      "wins": 377,
+      "games": 733
+    },
+    {
+      "id": "classic-053",
+      "wins": 685,
+      "games": 1337
+    },
+    {
+      "id": "classic-054",
+      "wins": 291,
+      "games": 566
+    },
+    {
+      "id": "classic-055",
+      "wins": 509,
+      "games": 981
+    },
+    {
+      "id": "classic-056",
+      "wins": 651,
+      "games": 1251
+    },
+    {
+      "id": "classic-057",
+      "wins": 315,
+      "games": 607
+    },
+    {
+      "id": "classic-058",
+      "wins": 358,
+      "games": 738
+    },
+    {
+      "id": "classic-059",
+      "wins": 758,
+      "games": 1494
+    },
+    {
+      "id": "classic-060",
+      "wins": 291,
+      "games": 640
+    },
+    {
+      "id": "classic-061",
+      "wins": 901,
+      "games": 1759
+    },
+    {
+      "id": "classic-062",
+      "wins": 505,
+      "games": 1011
+    },
+    {
+      "id": "classic-063",
+      "wins": 394,
+      "games": 798
+    },
+    {
+      "id": "classic-064",
+      "wins": 266,
+      "games": 599
+    },
+    {
+      "id": "classic-065",
+      "wins": 335,
+      "games": 678
+    },
+    {
+      "id": "classic-066",
+      "wins": 681,
+      "games": 1357
+    },
+    {
+      "id": "classic-067",
+      "wins": 641,
+      "games": 1260
+    },
+    {
+      "id": "classic-068",
+      "wins": 615,
+      "games": 1238
+    },
+    {
+      "id": "classic-069",
+      "wins": 819,
+      "games": 1666
+    },
+    {
+      "id": "classic-070",
+      "wins": 546,
+      "games": 1054
+    },
+    {
+      "id": "classic-071",
+      "wins": 753,
+      "games": 1479
+    },
+    {
+      "id": "classic-072",
+      "wins": 358,
+      "games": 732
+    },
+    {
+      "id": "classic-073",
+      "wins": 710,
+      "games": 1382
+    },
+    {
+      "id": "classic-074",
+      "wins": 530,
+      "games": 990
+    },
+    {
+      "id": "classic-075",
+      "wins": 378,
+      "games": 746
+    },
+    {
+      "id": "classic-076",
+      "wins": 777,
+      "games": 1578
+    },
+    {
+      "id": "classic-077",
+      "wins": 662,
+      "games": 1378
+    },
+    {
+      "id": "classic-078",
+      "wins": 378,
+      "games": 757
+    },
+    {
+      "id": "classic-079",
+      "wins": 294,
+      "games": 597
+    },
+    {
+      "id": "classic-080",
+      "wins": 755,
+      "games": 1483
+    },
+    {
+      "id": "classic-081",
+      "wins": 386,
+      "games": 760
+    },
+    {
+      "id": "classic-082",
+      "wins": 585,
+      "games": 1209
+    },
+    {
+      "id": "classic-083",
+      "wins": 438,
+      "games": 824
+    },
+    {
+      "id": "classic-084",
+      "wins": 299,
+      "games": 642
+    },
+    {
+      "id": "classic-085",
+      "wins": 601,
+      "games": 1205
+    },
+    {
+      "id": "classic-086",
+      "wins": 628,
+      "games": 1244
+    },
+    {
+      "id": "classic-087",
+      "wins": 308,
+      "games": 681
+    },
+    {
+      "id": "classic-088",
+      "wins": 412,
+      "games": 846
+    },
+    {
+      "id": "classic-089",
+      "wins": 674,
+      "games": 1364
+    },
+    {
+      "id": "classic-090",
+      "wins": 327,
+      "games": 608
+    },
+    {
+      "id": "classicplus-001",
+      "wins": 326,
+      "games": 630
+    },
+    {
+      "id": "classicplus-002",
+      "wins": 547,
+      "games": 1109
+    },
+    {
+      "id": "classicplus-003",
+      "wins": 788,
+      "games": 1586
+    },
+    {
+      "id": "classicplus-004",
+      "wins": 837,
+      "games": 1665
+    },
+    {
+      "id": "classicplus-005",
+      "wins": 707,
+      "games": 1407
+    },
+    {
+      "id": "classicplus-006",
+      "wins": 642,
+      "games": 1221
+    },
+    {
+      "id": "classicplus-007",
+      "wins": 506,
+      "games": 1000
+    },
+    {
+      "id": "classicplus-008",
+      "wins": 304,
+      "games": 637
+    },
+    {
+      "id": "classicplus-009",
+      "wins": 287,
+      "games": 584
+    },
+    {
+      "id": "classicplus-010",
+      "wins": 293,
+      "games": 586
+    },
+    {
+      "id": "classicplus-011",
+      "wins": 714,
+      "games": 1464
+    },
+    {
+      "id": "classicplus-012",
+      "wins": 748,
+      "games": 1466
+    },
+    {
+      "id": "classicplus-013",
+      "wins": 635,
+      "games": 1226
+    },
+    {
+      "id": "classicplus-014",
+      "wins": 275,
+      "games": 577
+    },
+    {
+      "id": "classicplus-015",
+      "wins": 283,
+      "games": 592
+    },
+    {
+      "id": "classicplus-016",
+      "wins": 349,
+      "games": 719
+    },
+    {
+      "id": "classicplus-017",
+      "wins": 348,
+      "games": 678
+    },
+    {
+      "id": "classicplus-018",
+      "wins": 653,
+      "games": 1367
+    },
+    {
+      "id": "classicplus-019",
+      "wins": 327,
+      "games": 641
+    },
+    {
+      "id": "classicplus-020",
+      "wins": 602,
+      "games": 1228
+    },
+    {
+      "id": "classicplus-021",
+      "wins": 294,
+      "games": 592
+    },
+    {
+      "id": "classicplus-022",
+      "wins": 373,
+      "games": 740
+    },
+    {
+      "id": "classicplus-023",
+      "wins": 353,
+      "games": 714
+    },
+    {
+      "id": "classicplus-024",
+      "wins": 390,
+      "games": 825
+    },
+    {
+      "id": "classicplus-025",
+      "wins": 377,
+      "games": 745
+    },
+    {
+      "id": "classicplus-026",
+      "wins": 678,
+      "games": 1485
+    },
+    {
+      "id": "classicplus-027",
+      "wins": 315,
+      "games": 642
+    },
+    {
+      "id": "classicplus-028",
+      "wins": 689,
+      "games": 1331
+    },
+    {
+      "id": "classicplus-029",
+      "wins": 394,
+      "games": 794
+    },
+    {
+      "id": "classicplus-030",
+      "wins": 752,
+      "games": 1471
+    },
+    {
+      "id": "classicplus-031",
+      "wins": 339,
+      "games": 688
+    },
+    {
+      "id": "classicplus-032",
+      "wins": 408,
+      "games": 759
+    },
+    {
+      "id": "classicplus-033",
+      "wins": 298,
+      "games": 595
+    },
+    {
+      "id": "classicplus-034",
+      "wins": 297,
+      "games": 622
+    },
+    {
+      "id": "classicplus-035",
+      "wins": 280,
+      "games": 599
+    },
+    {
+      "id": "classicplus-036",
+      "wins": 333,
+      "games": 731
+    },
+    {
+      "id": "classicplus-037",
+      "wins": 847,
+      "games": 1643
+    },
+    {
+      "id": "classicplus-038",
+      "wins": 974,
+      "games": 1993
+    },
+    {
+      "id": "classicplus-039",
+      "wins": 730,
+      "games": 1405
+    },
+    {
+      "id": "classicplus-040",
+      "wins": 322,
+      "games": 612
+    },
+    {
+      "id": "classicplus-041",
+      "wins": 425,
+      "games": 864
+    },
+    {
+      "id": "classicplus-042",
+      "wins": 422,
+      "games": 820
+    },
+    {
+      "id": "classicplus-043",
+      "wins": 419,
+      "games": 815
+    },
+    {
+      "id": "classicplus-044",
+      "wins": 402,
+      "games": 840
+    },
+    {
+      "id": "classicplus-045",
+      "wins": 384,
+      "games": 748
+    },
+    {
+      "id": "classicplus-046",
+      "wins": 1134,
+      "games": 2217
+    },
+    {
+      "id": "classicplus-047",
+      "wins": 367,
+      "games": 681
+    },
+    {
+      "id": "classicplus-048",
+      "wins": 738,
+      "games": 1470
+    },
+    {
+      "id": "classicplus-049",
+      "wins": 875,
+      "games": 1736
+    },
+    {
+      "id": "classicplus-050",
+      "wins": 315,
+      "games": 626
+    },
+    {
+      "id": "classicplus-051",
+      "wins": 934,
+      "games": 1819
+    },
+    {
+      "id": "classicplus-052",
+      "wins": 534,
+      "games": 1024
+    },
+    {
+      "id": "classicplus-053",
+      "wins": 524,
+      "games": 959
+    },
+    {
+      "id": "classicplus-054",
+      "wins": 483,
+      "games": 898
+    },
+    {
+      "id": "classicplus-055",
+      "wins": 519,
+      "games": 932
+    },
+    {
+      "id": "classicplus-056",
+      "wins": 515,
+      "games": 950
+    },
+    {
+      "id": "classicplus-057",
+      "wins": 560,
+      "games": 969
+    },
+    {
+      "id": "classicplus-058",
+      "wins": 398,
+      "games": 842
+    },
+    {
+      "id": "classicplus-059",
+      "wins": 428,
+      "games": 814
+    },
+    {
+      "id": "classicplus-060",
+      "wins": 383,
+      "games": 740
+    },
+    {
+      "id": "classicplus-061",
+      "wins": 319,
+      "games": 640
+    },
+    {
+      "id": "classicplus-062",
+      "wins": 701,
+      "games": 1366
+    },
+    {
+      "id": "classicplus-063",
+      "wins": 371,
+      "games": 756
+    },
+    {
+      "id": "classicplus-064",
+      "wins": 569,
+      "games": 1207
+    },
+    {
+      "id": "classicplus-065",
+      "wins": 428,
+      "games": 844
+    },
+    {
+      "id": "classicplus-066",
+      "wins": 586,
+      "games": 1167
+    },
+    {
+      "id": "classicplus-067",
+      "wins": 521,
+      "games": 1079
+    },
+    {
+      "id": "classicplus-068",
+      "wins": 305,
+      "games": 635
+    },
+    {
+      "id": "classicplus-069",
+      "wins": 671,
+      "games": 1304
+    },
+    {
+      "id": "classicplus-070",
+      "wins": 380,
+      "games": 736
+    },
+    {
+      "id": "classicplus-071",
+      "wins": 523,
+      "games": 953
+    },
+    {
+      "id": "classicplus-072",
+      "wins": 474,
+      "games": 905
+    },
+    {
+      "id": "classicplus-073",
+      "wins": 635,
+      "games": 1214
+    },
+    {
+      "id": "classicplus-074",
+      "wins": 366,
+      "games": 713
+    },
+    {
+      "id": "classicplus-075",
+      "wins": 736,
+      "games": 1427
+    },
+    {
+      "id": "classicplus-076",
+      "wins": 735,
+      "games": 1401
+    },
+    {
+      "id": "classicplus-077",
+      "wins": 373,
+      "games": 748
+    },
+    {
+      "id": "classicplus-078",
+      "wins": 384,
+      "games": 829
+    },
+    {
+      "id": "core-001",
+      "wins": 723,
+      "games": 1432
+    },
+    {
+      "id": "core-002",
+      "wins": 712,
+      "games": 1471
+    },
+    {
+      "id": "core-003",
+      "wins": 670,
+      "games": 1278
+    },
+    {
+      "id": "core-004",
+      "wins": 649,
+      "games": 1299
+    },
+    {
+      "id": "core-005",
+      "wins": 304,
+      "games": 596
+    },
+    {
+      "id": "core-006",
+      "wins": 345,
+      "games": 687
+    },
+    {
+      "id": "core-007",
+      "wins": 567,
+      "games": 1193
+    },
+    {
+      "id": "core-008",
+      "wins": 647,
+      "games": 1308
+    },
+    {
+      "id": "core-009",
+      "wins": 697,
+      "games": 1401
+    },
+    {
+      "id": "core-010",
+      "wins": 323,
+      "games": 642
+    },
+    {
+      "id": "core-011",
+      "wins": 670,
+      "games": 1309
+    },
+    {
+      "id": "core-012",
+      "wins": 787,
+      "games": 1564
+    },
+    {
+      "id": "core-013",
+      "wins": 988,
+      "games": 1794
+    },
+    {
+      "id": "core-014",
+      "wins": 422,
+      "games": 796
+    },
+    {
+      "id": "core-015",
+      "wins": 678,
+      "games": 1313
+    },
+    {
+      "id": "core-016",
+      "wins": 374,
+      "games": 756
+    },
+    {
+      "id": "core-017",
+      "wins": 298,
+      "games": 629
+    },
+    {
+      "id": "core-018",
+      "wins": 286,
+      "games": 606
+    },
+    {
+      "id": "core-019",
+      "wins": 724,
+      "games": 1412
+    },
+    {
+      "id": "core-020",
+      "wins": 777,
+      "games": 1444
+    },
+    {
+      "id": "core-021",
+      "wins": 297,
+      "games": 604
+    },
+    {
+      "id": "core-022",
+      "wins": 620,
+      "games": 1339
+    },
+    {
+      "id": "core-023",
+      "wins": 300,
+      "games": 589
+    },
+    {
+      "id": "core-024",
+      "wins": 281,
+      "games": 580
+    },
+    {
+      "id": "core-025",
+      "wins": 600,
+      "games": 1240
+    },
+    {
+      "id": "core-026",
+      "wins": 638,
+      "games": 1498
+    },
+    {
+      "id": "core-027",
+      "wins": 549,
+      "games": 1252
+    },
+    {
+      "id": "core-028",
+      "wins": 560,
+      "games": 1258
+    },
+    {
+      "id": "core-029",
+      "wins": 268,
+      "games": 684
+    },
+    {
+      "id": "core-030",
+      "wins": 691,
+      "games": 1391
+    },
+    {
+      "id": "core-031",
+      "wins": 406,
+      "games": 809
+    },
+    {
+      "id": "core-032",
+      "wins": 714,
+      "games": 1420
+    },
+    {
+      "id": "core-033",
+      "wins": 349,
+      "games": 710
+    },
+    {
+      "id": "core-034",
+      "wins": 337,
+      "games": 675
+    },
+    {
+      "id": "core-035",
+      "wins": 267,
+      "games": 585
+    },
+    {
+      "id": "core-036",
+      "wins": 306,
+      "games": 632
+    },
+    {
+      "id": "core-037",
+      "wins": 642,
+      "games": 1332
+    },
+    {
+      "id": "core-038",
+      "wins": 416,
+      "games": 807
+    },
+    {
+      "id": "core-039",
+      "wins": 315,
+      "games": 621
+    },
+    {
+      "id": "core-040",
+      "wins": 348,
+      "games": 698
+    },
+    {
+      "id": "core-041",
+      "wins": 335,
+      "games": 655
+    },
+    {
+      "id": "core-042",
+      "wins": 363,
+      "games": 722
+    },
+    {
+      "id": "core-043",
+      "wins": 726,
+      "games": 1496
+    },
+    {
+      "id": "core-044",
+      "wins": 305,
+      "games": 624
+    },
+    {
+      "id": "core-045",
+      "wins": 687,
+      "games": 1418
+    },
+    {
+      "id": "core-046",
+      "wins": 338,
+      "games": 737
+    },
+    {
+      "id": "core-047",
+      "wins": 556,
+      "games": 1125
+    },
+    {
+      "id": "core-048",
+      "wins": 274,
+      "games": 592
+    },
+    {
+      "id": "core-049",
+      "wins": 7,
+      "games": 24
+    },
+    {
+      "id": "core-050",
+      "wins": 761,
+      "games": 1502
+    },
+    {
+      "id": "core-051",
+      "wins": 449,
+      "games": 872
+    },
+    {
+      "id": "core-052",
+      "wins": 33,
+      "games": 59
+    },
+    {
+      "id": "core-053",
+      "wins": 711,
+      "games": 1512
+    },
+    {
+      "id": "core-054",
+      "wins": 598,
+      "games": 1199
+    },
+    {
+      "id": "core-055",
+      "wins": 717,
+      "games": 1484
+    },
+    {
+      "id": "core-056",
+      "wins": 674,
+      "games": 1305
+    },
+    {
+      "id": "core-057",
+      "wins": 510,
+      "games": 1029
+    },
+    {
+      "id": "core-058",
+      "wins": 369,
+      "games": 728
+    },
+    {
+      "id": "core-059",
+      "wins": 364,
+      "games": 696
+    },
+    {
+      "id": "core-060",
+      "wins": 297,
+      "games": 611
+    },
+    {
+      "id": "core-061",
+      "wins": 711,
+      "games": 1473
+    },
+    {
+      "id": "core-062",
+      "wins": 291,
+      "games": 624
+    },
+    {
+      "id": "core-063",
+      "wins": 291,
+      "games": 576
+    },
+    {
+      "id": "core-064",
+      "wins": 378,
+      "games": 754
+    },
+    {
+      "id": "core-065",
+      "wins": 280,
+      "games": 576
+    },
+    {
+      "id": "core-066",
+      "wins": 649,
+      "games": 1326
+    },
+    {
+      "id": "core-067",
+      "wins": 647,
+      "games": 1272
+    },
+    {
+      "id": "core-068",
+      "wins": 684,
+      "games": 1420
+    },
+    {
+      "id": "core-069",
+      "wins": 373,
+      "games": 721
+    },
+    {
+      "id": "core-070",
+      "wins": 360,
+      "games": 748
+    },
+    {
+      "id": "core-071",
+      "wins": 282,
+      "games": 569
+    },
+    {
+      "id": "core-072",
+      "wins": 285,
+      "games": 612
+    },
+    {
+      "id": "core-073",
+      "wins": 360,
+      "games": 726
+    },
+    {
+      "id": "core-074",
+      "wins": 289,
+      "games": 578
+    },
+    {
+      "id": "core-075",
+      "wins": 306,
+      "games": 646
+    },
+    {
+      "id": "core-076",
+      "wins": 323,
+      "games": 654
+    },
+    {
+      "id": "core-077",
+      "wins": 647,
+      "games": 1323
+    },
+    {
+      "id": "core-078",
+      "wins": 303,
+      "games": 629
+    },
+    {
+      "id": "core-079",
+      "wins": 287,
+      "games": 603
+    },
+    {
+      "id": "core-080",
+      "wins": 461,
+      "games": 908
+    },
+    {
+      "id": "core-081",
+      "wins": 740,
+      "games": 1426
+    },
+    {
+      "id": "core-082",
+      "wins": 582,
+      "games": 1061
+    },
+    {
+      "id": "core-083",
+      "wins": 383,
+      "games": 750
+    },
+    {
+      "id": "core-084",
+      "wins": 346,
+      "games": 726
+    },
+    {
+      "id": "core-085",
+      "wins": 387,
+      "games": 775
+    },
+    {
+      "id": "core-086",
+      "wins": 718,
+      "games": 1397
+    },
+    {
+      "id": "core-087",
+      "wins": 335,
+      "games": 653
+    },
+    {
+      "id": "core-088",
+      "wins": 346,
+      "games": 665
+    },
+    {
+      "id": "core-089",
+      "wins": 624,
+      "games": 1302
+    },
+    {
+      "id": "core-090",
+      "wins": 309,
+      "games": 658
+    },
+    {
+      "id": "core-091",
+      "wins": 842,
+      "games": 1675
+    },
+    {
+      "id": "core-092",
+      "wins": 720,
+      "games": 1429
+    },
+    {
+      "id": "core-093",
+      "wins": 421,
+      "games": 812
+    },
+    {
+      "id": "core-094",
+      "wins": 299,
+      "games": 619
+    },
+    {
+      "id": "core-095",
+      "wins": 611,
+      "games": 1229
+    },
+    {
+      "id": "core-096",
+      "wins": 283,
+      "games": 578
+    },
+    {
+      "id": "core-097",
+      "wins": 311,
+      "games": 611
+    },
+    {
+      "id": "core-098",
+      "wins": 320,
+      "games": 606
+    },
+    {
+      "id": "core-099",
+      "wins": 317,
+      "games": 628
+    },
+    {
+      "id": "core-100",
+      "wins": 302,
+      "games": 725
+    },
+    {
+      "id": "meditative-001",
+      "wins": 335,
+      "games": 699
+    },
+    {
+      "id": "meditative-002",
+      "wins": 650,
+      "games": 1345
+    },
+    {
+      "id": "meditative-003",
+      "wins": 709,
+      "games": 1416
+    },
+    {
+      "id": "meditative-004",
+      "wins": 548,
+      "games": 1095
+    },
+    {
+      "id": "meditative-005",
+      "wins": 324,
+      "games": 636
+    },
+    {
+      "id": "meditative-006",
+      "wins": 311,
+      "games": 606
+    },
+    {
+      "id": "meditative-007",
+      "wins": 387,
+      "games": 768
+    },
+    {
+      "id": "meditative-008",
+      "wins": 271,
+      "games": 585
+    },
+    {
+      "id": "meditative-009",
+      "wins": 348,
+      "games": 696
+    },
+    {
+      "id": "meditative-010",
+      "wins": 363,
+      "games": 744
+    },
+    {
+      "id": "meditative-011",
+      "wins": 298,
+      "games": 611
+    },
+    {
+      "id": "meditative-012",
+      "wins": 743,
+      "games": 1497
+    },
+    {
+      "id": "meditative-013",
+      "wins": 673,
+      "games": 1365
+    },
+    {
+      "id": "meditative-014",
+      "wins": 348,
+      "games": 706
+    },
+    {
+      "id": "meditative-015",
+      "wins": 721,
+      "games": 1443
+    },
+    {
+      "id": "meditative-016",
+      "wins": 753,
+      "games": 1384
+    },
+    {
+      "id": "meditative-017",
+      "wins": 302,
+      "games": 607
+    },
+    {
+      "id": "meditative-018",
+      "wins": 260,
+      "games": 575
+    },
+    {
+      "id": "meditative-019",
+      "wins": 310,
+      "games": 586
+    },
+    {
+      "id": "meditative-020",
+      "wins": 296,
+      "games": 638
+    },
+    {
+      "id": "meditative-021",
+      "wins": 295,
+      "games": 605
+    },
+    {
+      "id": "meditative-022",
+      "wins": 366,
+      "games": 711
+    },
+    {
+      "id": "meditative-023",
+      "wins": 639,
+      "games": 1234
+    },
+    {
+      "id": "meditative-024",
+      "wins": 388,
+      "games": 802
+    },
+    {
+      "id": "meditative-025",
+      "wins": 692,
+      "games": 1389
+    },
+    {
+      "id": "meditative-026",
+      "wins": 317,
+      "games": 643
+    },
+    {
+      "id": "meditative-027",
+      "wins": 706,
+      "games": 1490
+    },
+    {
+      "id": "meditative-028",
+      "wins": 683,
+      "games": 1376
+    },
+    {
+      "id": "meditative-029",
+      "wins": 443,
+      "games": 914
+    },
+    {
+      "id": "meditative-030",
+      "wins": 691,
+      "games": 1366
+    },
+    {
+      "id": "meditative-031",
+      "wins": 757,
+      "games": 1517
+    },
+    {
+      "id": "meditative-032",
+      "wins": 402,
+      "games": 801
+    },
+    {
+      "id": "meditative-033",
+      "wins": 348,
+      "games": 710
+    },
+    {
+      "id": "meditative-034",
+      "wins": 670,
+      "games": 1256
+    },
+    {
+      "id": "meditative-035",
+      "wins": 321,
+      "games": 666
+    },
+    {
+      "id": "meditative-036",
+      "wins": 324,
+      "games": 669
+    },
+    {
+      "id": "meditative-037",
+      "wins": 386,
+      "games": 707
+    },
+    {
+      "id": "meditative-038",
+      "wins": 777,
+      "games": 1478
+    },
+    {
+      "id": "meditative-039",
+      "wins": 801,
+      "games": 1564
+    },
+    {
+      "id": "meditative-040",
+      "wins": 446,
+      "games": 917
+    },
+    {
+      "id": "meditative-041",
+      "wins": 796,
+      "games": 1527
+    },
+    {
+      "id": "meditative-042",
+      "wins": 438,
+      "games": 872
+    },
+    {
+      "id": "meditative-043",
+      "wins": 334,
+      "games": 673
+    },
+    {
+      "id": "meditative-044",
+      "wins": 486,
+      "games": 1023
+    },
+    {
+      "id": "meditative-045",
+      "wins": 1274,
+      "games": 2459
+    },
+    {
+      "id": "meditative-046",
+      "wins": 354,
+      "games": 714
+    },
+    {
+      "id": "meditative-047",
+      "wins": 776,
+      "games": 1478
+    },
+    {
+      "id": "meditative-048",
+      "wins": 363,
+      "games": 717
+    },
+    {
+      "id": "meditative-049",
+      "wins": 1238,
+      "games": 2460
+    },
+    {
+      "id": "meditative-050",
+      "wins": 335,
+      "games": 675
+    },
+    {
+      "id": "meditative-051",
+      "wins": 697,
+      "games": 1372
+    },
+    {
+      "id": "meditative-052",
+      "wins": 296,
+      "games": 594
+    },
+    {
+      "id": "meditative-053",
+      "wins": 300,
+      "games": 598
+    },
+    {
+      "id": "meditative-054",
+      "wins": 307,
+      "games": 622
+    },
+    {
+      "id": "meditative-055",
+      "wins": 647,
+      "games": 1261
+    },
+    {
+      "id": "meditative-056",
+      "wins": 392,
+      "games": 777
+    },
+    {
+      "id": "meditative-057",
+      "wins": 649,
+      "games": 1285
+    },
+    {
+      "id": "meditative-058",
+      "wins": 711,
+      "games": 1438
+    },
+    {
+      "id": "meditative-059",
+      "wins": 711,
+      "games": 1293
+    },
+    {
+      "id": "meditative-060",
+      "wins": 392,
+      "games": 776
+    },
+    {
+      "id": "meditative-061",
+      "wins": 792,
+      "games": 1524
+    },
+    {
+      "id": "meditative-062",
+      "wins": 302,
+      "games": 582
+    },
+    {
+      "id": "meditative-063",
+      "wins": 403,
+      "games": 782
+    },
+    {
+      "id": "meditative-064",
+      "wins": 298,
+      "games": 599
+    },
+    {
+      "id": "meditative-065",
+      "wins": 615,
+      "games": 1235
+    },
+    {
+      "id": "meditative-066",
+      "wins": 361,
+      "games": 705
+    },
+    {
+      "id": "meditative-067",
+      "wins": 731,
+      "games": 1462
+    },
+    {
+      "id": "meditative-068",
+      "wins": 389,
+      "games": 745
+    },
+    {
+      "id": "meditative-069",
+      "wins": 761,
+      "games": 1565
+    },
+    {
+      "id": "meditative-070",
+      "wins": 621,
+      "games": 1282
+    },
+    {
+      "id": "meditative-071",
+      "wins": 391,
+      "games": 785
+    },
+    {
+      "id": "meditative-072",
+      "wins": 590,
+      "games": 1200
+    },
+    {
+      "id": "meditative-073",
+      "wins": 766,
+      "games": 1427
+    },
+    {
+      "id": "meditative-074",
+      "wins": 32,
+      "games": 72
+    },
+    {
+      "id": "meditative-075",
+      "wins": 331,
+      "games": 667
+    },
+    {
+      "id": "meditative-076",
+      "wins": 296,
+      "games": 611
+    },
+    {
+      "id": "meditative-077",
+      "wins": 392,
+      "games": 802
+    },
+    {
+      "id": "meditative-078",
+      "wins": 432,
+      "games": 804
+    },
+    {
+      "id": "meditative-079",
+      "wins": 1060,
+      "games": 2037
+    },
+    {
+      "id": "meditative-080",
+      "wins": 353,
+      "games": 700
+    },
+    {
+      "id": "meditative-081",
+      "wins": 282,
+      "games": 564
+    },
+    {
+      "id": "meditative-082",
+      "wins": 659,
+      "games": 1271
+    },
+    {
+      "id": "meditative-083",
+      "wins": 730,
+      "games": 1486
+    },
+    {
+      "id": "meditative-084",
+      "wins": 639,
+      "games": 1224
+    },
+    {
+      "id": "meditative-085",
+      "wins": 775,
+      "games": 1474
+    },
+    {
+      "id": "meditative-086",
+      "wins": 645,
+      "games": 1339
+    },
+    {
+      "id": "meditative-087",
+      "wins": 1279,
+      "games": 2251
+    },
+    {
+      "id": "meditative-088",
+      "wins": 611,
+      "games": 1260
+    },
+    {
+      "id": "meditative-089",
+      "wins": 391,
+      "games": 815
+    },
+    {
+      "id": "meditative-090",
+      "wins": 282,
+      "games": 581
+    },
+    {
+      "id": "meditative-091",
+      "wins": 936,
+      "games": 1855
+    },
+    {
+      "id": "meditative-092",
+      "wins": 718,
+      "games": 1437
+    },
+    {
+      "id": "meditative-093",
+      "wins": 720,
+      "games": 1424
+    },
+    {
+      "id": "meditative-094",
+      "wins": 703,
+      "games": 1370
+    },
+    {
+      "id": "meditative-095",
+      "wins": 673,
+      "games": 1285
+    },
+    {
+      "id": "meditative-096",
+      "wins": 276,
+      "games": 614
+    },
+    {
+      "id": "meditative-097",
+      "wins": 421,
+      "games": 832
+    },
+    {
+      "id": "meditative-098",
+      "wins": 268,
+      "games": 576
+    },
+    {
+      "id": "meditative-099",
+      "wins": 342,
+      "games": 701
+    },
+    {
+      "id": "meditative-100",
+      "wins": 641,
+      "games": 1344
+    },
+    {
+      "id": "meditative-101",
+      "wins": 642,
+      "games": 1355
+    },
+    {
+      "id": "meditative-102",
+      "wins": 757,
+      "games": 1532
+    },
+    {
+      "id": "meditativeplus-001",
+      "wins": 327,
+      "games": 698
+    },
+    {
+      "id": "meditativeplus-002",
+      "wins": 307,
+      "games": 598
+    },
+    {
+      "id": "meditativeplus-003",
+      "wins": 315,
+      "games": 614
+    },
+    {
+      "id": "meditativeplus-004",
+      "wins": 562,
+      "games": 1015
+    },
+    {
+      "id": "meditativeplus-005",
+      "wins": 311,
+      "games": 629
+    },
+    {
+      "id": "meditativeplus-006",
+      "wins": 288,
+      "games": 593
+    },
+    {
+      "id": "meditativeplus-007",
+      "wins": 613,
+      "games": 1296
+    },
+    {
+      "id": "meditativeplus-008",
+      "wins": 739,
+      "games": 1440
+    },
+    {
+      "id": "meditativeplus-009",
+      "wins": 268,
+      "games": 587
+    },
+    {
+      "id": "meditativeplus-010",
+      "wins": 662,
+      "games": 1251
+    },
+    {
+      "id": "meditativeplus-011",
+      "wins": 597,
+      "games": 1218
+    },
+    {
+      "id": "meditativeplus-012",
+      "wins": 602,
+      "games": 1252
+    },
+    {
+      "id": "meditativeplus-013",
+      "wins": 641,
+      "games": 1254
+    },
+    {
+      "id": "meditativeplus-014",
+      "wins": 294,
+      "games": 613
+    },
+    {
+      "id": "meditativeplus-015",
+      "wins": 516,
+      "games": 939
+    },
+    {
+      "id": "meditativeplus-016",
+      "wins": 1003,
+      "games": 1964
+    },
+    {
+      "id": "meditativeplus-017",
+      "wins": 312,
+      "games": 637
+    },
+    {
+      "id": "meditativeplus-018",
+      "wins": 299,
+      "games": 583
+    },
+    {
+      "id": "meditativeplus-019",
+      "wins": 312,
+      "games": 617
+    },
+    {
+      "id": "meditativeplus-020",
+      "wins": 557,
+      "games": 1090
+    },
+    {
+      "id": "meditativeplus-021",
+      "wins": 863,
+      "games": 1623
+    },
+    {
+      "id": "meditativeplus-022",
+      "wins": 384,
+      "games": 728
+    },
+    {
+      "id": "meditativeplus-023",
+      "wins": 509,
+      "games": 1075
+    },
+    {
+      "id": "meditativeplus-024",
+      "wins": 753,
+      "games": 1467
+    },
+    {
+      "id": "meditativeplus-025",
+      "wins": 519,
+      "games": 1055
+    },
+    {
+      "id": "meditativeplus-026",
+      "wins": 298,
+      "games": 603
+    },
+    {
+      "id": "stinkyscape-001",
+      "wins": 279,
+      "games": 577
+    },
+    {
+      "id": "stinkyscape-002",
+      "wins": 360,
+      "games": 726
+    },
+    {
+      "id": "stinkyscape-003",
+      "wins": 382,
+      "games": 756
+    },
+    {
+      "id": "stinkyscape-004",
+      "wins": 326,
+      "games": 619
+    },
+    {
+      "id": "stinkyscape-005",
+      "wins": 274,
+      "games": 583
+    },
+    {
+      "id": "stinkyscape-006",
+      "wins": 853,
+      "games": 1754
+    },
+    {
+      "id": "stinkyscape-007",
+      "wins": 329,
+      "games": 680
+    },
+    {
+      "id": "stinkyscape-008",
+      "wins": 376,
+      "games": 729
+    },
+    {
+      "id": "stinkyscape-009",
+      "wins": 367,
+      "games": 720
+    },
+    {
+      "id": "stinkyscape-010",
+      "wins": 368,
+      "games": 751
+    },
+    {
+      "id": "stinkyscape-011",
+      "wins": 415,
+      "games": 773
+    },
+    {
+      "id": "stinkyscape-012",
+      "wins": 314,
+      "games": 623
+    },
+    {
+      "id": "stinkyscape-013",
+      "wins": 390,
+      "games": 738
+    },
+    {
+      "id": "stinkyscape-014",
+      "wins": 700,
+      "games": 1440
+    },
+    {
+      "id": "stinkyscape-015",
+      "wins": 639,
+      "games": 1323
+    },
+    {
+      "id": "stinkyscape-016",
+      "wins": 302,
+      "games": 615
+    },
+    {
+      "id": "stinkyscape-017",
+      "wins": 645,
+      "games": 1269
+    },
+    {
+      "id": "stinkyscape-018",
+      "wins": 448,
+      "games": 881
+    },
+    {
+      "id": "stinkyscape-019",
+      "wins": 767,
+      "games": 1400
+    },
+    {
+      "id": "stinkyscape-020",
+      "wins": 719,
+      "games": 1353
+    },
+    {
+      "id": "stinkyscape-021",
+      "wins": 477,
+      "games": 926
+    },
+    {
+      "id": "stinkyscape-022",
+      "wins": 303,
+      "games": 640
+    },
+    {
+      "id": "stinkyscape-023",
+      "wins": 302,
+      "games": 565
+    },
+    {
+      "id": "stinkyscape-024",
+      "wins": 321,
+      "games": 665
+    },
+    {
+      "id": "stinkyscape-025",
+      "wins": 538,
+      "games": 1041
+    },
+    {
+      "id": "stinkyscape-026",
+      "wins": 768,
+      "games": 1519
+    },
+    {
+      "id": "stinkyscape-027",
+      "wins": 685,
+      "games": 1267
+    },
+    {
+      "id": "stinkyscape-028",
+      "wins": 700,
+      "games": 1253
+    },
+    {
+      "id": "stinkyscape-029",
+      "wins": 775,
+      "games": 1394
+    },
+    {
+      "id": "stinkyscape-030",
+      "wins": 757,
+      "games": 1453
+    },
+    {
+      "id": "stinkyscape-031",
+      "wins": 687,
+      "games": 1272
+    },
+    {
+      "id": "stinkyscape-032",
+      "wins": 710,
+      "games": 1255
+    },
+    {
+      "id": "stinkyscape-033",
+      "wins": 707,
+      "games": 1305
+    },
+    {
+      "id": "stinkyscape-034",
+      "wins": 170,
+      "games": 291
+    },
+    {
+      "id": "stinkyscape-035",
+      "wins": 157,
+      "games": 265
+    },
+    {
+      "id": "stinkyscape-036",
+      "wins": 130,
+      "games": 236
+    },
+    {
+      "id": "stinkyscape-037",
+      "wins": 995,
+      "games": 2035
+    },
+    {
+      "id": "stinkyscape-038",
+      "wins": 650,
+      "games": 1264
+    },
+    {
+      "id": "stinkyscape-039",
+      "wins": 386,
+      "games": 792
+    },
+    {
+      "id": "stinkyscape-040",
+      "wins": 842,
+      "games": 1721
+    },
+    {
+      "id": "stinkyscape-041",
+      "wins": 326,
+      "games": 618
+    },
+    {
+      "id": "stinkyscape-042",
+      "wins": 713,
+      "games": 1407
+    },
+    {
+      "id": "stinkyscape-043",
+      "wins": 598,
+      "games": 1248
+    },
+    {
+      "id": "stinkyscape-044",
+      "wins": 370,
+      "games": 723
+    },
+    {
+      "id": "stinkyscape-045",
+      "wins": 704,
+      "games": 1331
+    },
+    {
+      "id": "stinkyscape-046",
+      "wins": 279,
+      "games": 586
+    },
+    {
+      "id": "stinkyscape-047",
+      "wins": 308,
+      "games": 653
+    },
+    {
+      "id": "stinkyscape-048",
+      "wins": 643,
+      "games": 1222
+    },
+    {
+      "id": "stinkyscape-049",
+      "wins": 691,
+      "games": 1369
+    },
+    {
+      "id": "stinkyscape-050",
+      "wins": 820,
+      "games": 1601
+    },
+    {
+      "id": "stinkyscape-051",
+      "wins": 845,
+      "games": 1628
+    },
+    {
+      "id": "stinkyscape-052",
+      "wins": 801,
+      "games": 1538
+    },
+    {
+      "id": "stinkyscape-053",
+      "wins": 776,
+      "games": 1620
+    },
+    {
+      "id": "stinkyscape-054",
+      "wins": 868,
+      "games": 1612
+    },
+    {
+      "id": "stinkyscape-055",
+      "wins": 889,
+      "games": 1605
+    },
+    {
+      "id": "stinkyscape-056",
+      "wins": 861,
+      "games": 1642
+    },
+    {
+      "id": "stinkyscape-057",
+      "wins": 887,
+      "games": 1674
+    },
+    {
+      "id": "stinkyscape-058",
+      "wins": 698,
+      "games": 1359
+    },
+    {
+      "id": "stinkyscape-059",
+      "wins": 722,
+      "games": 1372
+    },
+    {
+      "id": "stinkyscape-060",
+      "wins": 744,
+      "games": 1439
+    },
+    {
+      "id": "stinkyscape-061",
+      "wins": 726,
+      "games": 1399
+    },
+    {
+      "id": "stinkyscape-062",
+      "wins": 619,
+      "games": 1238
+    },
+    {
+      "id": "stinkyscape-063",
+      "wins": 653,
+      "games": 1246
+    },
+    {
+      "id": "stinkyscape-064",
+      "wins": 684,
+      "games": 1433
+    },
+    {
+      "id": "stinkyscape-065",
+      "wins": 764,
+      "games": 1480
+    },
+    {
+      "id": "stinkyscape-066",
+      "wins": 607,
+      "games": 1210
+    },
+    {
+      "id": "stinkyscape-067",
+      "wins": 629,
+      "games": 1282
+    },
+    {
+      "id": "stinkyscape-068",
+      "wins": 631,
+      "games": 1271
+    },
+    {
+      "id": "stinkyscape-069",
+      "wins": 648,
+      "games": 1427
+    },
+    {
+      "id": "stinkyscape-070",
+      "wins": 596,
+      "games": 1215
+    },
+    {
+      "id": "stinkyscape-071",
+      "wins": 623,
+      "games": 1282
+    },
+    {
+      "id": "stinkyscape-072",
+      "wins": 662,
+      "games": 1371
+    },
+    {
+      "id": "stinkyscape-073",
+      "wins": 636,
+      "games": 1237
+    },
+    {
+      "id": "stinkyscape-074",
+      "wins": 618,
+      "games": 1260
+    },
+    {
+      "id": "stinkyscape-075",
+      "wins": 631,
+      "games": 1273
+    },
+    {
+      "id": "stinkyscape-076",
+      "wins": 668,
+      "games": 1440
+    },
+    {
+      "id": "stinkyscape-077",
+      "wins": 642,
+      "games": 1386
+    },
+    {
+      "id": "stinkyscape-078",
+      "wins": 748,
+      "games": 1495
+    },
+    {
+      "id": "stinkyscape-079",
+      "wins": 612,
+      "games": 1200
+    },
+    {
+      "id": "stinkyscape-080",
+      "wins": 617,
+      "games": 1276
+    },
+    {
+      "id": "stinkyscape-081",
+      "wins": 753,
+      "games": 1487
+    },
+    {
+      "id": "stinkyscape-082",
+      "wins": 637,
+      "games": 1266
+    },
+    {
+      "id": "stinkyscape-083",
+      "wins": 614,
+      "games": 1242
+    },
+    {
+      "id": "stinkyscape-084",
+      "wins": 314,
+      "games": 610
+    },
+    {
+      "id": "stinkyscape-085",
+      "wins": 643,
+      "games": 1298
+    },
+    {
+      "id": "stinkyscape-086",
+      "wins": 622,
+      "games": 1226
+    },
+    {
+      "id": "stinkyscape-087",
+      "wins": 937,
+      "games": 1913
+    },
+    {
+      "id": "stinkyscape-088",
+      "wins": 963,
+      "games": 1949
+    },
+    {
+      "id": "stinkyscape-089",
+      "wins": 285,
+      "games": 597
+    },
+    {
+      "id": "stinkyscape-090",
+      "wins": 738,
+      "games": 1441
+    },
+    {
+      "id": "stinkyscape-091",
+      "wins": 705,
+      "games": 1438
+    },
+    {
+      "id": "stinkyscape-092",
+      "wins": 820,
+      "games": 1717
+    },
+    {
+      "id": "stinkyscape-093",
+      "wins": 740,
+      "games": 1438
+    },
+    {
+      "id": "stinkyscape-094",
+      "wins": 783,
+      "games": 1494
+    },
+    {
+      "id": "stinkyscape-095",
+      "wins": 378,
+      "games": 743
+    },
+    {
+      "id": "stinkyscape-096",
+      "wins": 641,
+      "games": 1289
+    },
+    {
+      "id": "stinkyscape-097",
+      "wins": 401,
+      "games": 741
+    },
+    {
+      "id": "stinkyscape-098",
+      "wins": 620,
+      "games": 1290
+    },
+    {
+      "id": "stinkyscape-099",
+      "wins": 330,
+      "games": 620
+    },
+    {
+      "id": "stinkyscape-100",
+      "wins": 642,
+      "games": 1255
+    },
+    {
+      "id": "stinkyscape-101",
+      "wins": 712,
+      "games": 1393
+    },
+    {
+      "id": "stinkyscape-102",
+      "wins": 527,
+      "games": 943
+    },
+    {
+      "id": "stinkyscape-103",
+      "wins": 751,
+      "games": 1451
+    },
+    {
+      "id": "stinkyscape-104",
+      "wins": 686,
+      "games": 1377
+    },
+    {
+      "id": "stinkyscape-105",
+      "wins": 655,
+      "games": 1366
+    },
+    {
+      "id": "stinkyscape-106",
+      "wins": 638,
+      "games": 1247
+    },
+    {
+      "id": "stinkyscape-107",
+      "wins": 654,
+      "games": 1309
+    },
+    {
+      "id": "stinkyscape-108",
+      "wins": 742,
+      "games": 1401
+    },
+    {
+      "id": "stinkyscape-109",
+      "wins": 772,
+      "games": 1572
+    },
+    {
+      "id": "stinkyscape-110",
+      "wins": 891,
+      "games": 1792
+    },
+    {
+      "id": "stinkyscape-111",
+      "wins": 798,
+      "games": 1597
+    },
+    {
+      "id": "stinkyscape-112",
+      "wins": 291,
+      "games": 609
+    },
+    {
+      "id": "stinkyscape-113",
+      "wins": 656,
+      "games": 1296
+    },
+    {
+      "id": "stinkyscape-114",
+      "wins": 582,
+      "games": 1233
+    },
+    {
+      "id": "stinkyscape-115",
+      "wins": 773,
+      "games": 1597
+    },
+    {
+      "id": "stinkyscape-116",
+      "wins": 579,
+      "games": 1217
+    },
+    {
+      "id": "stinkyscape-117",
+      "wins": 366,
+      "games": 790
+    },
+    {
+      "id": "stinkyscape-118",
+      "wins": 407,
+      "games": 814
+    },
+    {
+      "id": "stinkyscape-119",
+      "wins": 393,
+      "games": 773
+    },
+    {
+      "id": "stinkyscape-120",
+      "wins": 404,
+      "games": 834
+    },
+    {
+      "id": "stinkyscape-121",
+      "wins": 318,
+      "games": 641
+    },
+    {
+      "id": "stinkyscape-122",
+      "wins": 591,
+      "games": 1222
+    },
+    {
+      "id": "stinkyscape-123",
+      "wins": 605,
+      "games": 1263
+    },
+    {
+      "id": "stinkyscape-124",
+      "wins": 527,
+      "games": 1032
+    },
+    {
+      "id": "stinkyscape-125",
+      "wins": 532,
+      "games": 1016
+    },
+    {
+      "id": "stinkyscape-126",
+      "wins": 495,
+      "games": 1000
+    },
+    {
+      "id": "stinkyscape-127",
+      "wins": 991,
+      "games": 1817
+    },
+    {
+      "id": "stinkyscape-128",
+      "wins": 747,
+      "games": 1504
+    },
+    {
+      "id": "stinkyscape-129",
+      "wins": 731,
+      "games": 1441
+    },
+    {
+      "id": "stinkyscape-130",
+      "wins": 405,
+      "games": 807
+    },
+    {
+      "id": "stinkyscape-131",
+      "wins": 284,
+      "games": 582
+    },
+    {
+      "id": "stinkyscape-132",
+      "wins": 707,
+      "games": 1400
+    },
+    {
+      "id": "stinkyscape-133",
+      "wins": 612,
+      "games": 1233
+    },
+    {
+      "id": "stinkyscape-134",
+      "wins": 635,
+      "games": 1260
+    },
+    {
+      "id": "stinkyscape-135",
+      "wins": 310,
+      "games": 623
+    },
+    {
+      "id": "stinkyscape-136",
+      "wins": 703,
+      "games": 1379
+    },
+    {
+      "id": "stinkyscape-137",
+      "wins": 643,
+      "games": 1249
+    },
+    {
+      "id": "stinkyscape-138",
+      "wins": 290,
+      "games": 609
+    },
+    {
+      "id": "stinkyscape-139",
+      "wins": 378,
+      "games": 730
+    },
+    {
+      "id": "stinkyscape-140",
+      "wins": 855,
+      "games": 1601
+    },
+    {
+      "id": "stinkyscape-141",
+      "wins": 807,
+      "games": 1608
+    },
+    {
+      "id": "stinkyscape-142",
+      "wins": 939,
+      "games": 1814
+    },
+    {
+      "id": "stinkyscape-143",
+      "wins": 846,
+      "games": 1646
+    },
+    {
+      "id": "stinkyscape-144",
+      "wins": 311,
+      "games": 622
+    },
+    {
+      "id": "stinkyscape-145",
+      "wins": 313,
+      "games": 651
+    },
+    {
+      "id": "stinkyscape-146",
+      "wins": 274,
+      "games": 573
+    },
+    {
+      "id": "stinkyscape-147",
+      "wins": 982,
+      "games": 1874
+    },
+    {
+      "id": "stinkyscape-148",
+      "wins": 391,
+      "games": 624
+    },
+    {
+      "id": "stinkyscape-149",
+      "wins": 396,
+      "games": 824
+    },
+    {
+      "id": "stinkyscape-150",
+      "wins": 681,
+      "games": 1276
+    },
+    {
+      "id": "stinkyscape-151",
+      "wins": 643,
+      "games": 1240
+    },
+    {
+      "id": "stinkyscape-152",
+      "wins": 324,
+      "games": 635
+    },
+    {
+      "id": "stinkyscape-153",
+      "wins": 279,
+      "games": 581
+    },
+    {
+      "id": "stinkyscape-154",
+      "wins": 281,
+      "games": 583
+    },
+    {
+      "id": "stinkyscape-155",
+      "wins": 354,
+      "games": 701
+    },
+    {
+      "id": "stinkyscape-156",
+      "wins": 256,
+      "games": 565
+    },
+    {
+      "id": "stinkyscape-157",
+      "wins": 306,
+      "games": 620
+    },
+    {
+      "id": "stinkyscape-158",
+      "wins": 333,
+      "games": 683
+    },
+    {
+      "id": "stinkyscape-159",
+      "wins": 318,
+      "games": 630
+    },
+    {
+      "id": "stinkyscape-160",
+      "wins": 351,
+      "games": 717
+    },
+    {
+      "id": "stinkyscape-161",
+      "wins": 383,
+      "games": 725
+    },
+    {
+      "id": "stinkyscape-162",
+      "wins": 342,
+      "games": 672
+    },
+    {
+      "id": "stinkyscape-163",
+      "wins": 288,
+      "games": 577
+    },
+    {
+      "id": "stinkyscape-164",
+      "wins": 267,
+      "games": 545
+    },
+    {
+      "id": "stinkyscape-165",
+      "wins": 288,
+      "games": 640
+    },
+    {
+      "id": "stinkyscape-166",
+      "wins": 286,
+      "games": 596
+    },
+    {
+      "id": "stinkyscape-167",
+      "wins": 339,
+      "games": 698
+    },
+    {
+      "id": "stinkyscape-168",
+      "wins": 407,
+      "games": 796
+    },
+    {
+      "id": "stinkyscape-169",
+      "wins": 596,
+      "games": 1256
+    },
+    {
+      "id": "stinkyscape-170",
+      "wins": 658,
+      "games": 1259
+    },
+    {
+      "id": "stinkyscape-171",
+      "wins": 696,
+      "games": 1415
+    },
+    {
+      "id": "stinkyscape-172",
+      "wins": 607,
+      "games": 1260
+    },
+    {
+      "id": "stinkyscape-173",
+      "wins": 629,
+      "games": 1381
+    },
+    {
+      "id": "stinkyscape-174",
+      "wins": 319,
+      "games": 668
+    },
+    {
+      "id": "stinkyscape-175",
+      "wins": 677,
+      "games": 1260
+    },
+    {
+      "id": "stinkyscape-176",
+      "wins": 405,
+      "games": 788
+    },
+    {
+      "id": "stinkyscape-177",
+      "wins": 542,
+      "games": 1166
+    },
+    {
+      "id": "stinkyscapeplus-001",
+      "wins": 450,
+      "games": 916
+    },
+    {
+      "id": "stinkyscapeplus-002",
+      "wins": 704,
+      "games": 1487
+    },
+    {
+      "id": "stinkyscapeplus-003",
+      "wins": 873,
+      "games": 1832
+    },
+    {
+      "id": "stinkyscapeplus-004",
+      "wins": 1341,
+      "games": 2600
+    },
+    {
+      "id": "stinkyscapeplus-005",
+      "wins": 878,
+      "games": 1748
+    },
+    {
+      "id": "stinkyscapeplus-006",
+      "wins": 710,
+      "games": 1414
+    },
+    {
+      "id": "stinkyscapeplus-007",
+      "wins": 661,
+      "games": 1265
+    },
+    {
+      "id": "stinkyscapeplus-008",
+      "wins": 892,
+      "games": 1637
+    },
+    {
+      "id": "stinkyscapeplus-009",
+      "wins": 774,
+      "games": 1569
+    },
+    {
+      "id": "stinkyscapeplus-010",
+      "wins": 711,
+      "games": 1380
+    },
+    {
+      "id": "stinkyscapeplus-011",
+      "wins": 695,
+      "games": 1467
+    },
+    {
+      "id": "stinkyscapeplus-012",
+      "wins": 619,
+      "games": 1244
+    },
+    {
+      "id": "stinkyscapeplus-013",
+      "wins": 664,
+      "games": 1358
+    },
+    {
+      "id": "stinkyscapeplus-014",
+      "wins": 609,
+      "games": 1226
+    },
+    {
+      "id": "stinkyscapeplus-015",
+      "wins": 682,
+      "games": 1413
+    },
+    {
+      "id": "stinkyscapeplus-016",
+      "wins": 661,
+      "games": 1397
+    },
+    {
+      "id": "stinkyscapeplus-017",
+      "wins": 573,
+      "games": 1141
+    },
+    {
+      "id": "stinkyscapeplus-018",
+      "wins": 551,
+      "games": 1059
+    },
+    {
+      "id": "stinkyscapeplus-019",
+      "wins": 669,
+      "games": 1344
+    },
+    {
+      "id": "stinkyscapeplus-020",
+      "wins": 297,
+      "games": 581
+    },
+    {
+      "id": "stinkyscapeplus-021",
+      "wins": 729,
+      "games": 1404
+    },
+    {
+      "id": "stinkyscapeplus-022",
+      "wins": 331,
+      "games": 668
+    },
+    {
+      "id": "stinkyscapeplus-023",
+      "wins": 335,
+      "games": 718
+    },
+    {
+      "id": "stinkyscapeplus-024",
+      "wins": 265,
+      "games": 599
+    },
+    {
+      "id": "stinkyscapeplus-025",
+      "wins": 736,
+      "games": 1500
+    },
+    {
+      "id": "stinkyscapeplus-026",
+      "wins": 384,
+      "games": 751
+    },
+    {
+      "id": "stinkyscapeplus-027",
+      "wins": 902,
+      "games": 1794
+    },
+    {
+      "id": "stinkyscapeplus-028",
+      "wins": 313,
+      "games": 615
+    },
+    {
+      "id": "stinkyscapeplus-029",
+      "wins": 682,
+      "games": 1351
+    },
+    {
+      "id": "stinkyscapeplus-030",
+      "wins": 270,
+      "games": 561
+    },
+    {
+      "id": "stinkyscapeplus-031",
+      "wins": 291,
+      "games": 602
+    },
+    {
+      "id": "stinkyscapeplus-032",
+      "wins": 386,
+      "games": 764
+    },
+    {
+      "id": "stinkyscapeplus-033",
+      "wins": 608,
+      "games": 1321
+    },
+    {
+      "id": "stinkyscapeplus-034",
+      "wins": 778,
+      "games": 1491
+    },
+    {
+      "id": "stinkyscapeplus-035",
+      "wins": 731,
+      "games": 1462
+    },
+    {
+      "id": "stinkyscapeplus-036",
+      "wins": 628,
+      "games": 1304
+    },
+    {
+      "id": "stinkyscapeplus-037",
+      "wins": 620,
+      "games": 1280
+    },
+    {
+      "id": "stinkyscapeplus-038",
+      "wins": 763,
+      "games": 1478
+    },
+    {
+      "id": "stinkyscapeplus-039",
+      "wins": 290,
+      "games": 592
+    },
+    {
+      "id": "stinkyscapeplus-040",
+      "wins": 285,
+      "games": 638
+    },
+    {
+      "id": "stinkyscapeplus-041",
+      "wins": 342,
+      "games": 666
+    },
+    {
+      "id": "stinkyscapeplus-042",
+      "wins": 427,
+      "games": 908
+    },
+    {
+      "id": "stinkyscapeplus-043",
+      "wins": 376,
+      "games": 801
+    },
+    {
+      "id": "stinkyscapeplus-044",
+      "wins": 622,
+      "games": 1361
+    },
+    {
+      "id": "stinkyscapeplus-045",
+      "wins": 630,
+      "games": 1339
+    },
+    {
+      "id": "stinkyscapeplus-046",
+      "wins": 620,
+      "games": 1340
+    },
+    {
+      "id": "stinkyscapeplus-047",
+      "wins": 661,
+      "games": 1388
+    },
+    {
+      "id": "stinkyscapeplus-048",
+      "wins": 611,
+      "games": 1348
+    },
+    {
+      "id": "stinkyscapeplus-049",
+      "wins": 602,
+      "games": 1327
+    },
+    {
+      "id": "stinkyscapeplus-050",
+      "wins": 594,
+      "games": 1317
+    },
+    {
+      "id": "stinkyscapeplus-051",
+      "wins": 367,
+      "games": 707
+    },
+    {
+      "id": "stinkyscapeplus-052",
+      "wins": 348,
+      "games": 695
+    },
+    {
+      "id": "stinkyscapeplus-053",
+      "wins": 359,
+      "games": 744
+    },
+    {
+      "id": "stinkyscapeplus-054",
+      "wins": 377,
+      "games": 758
+    },
+    {
+      "id": "stinkyscapeplus-055",
+      "wins": 353,
+      "games": 804
+    },
+    {
+      "id": "stinkyscapeplus-056",
+      "wins": 394,
+      "games": 870
+    },
+    {
+      "id": "stinkyscapeplus-057",
+      "wins": 343,
+      "games": 669
+    },
+    {
+      "id": "stinkyscapeplus-058",
+      "wins": 701,
+      "games": 1345
+    },
+    {
+      "id": "stinkyscapeplus-059",
+      "wins": 391,
+      "games": 779
+    },
+    {
+      "id": "stinkyscapeplus-060",
+      "wins": 693,
+      "games": 1386
+    },
+    {
+      "id": "stinkyscapeplus-061",
+      "wins": 835,
+      "games": 1737
+    },
+    {
+      "id": "stinkyscapeplus-062",
+      "wins": 288,
+      "games": 590
+    },
+    {
+      "id": "stinkyscapeplus-063",
+      "wins": 397,
+      "games": 801
+    },
+    {
+      "id": "stinkyscapeplus-064",
+      "wins": 701,
+      "games": 1384
+    },
+    {
+      "id": "stinkyscapeplus-065",
+      "wins": 672,
+      "games": 1357
+    },
+    {
+      "id": "stinkyscapeplus-066",
+      "wins": 630,
+      "games": 1302
+    },
+    {
+      "id": "stinkyscapeplus-067",
+      "wins": 679,
+      "games": 1345
+    },
+    {
+      "id": "stinkyscapeplus-068",
+      "wins": 298,
+      "games": 625
+    },
+    {
+      "id": "stinkyscapeplus-069",
+      "wins": 606,
+      "games": 1378
+    },
+    {
+      "id": "stinkyscapeplus-070",
+      "wins": 447,
+      "games": 878
+    },
+    {
+      "id": "stinkyscapeplus-071",
+      "wins": 282,
+      "games": 608
+    },
+    {
+      "id": "stinkyscapeplus-072",
+      "wins": 613,
+      "games": 1317
+    },
+    {
+      "id": "stinkyscapeplus-073",
+      "wins": 711,
+      "games": 1515
+    },
+    {
+      "id": "stinkyscapeplus-074",
+      "wins": 741,
+      "games": 1485
+    },
+    {
+      "id": "stinkyscapeplus-075",
+      "wins": 880,
+      "games": 1840
+    },
+    {
+      "id": "stinkyscapeplus-076",
+      "wins": 399,
+      "games": 759
+    },
+    {
+      "id": "stinkyscapeplus-077",
+      "wins": 584,
+      "games": 1307
+    },
+    {
+      "id": "stinkyscapeplus-078",
+      "wins": 569,
+      "games": 1246
+    },
+    {
+      "id": "stinkyscapeplus-079",
+      "wins": 568,
+      "games": 1310
+    },
+    {
+      "id": "stinkyscapeplus-080",
+      "wins": 575,
+      "games": 1322
+    },
+    {
+      "id": "stinkyscapeplus-081",
+      "wins": 658,
+      "games": 1374
+    },
+    {
+      "id": "stinkyscapeplus-082",
+      "wins": 310,
+      "games": 594
+    },
+    {
+      "id": "stinkyscapeplus-083",
+      "wins": 872,
+      "games": 1767
+    },
+    {
+      "id": "stinkyscapeplus-084",
+      "wins": 670,
+      "games": 1450
+    },
+    {
+      "id": "stinkyscapeplus-085",
+      "wins": 366,
+      "games": 723
+    },
+    {
+      "id": "stinkyscapeplus-086",
+      "wins": 724,
+      "games": 1501
+    },
+    {
+      "id": "stinkyscapeplus-087",
+      "wins": 412,
+      "games": 857
+    },
+    {
+      "id": "stinkyscapeplus-088",
+      "wins": 755,
+      "games": 1630
+    },
+    {
+      "id": "stinkyscapeplus-089",
+      "wins": 684,
+      "games": 1448
+    },
+    {
+      "id": "stinkyscapeplus-090",
+      "wins": 780,
+      "games": 1533
+    },
+    {
+      "id": "stinkyscapeplus-091",
+      "wins": 729,
+      "games": 1495
+    },
+    {
+      "id": "stinkyscapeplus-092",
+      "wins": 724,
+      "games": 1513
+    },
+    {
+      "id": "stinkyscapeplus-093",
+      "wins": 798,
+      "games": 1658
+    },
+    {
+      "id": "stinkyscapeplus-094",
+      "wins": 283,
+      "games": 594
+    },
+    {
+      "id": "stinkyscapeplus-095",
+      "wins": 308,
+      "games": 663
+    },
+    {
+      "id": "stinkyscapeplus-096",
+      "wins": 333,
+      "games": 654
+    },
+    {
+      "id": "stinkyscapeplus-097",
+      "wins": 22,
+      "games": 43
+    },
+    {
+      "id": "stinkyscapeplus-098",
+      "wins": 322,
+      "games": 685
+    },
+    {
+      "id": "stinkyscapeplus-099",
+      "wins": 308,
+      "games": 633
+    },
+    {
+      "id": "stinkyscapeplus-100",
+      "wins": 300,
+      "games": 657
+    },
+    {
+      "id": "stinkyscapeplus-101",
+      "wins": 695,
+      "games": 1420
+    },
+    {
+      "id": "stinkyscapeplus-102",
+      "wins": 636,
+      "games": 1214
+    },
+    {
+      "id": "stinkyscapeplus-103",
+      "wins": 350,
+      "games": 621
+    },
+    {
+      "id": "stinkyscapeplus-104",
+      "wins": 315,
+      "games": 640
+    },
+    {
+      "id": "stinkyscapeplus-105",
+      "wins": 736,
+      "games": 1428
+    },
+    {
+      "id": "stinkyscapeplus-106",
+      "wins": 650,
+      "games": 1307
+    },
+    {
+      "id": "stinkyscapeplus-107",
+      "wins": 761,
+      "games": 1539
+    },
+    {
+      "id": "stinkyscapeplus-108",
+      "wins": 699,
+      "games": 1437
+    },
+    {
+      "id": "stinkyscapeplus-109",
+      "wins": 684,
+      "games": 1440
+    },
+    {
+      "id": "stinkyscapeplus-110",
+      "wins": 651,
+      "games": 1286
+    },
+    {
+      "id": "stinkyscapeplus-111",
+      "wins": 595,
+      "games": 1238
+    },
+    {
+      "id": "stinkyscapeplus-112",
+      "wins": 755,
+      "games": 1510
+    },
+    {
+      "id": "stinkyscapeplus-113",
+      "wins": 760,
+      "games": 1537
+    },
+    {
+      "id": "stinkyscapeplus-114",
+      "wins": 718,
+      "games": 1421
+    },
+    {
+      "id": "stinkyscapeplus-115",
+      "wins": 642,
+      "games": 1279
+    },
+    {
+      "id": "stinkyscapeplus-116",
+      "wins": 642,
+      "games": 1337
+    },
+    {
+      "id": "stinkyscapeplus-117",
+      "wins": 669,
+      "games": 1402
+    },
+    {
+      "id": "stinkyscapeplus-118",
+      "wins": 761,
+      "games": 1611
+    },
+    {
+      "id": "stinkyscapeplus-119",
+      "wins": 619,
+      "games": 1317
+    },
+    {
+      "id": "stinkyscapeplus-120",
+      "wins": 644,
+      "games": 1279
+    },
+    {
+      "id": "stinkyscapeplus-121",
+      "wins": 28,
+      "games": 61
+    },
+    {
+      "id": "stinkyscapeplus-122",
+      "wins": 817,
+      "games": 1527
+    },
+    {
+      "id": "stinkyscapeplus-123",
+      "wins": 635,
+      "games": 1301
+    },
+    {
+      "id": "stinkyscapeplus-124",
+      "wins": 759,
+      "games": 1502
+    },
+    {
+      "id": "stinkyscapeplus-125",
+      "wins": 670,
+      "games": 1310
+    },
+    {
+      "id": "stinkyscapeplus-126",
+      "wins": 768,
+      "games": 1559
+    },
+    {
+      "id": "stinkyscapeplus-127",
+      "wins": 603,
+      "games": 1288
+    },
+    {
+      "id": "stinkyscapeplus-128",
+      "wins": 335,
+      "games": 640
+    },
+    {
+      "id": "stinkyscapeplus-129",
+      "wins": 383,
+      "games": 810
+    },
+    {
+      "id": "stinkyscapeplus-130",
+      "wins": 321,
+      "games": 675
+    },
+    {
+      "id": "stinkyscapeplus-131",
+      "wins": 337,
+      "games": 726
+    },
+    {
+      "id": "stinkyscapeplus-132",
+      "wins": 374,
+      "games": 777
+    },
+    {
+      "id": "stinkyscapeplus-133",
+      "wins": 338,
+      "games": 678
+    },
+    {
+      "id": "stinkyscapeplus-134",
+      "wins": 334,
+      "games": 687
+    },
+    {
+      "id": "stinkyscapeplus-135",
+      "wins": 368,
+      "games": 723
+    },
+    {
+      "id": "stinkyscapeplus-136",
+      "wins": 426,
+      "games": 833
+    },
+    {
+      "id": "stinkyscapeplus-137",
+      "wins": 324,
+      "games": 646
+    },
+    {
+      "id": "stinkyscapeplus-138",
+      "wins": 381,
+      "games": 775
+    },
+    {
+      "id": "stinkyscapeplus-139",
+      "wins": 284,
+      "games": 630
+    },
+    {
+      "id": "stinkyscapeplus-140",
+      "wins": 334,
+      "games": 664
+    },
+    {
+      "id": "stinkyscapeplus-141",
+      "wins": 662,
+      "games": 1348
+    },
+    {
+      "id": "stinkyscapeplus-142",
+      "wins": 641,
+      "games": 1249
+    },
+    {
+      "id": "stinkyscapeplus-143",
+      "wins": 798,
+      "games": 1547
+    },
+    {
+      "id": "stinkyscapeplus-144",
+      "wins": 828,
+      "games": 1596
+    },
+    {
+      "id": "stinkyscapeplus-145",
+      "wins": 722,
+      "games": 1414
+    },
+    {
+      "id": "stinkyscapeplus-146",
+      "wins": 797,
+      "games": 1617
+    },
+    {
+      "id": "stinkyscapeplus-147",
+      "wins": 854,
+      "games": 1682
+    },
+    {
+      "id": "stinkyscapeplus-148",
+      "wins": 720,
+      "games": 1430
+    },
+    {
+      "id": "stinkyscapeplus-149",
+      "wins": 632,
+      "games": 1273
+    },
+    {
+      "id": "stinkyscapeplus-150",
+      "wins": 679,
+      "games": 1420
+    },
+    {
+      "id": "stinkyscapeplus-151",
+      "wins": 562,
+      "games": 1173
+    },
+    {
+      "id": "stinkyscapeplus-152",
+      "wins": 653,
+      "games": 1366
+    },
+    {
+      "id": "stinkyscapeplus-153",
+      "wins": 678,
+      "games": 1470
+    },
+    {
+      "id": "stinkyscapeplus-154",
+      "wins": 725,
+      "games": 1400
+    },
+    {
+      "id": "stinkyscapeplus-155",
+      "wins": 313,
+      "games": 637
+    },
+    {
+      "id": "stinkyscapeplus-156",
+      "wins": 601,
+      "games": 1257
+    },
+    {
+      "id": "stinkyscapeplus-157",
+      "wins": 632,
+      "games": 1247
+    },
+    {
+      "id": "stinkyscapeplus-158",
+      "wins": 311,
+      "games": 617
+    },
+    {
+      "id": "stinkyscapeplus-159",
+      "wins": 655,
+      "games": 1291
+    },
+    {
+      "id": "stinkyscapeplus-160",
+      "wins": 629,
+      "games": 1278
+    },
+    {
+      "id": "stinkyscapeplus-161",
+      "wins": 690,
+      "games": 1466
+    },
+    {
+      "id": "stinkyscapeplus-162",
+      "wins": 692,
+      "games": 1290
+    },
+    {
+      "id": "stinkyscapeplus-163",
+      "wins": 884,
+      "games": 1854
+    },
+    {
+      "id": "stinkyscapeplus-164",
+      "wins": 364,
+      "games": 701
+    },
+    {
+      "id": "stinkyscapeplus-165",
+      "wins": 644,
+      "games": 1233
+    },
+    {
+      "id": "stinkyscapeplus-166",
+      "wins": 386,
+      "games": 813
+    },
+    {
+      "id": "traininggrounds-001",
+      "wins": 599,
+      "games": 1294
+    },
+    {
+      "id": "traininggrounds-002",
+      "wins": 672,
+      "games": 1292
+    },
+    {
+      "id": "traininggrounds-003",
+      "wins": 640,
+      "games": 1266
+    },
+    {
+      "id": "traininggrounds-004",
+      "wins": 727,
+      "games": 1432
+    },
+    {
+      "id": "traininggrounds-005",
+      "wins": 710,
+      "games": 1390
+    },
+    {
+      "id": "traininggrounds-006",
+      "wins": 591,
+      "games": 1199
+    },
+    {
+      "id": "traininggrounds-007",
+      "wins": 636,
+      "games": 1195
+    },
+    {
+      "id": "traininggrounds-008",
+      "wins": 732,
+      "games": 1517
+    },
+    {
+      "id": "traininggrounds-009",
+      "wins": 622,
+      "games": 1220
+    },
+    {
+      "id": "traininggrounds-010",
+      "wins": 299,
+      "games": 578
+    },
+    {
+      "id": "traininggrounds-011",
+      "wins": 381,
+      "games": 758
+    },
+    {
+      "id": "traininggrounds-012",
+      "wins": 287,
+      "games": 629
+    },
+    {
+      "id": "traininggrounds-013",
+      "wins": 329,
+      "games": 621
+    },
+    {
+      "id": "traininggrounds-014",
+      "wins": 293,
+      "games": 608
+    },
+    {
+      "id": "traininggrounds-015",
+      "wins": 345,
+      "games": 779
+    },
+    {
+      "id": "traininggrounds-016",
+      "wins": 610,
+      "games": 1238
+    },
+    {
+      "id": "traininggrounds-017",
+      "wins": 820,
+      "games": 1566
+    },
+    {
+      "id": "traininggrounds-018",
+      "wins": 636,
+      "games": 1274
+    },
+    {
+      "id": "traininggrounds-019",
+      "wins": 273,
+      "games": 560
+    },
+    {
+      "id": "traininggrounds-020",
+      "wins": 354,
+      "games": 714
+    },
+    {
+      "id": "traininggrounds-021",
+      "wins": 637,
+      "games": 1252
+    },
+    {
+      "id": "traininggrounds-022",
+      "wins": 837,
+      "games": 1587
+    },
+    {
+      "id": "traininggrounds-023",
+      "wins": 947,
+      "games": 1901
+    },
+    {
+      "id": "traininggrounds-024",
+      "wins": 287,
+      "games": 582
+    },
+    {
+      "id": "traininggrounds-025",
+      "wins": 751,
+      "games": 1520
+    },
+    {
+      "id": "traininggrounds-026",
+      "wins": 305,
+      "games": 628
+    },
+    {
+      "id": "traininggrounds-027",
+      "wins": 580,
+      "games": 1288
+    },
+    {
+      "id": "traininggrounds-028",
+      "wins": 714,
+      "games": 1458
+    },
+    {
+      "id": "traininggrounds-029",
+      "wins": 855,
+      "games": 1678
+    },
+    {
+      "id": "traininggrounds-030",
+      "wins": 718,
+      "games": 1453
+    },
+    {
+      "id": "traininggrounds-031",
+      "wins": 379,
+      "games": 772
+    },
+    {
+      "id": "traininggrounds-032",
+      "wins": 647,
+      "games": 1306
+    },
+    {
+      "id": "traininggrounds-033",
+      "wins": 893,
+      "games": 1786
+    },
+    {
+      "id": "traininggrounds-034",
+      "wins": 422,
+      "games": 845
+    },
+    {
+      "id": "traininggrounds-035",
+      "wins": 400,
+      "games": 802
+    },
+    {
+      "id": "traininggrounds-036",
+      "wins": 636,
+      "games": 1294
+    },
+    {
+      "id": "traininggrounds-037",
+      "wins": 342,
+      "games": 737
+    },
+    {
+      "id": "traininggrounds-038",
+      "wins": 656,
+      "games": 1285
+    },
+    {
+      "id": "traininggrounds-039",
+      "wins": 655,
+      "games": 1253
+    },
+    {
+      "id": "traininggrounds-040",
+      "wins": 322,
+      "games": 606
+    },
+    {
+      "id": "traininggrounds-041",
+      "wins": 800,
+      "games": 1522
+    },
+    {
+      "id": "traininggrounds-042",
+      "wins": 294,
+      "games": 599
+    },
+    {
+      "id": "traininggrounds-043",
+      "wins": 656,
+      "games": 1253
+    },
+    {
+      "id": "traininggrounds-044",
+      "wins": 801,
+      "games": 1576
+    },
+    {
+      "id": "traininggrounds-045",
+      "wins": 418,
+      "games": 793
+    },
+    {
+      "id": "traininggrounds-046",
+      "wins": 390,
+      "games": 788
+    },
+    {
+      "id": "traininggrounds-047",
+      "wins": 680,
+      "games": 1404
+    },
+    {
+      "id": "traininggrounds-048",
+      "wins": 801,
+      "games": 1477
+    },
+    {
+      "id": "traininggrounds-049",
+      "wins": 303,
+      "games": 590
+    },
+    {
+      "id": "traininggrounds-050",
+      "wins": 636,
+      "games": 1445
+    },
+    {
+      "id": "traininggrounds-051",
+      "wins": 708,
+      "games": 1423
+    },
+    {
+      "id": "traininggrounds-052",
+      "wins": 418,
+      "games": 785
+    },
+    {
+      "id": "traininggrounds-053",
+      "wins": 716,
+      "games": 1473
+    },
+    {
+      "id": "traininggrounds-054",
+      "wins": 674,
+      "games": 1320
+    },
+    {
+      "id": "traininggrounds-055",
+      "wins": 288,
+      "games": 576
+    },
+    {
+      "id": "traininggrounds-056",
+      "wins": 618,
+      "games": 1231
+    },
+    {
+      "id": "traininggrounds-057",
+      "wins": 308,
+      "games": 634
+    },
+    {
+      "id": "traininggrounds-058",
+      "wins": 296,
+      "games": 605
+    },
+    {
+      "id": "traininggrounds-059",
+      "wins": 580,
+      "games": 1146
+    },
+    {
+      "id": "traininggrounds-060",
+      "wins": 384,
+      "games": 743
+    }
+  ]
+}
