@@ -129,6 +129,7 @@ const SeriesRoute = routeChunks.series.Screen;
 const PracticeRoute = routeChunks.practice.Screen;
 const DungeonRoute = routeChunks.dungeon.Screen;
 const DungeonStatsRoute = routeChunks.dungeonStats.Screen;
+const AssaultRoute = routeChunks.assault.Screen;
 const PrivacyRoute = routeChunks.privacy.Screen;
 const TermsRoute = routeChunks.terms.Screen;
 const PurchasesRoute = routeChunks.purchases.Screen;
@@ -719,6 +720,14 @@ export function App(): ReactElement {
       return (
         <EngineGate>
           <DungeonStatsRoute />
+        </EngineGate>
+      );
+    }
+    // #4581: the Infinite Assault is offline and open to anyone, as practice and the Dungeon run are.
+    if (path === paths.assault) {
+      return (
+        <EngineGate>
+          <AssaultRoute />
         </EngineGate>
       );
     }
