@@ -538,7 +538,7 @@ describe("R192 a stated wait lifts by itself", () => {
     }
   });
 
-  it("R192 paused redemption says how long, and lifts when the breaker's wait is over", async () => {
+  it("R192 paused redemption says how long, and lifts when the pause's wait is over", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
     try {
       const wait = 5 * 60_000;
@@ -1203,7 +1203,7 @@ describe("R3147001 an account with no email address adds one before its code", (
 
 describe("R3147002 the code screen offers a new account's way back to an older one", () => {
   function base64url(text: string): string {
-    return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
   }
 
   function tokenFor(provider: string): string {

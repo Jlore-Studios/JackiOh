@@ -4,19 +4,26 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  FX_ADAPT_DISPLAY_MAX_MS,
+  FX_ADAPT_MOMENT_WINDOW,
   FX_ADAPT_RECOVER_WINDOWS,
+  FX_ADAPT_SLOW_FACTOR,
   FX_ADAPT_SLOW_MS,
   FX_ADAPT_WINDOW,
   FX_MAX_DT_MS,
+  FX_LOW_DEVICE_MEMORY_GB,
   FX_MAX_TAIL_MS,
   FX_MOBILE_WIDTH,
   FX_PARTICLE_CAP,
   FX_PARTICLE_CAP_MIN,
   FX_PARTICLE_CAP_MOBILE,
+  FX_PHONE_FRAME_BUDGET_MS,
+  FX_PHONE_STAGE_LAYERS,
   FX_SHAKE_MAX_DEG,
   FX_SHAKE_MAX_PX,
 } from "./constants.ts";
 import { capacityFor, createFxDirector, type FxDirector, type FxDirectorOptions } from "./director.ts";
+import { cueScreens, layerBudgetScreens, takeoverForm, TAKEOVER_ARTLESS, TAKEOVER_BARE, TAKEOVER_DARK, type FxDevice } from "./layers.ts";
 import { PARTICLE_PRESETS } from "./presets.ts";
 import { resetShedForTests } from "./shed.ts";
 import type { FxSurface } from "./surface.ts";
@@ -26,7 +33,10 @@ import type {
   FxCue,
   FxFrameSource,
   FxShakeOffset,
+  FxSetPieceCue,
   FxShakeSink,
+  FxTakeoverCue,
+  FxTakeoverStage,
   FxVisibility,
 } from "./types.ts";
 
@@ -789,7 +799,7 @@ describe("R3351000 the living game's shared shed order", () => {
   const TINT = { rim: "#ffffff", core: "#000000", glow: "#ff0000" };
 
   it("R3351000 a forced slow frame sheds motes first while the beats still play", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     expect(h.director.shedLevel()).toBe(1);
@@ -803,7 +813,7 @@ describe("R3351000 the living game's shared shed order", () => {
   });
 
   it("R3351000 further slow windows shed far auras, then faces, and healthy windows recover one stage at a time", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     expect(h.director.shedLevel()).toBe(1);
@@ -828,7 +838,7 @@ describe("R3351000 the living game's shared shed order", () => {
   });
 
   it("R3351000 a set piece's main beats never shed, at any stage", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
@@ -850,7 +860,7 @@ describe("R3351000 the living game's shared shed order", () => {
   });
 
   it("R3351000 disposing a director resets the shared shed level to full", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
@@ -859,11 +869,11 @@ describe("R3351000 the living game's shared shed order", () => {
     h.director.dispose();
     expect(h.director.shedLevel()).toBe(0);
     // A director mounted after it starts full too: no cross-route leak.
-    expect(harness({ phone: true }).director.shedLevel()).toBe(0);
+    expect(harness().director.shedLevel()).toBe(0);
   });
 
   it("R3351000 an idle shed board recovers to full on healthy frames with no effect work", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
@@ -882,14 +892,109 @@ describe("R3351000 the living game's shared shed order", () => {
     expect(h.frames.pending()).toBe(0);
   });
 
-  it("R3351000 a desktop director halves its cap on slow windows but never sheds", () => {
+  it("R3606000 a desktop director sheds motes, then far auras, then faces, and recovers one stage per healthy run", () => {
+    const h = harness();
+    settled(h);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(1);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(2);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+    // Past the last stage nothing more sheds.
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(2);
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(1);
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(0);
+    expect(h.director.capacity()).toBe(FX_PARTICLE_CAP);
+  });
+
+  it("R3606000 healthy desktop frames at the display's refresh never leave full", () => {
+    const h = harness();
+    settled(h);
+    h.frameEvery(16, FX_ADAPT_WINDOW * 5);
+    expect(h.director.shedLevel()).toBe(0);
+    expect(h.director.capacity()).toBe(FX_PARTICLE_CAP);
+  });
+
+  it("R3606000 a desktop shed still plays a set piece's main beats", () => {
     const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+    // Every set piece's beats: a takeover, a fold, a launch, a rift and a title card. They are DOM
+    // cues with no particle counts, so emission scaling cannot touch them.
+    h.director.play([
+      { kind: "takeover", stage: null, look: "prismatic", tint: TINT, at: at("card-a"), landMs: 100, delayMs: 0, durationMs: 1000 },
+      { kind: "setPiece", shape: "fold", tint: TINT, spin: 1, side: null, at: at("card-a"), holdMs: 200, delayMs: 0, durationMs: 1000 },
+      { kind: "launch", at: at("card-a"), tint: TINT, size: "large", countsMs: [0, 600, 1200], igniteMs: 100, delayMs: 0, durationMs: 1000 },
+      { kind: "rift", at: at("card-a"), side: "you", tint: TINT, tearMs: 50, flareMs: 150, delayMs: 0, durationMs: 1000 },
+      { kind: "anomalyTitle", at: at("card-a"), text: "Found", picture: "<svg></svg>", tint: TINT, delayMs: 0, durationMs: 1000 },
+    ]);
+    h.frame(h.clock.now() + STEP);
+    for (const kind of ["takeover", "setPiece", "launch", "rift", "anomalyTitle"]) {
+      expect(h.root.querySelectorAll(`[data-fx="${kind}"]`)).toHaveLength(1);
+    }
+  });
+});
+
+describe("R3674000 a slow moment sheds within it", () => {
+  /** A display learned at `ms` a frame (B34) through an ignored wake frame and one healthy window, the stage still full. */
+  function settledAt(h: ReturnType<typeof harness>, ms: number): void {
+    keepBusy(h.director);
+    h.frameEvery(ms, FX_ADAPT_WINDOW + 1);
     expect(h.director.shedLevel()).toBe(0);
-    expect(h.director.capacity()).toBeLessThan(FX_PARTICLE_CAP);
+  }
+
+  it("R3674000 FX_ADAPT_MOMENT_WINDOW frames over FX_PHONE_FRAME_BUDGET_MS shed one stage, the capacity left to the slow window", () => {
+    // On every viewport: a desktop's director and a phone's.
+    for (const capacity of [FX_PARTICLE_CAP, capacityFor(390)]) {
+      resetShedForTests();
+      const h = harness({ capacity });
+      settledAt(h, 16);
+      const slow = FX_PHONE_FRAME_BUDGET_MS + 10;
+      h.frameEvery(slow, FX_ADAPT_MOMENT_WINDOW - 1);
+      expect(h.director.shedLevel()).toBe(0);
+      h.frameEvery(slow, 1);
+      expect(h.director.shedLevel()).toBe(1);
+      expect(h.director.capacity()).toBe(capacity);
+      h.director.dispose();
+    }
+  });
+
+  it("R3674000 a run at exactly FX_PHONE_FRAME_BUDGET_MS sheds nothing; one millisecond more does", () => {
+    const h = harness();
+    // A 30 Hz display, whose slow window lets these frames by.
+    settledAt(h, FX_ADAPT_DISPLAY_MAX_MS);
+    h.frameEvery(FX_PHONE_FRAME_BUDGET_MS, FX_ADAPT_MOMENT_WINDOW);
+    expect(h.director.shedLevel()).toBe(0);
+    h.frameEvery(FX_PHONE_FRAME_BUDGET_MS, FX_ADAPT_MOMENT_WINDOW - 1);
+    h.frameEvery(FX_PHONE_FRAME_BUDGET_MS + 1, 1);
+    expect(h.director.shedLevel()).toBe(1);
+    expect(h.director.capacity()).toBe(FX_PARTICLE_CAP);
+  });
+
+  it("R3674000 a slow moment sheds before its slow window would, and a run and a window that end on one frame shed one stage", () => {
+    const h = harness();
+    settledAt(h, FX_ADAPT_DISPLAY_MAX_MS);
+    // Frames slow enough that the window trips on the second run's last frame.
+    const slow = Math.floor((FX_ADAPT_WINDOW * FX_ADAPT_DISPLAY_MAX_MS * FX_ADAPT_SLOW_FACTOR) / (2 * FX_ADAPT_MOMENT_WINDOW)) + 1;
+    h.frameEvery(slow, FX_ADAPT_MOMENT_WINDOW);
+    expect(h.director.shedLevel()).toBe(1);
+    expect(h.director.capacity()).toBe(FX_PARTICLE_CAP);
+    h.frameEvery(slow, FX_ADAPT_MOMENT_WINDOW);
+    expect(h.director.capacity()).toBe(halved(FX_PARTICLE_CAP));
+    expect(h.director.shedLevel()).toBe(2);
+    // Healthy windows still recover one stage at a time.
+    h.frameEvery(FX_ADAPT_DISPLAY_MAX_MS, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(1);
   });
 });
 
@@ -1024,5 +1129,202 @@ describe("B41 — bursts of a flash preset bloom at their origin", () => {
     h.frame(T0 + STEP);
     expect(h.surface.calls).toContain("createRadialGradient");
     expect(h.surface.calls).toContain("set globalCompositeOperation");
+  });
+});
+
+describe("#3633 a frame reads every box before it writes", () => {
+  /** A harness whose reads (`measure`) log `r` and whose mounts (`appendChild` on the root) log `w`. */
+  function logged(over: Partial<FxDirectorOptions> = {}) {
+    const log: string[] = [];
+    const h = harness({
+      measure: (anchor) => {
+        log.push("r");
+        return anchor.kind === "testid" && anchor.testid === "hero-opponent" ? HERO : CARD;
+      },
+      ...over,
+    });
+    const append = h.root.appendChild.bind(h.root);
+    h.root.appendChild = <T extends Node>(node: T): T => {
+      log.push("w");
+      return append(node);
+    };
+    return { h, log };
+  }
+
+  it("#3633 a frame measures every due cue before it mounts any", () => {
+    const { h, log } = logged();
+    h.director.play([
+      { kind: "rays", tone: "legendary", at: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "sheen", at: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "splat", tone: "damage", amount: 8, at: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "burst", preset: "spark", at: at("hero-opponent"), delayMs: 100, count: 24, spread: "point", power: 1 },
+    ]);
+    h.frame(T0 + 50);
+    expect(log).toEqual([]);
+    h.frame(T0 + 100);
+    expect(log.join("")).toMatch(/^r+w+$/);
+    expect(log.join("")).toBe("rrrrwww");
+    expect(h.root.childElementCount).toBe(3);
+    expect(h.director.particles()).toBeGreaterThan(0);
+  });
+
+  it("#3633 a stage cue keeps its place: the cues before it mount first and the cues after it read the board it moved", () => {
+    const card = document.createElement("div");
+    const { h, log } = logged({ element: (testid) => (testid === "card-b" ? card : null) });
+    const set = card.setAttribute.bind(card);
+    card.setAttribute = (name: string, value: string): void => {
+      if (name === "data-fx-pulled") log.push("s");
+      set(name, value);
+    };
+    h.director.play([
+      { kind: "splat", tone: "damage", amount: 8, at: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "pull", testid: "card-b", to: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "sheen", at: at("card-a"), delayMs: 100, durationMs: D },
+    ]);
+    h.frame(T0 + 100);
+    // The splat reads and mounts, the pull reads its centre and moves its card, then the sheen reads and mounts.
+    expect(log.join("")).toBe("rwrsrw");
+    expect(card.getAttribute("data-fx-pulled")).toBe("true");
+  });
+
+  it("#3633 a cue whose life ran out in a stalled tab is neither measured nor mounted, and the cues beside it still are", () => {
+    const { h, log } = logged();
+    h.director.play([
+      { kind: "sheen", at: at("card-a"), delayMs: 0, durationMs: 50 },
+      { kind: "splat", tone: "damage", amount: 8, at: at("card-a"), delayMs: 0, durationMs: D },
+    ]);
+    // The first frame comes after the sheen's life is over.
+    h.frame(T0 + 60);
+    expect(log.join("")).toBe("rw");
+    expect(h.root.querySelectorAll('[data-fx="sheen"]')).toHaveLength(0);
+    expect(h.root.querySelectorAll('[data-fx="splat"]')).toHaveLength(1);
+  });
+});
+
+describe("R4493001 the director's layer budget", () => {
+  const PHONE: FxDevice = { width: 390, height: 844, dpr: 3, memoryGb: null };
+  const DESKTOP: FxDevice = { width: 1280, height: 800, dpr: 2, memoryGb: 8 };
+  const LOW: FxDevice = { width: 1280, height: 800, dpr: 1, memoryGb: FX_LOW_DEVICE_MEMORY_GB };
+  const TINT = { rim: "#7c3aed", core: "#1e1b4b", glow: "#c4b5fd" };
+  const SLICES = 7;
+  const stage: FxTakeoverStage = {
+    planes: [],
+    name: "Ceaseless Void",
+    face: "ink",
+    slices: Array.from({ length: SLICES }, (_, i) => ({ image: `url(s${String(i)})`, plane: "far" as const, depth: i / (SLICES - 1) })),
+  };
+  const TAKEOVER_MS = 1800;
+  const takeover = (): FxTakeoverCue => ({ kind: "takeover", stage, look: "void", tint: TINT, at: at("card-a"), landMs: 600, delayMs: 0, durationMs: TAKEOVER_MS });
+  const crunch = (delayMs: number): FxSetPieceCue => ({
+    kind: "setPiece",
+    shape: "crunch",
+    tint: TINT,
+    spin: 1,
+    side: null,
+    at: at("card-a"),
+    holdMs: 1200,
+    delayMs,
+    durationMs: 3000,
+  });
+  const slicesOf = (h: ReturnType<typeof harness>): number => h.root.querySelectorAll(".fx-takeover-plane").length;
+  /** As many Big Crunches as leave the phone's budget no room for the takeover with its merged stage, by the director's tables. */
+  const crowd = (): number => {
+    const budget = layerBudgetScreens(PHONE);
+    const merged = cueScreens(takeoverForm(takeover(), TAKEOVER_ARTLESS));
+    return Math.floor((budget - merged) / cueScreens(crunch(0))) + 1;
+  };
+
+  it("R4493001 a phone mounts at most FX_PHONE_STAGE_LAYERS planes", () => {
+    for (const device of [PHONE, { ...PHONE, width: 844, height: 390 }]) {
+      const h = harness({ device: () => device });
+      h.director.play([takeover()]);
+      h.pumpTo(T0 + 20);
+      expect(slicesOf(h)).toBe(FX_PHONE_STAGE_LAYERS);
+      expect(h.root.querySelectorAll(".fx-takeover-stage")).toHaveLength(1);
+    }
+  });
+
+  it("R4493001 desktop, and a director with no device, keep every slice", () => {
+    for (const over of [{ device: () => DESKTOP }, {}]) {
+      const h = harness(over);
+      h.director.play([takeover()]);
+      h.pumpTo(T0 + 20);
+      expect(slicesOf(h)).toBe(SLICES);
+    }
+  });
+
+  it("R4493001 mounted set pieces that fill the budget make the takeover drop its stage, and every set piece still mounts", () => {
+    const n = crowd();
+    expect(n).toBeGreaterThanOrEqual(1);
+    const h = harness({ device: () => PHONE });
+    h.director.play(Array.from({ length: n }, () => crunch(0)));
+    h.pumpTo(T0 + 20);
+    expect(h.root.querySelectorAll('[data-fx="setPiece"]')).toHaveLength(n);
+    h.director.play([takeover()]);
+    h.pumpTo(T0 + 40);
+    // The takeover still mounts, its dark, sweep, rays and wave: a main beat; only its stage went.
+    const mounted = h.root.querySelector('[data-fx="takeover"]');
+    expect(mounted).not.toBeNull();
+    expect([...(mounted?.children ?? [])].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+    expect(h.root.querySelectorAll('[data-fx="setPiece"]')).toHaveLength(n);
+    // One fewer leaves it room for its merged stage.
+    const roomy = harness({ device: () => PHONE });
+    roomy.director.play(Array.from({ length: n - 1 }, () => crunch(0)));
+    roomy.pumpTo(T0 + 20);
+    roomy.director.play([takeover()]);
+    roomy.pumpTo(T0 + 40);
+    expect(slicesOf(roomy)).toBe(FX_PHONE_STAGE_LAYERS);
+  });
+
+  it("R4493001 a pending set piece due before the takeover ends counts; one due after it does not", () => {
+    const n = crowd();
+    const h = harness({ device: () => PHONE });
+    h.director.play([takeover(), ...Array.from({ length: n }, () => crunch(100))]);
+    h.pumpTo(T0 + 20);
+    expect(h.root.querySelector(".fx-takeover-stage")).toBeNull();
+    expect(h.root.querySelector('[data-fx="takeover"]')).not.toBeNull();
+    h.pumpTo(T0 + 120);
+    expect(h.root.querySelectorAll('[data-fx="setPiece"]')).toHaveLength(n);
+    const later = harness({ device: () => PHONE });
+    later.director.play([takeover(), ...Array.from({ length: n }, () => crunch(TAKEOVER_MS + 100))]);
+    later.pumpTo(T0 + 20);
+    expect(slicesOf(later)).toBe(FX_PHONE_STAGE_LAYERS);
+  });
+
+  it("R4493001 a budget too full even for the stageless takeover leaves it its dark and its sweep, and the set pieces all mount", () => {
+    const budget = layerBudgetScreens(PHONE);
+    const n = Math.floor((budget - cueScreens(takeoverForm(takeover(), TAKEOVER_BARE))) / cueScreens(crunch(0))) + 1;
+    const h = harness({ device: () => PHONE });
+    h.director.play(Array.from({ length: n }, () => crunch(0)));
+    h.pumpTo(T0 + 20);
+    h.director.play([takeover()]);
+    h.pumpTo(T0 + 40);
+    const mounted = h.root.querySelector('[data-fx="takeover"]');
+    expect([...(mounted?.children ?? [])].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-sweep"]);
+    expect(h.root.querySelectorAll('[data-fx="setPiece"]')).toHaveLength(n);
+  });
+
+  it("R4493001 a takeover still to come counts at its dark and its sweep, and takes its own form when it fires", () => {
+    const h = harness({ device: () => PHONE });
+    const second = { ...takeover(), delayMs: 100 };
+    h.director.play([takeover(), second]);
+    h.pumpTo(T0 + 20);
+    // The first keeps its rays and wave beside the least the second will hold, though not its stage.
+    const [first] = h.root.querySelectorAll('[data-fx="takeover"]');
+    const own = (el: Element | undefined): string[] => [...(el?.children ?? [])].map((child) => child.className);
+    expect(own(first)).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+    expect(cueScreens(takeoverForm(takeover(), TAKEOVER_BARE)) + cueScreens(takeoverForm(second, TAKEOVER_DARK))).toBeLessThanOrEqual(layerBudgetScreens(PHONE));
+    h.pumpTo(T0 + 120);
+    // The second, beside the first as it mounted, has room for its dark and its sweep alone.
+    const both = h.root.querySelectorAll('[data-fx="takeover"]');
+    expect(both).toHaveLength(2);
+    expect(own(both[1])).toEqual(["fx-takeover-dark", "fx-takeover-sweep"]);
+  });
+
+  it("R4493001 a low-memory 1280x800 device keeps every slice", () => {
+    const h = harness({ device: () => LOW });
+    h.director.play([takeover()]);
+    h.pumpTo(T0 + 20);
+    expect(slicesOf(h)).toBe(SLICES);
   });
 });

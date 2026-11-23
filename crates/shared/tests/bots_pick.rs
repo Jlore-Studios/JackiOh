@@ -1,7 +1,7 @@
 //! Bot series deck picks (`src/bots/pick.rs`, SPEC §9.5, R641000, R331, R332, R333).
 
 use jackioh_engine::config::DECK_SIZE;
-use jackioh_engine::{CardDefs, GameOverReason, PlayerId, Winner, query_cost};
+use jackioh_engine::{CardDefs, GameOverReason, PlayerId, Rng, Winner, query_cost};
 use jackioh_shared::bots::pick::{bot_pick, pick_due_at, pick_is_due, pick_slot, rule_slot};
 use jackioh_shared::config::{
     BOT_PICK_DELAY_MAX_MS, BOT_PICK_DELAY_MIN_MS, BOT_PICK_RULE_SHARE, SERIES_PICK_SECONDS,
@@ -185,6 +185,49 @@ fn r641000_the_rule_takes_the_slowest_deck_on_the_draw_and_the_fastest_on_the_pl
     }
 }
 
+/// R641000: a deck's pace is the mean cost of its cards, however many it holds, and of two decks at one
+/// pace the rule takes the lower slot, on the draw (game 1) and on the play (game 2).
+#[test]
+fn r641000_the_rule_reads_a_decks_mean_cost_and_a_tie_goes_to_the_lower_slot() {
+    let (person, bot) = trios();
+    let (middle, slow, fast) = (bot.decks.0.cards, bot.decks.1.cards, bot.decks.2.cards);
+    let with = |decks: [&[String]; 3]| -> (FrozenTrio, FrozenTrio) {
+        let [first, second, third] = decks.map(<[String]>::to_vec);
+        let bot = FrozenTrio {
+            name: "Bot trio".to_string(),
+            decks: (
+                frozen("Bot one", first),
+                frozen("Bot two", second),
+                frozen("Bot three", third),
+            ),
+        };
+        (person.clone(), bot)
+    };
+
+    // On the draw, the slowest: slots 1 and 2 hold one deck.
+    let tied_slow = series(&with([&middle, &slow, &slow]), "tie");
+    assert_eq!(rule_slot(&tied_slow, BOT_SEAT, defs()), Some(1));
+    // On the play, the fastest: slots 0 and 1 hold one deck.
+    let tied_fast = play(
+        &series(&with([&fast, &fast, &slow]), "tie"),
+        0,
+        2,
+        Winner::Draw,
+        NOW,
+        "match-2",
+    );
+    assert_eq!(rule_slot(&tied_fast, BOT_SEAT, defs()), Some(0));
+
+    // The mean, not the total: the two dearest cards alone are slower than a whole deck of the middle.
+    let dearest_two = &slow[slow.len() - 2..];
+    assert!(
+        pace(dearest_two) > pace(&middle),
+        "PREMISE: the dearest two cost more than the middle deck's mean"
+    );
+    let short = series(&with([dearest_two, &middle, &fast]), "short");
+    assert_eq!(rule_slot(&short, BOT_SEAT, defs()), Some(0));
+}
+
 #[test]
 fn r641000_the_pick_follows_the_rule_about_as_often_as_its_share() {
     let trios = trios();
@@ -333,5 +376,31 @@ fn r641000_the_pick_waits_a_person_s_delay_inside_the_clock() {
         deadline - 1,
     ] {
         assert!(!pick_is_due(&game_3, BOT_SEAT, at), "due at {at}");
+    }
+}
+
+/// R641000: the delay is one uniform draw over every whole millisecond of the window, both ends
+/// included, from the bot's own stream, `{seed_base}:bot-pick-delay:{seat}:{game}` (pick.rs): the
+/// soonest plus one of the BOT_PICK_DELAY_MAX_MS − BOT_PICK_DELAY_MIN_MS + 1 milliseconds from it.
+#[test]
+fn r641000_the_pick_delay_is_one_draw_over_every_millisecond_of_the_window() {
+    let trios = trios();
+    let first_game = 1;
+    let span = i32::try_from(BOT_PICK_DELAY_MAX_MS - BOT_PICK_DELAY_MIN_MS + 1).expect("a span");
+    for k in 0..SEEDS {
+        let row = series(&trios, &format!("delay-{k}"));
+        let mut rng = Rng::new(
+            &format!(
+                "{}:bot-pick-delay:{}:{first_game}",
+                row.seed_base,
+                BOT_SEAT.as_str()
+            ),
+            0,
+        );
+        assert_eq!(
+            pick_due_at(&row, BOT_SEAT),
+            Some(NOW + BOT_PICK_DELAY_MIN_MS + i64::from(rng.int(span))),
+            "seed {k}"
+        );
     }
 }

@@ -364,14 +364,6 @@ pub fn constants() -> Result<String, JsError> {
     js(wasm_core::constants())
 }
 
-/// R1011000: the learned evaluation's parity fixture (`crates/ai/tests/fixtures/learned-parity.json`)
-/// as this build computes it. The web's tests hold the WASM build to the fixture's numbers bit for bit,
-/// as `cargo test -p jackioh-ai` holds the native one.
-#[wasm_bindgen]
-pub fn learned_parity(fixture_json: &str) -> Result<String, JsError> {
-    js(wasm_core::learned_parity(fixture_json))
-}
-
 // The engine's tables the web's tests read (`subsystems.*`)
 
 /// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, so the
@@ -431,7 +423,7 @@ pub fn face(call_json: &str) -> Result<String, JsError> {
 /// One call of the game log: a `LogCall` as JSON in, a `LogAnswer` as JSON out. The catalog is the one
 /// `init` registered; the locale is an argument of the call (`crates/shared/README.md`).
 #[wasm_bindgen]
-pub fn log(call_json: &str) -> Result<String, JsError> {
+pub fn game_log(call_json: &str) -> Result<String, JsError> {
     js(wasm_core::log(call_json))
 }
 

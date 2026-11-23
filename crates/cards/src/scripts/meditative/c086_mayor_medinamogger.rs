@@ -55,14 +55,7 @@ mod tests {
                     "p1": { "hand": [BURN, FILLER], "field": [MAYOR] },
                     "p2": { "hand": [FILLER], "field": [GRUNT] },
                 }));
-                let burn = s.card(BURN).id.clone();
-                let plays: Vec<ActionBody> =
-                    jackioh_engine::reduce::legal_actions(s.state(), P1)
-                        .into_iter()
-                        .filter(|action| {
-                            matches!(action, ActionBody::Play { instance_id, .. } if instance_id == &burn)
-                        })
-                        .collect();
+                let plays: Vec<ActionBody> = s.plays_of(BURN);
                 assert_eq!(plays.len(), 1, "one play, not one per target: {plays:?}");
                 assert!(
                     matches!(&plays[0], ActionBody::Play { targets: None, .. }),
@@ -101,9 +94,10 @@ mod tests {
             }
 
             #[test]
-            fn r1200_r781001_the_drawn_target_is_never_an_immutable_unit_a_spell_cannot_target() {
+            fn r1200_r4353001_the_drawn_target_may_be_an_immutable_unit_a_spell_may_target() {
                 crate::register_all();
-                for n in 0..8 {
+                let mut menace_drawn = 0;
+                for n in 0..16 {
                     let mut s = scenario(json!({
                         "seed": format!("mayor-immutable-{n}"),
                         "p1": { "hand": ["core-016", FILLER], "field": [MAYOR], "mana": 10 },
@@ -111,12 +105,15 @@ mod tests {
                     }));
                     let menace = s.card("core-019").id.clone();
                     let mayor = s.card(MAYOR).id.clone();
-                    // Hit Job's target is drawn from the legal ones (R1200), and a Spell can't target the
-                    // Radiant Midrange Menace in play (R781001): only the Mayor is left to draw.
+                    // Hit Job's target is drawn from the legal ones (R1200), and a Spell may target the
+                    // Radiant Midrange Menace in play (R4353001): it is drawn from the two, and destroyed.
                     s.play("core-016", json!({}));
-                    s.expect_in_zone(&menace, "field");
-                    s.expect_in_zone(&mayor, "graveyard");
+                    let menace_gone = s.card(&menace).zone.z() == ZoneName::Graveyard;
+                    let mayor_gone = s.card(&mayor).zone.z() == ZoneName::Graveyard;
+                    assert!(menace_gone != mayor_gone, "seed {n}: one of the two was drawn and destroyed");
+                    menace_drawn += usize::from(menace_gone);
                 }
+                assert!(menace_drawn > 0, "the Immutable Menace is among the draws");
             }
 
             #[test]
@@ -133,17 +130,7 @@ mod tests {
                 gone.zone = jackioh_engine::wire::Zone::Graveyard { player: P1 };
                 s.state_mut().players[P1].graveyard.push(gone);
                 assert_eq!(s.view(P1).random_targets, None);
-                let burn = s.card(BURN).id.clone();
-                assert_eq!(
-                    jackioh_engine::reduce::legal_actions(s.state(), P1)
-                        .into_iter()
-                        .filter(|action| {
-                            matches!(action, ActionBody::Play { instance_id, .. } if instance_id == &burn)
-                        })
-                        .count(),
-                    3,
-                    "burn at either hero and the grunt — the Mayor is gone"
-                );
+                assert_eq!(s.plays_of(BURN).len(), 3, "burn at either hero and the grunt — the Mayor is gone");
             }
         }
 

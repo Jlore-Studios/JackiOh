@@ -2,14 +2,16 @@
 // preview face are the engine's own `craftPreview`, so these tests prove the editor shows what
 // the reducer will say.
 
-import type { ActionBody } from "@jackioh/shared";
+import type { Action, ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CraftMode, CraftOffer, CraftRecipe, PendingOption, PendingPromptView } from "../../wire/index.ts";
-import { CRAFT_HAT_PRICES } from "../../wire/engineConfig.ts";
+import { CRAFT_HAT_PRICES, SANDBOX_MANA_MAX } from "../../wire/engineConfig.ts";
+import { devDeck, realPort } from "../../audio/test/realGame.ts";
 import { INSPECT_HOVER, INSPECT_SHEET, closeInspect } from "../../cards/index.ts";
 import { LONG_PRESS_MS } from "../../cards/inspect/index.ts";
+import Prompt from "../Prompt.tsx";
 import { CraftEditor } from "./CraftEditor.tsx";
 import { HAT_LABELS } from "./recipe.ts";
 
@@ -565,5 +567,138 @@ describe("R1563007 the palette is the prompt's offer", () => {
 
     expect(screen.queryByRole("button", { name: /^Gain Armor ·/ })).toBeNull();
     expect(screen.getByRole("button", { name: /^Heal your hero ·/ })).toBeInTheDocument();
+  });
+});
+
+// #4294: every web craft test above feeds a hand-written prompt. These drive the real engine (WebAssembly)
+// as a player does: the card is played in a sandbox game, and the prompt `viewFor` redacts for its holder
+// goes through Prompt into the editor, so the chain engine presets → `option_view`'s `recipe` → wire →
+// Prompt → CraftEditor → the answer sent is proven whole (R97: only p1's own view is rendered).
+
+/** Meditative #17 True Craft a Card: a `number` prompt for the cost, then the craft prompt with no mode. */
+const TRUE_CRAFT = "meditative-017";
+/** Meditative+ #16 Jazakus: its Cry opens a `potion` craft prompt (R1182000). */
+const JAZAKUS = "meditativeplus-016";
+/** Meditative+ #16.1 Jazakus Prime: its Cry opens a `hugePotion` craft prompt (R1182001). */
+const JAZAKUS_PRIME = "meditativeplus-016-1";
+/** Meditative+ #26 Scratch Pad: a cost, then a `scratch` craft prompt (R1182002). */
+const SCRATCH_PAD = "meditativeplus-026";
+/** More than the setup's mulligans and the prompts they open ever take. */
+const SETUP_STEPS_MAX = 40;
+
+const port = realPort();
+
+type LiveCraft = { view(): PlayerView; answers(): ActionBody[]; act(body: ActionBody): void };
+
+/** A sandbox game at p1's main phase with full mana, `defId` spawned into p1's hand and played. */
+function castInSandbox(defId: string, radiant: boolean): LiveCraft {
+  const cheap = devDeck("cheap20");
+  let state = port.beginGame(
+    port.createGame({ seed: "r1563007-live-craft", decks: [cheap, cheap], sandbox: true } as Parameters<typeof port.createGame>[0]),
+  ).state;
+  let nonce = 0;
+  const raw = (player: PlayerId, body: ActionBody): void => {
+    nonce += 1;
+    const result = port.reduce(state, { ...body, playerId: player, nonce: `r1563007-${String(nonce)}` } as Action);
+    if (result.error !== undefined) throw new Error(`${player} ${body.type}: ${result.error}`);
+    state = result.state;
+  };
+  const actor = (): PlayerId | undefined =>
+    (["p1", "p2"] as const).find((p) => port.legalActions(state, p).some((a) => a.type !== "concede" && a.type !== "offerDraw"));
+  for (let step = 0; step < SETUP_STEPS_MAX; step += 1) {
+    const v = port.viewFor(state, "p1");
+    if (v.active === "p1" && v.phase === "main" && v.pending === null) break;
+    const who = actor();
+    if (who === undefined) break;
+    const legal = port.legalActions(state, who);
+    const hand = port.viewFor(state, who).you.hand;
+    if (legal.some((a) => a.type === "mulligan")) raw(who, { type: "mulligan", keep: Array.isArray(hand) ? hand.map((c) => c.instanceId) : [] });
+    else raw(who, legal.find((a) => a.type === "answer") ?? { type: "endTurn" });
+  }
+  const sandbox = (op: unknown): void => raw("p1", { type: "sandbox", op } as unknown as ActionBody);
+  sandbox({ kind: "setMana", player: "p1", current: SANDBOX_MANA_MAX, max: SANDBOX_MANA_MAX });
+  sandbox({ kind: "spawn", player: "p1", defId, ...(radiant ? { radiant: true } : {}), to: { zone: "hand" } });
+  const hand = port.viewFor(state, "p1").you.hand;
+  const card = Array.isArray(hand) ? hand.find((c) => c.defId === defId) : undefined;
+  const play = port.legalActions(state, "p1").find((a) => a.type === "play" && a.instanceId === card?.instanceId && a.faceDown === undefined);
+  if (play === undefined) throw new Error(`no play of ${defId}`);
+  raw("p1", play);
+  return {
+    view: () => port.viewFor(state, "p1"),
+    answers: () => port.legalActions(state, "p1").filter((a) => a.type === "answer"),
+    act: (body) => raw("p1", body),
+  };
+}
+
+/** Answers the cost prompt (True Craft's, Scratch Pad's) with `cost`. */
+function answerCost(game: LiveCraft, cost: number): void {
+  const want = JSON.stringify([{ pick: "mode", option: String(cost) }]);
+  const answer = game.answers().find((a) => a.type === "answer" && JSON.stringify(a.selection) === want);
+  if (answer === undefined) throw new Error(`no cost ${String(cost)} answer`);
+  game.act(answer);
+}
+
+/** p1's open craft prompt, as its view carries it. */
+function craftPrompt(view: PlayerView): PendingPromptView {
+  const pending = view.pending;
+  if (pending === null || !pending.forYou || pending.kind !== "craft") throw new Error("no craft prompt is open for p1");
+  return pending;
+}
+
+/** Every preset of the live prompt is a suggestion under its heading, and Craft after it sends its recipe. */
+function expectSuggestions(view: PlayerView, where: string): void {
+  const pending = craftPrompt(view);
+  expect(pending.options.length, where).toBeGreaterThan(0);
+  const onAction = vi.fn();
+  render(<Prompt view={view} onAction={onAction} />);
+  const row = screen.getByLabelText("Suggestions");
+  expect(within(row).getByRole("heading", { name: "Suggestions" }), where).toBeInTheDocument();
+  pending.options.forEach((option, index) => {
+    expect(option.recipe, `${where}: preset ${String(index)}'s recipe`).toBeDefined();
+    fireEvent.click(within(row).getByTestId(`craft-preset-${String(index)}`));
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    expect(onAction, `${where}: preset ${String(index)}`).toHaveBeenLastCalledWith({
+      type: "answer",
+      choiceId: pending.choiceId,
+      selection: [{ pick: "craft", recipe: option.recipe }],
+    });
+  });
+  cleanup();
+}
+
+describe("R1563007 the live prompt's presets are its suggestions (#4294)", () => {
+  it("R1563007 every cost and face of True Craft a Card, Jazakus and Jazakus Prime: viewFor's presets are suggestions that load and send their recipe", () => {
+    const costs = castInSandbox(TRUE_CRAFT, false).answers().length;
+    expect(costs).toBeGreaterThanOrEqual(1);
+    for (const radiant of [false, true]) {
+      for (let cost = 0; cost < costs; cost += 1) {
+        const game = castInSandbox(TRUE_CRAFT, radiant);
+        answerCost(game, cost);
+        expect(craftPrompt(game.view()).budget).toBe(cost);
+        expectSuggestions(game.view(), `True Craft cost ${String(cost)} radiant ${String(radiant)}`);
+      }
+    }
+    for (const [defId, mode] of [
+      [JAZAKUS, "potion"],
+      [JAZAKUS_PRIME, "hugePotion"],
+    ] as const) {
+      const view = castInSandbox(defId, false).view();
+      expect(craftPrompt(view).craftMode).toBe(mode);
+      expectSuggestions(view, defId);
+    }
+  });
+
+  it("R1182002 Scratch Pad's live prompt keeps its presets for the AI and shows no suggestion", () => {
+    const game = castInSandbox(SCRATCH_PAD, false);
+    answerCost(game, 2);
+    const view = game.view();
+    const pending = craftPrompt(view);
+    expect(pending.craftMode).toBe("scratch");
+    expect(pending.options.length).toBeGreaterThan(0);
+
+    render(<Prompt view={view} onAction={vi.fn()} />);
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-craft-mode", "scratch");
+    expect(screen.queryByLabelText("Suggestions")).toBeNull();
+    expect(screen.queryAllByTestId(/^craft-preset-/)).toHaveLength(0);
   });
 });

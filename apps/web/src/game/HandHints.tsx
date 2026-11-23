@@ -5,12 +5,12 @@
 
 import type { ReactElement } from "react";
 
-import type { CardView, PlayerView } from "@jackioh/shared";
+import type { CardView } from "@jackioh/shared";
 
 import { Icon } from "../cards/index.ts";
 import { useCardInfo, useCopiedDef } from "./catalog.ts";
 import { useLiveFace } from "./faces.ts";
-import { HAND_HINTS, hintsFor, type HandHint } from "./handHints.ts";
+import { HAND_HINTS, hintsFor, type HandHint, type HintView } from "./handHints.ts";
 import "./handHints.css";
 
 export function handHintsTestid(instanceId: string): string {
@@ -23,7 +23,7 @@ export default function HandHints({
   hints = HAND_HINTS,
 }: {
   card: CardView;
-  view: PlayerView;
+  view: HintView;
   hints?: readonly HandHint[] | undefined;
 }): ReactElement | null {
   // The same face `Card.tsx` draws: the definition from the public catalog (or the match-made

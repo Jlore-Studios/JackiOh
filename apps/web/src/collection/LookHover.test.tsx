@@ -37,7 +37,6 @@ function defOf(id: string): CardDef {
 /** The grid of `ids`, each owned, Core's set opened. */
 function grid(ids: readonly string[]): void {
   render(<OwnedCards collection={collectionOwning(ids)} defs={ids.map(defOf)} />);
-  fireEvent.click(screen.getByTestId(T.setToggle("Core")));
 }
 
 function tile(id: string): HTMLElement {

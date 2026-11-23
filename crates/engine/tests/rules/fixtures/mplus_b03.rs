@@ -1,7 +1,9 @@
 //! Test-only cards for the systems Meditative+ batch 03 builds (issue #1181): an effect made "in N
 //! turns" with its countdown badge (`delay`'s `turns` and `label`, R1181000), Mountaintop Garden's
 //! aura over embiggen prices (the `embiggenGarden` static flag, R1181002) and a price for the
-//! Embiggened version alone (`add_to_hand`'s `embiggenCostOverride`, R1181003). Ids `b3-…` from 11840.
+//! Embiggened version alone (`add_to_hand`'s `embiggenCostOverride`, R1181003), the shape M+ #23 had
+//! through v0.6.8d, and since #4350 no Embiggen premium (`noEmbiggenPremium`, R4350000). Ids `b3-…`
+//! from 11840.
 
 use std::sync::LazyLock;
 
@@ -58,6 +60,8 @@ pub static GARDEN: LazyLock<CardDef> = LazyLock::new(|| card(11842, "garden", "F
 pub static CASTER: LazyLock<CardDef> = LazyLock::new(|| card(11843, "caster", "Spell", json!(0)));
 /// "Add a swell to your hand; its Embiggened version costs (0)" (M+ #23's shape).
 pub static ELDER: LazyLock<CardDef> = LazyLock::new(|| card(11844, "elder", "Spell", json!(0)));
+/// "Add a swell to your hand; its Embiggened version costs no extra mana" (M+ #23's shape since #4350).
+pub static ELDER_LIVE: LazyLock<CardDef> = LazyLock::new(|| card(11845, "elder-live", "Spell", json!(0)));
 
 fn garden(premium: i32) -> Script {
     Script {
@@ -127,6 +131,19 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
                 ..Script::default()
             }),
         ),
+        (
+            ELDER_LIVE.id.clone(),
+            both(Script {
+                cry: Some(hook(|_ctx| {
+                    vec![effects::add_to_hand(effects::AddToHandArgs {
+                        def_id: Some(SWELL.id.clone()),
+                        no_embiggen_premium: Some(true),
+                        ..effects::AddToHandArgs::default()
+                    })]
+                })),
+                ..Script::default()
+            }),
+        ),
     ])
 });
 
@@ -137,6 +154,7 @@ pub static B03_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         GARDEN.clone(),
         CASTER.clone(),
         ELDER.clone(),
+        ELDER_LIVE.clone(),
     ]
 });
 

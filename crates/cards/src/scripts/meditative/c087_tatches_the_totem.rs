@@ -1,26 +1,31 @@
 //! M #87 Tatches the Totem (SPEC §8.8 row 87): (0) Unit ((1) until issue #3138), All Tribes (Human,
-//! Felinor, KY, CN, Jlockeed), Legendary, 0/3 → 0/6.
+//! Felinor, KY, CN, Jlockeed), Legendary, 0/4 → 0/8 (0/3 → 0/6 until issue #4154).
 //!
-//! Base:    "While in your deck: After you play a card with a tribal tag, summon this.
-//!          End of turn: Buff {cards|random card|random cards} in your hand or deck."
-//! Radiant: "While in your deck: After you play a card with a tribal tag, summon this.
-//!          End of turn: Buff {cards|random card|random cards} in your hand or deck and each adjacent
-//!          Unit."
+//! Base:    "While this is in your deck: After you play a card with a tribal tag, summon this.
+//!          End of turn: Buff {cards|random card|random cards} in your hand."
+//! Radiant: "While this is in your deck: After you play a card with a tribal tag, summon this.
+//!          End of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
 //! Engine: a deck trigger (R464, C+ #37 Wardrum's) on `cardResolved` of a `tribal_play`: `summon_this`
 //! into the leftmost open unit zone (R64), no Cry (R1), the first either player sees of it (R97); with
-//! no open zone it stays in the deck. A face-down play is a Trap with no tags until revealed (R448), so
-//! it summons nothing. End of turn: one Buff on a uniform pick over hand and deck (R440); Radiant, then
-//! one Buff on each Unit `adjacent_to` this (§3.1). "All Tribes" is all five tribal tags in the
-//! catalog's `tags`, read off them by the client — no catalog field of its own.
+//! no open zone it stays where it is. R4285004: issue #4285 took the hand out again, so a Tatches in the hand
+//! stays there; after v0.6.4c through v0.6.7k it summoned itself from the hand too (issue #3951), which
+//! `script_v0_6_7k` keeps for those replays, and through v0.6.4c from the deck alone, as now
+//! (`script_v0_6_4c`, R767000). A face-down play is a Trap with no tags until revealed (R448), so
+//! it summons nothing. End of turn: one Buff on a uniform pick over the hand (R440); Radiant, then one
+//! Buff on each Unit `adjacent_to` this (§3.1). Issue #3837 took the deck out of the pick; through
+//! v0.6.2c it was over hand and deck, which `script_v0_6_2c` keeps for those replays (R767000). "All
+//! Tribes" is all five tribal tags in the catalog's `tags`, read off them by the client — no catalog
+//! field of its own.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-087";
 
 /// Whether this resolution summons Tatches: its owner's play or cast (R70; not on draw, R2179002) of a card whose running
-/// face is neither Trap nor Field Trap and carries a tribal tag (R1424, MD-E11).
+/// face carries a tribal tag (R1424, MD-E11) and whose play counts as neither Trap nor Field Trap
+/// (`played_type_of`: a card set by its Cloaked is the Trap it was set as, R783005).
 fn tribal_play(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
-    let GameEvent::CardResolved { player, def_id, radiant, .. } = event else {
+    let GameEvent::CardResolved { player, def_id, .. } = event else {
         return false;
     };
     // R2179002: a card cast on draw is no play.
@@ -28,10 +33,7 @@ fn tribal_play(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
         return false;
     }
     let state: &GameState = ctx.state;
-    if matches!(
-        card_type_of_face(state, def_id, *radiant == Some(true)),
-        CardType::Trap | CardType::FieldTrap
-    ) {
+    if matches!(played_type_of(state, event), Some(CardType::Trap | CardType::FieldTrap)) {
         return false;
     }
     def_of(Some(state), def_id).tags.iter().any(|tag| TRIBAL_TAGS.contains(tag))
@@ -44,10 +46,15 @@ fn summon_on_tribal() -> TriggerDef {
     })
 }
 
-fn end_of_turn(radiant: bool) -> Hook {
+/// The piles the end-of-turn Buff picks from: the hand since issue #3837.
+const ZONES: &[&str] = &["hand"];
+/// Through v0.6.2c: the hand or the deck.
+const ZONES_V0_6_2C: &[&str] = &["hand", "library"];
+
+fn end_of_turn(radiant: bool, zones: &'static [&'static str]) -> Hook {
     hook(move |ctx| {
         let mut effects = vec![upgrade(json_as(json!({
-            "scope": { "side": "self", "zones": ["hand", "library"] },
+            "scope": { "side": "self", "zones": zones },
             "random": param(&*ctx, "cards"),
         })))];
         if radiant {
@@ -68,19 +75,47 @@ fn end_of_turn(radiant: bool) -> Hook {
     })
 }
 
-pub fn script() -> CardScripts {
+/// `from_hand`: whether it summons itself from the hand too (after v0.6.4c through v0.6.7k, issues #3951 and
+/// #4285).
+fn tatches(zones: &'static [&'static str], from_hand: bool) -> CardScripts {
+    let hand_triggers = || if from_hand { vec![summon_on_tribal()] } else { vec![] };
     CardScripts {
         base: Script {
+            hand_triggers: hand_triggers(),
             deck_triggers: vec![summon_on_tribal()],
-            end_of_turn: Some(end_of_turn(false)),
+            end_of_turn: Some(end_of_turn(false, zones)),
             ..Script::default()
         },
         radiant: Script {
+            hand_triggers: hand_triggers(),
             deck_triggers: vec![summon_on_tribal()],
-            end_of_turn: Some(end_of_turn(true)),
+            end_of_turn: Some(end_of_turn(true, zones)),
             ..Script::default()
         },
     }
+}
+
+/// R4285004: "While this is in your deck": the deck alone.
+pub fn script() -> CardScripts {
+    tatches(ZONES, false)
+}
+
+/// R767000, R4285004: the summon from the hand or the deck, after v0.6.4c through v0.6.7k (issue #4285);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_7k() -> CardScripts {
+    tatches(ZONES, true)
+}
+
+/// R767000: the summon from the deck alone, through v0.6.4c (issue #3951); `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_6_4c() -> CardScripts {
+    tatches(ZONES, false)
+}
+
+/// R767000: the end-of-turn Buff over hand and deck, through v0.6.2c; `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_6_2c() -> CardScripts {
+    tatches(ZONES_V0_6_2C, false)
 }
 
 // M #87 Tatches the Totem — SPEC §8.8 row 87, BUILD M10 row M 87.
@@ -137,7 +172,7 @@ mod tests {
         /// from the deck as ever (a summon pays nothing).
         #[test]
         fn issue_3138_it_costs_0_plays_for_no_mana_and_is_summoned_from_the_deck_on_both_faces() {
-            for (radiant, health) in [(false, 3), (true, 6)] {
+            for (radiant, health) in [(false, 4), (true, 8)] {
                 let mut s = scenario(json!({
                     "p1": { "mana": 0, "hand": [{ "def": TATCHES, "radiant": radiant }, FILLER] },
                     "p2": { "hand": [FILLER] },
@@ -201,6 +236,73 @@ mod tests {
                 assert!(!events.iter().any(|event| event["type"] == "cardPlayed" && event["defId"] == TATCHES));
             }
 
+            /// R4285004: "While this is in your deck": a tribal play leaves a Tatches in the hand where it is,
+            /// and still summons one from the deck, on both faces.
+            #[test]
+            fn r4285004_a_tribal_play_never_summons_it_from_the_hand_and_still_from_the_deck() {
+                for radiant in [false, true] {
+                    let mut s = scenario(json!({
+                        "p1": {
+                            "mana": 10,
+                            "hand": [VANILLA, { "def": TATCHES, "radiant": radiant }],
+                            "library": [FILLER, FILLER],
+                        },
+                        "p2": { "hand": [FILLER], "library": filler(4) },
+                    }));
+                    s.play(VANILLA, json!({}));
+                    assert!(s.unit(P1, 2).is_none(), "radiant {radiant}");
+                    assert!(s.hand(P1).iter().any(|card| card.def_id == TATCHES), "radiant {radiant}");
+
+                    let mut s = scenario(json!({
+                        "p1": {
+                            "mana": 10,
+                            "hand": [VANILLA],
+                            "library": [FILLER, { "def": TATCHES, "radiant": radiant }, FILLER],
+                        },
+                        "p2": { "hand": [FILLER], "library": filler(4) },
+                    }));
+                    s.play(VANILLA, json!({}));
+                    assert_eq!(s.unit(P1, 2).map(|card| card.def_id), Some(TATCHES.to_string()), "radiant {radiant}");
+                    assert!(!in_deck(&s));
+                }
+            }
+
+            /// R767000, R4285004: after v0.6.4c through v0.6.7k (issue #3951), "While in your hand or deck": a
+            /// Tatches in the hand was summoned as one in the deck is.
+            #[test]
+            fn r464_r767000_the_kept_v0_6_7k_script_summons_it_from_the_hand_too() {
+                crate::under_kept(TATCHES, script_v0_6_7k(), || {
+                    for radiant in [false, true] {
+                        let mut s = scenario(json!({
+                            "p1": {
+                                "mana": 10,
+                                "hand": [VANILLA, { "def": TATCHES, "radiant": radiant }],
+                                "library": [FILLER, FILLER],
+                            },
+                            "p2": { "hand": [FILLER], "library": filler(4) },
+                        }));
+                        s.play(VANILLA, json!({}));
+                        assert_eq!(s.unit(P1, 2).map(|card| card.def_id), Some(TATCHES.to_string()), "radiant {radiant}");
+                        assert!(!s.hand(P1).iter().any(|card| card.def_id == TATCHES));
+                        assert!(!events_json(&s).iter().any(|event| event["type"] == "cardPlayed" && event["defId"] == TATCHES));
+                    }
+                });
+            }
+
+            /// R767000: through v0.6.4c only the deck summoned it (issue #3951).
+            #[test]
+            fn r767000_the_kept_v0_6_4c_script_leaves_it_in_the_hand() {
+                crate::under_kept(TATCHES, script_v0_6_4c(), || {
+                    let mut s = scenario(json!({
+                        "p1": { "mana": 10, "hand": [VANILLA, TATCHES], "library": [FILLER, FILLER] },
+                        "p2": { "hand": [FILLER], "library": filler(4) },
+                    }));
+                    s.play(VANILLA, json!({}));
+                    assert!(s.unit(P1, 2).is_none());
+                    assert!(s.hand(P1).iter().any(|card| card.def_id == TATCHES));
+                });
+            }
+
             #[test]
             fn r1162_a_card_with_no_tribal_tag_does_nothing() {
                 let mut s = decked("tatches-plain", json!([STATELESS]));
@@ -217,6 +319,15 @@ mod tests {
                 let trap = s.backrow(P1, 1).expect("the set trap");
                 assert_eq!(trap.def_id, GROOM);
                 assert!(trap.face_up != Some(true));
+                assert!(in_deck(&s));
+            }
+
+            /// R783005: a Unit set face-down by its Cloaked is a Trap play, so the Human it is summons
+            /// nothing (R448).
+            #[test]
+            fn r783005_a_unit_set_face_down_by_its_cloaked_is_a_trap_play_and_summons_nothing() {
+                let mut s = decked("tatches-cloaked", json!([crate::CLOAKED_UNIT, FILLER]));
+                crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 1);
                 assert!(in_deck(&s));
             }
 
@@ -282,45 +393,58 @@ mod tests {
                 assert!(shown.iter().any(|event| event["type"] == "summoned" && event["defId"] == TATCHES));
             }
 
+            /// The last Buff's card.
+            fn last_buffed(s: &Scenario) -> String {
+                s.events()
+                    .iter()
+                    .filter_map(|event| match event {
+                        GameEvent::Upgraded { instance_id, .. } => Some(instance_id.clone()),
+                        _ => None,
+                    })
+                    .next_back()
+                    .expect("the Buff")
+            }
+
+            /// Tatches on the field with a two-card hand and a three-card deck, the seed numbered.
+            fn standing(seed: usize, radiant: bool) -> Scenario {
+                scenario(json!({
+                    "seed": format!("tatches-eot-{seed}"),
+                    "p1": {
+                        "hand": [FILLER, FILLER],
+                        "field": [{ "def": TATCHES, "radiant": radiant, "lane": 1 }],
+                        "library": filler(3),
+                    },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }))
+            }
+
             #[test]
-            fn r440_end_of_turn_one_random_card_of_hand_and_deck_gets_one_buff() {
-                let mut hand_hit = false;
-                let mut deck_hit = false;
+            fn r440_end_of_turn_one_random_card_of_the_hand_gets_one_buff_never_the_deck() {
                 for seed in 1..=20 {
-                    let mut s = scenario(json!({
-                        "seed": format!("tatches-eot-{seed}"),
-                        "p1": {
-                            "hand": [FILLER, FILLER],
-                            "field": [{ "def": TATCHES, "lane": 1 }],
-                            "library": filler(3),
-                        },
-                        "p2": { "hand": [FILLER], "library": filler(4) },
-                    }));
+                    let mut s = standing(seed, false);
                     let hand: Vec<String> =
                         s.hand(P1).iter().map(|card| card.id.clone()).collect();
-                    let deck: Vec<String> =
-                        s.pile(P1, "library").iter().map(|card| card.id.clone()).collect();
                     let before = upgraded_count(s.events());
                     s.end_turn();
                     assert_eq!(upgraded_count(s.events()), before + 1, "one Buff (seed {seed})");
-                    let buffed = s
-                        .events()
-                        .iter()
-                        .filter_map(|event| match event {
-                            GameEvent::Upgraded { instance_id, .. } => Some(instance_id.clone()),
-                            _ => None,
-                        })
-                        .next_back()
-                        .expect("the Buff");
-                    if hand.contains(&buffed) {
-                        hand_hit = true;
-                    } else if deck.contains(&buffed) {
-                        deck_hit = true;
-                    } else {
-                        panic!("the Buff hit neither pile: {buffed}");
-                    }
+                    let buffed = last_buffed(&s);
+                    assert!(hand.contains(&buffed), "the Buff left the hand (seed {seed}): {buffed}");
                 }
-                assert!(hand_hit && deck_hit, "both piles are reached");
+            }
+
+            #[test]
+            fn r767000_the_kept_v0_6_2c_script_reaches_the_deck() {
+                crate::under_kept(ID, script_v0_6_2c(), || {
+                    let mut deck_hit = false;
+                    for seed in 1..=20 {
+                        let mut s = standing(seed, false);
+                        let deck: Vec<String> =
+                            s.pile(P1, "library").iter().map(|card| card.id.clone()).collect();
+                        s.end_turn();
+                        deck_hit |= deck.contains(&last_buffed(&s));
+                    }
+                    assert!(deck_hit, "the deck is reached");
+                });
             }
 
             #[test]
@@ -369,6 +493,38 @@ mod tests {
                 assert_eq!(upgraded_for(s.events(), &one), 1);
                 assert_eq!(upgraded_for(s.events(), &three), 1);
                 assert_eq!(upgraded_for(s.events(), &five), 0, "lane 5 is untouched");
+            }
+
+            #[test]
+            fn radiant_buffs_the_hand_never_the_deck_and_each_adjacent_unit() {
+                for seed in 1..=20 {
+                    let mut s = scenario(json!({
+                        "seed": format!("rtatches-eot-{seed}"),
+                        "p1": {
+                            "hand": [FILLER, FILLER],
+                            "field": [{ "def": TATCHES, "radiant": true, "lane": 1 }, { "def": VANILLA, "lane": 2 }],
+                            "library": filler(3),
+                        },
+                        "p2": { "hand": [FILLER], "library": filler(4) },
+                    }));
+                    let hand: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
+                    let deck: Vec<String> =
+                        s.pile(P1, "library").iter().map(|card| card.id.clone()).collect();
+                    let neighbour = s.unit(P1, 2).expect("lane 2").id.clone();
+                    let before = s.events().len();
+                    s.end_turn();
+                    let buffed: Vec<String> = s.events()[before..]
+                        .iter()
+                        .filter_map(|event| match event {
+                            GameEvent::Upgraded { instance_id, .. } => Some(instance_id.clone()),
+                            _ => None,
+                        })
+                        .collect();
+                    assert_eq!(buffed.len(), 2, "seed {seed}");
+                    assert!(hand.contains(&buffed[0]), "seed {seed}: {buffed:?}");
+                    assert_eq!(buffed[1], neighbour, "seed {seed}");
+                    assert!(!buffed.iter().any(|id| deck.contains(id)), "seed {seed}");
+                }
             }
 
             #[test]

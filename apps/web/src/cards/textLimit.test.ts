@@ -16,7 +16,10 @@ import { faceModel } from "./model.ts";
 
 const SUMMIT_DEF_ID = "meditative-008";
 const MORE = "…";
-const SHORT_FORMS: Readonly<Record<string, { base?: number | string; radiant?: number | string }>> = shortFormsJson.forms;
+/** R3941001: a face's words written for play, `{key}`s and all, in English (and in Chinese, where written). */
+type Written = { en: string; zh?: string };
+type Form = number | string | Written;
+const SHORT_FORMS: Readonly<Record<string, { base?: Form; radiant?: Form }>> = shortFormsJson.forms;
 
 const DEFS = Object.values(CATALOG);
 const FACES = [false, true] as const;
@@ -31,7 +34,7 @@ function printed(defId: string, radiant: boolean): { full: string; form: "clamp"
   return { full, form, shown: (form === null ? null : face.short?.full) ?? full };
 }
 
-describe("R1017000 the face text limit", () => {
+describe("R1017000 R3941001 the face text limit", () => {
   it("R1017000 faceLines wraps by words at a width, each line of the text starting a new one", () => {
     expect(faceLines("", 28)).toBe(1);
     expect(faceLines("Deal 2 damage.", 28)).toBe(1);
@@ -68,7 +71,12 @@ describe("R1017000 the face text limit", () => {
         // A clamp is for a face over the limit; a cut short form may also hide a reminder or the
         // designer's flavour at the end of a face that fits, which the click-in carries.
         if (form === "clamp") expect(overLimit(full, FACE_TEXT_LIMIT), `${where} fits the limit whole`).toBe(true);
-        else {
+        else if (typeof form === "object") {
+          // R3941001: words written for a face its whole text overflows, which fit where the whole text does not.
+          expect(overLimit(full, FACE_TEXT_LIMIT), `${where} fits the limit whole`).toBe(true);
+          expect(overLimit(shown, FACE_TEXT_LIMIT), `${where}'s written words`).toBe(false);
+          expect(shown, `${where} prints its written words`).not.toBe(full);
+        } else {
           expect(shown, `${where} has nothing to cut`).not.toBe(full);
           expect(shown.endsWith(MORE), where).toBe(true);
           expect(full.startsWith(shown.slice(0, -MORE.length)), `${where} is not its text's start`).toBe(true);
@@ -77,7 +85,19 @@ describe("R1017000 the face text limit", () => {
     }
   });
 
-  it("B15 R1017000 the premise: the longest texts (Core's #93, #95 and #98, Classic+ #73, five Meditative cards, two Stinkyscape rows and the held Training Grounds #39) each print a short form", () => {
+  it("B15 R1017000 a clamped face's whole text fits the hover preview's limit, so no face clamps at 270 px", () => {
+    // A clamp cuts the text at the rules box's last line, which holds only while the whole text fits
+    // the preview's limit: past it the clamp ran off the 270 px face (issue #3920, Stinkyscape+ #4, #121).
+    for (const [defId, forms] of Object.entries(SHORT_FORMS)) {
+      for (const radiant of FACES) {
+        if ((radiant ? forms.radiant : forms.base) !== "clamp") continue;
+        const where = `${defId} ${radiant ? "radiant" : "base"}`;
+        expect(overLimit(printed(defId, radiant).full, PREVIEW_TEXT_LIMIT), where).toBe(false);
+      }
+    }
+  });
+
+  it("B15 R1017000 the premise: the longest texts (Core's #93, #95 and #98, Classic+ #73, five Meditative cards, Meditative+ #1's Radiant face, two Stinkyscape rows, the held Training Grounds #39 and Stinkyscape+ #61.1, #121 and #142) each print a short form", () => {
     const long = DEFS.flatMap((def) =>
       FACES.filter((face) => printed(def.id, face).full.length > TEXT_TIER_MAX.xl).map(
         (face) => `${def.id} ${face ? "radiant" : "base"}`,

@@ -2,7 +2,7 @@
 // R79/R104 define the imported room-code length and alphabet; R110 makes finished players queueable.
 // Seat 2 claims `POST /api/rooms/:code/join` before opening its socket (§9.5).
 // CLAUDE.md rule 7/§10.8: Node sees the opponent's hand count, while the browser renders its own.
-// R767 covers a guest following the room link and choosing its deck.
+// R767, R3730006: a guest follows the room link to its lobby screen, chooses a deck and joins.
 // R345: both seats turn R82's automatic turn end off, so the fixture's turns wait for End turn and the draw offer.
 
 import { SETTINGS_STORAGE_KEY } from "../../../apps/web/src/settings/store.ts";
@@ -10,16 +10,14 @@ import { CODE_ALPHABET, ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serv
 import { accounts, apiUrl, bearerHeaders, constants, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
   END_TURN,
+  LOBBY_DECK_SELECT,
+  LOBBY_JOIN_CARD,
+  LOBBY_JOIN_ROOM,
   MANA_CRYSTAL,
-  PLAY_DECK_SELECT,
-  PLAY_JOIN_INPUT,
-  PLAY_JOIN_SUBMIT,
-  PLAY_STATUS,
   handCardId,
   handCountId,
   heroId,
   manaId,
-  playModeId,
   ts,
   zoneId,
 } from "../../support/testids.ts";
@@ -362,7 +360,7 @@ describe("06 room code — a networked match between a browser and a Node client
     }
   });
 
-  it("R767 the guest opens the host's invite link, picks a deck, presses Join, and both reach the match", () => {
+  it("R767 R3730006 the guest opens the host's invite link, picks a deck, presses Join, and both reach the match", () => {
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();
     let roomCode = "";
@@ -391,22 +389,18 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // The guest link fills the form without joining.
+    // R3730006: the guest's link opens the room's lobby screen, which offers the classic room's join card.
     cy.then(() => {
       cy.visitAs(seatTwo, inviteLink(roomCode, "bo1"));
-      cy.location("pathname", { timeout: timeouts.view }).should("eq", routes.play());
-      cy.location("search").should("eq", "");
-      cy.get(ts(PLAY_JOIN_INPUT), { timeout: timeouts.view }).should("have.value", roomCode);
-      cy.get(ts(playModeId("bo1"))).should("be.checked");
-      cy.get(ts(PLAY_STATUS)).should("contain.text", "Pick a deck for Best of 1, then press Join.");
-      cy.focused({ timeout: timeouts.view }).should("have.attr", "data-testid", PLAY_DECK_SELECT);
+      cy.location("pathname", { timeout: timeouts.view }).should("eq", `/lobby/${roomCode}`);
+      cy.get(ts(LOBBY_JOIN_CARD), { timeout: timeouts.view }).should("contain.text", "Best of 1");
     });
 
     // R264: the guest still picks a deck and presses Join.
     cy.then(() => {
-      cy.get(ts(PLAY_DECK_SELECT)).select(deckOf(seatTwoDecks));
+      cy.get(ts(LOBBY_DECK_SELECT), { timeout: timeouts.view }).select(deckOf(seatTwoDecks));
     });
-    cy.get(ts(PLAY_JOIN_SUBMIT)).should("not.be.disabled").click();
+    cy.get(ts(LOBBY_JOIN_ROOM)).should("not.be.disabled").click();
 
     cy.location("pathname", { timeout: timeouts.view })
       .should("match", /^\/match\/([^/]+)$/)

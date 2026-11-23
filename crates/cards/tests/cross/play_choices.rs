@@ -35,13 +35,6 @@ fn body(literal: Value) -> ActionBody {
     json_as(literal)
 }
 
-fn plays_of(state: &GameState, card: &CardInstance) -> Vec<ActionBody> {
-    legal_actions(state, card.controller)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
-        .collect()
-}
-
 fn modes_of(action: &ActionBody) -> Vec<String> {
     match action {
         ActionBody::Play { modes, .. } => modes.clone().unwrap_or_default(),
@@ -177,7 +170,7 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
             },
             Selection::Hero { player: P2 },
         ];
-        assert!(plays_of(g.state(), &crafted).iter().any(
+        assert!(plays_in(g.state(), crafted.controller, &crafted.id).iter().any(
             |play| matches!(play, ActionBody::Play { targets: Some(targets), .. } if *targets == choice)
         ));
 
@@ -218,24 +211,25 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
 
         let wanted = vec!["highest".to_string(), "right".to_string()];
         assert!(
-            plays_of(g.state(), &crafted)
+            plays_in(g.state(), crafted.controller, &crafted.id)
                 .iter()
                 .any(|play| matches!(play, ActionBody::Play { modes: Some(modes), .. } if *modes == wanted))
         );
 
         g.play(&crafted.id, json!({ "zone": 2, "modes": ["highest", "right"] }));
 
-        // Rotating right moves the crafted card from lane 2 to lane 3, and p2's lane-1 card, the last
-        // step of the ring, onto p1's lane 1 (§3.1).
+        // Since issue #4353 Silas's base face is not summoned for the opponent (R4353025), so the crafted card
+        // lands in the zone the play named, p1's lane 2. Rotating right moves it on to p1's lane 3, and p2's
+        // lane-1 card, the last step of the ring, onto p1's lane 1 (§3.1).
         let hand: Vec<String> = g.hand(P1).iter().map(|card| card.def_id.clone()).collect();
         assert_eq!(
             json!({
                 "rotated": g.last_events().iter().any(|event| matches!(event, GameEvent::Rotated { .. })),
-                "craftedLane3": g.unit(P1, 3).map(|card| card.id.clone()),
+                "craftedMyLane3": g.unit(P1, 3).map(|card| card.id.clone()),
                 "theirsNowControlledBy": g.card(&theirs.id).controller,
                 "hand": hand,
             }),
-            json!({ "rotated": true, "craftedLane3": crafted.id, "theirsNowControlledBy": "p1", "hand": [RENO, MIDRANGE_MENACE] })
+            json!({ "rotated": true, "craftedMyLane3": crafted.id, "theirsNowControlledBy": "p1", "hand": [RENO, MIDRANGE_MENACE] })
         );
     }
 }
@@ -256,7 +250,7 @@ mod s8_conventions_r90_a_mode_that_deals_damage_or_heals_needs_its_target {
         }));
         let dividend = must(g.hand(P1).first().cloned(), "Efficiency Dividend");
 
-        let untargeted: Vec<ActionBody> = plays_of(g.state(), &dividend)
+        let untargeted: Vec<ActionBody> = plays_in(g.state(), dividend.controller, &dividend.id)
             .into_iter()
             .filter(|play| {
                 modes_of(play).first().map(String::as_str) != Some("mana") && targets_of(play).is_empty()
@@ -273,7 +267,7 @@ mod s8_conventions_r90_a_mode_that_deals_damage_or_heals_needs_its_target {
         );
         assert!(refused.error.is_some());
 
-        let mana: Vec<ActionBody> = plays_of(g.state(), &dividend)
+        let mana: Vec<ActionBody> = plays_in(g.state(), dividend.controller, &dividend.id)
             .into_iter()
             .filter(|play| modes_of(play).first().map(String::as_str) == Some("mana"))
             .collect();
@@ -351,13 +345,6 @@ fn units_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
         .collect()
 }
 
-fn plays_for(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<ActionBody> {
-    legal_actions(state, player)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
-        .collect()
-}
-
 fn sorted_key(ids: &[String]) -> String {
     let mut ids = ids.to_vec();
     ids.sort();
@@ -407,7 +394,7 @@ mod r81_r90_r101_every_tribute_a_play_may_pay_is_one_legalactions_offers {
 
         // …so legalActions, which the client narrows and the AI policy draws from (§10.2, CLAUDE.md
         // rule 7), must offer it.
-        let offered = plays_for(s.state(), P1, &golem);
+        let offered = plays_in(s.state(), P1, &golem.id);
         assert!(!offered.is_empty());
         let enemy_only: Vec<&ActionBody> = offered
             .iter()
@@ -517,7 +504,7 @@ mod r81_r90_r102_every_pick_a_crafted_card_s_declaration_may_make_is_one_legalac
             "the Sorcerer's part dealt its 4 to the enemy hero"
         );
 
-        let offered = plays_for(s.state(), P1, &crafted);
+        let offered = plays_in(s.state(), P1, &crafted.id);
         assert!(!offered.is_empty());
         let first_picks: IndexSet<String> = offered.iter().map(first_pick_key).collect();
         assert!(
@@ -530,5 +517,50 @@ mod r81_r90_r102_every_pick_a_crafted_card_s_declaration_may_make_is_one_legalac
                 "an offered play aims the Sorcerer's part at {id}"
             );
         }
+    }
+}
+
+mod r3543000_every_catalog_unit_printing_flying_is_flexible_and_shows_flying_alone {
+    use super::*;
+    use jackioh_engine::layers::{is_flexible, unit_has};
+
+    fn prints_flying(face: &CardFace) -> bool {
+        face.keywords
+            .iter()
+            .any(|keyword| keyword.kind() == KeywordKind::Flying)
+    }
+
+    #[test]
+    fn r3543000_every_catalog_unit_printing_flying_is_flexible_and_shows_flying_alone() {
+        register_all();
+        let catalog = registered_catalog().clone();
+        let mut checked = 0;
+        for def in catalog.values().filter(|def| def.type_ == CardType::Unit) {
+            for radiant in [false, true] {
+                let face = if radiant { &def.radiant } else { &def.base };
+                if !prints_flying(face) {
+                    continue;
+                }
+                let radiant_tag = if radiant { "-radiant" } else { "" };
+                let s = super::super::scenario(json!({
+                    "seed": format!("r3543000-{}{}", def.id, radiant_tag),
+                    "p1": { "hand": [{ "def": def.id, "radiant": radiant }] },
+                    "p2": { "library": ["core-019"] },
+                }));
+                let card = s.card(def.id.as_str()).clone();
+                assert!(
+                    is_flexible(s.state(), &card),
+                    "{} (radiant {radiant}): a Flying Unit is Flexible",
+                    def.id,
+                );
+                assert!(
+                    !unit_has(s.state(), &card, KeywordKind::Flexible),
+                    "{} (radiant {radiant}): Flexible is never added to its keywords",
+                    def.id,
+                );
+                checked += 1;
+            }
+        }
+        assert!(checked > 0, "at least one catalog Unit prints Flying");
     }
 }

@@ -25,9 +25,13 @@ import {
 } from "./constants.ts";
 import { createAudioEngine } from "./engine.ts";
 import { createMusicPlayer, type FocusPort, type MusicPlayer } from "./music.ts";
+import { musicUrl } from "./musicData.ts";
 import { resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
+import { deferSoundTablesForTests } from "./soundTablesLoader.ts";
 import { FakeFetch, fakeContextFactory, settle, type FakeAudio, type FakeNode } from "./test/fakeAudio.ts";
 import type { AudioEngine, MusicManifest, MusicTrack } from "./types.ts";
+
+const url = (id: string, hash = "x"): string => musicUrl(id, hash);
 
 /** Every track at 120 bpm in 4/4 has a two-second bar, which keeps the arithmetic readable. */
 function loop(over: Partial<MusicTrack> = {}): MusicTrack {
@@ -54,7 +58,7 @@ type Rig = { engine: AudioEngine; audio: FakeAudio; player: MusicPlayer; fetch: 
 
 const live: { engine: AudioEngine; player: MusicPlayer }[] = [];
 
-async function rig(options: { unlock?: boolean } = {}): Promise<Rig> {
+async function rig(options: { unlock?: boolean; saveData?: () => boolean; manifest?: MusicManifest } = {}): Promise<Rig> {
   const factory = fakeContextFactory({ decodedSeconds: 30 });
   const engine = createAudioEngine({ createContext: factory.create, speech: null, visibility: () => "visible" });
   const fetch = new FakeFetch();
@@ -72,7 +76,7 @@ async function rig(options: { unlock?: boolean } = {}): Promise<Rig> {
       return () => listeners.delete(l);
     },
   };
-  const player = createMusicPlayer({ engine: () => engine, manifest: MANIFEST, fetchBytes: fetch.fetchBytes, focus: port });
+  const player = createMusicPlayer({ engine: () => engine, manifest: options.manifest ?? MANIFEST, fetchBytes: fetch.fetchBytes, focus: port, saveData: options.saveData });
   live.push({ engine, player });
   if (options.unlock !== false) {
     engine.unlock();
@@ -133,7 +137,54 @@ afterEach(() => {
   }
 });
 
+describe("musicUrl", () => {
+  it("serves a track from audio/music/ with its manifest hash under the app's base URL (#4393)", () => {
+    expect(musicUrl("tavern-1", "0123456789abcdef")).toBe(
+      `${import.meta.env.BASE_URL}audio/music/tavern-1.m4a?v=0123456789abcdef`,
+    );
+    expect(musicUrl("intro-a", "fedcba9876543210")).toBe(
+      "/audio/music/intro-a.m4a?v=fedcba9876543210",
+    );
+  });
+});
+
 describe("R631 starting and stopping", () => {
+  it("#4393 music and intro fetches carry the manifest hash, and changing the hash changes the fetched URL", async () => {
+    const manifestA: MusicManifest = {
+      ...MANIFEST,
+      files: {
+        ...MANIFEST.files,
+        "tavern-1": loop({ hash: "hash-v1" }),
+        "intro-a": { ...MANIFEST.files["intro-a"]!, hash: "intro-hash-v1" },
+      },
+    };
+    const rA = await rig({ manifest: manifestA });
+    rA.player.request({ track: "tavern-1" });
+    await settle();
+    expect(rA.fetch.urls()).toEqual(["/audio/music/tavern-1.m4a?v=hash-v1"]);
+
+    rA.player.playIntro("intro-a");
+    await settle();
+    expect(rA.fetch.urls()).toContain("/audio/music/intro-a.m4a?v=intro-hash-v1");
+
+    const manifestB: MusicManifest = {
+      ...MANIFEST,
+      files: {
+        ...MANIFEST.files,
+        "tavern-1": loop({ hash: "hash-v2" }),
+        "intro-a": { ...MANIFEST.files["intro-a"]!, hash: "intro-hash-v2" },
+      },
+    };
+    const rB = await rig({ manifest: manifestB });
+    rB.player.request({ track: "tavern-1" });
+    await settle();
+    expect(rB.fetch.urls()).toEqual(["/audio/music/tavern-1.m4a?v=hash-v2"]);
+
+    rB.player.playIntro("intro-a");
+    await settle();
+    expect(rB.fetch.urls()).toContain("/audio/music/intro-a.m4a?v=intro-hash-v2");
+  });
+
   it("R631 schedules nothing before the context runs, then starts what was asked for", async () => {
     const r = await rig({ unlock: false });
     r.player.request({ track: "menu" });
@@ -157,7 +208,7 @@ describe("R631 starting and stopping", () => {
     expect(v?.source.loop).toBe(true);
     expect(v?.source.loopStart).toBe(3);
     expect(v?.source.loopEnd).toBe(19);
-    expect(r.fetch.urls()).toEqual(["/audio/music/tavern-1.m4a"]);
+    expect(r.fetch.urls()).toEqual([url("tavern-1")]);
     expect(r.player.current()).toBe("tavern-1");
   });
 
@@ -362,7 +413,7 @@ describe("R631 the turn mix, focus and audibility", () => {
     r.player.request({ track: "tavern-1" });
     await settle();
     expect(started(r)).toEqual(["tavern-1"]);
-    expect(r.fetch.urls()).toEqual(["/audio/music/tavern-1.m4a", "/audio/music/tavern-1.m4a"]);
+    expect(r.fetch.urls()).toEqual([url("tavern-1"), url("tavern-1")]);
   });
 
   it("R631 a track that cannot be had is not tried again at every idle, only when a request names it anew", async () => {
@@ -375,7 +426,7 @@ describe("R631 the turn mix, focus and audibility", () => {
       r.player.setBusy(false);
       await settle();
     }
-    expect(r.fetch.urls()).toEqual(["/audio/music/tavern-1.m4a"]);
+    expect(r.fetch.urls()).toEqual([url("tavern-1")]);
     r.audio.decodeMode = "reject";
     r.fetch.mode = "resolve";
     r.player.request({ track: "tavern-danger" });
@@ -398,12 +449,12 @@ describe("R631 the turn mix, focus and audibility", () => {
     r.player.request({ track: "tavern-1", opponentTurn: true });
     await settle();
     expect(started(r)).toEqual(["tavern-1"]);
-    expect(r.fetch.urls()).toEqual(["/audio/music/tavern-1.m4a", "/audio/music/tavern-1.m4a"]);
+    expect(r.fetch.urls()).toEqual([url("tavern-1"), url("tavern-1")]);
   });
 
   it("R631 a sting that cannot be fetched is skipped, and the track it leads into still plays", async () => {
     const r = await rig();
-    r.fetch.modes.set("/audio/music/tavern-start.m4a", "reject");
+    r.fetch.modes.set(url("tavern-start"), "reject");
     r.player.request({ track: "tavern-1", intro: "tavern-start" });
     await settle();
     expect(started(r)).toEqual(["tavern-1"]);
@@ -439,7 +490,7 @@ describe("R631 the turn mix, focus and audibility", () => {
     r.player.setBusy(false);
     await settle();
     expect(started(r)).toEqual(["tavern-1"]);
-    expect(r.fetch.urls()).toContain("/audio/music/tavern-danger.m4a");
+    expect(r.fetch.urls()).toContain(url("tavern-danger"));
   });
 });
 
@@ -526,7 +577,7 @@ describe("R1350 a card's intro on top of the music", () => {
     const [clip] = clips(r);
     expect(clip?.source.startTime).toBeCloseTo(2.5 + MUSIC_LEAD_S, 9);
     expect(clip?.source.loop).toBe(false);
-    expect(r.fetch.urls()).toContain("/audio/music/intro-a.m4a");
+    expect(r.fetch.urls()).toContain(url("intro-a"));
     expect(r.player.intro()).toBe("intro-a");
     expect(voices(r.audio)).toHaveLength(1);
     expect(voices(r.audio)[0]?.source.stopTime).toBeNull();
@@ -573,7 +624,7 @@ describe("R1350 a card's intro on top of the music", () => {
     writeAudioSettings({ muted: false, music: 0 });
     r.player.playIntro("intro-a");
     await settle();
-    expect(r.fetch.urls()).not.toContain("/audio/music/intro-a.m4a");
+    expect(r.fetch.urls()).not.toContain(url("intro-a"));
     writeAudioSettings({ music: 0.5 });
     await settle();
     expect(r.player.intro()).toBeNull();
@@ -596,14 +647,14 @@ describe("R1350 a card's intro on top of the music", () => {
     r.player.setBusy(true);
     r.player.preloadIntros(["intro-a"]);
     await settle();
-    expect(r.fetch.urls()).not.toContain("/audio/music/intro-a.m4a");
+    expect(r.fetch.urls()).not.toContain(url("intro-a"));
     r.player.setBusy(false);
     await settle();
-    expect(r.fetch.urls().filter((u) => u === "/audio/music/intro-a.m4a")).toHaveLength(1);
+    expect(r.fetch.urls().filter((u) => u === url("intro-a"))).toHaveLength(1);
     r.player.playIntro("intro-a");
     await settle();
     expect(clips(r)).toHaveLength(1);
-    expect(r.fetch.urls().filter((u) => u === "/audio/music/intro-a.m4a")).toHaveLength(1);
+    expect(r.fetch.urls().filter((u) => u === url("intro-a"))).toHaveLength(1);
   });
 });
 
@@ -642,11 +693,11 @@ describe("R1351 what cuts an intro short", () => {
     const r = await rig();
     r.player.request({ track: "tavern-1" });
     await settle();
-    r.fetch.modes.set("/audio/music/intro-a.m4a", "hang");
+    r.fetch.modes.set(url("intro-a"), "hang");
     r.player.playIntro("intro-a");
     r.player.playIntro("intro-a");
-    expect(r.fetch.urls().filter((u) => u === "/audio/music/intro-a.m4a")).toHaveLength(1);
-    r.fetch.release("/audio/music/intro-a.m4a");
+    expect(r.fetch.urls().filter((u) => u === url("intro-a"))).toHaveLength(1);
+    r.fetch.release(url("intro-a"));
     await settle();
     r.audio.advance(0.5);
     r.player.playIntro("intro-a");
@@ -691,11 +742,11 @@ describe("R1351 what cuts an intro short", () => {
     const r = await rig();
     r.player.request({ track: "tavern-1" });
     await settle();
-    r.fetch.modes.set("/audio/music/intro-a.m4a", "hang");
+    r.fetch.modes.set(url("intro-a"), "hang");
     r.player.playIntro("intro-a");
     await settle();
     r.audio.advance(MUSIC_INTRO_LATE_S + 0.1);
-    r.fetch.release("/audio/music/intro-a.m4a");
+    r.fetch.release(url("intro-a"));
     await settle();
     expect(r.player.intro()).toBeNull();
     expect(introGains(r)).toHaveLength(0);
@@ -705,10 +756,10 @@ describe("R1351 what cuts an intro short", () => {
     const r = await rig();
     r.player.request({ track: "tavern-1" });
     await settle();
-    r.fetch.modes.set("/audio/music/intro-a.m4a", "hang");
+    r.fetch.modes.set(url("intro-a"), "hang");
     r.player.playIntro("intro-a");
     r.player.stopIntro();
-    r.fetch.release("/audio/music/intro-a.m4a");
+    r.fetch.release(url("intro-a"));
     await settle();
     expect(introGains(r)).toHaveLength(0);
   });
@@ -752,7 +803,7 @@ describe("R3332002 a card's sting is its intro's opening", () => {
     const [sting] = stings(r);
     if (sting === undefined) throw new Error("no sting");
     // The intro's own file from its start, through its own gain into the effects bus.
-    expect(r.fetch.urls()).toContain("/audio/music/intro-a.m4a");
+    expect(r.fetch.urls()).toContain(url("intro-a"));
     expect(sting.source.startTime).toBeCloseTo(at, 9);
     expect(sting.source.startOffset ?? 0).toBe(0);
     expect(sting.source.loop).toBe(false);
@@ -783,7 +834,7 @@ describe("R3332002 a card's sting is its intro's opening", () => {
     writeAudioSettings({ muted: false, sfx: 0 });
     r.player.playSting("intro-a");
     await settle();
-    expect(r.fetch.urls()).not.toContain("/audio/music/intro-a.m4a");
+    expect(r.fetch.urls()).not.toContain(url("intro-a"));
     writeAudioSettings({ sfx: 0.8 });
     // A loop and an id the manifest does not hold are no clip.
     r.player.playSting("tavern-1");
@@ -830,11 +881,11 @@ describe("R3332002 a card's sting is its intro's opening", () => {
 
   it("R3332002 a sting whose file is not ready MUSIC_INTRO_LATE_S after its moment is dropped, and dispose stops one playing", async () => {
     const r = await playing();
-    r.fetch.modes.set("/audio/music/intro-a.m4a", "hang");
+    r.fetch.modes.set(url("intro-a"), "hang");
     r.player.playSting("intro-a");
     await settle();
     r.audio.advance(MUSIC_INTRO_LATE_S + 0.1);
-    r.fetch.release("/audio/music/intro-a.m4a");
+    r.fetch.release(url("intro-a"));
     await settle();
     expect(stings(r)).toEqual([]);
     r.player.playSting("intro-b");
@@ -850,11 +901,11 @@ describe("R3332002 a card's sting is its intro's opening", () => {
     const r = await rig();
     r.player.preloadIntros(["intro-a"]);
     await settle();
-    expect(r.fetch.urls()).toEqual(["/audio/music/intro-a.m4a"]);
+    expect(r.fetch.urls()).toEqual([url("intro-a")]);
     r.player.playSting("intro-a");
     await settle();
     expect(stings(r)).toHaveLength(1);
-    expect(r.fetch.urls()).toEqual(["/audio/music/intro-a.m4a"]);
+    expect(r.fetch.urls()).toEqual([url("intro-a")]);
   });
 });
 
@@ -913,5 +964,91 @@ describe("background: the OS closes the context mid-game (issue #2034)", () => {
     expect(ramp).toMatchObject({ method: "setTargetAtTime", value: 1, time: r.audio.currentTime, timeConstant: MUSIC_FOCUS_TC_S });
     expect(events.filter((e) => (e.method === "setValueAtTime" || e.method === "linearRampToValueAtTime") && e.value === 1)).toEqual([]);
     expect(r.audio.violations).toEqual([]);
+  });
+
+  describe("#4130 lazy sound tables loading in music player", () => {
+    it("#4130 a track requested before tables arrive starts once tables load", async () => {
+      const deferred = deferSoundTablesForTests();
+      const factory = fakeContextFactory({ decodedSeconds: 30 });
+      const engine = createAudioEngine({ createContext: factory.create, speech: null, visibility: () => "visible" });
+      const fetch = new FakeFetch();
+      const player = createMusicPlayer({ engine: () => engine, manifest: undefined, fetchBytes: fetch.fetchBytes });
+      live.push({ engine, player });
+      engine.unlock();
+      await settle();
+
+      player.request({ track: "menu" });
+      await settle();
+      expect(player.current()).toBeNull();
+      expect(player.log()).toEqual([]);
+
+      deferred.resolve({
+        cardAudio: { voices: {}, effects: {}, cards: {}, emotes: {} },
+        voiceManifest: { version: 1, format: "test", files: {} },
+        musicManifest: MANIFEST,
+        musicCards: {},
+      });
+      await settle();
+
+      expect(player.current()).toBe("menu");
+      expect(player.log().map((e) => e.track)).toEqual(["menu"]);
+    });
+
+    it("#4130 a sting requested before tables arrive plays once tables load", async () => {
+      const deferred = deferSoundTablesForTests();
+      const factory = fakeContextFactory({ decodedSeconds: 30 });
+      const engine = createAudioEngine({ createContext: factory.create, speech: null, visibility: () => "visible" });
+      const fetch = new FakeFetch();
+      const player = createMusicPlayer({ engine: () => engine, manifest: undefined, fetchBytes: fetch.fetchBytes });
+      live.push({ engine, player });
+      engine.unlock();
+      await settle();
+
+      player.playSting("intro-a");
+      await settle();
+      expect(player.log()).toEqual([]);
+
+      deferred.resolve({
+        cardAudio: { voices: {}, effects: {}, cards: {}, emotes: {} },
+        voiceManifest: { version: 1, format: "test", files: {} },
+        musicManifest: MANIFEST,
+        musicCards: {},
+      });
+      await settle();
+
+      expect(player.log().filter((e) => e.kind === "sting").map((e) => e.track)).toEqual(["intro-a"]);
+    });
+  });
+});
+
+describe("R4363000 the music prefetch waits while the browser asks to save data", () => {
+  it("R4363000 held track and intro preloads fetch nothing while the browser asks to save data, and the current track still plays", async () => {
+    const r = await rig({ saveData: () => true });
+    r.player.preload(["tavern-danger"]);
+    r.player.preloadIntros(["intro-a"]);
+    await settle();
+    expect(r.fetch.urls()).toEqual([]);
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    expect(started(r)).toEqual(["tavern-1"]);
+    expect(r.fetch.urls()).toEqual([url("tavern-1")]);
+    r.player.playIntro("intro-a");
+    await settle();
+    expect(r.fetch.urls().filter((u) => u === url("intro-a"))).toHaveLength(1);
+  });
+
+  it("R4363000 held preloads drain on the next pump after the signal clears", async () => {
+    let saving = true;
+    const r = await rig({ saveData: () => saving });
+    r.player.preload(["tavern-danger"]);
+    r.player.preloadIntros(["intro-a"]);
+    await settle();
+    expect(r.fetch.urls()).toEqual([]);
+    saving = false;
+    r.player.setBusy(true);
+    r.player.setBusy(false);
+    await settle();
+    expect(r.fetch.urls()).toContain(url("tavern-danger"));
+    expect(r.fetch.urls()).toContain(url("intro-a"));
   });
 });

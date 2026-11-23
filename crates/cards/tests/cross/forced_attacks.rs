@@ -3,8 +3,9 @@
 //! lenses L1 and L5).
 //!  - R173: a forced attack is made on an enemy. When #86 "Miss" Mrow dies to #9 Moths to the
 //!    Flame's strike back and its Death steals Moths, the rest of the run is on Moths's new side and
-//!    does not attack it; radiant #60 Bear Honeypot's tokens do not attack a played unit that #52
-//!    Silly Silas has already rotated onto their own side.
+//!    does not attack it; radiant #60 Bear Honeypot's tokens do not attack a played unit on their
+//!    own side, #52 Silly Silas summoned for them by his script through v0.6.8b (R3837000; since issue
+//!    #4353 he stays with his player, R4353025).
 //!  - R174: a run stops once its target has left the field, even when Reborn puts it straight back;
 //!    and (round 4, lens L2) an attacker the run named that died in an earlier combat of the run and
 //!    is back through Reborn is passed over, like one that is gone (R96).
@@ -29,6 +30,23 @@ const FIENDER: &str = "core-092";
 const LIBRARY: [&str; 6] = [VANILLA; 6];
 
 use super::scenario;
+
+/// R767000: `run` with #52 Silly Silas folding under his script kept for v0.6.8b, whose base face is
+/// summoned for the opponent (R3837000); since issue #4353 the build's stays with its player (R4353025).
+fn under_silas_v0_6_8b<T>(run: impl FnOnce() -> T) -> T {
+    jackioh_cards::register_all();
+    let (_, _, kept) = jackioh_cards::KEPT_SCRIPTS
+        .iter()
+        .find(|(id, version, _)| *id == SILAS && *version == "v0.6.8b")
+        .expect("Silly Silas's v0.6.8b script is kept");
+    let shipped: &'static jackioh_engine::ShippedCatalog =
+        Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
+            "kept",
+            jackioh_cards::CATALOG.clone(),
+            indexmap::IndexMap::from([(SILAS.to_string(), kept())]),
+        )));
+    jackioh_engine::with_shipped(Some(shipped), run)
+}
 
 #[derive(Clone, Debug, PartialEq)]
 struct Declared {
@@ -89,37 +107,40 @@ mod r173_a_forced_attack_is_made_on_an_enemy {
     }
 
     #[test]
-    fn r173_radiant_bear_honeypots_tokens_do_not_attack_a_played_unit_that_has_crossed_to_their_own_side_8_60_52()
+    fn r173_r3837000_radiant_bear_honeypots_tokens_do_not_attack_a_played_unit_that_lands_on_their_own_side_8_60_52()
      {
-        let mut g = scenario(json!({
-            "p1": { "hand": [SILAS, VANILLA] },
-            "p2": { "hand": [VANILLA], "backrow": [{ "def": HONEYPOT, "radiant": true, "lane": 3, "faceUp": false }] },
-        }));
+        under_silas_v0_6_8b(|| {
+            let mut g = scenario(json!({
+                "p1": { "hand": [SILAS, VANILLA], "mana": 10 },
+                "p2": { "hand": [VANILLA], "backrow": [{ "def": HONEYPOT, "radiant": true, "lane": 3, "faceUp": false }] },
+            }));
 
-        // Silas enters p1's lane 5 and rotates right: he crosses to p2's lane 5 and is p2's (§3.1).
-        let silas = g.card(SILAS).clone();
-        g.play(&silas.id, json!({ "zone": 5, "modes": ["right"] }));
-        assert!(g.events().contains(&GameEvent::ControlChanged {
-            instance_id: silas.id.clone(),
-            controller: P2,
-            row: Row::Units,
-            lane: 5,
-            former_id: None,
-            how: None,
-        }));
+            // p1 plays Silas, who is summoned for p2 (R3837000) and rotates left along p2's row: p2's (§3.1).
+            let silas = g.card(SILAS).clone();
+            g.play(&silas.id, json!({ "zone": 5, "modes": ["left"] }));
+            assert_eq!(g.card(&silas.id).controller, P2);
+            assert!(matches!(
+                g.card(&silas.id).zone,
+                Zone::Field {
+                    player: P2,
+                    row: Row::Units,
+                    ..
+                }
+            ));
 
-        assert!(
-            g.events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::TrapFired { .. }))
-        );
-        let at_silas: Vec<Declared> = declared(g.events())
-            .into_iter()
-            .filter(|event| event.target_id == silas.id)
-            .collect();
-        assert_eq!(at_silas, Vec::<Declared>::new());
-        g.expect_in_zone(&silas.id, "field");
-        assert_eq!(g.card(&silas.id).damage, 0);
+            assert!(
+                g.events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::TrapFired { .. }))
+            );
+            let at_silas: Vec<Declared> = declared(g.events())
+                .into_iter()
+                .filter(|event| event.target_id == silas.id)
+                .collect();
+            assert_eq!(at_silas, Vec::<Declared>::new());
+            g.expect_in_zone(&silas.id, "field");
+            assert_eq!(g.card(&silas.id).damage, 0);
+        });
     }
 }
 

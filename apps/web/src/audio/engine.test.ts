@@ -57,7 +57,11 @@ import {
   type FakeNode,
   type FakeSpeech,
 } from "./test/fakeAudio.ts";
+import { deferSoundTablesForTests, setSoundTablesForTests } from "./soundTablesLoader.ts";
+import { deferSfxForTests, setSfxForTests } from "./sfxLoader.ts";
+import * as sfxRecipes from "./sfx.ts";
 import type { AudioEngine, PlayedCue, SfxId, SfxParams, VoiceKey, CardAudioTable, PlayableLineKind, VoiceManifest } from "./types.ts";
+import { voiceUrl } from "./voiceData.ts";
 import { must } from "../test/stubServer.ts";
 
 /* Fixtures */
@@ -107,7 +111,7 @@ const MANY_MANIFEST: VoiceManifest = {
   files: { ...MANIFEST.files, ...Object.fromEntries(MANY_KEYS.map((key) => [key, FILE])) },
 };
 
-const url = (key: string): string => `/audio/voice/${key}.m4a`;
+const url = (key: string, hash = FILE.hash): string => voiceUrl(key as VoiceKey, hash);
 
 /* The rig */
 
@@ -224,9 +228,14 @@ beforeEach(() => {
   localStorage.clear();
   resetAudioSettingsForTests();
   writeAudioSettings({ ...LEVELS, muted: false, voiceOn: true });
+  // #4428: the setup installed the recipes, and the last test may have emptied them: every test
+  // starts with them loaded, the way the client has them after the first paint.
+  setSfxForTests(sfxRecipes);
 });
 
 afterEach(() => {
+  setSfxForTests(null);
+  setSoundTablesForTests(null);
   for (const engine of engines.splice(0)) {
     try {
       engine.dispose();
@@ -508,6 +517,53 @@ describe("B5 the acceptance gate", () => {
     r.engine.clearLog();
     expect(r.engine.log()).toEqual([]);
   });
+
+  it("#4428 a sound asked for before the recipes load is skipped without an error", async () => {
+    const deferred = deferSfxForTests();
+    try {
+      const r = rig();
+      const audio = unlocked(r);
+      const before = audio.nodes.length;
+
+      expect(r.engine.playSfx("draw")).toBe(false);
+      expect(r.engine.playSfx("impact", { amount: 4 })).toBe(false);
+      await settle();
+
+      expect(r.engine.log()).toEqual([]);
+      expect(audio.nodes.length, "no source is built for a skipped sound").toBe(before);
+      expect(audio.violations).toEqual([]);
+    } finally {
+      deferred.resolve(sfxRecipes);
+    }
+  });
+
+  it("#4428 the same sound plays once the recipes have loaded", async () => {
+    const deferred = deferSfxForTests();
+    try {
+      const r = rig();
+      const audio = unlocked(r);
+      const bus = buses(audio);
+
+      expect(r.engine.playSfx("impact", { amount: 4 }, 250)).toBe(false);
+      expect(r.engine.log()).toEqual([]);
+
+      deferred.resolve(sfxRecipes);
+      await settle();
+
+      // Past the unlock's silent frame: only the recipe's own sources count, as in the B5 test above.
+      const before = audio.nodes.length;
+      expect(r.engine.playSfx("impact", { amount: 4 }, 250)).toBe(true);
+      expect(r.engine.log().at(-1)).toMatchObject({ kind: "sfx", id: "impact", params: { amount: 4 }, delayMs: 250 });
+      const sources = audio.nodes.slice(before).filter((n) => n.started);
+      expect(sources.length, "the recipe started at least one source").toBeGreaterThan(0);
+      for (const source of sources) {
+        expect(audio.reaches(source, bus.sfx), `${source.kind} is heard through the sfx bus`).toBe(true);
+      }
+      expect(audio.violations).toEqual([]);
+    } finally {
+      setSfxForTests(null);
+    }
+  });
 });
 
 // B6: SFX retrigger and polyphony
@@ -717,6 +773,22 @@ describe("B8 voice files", () => {
     expect(audio.violations).toEqual([]);
   });
 
+  it("#4393 voice fetches carry the manifest hash, and changing the hash changes the fetched URL", async () => {
+    const manifestA: VoiceManifest = { ...MANIFEST, files: { "core-004-play": { hash: "hash-v1", bytes: 1000 } } };
+    const rA = rig({ engine: { manifest: manifestA } });
+    unlocked(rA);
+    expect(rA.engine.playVoice("core-004", "play", 0)).toBe(true);
+    await settle();
+    expect(rA.fetch.urls()).toEqual(["/audio/voice/core-004-play.m4a?v=hash-v1"]);
+
+    const manifestB: VoiceManifest = { ...MANIFEST, files: { "core-004-play": { hash: "hash-v2", bytes: 1000 } } };
+    const rB = rig({ engine: { manifest: manifestB } });
+    unlocked(rB);
+    expect(rB.engine.playVoice("core-004", "play", 0)).toBe(true);
+    await settle();
+    expect(rB.fetch.urls()).toEqual(["/audio/voice/core-004-play.m4a?v=hash-v2"]);
+  });
+
   it("B8 the log entry reads pending until the line starts, then file", async () => {
     const r = rig();
     unlocked(r);
@@ -879,13 +951,13 @@ describe("B11 preloadVoices", () => {
     const first = r.fetch.urls();
     expect(first).toHaveLength(VOICE_PRELOAD_MAX);
     expect(new Set(first).size).toBe(VOICE_PRELOAD_MAX);
-    for (const u of first) expect(PRELOAD_KEYS.map(url)).toContain(u);
+    for (const u of first) expect(PRELOAD_KEYS.map((key) => url(key))).toContain(u);
 
     r.engine.preloadVoices(keys);
     await settle();
     const all = r.fetch.urls();
     expect(all).toHaveLength(PRELOAD_KEYS.length);
-    expect(new Set(all)).toEqual(new Set(PRELOAD_KEYS.map(url)));
+    expect(new Set(all)).toEqual(new Set(PRELOAD_KEYS.map((key) => url(key))));
 
     r.engine.preloadVoices(keys);
     await settle();
@@ -1235,6 +1307,73 @@ describe("B51 caches and prefetch", () => {
     await elapse(r, VOICE_PREFETCH_DELAY_MS + 1_000);
 
     expect(r.fetch.urls()).toEqual([url("core-004-play")]);
+  });
+
+  it("#4316 no preload asked: tables landing on a running context fetch no voice bytes", async () => {
+    const deferred = deferSoundTablesForTests();
+    const r = rig({ engine: { lines: undefined, manifest: undefined } });
+    const audio = unlocked(r);
+    expect(r.engine.state()).toBe("running");
+
+    deferred.resolve({
+      cardAudio: LINES,
+      voiceManifest: PRELOAD_MANIFEST,
+      musicManifest: { version: 1, format: "", files: {} },
+      musicCards: {},
+    });
+    await elapse(r, VOICE_PREFETCH_DELAY_MS + 5_000);
+
+    expect(r.fetch.fetchBytes).not.toHaveBeenCalled();
+    expect(audio.violations).toEqual([]);
+  });
+
+  it("#4316 a preload asked for before the tables arrive fetches its lines, then the whole manifest", async () => {
+    const deferred = deferSoundTablesForTests();
+    const r = rig({ engine: { lines: undefined, manifest: undefined } });
+    unlocked(r);
+    r.fetch.mode = "hang";
+
+    r.engine.preloadVoices(["core-004-play"]);
+    await settle();
+    expect(r.fetch.fetchBytes, "held for the tables").not.toHaveBeenCalled();
+
+    deferred.resolve({
+      cardAudio: LINES,
+      voiceManifest: PRELOAD_MANIFEST,
+      musicManifest: { version: 1, format: "", files: {} },
+      musicCards: {},
+    });
+    await settle();
+    expect(r.fetch.urls()).toEqual([url("core-004-play")]);
+
+    await elapse(r, VOICE_PREFETCH_DELAY_MS);
+    expect(r.fetch.urls(), "a few at a time").toHaveLength(1 + VOICE_PREFETCH_CONCURRENCY);
+    for (let i = 0; i < 40; i += 1) {
+      r.fetch.release();
+      await settle();
+    }
+
+    const all = Object.keys(PRELOAD_MANIFEST.files).map((key) => url(key));
+    expect(new Set(r.fetch.urls())).toEqual(new Set(all));
+    expect(r.fetch.urls()).toHaveLength(all.length);
+  });
+});
+
+describe("R4316000 no voice bulk prefetch while the browser asks to save data", () => {
+  it("R4316000 while the save-data port holds, preloadVoices fetches only its own keys and nothing else follows", async () => {
+    const saving = rig({ engine: { manifest: PRELOAD_MANIFEST, saveData: () => true } });
+    unlocked(saving);
+    saving.engine.preloadVoices(["core-004-play"]);
+    await elapse(saving, VOICE_PREFETCH_DELAY_MS + 5_000);
+    expect(saving.fetch.urls()).toEqual([url("core-004-play")]);
+
+    const full = rig({ engine: { manifest: PRELOAD_MANIFEST, saveData: () => false } });
+    unlocked(full);
+    full.fetch.mode = "hang";
+    full.engine.preloadVoices(["core-004-play"]);
+    await settle();
+    await elapse(full, VOICE_PREFETCH_DELAY_MS);
+    expect(full.fetch.urls(), "a few at a time").toHaveLength(1 + VOICE_PREFETCH_CONCURRENCY);
   });
 });
 
@@ -1951,5 +2090,36 @@ describe("R3346000 a play's impact on the effects bus", () => {
     expect(log.filter((cue) => cue.kind === "voice")).toHaveLength(1);
     expect(sfxIds.length).toBeLessThan(SFX_MAX_VOICES);
     expect(audio.violations).toEqual([]);
+  });
+
+  describe("#4130 lazy sound tables loading in engine", () => {
+    it("#4130 a voice line requested before tables arrive queues and plays when tables load", async () => {
+      const deferred = deferSoundTablesForTests();
+      const r = rig({ engine: { lines: undefined, manifest: undefined } });
+      const audio = unlocked(r);
+      const bus = buses(audio);
+      expect(r.engine.playVoice("core-004", "play", 0)).toBe(true);
+      expect(voiceSources(audio, bus.voice)).toHaveLength(0);
+
+      deferred.resolve({
+        cardAudio: LINES,
+        voiceManifest: MANIFEST,
+        musicManifest: { version: 1, format: "", files: {} },
+        musicCards: {},
+      });
+      await settle();
+
+      expect(voiceSources(audio, bus.voice).length).toBeGreaterThan(0);
+      expect(audio.violations).toEqual([]);
+    });
+
+    it("#4130 an effect or pickup requested before tables arrive returns false quietly and logs nothing", () => {
+      setSoundTablesForTests(null);
+      const r = rig({ engine: { lines: undefined, manifest: undefined } });
+      unlocked(r);
+      expect(r.engine.playEffect("core-004", "play", 0)).toBe(false);
+      expect(r.engine.playPickup("core-004")).toBe(false);
+      expect(r.engine.log()).toEqual([]);
+    });
   });
 });

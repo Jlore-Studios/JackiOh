@@ -20,16 +20,18 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use jackioh_ai::AI_BUDGET;
+use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::wire::newest_shipped_set;
 use jackioh_engine::{Action, ActionBody, Difficulty, GameState, LastBoardEntry, PlayerId, SandboxOp};
 use jackioh_server::actor::engine::{self, Pinned};
 use jackioh_server::api::practice::{Swept, sweep_unsettled};
+use jackioh_server::api::retention::run_purge;
 use jackioh_server::app::{App, now_ms, serve_until};
 use jackioh_server::config::{
-    JLORE_GAMES_DAILY_CAP, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, PRACTICE_PAY_ATTEMPTS,
-    PRACTICE_SEED_TTL_SECONDS, PRACTICE_SEEDS_OPEN_MAX, PRACTICE_SETTLE_GRACE_SECONDS,
-    PRACTICE_VERIFY_CONCURRENCY, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SHUTDOWN_DRAIN_SECONDS,
-    STARTER_CARDS,
+    API_MAX_BODY_BYTES, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, JLORE_GAMES_DAILY_CAP,
+    JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, PRACTICE_PAY_ATTEMPTS, PRACTICE_SEED_TTL_SECONDS,
+    PRACTICE_SEEDS_OPEN_MAX, PRACTICE_SETTLE_GRACE_SECONDS, PRACTICE_VERIFY_CONCURRENCY,
+    SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SHUTDOWN_DRAIN_SECONDS, STARTER_CARDS,
 };
 use jackioh_server::db::fake::{CallOutcome, E2eStoreOptions, FakeCatalog, FakeTables, create_e2e_store};
 use jackioh_server::db::store::{LastBoardKind, ProfileStatus, StoreError};
@@ -130,6 +132,39 @@ async fn issue(app: &Arc<App>, token: &str) -> (String, Value) {
     assert_eq!(status, 201, "{body}");
     let seed = body["seed"].as_str().expect("a seed").to_string();
     (seed, body)
+}
+
+/// `POST /api/practice/seeds` for an Easy game on the list of cards `cards`, the human second: the status
+/// and the answer, whatever they are.
+async fn request_seed_on(app: &Arc<App>, token: &str, cards: &[String]) -> (u16, Value) {
+    let (status, _, body) = call(
+        app,
+        "POST",
+        "/api/practice/seeds",
+        Some(token),
+        json!({
+            "difficulty": "easy", "humanSeat": "p2", "deck": { "kind": "cards", "cards": cards },
+            "catalog": catalog_version(),
+        }),
+    )
+    .await;
+    (status, body)
+}
+
+/// How many seeds the store holds, whoever's.
+async fn seed_rows(app: &Arc<App>) -> usize {
+    fake_ref(app).lock().await.tables.economy.practice_seeds.len()
+}
+
+/// R4317000: an issue on `cards` is a 400 `bad_request` whose message holds `reason`, and the store
+/// holds no seed after it.
+async fn assert_refused_at_issue(app: &Arc<App>, token: &str, cards: &[String], reason: &str) {
+    let (status, body) = request_seed_on(app, token, cards).await;
+    assert_eq!(status, 400, "{body}");
+    assert_eq!(body["error"]["code"], json!("bad_request"), "{body}");
+    let message = body["error"]["message"].as_str().expect("a message");
+    assert!(message.contains(reason), "{reason:?} not in {message:?}");
+    assert_eq!(seed_rows(app).await, 0, "a refused issue writes no seed");
 }
 
 /// `DELETE /api/practice/seeds/:seed`: the status and the answer, whatever they are.
@@ -481,6 +516,80 @@ async fn a_game_on_a_list_of_cards_pays_too() {
         claim(&app, &token, &seed, "loss", &log).await,
         first_paid(JLORE_PRACTICE_LOSS, xp, false)
     );
+}
+
+#[tokio::test]
+async fn r4317000_a_deck_naming_a_card_the_catalog_lacks_is_refused_and_writes_nothing() {
+    let (app, token) = authed().await;
+    let mut cards = engine::deal_random_deck("r4317000", None);
+    cards[0] = "no-such-card".to_string();
+    assert_refused_at_issue(&app, &token, &cards, "is not in the catalog").await;
+    // It took no place among the open seeds: a deck that can be played issues.
+    let (_, body) = issue(&app, &token).await;
+    assert!(body["seed"].is_string(), "{body}");
+}
+
+#[tokio::test]
+async fn r4317000_a_deck_past_the_deck_size_is_refused_and_writes_nothing() {
+    let (app, token) = authed().await;
+    let mut cards = engine::deal_random_deck("r4317000", None);
+    let extra = engine::deal_random_deck("r4317000-another", None)
+        .into_iter()
+        .find(|id| !cards.contains(id))
+        .expect("a second deck holds a card the first lacks");
+    cards.push(extra);
+    assert_eq!(cards.len(), DECK_SIZE as usize + 1);
+    assert_refused_at_issue(&app, &token, &cards, "exactly 25 cards").await;
+}
+
+#[tokio::test]
+async fn r4317000_a_deck_breaking_the_copy_limit_is_refused_and_writes_nothing() {
+    let (app, token) = authed().await;
+    let mut cards = engine::deal_random_deck("r4317000", None);
+    cards[1] = cards[0].clone();
+    assert_refused_at_issue(&app, &token, &cards, "no duplicate card ids").await;
+}
+
+#[tokio::test]
+async fn r4317000_a_deck_near_the_body_cap_is_refused_and_writes_nothing() {
+    let (app, token) = authed().await;
+    // DECK_SIZE ids filling about 99% of the body the server reads: the 400 is the deal's, not the cap's 413.
+    let id = "j".repeat(API_MAX_BODY_BYTES / DECK_SIZE as usize - 64);
+    let cards = vec![id; DECK_SIZE as usize];
+    assert!(json!(cards).to_string().len() > API_MAX_BODY_BYTES * 9 / 10);
+    assert_refused_at_issue(&app, &token, &cards, "is not in the catalog").await;
+}
+
+#[tokio::test]
+async fn r4317000_the_issue_refuses_what_its_claim_would_refuse_and_nothing_else() {
+    let (app, token) = authed().await;
+    let bad = PracticeSetup {
+        deck: PracticeDeck::Cards {
+            cards: vec!["no-such-card".to_string()],
+        },
+        ..setup(Difficulty::Easy, Vec::new())
+    };
+    // The check an issue makes is the one the claim's check begins with: what it refuses, the claim refuses.
+    assert!(practice::deal_refusal(pinned(), "practice-bad-deck", &bad).is_some());
+    insert(&app, "practice-bad-deck", &bad, now_ms()).await;
+    let log = [Action::new(ActionBody::Concede, PlayerId::P2, "h0")];
+    assert_eq!(
+        claim(&app, &token, "practice-bad-deck", "loss", &log).await,
+        refusal("does_not_fold")
+    );
+    // What it passes, a list of cards and the random deck alike, the claim folds and pays.
+    let cards = engine::deal_random_deck("r4317000-parity", None);
+    let listed = PracticeSetup {
+        deck: PracticeDeck::Cards { cards },
+        ..setup(Difficulty::Hard, Vec::new())
+    };
+    for good in [listed, setup(Difficulty::Hard, Vec::new())] {
+        assert_eq!(
+            practice::deal_refusal(pinned(), "practice-good-deck", &good),
+            None
+        );
+    }
+    assert_unpaid(&app).await;
 }
 
 /// The test app over a store that carries R111's activation grant over the real catalog, as the
@@ -899,6 +1008,71 @@ async fn r1303001_an_abandoned_seed_is_pruned_by_the_next_issue() {
 }
 
 #[tokio::test]
+async fn r4317001_the_retention_loop_purges_every_accounts_lapsed_seeds_and_keeps_the_rest() {
+    let logs = record_logs();
+    let (app, _token) = authed().await;
+    let _ = fake_ref(&app)
+        .lock()
+        .await
+        .seed_profile(json!({ "id": "profile-b", "userId": "user-b", "status": "active" }));
+    let lapsed = now_ms() - TTL_MS - 1;
+    let seed = |name: &str, profile: &str, issued_at: i64| PracticeSeed {
+        seed: name.to_string(),
+        profile_id: profile.to_string(),
+        setup: setup(Difficulty::Easy, Vec::new()),
+        issued_at,
+        claimed_at: None,
+        claim: None,
+        settled: None,
+    };
+    for held in [
+        seed("lapsed-a", A, lapsed),
+        seed("lapsed-b", "profile-b", lapsed),
+        seed("fresh-b", "profile-b", now_ms()),
+        seed("claimed-b", "profile-b", lapsed),
+    ] {
+        store!(app, |t| t.economy_practice_seed_insert(&held));
+    }
+    // B's claim is not settled and is inside the grace, so the sweep before the purge leaves it too.
+    let claimed = PracticeClaim {
+        result: ClaimedResult::Loss,
+        log: Vec::new(),
+    };
+    assert!(store!(app, |t| t.economy_practice_seed_claim(
+        "profile-b",
+        "claimed-b",
+        now_ms(),
+        &claimed
+    )));
+
+    let purge = tokio::spawn(run_purge(Arc::clone(&app)));
+    for _ in 0..500 {
+        if !logs.named("practice.pruned").is_empty() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    purge.abort();
+
+    assert_eq!(logs.named("practice.pruned").len(), 1);
+    assert_eq!(logs.named("practice.pruned")[0].data["data"]["seeds"], json!(2));
+    let held = |profile: &'static str, name: &'static str| {
+        let app = app.clone();
+        async move { store!(app, |t| t.economy_practice_seed_get(profile, name)).is_some() }
+    };
+    assert!(
+        !held(A, "lapsed-a").await,
+        "another account's lapsed seed is purged too"
+    );
+    assert!(!held("profile-b", "lapsed-b").await);
+    assert!(held("profile-b", "fresh-b").await, "a seed inside the hour stays");
+    assert!(
+        held("profile-b", "claimed-b").await,
+        "a claim not yet settled stays"
+    );
+}
+
+#[tokio::test]
 async fn r1303001_another_accounts_seed_is_unknown() {
     let (app, token) = authed().await;
     let setup = setup(Difficulty::Easy, Vec::new());
@@ -1264,7 +1438,11 @@ async fn r1483000_another_accounts_open_seeds_do_not_count() {
 #[tokio::test]
 async fn r1483000_concurrent_seed_requests_never_exceed_the_open_limit() {
     let (app, token) = authed().await;
-    let requests: Vec<_> = (0..PRACTICE_SEEDS_OPEN_MAX * 2)
+    // As many at once as the account's turns hold, running and waiting (R2378000): an issue now deals the
+    // game off the runtime while it holds its turn (R4317000), so a burst past them is a 429, not a 409.
+    let burst = ECONOMY_SPENDS_RUNNING_MAX + ECONOMY_SPENDS_WAITING_MAX;
+    assert!(burst > PRACTICE_SEEDS_OPEN_MAX as usize);
+    let requests: Vec<_> = (0..burst)
         .map(|_| {
             let (app, token) = (app.clone(), token.clone());
             tokio::spawn(async move { request_seed(&app, &token).await.0 })
@@ -1276,7 +1454,11 @@ async fn r1483000_concurrent_seed_requests_never_exceed_the_open_limit() {
     }
     let count = |wanted: u16| statuses.iter().filter(|status| **status == wanted).count();
     assert_eq!(count(201), PRACTICE_SEEDS_OPEN_MAX as usize, "{statuses:?}");
-    assert_eq!(count(409), PRACTICE_SEEDS_OPEN_MAX as usize, "{statuses:?}");
+    assert_eq!(
+        count(409),
+        burst - PRACTICE_SEEDS_OPEN_MAX as usize,
+        "{statuses:?}"
+    );
     assert_eq!(
         fake_ref(&app).lock().await.tables.economy.practice_seeds.len(),
         PRACTICE_SEEDS_OPEN_MAX as usize

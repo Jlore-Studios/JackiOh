@@ -1,31 +1,9 @@
 //! Environment mapping for ALERT_RESEND_API_KEY and ALERT_EMAILS (#3595, `alerts.rs`).
 
-use indexmap::IndexMap;
 use jackioh_server::alerts::Notifier;
 use jackioh_server::env::{SERVER_ONLY_ENV_VARS, load_env};
 
-/// A complete, valid environment for the server, with `extra` over it.
-fn env_with(extra: &[(&str, &str)]) -> IndexMap<String, String> {
-    [
-        ("SUPABASE_URL", "https://project.supabase.test"),
-        (
-            "SUPABASE_SECRET_KEY",
-            "sb_secret_0123456789abcdefghijklmnopqrstuv",
-        ),
-        (
-            "DATABASE_URL",
-            "postgres://postgres:postgres@localhost:5432/jackioh",
-        ),
-        ("CODE_PEPPER", "a-pepper-of-at-least-thirty-two-characters"),
-        ("CATALOG_VERSION", jackioh_cards::catalog_version()),
-        ("PUBLIC_ORIGINS", "https://play.jackioh.test"),
-        ("NODE_ENV", "test"),
-    ]
-    .into_iter()
-    .chain(extra.iter().copied())
-    .map(|(name, value)| (name.to_string(), value.to_string()))
-    .collect()
-}
+use crate::support::deps::env_with;
 
 #[test]
 fn unset_tells_nobody() {

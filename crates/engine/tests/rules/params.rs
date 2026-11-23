@@ -405,9 +405,9 @@ mod r386_b3_4_rule_5_a_card_resolves_with_its_number_as_it_stands {
         state.players.p1.mana.current = 4;
         state.players.p1.mana.max = 4;
         let before = state.players.p2.hero.health;
-        let play = legal_actions(&state, P1)
+        let play = plays_in(&state, P1, &card.id)
             .into_iter()
-            .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
+            .next()
             .expect("expected a play");
         state = act(
             &state,
@@ -417,5 +417,132 @@ mod r386_b3_4_rule_5_a_card_resolves_with_its_number_as_it_stands {
             },
         );
         assert_eq!(state.players.p2.hero.health, before - 5);
+    }
+}
+
+mod r4334000_an_ingredient_fused_on_its_radiant_face_reads_its_numbers_there {
+    use super::*;
+
+    /// `ingredient` fused into `kept` (R77), on its Radiant face when `marked` (R469).
+    fn fused_into(
+        state: &mut GameState,
+        ingredient: CardInstance,
+        kept: CardInstance,
+        marked: bool,
+    ) -> CardInstance {
+        let id = ingredient.id.clone();
+        let mut sink = sink_for(state);
+        fuse(
+            &mut sink,
+            FuseArgs {
+                ingredients: vec![ingredient],
+                target: Some(kept),
+                radiant_ingredients: marked.then(|| vec![id]),
+                ..FuseArgs::default()
+            },
+        )
+        .expect("expected a fusion")
+    }
+
+    /// The numbered spell (`damage` 2, Radiant 4) fused into a body on the field, on its Radiant face
+    /// when `marked`, the fused card on its Radiant face when `host_radiant`.
+    fn numbered_in_body(state: &mut GameState, marked: bool, host_radiant: bool) -> CardInstance {
+        let kept = put(state, &body.id, slot(P1, Row::Units, 1), json!({}));
+        let spell = one(in_hand(state, &numbered.id, P1, 1));
+        let fused = fused_into(state, spell, kept, marked);
+        live_mut(state, &fused).radiant = host_radiant;
+        live(state, &fused)
+    }
+
+    /// `damage` on `card`: read by the text in its place on `path`, read with no place named (an
+    /// aura's), and shown in its view (`CardView.params`). Every other reader of the whole card agrees
+    /// with the view: `param_value` with no face named (a Tribute's worth, an Activate's price, hero
+    /// Armor), KY's Constant's list (`numbers_on`), and `declared_or`, which moves an untuned card's
+    /// flag by nothing.
+    fn damage_read(state: &mut GameState, card: &CardInstance, path: &[usize]) -> (i32, i32, Option<i32>) {
+        let now = live(state, card);
+        let shown = params_view(state, &now).and_then(|view| view.get("damage").copied());
+        assert_eq!(Some(value(state, &now, "damage")), shown, "param_value");
+        assert_eq!(
+            numbers_on(state, &now)
+                .iter()
+                .find(|entry| entry.id == "param:damage")
+                .map(|entry| entry.value),
+            shown,
+            "numbers_on"
+        );
+        assert_eq!(declared_or(state, &now, "damage", 0), 0, "declared_or");
+        let mut sink = sink_for(state);
+        let mut ctx = make_context(&mut sink, Some(&now), HookOptions::default());
+        let unplaced = param(&ctx, "damage");
+        ctx.data = part(path);
+        (param(&ctx, "damage"), unplaced, shown)
+    }
+
+    #[test]
+    fn r4334000_a_radiant_ingredient_of_a_base_card_reads_and_shows_its_radiant_number() {
+        let mut state = game();
+        let fused = numbered_in_body(&mut state, true, false);
+        assert_eq!(damage_read(&mut state, &fused, &[0]), (4, 4, Some(4)));
+    }
+
+    #[test]
+    fn r4334000_a_base_ingredient_of_a_base_card_reads_and_shows_its_base_number() {
+        let mut state = game();
+        let fused = numbered_in_body(&mut state, false, false);
+        assert_eq!(damage_read(&mut state, &fused, &[0]), (2, 2, Some(2)));
+    }
+
+    #[test]
+    fn r4334000_a_base_ingredient_of_a_radiant_card_reads_and_shows_its_radiant_number() {
+        let mut state = game();
+        let fused = numbered_in_body(&mut state, false, true);
+        assert_eq!(damage_read(&mut state, &fused, &[0]), (4, 4, Some(4)));
+    }
+
+    #[test]
+    fn r4334000_a_radiant_mark_one_fusion_down_still_reads_radiant() {
+        let mut state = game();
+        let inner = numbered_in_body(&mut state, true, false);
+        let spell = one(in_hand(&mut state, &nerfer.id, P1, 1));
+        let outer = fused_into(&mut state, spell, inner, false);
+        // The kept card comes last (R77): the Radiant spell is ingredient 0 of ingredient 1.
+        assert_eq!(damage_read(&mut state, &outer, &[1, 0]), (4, 4, Some(4)));
+    }
+}
+
+mod r4382000_a_fold_under_a_carried_catalog_reads_an_undeclared_number_off_the_build {
+    use super::*;
+
+    /// The carried catalog the test plants: the build's, the numbered spell's numbers taken off it, as a
+    /// snapshot from before the card declared them.
+    const CARRIED: &str = "v-r4382000";
+
+    #[test]
+    fn r4382000_a_fold_under_a_carried_catalog_reads_a_number_its_definition_never_declared_off_the_builds() {
+        let mut state = game();
+        let card = one(in_hand(&mut state, &numbered.id, P1, 1));
+        let mut defs = registered_catalog().clone();
+        defs.get_mut(&numbered.id).expect("the numbered spell").params = None;
+        register_shipped(vec![ShippedCatalog::new(CARRIED, defs, IndexMap::new())]);
+        let carried = shipped_catalog(CARRIED).expect("the planted catalog is carried");
+        with_shipped(Some(carried), || {
+            // The carried definition still declares nothing, so `param_or` keeps its printed number (R2657006).
+            assert!(param_decl_of(&state, &numbered.id, "damage").is_none());
+            assert_eq!(value(&state, &card, "damage"), 2);
+            live_mut(&mut state, &card).radiant = true;
+            assert_eq!(
+                value(&state, &card, "damage"),
+                4,
+                "on the Radiant face, the build's Radiant number"
+            );
+            live_mut(&mut state, &card).radiant = false;
+            // A number no definition of the card declares still panics (R386).
+            let text = panic_text(|| value(&state, &card, "noSuchNumber"));
+            assert!(text.contains("declares no number"), "{text}");
+        });
+        // Off the carried catalog, the build's definition declares it.
+        assert!(param_decl_of(&state, &numbered.id, "damage").is_some());
+        clear_overrides();
     }
 }

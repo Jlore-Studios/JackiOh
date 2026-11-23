@@ -229,6 +229,10 @@ export type FxTakeoverCue = {
   delayMs: number;
   durationMs: number;
   art?: string;
+  /** R4493001: the layer budget dropped the look's own art (takeoverArt.ts's parts or drawing) and its picture (`art`). */
+  artless?: true;
+  /** R4493001: the layer budget left it its dark and its sweep alone: no rays and no wave (nor a stage or art). */
+  sweepOnly?: true;
 };
 /**
  * R2800000: a board clear's set piece over the whole layer, centred on `at`: a `vortex` (the board
@@ -525,7 +529,8 @@ export type FxRecipe =
   | "brand"
   | "rewind"
   | "armor"
-  | "curve";
+  | "curve"
+  | "line";
 
 export type FxDescriptor = { readonly recipe: FxRecipe };
 
@@ -592,6 +597,8 @@ export type FxPlanEnv = {
   bigMoments?: FxBigMoments;
   /** R3334001: a phone's layer (narrower than `FX_MOBILE_WIDTH`): the Starship's moments throw fewer particles. */
   compact?: boolean;
+  /** R4493000: a phone's window either way up (layers.ts `isPhoneViewport`): the Starship's cinematic draws no closer than its phone zoom. */
+  phone?: boolean;
 };
 
 export type FxFrameSource = { request(callback: (timestampMs: number) => void): number; cancel(handle: number): void };

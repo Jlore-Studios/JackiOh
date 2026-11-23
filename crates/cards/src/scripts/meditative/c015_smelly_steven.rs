@@ -44,7 +44,7 @@ mod tests {
     const VANILLA: &str = "core-008";
     const STOCKPILE: &str = "core-005";
     const FLOOD: &str = "core-017";
-    const MANA_WELL: &str = "core-006";
+    const FIELD_SPELL: &str = "stand-in (3) Field Spell";
     const COUNTERSPELL: &str = "classic-017";
     const HINDER: &str = "core-021";
 
@@ -57,7 +57,7 @@ mod tests {
                 "mana": 8,
             },
             "p2": {
-                "hand": [VANILLA, STOCKPILE, FLOOD, MANA_WELL, COUNTERSPELL],
+                "hand": [VANILLA, STOCKPILE, FLOOD, FIELD_SPELL, COUNTERSPELL],
                 "library": [VANILLA, VANILLA, VANILLA, VANILLA],
             },
         }))
@@ -117,7 +117,7 @@ mod tests {
         fn field_spells_traps_and_units_keep_their_price() {
             let mut s = board(false);
             s.play(ID, json!({})).end_turn();
-            assert_eq!(price_of(&s, P2, MANA_WELL), 3);
+            assert_eq!(price_of(&s, P2, FIELD_SPELL), 3);
             assert_eq!(price_of(&s, P2, COUNTERSPELL), 2);
             assert_eq!(price_of(&s, P2, VANILLA), 1);
         }

@@ -124,7 +124,7 @@ func (x *Worker) suggest() {
 	}
 	prompt := x.Render("suggest", pyjson.New("repo", x.Cfg.Repo, "count", n,
 		"existing", existing, "declined", declined,
-		"priorities", ClassPriorities(x.Cfg.SuggestionPriorities)))
+		"priorities", ClassPriorities(x.Cfg.SuggestionPriorities), "area", SurveyArea(x.Plan)))
 	result := x.Call("suggest", prompt, wt.Cwd, true,
 		"propose improvements while a lane has nothing to start", false)
 	found := verdicts.Suggestions(result.Text, n)
@@ -135,6 +135,20 @@ func (x *Worker) suggest() {
 	x.Result.Set("status", "suggested")
 	x.Result.Set("reason", fmt.Sprintf("%d suggestion(s)", len(found)))
 	x.Result.Set("suggestions", suggestions)
+}
+
+// SurveyArea is the survey prompt's `$area` (#4026): the one part of the repository the survey
+// keeps to while others survey the rest, or the whole of it for a survey with no area (a plan
+// from before #4026, or no `suggestions.areas`).
+func SurveyArea(planned *pyjson.Object) string {
+	id, focus := planned.Str("area"), planned.Str("area_focus")
+	if id == "" || focus == "" {
+		return "The whole repository."
+	}
+	return fmt.Sprintf("**`%s`**: %s.\n\nPropose only improvements inside this area: read the rest "+
+		"of the repository as far as it needs, but suggest nothing whose work lies mostly outside it. "+
+		"Other surveys, each on an area of its own, cover the rest, so a suggestion there would only "+
+		"repeat theirs.", id, focus)
 }
 
 // ClassPriorities is every suggestion class and the priority it opens with, in pickup order

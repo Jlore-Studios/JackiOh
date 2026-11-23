@@ -13,10 +13,9 @@ import { SHIP_LAYER_IDS, SHIP_DRONE_IDS } from "../cards/art/stinkyscape.ts";
 import { planEntries, type AnimationEntry } from "../game/animations.ts";
 import { testid } from "../game/contract.ts";
 import { baseView, emptySide, unit, withEvents } from "../test/fixtures.ts";
+import { endOf, envOf } from "../test/signatures.ts";
 import { planBattleship, SHIP_TUNING } from "./battleship.ts";
 import {
-  FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_SHIP_BAY_AT,
   FX_SHIP_BLAST_TRAUMA,
@@ -36,29 +35,11 @@ import {
 } from "./constants.ts";
 import { frac } from "./build.ts";
 import { planFx } from "./cues.ts";
-import { createFxMemory } from "./memory.ts";
 import type { FxAnchor, FxBurstCue, FxCue, FxPlanEnv, FxProjectileCue, FxRingCue, FxShakeCue, FxShieldCue, FxShipCue, FxShotCue } from "./types.ts";
 
 const { shield: SHIELD, propagation: HANGAR, meltdown: MELTDOWN } = SHIP_LAYER_IDS;
 
-const envOf = (intensity: number = FX_INTENSITY_SCALE.normal): FxPlanEnv => ({ intensity, card: () => undefined, memory: createFxMemory() });
-
 const tid = (value: string, at?: { x: number; y: number }): FxAnchor => (at === undefined ? { kind: "testid", testid: value } : { kind: "testid", testid: value, at });
-
-/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS). */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 const activations = [
   { ability: "interceptor", label: "Activate 2", usesLeft: 2, usable: true },
@@ -404,7 +385,7 @@ describe("R3336000 every beat holds inside its entry and its tail, and names no 
     const view = board(shield());
     const [first] = planEntries([redirected()], withEvents(view, [redirected()]), false);
     if (first === undefined) throw new Error("no entry");
-    expect(planBattleship(first, first.view, envOf(0))).toBeNull();
+    expect(planBattleship(first, first.view, envOf({ intensity: 0 }))).toBeNull();
     expect(planBattleship({ ...first, durationMs: 0 }, first.view, envOf())).toBeNull();
     expect(planBattleship(first, first.view, envOf())).not.toBeNull();
     for (const shape of [{ zone: {} }, { sweep: {} }, { wipe: {} }, { fuse: {} }, { launch: {} }]) {

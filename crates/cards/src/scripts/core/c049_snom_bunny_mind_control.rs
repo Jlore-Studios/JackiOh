@@ -1,7 +1,9 @@
-//! #49 Snom Bunny Mind Control (SPEC §8.2): (5) Spell, Rare. "Float reduces cost. / Steal an enemy card.",
+//! #49 Snom Bunny Mind Control (SPEC §8.2): (6) Spell, Rare ((5) until issue #4154). "Float reduces cost. / Steal an enemy card.",
 //! radiant "Steal an enemy card. Make it Radiant."
 //!
-//! The radiant face steals the same card and then sets its flag (§8 Conventions).
+//! The radiant face steals the same card and then sets its flag (§8 Conventions), `steal`'s `radiant`, on a
+//! card the steal took only (R282's reading): one it had no room for is destroyed where it stands instead
+//! (R4205000) and made nothing.
 //!
 //! "Card" is any enemy permanent, a Unit, Field Spell, Trap or Field Trap, since issue #3139 (R3139002): a
 //! DECLARED play-time target (R81), validated by R90, only the top card of a Stack pile on offer (R13) and a
@@ -11,10 +13,11 @@
 //!
 //! "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger (R464) as
 //! Drone Core VIII's: each Float of its owner's lowers its cost by that much while it is in their hand,
-//! never in the deck (R2657002). At (5) it is past `MAX_MANA` and is played only after a Float or with mana
+//! never in the deck (R2657002). At (6) it is past `MAX_MANA` and is played only after a Float or with mana
 //! gained (§2.3).
 //!
-//! Placement is §6.3 Steal and R15 (`effects/steal.rs`). Control is field-only (R12): only `controller`
+//! Placement is §6.3 Steal and R15 (`effects/steal.rs`), and a card with no room is destroyed, past
+//! Indestructible (R4205000). Control is field-only (R12): only `controller`
 //! moves; owner, damage, buffs, counters and position stay (R78 is about leaving). `set_radiant` is the
 //! flag alone (R74): the base layer swaps, damage and buffs stay, no Cry re-fires (R22). It resolves by
 //! instance id, so the steal's zone move cannot make it miss.
@@ -63,10 +66,7 @@ fn scripts_with(targets: fn() -> Vec<TargetDecl>, float: bool) -> CardScripts {
         radiant: Script {
             targets: targets(),
             cry: Some(hook(|_ctx| {
-                vec![
-                    steal(json_as(json!({ "target": { "of": "chosen" } }))),
-                    set_radiant(json_as(json!({ "target": { "of": "chosen" } }))),
-                ]
+                vec![steal(json_as(json!({ "target": { "of": "chosen" }, "radiant": true })))]
             })),
             hand_triggers: hand_triggers(),
             ..Script::default()
@@ -87,6 +87,8 @@ mod tests {
     const SEVEN_SEVEN: &str = "core-025";
     const DUELIST: &str = "core-045";
     const VANILLA: &str = "core-008";
+    /// #66 The Rock: Indestructible.
+    const ROCK: &str = "core-066";
     const TOKEN_MAKER: &str = "core-015";
     const SHEEPISH: &str = "core-041";
     const WEAPONS: &str = "core-014";
@@ -94,27 +96,16 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    /// Mind Control costs (5), past the harness's 4 mana (issue #3139): a game gives p1 the mana to play it.
-    const COST: i32 = 5;
+    /// Mind Control costs (6) since issue #4154 ((5) from issue #3139), past the harness's 4 mana: a game gives
+    /// p1 the mana to play it.
+    const COST: i32 = 6;
 
     /// The target lists of every `play` `legal_actions` offers p1 for this card (R81).
-    // Differs from Scenario::offered: that card's targets as ids, per play, not the seat's whole legal list.
     fn offered(state: &GameState, card: &CardInstance) -> Vec<Vec<String>> {
-        legal_actions(state, P1)
+        plays_in(state, P1, &card.id)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play {
-                    instance_id, targets, ..
-                } if instance_id == card.id => Some(
-                    targets
-                        .unwrap_or_default()
-                        .into_iter()
-                        .filter_map(|target| match target {
-                            Selection::Instance { instance_id } => Some(instance_id),
-                            _ => None,
-                        })
-                        .collect(),
-                ),
+                ActionBody::Play { targets, .. } => Some(pick::instance_ids(&targets.unwrap_or_default())),
                 _ => None,
             })
             .collect()
@@ -143,7 +134,7 @@ mod tests {
             assert_eq!(g.card(&prey).controller, PlayerId::P1);
             assert_eq!(g.card(&prey).owner, PlayerId::P2);
             g.expect_events(json!(["cardPlayed", "controlChanged", "enteredGraveyard"]));
-            // Cost 5 since issue #3139.
+            // Cost 6 since issue #4154 (5 from issue #3139).
             g.expect_mana(PlayerId::P1, 0);
         }
 
@@ -268,6 +259,44 @@ mod tests {
             assert_eq!(mine, vec![prey.def_id.clone()]);
         }
 
+        /// p1's unit row full of Vanillas and the mana to cast it; `prey` is p2's only Unit.
+        fn full_row(hand: Value, prey: Value) -> Scenario {
+            scenario(json!({
+                "p1": { "hand": [hand], "mana": COST, "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] },
+                "p2": { "field": [prey] },
+            }))
+        }
+
+        /// R4205000: with no room on the caster's side the card is destroyed where it stands, into its
+        /// controller's graveyard, past Indestructible (#66 The Rock).
+        #[test]
+        fn r4205000_with_no_room_the_card_is_destroyed() {
+            let mut g = full_row(json!(MIND_CONTROL), json!({ "def": ROCK, "lane": 3 }));
+            let prey = g.unit(PlayerId::P2, 3).expect("setup: p2 should hold The Rock in lane 3").clone();
+
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+
+            assert!(g.unit(PlayerId::P2, 3).is_none());
+            g.expect_in_zone(&prey, "graveyard");
+            assert!(g.pile(PlayerId::P2, "graveyard").iter().any(|card| card.id == prey.id));
+            assert!(!g.events().iter().any(|event| event.event_type().as_str() == "controlChanged"));
+            assert!(g.events().iter().any(|event| event.event_type().as_str() == "destroyed"));
+        }
+
+        /// R282's reading, R4205000: the Radiant face makes Radiant only a card it took.
+        #[test]
+        fn r4205000_radiant_with_no_room_the_card_is_destroyed_not_made_radiant() {
+            let mut g = full_row(radiant_mind_control(), json!({ "def": SEVEN_SEVEN, "lane": 3 }));
+            let prey = g.unit(PlayerId::P2, 3).expect("setup: p2 should hold the 7/7 in lane 3").clone();
+
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+
+            g.expect_in_zone(&prey, "graveyard");
+            assert!(g.pile(PlayerId::P2, "graveyard").iter().any(|card| card.id == prey.id));
+            assert!(!g.card(&prey).radiant);
+            assert!(!g.events().iter().any(|event| event.event_type().as_str() == "radiantSet"));
+        }
+
         #[test]
         fn r81_both_faces_declare_one_enemy_permanent_and_the_radiant_face_adds_the_flag() {
             crate::register_all();
@@ -333,9 +362,9 @@ mod tests {
             assert_eq!(s.card(hand.as_str()).cost_mod, 0);
         }
 
-        /// At (5) it is past the 4 mana a turn gives: unplayable at 4, playable once a Float lowered it.
+        /// At (6) it is past the 4 mana a turn gives: unplayable at 4, playable once a Float lowered it by 2.
         #[test]
-        fn r3139002_at_5_it_cannot_be_played_on_4_mana_until_a_float_has_lowered_it() {
+        fn r3139002_at_6_it_cannot_be_played_on_4_mana_until_a_float_has_lowered_it() {
             let mut s = scenario(json!({
                 "p1": { "hand": [MIND_CONTROL, FILLER], "mana": 4 },
                 "p2": { "field": [SEVEN_SEVEN] },
@@ -346,6 +375,8 @@ mod tests {
             assert_eq!(s.card(&prey).controller, PlayerId::P2);
 
             s.card_mut(MIND_CONTROL).cost_mod = -1;
+            s.expect_refused(|s| s.play(MIND_CONTROL, named.clone()));
+            s.card_mut(MIND_CONTROL).cost_mod = -2;
             s.play(MIND_CONTROL, named);
             assert_eq!(s.card(&prey).controller, PlayerId::P1);
         }

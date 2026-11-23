@@ -25,6 +25,26 @@ function code(file: string, comment: RegExp): string {
 }
 
 const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
+
+/**
+ * A sheet's `selector { declarations }` pairs (#4009: `/([^{}]+)\{([^{}]*)\}/g` scans super-linearly
+ * on a long brace-free run).
+ */
+function rulePairs(css: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = css.split("}");
+  if (!css.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
+}
 const JSX_COMMENT = /\{\/\*[\s\S]*?\*\/\}|\/\*[\s\S]*?\*\/|(?<![:"'`])\/\/[^\n]*/g;
 
 /** The declarations of the first rule that opens with `selector`. */
@@ -65,7 +85,7 @@ describe("R3223000 one PageTitle per menu", () => {
       const css = code(file, CSS_COMMENT);
       expect(css, `${file} styles the brand as an h1`).not.toMatch(/\.brand\s+h1/);
       if (base.has(file)) continue;
-      for (const [, selector = "", declarations = ""] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      for (const [selector, declarations] of rulePairs(css)) {
         if (!bareH1.test(selector)) continue;
         expect(declarations, `${file}: ${selector.trim()}`).not.toMatch(/(^|[;\s])font(-size)?\s*:/);
       }

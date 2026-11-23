@@ -7,13 +7,18 @@ import { setShips } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { isGlitch } from "../../cards/glitch.ts";
+import { isSafeKey } from "../../wire/json.ts";
 
 /** `GET /api/collection`'s entries, as the validator wants them. */
 export function collectionFrom(
   entries: readonly { cardId: string; quantity: number }[],
 ): Collection {
   const owned: Record<string, number> = {};
-  for (const entry of entries) owned[entry.cardId] = entry.quantity;
+  for (const entry of entries) {
+    // Issue #4015: a card id from outside (`GET /api/collection`) never becomes an object key.
+    if (!isSafeKey(entry.cardId)) continue;
+    owned[entry.cardId] = entry.quantity;
+  }
   return owned;
 }
 

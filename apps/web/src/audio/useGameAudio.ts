@@ -20,7 +20,8 @@ import { createCrowdDirector, type CrowdDirector } from "./crowd.ts";
 import { getMusicPlayer } from "./music.ts";
 import { createMusicDirector, type MusicDirector } from "./musicDirector.ts";
 import { enterGameMusic } from "./musicScene.ts";
-import { CARD_AUDIO, voiceKeysForView } from "./voiceData.ts";
+import { useSoundTables } from "./soundTablesLoader.ts";
+import { voiceKeysForView } from "./voiceData.ts";
 
 function quietly(run: () => void): void {
   try {
@@ -47,6 +48,7 @@ export function cueCard(lookup: CardLookup | null, defId: string): CueCard | und
  * mounted boards play only the own duel's cues. The hook is still called; only its effects return early.
  */
 export function useGameAudio(runner: AnimationQueue, view: PlayerView, silent = false): void {
+  const soundTables = useSoundTables();
   // Use a ref so the persistent director sees a catalog that arrives after it.
   const lookup = useContext(CatalogContext);
   const lookupRef = useRef(lookup);
@@ -65,7 +67,7 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView, silent = 
   const directorRef = useRef<SoundDirector | null>(null);
   directorRef.current ??= createSoundDirector(
     getAudioEngine(),
-    CARD_AUDIO,
+    soundTables?.cardAudio,
     (defId) => cueCard(lookupRef.current, defId),
     (event, planned) => {
       quietly(() => musicRef.current?.onEvent(event, planned));
@@ -169,10 +171,10 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView, silent = 
 
   // Busy bursts hold preloads until the context runs and the burst ends.
   useEffect(() => {
-    if (silent) return;
+    if (silent || soundTables === null) return;
     quietly(() => {
       const engine = getAudioEngine();
-      if (engine.state() === "running") engine.preloadVoices(voiceKeysForView(view, CARD_AUDIO));
+      if (engine.state() === "running") engine.preloadVoices(voiceKeysForView(view, soundTables.cardAudio));
     });
-  }, [view]);
+  }, [view, soundTables, silent]);
 }

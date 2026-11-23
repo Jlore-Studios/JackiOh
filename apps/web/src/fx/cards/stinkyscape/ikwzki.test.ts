@@ -77,8 +77,8 @@ describe("R3407000 iKwzki's signature", () => {
       expectCuesR200(bloom, D, "duoBond bloom");
       expectNoCard(bloom, IKWZKI);
     }
-    expect(cuesOfRun(planWithOffsets([{ type: "cardPlayed", player: "p1", instanceId: "ik", defId: IKWZKI, costPaid: 7 }, landing("p1")], view, envOf(FX_INTENSITY_SCALE.off)))).toEqual([]);
-    expect(cuesOfRun(planWithOffsets([turn("p1"), radiant], view, envOf(FX_INTENSITY_SCALE.off)))).toEqual([]);
+    expect(cuesOfRun(planWithOffsets([{ type: "cardPlayed", player: "p1", instanceId: "ik", defId: IKWZKI, costPaid: 7 }, landing("p1")], view, envOf({ intensity: FX_INTENSITY_SCALE.off })))).toEqual([]);
+    expect(cuesOfRun(planWithOffsets([turn("p1"), radiant], view, envOf({ intensity: FX_INTENSITY_SCALE.off })))).toEqual([]);
   });
 
   it("R3407000 her gallery play ends within a Mythic's ceiling", () => {

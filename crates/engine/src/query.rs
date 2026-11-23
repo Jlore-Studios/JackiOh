@@ -14,20 +14,23 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::combat::{AttackTarget, attack_target_of};
-use crate::config::{CHINESE_TAG, HAND_CAP, LIBRARY_CAP};
-use crate::damage::DamageTarget;
+use crate::config::{BRITTLE_FIRST_TICK_TURNS, CHINESE_TAG, HAND_CAP, LIBRARY_CAP, STATE_CHECK_PASS_CAP};
+use crate::damage::{DamageTarget, ProjectedPools};
 use crate::duos_life::effective_life;
 use crate::layers::{AuraTable, face_of, unit_has, unit_view};
 use crate::script::{EffectContext, FlagOrCount, StaticFlags};
 use crate::state::{
-    CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, can_lose, find_instance,
+    CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, active_first, can_lose, find_instance,
+    find_instance_mut,
 };
-use crate::subsystems::lethal::{falls_to_first_strike, is_lethal, projected_damage};
+use crate::subsystems::lethal::{
+    StruckUnit, falls_to_first_strike, is_lethal, projected_damage, projected_damage_with, swept_units,
+};
 use crate::wire::{
-    ActionBody, AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, has_keyword,
-    opponent_of,
+    ActionBody, AttackHealth, CardType, GameEvent, KeywordKind, PLAYER_IDS, PlayerId, Row, Tag, Zone,
+    ZoneName, has_keyword, opponent_of,
 };
-use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of};
+use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of, stands_in_backrow};
 
 /// A hero's block as a card may see it (§10.1), copied so a script cannot write through it. Not the
 /// view's `wire::HeroView`; `lib.rs` resolves the root name to this one.
@@ -155,6 +158,59 @@ pub fn resources_in_hand_of(state: &GameState, player: PlayerId) -> Vec<CardInst
         .collect()
 }
 
+/// R3558000: which end of a hand an added card takes — the left end, or the right end every other
+/// arrival takes (§3). The player's own choice never moves a card: no player reorders a hand.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub enum HandSide {
+    Left,
+    #[default]
+    Right,
+}
+
+/// R3558000: where `id` sits in a hand — its owner and its index — or `None` when it is in no hand.
+/// Index 0 is the leftmost card (§3).
+pub fn hand_index(state: &GameState, id: &str) -> Option<(PlayerId, usize)> {
+    for player in PLAYER_IDS {
+        if let Some(at) = state.players[player].hand.iter().position(|card| card.id == id) {
+            return Some((player, at));
+        }
+    }
+    None
+}
+
+/// R3558000: the leftmost card of `player`'s hand (index 0), or `None` for an empty hand.
+pub fn hand_leftmost(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
+    state.players[player].hand.first()
+}
+
+/// R3558000: the rightmost card of `player`'s hand, or `None` for an empty hand.
+pub fn hand_rightmost(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
+    state.players[player].hand.last()
+}
+
+/// R3558000: the card beside `id` in its hand, on `side` of it, or `None` when `id` is in no hand
+/// or has no neighbour there.
+pub fn hand_neighbor<'a>(state: &'a GameState, id: &str, side: HandSide) -> Option<&'a CardInstance> {
+    let (player, at) = hand_index(state, id)?;
+    let hand = &state.players[player].hand;
+    match side {
+        HandSide::Left => at.checked_sub(1).and_then(|left| hand.get(left)),
+        HandSide::Right => hand.get(at + 1),
+    }
+}
+
+/// R3558000: whether `id` is the leftmost card of its hand.
+pub fn is_leftmost_in_hand(state: &GameState, id: &str) -> bool {
+    hand_index(state, id).is_some_and(|(_, at)| at == 0)
+}
+
+/// R3558000: whether `id` is the rightmost card of its hand.
+pub fn is_rightmost_in_hand(state: &GameState, id: &str) -> bool {
+    hand_index(state, id).is_some_and(|(player, at)| at + 1 == state.players[player].hand.len())
+}
+
 /// R1881007: whether a card of one of these definitions is mid-resolution (§10.5's `resolving`) for this
 /// player, as S #138 Pocket Peptides asks of its controller's CN Peptides cast.
 pub fn is_resolving(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bool {
@@ -169,6 +225,15 @@ pub fn is_resolving(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bo
 /// spent count (`state_check.rs`'s collect, R441), so only a crumble's death reads true.
 pub fn brittle_spent(card: &CardInstance) -> bool {
     crate::brittle_count::active_brittle_count(card) == Some(0)
+}
+
+/// R385, R638: whether the card's Brittle count ticks at a start of its controller's turn numbered `turn`:
+/// a count started on turn t first ticks at the first such start numbered t + `BRITTLE_FIRST_TICK_TURNS`
+/// or later, then at each one after. False with no count. `brittle::brittle_due` asks it of the turn
+/// under way; the AI asks it of the controller's next start (R3793000).
+pub fn brittle_due_by(card: &CardInstance, turn: i32) -> bool {
+    card.brittle
+        .is_some_and(|brittle| turn >= brittle.since + BRITTLE_FIRST_TICK_TURNS)
 }
 
 /// R1840005: this player's Credits, 0 until first gained. Public (§10.8).
@@ -191,6 +256,16 @@ pub fn cards_played_this_turn(state: &GameState, player: PlayerId) -> i32 {
 /// The ids this player has played this turn, in order, as a copy (`find_instance` finds each, R98).
 pub fn played_ids_this_turn(state: &GameState, player: PlayerId) -> Vec<String> {
     state.players[player].turn_log.played_ids.clone()
+}
+
+/// R3800003: `played_ids_this_turn` as this turn's end began (§2.2): once it has, the plays and casts
+/// the end of turn itself made are left off; before it, every play this turn.
+pub fn played_ids_before_this_end(state: &GameState, player: PlayerId) -> Vec<String> {
+    let log = &state.players[player].turn_log;
+    let before = log
+        .played_before_end
+        .map_or(log.played_ids.len(), |count| usize::try_from(count).unwrap_or(0));
+    log.played_ids.iter().take(before).cloned().collect()
 }
 
 /// §6.2 Combo X: how many cards this player played this turn before this card's play, its place in
@@ -268,6 +343,51 @@ pub fn cast_on_draw_event(event: &GameEvent) -> bool {
     )
 }
 
+/// R783005, R1040, R1044: the type a `cardPlayed` or `cardResolved` play counts as, as
+/// `play_counts::record_play` counted it (§10.5 step 4): a card set by its Cloaked the Trap it was set
+/// as, any other its face's type off the played definition (B2.7), so an Animated Field Spell that
+/// animated as it entered is still a Field Spell play (R383). A set card off the field is its printed
+/// card (R783008). Scripts typing a play read this, never `def_of(..).type_`; `None` for other events.
+pub fn played_type_of(state: &GameState, event: &GameEvent) -> Option<CardType> {
+    let (instance_id, def_id, radiant) = match event {
+        GameEvent::CardPlayed {
+            instance_id, def_id, ..
+        } => (instance_id, def_id, None),
+        GameEvent::CardResolved {
+            instance_id,
+            def_id,
+            radiant,
+            ..
+        } => (instance_id, def_id, *radiant),
+        _ => return None,
+    };
+    let live = find_instance(state, instance_id);
+    if let Some(set) = live.and_then(|card| crate::alt_play::set_type_of(state, card)) {
+        return Some(set);
+    }
+    let radiant = radiant.or_else(|| live.map(|card| card.radiant)).unwrap_or(false);
+    Some(crate::faces::card_type_of_face(state, def_id, radiant))
+}
+
+/// R4423000: whether a `destroyed` is a Unit's death, by what the card was on the field as it died: its
+/// face's type off the event's definition, unless the event's `diedAs` says otherwise (a card set by its
+/// Cloaked died as the Field Trap or Trap it was set as, R3777000, R783008; an Animated Field Spell or
+/// Trap killed in a unit zone died as a Unit, R383). Scripts typing a death read this, never
+/// `def_of(..).type_`, since the card has left the field by then; `false` for other events.
+pub fn is_unit_death(state: &GameState, event: &GameEvent) -> bool {
+    let GameEvent::Destroyed {
+        def_id,
+        radiant,
+        died_as,
+        ..
+    } = event
+    else {
+        return false;
+    };
+    died_as.unwrap_or_else(|| crate::faces::card_type_of_face(state, def_id, *radiant == Some(true)))
+        == CardType::Unit
+}
+
 /// R174, R2199007: the field's departures so far, a mark to ask `left_field_since_mark` with later
 /// (Training Grounds #31 Level Up!: a Unit that left and came back is a new arrival).
 pub fn field_exit_mark(state: &GameState) -> u32 {
@@ -314,8 +434,14 @@ pub fn killer_of<'a>(state: &'a GameState, card: Option<&CardInstance>) -> Optio
 
 // Board facts by workstream: generation (B5 E19, R471)
 // Plague Counters, read here, ruled by `plague.rs` (Classic #27, #39, #43, #59, #69, #87; C+ #3);
-// `permanents_on_field` is every permanent on the field in R68's order, face-down included.
-pub use crate::plague::{permanents_on_field, plague_multiplier_of, plague_on, plague_on_field};
+// `permanents_on_field` is every permanent on the field in R68's order, face-down included;
+// `reachable_permanents_on_field` the same less the Dormant cards (R4322000).
+pub use crate::plague::{
+    permanents_on_field, plague_multiplier_of, plague_on, plague_on_field, reachable_permanents_on_field,
+};
+
+// Burn and Toxic (Stinkyscape+ E2, R3540000), ruled by `afflictions.rs`.
+pub use crate::afflictions::{burn_on, converts_to, hero_burn_of, hero_toxic_of, toxic_on};
 
 // Readers: play pipeline A (B5 E1 announces, E4 play counters, R448, R451)
 
@@ -433,6 +559,12 @@ pub fn anomaly_misses_of(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].anomaly_misses.unwrap_or(0)
 }
 
+/// R3536004: how many of `player`'s cards evolved this game (`evolution::begin`), which
+/// Accelerationist counts (`evolution`).
+pub fn evolutions_of(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].evolutions.unwrap_or(0)
+}
+
 /// R1849004, R2476000: how much more `card`'s own-turn redirect (Stinkyscape #5 Masochism Unmasked)
 /// may take off its controller's hero this turn: its declared `cap` (R386) less what it has taken this
 /// turn, at least 0. `None` for a card with no such redirect.
@@ -440,6 +572,179 @@ pub fn own_turn_redirect_left(state: &GameState, card: &CardInstance) -> Option<
     let redirect = crate::scripts::flags_of(state, card).own_turn_redirect?;
     let cap = crate::params::declared_or(state, card, "cap", redirect.cap).max(0);
     Some((cap - crate::damage::own_turn_redirect_moved(state, card)).max(0))
+}
+
+/// R3550004: how much more `card`'s damage pool (Stinkyscape+ #42 Force Projector) may soak this
+/// turn: its declared `pool` (R386) less what it has soaked on its controller's current turn, at
+/// least 0. `None` for a card with no pool.
+pub fn damage_pool_left(state: &GameState, card: &CardInstance) -> Option<i32> {
+    Some((damage_pool_cap(state, card)? - crate::damage::damage_pool_used(state, card)).max(0))
+}
+
+/// R3550004: `card`'s whole damage pool, its declared `pool` (R386), at least 0: what it soaks once it
+/// refills at the start of its controller's turn. `None` for a card with no pool.
+fn damage_pool_cap(state: &GameState, card: &CardInstance) -> Option<i32> {
+    let pool = crate::scripts::flags_of(state, card).damage_pool?;
+    Some(crate::params::declared_or(state, card, "pool", pool).max(0))
+}
+
+/// R4064000: what `player`'s damage pools (R3550004) may soak between them, read off the cards §4.4
+/// step 3b reads: what each has left this turn, or, `refilled`, its whole pool (its next turn start).
+pub fn damage_pool_of(state: &GameState, player: PlayerId, refilled: bool) -> i32 {
+    crate::damage::acting_texts_of(state, player)
+        .iter()
+        .filter_map(|card| {
+            if refilled {
+                damage_pool_cap(state, card)
+            } else {
+                damage_pool_left(state, card)
+            }
+        })
+        .sum()
+}
+
+/// R3572002: the game-wide worth of a Warhero Token before its face doubles it (R3548002): 0 until
+/// the first Token has been printed, then the game's value. Public: it is one number both seats may
+/// read, so a preview of it hides nothing.
+pub fn warhero_worth(state: &GameState) -> i32 {
+    state.warhero_worth.unwrap_or(0)
+}
+
+/// R3560000: whether this player has used the once-a-game first `key` (S+ #120, #121).
+pub fn once_a_game_used(state: &GameState, player: PlayerId, key: &str) -> bool {
+    state.players[player]
+        .once_a_game
+        .as_ref()
+        .is_some_and(|used| used.iter().any(|seen| seen == key))
+}
+
+/// R3560005: whether a summon with `exileBelow` (E7) may land on `slot` for `source`: its half of a
+/// slashed board, never a void lane, never a pile holding a Dormant card, never a reserved zone.
+pub fn exiling_summon_lands(state: &GameState, source: &CardInstance, slot: crate::zones::ZoneSlot) -> bool {
+    crate::geometry::lane_in_half(state, slot.lane, crate::geometry::half_of_card(state, source))
+        && !crate::geometry::is_void(state, slot)
+        && !crate::zones::zone_contents(state, slot)
+            .iter()
+            .any(crate::slumber::is_slumbering)
+        && !crate::zones::is_reserved(state, slot)
+}
+
+/// R4238000: the card a `recruit` of `args` would take now, read without moving anything: its pile's
+/// first match that can be summoned, (X)-cost ones last (R690), or `None` when it would summon nothing.
+/// A script that must name the recruited card before its `recruit` runs (C #1's forced attacker) reads
+/// it here, the same scan the verb runs.
+pub fn recruit_takes(ctx: &EffectContext<'_>, args: &crate::effects::RecruitArgs) -> Option<CardInstance> {
+    crate::effects::summon::recruit_target(ctx, args)
+}
+
+/// R3560006: whether a card of `def_id` stands on either side's field. A pure read, never
+/// `unit_view`, so `conditional_keywords` may call it.
+pub fn def_on_field(state: &GameState, def_id: &str) -> bool {
+    crate::wire::PLAYER_IDS.iter().any(|player| {
+        crate::zones::active_units_of(state, *player)
+            .iter()
+            .any(|card| card.def_id == def_id)
+    })
+}
+
+/// R3550000: the enemy Unit this event brings onto the field, or `None`: a summon of a Unit onto
+/// the enemy side (Recruit, a token, a copy, Reborn), or a played one once it resolves — its play's
+/// own placement (§10.5 step 4, which carries `exitsFrom`) waits for that. Copied from Stinkyscape
+/// #23 Warp Disruptor's arrival (R1875003), with the controller as a parameter.
+pub fn enemy_unit_arrival(state: &GameState, controller: PlayerId, event: &GameEvent) -> Option<String> {
+    match event {
+        GameEvent::Summoned {
+            player,
+            row,
+            exits_from,
+            instance_id,
+            ..
+        } => {
+            if *player == controller || exits_from.is_some() {
+                return None;
+            }
+            // R1081000: a Unit summoned standing in a backrow zone is a summoned Unit too.
+            let unit = find_instance(state, instance_id)?;
+            (*row == Row::Units || stands_in_backrow(state, unit)).then(|| instance_id.clone())
+        }
+        GameEvent::CardResolved {
+            permanent,
+            instance_id,
+            ..
+        } => {
+            // R783005: the play as it counts, so a Unit set face-down by its Cloaked is no arriving Unit.
+            if !*permanent || played_type_of(state, event) != Some(CardType::Unit) {
+                return None;
+            }
+            let unit = find_instance(state, instance_id)?;
+            (unit.zone.z() == ZoneName::Field && unit.controller != controller).then(|| instance_id.clone())
+        }
+        _ => None,
+    }
+}
+
+/// R3550009: every enemy permanent — the opponent's acting units, then their backrow, each once
+/// (Stinkyscape+ #25 Snom Bunny's Death); Classic #40 MC Tech's count and pick read it too. A Dormant
+/// card is none (R4322000): `active_units_of` leaves out a Dormant Unit, and the backrow walk leaves
+/// out a Dormant card.
+pub fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+    let enemy = opponent_of(player);
+    let backrow: Vec<CardInstance> = crate::zones::slots_of(enemy, Row::Backrow)
+        .iter()
+        .flat_map(|slot| card_at(state, slot).cloned())
+        .filter(|card| !crate::slumber::is_slumbering(card))
+        .collect();
+    let mut permanents: Vec<CardInstance> = active_units_of(state, enemy).into_iter().cloned().collect();
+    // R1081000: a Unit standing in the backrow is already among the units — one permanent, once.
+    let backrow: Vec<CardInstance> = backrow
+        .into_iter()
+        .filter(|card| !permanents.iter().any(|unit| unit.id == card.id))
+        .collect();
+    permanents.extend(backrow);
+    permanents
+}
+
+/// R3550008: how the opponent's announced play meets the secret pick.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SecretPickHit {
+    Chosen,
+    OtherSeen,
+}
+
+/// R3550008: the opponent's announced play against the card's secret pick — the chosen card, or
+/// another card seen in the pick. `None` for the owner's own plays and cards never seen.
+pub fn secret_pick_hit(card: &CardInstance, event: &GameEvent) -> Option<SecretPickHit> {
+    let GameEvent::CardAnnounced {
+        player, instance_id, ..
+    } = event
+    else {
+        return None;
+    };
+    if *player == card.controller {
+        return None;
+    }
+    let note = card.memory.get(crate::effects::secret_pick::SECRET_PICK_KEY)?;
+    if note.get("chosen").and_then(Value::as_str) == Some(instance_id.as_str()) {
+        return Some(SecretPickHit::Chosen);
+    }
+    let seen = note.get("seen").and_then(Value::as_array)?;
+    seen.iter()
+        .any(|id| id.as_str() == Some(instance_id.as_str()))
+        .then_some(SecretPickHit::OtherSeen)
+}
+
+/// R3550002: whether the event is this Unit being Frozen — a `marked` adding the Frozen mark on
+/// its id. Every freeze that lands answers, a re-freeze included.
+pub fn is_frozen_event(event: &GameEvent, instance_id: &str) -> bool {
+    matches!(
+        event,
+        GameEvent::Marked {
+            instance_id: id,
+            mark,
+            added: true,
+            ..
+        } if id.as_str() == instance_id && mark.as_str() == crate::config::FROZEN_MARK.mark
+    )
 }
 
 // Readers for the Classic #1–#45 cards (card-specific)
@@ -519,8 +824,9 @@ pub fn gifted_would_make_radiant(state: &GameState, player: PlayerId, card: &Car
 }
 
 /// R662, R44: the units acting on the other side whose attack on this player's hero would be lethal now
-/// by #96 My Pawn's projection (`subsystems::is_lethal`: after Armor and the Anti-oneshot cap, net of a
-/// Lifesteal strike back): whether the blow is on the board, not whether it can be declared now.
+/// by #96 My Pawn's projection (`subsystems::is_lethal`: after Armor, the Anti-oneshot cap, a conversion
+/// and the damage pool, R4032000, net of a Lifesteal strike back): whether the blow is on the board, not
+/// whether it can be declared now.
 pub fn lethal_attackers_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let target = DamageTarget::Hero { player };
     active_units_of(state, opponent_of(player))
@@ -566,7 +872,7 @@ pub fn heal_multiplier_of(state: &GameState, player: PlayerId) -> i32 {
 pub fn fusable_permanents_of(state: &GameState, player: PlayerId, except: Option<&str>) -> Vec<CardInstance> {
     permanents_held_by(state, player)
         .into_iter()
-        .filter(|held| Some(held.id.as_str()) != except && !unit_has(state, held, KeywordKind::Immutable))
+        .filter(|held| Some(held.id.as_str()) != except && !crate::layers::is_immutable(state, held))
         .collect()
 }
 
@@ -587,27 +893,62 @@ pub fn emotes_heard(state: &GameState, player: PlayerId) -> bool {
 /// MD-D19, R1122: the acting Units beside the attacker on its own side that a redirect may re-aim it at,
 /// in lane order: §4.2 step 2's restrictions apply, never step 3's Taunt wall.
 pub fn redirect_neighbours(state: &GameState, attacker: &CardInstance) -> Vec<CardInstance> {
-    let Some(at) = slot_of(state, attacker) else {
-        return Vec::new();
-    };
-    crate::zones::adjacent(at)
-        .into_iter()
-        .filter_map(|slot| card_at(state, slot).cloned())
-        .filter(|unit| {
-            // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
-            crate::zones::is_adjacent_card(state, attacker, unit)
-                && crate::zones::acts_on_field(state, unit)
-                && !crate::zones::is_carried(state, unit)
-                && crate::restrictions::attack_restriction(
-                    state,
-                    attacker,
-                    &DamageTarget::Unit {
-                        instance: unit.clone(),
-                    },
-                )
-                .is_ok()
-        })
-        .collect()
+    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the attacker is met once.
+    let mut met: Vec<String> = vec![attacker.id.clone()];
+    let mut out: Vec<CardInstance> = Vec::new();
+    for slot in crate::giga::adjacent_slots(state, attacker) {
+        let Some(unit) = crate::giga::occupant_at(state, slot).cloned() else {
+            continue;
+        };
+        if met.contains(&unit.id) {
+            continue;
+        }
+        met.push(unit.id.clone());
+        // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
+        if crate::zones::is_adjacent_card(state, attacker, &unit)
+            && crate::zones::acts_on_field(state, &unit)
+            && !crate::zones::is_carried(state, &unit)
+            && crate::restrictions::attack_restriction(
+                state,
+                attacker,
+                &DamageTarget::Unit {
+                    instance: unit.clone(),
+                },
+            )
+            .is_ok()
+        {
+            out.push(unit);
+        }
+    }
+    out
+}
+
+/// §4.4 step 10, §3.1: the units one attack on `defender` strikes: the defender, then, with Cleave,
+/// each unit adjacent to it on its own side, never one dormant under a Stack (R13) nor a Dormant one,
+/// which nothing reaches (§3.2, R1839000; the pipeline's `land` drops a hit on either, R4290000).
+/// R3546001: a GIGA beside the target in either of its lanes is met once, by id; R1081000: beside a Unit
+/// standing in the backrow, only a Unit standing there. The lethal projection, the combat forecast's
+/// splash (R4290000) and the AI's static splash read this one walk (R4257000).
+pub fn cleave_struck(
+    state: &GameState,
+    attacker: &CardInstance,
+    defender: &CardInstance,
+) -> Vec<CardInstance> {
+    if !has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Cleave) {
+        return vec![defender.clone()];
+    }
+    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the target is met once.
+    let mut struck = vec![defender.clone()];
+    for slot in crate::giga::adjacent_slots(state, defender) {
+        if let Some(card) = crate::giga::occupant_at(state, slot)
+            && !struck.iter().any(|met| met.id == card.id)
+            && crate::zones::is_adjacent_card(state, defender, card)
+            && crate::zones::acts_on_field(state, card)
+        {
+            struck.push(card.clone());
+        }
+    }
+    struck
 }
 
 /// R901 (Meditative #30 Fickle E-Kitten's "a more expensive permanent than you"): the highest R396
@@ -652,10 +993,11 @@ pub fn credit_used_this_turn(state: &GameState, player: PlayerId) -> bool {
 /// R831008 (Meditative #98 Showdown's "an empty lane"): whether both players' unit and backrow zones of
 /// this lane are empty. A face-down card occupies its zone: the opponent sees it taken, never by what.
 pub fn lane_is_empty(state: &GameState, lane: i32) -> bool {
+    // R3546001: a lane a GIGA covers is no empty lane (`zones::is_empty` reads the cover).
     [PlayerId::P1, PlayerId::P2].into_iter().all(|player| {
         [Row::Units, Row::Backrow]
             .into_iter()
-            .all(|row| card_at(state, crate::zones::ZoneSlot { player, row, lane }).is_none())
+            .all(|row| crate::zones::is_empty(state, crate::zones::ZoneSlot { player, row, lane }))
     })
 }
 
@@ -697,7 +1039,9 @@ pub fn beneficial_on_own_side(state: &GameState, event: &GameEvent) -> Option<St
 /// the target's strike back does to the attacker (§4.3); `kills` says the blow destroys its target (ends
 /// the game, for a hero); `survives` says the attacker outlasts the exchange; and `pops` says the blow
 /// breaks a Divine Shield. A unit's size is its Attack plus its Health, the measure the tutorial's coach
-/// ranks its picks by; a hero target's is 0.
+/// ranks its picks by; a hero target's is 0. R4290000: `splash` is each other unit a Cleave attack
+/// strikes (§4.4 step 10) and `overflow` the Trample excess an attack on a unit sends on to its hero
+/// (step 9), each left off the wire when there is none.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -716,6 +1060,44 @@ pub struct AttackForecast {
     pub pops: bool,
     pub attacker_size: i32,
     pub target_size: i32,
+    /// R4290000: the Cleave hit on each unit beside the target, in the combat's order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub splash: Vec<SplashHit>,
+    /// R4290000: what the attack's Trample excess deals the target's hero, every hit's added up.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub overflow: Option<TrampleOverflow>,
+}
+
+/// R4290000: one Cleave hit on a unit beside an attack's target (§4.4 step 10), in the target's terms:
+/// what it deals that unit, whether it destroys it and whether it breaks its Divine Shield.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SplashHit {
+    pub instance_id: String,
+    pub dealt: i32,
+    pub kills: bool,
+    pub pops: bool,
+}
+
+/// R4290000: what an attack on a unit passes on to that unit's hero through Trample (§4.4 step 9), each
+/// hit's excess its own instance through the hero's Armor and caps (R176), and whether it ends the game.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TrampleOverflow {
+    pub hero_id: String,
+    pub dealt: i32,
+    pub kills: bool,
 }
 
 /// The forecast of one seat's whole turn so far: every attack it may declare, and whether the attackers
@@ -735,15 +1117,51 @@ pub struct CombatForecast {
     pub lethal: bool,
 }
 
+/// R4379000: the units each pass of §4.5's state check after one attack takes off the field, as the
+/// forecast settles it on a scratch copy of the board, by id, each pass in R68's order with its exiles
+/// first (MD-D31). A Reborn unit is listed in the pass it dies in, though its body comes back (R83).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct AttackDeaths {
+    pub passes: Vec<Vec<String>>,
+}
+
+impl AttackDeaths {
+    /// Every unit a pass takes off, in the passes' order.
+    pub fn gone(&self) -> impl Iterator<Item = &String> {
+        self.passes.iter().flatten()
+    }
+
+    /// Whether a pass takes off the unit `id`.
+    pub fn goes(&self, id: &str) -> bool {
+        self.gone().any(|gone| gone == id)
+    }
+}
+
+/// R4379000: a unit an attack's hits reach: all they deal it, whether they destroy it, and whether by
+/// exile (R1124).
+struct Reached {
+    id: String,
+    dealt: i32,
+    destroyed: bool,
+    exiled: bool,
+}
+
 /// R3100000: the forecast of every attack `seat` may declare now. It reads only what the board shows
 /// (every unit's stats and keywords through the layers, each hero's Armor and life), never a hand, a
 /// library or a face-down card, and it changes nothing: each damage is the pipeline's own reading (§4.4
-/// steps 1 to 4, `projected_damage` on a hero), so no forecast can disagree with the hit.
+/// steps 1 to 4 through `damage::project_hit`, a conversion and the damage pool included, R4032000;
+/// `projected_damage` on a hero), so no forecast can disagree with the hit. `lethal` adds up the blows
+/// on the enemy hero one after another, so they spend each enemy pool once between them. R4379000:
+/// `kills`, `survives` and each splash hit's `kills` count every pass of the state check after the
+/// combat (`attack_deaths`), a death the attack's other hits cause by taking an aura away included;
+/// every damage figure and `lethal` read the board as it stands, since every hit lands before any
+/// check (R59), and no card dormant beneath a pile is read (R13).
 pub fn combat_forecast(state: &GameState, seat: PlayerId) -> CombatForecast {
     let enemy = opponent_of(seat);
     let mut attacks = Vec::new();
     let mut hitters: IndexSet<String> = IndexSet::new();
     let mut hero_damage = 0;
+    let mut pools = ProjectedPools::default();
     for action in crate::reduce::legal_actions(state, seat) {
         let ActionBody::Attack {
             attacker_id,
@@ -758,10 +1176,10 @@ pub fn combat_forecast(state: &GameState, seat: PlayerId) -> CombatForecast {
         ) else {
             continue;
         };
-        let forecast = forecast_attack(state, attacker, &target);
+        let (forecast, _) = forecast_attack(state, attacker, &target);
         let on_enemy_hero = matches!(target, DamageTarget::Hero { player } if player == enemy);
         if on_enemy_hero && hitters.insert(attacker_id.clone()) {
-            hero_damage += forecast.dealt;
+            hero_damage += projected_damage_with(state, attacker, &target, &mut pools);
         }
         attacks.push(AttackForecast {
             attacker_id,
@@ -773,31 +1191,61 @@ pub fn combat_forecast(state: &GameState, seat: PlayerId) -> CombatForecast {
     CombatForecast { attacks, lethal }
 }
 
-/// One attack's forecast, its ids left empty for the caller.
-fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> AttackForecast {
+/// R4379000: the passes of the state check after `attacker`'s attack on `target` (§4.5), as the combat
+/// forecast settles them: what its `kills`, `survives` and splash `kills` count. Only what the board
+/// shows is read: no card dormant beneath a pile (R13), no Death hook, trap or replacement.
+pub fn attack_deaths(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> AttackDeaths {
+    forecast_attack(state, attacker, target).1
+}
+
+/// One attack's forecast, its ids left empty for the caller, and the state check's passes after it
+/// (R4379000). A blow of 1 or more from a source that exiles what it damages removes its target as a
+/// Poisonous one destroys it (R1124, R4111000), either way.
+fn forecast_attack(
+    state: &GameState,
+    attacker: &CardInstance,
+    target: &AttackTarget,
+) -> (AttackForecast, AttackDeaths) {
     let mine = unit_view(state, attacker);
     let attacker_size = mine.attack + mine.health;
     let DamageTarget::Unit { instance: defender } = target else {
         // A hero never strikes back: R44's projection of the blow is the whole of it.
-        return AttackForecast {
+        let kills = is_lethal(state, attacker, target);
+        let mut deaths = settle_deaths(state, &hero_sweep(state, attacker, target));
+        // §4.5 step 2: a blow that ends the game ends it after the check's first pass.
+        if kills {
+            deaths.passes.truncate(1);
+        }
+        let forecast = AttackForecast {
             attacker_id: String::new(),
             target_id: String::new(),
             dealt: projected_damage(state, attacker, target),
             taken: 0,
-            kills: is_lethal(state, attacker, target),
-            survives: true,
+            kills,
+            survives: !deaths.goes(&attacker.id),
             pops: false,
             attacker_size,
             target_size: 0,
+            splash: Vec::new(),
+            overflow: None,
         };
+        return (forecast, deaths);
     };
     let theirs = unit_view(state, defender);
     let bonus = crate::combat::attack_mod_for(state, attacker, defender);
     let hit = (mine.attack + bonus.attack) * crate::combat::lane_multiplier_for(state, attacker, defender);
-    let back = theirs.attack * crate::combat::lane_multiplier_for(state, defender, attacker);
+    // R4156000: a strike back takes lane strike's multiplier alone, never a sweep's weight.
+    let back_multiplier = crate::combat::strike_back_multiplier_for(state, defender, attacker);
+    let back = theirs.attack * back_multiplier;
     let strikes_back = crate::combat::takes_strike_back(state, attacker, defender);
-    // §4.3 step 1: a First Strike defender that destroys the attacker first leaves it no blow to land.
-    let falls = strikes_back && falls_to_first_strike(state, attacker, defender);
+    // §4.3 step 1: a First Strike defender that destroys the attacker first leaves it no blow to land,
+    // and so does one whose first blow exiles it (R1124, R4111000).
+    let exiled_first = has_keyword(&theirs.keywords, KeywordKind::FirstStrike)
+        && !has_keyword(&mine.keywords, KeywordKind::FirstStrike)
+        && exiles_on_damage(state, defender)
+        && hit_on_unit(state, defender, attacker, back) > 0;
+    let falls =
+        strikes_back && (falls_to_first_strike(state, attacker, defender, back_multiplier) || exiled_first);
     let mut dealt = if falls {
         0
     } else {
@@ -808,7 +1256,7 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
         dealt = dealt.min(theirs.health.max(0));
     }
     let poisons = bonus.poisonous || has_keyword(&mine.keywords, KeywordKind::Poisonous);
-    let kills = dealt > 0 && (poisons || dealt >= theirs.health);
+    let kills = dealt > 0 && (poisons || exiles_on_damage(state, attacker) || dealt >= theirs.health);
     // One First Strike attacker that destroys its target is not struck back (§4.3 step 1).
     let strikes_first = has_keyword(&mine.keywords, KeywordKind::FirstStrike)
         && !has_keyword(&theirs.keywords, KeywordKind::FirstStrike);
@@ -817,19 +1265,312 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
     } else {
         hit_on_unit(state, defender, attacker, back)
     };
-    let survives =
-        taken <= 0 || (taken < mine.health && !has_keyword(&theirs.keywords, KeywordKind::Poisonous));
-    AttackForecast {
+    let survives = taken <= 0
+        || (taken < mine.health
+            && !has_keyword(&theirs.keywords, KeywordKind::Poisonous)
+            && !exiles_on_damage(state, defender));
+    let (mut splash, besides, overflow) = if falls {
+        // R176: an attacker that falls first strikes nothing, so its Cleave never runs.
+        (Vec::new(), Vec::new(), None)
+    } else {
+        let attack = mine.attack + bonus.attack;
+        let (splash, besides) = splash_of(state, attacker, defender, attack, poisons);
+        (splash, besides, overflow_of(state, attacker, target))
+    };
+    // R4379000: the check after the combat, settled once every hit has landed (R59). The standing
+    // board's `kills` decided the strike back above (§4.3 step 1); a later pass only adds deaths.
+    let mut reached = vec![
+        Reached {
+            id: defender.id.clone(),
+            dealt,
+            destroyed: kills,
+            exiled: dealt > 0 && exiles_on_damage(state, attacker),
+        },
+        Reached {
+            id: attacker.id.clone(),
+            dealt: taken,
+            destroyed: !survives,
+            exiled: taken > 0 && exiles_on_damage(state, defender),
+        },
+    ];
+    reached.extend(besides);
+    let mut deaths = settle_deaths(state, &reached);
+    // §4.5 step 2: a Trample excess that ends the game ends it after the check's first pass.
+    if overflow.as_ref().is_some_and(|overflow| overflow.kills) {
+        deaths.passes.truncate(1);
+    }
+    for hit in &mut splash {
+        hit.kills |= deaths.goes(&hit.instance_id);
+    }
+    let forecast = AttackForecast {
         attacker_id: String::new(),
         target_id: String::new(),
         dealt,
         taken,
-        kills,
-        survives,
+        kills: kills || deaths.goes(&defender.id),
+        survives: survives && !deaths.goes(&attacker.id),
         pops: !falls && hit > 0 && is_shielded(state, defender),
         attacker_size,
         target_size: theirs.attack + theirs.health,
+        splash,
+        overflow,
+    };
+    (forecast, deaths)
+}
+
+/// R4290000, §4.4 step 10: the Cleave hit of `attack` on each unit beside `defender`, read through the
+/// same projection as the blow before it (`lethal::struck_units`), so a damage pool the blow spent is
+/// spent (R4032000). Cleave is the attack's, not the blow's: it lands when a Divine Shield,
+/// Indestructible or the zero rule stops the blow (R63), and from a Ranged attacker (R783001); a GIGA
+/// beside the target takes it once (R3546001). `kills` counts a sweep's hit on the same unit after it
+/// (R4290001), which `dealt`, Cleave's alone, does not. R4379000: with the splash, every unit besides
+/// the defender the attack's hits reach, a sweep's other hits included, for the check after it.
+fn splash_of(
+    state: &GameState,
+    attacker: &CardInstance,
+    defender: &CardInstance,
+    attack: i32,
+    poisons: bool,
+) -> (Vec<SplashHit>, Vec<Reached>) {
+    let pools = &mut ProjectedPools::default();
+    let struck = crate::subsystems::lethal::struck_units(state, attacker, defender, attack, pools);
+    let on_hero = DamageTarget::Hero {
+        player: defender.controller,
+    };
+    let swept = swept_units(state, attacker, Some(defender), attack, &struck, &on_hero, pools);
+    let exiles = exiles_on_damage(state, attacker);
+    let destroys = |dealt: i32| dealt > 0 && (poisons || exiles);
+    let mut reached: Vec<Reached> = Vec::new();
+    let splash = struck
+        .iter()
+        .filter(|hit| hit.unit.id != defender.id)
+        .map(|hit| {
+            let health = unit_view(state, &hit.unit).health;
+            // R4290001: a sweeping Cleaver's sweep hits the unit again after its Cleave hit (R3554008).
+            let after = swept
+                .iter()
+                .find(|swept| swept.unit.id == hit.unit.id)
+                .map_or(0, |swept| swept.dealt);
+            let kills = destroys(hit.dealt)
+                || destroys(after)
+                || (hit.dealt + after > 0 && hit.dealt + after >= health);
+            reached.push(Reached {
+                id: hit.unit.id.clone(),
+                dealt: hit.dealt + after,
+                destroyed: kills,
+                exiled: hit.dealt + after > 0 && exiles,
+            });
+            SplashHit {
+                kills,
+                pops: attack > 0 && is_shielded(state, &hit.unit),
+                instance_id: hit.unit.id.clone(),
+                dealt: hit.dealt,
+            }
+        })
+        .collect();
+    reached.extend(
+        swept
+            .iter()
+            .filter(|hit| !struck.iter().any(|met| met.unit.id == hit.unit.id))
+            .map(|hit| swept_reach(state, attacker, hit, poisons)),
+    );
+    (splash, reached)
+}
+
+/// R4379000, R3554008: what a sweep's hit on a unit no other hit of the attack struck does to it, read
+/// as a Cleave hit's is: any damage destroys it from a Poisonous attack and exiles it from one that
+/// exiles what it damages (R1124).
+fn swept_reach(state: &GameState, attacker: &CardInstance, hit: &StruckUnit, poisons: bool) -> Reached {
+    let dealt = hit.dealt;
+    let exiled = dealt > 0 && exiles_on_damage(state, attacker);
+    Reached {
+        id: hit.unit.id.clone(),
+        dealt,
+        destroyed: dealt > 0 && (poisons || exiled || dealt >= unit_view(state, &hit.unit).health),
+        exiled,
     }
+}
+
+/// R4379000, R3554008: the units a sweeper's attack on a hero sweeps, read after its blow as
+/// `projected_damage_with` reads them, so the blow spends a damage pool first (R4032000). None for an
+/// attacker that does not sweep.
+fn hero_sweep(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> Vec<Reached> {
+    if crate::scripts::flags_of(state, attacker).sweep_lane.is_none() {
+        return Vec::new();
+    }
+    let attack = unit_view(state, attacker).attack;
+    let pools = &mut ProjectedPools::default();
+    crate::damage::project_hit(state, Some(attacker), target, attack, pools);
+    let poisons = unit_has(state, attacker, KeywordKind::Poisonous);
+    swept_units(state, attacker, None, attack, &[], target, pools)
+        .iter()
+        .map(|hit| swept_reach(state, attacker, hit, poisons))
+        .collect()
+}
+
+/// The units on the field in R68's order, the active player's side first (`state_check::units_of`), as
+/// §4.5 step 1 walks them.
+fn units_in_check_order(state: &GameState) -> Vec<CardInstance> {
+    active_first(state)
+        .into_iter()
+        .flat_map(|player| crate::state_check::units_of(state, player))
+        .collect()
+}
+
+/// R4379000: whether one unit's leaving the field can change what §4.5 step 1 reads of another: an aura
+/// in play (§10.4 layer 5) or a unit that sets its own stats from the board (layer 2, R39), the only
+/// layers that read other cards. Without either, the check's first pass after an attack is all of it.
+fn layers_read_the_board(state: &GameState) -> bool {
+    crate::layers::aura_sources(state)
+        .into_iter()
+        .any(|source| !source.vanilla && crate::scripts::script_of(state, source).aura.is_some())
+        || PLAYER_IDS.into_iter().any(|player| {
+            crate::state_check::units_of(state, player)
+                .iter()
+                .any(|unit| !unit.vanilla && crate::scripts::script_of(state, unit).set_stat.is_some())
+        })
+}
+
+/// R4379000: `unit` off the scratch board with every card dormant beneath it in its pile, so none resumes
+/// on top: the forecast is not shown what a pile holds, only its count (R13, R4221002).
+fn take_off(after: &mut GameState, unit: &CardInstance) {
+    if let Some(slot) = slot_of(after, unit)
+        && card_at(after, slot).is_some_and(|top| top.id == unit.id)
+    {
+        let buried = crate::zones::beneath_at(after, slot).to_vec();
+        for card in &buried {
+            crate::zones::remove_from_field(after, card, Default::default());
+        }
+    }
+    crate::zones::remove_from_field(after, unit, Default::default());
+}
+
+/// R4379000, §4.5 steps 1 and 4: one pass's dying units off the scratch board together (R463), each
+/// whose view has Reborn back in its zone without it at 1 health (R83), read once every body is back,
+/// as `state_check::reborn_step` reads it. Its other resets (R78) are not modelled: they change
+/// nothing a later pass reads of it at 1 health.
+fn settle_pass(after: &mut GameState, dying: &[CardInstance]) {
+    let reborn: Vec<bool> = {
+        let auras = AuraTable::new(&*after);
+        dying
+            .iter()
+            .map(|unit| auras.unit_has(unit, KeywordKind::Reborn))
+            .collect()
+    };
+    let mut back: Vec<String> = Vec::new();
+    for (unit, reborn) in dying.iter().zip(reborn) {
+        if !reborn {
+            take_off(after, unit);
+            continue;
+        }
+        if let Some(body) = find_instance_mut(after, &unit.id) {
+            body.granted_keywords
+                .retain(|keyword| keyword.kind() != KeywordKind::Reborn);
+            body.reborn_spent = Some(true);
+            body.vanilla = false;
+            body.marked_destroyed = None;
+            body.damage = 0;
+            back.push(unit.id.clone());
+        }
+    }
+    for id in &back {
+        let Some(body) = find_instance(after, id).cloned() else {
+            continue;
+        };
+        let max_health = unit_view(after, &body).max_health;
+        if let Some(card) = find_instance_mut(after, id) {
+            card.damage = (max_health - 1).max(0);
+        }
+    }
+}
+
+/// R4379000: §4.5's check after an attack whose hits reach `reached`, settled on a scratch copy of the
+/// board until nothing changes: each pass exiles the units marked for it (MD-D31), then takes off every
+/// unit at 0 or less health or marked destroyed, so a unit an aura held up falls a pass after the
+/// aura's source. Nothing is cloned when nothing dies or no layer reads the board, where the first
+/// pass is the units the hits destroy. Death hooks, traps, "would die" replacements, Tribute
+/// conditions (R403), carriers (R446) and the card-on-card standing steps are not modelled.
+fn settle_deaths(state: &GameState, reached: &[Reached]) -> AttackDeaths {
+    if !reached.iter().any(|hit| hit.destroyed) {
+        return AttackDeaths::default();
+    }
+    if !layers_read_the_board(state) {
+        let walk = units_in_check_order(state);
+        let marked = |exiled: bool| {
+            walk.iter()
+                .filter(move |unit| {
+                    reached
+                        .iter()
+                        .any(|hit| hit.id == unit.id && hit.destroyed && hit.exiled == exiled)
+                })
+                .map(|unit| unit.id.clone())
+        };
+        let pass: IndexSet<String> = marked(true).chain(marked(false)).collect();
+        return AttackDeaths {
+            passes: vec![pass.into_iter().collect()],
+        };
+    }
+    let mut after = state.clone();
+    for hit in reached {
+        let Some(unit) = find_instance_mut(&mut after, &hit.id) else {
+            continue;
+        };
+        if hit.dealt > 0 {
+            unit.damage += hit.dealt;
+        }
+        if hit.exiled {
+            unit.marked_exiled = Some(true);
+        } else if hit.destroyed {
+            unit.marked_destroyed = Some(true);
+        }
+    }
+    let mut deaths = AttackDeaths::default();
+    for _ in 0..STATE_CHECK_PASS_CAP {
+        let exiles: Vec<CardInstance> = units_in_check_order(&after)
+            .into_iter()
+            .filter(|unit| unit.marked_exiled == Some(true))
+            .collect();
+        for unit in &exiles {
+            take_off(&mut after, unit);
+        }
+        let dying: Vec<CardInstance> = {
+            let auras = AuraTable::new(&after);
+            let mut met: IndexSet<String> = IndexSet::new();
+            units_in_check_order(&after)
+                .into_iter()
+                .filter(|unit| crate::state_check::is_dying(&auras, unit) && met.insert(unit.id.clone()))
+                .collect()
+        };
+        if exiles.is_empty() && dying.is_empty() {
+            break;
+        }
+        settle_pass(&mut after, &dying);
+        deaths
+            .passes
+            .push(exiles.iter().chain(&dying).map(|unit| unit.id.clone()).collect());
+    }
+    deaths
+}
+
+/// R4290000, §4.4 step 9: what an attack on a unit tramples on to that unit's hero, R44's projection
+/// (each hit's excess its own instance through the hero's Armor and caps, R176), and whether it ends the
+/// game net of a Lifesteal strike back (`is_lethal`). None when nothing reaches the hero; a strike back
+/// never tramples (R1750000).
+fn overflow_of(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> Option<TrampleOverflow> {
+    let dealt = projected_damage(state, attacker, target);
+    (dealt > 0).then(|| TrampleOverflow {
+        hero_id: crate::reduce::attack_target_id(&DamageTarget::Hero {
+            player: crate::subsystems::lethal::defending_hero(target),
+        }),
+        dealt,
+        kills: is_lethal(state, attacker, target),
+    })
+}
+
+/// R1124, R4111000: whether `source`'s damage exiles the Unit it lands on (Meditative #72 The Banisher),
+/// which the forecast counts as it counts Poisonous: any blow of 1 or more removes its target.
+fn exiles_on_damage(state: &GameState, source: &CardInstance) -> bool {
+    crate::scripts::flags_of(state, source).exiles_on_damage == Some(true)
 }
 
 /// Whether a unit's Divine Shield is up (§6.1): the view drops a spent one.
@@ -837,17 +1578,19 @@ fn is_shielded(state: &GameState, unit: &CardInstance) -> bool {
     unit_has(state, unit, KeywordKind::DivineShield) && unit.divine_shield_spent != Some(true)
 }
 
-/// §4.4 steps 1 to 4 on a unit, read as `damage.rs`'s pipeline reads them: a Divine Shield negates the
-/// hit, Armor takes its part unless the source pierces (R346), the unit's own cap comes next (R2179005)
-/// and an Indestructible unit takes nothing.
+/// §4.4 steps 1 to 4 on a unit, read as `damage.rs`'s pipeline reads them (`damage::project_hit`,
+/// R4032000): a Divine Shield negates the hit, Armor takes its part unless the source pierces (R346),
+/// the unit's own cap comes next (R2179005), a converting source deals nothing (R3540003), its side's
+/// damage pool soaks what it has left (R3550004) and an Indestructible unit takes nothing.
 fn hit_on_unit(state: &GameState, source: &CardInstance, unit: &CardInstance, amount: i32) -> i32 {
-    if amount <= 0 || is_shielded(state, unit) || unit_has(state, unit, KeywordKind::Indestructible) {
-        return 0;
-    }
-    let after_armor = if crate::damage::pierces(state, Some(source), None) {
-        amount
-    } else {
-        (amount - unit_view(state, unit).armor).max(0)
+    let target = DamageTarget::Unit {
+        instance: unit.clone(),
     };
-    crate::damage::unit_damage_cap(state, unit).map_or(after_armor, |cap| after_armor.min(cap))
+    crate::damage::project_hit(
+        state,
+        Some(source),
+        &target,
+        amount,
+        &mut ProjectedPools::default(),
+    )
 }

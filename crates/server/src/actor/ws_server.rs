@@ -9,7 +9,8 @@
 //!
 //! Surface contract: docs/v0.3.0/SURFACE.md §4.1, §4.2, §11.2, §11.3. The token comes from the
 //! offered `jackioh.bearer.` subprotocol (R1379000), or, when none is offered, from the previous
-//! day's client's `?token=`; only `jackioh.v1` is echoed.
+//! day's client's `?token=`; only `jackioh.v1` is echoed. The fallback logs `ws.upgrade.query_token`
+//! with the path alone, and no log line holds a socket's query (#4017).
 
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -31,7 +32,8 @@ use crate::actor::contracts::SocketHandlers;
 use crate::actor::protocol::{MAX_FRAME_BYTES, SocketErrorCode, encode, error_message};
 use crate::actor::registry::AttachError;
 use crate::api::http::{
-    ApiError, ApiErrorCode, assert_active, client_address, lock, rate_limit_address, upgrade_profile,
+    ApiError, ApiErrorCode, SOCKET_METHOD, assert_active, client_address, lock, rate_limit_address,
+    upgrade_profile,
 };
 use crate::api::rematch::in_rematch_window;
 use crate::app::{App, browser_origins, now_ms};
@@ -418,7 +420,15 @@ fn upgrade_token(headers: &HeaderMap, uri: &Uri) -> Option<String> {
             .ok()
             .and_then(|bytes| String::from_utf8(bytes).ok())
             .filter(|token| !token.is_empty()),
-        None => query_param(&query_pairs(uri), "token").filter(|token| !token.is_empty()),
+        None => {
+            let found = query_param(&query_pairs(uri), "token").filter(|token| !token.is_empty());
+            if found.is_some() {
+                // R1379000's fallback, for production's previous client: counted so a person can tell
+                // when it is unused (#4017). Never the query: it holds the token.
+                tracing::info!(event = "ws.upgrade.query_token", path = %uri.path());
+            }
+            found
+        }
     }
 }
 
@@ -520,10 +530,14 @@ pub async fn handle_match_socket(app: &Arc<App>, socket: &Socket, uri: &Uri, tok
 
     let query = query_pairs(uri);
     match upgrade_socket(app, socket, &query, token).await {
-        Ok(()) => {}
-        Err(UpgradeFailure::Refused { code, message }) => refuse(code, &message),
+        Ok(()) => app.route_health.answered(SOCKET_METHOD, WS_PATH),
+        Err(UpgradeFailure::Refused { code, message }) => {
+            app.route_health.answered(SOCKET_METHOD, WS_PATH);
+            refuse(code, &message);
+        }
         Err(UpgradeFailure::Threw(message)) => {
             tracing::error!(event = "ws.upgrade.threw", message = %message);
+            app.route_health.threw(SOCKET_METHOD, WS_PATH, &message);
             refuse(WS_CLOSE.internal, "something went wrong");
         }
     }
@@ -919,4 +933,93 @@ pub async fn handle_duos(app: Arc<App>, req: Request) -> Response {
             let _ = pump.await;
             unregister_client(key, &socket);
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Clone, Default)]
+    struct Captured(Arc<Mutex<Vec<u8>>>);
+
+    impl std::io::Write for Captured {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().expect("sink").extend_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    /// What `run` logged, as the server's JSON lines.
+    fn logged(run: impl FnOnce()) -> String {
+        let sink = Captured::default();
+        let writer = sink.clone();
+        let subscriber = tracing_subscriber::fmt()
+            .json()
+            .flatten_event(true)
+            .with_writer(move || writer.clone())
+            .finish();
+        tracing::subscriber::with_default(subscriber, run);
+        let bytes = sink.0.lock().expect("sink").clone();
+        String::from_utf8(bytes).expect("utf8 log")
+    }
+
+    fn offered(protocol: &str) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            SEC_WEBSOCKET_PROTOCOL,
+            HeaderValue::from_str(protocol).expect("header value"),
+        );
+        headers
+    }
+
+    fn uri(text: &str) -> Uri {
+        text.parse::<Uri>().expect("uri")
+    }
+
+    #[test]
+    fn a_query_token_is_read_and_logged_by_path_alone() {
+        let target = uri("/ws/match?matchId=match-1&token=SECRET-TOKEN");
+        let mut read = None;
+        let log = logged(|| read = upgrade_token(&HeaderMap::new(), &target));
+        assert_eq!(read, Some("SECRET-TOKEN".to_string()));
+        assert!(log.contains("ws.upgrade.query_token"), "{log}");
+        assert!(log.contains("/ws/match"), "{log}");
+        for leaked in ["SECRET-TOKEN", "token=", "matchId"] {
+            assert!(!log.contains(leaked), "{leaked} in {log}");
+        }
+    }
+
+    #[test]
+    fn a_percent_encoded_query_token_never_reaches_the_log() {
+        let target = uri("/ws/match?matchId=match-1&%74oken=SECRET-TOKEN");
+        let log = logged(|| {
+            let _ = upgrade_token(&HeaderMap::new(), &target);
+        });
+        for leaked in ["SECRET-TOKEN", "%74oken"] {
+            assert!(!log.contains(leaked), "{leaked} in {log}");
+        }
+    }
+
+    #[test]
+    fn a_subprotocol_credential_logs_nothing_even_beside_a_query_token() {
+        let target = uri("/ws/match?matchId=match-1&token=QUERY-TOKEN");
+        let headers = offered(&format!("jackioh.v1, {}", bearer_protocol("SECRET-TOKEN")));
+        let mut read = None;
+        let log = logged(|| read = upgrade_token(&headers, &target));
+        assert_eq!(read, Some("SECRET-TOKEN".to_string()));
+        assert!(log.is_empty(), "{log}");
+    }
+
+    #[test]
+    fn a_request_with_no_credential_logs_nothing() {
+        let target = uri("/ws/match?matchId=match-1");
+        let mut read = Some(String::new());
+        let log = logged(|| read = upgrade_token(&HeaderMap::new(), &target));
+        assert_eq!(read, None);
+        assert!(log.is_empty(), "{log}");
+    }
 }

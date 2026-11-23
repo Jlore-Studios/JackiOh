@@ -133,9 +133,9 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
     const FELINORS: &str = "core-012"; // Duplicating Felinors
     const TWO_TRAP: &str = "classic-052"; // Final Gambit: Trap that answers nothing these tests do (Unlicensed Experimentation, core-085 since issue #3136)
-    const TWINSPELL: &str = "core-079"; // Twinspell: a Field Spell
     const MENACE: &str = "core-019"; // Midrange Menace
-    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const FIELD_SPELL_2: &str = "stand-in (2) Field Spell";
+    const FIELD_SPELL_3: &str = "stand-in (3) Field Spell";
     const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
     const ROCK: &str = "core-066"; // The Rock: Indestructible, Tribute 1
     const DIVIDEND: &str = "core-024"; // Efficiency Dividend: a Spell
@@ -147,7 +147,7 @@ mod tests {
             "p1": {
                 "hand": [{ "def": GLITCH, "radiant": radiant_face }, FELINORS, VANILLA],
                 "field": [FELINORS, MENACE],
-                "backrow": [{ "def": TWO_TRAP, "faceUp": false }, MANA_WELL],
+                "backrow": [{ "def": TWO_TRAP, "faceUp": false }, FIELD_SPELL_3],
                 "library": [FELINORS, SEVEN],
                 "graveyard": [FELINORS],
                 "exile": [FELINORS],
@@ -155,7 +155,7 @@ mod tests {
             "p2": {
                 "hand": [FELINORS, STOCKPILE],
                 "field": [VANILLA, FELINORS],
-                "backrow": [TWINSPELL],
+                "backrow": [FIELD_SPELL_2],
                 "library": [REPLENISH, FELINORS],
                 "graveyard": [FELINORS],
                 "exile": [FELINORS],
@@ -188,10 +188,10 @@ mod tests {
     }
 
     fn offered_modes(s: &Scenario, instance_id: &str) -> Vec<Vec<String>> {
-        legal_actions(s.state(), P1)
+        plays_in(s.state(), P1, instance_id)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play { instance_id: id, modes, .. } if id == instance_id => Some(modes.unwrap_or_default()),
+                ActionBody::Play { modes, .. } => Some(modes.unwrap_or_default()),
                 _ => None,
             })
             .collect()

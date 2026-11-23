@@ -45,8 +45,6 @@ function deckProps(collection: Collection | null) {
     holders: new Map(),
     refusedCardId: null,
     onAdd: noop,
-    onDragStart: noop,
-    onDragEnd: noop,
   };
 }
 
@@ -141,7 +139,6 @@ describe("R1956000 the deck builder's pool and deck list wear the viewer's picks
         conflicts={new Map()}
         issues={new Map()}
         head={null}
-        onDropCard={noop}
         onRemove={noop}
         onInspect={noop}
       />

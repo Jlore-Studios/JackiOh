@@ -14,7 +14,7 @@ use serde_json::{Value, json};
 
 use crate::catalog::def_of;
 use crate::effects::targets::{BoardScope, TargetSpec, cards_in_scope_aimed, instance_of};
-use crate::plague::{permanents_on_field, place_plague_on, remove_plague};
+use crate::plague::{place_plague_on, reachable_permanents_on_field, remove_plague};
 use crate::prelude::json_as;
 use crate::prompts::{
     AnswerInput, OpenPromptArgs, close_prompt, in_offered_order, open_prompt, resume_at, resume_of,
@@ -185,11 +185,13 @@ fn label_of(state: &GameState, card: &CardInstance) -> String {
     def_of(Some(state), &card.def_id).name.clone()
 }
 
-/// Open the one placement prompt over every permanent on the field (R68's order), or return false
-/// when there is none: the placements fizzle and draw nothing (R129).
-fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) -> bool {
-    let cards: Vec<CardInstance> = permanents_on_field(sink.state, player)
+/// Open the one placement prompt over every permanent on the field an effect reaches (R68's order; a
+/// Dormant card is none, R4322000; for a Spell, `from_spell`, nor a Unit Immune to Spells, R4453000),
+/// or return false when there is none: the placements fizzle and draw nothing (R129).
+fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume, from_spell: bool) -> bool {
+    let cards: Vec<CardInstance> = reachable_permanents_on_field(sink.state, player)
         .into_iter()
+        .filter(|card| !(from_spell && crate::restrictions::immune_to_spells(sink.state, card)))
         .cloned()
         .collect();
     if cards.is_empty() {
@@ -205,10 +207,8 @@ fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) ->
     // R1200: while a Mayor acts the placement is drawn at random too, and nobody is asked.
     let random = mode.is_some_and(|mode| mode.random) || crate::random_targets::targets_random(sink.state);
     if random {
-        let now: Vec<CardInstance> = permanents_on_field(sink.state, player)
-            .into_iter()
-            .cloned()
-            .collect();
+        // The board is as `cards` read it: nothing has changed since.
+        let now: Vec<CardInstance> = cards.clone();
         let pool: Vec<CardInstance> = if mode.is_some_and(|mode| mode.friends_only) {
             // R1850004: a cast for its caster's own side places there alone.
             crate::random_cast::friends_only(sink.state, player, &now, |card: &CardInstance| {
@@ -313,7 +313,8 @@ pub fn place_plague_tokens(args: PlacePlagueTokensArgs) -> Effect {
         }
         let resume: Resume = resume_at(json_as(request));
         let controller = ctx.controller;
-        ask_placement(ctx, controller, resume);
+        let from_spell = crate::restrictions::effect_is_from_spell(ctx);
+        ask_placement(ctx, controller, resume, from_spell);
     })
 }
 

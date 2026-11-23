@@ -107,6 +107,35 @@ mod tests {
             g.expect_mana(PlayerId::P1, 4);
         }
 
+        /// "R4453000: a Spell's every-Unit switch passes a Unit Immune to Spells by (§6.1)"
+        #[test]
+        fn r4453000_an_immune_unit_keeps_its_position() {
+            let mut g = scenario(json!({
+                "p1": {
+                    "hand": [CONTROLLER],
+                    "field": [
+                        { "def": SEVEN_SEVEN, "lane": 1 },
+                        { "def": POINTMASTER, "lane": 2, "position": "DEF" },
+                    ],
+                },
+                "p2": {
+                    "field": [
+                        { "def": DUELIST, "lane": 1 },
+                        { "def": TIMMY, "lane": 2, "position": "DEF" },
+                    ],
+                },
+            }));
+            let warded = g.unit(PlayerId::P2, 2).map(|unit| unit.id).expect("p2's lane 2");
+            g.card_mut(warded.as_str()).granted_keywords.push(Keyword::ImmuneToSpells);
+
+            g.play(CONTROLLER, json!({}));
+
+            assert_eq!(position_at(&g, PlayerId::P2, 2), Some(Position::Def), "the immune Unit stays");
+            assert_eq!(position_at(&g, PlayerId::P1, 1), Some(Position::Def));
+            assert_eq!(position_at(&g, PlayerId::P1, 2), Some(Position::Atk));
+            assert_eq!(position_at(&g, PlayerId::P2, 1), Some(Position::Def));
+        }
+
         /// "R20 base: the switch spends no exertion — nothing's `switched` flag moves"
         #[test]
         fn r20_base_the_switch_spends_no_exertion_nothings_switched_flag_moves() {

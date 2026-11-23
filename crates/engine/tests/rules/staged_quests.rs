@@ -2,7 +2,8 @@
 // `fixtures/staged_quests.rs`. R1854000 the quest card of stages, its current stage public; R1854001
 // "Complete the current stage on all your Quests", which reaches In Too Deep's tree as well; R1854002
 // the six goals the set's stages need; R1854003 stealing the enemy's mana crystals; R1854004 "hear
-// back in N turns".
+// back in N turns". Issue #4331: R4331000 a spent Quest card going to the graveyard, and R4331001 a
+// steal of mana crystals going past the cap.
 
 use jackioh_engine::subsystems::quests::{QuestMemory, quest_memory_of};
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -59,14 +60,6 @@ fn play_quest(s: &mut Scenario, def_id: &str) -> String {
 
 fn line(s: &Scenario, id: &str) -> QuestMemory {
     quest_memory_of(s.card(id)).unwrap_or_else(|| panic!("{id} has no quest line"))
-}
-
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
-fn hero_pick(player: &str) -> Value {
-    json!({ "targets": [{ "pick": "hero", "player": player }] })
 }
 
 fn id_at(s: &Scenario, player: PlayerId, lane: i32) -> String {
@@ -220,15 +213,15 @@ mod r1854000_staged_quests {
             json!([{ "def": plain.id, "lane": 1 }]),
         );
         let (first, second) = (id_at(&s, P1, 1), id_at(&s, P1, 2));
-        s.play(smite.id.as_str(), pick(&first));
-        s.play(smite.id.as_str(), pick(&second));
+        s.play(smite.id.as_str(), pick::targets(pick::id(&first)));
+        s.play(smite.id.as_str(), pick::targets(pick::id(&second)));
         assert_eq!(
             line(&s, &quest).stage,
             Some(3),
             "two Acclaimed deaths finish stage 2"
         );
         let enemy = id_at(&s, P2, 1);
-        s.play(thief.id.as_str(), pick(&enemy));
+        s.play(thief.id.as_str(), pick::targets(pick::id(&enemy)));
         assert_eq!(completed(s.last_events(), &quest), strings(&["steal"]));
         let memory = line(&s, &quest);
         assert!(memory.active.is_empty(), "nothing is open after the last stage");
@@ -316,7 +309,7 @@ mod r1854000_staged_quests {
     #[test]
     fn r1854000_leaving_the_field_resets_the_line_and_played_again_it_starts_at_stage_1() {
         let (mut s, quest) = heist_at_stage_two("r1854000-reset", json!([recall.id]), json!([]), json!([]));
-        s.play(recall.id.as_str(), pick(&quest));
+        s.play(recall.id.as_str(), pick::targets(pick::id(&quest)));
         let bounced = s
             .hand(P1)
             .into_iter()
@@ -500,7 +493,7 @@ mod r1854002_goals {
             json!([]),
         );
         let unit = id_at(&s, P1, 1);
-        s.play(glow.id.as_str(), pick(&unit));
+        s.play(glow.id.as_str(), pick::targets(pick::id(&unit)));
         assert!(done(&s, &quest), "an Acclaimed Unit made Radiant on the field");
     }
 
@@ -523,7 +516,7 @@ mod r1854002_goals {
             json!([{ "def": acclaimed.id, "lane": 1 }]),
         );
         let enemy = id_at(&s, P2, 1);
-        s.play(glow.id.as_str(), pick(&enemy));
+        s.play(glow.id.as_str(), pick::targets(pick::id(&enemy)));
         assert!(!done(&s, &quest), "the enemy's Acclaimed Unit is not yours");
     }
 
@@ -541,19 +534,19 @@ mod r1854002_goals {
             id_at(&s, P1, 3),
             id_at(&s, P2, 1),
         );
-        s.play(smite.id.as_str(), pick(&enemy));
-        s.play(smite.id.as_str(), pick(&untagged));
+        s.play(smite.id.as_str(), pick::targets(pick::id(&enemy)));
+        s.play(smite.id.as_str(), pick::targets(pick::id(&untagged)));
         assert_eq!(
             line(&s, &quest).progress.get(ONLY_GOAL),
             Some(&0),
             "the enemy's and an untagged death"
         );
-        s.play(smite.id.as_str(), pick(&first));
+        s.play(smite.id.as_str(), pick::targets(pick::id(&first)));
         assert_eq!(
             progressed(s.last_events(), &quest),
             vec![(ONLY_GOAL.to_string(), 1)]
         );
-        s.play(smite.id.as_str(), pick(&last));
+        s.play(smite.id.as_str(), pick::targets(pick::id(&last)));
         assert!(done(&s, &quest));
     }
 
@@ -566,7 +559,7 @@ mod r1854002_goals {
             json!([{ "def": plain.id, "lane": 1 }]),
         );
         let enemy = id_at(&s, P2, 1);
-        s.play(thief.id.as_str(), pick(&enemy));
+        s.play(thief.id.as_str(), pick::targets(pick::id(&enemy)));
         assert!(done(&s, &quest), "a Steal onto your side");
 
         let (mut s, quest) = with_goal("cardsStolen", json!([pickpocket.id]), json!([]), json!([]));
@@ -665,9 +658,9 @@ mod r1854002_goals {
             json!([]),
             json!([]),
         );
-        s.play(near_hit.id.as_str(), hero_pick("p2"));
+        s.play(near_hit.id.as_str(), pick::targets(pick::hero("p2")));
         assert!(!done(&s, &quest), "11 is not 12");
-        s.play(big_hit.id.as_str(), hero_pick("p2"));
+        s.play(big_hit.id.as_str(), pick::targets(pick::hero("p2")));
         assert!(done(&s, &quest), "12 dealt");
 
         let mut s = board(
@@ -682,12 +675,12 @@ mod r1854002_goals {
         let quest = play_quest(&mut s, &goal_card("damageInstance"));
         s.end_turn();
         let unit = id_at(&s, P1, 1);
-        s.play(big_hit.id.as_str(), pick(&unit));
+        s.play(big_hit.id.as_str(), pick::targets(pick::id(&unit)));
         assert!(
             !done(&s, &quest),
             "12 to a Unit of yours is not your hero taking it"
         );
-        s.play(big_hit.id.as_str(), hero_pick("p1"));
+        s.play(big_hit.id.as_str(), pick::targets(pick::hero("p1")));
         assert!(done(&s, &quest), "12 taken by your hero");
     }
 }
@@ -714,22 +707,27 @@ mod r1854003_steal_mana_crystals {
     }
 
     #[test]
-    fn r1854003_the_enemy_loses_their_crystals_and_a_thief_at_the_cap_gains_none() {
+    fn r1854003_r4331001_the_enemy_loses_their_crystals_and_a_thief_at_the_cap_gains_them_past_it() {
         let mut s = mine("r1854003-cap", json!([heist_spell.id]), json!([]));
         s.play(heist_spell.id.as_str(), json!({}));
         assert_eq!(mana(&s, P2), (0, 0));
-        assert_eq!(mana(&s, P1), (MAX_MANA, MAX_MANA), "already at the cap");
+        assert_eq!(
+            mana(&s, P1),
+            (2 * MAX_MANA, 2 * MAX_MANA),
+            "at the cap, and its 4 on top"
+        );
         assert_eq!(
             mana_events(s.last_events()),
-            vec![(P2, 0, 0)],
-            "only the side that changed"
+            vec![(P2, 0, 0), (P1, 2 * MAX_MANA, 2 * MAX_MANA)],
+            "the victim's first"
         );
         let view = s.view(P2);
         assert_eq!((view.you.mana.current, view.you.mana.max), (0, 0));
+        assert_eq!(view.opponent.mana.max, 2 * MAX_MANA, "both seats see it");
     }
 
     #[test]
-    fn r1854003_the_thief_gains_them_full_up_to_the_cap_and_never_past_it() {
+    fn r1854003_r4331001_the_thief_gains_them_full_and_keeps_them_on_top_of_the_cap_as_its_turns_grow() {
         let mut s = board(
             "p1",
             "r1854003-early",
@@ -758,13 +756,38 @@ mod r1854003_steal_mana_crystals {
         assert_eq!(mana(&s, P1), (3, 3), "one crystal gained, full");
         assert_eq!(mana(&s, P2), (0, 0));
         assert_eq!(mana_events(s.last_events()), vec![(P2, 0, 0), (P1, 3, 3)]);
-        // p1's crystals grow with its turns, inside the cap.
+        // p1's own crystals grow with its turns up to the cap, the stolen one on top.
         let mut maxes = Vec::new();
         for _ in 0..3 {
             s.end_turn().end_turn();
             maxes.push(mana(&s, P1).1);
         }
-        assert_eq!(maxes, vec![MAX_MANA, MAX_MANA, MAX_MANA]);
+        assert_eq!(maxes, vec![MAX_MANA, MAX_MANA + 1, MAX_MANA + 1]);
+    }
+
+    #[test]
+    fn r4331001_a_steal_from_a_thief_takes_the_crystals_it_stole_and_those_never_come_back() {
+        let mut s = board(
+            "p1",
+            "r4331001-back",
+            json!([heist_spell.id]),
+            json!([]),
+            json!([heist_spell.id]),
+            json!([]),
+        );
+        s.play(heist_spell.id.as_str(), json!({}));
+        assert_eq!(mana(&s, P1).1, 2 * MAX_MANA);
+        s.end_turn();
+        assert_eq!(mana(&s, P2), (1, 1), "p2's first crystal back");
+        s.play(heist_spell.id.as_str(), json!({}));
+        assert_eq!(mana(&s, P1), (0, 0), "its own 4 and the 4 it stole");
+        assert_eq!(mana(&s, P2), (1 + 2 * MAX_MANA, 1 + 2 * MAX_MANA));
+        s.end_turn();
+        assert_eq!(
+            mana(&s, P1).1,
+            1,
+            "its own come back one a turn, the stolen ones never"
+        );
     }
 
     #[test]
@@ -862,11 +885,83 @@ mod r1854004_hear_back {
         let mut s = mine("r1854004-leave", json!([application.id, recall.id]), json!([]));
         let quest = play_quest(&mut s, &application.id);
         s.activate(quest.as_str(), json!({ "ability": SEND }));
-        s.play(recall.id.as_str(), pick(&quest));
+        s.play(recall.id.as_str(), pick::targets(pick::id(&quest)));
         let again = play_quest(&mut s, &application.id);
         let memory = line(&s, &again);
         assert_eq!((memory.stage, memory.hear_back), (Some(1), None));
         s.end_turn().end_turn().end_turn().end_turn();
         assert_eq!(line(&s, &again).stage, Some(1), "nothing heard back");
+    }
+}
+
+mod r4331000_spent_quests {
+    use super::*;
+
+    fn in_graveyard(s: &Scenario, id: &str) -> bool {
+        s.state().players.p1.graveyard.iter().any(|card| card.id == id)
+    }
+
+    fn on_field(s: &Scenario, id: &str) -> bool {
+        s.state()
+            .players
+            .p1
+            .backrow
+            .iter()
+            .flatten()
+            .any(|card| card.id == id)
+    }
+
+    #[test]
+    fn r4331000_a_line_whose_last_reward_is_single_use_sends_its_card_to_the_graveyard_after_the_reward() {
+        let mut s = mine("r4331000-spent", json!([spent.id, tylannt.id]), json!([]));
+        let quest = play_quest(&mut s, &spent.id);
+        let before = mana(&s);
+        s.play(tylannt.id.as_str(), json!({}));
+        assert_eq!(completed(s.last_events(), &quest), strings(&["goal-1"]));
+        assert_eq!(
+            mana(&s),
+            before - 2 + SPENT_MANA,
+            "the reward came first (Tylannt cost 2)"
+        );
+        assert!(!on_field(&s, &quest), "the spent quest left the field");
+        assert!(in_graveyard(&s, &quest), "into its owner's graveyard");
+        // A plain move, not a death (R3044000).
+        assert!(
+            !s.last_events().iter().any(
+                |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == quest)
+            ),
+            "not destroyed"
+        );
+    }
+
+    #[test]
+    fn r4331000_a_line_whose_last_reward_is_an_aura_keeps_its_card_on_the_field() {
+        let mut s = mine("r4331000-aura", json!([lasting.id, tylannt.id]), json!([]));
+        let quest = play_quest(&mut s, &lasting.id);
+        s.play(tylannt.id.as_str(), json!({}));
+        assert_eq!(completed(s.last_events(), &quest), strings(&["goal-1"]));
+        assert!(on_field(&s, &quest), "an Aura lasts, so the card stays");
+        assert_eq!(line(&s, &quest).auras, strings(&[LASTING_AURA]));
+    }
+
+    #[test]
+    fn r4331000_a_line_with_a_stage_still_open_is_not_over_and_its_last_stage_ends_it() {
+        let mut s = mine(
+            "r4331000-open",
+            json!([unfinished.id, tylannt.id, tylannt.id]),
+            json!([]),
+        );
+        s.state_mut().players.p1.mana.current = 2 * MAX_MANA;
+        let quest = play_quest(&mut s, &unfinished.id);
+        s.play(tylannt.id.as_str(), json!({}));
+        assert!(on_field(&s, &quest), "stage 2 is open, so the line goes on");
+        assert_eq!(line(&s, &quest).stage, Some(2));
+        s.play(tylannt.id.as_str(), json!({}));
+        assert_eq!(completed(s.last_events(), &quest), strings(&["goal-2"]));
+        assert!(in_graveyard(&s, &quest), "the last stage's reward spent it");
+    }
+
+    fn mana(s: &Scenario) -> i32 {
+        s.state().players.p1.mana.current
     }
 }

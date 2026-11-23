@@ -58,10 +58,6 @@ mod tests {
         s.unit(player, lane).map(|card| card.id).unwrap_or_default()
     }
 
-    fn enemy_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     fn apple(radiant: bool, field: Value, health: Option<i32>) -> Scenario {
         let mut p1 = json!({ "hand": [{ "def": APPLE, "radiant": radiant }, FILLER], "field": field });
         if let Some(health) = health {
@@ -76,7 +72,7 @@ mod tests {
         #[test]
         fn summons_a_rush_token_heals_your_hero_2_then_deals_1_damage_in_that_order() {
             let mut s = apple(false, json!([]), Some(20));
-            s.play(APPLE, json!({ "targets": enemy_hero() }));
+            s.play(APPLE, json!({ "targets": pick::hero("p2") }));
             let token = s.unit(PlayerId::P1, 1);
             assert_eq!(token.as_ref().map(|card| card.def_id.as_str()), Some(RUSH));
             assert_eq!(token.as_ref().map(|card| card.radiant), Some(false));
@@ -89,7 +85,7 @@ mod tests {
         #[test]
         fn r19_the_heal_goes_past_30() {
             let mut s = apple(false, json!([]), None);
-            s.play(APPLE, json!({ "targets": enemy_hero() }));
+            s.play(APPLE, json!({ "targets": pick::hero("p2") }));
             s.expect_health(PlayerId::P1, 32);
         }
 
@@ -106,14 +102,14 @@ mod tests {
         #[test]
         fn r64_the_token_takes_your_leftmost_open_zone() {
             let mut s = apple(false, json!([VANILLA]), None);
-            s.play(APPLE, json!({ "targets": enemy_hero() }));
+            s.play(APPLE, json!({ "targets": pick::hero("p2") }));
             assert_eq!(s.unit(PlayerId::P1, 2).map(|card| card.def_id), Some(RUSH.to_string()));
         }
 
         #[test]
         fn s3_2_a_full_board_summons_nothing_and_the_rest_still_resolves() {
             let mut s = apple(false, json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA]), Some(20));
-            s.play(APPLE, json!({ "targets": enemy_hero() }));
+            s.play(APPLE, json!({ "targets": pick::hero("p2") }));
             assert!(!s.last_events().iter().any(|event| matches!(event, GameEvent::Summoned { .. })));
             s.expect_health(PlayerId::P1, 22).expect_health(PlayerId::P2, 29);
         }
@@ -121,7 +117,7 @@ mod tests {
         #[test]
         fn e6_spell_damage_raises_the_hit_spell_damage_2_3() {
             let mut s = apple(false, json!([SOLARIUS]), None);
-            s.play(APPLE, json!({ "targets": enemy_hero() }));
+            s.play(APPLE, json!({ "targets": pick::hero("p2") }));
             s.expect_health(PlayerId::P2, 27);
         }
 
@@ -130,13 +126,13 @@ mod tests {
             let mut up = apple(false, json!([]), Some(20));
             step_param(up.card_mut(APPLE), "heal", 1);
             step_param(up.card_mut(APPLE), "damage", 1);
-            up.play(APPLE, json!({ "targets": enemy_hero() }));
+            up.play(APPLE, json!({ "targets": pick::hero("p2") }));
             up.expect_health(PlayerId::P1, 23).expect_health(PlayerId::P2, 28);
 
             let mut down = apple(false, json!([]), Some(20));
             step_param(down.card_mut(APPLE), "heal", -5);
             step_param(down.card_mut(APPLE), "damage", -5);
-            down.play(APPLE, json!({ "targets": enemy_hero() }));
+            down.play(APPLE, json!({ "targets": pick::hero("p2") }));
             down.expect_health(PlayerId::P1, 21).expect_health(PlayerId::P2, 29);
         }
     }
@@ -164,7 +160,7 @@ mod tests {
             let mut s = apple(true, json!([]), Some(20));
             step_param(s.card_mut(APPLE), "heal", 1);
             step_param(s.card_mut(APPLE), "damage", 1);
-            s.play(APPLE, json!({ "targets": enemy_hero() }));
+            s.play(APPLE, json!({ "targets": pick::hero("p2") }));
             s.expect_health(PlayerId::P1, 25).expect_health(PlayerId::P2, 27);
         }
     }

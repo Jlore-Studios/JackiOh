@@ -59,7 +59,7 @@ mod tests {
     const TWO_TRAP: &str = "classic-052"; // Final Gambit: Trap that answers nothing these tests do (Unlicensed Experimentation, core-085 since issue #3136)
     const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
     const TESLA: &str = "classic-005"; // Tesla: a Field Trap
-    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const FIELD_SPELL: &str = "stand-in (3) Field Spell";
     const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
     const VANILLA: &str = "core-008"; // Mr. Vanilla
     const WARDRUM: &str = "classicplus-037"; // Wardrum: Divine Shield, "End of turn: Cast a copy of a random Spell, Field Spell or Trap you played this turn."
@@ -87,8 +87,8 @@ mod tests {
             assert_eq!(
                 js(&crate::card_def(TRICKSTER).params),
                 json!([
-                    { "key": "discount", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "base", "cry": true },
-                    { "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0, "tunedOn": "radiant", "cry": true }
+                    { "key": "discount", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "base", "read": "cry" },
+                    { "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0, "tunedOn": "radiant", "read": "cry" }
                 ])
             );
             let scripts = script();
@@ -111,17 +111,17 @@ mod tests {
 
             #[test]
             fn a_field_trap_counts_as_a_trap_and_a_field_spell_is_reached_too() {
-                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, TESLA, MANA_WELL, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, TESLA, FIELD_SPELL, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 s.play(TRICKSTER, json!({}));
                 assert_eq!(cost_of(&s, TESLA), 0);
-                assert_eq!(cost_of(&s, MANA_WELL), 1);
+                assert_eq!(cost_of(&s, FIELD_SPELL), 1);
             }
 
             #[test]
             fn the_first_such_play_consumes_it_the_next_one_pays_full_price() {
-                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, MANA_WELL, SHEEPISH, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, FIELD_SPELL, SHEEPISH, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 s.play(TRICKSTER, json!({}));
-                s.play(MANA_WELL, json!({ "zone": 1 }));
+                s.play(FIELD_SPELL, json!({ "zone": 1 }));
                 s.expect_mana(P1, 2); // 4 − 1 − 1
                 assert_eq!(cost_of(&s, SHEEPISH), 1);
                 assert_eq!(modifier_labels(&s, P1, "you"), Vec::<String>::new());
@@ -130,14 +130,14 @@ mod tests {
             #[test]
             fn the_first_such_play_consumes_it_even_when_that_card_already_costs_0_under_cloaked_toe_cracker() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [TRICKSTER, TWO_TRAP, MANA_WELL, STOCKPILE], "field": ["classic-006"] },
+                    "p1": { "hand": [TRICKSTER, TWO_TRAP, FIELD_SPELL, STOCKPILE], "field": ["classic-006"] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 s.play(TRICKSTER, json!({}));
                 assert_eq!(cost_of(&s, TWO_TRAP), 0);
                 s.play(TWO_TRAP, json!({ "zone": 1 }));
                 assert_eq!(modifier_labels(&s, P1, "you"), Vec::<String>::new());
-                assert_eq!(cost_of(&s, MANA_WELL), 3);
+                assert_eq!(cost_of(&s, FIELD_SPELL), 3);
             }
 
             #[test]
@@ -167,7 +167,7 @@ mod tests {
             #[test]
             fn no_this_turn_it_waits_across_turns_until_used() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [TRICKSTER, MANA_WELL, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
+                    "p1": { "hand": [TRICKSTER, FIELD_SPELL, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
                 }));
                 s.play(TRICKSTER, json!({}));
@@ -175,8 +175,8 @@ mod tests {
                 assert_eq!(s.state().active, P2);
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
-                assert_eq!(cost_of(&s, MANA_WELL), 1);
-                s.play(MANA_WELL, json!({ "zone": 1 }));
+                assert_eq!(cost_of(&s, FIELD_SPELL), 1);
+                s.play(FIELD_SPELL, json!({ "zone": 1 }));
                 assert_eq!(modifier_labels(&s, P1, "you"), Vec::<String>::new());
             }
 
@@ -211,7 +211,7 @@ mod tests {
             #[test]
             fn r70_a_cast_never_uses_it_a_trap_wardrum_casts_leaves_the_discount_waiting() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [SHEEPISH, TRICKSTER, MANA_WELL, STOCKPILE], "field": [WARDRUM], "library": [STOCKPILE, STOCKPILE] },
+                    "p1": { "hand": [SHEEPISH, TRICKSTER, FIELD_SPELL, STOCKPILE], "field": [WARDRUM], "library": [STOCKPILE, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
                 }));
                 s.play(SHEEPISH, json!({ "zone": 1 })); // before the Trickster: full price
@@ -229,19 +229,19 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_of_discount_makes_it_3_less() {
-                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, MANA_WELL, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, FIELD_SPELL, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 step_param(s.card_mut(TRICKSTER), "discount", 1);
                 s.play(TRICKSTER, json!({}));
-                assert_eq!(cost_of(&s, MANA_WELL), 0);
+                assert_eq!(cost_of(&s, FIELD_SPELL), 0);
                 assert_eq!(modifier_labels(&s, P1, "you"), vec!["Your next Trap or Field Spell costs (3) less"]);
             }
 
             #[test]
             fn r386_a_degrade_of_discount_makes_it_1_less() {
-                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, MANA_WELL, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, FIELD_SPELL, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 step_param(s.card_mut(TRICKSTER), "discount", -1);
                 s.play(TRICKSTER, json!({}));
-                assert_eq!(cost_of(&s, MANA_WELL), 2);
+                assert_eq!(cost_of(&s, FIELD_SPELL), 2);
             }
         }
 
@@ -251,15 +251,15 @@ mod tests {
             #[test]
             fn cry_your_next_trap_field_trap_or_field_spell_costs_0() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [{ "def": TRICKSTER, "radiant": true }, MANA_WELL, TESLA, TWO_TRAP, STOCKPILE] },
+                    "p1": { "hand": [{ "def": TRICKSTER, "radiant": true }, FIELD_SPELL, TESLA, TWO_TRAP, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 s.play(TRICKSTER, json!({}));
-                assert_eq!(cost_of(&s, MANA_WELL), 0);
+                assert_eq!(cost_of(&s, FIELD_SPELL), 0);
                 assert_eq!(cost_of(&s, TESLA), 0);
                 assert_eq!(cost_of(&s, TWO_TRAP), 0);
                 assert_eq!(modifier_labels(&s, P1, "you"), vec!["Your next Trap or Field Spell costs (0)"]);
-                s.play(MANA_WELL, json!({ "zone": 1 }));
+                s.play(FIELD_SPELL, json!({ "zone": 1 }));
                 s.expect_mana(P1, 3);
                 assert_eq!(cost_of(&s, TWO_TRAP), 2);
             }
@@ -267,19 +267,19 @@ mod tests {
             #[test]
             fn r386_a_degrade_makes_the_next_one_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [{ "def": TRICKSTER, "radiant": true }, MANA_WELL, STOCKPILE] },
+                    "p1": { "hand": [{ "def": TRICKSTER, "radiant": true }, FIELD_SPELL, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 assert!(!crate::can_upgrade_number(&s, TRICKSTER, "setCost"));
                 assert_eq!(crate::degrade_number(&mut s, TRICKSTER, "setCost"), 1);
                 s.play(TRICKSTER, json!({}));
-                assert_eq!(cost_of(&s, MANA_WELL), 1);
+                assert_eq!(cost_of(&s, FIELD_SPELL), 1);
             }
 
             #[test]
             fn spells_and_units_neither_use_nor_consume_it_and_it_waits_across_turns() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [{ "def": TRICKSTER, "radiant": true }, STOCKPILE, MANA_WELL], "library": [STOCKPILE, STOCKPILE] },
+                    "p1": { "hand": [{ "def": TRICKSTER, "radiant": true }, STOCKPILE, FIELD_SPELL], "library": [STOCKPILE, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
                 }));
                 s.play(TRICKSTER, json!({}));
@@ -287,7 +287,7 @@ mod tests {
                 s.play(STOCKPILE, json!({}));
                 s.end_turn();
                 s.end_turn();
-                assert_eq!(cost_of(&s, MANA_WELL), 0);
+                assert_eq!(cost_of(&s, FIELD_SPELL), 0);
             }
         }
     }

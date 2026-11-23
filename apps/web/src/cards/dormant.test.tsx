@@ -61,6 +61,26 @@ function declOf(body: string, name: string): string | undefined {
   return new RegExp(`${name}\\s*:\\s*([^;]+);`).exec(body)?.[1]?.trim().replace(/\s+/g, " ");
 }
 
+/**
+ * The property names `body` sets, as `/([a-z-]+)\s*:/g` names them (#4009: the name plus optional
+ * whitespace before `:` scans super-linearly on long runs).
+ */
+function propertyNames(body: string): (string | undefined)[] {
+  const names: (string | undefined)[] = [];
+  let at = 0;
+  while (at < body.length) {
+    const colon = body.indexOf(":", at);
+    if (colon === -1) return names;
+    let start = colon;
+    while (start > 0 && /\s/.test(body.charAt(start - 1))) start--;
+    let name = start;
+    while (name > 0 && /[a-z-]/.test(body.charAt(name - 1))) name--;
+    if (name < start) names.push(body.slice(name, start));
+    at = colon + 1;
+  }
+  return names;
+}
+
 function faceOf(id: string): HTMLElement {
   return must(screen.getByTestId(testid.card(id)).querySelector<HTMLElement>(".cf"), `a face inside ${id}`);
 }
@@ -178,7 +198,8 @@ describe("#2435 a Dormant card's treatment", () => {
     expect(seal.querySelector(".cf-dormant-ribbons")?.classList.contains("cf-dormant-anim")).toBe(false);
     expect(seal.style.getPropertyValue("--cf-dormant-pulse")).toBe(`${String(DORMANT_PULSE_MS)}ms`);
 
-    const animations = [...dormantCss.matchAll(/animation\s*:\s*([^;]+);/g)].map((match) => (match[1] ?? "").trim());
+    // No `\s*` after the colon (#4009): it trades characters with `[^;]+` super-linearly.
+    const animations = [...dormantCss.matchAll(/animation\s*:([^;]+);/g)].map((match) => (match[1] ?? "").trim());
     const loops = animations.filter((value) => !value.startsWith("none"));
     expect(animations.filter((value) => value.startsWith("none")).length).toBe(2);
     expect(loops.length).toBe(1);
@@ -188,7 +209,7 @@ describe("#2435 a Dormant card's treatment", () => {
     const keyframes = /@keyframes\s+cf-dormant-pulse\s*\{([\s\S]*?)\n\}/.exec(dormantCss)?.[1] ?? "";
     expect(keyframes).toContain("from");
     expect(keyframes).toContain("to");
-    const names = [...keyframes.matchAll(/([a-z-]+)\s*:/g)].map((match) => match[1]).filter((name) => name !== undefined);
+    const names = propertyNames(keyframes).filter((name) => name !== undefined);
     expect(new Set(names)).toEqual(new Set(["opacity", "transform"]));
   });
 

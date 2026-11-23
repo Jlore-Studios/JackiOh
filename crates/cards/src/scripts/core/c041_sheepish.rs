@@ -10,7 +10,6 @@
 //! consumed regardless. A face-down trap's identity is the view's (R33). No glow (R662): what a glow
 //! would tell, a Unit in the opponent's hand, is hidden (§9.1).
 
-use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::{add_to_hand, transform};
 use jackioh_engine::prelude::*;
 use jackioh_engine::query::left_field_since_resolved;
@@ -54,7 +53,6 @@ fn sheepish(lava_golem: bool) -> TriggerDef {
     .with_when(|ctx, event| {
         let GameEvent::CardResolved {
             player,
-            def_id,
             permanent,
             ..
         } = event
@@ -65,8 +63,9 @@ fn sheepish(lava_golem: bool) -> TriggerDef {
         if *player == ctx.controller {
             return false;
         }
-        // §5.1: a Unit, so a Spell or a backrow card leaves the trap armed (R61).
-        if def_of(Some(&*ctx.state), def_id).type_ != CardType::Unit {
+        // §5.1: a Unit, so a Spell or a backrow card leaves the trap armed (R61), or a Unit set by its
+        // Cloaked, a Field Trap play (R783005).
+        if played_type_of(&*ctx.state, event) != Some(CardType::Unit) {
             return false;
         }
         // R174, R427: not a Unit an earlier answer to this play has already taken off the field.
@@ -144,6 +143,19 @@ mod tests {
             s.expect_events(json!(["cardPlayed", "healed", "cardResolved", "trapFired", "transformed"]));
             assert_eq!(unit_def(&s, "p1", 1).as_deref(), Some("core-t-sheep"));
             s.expect_health("p1", 30);
+        }
+
+        /// R783005: a Unit set face-down by its Cloaked is a Field Trap play, no Unit played.
+        #[test]
+        fn r783005_a_unit_set_face_down_by_its_cloaked_leaves_sheepish_set() {
+            let mut s = trap_set(json!(crate::CLOAKED_UNIT), false);
+            crate::set_cloaked(&mut s, PlayerId::P1, crate::CLOAKED_UNIT, 1);
+            assert!(!fired_trap(s.events()));
+            s.expect_in_zone("core-041", "field");
+            assert_eq!(
+                s.backrow(PlayerId::P1, 1).map(|card| card.def_id).as_deref(),
+                Some(crate::CLOAKED_UNIT)
+            );
         }
 
         #[test]

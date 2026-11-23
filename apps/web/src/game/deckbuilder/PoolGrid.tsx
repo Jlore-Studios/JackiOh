@@ -2,8 +2,8 @@
 // holding the card, `card-pool-<id>` (`data-held-by` when a compared deck holds it, R251: a card is its
 // catalog id, so one copy per trio), and `db-add-<id>`, the "+" that adds it in one tap. A click, right-click
 // or long-press opens the detail view ("Add to <deck>"). A resting mouse opens a preview only on a card whose
-// face prints less than its whole text (#1017). The face is decoration to a screen reader. READ-ONLY, for the
-// Card Almanac (R630): given none of the deck editor's props, no "+", no drag, no `data-*` or `aria-disabled`.
+// face prints less than its whole text (#1017), or (R3838001) below an `AlwaysFullText` any card with words. The face is decoration to a screen reader. READ-ONLY, for the
+// Card Almanac (R630): given none of the deck editor's props, no "+", no drag (DeckDrag.tsx), no `data-*` or `aria-disabled`.
 // R1956000: a card the viewer owns is drawn as their own copy with their picks (R1655000's foil, finish,
 // border, full art): below the deck builder's `OwnCopy` every card the collection does not say is unowned,
 // in a read-only grid the cards `own` names. #2266: the Almanac draws ~700 cards, so each is memoized
@@ -19,7 +19,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type DragEvent,
   type ReactElement,
   type ReactNode,
 } from "react";
@@ -27,14 +26,23 @@ import {
 import type { CardDef, SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
-import { CardFace, TermTips, useCanOpenFullScreen, faceModel, faceText, openFullScreenArt, useInspectTrigger } from "../../cards/index.ts";
+import {
+  CardFace,
+  TermTips,
+  useCanOpenFullScreen,
+  faceModel,
+  openFullScreenArt,
+  showsFullText,
+  useAlwaysFullText,
+  useInspectTrigger,
+} from "../../cards/index.ts";
 import { OwnershipContext, type CardOwnership } from "../../cards/cosmetics.ts";
 import { FullArtOwned, OwnCopy, useFullArt, useOwnCopy } from "../../cards/fullArt.ts";
-import { CARD_TABLES, readerName } from "../../cards/chinese.ts";
+import { readerName, readerTerms } from "../../cards/chinese.ts";
 import { costText } from "../../patches/diff.ts";
 import { NEW_RIBBON_SET } from "../../patches/ribbon.ts";
-import { getLocale, t, useLocale } from "../../i18n/i18n.ts";
-import { poolRowTracks } from "./poolWindow.ts";
+import { t, useLocale } from "../../i18n/i18n.ts";
+import { mountedAt, poolCell, poolRowTracks } from "./poolWindow.ts";
 import { CARD_POOL, addPoolId, poolCardId } from "./testids.ts";
 import { usePoolWindow } from "./usePoolWindow.ts";
 import type { Holder } from "./workshop.ts";
@@ -86,7 +94,7 @@ type PoolGridBaseProps = {
   virtual?: boolean;
 };
 
-/** The deck editor's half: the open deck, ownership, the "+" and the drag. */
+/** The deck editor's half: the open deck, ownership and the "+". */
 export type PoolGridDeckProps = {
   /** The open deck's name, for the "+" label. */
   deckName: string;
@@ -97,8 +105,6 @@ export type PoolGridDeckProps = {
   holders: ReadonlyMap<string, Holder>;
   refusedCardId: string | null;
   onAdd: (cardId: string) => void;
-  onDragStart: (cardId: string, event: DragEvent<HTMLElement>) => void;
-  onDragEnd: () => void;
 };
 
 /** A read-only grid passes none of the deck editor's props. */
@@ -114,8 +120,6 @@ type PoolItemDeck = {
   owned: boolean | null;
   refused: boolean;
   onAdd: (cardId: string) => void;
-  onDragStart: (cardId: string, event: DragEvent<HTMLElement>) => void;
-  onDragEnd: () => void;
 };
 
 type PoolItemProps = {
@@ -129,7 +133,7 @@ type PoolItemProps = {
   onInspect: (cardId: string) => void;
 };
 
-type PoolHandlers = Pick<PoolItemDeck, "onAdd" | "onDragStart" | "onDragEnd"> & { onInspect: (cardId: string) => void };
+type PoolHandlers = Pick<PoolItemDeck, "onAdd"> & { onInspect: (cardId: string) => void };
 
 /** The badge on a card that is already somewhere: "In deck", or "In <compared deck>". */
 export function placeWords(place: PoolPlace): string | null {
@@ -148,7 +152,7 @@ export function poolCardLabel(
   fresh = false,
 ): string {
   // The type and rarity in the card frame's own words (cards/chinese.ts, R1303).
-  const terms = CARD_TABLES[getLocale()]?.terms;
+  const terms = readerTerms();
   const rarity = terms?.rarities[def.rarity] ?? def.rarity;
   const printed = def.printedRarity;
   const rarityWords =
@@ -199,16 +203,18 @@ function PoolItem({ cardId, def, deck, fresh, area, onInspect }: PoolItemProps):
   const face = useMemo(() => faceModel({ defId: cardId, def, radiant: false }), [cardId, def, locale]);
   // R1313000: a full art the viewer does not own prints its words, and opens a preview as they do.
   const fullArtOn = useFullArt(cardId);
+  // R3838001: below an `AlwaysFullText` (the Almanac) every card with words opens the preview, its text beside it.
+  const alwaysText = useAlwaysFullText();
   // R1956000: the viewer's own copy wears their picks; a card the collection says is unowned is not one.
   const worn = useOwnCopy() && deck?.owned !== false;
   const isFs = useCanOpenFullScreen(face, cardId, worn);
   const inspect = useInspectTrigger(
     { key: poolCardId(cardId), face },
     {
-      hover: faceText(face, undefined, fullArtOn).less,
+      hover: showsFullText(face, undefined, fullArtOn, alwaysText),
       holdAnyPointer: isFs ? true : undefined,
-      onLongPress: (pointerId) => {
-        if (isFs) {
+      onLongPress: (pointerId, pointerType) => {
+        if (isFs && pointerType !== "touch") {
           openFullScreenArt({
             defId: cardId,
             radiant: face.radiant,
@@ -247,15 +253,6 @@ function PoolItem({ cardId, def, deck, fresh, area, onInspect }: PoolItemProps):
         data-rarity={def.rarity}
         aria-disabled={deck === null ? undefined : place !== null}
         aria-label={poolCardLabel(def, place, deck?.owned ?? null, fresh)}
-        draggable={deck === null ? undefined : true}
-        onDragStart={
-          deck === null
-            ? undefined
-            : (event) => {
-                deck.onDragStart(cardId, event);
-              }
-        }
-        onDragEnd={deck?.onDragEnd}
         onClick={() => {
           onInspect(cardId);
         }}
@@ -323,9 +320,7 @@ function samePoolItem(before: PoolItemProps, after: PoolItemProps): boolean {
     was.place === is.place &&
     was.owned === is.owned &&
     was.refused === is.refused &&
-    was.onAdd === is.onAdd &&
-    was.onDragStart === is.onDragStart &&
-    was.onDragEnd === is.onDragEnd
+    was.onAdd === is.onAdd
   );
 }
 
@@ -341,8 +336,6 @@ function itemDeck(props: PoolGridProps, cardId: string, handlers: PoolHandlers):
     owned: collection === null ? null : (collection[cardId] ?? 0) > 0,
     refused: refusedCardId === cardId,
     onAdd: handlers.onAdd,
-    onDragStart: handlers.onDragStart,
-    onDragEnd: handlers.onDragEnd,
   };
 }
 
@@ -362,12 +355,6 @@ function usePoolHandlers(props: PoolGridProps): PoolHandlers {
       },
       onAdd: (cardId) => {
         latest.current.onAdd?.(cardId);
-      },
-      onDragStart: (cardId, event) => {
-        latest.current.onDragStart?.(cardId, event);
-      },
-      onDragEnd: () => {
-        latest.current.onDragEnd?.();
       },
     }),
     [],
@@ -414,12 +401,6 @@ function StagedPool(props: PoolGridProps): ReactElement {
   );
 }
 
-function cellOf(at: number, columns: number): string {
-  const row = Math.floor(at / columns) + 1;
-  const column = (at % columns) + 1;
-  return `${String(row)} / ${String(column)} / ${String(row + 1)} / ${String(column + 1)}`;
-}
-
 /** Only the rows near the view (#2334); the grid's row tracks hold the place of the rest. */
 function WindowedPool(props: PoolGridProps): ReactElement {
   const { ids } = props;
@@ -431,16 +412,7 @@ function WindowedPool(props: PoolGridProps): ReactElement {
   const [held, setHeld] = useState<string | null>(null);
 
   const rows = view === null || view === "all" ? null : view;
-  const from = rows === null ? 0 : rows.firstRow * rows.columns;
-  const to =
-    view === "all"
-      ? ids.length
-      : Math.min(ids.length, rows === null ? POOL_FIRST_CARDS : (rows.lastRow + 1) * rows.columns);
-  const heldAt = held === null ? -1 : ids.indexOf(held);
-  const mounted: number[] = [];
-  if (heldAt >= 0 && heldAt < from) mounted.push(heldAt);
-  for (let at = from; at < to; at += 1) mounted.push(at);
-  if (heldAt >= to) mounted.push(heldAt);
+  const mounted = mountedAt(view, ids.length, held === null ? -1 : ids.indexOf(held), POOL_FIRST_CARDS);
 
   return (
     <section
@@ -465,7 +437,7 @@ function WindowedPool(props: PoolGridProps): ReactElement {
           props,
           handlers,
           cardId,
-          rows === null ? undefined : cellOf(at, rows.columns),
+          rows === null ? undefined : poolCell(at, rows.columns),
         );
       })}
     </section>

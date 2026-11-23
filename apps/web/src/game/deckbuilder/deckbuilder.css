@@ -28,7 +28,7 @@
    against: tavern.css's padding and its 1120 px reading column are for a form, not a pool. */
 .deckbuilder.app-shell {
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--shell-screen-h, 100dvh);
 }
 
 .tavern.deckbuilder.app-shell {
@@ -439,6 +439,46 @@
   outline-offset: 3px;
 }
 
+/* Issue #3734 (R3734001): a pool card of the deck editor is dragged with pointer events (DeckDrag.tsx). A
+   finger that moves up or down is the pool's scroll (`pan-y`), one that moves across lifts the card; the press
+   neither selects text nor opens the system's callout, and the card's art is not a native drag. */
+.deckbuilder.app-shell .db-card[data-legal] {
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.deckbuilder.app-shell .db-card img {
+  -webkit-user-drag: none;
+}
+
+/* The ghost follows the pointer while the card is in flight: the card's name on the deck's own badge. */
+.db-drag-ghost {
+  position: fixed;
+  z-index: var(--z-drag);
+  max-width: 60vw;
+  padding: var(--space-1) var(--space-4);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--pal-white) 35%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--you) 85%, var(--pal-black));
+  box-shadow: var(--shadow-2);
+  color: var(--pal-white);
+  font-size: var(--type-sm);
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translate(-50%, calc(-100% - var(--space-4)));
+  pointer-events: none;
+}
+
+/* The deck takes the card where it is released. */
+.db-deck[data-drop="over"] {
+  outline: 2px dashed var(--selected);
+  outline-offset: var(--space-2);
+}
+
 .db-held {
   position: absolute;
   z-index: 1;
@@ -489,12 +529,14 @@
 
 /* The "+" that adds the card to the open deck in one tap. It is drawn 28 px round in the card's
    top-right corner, and its ::before widens the hit area to --hit-min (task 7's touch-target floor)
-   without covering more of the face. */
+   without covering more of the face. That hit area is centered on it (R2122000), so the "+" sits
+   at least its reach, (--hit-min - 28 px) / 2, in from the card's right edge: at 3% alone a phone's
+   last column laid it 2.9 px past the deck editor's edge, which then panned sideways (#4375). */
 .deckbuilder.app-shell .db-add {
   position: absolute;
   z-index: 1;
   top: 2.5%;
-  right: 3%;
+  right: max(3%, (var(--hit-min) - 28px) / 2);
   display: grid;
   place-items: center;
   width: 28px;
@@ -537,13 +579,17 @@
 
 /* The status toast: what the last add or removal did, at the foot of the screen, gone after a
    moment (Deckbuilder.tsx). Fixed so a phone deep in the pool still sees it, and blind to the
-   pointer so it can never cover a card. */
+   pointer so it can never cover a card. Inside the menus' shell (R3728000, shell/menu-shell.css) it
+   sits above a phone's tab bar, which is drawn over its layer (`--shell-bottom`, the bar and the
+   bottom inset), and centers on the screen's column beside the rail (`--shell-start`, the rail's
+   width): every `left` here is the column's middle without the rail, which `translate` moves by
+   half the rail, and every `max-width` leaves the rail out. */
 .db-deck-status {
   position: fixed;
   z-index: 30;
   left: 50%;
-  bottom: max(16px, env(safe-area-inset-bottom));
-  max-width: calc(100vw - 32px);
+  bottom: max(16px, env(safe-area-inset-bottom), calc(var(--shell-bottom, 0px) + 16px));
+  max-width: calc(100vw - var(--shell-start, 0px) - 32px);
   margin: 0;
   padding: 8px 14px;
   border: 1px solid color-mix(in srgb, var(--legal) 60%, var(--line-bright));
@@ -557,7 +603,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  translate: -50% 0;
+  translate: calc(var(--shell-start, 0px) / 2 - 50%) 0;
   pointer-events: none;
   transition: opacity 160ms ease;
 }
@@ -567,14 +613,14 @@
 @media (min-width: 761px) {
   .db-deck-status {
     left: calc(50% - 177px);
-    max-width: calc(100vw - 420px);
+    max-width: calc(100vw - var(--shell-start, 0px) - 420px);
   }
 }
 
 @media (min-width: 761px) and (max-width: 1024px) {
   .db-deck-status {
     left: calc(50% - 147px);
-    max-width: calc(100vw - 340px);
+    max-width: calc(100vw - var(--shell-start, 0px) - 340px);
   }
 }
 
@@ -1068,6 +1114,15 @@
 
 }
 
+/* R3956000: an iPad mini held upright (744 px) splits too. The shell's 80 px icon rail, the workshop's
+   148 px rail and the page's padding leave 478 px there, so the sidebar is 232 px and the pool keeps
+   two columns of about 100 px, not the 184 px a 280 px sidebar would leave it. */
+@media (min-width: 601px) and (max-width: 760px) {
+  .db-layout {
+    grid-template-columns: minmax(0, 1fr) 232px;
+  }
+}
+
 /* A phone on its side is only about 390 px tall, where a 200 px card is 280 px of it: the pool
    takes three narrower cards to a row, so a whole row shows at once. */
 @media (min-width: 761px) and (max-height: 500px) {
@@ -1102,12 +1157,13 @@
    beside it stays in view, without anything being sticky. (A max-height from the viewport ran the
    pool 90 px past a 720 px screen's foot, under the filters' height.) The deck list fills what
    the sidebar has left. A screen under 501 px tall keeps one page scroll instead: an inner
-   scroller there would show a row of cards at most. */
-@media (min-width: 761px) and (min-height: 501px) {
+   scroller there would show a row of cards at most. From 601 px, as the pool and the deck sit side by side
+   from there (R3956000). */
+@media (min-width: 601px) and (min-height: 501px) {
   .deckbuilder.app-shell {
     box-sizing: border-box;
     height: 100vh;
-    height: 100dvh;
+    height: var(--shell-screen-h, 100dvh);
   }
 
   .db-layout {
@@ -1165,16 +1221,17 @@
 /* R1581000: the phone's builder is one screen too. The page is the window's height, and the pool
    scrolls inside the workshop's or the almanac's one region (workshop.css, routes/almanac.css),
    not the page, as a desktop's does. */
-@media (max-width: 760px) and (min-height: 501px) {
+@media (max-width: 600px) and (min-height: 501px) {
   .deckbuilder.app-shell {
     height: 100vh;
-    height: 100dvh;
+    height: var(--shell-screen-h, 100dvh);
   }
 }
 
-/* Phone and narrow tablet: one column, the sidebar first. The pool drops its frame so two
-   columns fit in a 390 px viewport even with a classic scrollbar. */
-@media (max-width: 760px) {
+/* Phone: one column, the sidebar first (R3956000: from 601 px the pool and the deck sit side by side,
+   an iPad mini's 744 px too). The pool drops its frame so two columns fit in a 390 px viewport even
+   with a classic scrollbar. */
+@media (max-width: 600px) {
   .db-layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
@@ -1238,7 +1295,7 @@
    cost chips), so a first screen still reaches the pool: the Cost label goes (the crystals say what
    they are), the Sort label and the result count are kept for a screen reader only (the label is
    the select's name, #1561), and the eight cost chips share one row. */
-@media (max-width: 760px) {
+@media (max-width: 600px) {
   .db-filter-row--cost .db-group-label {
     display: none;
   }

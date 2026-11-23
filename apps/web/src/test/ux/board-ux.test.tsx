@@ -6,12 +6,16 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { LONG_PRESS_MS } from "../../cards/inspect/constants.ts";
+import { INSPECT_CLOSE, INSPECT_SHEET } from "../../cards/inspect/testids.ts";
 import Board from "../../game/Board.tsx";
+import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
 import Game from "../../game/Game.tsx";
 import { NO_HIGHLIGHT, type Highlight } from "../../game/contract.ts";
 import { offerDrawControlText } from "../../game/DrawOffer.tsx";
@@ -334,6 +338,37 @@ describe("B26 each hand card sits in a slot and a tap lifts it", () => {
 
     expect(opponent.querySelectorAll("[data-lifted]")).toHaveLength(0);
   });
+
+  it("B26 R3893000 a click in the inspect sheet a held Mythic opened neither lifts nor lowers its hand card", () => {
+    vi.useFakeTimers();
+    try {
+      const view = boardView({
+        you: emptySide("p1", {
+          hero: { health: 30, armor: 0, powers: [heroPower], power: heroPower },
+          hand: [card({ instanceId: "h1", defId: "core-100", cost: 10 }), card({ instanceId: "h2", defId: "core-005" })],
+        }),
+      });
+      render(
+        <CatalogContext.Provider value={lookupFromDefs(CATALOG)}>
+          <Board view={view} highlight={NO_HIGHLIGHT} />
+        </CatalogContext.Provider>,
+      );
+      const held = screen.getByTestId("hand-card-h1");
+      const touch = { clientX: 100, clientY: 100, pointerId: 1, isPrimary: true, button: 0, pointerType: "touch" };
+      fireEvent.pointerDown(held, touch);
+      act(() => {
+        vi.advanceTimersByTime(LONG_PRESS_MS);
+      });
+      fireEvent.pointerUp(held, touch);
+      // The sheet is a portal of the hand card's: its Close bubbles through the card's slot in React.
+      fireEvent.click(screen.getByTestId(INSPECT_CLOSE));
+
+      expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
+      expect(slotOf("hand-card-h1")).not.toHaveAttribute("data-lifted");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("B27 the board reflects drag to play and hover previews, live", () => {
@@ -401,6 +436,71 @@ describe("B27 the board reflects drag to play and hover previews, live", () => {
 
 function css(file: "board.css" | "market.css" | "prompt.css"): string {
   return readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "game", file), "utf8");
+}
+
+/**
+ * Whether `portrait` wraps Offer draw and Concede's labels, as
+ * `/control-offer-draw,\s*[^{]*control-concede\s*\{[^}]*white-space:\s*normal/` reads it: every gap
+ * crossed holds no brace, and the declaration sets `white-space` to `normal` (#4009: the runs between
+ * the literals trade characters super-linearly).
+ */
+function wrapsDrawConcede(portrait: string): boolean {
+  const drawMark = "control-offer-draw,";
+  const concedeMark = "control-concede";
+  const propMark = "white-space:";
+  let at = 0;
+  for (;;) {
+    const draw = portrait.indexOf(drawMark, at);
+    if (draw === -1) return false;
+    const afterDraw = draw + drawMark.length;
+    let from = afterDraw;
+    for (;;) {
+      const concede = portrait.indexOf(concedeMark, from);
+      if (concede === -1 || portrait.slice(afterDraw, concede).includes("{")) break;
+      let open = concede + concedeMark.length;
+      while (open < portrait.length && /\s/.test(portrait.charAt(open))) open++;
+      if (portrait.charAt(open) === "{") {
+        let fromDecl = open + 1;
+        for (;;) {
+          const decl = portrait.indexOf(propMark, fromDecl);
+          if (decl === -1 || portrait.slice(open + 1, decl).includes("}")) break;
+          let value = decl + propMark.length;
+          while (value < portrait.length && /\s/.test(portrait.charAt(value))) value++;
+          if (portrait.startsWith("normal", value)) return true;
+          fromDecl = decl + 1;
+        }
+      }
+      from = concede + 1;
+    }
+    at = draw + 1;
+  }
+}
+
+/**
+ * Whether `text` sticks Confirm to the modal's bottom, as
+ * `/\.prompt-actions \{\s*[^}]*position: sticky;\s*[^}]*bottom: 0;/` reads it (#4009: the runs
+ * between the literals trade characters super-linearly).
+ */
+function confirmSticks(text: string): boolean {
+  const head = ".prompt-actions {";
+  const stickyMark = "position: sticky;";
+  const bottomMark = "bottom: 0;";
+  let at = 0;
+  for (;;) {
+    const rule = text.indexOf(head, at);
+    if (rule === -1) return false;
+    const body = rule + head.length;
+    let fromSticky = body;
+    for (;;) {
+      const sticky = text.indexOf(stickyMark, fromSticky);
+      if (sticky === -1 || text.slice(body, sticky).includes("}")) break;
+      const afterSticky = sticky + stickyMark.length;
+      const bottom = text.indexOf(bottomMark, afterSticky);
+      if (bottom !== -1 && !text.slice(afterSticky, bottom).includes("}")) return true;
+      fromSticky = sticky + 1;
+    }
+    at = rule + 1;
+  }
 }
 
 function padsWith(text: string, inset: string): boolean {
@@ -478,7 +578,7 @@ describe("#785 a phone held upright keeps the control bar to one row", () => {
     expect(portrait).toMatch(/\.board \.control-bar \.audio-toggle,\s*\.board \.control-bar \.language-button--game\s*\{\s*display:\s*none;/);
   });
 
-  it("#815 board.css wraps End turn's label in the one row, takes an empty notices strip out of it, and gives a notice a row of its own", () => {
+  it("#815 board.css wraps End turn's label in the one row, and board notices draw as an overlay over the field (#3868)", () => {
     const text = css("board.css");
     const start = text.indexOf("@media (max-width: 600px) {");
     const portrait = text.slice(start, text.indexOf("@media", start + 1));
@@ -486,12 +586,12 @@ describe("#785 a phone held upright keeps the control bar to one row", () => {
     expect(start).toBeGreaterThan(-1);
     // "End turn" took 63px on one line in a 44px button at 390px, and ran over Offer draw.
     expect(portrait).toMatch(/\.board \.control-bar \.control-end-turn\s*\{[^}]*white-space:\s*normal;/);
-    // An empty strip is hidden the visually-hidden way, so its live region still announces.
-    const empty = portrait.match(/\.board \.control-bar \.board-notices:not\(:has\(> :not\(:empty\)\)\)\s*\{([^}]*)\}/);
-    expect(empty).not.toBeNull();
-    expect(empty?.[1]).toMatch(/position:\s*absolute;/);
-    expect(empty?.[1]).not.toMatch(/display:\s*none/);
-    expect(portrait).toMatch(/\.board \.control-bar:has\(> \.board-notices > :not\(:empty\)\)\s*\{\s*flex-wrap:\s*wrap;/);
+    // #3868: notices are an overlay layer over the field, taking no space in the control bar.
+    const notices = text.match(/\.board-notices\s*\{([^}]*)\}/);
+    expect(notices).not.toBeNull();
+    expect(notices?.[1]).toMatch(/position:\s*absolute;/);
+    expect(notices?.[1]).toMatch(/pointer-events:\s*none;/);
+    expect(text).not.toMatch(/\.control-bar:has\(> \.board-notices > :not\(:empty\)\)/);
   });
 });
 
@@ -734,7 +834,7 @@ describe("#2645 a phone's control bar holds the match menu", () => {
     // Offer draw and Concede are never squeezed into wrapping their labels.
     expect(portrait).not.toContain("friends-button--game");
     expect(narrow).not.toContain("friends-button--game");
-    expect(portrait).not.toMatch(/control-offer-draw,\s*[^{]*control-concede\s*\{[^}]*white-space:\s*normal/);
+    expect(wrapsDrawConcede(portrait), "Offer draw and Concede wrap their labels").toBe(false);
     expect(narrow).not.toMatch(/control-offer-draw|control-concede/);
     // The landscape column is two rows: End turn and the gear, then the toggles of the Marketplace, the log and ⋯.
     expect(landscape).toMatch(
@@ -807,10 +907,6 @@ describe("#990 an online match's rail on a phone", () => {
 
     expect(start).toBeGreaterThan(-1);
     expect(landscape).toMatch(/\.match-ranks\s*\{\s*flex-basis:\s*100%;/);
-    const empty = landscape.match(/\.board \.control-bar:has\(> \.board-rail\) \.board-notices:not\(:has\(> :not\(:empty\)\)\)\s*\{([^}]*)\}/);
-    expect(empty).not.toBeNull();
-    expect(empty?.[1]).toMatch(/position:\s*absolute;/);
-    expect(empty?.[1]).not.toMatch(/display:\s*none/);
     expect(landscape).toMatch(/\.board \.control-bar:has\(> \.board-rail\) \.language-button--game\s*\{\s*display:\s*none;/);
     expect(landscape).toMatch(/\.board \.control-bar:has\(> \.board-rail\) \.turn-plate\s*\{[^}]*flex-flow:\s*row wrap;/);
   });
@@ -840,13 +936,14 @@ describe("B44 the picker says which route opened it", () => {
     const text = css("prompt.css");
     const portrait = text.slice(text.lastIndexOf("@media (max-width: 600px) {"));
 
-    expect(portrait).toContain('.game:has(> .board[data-drag="on"]) .prompt[data-prompt-source="play"]:is(');
-    expect(portrait).toMatch(/> :is\(\.prompt-count, \.prompt-zones, \.prompt-list, \.prompt-board-note\) \{\s*display: none;/);
+    // #3864: a one-zone pick is the hint pill at any width, so the bar leaves it out.
+    expect(portrait).toContain('.game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:not([data-board-pick]):is(');
+    expect(portrait).toMatch(/> :is\(\.prompt-count, \.prompt-list, \.prompt-board-note\) \{\s*display: none;/);
   });
 
   it("Confirm sticks to the modal's visible bottom, so no menu pushes it off-screen", () => {
     const text = css("prompt.css");
 
-    expect(text).toMatch(/\.prompt-actions \{\s*[^}]*position: sticky;\s*[^}]*bottom: 0;/);
+    expect(confirmSticks(text), "Confirm sticks to the modal's visible bottom").toBe(true);
   });
 });

@@ -71,3 +71,55 @@ mod r89_a_destroyed_unit_s_face {
         assert!(!carries_flag);
     }
 }
+
+mod r4423000_what_a_card_died_as {
+    use super::*;
+    use crate::rules::fixtures::field::banner;
+
+    fn died(def_id: &str, died_as: Option<CardType>) -> GameEvent {
+        GameEvent::Destroyed {
+            instance_id: "c9".into(),
+            def_id: def_id.into(),
+            owner: P2,
+            controller: P2,
+            attack: 1,
+            max_health: 1,
+            killer_id: None,
+            radiant: None,
+            animated: None,
+            died_as,
+            via: None,
+        }
+    }
+
+    #[test]
+    fn r4423000_an_ordinary_unit_s_destroyed_event_carries_no_died_as() {
+        for radiant in [false, true] {
+            let event = killed(radiant).expect("a destroyed event");
+            let json = serde_json::to_value(&event).expect("event serializes");
+            assert!(json.get("diedAs").is_none(), "{json}");
+            assert!(query::is_unit_death(&playing("is-unit-death"), &event));
+        }
+    }
+
+    #[test]
+    fn r4423000_is_unit_death_reads_the_printed_face_unless_the_event_says_otherwise() {
+        let state = playing("is-unit-death");
+        assert!(query::is_unit_death(&state, &died(&plain.id, None)));
+        assert!(!query::is_unit_death(
+            &state,
+            &died(&plain.id, Some(CardType::FieldTrap))
+        ));
+        assert!(!query::is_unit_death(&state, &died(&banner.id, None)));
+        assert!(query::is_unit_death(
+            &state,
+            &died(&banner.id, Some(CardType::Unit))
+        ));
+        assert!(!query::is_unit_death(
+            &state,
+            &GameEvent::DivineShieldLost {
+                instance_id: "c9".into()
+            }
+        ));
+    }
+}

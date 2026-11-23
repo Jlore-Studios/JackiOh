@@ -7,7 +7,7 @@ import type { CardDefs } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
-import { ROTATION_POOL, type RandomSource } from "../routes/landingFan.ts";
+import { shippedPool, type RandomSource } from "../routes/landingFan.ts";
 import { seeded } from "../test/random.ts";
 import { SHOWCASE_MIN_PLAYS } from "./config.ts";
 import { EMPTY_STATS, NO_COUNTS, type CardCounter, type CardCounters, type PlayerStats } from "./model.ts";
@@ -588,9 +588,9 @@ describe("R1743000 the new stats", () => {
       mirror(); // Explorer's draw: core-003 is the one card played.
       const ids = ["core-001", "core-002"];
       const found = statOf(stats, "collector", seed);
-      expect([found?.cardId, found?.line()]).toEqual([ids[Math.floor(mirror() * ids.length)], `seen 2 of ${String(ROTATION_POOL.length)} cards`]);
+      expect([found?.cardId, found?.line()]).toEqual([ids[Math.floor(mirror() * ids.length)], `seen 2 of ${String(shippedPool().length)} cards`]);
     }
-    expect(ROTATION_POOL.every((def) => !def.token)).toBe(true);
+    expect(shippedPool().every((def) => !def.token)).toBe(true);
     expect(statOf(tally({ [TOKENS[0]]: { seen: 5 }, "gone-001": { seen: 3 } }), "collector")).toBeUndefined();
   });
 

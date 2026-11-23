@@ -23,8 +23,12 @@
 //! - `economy`: the economy's holdings and ledgers (SPEC §14.11, #1299) and the writing of an outcome
 //!   `jackioh_shared::economy` decides (the rolls, pity, the token bars and the level curve, #1298, #1301,
 //!   #3104), and the card packs (#1301).
+//! - `lobby`: the private lobbies, a 1v1 or co-op friend game's seats, picks, Ready and Start
+//!   (SPEC §9.5, §13.9; #3730, R3730000 to R3730006).
 //! - `admin`: the dev dashboard's store (#3074): the audit of every dev and admin action, the
 //!   hand-set ratings and their ledger, and the news posts (R3074000, R3074001, R3074003).
+//! - `notifications`: the in-game feed kept until read, written where each event is handled, read in
+//!   the inbox and pushed over `/ws/social` (SPEC §9.4, §9.13; #4039, R4039000).
 
 pub mod actor;
 // The dev dashboard (SPEC §14.10, §14.13; #3074): its audit, hand-set ratings and posts.
@@ -39,6 +43,8 @@ pub mod bug_reports;
 pub mod cli;
 pub mod config;
 pub mod cosmetics;
+// Daily games (SPEC §9.13, #3727): a move every 1, 3, 7 or 14 days over plain HTTPS.
+pub mod daily;
 pub mod db;
 // Economy (SPEC §14, #1299)
 pub mod economy;
@@ -48,7 +54,11 @@ pub mod duos;
 // end Duos co-op (#946)
 pub mod env;
 pub mod loadout;
+// Private lobbies (#3730): a friend game's pre-game stage, 1v1 or co-op (SPEC §9.5, §13.9).
+pub mod lobby;
 pub mod loops;
+// The in-game notification feed (#4039, R4039000): kept until read, pushed over `/ws/social`.
+pub mod notifications;
 /// The ranked ladder's rules are `jackioh-shared`'s (#3105); the old paths (`ranked::ladder::…`) name them.
 pub use jackioh_shared::ranked;
 pub mod seats;

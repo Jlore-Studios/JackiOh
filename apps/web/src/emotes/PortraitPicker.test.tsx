@@ -7,13 +7,14 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ReactElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PortraitId } from "@jackioh/shared";
 import { EMOJI_EMOTE_IDS, EMOTE_IDS, PORTRAIT_IDS, VOICE_EMOTE_IDS } from "@jackioh/shared";
 
 import { VOICE_PRIORITY } from "../audio/constants.ts";
 import { setAudioEngineForTests } from "../audio/engine.ts";
+import { loadSoundTables } from "../audio/soundTablesLoader.ts";
 import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.ts";
 import type { SavedDeck } from "../net/api.ts";
 import DeckWorkshop from "../game/deckbuilder/DeckWorkshop.tsx";
@@ -31,10 +32,14 @@ import { at } from "../test/stubServer.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { EMOJI_LABEL } from "./EmojiArt.tsx";
 import { ownedPortraits, portraitCosmeticId, portraitOfCosmetic, PortraitsOwned } from "./ownedPortraits.ts";
-import { PORTRAIT_DEFS } from "./portraits.ts";
+import { portraitDefs } from "./portraits.ts";
 import { PortraitPicker } from "./PortraitPicker.tsx";
 
 let engine: FakeAudioEngine;
+
+beforeAll(async () => {
+  await loadSoundTables();
+});
 
 beforeEach(() => {
   engine = fakeAudioEngine();
@@ -59,7 +64,7 @@ describe("the deck's portrait button (R641)", () => {
   it("R641 the collapsed control wears the deck's portrait art as the hero does — its oval", () => {
     render(picker("dfender"));
     const current = screen.getByTestId("portrait-current");
-    expect(current).toHaveAttribute("title", `Hero portrait: ${PORTRAIT_DEFS.dfender.def.name}`);
+    expect(current).toHaveAttribute("title", `Hero portrait: ${portraitDefs().dfender.def.name}`);
     // CardArt's oval, the same element the hero's portrait uses.
     expect(current.querySelector(".cf-art--oval")).not.toBeNull();
     // Root + button is all the deck editor's row has to fit.
@@ -80,7 +85,7 @@ describe("the deck's portrait button (R641)", () => {
       const pick = within(tile).getByTestId(`portrait-pick-${portrait}`);
       expect(pick.querySelector(".cf-art--oval")).not.toBeNull();
       // The tile names the card it draws — the roster is looked up by name, never by number.
-      const def = PORTRAIT_DEFS[portrait].def;
+      const def = portraitDefs()[portrait].def;
       expect(pick.title.startsWith(`${def.name} — `)).toBe(true);
       expect(within(tile).getByTestId(`portrait-preview-${portrait}`).textContent).toBe("Preview");
     }
@@ -350,7 +355,7 @@ describe("the picker in the deck editor (R641)", () => {
     );
 
     const current = screen.getByTestId("portrait-current");
-    expect(current).toHaveAttribute("title", `Hero portrait: ${PORTRAIT_DEFS.gary.def.name}`);
+    expect(current).toHaveAttribute("title", `Hero portrait: ${portraitDefs().gary.def.name}`);
     expect(current.querySelector(".cf-art--oval")).not.toBeNull();
 
     // A pick writes through the deck store like any edit — `updateDeck(id, { portrait })` —
@@ -359,7 +364,7 @@ describe("the picker in the deck editor (R641)", () => {
     fireEvent.click(screen.getByTestId("portrait-pick-shredder"));
     expect(screen.getByTestId("portrait-current")).toHaveAttribute(
       "title",
-      `Hero portrait: ${PORTRAIT_DEFS.shredder.def.name}`,
+      `Hero portrait: ${portraitDefs().shredder.def.name}`,
     );
 
     const mirror = JSON.parse(

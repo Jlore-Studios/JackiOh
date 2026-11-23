@@ -23,7 +23,8 @@ import {
 import { testid } from "../game/contract.ts";
 import { createPlayTracker } from "../game/runs.ts";
 import { baseView, dormantStarship, emptySide, unit } from "../test/fixtures.ts";
-import { FX_INTENSITY_SCALE, FX_LUNGE_CONTACT_AT, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_STARSHIP_TAIL_MS } from "./constants.ts";
+import { endOf } from "../test/signatures.ts";
+import { FX_INTENSITY_SCALE, FX_LUNGE_CONTACT_AT, FX_MAX_TAIL_MS, FX_STARSHIP_TAIL_MS } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
 import { planStage } from "./stage.ts";
@@ -65,29 +66,14 @@ const env = (over: Partial<FxPlanEnv> = {}): FxPlanEnv => ({ intensity: FX_INTEN
 const MIX = [BEAM, RUSH, ENGINE, SHIELD, CANNON, FRUIT, DRILL, FLAK] as const;
 const piecesOf = (n: number): string[] => Array.from({ length: n }, (_, k) => MIX[k % MIX.length] ?? BEAM);
 
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    case "conceal":
-      // The stage's: the board's next view ends it, FX_HOLD_MAX_MS at the latest (R200); it paints nothing.
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
-
 function expectBounded(cues: readonly FxCue[], D: number, where: string): void {
   expect(cues.length, where).toBeGreaterThan(0);
   for (const cue of cues) {
     expect(cue.delayMs, `${where}: ${cue.kind}`).toBeGreaterThanOrEqual(0);
     expect(cue.delayMs, `${where}: ${cue.kind}`).toBeLessThanOrEqual(D);
-    expect(endOf(cue), `${where}: ${cue.kind}`).toBeLessThanOrEqual(D + FX_MAX_TAIL_MS);
+    // A conceal is the stage's: the board's next view ends it, FX_HOLD_MAX_MS at the latest (R200); it paints nothing.
+    const end = cue.kind === "conceal" ? cue.delayMs : endOf(cue);
+    expect(end, `${where}: ${cue.kind}`).toBeLessThanOrEqual(D + FX_MAX_TAIL_MS);
   }
 }
 
@@ -359,6 +345,27 @@ describe("R3334001 the launch", () => {
       // …with fewer particles: half the sparks, and fewer burst particles in all.
       expect(phone?.sparks).toBe(Math.max(1, Math.round((full?.sparks ?? 0) * STARSHIP_CINEMATIC.phoneShare)));
       expectPhoneShare(cues, compact, `launch of ${String(n)}`);
+    }
+  });
+
+  it("R4493000 a phone's cinematic draws no closer than STARSHIP_CINEMATIC.phoneZoom", () => {
+    for (const n of [1, 4, 8]) {
+      const held = piecesOf(n);
+      const view = dormantBoard(held);
+      const full = cinematicOf(planStarship(launchEntry(held, view, "full"), view, env())?.cues ?? []);
+      const phone = cinematicOf(planStarship(launchEntry(held, view, "full"), view, env({ compact: true }))?.cues ?? []);
+      if (full === undefined || phone === undefined) throw new Error(`no cinematic of ${String(n)} pieces`);
+      // Every size zooms closer than a phone may on the desktop, and on a phone stops at phoneZoom.
+      expect(full.zoom, `${String(n)} pieces`).toBeGreaterThan(STARSHIP_CINEMATIC.phoneZoom);
+      expect(phone.zoom, `${String(n)} pieces`).toBe(STARSHIP_CINEMATIC.phoneZoom);
+      // Its camera still looks only where the picture at that zoom fills the screen, stern to bow.
+      expect(phone.cameraFrom).toEqual(cameraPoint(phone.cameraFrom, phone.zoom));
+      expect(phone.cameraTo).toEqual(cameraPoint(phone.cameraTo, phone.zoom));
+      expect(phone.cameraFrom.x).toBeLessThanOrEqual(phone.cameraTo.x);
+      // A phone on its side (wider than FX_MOBILE_WIDTH, its narrower side under it) caps the zoom too, its sparks a desktop's.
+      const side = cinematicOf(planStarship(launchEntry(held, view, "full"), view, env({ phone: true }))?.cues ?? []);
+      expect(side?.zoom, `${String(n)} pieces on its side`).toBe(STARSHIP_CINEMATIC.phoneZoom);
+      expect(side?.sparks, `${String(n)} pieces on its side`).toBe(full.sparks);
     }
   });
 

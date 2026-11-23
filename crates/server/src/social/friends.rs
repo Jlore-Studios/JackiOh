@@ -6,9 +6,11 @@
 //! - `POST /api/friends/requests/:id/accept` makes the friendship; decline/cancel deletes it;
 //!   `DELETE /api/friends/:profileId` ends it (B45), canceling challenges and shares (R1689000).
 //! - `POST /api/blocks` `{profileId}` (B46): ends friendships, requests, challenges, shares,
-//!   watches (B50, B52) and mutes emotes (R1351000). `DELETE /api/blocks/:profileId` lifts it.
+//!   the notifications between the two, either way (R4348000), watches (B50, B52) and mutes
+//!   emotes (R1351000). `DELETE /api/blocks/:profileId` lifts it.
 //!
-//! `GET /api/friends` reads everything in one transaction (`presence::standings`). R3214000: each
+//! `GET /api/friends` reads everything in one transaction (`presence::standings`, and one read of the
+//! online friends' open lobbies, R3732001). R3214000: each
 //! change nudges the `/ws/social` sockets of the accounts whose list it changed (`friends`), and one
 //! that ends a friendship or a challenge pushes both their social reads.
 
@@ -20,12 +22,14 @@ use serde_json::json;
 use crate::actor::rooms::release_room;
 use crate::api::collection::caller_profile;
 use crate::api::http::{
-    ApiResult, Req, account_key, bad_request, log_info, now_ms, rate_limited, str, to_json,
+    ApiResult, Req, account_key, address_key, bad_request, log_info, now_ms, rate_limited, str, to_json,
 };
 use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::MAX_FRIENDS;
-use crate::db::store::{ChallengeState, FriendRequestRow, Profile, StoreError, Tx};
+use crate::db::store::{ChallengeState, DailyInviteState, FriendRequestRow, Profile, StoreError, Tx};
+use crate::notifications::store::NotificationKind;
+use crate::notifications::{Notice, mark_subject, notify};
 use crate::social::live::{nudge_friends, push_social};
 use crate::social::presence::{Standing, Status, standings};
 use crate::social::watch::{revoke_between, revoke_blocked};
@@ -46,10 +50,26 @@ pub struct Friend {
     pub duos: bool,
     /// When the friendship began, ISO-8601.
     pub since: String,
+    /// R3732001: when an offline friend's last heartbeat was, ISO-8601; left off while they are
+    /// online or in a match, and when presence kept none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_seen_at: Option<String>,
+    /// R3732001: the turn of the 1v1 match the friend is in, while the viewer may watch it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub turn: Option<i32>,
+    /// R3732001: the code of an online friend's lobby (R3730000) with an empty seat and which
+    /// has not started, which the friend may enter as anyone holding the code may.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lobby_code: Option<String>,
 }
 
 impl Friend {
-    pub fn of(profile: &Profile, since: i64, standing: Option<&Standing>) -> Friend {
+    pub fn of(
+        profile: &Profile,
+        since: i64,
+        standing: Option<&Standing>,
+        lobby_code: Option<String>,
+    ) -> Friend {
         let standing = standing.cloned().unwrap_or(Standing::OFFLINE);
         Friend {
             profile_id: profile.id.clone(),
@@ -59,6 +79,9 @@ impl Friend {
             watchable: standing.watchable,
             duos: standing.duos,
             since: iso(since),
+            last_seen_at: standing.last_seen.map(iso),
+            turn: standing.turn,
+            lobby_code,
         }
     }
 }
@@ -120,10 +143,30 @@ pub async fn get_friends(app: &Arc<App>, req: Req) -> ApiResult {
         .map(|(profile, _)| profile.clone())
         .collect();
     let standing = standings(&mut tx, app, &me, &listed).await?;
+    // R3732001: one read of the open lobbies of every online friend; the newest of a host's is the
+    // one their row names.
+    let online: Vec<String> = listed
+        .iter()
+        .filter(|profile| {
+            standing
+                .get(&profile.id)
+                .is_some_and(|standing| standing.status == Status::Online)
+        })
+        .map(|profile| profile.id.clone())
+        .collect();
+    let lobbies = tx.lobbies_open_of_hosts(&online, now_ms()).await?;
     tx.commit().await?;
     let friends: Vec<Friend> = friend_profiles
         .iter()
-        .map(|(profile, since)| Friend::of(profile, *since, standing.get(&profile.id)))
+        .map(|(profile, since)| {
+            let lobby = lobbies.iter().find(|lobby| lobby.host == profile.id);
+            Friend::of(
+                profile,
+                *since,
+                standing.get(&profile.id),
+                lobby.map(|lobby| lobby.code.clone()),
+            )
+        })
         .collect();
 
     let request_of = |row: &FriendRequestRow| -> Option<FriendRequest> {
@@ -171,6 +214,16 @@ pub async fn post_request(app: &Arc<App>, req: Req) -> ApiResult {
             app.social.friend_requests.retry_after_ms(&key, now),
         ));
     }
+    // R4008001: and per address, so a second account at the same address starts no fresh allowance.
+    let address = address_key(&req.address);
+    if !app.social.friend_requests_by_address.allow(&address, now) {
+        return Err(rate_limited(
+            "too many friend requests; try again later",
+            app.social
+                .friend_requests_by_address
+                .retry_after_ms(&address, now),
+        ));
+    }
 
     let unknown = || not_found("no player has that username");
     let Some((name_key, tag)) = sign_in_name(&typed) else {
@@ -209,6 +262,26 @@ pub async fn post_request(app: &Arc<App>, req: Req) -> ApiResult {
             "friends.added",
             json!({ "profileId": me, "friendProfileId": target.id, "mutual": true }),
         );
+        // R4039000: the one who asked first is told their request was taken.
+        notify(
+            app,
+            vec![Notice::new(
+                NotificationKind::FriendAccepted,
+                &target.id,
+                &me,
+                &theirs.id,
+            )],
+        )
+        .await;
+        // R4233000: taking their request answers it, marking its row read, after the add committed.
+        mark_subject(
+            app,
+            &me,
+            &[NotificationKind::FriendRequest],
+            &theirs.id,
+            Some(&target.id),
+        )
+        .await;
         return Ok(created(json!({ "requestId": theirs.id })));
     }
 
@@ -227,6 +300,16 @@ pub async fn post_request(app: &Arc<App>, req: Req) -> ApiResult {
         "friends.requested",
         json!({ "requestId": request.id, "fromProfileId": me, "toProfileId": target.id }),
     );
+    notify(
+        app,
+        vec![Notice::new(
+            NotificationKind::FriendRequest,
+            &target.id,
+            &me,
+            &request.id,
+        )],
+    )
+    .await;
     Ok(created(json!({ "requestId": request.id })))
 }
 
@@ -264,7 +347,26 @@ pub async fn accept_request(app: &Arc<App>, req: Req) -> ApiResult {
         "friends.added",
         json!({ "profileId": me, "friendProfileId": sender.id, "mutual": false }),
     );
-    let friend = Friend::of(&sender, friendship.since, standing.get(&sender.id));
+    notify(
+        app,
+        vec![Notice::new(
+            NotificationKind::FriendAccepted,
+            &sender_id,
+            &me,
+            &request_id,
+        )],
+    )
+    .await;
+    // R4233000: accepting the request marks its row read, after the add committed.
+    mark_subject(
+        app,
+        &me,
+        &[NotificationKind::FriendRequest],
+        &request_id,
+        Some(&sender_id),
+    )
+    .await;
+    let friend = Friend::of(&sender, friendship.since, standing.get(&sender.id), None);
     Ok(crate::api::http::ok(json!({ "friend": to_json(&friend)? })))
 }
 
@@ -290,6 +392,18 @@ async fn remove_request(app: &App, req: Req, mine: fn(&FriendRequestRow, &str) -
     tx.friends_request_delete(&request.id).await?;
     tx.commit().await?;
     nudge_friends(app, &[&request.from_profile, &request.to_profile]);
+    // R4233000: a decline answers the request, marking its row read. A sender's cancel marks
+    // nothing.
+    if request.to_profile == me {
+        mark_subject(
+            app,
+            &me,
+            &[NotificationKind::FriendRequest],
+            &request.id,
+            Some(&request.from_profile),
+        )
+        .await;
+    }
     Ok(no_content())
 }
 
@@ -310,6 +424,10 @@ pub async fn remove_friend(app: &Arc<App>, req: Req) -> ApiResult {
     for challenge in closed.iter().filter(|challenge| challenge.expires_at > now) {
         release_room(&mut tx, &challenge.room_code).await?;
     }
+    // R3727007: and the open daily challenges either way; a daily game already running goes on.
+    let daily_closed = tx
+        .daily_invites_close_between(&me, &friend_id, DailyInviteState::Cancelled)
+        .await?;
     tx.commit().await?;
     // After the commit, so a hello judged from here on is refused and one judged before is revoked.
     let watchers = revoke_between(app, &me, &friend_id);
@@ -324,6 +442,7 @@ pub async fn remove_friend(app: &Arc<App>, req: Req) -> ApiResult {
                 "profileId": me,
                 "friendProfileId": friend_id,
                 "challengesClosed": closed.len(),
+                "dailyChallengesClosed": daily_closed.len(),
                 "sharesRemoved": shares,
                 "watchersRevoked": watchers,
             }),
@@ -351,6 +470,8 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
     let requests = tx.friends_requests_delete_between(&me, &target).await?;
     // B46, B52: a share either way ends for good, so unblocking restores none.
     let shares = tx.shares_remove_between(&me, &target).await?;
+    // R4348000: and the notifications between the two, either way, for the same reason.
+    let notifications = tx.notifications_delete_between(&me, &target).await?;
     // B46, B49: an open challenge either way is canceled and its room freed.
     let closed = tx
         .challenges_close_between(&me, &target, ChallengeState::Canceled)
@@ -358,6 +479,10 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
     for challenge in closed.iter().filter(|challenge| challenge.expires_at > now) {
         release_room(&mut tx, &challenge.room_code).await?;
     }
+    // R3727007: and the open daily challenges either way; a daily game already running goes on.
+    let daily_closed = tx
+        .daily_invites_close_between(&me, &target, DailyInviteState::Cancelled)
+        .await?;
     tx.commit().await?;
     // B46, B50: and a watch either way ends at once, a co-op one of the other's teammate's seat too
     // (R2881000).
@@ -367,7 +492,7 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
     // R3214000: the blocker's list shows the block. The blocked is told only of what it could already
     // see go (a friend, a request, a challenge), so a block of a stranger reaches it not at all.
     nudge_friends(app, &[&me]);
-    if unfriended || requests > 0 || !closed.is_empty() {
+    if unfriended || requests > 0 || !closed.is_empty() || !daily_closed.is_empty() || notifications > 0 {
         nudge_friends(app, &[&target]);
         push_social(app, &[&me, &target]).await;
     }
@@ -377,7 +502,9 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
             "profileId": me,
             "blockedProfileId": target,
             "challengesClosed": closed.len(),
+            "dailyChallengesClosed": daily_closed.len(),
             "sharesRemoved": shares,
+            "notificationsRemoved": notifications,
             "watchersRevoked": watchers,
             "matchesMuted": matches_muted,
         }),

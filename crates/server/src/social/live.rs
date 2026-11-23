@@ -10,14 +10,21 @@
 //! so a session the provider ended (R194) or an account banned meanwhile is cut off as a polling tab
 //! would be refused.
 //!
-//! The server sends three frames, each only what its account may read:
-//! - `{type: "social", incoming, outgoing, unread}`: `GET /api/social`'s own body for the socket's
-//!   account (`social_snapshot`), on connect, after every change to its challenges or unread counts,
+//! The server sends six frames, each only what its account may read:
+//! - `{type: "social", incoming, outgoing, unread, dailyWaiting, notificationsUnread}`: `GET
+//!   /api/social`'s own body for the socket's account (`social_snapshot`), on connect, after every
+//!   change to its challenges, unread counts, daily games (#3727) or notification feed (R4039000),
 //!   when one of its challenges lapses, and in answer to a hello;
 //! - `{type: "chat", friendId}`: a message between it and that friend was sent; no body rides it,
 //!   the tab reads the conversation itself;
 //! - `{type: "friends"}`: its friends list changed (a request, an accept, a removal, a block); the tab
 //!   reads the list itself. A friend's status is not pushed: the list keeps its own read for that.
+//! - `{type: "lobby", code}`: a private lobby it is in (or was just removed from) changed (R3730000);
+//!   the tab reads the lobby itself;
+//! - `{type: "lobbyInvite", code, format, from}`: a friend invites it into their lobby (R3730005), a
+//!   live toast; the feed keeps it too (R4039000);
+//! - `{type: "notification", notification}`: a row of its notification feed, as it is written
+//!   (R4039000), as `GET /api/notifications` lists it.
 //!
 //! The socket takes one frame, `{type: "hello"}`, answered with a `social` frame at most once a
 //! `WATCH_HELLO_INTERVAL_MS` (R2609000's interval), so a woken page's probe (R1441) hears a live
@@ -37,7 +44,7 @@ use crate::actor::contracts::SocketHandlers;
 use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard};
 use crate::actor::protocol::{SocketErrorCode, encode, error_message};
 use crate::actor::ws_server::{SOCIAL_PATH, Socket, UpgradeFailure, WS_CLOSE, authenticate_upgrade};
-use crate::api::http::{ApiError, assert_active, lock};
+use crate::api::http::{ApiError, SOCKET_METHOD, assert_active, lock};
 use crate::app::{App, now_ms};
 use crate::config::{SOCIAL_SESSION_CHECK_SECONDS, SOCIAL_SOCKETS_PER_ACCOUNT};
 use crate::social::reads::social_snapshot;
@@ -155,11 +162,17 @@ fn refuse(socket: &Socket, code: u16, message: &str) {
     socket.close(Some(code), Some(message));
 }
 
-fn refuse_for(socket: &Socket, failure: UpgradeFailure) {
+/// Refuses `socket` for `failure`, and tells `app.route_health` which it was (#3826): a refusal is an
+/// answer, a fault is a failure of the route.
+fn refuse_for(app: &App, socket: &Socket, failure: UpgradeFailure) {
     match failure {
-        UpgradeFailure::Refused { code, message } => refuse(socket, code, &message),
+        UpgradeFailure::Refused { code, message } => {
+            app.route_health.answered(SOCKET_METHOD, SOCIAL_PATH);
+            refuse(socket, code, &message);
+        }
         UpgradeFailure::Threw(message) => {
             tracing::error!(event = "ws.social.threw", message = %message);
+            app.route_health.threw(SOCKET_METHOD, SOCIAL_PATH, &message);
             refuse(socket, WS_CLOSE.internal, "something went wrong");
         }
     }
@@ -241,6 +254,30 @@ pub fn nudge_friends(app: &App, ids: &[&str]) {
     }
 }
 
+/// R3730000: lobby `code` changed (a join, a leave, a pick, a Ready, a setting, a Start): each of
+/// `ids`, its members old and new, is told which lobby, and nothing of it; the tab reads the lobby
+/// itself, as its member.
+pub fn nudge_lobby(app: &App, ids: &[&str], code: &str) {
+    let frame = json!({ "type": "lobby", "code": code }).to_string();
+    for id in ids {
+        send_to(app, id, &frame);
+    }
+}
+
+/// R3730005: `from` invites `to` into lobby `code` of `format` (`"duel"` or `"coop"`), a live toast
+/// (the feed's `lobbyInvite` row keeps it, R4039000): `from` is the inviter's `{profileId, username}`.
+pub fn send_lobby_invite(app: &App, to: &str, code: &str, format: &str, from: &Value) {
+    let frame = json!({ "type": "lobbyInvite", "code": code, "format": format, "from": from }).to_string();
+    send_to(app, to, &frame);
+}
+
+/// R4039000: a row of `to`'s notification feed was written: each of `to`'s sockets is sent it, as
+/// `GET /api/notifications` lists it (`notifications::notification_json`).
+pub fn send_notification(app: &App, to: &str, notification: &Value) {
+    let frame = json!({ "type": "notification", "notification": notification }).to_string();
+    send_to(app, to, &frame);
+}
+
 /// A social socket's life after its upgrade: who it is, its room under the account's cap, its first
 /// `social` frame and its session check; or the one refusal. `None` when it was not let in.
 pub async fn serve(app: &Arc<App>, socket: &Socket, token: Option<String>) -> Option<Arc<LiveSocket>> {
@@ -251,12 +288,13 @@ pub async fn serve(app: &Arc<App>, socket: &Socket, token: Option<String>) -> Op
     let profile = match authenticate_upgrade(app, token.clone(), SOCIAL_PATH).await {
         Ok(profile) => profile,
         Err(failure) => {
-            refuse_for(socket, failure);
+            refuse_for(app, socket, failure);
             return None;
         }
     };
     if !app.social.live.try_add(&profile.id, socket) {
         tracing::info!(event = "ws.social.too_many", profileId = %profile.id, limit = SOCIAL_SOCKETS_PER_ACCOUNT);
+        app.route_health.answered(SOCKET_METHOD, SOCIAL_PATH);
         refuse(socket, WS_CLOSE.forbidden, TOO_MANY_TABS);
         return None;
     }
@@ -282,10 +320,11 @@ pub async fn serve(app: &Arc<App>, socket: &Socket, token: Option<String>) -> Op
     match social_frame(app, &live.id).await {
         Ok(frame) => socket.send(frame),
         Err(error) => {
-            refuse_for(socket, UpgradeFailure::Threw(error.message));
+            refuse_for(app, socket, UpgradeFailure::Threw(error.message));
             return None;
         }
     }
+    app.route_health.answered(SOCKET_METHOD, SOCIAL_PATH);
     watch_session(&live, token.unwrap_or_default());
     Some(live)
 }

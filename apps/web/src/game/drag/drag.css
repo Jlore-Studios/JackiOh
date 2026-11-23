@@ -43,7 +43,10 @@
 
 /* R658: a card option lifts on touch, so the browser must not pan under it; list and plain options
    keep the panel scrolling, and are dragged with a mouse or a pen. */
-.game:has(> .board[data-drag="on"]) .prompt .prompt-card {
+/* #3633: Game's `data-drag` and FxLayer's `data-fx-hold` stand on the game root where `.game:has()`
+   read the board's and the effects layer's (a `:has()` on the game restyled the whole board on every
+   change). The doubled `[data-drag]` keeps the specificity of `:has(> .board[data-drag="on"])`. */
+.game[data-drag][data-drag="on"] .prompt .prompt-card {
   touch-action: none;
 }
 
@@ -157,7 +160,7 @@
 }
 
 /* #3347: once the effects layer's stand-in flies the played card in, the landing ghost steps aside. */
-.game:has(.fx-hold) .drag-landing {
+.game[data-fx-hold] .drag-landing {
   visibility: hidden;
 }
 
@@ -333,7 +336,30 @@
   stroke-width: 5;
   stroke-linecap: round;
   stroke-dasharray: 1 27;
-  animation: drag-arrow-march 0.7s linear infinite;
+  opacity: 0;
+  animation: drag-arrow-march 0.7s steps(1, end) infinite;
+}
+
+/* R3608000: the dots march by four copies of the shaft, one quarter of the 28-unit dash period apart, each
+   shown for a quarter of the loop (DragLayer.tsx's PULSE_PHASES); a dash offset is a paint property, opacity
+   is not. Under reduced motion the first copy stays, the still dotted line. */
+.drag-arrow-pulse[data-phase="0"] {
+  opacity: 1;
+}
+
+.drag-arrow-pulse[data-phase="1"] {
+  stroke-dashoffset: -7;
+  animation-delay: -0.525s;
+}
+
+.drag-arrow-pulse[data-phase="2"] {
+  stroke-dashoffset: -14;
+  animation-delay: -0.35s;
+}
+
+.drag-arrow-pulse[data-phase="3"] {
+  stroke-dashoffset: -21;
+  animation-delay: -0.175s;
 }
 
 .drag-arrow-head {
@@ -350,8 +376,13 @@
 }
 
 @keyframes drag-arrow-march {
-  to {
-    stroke-dashoffset: -28;
+  0% {
+    opacity: 1;
+  }
+
+  25%,
+  100% {
+    opacity: 0;
   }
 }
 

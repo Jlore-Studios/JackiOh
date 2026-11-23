@@ -140,10 +140,11 @@ mod build_ai_deck_b22 {
     }
 
     #[test]
-    fn r380_b22_the_decks_reach_every_set_core_classic_classic_plus_meditative_meditative_plus_stinkyscape_and_training_grounds_alike()
+    fn r380_b22_the_decks_reach_every_set_core_classic_classic_plus_meditative_meditative_plus_stinkyscape_training_grounds_and_stinkyscape_plus_alike()
      {
-        // The AI's soft gate is empty (#1885), so every set that ships is dealt: Meditative+ too, as #1186's
-        // sweep banned none of it (#1187), and Training Grounds (#2204).
+        // The AI's soft gate is empty (#1885, and again since #3574), so every set that ships is dealt:
+        // Meditative+ too, as #1186's sweep banned none of it (#1187), Training Grounds (#2204) and
+        // Stinkyscape+ (R3574000).
         let dealt: IndexSet<String> = decks(30, &options(json!({})), "sets")
             .iter()
             .flatten()
@@ -160,6 +161,7 @@ mod build_ai_deck_b22 {
                 "Meditative",
                 "Meditative+",
                 "Stinkyscape",
+                "Stinkyscape+",
                 "Training Grounds"
             ]
         );
@@ -697,68 +699,74 @@ mod r1370_a_deck_that_leans_on_a_set {
         // the pins, their seeds stopping at the same cursors (#831, #1149, #1194, #1704, #2179, #2657; #1151
         // the themed pin only, #2521 the human and themed pins, #3042 the hard, human and themed pins, #3139 and
         // #3138 the human, easy and hard pins: Living Bomb costs (2), Snom Bunny Mind Control (5) and a dozen
-        // Meditative and Classic+ cards move cost, which moves the curve's buckets).
+        // Meditative and Classic+ cards move cost, which moves the curve's buckets; #3837 every pin:
+        // Speciesist costs (3), Spiteful Stab, Argusland and Wardrum one less, and Ivory Tower (1); #3951
+        // every pin: Wardrum, Jlarna, Jlockeed's Yamato Cannon and Cloaking Module cost one less; #3996
+        // the easy, hard and themed pins: Mana Well, Twinspell, Field of Dreams and Income Tax cost one
+        // less, Felinor Feelings and Heroic Power one more; #4154 the human pin: Living Bomb (3), Snom
+        // Bunny Mind Control (6), K-Pop Fanatic (3), Lockdown and Memory Leak (1), Field of Dreams (0) and others
+        // move cost).
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
                 20,
-                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds"] }),
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"] }),
                 21,
                 &[
-                    "classicplus-006",
-                    "core-089",
-                    "classic-021",
+                    "classicplus-007",
+                    "core-091",
+                    "classic-022",
                     "classicplus-015",
-                    "classic-027",
+                    "classic-028",
                     "classic-086",
-                    "classic-089",
-                    "classic-007",
-                    "classicplus-002",
-                    "classic-081",
+                    "classic-090",
+                    "classic-010",
+                    "classicplus-003",
+                    "classic-082",
                     "classicplus-013",
-                    "classicplus-037",
+                    "classicplus-035",
                     "classicplus-078",
+                    "core-019",
                     "core-012",
-                    "core-010",
-                    "core-055",
-                    "classicplus-005",
-                    "classicplus-034",
-                    "core-076",
-                    "classicplus-026",
+                    "core-053",
+                    "classic-085",
+                    "classicplus-036",
+                    "core-070",
+                    "classicplus-011",
                 ],
             ),
             (
                 "r1370-pin:easy",
                 20,
-                json!({ "manaCap": 4, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds"] }),
+                json!({ "manaCap": 4, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"] }),
                 21,
                 &[
-                    "core-089",
+                    "core-091",
                     "classicplus-020",
-                    "classic-021",
-                    "classic-070",
-                    "core-097",
-                    "core-068",
+                    "classic-022",
+                    "classic-071",
+                    "core-099",
+                    "core-069",
                     "classic-013",
                     "core-015",
                     "core-004",
-                    "core-052",
-                    "core-091",
+                    "core-054",
+                    "classic-002",
                     "classicplus-001",
-                    "classicplus-044",
+                    "classicplus-045",
                     "core-032",
-                    "classic-049",
-                    "classicplus-066",
-                    "classic-006",
+                    "classic-048",
                     "classicplus-067",
-                    "core-042",
+                    "classic-006",
+                    "classicplus-069",
+                    "core-046",
                     "core-053",
                 ],
             ),
             (
                 "r1370-pin:hard",
                 30,
-                json!({ "manaCap": 7, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds"] }),
+                json!({ "manaCap": 7, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"] }),
                 31,
                 &[
                     "classicplus-006",
@@ -779,53 +787,57 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-040",
                     "core-020",
                     "classic-066",
-                    "classicplus-012",
+                    "classicplus-011",
                     "classic-077",
                     "classic-020",
                     "classicplus-003",
-                    "classic-060",
-                    "classicplus-007",
-                    "classicplus-038",
-                    "core-029",
-                    "classic-010",
-                    "classic-006",
-                    "classic-009",
-                    "classicplus-018",
+                    "classic-058",
+                    "classicplus-005",
+                    "classicplus-047",
+                    "core-026",
+                    "classic-032",
+                    "classic-029",
+                    "classic-018",
+                    "classic-086",
                 ],
             ),
             (
                 "r1370-pin:themed",
                 20,
-                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds"], "theme": "Human" }),
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"], "theme": "Human" }),
                 20,
                 &[
-                    "classic-008",
+                    "classic-013",
                     "core-092",
                     "core-004",
-                    "classicplus-028",
-                    "classic-064",
+                    "classicplus-029",
+                    "classic-066",
                     "core-067",
                     "core-091",
                     "classic-006",
-                    "classic-026",
-                    "classic-077",
-                    "classic-066",
+                    "classic-030",
+                    "classic-082",
+                    "classic-067",
                     "classicplus-037",
                     "core-001",
-                    "core-085",
-                    "core-072",
                     "core-066",
+                    "core-061",
+                    "core-085",
                     "classicplus-063",
-                    "core-089",
-                    "classic-083",
-                    "classicplus-026",
+                    "core-094",
+                    "classic-071",
+                    "classicplus-019",
                 ],
             ),
         ];
         // These pins are recorded deals, so they read the pools as they are, not as the pool probe (#3117)
         // rotates them: `gatedSets` (R1390) and R1420 keep a later set out of the pool they name, and a
         // set's release re-pins them by design, so a pool roll is not what they guard.
+        // Every pin is dealt before any is compared, so a patch that re-deals them reads every new deck and
+        // cursor in one failure.
         with_pool_shift(0, || {
+            let mut dealt = Vec::new();
+            let mut pinned = Vec::new();
             for (seed, size, literal, cursor, expected) in pins {
                 for literal in [literal.clone(), {
                     let mut with_null = literal.clone();
@@ -834,11 +846,13 @@ mod r1370_a_deck_that_leans_on_a_set {
                 }] {
                     let mut rng = create_rng(seed, 0);
                     let traced = build_ai_deck_traced(&mut rng, size, &options(literal.clone()));
-                    assert_eq!(traced.deck, expected, "{seed} {literal}");
-                    assert_eq!(rng.cursor(), cursor, "{seed} {literal}");
-                    assert_eq!(traced.lean_forced, 0, "{seed} {literal}");
+                    let label = format!("{seed} {literal}");
+                    dealt.push((label.clone(), traced.deck, rng.cursor(), traced.lean_forced));
+                    let expected: Vec<String> = expected.iter().map(|id| id.to_string()).collect();
+                    pinned.push((label, expected, cursor, 0));
                 }
             }
+            assert_eq!(dealt, pinned);
         });
         assert_eq!(AiDeckOptions::default().lean_set, None);
         assert_eq!(
@@ -1103,9 +1117,11 @@ mod r1390_the_ai_decks_soft_gate {
     /// A card of the Meditative set, which the sweep forces in by name.
     const FORCED_MEDITATIVE: &str = "meditative-002";
 
-    /// The gate the AI's decks were dealt under from #551 until #732 lifted it, named by the tests of
-    /// the gate's mechanics now that `AI_DECK_GATED_SETS` is empty.
-    const GATE: &[SetName] = &[SetName::Meditative];
+    /// A gate the tests of the gate's mechanics deal under: Meditative, which the AI's decks were
+    /// dealt under from #551 until #732 lifted it, and Stinkyscape+, which `AI_DECK_GATED_SETS` held from
+    /// its release (#3573) until fullsend 2 (#3574), so a lean on the first lands on the newest set that is
+    /// in neither.
+    const GATE: &[SetName] = &[SetName::Meditative, SetName::StinkyscapePlus];
 
     fn gated_in(deck: &[String]) -> Vec<&String> {
         deck.iter()
@@ -1194,7 +1210,8 @@ mod r1390_the_ai_decks_soft_gate {
         register_cards();
         let gate = GATE;
         // The newest set that ships, which this gate leaves, is Training Grounds (#2204; Stinkyscape #1884
-        // and Meditative+ #1187 before it), so a lean on gated Meditative lands on it, not on Classic+.
+        // and Meditative+ #1187 before it; Stinkyscape+ #3573 is gated), so a lean on gated Meditative
+        // lands on it, not on Classic+.
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), gate),
             Some(SetName::TrainingGrounds)
@@ -1215,7 +1232,8 @@ mod r1390_the_ai_decks_soft_gate {
                     SetName::ClassicPlus,
                     SetName::Meditative,
                     SetName::Stinkyscape,
-                    SetName::TrainingGrounds
+                    SetName::TrainingGrounds,
+                    SetName::StinkyscapePlus
                 ]
             ),
             Some(SetName::MeditativePlus)
@@ -1228,7 +1246,8 @@ mod r1390_the_ai_decks_soft_gate {
                     SetName::Meditative,
                     SetName::MeditativePlus,
                     SetName::Stinkyscape,
-                    SetName::TrainingGrounds
+                    SetName::TrainingGrounds,
+                    SetName::StinkyscapePlus
                 ]
             ),
             Some(SetName::Classic)
@@ -1333,8 +1352,9 @@ mod r1390_the_ai_decks_soft_gate {
     fn r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_meditative_cards() {
         register_cards();
         // Issue #732 measured the AI on the Meditative set and took it off the list (R1390): the AI's
-        // own decks are dealt from it.
-        assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
+        // own decks are dealt from it. The list is empty since fullsend 2 (#3574, R3574000) lifted the
+        // Stinkyscape+ set's gate.
+        assert_eq!(AI_DECK_GATED_SETS, &[] as &[SetName]);
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), AI_DECK_GATED_SETS),
             Some(SetName::Meditative)
@@ -1393,6 +1413,46 @@ mod r1390_the_ai_decks_soft_gate {
             "{leaning:?}"
         );
     }
+
+    /// R3574000: fullsend 2's sweep of record measured the AI on the Stinkyscape+ set, so the gate holds
+    /// none of it: the AI's own decks are dealt from it at every tier, every card the shadow ban leaves
+    /// it, and a lean on it leans on it.
+    #[test]
+    fn r3574000_r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_stinkyscape_plus_cards() {
+        register_cards();
+        assert!(SHIPPED_SETS.contains(&SetName::StinkyscapePlus));
+        assert!(!AI_DECK_GATED_SETS.contains(&SetName::StinkyscapePlus));
+        assert_eq!(
+            ungated_lean(Some(SetName::StinkyscapePlus), AI_DECK_GATED_SETS),
+            Some(SetName::StinkyscapePlus)
+        );
+        let mut dealt = 0;
+        for (tier, size, base) in ai_rules() {
+            for n in 1..=GATE_SEEDS {
+                let seed = format!("r3574000:plus:{tier}:{n}");
+                let deck = build_ai_deck(&mut create_rng(&seed, 0), size, &options(base.clone()));
+                assert_eq!(deck.len(), size as usize, "{seed}");
+                assert!(
+                    deck.iter().all(|id| !SHADOW_BAN_IDS.contains(&id.as_str())),
+                    "{seed}: a shadow-banned card dealt: {deck:?}"
+                );
+                dealt += of_set(&deck, SetName::StinkyscapePlus);
+            }
+        }
+        assert!(dealt > 0, "no AI deck held a Stinkyscape+ card");
+        for n in 1..=GATE_SEEDS {
+            let seed = format!("r3574000:plus:lean:{n}");
+            let leaning = build_ai_deck(
+                &mut create_rng(&seed, 0),
+                DECK_SIZE,
+                &options(json!({ "leanSet": "Stinkyscape+" })),
+            );
+            assert!(
+                of_set(&leaning, SetName::StinkyscapePlus) >= lean_floor(DECK_SIZE),
+                "{seed}: {leaning:?}"
+            );
+        }
+    }
 }
 
 // R750000: a ladder bot's deal leans on the cards that win; R3049002: the table it is handed
@@ -1404,8 +1464,10 @@ mod win_rate_strength {
         WinRateRow, WinRateSource, WinRateTable, clear_overrides, register_win_rates,
     };
 
-    /// The rated cards: the first `RATED` ids of the pool, alternately winners and losers.
-    const RATED: usize = 80;
+    /// The rated cards: the first `RATED` ids of the pool, alternately winners and losers. Re-pinned for
+    /// the Stinkyscape+ release (#3573) with the pool: 100 of its 800 cards, the share (an eighth) 80 of
+    /// 634 were, so the rated cards weigh in a deck as they did.
+    const RATED: usize = 100;
     /// Each rated row's games, well past `AI_WIN_RATE.min_games`.
     const GAMES: i32 = 80;
     /// A winner's and a loser's wins: 90% and 10%.

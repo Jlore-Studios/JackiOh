@@ -1,8 +1,13 @@
-//! TG #35 Corpse Recycler (SPEC §8.11 row 35). (3) Field Spell, Epic. "After a non-Token Unit dies,
-//! summon a Rush Token for its controller." (Radiant: a Radiant Rush Token.)
+//! TG #35 Corpse Recycler (SPEC §8.11 row 35, R2199006, R3837005, R4423000). (3) Field Spell, Epic. "After a
+//! non-Token Unit dies, summon a Rush Token for you." (Radiant: a Radiant Rush Token.)
 //! A trigger on `destroyed`, as C+ #19.5 Bot Loser's: a Field Spell's, so both players' Units answer it
-//! (R2199006). The token goes to the Unit's controller as it died (R172), in R64's leftmost open zone (the
-//! event carries no lane, R89), none on a full row (§3.2); a Token's death gives nothing (§7).
+//! (R2199006). Since issue #3837 the token goes to the Recycler's controller whoever's Unit died
+//! (R3837005); through v0.6.2c it went to the Unit's controller as it died (R172), which `script_v0_6_2c`
+//! keeps for those replays (R767000). It lands in R64's leftmost open zone (the event carries no lane,
+//! R89), none on a full row (§3.2); a Token's death gives nothing (§7). R4423000: a Unit's death is read by
+//! what the card was on the field as it died (`is_unit_death`), so a Unit set face-down by its Cloaked and
+//! destroyed before it reveals gives nothing and an Animated Field Spell or Trap killed in a unit zone gives
+//! a token; `script_v0_6_9i` keeps the definition's type for v0.6.9l and before (R767000).
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::summon;
@@ -13,25 +18,33 @@ pub const ID: &str = "traininggrounds-035";
 /// §7: the Rush Token, 3/3 Rush (Radiant 6/6 Rush, Cleave).
 const RUSH_TOKEN: &str = "core-t-rush";
 
-/// A non-Token Unit's death (R2199006): the player who controlled it as it died (R172), or nothing.
-fn died_unit(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<PlayerId> {
+/// A non-Token Unit's death (R2199006): the player who controlled it as it died (R172), or nothing. A Unit
+/// by what the card was as it died (R4423000), or `by_print` by its definition, as v0.6.9l and before.
+fn died_unit(ctx: &EffectContext<'_>, event: &GameEvent, by_print: bool) -> Option<PlayerId> {
     let GameEvent::Destroyed { def_id, controller, .. } = event else {
         return None;
     };
     let def = def_of(Some(&*ctx.state), def_id);
-    (def.type_ == CardType::Unit && !def.is_token()).then_some(*controller)
+    let unit = if by_print {
+        def.type_ == CardType::Unit
+    } else {
+        is_unit_death(&*ctx.state, event)
+    };
+    (unit && !def.is_token()).then_some(*controller)
 }
 
 /// The condition is written twice, as Core #18's: a queued trigger takes an empty list as "not met".
-fn recycler(radiant: bool) -> Script {
+/// `for_you`: the token is the Recycler's controller's (R3837005), not the dead Unit's (R172).
+/// `by_print`: as `died_unit`'s.
+fn recycler(radiant: bool, for_you: bool, by_print: bool) -> Script {
     let trigger = TriggerDef::new("corpse-recycler", &[GameEventType::Destroyed], move |ctx, event| {
-        let Some(controller) = died_unit(ctx, event) else {
+        let Some(controller) = died_unit(ctx, event, by_print) else {
             return vec![];
         };
-        let side = if controller == ctx.controller { "self" } else { "enemy" };
+        let side = if for_you || controller == ctx.controller { "self" } else { "enemy" };
         vec![summon(json_as(json!({ "defId": RUSH_TOKEN, "player": side, "radiant": radiant })))]
     })
-    .with_when(|ctx, event| died_unit(ctx, event).is_some());
+    .with_when(move |ctx, event| died_unit(ctx, event, by_print).is_some());
     Script {
         triggers: vec![trigger],
         ..Script::default()
@@ -40,8 +53,26 @@ fn recycler(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: recycler(false),
-        radiant: recycler(true),
+        base: recycler(false, true, false),
+        radiant: recycler(true, true, false),
+    }
+}
+
+/// R767000: a Unit's death read by the dead card's definition (R4423000), through v0.6.9l; `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_6_9i() -> CardScripts {
+    CardScripts {
+        base: recycler(false, true, true),
+        radiant: recycler(true, true, true),
+    }
+}
+
+/// R767000: the token for the dead Unit's controller (R172), through v0.6.2c; `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_6_2c() -> CardScripts {
+    CardScripts {
+        base: recycler(false, false, true),
+        radiant: recycler(true, false, true),
     }
 }
 
@@ -95,15 +126,30 @@ mod tests {
         }
 
         #[test]
-        fn r172_an_enemy_unit_dies_and_the_enemy_gets_one() {
+        fn r3837005_an_enemy_unit_dies_and_you_get_the_token() {
             // Timmy's First Strike kills the Speciesist before it strikes back.
             let mut s = board(false, json!({ "field": [TIMMY] }), json!({ "field": [SPECIESIST] }));
             let vanilla = s.unit(P1, 1).unwrap();
             let speciesist = s.unit(P2, 1).unwrap();
             s.attack(&vanilla, &speciesist);
 
-            assert_eq!(tokens(&s, P2), 1);
-            assert_eq!(tokens(&s, P1), 0);
+            // "For you": the Recycler's controller's, in their leftmost open zone (R64).
+            assert_eq!(tokens(&s, P1), 1);
+            assert_eq!(units(&s, P1)[1].as_deref(), Some(RUSH));
+            assert_eq!(tokens(&s, P2), 0);
+        }
+
+        #[test]
+        fn r767000_the_kept_v0_6_2c_script_gives_the_enemy_its_token() {
+            crate::under_kept(RECYCLER, super::super::script_v0_6_2c(), || {
+                let mut s = board(false, json!({ "field": [TIMMY] }), json!({ "field": [SPECIESIST] }));
+                let vanilla = s.unit(P1, 1).unwrap();
+                let speciesist = s.unit(P2, 1).unwrap();
+                s.attack(&vanilla, &speciesist);
+
+                assert_eq!(tokens(&s, P2), 1);
+                assert_eq!(tokens(&s, P1), 0);
+            });
         }
 
         #[test]
@@ -144,9 +190,9 @@ mod tests {
             );
             s.play(BIG_FELINOR, json!({ "zone": 1 }));
 
-            // Three non-Felinor Units died: one token for p1 (its Vanilla), two for p2.
-            assert_eq!(tokens(&s, P1), 1);
-            assert_eq!(tokens(&s, P2), 2);
+            // Three non-Felinor Units died: three tokens, every one p1's (R3837005).
+            assert_eq!(tokens(&s, P1), 3);
+            assert_eq!(tokens(&s, P2), 0);
 
             // R68: death triggers run in side then lane order, the active player's first.
             let p1_vanilla = |e: &GameEvent| matches!(e, GameEvent::Destroyed { controller: P1, def_id, .. } if def_id == VANILLA);
@@ -168,8 +214,8 @@ mod tests {
                     _ => None,
                 })
                 .collect();
-            // p1's token in its leftmost open zone (lane 2, the Felinor in 1), then p2's in lanes 1 and 2.
-            assert_eq!(summons, vec![(P1, 2), (P2, 1), (P2, 2)]);
+            // Each in p1's leftmost open zone: lane 2 (the Felinor in 1), then 3, then 4 (its Vanilla's).
+            assert_eq!(summons, vec![(P1, 2), (P1, 3), (P1, 4)]);
         }
 
         #[test]
@@ -199,6 +245,70 @@ mod tests {
             assert_eq!(token.def_id, RUSH);
             assert!(token.radiant);
             s.expect_stats(RUSH, json!({ "attack": 6, "health": 6 }));
+        }
+    }
+
+    /// R4423000: a death gives a token by what the card was on the field as it died.
+    mod r4423000_what_it_died_as {
+        use super::*;
+
+        const MAGIC_JAMMED: &str = "core-036";
+        const FILLER: &str = "core-005";
+
+        /// p1 sets a Cloaked Toe Cracker face-down and destroys it with Magic Jammed before it reveals,
+        /// its Recycler face-up in backrow lane 1; the set card's id.
+        fn jammed() -> (Scenario, String) {
+            let mut s = board(
+                false,
+                json!({ "hand": [crate::CLOAKED_UNIT, MAGIC_JAMMED, FILLER], "mana": 10 }),
+                json!({ "hand": [FILLER] }),
+            );
+            let set = crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 2);
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&set) }));
+            (s, set)
+        }
+
+        #[test]
+        fn r4423000_a_set_cloaked_unit_destroyed_before_it_reveals_is_no_unit_death_for_it() {
+            let (s, set) = jammed();
+            assert_eq!(crate::died_as_of(&s, &set), Some(CardType::FieldTrap));
+            assert_eq!(tokens(&s, P1), 0);
+            assert_eq!(tokens(&s, P2), 0);
+        }
+
+        /// p1's set Catnip animates after p2's Spell, and p2's Hit Job kills it in its unit zone.
+        #[test]
+        fn r4423000_an_animated_field_trap_killed_in_a_unit_zone_is_a_unit_death_for_it() {
+            let mut s = scenario(json!({
+                "seed": "corpse-recycler",
+                "active": "p2",
+                "p1": {
+                    "hand": [FILLER],
+                    "backrow": [
+                        { "def": RECYCLER, "faceUp": true, "lane": 1 },
+                        { "def": crate::ANIMATED_TRAP, "faceUp": false, "lane": 2 },
+                    ],
+                },
+                "p2": { "hand": [FILLER, HIT_JOB, FILLER], "mana": 10 },
+            }));
+            s.play(FILLER, json!({}));
+            let catnip = s.card(crate::ANIMATED_TRAP).id.clone();
+            assert!(s.unit(P1, 2).is_some_and(|unit| unit.id == catnip), "Catnip animated");
+            s.play(HIT_JOB, json!({ "targets": pick::id(&catnip) }));
+
+            assert_eq!(crate::died_as_of(&s, &catnip), Some(CardType::Unit));
+            assert_eq!(tokens(&s, P1), 1);
+            assert_eq!(tokens(&s, P2), 0);
+        }
+
+        /// R767000: v0.6.9l and before gave a token for the set card's death, by the definition's type.
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_9i_counts_a_set_cloaked_unit_s_death() {
+            crate::under_kept(RECYCLER, super::super::script_v0_6_9i(), || {
+                let (s, _) = jammed();
+                assert_eq!(tokens(&s, P1), 1);
+                assert_eq!(tokens(&s, P2), 0);
+            });
         }
     }
 }

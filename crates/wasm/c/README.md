@@ -108,6 +108,8 @@ A **panic** is an engine invariant broken (SURFACE §4.4.9). In WebAssembly it i
 an `unreachable` trap and the instance is dead, so it must be **replaced by a fresh one**, with its
 state lost. The panic's text (message and place) is kept before the trap, and is still readable at
 `jackioh_result_ptr()` and `jackioh_result_len()` afterwards, as the result buffer holds it; log it.
+The module ships without its `name` section (#4275's smaller build strips it), so a trap's backtrace
+carries no function names; the text above still reads.
 
 ## The bindings
 
@@ -139,11 +141,10 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `bots(call)` | string | #3103: one call of `jackioh-shared`'s decisions around a ladder bot, a `BotCall` in and a `BotAnswer` out (the pool's size and who grinds, a new bot, its decks and trio, the empty-queue pairing, a Conquest series pick, the cosmetics it wears), over plain records the host read from its store (`crates/shared/README.md`, the host contract) |
 | `bot_decide(call, deadline_ms)` | string, then `deadline_ms: f64` | #3103: the move a ladder bot owes, a `DecideCall` (the `DuelHost` and the `DecideRequest` a `decide` output made) in and the `BotChoice` to feed the machine back as `decided` out. As `ai_decide`'s, `deadline_ms` is accepted and has no effect (the module has no clock): the search ends at the strength's budget |
 | `face(call)` | string | #3106: one call of `jackioh-shared`'s card face model, a `FaceCall` in and a `FaceAnswer` out (a face, every face of a view, a text as spans, a word diff); the catalog is the one `init` registered and the locale an argument, so the answer is final text as spans in the reader's words and the host lays it out (`crates/shared/README.md`) |
-| `log(call)` | string | #3108: one call of `jackioh-shared`'s game log, a `LogCall` in and a `LogAnswer` out (a line, or `null`, for each event of a view's window; the line that says events may be missing); the catalog is the one `init` registered and the locale an argument, so each line is final text as spans in the reader's words, and a line about a hidden card never names it (`crates/shared/README.md`) |
+| `game_log(call)` | string | #3108: one call of `jackioh-shared`'s game log, a `LogCall` in and a `LogAnswer` out (a line, or `null`, for each event of a view's window; the line that says events may be missing); the catalog is the one `init` registered and the locale an argument, so each line is final text as spans in the reader's words, and a line about a hidden card never names it (`crates/shared/README.md`) |
 | `economy(call)` | string | #3104: one call of `jackioh-shared`'s collection economy, an `EconomyCall` in and an `EconomyAnswer` out (`openCardPack` and `openCosmeticPack` take the records the store read, the seed and the time, and answer the slots, the `grants` to write in order and the `log` every row's `ref` carries; `payGame`, `payXp`, `startingRewards` and the quest calls answer the grants to write, in order; `fillBar` and `levelReward` are reads); the host reads the records from its store and writes the grants back (`crates/shared/README.md`, the host contract) |
 | `craft_preview(recipe, cost, prompt)` | `recipe`, then `cost: f64`, then `prompt` | the engine's verdict on a recipe |
 | `engine_tables()` | | the Call to Chaos and Heroic Power tables |
-| `learned_parity(fixture)` | string | the learned evaluation's answers for a fixture, to hold a port to |
 | `preview_sets(sets)` | string | nothing (an empty result); a module built with `preview` previews the sets |
 | `run_content()`, `run_constants()` | | the dungeon run's content and numbers |
 | `run_content_at(version)` | string | R3496000: the dungeon run's content for a catalog version: the build's own, a carried version's, or `null` when this build carries it no longer |
@@ -183,3 +184,18 @@ none of them. Later shared modules add theirs here.
 - **One thread.** The module is single-threaded and **not reentrant**: one call at a time, from the
   thread that instantiated it, and the result buffer and the state cache are the instance's, so two
   instances do not share them.
+
+## Checking the built module
+
+The build (`JACKIOH_WASM_C=1 sh scripts/build-wasm.sh`) checks that the module imports nothing, contains no trapping stubs, and keeps readable panic text after a trap. It then plays the hotseat fixture (`crates/engine/tests/golden/01-hotseat-full-game.json`) move by move using the reference host (`luau/tools/reference-host.mjs fixture`), failing if the game ends anywhere other than `HOTSEAT_HASH` (`512357ea`).
+
+To run the reference host by hand:
+
+```
+node luau/tools/reference-host.mjs fixture <path/to/jackioh_wasm_c.wasm>
+node luau/tools/reference-host.mjs traces <path/to/jackioh_wasm_c.wasm> <path/to/trace.jsonl>
+```
+
+- `fixture` folds the hotseat fixture and replays its 39 actions step by step with `reduce` and `hash_state`.
+- `traces` replays a recorded game trace (from `cargo jackioh golden record`) step by step, verifying state hashes at each move.
+

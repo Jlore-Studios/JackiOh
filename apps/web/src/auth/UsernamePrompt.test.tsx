@@ -263,7 +263,7 @@ describe("R1435 the username prompt", () => {
 
 describe("R3147003 the prompt starts from the provider's username", () => {
   function base64url(text: string): string {
-    return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
   }
 
   function tokenWith(userMetadata: Record<string, unknown>): string {

@@ -20,16 +20,16 @@ import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import type { CardLookup } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { getReplays } from "../net/api.ts";
-import type { OnlineReplayListing, QueueMode } from "../net/api.ts";
+import type { OnlineReplayListing } from "../net/api.ts";
 import { useAccount } from "../net/gate.ts";
 import { paths } from "../net/navigate.ts";
 import { createPracticeHost } from "../practice/host.ts";
 import type { PracticeHost } from "../practice/host.ts";
 import type { PracticeReplayListing } from "../practice/protocol.ts";
 import ReplayPlayer from "../replay/ReplayPlayer.tsx";
-import { downloadFile, onlineGame, practiceGame, readReplayJsonFile, replayJsonFile, replayStepsOf } from "../replay/download.ts";
+import { downloadFile, onlineGame, practiceGame, readReplayJsonFile, replayJsonFile, replayPortraitsOf, replayStepsOf } from "../replay/download.ts";
 import type { ReplayJsonGame } from "../replay/download.ts";
-import { ReplayFailure, memoryReplaySource, replayFailureOf, replayFailureText } from "../replay/source.ts";
+import { memoryReplaySource, replayFailureOf, replayFailureText } from "../replay/source.ts";
 import type { ReplaySource } from "../replay/source.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
@@ -38,6 +38,7 @@ import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { sharedWithMePath } from "../together/anchors.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 import { ArrowIcon } from "./ArrowIcon.tsx";
+import { MODE_WORDS, RESULT_WORDS, opponentName, unavailableText } from "./replayWords.ts";
 import { messageOf } from "../net/errors.ts";
 
 import "./replays.css";
@@ -81,19 +82,7 @@ type Listed<Row> =
  * The replay on screen; `matchId` for an online match's, which can be shared with a friend (#936 B59),
  * and `practice` for a practice game's (R1313000).
  */
-type Open = { key: string; source: ReplaySource; matchId?: string; practice?: true } | { key: string; duos: DuosReplaySteps };
-
-const RESULT_WORDS: Readonly<Record<PracticeReplayListing["result"], string>> = {
-  win: "Win",
-  loss: "Loss",
-  draw: "Draw",
-};
-
-const MODE_WORDS: Readonly<Record<QueueMode, string>> = {
-  bo1: "Best of 1",
-  bo3: "Conquest",
-  random: "All random",
-};
+type Open = { key: string; source: ReplaySource; matchId?: string; practice?: true; opponentLabel?: string } | { key: string; duos: DuosReplaySteps };
 
 /** The worker's card data and the games it kept, asked in turn (its answers arrive in order). */
 async function readDevice(host: PracticeHost): Promise<{ lookup: CardLookup; replays: PracticeReplayListing[] }> {
@@ -107,11 +96,6 @@ async function readDevice(host: PracticeHost): Promise<{ lookup: CardLookup; rep
 /** How long the game ran, in turns. */
 function turnsText(turns: number): string {
   return turns === 1 ? t("1 turn") : t("{turns} turns", { turns });
-}
-
-/** The row's reason it cannot be shown, if any, worded as the player words it. */
-function unavailableText(reason: PracticeReplayListing["unavailable"]): string | null {
-  return reason === undefined ? null : replayFailureText(new ReplayFailure(reason));
 }
 
 /**
@@ -165,10 +149,11 @@ function OpenReplayJson({ ready, onOpen }: { ready: boolean; onOpen: (opened: Op
     readReplayJsonFile(file)
       .then((json): Open => {
         const key = `file-${file.name}`;
-        // R1242000: a co-op replay's file is read as its own format; any other as a 1v1 replay's.
+        // R1242000: a co-op replay's file is read as its own format; any other as a 1v1 replay's, its
+        // steps checked first and drawn with the portraits it holds, if any (R3976000).
         return json.format === DUOS_REPLAY_JSON_FORMAT
           ? { key, duos: parseDuosReplayJson(json) }
-          : { key, source: memoryReplaySource(replayStepsOf(json)) };
+          : { key, source: memoryReplaySource(replayStepsOf(json), replayPortraitsOf(json)) };
       })
       .then(onOpen, (cause: unknown) => {
         setFailed(replayFailureText(replayFailureOf(cause)));
@@ -270,10 +255,10 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
   };
 
   const openPractice = (row: PracticeReplayListing): void => {
-    if (host.current !== null) setOpen({ key: `practice-${String(row.game)}`, source: practiceReplaySource(host.current, row), practice: true });
+    if (host.current !== null) setOpen({ key: `practice-${String(row.game)}`, source: practiceReplaySource(host.current, row), practice: true, opponentLabel: t("AI") });
   };
   const openOnline = (row: OnlineReplayListing): void => {
-    if (token !== null) setOpen({ key: `online-${row.matchId}`, source: onlineReplaySource(token, row), matchId: row.matchId });
+    if (token !== null) setOpen({ key: `online-${row.matchId}`, source: onlineReplaySource(token, row), matchId: row.matchId, opponentLabel: opponentName(row) });
   };
 
   if (agreeing && consentOwed) {
@@ -304,6 +289,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
                   key={open.key}
                   source={open.source}
                   onLeave={() => setOpen(null)}
+                  {...(open.opponentLabel === undefined ? {} : { opponentLabel: open.opponentLabel })}
                   {...(open.matchId === undefined ? {} : { actions: <ShareWithFriend matchId={open.matchId} /> })}
                 />
               )
@@ -448,7 +434,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
               <ul className="replays__list">
                 {online.rows.map((row) => {
                   const why = unavailableText(row.unavailable);
-                  const opponent = row.opponent.username === "" ? t("a deleted account") : row.opponent.username;
+                  const opponent = opponentName(row);
                   return (
                     <li key={row.matchId} className="replays__row" data-testid={replaysTestid.online(row.matchId)}>
                       <span className="replays__what">

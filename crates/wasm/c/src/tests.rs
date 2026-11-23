@@ -241,9 +241,6 @@ fn static_exports_answer_what_the_core_bodies_answer() {
     let crafted = answered(craft_preview("{}".as_ptr(), 2, 1.0, "{}".as_ptr(), 2));
     assert_eq!(crafted, expect(wasm_core::craft_preview("{}", 1.0, "{}")));
     assert_eq!(crafted.status, STATUS_FAILED);
-    let parity = call!(learned_parity; "{}";);
-    assert_eq!(parity, expect(wasm_core::learned_parity("{}")));
-    assert_eq!(parity.status, STATUS_FAILED);
     // No set to preview is no preview, which every module takes: the result is empty.
     assert_eq!(
         call!(preview_sets; "[]";),
@@ -274,10 +271,10 @@ fn face_export_answers_what_the_core_body_answers() {
 }
 
 #[test]
-fn log_export_answers_what_the_core_body_answers() {
+fn game_log_export_answers_what_the_core_body_answers() {
     init();
     let gap = r#"{ "call": "gap", "locale": "zh-CN" }"#;
-    let answer = call!(log; gap;);
+    let answer = call!(game_log; gap;);
     assert_eq!(answer, expect(wasm_core::log(gap)));
     assert_eq!(answer.status, STATUS_OK, "{}", answer.text);
     let line: Value = serde_json::from_str(&answer.text).expect("JSON");
@@ -286,7 +283,7 @@ fn log_export_answers_what_the_core_body_answers() {
     // The words are the reader's: a reader of Chinese reads the line in Chinese.
     assert_ne!(line["line"]["text"]["full"], "Some events may be missing here");
     // A call that does not parse is the one failure.
-    let broken = call!(log; "{}";);
+    let broken = call!(game_log; "{}";);
     assert_eq!(broken, expect(wasm_core::log("{}")));
     assert_eq!(broken.status, STATUS_FAILED);
 }
@@ -591,12 +588,8 @@ fn run_exports_answer_what_the_core_bodies_answer() {
     assert_ne!(state, "null", "{created}");
 
     let action = json!({ "type": "go", "col": 0 }).to_string();
-    let reduced = call!(run_reduce; state, content, action;);
-    assert_eq!(reduced, expect(wasm_core::run_reduce(&state, &content, &action)));
-    let reduced: Value = serde_json::from_str(&ok(reduced)).expect("JSON");
-    let after = reduced["state"].to_string();
-    assert_ne!(after, "null", "{reduced}");
-
+    // The fold before the reduce: both answer the state after the move, so a fold that answered
+    // nothing would leave the reduce's answer standing in the buffer and match it.
     let file = json!({
         "setup": serde_json::from_str::<Value>(&setup).expect("JSON"),
         "unlocks": serde_json::from_str::<Value>(&unlocks).expect("JSON"),
@@ -607,6 +600,11 @@ fn run_exports_answer_what_the_core_bodies_answer() {
         call!(run_fold; file, content;),
         expect(wasm_core::run_fold(&file, &content))
     );
+    let reduced = call!(run_reduce; state, content, action;);
+    assert_eq!(reduced, expect(wasm_core::run_reduce(&state, &content, &action)));
+    let reduced: Value = serde_json::from_str(&ok(reduced)).expect("JSON");
+    let after = reduced["state"].to_string();
+    assert_ne!(after, "null", "{reduced}");
     // R3496000: this build's own version answers its content, like `run_content`.
     let version = serde_json::to_string(&ok(call!(catalog_version;;))).expect("JSON");
     assert_eq!(
@@ -673,24 +671,64 @@ fn r3496000_run_content_at_answers_the_carried_and_current_versions_and_null_for
 }
 
 #[test]
-fn duos_exports_answer_what_the_core_bodies_answer() {
+fn duos_exports_play_a_game_through_the_core_bodies() {
     init();
-    // Built without the `duos` feature each body answers the reason, which the status carries.
-    assert_eq!(call!(duos_create; "{}";), expect(wasm_core::duos_create("{}")));
-    assert_eq!(call!(duos_begin; "{}";), expect(wasm_core::duos_begin("{}")));
-    assert_eq!(
-        call!(duos_reduce; "{}", "{}";),
-        expect(wasm_core::duos_reduce("{}", "{}"))
+    let deck = |seed: &str| -> Value {
+        let options = json!({ "rngSeed": seed, "size": jackioh_engine::config::DECK_SIZE }).to_string();
+        let built: Value = serde_json::from_str(&ok(call!(build_ai_deck; options;))).expect("JSON");
+        built["deck"].clone()
+    };
+    let options = json!({
+        "seed": "duos-c-test",
+        "decks": {
+            "a1": deck("duos-c-a1"), "a2": deck("duos-c-a2"),
+            "b1": deck("duos-c-b1"), "b2": deck("duos-c-b2"),
+        },
+    })
+    .to_string();
+    let created = call!(duos_create; options;);
+    assert_eq!(created, expect(wasm_core::duos_create(&options)));
+    let created = ok(created);
+    let begun = call!(duos_begin; created;);
+    assert_eq!(begun, expect(wasm_core::duos_begin(&created)));
+    let begun = ok(begun);
+    let begun: Value = serde_json::from_str(&begun).expect("JSON");
+    let state = begun["state"].to_string();
+    let mut acted: Option<(String, Value)> = None;
+    for seat in ["a1", "a2", "b1", "b2"] {
+        let legal = call!(duos_legal_actions; state, seat;);
+        assert_eq!(legal, expect(wasm_core::duos_legal_actions(&state, seat)));
+        assert_eq!(legal.status, STATUS_OK, "{}", legal.text);
+        if acted.is_none() {
+            let bodies: Value = serde_json::from_str(&legal.text).expect("JSON");
+            if let Some(first) = bodies.as_array().and_then(|bodies| bodies.first()).cloned() {
+                acted = Some((seat.to_owned(), first));
+            }
+        }
+    }
+    let (seat, first) = acted.expect("a begun duos game offers an action");
+    let action = json!({ "seat": seat, "nonce": "duos-c-1", "body": first }).to_string();
+    let reduced = call!(duos_reduce; state, action;);
+    assert_eq!(reduced, expect(wasm_core::duos_reduce(&state, &action)));
+    assert_eq!(reduced.status, STATUS_OK, "{}", reduced.text);
+    assert!(
+        !reduced.text.contains("\"error\""),
+        "the legal action is taken: {}",
+        reduced.text
     );
-    assert_eq!(
-        call!(duos_legal_actions; "{}", "a1";),
-        expect(wasm_core::duos_legal_actions("{}", "a1"))
-    );
-    assert_eq!(
-        call!(duos_view_for; "{}", "a1";),
-        expect(wasm_core::duos_view_for("{}", "a1"))
-    );
-    assert_eq!(call!(duos_create; "{}";).status, STATUS_FAILED);
+    for seat in ["a1", "a2", "b1", "b2"] {
+        let viewed = call!(duos_view_for; state, seat;);
+        assert_eq!(viewed, expect(wasm_core::duos_view_for(&state, seat)));
+        assert_eq!(viewed.status, STATUS_OK, "{}", viewed.text);
+    }
+    // A bad deck is refused with its seat named (the setup check labels each deck by seat).
+    let mut bad: Value = serde_json::from_str(&options).expect("JSON");
+    bad["decks"]["b2"] = json!([]);
+    let bad = bad.to_string();
+    let refused = call!(duos_create; bad;);
+    assert_eq!(refused, expect(wasm_core::duos_create(&bad)));
+    assert_eq!(refused.status, STATUS_FAILED, "{}", refused.text);
+    assert!(refused.text.contains("b2"), "{}", refused.text);
 }
 
 #[test]

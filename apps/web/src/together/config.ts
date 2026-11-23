@@ -27,3 +27,6 @@ export const WATCH_RECONNECT_ATTEMPTS = 5;
 
 /** How often a watched game's clock repaints (presentation only, not a SPEC value). */
 export const WATCH_CLOCK_TICK_MS = 250;
+
+/** #4444: how near the message list's top a scroll-up asks for the earlier page. */
+export const CHAT_EARLIER_EDGE_PX = 160;

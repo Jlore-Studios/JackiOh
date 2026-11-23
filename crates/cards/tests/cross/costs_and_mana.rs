@@ -14,7 +14,7 @@ use jackioh_engine::testkit::*;
 
 const STOCKPILE: &str = "core-005";
 const VANILLA: &str = "core-008";
-const STAB: &str = "core-070"; // Spiteful Stab: a printed Spell (Flood costs 4 since patch v0.2.0)
+const STAB: &str = "stand-in (3) Spell";
 const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: a printed Unit
 const MENACE: &str = "core-019";
 const RAPID: &str = "core-010";
@@ -123,20 +123,13 @@ mod r65_one_cost_calculation_in_play_and_out_of_it {
 
         s.play(TUTOR, json!({}));
         s.answer(json!("Spell"));
-        let brackets = s
-            .state()
-            .pending
-            .clone()
-            .expect("the bracket prompt should be open");
-        let offered: Vec<String> = brackets
-            .options
-            .iter()
-            .map(|o| match &o.selection {
-                Selection::Mode { option } => option.clone(),
-                _ => o.key.clone(),
-            })
-            .collect();
+        let offered = s.prompt_modes();
         assert_eq!(offered, ["0-1"]);
+        assert_eq!(
+            must(s.state().pending.as_ref(), "an open prompt").options.len(),
+            1,
+            "an option other than a Mode is offered"
+        );
     }
 }
 
@@ -188,10 +181,6 @@ const LUNAR_ECLIPSE: &str = "core-035";
 const FULLSEND: &str = "core-078"; // /fullsend: a Spell
 const GREED: &str = "core-094";
 
-fn at_p2() -> Value {
-    json!([{ "pick": "hero", "player": "p2" }])
-}
-
 /// A play-time discount is not a library or graveyard card's cost (§6.3 Cost, R48, R65, §8 #35, #77, #78)
 mod a_play_time_discount_is_not_a_library_or_graveyard_cards_cost {
     use super::*;
@@ -230,7 +219,7 @@ mod a_play_time_discount_is_not_a_library_or_graveyard_cards_cost {
             },
             "p2": { "hand": [HINDER], "library": LIBRARY },
         }));
-        g.play(LUNAR_ECLIPSE, json!({ "targets": at_p2() }));
+        g.play(LUNAR_ECLIPSE, json!({ "targets": pick::hero("p2") }));
         g.play(ARCHIVIST, json!({ "zone": 1, "modes": ["highest"] }));
 
         assert!(def_ids(&g.hand("p1")).contains(&FULLSEND.to_string()));

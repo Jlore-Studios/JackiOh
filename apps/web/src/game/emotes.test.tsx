@@ -9,16 +9,18 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ReactElement } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, EmoteId, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 import { EMOTE_HAND_SIZE, EMOTE_HAND_VOICE, EMOTE_IDS, PORTRAIT_IDS, PORTRAITS } from "@jackioh/shared";
 
-import { flavourFor } from "../cards/flavour.ts";
+import { loadSoundTables } from "../audio/soundTablesLoader.ts";
+
+import { flavourFor, loadFlavour } from "../cards/flavour.ts";
 import { LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "../cards/inspect/constants.ts";
 import { PORTRAIT_REACT_MS } from "../emotes/config.ts";
 import { DEFAULT_EMOTE_HAND, type EmoteHands } from "../emotes/hand.ts";
-import { PORTRAIT_DEFS } from "../emotes/portraits.ts";
+import { portraitDefs } from "../emotes/portraits.ts";
 import { useEmotes, type EmotesApi } from "../emotes/useEmotes.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, card, emptySide, fullBoardView } from "../test/fixtures.ts";
@@ -75,6 +77,11 @@ const FACE_ATTACK: readonly ActionBody[] = [
   { type: "attack", attackerId: "u1", targetId: "hero-p2" },
   END_TURN,
 ];
+
+beforeAll(async () => {
+  await loadSoundTables();
+  await loadFlavour();
+});
 
 afterEach(() => {
   cleanup();
@@ -576,7 +583,7 @@ describe("MN02 the hero's inspect view (R1330)", () => {
     expect(view.querySelector('.portrait-art[data-portrait-art="gary"]')).not.toBeNull();
     expect(within(view).getByTestId("hero-inspect-name")).toHaveTextContent("Gary the Gambler");
     expect(within(view).getByTestId("hero-inspect-title")).toHaveTextContent(PORTRAITS.gary.flavour);
-    const flavour = flavourFor(PORTRAIT_DEFS.gary.defId)?.flavour;
+    const flavour = flavourFor(portraitDefs().gary.defId)?.flavour;
     expect(flavour).toBeDefined();
     expect(within(view).getByTestId("hero-inspect-flavour")).toHaveTextContent(flavour as string);
     expect(within(view).getByTestId("hero-inspect-health")).toHaveAttribute("data-health", "30");

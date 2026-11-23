@@ -428,13 +428,13 @@ describe("#2757 a Choose one of lanes is lit on the board, one oblong a lane", (
     mount(showdownView("p1"), SHOWDOWN_PLAYS);
     cy.get(ts(testid.handCard(HAND))).click();
     cy.get(".lane-pick-oblong").first().should(($oblong) => {
-      expect(getComputedStyle($oblong[0] as Element).animationName).to.not.eq("none");
+      expect(getComputedStyle($oblong[0] as Element, "::after").animationName).to.not.eq("none");
     });
     cy.document().then((doc) => {
       doc.documentElement.setAttribute("data-reduce-motion", "true");
     });
     cy.get(".lane-pick-oblong").first().should(($oblong) => {
-      expect(getComputedStyle($oblong[0] as Element).animationName).to.eq("none");
+      expect(getComputedStyle($oblong[0] as Element, "::after").animationName).to.eq("none");
     });
     cy.document().then((doc) => {
       doc.documentElement.removeAttribute("data-reduce-motion");

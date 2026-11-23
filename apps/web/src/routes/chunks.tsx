@@ -1,49 +1,17 @@
 // #2116, R2116000: every lazy screen's `import()` in one map, so a prefetch and the route make one request.
-// `Screen` exists because a plain `lazy()` shows the fallback even over a resolved import. Only code is
-// fetched, never game state (CLAUDE.md rule 7).
 
-import { lazy, useState, type ComponentType, type ReactElement } from "react";
-
-import { duosIdOf, matchIdOf, paths, seriesIdOf, watchIdOf } from "../net/navigate.ts";
+import { dailyIdOf, duosIdOf, lobbyCodeOf, matchIdOf, paths, seriesIdOf, stripTrailingSlashes, watchIdOf } from "../net/navigate.ts";
 import type { DecksRouteProps } from "./decks.tsx";
 import type { InviteRouteProps } from "./invite.tsx";
-import { loadWasm } from "../wasm/index.ts";
+import { loadSoundTables } from "../audio/soundTablesLoader.ts";
+import { loadSceneData } from "../cards/art/sceneLoader.ts";
+import { savingData } from "../net/saveData.ts";
+import { routeChunk } from "./routeChunk.tsx";
+
+export type { RouteChunk } from "./routeChunk.tsx";
+export { routeChunk };
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
-
-type ScreenModule<P> = { default: ComponentType<P> };
-
-export type RouteChunk<P extends object> = {
-  /** One import, shared; a failed one is forgotten, so the next call asks again. */
-  load: () => Promise<ScreenModule<P>>;
-  /** Drawn at once when its code is in, else through `lazy()`. */
-  Screen: (props: P) => ReactElement;
-};
-
-export function routeChunk<P extends object>(importScreen: () => Promise<ScreenModule<P>>): RouteChunk<P> {
-  let pending: Promise<ScreenModule<P>> | null = null;
-  let arrived: ComponentType<P> | null = null;
-  const load = (): Promise<ScreenModule<P>> => {
-    pending ??= importScreen().then(
-      (module) => {
-        arrived = module.default;
-        return module;
-      },
-      (cause: unknown) => {
-        pending = null;
-        throw cause;
-      },
-    );
-    return pending;
-  };
-  const Lazy = lazy(load);
-  function Screen(props: P): ReactElement {
-    // Chosen once per mount: a screen that swapped from `Lazy` to its module mid-life would remount.
-    const [Shown] = useState<ComponentType<P>>(() => arrived ?? Lazy);
-    return <Shown {...props} />;
-  }
-  return { load, Screen };
-}
 
 export const routeChunks = {
   // Behind DEV_ONLY, the bundler leaves the hotseat chunk (and its developer text) out of production.
@@ -54,6 +22,8 @@ export const routeChunks = {
   fxGallery: DEV_ONLY ? routeChunk(() => import("./dev/fx.tsx")) : null,
   // #936 B61–B64: the networked co-op board.
   duos: routeChunk(() => import("../duos/DuosRoute.tsx")),
+  /** R3730000: a private lobby. */
+  lobby: routeChunk(() => import("../lobby/LobbyScreen.tsx")),
   // R768000: the recent games and their replays.
   replays: routeChunk(() => import("./replays.tsx")),
   login: routeChunk(() => import("./login.tsx")),
@@ -72,17 +42,21 @@ export const routeChunks = {
   privacy: routeChunk(() => import("./privacy.tsx")),
   terms: routeChunk(() => import("./terms.tsx")),
   purchases: routeChunk(() => import("./purchases.tsx")),
-  accessibility: routeChunk(() => import("./accessibility.tsx")),
-  ai: routeChunk(() => import("./ai.tsx")),
   copyright: routeChunk(() => import("./copyright.tsx")),
   patchNotes: routeChunk(() => import("./patch-notes.tsx")),
   almanac: routeChunk(() => import("./almanac.tsx")),
   leaderboard: routeChunk(() => import("./leaderboard.tsx")),
   collection: routeChunk(() => import("./collection.tsx")),
   shop: routeChunk(() => import("./shop.tsx")),
+  // #4517: `/account` draws inside `EngineGate`, so its screen rides this chunk while the gate's
+  // Sign out stays entry-static (`auth/signOut.ts`).
+  account: routeChunk(() => import("./account.tsx")),
   stats: routeChunk(() => import("./stats.tsx")),
   together: routeChunk(() => import("../together/TogetherRoute.tsx").then((module) => ({ default: module.TogetherRoute }))),
   watch: routeChunk(() => import("../together/WatchRoute.tsx").then((module) => ({ default: module.WatchRoute }))),
+  // #3727: daily games, the list and one game's board, each read from the server (no socket, no engine run).
+  daily: routeChunk(() => import("../daily/DailyRoute.tsx")),
+  dailyGame: routeChunk(() => import("../daily/DailyBoard.tsx")),
 };
 
 export type RouteChunkName = keyof typeof routeChunks;
@@ -94,29 +68,38 @@ const ENGINE_CHUNKS: ReadonlySet<RouteChunkName> = new Set<RouteChunkName>([
   "match",
   "series",
   "duos",
+  "lobby",
   "watch",
   "dungeon",
   "dungeonStats",
+  // The board's card faces and log lines, and the list's numbers (`dailyConstants`), are the module's.
+  "daily",
+  "dailyGame",
+  // #4288: the catalog screens read the module's currentCatalog() behind EngineGate (#4180, #4222), so intent starts it too.
+  "collection",
+  "decks",
+  "almanac",
+  "stats",
+  "patchNotes",
+  "together",
+  "leaderboard",
+  // #4517: `/account` draws inside `EngineGate`, like the catalog screens.
+  "account",
 ]);
 
 /** The chunk drawing `path` (query ignored), or null. */
 export function chunkAt(path: string): RouteChunkName | null {
-  const pathname = new URL(path, window.location.origin).pathname.replace(/\/+$/u, "") || "/";
+  const pathname = stripTrailingSlashes(new URL(path, window.location.origin).pathname) || "/";
   if (matchIdOf(pathname) !== null) return "match";
   if (seriesIdOf(pathname) !== null) return "series";
   if (watchIdOf(pathname) !== null) return "watch";
   if (duosIdOf(pathname) !== null) return "duos";
+  if (lobbyCodeOf(pathname) !== null) return "lobby";
+  if (dailyIdOf(pathname) !== null) return "dailyGame";
   for (const name of Object.keys(routeChunks) as RouteChunkName[]) {
     if (paths[name] === pathname) return name;
   }
   return null;
-}
-
-/** Chromium's Network Information field, absent from TypeScript's DOM types. */
-type SaveDataNavigator = Navigator & { connection?: { saveData?: boolean } };
-
-function savingData(): boolean {
-  return (navigator as SaveDataNavigator).connection?.saveData === true;
 }
 
 /** Each chunk once per page load. */
@@ -134,7 +117,13 @@ export function prefetchRoute(path: string): void {
   if (name === null || prefetched.has(name)) return;
   prefetched.add(name);
   void routeChunks[name]?.load().catch(() => undefined);
-  if (ENGINE_CHUNKS.has(name)) void loadWasm().catch(() => undefined);
+  if (ENGINE_CHUNKS.has(name)) {
+    // #4180: the sound loader awaits the module before its chunk parses against the catalog,
+    // so one call starts both; `loadWasm()` is idempotent, and the test holds the single call.
+    void loadSoundTables().catch(() => undefined);
+    // #4222: the scene tables start beside the module too, so a face draws once both are in.
+    void loadSceneData().catch(() => undefined);
+  }
 }
 
 /**
@@ -145,7 +134,12 @@ export function prefetchRoute(path: string): void {
 export function startScreen(path: string, engine: boolean): void {
   const name = chunkAt(path);
   if (name !== null) void routeChunks[name]?.load().catch(() => undefined);
-  if (engine) void loadWasm().catch(() => undefined);
+  if (engine) {
+    // #4180: as above, the sound loader starts the module too.
+    void loadSoundTables().catch(() => undefined);
+    // #4222: as above, the scene tables start beside the module too.
+    void loadSceneData().catch(() => undefined);
+  }
 }
 
 const INTENT_EVENTS = ["pointerenter", "focus", "touchstart"] as const;

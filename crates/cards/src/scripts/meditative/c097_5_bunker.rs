@@ -259,13 +259,7 @@ mod tests {
             // One Unit is not enough.
             let one = s.unit(P1, 1).unwrap().id;
             s.expect_refused(|s| s.play(ID, json!({ "zone": 2, "tributes": [one.clone()] })));
-            assert!(
-                legal_actions(s.state(), P1).iter().all(|action| !matches!(
-                    action,
-                    ActionBody::Play { instance_id, .. } if *instance_id == s.card(ID).id
-                )),
-                "no play is offered with one Unit to pay"
-            );
+            assert!(!s.can_play(ID), "no play is offered with one Unit to pay");
         }
 
         #[test]

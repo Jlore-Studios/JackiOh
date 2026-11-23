@@ -2,7 +2,9 @@
 //! `docs/dungeon-run.md` that sets it. The mode has no spec section yet: a number here is the plan's,
 //! and one the plan marks a strawman is to be tuned.
 
-use jackioh_engine::config::{DECK_SIZE, HERO_HEALTH, LIBRARY_CAP};
+use jackioh_engine::config::{
+    AI_DIFFICULTY, DECK_SIZE, DRAW_EVERY_TURN, HERO_HEALTH, HUMAN_HANDICAP, Handicap, LIBRARY_CAP,
+};
 use jackioh_engine::wire::PrintedRarity;
 
 use crate::{RunByFight, RunNodeKind, RunTier};
@@ -10,18 +12,25 @@ use crate::{RunByFight, RunNodeKind, RunTier};
 /// DR2: the letters of a seed.
 pub const RUN_SEED_LENGTH: usize = 6;
 
-/// DR4: the fights before each act's boss. With the 2 mini-bosses and the final boss, 16 fights.
-pub const RUN_ACT_FIGHTS: [usize; 3] = [5, 4, 4];
-/// DR4: the fewest nodes a row of the map offers.
-pub const RUN_ROW_WIDTH_MIN: i32 = 2;
-/// DR4: the most nodes a row of the map offers.
-pub const RUN_ROW_WIDTH_MAX: i32 = 3;
+/// DR4: the map's acts, each ending at its boss's row: a mini-boss's, then the final boss's for the last.
+pub const RUN_ACTS: usize = 3;
+/// DR4, a strawman: the rows of nodes in each act before its boss's row.
+pub const RUN_ACT_ROWS: usize = 7;
+/// DR4, a strawman: the columns of the grid the map's rows lie on.
+pub const RUN_MAP_COLUMNS: usize = 7;
+/// DR4, a strawman: the seeded walks up each act, each from its own column of the act's first row.
+pub const RUN_MAP_PATHS: usize = 6;
+/// DR4: the fewest fights on any route from a start to the final boss, the bosses counted.
+pub const RUN_ROUTE_FIGHTS_MIN: i32 = 12;
+/// DR4: the most fights on any route from a start to the final boss, the bosses counted.
+pub const RUN_ROUTE_FIGHTS_MAX: i32 = 16;
+/// DR4: the fewest tiles on any route from a start to the final boss.
+pub const RUN_ROUTE_TILES_MIN: i32 = 8;
 /// DR4: the chance, in percent, that a fight node of the map is an elite.
 pub const RUN_ELITE_PERCENT: i32 = 30;
 /// DR5: the chance, in percent, that a fight node that is no elite is a ghost.
 pub const RUN_GHOST_PERCENT: i32 = 10;
-/// DR4, DR7: the weights of the tiles a row between two fight rows deals. A campfire also always stands
-/// on the row before each boss.
+/// DR4, DR7: the weights of a tile node's kind.
 pub const RUN_TILE_WEIGHTS: [(RunNodeKind, i32); 5] = [
     (RunNodeKind::Shop, 2),
     (RunNodeKind::Campfire, 2),
@@ -143,20 +152,86 @@ pub const RUN_TIER_POINTS: [(RunTier, i32); 5] = [
 
 /// DR5: the health a run starts with, before wins, campfires, events and passives raise it.
 pub const RUN_MAX_HP: i32 = HERO_HEALTH;
-/// DR5, a strawman: each enemy's hero health by its kind of fight.
-pub const RUN_ENEMY_HEALTH: RunByFight = RunByFight {
-    fight: 20,
-    elite: 30,
-    ghost: HERO_HEALTH,
-    mini_boss: 40,
-    boss: 50,
-};
-/// DR5: the enemy artifact that gives its carrier the Medium AI's resources (`AI_DIFFICULTY.medium`,
-/// R180) in a fight.
-pub const RUN_LOOMING_PRESENCE: &str = "looming-presence";
-/// DR5: the enemy artifact that gives its carrier the Hard AI's resources (`AI_DIFFICULTY.hard`, R180)
-/// in a fight. It outranks Looming Presence when an enemy carries both.
-pub const RUN_OVERWHELMING_PRESENCE: &str = "overwhelming-presence";
+/// DR5, R3586000: the enemy tiers each act's `RUN_ACT_ROWS` rows spread over, its first row at the
+/// lowest and its last before the boss at the highest; its boss stands one tier higher.
+pub const RUN_ACT_TIERS: usize = 4;
+// R3586000: an act's last row before its boss reaches its highest tier.
+const _: () = assert!(RUN_ACT_ROWS >= RUN_ACT_TIERS);
+
+/// R3586001: `HUMAN_HANDICAP` at this mana cap and bonus (R181), `opening` more opening cards (R182)
+/// or, below 0, that many fewer (R3582000), turn draws every `draw_every`th turn (R3582000) and a hero
+/// at `hero_health` (R290).
+const fn tier_row(
+    mana_cap: i32,
+    mana_bonus: i32,
+    opening: i32,
+    draw_every: i32,
+    hero_health: i32,
+) -> Handicap {
+    Handicap {
+        mana_cap,
+        mana_bonus,
+        extra_opening_cards: if opening > 0 { opening } else { 0 },
+        fewer_opening_cards: if opening < 0 { Some(-opening) } else { None },
+        draw_every: if draw_every > DRAW_EVERY_TURN {
+            Some(draw_every)
+        } else {
+            None
+        },
+        hero_health: Some(hero_health),
+        ..HUMAN_HANDICAP
+    }
+}
+
+/// R3586001: a boss's row: a practice tier's resources (`AI_DIFFICULTY`, R180), its hero at
+/// `hero_health`.
+const fn with_health(base: Handicap, hero_health: i32) -> Handicap {
+    Handicap {
+        hero_health: Some(hero_health),
+        ..base
+    }
+}
+
+/// DR5, R3586001, a strawman: each tier's enemy from tier 1, its handicap and hero health; every fight
+/// but an elite reads it, ghosts and bosses included; tiers 5, 10 and 15 are Easy's, Medium's and
+/// Hard's resources with their own health; a row's `deck_size` is not read.
+pub const RUN_TIERS: [Handicap; RUN_ACTS * (RUN_ACT_TIERS + 1)] = [
+    tier_row(2, 0, -2, 2, 10),               // 1
+    tier_row(2, 0, -1, 2, 12),               // 2
+    tier_row(3, 0, -1, 2, 14),               // 3
+    tier_row(3, 0, -1, DRAW_EVERY_TURN, 16), // 4
+    with_health(AI_DIFFICULTY.easy, 25),     // 5, the first mini-boss
+    tier_row(3, 0, 0, DRAW_EVERY_TURN, 18),  // 6
+    tier_row(4, 0, 0, DRAW_EVERY_TURN, 20),  // 7
+    tier_row(4, 0, 0, DRAW_EVERY_TURN, 22),  // 8
+    tier_row(4, 1, 0, DRAW_EVERY_TURN, 24),  // 9
+    with_health(AI_DIFFICULTY.medium, 35),   // 10, the second mini-boss
+    tier_row(4, 1, 0, DRAW_EVERY_TURN, 26),  // 11
+    tier_row(5, 1, 0, DRAW_EVERY_TURN, 28),  // 12
+    tier_row(5, 1, 1, DRAW_EVERY_TURN, 30),  // 13
+    tier_row(6, 1, 1, DRAW_EVERY_TURN, 32),  // 14
+    with_health(AI_DIFFICULTY.hard, 50),     // 15, the final boss
+];
+/// DR5, R3586001, a strawman: an elite's own rows, `(tier, row)`, one for each tier an elite stands
+/// on, none weaker than the one before, each stronger than that tier's `RUN_TIERS` row. Tier 1's is
+/// tier 2's since issue #4154, after which its old row (a turn draw every other turn, 16 health) cost
+/// run-sim's player no more HP than tier 1's normal fight. Both open with a whole hand since issue #4159
+/// (R4159000): with one card fewer, the hand evaluation alone cost that player 7 HP over the band's
+/// six fights, against tier 1's 13.
+pub const RUN_ELITE_TIERS: [(usize, Handicap); RUN_ACTS * RUN_ACT_TIERS] = [
+    (1, tier_row(3, 0, 0, DRAW_EVERY_TURN, 18)),
+    (2, tier_row(3, 0, 0, DRAW_EVERY_TURN, 18)),
+    (3, tier_row(3, 0, 0, DRAW_EVERY_TURN, 20)),
+    (4, tier_row(4, 0, 0, DRAW_EVERY_TURN, 22)),
+    (6, tier_row(4, 0, 0, DRAW_EVERY_TURN, 24)),
+    (7, tier_row(4, 1, 0, DRAW_EVERY_TURN, 26)),
+    (8, tier_row(5, 1, 0, DRAW_EVERY_TURN, 28)),
+    (9, tier_row(5, 1, 1, DRAW_EVERY_TURN, 30)),
+    (11, tier_row(5, 1, 1, DRAW_EVERY_TURN, 32)),
+    (12, tier_row(6, 1, 1, DRAW_EVERY_TURN, 34)),
+    (13, tier_row(6, 1, 1, DRAW_EVERY_TURN, 36)),
+    (14, tier_row(7, 1, 1, DRAW_EVERY_TURN, 38)),
+];
 /// DR5: an enemy's deck, its own cards first and the rest dealt from the pool.
 pub const RUN_ENEMY_DECK_SIZE: usize = DECK_SIZE as usize;
 /// DR5: the lowest tier of a mini-boss's drop when its content names none.
@@ -283,7 +358,7 @@ pub const WALK_WAY_ON_PERCENT: i32 = 10;
 /// Tests only: the percent of a walk's fights lost, so losses and dead runs stay covered.
 #[cfg(test)]
 pub const WALK_LOSS_PERCENT: i32 = 10;
-/// Tests only: the steps before a walk is a loop: the map is 29 rows, and every shop stay spends
+/// Tests only: the steps before a walk is a loop: the map is 24 rows, and every shop stay spends
 /// stock or funds, so only a real loop reaches it.
 #[cfg(test)]
 pub const WALK_MAX_STEPS: usize = 5000;
@@ -299,3 +374,18 @@ pub const WALK_DRAWN_MAX: i32 = 15;
 /// Tests only: the most turns a walk's random fight report lasts.
 #[cfg(test)]
 pub const WALK_TURNS_MAX: i32 = 12;
+/// Tests only: the seeds per content the map fuzz test (`map_fuzz_tests`) walks with stubbed
+/// fight reports.
+#[cfg(test)]
+pub const MAP_FUZZ_SEEDS: usize = 10;
+/// Tests only: the seeds per content the ignored daily map fuzz sweep walks.
+#[cfg(test)]
+pub const MAP_FUZZ_DAILY_SEEDS: usize = 300;
+/// Tests only: the seeds `map_tests` deals a map from on each content (R3583000, R3583001).
+#[cfg(test)]
+pub const MAP_SEEDS: usize = 200;
+/// Tests only: the seeds whose maps `map_tests` pins by checksum: the deal's rarer branches (a route's
+/// spread within the bounds, a row of one kind alone) come up once in some hundreds of seeds, so it deals
+/// 3,000 rather than `MAP_SEEDS`.
+#[cfg(test)]
+pub const MAP_PIN_SEEDS: usize = 3000;

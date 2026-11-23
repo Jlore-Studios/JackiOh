@@ -17,7 +17,7 @@ import { closeInspect } from "../cards/index.ts";
 import Board from "./Board.tsx";
 import { IDLE, highlightFor, type Interaction } from "./actions.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
-import Prompt from "./Prompt.tsx";
+import Prompt, { PROMPT_CELL_MARK } from "./Prompt.tsx";
 import { baseView, card, emptySide, faceDownBackrow, pendingFor, unit } from "../test/fixtures.ts";
 
 afterEach(() => {
@@ -35,7 +35,7 @@ function nameOf(defId: string): string {
   return name;
 }
 
-function renderPrompt(view: PlayerView, props: { interaction?: Interaction; legal?: ActionBody[]; onCancel?: () => void } = {}) {
+function renderPrompt(view: PlayerView, props: { interaction?: Interaction; legal?: ActionBody[]; onCancel?: () => void; sequenceClock?: boolean } = {}) {
   const onAction = vi.fn();
   render(
     <CatalogContext.Provider value={lookup}>
@@ -45,6 +45,7 @@ function renderPrompt(view: PlayerView, props: { interaction?: Interaction; lega
         {...(props.interaction === undefined ? {} : { interaction: props.interaction })}
         {...(props.legal === undefined ? {} : { legal: props.legal })}
         {...(props.onCancel === undefined ? {} : { onCancel: props.onCancel })}
+        {...(props.sequenceClock === undefined ? {} : { sequenceClock: props.sequenceClock })}
       />
     </CatalogContext.Provider>,
   );
@@ -215,6 +216,15 @@ describe("a question sequence (Meditative+ #20 KY's Competition)", () => {
     answered(onStop, [{ pick: "none" }]);
   });
 
+  it("R1563006 a question of a sequence shows its 60-second countdown, and none where sequenceClock is false (R3727003)", () => {
+    renderPrompt(sequenceView(0));
+    expect(screen.getByTestId("prompt-sequence-clock")).toHaveAttribute("data-seconds");
+    cleanup();
+    renderPrompt(sequenceView(0), { sequenceClock: false });
+    expect(screen.getByTestId("prompt-streak")).toBeInTheDocument();
+    expect(screen.queryByTestId("prompt-sequence-clock")).toBeNull();
+  });
+
   it("R1184000 a lone problem (C+ #42) shows no streak and no Stop", () => {
     renderPrompt(
       baseView({
@@ -265,16 +275,13 @@ describe("cell (C+ #62)", () => {
     return onAction;
   }
 
-  it("R514 lists the cells by side and row, lane by lane, and a cell or Done answers from the list", () => {
-    const onAction = renderPrompt(cellView());
+  it("R3864000 a cell prompt lists no cells: its zones answer on the board, and Done stays a button", () => {
+    renderPrompt(cellView());
     expect(modal()).toHaveAttribute("data-prompt-kind", "cell");
-    const rows = [...modal().querySelectorAll(".prompt-zone-row")].map((node) => node.textContent);
-    expect(rows).toEqual(["Your backrow", "Your units", "Enemy units", "Enemy backrow"]);
-    expect(screen.getByTestId("prompt-option-zone:p2:units:3")).toHaveTextContent("Lane 3");
-    expect(document.activeElement).toBe(screen.getByTestId("prompt-option-zone:p1:backrow:1"));
-
-    fireEvent.click(screen.getByTestId("prompt-option-zone:p2:units:3"));
-    answered(onAction, [{ pick: "zone", player: "p2", row: "units", lane: 3 }]);
+    expect(modal().querySelector(".prompt-zones")).toBeNull();
+    expect(modal().querySelector(".prompt-zone-row")).toBeNull();
+    expect(screen.queryByTestId("prompt-option-zone:p2:units:3")).toBeNull();
+    expect(screen.getByTestId("prompt-option-none")).toHaveTextContent("Done");
   });
 
   it("R514 Done picks no cell", () => {
@@ -338,9 +345,24 @@ describe("cell (C+ #62)", () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
+  it("#3633 an open cell pick marks its game, where prompt.css crosses the zones, and takes the mark off as it closes", () => {
+    const view = cellView();
+    const tree = (shown: PlayerView) => (
+      <CatalogContext.Provider value={lookup}>
+        <div className="game" data-testid="game-root">
+          <Prompt view={shown} legal={[]} onAction={vi.fn()} />
+        </div>
+      </CatalogContext.Provider>
+    );
+    const { rerender } = render(tree(view));
+    expect(screen.getByTestId("game-root")).toHaveAttribute(PROMPT_CELL_MARK, "true");
+    rerender(tree({ ...view, pending: null }));
+    expect(screen.getByTestId("game-root")).not.toHaveAttribute(PROMPT_CELL_MARK);
+  });
+
   it("R514 prompt.css marks the glowing zones with a crosshair while a cell prompt is open", () => {
     const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "prompt.css"), "utf8");
-    expect(css).toContain('.game:has([data-prompt-kind="cell"]) .zone[data-glow="ready"]::after');
+    expect(css).toContain('.game[data-prompt-cell] .zone[data-glow="ready"]::after');
   });
 });
 

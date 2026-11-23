@@ -21,14 +21,15 @@ import type { PlayerView } from "@jackioh/shared";
 import { playImpactCue } from "../../audio/cues.ts";
 import { PLAY_IMPACT_OPPONENT_GAIN } from "../../audio/constants.ts";
 import { getAudioEngine } from "../../audio/engine.ts";
+import { pointerFrames } from "../../cards/pointerFrame.ts";
 import type { PlayTier, PlayType } from "../../game/damageFeel.ts";
 import { PLAY_TIERS_ASCENDING } from "../../game/damageFeel.ts";
 import { boardShakeSink, resolveAnchor } from "../../fx/anchors.ts";
 import { FX_CARD_FILES, FX_CARD_TABLE, isSignature } from "../../fx/cards/tables.ts";
-import { FX_DEFAULT_SEED, FX_GALLERY_SCALES, FX_INTENSITY_SCALE, FX_MOBILE_WIDTH } from "../../fx/constants.ts";
+import { FX_DEFAULT_SEED, FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../../fx/director.ts";
 import { FX_PALETTES, isPalette, type FxPalette } from "../../fx/flavors.ts";
-import { defaultFrames, defaultNow, defaultVisibility } from "../../fx/FxLayer.tsx";
+import { defaultNow, defaultVisibility } from "../../fx/FxLayer.tsx";
 import { planFx, playTrauma } from "../../fx/cues.ts";
 import { createFxMemory } from "../../fx/memory.ts";
 import {
@@ -174,13 +175,12 @@ export default function FxGallery(): ReactElement {
       surface,
       domRoot: domRef.current!,
       now: defaultNow,
-      frames: defaultFrames(),
+      frames: pointerFrames(),
       visibility: defaultVisibility(),
       measure: resolveAnchor,
       shakeSink: boardShakeSink(document),
       seed: FX_DEFAULT_SEED,
       capacity: capacityFor(window.innerWidth),
-      phone: window.innerWidth < FX_MOBILE_WIDTH,
     });
     director.current = created;
     return () => {

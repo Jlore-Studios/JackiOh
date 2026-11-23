@@ -4,7 +4,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { CombatForecast } from "@jackioh/shared";
-import { SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
+import {
+  MATCH_OVER_CLOSE_CODE,
+  SEAT_TAKEN_CLOSE_CODE,
+  SPECTATOR_EMOTE_HAND_SIZE,
+  WS_PING_INTERVAL_SECONDS,
+} from "@jackioh/server-config";
 
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import {
@@ -316,6 +321,26 @@ describe("the co-op socket's reconnect", () => {
     expect(h.pending()).toBe(0);
   });
 
+  it("R3694000 a finished co-op match's close (MATCH_OVER_CLOSE_CODE) is final: no reconnect, no error, the last view kept", () => {
+    const h = connected();
+    h.socket().deliver(view(4));
+    h.socket().drop(MATCH_OVER_CLOSE_CODE, "the match is over");
+    expect(h.client.snapshot().connection).toBe("closed");
+    expect(h.client.snapshot().error).toBeNull();
+    expect(roundOf(h)).toBe(4);
+    expect(h.pending()).toBe(0);
+  });
+
+  it("R3694000 a co-op close with 1001, a restart's drain, reconnects with a backoff", () => {
+    const h = connected();
+    h.socket().drop(1001, "the server is restarting");
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+    expect(h.pending()).toBe(1);
+
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+  });
+
   it("R1441 a reconnect waits its backoff plus up to RECONNECT_JITTER of it more", () => {
     const h = connected({ random: () => 0.5 });
     h.socket().drop(1006);
@@ -377,6 +402,112 @@ describe("the co-op socket's reconnect", () => {
     h.socket().deliver({ type: "ack", nonce: "n-1", seq: 1 });
     expect(h.client.snapshot().error).toBeNull();
     expect(h.client.snapshot().errorCode).toBeNull();
+  });
+
+  it("R4250000 a co-op socket refused with 4429 after open climbs the backoff", () => {
+    const h = harness();
+    h.client.connect();
+    for (let round = 0; round < RECONNECT_DELAYS_MS.length + 1; round += 1) {
+      h.socket().open();
+      expect(h.socket().frames()).toEqual([HELLO]);
+      h.socket().drop(4429, "too many requests; slow down");
+      expect(h.client.snapshot().connection).toBe("reconnecting");
+      expect(h.pending()).toBe(1);
+      h.runTimers();
+    }
+    expect(h.delays()).toEqual([...RECONNECT_DELAYS_MS, RECONNECT_DELAYS_MS.at(-1)]);
+  });
+
+  it("R4250000 a co-op socket closed with 1011 after open climbs the backoff", () => {
+    const h = harness();
+    h.client.connect();
+    for (let round = 0; round < RECONNECT_DELAYS_MS.length + 1; round += 1) {
+      h.socket().open();
+      h.socket().drop(1011, "the server faulted");
+      expect(h.client.snapshot().connection).toBe("reconnecting");
+      expect(h.pending()).toBe(1);
+      h.runTimers();
+    }
+    expect(h.delays()).toEqual([...RECONNECT_DELAYS_MS, RECONNECT_DELAYS_MS.at(-1)]);
+  });
+
+  it("R4250000 a co-op socket that delivered a view starts the backoff over", () => {
+    const h = harness();
+    h.client.connect();
+    h.socket().open();
+    h.socket().drop(1006);
+    h.runTimers();
+    h.socket().open();
+    h.socket().drop(1006);
+    h.runTimers();
+    expect(h.delays()).toEqual(RECONNECT_DELAYS_MS.slice(0, 2));
+
+    h.socket().open();
+    h.socket().deliver(view(3));
+    h.socket().drop(1006);
+    h.runTimers();
+    expect(h.delays().at(-1)).toBe(RECONNECT_DELAYS_MS[0]);
+  });
+});
+
+describe("R3767000 a seat another tab or device took", () => {
+  it("R3767000 a close with SEAT_TAKEN_CLOSE_CODE leaves the client elsewhere: no backoff, no socket however far the clock goes, the last view kept, no error", () => {
+    const h = connected();
+    h.socket().deliver(view(4));
+    h.socket().drop(SEAT_TAKEN_CLOSE_CODE, "this game is open somewhere else");
+    expect(h.client.snapshot().connection).toBe("elsewhere");
+    expect(h.client.snapshot().error).toBeNull();
+    expect(roundOf(h)).toBe(4);
+    expect(h.pending()).toBe(0);
+
+    h.advance(10 * SILENCE_MS);
+    h.wake();
+    h.runTimers();
+    expect(h.sockets).toHaveLength(1);
+    expect(h.client.snapshot().connection).toBe("elsewhere");
+  });
+
+  it("R3767000 a close with 1000 still reconnects", () => {
+    const h = connected();
+    h.socket().drop(1000, "replaced by a new socket");
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+    expect(h.pending()).toBe(1);
+
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+  });
+
+  it("R3767000 connect() takes the seat back by opening exactly one socket", () => {
+    const h = connected();
+    h.socket().drop(SEAT_TAKEN_CLOSE_CODE, "this game is open somewhere else");
+
+    h.client.connect();
+    expect(h.sockets).toHaveLength(2);
+    expect(h.client.snapshot().connection).toBe("connecting");
+    h.client.connect();
+    expect(h.sockets).toHaveLength(2);
+
+    h.socket().open();
+    expect(h.client.snapshot().connection).toBe("open");
+    expect(h.socket().frames()).toEqual([HELLO]);
+  });
+
+  it("R3767000 a tab's own replacement of a stale socket never reaches elsewhere", () => {
+    const h = connected();
+    const old = h.socket();
+    h.advance(SILENCE_MS + 1);
+    h.wake();
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+
+    // The server closes the stale socket with SEAT_TAKEN_CLOSE_CODE as the successor attaches; this tab let
+    // that socket go itself, so the close is not its seat taken.
+    old.drop(SEAT_TAKEN_CLOSE_CODE, "this game is open somewhere else");
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+
+    h.socket().open();
+    expect(h.client.snapshot().connection).toBe("open");
+    expect(h.sockets).toHaveLength(2);
   });
 });
 
@@ -483,6 +614,26 @@ describe("a co-op socket refused for its sign-in", () => {
       afterRetry.client.setToken("newer");
       expect(afterRetry.sockets).toHaveLength(2);
       expect(afterRetry.client.snapshot().connection).toBe("refused");
+    }
+  });
+
+  it("R1115000 a co-op socket opened after a 4401 forgets the refusal: a renewal once the seat is taken or the match is gone opens nothing", () => {
+    for (const [code, connection] of [
+      [SEAT_TAKEN_CLOSE_CODE, "elsewhere"],
+      [4410, "closed"],
+    ] as const) {
+      const h = connected();
+      h.socket().drop(4401, "sign in first");
+      // The page's Reconnect opens a socket on the same token, and the server takes it this time.
+      h.client.connect();
+      h.socket().open();
+      h.socket().drop(code, "gone");
+      expect(h.client.snapshot().connection).toBe(connection);
+
+      h.client.setToken("new");
+      expect(h.sockets, String(code)).toHaveLength(2);
+      expect(h.client.snapshot().connection).toBe(connection);
+      expect(h.pending()).toBe(0);
     }
   });
 });
@@ -638,5 +789,39 @@ describe("R2990000 a co-op seat hears the watchers' emotes", () => {
     const before = h.client.snapshot();
     h.socket().deliver({ type: "spectatorHand", emotes: hand });
     expect(h.client.snapshot()).toBe(before);
+  });
+});
+
+describe("R3731002 a 2v2's team B people have disconnect graces too", () => {
+  it("R3731002 a clock frame with team B's graces parses", () => {
+    const clock = (graceDeadlines: Record<string, unknown>): string => JSON.stringify({ type: "clock", now: 5, roundDeadline: 90, graceDeadlines });
+    // A team B person's grace rides beside team A's while it runs.
+    expect(parseDuosFrame(clock({ a1: null, a2: 7, b1: 40, b2: 60 }))).toEqual({
+      type: "clock",
+      now: 5,
+      roundDeadline: 90,
+      graceDeadlines: { a1: null, a2: 7, b1: 40, b2: 60 },
+    });
+    // Absent, it is none: a co-op game's frame, and a 2v2's with no team B grace running.
+    expect(parseDuosFrame(clock({ a1: 3, a2: null, b2: 60 }))).toMatchObject({ graceDeadlines: { a1: 3, a2: null, b1: null, b2: 60 } });
+    expect(parseDuosFrame(clock({ a1: null, a2: null }))).toMatchObject({ graceDeadlines: { a1: null, a2: null, b1: null, b2: null } });
+    // One that is not a time is no frame this client knows.
+    expect(parseDuosFrame(clock({ a1: null, a2: null, b1: "soon" }))).toBeNull();
+    // A seat's snapshot keeps them.
+    const h = connected();
+    h.socket().deliver({ type: "clock", now: 5, roundDeadline: null, graceDeadlines: { a1: null, a2: null, b1: 40 } });
+    expect(h.client.snapshot().clock?.graceDeadlines).toEqual({ a1: null, a2: null, b1: 40, b2: null });
+  });
+});
+
+describe("#4015 prototype pollution", () => {
+  it("a duos frame with proto keys does not pollute", () => {
+    expect(parseDuosFrame('{"type":"nope","__proto__":{"polluted":true}}')).toBeNull();
+    expect(parseDuosFrame('{"type":"nope","constructor":{"prototype":{"polluted":true}}}')).toBeNull();
+    expect(parseDuosFrame('{"type":"watchers","count":2,"__proto__":{"polluted":true}}')).toEqual({
+      type: "watchers",
+      count: 2,
+    });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
   });
 });

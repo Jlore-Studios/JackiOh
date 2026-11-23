@@ -34,7 +34,7 @@ export { CardArt, ART_PLANES } from "./art/index.ts";
 
 // Slice C: inspect.
 export {
-  CardDetail,
+  AlwaysFullText,
   CardListPreview,
   CardListSheet,
   closeInspect,
@@ -60,6 +60,8 @@ export {
   INSPECT_SHEET,
   INSPECT_KEY_SHORTCUT,
   isInspectKey,
+  showsFullText,
+  useAlwaysFullText,
   useInspectTrigger,
 } from "./inspect/index.ts";
 export type { CardListEntry, InspectOverlayState, InspectRenderSubject, InspectSubject } from "./inspect/index.ts";
@@ -77,6 +79,7 @@ export {
   openFullScreenArt,
   useCanOpenFullScreen,
   useFullScreenArt,
+  useFullScreenArtId,
   useFullScreenTrigger,
   type FullScreenState,
   type FullScreenTriggerOptions,

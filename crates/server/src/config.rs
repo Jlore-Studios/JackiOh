@@ -208,6 +208,9 @@ pub const ROOM_CODE_TTL_SECONDS: i64 = 15 * 60;
 /// lingers to expiry. Advisory: the seat compare-and-set is what stops a double seat, not this.
 /// `create` refuses a fourth with 409.
 pub const MAX_OPEN_ROOMS_PER_HOST: i64 = 3;
+/// R3730002: the countdown, in seconds, from a private lobby's Start to its board. The clients count
+/// it down from when each sees the Start; the game itself starts at once, so a restart loses nothing.
+pub const LOBBY_START_COUNTDOWN_SECONDS: i64 = 3;
 
 // ---------------------------------------------------------------------------------------------
 // The code alphabet (§9.4, §9.5).
@@ -376,7 +379,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// asked to agree again. R970001: a second change on a day the page already changed keeps its date
 /// and gives its half a letter (`2026-10-15b`, then `c`); `privacy.test.tsx` holds each version to
 /// the words of both pages, so a change to them fails until this moves.
-pub const TERMS_VERSION: &str = "2026-11-05/2026-11-05";
+pub const TERMS_VERSION: &str = "2026-11-05/2026-11-11";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
@@ -398,6 +401,19 @@ pub const CODE_ATTEMPTS_PER_PROFILE_PER_HOUR: i64 = 5;
 pub const CODE_ATTEMPTS_PER_IP_PER_HOUR: i64 = 20;
 /// §9.4: the rolling window both attempt limits above are counted over, in seconds.
 pub const CODE_ATTEMPT_WINDOW_SECONDS: i64 = 3600;
+
+// Guessable values (#4008, R4008000): the codes a caller can only learn by being told them. A limit here
+// counts guesses (distinct codes tried, right or wrong), never requests or frames.
+
+/// R4008000: distinct room, co-op room and lobby codes (right or wrong) one account may try in
+/// `CODE_TRY_WINDOW_SECONDS`; once spent, every code lookup of the account is 429 `rate_limited`.
+pub const CODE_TRIES_PER_ACCOUNT_PER_HOUR: usize = 10;
+/// R4008000: distinct codes one address (R190) may try across all its accounts in the same window.
+pub const CODE_TRIES_PER_ADDRESS_PER_HOUR: usize = 60;
+/// R4008000: the window both code limits above are counted over, in seconds.
+pub const CODE_TRY_WINDOW_SECONDS: i64 = 3600;
+/// R4008000: `CODE_TRY_WINDOW_SECONDS` in milliseconds, the unit the limiters count in.
+pub const CODE_TRY_WINDOW_MS: i64 = CODE_TRY_WINDOW_SECONDS * 1000;
 
 // ---------------------------------------------------------------------------------------------
 // Retention: how long the server keeps rows nothing reads any more. Not in SPEC, and no R-row
@@ -439,6 +455,27 @@ pub const GAME_RECORD_REFILE_WINDOW_SECONDS: i64 = 24 * 60 * 60;
 /// loop. Five seconds holds such a loop to one alert line per five seconds and leaves a pairing or
 /// a sweep late by seconds only.
 pub const LOOP_RESTART_DELAY_SECONDS: i64 = 5;
+/// #3770: how long a sweep step (the matchmaker, the reaper, a sweeper, a retention purge) must have
+/// failed on every pass before `loops::FailingStreak` raises its `<step>.failing` alert. Both this
+/// and `LOOP_FAILING_ALERT_PASSES` must hold: the 3 s matchmaker alerts after five minutes (about a
+/// hundred passes), the hourly purge on its third failed pass. Five minutes passes over a database
+/// blip, which a reconnect clears, and still reaches the owners before a player gives up on the
+/// queue. `ALERT_WINDOW_MS` then holds each event to one notice an hour.
+pub const LOOP_FAILING_ALERT_MS: i64 = 5 * 60 * 1000;
+/// #3770: how many passes in a row a sweep step must fail before `<step>.failing` is raised, beside
+/// `LOOP_FAILING_ALERT_MS`. Three keeps one unlucky pass of a slow loop (the hourly purge) from
+/// being a streak.
+pub const LOOP_FAILING_ALERT_PASSES: u32 = 3;
+/// #3826: how many internal errors in a row, with no other answer between, one route (or one socket
+/// upgrade) must give before `http::RouteHealth` raises `api.route.failing`, beside
+/// `ROUTE_FAILING_ALERT_MS`. Both must hold. Five in a row is no unlucky request: a route that answers
+/// "something went wrong" to every request is broken for its players (a bad migration, say).
+pub const ROUTE_FAILING_ALERT_COUNT: u32 = 5;
+/// #3826: how long a route's run of internal errors must last, beside `ROUTE_FAILING_ALERT_COUNT`,
+/// before `api.route.failing` is raised. Both must hold. A minute passes over a database blip, which a
+/// reconnect clears, and is quicker than the loops' five minutes (`LOOP_FAILING_ALERT_MS`) because a
+/// player is waiting on the route. `ALERT_WINDOW_MS` then holds the event to one notice an hour.
+pub const ROUTE_FAILING_ALERT_MS: i64 = 60 * 1000;
 
 // ---------------------------------------------------------------------------------------------
 // The probes and the shutdown (`api/health.rs`, `app::serve_until`). Not in SPEC, and no R-row (#861).
@@ -523,18 +560,16 @@ pub const REDEMPTION_RESPONSE_FLOOR_MS: i64 = 250;
 pub const REDEMPTION_IDENTICAL_ERROR: &str = "This invite code is invalid.";
 
 // ---------------------------------------------------------------------------------------------
-// The circuit breaker (§9.4).
+// The operator's redemption pause (§9.4).
 // ---------------------------------------------------------------------------------------------
 
-// SPEC §9.4: "A global circuit breaker disables redemption and alerts when system-wide failures
-// cross a threshold in a window" — SPEC fixes neither the threshold nor the window.
-//
-// SPEC §11 R106: 100 failed redemption attempts (across all profiles and IPs) within 600 s trips
-// the breaker. High enough that normal typo/expired-code traffic never trips it, low enough to
-// catch a scripted brute-force attempt quickly.
-pub const REDEMPTION_CIRCUIT_FAILURE_THRESHOLD: i64 = 100;
-/// SPEC §11 R106: the rolling window the circuit breaker counts failures over, in seconds.
-pub const REDEMPTION_CIRCUIT_WINDOW_SECONDS: i64 = 600;
+// R4131000 (replacing R106's breaker, which opened on 100 system-wide failures in 600 s): no count
+// of failures pauses redemption for everyone. §9.4 steps 2 and 3 block one profile and one address
+// for the rest of their hour; the database's switch (`moderate redemption off`) is the only pause.
+/// R4131000: how long this process keeps refusing redemption before the store after the database
+/// answered that it is paused, so the code screen says "paused" and further presses spend no try, in
+/// seconds. The switch's state is re-read once it lapses.
+pub const REDEMPTION_PAUSE_MIRROR_SECONDS: i64 = 600;
 
 // ---------------------------------------------------------------------------------------------
 // The invite-cluster watch (§9.8).
@@ -797,14 +832,17 @@ pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
 /// of it (`actor::checkpoint`). A shorter log is cheap to fold whole, so the drain spends no write on
 /// it: as #1169's plan measured a release build, a fold costs about 0.39 ms an action and the
 /// telemetry's replay about 0.50 ms, while a checkpoint (some 75 KB) takes about 0.3 ms to serialize
-/// and hash, plus its write.
+/// and hash, plus its write. #4169: a co-op or 2v2 match's too (`duos::checkpoint`), whose actor also
+/// stores one after every row of its log whose seq is a multiple of it, so a crash costs at most this
+/// many rows' fold.
 pub const MATCH_CHECKPOINT_MIN_ACTIONS: i64 = 32;
 /// #1169: the shape of a checkpoint's body and of what the server folds a log to. A checkpoint
 /// stamped with another is refused and the whole log folded. Bump it when a server change alters
-/// either: the body (`actor::checkpoint::CheckpointBody`), the setup a rebuild folds with
-/// (`Registry::rebuild`'s arguments) or the bot turns it reads (`bot_moved_turns`). A change to the
-/// engine, the cards or `actor/engine.rs` and `actor/telemetry.rs` needs none: the rules fingerprint
-/// (`build.rs`) refuses those.
+/// either: the body (`actor::checkpoint::CheckpointBody`, or a co-op match's
+/// `duos::checkpoint::DuosCheckpointBody`, #4169), the setup a rebuild folds with
+/// (`Registry::rebuild`'s arguments, or `DuosRegistry::rebuild`'s fold inputs) or the bot turns it reads
+/// (`bot_moved_turns`). A change to the engine, the cards or `actor/engine.rs`, `actor/telemetry.rs` and
+/// `duos/engine.rs` needs none: the rules fingerprint (`build.rs`) refuses those.
 pub const MATCH_CHECKPOINT_VERSION: i32 = 1;
 
 // ---------------------------------------------------------------------------------------------
@@ -866,6 +904,28 @@ pub const ALERT_EMAIL_DAY_MS: i64 = 24 * 60 * 60 * 1000;
 pub const ALERT_TIMEOUT_MS: u64 = 10_000;
 
 // ---------------------------------------------------------------------------------------------
+// Client errors (#3619): a crash in a player's browser, told to the owners as the `client.error` alert.
+// ---------------------------------------------------------------------------------------------
+
+/// #3619: the longest error message a client report keeps; the rest is cut. The web reads it too.
+pub const CLIENT_ERROR_MESSAGE_MAX_CHARS: usize = 300;
+/// #3619: the longest stack a client report keeps; the rest is cut. The web reads it too.
+pub const CLIENT_ERROR_STACK_MAX_CHARS: usize = 2000;
+/// #3619: the longest route or catalog version a client report keeps.
+pub const CLIENT_ERROR_FIELD_MAX_CHARS: usize = 64;
+/// #3619: the largest client report body, in bytes, refused before it is counted.
+pub const CLIENT_ERROR_BODY_MAX_BYTES: usize = 8192;
+/// #3619: how many client reports one address may send in `CLIENT_ERROR_WINDOW_MS`.
+pub const CLIENT_ERROR_REPORTS_PER_ADDRESS: usize = 10;
+/// #3619: how many client reports one account may send in `CLIENT_ERROR_WINDOW_MS`, from any address.
+pub const CLIENT_ERROR_REPORTS_PER_ACCOUNT: usize = 10;
+/// #3619: the window of both client-report limits (ten minutes).
+pub const CLIENT_ERROR_WINDOW_MS: i64 = 10 * 60 * 1000;
+/// #3619: what raised a client report: an error the route boundary caught, an uncaught `error` event
+/// or an `unhandledrejection`.
+pub const CLIENT_ERROR_TRIGGERS: &[&str] = &["boundary", "error", "unhandledrejection"];
+
+// ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
 // ---------------------------------------------------------------------------------------------
 
@@ -877,6 +937,18 @@ pub const GLITCH_BOARDS_SAMPLED: usize = 2;
 /// HTTP's 410 Gone: the match no longer exists. The last `view` the clients got already shows the
 /// game over with reason `voided`.
 pub const MATCH_VOIDED_CLOSE_CODE: u16 = 4410;
+/// R3694000: what the reaper closes a finished match's sockets still open with (seats' and watchers',
+/// 1v1 and co-op) once `REMATCH_OFFER_TTL_MS` has passed since its end, beside "the match is over".
+/// In the 4000–4999 range beside `MATCH_VOIDED_CLOSE_CODE`, and as final: no client reconnects on it.
+pub const MATCH_OVER_CLOSE_CODE: u16 = 4411;
+/// R3767000: the close code a seat's replaced socket gets when a newer socket of the same account takes
+/// the seat (a second tab, or another device), 1v1 and co-op, beside `SEAT_TAKEN_CLOSE_REASON`. In the
+/// 4000–4999 range beside `MATCH_OVER_CLOSE_CODE`; no client reconnects on it, so two clients of one
+/// account stop taking the seat from each other. An older client reads it as a drop and reconnects, as
+/// it did on 1000. A watcher's replacement stays 1000.
+pub const SEAT_TAKEN_CLOSE_CODE: u16 = 4412;
+/// R3767000: the reason that close carries.
+pub const SEAT_TAKEN_CLOSE_REASON: &str = "this game is open somewhere else";
 
 // ---------------------------------------------------------------------------------------------
 // Saved decks and trios (SPEC §9.4, R250–R256). PUBLIC: the deck builder imports these too.
@@ -1231,6 +1303,8 @@ pub const OPEN_MATCH_REAP_GRACE_MS: i64 = OPEN_MATCH_REAP_GRACE_SECONDS * 1000;
 
 /// B43: friend requests one account may send in an hour; the next is 429.
 pub const FRIEND_REQUESTS_PER_HOUR: usize = 20;
+/// R4008001: friend requests one address (R190) may send in an hour across all its accounts; the next is 429.
+pub const FRIEND_REQUESTS_PER_ADDRESS_PER_HOUR: usize = 60;
 /// B43: friends one account may hold; a request or an accept past it is 409 `friend_cap`.
 pub const MAX_FRIENDS: i64 = 200;
 /// B47: a friend is online while their last heartbeat is at most this old.
@@ -1272,6 +1346,13 @@ pub const CHAT_PAGE: i64 = 50;
 /// B52 (#1825): the most shares one `GET /api/replays/shared` lists, newest first, so that list is
 /// bounded like the friends (`MAX_FRIENDS`) and a chat page (`CHAT_PAGE`); fifty is a chat page's.
 pub const SHARED_REPLAYS_LIST_MAX: i64 = 50;
+/// R3732000: the most opponents `GET /api/friends/recent` lists, newest first: twenty, a screen of
+/// rows, so Recently played stays a glance and not a history.
+pub const RECENT_OPPONENTS_MAX: usize = 20;
+/// R3732000: the newest games `GET /api/friends/recent` reads to find them, ranked ones included
+/// (which it then leaves out): fifty, a page of the replay list's order of magnitude, so the read is
+/// one bounded query whatever the account's history.
+pub const RECENT_OPPONENTS_SCAN: i64 = 50;
 /// B58: how often an open chat panel reads its conversation again, while the tab's `/ws/social` is
 /// down (R3214000).
 pub const CHAT_POLL_MS: i64 = 4_000;
@@ -1295,12 +1376,32 @@ pub const SOCIAL_SOCKETS_PER_ACCOUNT: usize = 5;
 /// toast on the friend's screen, so a create-and-cancel loop is bounded; thirty is one every two
 /// minutes, a challenge's whole life, kept up for an hour.
 pub const CHALLENGES_PER_HOUR: usize = 30;
+/// R4391000: replay shares one account may make in an hour; the next is 429. Every attempt counts, a
+/// re-share included. A share tells the friend by a feed row and a toast, so a loop is bounded as
+/// challenges are; thirty, the same as `CHALLENGES_PER_HOUR`. Server-only.
+pub const REPLAY_SHARES_PER_HOUR: usize = 30;
 // NOT IN SPEC: how often the challenge sweeper deletes the challenges lapsed by now. A lapsed
 // challenge is already shut (its room expired with it, the reaper takes the room's row, and no read
 // lists the challenge), so the sweep only removes the rows; ten seconds keeps none much past its
 // CHALLENGE_TTL_MS for one cheap delete.
 pub const CHALLENGE_SWEEP_INTERVAL_SECONDS: i64 = 10;
 // ---- end Social ----
+// ---- Notifications: the in-game feed kept until read (#4039) ----
+/// R4039000: the feed's rows one account keeps; writing one more deletes its oldest past this. A
+/// hundred is weeks of a busy player's daily games and friends, and keeps every page read small.
+/// Server-only.
+pub const NOTIFICATIONS_KEEP: i64 = 100;
+/// R4039000: how old a feed row gets before the daily sweep deletes it, read or not. A month: a
+/// daily game's longest time per move is two weeks, so a row outlives the move it told of. Server-only.
+pub const NOTIFICATIONS_KEEP_DAYS: i64 = 30;
+/// R4039000: the rows `GET /api/notifications` answers when it names no `limit`: what the inbox's
+/// Recent section shows before "Show older". Server-only.
+pub const NOTIFICATIONS_PAGE: i64 = 20;
+/// R4039000: the most rows one `GET /api/notifications` answers; a larger `limit` is 400. Server-only.
+pub const NOTIFICATIONS_PAGE_MAX: i64 = 50;
+const _: () =
+    assert!(NOTIFICATIONS_PAGE <= NOTIFICATIONS_PAGE_MAX && NOTIFICATIONS_PAGE_MAX <= NOTIFICATIONS_KEEP);
+// ---- end Notifications ----
 // ---- Duos co-op (#946) ----
 // Fullsend SPEC S6 (#936): the Duos co-op rooms and their four-seat actor (`src/duos/`). Every one
 // but `DUOS_AI_BUDGET` is exported to `apps/web/src/wire/serverConfig.ts`, since the co-op board
@@ -1505,7 +1606,8 @@ pub const DEV_RATING_MIN: f64 = 100.0;
 /// §14.10, R3074001: the highest rating a dev account may hand-set itself on a ladder, past every
 /// bot's (`SKILL_ELO_TABLE`). Exported to `serverConfig.ts`.
 pub const DEV_RATING_MAX: f64 = 3000.0;
-/// §14.10, R3074000: the newest audit rows `GET /api/admin/audit` answers.
+/// §14.10, R3074000: the page size of every `GET /api/admin/audit` read, the newest matching
+/// audit rows first, `nextBeforeId` naming the cursor of the next older page.
 pub const ADMIN_AUDIT_PAGE: i64 = 200;
 /// §14.13, R3074003: the newest posts `GET /api/admin/news` answers, taken down or not.
 pub const NEWS_POSTS_PAGE: i64 = 100;
@@ -1540,3 +1642,67 @@ pub const SERVER_PERF_BROADCAST_MS_BUDGET: f64 = 500.0;
 /// `cargo test`'s profile. Measured in the same eleven runs: 16 matches of 1,887 actions in all, in
 /// 16.5 to 18.68 s, so 0.86 to 0.97 a second. The least divided by 5, rounded down.
 pub const SERVER_PERF_MATCHES_PER_SECOND_FLOOR: f64 = 0.17;
+
+// ---------------------------------------------------------------------------------------------
+// Daily games (#3727, SPEC §9.13): the sweep, the player mail and Web Push. The clock's and the
+// notification decision's numbers are `jackioh_shared::config`'s, re-exported here for the server.
+// ---------------------------------------------------------------------------------------------
+
+pub use jackioh_shared::config::{
+    DAILY_CHALLENGE_TTL_DAYS, DAILY_EMAIL_MIN_GAP_HOURS, DAILY_MAX_ACTIVE_GAMES, DAILY_RECENT_FINISHED,
+    DAILY_REMINDER_HOURS, DAILY_SEEK_TTL_DAYS, DAILY_TIME_PER_MOVE_DAYS, DAILY_URGENT_HOURS, MS_PER_HOUR,
+};
+
+/// §9.13: how often the daily sweep ends the games whose move ran out, lapses old challenges and
+/// seeks and sends the emails and pushes due, in minutes, while the server is awake. The Worker's
+/// hourly cron (`apps/edge`'s `DAILY_SWEEP_CRON`) wakes it for one while nobody else does.
+pub const DAILY_SWEEP_MINUTES: u64 = 60;
+/// §9.13: the route the Worker's cron posts the sweep to; outside `/api`, so the Worker's public
+/// `fetch` never forwards it.
+pub const DAILY_SWEEP_PATH: &str = "/daily-sweep";
+/// §9.13: how many times a request ends a game on time when another request moved first and its
+/// log row clashed (R3727000), before it answers what it read.
+pub const DAILY_SETTLE_ATTEMPTS: usize = 3;
+/// §9.13: Resend's send endpoint, for the "your move" emails (`daily::notify`), under the player
+/// mail's own key (`PLAYER_RESEND_API_KEY`), never the operators' alert key.
+pub const PLAYER_EMAIL_API_URL: &str = "https://api.resend.com/emails";
+/// §9.13: who a "your move" email is from, on the domain Resend sends jackioh.com's mail for.
+pub const PLAYER_EMAIL_FROM: &str = "JackiOh <no-reply@jackioh.com>";
+/// §9.13: how long a send to Resend may take before it is given up, in milliseconds; the next sweep
+/// tries again, since nothing was marked sent.
+pub const PLAYER_EMAIL_TIMEOUT_MS: u64 = 10_000;
+/// §9.13, #3843: the most "your move" emails the server sends in one UTC day, across every account,
+/// the sweep's and the after-move queue's together, counted in the store (migration 0092's
+/// `daily_email_days`) so a restart starts none afresh. Half of Resend's free plan's 100 a day, which
+/// leaves the rest to the sign-in, password-reset and alert mail sent from the same account. Past it
+/// no email goes for the rest of the day; push still does. An `i32`, as the column is.
+pub const DAILY_PLAYER_EMAILS_PER_DAY: i32 = 50;
+/// §9.13: how many profiles wait for the notifier's task (`daily::notify::NotifyQueue`) before a new
+/// one is dropped; the next sweep decides for it, since nothing unsent is ever marked sent.
+pub const DAILY_NOTIFY_QUEUE: usize = 256;
+/// RFC 8030's `TTL`: how long a push service keeps a "your move" push for a device that is offline,
+/// in seconds (a day: the next one says it again).
+pub const PUSH_TTL_SECONDS: u64 = 86_400;
+/// How long a send to a push service may take, in milliseconds.
+pub const PUSH_TIMEOUT_MS: u64 = 10_000;
+/// RFC 8292's `sub`: how a push service reaches the site's operators about its pushes.
+pub const VAPID_SUBJECT: &str = "mailto:no-reply@jackioh.com";
+/// RFC 8292: how long one VAPID token is good for, in seconds (12 hours; the RFC caps it at 24).
+pub const VAPID_TOKEN_SECONDS: i64 = 43_200;
+/// §9.8: the most devices one account keeps push subscriptions for; a new one past it replaces the
+/// oldest.
+pub const PUSH_MAX_DEVICES: usize = 10;
+/// §9.8: the longest push endpoint or key the server keeps, in characters (a push service's
+/// endpoint is a few hundred).
+pub const PUSH_FIELD_MAX_LENGTH: usize = 2048;
+/// §9.8, §9.13: the browsers' push services, the only hosts a push subscription's endpoint may name
+/// (it or a subdomain of it, over https on the default port), so the server's pushes reach nothing
+/// else: Firebase Cloud Messaging under both its names (Chrome and the other Chromium browsers but
+/// Edge), Mozilla's (Firefox), Apple's (Safari) and Windows Push Notification Services (Edge).
+pub const PUSH_SERVICE_HOSTS: [&str; 5] = [
+    "fcm.googleapis.com",
+    "android.googleapis.com",
+    "push.services.mozilla.com",
+    "push.apple.com",
+    "notify.windows.com",
+];

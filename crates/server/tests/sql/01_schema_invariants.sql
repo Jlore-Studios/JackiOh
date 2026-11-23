@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 76 tables of migrations 0001-0086 ==='
+\echo '=== CHECK 2: the 84 tables of migrations 0001-0097 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -88,27 +88,32 @@ declare
   -- (0077, R2875000), the practice claims' practice_claim_counts (0078, #2884), the dev
   -- dashboard's admin_actions, hand_set_ratings, rating_grants and news_posts (0080, R3074000),
   -- and each card's plays, level and stamp, card_proficiency (0081, R3013000), and the Fleet track's
-  -- fleet_tracks and fleet_track_grants (0086, R3335001).
+  -- fleet_tracks and fleet_track_grants (0086, R3335001), and the daily games' daily_games,
+  -- daily_invites, daily_notify and push_subscriptions (0089, SPEC §9.13, #3727), and a private
+  -- lobby's lobbies (0090, R3730000), and the player mail's daily_email_days (0092, #3843), and the
+  -- in-game notification feed's notifications (0093, R4039000), and the live co-op matches'
+  -- duos_match_checkpoints (0097, #4169).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
   -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075,
-  -- 0076 and 0079 add no table, 0082 drops custom_cards, which 0037 had added, and 0083, 0084 and 0085 add none.
+  -- 0076 and 0079 add no table, 0082 drops custom_cards, which 0037 had added, and 0083, 0084, 0085, 0087, 0088 and
+  -- 0091 add none, nor do 0094, 0095 and 0096.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
     'account_cosmetics', 'action_timings', 'admin_actions', 'age_checks', 'blocks', 'bot_ratings', 'bots', 'card_cosmetic_picks',
     'card_cosmetics', 'card_proficiency', 'card_totals', 'cards', 'challenges',
     'chat_messages', 'chat_reports', 'code_attempts', 'collection', 'collection_grants', 'cosmetic_grants',
-    'cosmetics',
-    'deck_versions', 'decklist_totals', 'decks', 'duos_match_actions', 'duos_matches', 'duos_rooms', 'economy_counter_grants',
+    'cosmetics', 'daily_email_days', 'daily_games', 'daily_invites', 'daily_notify',
+    'deck_versions', 'decklist_totals', 'decks', 'duos_match_actions', 'duos_match_checkpoints', 'duos_matches', 'duos_rooms', 'economy_counter_grants',
     'economy_counters', 'emote_events',
     'fleet_track_grants', 'fleet_tracks', 'friend_requests', 'friendships', 'game_record_batches', 'game_records', 'game_totals', 'hand_set_ratings', 'held_quests',
     'idempotency_keys', 'inventory',
     'inventory_grants',
-    'invite_codes', 'jlore_grants', 'last_boards', 'loadout_deck_cards',
+    'invite_codes', 'jlore_grants', 'last_boards', 'loadout_deck_cards', 'lobbies',
     'loadout_decks', 'loadouts', 'match_actions', 'match_checkpoints', 'match_signals', 'matches',
-    'news_claims', 'news_posts', 'player_settings',
-    'player_stats', 'practice_claim_counts', 'practice_seeds', 'presence', 'profiles', 'quest_grants', 'quest_schedules', 'rated_games', 'rating_grants', 'record_totals',
+    'news_claims', 'news_posts', 'notifications', 'player_settings',
+    'player_stats', 'practice_claim_counts', 'practice_seeds', 'presence', 'profiles', 'push_subscriptions', 'quest_grants', 'quest_schedules', 'rated_games', 'rating_grants', 'record_totals',
     'replay_shares', 'results',
     'season_ranks', 'seasons', 'series', 'set_track_grants', 'set_tracks', 'terms_acceptances', 'tickets',
     'trios', 'tutorial_progress', 'wallets'];
@@ -946,7 +951,8 @@ end $$;
 -- with #1837's Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean (R1837000), and 0065
 -- with the Stinkyscape set's Drone Core, Weapon, War Doctrine and Swarm (R1857000), and 0069 with
 -- the Training Grounds Legacy cards' Legacy (R2511000), and 0070 with #2521's Resource and
--- Faction, and 0083 with #3038's Starship (R3038000). Each probe
+-- Faction, and 0083 with #3038's Starship (R3038000), and 0087 with #3535's Mindustrial, Mineral,
+-- Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω, Automa-ζ and Paperclip (R3535002). Each probe
 -- row is removed before the next, and each probe runs in a block of its own, so later checks see
 -- only the cards CHECK 10 seeded.
 do $$
@@ -956,7 +962,8 @@ declare
     'Human', 'Felinor', 'KY', 'CN', 'Fruit', 'Call to Chaos', 'Quickdraw', 'Jlockeed', 'Book', 'Pancake',
     'AI', 'Plague', 'Catalyst', 'Prime', 'Acclaimed', 'Wincon', 'Potion', 'Terminus', 'Quest',
     'Otherworldly', 'Other-Origins', 'Jelly Bean', 'Drone Core', 'Weapon', 'War Doctrine', 'Swarm',
-    'Legacy', 'Resource', 'Faction', 'Starship', 'Token'];
+    'Legacy', 'Resource', 'Faction', 'Starship', 'Mindustrial', 'Mineral', 'Automa-α', 'Automa-β',
+    'Automa-γ', 'Automa-δ', 'Automa-Ω', 'Automa-ζ', 'Paperclip', 'Token'];
   tag      text;
   refused  boolean;
 begin
@@ -972,14 +979,14 @@ begin
     delete from public.cards where id = 'check18-probe';
   end loop;
 
-  -- All thirty-one on one card: `<@` holds for the whole list, not only one tag at a time.
+  -- All forty on one card: `<@` holds for the whole list, not only one tag at a time.
   begin
     insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
                               catalog_version)
     values ('check18-probe', '18', 'Check 18 probe', 'Core', 'Unit', catalog_tags, 'Common', false,
             '1'::jsonb, 'core-1');
   exception when check_violation then
-    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all thirty-one tags';
+    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all forty tags';
   end;
   delete from public.cards where id = 'check18-probe';
 
@@ -1271,6 +1278,408 @@ begin
     raise exception E'FAIL (CHECK 21): the rank read does not take the asked rows through an index:\n%', plan_text;
   end if;
   raise notice 'OK (CHECK 21): the rank read takes its asked rows through an index and its Mythic rows as a range of season_ranks_season_ladder_idx, and reads no season whole';
+end $$;
+rollback;
+
+\echo '=== CHECK 22 (#4012): no public view bypasses RLS — every view runs as its caller ==='
+-- A Postgres view runs with its owner's rights unless it is created with
+-- security_invoker = true, so a view over an RLS table shows every row to a
+-- caller whose policies should filter them. Materialized views cannot carry
+-- RLS or security_invoker at all and are CHECK 23's alone.
+select c.relname as view_without_security_invoker
+  from pg_class c join pg_namespace n on n.oid = c.relnamespace
+ where n.nspname = 'public' and c.relkind = 'v'
+   and not (coalesce(c.reloptions, '{}') @> array['security_invoker=true'])
+ order by 1;
+do $$
+declare
+  offenders text;
+begin
+  -- Failing case first: a plain view must be named.
+  create view public.check22_probe as select 1;
+  select string_agg(c.relname, ', ' order by c.relname) into offenders
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relkind = 'v'
+     and not (coalesce(c.reloptions, '{}') @> array['security_invoker=true']);
+  if offenders is null or position('check22_probe' in offenders) = 0 then
+    raise exception
+      'FAIL (CHECK 22): the probe view was not detected (saw %) — the detector matches nothing',
+      coalesce(offenders, '(none)');
+  end if;
+
+  -- A security_invoker view must be ignored.
+  create view public.check22_ok with (security_invoker = true) as select 1;
+  select string_agg(c.relname, ', ' order by c.relname) into offenders
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relkind = 'v'
+     and not (coalesce(c.reloptions, '{}') @> array['security_invoker=true']);
+  if offenders is distinct from 'check22_probe' then
+    raise exception
+      'FAIL (CHECK 22): the security_invoker probe leaked or vanished (saw %)',
+      coalesce(offenders, '(none)');
+  end if;
+  drop view public.check22_ok;
+  drop view public.check22_probe;
+
+  select string_agg(c.relname, ', ' order by c.relname) into offenders
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relkind = 'v'
+     and not (coalesce(c.reloptions, '{}') @> array['security_invoker=true']);
+  if offenders is not null then
+    raise exception
+      'FAIL (CHECK 22): public view(s) without security_invoker = true: % — a view runs as its owner past RLS',
+      offenders;
+  end if;
+
+  raise notice 'OK (CHECK 22): no public view without security_invoker = true';
+end $$;
+
+\echo '=== CHECK 23 (#4012): no public materialized view ==='
+-- A materialized view can carry neither RLS nor security_invoker, so any one
+-- in public is a snapshot of rows no policy filters. None exists today; one
+-- appearing is the failure.
+select c.relname as public_matview
+  from pg_class c join pg_namespace n on n.oid = c.relnamespace
+ where n.nspname = 'public' and c.relkind = 'm'
+ order by 1;
+do $$
+declare
+  offenders text;
+begin
+  -- Failing case first: a materialized view must be named.
+  create materialized view public.check23_probe as select 1;
+  select string_agg(c.relname, ', ' order by c.relname) into offenders
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relkind = 'm';
+  if offenders is distinct from 'check23_probe' then
+    raise exception
+      'FAIL (CHECK 23): the probe materialized view was not detected (saw %) — the detector matches nothing',
+      coalesce(offenders, '(none)');
+  end if;
+  drop materialized view public.check23_probe;
+
+  select string_agg(c.relname, ', ' order by c.relname) into offenders
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relkind = 'm';
+  if offenders is not null then
+    raise exception
+      'FAIL (CHECK 23): public materialized view(s): % — a materialized view can carry neither RLS nor security_invoker',
+      offenders;
+  end if;
+
+  raise notice 'OK (CHECK 23): no public materialized view';
+end $$;
+
+\echo '=== CHECK 24 (#4012): every SECURITY DEFINER function in public or app pins its search_path ==='
+-- A SECURITY DEFINER function without a pinned search_path is hijackable by
+-- any role that can create objects in a schema it resolves through. This
+-- reads the catalog where CHECK 17 follows a hand-maintained list, so a stale
+-- list cannot hide a function; the predicate is CHECK 17's (line 920).
+select p.proname as definer_without_search_path
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname in ('public', 'app') and p.prosecdef
+   and not (coalesce(p.proconfig, '{}'::text[]) @> array['search_path=""'])
+ order by 1;
+do $$
+declare
+  offenders text;
+begin
+  -- Failing case first: a DEFINER function with no SET clause must be named.
+  create function app.check24_probe() returns int
+    language sql security definer
+    as $fn$ select 1 $fn$;
+  select string_agg(p.proname, ', ' order by p.proname) into offenders
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname in ('public', 'app') and p.prosecdef
+     and not (coalesce(p.proconfig, '{}'::text[]) @> array['search_path=""']);
+  if offenders is null or position('check24_probe' in offenders) = 0 then
+    raise exception
+      'FAIL (CHECK 24): the probe function was not detected (saw %) — the detector matches nothing',
+      coalesce(offenders, '(none)');
+  end if;
+  drop function app.check24_probe();
+
+  select string_agg(n.nspname || '.' || p.proname, ', ' order by n.nspname, p.proname)
+    into offenders
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname in ('public', 'app') and p.prosecdef
+     and not (coalesce(p.proconfig, '{}'::text[]) @> array['search_path=""']);
+  if offenders is not null then
+    raise exception
+      'FAIL (CHECK 24): SECURITY DEFINER function(s) without a pinned search_path: %',
+      offenders;
+  end if;
+
+  raise notice 'OK (CHECK 24): every SECURITY DEFINER function in public and app pins its search_path';
+end $$;
+
+\echo '=== CHECK 25 (#4012): no SECURITY DEFINER function in public or app is executable by a client role outside the allowlist ==='
+-- A function defaults to EXECUTE for PUBLIC, so a DEFINER function no
+-- migration ever revoked stays callable by anon and authenticated: a client
+-- path into privileged code. Read the ACLs directly as CHECK 6 does — a null
+-- proacl IS the default PUBLIC grant, via acldefault. Scoped to public/app:
+-- auth.uid() in auth is granted to clients by design.
+select p.proname as function_name,
+       coalesce(g.rolname, 'PUBLIC') as grantee
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+  left join pg_roles g on g.oid = a.grantee
+ where n.nspname in ('public', 'app')
+   and p.prosecdef
+   and coalesce(g.rolname, 'PUBLIC') in ('anon', 'authenticated', 'PUBLIC')
+   and not (n.nspname = 'app' and p.proname = 'profile_is_active' and p.pronargs = 0
+            and coalesce(g.rolname, 'PUBLIC') = 'authenticated')
+ order by 1, 2;
+do $$
+declare
+  offenders text;
+  measured  bigint;
+begin
+  -- The allowlist: the zero-argument app.profile_is_active() stays callable
+  -- by authenticated alone because the RLS policies of 0002/0003/0004 call
+  -- it, and it is DEFINER so it reads public.profiles (0001) without
+  -- recursing into policies. Any other grantee (anon, PUBLIC), any overload
+  -- with arguments, and any other function still fail this check.
+  -- app.current_profile_id() is also granted to authenticated but is
+  -- SECURITY INVOKER, so it is out of this check's scope.
+  -- No synthetic probe: the schema itself is the failing case until 0094 —
+  -- app.on_profile_activated() (0002, the pending-to-active launch-grant
+  -- trigger) never had PUBLIC execute revoked.
+  select string_agg(format('%s.%s:%s', n.nspname, p.proname,
+                           coalesce(g.rolname, 'PUBLIC')),
+                    ', ' order by n.nspname, p.proname, coalesce(g.rolname, 'PUBLIC'))
+    into offenders
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    left join pg_roles g on g.oid = a.grantee
+   where n.nspname in ('public', 'app')
+     and p.prosecdef
+     and coalesce(g.rolname, 'PUBLIC') in ('anon', 'authenticated', 'PUBLIC')
+     and not (n.nspname = 'app' and p.proname = 'profile_is_active' and p.pronargs = 0
+              and coalesce(g.rolname, 'PUBLIC') = 'authenticated');
+  if offenders is not null then
+    raise exception
+      'FAIL (CHECK 25): SECURITY DEFINER function(s) executable by a client role outside the allowlist: % — revoke PUBLIC execute; the server calls them as service_role',
+      offenders;
+  end if;
+
+  -- Vacuity guard: "no offender" means nothing if there is no DEFINER
+  -- function in scope to measure.
+  select count(*) into measured
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname in ('public', 'app') and p.prosecdef;
+  if measured = 0 then
+    raise exception
+      'FAIL (CHECK 25): no SECURITY DEFINER function in public or app — the migrations did not apply, so this check measured nothing';
+  end if;
+
+  raise notice 'OK (CHECK 25): % SECURITY DEFINER function(s) in public/app, none executable by a client role outside the allowlist', measured;
+end $$;
+
+\echo '=== CHECK 26 (#4468): the public players list walks player_stats_public_games_idx in order and sorts no row ==='
+-- GET /api/stats/players, open to anyone, reads player_stats_list_public (src/db/pg.rs): unbanned players'
+-- public rows, most games first (R654, R3911000), optionally matched on the username key (R1436). Over
+-- 2,000 analysed public rows of several KB of stats, some private and one banned, with sequential scans
+-- priced out, the default page and a search must walk player_stats_public_games_idx (migration 0098) and
+-- sort nothing; without 0098 the planner reads player_stats_pkey whole and sorts every public row. The
+-- probes are pg.rs's query with its binds as literals (no search, then a username key; `limit`
+-- PLAYER_STATS_PAGE_LIMIT, `offset` 0): an edit of pg.rs's `order by` edits this probe too. Rolled back, as CHECK 21.
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+  select gen_random_uuid(), format('check-26-%s@example.test', n), now() from generate_series(1, 2000) as n;
+insert into public.player_stats (profile_id, stats, is_private, updated_at)
+  select u.id,
+         jsonb_build_object('games', (row_number() over (order by u.id)) % 500, 'cards', repeat('x', 4000)),
+         (row_number() over (order by u.id)) % 50 = 0,
+         now() - make_interval(mins => (row_number() over (order by u.id))::integer)
+    from auth.users u
+   where u.email like 'check-26-%';
+update public.profiles set status = 'banned'
+ where id = (select id from auth.users where email = 'check-26-1@example.test');
+analyze public.player_stats;
+analyze public.profiles;
+do $$
+declare
+  probes    text[];
+  plan_text text;
+  line      text;
+begin
+  probes := array[array['the default page', 'null'], array['a search', '''player#12''']];
+  -- Local to this file's transaction, which the rollback below ends.
+  perform set_config('enable_seqscan', 'off', true);
+  for i in 1 .. array_length(probes, 1) loop
+    plan_text := '';
+    for line in execute format(
+      'explain select ps.profile_id, p.username_base, p.username_tag, ps.stats, ps.updated_at
+         from public.player_stats ps
+         join public.profiles p on p.id = ps.profile_id
+        where ps.is_private = false
+          and p.status <> ''banned''
+          and (%1$s::text is null
+               or position(%1$s::text in (p.username_key || coalesce(''#'' || p.username_tag::text, ''''))) > 0)
+        order by
+          case when (ps.stats->>''games'') ~ ''^[0-9]+$'' then (ps.stats->>''games'')::bigint else 0 end desc,
+          ps.updated_at desc,
+          ps.profile_id asc
+        limit 50::int offset 0::int', probes[i][2]) loop
+      plan_text := plan_text || line || E'\n';
+    end loop;
+    if plan_text ~ 'Seq Scan on player_stats\M' then
+      raise exception E'FAIL (CHECK 26): % of player_stats_list_public reads player_stats whole:\n%', probes[i][1], plan_text;
+    end if;
+    if plan_text !~ '\mplayer_stats_public_games_idx\M' or plan_text ~ '\mSort\M' then
+      raise exception E'FAIL (CHECK 26): % of player_stats_list_public sorts player_stats instead of walking player_stats_public_games_idx:\n%', probes[i][1], plan_text;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 26): the players list''s default page and its search walk player_stats_public_games_idx in order, sort no row and read no player_stats whole';
+end $$;
+rollback;
+
+\echo '=== CHECK 27 (#4468): the daily pay sums read one day of one account''s game rows, each through its own index ==='
+-- A paid game's payout (economy/rewards.rs) and the daily-cap reads (api/results.rs, duos/mod.rs) sum an
+-- account's `game` rows of one UTC day: game_jlore_totals over jlore_grants and fleet_get, which GET
+-- /api/economy also runs, over fleet_track_grants (src/economy/store.rs; R1483000). Over 20 accounts of
+-- 2,000 analysed rows each, spread over 400 days, with sequential scans priced out, both day bounds must
+-- be an Index Cond of jlore_grants_profile_reason_at_idx and fleet_track_grants_profile_reason_at_idx
+-- (migration 0098), never a Filter; without 0098 each sum reads the account's rows through (profile_id,
+-- id) (0045, 0086) and filters the day. The probes are store.rs's queries with their binds as literals.
+-- Rolled back, as CHECK 21.
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+  select gen_random_uuid(), format('check-27-%s@example.test', n), now() from generate_series(1, 20) as n;
+insert into public.jlore_grants (profile_id, delta, reason, ref, at)
+  select u.id, 10, case when n % 5 = 0 then 'quest' else 'game' end, format('check-27-%s', n),
+         now() - make_interval(hours => n * 5)
+    from auth.users u cross join generate_series(1, 2000) as n
+   where u.email like 'check-27-%';
+insert into public.fleet_track_grants (profile_id, xp, reason, ref, at)
+  select u.id, 10, 'game', format('check-27-%s', n), now() - make_interval(hours => n * 5)
+    from auth.users u cross join generate_series(1, 2000) as n
+   where u.email like 'check-27-%';
+analyze public.jlore_grants;
+analyze public.fleet_track_grants;
+do $$
+declare
+  day_ms    constant bigint := 24 * 3600 * 1000;
+  from_ms   constant bigint :=
+    (extract(epoch from date_trunc('day', clock_timestamp() at time zone 'utc')) * 1000)::bigint;
+  until_ms  constant bigint := from_ms + day_ms;
+  profile   uuid;
+  probes    text[];
+  plan_text text;
+  line      text;
+begin
+  select id into profile from auth.users where email = 'check-27-1@example.test';
+  probes := array[
+    array['jlore_grants_profile_reason_at_idx', 'game_jlore_totals', format(
+      'select coalesce(sum(delta), 0)::bigint,
+              coalesce(sum(delta) filter (where ref = %L::text), 0)::bigint
+         from public.jlore_grants
+        where profile_id = %L::uuid and reason = ''game''::text
+          and at >= to_timestamp(%s::double precision / 1000.0)
+          and at < to_timestamp(%s::double precision / 1000.0)', 'check-27-1', profile, from_ms, until_ms)],
+    array['fleet_track_grants_profile_reason_at_idx', 'fleet_get', format(
+      'select coalesce(sum(xp), 0)::bigint from public.fleet_track_grants
+        where profile_id = %L::uuid and reason = ''game''::text
+          and at >= to_timestamp(%s::double precision / 1000.0)
+          and at < to_timestamp(%s::double precision / 1000.0)', profile, from_ms, until_ms)]];
+  -- Local to this file's transaction, which the rollback below ends.
+  perform set_config('enable_seqscan', 'off', true);
+  for i in 1 .. array_length(probes, 1) loop
+    plan_text := '';
+    for line in execute 'explain ' || probes[i][3] loop
+      plan_text := plan_text || line || E'\n';
+    end loop;
+    if plan_text ~ 'Seq Scan on (jlore_grants|fleet_track_grants)\M' then
+      raise exception E'FAIL (CHECK 27): % reads its ledger whole:\n%', probes[i][2], plan_text;
+    end if;
+    if plan_text !~ ('\m' || probes[i][1] || '\M')
+       or plan_text !~ 'Index Cond: [^\n]*\mat >= '
+       or plan_text !~ 'Index Cond: [^\n]*\mat < '
+       or plan_text ~ 'Filter: [^\n]*\mat [<>]' then
+      raise exception E'FAIL (CHECK 27): % filters the account''s rows by day instead of reading the day through %:\n%',
+        probes[i][2], probes[i][1], plan_text;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 27): game_jlore_totals and fleet_get read one day of one account''s game rows through % and %, and filter no day',
+    'jlore_grants_profile_reason_at_idx', 'fleet_track_grants_profile_reason_at_idx';
+end $$;
+rollback;
+
+\echo '=== CHECK 28 (#4510): the daily list reads its games'' portraits and the daily sweep its due games, each through an index ==='
+-- daily::games::list reads the portraits of every game it lists in one query on matches_pkey
+-- (db/pg.rs matches_portraits), and the hourly sweep reads its due games in two (daily_games_due): the
+-- running games past their deadline through daily_games_due_idx, and the finished games whose match is
+-- still live from the live matches, through matches_status_created_at_idx and daily_games_pkey. One
+-- `or` over both left the finished arm (`ended_at <= $1`) without an index, so Postgres read every
+-- daily game ever played, and no row is deleted. With sequential scans priced out, no plan may read
+-- daily_games or matches whole, and each must name its index. Each probe is pg.rs's query with its binds
+-- as literals (the portraits' ids are uuid literals: a volatile gen_random_uuid() would not be an index
+-- bound). Over 3,000 analysed matches, all of them live or over, and 2,010 daily games, 2,000 of them
+-- finished with their match over, ten finished with it live and ten running. An empty table lets the
+-- planner read `status in ('live','over')`, which every row meets, over the key it was asked. Rolled back,
+-- as CHECK 21.
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+  select gen_random_uuid(), format('check-28-%s@example.test', n), now() from generate_series(1, 2) as n;
+insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
+                            catalog_version, ceiling_at, started_at, ended_at)
+  select gen_random_uuid(), case when n <= 20 then 'live' else 'over' end, 'c28-' || n,
+         (select id from auth.users where email = 'check-28-1@example.test'),
+         (select id from auth.users where email = 'check-28-2@example.test'),
+         '[]', '[]', 'core-1', now(), now(), case when n <= 20 then null else now() end
+    from generate_series(1, 3000) as n;
+-- Matches 1-10: a game over whose result was never written (match live); 11-20: a running game;
+-- 21-2010: a game over, its match over.
+insert into public.daily_games (match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board,
+                                next_deadline_at, created_at, ended_at)
+  select m.id, m.p1_profile_id, m.p2_profile_id, 'bo1', 1, '{}', '{}',
+         case when n between 11 and 20 then 2000 + n end, 500 + n,
+         case when n between 11 and 20 then null else 600 + n end
+    from (select m.*, split_part(m.seed, '-', 2)::integer as n from public.matches m
+           where m.seed like 'c28-%') m
+   where n <= 2010;
+analyze public.matches;
+analyze public.daily_games;
+do $$
+declare
+  probes    text[];
+  plan_text text;
+  line      text;
+begin
+  probes := array[
+    array['daily_games_due_idx', 'the running games due',
+      'select d.match_id, d.next_deadline_at as at from public.daily_games d
+        where d.ended_at is null and d.next_deadline_at <= 1000::bigint'],
+    array['matches_status_created_at_idx', 'the finished games whose match is still live',
+      'select d.match_id, d.ended_at as at from public.matches m
+         join public.daily_games d on d.match_id = m.id
+        where m.status = ''live'' and d.ended_at <= 1000::bigint'],
+    array['matches_pkey', 'the portraits read',
+      'select id, p1_portrait, p2_portrait from public.matches
+        where id = any(array[''00000000-0000-4000-8000-000000000001'', ''00000000-0000-4000-8000-000000000002'']::uuid[])
+          and status in (''live'', ''over'')']];
+  -- Local to this block's transaction: the files after this one plan as they always have.
+  perform set_config('enable_seqscan', 'off', true);
+  for i in 1 .. array_length(probes, 1) loop
+    plan_text := '';
+    for line in execute 'explain ' || probes[i][3] loop
+      plan_text := plan_text || line || E'\n';
+    end loop;
+    if plan_text ~ 'Seq Scan on (daily_games|matches)\M' then
+      raise exception E'FAIL (CHECK 28): % reads its table whole:\n%', probes[i][2], plan_text;
+    end if;
+    if plan_text !~ ('\m' || probes[i][1] || '\M') then
+      raise exception E'FAIL (CHECK 28): % does not use %:\n%', probes[i][2], probes[i][1], plan_text;
+    end if;
+    if i = 2 and plan_text !~ '\mdaily_games_pkey\M' then
+      raise exception E'FAIL (CHECK 28): % does not use daily_games_pkey:\n%', probes[i][2], plan_text;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 28): the sweep''s two reads and the list''s portraits read go through % and read no table whole',
+    'daily_games_due_idx, matches_status_created_at_idx with daily_games_pkey, and matches_pkey';
 end $$;
 rollback;
 

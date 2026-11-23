@@ -49,8 +49,10 @@ export function precompressedModule(stored: Response): Response {
   headers.set("Content-Type", "application/wasm");
   headers.set("Content-Encoding", "br");
   if (!headers.has("Cache-Control")) headers.set("Cache-Control", MODULE_CACHE_CONTROL);
-  // Stryker disable next-line StringLiteral: `manual` is a Workers-runtime-only body hint with no
-  // observable accessor, so no unit test here can tell it from any other string.
+  withSecurityHeaders(headers);
+  // `manual` is a Workers-runtime-only body hint with no observable accessor, so no unit test here can
+  // tell it from any other string. A disable covers only the line after it, so it stands last.
+  // Stryker disable next-line StringLiteral: a Workers-only body hint no test can read (above)
   return new Response(stored.body, { status: 200, headers, encodeBody: "manual" });
 }
 
@@ -70,9 +72,38 @@ export function forServer(request: Request): Request {
 /** The port the server listens on in the container (its `PORT`). */
 export const SERVER_PORT = 8080;
 
+/**
+ * #4297: the static security headers the Worker's own answers carry, copied character-for-character
+ * from the `/*` block of `apps/web/public/_headers`. The Worker sets them because those answers are
+ * never files Cloudflare serves: `precompressedModule` builds the module's answer and `index.ts`
+ * builds its own 404. `Content-Security-Policy` is excluded: its `connect-src` is a per-build
+ * `%CONNECT_SRC%` placeholder `static-pages.ts` fills, which the edge cannot reproduce, and a
+ * hardcoded CSP would drift or break hosts.
+ */
+export const SECURITY_HEADERS: Readonly<Record<string, string>> = Object.freeze({
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+});
+
+/** #4297: sets `SECURITY_HEADERS` on a Worker-synthesized answer's headers. */
+export function withSecurityHeaders(headers: Headers): void {
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) headers.set(name, value);
+}
+
 /** The server's probes (crates/server/src/api/health.rs): the image check reads liveness's `x-deployed-commit`, the daily cron asks for readiness. */
 export const HEALTH_PATH = "/healthz";
 export const READY_PATH = "/readyz";
+
+/**
+ * #3727: the daily games' sweep (crates/server/src/daily/notify.rs): ends the games whose move ran out
+ * and sends the "your move" emails and pushes while nobody else wakes the server. Hourly, beside the
+ * daily wake-up's cron, and posted to a path outside `/api` and `/ws`, which `isServerPath` never
+ * forwards from the public.
+ */
+export const DAILY_SWEEP_CRON = "7 * * * *";
+export const DAILY_SWEEP_PATH = "/daily-sweep";
 
 /** The server's settings that wrangler.jsonc's `vars` hold, one set per environment. */
 export const SERVER_VARS = ["PUBLIC_ORIGINS", "SUPABASE_URL", "TRUSTED_PROXY_HOPS", "LADDER_BOTS", "DEV_STRICT"] as const;
@@ -87,6 +118,11 @@ export const SERVER_SECRETS = [
   // #3595: an alert's email (crates/server/src/alerts.rs): a sending-only Resend key and the addresses.
   "ALERT_RESEND_API_KEY",
   "ALERT_EMAILS",
+  // #3727: the daily games' "your move" email (a Resend key of its own) and Web Push (the VAPID pair,
+  // whose public half `GET /api/daily/settings` gives the browser). Each channel is off while unset.
+  "PLAYER_RESEND_API_KEY",
+  "VAPID_PRIVATE_KEY",
+  "VAPID_PUBLIC_KEY",
 ] as const;
 
 export type ServerSetting = (typeof SERVER_VARS)[number] | (typeof SERVER_SECRETS)[number];
@@ -105,4 +141,19 @@ export function containerEnv(settings: ServerSettings): Record<string, string> {
     if (value !== undefined && value !== "") vars[name] = value;
   }
   return vars;
+}
+
+/**
+ * #4118: the lowercase hex SHA-256 of `containerEnv(settings)` as JSON with its names in order, so the same
+ * settings in any key order give the same digest, and a change to any one of them, the commit among them,
+ * changes it. The Worker keeps it in the object's storage to tell a running server that started on other
+ * settings from one that started on these (index.ts). It is a digest of secrets: never log or send it.
+ */
+export async function settingsFingerprint(settings: ServerSettings): Promise<string> {
+  const env = containerEnv(settings);
+  const entries = Object.keys(env)
+    .sort()
+    .map((name) => [name, env[name]]);
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(entries)));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }

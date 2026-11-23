@@ -373,6 +373,18 @@ fn place(state: &mut GameState, item: WorkItem) -> WorkItem {
     item
 }
 
+/// The Resume an engine sequence owes: no card's (empty def_id, not Radiant, no instance).
+pub(crate) fn engine_resume(hook: &str, step: &str, data: IndexMap<String, Value>) -> Resume {
+    Resume {
+        def_id: String::new(),
+        hook: hook.to_string(),
+        step: step.to_string(),
+        radiant: false,
+        instance_id: None,
+        data,
+    }
+}
+
 /// Park one owed continuation at the cursor and return the item. The id and `seq` come from
 /// `state.next_seq` (R68's creation order), so the queue a replay builds is the queue the live game
 /// had; `owner` defaults to the active player.
@@ -582,6 +594,10 @@ pub fn script_step_for(script: &Script, resume: &Resume) -> Option<Hook> {
     if resume.hook == crate::subsystems::CHAOS_DEATH_WATCH_HOOK {
         return Some(crate::subsystems::death_watch_step());
     }
+    // R3570004: Stinkyscape+ #142's launch watcher, the same.
+    if resume.hook == crate::subsystems::CHAOS_MS_LAUNCH_WATCH_HOOK {
+        return Some(crate::subsystems::launch_watch_step());
+    }
     // R1845002: a trade offer's steps, the same, as it comes due and as each of its prompts is answered.
     if resume.hook == crate::effects::trade::TRADE_OFFER_HOOK {
         return crate::effects::trade::trade_offer_step(&resume.step);
@@ -636,6 +652,7 @@ const ENGINE_WORK_HOOKS: &[&str] = &[
     "@activate",
     "@aiTurn",
     "@setRepeat",
+    "@setResolved",
     "@extraCry",
     "@melee",
 ];
@@ -680,6 +697,7 @@ pub fn run_work_item(sink: &mut EngineSink<'_>, item: &WorkItem) {
         "@activate" => crate::subsystems::activate::run_owed_activation(sink, item),
         "@aiTurn" => crate::subsystems::ai_policy::run_owed_ai_turn(sink, item),
         "@setRepeat" => crate::cry_trigger::run_owed_repeat(sink, item),
+        "@setResolved" => crate::cry_trigger::run_owed_set_resolved(sink, item),
         "@extraCry" => crate::cry_trigger::run_owed_extra_cries(sink, item),
         "@melee" => crate::combat::run_owed_melee(sink, item),
         _ => {
@@ -749,10 +767,13 @@ pub fn run_next_work(sink: &mut EngineSink<'_>) -> bool {
 /// queue is empty; `triggers::settle` drains here before it pops a trigger (§10.3, R59).
 pub fn drain_work(sink: &mut EngineSink<'_>) -> bool {
     begin_work_cascade(sink);
-    for _ in 0..MAX_WORK_STEPS {
+    for step in 0..MAX_WORK_STEPS {
         if paused(sink) {
             return !has_work(sink.state);
         }
+        // R3925000: a drain that keeps owing work stops at the loop cap, and what is owed at the trip then
+        // drains with its cards' text off, so it adds nothing more.
+        crate::loop_cap::trip_if_due(sink, step);
         if !run_next_work(sink) {
             return true;
         }

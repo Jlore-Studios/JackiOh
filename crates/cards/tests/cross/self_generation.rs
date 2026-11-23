@@ -59,6 +59,14 @@ const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
         "traininggrounds-023",
         "Quadrupling Felinors summons copies of this (rule 4, as Duplicating Felinors)",
     ),
+    (
+        "classicplus-047",
+        "Jogg's Box casts random Spells, and one of them can be TG #57 Legacy: Recycling Initiative, whose end of turn adds a copy of each other card played that turn, Jogg's Box among them (rule 4: copies are not generation)",
+    ),
+    (
+        "stinkyscapeplus-083",
+        "Offworld Replicant's Evolve adds a copy of this to your hand (rule 4: a copy of \"this\" is not generation, R3541001)",
+    ),
 ];
 
 const SEEDS: &[&str] = &["self-gen-a", "self-gen-b", "self-gen-c", "self-gen-d"];
@@ -232,10 +240,7 @@ impl Sweep {
 fn sweep(def_id: &str, seed: &str) -> Vec<String> {
     let s = board(seed, def_id);
     let own = s.card(def_id).id.clone();
-    let plays: Vec<ActionBody> = legal_actions(s.state(), PlayerId::P1)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == own))
-        .collect();
+    let plays: Vec<ActionBody> = s.plays_of(&own);
     if plays.is_empty() {
         return vec![];
     }

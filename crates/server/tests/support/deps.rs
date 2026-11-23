@@ -8,6 +8,8 @@ use axum::body::Body;
 use axum::extract::Request;
 use axum::http::{HeaderMap, HeaderValue};
 use axum::response::Response;
+use indexmap::IndexMap;
+use serde::de::DeserializeOwned;
 use serde_json::{Map, Value};
 use tower::ServiceExt;
 use tracing::field::{Field, Visit};
@@ -25,6 +27,34 @@ pub use super::test_app::{TEST_CATALOG_VERSION, TestAppOptions, test_app, test_a
 /// the deployed server behind one proxy hop (the Worker's, wrangler.jsonc). The server's own default
 /// is 0 (R190), and the client-address tests cover it by setting `TRUSTED_PROXY_HOPS`.
 pub const DEFAULT_TEST_IP: &str = "203.0.113.7";
+
+/// A complete, valid environment for the server, with `extra` over it: what `load_env` takes.
+pub fn env_with(extra: &[(&str, &str)]) -> IndexMap<String, String> {
+    [
+        ("SUPABASE_URL", "https://project.supabase.test"),
+        (
+            "SUPABASE_SECRET_KEY",
+            "sb_secret_0123456789abcdefghijklmnopqrstuv",
+        ),
+        (
+            "DATABASE_URL",
+            "postgres://postgres:postgres@localhost:5432/jackioh",
+        ),
+        ("CODE_PEPPER", "a-pepper-of-at-least-thirty-two-characters"),
+        ("CATALOG_VERSION", jackioh_cards::catalog_version()),
+        ("PUBLIC_ORIGINS", "https://play.jackioh.test"),
+        ("NODE_ENV", "test"),
+    ]
+    .into_iter()
+    .chain(extra.iter().copied())
+    .map(|(name, value)| (name.to_string(), value.to_string()))
+    .collect()
+}
+
+/// A JSON literal as the type it spells, as the port's JSON shape reads it.
+pub fn from_json<T: DeserializeOwned>(value: Value) -> T {
+    serde_json::from_value(value).expect("the literal has the port's JSON shape")
+}
 
 /// R144: test app over empty store baseline without fixtures.
 pub async fn empty_test_app() -> Arc<App> {

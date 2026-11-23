@@ -33,6 +33,7 @@ import { isAnomalyCode } from "../cards/anomalies.ts";
 import { themeFor } from "../cards/art/themes.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { armorTookHalf, damageTier, playTier, UNIT_SLAM, type PlayTier, type PlayType } from "../game/damageFeel.ts";
+import { defIdOfInstance } from "../game/contract.ts";
 import { slamStatsOf, slamTier } from "../game/unitSlam.ts";
 import {
   BLEAT_DELAY_MS,
@@ -54,7 +55,7 @@ import {
   VOICE_DELAY_MS,
   VOICE_PRIORITY,
 } from "./constants.ts";
-import { MUSIC_CARDS } from "./musicData.ts";
+import { soundTablesNow } from "./soundTablesLoader.ts";
 import type {
   CardAudioTable,
   CardHook,
@@ -69,32 +70,6 @@ import type {
 import { entryFor, hookFor } from "./voiceData.ts";
 import { battleshipCues } from "./battleshipCues.ts";
 import { signatureCues } from "./signatureCues.ts";
-
-/** R1088: the defId the view reads on `instanceId`, or undefined when it shows the card nowhere. */
-function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
-  for (const side of ["you", "opponent"] as const) {
-    const sv = side === "you" ? view.you : view.opponent;
-    for (const unit of sv.units) {
-      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
-    }
-    for (const unit of sv.carried ?? []) {
-      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
-    }
-    for (const slot of sv.backrow) {
-      if (slot !== null && !slot.faceDown && slot.instanceId === instanceId) return slot.defId;
-    }
-    for (const card of sv.resolving) {
-      if (card.instanceId === instanceId) return card.defId;
-    }
-  }
-  const hand = view.you.hand;
-  if (Array.isArray(hand)) {
-    for (const card of hand) {
-      if (card.instanceId === instanceId) return card.defId;
-    }
-  }
-  return undefined;
-}
 
 /** The public catalog facts a cue may color itself with (§5.1): never looked up for "hidden". */
 export type CueCard = {
@@ -329,7 +304,7 @@ function playImpact(event: Extract<GameEvent, { type: "cardPlayed" }>, ctx: CueC
  */
 function entranceSting(defId: string, rarity: Rarity | PrintedRarity | undefined, delayMs: number): readonly SoundCue[] {
   if (rarity !== "Legendary" && rarity !== "Mythic") return NONE;
-  if (MUSIC_CARDS[defId]?.intro !== undefined) return NONE;
+  if (soundTablesNow()?.musicCards?.[defId]?.intro !== undefined) return NONE;
   return [sfx("entrance", rarity === "Mythic" ? { mythic: true } : undefined, delayMs)];
 }
 
@@ -658,6 +633,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // B5 E3: the draw is called off, like an attack; R319 keeps the refusal sound the full library's own.
   drawLimited: { sfx: "cancel", cues: () => [sfx("cancel")] },
   turnCutShort: { sfx: "notify", cues: () => [sfx("notify", { urgent: true })] },
+  // R3925000: the loop cap stopped a loop: the same urgent notice.
+  loopCapped: { sfx: "notify", cues: () => [sfx("notify", { urgent: true })] },
   // R437: a mark brands its card as it lands (#50's pending steal) and lets go softly as it lifts.
   marked: { sfx: "brand", cues: markCues },
   // R676: a Glitch tears the match: the rollback's rush with a shattering glass over it.
@@ -672,6 +649,9 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // docs/meditative-set.md M8, MN05
   // R1363: the Armor took the whole hit: a bright ring from the unit's lane (a hero's is centered).
   damageAbsorbed: { sfx: "armorRing", cues: () => [sfx("armorRing")] },
+  // R3857000: a hero kept Armor: the sweep of a stat gained, as a Buff and a gained keyword play it,
+  // centered (a hero's). The ring stays Armor's own for a hit it took whole (R1363, R1365).
+  armorGained: { sfx: "buff", cues: () => [sfx("buff")] },
   // R961: a Jade Counter rose; the badge ticks, the same click as every counter badge.
   jadeChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
 
@@ -682,10 +662,14 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   predicted: { sfx: "notify", cues: () => [sfx("notify")] },
   // R831003: KY's Papaya's curve sweeps across the board.
   curveDrawn: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  // R3554005: the line runs to its tile.
+  lineDrawn: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   // R1183002: the AI takes the rest of the turn.
   autopilotEngaged: { sfx: "notify", cues: () => [sfx("notify")] },
   // R1839002: a Dormant card awakens.
   awakened: { sfx: "radiant", cues: () => [sfx("radiant")] },
+  // R3536005: a card evolves.
+  evolved: { sfx: "radiant", cues: () => [sfx("radiant")] },
   // R1838001: a Trade sends a card into the deck with a shuffle-in's whoosh, naming no card (R203).
   traded: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   // R1840005: the Credits count ticks, as the Jade Counter's does.

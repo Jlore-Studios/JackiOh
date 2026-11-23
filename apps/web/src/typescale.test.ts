@@ -30,8 +30,43 @@ const FAMILIES = [
 ];
 
 const STEP = /var\(--type-[a-z0-9]+(?:-em)?\)/;
-/** A viewport or container term, which a clamp() or max() may hold beside a step. */
-const FLUID = /\d*\.?\d+(?:vw|vh|vmin|vmax|dvh|svh|lvh|cqw|cqh|cqi|cqb|cqmin|cqmax)\b/g;
+/** Viewport and container units, in the order the pattern below tried them. */
+const FLUID_UNITS = ["vw", "vh", "vmin", "vmax", "dvh", "svh", "lvh", "cqw", "cqh", "cqi", "cqb", "cqmin", "cqmax"];
+
+/**
+ * `value` without its `<number><fluid-unit>` terms, as `/\d*\.?\d+(?:vw|…)\b/g` cut them (#4009: the
+ * number plus unit alternation rescans from every position).
+ */
+function stripFluid(value: string): string {
+  let out = "";
+  let at = 0;
+  while (at < value.length) {
+    let i = at;
+    let numEnd = -1;
+    if (/[0-9]/.test(value.charAt(i))) {
+      while (i < value.length && /[0-9]/.test(value.charAt(i))) i++;
+      if (value.charAt(i) === "." && /[0-9]/.test(value.charAt(i + 1))) {
+        i++;
+        while (i < value.length && /[0-9]/.test(value.charAt(i))) i++;
+      }
+      numEnd = i;
+    } else if (value.charAt(i) === "." && /[0-9]/.test(value.charAt(i + 1))) {
+      i += 2;
+      while (i < value.length && /[0-9]/.test(value.charAt(i))) i++;
+      numEnd = i;
+    }
+    if (numEnd !== -1) {
+      const unit = FLUID_UNITS.find((name) => value.startsWith(name, numEnd));
+      if (unit !== undefined && (numEnd + unit.length >= value.length || !/\w/.test(value.charAt(numEnd + unit.length)))) {
+        at = numEnd + unit.length;
+        continue;
+      }
+    }
+    out += value.charAt(at);
+    at++;
+  }
+  return out;
+}
 const KEYWORD = /\b(?:xx-small|x-small|small|medium|large|x-large|xx-large|xxx-large|smaller|larger)\b/;
 
 function offScale(css: string): string[] {
@@ -39,7 +74,7 @@ function offScale(css: string): string[] {
   const found: string[] = [];
   for (const match of code.matchAll(/(?<![\w-])font-size\s*:\s*([^;}]+)/g)) {
     const value = (match[1] ?? "").trim();
-    const rest = value.replace(/var\(--[a-z0-9-]+\)/g, "").replace(FLUID, "");
+    const rest = stripFluid(value.replace(/var\(--[a-z0-9-]+\)/g, ""));
     if (value !== "inherit" && (!STEP.test(value) || /\d/.test(rest) || KEYWORD.test(rest))) found.push(`font-size: ${value}`);
   }
   for (const match of code.matchAll(/(?<![\w-])font-family\s*:\s*([^;}]+)/g)) {
@@ -87,7 +122,7 @@ const UNSCALED: Record<string, number> = {
   "cards/keywords.css": 3,
   "cards/marks.css": 1,
   "cards/wheel/wheel.css": 3,
-  "collection/collection.css": 10,
+  "collection/collection.css": 8,
   "duos/duos.css": 14,
   "economy/economy.css": 6,
   "economy/xp.css": 1,
@@ -105,11 +140,11 @@ const UNSCALED: Record<string, number> = {
   "routes/account.css": 3,
   "routes/game-banner.css": 5,
   "routes/landing.css": 20,
-  "routes/lobby.css": 51,
+  "routes/lobby.css": 32,
   "routes/privacy.css": 3,
   "routes/purchases.css": 2,
   "routes/site-footer.css": 1,
-  "routes/stats.css": 23,
+  "routes/stats.css": 22,
   "settings/changeEmail.css": 1,
   "settings/settings.css": 10,
   "shop/shop.css": 2,
@@ -118,15 +153,26 @@ const UNSCALED: Record<string, number> = {
   "tutorial/tutorial.css": 31,
 };
 
-const STEPS = [...read("typescale.css").matchAll(/^\s*--type-([a-z0-9]+):\s*(\d+)px;$/gm)].map((match) => ({
-  name: match[1] ?? "",
-  px: Number(match[2]),
+/**
+ * Each line's captures (#4009: `/^\s*--…$/gm` line patterns rescan newline runs from every line
+ * start); `pattern` is the line without its `m` flag.
+ */
+function tokenCaptures(text: string, pattern: RegExp): string[][] {
+  const out: string[][] = [];
+  for (const line of text.split("\n")) {
+    const match = pattern.exec(line);
+    if (match !== null) out.push(match.slice(1).map((group) => group ?? ""));
+  }
+  return out;
+}
+
+const STEPS = tokenCaptures(read("typescale.css"), /^\s*--type-([a-z0-9]+):\s*(\d+)px;$/).map(([name = "", px = ""]) => ({
+  name,
+  px: Number(px),
 }));
-const EM_FORMS = [...read("typescale.css").matchAll(/^\s*--type-([a-z0-9]+)-em:\s*calc\((\d+)em \/ (\d+)\);$/gm)].map((match) => ({
-  name: match[1] ?? "",
-  px: Number(match[2]),
-  over: Number(match[3]),
-}));
+const EM_FORMS = tokenCaptures(read("typescale.css"), /^\s*--type-([a-z0-9]+)-em:\s*calc\((\d+)em \/ (\d+)\);$/).map(
+  ([name = "", px = "", over = ""]) => ({ name, px: Number(px), over: Number(over) }),
+);
 
 describe("#2107 the type scale", () => {
   it("#2107 typescale.css names at most TYPE_MAX sizes in px, smallest first, each but the body's with its em form, and nothing else", () => {
@@ -139,7 +185,13 @@ describe("#2107 the type scale", () => {
     expect(body).toBeDefined();
     expect(EM_FORMS).toEqual(STEPS.filter((step) => step.name !== BODY_STEP).map((step) => ({ name: step.name, px: step.px, over: body })));
     const text = read("typescale.css").replace(/\/\*[\s\S]*?\*\//g, "");
-    const rest = text.replace(/^\s*--type-[a-z0-9]+:\s*\d+px;$/gm, "").replace(/^\s*--type-[a-z0-9]+-em:\s*calc\(\d+em \/ \d+\);$/gm, "");
+    // Token lines blanked (#4009: the `/^\s*--…$/gm` patterns rescan newline runs from every line).
+    const rest = text
+      .split("\n")
+      .map((line) =>
+        /^\s*--type-[a-z0-9]+:\s*\d+px;$/.test(line) || /^\s*--type-[a-z0-9]+-em:\s*calc\(\d+em \/ \d+\);$/.test(line) ? "" : line,
+      )
+      .join("\n");
     expect(rest.replace(/\s+/g, "")).toBe(":root{}");
     expect(read("index.css")).toMatch(/^@import "\.\/fonts\.css";\n@import "\.\/palette\.css";\n@import "\.\/typescale\.css";\n/);
   });
@@ -158,7 +210,7 @@ describe("#2107 the type scale", () => {
       if (sheet !== "typescale.css") expect(css, sheet).not.toMatch(/--type-[a-z0-9-]+\s*:/);
       if (sheet !== "fonts.css") expect(css, sheet).not.toMatch(/--font-[a-z0-9-]+\s*:/);
     }
-    expect([...read("fonts.css").matchAll(/^\s*(--font-[a-z0-9-]+):/gm)].map((match) => match[1])).toEqual([
+    expect(tokenCaptures(read("fonts.css"), /^\s*(--font-[a-z0-9-]+):/).map(([name]) => name)).toEqual([
       "--font-display",
       "--font-text",
       "--font-mono",

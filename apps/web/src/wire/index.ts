@@ -19,6 +19,8 @@
 import type { BackrowView as BackrowSlot } from "./generated/BackrowView.ts";
 import type { CardDef } from "./generated/CardDef.ts";
 import type { GameEventType } from "./generated/GameEventType.ts";
+import type { KeywordKind } from "./generated/KeywordKind.ts";
+import { KEYWORD_KINDS as PRINTED_KINDS, UNPRINTED_KEYWORD_KINDS as UNPRINTED_KINDS } from "./catalog.ts";
 
 // ---------------------------------------------------------------------------------------------
 // generated: catalog-types, actions, events, view
@@ -81,10 +83,13 @@ export type { Selection } from "./generated/Selection.ts";
 export type { SetName } from "./generated/SetName.ts";
 export type { SideView } from "./generated/SideView.ts";
 export type { SpawnZone } from "./generated/SpawnZone.ts";
+export type { SplashHit } from "./generated/SplashHit.ts";
 export type { StarscapeNodeView } from "./generated/StarscapeNodeView.ts";
 export type { StarscapeView } from "./generated/StarscapeView.ts";
 export type { Tag } from "./generated/Tag.ts";
 export type { TallyView } from "./generated/TallyView.ts";
+export type { TipsyBlur } from "./generated/TipsyBlur.ts";
+export type { TrampleOverflow } from "./generated/TrampleOverflow.ts";
 export type { Tuning } from "./generated/Tuning.ts";
 export type { UnitView } from "./generated/UnitView.ts";
 export type { Zone } from "./generated/Zone.ts";
@@ -185,16 +190,24 @@ export const GAME_EVENT_TYPES = [
   "deradianted",
   "manaSpent",
   "damageAbsorbed",
+  // Issue #3857: a hero kept Armor (R3857000).
+  "armorGained",
+  // Issue #3925: a resolution loop reached the loop cap (R3925000).
+  "loopCapped",
   "jadeChanged",
   "secretChosen",
   "secretRevealed",
   "predicted",
   // #831's patch (C+ #62 KY's Papaya, R831003).
   "curveDrawn",
+  // Stinkyscape+ E7 (S+ #109 Lancer, #126 Vela, #127 Corvus, R3554005).
+  "lineDrawn",
   // Meditative+ #18 Cognitive Offloading's autopilot (R1183002).
   "autopilotEngaged",
   // Stinkyscape's Dormant: a Dormant card awakened (issue #1839, R1839002).
   "awakened",
+  // Stinkyscape+ Evolve: a card evolved (issue #3536, R3536005).
+  "evolved",
   // Issue #1838's Trade (R1838001).
   "traded",
   // Issue #1840's Credits (R1840005); its Resources are hand cards since #2250 (R2250000).
@@ -231,6 +244,11 @@ type NoneMissing<T extends never> = T;
 
 export type GameEventTypesAreExhaustive = NoneMissing<Exclude<GameEventType, (typeof GAME_EVENT_TYPES)[number]>>;
 
+/** The same guard for the keyword lists: a `KeywordKind` in neither `KEYWORD_KINDS` nor `UNPRINTED_KEYWORD_KINDS` is a compile error. */
+export type KeywordKindsAreExhaustive = NoneMissing<
+  Exclude<KeywordKind, (typeof PRINTED_KINDS)[number] | (typeof UNPRINTED_KINDS)[number]>
+>;
+
 // ---------------------------------------------------------------------------------------------
 // hand-kept helpers
 // ---------------------------------------------------------------------------------------------
@@ -244,6 +262,7 @@ export {
   LEAN_NEWEST,
   PARAM_PLACEHOLDER,
   SHIPPED_SETS,
+  UNPRINTED_KEYWORD_KINDS,
   fillParams,
   hasKeyword,
   isLeanPick,

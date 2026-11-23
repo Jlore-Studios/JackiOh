@@ -4,7 +4,18 @@
 
 import { AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH } from "@jackioh/server-config";
 
-const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
+/**
+ * The local part, the `@` and a domain with no `@` or whitespace; the dot the shape also needs is
+ * checked in `isEmailShape`, since adjacent `[^\s@]+` runs scan super-linearly on long input (#4009).
+ */
+const EMAIL_LOCAL_DOMAIN = /^[^\s@]+@[^\s@]+$/u;
+
+/** Whether `email` shapes like `name@example.com`: one `@`, no whitespace, a dot inside the domain. */
+function isEmailShape(email: string): boolean {
+  if (!EMAIL_LOCAL_DOMAIN.test(email)) return false;
+  const domain = email.slice(email.indexOf("@") + 1);
+  return domain.slice(1, -1).includes(".");
+}
 
 /** Trim only. Case is left alone: the provider folds it, and the address is shown back as typed. */
 export function normalizeEmail(raw: string): string {
@@ -14,7 +25,7 @@ export function normalizeEmail(raw: string): string {
 export function emailProblem(raw: string): string | null {
   const email = normalizeEmail(raw);
   if (email.length === 0) return "Enter your email address.";
-  if (!EMAIL_SHAPE.test(email)) return "Enter a valid email address, like name@example.com.";
+  if (!isEmailShape(email)) return "Enter a valid email address, like name@example.com.";
   return null;
 }
 

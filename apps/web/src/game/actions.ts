@@ -32,6 +32,7 @@ import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
 import {
   LANES,
   NO_HIGHLIGHT,
+  NOT_NOW,
   playerOf,
   sideOf,
   testid,
@@ -100,6 +101,11 @@ export const IDLE: Interaction = { stage: "idle" };
 
 export function isBuilding(interaction: Interaction): interaction is Building {
   return interaction.stage === "playing" || interaction.stage === "activating";
+}
+
+/** #2924: the shown turn, seat and viewer a half-built play or attack belongs to. */
+export function boardKeyOf(view: PlayerView): string {
+  return `${String(view.turn)}:${view.active}:${view.viewer}`;
 }
 
 /** What is still unchosen about the play in flight, derived only from the candidates. */
@@ -224,13 +230,32 @@ export function attackTargetTestid(view: PlayerView, targetId: string): string {
   return player === null ? testid.card(targetId) : testid.hero(sideOf(view, player));
 }
 
+/**
+ * R3777001: the zone whose back is a declared target the viewer may not read (an enemy face-down
+ * backrow card), by the id `legalActions` names it by, or null when the view names no such target.
+ */
+export function hiddenTargetZone(view: PlayerView, instanceId: string): { side: Side; row: Row; lane: number } | null {
+  const entry = view.hiddenTargets?.find((hidden) => hidden.instanceId === instanceId);
+  return entry === undefined ? null : { side: sideOf(view, entry.zone.player), row: entry.zone.row, lane: entry.zone.lane };
+}
+
+/** R3777001: the id of the hidden target whose back lies in this zone, or null. */
+function hiddenTargetAt(view: PlayerView, side: Side, row: Row, lane: number): string | null {
+  const entry = view.hiddenTargets?.find(
+    (hidden) => sideOf(view, hidden.zone.player) === side && hidden.zone.row === row && hidden.zone.lane === lane,
+  );
+  return entry === undefined ? null : entry.instanceId;
+}
+
 export function selectionTestid(view: PlayerView, selection: Selection): string | null {
   switch (selection.pick) {
     case "instance": {
       const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
-      return hand.some((card) => card.instanceId === selection.instanceId)
-        ? testid.handCard(selection.instanceId)
-        : testid.card(selection.instanceId);
+      if (hand.some((card) => card.instanceId === selection.instanceId)) return testid.handCard(selection.instanceId);
+      // R3777001: a face-down card has no testid of its own, so the zone its back lies in stands for it.
+      const hidden = hiddenTargetZone(view, selection.instanceId);
+      if (hidden !== null) return testid.zone(hidden.side, hidden.row, hidden.lane);
+      return testid.card(selection.instanceId);
     }
     case "hero":
       return testid.hero(sideOf(view, selection.player));
@@ -370,19 +395,21 @@ function matches(candidate: BuildBody, picked: Partial<PlayBuild>): boolean {
   return true;
 }
 
-/** A list that is empty is no list at all: the engine never lists one, and neither does the client. */
+/** A picked list that is empty is no pick at all, and the client adds none. */
 function nonEmpty<T>(values: readonly T[] | undefined): T[] | undefined {
   return values === undefined || values.length === 0 ? undefined : [...values];
 }
 
 /**
  * The emitted body is the candidate the engine listed, every field it carries kept, plus only the
- * choices it left unset (CARRY_THROUGH): never a field its action type does not have.
+ * choices it left unset (CARRY_THROUGH): never a field its action type does not have. A list the
+ * candidate carries is kept as listed, an empty one too: R90 lists a declared target the board cannot
+ * satisfy as `targets: []` (Stinkyscape+ #24 Forced Propagation with no card of yours to choose).
  */
 function mergePicked(candidate: BuildBody, picked: Partial<PlayBuild>): BuildBody {
-  const tributes = nonEmpty(candidate.type === "activatePower" ? undefined : (candidate.tributes ?? picked.tributes));
-  const targets = nonEmpty(candidate.targets ?? picked.targets);
-  const modes = nonEmpty(candidate.type === "activatePower" ? undefined : (candidate.modes ?? picked.modes));
+  const tributes = candidate.type === "activatePower" ? undefined : (candidate.tributes ?? nonEmpty(picked.tributes));
+  const targets = candidate.targets ?? nonEmpty(picked.targets);
+  const modes = candidate.type === "activatePower" ? undefined : (candidate.modes ?? nonEmpty(picked.modes));
   switch (candidate.type) {
     case "play": {
       const { tributes: _t, targets: _g, modes: _m, ...rest } = candidate;
@@ -880,7 +907,26 @@ function startPlay(
   return settle({ stage: "playing", instanceId, candidates, picked: {} });
 }
 
-/** R384: an Activate control pressed. Pressing the control of the build in flight puts it back down. */
+/**
+ * R3768000: why a pressed Activate control is greyed, in the view's words (`NOT_NOW` when it gives none), or
+ * undefined when the view lists no such activation on the card (Heroic Power has its own control).
+ */
+function activationReason(view: PlayerView | undefined, target: Extract<ClickTarget, { on: "activate" }>): string | undefined {
+  if (view === undefined) return undefined;
+  const listed = activationsOnField(view, target.instanceId);
+  if (listed === null || listed.length === 0) return undefined;
+  const named = target.ability === undefined ? undefined : listed.find((a) => a.ability === target.ability);
+  if (target.ability !== undefined && named === undefined) return undefined;
+  // No ability named: the control's combined reason, the first one the view gives (as ActivateControl does).
+  const own = named ?? listed.find((a) => a.reason !== undefined);
+  return own?.reason ?? NOT_NOW;
+}
+
+/**
+ * R384: an Activate control pressed. Pressing the control of the build in flight puts it back down.
+ * R3768000: a greyed control's press, when `legal` lists no activation, returns the view's reason as the
+ * notice and sends nothing.
+ */
 function startActivation(
   legal: readonly ActionBody[],
   interaction: Interaction,
@@ -895,7 +941,12 @@ function startActivation(
     return { interaction: IDLE };
   }
   const candidates = activationsFor(legal, target.instanceId, target.ability);
-  if (candidates.length === 0) return { interaction };
+  // `highlightFor` greys every activation control while an attack is picked: that press is refused too, and
+  // `activationReason` is then the view's reason or `NOT_NOW` (R3768000).
+  if (candidates.length === 0 || interaction.stage === "attacking") {
+    const reason = activationReason(view, target);
+    return reason === undefined ? { interaction } : { interaction, notice: reason };
+  }
   const listed = view ? activationsOnField(view, target.instanceId) : null;
   // R1751000: several abilities ask which; R3291000: a launched Starship asks for its one too.
   const asks = listed !== null && (listed.length > 1 || (view !== undefined && isLaunchedStarship(view, target.instanceId)));
@@ -963,7 +1014,11 @@ export function onClickTarget(
         row: target.row,
         lane: target.lane,
       });
-      return asTarget === null ? { interaction } : settle(asTarget);
+      if (asTarget !== null) return settle(asTarget);
+      // R3777001: a face-down card the viewer may not read is picked by the zone its back lies in.
+      const hidden = hiddenTargetAt(view, target.side, target.row, target.lane);
+      const asHidden = hidden === null ? null : narrowByTarget(interaction, { pick: "instance", instanceId: hidden });
+      return asHidden === null ? { interaction } : settle(asHidden);
     }
 
     case "unit":
@@ -982,6 +1037,22 @@ export function onClickTarget(
         return startAttack(legal, target.instanceId) ?? { interaction };
       }
       if (isBuilding(interaction)) {
+        // R3864000, R391, R446: a Tribute may pay for its own zone, so once the play asks only its zone, a click on your
+        // unit is a click on its zone (e2e spec 48, #4079: the tribute was appended again and the play never finished).
+        // Only a unit the play tributes: it is lit, so its click stops at the card (Card.tsx `fire`), while any other
+        // unit's click goes on to its zone itself (R3821000), which a second answer here would play twice.
+        if (
+          target.on === "unit" &&
+          target.side === "you" &&
+          outstandingNeed(interaction)?.kind === "zone" &&
+          someCandidateFixesTribute(interaction, target.instanceId)
+        ) {
+          const zone: ZoneChoice = { row: "units", lane: target.lane };
+          if (someCandidateFixesZone(interaction, zone)) {
+            const next = narrowedBy(interaction, { zone });
+            return next === null ? { interaction } : settle(next);
+          }
+        }
         const asTribute = target.on === "unit" ? narrowByTribute(interaction, target.instanceId) : null;
         if (asTribute !== null) return settle(asTribute);
         const asTarget = narrowByTarget(interaction, { pick: "instance", instanceId: target.instanceId });
@@ -1000,8 +1071,10 @@ export function onClickTarget(
       const started = startAttack(legal, target.instanceId);
       if (started !== null) return started;
       // R849000: no attack listed; the notice is the engine's words, `UnitView.attackReason` (on the
-      // viewer's own units only). Nothing is sent.
-      const reason = view.you.units.find((unit) => unit?.instanceId === target.instanceId)?.attackReason;
+      // viewer's own units only), else (R3821000) `UnitView.switchReason`, so a spent unit says it has
+      // already acted. Nothing is sent.
+      const own = view.you.units.find((unit) => unit?.instanceId === target.instanceId);
+      const reason = own?.attackReason ?? own?.switchReason;
       return reason === undefined ? { interaction } : { interaction, notice: reason };
     }
 

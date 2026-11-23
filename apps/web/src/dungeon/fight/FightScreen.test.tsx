@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import type { Mock } from "vitest";
 
 import { AI_DIFFICULTY, HUMAN_HANDICAP } from "@jackioh/engine/config";
-import type { RunAction, RunContent, RunFightSetup, RunState } from "@jackioh/run";
+import type { RunAction, RunContent, RunFightSetup, RunNode, RunState } from "@jackioh/run";
+import type { ModifierView } from "@jackioh/shared";
 
 import { navigate, paths } from "../../net/navigate.ts";
 import { at } from "../../test/stubServer.ts";
@@ -21,7 +22,8 @@ import {
 import type { PracticeHost } from "../../practice/host.ts";
 import type { PracticeRequestBody, PracticeResponse, PracticeSnapshot, PracticeStartConfig } from "../../practice/protocol.ts";
 import { CONCEDE_BODY } from "../../game/ConfirmConcede.tsx";
-import { baseView, emptySide } from "../../test/fixtures.ts";
+import { modifierListTestid } from "../../game/ModifierList.tsx";
+import { baseView, emptySide, opponentModifiers, yourModifiers } from "../../test/fixtures.ts";
 import { stubPhoneBar } from "../../test/phoneBar.ts";
 import { settle } from "../../test/settle.ts";
 import type { Dungeon } from "../store.ts";
@@ -48,8 +50,11 @@ const SETUP: RunFightSetup = {
   humanMarks: [{ index: 1, radiant: true, upgrades: 0 }],
   enemyDeck: ["core-003"],
   enemyHandicap: { ...AI_DIFFICULTY.medium, deckSize: 1, heroHealth: 30 },
-  enemy: { id: "cave-troll", name: "Cave Troll", heroHealth: 30, deck: ["core-003"], artifacts: ["looming-presence"] },
+  enemy: { id: "cave-troll", name: "Cave Troll", tier: 7, deck: ["core-003"], artifacts: ["war-banner"] },
 };
+
+/** #3586: the node the run stands on, a plain fight. */
+const FIGHT_NODE: RunNode = { kind: "fight", enemy: SETUP.enemy, event: null, artifact: null, column: 0, next: [] };
 
 const RUN = {
   seed: "RUNSED",
@@ -58,7 +63,13 @@ const RUN = {
   artifacts: [{ id: "lucky-coin", level: 2 }],
   blessings: ["blessing-of-dawn"],
   phase: { phase: "fight" },
+  row: 0,
+  col: 0,
+  map: [[FIGHT_NODE]],
 } as unknown as RunState;
+
+/** #3586: the same run, its node an elite. */
+const ELITE_RUN = { ...RUN, map: [[{ ...FIGHT_NODE, kind: "elite" }]] } as RunState;
 
 const CONTENT = {
   pool: [],
@@ -67,7 +78,7 @@ const CONTENT = {
   passives: [
     { id: "lucky-coin", name: "Lucky Coin", kind: "economic", text: "Gain 5 more Coins after each fight.", tier: "bronze" },
     { id: "blessing-of-dawn", name: "Blessing of Dawn", kind: "blessing", text: "Heal 3 after each fight.", tier: null },
-    { id: "looming-presence", name: "Looming Presence", kind: "enemy", text: "Starts with 1 more mana and 1 more card.", tier: null },
+    { id: "war-banner", name: "War Banner", kind: "enemy", text: "The enemy's own banner.", tier: null },
   ],
   events: [],
   curses: [],
@@ -75,15 +86,22 @@ const CONTENT = {
 
 const LOST: RunAction = { type: "fightOver", won: false, hp: 0, damageDealt: 4, healingDone: 0, cardsDrawn: 5, turns: 3 };
 
-function snapshotFor(result: PracticeSnapshot["view"]["result"] = null, aiToAct = false): PracticeSnapshot {
+/** The modifiers each side's view lists (R169). */
+type SideModifiers = { you?: ModifierView[]; opponent?: ModifierView[] };
+
+function snapshotFor(
+  result: PracticeSnapshot["view"]["result"] = null,
+  aiToAct = false,
+  modifiers: SideModifiers = {},
+): PracticeSnapshot {
   return {
     view: baseView({
       viewer: "p1",
       turn: 1,
       active: aiToAct ? "p2" : "p1",
       phase: "main",
-      you: emptySide("p1"),
-      opponent: emptySide("p2", { hand: { count: 4 } }),
+      you: emptySide("p1", { modifiers: modifiers.you ?? [] }),
+      opponent: emptySide("p2", { hand: { count: 4 }, modifiers: modifiers.opponent ?? [] }),
       result,
     }),
     legal: result === null && !aiToAct ? [{ type: "endTurn" }, { type: "concede" }] : [],
@@ -104,9 +122,16 @@ type FightHost = {
 /**
  * The worker, scripted: a conceded game is lost; `runReport` answers each of `reports` in turn, then the
  * action. With `aiToAct` the game starts on the AI's turn, and an `aiStep` is answered with the AI done.
- * `resume` answers `started` only when asked, else `failed`; the first `startFails` starts fail.
+ * `resume` answers `started` only when asked, else `failed`; the first `startFails` starts fail. Every
+ * snapshot lists `modifiers` on its sides' views (R169).
  */
-function fightHost(reports: ("action" | "error")[] = [], aiToAct = false, resume: "started" | "failed" = "failed", startFails = 0): FightHost {
+function fightHost(
+  reports: ("action" | "error")[] = [],
+  aiToAct = false,
+  resume: "started" | "failed" = "failed",
+  startFails = 0,
+  modifiers: SideModifiers = {},
+): FightHost {
   const requests: PracticeRequestBody[] = [];
   let id = 0;
   let failures = startFails;
@@ -115,11 +140,11 @@ function fightHost(reports: ("action" | "error")[] = [], aiToAct = false, resume
       requests.push(body);
       id += 1;
       const mine = id;
-      let response: PracticeResponse = { id: mine, type: "snapshot", snapshot: snapshotFor() };
+      let response: PracticeResponse = { id: mine, type: "snapshot", snapshot: snapshotFor(null, false, modifiers) };
       if (body.type === "resume") {
         response =
           resume === "started"
-            ? { id: mine, type: "started", snapshot: snapshotFor(null, aiToAct), defs: {}, aiSeat: "p2" }
+            ? { id: mine, type: "started", snapshot: snapshotFor(null, aiToAct, modifiers), defs: {}, aiSeat: "p2" }
             : { id: mine, type: "failed", message: "no practice game is saved on this device" };
       }
       if (body.type === "start") {
@@ -127,11 +152,11 @@ function fightHost(reports: ("action" | "error")[] = [], aiToAct = false, resume
           failures -= 1;
           response = { id: mine, type: "failed", message: "the fight could not be dealt" };
         } else {
-          response = { id: mine, type: "started", snapshot: snapshotFor(null, aiToAct), defs: {}, aiSeat: "p2" };
+          response = { id: mine, type: "started", snapshot: snapshotFor(null, aiToAct, modifiers), defs: {}, aiSeat: "p2" };
         }
       }
       if (body.type === "act" && body.action.type === "concede") {
-        response = { id: mine, type: "snapshot", snapshot: snapshotFor({ winner: "p2", reason: "concede" }) };
+        response = { id: mine, type: "snapshot", snapshot: snapshotFor({ winner: "p2", reason: "concede" }, false, modifiers) };
       }
       if (body.type === "runReport") {
         response =
@@ -238,7 +263,34 @@ describe("B23 both sides' relics beside their heroes", () => {
     expect(coin).toHaveTextContent("Gain 5 more Coins after each fight.");
 
     fireEvent.click(screen.getByRole("button", { name: "The enemy's relics: 1" }));
-    expect(screen.getByTestId(fightTestid.trayItem("enemy", "looming-presence"))).toHaveTextContent("Looming Presence");
+    expect(screen.getByTestId(fightTestid.trayItem("enemy", "war-banner"))).toHaveTextContent("War Banner");
+  });
+});
+
+describe("#3586 the enemy's tier beside its relics", () => {
+  it("#3586 the enemy's tier shows beside its relic tray", async () => {
+    renderFight(fightHost(), fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    const tier = screen.getByTestId(fightTestid.tier);
+    expect(tier).toHaveTextContent(/^Tier 7$/);
+    const aside = tier.closest(".hero-aside");
+    expect(aside?.parentElement).toHaveClass("seat-opponent");
+    expect(aside).toContainElement(screen.getByTestId(fightTestid.tray("enemy")));
+  });
+
+  it("#3586 an elite's tier says Elite", async () => {
+    renderFight(fightHost(), { ...fakeDungeon(vi.fn(() => null)), run: ELITE_RUN } as Dungeon);
+    await screen.findByTestId(fightTestid.screen);
+    expect(screen.getByTestId(fightTestid.tier)).toHaveTextContent(/^Elite, tier 7$/);
+  });
+
+  it("#3586 an enemy with no relic still shows its tier", async () => {
+    plan.setup = { ...SETUP, enemy: { ...SETUP.enemy, artifacts: [] } };
+    renderFight(fightHost(), fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+    expect(screen.getByTestId(fightTestid.tier)).toHaveTextContent(/^Tier 7$/);
+    expect(screen.queryByTestId(fightTestid.tray("enemy"))).toBeNull();
   });
 });
 
@@ -249,6 +301,66 @@ describe("B24 the run's timer on screen", () => {
     const timer = screen.getByTestId(fightTestid.timer);
     expect(timer.closest(".board-status")).not.toBeNull();
     expect(timer).toHaveTextContent(/Run time 1:0\d/);
+  });
+});
+
+describe("R3912000 a fight's rail lists the live modifiers (R169)", () => {
+  it("R3912000 a modifier on your side shows the chip in the rail, and tapping it lists the label under You", async () => {
+    const mine = yourModifiers.slice(0, 1);
+    renderFight(fightHost([], false, "failed", 0, { you: mine }), fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    const chip = screen.getByTestId(modifierListTestid.chip);
+    expect(chip).toHaveAttribute("data-count", "1");
+    // Beside the rail's text, a sibling of it, not inside its wrapping span.
+    expect(chip.closest(".modifier-list")?.parentElement).toHaveClass("board-status");
+    expect(chip.closest(".dungeon-fight__status")).toBeNull();
+    expect(screen.queryByTestId(modifierListTestid.panel)).toBeNull();
+
+    fireEvent.click(chip);
+    const panel = await screen.findByTestId(modifierListTestid.panel);
+    for (const modifier of mine) expect(panel).toHaveTextContent(modifier.label);
+    expect([...panel.querySelectorAll(".modifier-list__who")].map((who) => who.textContent)).toEqual(["You"]);
+  });
+
+  it("R3912000 a modifier on the enemy's side is listed under the enemy's name", async () => {
+    renderFight(fightHost([], false, "failed", 0, { opponent: opponentModifiers }), fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    const chip = screen.getByTestId(modifierListTestid.chip);
+    expect(chip).toHaveAttribute("data-count", String(opponentModifiers.length));
+    fireEvent.click(chip);
+    const panel = await screen.findByTestId(modifierListTestid.panel);
+
+    const side = panel.querySelector('[data-side="opponent"]');
+    expect(side?.querySelector(".modifier-list__who")).toHaveTextContent("Cave Troll");
+    expect(side?.querySelector(".modifier-list__who")?.textContent).toBe(screen.getByTestId(fightTestid.enemy).textContent);
+    for (const modifier of opponentModifiers) expect(side).toHaveTextContent(modifier.label);
+    expect(panel.querySelector('[data-side="you"]')).toBeNull();
+  });
+
+  it("R3912000 a modifier on each side is counted together and listed under each name", async () => {
+    renderFight(
+      fightHost([], false, "failed", 0, { you: yourModifiers, opponent: opponentModifiers }),
+      fakeDungeon(vi.fn(() => null)),
+    );
+    await screen.findByTestId(fightTestid.screen);
+
+    const chip = screen.getByTestId(modifierListTestid.chip);
+    expect(chip).toHaveAttribute("data-count", String(yourModifiers.length + opponentModifiers.length));
+    fireEvent.click(chip);
+    const panel = await screen.findByTestId(modifierListTestid.panel);
+
+    expect([...panel.querySelectorAll(".modifier-list__who")].map((who) => who.textContent)).toEqual(["You", "Cave Troll"]);
+    for (const modifier of [...yourModifiers, ...opponentModifiers]) expect(panel).toHaveTextContent(modifier.label);
+  });
+
+  it("R3912000 with no modifier on either side no chip renders", async () => {
+    renderFight(fightHost(), fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
+    expect(screen.queryByTestId(modifierListTestid.panel)).toBeNull();
   });
 });
 
@@ -427,6 +539,73 @@ describe("R2972000 leaving a fight in progress asks first", () => {
     });
 
     expect(navigate(paths.play)).toBe(true);
+    expect(window.location.pathname).toBe(paths.play);
+    expect(screen.queryByTestId(fightTestid.leaveDialog)).toBeNull();
+    at("/");
+  });
+});
+
+describe("R3932000 a dungeon fight has a Menu button that asks before it leaves", () => {
+  it("R3932000 mid-fight Menu button opens the leave dialog and Stay cancels", async () => {
+    at(paths.dungeon);
+    const host = fightHost();
+    renderFight(host, fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    const menu = screen.getByTestId(fightTestid.menu);
+    expect(menu).toHaveTextContent("Menu");
+    expect(menu).toHaveAttribute("aria-label", "Main menu");
+    expect(menu).toHaveAttribute("title", "Main menu");
+    expect(menu).toHaveAttribute("aria-haspopup", "dialog");
+    expect(menu).toHaveClass("control", "control-practice-menu");
+
+    fireEvent.click(menu);
+    expect(window.location.pathname).toBe(paths.dungeon);
+    const dialog = await screen.findByTestId(fightTestid.leaveDialog);
+    expect(dialog).toHaveAttribute("role", "alertdialog");
+    expect(screen.getByTestId(fightTestid.leaveStay)).toHaveFocus();
+
+    fireEvent.click(screen.getByTestId(fightTestid.leaveStay));
+    expect(screen.queryByTestId(fightTestid.leaveDialog)).toBeNull();
+    expect(screen.getByTestId(fightTestid.screen)).toBeInTheDocument();
+    expect(host.reports()).toBe(0);
+    expect(host.starts()).toHaveLength(1);
+    at("/");
+  });
+
+  it("R3932000 mid-fight Menu button confirms leave to the Play menu", async () => {
+    at(paths.dungeon);
+    const host = fightHost();
+    renderFight(host, fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    fireEvent.click(screen.getByTestId(fightTestid.menu));
+    const leave = await screen.findByTestId(fightTestid.leaveConfirm);
+    expect(leave).toHaveClass("button-danger");
+    fireEvent.click(leave);
+    expect(window.location.pathname).toBe(paths.play);
+    expect(screen.getByTestId(fightTestid.screen)).toBeInTheDocument();
+    expect(host.reports()).toBe(0);
+    expect(host.starts()).toHaveLength(1);
+    at("/");
+  });
+
+  it("R3932000 once the fight has its result Menu goes to Play without asking", async () => {
+    at(paths.dungeon);
+    const host = fightHost();
+    renderFight(host, fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(fightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+
+    const menu = screen.getByTestId(fightTestid.menu);
+    expect(menu).not.toHaveAttribute("aria-haspopup");
+
+    fireEvent.click(menu);
     expect(window.location.pathname).toBe(paths.play);
     expect(screen.queryByTestId(fightTestid.leaveDialog)).toBeNull();
     at("/");

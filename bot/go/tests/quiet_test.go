@@ -358,7 +358,9 @@ func TestQuiet_AForcedItemSkipsTheQuietCheck(t *testing.T) {
 			"`claude-1` (claude, `opus`, strong); build on `claude-1` (claude, " +
 			"`sonnet`, medium); review on `claude-1` (claude, `opus`, strong)",
 			true, ""})
-	idle := testsupport.MakeCtx(fakes.NewFakeGitHub(), testsupport.Ctx{At: testsupport.Day})
+	// Forced, the accounts' lanes count as spare outside their hours too (#3659).
+	idle := testsupport.MakeCtx(fakes.NewFakeGitHub(), testsupport.Ctx{At: testsupport.Day,
+		Cfg: testsupport.MakeConfig(testsupport.Config{Env: crossAll})})
 	testsupport.IdleFor(idle)
 	look = plan.Peek_(idle, true, nil, "auto")
 	assertEqual(t, []bool{look.Work, look.Forced}, []bool{true, true})
@@ -366,11 +368,16 @@ func TestQuiet_AForcedItemSkipsTheQuietCheck(t *testing.T) {
 
 func TestQuiet_ASurveyWhenIdle(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
-	assertFalse(t, plan.Peek_(testsupport.MakeCtx(gh), false, nil, "auto").Work) // idle, but not for 30 minutes yet
-	assertTrue(t, plan.Peek_(testsupport.MakeCtx(gh), false, nil, "auto").Idle)
-	ctx := testsupport.MakeCtx(gh)
+	// claude-1 alone has a secret: its two lanes are spare, more than the one a survey waits for
+	// (#3740), but no tick has seen them spare yet.
+	look := plan.Peek_(testsupport.MakeCtx(gh), false, nil, "auto")
+	assertEqual(t, []any{look.Work, look.Idle, look.Spare}, []any{false, true, 2})
+	every := testsupport.Ctx{Cfg: testsupport.MakeConfig(testsupport.Config{Env: crossAll})}
+	assertFalse(t, plan.Peek_(testsupport.MakeCtx(gh, every), false, nil, "auto").Work) // no tick saw them spare yet
+	assertTrue(t, plan.Peek_(testsupport.MakeCtx(gh, every), false, nil, "auto").Idle)
+	ctx := testsupport.MakeCtx(gh, every)
 	testsupport.IdleFor(ctx)
-	look := plan.Peek_(ctx, false, nil, "auto")
+	look = plan.Peek_(ctx, false, nil, "auto")
 	assertTrue(t, look.Work)
 	assertIn(t, "survey", look.Reason)
 }

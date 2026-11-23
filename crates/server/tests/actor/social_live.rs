@@ -24,7 +24,7 @@ use super::duos::{
     settle,
 };
 use crate::support::deps::{add_user, empty_test_app, fake_auth};
-use crate::support::store::{Account, account, befriend, fake, uuid};
+use crate::support::store::{Account, account, befriend, fake, store, uuid};
 
 /// RFC 6455's policy violation: a socket past its malformed budget (R835002).
 const CLOSE_POLICY_VIOLATED: u16 = 1008;
@@ -138,7 +138,14 @@ mod r3214000_signing_in {
         let first = next_social(&client, 0).await;
         assert_eq!(
             first,
-            json!({ "type": "social", "incoming": [], "outgoing": [], "unread": {} })
+            json!({
+                "type": "social",
+                "incoming": [],
+                "outgoing": [],
+                "unread": {},
+                "dailyWaiting": 0,
+                "notificationsUnread": 0,
+            })
         );
         assert!(client.close_code().is_none());
         for frame in client.frames() {
@@ -574,5 +581,491 @@ mod r3214000_the_connection_limits {
         // The address's match, co-op and watch sockets are counted apart, so idle tabs take none of them.
         assert_eq!(served.upgrade_status(WATCH_PATH, &protocols).await, 101);
         assert!(held.iter().all(|client| client.close_code().is_none()));
+    }
+}
+
+mod r3730000_lobbies {
+    //! A private lobby's changes reach its members alone (R3730000), and an invite the friend alone
+    //! (R3730005), each a word over `/ws/social` with nothing of the lobby in it.
+    use super::*;
+
+    /// `who`'s first `type` frame from index `from` on.
+    async fn next_of(client: &WsClient, from: usize, kind: &str, who: &str) -> Value {
+        client
+            .wait_for(from, PROMPTLY, |frame| frame["type"] == kind)
+            .await
+            .unwrap_or_else(|| panic!("{who}: no {kind} frame: {:?}", client.frames()))
+            .2
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3730000_every_lobby_change_reaches_its_members_alone() {
+        let app = empty_test_app().await;
+        let (ana, bob, cy) = three_friends(&app).await;
+        let served = serve(&app);
+        let (ana_ws, bob_ws, cy_ws) = (
+            connected(&served, &ana).await,
+            connected(&served, &bob).await,
+            connected(&served, &cy).await,
+        );
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/lobbies",
+            &ana.token,
+            json!({ "format": "duel", "mode": "random" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let code = body["code"].as_str().expect("a lobby code").to_string();
+        let (from_ana, from_bob, from_cy) = (ana_ws.received(), bob_ws.received(), cy_ws.received());
+
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/lobbies/{code}/enter"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let word = json!({ "type": "lobby", "code": code });
+        assert_eq!(next_of(&ana_ws, from_ana, "lobby", "Ana").await, word);
+        assert_eq!(next_of(&bob_ws, from_bob, "lobby", "Bob").await, word);
+        assert_told_nothing(&cy_ws, from_cy, "Cy").await;
+
+        // A guest who leaves is told too, once more, so their screen reads the seat gone.
+        let from_bob = bob_ws.received();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/lobbies/{code}/leave"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        assert_eq!(next_of(&bob_ws, from_bob, "lobby", "Bob").await, word);
+    }
+
+    // R4072000: the move onto the running catalog tells every member over `/ws/social`.
+    #[tokio::test(start_paused = true)]
+    async fn r4072000_the_move_reaches_every_member() {
+        let app = empty_test_app().await;
+        let (ana, bob, cy) = three_friends(&app).await;
+        let served = serve(&app);
+        let (ana_ws, bob_ws, cy_ws) = (
+            connected(&served, &ana).await,
+            connected(&served, &bob).await,
+            connected(&served, &cy).await,
+        );
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/lobbies",
+            &ana.token,
+            json!({ "format": "duel", "mode": "random" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let code = body["code"].as_str().expect("a lobby code").to_string();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/lobbies/{code}/enter"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        for who in [&ana, &bob] {
+            let (status, body) = api(
+                &app,
+                "POST",
+                &format!("/api/lobbies/{code}/pick"),
+                &who.token,
+                json!({ "mode": "random" }),
+            )
+            .await;
+            assert_eq!(status, 204, "{body}");
+            let (status, body) = api(
+                &app,
+                "POST",
+                &format!("/api/lobbies/{code}/ready"),
+                &who.token,
+                json!({ "ready": true }),
+            )
+            .await;
+            assert_eq!(status, 204, "{body}");
+        }
+        // Fake a lobby made before a deploy: its stored catalog is older.
+        let lobby = store!(&app, tx => tx.lobbies_get(&code).await.expect("lobbies.get")).expect("the lobby");
+        let rev = lobby.rev;
+        let mut aged = lobby.clone();
+        aged.catalog_version = "v-before-the-deploy".to_string();
+        assert!(store!(&app, tx => tx.lobbies_update(&aged, rev).await.expect("lobbies.update")));
+        let (from_ana, from_bob, from_cy) = (ana_ws.received(), bob_ws.received(), cy_ws.received());
+
+        let (status, body) = api(
+            &app,
+            "GET",
+            &format!("/api/lobbies/{code}"),
+            &ana.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let word = json!({ "type": "lobby", "code": code });
+        assert_eq!(next_of(&ana_ws, from_ana, "lobby", "Ana").await, word);
+        assert_eq!(next_of(&bob_ws, from_bob, "lobby", "Bob").await, word);
+        assert_told_nothing(&cy_ws, from_cy, "Cy").await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3730005_an_invite_reaches_the_friend_alone() {
+        let app = empty_test_app().await;
+        let (ana, bob, cy) = three_friends(&app).await;
+        let served = serve(&app);
+        let (ana_ws, bob_ws, cy_ws) = (
+            connected(&served, &ana).await,
+            connected(&served, &bob).await,
+            connected(&served, &cy).await,
+        );
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/lobbies",
+            &ana.token,
+            json!({ "format": "coop", "difficulty": "medium" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let code = body["code"].as_str().expect("a lobby code").to_string();
+        let (from_ana, from_bob, from_cy) = (ana_ws.received(), bob_ws.received(), cy_ws.received());
+
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/lobbies/{code}/invite"),
+            &ana.token,
+            json!({ "profileId": bob.id }),
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        assert_eq!(
+            next_of(&bob_ws, from_bob, "lobbyInvite", "Bob").await,
+            json!({
+                "type": "lobbyInvite",
+                "code": code,
+                "format": "coop",
+                "from": { "profileId": ana.id, "username": ana.name },
+            })
+        );
+        assert_told_nothing(&ana_ws, from_ana, "Ana").await;
+        assert_told_nothing(&cy_ws, from_cy, "Cy").await;
+    }
+}
+
+mod r4039000_frames {
+    //! R4039000: a row of an account's notification feed reaches every one of its sockets as a
+    //! `notification` frame, with its social read after it, and no other account's.
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r4039000_a_notification_reaches_every_socket_of_its_account_alone() {
+        let app = empty_test_app().await;
+        let ana = account(&app, 1, "Ana").await;
+        let bob = account(&app, 2, "Bob").await;
+        let cy = account(&app, 3, "Cy").await;
+        let served = serve(&app);
+        let (bob_one, bob_two, ana_ws, cy_ws) = (
+            connected(&served, &bob).await,
+            connected(&served, &bob).await,
+            connected(&served, &ana).await,
+            connected(&served, &cy).await,
+        );
+        let from: Vec<usize> = [&bob_one, &bob_two, &ana_ws, &cy_ws]
+            .iter()
+            .map(|client| client.received())
+            .collect();
+
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/friends/requests",
+            &ana.token,
+            json!({ "username": bob.name }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let request_id = body["requestId"].as_str().expect("a request id").to_string();
+        for (client, at) in [(&bob_one, from[0]), (&bob_two, from[1])] {
+            let (index, _, frame) = client
+                .wait_for(at, PROMPTLY, |frame| frame["type"] == "notification")
+                .await
+                .unwrap_or_else(|| panic!("Bob: no notification frame: {:?}", client.frames()));
+            assert_eq!(
+                frame,
+                json!({
+                    "type": "notification",
+                    "notification": {
+                        "id": frame["notification"]["id"],
+                        "kind": "friendRequest",
+                        "actor": { "profileId": ana.id, "username": ana.name },
+                        "subject": request_id,
+                        "payload": {},
+                        "createdAt": frame["notification"]["createdAt"],
+                        "read": false,
+                    },
+                })
+            );
+            assert_eq!(next_social(client, index).await["notificationsUnread"], 1);
+        }
+        settle().await;
+        for (client, at, who) in [(&ana_ws, from[2], "Ana"), (&cy_ws, from[3], "Cy")] {
+            assert!(
+                client.of_type_since(at, "notification").is_empty(),
+                "{who} was told {:?}",
+                client.frames()
+            );
+        }
+        assert_told_nothing(&cy_ws, from[3], "Cy").await;
+    }
+}
+
+mod r4233000_push {
+    //! R4233000: a mark that changes a row pushes the owner's social frame, with the new count,
+    //! to its open `/ws/social` sockets.
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r4233000_a_mark_pushes_the_new_count() {
+        let app = empty_test_app().await;
+        let ana = account(&app, 1, "Ana").await;
+        let bob = account(&app, 2, "Bob").await;
+        let served = serve(&app);
+        let (_ana_ws, bob_ws) = (connected(&served, &ana).await, connected(&served, &bob).await);
+
+        // Ana asks Bob: his sockets hear the row and the count of one.
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/friends/requests",
+            &ana.token,
+            json!({ "username": bob.name }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let request_id = body["requestId"].as_str().expect("a request id").to_string();
+        let from = bob_ws.received();
+        bob_ws
+            .wait_for(from, PROMPTLY, |frame| frame["type"] == "notification")
+            .await
+            .unwrap_or_else(|| panic!("Bob: no notification frame: {:?}", bob_ws.frames()));
+        assert_eq!(next_social(&bob_ws, from).await["notificationsUnread"], 1);
+
+        // Bob accepts: answering marks the row, and the mark pushes his new count of none.
+        // Nothing else in the accept pushes Bob a social frame (the accept is told to Ana).
+        let from = bob_ws.received();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/friends/requests/{request_id}/accept"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(next_social(&bob_ws, from).await["notificationsUnread"], 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r4233000_a_board_read_pushes_the_new_count() {
+        use jackioh_server::config::NOTIFICATIONS_KEEP;
+        use jackioh_server::notifications::store::{NewNotification, NotificationKind};
+
+        let app = empty_test_app().await;
+        let ana = account(&app, 1, "Ana").await;
+        let bob = account(&app, 2, "Bob").await;
+        befriend(&app, &ana, &bob).await;
+
+        // A daily game between them: Ana challenges, Bob accepts.
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/daily/challenges",
+            &ana.token,
+            json!({ "friendId": bob.id, "mode": "random", "perMoveDays": 3 }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let challenge_id = body["id"].as_str().expect("a challenge id").to_string();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/daily/challenges/{challenge_id}/accept"),
+            &bob.token,
+            json!({ "mode": "random" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let match_id = body["matchId"].as_str().expect("a match id").to_string();
+
+        // One unread `dailyMove` row about the game, as a handed-over move would write. The
+        // store write itself pushes nothing; only opening the board does.
+        let mut tx = app.db.begin(None).await.expect("a store transaction begins");
+        tx.notifications_add(
+            &NewNotification {
+                profile_id: bob.id.clone(),
+                kind: NotificationKind::DailyMove,
+                actor_id: Some(ana.id.clone()),
+                subject: Some(match_id.clone()),
+                payload: json!({}),
+                created_at: now_ms(),
+                read: false,
+            },
+            NOTIFICATIONS_KEEP,
+        )
+        .await
+        .expect("the row is written");
+        tx.commit().await.expect("the row commits");
+        let (status, social) = api(&app, "GET", "/api/social", &bob.token, Value::Null).await;
+        assert_eq!(status, 200, "{social}");
+        assert_eq!(social["notificationsUnread"], 1);
+
+        let served = serve(&app);
+        let bob_ws = connected(&served, &bob).await;
+
+        // Bob opens the board: the read marks the row, and the mark pushes his new count of
+        // none. Nothing else in the read pushes Bob a frame.
+        let from = bob_ws.received();
+        let (status, body) = api(
+            &app,
+            "GET",
+            &format!("/api/daily/games/{match_id}"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(next_social(&bob_ws, from).await["notificationsUnread"], 0);
+
+        // Reading again marks nothing, so it pushes nothing either.
+        let from = bob_ws.received();
+        let (status, body) = api(
+            &app,
+            "GET",
+            &format!("/api/daily/games/{match_id}"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_told_nothing(&bob_ws, from, "Bob").await;
+    }
+
+    /// #4291 (F22): a mark reaches every socket its account holds open, a second tab's too.
+    #[tokio::test(start_paused = true)]
+    async fn r4233000_a_mark_reaches_every_socket_of_its_account() {
+        let app = empty_test_app().await;
+        let ana = account(&app, 1, "Ana").await;
+        let bob = account(&app, 2, "Bob").await;
+        let served = serve(&app);
+        let tabs = [connected(&served, &bob).await, connected(&served, &bob).await];
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/friends/requests",
+            &ana.token,
+            json!({ "username": bob.name }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let request_id = body["requestId"].as_str().expect("a request id").to_string();
+        for tab in &tabs {
+            let from = 0;
+            tab.wait_for(from, PROMPTLY, |frame| frame["type"] == "notification")
+                .await
+                .unwrap_or_else(|| panic!("a tab of Bob's: no notification frame: {:?}", tab.frames()));
+        }
+
+        let from: Vec<usize> = tabs.iter().map(WsClient::received).collect();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/friends/requests/{request_id}/accept"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        for (tab, from) in tabs.iter().zip(from) {
+            assert_eq!(next_social(tab, from).await["notificationsUnread"], 0);
+        }
+    }
+
+    /// #4291 (F2): the ending told to the player whose own concession ended a daily game is written
+    /// read, so their socket is sent no `notification` frame for it; the other player's is.
+    #[tokio::test(start_paused = true)]
+    async fn r4233000_a_conceders_own_ended_row_sends_them_no_notification() {
+        let app = empty_test_app().await;
+        let ana = account(&app, 1, "Ana").await;
+        let bob = account(&app, 2, "Bob").await;
+        befriend(&app, &ana, &bob).await;
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/daily/challenges",
+            &ana.token,
+            json!({ "friendId": bob.id, "mode": "random", "perMoveDays": 3 }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let challenge_id = body["id"].as_str().expect("a challenge id").to_string();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/daily/challenges/{challenge_id}/accept"),
+            &bob.token,
+            json!({ "mode": "random" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let match_id = body["matchId"].as_str().expect("a match id").to_string();
+        let (status, game) = api(
+            &app,
+            "GET",
+            &format!("/api/daily/games/{match_id}"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{game}");
+
+        let served = serve(&app);
+        let (ana_ws, bob_ws) = (connected(&served, &ana).await, connected(&served, &bob).await);
+        let (ana_from, bob_from) = (ana_ws.received(), bob_ws.received());
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/daily/games/{match_id}/actions"),
+            &bob.token,
+            json!({ "after": game["seq"], "nonce": "concede", "action": { "type": "concede" } }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let (_, _, told) = ana_ws
+            .wait_for(ana_from, PROMPTLY, |frame| frame["type"] == "notification")
+            .await
+            .unwrap_or_else(|| panic!("Ana: no notification frame: {:?}", ana_ws.frames()));
+        assert_eq!(told["notification"]["kind"], "dailyEnded", "{told}");
+        assert!(
+            bob_ws
+                .wait_for(bob_from, PROMPTLY, |frame| frame["type"] == "notification")
+                .await
+                .is_none(),
+            "Bob was told of his own concession: {:?}",
+            bob_ws.frames()
+        );
     }
 }

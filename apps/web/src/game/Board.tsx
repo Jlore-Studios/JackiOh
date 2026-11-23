@@ -13,6 +13,7 @@ import type { CardView, CreditView, GameEvent, GameEventType, LibraryView, Playe
 
 import { animTestid } from "./animations.ts";
 import Card, { cx, isLegal, isSelected, legalAttr, type Pops } from "./Card.tsx";
+import { blackHoleCount, laneMarkOf } from "./geometry.ts";
 import { CatalogContext, MatchCardsProvider, type CardLookup } from "./catalog.ts";
 import { RIFFLE_LEAVES } from "./config.ts";
 import {
@@ -52,6 +53,7 @@ import { getAudioEngine } from "../audio/engine.ts";
 import LanguageButton from "../i18n/LanguageButton.tsx";
 import { FriendsButton } from "../together/FriendsButton.tsx";
 import { formatSeconds, t } from "../i18n/i18n.ts";
+import { EventTag } from "./EventTag.tsx";
 import { ActingProvider } from "./spent.ts";
 import { KeywordLossProvider, keywordLossesFrom } from "./keywordLoss.ts";
 import { AwakeningProvider, awakeningsFrom } from "./awakening.ts";
@@ -160,11 +162,13 @@ function ManaTray({
   mana,
   credit,
   animating,
+  infinite,
 }: {
   side: Side;
   mana: { current: number; max: number };
   credit?: CreditView;
   animating?: AnimatingMap;
+  infinite?: boolean;
 }): ReactElement {
   const testId = `mana-${side}`;
   const crystals = Math.max(mana.max, mana.current);
@@ -177,7 +181,9 @@ function ManaTray({
       data-current={mana.current}
       data-max={mana.max}
       data-animating={animating?.get(testId)}
-      title={t("Mana {current}/{max}", { current: mana.current, max: mana.max })}
+      // R3548004: infinite mana reads infinity, at no number.
+      data-infinite={infinite === true ? "true" : undefined}
+      title={infinite === true ? t("Mana: infinite") : t("Mana {current}/{max}", { current: mana.current, max: mana.max })}
     >
       <span className="crystals">
         {Array.from({ length: crystals }, (_unused, index) => (
@@ -192,7 +198,7 @@ function ManaTray({
         ))}
       </span>
       <span className="mana-text">
-        {mana.current}/{mana.max}
+        {infinite === true ? "∞" : `${mana.current}/${mana.max}`}
       </span>
       {credit !== undefined && (
         <span
@@ -387,6 +393,7 @@ function Pile({
           </span>
         ) : null}
         {children}
+        <EventTag host={regionId} animating={animating?.get(regionId)} />
       </span>
       {inspect.overlay}
     </>
@@ -403,6 +410,7 @@ function Seat({
   pops,
   notices,
   emotes,
+  portraits,
   aside,
   heroLabel,
 }: {
@@ -415,6 +423,8 @@ function Seat({
   pops: ReadonlyMap<string, Pops>;
   notices: OverflowNotices;
   emotes?: BoardProps["emotes"];
+  /** R3976000: each seat's portrait where no emote surface gives one (a replay's board). */
+  portraits?: BoardProps["portraits"];
   /** The route's chrome beside this seat's hero (`HeroAside`), drawn outside the hero's own clicks. */
   aside?: ReactNode;
   /** The opponent hero's seat label (a practice game's `AI · Easy`); drawn only on the opponent's seat. */
@@ -439,6 +449,7 @@ function Seat({
         onControl={onControl}
         pops={pops.get(testid.hero(side))}
         emotes={emotes?.(side)}
+        portrait={portraits?.[seat.player]}
         {...(side === "opponent" && heroLabel !== undefined ? { seatLabel: heroLabel } : {})}
       />
       {aside === undefined || aside === null ? null : (
@@ -446,7 +457,7 @@ function Seat({
           {aside}
         </div>
       )}
-      <ManaTray side={side} mana={seat.mana} credit={seat.credit} animating={animating} />
+      <ManaTray side={side} mana={seat.mana} credit={seat.credit} animating={animating} infinite={seat.infiniteMana === true} />
       {/* R1847000: the seat's starscape map, both seats' once its player has first traveled. */}
       {seat.starscape !== undefined && <StarscapeMap side={side} starscape={seat.starscape} />}
       <span className="piles">
@@ -574,6 +585,7 @@ export default function Board({
   animating,
   animated,
   turnClock,
+  endTurnLabel,
   matchStatus,
   boardRail,
   heroAside,
@@ -585,6 +597,7 @@ export default function Board({
   onClick,
   onControl,
   emotes,
+  portraits = null,
   wearCosmetics = false,
   deckCosmetics = null,
   loadouts = null,
@@ -720,6 +733,7 @@ export default function Board({
           pops={pops}
           notices={notices}
           emotes={emotes}
+          portraits={portraits}
           aside={heroAside?.enemy}
           {...(enemyLabel === undefined ? {} : { heroLabel: enemyLabel })}
         />
@@ -738,7 +752,12 @@ export default function Board({
             <CornerProps mat={slots.table} half="yours" draining={draining} />
             <CornerProps mat={theirSlots.table} half="theirs" />
             {LANES.map((lane) => (
-              <div className="lane" key={lane} data-lane={lane}>
+              <div className="lane" key={lane} data-lane={lane} data-lane-mark={laneMarkOf(view, lane) ?? undefined}>
+                {laneMarkOf(view, lane) === "blackHole" && (
+                  <span className="black-hole-count" data-testid={testid.blackHoleCount}>
+                    {blackHoleCount(view)}
+                  </span>
+                )}
                 {FIELD_ROWS.map((slot) => (
                   <Zone
                     key={`${slot.side}-${slot.row}`}
@@ -754,15 +773,18 @@ export default function Board({
                 ))}
               </div>
             ))}
+            {/* A group, so its name is allowed on a div that may hold no notice (axe aria-prohibited-attr, spec 38). */}
+            <div className="board-notices" role="group" aria-label={t("Notices")}>
+              {boardNotices}
+            </div>
           </div>
 
-          <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} aside={heroAside?.own} />
+          <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} portraits={portraits} aside={heroAside?.own} />
           <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} view={view} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("you")} />
         </HoveredHandCardProvider>
 
         <div className="control-bar" aria-label={t("Controls")}>
           {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}
-          {boardNotices === undefined ? null : <div className="board-notices">{boardNotices}</div>}
           {/* Whose turn, above End turn wherever the controls have a column of their own (board.css
               hides it on a phone held upright, where the shell's banner says it). The banner is the
               live region, so this copy stays out of the accessibility tree. */}
@@ -797,7 +819,7 @@ export default function Board({
             <ControlButton
               control="end-turn"
               testId={testid.endTurn}
-              label={endTurnState === "enemy" ? t("Enemy turn") : armed ? t("Confirm end turn") : t("End turn")}
+              label={endTurnState === "enemy" ? t("Enemy turn") : armed ? t("Confirm end turn") : (endTurnLabel ?? t("End turn"))}
               highlight={highlight}
               animating={animating}
               confirm={armed ? "armed" : undefined}

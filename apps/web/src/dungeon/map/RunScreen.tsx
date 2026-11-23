@@ -148,7 +148,7 @@ function PhaseBody({ dungeon, run, content, send, opened }: PhaseBodyProps): Rea
   const phase = run.phase;
   switch (phase.phase) {
     case "map":
-      return <MapScreen run={run} content={content} send={send} />;
+      return <MapScreen run={run} content={content} trail={dungeon.trail} send={send} />;
     case "fight":
       // Part E's screen owns fights; the page never renders this screen for one.
       return <></>;

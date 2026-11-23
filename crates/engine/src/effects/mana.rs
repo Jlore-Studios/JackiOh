@@ -31,6 +31,40 @@ pub fn gain_mana(args: GainManaArgs) -> Effect {
     })
 }
 
+/// `loseMaxMana`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct LoseMaxManaArgs {
+    pub amount: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// R3569008 (S+ #82 Endless Expedition): "For the rest of the game lose N mana": the player's persistent
+/// modifier to max mana falls by `amount` (§2.3), so max mana is lower at every refresh from now on,
+/// floored at 0 as §2.3's formula is. Current mana falls as far as max does, spent crystals going first
+/// (an empty crystal is the one lost), never below 0. A loss that moves nothing announces nothing.
+pub fn lose_max_mana(args: LoseMaxManaArgs) -> Effect {
+    Effect::new("loseMaxMana", move |ctx| {
+        if args.amount <= 0 {
+            return;
+        }
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let side = &mut ctx.sink.state.players[player];
+        let (max_before, current_before) = (side.mana.max, side.mana.current);
+        side.mana.perm_mod -= args.amount;
+        side.mana.max = crate::mana::max_mana_for(side);
+        let lost = (max_before - side.mana.max).max(0);
+        let empty = (max_before - current_before).max(0);
+        side.mana.current = (current_before - (lost - empty).max(0)).max(0);
+        if side.mana.max != max_before || side.mana.current != current_before {
+            let event = mana_event(player, side);
+            ctx.sink.events.push(event);
+        }
+    })
+}
+
 /// `refreshMana`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -89,14 +123,53 @@ pub fn next_turn_mana(args: NextTurnManaArgs) -> Effect {
     })
 }
 
+/// `changeMaxMana`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct ChangeMaxManaArgs {
+    pub amount: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// R3538006 (S+ #95 JC Backed): "lose N mana for the rest of the game" lowers max mana: `amount`
+/// onto the seat's persistent modifier, max mana recomputed, and a loss comes off current mana too,
+/// never below 0, as `move_mana_crystals` takes it. A change that moves nothing announces nothing.
+pub fn change_max_mana(args: ChangeMaxManaArgs) -> Effect {
+    Effect::new("changeMaxMana", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let side = &mut ctx.sink.state.players[player];
+        let before = (side.mana.max, side.mana.current);
+        side.mana.perm_mod += args.amount;
+        side.mana.max = crate::mana::max_mana_for(side);
+        let lost = (before.0 - side.mana.max).max(0);
+        side.mana.current = (side.mana.current - lost).max(0);
+        if (side.mana.max, side.mana.current) != before {
+            let event = crate::mana::mana_event(player, side);
+            ctx.sink.events.push(event);
+        }
+    })
+}
+
 /// R1854003: "Steal your enemy's mana crystals" (Stinkyscape #7 The Greatest Heist's last reward),
-/// by `mana::move_mana_crystals`. Each side whose mana changed is announced; a steal from a player
-/// with no maximum mana announces nothing.
+/// by `mana::move_mana_crystals`, the thief's gain standing past the cap (R4331001). Each side whose
+/// mana changed is announced; a steal from a player with no maximum mana announces nothing.
 pub fn steal_mana_crystals() -> Effect {
+    steal_mana_crystals_with(crate::mana::CrystalGain::PastTheCap)
+}
+
+/// R767000: the steal v0.6.9c and before ran (R1854003), the thief gaining only up to the cap, for The
+/// Greatest Heist's kept script.
+pub fn steal_mana_crystals_to_cap() -> Effect {
+    steal_mana_crystals_with(crate::mana::CrystalGain::ToTheCap)
+}
+
+fn steal_mana_crystals_with(gain: crate::mana::CrystalGain) -> Effect {
     Effect::new("stealManaCrystals", move |ctx| {
         let thief = ctx.controller;
         let victim = opponent_of(thief);
-        let (lost, gained) = crate::mana::move_mana_crystals(ctx.sink.state, thief, victim);
+        let (lost, gained) = crate::mana::move_mana_crystals(ctx.sink.state, thief, victim, gain);
         if lost > 0 {
             let event = mana_event(victim, &ctx.sink.state.players[victim]);
             ctx.sink.events.push(event);

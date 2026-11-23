@@ -99,9 +99,11 @@ const ESCAPE_HANDLERS: Record<string, number> = {
   "emotes/ui.tsx": 1,
   "game/ModifierList.tsx": 1,
   "dungeon/fight/ArtifactTray.tsx": 1,
-  // The board's gestures: a drag or an aim Escape calls off, and the showcase Escape skips.
+  // The board's gestures: a drag or an aim Escape calls off, and the showcase Escape skips; the deck
+  // builder's pool drag (R3734001) calls its own off the same way.
   "game/drag/DragLayer.tsx": 1,
   "game/drag/OptionDrag.tsx": 1,
+  "game/deckbuilder/DeckDrag.tsx": 1,
   "game/showcase/CardShowcase.tsx": 1,
   // An inline question under no dialog, whose Escape answers Cancel.
   "dungeon/start/StartScreen.tsx": 1,
@@ -110,10 +112,30 @@ const ESCAPE_HANDLERS: Record<string, number> = {
 /** The board's own scrims, under the prompt and the result (R3220000 left them to the board). */
 const BOARD_SCRIMS = ["prompt-scrim", "result-scrim"];
 
+/**
+ * A sheet's `selector { body }` pairs (#4009: `/([^{}]+)\{([^{}]*)\}/g` scans super-linearly on a
+ * long brace-free run).
+ */
+function rulePairs(css: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = css.split("}");
+  if (!css.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
+}
+
 /** Every rule of a sheet, its comments cut, as `[selector, body]`; a rule inside `@media` counts as its own. */
 function rules(css: string): [string, string][] {
   const code = css.replace(/\/\*[\s\S]*?\*\//g, " ");
-  return [...code.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => [(match[1] ?? "").trim(), match[2] ?? ""]);
+  return rulePairs(code).map(([selector, body]) => [selector.trim(), body] as [string, string]);
 }
 
 /** A glyph standing alone in an element, as a close's label would, or a string that is only the glyph. */
@@ -173,7 +195,7 @@ function countsOf(count: (file: string) => number): Record<string, number> {
 /** The dialogs #3221 moved onto Dialog, each drawn through it. */
 const MOVED = [
   "settings/SettingsPanel.tsx",
-  "together/FriendsButton.tsx",
+  "together/FriendsDrawer.tsx",
   "together/ChatPanel.tsx",
   "together/ChallengeDialog.tsx",
   "collection/TokenOffer.tsx",

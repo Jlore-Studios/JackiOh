@@ -14,11 +14,10 @@ import { describe, expect, it } from "vitest";
 import { entranceEntries, planEntries, setPieceEntries, takeoverClaim, type EntranceResolver } from "../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { describeEntry } from "../../test/setPass.ts";
+import { endOf, envOf } from "../../test/signatures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { planCardFx, planCardMotif } from "../cardFx.ts";
 import {
-  FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_SET_PASS_FLOOR,
   SIGNATURE_LEGENDARY_MAX_MS,
@@ -27,12 +26,10 @@ import {
   SIGNATURE_SPELL_SHARE,
 } from "../constants.ts";
 import { planFx } from "../cues.ts";
-import { createFxMemory } from "../memory.ts";
 import { motifScale } from "../motifs/build.ts";
 import { galleryBoardOf, galleryCardEvents, galleryEntry, galleryFieldView, galleryPlayOf, motifFixture, RECIPE_FIXTURES } from "../motifs/gallery.ts";
 import { isDrawnMotif } from "../motifs/names.ts";
 import { hasSetPiece, wipeClaim } from "../setPieces.ts";
-import type { FxCue, FxPlanEnv } from "../types.ts";
 import { isCardRecipeKey } from "./bespoke.ts";
 import rawTable from "./stinkyscape-2.md?raw";
 import { entryAura, FX_CARD_FILES, isSignature, parseFxCardTable, type FxCardEntry } from "./tables.ts";
@@ -70,10 +67,6 @@ function entryOf(id: string): FxCardEntry {
   return entry;
 }
 
-function envOf(): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
-}
-
 const played = (player: PlayerId, instanceId: string, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 1 });
 
 /** The play's motif on its gallery fixture, as the board plans it once the play's `cardPlayed` is remembered. */
@@ -100,21 +93,6 @@ const resolve: EntranceResolver = (defId) => {
   const def = CATALOG[defId];
   return def === undefined ? null : { type: def.type, rarity: def.printedRarity ?? def.rarity };
 };
-
-/** A cue's end, as R200's tests count it (tiers.test.ts): bursts burn, shots fly then burst, shakes ride, the rest run out. */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shot":
-    case "projectile":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 /** R202: `events` as a seat that may not read the card sees its play: its play, resolution and landing name no definition. */
 function hidden(events: readonly GameEvent[]): GameEvent[] {

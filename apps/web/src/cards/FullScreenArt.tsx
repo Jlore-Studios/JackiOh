@@ -11,12 +11,13 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type ReactEleme
 import { createPortal } from "react-dom";
 
 import { getMusicPlayer } from "../audio/music.ts";
-import { MUSIC_CARDS } from "../audio/musicData.ts";
+import { useSoundTables } from "../audio/soundTablesLoader.ts";
 import { DialogClose } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useModalKeys } from "../together/modalKeys.ts";
 import { dioramaOf, dioramaSliceBackground } from "./art/dioramas/index.ts";
-import { ART_PLANES, artPlaneBackground } from "./art/pictures.ts";
+import { ART_PLANES } from "./art/pictures.ts";
+import { artPlaneBackground } from "./art/planes.ts";
 import {
   CARD_TILT_MAX_DEG,
   DIORAMA_TURN_MAX_DEG,
@@ -29,7 +30,7 @@ import {
   FULLSCREEN_SLICE_SHIFT_NEAR_PX,
 } from "./constants.ts";
 import { useDepthMotion } from "./depth.ts";
-import { closeFullScreenArt, openFullScreenArt, useCanOpenFullScreen, useFullScreenArt, type FullScreenState } from "./fullscreen.ts";
+import { closeFullScreenArt, openFullScreenArt, useCanOpenFullScreen, useFullScreenArt, useFullScreenArtId, type FullScreenState } from "./fullscreen.ts";
 import { useCardSettings } from "./settings.ts";
 import { devicePose, glareOf, pointerPose, tiltDegrees, type TiltPose } from "./tilt.ts";
 
@@ -112,28 +113,35 @@ export function fullscreenCoverScale(width: number, height: number, rxDeg: numbe
 
 export type FullScreenArtProps = {
   defId: string;
+  /** The catalog card the planes draw from, when the opener resolved it (`FullScreenState.artId`). */
+  artId?: string;
   radiant?: boolean;
   name?: string;
   heldPointerId?: number | null;
   onClose: () => void;
 };
 
-export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onClose }: FullScreenArtProps): ReactElement {
+export function FullScreenArt({ defId, artId: givenArtId, radiant = false, name, heldPointerId, onClose }: FullScreenArtProps): ReactElement {
   useLocale();
+  // R3345000: a fused id is in no catalog, so the planes draw from the card its picture is (`fullScreenArtId`): the one
+  // the opener resolved under its own definitions, else the one these definitions give.
+  const resolved = useFullScreenArtId(defId);
+  const artId = givenArtId ?? resolved;
   const [paused, setPaused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { deviceTilt } = useCardSettings();
   // R3350000: a Mythic's diorama, its loops held still where the viewer's motion settings ask for the flat picture and while
   // a tap pauses the view (R3345000): a loop runs inside its slice's own picture, where no play state reaches it.
-  const diorama = dioramaOf(defId);
+  const diorama = artId === null ? null : dioramaOf(artId);
   const { flat } = useDepthMotion();
+  const tables = useSoundTables();
   const maxDeg = diorama !== null ? DIORAMA_TURN_MAX_DEG : CARD_TILT_MAX_DEG;
   const turnsDiorama = diorama !== null;
 
   // Audio: play intro sting/music on mount, stop on unmount or pause
   useEffect(() => {
     try {
-      const intro = MUSIC_CARDS[defId]?.intro;
+      const intro = tables?.musicCards[defId]?.intro;
       if (intro && !paused) {
         getMusicPlayer().playIntro(intro);
       }
@@ -147,7 +155,12 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
         // Audio is never worth an error
       }
     };
-  }, [defId, paused]);
+  }, [defId, paused, tables]);
+
+  // A view with no picture to draw closes at once, never a black dialog.
+  useEffect(() => {
+    if (artId === null) onClose();
+  }, [artId, onClose]);
 
   // Release closes: if heldPointerId is released
   useEffect(() => {
@@ -232,7 +245,7 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
       onClick={handleClick}
     >
       <div className="fullscreen-art-planes" data-diorama={diorama !== null ? "true" : undefined}>
-        {diorama !== null
+        {artId === null ? null : diorama !== null
           ? diorama.slices.map((slice, index) => (
               <div
                 key={slice.name}
@@ -242,7 +255,7 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
                 data-bend={slice.bend?.axis}
                 style={
                   {
-                    backgroundImage: dioramaSliceBackground(defId, radiant, index, !flat && !paused),
+                    backgroundImage: dioramaSliceBackground(artId ?? defId, radiant, index, !flat && !paused),
                     "--fs-slice-shift": `${sliceShiftPx(slice.depth)}px`,
                     ...(slice.bend === undefined ? {} : { "--cf-slice-bend": `${slice.bend.deg}deg` }),
                   } as CSSProperties
@@ -254,7 +267,7 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
                 key={plane}
                 className="fullscreen-art-plane"
                 data-plane={plane}
-                style={{ backgroundImage: artPlaneBackground(defId, plane, radiant) }}
+                style={{ backgroundImage: artPlaneBackground(artId ?? defId, plane, radiant) }}
               />
             ))}
       </div>
@@ -301,13 +314,16 @@ export function FullScreenButton({
 }): ReactElement | null {
   useLocale();
   const can = useCanOpenFullScreen(card, card.defId, worn);
+  const artId = useFullScreenArtId(card.defId);
   if (!can) return null;
   return (
     <button
       type="button"
       className="fullscreen-art-open"
       data-testid="fullscreen-art-open"
-      onClick={() => openFullScreenArt({ defId: card.defId, radiant: card.radiant, name: card.name, heldPointerId: null })}
+      onClick={() =>
+        openFullScreenArt({ defId: card.defId, radiant: card.radiant, name: card.name, heldPointerId: null, artId: artId ?? undefined })
+      }
     >
       {t("Full screen")}
     </button>

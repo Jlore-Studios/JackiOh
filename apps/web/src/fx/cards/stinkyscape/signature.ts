@@ -43,8 +43,6 @@ export const STINKYSCAPE_TWO_SIGNATURES = [
   "stinkyscape-t-red-narcor",
 ] as const;
 
-export type StinkyscapeTwoSignature = (typeof STINKYSCAPE_TWO_SIGNATURES)[number];
-
 /** Every particle count the shared beats throw at scale 1 (rule 9). */
 const TUNING = {
   ballot: { count: 12, power: 0.8 },
@@ -78,6 +76,7 @@ export function landMsAfter(wait: number, D: number): number {
 export function entranceTimes(p: EntrancePlan): { wait: number; at: (x: number) => number; slam: number } {
   const slam = Math.min(Math.max(0, p.landMs ?? frac(FX_SLAM_AT, p.D)), p.D);
   const guess = Math.round((slam - FX_SLAM_AT * p.D) / (1 - FX_SLAM_AT));
+  // Stryker disable next-line ArrayDeclaration,ArithmeticOperator,ArrowFunction,ConditionalExpression: the guess lands at the slam whenever the slam is a whole ms (being within half a ms of the exact hold, it moves the landing by at most (1 − FX_SLAM_AT) / 2 < ½ ms) and no whole-ms wait lands on any other slam, so the search answers the guess or nothing, whichever candidates it tries in whichever order
   const exact = [guess, guess - 1, guess + 1, guess - 2, guess + 2].find((w) => landMsAfter(w, p.D) === slam);
   const wait = Math.min(Math.max(0, exact ?? guess), p.D);
   const at = (x: number): number => wait + frac(x, p.D - wait);

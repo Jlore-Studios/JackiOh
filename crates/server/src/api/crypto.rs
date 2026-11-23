@@ -90,8 +90,17 @@ pub(crate) fn digest(key: &str, value: &str) -> String {
     hex(&mac.finalize().into_bytes())
 }
 
-fn hex(bytes: &[u8]) -> String {
+/// `bytes` in lowercase hex, two digits a byte.
+pub(crate) fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+/// Whether `a` and `b` hold the same bytes, in time that depends on their lengths and not on where they first differ.
+/// The one way the server compares a caller's value with a secret or a stored token in code (README.md, Conventions);
+/// `==` stops at the first wrong byte.
+pub(crate) fn constant_time_eq(a: &str, b: &str) -> bool {
+    use subtle::ConstantTimeEq;
+    a.as_bytes().ct_eq(b.as_bytes()).into()
 }
 
 impl Hashes {
@@ -142,3 +151,28 @@ impl SystemIds {
 /// Kept under lowercase name for SURFACE §4.2.
 #[allow(non_upper_case_globals)]
 pub const system_ids: SystemIds = SystemIds;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn constant_time_eq_holds_equal_text_equal() {
+        let hash = digest("key", "value");
+        assert!(constant_time_eq(&hash, &hash.clone()));
+        assert!(constant_time_eq("", ""));
+    }
+
+    #[test]
+    fn constant_time_eq_tells_a_difference_anywhere_and_another_length() {
+        let hash = digest("key", "value");
+        // `x` is no hex digit, so each variant differs from the hash at the character it replaces.
+        let first = format!("x{}", &hash[1..]);
+        let last = format!("{}x", &hash[..hash.len() - 1]);
+        assert!(!constant_time_eq(&hash, &first));
+        assert!(!constant_time_eq(&hash, &last));
+        assert!(!constant_time_eq(&hash, &hash[..hash.len() - 1]));
+        assert!(!constant_time_eq(&hash, &format!("{hash}0")));
+        assert!(!constant_time_eq("", "0"));
+    }
+}

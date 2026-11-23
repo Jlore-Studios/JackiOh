@@ -11,14 +11,14 @@ import { describe, expect, it } from "vitest";
 import { entranceEntries, planEntries, setPieceEntries, takeoverClaim, type AnimationEntry, type EntranceResolver } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { faceDownBackrow, fullBoardView, withEvents } from "../../../test/fixtures.ts";
+import { endOf, envOf } from "../../../test/signatures.ts";
 import { CATALOG } from "../../../wire/cards.ts";
 import { planAuras } from "../../aura/plan.ts";
 import { frac } from "../../build.ts";
 import { planCardFx } from "../../cardFx.ts";
-import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_SLAM_AT } from "../../constants.ts";
+import { FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_SLAM_AT } from "../../constants.ts";
 import { planFx } from "../../cues.ts";
 import { ENTRANCES } from "../../entrances.ts";
-import { createFxMemory } from "../../memory.ts";
 import { galleryBoardOf, galleryCardEvents, galleryFieldView, galleryPlayOf, RECIPE_FIXTURES } from "../../motifs/gallery.ts";
 import { hasSetPiece, wipeClaim } from "../../setPieces.ts";
 import { entranceCues } from "../../takeover.ts";
@@ -38,29 +38,10 @@ const resolve: EntranceResolver = (defId) => {
   return def === undefined ? null : { type: def.type, rarity: def.printedRarity ?? def.rarity };
 };
 
-function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
-}
-
 function bespokeOf(defId: string): Extract<FxCardEntry, { kind: "bespoke" }> {
   const entry = FX_CARD_TABLE.get(defId);
   if (entry?.kind !== "bespoke") throw new Error(`${defId} is no bespoke entry`);
   return entry;
-}
-
-/** A cue's end, as tiers.test.ts counts it. */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shot":
-    case "projectile":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
 }
 
 type Planned = { entry: AnimationEntry; cues: FxCue[]; claims: { event: GameEvent; cues: FxCue[]; row: "keep" | "replace" }[] };

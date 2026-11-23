@@ -97,8 +97,9 @@ pub fn face_of(state: &GameState, instance: &CardInstance) -> FaceStats {
 }
 
 /// R2280000: whether the card has a stat line its definition gives it: its own printed one or a fused
-/// definition's (R77, R102), a summon's `statsOverride` or X stats. Buffs, auras and `tuning` never
-/// make one, and a Field Spell, Trap or Field Trap animates only with one (`animated::animated_with_stats`).
+/// definition's (R77, R102), a summon's `statsOverride` or X stats, or (R3542000) one its own text gives
+/// it while its `stat_line_when` holds. Buffs, auras and `tuning` never make one, and a Field Spell, Trap
+/// or Field Trap animates only with one (`animated::animated_with_stats`).
 pub fn has_stat_line(state: &GameState, instance: &CardInstance) -> bool {
     let def = def_of(Some(state), &instance.def_id);
     let face = if instance.radiant { &def.radiant } else { &def.base };
@@ -106,6 +107,16 @@ pub fn has_stat_line(state: &GameState, instance: &CardInstance) -> bool {
         || face.x_stats.is_some()
         || face.attack.is_some()
         || face.health.is_some()
+        || crate::scripts::script_of(state, instance)
+            .stat_line_when
+            .as_ref()
+            .is_some_and(|when| {
+                when(crate::script::HookArgs {
+                    state,
+                    self_: instance,
+                    radiant: instance.radiant,
+                })
+            })
 }
 
 /// The keywords the running face prints, before tuning (§5.2): what a Degrade takes off and what a
@@ -181,8 +192,9 @@ fn is_dormant(state: &GameState, instance: &CardInstance) -> bool {
 /// R1859007: the keywords its controller's "your Units have X" lends a card (`UnitsHaveKeyword`): to
 /// a Unit of theirs in a unit zone or standing in the backrow (R1081000), never a Vanilla one (unlike
 /// an aura's grant, §8.10), nor one Dormant or buried under a Stack pile (R13, R1839000). R1870004:
-/// only while the modifier is live.
-fn lent_by_player(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
+/// only while the modifier is live. R4508000: one a Spell made passes the card by while it is `immune`
+/// to Spells by its other keywords, read live, so it lends again once the immunity goes.
+fn lent_by_player(state: &GameState, instance: &CardInstance, immune: bool) -> Vec<Keyword> {
     if instance.vanilla
         || is_dormant(state, instance)
         || crate::slumber::is_slumbering(instance)
@@ -194,7 +206,10 @@ fn lent_by_player(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
         .mods
         .iter()
         .filter_map(|modifier| match &modifier.kind {
-            ModifierKind::UnitsHaveKeyword { keyword } if crate::mana::modifier_is_live(state, modifier) => {
+            ModifierKind::UnitsHaveKeyword { keyword, from_spell }
+                if crate::mana::modifier_is_live(state, modifier)
+                    && !(immune && *from_spell == Some(true)) =>
+            {
                 Some(keyword.clone())
             }
             _ => None,
@@ -242,7 +257,7 @@ pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
 }
 
 /// Every aura source's entries, in `aura_sources` order: each source's hook asked once.
-fn aura_entries(state: &GameState) -> Vec<AuraEntry<'_>> {
+pub(crate) fn aura_entries(state: &GameState) -> Vec<AuraEntry<'_>> {
     let mut entries: Vec<AuraEntry<'_>> = Vec::new();
     for source in aura_sources(state) {
         // §6.1/§6.3: Vanilla clears scripts, and an aura is part of a card's Script (§10.9), so a
@@ -254,12 +269,32 @@ fn aura_entries(state: &GameState) -> Vec<AuraEntry<'_>> {
         let Some(aura) = script.aura.as_ref() else {
             continue;
         };
-        entries.extend(aura(HookArgs {
-            state,
-            self_: source,
-            // R1850000: the face of the text that is running, a copier's copied one.
-            radiant: crate::subsystems::unit_text::text_def_of(source).1,
-        }));
+        // R3554003: on a slashed board an aura reaches only its own half; off one the wrap costs a
+        // single `Option` read per entry (perf budget).
+        let slashed = state.slashed_lane.is_some();
+        let from = source.clone();
+        entries.extend(
+            aura(HookArgs {
+                state,
+                self_: source,
+                // R1850000: the face of the text that is running, a copier's copied one.
+                radiant: crate::subsystems::unit_text::text_def_of(source).1,
+            })
+            .into_iter()
+            .map(|entry| {
+                if !slashed {
+                    return entry;
+                }
+                let from = from.clone();
+                let applies = entry.applies;
+                AuraEntry {
+                    applies: Box::new(move |unit: &CardInstance| {
+                        applies(unit) && crate::geometry::reaches(state, Some(&from), unit)
+                    }),
+                    mod_: entry.mod_,
+                }
+            }),
+        );
     }
     entries
 }
@@ -500,7 +535,10 @@ fn compute_layers_on(
     for modifier in &auras {
         listed.extend(modifier.keywords.iter().flatten().cloned());
     }
-    listed.extend(lent_by_player(state, instance));
+    // R4508000: the keywords above, which hold every Immune to Spells a card can have (no lend gives
+    // it), decide whether a Spell's lend passes the card by.
+    let immune = has_keyword(&listed, KeywordKind::ImmuneToSpells);
+    listed.extend(lent_by_player(state, instance, immune));
     let mut keywords: Vec<Keyword> = with_brittle_count(&listed, instance);
 
     // Position grants: Defense adds Taunt and Armor +1 (§4.1).
@@ -565,4 +603,35 @@ pub fn keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
 
 pub fn unit_has(state: &GameState, instance: &CardInstance, kind: KeywordKind) -> bool {
     has_keyword(&unit_view(state, instance).keywords, kind)
+}
+
+/// R4353000: whether `keywords`, the ones the caller reads `instance` by, make it Immutable: the keyword,
+/// or Indestructible on a Unit card (its running face's printed type), which is Immutable innately and
+/// never adds the keyword, as Flying is Flexible (R3543000). An Indestructible Field Spell is not, so
+/// its own fusing and tuning (C+ #33 Ivory Tower, Core #98 Heroic Power) go on. Every rule that asks
+/// whether a card is Immutable asks this or `is_immutable`.
+pub fn immutable_by(state: &GameState, instance: &CardInstance, keywords: &[Keyword]) -> bool {
+    has_keyword(keywords, KeywordKind::Immutable)
+        || (has_keyword(keywords, KeywordKind::Indestructible)
+            && crate::faces::card_type_of_face(state, &instance.def_id, instance.radiant) == CardType::Unit)
+}
+
+/// R4353000: whether `instance`, read through the layers where it is (§10.4), is Immutable
+/// (`immutable_by` over its layered keywords).
+pub fn is_immutable(state: &GameState, instance: &CardInstance) -> bool {
+    immutable_by(state, instance, &unit_view(state, instance).keywords)
+}
+
+/// R3543000: whether a keyword lets its Unit enter its backrow as well as its unit row: Flexible, and
+/// Flying, which has it innately (never added to the keywords, so a Flying Unit's view is unchanged).
+pub fn grants_flexible(kind: KeywordKind) -> bool {
+    matches!(kind, KeywordKind::Flexible | KeywordKind::Flying)
+}
+
+/// R3543000: whether `instance`, read through the layers where it is (§10.4), is Flexible.
+pub fn is_flexible(state: &GameState, instance: &CardInstance) -> bool {
+    unit_view(state, instance)
+        .keywords
+        .iter()
+        .any(|keyword| grants_flexible(keyword.kind()))
 }

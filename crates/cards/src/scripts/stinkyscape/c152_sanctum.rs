@@ -16,7 +16,7 @@ pub const ID: &str = "stinkyscape-152";
 
 /// R1869003: "Every card in your deck and graveyard has Flashback": the cards in its controller's
 /// library and graveyard, read off their zone.
-fn flashback_aura() -> AuraHook {
+pub fn flashback_aura() -> AuraHook {
     aura_hook(|args: HookArgs<'_>| {
         let controller = args.self_.controller;
         vec![AuraEntry {
@@ -121,15 +121,28 @@ mod tests {
             assert!(graveyard_defs_offered(&s, P1).is_empty());
         }
 
+        /// R4285000: the Flashback Sanctum lends is Flashback, so a (0) card played by it from the graveyard
+        /// costs (1): not offered at 0 mana, and paid 1.
+        #[test]
+        fn r4285000_a_lent_flashback_of_a_0_cost_card_costs_1() {
+            const FREE: &str = "stand-in (0) 1/1 R2/2";
+            let mut s = standing(false, json!([FREE]));
+            let free = s.pile(P1, "graveyard")[0].clone();
+            assert!(flashback(&s, &free));
+            assert_eq!(play_cost(s.state(), s.card(&free.id)), 1);
+            let mut broke = s.state().clone();
+            broke.players.p1.mana.current = 0;
+            assert!(plays_in(&broke, P1, &free.id).is_empty());
+            play_from_graveyard(&mut s, &free, json!({ "zone": { "row": "units", "lane": 2 } }));
+            s.expect_mana(P1, 4 - 1);
+        }
+
         #[test]
         fn r1869003_the_opponents_graveyard_is_not_offered() {
             let s = standing(false, json!([]));
             let theirs = s.pile(P2, "graveyard")[0].clone();
             assert!(!flashback(&s, &theirs));
-            assert!(!legal_actions(s.state(), P1).iter().any(|action| matches!(
-                action,
-                ActionBody::Play { instance_id, .. } if *instance_id == theirs.id
-            )));
+            assert!(plays_in(s.state(), P1, &theirs.id).is_empty());
         }
 
         #[test]
@@ -158,10 +171,7 @@ mod tests {
             let s = standing(false, json!([]));
             let top = s.pile(P1, "library")[0].clone();
             assert!(flashback(&s, &top));
-            assert!(!legal_actions(s.state(), P1).iter().any(|action| matches!(
-                action,
-                ActionBody::Play { instance_id, .. } if *instance_id == top.id
-            )));
+            assert!(!s.can_play(&top));
             assert!(!serde_json::to_string(&s.view(P1)).expect("serializes").contains("Flashback"));
         }
 

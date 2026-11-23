@@ -10,6 +10,7 @@ import { CHAT_POLL_MS } from "@jackioh/server-config";
 
 import type { ChatMessage, Friend, PlayerRef } from "../net/social.ts";
 import { fakeSockets, type FakeSocket } from "../test/fakeSocket.ts";
+import { pressFriendMenuItem } from "../test/friendMenu.ts";
 import { pressBack } from "../test/history.ts";
 import { settle } from "../test/settle.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
@@ -18,6 +19,11 @@ import { ChatPanel } from "./ChatPanel.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { FriendsButton } from "./FriendsButton.tsx";
+import { friendsDrawerChunk } from "./friendsDrawerChunk.ts";
+
+// #4444: the drawer arrives in its own chunk; warmed once here so the panel tests below measure
+// the drawer, not the code's arrival.
+await friendsDrawerChunk.load();
 import { useSocialPoll } from "./socialPoll.ts";
 import { setSocialSocketFactory } from "./socialSocket.ts";
 import { friendsTestid, togetherTestid } from "./testids.ts";
@@ -174,6 +180,91 @@ describe("R1384000 earlier pages", () => {
       .map((call) => call.query.get("before"))
       .filter((before) => before !== null);
     expect(asked).toEqual([FIRST, SECOND]);
+  });
+
+  it("#4444 scrolling the message list to its top loads the earlier page by its cursor", async () => {
+    const server = serve(conversation(), (call) => {
+      if (call.method !== "GET" || call.path !== `/api/chat/${ANN.profileId}`) return undefined;
+      switch (call.query.get("before")) {
+        case null:
+          return { status: 200, body: { messages: conversation(), nextCursor: FIRST } };
+        case FIRST:
+          return { status: 200, body: { messages: [message("msg-0c", ANN.profileId, "are you there", 0)], nextCursor: null } };
+        default:
+          return refusal(400, "bad_request", "not a cursor");
+      }
+    });
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(shown()).toHaveLength(2);
+    }, SLOW);
+
+    const messages = must(document.querySelector("ol.chat-panel__messages"), "the message list");
+    fireEvent.scroll(messages, { target: { scrollTop: 0 } });
+    await waitFor(() => {
+      expect(shown()).toHaveLength(3);
+    }, SLOW);
+    expect(must(shown()[0], "the oldest")).toContain("are you there");
+    expect(screen.queryByTestId("chat-earlier")).toBeNull();
+    const asked = server
+      .to("GET", `/api/chat/${ANN.profileId}`)
+      .map((call) => call.query.get("before"))
+      .filter((before) => before !== null);
+    expect(asked).toEqual([FIRST]);
+
+    // With no earlier page left `loadEarlier` returns at once and sends nothing: the stub records
+    // the `fetch` synchronously, so this holds without a wait.
+    fireEvent.scroll(messages, { target: { scrollTop: 0 } });
+    expect(shown()).toHaveLength(3);
+    expect(server.to("GET", `/api/chat/${ANN.profileId}`).map((call) => call.query.get("before")).filter((before) => before !== null)).toEqual([
+      FIRST,
+    ]);
+  });
+
+  it("#4444 a failed earlier-page read arms no scroll restore for the next read", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    serve(conversation(), (call) => {
+      if (call.method !== "GET" || call.path !== `/api/chat/${ANN.profileId}`) return undefined;
+      switch (call.query.get("before")) {
+        case null:
+          return { status: 200, body: { messages: conversation(), nextCursor: FIRST } };
+        default:
+          return refusal(503, "unavailable", "Try again later.");
+      }
+    });
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(shown()).toHaveLength(2);
+    }, SLOW);
+
+    // jsdom has no layout, so stand in fixed geometry: the list is 1000 high
+    // with its top 400 down, and every scrollTop write is recorded.
+    const list = must(document.querySelector("ol.chat-panel__messages"), "the message list");
+    Object.defineProperty(list, "scrollHeight", { value: 1000, configurable: true });
+    let top = 400;
+    const writes: number[] = [];
+    Object.defineProperty(list, "scrollTop", {
+      get: () => top,
+      set: (value: number) => {
+        writes.push(value);
+        top = value;
+      },
+      configurable: true,
+    });
+
+    fireEvent.scroll(list, { target: { scrollTop: 0 } });
+    await screen.findByTestId("chat-error", undefined, SLOW);
+    await waitFor(() => {
+      expect(screen.getByTestId("chat-earlier")).toBeEnabled();
+    }, SLOW);
+
+    // The failed read settled: the next poll re-reads the same newest page,
+    // whose newest id is unchanged, so neither the bottom scroll nor a stale
+    // restore may move the list.
+    writes.length = 0;
+    await settle({ advance: CHAT_POLL_MS + 1 });
+    expect(shown()).toHaveLength(2);
+    expect(writes).toEqual([]);
   });
 });
 
@@ -733,7 +824,7 @@ describe("B58 chat from the Friends panel", () => {
     await openPanel();
     expect(screen.queryByTestId("chat-input")).toBeNull();
     await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
-    fireEvent.click(within(annsRow()).getByTestId(togetherTestid.chatOpen));
+    pressFriendMenuItem(annsRow(), togetherTestid.chatOpen);
     expect(await screen.findByTestId("chat-input", undefined, SLOW)).toBeInTheDocument();
     // The conversation has the panel's place: the panel itself is gone.
     expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
@@ -748,7 +839,7 @@ describe("B58 chat from the Friends panel", () => {
     const panel = screen.getByTestId(friendsTestid.panel);
     expect(button).toHaveAttribute("aria-controls", panel.id);
     await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
-    fireEvent.click(within(annsRow()).getByTestId(togetherTestid.chatOpen));
+    pressFriendMenuItem(annsRow(), togetherTestid.chatOpen);
     expect(await screen.findByTestId("chat-input", undefined, SLOW)).toHaveFocus();
     expect(button).not.toHaveAttribute("aria-controls");
 
@@ -758,7 +849,7 @@ describe("B58 chat from the Friends panel", () => {
 
     fireEvent.click(button);
     await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
-    fireEvent.click(within(annsRow()).getByTestId(togetherTestid.chatOpen));
+    pressFriendMenuItem(annsRow(), togetherTestid.chatOpen);
     fireEvent.keyDown(await screen.findByTestId("chat-input", undefined, SLOW), { key: "Escape" });
     expect(screen.queryByTestId("chat-panel")).toBeNull();
     expect(button).toHaveFocus();
@@ -770,7 +861,7 @@ describe("B58 chat from the Friends panel", () => {
     serveFriends();
     const button = await openPanel();
     await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
-    fireEvent.click(within(annsRow()).getByTestId(togetherTestid.chatOpen));
+    pressFriendMenuItem(annsRow(), togetherTestid.chatOpen);
     expect(await screen.findByTestId("chat-input", undefined, SLOW)).toHaveFocus();
 
     await pressBack();
@@ -780,10 +871,12 @@ describe("B58 chat from the Friends panel", () => {
     expect(window.location.pathname).toBe("/play");
   });
 
-  it("B58 the panel lists the friends who are on first, the offline ones last", async () => {
+  it("B58 R3732002 the panel lists the friends who are on first, the offline ones last and behind Offline's toggle", async () => {
     serveFriends();
     await openPanel();
     await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
+    expect(screen.getAllByTestId(togetherTestid.friendRow).map((row) => row.getAttribute("data-profile-id"))).toEqual(["f-ann"]);
+    fireEvent.click(screen.getByTestId(togetherTestid.offlineToggle));
     const order = screen.getAllByTestId(togetherTestid.friendRow).map((row) => row.getAttribute("data-profile-id"));
     expect(order).toEqual(["f-ann", "f-cy"]);
   });
@@ -817,23 +910,23 @@ describe("R2094000 a room link in chat draws Join", () => {
     }, SLOW);
   }
 
-  it("R2094000 a message with this origin's co-op link shows Join, and Join navigates in-app to that path", async () => {
+  it("R2094000 R3730006 a message with this origin's co-op link shows Join, and Join navigates in-app to its lobby", async () => {
     window.history.replaceState(null, "", "/together");
     await openWith(`Join my co-op game against the AI here: ${origin}/together?coop=ABC234 (room code ABC234).`);
     const join = await screen.findByTestId("chat-join", undefined, SLOW);
     expect(join).toHaveTextContent("Join");
     fireEvent.click(join);
-    expect(window.location.pathname).toBe("/together");
-    expect(window.location.search).toBe("?coop=ABC234");
+    expect(window.location.pathname).toBe("/lobby/ABC234");
+    expect(window.location.search).toBe("");
   });
 
-  it("R2094000 a message with this origin's /play?room= link shows Join and navigates to it", async () => {
+  it("R2094000 R3730006 a message with this origin's /play?room= or /lobby/ link shows Join and navigates to its lobby", async () => {
     window.history.replaceState(null, "", "/together");
     await openWith(`A room for you: ${origin}/play?room=ABC234&mode=bo1`);
     const join = await screen.findByTestId("chat-join", undefined, SLOW);
     fireEvent.click(join);
-    expect(window.location.pathname).toBe("/play");
-    expect(window.location.search).toBe("?room=ABC234&mode=bo1");
+    expect(window.location.pathname).toBe("/lobby/ABC234");
+    expect(window.location.search).toBe("");
   });
 
   it("R2094000 a message with another origin's link, a malformed link, or no link shows no Join", async () => {

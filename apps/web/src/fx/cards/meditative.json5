@@ -14,7 +14,7 @@
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
 // recipe) or "keep" (it plays over that recipe).
 {
-  "meditative-001": { cast: { motif: "flight" }, aura: { look: "frost", scope: "zone" } }, // Disruptive Disruptor
+  "meditative-001": { cast: { motif: "flight" }, activate: { motif: "vanish" }, aura: { look: "frost", scope: "zone" } }, // Disruptive Disruptor
   "meditative-002": "none: no motif reads discarded (its trigger's discard row plays)", // Rampaging Rhino
   "meditative-003": { trigger: { motif: "vanish" } }, // Jlockwork Machine
   "meditative-004": { cast: { motif: "flight" } }, // Juicy Kumquat Melon
@@ -22,8 +22,8 @@
   "meditative-006": { cast: { motif: "tether", palette: "Hustle/cash" } }, // Me no Likey
   "meditative-007": { bespoke: "introspection", entrance: "poolBreath", aura: { look: "ripple", palette: "Holy", scope: "zone" }, signature: true }, // Introspection
   "meditative-008": { bespoke: "summitAscent", takeover: "ascent", signature: true }, // Reach the Summit
-  "meditative-009": { cast: { motif: "bless" }, aura: { look: "arcane", palette: "Nerd/ink", scope: "zone" } }, // Joint Filing
-  "meditative-010": { cast: { motif: "bless" }, aura: { look: "bloom", palette: "Nerd/ink", scope: "zone" } }, // Double Counting
+  "meditative-009": { cast: { motif: "bless" }, activate: { motif: "deal", palette: "Nerd/ink" }, aura: { look: "arcane", palette: "Nerd/ink", scope: "zone" } }, // Joint Filing
+  "meditative-010": { cast: { motif: "bless" }, activate: { motif: "deal", palette: "Nerd/ink" }, aura: { look: "bloom", palette: "Nerd/ink", scope: "zone" } }, // Double Counting
   "meditative-011": { bespoke: "doubleHeader", entrance: "floodlights", aura: { look: "arcane", scope: "zone" }, signature: true }, // Double Header
   "meditative-012": "none: no board change of its own (its Cry runs your End of turn hooks, each under its own marker)", // Fear Mongerer
   "meditative-013": { trigger: { motif: "bolt" } }, // Gatling Pea
@@ -66,7 +66,7 @@
   "meditative-041": { trigger: { motif: "deal", palette: "Hustle/jade" } }, // CN Smuggler
   "meditative-042": { bespoke: "fleaMarket", signature: true }, // CN Flea Market
   "meditative-043": { cast: { motif: "deal", palette: "Hustle/jade" } }, // CN Jade Market
-  "meditative-044": { cast: { motif: "deal", palette: "Hustle/jade" }, trigger: { motif: "deal", palette: "Hustle/jade" }, aura: { look: "frost", palette: "Hustle/jade", scope: "zone" } }, // CN Jade Well
+  "meditative-044": { cast: { motif: "deal", palette: "Hustle/jade" }, activate: { motif: "deal", palette: "Hustle/jade" }, aura: { look: "frost", palette: "Hustle/jade", scope: "zone" } }, // CN Jade Well
   "meditative-045": { bespoke: "knowledgeBreaker", entrance: "chalkMask", aura: { look: "chalk", scope: "tile" }, signature: true }, // Knowledge Breaker
   "meditative-045-1": { bespoke: "breakerPrime", entrance: "maskSplit", aura: { look: "storm", palette: "Nerd/chalk", scope: "tile" }, signature: true }, // Knowledge Breaker Prime
   "meditative-046": { cast: { motif: "deal", palette: "Nerd/ink" } }, // Conjure Intellect
@@ -80,7 +80,7 @@
   "meditative-051": { bespoke: "devinBot", entrance: "cushionDrop", aura: { look: "incense", palette: "Tech/hologram", scope: "tile" }, signature: true }, // Devin Bot
   "meditative-052": { cast: { motif: "bless" }, aura: { look: "storm", palette: "Hustle/cash", scope: "board" } }, // Economic Anxiety
   "meditative-053": { cast: { motif: "seal" } }, // Prestige
-  "meditative-054": { cast: { motif: "deal", palette: "Hustle/cash" }, trigger: { motif: "deal", palette: "Hustle/cash" }, activate: { motif: "deal", palette: "Hustle/cash" }, aura: { look: "holy", palette: "Hustle/cash", scope: "zone" } }, // Money Machine
+  "meditative-054": { cast: { motif: "deal", palette: "Hustle/cash" }, trigger: { motif: "deal", palette: "Hustle/cash" }, aura: { look: "holy", palette: "Hustle/cash", scope: "zone" } }, // Money Machine
   "meditative-055": { cast: { motif: "deal" } }, // Dragon Fruit
   "meditative-056": { cast: { motif: "conjure" } }, // House Party
   "meditative-057": { cry: { motif: "deal" } }, // Clip-Farming Critikal
@@ -111,7 +111,7 @@
   "meditative-080": { bespoke: "aluneth", entrance: "lanternLight", aura: { look: "frost", palette: "Nerd/ink", scope: "zone" }, signature: true }, // Aluneth
   "meditative-081": { cast: { motif: "deal" } }, // Deadman's Hand
   "meditative-082": { cry: { motif: "bless" } }, // Medina Outfitter
-  "meditative-083": { trigger: { motif: "bless" } }, // Medina Enforcer
+  "meditative-083": { activate: { motif: "bless" } }, // Medina Enforcer
   "meditative-084": "none: vanilla (the census saw its Cry change nothing)", // Volatility
   "meditative-085": { trigger: { motif: "deal" } }, // Playtester
   "meditative-086": { entrance: "coinFlip", aura: { look: "orbit", palette: "Hustle/cash", scope: "tile" }, signature: true }, // Mayor Medinamogger

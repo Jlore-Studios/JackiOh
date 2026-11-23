@@ -10,7 +10,7 @@ import { baseView, pendingFor, waitingPending } from "../test/fixtures.ts";
 import type { PracticePacing } from "./config.ts";
 import { createPracticeController } from "./controller.ts";
 import { readLastBoard, writeLastBoard } from "./lastBoard.ts";
-import { readPracticeResume, writePracticeResume } from "./resume.ts";
+import { readPracticeResumeState, writePracticeResume } from "./resume.ts";
 import type { PracticeController, PracticeTimers } from "./controller.ts";
 import type { PracticeHost } from "./host.ts";
 import type {
@@ -711,7 +711,7 @@ describe("R2706000 a dungeon run's fight through the controller", () => {
     humanMarks: [],
     enemyDeck: ["classic-090"],
     enemyHandicap: { deckSize: 1, manaBonus: 0, manaCap: 4, extraOpeningCards: 0, extraDrawsPerTurn: 0, heroHealth: 20 },
-    enemy: { id: "cave-troll", name: "Cave Troll", heroHealth: 20, deck: ["classic-090"], artifacts: [] },
+    enemy: { id: "cave-troll", name: "Cave Troll", tier: 1, deck: ["classic-090"], artifacts: [] },
   };
   const FIGHT: PracticeStartConfig = { ...CONFIG, seed: SETUP.seed, run: SETUP };
   const LOST: RunAction = { type: "fightOver", won: false, hp: 0, damageDealt: 3, healingDone: 0, cardsDrawn: 4, turns: 2 };
@@ -733,7 +733,7 @@ describe("R2706000 a dungeon run's fight through the controller", () => {
     expect(fake.requests.at(-1)?.body).toEqual({ type: "start", config: FIGHT });
     fake.respond({ type: "started", snapshot: humanTurn(1), defs: {}, aiSeat: "p2" });
     await started;
-    expect(readPracticeResume()).toEqual(CONFIG);
+    expect(readPracticeResumeState()?.config ?? null).toEqual(CONFIG);
 
     controller.act({ type: "concede" });
     await flush();
@@ -741,7 +741,7 @@ describe("R2706000 a dungeon run's fight through the controller", () => {
     await flush();
     expect(controller.getState().phase).toBe("over");
     // The free game the page remembers is still there to resume, and its last board is the one it had.
-    expect(readPracticeResume()).toEqual(CONFIG);
+    expect(readPracticeResumeState()?.config ?? null).toEqual(CONFIG);
     expect(readLastBoard()).toEqual(board);
   });
 
@@ -760,7 +760,7 @@ describe("R2706000 a dungeon run's fight through the controller", () => {
     await flush();
     expect(controller.getState().phase).toBe("failed");
     // The miss clears nothing: the free game is still there to resume, board and all.
-    expect(readPracticeResume(), "the free game is still remembered").toEqual(CONFIG);
+    expect(readPracticeResumeState()?.config ?? null, "the free game is still remembered").toEqual(CONFIG);
     expect(readLastBoard(), "its last board is untouched").toEqual(board);
 
     // And dealing the fight remembers nothing new either.
@@ -770,7 +770,7 @@ describe("R2706000 a dungeon run's fight through the controller", () => {
     fake.respond({ type: "started", snapshot: humanTurn(1), defs: {}, aiSeat: "p2" });
     await started;
     await flush();
-    expect(readPracticeResume(), "starting the fight remembers nothing new").toEqual(CONFIG);
+    expect(readPracticeResumeState()?.config ?? null, "starting the fight remembers nothing new").toEqual(CONFIG);
     expect(readLastBoard(), "its last board is untouched").toEqual(board);
   });
 

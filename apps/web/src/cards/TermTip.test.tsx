@@ -25,7 +25,7 @@ import { useInspectTrigger } from "./inspect/useInspectTrigger.tsx";
 import { standInCopy } from "../fx/dom.ts";
 import { must } from "../test/stubServer.ts";
 
-/** Speciesist (core-002): "Cry: Destroy an enemy non-Human Unit." */
+/** Speciesist (core-002): "Cry: Destroy an enemy non-Human Unit. You have {mana} less mana next turn." */
 const SPECIESIST = "core-002";
 /** Shorter than any long-press: a tap. */
 const TAP_MS = 50;
@@ -41,6 +41,26 @@ function speciesistFace(): FaceModel {
 function cry(root: ParentNode): HTMLElement {
   const found = root.querySelector<HTMLElement>('.cf-term[data-term="Cry"]');
   return must(found, "Speciesist's Cry term");
+}
+
+/**
+ * A sheet's `selector { body }` pairs (#4009: `/([^{}]+)\{([^{}]*)\}/g` scans super-linearly on a
+ * long brace-free run).
+ */
+function rulePairs(css: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = css.split("}");
+  if (!css.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
 }
 
 function advance(ms: number): void {
@@ -152,7 +172,7 @@ describe("R2098000 a term in a card's text shows its glossary line", () => {
 
   it("R2098000 a term takes the pointer only where its card does: never mid-animation, taken away by a burst, or as a stand-in on the fx layer", () => {
     const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "cards.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-    const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({ selector: (match[1] ?? "").trim(), body: match[2] ?? "" }));
+    const rules = rulePairs(css).map(([selector, body]) => ({ selector: selector.trim(), body }));
     const takes = rules.findIndex((rule) => rule.selector === ".cf-term[data-tip]" && /pointer-events:\s*auto/.test(rule.body));
     const gives = rules.findIndex((rule) => rule.selector.endsWith(" .cf-term[data-tip]") && /pointer-events:\s*none/.test(rule.body));
     expect(takes, "the term takes the pointer back from its face").toBeGreaterThanOrEqual(0);

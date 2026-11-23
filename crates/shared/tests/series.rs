@@ -177,6 +177,28 @@ fn rating_move(before: (f64, f64), after: (f64, f64)) -> RatingMove {
     RatingMove { before, after }
 }
 
+/// R331 (SPEC §9.5): each reason a transition is refused for has one wire literal, the text its JSON
+/// carries, which the server's `api/series.rs` hands on.
+#[test]
+fn r331_each_refusal_reason_is_its_wire_literal() {
+    let reasons = [
+        (SeriesRefusalReason::NotPicking, "not_picking"),
+        (SeriesRefusalReason::Over, "over"),
+        (SeriesRefusalReason::PickClosed, "pick_closed"),
+        (SeriesRefusalReason::SlotOutOfRange, "slot_out_of_range"),
+        (SeriesRefusalReason::SlotWon, "slot_won"),
+        (SeriesRefusalReason::PickSealed, "pick_sealed"),
+        (SeriesRefusalReason::StalePick, "stale_pick"),
+        (SeriesRefusalReason::PickOpen, "pick_open"),
+        (SeriesRefusalReason::NotPlaying, "not_playing"),
+        (SeriesRefusalReason::PicksMissing, "picks_missing"),
+    ];
+    for (reason, literal) in reasons {
+        assert_eq!(reason.as_str(), literal);
+        assert_eq!(to_json(&reason), json!(literal));
+    }
+}
+
 mod r330_conquest_a_win_with_every_deck {
     use super::*;
 

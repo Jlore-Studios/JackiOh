@@ -2,15 +2,13 @@
 // the way the board's effects layer plans it (entered, held as the queue holds it at speed 1 with Big
 // moments full, remembered, then planned, a zero-length marker remembered alone as FxLayer's `pass` does,
 // R3407002), each entry's cues at its offset from the run's start, a cue's
-// end as R200 counts it, each card's signature ceiling, and R200 held over every entry.
+// end as R200 counts it (signatures.ts's `endOf`), each card's signature ceiling, and R200 held over every entry.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { expect } from "vitest";
 
 import { entranceEntries, planEntries, setPieceEntries, takeoverClaim, type AnimationEntry, type EntranceResolver } from "../game/animations.ts";
 import {
-  FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   SIGNATURE_LEGENDARY_MAX_MS,
   SIGNATURE_MYTHIC_MAX_MS,
@@ -20,16 +18,15 @@ import { planCardFx } from "../fx/cardFx.ts";
 import type { CardFxResult } from "../fx/cards/recipe.ts";
 import { FX_CARD_TABLE } from "../fx/cards/tables.ts";
 import { planFx } from "../fx/cues.ts";
-import { createFxMemory } from "../fx/memory.ts";
 import { galleryBoardOf, galleryCardEvents, galleryEntry, galleryFieldView, galleryPlayOf } from "../fx/motifs/gallery.ts";
 import { hasSetPiece, wipeClaim } from "../fx/setPieces.ts";
 import type { FxCue, FxPlanEnv } from "../fx/types.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { fullBoardView, withEvents } from "./fixtures.ts";
+import { endOf, envOf } from "./signatures.ts";
 
-export function envOf(intensity: number = FX_INTENSITY_SCALE.normal): FxPlanEnv {
-  return { intensity, card: () => undefined, memory: createFxMemory() };
-}
+/** The effects tests' shared helpers live in signatures.ts; the signature passes take them from here too. */
+export { endOf, envOf };
 
 /** As the board resolves an entrance: the card's type and rarity, a token's the one it prints (B2.5). */
 export const resolveEntrance: EntranceResolver = (defId) => {
@@ -37,21 +34,6 @@ export const resolveEntrance: EntranceResolver = (defId) => {
   if (def === undefined) return null;
   return { type: def.type, rarity: def.printedRarity ?? def.rarity };
 };
-
-/** A cue's end, as R200 counts it: bursts burn, shots fly then burst, shakes ride, the rest run out. */
-export function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shot":
-    case "projectile":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 /** One entry as planned, with its offset from the run's start. */
 export type PlannedEntry = { entry: AnimationEntry; offset: number; cues: FxCue[] };

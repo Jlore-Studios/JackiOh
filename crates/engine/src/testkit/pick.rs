@@ -1,11 +1,15 @@
-//! The one-instance `Selection[]` a test hands to a play's `targets` or a prompt's `answer`. Not
-//! globbed in: a test writes `pick::<builder>`. crates/tools/tests/acceptance.rs refuses a test's own
-//! copy (#1826).
+//! The one-pick `Selection[]` a test hands to a play's `targets` or a prompt's `answer` (an instance,
+//! a hero or a Mode option), and `targets`, the play's `{ "targets": … }` around one. Not globbed in:
+//! a test writes `pick::<builder>`. crates/tools/tests/acceptance.rs refuses a test's own copy of one,
+//! whatever its name (#1826, #3827). And `instance_ids`, the instance ids among a `Selection[]` (#3913).
+
+use std::fmt::Display;
 
 use serde_json::{Value, json};
 
 use crate::state::CardInstance;
 use crate::testkit::scenario::{CardRef, Scenario, SeatRef};
+use crate::wire::Selection;
 
 /// The pick of the instance whose id is `instance_id`.
 pub fn id(instance_id: &str) -> Value {
@@ -25,4 +29,30 @@ pub fn card(s: &Scenario, card: impl Into<CardRef>) -> Value {
 /// The pick of the unit in `player`'s lane `lane`, which must hold one (`Scenario::unit_at`).
 pub fn unit_at(s: &Scenario, player: impl SeatRef, lane: i32) -> Value {
     instance(&s.unit_at(player, lane))
+}
+
+/// The pick of the Mode option `option` (a Discover, Mode or Answer prompt's option string).
+pub fn mode(option: impl AsRef<str>) -> Value {
+    json!([{ "pick": "mode", "option": option.as_ref() }])
+}
+
+/// The pick of `player`'s hero (`"p1"`, `"p2"` or a `PlayerId`).
+pub fn hero(player: impl Display) -> Value {
+    json!([{ "pick": "hero", "player": player.to_string() }])
+}
+
+/// The `targets` of a play: `picks` (a builder above, or any `Selection[]`) as its only key.
+pub fn targets(picks: Value) -> Value {
+    json!({ "targets": picks })
+}
+
+/// The instance picks' ids among `selections`, in order; hero, zone, Mode, craft and none picks are skipped.
+pub fn instance_ids(selections: &[Selection]) -> Vec<String> {
+    selections
+        .iter()
+        .filter_map(|selection| match selection {
+            Selection::Instance { instance_id } => Some(instance_id.clone()),
+            _ => None,
+        })
+        .collect()
 }

@@ -1,5 +1,6 @@
-//! Stinkyscape #79 Orca (SPEC §8.10 row 79). Unit 3/3 → 6/6, cost 4, Embiggened (5), Epic.
-//!   Base:    "Starship Piece, Flying
+//! Stinkyscape #79 Orca (SPEC §8.10 row 79). Unit 3/1 → 6/2 (3/3 → 6/6 through v0.6.7k, issue #4285), cost
+//! 4, Embiggened (5), Epic.
+//!   Base:    "Flying
 //!            Cry: Choose one of 2 Miners and Equip it into this.
 //!            Embiggened (5): The Miners offered are Radiant."
 //!   Radiant: "… Cry: Choose one of 2 Miners and Equip it into this, twice. …"
@@ -8,22 +9,15 @@
 //! the pick is a fresh copy fused straight into this (R1086, R77), its Activate with it (R1751000). The
 //! Radiant face asks twice, the second offer once the first pick is in and without it. Embiggened
 //! (R1175000), the offer is Radiant (R469), the Cry reading the play's stamp (R81); its (5) is past
-//! `MAX_MANA`, so it is played so only with mana an effect gave (R1857001). Starship Piece and Flying are
-//! catalog keywords the engine plays; it stays a piece, the kept card being one (R1852001).
+//! `MAX_MANA`, so it is played so only with mana an effect gave (R1857001). Flying is a catalog keyword
+//! the engine plays. Issue #4154 took off its Starship Piece, so a Miner equipped into it leaves it no
+//! piece (R1852001) and its death fuses nothing. Since issue #4285 the Miners print no Equip, which the pick
+//! never read: they fuse in as before (R4285001).
 
 use jackioh_engine::effects::equip_picks;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-079";
-
-/// S #62 Miner v1 to S #66 Miner v5.
-const MINERS: [&str; 5] = [
-    "stinkyscape-062",
-    "stinkyscape-063",
-    "stinkyscape-064",
-    "stinkyscape-065",
-    "stinkyscape-066",
-];
 
 /// "Choose one of 2 Miners".
 const OFFER: i32 = 2;
@@ -35,7 +29,7 @@ const RADIANT_PICKS: i32 = 2;
 fn trawl(picks: i32) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            let mut args = json!({ "query": { "defId": MINERS }, "options": OFFER, "times": picks });
+            let mut args = json!({ "query": crate::query::miners(), "options": OFFER, "times": picks });
             if ctx.embiggened {
                 args["radiant"] = json!(true);
             }
@@ -60,6 +54,16 @@ mod tests {
     use jackioh_engine::effects::EQUIP_PICK_STEP;
     use jackioh_engine::testkit::*;
 
+    /// R3869002: the Miner pool today, S #62 Miner v1 to S #66 Miner v5, pinned so a change to it is
+    /// deliberate: the five this card named by id through v0.6.2b, in its order.
+    const MINERS: [&str; 5] = [
+        "stinkyscape-062",
+        "stinkyscape-063",
+        "stinkyscape-064",
+        "stinkyscape-065",
+        "stinkyscape-066",
+    ];
+
     const P1: PlayerId = PlayerId::P1;
 
     fn played(radiant: bool, embiggened: bool) -> (Scenario, String) {
@@ -73,25 +77,13 @@ mod tests {
         (s, host)
     }
 
-    // Differs from Scenario::offered: the open Discover's options, not the seat's legal actions.
-    fn offered(s: &Scenario) -> Vec<String> {
-        let pending = s.state().pending.clone().expect("a Discover is open");
-        assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
-        assert_eq!(pending.resume.step, EQUIP_PICK_STEP);
-        pending
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect()
-    }
-
     fn answers(s: &mut Scenario, host: &str, picks: usize, radiant_offer: bool) -> Vec<String> {
         let mut held: Vec<String> = Vec::new();
         for _ in 0..picks {
-            let offer = offered(s);
+            let pending = s.state().pending.as_ref().expect("a Discover is open");
+            assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
+            assert_eq!(pending.resume.step, EQUIP_PICK_STEP);
+            let offer = s.prompt_modes();
             assert_eq!(offer.len(), OFFER as usize, "{offer:?}");
             assert!(offer.iter().all(|id| MINERS.contains(&id.as_str()) && !held.contains(id)), "{offer:?}");
             let before = s.stats(host).health;
@@ -105,22 +97,45 @@ mod tests {
         held
     }
 
-    /// #3142: 3/3 on its base face and 6/6 on its Radiant one, until a Miner is equipped.
+    /// Issue #4285: 3/1 on its base face and 6/2 on its Radiant one (3/3 and 6/6 through v0.6.7k), until a
+    /// Miner is equipped.
     #[test]
-    fn it_is_3_3_and_radiant_6_6_before_its_miner() {
-        for (radiant, stats) in [(false, 3), (true, 6)] {
+    fn it_is_3_1_and_radiant_6_2_before_its_miner() {
+        for (radiant, stats) in [(false, (3, 1)), (true, (6, 2))] {
             let (s, host) = played(radiant, false);
             assert!(s.state().pending.is_some(), "the offer is open: nothing is equipped yet");
             let first = s.stats(host.as_str());
-            assert_eq!((first.attack, first.health), (stats, stats), "radiant {radiant}");
+            assert_eq!((first.attack, first.health), stats, "radiant {radiant}");
         }
+    }
+
+    /// R4285001: the Miners print no Equip since issue #4285, and the pick fuses one in all the same.
+    #[test]
+    fn r4285001_its_pick_still_fuses_and_prints_no_equip() {
+        crate::register_all();
+        for miner in MINERS {
+            let def = crate::card_def(miner);
+            for face in [&def.base, &def.radiant] {
+                assert!(!face.keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Equip), "{miner}");
+            }
+        }
+        let (mut s, host) = played(false, false);
+        // `answers` holds the host to the pick's health gained; the fusion is reported onto the host.
+        answers(&mut s, &host, 1, false);
+        assert!(s.events().iter().any(|event| matches!(
+            event,
+            GameEvent::Fused { result_instance_id, .. } if *result_instance_id == host
+        )));
+        s.activate(host.as_str(), json!({ "ability": "mine" }));
+        assert_eq!(resources_in_hand_of(s.state(), P1).len(), 1);
     }
 
     #[test]
     fn r1872002_its_cry_offers_two_miners_and_equips_the_one_chosen() {
         let (mut s, host) = played(false, false);
         answers(&mut s, &host, 1, false);
-        assert!(unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
+        // Issue #4154: no Starship Piece, and a Miner equipped into it makes it none (R1852001).
+        assert!(!unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
         s.activate(host.as_str(), json!({ "ability": "mine" }));
         assert_eq!(resources_in_hand_of(s.state(), P1).len(), 1);
     }
@@ -137,6 +152,7 @@ mod tests {
         let (mut s, host) = played(true, false);
         // The Radiant host wears its Miners' Radiant faces (R77).
         answers(&mut s, &host, 2, true);
-        assert!(unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
+        // Issue #4154: no Starship Piece, and a Miner equipped into it makes it none (R1852001).
+        assert!(!unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
     }
 }

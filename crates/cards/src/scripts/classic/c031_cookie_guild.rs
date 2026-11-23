@@ -2,12 +2,13 @@
 //!   Base:    "Cry: Recruit {units|Unit|Units} of ({costLimit}) Cost or less." — 1 Unit, (2)
 //!   Radiant: "Cry: Recruit {units|Unit|Units} of ({costLimit}) Cost or less." — 2 Units, (2)
 //!   Engine:  "Recruit (§6.3) filtered to Units whose deck cost (R65) is (2) or less, an X Unit counting
-//!            0 there (R396); two scans on the Radiant face, as #69 Call to Arms does, stopping when
-//!            the board is full. Tunes: cost limit 2 ↑; units 1 ↑."
+//!            0 there (R396); two scans on the Radiant face, as #69 Call to Arms does, each passing
+//!            over a match no zone takes (R4238000). Tunes: cost limit 2 ↑; units 1 ↑."
 //!
 //! §6.3 Recruit is one top-down scan for the first permanent that matches, summoned per R64 into the
 //! leftmost open zone with no Cry (R1). "Recruit N" is N scans, each taking the card it found, as #69
-//! Call to Arms writes it; a scan that finds a Unit but no open zone leaves it in the library.
+//! Call to Arms writes it; a scan passes over a Unit no open zone takes, which stays in the library,
+//! for the next match that lands (R4238000).
 //! The filter is `type: "Unit"` and `costRange.max`: the scan reads each library card's cost out of
 //! play (R65: its own cost plus its `costMod`, no player discount; an X card 0, R396).
 

@@ -28,9 +28,11 @@ import { CATALOG } from "@jackioh/cards";
 import { PACKS_OPEN_ALL_MAX } from "@jackioh/server-config";
 
 import { CardBack, CardFace, FullScreenArt, faceModel, useFullScreenTrigger } from "../cards/index.ts";
+import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { readerName } from "../cards/chinese.ts";
 import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
 import { useModalOverlay } from "../cards/inspect/store.ts";
+import { pointerFrames } from "../cards/pointerFrame.ts";
 import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
 import EquipButton from "../collection/EquipButton.tsx";
 import { flightsOf } from "../economy/bars.ts";
@@ -38,9 +40,9 @@ import OpeningBars from "../economy/OpeningBars.tsx";
 import "../economy/spend.css";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { resolveAnchor } from "../fx/anchors.ts";
-import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_MOBILE_WIDTH } from "../fx/constants.ts";
+import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../fx/director.ts";
-import { defaultFrames, defaultNow, defaultVisibility } from "../fx/FxLayer.tsx";
+import { defaultNow, defaultVisibility } from "../fx/FxLayer.tsx";
 import { useFxSettings } from "../fx/settings.ts";
 import { createSurface } from "../fx/surface.ts";
 import type { FxShakeSink } from "../fx/types.ts";
@@ -108,14 +110,20 @@ function revealOf(slot: OpenedPackResponse["slots"][number]): GrantItem | null {
 
 function PackSlotFace({ slot, look }: { slot: OpenedPackResponse["slots"][number]; look: string | null }): ReactElement {
   const def = CATALOG[slot.cardId];
-  const fs = useFullScreenTrigger({
-    defId: slot.cardId,
-    rarity: slot.rarity,
-    printedRarity: def?.printedRarity,
-    // A dropped cosmetic's look that is a full-art level opens as a Mythic does.
-    level: look,
-    name: def ? readerName(def) : slot.cardId,
-  });
+  const [detailOpen, setDetailOpen] = useState(false);
+  const fs = useFullScreenTrigger(
+    {
+      defId: slot.cardId,
+      rarity: slot.rarity,
+      printedRarity: def?.printedRarity,
+      // A dropped cosmetic's look that is a full-art level opens as a Mythic does.
+      level: look,
+      name: def ? readerName(def) : slot.cardId,
+    },
+    {
+      onTouchHold: () => setDetailOpen(true),
+    },
+  );
   return (
     <div className="pack-slot__face" {...fs.handlers}>
       {/* The shop never waits for the module (#1577), and a face is worked out by it (#778). */}
@@ -128,6 +136,7 @@ function PackSlotFace({ slot, look }: { slot: OpenedPackResponse["slots"][number
           )
         }
       </WhenEngineReady>
+      {detailOpen && def ? <CardDetail def={def} onClose={() => setDetailOpen(false)} /> : null}
     </div>
   );
 }
@@ -186,13 +195,12 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
       surface,
       domRoot: domRef.current!,
       now: defaultNow,
-      frames: defaultFrames(),
+      frames: pointerFrames(),
       visibility: defaultVisibility(),
       measure: resolveAnchor,
       shakeSink: NO_SHAKE,
       seed: FX_DEFAULT_SEED,
       capacity: capacityFor(window.innerWidth),
-      phone: window.innerWidth < FX_MOBILE_WIDTH,
     });
     director.current = created;
     return () => {

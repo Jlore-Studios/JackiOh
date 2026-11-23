@@ -191,6 +191,11 @@ mod tests {
 
         /// The Maestro on p1's field with `counters` Plague Counters, and every enemy zone full.
         fn full_enemy(seed: &str, radiant_face: bool, counters: i32) -> Scenario {
+            with_enemy_field(seed, radiant_face, counters, json!([VANILLA, VANILLA, VANILLA]))
+        }
+
+        /// `full_enemy` with `field` on the enemy's field.
+        fn with_enemy_field(seed: &str, radiant_face: bool, counters: i32, field: Value) -> Scenario {
             scenario(json!({
                 "seed": seed,
                 "p1": {
@@ -200,7 +205,7 @@ mod tests {
                 },
                 "p2": {
                     "hand": [FILLER, FILLER, FILLER],
-                    "field": [VANILLA, VANILLA, VANILLA],
+                    "field": field,
                     "graveyard": [FILLER, FILLER, FILLER],
                     "library": filler(4),
                 },
@@ -230,7 +235,8 @@ mod tests {
             find_instance_mut(s.state_mut(), &power)
                 .expect("the Heroic Power")
                 .memory
-                .insert(jackioh_engine::subsystems::POWER_KEY.to_string(), json!("draw"));
+                // Ranching, a (1) power: Life Tap costs (0) since R3551002, so spends nothing.
+                .insert(jackioh_engine::subsystems::POWER_KEY.to_string(), json!("rush"));
             s.activate(HEROIC_POWER, json!({}));
             assert_eq!(plague(&s, &maestro.id), 1);
         }
@@ -250,6 +256,46 @@ mod tests {
             assert_eq!(s.pile("p2", "graveyard").len(), 2);
             assert_eq!(s.pile("p2", "exile").len(), 4);
             assert_eq!(exiled_of(&s).len(), 4);
+        }
+
+        /// Imprisoned Ship Smith, a Unit printing Dormant.
+        const SMITH: &str = "stinkyscape-017"; // Imprisoned Ship Smith
+
+        fn dormant_smith() -> Value {
+            json!({ "def": SMITH, "slumber": { "turns": 2 } })
+        }
+
+        #[test]
+        fn r4322000_with_only_a_dormant_card_on_their_field_the_field_pick_exiles_nothing() {
+            let mut s = with_enemy_field("maestro-dormant-only", false, 4, json!([dormant_smith()]));
+            let before = s.unit("p2", 1).expect("the Smith");
+            activate_exile(&mut s);
+            // The hand, the library and the graveyard lose one each; the field, holding only a card
+            // no effect reaches, is skipped as an empty zone is (R1110).
+            assert_eq!(exiled_of(&s).len(), 3);
+            assert_eq!(s.pile("p2", "exile").len(), 3);
+            let smith = s.unit("p2", 1).expect("the Smith still stands");
+            assert_eq!(slumber_turns_of(&smith), Some(2), "still Dormant, its countdown untouched");
+            assert_eq!(smith, before, "the Smith is unchanged, its memory included");
+        }
+
+        #[test]
+        fn r4322000_beside_an_awake_permanent_the_field_pick_always_exiles_the_awake_one() {
+            for cursor in 0..16u32 {
+                let mut s = with_enemy_field(
+                    "maestro-dormant-beside",
+                    false,
+                    4,
+                    json!([dormant_smith(), VANILLA]),
+                );
+                s.state_mut().rng_cursor = cursor;
+                activate_exile(&mut s);
+                let smith = s.unit("p2", 1).expect("the Smith still stands");
+                assert_eq!(smith.def_id, SMITH, "cursor {cursor}");
+                assert_eq!(slumber_turns_of(&smith), Some(2), "cursor {cursor}");
+                assert!(s.unit("p2", 2).is_none(), "cursor {cursor}: the awake one is exiled");
+                assert_eq!(exiled_of(&s).len(), 4, "cursor {cursor}");
+            }
         }
 
         #[test]

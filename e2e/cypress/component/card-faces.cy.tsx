@@ -709,13 +709,16 @@ describe("faces in play fit their boxes (SPEC §10.10)", () => {
 
   it("a fused card's text breaks a line per ingredient", () => {
     cy.mount(<InPlayGrid width={270} />);
-    cy.get('[data-fit-box="fused-base"] .cf-text-base').should(($text) => {
+    // R102: a line per ingredient. `crafted`'s three ingredients each print a rules line; the pair's two
+    // keyword-only lines (core-011 and core-020, both "Rush, First Strike") have printed as one line since
+    // R3941002 (`merged_keyword_lines`), so the pair no longer shows the break.
+    cy.get('[data-fit-box="crafted"] .cf-text-base').should(($text) => {
       const el = $text[0];
       expect(el, "the fused rules text").to.not.eq(undefined);
       if (el === undefined) return;
       const style = getComputedStyle(el);
       expect(style.whiteSpace).to.eq("pre-line");
-      // Two ingredients, two lines at least: the box is taller than one line of its own text.
+      // Three ingredients, two lines at least: the box is taller than one line of its own text.
       expect(el.getBoundingClientRect().height).to.be.greaterThan(parseFloat(style.lineHeight) * 1.5);
     });
   });

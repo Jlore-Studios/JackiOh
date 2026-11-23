@@ -14,7 +14,7 @@ import {
   PREVIEW_PHONE_WIDTH_PX,
   PREVIEW_REFS_WIDTH_PX,
 } from "./constants.ts";
-import { FACE_ASPECT } from "../constants.ts";
+import { FACE_ASPECT, REF_TOOLTIP_HEIGHT_PX } from "../constants.ts";
 
 export type Rect = { left: number; top: number; width: number; height: number };
 
@@ -75,6 +75,31 @@ export function estimatedPreviewSize(
   const refs = panels.withRefs ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_REFS_WIDTH_PX : 0;
   const extended = panels.withExtended ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_EXTENDED_WIDTH_PX : 0;
   return { width: cardWidth + glossary + refs + extended, height: cardHeight };
+}
+
+/**
+ * R3838002: a reference's tooltip (CardRef.tsx): its face REF_TOOLTIP_HEIGHT_PX tall, never past the viewport. With its
+ * card's whole text (Extended.tsx) the panel stands on the face's left, as in the hover preview; on a phone it stacks
+ * above the face across its width, PREVIEW_EXTENDED_STACKED_MAX_PX tall at most, and the face shrinks so both fit.
+ */
+export function refTooltipSize(
+  viewport: { width: number; height: number },
+  withText: boolean,
+): { width: number; height: number; faceHeight: number; stacked: boolean } {
+  const faceHeight = Math.min(REF_TOOLTIP_HEIGHT_PX, viewport.height);
+  if (!withText) return { width: faceHeight * FACE_ASPECT, height: faceHeight, faceHeight, stacked: false };
+  if (!isPhoneViewport(viewport.width)) {
+    const width = faceHeight * FACE_ASPECT + PREVIEW_GLOSSARY_GAP_PX + PREVIEW_EXTENDED_WIDTH_PX;
+    return { width, height: faceHeight, faceHeight, stacked: false };
+  }
+  const room = viewport.height - 2 * PREVIEW_MARGIN_PX - PREVIEW_GLOSSARY_GAP_PX - PREVIEW_EXTENDED_STACKED_MAX_PX;
+  const stackedFace = Math.max(0, Math.min(faceHeight, room));
+  return {
+    width: stackedFace * FACE_ASPECT,
+    height: stackedFace + PREVIEW_GLOSSARY_GAP_PX + PREVIEW_EXTENDED_STACKED_MAX_PX,
+    faceHeight: stackedFace,
+    stacked: true,
+  };
 }
 
 type PreviewSide = "right" | "left" | "above" | "below";

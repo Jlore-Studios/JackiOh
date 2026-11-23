@@ -16,6 +16,7 @@ import type { PlayerId, PlayerView, Tag } from "@jackioh/shared";
 
 import { ANOMALIES, ANOMALY_FOUND_ID, type AnomalyCode } from "../../cards/anomalies.ts";
 import { CardArt } from "../../cards/art/CardArt.tsx";
+import { pointerFrames } from "../../cards/pointerFrame.ts";
 import { newEventsSince, reducedMotionNow } from "../../game/animations.ts";
 import { byTestid } from "../../game/contract.ts";
 import { useSetting } from "../../settings/store.ts";
@@ -23,7 +24,7 @@ import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { AURA_FADE_IN_MS, AURA_FADE_OUT_MS, FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../constants.ts";
 import { capacityFor } from "../director.ts";
 import { shedAuraScale, shedLevel, shedPointer, subscribeShed } from "../shed.ts";
-import { defaultFrames, defaultNow, defaultVisibility } from "../FxLayer.tsx";
+import { defaultNow, defaultVisibility } from "../FxLayer.tsx";
 import { createFrameLoop } from "../loop.ts";
 import { createFxMemory } from "../memory.ts";
 import { createRng } from "../rng.ts";
@@ -80,6 +81,20 @@ function holdsPointer(box: FxBox, pointer: { x: number; y: number }): boolean {
   return pointer.x >= box.x && pointer.x <= box.x + box.width && pointer.y >= box.y && pointer.y <= box.y + box.height;
 }
 
+/** #3674: `nearAuras` below shed stage 2, where every aura draws whole, or with no pointer known, where every one counts as far. */
+const NEAR_NONE = "none";
+
+/**
+ * R3351000 (#3674): the auras whose boxes hold the pointer at a stage that halves the far ones, as one string (their keys,
+ * in `boxes`' order), so the snapshot holds still while the pointer moves inside the same auras; NEAR_NONE below that stage
+ * or with no pointer known.
+ */
+function nearAuras(boxes: ReadonlyMap<string, FxBox>): string {
+  const pointer = shedPointer();
+  if (shedAuraScale(shedLevel()) === 1 || pointer === null) return NEAR_NONE;
+  return JSON.stringify([...boxes].filter(([, box]) => holdsPointer(box, pointer)).map(([key]) => key));
+}
+
 /** The union of the zones' boxes, or null while one of them is not on the page or it is empty. */
 export function measureZones(testids: readonly string[]): FxBox | null {
   let left = Infinity;
@@ -126,12 +141,6 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
   const off = settings.intensity === "off";
   const still = panelReduces || reducedMotionNow(settings);
   const intensity: number = FX_INTENSITY_SCALE[settings.intensity];
-  // R3351000: the shed stage and the pointer it measures far auras by (shed.ts). Below stage 2
-  // the snapshot is always null, so pointer-move notifications change nothing and React bails out:
-  // no re-render, no measureAll forced layout, no drift re-sync.
-  const shed = useSyncExternalStore(subscribeShed, shedLevel, () => 0);
-  const pointer = useSyncExternalStore(subscribeShed, () => (shedAuraScale(shedLevel()) === 1 ? null : shedPointer()), () => null);
-
   // What the effects read: a ref, so a seam object made each render restarts nothing.
   const live = useRef(seams ?? {});
   live.current = seams ?? {};
@@ -188,6 +197,16 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
   // The board can move under the auras without this layer rendering (a resize, an orientation change, a
   // scroll), so the boxes are measured after every render and on those events, and set only when one moved.
   const [boxes, setBoxes] = useState<ReadonlyMap<string, FxBox>>(() => new Map());
+  // R3351000: the shed stage's aura scale and the auras under the pointer it tells far auras by
+  // (shed.ts). #3674: each snapshot is a value that holds still until it changes what this layer
+  // draws: a shed to motes or to faces leaves the scale, and below stage 2, with no pointer known or
+  // while the pointer moves inside the same auras, the auras under it hold, so React bails out: no
+  // re-render, no measureAll forced layout, no drift re-sync.
+  const auraScale = useSyncExternalStore(subscribeShed, () => shedAuraScale(shedLevel()), () => 1);
+  const boxesRef = useRef(boxes);
+  boxesRef.current = boxes;
+  const near = useSyncExternalStore(subscribeShed, () => nearAuras(boxesRef.current), () => NEAR_NONE);
+  const underPointer: ReadonlySet<string> | null = near === NEAR_NONE ? null : new Set(JSON.parse(near) as string[]);
   const shownRef = useRef(shown);
   shownRef.current = shown;
   useLayoutEffect(() => {
@@ -223,7 +242,7 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
     // Motes to draw, or a phase to settle. Without a canvas (no 2D context) only the phases are work.
     const busy = (current: AuraTrack): boolean => (surface !== null && drift.count() > 0) || current.auras.some((aura) => aura.phase !== "standing");
     const loop = createFrameLoop({
-      frames: s.frames ?? defaultFrames(),
+      frames: s.frames ?? pointerFrames(),
       visibility: s.visibility ?? defaultVisibility(),
       now: s.now ?? defaultNow,
       onFrame: ({ dt, now: t }) => {
@@ -261,12 +280,9 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
   // theirs; the one under it keeps its whole budget, and with no pointer known every aura counts
   // as far. A box not measured yet keeps its whole budget until the measure lands.
   const budgetFor = (key: string): number => {
-    if (shedAuraScale(shed) === 1) return whole;
-    if (pointer !== null) {
-      const box = boxes.get(key);
-      if (box === undefined || holdsPointer(box, pointer)) return whole;
-    }
-    return Math.floor(whole * shedAuraScale(shed));
+    if (auraScale === 1) return whole;
+    if (underPointer !== null && (!boxes.has(key) || underPointer.has(key))) return whole;
+    return Math.floor(whole * auraScale);
   };
   const motes = shown.reduce((sum, aura) => sum + budgetFor(aura.spec.key), 0);
 

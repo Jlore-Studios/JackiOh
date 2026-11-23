@@ -364,6 +364,50 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0087_v0_5_13_retcon.sql",
         include_str!("../../migrations/0087_v0_5_13_retcon.sql"),
     ),
+    (
+        "0088_stinkyscape_plus_tags.sql",
+        include_str!("../../migrations/0088_stinkyscape_plus_tags.sql"),
+    ),
+    (
+        "0089_daily_games.sql",
+        include_str!("../../migrations/0089_daily_games.sql"),
+    ),
+    (
+        "0090_lobbies.sql",
+        include_str!("../../migrations/0090_lobbies.sql"),
+    ),
+    (
+        "0091_two_v_two.sql",
+        include_str!("../../migrations/0091_two_v_two.sql"),
+    ),
+    (
+        "0092_daily_email_days.sql",
+        include_str!("../../migrations/0092_daily_email_days.sql"),
+    ),
+    (
+        "0093_notifications.sql",
+        include_str!("../../migrations/0093_notifications.sql"),
+    ),
+    (
+        "0094_revoke_on_profile_activated.sql",
+        include_str!("../../migrations/0094_revoke_on_profile_activated.sql"),
+    ),
+    (
+        "0095_no_global_redemption_breaker.sql",
+        include_str!("../../migrations/0095_no_global_redemption_breaker.sql"),
+    ),
+    (
+        "0096_moderation_audit.sql",
+        include_str!("../../migrations/0096_moderation_audit.sql"),
+    ),
+    (
+        "0097_duos_match_checkpoints.sql",
+        include_str!("../../migrations/0097_duos_match_checkpoints.sql"),
+    ),
+    (
+        "0098_stats_and_daily_pay_indexes.sql",
+        include_str!("../../migrations/0098_stats_and_daily_pay_indexes.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is

@@ -149,6 +149,89 @@ fn a_hidden_card_that_was_buffed_is_not_given_a_size_and_a_public_buff_is_named_
 }
 
 #[test]
+fn a_buff_that_lowers_a_units_stats_says_it_got_the_signed_change_with_a_real_minus() {
+    let view = board(json!([
+        { "type": "buffed", "instanceId": "u1", "attack": -5, "health": 0 },
+        { "type": "buffed", "instanceId": "u1", "attack": -2, "health": -2 },
+        { "type": "buffed", "instanceId": "u1", "attack": 2, "health": -1 },
+        { "type": "buffed", "instanceId": "u1", "attack": 0, "health": -3 },
+    ]));
+    let lines = english(&view);
+    let n = name_of("core-032");
+    assert_eq!(
+        lines,
+        vec![
+            format!("{n} got \u{2212}5/+0"),
+            format!("{n} got \u{2212}2/\u{2212}2"),
+            format!("{n} got +2/\u{2212}1"),
+            format!("{n} got +0/\u{2212}3"),
+        ]
+    );
+    let joined = lines.join("\n");
+    assert!(!joined.contains("+-") && !joined.contains("+\u{2212}"));
+}
+
+#[test]
+fn a_gain_still_reads_gained_with_plus_signs_and_a_hidden_buff_stays_hidden() {
+    let view = board(json!([
+        { "type": "buffed", "instanceId": "u1", "attack": 2, "health": 1 },
+        { "type": "buffed", "instanceId": "u1", "attack": 0, "health": 3 },
+        { "type": "buffed", "instanceId": "hidden", "attack": 0, "health": 0 },
+    ]));
+    let n = name_of("core-032");
+    assert_eq!(
+        english(&view),
+        vec![
+            format!("{n} gained +2/+1"),
+            format!("{n} gained +0/+3"),
+            "A hidden card was buffed".to_string(),
+        ]
+    );
+}
+
+#[test]
+fn a_reader_of_chinese_reads_a_loss_in_chinese() {
+    let view = board(json!([
+        { "type": "buffed", "instanceId": "u1", "attack": -5, "health": 0 },
+    ]));
+    assert_eq!(
+        said(&view, Locale::ZhCn),
+        vec![format!("{}的属性变化：\u{2212}5/+0", chinese_name_of("core-032"))]
+    );
+}
+
+#[test]
+fn a_real_secure_system_sends_a_negative_buff_through_the_engine_to_the_log() {
+    use jackioh_engine::PlayerId::P1;
+    use jackioh_engine::testkit::scenario;
+
+    ready();
+    let mut s = scenario(json!({
+        "seed": "r3865",
+        "active": "p1",
+        "p1": {
+            "hand": ["stinkyscape-118"],
+            "field": ["core-011"],
+            "mana": 10,
+            "library": ["core-005", "core-005", "core-005", "core-005"],
+        },
+        "p2": { "hand": ["core-005"], "library": ["core-005", "core-005", "core-005", "core-005"] },
+    }));
+    let unit = s.unit_at(P1, 1);
+    let attack = s.stats(&unit).attack;
+    assert!(attack > 0);
+
+    s.play("stinkyscape-118", json!({}));
+
+    let lines = english(&s.view(P1));
+    assert!(
+        lines.contains(&format!("{} got \u{2212}{attack}/+0", name_of("core-011"))),
+        "{lines:?}"
+    );
+    assert!(!lines.join("\n").contains("+-"));
+}
+
+#[test]
 fn an_opponents_trap_the_viewer_may_not_read_fires_as_a_face_down_trap() {
     let view = bare(json!([
         { "type": "trapFired", "instanceId": "hidden", "defId": "hidden", "controller": "p2", "row": "backrow", "lane": 2 }
@@ -853,6 +936,239 @@ fn a_hit_names_its_source_off_combat_only_and_only_where_the_view_names_it() {
     );
 }
 
+/// R3857000: a hero's kept Armor gain names the hero by its side, in both languages.
+#[test]
+fn r3857000_an_armor_gain_names_the_heros_side() {
+    let view = bare(json!([
+        { "type": "armorGained", "player": "p1", "amount": 2, "armor": 2 },
+        { "type": "armorGained", "player": "p2", "amount": 3, "armor": 5 },
+    ]));
+    assert_eq!(
+        english(&view),
+        [
+            "Your hero gained 2 Armor".to_string(),
+            "The opponent's hero gained 3 Armor".to_string(),
+        ]
+    );
+    assert_eq!(
+        said(&view, Locale::ZhCn),
+        [
+            "你的英雄获得了2点护甲".to_string(),
+            "对手的英雄获得了3点护甲".to_string()
+        ]
+    );
+}
+
+/// R3925000: the loop cap's line names the side whose interaction it stopped, in both languages.
+#[test]
+fn r3925000_a_capped_loop_names_its_side() {
+    let view = bare(json!([
+        { "type": "loopCapped", "player": "p1" },
+        { "type": "loopCapped", "player": "p2" },
+    ]));
+    assert_eq!(
+        english(&view),
+        [
+            "Your chain of effects was stopped at the loop cap".to_string(),
+            "The opponent's chain of effects was stopped at the loop cap".to_string(),
+        ]
+    );
+    assert_eq!(
+        said(&view, Locale::ZhCn),
+        [
+            "你的连锁效果在循环上限处停止了".to_string(),
+            "对手的连锁效果在循环上限处停止了".to_string()
+        ]
+    );
+}
+
+/// The ids of the keywords each line names, in order.
+fn keywords(view: &PlayerView, locale: Locale) -> Vec<Vec<String>> {
+    call(view, locale)
+        .into_iter()
+        .flatten()
+        .map(|line| {
+            line.text
+                .spans
+                .iter()
+                .filter_map(|span| match span {
+                    Span::Keyword { entry, .. } => Some(entry.id.clone()),
+                    _ => None,
+                })
+                .collect()
+        })
+        .collect()
+}
+
+fn absorbed_hit(over: Value) -> Value {
+    let mut event = json!({ "type": "damageAbsorbed", "sourceId": "e1", "targetId": "u1", "absorbed": 3, "combat": false });
+    for (key, value) in over.as_object().expect("an object") {
+        event[key] = value.clone();
+    }
+    event
+}
+
+fn died(over: Value) -> Value {
+    let mut event = json!({ "type": "destroyed", "instanceId": "u1", "defId": "core-032", "owner": "p1", "controller": "p1", "attack": 3, "maxHealth": 4, "killerId": null });
+    for (key, value) in over.as_object().expect("an object") {
+        event[key] = value.clone();
+    }
+    event
+}
+
+fn returned(over: Value) -> Value {
+    let mut event = json!({ "type": "summoned", "player": "p1", "instanceId": "u1", "defId": "core-032", "row": "units", "lane": 1 });
+    for (key, value) in over.as_object().expect("an object") {
+        event[key] = value.clone();
+    }
+    event
+}
+
+fn healed(over: Value) -> Value {
+    let mut event = json!({ "type": "healed", "targetId": "u1", "amount": 3 });
+    for (key, value) in over.as_object().expect("an object") {
+        event[key] = value.clone();
+    }
+    event
+}
+
+#[test]
+fn a_hit_names_the_keyword_behind_it() {
+    let panther = name_of("core-032");
+    let vanilla = name_of("core-008");
+    for via in ["Cleave", "Trample", "First Strike", "Pierce"] {
+        let view = board(json!([
+            hit(json!({ "sourceId": null, "amount": 3, "combat": true, "via": via })),
+            hit(json!({ "sourceId": "e1", "amount": 3, "absorbed": 2, "via": via })),
+            hit(json!({ "sourceId": null, "targetId": "hero-p1", "amount": 2, "combat": true, "via": via })),
+            hit(json!({ "sourceId": null, "amount": 2, "combat": true, "absorbed": 1, "via": via })),
+            absorbed_hit(json!({ "via": via })),
+            absorbed_hit(json!({ "combat": true, "via": via })),
+        ]));
+        assert_eq!(
+            english(&view),
+            [
+                format!("{panther} took 3 damage in combat ({via})"),
+                format!("{vanilla} dealt 3 damage to {panther}, 2 absorbed by Armor ({via})"),
+                format!("Your hero took 2 damage in combat ({via})"),
+                format!("{panther} took 2 damage in combat, 1 absorbed by Armor ({via})"),
+                format!("{panther}'s Armor absorbed 3 damage from {vanilla} ({via})"),
+                format!("{panther}'s Armor absorbed 3 damage in combat ({via})"),
+            ]
+        );
+        assert!(
+            keywords(&view, Locale::En)
+                .iter()
+                .all(|ids| ids == &[via.to_string()]),
+            "{via}"
+        );
+    }
+}
+
+#[test]
+fn a_heal_a_death_and_a_return_name_the_keyword_behind_them() {
+    let panther = name_of("core-032");
+    let view = board(json!([
+        healed(json!({ "via": "Lifesteal" })),
+        died(json!({ "via": "Poisonous" })),
+        died(json!({ "via": "First Strike" })),
+        returned(json!({ "via": "Reborn" })),
+    ]));
+    assert_eq!(
+        english(&view),
+        [
+            format!("{panther} healed 3 (Lifesteal)"),
+            format!("{panther} was destroyed (Poisonous)"),
+            format!("{panther} was destroyed (First Strike)"),
+            format!("{panther} came back in your lane 1 (Reborn)"),
+        ]
+    );
+    assert_eq!(
+        keywords(&view, Locale::En),
+        [["Lifesteal"], ["Poisonous"], ["First Strike"], ["Reborn"]]
+    );
+}
+
+#[test]
+fn r2783001_events_without_via_read_as_they_did() {
+    let panther = name_of("core-032");
+    let vanilla = name_of("core-008");
+    let view = board(json!([
+        hit(json!({ "sourceId": null, "amount": 3, "combat": true })),
+        hit(json!({ "sourceId": "e1", "amount": 3, "absorbed": 2 })),
+        absorbed_hit(json!({ "combat": true })),
+        absorbed_hit(json!({})),
+        healed(json!({})),
+        died(json!({})),
+        returned(json!({})),
+    ]));
+    assert_eq!(
+        english(&view),
+        [
+            format!("{panther} took 3 damage in combat"),
+            format!("{vanilla} dealt 3 damage to {panther}, 2 absorbed by Armor"),
+            format!("{panther}'s Armor absorbed 3 damage in combat"),
+            format!("{panther}'s Armor absorbed 3 damage from {vanilla}"),
+            format!("{panther} healed 3"),
+            format!("{panther} was destroyed"),
+            format!("{panther} entered your lane 1"),
+        ]
+    );
+    assert!(keywords(&view, Locale::En).iter().all(Vec::is_empty));
+}
+
+#[test]
+fn a_reader_of_chinese_reads_the_keyword_and_the_sentence_in_chinese() {
+    let view = board(json!([
+        hit(json!({ "sourceId": null, "amount": 3, "combat": true, "via": "Poisonous" })),
+        returned(json!({ "via": "Reborn" })),
+    ]));
+    let lines = call(&view, Locale::ZhCn);
+    let hit_line = lines[0].as_ref().expect("a line");
+    let word = hit_line
+        .text
+        .spans
+        .iter()
+        .find_map(|span| match span {
+            Span::Keyword { children, .. } => children.iter().find_map(|child| match child {
+                Span::Text { text } => Some(text.clone()),
+                _ => None,
+            }),
+            _ => None,
+        })
+        .expect("a keyword span");
+    assert!(!word.is_ascii(), "{word}");
+    assert!(
+        hit_line.text.full.ends_with(&format!("（{word}）")),
+        "{}",
+        hit_line.text.full
+    );
+    let back = &lines[1].as_ref().expect("a line").text.full;
+    assert!(back.contains("回到了") && back.ends_with('）'), "{back}");
+    assert_eq!(keywords(&view, Locale::ZhCn), [["Poisonous"], ["Reborn"]]);
+}
+
+#[test]
+fn a_hidden_card_or_source_names_no_keyword() {
+    let view = board(json!([
+        died(json!({ "instanceId": "hidden", "defId": "hidden" })),
+        died(json!({ "instanceId": "hidden", "defId": "hidden", "via": "Poisonous" })),
+        returned(json!({ "instanceId": "hidden", "defId": "hidden", "via": "Reborn" })),
+        hit(json!({ "sourceId": "hidden", "amount": 2 })),
+        absorbed_hit(json!({ "sourceId": "hidden" })),
+    ]));
+    assert!(keywords(&view, Locale::En).iter().all(Vec::is_empty));
+    assert!(
+        english(&view)
+            .iter()
+            .all(|line| !["Poisonous", "Reborn", "came back"]
+                .iter()
+                .any(|word| line.contains(word))),
+        "{:?}",
+        english(&view)
+    );
+}
+
 #[test]
 fn each_play_pairs_with_its_own_announce_by_the_event_itself() {
     let spell = name_of(SPELL);
@@ -1050,6 +1366,170 @@ fn glitch_marks_and_the_rest_of_the_late_sets_read_as_one_sentence_each() {
             "Opponent emoted",
         ]
         .map(String::from)
+    );
+}
+
+/// R437: a mark's line says the name its badge does, each mark its own.
+#[test]
+fn r437_each_mark_is_named_as_its_badge_says() {
+    let marks = [
+        ("steal", "Steal"),
+        ("berserk", "Berserk"),
+        ("frozen", "Frozen"),
+        ("destroy", "Destroy"),
+        ("allure", "Allure"),
+        ("duo", "Duo"),
+        ("endOfTurn", "End of turn"),
+    ];
+    let events: Vec<Value> = marks
+        .iter()
+        .map(|(mark, _)| json!({ "type": "marked", "instanceId": "hidden", "mark": mark, "color": "purple", "added": true }))
+        .collect();
+    let want: Vec<String> = marks
+        .iter()
+        .map(|(_, name)| format!("A card was marked ({name})"))
+        .collect();
+    assert_eq!(english(&bare(Value::Array(events))), want);
+}
+
+/// R404: a quest's line says the quest's words while the card's view lists that quest open, and only the
+/// progress for a quest it does not list.
+#[test]
+fn r404_a_quests_line_says_its_words_while_the_card_lists_it_open() {
+    let quest = json!({
+        "open": [{ "id": "q1", "text": "Play 3 Spells", "progress": 1, "goal": 3, "rewards": [] }],
+        "auras": [],
+    });
+    let view = view(
+        side(
+            "p1",
+            json!({ "units": [unit("p1", "u1", "core-032", json!({ "quest": quest })), null, null, null, null] }),
+        ),
+        side("p2", json!({ "hand": { "count": 4 } })),
+        json!([
+            { "type": "questProgressed", "player": "p1", "instanceId": "u1", "quest": "q1", "progress": 1, "goal": 3 },
+            { "type": "questProgressed", "player": "p1", "instanceId": "u1", "quest": "q2", "progress": 2, "goal": 5 },
+        ]),
+    );
+    let panther = name_of("core-032");
+    assert_eq!(
+        english(&view),
+        [
+            format!("Your {panther} quest: Play 3 Spells, 1/3"),
+            format!("Your {panther} quest: 2/5"),
+        ]
+    );
+}
+
+/// R177, R97, R370: a cost redacted to a negative sentinel says only that it changed, and a cost of 0 or more
+/// is said; a card set in the backrow is a face-down trap only when the viewer may not read it, and a hidden
+/// card summoned among the units enters as a hidden card; a card that became another is a hidden card only
+/// where both sides are hidden; a countered card is stolen only when it went to its counterer's hand.
+#[test]
+fn r177_r97_costs_summons_transforms_and_counters_say_what_the_viewer_may_read() {
+    let view = board(json!([
+        { "type": "costChanged", "instanceId": "u1", "cost": -1 },
+        { "type": "costChanged", "instanceId": "u1", "cost": 0 },
+        { "type": "costChanged", "instanceId": "u1", "cost": 2 },
+        { "type": "summoned", "player": "p2", "instanceId": "w1", "defId": "core-006", "row": "backrow", "lane": 1 },
+        { "type": "summoned", "player": "p2", "instanceId": "hidden", "defId": "hidden", "row": "units", "lane": 2 },
+        { "type": "transformed", "instanceId": "hidden", "fromDefId": "hidden", "toDefId": "core-020", "newInstanceId": "t1" },
+        { "type": "countered", "player": "p2", "instanceId": "c1", "defId": "core-020", "byInstanceId": null, "to": "hand" },
+        { "type": "countered", "player": "p2", "instanceId": "c2", "defId": "core-020", "byInstanceId": null, "to": "graveyard" },
+    ]));
+    let lines = english(&view);
+    let (panther, well, other) = (name_of("core-032"), name_of("core-006"), name_of("core-020"));
+    assert_eq!(
+        lines[..3],
+        [
+            format!("{panther} changed cost"),
+            format!("{panther} now costs (0)"),
+            format!("{panther} now costs (2)"),
+        ]
+    );
+    assert!(lines[3].starts_with(&format!("{well} entered")), "{}", lines[3]);
+    assert!(lines[4].starts_with("A hidden card entered"), "{}", lines[4]);
+    assert_eq!(
+        lines[5..],
+        [
+            format!("A hidden card became {other}"),
+            format!("{other} was countered and stolen"),
+            format!("{other} was countered"),
+        ]
+    );
+}
+
+/// R97: a card in a pile is named by its own instance, in Chinese when the view shows it so, and one that left
+/// the board fused or transformed is named by what it became; an instance whose definition the window hid is
+/// never named by the sentinel.
+#[test]
+fn r97_a_piles_card_and_one_that_became_another_are_named_by_their_instance() {
+    let view = view(
+        side(
+            "p1",
+            json!({ "graveyard": [
+                { "instanceId": "g0", "defId": "core-008", "radiant": false, "cost": 1 },
+                { "instanceId": "g1", "defId": "core-020", "radiant": false, "cost": 2 },
+                { "instanceId": "g2", "defId": "meditative-023", "radiant": false, "cost": 3, "chinese": true },
+            ] }),
+        ),
+        side("p2", json!({ "hand": { "count": 4 } })),
+        json!([
+            { "type": "costChanged", "instanceId": "g1", "cost": 1 },
+            { "type": "costChanged", "instanceId": "g2", "cost": 1 },
+            { "type": "fused", "instanceIds": ["a", "b"], "resultInstanceId": "f1", "defId": "core-032" },
+            { "type": "costChanged", "instanceId": "f1", "cost": 1 },
+            { "type": "transformed", "instanceId": "x1", "fromDefId": "core-008", "toDefId": "core-020", "newInstanceId": "x2" },
+            { "type": "costChanged", "instanceId": "x1", "cost": 1 },
+            { "type": "discarded", "instanceId": "d1", "defId": "hidden", "owner": "p2" },
+            { "type": "costChanged", "instanceId": "d1", "cost": 1 },
+        ]),
+    );
+    let costs: Vec<String> = english(&view)
+        .into_iter()
+        .filter(|line| line.ends_with("now costs (1)"))
+        .collect();
+    let other = name_of("core-020");
+    assert_eq!(
+        costs,
+        [
+            format!("{other} now costs (1)"),
+            format!("{} now costs (1)", chinese_name_of("meditative-023")),
+            format!("{} now costs (1)", name_of("core-032")),
+            format!("{other} now costs (1)"),
+            "A card now costs (1)".to_string(),
+        ]
+    );
+}
+
+/// R1301, R97: a sentinel definition names no card, even for an instance the view shows in Chinese.
+#[test]
+fn r1301_a_hidden_definition_is_a_hidden_card_whatever_its_instance() {
+    let view = view(
+        side(
+            "p1",
+            json!({ "units": [unit("p1", "u5", "meditative-023", json!({ "chinese": true })), null, null, null, null] }),
+        ),
+        side("p2", json!({ "hand": { "count": 4 } })),
+        json!([{ "type": "summoned", "player": "p1", "instanceId": "u5", "defId": "hidden", "row": "units", "lane": 2 }]),
+    );
+    let lines = english(&view);
+    assert!(lines[0].starts_with("A hidden card entered"), "{lines:?}");
+}
+
+/// The card a line opens: the card a transform made, and one no longer Radiant, by its own instance.
+#[test]
+fn a_transformed_or_deradianted_cards_line_opens_that_card() {
+    let view = board(json!([
+        { "type": "transformed", "instanceId": "u1", "fromDefId": "core-032", "toDefId": "core-020", "newInstanceId": "t1" },
+        { "type": "deradianted", "instanceId": "u1", "defId": "core-032", "zone": { "z": "field", "player": "p1", "row": "units", "lane": 1 } },
+    ]));
+    assert_eq!(
+        cards(&view),
+        [
+            ("core-020".to_string(), Some("t1".to_string())),
+            ("core-032".to_string(), Some("u1".to_string())),
+        ]
     );
 }
 

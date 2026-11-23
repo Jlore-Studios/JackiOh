@@ -13,9 +13,9 @@
 //!
 //! THE RADIANT TRIGGER answers every `cardPlayed` of a Trap or Field Trap by its controller, a cast
 //! included (R70), and gains the card's declared mana (`param(ctx, "mana")`) for this turn (§6.3 Mana).
-//! The played card is read as it stands, so a Cloaked card's face-down play, a Trap play (R783005),
-//! answers it. The `manaChanged` it makes names no card, so a face-down trap stays unnamed to the
-//! opponent (R33, R97).
+//! The play is read as it counts (`played_type_of`), so a Cloaked card's face-down play, a Trap play
+//! (R783005), answers it. The `manaChanged` it makes names no card, so a face-down trap stays unnamed
+//! to the opponent (R33, R97).
 
 use jackioh_engine::effects::gain_mana;
 use jackioh_engine::prelude::*;
@@ -43,22 +43,14 @@ fn aura() -> CostAuraHook {
 /// with nothing.
 fn after_you_play_a_trap() -> TriggerDef {
     TriggerDef::new("toe-cracker-mana", &[GameEventType::CardPlayed], |ctx, event| {
-        let GameEvent::CardPlayed {
-            player,
-            instance_id,
-            def_id,
-            ..
-        } = event
-        else {
+        let GameEvent::CardPlayed { player, .. } = event else {
             return vec![];
         };
         if *player != ctx.controller {
             return vec![];
         }
-        // R783005: the card as it stands, so a card set by its Cloaked is the Trap it was played as.
-        let played = find_instance(ctx.state, instance_id)
-            .map_or_else(|| def_of(Some(&*ctx.state), def_id).type_, |card| card_type_of(ctx.state, card));
-        if !TRAP_TYPES.contains(&played) {
+        // R783005: the play as it counts, so a card set by its Cloaked is the Trap it was played as.
+        if !played_type_of(&*ctx.state, event).is_some_and(|played| TRAP_TYPES.contains(&played)) {
             return vec![];
         }
         vec![gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") })))]
@@ -97,7 +89,7 @@ mod tests {
     const TWO_TRAP: &str = "classic-052"; // Final Gambit: Trap that answers nothing these tests do (Unlicensed Experimentation, core-085 since issue #3136)
     const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
     const TESLA: &str = "classic-005"; // Tesla: a Field Trap
-    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const FIELD_SPELL: &str = "stand-in (3) Field Spell";
     const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
     const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
     const WARDRUM: &str = "classicplus-037"; // Wardrum: Divine Shield, "End of turn: Cast a copy of a random Spell, Field Spell or Trap you played this turn."
@@ -166,10 +158,10 @@ mod tests {
             #[test]
             fn the_opponent_s_traps_and_your_field_spells_and_spells_are_untouched() {
                 let s = scenario(json!({
-                    "p1": { "hand": [MANA_WELL, STOCKPILE], "field": [CRACKER] },
+                    "p1": { "hand": [FIELD_SPELL, STOCKPILE], "field": [CRACKER] },
                     "p2": { "hand": [TWO_TRAP, STOCKPILE] },
                 }));
-                assert_eq!(cost_of(&s, MANA_WELL), 3);
+                assert_eq!(cost_of(&s, FIELD_SPELL), 3);
                 assert_eq!(cost_of(&s, STOCKPILE), 1);
                 assert_eq!(cost_of(&s, TWO_TRAP), 2);
             }
@@ -255,8 +247,8 @@ mod tests {
                     }));
                     let id = cracker_in_hand(&s);
                     assert!(
-                        legal_actions(s.state(), P1).iter().any(|action| matches!(action,
-                            ActionBody::Play { instance_id, face_down: Some(RevealAt::Cloaked), .. } if *instance_id == id)),
+                        s.plays_of(&id).iter().any(|action| matches!(action,
+                            ActionBody::Play { face_down: Some(RevealAt::Cloaked), .. })),
                         "offered Cloaked"
                     );
                     set_cracker(&mut s);
@@ -351,12 +343,12 @@ mod tests {
             #[test]
             fn a_spell_a_field_spell_or_the_opponent_s_trap_gains_nothing() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [STOCKPILE, MANA_WELL], "field": [{ "def": CRACKER, "radiant": true }], "library": [STOCKPILE, STOCKPILE] },
+                    "p1": { "hand": [STOCKPILE, FIELD_SPELL], "field": [{ "def": CRACKER, "radiant": true }], "library": [STOCKPILE, STOCKPILE] },
                     "p2": { "hand": [SHEEPISH, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
                 }));
                 s.play(STOCKPILE, json!({}));
                 s.expect_mana(P1, 3);
-                s.play(MANA_WELL, json!({ "zone": 1 }));
+                s.play(FIELD_SPELL, json!({ "zone": 1 }));
                 s.expect_mana(P1, 0);
                 s.end_turn();
                 s.play(SHEEPISH, json!({ "zone": 1 }));

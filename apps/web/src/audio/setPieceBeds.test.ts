@@ -28,8 +28,12 @@ import { baseView, dormantStarship, emptySide, fullBoardView, unit, withEvents }
 import { createSoundDirector } from "./director.ts";
 import { SET_PIECE_BEDS, STARSHIP_LAUNCH_BED, setPieceBed } from "./setPieceBeds.ts";
 import { SFX_IDS } from "./sfx.ts";
+import { loadSoundTables } from "./soundTablesLoader.ts";
 import type { CardHook, PlayableLineKind, SfxId, SoundSink } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
+
+// #4158: the sound tables load lazily; this file reads the shipped ones.
+await loadSoundTables();
 
 const NETHER = "core-088";
 const lookup = lookupFromDefs(CATALOG);

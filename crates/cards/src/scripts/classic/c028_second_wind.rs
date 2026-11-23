@@ -1,19 +1,77 @@
-//! C #28 Second Wind (SPEC §8.6 row 28, §6.2 Replacement, §6.3 Play; R1, R3, R65, R78, R393).
-//! Field Spell, cost 0, Legendary.
-//!   Base:    "Cry: Exile your deck and discard your hand.\nAura: You may play ({minCost})+ Cost cards
-//!            from your graveyard. Cards that would go there are exiled instead."
-//!   Radiant: "Cry: Exile your deck and discard your hand.\nAura: You may play ({minCost})+ Cost cards
-//!            from your graveyard."
-//!   Engine:  "Play from the graveyard (§6.3 Play) for every card type while this is on the field: such
-//!            a play costs, chooses and counts as one from hand, fires its Cry (R1) and takes R65's
-//!            player discounts, at a price of at least (1) as paid (no free loop). The base face adds a
-//!            replacement (§6.2) for cards you own that would go to a graveyard: they are exiled instead.
-//!            The Cry's own discard lands first, so the discarded hand is playable (R393). With no deck
-//!            left, every draw is fatigue (§2.4). Tunes: minimum price 1 ↓."
+//! C #28 Second Wind (SPEC §8.6 row 28, §6.1 Indestructible and Flashback, §6.2 Aura; R1, R16, R1869003,
+//! R3951001, R4440052). Field Spell, cost 0, Legendary.
+//!   Base:    "Indestructible\nCry: Discard your hand and exile your deck.\nAura: Every card in your deck
+//!            and graveyard has Flashback. You have +{mana} mana per turn." (mana 1)
+//!   Radiant: "Indestructible\nCry: Discard your hand and your deck.\nAura: Every card in your deck and
+//!            graveyard has Flashback. You have +{mana} mana per turn." (mana 2)
+//!   Engine:  Indestructible is a catalog keyword (§6.1). The Cry (R1) discards the whole hand (R16: no
+//!            choice), then the base face exiles the deck, each card its own exile (R135), and the Radiant
+//!            face sends it to the graveyard (`discard_library`, R3951001), where its cards can be played
+//!            again. The Aura is S #152 Sanctum's (R1869003): while this acts on the field, every card in
+//!            its controller's deck and graveyard has Flashback (R783012), so each graveyard card is
+//!            offered once as a play from there at its cost, and a played one's `flashbackSpent` keeps the
+//!            aura off it for good (R783013). With no deck left, every draw is fatigue (§2.4). "You have
+//!            +{mana} mana per turn" (issue #4440) is the engine's `mana_per_turn` flag (R4440052): while
+//!            this acts face-up on its controller's field, each of their refreshes gives `mana` more, on
+//!            top of max mana, as Hearthstone's Overload in reverse; through v0.6.9n it gave none
+//!            (`script_v0_6_9n`, kept, R767000).
+//!   Issue #3951 gave it this text. Through v0.6.4c its Cry exiled the deck and then discarded the
+//!   hand, and its Aura let its controller play (1)+ Cost cards from their graveyard (`minCost`) any
+//!   number of times, the base face exiling every card of theirs that would go there; `script_v0_6_4c`
+//!   keeps that for those replays (R767000, R393, R65).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-028";
+
+/// "You have +1 mana per turn": the base face's `mana` (R4440052), the flag the declared number moves.
+const MANA: i32 = 1;
+/// "You have +2 mana per turn": the Radiant face's.
+const RADIANT_MANA: i32 = 2;
+
+/// R3951001: the Cry: the hand discarded, then the deck exiled (base) or discarded (Radiant).
+fn cry(radiant: bool) -> Hook {
+    hook(move |_ctx| {
+        let deck = if radiant {
+            discard_library(DiscardLibraryArgs::default())
+        } else {
+            exile_matching(json_as(json!({ "zones": ["library"] })))
+        };
+        vec![discard_hand(Default::default()), deck]
+    })
+}
+
+pub fn script() -> CardScripts {
+    let face = |radiant: bool| Script {
+        static_flags: Some(StaticFlags {
+            mana_per_turn: Some(if radiant { RADIANT_MANA } else { MANA }),
+            ..StaticFlags::default()
+        }),
+        ..wind(radiant)
+    };
+    CardScripts {
+        base: face(false),
+        radiant: face(true),
+    }
+}
+
+/// R3951001: one face's Cry and Flashback Aura, as v0.6.9n ran them.
+fn wind(radiant: bool) -> Script {
+    Script {
+        cry: Some(cry(radiant)),
+        aura: Some(crate::scripts::stinkyscape::c152_sanctum::flashback_aura()),
+        ..Script::default()
+    }
+}
+
+/// R767000: after v0.6.4c through v0.6.9n it gave no mana per turn (issue #4440); `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_6_9n() -> CardScripts {
+    CardScripts {
+        base: wind(false),
+        radiant: wind(true),
+    }
+}
 
 /// The instance-memory mark the Cry holds while its own discard lands (R393).
 const CRY_RUNNING: &str = "secondWindCry";
@@ -25,7 +83,7 @@ fn recalled_on<'a>(card: &'a CardInstance, key: &str) -> Option<&'a Value> {
 /// Both faces' Cry: exile the deck, each card its own exile (R135), then discard the hand (R16: a whole
 /// hand needs no choice). Its discard must land in the graveyard before the Aura starts exiling (R393),
 /// so the Cry marks itself as running (`remember`) around it.
-fn cry() -> Hook {
+fn cry_v0_6_4c() -> Hook {
     hook(|_ctx| {
         vec![
             remember(json_as(json!({ "key": CRY_RUNNING, "value": true }))),
@@ -47,9 +105,12 @@ fn graveyard_play() -> GraveyardPlayHook {
     })
 }
 
-pub fn script() -> CardScripts {
+/// R767000: the scripts through v0.6.4c (issue #3951): the Cry exiled the deck, then discarded the hand,
+/// and the Aura let its controller play (`minCost`)+ Cost cards from their graveyard, the base face
+/// exiling their cards that would go there. `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_4c() -> CardScripts {
     let base = Script {
-        cry: Some(cry()),
+        cry: Some(cry_v0_6_4c()),
         graveyard_play: Some(graveyard_play()),
         // B5 E5: your cards that would go to a graveyard are exiled, but not while the Cry's mark is on
         // (R393); a Second Wind that arrives without its Cry (a Recruit, a summon) has no mark.
@@ -72,7 +133,7 @@ pub fn script() -> CardScripts {
     };
 
     let radiant = Script {
-        cry: Some(cry()),
+        cry: Some(cry_v0_6_4c()),
         graveyard_play: Some(graveyard_play()),
         ..Script::default()
     };
@@ -80,45 +141,25 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #28 Second Wind — SPEC §8.6 row 28, BUILD M9 Classic row C 28 (#64, R393, R65, §2.4, R386).
+// C #28 Second Wind — SPEC §8.6 row 28, BUILD M9 Classic row C 28 (#64, R393, R65, §2.4, R386, R4440052).
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::def_ids;
-    use crate::js;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
-    const P2: PlayerId = PlayerId::P2;
 
     const WIND: &str = "classic-028";
-    const REPLENISH: &str = "core-010"; // Rapid Replenish: a Spell
-    const STOCKPILE: &str = "core-005"; // Stockpile: "Draw 2. Heal your hero 2."
-    const ECLIPSE: &str = "core-035"; // Lunar Eclipse: "Deal 3 damage to a target."
-    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: "Cry: Summon a Rush Token."
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const ECLIPSE: &str = "core-035"; // Lunar Eclipse: a Spell with a target
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: a Unit with a Cry
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
-    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
-    const MENACE: &str = "core-019"; // Midrange Menace
-    const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
-    const COLLATERAL: &str = "core-034"; // Collateral Damage: exile target permanent and a random card from their deck
-    const TOE_CRACKER: &str = "classic-006"; // Cloaked Toe Cracker: "Aura: Your Traps are free."
-    const RUSH_TOKEN: &str = "core-t-rush";
+    const MENACE: &str = "core-019"; // Midrange Menace: a Unit
 
-    struct Played {
-        state: GameState,
-        events: Vec<GameEvent>,
-    }
-
-    fn plays_of_card(s: &Scenario, instance_id: &str, player: PlayerId) -> Vec<ActionBody> {
-        legal_actions(s.state(), player)
-            .into_iter()
-            .filter(|action| matches!(action, ActionBody::Play { instance_id: id, .. } if id == instance_id))
-            .collect()
-    }
-
+    /// The defs of p1's graveyard cards `legalActions` offers a play of.
     fn graveyard_defs_offered(s: &Scenario) -> Vec<String> {
         let offered: IndexSet<String> = legal_actions(s.state(), P1)
             .into_iter()
@@ -134,346 +175,187 @@ mod tests {
             .collect()
     }
 
-    /// A play of a graveyard card (B5 E11), sent to `reduce` as `legalActions` offers it: the harness's
-    /// `play` takes a card from a hand, so a graveyard play is reduced here and read back off its result.
-    fn play_from_graveyard(s: &Scenario, card: &CardInstance, extra: Value) -> Played {
-        let mut action = json!({ "type": "play", "playerId": "p1", "instanceId": card.id });
-        if let (Some(into), Some(more)) = (action.as_object_mut(), extra.as_object()) {
-            for (key, value) in more {
-                into.insert(key.clone(), value.clone());
-            }
+    fn game(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": {
+                "hand": [{ "def": WIND, "radiant": radiant }, STOCKPILE, MR_TOKEN],
+                "library": [VANILLA, MENACE, ECLIPSE],
+                "mana": 10,
+            },
+            "p2": { "hand": [STOCKPILE] },
+        }))
+    }
+
+    fn count(s: &Scenario, kind: &str) -> usize {
+        s.events().iter().filter(|event| event.event_type().as_str() == kind).count()
+    }
+
+    /// Issue #3951: Indestructible, the Aura Sanctum's, and no play permission or replacement of its own any
+    /// more; issue #4440: its one number, `mana`, 1 (Radiant 2), the flag each face holds.
+    #[test]
+    fn it_declares_mana_1_and_2_is_indestructible_and_lends_flashback() {
+        crate::register_all();
+        let def = crate::card_def(WIND);
+        let params = def.params.clone().unwrap_or_default();
+        assert_eq!(params.len(), 1);
+        assert_eq!((params[0].key.as_str(), params[0].base, params[0].radiant), ("mana", MANA, RADIANT_MANA));
+        for face in [&def.base, &def.radiant] {
+            assert!(face.keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Indestructible));
         }
-        action["nonce"] = json!(format!("graveyard-{}", card.id));
-        let result = reduce(s.state(), &json_as::<Action>(action));
-        if let Some(error) = result.error {
-            panic!("{error}");
-        }
-        Played {
-            state: result.state,
-            events: result.events,
+        let scripts = script();
+        for (face, mana) in [(&scripts.base, MANA), (&scripts.radiant, RADIANT_MANA)] {
+            assert!(face.aura.is_some());
+            assert!(face.graveyard_play.is_none());
+            assert!(face.replacements.is_empty());
+            assert_eq!(face.static_flags.as_ref().and_then(|flags| flags.mana_per_turn), Some(mana));
         }
     }
 
-    fn zone_of(state: &GameState, card: &CardInstance) -> Option<ZoneName> {
-        find_instance(state, &card.id).map(|found| found.zone.z())
+    /// p1's Second Wind (`radiant` its face) standing in their backrow, its Cry long run.
+    fn standing(radiant: bool) -> Scenario {
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [STOCKPILE],
+                "backrow": [{ "def": WIND, "radiant": radiant }],
+                "library": [VANILLA, MENACE, ECLIPSE],
+            },
+            "p2": { "hand": [STOCKPILE], "library": [VANILLA, MENACE, ECLIPSE] },
+        }));
+        for player in [P1, PlayerId::P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        s
     }
 
-    /// On the base face a setup's graveyard would be exiled once it stands, so the graveyard
-    /// comes the way the card makes it: Second Wind is played and its Cry discards the hand first (R393).
-    fn standing(radiant_face: bool, graveyard: &[&str], extra: Value) -> Scenario {
-        let p2 = json!({ "hand": [STOCKPILE, HIT_JOB, COLLATERAL], "field": [MENACE], "library": [STOCKPILE, STOCKPILE] });
-        let field = extra.get("field").cloned().unwrap_or_else(|| json!([]));
-        if !radiant_face && !graveyard.is_empty() {
-            let mut hand = vec![WIND];
-            hand.extend_from_slice(graveyard);
-            let mut p1 = json!({ "hand": hand, "field": field, "library": [VANILLA, VANILLA, VANILLA] });
-            if let Some(mana) = extra.get("mana") {
-                p1["mana"] = mana.clone();
-            }
-            let mut s = scenario(json!({ "p1": p1, "p2": p2 }));
-            s.play(WIND, json!({ "zone": 1 }));
-            return s;
+    /// R4440052: each refresh of its controller's gives `mana` more on top of max mana, which is unmoved;
+    /// the opponent's refresh gets none.
+    #[test]
+    fn r4440052_your_refresh_gives_1_more_radiant_2_and_max_mana_stays() {
+        for (radiant, more) in [(false, MANA), (true, RADIANT_MANA)] {
+            let mut s = standing(radiant);
+            s.start_turn();
+            let mana = s.state().players[P1].mana;
+            assert_eq!((mana.current, mana.max), (MAX_MANA + more, MAX_MANA), "radiant {radiant}");
+            s.end_turn();
+            let theirs = s.state().players[PlayerId::P2].mana;
+            assert_eq!((theirs.current, theirs.max), (MAX_MANA, MAX_MANA), "radiant {radiant}: the opponent's");
         }
-        let hand = extra.get("hand").cloned().unwrap_or_else(|| json!([STOCKPILE]));
-        let mut p1 = json!({
-            "hand": hand,
-            "backrow": [{ "def": WIND, "radiant": radiant_face }],
-            "field": field,
-            "graveyard": graveyard,
-            "library": [VANILLA, VANILLA, VANILLA],
+    }
+
+    /// R4440052, R386: the flag reads its declared `mana`, so an Upgrade gives one more.
+    #[test]
+    fn r4440052_mana_reads_through_param() {
+        let mut s = standing(false);
+        assert_eq!(crate::upgrade_number(&mut s, WIND, "mana"), MANA + 1);
+        s.start_turn();
+        s.expect_mana(P1, MAX_MANA + MANA + 1);
+    }
+
+    /// R4440052: gone from the field, it gives nothing.
+    #[test]
+    fn r4440052_in_your_hand_it_gives_nothing() {
+        let mut s = scenario(json!({
+            "p1": { "hand": [WIND, STOCKPILE], "library": [VANILLA, MENACE, ECLIPSE] },
+            "p2": { "hand": [STOCKPILE] },
+        }));
+        s.start_turn();
+        s.expect_mana(P1, MAX_MANA);
+    }
+
+    /// R767000: through v0.6.9n it gave no mana per turn (issue #4440).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_9n_gives_no_mana_per_turn() {
+        crate::under_kept(WIND, script_v0_6_9n(), || {
+            let mut s = standing(true);
+            s.start_turn();
+            s.expect_mana(P1, MAX_MANA);
         });
-        if let Some(mana) = extra.get("mana") {
-            p1["mana"] = mana.clone();
-        }
-        scenario(json!({ "p1": p1, "p2": p2 }))
     }
 
-    mod c_n28_second_wind {
+    mod base {
         use super::*;
 
         #[test]
-        fn declares_its_one_number_the_radiant_face_s_minimum_price_r386() {
-            crate::register_all();
-            let def = crate::card_def(WIND);
-            assert_eq!(
-                js(&def.params),
-                json!([{ "key": "minCost", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1 }])
-            );
-            let scripts = script();
-            let moments: Vec<ReplacementMoment> = scripts.base.replacements.iter().map(|entry| entry.on).collect();
-            assert_eq!(moments, vec![ReplacementMoment::ToGraveyard]);
-            assert!(scripts.radiant.replacements.is_empty());
+        fn r3951001_the_cry_discards_your_hand_then_exiles_your_deck() {
+            let mut s = game(false);
+            let library = s.pile(P1, "library");
+            s.play(WIND, json!({ "zone": 1 }));
+            assert!(s.hand(P1).is_empty());
+            assert!(s.pile(P1, "library").is_empty());
+            for card in &library {
+                s.expect_in_zone(card, "exile");
+            }
+            assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![STOCKPILE, MR_TOKEN]);
+            s.expect_events(json!(["discarded", "exiled"]));
         }
 
-        mod base {
-            use super::*;
+        #[test]
+        fn r1869003_your_graveyard_cards_have_flashback_each_played_once() {
+            let mut s = game(false);
+            s.play(WIND, json!({ "zone": 1 }));
+            assert_eq!(graveyard_defs_offered(&s), vec![STOCKPILE, MR_TOKEN]);
+            let stockpile = s.pile(P1, "graveyard").into_iter().find(|card| card.def_id == STOCKPILE).expect("Stockpile");
+            let action = s.plays_of(&stockpile).into_iter().next().expect("its Flashback play is offered");
+            s.act(action, P1, "play Stockpile from the graveyard");
+            s.expect_in_zone(&stockpile, "graveyard");
+            assert_eq!(graveyard_defs_offered(&s), vec![MR_TOKEN], "its Flashback is spent");
+        }
+    }
 
-            #[test]
-            fn cry_exiles_your_whole_deck_then_discards_your_hand() {
-                let mut s = scenario(json!({
-                    "p1": { "hand": [WIND, ECLIPSE, MR_TOKEN], "library": [VANILLA, MENACE, STOCKPILE] },
-                    "p2": { "hand": [STOCKPILE] },
-                }));
-                let library = s.pile(P1, "library");
-                s.play(WIND, json!({ "zone": 1 }));
-                assert!(s.pile(P1, "library").is_empty());
-                for card in &library {
-                    s.expect_in_zone(card, "exile");
-                }
-                assert!(s.hand(P1).is_empty());
-                assert_eq!(
-                    s.events().iter().filter(|event| matches!(event, GameEvent::Discarded { .. })).count(),
-                    2
-                );
-                s.expect_events(json!(["exiled", "discarded"]));
-            }
+    mod radiant {
+        use super::*;
 
-            #[test]
-            fn r393_the_discards_land_in_your_graveyard_before_the_aura_starts_so_they_are_playable() {
+        #[test]
+        fn r3951001_the_cry_discards_your_hand_and_your_deck_into_your_graveyard() {
+            let mut s = game(true);
+            s.play(WIND, json!({ "zone": 1 }));
+            assert!(s.hand(P1).is_empty());
+            assert!(s.pile(P1, "library").is_empty());
+            assert!(s.pile(P1, "exile").is_empty());
+            assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![STOCKPILE, MR_TOKEN, VANILLA, MENACE, ECLIPSE]);
+            assert_eq!(count(&s, "discarded"), 2, "only the hand is discarded");
+            assert_eq!(count(&s, "enteredGraveyard"), 5);
+            assert_eq!(count(&s, "fatigue"), 0, "no draw");
+        }
+
+        #[test]
+        fn r1869003_every_card_of_the_deck_it_discarded_has_flashback() {
+            let mut s = game(true);
+            s.play(WIND, json!({ "zone": 1 }));
+            assert_eq!(graveyard_defs_offered(&s), vec![STOCKPILE, MR_TOKEN, VANILLA, MENACE, ECLIPSE]);
+        }
+    }
+
+    /// R767000: the scripts kept for v0.6.4c, with the `minCost` they declared then.
+    mod kept_v0_6_4c {
+        use super::*;
+
+        fn kept<T>(run: impl FnOnce() -> T) -> T {
+            crate::under_kept_as(
+                WIND,
+                script_v0_6_4c(),
+                |def| {
+                    def.params = serde_json::from_value(json!([
+                        { "key": "minCost", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1 }
+                    ]))
+                    .expect("the v0.6.4c params");
+                },
+                run,
+            )
+        }
+
+        #[test]
+        fn r393_the_discards_land_in_your_graveyard_before_the_aura_starts_so_they_are_playable() {
+            kept(|| {
                 let mut s = scenario(json!({
                     "p1": { "hand": [WIND, ECLIPSE, MR_TOKEN], "library": [VANILLA] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 s.play(WIND, json!({ "zone": 1 }));
+                s.expect_events(json!(["exiled", "discarded"]));
                 assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![ECLIPSE, MR_TOKEN]);
                 assert_eq!(graveyard_defs_offered(&s), vec![ECLIPSE, MR_TOKEN]);
-            }
-
-            #[test]
-            fn e11_aura_legalactions_offers_every_card_in_your_graveyard_any_type_at_its_cost_with_its_choices() {
-                crate::register_all();
-                let s = standing(false, &[STOCKPILE, MR_TOKEN, SHEEPISH, MANA_WELL, ECLIPSE, MENACE], json!({}));
-                assert_eq!(
-                    graveyard_defs_offered(&s),
-                    vec![STOCKPILE, MR_TOKEN, SHEEPISH, MANA_WELL, ECLIPSE, MENACE]
-                );
-                let eclipse = s
-                    .pile(P1, "graveyard")
-                    .into_iter()
-                    .find(|card| card.def_id == ECLIPSE)
-                    .expect("setup");
-                let targets: Vec<Option<Vec<Selection>>> = plays_of_card(&s, &eclipse.id, P1)
-                    .into_iter()
-                    .map(|action| match action {
-                        ActionBody::Play { targets, .. } => targets,
-                        _ => None,
-                    })
-                    .collect();
-                assert!(targets.contains(&Some(vec![Selection::Hero { player: P2 }])));
-            }
-
-            #[test]
-            fn r1_a_unit_played_from_the_graveyard_fires_its_cry_pays_its_cost_and_counts_as_played() {
-                crate::register_all();
-                let s = standing(false, &[MR_TOKEN], json!({}));
-                let unit = s.card(MR_TOKEN).clone();
-                let after = play_from_graveyard(&s, &unit, json!({}));
-                assert_eq!(
-                    card_at(&after.state, ZoneRef { player: P1, row: Row::Units, lane: 1 }).map(|card| card.id.clone()),
-                    Some(unit.id.clone())
-                );
-                assert_eq!(
-                    card_at(&after.state, ZoneRef { player: P1, row: Row::Units, lane: 2 }).map(|card| card.def_id.clone()),
-                    Some(RUSH_TOKEN.to_string())
-                );
-                assert_eq!(unspent_mana_of(&after.state, P1), 3);
-                let played = after
-                    .events
-                    .iter()
-                    .find(|event| matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == unit.id))
-                    .expect("the play is announced");
-                let played = js(played);
-                assert_eq!(played["from"], json!("graveyard"));
-                assert_eq!(played["costPaid"], json!(1));
-            }
-
-            #[test]
-            fn r65_a_play_from_the_graveyard_takes_the_player_s_discounts_but_never_below_the_1_minimum_price() {
-                crate::register_all();
-                let s = standing(false, &[SHEEPISH], json!({ "field": [TOE_CRACKER] }));
-                let trap = s.card(SHEEPISH).clone();
-                assert!(plays_of_card(&s, &trap.id, P1).is_empty());
-                expect_throw(|| {
-                    play_from_graveyard(&s, &trap, json!({ "zone": { "row": "backrow", "lane": 2 } }));
-                });
-            }
-
-            #[test]
-            fn a_card_it_can_t_afford_is_not_offered() {
-                crate::register_all();
-                let s = standing(false, &[MENACE], json!({ "mana": 2 }));
-                assert!(graveyard_defs_offered(&s).is_empty());
-            }
-
-            #[test]
-            fn r3_with_no_deck_every_draw_is_fatigue() {
-                let mut s = scenario(json!({
-                    "p1": { "hand": [WIND, ECLIPSE], "library": [VANILLA, VANILLA] },
-                    "p2": { "hand": [STOCKPILE, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
-                }));
-                s.play(WIND, json!({ "zone": 1 }));
-                s.end_turn();
-                s.end_turn();
-                assert_eq!(s.state().active, P1);
-                s.expect_health(P1, 29);
-                assert!(s.events().iter().any(|event| matches!(event, GameEvent::Fatigue { .. })));
-            }
-
-            #[test]
-            fn its_aura_ends_when_it_leaves_the_field_nothing_in_the_graveyard_is_offered_any_more() {
-                crate::register_all();
-                let mut s = standing(false, &[STOCKPILE, VANILLA], json!({}));
-                assert_eq!(graveyard_defs_offered(&s), vec![STOCKPILE, VANILLA]);
-                s.end_turn();
-                let wind = s.card(WIND).id.clone();
-                s.play(COLLATERAL, json!({ "targets": [{ "pick": "instance", "instanceId": wind }] }));
-                s.expect_in_zone(WIND, "exile");
-                s.end_turn();
-                assert!(graveyard_defs_offered(&s).is_empty());
-            }
-
-            #[test]
-            fn no_event_carries_a_deck_position() {
-                let mut s = scenario(json!({
-                    "p1": { "hand": [WIND, ECLIPSE], "library": [VANILLA, MENACE, STOCKPILE] },
-                    "p2": { "hand": [STOCKPILE] },
-                }));
-                s.play(WIND, json!({ "zone": 1 }));
-                let exiled: Vec<&GameEvent> = s
-                    .events()
-                    .iter()
-                    .filter(|event| matches!(event, GameEvent::Exiled { .. }))
-                    .collect();
-                assert_eq!(exiled.len(), 3);
-                for event in exiled {
-                    let json = js(event);
-                    let mut keys: Vec<String> = json.as_object().expect("an object").keys().cloned().collect();
-                    keys.sort();
-                    assert_eq!(keys, vec!["defId", "instanceId", "owner", "type"]);
-                }
-                for viewer in [P1, P2] {
-                    for event in &s.view(viewer).events {
-                        let json = js(event);
-                        assert!(json.get("position").is_none());
-                    }
-                }
-            }
-
-            #[test]
-            fn e5_a_spell_played_from_your_graveyard_is_exiled_after_it_resolves() {
-                crate::register_all();
-                let s = standing(false, &[STOCKPILE], json!({}));
-                let spell = s.pile(P1, "graveyard").into_iter().next().expect("setup");
-                let after = play_from_graveyard(&s, &spell, json!({}));
-                assert_eq!(zone_of(&after.state, &spell), Some(ZoneName::Exile));
-            }
-
-            #[test]
-            fn e5_a_card_of_yours_that_would_go_to_your_graveyard_is_exiled_instead_a_discard_a_destroyed_unit() {
-                crate::register_all();
-                let mut s = standing(false, &[], json!({ "hand": [STOCKPILE], "field": [VANILLA] }));
-                let vanilla = s.card(VANILLA).clone();
-                s.end_turn();
-                s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));
-                s.expect_in_zone(&vanilla, "exile");
-                assert!(s.pile(P1, "graveyard").is_empty());
-            }
-
-            #[test]
-            fn e5_the_replacement_ends_when_it_leaves_the_field_your_destroyed_unit_goes_to_your_graveyard_again() {
-                crate::register_all();
-                let mut s = standing(false, &[], json!({ "field": [VANILLA] }));
-                let vanilla = s.card(VANILLA).clone();
-                s.end_turn();
-                let wind = s.card(WIND).id.clone();
-                s.play(COLLATERAL, json!({ "targets": [{ "pick": "instance", "instanceId": wind }] }));
-                s.expect_in_zone(WIND, "exile");
-                s.end_turn();
-                s.end_turn();
-                assert_eq!(s.state().active, P2);
-                s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));
-                s.expect_in_zone(&vanilla, "graveyard");
-            }
-
-            #[test]
-            fn e5_the_opponent_s_cards_go_to_their_graveyard_as_usual() {
-                crate::register_all();
-                let mut s = standing(false, &[], json!({ "field": [VANILLA] }));
-                s.end_turn();
-                let hit_job = s.card(HIT_JOB).clone();
-                let vanilla = s.card(VANILLA).id.clone();
-                s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla }] }));
-                s.expect_in_zone(&hit_job, "graveyard");
-            }
-        }
-
-        mod radiant {
-            use super::*;
-
-            #[test]
-            fn the_same_cry_exiles_your_deck_discards_your_hand_into_your_graveyard() {
-                let mut s = scenario(json!({
-                    "p1": { "hand": [{ "def": WIND, "radiant": true }, ECLIPSE, MR_TOKEN], "library": [VANILLA, MENACE] },
-                    "p2": { "hand": [STOCKPILE] },
-                }));
-                s.play(WIND, json!({ "zone": 1 }));
-                assert!(s.pile(P1, "library").is_empty());
-                assert_eq!(def_ids(&s.pile(P1, "exile")), vec![VANILLA, MENACE]);
-                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![ECLIPSE, MR_TOKEN]);
-            }
-
-            #[test]
-            fn only_cards_whose_price_as_it_would_be_paid_is_1_or_more_are_offered() {
-                crate::register_all();
-                let s = standing(true, &[REPLENISH, STOCKPILE, VANILLA, MANA_WELL], json!({}));
-                assert_eq!(graveyard_defs_offered(&s), vec![STOCKPILE, VANILLA, MANA_WELL]);
-            }
-
-            #[test]
-            fn the_price_is_read_as_it_would_be_paid_a_1_trap_toe_cracker_makes_0_is_not_offered() {
-                crate::register_all();
-                let s = standing(true, &[SHEEPISH, STOCKPILE], json!({ "field": [TOE_CRACKER] }));
-                assert_eq!(graveyard_defs_offered(&s), vec![STOCKPILE]);
-            }
-
-            #[test]
-            fn no_exile_replacement_a_spell_played_from_the_graveyard_lands_in_it_again() {
-                crate::register_all();
-                let s = standing(true, &[STOCKPILE], json!({}));
-                let spell = s.pile(P1, "graveyard").into_iter().next().expect("setup");
-                let after = play_from_graveyard(&s, &spell, json!({}));
-                assert_eq!(zone_of(&after.state, &spell), Some(ZoneName::Graveyard));
-                let graveyard: Vec<String> = zone_cards(&after.state, P1, OffFieldZone::Graveyard)
-                    .iter()
-                    .map(|card| card.id.clone())
-                    .collect();
-                assert_eq!(graveyard, vec![spell.id.clone()]);
-                assert!(
-                    legal_actions(&after.state, P1)
-                        .iter()
-                        .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == spell.id))
-                );
-            }
-
-            #[test]
-            fn r1_a_unit_played_from_the_graveyard_fires_its_cry() {
-                crate::register_all();
-                let s = standing(true, &[MR_TOKEN], json!({}));
-                let unit = s.card(MR_TOKEN).clone();
-                let after = play_from_graveyard(&s, &unit, json!({}));
-                assert_eq!(
-                    card_at(&after.state, ZoneRef { player: P1, row: Row::Units, lane: 2 }).map(|card| card.def_id.clone()),
-                    Some(RUSH_TOKEN.to_string())
-                );
-            }
-
-            #[test]
-            fn r386_a_degrade_of_the_minimum_price_makes_it_2_a_1_cost_card_is_no_longer_offered() {
-                crate::register_all();
-                let mut s = standing(true, &[STOCKPILE, MANA_WELL], json!({}));
-                step_param(s.card_mut(WIND), "minCost", 1);
-                assert_eq!(graveyard_defs_offered(&s), vec![MANA_WELL]);
-            }
+            });
         }
     }
 }

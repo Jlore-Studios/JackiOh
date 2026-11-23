@@ -656,7 +656,7 @@ var VerbHelp = pyjson.New(
 		"myself. On one of my pull requests it is its issue's item. A run working on it keeps it " +
 		"until it delivers, and the handoff follows.", "{slash} handoff hard"},
 	"suggest", [3]string{"suggest", "Ask for a suggestion survey the next time a lane has nothing to " +
-		"start, without waiting out the 30 idle minutes a survey otherwise waits for.",
+		"start, without waiting for the three spare lanes a survey otherwise waits for.",
 		"@{bot} suggest"},
 	"status", [3]string{"status", "Halt state, which subscriptions are running what right now, each " +
 		"subscription (its hours, usage, and what it is doing), and what is queued.",

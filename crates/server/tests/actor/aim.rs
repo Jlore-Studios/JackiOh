@@ -173,6 +173,7 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
     #[tokio::test(start_paused = true)]
     async fn r738_relays_an_aim_to_the_opponent_alone_stamped_with_the_senders_seat_and_writes_nothing() {
         let h = harness().await;
+        let built = h.actor.seat_views_built();
         h.p1.receive_json(json!({ "type": "aim", "aim": at_hero() }));
         h.idle().await;
 
@@ -194,6 +195,8 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
             relays(&h.p2).last(),
             Some(&json!({ "type": "aim", "from": "p1", "aim": null }))
         );
+        // Nothing changed the game since the seats were greeted: the relays read the views they have.
+        assert_eq!(h.actor.seat_views_built(), built);
     }
 
     #[tokio::test(start_paused = true)]

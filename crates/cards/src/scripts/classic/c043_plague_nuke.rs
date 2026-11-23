@@ -12,10 +12,10 @@
 //! "Them" is the top of each unit pile on both sides, never a card dormant under a Stack (R13), read
 //! once, first. The one §4.5 check runs where `afterStateCheck` sits in the list (R59), so an
 //! Indestructible survivor's tokens still count; the temporary mana follows (§2.3). Radiant summons
-//! (§6.3) in R68's order (the active side first, lane order) and skips a unit exiled instead of dying;
-//! it runs on a stay that begins after the check (R174), which lets it name a card in its graveyard.
-//! R280: the preview is the mana it would give now, off public counters (§10.8). The number is the
-//! declared `mana` (R386), read through `param`.
+//! (§6.3) in R68's order (the active side first, lane order) and skips a unit a replacement exiled as it
+//! died (R4207000), which is in no graveyard; it runs on a stay that begins after the check (R174), which
+//! lets it name a card in its graveyard. R280: the preview is the mana it would give now, off public
+//! counters (§10.8). The number is the declared `mana` (R386), read through `param`.
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{after_state_check, destroy_all, gain_mana, summon};
@@ -375,7 +375,8 @@ mod tests {
             fn c_50_a_unit_exiled_instead_of_dying_into_a_graveyard_is_not_summoned() {
                 crate::register_all();
                 // C #50 Voidwalker's Aura (SPEC §8.6 row 50) exiles what would go to a graveyard; an Indestructible
-                // one survives the Nuke (R46), so the plagued Vanilla beside it is exiled (R461: it has not died).
+                // one survives the Nuke (R46), so the plagued Vanilla beside it is exiled (R4207000: it died into
+                // exile, not a graveyard).
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": NUKE, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [plagued(VANILLA, 1), VOIDWALKER] },

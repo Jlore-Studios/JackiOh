@@ -9,6 +9,9 @@
 //! `{ of: "selfHero" }`, not the target (R19's license is #47 Fig of Life's); §3 gives a hero no
 //! maximum. The token is summoned on its base face on both faces (R349 would double the 3X); R64
 //! places it in the leftmost empty unit zone.
+//!
+//! Through v0.1.0d the token was an X/X Rush Token and the catalog had no Ghoul Token;
+//! `script_v0_1_0d` keeps that for those versions' replays (R767000, R4382001).
 
 use jackioh_engine::effects::{damage, draw, heal, summon};
 use jackioh_engine::prelude::*;
@@ -17,6 +20,9 @@ pub const ID: &str = "core-074";
 
 /// §7, R353: the token is the catalog's Ghoul Token, named by id.
 const GHOUL_TOKEN: &str = "core-t-ghoul";
+
+/// R4382001: the token through v0.1.0d, "summon an X/X Rush Token", before the Ghoul Token existed.
+const RUSH_TOKEN: &str = "core-t-rush";
 
 /// §8 Conventions: any unit or hero on either side, so a hero is always legal; R90 fizzles it
 /// rather than refusing the play if it somehow has no answer.
@@ -31,11 +37,12 @@ fn chosen_x(ctx: &EffectContext<'_>) -> i32 {
 }
 
 /// The multipliers are the declared numbers `damage`, `heal`, `draw` and `ghoul` (R386), tuned on the
-/// Radiant face alone: the base face prints a bare X, which is always 1X (R749).
-fn adaptive_ui() -> Script {
+/// Radiant face alone: the base face prints a bare X, which is always 1X (R749). `token` is the X/X
+/// Unit it summons.
+fn adaptive_ui(token: &'static str) -> Script {
     Script {
         targets: targets(),
-        cry: Some(hook(|ctx| {
+        cry: Some(hook(move |ctx| {
             let x = chosen_x(ctx);
             // R348 keeps a play from choosing X = 0; a run with none makes nothing, and no 0/0 token.
             if x == 0 {
@@ -49,7 +56,7 @@ fn adaptive_ui() -> Script {
                 damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount }))),
                 heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": healed }))),
                 draw(json_as(json!({ "count": drawn }))),
-                summon(json_as(json!({ "defId": GHOUL_TOKEN, "statsOverride": { "attack": stats, "health": stats } }))),
+                summon(json_as(json!({ "defId": token, "statsOverride": { "attack": stats, "health": stats } }))),
             ]
         })),
         ..Script::default()
@@ -57,7 +64,14 @@ fn adaptive_ui() -> Script {
 }
 
 pub fn script() -> CardScripts {
-    let base = adaptive_ui();
+    let base = adaptive_ui(GHOUL_TOKEN);
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+/// R767000, R4382001: through v0.1.0d the card summoned an X/X Rush Token; `KEPT_SCRIPTS` keeps it.
+pub fn script_v0_1_0d() -> CardScripts {
+    let base = adaptive_ui(RUSH_TOKEN);
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -75,6 +89,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const X_REFUSAL: &str = "X must be at least 1";
+    const SHREDDER: &str = "stand-in (3) 6/8 R12/16";
 
     fn setup(opts: Value) -> Scenario {
         scenario(opts)
@@ -104,10 +119,6 @@ mod tests {
             .collect()
     }
 
-    fn at_enemy_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     mod adaptive_ui_base {
         use super::*;
 
@@ -123,7 +134,7 @@ mod tests {
                 "p2": { "hand": ["core-005"], "health": 30 },
             }));
 
-            s.play("core-074", json!({ "x": 2, "targets": at_enemy_hero() }));
+            s.play("core-074", json!({ "x": 2, "targets": pick::hero("p2") }));
 
             s.expect_health(P2, 28);
             s.expect_health(P1, 22);
@@ -146,9 +157,9 @@ mod tests {
             let mut s = setup(json!({
                 "seed": "core-074-unit-target",
                 "p1": { "hand": ["core-074", "core-005"], "library": ["core-035", "core-036"], "health": 20 },
-                "p2": { "field": ["core-013"], "hand": ["core-005"], "health": 30 },
+                "p2": { "field": [SHREDDER], "hand": ["core-005"], "health": 30 },
             }));
-            let shredder = s.unit(P2, 1).expect("setup: Jlockeed Shredder-10 in p2's lane 1");
+            let shredder = s.unit(P2, 1).expect("setup: the 6/8 stand-in in p2's lane 1");
 
             s.play("core-074", json!({ "x": 2, "targets": [{ "pick": "instance", "instanceId": shredder.id }] }));
 
@@ -167,9 +178,9 @@ mod tests {
             }));
 
             assert_eq!(offered_x(&s), [1, 2, 3, 4]);
-            s.expect_refused_with(|s| s.play("core-074", json!({ "x": 0, "targets": at_enemy_hero() })), X_REFUSAL);
+            s.expect_refused_with(|s| s.play("core-074", json!({ "x": 0, "targets": pick::hero("p2") })), X_REFUSAL);
             // A play that names no X is X = 0 too, and refused the same way.
-            s.expect_refused_with(|s| s.play("core-074", json!({ "targets": at_enemy_hero() })), X_REFUSAL);
+            s.expect_refused_with(|s| s.play("core-074", json!({ "targets": pick::hero("p2") })), X_REFUSAL);
 
             s.expect_health(P2, 30).expect_health(P1, 20);
             let hand = def_ids(&s.hand(P1));
@@ -187,7 +198,7 @@ mod tests {
                 "p2": { "hand": ["core-005"] },
             }));
             assert!(offered_x(&s).is_empty());
-            s.expect_refused_with(|s| s.play("core-074", json!({ "x": 0, "targets": at_enemy_hero() })), X_REFUSAL);
+            s.expect_refused_with(|s| s.play("core-074", json!({ "x": 0, "targets": pick::hero("p2") })), X_REFUSAL);
         }
 
         #[test]
@@ -203,7 +214,7 @@ mod tests {
                 "p2": { "hand": ["core-005"], "health": 30 },
             }));
 
-            s.play("core-074", json!({ "x": 2, "targets": at_enemy_hero() }));
+            s.play("core-074", json!({ "x": 2, "targets": pick::hero("p2") }));
 
             s.expect_health(P2, 28).expect_health(P1, 22);
             assert_eq!(s.hand(P1).len(), 3);
@@ -229,7 +240,7 @@ mod tests {
             }));
             assert_eq!(s.hand(P1).first().map(|card| card.radiant), Some(true));
 
-            s.play("core-074", json!({ "x": 2, "targets": at_enemy_hero() }));
+            s.play("core-074", json!({ "x": 2, "targets": pick::hero("p2") }));
 
             s.expect_health(P2, 26);
             s.expect_health(P1, 26);
@@ -258,7 +269,7 @@ mod tests {
                 "p2": { "hand": ["core-005"], "health": 30 },
             }));
 
-            s.play("core-074", json!({ "x": 1, "targets": at_enemy_hero() }));
+            s.play("core-074", json!({ "x": 1, "targets": pick::hero("p2") }));
 
             s.expect_health(P2, 28).expect_health(P1, 23);
             assert_eq!(s.hand(P1).len(), 3);
@@ -280,7 +291,7 @@ mod tests {
             }));
 
             assert_eq!(offered_x(&s), [1, 2, 3, 4]);
-            s.expect_refused_with(|s| s.play("core-074", json!({ "x": 0, "targets": at_enemy_hero() })), X_REFUSAL);
+            s.expect_refused_with(|s| s.play("core-074", json!({ "x": 0, "targets": pick::hero("p2") })), X_REFUSAL);
             assert!(s.unit(P1, 1).is_none());
             assert_eq!(s.hand(P1).len(), 2);
             assert_eq!(s.state().players.p1.turn_log.cards_played, 0);
@@ -293,7 +304,7 @@ mod tests {
                 "p1": { "hand": [{ "def": "core-074", "radiant": true }, "core-005"], "library": ["core-035", "core-036"] },
                 "p2": { "backrow": ["core-084"], "hand": ["core-005"], "health": 30 },
             }));
-            s.play("core-074", json!({ "x": 1, "targets": at_enemy_hero() }));
+            s.play("core-074", json!({ "x": 1, "targets": pick::hero("p2") }));
             // 2X = 2 to the hero, Armor 2 takes it all.
             s.expect_health(P2, 30);
             let ghoul = s.unit(P1, 1).expect("a Ghoul Token in lane 1");
@@ -326,7 +337,7 @@ mod tests {
                     crate::degrade_number(&mut s, "core-074", key);
                 }
             }
-            s.play("core-074", json!({ "x": 1, "targets": at_enemy_hero() }));
+            s.play("core-074", json!({ "x": 1, "targets": pick::hero("p2") }));
             s.expect_health(P2, 30 - damage);
             s.expect_health(P1, 20 + healed);
             assert_eq!(s.pile(P1, "library").len(), 4 - drawn as usize);
@@ -338,5 +349,32 @@ mod tests {
             assert!(!crate::can_upgrade_number(&s, "core-074", key));
             assert!(!crate::can_degrade_number(&s, "core-074", key));
         }
+    }
+
+    /// R767000, R4382001: a game on v0.1.0d folds under the kept script, which summons an X/X Rush
+    /// Token, since that catalog has no Ghoul Token; its definition declared no number, so the
+    /// multipliers read off the build's (R4382000): a 2/2 at X = 2, a 3/3 on the Radiant face at X = 1.
+    #[test]
+    fn r4382001_a_game_on_v0_1_0d_summons_an_x_x_rush_token() {
+        use super::{GHOUL_TOKEN, ID, RUSH_TOKEN};
+        crate::register_all();
+        let carried = crate::catalog_defs_at("v0.1.0d").expect("v0.1.0d is carried");
+        assert!(!carried.contains_key(GHOUL_TOKEN), "v0.1.0d has a Ghoul Token");
+        assert!(carried[ID].params.is_none(), "v0.1.0d's Adaptive UI declares a number");
+        jackioh_engine::with_shipped(crate::shipped_catalog("v0.1.0d"), || {
+            for (radiant, x, stats) in [(false, 2, 2), (true, 1, 3)] {
+                let mut s = setup(json!({
+                    "seed": "core-074-v0.1.0d",
+                    "p1": {
+                        "hand": [{ "def": ID, "radiant": radiant }, "core-005"],
+                        "library": ["core-035", "core-036", "core-013"],
+                    },
+                }));
+                s.play(ID, json!({ "x": x, "targets": pick::hero("p2") }));
+                let token = s.unit(P1, 1).expect("a token in lane 1");
+                assert_eq!(token.def_id, RUSH_TOKEN);
+                s.expect_stats(&token, json!({ "attack": stats, "health": stats }));
+            }
+        });
     }
 }

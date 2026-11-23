@@ -1,0 +1,14 @@
+{
+  "name": "JackiOh",
+  "short_name": "JackiOh",
+  "description": "A 1v1 card game of lanes, mana and hidden traps.",
+  "start_url": "/daily",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#120b07",
+  "theme_color": "#120b07",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

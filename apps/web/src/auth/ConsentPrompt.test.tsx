@@ -313,7 +313,7 @@ describe("R757001 the terms at the gate", () => {
 
 describe("R3147002 the consent screen offers a new account's way back to an older one", () => {
   function base64url(text: string): string {
-    return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
   }
 
   const ROBLOX = `${base64url(JSON.stringify({ alg: "none" }))}.${base64url(

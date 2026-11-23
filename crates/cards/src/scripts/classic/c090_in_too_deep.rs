@@ -349,7 +349,9 @@ fn quest_completed(radiant: bool, defer_g: bool, numbers: QuestNumbers) -> Trigg
     )
 }
 
-fn in_too_deep(radiant: bool, defer_g: bool, numbers: QuestNumbers) -> Script {
+/// `spends`: R4331000's end, a base line that ends on a reward that is no Aura (J or K) sending the card to
+/// the graveyard; the kept scripts of v0.6.9c and before pass `false`, the card staying.
+fn in_too_deep(radiant: bool, defer_g: bool, numbers: QuestNumbers, spends: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
@@ -368,6 +370,12 @@ fn in_too_deep(radiant: bool, defer_g: bool, numbers: QuestNumbers) -> Script {
                         // prompt for the deferred step.
                         if !(defer_g && id == "G" && reward_g_defers(ctx)) {
                             effects.extend(path_of(&id));
+                        }
+                        // R4331000: J and K end the line with nothing lasting, so the card is spent.
+                        // L and M are Auras, which `end_quest_line` finds held. Radiant follows every
+                        // path, so its line ends only once L and M are held: it is never spent.
+                        if spends && path_of(&id).is_empty() {
+                            effects.push(end_quest_line());
                         }
                         effects
                     }
@@ -423,8 +431,17 @@ fn in_too_deep(radiant: bool, defer_g: bool, numbers: QuestNumbers) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: in_too_deep(false, true, QUESTS),
-        radiant: in_too_deep(true, true, QUESTS),
+        base: in_too_deep(false, true, QUESTS, true),
+        radiant: in_too_deep(true, true, QUESTS, true),
+    }
+}
+
+/// R767000: the scripts v0.6.9c and the versions after v0.5.11r ran, kept for their replays: a line
+/// that ended on J or K left the card on the field (issue #4331).
+pub fn script_v0_6_9c() -> CardScripts {
+    CardScripts {
+        base: in_too_deep(false, true, QUESTS, false),
+        radiant: in_too_deep(true, true, QUESTS, false),
     }
 }
 
@@ -433,8 +450,8 @@ pub fn script() -> CardScripts {
 /// (2 draws, 2 kills, a float of 3, a float of 5, 3 exiles, 6 Units in the graveyard).
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
-        base: in_too_deep(false, true, QUESTS_V0_5_11O),
-        radiant: in_too_deep(true, true, QUESTS_V0_5_11O),
+        base: in_too_deep(false, true, QUESTS_V0_5_11O, false),
+        radiant: in_too_deep(true, true, QUESTS_V0_5_11O, false),
     }
 }
 
@@ -442,8 +459,8 @@ pub fn script_v0_5_11o() -> CardScripts {
 /// their replays: quest 3 at 3 permanents, quest 5 at 12 damage and quest 6 at totals of 10.
 pub fn script_v0_4_0f() -> CardScripts {
     CardScripts {
-        base: in_too_deep(false, true, QUESTS_V0_4_0F),
-        radiant: in_too_deep(true, true, QUESTS_V0_4_0F),
+        base: in_too_deep(false, true, QUESTS_V0_4_0F, false),
+        radiant: in_too_deep(true, true, QUESTS_V0_4_0F, false),
     }
 }
 
@@ -451,8 +468,8 @@ pub fn script_v0_4_0f() -> CardScripts {
 /// asked at once on any turn, and its quest opened beside the prompt, at the goals through v0.4.0f.
 pub fn script_v0_3_16() -> CardScripts {
     CardScripts {
-        base: in_too_deep(false, false, QUESTS_V0_4_0F),
-        radiant: in_too_deep(true, false, QUESTS_V0_4_0F),
+        base: in_too_deep(false, false, QUESTS_V0_4_0F, false),
+        radiant: in_too_deep(true, false, QUESTS_V0_4_0F, false),
     }
 }
 
@@ -545,6 +562,15 @@ mod tests {
     fn expect_line_matches(s: &Scenario, pattern: Value) {
         let memory = line_json(&must(line(s), "a quest line"));
         assert!(matches_object(&memory, &pattern), "quest line {memory} does not match {pattern}");
+    }
+
+    /// R4331000: the line ended on a single-use reward, so In Too Deep went to p1's graveyard.
+    fn expect_spent(s: &Scenario) {
+        assert!(s.state().players.p1.backrow.iter().flatten().all(|card| card.def_id != ITD), "off the field");
+        assert!(
+            s.pile(P1, "graveyard").iter().any(|card| card.def_id == ITD),
+            "In Too Deep is in p1's graveyard"
+        );
     }
 
     fn expect_line_equals(s: &Scenario, want: Value) {
@@ -644,9 +670,7 @@ mod tests {
     }
 
     fn offers_play_of(s: &Scenario, player: PlayerId, instance_id: &str) -> bool {
-        legal_actions(s.state(), player)
-            .iter()
-            .any(|action| matches!(action, ActionBody::Play { instance_id: id, .. } if id == instance_id))
+        !plays_in(s.state(), player, instance_id).is_empty()
     }
 
     fn prompt_opened_for_a_reward(events: &[GameEvent]) -> bool {
@@ -1013,7 +1037,7 @@ mod tests {
                         "backrow": [ITD],
                         "hand": [MIND_CONTROL, HIT_JOB, HIT_JOB, STOCKPILE],
                         "library": SPARE_LIBRARY,
-                        "mana": 11,
+                        "mana": 12,
                     },
                     "p2": spare(json!({ "field": [VANILLA, TIMMY] })),
                 }));
@@ -1533,7 +1557,7 @@ mod tests {
             }
 
             #[test]
-            fn r540_reward_j_100_mana_on_your_next_turn_next_turn_mana_and_the_line_ends_there() {
+            fn r540_r4331000_reward_j_100_mana_on_your_next_turn_next_turn_mana_and_the_line_ends_there_spending_the_card() {
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD], "mana": 6 })),
                     "p2": spare(json!({})),
@@ -1541,13 +1565,29 @@ mod tests {
                 on_quest(&mut s, "7", 0, json!({}));
                 s.end_turn();
                 s.answer(json!("J"));
-                expect_line_matches(&s, json!({ "active": [], "done": ["7"] }));
+                expect_spent(&s);
                 assert_eq!(s.state().active, P2);
                 assert_eq!(s.state().players.p1.mana.next_turn_mod, 100);
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
                 let mana = &s.state().players.p1.mana;
                 assert_eq!(mana.current, mana.max + 100);
+            }
+
+            /// R767000: through v0.6.9c a line that ended on J left In Too Deep on the field.
+            #[test]
+            fn r767000_the_script_kept_for_v0_6_9c_keeps_the_card_after_reward_j() {
+                crate::under_kept(ITD, crate::scripts::classic::c090_in_too_deep::script_v0_6_9c(), || {
+                    let mut s = scenario(json!({
+                        "p1": spare(json!({ "backrow": [ITD], "mana": 6 })),
+                        "p2": spare(json!({})),
+                    }));
+                    on_quest(&mut s, "7", 0, json!({}));
+                    s.end_turn();
+                    s.answer(json!("J"));
+                    expect_line_matches(&s, json!({ "active": [], "done": ["7"] }));
+                    assert_eq!(s.state().players.p1.mana.next_turn_mod, 100);
+                });
             }
 
             #[test]
@@ -1588,7 +1628,7 @@ mod tests {
             }
 
             #[test]
-            fn r404_reward_k_your_opponents_deck_every_card_of_it_to_their_exile() {
+            fn r404_r4331000_reward_k_your_opponents_deck_every_card_of_it_to_their_exile_spending_the_card() {
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": { "hand": [STOCKPILE], "library": [VANILLA, TIMMY, MENACE] },
@@ -1602,7 +1642,7 @@ mod tests {
                 let mut want = vec![MENACE, TIMMY, VANILLA];
                 want.sort();
                 assert_eq!(exiled, want);
-                expect_line_matches(&s, json!({ "active": [], "done": ["8"] }));
+                expect_spent(&s);
             }
 
             #[test]
@@ -1631,7 +1671,7 @@ mod tests {
             }
 
             #[test]
-            fn r454_reward_l_you_may_play_cards_from_your_graveyard_while_it_stands_an_exile_ends_the_aura_and_the_line_r78() {
+            fn r454_r4331000_reward_l_you_may_play_cards_from_your_graveyard_while_it_stands_an_exile_ends_the_aura_and_the_line_r78() {
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD], "graveyard": [TIMMY] })),
                     "p2": { "hand": [COLLATERAL, STOCKPILE], "library": SPARE_LIBRARY, "mana": 10 },
@@ -1639,6 +1679,7 @@ mod tests {
                 on_quest(&mut s, "9", 1, json!({}));
                 any_action(&mut s);
                 s.answer(json!("L"));
+                // R4331000: L is an Aura, so the line's end keeps the card on the field.
                 expect_line_matches(&s, json!({ "auras": ["L"], "active": [], "done": ["9"] }));
                 assert_eq!(
                     json!(must(shown(&s, P2).quest, "the quest view").auras),

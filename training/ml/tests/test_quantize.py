@@ -1,5 +1,6 @@
-"""The integer network (#1011): it stays close to the float one it was made from, its weights fit
-their integers, and the parity fixture is what its reference computes."""
+"""The integer network (#1011): it stays close to the float one it was made from, and its weights fit
+their integers. The parity fixture the Rust and WASM builds were held to is gone with the learned
+evaluation (#4159, R4159000)."""
 
 import json
 import math
@@ -9,7 +10,6 @@ from jackioh_ml import export as E
 from jackioh_ml import quantize as Q
 
 FIXTURE = Path(__file__).parent / "fixtures" / "positions.jsonl"
-PARITY = Path(__file__).resolve().parents[3] / "crates" / "ai" / "tests" / "fixtures" / "learned-parity.json"
 
 
 def _rows(count: int):
@@ -39,18 +39,6 @@ def test_every_weight_fits_its_integer():
     shift, w, _ = net["out"]
     assert shift >= 0 and all(-128 <= x <= 127 for x in w)
     assert int_weights["format"] == Q.FORMAT and int_weights["activation"] == Q.ACTIVATION
-
-
-def test_the_committed_parity_fixture_is_what_the_reference_computes():
-    fixture = json.loads(PARITY.read_text(encoding="utf-8"))
-    net = Q.unpacked(fixture["network"])
-    for case in fixture["cases"]:
-        value = Q.correction(net, case["dense"], case["sparse"])
-        assert repr(value) == case["expected"]
-        assert math.isfinite(value)
-    # And it is the fixture `--random 1011` writes: the seeded network over the training fixture.
-    again = Q.parity(Q.quantize(E.random_network(FIXTURE, 1011)), FIXTURE, len(fixture["cases"]))
-    assert again == fixture
 
 
 def test_features_of_another_layout_get_no_correction():

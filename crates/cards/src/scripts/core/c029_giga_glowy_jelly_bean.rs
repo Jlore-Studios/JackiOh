@@ -118,6 +118,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
+    const SHREDDER: &str = "stand-in (3) 6/8 R12/16";
+
     fn permanents_of(state: &GameState) -> Vec<CardInstance> {
         let side = &state.players.p1;
         let mut cards: Vec<CardInstance> = side.units.iter().flatten().filter_map(|pile| pile.first().cloned()).collect();
@@ -129,7 +131,7 @@ mod tests {
         scenario(json!({
             "p1": {
                 "hand": [{ "def": "core-029", "radiant": radiant }, "core-005", "core-016", "core-010"],
-                "field": [{ "def": "core-013", "damage": 2 }, "core-025"],
+                "field": [{ "def": SHREDDER, "damage": 2 }, "core-025"],
                 "backrow": ["core-006"],
                 "library": ["core-043"],
                 "mana": mana,
@@ -258,7 +260,7 @@ mod tests {
 
             s.play("core-029", json!({}));
 
-            // #13 Jlockeed Shredder-10 is 6/8 → 12/16; the 2 damage stays, and no Cry re-fires: setting
+            // The stand-in is 6/8 → 12/16; the 2 damage stays, and no Cry re-fires: setting
             // a flag is not an entry to the field.
             s.expect_stats(&unit_id, json!({ "attack": 12, "maxHealth": 16, "health": 14 }));
             assert_eq!(
@@ -344,6 +346,41 @@ mod tests {
             s.state_mut().players.p2.mana.current = 4;
             s.end_turn();
             assert_eq!(s.card(hand.as_str()).cost_mod, 0);
+        }
+
+        /// R767000, R2657002: a game folded under v0.5.9f or before ran the deck trigger too, so a Float
+        /// lowers the deck copy's cost beside the hand copy's, on either face.
+        #[test]
+        fn r767000_r2657002_under_v0_5_9f_a_float_lowers_its_cost_in_the_deck_too() {
+            crate::under_kept("core-029", super::super::script_v0_5_9f(), || {
+                for radiant in [false, true] {
+                    let (mut s, hand, deck) = floating(3, radiant);
+                    s.end_turn();
+                    assert_eq!(s.card(hand.as_str()).cost_mod, -3, "radiant {radiant}");
+                    assert_eq!(s.card(deck.as_str()).cost_mod, -3, "radiant {radiant}");
+                }
+            });
+        }
+
+        /// R767000, R1563000: a game folded under v0.4.0f or before had no Float discount, and the card
+        /// still made the hand Radiant, and on its Radiant face the permanents too.
+        #[test]
+        fn r767000_r1563000_under_v0_4_0f_a_float_lowers_nothing_and_it_still_makes_cards_radiant() {
+            crate::under_kept("core-029", super::super::script_v0_4_0f(), || {
+                for radiant in [false, true] {
+                    let (mut s, hand, _) = floating(3, radiant);
+                    s.end_turn();
+                    assert_eq!(s.card(hand.as_str()).cost_mod, 0, "radiant {radiant}");
+
+                    let mut s = giga(6, radiant);
+                    let hand_ids = other_hand_ids(s.state());
+                    let permanents: Vec<String> =
+                        permanents_of(s.state()).into_iter().map(|card| card.id).collect();
+                    s.play("core-029", json!({}));
+                    assert!(hand_ids.iter().all(|id| s.card(id).radiant), "radiant {radiant}");
+                    assert!(permanents.iter().all(|id| s.card(id).radiant == radiant), "radiant {radiant}");
+                }
+            });
         }
     }
 }

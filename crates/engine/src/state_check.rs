@@ -23,10 +23,10 @@ use crate::state::{
     CardInstance, GameState, Resume, WorkItem, active_first, find_instance, find_instance_mut,
 };
 use crate::wire::{
-    AttackHealth, GameEvent, GameOverReason, HookKind, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Position,
-    Row, Winner, Zone, ZoneName, ZoneRef, has_keyword,
+    AttackHealth, CardType, GameEvent, GameOverReason, HookKind, Keyword, KeywordKind, PLAYER_IDS, PlayerId,
+    Position, Row, Winner, Zone, ZoneName, ZoneRef, has_keyword,
 };
-use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, paused_of};
+use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, engine_resume, paused_of};
 use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, live_or};
 
 /// Every unit on the field: the top of each unit zone's pile in lane order, then the Units the carriers hold
@@ -35,7 +35,7 @@ use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, live
 /// R13, R174), so §4.5 step 1 never reaches under a pile: an aura that stops reaching a buried card cannot
 /// kill it there; it keeps its damage, cannot be marked (R90) and is judged once it resumes on top.
 /// Collecting buried cards also let a buried Reborn card come back over the card acting in its zone (R175).
-fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+pub(crate) fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let side = &state.players[player];
     let mut units: Vec<CardInstance> = Vec::new();
     for lane in 1..=UNIT_ZONES {
@@ -60,8 +60,16 @@ fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 }
 
 /// §4.5 step 1: a unit dies at 0 or less health or when marked destroyed; an Indestructible one only
-/// when its max health has fallen to 0 or less (R69).
-fn is_dying(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
+/// when its max health has fallen to 0 or less (R69), or when a steal had no room for it (R4205000).
+pub(crate) fn is_dying(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
+    if unit.unpreventable_destroy == Some(true) {
+        return true;
+    }
+    // R3539003: no damage or aura reaches a Dormant card, so no health judges it; only a destroy mark
+    // does.
+    if crate::slumber::is_slumbering(unit) {
+        return unit.marked_destroyed == Some(true);
+    }
     let view = auras.unit_view(unit);
     let indestructible = has_keyword(&view.keywords, KeywordKind::Indestructible);
     if indestructible {
@@ -111,11 +119,12 @@ fn backrow_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 /// R46: a marked Indestructible unit switches to Attack Position and loses Taunt for the turn; a backrow card
 /// has no position, so an Indestructible Field Spell only has its mark dropped. §10.3: both are reported, the
 /// switch as `positionSwitched` only when there is one (R91), the Taunt as a `keywordGranted` with `lost`
-/// set, so the Taunt that decides what may be attacked (§4.2 step 3) never goes silently.
+/// set, so the Taunt that decides what may be attacked (§4.2 step 3) never goes silently. R4205000: the
+/// mark of a steal that had no room for the card is not dropped, so it switches nothing either.
 fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
     for player in PLAYER_IDS {
         for unit in units_of(sink.state, player) {
-            if unit.marked_destroyed != Some(true) {
+            if unit.marked_destroyed != Some(true) || unit.unpreventable_destroy == Some(true) {
                 continue;
             }
             let view = crate::layers::unit_view(sink.state, &unit);
@@ -155,7 +164,7 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
             }
         }
         for card in backrow_of(sink.state, player) {
-            if card.marked_destroyed != Some(true) {
+            if card.marked_destroyed != Some(true) || card.unpreventable_destroy == Some(true) {
                 continue;
             }
             if !has_keyword(
@@ -175,17 +184,22 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
 /// Unit on either side in Defense Position switches to Attack Position, active player's first (R68), whether
 /// it arrived in it or stood in it as the aura came. An effect's switch (R20), so no exertion is spent;
 /// `positionSwitched` reports it. R2179000: so does an Indestructible Unit in Defense Position, aura or not
-/// (one that arrived in it, or became Indestructible standing in it), and R2657000 a Unit with Can't Defend.
+/// (one that arrived in it, or became Indestructible standing in it), R2657000 a Unit with Can't Defend,
+/// and R3543002 an Evasive one, which implies Can't Defend as an Indestructible one does. A Dormant card is
+/// passed by until it awakens (R4454005).
 fn leave_defense(sink: &mut EngineSink<'_>) {
     let barred = crate::restrictions::defense_barred(sink.state);
     for player in active_first(sink.state) {
         for unit in units_of(sink.state, player) {
-            if unit.position != Some(Position::Def) {
+            // R4454005: a Dormant card is no Unit and nothing reaches it (R1839000): it keeps its position
+            // until it awakens, and the next check after that switches it.
+            if unit.position != Some(Position::Def) || crate::slumber::is_slumbering(&unit) {
                 continue;
             }
             if !barred
                 && !crate::layers::unit_has(sink.state, &unit, KeywordKind::Indestructible)
                 && !crate::layers::unit_has(sink.state, &unit, KeywordKind::CantDefend)
+                && !crate::layers::unit_has(sink.state, &unit, KeywordKind::Evasive)
             {
                 continue;
             }
@@ -253,6 +267,16 @@ pub struct RebornEntry {
     /// R1081000: the unit stood in a backrow zone itself, so it returns standing there. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub standing: Option<bool>,
+    /// R3546003: the other three zones a returning GIGA holds with its anchor, released at its return.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub giga_zones: Option<Vec<ZoneRef>>,
+    /// R3996100: the Brittle the body comes back with, read off the snapshot of a card summoned with
+    /// Brittle for itself and its Reborn copy (`SummonPlacement.brittle`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub brittle: Option<i32>,
+    /// R4207000: the body died into its exile pile, so step 4 returns it from there. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exiled: Option<bool>,
 }
 
 /// One of step 5's reports (`DeathPass.collected`).
@@ -341,17 +365,7 @@ pub fn owed_deaths_of(resume: &Resume) -> Option<DeathPass> {
 fn plan_for(pass: &DeathPass, owner: PlayerId) -> ResumePlan {
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert(PASS_KEY.to_string(), pass_json(pass));
-    WorkPlan::new(
-        Resume {
-            def_id: String::new(),
-            hook: DEATHS_WORK.to_string(),
-            step: DEATHS_STEP.to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
-        owner,
-    )
+    WorkPlan::new(engine_resume(DEATHS_WORK, DEATHS_STEP, data), owner)
 }
 
 /// Park the rest of the pass (R113) with the default owner (the active player): the item lands at the
@@ -366,14 +380,7 @@ fn owe_deaths(sink: &mut EngineSink<'_>, pass: &DeathPass, step: Option<&PausedS
             serde_json::to_value(step).expect("a paused step is plain JSON (§9.3)"),
         );
     }
-    let resume = Resume {
-        def_id: String::new(),
-        hook: DEATHS_WORK.to_string(),
-        step: DEATHS_STEP.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    };
+    let resume = engine_resume(DEATHS_WORK, DEATHS_STEP, data);
     crate::work::push_work(sink, resume, None);
 }
 
@@ -406,6 +413,12 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             continue;
         }
         crate::zones::release_zone(sink.state, entry.at);
+        // R3546003: a returning GIGA's other three zones go with its anchor.
+        if let Some(zones) = &entry.giga_zones {
+            for slot in zones {
+                crate::zones::release_zone(sink.state, *slot);
+            }
+        }
         // R127: found by id, so a unit a Death hook exiled or unmade in between is not resurrected; a
         // unit token is in no pile (R11, R175), so the pass carries it, reset as R78 resets any body.
         let mut copy = match &entry.token {
@@ -415,13 +428,24 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             },
             Some(token) => reborn_token(token),
         };
-        // §4.5 step 4 returns it only from the graveyard: one a Death hook moved on (exiled, to a hand)
-        // would otherwise be in two zones at once (§10.1).
-        if entry.token.is_none() && copy.zone.z() != ZoneName::Graveyard {
+        // §4.5 step 4 returns it only from the pile it died into, its graveyard or, when a replacement
+        // exiled it as it died, its exile pile (R4207000): one a Death hook moved on (exiled out of its
+        // graveyard, to a hand) would otherwise be in two zones at once (§10.1).
+        let pile = if entry.exiled == Some(true) {
+            ZoneName::Exile
+        } else {
+            ZoneName::Graveyard
+        };
+        if entry.token.is_none() && copy.zone.z() != pile {
             continue;
         }
         prepare_body(&mut copy, entry);
-        // A body that finds no room keeps these changes in the graveyard.
+        // R3996100: Brittle N whatever its count was as it died (a crumble's spent count went with the
+        // move, R441), its turn cycle started by the return (R638).
+        if let Some(count) = entry.brittle {
+            crate::brittle_count::give_brittle_count(&*sink.state, &mut copy, count);
+        }
+        // A body that finds no room keeps these changes in its pile.
         if entry.token.is_none()
             && let Some(card) = find_instance_mut(sink.state, &entry.id)
         {
@@ -446,7 +470,9 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
         }
         let owner = copy.owner;
         let id = copy.id.clone();
-        sink.state.players[owner].graveyard.retain(|card| card.id != id);
+        let side = &mut sink.state.players[owner];
+        side.graveyard.retain(|card| card.id != id);
+        side.exile.retain(|card| card.id != id);
         let turn = sink.state.turn;
         if let Some(body) = find_instance_mut(sink.state, &id) {
             body.reborn_spent = Some(true);
@@ -529,6 +555,11 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
         if sink.state.result.is_some() {
             return false;
         }
+        // R3925000: at the loop cap card text is off, so the Deaths still owed never run.
+        if crate::loop_cap::capped(sink) {
+            pass.owed.clear();
+            break;
+        }
 
         let Some(snapshot) = pass.owed.first().cloned() else {
             break;
@@ -565,6 +596,7 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
         // parks the rest of the hook with the pass (`plan_for`); when the hook's last effect asked there
         // is none to park, so the pass parks itself without the card. The status tells the two apart,
         // not a count of items: a nested pass parks an item of its own (R156).
+        let first_event = sink.events.len();
         let status = {
             let mut ctx = make_context(
                 sink,
@@ -594,6 +626,10 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
             let effects = hook(&mut ctx);
             run_resumable_list(&mut ctx, &plan, effects, paused)
         };
+        // R4265001: the copies still owed read the fresh ids this run gave, as the cards in play do.
+        if let Some(events) = sink.events.get(first_event..) {
+            crate::state::follow_fresh_ids(&mut pass.owed, events);
+        }
         if status == ListStatus::Done {
             pass.owed.remove(0);
             continue;
@@ -608,11 +644,31 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
         return false;
     }
 
-    // Neither of these can ask anything, so they finish the pass once step 3 is done.
+    // Neither of these can ask anything, so they finish the pass once step 3 is done. R3925000: at the
+    // loop cap no Reborn body returns and no Starship Piece fuses; the zones held for the returns go free.
+    if crate::loop_cap::capped(sink) {
+        release_reborn_zones(sink, pass);
+        graveyard_step(sink, pass);
+        return true;
+    }
     reborn_step(sink, pass);
     graveyard_step(sink, pass);
     starship_step(sink, pass);
     true
+}
+
+/// R3925000: the zones `collect` held for the pass's Reborn returns (R64), released with no body back,
+/// as `reborn_step` releases one before its return.
+fn release_reborn_zones(sink: &mut EngineSink<'_>, pass: &DeathPass) {
+    for entry in &pass.reborn {
+        if !crate::zones::is_reserved(sink.state, entry.at) {
+            continue;
+        }
+        crate::zones::release_zone(sink.state, entry.at);
+        for slot in entry.giga_zones.iter().flatten() {
+            crate::zones::release_zone(sink.state, *slot);
+        }
+    }
 }
 
 /// R1852000: the pass's last step, each Starship Piece that died in it fusing a copy into its owner's
@@ -666,14 +722,30 @@ struct ReadCard {
     at: Option<ZoneRef>,
     token: bool,
     standing: bool,
+    /// R4395001: a Field Spell, Trap or Field Trap that dies standing in a unit zone (Animated, R383).
+    animated: bool,
+    /// R4423000: what it dies as, when not its face's printed type.
+    died_as: Option<CardType>,
+    /// R1849002, R4207000: a destroy-to-exile aura sends it to its exile pile instead of its graveyard.
+    exiled: bool,
     snapshot: CardInstance,
+}
+
+/// R4423000: the card's type as it dies when not its face's printed one (`faces::card_type_of`: a card set
+/// by its Cloaked is a Field Trap or a Trap, R3777000; one standing in a unit zone a Unit, R383), read
+/// before any collected card leaves the field (R89).
+fn died_as(state: &GameState, card: &CardInstance) -> Option<CardType> {
+    let now = crate::faces::card_type_of(state, card);
+    (now != crate::faces::card_type_of_face(state, &card.def_id, card.radiant)).then_some(now)
 }
 
 /// §4.5 step 1: move the collected cards (units by health or a destroy mark, backrow cards by a mark) all at
 /// once, in R68's order, leaving the pass steps 3 to 5 owe. Every card is read (layers, Reborn, snapshot)
 /// before any moves, since a card's layers depend on the others (#65.1 Spikey Pillow's aura, a #92 Felinor
 /// Fiender's count), so what it "was as it died" (R89) does not hang on lane order. A Sacrifice (§6.3) names
-/// no killer (R42) and bypasses Indestructible, so its caller decides it dies.
+/// no killer (R42) and bypasses Indestructible, so its caller decides it dies. A card a destroy-to-exile aura
+/// (R1849002) or a "would go to a graveyard" replacement (B5 E5) sends elsewhere has died all the same
+/// (R4207000): its Death, Reborn, `destroyed` and Starship fusion are owed as any other's.
 fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause) -> DeathPass {
     let mut pass = DeathPass::default();
 
@@ -690,6 +762,14 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 at: crate::zones::slot_of(sink.state, &unit),
                 token: crate::zones::is_unit_token(sink.state, &unit),
                 standing: crate::zones::stands_in_backrow(sink.state, &unit),
+                animated: matches!(unit.zone, Zone::Field { row: Row::Units, .. })
+                    && crate::faces::card_type_of_face(sink.state, &unit.def_id, unit.radiant)
+                        != crate::CardType::Unit,
+                // R1849002: judged for every card before any moves, so the aura card dying beside them
+                // exiles itself and the rest; a Sacrifice is no destroy, so this aura leaves it alone.
+                exiled: cause == DeathCause::Collected
+                    && crate::replacements::destroy_exiles(sink.state, &unit),
+                died_as: died_as(sink.state, &unit),
                 // R78 resets an instance as it leaves, so the Death hook of step 3 reads this snapshot (R89).
                 snapshot: unit.clone(),
                 unit,
@@ -743,18 +823,19 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             .death_via
             .shift_remove(&card.snapshot.id)
             .filter(|_| cause != DeathCause::Sacrificed);
-        let landed = crate::zones::move_to_zone(
-            sink.state,
-            &mut card.unit,
-            OffFieldZone::Graveyard,
-            Default::default(),
-        );
-        if matches!(landed, MoveResult::Replaced) {
-            // R461: a card exiled (or sent to its library) instead of reaching a graveyard has not died: no
-            // Death hook, no Reborn, no `destroyed` for "destroys a Unit" (R42) or the destroyed count (R55).
-            crate::zones::report_graveyard_landing(sink, &card.unit, landed);
-            continue;
+        let to = if card.exiled {
+            OffFieldZone::Exile
+        } else {
+            OffFieldZone::Graveyard
+        };
+        let landed = crate::zones::move_to_zone(sink.state, &mut card.unit, to, Default::default());
+        // R55, R11: counted as `zones::exile_to_pile` counts; a "would go to a graveyard" redirect counts its own.
+        if card.exiled && landed == MoveResult::Moved {
+            sink.state.counters.exiled += 1;
         }
+        // R4207000 (superseding R461): a card a replacement sent elsewhere as it died has still died, so it
+        // goes on below as any collected card; only step 5's `enteredGraveyard` is not its to report.
+        let elsewhere = card.exiled || landed == MoveResult::Replaced;
         pass.owed.push(card.snapshot.clone());
         // R1852000: a piece that died, which the pass's last step fuses into its owner's Starship.
         if card.piece {
@@ -772,15 +853,31 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 pass.owed.push(card.snapshot.clone());
             }
         }
-        pass.collected.push(CollectedEntry {
-            id: card.unit.id.clone(),
-            def_id: card.unit.def_id.clone(),
-            owner: card.unit.owner,
-        });
+        if !elsewhere {
+            pass.collected.push(CollectedEntry {
+                id: card.unit.id.clone(),
+                def_id: card.unit.def_id.clone(),
+                owner: card.unit.owner,
+            });
+        }
         if card.reborn
             && let Some(at) = card.at
         {
             crate::zones::reserve_zone(sink.state, at);
+            // R3546003: a returning GIGA holds its other three zones with its anchor.
+            let giga_zones = if crate::giga::is_giga(&card.snapshot) {
+                let rest: Vec<ZoneRef> = crate::giga::spanned_slots(at)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter(|slot| *slot != at)
+                    .collect();
+                for slot in &rest {
+                    crate::zones::reserve_zone(sink.state, *slot);
+                }
+                if rest.is_empty() { None } else { Some(rest) }
+            } else {
+                None
+            };
             // R175: a unit token is in no pile, so the pass carries its return with the X/X it was
             // summoned as, read off the snapshot since the move above reset the instance (R78).
             let face = reborn_face_of(sink.state, &card.snapshot);
@@ -796,6 +893,15 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 },
                 face,
                 standing: if card.standing { Some(true) } else { None },
+                giga_zones,
+                brittle: card
+                    .snapshot
+                    .memory
+                    .get(crate::effects::summon::REBORN_BRITTLE_KEY)
+                    .and_then(Value::as_i64)
+                    .and_then(|count| i32::try_from(count).ok()),
+                // R4207000: a body that died into its exile pile returns from there.
+                exiled: (card.unit.zone.z() == ZoneName::Exile).then_some(true),
             });
         }
         sink.state.counters.destroyed += 1;
@@ -815,6 +921,11 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 .get_or_insert_with(IndexMap::new)
                 .insert(card.unit.id.clone(), killer.clone());
         }
+        // R3550006: a kill credited to the killer meets its kill deadlines at once, before the
+        // event reports it.
+        if let Some(killer) = killer_id.as_ref() {
+            crate::effects::delay::meet_kill_deadlines(sink.state, killer);
+        }
         // R89: the event carries what the card was, since R78 resets the instance as it leaves.
         sink.events.push(GameEvent::Destroyed {
             instance_id: card.unit.id.clone(),
@@ -828,8 +939,24 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             // R89: its face as it died, which a unit token that has ceased to exist can no longer tell
             // (C+ #12.8 Frostspatula remembers what it killed by definition and face, R409).
             radiant: if card.snapshot.radiant { Some(true) } else { None },
+            // R4395001: an Animated Field Spell or Trap that died standing as a Unit (R383).
+            animated: card.animated.then_some(true),
+            // R4423000: what it died as, when its printed type does not say it (a set Cloaked card, an
+            // Animated one).
+            died_as: card.died_as,
             via,
         });
+        // R4207000: then where it went, as `zones::exile_to_pile` reports an exile (a unit token's
+        // included) and B5 E5 a redirected landing.
+        if card.exiled {
+            sink.events.push(GameEvent::Exiled {
+                instance_id: card.unit.id.clone(),
+                def_id: card.unit.def_id.clone(),
+                owner: card.unit.owner,
+            });
+        } else if landed == MoveResult::Replaced {
+            crate::zones::report_graveyard_landing(sink, &card.unit, landed);
+        }
     }
 
     pass
@@ -888,8 +1015,41 @@ pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
     run_death_pass(sink, &mut pass, None);
 }
 
+/// R4154205 (Stinkyscape #70 Z'Zoth's "Trigger their Deaths"): each of `cards`' Death hooks runs now, in
+/// the order given, as §4.5 step 3 runs a dying card's, the card read as it stands (its snapshot, R89):
+/// none dies, so there is no Reborn, no `destroyed`, no graveyard step and no state check after it (the
+/// list's own follows, R59), as after a Sacrifice's pass. Its controller's Cry and Death multiplier
+/// (R823) runs each Death that many more times, as for a Death the check collects. A card with no Death
+/// runs nothing; a hook that asks parks the rest of the run on `state.work` (R113).
+pub fn run_death_hooks(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
+    let mut owed: Vec<CardInstance> = Vec::new();
+    for card in cards {
+        if crate::grants::death_hook_of(sink.state, card).is_none() {
+            continue;
+        }
+        let extra = crate::multipliers::extra_runs(
+            sink.state,
+            card.controller,
+            crate::multipliers::Multiplied::CryAndDeath,
+        )
+        .max(0) as usize;
+        for _ in 0..=extra {
+            owed.push(card.clone());
+        }
+    }
+    if owed.is_empty() {
+        return;
+    }
+    let mut pass = DeathPass {
+        owed,
+        sacrificed: Some(true),
+        ..DeathPass::default()
+    };
+    run_death_pass(sink, &mut pass, None);
+}
+
 /// MD-D31, R1124: §4.5 step 1 exiles the units damage marked ahead of deaths, in R68's order, by §6.3
-/// Exile's move (`zones::exile_to_pile`, R11, R55): no Death, no Reborn, no `destroyed` (R461), even
+/// Exile's move (`zones::exile_to_pile`, R11, R55): no Death, no Reborn, no `destroyed` (R1124), even
 /// when the hit was lethal.
 fn exile_marked(sink: &mut EngineSink<'_>) {
     let order = active_first(sink.state);
@@ -928,7 +1088,7 @@ fn forget_spent_killers(sink: &mut EngineSink<'_>, survivors: &[CardInstance]) {
 }
 
 /// The cards acting on the field, the active player's side first (units, then the backrow, lane 1 up).
-fn permanents_in_play(state: &GameState) -> Vec<CardInstance> {
+pub(crate) fn permanents_in_play(state: &GameState) -> Vec<CardInstance> {
     let first = state.active;
     let mut out: Vec<CardInstance> = Vec::new();
     for player in [first, first.opponent()] {
@@ -948,11 +1108,21 @@ fn permanents_in_play(state: &GameState) -> Vec<CardInstance> {
 }
 
 pub fn state_check(sink: &mut EngineSink<'_>) {
+    // R3925000: at the loop cap the check collects the dead with their text off.
+    if crate::loop_cap::capped(sink) {
+        capped_check(sink);
+        return;
+    }
     // R460, R1875006: the cards whose would-die replacement flickered or resolved its follow-up in this
     // check, which answer no later pass of it, as each card replaces an event at most once.
     let mut resolved_first: Vec<String> = Vec::new();
-    for _pass in 0..STATE_CHECK_PASS_CAP {
+    for pass in 0..STATE_CHECK_PASS_CAP {
         if sink.state.result.is_some() {
+            return;
+        }
+        // R3925000: a check still going round at the loop cap stops there; the trip judged the board.
+        if crate::loop_cap::halted(sink, pass) {
+            capped_check(sink);
             return;
         }
         // R446: a Unit whose carrier is gone steps down, or is marked destroyed for want of a unit zone,
@@ -1006,47 +1176,12 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         if crate::card_on_card::release_held(sink)
             || crate::card_on_card::standing_text(sink)
             || crate::animated::animate_owed(sink)
+            || crate::geometry::swallow_standing(sink)
         {
             continue;
         }
 
-        let order = active_first(sink.state);
-        let units: Vec<CardInstance> = order
-            .iter()
-            .flat_map(|player| units_of(sink.state, *player))
-            .collect();
-        let dying_ids: Vec<String> = {
-            // #892: one aura table for every unit's death check.
-            let auras = AuraTable::new(&*sink.state);
-            units
-                .iter()
-                .filter(|unit| is_dying(&auras, unit))
-                .map(|unit| unit.id.clone())
-                .collect()
-        };
-        let survivors: Vec<CardInstance> = units
-            .iter()
-            .filter(|unit| !dying_ids.contains(&unit.id))
-            .cloned()
-            .collect();
-        forget_spent_killers(sink, &survivors);
-        // R68's order, which §4.5 step 3's Deaths keep: the active player's side first, each side's units
-        // by lane, then its backrow, so a backrow Death (Classic+ #61, #12.8) fires in its side's place.
-        let mut dying: Vec<CardInstance> = Vec::new();
-        for player in order {
-            dying.extend(
-                units_of(sink.state, player)
-                    .into_iter()
-                    .filter(|unit| dying_ids.contains(&unit.id)),
-            );
-            // R1081000: a Unit standing in the backrow is among `units_of`'s already, collected once.
-            dying.extend(
-                backrow_of(sink.state, player)
-                    .into_iter()
-                    .filter(|card| card.marked_destroyed == Some(true))
-                    .filter(|card| !crate::zones::is_standing_unit(sink.state, card)),
-            );
-        }
+        let dying = dying_now(sink);
 
         if dying.is_empty() {
             // R2783001: nothing died, so no keyword recorded for a death says how anything died.
@@ -1055,6 +1190,20 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             if hero_check(sink) || crate::win_conditions::win_check(sink) {
                 return;
             }
+            // R3569000: with Tears of the Kwzki Tree in force, every card turns Radiant on the settled board.
+            // R3908000: a Radiant face can carry what its base lacked (Indestructible, less health), so a
+            // sweep that turned any card starts the check over and steps 1 to 5 judge the board it left.
+            if crate::effects::radiant::radiate_world(sink) {
+                continue;
+            }
+            // R3536001, R3536002: the settled board: standing "Evolves when" conditions and cards
+            // marked to enter evolved evolve now, queuing their Evolve texts behind the check.
+            crate::evolution::evolve_standing(sink);
+            // R3558001, R3558002, R3558007: the settled hand and library: lends sync to the cards
+            // the lenders sit beside, waiting pairs meet, and standing deck casts queue.
+            crate::hand_order::sync_hand_auras(sink);
+            crate::hand_order::meet_pairs(sink);
+            crate::deck_cast::queue_deck_casts(sink);
             // B5 E33, R404: the board has settled, so a quest completed by what happened is noticed now.
             crate::subsystems::quests::notice_quests(sink);
             return;
@@ -1062,9 +1211,21 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
 
         // B5 E5: before any card moves, the units that would die meet the "would die" replacements
         // (Classic #14's Radiant flicker), which take some of them out of the collection (R462).
+        // R4205000: a card a steal had no room for is not offered, as R462 keeps a Sacrifice out: a
+        // flicker would keep it on the field, which nothing may. It dies with the rest, in R68's order.
+        let preventable: Vec<CardInstance> = dying
+            .iter()
+            .filter(|card| card.unpreventable_destroy != Some(true))
+            .cloned()
+            .collect();
         let remaining: Vec<CardInstance> =
-            match crate::replacements::would_die_window(sink, &dying, &mut resolved_first) {
-                crate::replacements::WouldDie::Die(remaining) => remaining,
+            match crate::replacements::would_die_window(sink, &preventable, &mut resolved_first) {
+                crate::replacements::WouldDie::Die(left) => dying
+                    .into_iter()
+                    .filter(|card| {
+                        card.unpreventable_destroy == Some(true) || left.iter().any(|kept| kept.id == card.id)
+                    })
+                    .collect(),
                 // R1875006: a replacement resolved before anything moved: judge the board it left again.
                 crate::replacements::WouldDie::StartOver => {
                     if sink.state.result.is_some() || sink.state.pending.is_some() {
@@ -1073,15 +1234,6 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
                     continue;
                 }
             };
-        // R1849002: what a destroy-to-exile aura reaches, judged for every card before any moves, is
-        // exiled first in R68's order, not collected: no Death, Reborn or `destroyed` (R461, R1124).
-        let (exiled, remaining): (Vec<CardInstance>, Vec<CardInstance>) = remaining
-            .into_iter()
-            .partition(|card| crate::replacements::destroy_exiles(sink.state, &live_or(sink.state, card)));
-        for card in &exiled {
-            let card = live_or(sink.state, card);
-            crate::zones::exile_to_pile(sink, card);
-        }
         let mut collected = collect(sink, &remaining, DeathCause::Collected);
         // R2783001: a keyword recorded for a unit this pass did not collect (a "would die" replacement
         // spared it) says nothing of a later death; one a Death hook's hit records is the next pass's.
@@ -1099,6 +1251,75 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         }
     }
 
-    // §4.5 repeats "until nothing changes"; a board that never settles is a bug, not a draw.
+    // §4.5 repeats "until nothing changes"; the loop cap stops a board that never settles first
+    // (R3925000), so this is an assertion play cannot reach.
     panic!("the board did not settle in {STATE_CHECK_PASS_CAP} passes");
+}
+
+/// §4.5 step 1's collection: the cards the check collects now, in R68's order, which §4.5 step 3's Deaths
+/// keep: the active player's side first, each side's units by lane, then its backrow, so a backrow Death
+/// (Classic+ #61, #12.8) fires in its side's place. A survivor forgets a spent killer (R42).
+fn dying_now(sink: &mut EngineSink<'_>) -> Vec<CardInstance> {
+    let order = active_first(sink.state);
+    let units: Vec<CardInstance> = order
+        .iter()
+        .flat_map(|player| units_of(sink.state, *player))
+        .collect();
+    let dying_ids: Vec<String> = {
+        // #892: one aura table for every unit's death check.
+        let auras = AuraTable::new(&*sink.state);
+        units
+            .iter()
+            .filter(|unit| is_dying(&auras, unit))
+            .map(|unit| unit.id.clone())
+            .collect()
+    };
+    let survivors: Vec<CardInstance> = units
+        .iter()
+        .filter(|unit| !dying_ids.contains(&unit.id))
+        .cloned()
+        .collect();
+    forget_spent_killers(sink, &survivors);
+    let mut dying: Vec<CardInstance> = Vec::new();
+    for player in order {
+        dying.extend(
+            units_of(sink.state, player)
+                .into_iter()
+                .filter(|unit| dying_ids.contains(&unit.id)),
+        );
+        // R1081000: a Unit standing in the backrow is among `units_of`'s already, collected once.
+        dying.extend(
+            backrow_of(sink.state, player)
+                .into_iter()
+                .filter(|card| card.marked_destroyed == Some(true))
+                .filter(|card| !crate::zones::is_standing_unit(sink.state, card)),
+        );
+    }
+    dying
+}
+
+/// R3925000: the check at the loop cap, card text off: the dead are collected (§4.5 step 1) with no "would
+/// die" replacement, Death, Reborn or Starship fusion, and step 2's hero check, then a held win (R850),
+/// still ends a game that has ended. It repeats while a collection leaves more to collect (an aura that
+/// went with the dead); nothing it does can add a card, so it settles.
+fn capped_check(sink: &mut EngineSink<'_>) {
+    for _pass in 0..STATE_CHECK_PASS_CAP {
+        if sink.state.result.is_some() {
+            return;
+        }
+        let dying = dying_now(sink);
+        if dying.is_empty() {
+            sink.frontier.get_mut().death_via.clear();
+            let _ = hero_check(sink) || crate::win_conditions::win_check(sink);
+            return;
+        }
+        let mut collected = collect(sink, &dying, DeathCause::Collected);
+        sink.frontier.get_mut().death_via.clear();
+        if hero_check(sink) {
+            return;
+        }
+        // Step 3 runs no Death while capped; Reborn's zones go free and step 5 reports the graveyard.
+        run_death_pass(sink, &mut collected, None);
+    }
+    panic!("the capped board did not settle in {STATE_CHECK_PASS_CAP} passes (R3925000)");
 }

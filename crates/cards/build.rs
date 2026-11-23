@@ -37,9 +37,10 @@
 //! the catalog ids its snapshot (`patches/<version>.json`) lacks (`absent`), for each id whose entry
 //! differs from `catalog.json`'s, an index into `patches` (`changed`), and, when it has a win-rate
 //! table file (`patches/win_rates/<version>.json`, R1329000), an index into `winRates`, which holds
-//! each table once, and, when it has a card-lists file (`patches/card_metrics/<version>.json`,
-//! R2173000), an index into `cardLists`, which holds each version's BUSTED and complicated lists
-//! once. Each patch is `{ set, unset }`: the snapshot's top-level keys whose value
+//! each table once; when it has a file of the win rates of record (`patches/records/<version>.json`,
+//! R3882000), an index into the same `winRates` (`records`); and, when it has a card-lists file
+//! (`patches/card_metrics/<version>.json`, R2173000), an index into `cardLists`, which holds each
+//! version's BUSTED and complicated lists once. Each patch is `{ set, unset }`: the snapshot's top-level keys whose value
 //! differs, with that value, and the keys only `catalog.json`'s entry has. An id the catalog no longer
 //! has is not carried. `src/history.rs` reads it.
 //!
@@ -119,6 +120,7 @@ fn main() {
     let catalog_ids = read_catalog_ids(&catalog_path);
     let version = read_catalog_version(&patches_path);
     println!("cargo:rustc-env=JACKIOH_CATALOG_VERSION={version}");
+    println!("cargo:rustc-env=JACKIOH_PAST_FROM={BROWSER_CARRIED_FROM}");
 
     let mut problems: Vec<String> = Vec::new();
     let files = find_card_files(&scripts_dir, &mut problems);
@@ -466,6 +468,17 @@ fn history_json(
                 tables.push(table);
             }
             entry["winRates"] = serde_json::Value::from(at);
+        }
+        // R3882000: the win rates of record it shipped with (`patches/records/<version>.json`), an
+        // index into the same `winRates`, which only the record reads.
+        let record_path = patches_dir.join("records").join(format!("{version}.json"));
+        if record_path.exists() {
+            let table = read_json(&record_path);
+            let at = *seen_tables.entry(table.to_string()).or_insert(tables.len());
+            if at == tables.len() {
+                tables.push(table);
+            }
+            entry["records"] = serde_json::Value::from(at);
         }
         let lists_path = patches_dir.join("card_metrics").join(format!("{version}.json"));
         if lists_path.exists() {

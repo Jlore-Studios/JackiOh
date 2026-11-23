@@ -258,6 +258,7 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
             card.counters = Counters {
                 plague: Some(2),
                 grade: Some(3),
+                ..Default::default()
             };
             card.memory = [("meal".to_string(), json!("felinor"))].into_iter().collect();
             card.exertion = Exertion {
@@ -790,7 +791,7 @@ mod s6_3_mana_and_next_turn_mana_s2_3_m3_t1 {
     }
 
     #[test]
-    fn r364_refresh_gives_back_spent_mana_up_to_max_and_never_past_it_s6_3_refresh() {
+    fn r364_replenish_gives_back_spent_mana_up_to_max_and_never_past_it_s6_3_replenish() {
         let mut state = game("refresh-mana");
         state.players.p1.mana = ManaState {
             current: 0,

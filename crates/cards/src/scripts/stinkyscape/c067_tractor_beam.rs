@@ -1,9 +1,10 @@
 //! SPEC §8.10 Stinkyscape 67 Tractor Beam, a card of the Stinkyscape set.
-//!   Base:    "Starship Piece, Equip\nStart of turn: Gain a random Stinkyscape Resource." (0/2)
-//!   Radiant: "Starship Piece, Equip\nStart of turn: Gain a random Radiant Stinkyscape Resource." (0/4)
+//!   Base:    "Starship Piece\nStart of turn: Gain a random Stinkyscape Resource." (0/2)
+//!   Radiant: "Starship Piece\nStart of turn: Gain a random Radiant Stinkyscape Resource." (0/4)
 //!
-//! Starship Piece and Equip are printed keywords, the engine's: its death fuses a copy into its owner's
-//! Dormant Starship (R1852000), and played onto one of its controller's Units it fuses into that Unit,
+//! Starship Piece is a printed keyword, the engine's (Equip was one too through v0.6.7k, R4285001): its death
+//! fuses a copy into its owner's Dormant Starship (R1852000), and Equipped onto one of its controller's Units
+//! it fuses into that Unit,
 //! the host taking its Start of turn line and staying no piece (R1086, R1852001). Start of turn (R62):
 //! `gain_resources` of one random Resource into its controller's hand (R1840000, R1840002's roll), a
 //! ninth sold at once (R1840001); the first gain opens the Marketplace (R1853000). Radiant: a Radiant
@@ -95,6 +96,7 @@ mod tests {
             "p2": { "hand": [FILLER], "library": filler(4) },
         }));
         let host = s.unit_at(P1, 1);
+        crate::give_equip(&mut s, ID);
         s.play(ID, json!({ "zone": 1, "equip": true }));
         assert_eq!(s.unit_at(P1, 1).id, host.id, "the host is the kept card");
         assert!(

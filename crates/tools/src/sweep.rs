@@ -4,7 +4,9 @@
 //! (AI_SWEEP.seedsPerCard games each, at AI_GATE_BUDGET); `atRiskIds` reads the at-risk cards off it
 //! (plus today's SHADOW_BAN and SHADOW_WATCH). Pass 2: `sweepAtRisk` forces each at-risk card into
 //! AI_SWEEP.seedsPerCardAtRisk more games per tier, every at-risk card dealt more often as filler.
-//! `sweepVerdict` joins a card's tiers and passes. The report ends with the SHADOW_BAN and SHADOW_WATCH
+//! Both passes play each card on its base face, then on its Radiant face (the forced card dealt Radiant
+//! through a deck mark, R2702000; #4466), each face its own line. `sweepVerdict` joins a card's tiers,
+//! faces and passes. The report ends with the SHADOW_BAN and SHADOW_WATCH
 //! entries, the ids it cleared (R1675000) and the header line for `crates/ai/src/shadow_ban.rs`, whose
 //! tables are never copied in by hand: `--write` rewrites its header block and both tables from the
 //! reports of record (this output, committed under `training/history/`, oldest first), and `--check`
@@ -41,9 +43,9 @@ use indexmap::IndexSet;
 use serde_json::Value;
 
 use jackioh_ai::{
-    AI_GATE_BUDGET, AI_SWEEP, SHADOW_BAN, SHADOW_UNBANNED, SHADOW_WATCH, SlowDecision, SweepFlag,
-    SweepOptions, SweepPass2, SweepResult, SweepStats, ai_generation, at_risk_ids, pass2_keep_out,
-    pass2_stats, sweep_at_risk, sweep_card, sweep_verdict,
+    AI_GATE_BUDGET, AI_SWEEP, SHADOW_BAN, SHADOW_UNBANNED, SHADOW_WATCH, SlowDecision, SweepFace, SweepFlag,
+    SweepOptions, SweepPass2, SweepResult, SweepStats, ai_generation, at_risk_ids, face_flags,
+    pass2_keep_out, pass2_stats, sweep_at_risk, sweep_card, sweep_verdict,
 };
 use jackioh_engine::catalog::{CatalogQueryArgs, query};
 use jackioh_engine::testkit::preview_every_set;
@@ -213,6 +215,7 @@ fn row(stats: &SweepStats, tier: &str, flags: &str) -> String {
         stats.def_id.clone(),
         name_of(&stats.def_id),
         tier.to_string(),
+        stats.face.as_str().to_string(),
         flags.to_string(),
         format!("{}/{}", stats.drawn_games, stats.games),
         stats.affordable_turns.to_string(),
@@ -228,8 +231,8 @@ fn row(stats: &SweepStats, tier: &str, flags: &str) -> String {
 }
 
 const TABLE_HEAD: [&str; 2] = [
-    "| id | name | tier | flags | drawn/games | affordable turns | playable turns | plays | errors | timeouts | raw timeouts | mean eval delta |",
-    "|---|---|---|---|---|---|---|---|---|---|---|---|",
+    "| id | name | tier | face | flags | drawn/games | affordable turns | playable turns | plays | errors | timeouts | raw timeouts | mean eval delta |",
+    "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
 ];
 
 fn timed<T>(label: &str, run: impl FnOnce() -> T, describe: impl FnOnce(&T) -> String) -> T {
@@ -313,33 +316,41 @@ fn pass1(ids: &[String], mut emit: impl FnMut(&SweepResult)) -> Vec<SweepResult>
     let mut results: Vec<SweepResult> = Vec::new();
     for (index, id) in ids.iter().enumerate() {
         for tier in AI_SWEEP.tiers.iter().copied() {
-            let result = timed(
-                &format!("pass 1 {}/{} {id} {} @{tier}", index + 1, ids.len(), name_of(id)),
-                || {
-                    sweep_card(
-                        id,
-                        &SweepOptions {
-                            seeds: None,
-                            now: Some(&now),
-                            retime: Some(&retime),
-                            tier: Some(tier),
-                            banned: None,
-                            setup: None,
-                        },
-                    )
-                },
-                |r| {
-                    if !r.flags.is_empty() {
-                        flag_names(&r.flags)
-                    } else if r.unswept {
-                        "unswept".to_string()
-                    } else {
-                        "clean".to_string()
-                    }
-                },
-            );
-            emit(&result);
-            results.push(result);
+            for face in SweepFace::ALL {
+                let result = timed(
+                    &format!(
+                        "pass 1 {}/{} {id} {} @{tier} {face}",
+                        index + 1,
+                        ids.len(),
+                        name_of(id)
+                    ),
+                    || {
+                        sweep_card(
+                            id,
+                            &SweepOptions {
+                                seeds: None,
+                                now: Some(&now),
+                                retime: Some(&retime),
+                                tier: Some(tier),
+                                banned: None,
+                                setup: None,
+                                face: Some(face),
+                            },
+                        )
+                    },
+                    |r| {
+                        if !r.flags.is_empty() {
+                            flag_names(&r.flags)
+                        } else if r.unswept {
+                            "unswept".to_string()
+                        } else {
+                            "clean".to_string()
+                        }
+                    },
+                );
+                emit(&result);
+                results.push(result);
+            }
         }
     }
     results
@@ -357,33 +368,41 @@ fn pass2(
     let mut results: Vec<SweepPass2> = Vec::new();
     for (index, id) in ids.iter().enumerate() {
         for tier in AI_SWEEP.tiers.iter().copied() {
-            let result = timed(
-                &format!("pass 2 {}/{} {id} {} @{tier}", index + 1, ids.len(), name_of(id)),
-                || {
-                    sweep_at_risk(
-                        id,
-                        at_risk,
-                        keep_out,
-                        &SweepOptions {
-                            seeds: None,
-                            now: Some(&now),
-                            retime: Some(&retime),
-                            tier: Some(tier),
-                            banned: None,
-                            setup: None,
-                        },
-                    )
-                },
-                |r| {
-                    format!(
-                        "{} at-risk card(s) dealt, {} suspect line(s)",
-                        r.cards.len(),
-                        r.suspects.len()
-                    )
-                },
-            );
-            emit(&result);
-            results.push(result);
+            for face in SweepFace::ALL {
+                let result = timed(
+                    &format!(
+                        "pass 2 {}/{} {id} {} @{tier} {face}",
+                        index + 1,
+                        ids.len(),
+                        name_of(id)
+                    ),
+                    || {
+                        sweep_at_risk(
+                            id,
+                            at_risk,
+                            keep_out,
+                            &SweepOptions {
+                                seeds: None,
+                                now: Some(&now),
+                                retime: Some(&retime),
+                                tier: Some(tier),
+                                banned: None,
+                                setup: None,
+                                face: Some(face),
+                            },
+                        )
+                    },
+                    |r| {
+                        format!(
+                            "{} at-risk card(s) dealt, {} suspect line(s)",
+                            r.cards.len(),
+                            r.suspects.len()
+                        )
+                    },
+                );
+                emit(&result);
+                results.push(result);
+            }
         }
     }
     results
@@ -412,16 +431,16 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>, da
     let ids = sorted_unique(first.iter().map(|result| result.stats.def_id.clone()));
     let at_risk = at_risk_ids(first, SHADOW_BAN, SHADOW_WATCH);
     let forced = sorted_unique(second.iter().map(|result| result.forced.clone()));
+    let own_of = |id: &str| -> Vec<SweepResult> {
+        first
+            .iter()
+            .filter(|result| result.stats.def_id == id)
+            .cloned()
+            .collect()
+    };
     let verdicts: Vec<_> = sorted_unique(ids.iter().chain(forced.iter()).cloned())
         .iter()
-        .map(|id| {
-            let own: Vec<SweepResult> = first
-                .iter()
-                .filter(|result| &result.stats.def_id == id)
-                .cloned()
-                .collect();
-            sweep_verdict(&own, second)
-        })
+        .map(|id| sweep_verdict(&own_of(id), second))
         .collect();
     let banned: Vec<_> = verdicts
         .iter()
@@ -441,8 +460,14 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>, da
         .map(|tier| tier.as_str())
         .collect::<Vec<_>>()
         .join(" and ");
+    // #4466: a sweep that played Radiant faces says so; one of base faces alone reads as it always did.
+    let faces = if first.iter().any(|result| result.face == SweepFace::Radiant) {
+        ", each card also on its Radiant face (`sweep:<tier>:<id>:radiant:<n>`, `sweep2:<tier>:<id>:radiant:<n>`)"
+    } else {
+        ""
+    };
     let passes = format!(
-        "pass 1 over {} card(s) at {tiers}, {} seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over {} at-risk card(s), {} seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×{}), budget AI_GATE_BUDGET {budget}",
+        "pass 1 over {} card(s) at {tiers}, {} seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over {} at-risk card(s), {} seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×{}){faces}, budget AI_GATE_BUDGET {budget}",
         ids.len(),
         AI_SWEEP.seeds_per_card,
         forced.len(),
@@ -523,13 +548,24 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>, da
         for id in &dealt {
             let verdict = verdicts.iter().find(|entry| &entry.def_id == id);
             for tier in AI_SWEEP.tiers.iter().copied() {
-                let total = pass2_stats(second, id, tier);
-                if total.games > 0 {
-                    let flags = match verdict {
-                        Some(verdict) if verdict.reason.is_some() => flag_names(&verdict.flags),
-                        _ => "cleared".to_string(),
-                    };
-                    out.push(row(&total, tier.as_str(), &flags));
+                for face in SweepFace::ALL {
+                    let total = pass2_stats(second, id, tier, face);
+                    if total.games > 0 {
+                        // #4466: a banned card's row shows the flags of its own face, so a face that
+                        // raised none reads as cleared.
+                        let flags = match verdict {
+                            Some(verdict) if verdict.reason.is_some() => {
+                                let raised = face_flags(id, &own_of(id), second, face);
+                                if raised.is_empty() {
+                                    "cleared".to_string()
+                                } else {
+                                    flag_names(&raised)
+                                }
+                            }
+                            _ => "cleared".to_string(),
+                        };
+                        out.push(row(&total, tier.as_str(), &flags));
+                    }
                 }
             }
         }
@@ -1398,6 +1434,71 @@ mod tests {
         assert!(TABLE_HEAD.iter().all(|head| head.matches('|').count() == bars));
     }
 
+    #[test]
+    fn a_rows_face_cell_follows_its_tier() {
+        jackioh_cards::register_all();
+        let radiant: SweepStats = serde_json::from_value(serde_json::json!({
+            "defId": "core-011", "face": "radiant", "games": 8, "drawnGames": 5, "affordableTurns": 4,
+            "plays": 2, "errors": 1, "timeouts": 0, "evalDeltaSum": 0, "evalDeltaCount": 0
+        }))
+        .unwrap();
+        let base = SweepStats {
+            face: SweepFace::Base,
+            ..radiant.clone()
+        };
+        let line = row(&radiant, "easy", "error");
+        assert!(line.contains(" | easy | radiant | error | "), "{line}");
+        let base_line = row(&base, "easy", "cleared");
+        assert!(base_line.contains(" | easy | base | "), "{base_line}");
+        assert!(TABLE_HEAD[0].contains("| tier | face | flags |"));
+        let bars = line.matches('|').count();
+        assert!(TABLE_HEAD.iter().all(|head| head.matches('|').count() == bars));
+    }
+
+    #[test]
+    fn the_report_names_the_radiant_face() {
+        jackioh_cards::register_all();
+        let lines: Vec<Value> = [
+            r#"{"defId":"core-011","games":8,"drawnGames":6,"affordableTurns":5,"playableTurns":5,"plays":3,"errors":0,"timeouts":0,"evalDeltaSum":6,"evalDeltaCount":3,"tier":"easy","flags":[],"unswept":false}"#,
+            r#"{"defId":"core-011","face":"radiant","games":8,"drawnGames":6,"affordableTurns":5,"playableTurns":5,"plays":3,"errors":1,"timeouts":0,"evalDeltaSum":6,"evalDeltaCount":3,"tier":"easy","flags":["error"],"unswept":false}"#,
+        ]
+        .iter()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+        let printed = report(&pass1_lines(&lines).unwrap(), &[], None, FIXTURE_DATE);
+        assert!(printed.contains("| easy | radiant | error |"), "{printed}");
+        // Pass 2's table shows each face's own flags: the base face raised none.
+        let second: Vec<SweepPass2> = [
+            r#"{"forced":"core-011","tier":"easy","games":24,"cards":[{"defId":"core-011","games":24,"drawnGames":18,"affordableTurns":20,"playableTurns":20,"plays":9,"errors":0,"timeouts":0,"evalDeltaSum":18,"evalDeltaCount":9}],"suspects":[]}"#,
+            r#"{"forced":"core-011","tier":"easy","games":24,"cards":[{"defId":"core-011","face":"radiant","games":24,"drawnGames":18,"affordableTurns":20,"playableTurns":20,"plays":9,"errors":0,"timeouts":0,"evalDeltaSum":18,"evalDeltaCount":9}],"suspects":[]}"#,
+        ]
+        .iter()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+        let both = report(&pass1_lines(&lines).unwrap(), &second, None, FIXTURE_DATE);
+        let table: Vec<&str> = both
+            .lines()
+            .skip_while(|line| !line.starts_with("## Pass 2"))
+            .filter(|line| line.starts_with("| core-011 "))
+            .collect();
+        assert_eq!(table.len(), 2, "{both}");
+        assert!(table[0].contains(" | easy | base | cleared | "), "{both}");
+        assert!(table[1].contains(" | easy | radiant | error | "), "{both}");
+        let block = parse_block(&printed).unwrap();
+        assert_eq!(
+            block.ban,
+            [pair(
+                "core-011",
+                "error: easy (Radiant): 1 engine or search error(s) over 8 games"
+            )]
+        );
+        assert!(
+            block.header.contains("`sweep:<tier>:<id>:radiant:<n>`"),
+            "{}",
+            block.header
+        );
+    }
+
     /// Pass-1 and pass-2 lines as the slices emit them: meditative-011 and -012 time out, core-001 and
     /// meditative-022 are at risk (pass 2 cleared meditative-022's deal but not its watch).
     const FIXTURE_LINES: &str = r#"{"defId":"meditative-011","games":8,"drawnGames":7,"affordableTurns":7,"playableTurns":7,"plays":2,"errors":0,"timeouts":3,"evalDeltaSum":3.6,"evalDeltaCount":2,"tier":"easy","flags":["timeout"],"unswept":false}
@@ -1750,12 +1851,13 @@ mod tests {
                 SetName::Meditative,
                 SetName::MeditativePlus,
                 SetName::Stinkyscape,
-                SetName::TrainingGrounds
+                SetName::TrainingGrounds,
+                SetName::StinkyscapePlus
             ]
         );
         assert_eq!(
             ban_sets_named(),
-            "Meditative, Meditative+, Stinkyscape and Training Grounds"
+            "Meditative, Meditative+, Stinkyscape, Training Grounds and Stinkyscape+"
         );
         let ids = stinkyscape_ids();
         let fifth = ids.len() / 5;
@@ -1768,7 +1870,9 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(
-            error.contains("holds Meditative, Meditative+, Stinkyscape and Training Grounds cards only"),
+            error.contains(
+                "holds Meditative, Meditative+, Stinkyscape, Training Grounds and Stinkyscape+ cards only"
+            ),
             "{error}"
         );
     }

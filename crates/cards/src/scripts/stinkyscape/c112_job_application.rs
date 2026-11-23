@@ -1,11 +1,11 @@
 //! SPEC §8.10 Stinkyscape 112 Job Application (§6.3 Quest stages, Hold beneath, Buff; §6.2 Death; §6.1
-//! Lucky; R81, R384, R1854000–R1854004, R1865000–R1865002). Field Spell, Quest, cost 1, Legendary, a card
-//! of the Stinkyscape set.
+//! Lucky; R81, R384, R1854000–R1854004, R1865000–R1865002). Field Spell, Quest, cost 0 (1 until issue
+//! #4353), Legendary, a card of the Stinkyscape set.
 //!   Base:    "Death: Resummon this at Stage 1.
 //!            Quest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your
-//!            resume. Reward: Hear back in 2 to 6 turns.
+//!            resume. Reward: Hear back in 1 to 2 turns.
 //!            Quest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the
-//!            same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or
+//!            same as your resume; play 2 cards of different costs in one turn; or take or deal 8 or
 //!            more damage in one hit. Reward: Add your resume to your hand and Buff it
 //!            {buffs|time|times}. It costs (0).
 //!            Quest: Stage 3, The Offer. Activate this to accept the offer, or to send in another
@@ -17,6 +17,10 @@
 //! Stage 2 draws goal (R1854002); returns held resume at (0) buffed.
 //! Stage 3 accepts or reapplies (R81, #112.1, R1865002). Death resummon (R64, R78, R1865000).
 //! Radiant: Lucky 1 keeps shorter wait; buffs 10.
+//! Issue #4154 made the rewards easier to gain (R4154204): the resume hears back in 1 to 2 turns (1 to 4
+//! through v0.6.6h, 2 to 6 through v0.6.4c), and the Interview asks for 2 cards of different costs in a
+//! turn (3) or a hit of 8 or more (12); the same-cost goal and the tripling stay. `script_v0_6_6h` keeps
+//! the terms before it for those replays (R767000).
 
 use jackioh_engine::effects::{
     AddToHandArgs, HearBackArgs, RememberArgs, ReturnHeldArgs, SetAsideArgs, SummonArgs, add_to_hand,
@@ -63,13 +67,16 @@ const RESUME_WAIT_KEY: &str = "resumeWait";
 const REWARD_FACTOR_KEY: &str = "rewardFactor";
 const HIRED_KEY: &str = "hired";
 
-/// "Hear back in 2 to 6 turns".
-const SHORTEST_WAIT: i32 = 2;
-const LONGEST_WAIT: i32 = 6;
-/// "Play 3 cards of different costs in one turn".
-const BEHAVIORAL_COSTS: i32 = 3;
-/// "Take or deal 12 or more damage in one hit".
-const HARDBALL_DAMAGE: i32 = 12;
+/// "Hear back in 1 to 2 turns" (1 to 4 through v0.6.6h, issue #4154; 2 to 6 through v0.6.4c, issue #3951).
+const SHORTEST_WAIT: i32 = 1;
+const LONGEST_WAIT: i32 = 2;
+/// "Play 2 cards of different costs in one turn" (3 through v0.6.6h).
+const BEHAVIORAL_COSTS: i32 = 2;
+/// "Take or deal 8 or more damage in one hit" (12 through v0.6.6h).
+const HARDBALL_DAMAGE: i32 = 8;
+/// The Interview's two numbers through v0.6.6h (issue #4154).
+const BEHAVIORAL_COSTS_V0_6_6H: i32 = 3;
+const HARDBALL_DAMAGE_V0_6_6H: i32 = 12;
 /// The cost the Interview's first goal asks for while no resume's cost is noted (R1865001).
 const NO_RESUME_COST: i32 = 0;
 /// "It costs (0)".
@@ -95,9 +102,56 @@ const RARITY_LADDER: [Rarity; 5] = [
 
 /// R1865001: the weights of the waits `SHORTEST_WAIT` to `LONGEST_WAIT`, in that order, for a weak, a
 /// solid and a strong resume.
-const WEAK_WAITS: [i32; 5] = [1, 2, 3, 4, 5];
-const SOLID_WAITS: [i32; 5] = [2, 3, 4, 3, 2];
-const STRONG_WAITS: [i32; 5] = [5, 4, 3, 2, 1];
+const WEAK_WAITS: [i32; 2] = [1, 3];
+const SOLID_WAITS: [i32; 2] = [1, 1];
+const STRONG_WAITS: [i32; 2] = [3, 1];
+
+/// R1865001: the waits a resume hears back in, `shortest` to `longest`, and each table's weights over
+/// them; and the Interview's two numbers, `behavioral` costs and `hardball` damage (R4154204).
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Waits {
+    shortest: i32,
+    longest: i32,
+    weak: &'static [i32],
+    solid: &'static [i32],
+    strong: &'static [i32],
+    behavioral: i32,
+    hardball: i32,
+}
+
+/// Since issue #4154: 1 to 2 turns, 2 costs, 8 damage.
+const WAITS: Waits = Waits {
+    shortest: SHORTEST_WAIT,
+    longest: LONGEST_WAIT,
+    weak: &WEAK_WAITS,
+    solid: &SOLID_WAITS,
+    strong: &STRONG_WAITS,
+    behavioral: BEHAVIORAL_COSTS,
+    hardball: HARDBALL_DAMAGE,
+};
+
+/// From v0.6.4d through v0.6.6h: 1 to 4 turns, each table's weights over those four, 3 costs, 12 damage
+/// (R767000).
+const WAITS_V0_6_6H: Waits = Waits {
+    shortest: 1,
+    longest: 4,
+    weak: &[1, 2, 3, 4],
+    solid: &[2, 3, 3, 2],
+    strong: &[4, 3, 2, 1],
+    behavioral: BEHAVIORAL_COSTS_V0_6_6H,
+    hardball: HARDBALL_DAMAGE_V0_6_6H,
+};
+
+/// Through v0.6.4c: 2 to 6 turns, each table's weights over those five (R767000).
+const WAITS_V0_6_4C: Waits = Waits {
+    shortest: 2,
+    longest: 6,
+    weak: &[1, 2, 3, 4, 5],
+    solid: &[2, 3, 4, 3, 2],
+    strong: &[5, 4, 3, 2, 1],
+    behavioral: BEHAVIORAL_COSTS_V0_6_6H,
+    hardball: HARDBALL_DAMAGE_V0_6_6H,
+};
 
 /// `remember` of one key.
 fn note(key: &str, value: Value) -> Effect {
@@ -126,34 +180,34 @@ fn merit_of(state: &GameState, resume: &CardInstance) -> i32 {
 }
 
 /// R1865001: the table a resume of `merit` waits on.
-fn waits_for(merit: i32) -> &'static [i32; 5] {
+fn waits_for(merit: i32, waits: Waits) -> &'static [i32] {
     if merit >= STRONG_MERIT {
-        &STRONG_WAITS
+        waits.strong
     } else if merit >= SOLID_MERIT {
-        &SOLID_WAITS
+        waits.solid
     } else {
-        &WEAK_WAITS
+        waits.weak
     }
 }
 
 /// One draw of the match rng over the weights' sum, walked from the shortest wait.
-fn draw_wait(rng: &mut Rng, weights: &[i32]) -> i32 {
+fn draw_wait(rng: &mut Rng, weights: &[i32], waits: Waits) -> i32 {
     let mut at = rng.int(weights.iter().sum());
     for (index, weight) in weights.iter().enumerate() {
         if at < *weight {
-            return SHORTEST_WAIT + index as i32;
+            return waits.shortest + index as i32;
         }
         at -= weight;
     }
-    LONGEST_WAIT
+    waits.longest
 }
 
 /// R1865001, §6.1: the wait, a luck-based roll whose better side is the shorter wait, so the card's
 /// Lucky (printed and given, R1438) and its controller's Luck (R987) each draw it again.
-fn roll_wait(ctx: &mut EffectContext<'_>, weights: &[i32]) -> i32 {
+fn roll_wait(ctx: &mut EffectContext<'_>, weights: &[i32], waits: Waits) -> i32 {
     let lucky =
         ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me)) + luck_of(&*ctx.state, ctx.controller);
-    ctx.rng.lucky(lucky, |rng| draw_wait(rng, weights), i32::min)
+    ctx.rng.lucky(lucky, |rng| draw_wait(rng, weights, waits), i32::min)
 }
 
 /// R1865002: the reward factor the card holds on its stay.
@@ -203,23 +257,23 @@ fn resummon_lane(state: &GameState, me: &CardInstance) -> Option<i32> {
         .map(|slot| slot.lane)
 }
 
-fn stages() -> Vec<QuestStage> {
+fn stages(waits: Waits) -> Vec<QuestStage> {
     json_as(json!([
         {
             "name": "Upload Resume",
             "goals": [{ "id": RESUME_GOAL, "text": "Activate this to send a card from your hand in as your resume",
                         "goal": { "kind": "byEffect" } }],
-            "reward": { "id": "hearBack", "text": format!("Hear back in {SHORTEST_WAIT} to {LONGEST_WAIT} turns") },
+            "reward": { "id": "hearBack", "text": format!("Hear back in {} to {} turns", waits.shortest, waits.longest) },
         },
         {
             "name": "The Interview",
             "goals": [
                 { "id": PROVE, "text": "Play a card that costs the same as your resume",
                   "goal": { "kind": "playCosting", "cost": NO_RESUME_COST, "remembered": RESUME_COST_KEY } },
-                { "id": BEHAVIORAL, "text": "Play 3 cards of different costs in one turn",
-                  "goal": { "kind": "differentCostsInTurn", "count": BEHAVIORAL_COSTS } },
-                { "id": HARDBALL, "text": "Take or deal 12 or more damage in one hit",
-                  "goal": { "kind": "damageInstance", "amount": HARDBALL_DAMAGE } },
+                { "id": BEHAVIORAL, "text": format!("Play {} cards of different costs in one turn", waits.behavioral),
+                  "goal": { "kind": "differentCostsInTurn", "count": waits.behavioral } },
+                { "id": HARDBALL, "text": format!("Take or deal {} or more damage in one hit", waits.hardball),
+                  "goal": { "kind": "damageInstance", "amount": waits.hardball } },
             ],
             "reward": { "id": "resumeBack", "text": "Add your resume to your hand and Buff it. It costs (0)" },
         },
@@ -235,15 +289,15 @@ fn stages() -> Vec<QuestStage> {
 
 /// Stage 1's Activate: the resume's cost and wait noted, the card set aside, the stage complete. A
 /// resume that is not there to send (R90) sends nothing.
-fn send(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+fn send(ctx: &mut EffectContext<'_>, waits: Waits) -> Vec<Effect> {
     let Some(resume) = instance_of(ctx, &TargetSpec::Chosen { index: None }) else {
         return vec![];
     };
     let turns = if resume.def_id == IKWZKI {
-        LONGEST_WAIT
+        waits.longest
     } else {
         let merit = merit_of(&*ctx.state, &resume);
-        roll_wait(ctx, waits_for(merit))
+        roll_wait(ctx, waits_for(merit, waits), waits)
     };
     vec![
         note(RESUME_COST_KEY, json!(cost_now(&*ctx.state, &resume))),
@@ -266,17 +320,17 @@ fn answer(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
 }
 
 /// Each stage's reward, on the card's own `questCompleted` (R1854000).
-fn stage_completed() -> TriggerDef {
+fn stage_completed(waits: Waits) -> TriggerDef {
     TriggerDef::new(
         "stage-completed",
         &[GameEventType::QuestCompleted],
-        |ctx, event| match subsystems::completed_stage_of(ctx, event) {
+        move |ctx, event| match subsystems::completed_stage_of(ctx, event) {
             Some(UPLOAD_STAGE) => {
                 // R1865001: with no resume sent (R1854001), the weak table.
                 let noted = recalled(ctx, RESUME_WAIT_KEY).and_then(|value| value.as_i64());
                 let turns = match noted {
                     Some(turns) => turns as i32,
-                    None => roll_wait(ctx, &WEAK_WAITS),
+                    None => roll_wait(ctx, waits.weak, waits),
                 };
                 vec![
                     hear_back(HearBackArgs { turns, stage: None }),
@@ -337,11 +391,11 @@ fn resummon(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     })]
 }
 
-fn job_application() -> Script {
+fn job_application(waits: Waits) -> Script {
     Script {
         preview: Some(preview()),
-        stages: stages(),
-        triggers: vec![stage_completed()],
+        stages: stages(waits),
+        triggers: vec![stage_completed(waits)],
         start_of_turn: Some(hook(paychecks)),
         death: Some(hook(resummon)),
         activations: vec![
@@ -358,7 +412,7 @@ fn job_application() -> Script {
                 modes: vec![],
                 can_activate: None,
                 has: Some(read_hook(|a| open_now(a.self_, RESUME_GOAL))),
-                run: hook(send),
+                run: hook(move |ctx| send(ctx, waits)),
             },
             ActivationDecl {
                 id: ANSWER.to_string(),
@@ -382,9 +436,27 @@ fn job_application() -> Script {
 pub fn script() -> CardScripts {
     // The same script: the Radiant face's Lucky 1 is its printed keyword, which `lucky_on` reads, and
     // its 10 Buffs its declared `buffs`, which `param` reads.
-    let base = job_application();
-    let radiant = job_application();
+    let base = job_application(WAITS);
+    let radiant = job_application(WAITS);
     CardScripts { base, radiant }
+}
+
+/// R767000: the scripts from v0.6.4d through v0.6.6h, whose resume heard back in 1 to 4 turns and whose
+/// Interview asked for 3 costs or 12 damage (issue #4154). `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6h() -> CardScripts {
+    CardScripts {
+        base: job_application(WAITS_V0_6_6H),
+        radiant: job_application(WAITS_V0_6_6H),
+    }
+}
+
+/// R767000: the scripts through v0.6.4c, whose resume heard back in 2 to 6 turns (issue #3951).
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_4c() -> CardScripts {
+    CardScripts {
+        base: job_application(WAITS_V0_6_4C),
+        radiant: job_application(WAITS_V0_6_4C),
+    }
 }
 
 // S #112 Job Application — SPEC §8.10 row 112, BUILD M12 row S 112 (R1865000, R1865002).
@@ -717,14 +789,72 @@ mod tests {
         assert_eq!(merit(SLIME), 0);
         assert_eq!(merit(VANILLA), 1);
         assert_eq!(merit(MENACE), 3);
-        assert_eq!(merit(SILAS), 7, "Legendary is 3, and its cost 4");
+        assert_eq!(merit(SILAS), 7, "Legendary is 3, and its cost (6) counts as MAX_MANA, 4");
         let mut radiant = in_hand(&s, VANILLA);
         radiant.radiant = true;
         assert_eq!(merit_of(s.state(), &radiant), 1 + RADIANT_MERIT);
-        assert_eq!(waits_for(2), &WEAK_WAITS);
-        assert_eq!(waits_for(SOLID_MERIT), &SOLID_WAITS);
-        assert_eq!(waits_for(STRONG_MERIT - 1), &SOLID_WAITS);
-        assert_eq!(waits_for(STRONG_MERIT), &STRONG_WAITS);
+        assert_eq!(waits_for(2, WAITS), &WEAK_WAITS[..]);
+        assert_eq!(waits_for(SOLID_MERIT, WAITS), &SOLID_WAITS[..]);
+        assert_eq!(waits_for(STRONG_MERIT - 1, WAITS), &SOLID_WAITS[..]);
+        assert_eq!(waits_for(STRONG_MERIT, WAITS), &STRONG_WAITS[..]);
+        for table in [WAITS.weak, WAITS.solid, WAITS.strong] {
+            assert_eq!(table.len(), (LONGEST_WAIT - SHORTEST_WAIT + 1) as usize, "one weight a wait");
+        }
+    }
+
+    /// R767000: through v0.6.4c a resume heard back in 2 to 6 turns (issue #3951), and the stage said so.
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_4c_hears_back_in_2_to_6_turns() {
+        let kept = script_v0_6_4c();
+        let stage = serde_json::to_value(&kept.base.stages[0]).expect("a stage serializes");
+        assert_eq!(stage["reward"]["text"], json!("Hear back in 2 to 6 turns"));
+        for table in [WAITS_V0_6_4C.weak, WAITS_V0_6_4C.solid, WAITS_V0_6_4C.strong] {
+            assert_eq!(table.len(), 5);
+        }
+        crate::under_kept(ID, kept, || {
+            let mut seen: IndexSet<i32> = IndexSet::new();
+            for seed in 0..40 {
+                seen.insert(wait_of(&format!("ja-kept-{seed}"), false, SLIME));
+            }
+            assert!(seen.iter().all(|turns| (2..=6).contains(turns)), "{seen:?}");
+            assert!(seen.contains(&6), "the longest wait comes up: {seen:?}");
+        });
+        let stage = serde_json::to_value(&script().base.stages[0]).expect("a stage serializes");
+        assert_eq!(stage["reward"]["text"], json!("Hear back in 1 to 2 turns"));
+    }
+
+    /// R767000: from v0.6.4d through v0.6.6h a resume heard back in 1 to 4 turns and the Interview asked
+    /// for 3 costs or 12 damage (issue #4154).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_6h_hears_back_in_1_to_4_turns_and_asks_3_costs_or_12_damage() {
+        let kept = script_v0_6_6h();
+        let stages = serde_json::to_value(&kept.base.stages).expect("the stages serialize");
+        assert_eq!(stages[0]["reward"]["text"], json!("Hear back in 1 to 4 turns"));
+        assert_eq!(stages[1]["goals"][1]["text"], json!("Play 3 cards of different costs in one turn"));
+        assert_eq!(stages[1]["goals"][1]["goal"]["count"], json!(3));
+        assert_eq!(stages[1]["goals"][2]["text"], json!("Take or deal 12 or more damage in one hit"));
+        assert_eq!(stages[1]["goals"][2]["goal"]["amount"], json!(12));
+        crate::under_kept(ID, kept, || {
+            let mut seen: IndexSet<i32> = IndexSet::new();
+            for seed in 0..40 {
+                seen.insert(wait_of(&format!("ja-kept-e-{seed}"), false, SLIME));
+            }
+            assert!(seen.iter().all(|turns| (1..=4).contains(turns)), "{seen:?}");
+            assert!(seen.iter().any(|turns| *turns > LONGEST_WAIT), "a wait past 2 comes up: {seen:?}");
+        });
+    }
+
+    /// R4154204: since issue #4154 the Interview asks for 2 cards of different costs or a hit of 8.
+    #[test]
+    fn r4154204_the_interview_asks_for_2_costs_or_8_damage_and_hears_back_in_1_to_2() {
+        let stages = serde_json::to_value(&script().base.stages).expect("the stages serialize");
+        assert_eq!(stages[0]["reward"]["text"], json!("Hear back in 1 to 2 turns"));
+        assert_eq!(stages[1]["goals"][0]["id"], json!(PROVE), "the same-cost goal stays");
+        assert_eq!(stages[1]["goals"][1]["text"], json!("Play 2 cards of different costs in one turn"));
+        assert_eq!(stages[1]["goals"][1]["goal"]["count"], json!(BEHAVIORAL_COSTS));
+        assert_eq!(stages[1]["goals"][2]["text"], json!("Take or deal 8 or more damage in one hit"));
+        assert_eq!(stages[1]["goals"][2]["goal"]["amount"], json!(HARDBALL_DAMAGE));
+        assert_eq!((BEHAVIORAL_COSTS, HARDBALL_DAMAGE), (2, 8));
     }
 
     #[test]
@@ -915,7 +1045,7 @@ mod tests {
                 _ => None,
             })
             .collect();
-        for id in added {
+        for id in nonempty(added, "the Paychecks added") {
             assert!(!s.card(id.as_str()).radiant, "{id} on its base face");
         }
     }

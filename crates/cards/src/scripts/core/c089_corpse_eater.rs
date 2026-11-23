@@ -1,9 +1,9 @@
-//! #89 Corpse Eater (SPEC §8.5, §6.2, §10.3, §10.4, R11, R38, R68, R78, R89, R3139004).
+//! #89 Corpse Eater (SPEC §8.5, §6.2, §10.3, §10.4, R11, R38, R68, R78, R89, R3139004, R4423000, R4423001).
 //!
 //! Base: "Rush, Brittle 1. While in your hand: whenever a unit on either side dies, this gains its attack and
-//! max health. After this attacks a Unit, it may attack again". Radiant: "Rush, Divine Shield, Brittle 3;
-//! gains double". §8's Conventions: both keyword lists are printed in `catalog.json` (§10.4 layer 1), so no
-//! script grants them and only the gain doubles.
+//! max health. After this attacks a Unit, it may attack again". Radiant: "Rush, Brittle 3; gains double"
+//! (its Divine Shield went in issue #4292). §8's Conventions: both keyword lists are printed in
+//! `catalog.json` (§10.4 layer 1), so no script grants them and only the gain doubles.
 //!
 //! "After this attacks a Unit, it may attack again" (since issue #3139, R3139004) is an `after_attack` hook,
 //! Tmack Trav's (R2285001, R2521002): it runs only for an attacker that survived its combat, and when the
@@ -17,13 +17,24 @@
 //! (§10.3, R68). It reads the event, not the instance (R78 resets an instance leaving the field): R89's
 //! `destroyed` carries the attack and max health the layers computed at death (R38). A discard, burn or
 //! bounce is no death (§4.5 step 1, §6.2). `def_of` includes a transient Fuse def (R77).
+//!
+//! R4423000: a Unit's death is read by what the card was on the field as it died (`is_unit_death`): a Unit
+//! set face-down by its Cloaked and destroyed before it reveals died as a Field Trap and feeds nothing, and
+//! an Animated Field Spell or Trap killed in a unit zone died as a Unit and feeds it. `script_v0_6_9i` keeps
+//! the definition's type for v0.6.9l and before (R767000).
+//!
+//! R4423001: the gain takes its Attack and max Health no higher than `MULTIPLIED_STAT_CAP`, as R4079000's
+//! doublings stop: an Eater in hand that eats another Eater gains what that one gathered, so copies fed to
+//! each other grew without bound. `script_v0_6_9i` has no cap.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-089";
 
 /// `factor` is the whole of the radiant text: 1 gains its stats, 2 gains double (§8 Conventions).
-fn feed(factor: i32) -> TriggerDef {
+/// `kept` is what v0.6.9l and before ran (R767000): a death read by the dead card's definition, and a gain with
+/// no cap (R4423001).
+fn feed(factor: i32, kept: bool) -> TriggerDef {
     TriggerDef::new("corpse-eater-feed", &[GameEventType::Destroyed], move |ctx, event| {
         // `on` already narrows this, and the check is what gives the payload its type.
         let GameEvent::Destroyed {
@@ -37,8 +48,14 @@ fn feed(factor: i32) -> TriggerDef {
         };
 
         let dead = def_of(Some(&*ctx.state), def_id);
-        // A destroyed Field Spell or Trap emits the same event; only units feed it.
-        if dead.type_ != CardType::Unit {
+        // A destroyed Field Spell or Trap emits the same event; only units feed it, R4423000: by what the
+        // card was as it died.
+        let unit = if kept {
+            dead.type_ == CardType::Unit
+        } else {
+            is_unit_death(&*ctx.state, event)
+        };
+        if !unit {
             return vec![];
         }
         // R11: a unit token ceases to exist and never reaches a graveyard, so it never died for this.
@@ -49,8 +66,20 @@ fn feed(factor: i32) -> TriggerDef {
         // R38, R89: the attack and max health the layers computed at the moment it died. R219: a gain
         // is never a loss, so a unit #46 starved below 0 max health gives nothing rather than shrinking
         // the Eater (§10.4 floors attack at 0 already; max health below 0 is only the check's signal).
-        let gained_attack = (*attack).max(0) * factor;
-        let gained_health = (*max_health).max(0) * factor;
+        let mut gained_attack = (*attack).max(0) * factor;
+        let mut gained_health = (*max_health).max(0) * factor;
+        // R4423001: the gain takes its Attack and max Health no higher than `MULTIPLIED_STAT_CAP`, so an Eater
+        // that eats another Eater (the doubling R4079000 bounds) stops there; one the cap leaves nothing to
+        // gain buffs nothing.
+        if !kept && let Some(eater) = ctx.live_self() {
+            let now = unit_view(&*ctx.state, eater);
+            let attack = gained_attack.min(MULTIPLIED_STAT_CAP - now.attack).max(0);
+            let health = gained_health.min(MULTIPLIED_STAT_CAP - now.max_health).max(0);
+            if (attack, health) == (0, 0) && (gained_attack, gained_health) != (0, 0) {
+                return vec![];
+            }
+            (gained_attack, gained_health) = (attack, health);
+        }
         vec![buff(json_as(json!({
             "target": { "of": "self" },
             "attack": gained_attack,
@@ -77,28 +106,39 @@ fn attack_again() -> Hook {
 }
 
 pub fn script() -> CardScripts {
+    eater(false)
+}
+
+/// The script with its repeat attack; `kept` as `feed`'s.
+fn eater(kept: bool) -> CardScripts {
     let base = Script {
-        hand_triggers: vec![feed(1)],
+        hand_triggers: vec![feed(1, kept)],
         after_attack: Some(attack_again()),
         ..Script::default()
     };
     let radiant = Script {
-        hand_triggers: vec![feed(2)],
+        hand_triggers: vec![feed(2, kept)],
         after_attack: Some(attack_again()),
         ..Script::default()
     };
     CardScripts { base, radiant }
 }
 
+/// R767000: the script v0.6.9i and the versions before it ran (back to the one `script_v0_5_11o` keeps),
+/// reading a death by the dead card's definition (R4423000); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9i() -> CardScripts {
+    eater(true)
+}
+
 /// R767000: the script v0.5.11r and the versions before it ran, the hand growth alone with no repeat
 /// attack; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     let base = Script {
-        hand_triggers: vec![feed(1)],
+        hand_triggers: vec![feed(1, true)],
         ..Script::default()
     };
     let radiant = Script {
-        hand_triggers: vec![feed(2)],
+        hand_triggers: vec![feed(2, true)],
         ..Script::default()
     };
     CardScripts { base, radiant }
@@ -148,16 +188,14 @@ mod tests {
     mod n89_corpse_eater_printed_faces_s8_conventions {
         use super::*;
 
-        /// Issue #3139: both faces gain Brittle, 1 on the base and 3 on the Radiant face.
+        /// Issue #3139: both faces gain Brittle, 1 on the base and 3 on the Radiant face. Issue #4292 took
+        /// the Radiant face's Divine Shield, so both faces list the same keywords.
         #[test]
-        fn the_keyword_cells_list_rush_and_brittle_and_the_radiant_one_divine_shield_and_brittle_3() {
+        fn the_keyword_cells_list_rush_and_brittle_on_both_faces_since_issue_4292() {
             crate::register_all();
             let def = crate::card_def(ID);
             assert_eq!(kinds(&def.base.keywords), vec![KeywordKind::Rush, KeywordKind::Brittle]);
-            assert_eq!(
-                kinds(&def.radiant.keywords),
-                vec![KeywordKind::Rush, KeywordKind::DivineShield, KeywordKind::Brittle]
-            );
+            assert_eq!(kinds(&def.radiant.keywords), vec![KeywordKind::Rush, KeywordKind::Brittle]);
             let brittle = |keywords: &[Keyword]| keywords.iter().find(|keyword| keyword.kind() == KeywordKind::Brittle).and_then(Keyword::n);
             assert_eq!(brittle(&def.base.keywords), Some(1));
             assert_eq!(brittle(&def.radiant.keywords), Some(3));
@@ -363,7 +401,7 @@ mod tests {
         }
 
         #[test]
-        fn stops_once_on_the_field_and_its_printed_divine_shield_is_the_catalog_s_not_a_grant() {
+        fn stops_once_on_the_field_and_prints_no_divine_shield_since_issue_4292() {
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [{ "def": EATER, "radiant": true }, FILLER], "field": [{ "def": STRAAZA, "lane": 2 }] },
@@ -371,10 +409,7 @@ mod tests {
             }));
 
             s.play(EATER, json!({}));
-            assert_eq!(
-                kinds(&s.stats(EATER).keywords),
-                vec![KeywordKind::Rush, KeywordKind::DivineShield, KeywordKind::Brittle]
-            );
+            assert_eq!(kinds(&s.stats(EATER).keywords), vec![KeywordKind::Rush, KeywordKind::Brittle]);
             assert!(s.card(EATER).granted_keywords.is_empty());
 
             s.attack(STRAAZA, GARY);
@@ -553,6 +588,144 @@ mod tests {
             s.attack(EATER, s.unit_at(P2, 1));
             assert!(s.card(EATER).exertion.attacked, "no second attack");
         });
+    }
+
+    /// R4423000: a death feeds it by what the card was on the field as it died.
+    mod n89_corpse_eater_r4423000 {
+        use super::*;
+
+        const MAGIC_JAMMED: &str = "core-036";
+        const HIT_JOB: &str = "core-016";
+
+        /// p1 sets a Cloaked Toe Cracker (3/4) face-down and destroys it with Magic Jammed before it
+        /// reveals, its Eater in hand; the set card's id.
+        fn jammed(radiant: bool) -> (Scenario, String) {
+            let mut s = scenario(json!({
+                "seed": SEED,
+                "p1": {
+                    "hand": [{ "def": EATER, "radiant": radiant }, crate::CLOAKED_UNIT, MAGIC_JAMMED, FILLER],
+                    "mana": 10,
+                },
+                "p2": { "hand": [FILLER] },
+            }));
+            let set = crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 2);
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&set) }));
+            (s, set)
+        }
+
+        /// p1's set Catnip (a 5/5 Animated Field Trap) animates after p2's Spell, and p2's Hit Job kills
+        /// it in its unit zone, p1's Eater in hand; Catnip's id.
+        fn hit(radiant: bool) -> (Scenario, String) {
+            let mut s = scenario(json!({
+                "seed": SEED,
+                "active": "p2",
+                "p1": {
+                    "hand": [{ "def": EATER, "radiant": radiant }, FILLER],
+                    "backrow": [{ "def": crate::ANIMATED_TRAP, "faceUp": false, "lane": 2 }],
+                },
+                "p2": { "hand": [FILLER, HIT_JOB, FILLER], "mana": 10 },
+            }));
+            s.play(FILLER, json!({}));
+            let catnip = s.card(crate::ANIMATED_TRAP).id.clone();
+            assert!(s.unit(P1, 2).is_some_and(|unit| unit.id == catnip), "Catnip animated");
+            s.play(HIT_JOB, json!({ "targets": pick::id(&catnip) }));
+            (s, catnip)
+        }
+
+        #[test]
+        fn r4423000_a_set_cloaked_unit_destroyed_before_it_reveals_is_no_unit_death_for_it() {
+            for (radiant, printed) in [(false, 2), (true, 4)] {
+                let (mut s, set) = jammed(radiant);
+                assert_eq!(crate::died_as_of(&s, &set), Some(CardType::FieldTrap));
+                s.expect_stats(EATER, json!({ "attack": printed, "maxHealth": printed }));
+                assert_eq!(count_of(&s, GameEventType::Buffed), 0);
+            }
+        }
+
+        #[test]
+        fn r4423000_an_animated_field_trap_killed_in_a_unit_zone_is_a_unit_death_for_it() {
+            for (radiant, printed, factor) in [(false, 2, 1), (true, 4, 2)] {
+                let (mut s, catnip) = hit(radiant);
+                assert_eq!(crate::died_as_of(&s, &catnip), Some(CardType::Unit));
+                // Catnip died a 5/5.
+                let fed = printed + 5 * factor;
+                s.expect_stats(EATER, json!({ "attack": fed, "maxHealth": fed }));
+            }
+        }
+
+        /// R767000: v0.6.9l and before fed it on the set card's death, by the definition's type.
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_9i_counts_a_set_cloaked_unit_s_death() {
+            crate::under_kept(ID, script_v0_6_9i(), || {
+                let (mut s, set) = jammed(false);
+                let (attack, max_health) = s
+                    .events()
+                    .iter()
+                    .find_map(|event| match event {
+                        GameEvent::Destroyed {
+                            instance_id,
+                            attack,
+                            max_health,
+                            ..
+                        } if *instance_id == set => Some((*attack, *max_health)),
+                        _ => None,
+                    })
+                    .expect("the set card's destroyed");
+                assert!(attack > 0 && max_health > 0, "{attack}/{max_health}");
+                s.expect_stats(EATER, json!({ "attack": 2 + attack, "maxHealth": 2 + max_health }));
+            });
+        }
+    }
+
+    /// R4423001: the gain takes the Eater's Attack and max Health no higher than `MULTIPLIED_STAT_CAP`.
+    mod n89_corpse_eater_r4423001 {
+        use super::*;
+
+        const HIT_JOB: &str = "core-016";
+        const BIG: &str = "stand-in (1) 600/600";
+
+        /// p2's two Hit Jobs kill p1's two 600/600 Units, p1's Eater in hand; the Buffs of each death.
+        fn two_deaths(radiant: bool) -> (Scenario, [usize; 2]) {
+            let mut s = scenario(json!({
+                "seed": SEED,
+                "active": "p2",
+                "p1": {
+                    "hand": [{ "def": EATER, "radiant": radiant }, FILLER],
+                    "field": [{ "def": BIG, "lane": 1 }, { "def": BIG, "lane": 2 }],
+                },
+                "p2": { "hand": [HIT_JOB, HIT_JOB, FILLER], "mana": 10 },
+            }));
+            let mut buffs = [0; 2];
+            for (lane, buffed) in [1, 2].into_iter().zip(&mut buffs) {
+                let big = s.unit_at(P1, lane).id.clone();
+                s.play(HIT_JOB, json!({ "targets": pick::id(&big) }));
+                *buffed = s.last_events_of(GameEventType::Buffed).len();
+            }
+            (s, buffs)
+        }
+
+        #[test]
+        fn r4423001_corpse_eater_s_gain_stops_at_the_multiplied_stat_cap() {
+            // The base face's 2/2 takes 600/600 and then the 397/397 left below the cap; the Radiant
+            // face's 4/4 takes the 995/995 left of its doubled 1200/1200 and then gains nothing.
+            for (radiant, buffs) in [(false, [1, 1]), (true, [1, 0])] {
+                let (mut s, buffed) = two_deaths(radiant);
+                assert_eq!(buffed, buffs, "radiant {radiant}");
+                s.expect_stats(
+                    EATER,
+                    json!({ "attack": MULTIPLIED_STAT_CAP, "maxHealth": MULTIPLIED_STAT_CAP }),
+                );
+            }
+        }
+
+        /// R767000: v0.6.9l and before had no cap.
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_9i_gains_past_the_cap() {
+            crate::under_kept(ID, script_v0_6_9i(), || {
+                let (mut s, _) = two_deaths(true);
+                s.expect_stats(EATER, json!({ "attack": 2404, "maxHealth": 2404 }));
+            });
+        }
     }
 
     mod n89_corpse_eater_r219 {

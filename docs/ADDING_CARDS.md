@@ -22,7 +22,7 @@ index in three digits after a `c`, then its slug with every `-` and `.` an `_` (
 | 5 | `docs/radiant-audit.md` | one row `\| <id> \| <name> \| <verdict> \| <reasoning> \|` in the last section: the verdict against R275 (the Radiant face must be about twice the base face; doubling stats alone is not enough for a unit with text) and its reasoning are yours, and the name is `cargo jackioh names`'s | `tests/cross/radiant_standard.rs` |
 | 6 | `apps/web/src/audio/card-audio.json5` | the card's entry in catalog order, its name comment written by `cargo jackioh names`: the voice of a Unit's play, attack and death lines (R1448), of anything else's cast line, and any effects (R655; the file's header says how). The lines' words are row 7's | `voice-lines.test.ts`, `voiceData.test.ts` |
 | 7 | `crates/cards/card-text.yaml` | the card's entry in catalog order, its name comment written by `cargo jackioh names` (#2498; the file's header says how): its `flavour`, one short line in the source notes' voice, no rules words, at most 120 characters (R660); its `voice` lines, one for each hook row 6 gives a voice; and its `zh` (row 11). Then run `cargo test -p jackioh-tools --test export_card_text`, which writes `crates/cards/flavour.json`, `crates/cards/chinese.json` and `apps/web/src/audio/voice-text.json` from it, and commit them. It is not card data, so no fragment claims it | `crates/tools/tests/export_card_text.rs`, `tests/cross/flavour.rs`, `apps/web/src/cards/flavour.test.tsx`, `voice-lines.test.ts` |
-| 8 | a pinned pool, when the card joins one | `tests/cross/query.rs` names the pools the spec pins down card by card (the KY pool, the (1) Cost Traps, R35's Legendaries, …) | `tests/cross/query.rs` |
+| 8 | a pinned pool, when the card joins one | `tests/cross/query.rs` names the pools the spec pins down card by card (the KY pool, the (1) Cost Traps, R35's Legendaries, …). No spec row or keyword list needs the card: `spec/CARDS.md`, the cards by keyword, tag and pool, is written from the catalog (#3804) | `tests/cross/query.rs` |
 | 9 | `crates/cards/patches/pending/<slug>.json` | the fragment, `cargo jackioh patches …` ([§3](#3-the-patch-and-its-order)); the shipped history and the version sites move at promotion, not here | `patches check` |
 | 10 | a Legendary or Mythic, or a token printed so: `apps/web/scripts/music/tracks.mjs`, `apps/web/src/audio/music-cards.json`, `assets/music/LICENSES.md` | its intro (R1352): an `INTRO_CARDS` row (its facts, and a `tune` if it is hand-tuned), its `"intro": "intro-<id>"` entry, `pnpm --filter @jackioh/web gen:music` (FluidSynth and ffmpeg, Linux included) with the rendered file and manifest row committed, and its license row | `music-assets.test.ts` (the daily audio run) |
 | 11 | `crates/cards/card-text.yaml` (the entry's `zh`, row 7) | the card's Chinese (R1303): `name`, `base` and `radiant` in Simplified Chinese, each face keeping exactly its English face's `{key}`s, plus `previews` exactly where the script declares `preview`; it is not card data, so no fragment claims it | `tests/cross/chinese.rs` |
@@ -34,7 +34,7 @@ before yours, so a pending-claimed card needs no edit there (R646). What stays h
 `src/census.rs`, each set's counts, rarities, tokens and tag counts written once and never computed from `catalog.json` (#108, #2581).
 BUILD's must-pass tables take no row for a new card; its own tests are the record (CLAUDE.md rule 6).
 
-**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; and the Training Grounds set while tracker #2193 built it, until its release, issue #2204, R2194000; no set is held now) differs in five places, the Training Grounds paths below standing for any held set's:
+**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; the Training Grounds set while tracker #2193 built it, until its release, issue #2204, R2194000; and the Stinkyscape+ set while tracker #3533 built it, until its release, issue #3573, R3535000; no set is held now) differs in five places, the Training Grounds paths below standing for any held set's:
 - Its script goes in `src/scripts/training_grounds/` (id `traininggrounds-NNN`, a token's `traininggrounds-NNN-k`; Stinkyscape's
   had entries outside the numbers too, `stinkyscape-t-<name>`). The foundation (issue #2194) wrote a stub for every entry there,
   `STUB (#2194):` in its header (the snapshots #41–#60 are part 2's, #2195, which adds their entries and scripts): a card
@@ -53,7 +53,8 @@ BUILD's must-pass tables take no row for a new card; its own tests are the recor
 - Its `card-audio.json5` and `card-text.yaml` entries are written as for any card, but no voice file is expected for it until the set ships
   (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
   Its intro (row 10) is the release's too: the intros' totality test reads the sets that ship. (The Stinkyscape set's intros
-  came early, with its look-and-sound part, issue #1883, R1883000, so its release owes none.)
+  came early, with its look-and-sound part, issue #1883, R1883000, and the Stinkyscape+ set's with its own, issue #3572,
+  R3572000, so neither's release owes any.)
 - Tests that count the catalog count the sets that ship (`set_is_open` in Rust, `setShips` in the web), never every entry, and a
   test that pins a list of cards reads the shipped sets or the held set's entries that have landed (`landed()` in
   `tests/cross/catalog.rs`, R1857000). `docs/training-grounds-set.md` TG3 says the rest (`docs/stinkyscape-set.md`,
@@ -80,8 +81,8 @@ Its cards still need their own files, row by row above: the catalog entries, the
 ## 2. Templates
 
 **Catalog entry** (C+ #6). `loc` is the script's lines of code, from `cargo jackioh catalog loc <script path>` once the script is written
-([§3](#3-the-patch-and-its-order)); text is the printed text, with `{key}` where a number is declared in `params`, marked `"cry": true` when only the card's Cry
-writes it (R1748000), or `"cry": "base"` (`"radiant"`) when only that face's Cry does and the other face's lasting text writes it too (R2261001). A Spell or a Field Spell declares every number it prints unless `tests/cross/params.rs` names why it is fixed
+([§3](#3-the-patch-and-its-order)); text is the printed text, with `{key}` where a number is declared in `params`, marked `"read"` when every line that
+writes it reads it at one time or in one place: `"cry"`, `"combo"`, `"castOnDraw"`, `"awaken"` ("When this awakens"), `"evolve"` ("Evolve:" or "Evolves when"), `"handOrDeck"` or `"graveyard"` (R1748000, R3888001), with `"readOn": "base"` (`"radiant"`) when only that face's such lines do and the other face's lasting text writes it too (R2261001); `catalog check` holds the mark to the text. A Spell or a Field Spell declares every number it prints unless `tests/cross/params.rs` names why it is fixed
 (R1748003); one that deals damage carries `"dealsDamage": true` (R1748001), and a Field Spell that uses its own Plague Counters
 `"usesPlague": true` (R1748002). A token has
 `"token": true`, `"rarity": "Token"` and the `Token` tag. A new entry, a token's too, carries a `flavor` (§1 row 2).
@@ -169,8 +170,8 @@ side's setup over its defaults), `matches_object` (TS `toMatchObject`), `filler(
 for a library), `ids` (the cards' ids), `def_ids` (the cards' def ids), `events_json` (the events so far, as JSON), `unit_or_blank`,
 `stand_in_backrow`, `give_flying`, `give_lucky`, `built_starship` (p1's Dormant Starship built from the pieces
 given, #1859), `launch_starship`, and `upgrade_number`, `degrade_number`, `can_upgrade_number` and
-`can_degrade_number`. Take the engine testkit's `Scenario::unit_at`, `pick::…` and `must` the same way;
-`crates/tools/tests/acceptance.rs` refuses a copy, and a `register_all();` on the line above a `scenario(` (#1826, #2023, #2930). Read events and offered actions through `Scenario::count`, `last_count`, `events_of`, `last_events_of` and `offered(seat)` rather than a copy (#3504). Keep a local helper only when its body differs.
+`can_degrade_number`. Take the engine testkit's `Scenario::unit_at`, `pick::…`, `must` and `nonempty` the same way;
+`crates/tools/tests/acceptance.rs` refuses a copy, and a `register_all();` on the line above a `scenario(` (#1826, #2023, #2930). Read events and offered actions through `Scenario::count`, `last_count`, `events_of`, `last_events_of` and `offered(seat)` rather than a copy (#3504). Read an open prompt's Mode options through `Scenario::prompt_modes` (or `prompt_modes_of(&pending)` for a prompt you hold) and answer one with `pick::mode`; the acceptance scan refuses a hand-written `Selection::Mode { option } => option.clone()` (#3796). Read one card's offered plays through `Scenario::plays_of`, `can_play` and `play_targets` (`plays_in` for a state you hold or another seat, `is_play_of` for one action, `pick::instance_ids` for the ids among targets); the scan refuses a copy of those names (#3913). Aim a play with `pick::targets(pick::id(..))`, `pick::targets(pick::instance(..))` or `pick::targets(pick::hero("p2"))`, and in the rules tests look a card up with the harness's `live` (an owned copy) or `live_mut`; the scan refuses a copy under another name (#3827). Keep a local helper only when its body differs. A loop over what a test expects to find (the cards drawn, the cards added) goes through `nonempty(items, what)` first, since a loop over nothing passes; and no test notes a value in a bare `let _ = name;`: compare it or never capture it (the acceptance scan refuses one, #3914).
 
 **Helper cards** (#3486). A test that needs only a card's numbers (some 3-cost 9/9, a textless Spell to fill a
 hand) names a stand-in, a card its id spells out, `const BIG: &str = "stand-in (3) 9/9";`, rather than a real
@@ -184,11 +185,11 @@ runs over the card tests, refuses one.
 ## 3. The patch, and its order
 
 A change to a card is a patch (R388, R646). No one names its version: `patches ship` names it when it
-ships, from what it does to the cards (R1366000): a major when a set ships, a patch (the next X) when
-15 or more card families are reprinted, 50 or more play differently or a rule meets a quarter of the
-games (R2455000, R2499000), a micro
-(the next letter) for anything smaller, for wording alone or for a change to how cards look
-(`apps/web/src/cards/`, claimed with `--visual`, R2529000); never reopen a shipped one. A branch claims its card changes with a pending fragment:
+ships (R1366000, R3944000): a major when a set ships, and otherwise a micro (the next letters), however
+many cards it reprints or plays, for wording alone and for a change to how cards look
+(`apps/web/src/cards/`, claimed with `--visual`, R2529000); never reopen a shipped one. Once a day
+`patches cut` rolls the micros since the newest major or patch into the day's patch, `v0.X.Y`, the
+release players read ([issues-and-patches.md](issues-and-patches.md), Version numbers). A branch claims its card changes with a pending fragment:
 
 ```
 cargo jackioh patches "<title>" --source "<issue or PR>" --notes "<what changed>" [--plays <ids>] [--rule] [--visual]
@@ -220,7 +221,8 @@ its own scripts for them. A patch
 that changes what a card's script does, not only a number in its definition, keeps the script it
 replaces: add `(ID, the newest shipped version, a fn that builds the old scripts)` to
 `KEPT_SCRIPTS` in `crates/cards/src/history.rs`. Without it, the replays that script would change are
-refused by their final hash rather than shown wrong. A script that writes its card's words into the
+refused by their final hash rather than shown wrong. `cargo jackioh carried` plays every era of every carried
+catalog and folds it back, so a kept script that is missing and panics there fails it (R4382000, R4382001). A script that writes its card's words into the
 state (a badge, a prompt) reads them with `def_of(Some(&*ctx.state), ID)`, the definition the game
 folds under, never `crate::card_def`, the build's: then a patch to those words keeps no script.
 
@@ -256,9 +258,9 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   needs a roll to land one way searches at run time with the testkit's `seed_where(prefix, accept)` or `cursor_where(seed, accept)`
   (bounded by `SEED_SEARCH_BOUND`; `accept` builds the position and reads where the roll landed), or builds the position directly, and
   a test about a Craft a Card result and not about its offers builds the fused card with `cross::craft_fused` (R77). Keep a search
-  within a few hundred tries. `sh scripts/pool-probe.sh` (daily, in `super.yml`) runs the cards', AI's, server's and tools' tests with
-  every random pool rotated one place (#3117); a test it fails leans on a roll, so convert it. A test of a pool's content or order reads
-  it under `with_pool_shift(0, …)`.
+  within a few hundred tries. `sh scripts/pool-probe.sh` runs the cards', AI's, server's and tools' tests with every random pool rotated
+  one place (#3117), by hand, and super.yml's daily tests run the cards' that way through `crates/tools/tests/pool_probe.rs` (#4181); a
+  test that either fails leans on a roll, so convert it. A test of a pool's content or order reads it under `with_pool_shift(0, …)`.
 - **The cross-build replay** (`cargo jackioh classify --base origin/main --parent-bin <base build's jackioh>`, which `rust (classify)`
   runs on the pull request) records golden-seeded games on your build with `golden record` and has the base build replay them with `golden check --file`;
   a divergence names the seed, the step and the hash. Nothing is committed (the 240 golden traces were retired in #2578), so nothing is
@@ -273,6 +275,12 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   those hooks joins the texts, and a new Unit joins the bodies, so the pull request's stride sample can move onto pairs nobody has
   played. A failure prints both ids, the seed and `cargo jackioh fused-pairs --pair <body>+<text>`, which plays it again on any day. Fix
   it, or file it and list the pair in `KNOWN_OPEN` (`crates/tools/src/fused_pairs.rs`) with its open issue; never skip it any other way.
+- **The carried-catalog sweep** (`cargo jackioh carried`, #4382) plays each card on every older catalog the build carries, one era
+  for each run of versions over which its definition and kept script stay the same, and folds the game back as a replay pinned to
+  that version. The `fuzz` gate plays the eras of the cards you changed, and the whole sweep runs daily. A failure names the version,
+  the card and the stage and prints `cargo jackioh carried --catalog <version> --card <id>`, which plays that era again: usually a
+  current script reading what the old definition lacks, or making a card the old catalog lacks, which a kept script fixes. Fix it
+  or report it; never skip it.
 - **A renamed card** (a patch that changes a `name`): run `cargo jackioh names`, which writes the new name into the comment beside its id in `card-audio.json5` (R655), `card-text.yaml` (#2498) and its `fx/cards/` table (R2784000), and into its row in the audit's last section. The audit row of a card older than #3111 still holds its name in its `Card` cell, and `tests/cross/catalog.rs`'s fixture row too: edit those by hand.
 - **A card patched to Legendary or Mythic** (or a token's `printedRarity`) fails `music-assets.test.ts` until it has row 10's intro, and one
   patched down from either until its `intro` is taken out (R1352).
@@ -290,7 +298,8 @@ nothing), `crates/server/src/**` and `crates/ai/src/**` (they read the catalog),
 When the text needs a verb, keyword, filter or board fact that no card uses: find where the most similar existing mechanic lives, add the new
 one beside it in that pattern, and test it there. A verb is an effect in `crates/engine/src/effects/` (re-exported by `effects/mod.rs` and the
 prelude), a new board fact goes in `crates/engine/src/query.rs`, a new keyword also needs its row in spec §6.1 (the web glossary reads that
-table). Engine tests that need the card's behavior use a fixture script in `crates/engine/tests/rules/fixtures/`. Keep the card's script a
+table), and no list of the cards that print it (`spec/CARDS.md` holds that). A new random pool a spec row would name card by card is a named
+function in `crates/cards/src/query.rs` and a row of its `POOLS`, which the script calls and the row links (`[[CARDS#<name>]]`, #3804). Engine tests that need the card's behavior use a fixture script in `crates/engine/tests/rules/fixtures/`. Keep the card's script a
 list of those effects (CLAUDE.md rules 4 and 5). A rule the spec does not decide is a new ruling note with a proving test (CLAUDE.md rule 3).
 No escalation step.
 

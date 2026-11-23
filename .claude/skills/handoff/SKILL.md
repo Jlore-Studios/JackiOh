@@ -13,16 +13,16 @@ description: >
 # Handoff
 
 A JackiOh item is worked by the night bot, Squishy and people's Claude sessions, often in turn. The
-bots journal every run on the `bot-journal` branch (`<issue>.md`). A session cannot write that branch
+bots journal every run on the `_bot-journal` branch (`<issue>.md`). A session cannot write that branch
 (it pushes only its own), so it leaves its handoff as **one comment of its own** on the item, and the
 bot's next run reads it there (`bot/go/internal/journal/handoffs.go`). This keeps one trail, readable
 by the next session and the next bot run alike (#2748 section 10).
 
 ## Before you start: read
 
-1. The item's journal, if it has one: `<issue>.md` on `bot-journal` (a pull request's runs are in the
-   file of the issue it closes). With the GitHub tools, read the file at ref `refs/heads/bot-journal`;
-   with git, `git fetch origin bot-journal` then `git show FETCH_HEAD:<issue>.md`. No file means no bot
+1. The item's journal, if it has one: `<issue>.md` on `_bot-journal` (a pull request's runs are in the
+   file of the issue it closes). With the GitHub tools, read the file at ref `refs/heads/_bot-journal`;
+   with git, `git fetch origin _bot-journal` then `git show FETCH_HEAD:<issue>.md`. No file means no bot
    has run on it.
 2. The handoff comments on the issue and on its pull request: comments holding
    `<!-- jackioh-session:handoff -->`. Read the newest few.

@@ -1,5 +1,6 @@
-//! C+ #19.1 Top Loser (SPEC §8.7 row 19.1): Armor 3 (Radiant: 6, Immune to Spells, catalog keywords);
-//! never in Defense Position, and only a Unit in its lane may attack it (E35 static flags).
+//! C+ #19.1 Top Loser (SPEC §8.7 row 19.1): a 3/3 with Armor 2 (Radiant: a 6/6 with Armor 2, the base
+//! face's since issue #4292 (4 before), and Immune to Spells; catalog keywords); never in Defense
+//! Position, and only a Unit in its lane may attack it (E35 static flags).
 
 use jackioh_engine::prelude::*;
 
@@ -42,6 +43,7 @@ mod tests {
     const JUNGLE: &str = "classicplus-019-2";
     const BODY: &str = "core-019"; // Midrange Menace: Taunt
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const STAND_IN: &str = "stand-in (1) 5/9";
     const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
     const SORCERER: &str = "core-068"; // Twisted Sorcerer: Cry deal 4 damage to a target
     const SWITCH_ALL: &str = "core-048"; // 5pek Controller: switch the position of every Unit
@@ -115,8 +117,8 @@ mod tests {
         use super::*;
 
         #[test]
-        fn base_enters_at_4_4_radiant_unchanged() {
-            for (radiant_face, size) in [(false, 4), (true, 8)] {
+        fn base_enters_at_3_3_radiant_at_6_6() {
+            for (radiant_face, size) in [(false, 3), (true, 6)] {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TOP, "radiant": radiant_face }, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -130,17 +132,19 @@ mod tests {
         mod base {
             use super::*;
 
+            /// A 4/4's hit of 4 through Armor 2 deals 2: the 3/3 is left at 1.
             #[test]
-            fn has_armor_2_a_4_damage_hit_leaves_it_at_2() {
+            fn has_armor_2_a_4_damage_hit_leaves_it_at_1() {
                 let mut s = top_loser(json!({ "field": [{ "def": VANILLA, "lane": 3 }] }), false, json!({}));
                 assert_eq!(s.stats(top(&s)).armor, 2);
                 let attacker = unit_or_blank(&s, P1, 3);
                 let target = top(&s);
                 s.attack(attacker, &target);
                 let target = top(&s);
-                s.expect_stats(&target, json!({ "health": 2 }));
+                s.expect_stats(&target, json!({ "health": 1 }));
             }
 
+            /// Armor 3 lets 1 of the 4/4's 4 through: the 3/3 is left at 2.
             #[test]
             fn r386_its_armor_is_tuned_as_a_numbered_keyword_an_upgrade_makes_it_armor_3() {
                 let mut s = top_loser(json!({ "field": [{ "def": VANILLA, "lane": 3 }] }), false, json!({}));
@@ -151,7 +155,7 @@ mod tests {
                 let target = top(&s);
                 s.attack(attacker, &target);
                 let target = top(&s);
-                s.expect_stats(&target, json!({ "health": 3 }));
+                s.expect_stats(&target, json!({ "health": 2 }));
             }
 
             #[test]
@@ -163,6 +167,28 @@ mod tests {
                 let unit = unit_or_blank(&s, P1, 1);
                 s.expect_refused_with(|s| s.switch_position(&unit), "Defense");
                 assert_eq!(s.stats(unit_or_blank(&s, P1, 1)).position, Position::Atk);
+            }
+
+            /// R767000: a game on v0.5.9f folds under the kept script, whose static flags still bar Defense
+            /// Position (before R2657000's Can't Defend) and an attack from another lane.
+            #[test]
+            fn r767000_a_game_on_v0_5_9f_keeps_it_out_of_defense_and_open_only_to_its_own_lane() {
+                crate::register_all();
+                let shipped = crate::shipped_catalog("v0.5.9f").expect("v0.5.9f is carried");
+                jackioh_engine::with_shipped(Some(shipped), || {
+                    let mut s = top_loser(
+                        json!({ "field": [{ "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 3 }] }),
+                        false,
+                        json!({}),
+                    );
+                    let beside = s.unit(P1, 2).expect("setup");
+                    let loser = top(&s);
+                    s.expect_refused_with(|s| s.attack(&beside, &loser), "lane");
+                    s.end_turn();
+                    let loser = top(&s);
+                    s.expect_refused_with(|s| s.switch_position(&loser), "Defense");
+                    assert_eq!(s.stats(top(&s)).position, Position::Atk);
+                });
             }
 
             #[test]
@@ -191,8 +217,9 @@ mod tests {
                 assert!(attack_targets(&s, &across.id).contains(&loser.id));
                 s.expect_refused_with(|s| s.attack(&beside, &loser), "lane");
                 s.attack(&across, &loser);
+                // 4 through Armor 2: the 3/3 is left at 1.
                 let loser = top(&s);
-                s.expect_stats(&loser, json!({ "health": 2 }));
+                s.expect_stats(&loser, json!({ "health": 1 }));
             }
 
             #[test]
@@ -285,16 +312,7 @@ mod tests {
                 s.expect_refused(|s| {
                     s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": loser.id }] }))
                 });
-                let hit_job = s.card(HIT_JOB).id.clone();
-                let offered: Vec<Selection> = legal_actions(s.state(), P1)
-                    .into_iter()
-                    .flat_map(|action| match action {
-                        ActionBody::Play { instance_id, targets, .. } if instance_id == hit_job => {
-                            targets.unwrap_or_default()
-                        }
-                        _ => Vec::new(),
-                    })
-                    .collect();
+                let offered = s.play_targets(HIT_JOB);
                 assert!(!serde_json::to_string(&offered).expect("JSON").contains(&top(&s).id));
             }
 
@@ -307,7 +325,7 @@ mod tests {
                 );
                 s.play(WHIRLWIND, json!({}));
                 let loser = top(&s);
-                s.expect_stats(&loser, json!({ "health": 8 }));
+                s.expect_stats(&loser, json!({ "health": 6 }));
                 s.play(NETHER, json!({}));
                 assert_eq!(s.unit(P2, 3).map(|unit| unit.def_id), Some(TOP.to_string()));
                 assert!(s.unit(P2, 1).is_none());
@@ -315,8 +333,8 @@ mod tests {
 
             #[test]
             fn s6_1_a_unit_still_reaches_it_a_cry_targets_it_and_a_unit_s_sweep_destroys_it() {
-                // Radiant Twisted Sorcerer's 8 through the Radiant Top Loser's Armor 4 leaves 4.
-                let mut s = top_loser(json!({ "hand": [{ "def": SORCERER, "radiant": true }, FILLER] }), true, json!({}));
+                // Twisted Sorcerer's 4 through the Radiant Top Loser's Armor 2 deals 2: the 6/6 is left at 4.
+                let mut s = top_loser(json!({ "hand": [SORCERER, FILLER] }), true, json!({}));
                 let loser = top(&s);
                 s.play(
                     SORCERER,
@@ -330,12 +348,26 @@ mod tests {
                 felinor.expect_in_zone(&loser, "gone");
             }
 
+            /// Issue #4292: the Radiant face prints the base face's Armor 2 (4 before) and keeps Immune to
+            /// Spells.
+            #[test]
+            fn prints_armor_2_since_issue_4292_and_keeps_immune_to_spells() {
+                let s = top_loser(json!({}), true, json!({}));
+                let loser = top(&s);
+                assert_eq!(s.stats(&loser).armor, 2);
+                assert!(unit_has(s.state(), &loser, KeywordKind::ImmuneToSpells));
+                let face = crate::card_def(TOP).radiant.keywords;
+                assert!(face.contains(&Keyword::Armor { n: 2 }), "{face:?}");
+                assert!(face.contains(&Keyword::ImmuneToSpells), "{face:?}");
+            }
+
             #[test]
             fn s4_2_it_may_still_be_attacked_from_its_lane() {
-                let mut s = top_loser(json!({ "field": [{ "def": BODY, "lane": 3 }] }), true, json!({}));
+                let mut s = top_loser(json!({ "field": [{ "def": STAND_IN, "lane": 3 }] }), true, json!({}));
                 let attacker = unit_or_blank(&s, P1, 3);
                 let target = top(&s);
                 s.attack(attacker, &target);
+                // The stand-in's 5 through Armor 2 deals 3: the 6/6 is left at 3.
                 let target = top(&s);
                 s.expect_stats(&target, json!({ "health": 3 }));
             }
@@ -355,7 +387,8 @@ mod tests {
             ) {
                 let mut aura = top_loser(json!({ "backrow": [{ "def": AURA, "lane": 1 }] }), true, json!({}));
                 let loser = top(&aura);
-                aura.expect_stats(&loser, json!({ "attack": 7, "health": 7 }));
+                // The 6/6 shrinks to 5/5.
+                aura.expect_stats(&loser, json!({ "attack": 5, "health": 5 }));
 
                 let mut s = scenario(json!({
                     "active": "p2",

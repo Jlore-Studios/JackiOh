@@ -11,13 +11,13 @@ use std::sync::{Arc, LazyLock, Mutex};
 use indexmap::IndexMap;
 use serde_json::{Value, json};
 
-use jackioh_engine::{PlayerId, pick_portrait_from_seed};
+use jackioh_engine::{LeanPick, PlayerId, pick_portrait_from_seed};
 
 use crate::actor::engine::{deal_random_deck, lean_of};
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, already_in_match, assert_free_to_play, freeze_choice, host_busy,
-    join_refusal, read_mode_choice,
+    FrozenChoice, already_in_match, assert_free_to_play, freeze_choice, host_busy, join_refusal,
+    read_mode_choice,
 };
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, caller_of, json as json_response};
 use crate::api::queue::{new_seed, new_uuid, seat_coin_p1_first, seat_override_of, seed_override_of};
@@ -27,8 +27,10 @@ use jackioh_shared::series::{NewSeriesInput, NewSeriesSide};
 use crate::app::{App, now_ms};
 use crate::config::{MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use crate::db::store::{MatchSeat, QueueMode, Room, SeriesRow, StartMatchInput};
-use crate::seats::Seat;
+use crate::loadout::DeckSlots;
+use crate::seats::{Seat, Taken};
 use crate::social::live::push_social;
+use jackioh_shared::deck::FrozenDeck;
 
 /// SPEC §11 R149: bounded retries against the codes in use; eight is far more than a 30-bit space
 /// (R104) needs against the codes R110 has not released. Config's, like R79's clocks.
@@ -142,15 +144,6 @@ fn mode_refusal(mode: QueueMode) -> &'static str {
     }
 }
 
-/// The mode a request's choice asks for.
-fn choice_mode(choice: &ModeChoiceInput) -> QueueMode {
-    match choice {
-        ModeChoiceInput::Bo1 { .. } => QueueMode::Bo1,
-        ModeChoiceInput::Bo3 { .. } => QueueMode::Bo3,
-        ModeChoiceInput::Random { .. } => QueueMode::Random,
-    }
-}
-
 /// The mode a frozen choice was made in.
 fn frozen_mode(frozen: &FrozenChoice) -> QueueMode {
     match frozen {
@@ -190,11 +183,60 @@ async fn joinable_room(app: &App, typed: &str) -> Result<Room, ApiError> {
             "someone already joined that room",
         ));
     }
+    // R3730006: the room a private lobby's Start opens under its code is that Start's to claim.
+    let mut tx = app.db.begin(None).await?;
+    let lobby = tx.lobbies_get(&code).await?;
+    tx.commit().await?;
+    if lobby.is_some() {
+        return Err(miss());
+    }
     // §9.4: a stale catalog is rejected at every door into a match.
     if room.catalog_version != app.catalog.version {
         return Err(ApiError::new(ApiErrorCode::UpdateRequired, "update required"));
     }
     Ok(room)
+}
+
+/// The host's side of a two-seat start, what they froze before the joiner came: a room's, or a daily
+/// challenge's or seek's (§9.13, which keeps no room).
+pub(crate) struct HostSide {
+    pub profile_id: String,
+    pub mode: QueueMode,
+    pub deck: Vec<String>,
+    pub portrait: Option<String>,
+    pub deck_slots: Option<DeckSlots>,
+    pub lean: Option<LeanPick>,
+}
+
+impl HostSide {
+    fn of_room(room: &Room) -> HostSide {
+        HostSide {
+            profile_id: room.host_profile_id.clone(),
+            mode: room.mode,
+            deck: room.host_deck.clone(),
+            portrait: room.host_portrait.clone().flatten(),
+            deck_slots: room.host_deck_slots.clone(),
+            lean: room.host_lean,
+        }
+    }
+
+    /// The side `choice` freezes for `profile_id`: a Best-of-1 deck or an All Random lean; `None`
+    /// for a Conquest trio, which seats through its series.
+    pub(crate) fn of_choice(profile_id: &str, choice: &FrozenChoice) -> Option<HostSide> {
+        let side = |mode, deck: Option<&FrozenDeck>, lean| HostSide {
+            profile_id: profile_id.to_string(),
+            mode,
+            deck: deck.map(|deck| deck.cards.clone()).unwrap_or_default(),
+            portrait: deck.and_then(|deck| deck.portrait.clone().flatten()),
+            deck_slots: deck.and_then(|deck| deck.slots.clone()),
+            lean,
+        };
+        match choice {
+            FrozenChoice::Bo1 { deck } => Some(side(QueueMode::Bo1, Some(deck), None)),
+            FrozenChoice::Random { lean } => Some(side(QueueMode::Random, None, *lean)),
+            FrozenChoice::Bo3 { .. } => None,
+        }
+    }
 }
 
 /// The two seats of a room's match: R1989000 seats host and joiner by seed coin.
@@ -205,12 +247,24 @@ fn room_seats(
     seed: &str,
     host_is_p1: bool,
 ) -> Result<(MatchSeat, MatchSeat), ApiError> {
+    seats_of_sides(&HostSide::of_room(room), joiner_id, joiner, seed, host_is_p1)
+}
+
+/// The two seats, host's then joiner's, of a start between `host` and `joiner_id`, who froze
+/// `joiner`: R1989000 seats them by the seed's coin (`host_is_p1`).
+pub(crate) fn seats_of_sides(
+    host: &HostSide,
+    joiner_id: &str,
+    joiner: &FrozenChoice,
+    seed: &str,
+    host_is_p1: bool,
+) -> Result<(MatchSeat, MatchSeat), ApiError> {
     let (host_player, joiner_player) = if host_is_p1 {
         (PlayerId::P1, PlayerId::P2)
     } else {
         (PlayerId::P2, PlayerId::P1)
     };
-    if room.mode == QueueMode::Random {
+    if host.mode == QueueMode::Random {
         // R258, R642: decks and portraits dealt by seat; R1372, R924000: each leans on its player's set.
         let joiner_lean = match joiner {
             FrozenChoice::Random { lean } => *lean,
@@ -218,11 +272,11 @@ fn room_seats(
         };
         return Ok((
             MatchSeat {
-                profile_id: room.host_profile_id.clone(),
+                profile_id: host.profile_id.clone(),
                 player: host_player,
                 deck: deal_random_deck(
                     &format!("{seed}:{}-deck", host_player.as_str()),
-                    lean_of(room.host_lean),
+                    lean_of(host.lean),
                 ),
                 portrait: Some(
                     pick_portrait_from_seed(&format!("{seed}:portrait:{}", host_player.as_str()))
@@ -256,12 +310,12 @@ fn room_seats(
     };
     Ok((
         MatchSeat {
-            profile_id: room.host_profile_id.clone(),
+            profile_id: host.profile_id.clone(),
             player: host_player,
-            deck: room.host_deck.clone(),
-            portrait: room.host_portrait.clone().flatten(),
+            deck: host.deck.clone(),
+            portrait: host.portrait.clone(),
             // R1834002: each deck's slots, frozen with it: the host's at the room's making.
-            deck_slots: room.host_deck_slots.clone(),
+            deck_slots: host.deck_slots.clone(),
         },
         MatchSeat {
             profile_id: joiner_id.to_string(),
@@ -271,6 +325,44 @@ fn room_seats(
             deck_slots: deck.slots.clone(),
         },
     ))
+}
+
+/// The room row a host's frozen choice opens under `code` (§9.4, §9.5): `open_room`'s, and a private
+/// lobby's at its Start (R3730002).
+fn room_row(app: &App, code: &str, host_id: &str, frozen: &FrozenChoice, now: i64, expires_at: i64) -> Room {
+    Room {
+        code: code.to_string(),
+        host_profile_id: host_id.to_string(),
+        mode: frozen_mode(frozen),
+        // §9.4, §9.5: the deck or the trio is frozen here, exactly as it is into a queue ticket.
+        host_deck: match frozen {
+            FrozenChoice::Bo1 { deck } => deck.cards.clone(),
+            _ => Vec::new(),
+        },
+        host_portrait: match frozen {
+            FrozenChoice::Bo1 { deck } => Some(deck.portrait.clone().flatten()),
+            _ => Some(None),
+        },
+        // R1834002: and its slots with it.
+        host_deck_slots: match frozen {
+            FrozenChoice::Bo1 { deck } => deck.slots.clone(),
+            _ => None,
+        },
+        host_trio: match frozen {
+            FrozenChoice::Bo3 { trio } => Some(trio.as_ref().clone()),
+            _ => None,
+        },
+        // R1372, R924000: an All Random host's lean waits with the room for the deal at the join.
+        host_lean: match frozen {
+            FrozenChoice::Random { lean } => *lean,
+            _ => None,
+        },
+        catalog_version: app.catalog.version.clone(),
+        created_at: now,
+        expires_at,
+        guest_profile_id: None,
+        match_id: None,
+    }
 }
 
 /// POST /api/rooms — create a room in a mode and return its code (§9.5, R264); a challenge (B48,
@@ -323,40 +415,13 @@ pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, 
     for _attempt in 0..CODE_ATTEMPTS {
         // R79, §9.5: 6 characters from the invite-code alphabet.
         let code = mint_code();
-        let room = Room {
-            code: code.clone(),
-            host_profile_id: profile_id.clone(),
-            mode,
-            // §9.4, §9.5: the deck or the trio is frozen here, exactly as it is into a queue ticket.
-            host_deck: match &frozen {
-                FrozenChoice::Bo1 { deck } => deck.cards.clone(),
-                _ => Vec::new(),
-            },
-            host_portrait: match &frozen {
-                FrozenChoice::Bo1 { deck } => Some(deck.portrait.clone().flatten()),
-                _ => Some(None),
-            },
-            // R1834002: and its slots with it.
-            host_deck_slots: match &frozen {
-                FrozenChoice::Bo1 { deck } => deck.slots.clone(),
-                _ => None,
-            },
-            host_trio: match &frozen {
-                FrozenChoice::Bo3 { trio } => Some(trio.as_ref().clone()),
-                _ => None,
-            },
-            // R1372, R924000: an All Random host's lean waits with the room for the deal at the join.
-            host_lean: match &frozen {
-                FrozenChoice::Random { lean } => *lean,
-                _ => None,
-            },
-            catalog_version: app.catalog.version.clone(),
-            created_at: now,
-            expires_at,
-            guest_profile_id: None,
-            match_id: None,
-        };
+        let room = room_row(app, &code, &profile_id, &frozen, now, expires_at);
         let mut tx = app.db.begin(None).await?;
+        // R3730006: a code a private lobby holds is its lobby's, so a room never shares it.
+        if tx.lobbies_get(&code).await?.is_some() {
+            tx.commit().await?;
+            continue;
+        }
         let created = tx.rooms_create(&room).await?;
         tx.commit().await?;
         if !created {
@@ -394,7 +459,10 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     assert_free_to_play(app, &profile_id).await?;
 
     let typed = req.params.get("code").cloned().unwrap_or_default();
-    let room = joinable_room(app, &typed).await?;
+    let room = app
+        .code_guesses
+        .lookup(&req, &profile_id, joinable_room(app, &typed))
+        .await?;
     if room.host_profile_id == profile_id {
         return Err(ApiError::new(
             ApiErrorCode::Conflict,
@@ -404,7 +472,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     // B49: a challenge's room is the challenged friend's to join.
     crate::social::challenges::assert_may_join(app, &room.code, &profile_id).await?;
     // R264: mode checked before the deck, so the refusal is the useful one.
-    if choice_mode(&choice) != room.mode {
+    if choice.mode() != room.mode {
         return Err(ApiError::with_details(
             ApiErrorCode::Conflict,
             mode_refusal(room.mode),
@@ -413,7 +481,50 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     }
 
     let frozen = freeze_choice(app, &profile_id, &choice).await?;
+    let started = claim_and_start(
+        app,
+        &room,
+        &profile_id,
+        &frozen,
+        joiner_seed,
+        joiner_seat,
+        |taken| join_refusal(&profile_id, taken),
+    )
+    .await?;
+    Ok(json_response(
+        200,
+        json!({
+            "matchId": started.match_id,
+            "seriesId": started.series_id,
+            "code": room.code,
+            // R1989000: the joiner's actual seat, which the coin may have given the host's away.
+            "seat": if started.host_is_p1 { "p2" } else { "p1" },
+            "mode": room.mode,
+        }),
+    ))
+}
 
+/// What `claim_and_start` began: a match, or a Conquest series (whose first game has its own id),
+/// and whether the coin gave the host p1 (R1989000).
+pub(crate) struct RoomStarted {
+    pub match_id: Option<String>,
+    pub series_id: Option<String>,
+    pub host_is_p1: bool,
+}
+
+/// Reserves both seats, claims `room` for `joiner_id` and starts its game with the joiner's frozen
+/// choice (§9.5, R1523000): a room's join, and a private lobby's Start (R3730002) over the room it
+/// opens. `refusal` answers a seat the ledger refused.
+pub(crate) async fn claim_and_start(
+    app: &Arc<App>,
+    room: &Room,
+    joiner_id: &str,
+    frozen: &FrozenChoice,
+    joiner_seed: Option<String>,
+    joiner_seat: Option<PlayerId>,
+    refusal: impl FnOnce(&Taken) -> ApiError,
+) -> Result<RoomStarted, ApiError> {
+    let profile_id = joiner_id.to_string();
     let match_id = new_uuid();
     let series_id = new_uuid();
     let now = now_ms();
@@ -430,7 +541,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let lease = app
         .seats
         .reserve(&[&profile_id, &room.host_profile_id], seat)
-        .map_err(|taken| join_refusal(&profile_id, &taken))?;
+        .map_err(|taken| refusal(&taken))?;
 
     // Atomic single-claim (§9.5, mirroring `tickets_claim_pair`): one winner is the guest. Fenced
     // (R1523000): past a newer epoch nothing is claimed (503).
@@ -455,7 +566,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         (None, None) => seat_coin_p1_first(&seed),
     };
 
-    if let FrozenChoice::Bo3 { trio } = &frozen {
+    if let FrozenChoice::Bo3 { trio } = frozen {
         // R259, R263: the series opens on its pick phase. R1989000, R335: the coin winner is index 0.
         let Some(host_trio) = claimed.host_trio.clone() else {
             return Err(wiring_fault(format!(
@@ -540,20 +651,14 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             // R3214000: the challenge is gone from both, once the series the challenger follows exists.
             push_social(app, &[&claimed.host_profile_id, &profile_id]).await;
         }
-        return Ok(json_response(
-            200,
-            json!({
-                "matchId": Value::Null,
-                "seriesId": series.id,
-                "code": claimed.code,
-                // R1989000: the joiner's actual seat, which the coin may have given the host's away.
-                "seat": if host_is_p1 { "p2" } else { "p1" },
-                "mode": claimed.mode,
-            }),
-        ));
+        return Ok(RoomStarted {
+            match_id: None,
+            series_id: Some(series.id),
+            host_is_p1,
+        });
     }
 
-    let (host_seat, joiner_seat) = room_seats(&claimed, &profile_id, &frozen, &seed, host_is_p1)?;
+    let (host_seat, joiner_seat) = room_seats(&claimed, &profile_id, frozen, &seed, host_is_p1)?;
     // The row is seat-ordered — index 0 is p1 — whatever the coin gave the host.
     let seats = if host_is_p1 {
         (host_seat, joiner_seat)
@@ -646,17 +751,45 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         // R3214000: the challenge is gone from both, once the game the challenger follows has started.
         push_social(app, &[&claimed.host_profile_id, &profile_id]).await;
     }
-    Ok(json_response(
-        200,
-        json!({
-            "matchId": match_id,
-            "seriesId": Value::Null,
-            "code": claimed.code,
-            // R1989000: the joiner's actual seat, which the coin may have given the host's away.
-            "seat": if host_is_p1 { "p2" } else { "p1" },
-            "mode": claimed.mode,
-        }),
-    ))
+    Ok(RoomStarted {
+        match_id: Some(match_id),
+        series_id: None,
+        host_is_p1,
+    })
+}
+
+/// R3730002: a private 1v1 lobby's Start. Opens the host's room under the lobby's `code` with the
+/// host's frozen pick and claims it for the guest with theirs, as a join would (`claim_and_start`),
+/// so the game starts as every room game does. A room nobody claimed is freed again on a refusal.
+pub(crate) async fn start_lobby_room(
+    app: &Arc<App>,
+    code: &str,
+    host_id: &str,
+    host: &FrozenChoice,
+    guest_id: &str,
+    guest: &FrozenChoice,
+    refusal: impl FnOnce(&Taken) -> ApiError,
+) -> Result<RoomStarted, ApiError> {
+    let now = now_ms();
+    let room = room_row(app, code, host_id, host, now, now + ROOM_CODE_TTL_SECONDS * 1000);
+    let mut tx = app.db.begin(None).await?;
+    let created = tx.rooms_create(&room).await?;
+    tx.commit().await?;
+    if !created {
+        tracing::error!(event = "lobby.room_code_held", code = %code);
+        return Err(ApiError::new(
+            ApiErrorCode::Unavailable,
+            "could not start the game; try again",
+        ));
+    }
+    let started = claim_and_start(app, &room, guest_id, guest, None, None, refusal).await;
+    if started.is_err() {
+        // `rooms_release` deletes only an unjoined room: a claimed one went with its discarded match.
+        let mut tx = app.db.begin(None).await?;
+        release_room(&mut tx, code).await?;
+        tx.commit().await?;
+    }
+    started
 }
 
 /// DELETE /api/rooms/:code — the host frees an unjoined room via `release_room` (§9.5, R1075000);
@@ -667,9 +800,11 @@ pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(None).await?;
     let Some(room) = tx.rooms_get(&code).await? else {
         tx.commit().await?;
+        app.code_guesses.claim(&req, &profile_id, false)?;
         return Ok(json_response(200, json!({ "cancelled": false })));
     };
     if room.host_profile_id != profile_id {
+        app.code_guesses.claim(&req, &profile_id, false)?;
         return Err(ApiError::new(
             ApiErrorCode::NotFound,
             "that room code is not open",

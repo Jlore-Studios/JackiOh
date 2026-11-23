@@ -34,7 +34,11 @@ Every Part B issue follows it, and review holds each one to it.
 3. **The caller owns the state.** A long-lived thing (a match, a practice session) is a serializable
    value the caller holds and hands back on every call, like `GameState`. A Roblox server can then
    checkpoint it to MemoryStore and resume it on another server (#2898, risk 4). This crate keeps
-   nothing between calls: no static, no cache.
+   nothing between calls: no static, no cache. (What a machine keeps inside its own value is another matter:
+   the duel machine keeps each seat's engine view until the game next changes, so a change builds each view
+   once and the prompt, aim and hover relays read it. That copy is skipped by serde and the exported types,
+   ignored by equality and empty after a restore. `Pushed` carries the views it sent, for a host in the same
+   process: it is not serialized, and a caller handed none builds its own.)
 4. **Everything impure comes in as an argument:** the time (`now_ms`, or the `now` of the first move,
    in epoch milliseconds), random seeds (drawn through the engine's `Rng`, the same 32-bit generator),
    the locale, and whatever the store read.
@@ -95,7 +99,9 @@ reads is only the server's and stays there), and
 the economy's (#3104): the drop tables (`CARD_TIER_WEIGHTS`, `COSMETIC_TIER_WEIGHTS`, `TIER_WEIGHT_TOTAL`, `PACK_SLOTS`, the floors, the global
 cosmetic roll), pity (`PITY_*_PACKS`), the token bars (`CARD_TOKEN_BAR_SIZE`, `COSMETIC_TOKEN_CYCLE` and the
 points per rarity), the cosmetic pack and Chase Shard bar, the set track's `SET_TRACK_XP_PER_LEVEL`, and what a game pays and a quest does (#3104, part 2): the Jlore and XP rates (`JLORE_*`, `XP_*`), the daily cap (`JLORE_GAMES_DAILY_CAP`, R1483000), the track levels (`SET_TRACK_LEVELS`, `SET_TRACK_UNLOCK_LEVEL`, `SET_TRACK_FIRST_LEVEL`) and the quest rhythm and pay (`QUEST_*`). The practice session's are `PRACTICE_AI_CLOCK_MS` (R2575000), `PRACTICE_LETHAL_HINT_CLOCK_MS` (R2102000) and
-`PRACTICE_REPLAYS_KEPT` (R768). The server re-exports the series', the match host's, the ranked ladder's, the bots' and the economy's
+`PRACTICE_REPLAYS_KEPT` (R768). The daily games' (#3727, SPEC §9.13) are `MS_PER_HOUR`, `DAILY_TIME_PER_MOVE_DAYS`,
+`DAILY_CHALLENGE_TTL_DAYS`, `DAILY_SEEK_TTL_DAYS`, `DAILY_MAX_ACTIVE_GAMES` (R3727004), `DAILY_REMINDER_HOURS`,
+`DAILY_EMAIL_MIN_GAP_HOURS`, `DAILY_URGENT_HOURS` and `DAILY_RECENT_FINISHED`. The server re-exports the series', the match host's, the ranked ladder's, the bots' and the economy's
 from its own `config.rs` (so `serverConfig.ts` and its code name them as before), and `jackioh-wasm-core`'s `constants` carries them all, which the browser and the C module
 (`crates/wasm/c`) both bind. `bot-calibrate --write` and `timing-fit` rewrite and print items of this file, and `cosmetics-fit` prints the rows
 to paste over `BOT_COSMETIC_FITS`.
@@ -213,6 +219,8 @@ into readable lines, so a client draws what this returns and writes no line. The
 may not read is never named. `drawn`, `addedToHand` and `shuffledIn` carry a `defId` for the animation layer
 and read "drew a card"; the sentinel `hidden` is "a card" or "a hidden card" and opens nothing; an id is never
 printed; `cardResolved`, `cardAnnounced`, `manaSpent`, `translated` and `hookResolving` have no line.
+A `damage`, `damageAbsorbed`, `healed`, `destroyed` or `summoned` line ends with its event's `via` keyword, the glossary's term
+with its tooltip (R2783001); a `summoned` by Reborn reads "came back"; the view drops `via` with a hidden card (R97).
 
 | Call | Takes | Answers |
 | --- | --- | --- |
@@ -359,22 +367,48 @@ there with its best line, its beam wrapped up at `AI_WRAP_UP_SHARE` of the time 
 other worlds still run (R3498000: `bots::decide`, `DecideJob::run` and `boundary::decide` take the
 wrap-up beside the hard stop); the C module has no clock, so the search ends at the strength's budget.
 
+### Daily games (`src/host/daily.rs`, `src/notify.rs`; #3727, SPEC §9.13)
+
+A daily game's clock beside the live one: days per move, no timers, nothing held between requests. The
+server stores a `DailyClock` with each game (`daily_games.clock`) and calls these on every read and move:
+
+- `daily_holders(state)`: who has the move. Nobody once the game is over; else each seat still owing its
+  mulligan (R3727002); else the player an open prompt waits on (R3727001); else the other player while the
+  active player's draw offer stands (R3727006); else the active player.
+- `daily_sync(clock, state, now)`: the clock after a step. A holder that goes on holding the same move (the
+  same seat, and the mulligan or the same turn: `move_key`) keeps its hold; a new one gets the whole
+  `per_move_days` from `now`, so unused time never carries over. KY's Competition's questions are prompts
+  inside one move and arm no window of their own (R3727003).
+- `daily_expired(clock, now)`: the holder whose deadline has come, the earliest first and a tie in seat
+  order; its host logs `disconnectExpired` for it (R3727000).
+- `daily_allows`, `daily_legal`: a seat holding no move may only concede, R3727006's offerer among them, so
+  nobody but the holder appends to the log; `is_daily_time` checks a
+  time per move against `DAILY_TIME_PER_MOVE_DAYS`; `daily_board` is the public summary a list shows.
+
+`notify::decide_notify(input, now)` is what to send one account: an email and a push when a game started
+waiting on it since that channel last went, or a deadline came within `DAILY_REMINDER_HOURS` since then; an
+email only with the setting on, an address, and `DAILY_EMAIL_MIN_GAP_HOURS` since the last; a push only to an
+account with a device; nothing when no game waits. Its `games` are every game waiting, the least time left
+first, which one email lists. Only the server calls either today (a client reads the holds from
+`GET /api/daily/games/:matchId`), so no `jackioh-wasm-core` body binds them yet.
+
 ### Duos co-op (`src/host/duos.rs`, `src/host/again.rs`)
 
 The co-op host (`crates/server/src/duos/actor.rs`, fullsend SPEC S4 to S6, B35 to B40) is the twin of the
 1v1 one under the same shapes: `step_duos(host, event, now) -> (host, outputs)` over a serializable
-`DuosHost` holding the `DuosState` of two duels and four seats (a1 and a2 are people, b1 and b2 the AI's).
+`DuosHost` holding the `DuosState` of two duels and four seats (a1 and a2 are people, b1 and b2 the AI's, or
+two more people in a 2v2: `DuosSetup.team_b`, `DuosTeamB`, R3731002; its per-seat arrays are by `slot`).
 `DuosHostEvent` (`arm`, `connected` / `attached` / `hello` / `left` / `disconnected`, `action`, `logged`,
 `timerFired`, `decided`, `rowChecked`, `stop`) and `DuosHostOutput` (`send`, `timer`, `append`, `answer`,
 `greeting`, `refused`, `panicked`, `pushed`, `decide`, `record`, `ceilingDraw`, `checkRow`, `letGo`, `note`)
 read like the 1v1 machine's, and its timers are the `duos*` `TimerKey`s. What it decides:
 
 - **The clocks** (S6, B2, B38): the one mulligan clock over the four mulligans (§13.2, R268), the round
-  clock of a round with a person in it, a prompt clock for a prompt a person holds outside its own round,
+  clock of a round with a person in it (every round of a 2v2), a prompt clock for a prompt a person holds outside its own round,
   each person's disconnect grace (R744) and the hard ceiling (R1047000) with its retry (R776000). An expiry
   hands seats to the AI and logs nothing itself: a lapsed mulligan keeps the hand, a lapsed round answers
   the prompts and ends the turn of each round seat, a lapsed prompt answers that prompt alone.
-- **Who plays a seat** (B36 to B38): b1 and b2 always; a person's seat past its grace (until the person is
+- **Who plays a seat** (B36 to B38): the AI team's b1 and b2 always; a person's seat, on either team, past its grace (until the person is
   back, no loss by disconnect) or in the mode an expiry forced. The pause before every AI action
   (`DUOS_AI_STEP_DELAY_MS`), whether the move needs the AI's search at all (a mulligan kept whole or a
   turn simply ended does not), the move it falls back on and R188's forbidden ones, a refused move
@@ -747,13 +781,20 @@ The economy's rolls carry their tests in their modules
 decisions over records and their boundary. The host machine's: `tests/clock.rs` (the clock's
 tests, moved from the server's actor tests on a simulated host), `tests/duel.rs` (the machine played on
 the real catalog), `tests/rematch.rs` (the book), `tests/duos.rs` and `tests/again.rs` (the co-op machine and its Play again
-book) and `tests/host_boundary.rs`; the practice session's, `tests/practice.rs` (played on the real catalog with a `Session`
+book) and `tests/host_boundary.rs`; `tests/host_fuzz.rs` plays both host machines on seeded random events (#4392: a clock
+running out, a socket dropping and returning, a refused or taken log write, a resent or copied nonce, a restart rebuilt
+from the written rows) and checks after every step that the log rebuilds the game, that it is well formed, that a stale
+timer changes nothing, that a match ends once and that a restart holds the game. `HOST_FUZZ_SEEDS` matches per machine
+run on every pull request and `daily_host_fuzz_sweep` plays `HOST_FUZZ_DAILY_SEEDS`; to rerun one failing seed, set
+`REPRO = Some((Machine::Duel, <seed>))` (or `Duos`) in the file, as the failure's text says, and run `cargo test -p
+jackioh-shared --features jackioh-engine/testkit --test host_fuzz repro`; the practice session's, `tests/practice.rs` (played on the real catalog with a `Session`
 standing in for a host). The ranked ladder's: `tests/glicko2.rs`, `tests/ladder.rs` and `tests/season.rs` (moved from the server's API tests
 with the maths), `tests/board.rs` (the sort key) and `tests/ranked_game.rs` (`decide` and its JSON calls). The `ts` feature writes the types that cross to
-`apps/web/src/wire/generated/`; commit any diff.
+`apps/web/src/wire/generated/`; commit any diff. `cargo test --workspace` writes them too (`jackioh-wasm-core`'s
+dev-dependencies turn the feature on, #4426), so `ci.yml`'s V20 step fails a pull request that leaves one stale.
 
 ```
-cargo test -p jackioh-shared
-cargo test -p jackioh-shared --features ts
-cargo clippy -p jackioh-shared --all-targets -- -D warnings
+cargo test -p jackioh-shared --features jackioh-engine/testkit
+cargo test -p jackioh-shared --features ts,jackioh-engine/testkit
+cargo clippy -p jackioh-shared --all-targets --features jackioh-engine/testkit -- -D warnings
 ```

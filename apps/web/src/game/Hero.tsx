@@ -9,6 +9,7 @@
 // opponent's are tags; `usedThisTurn` is drawn, never obeyed; the flash plays on `card-<instanceId>`.
 // Portrait (R1449): a click, Enter or Space on a non-target toggles the emote menu (R643: the opponent's is a
 // one-item mute); a hold opens `emotes/HeroInspect.tsx` (R1330). Owed extra turns are a modifier badge (R846).
+// R3976000: a hero with no emote surface (a replay's) draws `portrait`, its seat's, and opens nothing.
 // R1840005: a seat's Credits (spent by R1853003's Marketplace, earned by R2250001's Resource) show as
 // `market-credits-<side>`, even at 0; a Resource is a hand card (#2250, R2250000), so the hand draws it.
 
@@ -20,13 +21,13 @@ import { readerName } from "../cards/chinese.ts";
 import { useInspectTrigger } from "../cards/inspect/index.ts";
 import { HeroInspect } from "../emotes/HeroInspect.tsx";
 import { HeroPortrait, usePortraitReaction } from "../emotes/Portrait.tsx";
-import { PORTRAIT_DEFS } from "../emotes/portraits.ts";
+import { portraitDefs } from "../emotes/portraits.ts";
 import { EmoteMenu, EmoteShow as EmoteShowEl, MuteMenu } from "../emotes/ui.tsx";
 import { useSetting } from "../settings/store.ts";
 import { ACTIVATED_EVENT } from "./ActivateControl.tsx";
 import { cx, isLegal, isSelected, legalAttr, PopLayer, type Pops } from "./Card.tsx";
-import { AttackTargetPreview } from "./AttackOutcome.tsx";
-import { outcomeFor } from "./attackOutcome.ts";
+import { AttackOverflowPreview, AttackTargetPreview } from "./AttackOutcome.tsx";
+import { outcomeFor, overflowFor } from "./attackOutcome.ts";
 import HeroTray, { RIFT_SPENT_LABEL, RIFT_SPENT_NOTE } from "./HeroTray.tsx";
 import {
   sideView,
@@ -41,7 +42,7 @@ import {
 import { glowAttr } from "./glow.ts";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import { t } from "../i18n/i18n.ts";
-import type { HeroPowerView, PlayerView } from "@jackioh/shared";
+import type { HeroPowerView, PlayerView, PortraitId } from "@jackioh/shared";
 
 export type { HeroEmotes } from "./contract.ts";
 
@@ -54,6 +55,8 @@ export type HeroProps = {
   onControl?: (control: BoardControl) => void;
   pops?: Pops;
   emotes?: HeroEmotes;
+  /** R3976000: the seat's portrait where no emote surface gives one (a replay's board); absent, the default. */
+  portrait?: PortraitId;
   /** The seat's label, drawn over `You`/`Opponent` (a practice game's `AI · Easy` on the opponent's seat). */
   seatLabel?: string;
 };
@@ -74,10 +77,10 @@ export default function Hero(props: HeroProps): ReactElement {
   const seat = sideView(view, side);
   const hero = seat.hero;
   const emotes = props.emotes;
-  const portrait = emotes?.portrait ?? DEFAULT_PORTRAIT;
+  const portrait = emotes?.portrait ?? props.portrait ?? DEFAULT_PORTRAIT;
   const menu = emotes?.menu ?? null;
   const inspect = emotes?.inspect === true;
-  const portraitName = readerName(PORTRAIT_DEFS[portrait].def);
+  const portraitName = readerName(portraitDefs()[portrait].def);
 
   const testId = testid.hero(side);
   const legal = isLegal(props.highlight, testId);
@@ -87,6 +90,8 @@ export default function Hero(props: HeroProps): ReactElement {
   // (R3100000), so it wears no taken marker of its own.
   const hovered = props.highlight?.hoveredAttack;
   const targetOutcome = hovered?.target === testId ? outcomeFor(props.highlight, testId) : undefined;
+  // R4290000: what the hovered attack on a unit tramples onto this hero.
+  const overflow = overflowFor(props.highlight, testId);
 
   // R1331: the portrait reacts as its menu or its view opens, and not at all under either Reduce
   // Motion switch.
@@ -147,7 +152,6 @@ export default function Hero(props: HeroProps): ReactElement {
         portrait={portrait}
         health={hero.health}
         armor={hero.armor}
-        luck={seat.luck}
         reacting={reacting}
         press={emotes === undefined ? undefined : press.handlers}
       >
@@ -187,6 +191,9 @@ export default function Hero(props: HeroProps): ReactElement {
             {seat.jade}
           </span>
         )}
+        {/* #4251: R3540000's Burn and Toxic and R3548000's Tipsy ride the tray now
+            (`HeroTray.tsx`), as labelled chips beside the plate, so no portrait badge covers
+            them; R987's Luck went with them. */}
         {/* R1840005: the Credits, 0 included, once the view carries them. */}
         {seat.marketCredits !== undefined && (
           <span
@@ -254,6 +261,7 @@ export default function Hero(props: HeroProps): ReactElement {
 
       <PopLayer pops={props.pops} />
       {targetOutcome !== undefined && <AttackTargetPreview outcome={targetOutcome} target={testId} />}
+      {overflow !== undefined && <AttackOverflowPreview overflow={overflow} hero={testId} />}
 
       {emotes !== undefined && menu !== null && inspect && (
         <HeroInspect
@@ -261,6 +269,12 @@ export default function Hero(props: HeroProps): ReactElement {
           portrait={portrait}
           health={hero.health}
           armor={hero.armor}
+          luck={seat.luck}
+          jade={seat.jade}
+          burn={hero.burn}
+          toxic={hero.toxic}
+          tipsy={seat.tipsy}
+          marketCredits={seat.marketCredits}
           menu={menu}
           hand={emotes.hand}
           gate={emotes.gate}

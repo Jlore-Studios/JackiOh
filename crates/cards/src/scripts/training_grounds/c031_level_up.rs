@@ -1,22 +1,57 @@
-//! TG #31 Level Up! (SPEC §8.11 row 31). (3) Field Spell, Epic. "After one of your Units has attacked
-//! {attacks|time|times} since this arrived, it becomes Radiant." (Radiant: 2 times.)
+//! TG #31 Level Up! (SPEC §8.11 row 31). (3) Field Spell, Epic. "After one of your Units attacks, if it
+//! destroyed an enemy Unit, it becomes Radiant." (Radiant: "After one of your Units attacks, it becomes
+//! Radiant.")
 //! The engine's `allyAttack` hook (R2199000): run once the state check closing each combat of one of its
 //! controller's Units has run, declared or forced (R53); an attack called off before it fought never
-//! reaches it (R44). Each Unit counts apart, across turns, from when this arrived (R2199007), in this
-//! card's own `memory` (§10.1) as Unit id to `{ n, mark }`, so the counts go when it leaves (R78). `mark`
-//! is the field's departures as the count began: a Unit that has left since is a new arrival (R174). It
-//! becomes Radiant after its Nth combat if it still stands (`set_radiant`, R22, R74). R2321000: the
-//! counts that still hold ride on their Units in both views (`tallies`).
+//! reaches it (R44). The hook is handed whether the attacker still stands (`survived`, R174) and whether
+//! that combat destroyed a Unit of its opponent with it the killer (`destroyed_enemy`, R42, R3951000): the
+//! base face makes a surviving attacker that destroyed one Radiant, the Radiant face every surviving
+//! attacker (`set_radiant`, R22, R74). Issue #3951 gave it this text; through v0.6.4c it counted each
+//! Unit's attacks since it arrived and made it Radiant at the third (Radiant: second), with the counts on
+//! the Units (R2199007, R2321000), which `script_v0_6_4c` keeps for those replays (R767000).
 
 use jackioh_engine::combat::ally_attack_of;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-031";
 
-/// §10.1: where this card keeps its counts.
+/// R3951000: one of its controller's Units that survived its attack becomes Radiant, on the base face only
+/// when that combat destroyed an enemy Unit.
+fn level_up(needs_kill: bool) -> Hook {
+    hook(move |ctx| {
+        let Some(facts) = ally_attack_of(ctx) else {
+            return vec![];
+        };
+        if !facts.survived || (needs_kill && !facts.destroyed_enemy) {
+            return vec![];
+        }
+        let Some(attacker) = find_instance(ctx.state, &facts.attacker_id) else {
+            return vec![];
+        };
+        if attacker.controller != ctx.controller || attacker.radiant {
+            return vec![];
+        }
+        vec![set_radiant(json_as(json!({ "instanceId": attacker.id })))]
+    })
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            ally_attack: Some(level_up(true)),
+            ..Script::default()
+        },
+        radiant: Script {
+            ally_attack: Some(level_up(false)),
+            ..Script::default()
+        },
+    }
+}
+
+/// §10.1: where this card kept its counts through v0.6.4c.
 const COUNTS: &str = "attacks";
 
-fn level_up(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+fn level_up_v0_6_4c(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(facts) = ally_attack_of(ctx) else {
         return vec![];
     };
@@ -78,9 +113,11 @@ fn tallies() -> TallyHook {
     })
 }
 
-pub fn script() -> CardScripts {
+/// R767000, R2199007: the scripts through v0.6.4c, which counted each Unit's attacks (issue #3951).
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_4c() -> CardScripts {
     let base = Script {
-        ally_attack: Some(hook(level_up)),
+        ally_attack: Some(hook(level_up_v0_6_4c)),
         tallies: Some(tallies()),
         ..Script::default()
     };
@@ -95,18 +132,43 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    use crate::upgrade_number;
+    use super::script_v0_6_4c;
 
     const LEVEL_UP: &str = super::ID;
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-    const SPECIESIST: &str = "core-002"; // Speciesist
+    const FRAIL: &str = "stand-in (1) 4/1";
+    const CLEAVER: &str = "stand-in (1) 4/4 Cleave";
     /// S Trap: "Reveals when an enemy Unit attacks one of your Units: Cancel the attack and Freeze the attacker."
     const CANCELLER: &str = "stinkyscape-t-ai-04";
-    const MOTHS: &str = "core-009"; // Moths to the Flame: start of turn: every enemy Unit attacks this
     const FILLER: &str = "core-010";
+    const PHOENIX: &str = "stand-in (1) 4/1 Reborn";
 
     fn wall() -> Value {
         json!({ "def": VANILLA, "statsOverride": { "attack": 0, "health": 30 } })
+    }
+
+    /// An enemy Unit a 4-Attack hit destroys, striking back for `attack`.
+    fn prey(attack: i32) -> Value {
+        json!({ "def": VANILLA, "statsOverride": { "attack": attack, "health": 3 } })
+    }
+
+    /// R767000: `run` under the script kept for v0.6.4c, with the `attacks` it declared then (3, Radiant 2).
+    fn kept<T>(run: impl FnOnce() -> T) -> T {
+        crate::under_kept_as(
+            LEVEL_UP,
+            script_v0_6_4c(),
+            |def| {
+                def.params = serde_json::from_value(json!([
+                    { "key": "attacks", "base": 3, "radiant": 2, "better": "down", "step": 1, "min": 1 }
+                ]))
+                .expect("the v0.6.4c params");
+            },
+            run,
+        )
+    }
+
+    fn radiant_set(s: &Scenario) -> bool {
+        s.events().iter().any(|e| matches!(e, GameEvent::RadiantSet { .. }))
     }
 
     fn board(radiant: bool, p1: Value, p2: Value) -> Scenario {
@@ -164,231 +226,74 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r2321000_each_units_count_rides_on_it_in_both_views() {
-            let mut s = board(false, json!({ "field": [VANILLA, VANILLA] }), json!({ "field": [wall()] }));
-            assert_eq!(tallies_seen(&s, P1, 1), None, "no attack yet, no count");
+        fn r3951000_a_unit_that_destroys_the_unit_it_attacks_becomes_radiant() {
+            let mut s = board(false, json!({ "field": [VANILLA] }), json!({ "field": [prey(0)] }));
+            let attacker = s.unit(P1, 1).unwrap().id;
             swing(&mut s, 1);
-            assert_eq!(tallies_seen(&s, P1, 1), counted(1, 3));
-            assert_eq!(tallies_seen(&s, P2, 1), counted(1, 3), "a face-up Field Spell's count is public");
-            assert_eq!(tallies_seen(&s, P1, 2), None, "each Unit counts apart");
-            next_round(&mut s);
-            swing(&mut s, 1);
-            assert_eq!(tallies_seen(&s, P2, 1), counted(2, 3));
-            next_round(&mut s);
-            swing(&mut s, 1);
+            assert!(s.unit(P2, 1).is_none(), "the prey died");
             assert!(radiant_at(&s, 1));
-            assert_eq!(tallies_seen(&s, P1, 1), counted(3, 3));
+            // After the combat: the hit was the base face's 4, the stats the Radiant face's now.
+            s.expect_stats(attacker.as_str(), json!({ "attack": 12, "health": 12 }));
         }
 
         #[test]
-        fn r2321000_r174_a_bounced_and_replayed_unit_shows_no_stale_count() {
-            let mut s = board(
-                false,
-                json!({ "field": [VANILLA], "hand": [FILLER], "mana": 10 }),
-                json!({ "field": [wall()] }),
-            );
-            swing(&mut s, 1);
-            let vanilla = s.unit(P1, 1).unwrap();
-            bounce_to_hand(&mut s, &vanilla.id);
-            s.play(VANILLA, json!({ "zone": 1 }));
-            assert_eq!(tallies_seen(&s, P1, 1), None, "its count began again");
-        }
-
-        #[test]
-        fn r2321000_r78_the_counts_go_with_this_card() {
+        fn r3951000_an_attack_that_destroys_nothing_does_not() {
             let mut s = board(false, json!({ "field": [VANILLA] }), json!({ "field": [wall()] }));
             swing(&mut s, 1);
-            let level_up = s.backrow(P1, 1).unwrap();
-            bounce_to_hand(&mut s, &level_up.id);
-            assert_eq!(tallies_seen(&s, P1, 1), None);
-        }
-
-        #[test]
-        fn r2199000_r2199007_a_unit_that_attacks_3_times_over_several_turns_becomes_radiant_after_the_third() {
-            let mut s = board(false, json!({ "field": [VANILLA] }), json!({ "field": [wall()] }));
-            swing(&mut s, 1);
-            next_round(&mut s);
-            swing(&mut s, 1);
             assert!(!radiant_at(&s, 1));
-            next_round(&mut s);
-            swing(&mut s, 1);
-
-            assert!(radiant_at(&s, 1));
-            // Not before its damage: the third combat's hit was the base face's 4.
-            let hits: Vec<i32> = s
-                .events()
-                .iter()
-                .filter_map(|e| match e {
-                    GameEvent::Damage { amount, combat: true, target_id, .. } if *target_id == s.unit(P2, 1).unwrap().id => {
-                        Some(*amount)
-                    }
-                    _ => None,
-                })
-                .collect();
-            assert_eq!(hits, vec![4, 4, 4]);
-            s.expect_stats(VANILLA, json!({ "attack": 12, "health": 12 }));
+            assert!(!radiant_set(&s));
         }
 
         #[test]
-        fn r2199007_two_units_attacking_once_and_twice_make_neither_radiant() {
-            let mut s = board(false, json!({ "field": [VANILLA, VANILLA] }), json!({ "field": [wall()] }));
-            swing(&mut s, 1);
-            swing(&mut s, 2);
-            next_round(&mut s);
-            swing(&mut s, 2);
-
-            assert!(!radiant_at(&s, 1));
-            assert!(!radiant_at(&s, 2));
-        }
-
-        #[test]
-        fn r2199007_attacks_made_before_this_arrived_do_not_count() {
+        fn r3951000_a_unit_its_cleave_destroys_counts() {
             let mut s = board(
                 false,
-                json!({ "hand": [LEVEL_UP], "backrow": [], "field": [VANILLA], "mana": 10 }),
-                json!({ "field": [wall()] }),
+                json!({ "field": [CLEAVER] }),
+                json!({ "field": [wall(), prey(0)] }),
             );
             swing(&mut s, 1);
-            s.play(LEVEL_UP, json!({}));
-            next_round(&mut s);
-            swing(&mut s, 1);
-            next_round(&mut s);
-            swing(&mut s, 1);
-
-            assert!(!radiant_at(&s, 1), "only two attacks since it arrived");
-            next_round(&mut s);
-            swing(&mut s, 1);
+            assert!(s.unit(P2, 2).is_none(), "the Cleave destroyed the Unit beside the wall");
             assert!(radiant_at(&s, 1));
         }
 
         #[test]
-        fn r2199007_an_enemy_units_attacks_never_count() {
-            let mut s = board(false, json!({ "field": [wall()] }), json!({ "field": [VANILLA] }));
-            for _ in 0..3 {
-                s.end_turn();
-                let attacker = s.unit(P2, 1).unwrap();
-                let target = s.unit(P1, 1).unwrap();
-                s.attack(&attacker, &target);
-                s.end_turn();
-            }
+        fn r174_r3951000_a_unit_that_dies_in_the_combat_it_wins_is_not_made_radiant() {
+            let mut s = board(false, json!({ "field": [FRAIL] }), json!({ "field": [prey(1)] }));
+            swing(&mut s, 1);
+            assert!(s.unit(P2, 1).is_none(), "the prey died");
+            s.expect_in_zone(FRAIL, "graveyard");
+            assert!(!radiant_set(&s));
+        }
 
+        #[test]
+        fn r3951000_an_enemy_units_kill_never_counts() {
+            let mut s = board(false, json!({ "field": [prey(0)] }), json!({ "field": [VANILLA] }));
+            s.end_turn();
+            let attacker = s.unit(P2, 1).unwrap();
+            let target = s.unit(P1, 1).unwrap();
+            s.attack(&attacker, &target);
+            assert!(s.unit(P1, 1).is_none(), "p1's Unit died");
             assert!(!s.unit(P2, 1).unwrap().radiant);
         }
 
         #[test]
-        fn r53_a_forced_attack_counts() {
-            let mut s = board(
-                false,
-                json!({ "field": [VANILLA] }),
-                json!({ "field": [{ "def": MOTHS, "statsOverride": { "attack": 0, "health": 30 } }] }),
-            );
-            swing(&mut s, 1);
-            // p2's turn begins: the Moths force the Vanilla's second attack.
-            next_round(&mut s);
-            swing(&mut s, 1);
-
-            assert!(radiant_at(&s, 1), "a declared, a forced and a declared attack");
-        }
-
-        #[test]
-        fn r44_a_canceled_attack_does_not_count() {
-            let mut s = board(
-                false,
-                json!({ "field": [VANILLA] }),
-                json!({ "field": [wall()], "backrow": [{ "def": CANCELLER, "faceUp": false, "lane": 2 }] }),
-            );
-            swing(&mut s, 1); // the trap calls this one off, and Freezes the attacker
-            assert!(s.events().iter().any(|e| matches!(e, GameEvent::AttackCancelled { .. })));
-            next_round(&mut s);
-            next_round(&mut s);
-            swing(&mut s, 1);
-            next_round(&mut s);
-            swing(&mut s, 1);
-            assert!(!radiant_at(&s, 1), "two attacks fought");
-
-            next_round(&mut s);
-            swing(&mut s, 1);
-            assert!(radiant_at(&s, 1));
-        }
-
-        #[test]
-        fn r174_a_unit_that_dies_in_its_third_attack_is_not_made_radiant() {
-            let mut s = board(false, json!({ "field": [SPECIESIST] }), json!({ "field": [{ "def": VANILLA, "statsOverride": { "attack": 0, "health": 30 } }] }));
-            swing(&mut s, 1);
-            next_round(&mut s);
-            swing(&mut s, 1);
-            next_round(&mut s);
-            // The wall hits back for 1 now: the 4/1 dies in its third combat.
-            let wall_id = s.unit(P2, 1).unwrap().id;
-            s.card_mut(wall_id.as_str()).buffs = AttackHealth { attack: 1, health: 0 };
-            swing(&mut s, 1);
-
-            s.expect_in_zone(SPECIESIST, "graveyard");
-            assert!(!s.card(SPECIESIST).radiant);
-        }
-
-        #[test]
-        fn r174_bounce_and_replay_restarts_that_units_count() {
-            let mut s = board(
-                false,
-                json!({ "field": [VANILLA], "hand": [FILLER], "mana": 10 }),
-                json!({ "field": [wall()] }),
-            );
-            swing(&mut s, 1);
-            next_round(&mut s);
-            swing(&mut s, 1);
-            // Bounce it to the hand and play it again: a new arrival.
-            let vanilla = s.unit(P1, 1).unwrap();
-            bounce_to_hand(&mut s, &vanilla.id);
-            s.play(VANILLA, json!({ "zone": 1 }));
-            next_round(&mut s);
-            swing(&mut s, 1);
-
-            assert!(!radiant_at(&s, 1), "its count began again at the replay");
-        }
-
-        #[test]
-        fn r78_this_leaving_the_field_resets_every_count() {
-            let mut s = board(
-                false,
-                json!({ "field": [VANILLA], "hand": [LEVEL_UP, FILLER], "mana": 10 }),
-                json!({ "field": [wall()] }),
-            );
-            swing(&mut s, 1);
-            next_round(&mut s);
-            swing(&mut s, 1);
-            // The first Level Up leaves; a second one starts with no counts.
-            let first = s.backrow(P1, 1).unwrap();
-            bounce_to_hand(&mut s, &first.id);
-            s.play(LEVEL_UP, json!({}));
-            next_round(&mut s);
-            swing(&mut s, 1);
-
+        fn r3951000_a_defender_that_destroys_its_attacker_is_not_made_radiant() {
+            let defender = json!({ "def": VANILLA, "statsOverride": { "attack": 1, "health": 30 } });
+            let mut s = board(false, json!({ "field": [defender] }), json!({ "field": [FRAIL] }));
+            s.end_turn();
+            let attacker = s.unit(P2, 1).unwrap();
+            let target = s.unit(P1, 1).unwrap();
+            s.attack(&attacker, &target);
+            assert!(s.unit(P2, 1).is_none(), "the attacker died on the Vanilla");
             assert!(!radiant_at(&s, 1));
         }
 
         #[test]
         fn r74_an_already_radiant_unit_is_unchanged() {
-            let mut s = board(false, json!({ "field": [{ "def": VANILLA, "radiant": true }] }), json!({ "field": [wall()] }));
-            for _ in 0..3 {
-                swing(&mut s, 1);
-                next_round(&mut s);
-            }
-
-            assert!(radiant_at(&s, 1));
-            s.expect_stats(VANILLA, json!({ "attack": 12, "health": 12 }));
-            assert!(!s.events().iter().any(|e| matches!(e, GameEvent::RadiantSet { .. })));
-        }
-
-        #[test]
-        fn r386_attacks_reads_through_param() {
-            let mut s = board(false, json!({ "field": [VANILLA] }), json!({ "field": [wall()] }));
-            assert_eq!(upgrade_number(&mut s, LEVEL_UP, "attacks"), 2);
+            let mut s = board(false, json!({ "field": [{ "def": VANILLA, "radiant": true }] }), json!({ "field": [prey(0)] }));
             swing(&mut s, 1);
-            next_round(&mut s);
-            swing(&mut s, 1);
-
             assert!(radiant_at(&s, 1));
+            assert!(!radiant_set(&s));
         }
     }
 
@@ -396,15 +301,111 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r2199007_two_attacks_suffice() {
+        fn r3951000_any_attack_it_survives_makes_it_radiant() {
             let mut s = board(true, json!({ "field": [VANILLA] }), json!({ "field": [wall()] }));
             swing(&mut s, 1);
-            assert!(!radiant_at(&s, 1));
-            assert_eq!(tallies_seen(&s, P1, 1), counted(1, 2), "R2321000: the Radiant face counts to 2");
-            next_round(&mut s);
-            swing(&mut s, 1);
-
             assert!(radiant_at(&s, 1));
+        }
+
+        #[test]
+        fn r174_a_reborn_body_is_not_the_unit_that_attacked() {
+            // R2199000 hands the hook `survived: false` for a Unit that died in its combat and came back
+            // through Reborn, a new arrival (R174).
+            let killer = json!({ "def": VANILLA, "statsOverride": { "attack": 5, "health": 30 } });
+            let mut s = board(true, json!({ "field": [PHOENIX] }), json!({ "field": [killer] }));
+            let phoenix = s.unit(P1, 1).unwrap().id;
+            swing(&mut s, 1);
+            let reborn = s.last_events().iter().any(|e| {
+                matches!(e, GameEvent::Summoned { instance_id, via: Some(KeywordKind::Reborn), .. }
+                    if *instance_id == phoenix)
+            });
+            assert!(reborn, "Reborn brought the same card back");
+            assert!(!radiant_at(&s, 1));
+        }
+    }
+
+    /// R767000: the script kept for v0.6.4c, which counted each Unit's attacks (R2199007, R2321000).
+    mod kept_v0_6_4c {
+        use super::*;
+
+        #[test]
+        fn r2321000_each_units_count_rides_on_it_in_both_views() {
+            kept(|| {
+                let mut s = board(false, json!({ "field": [VANILLA, VANILLA] }), json!({ "field": [wall()] }));
+                assert_eq!(tallies_seen(&s, P1, 1), None, "no attack yet, no count");
+                swing(&mut s, 1);
+                assert_eq!(tallies_seen(&s, P1, 1), counted(1, 3));
+                assert_eq!(tallies_seen(&s, P2, 1), counted(1, 3), "a face-up Field Spell's count is public");
+                assert_eq!(tallies_seen(&s, P1, 2), None, "each Unit counts apart");
+            });
+        }
+
+        #[test]
+        fn r2199000_r2199007_a_unit_that_attacks_3_times_over_several_turns_becomes_radiant_after_the_third() {
+            kept(|| {
+                let mut s = board(false, json!({ "field": [VANILLA] }), json!({ "field": [wall()] }));
+                swing(&mut s, 1);
+                next_round(&mut s);
+                swing(&mut s, 1);
+                assert!(!radiant_at(&s, 1));
+                next_round(&mut s);
+                swing(&mut s, 1);
+                assert!(radiant_at(&s, 1));
+            });
+        }
+
+        #[test]
+        fn r2199007_attacks_made_before_this_arrived_do_not_count() {
+            kept(|| {
+                let mut s = board(
+                    false,
+                    json!({ "hand": [LEVEL_UP], "backrow": [], "field": [VANILLA], "mana": 10 }),
+                    json!({ "field": [wall()] }),
+                );
+                swing(&mut s, 1);
+                s.play(LEVEL_UP, json!({}));
+                next_round(&mut s);
+                swing(&mut s, 1);
+                next_round(&mut s);
+                swing(&mut s, 1);
+                assert!(!radiant_at(&s, 1), "only two attacks since it arrived");
+                next_round(&mut s);
+                swing(&mut s, 1);
+                assert!(radiant_at(&s, 1));
+            });
+        }
+
+        #[test]
+        fn r44_a_canceled_attack_does_not_count() {
+            kept(|| {
+                let mut s = board(
+                    false,
+                    json!({ "field": [VANILLA] }),
+                    json!({ "field": [wall()], "backrow": [{ "def": CANCELLER, "faceUp": false, "lane": 2 }] }),
+                );
+                swing(&mut s, 1); // the trap calls this one off, and Freezes the attacker
+                assert!(s.events().iter().any(|e| matches!(e, GameEvent::AttackCancelled { .. })));
+                next_round(&mut s);
+                next_round(&mut s);
+                swing(&mut s, 1);
+                next_round(&mut s);
+                swing(&mut s, 1);
+                assert!(!radiant_at(&s, 1), "two attacks fought");
+                next_round(&mut s);
+                swing(&mut s, 1);
+                assert!(radiant_at(&s, 1));
+            });
+        }
+
+        #[test]
+        fn r78_r174_bouncing_this_or_the_unit_restarts_the_count() {
+            kept(|| {
+                let mut s = board(false, json!({ "field": [VANILLA] }), json!({ "field": [wall()] }));
+                swing(&mut s, 1);
+                let level_up = s.backrow(P1, 1).unwrap();
+                bounce_to_hand(&mut s, &level_up.id);
+                assert_eq!(tallies_seen(&s, P1, 1), None);
+            });
         }
     }
 

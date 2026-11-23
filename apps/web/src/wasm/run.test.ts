@@ -66,6 +66,8 @@ describe("B12 the run bindings", () => {
     if (fight === null) throw new Error("a go onto the first row starts a fight");
     expect(fight.seed).toBe(`${setup.seed}-0-0`);
     expect(fight.humanDeck).toHaveLength(starter.length);
+    // R3586000: the first row's fight is tier 1.
+    expect(fight.enemy.tier).toBe(1);
 
     const game: ReplayInput = {
       seed: fight.seed,

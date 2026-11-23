@@ -299,3 +299,25 @@ pub struct QuestBook {
     #[cfg_attr(feature = "ts", ts(type = "number | null"))]
     pub next_due_at: Option<i64>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// R1298000: the pity counters are the only counters a pack key may name; a token bar's points, the
+    /// cosmetic cycle and the Chase Shard bar are each kept once for the account.
+    #[test]
+    fn r1298000_only_the_pity_counters_are_pity() {
+        for (counter, pity) in [
+            (Counter::PityEpic, true),
+            (Counter::PityLegendary, true),
+            (Counter::PityMythic, true),
+            (Counter::CardTokenBar, false),
+            (Counter::CosmeticTokenBar, false),
+            (Counter::CosmeticTokenCycle, false),
+            (Counter::ChaseShardBar, false),
+        ] {
+            assert_eq!(counter.is_pity(), pity, "{counter:?}");
+        }
+    }
+}

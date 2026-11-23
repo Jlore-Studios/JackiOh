@@ -90,17 +90,46 @@ export function clippingBoxes(grid: HTMLElement): HTMLElement[] {
   return boxes;
 }
 
-/** The grid's rows as it lays them out; null where it lays out none (no layout engine, no card yet). */
-export function readShape(grid: HTMLElement): PoolShape | null {
+/**
+ * Issue #3734: the grid's cell for the card at `at` (0-based, in reading order) in a grid `columns` wide, as a
+ * `grid-area`, so a virtual grid places each mounted card in the row it belongs to.
+ */
+export function poolCell(at: number, columns: number): string {
+  const row = Math.floor(at / columns) + 1;
+  const column = (at % columns) + 1;
+  return `${String(row)} / ${String(column)} / ${String(row + 1)} / ${String(column + 1)}`;
+}
+
+/**
+ * Issue #3734: the positions of the cards a virtual grid mounts, in order: those of the rows in `view`, the ones of
+ * the first render (`firstCards`) before the page has been read, and every card where it has no layout ("all").
+ * The card that has focus (`heldAt`, -1 for none) stays mounted where the view has scrolled away from it.
+ */
+export function mountedAt(view: PoolWindow | "all" | null, count: number, heldAt: number, firstCards: number): number[] {
+  const rows = view === null || view === "all" ? null : view;
+  const from = rows === null ? 0 : rows.firstRow * rows.columns;
+  const to = view === "all" ? count : Math.min(count, rows === null ? firstCards : (rows.lastRow + 1) * rows.columns);
+  const mounted: number[] = [];
+  if (heldAt >= 0 && heldAt < from) mounted.push(heldAt);
+  for (let at = from; at < to; at += 1) mounted.push(at);
+  if (heldAt >= to) mounted.push(heldAt);
+  return mounted;
+}
+
+/**
+ * The grid's rows as it lays them out; null where it lays out none (no layout engine, no card yet). `card` is the
+ * selector of a card of the grid: the pool's `.db-card`, or the Collection's own.
+ */
+export function readShape(grid: HTMLElement, card: string = CARD): PoolShape | null {
   const style = getComputedStyle(grid);
   // The resolved tracks of the grid are lengths in pixels, one for each column it fits.
   const columns = style
     .getPropertyValue("grid-template-columns")
     .split(" ")
     .filter((track) => track.endsWith("px")).length;
-  const card = grid.querySelector(CARD);
-  if (columns === 0 || card === null) return null;
-  const rowHeight = card.getBoundingClientRect().height;
+  const first = grid.querySelector(card);
+  if (columns === 0 || first === null) return null;
+  const rowHeight = first.getBoundingClientRect().height;
   if (!(rowHeight > 0)) return null;
   return {
     columns,

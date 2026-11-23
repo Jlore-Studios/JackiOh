@@ -1,15 +1,16 @@
-//! S #94 Tmack Trav (SPEC §8.10 row 94): (3) Unit, Human, Epic, 8/8 → 16/16, of the Stinkyscape
+//! S #94 Tmack Trav (SPEC §8.10 row 94): (3) Unit, Human, Epic, 7/7 → 14/14 (8/8 → 16/16 until issue #4154), of the Stinkyscape
 //! set. Not Tnack Trav, S #20 (ST9).
-//!   Base:    "Rush / After this destroys a Unit, it may attack again."
-//!   Radiant: "Rush, Pierce / After this destroys a Unit, it may attack again."
-//! Engine: Rush and Pierce (its hits ignore Armor, R346) are catalog keywords. `after_attack` (§4.2, R1869002): when it survived
-//! the combat and the Unit it attacked is in that combat's destroyed ids, `may_attack_again` (B5 E35, as
-//! C+ #73.1 Classic Golem's): a fresh exertion this turn, the rest of §4.2's restrictions still applying.
-//! Each kill grants one more attack, with no cap; a forced attack counts as a declared one does
-//! (R1849001's `afterAttack` fires for both). A hit on the hero, a target that lives, and a kill while
-//! defending (no `afterAttack` of its own) give nothing. The fresh exertion keeps its summoning sickness
-//! (`keepSick`, R2521002), unlike the Golem's: on its summon turn Rush lets it attack again a Unit only,
-//! the hero neither offered nor allowed (§6.1); on a later turn the extra attack may hit the hero.
+//!   Base:    "Rush, Frenzy"
+//!   Radiant: "Rush, Pierce, Frenzy"
+//!   Through v0.5.13g: "Rush / After this destroys a Unit, it may attack again" (Radiant: "Rush,
+//!   Pierce" and the same), `tmack`'s `after_attack` (`script_v0_5_13g`, kept, R767000).
+//! Engine: Rush, Pierce (its hits ignore Armor, R346) and Frenzy (S01, R3551004: "after this kills a
+//! Unit it may attack again", B5 E35) are catalog keywords: after killing a Unit it may attack again,
+//! a fresh exertion this turn, the rest of §4.2's restrictions still applying. Each kill grants one
+//! more attack, with no cap; a forced attack counts as a declared one does. A hit on the hero, a
+//! target that lives, and a kill while defending give nothing. The fresh exertion keeps its summoning
+//! sickness (`keepSick`, R2521002): on its summon turn Rush lets it attack again a Unit only, the hero
+//! neither offered nor allowed (§6.1); on a later turn the extra attack may hit the hero.
 //! Through v0.5.11 the kill lifted its sickness, which `script_v0_5_11` keeps (R767000).
 
 use jackioh_engine::prelude::*;
@@ -47,8 +48,18 @@ fn tmack(keep_sick: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
+    let base = Script::default();
+    // No script at all: the Radiant face's Pierce and both faces' Rush and Frenzy are catalog data.
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
+
+/// R767000: through v0.5.13g the kill ran `tmack`'s `after_attack`; `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_5_13g() -> CardScripts {
     let base = tmack(true);
-    // The Radiant face adds Pierce, catalog data.
     CardScripts {
         radiant: base.clone(),
         base,
@@ -67,6 +78,52 @@ pub fn script_v0_5_11() -> CardScripts {
 
 // S #94 Tmack Trav — SPEC §8.10 row 94, BUILD M12 row S 94.
 #[cfg(test)]
+mod frenzy_r3551004 {
+    use super::*;
+
+    #[test]
+    fn r3551004_frenzy_on_both_faces() {
+        crate::register_all();
+        let def = crate::card_def(ID);
+        assert_eq!(
+            crate::js(&def.base.keywords),
+            json!([{ "kind": "Rush" }, { "kind": "Frenzy" }]),
+        );
+        assert_eq!(def.base.text, "Rush, Frenzy");
+        assert_eq!(
+            crate::js(&def.radiant.keywords),
+            json!([{ "kind": "Rush" }, { "kind": "Pierce" }, { "kind": "Frenzy" }]),
+        );
+        assert_eq!(def.radiant.text, "Rush, Pierce, Frenzy");
+        // No script at all: Frenzy is the catalog's keyword now.
+        for face in [&script().base, &script().radiant] {
+            assert!(face.activations.is_empty());
+        }
+    }
+
+    #[test]
+    fn r3551004_kept_script_still_attacks_again() {
+        use jackioh_engine::testkit::PlayerId::{P1, P2};
+        use jackioh_engine::testkit::*;
+        // Big D-fender dies to Tmack's 8 and strikes back for nothing; Stockpile keeps a turn from ending.
+        const GRUNT: &str = "core-001";
+        const FILLER: &str = "core-005";
+        crate::under_kept(ID, script_v0_5_13g(), || {
+            let mut s = crate::scenario(json!({
+                "p1": { "hand": [FILLER], "field": [ID], "library": crate::filler(4) },
+                "p2": { "hand": [FILLER], "field": [GRUNT, GRUNT], "library": crate::filler(4) },
+            }));
+            let tmack = s.unit_at(P1, 1);
+            s.attack(&tmack, s.unit_at(P2, 1));
+            assert!(s.unit(P2, 1).is_none(), "the first Big D-fender died");
+            // The kept `after_attack` re-exerts it (B5 E35): it may attack again.
+            s.attack(&tmack, s.unit_at(P2, 2));
+            assert!(s.unit(P2, 2).is_none(), "the second Big D-fender died");
+        });
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
@@ -75,7 +132,7 @@ mod tests {
 
     const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
     const VANILLA: &str = "core-008"; // Mr. Vanilla
-    const GRUNT: &str = "core-001"; // Big D-fender: Big D-fender: dies to Tmack's 8, and strikes back for nothing
+    const GRUNT: &str = "core-001"; // Big D-fender: Big D-fender: dies to Tmack's 7, and strikes back for nothing
     const MOTHS: &str = "core-009"; // Moths to the Flame: at its controller's start of turn every enemy Unit attacks it.
 
     fn fauci() -> Value {
@@ -139,15 +196,15 @@ mod tests {
             s.attack(&tmack, s.unit_at(P2, 1));
             assert!(s.unit(P2, 1).is_none(), "the Vanilla died");
             s.attack(&tmack, "hero");
-            s.expect_health(P2, HERO_HEALTH - 8);
+            s.expect_health(P2, HERO_HEALTH - 7);
             s.expect_refused(|s| s.attack(&tmack, "hero"));
         }
 
         #[test]
-        fn is_8_8_with_rush() {
+        fn is_7_7_with_rush() {
             let mut s = board(false, json!([]));
             let tmack = s.unit_at(P1, 1);
-            s.expect_stats(&tmack, json!({ "attack": 8, "health": 8 }));
+            s.expect_stats(&tmack, json!({ "attack": 7, "health": 7 }));
         }
 
         #[test]
@@ -180,7 +237,7 @@ mod tests {
             assert!(s.unit(P2, 2).is_none(), "the second Big D-fender died");
             assert!(offers(&s, &tmack, "hero-p2"));
             s.attack(&tmack, "hero");
-            s.expect_health(P2, HERO_HEALTH - 8);
+            s.expect_health(P2, HERO_HEALTH - 7);
         }
 
         /// R767000: the script kept for the replays of v0.5.11 and before, whose kill lifted the sickness.
@@ -193,7 +250,7 @@ mod tests {
                 s.attack(&tmack, s.unit_at(P2, 1));
                 assert!(offers(&s, &tmack, "hero-p2"));
                 s.attack(&tmack, "hero");
-                s.expect_health(P2, HERO_HEALTH - 8);
+                s.expect_health(P2, HERO_HEALTH - 7);
             });
         }
 
@@ -203,7 +260,7 @@ mod tests {
             let tmack = s.unit_at(P1, 1);
             let fauci = s.unit_at(P2, 1);
             s.attack(&tmack, &fauci);
-            s.expect_stats(&fauci, json!({ "health": 4 }));
+            s.expect_stats(&fauci, json!({ "health": 5 }));
             s.expect_refused(|s| s.attack(&tmack, "hero"));
         }
 
@@ -244,8 +301,8 @@ mod tests {
             s.attack(&tmack, s.unit_at(P2, 1));
             s.attack(&tmack, s.unit_at(P2, 2));
             s.attack(&tmack, "hero");
-            s.expect_health(P2, HERO_HEALTH - 8);
-            s.expect_stats(&tmack, json!({ "health": 8 }));
+            s.expect_health(P2, HERO_HEALTH - 7);
+            s.expect_stats(&tmack, json!({ "health": 7 }));
             s.expect_refused(|s| s.attack(&tmack, "hero"));
         }
     }
@@ -254,15 +311,15 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_16_16_with_pierce() {
+        fn is_14_14_with_pierce() {
             let mut s = board(true, json!([VANILLA]));
             let tmack = s.unit_at(P1, 1);
-            s.expect_stats(&tmack, json!({ "attack": 16, "health": 16 }));
+            s.expect_stats(&tmack, json!({ "attack": 14, "health": 14 }));
             let keywords = s.stats(&tmack).keywords;
             assert!(has_keyword(&keywords, KeywordKind::Rush) && has_keyword(&keywords, KeywordKind::Pierce));
             s.attack(&tmack, s.unit_at(P2, 1));
             s.attack(&tmack, "hero");
-            s.expect_health(P2, HERO_HEALTH - 16);
+            s.expect_health(P2, HERO_HEALTH - 14);
         }
 
         #[test]

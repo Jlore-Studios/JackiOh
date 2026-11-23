@@ -6,12 +6,19 @@
 //! Every entry is built when it resolves (`lazy_part`), as Core's are: a recursion changes what each
 //! later entry reads (R87), and a pause parks the rest (R113). Entry 9 is the engine's own rest-of-game
 //! effect (R458, R1241), stepped by `eternal_step`, so the table never leans on a card file.
+//!
+//! Issue #4154 cut entry 4's Armor and heal 5 → 4 (R4154305). The table it had through v0.6.6h,
+//! `CHAOS_MED_EFFECTS_V0_6_6H`, is the one the card's kept script rolls for those replays (R767000).
+//! Issue #4285 priced entries 1 to 3's cards (1), from (0), and cut entry 4 to 3 and 3 (R4285005); the
+//! table through v0.6.7k is `CHAOS_MED_EFFECTS_V0_6_7K`.
 
 use serde_json::{Value, json};
 
 use crate::config::{
     CALL_TO_CHAOS_ETERNAL_CAP, CHAOS_MED_ACCLAIMED, CHAOS_MED_CN_CARDS, CHAOS_MED_COST,
-    CHAOS_MED_FUSE_COPIES, CHAOS_MED_HEAL, CHAOS_MED_HERO_ARMOR, CHAOS_MED_NERFS, CHAOS_MED_PRIME_CARDS,
+    CHAOS_MED_COST_V0_6_7K, CHAOS_MED_FUSE_COPIES, CHAOS_MED_HEAL, CHAOS_MED_HEAL_V0_6_6H,
+    CHAOS_MED_HEAL_V0_6_7K, CHAOS_MED_HERO_ARMOR, CHAOS_MED_HERO_ARMOR_V0_6_6H, CHAOS_MED_HERO_ARMOR_V0_6_7K,
+    CHAOS_MED_NERFS, CHAOS_MED_PRIME_CARDS,
 };
 use crate::effects::add_to_hand::AddToHandArgs;
 use crate::effects::delay::ForRestOfGameArgs;
@@ -22,7 +29,7 @@ use crate::script::{Effect, EffectContext, EffectPart, Hook, hook};
 use crate::state::{GameState, ModifierKind, find_instance, find_instance_mut};
 use crate::subsystems::call_to_chaos::{ChaosEffectDef, cast_random_call_to_chaos};
 use crate::subsystems::fuse::{FuseArgs, HandPrice};
-use crate::wire::{KeywordKind, PlayerId, SetName, ZoneName};
+use crate::wire::{PlayerId, SetName, ZoneName};
 
 /// §7: the tokens this edition summons, by their indices in the Meditative set (B2.2).
 const TOKEN_SET: SetName = SetName::Meditative;
@@ -63,14 +70,15 @@ fn entry(
     })
 }
 
-/// Entries 2 and 3: independent picks of a pool (R60), each a fresh (0) hand card; a full hand burns (§2.4).
-fn add_free(name: &'static str, pool: Value, count: i32) -> Effect {
+/// Entries 2 and 3: independent picks of a pool (R60), each a fresh hand card at `cost` ((1) since R4285005,
+/// (0) through v0.6.7k); a full hand burns (§2.4).
+fn add_priced(name: &'static str, pool: Value, count: i32, cost: i32) -> Effect {
     entry(name, move |_ctx| {
         vec![crate::effects::add_to_hand::add_random_from_catalog(json_as(
             json!({
                 "query": pool,
                 "count": count,
-                "costOverride": CHAOS_MED_COST,
+                "costOverride": cost,
             }),
         ))]
     })
@@ -109,17 +117,17 @@ pub fn eternal_step() -> Hook {
 }
 
 /// 1. R1242, R3135001: every non-Immutable card in your hand (R23), in hand order, fused into one fresh hand
-///    card (R77, R102, R469) plus `CHAOS_MED_FUSE_COPIES` copy (R57's riders), both costing (0); a lone card
-///    is not fused but takes the (0) and the copy. Its `fused` event is hidden as the hand is (R470).
-fn build_fuse() -> Effect {
-    entry("fuse", |_ctx| {
-        vec![Effect::new("callToChaosMeditative:fuseHand", |ctx| {
+///    card (R77, R102, R469) plus `CHAOS_MED_FUSE_COPIES` copy (R57's riders), both costing `cost`; a lone
+///    card is not fused but takes the price and the copy. Its `fused` event is hidden as the hand is (R470).
+fn fuse_entry(cost: i32) -> Effect {
+    entry("fuse", move |_ctx| {
+        vec![Effect::new("callToChaosMeditative:fuseHand", move |ctx| {
             let controller = ctx.controller;
             let state: &GameState = ctx.state;
             let fusable: Vec<_> = state.players[controller]
                 .hand
                 .iter()
-                .filter(|card| !crate::layers::unit_has(state, card, KeywordKind::Immutable))
+                .filter(|card| !crate::layers::is_immutable(state, card))
                 .cloned()
                 .collect();
             let kept_id = match fusable.len() {
@@ -148,12 +156,12 @@ fn build_fuse() -> Effect {
                 return;
             }
             if let Some(live) = find_instance_mut(ctx.state, &kept_id) {
-                live.cost_override = Some(CHAOS_MED_COST);
+                live.cost_override = Some(cost);
             }
             for _ in 0..CHAOS_MED_FUSE_COPIES {
                 let copy = crate::effects::add_to_hand::add_to_hand(AddToHandArgs {
                     copy_of: Some(kept_id.clone()),
-                    cost_override: Some(CHAOS_MED_COST),
+                    cost_override: Some(cost),
                     ..AddToHandArgs::default()
                 });
                 (copy.apply)(ctx);
@@ -162,28 +170,82 @@ fn build_fuse() -> Effect {
     })
 }
 
-/// 2. Non-token CN cards of every set that ships (R380, R1420).
-fn build_cn() -> Effect {
-    add_free("cn", json!({ "tags": ["CN"] }), CHAOS_MED_CN_CARDS)
+/// 1. Both cards at (1) since R4285005.
+fn build_fuse() -> Effect {
+    fuse_entry(CHAOS_MED_COST)
 }
 
-/// 3. The Prime pool, which holds the Prime tokens (R1421).
+/// R4285005, R767000: entry 1 through v0.6.7k, both cards at (0).
+fn build_fuse_v0_6_7k() -> Effect {
+    fuse_entry(CHAOS_MED_COST_V0_6_7K)
+}
+
+/// 2. Non-token CN cards of every set that ships (R380, R1420), at (1) since R4285005.
+fn build_cn() -> Effect {
+    add_priced(
+        "cn",
+        json!({ "tags": ["CN"] }),
+        CHAOS_MED_CN_CARDS,
+        CHAOS_MED_COST,
+    )
+}
+
+/// R4285005, R767000: entry 2 through v0.6.7k, at (0).
+fn build_cn_v0_6_7k() -> Effect {
+    add_priced(
+        "cn",
+        json!({ "tags": ["CN"] }),
+        CHAOS_MED_CN_CARDS,
+        CHAOS_MED_COST_V0_6_7K,
+    )
+}
+
+/// 3. The Prime pool, which holds the Prime tokens (R1421), at (1) since R4285005.
 fn build_prime() -> Effect {
-    add_free("prime", json!({ "tags": ["Prime"] }), CHAOS_MED_PRIME_CARDS)
+    add_priced(
+        "prime",
+        json!({ "tags": ["Prime"] }),
+        CHAOS_MED_PRIME_CARDS,
+        CHAOS_MED_COST,
+    )
+}
+
+/// R4285005, R767000: entry 3 through v0.6.7k, at (0).
+fn build_prime_v0_6_7k() -> Effect {
+    add_priced(
+        "prime",
+        json!({ "tags": ["Prime"] }),
+        CHAOS_MED_PRIME_CARDS,
+        CHAOS_MED_COST_V0_6_7K,
+    )
 }
 
 /// 4. §6.1's Armor kept for the rest of the game (C+ #46's, R124), then an uncapped hero heal (§6.3), both
-///    5 since R3135001.
-fn build_armor() -> Effect {
-    entry("armor", |_ctx| {
+///    3 since R4285005 (4 from R4154305 through v0.6.7k, 5 from R3135001 through v0.6.6h).
+fn armor_entry(armor: i32, heal: i32) -> Effect {
+    entry("armor", move |_ctx| {
         vec![
-            crate::effects::perks::gain_hero_armor(json_as(json!({ "amount": CHAOS_MED_HERO_ARMOR }))),
+            crate::effects::perks::gain_hero_armor(json_as(json!({ "amount": armor }))),
             crate::effects::heal(json_as(json!({
                 "target": { "of": "selfHero" },
-                "amount": CHAOS_MED_HEAL
+                "amount": heal
             }))),
         ]
     })
+}
+
+fn build_armor() -> Effect {
+    armor_entry(CHAOS_MED_HERO_ARMOR, CHAOS_MED_HEAL)
+}
+
+/// R4285005, R767000: entry 4 through v0.6.7k, 4 Armor and a heal of 4.
+fn build_armor_v0_6_7k() -> Effect {
+    armor_entry(CHAOS_MED_HERO_ARMOR_V0_6_7K, CHAOS_MED_HEAL_V0_6_7K)
+}
+
+/// R4154305, R767000: entry 4 through v0.6.6h, 5 Armor and a heal of 5.
+fn build_armor_v0_6_6h() -> Effect {
+    armor_entry(CHAOS_MED_HERO_ARMOR_V0_6_6H, CHAOS_MED_HEAL_V0_6_6H)
 }
 
 /// 5. The Jade Beauty token's base face (Meditative #39.5); the Jade Counter is not touched.
@@ -261,27 +323,141 @@ fn build_eternal() -> Effect {
 }
 
 /// §8.8 row 95's ten entries in printed order, each `label` the printed clause (R432's cost words,
-/// R373's "deck") that `chaosRolled` names to both players (R436).
+/// R373's "deck") that `chaosRolled` names to both players (R436). Issue #4154 cut entry 4 (R4154305); issue #4285
+/// priced entries 1 to 3's cards (1) and cut entry 4 again (R4285005).
 pub const CHAOS_MED_EFFECTS: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "fuse",
-        label: "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0)",
+        label: "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (1)",
         build: build_fuse,
     },
     ChaosEffectDef {
         name: "cn",
-        label: "Add 2 random CN cards to your hand, which cost (0)",
+        label: "Add 2 random CN cards to your hand, which cost (1)",
         build: build_cn,
     },
     ChaosEffectDef {
         name: "prime",
-        label: "Add 2 random Prime cards to your hand, which cost (0)",
+        label: "Add 2 random Prime cards to your hand, which cost (1)",
         build: build_prime,
     },
     ChaosEffectDef {
         name: "armor",
-        label: "Your hero gains 5 Armor and you heal it 5",
+        label: "Your hero gains 3 Armor and you heal it 3",
         build: build_armor,
+    },
+    ChaosEffectDef {
+        name: "jade",
+        label: "Summon a Jade Beauty",
+        build: build_jade,
+    },
+    ChaosEffectDef {
+        name: "acclaimed",
+        label: "Summon 2 random Acclaimed cards",
+        build: build_acclaimed,
+    },
+    ChaosEffectDef {
+        name: "bounce",
+        label: "Bounce every enemy permanent, then Nerf each card bounced",
+        build: build_bounce,
+    },
+    ChaosEffectDef {
+        name: "golem",
+        label: "Summon a CN Golem",
+        build: build_golem,
+    },
+    ChaosEffectDef {
+        name: "eternal",
+        label: "For the rest of the game, at the start of each of your turns, cast a random Call to Chaos",
+        build: build_eternal,
+    },
+    // 10. Core's recursion, the chain counting casts of every edition (R28, R87, R1240).
+    ChaosEffectDef {
+        name: "recast",
+        label: "Cast a random Call to Chaos",
+        build: cast_random_call_to_chaos,
+    },
+];
+
+/// R4285005, R767000: §8.8 row 95's ten entries as they were through v0.6.7k, before issue #4285 priced entries
+/// 1 to 3's cards (1) and cut entry 4 to 3 and 3: the card's kept script (`script_v0_6_7k`) rolls it for those
+/// replays.
+pub const CHAOS_MED_EFFECTS_V0_6_7K: &[ChaosEffectDef] = &[
+    ChaosEffectDef {
+        name: "fuse",
+        label: "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0)",
+        build: build_fuse_v0_6_7k,
+    },
+    ChaosEffectDef {
+        name: "cn",
+        label: "Add 2 random CN cards to your hand, which cost (0)",
+        build: build_cn_v0_6_7k,
+    },
+    ChaosEffectDef {
+        name: "prime",
+        label: "Add 2 random Prime cards to your hand, which cost (0)",
+        build: build_prime_v0_6_7k,
+    },
+    ChaosEffectDef {
+        name: "armor",
+        label: "Your hero gains 4 Armor and you heal it 4",
+        build: build_armor_v0_6_7k,
+    },
+    ChaosEffectDef {
+        name: "jade",
+        label: "Summon a Jade Beauty",
+        build: build_jade,
+    },
+    ChaosEffectDef {
+        name: "acclaimed",
+        label: "Summon 2 random Acclaimed cards",
+        build: build_acclaimed,
+    },
+    ChaosEffectDef {
+        name: "bounce",
+        label: "Bounce every enemy permanent, then Nerf each card bounced",
+        build: build_bounce,
+    },
+    ChaosEffectDef {
+        name: "golem",
+        label: "Summon a CN Golem",
+        build: build_golem,
+    },
+    ChaosEffectDef {
+        name: "eternal",
+        label: "For the rest of the game, at the start of each of your turns, cast a random Call to Chaos",
+        build: build_eternal,
+    },
+    // 10. Core's recursion, the chain counting casts of every edition (R28, R87, R1240).
+    ChaosEffectDef {
+        name: "recast",
+        label: "Cast a random Call to Chaos",
+        build: cast_random_call_to_chaos,
+    },
+];
+
+/// R4154305, R767000: §8.8 row 95's ten entries as they were through v0.6.6h, before issue #4154 cut entry 4's
+/// Armor and heal: the card's kept script (`script_v0_6_6h`) rolls it for those replays.
+pub const CHAOS_MED_EFFECTS_V0_6_6H: &[ChaosEffectDef] = &[
+    ChaosEffectDef {
+        name: "fuse",
+        label: "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0)",
+        build: build_fuse_v0_6_7k,
+    },
+    ChaosEffectDef {
+        name: "cn",
+        label: "Add 2 random CN cards to your hand, which cost (0)",
+        build: build_cn_v0_6_7k,
+    },
+    ChaosEffectDef {
+        name: "prime",
+        label: "Add 2 random Prime cards to your hand, which cost (0)",
+        build: build_prime_v0_6_7k,
+    },
+    ChaosEffectDef {
+        name: "armor",
+        label: "Your hero gains 5 Armor and you heal it 5",
+        build: build_armor_v0_6_6h,
     },
     ChaosEffectDef {
         name: "jade",

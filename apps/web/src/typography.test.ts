@@ -100,16 +100,79 @@ function parseSheet(css: string): Sheet {
   return sheet;
 }
 
+/**
+ * Whitespace collapsed to one space; the operator and bracket shapes are tightened below (#4009:
+ * the adjacent quantifiers rescan from every position).
+ */
+function collapseSpaces(value: string): string {
+  let out = "";
+  let i = 0;
+  while (i < value.length) {
+    const char = value.charAt(i);
+    if (/\s/.test(char)) {
+      out += " ";
+      while (i < value.length && /\s/.test(value.charAt(i))) i++;
+    } else {
+      out += char;
+      i++;
+    }
+  }
+  return out;
+}
+
+/**
+ * Whitespace touching any of `chars` dropped, as the `\s*([>,+~=])\s*` to `"$1"` rewrite does
+ * (#4009).
+ */
+function tightenAround(value: string, chars: string): string {
+  let out = "";
+  let i = 0;
+  while (i < value.length) {
+    const char = value.charAt(i);
+    if (/\s/.test(char)) {
+      let end = i;
+      while (end < value.length && /\s/.test(value.charAt(end))) end++;
+      const left = i > 0 && chars.includes(value.charAt(i - 1));
+      const right = end < value.length && chars.includes(value.charAt(end));
+      if (!left && !right) out += value.slice(i, end);
+      i = end;
+    } else {
+      out += char;
+      i++;
+    }
+  }
+  return out;
+}
+
+/**
+ * Whitespace directly before any of `chars` dropped, as `/\s+\)/g` with `")"` does (#4009).
+ */
+function dropWsBefore(value: string, chars: string): string {
+  let out = "";
+  let i = 0;
+  while (i < value.length) {
+    const char = value.charAt(i);
+    if (/\s/.test(char)) {
+      let end = i;
+      while (end < value.length && /\s/.test(value.charAt(end))) end++;
+      if (end >= value.length || !chars.includes(value.charAt(end))) out += value.slice(i, end);
+      i = end;
+    } else {
+      out += char;
+      i++;
+    }
+  }
+  return out;
+}
+
 function normSelector(selector: string): string {
-  return selector
-    .replace(/['"]/g, "")
-    .replace(/\s+/g, " ")
-    .replace(/\s*([>,+~=])\s*/g, "$1")
-    .replace(/\(\s+/g, "(")
-    .replace(/\s+\)/g, ")")
-    .replace(/\[\s+/g, "[")
-    .replace(/\s+\]/g, "]")
-    .trim();
+  return dropWsBefore(
+    dropWsBefore(
+      tightenAround(collapseSpaces(selector.replace(/['"]/g, "")), ">,+~=").replace(/\(\s+/g, "(").replace(/\[\s+/g, "["),
+      ")",
+    ),
+    "]",
+  ).trim();
 }
 
 function sheet(path: string): Sheet {
@@ -142,7 +205,8 @@ const TABULAR: Readonly<Record<string, readonly string[]>> = {
   "packs/packs.css": [".packs-held"],
   "economy/economy.css": [".fill-bar__caption"],
   "economy/xp.css": [".xp-reveal__level", ".xp-reveal__quest-pay"],
-  "collection/collection.css": [".tavern.app-shell .collection-set__toggle", ".tavern.app-shell .collection-list"],
+  "collection/collection.css": [".tavern.app-shell .collection-list"],
+  "collection/browse.css": [".collection-screen .collection-count", ".collection-screen .collection-set", ".collection-screen .collection-deck-tile__count"],
   "routes/leaderboard.css": [".tavern.app-shell.leaderboard-screen ol", ".tavern.app-shell.leaderboard-screen ul"],
   "routes/stats.css": [".stats-table", ".stats-grid-figures dd", ".stats-pager-page"],
 };

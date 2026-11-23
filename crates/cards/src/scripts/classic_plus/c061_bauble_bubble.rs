@@ -175,6 +175,8 @@ mod tests {
         #[test]
         fn s6_2_a_bounce_adds_nothing_a_radiant_silly_silas_rotates_it_across_so_it_bounces_home() {
             let mut s = bubble(false, json!([{ "def": SILAS, "radiant": true }, FILLER]), Some(5), json!([]));
+            // Silas costs (6) since issue #4353, past the 4 mana a turn gives.
+            s.state_mut().players.p1.mana.current = 10;
             s.play(SILAS, json!({ "modes": ["right"] }));
             s.expect_in_zone(BAUBLE, "hand");
             let bauble = s.card(BAUBLE).id.clone();
@@ -215,18 +217,7 @@ mod tests {
         #[test]
         fn r428_carnivorous_cube_cant_eat_it_units_only() {
             let mut s = bubble(false, json!([CUBE, FILLER]), None, json!([VANILLA]));
-            let cube = s.card(CUBE).id.clone();
-            let ids: Vec<String> = legal_actions(s.state(), PlayerId::P1)
-                .into_iter()
-                .flat_map(|action| match action {
-                    ActionBody::Play { instance_id, targets, .. } if instance_id == cube => targets.unwrap_or_default(),
-                    _ => Vec::new(),
-                })
-                .filter_map(|pick| match pick {
-                    Selection::Instance { instance_id } => Some(instance_id),
-                    _ => None,
-                })
-                .collect();
+            let ids = pick::instance_ids(&s.play_targets(CUBE));
             let own = s.unit(PlayerId::P1, 1).map(|card| card.id).unwrap_or_default();
             assert!(ids.contains(&own));
             let bauble = s.card(BAUBLE).id.clone();

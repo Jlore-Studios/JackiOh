@@ -252,8 +252,8 @@ describe("R3407000 IN33DH3, IN33DH3 Prime and the Wardrum Blob", () => {
   });
 
   it("R3407000 nothing draws with the effects off", () => {
-    for (const id of [IN33DH3, PRIME, BLOB]) expect(cuesOfRun(galleryRun(id, envOf(FX_INTENSITY_SCALE.off)).run), id).toEqual([]);
-    expect(cuesOfRun(planWithOffsets([death("p1", "in"), shuffled("p1")], fullBoardView(), envOf(FX_INTENSITY_SCALE.off)))).toEqual([]);
+    for (const id of [IN33DH3, PRIME, BLOB]) expect(cuesOfRun(galleryRun(id, envOf({ intensity: FX_INTENSITY_SCALE.off })).run), id).toEqual([]);
+    expect(cuesOfRun(planWithOffsets([death("p1", "in"), shuffled("p1")], fullBoardView(), envOf({ intensity: FX_INTENSITY_SCALE.off })))).toEqual([]);
   });
 
   it("R3407000 R200 each entrance and recipe beat starts inside its entry and is gone within FX_MAX_TAIL_MS at D 120, 200, 400, 732 and 1400", () => {

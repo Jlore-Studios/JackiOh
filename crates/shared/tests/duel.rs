@@ -6,12 +6,13 @@
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::PlayerId::{self, P1, P2};
 use jackioh_engine::{
-    Action, ActionBody, Aim, AimEnd, DECK_SIZE, EmoteId, GameOverReason, GameState, PerPlayer, Rng, Winner,
+    Action, ActionBody, Aim, AimEnd, DECK_SIZE, EmoteId, GameOverReason, GameState, PerPlayer, PlayerView,
+    Rng, Winner,
 };
 use jackioh_shared::bots::decide::BotChoice;
-use jackioh_shared::bots::signals::{idles_turn, rematch_plan};
+use jackioh_shared::bots::signals::{aim_lead_ms, idles_turn, rematch_plan};
 use jackioh_shared::config::{
-    AIM_RELAY_INTERVAL_MS, BOT_REMATCH_FIT, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT,
+    AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_REMATCH_FIT, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT,
     BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MATCH_SERVER_ACTION_RETRY_MS,
     MULLIGAN_CLOCK_SECONDS, PersonaName, STAKE_NORMAL, TURN_CLOCK_SECONDS,
 };
@@ -88,6 +89,8 @@ struct Table {
     timers: Vec<(TimerKey, u32, i64)>,
     log: Vec<(i64, Action)>,
     sent: PerPlayer<Vec<SeatMessage>>,
+    /// The views each `Pushed` carried, in order.
+    pushed: Vec<PerPlayer<Option<Box<PlayerView>>>>,
     persisted: Vec<MatchClocks>,
     answers: Vec<(String, ActionAnswer)>,
     records: Vec<RecordRequest>,
@@ -104,6 +107,8 @@ struct Table {
     presence_changes: usize,
     /// How many of the next appends the log refuses.
     failing_appends: usize,
+    /// While set, a row the host asks for is neither written nor answered: the test feeds its `Logged` itself.
+    holding_appends: bool,
 }
 
 impl Table {
@@ -121,6 +126,7 @@ impl Table {
             timers: Vec::new(),
             log: Vec::new(),
             sent: PerPlayer::new(Vec::new(), Vec::new()),
+            pushed: Vec::new(),
             persisted: Vec::new(),
             answers: Vec::new(),
             records: Vec::new(),
@@ -135,6 +141,7 @@ impl Table {
             voids: 0,
             presence_changes: 0,
             failing_appends: 0,
+            holding_appends: false,
         }
     }
 
@@ -161,6 +168,7 @@ impl Table {
                     P2 => self.sent.p2.push(message),
                 },
                 DuelOutput::PersistClocks { clocks } => self.persisted.push(clocks),
+                DuelOutput::Append { .. } if self.holding_appends => {}
                 DuelOutput::Append { seq, action, .. } => {
                     let outcome = if self.failing_appends > 0 {
                         self.failing_appends -= 1;
@@ -189,8 +197,8 @@ impl Table {
                 DuelOutput::Panicked { .. }
                 | DuelOutput::Applied { .. }
                 | DuelOutput::SeatsSwapped { .. }
-                | DuelOutput::Changed { .. }
-                | DuelOutput::Pushed { .. } => {}
+                | DuelOutput::Changed { .. } => {}
+                DuelOutput::Pushed { views, .. } => self.pushed.push(views),
             }
         }
     }
@@ -758,9 +766,12 @@ mod being_here {
         table.through_the_mulligans();
         table.act(P1, "gg", ActionBody::Concede);
         table.feed(DuelEvent::Left { home: P2 });
+        let told = table.sent.p1.len();
         table.feed(DuelEvent::Disconnected { home: P2 });
         assert_eq!(table.clocks_p2_grace(), None);
         assert!(table.timers.is_empty());
+        // Nor is the seat still here sent a clock for it.
+        assert_eq!(table.sent.p1.len(), told, "{:?}", &table.sent.p1[told..]);
     }
 
     #[test]
@@ -1133,6 +1144,32 @@ mod bots {
         assert_eq!(stale.log.len(), 1, "{:?}", stale.nonces());
     }
 
+    /// R1452: a fresh move the engine refuses falls back to `fallback_action` once, under its own nonce; a refused
+    /// move decided on a state since moved on falls back to nothing, and the bot is asked again.
+    #[test]
+    fn r1452_only_a_refused_fresh_move_falls_back() {
+        // The bot owes its mulligan, so the engine refuses its ending the turn.
+        let mut table = with_bot_at_p2(false);
+        let request = table.decides[0].clone();
+        decided(&mut table, &request, chose(Some(ActionBody::EndTurn)));
+        assert_eq!(table.log.len(), 1, "{:?}", table.nonces());
+        let (_, row) = &table.log[0];
+        assert_eq!(row.player_id, P2);
+        assert!(matches!(row.body, ActionBody::Mulligan { .. }), "{:?}", row.body);
+        assert!(row.nonce.ends_with("-r"), "{}", row.nonce);
+
+        let mut stale = with_bot_at_p2(false);
+        let request = stale.decides[0].clone();
+        let keep = stale.keep_hand(P1);
+        stale.act(P1, "p1", keep);
+        assert_ne!(stale.host.next_seq(), request.version, "PREMISE: stale");
+        assert_eq!(stale.host.game().turn, request.turn, "PREMISE: the same turn");
+        let asked = stale.decides.len();
+        decided(&mut stale, &request, chose(Some(ActionBody::EndTurn)));
+        assert_eq!(stale.log.len(), 1, "{:?}", stale.nonces());
+        assert_eq!(stale.decides.len(), asked + 1, "{:?}", stale.decides);
+    }
+
     #[test]
     fn r1452_a_move_the_log_would_not_take_is_decided_again_after_the_write_retry_pace() {
         let mut table = with_bot_at_p2(false);
@@ -1147,6 +1184,234 @@ mod bots {
         );
         table.sleep(BOT_WRITE_RETRY_MS);
         assert_eq!(table.decides.len(), 2);
+    }
+
+    /// A ranked match on `seed`, a bot that passes for a person (`hidden`) or not at the seat that moves first
+    /// (`bot_first`) or second, the person here at the other, and both through their mulligans: the bot's seat.
+    fn seated(seed: &str, hidden: bool, bot_first: bool) -> (Table, PlayerId) {
+        let game = opening("bot-1");
+        let mut probe = Table::new(setup(game.clone()));
+        probe.feed(DuelEvent::Arm);
+        probe.through_the_mulligans();
+        let first = probe.active();
+        let bot = if bot_first { first } else { first.opponent() };
+        let mut setup = setup(game);
+        setup.seed = seed.to_string();
+        setup.ranked = true;
+        setup.bots = match bot {
+            P1 => PerPlayer::new(Some(bot_seat(hidden)), None),
+            P2 => PerPlayer::new(None, Some(bot_seat(hidden))),
+        };
+        let mut table = Table::new(setup);
+        table.connect(bot.opponent());
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        assert_eq!(table.active(), first);
+        (table, bot)
+    }
+
+    /// R639000, R36: a bot's request says whether it opens the bot's own turn: not for its mulligan, nor for the
+    /// answer a person's draw offer asks of it on the person's turn.
+    #[test]
+    fn r639000_a_request_opens_the_bots_own_turn_only_on_that_turn() {
+        let (mut table, bot) = seated("seed-own-turn", false, false);
+        let person = bot.opponent();
+        let mulligan = table.decides[0].clone();
+        assert_eq!(mulligan.home, bot);
+        assert!(mulligan.first_in_turn && !mulligan.own_turn_start, "{mulligan:?}");
+        decided(&mut table, &mulligan, BotChoice::nothing(0));
+        assert_eq!(
+            table.decides.len(),
+            1,
+            "PREMISE: nothing owed on the person's turn"
+        );
+        assert!(
+            table.host.legal(person).contains(&ActionBody::OfferDraw),
+            "PREMISE: the person may offer a draw"
+        );
+        let answer = table.act(person, "offer", ActionBody::OfferDraw);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+        let request = table.decides.last().expect("the bot answers the offer").clone();
+        assert_eq!((request.home, request.turn), (bot, table.host.game().turn));
+        assert!(request.first_in_turn && !request.own_turn_start, "{request:?}");
+    }
+
+    /// R1452, R639000: a bot's move decided after the match ended plays nothing, whether it passes for a person
+    /// (it waits out no think time) or not.
+    #[test]
+    fn r1452_a_bots_move_decided_after_the_match_ended_plays_nothing_and_waits_for_nothing() {
+        for hidden in [false, true] {
+            let mut table = with_bot_at_p2(hidden);
+            let request = table.decides[0].clone();
+            let keep = table.keep_hand(P2);
+            let answer = table.act(P1, "gg", ActionBody::Concede);
+            assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+            assert!(table.host.is_finished());
+            let answers = table.answers.len();
+            decided(&mut table, &request, chose(Some(keep)));
+            assert_eq!(
+                table.answers.len(),
+                answers,
+                "hidden {hidden}: {:?}",
+                &table.answers[answers..]
+            );
+            assert_eq!(
+                table.timer(TimerKey::BotMove { player: P2 }),
+                None,
+                "hidden {hidden}"
+            );
+        }
+    }
+
+    /// R1452: a move decided on a state since moved on still goes in, as it was decided, while the turn is the one
+    /// it was decided in.
+    #[test]
+    fn r1452_a_move_decided_on_a_stale_state_still_goes_in_the_same_turn() {
+        let mut table = with_bot_at_p2(false);
+        let request = table.decides[0].clone();
+        let keep = table.keep_hand(P2);
+        let mine = table.keep_hand(P1);
+        table.act(P1, "p1", mine);
+        assert_ne!(table.host.next_seq(), request.version, "PREMISE: stale");
+        assert_eq!(table.host.game().turn, request.turn, "PREMISE: the same turn");
+        decided(&mut table, &request, chose(Some(keep.clone())));
+        assert_eq!(table.log.len(), 2, "{:?}", table.nonces());
+        let (_, row) = &table.log[1];
+        assert_eq!(row.player_id, P2);
+        assert_eq!(row.body, keep);
+        assert!(row.nonce.starts_with("srv-bot-"), "{}", row.nonce);
+    }
+
+    /// R738: a hidden bot's aim goes up its lead (`aim_lead_ms`) before the move; with no more than the lead left it
+    /// goes up at once; with less than the relay's interval left it does not go up at all.
+    #[test]
+    fn r738_a_bots_aim_goes_up_its_lead_before_the_move_at_once_or_not_at_all() {
+        let aim = Aim {
+            source: AimEnd::Hero { player: P2 },
+            target: Some(AimEnd::Hero { player: P1 }),
+        };
+        let aims_p1 = |table: &Table| -> Vec<Option<Aim>> {
+            table
+                .sent
+                .p1
+                .iter()
+                .filter_map(|message| match message {
+                    SeatMessage::Aim { aim, .. } => Some(*aim),
+                    _ => None,
+                })
+                .collect()
+        };
+        // The bot's mulligan, decided `took` ms after it was asked, with the aim.
+        let aimed_after = |took: i64| -> (Table, DecideRequest) {
+            let mut table = with_bot_at_p2(true);
+            let request = table.decides[0].clone();
+            let keep = table.keep_hand(P2);
+            table.sleep(took);
+            decided(
+                &mut table,
+                &request,
+                BotChoice {
+                    aim: Some(aim),
+                    ..chose(Some(keep))
+                },
+            );
+            (table, request)
+        };
+        let (table, request) = aimed_after(0);
+        let move_at = table
+            .timer(TimerKey::BotMove { player: P2 })
+            .expect("the move waits");
+        let think = move_at - table.now;
+        let lead = aim_lead_ms("seed-host", P2, request.version);
+        assert!(
+            think > lead && lead >= AIM_RELAY_INTERVAL_MS,
+            "PREMISE: {think} {lead}"
+        );
+        assert_eq!(table.timer(TimerKey::BotAim { player: P2 }), Some(move_at - lead));
+        assert!(aims_p1(&table).is_empty());
+
+        // The lead left and no more: the aim goes up at once.
+        let (table, _) = aimed_after(think - lead);
+        assert_eq!(table.timer(TimerKey::BotAim { player: P2 }), None);
+        assert_eq!(aims_p1(&table), vec![Some(aim)]);
+        assert_eq!(
+            table.timer(TimerKey::BotMove { player: P2 }),
+            Some(table.now + lead)
+        );
+
+        // Less than the relay's interval left: no aim, and the move goes when its time is out.
+        let short = AIM_RELAY_INTERVAL_MS / 2;
+        let (mut table, _) = aimed_after(think - short);
+        assert!(aims_p1(&table).is_empty());
+        assert_eq!(
+            table.timer(TimerKey::BotMove { player: P2 }),
+            Some(table.now + short)
+        );
+        table.sleep(short);
+        assert_eq!(table.log.len(), 1, "{:?}", table.nonces());
+        assert!(aims_p1(&table).is_empty());
+    }
+
+    /// R645: the change that leaves the person the active seat arms the bot's long-turn wait,
+    /// `AI_EMOTE.long_turn_ms` on; the bot's own turn takes it back, and so does the game ending on the person's
+    /// turn.
+    #[test]
+    fn r645_a_persons_turn_arms_the_bots_long_turn_wait_and_its_own_turn_or_the_end_takes_it_back() {
+        let (mut table, bot) = seated("seed-long-turn", true, false);
+        let person = bot.opponent();
+        let long_turn = TimerKey::BotLongTurn { player: bot };
+        assert_eq!(table.timer(long_turn), Some(table.now + AI_EMOTE.long_turn_ms));
+        table.act(person, "end-1", ActionBody::EndTurn);
+        assert_eq!(table.active(), bot, "PREMISE: the bot's turn");
+        assert_eq!(table.timer(long_turn), None);
+
+        let (mut table, bot) = seated("seed-long-turn", true, false);
+        let long_turn = TimerKey::BotLongTurn { player: bot };
+        assert!(table.timer(long_turn).is_some(), "PREMISE");
+        table.act(bot.opponent(), "gg", ActionBody::Concede);
+        assert!(table.host.is_finished(), "PREMISE");
+        assert_eq!(table.timer(long_turn), None);
+    }
+
+    /// R645: once the person's turn has run `AI_EMOTE.long_turn_ms` long, the bot's persona may emote, by its own
+    /// roll: on some host seed it does.
+    #[test]
+    fn r645_a_persons_long_turn_may_earn_an_emote_from_the_bot() {
+        let after_the_wait = |seed: &str| {
+            let (mut table, _) = seated(seed, true, false);
+            table.sleep(AI_EMOTE.long_turn_ms - 1);
+            let before = table.emotes.len();
+            table.sleep(1 + 3 * SECOND);
+            table.emotes.len() - before
+        };
+        assert!(
+            (0..100).any(|k| after_the_wait(&format!("seed-long-turn-{k}")) > 0),
+            "no seed's bot emoted on a long turn"
+        );
+    }
+
+    /// R645, R1452: a row the log writes after the stop arms no long-turn wait and asks no bot for a move.
+    #[test]
+    fn r645_a_row_written_after_the_stop_arms_no_wait_and_asks_no_bot() {
+        let (mut table, bot) = seated("seed-stopped-row", true, false);
+        let person = bot.opponent();
+        let mulligan = table.decides[0].clone();
+        decided(&mut table, &mulligan, BotChoice::nothing(0));
+        table.sleep(BOT_THINK_MAX_MS);
+        let asked = table.decides.len();
+        table.holding_appends = true;
+        table.feed(DuelEvent::Action {
+            by: ActionBy::Home { home: person },
+            nonce: "offer".to_string(),
+            body: ActionBody::OfferDraw,
+        });
+        table.feed(DuelEvent::Stop);
+        table.feed(DuelEvent::Logged {
+            outcome: LogOutcome::Written,
+        });
+        assert!(matches!(table.answer("offer"), ActionAnswer::Ack { .. }));
+        assert_eq!(table.timer(TimerKey::BotLongTurn { player: bot }), None);
+        assert_eq!(table.decides.len(), asked, "{:?}", &table.decides[asked..]);
     }
 
     /// A host seed whose bot at p2 plans a rematch `wanted` says it does, by R639000's fit.
@@ -1259,6 +1524,35 @@ mod bots {
         table.sleep(1);
         assert_eq!(table.presence_changes, 1);
         assert!(!table.host.presence(table.now).p2);
+    }
+
+    /// R3213000: a bot's reply landing inside its linger is no change in who is here, nor is one landing past it
+    /// after the host stopped.
+    #[test]
+    fn r3213000_a_reply_inside_the_linger_or_after_the_stop_changes_no_presence() {
+        let seed = seed_where(|plan| plan.accepts && plan.reply_ms < plan.linger_ms);
+        let plan = rematch_plan(&seed, P2, &BOT_REMATCH_FIT);
+        let mut table = conceded_to_the_bot(&seed);
+        table.feed(DuelEvent::RematchOffered {
+            from: P1,
+            stakes: STAKE_NORMAL,
+        });
+        table.sleep(plan.reply_ms);
+        assert_eq!(table.offers.last(), Some(&(P2, STAKE_NORMAL, true)));
+        table.feed(DuelEvent::RematchSent { home: P2 });
+        assert_eq!(table.presence_changes, 0);
+
+        let seed = seed_where(|plan| plan.accepts);
+        let plan = rematch_plan(&seed, P2, &BOT_REMATCH_FIT);
+        let mut table = conceded_to_the_bot(&seed);
+        table.feed(DuelEvent::RematchOffered {
+            from: P1,
+            stakes: STAKE_NORMAL,
+        });
+        table.sleep(plan.linger_ms.max(plan.reply_ms));
+        table.feed(DuelEvent::Stop);
+        table.feed(DuelEvent::RematchSent { home: P2 });
+        assert_eq!(table.presence_changes, 0);
     }
 
     #[test]
@@ -1583,5 +1877,896 @@ mod the_forecast {
             forecast.as_ref(),
             Some(&jackioh_engine::combat_forecast(table.host.game(), active))
         );
+    }
+}
+
+/// The host's reads and its guards once it is stopped (#3513, the shared crate's fifteenth shard).
+mod reads_and_stops {
+    use super::*;
+
+    /// Both seats here, the game begun.
+    fn playing(seed: &str) -> Table {
+        let mut table = Table::new(setup(opening(seed)));
+        table.connect(P1);
+        table.connect(P2);
+        table.feed(DuelEvent::Arm);
+        table
+    }
+
+    /// R268: the mulligan clock's timeouts, one for each seat still owing, run one after the other, each logged
+    /// before the next is reduced; a stop that lands between the two dispatches the second to no one.
+    #[test]
+    fn r268_a_stop_between_the_mulligan_timeouts_dispatches_no_more_of_them() {
+        let mut table = playing("stop-between-timeouts");
+        let expired = |table: &Table| {
+            table
+                .notes
+                .iter()
+                .filter(|note| matches!(note, HostNote::ClockExpired { .. }))
+                .count()
+        };
+        table.holding_appends = true;
+        table.sleep(mulligan_ms());
+        assert_eq!(
+            expired(&table),
+            1,
+            "PREMISE: the first seat's timeout awaits its row"
+        );
+        table.feed(DuelEvent::Stop);
+        table.feed(DuelEvent::Logged {
+            outcome: LogOutcome::Written,
+        });
+        assert!(table.host.is_stopped());
+        assert_eq!(expired(&table), 1, "{:?}", table.notes);
+    }
+
+    /// The host's reads for its own sends and its checkpoint: the match's id, the newest nonce in the log, and
+    /// whether the match is finished, voided or stopped.
+    #[test]
+    fn the_hosts_reads_name_its_match_its_newest_nonce_and_its_state() {
+        let mut table = playing("reads-1");
+        assert_eq!(table.host.match_id(), "match-1");
+        assert_eq!(table.host.last_nonce(), None);
+        assert!(!table.host.is_finished() && !table.host.is_voided() && !table.host.is_stopped());
+        table.through_the_mulligans();
+        assert_eq!(table.host.last_nonce(), Some("m-1"));
+    }
+
+    /// R738, §9.5: once the host has stopped, a seat leaving takes no arrow back from the other seat, and a dropped
+    /// socket tells the other seat of no grace.
+    #[test]
+    fn s9_5_a_seat_leaving_or_dropping_after_the_stop_tells_the_other_seat_nothing() {
+        let mut table = playing("stopped-1");
+        table.through_the_mulligans();
+        let me = table.active();
+        table.feed(DuelEvent::Aim {
+            home: me,
+            aim: Some(Aim {
+                source: AimEnd::Hero { player: me },
+                target: Some(AimEnd::Hero {
+                    player: me.opponent(),
+                }),
+            }),
+        });
+        table.feed(DuelEvent::Stop);
+        let told = (table.sent.p1.len(), table.sent.p2.len());
+        table.feed(DuelEvent::Left { home: me });
+        table.feed(DuelEvent::Left { home: me.opponent() });
+        table.feed(DuelEvent::Disconnected { home: me.opponent() });
+        assert_eq!((table.sent.p1.len(), table.sent.p2.len()), told);
+        // An aim inside the relay interval after the stop is not held for later either.
+        table.feed(DuelEvent::Aim {
+            home: me,
+            aim: Some(Aim {
+                source: AimEnd::Hero { player: me },
+                target: None,
+            }),
+        });
+        assert_eq!(table.timer(TimerKey::Aim { player: me }), None);
+    }
+
+    /// R738: an aim inside the relay interval waits for the interval to end after the last one relayed.
+    #[test]
+    fn r738_a_held_aim_is_due_an_interval_after_the_last_relayed() {
+        let mut table = playing("aim-held-1");
+        table.through_the_mulligans();
+        let me = table.active();
+        let aim = |target: Option<AimEnd>| DuelEvent::Aim {
+            home: me,
+            aim: Some(Aim {
+                source: AimEnd::Hero { player: me },
+                target,
+            }),
+        };
+        let relayed_at = table.now;
+        table.feed(aim(Some(AimEnd::Hero {
+            player: me.opponent(),
+        })));
+        table.sleep(10);
+        table.feed(aim(None));
+        assert_eq!(
+            table.timer(TimerKey::Aim { player: me }),
+            Some(relayed_at + AIM_RELAY_INTERVAL_MS)
+        );
+    }
+
+    /// R744: until the first attach the stored grace is what the host writes back, never a clock without it.
+    #[test]
+    fn r744_the_stored_grace_is_written_back_until_the_first_attach() {
+        let mut stored = initial_clocks(EPOCH);
+        stored.grace_deadline.p2 = Some(EPOCH + 10 * SECOND);
+        let mut rebuilt = setup(opening("here-6"));
+        rebuilt.clocks = stored;
+        let mut table = Table::new(rebuilt);
+        table.feed(DuelEvent::Arm);
+        assert!(
+            table
+                .persisted
+                .iter()
+                .all(|clocks| clocks.grace_deadline.p2 == Some(EPOCH + 10 * SECOND)),
+            "{:?}",
+            table.persisted
+        );
+    }
+
+    /// MD-D29, R1127: while an acting card of the other seat hears emotes (p2's Radiant Pareto Optimality), a
+    /// seat's emote is also an engine action, played and logged under a server nonce.
+    #[test]
+    fn r1127_an_emote_a_card_hears_is_played_and_logged() {
+        jackioh_cards::register_all();
+        let built = jackioh_engine::testkit::scenario(jackioh_engine::testkit::json!({
+            "seed": "r1127",
+            "active": "p1",
+            "p1": { "hand": ["core-008"], "library": ["core-008", "core-020"] },
+            "p2": { "field": [{ "def": "meditative-071", "radiant": true }], "library": ["core-008"] },
+        }));
+        let mut table = Table::new(setup(built.state().clone()));
+        table.feed(DuelEvent::Arm);
+        table.connect(P1);
+        table.connect(P2);
+        let emote = table
+            .host
+            .legal(P1)
+            .into_iter()
+            .find_map(|body| match body {
+                ActionBody::Emote { emote } => Some(emote),
+                _ => None,
+            })
+            .expect("PREMISE: p2's Radiant Pareto Optimality hears p1's emotes");
+        table.feed(DuelEvent::Emote { home: P1, emote });
+        assert!(
+            table
+                .log
+                .iter()
+                .any(|(_, action)| action.body == ActionBody::Emote { emote }),
+            "{:?}",
+            table.log
+        );
+    }
+
+    /// R265, R266: once the mulligan window closes, neither seat is told the other still owes one.
+    #[test]
+    fn r265_the_window_closing_tells_no_seat_the_other_owes() {
+        let mut table = playing("window-1");
+        let keep = table.keep_hand(P1);
+        table.act(P1, "m-0", keep);
+        let told = (table.sent.p1.len(), table.sent.p2.len());
+        let keep = table.keep_hand(P2);
+        table.act(P2, "m-1", keep);
+        let owes = |sent: &[SeatMessage]| {
+            sent.iter()
+                .any(|message| matches!(message, SeatMessage::PromptForOpponent { .. }))
+        };
+        assert!(!(owes(&table.sent.p1[told.0..]) && owes(&table.sent.p2[told.1..])));
+    }
+
+    /// R79, R268: a host made for a match already finished logs nothing when its clocks run out.
+    #[test]
+    fn r79_a_finished_matchs_clocks_running_out_log_nothing() {
+        let mut finished = setup(opening("finished-1"));
+        finished.finished = true;
+        let mut table = Table::new(finished);
+        table.sleep(MATCH_CEILING_MINUTES * MINUTE);
+        assert!(table.log.is_empty(), "{:?}", table.nonces());
+    }
+}
+
+/// R2739001: a seat's choice hover over a prompt open in the game (#3513, the shared crate's fifteenth and sixteenth
+/// shards).
+mod the_choice_hover {
+    use super::*;
+    use jackioh_engine::testkit::{json, scenario};
+
+    /// p1, to act, holds core-007, whose Discover asks it to pick one of the cards it offers (§10.6); the card is
+    /// played and its prompt is open.
+    fn asking() -> Table {
+        jackioh_cards::register_all();
+        let built = scenario(json!({
+            "seed": "r2739001",
+            "active": "p1",
+            "p1": { "hand": ["core-007"], "mana": 1, "library": ["core-008", "core-020"] },
+            "p2": { "library": ["core-008"] },
+        }));
+        let card = built.hand(P1)[0].id.clone();
+        let mut table = Table::new(setup(built.state().clone()));
+        table.feed(DuelEvent::Arm);
+        table.connect(P1);
+        table.connect(P2);
+        let play = table
+            .host
+            .legal(P1)
+            .into_iter()
+            .find(|body| matches!(body, ActionBody::Play { instance_id, .. } if *instance_id == card))
+            .expect("core-007 is playable");
+        let answer = table.act(P1, "play-007", play);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+        assert!(
+            table
+                .host
+                .game()
+                .pending
+                .as_ref()
+                .is_some_and(|pending| pending.player_id == P1),
+            "PREMISE: the Discover asks p1"
+        );
+        table
+    }
+
+    /// What p2 was told of p1's hover, in order.
+    fn hovers(sent: &[SeatMessage]) -> Vec<Option<i32>> {
+        sent.iter()
+            .filter_map(|message| match message {
+                SeatMessage::ChoiceHover { from: P1, index } => Some(*index),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// §10.6, R2739001: the prompt is pushed to the seat it asks; a hover over it reaches the other seat at once,
+    /// one inside the relay interval waits out the interval after the last relayed, and answering the prompt
+    /// clears the outline.
+    #[test]
+    fn r2739001_a_hover_is_relayed_held_out_its_interval_and_cleared_with_its_prompt() {
+        let mut table = asking();
+        assert!(
+            table
+                .sent
+                .p1
+                .iter()
+                .any(|message| matches!(message, SeatMessage::PromptForYou { player: P1, .. }))
+        );
+        let relayed_at = table.now;
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(0),
+        });
+        assert_eq!(hovers(&table.sent.p2), vec![Some(0)]);
+        table.sleep(10);
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(1),
+        });
+        assert_eq!(hovers(&table.sent.p2), vec![Some(0)]);
+        assert_eq!(
+            table.timer(TimerKey::Hover { player: P1 }),
+            Some(relayed_at + AIM_RELAY_INTERVAL_MS)
+        );
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        assert_eq!(hovers(&table.sent.p2), vec![Some(0), Some(1)]);
+        let answer = table
+            .host
+            .legal(P1)
+            .into_iter()
+            .find(|body| matches!(body, ActionBody::Answer { .. }))
+            .expect("the prompt has an answer");
+        table.act(P1, "answer-007", answer);
+        assert!(
+            table.host.game().pending.is_none(),
+            "PREMISE: the prompt is answered"
+        );
+        assert_eq!(hovers(&table.sent.p2), vec![Some(0), Some(1), None]);
+    }
+
+    /// R2739001: a hover over an index the prompt does not offer is dropped silently, though the prompt is open.
+    #[test]
+    fn r2739001_a_hover_past_the_prompts_options_is_dropped_silently() {
+        let mut table = asking();
+        let told = table.sent.p2.len();
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(99),
+        });
+        assert!(
+            hovers(&table.sent.p2[told..]).is_empty(),
+            "{:?}",
+            &table.sent.p2[told..]
+        );
+        assert_eq!(table.timer(TimerKey::Hover { player: P1 }), None);
+    }
+
+    /// R2739001: after the stop, a hover inside the relay interval is not held for later.
+    #[test]
+    fn r2739001_a_hover_after_the_stop_is_not_held() {
+        let mut table = asking();
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(0),
+        });
+        table.sleep(5);
+        table.feed(DuelEvent::Stop);
+        table.sleep(5);
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(1),
+        });
+        assert_eq!(table.timer(TimerKey::Hover { player: P1 }), None);
+    }
+}
+
+/// Scripted cards on the real catalog, as the server's tests install them (`crates/server/tests/support/engine.rs`):
+/// a Glitch forced to swap the seats (R677), one forced to void the game (R679), and a Field Spell whose turn's end
+/// panics (R1253000), each a 0-cost Quickdraw card so it starts in the opening hand, and fillers that do nothing.
+mod scripted {
+    use super::*;
+    use indexmap::IndexMap;
+    use jackioh_engine::game_over::end_game;
+    use jackioh_engine::prelude::json_as;
+    use jackioh_engine::script::Effect;
+    use jackioh_engine::testkit::{register_catalog, register_scripts};
+    use jackioh_engine::wire::{GameEvent, GlitchOutcome};
+    use jackioh_engine::{CardDef, CardScripts, Script, StaticFlags, hook};
+    use serde_json::json;
+
+    const SWAP: &str = "test-glitch-swap";
+    const VOID: &str = "test-glitch-void";
+    const PANICS_AT_TURN_END: &str = "test-panics-at-turn-end";
+    const FILLER: &str = "test-card-";
+    const FIRST_INDEX: i32 = 9001;
+
+    fn def(id: &str, index: i32, card_type: &str, text: &str) -> CardDef {
+        json_as(json!({
+            "id": id,
+            "index": index.to_string(),
+            "name": format!("{id} (duel tests)"),
+            "set": "Core",
+            "type": card_type,
+            "tags": [],
+            "rarity": "Common",
+            "token": false,
+            "cost": 0,
+            "base": { "keywords": [], "text": text },
+            "radiant": { "keywords": [], "text": text },
+        }))
+    }
+
+    fn quickdraw() -> Option<StaticFlags> {
+        Some(StaticFlags {
+            quickdraw: Some(true),
+            ..StaticFlags::default()
+        })
+    }
+
+    /// A Glitch forced to `outcome`: the public `glitched` event, then the outcome's write.
+    fn glitch(outcome: GlitchOutcome) -> Script {
+        Script {
+            static_flags: quickdraw(),
+            cry: Some(hook(move |_ctx| {
+                vec![Effect::new("test-glitch", move |ctx| {
+                    ctx.sink.events.push(GameEvent::Glitched {
+                        player: ctx.controller,
+                        outcome,
+                    });
+                    if outcome == GlitchOutcome::Void {
+                        end_game(&mut ctx.sink, Winner::Draw, GameOverReason::Voided);
+                    } else {
+                        ctx.sink.state.seat_swaps = Some(ctx.sink.state.seat_swaps.unwrap_or(0) + 1);
+                    }
+                })]
+            })),
+            ..Script::default()
+        }
+    }
+
+    fn install() {
+        jackioh_cards::register_all();
+        let mut defs = jackioh_cards::CATALOG.clone();
+        let mut scripts: IndexMap<String, CardScripts> = jackioh_cards::scripts_of();
+        let panics = Script {
+            static_flags: quickdraw(),
+            end_of_turn: Some(hook(|_ctx| {
+                panic!("test-panics-at-turn-end: the turn's end panicked")
+            })),
+            ..Script::default()
+        };
+        let mut cards = vec![
+            (
+                SWAP.to_string(),
+                "Spell",
+                "Quickdraw. Glitch: swap.",
+                glitch(GlitchOutcome::Swap),
+            ),
+            (
+                VOID.to_string(),
+                "Spell",
+                "Quickdraw. Glitch: void.",
+                glitch(GlitchOutcome::Void),
+            ),
+            (
+                PANICS_AT_TURN_END.to_string(),
+                "Field Spell",
+                "Quickdraw. End of turn: panics.",
+                panics,
+            ),
+        ];
+        for n in 0..DECK_SIZE {
+            cards.push((
+                format!("{FILLER}{n}"),
+                "Spell",
+                "Does nothing.",
+                Script::default(),
+            ));
+        }
+        for (index, (id, card_type, text, script)) in (FIRST_INDEX..).zip(cards) {
+            defs.insert(id.clone(), def(&id, index, card_type, text));
+            scripts.insert(
+                id,
+                CardScripts {
+                    base: script.clone(),
+                    radiant: script,
+                },
+            );
+        }
+        register_catalog(defs);
+        register_scripts(scripts);
+    }
+
+    /// A deck of fillers holding `card`.
+    fn deck(card: &str) -> Vec<String> {
+        let mut deck = vec![card.to_string()];
+        deck.extend((1..DECK_SIZE).map(|n| format!("{FILLER}{n}")));
+        deck
+    }
+
+    /// Both seats here, each holding `card`, and through their mulligans.
+    fn holding(seed: &str, card: &str) -> Table {
+        install();
+        let options = serde_json::from_value(json!({ "seed": seed, "decks": [deck(card), deck(card)] }))
+            .expect("create options");
+        let begun = jackioh_engine::begin_game(&jackioh_engine::create_game(&options));
+        assert!(begun.error.is_none(), "{:?}", begun.error);
+        let mut table = Table::new(setup(begun.state));
+        table.connect(P1);
+        table.connect(P2);
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        table
+    }
+
+    /// The seat on turn plays its `card`.
+    fn play(table: &mut Table, card: &str, nonce: &str) -> PlayerId {
+        let holder = table.active();
+        let body = {
+            let game = table.host.game();
+            table
+                .host
+                .legal(holder)
+                .into_iter()
+                .find(|body| {
+                    matches!(body, ActionBody::Play { instance_id, .. }
+                        if jackioh_engine::state::find_instance(game, instance_id)
+                            .is_some_and(|held| held.def_id == card))
+                })
+                .unwrap_or_else(|| panic!("{holder} cannot play {card}"))
+        };
+        let answer = table.act(holder, nonce, body);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+        holder
+    }
+
+    /// R677: a Glitch swap moves the grace of the account that is away to the seat it plays now, restarted there,
+    /// and leaves the seat the account that is here plays now without one.
+    #[test]
+    fn r677_a_swap_moves_the_away_accounts_grace_to_the_seat_it_plays_now() {
+        let mut table = holding("duel-swap", SWAP);
+        let holder = table.active();
+        let away = holder.opponent();
+        table.feed(DuelEvent::Left { home: away });
+        table.feed(DuelEvent::Disconnected { home: away });
+        assert!(table.host.clocks().grace_deadline[away].is_some());
+        table.sleep(SECOND);
+        play(&mut table, SWAP, "swap");
+        assert_eq!(
+            table.host.game().seat_swaps,
+            Some(1),
+            "PREMISE: the seats swapped"
+        );
+        let grace = table.host.clocks().grace_deadline;
+        assert_eq!(grace[holder], Some(table.now + grace_ms()), "{grace:?}");
+        assert_eq!(grace[away], None, "{grace:?}");
+    }
+
+    /// R679: a Glitch that voids the game ends the match voided, recording nothing.
+    #[test]
+    fn r679_a_voided_game_is_voided_and_records_nothing() {
+        let mut table = holding("duel-void", VOID);
+        play(&mut table, VOID, "void");
+        assert_eq!(table.voids, 1);
+        assert!(table.host.is_voided());
+        assert!(table.records.is_empty());
+    }
+
+    /// R1253000, R112: a clock action whose `reduce` panics (the turn clock's timeout running a turn's end that
+    /// panics) ends the match as a ceiling draw, and an aim still held for the relay is never sent after it (R738).
+    #[test]
+    fn r1253000_a_clock_action_that_panics_ends_the_match_as_a_ceiling_draw_and_relays_nothing_after() {
+        let mut table = holding("duel-panics", PANICS_AT_TURN_END);
+        let holder = play(&mut table, PANICS_AT_TURN_END, "field");
+        let due = table.timer(TimerKey::Turn).expect("the turn clock runs");
+        let aim = |target: Option<AimEnd>| {
+            Some(Aim {
+                source: AimEnd::Hero { player: holder },
+                target,
+            })
+        };
+        table.sleep(due - table.now - AIM_RELAY_INTERVAL_MS / 2);
+        table.feed(DuelEvent::Aim {
+            home: holder,
+            aim: aim(Some(AimEnd::Hero {
+                player: holder.opponent(),
+            })),
+        });
+        table.sleep(AIM_RELAY_INTERVAL_MS / 4);
+        table.feed(DuelEvent::Aim {
+            home: holder,
+            aim: aim(None),
+        });
+        let receiver = &table.sent[holder.opponent()];
+        let relayed = receiver
+            .iter()
+            .filter(|message| matches!(message, SeatMessage::Aim { .. }))
+            .count();
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        assert_eq!(table.ceiling_draws, 1);
+        assert!(table.host.is_finished());
+        let after = table.sent[holder.opponent()]
+            .iter()
+            .filter(|message| matches!(message, SeatMessage::Aim { .. }))
+            .count();
+        assert_eq!(after, relayed, "an aim was relayed after the draw");
+    }
+
+    /// p1, a person on turn, with core-007 (a Discover, §10.6) to play and, in its backrow, the Field Spell whose
+    /// turn's end panics, on host seed `seed`. p2 is a person here too, or, with `bot`, a bot that passes for a
+    /// person, so its persona watches p1's turn (R645).
+    fn a_panicking_turn(seed: &str, bot: bool) -> Table {
+        install();
+        let built = jackioh_engine::testkit::scenario(json!({
+            "seed": "duel-panics-turn",
+            "active": "p1",
+            "p1": {
+                "hand": ["core-007"],
+                "mana": 1,
+                "library": ["core-008", "core-020"],
+                "backrow": [{ "def": PANICS_AT_TURN_END, "faceUp": true }],
+            },
+            "p2": { "library": ["core-008"] },
+        }));
+        let mut setup = setup(built.state().clone());
+        setup.seed = seed.to_string();
+        if bot {
+            setup.bots = PerPlayer::new(
+                None,
+                Some(BotSeat {
+                    strength: 2,
+                    speed: 1.0,
+                    persona: PersonaName::Balanced,
+                    hidden: true,
+                }),
+            );
+        }
+        let mut table = Table::new(setup);
+        table.connect(P1);
+        if !bot {
+            table.connect(P2);
+        }
+        table.feed(DuelEvent::Arm);
+        table
+    }
+
+    /// p1 plays the Discover, whose prompt then asks p1.
+    fn play_the_discover(table: &mut Table) {
+        let play = table
+            .host
+            .legal(P1)
+            .into_iter()
+            .find(|body| matches!(body, ActionBody::Play { .. }))
+            .expect("core-007 is playable");
+        let answer = table.act(P1, "play-007", play);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+        assert!(
+            table
+                .host
+                .game()
+                .pending
+                .as_ref()
+                .is_some_and(|pending| pending.player_id == P1),
+            "PREMISE: the Discover asks p1"
+        );
+    }
+
+    /// What p2 was told of p1's choice hover, in order.
+    fn hovers(sent: &[SeatMessage]) -> Vec<Option<i32>> {
+        sent.iter()
+            .filter_map(|message| match message {
+                SeatMessage::ChoiceHover { from: P1, index } => Some(*index),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// R1253000, R2739001: the turn clock's timeout answers p1's open Discover and runs the turn's end, which
+    /// panics: the match ends as a ceiling draw, and the choice hover p1's seat held for the relay is never sent
+    /// after it, as no aim is (R738).
+    #[test]
+    fn r1253000_a_hover_held_for_the_relay_is_never_sent_after_the_ceiling_draw() {
+        let mut table = a_panicking_turn("duel-panics-hover", false);
+        let due = table.timer(TimerKey::Turn).expect("the turn clock runs");
+        play_the_discover(&mut table);
+        table.sleep(due - table.now - AIM_RELAY_INTERVAL_MS / 2);
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(0),
+        });
+        table.sleep(AIM_RELAY_INTERVAL_MS / 4);
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(1),
+        });
+        assert_eq!(hovers(&table.sent.p2), vec![Some(0)]);
+        assert!(
+            table
+                .timer(TimerKey::Hover { player: P1 })
+                .is_some_and(|at| at > due),
+            "PREMISE: the hover is held past the clock"
+        );
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        assert_eq!(table.ceiling_draws, 1);
+        assert!(table.host.is_finished());
+        assert_eq!(
+            hovers(&table.sent.p2),
+            vec![Some(0)],
+            "a hover was relayed after the draw"
+        );
+    }
+
+    /// R1253000, R645: a bot's reaction to the person's long turn never goes out after the ceiling draw. p1 plays
+    /// the Discover just before the bot's first long-turn wait ends, which sets the wait going again, now past the
+    /// turn clock, whose timeout panics. On some host seed the bot's persona reacts to a long turn (R645's own
+    /// test), so twenty seeds hold the rule.
+    #[test]
+    fn r1253000_a_long_turn_wait_left_running_earns_no_emote_after_the_ceiling_draw() {
+        for k in 0..20 {
+            let seed = format!("duel-panics-turn-{k}");
+            let mut table = a_panicking_turn(&seed, true);
+            let due = table.timer(TimerKey::Turn).expect("the turn clock runs");
+            let long_turn = TimerKey::BotLongTurn { player: P2 };
+            table.sleep(AI_EMOTE.long_turn_ms - 5 * SECOND);
+            play_the_discover(&mut table);
+            let reacts_at = table.timer(long_turn).expect("the long-turn wait runs");
+            assert!(reacts_at > due, "PREMISE: the wait ends after the clock");
+            table.sleep(due - table.now - SECOND);
+            assert_eq!(
+                table.timer(TimerKey::BotEmote { player: P2 }),
+                None,
+                "PREMISE: no emote of the bot's still waits"
+            );
+            let emotes = table.emotes.len();
+            table.sleep(reacts_at - table.now + 10 * SECOND);
+            assert_eq!(table.ceiling_draws, 1, "{seed}");
+            assert!(table.host.is_finished(), "{seed}");
+            assert_eq!(
+                table.emotes.len(),
+                emotes,
+                "{seed}: {:?}",
+                &table.emotes[emotes..]
+            );
+        }
+    }
+}
+
+mod the_sequence {
+    use super::*;
+    use jackioh_engine::testkit::{json, scenario};
+
+    const COMPETITION: &str = "meditativeplus-020";
+
+    /// R1563006: the sequence clock's expiry answers Stop for the player whose question is open, and nothing for
+    /// the other.
+    #[test]
+    fn r1563006_a_sequence_expiry_answers_stop_for_the_question_holder_only() {
+        jackioh_cards::register_all();
+        let built = scenario(json!({
+            "seed": "r1563006-duel",
+            "active": "p1",
+            "p1": { "hand": [COMPETITION], "mana": 10, "library": ["core-008", "core-020"] },
+            "p2": { "library": ["core-008"] },
+        }));
+        let card = built.hand(P1)[0].id.clone();
+        let mut table = Table::new(setup(built.state().clone()));
+        table.feed(DuelEvent::Arm);
+        table.connect(P1);
+        table.connect(P2);
+        let play = table
+            .host
+            .legal(P1)
+            .into_iter()
+            .find(|body| matches!(body, ActionBody::Play { instance_id, .. } if *instance_id == card))
+            .expect("KY's Competition is playable");
+        let answer = table.act(P1, "play-competition", play);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+        let stop =
+            jackioh_engine::prompts::stop_answer(table.host.game()).expect("PREMISE: a question is open");
+        assert_eq!(
+            table
+                .host
+                .server_actions_for(ClockExpiry::Sequence { player: P1 }),
+            vec![(P1, stop)]
+        );
+        assert!(
+            table
+                .host
+                .server_actions_for(ClockExpiry::Sequence { player: P2 })
+                .is_empty()
+        );
+    }
+}
+
+mod the_kept_views {
+    use super::*;
+
+    fn begun(seed: &str, connect: &[PlayerId]) -> Table {
+        let mut table = Table::new(setup(opening(seed)));
+        for home in connect {
+            table.connect(*home);
+        }
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        table
+    }
+
+    fn end_turn(table: &mut Table, nonce: &str) {
+        let home = table.active();
+        let answer = table.act(home, nonce, ActionBody::EndTurn);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+    }
+
+    fn last_view(table: &Table, home: PlayerId) -> PlayerView {
+        table.sent[home]
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                SeatMessage::View { view, .. } => Some((**view).clone()),
+                _ => None,
+            })
+            .expect("a view was sent")
+    }
+
+    #[test]
+    fn pushed_hands_over_the_views_it_sent() {
+        let mut table = begun("kept-1", &[P1, P2]);
+        end_turn(&mut table, "end-1");
+        let views = table.pushed.last().expect("a change was pushed");
+        for home in [P1, P2] {
+            let pushed = views[home].as_ref().expect("a connected seat is pushed its view");
+            assert_eq!(**pushed, last_view(&table, home));
+            assert_eq!(**pushed, table.host.view_for(table.host.playing(home), table.now));
+        }
+    }
+
+    #[test]
+    fn an_unconnected_seat_is_pushed_no_view() {
+        let mut table = begun("kept-2", &[P1]);
+        end_turn(&mut table, "end-1");
+        let views = table.pushed.last().expect("a change was pushed");
+        assert!(views[P1].is_some());
+        assert!(views[P2].is_none());
+    }
+
+    #[test]
+    fn a_change_builds_each_seat_view_once() {
+        let mut table = begun("kept-3", &[P1, P2]);
+        let before = table.host.views_built();
+        end_turn(&mut table, "end-1");
+        assert_eq!(table.host.views_built() - before, 2);
+    }
+
+    #[test]
+    fn aim_and_hover_relays_build_no_view() {
+        let mut table = begun("kept-4", &[P1, P2]);
+        end_turn(&mut table, "end-1");
+        let before = table.host.views_built();
+        let aim = Aim {
+            source: AimEnd::Hero { player: P1 },
+            target: Some(AimEnd::Hero { player: P2 }),
+        };
+        table.feed(DuelEvent::Aim {
+            home: P1,
+            aim: Some(aim),
+        });
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        table.feed(DuelEvent::Aim { home: P1, aim: None });
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(0),
+        });
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: None,
+        });
+        assert_eq!(table.host.views_built(), before);
+        assert!(
+            table
+                .sent
+                .p2
+                .iter()
+                .any(|message| matches!(message, SeatMessage::Aim { .. })),
+            "the aim was relayed"
+        );
+        // The next change builds its views afresh.
+        end_turn(&mut table, "end-2");
+        assert_eq!(table.host.views_built(), before + 2);
+    }
+
+    #[test]
+    fn an_unconnected_receivers_relays_share_one_view() {
+        let mut table = begun("kept-5", &[P1]);
+        end_turn(&mut table, "end-1");
+        let aim = |target| DuelEvent::Aim {
+            home: P1,
+            aim: Some(Aim {
+                source: AimEnd::Hero { player: P1 },
+                target,
+            }),
+        };
+        let before = table.host.views_built();
+        table.feed(aim(Some(AimEnd::Hero { player: P2 })));
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        let after_first = table.host.views_built();
+        assert!(after_first - before <= 1);
+        table.feed(aim(None));
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        assert_eq!(table.host.views_built(), after_first);
+    }
+
+    #[test]
+    fn a_restored_checkpoint_equals_and_repushes_the_same_views() {
+        let mut table = begun("kept-6", &[P1, P2]);
+        end_turn(&mut table, "end-1");
+        let json = serde_json::to_value(&table.host).expect("the host serializes");
+        assert!(json.get("views").is_none(), "the cache is not in the checkpoint");
+        let mut resumed: DuelHost = serde_json::from_value(json).expect("the host reads back");
+        assert_eq!(resumed, table.host);
+        assert_eq!(resumed.views_built(), 0);
+        let event = DuelEvent::Action {
+            by: ActionBy::Home { home: table.active() },
+            nonce: "end-2".to_string(),
+            body: ActionBody::EndTurn,
+        };
+        let mut original = table.host.clone();
+        // The row is written, and the change is pushed.
+        let mut theirs = resumed.step(event.clone(), table.now);
+        let mut ours = original.step(event, table.now);
+        let written = DuelEvent::Logged {
+            outcome: LogOutcome::Written,
+        };
+        theirs.extend(resumed.step(written.clone(), table.now));
+        ours.extend(original.step(written, table.now));
+        assert_eq!(theirs, ours);
+        let pushed = theirs.iter().find_map(|output| match output {
+            DuelOutput::Pushed { views, .. } => Some(views),
+            _ => None,
+        });
+        assert!(pushed.is_some_and(|views| views.p1.is_some() && views.p2.is_some()));
     }
 }

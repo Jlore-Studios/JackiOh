@@ -25,9 +25,9 @@ What the other crates call:
 | `summarize_game` (`game_summary.rs`) | a finished game's record for the card statistics (R376), its dealt cards apart from its Created ones (R2089000); `SummaryReader` reads it a step at a time, as a test reads a `scenario()` |
 | `last_board_for`, `seat_played_by`, `seats_swapped`, `mulligan_owed` | the facts the server and practice read at the edges of a game (R417, R677, R265) |
 | `registered_catalog()` | the catalog `jackioh_cards::register_all()` installed |
-| `combat_forecast(&GameState, PlayerId) -> CombatForecast` (`query.rs`, R3100000) | what each attack that player may declare would do (the damage after Armor and Divine Shield, the strike back, whether it kills, whether the attacker lives, whether a shield breaks) and whether the attackers that reach the enemy hero finish it, projected from the board through the damage pipeline's own readers; the tutorial's coach names its attacks by it |
+| `combat_forecast(&GameState, PlayerId) -> CombatForecast` (`query.rs`, R3100000) | what each attack that player may declare would do (the damage after Armor and Divine Shield, the strike back, whether it kills, whether the attacker lives (both counting the state check's passes after the combat, R4379000; `attack_deaths` lists them), whether a shield breaks, a Cleave attack's splash on each neighbour and a Trample attack's overflow onto the hero, R4290000) and whether the attackers that reach the enemy hero finish it, projected from the board through the damage pipeline's own readers; the tutorial's coach names its attacks by it |
 | `validator::*` | deck and trio checks (§9.4: D1–D4, T1–T3, L1–L6, R250–R253, R340), shared by the server and, through WASM, the client |
-| `duos::*` (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`, `duos_hash`, `duos_fold`) | a Duos game (§13): two 1v1 games side by side, below |
+| `duos::*` (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`, `duos_hash`, `duos_fold`, `duos_fold_from`) | a Duos game (§13): two 1v1 games side by side, below |
 
 `reduce` never panics on an illegal action. It takes no `rng`: the match rng is rebuilt from
 `(state.seed, state.rng_cursor)` and the cursor written back, so `(seed, decks, log)` folds to the
@@ -47,6 +47,13 @@ pause parks what it still owes on `state.work` as plain-data `Resume` records, n
 order R113 sets (`state.work_cursor`). Read `work.rs`'s header before touching anything that can
 open a prompt.
 
+`loop_cap.rs` is the backstop behind every loop (§10.3, R3925000): each interaction (an action, a
+timeout's answer, an autopilot or AI action, a turn the engine ends) counts its events on the sink's
+`Frontier`, and at `RESOLUTION_EVENT_CAP` the loops that resolve it (`settle`, `dispatch_pending`, the
+announce window, the state check's passes, `drain_work`) stop: the rest is dropped, `loopCapped` says so,
+the dead are collected with their text off (`state_check::capped_check`) and card text stays off until
+the next interaction. `STATE_CHECK_PASS_CAP` and `MAX_WORK_STEPS` sit past it as assertions.
+
 The event stream also says why things happen, for the client's cues and never for a rule. A keyword
 behind a `damage`, `damageAbsorbed`, `healed`, `destroyed` or `summoned` rides it as `via`, set where
 the keyword applies: Cleave, Trample and First Strike as the hit's route (`DamageFlags.via`, never
@@ -56,7 +63,8 @@ Reborn in `state_check.rs` (R2783001). `hook_marks.rs` emits `hookResolving` jus
 of a Cry, Death, turn hook, Whenever trigger or Activate (`prompts::run_resume`,
 `state_check::run_death_pass`, `triggers::run_queued_trigger`), withheld from the trigger loop, and
 `view_for` keeps it from a seat that could not read the card (R2783000). `GameEvent::as_rules_read`
-drops `via`, so neither moves a hash.
+drops `via`, so neither moves a hash. `effects::gain_hero_armor` reports `armorGained`, withheld the
+same way (R3857000).
 
 ## Purity (CLAUDE.md rule 4)
 
@@ -80,7 +88,8 @@ mutable static. Two things hold it:
 Every random draw goes through `Rng` (`rng.rs`, seeded, its cursor in the state), in the same order
 on every run. Every player choice is a `PendingChoice` in the state. The only statics are the
 catalog and the script registry, each a `OnceLock` set once by `jackioh_cards::register_all()`
-(with where the older shipped catalogs are found, `register_shipped`, R767000, and the card metrics
+(with where the older shipped catalogs are found, `register_shipped`, R767000, where a card's past
+versions are found, `register_past_versions`, R3538002, and the card metrics
 compiled beside the catalog, `register_card_metrics`, R1846000, the extra-turn cards the AI prices
 among them, #3116); under the `testkit`
 feature a thread-local override lets a test install fixture cards, the one allowed `RefCell`. One
@@ -120,8 +129,55 @@ builds reads its own game's hold without the state (R2201001).
   quest's stages (`Script.stages`, R1854000), run on the same `memory.quest`, with the goals the
   Stinkyscape set's stages count (R1854002); the verbs that move a line or complete it are the
   effects' (`effects/quests.rs`: `complete_quests`, `complete_this_quest`, `open_stage`, `next_stage`,
-  `hear_back`), and "steal your enemy's mana crystals" is `effects::steal_mana_crystals`, the count
-  `PlayerState.mana_crystals` moves inside §2.3's cap (R1854003).
+  `hear_back`, and `end_quest_line`, which sends a spent Quest card to its graveyard, R4331000), and
+  "steal your enemy's mana crystals" is `effects::steal_mana_crystals`: the victim's count
+  `PlayerState.mana_crystals` moves inside §2.3's cap (R1854003), and the thief's gain is
+  `PlayerState.stolen_mana_crystals`, on top of it (R4331001).
+- `evolution.rs` is Evolve and Evolves (§6.2, §6.3, R1849001, R3536000–R3536005): the once-only
+  `evolve_now` verb body, the settled state check's `evolve_standing`, the deck-marking
+  `mark_library`, the `Evolved` event and the per-player `evolutions` count.
+- `afflictions.rs` is Burn and Toxic (§6.3, R3540000–R3540005); the verbs are `effects/burn_toxic.rs`.
+- `giga.rs` is GIGA (§3, §6.1, R3546000–R3546004): the four-zone geometry (`spanned_slots`,
+  `covering`, `fits`, `first_anchor`, `entry_anchor`) and the both-lanes reads (`lanes_of`,
+  `occupant_at`, `adjacent_slots`, `lanes_meet`).
+- `tipsy.rs` is Tipsy X (§6.1, R3548000–R3548001): the counter (`stamp_for`, `add_on_play`,
+  `decay_at_turn_start`), the chance (`blur_chance`) and the owner's-view-only blur (`blur_for`,
+  drawn from a seed stream, never the game's `Rng`); `warhero.rs` is the Warhero Token's game-wide
+  worth (R3548002): `note_minted`, `worth_of` and the cleanup's `grow_at_cleanup`.
+- `effects/activations.rs` is Refresh for Activates (§6.3, R3548003): `refresh_activates`
+  (`refreshActivates`), `refresh_ability` and `is_refresh_ability`; infinite mana (R3548004) is
+  `StaticFlags.infinite_mana`, `mana::has_infinite_mana` and `credit::can_pay`, which every refusal
+  and listing reads.
+- `geometry.rs` is board geometry (§3, R3554000–R3554004): the hole and slash reads (`in_hole`,
+  `is_void`, `half_of_lane`, `half_of_card`, `lane_in_half`, `reaches`, `chain_members`,
+  `line_cells`) and the turn steps (`exile_zone`, `swallow_standing`, `pull_at_turn_start`); the
+  verbs are `effects/geometry.rs`: `open_black_hole` (`openBlackHole`, R3554000; its `capacity` a
+  card's declared number, R3561000), `slash_board` (`slashBoard`, R3554002) with `ask_slash_lane`/`chosen_slash_lane`, `line_damage_begin` and
+  `line_damage_answered` (`lineTile`/`lineDamage`, R3554005), `chain_lightning` (`chainLightning`,
+  R3554006) and `chain_units` (`chainUnits`, R3554007); the sweep (R3554008) is
+  `StaticFlags.sweep_lane`/`sweep_adjacent` with `combat::sweep_weight` and `combat::sweep`, on the
+  sweeper's own attacks alone (a strike back reads `combat::strike_back_multiplier_for`, R4156000), and the
+  occupied summon (R3554009) is `SummonPlacement.exile_below`.
+- S+ S22 (issue #3569, R3569000–R3569008) adds `GameState.radiant_world` (set by `effects/radiant.rs`'s
+  `make_all_radiant`, kept true of every card by `radiate_world` at the settled state check, R3569000),
+  the card scope's `CardZone::Graveyard` and `CardZone::Exile` (R3569001), the verb `fuse_board_into`
+  (`effects/fuse.rs`, R3569002) and `lose_max_mana` (`effects/mana.rs`, R3569008). Every new field is
+  absent until set, so old games hash the same.
+- `countering.rs` is counters (§4.2, §6.3, R3550005): `counter_declared_attack` and
+  `counter_activation`, read by `combat::declare_instead` and `activate::{activate_ability,
+  run_owed_activation}`; `effects/combat.rs` is the forced attack `forced_attack` (`forcedAttack`,
+  R3550000); `effects/delay.rs` is the kill deadline (R3550006): `kill_deadline` (`killDeadline`),
+  `meet_kill_deadlines` and the deadline mark; `effects/secret_pick.rs` is the secret pick (R3550008):
+  `secret_pick` and `keep_secret_pick`; `subsystems/board_history.rs` is the side snapshot and its
+  restore (R3550007): `side_snapshot_of`, `snapshot_side` (`snapshotSide`) and
+  `restore_side_snapshot` (`restoreSideSnapshot`).
+- `hand_order.rs` is the hand neighbours (R3558001–R3558002): the `handAura` lends
+  (`hand_aura_cost_delta`, `sync_hand_auras`) and the meeting pairs (`add_meet`, `meets_partner`,
+  `meet_pairs`, the `meet` mark); `deck_cast.rs` is the cast from the deck (R3558007):
+  `queue_deck_casts` and `run_deck_cast` behind the hidden `@deckCast` entry; the verbs are
+  `effects/add_to_hand.rs` (`addMeetingPair`, `at`), `effects/fuse.rs` (`count`, `unfusedOnly`,
+  `untilCost`), `effects/cast.rs` (`cast_new_times`), the catalog's `nameContains` and
+  `StaticFlags.starts_at_bottom`.
 - `effects/anomaly.rs` is Stinkyscape's Anomalies and Scanning Probes (R1855000–R1855003):
   `replace_board` exiles what its card reaches of its caster's side, lays a preset as summons into
   their named zones with their riders in memory, then fires each laid Unit's Cry under R452's random
@@ -203,8 +259,8 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 
 | Feature | Default | What |
 | --- | --- | --- |
-| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs (and, in `duos`, `duos_scenario`, §13), the I1–I4 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override (and `thread_overrides()`, which hands a thread's override to another thread, #1035), the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848), the pool shift (`with_pool_shift(0, …)`, `hold_pool_shift`: a test of a pool's content or order reads it as it is under `pool-probe`, #3117) the test seams (`seams.rs`) and the golden replay's pure half (`golden`: the canonical texts, one recorded game's replay to its first `Mismatch`, the hotseat fixture and `HOTSEAT_HASH`, shared by `tests/golden.rs` and `cargo jackioh golden check`, #1641), `Scenario::unit_at`, the event and action queries (`events_of`, `last_events_of`, `count`, `last_count`: a `GameEventType` or its string, an unknown one panicking; `offered(seat)`, the seat's `legal_actions`, #3504), the one-instance pick builders (`pick`, #1826) `must` (an `Option`'s value, or a panic naming what was expected, #2023) and the stand-in cards (`stand_in.rs`, #3486: a card a `stand-in (1) 4/4 R12/12` id spells out, which `catalog::find_def` builds on a miss and no pool or query reaches). Every test crate enables it as a dev-dependency |
-| `pool-probe` | off | implies `testkit`: every random pool `catalog::query` returns comes back rotated `POOL_PROBE_SHIFT` (1) place, so each draw lands where one more card in the pool would put it (R380) and a test that pins a roll fails; `sh scripts/pool-probe.sh` runs the cards', AI's, server's and tools' tests under it (#3117, `testkit/pool_probe.rs`) |
+| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs (and, in `duos`, `duos_scenario`, §13), the I1–I22 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override (and `thread_overrides()`, which hands a thread's override to another thread, #1035), the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848), the pool shift (`with_pool_shift(0, …)`, `hold_pool_shift`: a test of a pool's content or order reads it as it is under `pool-probe`, #3117), the unique-draws switch (`with_unique_draws`, R3563000: `UNIQUE_RANDOM_DRAWS` is on since the Stinkyscape+ release, #3573), the test seams (`seams.rs`) and the golden replay's pure half (`golden`: the canonical texts, one recorded game's replay to its first `Mismatch`, the hotseat fixture and `HOTSEAT_HASH`, shared by `tests/golden.rs` and `cargo jackioh golden check`, #1641), `Scenario::unit_at`, the event and action queries (`events_of`, `last_events_of`, `count`, `last_count`: a `GameEventType` or its string, an unknown one panicking; `offered(seat)`, the seat's `legal_actions`, #3504; `prompt_modes` and `prompt_modes_of`, an open prompt's Mode options, #3796; `plays_of`, `can_play`, `play_targets`, `activations_of` and `attacks_of`, one card's offered actions, with `plays_in` and `is_play_of` for a state or one action, #3913), the pick builders (`pick`: the one-instance ones, #1826, `pick::mode`, #3796, `pick::hero` and the `pick::targets` wrapper, #3827, and `pick::instance_ids`, the instance ids among a `Selection[]`, #3913) `must` (an `Option`'s value, or a panic naming what was expected, #2023), `nonempty` (a `Vec`'s items, or a panic naming what was expected in them, #3914) and the stand-in cards (`stand_in.rs`, #3486: a card a `stand-in (1) 4/4 R12/12` id spells out, which `catalog::find_def` builds on a miss and no pool or query reaches). Every test crate enables it as a dev-dependency |
+| `pool-probe` | off | implies `testkit`: every random pool `catalog::query` returns comes back rotated `POOL_PROBE_SHIFT` (1) place, so each draw lands where one more card in the pool would put it (R380) and a test that pins a roll fails; `sh scripts/pool-probe.sh` runs the cards', AI's, server's and tools' tests under it by hand, and `crates/tools/tests/pool_probe.rs` the cards' daily (#3117, #4181, `testkit/pool_probe.rs`) |
 | `ts` | off | the ts-rs derives above |
 
 ## Tests

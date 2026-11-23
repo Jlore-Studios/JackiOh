@@ -154,8 +154,9 @@ mod r174_50_k_pop_fanatics_delayed_steal_and_a_target_that_left_the_field {
     #[test]
     fn r174_the_steal_fizzles_on_a_target_that_died_and_came_back_through_reborn_r76_r83() {
         jackioh_cards::register_all();
+        // K-Pop Fanatic (3 since #4154) and Hit Job (3).
         let mut g = scenario(json!({
-            "p1": { "hand": [KPOP, HIT_JOB, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY, "mana": 5 },
+            "p1": { "hand": [KPOP, HIT_JOB, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY, "mana": 6 },
             "p2": {
                 "hand": [VANILLA],
                 "field": [{ "def": RIGHT_HOUSE, "lane": 2 }, { "def": VANILLA, "lane": 4 }],
@@ -384,8 +385,9 @@ mod c8_52_r4_r78_a_rider_on_a_card_that_never_reached_the_hand {
             json!(REMINISCE),
         ];
         hand.extend(fillers.iter().map(|filler| json!(filler)));
+        // Snom Bunny Mind Control (6 since #4154), radiant Silas (6 since #4353) and Reminisce (1).
         let mut g = scenario(json!({
-            "p1": { "hand": hand, "mana": 10, "library": LIBRARY },
+            "p1": { "hand": hand, "mana": 13, "library": LIBRARY },
             "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 1 }], "library": LIBRARY },
         }));
         let seven = g.card(SEVEN_SEVEN).id.clone();
@@ -421,7 +423,7 @@ mod c8_52_r4_r78_a_rider_on_a_card_that_never_reached_the_hand {
      {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
-            "p1": { "hand": [MIND_CONTROL, { "def": SILAS, "radiant": true }], "mana": 10, "library": LIBRARY },
+            "p1": { "hand": [MIND_CONTROL, { "def": SILAS, "radiant": true }], "mana": 12, "library": LIBRARY },
             "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 1 }], "library": LIBRARY },
         }));
         let seven = g.card(SEVEN_SEVEN).id.clone();
@@ -562,6 +564,9 @@ mod r35_3_2_a_transform_replaces_the_occupant_of_a_locked_zone {
 mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
     use super::*;
 
+    /// What issue #4353 added to Silly Silas's cost: (6), from (4).
+    const SILAS_SINCE_4353: i32 = 2;
+
     #[test]
     fn r174_a_fused_cube_sorcerers_damage_aimed_at_the_meal_does_not_land_on_the_meals_reborn_body_r83() {
         jackioh_cards::register_all();
@@ -580,6 +585,8 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         let fused = g.card(sorcerer.as_str()).clone();
         assert_ne!(fused.def_id, SORCERER);
         g.end_turn();
+        // Silas costs (6) since issue #4353, (2) more than the turn's refresh had for him.
+        g.state_mut().players.p2.mana.current += SILAS_SINCE_4353;
         // p2's radiant Silas rotates right: the fused unit in lane 5 would cross, so it is bounced to
         // p2's hand costing 0 (§8 #52 radiant, R14).
         let silas = must(
@@ -623,6 +630,8 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         let fused = g.card(postdoc.as_str()).clone();
         assert_ne!(fused.def_id, POSTDOC);
         g.end_turn();
+        // Silas costs (6) since issue #4353, (2) more than the turn's refresh had for him.
+        g.state_mut().players.p2.mana.current += SILAS_SINCE_4353;
         let silas = must(
             g.hand(PlayerId::P2)
                 .iter()
@@ -658,9 +667,9 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
                 "hand": [SILAS, VANILLA, VANILLA, VANILLA],
                 "backrow": [{ "def": MANA_WELL, "lane": 1 }, { "def": MANA_WELL, "lane": 2 }],
                 "library": LIBRARY,
-                // Silas costs (4): the fifth mana keeps a Vanilla playable, so the turn does not end by
-                // itself (R82).
-                "mana": 5,
+                // Silas costs (6) since issue #4353: the seventh mana keeps a Vanilla playable, so the turn
+                // does not end by itself (R82).
+                "mana": 7,
             },
             "p2": {
                 "hand": [MAGIC_JAMMED, FLOOD, VANILLA, VANILLA, COIN],

@@ -1,14 +1,16 @@
 //! #42 Selective Breeding (SPEC §8.2). Spell, cost 2, Common.
 //!   Base:    "Exile all cards in your deck that cost (2) or less. Each card left in your deck has a 50%
-//!             chance to become Radiant." (patch v0.3.10; it exiled 7 random cards before; 30% until
-//!             issue #3136, which only moves the declared `chance`)
+//!             chance to become Radiant. Evolve all cards in your deck." (patch v0.3.10; it exiled 7
+//!            random cards before; 30% until issue #3136, which only moves the declared `chance`;
+//!            the Evolve is S01's)
 //!   Radiant: "Exile all cards in your deck that cost (2) or less. Each card left in your deck becomes
-//!             Radiant." (patch v0.3.10: 100%, and no Lucky, since nothing is left to chance)
+//!             Radiant. Evolve all cards in your deck." (patch v0.3.10: 100%, and no Lucky, since
+//!            nothing is left to chance)
 //!   Engine:  `exile_matching` over the library with `maxCost` 2 (R831014): each card's cost read per R65.
 //! Exile moves straight to exile zone (§2.1, §4.5, §6.3; no death trigger, R61). Each card bumps exile counter (R55; R59, R135, R1431).
 //! Survivors made Radiant via seeded RNG (CLAUDE.md rule 4, R60, R1438); Radiant face marks 100% directly (§5.2, R74).
 
-use jackioh_engine::effects::{exile_matching, radiant_chance};
+use jackioh_engine::effects::{evolve_deck, exile_matching, radiant_chance};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-042";
@@ -29,9 +31,9 @@ const PERCENT: i32 = 100;
 
 /// The faces differ only in the chance (§6.1): the base face's the declared `chance`, 50% (or its printed
 /// 30% when `declared` is off), the Radiant face's certain. Any Lucky given (`given_lucky_on`, R1438)
-/// still rolls the base face's chance twice a card. The exile runs first and the chance rolls over
-/// what is left.
-fn selective_breeding(radiant: bool, declared: bool) -> Script {
+/// still rolls the base face's chance twice a card. The exile runs first, the chance rolls over
+/// what is left, and the Evolve marks the survivors that print an Evolve text (R3536002, S01).
+fn selective_breeding(radiant: bool, declared: bool, evolves: bool) -> Script {
     Script {
         // A Spell's script hangs off `cry`: that is its on-resolve hook (§10.9).
         cry: Some(hook(move |ctx| {
@@ -47,10 +49,14 @@ fn selective_breeding(radiant: bool, declared: bool) -> Script {
             if lucky > 0 {
                 chance_args["lucky"] = json!(lucky);
             }
-            vec![
+            let mut effects = vec![
                 exile_matching(json_as(json!({ "zones": ["library"], "maxCost": SELECTIVE_BREEDING_MAX_COST }))),
                 radiant_chance(json_as(chance_args)),
-            ]
+            ];
+            if evolves {
+                effects.push(evolve_deck(json_as(json!({}))));
+            }
+            effects
         })),
         ..Script::default()
     }
@@ -58,8 +64,16 @@ fn selective_breeding(radiant: bool, declared: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: selective_breeding(false, true),
-        radiant: selective_breeding(true, true),
+        base: selective_breeding(false, true, true),
+        radiant: selective_breeding(true, true, true),
+    }
+}
+
+/// R767000: through v0.5.13g the Breeding marked no deck; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_13g() -> CardScripts {
+    CardScripts {
+        base: selective_breeding(false, true, false),
+        radiant: selective_breeding(true, true, false),
     }
 }
 
@@ -67,8 +81,8 @@ pub fn script() -> CardScripts {
 /// under it.
 pub fn script_v0_4_4b() -> CardScripts {
     CardScripts {
-        base: selective_breeding(false, false),
-        radiant: selective_breeding(true, false),
+        base: selective_breeding(false, false, false),
+        radiant: selective_breeding(true, false, false),
     }
 }
 
@@ -78,7 +92,7 @@ pub fn script_v0_4_4b() -> CardScripts {
 
 #[cfg(test)]
 mod tests {
-    use super::{ID, script, script_v0_4_4b};
+    use super::{ID, script, script_v0_4_4b, script_v0_5_13g};
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
@@ -271,7 +285,7 @@ mod tests {
         fn s10_9_the_base_face_is_one_exile_effect_followed_by_one_chance_effect_in_that_order() {
             assert_eq!(
                 effect_kinds(script().base.cry.as_ref()),
-                vec!["exileMatching", "radiantChance"],
+                vec!["exileMatching", "radiantChance", "evolveDeck"],
             );
         }
     }
@@ -324,8 +338,57 @@ mod tests {
         fn s10_9_the_radiant_face_is_the_same_pair_of_effects_so_only_the_chance_changed() {
             assert_eq!(
                 effect_kinds(script().radiant.cry.as_ref()),
-                vec!["exileMatching", "radiantChance"],
+                vec!["exileMatching", "radiantChance", "evolveDeck"],
             );
+        }
+
+        #[test]
+        fn marks_surviving_evolve_cards_on_both_faces() {
+            crate::register_all();
+            for radiant in [false, true] {
+                let mut s = scenario(json!({
+                    "seed": "selective-breeding-evolves",
+                    "p1": {
+                        "hand": [{ "def": "core-042", "radiant": radiant }, "core-021"],
+                        // C+ #49 Jay Fungus, made (4) so the exile leaves it, beside a (3) Menace.
+                        "library": [{ "def": "classicplus-049", "costMod": 2 }, "core-019"],
+                    },
+                }));
+                s.play("core-042", json!({}));
+                let library = s.pile(PlayerId::P1, "library");
+                assert_eq!(library.len(), 2, "radiant {radiant}");
+                let fungus = library
+                    .iter()
+                    .find(|card| card.def_id == "classicplus-049")
+                    .expect("the Fungus survived");
+                assert_eq!(fungus.enters_evolved, Some(true), "radiant {radiant}");
+                assert!(
+                    library
+                        .iter()
+                        .filter(|card| card.def_id == "core-019")
+                        .all(|card| card.enters_evolved.is_none()),
+                    "radiant {radiant}"
+                );
+            }
+        }
+
+        #[test]
+        fn the_kept_script_marks_nothing() {
+            crate::under_kept("core-042", script_v0_5_13g(), || {
+                let mut s = scenario(json!({
+                    "seed": "selective-breeding-kept",
+                    "p1": {
+                        "hand": ["core-042", "core-021"],
+                        "library": [{ "def": "classicplus-049", "costMod": 2 }, "core-019"],
+                    },
+                }));
+                s.play("core-042", json!({}));
+                assert_eq!(s.pile(PlayerId::P1, "library").len(), 2);
+                assert!(s
+                    .pile(PlayerId::P1, "library")
+                    .iter()
+                    .all(|card| card.enters_evolved.is_none()));
+            });
         }
     }
 

@@ -198,3 +198,70 @@ mod r1935000_daily_runs {
         assert_eq!(app.ci_runs.reads(), (3, 2));
     }
 }
+
+/// #4011 (cache poisoning): `GET /api/stats/ci` is answered through `cached_ok` as `public`,
+/// so shared caches key on the URL alone. The same path and query must answer byte-identical
+/// bodies whatever else the request carries.
+mod cache_poisoning {
+    use super::*;
+    use axum::http::{HeaderMap, HeaderName, HeaderValue};
+
+    use crate::support::deps::{json_request, send};
+
+    /// `GET path` carrying `headers`, signed in when `token` is `Some`.
+    async fn get_with(
+        app: &Arc<App>,
+        path: &str,
+        token: Option<&str>,
+        headers: &[(&str, &str)],
+    ) -> (u16, HeaderMap, Value) {
+        let mut request = json_request("GET", path, &Value::Null, token, None);
+        for (name, value) in headers {
+            request.headers_mut().insert(
+                name.parse::<HeaderName>().expect("a header name"),
+                HeaderValue::from_str(value).expect("a header value"),
+            );
+        }
+        send(app, request).await
+    }
+
+    #[tokio::test]
+    async fn cache_poisoning_ci_runs_same_bytes_whatever_the_caller_carries() {
+        let app = test_app().await;
+        // A passed run, so no jobs are read.
+        app.ci_runs
+            .answer_runs(runs(vec![run(7, 1, "completed", Some("success"))]));
+
+        let poisoned = format!("{PATH}?poison=1");
+        let forwarded = [
+            ("x-forwarded-host", "evil.example"),
+            ("x-forwarded-for", "203.0.113.9"),
+            ("x-original-url", "/api/admin"),
+            ("x-rewrite-url", "/api/admin"),
+        ];
+        let mut all = vec![("accept-language", "fr-FR"), ("cookie", "sid=abc")];
+        all.extend(forwarded);
+        // The route is `AuthLevel::None`, so any Bearer [REDACTED] stays unread.
+        let responses = vec![
+            get_with(&app, PATH, None, &[]).await,
+            get_with(&app, PATH, Some("e2e-token-p1"), &[]).await,
+            get_with(&app, PATH, None, &[("accept-language", "fr-FR")]).await,
+            get_with(&app, PATH, None, &[("cookie", "sid=abc")]).await,
+            get_with(&app, PATH, None, &forwarded).await,
+            get_with(&app, &poisoned, None, &[]).await,
+            get_with(&app, &poisoned, Some("e2e-token-p1"), &all).await,
+        ];
+
+        let expected = format!("public, max-age={CI_RUNS_CACHE_TTL_SECONDS}");
+        let mut bodies = Vec::with_capacity(responses.len());
+        for (status, headers, body) in &responses {
+            assert_eq!(*status, 200);
+            let cache = headers.get("cache-control").and_then(|value| value.to_str().ok());
+            assert_eq!(cache, Some(expected.as_str()));
+            bodies.push(serde_json::to_string(body).expect("a body serializes"));
+        }
+        for body in &bodies[1..] {
+            assert_eq!(body, &bodies[0]);
+        }
+    }
+}

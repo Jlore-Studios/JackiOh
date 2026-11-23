@@ -4,10 +4,11 @@
 // (R279) are the face's own, a Resource's Credits line follows it (R2521009), and in play the keywords
 // it has gained and its granted abilities follow. R2718000: a full-art card has no rules box, so the
 // panel its words move to wears the set's watermark behind them, in the ink for a dark ground.
+// R3838001: below an `AlwaysFullText` (the Almanac) every face with words has them there, whole or not.
 
-import type { ReactElement } from "react";
+import { createContext, useContext, type ReactElement, type ReactNode } from "react";
 import { t } from "../../i18n/i18n.ts";
-import { faceText } from "../CardFace.tsx";
+import { faceText, printsText } from "../CardFace.tsx";
 import { isGlitch } from "../glitch.ts";
 import { showsFullArt, useFullArt } from "../fullArt.ts";
 import type { FaceModel } from "../model.ts";
@@ -16,10 +17,31 @@ import { watermarkOf } from "../setMark.ts";
 import { useCardSettings } from "../settings.ts";
 import { INSPECT_EXTENDED } from "./testids.ts";
 
+const AlwaysFullTextContext = createContext(false);
+
+/** R3838001: the hover previews, sheets and reference tooltips below it carry every card's whole text (the Almanac). */
+export function AlwaysFullText({ children }: { children?: ReactNode }): ReactElement {
+  return <AlwaysFullTextContext.Provider value={true}>{children}</AlwaysFullTextContext.Provider>;
+}
+
+/** R3838001: whether an `AlwaysFullText` is above. */
+export function useAlwaysFullText(): boolean {
+  return useContext(AlwaysFullTextContext);
+}
+
+/**
+ * Whether `face` has the Full text panel: it prints less than its whole text (#1017), or (R3838001) `always`, below an
+ * `AlwaysFullText`, and it has words. `fullArtOn` is the caller's `useFullArt(defId)`.
+ */
+export function showsFullText(face: FaceModel, ascentLevel: number | null | undefined, fullArtOn: boolean, always: boolean): boolean {
+  return faceText(face, ascentLevel, fullArtOn).less || (always && printsText(face));
+}
+
 export function Extended({ face, ascentLevel }: { face: FaceModel; ascentLevel?: number | null }): ReactElement | null {
   const fullArtOn = useFullArt(face.defId);
+  const always = useAlwaysFullText();
   const { setWatermarks } = useCardSettings();
-  if (!faceText(face, ascentLevel, fullArtOn).less) return null;
+  if (!showsFullText(face, ascentLevel, fullArtOn, always)) return null;
   // R2718000: only a full-art face lacks a rules box of its own to hold the watermark.
   const watermark = setWatermarks && showsFullArt(face, fullArtOn) && !isGlitch(face.defId) ? watermarkOf(face.set) : null;
   const gained = face.gainedLine;

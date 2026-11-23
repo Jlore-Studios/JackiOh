@@ -1,5 +1,6 @@
 //! Invariants I2 (R44, R386, R636, #874), I6 hidden information (SPEC §10.8, issue #348, R177, R227,
-//! R312, R466), I8 (issues #1192, #1574) and I14 (#3062). Test paths: SURFACE §4.1, §8.
+//! R312, R466), I8 (issues #1192, #1574) and I14 (#3062), and I21's Spell sweep (#4508). Test paths:
+//! SURFACE §4.1, §8.
 
 use jackioh_engine::testkit::*;
 
@@ -141,6 +142,279 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
     fn r636_r386_a_buff_into_another_keyword_leaves_the_second_declaration_an_extra_attack() {
         let change = json!({ "kind": "keyword", "keyword": { "kind": "Ranged" }, "added": true });
         let found = buffed_twice_declared(&["Ranged"], change);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}
+
+/// I2 and a unit gone by the action's end that attacked twice inside it under an aura's Windfury, which
+/// no event reports (R636, R3556008: S+ #63 Overdrive Dome awake inside the action; fuzz seeds 1596, 2217).
+mod i2_a_unit_gone_under_a_windfury_aura {
+    use super::*;
+
+    const DOME: &str = "stinkyscapeplus-063";
+
+    /// p1's Vanilla, the Dome in p1's backrow when `dome`, declares two attacks at the enemy hero and is
+    /// destroyed, all inside one action, and is gone from the state the action leaves.
+    fn two_attacks_then_gone(dome: bool) -> Vec<String> {
+        let mut p1 = json!({ "field": [{ "def": VANILLA, "lane": 1 }] });
+        if dome {
+            p1["backrow"] = json!([{ "def": DOME, "lane": 1 }]);
+        }
+        let mut g = scenario(json!({ "p1": p1 }));
+        let mut unit = g.unit_at(PlayerId::P1, 1);
+        let mut monitor = create_invariant_monitor(g.state());
+        jackioh_engine::zones::cease_to_exist(g.state_mut(), &mut unit);
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": unit.id, "targetId": "hero-p2", "forced": false }),
+            )
+        };
+        let destroyed = event(json!({
+            "type": "destroyed", "instanceId": unit.id, "defId": VANILLA, "owner": "p1", "controller": "p1",
+            "attack": 1, "maxHealth": 1,
+        }));
+        monitor.after(&[declared(), declared(), destroyed], g.state())
+    }
+
+    #[test]
+    fn r636_r3556008_a_unit_gone_by_the_end_that_attacked_twice_under_a_windfury_aura_is_one_windfury_turn() {
+        assert_eq!(two_attacks_then_gone(true), no_violations());
+    }
+
+    #[test]
+    fn r636_a_unit_gone_by_the_end_that_attacked_twice_with_no_windfury_aura_is_still_an_extra_attack() {
+        let found = two_attacks_then_gone(false);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}
+
+/// I2 and an animated card back in its backrow by the action's end that attacked twice inside it under an
+/// aura's Windfury: no Unit by then, it reads as a gone unit does (R636, R383: M #66 Fiery Waraxe under S+
+/// #63 Overdrive Dome; fuzz seed 1013, #4079).
+mod i2_an_animated_card_back_in_its_backrow_under_a_windfury_aura {
+    use super::*;
+
+    const WARAXE: &str = "meditative-066";
+    const DOME: &str = "stinkyscapeplus-063";
+
+    /// p1's Waraxe, the Dome in p1's backrow when `dome`, animates, declares two attacks at p2's Vanilla
+    /// and goes back to its backrow zone, all inside one action.
+    fn animated_twice_then_home(dome: bool) -> Vec<String> {
+        let mut backrow = vec![json!({ "def": WARAXE, "lane": 1 })];
+        if dome {
+            backrow.push(json!({ "def": DOME, "lane": 2 }));
+        }
+        let mut g = scenario(json!({
+            "active": "p2",
+            "p1": { "backrow": backrow },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let waraxe = backrow_at(&g, PlayerId::P1, 1, "the Waraxe");
+        let prey = g.unit_at(PlayerId::P2, 1);
+        let mut monitor = create_invariant_monitor(g.state());
+        // The animation stamps its entry (`animated::step_into_units`), and the card keeps it back in its backrow.
+        let turn = g.state().turn;
+        find_instance_mut(g.state_mut(), &waraxe.id)
+            .expect("the Waraxe")
+            .summoned_turn = Some(turn);
+        let moved = |kind: &str| {
+            event(json!({
+                "type": kind, "player": "p1", "instanceId": waraxe.id, "defId": WARAXE,
+                "backrowLane": 1, "unitLane": 1,
+            }))
+        };
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": waraxe.id, "targetId": prey.id, "forced": false }),
+            )
+        };
+        monitor.after(
+            &[moved("animated"), declared(), declared(), moved("deanimated")],
+            g.state(),
+        )
+    }
+
+    #[test]
+    fn r636_r383_an_animated_card_back_in_its_backrow_that_attacked_twice_under_a_windfury_aura_is_one_windfury_turn()
+     {
+        assert_eq!(animated_twice_then_home(true), no_violations());
+    }
+
+    #[test]
+    fn r636_an_animated_card_back_in_its_backrow_that_attacked_twice_with_no_windfury_aura_is_still_an_extra_attack()
+     {
+        let found = animated_twice_then_home(false);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}
+
+/// I2 and a Drone Corvette summoned, killing twice and gone inside one action: it drew its keywords
+/// (`note_drawn_windfury`), Frenzy among them maybe, and no state is left to say otherwise, so each kill
+/// may ready it (R3543003, R781004; Duos fuzz seed 1778, #4079).
+mod i2_r3543003_a_drone_corvette_gone_by_the_end {
+    use super::*;
+
+    const CORVETTE: &str = "stinkyscape-t-drone-corvette";
+
+    /// p1's Corvette is summoned and declares three attacks at p2's Vanillas, the first two killing their
+    /// prey when `kills`, and is destroyed, all inside one action.
+    fn three_attacks_then_gone(kills: bool) -> Vec<String> {
+        let mut g = scenario(json!({
+            "p2": { "field": [
+                { "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 3 },
+            ] },
+        }));
+        let mut preys: Vec<CardInstance> = (1..=3).map(|lane| g.unit_at(PlayerId::P2, lane)).collect();
+        let mut monitor = create_invariant_monitor(g.state());
+        let mut events = vec![event(json!({
+            "type": "summoned", "player": "p1", "instanceId": "corvette", "defId": CORVETTE,
+            "row": "units", "lane": 1,
+        }))];
+        let declared = |prey: &CardInstance| {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": "corvette", "targetId": prey.id, "forced": false }),
+            )
+        };
+        for prey in preys.iter_mut().take(2) {
+            events.push(declared(prey));
+            if kills {
+                jackioh_engine::zones::cease_to_exist(g.state_mut(), prey);
+                events.push(event(json!({
+                    "type": "destroyed", "instanceId": prey.id, "defId": VANILLA, "owner": "p2",
+                    "controller": "p2", "attack": 1, "maxHealth": 1, "killerId": "corvette",
+                })));
+            }
+        }
+        events.push(declared(&preys[2]));
+        events.push(event(json!({
+            "type": "destroyed", "instanceId": "corvette", "defId": CORVETTE, "owner": "p1", "controller": "p1",
+            "attack": 1, "maxHealth": 1,
+        })));
+        monitor.after(&events, g.state())
+    }
+
+    #[test]
+    fn r3543003_a_drone_corvette_summoned_and_gone_inside_one_action_that_kills_twice_may_attack_a_third_time()
+     {
+        assert_eq!(three_attacks_then_gone(true), no_violations());
+    }
+
+    #[test]
+    fn r3543003_a_drone_corvette_gone_by_the_end_that_killed_nothing_may_not_attack_a_third_time() {
+        let found = three_attacks_then_gone(false);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}
+
+/// I2 and R3139004 inside one action: an attack on a Unit that killed nothing readies an attacker whose
+/// own `afterAttack` answers it (Core #89 Corpse Eater), so its next attack in the same action is no extra
+/// attack (daily fuzz seed 11162); one with no such text still declares one.
+mod i2_r3139004_a_second_attack_after_an_attack_on_a_unit_inside_one_action {
+    use super::*;
+
+    const CORPSE_EATER: &str = "core-089";
+
+    /// p1's `attacker` declares two attacks at p2's Vanilla inside one action, killing nothing.
+    fn two_attacks_on_a_unit(attacker: &str) -> Vec<String> {
+        let g = scenario(json!({
+            "p1": { "field": [{ "def": attacker, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let unit = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
+        let mut monitor = create_invariant_monitor(g.state());
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": unit.id, "targetId": prey.id, "forced": false }),
+            )
+        };
+        monitor.after(&[declared(), declared()], g.state())
+    }
+
+    #[test]
+    fn r3139004_a_corpse_eater_that_attacks_a_unit_twice_inside_one_action_is_readied_by_the_first() {
+        assert_eq!(two_attacks_on_a_unit(CORPSE_EATER), no_violations());
+    }
+
+    #[test]
+    fn r3139004_a_unit_with_no_after_attack_text_that_attacks_a_unit_twice_inside_one_action_is_an_extra_attack()
+     {
+        let found = two_attacks_on_a_unit(VANILLA);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}
+
+/// I2 and a Prime's kill behind its joiners (R1203): its joiner declares a forced attack on its target
+/// first, and the Prime's own combat follows with no declaration, so the kill is the Prime's and its
+/// Frenzy's fresh exertion answers it (R3543003; fuzz seed 867, #4221).
+mod i2_r1203_a_prime_s_kill_behind_its_joiners {
+    use super::*;
+
+    /// M #91.1 Windfurious Prime (Rush, Windfury; its joiners attack its target first).
+    const PRIME: &str = "meditative-091-1";
+    /// Core #1 Big D-fender, a 0/7: the one Unit in hand, so the joiner, which kills nothing.
+    const FENDER: &str = "core-001";
+    const STOCKPILE: &str = "core-005";
+
+    /// p1's Prime, with Frenzy when `frenzy`, attacks p2's Vanilla behind its joiner and kills it, then
+    /// attacks each of `then`; each step watched by one monitor. The scenario, the monitor, the Prime's
+    /// id and every violation found.
+    fn kill_behind_a_joiner(
+        frenzy: bool,
+        then: &[&str],
+    ) -> (Scenario, InvariantMonitor, String, Vec<String>) {
+        let mut g = scenario(json!({
+            "p1": { "hand": [FENDER, STOCKPILE], "library": [], "field": [{ "def": PRIME, "lane": 1 }] },
+            "p2": { "hand": [STOCKPILE], "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let prime = g.unit_at(PlayerId::P1, 1).id;
+        let prey = g.unit_at(PlayerId::P2, 1).id;
+        if frenzy {
+            find_instance_mut(g.state_mut(), &prime)
+                .expect("the Prime")
+                .granted_keywords = vec![json_as::<Keyword>(json!({ "kind": "Frenzy" }))];
+        }
+        let mut monitor = create_invariant_monitor(g.state());
+        let mut found = Vec::new();
+        for target in std::iter::once(prey.as_str()).chain(then.iter().copied()) {
+            let attack = ActionBody::Attack {
+                attacker_id: prime.clone(),
+                target_id: target.to_string(),
+            };
+            // `before` reads the Frenzy the Prime begins each attack with (R3543003); its I3 names the
+            // scenario's cards, which were set out with no entry event.
+            found.extend(
+                monitor
+                    .before(g.state(), PlayerId::P1, &attack)
+                    .into_iter()
+                    .filter(|found| !found.starts_with("I3 ")),
+            );
+            g.attack(prime.as_str(), if target == "hero-p2" { "hero" } else { target });
+            found.extend(monitor.after(g.last_events(), g.state()));
+        }
+        g.expect_in_zone(prey.as_str(), "graveyard");
+        (g, monitor, prime, found)
+    }
+
+    #[test]
+    fn r1203_r3543003_a_frenzied_prime_that_kills_behind_its_joiner_may_attack_twice_more() {
+        let (.., found) = kill_behind_a_joiner(true, &["hero-p2", "hero-p2"]);
+        assert_eq!(found, no_violations());
+    }
+
+    #[test]
+    fn r1203_a_prime_with_no_frenzy_that_kills_behind_its_joiner_still_has_windfury_s_two_alone() {
+        let (g, mut monitor, prime, found) = kill_behind_a_joiner(false, &["hero-p2"]);
+        assert_eq!(found, no_violations());
+        let third = event(
+            json!({ "type": "attackDeclared", "attackerId": prime, "targetId": "hero-p2", "forced": false }),
+        );
+        let found = monitor.after(&[third], g.state());
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
     }
@@ -445,6 +719,34 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
         let found = hidden_information_violations(g.state(), PlayerId::P1, &view, &offer(&secret.id));
         assert!(
             found.iter().any(|message| message.contains("in legalActions")),
+            "{found:?}"
+        );
+    }
+
+    /// R3777001: p1's view names p2's face-down trap in `hiddenTargets` while #36 Magic Jammed's play may
+    /// target it, by the bare id `legalActions` offers; the same view beside a listing that offers no such
+    /// play names a hidden card.
+    #[test]
+    fn r3777001_i6_lets_the_view_name_a_face_down_target_only_as_legal_actions_offers_it() {
+        let g = scenario(json!({
+            "p1": { "hand": ["core-036"] },
+            "p2": { "backrow": [{ "def": MY_PAWN, "lane": 1 }] },
+        }));
+        let trap = backrow_at(&g, PlayerId::P2, 1, "p2 should hold a face-down trap in lane 1");
+        let view = view_for(g.state(), PlayerId::P1);
+        assert!(
+            view.hidden_targets
+                .iter()
+                .flatten()
+                .any(|hidden| hidden.instance_id == trap.id),
+            "the view names the trap's zone"
+        );
+        assert_eq!(violations(&g, PlayerId::P1, &[]), no_violations());
+        let found = hidden_information_violations(g.state(), PlayerId::P1, &view, &[]);
+        assert!(
+            found
+                .iter()
+                .any(|message| message.contains("in the view") && message.contains(&quoted(&trap.id))),
             "{found:?}"
         );
     }
@@ -770,7 +1072,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
         // they were never in any pile. A Book is no token, so R11's rule above does not cover them.
         let library: Vec<&str> = (0..LIBRARY_CAP).map(|_| VANILLA).collect();
         let mut g = scenario(json!({ "p1": { "hand": [APPROPRIATIONS], "library": library } }));
-        g.play(APPROPRIATIONS, json!({ "x": 2, "modes": ["Education"] }));
+        g.play(APPROPRIATIONS, json!({ "x": 3, "modes": ["Education"] }));
         let refused: Vec<String> = g
             .last_events()
             .iter()
@@ -784,8 +1086,8 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
                 _ => None,
             })
             .collect();
-        // 2X − 2 Books at X = 2 (#3135, R3135002; 2X − 1 through v0.5.11r).
-        assert_eq!(refused.len(), 2);
+        // 2X − 3 Books at X = 3 (#3996, R3996201; 2X − 2 through v0.6.5b, R3135002; 2X − 1 through v0.5.11r).
+        assert_eq!(refused.len(), 3);
         for seat in [PlayerId::P1, PlayerId::P2] {
             let sent = serde_json::to_string(&view_for(g.state(), seat).events).expect("events serialize");
             for id in &refused {
@@ -1079,7 +1381,8 @@ mod i8_an_attack_or_a_switch_reduce_accepts_that_the_list_leaves_out {
 mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
     use super::*;
 
-    const CRATER: &str = "classicplus-034"; // Memory Leak: Field Spell with Crater, Locks its zone
+    // Comet Crash: Field Spell with Crater, Locks its zone (Memory Leak until issue #4285 took its Crater).
+    const CRATER: &str = "stinkyscape-155";
     const CARRIER: &str = "classicplus-033"; // Ivory Tower: a Unit may stack onto its zone
     const FLYING: &str = "classicplus-051"; // Jlockeed's J15 Fighter: Flying
     const TRIBUTE: &str = "core-066"; // The Rock: Tribute 1
@@ -1126,14 +1429,11 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
     fn i8_fires_when_every_listed_play_of_a_1_cost_unit_into_one_lane_is_left_out() {
         let g = board();
         let card = vanilla(&g);
-        let mut lanes: Vec<i32> = legal_actions(g.state(), PlayerId::P1)
+        let mut lanes: Vec<i32> = g
+            .plays_of(&card)
             .iter()
             .filter_map(|body| match body {
-                ActionBody::Play {
-                    instance_id,
-                    zone: Some(at),
-                    ..
-                } if *instance_id == card.id && at.row == Row::Units => Some(at.lane),
+                ActionBody::Play { zone: Some(at), .. } if at.row == Row::Units => Some(at.lane),
                 _ => None,
             })
             .collect();
@@ -1146,14 +1446,8 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
             lane,
         };
         let legal = without_matching(&g, |body| {
-            matches!(
-                body,
-                ActionBody::Play {
-                    instance_id,
-                    zone: Some(at),
-                    ..
-                } if *instance_id == card.id && *at == left_out
-            )
+            is_play_of(body, &card.id)
+                && matches!(body, ActionBody::Play { zone: Some(at), .. } if *at == left_out)
         });
         let found = unlisted_accepted(g.state(), PlayerId::P1, &legal);
         assert_unlisted_play(&found, &card.id);
@@ -1163,10 +1457,7 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
     fn i8_fires_when_every_play_of_a_card_is_left_out() {
         let g = board();
         let card = vanilla(&g);
-        let legal = without_matching(
-            &g,
-            |body| matches!(body, ActionBody::Play { instance_id, .. } if *instance_id == card.id),
-        );
+        let legal = without_matching(&g, |body| is_play_of(body, &card.id));
         let found = unlisted_accepted(g.state(), PlayerId::P1, &legal);
         assert_unlisted_play(&found, &card.id);
     }
@@ -1183,26 +1474,18 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
             "p2": {},
         }));
         // Crater Locks the zone its card enters (R1850006), which the setup's placement does not
-        // run: play Memory Leak from the hand, answering its mode prompt with the first option.
+        // run: play Comet Crash from the hand, answering any prompt with the first option.
         let crater = g.card(CRATER).clone();
         let into_lane_2 = ZoneChoice {
             row: Row::Backrow,
             lane: 2,
         };
-        let play = legal_actions(g.state(), PlayerId::P1)
+        let play = g
+            .plays_of(&crater)
             .into_iter()
-            .find(|body| {
-                matches!(
-                    body,
-                    ActionBody::Play {
-                        instance_id,
-                        zone: Some(at),
-                        ..
-                    } if *instance_id == crater.id && *at == into_lane_2
-                )
-            })
-            .expect("a play of Memory Leak into backrow lane 2 is listed");
-        g.act(play, PlayerId::P1, "play Memory Leak into backrow lane 2");
+            .find(|body| matches!(body, ActionBody::Play { zone: Some(at), .. } if *at == into_lane_2))
+            .expect("a play of Comet Crash into backrow lane 2 is listed");
+        g.act(play, PlayerId::P1, "play Comet Crash into backrow lane 2");
         let mut answers = 0;
         while g.state().pending.is_some() && answers < 5 {
             let pending = g.state().pending.clone().expect("a prompt is open");
@@ -1226,7 +1509,7 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
                     lane: 2,
                 }
             ),
-            "Memory Leak Locks its zone as it enters"
+            "Comet Crash Locks its zone as it enters"
         );
         // A Vanilla with the Fiender stacked atop it.
         g.play(VANILLA, json!({ "zone": 1 }));
@@ -1553,6 +1836,86 @@ mod i14_a_listed_action_reduce_refuses {
             "{found:?}"
         );
     }
+
+    #[test]
+    fn i14_branch_reports_unit_token_in_graveyard_on_accepted_branch_action() {
+        let g = board();
+        let found = listed_refused(
+            g.state(),
+            PlayerId::P1,
+            &[ActionBody::EndTurn],
+            |state, action| {
+                let mut result = reduce(state, action);
+                let token = new_instance(
+                    &mut result.state,
+                    RUSH_TOKEN,
+                    action.player_id,
+                    Zone::Graveyard {
+                        player: action.player_id,
+                    },
+                );
+                result.state.players[action.player_id].graveyard.push(token);
+                result
+            },
+        );
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I14 branch: after "), "{}", found[0]);
+        assert!(found[0].contains("(listed, not played)"), "{}", found[0]);
+        assert!(found[0].contains("I11 unit token in pile:"), "{}", found[0]);
+        assert!(found[0].contains("p1"), "{}", found[0]);
+        assert!(
+            found[0].contains(&format!("turn {}", g.state().turn)),
+            "{}",
+            found[0]
+        );
+        assert!(
+            found[0].contains(&format!("seed {}", g.state().seed)),
+            "{}",
+            found[0]
+        );
+    }
+
+    #[test]
+    fn i14_branch_reports_orphaned_work_on_accepted_branch_action() {
+        let g = board();
+        let found = listed_refused(
+            g.state(),
+            PlayerId::P1,
+            &[ActionBody::EndTurn],
+            |state, action| {
+                let mut result = reduce(state, action);
+                result.state.work.push(WorkItem {
+                    id: "w-planted".to_string(),
+                    seq: 0,
+                    owner: action.player_id,
+                    resume: Resume {
+                        def_id: "core-051".to_string(),
+                        hook: "resume".to_string(),
+                        step: "orphaned".to_string(),
+                        radiant: false,
+                        instance_id: None,
+                        data: indexmap::IndexMap::new(),
+                    },
+                });
+                result
+            },
+        );
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I14 branch: after "), "{}", found[0]);
+        assert!(found[0].contains("(listed, not played)"), "{}", found[0]);
+        assert!(found[0].contains("I7 orphaned work:"), "{}", found[0]);
+        assert!(found[0].contains("p1"), "{}", found[0]);
+        assert!(
+            found[0].contains(&format!("turn {}", g.state().turn)),
+            "{}",
+            found[0]
+        );
+        assert!(
+            found[0].contains(&format!("seed {}", g.state().seed)),
+            "{}",
+            found[0]
+        );
+    }
 }
 
 /// R127, R436: a Cry run out of a graveyard runs with no card (`self` null), so the `chaosRolled` a
@@ -1870,11 +2233,11 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
             })
             .expect("a zone one step from lane 1");
         let played = event(json!({
-            "type": "cardPlayed", "player": "p1", "instanceId": "silas", "defId": "core-052", "costPaid": 4,
+            "type": "cardPlayed", "player": "p1", "instanceId": "silas", "defId": "core-052", "costPaid": 6,
         }));
         let announced = event(json!({
             "type": "cardAnnounced", "player": "p1", "instanceId": "silas", "defId": "core-052",
-            "cardType": "Unit", "costPaid": 4, "targets": [], "row": "units", "lane": from,
+            "cardType": "Unit", "costPaid": 6, "targets": [], "row": "units", "lane": from,
         }));
         let rotated = event(json!({ "type": "rotated", "direction": direction }));
 
@@ -1886,6 +2249,37 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
         );
         let found = monitor.clone().after(&[announced, played], g.state());
         assert_eq!(entry_mismatches(&found).len(), 1, "{found:?}");
+    }
+
+    /// R3554001: the hole's pull at a turn's start moves a pile one lane and no event says so. A card the
+    /// action summoned (a Drone Battleship's layer, beneath its Shield), uncovered on a later turn of that
+    /// action and pulled on, takes the turn it was uncovered on, though it stands in no zone an event named
+    /// (fuzz handicap seed 6708, issue #3800). A card no event of the action named still does not.
+    #[test]
+    fn r3554001_r1829000_i4_takes_the_turn_of_a_unit_the_action_summoned_though_a_pull_moved_its_pile() {
+        let (mut g, monitor, _, fiender, _) = covered_on_an_earlier_turn();
+        let summoned_on = g.state().turn;
+        g.end_turn();
+        let uncovered_on = g.state().turn;
+        assert!(uncovered_on > summoned_on);
+        find_instance_mut(g.state_mut(), &fiender.id)
+            .expect("the Fiender")
+            .summoned_turn = Some(uncovered_on);
+        // Summoned into lane 2 on the earlier turn; it stands in lane 1 now.
+        let summoned = event(json!({
+            "type": "summoned", "player": "p1", "instanceId": fiender.id, "defId": FIENDER,
+            "row": "units", "lane": 2,
+        }));
+        let turn = g.last_events().to_vec();
+
+        let events: Vec<GameEvent> = std::iter::once(summoned).chain(turn.iter().cloned()).collect();
+        let found = monitor.clone().after(&events, g.state());
+        assert!(entry_mismatches(&found).is_empty(), "{found:?}");
+
+        let found = monitor.clone().after(&turn, g.state());
+        let mismatches = entry_mismatches(&found);
+        assert_eq!(mismatches.len(), 1, "{found:?}");
+        assert!(mismatches[0].contains(&fiender.id), "{found:?}");
     }
 }
 
@@ -2034,6 +2428,49 @@ mod r1869002_i2_a_kill_credit {
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(
             found[0].contains("I2 extra attack: ") && found[0].contains("attack number 7"),
+            "{}",
+            found[0]
+        );
+    }
+
+    /// R3543003, issue #3800 (fuzz seeds 8022 and 7429): a Frenzy kill inside one action is answered by
+    /// the Frenzy its attacker began the action with, though the state the action leaves shows none (the
+    /// autopilot's turn ends with a Drone Corvette exiled or dead, its drawn keywords reset, R78). One more
+    /// attack is no extra attack to I2; a third, with no second kill, still is.
+    #[test]
+    fn r3543003_a_frenzy_kill_inside_the_action_frees_the_attacker_though_it_leaves_without_frenzy() {
+        let mut g = scenario(json!({
+            "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let attacker = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
+        find_instance_mut(g.state_mut(), &attacker.id)
+            .expect("the Vanilla")
+            .granted_keywords = vec![json_as::<Keyword>(json!({ "kind": "Frenzy" }))];
+        let mut monitor = create_invariant_monitor(g.state());
+        // Read between actions, as the fuzz does; its I3 on the setup's cards is not this test's.
+        monitor.before(g.state(), PlayerId::P1, &ActionBody::EndTurn);
+        // The state the action leaves: the attacker's Frenzy is gone with the keywords it drew.
+        find_instance_mut(g.state_mut(), &attacker.id)
+            .expect("the Vanilla")
+            .granted_keywords
+            .clear();
+        let declared = |target: &str| {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": attacker.id, "targetId": target, "forced": false }),
+            )
+        };
+        let killed = event(json!({
+            "type": "destroyed", "instanceId": prey.id, "defId": prey.def_id, "owner": "p2",
+            "controller": "p2", "attack": 1, "maxHealth": 1, "killerId": attacker.id,
+        }));
+        let events = vec![declared(&prey.id), killed, declared("hero-p2")];
+        assert_eq!(monitor.after(&events, g.state()), no_violations());
+        let found = monitor.after(&[declared("hero-p2")], g.state());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].contains("I2 extra attack: ") && found[0].contains("attack number 3"),
             "{}",
             found[0]
         );
@@ -2799,5 +3236,521 @@ mod r1279000_opponent_held_prompt_off_turn {
         assert_eq!(w.holder(), Some(PlayerId::P2));
         w.answer_all();
         assert!(w.is_clean(), "{:?}", w.found);
+    }
+}
+
+mod i16_every_card_s_record_agrees_with_the_pile_that_holds_it {
+    use super::*;
+
+    const KPOP: &str = "core-050"; // K-Pop Fanatic: Cry: Allure an enemy permanent, a steal at its next turn's start
+    const TOWER: &str = "classicplus-033"; // Ivory Tower: a carrier
+    const TICKETED: &str = "stinkyscape-009"; // Ticketed: holds a permanent beneath it
+
+    fn i16(g: &Scenario) -> Vec<String> {
+        create_invariant_monitor(g.state())
+            .after(&[], g.state())
+            .into_iter()
+            .filter(|finding| finding.starts_with("I16"))
+            .collect()
+    }
+
+    /// A board of real cards holding what I16 must not flag: a stolen unit, a backrow pile, a carried unit,
+    /// a held card and a buffed hand card. Also the stolen unit.
+    fn board() -> (Scenario, CardInstance) {
+        let mut g = scenario(json!({
+            "p1": {
+                "hand": [KPOP, TICKETED, VANILLA],
+                "backrow": [
+                    { "def": TOWER, "lane": 2 },
+                    { "def": SHEEPISH, "lane": 3, "faceUp": false },
+                    { "def": SHEEPISH, "lane": 3, "stack": true },
+                ],
+                "library": [VANILLA, VANILLA, VANILLA],
+                "mana": 10,
+            },
+            "p2": {
+                "hand": [VANILLA],
+                "field": [{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 2 }],
+                "library": [VANILLA, VANILLA, VANILLA],
+            },
+        }));
+        let stolen = g.unit_at(PlayerId::P2, 1);
+        let held = g.unit_at(PlayerId::P2, 2);
+        g.play(TICKETED, json!({ "zone": 1, "targets": pick::instance(&held) }));
+        g.play(KPOP, json!({ "targets": pick::instance(&stolen) }));
+        g.end_turn();
+        g.end_turn();
+        assert_eq!(g.state().active, PlayerId::P1);
+        assert_eq!(
+            (g.card(&stolen).controller, g.card(&stolen).owner),
+            (PlayerId::P1, PlayerId::P2)
+        );
+        assert_eq!(g.state().held.iter().flatten().count(), 1);
+        let pile = ZoneSlot {
+            player: PlayerId::P1,
+            row: Row::Backrow,
+            lane: 3,
+        };
+        assert_eq!(beneath_at(g.state(), pile).len(), 1);
+        let tower = ZoneSlot {
+            player: PlayerId::P1,
+            row: Row::Backrow,
+            lane: 2,
+        };
+        let mut rider = new_instance(
+            g.state_mut(),
+            VANILLA,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
+        assert!(place_on_field(
+            g.state_mut(),
+            &mut rider,
+            tower,
+            PlaceOnFieldOptions::default()
+        ));
+        assert!(carried_at(g.state(), tower).is_some());
+        // B5 E38: a Buff lands on a hand card and rides it onto the field (`effects/buff.rs`).
+        let in_hand = g.card(VANILLA).id.clone();
+        let buffed = g.card_mut(&in_hand);
+        buffed.buffs = AttackHealth { attack: 2, health: 1 };
+        buffed.cost_mod = -1;
+        (g, stolen)
+    }
+
+    #[test]
+    fn i16_is_clean_with_a_stolen_unit_a_backrow_pile_a_carried_unit_a_held_card_and_a_buffed_hand_card() {
+        assert_eq!(i16(&board().0), no_violations());
+    }
+
+    #[test]
+    fn i16_sees_the_stolen_unit_s_controller_drift_back_to_its_owner() {
+        let (mut g, stolen) = board();
+        g.card_mut(&stolen).controller = PlayerId::P2;
+        let found = i16(&g);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].contains(&stolen.id) && found[0].contains("controller drift"),
+            "{}",
+            found[0]
+        );
+    }
+}
+
+// I19 (§6.1 Dormant, R1839000; #4454): the real board sweeps exile Dormant cards lawfully (R3539002,
+// R3554002), so the monitor's `BOARD_SWEEPS` names each by the id its card runs as; a renamed id fails here.
+mod i19_the_board_sweeps_of_s_plus_78_to_81 {
+    use super::*;
+
+    const SLASH: &str = "stinkyscapeplus-078";
+    const GLIMPSE: &str = "stinkyscapeplus-079";
+    const VOYAGE: &str = "stinkyscapeplus-080";
+    const DOOMSAYER: &str = "stinkyscapeplus-081";
+    const ECHO: &str = "classic-057";
+    const STAND_IN: &str = "stand-in (1) 4/4 R12/12";
+
+    fn dormant(lane: i32) -> Value {
+        json!({ "def": STAND_IN, "lane": lane, "slumber": { "turns": 2 } })
+    }
+
+    fn library() -> Value {
+        json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA])
+    }
+
+    /// The step `act` takes on `s`, through the monitor as the fuzz runs it: no I19, and the Dormant
+    /// stand-in on `side`'s lane `lane` ends in its exile pile.
+    fn swept(mut s: Scenario, side: PlayerId, lane: i32, act: impl FnOnce(&mut Scenario)) {
+        for player in [PlayerId::P1, PlayerId::P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        let id = s.unit_at(side, lane).id;
+        let before = s.state().clone();
+        let mut monitor = create_invariant_monitor(&before);
+        monitor.before(&before, before.active, &ActionBody::EndTurn);
+        act(&mut s);
+        let found: Vec<String> = monitor
+            .after(s.last_events(), s.state())
+            .into_iter()
+            .filter(|finding| finding.starts_with("I19"))
+            .collect();
+        assert_eq!(found, no_violations());
+        assert!(
+            s.state().players[side].exile.iter().any(|card| card.id == id),
+            "the Dormant stand-in is exiled"
+        );
+    }
+
+    #[test]
+    fn i19_the_board_sweeps_of_s_plus_78_to_81_exile_dormant_cards_lawfully() {
+        // S+ #80 The Last Voyage, on its caster's own board.
+        let voyage = scenario(json!({
+            "p1": { "hand": [VOYAGE], "mana": 4, "field": [dormant(1)], "library": library() },
+            "p2": { "library": library() },
+        }));
+        swept(voyage, PlayerId::P1, 1, |s| {
+            s.play(VOYAGE, json!({}));
+        });
+        // S+ #79 A Glimpse into the Endless Sea, on the opponent's board.
+        let glimpse = scenario(json!({
+            "p1": { "hand": [GLIMPSE], "mana": 4, "library": library() },
+            "p2": { "field": [dormant(1)], "library": library() },
+        }));
+        swept(glimpse, PlayerId::P2, 1, |s| {
+            s.play(GLIMPSE, json!({}));
+        });
+        // S+ #78 Slashed Dream Cries in Red, the opponent's lane 3.
+        let slash = scenario(json!({
+            "p1": { "hand": [SLASH], "mana": 4, "library": library() },
+            "p2": { "field": [dormant(3)], "library": library() },
+        }));
+        swept(slash, PlayerId::P2, 3, |s| {
+            s.play(SLASH, json!({}));
+        });
+        // S+ #81 Doomsayer, at the start of its controller's turn.
+        let doomsayer = scenario(json!({
+            "active": "p2",
+            "p1": { "field": [{ "def": DOOMSAYER, "lane": 1 }, dormant(2)], "library": library() },
+            "p2": { "library": library() },
+        }));
+        swept(doomsayer, PlayerId::P1, 2, |s| {
+            s.end_turn();
+        });
+        // C #57 Echo running The Last Voyage's text, the last Spell played (R399, R546).
+        let mut echo = scenario(json!({
+            "p1": { "hand": [ECHO], "mana": 4, "field": [dormant(1)], "library": library() },
+            "p2": { "library": library() },
+        }));
+        echo.state_mut().last_spell = Some(jackioh_engine::state::PlayRecord {
+            def_id: VOYAGE.to_string(),
+            radiant: false,
+        });
+        swept(echo, PlayerId::P1, 1, |s| {
+            s.play(ECHO, json!({}));
+        });
+    }
+}
+
+// I21 (#4508): every shipped Spell and Spell token, on each face that is a Spell, cast at a board with a
+// Unit Immune to Spells on each side, passes it by (§6.1, R4453000): no I21 from the monitor, and no
+// change to the immune stand-in's view in a step only Spells ran.
+mod i21_every_spell_passes_a_unit_immune_to_spells_by {
+    use super::*;
+    use jackioh_engine::faces::card_type_of_face;
+    use jackioh_engine::layers::{UnitView, unit_view};
+    use jackioh_engine::wire::{CardType, SwapWhat};
+
+    const IMMUNE: &str = "stand-in (1) 4/4 Immune to Spells";
+    const PLAIN: &str = "stand-in (1) 4/4";
+    /// The most prompts one play's run is answered through.
+    const ANSWER_CAP: usize = 8;
+    /// Where each side's immune stand-in stands.
+    const IMMUNE_LANE: i32 = 2;
+
+    /// Every shipped definition, with each face that is a Spell (base `false`, Radiant `true`), in id
+    /// order: a card or token that joins the catalog joins the sweep.
+    fn spell_faces() -> Vec<(String, bool)> {
+        let mut ids: Vec<&String> = jackioh_cards::CATALOG
+            .iter()
+            .filter(|(_, def)| set_ships(def.set))
+            .map(|(id, _)| id)
+            .collect();
+        ids.sort();
+        ids.into_iter()
+            .flat_map(|id| {
+                let def = &jackioh_cards::CATALOG[id];
+                [(false, &def.base), (true, &def.radiant)]
+                    .into_iter()
+                    .filter(|(_, face)| face.type_.unwrap_or(def.type_) == CardType::Spell)
+                    .map(|(radiant, _)| (id.clone(), radiant))
+                    .collect::<Vec<_>>()
+            })
+            .collect()
+    }
+
+    /// p1's main phase with `spell` in hand on `radiant`'s face at full mana; on each side a 1/4 in lane 1,
+    /// the immune stand-in in lane 2 and a 9/4 in lane 3 (p2's first two Radiant), and plain stand-ins to
+    /// draw. No card on it has text but the Spell.
+    fn board(spell: &str, radiant: bool) -> Scenario {
+        let library = json!([PLAIN, PLAIN, PLAIN, PLAIN, PLAIN, PLAIN]);
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [{ "def": spell, "radiant": radiant }],
+                "mana": 10,
+                "field": [
+                    { "def": "stand-in (1) 1/4", "lane": 1 },
+                    { "def": IMMUNE, "lane": IMMUNE_LANE },
+                    { "def": "stand-in (1) 9/4", "lane": 3 },
+                ],
+                "library": library,
+            },
+            "p2": {
+                "field": [
+                    { "def": "stand-in (1) 1/4", "lane": 1, "radiant": true },
+                    { "def": IMMUNE, "lane": IMMUNE_LANE, "radiant": true },
+                    { "def": "stand-in (1) 9/4", "lane": 3 },
+                ],
+                "library": library,
+            },
+        }));
+        for player in [PlayerId::P1, PlayerId::P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        s
+    }
+
+    /// What the hold keeps of an immune stand-in: its controller, its zone and its layered view.
+    fn held(state: &GameState, id: &str) -> Option<(PlayerId, Zone, UnitView)> {
+        let card = find_instance(state, id)?;
+        matches!(card.zone, Zone::Field { .. })
+            .then(|| (card.controller, card.zone.clone(), unit_view(state, card)))
+    }
+
+    /// Whether `def_id` on `source_id`'s face is a Spell, as the catalog prints it.
+    fn is_spell(state: &GameState, def_id: &str, source_id: &str) -> bool {
+        let radiant = find_instance(state, source_id).is_some_and(|card| card.radiant);
+        jackioh_engine::catalog::find_def(Some(state), def_id).is_some()
+            && card_type_of_face(state, def_id, radiant) == CardType::Spell
+    }
+
+    /// Whether a step's view of an immune stand-in may lawfully change with no event naming it: a run
+    /// that is no Spell's (a card the Spell made, a trap), an attack (R4508002), a board move (R4508001),
+    /// the AI's turn, a turn edge, the Radiant world (R4508003), or a card with an aura on the field.
+    fn hold_skipped(
+        state: &GameState,
+        events: &[GameEvent],
+        scripts: &IndexMap<String, CardScripts>,
+    ) -> bool {
+        let others = events.iter().any(|event| match event {
+            GameEvent::HookResolving {
+                source_id, def_id, ..
+            } => !is_spell(state, def_id, source_id),
+            GameEvent::TrapFired { .. }
+            | GameEvent::AttackDeclared { .. }
+            | GameEvent::Swapped {
+                what: SwapWhat::Board,
+            }
+            | GameEvent::Rotated { .. }
+            | GameEvent::RolledBack { .. }
+            | GameEvent::AutopilotEngaged { .. }
+            | GameEvent::TurnStarted { .. }
+            | GameEvent::TurnEnded { .. } => true,
+            _ => false,
+        });
+        let aura = [PlayerId::P1, PlayerId::P2].into_iter().any(|player| {
+            let side = &state.players[player];
+            side.units
+                .iter()
+                .flatten()
+                .flatten()
+                .chain(side.backrow.iter().flatten())
+                .filter(|card| !card.def_id.starts_with("stand-in"))
+                .any(|card| {
+                    scripts
+                        .get(&card.def_id)
+                        .is_none_or(|script| script.base.aura.is_some() || script.radiant.aura.is_some())
+                })
+        });
+        others || aura || state.radiant_world == Some(true)
+    }
+
+    #[test]
+    fn i21_every_spell_and_spell_token_on_both_faces_passes_the_immune_stand_ins_by() {
+        jackioh_cards::register_all();
+        let scripts = jackioh_cards::scripts_of();
+        let faces = spell_faces();
+        assert!(
+            faces.len() > 300,
+            "the sweep reads the catalog's Spells: {}",
+            faces.len()
+        );
+        let mut failures: Vec<String> = Vec::new();
+        for (spell, radiant) in &faces {
+            let face = if *radiant { "Radiant" } else { "base" };
+            let s = board(spell, *radiant);
+            let base = s.state().clone();
+            let card = base.players[PlayerId::P1].hand[0].id.clone();
+            let immune: Vec<String> = [PlayerId::P1, PlayerId::P2]
+                .into_iter()
+                .map(|player| s.unit_at(player, IMMUNE_LANE).id)
+                .collect();
+            let plays: Vec<ActionBody> = legal_actions(&base, PlayerId::P1)
+                .into_iter()
+                .filter(
+                    |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card),
+                )
+                .collect();
+            if plays.is_empty() {
+                failures.push(format!(
+                    "{spell} ({face}): no play of it is listed on the sweep's board"
+                ));
+                continue;
+            }
+            let spread: Vec<&ActionBody> = if plays.len() <= I14_ACTION_CAP {
+                plays.iter().collect()
+            } else {
+                (0..I14_ACTION_CAP)
+                    .map(|k| &plays[k * plays.len() / I14_ACTION_CAP])
+                    .collect()
+            };
+            for play in spread {
+                let mut state = base.clone();
+                let mut monitor = create_invariant_monitor(&state);
+                let mut body = play.clone();
+                let mut player = PlayerId::P1;
+                for n in 0..=ANSWER_CAP {
+                    let kept: Vec<_> = immune.iter().map(|id| held(&state, id)).collect();
+                    monitor.before(&state, player, &body);
+                    let result = reduce(
+                        &state,
+                        &Action::new(body.clone(), player, format!("i21-sweep-{n}")),
+                    );
+                    if result.error.is_some() {
+                        break;
+                    }
+                    let sent = serde_json::to_string(&body).unwrap_or_default();
+                    failures.extend(
+                        monitor
+                            .after(&result.events, &result.state)
+                            .into_iter()
+                            .filter(|finding| finding.starts_with("I21"))
+                            .map(|finding| format!("{spell} ({face}), {sent}: {finding}")),
+                    );
+                    if !hold_skipped(&result.state, &result.events, &scripts) {
+                        for (id, kept) in immune.iter().zip(&kept) {
+                            let (Some(kept), Some(now)) = (kept, held(&result.state, id)) else {
+                                continue;
+                            };
+                            if *kept != now {
+                                failures.push(format!(
+                                    "{spell} ({face}), {sent}: the immune stand-in {id} went from {kept:?} to {now:?} \
+                                     with only Spells running (§6.1, R4453000)"
+                                ));
+                            }
+                        }
+                    }
+                    state = result.state;
+                    let Some(pending) = state.pending.as_ref().filter(|_| state.result.is_none()) else {
+                        break;
+                    };
+                    player = pending.player_id;
+                    let Some(next) = legal_actions(&state, player)
+                        .into_iter()
+                        .find(|action| !matches!(action, ActionBody::Concede))
+                    else {
+                        break;
+                    };
+                    body = next;
+                }
+            }
+        }
+        assert_eq!(failures, no_violations());
+    }
+}
+
+// R4508004 (#4508): a lane the board loses takes a Unit Immune to Spells with all it holds: S+ #78's slash
+// and S+ #77's Black Hole, on the real cards through the monitor as the fuzz runs it.
+mod r4508004_a_lane_the_board_loses_takes_an_immune_unit_with_it {
+    use super::*;
+
+    const HOLE: &str = "stinkyscapeplus-077";
+    const SLASH: &str = "stinkyscapeplus-078";
+    const GLIMPSE: &str = "stinkyscapeplus-079";
+    const IMMUNE: &str = "stand-in (1) 4/4 Immune to Spells";
+
+    /// p1's main phase with `spell` in hand on `radiant`'s face; p2's immune stand-in in `lane`, and its id.
+    fn board(spell: &str, radiant: bool, lane: i32) -> (Scenario, String) {
+        let library = json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA]);
+        let mut s = scenario(json!({
+            "p1": { "hand": [{ "def": spell, "radiant": radiant }], "mana": 10, "library": library },
+            "p2": { "field": [{ "def": IMMUNE, "lane": lane }], "library": library },
+        }));
+        for player in [PlayerId::P1, PlayerId::P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        let id = s.unit_at(PlayerId::P2, lane).id;
+        (s, id)
+    }
+
+    /// The I21 findings of the step `act` takes on `s`, through a fresh monitor.
+    fn i21_of(s: &mut Scenario, act: impl FnOnce(&mut Scenario)) -> Vec<String> {
+        let before = s.state().clone();
+        let mut monitor = create_invariant_monitor(&before);
+        monitor.before(&before, before.active, &ActionBody::EndTurn);
+        act(s);
+        monitor
+            .after(s.last_events(), s.state())
+            .into_iter()
+            .filter(|finding| finding.starts_with("I21"))
+            .collect()
+    }
+
+    fn exiled(s: &Scenario, id: &str) -> bool {
+        s.state().players[PlayerId::P2]
+            .exile
+            .iter()
+            .any(|card| card.id == id)
+    }
+
+    #[test]
+    fn r4508004_the_slash_and_the_black_hole_take_an_immune_unit_with_their_lane_and_i21_allows_it() {
+        // The slash's base face: lane 3 (R3554002).
+        let (mut s, id) = board(SLASH, false, 3);
+        assert_eq!(
+            i21_of(&mut s, |s| {
+                s.play(SLASH, json!({}));
+            }),
+            no_violations()
+        );
+        assert!(exiled(&s, &id), "the base face's slash takes lane 3");
+        // Its Radiant face: the lane its caster picks.
+        let (mut s, id) = board(SLASH, true, 2);
+        assert_eq!(
+            i21_of(&mut s, |s| {
+                s.play(SLASH, json!({}));
+            }),
+            no_violations()
+        );
+        assert_eq!(
+            i21_of(&mut s, |s| {
+                s.answer(json!("2"));
+            }),
+            no_violations()
+        );
+        assert!(exiled(&s, &id), "the Radiant face's slash takes lane 2");
+        // The Black Hole swallows what stands in its lane (R3554000).
+        let (mut s, id) = board(HOLE, false, 3);
+        assert_eq!(
+            i21_of(&mut s, |s| {
+                s.play(HOLE, json!({}));
+            }),
+            no_violations()
+        );
+        assert!(exiled(&s, &id), "the hole swallows lane 3");
+        // Another Spell's exile is a reach: only a lane the board loses is exempt.
+        let (s, id) = board(SLASH, false, 3);
+        let state = s.state().clone();
+        let mut monitor = create_invariant_monitor(&state);
+        monitor.before(&state, PlayerId::P1, &ActionBody::EndTurn);
+        let events = [
+            event(json!({
+                "type": "hookResolving",
+                "sourceId": "r4508004-source",
+                "defId": GLIMPSE,
+                "controller": "p1",
+                "hook": "cry",
+            })),
+            event(json!({ "type": "exiled", "instanceId": id, "defId": IMMUNE, "owner": "p2" })),
+        ];
+        let found: Vec<String> = monitor
+            .after(&events, &state)
+            .into_iter()
+            .filter(|finding| finding.starts_with("I21"))
+            .collect();
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].contains(&id) && found[0].contains(GLIMPSE),
+            "{}",
+            found[0]
+        );
     }
 }

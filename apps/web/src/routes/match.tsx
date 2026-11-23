@@ -21,7 +21,7 @@ import ConfirmLeaveMatch from "../game/ConfirmLeaveMatch.tsx";
 import { connectionWords } from "../game/connectionWords.ts";
 import Game from "../game/Game.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
-import { OnceRevealed } from "../game/Result.tsx";
+import { OnceRevealed, resultSaysOpponentLeft } from "../game/Result.tsx";
 import { getAudioEngine } from "../audio/index.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import XpReveal from "../economy/XpReveal.tsx";
@@ -75,6 +75,10 @@ export const matchTestid = {
   gone: "match-gone",
   /** The button that retries at once while the connection line says Reconnecting…. */
   reconnect: "match-reconnect",
+  /** R3767000: the sentence for a game another tab or device took the seat of, before any view. */
+  elsewhere: "match-elsewhere",
+  /** R3767000: the button that takes the seat back, there and in the connection line. */
+  playHere: "match-play-here",
   /** Both seats' visible ranks and whether this game moves them (R604, R612). */
   ranks: "match-ranks",
   /** R2388000: one seat's rank before → after in a ranked match's result panel (`data-seat`). */
@@ -98,6 +102,14 @@ function ConnectionLine({ state, onReconnect }: { state: ConnectionState; onReco
           {" "}
           <button type="button" className="link-button" data-testid={matchTestid.reconnect} onClick={onReconnect}>
             {t("Reconnect now")}
+          </button>
+        </>
+      ) : null}
+      {state === "elsewhere" ? (
+        <>
+          {" "}
+          <button type="button" className="link-button" data-testid={matchTestid.playHere} onClick={onReconnect}>
+            {t("Play here")}
           </button>
         </>
       ) : null}
@@ -383,6 +395,22 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
         </ShellPanel>
       );
     }
+    // R3767000: another tab or device took the seat before the first view; nothing is loading, and a press
+    // takes the seat back.
+    if (match.connection === "elsewhere") {
+      return (
+        <ShellPanel testId={matchTestid.connecting}>
+          <p className="notice" data-testid={matchTestid.elsewhere} role="alert">
+            {t("This game is open in another tab or on another device.")}
+          </p>
+          <div className="row">
+            <button type="button" className="button-primary" data-testid={matchTestid.playHere} onClick={match.connect}>
+              {t("Play here")}
+            </button>
+          </div>
+        </ShellPanel>
+      );
+    }
     // A server that has slept takes a while to start again (apps/edge), which `slow` says once it has.
     return (
       <Loading what="Joining the match…" slow testId={matchTestid.connecting}>
@@ -399,6 +427,15 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     );
   }
 
+  // R3694000: a finished match whose socket closed for good (its window over, or a void, R679) keeps its
+  // result, offers no rematch and reads its status once.
+  const over = match.connection === "closed" && view.result !== null;
+
+  // #3698, R3933000: the live board's opponent hero and the replay name the other side as the ranks read does,
+  // when it has come and holds a name.
+  const opponentSeat = ranks === null ? undefined : [ranks.seats.p1, ranks.seats.p2].find((seat) => !seat.you);
+  const opponentName = opponentSeat === undefined || opponentSeat.username === "" ? undefined : opponentSeat.username;
+
   if (watching !== null && view.result !== null) {
     return (
       <CatalogContext.Provider value={lookup}>
@@ -407,6 +444,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           load={() => openOnlineMatchReplay(token, matchId)}
           start={watching.share ? "last" : "first"}
           shareOnOpen={watching.share}
+          {...(opponentName === undefined ? {} : { opponentLabel: opponentName })}
           // #936 B59: the finished match's replay, shared with a friend.
           actions={<ShareWithFriend matchId={matchId} />}
           onLeave={() => {
@@ -419,7 +457,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           that offered and opened the replay would never be taken to the game the offers created.
           Same series gate: series games offer no rematch.
         */}
-        {series === null ? <RematchWatcher token={token} matchId={matchId} pushed={match.rematch} /> : null}
+        {series === null ? <RematchWatcher token={token} matchId={matchId} pushed={match.rematch} over={over} /> : null}
       </CatalogContext.Provider>
     );
   }
@@ -437,11 +475,12 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     you: clock === null ? null : remainingMs(clock.clocks.graceDeadline[view.viewer], clock),
     opponent: clock === null ? null : remainingMs(clock.clocks.graceDeadline[opponent], clock),
   };
-  // #1899: a socket closed for good once the board is up (a voided match; `close()` runs only as this
-  // route unmounts) has nothing to reconnect to.
-  const gone = match.connection === "closed";
   // R679: the server keeps no record of a voided match, so its result offers no replay to watch or share.
   const voided = view.result?.reason === "voided";
+  // #1899: a socket closed for good once the board is up (a voided match; `close()` runs only as this
+  // route unmounts) has nothing to reconnect to. R3694000: a finished match closed past its rematch
+  // window keeps its result, so it says nothing of the kind.
+  const gone = match.connection === "closed" && (view.result === null || voided);
 
   // R2388000: each seat's recorded move, both ends present, for the result panel.
   const moves =
@@ -468,6 +507,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       choiceHover={choiceHover}
       trackStats
       wearCosmetics
+      {...(opponentName === undefined ? {} : { enemyLabel: opponentName })}
       deckCosmetics={deckCosmetics}
       loadouts={loadouts}
       // A refused socket's reason is the console's (above); the board says it in a player's words.
@@ -480,13 +520,14 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
         // A rematch, never for a series game (the server refuses those, `series_game`, and the
         // Conquest continue flow owns what comes next), then the series' next game, then the lobby.
         <>
-          {series === null ? (
+          {series === null && !over ? (
             <RematchButtons
               token={token}
               matchId={matchId}
               connection={match.connection}
               ranked={ranks?.ranked ?? false}
               pushed={match.rematch}
+              opponentLeftInResult={view.result !== null && resultSaysOpponentLeft(view.result, view.viewer)}
             />
           ) : null}
           <SeriesContinue series={series} matchId={matchId} />
@@ -560,7 +601,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
             folded the panel would never be taken to the game the offers created (Rematch.tsx).
             Same series gate as the buttons: series games offer no rematch.
           */}
-          {view.result !== null && series === null ? <RematchWatcher token={token} matchId={matchId} pushed={match.rematch} /> : null}
+          {view.result !== null && series === null ? <RematchWatcher token={token} matchId={matchId} pushed={match.rematch} over={over} /> : null}
           {ranks !== null ? (
             <p className="match-ranks" data-testid={matchTestid.ranks}>
               <span className="match-ranks__full">

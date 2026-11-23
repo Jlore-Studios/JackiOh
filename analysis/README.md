@@ -46,7 +46,9 @@ catalog = load_catalog()  # id → name, set, rarity, cost, type, tags, off crat
 seats of live games (a ladder bot's side is read only when asked for) and every seat of the rest (R1451). Each
 deck counts once per game, a draw is a game not won, and the played delta is the played win rate minus the
 drawn-but-not-played win rate in percentage points. The drawn delta is the drawn win rate (played and
-drawn but not played together) minus the never-drawn win rate in percentage points (R2427000). It returns
+drawn but not played together) minus the never-drawn win rate in percentage points (R2427000). A card an effect
+cast or summoned from the deck or the hand (a record's `castOrSummoned`) counts as played, on the turn it went
+in (R4279000). It returns
 one row per card with `<breakdown>_games`, `_wins`, `_draws` and `_rate` for `in_deck`, `opening_hand`,
 `going_first`, `going_second`, `played`, `drawn_not_played` and `not_drawn`, and `played_delta` and
 `drawn_delta`; the frame's `attrs` hold `games` and `decks`.
@@ -57,16 +59,33 @@ it has already read (`stats report` would count the game twice), so files that o
 Two more loaders read what is not a record file:
 
 ```python
-from jackioh_records import load_generations, load_sweep
+from jackioh_records import load_generations, load_sweep, load_sweep_pass2
 
 sweep = load_sweep(["sweep-1.jsonl", "sweep-2.jsonl"])  # cargo jackioh sweep --json's lines
+verdicts = load_sweep_pass2(["sweep-1.jsonl", "sweep-2.jsonl", "pass2.jsonl"])  # cargo jackioh sweep --pass2's
 generations = load_generations(".")  # a repository root
 ```
 
-`load_sweep` is one row per card and tier (`card`, `tier`, `games`, `drawn_games`, `affordable_turns`, `plays`,
-`errors`, `timeouts`, `eval_delta_sum`, `eval_delta_count`, `eval_delta_mean` (NaN with no plays), `flags` (a list
-of `error`, `timeout`, `neverPlayed`, `selfHarm`) and `unswept`). It skips a pass-2 line, so the files of a whole
-sweep may be named together, and refuses a card and tier it has already read. `load_generations` is one row per
+`load_sweep` is one row per card, tier and face (`card`, `tier`, `face` (`base` or `radiant`; `base` when a line
+has none), `games`, `drawn_games`, `affordable_turns`, `plays`, `errors`, `timeouts`, `eval_delta_sum`,
+`eval_delta_count`, `eval_delta_mean` (NaN with no plays), `flags` (a list of `error`, `timeout`, `neverPlayed`,
+`selfHarm`) and `unswept`). It skips a pass-2 line, so the files of a whole sweep may be named together, and
+refuses a card, tier and face it has already read.
+
+`load_sweep_pass2` reads the pass-2 lines `load_sweep` skips, the pass that bans (SPEC §9.9, R390), and skips
+pass 1's in turn, so the same files may be named to both. A pass-2 line forces one at-risk card and lists that
+card and every other at-risk card the AI was dealt as filler; a row is one card, tier and face (`card`, `tier`,
+`face`) summed over every pass-2 game it was dealt in, forced or filler, as the verdict sums it, with `forced`
+(some line forced it; a filler-only row is false), `games`, `drawn_games`, `affordable_turns`, `playable_turns`,
+`plays`, `errors`, `timeouts`, `eval_delta_sum`, `eval_delta_count`, `eval_delta_mean` (NaN with no plays) and
+`losing_plays`. `flags` are what pass 2's own numbers raise at ban strength (`error`, `timeout`, `neverPlayed`,
+`selfHarm`, `selfKill`), `half_flags` the same at half strength, and `status` reads them: `banned` (a flag),
+`watched` (cleared of a ban, but a half flag keeps it on `SHADOW_WATCH`), `unswept` (never affordable in these
+games) or `cleared`. The status reads pass 2 alone: `cargo jackioh sweep --report` over the pass-1 files too is
+the verdict of record (a pass-1 error or timeout also bans, pass-1 half flags also watch). It refuses a line
+that is not a pass-1 or pass-2 result, and a second line forcing a card, tier and face, naming file and line.
+
+`load_generations` is one row per
 generation, oldest first, from `training/history/*.jsonl` and `crates/ai/generation.json` under the root (the
 history's line for a generation wins over `generation.json`'s, which holds the newest again and generation 0);
 `vs_random_wins` and `vs_random_games`, `vs_parent_wins` and `vs_parent_games` are the gate's `"93/100"` split in two.
@@ -81,7 +100,7 @@ one; `test_notebooks.py` fails on a notebook that holds any), and `test_notebook
 |---|---|
 | `01-card-win-rates.ipynb` | R377's breakdowns for every card beside their games, by set and rarity, the 15 best and worst cards by in-deck win rate and by drawn delta, one patch against the one before it, and a development run against live games of the same patch (R378) |
 | `02-decks-and-play.ipynb` | Mana curves by mode and pilot, play rate and the cards most often drawn and not played, the turn cards are first played on, and the first player's win rate, how games end and the length of a game by mode and patch |
-| `03-ai-sweep-and-generations.ipynb` | A shadow-ban sweep's pass-1 lines per card and tier with its flags, and the AI's generations against random play and their parents, per lane |
+| `03-ai-sweep-and-generations.ipynb` | A shadow-ban sweep's pass-1 lines per card, tier and face with its flags, its pass-2 verdicts (banned, watched, cleared, unswept), and the AI's generations against random play and their parents, per lane |
 
 Each one's first cell reads its inputs from the environment and defaults to the fixtures, saying so when it does:
 
@@ -89,7 +108,7 @@ Each one's first cell reads its inputs from the environment and defaults to the 
 |---|---|---|---|
 | `JACKIOH_RECORDS` | 01, 02 | record files, comma-separated | `fixtures/dev-40.jsonl`, `fixtures/live-40.jsonl` |
 | `JACKIOH_CATALOG` | all | the catalog | `crates/cards/catalog.json` |
-| `JACKIOH_SWEEP` | 03 | pass-1 sweep lines, comma-separated files | `fixtures/sweep-small.jsonl` |
+| `JACKIOH_SWEEP` | 03 | sweep lines (pass 1's and pass 2's), comma-separated files | `fixtures/sweep-small.jsonl` |
 | `JACKIOH_REPO` | 03 | a repository root, for `crates/ai/generation.json` and `training/history/` | `fixtures/repo` |
 | `JACKIOH_SOURCE` | 01, 02 | `live`, `dev` or `all`: the games the figures read (R378: live unless asked) | `live` |
 | `JACKIOH_PATCH` | 01, 02 | the patch to read | the newest patch among the games read |
@@ -121,7 +140,9 @@ record named twice is trimmed first.
 
 `cargo jackioh stats report <file>… [--source] [--mode] [--patch] [--pilot] [--card] [--json]` prints the same
 figures from `jackioh_engine::card_stats`, with no database. `tests/test_card_stats.py` checks the loader's
-`card_stats` against that report over a committed fixture: wins and games exactly, rates to 1e-9.
+`card_stats` against that report over a committed fixture: wins and games exactly, rates to 1e-9. `ai_sweep()`
+reads the sweep's limits (`AI_SWEEP`) off `crates/ai/src/sweep.rs`, and `load_sweep_pass2` judges against them, so
+no number of the Rust is restated here.
 `cargo jackioh stats report --games <file>… [--source] [--mode] [--patch] [--pilot] [--json]` prints the game
 figures (the first seat's wins, how games end, the turns, fatigue, traps, position switches and Radiant upgrades),
 and `tests/test_notebooks.py` holds notebook 02's first-seat and ending figures, per patch, mode and source,
@@ -137,7 +158,7 @@ exactly, means to three places).
 | `fixtures/counts.jsonl` | Five live v0.2.5f games, bo1 and bo3, three of whose records carry R1256000's counts and two written before them. **Made up** by hand: no run writes old and new records together |
 | `fixtures/counts.report.json` | `stats report --games --source=all` over it, as JSON: the figures notebook 02's switch and upgrade columns are held to; `crates/tools/src/stats.rs`'s R1994000 test holds it to the command |
 | `fixtures/live-40.jsonl` | 40 more AI games, filed as live ones: `make_live.py` gives them live ids, patches v0.2.5e (16) and v0.2.5f (24), the modes bo1 and bo3 and a human first seat. Not played by anyone: the notebooks' live and patch comparisons need records of that shape |
-| `fixtures/sweep-small.jsonl` | `cargo jackioh sweep --json` over four cards (pass 1 at Easy and Hard), as it wrote it |
+| `fixtures/sweep-small.jsonl` | `cargo jackioh sweep --json` over four cards (pass 1 at Easy and Hard), then `sweep --pass2` over the one at-risk id `core-001` (four lines: Easy and Hard, base and Radiant), as it wrote them |
 | `fixtures/repo/` | The files `load_generations` reads under a repository root: `crates/ai/generation.json` and `training/history/*.jsonl`. **Made up**: three promotions on two lanes, so the charts have a line. The real histories are empty until the first promotion |
 
 To remake them (after a change to the record's shape or to R377's arithmetic, never to quiet a failing test):
@@ -150,6 +171,7 @@ python3 analysis/fixtures/make_live.py /tmp/prev-40.jsonl > analysis/fixtures/li
 cargo jackioh stats report --games --source=all --json analysis/fixtures/dev-40.jsonl analysis/fixtures/live-40.jsonl > analysis/fixtures/games.report.json
 cargo jackioh stats report --games --source=all --json analysis/fixtures/counts.jsonl > analysis/fixtures/counts.report.json   # counts.jsonl is hand-written; only its report is remade
 cargo jackioh sweep --json core-002 core-011 classic-020 classicplus-005 > analysis/fixtures/sweep-small.jsonl   # about 70 seconds
+cargo jackioh sweep --pass2 analysis/fixtures/sweep-small.jsonl core-001 >> analysis/fixtures/sweep-small.jsonl   # minutes; any id in SHADOW_WATCH (an id that is not at risk plays nothing)
 ```
 
 The fixture is a snapshot: it is a file, so a later change to the engine, the cards or the AI leaves it as it is,

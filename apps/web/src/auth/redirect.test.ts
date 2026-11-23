@@ -22,7 +22,7 @@ const EXPIRES_AT_S = 2_000_000_000;
 const REFRESH = "refresh-from-link";
 
 function base64url(text: string): string {
-  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
 }
 
 function jwt(payload: Record<string, unknown>): string {

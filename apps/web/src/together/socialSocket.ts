@@ -2,8 +2,10 @@
 // tab's challenges, unread counts, chat or friends list change, so the social poll and an open chat's
 // poll (`socialPoll.ts`, `ChatPanel.tsx`) send nothing while it is up. A `social` frame is the tab's own
 // `GET /api/social` answer; a `chat` frame names the friend a message came from or went to, never its
-// words; a `friends` frame says the friends list changed. The tab sends only `hello`, which the server
-// answers with a `social` frame.
+// words; a `friends` frame says the friends list changed; a `lobby` frame names a private lobby that
+// changed and a `lobbyInvite` a friend's invite into one (R3730000, R3730005); a `notification` is a row the server
+// just wrote to the tab's notification feed (R4039000). The tab sends only `hello`, which the server answers with a
+// `social` frame.
 //
 // The handshake is `/ws/match`'s: the token as an offered subprotocol (R1379000), never in the
 // address. A drop reopens on the match socket's backoff and a woken page probes a quiet socket (R1441);
@@ -25,7 +27,8 @@ import {
   type Timers,
 } from "../game/net.ts";
 import { serverSocketUrl } from "../net/api.ts";
-import type { Challenge, SocialRead } from "../net/social.ts";
+import { isFeedNotification, type FeedNotification } from "../net/notifications.ts";
+import type { Challenge, PlayerRef, SocialRead } from "../net/social.ts";
 import { socketProtocols } from "../net/socketProtocols.ts";
 import { isRecord } from "../wire/json.ts";
 
@@ -42,7 +45,22 @@ export type SocialPush =
   /** A chat message to or from `friendId`: the open conversation with them reads its newest page. */
   | { kind: "chat"; friendId: string }
   /** The friends list changed: an open list reads again. */
-  | { kind: "friends" };
+  | { kind: "friends" }
+  /** R3730000: private lobby `code` changed: an open lobby screen reads it again. */
+  | { kind: "lobby"; code: string }
+  /** R3730005: a friend invites the tab's account into their lobby, a toast nothing keeps. */
+  | { kind: "lobbyInvite"; code: string; format: LobbyFormat; from: PlayerRef }
+  /** R4039000: a row the server just wrote to the account's notification feed. */
+  | { kind: "notification"; notification: FeedNotification };
+
+/** A lobby's format, as `lobbyInvite` names it: a 2v2's too (R3731000). */
+export type LobbyFormat = "duel" | "coop" | "2v2";
+
+const LOBBY_FORMATS: readonly string[] = ["duel", "coop", "2v2"] satisfies readonly LobbyFormat[];
+
+function isLobbyFormat(value: unknown): value is LobbyFormat {
+  return typeof value === "string" && LOBBY_FORMATS.includes(value);
+}
 
 /** One text frame, or null for anything this client does not read (an error frame, junk). */
 export function parseSocialPush(data: unknown): SocialPush | null {
@@ -56,17 +74,29 @@ export function parseSocialPush(data: unknown): SocialPush | null {
   if (!isRecord(parsed)) return null;
   switch (parsed.type) {
     case "social": {
-      const { incoming, outgoing, unread } = parsed;
+      const { incoming, outgoing, unread, dailyWaiting, notificationsUnread } = parsed;
       if (!Array.isArray(incoming) || !Array.isArray(outgoing) || !isRecord(unread)) return null;
-      return {
-        kind: "social",
-        read: { incoming: incoming as Challenge[], outgoing: outgoing as Challenge[], unread: unread as Record<string, number> },
-      };
+      let read: SocialRead = { incoming: incoming as Challenge[], outgoing: outgoing as Challenge[], unread: unread as Record<string, number> };
+      // #3727: the daily games waiting on the player; a frame without it (an older server) says none.
+      if (typeof dailyWaiting === "number") read = { ...read, dailyWaiting };
+      // R4039000: the feed's unread rows; a frame without it says none.
+      if (typeof notificationsUnread === "number") read = { ...read, notificationsUnread };
+      return { kind: "social", read };
     }
     case "chat":
       return typeof parsed.friendId === "string" ? { kind: "chat", friendId: parsed.friendId } : null;
     case "friends":
       return { kind: "friends" };
+    case "lobby":
+      return typeof parsed.code === "string" ? { kind: "lobby", code: parsed.code } : null;
+    case "lobbyInvite": {
+      const { code, format, from } = parsed;
+      if (typeof code !== "string" || !isLobbyFormat(format) || !isRecord(from)) return null;
+      if (typeof from.profileId !== "string" || typeof from.username !== "string") return null;
+      return { kind: "lobbyInvite", code, format, from: { profileId: from.profileId, username: from.username } };
+    }
+    case "notification":
+      return isFeedNotification(parsed.notification) ? { kind: "notification", notification: parsed.notification } : null;
     default:
       return null;
   }

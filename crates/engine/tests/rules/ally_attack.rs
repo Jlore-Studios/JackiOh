@@ -9,14 +9,10 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{
-    ally_asker, ally_noter, answer, defender, grunt, notes, pawn, playing, recorder, replays_to, round_trip,
-    veteran, wall,
+    ally_asker, ally_kill_noter, ally_noter, answer, defender, grunt, notes, pawn, playing, recorder,
+    replays_to, round_trip, veteran, wall,
 };
-use crate::rules::fixtures::harness::{by, input, put, sink_for, slot};
-
-fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
+use crate::rules::fixtures::harness::{by, input, live_mut, put, sink_for, slot};
 
 mod r2199000_ally_attack {
     use super::*;
@@ -92,7 +88,7 @@ mod r2199000_ally_attack {
             slot(P2, Row::Units, 1),
             Default::default(),
         );
-        by_id_mut(&mut state, &target.id).buffs = AttackHealth { attack: 5, health: 0 };
+        live_mut(&mut state, &target.id).buffs = AttackHealth { attack: 5, health: 0 };
         let mut game = recorder(&state);
         game.play(input(json!({
             "type": "attack", "attackerId": striker.id, "targetId": target.id, "playerId": "p1"
@@ -212,5 +208,44 @@ mod r2199000_ally_attack {
             "type": "answer", "choiceId": pending.id, "selection": [{ "pick": "none" }], "playerId": "p1"
         })));
         assert!(replays_to(&game.start, &game.log, game.state()));
+    }
+}
+
+/// R3951000: the hook is told whether its combat destroyed a Unit of the attacker's opponent with the
+/// attacker the killer (R42).
+mod r3951000_destroyed_enemy {
+    use super::*;
+
+    /// The grunt (2/2) attacks `target_id`'s fixture with `target_damage` already on it.
+    fn swing(seed: &str, target_id: &str, target_damage: i32) -> (String, Vec<String>) {
+        let mut state = playing(seed);
+        put(
+            &mut state,
+            &ally_kill_noter.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        let striker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
+        let target = put(&mut state, target_id, slot(P2, Row::Units, 1), Default::default());
+        live_mut(&mut state, &target.id).damage = target_damage;
+        let mut game = recorder(&state);
+        game.play(input(json!({
+            "type": "attack", "attackerId": striker.id, "targetId": target.id, "playerId": "p1"
+        })));
+        assert!(replays_to(&game.start, &game.log, game.state()));
+        (striker.id, notes(game.state()))
+    }
+
+    #[test]
+    fn r3951000_a_combat_that_destroys_the_defender_reports_it_even_when_the_attacker_dies_too() {
+        let (striker, notes) = swing("ally-kill", &grunt.id, 1);
+        assert_eq!(notes, vec![format!("kill:{striker}:true")]);
+    }
+
+    #[test]
+    fn r3951000_a_combat_that_destroys_nothing_reports_none() {
+        // The wall (1/8) takes the 2 and stands.
+        let (striker, notes) = swing("ally-no-kill", &wall.id, 0);
+        assert_eq!(notes, vec![format!("kill:{striker}:false")]);
     }
 }

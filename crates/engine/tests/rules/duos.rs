@@ -72,6 +72,10 @@ const EMBER: &str = "fx-duos-ember";
 const STALL: &str = "fx-duos-stall";
 /// A 9-cost Tradable Spell that does nothing: a Trade on offer and no play (R1838003).
 const TRADABLE: &str = "fx-duos-tradable";
+/// A 1-cost Unit whose Death summons another of itself at 0/0: a loop only the loop cap ends (R3925000).
+const ENDLESS: &str = "fx-duos-endless";
+/// Summon an ENDLESS at 0/0.
+const SPARK: &str = "fx-duos-spark";
 
 const BOLT_DAMAGE: i32 = 6;
 const NUKE_DAMAGE: i32 = 25;
@@ -149,6 +153,8 @@ fn catalog() -> CardDefs {
         unit(BRUTE, "D15", BRUTE_ATTACK, 5, "brute"),
         unit(EMBER, "D16", 1, 1, "ember"),
         unit(STALL, "D17", 1, 1, "stall"),
+        unit(ENDLESS, "D19", 1, 1, "endless"),
+        spell(SPARK, "D20", "spark"),
         json_as(json!({
             "id": TRADABLE, "index": "D18", "name": "Duos tradable", "set": "Core", "type": "Spell",
             "tags": [], "rarity": "Common", "token": false, "cost": 9,
@@ -170,6 +176,13 @@ fn on_play(make: fn() -> Vec<Effect>) -> CardScripts {
 
 fn hit(who: &str, amount: i32) -> Effect {
     effects::damage(json_as(json!({ "to": { "of": who }, "amount": amount })))
+}
+
+fn summon_dead_endless() -> Effect {
+    effects::summon(json_as(json!({
+        "defId": ENDLESS,
+        "statsOverride": { "attack": 0, "health": 0 },
+    })))
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {
@@ -235,6 +248,14 @@ fn scripts() -> IndexMap<String, CardScripts> {
             ..Script::default()
         }),
     );
+    map.insert(
+        ENDLESS.into(),
+        both(Script {
+            death: Some(hook(|_ctx| vec![summon_dead_endless()])),
+            ..Script::default()
+        }),
+    );
+    map.insert(SPARK.into(), on_play(|| vec![summon_dead_endless()]));
     map.insert(
         GAMBIT.into(),
         both(Script {
@@ -501,26 +522,24 @@ fn passes_offered(state: &DuosState, seat: DuosSeat) -> Vec<String> {
 }
 
 fn offers_play(state: &DuosState, seat: DuosSeat, id: &str) -> bool {
-    duos_legal_actions(state, seat).iter().any(|offered| {
-        matches!(offered, DuosActionBody::Duel { body: ActionBody::Play { instance_id, .. } } if instance_id.as_str() == id)
-    })
+    duos_legal_actions(state, seat)
+        .iter()
+        .any(|offered| matches!(offered, DuosActionBody::Duel { body } if is_play_of(body, id)))
 }
 
 fn legal_play(state: &DuosState, seat: DuosSeat, id: &str) -> DuosActionBody {
     duos_legal_actions(state, seat)
         .into_iter()
-        .find(|offered| {
-            matches!(offered, DuosActionBody::Duel { body: ActionBody::Play { instance_id, .. } } if instance_id.as_str() == id)
-        })
+        .find(|offered| matches!(offered, DuosActionBody::Duel { body } if is_play_of(body, id)))
         .unwrap_or_else(|| panic!("{seat} is offered no play of {id}"))
 }
 
 /// A well-formed play of `id`: the one the seat's duel itself would offer, else a bare play. For
 /// asking the wrapper to refuse what the 1v1 game alone would allow.
 fn raw_play(state: &DuosState, seat: DuosSeat, id: &str) -> DuosActionBody {
-    let body = legal_actions(&state.duels[seat.duel()], seat.player())
+    let body = plays_in(&state.duels[seat.duel()], seat.player(), id)
         .into_iter()
-        .find(|offered| matches!(offered, ActionBody::Play { instance_id, .. } if instance_id.as_str() == id))
+        .next()
         .unwrap_or_else(|| json_as(json!({ "type": "play", "instanceId": id })));
     duel(body)
 }
@@ -2808,5 +2827,41 @@ mod r1705003_a_co_op_game_made_before_1705 {
         });
         assert_eq!(replayed.refused_at, None);
         assert_eq!(replayed.hash, duos_hash(&live.state));
+    }
+}
+
+mod r3925000_the_loop_cap {
+    use super::*;
+
+    /// §13: a duel is a 1v1 game, so the loop cap (§10.3) counts a duel action as `reduce` counts any:
+    /// the duel's loop stops at the cap, the other duel is untouched and the game goes on.
+    #[test]
+    fn r3925000_a_duel_loop_stops_at_the_cap_and_the_game_goes_on() {
+        let state = begun("r3925000-duos");
+        let untouched = hash_state(&state.duels[1]);
+        let result = cast(state, A1, SPARK);
+        let capped: Vec<(u8, &GameEvent)> = result
+            .events
+            .iter()
+            .filter_map(|event| match event {
+                DuosEvent::Duel { duel, event } if matches!(event, GameEvent::LoopCapped { .. }) => {
+                    Some((*duel, event))
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(capped, vec![(0, &GameEvent::LoopCapped { player: P1 })]);
+        let duel = &result.state.duels[0];
+        assert!(duel.trigger_queue.is_empty() && duel.work.is_empty() && duel.pending.is_none());
+        assert!(
+            units_on_field_of(duel, P1)
+                .iter()
+                .all(|unit| unit.def_id != ENDLESS),
+            "the capped check collected the last body"
+        );
+        assert_eq!(hash_state(&result.state.duels[1]), untouched);
+        assert!(result.state.result.is_none());
+        let state = ok(&result.state, A1, end_turn());
+        assert!(state.ended[0]);
     }
 }

@@ -220,6 +220,93 @@ mod signature {
         assert_signed(|state| field_unit(state, AI).tuning = Some(tuning.clone()));
     }
 
+    fn secret(
+        id: &str,
+        owner: PlayerId,
+        choice: Option<SecretChoice>,
+        revealed: Option<bool>,
+    ) -> SecretRecord {
+        SecretRecord {
+            id: id.to_string(),
+            owner,
+            choice,
+            revealed,
+        }
+    }
+
+    /// `base()` with the seat's one secret, minted as `id`, keeping `choice`.
+    fn keeping(id: &str, choice: SecretChoice) -> GameState {
+        let mut state = base();
+        state.secrets = Some(vec![secret(id, AI, Some(choice), None)]);
+        state
+    }
+
+    #[test]
+    fn r3772000_the_seats_own_secret_choice_is_signed() {
+        let signed = |choice| search_signature(&keeping("secret-1", choice), AI);
+        let (greed, attack, defend) = (
+            signed(SecretChoice::Greed),
+            signed(SecretChoice::Attack),
+            signed(SecretChoice::Defend),
+        );
+        assert_ne!(greed, attack);
+        assert_ne!(greed, defend);
+        assert_ne!(attack, defend);
+        // A secret held at all is signed.
+        assert_ne!(search_signature(&base(), AI), greed);
+    }
+
+    #[test]
+    fn r3772000_a_secrets_minted_id_is_not_signed() {
+        assert_eq!(
+            search_signature(&keeping("secret-1", SecretChoice::Attack), AI),
+            search_signature(&keeping("secret-9", SecretChoice::Attack), AI)
+        );
+    }
+
+    #[test]
+    fn r3772000_a_secrets_owner_and_revealed_flag_are_signed() {
+        let held = keeping("secret-1", SecretChoice::Attack);
+        let with = |record: SecretRecord| {
+            let mut state = held.clone();
+            state.secrets = Some(vec![record]);
+            search_signature(&state, AI)
+        };
+        let signatures = [
+            search_signature(&held, AI),
+            with(secret("secret-1", HUMAN, Some(SecretChoice::Attack), None)),
+            with(secret("secret-1", AI, Some(SecretChoice::Attack), Some(true))),
+            with(secret("secret-1", AI, None, None)),
+        ];
+        for (at, one) in signatures.iter().enumerate() {
+            for other in &signatures[at + 1..] {
+                assert_ne!(one, other);
+            }
+        }
+    }
+
+    #[test]
+    fn r3772000_two_secrets_sign_alike_in_either_order() {
+        let mut first = base();
+        first.secrets = Some(vec![
+            secret("secret-1", AI, Some(SecretChoice::Greed), None),
+            secret("secret-2", HUMAN, Some(SecretChoice::Defend), None),
+        ]);
+        let mut second = first.clone();
+        second.secrets = Some(vec![
+            secret("secret-7", HUMAN, Some(SecretChoice::Defend), None),
+            secret("secret-8", AI, Some(SecretChoice::Greed), None),
+        ]);
+        assert_eq!(search_signature(&first, AI), search_signature(&second, AI));
+    }
+
+    #[test]
+    fn r3772000_a_position_with_no_secret_signs_as_before() {
+        let mut emptied = base();
+        emptied.secrets = Some(Vec::new());
+        assert_eq!(search_signature(&base(), AI), search_signature(&emptied, AI));
+    }
+
     #[test]
     fn a_hand_cards_enchantments_are_signed() {
         assert_signed(|state| state.players[AI].hand[0].enchantments = Some(vec![Enchantment::CastOnDraw]));
@@ -229,7 +316,7 @@ mod signature {
     fn a_plain_position_signs_none_of_the_new_parts() {
         let signature = search_signature(&base(), AI);
         let new_parts = [
-            "Mp", "Lp", "Xp", "Tp", "Fp", "Jp", "Ep", "Cp", "Gp", "Yp", "Pp", "D", "K",
+            "Mp", "Lp", "Xp", "Tp", "Fp", "Jp", "Ep", "Cp", "Gp", "Yp", "Pp", "D", "K", "S",
         ];
         for part in signature.split('|') {
             assert!(
@@ -270,32 +357,45 @@ mod soak {
     use super::*;
     use crate::ai::support::act;
 
-    /// The enemy hero's health lost when the AI's units attack in `face_threat`'s order, smallest
-    /// first, each the enemy's first Taunt while one stands and the hero after. R82 would end the turn
-    /// after the last attack and fatigue would run on, so the AI turns it off first (R345).
+    /// The most hero health the AI's units can take over every order they may attack in, each the
+    /// enemy's first Taunt while one stands and the hero after. R82 would end the turn after the last
+    /// attack and fatigue would run on, so the AI turns it off first (R345).
     fn played(state: &GameState) -> i32 {
-        let mut attackers: Vec<(String, i32)> = active_units_of(state, AI)
-            .into_iter()
-            .map(|unit| (unit.id.clone(), unit_view(state, unit).attack))
+        let mut start = state.clone();
+        start.players[AI].auto_end_turn = Some(false);
+        let waiting: Vec<String> = active_units_of(&start, AI)
+            .iter()
+            .map(|unit| unit.id.clone())
             .collect();
-        attackers.sort_by_key(|(_, attack)| *attack);
-        let mut after = state.clone();
-        after.players[AI].auto_end_turn = Some(false);
-        for (attacker_id, _) in attackers {
-            let target_id = active_units_of(&after, HUMAN)
+        best_after(&start, &waiting, state.players[HUMAN].hero.health)
+    }
+
+    /// The most hero health `waiting`, attacking from `after` in any order, takes.
+    fn best_after(after: &GameState, waiting: &[String], before: i32) -> i32 {
+        let mut best = before - after.players[HUMAN].hero.health;
+        for attacker_id in waiting {
+            if !active_units_of(after, AI)
+                .iter()
+                .any(|unit| unit.id == *attacker_id)
+            {
+                continue;
+            }
+            let target_id = active_units_of(after, HUMAN)
                 .into_iter()
-                .find(|unit| has_keyword(&unit_view(&after, unit).keywords, KeywordKind::Taunt))
+                .find(|unit| has_keyword(&unit_view(after, unit).keywords, KeywordKind::Taunt))
                 .map_or_else(|| format!("hero-{HUMAN}"), |unit| unit.id.clone());
-            after = act(
-                &after,
+            let next = act(
+                after,
                 AI,
                 ActionBody::Attack {
-                    attacker_id,
+                    attacker_id: attacker_id.clone(),
                     target_id,
                 },
             );
+            let rest: Vec<String> = waiting.iter().filter(|id| *id != attacker_id).cloned().collect();
+            best = best.max(best_after(&next, &rest, before));
         }
-        state.players[HUMAN].hero.health - after.players[HUMAN].hero.health
+        best
     }
 
     #[track_caller]
@@ -305,22 +405,39 @@ mod soak {
         assert_eq!(played(&state), expected, "the attacks played out");
     }
 
+    /// A Mr. Vanilla in Defense Position at 1 health with Armor 1, against two 1/4s and a 4/4.
+    fn armored_guard() -> Value {
+        json!({
+            "seed": "ai-soak-armor",
+            "p1": { "field": [
+                { "def": "core-008", "statsOverride": { "attack": 1, "health": 4 } },
+                { "def": "core-008", "statsOverride": { "attack": 1, "health": 4 } },
+                "core-008",
+            ] },
+            "p2": { "field": [{ "def": "core-008", "position": "DEF", "damage": 3 }] },
+        })
+    }
+
+    /// The issue's board (#3937): a Mr. Vanilla in Defense Position at 3 health, against two 3/4s and a
+    /// 4/4.
+    fn guard_vs_3_3_4() -> Value {
+        json!({
+            "seed": "ai-soak-lone-breaker",
+            "p1": { "field": [
+                { "def": "core-008", "statsOverride": { "attack": 3, "health": 4 } },
+                { "def": "core-008", "statsOverride": { "attack": 3, "health": 4 } },
+                "core-008",
+            ] },
+            "p2": { "field": [{ "def": "core-008", "position": "DEF", "damage": 1 }] },
+        })
+    }
+
     #[test]
-    fn armor_comes_off_each_hit_so_one_attack_units_never_scratch_an_armored_taunt() {
-        // A Mr. Vanilla in Defense Position at 1 health with Armor 1: each 1-attack hit loses its point
-        // to the Armor, and the 4/4 destroys it with nothing left over.
-        assert_soaks(
-            json!({
-                "seed": "ai-soak-armor",
-                "p1": { "field": [
-                    { "def": "core-008", "statsOverride": { "attack": 1, "health": 4 } },
-                    { "def": "core-008", "statsOverride": { "attack": 1, "health": 4 } },
-                    "core-008",
-                ] },
-                "p2": { "field": [{ "def": "core-008", "position": "DEF", "damage": 3 }] },
-            }),
-            0,
-        );
+    fn r3937000_armor_stops_the_one_attack_units_so_the_four_breaks_the_taunt_first_and_they_go_face() {
+        // Each 1-attack hit would lose its point to the Armor, so neither goes in while the Taunt stands:
+        // the 4/4 destroys it and both 1s go face. The old order spent them on the Armor and counted 0.
+        assert_soaks(armored_guard(), 2);
+        assert_eq!(face_threat_with(&board(armored_guard()), AI, &GREEDY_EVAL), 0);
     }
 
     #[test]
@@ -377,5 +494,124 @@ mod soak {
             }),
             4,
         );
+    }
+
+    #[test]
+    fn r3937000_a_lone_breaker_goes_at_the_guard_first_and_the_rest_go_face() {
+        // The 4 destroys the 3-health guard alone, so both 3s go face for 6. Smallest first sends the two
+        // 3s into it and counts 4.
+        assert_soaks(guard_vs_3_3_4(), 6);
+        assert_eq!(face_threat_with(&board(guard_vs_3_3_4()), AI, &GREEDY_EVAL), 4);
+    }
+
+    #[test]
+    fn r3937000_a_taunt_no_attacker_breaks_alone_is_still_soaked_smallest_first() {
+        // Midrange Menace (9/9 Taunt) outlasts every one of the 3s and 4s alone: the two 3s and a 4 destroy
+        // it and the last 4 goes face.
+        assert_soaks(
+            json!({
+                "seed": "ai-soak-no-breaker",
+                "p1": { "field": [
+                    { "def": "core-008", "statsOverride": { "attack": 3, "health": 4 } },
+                    { "def": "core-008", "statsOverride": { "attack": 3, "health": 4 } },
+                    "core-008",
+                    "core-008",
+                ] },
+                "p2": { "field": ["core-019"] },
+            }),
+            4,
+        );
+    }
+
+    #[test]
+    fn r3937000_the_better_of_two_orders_counts_when_the_lone_breaker_is_worth_more_at_the_face() {
+        // A full-health Mr. Vanilla in Defense Position (4 health, Armor 1) against four 2s and a 9: the 9
+        // breaks it alone and the 2s go face for 8, but the 2s break it (1 each past the Armor) and the 9
+        // goes face for 9, so smallest first counts.
+        let two = json!({ "def": "core-008", "statsOverride": { "attack": 2, "health": 4 } });
+        assert_soaks(
+            json!({
+                "seed": "ai-soak-two-orders",
+                "p1": { "field": [
+                    two.clone(),
+                    two.clone(),
+                    two.clone(),
+                    two,
+                    { "def": "core-008", "statsOverride": { "attack": 9, "health": 4 } },
+                ] },
+                "p2": { "field": [{ "def": "core-008", "position": "DEF" }] },
+            }),
+            9,
+        );
+    }
+
+    #[test]
+    fn r3937000_attackers_a_first_strike_taunt_would_destroy_wait_for_the_one_that_breaks_it() {
+        // Pointmaster (6/1 First Strike) in Defense Position would strike each Mr. Vanilla down first, so
+        // they wait; the 7/7's Armor 7 takes its strike and its 7 destroys it, and both Vanillas go face
+        // for 8. The old order spent the Vanillas on it and counted 0.
+        let setup = json!({
+            "seed": "ai-soak-first-strike-wait",
+            "p1": { "field": ["core-008", "core-008", "core-025"] },
+            "p2": { "field": [{ "def": "core-020", "position": "DEF" }] },
+        });
+        assert_eq!(face_threat_with(&board(setup.clone()), AI, &GREEDY_EVAL), 0);
+        assert_soaks(setup, 8);
+    }
+
+    #[test]
+    fn r3937000_attackers_that_may_not_hit_the_hero_soak_the_guard_before_one_that_may() {
+        // The 3s may not hit the hero. The 4 alone breaks the 3-health guard (Armor 1), but sent first it
+        // leaves the 3s nothing to hit, so the 3s soak the guard and the 4 goes face, as before.
+        let state = board(json!({
+            "seed": "ai-soak-hero-ineligible",
+            "p1": { "field": [{ "def": "core-008", "position": "DEF", "damage": 1 }] },
+            "p2": { "field": [
+                { "def": "core-008", "statsOverride": { "attack": 3, "health": 4 } },
+                { "def": "core-008", "statsOverride": { "attack": 3, "health": 4 } },
+                "core-008",
+            ] },
+        }));
+        let units = active_units_of(&state, HUMAN);
+        let attacks = [(units[0], 3, false), (units[1], 3, false), (units[2], 4, true)];
+        assert_eq!(damage_past_taunts_with(&state, AI, &attacks, &AI_EVAL), 4);
+        assert_eq!(damage_past_taunts_with(&state, AI, &attacks, &GREEDY_EVAL), 4);
+    }
+
+    #[test]
+    fn r2179005_anime_armor_on_guard_takes_one_from_each_hit_so_three_four_fours_spend_themselves_on_it() {
+        // Anime Armor (3/3) in Defense Position: each Mr. Vanilla's 4 loses 1 to the Armor and its own
+        // guard caps the 3 left at 1, so all three hits go into it and nothing goes face. Uncapped, the walk
+        // had the first Vanilla's 3 destroy it and counted the other two at the face, 1 each through the
+        // hero's same cap.
+        assert_soaks(
+            json!({
+                "seed": "ai-soak-anime-armor",
+                "p1": { "field": ["core-008", "core-008", "core-008"] },
+                "p2": { "field": [{ "def": "classicplus-011", "position": "DEF" }] },
+            }),
+            0,
+        );
+    }
+
+    #[test]
+    fn r2179005_anime_armor_outlasts_a_first_strike_taunt_and_frees_mr_vanilla_for_the_face() {
+        // Pointmaster (First Strike) in Defense Position strikes Anime Armor first, but its own guard caps
+        // the hit at 1, so Anime Armor lives to destroy it and Mr. Vanilla goes face for 4. Uncapped, the
+        // walk had Pointmaster strike Anime Armor down and Mr. Vanilla wait on it for good.
+        assert_soaks(
+            json!({
+                "seed": "ai-soak-anime-armor-first-strike",
+                "p1": { "field": ["classicplus-011", "core-008"] },
+                "p2": { "field": [{ "def": "core-020", "position": "DEF" }] },
+            }),
+            4,
+        );
+    }
+
+    #[test]
+    fn r3937000_greedy_eval_keeps_the_old_order() {
+        const { assert!(AI_EVAL.best_attack_order_past_taunts) };
+        const { assert!(!GREEDY_EVAL.best_attack_order_past_taunts) };
     }
 }

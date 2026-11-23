@@ -36,6 +36,8 @@ mod tests {
 
     const SEED: &str = "core-028";
 
+    const SHREDDER: &str = "stand-in (3) 6/8 R12/16";
+
     /// Exactly the union #28 draws from: hand, library and field — never the graveyard.
     fn pool_cards(state: &GameState) -> Vec<CardInstance> {
         let side = &state.players.p1;
@@ -88,13 +90,13 @@ mod tests {
             crate::register_all();
             // The pool holds exactly one card — the unit on the field: #28 itself is in the `resolving`
             // zone while its script runs and the library is empty, so the pick is not a coin flip.
-            let mut s = knockoff(json!({ "hand": ["core-028"], "library": [], "field": [{ "def": "core-013", "damage": 2 }] }));
+            let mut s = knockoff(json!({ "hand": ["core-028"], "library": [], "field": [{ "def": SHREDDER, "damage": 2 }] }));
             let unit_id = s.unit(P1, 1).map(|card| card.id.clone()).unwrap_or_default();
             s.expect_stats(&unit_id, json!({ "attack": 6, "maxHealth": 8, "health": 6 }));
 
             s.play("core-028", json!({}));
 
-            // #13 Jlockeed Shredder-10 is 6/8 → 12/16. R22: the base layer swaps, the 2 damage stays (so
+            // The stand-in is 6/8 → 12/16. R22: the base layer swaps, the 2 damage stays (so
             // health is 14, not a fresh 16), and setting a flag is no entry to the field, so no Cry re-fires.
             assert!(s.card(&unit_id).radiant);
             s.expect_stats(&unit_id, json!({ "attack": 12, "maxHealth": 16, "health": 14 }));
@@ -145,6 +147,52 @@ mod tests {
             for id in &cued {
                 assert!(hidden.contains(id));
             }
+        }
+    }
+
+    /// R4453000: the Spell's pick passes a field Unit Immune to Spells by (§6.1), as R4322000's passes a
+    /// Dormant card by, so the draw lands where it changes something.
+    mod r4453000_an_immune_field_unit_is_out_of_the_pool {
+        use super::*;
+
+        /// `knockoff`'s board on its own seed, with the field's lane-1 Unit made Immune to Spells.
+        fn warded(seed: &str, mut side: Value) -> (Scenario, String) {
+            side["mana"] = json!(2);
+            let mut s = scenario(json!({ "seed": seed, "p1": side }));
+            let id = s.unit(P1, 1).map(|card| card.id).expect("the field Unit");
+            s.card_mut(id.as_str()).granted_keywords.push(Keyword::ImmuneToSpells);
+            (s, id)
+        }
+
+        #[test]
+        fn r4453000_never_draws_an_immune_field_unit() {
+            crate::register_all();
+            for n in 0..16 {
+                let (mut s, field) = warded(
+                    &format!("core-028-immune-{n}"),
+                    json!({
+                        "hand": ["core-028", "core-005", "core-016"],
+                        "library": ["core-010", "core-013"],
+                        "field": ["core-025"],
+                    }),
+                );
+                s.play("core-028", json!({}));
+                assert!(!s.card(field.as_str()).radiant, "seed {n}");
+                assert_eq!(radiant_in_pool(s.state()).len(), 2, "seed {n}");
+            }
+        }
+
+        #[test]
+        fn r4453000_with_only_immune_field_units_it_draws_hand_and_library() {
+            crate::register_all();
+            let (mut s, field) = warded(
+                "core-028-immune-only",
+                json!({ "hand": ["core-028", "core-005"], "library": ["core-010"], "field": ["core-025"] }),
+            );
+            s.play("core-028", json!({}));
+            assert!(!s.card(field.as_str()).radiant);
+            assert!(s.card("core-005").radiant);
+            assert!(s.card("core-010").radiant);
         }
     }
 

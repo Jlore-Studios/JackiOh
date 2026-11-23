@@ -26,6 +26,7 @@ import { PHONE_SHEET_QUERY } from "../../breakpoints.ts";
 import { CardFace, faceModel, useInspectTrigger } from "../../cards/index.ts";
 import { readerTerms } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
+import { queryList } from "../mediaQuery.ts";
 
 import {
   HAT_LABELS,
@@ -65,15 +66,11 @@ import "./craft.css";
 
 const TYPES: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap"];
 
-/** The phone sheet query (`PHONE_SHEET_QUERY`). Read in a try/catch, as `tutorial/Coach.tsx` does. */
+/** The phone sheet query (`PHONE_SHEET_QUERY`). Read through `queryList` (`game/mediaQuery.ts`). */
 const CRAFT_SHEET_QUERY = PHONE_SHEET_QUERY;
 
 function sheetQuery(): MediaQueryList | null {
-  try {
-    return typeof window.matchMedia === "function" ? window.matchMedia(CRAFT_SHEET_QUERY) : null;
-  } catch {
-    return null;
-  }
+  return queryList(CRAFT_SHEET_QUERY);
 }
 
 type DragPayload =
@@ -329,21 +326,26 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                 ))}
               </ul>
             )}
-            {!scratch && presets.length > 0 && (
-              <div className="craft-suggestions" aria-label={t("Suggestions")}>
-                {presets.map((option, index) =>
-                  option.recipe === undefined ? null : (
-                    <button
-                      key={option.key}
-                      type="button"
-                      data-testid={`craft-preset-${index}`}
-                      onClick={() => setRecipe(option.recipe ?? blankRecipe(cost, frame))}
-                    >
-                      {option.label}
-                    </button>
-                  ),
-                )}
-              </div>
+            {/* R880, R1563007: the presets under a heading of their own, as the palette's sections are, so
+                they read as suggestions and not as the card's caption (#4294). */}
+            {!scratch && presets.some((option) => option.recipe !== undefined) && (
+              <section className="craft-suggestions" aria-label={t("Suggestions")}>
+                <h3>{t("Suggestions")}</h3>
+                <div className="craft-row">
+                  {presets.map((option, index) =>
+                    option.recipe === undefined ? null : (
+                      <button
+                        key={option.key}
+                        type="button"
+                        data-testid={`craft-preset-${index}`}
+                        onClick={() => setRecipe(option.recipe ?? blankRecipe(cost, frame))}
+                      >
+                        {option.label}
+                      </button>
+                    ),
+                  )}
+                </div>
+              </section>
             )}
           </aside>
           {scratch ? (

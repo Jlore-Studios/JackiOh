@@ -66,6 +66,7 @@ pub fn make_context<'b>(
         chosen_from: None,
         event_stay: None,
         summoned: None,
+        draw_tally: crate::catalog::DrawTally::new(),
         self_resolving,
         controller,
         self_: self_.cloned(),
@@ -84,7 +85,8 @@ pub fn make_context<'b>(
 /// on draw that killed its own hero), the rest of the list does not resolve (§2.5).
 pub fn apply_effects(effects: &[Effect], ctx: &mut EffectContext<'_>) {
     for effect in effects {
-        if ctx.state.result.is_some() {
+        // R3925000: nor once the loop cap has turned card text off.
+        if ctx.state.result.is_some() || crate::loop_cap::capped(&ctx.sink) {
             return;
         }
         (effect.apply)(ctx);
@@ -186,6 +188,8 @@ pub struct CastOptions {
     pub afterward: Option<CastAfterward>,
     /// MD-B22, R946: an aimed cast takes a named legal pick for its first target declaration.
     pub aim_at: Option<String>,
+    /// R3920001: a cast from the deck, a cast and no play (`deck_cast.rs`).
+    pub from_deck: Option<bool>,
 }
 
 /// R70: "a cast is free and counts as a play for every rule that counts or reacts to plays, with cost
@@ -202,9 +206,10 @@ pub fn cast_card(sink: &mut EngineSink<'_>, instance: &CardInstance, options: Ca
 
 /// §5.1 and R155: "Spells with 'End of turn: add this back to your hand' are flagged
 /// `returnToHandAtEndOfTurn` when played and return from the graveyard at the end of that turn".
-/// Written at §10.5 step 7, as the Spell lands, on three conditions in order: a Spell (a Unit with an
+/// Written at §10.5 step 7, as the Spell lands, on four conditions: a Spell (a Unit with an
 /// `endOfTurn` hook, #13, must not return, R153); an `endOfTurn` hook on its resolving face (#23, #24,
-/// #31); and in the **graveyard** (#39 exiles itself on play). `turn.cleanup` clears it that turn (R153).
+/// #31), all of it a Spell's text when the card is fused (R3806002); and in the **graveyard** (#39 exiles
+/// itself on play). `turn.cleanup` clears it that turn (R153).
 pub fn flag_return_to_hand_at_end_of_turn(state: &mut GameState, instance_id: &str) {
     let Some(card) = find_instance(state, instance_id) else {
         return;
@@ -216,6 +221,11 @@ pub fn flag_return_to_hand_at_end_of_turn(state: &mut GameState, instance_id: &s
         return;
     }
     if crate::scripts::script_of(state, card).end_of_turn.is_none() {
+        return;
+    }
+    // R3806002: a fused Spell whose end-of-turn text is (in part) a permanent ingredient's declares no
+    // return: that text works from the field alone (R153), so it never runs from the graveyard.
+    if !crate::subsystems::fuse::end_of_turn_is_spell_text(state, &card.def_id, card.radiant) {
         return;
     }
     if let Some(card) = find_instance_mut(state, instance_id) {

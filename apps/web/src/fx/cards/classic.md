@@ -32,7 +32,7 @@ gallery plays every entry.
 | `classic-006` | Cloaked Toe Cracker | Unit | none: vanilla | — | none: vanilla | the census agrees: its reveal is its entrance, and its Aura shows nothing |
 | `classic-007` | InfiniScepter | Field Spell | signature; entrance sceptrePlant; bespoke sceptreLocket; aura sceptreLoop zone | 1.51 | vanish | signature (#3389): a crystal sceptre spins down and plants, its locket opening; its Cry draws the Spell into the locket, each Activate sends a copy out; the held Spell turns in its loop |
 | `classic-008` | Pickle | Spell | cast curse Dark/curse | 1.19 | none: vanilla | cast: its effect waits a turn, so its play shows nothing; a curse in Dark's curse sub-look says the threat |
-| `classic-009` | Income Tax | Trap | signature; bespoke taxSeizure | 1.74 | none: vanilla | signature (#3389): as it fires, a strongbox lid flies open, a chain and a crimson seal close on the other hand, and each card it takes is yanked across, a card back; a face-down Trap wears no aura |
+| `classic-009` | Income Tax | Trap | signature; bespoke taxSeizure | 1.62 | none: vanilla | signature (#3389): as it fires, a strongbox lid flies open, a chain and a crimson seal close on the other hand, and each card it takes is yanked across, a card back; a face-down Trap wears no aura |
 | `classic-010` | Exile | Trap | cast negate | 1.16 | negate | cast: the census agrees (negate) |
 | `classic-011` | Mind Melt | Spell | cast vanish | 1.08 | vanish | cast: the census agrees (vanish) |
 | `classic-012` | Book of Blood | Spell | cast bolt Dark/blood | 1.35 | lance | cast: it hits one Unit, a bolt; the census's lance counted its Lifesteal heal as a second target; blood sub-look |
@@ -55,14 +55,14 @@ gallery plays every entry.
 | `classic-029` | Book of Vital Kill | Spell | cast drain Dark/blood | 1.35 | none: no motif reads healthSet | cast: no census family reads healthSet, which drain (#2786) reads; blood sub-look |
 | `classic-030` | Recycle | Spell | bespoke recycleLoop | 1.19 | none: no motif reads shuffledIn | bespoke: its graveyard visibly loops into the deck, where #2793's send flies a made card from the caster's hero |
 | `classic-031` | Cookie Guild | Unit | cry conjure | 1.16 | none: no motif reads summoned | cry: no census family reads summoned, which conjure (#2786) reads |
-| `classic-032` | Felinor Feelings | Spell | cast tether Beast/felinor | 1.28 | none: vanilla | cast: its steal found no free lane in the census's games; tether draws a steal; felinor sub-look |
+| `classic-032` | Felinor Feelings | Spell | cast tether Beast/felinor | 1.36 | none: vanilla | cast: its steal found no free lane in the census's games; tether draws a steal; felinor sub-look |
 | `classic-033` | Joro | Unit | signature; entrance silkDrop; bespoke webRedirect; aura silkWeb tile | 1.40 | none: vanilla | signature (#3389): nothing shows in the hand; a thread drops and it swings down into its zone, and a web snaps from the Spell's aim to it as it takes the target; a faint web in its zone |
 | `classic-034` | Ancient Acquisition | Spell | cast recall Nerd/ink | 1.19 | none: no motif reads addedToHand | cast: a card back from the graveyard, which recall (R2794000) reads; #2793's send flies a made card from the hero; ink sub-look |
 | `classic-035` | Prep | Spell | cast flight | 1.00 | none: no motif reads modifierChanged | cast: its Embiggened draw, which flight (#2786) reads |
 | `classic-036` | Burn | Spell | cast bolt | 1.00 | bolt | cast: the census agrees (bolt) |
 | `classic-037` | Last Hurrah | Spell | cast flight | 1.25 | bolt | cast: fatigue; it draws your deck, which flight (#2786) reads |
 | `classic-038` | Jackiestan Auctioneer | Field Trap | cast bolt Hustle/cash | 1.28 | bolt | cast: the census agrees (bolt), in Hustle's cash sub-look |
-| `classic-039` | Outbreak | Spell | cast tally | 1.35 | bolt | cast: it places counters, which tally (#2786) reads |
+| `classic-039` | Outbreak | Spell | cast tally | 1.55 | bolt | cast: it places counters, which tally (#2786) reads |
 | `classic-040` | MC Tech | Unit | cry tether | 1.19 | none: no motif reads controlChanged | cry: no census family reads controlChanged, which tether (#2786) reads |
 | `classic-041` | State of the Game | Unit | none: vanilla | — | none: vanilla | the census agrees |
 | `classic-042` | Transmutable Toxins | Field Spell | cast tally; activate tally; aura toxic board | 1.28 | wipe | cast and activate: it places counters, which tally (#2786) reads; the census's wipe read the deaths they cause |
@@ -85,7 +85,7 @@ gallery plays every entry.
 | `classic-059` | Plague Doctor | Unit | cry bolt | 1.08 | bolt | cry: the census agrees (bolt) |
 | `classic-060` | Pile On | Spell | cast conjure Physical/sport | 1.75 | none: no motif reads summoned | cast: no census family reads summoned, which conjure (#2786) reads; sport sub-look |
 | `classic-061` | Plague Bringer Goliath | Unit | cry tally | 1.36 | offering | cry: the census's offering read its Tribute, a cost; its Cry places counters, which tally (#2786) reads |
-| `classic-062` | Living Bomb | Field Spell | cast nova; trigger nova; aura toxic board | 1.28 | bolt | cast and trigger: its kills of every countered permanent land at once, which nova draws; a set-piece candidate |
+| `classic-062` | Living Bomb | Field Spell | cast nova; trigger nova; aura toxic board | 1.36 | bolt | cast and trigger: its kills of every countered permanent land at once, which nova draws; a set-piece candidate |
 | `classic-063` | Crop Dusting | Trap | cast tally | 1.08 | nova | cast: the census's nova read fatigue; it places counters, which tally (#2786) reads |
 | `classic-064` | Malzahar's Recycler | Field Spell | cast flight; trigger flight; aura arcane side | 1.19 | bolt | cast and trigger: fatigue; it draws, which flight (#2786) reads |
 | `classic-065` | Ace in the Hole | Trap | cast conjure | 1.16 | none: vanilla | cast: its Recruit summons, which conjure (#2786) reads |
@@ -98,7 +98,7 @@ gallery plays every entry.
 | `classic-072` | Grand Counterspell | Trap | cast negate | 1.28 | negate | cast: the census agrees (negate) |
 | `classic-073` | Nurse Cleaver | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only, which the keyword beats draw |
 | `classic-074` | Corpse Plantation | Field Spell | cast tally; activate rise; aura bloom zone | 1.45 | bolt | cast: the census's bolt is noise; it places counters, which tally (#2786) reads; activate: it raises a Unit, which rise draws |
-| `classic-075` | Argusland | Field Spell | cast bless; aura holy side | 1.36 | none: vanilla | cast: its standing guard draws in the rows; ward folded into the rows (R2803000), so cast names bless, its nearest motif |
+| `classic-075` | Argusland | Field Spell | cast bless; aura holy side | 1.28 | none: vanilla | cast: its standing guard draws in the rows; ward folded into the rows (R2803000), so cast names bless, its nearest motif |
 | `classic-076` | Plague Bringer | Unit | cry tally | 1.28 | bolt | cry: it places counters, which tally (#2786) reads |
 | `classic-077` | Anti-Magic Monkey | Unit | none: vanilla | — | bolt | the census's bolt is one stray damage; its Aura taxes Spells, with no moment to draw |
 | `classic-078` | Mutate Spell | Field Spell | cast vanish; activate vanish; aura arcane zone | 1.19 | vanish | cast and activate: the census agrees (vanish) |
@@ -107,7 +107,7 @@ gallery plays every entry.
 | `classic-081` | The Power to Thrive | Field Spell | cast flight; activate flight; aura bloom side | 1.28 | bolt | cast and activate: fatigue; its Activate draws or heals, and flight (#2786) reads the draw |
 | `classic-082` | Sheeople | Unit | death flight Beast/wool | 1.08 | bolt | death: fatigue; its Death draws, which flight (#2786) reads; wool sub-look |
 | `classic-083` | Flame Lance | Spell | cast lance | 1.24 | lance | cast: the census agrees (lance) |
-| `classic-084` | Lockdown | Field Spell | cast bind Dark/curse; trigger bind Dark/curse; aura frost board Dark/curse | 1.28 | none: vanilla | cast and trigger: no census family reads locked, which bind (#2786) reads; curse sub-look |
+| `classic-084` | Lockdown | Field Spell | cast bind Dark/curse; trigger bind Dark/curse; aura frost board Dark/curse | 1.19 | none: vanilla | cast and trigger: no census family reads locked, which bind (#2786) reads; curse sub-look |
 | `classic-085` | King Wagtoggle | Unit | signature; entrance royalCloak; bespoke crownSwap; aura cloakShimmer tile | 1.85 | none: no motif reads swapped | signature (#3389): a velvet cloak sweeps in and he tips his crown; the two decks cross under a crown, and its Radiant Recruit leaps out of its new deck; a crimson shimmer runs along its cloak |
 | `classic-086` | Genn | Unit | none: vanilla | — | none: vanilla | the census agrees: no text |
 | `classic-087` | Plague Chalice | Field Spell | cast negate; trigger negate; aura void zone | 1.55 | negate | cast and trigger: the census agrees (negate) |

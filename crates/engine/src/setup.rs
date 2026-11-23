@@ -17,13 +17,13 @@ use crate::prompts::run_start_of_game;
 use crate::script::EngineSink;
 use crate::scripts::flags_of;
 use crate::state::{
-    CardInstance, EngineError, GameState, MulliganSeat, PendingChoice, PromptOption, Resume, WorkItem,
-    find_instance, find_instance_mut, handicap_of, new_instance,
+    CardInstance, EngineError, GameState, MulliganSeat, PendingChoice, PromptOption, WorkItem, find_instance,
+    find_instance_mut, handicap_of, new_instance,
 };
 use crate::state_check::state_check;
 use crate::turn::{clear_return_flags, start_turn};
 use crate::wire::{GameEvent, PLAYER_IDS, PerPlayer, Phase, PlayerId, PromptKind, Selection, Zone};
-use crate::work::{owe, paused};
+use crate::work::{engine_resume, owe, paused};
 use crate::zones::{LibraryPosition, MoveToZoneOptions, OffFieldZone, move_to_zone};
 
 fn seat_of(player: PlayerId) -> usize {
@@ -76,14 +76,7 @@ fn mulligan_prompt(sink: &EngineSink, player: PlayerId) -> PendingChoice {
         craft_mode: None,
         craft_offer: None,
         streak: None,
-        resume: Resume {
-            def_id: String::new(),
-            hook: "mulligan".to_string(),
-            step: "mulligan".to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
+        resume: engine_resume("mulligan", "mulligan", data),
     }
 }
 
@@ -223,7 +216,19 @@ fn deal_from(sink: &mut EngineSink, seat: usize) {
         };
         let quickdraw_count = quickdraw.len() as i32;
         let drawable_len = drawable.len() as i32;
-        let mut library = drawable;
+        // R3558006: the bottom starters sink below every other dealt card, keeping the shuffle's
+        // order among themselves, so two starters are the last two cards in either order.
+        let mut library: Vec<CardInstance> = Vec::with_capacity(drawable.len());
+        let mut bottom: Vec<CardInstance> = Vec::new();
+        for card in drawable {
+            let state: &GameState = &*sink.state;
+            if flags_of(state, &card).starts_at_bottom == Some(true) {
+                bottom.push(card);
+            } else {
+                library.push(card);
+            }
+        }
+        library.extend(bottom);
         library.extend(set_aside);
         library.extend(quickdraw);
         sink.state.players[player].library = library;
@@ -521,17 +526,7 @@ fn owe_setup(sink: &mut EngineSink, owed: Value) {
         .to_string();
     let mut data = indexmap::IndexMap::new();
     data.insert("owed".to_string(), owed);
-    owe(
-        sink,
-        Resume {
-            def_id: String::new(),
-            hook: SETUP_WORK.to_string(),
-            step,
-            radiant: false,
-            instance_id: None,
-            data,
-        },
-    );
+    owe(sink, engine_resume(SETUP_WORK, &step, data));
 }
 
 /// `work.rs`'s handler for `SETUP_WORK`: setup, continued where a question stopped it (R113, R122).
@@ -670,10 +665,32 @@ fn shuffle_in_set_aside(sink: &mut EngineSink) {
     }
 }
 
+/// R3558006: after every shuffle of setup, the bottom starters sink below every other card of
+/// their library, flagged cards last in a stable partition, so no later shuffle strands one in the
+/// middle of the deck. The deal already partitions them (`deal_from`); this keeps them down after
+/// `shuffle_in_set_aside` mixes the set-aside cards back in.
+fn sink_bottom_starters(sink: &mut EngineSink) {
+    for player in PLAYER_IDS {
+        let mut top: Vec<CardInstance> = Vec::new();
+        let mut bottom: Vec<CardInstance> = Vec::new();
+        for card in sink.state.players[player].library.iter().cloned() {
+            let state: &GameState = &*sink.state;
+            if flags_of(state, &card).starts_at_bottom == Some(true) {
+                bottom.push(card);
+            } else {
+                top.push(card);
+            }
+        }
+        top.extend(bottom);
+        sink.state.players[player].library = top;
+    }
+}
+
 /// R635's shuffle-in, R244's Coin, the start-of-game effects, R748's casts, then player 1 takes the
 /// first turn and draws (§2.1, R10).
 pub fn finish_setup(sink: &mut EngineSink) {
     shuffle_in_set_aside(sink);
+    sink_bottom_starters(sink);
     deal_coins(sink);
     let cards: Vec<String> = PLAYER_IDS
         .into_iter()

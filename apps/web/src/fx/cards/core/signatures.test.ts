@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import { animTestid, entranceEntries, planEntries, setPieceEntries, takeoverClaim, type AnimationEntry, type EntranceResolver } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { fullBoardView, withEvents } from "../../../test/fixtures.ts";
+import { envOf } from "../../../test/signatures.ts";
 import { CATALOG } from "../../../wire/cards.ts";
 import {
   FX_CENTER,
@@ -27,10 +28,9 @@ import {
   FX_TAKEOVER_TRAUMA,
 } from "../../constants.ts";
 import { planFx } from "../../cues.ts";
-import { createFxMemory } from "../../memory.ts";
 import { galleryBoardOf, galleryCardEvents, galleryEntry, galleryFieldView, galleryPlayId, galleryPlayOf } from "../../motifs/gallery.ts";
 import { hasSetPiece, wipeClaim } from "../../setPieces.ts";
-import type { FxAnchor, FxCue, FxPlanEnv } from "../../types.ts";
+import type { FxAnchor, FxCue } from "../../types.ts";
 import { CARD_RECIPES } from "../bespoke.ts";
 import { ENTRANCE_TRAUMA } from "../recipe.ts";
 import { FX_CARD_TABLE, isSignature } from "../tables.ts";
@@ -43,10 +43,6 @@ const CORE_SIGNATURES = ["core-052", "core-083", "core-085", "core-087", "core-0
 
 const tid = (value: string, at?: { x: number; y: number }): FxAnchor => (at === undefined ? { kind: "testid", testid: value } : { kind: "testid", testid: value, at });
 const CENTRE = tid(testid.board, FX_CENTER);
-
-function envOf(): FxPlanEnv {
-  return { intensity: I, card: () => undefined, memory: createFxMemory() };
-}
 
 /** As the board resolves an entrance: the card's type and rarity, a token's the one it prints (B2.5). */
 const resolve: EntranceResolver = (defId) => {

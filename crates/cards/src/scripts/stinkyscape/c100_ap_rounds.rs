@@ -1,5 +1,5 @@
 //! SPEC §8.10 Stinkyscape 100 AP Rounds, a card of the Stinkyscape set.
-//! (1) Unit, Common, 3/1 → 6/2: Starship Piece, Equip, Pierce.
+//! (1) Unit, Common, 3/1 → 6/2: Starship Piece, Pierce.
 //!
 //! Keywords only (§6.1): its script is empty. Equip (R1086): played onto one of your Units it
 //! fuses into it, the host keeping its zone and taking its stats, keywords and text (R77, R102),
@@ -61,6 +61,7 @@ mod tests {
             "p2": { "hand": [ANCHOR], "library": filler(4) },
         }));
         s.play(VANILLA, json!({ "zone": 1 }));
+        crate::give_equip(&mut s, ROUNDS);
         s.play(ROUNDS, json!({ "zone": 1, "equip": true }));
 
         let host = s.unit(PlayerId::P1, 1).expect("the fused host");

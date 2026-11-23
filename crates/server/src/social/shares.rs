@@ -3,7 +3,8 @@
 //! The friend reads the replay through `GET /api/replays/:matchId`, from the sharer's seat
 //! (`api/replays.rs`'s `replay_reader`). Every read, there and here, judges the friendship anew
 //! (`shares_sharers`, `shares_for`), so an unshare, an unfriend or a block ends it at once; anyone
-//! else still gets the unknown-id answer (R768).
+//! else still gets the unknown-id answer (R768). An account may share `REPLAY_SHARES_PER_HOUR` times
+//! an hour, and a share already held tells the friend nothing again (R4391000).
 
 use std::sync::Arc;
 
@@ -12,10 +13,12 @@ use serde::Serialize;
 use serde_json::json;
 
 use crate::api::collection::caller_profile;
-use crate::api::http::{ApiError, ApiResult, Req, log_info, now_ms, ok_of, str};
+use crate::api::http::{ApiError, ApiResult, Req, account_key, log_info, now_ms, ok_of, rate_limited, str};
 use crate::app::App;
 use crate::config::SHARED_REPLAYS_LIST_MAX;
 use crate::db::store::{MatchPhase, ReplayShare, StoreError, Tx};
+use crate::notifications::store::NotificationKind;
+use crate::notifications::{Notice, notify};
 use crate::social::friends::are_friends;
 use crate::social::{PlayerRef, iso, no_content, not_found, param};
 
@@ -61,6 +64,16 @@ pub async fn share_replay(app: &Arc<App>, req: Req) -> ApiResult {
     let match_id = param(&req, "matchId");
     let friend_id = str(&req.body, "friendId")?;
 
+    // R4391000: counted on every attempt, before any lookup.
+    let now = now_ms();
+    let key = account_key(&profile.id);
+    if !app.social.replay_shares.allow(&key, now) {
+        return Err(rate_limited(
+            "too many replay shares; try again later",
+            app.social.replay_shares.retry_after_ms(&key, now),
+        ));
+    }
+
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let seated = shares_as_seat(&mut tx, &match_id, &profile.id).await?;
     if !seated || !are_friends(&mut tx, &profile.id, &friend_id).await? {
@@ -72,15 +85,30 @@ pub async fn share_replay(app: &Arc<App>, req: Req) -> ApiResult {
     if !tx.matches_has_actions(&match_id).await? {
         return Err(no_such_share());
     }
-    tx.shares_put(&ReplayShare {
-        match_id: match_id.clone(),
-        sharer: profile.id.clone(),
-        friend: friend_id,
-        created_at: now_ms(),
-    })
-    .await?;
+    let wrote = tx
+        .shares_put(&ReplayShare {
+            match_id: match_id.clone(),
+            sharer: profile.id.clone(),
+            friend: friend_id.clone(),
+            created_at: now,
+        })
+        .await?;
     tx.commit().await?;
     log_info("replay.shared", json!({ "matchId": match_id }));
+    // R4391000: told only when a row was written; a share already held tells nobody again. R4039000:
+    // the friend is told, the shared list's link the subject.
+    if wrote {
+        notify(
+            app,
+            vec![Notice::new(
+                NotificationKind::ReplayShared,
+                &friend_id,
+                &profile.id,
+                &match_id,
+            )],
+        )
+        .await;
+    }
     Ok(no_content())
 }
 

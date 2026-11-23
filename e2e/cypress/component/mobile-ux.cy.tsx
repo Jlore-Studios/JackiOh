@@ -85,9 +85,28 @@ const GLOW_LEGAL: Legal = [
   { type: "concede" },
 ];
 
-/** A computed `box-shadow`, one entry per layer (commas inside `rgb(...)` are not separators). */
+/**
+ * A computed `box-shadow`, one entry per layer: split at each comma with no `)` before the next
+ * `(` ahead of it, as `/,(?![^(]*\))/` does (#4009: the lookahead rescans ahead from every comma).
+ */
 function shadowLayers(shadow: string): string[] {
-  return shadow.split(/,(?![^(]*\))/).map((layer) => layer.trim());
+  const closesFirst: boolean[] = new Array<boolean>(shadow.length).fill(false);
+  let first: string | null = null;
+  for (let i = shadow.length - 1; i >= 0; i--) {
+    closesFirst[i] = first === ")";
+    const char = shadow.charAt(i);
+    if (char === "(" || char === ")") first = char;
+  }
+  const out: string[] = [];
+  let start = 0;
+  for (let i = 0; i < shadow.length; i++) {
+    if (shadow.charAt(i) === "," && !closesFirst[i]) {
+      out.push(shadow.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+  out.push(shadow.slice(start).trim());
+  return out;
 }
 
 function expectShadow(testid: string, check: (shadow: string) => void): void {
@@ -351,7 +370,9 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
       cy.viewport(viewport.width, viewport.height);
       mountGame(fullBoardView());
 
-      // The pill's ::after is its finger-sized target.
+      // The pill's ::after is its finger-sized target. R2122000: neighbours split the gap, so the band stops
+      // halfway to a target beside it across its 44 px (on a phone the hero plate and the Heroic Power stand
+      // flush above the pills, and your hand's cards rise below them).
       cy.get(`${BOARD} [data-browsable="true"]`)
         .should("have.length", 3)
         .each(($pile) => {
@@ -360,10 +381,16 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
             const box = rectOf(pile);
             const doc = pile.ownerDocument;
             const reach = TOUCH_PX / 2 - 2;
-            for (const [x, y] of [
-              [box.left + box.width / 2, box.top + box.height / 2 - reach],
-              [box.left + box.width / 2, box.top + box.height / 2 + reach],
-            ] as const) {
+            const x = box.left + box.width / 2;
+            let top = box.top + box.height / 2 - reach;
+            let bottom = box.top + box.height / 2 + reach;
+            for (const target of doc.querySelectorAll(`${BOARD} :is(button, [role="button"], [tabindex="0"], .hero, .card)`)) {
+              const r = rectOf(target);
+              if (target.contains(pile) || pile.contains(target) || r.right <= x - TOUCH_PX / 2 || r.left >= x + TOUCH_PX / 2) continue;
+              if (r.bottom <= box.top + EPSILON) top = Math.max(top, (r.bottom + box.top) / 2 + 1);
+              if (r.top >= box.bottom - EPSILON) bottom = Math.min(bottom, (box.bottom + r.top) / 2 - 1);
+            }
+            for (const y of [top, bottom]) {
               const hit = doc.elementFromPoint(x, y);
               expect(
                 hit !== null && (hit === pile || pile.contains(hit)),
@@ -774,21 +801,23 @@ describe("B44 a play's board pick on a phone held upright", () => {
     localStorage.clear();
   });
 
-  it("B44 with drag to play on, a tap on a playable card opens a slim bar that covers neither that card nor the hand", () => {
+  it("B44 a tap on a playable card opens a slim hint pill with no zone list, clear of the field", () => {
     cy.viewport(390, 844);
     mountGame(tapView(), TAP_LEGAL);
 
     cy.get(ts("hand-card-t1")).click();
     cy.get(ts("zone-you-units-2")).should("have.attr", "data-glow", "ready");
-    cy.get(ts("prompt-modal")).should("have.attr", "data-prompt-source", "play").find(".prompt-zones").should("not.be.visible");
+    cy.get(ts("prompt-modal")).should("have.attr", "data-prompt-source", "play").find(".prompt-zones").should("not.exist");
     settledBox("hand-card-t1", () => undefined);
     cy.get(ts("prompt-modal")).should(($bar) => {
       const bar = rectOf($bar[0] as Element);
+      const field = rectOf($bar[0]?.ownerDocument.querySelector(`${BOARD} .field`) as Element);
       const hand = rectOf($bar[0]?.ownerDocument.querySelector(ts("hand-you")) as Element);
       const lifted = rectOf($bar[0]?.ownerDocument.querySelector(ts("hand-card-t1")) as Element);
-      expect(bar.height, "a bar, not a sheet").to.be.at.most(72);
+      expect(bar.height, "a pill, not a sheet").to.be.at.most(72);
       expect(bar.top, "below the hand").to.be.at.least(hand.bottom - EPSILON);
       expect(bar.top, "below the card that was tapped").to.be.at.least(lifted.bottom - EPSILON);
+      expect(bar.top, "below the field").to.be.at.least(field.bottom - EPSILON);
     });
     cy.get(ts("prompt-modal"))
       .find(".prompt-board-hint")
@@ -803,7 +832,7 @@ describe("B44 a play's board pick on a phone held upright", () => {
     cy.get(ts("prompt-modal")).should("not.exist");
   });
 
-  it("B44 with drag to play off, the same tap opens the full picker sheet", () => {
+  it("B44 with drag to play off, the same tap opens the same hint pill, no list", () => {
     cy.viewport(390, 844);
     cy.then(() => {
       writeSettings({ dragToPlay: false });
@@ -811,8 +840,8 @@ describe("B44 a play's board pick on a phone held upright", () => {
     mountGame(tapView(), TAP_LEGAL);
 
     cy.get(ts("hand-card-t1")).click();
-    cy.get(ts("prompt-modal")).find(".prompt-zones").should("be.visible");
-    cy.get(ts("prompt-modal")).find(".prompt-board-hint").should("not.be.visible");
+    cy.get(ts("prompt-modal")).find(".prompt-zones").should("not.exist");
+    cy.get(ts("prompt-modal")).find(".prompt-board-hint").should("be.visible");
   });
 });
 

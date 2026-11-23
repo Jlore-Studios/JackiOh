@@ -1,7 +1,8 @@
 //! BUILD M8's `E2E=1` test server: the fixture accounts and invite codes and R144's reseed, at boot
 //! and on `POST /api/e2e/reseed`; `crate::auth::E2eAuth` (SURFACE §11.1), built from `E2E_ACCOUNTS`
 //! here, honors the fixture tokens. `e2e-p1` and `e2e-p2` are active and own every card (a
-//! redemption grants only the starter cards, R1310000, so they are granted the rest), `e2e-pending`
+//! redemption grants only the starter cards, R1310000, so they are granted the rest), as do `e2e-p3`
+//! and `e2e-p4`, a 2v2's other two people (spec 55, R3731000), `e2e-pending`
 //! is pending, and R1310004's `e2e-econ` is a dev account in end-to-end mode alone ([`is_e2e_dev`]).
 //!
 //! SPEC §11 R144: the reseed makes a spec that activates the pending account or spends a code
@@ -76,6 +77,25 @@ pub const E2E_ACCOUNTS: &[E2EAccount] = &[
         token: "e2e-token-p2",
         status: E2EAccountStatus::Active,
         username: "e2e_p2",
+        dev: false,
+    },
+    // R3731000: a 2v2 lobby's other two people (spec 55).
+    E2EAccount {
+        user_id: "e2e-p3",
+        email: "e2e-p3@jackioh.test",
+        password: "e2e-p3-password",
+        token: "e2e-token-p3",
+        status: E2EAccountStatus::Active,
+        username: "e2e_p3",
+        dev: false,
+    },
+    E2EAccount {
+        user_id: "e2e-p4",
+        email: "e2e-p4@jackioh.test",
+        password: "e2e-p4-password",
+        token: "e2e-token-p4",
+        status: E2EAccountStatus::Active,
+        username: "e2e_p4",
         dev: false,
     },
     E2EAccount {
@@ -234,6 +254,10 @@ pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Resul
         ));
     };
     store.lock().await.reset();
+    // R144, R3210000: and every presence row with it, so the router's touch writes again at once, as after
+    // a boot; else an account heard from just before the reseed reads offline for a `PRESENCE_TOUCH_EVERY_MS`
+    // and a challenge to it is 409 `offline` (spec 57, #4221).
+    app.social.presence.clear();
     // R1523000: the wipe took the seat epoch and every seat with it, so the ledger boots again on
     // the empty store, as a restart over it would.
     crate::seats::boot(app).await?;
@@ -318,6 +342,25 @@ pub async fn post_reseed(app: &Arc<App>, _req: Req) -> ApiResult {
         return Err(ApiError::new(ApiErrorCode::NotFound, "no such endpoint"));
     }
     ok_of(&seed_e2e_fixtures(app).await?)
+}
+
+/// The daily clock's path. A contract with `e2e/support/daily.ts`'s `DAILY_CLOCK_PATH`.
+pub const E2E_DAILY_CLOCK_PATH: &str = "/api/e2e/daily-clock";
+
+/// `POST /api/e2e/daily-clock` `{offsetMs}` (`AuthLevel::None`, #3727): the daily games' clock reads
+/// `offsetMs` ahead of the server's from now on (0 puts it back), so spec 53 can watch a move run out
+/// (R3727000). Outside end-to-end mode it answers as a path nobody serves, as the reseed does.
+pub async fn post_daily_clock(app: &Arc<App>, req: Req) -> ApiResult {
+    if !app.env.e2e {
+        return Err(ApiError::new(ApiErrorCode::NotFound, "no such endpoint"));
+    }
+    let offset_ms = req
+        .body
+        .get("offsetMs")
+        .and_then(serde_json::Value::as_i64)
+        .ok_or_else(|| ApiError::new(ApiErrorCode::BadRequest, "\"offsetMs\" must be a whole number"))?;
+    app.daily.set_offset(offset_ms);
+    ok_of(&serde_json::json!({ "offsetMs": offset_ms }))
 }
 
 fn invite_code_for(app: &App, kind: E2EInviteCodeKind, plain: &str, now: i64) -> InviteCode {

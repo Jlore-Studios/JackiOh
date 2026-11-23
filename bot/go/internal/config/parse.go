@@ -170,6 +170,33 @@ func resolvers(raw any) []*Resolver {
 	return out
 }
 
+// areas is `suggestions.areas` (#4026): a list of objects, each a unique `id` and its `focus`.
+func areas(raw any) []SuggestionArea {
+	list, ok := raw.([]any)
+	if !ok {
+		raiseConfig("suggestions.areas: expected a list")
+	}
+	out := []SuggestionArea{}
+	seen := map[string]bool{}
+	for i, entry := range list {
+		o, isDict := entry.(*pyjson.Object)
+		if !isDict {
+			raiseConfig("suggestions.areas[%d]: expected an object", i)
+		}
+		id, _ := o.Get("id").(string)
+		focus, _ := o.Get("focus").(string)
+		if strings.TrimSpace(id) == "" || strings.TrimSpace(focus) == "" {
+			raiseConfig("suggestions.areas[%d]: needs an id and a focus", i)
+		}
+		if seen[id] {
+			raiseConfig("suggestions.areas: %s twice", py.Repr(id))
+		}
+		seen[id] = true
+		out = append(out, SuggestionArea{ID: id, Focus: strings.TrimSpace(focus)})
+	}
+	return out
+}
+
 // priorities is _priorities: `suggestions.priorities`: each key a known class, each value a
 // priority level.
 func priorities(raw any) map[string]string {
@@ -388,7 +415,9 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	c.SuggestionsEnabled = pyjson.Truthy(suggestions.GetOr("enabled", true))
 	c.SuggestionsMaxOpen = py.MustInt(suggestions.GetOr("max_open", 4))
 	c.SuggestionsIdleMinutes = py.MustInt(suggestions.GetOr("idle_minutes", 30))
+	c.SuggestionsSpareLanes = py.MustInt(suggestions.GetOr("spare_lanes", 3))
 	c.SuggestionPriorities = priorities(suggestions.GetOr("priorities", pyjson.New()))
+	c.SuggestionAreas = areas(suggestions.GetOr("areas", []any{}))
 	c.Quiet = quiet(raw.Get("quiet"))
 	c.ForbiddenPaths = mustStrs(raw.Get("forbidden_paths"))
 	c.ReviewPaths = mustStrs(raw.Get("review_paths"))
@@ -456,7 +485,6 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 		c.ServerURL = "https://github.com"
 	}
 	c.NowOverride = env["HARNESS_NOW"]
-	c.PCGist = env["JACKIOH_PC_GIST"]
 	c.Secrets = providers.SecretsOf(env)
 	c.ProviderSecrets = map[string]string{}
 	for _, k := range append([]string{ProviderSecretKey}, providers.SecretNames...) {

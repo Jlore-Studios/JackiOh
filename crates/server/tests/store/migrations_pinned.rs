@@ -101,6 +101,17 @@ const PINNED: &[(&str, &str)] = &[
     ("0085_match_win_rates.sql", "66c77d08"),
     ("0086_fleet_track.sql", "e0fd41a9"),
     ("0087_v0_5_13_retcon.sql", "6029729e"),
+    ("0088_stinkyscape_plus_tags.sql", "f37c9822"),
+    ("0089_daily_games.sql", "eb422bf6"),
+    ("0090_lobbies.sql", "1b219821"),
+    ("0091_two_v_two.sql", "c1eb76a2"),
+    ("0092_daily_email_days.sql", "86f02307"),
+    ("0093_notifications.sql", "96151b07"),
+    ("0094_revoke_on_profile_activated.sql", "2ac06ed4"),
+    ("0095_no_global_redemption_breaker.sql", "de19167a"),
+    ("0096_moderation_audit.sql", "13a16723"),
+    ("0097_duos_match_checkpoints.sql", "8a2c2b13"),
+    ("0098_stats_and_daily_pay_indexes.sql", "5e5f709f"),
 ];
 
 /// `PINNED[name]`.

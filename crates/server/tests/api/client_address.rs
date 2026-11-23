@@ -9,9 +9,7 @@ use axum::extract::ConnectInfo;
 use axum::http::{HeaderMap, HeaderName, HeaderValue, Request};
 use indexmap::IndexMap;
 use serde::Serialize;
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
-use tokio::sync::Mutex;
 use tower::ServiceExt;
 use tracing_subscriber::layer::SubscriberExt;
 
@@ -21,12 +19,10 @@ use jackioh_server::config::{
     API_REQUESTS_PER_MINUTE, CODE_ATTEMPTS_PER_IP_PER_HOUR, DEFAULT_TRUSTED_PROXY_HOPS,
     IPV6_RATE_LIMIT_PREFIX_BITS, MAX_TRUSTED_PROXY_HOPS, REDEMPTION_IDENTICAL_ERROR,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::Db;
 use jackioh_server::env::{SERVER_ONLY_ENV_VARS, load_env};
 
-use crate::support::deps;
-use crate::support::store::hmac_sha256_hex;
+use crate::support::deps::{self, from_json};
+use crate::support::store::{fake, hmac_sha256_hex};
 
 /// R109's allowance, as the server carries it.
 const LIMIT: usize = API_REQUESTS_PER_MINUTE;
@@ -107,7 +103,7 @@ impl Reply {
 async fn server_from(source: &IndexMap<String, String>) -> Server {
     let env = app::load_server_env(source).expect("the test environment loads");
     let app = app::build(env).await.expect("the test app builds");
-    store_of(&app).lock().await.reset();
+    fake(&app).lock().await.reset();
     Server {
         router: app::router(app.clone()),
         app,
@@ -139,17 +135,6 @@ impl Server {
             text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8"),
         }
     }
-}
-
-fn store_of(app: &App) -> Arc<Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => data.clone(),
-        Db::Pg(_) => panic!("E2E=1 builds the in-memory store"),
-    }
-}
-
-fn from_json<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value).expect("the literal has the port's JSON shape")
 }
 
 fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
@@ -225,7 +210,7 @@ struct Seeded {
 async fn seed_caller(server: &Server, id: &str) -> Seeded {
     let user_id = format!("user-{id}");
     let token = deps::add_user(&server.app, &user_id, &format!("{id}@example.test"), true);
-    let _ = store_of(&server.app)
+    let _ = fake(&server.app)
         .lock()
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": "pending" }));
@@ -261,7 +246,7 @@ async fn flood_address(server: &Server, address: &str) {
 
 /// The ip hash of the one attempt `profile_id` has on record.
 async fn attempt_ip_hash(server: &Server, profile_id: &str) -> String {
-    let rows: Vec<Value> = json_rows(&store_of(&server.app).lock().await.tables.attempts)
+    let rows: Vec<Value> = json_rows(&fake(&server.app).lock().await.tables.attempts)
         .into_iter()
         .filter(|row| row["profileId"] == json!(profile_id))
         .collect();

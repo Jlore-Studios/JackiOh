@@ -82,6 +82,19 @@ mod tests {
         }))
     }
 
+    /// R4453000: [VANILLA ×3] on `seed`, lane 1 stamped Dormant (white-box, as the engine's tests do):
+    /// the sleeper, the lane-2 target and the lane-3 Unit.
+    fn dormant_board(seed: &str, radiant: bool) -> (Scenario, [CardInstance; 3]) {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [{ "def": METEOR, "radiant": radiant }, FILLER] },
+            "p2": { "hand": [FILLER], "field": [VANILLA, VANILLA, VANILLA], "library": filler(4) },
+        }));
+        let units = [1, 2, 3].map(|lane| s.unit_at(P2, lane));
+        s.card_mut(&units[0]).slumber = Some(Slumber { turns: Some(2) });
+        (s, units)
+    }
+
     mod base {
         use super::*;
 
@@ -139,6 +152,20 @@ mod tests {
         }
 
         #[test]
+        fn r4453000_a_dormant_neighbour_is_passed_by() {
+            // A Dormant card acts not (§6.1 Dormant): it is no neighbour, so whichever way a coin would
+            // have landed the 11 left go on to lane 3, never stopping on a card no effect reaches.
+            for n in 0..8 {
+                let (mut s, [sleeper, target, other]) = dormant_board(&format!("meteor-dormant-{n}"), false);
+                s.play(METEOR, json!({ "targets": pick::instance(&target) }));
+                s.expect_in_zone(&target, "graveyard");
+                s.expect_in_zone(&other, "graveyard");
+                s.expect_in_zone(&sleeper, "field");
+                assert_eq!(s.card(&sleeper).damage, 0, "seed {n}");
+            }
+        }
+
+        #[test]
         fn with_no_neighbour_the_excess_is_lost() {
             let mut s = meteor_board(false, json!([{ "def": VANILLA, "lane": 3 }]));
             let target = s.unit_at(P2, 3);
@@ -150,11 +177,11 @@ mod tests {
         }
 
         fn no_play_into(s: &Scenario, lane: i32) -> bool {
-            let held = s.card(VANILLA).id.clone();
-            let plays: Vec<Option<ZoneChoice>> = legal_actions(s.state(), P2)
+            let plays: Vec<Option<ZoneChoice>> = s
+                .plays_of(VANILLA)
                 .iter()
                 .filter_map(|action| match action {
-                    ActionBody::Play { instance_id, zone, .. } if *instance_id == held => Some(*zone),
+                    ActionBody::Play { zone, .. } => Some(*zone),
                     _ => None,
                 })
                 .collect();
@@ -236,6 +263,17 @@ mod tests {
             // 15 less 4 for each of the three is 3 on their hero (#2521: the Radiant face deals 15).
             assert_eq!(hero_health(&s, P2), HERO_HEALTH - 3);
             assert_eq!(hero_health(&s, P1), HERO_HEALTH);
+        }
+
+        #[test]
+        fn r4453000_radiant_sends_the_rest_to_the_hero() {
+            // 15 less 4 for the target and 4 for lane 3 is 7 on their hero; the Dormant lane 1 takes none.
+            for n in 0..8 {
+                let (mut s, [sleeper, target, _]) = dormant_board(&format!("meteor-dormant-radiant-{n}"), true);
+                s.play(METEOR, json!({ "targets": pick::instance(&target) }));
+                assert_eq!(hero_health(&s, P2), HERO_HEALTH - 7, "seed {n}");
+                assert_eq!(s.card(&sleeper).damage, 0, "seed {n}");
+            }
         }
     }
 }

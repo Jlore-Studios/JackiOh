@@ -11,7 +11,7 @@ import { ApiRequestError, postConsent, type MeResponse } from "../net/api.ts";
 import { announceAccountChange, callWithRenewal } from "../net/gate.ts";
 import { loginPath, navigate } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses } from "../net/session.ts";
-import { signOut, signOutLabel, useSigningOut } from "../routes/account.tsx";
+import { signOut, signOutLabel, useSigningOut } from "./signOut.ts";
 import { PageTitle } from "../routes/PageTitle.tsx";
 import { Wordmark } from "../routes/Wordmark.tsx";
 import MoveToExisting from "./MoveToExisting.tsx";

@@ -37,6 +37,7 @@ use crate::actor::match_actor::WATCH_NOT_ALLOWED as NOT_ALLOWED;
 use crate::actor::protocol::{ClientMessage, SocketErrorCode, encode, error_message, parse_client_message};
 use crate::actor::registry::AttachError;
 use crate::actor::ws_server::{Socket, UpgradeFailure, WATCH_PATH, WS_CLOSE, authenticate_upgrade};
+use crate::api::http::SOCKET_METHOD;
 use crate::app::App;
 use crate::config::{
     SPECTATOR_EMOTE_COOLDOWN_MS, SPECTATOR_EMOTE_HAND_SIZE, SPECTATOR_EMOTE_WINDOW_MAX,
@@ -242,10 +243,16 @@ pub async fn serve(app: &Arc<App>, socket: &Socket, token: Option<String>, liste
         socket.close(Some(code), Some(message));
     };
     match admit(app, socket, token, listener).await {
-        Ok(()) | Err(WatchFailure::Gone) => {}
-        Err(WatchFailure::Refused { code, message }) => refuse(code, &message),
+        Ok(()) => app.route_health.answered(SOCKET_METHOD, WATCH_PATH),
+        // No one was answered, so the route's run is neither counted nor ended.
+        Err(WatchFailure::Gone) => {}
+        Err(WatchFailure::Refused { code, message }) => {
+            app.route_health.answered(SOCKET_METHOD, WATCH_PATH);
+            refuse(code, &message);
+        }
         Err(WatchFailure::Threw(message)) => {
             tracing::error!(event = "ws.watch.threw", message = %message);
+            app.route_health.threw(SOCKET_METHOD, WATCH_PATH, &message);
             refuse(WS_CLOSE.internal, "something went wrong");
         }
     }
@@ -373,7 +380,8 @@ fn revoke(
 
 /// B50's store checks, in one transaction: `viewer_id` and `friend_id` are friends with neither
 /// blocking the other; `match_id` is live, seats `friend_id` and not `viewer_id`. The match is a row
-/// of `matches` (a 1v1 match) or, when it is none, of `duos_matches`, whose people hold a1 and a2,
+/// of `matches` (a 1v1 match) or, when it is none, of `duos_matches`, whose people hold a1 and a2 (and
+/// b1 and b2 in a 2v2),
 /// and then neither blocks the other with the friend's teammate either, whose duel a watcher is
 /// shown (§13.6, R2881000).
 async fn watchable_in(
@@ -391,11 +399,14 @@ async fn watchable_in(
         let Some(row) = tx.duos_matches_get(match_id).await? else {
             return Ok(None);
         };
-        let seated = |id: &str| row.a1 == id || row.a2 == id;
-        if row.ended_at.is_some() || !seated(friend_id) || seated(viewer_id) {
+        // R3731002: a 2v2's team B people may be watched as team A's are.
+        let Some(seat) = row.seat_of(friend_id) else {
+            return Ok(None);
+        };
+        if row.ended_at.is_some() || row.seat_of(viewer_id).is_some() {
             return Ok(None);
         }
-        let teammate = if row.a1 == friend_id { &row.a2 } else { &row.a1 };
+        let teammate = row.profile_at(seat.teammate());
         let blocked = tx.blocks_between(viewer_id, teammate).await?;
         return Ok((!blocked).then_some(Watched::Duos));
     };

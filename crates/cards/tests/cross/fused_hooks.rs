@@ -120,9 +120,8 @@ mod r90_r102_a_fused_cards_choices_are_split_as_the_play_declared_them {
                 .is_some_and(|def| def.tags.contains(&Tag::Human))
         );
         let hero_only: Vec<Selection> = vec![Selection::Hero { player: P2 }];
-        let offered = legal_actions(s.state(), P1).iter().any(|action| {
-            matches!(action, ActionBody::Play { instance_id, targets, .. }
-                if *instance_id == crafted.id && targets.as_ref() == Some(&hero_only))
+        let offered = s.plays_of(&crafted).iter().any(|action| {
+            matches!(action, ActionBody::Play { targets, .. } if targets.as_ref() == Some(&hero_only))
         });
         assert!(offered);
 
@@ -340,7 +339,7 @@ mod r77_5_2_a_keyword_a_fuse_newly_prints_applies_at_once {
         assert!(printed_kinds(&g, &fused.def_id).contains(&KeywordKind::DivineShield));
         // The fused definition prints Jilliax's Divine Shield, which K-Pop Fanatic's base face never
         // printed: a keyword the card newly gains applies at once (§5.2), exactly as radiant #50's
-        // printed shield does after a granted one was spent.
+        // printed shield did after a granted one was spent, until issue #4292 took it off that face.
         assert!(kinds(&g, &kpop).contains(&KeywordKind::DivineShield));
     }
 
@@ -675,7 +674,7 @@ const SUPPRESSIVE_AURA: &str = "core-046"; // Suppressive Aura: embiggen 4
 const GOING_LONG: &str = "core-084"; // Going Long: embiggen 4, Quickdraw — hero Armor 2 (paid 4: 5)
 const BIG_FELINOR: &str = "core-043"; // Big Felinor
 const PILLOW: &str = "core-065-1"; // Spikey Pillow: Unit token, the −2 attack aura
-const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: a Field Spell, your units +3 attack, Rush, First Strike
+const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: a Field Spell, your units +1 attack, Rush, First Strike
 const LAYER_LIBRARY: [&str; 6] = [MR_VANILLA; 6];
 
 fn backrow_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
@@ -778,9 +777,11 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
                     { "def": MASOCHISM_MASK, "lane": 1 },
                     { "def": WEAPONS, "lane": 2 },
                     { "def": EXPERIMENTATION, "lane": 3 },
-                    // A second Weapons: its +2 twice (issue #3136, +3 once before) keeps the sum above what the
-                    // base Pillow's own −2 takes off, so a second −2 from the fused aura would show.
+                    // Three Weapons: their +1 three times (issue #4440; +2 twice from issue #3136, +3 once
+                    // before) keeps the sum above what the base Pillow's own −2 takes off, so a second −2 from
+                    // the fused aura would show.
                     { "def": WEAPONS, "lane": 4 },
+                    { "def": WEAPONS, "lane": 5 },
                 ],
                 "hand": [STOCKPILE],
                 "library": LAYER_LIBRARY,
@@ -801,8 +802,8 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
         let pillow = g.unit_at(P1, 2);
         assert_eq!(pillow.def_id, PILLOW);
 
-        // 0 + 2 + 2 from the Weapons, −2 from the base Pillow's own aura; the fused Radiant aura spares it.
-        g.expect_stats(&pillow.id, json!({ "attack": 2 }));
+        // 0 + 1 + 1 + 1 from the Weapons, −2 from the base Pillow's own aura; the fused Radiant aura spares it.
+        g.expect_stats(&pillow.id, json!({ "attack": 1 }));
     }
 }
 

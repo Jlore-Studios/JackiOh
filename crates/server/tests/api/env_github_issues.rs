@@ -1,31 +1,9 @@
 //! Environment mapping for CREATE_ISSUES_TOKEN and GITHUB_ISSUES_REPO.
 
-use indexmap::IndexMap;
 use jackioh_server::config::BUG_REPORT_REPO_DEFAULT;
 use jackioh_server::env::{SERVER_ONLY_ENV_VARS, load_env};
 
-/// A complete, valid environment for the server, with `extra` over it.
-fn env_with(extra: &[(&str, &str)]) -> IndexMap<String, String> {
-    [
-        ("SUPABASE_URL", "https://project.supabase.test"),
-        (
-            "SUPABASE_SECRET_KEY",
-            "sb_secret_0123456789abcdefghijklmnopqrstuv",
-        ),
-        (
-            "DATABASE_URL",
-            "postgres://postgres:postgres@localhost:5432/jackioh",
-        ),
-        ("CODE_PEPPER", "a-pepper-of-at-least-thirty-two-characters"),
-        ("CATALOG_VERSION", jackioh_cards::catalog_version()),
-        ("PUBLIC_ORIGINS", "https://play.jackioh.test"),
-        ("NODE_ENV", "test"),
-    ]
-    .into_iter()
-    .chain(extra.iter().copied())
-    .map(|(name, value)| (name.to_string(), value.to_string()))
-    .collect()
-}
+use crate::support::deps::env_with;
 
 #[test]
 fn unset_files_nothing_and_names_the_default_repository() {

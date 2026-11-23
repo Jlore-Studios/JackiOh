@@ -2,7 +2,7 @@
 // game-over state (Result.tsx), and animations that played twice.
 
 import { CATALOG } from "@jackioh/cards";
-import type { ActionBody, GameEvent, PlayerView } from "@jackioh/shared";
+import type { ActionBody, AttackForecast, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { StrictMode, useState, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,12 +10,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ANIMATIONS, HIDDEN_ID } from "./animations.ts";
 import { DAMAGE_FEEL, SLAM_LAND_AT, UNIT_SLAM } from "./damageFeel.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
-import { testid } from "./contract.ts";
-import Game from "./Game.tsx";
+import { testid, type Highlight } from "./contract.ts";
+import Game, { GAME_HOST_ATTRIBUTE, sameHighlight } from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
-import { baseView, card, emptySide, faceDownBackrow, pendingFor, unit, waitingPending, withEvents } from "../test/fixtures.ts";
+import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, pendingFor, unit, waitingPending, withEvents } from "../test/fixtures.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
+import { readRootVar } from "./rootVars.ts";
 
 const END_TURN: ActionBody = { type: "endTurn" };
 
@@ -122,7 +123,9 @@ describe("issue #185 unit slam on the board", () => {
     const game = screen.getByTestId("game");
     expect(game).toHaveAttribute("data-slam-tier", "massive");
     expect(game).toHaveAttribute("data-slam-side", "opponent");
-    expect(game.style.getPropertyValue("--slam-anticipation")).toBe(`${String(UNIT_SLAM.massive.anticipationMs)}ms`);
+    expect(readRootVar(game, "--slam-anticipation")).toBe(`${String(UNIT_SLAM.massive.anticipationMs)}ms`);
+    // #3633: written onto its readers, never onto the root's own style, which restyled the whole game.
+    expect(game.style.getPropertyValue("--slam-anticipation")).toBe("");
     expect(game).not.toHaveAttribute("data-hit-stop");
     act(() => {
       vi.advanceTimersByTime(UNIT_SLAM.massive.anticipationMs + ANIMATIONS.summoned.durationMs * SLAM_LAND_AT);
@@ -163,6 +166,76 @@ describe("issue #57 board-mounted match chrome", () => {
     expect(screen.getByText("Read-only replay").closest(".board")).not.toBeNull();
     expect(screen.getByTestId("action-error").closest(".board")).not.toBeNull();
     expect(document.querySelector(".game > .game-error")).toBeNull();
+  });
+});
+
+describe("#3633 the game screen's host", () => {
+  it("#3633 Game marks its parent as a game host while mounted", () => {
+    const shell = (showGame: boolean): ReactElement => (
+      <div className="app-shell app-shell--wide" data-testid="shell">
+        <nav className="screen-nav" />
+        {showGame ? <Game view={withEvents(baseView(), START)} legal={[]} onAction={vi.fn()} /> : null}
+      </div>
+    );
+    const { rerender, unmount } = render(shell(true));
+    const host = screen.getByTestId("shell");
+    expect(host).toHaveAttribute(GAME_HOST_ATTRIBUTE, "true");
+    expect(document.querySelector(`.app-shell--wide[${GAME_HOST_ATTRIBUTE}] > .game`)).not.toBeNull();
+    // The route takes the game down and keeps its shell: the shell is no game's host any more.
+    rerender(shell(false));
+    expect(host).not.toHaveAttribute(GAME_HOST_ATTRIBUTE);
+    rerender(shell(true));
+    expect(host).toHaveAttribute(GAME_HOST_ATTRIBUTE, "true");
+    unmount();
+    expect(host).not.toHaveAttribute(GAME_HOST_ATTRIBUTE);
+  });
+});
+
+describe("#3633 the highlight the cards keep", () => {
+  it("#3633 sameHighlight keeps a highlight that lights the same things and drops one that does not", () => {
+    const outcome: AttackForecast = { attackerId: "u1", targetId: "u2", dealt: 2, taken: 1, kills: false, survives: true, pops: false, attackerSize: 3, targetSize: 3 };
+    const outcomes = new Map([[testid.card("u2"), outcome]]);
+    const hovered = { attacker: testid.card("u1"), target: testid.card("u2"), strikesBack: true };
+    const base: Highlight = { legal: new Set(["a", "b"]), selected: new Set(["a"]), outcomes, hoveredAttack: hovered };
+    // Built again from the same facts: kept.
+    expect(sameHighlight(base, { ...base, legal: new Set(["b", "a"]), outcomes: new Map(outcomes), hoveredAttack: { ...hovered } })).toBe(true);
+    expect(sameHighlight(base, { ...base, legal: new Set(["a"]) })).toBe(false);
+    expect(sameHighlight(base, { ...base, glow: new Set(["a"]) })).toBe(false);
+    expect(sameHighlight(base, { ...base, outcomes: undefined })).toBe(false);
+    // R3615000: the pointer moves to another target, or off it, under the same outcomes.
+    expect(sameHighlight(base, { ...base, hoveredAttack: { ...hovered, target: testid.card("u3") } })).toBe(false);
+    expect(sameHighlight(base, { ...base, hoveredAttack: { ...hovered, strikesBack: false } })).toBe(false);
+    expect(sameHighlight(base, { ...base, hoveredAttack: undefined })).toBe(false);
+  });
+});
+
+describe("#3633 the game root's marks", () => {
+  it("#3633 Game marks its root where the stylesheets read a :has() on it: a play animating, the drag setting and the end", () => {
+    const before = withEvents(baseView({ you: emptySide("p1", { hand: [card({ instanceId: "c9", defId: "core-002", cost: 1 })] }) }), START);
+    const played: GameEvent = { type: "cardPlayed", player: "p1", instanceId: "c9", defId: "core-002", costPaid: 1 };
+    const after = withEvents(before, [...START, played]);
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    const game = screen.getByTestId("game");
+    expect(game).not.toHaveAttribute("data-card-played");
+    // The drag setting, as the board draws it (Board's `data-drag`).
+    expect(game).toHaveAttribute("data-drag", screen.getByTestId(testid.board).getAttribute("data-drag") ?? "");
+    rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
+    expect(game).toHaveAttribute("data-card-played", "true");
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(game).not.toHaveAttribute("data-card-played");
+    act(() => {
+      writeSettings({ dragToPlay: false });
+    });
+    expect(game).toHaveAttribute("data-drag", "off");
+    expect(game).not.toHaveAttribute("data-game-over");
+    rerender(<Game view={{ ...after, result: { winner: "p2", reason: "hero-death" } }} legal={[]} onAction={vi.fn()} />);
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(game).toHaveAttribute("data-game-over", "true");
+    expect(document.querySelector('.game[data-game-over] > [data-testid="result-overlay"]')).not.toBeNull();
   });
 });
 
@@ -491,6 +564,38 @@ describe("R821000 a Plague Counter placement is answered by a click on the board
   });
 });
 
+describe("R3777001 a play aimed at a face-down enemy backrow card is built by a click on its zone", () => {
+  const view = baseView({
+    you: emptySide("p1", { hand: [card({ instanceId: "h1" })] }),
+    opponent: emptySide("p2", {
+      hand: { count: 0 },
+      backrow: [null, faceDownBackrow, null, faceUpBackrow("p2", { instanceId: "b1" }), null],
+    }),
+    hiddenTargets: [{ instanceId: "t1", zone: { player: "p2", row: "backrow", lane: 2 } }],
+  });
+  const aimed = (instanceId: string): ActionBody => ({
+    type: "play",
+    instanceId: "h1",
+    targets: [{ pick: "instance", instanceId }],
+  });
+  const legal: ActionBody[] = [aimed("t1"), aimed("b1")];
+
+  it("R3777001 lights the back's zone once the card is picked up, and its click sends the play naming the hidden id", () => {
+    const onAction = vi.fn();
+    render(<Game view={view} legal={legal} onAction={onAction} />);
+    const zone = screen.getByTestId(testid.zone("opponent", "backrow", 2));
+    expect(zone).not.toHaveAttribute("data-legal", "true");
+
+    fireEvent.click(screen.getByTestId(testid.handCard("h1")));
+    expect(zone).toHaveAttribute("data-legal", "true");
+    expect(screen.getByTestId(testid.zone("opponent", "backrow", 3))).not.toHaveAttribute("data-legal", "true");
+
+    fireEvent.click(zone);
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenLastCalledWith(aimed("t1"));
+  });
+});
+
 describe("a half-built play or attack is dropped at the turn change (#2924)", () => {
   const attacker = (): PlayerView =>
     baseView({
@@ -551,6 +656,148 @@ describe("a half-built play or attack is dropped at the turn change (#2924)", ()
 
     rerender(<Game view={{ ...first, clockMs: 59000, pending: null }} legal={[attack]} onAction={onAction} />);
     expect(screen.getByTestId(testid.card("u1"))).toHaveAttribute("data-selected", "true");
+  });
+});
+
+// #3899 (`docs/implicit-states.md`, state 6): the board's layers at once — a burst holding the newest
+// view back, a selection, a prompt and a hotseat hand-over. Each burst is built as "the board's moves
+// wait for the board" builds one: a view whose window adds an event the runner animates.
+describe("layer states 3899", () => {
+  const AGAIN: GameEvent = { type: "damage", sourceId: null, targetId: "hero-p1", amount: 2, combat: false };
+  const attacker = (over: Partial<PlayerView> = {}): PlayerView =>
+    baseView({
+      you: emptySide("p1", { units: [unit("p1", { instanceId: "u1" }), null, null, null, null] }),
+      opponent: emptySide("p2", { units: [unit("p2", { instanceId: "e1" }), null, null, null, null] }),
+      ...over,
+    });
+  const attack: ActionBody = { type: "attack", attackerId: "u1", targetId: "e1" };
+  const asking = (): PlayerView =>
+    baseView({
+      pending: pendingFor(
+        "answer",
+        ["A", "B"].map((label) => ({ key: `mode:${label}`, label })),
+        { prompt: "Pick one" },
+      ),
+    });
+  const answerB: ActionBody = { type: "answer", choiceId: "ch1", selection: [{ pick: "mode", option: "B" }] };
+  const drain = (): void => {
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+  };
+
+  it("a second burst queues behind the first and a fresh copy of the newest view adds nothing", () => {
+    const onAction = vi.fn();
+    const { rerender } = render(<Game view={withEvents(baseView(), START)} legal={[END_TURN]} onAction={onAction} />);
+    rerender(<Game view={withEvents(baseView(), [...START, HIT])} legal={[END_TURN]} onAction={onAction} />);
+    const newest = withEvents(baseView(), [...START, HIT, AGAIN]);
+    rerender(<Game view={newest} legal={[END_TURN]} onAction={onAction} />);
+    expect(screen.getByTestId("animation-queue")).toHaveAttribute("data-animating", "damage");
+
+    act(() => {
+      vi.advanceTimersByTime(ANIMATIONS.damage.durationMs);
+    });
+    expect(screen.getByTestId("animation-queue"), "the second burst plays after the first").toHaveAttribute(
+      "data-animating",
+      "damage",
+    );
+    expect(screen.getByTestId("end-turn")).toBeDisabled();
+
+    // The same view again, as fresh JSON (a reconnect's resend, a second poll): nothing new to play.
+    rerender(<Game view={structuredClone(newest)} legal={[END_TURN]} onAction={onAction} />);
+    act(() => {
+      vi.advanceTimersByTime(ANIMATIONS.damage.durationMs);
+    });
+    expect(screen.queryByTestId("animation-queue")).toBeNull();
+    expect(screen.getByTestId("end-turn")).not.toBeDisabled();
+  });
+
+  it("an animated turn change keeps a selection through the burst and drops it once the board shows the turn", () => {
+    const onAction = vi.fn();
+    const u1 = () => screen.getByTestId(testid.card("u1"));
+    const { rerender } = render(<Game view={withEvents(attacker(), START)} legal={[attack]} onAction={onAction} />);
+    fireEvent.click(u1());
+    expect(u1()).toHaveAttribute("data-selected", "true");
+
+    // A burst of the same turn: the board lights nothing while it plays, and the selection is back after it.
+    rerender(<Game view={withEvents(attacker(), [...START, HIT])} legal={[attack]} onAction={onAction} />);
+    expect(screen.getByTestId("animation-queue")).toBeInTheDocument();
+    expect(u1()).not.toHaveAttribute("data-selected");
+    drain();
+    expect(u1()).toHaveAttribute("data-selected", "true");
+
+    // A burst that carries the board on to the viewer's next turn: the selection goes once it shows it.
+    rerender(<Game view={withEvents(attacker({ turn: 5 }), [...START, HIT, AGAIN])} legal={[attack]} onAction={onAction} />);
+    expect(screen.getByTestId("animation-queue")).toBeInTheDocument();
+    drain();
+    expect(screen.queryByTestId("animation-queue")).toBeNull();
+    expect(u1()).not.toHaveAttribute("data-selected");
+    expect(screen.getByTestId(testid.card("e1"))).not.toHaveAttribute("data-glow");
+    fireEvent.click(screen.getByTestId(testid.card("e1")));
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("a prompt inside a burst opens once the board shows it and one tap answers once", () => {
+    const onAction = vi.fn();
+    const board = (view: PlayerView) => (
+      <CatalogContext.Provider value={lookupFromDefs(CATALOG)}>
+        <Game view={view} legal={[]} onAction={onAction} />
+      </CatalogContext.Provider>
+    );
+    const { rerender } = render(board(withEvents(baseView(), START)));
+    rerender(board(withEvents(asking(), [...START, HIT])));
+    expect(screen.getByTestId("animation-queue")).toBeInTheDocument();
+    expect(screen.queryByTestId("prompt-modal"), "the board still shows the view before the question").toBeNull();
+
+    drain();
+    expect(screen.getByTestId("prompt-modal")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("prompt-option-mode:B"));
+    fireEvent.click(screen.getByTestId("prompt-option-mode:B"));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(answerB);
+  });
+
+  it("a hotseat hand-over mid-burst drains it and replays nothing", () => {
+    const { rerender } = render(<Game view={withEvents(baseView(), START)} legal={[]} onAction={vi.fn()} />);
+    rerender(<Game view={withEvents(baseView(), [...START, HIT])} legal={[]} onAction={vi.fn()} />);
+    expect(screen.getByTestId("animation-queue")).toBeInTheDocument();
+
+    const theirs = withEvents(
+      baseView({ viewer: "p2", active: "p2", turn: 4, you: emptySide("p2"), opponent: emptySide("p1", { hand: { count: 4 } }) }),
+      [...START, HIT, { type: "turnStarted", player: "p2", turn: 4 }],
+    );
+    rerender(<Game view={theirs} legal={[END_TURN]} onAction={vi.fn()} />);
+    expect(screen.queryByTestId("animation-queue"), "the arriving seat sees no history").toBeNull();
+    expect(screen.getByTestId("end-turn")).not.toBeDisabled();
+    act(() => {
+      vi.advanceTimersByTime(ANIMATIONS.damage.durationMs);
+    });
+    expect(screen.queryByTestId("animation-queue")).toBeNull();
+  });
+
+  // Unspecified (named for a person): R3060000 drops a repeat against the view it was sent against, and
+  // the answer's own view is newer, so a second tap while the answered prompt fades out sends again.
+  it("a second tap while the answered prompt fades sends the answer again", () => {
+    const onAction = vi.fn();
+    const board = (view: PlayerView) => (
+      <CatalogContext.Provider value={lookupFromDefs(CATALOG)}>
+        <Game view={view} legal={[]} onAction={onAction} />
+      </CatalogContext.Provider>
+    );
+    const { rerender } = render(board(withEvents(asking(), START)));
+    fireEvent.click(screen.getByTestId("prompt-option-mode:B"));
+    expect(onAction).toHaveBeenCalledTimes(1);
+
+    rerender(board(withEvents(baseView(), [...START, { type: "promptAnswered", player: "p1", choiceId: "ch1" }])));
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-animating", "promptAnswered");
+    fireEvent.click(screen.getByTestId("prompt-option-mode:B"));
+    expect(onAction).toHaveBeenCalledTimes(2);
+    expect(onAction).toHaveBeenLastCalledWith(answerB);
+
+    act(() => {
+      vi.advanceTimersByTime(ANIMATIONS.promptAnswered.durationMs);
+    });
+    expect(screen.queryByTestId("prompt-modal")).toBeNull();
   });
 });
 

@@ -21,13 +21,16 @@ enforces rules and never sees hidden information.** In practice:
   reads.
 - Choices split two ways per SPEC §11 R81: zone, X, embiggen, Tribute and a card's declared
   targets and modes are built **inline into the `play` action**; everything decided during
-  resolution is a `PendingChoice` answered with an `answer` action. `game/Prompt.tsx` renders
-  both with the same pickers. A choice of `DISCOVER_OPTION_LIMIT` (4) options or fewer that name no
+  resolution is a `PendingChoice` answered with an `answer` action. A declared target the viewer
+  may not read (an enemy face-down backrow card) is lit and clicked by the zone its back lies in,
+  which the view's `hiddenTargets` names (R3777001), as a prompt option names it (R821000).
+  `game/Prompt.tsx` renders both with the same pickers. A choice of `DISCOVER_OPTION_LIMIT` (4) options or fewer that name no
   card draws each option as a choice card (`game/ChoiceCard.tsx`, #2646): art, its label and what it
   does, which is prompt chrome and no card, so it opens no inspect overlay and reaches no zone or log.
   A live card picker (`data-prompt-layout="cards"`) is its cards alone over the dimmed board (`data-bare`, #2738): no panel, title or count, and no `prompt-submit` when one tap answers.
   The other seat's is its backs (`game/OpponentChoice.tsx`, R2739000) when the view's `pending` carries `optionCount`: that many of the opponent's card backs, laid out as the bare picker over the waiting notice's lighter dim and in the middle of the screen at every width (a phone docks the chooser's picker to its bottom edge), with no words or control and "Your opponent is choosing…" as the dialog's name; without it, the notice. Online, the back the opponent's pointer or focus is on is outlined in their color, still (R2739001): an engine card picker but the mulligan sends its option's index as it changes and null as it leaves, folds or closes (`game/choiceHover.ts`, `net.ts`'s `choiceHover` frame), which the server relays to the opponent alone and drops when the count is not shown; a play's own picker, a replay's, hotseat and practice send none.
   A Choose one of lanes (`lane-<n>`, #2757) opens no list: one oblong a lane (`game/LanePick.tsx`), answered from its zones as R514's cells are.
+  A choice of one board zone (a play's zone, a `cell` prompt, a declared zone target; R3864000) opens no list either: the zones glow, a tap, Enter or Space on one answers, and the modal is the hint, a play's Cancel and any option that names no cell.
 
 The arena (`src/game/arena/`, R3348000, R3348001): a living playmat that is only ever the viewer's own, and that
 no rule reads. `SandSurface.tsx` answers a press on any tile with a press-in and a ripple in its half's playmat
@@ -69,16 +72,35 @@ The spacing is one scale (#3225): `src/spacing.css`, imported by `index.css` aft
 
 The breakpoints are one named set (#3227), `src/breakpoints.ts`'s `BREAKPOINT_PX`. Each is the widest (or tallest) window of the smaller layout: `(max-width: N)` holds up to N and the layout above starts at `(min-width: N+1)`. They are `phone` 600 px (a phone held upright), `narrow` 760 px (a small tablet upright), `medium` 899 px (a tablet upright), `tablet` 1024 px (the desktop starts at 1025) and, for height, `short` 500 px (a phone on its side). Touch is `(pointer: coarse)`. A sheet spells the number out (CSS reads no custom property in `@media`), and a script builds its query with `upTo()`, `over()` and `PHONE_SHEET_QUERY`. `src/breakpoints.test.ts` holds both, its `KEEP` listing each other value with its reason.
 
-Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
-window, and what a menu holds past its room scrolls in its one region, never in the page, with its
+Every menu is one screen (R1581000): at every size of `MENU_SIZES` (`e2e/support/config.ts`, R3728000:
+desktop 1440x900 and 1280x720, iPad 1180x820, 1366x1024, 820x1180 and 744x1133, phone 390x844) the page is
+no taller or wider than the window, and what a menu holds past its room scrolls in its one region, never in the page, with its
 top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
 makes the shell the window's height); its region takes `one-screen__body`; a box between the two
 that must shrink (a tavern panel) takes `one-screen__frame`, and a wrapper that stacks its children
-as the shell does takes `one-screen__stack`. Under 501 px tall (a phone on its side) the page
+as the shell does takes `one-screen__stack`. Inside the menus' shell "the window's height" is
+`--shell-screen-h` (`shell/menu-shell.css`): the window less the top inset and a phone's tab bar, read with
+`100dvh` as its fallback by every one-screen menu's sheet. Under 501 px tall (a phone on its side) the page
 scrolls as it did. The deck builder and the almanac do the same on a phone (`deckbuilder.css`,
 `workshop.css`, `almanac.css`), as they already did on a desktop. No type shrinks to make it fit.
-The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at both
-sizes and fails when the page is taller or wider than its allowance.
+The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at every
+size and fails when the page is taller or wider than its allowance.
+
+Every menu screen renders inside one shell (#3728, R3728000–R3728002, `shell/MenuShell.tsx`,
+`docs/polish/10-menus.md`): `main.tsx` wraps each route that `menuShellOn` says is a menu, every path but a
+board's (`isBoardPath`), the series screen and the dev screens. The shell draws the screen's column, then its
+navigation, Home, Play, Collection, Shop and Friends, in one place on every menu: a rail with labels at 1025
+px and wider, the same rail with icons alone from 601 to 1024 px, a tab bar at the foot of the window at 600
+px and under (`menu-shell.css`, on `phone` and `tablet`), inside the safe-area insets. A toast fixed at the
+column's foot reads the room the navigation takes, `--shell-start` (the rail's width) and `--shell-bottom` (a
+phone's tab bar and the bottom inset), each 0px outside the shell, to center on the column and sit above the
+tab bar, as the deck builder's status toast and the undo toast do. A board drawn on a menu
+path (`game/boardShown.ts`) takes the navigation away and keeps the screen mounted. Friends is the friends
+panel's button (`FriendsButton`'s `rail`), which opens the panel as the Dialog's drawer down the right edge,
+and the top bar no longer draws it inside the shell. The shell hands the screens a status row
+(`shell/context.ts`'s `useMenuShell`): the live game to go back to, else this tab's queue search with Cancel,
+on `/play` too (R3729001), which BackLink draws as its last slot and Home under its corner. e2e spec `51` clicks through the
+five destinations and closes the drawer each way at every size, and spec `38` runs axe over the shell.
 
 On a phone every control takes a tap across `--hit-min` (44 px) each way (R2122000). Under
 `(pointer: coarse), (max-width: 600px)`, `index.css` gives each button, link, `role="button"` and
@@ -160,8 +182,9 @@ it: no `"Escape"` comparison outside the shared hooks and its named exceptions, 
 the inline confirms' safe choice first.
 
 The top bar is also one layout (#3218, R3218000), the same sheet's. BackLink's slots run Back, the line
-(`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends,
-language, the gear, so Back is the leftmost control and the gear the rightmost. On a phone (600 px, the touch
+(`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends
+(off the menus' shell alone, R3728000), language, the gear, so Back is the leftmost control and the gear the
+rightmost; inside the shell a fifth slot, the status row, takes a row of its own under the rest (R3728002). On a phone (600 px, the touch
 rule's) the line takes a row under Back and the end group. Only `routes/top-bar.css` places those controls:
 a screen passes its title and extras to BackLink and never wraps the bar in a flex header or sets a margin on
 a bar control, and the replay player's Back is BackLink's too (`onPress`, `testId`). e2e spec `46` measures it.
@@ -316,6 +339,16 @@ as little as keeps the screen covered (`fullscreenCoverScale`), and the takeover
 `fx-takeover-fly`). Alt art, a restyle and every flat face draw none. `dioramas.test.ts` lists any
 Mythic without one (`PENDING`, empty) and holds every slice to its picture's colours, no text and `ART_DETAIL_MAX_BYTES`.
 
+**Layer memory on a phone** (R4493000, R4493001): every DOM effect part is a GPU layer held at the device's full density,
+and a phone's browser kills the tab past its memory. So on a phone (the window's narrower side under `FX_MOBILE_WIDTH`) a
+takeover's stage merges its slices or planes into `FX_PHONE_STAGE_LAYERS` pictures (`fx/layers.ts`'s `mergeStage`). No
+effect element covers more than `FX_LAYER_MAX_SCREENS` at its largest scale. On a phone, or a device with
+`navigator.deviceMemory` of `FX_LOW_DEVICE_MEMORY_GB` or less, the director keeps what its mounted and coming DOM cues hold
+within `FX_PHONE_LAYER_BUDGET_MB` (`budgetTakeover`, from `layers.ts`'s tables). It mounts a takeover in the fullest form
+that fits: merged, then without its art, then without its stage, and at the least its dark and its sweep. No other cue is
+reduced. `fx/layerBudget.test.ts` estimates every DOM cue kind from `fx.css` (`src/test/layerEstimate.ts`) and holds the
+tables to it per pull request; `e2e/cypress/component/fx-phone-layers.cy.tsx` measures the phone scenes at 3x daily.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and
@@ -412,9 +445,9 @@ them to its controller's own view of a card acting on the field) wears one contr
 left this turn ("∞" for Activate ♾️; on a card listing several, the sum of its usable abilities'), the
 ability's words (its `{key}`s filled from the card's `params`) as tooltip and accessible name. It is
 `activate-<instanceId>` with its badge `activate-uses-<instanceId>`; each ability counts its own uses and
-cooldown (R1751000), and `namedAbility` (`contract.ts`) is kept only for the ability a press names. It is
+cooldown (R1751000). It is
 live exactly when `legal` lists that card's `activate`; otherwise it is greyed and its tooltip gives the
-view's `reason`. A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
+view's `reason`, and a press shows that reason in the board's reason line and sends nothing (R3768000). A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
 play's choices are built: one listed body is sent at once, except on a card listing several abilities,
 which asks which first (the `ability` need, a Discover of choice cards in `Prompt.tsx` showing each
 ability's words and uses left, even when only one is legal) and leaves the card's other abilities usable
@@ -436,8 +469,9 @@ zone is picked by clicking the unit or its zone.
 for, or whose view carries a `tradeReason`, gets the Duos pass control's bar when pointed at
 (`TradeControl.tsx` over `cardBar.ts`, which `duos/CardActions.tsx` shares): `trade-bar` holding
 `trade-<instanceId>`, "Trade" with the Trades left from the view's `trades`. It is live
-exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed with the engine's
-reason as its tooltip. On a Duos board the button rides the card bar beside the pass control, and
+exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed (`aria-disabled`, focusable) with the engine's
+reason as its tooltip and accessible description, and a press shows it in the board's reason line and sends
+nothing (R3768000). On a Duos board the button rides the card bar beside the pass control, and
 Game's own bar is off (`tradeBar={false}`).
 
 **Plays from the graveyard** (B5 E11). While `legal` lists a `play` for a card in the viewer's
@@ -451,13 +485,26 @@ and nothing while the view carries none; a count of 0 still shows. A Resource is
 #2250 (R2250000), so the hand draws it and there is no Resource tray. A Resource's face prints
 `Credits: <min>–<max>` under its text, its face's `resource` prices (the face model's `creditsLine`, jackioh-shared, R2521009).
 
+**Hero counters** (#4251). The oval keeps one badge on each corner — health lower right, Armor lower
+left (both `emotes.css`), the Jade Counter top left and the Credits top right — so no two overlap.
+Luck (R987), Burn and Toxic (R3540000) and Tipsy (R3548000) ride the hero's tray instead
+(`HeroTray.tsx`'s `hero-counters-<side>`), as labelled chips with their names beside their counts
+(`hero-luck`, `hero-burn`, `hero-toxic`, `hero-tipsy`, each keeping its `data-*` attribute),
+outside the tray's overflow allowance: every counter reads at once however many effects the seat
+carries, and a counter rising from 0 never moves the plate. Holding a hero (or Shift+F10 on it)
+lists every counter above 0 with its name and number in the inspect view (`HeroInspect.tsx`). #4270: where
+the tray has only its plate's width (the opponent's on a phone held upright, where it hangs below the
+seat's pills, and both seats' on a phone on its side, where each hangs above its plate) its counters show
+their counts alone, each name staying in its chip's title and label and in that inspect list.
+
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
 a toggle (`marketplace-button`) in the board's control bar (the pill at the bottom left where the board has
 its sidebar; #2645) that opens its panel (`marketplace-panel`), upward from the bar's top edge: the viewer's
-Credits, the turn the offering re-rolls on, each lot on its face with the price and the copies left
-the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-<instanceId>`) for each
-sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
-`marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
+Credits, the turn the offering re-rolls on, and each lot on its face with the price and the copies left
+the view gives and its "Buy" (`market-buy-<offer>`), live exactly when `legal` lists its `marketBuy` and
+sending that body; otherwise it is greyed, its tooltip the engine's `reason`. There is no "Sell": a
+Resource or Spice pays its Credits as it is played or discarded, and shows its quote in braces in the hand
+while the Marketplace is open (R3047004, R4410000).
 
 **The match menu** (#2645). On a phone (`game/phoneBar.ts`, board.css's two phone layouts) the control bar
 keeps to one row: End turn, the Marketplace toggle while the view carries a marketplace, the log toggle,
@@ -466,6 +513,8 @@ Concede and Friends, each a full-width 44px row with its whole label; it decides
 only asks (`ConfirmConcede`) and Offer draw keeps its words, ⋯ wearing a dot while a declined offer blocks
 it. A press on a row, ⋯, Escape and Back close the menu, and the menu and the shop are never open together.
 Tablets and desktops keep the buttons in the bar.
+
+**Board notices** (#3868). In-game transient notices (`action-error`, `attack-reason`, `lethal-hint`, `DrawOfferNotice`, match-gone / read-only, practice-unearned) render in an overlay layer (`.board-notices`) positioned over the field (`.field`) near the viewer's side, rather than in normal flow in the control rail. Showing, stacking or clearing notices alters zero board dimensions or flow across desktop, phone portrait and phone landscape viewports. The layer container has `pointer-events: none` so clicks pass through to cards underneath, while interactive buttons and links retain `pointer-events: auto`.
 
 **The phone board's top strip and field badges** (#2932). Only on a phone held upright (`@media
 (max-width: 600px)`, `usePhonePortrait` in `game/phoneBar.ts`); wide screens and a phone held sideways
@@ -496,11 +545,22 @@ difference. The control's tap band (up to
 zone's placeholder (`.zone::before`) is sized to the box a field card takes there less a 2px inset, so
 the unit's picture (#3341: its art runs up to the frame) and the backrow's outline keep a card's shape.
 
+**A short phone held upright** (#4427) keeps the same layout. Measured in Cypress's Chrome, the upright board
+needs no scrolling down to a window 491px tall with nothing above it and 537px tall with the top strip's rail,
+and End turn stays on the screen down to 484px and 530px (in the practice frame, which hides what overflows,
+down to 484px). So End turn and the whole hand stay on the screen of an iPhone SE in Safari (375x548), a
+320x568 phone and a 360x560 Android in Chrome, with every field row at its 44px floor or above;
+`e2e/cypress/component/board-layout.cy.tsx` holds those three sizes (its `#2876` and `#4427` rows). The Duos
+board, the only one that draws its rail in the control bar on an upright phone, budgets its cards in
+`duos.css` and is not measured here. A phone shorter than these would need a peek of the hand, as a phone on
+its side has.
+
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
 (`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
 in `game/handHints.ts`. Each is `{ id, icon, applies(card, view, face) }`, reads only the
-`CardView`, the `PlayerView` and the card's face the way `Card.tsx` reads it, and returns null
+`CardView`, the part of the view `HintView` names (the viewer's `trades`; `Hand.tsx` hands it
+one object while they are one, #3609) and the card's face the way `Card.tsx` reads it, and returns null
 or `{ n?, dimmed?, label }`, its label through `t()`.
 No row when no hint applies. No pointer event. Never on the opponent's backs, the revealed
 hand, the board or the menus. Adding a hint is one entry plus its icon (`cards/icons.tsx`).
@@ -508,6 +568,18 @@ The list ships the Tradable hint (#2269): a small swap-mark pip on each of the v
 hand cards with the Tradable keyword, dimmed once the turn's Trade is spent. It also ships
 `tribute` (#2268, R2268000): the Tributes a play of the card asks now, the view's `tribute`,
 which the engine sets on the viewer's own hand cards only and never at 0.
+
+**Card redraws** (#3609). A card is drawn again only when what it draws changes. A view arrives as
+fresh JSON (the wasm module's `viewFor`, a socket frame), so `Game` shares the cards a view holds
+unchanged with the view before it (`game/shareView.ts`: the two seats and the viewer's `trades`,
+never `events`, which the animations and the sound director match by identity, and nothing across a
+change of viewer), and `Card`'s `sameCardProps` and `useLiveFace` then see the same card object. A
+selection or a hover builds a new `Highlight` for every card, so `sameCardProps` counts only a
+card's own slice of it (`game/cardHighlight.ts`: its testids, its Activate controls, the hovered
+attack where it is the target or the attacker); a new read of the highlight in a card's tree is
+counted there too. The drag ghost memoises its face (`useLiveFace`), and the pointer's position stays
+in the drag layer's own state and the aim's hover only changes when the target does, so a pointer in
+motion draws no card. `game/Game.render.test.tsx` pins each, through `<Game>`.
 
 ## Commands
 
@@ -587,6 +659,9 @@ practice result dialog and an online match's result panel offer "Watch the repla
 last turn" (the last step, its turn's GIF already being made). A practice result reads the kept game from
 the worker's final snapshot (`replay`) and asks its pages through the practice controller's queue; a
 match result loads its first page to learn the replay's length (`OpenedReplay`, `openOnlineMatchReplay`).
+Each source answers `portraits()` (R3976000: an online one from its pages, a practice one from its summary, an
+opened file from the file), which the board draws read-only (`Game`'s `portraits`, no emote menu) and the GIF
+draws too; a source with none draws the default.
 The GIF code still loads on demand, never in the main bundle.
 Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
 row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved
@@ -603,7 +678,7 @@ src/replay/
                   and the sentence each reason shows
   sources.ts      the two sources: the practice worker's `replay` requests, the server's replay routes
   steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search; a clip's ends
-  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the seat's own open prompt read-only and folded (`replayPrompt`, R2211000), the controls in its notice slot;
+  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the seat's own open prompt read-only and folded (`replayPrompt`, R2211000), the controls in its rail slot;
                   `start` and `shareOnOpen` for a result screen's two buttons (R768000)
   ReplayToolbar.tsx  the controls both replays share (#2025): step and turn buttons, Play, the scrubber (the board
                   moves when it is let go), the readout and an actions slot; `replayTestid`, `isTyping`
@@ -625,7 +700,7 @@ decides a rule: every verdict they show comes from `@jackioh/validator` (the Rus
 WASM), the module the server runs at queue, and the server's refusal, when it comes, is shown in its own words (rule 7).
 
 ```
-routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection hub (R1579000);
+routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection's Decks tab (R1579000, R3734000), and `?deck=<id>` opens that deck (R3734000);
                         takes the gate's account and reads none of its own (R3207003)
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
                         browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630, its
@@ -646,38 +721,72 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         deck whose edit has not landed restores nothing;
                         Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099);
                         a deck holding a card the newest patch changed wears a badge listing them until saved
-                        under it (DeckPatchBadge.tsx, R2097000)
-routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
-                        largest, Practice, Play together and Replays as three smaller links (R1646000)
-                        beside it, and for a visitor with no account (`token` null) a Sign in in the online
-                        panel and no read at all; the online panel is the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
-                        trio choice with the validator's verdict as UX, the queue and the room code; it
-                        waits on /api/auth/me's currentMatchId and currentSeriesId; it shows the player's
-                        own rank on the ladder of the mode picked and links that ladder's /leaderboard
-                        (R661, R2778000); a queue it joined is remembered for the
-                        tab, so the player may leave while they wait and it picks the wait up again (R765);
-                        a room's ticket shares it as an invite link, and a lobby opened on one fills in
-                        its join form (R767); a queue the server no longer holds ends the wait with a
+                        under it (DeckPatchBadge.tsx, R2097000);
+                        a pool card is dragged into the deck by pointer events, so a finger works (DeckDrag.tsx,
+                        R3734001: a touch lifts it on a move across, `touch-action: pan-y` leaving a move down to
+                        the pool's scroll), and the rail, the pool and the deck sit side by side from 601 px
+                        (workshop.css; R3956000: the pool and the deck beside each other from 601 px, the sidebar
+                        232 px up to 760 px), taking turns only at 600 px and under
+routes/play.tsx         /play, the Play hub (R1578000, R3729000): one screen that does not scroll, whose one
+                        region (`.play-body`) holds `PlayHub`'s four groups of cards, Online, Daily, With
+                        friends and Solo, with Replays and Friends under them; the words, times and
+                        needs of every card are `routes/playModes.ts`'s catalog (`playCards`, `GAME_MINUTES`).
+                        For a visitor with no account (`token` null) a Sign in and the Solo cards, and no read
+                        at all. An Online card opens `QueuePanel` (one dialog: the rank of the mode's ladder,
+                        R661, R2778000, the deck or trio choice with the validator's verdict as UX, the
+                        server's refusal, and Find a match; Best of 1, Conquest, All Random, R257, R330), on
+                        the last mode and deck used; the Private lobby card opens the private lobby's panels
+                        (`lobby/LobbyPanel.tsx`, R3730000). It waits on /api/auth/me's currentMatchId and
+                        currentSeriesId; both ladders' ranks are read at mount and shown on their cards; a queue
+                        it joined is remembered for the tab, so the player may leave while they wait and it
+                        picks the wait up again (R765); inside the shell the search is the shell's banner
+                        (R3729001) and Cancel there ends the wait here, outside it the hub draws its own beacon
+                        and Leave the queue; a queue the server no longer holds ends the wait with a
                         rejoin message (R897000); it takes the gate's account (`me`) and sends no
                         /api/auth/me read at mount for a fresh one that names no game, reads the queue readout on
                         mount and then every QUEUE_POPULATION_POLL_SECONDS while it waits, its account
                         read keeping SERIES_POLL_SECONDS for the ticket (R3207000, R3207003)
-net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for the share sheet or the
-                        clipboard, read once off the address bar into this tab, through a sign-in, for
-                        the lobby
+routes/playModes.ts     R3729000: the hub's catalog of cards and groups: name, line, time, needs, testid, action
+routes/PlayHub.tsx      R3729000: the groups of cards; routes/QueuePanel.tsx the Online cards' one panel
+routes/playTestids.ts   /play's testids, with no imports, which e2e/support/testids.ts mirrors
+shell/QueueBanner.tsx   R3729001: the queue search in the shell's status row, on every menu screen: the mode, a
+                        ticking clock, the expected wait (net/queueReadout.ts) and Cancel
+inbox/                  R3729002: the bell (`InboxBell`, in the top bar's end group and the landing's corner)
+                        and its sheet (`InboxPanel`): under "Waiting on you", live challenges, lobby invites
+                        (`invites.ts`, kept in the tab), daily games on the player's move, daily challenges,
+                        friend requests and shared replays, in `order.ts`'s order, each answered inline;
+                        `store.ts` reads the daily list, friends and shared replays beside the social read.
+                        R4039001: under "Recent" (`RecentSection.tsx`, `feed.ts`), the notification feed the
+                        server keeps (R4039000, `net/notifications.ts`), newest first, each row in words, its
+                        time ago and Open, "Show older" a page at a time; opening the panel marks it read up
+                        to the newest row shown. A dot on the bell when the feed holds unread rows and the
+                        badge counts nothing (the social read's `notificationsUnread`); while the tab is
+                        hidden its title carries the badge's count, except on a board or /daily (`title.ts`);
+                        one toast for the newest row the socket pushes, none for a lobby invite (it has its
+                        own), held while a board is shown (`NotificationToast.tsx`, in `main.tsx`); and a
+                        desktop notification for a daily move, a daily challenge, a lobby invite or a friend
+                        request while the tab is hidden, when the player turned them on (`desktop.ts`)
+net/clientErrors.ts     #3619: a crash in this browser told to the owners: the route boundary's error, an
+                        uncaught error and an unhandled rejection each POST one small report (message,
+                        trimmed stack, route pattern, catalog version) to /api/client-errors; never state,
+                        a query or an id; lazy-chunk failures and stacks with no file of ours are left out
+net/roomLink.ts         R767, R3730006: the room link (/play?room=…&mode=…) and the lobby link
+                        (/lobby/:code): built for the share sheet or the clipboard, read once off the
+                        address bar into this tab, through a sign-in, for the lobby screen
 net/spending.ts         R2378000: whether one of the tab's spends is out, from its press until its answer or
                         its failure (`net/api.ts`'s spends run through `whileSpending`); the Shop's Buy and
                         the pack panel's Open, Open all, sealed pack, Reveal all and Next pack and the
                         cosmetic pack panel's Open and chase Buy (R2683000) wait on it, Buy, Open and Open
                         all turning economy/spend.css's wheel, and a 429 keeps its press's key
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
-                        which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
-                        then the game), and useLiveGame, the live match, series or co-op game the menus'
+                        which main.tsx's useQueueFollow follows on every screen but /play ("Match found!", naming the
+                        opponent, R3729001, then the game), and useLiveGame, the live match, series or co-op game the menus'
                         banner offers (R1566000), read every LIVE_GAME_POLL_SECONDS (R3207001); an ended
                         queue is forgotten after QUEUE_ENDED_AFTER_READS reads (R897000)
 routes/GameBanner.tsx   R765: the one banner atop a menu while there is a game to go back to: a saved
                         practice game (Resume, on /practice) and the live online or co-op game (Rejoin,
-                        on / and /practice); game-banner.css draws it as the tavern's notice
+                        in the menus' shell's status row on every menu but the game's own, R3728002, and
+                        on /practice); game-banner.css draws it as the tavern's notice
 routes/series.tsx       /series/:id: a Conquest series (R330–R336): score, both sides' won (locked) decks,
                         the history, forfeit between games, the result
 routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as the mulligan (R331–R333,
@@ -692,18 +801,31 @@ routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — 
                         (#1650), for this screen, the account, Play and the board; rank/StreakFlame.tsx
                         draws a ranked win streak as a flame on the account and a ranked match's
                         line (R2101000)
-routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three doors, Decks (/decks) as a
-                        link, Cards and Cosmetics opened in place by
-                        `?section=` (net/navigate.ts `useSearch`) so the browser's Back and Forward move
-                        between them and the hub; the page never scrolls, a section's body does. Cards is
-                        the account's cards per shipped set, wallet, set tracks and quests, each panel
+routes/account.tsx      /account (#3733, R3733000): a profile header (the last game's portrait, name#tag with Copy,
+                        Member since, each ladder's rank, season record and flame) over a settings list of six
+                        sections by `?section=` (routes/accountSections.ts: Overview, Match history, Sign-in &
+                        security, Notifications, Privacy & data, Delete account; only the open one mounts); the
+                        list beside the section over 600 px, the list and then one section on a phone; the history
+                        is GET /api/replays worded by routes/replayWords.ts, shared with /replays
+routes/collection.tsx   /collection (#1307, #1579, R1579000, #3734, R3734000): four tabs over the whole window,
+                        Cards, Decks, Cosmetics and Progress, by `?section=` (net/navigate.ts `useSearch`; Cards
+                        when it names none), the route holding the Cards and Cosmetics tabs' search and filters so
+                        they survive a switch; the page never scrolls, a tab's body does. Cards is
+                        one virtual grid of every collectible card (collection/CardGrid.tsx, the pool's windowing
+                        in game/deckbuilder/poolWindow.ts) with the deck builder's search, chips and sorts
+                        (game/deckbuilder/filters.ts `collectionPool`, FilterBar.tsx's `part`), an owned count and
+                        a bar for each set, its filters a sidebar over 1024 px and a sheet under it
+                        (collection/BrowsePanel.tsx); Decks is a tile for each deck with the validator's verdict
+                        and modes (collection/DeckTiles.tsx, each opening `/decks?deck=<id>`); Progress is the
+                        wallet, set tracks, Fleet track and quests, each panel
                         reading for itself and saying why when its read fails, each track a filling bar
-                        (economy/FillBar.tsx); Cosmetics is where one is equipped (and a pack reveal's Equip,
+                        (economy/FillBar.tsx); Cosmetics is where one is equipped, with the same search and filters
+                        (collection/CosmeticsFilters.tsx, cosmeticsBrowse.ts) (and a pack reveal's Equip,
                         collection/EquipButton.tsx, R1955000): the playmat, backdrop and card back as preview
                         tiles (collection/AccountCosmeticTiles.tsx), on the same store and `cosmetics` settings
                         group as before (R633), with no list of what the account owns (R2731000) and no
                         defaults of every card, so a card with no pick
-                        of its own wears its kind's default (R1953001); a card of the Cards section opens large
+                        of its own wears its kind's default (R1953001); a card of the Cards tab opens large
                         wearing its own picks
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of the foils, finishes
                         and borders it may wear drawn as live previews and, R3015007, its variants as ladders
@@ -738,7 +860,7 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three d
                         holds the panels (OwnedCards, WalletPanel, TracksPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
                         every one renders the server's answers and decides nothing (rule 7)
-routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
+routes/QuestsPanel.tsx  /collection's Progress tab's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307), and Replace on each, behind
                         a confirm, while a replace is left today (R2210000). The landing's bookmark
                         shares `useQuests` and `QuestsView` (R2035000)
@@ -774,8 +896,8 @@ routes/lobby.css        the lobby's, the series screen's and its picker's tavern
 routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or
                         complete a quest, §14.9), shown
                         when /api/auth/me says isDev; the server decides every grant, and the panel shows
-                        its answer or refusal; /account's "Manage sign-in & account" shows every account
-                        its account secret ID, hidden until asked for, with a copy button
+                        its answer or refusal; /account's Sign-in & security section shows every account
+                        its account secret ID, hidden until Reveal, with a copy button
 packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, §14.4; `PackOpening.tsx`, imported
                         by routes/shop.tsx): the packs held, each a physical pack (`PackObject.tsx`, #1663: a
                         foil wrapper with crimped seals, its set's emblem and colors, a sheen and a tilt
@@ -839,10 +961,23 @@ active account, and asks for one the way `/play` does.
 
 ```
 routes (net/navigate.ts paths, and public/_redirects):
-  /together              together/TogetherRoute.tsx: friends with status dots, the requests in and out
-                         (accept, decline, cancel), the blocked players (unblock), the add form by
-                         name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
-                         Chat (always), Remove and Block; "Shared with me"; the co-op panel
+  /together              together/TogetherRoute.tsx: Friends (R3732002), five tabs by `?section=`
+                         (together/anchors.ts): Friends (the add form by name#tag and the friends in
+                         groups, together/FriendList.tsx), Requests (in and out: accept, decline,
+                         cancel, block; the challenges sent), Recently played (R3732000, from
+                         `GET /api/friends/recent`, each with Add friend), Blocked (unblock) and Shared
+                         with me (`#shared` opens it); together/TogetherPanels.tsx draws the last four.
+                         The co-op lobby panel is on /play now
+together/FriendList.tsx  R3732002: the drawer's list and the Friends tab's: a search, the requests, and the
+                         friends in groups, In a game, Online and Offline (collapsed), each heading with
+                         its count; together/friendGroups.ts is the pure read of the server's facts
+                         (`status`, `watchable`, `matchId`, `lobbyCode`, `turn`, `lastSeenAt`, R3732001):
+                         the groups, the one primary button (Watch, Join, Challenge or Daily), the ⋯ menu's
+                         items and the status line
+together/FriendMenu.tsx  a row's ⋯ menu: Chat, Daily challenge, Invite to lobby, Watch, Remove and Block;
+                         a layer of its own (Escape and Back close it alone, a press outside closes it)
+together/useFriendActions.ts  what the drawer and the page do to a friend: Remove behind Undo
+                         (R2119000), Block, Invite to lobby (R3874000), one change at a time
   /watch/:matchId        together/WatchRoute.tsx: a friend's seat over /ws/watch, Game on a view with no
                          legal action, SPECTATE_DELAY_MS behind; its turn clock counts down silently from each frame's
                          `clockMs` (together/WatchClock.tsx); Reconnect now once its own reopens run out;
@@ -861,24 +996,27 @@ sideline/                R2990000, R2990004: the sideline strip (SidelineStrip.t
                          Audio tab's Mute spectator emotes mutes every match's from its start
   /dev/duos              duos/DevDuosRoute.tsx: a four-seat hotseat Duos game over the WASM Duos
                          bindings, with a seat switcher (development only, as /dev/hotseat)
-net/social.ts            fetch wrappers for every Play together route, typed (Friend, FriendRequest,
-                         Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
+net/social.ts            fetch wrappers for every Friends route, typed (Friend, FriendRequest,
+                         Challenge, ChatMessage, SharedReplay, RecentOpponent, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
 together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open and the social socket is
                          down, and read on its friend's chat push while it is live (R3214000); a message holding
                          this site's room link draws a Join button that navigates in-app (R2094000);
                          a send shows at once, sends go one at a time, a failed one offers Retry and
                          Discard (R2120000)
-net/roomLink.ts          R767's room link (/play?room=…&mode=…) and R2094000's co-op link
-                         (/together?coop=…): built for the share sheet or the clipboard, read once off
-                         the address bar into this tab, through a sign-in, for the lobby or the co-op panel
-together/FriendsButton.tsx  the Friends button at the top right of every signed-in screen (the nav, the
-                         landing and a board's controls) with its badge (incoming requests, challenges
+net/roomLink.ts          R767's room link (/play?room=…&mode=…), R2094000's co-op link
+                         (/together?coop=…) and R3730006's lobby link (/lobby/:code): built for the share
+                         sheet or the clipboard, read once off the address bar into this tab, through a
+                         sign-in, for the lobby screen, which every one of them opens
+together/FriendsButton.tsx  the Friends button on every signed-in screen (the menus' shell's navigation,
+                         R3728000, which opens its panel as a drawer, R3728001; the top bar off the shell;
+                         a board's controls) with its badge (incoming requests, challenges
                          and unread chats), and its panel: the player's name#tag, the add form, the
-                         requests in, the friends online first with Challenge, Watch and Chat (the rows
-                         of FriendRows.tsx, shared with /together) and a link to /together; the friends
-                         list is read only while the panel is open, ChatPanel and ChallengeDialog open
-                         from it without leaving the screen
+                         list of FriendList.tsx (the requests in, the friends in groups, each row with
+                         one primary button and a ⋯ menu, the rows of FriendRows.tsx, shared with
+                         /together) and a link to /together; the friends list is read only while the
+                         panel is open, ChatPanel (the drawer too, from the shell) and ChallengeDialog
+                         open from it without leaving the screen
 together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unread counts, one
                          GET /api/social, R3210000) the toast,
                          the button and /together share, and the badge's count (paused while the tab is
@@ -899,15 +1037,26 @@ together/config.ts       the social reads' pace: the friends list every FRIENDS_
 together/ChallengeToast.tsx  mounted once in the shell; reads the challenges (socialPoll.ts's GET /api/social) while signed in and
                          toasts an incoming challenge anywhere with a deck picker (the last deck used for
                          its mode): Accept joins the room with it and goes to the game (R1831000), a
-                         refused join offers Open in lobby, /play with the room code filled in (R767);
+                         refused join offers Open in lobby, the room's /lobby/:code (R3730006);
                          Decline declines
 together/presence.ts     usePresenceHeartbeat: POST /api/presence once PRESENCE_HEARTBEAT_MS passes with
                          no signed-in request (onSignedInRequest, R3210000), none while the tab has
                          been hidden for HIDDEN_QUIET_MS (R3576000)
-duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
-                         offer its link, invite a friend by sending the link in chat, join by code or by
-                         a co-op link that fills the join form and focuses Join (R2094000); both players
-                         go to /duos/:matchId once the guest joins
+lobby/LobbyScreen.tsx    /lobby/:code (R3730000 to R3730006, R3731000): a private lobby, 1v1, co-op or
+                         2v2: its code with Copy and Copy link, its seats (player, presence, the host's
+                         crown, the deck state; an empty seat invites a friend; co-op's other two the
+                         AI's; a 2v2's four in two team rows, Switch team for a guest, the host's Move
+                         and dragging a seat onto another), the host's settings, the member's own deck with the validator's verdict and Ready, the
+                         friends to invite, Leave, the host's Remove and Start, and the countdown to the
+                         board; read again on every `lobby` push and every LOBBY_POLL_MS while the social
+                         socket is down; with no lobby under the code, the classic room's join card
+lobby/LobbyPanel.tsx     Create a lobby, Join by code and the player's own lobbies: "Play a friend" on /play,
+                         and under it the co-op panel (with the way back to a live co-op game there, and
+                         Create a 2v2 lobby, R3731000; it left /together with R3732002)
+lobby/LobbyInviteToast.tsx  mounted once beside the challenge toast: a friend's `lobbyInvite`, Open or
+                         Dismiss (R3730005)
+lobby/seats.ts           the seats a lobby view shows, whether Start may light, a seat's deck words
+lobby/inviteRefusal.ts   R3874000: a friend's refused invite from the Friends page or drawer, said once on its lobby's screen
 duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' own HP and pools, a
                          spent seat's bar giving way to its pool), the pass control, the portal, the
                          Both boards toggle (R2095000), the teammate strip and the ping wheel
@@ -920,7 +1069,7 @@ duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): th
 The landing page offers three doors — Play (to the `/play` hub, R1578000), Collection and Shop (#1577) — with a quiet quests bookmark under them for an active account on a live economy (R2035000) and beside it the news' (R2875002), a red count of its unclaimed entries, none with no live entry (R2875001), and no door to Play together, which the hub links and which lives at `/together` behind the gate. The replays list and the replay player offer
 "Share with a friend". The match board's rail says how many friends are watching while any are
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
-snapshot's `watchers`). While any modifier is live on either side, the rail carries `game/ModifierList.tsx`'s chip (`modifier-list`, its count in `data-count`), which opens every label in full under You and Opponent; on a phone the badges beside each hero are cut short, and each is a button (`game/ModifierBadge.tsx`) whose tap opens its own whole label beside it (`modifier-full-<id>`, #2321) and whose second tap, a tap elsewhere or focus leaving it closes it, with no key handler (R2126000). Practice and the lessons show the same chip in their HUD, under You and AI, the Duos board shows it for the seat's own duel, and the watch screen (the newest view) and the replay player (the step on the board) show it in their rail. A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:
+snapshot's `watchers`). While any modifier is live on either side, the rail carries `game/ModifierList.tsx`'s chip (`modifier-list`, its count in `data-count`), which opens every label in full under You and Opponent; on a phone the badges beside each hero are cut short, and each is a button (`game/ModifierBadge.tsx`) whose tap opens its own whole label beside it (`modifier-full-<id>`, #2321) and whose second tap, a tap elsewhere or focus leaving it closes it, with no key handler (R2126000). Practice and the lessons show the same chip in their HUD, under You and AI, a dungeon fight's rail shows it under You and the enemy's name (R3912000), the Duos board shows it for the seat's own duel, and the watch screen (the newest view) and the replay player (the step on the board) show it in their rail. A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:
 
 - the pass control on an inspected hand card sends `Pass` only when `legal` holds it, with the pass
   cost and the passes left beside it (SPEC §13.5); it is the only way to pass, and a hand card
@@ -943,8 +1092,12 @@ snapshot's `watchers`). While any modifier is live on either side, the rail carr
   (`POST /api/duos/matches/:matchId/again`) with the device's "More cards from" pick, and
   `duos-result-again-status` reads `GET` every `SERIES_POLL_SECONDS`: waiting, the teammate wanting
   to play again, the teammate gone (the button hidden), or a refusal in the server's words. An
-  answer naming the new match takes both people to `/duos/:matchId`. A replay and `/dev/duos` show
-  no button.
+  answer naming the new match takes both people to `/duos/:matchId`. A replay, `/dev/duos` and a 2v2
+  (`unavailable`, R3731003) show no button.
+- a game a duel's ending decided (`duelResult`) says which board and how in its result panel (#3697): "On your board: …"
+  in `game/Result.tsx`'s `resultReason` words for the seat, else "On your teammate's board: …" in words written for the
+  teammate's side (`DuosBoard.tsx`'s `teammateReason`), else the old "One of the duels decided the game."; the turn cap
+  reads as the 1v1 one does.
 
 The Duos WASM bindings (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`,
 `duos_view_for`, JSON in and out like the 1v1 ones) are reached only through `src/wasm/index.ts`, for
@@ -955,10 +1108,64 @@ any other build each throws the reason.
 Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
 `together-challenge`, `together-watch`, `together-chat-open`, `friends-button`, `friends-badge`,
-`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `chat-join`, `coop-create`, `coop-difficulty`, `coop-code`, `duos-coop-link`, `coop-join-input`, `coop-join-submit`,
+`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `chat-join`, `lobby-create`, `lobby-code`, `lobby-ready`, `lobby-start`, `lobby-settings`, `lobby-deck-select`, `lobby-team`, `lobby-switch-team`, `lobby-move`, `lobby-create-2v2`,
 `duos-portal`, `duos-both`, `duos-board-own`, `duos-board-teammate`, `duos-pass`, `duos-pool`,
 `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`, `duos-ping-<kind>`, `duos-ping-marker`,
 `sideline-strip`, `sideline-emote`, `sideline-menu` and `sideline-mute`.
+
+## Daily games
+
+Daily games (SPEC §9.13, #3727) are a 1v1 game played a move every 1, 3, 7 or 14 days, by a challenge to
+any friend or the daily queue. The browser runs no engine and opens no socket for one: every read and
+action is one HTTPS request (`crates/server/README.md`, Daily games), and who holds the move, until when,
+what is legal and every refusal are the server's (rule 7). The times per move, the urgent hours and the
+list's sizes are `crates/shared`'s, read from the WebAssembly module (`wasm/index.ts` `dailyConstants`).
+
+```
+routes (net/navigate.ts paths, public/_redirects, behind the gate as /together is):
+  /daily                 daily/DailyRoute.tsx: Your move (least time left first), Their move, the
+                         challenges in and out, the seeks, the games that ended (daily/order.ts); each
+                         game one row (opponent and portrait, mode, turn, both lives, "Your move · 1d 4h
+                         left", urgent under DAILY_URGENT_HOURS); New daily game; the notifications
+                         (email on or off, push on this device, Add to Home Screen on an iPhone or iPad
+                         outside it); the tab reads "Your move (n)"; read again when the social read's
+                         dailyWaiting changes, every DAILY_REREAD_MS while the tab shows and when it
+                         shows again (R3840000)
+  /daily/:matchId        daily/DailyBoard.tsx: Game.tsx on the server's view, legal and forecast (the
+                         opponent's name on its hero, the modifiers in its rail, an aimed attack's
+                         outcomes, R3855000); each action one
+                         POST sent after the seq it read, under a fresh nonce; End turn says it sends the
+                         move; the clock pill in days and hours (daily/DailyClockPill.tsx); Next game to the
+                         next game waiting once the move has passed; "Lost on time" and "Won on time"; a
+                         notice when the game plays on an older card version; once it ends, Rematch (a new
+                         daily challenge to the opponent at its mode and time, NewDailyDialog's rematch)
+                         and Watch the replay (the server's replay of it, none for a voided game); read
+                         again the same way until the game is over, so an end on the opponent's move
+                         shows (R3840000); a finished game whose moves the retention purge took (its
+                         read says `expired`) shows its result, both heroes' life, when it ended, a line
+                         that its moves are no longer kept and Back to daily games, with no replay or
+                         rematch (R3934000)
+net/daily.ts             fetch wrappers for every daily route, typed
+daily/NewDailyDialog.tsx challenge any friend (online or not) or find an opponent, with daily/DailyFields.tsx:
+                         the mode, its deck or lean, and the time per move on the segmented toggle; as a
+                         rematch, only the deck or lean, to the finished game's opponent
+daily/NotificationSettings.tsx  email and push on or off, and (R4039001) desktop notifications while JackiOh is
+                         open, this browser's own (`inbox/desktop.ts`; a refused permission leaves them off
+                         and says so); a server with no mailer (`emailAvailable` false) shows no email toggle,
+                         only where JackiOh tells the player instead: /daily's panel and /account's
+                         Notifications section
+daily/DailyBadge.tsx     the count of games waiting on the player (the social read's dailyWaiting), on
+                         the Play hub's Daily games
+daily/push.ts            this device's push subscription from GET /api/daily/settings's vapidPublicKey,
+                         kept at POST /api/daily/push; dropped at sign-out (routes/account.tsx)
+public/sw.js             the service worker: shows a push and opens its game; caches nothing
+public/manifest.webmanifest  the web app manifest, so iOS and iPadOS deliver web push once the site is
+                         added to the Home Screen
+```
+
+The friends panel's and /together's Challenge or Daily (`together/ChallengeDialog.tsx`) offers Live (an online, idle
+friend, as before) or Daily (any friend). Test ids are `daily/testids.ts`'s, mirrored in
+`e2e/support/testids.ts`.
 
 ## Practice
 
@@ -1020,7 +1227,9 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   (`tutorial/advice.ts`), so the client does no combat maths. Outside a lesson the board draws it too: while
   an attacker is selected or dragged, each legal target with an entry wears a label (`game/AttackOutcome.tsx`,
   `outcome-<target testid>`) with the damage dealt, the damage taken back, a skull on whichever dies and the
-  struck-through shield mark for a broken Divine Shield; the Show attack outcomes setting (`attackOutcomes`,
+  struck-through shield mark for a broken Divine Shield, each unit a Cleave attack strikes beside it its splash
+  (`outcome-splash-<card testid>`) and the hero a Trample attack reaches its overflow (`outcome-overflow-<hero
+  testid>`, R4290000); the Show attack outcomes setting (`attackOutcomes`,
   on by default) hides it. A seat's 1v1 and Duos `view` frames carry the same field (`net.ts`,
   `duos/socket.ts`), and a watcher's never does.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
@@ -1181,6 +1390,8 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   sample-exact even for a decoder that keeps AAC's 48 ms of encoder priming.
 - `node apps/web/scripts/gen-music.mjs --check` needs no renderer, runs anywhere, and is what
   `music-assets.test.ts` calls.
+- Each track is fetched under its manifest hash (`/audio/music/<id>.m4a?v=<hash>`), so Cloudflare caches
+  it for a year (`/audio/*`, #4393) and a browser returns to it without re-validating.
 - Record a new track's source in `assets/music/LICENSES.md`. A station switch or a card's intro is an entry in
   `src/audio/music-cards.json`, and the music system needs no change for it. No card plays a theme (R822000).
   A Legendary's or Mythic's intro is also its play sting (R3332002): with dynamic music off or the music at zero, its
@@ -1219,7 +1430,7 @@ and encoded to the same mono AAC at 22050 Hz and about 32 kbps. After editing a 
 `PATH` for SAPI voices; with neither it exits 2. It renders only the keys whose input hash changed
 and whose backend this machine has, reports a stale key of the other backend as needing it, deletes
 orphan files, rewrites `src/audio/voice-manifest.json`, and fails if the set passes
-`VOICE_BUDGET_BYTES` (12 MiB since R1448; 6 MiB from R501) or a line runs past 4 s. `--only <defId>` limits it to one card
+`VOICE_BUDGET_BYTES` (24 MiB since R3596000, 16 MiB since R1884000, 12 MiB since R1448; 6 MiB from R501) or a line runs past 4 s. `--only <defId>` limits it to one card
 and `--force` renders everything this machine can again (legacy `say` voices such as Fred are not
 byte-deterministic, so expect a large diff). Commit the manifest together with `public/audio/voice/`.
 With neither machine at hand, push a commit whose message holds `[gen:voice]` (or run the `voice`
@@ -1230,7 +1441,9 @@ each committing what it rendered back to the branch, and a Linux job runs `--che
 asset test calls; `--catalog <file>` checks the lines against another catalog. A line must stay
 flavour text: `voice-lines.test.ts` enforces the word limits and bans rules words. At runtime a file
 missing from the manifest falls back to the browser's `speechSynthesis`, with the voice's `web`
-pitch and rate.
+pitch and rate. The sound tables load with the first sound, not with the page. Each voice line is
+fetched under its manifest hash (`/audio/voice/<key>.m4a?v=<hash>`), so Cloudflare caches it for a
+year (`/audio/*`, #4393) and a returning player's browser keeps it without conditional requests.
 
 ## The engine as WebAssembly
 
@@ -1249,14 +1462,25 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   so a screen that does not wait for it (the landing, the shop, `/replays`) draws a face only through
   `useEngineReady` or `WhenEngineReady` (`src/wasm/`), the way the landing's fan, "Your table" showcase and
   the shop's pack reveal do; `routes/engine-gate.test.tsx` holds the landing to it with a played game's stats.
+  The scene kits and both recipe tables load in a chunk beside the module (#4222:
+  `src/cards/art/sceneLoader.ts`): `EngineGate` and `useEngineReady` wait for both before a face draws,
+  and `test/setup.ts` installs the tables synchronously. The sound-effect recipes load the same way
+  (#4428: `src/audio/sfxLoader.ts`): `main.tsx` starts them off the first paint beside the page-wide
+  sound, and the engine's `unlock()` is the backstop, never behind the module; a sound asked for
+  before they land is skipped silently, and `test/setup.ts` installs them synchronously. The
+  flavour sidecar loads in a chunk beside the module too (#4435, `src/cards/flavour.ts`): no screen
+  waits for it, and an inspect view opened before it arrives gains its line when it does.
 - `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
   `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
   buttons and prefetches each route's code once per page load, and the Practice, Play and match
-  screens also call `loadWasm()`; Save-Data turns it all off, a production build has no dev
+  screens also call `loadWasm()`; engine routes also start `loadSceneData()` beside it (#4222).
+  Save-Data turns it all off, a production build has no dev
   chunk, and a screen whose code is already in shows no fallback.
 - `src/game/currentCatalog.ts` is the current catalog every screen with no game of its own reads (SPEC
   §9.4, R163, #1378): `currentCatalog()`, the module's registered definitions and compiled-in version,
-  and `currentCatalogLookup()`, the board's names over them, each built once. No screen asks
+  and `currentCatalogLookup()`, the board's names over them, each built once. The landing fan, the
+  command menu, the lost card, the Almanac, the stats page, the hero portraits, the sound tables and
+  the art helpers read it too (#4180: the entry chunk carries no catalog of its own). No screen asks
   `GET /api/catalog`; `game/currentCatalog.test.ts` fails a client file that names it.
 - `src/wire/` keeps every import the client had when these packages were TypeScript working
   unchanged: `@jackioh/shared` is the generated wire types plus hand-kept helpers, `@jackioh/engine`
@@ -1286,6 +1510,8 @@ held by guards against Title Case labels outside their allowlist.
 
 ## Internationalisation
 
-The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). What a card face prints is `jackioh-shared`'s (#3106), in the reader's words: its face and glossary strings are a dictionary there (`crates/shared/data/<tag>.json`, read through `Locale` in `crates/shared/src/face/`), so a language adds that file and its `Locale` variant too, and `cards/model.ts` passes the reader's tag with every call. The client draws the spans the face model returns (`cards/RulesText.tsx`) and words none of them. The game log's lines are `jackioh-shared`'s too (#3108, `crates/shared/src/log/`, with its sentences in the same dictionary file): `game/logLines.ts` asks the module for a line for each event of a view, and `game/Log.tsx` draws them and keeps the history of the lines it was shown (R745). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English. That fallback is for the engine's and the server's sentences: every literal sentence the client wraps in `t()` (a string, a template with no substitutions, or either branch of `t(cond ? "a" : "b")`) has an entry in `src/i18n/zh-CN.json`, an identity entry when it reads as written, and `src/i18n/i18n.test.ts` (R711000) fails on one that has none, naming its file and line.
+The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). What a card face prints is `jackioh-shared`'s (#3106), in the reader's words: its face and glossary strings are a dictionary there (`crates/shared/data/<tag>.json`, read through `Locale` in `crates/shared/src/face/`), so a language adds that file and its `Locale` variant too, and `cards/model.ts` passes the reader's tag with every call. The client draws the spans the face model returns (`cards/RulesText.tsx`) and words none of them. The game log's lines are `jackioh-shared`'s too (#3108, `crates/shared/src/log/`, with its sentences in the same dictionary file): `game/logLines.ts` asks the module for a line for each event of a view, and `game/Log.tsx` draws them and keeps the history of the lines it was shown (R745). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English. That fallback is for the engine's and the server's sentences: every literal sentence the client wraps in `t()` (a string, a template with no substitutions, either branch of `t(cond ? "a" : "b")`, or either operand of `??`/`||`) has an entry in `src/i18n/zh-CN.json`, an identity entry when it reads as written, and `src/i18n/i18n.test.ts` (R711000) fails on one that has none, naming its file and line. Words that reach `t()` through a variable instead — the option labels and details in `game/modeText.ts` on both faces, the `ANOMALIES` names, the mark words, `DrawOffer`'s texts, the card settings' fields and the board-names options, `CardList`'s default order — are walked the same way by a second R711000 test that fails naming the table and the value; a new table feeding `t()` joins that walk in `i18n.test.ts`.
 
 The language button (`src/i18n/LanguageButton.tsx`) stays only until the device has settled on its language (R1916000): `localStorage["jackioh.locale.settledVisits"]` counts the boots, every language change and the settings' reset set it back to 0, and from the third unchanged boot the button leaves the top bar and the board while settings' Language row stays.
+
+A language's card tables load with its language: `LOCALES["zh-CN"].load` awaits `loadCardTables()` (`src/cards/chinese.ts`) beside the dictionary, and `EngineGate` and `useEngineReady` load them best-effort beside the module, so a Chinese reader's first paint and a flagged view's first face are already Chinese (R711000, R1301, #4180). Until they arrive every lookup falls back to English, as `t()` does for a missing entry, and a tables-chunk failure never bricks a gated screen: readiness is the module alone. `src/net/first-load.test.ts` holds the entry chunk to it: no Chinese card name inside, and a gzip budget the tables never enter.

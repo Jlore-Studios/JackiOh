@@ -8,6 +8,7 @@
 //! - R1203 (ME-ATTACKSUMMON): Windfurious Prime's rider — joiners attack first.
 //! - R1204 (ME-LETHALGUARD): §4.4 step 4a opens for Units too; `redirect: "self"` sends the hit to
 //!   the guard through its own Armor, each guard catching a given hit once.
+//! - R4188001: the combat forecast carries no attack whose target a Mayor draws.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -88,7 +89,7 @@ fn r1200_legal_actions_offer_plays_and_attacks_without_targets() {
     let actions = legal_actions(&state, P1);
     let plays: Vec<&ActionBody> = actions
         .iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == &bolt.id))
+        .filter(|action| is_play_of(action, &bolt.id))
         .collect();
     assert_eq!(plays.len(), 1, "one play, not one per target");
     assert!(
@@ -108,6 +109,40 @@ fn r1200_legal_actions_offer_plays_and_attacks_without_targets() {
         "the attack names the random sentinel: {:?}",
         attacks[0]
     );
+}
+
+#[test]
+fn r4188001_the_forecast_carries_no_attack_whose_target_a_mayor_draws() {
+    let mut state = playing("mb22-forecast");
+    let mayor = put(&mut state, &fx::mayor.id, slot(P1, Row::Units, 1), json!({}));
+    let skirmisher = put(&mut state, &fx::skirmisher.id, slot(P1, Row::Units, 2), json!({}));
+    state.players[P2].hero.health = 1;
+
+    let offered = legal_actions(&state, P1).into_iter().any(|action| {
+        matches!(&action, ActionBody::Attack { attacker_id, target_id }
+            if attacker_id == &skirmisher.id && target_id == RANDOM_ATTACK_TARGET)
+    });
+    assert!(offered, "the attack names the random sentinel");
+    let forecast = combat_forecast(&state, P1);
+    assert!(forecast.attacks.is_empty(), "{:?}", forecast.attacks);
+    assert!(!forecast.lethal, "a drawn target is no lethal swing");
+
+    // Once the Mayor leaves, the same attacker's named attacks are forecast, the lethal one among them.
+    assert!(jackioh_engine::zones::remove_from_field(
+        &mut state,
+        &mayor,
+        Default::default()
+    ));
+    let forecast = combat_forecast(&state, P1);
+    assert!(
+        forecast
+            .attacks
+            .iter()
+            .any(|entry| entry.attacker_id == skirmisher.id && entry.target_id == "hero-p2"),
+        "{:?}",
+        forecast.attacks
+    );
+    assert!(forecast.lethal);
 }
 
 #[test]
@@ -152,7 +187,7 @@ fn r1200_hand_picks_and_modes_stay_choices() {
     let actions = legal_actions(&state, P1);
     let plays: Vec<&ActionBody> = actions
         .iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == &tricky.id))
+        .filter(|action| is_play_of(action, &tricky.id))
         .collect();
     assert_eq!(plays.len(), 2, "one play per mode, not per target");
     for play in &plays {
@@ -240,10 +275,7 @@ fn r1200_choices_return_once_the_mayor_leaves() {
     gone.zone = Zone::Graveyard { player: P1 };
     state.players[P1].graveyard.push(gone);
     assert_eq!(view_for(&state, P1).random_targets, None);
-    let plays = legal_actions(&state, P1)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == &bolt.id))
-        .count();
+    let plays = plays_in(&state, P1, &bolt.id).len();
     assert_eq!(plays, 3, "bolt at either hero and the ally again");
 }
 
@@ -263,10 +295,16 @@ fn r1200_r1044_a_face_down_play_under_a_mayor_draws_no_target() {
     );
     let spell = in_hand(&mut state, &fx::bolt.id, P1, 1).remove(0);
 
-    let sets: Vec<ActionBody> = legal_actions(&state, P1)
+    let sets: Vec<ActionBody> = plays_in(&state, P1, &spell.id)
         .into_iter()
         .filter(|action| {
-            matches!(action, ActionBody::Play { instance_id, face_down: Some(_), .. } if instance_id == &spell.id)
+            matches!(
+                action,
+                ActionBody::Play {
+                    face_down: Some(_),
+                    ..
+                }
+            )
         })
         .collect();
     assert!(!sets.is_empty(), "the face-down plays are offered");
@@ -992,4 +1030,84 @@ fn r1204_trample_into_the_guard_tramples_into_its_hero() {
     );
     assert_eq!(result.state.players[P1].hero.health, HERO_HEALTH - 2);
     assert!(!on_field(&result.state, &guard.id), "the guard died of its 5");
+}
+
+// R113 (ME-ATTACKSUMMON): a question that opens mid-attack owes the rest of the replacement or the
+// rider behind it, and the rest runs once it is answered.
+mod r113_a_question_mid_attack_summon_owes_the_rest {
+    use super::*;
+    use crate::rules::fixtures::damage_combat::{self as dc, ally_noter, death_asker};
+
+    /// damage_combat's game, its note log among it, with this file's cards registered beside its own.
+    fn noting(seed: &str) -> GameState {
+        let state = dc::playing(seed);
+        fx::register();
+        state
+    }
+
+    /// R1202, R113: the substitute's combat kills a Unit whose Death asks; its bounce is owed behind
+    /// the question and runs once it is answered.
+    #[test]
+    fn r1202_r113_a_question_in_the_substitutes_combat_owes_its_bounce() {
+        let mut state = noting("mb22-bounce-owed");
+        let windfast = put(&mut state, &fx::windfast.id, slot(P1, Row::Units, 1), json!({}));
+        clear_hands(&mut state);
+        let offered = in_hand(&mut state, &fx::ally.id, P1, 1).remove(0);
+        let doomed = put(&mut state, &death_asker.id, slot(P2, Row::Units, 1), json!({}));
+        let paused = act_result(&state, attack_action(P1, &windfast.id, &doomed.id));
+        assert!(paused.error.is_none(), "{:?}", paused.error);
+        assert!(paused.state.pending.is_some(), "the Death asks");
+        assert!(
+            on_field(&paused.state, &offered.id),
+            "the bounce waits for the answer"
+        );
+        let resumed = dc::answer(&paused.state).state;
+        assert!(resumed.pending.is_none());
+        assert!(
+            resumed.players[P1].hand.iter().any(|card| card.id == offered.id),
+            "bounced once answered"
+        );
+        assert!(resumed.work.is_empty());
+    }
+
+    /// R1203, R113: a joiner's Death asks mid-run; the Prime's own combat is owed behind it and runs
+    /// once the question is answered.
+    #[test]
+    fn r1203_r113_a_joiners_death_question_owes_the_primes_combat() {
+        let mut state = noting("mb22-combat-owed");
+        let prime = put(&mut state, &fx::prime.id, slot(P1, Row::Units, 1), json!({}));
+        clear_hands(&mut state);
+        set_library(&mut state, P1, &[] as &[&str]);
+        in_hand(&mut state, &death_asker.id, P1, 1);
+        let wall = put(&mut state, &fx::wall.id, slot(P2, Row::Units, 1), json!({}));
+        let paused = act_result(&state, attack_action(P1, &prime.id, &wall.id));
+        assert!(paused.error.is_none(), "{:?}", paused.error);
+        assert!(paused.state.pending.is_some(), "the joiner's Death asks");
+        let damage = |state: &GameState| find_instance(state, &wall.id).expect("the wall").damage;
+        assert_eq!(damage(&paused.state), 1, "the joiner's hit; the Prime's waits");
+        let resumed = dc::answer(&paused.state).state;
+        assert_eq!(damage(&resumed), 6, "the joiner's 1 and the Prime's 5");
+        assert!(resumed.work.is_empty());
+    }
+
+    /// R1202: only a Unit in hand makes the attack. A Field Spell, which a summon would land in the
+    /// backrow, is no substitute, so Windfast attacks itself.
+    #[test]
+    fn r1202_a_field_spell_in_hand_is_no_substitute() {
+        let mut state = noting("mb22-field-spell");
+        let windfast = put(&mut state, &fx::windfast.id, slot(P1, Row::Units, 1), json!({}));
+        clear_hands(&mut state);
+        let spell = in_hand(&mut state, &ally_noter.id, P1, 1).remove(0);
+        let result = act_result(&state, attack_action(P1, &windfast.id, "hero-p2"));
+        assert!(result.error.is_none(), "{:?}", result.error);
+        let declared = declared_attacks(&result.events);
+        assert_eq!(declared.len(), 1);
+        assert_eq!(declared[0].0, windfast.id);
+        assert!(
+            result.state.players[P1]
+                .hand
+                .iter()
+                .any(|card| card.id == spell.id)
+        );
+    }
 }

@@ -12,15 +12,15 @@ import { MARK_PALETTES } from "../../../cards/marks.ts";
 import { planEntries, type AnimationEntry } from "../../../game/animations.ts";
 import { sideOf, testid } from "../../../game/contract.ts";
 import { fullBoardView, withEvents } from "../../../test/fixtures.ts";
+import { envOf } from "../../../test/signatures.ts";
 import { tid } from "../../build.ts";
 import { planCardFx } from "../../cardFx.ts";
 import { FX_BRAND_SLAM_AT, FX_INTENSITY_SCALE, FX_SLAM_AT } from "../../constants.ts";
 import { planFx } from "../../cues.ts";
 import { FLAVOR_LOOKS, paletteLook } from "../../flavors.ts";
-import { createFxMemory } from "../../memory.ts";
 import { MOTIF_FOOT } from "../../motifs/build.ts";
 import { galleryBoardOf, galleryEntry, RECIPE_FIXTURES } from "../../motifs/gallery.ts";
-import type { FxCue, FxPlanEnv, FxShotCue } from "../../types.ts";
+import type { FxCue, FxShotCue } from "../../types.ts";
 import { ENTRANCE_TRAUMA } from "../recipe.ts";
 import { PREEMPTIVE_BEATS, PREEMPTIVE_BRAND_TAIL_MS, PREEMPTIVE_TRAUMA } from "./preemptiveStrike.ts";
 import { FLEET_ORDER_LANDS_AT, fleetBoard, fleetCommand, GALLERY_STARSHIP_LANE, GALLERY_STARSHIP_PIECES, shipyardRollout, WELDS } from "./starshipSignatures.ts";
@@ -36,10 +36,6 @@ type Summoned = Extract<GameEvent, { type: "summoned" }>;
 
 function landingOf(defId: string, player: PlayerId, lane: number, instanceId = "landing"): Summoned {
   return { type: "summoned", player, instanceId, defId, row: "units", lane };
-}
-
-function envOf(): FxPlanEnv {
-  return { intensity: I, card: () => undefined, memory: createFxMemory() };
 }
 
 const played = (player: PlayerId, instanceId: string, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 2 });

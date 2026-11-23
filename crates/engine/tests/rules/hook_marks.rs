@@ -814,6 +814,94 @@ fn r2783000_r2783001_golden_texts_leave_out_markers_and_via() {
 }
 
 #[test]
+fn r4395001_golden_texts_leave_out_a_destroyed_events_animated() {
+    let died = |animated: Option<bool>| GameEvent::Destroyed {
+        instance_id: "c4".into(),
+        def_id: "core-001".into(),
+        owner: P1,
+        controller: P1,
+        attack: 1,
+        max_health: 1,
+        killer_id: None,
+        radiant: None,
+        animated,
+        died_as: None,
+        via: None,
+    };
+    assert_eq!(events_text(&[died(Some(true))]), events_text(&[died(None)]));
+
+    let mut state = playing("golden");
+    let mut bare = state.clone();
+    state.applied.push(AppliedAction {
+        nonce: "golden".into(),
+        events: vec![died(Some(true))],
+    });
+    bare.applied.push(AppliedAction {
+        nonce: "golden".into(),
+        events: vec![died(None)],
+    });
+    assert_eq!(view_texts(&state), view_texts(&bare));
+}
+
+/// R4423000: a `destroyed` of `card` saying it died as `died_as`, as the last action's one event.
+fn died_as_applied(state: &mut GameState, card: &CardInstance, died_as: Option<CardType>) {
+    state.applied.push(AppliedAction {
+        nonce: "died-as".into(),
+        events: vec![GameEvent::Destroyed {
+            instance_id: card.id.clone(),
+            def_id: card.def_id.clone(),
+            owner: P1,
+            controller: P1,
+            attack: 1,
+            max_health: 1,
+            killer_id: None,
+            radiant: None,
+            animated: None,
+            died_as,
+            via: None,
+        }],
+    });
+}
+
+/// The `destroyed` `player` sees of the last action.
+fn seen_destroyed(state: &GameState, player: PlayerId) -> Value {
+    json_of(&view_for(state, player).events)
+        .as_array()
+        .and_then(|events| events.iter().find(|event| event["type"] == "destroyed").cloned())
+        .expect("a destroyed event in the view")
+}
+
+#[test]
+fn r4423000_a_seat_that_cannot_read_the_card_sees_no_died_as() {
+    let mut state = playing("died-as-hidden");
+    let held = in_hand(&mut state, &quiet().id, P1);
+    died_as_applied(&mut state, &held, Some(CardType::Unit));
+    let mine = seen_destroyed(&state, P1);
+    assert_eq!(mine["diedAs"], "Unit", "{mine}");
+    let theirs = seen_destroyed(&state, P2);
+    assert!(theirs.get("diedAs").is_none(), "{theirs}");
+    assert_ne!(theirs["instanceId"], held.id, "{theirs}");
+}
+
+#[test]
+fn r4423000_golden_texts_leave_out_a_destroyed_events_died_as() {
+    let mut state = playing("died-as-golden");
+    let shown = put(&mut state, &quiet().id, slot(P1, Row::Units, 1), json!({}));
+    let mut bare = state.clone();
+    died_as_applied(&mut state, &shown, Some(CardType::FieldTrap));
+    died_as_applied(&mut bare, &shown, None);
+    // The premise: both seats read the card, so the view itself keeps the field.
+    for player in [P1, P2] {
+        assert_eq!(seen_destroyed(&state, player)["diedAs"], "Field Trap");
+    }
+    assert_eq!(view_texts(&state), view_texts(&bare));
+    assert_eq!(
+        events_text(&state.applied[state.applied.len() - 1].events),
+        events_text(&bare.applied[bare.applied.len() - 1].events)
+    );
+}
+
+#[test]
 fn r2783000_a_round_tripped_state_replays_its_markers_and_they_take_no_number() {
     let mut state = playing("round-trip");
     let bare = act_with_nonce(&state, json!({ "type": "endTurn", "playerId": "p1" }), "hm-end");

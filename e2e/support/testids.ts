@@ -314,8 +314,8 @@ export function loadoutErrorId(rule: string): string {
 export const DECKBUILDER_LOADING = "deckbuilder-loading";
 export const DECKBUILDER_ERROR = "deckbuilder-error";
 
-/** Pool drags carry a catalog id, not the board's click target. */
-export const DECK_DRAG_MIME = "application/x-jackioh-card";
+/** Issue #3734: the ghost that follows a pointer while a pool card is dragged to the deck. */
+export const DECK_DRAG_GHOST = "deck-drag-ghost";
 
 export const TRIO_EDITOR = "trio-editor";
 export const TRIO_NAME_INPUT = "trio-name-input";
@@ -512,11 +512,28 @@ export const RADIANT_MARK = ".cf-mark";
 export const CARD_REF = ".cf-ref";
 export const CARD_VALUE = ".cf-value";
 
+// R3572000: a Greek letter reads as its name, so the Automa-α to Automa-ζ and Automa-Ω chips each get an id.
+/** `value` without its leading and trailing hyphens (#4009: `/^-+|-+$/` scans super-linearly). */
+function stripEdgeHyphens(value: string): string {
+  let start = 0;
+  while (value.charAt(start) === "-") start++;
+  let end = value.length;
+  while (end > start && value.charAt(end - 1) === "-") end--;
+  return value.slice(start, end);
+}
+
 export function slugOf(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return stripEdgeHyphens(
+    value
+      .toLowerCase()
+      .replace(/α/g, "alpha")
+      .replace(/β/g, "beta")
+      .replace(/γ/g, "gamma")
+      .replace(/δ/g, "delta")
+      .replace(/ζ/g, "zeta")
+      .replace(/ω/g, "omega")
+      .replace(/[^a-z0-9]+/g, "-"),
+  );
 }
 
 export const DB_FILTERS = "db-filters";
@@ -540,6 +557,14 @@ export function filterSetId(set: string): string {
 
 export function filterRarityId(rarity: string): string {
   return `db-filter-rarity-${slugOf(rarity)}`;
+}
+
+export function filterKeywordId(kind: string): string {
+  return `db-filter-keyword-${slugOf(kind)}`;
+}
+
+export function filterOwnershipId(view: "all" | "owned" | "missing"): string {
+  return `db-filter-ownership-${view}`;
 }
 
 export const DB_FILTER_OWNED = "db-filter-owned";
@@ -583,11 +608,6 @@ export type QueueMode = "bo1" | "bo3" | "random";
 
 export const PLAY_QUEUE = "play-queue";
 export const PLAY_LEAVE_QUEUE = "play-leave-queue";
-export const PLAY_CREATE_ROOM = "play-create-room";
-export const PLAY_ROOM_CODE = "play-room-code";
-export const PLAY_ROOM_MODE = "play-room-mode";
-export const PLAY_JOIN_INPUT = "play-join-code";
-export const PLAY_JOIN_SUBMIT = "play-join-submit";
 export const PLAY_STATUS = "play-status";
 export const PLAY_ERROR = "play-error";
 export const PLAY_DECK_SELECT = "play-deck-select";
@@ -595,11 +615,19 @@ export const PLAY_TRIO_SELECT = "play-trio-select";
 export const PLAY_VERDICT = "play-choice-verdict";
 /** R1372: All random's “More cards from the newest set” option. */
 export const PLAY_LEAN_NEWEST = "play-lean-newest";
-/** R1578000: the Play hub, its online panel, the other ways to play and their tiles. */
+/** R1578000: the Play screen and a visitor's sign-in panel. R3729000: the hub of four groups of cards, the panel an Online card opens, the Private lobby's dialog, and the links under the groups. */
 export const PLAY_SCREEN = "play-screen";
 export const PLAY_ONLINE = "play-online";
-export const PLAY_WAYS = "play-ways";
+export const PLAY_HUB = "play-hub";
+export const PLAY_QUEUE_PANEL = "play-queue-panel";
+export const PLAY_LOBBY = "play-lobby";
+export const PLAY_LOBBY_DIALOG = "play-lobby-dialog";
+export const PLAY_MORE = "play-more";
 export const PLAY_TOGETHER = "play-together";
+/** R3729000: a group's section, `online`, `daily`, `friends` or `solo`. */
+export function playGroupId(group: "online" | "daily" | "friends" | "solo"): string {
+  return `play-group-${group}`;
+}
 /** R1578000: a visitor with no account is offered sign-in where the online controls would be. */
 export const PLAY_SIGN_IN = "play-sign-in";
 
@@ -745,9 +773,30 @@ export const TOGETHER_ERROR = "together-error";
 /** One per friend: `data-profile-id`, `data-status` (`offline|online|inMatch`), `data-watchable`. */
 export const TOGETHER_FRIEND_ROW = "together-friend-row";
 export const TOGETHER_NO_FRIENDS = "together-no-friends";
+/** R3732002: a row's Challenge or Daily, the one primary button of an online or an offline friend: `data-action` (`challenge|daily`). */
 export const TOGETHER_CHALLENGE = "together-challenge";
+/** R3732002: the primary Watch of a friend in a game that can be watched, and Join of one with a lobby open (`data-route`). */
 export const TOGETHER_WATCH = "together-watch";
+export const TOGETHER_JOIN = "together-join";
+/** R3732002: a row's ⋯ menu button, and its items: Chat, Daily challenge, Invite to lobby, Watch, Remove, Block. */
+export const TOGETHER_MENU = "together-menu";
+export const TOGETHER_MENU_UNREAD = "together-menu-unread";
 export const TOGETHER_CHAT_OPEN = "together-chat-open";
+export const TOGETHER_DAILY = "together-daily";
+export const TOGETHER_LOBBY = "together-lobby";
+export const TOGETHER_WATCH_ITEM = "together-watch-item";
+/** R3732002: the search over the list, a group (`data-group`: `requests|inGame|online|offline`) and Offline's toggle. */
+export const TOGETHER_SEARCH = "together-search";
+export const TOGETHER_GROUP = "together-group";
+export const TOGETHER_OFFLINE_TOGGLE = "together-offline-toggle";
+/** R3732000: Recently played's rows (`data-profile-id`) and each one's Add friend. */
+export const TOGETHER_RECENT_ROW = "together-recent-row";
+export const TOGETHER_RECENT_ADD = "together-recent-add";
+
+/** R3732002: a tab of the Friends page, by section (`friends|requests|recent|blocked|shared`). */
+export function togetherTabId(section: string): string {
+  return `together-tab-${section}`;
+}
 export const TOGETHER_UNREAD = "together-unread";
 export const TOGETHER_REMOVE = "together-remove";
 export const TOGETHER_BLOCK = "together-block";
@@ -779,6 +828,52 @@ export function togetherChallengeModeId(mode: QueueMode): string {
   return `together-challenge-mode-${mode}`;
 }
 
+/** #3727: the challenge dialog's Live or Daily (`apps/web/src/together/testids.ts`); the form carries `data-kind`. */
+export const TOGETHER_CHALLENGE_KIND = "together-challenge-kind";
+
+export function togetherChallengeKindId(kind: "live" | "daily"): string {
+  return `together-challenge-kind-${kind}`;
+}
+
+// #3727: daily games (`apps/web/src/daily/testids.ts`).
+export const DAILY_ROOT = "daily";
+export const DAILY_NEW_GAME = "daily-new-game";
+/** One per section: `data-section` (`yourMove|theirMove|incoming|outgoing|seeks|finished`). */
+export const DAILY_SECTION = "daily-section";
+/** One per game: `data-match-id`, `data-has-move`, `data-over`. */
+export const DAILY_GAME_ROW = "daily-game-row";
+/** A row's time left: `data-urgent`. */
+export const DAILY_TIME_LEFT = "daily-time-left";
+/** One per challenge or seek: `data-invite-id`, `data-kind`, `data-direction` (`incoming|outgoing|seek`). */
+export const DAILY_INVITE_ROW = "daily-invite-row";
+export const DAILY_ACCEPT = "daily-accept";
+export const DAILY_DECLINE = "daily-decline";
+export const DAILY_CANCEL = "daily-cancel";
+/** A daily game's board: `data-match-id`, `data-has-move`. */
+export const DAILY_BOARD = "daily-board";
+/** Whoever holds the move: `data-holder` (`you|opponent`), `data-urgent`. */
+export const DAILY_CLOCK = "daily-clock";
+export const DAILY_NEXT_GAME = "daily-next-game";
+/** The Play screen's Daily games, and its badge of the games waiting on the player. */
+export const PLAY_DAILY = "play-daily";
+export const PLAY_DAILY_BADGE = "play-daily-badge";
+/** The New daily game dialog: who to play (a friend, `DAILY_FRIEND`'s select, or the queue), the mode and Send. */
+export const DAILY_NEW_DIALOG = "daily-new-dialog";
+export const DAILY_FRIEND = "daily-friend";
+export const DAILY_SEND = "daily-send";
+
+export function dailyKindId(kind: "friend" | "queue"): string {
+  return `daily-kind-${kind}`;
+}
+
+export function dailyModeId(mode: "bo1" | "random"): string {
+  return `daily-mode-${mode}`;
+}
+
+export function dailyPerMoveId(days: number): string {
+  return `daily-per-move-${String(days)}`;
+}
+
 /** `data-friend-id`. */
 export const CHAT_PANEL = "chat-panel";
 export const CHAT_INPUT = "chat-input";
@@ -797,12 +892,20 @@ export const CHAT_JOIN = "chat-join";
 export const FRIENDS_BUTTON = "friends-button";
 export const FRIENDS_BADGE = "friends-badge";
 export const FRIENDS_PANEL = "friends-panel";
+/** `skeletonTestid.root` (apps/web/src/skeleton/Skeleton.tsx): a list still loading. */
+export const SKELETON = "skeleton";
+/** The panel's ✕. */
+export const FRIENDS_CLOSE = "friends-close";
+/** The drawer's "See all friends" link. */
+export const FRIENDS_ALL = "friends-all";
 
 /** One per incoming challenge: `data-challenge-id`, `data-room-code`, `data-mode`. */
 export const CHALLENGE_TOAST = "challenge-toast";
 export const CHALLENGE_ACCEPT = "challenge-toast-accept";
 export const CHALLENGE_DECLINE = "challenge-decline";
 export const CHALLENGE_TOAST_ERROR = "challenge-toast-error";
+/** R3729002: Later sends the toast away; the challenge stays in the inbox. */
+export const CHALLENGE_LATER = "challenge-toast-later";
 
 /** `data-connection` (`connecting|open|closed|refused`). */
 export const WATCH_SCREEN = "watch-screen";
@@ -846,11 +949,6 @@ export const SIDELINE_MENU = "sideline-menu";
 export const SIDELINE_MUTE = "sideline-mute";
 // #936 S8: Duos co-op selectors mirror `duosTestid` in `apps/web/src/duos/testids.ts` (B60–B65).
 
-export const COOP_CREATE = "coop-create";
-export const COOP_DIFFICULTY = "coop-difficulty";
-export const COOP_CODE = "coop-code";
-export const COOP_JOIN_INPUT = "coop-join-input";
-export const COOP_JOIN_SUBMIT = "coop-join-submit";
 export const DUOS_PORTAL = "duos-portal";
 export const DUOS_PASS = "duos-pass";
 export const DUOS_POOL = "duos-pool";
@@ -865,9 +963,6 @@ export function duosPingId(kind: DuosPingKind): string {
   return `duos-ping-${kind}`;
 }
 
-export const COOP_DECK = "coop-deck";
-export const COOP_ERROR = "coop-error";
-export const COOP_LINK = "duos-coop-link";
 export const DUOS_BOARD = "duos-board";
 export const DUOS_BOTH = "duos-both";
 export const DUOS_BOARD_OWN = "duos-board-own";
@@ -922,8 +1017,25 @@ export const TOKEN_PANEL = "token-panel";
 export const TOKEN_HELD_CARD = "token-held-card";
 
 /** R2730000: a locked card or cosmetic's fullscreen preview in the Collection, the only place a token is spent. */
-export function collectionSetToggleId(set: string): string {
-  return `collection-set-toggle-${set}`;
+/** Issue #3734, R3734000: the Collection's tabs and the Cards tab's grid, count, filters, and the Decks tab's tiles. */
+export function collectionTabId(tab: "cards" | "decks" | "cosmetics" | "progress"): string {
+  return `collection-tab-${tab}`;
+}
+
+export const COLLECTION_GRID = "collection-grid";
+export const COLLECTION_COUNT = "collection-count";
+export const COLLECTION_FILTERS = "collection-filters";
+export const COLLECTION_FILTERS_OPEN = "collection-filters-open";
+export const COLLECTION_FILTERS_SHEET = "collection-filters-sheet";
+export const COLLECTION_DECKS = "collection-decks";
+export const COLLECTION_DECK_NEW = "collection-deck-new";
+
+export function collectionDeckTileId(id: string): string {
+  return `collection-deck-${id}`;
+}
+
+export function collectionSetProgressId(set: string): string {
+  return `collection-set-progress-${set}`;
 }
 
 export function collectionCardId(cardId: string): string {
@@ -982,3 +1094,25 @@ export function collectionTrackXpId(set: string): string {
 
 /** A card face's root (apps/web/src/cards/CardFace.tsx); `data-full-art="true"` when it prints full art (R1017001, R1313000). */
 export const CARD_FACE = ".cf";
+
+// R3730000: the private lobby, mirroring `lobbyTestid` in apps/web/src/lobby/testids.ts.
+export const LOBBY_SCREEN = "lobby-screen";
+export const LOBBY_CODE = "lobby-code";
+export const LOBBY_COPY_LINK = "lobby-copy-link";
+export const LOBBY_SEAT = "lobby-seat";
+export const LOBBY_TEAM = "lobby-team";
+export const LOBBY_SWITCH_TEAM = "lobby-switch-team";
+export const LOBBY_MOVE = "lobby-move";
+export const LOBBY_INVITE = "lobby-invite";
+export const LOBBY_SETTINGS = "lobby-settings";
+export const LOBBY_DECK_SELECT = "lobby-deck-select";
+export const LOBBY_READY = "lobby-ready";
+export const LOBBY_START = "lobby-start";
+export const LOBBY_LEAVE = "lobby-leave";
+export const LOBBY_COUNTDOWN = "lobby-countdown";
+export const LOBBY_ERROR = "lobby-error";
+export const LOBBY_JOIN_CARD = "lobby-join-card";
+export const LOBBY_JOIN_ROOM = "lobby-join-room";
+export const LOBBY_PANEL = "lobby-panel";
+export const LOBBY_CREATE = "lobby-create";
+export const LOBBY_CREATE_2V2 = "lobby-create-2v2";

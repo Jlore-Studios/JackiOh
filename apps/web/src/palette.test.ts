@@ -67,7 +67,7 @@ const UNMIGRATED: Record<string, number> = {
   "cards/marks.css": 5,
   "cards/setmark.css": 5,
   "cards/wheel/wheel.css": 7,
-  "collection/collection.css": 90,
+  "collection/collection.css": 89,
   "duos/duos.css": 13,
   "economy/economy.css": 24,
   "economy/jlore-pill.css": 11,
@@ -86,9 +86,9 @@ const UNMIGRATED: Record<string, number> = {
   "routes/account.css": 3,
   "routes/game-banner.css": 8,
   "routes/landing.css": 73,
-  "routes/lobby.css": 50,
+  "routes/lobby.css": 40,
   "routes/site-footer.css": 1,
-  "routes/stats.css": 64,
+  "routes/stats.css": 63,
   "settings/changeEmail.css": 2,
   "settings/settings.css": 17,
   "shop/shop.css": 2,
@@ -96,9 +96,20 @@ const UNMIGRATED: Record<string, number> = {
   "tutorial/tutorial.css": 13,
 };
 
-const PALETTE = new Map(
-  [...read("palette.css").matchAll(/^\s*(--pal-[a-z0-9-]+):\s*(#[0-9a-f]{6});$/gm)].map((match) => [match[1] ?? "", match[2] ?? ""]),
-);
+/**
+ * A token line's captures (#4009: `/^\s*--…$/gm` line patterns rescan newline runs from every line
+ * start); `pattern` is the line without its `m` flag.
+ */
+function tokenLines(text: string, pattern: RegExp): [string, string][] {
+  const out: [string, string][] = [];
+  for (const line of text.split("\n")) {
+    const match = pattern.exec(line);
+    if (match !== null) out.push([match[1] ?? "", match[2] ?? ""]);
+  }
+  return out;
+}
+
+const PALETTE = new Map(tokenLines(read("palette.css"), /^\s*(--pal-[a-z0-9-]+):\s*(#[0-9a-f]{6});$/));
 
 /** The hex of the palette color that `sheet` gives `token` (its first declaration). */
 function resolved(sheet: string, token: string): string | undefined {
@@ -128,7 +139,14 @@ describe("#2105 the palette", () => {
     expect(PALETTE.size).toBeGreaterThan(0);
     expect(PALETTE.size).toBeLessThanOrEqual(PALETTE_MAX);
     expect(new Set(PALETTE.values()).size, "two names for one color").toBe(PALETTE.size);
-    expect(text.replace(/^\s*--pal-[a-z0-9-]+:\s*#[0-9a-f]{6};$/gm, "").replace(/\s+/g, "")).toBe(":root{}");
+    // Token lines blanked (#4009: the `/^\s*--…$/gm` pattern rescans newline runs from every line).
+    expect(
+      text
+        .split("\n")
+        .map((line) => (/^\s*--pal-[a-z0-9-]+:\s*#[0-9a-f]{6};$/.test(line) ? "" : line))
+        .join("\n")
+        .replace(/\s+/g, ""),
+    ).toBe(":root{}");
     expect(read("index.css")).toMatch(/^@import "\.\/fonts\.css";\n@import "\.\/palette\.css";\n/);
   });
 

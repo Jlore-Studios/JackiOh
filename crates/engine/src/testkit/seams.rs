@@ -10,13 +10,18 @@
 //!   three turn stages: `turn.rs` runs the double in place of `brittle::brittle_tick`,
 //!   `animated::animate_at_turn_start` and `animated::return_at_cleanup` while one is set, and the
 //!   real stage otherwise.
+//! - `record_target_draw` keeps each `target` pick drawn at random with no prompt open (a random
+//!   cast's, R452, a Mayor's, R1200) for the fuzz monitor's I22 (#4540): the engine calls it at its
+//!   draw sites under the feature, and it keeps a draw only while a record is open. The monitor's
+//!   `before` opens one and its `after` takes it, so a run with no monitor (`cargo jackioh gate`, an
+//!   AI search; `jackioh-tools` links the testkit) keeps nothing.
 
 use std::cell::Cell;
 use std::rc::Rc;
 
 use crate::script::EngineSink;
-use crate::state::WorkItem;
-use crate::wire::PlayerId;
+use crate::state::{CardInstance, GameState, WorkItem};
+use crate::wire::{PlayerId, Selection};
 
 /// Runs one owed item of the sequence it is registered for.
 pub type WorkHandler = fn(&mut EngineSink<'_>, &WorkItem);
@@ -29,6 +34,30 @@ thread_local! {
     static BRITTLE_TICK: Cell<Option<Rc<StageDouble>>> = const { Cell::new(None) };
     static ANIMATE_AT_TURN_START: Cell<Option<Rc<StageDouble>>> = const { Cell::new(None) };
     static RETURN_AT_CLEANUP: Cell<Option<Rc<StageDouble>>> = const { Cell::new(None) };
+    /// `None` while no record is open.
+    static TARGET_DRAWS: Cell<Option<Vec<TargetDraw>>> = const { Cell::new(None) };
+}
+
+/// What drew a `target` pick at random, with nobody asked.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TargetDrawBy {
+    /// A random cast makes its caster's picks itself (R452).
+    RandomCast,
+    /// While a Mayor acts every `target` pick is drawn at random (R1200).
+    Mayor,
+}
+
+/// One random `target` draw, as I22 judges it (#4540).
+#[derive(Clone, Debug)]
+pub struct TargetDraw {
+    /// The state the draw was made on.
+    pub state: GameState,
+    /// The card whose targeting drew, `None` for a prompt whose card is gone.
+    pub source: Option<CardInstance>,
+    /// The player the picks were drawn for.
+    pub seat: PlayerId,
+    pub by: TargetDrawBy,
+    pub picks: Vec<Selection>,
 }
 
 /// For this thread, `handler` runs every owed item whose `resume.hook` is `hook` and that no engine
@@ -116,12 +145,51 @@ pub fn return_at_cleanup_double() -> Option<Rc<StageDouble>> {
     double_of(&RETURN_AT_CLEANUP)
 }
 
-/// Every seam back to the engine's own code for this thread: no test work handler, no stage double.
+/// Opens this thread's record of random `target` draws, empty (the monitor's `before`).
+pub fn start_target_draws() {
+    TARGET_DRAWS.with(|cell| cell.set(Some(Vec::new())));
+}
+
+/// The draws this thread recorded since `start_target_draws`, in draw order; closes the record.
+pub fn take_target_draws() -> Vec<TargetDraw> {
+    TARGET_DRAWS.with(|cell| cell.take().unwrap_or_default())
+}
+
+/// Keeps one random `target` draw made on `state` while a record is open; nothing else. What the engine
+/// calls where it draws (`prompts::answer_at_random`, `play_steps`, `cry_trigger`, `play_choices`).
+pub fn record_target_draw(
+    state: &GameState,
+    source: Option<&CardInstance>,
+    seat: PlayerId,
+    by: TargetDrawBy,
+    picks: &[Selection],
+) {
+    if picks.is_empty() {
+        return;
+    }
+    TARGET_DRAWS.with(|cell| {
+        let Some(mut draws) = cell.take() else {
+            return;
+        };
+        draws.push(TargetDraw {
+            state: state.clone(),
+            source: source.cloned(),
+            seat,
+            by,
+            picks: picks.to_vec(),
+        });
+        cell.set(Some(draws));
+    });
+}
+
+/// Every seam back to the engine's own code for this thread: no test work handler, no stage double, no
+/// record of target draws.
 pub fn clear_seams() {
     WORK_HANDLERS.with(|cell| cell.set(Vec::new()));
     BRITTLE_TICK.with(|cell| cell.set(None));
     ANIMATE_AT_TURN_START.with(|cell| cell.set(None));
     RETURN_AT_CLEANUP.with(|cell| cell.set(None));
+    TARGET_DRAWS.with(|cell| cell.set(None));
 }
 
 #[cfg(test)]
@@ -133,7 +201,7 @@ mod tests {
     use crate::state::{GameState, Resume};
     use crate::testkit::scenario::{Scenario, catalog_override, register_catalog, scenario};
     use crate::wire::{CardDefs, GameEvent};
-    use crate::work::{can_resume, drain_work, push_work};
+    use crate::work::{can_resume, drain_work, engine_resume, push_work};
 
     const HOOK: &str = "__seam";
 
@@ -153,14 +221,7 @@ mod tests {
     }
 
     fn seam_resume() -> Resume {
-        Resume {
-            def_id: String::new(),
-            hook: HOOK.to_string(),
-            step: "seam".to_string(),
-            radiant: false,
-            instance_id: None,
-            data: Default::default(),
-        }
+        engine_resume(HOOK, "seam", Default::default())
     }
 
     /// A test sequence's step: one point off its owner's hero, so the run shows on the board.

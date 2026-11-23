@@ -19,6 +19,7 @@ import Game, { type GameProps } from "./Game.tsx";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, withEvents } from "../test/fixtures.ts";
+import { readRootVar } from "./rootVars.ts";
 
 const lookup = lookupFromDefs(CATALOG);
 const ZEPHRYS = "core-097";
@@ -131,7 +132,7 @@ describe("R2785000 a set piece on the board", () => {
 
     const teammate = playOut(ZEPHRYS, { replay: true, silent: true });
     expect(teammate).not.toHaveAttribute("data-set-piece");
-    expect(teammate.style.getPropertyValue("--set-piece-hold")).toBe("");
+    expect(readRootVar(teammate, "--set-piece-hold")).toBe("");
     expect(screen.queryByTestId(SKIP_HINT)).toBeNull();
     // Its entry plays the table's time alone.
     act(() => {
@@ -143,7 +144,7 @@ describe("R2785000 a set piece on the board", () => {
   it("R2785000 the opponent's Mythic holds the viewer's board too (hotseat's both seats)", () => {
     const game = playOut(ZEPHRYS, {}, "p2");
     expect(game).toHaveAttribute("data-set-piece", TAKEOVER_SET_PIECE);
-    expect(game.style.getPropertyValue("--set-piece-hold")).toBe(`${String(TAKEOVER_HOLD_MS)}ms`);
+    expect(readRootVar(game, "--set-piece-hold")).toBe(`${String(TAKEOVER_HOLD_MS)}ms`);
   });
 
   it("R2785000 under reduced motion no hold, no hint, no effects", () => {
@@ -152,7 +153,7 @@ describe("R2785000 a set piece on the board", () => {
     expect(game).toHaveAttribute("data-reduced-motion", "true");
     expect(game).not.toHaveAttribute("data-set-piece");
     expect(game).not.toHaveAttribute("data-takeover");
-    expect(game.style.getPropertyValue("--set-piece-hold")).toBe("");
+    expect(readRootVar(game, "--set-piece-hold")).toBe("");
     expect(screen.queryByTestId(SKIP_HINT)).toBeNull();
     expect(animating()).toBeNull();
     // The effects layer is off under Reduce motion (R200), and draws nothing: no shake, flash or sweep.
@@ -173,7 +174,7 @@ describe("R2785000 a set piece on the board", () => {
 
   it("R2785000 the hint fades in after SET_PIECE_SKIP_HINT_MS", () => {
     const game = playOut(ZEPHRYS);
-    expect(game.style.getPropertyValue("--set-piece-skip-delay")).toBe(`${String(SET_PIECE_SKIP_HINT_MS)}ms`);
+    expect(readRootVar(game, "--set-piece-skip-delay")).toBe(`${String(SET_PIECE_SKIP_HINT_MS)}ms`);
     const hint = screen.getByTestId(SKIP_HINT);
     expect(hint).toHaveClass("set-piece-skip");
     expect(hint).toHaveAttribute("aria-hidden", "true");

@@ -1,7 +1,7 @@
 // R3340000: art that lives in play. The board's faces (a Unit's `MinionFace`, a face-up backrow card's compact `CardFace`) move
 // their art for an animated or signed level and for every Mythic, in the one budget of motion slots the hand shares (ranked
 // by the pointer or focus first, then Mythics, Legendaries and the rest newest first); a tab hidden, a face off screen and
-// every motion setting hold them still; the art answers the pointer, a press and an attack; and a unit's art wears cracks, a
+// every motion setting hold them still; the art answers the pointer, a press and an attack; and a unit's art wears a
 // glow and frost. Vitest stubs CSS, so artLive.css is read as text; the pixels are e2e's cypress/component/art-answers.cy.tsx.
 
 import { act, cleanup, render } from "@testing-library/react";
@@ -18,6 +18,7 @@ import Zone from "../game/Zone.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { readSheet, resetVisibility, setReducedMotion, setVisibility } from "../test/setup.ts";
 import { baseView, emptySide, faceUpBackrow, unit } from "../test/fixtures.ts";
+import { manualFrames, type ManualFrames } from "../test/frames.ts";
 import { THEME_PALETTES, type ArtThemeId } from "./art/themes.ts";
 import { PARTICLE_COUNT } from "./art/motion.ts";
 import { CardFace } from "./CardFace.tsx";
@@ -134,10 +135,20 @@ function documentOf(element: Element | null): Document {
   return new DOMParser().parseFromString(decodeURIComponent(uri.slice(DATA_PREFIX.length)), "image/svg+xml");
 }
 
-/** The pointer and focus events a face listens for, on its card's host. */
+let frames: ManualFrames;
+
+/** The pointer and focus events a face listens for, on its card's host; a move gets its frame (#3610) at once. */
 const fire = (target: Element, type: string, init: MouseEventInit = {}): void => {
   act(() => {
     target.dispatchEvent(type.startsWith("focus") ? new FocusEvent(type, { bubbles: true }) : new MouseEvent(type, { bubbles: true, ...init }));
+  });
+  if (type === "pointermove") frames.flush();
+};
+
+/** #3610: a pointermove on `target` left waiting for its frame, which the test runs with `frames.flush()`. */
+const hold = (target: Element, x: number, y: number): void => {
+  act(() => {
+    target.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: x, clientY: y }));
   });
 };
 
@@ -173,6 +184,7 @@ function observerFor(face: HTMLElement): FakeObserver {
 }
 
 beforeEach(() => {
+  frames = manualFrames();
   localStorage.clear();
   resetCosmeticsForTests();
   resetFxSettingsForTests();
@@ -181,6 +193,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  frames.restore();
   cleanup();
   vi.unstubAllGlobals();
   resetVisibility();
@@ -502,8 +515,8 @@ describe("R3340000 motion pauses and the settings still rule", () => {
       expect(motions(container), why).toEqual(["static", "static"]);
       expect(container.querySelector("[data-art-moving], [data-art-live]"), why).toBeNull();
       expect(worn.hasAttribute("data-art-response"), `${why}: the whole-art fallback is still too`).toBe(false);
-      // Damage, a buff and frost are still marks.
-      expect(worn.querySelectorAll(".cf-art-cracks path"), why).toHaveLength(3);
+      // A buff and frost are still marks; missing health is none (R3776000).
+      expect(worn.querySelector(".cf-art-cracks"), why).toBeNull();
       expect(worn.querySelector(".cf-art-glow"), why).not.toBeNull();
       expect(worn.querySelector(".cf-art-frost"), why).not.toBeNull();
       cleanup();
@@ -575,6 +588,69 @@ describe("R3340000 cards that answer", () => {
     expect(cf.style.getPropertyValue("--art-aim-x")).toBe("0.500");
     fire(host(cf), "pointerleave");
     expect(cf.getAttribute("data-art-hover")).toBe("false");
+  });
+
+  it("R3340000 ten moves inside one frame read the face's box at most once and write each aim property once, the last move's", () => {
+    const { container } = render(<Board specs={[{ id: COMMON }]} />);
+    const cf = minions(container)[0] as HTMLElement;
+    const read = vi.spyOn(cf, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 100, height: 200, right: 100, bottom: 200, x: 0, y: 0, toJSON: () => ({}) });
+    const setProperty = vi.spyOn(cf.style, "setProperty");
+    const aimWrites = (property: string): string[] => setProperty.mock.calls.filter(([name]) => name === property).map(([, value]) => String(value));
+    fire(host(cf), "pointerenter");
+    const asked = frames.requested();
+    for (let step = 0; step < 9; step += 1) hold(host(cf), step * 10, step * 20);
+    hold(host(cf), 75, 50);
+    // The moves are kept, not handled: one frame is asked for, and nothing is read or written until it runs.
+    expect(frames.requested() - asked).toBe(1);
+    expect(read).not.toHaveBeenCalled();
+    expect(aimWrites("--art-aim-x")).toEqual([]);
+    frames.flush();
+    expect(read.mock.calls.length).toBeLessThanOrEqual(1);
+    expect(aimWrites("--art-aim-x")).toEqual(["0.500"]);
+    expect(aimWrites("--art-aim-y")).toEqual(["-0.500"]);
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("0.500");
+    expect(cf.style.getPropertyValue("--art-aim-y")).toBe("-0.500");
+    // The next frame handles the next move, again once.
+    hold(host(cf), 25, 150);
+    hold(host(cf), 100, 200);
+    frames.flush();
+    expect(aimWrites("--art-aim-x")).toEqual(["0.500", "1.000"]);
+    expect(aimWrites("--art-aim-y")).toEqual(["-0.500", "1.000"]);
+  });
+
+  it("R3340000 leaving the face drops the move waiting for its frame: nothing is written after the pointer has left", () => {
+    const { container } = render(<Board specs={[{ id: COMMON }]} />);
+    const cf = minions(container)[0] as HTMLElement;
+    vi.spyOn(cf, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 100, height: 200, right: 100, bottom: 200, x: 0, y: 0, toJSON: () => ({}) });
+    fire(host(cf), "pointerenter");
+    hold(host(cf), 75, 50);
+    hold(host(cf), 80, 60);
+    expect(frames.pending()).toBe(1);
+    const dropped = frames.cancelled();
+    fire(host(cf), "pointerleave");
+    expect(frames.cancelled() - dropped).toBe(1);
+    expect(frames.pending()).toBe(0);
+    frames.flush();
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("");
+    expect(cf.style.getPropertyValue("--art-aim-y")).toBe("");
+    // A pointer that comes back is followed again.
+    fire(host(cf), "pointerenter");
+    fire(host(cf), "pointermove", { clientX: 75, clientY: 50 });
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("0.500");
+  });
+
+  it("R3340000 unmounting the face drops the move waiting for its frame: nothing is written after it is gone", () => {
+    const { container, unmount } = render(<Board specs={[{ id: COMMON }]} />);
+    const cf = minions(container)[0] as HTMLElement;
+    vi.spyOn(cf, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 100, height: 200, right: 100, bottom: 200, x: 0, y: 0, toJSON: () => ({}) });
+    fire(host(cf), "pointerenter");
+    hold(host(cf), 75, 50);
+    expect(frames.pending()).toBe(1);
+    const setProperty = vi.spyOn(cf.style, "setProperty");
+    unmount();
+    expect(frames.pending()).toBe(0);
+    frames.flush();
+    expect(setProperty).not.toHaveBeenCalled();
   });
 
   it("R3340000 the focus a click or a tap gives a card is the pointer's: once the pointer leaves, the face holds no keyboard pose", () => {
@@ -672,23 +748,52 @@ describe("R3340000 cards that answer", () => {
   });
 });
 
-describe("R3340000 the marks of a unit's state", () => {
-  it("R3340000 the cracks grow with the health missing, from none for a whole unit", () => {
-    const cracks = (over: Partial<UnitView>): number => {
+describe("R3340000 and R3776000 the marks of a unit's state", () => {
+  it("R3776000 a damaged unit's art wears no mark for its missing health, however much is missing", () => {
+    const damaged: Partial<UnitView>[] = [
+      {},
+      { health: 3, maxHealth: 4 },
+      { health: 1, maxHealth: 4 },
+      { health: 1, maxHealth: 30 },
+    ];
+    for (const over of damaged) {
       const { container } = render(<Board specs={[{ id: COMMON, over }]} />);
       const art = container.querySelector<HTMLElement>(".cf-art");
-      const count = art?.querySelectorAll(".cf-art-cracks path").length ?? 0;
-      expect(art?.getAttribute("data-art-damage") ?? "0", JSON.stringify(over)).toBe(String(count));
+      const why = JSON.stringify(over);
+      expect(art, why).not.toBeNull();
+      expect(container.querySelector(".cf-art-cracks"), why).toBeNull();
+      expect(container.querySelector(".cf-art-wear"), why).toBeNull();
+      for (const attribute of ["data-art-damage", "data-art-buffed", "data-art-frozen"]) {
+        expect(art?.hasAttribute(attribute), `${why}: ${attribute}`).toBe(false);
+      }
       cleanup();
-      return count;
-    };
-    expect(cracks({ health: 4, maxHealth: 4 })).toBe(0);
-    expect(cracks({ health: 3, maxHealth: 4 })).toBe(1);
-    expect(cracks({ health: 2, maxHealth: 4 })).toBe(2);
-    expect(cracks({ health: 1, maxHealth: 4 })).toBe(3);
-    expect(cracks({ health: 1, maxHealth: 30 })).toBe(4);
-    const { container } = render(<Board specs={[{ id: COMMON }]} />);
-    expect(container.querySelector(".cf-art-wear"), "a whole, unbuffed, unfrozen unit wears nothing").toBeNull();
+    }
+  });
+
+  it("R3776000 a damaged unit that is buffed still glows and one that is frozen still frosts, and neither draws cracks", () => {
+    const over = { health: 1, maxHealth: 4 };
+    const { container } = render(
+      <Board
+        specs={[
+          { id: COMMON, attack: 9, over },
+          { id: COMMON, over: { ...over, frozen: true } },
+          { id: COMMON, attack: 9, over: { ...over, frozen: true } },
+        ]}
+      />,
+    );
+    const [buffed, frozen, both] = [...container.querySelectorAll<HTMLElement>(".cf-art")] as [HTMLElement, HTMLElement, HTMLElement];
+    expect(buffed.querySelector(".cf-art-glow")).not.toBeNull();
+    expect(buffed.getAttribute("data-art-buffed")).toBe("true");
+    expect(buffed.querySelector(".cf-art-frost")).toBeNull();
+    expect(frozen.querySelector(".cf-art-frost")).not.toBeNull();
+    expect(frozen.getAttribute("data-art-frozen")).toBe("true");
+    expect(frozen.querySelector(".cf-art-glow")).toBeNull();
+    expect(both.querySelector(".cf-art-glow")).not.toBeNull();
+    expect(both.querySelector(".cf-art-frost")).not.toBeNull();
+    for (const art of [buffed, frozen, both]) {
+      expect(art.querySelector(".cf-art-wear")).not.toBeNull();
+      expect(art.querySelector(".cf-art-cracks")).toBeNull();
+    }
   });
 
   it("R3340000 a buffed unit glows in its card's theme colour and a frozen one frosts over", () => {
@@ -706,7 +811,7 @@ describe("R3340000 the marks of a unit's state", () => {
     expect(first.querySelector(".cf-art-frost")).not.toBeNull();
     expect(second.hasAttribute("data-art-frozen")).toBe(false);
     expect(second.querySelector(".cf-art-frost")).toBeNull();
-    for (const attribute of ["data-art-buffed", "data-art-frozen", "data-art-damage"]) expect(plain.hasAttribute(attribute), attribute).toBe(false);
+    for (const attribute of ["data-art-buffed", "data-art-frozen"]) expect(plain.hasAttribute(attribute), attribute).toBe(false);
     expect(plain.style.getPropertyValue("--art-glow")).toBe("");
     // The marks sit over the picture, and are drawings, hidden from assistive technology like the art.
     expect(first.querySelector(".cf-art-wear")?.getAttribute("aria-hidden")).toBe("true");
@@ -747,15 +852,18 @@ describe("R3340000 the stylesheet", () => {
     }
     expect(css).toContain("--art-aim-x");
     expect(css).toContain("--fx-lunge-x");
+    // No `\d*\.?\d+`: its runs trade characters super-linearly; the alternation matches the same
+    // numbers (#4009).
     expect(css, "the sheet uses relative lengths and the shared lunge distance, never a raw px or rem length").not.toMatch(
-      /(?<![\w.])\d*\.?\d+(?:px|rem)\b/u,
+      /(?<![\w.])(\d+(?:\.\d+)?|\.\d+)(?:px|rem)\b/u,
     );
     expect(css).toContain("var(--lunge-distance)");
     const gate = css.indexOf("@media (prefers-reduced-motion: no-preference)");
-    for (const mark of [".cf-art-cracks path", ".cf-art-glow {", ".cf-art-frost {"]) {
+    for (const mark of [".cf-art-glow {", ".cf-art-frost {"]) {
       const at = css.indexOf(mark);
       expect(at, mark).toBeGreaterThan(-1);
       expect(at, mark).toBeLessThan(gate);
     }
+    expect(css).not.toContain("cf-art-cracks");
   });
 });

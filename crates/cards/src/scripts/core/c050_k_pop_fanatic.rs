@@ -1,13 +1,13 @@
 //! #50 K-Pop Fanatic (SPEC §8.2; R13, R15, R46, R62, R68, R76, R81, R90, R126, R127, R174, R275, R282,
-//! R437, R767000, R1045000).
-//!   (2) Unit, Human, Epic, 1/1 → 2/2.
-//!   Base:    "Can't Defend; Cry: Allure an enemy permanent."
-//!   Radiant: "Divine Shield, Can't Defend; Cry: Allure an enemy permanent. Make it Radiant when you steal
-//!            it." (R275; "Divine Shield" and, since #2657, Can't Defend, R2657000, are printed in
-//!            `catalog.json`).
+//! R437, R767000, R1045000, R4205000).
+//!   (3) Unit, Human, Epic, 1/1 → 2/2 ((2) until issue #4154).
+//!   Base:    "Cry: Allure an enemy permanent."
+//!   Radiant: "Cry: Allure an enemy permanent. Make it Radiant when you steal it." (R275; the Divine
+//!            Shield it printed went in issue #4292, and the Can't Defend both faces printed from #2657,
+//!            R2657000, in issue #4154).
 //!
-//! Allure (§6.3, R963, R1045000) is a delayed steal that destroys a target with no open zone in its row
-//! (`otherwise: destroy`, R46). The target is declared at PLAY time (R81) over both enemy rows (§6.3),
+//! Allure (§6.3, R963, R1045000) is a delayed steal; like every steal it destroys a target with no open
+//! zone in its row, past Indestructible (R4205000). The target is declared at PLAY time (R81) over both enemy rows (§6.3),
 //! validated by R90; a face-down trap may be named unseen (§9.1), a Stack pile offers its top (R13).
 //! The delay (§8.2 Engine cell) is keyed to the TARGET, so it fires even if K-Pop Fanatic died (R76,
 //! R127); R62 and R68 order it, `run_resume` re-enters it through `resume` alone (§10.6), hence
@@ -26,12 +26,11 @@ const STEAL_STEP: &str = "steal";
 const TARGET_KEY: &str = "targetId";
 
 /// The delayed steal as one version of the card makes it: the mark its target carries while it waits
-/// (R437), and what the steal does when this side has no free zone in the target's row.
+/// (R437).
 #[derive(Clone, Copy)]
 struct Pending {
     mark: &'static str,
     color: &'static str,
-    otherwise: Option<StealOtherwise>,
 }
 
 impl Pending {
@@ -43,25 +42,22 @@ impl Pending {
     fn steal_of(&self, target_id: &str) -> Effect {
         steal(StealTarget {
             instance_id: Some(target_id.to_string()),
-            otherwise: self.otherwise,
             ..StealTarget::default()
         })
     }
 }
 
-/// R1045000: Allure (§6.3, R963): Allure's pink mark, and a target with no room on this side destroyed.
+/// R1045000: Allure (§6.3, R963): Allure's pink mark.
 const ALLURE: Pending = Pending {
     mark: ALLURE_MARK,
     color: ALLURE_MARK_COLOR,
-    otherwise: Some(StealOtherwise::Destroy),
 };
 
-/// R767000: the plain steal of v0.3.7b and before: a purple `steal` mark, and a target with no room left
-/// with the opponent (R15).
+/// R767000: the plain steal of v0.3.7b and before: a purple `steal` mark. Its target with no room was
+/// left with the opponent (R15) until R4205000, which destroys it under every version.
 const PLAIN_STEAL: Pending = Pending {
     mark: "steal",
     color: "purple",
-    otherwise: None,
 };
 
 /// The play-time pick (R81), read straight off the context — reading state is not mutating it.
@@ -116,7 +112,7 @@ fn steal_step(ctx: &mut EffectContext<'_>, pending: Pending) -> Vec<Effect> {
 
 /// The radiant face's step: the steal, then R282's rider on the card it took and nothing else.
 /// `takeable` is read as the list is built, before the steal; `for_each_card` reads its set after it (a
-/// target destroyed for want of room, R1045000, still stands under the other player).
+/// target destroyed for want of room, R4205000, still stands under the other player).
 fn radiant_steal_step(ctx: &mut EffectContext<'_>, pending: Pending) -> Vec<Effect> {
     let Some(target_id) = captured_target_id(ctx) else {
         return vec![];
@@ -217,10 +213,6 @@ mod tests {
         super::script()
     }
 
-    fn target(id: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-    }
-
     fn unit_id(g: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
         g.unit(player, lane).map(|unit| unit.id.clone())
     }
@@ -310,7 +302,7 @@ mod tests {
             }));
             let prey = g.unit_at(P2, 4);
 
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             // The choice was made at play time, so resolution never paused (R81, §10.6).
             assert!(g.state().pending.is_none());
@@ -336,7 +328,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             g.end_turn();
             // The entry names p1's start of turn, so the opponent's start of turn does not fire it.
@@ -366,7 +358,7 @@ mod tests {
             }));
             let prey = g.unit_at(P2, 2);
             // K-Pop Fanatic takes the leftmost free zone, lane 1 (R64).
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             assert_eq!(g.unit(P1, 1).map(|unit| unit.def_id.clone()), Some(KPOP.to_string()));
 
             g.end_turn();
@@ -389,7 +381,7 @@ mod tests {
                 },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             let fanatic = g.unit_at(P1, 1);
 
             g.end_turn();
@@ -413,7 +405,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": DUELIST, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             g.end_turn();
             // The 4/3 throws itself at a 10/10 Indestructible wall and dies.
@@ -432,14 +424,14 @@ mod tests {
         #[test]
         fn r76_base_it_fizzles_when_the_target_is_already_under_your_control() {
             let mut g = scenario(json!({
-                // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 5.
-                "p1": { "hand": [KPOP, "core-049"], "library": LIBRARY, "mana": 7 },
+                // K-Pop Fanatic costs 3 and Snom Bunny Mind Control 6 (issue #4154).
+                "p1": { "hand": [KPOP, "core-049"], "library": LIBRARY, "mana": 9 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
 
-            g.play(KPOP, target(&prey.id));
-            g.play("core-049", target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
+            g.play("core-049", pick::targets(pick::id(&prey.id)));
             assert_eq!(g.card(&prey).controller, P1);
 
             g.end_turn();
@@ -452,42 +444,34 @@ mod tests {
         }
 
         #[test]
-        fn radiant_divine_shield_eats_the_first_hit_and_the_delayed_steal_lands_with_its_rider_r282() {
+        fn radiant_prints_no_divine_shield_since_issue_4292_and_the_delayed_steal_lands_with_its_rider_r282() {
             let mut g = scenario(json!({
                 "p1": { "hand": [{ "def": KPOP, "radiant": true }, FILLER], "library": LIBRARY },
                 "p2": { "hand": [FILLER], "field": [{ "def": DUELIST, "lane": 3 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 3);
 
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             let fanatic = g.unit_at(P1, 1);
+            // The radiant 2/2 upgrades its stats and its rider alone: its Divine Shield went in issue #4292.
             g.expect_stats(&fanatic, json!({ "attack": 2, "maxHealth": 2, "health": 2 }));
-            assert!(g.stats(&fanatic).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::DivineShield));
+            assert!(g.stats(&fanatic).keywords.is_empty());
 
             g.end_turn();
-            g.attack(&prey, &fanatic);
-
-            // §6.1: the shield absorbs the whole hit, so a 4/3 attacker cannot kill the 2/2.
-            g.expect_events(json!(["divineShieldLost"]));
-            g.expect_in_zone(&fanatic, "field");
-            assert_eq!(g.card(&fanatic).damage, 0);
-            assert_eq!(g.card(&fanatic).divine_shield_spent, Some(true));
-            assert_eq!(g.card(&prey).damage, 2);
-
             g.end_turn();
 
             assert_eq!(unit_id(&g, P1, 3), Some(prey.id.clone()));
             assert_eq!(g.card(&prey).controller, P1);
-            // R282: the stolen Duelist becomes Radiant in place (R22): the 8/6 face, its 2 damage kept.
+            // R282: the stolen Duelist becomes Radiant in place (R22): the 8/6 face, undamaged.
             assert!(g.card(&prey).radiant);
-            g.expect_stats(&prey, json!({ "attack": 8, "maxHealth": 6, "health": 4 }));
+            g.expect_stats(&prey, json!({ "attack": 8, "maxHealth": 6, "health": 6 }));
         }
 
         #[test]
         fn radiant_the_steal_still_fires_after_a_radiant_k_pop_fanatic_dies_r76() {
             crate::register_all();
-            // The radiant 2/2's Divine Shield takes TWO hits in the one turn before the steal (R76), and a
-            // unit has one attack exertion per turn (§4.1), so p2 fields two: the Duelist pops the shield.
+            // The radiant 2/2 has no Divine Shield since issue #4292, so the Duelist's one hit kills it in
+            // the turn before the steal (R76), and the 7/7 stays where it is to be taken.
             let mut g = scenario(json!({
                 "p1": { "hand": [{ "def": KPOP, "radiant": true }, FILLER], "library": LIBRARY },
                 "p2": {
@@ -501,13 +485,11 @@ mod tests {
             }));
             let prey = g.unit_at(P2, 4);
             let opener = g.unit_at(P2, 3);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             let fanatic = g.unit_at(P1, 1);
 
             g.end_turn();
             g.attack(&opener, &fanatic);
-            g.expect_in_zone(&fanatic, "field");
-            g.attack(&prey, &fanatic);
             g.expect_in_zone(&fanatic, "graveyard");
 
             g.end_turn();
@@ -535,13 +517,13 @@ mod tests {
             let CardScripts { base, radiant } = faces();
             assert_eq!(def.id, KPOP);
             assert_eq!(def.type_, CardType::Unit);
-            assert_eq!(def.cost, CardCost::Fixed(2));
+            assert_eq!(def.cost, CardCost::Fixed(3));
             assert_eq!((def.base.attack, def.base.health), (Some(1), Some(1)));
             assert_eq!((def.radiant.attack, def.radiant.health), (Some(2), Some(2)));
-            // "Divine Shield" without "Plus" is the radiant form's whole keyword list (§8 Conventions), with
-            // Can't Defend on both faces since #2657 (R2657000).
-            assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::CantDefend]);
-            assert_eq!(def.base.keywords, vec![Keyword::CantDefend]);
+            // The radiant face prints no keyword: its Divine Shield went in issue #4292, and the Can't Defend
+            // both faces had from #2657 (R2657000) in issue #4154.
+            assert!(def.radiant.keywords.is_empty());
+            assert!(def.base.keywords.is_empty());
 
             let decl = json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit", "backrow"] } }]);
             assert_eq!(serde_json::to_value(&base.targets).unwrap(), decl);
@@ -566,7 +548,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2, "damage": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             assert!(!g.card(&prey).radiant);
 
             g.end_turn();
@@ -593,7 +575,7 @@ mod tests {
                 .backrow(P2, 3)
                 .expect("setup: p2 should hold the Clone Machine in backrow lane 3")
                 .clone();
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             g.end_turn();
             g.end_turn();
@@ -611,7 +593,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": DUELIST, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             g.end_turn();
             g.attack(&prey, ROCK);
@@ -632,7 +614,7 @@ mod tests {
                 "p2": { "hand": [FLOOD, FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             g.end_turn();
 
             // #17 Flood bounces every unit on both sides, the prey into p2's hand.
@@ -655,7 +637,7 @@ mod tests {
                 "p2": { "hand": [FLOOD, FILLER, "core-t-coin"], "field": [{ "def": VANILLA, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             g.end_turn();
 
             g.play("core-t-coin", json!({}));
@@ -677,7 +659,7 @@ mod tests {
                 "p2": { "hand": [FIENDER, FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             g.end_turn();
 
             // p2 stacks Felinor Fiender onto the prey's zone: the prey is dormant (§3.2, R13).
@@ -698,14 +680,14 @@ mod tests {
         #[test]
         fn r282_a_target_already_this_player_s_is_not_made_radiant_the_delayed_steal_took_nothing_r76() {
             let mut g = scenario(json!({
-                // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 5.
-                "p1": { "hand": [radiant_kpop(), MIND_CONTROL], "library": LIBRARY, "mana": 7 },
+                // K-Pop Fanatic costs 3 and Snom Bunny Mind Control 6 (issue #4154).
+                "p1": { "hand": [radiant_kpop(), MIND_CONTROL], "library": LIBRARY, "mana": 9 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             // Base #49 takes the same permanent this turn, with no rider of its own.
-            g.play(MIND_CONTROL, target(&prey.id));
+            g.play(MIND_CONTROL, pick::targets(pick::id(&prey.id)));
             assert_eq!(g.card(&prey).controller, P1);
 
             until_active(&mut g, P2);
@@ -728,7 +710,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             assert_eq!(g.unit(P1, 5).map(|unit| unit.def_id.clone()), Some(KPOP.to_string()));
 
             g.end_turn();
@@ -756,7 +738,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             // Radiant GIGA Glowy Jelly Bean makes every permanent p1 controls Radiant, the Fanatic included.
             g.play("core-029", json!({}));
             assert!(g.card(KPOP).radiant);
@@ -770,11 +752,11 @@ mod tests {
         }
     }
 
-    mod n50_k_pop_fanatic_a_radiant_flip_on_the_field_adds_divine_shield_s5_2 {
+    mod n50_k_pop_fanatic_a_radiant_flip_on_the_field_adds_no_divine_shield_s5_2 {
         use super::*;
 
         #[test]
-        fn s5_2_a_base_n50_whose_granted_divine_shield_was_spent_gets_its_radiant_face_s_divine_shield_when_n81_radiates_it() {
+        fn s5_2_a_base_n50_whose_granted_divine_shield_was_spent_gets_none_back_when_n81_radiates_it_since_issue_4292() {
             crate::register_all();
             // #63 Plastic Surgery grants one random keyword (R21); pick the cursor whose roll is Divine
             // Shield, the only way a base #50 (no keywords) ever has one.
@@ -788,7 +770,7 @@ mod tests {
                 }));
                 trial.state_mut().rng_cursor = cursor;
                 let kpop_id = trial.card(KPOP).id.clone();
-                trial.play(SURGERY, target(&kpop_id));
+                trial.play(SURGERY, pick::targets(pick::id(&kpop_id)));
                 if trial.stats(KPOP).keywords.iter().any(|k| k.kind() == KeywordKind::DivineShield) {
                     found = Some(trial);
                 }
@@ -803,19 +785,18 @@ mod tests {
             assert_eq!(s.card(&kpop).damage, 0);
             assert!(!s.stats(&kpop).keywords.iter().any(|k| k.kind() == KeywordKind::DivineShield));
 
-            // #81 dies to #19 and its Death makes p1's other units Radiant: #50's radiant face prints Divine
-            // Shield, which its base face lacks, so it applies at once (§5.2), as a spent shield comes back
-            // when the keyword is granted again (§10.4, `grant_to`).
+            // #81 dies to #19 and its Death makes p1's other units Radiant. #50's radiant face prints no
+            // Divine Shield since issue #4292 (it did before), so the flip lends none (§5.2) and the spent
+            // granted shield stays spent.
             s.attack(SAINTESS, &menace);
             assert!(s.card(&kpop).radiant);
             let kinds: Vec<KeywordKind> = s.stats(&kpop).keywords.iter().map(|k| k.kind()).collect();
-            assert!(kinds.contains(&KeywordKind::DivineShield));
+            assert!(!kinds.contains(&KeywordKind::DivineShield));
 
-            // And it works as one: on p2's turn #19's 9 is negated whole, where the radiant 5/5 would die.
+            // So nothing negates #19's 9 on p2's turn: the radiant #50 dies to it.
             s.end_turn();
             s.attack(&menace, &kpop);
-            s.expect_in_zone(&kpop, "field");
-            assert_eq!(s.card(&kpop).damage, 0);
+            s.expect_in_zone(&kpop, "graveyard");
         }
     }
 
@@ -829,7 +810,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             assert_eq!(mark_events(g.last_events()), vec![marked(&prey.id, true)]);
             assert_eq!(marks_in(&g.view(P1), &prey.id), json!([allure_mark()]));
@@ -852,12 +833,12 @@ mod tests {
         #[test]
         fn r437_r76_a_steal_that_fizzles_on_a_card_already_this_player_s_takes_the_mark_away_too() {
             let mut g = scenario(json!({
-                "p1": { "hand": [KPOP, MIND_CONTROL], "library": LIBRARY, "mana": 7 },
+                "p1": { "hand": [KPOP, MIND_CONTROL], "library": LIBRARY, "mana": 9 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
-            g.play(MIND_CONTROL, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
+            g.play(MIND_CONTROL, pick::targets(pick::id(&prey.id)));
             // Taking control is not leaving the field (R171): the steal still waits, and so does its mark.
             assert_eq!(marks_in(&g.view(P1), &prey.id), json!([allure_mark()]));
 
@@ -877,7 +858,7 @@ mod tests {
                 "p2": { "hand": [FLOOD, FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             g.end_turn();
 
             g.play(FLOOD, json!({}));
@@ -909,7 +890,7 @@ mod tests {
                 .backrow(P2, 3)
                 .expect("setup: p2 should hold a face-down trap in backrow lane 3")
                 .clone();
-            g.play(KPOP, target(&trap.id));
+            g.play(KPOP, pick::targets(pick::id(&trap.id)));
 
             let p1_view = g.view(P1);
             let back = js(&p1_view.opponent.backrow[2]);
@@ -981,8 +962,8 @@ mod tests {
                 let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
                 state = act(&mut log, &state, json!({ "type": "mulligan", "keep": keep, "playerId": player }));
             }
-            // With K-Pop Fanatic at (2), p1's 1 mana of turn 1 may pay for nothing, and the turn has then
-            // ended by itself (R82).
+            // With K-Pop Fanatic at (3) (issue #4154), p1's 1 mana of turn 1 may pay for nothing, and the turn
+            // has then ended by itself (R82).
             if state.active == P1 {
                 state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": "p1" }));
             }
@@ -1000,6 +981,11 @@ mod tests {
                 json!({ "type": "play", "instanceId": token.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p2" }),
             );
             state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": "p2" }));
+            // K-Pop Fanatic costs (3): the turns pass until p1's begins with 3 mana.
+            while !(state.active == P1 && state.players.p1.mana.current >= 3) {
+                let active = state.active;
+                state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": active }));
+            }
             let fanatic = state
                 .players
                 .p1
@@ -1038,7 +1024,8 @@ mod tests {
     mod n50_k_pop_fanatic_r1045000_allure_reaches_every_permanent {
         use super::*;
 
-        /// Core #66 Rock Wall: Indestructible, so a destroy leaves it standing (R46).
+        /// Core #66 Rock Wall: Indestructible, so an ordinary destroy leaves it standing (R46), though a
+        /// steal with no room for it does not (R4205000).
         const WALL: &str = "core-066";
         /// Core #75 Infinite Reserves: a Field Spell with nothing to do in these cases.
         const RESERVES: &str = "core-075";
@@ -1062,11 +1049,9 @@ mod tests {
             let old_base = "Cry: Choose an enemy permanent. At the start of your next turn, steal it.";
             let old_radiant = "Divine Shield\nCry: Choose an enemy permanent. At the start of your next turn, steal it and make it Radiant.";
 
-            assert_eq!(def.base.text, "Can't Defend\nCry: Allure an enemy permanent.");
-            assert_eq!(
-                def.radiant.text,
-                "Divine Shield, Can't Defend\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
-            );
+            assert_eq!(def.base.text, "Cry: Allure an enemy permanent.");
+            // Issue #4292 took the radiant face's Divine Shield line.
+            assert_eq!(def.radiant.text, "Cry: Allure an enemy permanent. Make it Radiant when you steal it.");
             assert!(def.base.text.len() < old_base.len());
             assert!(def.radiant.text.len() < old_radiant.len());
         }
@@ -1076,7 +1061,7 @@ mod tests {
             crate::register_all();
             let mut g = full_row(json!({ "def": VANILLA, "lane": 2 }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             assert_eq!(g.unit(P1, 5).map(|unit| unit.def_id.clone()), Some(KPOP.to_string()));
 
             g.end_turn();
@@ -1093,18 +1078,25 @@ mod tests {
         }
 
         #[test]
-        fn r1045000_an_indestructible_allured_unit_with_no_room_stays_where_it_is() {
+        fn r1045000_r4205000_an_indestructible_allured_unit_with_no_room_is_destroyed() {
             crate::register_all();
             let mut g = full_row(json!({ "def": WALL, "lane": 2 }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             g.end_turn();
             g.end_turn();
 
             assert_eq!(g.state().active, P1);
-            assert_eq!(unit_id(&g, P2, 2), Some(prey.id.clone()));
-            assert_eq!(g.card(&prey).controller, P2);
+            g.expect_in_zone(&prey, "graveyard");
+            assert_eq!(g.card(&prey).owner, P2);
+            assert_eq!(unit_id(&g, P2, 2), None);
+            assert!(g.events().iter().any(
+                |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == prey.id)
+            ));
+            assert!(!g.events().iter().any(
+                |event| matches!(event, GameEvent::PositionSwitched { instance_id, .. } if *instance_id == prey.id)
+            ));
             assert_eq!(count_events(&g, GameEventType::ControlChanged), 0);
         }
 
@@ -1127,7 +1119,7 @@ mod tests {
                 .backrow(P2, 3)
                 .expect("setup: p2 should hold Infinite Reserves in backrow lane 3")
                 .clone();
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             assert_eq!(marks_in(&g.view(P2), &prey.id), json!([allure_mark()]));
 
@@ -1141,13 +1133,13 @@ mod tests {
         }
 
         #[test]
-        fn r1045000_r767000_a_game_on_v0_3_7_folds_under_the_kept_plain_steal_its_mark_purple_and_a_full_row_leaving_the_target() {
+        fn r1045000_r767000_r4205000_a_game_on_v0_3_7_folds_under_the_kept_plain_steal_its_mark_purple_and_a_full_row_now_destroying_the_target() {
             crate::register_all();
             let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
             jackioh_engine::with_shipped(Some(shipped), || {
                 let mut g = full_row(json!({ "def": VANILLA, "lane": 2 }));
                 let prey = g.unit_at(P2, 2);
-                g.play(KPOP, target(&prey.id));
+                g.play(KPOP, pick::targets(pick::id(&prey.id)));
                 assert_eq!(
                     marks_in(&g.view(P2), &prey.id),
                     json!([{ "mark": "steal", "color": "purple" }])
@@ -1157,9 +1149,9 @@ mod tests {
                 g.end_turn();
 
                 assert_eq!(g.state().active, P1);
-                assert_eq!(unit_id(&g, P2, 2), Some(prey.id.clone()));
-                assert_eq!(g.card(&prey).controller, P2);
-                assert!(!g
+                g.expect_in_zone(&prey, "graveyard");
+                assert_eq!(unit_id(&g, P2, 2), None);
+                assert!(g
                     .events()
                     .iter()
                     .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == prey.id)));

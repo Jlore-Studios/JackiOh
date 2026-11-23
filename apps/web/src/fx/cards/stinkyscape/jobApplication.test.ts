@@ -127,8 +127,8 @@ describe("R3407000 Job Application's and Paycheck's signatures", () => {
       expectCuesR200(quest, D, "jobInterview");
       expectCuesR200(pay, D, "payday");
     }
-    expect(cuesOfRun(planWithOffsets(payday("p1"), view, envOf(FX_INTENSITY_SCALE.off)))).toEqual([]);
-    expect(cuesOfRun(planWithOffsets([...jobInterviewFixture(view, "job", "p1"), progressed("p1"), completed("p1")], view, envOf(FX_INTENSITY_SCALE.off)))).toEqual([]);
+    expect(cuesOfRun(planWithOffsets(payday("p1"), view, envOf({ intensity: FX_INTENSITY_SCALE.off })))).toEqual([]);
+    expect(cuesOfRun(planWithOffsets([...jobInterviewFixture(view, "job", "p1"), progressed("p1"), completed("p1")], view, envOf({ intensity: FX_INTENSITY_SCALE.off })))).toEqual([]);
   });
 
   it("R3407000 each gallery play, the stages from its Activate's marker and each Payday beat from its own entry end within their Legendary ceilings", () => {

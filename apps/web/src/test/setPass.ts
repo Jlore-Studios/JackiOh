@@ -8,14 +8,12 @@ import { expect } from "vitest";
 
 import { planCardMotif, type MotifResult } from "../fx/cardFx.ts";
 import { FX_CARD_TABLE, type FxAuraSpec, type FxCardEntry } from "../fx/cards/tables.ts";
-import { FX_INTENSITY_SCALE } from "../fx/constants.ts";
-import { createFxMemory } from "../fx/memory.ts";
 import { motifScale } from "../fx/motifs/build.ts";
 import { galleryEntry, motifFixture } from "../fx/motifs/gallery.ts";
 import { FX_CARD_HOOKS, isDrawnMotif, type DrawnMotif } from "../fx/motifs/names.ts";
-import type { FxPlanEnv } from "../fx/types.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { fullBoardView } from "./fixtures.ts";
+import { envOf } from "./signatures.ts";
 
 /** A set's cards, tokens included, in catalog order. */
 export function setCards(set: string): string[] {
@@ -56,10 +54,6 @@ export function describeEntry(entry: FxCardEntry): string {
       return parts.join("; ");
     }
   }
-}
-
-function envOf(): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
 }
 
 const played = (player: PlayerId, instanceId: string, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 1 });

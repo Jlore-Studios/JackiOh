@@ -32,6 +32,12 @@ export type Patch = {
   readonly player?: PlayerNote;
   /** R1369000: recorded by `patches ship` since #1366; the patches shipped before it have none. */
   readonly tier?: "major" | "patch" | "micro";
+  /**
+   * R3944000: on a major or a patch that rolls micros up (the daily patch `patches cut` writes, or a major
+   * `patches ship` names after them), the versions of those micros, oldest first: exactly the micros
+   * between the major or patch before it and itself. The entries shipped before it have none.
+   */
+  readonly includes?: readonly string[];
   readonly changes: readonly PatchChange[];
 };
 
@@ -60,18 +66,13 @@ export type PatchSource = {
   technical(): Promise<readonly TechnicalEntry[]>;
 };
 
-export type Loader = () => Promise<unknown>;
-
 /** R646: files that are not snapshots. */
 const PATCHES_FILE = "patches";
 const INDEX_FILE = "index";
 const SHIPPED_FILE = "shipped";
 const TECHNICAL_FILE = "technical";
 
-export function fileStem(path: string): string {
-  const name = path.slice(path.lastIndexOf("/") + 1);
-  return name.endsWith(".json") ? name.slice(0, -".json".length) : name;
-}
+import { loadersByStem, type Loader } from "./loaders.ts";
 
 function readPatches(value: unknown): readonly Patch[] {
   if (!Array.isArray(value)) throw new Error("patches.json is not a list of patches");
@@ -137,12 +138,6 @@ export function sourceFromLoaders(loaders: Readonly<Record<string, Loader>>): Pa
       return pending === null ? [] : readTechnical(await pending);
     },
   };
-}
-
-export function loadersByStem(glob: Readonly<Record<string, Loader>>): Record<string, Loader> {
-  const out: Record<string, Loader> = {};
-  for (const [path, loader] of Object.entries(glob)) out[fileStem(path)] = loader;
-  return out;
 }
 
 export function sourceFromData(data: {

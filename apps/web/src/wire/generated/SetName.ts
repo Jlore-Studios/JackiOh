@@ -3,7 +3,7 @@
 /**
  * §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
  * issue #1173, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and
- * Training Grounds (issue #2193, R2194000; released by #2204) ship; Boss and Boss-X are
- * reserved.
+ * Training Grounds (issue #2193, R2194000; released by #2204) and Stinkyscape+ (issue #3535,
+ * R3535000; released by #3573) ship; Boss and Boss-X are reserved.
  */
-export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Stinkyscape" | "Training Grounds" | "Boss" | "Boss-X";
+export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Stinkyscape" | "Training Grounds" | "Boss" | "Boss-X" | "Stinkyscape+";

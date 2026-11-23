@@ -17,6 +17,7 @@ import { REVEAL_STAGGER_MS, flightsMs, segmentMs } from "../economy/bars.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
+import zhCN from "../i18n/zh-CN.json";
 import { keptPaths, type BoughtPackResponse, type OpenedCosmeticPackResponse } from "../net/api.ts";
 import { clearReadCache, expireRead } from "../net/readCache.ts";
 import { whileSpending } from "../net/spending.ts";
@@ -1226,6 +1227,33 @@ describe("#1667 the Chase Shard bar", () => {
     expect(screen.getByRole("button", { name: "取消" })).toHaveFocus();
     expect(within(dialog).getByRole("button", { name: "确认" })).toBeEnabled();
     expect(server.to("POST", "/api/cosmetic-packs/chase")).toHaveLength(0);
+  });
+
+  it("R711000 the chase row and its card label name the cosmetic in the reader's language", async () => {
+    await setLocale("zh-CN");
+    const ASTRAL = REGISTRY.find((entry) => entry.id === "table-astral")!;
+    const MOLTEN: RegistryCosmetic = {
+      id: "foil-molten-gold",
+      kind: "foil",
+      name: "Molten gold",
+      rarity: "Legendary",
+      default: false,
+      starter: false,
+      chase: true,
+    };
+    chaseServer();
+    render(<CosmeticPacks token={TOKEN} registry={[ASTRAL, MOLTEN]} />);
+    await flush();
+
+    const choice = screen.getByTestId(T.shardChoice);
+    expect(choice).toHaveTextContent(zhCN["Astral"]);
+    expect(choice).toHaveTextContent(zhCN["Molten gold"]);
+    expect(choice).toHaveTextContent("神话");
+    expect(choice).toHaveTextContent("传说");
+    expect(choice).toHaveTextContent("追猎");
+    expect(choice).toHaveTextContent(`${zhCN["Molten gold"]}所属卡牌`);
+    expect(choice).not.toHaveTextContent("Molten gold");
+    expect(choice).not.toHaveTextContent("Astral");
   });
 
   it("R2683000 Cancel and Escape spend nothing and return focus to Buy", async () => {

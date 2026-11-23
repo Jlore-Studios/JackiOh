@@ -1,5 +1,5 @@
-//! S #92 The Propagation's Hornet (SPEC §8.10 row 92): (2) Unit, Swarm, Rare, 3/3 → 6/6 (3/4 → 6/8 until #3041; 4/4 → 8/8 until #2657), of the
-//! Stinkyscape set.
+//! S #92 The Propagation's Hornet (SPEC §8.10 row 92): (2) Unit, Swarm, Rare, 1/3 → 2/6 (2/3 → 4/6 until issue #4154; 3/3 → 6/6 until
+//! issue #3996; 3/4 → 6/8 until #3041; 4/4 → 8/8 until #2657), of the Stinkyscape set.
 //!   Base:    "Rush / After this attacks, summon a copy of this, then evolve. / Evolve: Gain Flying."
 //!   Radiant: "Rush / After this attacks, summon a copy of this, then evolve. / Evolve: Gain Flying."
 //! Engine: S #91 The Propagation's Wasp's script; Rush is a catalog keyword. `after_attack`
@@ -7,9 +7,10 @@
 //! `summon_copy` of it (R57, into R64's zone, no Cry, R1), made from it before it evolves, then `evolve`
 //! on it, which runs its `Script.evolve` hook: Gain Flying (`grant_keyword`). The copy has no Flying and
 //! the original has it; one that died attacking does nothing, neither copy nor evolve (R2285001); a
-//! full unit row summons no copy. The copy has Rush too, a copy of
+//! full unit row summons no copy. It evolves once: a later attack copies it again but evolves nothing
+//! (R3536000). The copy has Rush too, a copy of
 //! the card, so it may attack a Unit that turn and copy again. Radiant: the same text, the copy of a
-//! Radiant Hornet a Radiant 6/6.
+//! Radiant Hornet a Radiant 4/6.
 
 use jackioh_engine::prelude::*;
 
@@ -81,13 +82,13 @@ mod tests {
             let hornet = s.unit_at(P1, 1);
             assert!(!flies(&s, &hornet));
             s.attack(&hornet, "hero");
-            s.expect_health(P2, HERO_HEALTH - 3);
+            s.expect_health(P2, HERO_HEALTH - 1);
             let copies = copies(&s);
             assert_eq!(copies.len(), 1);
             assert_eq!(s.unit_at(P1, 2).id, copies[0].id, "R64: the leftmost open zone");
             assert!(!flies(&s, &copies[0]), "made before it evolved");
             assert!(flies(&s, &hornet));
-            s.expect_stats(&copies[0], json!({ "attack": 3, "health": 3 }));
+            s.expect_stats(&copies[0], json!({ "attack": 1, "health": 3 }));
         }
 
         #[test]
@@ -138,6 +139,31 @@ mod tests {
             assert!(copies(&s).is_empty());
             assert!(flies(&s, &hornet), "it evolves all the same");
         }
+
+        #[test]
+        fn r3536000_a_second_attack_copies_again_but_evolves_it_no_more() {
+            let mut s = board(false, json!([]), json!([]));
+            let hornet = s.unit_at(P1, 1);
+            s.attack(&hornet, "hero");
+            assert!(flies(&s, &hornet));
+            s.end_turn();
+            s.end_turn();
+            s.attack(&hornet, "hero");
+            assert_eq!(copies(&s).len(), 2, "a later attack copies it again");
+            let evolved = s
+                .events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Evolved { .. }))
+                .count();
+            assert_eq!(evolved, 1, "it evolves once");
+            let grants = s
+                .events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::KeywordGranted { .. }))
+                .count();
+            assert_eq!(grants, 1, "its Evolve text runs once");
+            assert!(flies(&s, &hornet));
+        }
     }
 
     mod radiant {
@@ -147,13 +173,13 @@ mod tests {
         fn copies_at_double_size() {
             let mut s = board(true, json!([]), json!([]));
             let hornet = s.unit_at(P1, 1);
-            s.expect_stats(&hornet, json!({ "attack": 6, "health": 6 }));
+            s.expect_stats(&hornet, json!({ "attack": 2, "health": 6 }));
             s.attack(&hornet, "hero");
-            s.expect_health(P2, HERO_HEALTH - 6);
+            s.expect_health(P2, HERO_HEALTH - 2);
             let copies = copies(&s);
             assert_eq!(copies.len(), 1);
             assert!(copies[0].radiant);
-            s.expect_stats(&copies[0], json!({ "attack": 6, "health": 6 }));
+            s.expect_stats(&copies[0], json!({ "attack": 2, "health": 6 }));
             assert!(!flies(&s, &copies[0]));
             assert!(flies(&s, &hornet));
         }

@@ -14,7 +14,6 @@ import type { CardDef } from "@jackioh/shared";
 
 import { COSMETIC_OFFERS } from "../../wire/generated/cosmetics.ts";
 import { FULL_ART_CARDS, FULL_ART_TOKEN_PARENT, artMotionOf } from "../fullArt.ts";
-import { ART_WEAR_LEVELS } from "../constants.ts";
 import { VERSION_ALT_FULL_ART_SIGNED_ID, VERSION_FULL_ART_SIGNED_ID, VERSION_SKETCH_FULL_ART_SIGNED_ID } from "../versions.ts";
 import { CardArt } from "./CardArt.tsx";
 import {
@@ -30,7 +29,6 @@ import {
   type ArtMotion,
 } from "./motion.ts";
 import { particleLayerUri } from "./svg.ts";
-import { crackPaths } from "./wear.ts";
 
 afterEach(cleanup);
 
@@ -57,9 +55,24 @@ function artDocument(id: string, motion: ArtMotion | null): { text: string; doc:
   return { text, doc: new DOMParser().parseFromString(text, "image/svg+xml") };
 }
 
-/** The properties a keyframes text sets. */
+/**
+ * The properties a keyframes text sets, as `/([a-z-]+)\s*:/gu` names them (#4009: the name plus
+ * optional whitespace before `:` scans super-linearly on long runs).
+ */
 function properties(keyframes: string): string[] {
-  return [...keyframes.matchAll(/([a-z-]+)\s*:/gu)].map((match) => match[1] ?? "");
+  const names: string[] = [];
+  let at = 0;
+  while (at < keyframes.length) {
+    const colon = keyframes.indexOf(":", at);
+    if (colon === -1) return names;
+    let start = colon;
+    while (start > 0 && /\s/.test(keyframes.charAt(start - 1))) start--;
+    let name = start;
+    while (name > 0 && /[a-z-]/.test(keyframes.charAt(name - 1))) name--;
+    if (name < start) names.push(keyframes.slice(name, start));
+    at = colon + 1;
+  }
+  return names;
 }
 
 describe("R2715001 the full-art cards' moving art", () => {
@@ -253,15 +266,6 @@ describe("R3340000 art that lives in play", () => {
       expect(backdrop.querySelector(".art-m-subject"), `${id}: backdrop's subject`).toBeNull();
       expect(subject.querySelector(".art-m-subject"), `${id}: subject`).not.toBeNull();
       expect(subject.querySelectorAll(".art-m-particle").length, `${id}: subject's particles`).toBe(0);
-    }
-  });
-
-  it("R3340000 a crack at one level begins the same crack at the next, and the levels are ART_WEAR_LEVELS", () => {
-    for (let level = 1; level < ART_WEAR_LEVELS; level += 1) {
-      const lower = crackPaths("core-004", level);
-      const higher = crackPaths("core-004", level + 1);
-      expect(higher.length).toBe(level + 1);
-      lower.forEach((path, k) => expect(higher[k]?.startsWith(path)).toBe(true));
     }
   });
 });

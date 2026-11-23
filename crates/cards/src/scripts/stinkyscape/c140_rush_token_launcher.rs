@@ -1,7 +1,7 @@
 //! Stinkyscape #140 Rush Token Launcher (SPEC §8.10 row 140). Unit 0/2 → 0/4, Weapon, cost 2, Rare.
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate: Summon a Rush Token that attacks an enemy Unit, Taunt Units first."
-//!   Radiant: "Starship Piece, Equip
+//!   Radiant: "Starship Piece
 //!            Activate: Summon a Radiant Rush Token that attacks an enemy Unit, Taunt Units first."
 //!
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
@@ -9,7 +9,8 @@
 //! R1862003: the Activate's target is a declared enemy Unit, never a hero (R81), once a turn (R384).
 //! While the enemy has a Taunt Unit, only those may be chosen (§4.2 step 3 read for the choice): its
 //! Taunt read through the layers, so an Indestructible one has none (R347), and one no attack may name
-//! (Can't be attacked, a carrier's Unit) binds nobody (B5 E35). Then §7's Rush Token is summoned into
+//! (Can't be attacked, Evasive, a carrier's Unit) binds nobody (B5 E35, R3551003). Then §7's Rush Token
+//! is summoned into
 //! the leftmost open unit zone, else the leftmost empty Locked one (R64, R688), and makes a forced
 //! attack on that Unit (R53), which strikes back, as Core #60 Bear Honeypot's tokens attack; one the
 //! token may not attack (§4.2 step 2) takes none. The Activate is offered while the token has such a
@@ -26,9 +27,13 @@ const RUSH_TOKEN: &str = "core-t-rush";
 /// The target check that keeps "Taunt Units first".
 const TAUNT_FIRST: &str = "rushLauncherTauntFirst";
 
-/// Whether `unit`'s Taunt binds the choice: it has Taunt (R347), and an attack may name it at all.
+/// Whether `unit`'s Taunt binds the choice: it has Taunt (R347), and an attack may name it at all
+/// (R3551003: an Evasive Taunt is no more nameable than a "Can't be attacked" one).
 fn taunts(state: &GameState, unit: &CardInstance) -> bool {
-    unit_has(state, unit, KeywordKind::Taunt) && !cannot_be_attacked(state, unit) && !is_carried(state, unit)
+    unit_has(state, unit, KeywordKind::Taunt)
+        && !cannot_be_attacked(state, unit)
+        && !unit_has(state, unit, KeywordKind::Evasive)
+        && !is_carried(state, unit)
 }
 
 /// "Taunt Units first": `candidate` binds the choice, or nothing on its side does.
@@ -213,6 +218,18 @@ mod tests {
         }
 
         #[test]
+        fn r3551003_an_evasive_taunt_does_not_bind_taunt_units_first() {
+            let mut s = launcher_on(false, json!({ "field": [VANILLA, MENACE] }));
+            let vanilla = s.unit_at(P2, 1).id;
+            let menace = s.unit_at(P2, 2).id;
+            s.card_mut(menace.as_str()).granted_keywords.push(Keyword::Evasive);
+            // The Evasive Taunt binds nobody (R3551003): the plain Vanilla may be chosen.
+            assert_eq!(activations(&s), 2);
+            s.activate(ID, at(&vanilla));
+            assert_eq!(hits(s.last_events())[0], (vanilla, TOKEN_ATTACK));
+        }
+
+        #[test]
         fn r1862003_no_hero_may_be_chosen() {
             let at_hero = json!({ "ability": "rushToken", "targets": [{ "pick": "hero", "player": "p2" }] });
             let mut s = launcher_on(false, json!({ "field": [VANILLA] }));
@@ -293,6 +310,7 @@ mod tests {
             );
             let host = s.unit_at(P1, 1).id;
             let target = s.unit_at(P2, 1).id;
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             s.activate(host.as_str(), at(&target));
             assert_eq!(summoned(s.last_events()).len(), 1);

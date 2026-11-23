@@ -14,16 +14,34 @@
 //!   4. FAILURE DETAIL: every card id in the failing seed's two decks is named in the report, because
 //!      a bare seed number is useless against a 100-card pool.
 //!
-//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I15 hold on every applicable state or action
+//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I22 hold on every applicable state or action
 //! (stage "invariant"); I11 finds Unit tokens left in the graveyards, exile piles or held cards (R11), I12
 //! shadows chosen switches and declared attacks through each turn and stint (R49, R636), I13 holds every
 //! hand card and admitted graveyard card `legalActions` lists no play of to a `playReason` (§10.8, R979000,
 //! R2975000), I15 every Activate ability a view shows to the listing, `usable` exactly when an `activate`
-//! of it is listed (§10.8, R384, R3061000). Only the costly I6 (no card a seat may not read in its view or
-//! legal actions, §10.8) and I8 (no unlisted play, attack, switch or activation `reduce` accepts, §4.1,
-//! §4.2, §10.2, §10.5) are sampled, by their strides; I13 and I15 read I6's view and listing, so they ride
-//! I6's stride. I14 (every action `legalActions` lists is accepted by `reduce`, §10.2) is sampled too, at
-//! setup and by its stride.
+//! of it is listed (§10.8, R384, R3061000), I16 each card's own zone, owner and controller to the pile or
+//! slot that holds it, and a card off the field to R78's and R766's resets (§3.2). Only the costly I6 (no
+//! card a seat may not read in its view or legal actions, §10.8) and I8 (no unlisted play, attack, switch,
+//! activation, Trade or Marketplace deal `reduce` accepts, §4.1, §4.2, §6.3, §10.2, §10.5) are sampled,
+//! by their strides; I13 and I15 read I6's view and listing, so they ride I6's stride. I14 (every action
+//! `legalActions` lists is accepted by `reduce`, §10.2) is sampled too, at setup and by its stride.
+//! I17 holds what the state check leaves (§4.5): on a settled state no unit dead but R69's or R3539003's,
+//! no unit in Defense Position that §4.5 step 1 switches out of it (R2179000, R2657000, R3543002,
+//! R1849006) and no 1v1 hero at 0 that can lose; on every state no mana or card damage below 0 and no
+//! `damage` of 0 (R63).
+//! I18 holds each plain attack to the forecast its seat was shown (R3100000, R4111000); the summary's
+//! `forecast attacks judged:` (`--json`'s `forecastJudged`) shows a filter that judges nothing.
+//! I19 holds every card Dormant as a step begins untouched until it wakes (§6.1 Dormant, R1839000; #4454),
+//! on the played path, on I14's branches and in each Duos duel.
+//! I20 holds each field card's stored `damage` to the stream's `damage` and `healed` events (§4.4, §10.3, R78;
+//! #4478), on the played path and in each Duos duel.
+//! I21 fails a step in which a Spell changes a Unit Immune to Spells on the field (§6.1, R4453000; #4508), on
+//! the played path, on I14's branches and in each Duos duel.
+//! I22 holds every random `target` draw, listed `target` declaration and open `target` prompt to what its
+//! source may aim at (R450, R452, R1200, R1839000, R4353002; #4540), on the played path and in each Duos duel.
+//! I9 holds the wire to the state: each `turnStarted`, `turnEnded`, `gameOver` and `manaChanged` to the
+//! state it left, each `fatigue` to its seat's count, and each 1v1 hero's health to a tally kept from
+//! `damage`, `healthLost`, `healed`, `healthSet` and `swapped` alone (§10.3).
 //!
 //! And after every action, GROWTH (#1254): each action is weighed by the events `reduce` returned, the
 //! largest number on any card instance and the instances in play, and a seed fails in the "growth" stage
@@ -52,9 +70,10 @@
 //! # The regression corpus (#1197)
 //!
 //! A seed's deal moves whenever a card joins `FUZZ_POOL`, so a seed a past report named stops
-//! reproducing the day the next card lands. Each kept failure therefore pins its own decks in
-//! `crates/tools/fuzz-corpus/`; `--regress` replays them, never a deal from the live pool, through the
-//! gate's checks, and the tools' `cargo test` runs it.
+//! reproducing the day the next card lands. A board drawn from the catalog moves for the same reason.
+//! Each kept failure therefore pins its own decks, literal start inputs and endings-channel choice in
+//! `crates/tools/fuzz-corpus/`; `--regress` replays them, never a deal or board from the live pools,
+//! through the gate's checks, and the tools' `cargo test` runs it.
 //!
 //! # The handicapped wave
 //!
@@ -71,7 +90,7 @@
 //! paths that read them would have no random coverage. On `START_STATE_SHARE` of seeds, in both waves,
 //! the game starts from a dealt deck (R433), last boards (R417, R564) or Glitch boards (R678), each board
 //! holding one fused Unit (R179). Create, fold and checkpoint take the same inputs, so such a game still
-//! folds back to its live hash. The corpus replays from the plain start.
+//! folds back to its live hash. A corpus record pins whichever of these inputs its failure used.
 //!
 //! # Dungeon-fight starts (#3283)
 //!
@@ -91,7 +110,8 @@
 //! `RUN_START_BUFFS_MAX` times. Create, fold and checkpoint take the same handicaps and marks, so the
 //! game goes through every check above and folds back to its live hash. The summary's `starts:`
 //! line and `--json`'s `starts` count these games as `run`, and a failure's report and `--json` print
-//! the handicaps and marks, which `--from N --seeds 1` deals again from the seed alone.
+//! the handicaps and marks, which `--from N --seeds 1` deals again from the seed alone and a corpus
+//! record pins literally.
 //!
 //! # The endings channel (#1572)
 //!
@@ -99,15 +119,16 @@
 //! `disconnectExpired`, `ceilingReached` and `setAutoEndTurn` are the server's, so a plain wave never
 //! plays those endings and cleanups across random boards. On `ENDINGS_SHARE` of seeds, in both waves,
 //! `endings_action` may send one of those actions in the policy's place, logged like any other, so
-//! replay, the hash and the checkpoint fold it. The corpus replays without it, and the shipped §10.7
-//! policy (`AI_SKIPPED_ACTIONS`) is unchanged.
+//! replay, the hash and the checkpoint fold it. A corpus record pins whether its failure took the
+//! channel, and the shipped §10.7 policy (`AI_SKIPPED_ACTIONS`) is unchanged.
 //!
 //! # Forced cards (#2387)
 //!
 //! A seed deals 50 of about 630 cards, so a plain wave deals any one card in fewer than one seed in
-//! ten. `--cards` deals the named cards into both decks of every seed of both waves, through `golden.rs`
-//! (a token through the card whose `refs` name it, R279; a Core card and its Legacy card are two,
-//! R2511001). The streams are untouched, so a wave without `--cards` plays as it always did.
+//! ten. `--cards` deals the named cards into both decks of every seed of both 1v1 waves, and into
+//! all four seats' decks of every Duos seed (#4369), through `golden.rs` (a token through the card
+//! whose `refs` name it, R279; a Core card and its Legacy card are two, R2511001). The streams are
+//! untouched, so a wave without `--cards` plays as it always did.
 //!
 //! # Changed cards (#3113)
 //!
@@ -119,19 +140,36 @@
 //! each of them into both decks, seeds `1..=rotation_seeds(..)` at most `CHANGED_WAVE_MAX_SEEDS`, forced
 //! as `--cards` forces and failing as the gate does, its `reproduce:` line naming the slice; and
 //! `fused_pairs::play_changed` plays every fused pair with one of them as its body or its text, up to
-//! `CHANGED_PAIRS_MAX`. A change with no card plays and prints what it always did, and so does any run
+//! `CHANGED_PAIRS_MAX`, and `carried::play_changed` plays every carried era of each of them, up to
+//! `CHANGED_ERAS_MAX` (#4382). A change with no card plays and prints what it always did, and so does any run
 //! that names its own seeds, wave or cards.
+//!
+//! The wave deals every card on its normal face, so a Radiant face is played only when a game upgrades
+//! the card by chance. After it, the Radiant rotation (#4161, `play_radiant_rotation`) plays
+//! `CHANGED_RADIANT_DEALS_PER_CARD` games for each changed card, at most `CHANGED_RADIANT_MAX_SEEDS`
+//! seeds: each is a dungeon-fight start (#3283) with the changed cards forced into both decks and the
+//! forced indices (first in each deck) pinned Radiant through `deckMarks` (`GameSetup::radiant`), after
+//! the start's own draws so no stream moves. It goes through the same checks and fails the gate as the
+//! wave does; its `reproduce:` line ends in `--radiant`, which `--cards` takes to pin those cards for
+//! one seed. Which cards resolved Radiant is printed (`changed cards resolved Radiant: …; never: …`)
+//! and never fails the gate: the random policy may not play a card in a few games.
+//!
+//! After it, the changed-Duos rotation (#4369) plays `CHANGED_DUOS_DEALS_PER_CARD` games for each
+//! changed card, at most `CHANGED_DUOS_MAX_SEEDS` seeds: Duos games with the changed cards forced
+//! into all four seats' decks, through the Duos wave's checks with their own summary and coverage
+//! line. It fails the gate as the wave does; its `reproduce:` line names `--duos --cards …`, which
+//! forces those cards into one Duos seed's four decks.
 //!
 //! # The daily top-up (#3113)
 //!
-//! The daily 1v1 run plays a fixed `FUZZ_SEEDS` (super.yml's, 10,000), so each card the pool gains
-//! would be dealt in a smaller share of its games. The tests' `fuzz_daily_top_up` keeps each pool card's
-//! deck slots over the day at `DAILY_DEALS_PER_CARD`: `daily_seeds(pool)` is the seeds that takes,
-//! and its daily test plays the seeds past `DAILY_FUZZ_SEEDS` (`extra_daily_seeds`, none while the pool
-//! is today's) in both waves, up to `DAILY_TOP_UP_MAX`. Past that super.yml's own `FUZZ_SEEDS` must
-//! grow, which a person edits, and the test fails to say so. Each wave's summary reports the fewest
-//! and most games any pool card was dealt in (`Coverage::deals_line`), so the daily log shows what
-//! each card got.
+//! The daily 1v1 run plays a fixed `FUZZ_SEEDS` (super.yml's, read by `workflow_seeds`), so each card
+//! the pool gains would be dealt in a smaller share of its games. The tests' `fuzz_daily_top_up` keeps
+//! each pool card's deck slots over the day at `DAILY_DEALS_PER_CARD`: `daily_seeds(pool)` is the seeds
+//! that takes, and its daily test plays the seeds past super.yml's `FUZZ_SEEDS` (`extra_daily_seeds`,
+//! none while those are enough) in both waves, up to `DAILY_TOP_UP_MAX`. Past that super.yml's own
+//! `FUZZ_SEEDS` must grow, which a person edits, and the test fails to say so. Each wave's summary
+//! reports the fewest and most games any pool card was dealt in (`Coverage::deals_line`), so the daily
+//! log shows what each card got.
 //!
 //! # Pool coverage (#2426)
 //!
@@ -140,6 +178,8 @@
 //! event named, setup's included (`Coverage`). It never fails a seed, and played is not every hook run.
 //! A second line names the dealt ids no `cardResolved` showed `radiant` (#3283), so a Radiant face no
 //! game ever played is listed too.
+//! The changed cards' Radiant rotation (#4161) has its own summary, so its `coverage (Radiant faces)`
+//! line says which of them it played Radiant.
 //! The ids merge in seed order and the list is sorted, so any thread count gives the same report.
 
 use std::cell::RefCell;
@@ -158,25 +198,26 @@ use jackioh_engine::testkit::{
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardDef, CardInstance, CardType,
-    CreateGameOptions, DECK_SIZE, DeckMark, Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState,
-    EARLIER_DECK_SIZE, FoldArgs, GameEvent, GameState, HUMAN_HANDICAP, Handicap, KeywordKind, LastBoardEntry,
-    PLAYER_IDS, PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, SetName, TURN_CAP_PLAYER_TURNS, UNIT_ZONES,
-    begin_game, create_game, create_recorded_game, find_instance, fold, has_standing_draw_offer, hash_state,
-    legal_actions, made_by_a_rule, mulligan_owed, opponent_of, reduce, seat_to_act, subsystems,
-    validate_deck,
+    CreateGameOptions, DECK_SIZE, DeckMark, Difficulty, DuosActionBody, DuosDecks, DuosEvent, DuosSeat,
+    DuosState, EARLIER_DECK_SIZE, FoldArgs, GameEvent, GameState, HUMAN_HANDICAP, Handicap, KeywordKind,
+    LastBoardEntry, LastBoardInput, PLAYER_IDS, PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, SetName,
+    SetupKind, TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game, create_game, create_recorded_game,
+    find_instance, fold, has_standing_draw_offer, hash_state, legal_actions, made_by_a_rule, mulligan_owed,
+    opponent_of, reduce, seat_to_act, subsystems, validate_setup,
 };
-use jackioh_run::config::{RUN_ARTIFACT_LEVEL_MAX, RUN_DECK_MAX, RUN_ENEMY_HEALTH, RUN_STARTER_SIZE};
+use jackioh_run::config::{RUN_ARTIFACT_LEVEL_MAX, RUN_DECK_MAX, RUN_STARTER_SIZE, RUN_TIERS};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 
 use crate::agent::panic_message;
+use crate::carried;
 use crate::changed;
 use crate::fused_pairs;
 use crate::gate::MS_PER_SECOND;
 use crate::golden::{carrier_of, force_into, resolve_force};
 
-/// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap | --duos | --regress] [--cards ids|set]`
+/// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap | --duos | --regress] [--cards ids|set [--radiant]]`
 /// (SURFACE §12).
 #[derive(clap::Args, Debug)]
 pub struct Args {
@@ -196,14 +237,19 @@ pub struct Args {
     /// unless `--seeds` says otherwise.
     #[arg(long)]
     pub duos: bool,
-    /// Deal these into both decks of every seed of the gate's or the handicapped wave (#2387): card ids,
-    /// each forced as `golden record --force` forces it (a token through the card whose `refs` name it),
-    /// or one set's name as the catalog spells it ("Stinkyscape", "Training Grounds"), whose cards go in
+    /// Deal these into both decks of every seed of the gate's or the handicapped wave, and into all
+    /// four seats' decks of every Duos seed (`--duos`, #4369) (#2387): card ids, each forced as
+    /// `golden record --force` forces it (a token through the card whose `refs` name it), or one
+    /// set's name as the catalog spells it ("Stinkyscape", "Training Grounds"), whose cards go in
     /// FORCED_SET_CARDS_PER_SEED a seed, in turn.
-    #[arg(long, value_name = "IDS|SET", value_delimiter = ',', conflicts_with_all = ["duos", "regress"])]
+    #[arg(long, value_name = "IDS|SET", value_delimiter = ',', conflicts_with_all = ["regress"])]
     pub cards: Vec<String>,
+    /// Pin the `--cards` cards Radiant (#4161): every seed then starts as a dungeon fight with them
+    /// marked, which is how a failing seed of the changed cards' Radiant rotation is replayed.
+    #[arg(long, requires = "cards", conflicts_with_all = ["handicap", "duos", "regress"])]
+    pub radiant: bool,
     /// Replay the regression corpus (`crates/tools/fuzz-corpus/`, #1197) instead of a wave: each kept
-    /// failure's pinned decks, never a deal from the live pool.
+    /// failure's pinned decks, literal start inputs and endings-channel choice.
     #[arg(long, conflicts_with_all = ["from", "seeds", "handicap", "duos"])]
     pub regress: bool,
     /// Print the wave, the gate's or with `--handicap` the handicapped one, as one JSON object
@@ -221,12 +267,20 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     }
     let from = first_seed(args.from);
     if args.duos {
-        return crate::duos_fuzz::run(from, args.seeds, args.json);
+        let forcing = Forcing::from_cards(&args.cards)?;
+        return crate::duos_fuzz::run(from, args.seeds, args.json, &forcing);
     }
     let ran = wave_size(args.seeds);
     let forcing = Forcing::from_cards(&args.cards)?;
+    let forcing = if args.radiant {
+        forcing.pinned_radiant()
+    } else {
+        forcing
+    };
     let wave = if args.handicap {
         play_handicap_wave(from, ran, &forcing)
+    } else if args.radiant {
+        play_radiant_wave(from, ran, &forcing)
     } else {
         play_wave(from, ran, &forcing)
     };
@@ -262,8 +316,9 @@ fn plays_changed(args: &Args) -> bool {
     args.from.is_none() && !args.handicap && !args.json && args.cards.is_empty()
 }
 
-/// The changed cards' wave and fused pairs (#3113), after the plain wave; the messages of what failed.
-/// A change with no card (or none a deck can hold) prints and plays nothing here.
+/// The changed cards' wave, fused pairs (#3113) and carried eras (#4382), after the plain wave; the
+/// messages of what failed. A change with no card (or none a deck can hold) prints and plays nothing
+/// here.
 fn play_changed_cards(root: &Path) -> Vec<String> {
     let changed = changed::changed_cards(root);
     if let Some(warning) = &changed.warning {
@@ -276,7 +331,7 @@ fn play_changed_cards(root: &Path) -> Vec<String> {
     let mut failed = Vec::new();
     let forcing = Forcing::from_changed(&changed.ids);
     if forcing.cards.is_empty() {
-        println!("changed cards: none a deck can hold, so no wave");
+        println!("changed cards: none a deck can hold, so no wave or Radiant rotation");
     } else {
         let seeds = rotation_seeds(forcing.cards.len(), forcing.per_seed, CHANGED_DEALS_PER_CARD)
             .min(CHANGED_WAVE_MAX_SEEDS);
@@ -295,9 +350,88 @@ fn play_changed_cards(root: &Path) -> Vec<String> {
                 wave.failures.len()
             ));
         }
+        failed.extend(play_radiant_rotation(&forcing));
+        failed.extend(play_changed_duos_rotation(&forcing));
     }
     if let Err(error) = fused_pairs::play_changed(&changed.ids) {
         failed.push(format!("{error:#}"));
+    }
+    if let Err(error) = carried::play_changed(&changed.ids) {
+        failed.push(format!("{error:#}"));
+    }
+    failed
+}
+
+/// The changed cards' Radiant rotation (#4161), after their wave: run-start games with each card forced
+/// into both decks and pinned Radiant, `CHANGED_RADIANT_DEALS_PER_CARD` deals each at most
+/// `CHANGED_RADIANT_MAX_SEEDS` seeds. The messages of what failed; which cards resolved Radiant is
+/// printed and never fails, since the random policy may not play a card in a few games.
+fn play_radiant_rotation(forcing: &Forcing) -> Vec<String> {
+    let radiant = forcing.pinned_radiant();
+    let seeds = rotation_seeds(
+        radiant.cards.len(),
+        radiant.per_seed,
+        CHANGED_RADIANT_DEALS_PER_CARD,
+    )
+    .min(CHANGED_RADIANT_MAX_SEEDS);
+    println!(
+        "changed cards (Radiant faces): {} pinned Radiant ({} a seed) over seeds 1..{seeds}: {}",
+        radiant.cards.len(),
+        radiant.per_seed,
+        shown_ids(&radiant.cards)
+    );
+    let wave = play_radiant_wave(1, seeds, &radiant);
+    print!("{}", wave.summary());
+    let mut failed = Vec::new();
+    if !wave.failures.is_empty() {
+        println!("{}", report(&wave.failures, seeds, wave.elapsed_ms));
+        failed.push(format!(
+            "the changed cards' Radiant rotation: {} of {seeds} seeds failed",
+            wave.failures.len()
+        ));
+    }
+    let (resolved, never): (Vec<String>, Vec<String>) = radiant
+        .cards
+        .iter()
+        .cloned()
+        .partition(|id| wave.coverage.radiant.contains(id));
+    let listed = |ids: &[String]| {
+        if ids.is_empty() {
+            "none".to_string()
+        } else {
+            shown_ids(ids)
+        }
+    };
+    println!(
+        "changed cards resolved Radiant: {}; never: {}",
+        listed(&resolved),
+        listed(&never)
+    );
+    failed
+}
+
+/// The changed cards' Duos rotation (#4369), after their Radiant rotation: Duos games with each
+/// card forced into all four seats' decks, `CHANGED_DUOS_DEALS_PER_CARD` deals each at most
+/// `CHANGED_DUOS_MAX_SEEDS` seeds, through the Duos wave's checks. The messages of what failed.
+fn play_changed_duos_rotation(forcing: &Forcing) -> Vec<String> {
+    let seeds = rotation_seeds(forcing.cards.len(), forcing.per_seed, CHANGED_DUOS_DEALS_PER_CARD)
+        .min(CHANGED_DUOS_MAX_SEEDS);
+    println!(
+        "changed cards (Duos): {} forced ({} a seed) over seeds 1..{seeds}: {}",
+        forcing.cards.len(),
+        forcing.per_seed,
+        shown_ids(&forcing.cards)
+    );
+    let outcomes = crate::duos_fuzz::play_duos_wave(1, seeds, forcing);
+    print!("{}", crate::duos_fuzz::summary(1, seeds, &outcomes, forcing));
+    let failures = crate::duos_fuzz::failure_lines(&outcomes, forcing);
+    let mut failed = Vec::new();
+    if !failures.is_empty() {
+        println!("{}", failures.join("\n"));
+        failed.push(format!(
+            "the changed cards' Duos rotation: {} of {seeds} seeds failed",
+            failures.len()
+        ));
     }
     failed
 }
@@ -505,6 +639,26 @@ pub const CHANGED_DEALS_PER_CARD: u32 = 20;
 /// each fewer than `CHANGED_DEALS_PER_CARD` times, which keeps `rust (checks, fuzz 200)` in its budget.
 pub const CHANGED_WAVE_MAX_SEEDS: u32 = 100;
 
+/// How many games deal each changed card on its Radiant face (#4161): the Radiant rotation plays this
+/// many, or `CHANGED_RADIANT_MAX_SEEDS` seeds when that is fewer. The plain wave's copies are Radiant
+/// only by an in-game upgrade, so this small second batch pins them Radiant (`GameSetup::radiant`).
+pub const CHANGED_RADIANT_DEALS_PER_CARD: u32 = 6;
+
+/// The most seeds the Radiant rotation plays (#4161), about 7 seconds on the gate's runner, on top of
+/// `CHANGED_WAVE_MAX_SEEDS`'s wave: a change of many cards deals each fewer than
+/// `CHANGED_RADIANT_DEALS_PER_CARD` times, which keeps `rust (checks, fuzz 200)` in its budget.
+pub const CHANGED_RADIANT_MAX_SEEDS: u32 = 30;
+
+/// How many games deal each changed card into all four Duos seats' decks (#4369): the changed-Duos
+/// rotation plays this many, or `CHANGED_DUOS_MAX_SEEDS` seeds when that is fewer. Four-seat games
+/// cost more than 1v1 ones, so this is smaller than `CHANGED_DEALS_PER_CARD`.
+pub const CHANGED_DUOS_DEALS_PER_CARD: u32 = 4;
+
+/// The most seeds the changed-Duos rotation plays (#4369), on top of `CHANGED_WAVE_MAX_SEEDS`'s
+/// wave and the Radiant rotation: a change of many cards deals each fewer than
+/// `CHANGED_DUOS_DEALS_PER_CARD` times, which keeps `rust (checks, fuzz 200)` in its budget.
+pub const CHANGED_DUOS_MAX_SEEDS: u32 = 16;
+
 /// The greatest common divisor of `a` and `b`.
 fn gcd(a: usize, b: usize) -> usize {
     if b == 0 { a } else { gcd(b, a % b) }
@@ -535,9 +689,20 @@ pub(crate) struct Forcing {
     cards: Vec<String>,
     /// How many of `cards` one seed forces: all of an id list, `FORCED_SET_CARDS_PER_SEED` of a set's.
     per_seed: usize,
+    /// Whether the games pin the forced cards Radiant (#4161): each seed then starts as a dungeon
+    /// fight with the forced indices marked (`GameSetup::radiant`).
+    radiant: bool,
 }
 
 impl Forcing {
+    /// `self` with its games pinning the forced cards Radiant (#4161).
+    pub(crate) fn pinned_radiant(&self) -> Forcing {
+        Forcing {
+            radiant: true,
+            ..self.clone()
+        }
+    }
+
     /// What `--cards named` forces, or the default when it named nothing.
     pub(crate) fn from_cards(named: &[String]) -> anyhow::Result<Forcing> {
         if named.is_empty() {
@@ -569,6 +734,7 @@ impl Forcing {
                 named: named.to_vec(),
                 cards,
                 per_seed,
+                radiant: false,
             });
         }
         let cards = resolve_force(named).context("--cards")?;
@@ -579,6 +745,7 @@ impl Forcing {
             named: named.to_vec(),
             cards: cards.clone(),
             per_seed: cards.len(),
+            radiant: false,
         })
     }
 
@@ -599,6 +766,7 @@ impl Forcing {
             named: cards.clone(),
             per_seed: FORCED_SET_CARDS_PER_SEED.min(cards.len()),
             cards,
+            radiant: false,
         }
     }
 
@@ -625,6 +793,22 @@ impl Forcing {
         (force_into(&decks.0, &forced), force_into(&decks.1, &forced))
     }
 
+    /// `decks` with this seed's forced cards in all four Duos seats (#4369): untouched when nothing
+    /// is forced, so a Duos wave without `--cards` deals exactly the decks it always dealt and draws
+    /// no extra rng.
+    pub(crate) fn deal_duos(&self, seed: u32, decks: DuosDecks) -> DuosDecks {
+        let forced = self.for_seed(seed);
+        if forced.is_empty() {
+            return decks;
+        }
+        DuosDecks {
+            a1: force_into(&decks.a1, &forced),
+            a2: force_into(&decks.a2, &forced),
+            b1: force_into(&decks.b1, &forced),
+            b2: force_into(&decks.b2, &forced),
+        }
+    }
+
     /// `play` over this seed's forced decks, naming them on the failure.
     fn play(
         &self,
@@ -639,41 +823,65 @@ impl Forcing {
     }
 
     /// The summary's line naming what `--cards` forced, or `None` when it forced nothing.
-    fn summary_line(&self) -> Option<String> {
+    pub(crate) fn summary_line(&self) -> Option<String> {
+        self.summary_line_in("both decks of every seed", "both decks of each seed")
+    }
+
+    /// `summary_line` for a Duos wave (#4369): the cards go into all four seats' decks, not two.
+    pub(crate) fn summary_line_duos(&self) -> Option<String> {
+        self.summary_line_in(
+            "all four seats' decks of every seed",
+            "all four seats' decks of each seed",
+        )
+    }
+
+    /// `summary_line` with the decks named by `every` (the whole list) and `each` (a set's slice).
+    fn summary_line_in(&self, every: &str, each: &str) -> Option<String> {
         if self.cards.is_empty() {
             return None;
         }
         let named = self.named.join(",");
+        let pinned = if self.radiant {
+            ", pinned Radiant (each seed starts as a dungeon fight)"
+        } else {
+            ""
+        };
         if self.per_seed < self.cards.len() {
             Some(format!(
-                "  forced (--cards {named}): {} of its {} cards into both decks of each seed, in turn\n",
+                "  forced (--cards {named}): {} of its {} cards into {each}, in turn{pinned}\n",
                 self.per_seed,
                 self.cards.len()
             ))
         } else {
             Some(format!(
-                "  forced (--cards {named}): {} into both decks of every seed\n",
+                "  forced (--cards {named}): {} into {every}{pinned}\n",
                 self.cards.join(", ")
             ))
         }
     }
 
     /// `--json`'s `forced`: `null` when `--cards` forced nothing.
-    fn json(&self) -> Value {
+    pub(crate) fn json(&self) -> Value {
         if self.cards.is_empty() {
             return Value::Null;
         }
-        json!({ "named": self.named, "cards": self.cards, "perSeed": self.per_seed })
+        let mut forced = json!({ "named": self.named, "cards": self.cards, "perSeed": self.per_seed });
+        if self.radiant {
+            forced["radiant"] = Value::Bool(true);
+        }
+        forced
     }
 }
 
 // Starting states (#1503)
 
-/// What a game starts from beyond its decks and handicaps: the three setup inputs `create_game` and
-/// `fold` take that a plain deal never sets (§9.3).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum StartKind {
-    /// Two built decks and no boards: the plain deal, and every corpus record's.
+/// What a game starts from beyond its ordinary decks: the setup inputs `create_game` and `fold` take
+/// that a plain deal never sets (§9.3).
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum StartKind {
+    /// Two built decks and no boards: the plain deal.
+    #[default]
     Plain,
     /// A deck dealt for one seat or both, its starting library unknown to its owner's view (R433).
     Dealt,
@@ -728,10 +936,12 @@ const RUN_START_DECK_MIN: i32 = RUN_STARTER_SIZE as i32;
 /// (R184), the most a handicap's `deckSize` may be.
 const RUN_START_DECK_MAX: i32 = RUN_DECK_MAX as i32;
 
-/// The most health a run-start hero begins with: the final boss's (`RUN_ENEMY_HEALTH`, DR5), the
-/// highest a dungeon fight starts a hero at. The least is 1 (R290), a hero a run brought down to its
-/// last point. A relic that raises the run's health only moves this up.
-const RUN_START_HERO_HEALTH_MAX: i32 = RUN_ENEMY_HEALTH.boss;
+/// The most health a run-start hero begins with: the final boss's (its row of `RUN_TIERS`, R3586001),
+/// the highest a dungeon fight starts a hero at. The least is 1 (R290), a hero a run brought down to
+/// its last point. A relic that raises the run's health only moves this up.
+const RUN_START_HERO_HEALTH_MAX: i32 = RUN_TIERS[RUN_TIERS.len() - 1]
+    .hero_health
+    .expect("the final boss's row sets its health");
 
 /// The largest amount a placeholder Combat artifact's fight effect carries per level
 /// (`RunFightEffect`'s `n`, R2922001: `Temp Crown`'s Armor, `Temp Final Relic`'s opening cards).
@@ -780,12 +990,15 @@ static BOARD_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     pool
 });
 
-/// R23: an Immutable card, on either face, is never fused.
+/// R23: an Immutable card, on either face, is never fused; R4353000: nor an Indestructible Unit card,
+/// which is Immutable innately.
 pub(crate) fn is_immutable(def: &CardDef) -> bool {
+    let unit = def.type_ == CardType::Unit;
     [&def.base, &def.radiant].iter().any(|face| {
-        face.keywords
-            .iter()
-            .any(|keyword| keyword.kind() == KeywordKind::Immutable)
+        face.keywords.iter().any(|keyword| {
+            keyword.kind() == KeywordKind::Immutable
+                || (unit && keyword.kind() == KeywordKind::Indestructible)
+        })
     })
 }
 
@@ -868,6 +1081,27 @@ fn run_start_inputs(
         *marks.slot(player) = Some(list);
     }
     (handicaps, marks)
+}
+
+/// Marks the first `count` deck indices of both seats Radiant (#4161), keeping a mark's drawn upgrades
+/// and adding one where the draw left none. Forced cards sit first in each deck (`golden::force_into`)
+/// and `run_deck_size` keeps a run deck at least as long as `forced`, so the indices are valid.
+fn pin_radiant(marks: Option<&mut PerPlayerOpt<Vec<DeckMark>>>, count: usize) {
+    let Some(marks) = marks else { return };
+    for player in PLAYER_IDS {
+        let list = marks.slot(player).get_or_insert_with(Vec::new);
+        for index in 0..count {
+            match list.iter_mut().find(|mark| mark.index == index) {
+                Some(mark) => mark.radiant = true,
+                None => list.push(DeckMark {
+                    index,
+                    radiant: true,
+                    upgrades: 0,
+                }),
+            }
+        }
+        list.sort_by_key(|mark| mark.index);
+    }
 }
 
 // The endings channel (#1572)
@@ -993,6 +1227,8 @@ struct GameRun {
     played: IndexSet<String>,
     /// The def ids that resolved on their Radiant face (#3283), setup's included.
     radiant: IndexSet<String>,
+    /// I18: the attacks the monitor held to their forecast (#4111).
+    forecast_judged: usize,
 }
 
 fn pending_label(state: &GameState) -> String {
@@ -1027,6 +1263,9 @@ struct GameSetup {
     /// Whether the game is a corpus record's, made under the deck size it was found with and so
     /// created as a recorded game (`create_recorded_game`, R1705003).
     recorded: bool,
+    /// How many leading deck indices of a `Run` start are pinned Radiant (#4161): the forced cards,
+    /// which `force_into` puts first. 0 pins none.
+    radiant: usize,
 }
 
 impl GameSetup {
@@ -1035,8 +1274,7 @@ impl GameSetup {
         GameSetup::plain(seed).with_drawn_start().with_drawn_endings()
     }
 
-    /// The gate's game for `seed` from the plain start, drawing none: the game a corpus record
-    /// replays (#1503).
+    /// The gate's game for `seed` from the plain start, drawing no optional inputs.
     fn plain(seed: u32) -> GameSetup {
         GameSetup {
             seed,
@@ -1044,7 +1282,19 @@ impl GameSetup {
             start: StartKind::Plain,
             endings: false,
             recorded: false,
+            radiant: 0,
         }
+    }
+
+    /// The Radiant rotation's game for `seed` (#4161): a dungeon fight whatever the seed draws, the
+    /// seed's own endings draw, and the first `pinned` indices of both decks marked Radiant.
+    fn radiant(seed: u32, pinned: usize) -> GameSetup {
+        GameSetup {
+            start: StartKind::Run,
+            radiant: pinned,
+            ..GameSetup::plain(seed)
+        }
+        .with_drawn_endings()
     }
 
     /// The handicapped wave's game for `seed`, with its rotation and the start the seed draws.
@@ -1055,6 +1305,7 @@ impl GameSetup {
             start: StartKind::Plain,
             endings: false,
             recorded: false,
+            radiant: 0,
         }
         .with_drawn_start()
         .with_drawn_endings()
@@ -1150,6 +1401,10 @@ impl GameSetup {
                 let (handicaps, marks) = run_start_inputs(&mut rng, options.handicaps.take(), &options.decks);
                 options.handicaps = Some(handicaps);
                 options.deck_marks = Some(marks);
+                // After `run_start_inputs`, so none of its draws move.
+                if self.radiant > 0 {
+                    pin_radiant(options.deck_marks.as_mut(), self.radiant);
+                }
             }
         }
         options
@@ -1158,27 +1413,22 @@ impl GameSetup {
     /// What `fold` takes to replay `log` over `decks`: the same setup `create_options` gives
     /// `create_game` (§9.3, R180, R187, R433, R417, R678, R2702000).
     fn fold_args(&self, decks: (Vec<String>, Vec<String>), log: Vec<Action>) -> FoldArgs {
-        let CreateGameOptions {
-            seed,
-            decks,
-            handicaps,
-            dealt,
-            last_boards,
-            glitch_boards,
-            deck_marks,
-            ..
-        } = self.create_options(decks);
-        FoldArgs {
-            seed,
-            decks,
-            log,
-            handicaps,
-            dealt,
-            last_boards,
-            glitch_boards,
-            deck_marks,
-            ..FoldArgs::default()
-        }
+        fold_args_from_options(&self.create_options(decks), log)
+    }
+}
+
+/// What `fold` takes to replay `log` over the literal setup `options` gave `create_game` (§9.3).
+fn fold_args_from_options(options: &CreateGameOptions, log: Vec<Action>) -> FoldArgs {
+    FoldArgs {
+        seed: options.seed.clone(),
+        decks: options.decks.clone(),
+        log,
+        handicaps: options.handicaps.clone(),
+        dealt: options.dealt.clone(),
+        last_boards: options.last_boards.clone(),
+        glitch_boards: options.glitch_boards.clone(),
+        deck_marks: options.deck_marks.clone(),
+        ..FoldArgs::default()
     }
 }
 
@@ -1189,14 +1439,22 @@ fn play_game(
     decks: (Vec<String>, Vec<String>),
     probe: Reducer,
 ) -> Result<GameRun, FuzzFailure> {
+    play_game_with_options(setup, &setup.create_options(decks), probe)
+}
+
+/// `play_game` from literal setup options. Corpus replay passes its pinned inputs here unchanged.
+fn play_game_with_options(
+    setup: &GameSetup,
+    options: &CreateGameOptions,
+    probe: Reducer,
+) -> Result<GameRun, FuzzFailure> {
     register_all();
 
-    let options = setup.create_options(decks.clone());
     // R1705003: a corpus record's game is one already made, under the deck size it was found with.
     let start = if setup.recorded {
-        create_recorded_game(&options)
+        create_recorded_game(options)
     } else {
-        create_game(&options)
+        create_game(options)
     };
     let begun = begin_game(&start);
     let mut state = begun.state;
@@ -1404,11 +1662,12 @@ fn play_game(
     Ok(GameRun {
         state,
         log,
-        decks,
+        decks: options.decks.clone(),
         heaviest,
         paused: paused_steps,
         played,
         radiant,
+        forecast_judged: monitor.forecast_judged(),
     })
 }
 
@@ -1464,13 +1723,23 @@ fn check_termination(setup: &GameSetup, run: &GameRun) -> Result<(), FuzzFailure
 
 /// Assertion 3: `(seed, log)` is the truth (§9.3). Fold from scratch and compare the hash.
 fn check_replay(setup: &GameSetup, run: &GameRun) -> Result<(), FuzzFailure> {
+    check_replayed(run, setup.fold_args(run.decks.clone(), run.log.clone()))
+}
+
+/// `check_replay` from the same literal setup options that created the live game.
+fn check_replay_with_options(options: &CreateGameOptions, run: &GameRun) -> Result<(), FuzzFailure> {
+    check_replayed(run, fold_args_from_options(options, run.log.clone()))
+}
+
+/// Checks the state `fold_args` rebuilds against the live `run`.
+fn check_replayed(run: &GameRun, fold_args: FoldArgs) -> Result<(), FuzzFailure> {
     let at = At {
         turn: run.state.turn,
         actions: run.log.len(),
     };
     register_all();
     // R180, R187: the handicaps are part of what a game replays from, and so is its start (#1503).
-    let replayed = fold(&setup.fold_args(run.decks.clone(), run.log.clone()));
+    let replayed = fold(&fold_args);
 
     if let Some(first) = replayed.errors.first() {
         return Err(FuzzFailure::new(
@@ -1507,6 +1776,18 @@ fn check_replay(setup: &GameSetup, run: &GameRun) -> Result<(), FuzzFailure> {
             at,
         ));
     }
+    // What `hash_state` leaves out (`applied`, `opening`, `generators`) still has to fold back:
+    // a fold that rebuilds the hash but not the whole match did not reproduce it (§9.3).
+    if replayed.state != run.state {
+        return Err(FuzzFailure::new(
+            FailureStage::Replay,
+            format!(
+                "replay: {} — folding (seed, log) did not reproduce the match (§9.3)",
+                join_state_diff(&run.state, &replayed.state)
+            ),
+            at,
+        ));
+    }
     Ok(())
 }
 
@@ -1538,9 +1819,96 @@ pub(crate) fn round_trip<S: Serialize + for<'de> Deserialize<'de>>(state: &S) ->
         .map_err(|error| format!("the round trip could not parse the state back: {error}"))
 }
 
-/// `state` restored by `restore`, required to hash as `state` does under `hash`: the restored
-/// state, or the mismatch. Every wave restores with `round_trip`; a test plants a lossy one.
-pub(crate) fn verify_round_trip<S>(
+/// The top-level fields where two serialized states differ (`serde_json::to_value` of each),
+/// in key order: the left value's keys, then keys only the right value holds. One entry per
+/// differing field — `{field} differs`, naming the first differing entry inside `applied` and
+/// `generators`, the records `hash_state` leaves out — so a failure names what the hash cannot
+/// see (§9.3). Empty when the two values are equal.
+pub(crate) fn state_diff(live: &Value, other: &Value) -> Vec<String> {
+    let (Value::Object(left), Value::Object(right)) = (live, other) else {
+        if live == other {
+            return Vec::new();
+        }
+        return vec!["state differs".to_string()];
+    };
+    let mut out = Vec::new();
+    for key in left
+        .keys()
+        .chain(right.keys().filter(|key| !left.contains_key(*key)))
+    {
+        if left.get(key) == right.get(key) {
+            continue;
+        }
+        out.push(match key.as_str() {
+            "applied" => match (left.get(key), right.get(key)) {
+                (Some(Value::Array(before)), Some(Value::Array(after))) => {
+                    match first_applied_at(before, after) {
+                        Some(at) => format!("applied differs (first at {at})"),
+                        None => "applied differs".to_string(),
+                    }
+                }
+                _ => "applied differs".to_string(),
+            },
+            "generators" => match (left.get(key), right.get(key)) {
+                (Some(Value::Object(before)), Some(Value::Object(after))) => {
+                    match first_generator_at(before, after) {
+                        Some(at) => format!("generators differs (first at {at})"),
+                        None => "generators differs".to_string(),
+                    }
+                }
+                _ => "generators differs".to_string(),
+            },
+            _ => format!("{key} differs"),
+        });
+    }
+    out
+}
+
+/// The first generator whose root differs or is missing on one side, in key order: the left map's
+/// keys, then keys only the right map holds. That key is the Created card's instance id.
+fn first_generator_at(before: &Map<String, Value>, after: &Map<String, Value>) -> Option<String> {
+    before
+        .keys()
+        .chain(after.keys().filter(|key| !before.contains_key(*key)))
+        .find(|key| before.get(*key) != after.get(*key))
+        .cloned()
+}
+
+/// The first index where two `applied` logs differ: the live entry's nonce when it carries one,
+/// else its `#{index}`; when one log is a strict prefix of the other, the first missing index.
+fn first_applied_at(before: &[Value], after: &[Value]) -> Option<String> {
+    for (index, (one, another)) in before.iter().zip(after.iter()).enumerate() {
+        if one != another {
+            let at = one
+                .get("nonce")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+                .unwrap_or_else(|| format!("#{index}"));
+            return Some(at);
+        }
+    }
+    (before.len() != after.len()).then(|| format!("#{}", before.len().min(after.len())))
+}
+
+/// `state_diff` between two states, joined for a failure message: never empty, so a mismatch
+/// names a field rather than reporting a bare inequality.
+pub(crate) fn join_state_diff<S: Serialize>(live: &S, other: &S) -> String {
+    let diff = match (serde_json::to_value(live), serde_json::to_value(other)) {
+        (Ok(live), Ok(other)) => state_diff(&live, &other),
+        _ => Vec::new(),
+    };
+    if diff.is_empty() {
+        "state differs".to_string()
+    } else {
+        diff.join(", ")
+    }
+}
+
+/// `state` restored by `restore`, required to hash as `state` does under `hash` and then to equal
+/// it: the restored state, or the mismatch. The equality arm catches what the hash leaves out
+/// (`applied`, `opening`, `generators`), which `hash_state` skips by design. Every wave restores
+/// with `round_trip`; a test plants a lossy one.
+pub(crate) fn verify_round_trip<S: Serialize + for<'de> Deserialize<'de> + PartialEq>(
     state: &S,
     hash: impl Fn(&S) -> String,
     restore: impl FnOnce(&S) -> Result<S, String>,
@@ -1548,22 +1916,34 @@ pub(crate) fn verify_round_trip<S>(
     let restored = restore(state)?;
     let (live, again) = (hash(state), hash(&restored));
     if again != live {
+        let mut message = format!("the round trip changed the state: hash {again} != {live}");
+        if let (Ok(live), Ok(again)) = (serde_json::to_value(state), serde_json::to_value(&restored)) {
+            let diff = state_diff(&live, &again);
+            if !diff.is_empty() {
+                message.push_str(&format!(" ({})", diff.join(", ")));
+            }
+        }
+        return Err(message);
+    }
+    if restored != *state {
         return Err(format!(
-            "the round trip changed the state: hash {again} != {live}"
+            "the round trip changed the state: {}",
+            join_state_diff(state, &restored)
         ));
     }
     Ok(restored)
 }
 
 /// What one game's checkpoint crossed and what it cost: whether it restarted from paused work and
-/// the cost in milliseconds.
+/// its round trip's cost in milliseconds.
 struct CheckpointReport {
     paused: bool,
     ms: u128,
 }
 
 /// Assertion 4 (#1387): state survives serialized restart at checkpoint step.
-/// Fails in "checkpoint" stage or past `CHECKPOINT_TIME_BOUND_MS` (#1803).
+/// Fails in "checkpoint" stage, or when its round trip takes longer than `CHECKPOINT_TIME_BOUND_MS`
+/// (#1803, #3712).
 fn check_serial_restart(
     setup: &GameSetup,
     decks: &(Vec<String>, Vec<String>),
@@ -1571,13 +1951,45 @@ fn check_serial_restart(
     live: &GameState,
     paused: &[usize],
 ) -> Result<CheckpointReport, FuzzFailure> {
+    check_serial_restart_with(setup, decks, log, live, paused, reduce)
+}
+
+/// `check_serial_restart`, the rest of the log applied to the restored state through `continue_with`
+/// (`reduce`; a test plants a slow one, #3712).
+fn check_serial_restart_with(
+    setup: &GameSetup,
+    decks: &(Vec<String>, Vec<String>),
+    log: &[Action],
+    live: &GameState,
+    paused: &[usize],
+    continue_with: Reducer,
+) -> Result<CheckpointReport, FuzzFailure> {
+    check_serial_restart_with_options(
+        setup,
+        &setup.create_options(decks.clone()),
+        log,
+        live,
+        paused,
+        continue_with,
+    )
+}
+
+/// `check_serial_restart` from the same literal setup options that created the live game.
+fn check_serial_restart_with_options(
+    setup: &GameSetup,
+    options: &CreateGameOptions,
+    log: &[Action],
+    live: &GameState,
+    paused: &[usize],
+    continue_with: Reducer,
+) -> Result<CheckpointReport, FuzzFailure> {
     let at = At {
         turn: live.turn,
         actions: log.len(),
     };
     let (step, was_paused) = checkpoint_step(&setup.stream("checkpoint-"), paused, log.len());
     register_all();
-    let prefix = fold(&setup.fold_args(decks.clone(), log[..step].to_vec()));
+    let prefix = fold(&fold_args_from_options(options, log[..step].to_vec()));
     if let Some(first) = prefix.errors.first() {
         return Err(FuzzFailure::new(
             FailureStage::Checkpoint,
@@ -1593,8 +2005,11 @@ fn check_serial_restart(
     let started_at = Instant::now();
     let mut state = verify_round_trip(&prefix.state, hash_state, round_trip)
         .map_err(|message| FuzzFailure::new(FailureStage::Checkpoint, message, at))?;
+    // #3712: the restart's cost ends here. The continuation below is the game's own `reduce`, checked
+    // for the live hash and ending but not timed: its cost grows with the game, as the prefix fold's does.
+    let ms = started_at.elapsed().as_millis();
     for action in &log[step..] {
-        let result = reduce(&state, action);
+        let result = continue_with(&state, action);
         if let Some(error) = &result.error {
             return Err(FuzzFailure::new(
                 FailureStage::Checkpoint,
@@ -1629,11 +2044,24 @@ fn check_serial_restart(
             at,
         ));
     }
-    let ms = started_at.elapsed().as_millis();
+    // The restored game must resume to the live state whole, not only to its hash: a loss in
+    // `applied`, `opening` or `generators` survives the round trip and the continuation (§9.3).
+    if state != *live {
+        return Err(FuzzFailure::new(
+            FailureStage::Checkpoint,
+            format!(
+                "checkpoint: {} — the restored game diverged (§9.3)",
+                join_state_diff(live, &state)
+            ),
+            at,
+        ));
+    }
     if ms > CHECKPOINT_TIME_BOUND_MS {
         return Err(FuzzFailure::new(
             FailureStage::Checkpoint,
-            format!("checkpoint took {ms}ms, past CHECKPOINT_TIME_BOUND_MS ({CHECKPOINT_TIME_BOUND_MS}ms)"),
+            format!(
+                "the checkpoint's round trip took {ms}ms, past CHECKPOINT_TIME_BOUND_MS ({CHECKPOINT_TIME_BOUND_MS}ms)"
+            ),
             at,
         ));
     }
@@ -1646,13 +2074,18 @@ fn check_serial_restart(
 // Growth inside one action (#1254)
 
 /// The most wall-clock time one game's serialized restart may take (#1387): the state's round trip
-/// through JSON, its hashes, and the continuation from the restored state. It does not time the prefix
-/// fold that rebuilds the checkpoint state from turn 0: that setup cost grows with the checkpoint's
-/// position and a loaded runner stretched it past the bound (#1803: seed 1557 handicapped).
+/// through JSON and its two hashes. It times neither the prefix fold that rebuilds the checkpoint state
+/// from turn 0 nor the continuation from the restored state: both are the game's own `fold` and
+/// `reduce`, which grow with its length and board, and a loaded runner stretched each past the bound
+/// (#1803: seed 1557 handicapped, the fold; #3712: seed 247, a Zephrys dry run on a 300-instance
+/// board, the continuation). The continuation is still held to the live hash, the ending and
+/// the whole live state.
 pub const CHECKPOINT_TIME_BOUND_MS: u128 = 5_000;
 
-/// The most events one action may emit. Bounds runaway growth before settle cap (§10.3),
-/// leaving margin for R58's full-library draw chain.
+/// The most events one turn of one action may emit. Bounds runaway growth before settle cap (§10.3),
+/// leaving margin for R58's full-library draw chain. An action that plays several turns, nobody asked
+/// anything between them (S+ T-the-enigmata's self-playing turns, R3569004), is weighed a turn at a
+/// time (`most_events_in_a_turn`, #4375).
 pub const GROWTH_EVENTS_BOUND: i64 = 10_000;
 
 /// The largest number any card instance may carry after one action (attack, health, cost, counter),
@@ -1785,24 +2218,6 @@ impl Heaviest {
     }
 }
 
-/// Every card instance both sides hold, in every zone: a copy of `side_cards`'s list in
-/// `crates/engine/src/state.rs` (private there), in its order.
-pub(crate) fn instances_of(state: &GameState) -> impl Iterator<Item = &CardInstance> {
-    PLAYER_IDS.into_iter().flat_map(move |player| {
-        let side = &state.players[player];
-        side.hand
-            .iter()
-            .chain(side.library.iter())
-            .chain(side.graveyard.iter())
-            .chain(side.exile.iter())
-            .chain(side.units.iter().flatten().flatten())
-            .chain(side.backrow.iter().flatten())
-            .chain(side.backrow_piles.iter().flatten().flatten())
-            .chain(side.carried.iter().flatten().flatten())
-            .chain(side.resolving.iter())
-    })
-}
-
 /// The largest absolute number a card instance carries: its damage, buffs, cost changes, X, exertion
 /// count, overridden stats, counters, Brittle count, play count, tuned numbers and every number in its
 /// memory. Turn stamps (`summoned_turn`, `frozen`, Brittle's `since`) are left out: they count turns,
@@ -1836,6 +2251,11 @@ pub(crate) fn largest_number(card: &CardInstance) -> i64 {
     card.memory.values().map(largest_in_json).fold(most, i64::max)
 }
 
+/// The turn stamps `largest_number` leaves out, by their JSON names, left out of a card record a
+/// memory holds as well: S+ #84 Bogos Binted keeps its side's cards on its memory (R3550007), and a
+/// Unit frozen forever there carries `FROZEN_FOREVER` (R1848000), a turn, not a growth (issue #3800).
+const TURN_STAMP_KEYS: [&str; 3] = ["summonedTurn", "frozen", "since"];
+
 pub(crate) fn largest_in_json(value: &Value) -> i64 {
     match value {
         Value::Number(number) => number
@@ -1844,7 +2264,12 @@ pub(crate) fn largest_in_json(value: &Value) -> i64 {
             .or_else(|| number.as_f64().map(|f| f.abs() as i64))
             .unwrap_or(0),
         Value::Array(items) => items.iter().map(largest_in_json).max().unwrap_or(0),
-        Value::Object(fields) => fields.values().map(largest_in_json).max().unwrap_or(0),
+        Value::Object(fields) => fields
+            .iter()
+            .filter(|(key, _)| !TURN_STAMP_KEYS.contains(&key.as_str()))
+            .map(|(_, value)| largest_in_json(value))
+            .max()
+            .unwrap_or(0),
         _ => 0,
     }
 }
@@ -1852,14 +2277,27 @@ pub(crate) fn largest_in_json(value: &Value) -> i64 {
 /// One action's weights, in `MEASURES`' order: the events `reduce` returned, the largest number on
 /// any instance of `state` (the state it produced) and the instances in it.
 pub(crate) fn weigh(events: &[GameEvent], state: &GameState) -> [i64; 3] {
-    let (largest, instances) = instances_of(state).fold((0_i64, 0_i64), |(largest, count), card| {
-        (largest.max(largest_number(card)), count + 1)
-    });
+    let (largest, instances) = jackioh_engine::every_instance(state)
+        .fold((0_i64, 0_i64), |(largest, count), card| {
+            (largest.max(largest_number(card)), count + 1)
+        });
     [
-        i64::try_from(events.len()).unwrap_or(i64::MAX),
+        i64::try_from(most_events_in_a_turn(events)).unwrap_or(i64::MAX),
         largest,
         instances,
     ]
+}
+
+/// The most of one action's events that fall within one turn: the stretches between its `turnStarted`
+/// events. Runaway growth is growth inside a turn; an action that plays turn after turn with nobody
+/// asked anything (R3569004) emits each turn's events in it, and no one of those turns is runaway
+/// (#4375: seed 2096 played The Enigmata's turns past 10,000 events in one action).
+fn most_events_in_a_turn(events: &[GameEvent]) -> usize {
+    events
+        .split(|event| matches!(event, GameEvent::TurnStarted { .. }))
+        .map(<[GameEvent]>::len)
+        .max()
+        .unwrap_or(0)
 }
 
 /// The def id of the card an action is by, read in the state it was chosen in: the instance a
@@ -1878,7 +2316,7 @@ pub(crate) fn acting_card(state: &GameState, body: &ActionBody) -> Option<String
 
 /// The def id of the first instance carrying `value` as its largest number.
 fn holder_of_largest(state: &GameState, value: i64) -> String {
-    instances_of(state)
+    jackioh_engine::every_instance(state)
         .find(|card| largest_number(card) == value)
         .map_or_else(|| "no card".to_string(), |card| card.def_id.clone())
 }
@@ -1944,7 +2382,7 @@ pub(crate) fn weigh_duos(events: &[DuosEvent], state: &DuosState) -> [i64; 3] {
     let (largest, instances) = state
         .duels
         .iter()
-        .flat_map(instances_of)
+        .flat_map(jackioh_engine::every_instance)
         .fold((0_i64, 0_i64), |(largest, count), card| {
             (largest.max(largest_number(card)), count + 1)
         });
@@ -1969,7 +2407,7 @@ fn duos_holder_of_largest(state: &DuosState, value: i64) -> String {
     state
         .duels
         .iter()
-        .flat_map(instances_of)
+        .flat_map(jackioh_engine::every_instance)
         .find(|card| largest_number(card) == value)
         .map_or_else(|| "no card".to_string(), |card| card.def_id.clone())
 }
@@ -2037,7 +2475,8 @@ pub fn probe_stride() -> usize {
     }
 }
 
-/// What a probe's forged action goes through: `reduce`, or in a test a broken one it must catch.
+/// What a probe's forged action, or a checkpoint's continuation (#3712), goes through: `reduce`, or in
+/// a test a broken or slow one it must catch.
 type Reducer = fn(&GameState, &Action) -> ReduceResult;
 
 /// What a probe's `result` did wrong (§9.3, §10.2): with `owed` `None` it owed a refusal with no
@@ -2141,6 +2580,8 @@ struct Failure {
     rotation: Option<(Difficulty, PlayerId)>,
     /// What the seed's game started from (#1503). Kept out of `signature` as the rotation is.
     start: StartKind,
+    /// Whether the failing game took the endings channel (#1572).
+    endings: bool,
     stage: FailureStage,
     signature: String,
     message: String,
@@ -2150,6 +2591,9 @@ struct Failure {
     decks: Box<(Vec<String>, Vec<String>)>,
     /// The cards `--cards` forced into both decks of this seed (#2387); empty without it.
     forced: Vec<String>,
+    /// How many leading deck indices the failing game pinned Radiant (#4161); 0 outside the Radiant
+    /// rotation. Kept out of `signature`, like `start`.
+    radiant: usize,
     turn: i64,
     actions: i64,
 }
@@ -2159,20 +2603,21 @@ impl Failure {
         self.decks.0.iter().chain(&self.decks.1)
     }
 
-    /// The handicaps and the deck marks a `Run` start dealt this seed (#3283), as JSON; `None` for any
-    /// other start. A failure holds neither, so they are drawn again from its seed and its decks, as
-    /// the fold draws them.
-    fn run_start_note(&self) -> Option<(Value, Value)> {
-        if self.start != StartKind::Run {
-            return None;
-        }
-        let setup = if self.rotation.is_some() {
+    /// The exact optional setup inputs the failing wave drew from this seed and these decks. `start`
+    /// and `endings` come from the failure rather than being redrawn, so the text report is record-ready.
+    fn start_options(&self) -> CreateGameOptions {
+        let drawn = if self.rotation.is_some() {
             GameSetup::handicapped(self.seed)
         } else {
             GameSetup::gate(self.seed)
         };
-        let options = setup.create_options((*self.decks).clone());
-        Some((json!(options.handicaps), json!(options.deck_marks)))
+        let setup = GameSetup {
+            start: self.start,
+            endings: self.endings,
+            radiant: self.radiant,
+            ..drawn
+        };
+        setup.create_options((*self.decks).clone())
     }
 }
 
@@ -2190,13 +2635,14 @@ fn wave_name(handicapped: bool) -> &'static str {
 fn reproduce_command(seed: u32, handicapped: bool, forcing: &Forcing) -> String {
     let forced = forcing.for_seed(seed);
     format!(
-        "cargo jackioh fuzz --from {seed} --seeds 1{}{}",
+        "cargo jackioh fuzz --from {seed} --seeds 1{}{}{}",
         if handicapped { " --handicap" } else { "" },
         if forced.is_empty() {
             String::new()
         } else {
             format!(" --cards {}", forced.join(","))
-        }
+        },
+        if forcing.radiant { " --radiant" } else { "" }
     )
 }
 
@@ -2461,17 +2907,36 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
             first.seed, first.turn, first.actions
         ));
         lines.push(format!("  start: {}", first.start.as_str()));
-        if let Some((handicaps, marks)) = first.run_start_note() {
-            lines.push(format!("  handicaps: {handicaps}"));
-            lines.push(format!("  marks: {marks}"));
+        let start_options = first.start_options();
+        if first.start == StartKind::Run {
+            lines.push(format!("  handicaps: {}", json!(start_options.handicaps)));
+            lines.push(format!("  marks: {}", json!(start_options.deck_marks)));
         }
+        lines.push(format!("  \"start\": {},", json!(first.start)));
+        match first.start {
+            StartKind::Plain => {}
+            StartKind::Dealt => lines.push(format!("  \"dealt\": {},", json!(start_options.dealt))),
+            StartKind::LastBoards => {
+                lines.push(format!("  \"lastBoards\": {},", json!(start_options.last_boards)))
+            }
+            StartKind::GlitchBoards => lines.push(format!(
+                "  \"glitchBoards\": {},",
+                json!(start_options.glitch_boards)
+            )),
+            StartKind::Run => {
+                lines.push(format!("  \"handicaps\": {},", json!(start_options.handicaps)));
+                lines.push(format!("  \"deckMarks\": {},", json!(start_options.deck_marks)));
+            }
+        }
+        lines.push(format!("  \"endings\": {},", first.endings));
         if !first.forced.is_empty() {
             lines.push(format!("  forced: {}", first.forced.join(", ")));
             lines.push(format!(
-                "  reproduce: cargo jackioh fuzz --from {} --seeds 1{} --cards {}",
+                "  reproduce: cargo jackioh fuzz --from {} --seeds 1{} --cards {}{}",
                 first.seed,
                 if handicapped { " --handicap" } else { "" },
-                first.forced.join(",")
+                first.forced.join(","),
+                if first.radiant > 0 { " --radiant" } else { "" }
             ));
         }
         lines.push(format!("  message: {}", first.message));
@@ -2536,9 +3001,14 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
         .iter()
         .find_map(|failure| (!failure.forced.is_empty()).then(|| failure.forced.join(",")));
     lines.push(format!(
-        "Reproduce one seed with: cargo jackioh fuzz --from <seed> --seeds 1{}{}",
+        "Reproduce one seed with: cargo jackioh fuzz --from <seed> --seeds 1{}{}{}",
         if handicapped { " --handicap" } else { "" },
-        forced.map_or_else(String::new, |cards| format!(" --cards {cards}"))
+        forced.map_or_else(String::new, |cards| format!(" --cards {cards}")),
+        if failures.iter().any(|failure| failure.radiant > 0) {
+            " --radiant"
+        } else {
+            ""
+        }
     ));
     lines.join("\n")
 }
@@ -2590,6 +3060,8 @@ struct Coverage {
     /// For each id dealt, how many games dealt it into either deck (#3113), once a game however many
     /// copies or decks held it.
     deals: IndexMap<String, u32>,
+    /// I18: the attacks the monitor held to their forecast (#4111), so a filter that judges nothing shows.
+    forecast_judged: usize,
 }
 
 impl Coverage {
@@ -2601,12 +3073,21 @@ impl Coverage {
             dealt,
             played,
             radiant: IndexSet::new(),
+            forecast_judged: 0,
         }
     }
 
     /// `self` with the ids its game's events show resolved Radiant (#3283).
     fn with_radiant(self, radiant: IndexSet<String>) -> Coverage {
         Coverage { radiant, ..self }
+    }
+
+    /// `self` with the attacks its game's monitor held to their forecast (I18, #4111).
+    fn with_forecast_judged(self, forecast_judged: usize) -> Coverage {
+        Coverage {
+            forecast_judged,
+            ..self
+        }
     }
 
     /// Adds another game's coverage; the wave adds them in seed order.
@@ -2617,6 +3098,7 @@ impl Coverage {
         for (id, games) in other.deals {
             *self.deals.entry(id).or_insert(0) += games;
         }
+        self.forecast_judged += other.forecast_judged;
     }
 
     /// The pool card dealt in the fewest games and the one dealt in the most, each with its count; a
@@ -2641,6 +3123,12 @@ impl Coverage {
     fn deals_line(&self) -> String {
         let ((least_id, least), (most_id, most)) = self.fewest_and_most();
         format!("  deals per pool card: fewest {least} ({least_id}), most {most} ({most_id})\n")
+    }
+
+    /// The summary's line of how many attacks I18 held to their forecast (#4111): 0 says its filter
+    /// judged nothing.
+    fn forecast_line(&self) -> String {
+        format!("  forecast attacks judged: {}\n", self.forecast_judged)
     }
 
     /// The dealt ids no game played, sorted by id.
@@ -2775,21 +3263,60 @@ fn fuzz_handicap_deal(
     run_seed(&GameSetup::handicapped(seed), decks, probe)
 }
 
+/// One seed of the Radiant rotation (#4161) through the same checks: a dungeon-fight start with the
+/// seed's forced cards (first in each deck) pinned Radiant.
+fn fuzz_radiant_seed(seed: u32, forcing: &Forcing) -> Result<Passed, Failure> {
+    let pinned = forcing.for_seed(seed).len();
+    let decks = GameSetup::radiant(seed, pinned).decks(pinned);
+    forcing.play(seed, decks, |decks| {
+        fuzz_radiant_deal(seed, pinned, decks, reduce)
+    })
+}
+
+/// `decks` played as `seed`'s Radiant game with `pinned` indices marked, the probes' forged actions
+/// going through `probe`.
+fn fuzz_radiant_deal(
+    seed: u32,
+    pinned: usize,
+    decks: (Vec<String>, Vec<String>),
+    probe: Reducer,
+) -> Result<Passed, Failure> {
+    run_seed(&GameSetup::radiant(seed, pinned), decks, probe)
+}
+
 /// One game through the four assertions, whichever wave `setup` is of.
 fn run_seed(setup: &GameSetup, decks: (Vec<String>, Vec<String>), probe: Reducer) -> Result<Passed, Failure> {
+    run_seed_with_options(setup, &setup.create_options(decks), probe)
+}
+
+/// `run_seed` from one literal setup shape, shared by live creation, full fold and checkpoint fold.
+fn run_seed_with_options(
+    setup: &GameSetup,
+    options: &CreateGameOptions,
+    probe: Reducer,
+) -> Result<Passed, Failure> {
     // R1420: the fuzz pool is the whole catalog, every set shipped or not, so this worker thread
     // previews every set for the game, its checks and its replay.
     let _preview = preview_every_set();
     let mut reached: Option<At> = None;
     let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<Passed, FuzzFailure> {
-        let run = play_game(setup, decks.clone(), probe)?;
+        let run = if setup.recorded {
+            play_game_with_options(setup, options, probe)?
+        } else {
+            play_game(setup, options.decks.clone(), probe)?
+        };
         reached = Some(At {
             turn: run.state.turn,
             actions: run.log.len(),
         });
         check_termination(setup, &run)?;
-        check_replay(setup, &run)?;
-        let checkpoint = check_serial_restart(setup, &run.decks, &run.log, &run.state, &run.paused)?;
+        let checkpoint = if setup.recorded {
+            check_replay_with_options(options, &run)?;
+            check_serial_restart_with_options(setup, options, &run.log, &run.state, &run.paused, reduce)?
+        } else {
+            check_replay(setup, &run)?;
+            check_serial_restart(setup, &run.decks, &run.log, &run.state, &run.paused)?
+        };
         Ok(Passed {
             hash: hash_state(&run.state),
             reason: run
@@ -2802,7 +3329,9 @@ fn run_seed(setup: &GameSetup, decks: (Vec<String>, Vec<String>), probe: Reducer
             checkpoint_paused: checkpoint.paused,
             checkpoint_ms: checkpoint.ms,
             start: setup.start,
-            coverage: Coverage::of_game(&run.decks, run.played).with_radiant(run.radiant),
+            coverage: Coverage::of_game(&run.decks, run.played)
+                .with_radiant(run.radiant)
+                .with_forecast_judged(run.forecast_judged),
         })
     }));
     let (stage, message, turn, actions) = match caught {
@@ -2833,11 +3362,13 @@ fn run_seed(setup: &GameSetup, decks: (Vec<String>, Vec<String>), probe: Reducer
         seed: setup.seed,
         rotation: setup.rotation.map(SeedHandicap::who),
         start: setup.start,
+        endings: setup.endings,
         stage,
         signature: signature_of(stage, &message),
         message,
-        decks: Box::new(decks),
+        decks: Box::new(options.decks.clone()),
         forced: Vec::new(),
+        radiant: setup.radiant,
         turn,
         actions,
     })
@@ -2876,6 +3407,11 @@ fn play_wave(from: u32, ran: u32, forcing: &Forcing) -> Wave {
 /// Plays the handicapped wave's seeds `from..from + ran` the same way.
 fn play_handicap_wave(from: u32, ran: u32, forcing: &Forcing) -> Wave {
     play_seeds(true, from, ran, forcing, |seed| fuzz_handicap_seed(seed, forcing))
+}
+
+/// Plays the Radiant rotation's seeds `from..from + ran` the same way (#4161).
+fn play_radiant_wave(from: u32, ran: u32, forcing: &Forcing) -> Wave {
+    play_seeds(false, from, ran, forcing, |seed| fuzz_radiant_seed(seed, forcing))
 }
 
 /// `seed` over `from..from + ran`, in parallel, gathered back in seed order into one wave's numbers.
@@ -3034,6 +3570,7 @@ impl Wave {
         text.push_str(&self.coverage.line());
         text.push_str(&self.coverage.radiant_line());
         text.push_str(&self.coverage.deals_line());
+        text.push_str(&self.coverage.forecast_line());
         text.push_str(&heaviest_lines(&self.heaviest));
         text
     }
@@ -3046,24 +3583,28 @@ impl Wave {
             "from": self.from,
             "ran": self.ran,
             "passed": self.ran as usize - self.failures.len(),
-            "failures": self.failures.iter().map(|failure| json!({
-                "seed": failure.seed,
-                "tier": failure.rotation.map(|(tier, _)| tier.to_string()),
-        "seat": failure.rotation.map(|(_, seat)| seat.to_string()),
-                "start": failure.start.as_str(),
-                "stage": failure.stage.as_str(),
-                "turn": failure.turn,
-                "step": failure.actions,
-                "message": failure.message,
-                "forced": failure.forced,
-                "handicaps": failure.run_start_note().map(|(handicaps, _)| handicaps),
-                "marks": failure.run_start_note().map(|(_, marks)| marks),
-            })).collect::<Vec<_>>(),
+            "failures": self.failures.iter().map(|failure| {
+                let run = (failure.start == StartKind::Run).then(|| failure.start_options());
+                json!({
+                    "seed": failure.seed,
+                    "tier": failure.rotation.map(|(tier, _)| tier.to_string()),
+                    "seat": failure.rotation.map(|(_, seat)| seat.to_string()),
+                    "start": failure.start.as_str(),
+                    "stage": failure.stage.as_str(),
+                    "turn": failure.turn,
+                    "step": failure.actions,
+                    "message": failure.message,
+                    "forced": failure.forced,
+                    "handicaps": run.as_ref().map(|options| json!(options.handicaps)),
+                    "marks": run.as_ref().map(|options| json!(options.deck_marks)),
+                })
+            }).collect::<Vec<_>>(),
             "heaviest": self.heaviest,
             "starts": self.start_counts().collect::<IndexMap<_, _>>(),
             "endingsChannel": self.endings,
             "forced": self.forcing.json(),
             "coverage": self.coverage.json(),
+            "forecastJudged": self.coverage.forecast_judged,
             "bounds": MEASURES
                 .into_iter()
                 .map(|measure| (measure.as_str(), measure.bound()))
@@ -3123,8 +3664,8 @@ pub(crate) fn duos_heaviest_lines(heaviest: &Heaviest) -> String {
 /// Where the kept failures live: one JSON file per record (`fuzz-corpus/README.md`).
 pub const CORPUS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/fuzz-corpus");
 
-/// One kept fuzz failure: the seed and the exact decks it was dealt, so a later card in `FUZZ_POOL`
-/// cannot redeal it.
+/// One kept fuzz failure: the seed, decks and literal optional setup inputs it was dealt, so a later
+/// card in `FUZZ_POOL` or `BOARD_POOL` cannot redraw it as another game.
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CorpusRecord {
@@ -3134,11 +3675,67 @@ pub struct CorpusRecord {
     pub catalog_version: String,
     /// p1's deck then p2's, as the report's `seed N p1 deck:` / `p2 deck:` lines print them.
     pub decks: (Vec<String>, Vec<String>),
+    /// What the failure's game started from. Omitted legacy records replay the plain start.
+    #[serde(default)]
+    pub start: StartKind,
+    /// R433: the seats whose decks were dealt, for a `Dealt` start.
+    #[serde(default)]
+    pub dealt: Option<Vec<PlayerId>>,
+    /// R417, R564: both literal last boards, for a `LastBoards` start.
+    #[serde(default)]
+    pub last_boards: Option<LastBoardInput>,
+    /// R678: both literal Glitch boards, for a `GlitchBoards` start.
+    #[serde(default)]
+    pub glitch_boards: Option<LastBoardInput>,
+    /// R180: both dungeon-fight handicaps, for a `Run` start.
+    #[serde(default)]
+    pub handicaps: Option<PerPlayerOpt<Handicap>>,
+    /// R2702000: both dungeon-fight decks' marks, for a `Run` start.
+    #[serde(default)]
+    pub deck_marks: Option<PerPlayerOpt<Vec<DeckMark>>>,
+    /// Whether the failure took the endings channel. Omitted legacy records did not.
+    #[serde(default)]
+    pub endings: bool,
     /// Which run failed, how, and the issue that fixed or filed it.
     pub found: String,
     /// Which ids left the catalog: a retired record is listed and not replayed, never edited.
     #[serde(default)]
     pub retired: Option<String>,
+}
+
+impl CorpusRecord {
+    /// The literal game setup this record pins. No board or dungeon input is redrawn from its seed.
+    fn create_options(&self) -> CreateGameOptions {
+        CreateGameOptions {
+            seed: GameSetup::plain(self.seed).stream(""),
+            decks: self.decks.clone(),
+            handicaps: self.handicaps.clone(),
+            dealt: self.dealt.clone(),
+            last_boards: self.last_boards.clone(),
+            glitch_boards: self.glitch_boards.clone(),
+            deck_marks: self.deck_marks.clone(),
+            ..CreateGameOptions::default()
+        }
+    }
+}
+
+/// Engine validation of a record's handicaps, deck sizes and marks. A retired record may name a
+/// deck id the live catalog no longer has, so give only those missing ids a non-token stand-in: the
+/// lint below still reports them for a live record, while every catalog-independent setup check runs
+/// for both live and retired records.
+fn validate_record_setup(record: &CorpusRecord) -> Result<(), String> {
+    // R1420: validate against the live catalog with every set previewed, the way `fuzz_deal` deals.
+    let _preview = preview_every_set();
+    let Some(stand_in) = FUZZ_POOL.iter().find_map(|id| CATALOG.get(id)).cloned() else {
+        return Err("the fuzz pool has no non-token card to validate a retired record with".to_string());
+    };
+    let mut catalog = (*CATALOG).clone();
+    for id in record.decks.0.iter().chain(&record.decks.1) {
+        if !catalog.contains_key(id) {
+            catalog.insert(id.clone(), stand_in.clone());
+        }
+    }
+    validate_setup(&record.create_options(), &catalog, SetupKind::Recorded).map_err(|error| error.message)
 }
 
 /// One line per problem with `record`: its shape, then its ids against the live catalog.
@@ -3156,21 +3753,79 @@ fn lint_record(record: &CorpusRecord) -> Vec<String> {
     if record.found.trim().is_empty() {
         problems.push("found is empty: say which run failed, how, and the issue".to_string());
     }
+
+    let inputs = [
+        ("dealt", record.dealt.is_some()),
+        ("lastBoards", record.last_boards.is_some()),
+        ("glitchBoards", record.glitch_boards.is_some()),
+        ("handicaps", record.handicaps.is_some()),
+        ("deckMarks", record.deck_marks.is_some()),
+    ];
+    for (name, present) in inputs {
+        let required = match record.start {
+            StartKind::Plain => false,
+            StartKind::Dealt => name == "dealt",
+            StartKind::LastBoards => name == "lastBoards",
+            StartKind::GlitchBoards => name == "glitchBoards",
+            StartKind::Run => matches!(name, "handicaps" | "deckMarks"),
+        };
+        if required && !present {
+            problems.push(format!("{} start requires {name}", record.start.as_str()));
+        } else if !required && present {
+            problems.push(format!("{} start cannot set {name}", record.start.as_str()));
+        }
+    }
+    if let Some(dealt) = &record.dealt
+        && !DEALT_SEATS.contains(&dealt.as_slice())
+    {
+        problems.push("dealt must be [\"p1\"], [\"p2\"] or [\"p1\",\"p2\"]".to_string());
+    }
+    if record.start == StartKind::Run {
+        if record.handicaps.as_ref().is_some_and(|handicaps| {
+            PLAYER_IDS
+                .into_iter()
+                .any(|player| handicaps.get(player).is_none())
+        }) {
+            problems.push("run start requires handicaps for p1 and p2".to_string());
+        }
+        if record
+            .deck_marks
+            .as_ref()
+            .is_some_and(|marks| PLAYER_IDS.into_iter().any(|player| marks.get(player).is_none()))
+        {
+            problems.push(
+                "run start requires deckMarks for p1 and p2 (use an empty list for no marks)".to_string(),
+            );
+        }
+    }
+
     let decks = [("p1", &record.decks.0), ("p2", &record.decks.1)];
-    // R1705003: a record found before #1705 holds EARLIER_DECK_SIZE-card decks and replays as made.
-    let sizes = [DECK_SIZE, EARLIER_DECK_SIZE].map(|size| usize::try_from(size).unwrap_or(0));
-    let deck_size = if sizes.contains(&record.decks.0.len()) {
-        record.decks.0.len()
+    if record.start == StartKind::Run {
+        for (label, deck) in decks {
+            let size = i32::try_from(deck.len()).unwrap_or(i32::MAX);
+            if !(RUN_START_DECK_MIN..=RUN_START_DECK_MAX).contains(&size) {
+                problems.push(format!(
+                    "{label} run deck holds {} ids, outside RUN_START_DECK_MIN {RUN_START_DECK_MIN} through RUN_START_DECK_MAX {RUN_START_DECK_MAX}",
+                    deck.len()
+                ));
+            }
+        }
     } else {
-        sizes[0]
-    };
-    for (label, deck) in decks {
-        if deck.len() != deck_size {
-            problems.push(format!(
-                "{label} deck holds {} ids, not {deck_size} (DECK_SIZE {DECK_SIZE} or, for a record found \
-                 before #1705, EARLIER_DECK_SIZE {EARLIER_DECK_SIZE}, both decks alike)",
-                deck.len()
-            ));
+        // R1705003: a record found before #1705 holds EARLIER_DECK_SIZE-card decks and replays as made.
+        let sizes = [DECK_SIZE, EARLIER_DECK_SIZE].map(|size| usize::try_from(size).unwrap_or(0));
+        let deck_size = if sizes.contains(&record.decks.0.len()) {
+            record.decks.0.len()
+        } else {
+            sizes[0]
+        };
+        for (label, deck) in decks {
+            if deck.len() != deck_size {
+                problems.push(format!(
+                    "{label} deck holds {} ids, not {deck_size} (DECK_SIZE {DECK_SIZE} or, for a record found \
+                     before #1705, EARLIER_DECK_SIZE {EARLIER_DECK_SIZE}, both decks alike)",
+                    deck.len()
+                ));
+            }
         }
     }
     let ids: Vec<&str> = decks
@@ -3186,24 +3841,27 @@ fn lint_record(record: &CorpusRecord) -> Vec<String> {
         }
         Some(_) => {}
         None => {
-            for id in ids {
+            for &id in &ids {
                 if !CATALOG.contains_key(id) {
                     problems.push(format!(
                         "\"{id}\" names no catalog card: mark the record retired, never edit its decks"
                     ));
                 }
             }
-            if problems.is_empty() {
-                // R1420: the live catalog with every set previewed, the way `fuzz_deal` deals.
-                let _preview = preview_every_set();
-                for (label, deck) in decks {
-                    let size = i32::try_from(deck_size).unwrap_or(DECK_SIZE);
-                    if let Err(error) = validate_deck(deck, &CATALOG, label, size) {
-                        problems.push(error.message);
+            for boards in [&record.last_boards, &record.glitch_boards].into_iter().flatten() {
+                for entry in boards.0.iter().chain(&boards.1) {
+                    if !subsystems::last_boards::rebuildable_from_id(&entry.def_id, &CATALOG) {
+                        problems.push(format!(
+                            "\"{}\" cannot be rebuilt from the live catalog: mark the record retired, never edit its boards",
+                            entry.def_id
+                        ));
                     }
                 }
             }
         }
+    }
+    if let Err(problem) = validate_record_setup(record) {
+        problems.push(problem);
     }
     problems
 }
@@ -3242,15 +3900,17 @@ fn read_corpus(dir: &Path) -> anyhow::Result<(Vec<NamedRecord>, Vec<String>)> {
     Ok((records, problems))
 }
 
-/// `record` through the gate's four assertions with its pinned decks, never a deal from the live pool.
+/// `record` through the gate's checks with its pinned decks and literal optional start inputs.
 fn replay_record(record: &CorpusRecord) -> Result<Passed, Failure> {
-    // #1503: from the plain start, the one every kept failure was found from, and (R1705003) as the
-    // game it was, dealt the decks of the size it was found with.
+    // R1705003: replay as the game it was, dealt the decks of the size it was found with. Its boards,
+    // dungeon inputs and endings choice come from the record, never the live draw pools.
     let setup = GameSetup {
+        start: record.start,
+        endings: record.endings,
         recorded: true,
         ..GameSetup::plain(record.seed)
     };
-    run_seed(&setup, record.decks.clone(), reduce)
+    run_seed_with_options(&setup, &record.create_options(), reduce)
 }
 
 /// What `--regress` found: a line per record that passed or is retired, and every problem.
@@ -3514,7 +4174,7 @@ pub(crate) mod tests {
 
         #[test]
         fn seeds_widens_the_wave_past_the_gate_as_the_daily_run_asks() {
-            // super.yml plays each quarter of its 10,000 seeds as `--from <q> --seeds 2500` (#659).
+            // super.yml plays each quarter of its 12,500 seeds as `--from <q> --seeds 3125` (#659).
             assert_eq!(wave_size(Some(2500)), 2500);
             assert_eq!(wave_size(Some(WAVE_SEEDS)), WAVE_SEEDS);
             assert_eq!(wave_size(Some(1)), 1);
@@ -3583,6 +4243,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn plays_the_seeded_games_to_a_result_and_replays_each_to_the_same_hash_short_wave() {
             let ran = wave_size(None);
             let wave = play_wave(first_seed(None), ran, &Forcing::default());
@@ -3632,6 +4293,19 @@ pub(crate) mod tests {
             assert_eq!(origin_of(None), "");
         }
 
+        /// A token's id holds letters where a card's holds digits (`core-t-rush`), and the signature blanks
+        /// it whole, so two seeds that deal different tokens twice share one signature.
+        #[test]
+        fn a_failure_signature_blanks_a_tokens_id_whole() {
+            assert_eq!(
+                signature_of(
+                    FailureStage::Play,
+                    "core-t-rush and core-t-sheep were dealt twice"
+                ),
+                "[play] <card> and <card> were dealt twice"
+            );
+        }
+
         #[test]
         fn r679_a_glitch_that_voids_the_match_is_a_real_ending() {
             register_all();
@@ -3656,6 +4330,7 @@ pub(crate) mod tests {
                 paused: Vec::new(),
                 played: IndexSet::new(),
                 radiant: IndexSet::new(),
+                forecast_judged: 0,
             };
             assert_eq!(
                 check_termination(&GameSetup::plain(1), &run)
@@ -3690,6 +4365,7 @@ pub(crate) mod tests {
                     paused: Vec::new(),
                     played: IndexSet::new(),
                     radiant: IndexSet::new(),
+                    forecast_judged: 0,
                 };
                 assert_eq!(
                     check_termination(&GameSetup::plain(1), &run)
@@ -3703,7 +4379,65 @@ pub(crate) mod tests {
         }
     }
 
+    mod state_diff_tests {
+        use super::*;
+
+        #[test]
+        fn state_diff_names_exactly_the_fields_that_differ() {
+            let live = json!({
+                "turn": 3,
+                "generators": {"card-a": "root-a", "card-b": "root-b"},
+                "opening": null,
+            });
+            let other = json!({
+                "turn": 4,
+                "generators": {"card-a": "root-changed", "card-c": "root-c"},
+                "opening": null,
+            });
+            // One entry per differing top-level key, in key order: the changed generator's card
+            // id is named, the missing `card-b` and the extra `card-c` add no second entry, and
+            // the equal `opening` is never named.
+            assert_eq!(
+                state_diff(&live, &other),
+                [
+                    "generators differs (first at card-a)".to_string(),
+                    "turn differs".to_string(),
+                ]
+            );
+            assert!(state_diff(&live, &live.clone()).is_empty());
+        }
+
+        #[test]
+        fn state_diff_names_the_first_applied_entry_that_differs() {
+            let live = json!({ "applied": [{"nonce": "n1"}, {"nonce": "n2"}] });
+            // Same length, one entry's body changed: the live entry's nonce names it.
+            let changed = json!({ "applied": [{"nonce": "n1"}, {"nonce": "n2", "events": [1]}] });
+            assert_eq!(
+                state_diff(&live, &changed),
+                ["applied differs (first at n2)".to_string()]
+            );
+            // No nonce to name: the index names it.
+            let anonymous = json!({ "applied": [1, 2] });
+            let anonymous_changed = json!({ "applied": [1, 3] });
+            assert_eq!(
+                state_diff(&anonymous, &anonymous_changed),
+                ["applied differs (first at #1)".to_string()]
+            );
+            // The other log is a strict prefix of the live one: the first missing index.
+            let prefix = json!({ "applied": [{"nonce": "n1"}] });
+            assert_eq!(
+                state_diff(&live, &prefix),
+                ["applied differs (first at #1)".to_string()]
+            );
+            // A shape that is not an array on both sides names no entry.
+            let not_a_log = json!({ "applied": {"nonce": "n1"} });
+            assert_eq!(state_diff(&live, &not_a_log), ["applied differs".to_string()]);
+        }
+    }
+
     mod fuzz_serial_restart {
+        use std::cell::Cell;
+
         use super::*;
 
         #[test]
@@ -3761,6 +4495,90 @@ pub(crate) mod tests {
             assert!(error.contains("the round trip changed the state"), "{error}");
         }
 
+        /// A planted lossy restore: the JSON round trip, then the Created cards' record dropped.
+        /// `hash_state` skips `generators` by design, so the hash cannot see the loss.
+        fn lossy_without_generators(state: &GameState) -> Result<GameState, String> {
+            let mut restored = round_trip(state)?;
+            restored.generators.clear();
+            Ok(restored)
+        }
+
+        /// A planted lossy restore: the JSON round trip, then the applied-action record emptied.
+        /// `hash_state` skips `applied` by design, so the hash cannot see the loss.
+        fn lossy_without_applied(state: &GameState) -> Result<GameState, String> {
+            let mut restored = round_trip(state)?;
+            restored.applied.clear();
+            Ok(restored)
+        }
+
+        #[test]
+        fn a_lossy_round_trip_that_drops_generators_fails_naming_generators() {
+            let _preview = preview_every_set();
+            let run = seed_one();
+            assert!(
+                !run.state.generators.is_empty(),
+                "seed 1 must create a card, or this plants nothing"
+            );
+            let restored = lossy_without_generators(&run.state).expect("the planted restore builds");
+            assert_eq!(
+                hash_state(&restored),
+                hash_state(&run.state),
+                "today's hash is blind to a dropped generators record"
+            );
+            let error = verify_round_trip(&run.state, hash_state, lossy_without_generators)
+                .expect_err("a round trip that drops generators must fail it");
+            assert!(error.contains("the round trip changed the state"), "{error}");
+            assert!(error.contains("generators"), "{error}");
+        }
+
+        #[test]
+        fn a_lossy_round_trip_that_empties_applied_fails_naming_applied() {
+            let _preview = preview_every_set();
+            let run = seed_one();
+            assert!(
+                !run.state.applied.is_empty(),
+                "seed 1 must apply an action, or this plants nothing"
+            );
+            let restored = lossy_without_applied(&run.state).expect("the planted restore builds");
+            assert_eq!(
+                hash_state(&restored),
+                hash_state(&run.state),
+                "today's hash is blind to an emptied applied record"
+            );
+            let error = verify_round_trip(&run.state, hash_state, lossy_without_applied)
+                .expect_err("a round trip that empties applied must fail it");
+            assert!(error.contains("the round trip changed the state"), "{error}");
+            assert!(error.contains("applied"), "{error}");
+        }
+
+        #[test]
+        fn a_replay_that_loses_generators_fails_naming_generators() {
+            let _preview = preview_every_set();
+            let mut run = seed_one();
+            assert!(
+                !run.state.generators.is_empty(),
+                "seed 1 must create a card, or this plants nothing"
+            );
+            run.state.generators.clear();
+            let Err(failure) = check_replay(&GameSetup::gate(1), &run) else {
+                panic!("a replay that loses the generators record must fail");
+            };
+            assert_eq!(failure.stage, FailureStage::Replay, "{}", failure.message);
+            assert!(failure.message.contains("generators"), "{}", failure.message);
+        }
+
+        #[test]
+        fn a_replay_that_empties_applied_fails_naming_applied() {
+            let _preview = preview_every_set();
+            let mut run = seed_one();
+            run.state.applied.clear();
+            let Err(failure) = check_replay(&GameSetup::gate(1), &run) else {
+                panic!("a replay that empties the applied record must fail");
+            };
+            assert_eq!(failure.stage, FailureStage::Replay, "{}", failure.message);
+            assert!(failure.message.contains("applied"), "{}", failure.message);
+        }
+
         #[test]
         fn a_restored_game_that_misses_the_live_hash_fails_in_the_checkpoint_stage() {
             let _preview = preview_every_set();
@@ -3776,6 +4594,36 @@ pub(crate) mod tests {
                 "{}",
                 failure.message
             );
+        }
+
+        #[test]
+        fn a_checkpoint_continuation_that_loses_generators_fails_naming_generators() {
+            let _preview = preview_every_set();
+            let run = seed_one();
+            assert!(
+                !run.state.generators.is_empty(),
+                "seed 1 must create a card, or this plants nothing"
+            );
+            let mut live = run.state.clone();
+            live.generators.clear();
+            let Err(failure) = seed_one_checkpoint(&run, &run.log, &live) else {
+                panic!("a checkpoint that loses the generators record must fail");
+            };
+            assert_eq!(failure.stage, FailureStage::Checkpoint, "{}", failure.message);
+            assert!(failure.message.contains("generators"), "{}", failure.message);
+        }
+
+        #[test]
+        fn a_checkpoint_continuation_that_loses_applied_fails_naming_applied() {
+            let _preview = preview_every_set();
+            let run = seed_one();
+            let mut live = run.state.clone();
+            live.applied.clear();
+            let Err(failure) = seed_one_checkpoint(&run, &run.log, &live) else {
+                panic!("a checkpoint that loses the applied record must fail");
+            };
+            assert_eq!(failure.stage, FailureStage::Checkpoint, "{}", failure.message);
+            assert!(failure.message.contains("applied"), "{}", failure.message);
         }
 
         #[test]
@@ -3803,6 +4651,57 @@ pub(crate) mod tests {
             );
         }
 
+        /// How long the planted continuation sleeps before its first action: far over seed 1's round
+        /// trip, so a clock that still counted the continuation would report at least this much.
+        const PLANTED_CONTINUATION_MS: u64 = 300;
+
+        thread_local! {
+            /// Whether the planted continuation has slept yet on this thread.
+            static PLANTED_SLEPT: Cell<bool> = const { Cell::new(false) };
+        }
+
+        /// `reduce`, after sleeping `PLANTED_CONTINUATION_MS` before the first action on this thread.
+        fn slow_continuation(state: &GameState, action: &Action) -> ReduceResult {
+            if !PLANTED_SLEPT.with(|slept| slept.replace(true)) {
+                std::thread::sleep(std::time::Duration::from_millis(PLANTED_CONTINUATION_MS));
+            }
+            reduce(state, action)
+        }
+
+        /// #3712: the bound times the restart, the round trip and its hashes, never the continuation's
+        /// own `reduce`: one planted slow still passes, and the report carries the round trip's cost.
+        #[test]
+        fn the_checkpoint_clock_times_the_round_trip_and_not_the_continuation() {
+            let _preview = preview_every_set();
+            let run = seed_one();
+            let setup = GameSetup::gate(1);
+            let (step, _) = checkpoint_step(&setup.stream("checkpoint-"), &run.paused, run.log.len());
+            assert!(
+                step < run.log.len(),
+                "seed 1's checkpoint at {step} of {} leaves nothing to continue",
+                run.log.len()
+            );
+            PLANTED_SLEPT.with(|slept| slept.set(false));
+            let report = check_serial_restart_with(
+                &setup,
+                &run.decks,
+                &run.log,
+                &run.state,
+                &run.paused,
+                slow_continuation,
+            )
+            .unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert!(
+                PLANTED_SLEPT.with(Cell::get),
+                "the continuation went through the planted reducer"
+            );
+            assert!(
+                report.ms < u128::from(PLANTED_CONTINUATION_MS),
+                "the checkpoint's clock counted the continuation: {}ms",
+                report.ms
+            );
+        }
+
         #[test]
         fn one_seed_crosses_its_checkpoint_and_reports_cost() {
             let passed =
@@ -3822,6 +4721,8 @@ pub(crate) mod tests {
 
     mod fuzz_growth_stage {
         use super::*;
+        use jackioh_engine::config::FROZEN_FOREVER;
+        use jackioh_engine::effects::SIDE_SNAPSHOT_KEY;
         use jackioh_engine::testkit::{
             CardScripts, GameEventType, Script, TriggerDef, clear_overrides, effects, json_as,
             register_catalog_as, register_scripts,
@@ -3928,9 +4829,13 @@ pub(crate) mod tests {
         #[test]
         fn a_planted_grower_in_handicapped_decks_fails_in_the_growth_stage() {
             install_grower();
-            // The overrides are this thread's, so the seeds run here and not under rayon.
+            // The overrides are this thread's, so the seeds run here and not under rayon. The first seed
+            // whose failure names the grower: a seed may fuse it into another card before it grows, whose
+            // fused definition goes by its hash, and which seeds do moves with every card joining a pool
+            // (#848).
             let failure = (1..=PLANTED_SEEDS)
-                .find_map(|seed| fuzz_handicap_deal(seed, planted_handicap_decks(seed), reduce).err())
+                .filter_map(|seed| fuzz_handicap_deal(seed, planted_handicap_decks(seed), reduce).err())
+                .find(|failure| failure.message.contains(GROWER))
                 .expect("a card that grows without end must fail one of the planted handicapped seeds");
             clear_overrides();
             assert_eq!(failure.stage, FailureStage::Growth, "{}", failure.message);
@@ -3939,7 +4844,6 @@ pub(crate) mod tests {
                 "{}",
                 failure.message
             );
-            assert!(failure.message.contains(GROWER), "{}", failure.message);
             assert!(
                 failure.message.contains("GROWTH_NUMBER_BOUND"),
                 "{}",
@@ -3981,12 +4885,48 @@ pub(crate) mod tests {
                 .insert("activations".to_string(), json!({ "turn": 3, "count": 4100 }));
             assert_eq!(largest_number(card), 4100);
             card.memory.clear();
+            // Issue #3800: a card record on a memory (R3550007's side snapshot) counts no turn stamp.
+            card.memory.insert(
+                SIDE_SNAPSHOT_KEY.to_string(),
+                json!({ "turn": 12, "side": { "units": [[{ "frozen": FROZEN_FOREVER, "summonedTurn": 9,
+                    "brittle": [{ "count": 2, "since": 11 }], "buffs": { "attack": 1, "health": 30 } }]] } }),
+            );
+            assert_eq!(largest_number(card), 30);
+            card.memory.clear();
             card.tuning = Some(Tuning {
                 numbers: Some(IndexMap::from([("times".to_string(), 33_724)])),
                 ..Tuning::default()
             });
             assert_eq!(largest_number(card), 33_724);
             assert_eq!(weigh(&[], &state)[1], 33_724);
+        }
+
+        #[test]
+        fn an_action_that_plays_several_turns_is_weighed_a_turn_at_a_time() {
+            // #4375, R3569004: The Enigmata's turns play themselves inside one action; each turn's
+            // events are weighed alone, and one turn past the bound still fails.
+            let ended = |turn: i32| GameEvent::TurnEnded {
+                player: PlayerId::P1,
+                turn,
+                unspent_mana: 0,
+            };
+            let started = |turn: i32| GameEvent::TurnStarted {
+                player: PlayerId::P2,
+                turn,
+                extra: None,
+            };
+            let per_turn = usize::try_from(GROWTH_EVENTS_BOUND).expect("a count");
+            let mut events: Vec<GameEvent> = Vec::new();
+            for turn in 1..=3 {
+                events.extend((0..per_turn).map(|_| ended(turn)));
+                events.push(started(turn + 1));
+            }
+            assert!(events.len() > per_turn * 3);
+            assert_eq!(most_events_in_a_turn(&events), per_turn);
+            events.push(ended(4));
+            events.extend((0..per_turn).map(|_| ended(4)));
+            assert_eq!(most_events_in_a_turn(&events), per_turn + 1);
+            assert_eq!(most_events_in_a_turn(&[]), 0);
         }
 
         #[test]
@@ -4197,6 +5137,129 @@ pub(crate) mod tests {
                 failure.message
             );
             assert!(failure.message.contains("planted refusal"), "{}", failure.message);
+            assert!(
+                failure.message.contains("seed jackioh-fuzz-1"),
+                "{}",
+                failure.message
+            );
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(text.contains("example: seed 1 ("), "{text}");
+            assert!(text.contains("[invariant]"), "{text}");
+        }
+
+        /// A reducer that accepts one listed action (I14) but returns a state with a Unit token in a
+        /// graveyard (#4057): the played game stays clean, but the branch check catches it.
+        fn plants_branch_token_in_graveyard(state: &GameState, action: &Action) -> ReduceResult {
+            let mut result = reduce(state, action);
+            if action.nonce == I14_NONCE && matches!(action.body, ActionBody::Concede) {
+                let token = jackioh_engine::state::new_instance(
+                    &mut result.state,
+                    "core-t-rush",
+                    action.player_id,
+                    jackioh_engine::wire::Zone::Graveyard {
+                        player: action.player_id,
+                    },
+                );
+                result.state.players[action.player_id].graveyard.push(token);
+            }
+            result
+        }
+
+        #[test]
+        fn a_reducer_that_plants_a_unit_token_in_graveyard_on_a_branch_fails_the_seed_in_the_invariant_stage()
+        {
+            register_all();
+            let Some(failure) =
+                fuzz_deal_probed(1, decks_for_seed(1), plants_branch_token_in_graveyard).err()
+            else {
+                panic!("a reducer that plants a unit token on a branch must fail seed 1 (I14, #4057)");
+            };
+            assert_eq!(failure.stage, FailureStage::Invariant, "{}", failure.message);
+            assert!(
+                failure.message.starts_with("I14 branch: after "),
+                "{}",
+                failure.message
+            );
+            assert!(failure.message.contains("concede"), "{}", failure.message);
+            assert!(
+                failure.message.contains("(listed, not played)"),
+                "{}",
+                failure.message
+            );
+            assert!(
+                failure.message.contains("I11 unit token in pile:"),
+                "{}",
+                failure.message
+            );
+            assert!(failure.message.contains("p1"), "{}", failure.message);
+            assert!(failure.message.contains("turn 0"), "{}", failure.message);
+            assert!(
+                failure.message.contains("seed jackioh-fuzz-1"),
+                "{}",
+                failure.message
+            );
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(text.contains("example: seed 1 ("), "{text}");
+            assert!(text.contains("[invariant]"), "{text}");
+        }
+
+        /// A reducer that accepts one listed action (I14) but leaves work owed with no prompt open (I7)
+        /// on the branch only (#4057): the played action stays clean, which proves the finding comes
+        /// from the branch.
+        fn leaves_branch_work_owed(state: &GameState, action: &Action) -> ReduceResult {
+            let mut result = reduce(state, action);
+            if action.nonce == I14_NONCE
+                && matches!(action.body, ActionBody::EndTurn)
+                && result.state.result.is_none()
+                && result.state.pending.is_none()
+                && result.state.mulligan.is_none()
+            {
+                result.state.work.push(jackioh_engine::state::WorkItem {
+                    id: "w-planted".to_string(),
+                    seq: 0,
+                    owner: action.player_id,
+                    resume: jackioh_engine::state::Resume {
+                        def_id: "core-051".to_string(),
+                        hook: "resume".to_string(),
+                        step: "orphaned".to_string(),
+                        radiant: false,
+                        instance_id: None,
+                        data: indexmap::IndexMap::new(),
+                    },
+                });
+            }
+            result
+        }
+
+        #[test]
+        fn a_reducer_that_leaves_work_owed_on_a_branch_fails_the_seed_in_the_invariant_stage() {
+            register_all();
+            let Some(failure) = fuzz_deal_probed(1, decks_for_seed(1), leaves_branch_work_owed).err() else {
+                panic!("a reducer that leaves work owed on a branch must fail seed 1 (I14, #4057)");
+            };
+            assert_eq!(failure.stage, FailureStage::Invariant, "{}", failure.message);
+            assert!(
+                failure.message.starts_with("I14 branch: after "),
+                "{}",
+                failure.message
+            );
+            assert!(failure.message.contains("endTurn"), "{}", failure.message);
+            assert!(
+                failure.message.contains("(listed, not played)"),
+                "{}",
+                failure.message
+            );
+            assert!(
+                failure.message.contains("I7 orphaned work:"),
+                "{}",
+                failure.message
+            );
+            assert!(
+                failure.message.contains("p1") || failure.message.contains("p2"),
+                "{}",
+                failure.message
+            );
+            assert!(failure.message.contains("turn "), "{}", failure.message);
             assert!(
                 failure.message.contains("seed jackioh-fuzz-1"),
                 "{}",
@@ -4497,13 +5560,37 @@ pub(crate) mod tests {
         use jackioh_cards::CATALOG_VERSION;
 
         /// A record that lints clean: seed `seed`'s deal from the live pool.
-        fn sound(seed: u32) -> CorpusRecord {
+        pub(super) fn sound(seed: u32) -> CorpusRecord {
             CorpusRecord {
                 seed,
                 catalog_version: CATALOG_VERSION.to_string(),
                 decks: decks_for_seed(seed),
+                start: StartKind::Plain,
+                dealt: None,
+                last_boards: None,
+                glitch_boards: None,
+                handicaps: None,
+                deck_marks: None,
+                endings: false,
                 found: "a test's record".to_string(),
                 retired: None,
+            }
+        }
+
+        /// A sound pinned dungeon-fight start, including its run-sized decks and literal inputs.
+        fn sound_run(seed: u32) -> CorpusRecord {
+            let setup = GameSetup {
+                start: StartKind::Run,
+                ..GameSetup::plain(seed)
+            };
+            let decks = setup.decks(0);
+            let options = setup.create_options(decks.clone());
+            CorpusRecord {
+                decks,
+                start: StartKind::Run,
+                handicaps: options.handicaps,
+                deck_marks: options.deck_marks,
+                ..sound(seed)
             }
         }
 
@@ -4531,6 +5618,7 @@ pub(crate) mod tests {
         fn the_lint_passes_a_sound_record_and_names_each_malformed_one() {
             register_all();
             assert_eq!(lint_record(&sound(1)), Vec::<String>::new());
+            assert_eq!(lint_record(&sound_run(1)), Vec::<String>::new());
             let token = CATALOG
                 .iter()
                 .find(|(_, def)| def.is_token())
@@ -4592,6 +5680,142 @@ pub(crate) mod tests {
                     },
                     "retired is empty",
                 ),
+                (
+                    CorpusRecord {
+                        start: StartKind::Dealt,
+                        ..sound(1)
+                    },
+                    "dealt start requires dealt",
+                ),
+                (
+                    CorpusRecord {
+                        start: StartKind::LastBoards,
+                        ..sound(1)
+                    },
+                    "last-boards start requires lastBoards",
+                ),
+                (
+                    CorpusRecord {
+                        start: StartKind::GlitchBoards,
+                        ..sound(1)
+                    },
+                    "glitch-boards start requires glitchBoards",
+                ),
+                (
+                    CorpusRecord {
+                        start: StartKind::Run,
+                        handicaps: None,
+                        ..sound_run(1)
+                    },
+                    "run start requires handicaps",
+                ),
+                (
+                    CorpusRecord {
+                        handicaps: Some(PerPlayerOpt::default()),
+                        ..sound_run(1)
+                    },
+                    "run start requires handicaps for p1 and p2",
+                ),
+                (
+                    CorpusRecord {
+                        deck_marks: Some(PerPlayerOpt::default()),
+                        ..sound_run(1)
+                    },
+                    "run start requires deckMarks for p1 and p2",
+                ),
+                (
+                    CorpusRecord {
+                        dealt: Some(vec![PlayerId::P1]),
+                        ..sound(1)
+                    },
+                    "plain start cannot set dealt",
+                ),
+                (
+                    CorpusRecord {
+                        start: StartKind::Dealt,
+                        dealt: Some(vec![PlayerId::P1, PlayerId::P1]),
+                        ..sound(1)
+                    },
+                    "dealt must be",
+                ),
+                (
+                    {
+                        let mut record = sound_run(1);
+                        record
+                            .decks
+                            .0
+                            .truncate(usize::try_from(RUN_START_DECK_MIN - 1).unwrap_or_default());
+                        record
+                    },
+                    "outside RUN_START_DECK_MIN",
+                ),
+                (
+                    {
+                        let mut record = sound_run(1);
+                        record.decks.1 = FUZZ_POOL
+                            .iter()
+                            .take(usize::try_from(RUN_START_DECK_MAX + 1).unwrap_or(usize::MAX))
+                            .cloned()
+                            .collect();
+                        record
+                    },
+                    "outside RUN_START_DECK_MIN",
+                ),
+                (
+                    {
+                        let mut record = sound_run(1);
+                        let mut marks = record.deck_marks.take().unwrap_or_default();
+                        *marks.slot(PlayerId::P1) = Some(vec![DeckMark {
+                            index: record.decks.0.len(),
+                            radiant: true,
+                            upgrades: 0,
+                        }]);
+                        record.deck_marks = Some(marks);
+                        record
+                    },
+                    "deck mark index",
+                ),
+                (
+                    {
+                        let mut record = sound_run(1);
+                        let mut handicaps = record.handicaps.take().unwrap_or_default();
+                        handicaps
+                            .get_mut(PlayerId::P1)
+                            .expect("a run record handicaps p1")
+                            .hero_armor = Some(-1);
+                        record.handicaps = Some(handicaps);
+                        record
+                    },
+                    "heroArmor",
+                ),
+                (
+                    CorpusRecord {
+                        start: StartKind::LastBoards,
+                        last_boards: Some((
+                            vec![LastBoardEntry {
+                                def_id: "core-gone".to_string(),
+                                radiant: false,
+                            }],
+                            Vec::new(),
+                        )),
+                        ..sound(1)
+                    },
+                    "never edit its boards",
+                ),
+                (
+                    CorpusRecord {
+                        start: StartKind::GlitchBoards,
+                        glitch_boards: Some((
+                            vec![LastBoardEntry {
+                                def_id: format!("{BOARD_FUSED_HEAD}{}+core-gone", FUSABLE_UNITS[0]),
+                                radiant: true,
+                            }],
+                            Vec::new(),
+                        )),
+                        ..sound(1)
+                    },
+                    "never edit its boards",
+                ),
             ];
             for (record, phrase) in cases {
                 let problems = lint_record(&record).join("\n");
@@ -4605,6 +5829,105 @@ pub(crate) mod tests {
             retired.decks.0[0] = "core-gone".to_string();
             retired.retired = Some("core-gone left the catalog".to_string());
             assert_eq!(lint_record(&retired), Vec::<String>::new());
+
+            let mut retired_board = sound(1);
+            retired_board.start = StartKind::LastBoards;
+            retired_board.last_boards = Some((
+                vec![LastBoardEntry {
+                    def_id: "core-gone".to_string(),
+                    radiant: false,
+                }],
+                Vec::new(),
+            ));
+            retired_board.retired = Some("core-gone left the catalog".to_string());
+            assert_eq!(lint_record(&retired_board), Vec::<String>::new());
+
+            let retired_run = || {
+                let mut record = sound_run(1);
+                record.decks.0[0] = "core-gone".to_string();
+                record.retired = Some("core-gone left the catalog".to_string());
+                record
+            };
+            let retired_cases = [
+                (
+                    {
+                        let mut record = retired_run();
+                        record
+                            .handicaps
+                            .as_mut()
+                            .and_then(|handicaps| handicaps.get_mut(PlayerId::P1))
+                            .expect("a run record handicaps p1")
+                            .hero_armor = Some(-1);
+                        record
+                    },
+                    "heroArmor",
+                ),
+                (
+                    {
+                        let mut record = retired_run();
+                        record
+                            .handicaps
+                            .as_mut()
+                            .and_then(|handicaps| handicaps.get_mut(PlayerId::P1))
+                            .expect("a run record handicaps p1")
+                            .deck_size += 1;
+                        record
+                    },
+                    "its handicap",
+                ),
+                (
+                    {
+                        let mut record = retired_run();
+                        record.deck_marks.as_mut().expect("a run record sets marks").p1 =
+                            Some(vec![DeckMark {
+                                index: record.decks.0.len(),
+                                radiant: true,
+                                upgrades: 0,
+                            }]);
+                        record
+                    },
+                    "deck mark index",
+                ),
+                (
+                    {
+                        let mut record = retired_run();
+                        record.deck_marks.as_mut().expect("a run record sets marks").p1 = Some(vec![
+                            DeckMark {
+                                index: 0,
+                                radiant: true,
+                                upgrades: 0,
+                            },
+                            DeckMark {
+                                index: 0,
+                                radiant: false,
+                                upgrades: 1,
+                            },
+                        ]);
+                        record
+                    },
+                    "two deck marks name index",
+                ),
+                (
+                    {
+                        let mut record = retired_run();
+                        record.deck_marks.as_mut().expect("a run record sets marks").p1 =
+                            Some(vec![DeckMark {
+                                index: 0,
+                                radiant: false,
+                                upgrades: -1,
+                            }]);
+                        record
+                    },
+                    "deck mark upgrades",
+                ),
+            ];
+            for (record, phrase) in retired_cases {
+                let problems = lint_record(&record).join("\n");
+                assert!(
+                    problems.contains(phrase),
+                    "expected retired record problem {phrase:?} in {problems:?}"
+                );
+            }
         }
 
         #[test]
@@ -4617,7 +5940,10 @@ pub(crate) mod tests {
                 "found": record.found,
             });
             let parses = |value: &serde_json::Value| serde_json::from_str::<CorpusRecord>(&value.to_string());
-            assert_eq!(parses(&fields).ok(), Some(record.clone()));
+            let legacy = parses(&fields).expect("legacy records still parse");
+            assert_eq!(legacy, record.clone());
+            assert_eq!(legacy.start, StartKind::Plain);
+            assert!(!legacy.endings);
 
             let mut missing = fields.clone();
             missing
@@ -4635,6 +5961,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn the_checked_in_corpus_lints_clean_and_every_record_replays() {
             let regress = regress(Path::new(CORPUS_DIR)).unwrap_or_else(|error| panic!("{error:#}"));
             assert_eq!(
@@ -4644,6 +5971,104 @@ pub(crate) mod tests {
                 regress.failed.join("\n")
             );
             assert!(!regress.lines.is_empty());
+
+            let (records, problems) =
+                read_corpus(Path::new(CORPUS_DIR)).unwrap_or_else(|error| panic!("{error:#}"));
+            assert_eq!(problems, Vec::<String>::new(), "{}", problems.join("\n"));
+            let seed_8 = records
+                .iter()
+                .find(|(_, record)| record.seed == 8)
+                .map(|(_, record)| record)
+                .expect("the checked-in corpus keeps seed 8");
+            assert_eq!(seed_8.start, StartKind::Dealt);
+            assert_eq!(seed_8.dealt, Some(vec![PlayerId::P1, PlayerId::P2]));
+            assert!(!seed_8.endings);
+            let replayed = replay_record(seed_8).unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert_eq!(replayed.start, StartKind::Dealt);
+            let mut p1_only = seed_8.clone();
+            p1_only.dealt = Some(vec![PlayerId::P1]);
+            let p1_only = replay_record(&p1_only).unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert_ne!(
+                replayed.hash, p1_only.hash,
+                "replay_record ignored the pinned dealt seats"
+            );
+
+            let seed_3760 = records
+                .iter()
+                .find(|(_, record)| record.seed == 3760)
+                .map(|(_, record)| record)
+                .expect("the checked-in corpus keeps seed 3760");
+            assert_eq!(seed_3760.start, StartKind::Plain);
+            assert!(seed_3760.endings);
+        }
+
+        #[test]
+        fn a_corpus_record_uses_its_pinned_endings_channel_flag() {
+            register_all();
+            let (records, problems) =
+                read_corpus(Path::new(CORPUS_DIR)).unwrap_or_else(|error| panic!("{error:#}"));
+            assert_eq!(problems, Vec::<String>::new(), "{}", problems.join("\n"));
+            let record = records
+                .iter()
+                .find(|(_, record)| record.seed == 3760)
+                .map(|(_, record)| record)
+                .expect("the checked-in corpus keeps seed 3760");
+            let with = replay_record(record).unwrap_or_else(|failure| panic!("{}", failure.message));
+            let mut without_record = record.clone();
+            without_record.endings = false;
+            let without =
+                replay_record(&without_record).unwrap_or_else(|failure| panic!("{}", failure.message));
+            // No assertion on the terminal reason: whether this seed's channel game ends
+            // through the channel is chance (ENDINGS_END_CHANCE per step), so any
+            // game-altering card, engine or policy change can flip it; the second
+            // half was vacuous besides (check_termination already refuses those
+            // reasons without the channel). The hash comparison below is the
+            // property of the change: it proves replay_record uses record.endings.
+            assert_ne!(with.hash, without.hash, "replay_record ignored record.endings");
+        }
+
+        #[test]
+        fn a_corpus_record_uses_its_pinned_run_handicaps_and_deck_marks() {
+            register_all();
+            let mut record = sound_run(1);
+            record
+                .handicaps
+                .as_mut()
+                .and_then(|handicaps| handicaps.get_mut(PlayerId::P1))
+                .expect("a run record handicaps p1")
+                .hero_armor = Some(7);
+            record.deck_marks.as_mut().expect("a run record sets marks").p1 = Some(vec![DeckMark {
+                index: 0,
+                radiant: true,
+                upgrades: 1,
+            }]);
+            assert_eq!(lint_record(&record), Vec::<String>::new());
+            let pinned = replay_record(&record).unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert_eq!(pinned.start, StartKind::Run);
+
+            let mut other_handicap = record.clone();
+            other_handicap
+                .handicaps
+                .as_mut()
+                .and_then(|handicaps| handicaps.get_mut(PlayerId::P1))
+                .expect("a run record handicaps p1")
+                .hero_armor = Some(8);
+            assert_eq!(lint_record(&other_handicap), Vec::<String>::new());
+            let other_handicap =
+                replay_record(&other_handicap).unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert_ne!(
+                pinned.hash, other_handicap.hash,
+                "replay_record ignored the pinned handicaps"
+            );
+
+            let mut no_marks = record;
+            no_marks.deck_marks.as_mut().expect("a run record sets marks").p1 = Some(Vec::new());
+            assert_eq!(lint_record(&no_marks), Vec::<String>::new());
+            let no_marks = replay_record(&no_marks).unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert_ne!(
+                pinned.hash, no_marks.hash,
+                "replay_record ignored the pinned deck marks"
+            );
         }
     }
 
@@ -4665,6 +6090,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn r180_seeds_with_one_seat_on_medium_or_hard_no_throw_a_real_ending_and_a_replay_that_matches() {
             let from = first_seed(None);
             let size = wave_size(None);
@@ -4753,12 +6179,14 @@ pub(crate) mod tests {
                 seed: 1,
                 rotation: Some(handicap_for_seed(1).who()),
                 start: StartKind::Plain,
+                endings: false,
                 stage: FailureStage::Growth,
                 signature: String::new(),
                 message: "step 3 grew".into(),
                 decks: Box::new((Vec::new(), Vec::new())),
                 forced: Vec::new(),
                 turn: 4,
+                radiant: 0,
                 actions: 3,
             };
             let failed = Wave {
@@ -4790,7 +6218,6 @@ pub(crate) mod tests {
 
     mod fuzz_starting_states {
         use super::*;
-        use jackioh_cards::CATALOG_VERSION;
 
         /// The seeds CI's `cargo jackioh fuzz --seeds 200` plays.
         const CI_SEEDS: u32 = 200;
@@ -4818,7 +6245,7 @@ pub(crate) mod tests {
         }
 
         #[test]
-        fn ci_s_seeds_draw_every_start_in_both_waves_and_a_corpus_record_draws_none() {
+        fn ci_s_seeds_draw_every_start_in_both_waves_and_a_plain_setup_draws_none() {
             let waves: [fn(u32) -> GameSetup; 2] = [GameSetup::gate, GameSetup::handicapped];
             for wave in waves {
                 let drawn: IndexSet<&str> = (1..=CI_SEEDS).map(|seed| wave(seed).start.as_str()).collect();
@@ -4917,6 +6344,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn a_game_from_each_start_plays_monitor_clean_and_folds_back_to_its_live_hash() {
             register_all();
             let plain = {
@@ -4946,6 +6374,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn a_planted_portal_to_the_past_is_cast_from_a_manufactured_last_board_and_the_game_folds_back() {
             register_all();
             let _preview = preview_every_set();
@@ -5011,12 +6440,14 @@ pub(crate) mod tests {
                 seed: 3,
                 rotation: None,
                 start: StartKind::GlitchBoards,
+                endings: false,
                 stage: FailureStage::Replay,
                 signature: String::new(),
                 message: "it broke".into(),
                 decks: Box::new((Vec::new(), Vec::new())),
                 forced: Vec::new(),
                 turn: 2,
+                radiant: 0,
                 actions: 1,
             };
             let text = report(std::slice::from_ref(&failure), 1, 0.0);
@@ -5054,22 +6485,90 @@ pub(crate) mod tests {
         }
 
         #[test]
-        fn a_corpus_record_replays_from_the_plain_start_whatever_start_its_seed_draws() {
+        fn a_failure_prints_copy_pasteable_pinned_corpus_fields() {
+            let failure = |start: StartKind, endings: bool| Failure {
+                seed: 1,
+                rotation: None,
+                start,
+                endings,
+                stage: FailureStage::Replay,
+                signature: String::new(),
+                message: "it broke".into(),
+                decks: Box::new(decks_for_seed(1)),
+                forced: Vec::new(),
+                turn: 2,
+                radiant: 0,
+                actions: 1,
+            };
+            for (start, endings, field) in [
+                (StartKind::Plain, false, None),
+                (StartKind::Dealt, false, Some("dealt")),
+                (StartKind::LastBoards, true, Some("lastBoards")),
+                (StartKind::GlitchBoards, false, Some("glitchBoards")),
+            ] {
+                let failure = failure(start, endings);
+                let options = failure.start_options();
+                let text = report(std::slice::from_ref(&failure), 1, 0.0);
+                assert!(
+                    text.contains(&format!("\n  \"start\": {},\n", json!(start))),
+                    "{text}"
+                );
+                assert!(text.contains(&format!("\n  \"endings\": {endings},\n")), "{text}");
+                if let Some(field) = field {
+                    let value = match start {
+                        StartKind::Dealt => json!(options.dealt),
+                        StartKind::LastBoards => json!(options.last_boards),
+                        StartKind::GlitchBoards => json!(options.glitch_boards),
+                        StartKind::Plain | StartKind::Run => Value::Null,
+                    };
+                    assert!(text.contains(&format!("\n  \"{field}\": {value},\n")), "{text}");
+                }
+            }
+        }
+
+        #[test]
+        fn a_corpus_record_replays_its_pinned_last_boards() {
             register_all();
             let seed = first_seed_drawing(StartKind::LastBoards);
+            let pinned = (
+                vec![LastBoardEntry {
+                    def_id: BOARD_POOL[0].clone(),
+                    radiant: false,
+                }],
+                vec![LastBoardEntry {
+                    def_id: BOARD_POOL[1].clone(),
+                    radiant: true,
+                }],
+            );
             let record = CorpusRecord {
-                seed,
-                catalog_version: CATALOG_VERSION.to_string(),
-                decks: decks_for_seed(seed),
-                found: "a test's record".to_string(),
-                retired: None,
+                start: StartKind::LastBoards,
+                last_boards: Some(pinned.clone()),
+                ..super::fuzz_regression_corpus::sound(seed)
             };
+            assert_eq!(lint_record(&record), Vec::<String>::new());
+            assert_ne!(
+                record.last_boards,
+                GameSetup::gate(seed)
+                    .create_options(record.decks.clone())
+                    .last_boards,
+                "the fixture must differ from the board this seed draws today"
+            );
             let replayed = replay_record(&record).unwrap_or_else(|failure| panic!("{}", failure.message));
-            assert_eq!(replayed.start, StartKind::Plain);
-            let drawn =
-                fuzz_seed(seed, &Forcing::default()).unwrap_or_else(|failure| panic!("{}", failure.message));
-            assert_eq!(drawn.start, StartKind::LastBoards);
-            assert_ne!(replayed.hash, drawn.hash);
+            assert_eq!(replayed.start, StartKind::LastBoards);
+            assert_eq!(
+                replayed.hash,
+                replay_record(&record)
+                    .unwrap_or_else(|failure| panic!("{}", failure.message))
+                    .hash
+            );
+            let mut other = record.clone();
+            other.last_boards = Some((pinned.1, pinned.0));
+            assert_eq!(lint_record(&other), Vec::<String>::new());
+            let other = replay_record(&other).unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert_ne!(
+                replayed.hash, other.hash,
+                "replay_record ignored the literal pinned last boards"
+            );
         }
     }
 
@@ -5077,7 +6576,6 @@ pub(crate) mod tests {
     mod fuzz_run_starts {
         use super::*;
         use jackioh_engine::testkit::json_as;
-        use jackioh_engine::{SetupKind, validate_setup};
 
         /// The seeds CI's `cargo jackioh fuzz --seeds 200` plays.
         const CI_SEEDS: u32 = 200;
@@ -5274,6 +6772,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn a_run_start_game_plays_monitor_clean_and_folds_back_to_its_live_hash() {
             register_all();
             let waves: [(SetupOf, PlaySeed); 2] = [
@@ -5300,6 +6799,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn a_run_seed_played_alone_is_counted_as_run_in_the_summary_and_the_json() {
             register_all();
             let waves: [(SetupOf, PlayWave); 2] = [
@@ -5339,12 +6839,14 @@ pub(crate) mod tests {
                 seed,
                 rotation: None,
                 start,
+                endings: false,
                 stage: FailureStage::Replay,
                 signature: String::new(),
                 message: "it broke".into(),
                 decks: Box::new(decks),
                 forced: Vec::new(),
                 turn: 2,
+                radiant: 0,
                 actions: 1,
             };
             let wave_of = |failure: Failure| Wave {
@@ -5380,6 +6882,16 @@ pub(crate) mod tests {
                 text.contains(&format!("\n  marks: {}\n", json!(options.deck_marks))),
                 "{text}"
             );
+            assert!(text.contains("\n  \"start\": \"run\",\n"), "{text}");
+            assert!(
+                text.contains(&format!("\n  \"handicaps\": {},\n", json!(options.handicaps))),
+                "{text}"
+            );
+            assert!(
+                text.contains(&format!("\n  \"deckMarks\": {},\n", json!(options.deck_marks))),
+                "{text}"
+            );
+            assert!(text.contains("\n  \"endings\": false,\n"), "{text}");
             let json = wave_of(run).json();
             assert_eq!(json["failures"][0]["handicaps"], json!(options.handicaps));
             assert_eq!(json["failures"][0]["marks"], json!(options.deck_marks));
@@ -5540,7 +7052,7 @@ pub(crate) mod tests {
         }
 
         #[test]
-        fn a_share_of_ci_s_seeds_takes_the_channel_in_both_waves_and_a_corpus_record_takes_none() {
+        fn a_share_of_ci_s_seeds_takes_the_channel_in_both_waves_and_a_plain_setup_takes_none() {
             for setup_of in [GameSetup::gate, GameSetup::handicapped] {
                 let taking = (1..=200).filter(|seed| setup_of(*seed).endings).count();
                 assert!(
@@ -5557,6 +7069,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn the_gate_s_channel_games_log_its_actions_and_fold_back_from_a_concede_and_an_accepted_draw() {
             register_all();
             let _preview = preview_every_set();
@@ -5596,6 +7109,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn a_planted_listener_s_opponent_emotes_through_the_channel_and_the_game_folds_back() {
             install_listener();
             let _preview = preview_every_set();
@@ -5647,6 +7161,7 @@ pub(crate) mod tests {
                     paused: Vec::new(),
                     played: IndexSet::new(),
                     radiant: IndexSet::new(),
+                    forecast_judged: 0,
                 };
                 let failure = check_termination(&GameSetup::plain(1), &run)
                     .expect_err("a game without the channel cannot end by one of its endings");
@@ -5697,6 +7212,7 @@ pub(crate) mod tests {
                     paused: Vec::new(),
                     played: IndexSet::new(),
                     radiant: IndexSet::new(),
+                    forecast_judged: 0,
                 };
                 assert_eq!(
                     check_termination(&GameSetup::plain(1), &run)
@@ -5742,6 +7258,7 @@ pub(crate) mod tests {
     mod fuzz_forced_cards {
         use super::fuzz_probe_stage::seatless;
         use super::*;
+        use jackioh_engine::validate_deck;
 
         /// The seeds CI's `cargo jackioh fuzz --seeds 200` plays.
         const CI_SEEDS: u32 = 200;
@@ -5983,10 +7500,39 @@ pub(crate) mod tests {
                 wave.summary()
             );
         }
+
+        /// #4369: `--cards` forces into Duos seeds too, while `--radiant` still refuses them.
+        #[test]
+        fn cards_force_into_duos_seeds_but_radiant_still_refuses_them() {
+            use clap::Parser;
+            #[derive(Parser)]
+            struct Cli {
+                #[command(flatten)]
+                args: Args,
+            }
+            let parse =
+                |words: &[&str]| Cli::try_parse_from(std::iter::once("fuzz").chain(words.iter().copied()));
+            let duos = parse(&["--duos", "--cards", "core-090"]).expect("--cards with --duos parses");
+            assert_eq!(duos.args.cards, ["core-090".to_string()]);
+            assert!(duos.args.duos);
+            assert!(
+                parse(&["--duos", "--cards", "core-090", "--radiant"]).is_err(),
+                "--radiant --duos is refused"
+            );
+            assert!(
+                parse(&["--duos", "--radiant"]).is_err(),
+                "--radiant --duos is refused without --cards too"
+            );
+            assert!(
+                parse(&["--cards", "core-090", "--regress"]).is_err(),
+                "--cards --regress is still refused"
+            );
+        }
     }
 
     /// #3113: the pull request's gate also plays the cards its change touches.
     mod fuzz_changed_cards {
+        use super::fuzz_probe_stage::seatless;
         use super::*;
 
         fn ids(ids: &[&str]) -> Vec<String> {
@@ -6000,6 +7546,7 @@ pub(crate) mod tests {
                 handicap: false,
                 duos: false,
                 cards: Vec::new(),
+                radiant: false,
                 regress: false,
                 json: false,
             }
@@ -6024,6 +7571,7 @@ pub(crate) mod tests {
                     named: Vec::new(),
                     cards: (0..count).map(|n| format!("card-{n}")).collect(),
                     per_seed: per_seed.min(count),
+                    radiant: false,
                 };
                 let seeds = rotation_seeds(count, per_seed, CHANGED_DEALS_PER_CARD);
                 let mut dealt: IndexMap<String, u32> = IndexMap::new();
@@ -6069,6 +7617,19 @@ pub(crate) mod tests {
             assert!(Forcing::from_changed(&[]).for_seed(1).is_empty());
         }
 
+        /// #4369: the changed-Duos rotation deals each card `CHANGED_DUOS_DEALS_PER_CARD` times in
+        /// at most `CHANGED_DUOS_MAX_SEEDS` seeds, a smaller wave than the 1v1 one.
+        #[test]
+        fn the_changed_duos_rotation_is_bounded_and_smaller_than_the_1v1_wave() {
+            assert!(rotation_seeds(1, 1, CHANGED_DUOS_DEALS_PER_CARD) > 0);
+            assert_eq!(
+                rotation_seeds(100, 10, CHANGED_DUOS_DEALS_PER_CARD).min(CHANGED_DUOS_MAX_SEEDS),
+                CHANGED_DUOS_MAX_SEEDS
+            );
+            const { assert!(CHANGED_DUOS_MAX_SEEDS <= CHANGED_WAVE_MAX_SEEDS) };
+            const { assert!(CHANGED_DUOS_DEALS_PER_CARD <= CHANGED_DEALS_PER_CARD) };
+        }
+
         /// #3113: a changed card is in both decks of every seed of its wave, and the summary counts the
         /// games that dealt each pool card.
         #[test]
@@ -6085,6 +7646,209 @@ pub(crate) mod tests {
             assert!(
                 summary.contains("forced (--cards core-090): core-090 into both decks"),
                 "{summary}"
+            );
+        }
+
+        /// The deck marks a `Run` start at `seed` draws and pins `pinned` Radiant, both seats.
+        fn radiant_marks(seed: u32, pinned: usize, forcing: &Forcing) -> PerPlayerOpt<Vec<DeckMark>> {
+            let setup = GameSetup::radiant(seed, pinned);
+            let decks = forcing.deal(seed, setup.decks(pinned));
+            setup
+                .create_options(decks)
+                .deck_marks
+                .expect("a run start sets deck marks")
+        }
+
+        /// #4161: a Radiant game is a dungeon fight whose forced cards, first in both decks, are marked
+        /// Radiant; pinning none leaves the marks the run start drew.
+        #[test]
+        fn a_radiant_game_pins_its_forced_cards_radiant_in_both_decks() {
+            register_all();
+            let forcing = Forcing::from_changed(&ids(&["core-090"])).pinned_radiant();
+            let setup = GameSetup::radiant(1, 1);
+            assert_eq!(setup.start, StartKind::Run);
+            let decks = forcing.deal(1, setup.decks(1));
+            assert_eq!(decks.0[0], "core-090");
+            assert_eq!(decks.1[0], "core-090");
+            let options = setup.create_options(decks.clone());
+            assert_eq!(options.decks, decks);
+            let marks = options.deck_marks.expect("a run start sets deck marks");
+            for player in [PlayerId::P1, PlayerId::P2] {
+                let list = marks.get(player).expect("each seat has marks");
+                let first: Vec<&DeckMark> = list.iter().filter(|mark| mark.index == 0).collect();
+                assert_eq!(first.len(), 1, "{player:?}: {list:?}");
+                assert!(first[0].radiant, "{player:?}: {list:?}");
+                assert!(
+                    list.windows(2).all(|pair| pair[0].index < pair[1].index),
+                    "{list:?}"
+                );
+            }
+            // Pinning none is the plain run start's own draw.
+            let plain = GameSetup {
+                start: StartKind::Run,
+                ..GameSetup::plain(1)
+            };
+            assert_eq!(
+                radiant_marks(1, 0, &forcing),
+                plain
+                    .create_options(forcing.deal(1, plain.decks(1)))
+                    .deck_marks
+                    .unwrap()
+            );
+        }
+
+        /// How many windows of `CHANGED_RADIANT_DEALS_PER_CARD` seeds the Radiant rotation's test tries
+        /// for one whose plain games never resolve core-090 Radiant by chance.
+        const PLAIN_WINDOWS: u32 = 8;
+
+        /// #4161: the Radiant rotation plays the changed card Radiant-resolved, which its plain wave over
+        /// the same seeds does not. The seeds are the first window where core-090 resolves Radiant by
+        /// chance in no plain game, since which games do moves with every card joining a pool (#848).
+        #[test]
+        fn a_radiant_rotation_resolves_the_changed_card_radiant() {
+            let forcing = Forcing::from_changed(&ids(&["core-090"]));
+            let from = (0..PLAIN_WINDOWS)
+                .map(|window| 1 + window * CHANGED_RADIANT_DEALS_PER_CARD)
+                .find(|from| {
+                    let plain = play_wave(*from, CHANGED_RADIANT_DEALS_PER_CARD, &forcing);
+                    !plain.coverage.radiant.contains("core-090")
+                })
+                .expect("a window of plain games that never resolves core-090 Radiant");
+            let wave = play_radiant_wave(from, CHANGED_RADIANT_DEALS_PER_CARD, &forcing.pinned_radiant());
+            assert!(
+                wave.failures.is_empty(),
+                "{}",
+                report(&wave.failures, CHANGED_RADIANT_DEALS_PER_CARD, wave.elapsed_ms)
+            );
+            assert!(wave.coverage.radiant.contains("core-090"), "{}", wave.summary());
+            assert_eq!(
+                wave.coverage.deals.get("core-090"),
+                Some(&CHANGED_RADIANT_DEALS_PER_CARD)
+            );
+            assert_eq!(
+                wave.starts.get("run"),
+                Some(&(CHANGED_RADIANT_DEALS_PER_CARD as usize))
+            );
+        }
+
+        /// #4161: the rotation stays within its caps, which sit at or under the changed wave's.
+        #[test]
+        fn the_radiant_rotation_is_sized_within_its_caps() {
+            const {
+                assert!(CHANGED_RADIANT_DEALS_PER_CARD <= CHANGED_DEALS_PER_CARD);
+                assert!(CHANGED_RADIANT_MAX_SEEDS <= CHANGED_WAVE_MAX_SEEDS);
+            }
+            for count in [1, 10, 633] {
+                let per_seed = FORCED_SET_CARDS_PER_SEED.min(count);
+                let seeds = rotation_seeds(count, per_seed, CHANGED_RADIANT_DEALS_PER_CARD)
+                    .min(CHANGED_RADIANT_MAX_SEEDS);
+                assert!(
+                    seeds > 0 && seeds <= CHANGED_RADIANT_MAX_SEEDS,
+                    "{count} cards: {seeds}"
+                );
+            }
+        }
+
+        /// #4161: a failing Radiant seed's report has a `reproduce:` line with `--radiant`, its marks pin
+        /// the card, and `--cards ... --radiant` replays the identical game.
+        #[test]
+        fn a_radiant_failure_prints_a_reproduce_line_that_replays_it() {
+            register_all();
+            let _preview = preview_every_set();
+            let forcing = Forcing::from_changed(&ids(&["core-090"])).pinned_radiant();
+            let play = |seed: u32, forcing: &Forcing| {
+                let pinned = forcing.for_seed(seed).len();
+                let decks = GameSetup::radiant(seed, pinned).decks(pinned);
+                forcing.play(seed, decks, |decks| {
+                    fuzz_radiant_deal(seed, pinned, decks, seatless)
+                })
+            };
+            let (seed, failure) = (2..=SWEEP_SEEDS)
+                .find_map(|seed| play(seed, &forcing).err().map(|failure| (seed, failure)))
+                .expect("a Radiant seed must fail under the seatless probe reducer");
+            assert_eq!(failure.radiant, 1);
+            assert_eq!(failure.forced, ["core-090"]);
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(
+                text.contains(&format!(
+                    "  reproduce: cargo jackioh fuzz --from {seed} --seeds 1 --cards core-090 --radiant"
+                )),
+                "{text}"
+            );
+            assert!(
+                text.contains("Reproduce one seed with: cargo jackioh fuzz --from <seed> --seeds 1 --cards core-090 --radiant"),
+                "{text}"
+            );
+            let marks = failure.start_options().deck_marks;
+            assert!(
+                text.contains(&format!("  \"deckMarks\": {},", json!(marks))),
+                "{text}"
+            );
+            let marks = marks.expect("a run start has marks");
+            for player in [PlayerId::P1, PlayerId::P2] {
+                assert!(
+                    marks
+                        .get(player)
+                        .is_some_and(|list| list.iter().any(|mark| mark.index == 0 && mark.radiant)),
+                    "{player:?}"
+                );
+            }
+            let replay = Forcing::from_cards(&failure.forced).unwrap().pinned_radiant();
+            let again = play(seed, &replay)
+                .err()
+                .expect("the reproduce line replays the failure");
+            assert_eq!(again.decks, failure.decks);
+            assert_eq!(again.message, failure.message);
+            assert_eq!(again.forced, failure.forced);
+            assert_eq!(again.radiant, failure.radiant);
+        }
+
+        /// #4161: `--radiant` replays one seed, needs `--cards`, excludes the other waves, and changes
+        /// nothing in a run without it.
+        #[test]
+        fn the_radiant_flag_replays_one_seed_and_stays_out_of_the_other_runs() {
+            assert!(!plays_changed(&Args {
+                radiant: true,
+                cards: ids(&["core-090"]),
+                ..args()
+            }));
+            let forcing = Forcing::from_changed(&ids(&["core-090"]));
+            assert!(reproduce_command(3, false, &forcing).ends_with("--cards core-090"));
+            assert!(
+                reproduce_command(3, false, &forcing.pinned_radiant())
+                    .ends_with("--cards core-090 --radiant")
+            );
+            assert!(forcing.json().get("radiant").is_none());
+            assert_eq!(forcing.pinned_radiant().json()["radiant"], json!(true));
+            let plain = forcing.summary_line().unwrap();
+            assert_eq!(
+                plain,
+                "  forced (--cards core-090): core-090 into both decks of every seed\n"
+            );
+            let pinned = forcing.pinned_radiant().summary_line().unwrap();
+            assert!(pinned.contains("pinned Radiant"), "{pinned}");
+            let parse = |argv: &[&str]| {
+                <Args as clap::Args>::augment_args(clap::Command::new("t"))
+                    .try_get_matches_from(std::iter::once("t").chain(argv.iter().copied()))
+            };
+            assert!(parse(&["--cards", "core-090", "--radiant"]).is_ok());
+            assert!(parse(&["--radiant"]).is_err());
+            assert!(parse(&["--radiant", "--handicap", "--cards", "x"]).is_err());
+            assert!(parse(&["--radiant", "--regress", "--cards", "x"]).is_err());
+        }
+
+        /// #4161: no deckable changed card forces nothing, so the rotation plays no seed.
+        #[test]
+        fn the_empty_changed_forcing_plays_no_radiant_games() {
+            let forcing = Forcing::from_changed(&ids(&["no-such-card"]));
+            assert!(forcing.cards.is_empty());
+            assert_eq!(
+                rotation_seeds(
+                    forcing.cards.len(),
+                    forcing.per_seed,
+                    CHANGED_RADIANT_DEALS_PER_CARD
+                ),
+                0
             );
         }
 
@@ -6132,8 +7896,8 @@ pub(crate) mod tests {
     mod fuzz_daily_top_up {
         use super::*;
 
-        /// The seeds the daily 1v1 run plays, as super.yml's `FUZZ_SEEDS` says it: `daily_seeds` is what
-        /// the pool needs, and a test holds the two together.
+        /// The floor super.yml's `FUZZ_SEEDS` (the seeds the daily 1v1 run plays) never drops under, sized
+        /// for the 633-card pool: `daily_seeds` is what the pool needs, and a test holds the two together.
         const DAILY_FUZZ_SEEDS: u32 = 10_000;
 
         /// The deck slots each pool card gets over the daily run's seeds, kept as the pool grows: the
@@ -6141,10 +7905,13 @@ pub(crate) mod tests {
         /// 633 cards is 790 slots a card, rounded down.
         const DAILY_DEALS_PER_CARD: u64 = 780;
 
-        /// The most seeds past `DAILY_FUZZ_SEEDS` the daily test plays, about 15 minutes of games on the
-        /// daily run's runner. A pool that needs more has outgrown super.yml's `FUZZ_SEEDS`, which a
-        /// person edits (the bot may not change `.github/`).
-        const DAILY_TOP_UP_MAX: u32 = 4_000;
+        /// The most seeds past super.yml's `FUZZ_SEEDS` the daily test plays, about 15 minutes of both
+        /// waves in the test profile on the daily run's four cores. On 2026-11-16 the plain wave played
+        /// about 50 seeds a minute there and the handicapped wave is about a third slower (release: 921 s
+        /// against 697 s), so the 4,000 this was first set to took nearly two hours and the daily-tests
+        /// job's 60-minute timeout cancelled it (#4035). A pool that needs more has outgrown super.yml's
+        /// `FUZZ_SEEDS`, which a person edits (the bot may not change `.github/`).
+        const DAILY_TOP_UP_MAX: u32 = 300;
 
         /// The seeds that deal each pool card `DAILY_DEALS_PER_CARD` deck slots when the pool holds
         /// `pool` cards.
@@ -6154,9 +7921,9 @@ pub(crate) mod tests {
             u32::try_from(needed).unwrap_or(u32::MAX)
         }
 
-        /// The seeds `pool` cards need past what super.yml plays: 0 while `DAILY_FUZZ_SEEDS` is enough.
-        fn extra_daily_seeds(pool: usize) -> u32 {
-            daily_seeds(pool).saturating_sub(DAILY_FUZZ_SEEDS)
+        /// The seeds `pool` cards need past the `played` seeds super.yml plays: 0 while those are enough.
+        fn extra_daily_seeds(pool: usize, played: u32) -> u32 {
+            daily_seeds(pool).saturating_sub(played)
         }
 
         /// super.yml's `FUZZ_SEEDS`, the 1v1 daily run's seeds.
@@ -6177,11 +7944,19 @@ pub(crate) mod tests {
 
         #[test]
         fn daily_seeds_grow_with_the_pool_and_super_yml_plays_the_baseline() {
-            assert_eq!(workflow_seeds(), DAILY_FUZZ_SEEDS, "super.yml's FUZZ_SEEDS moved");
+            assert!(
+                workflow_seeds() >= DAILY_FUZZ_SEEDS,
+                "super.yml's FUZZ_SEEDS fell under the baseline"
+            );
             // The pool super.yml's count was sized for needs no top-up, and the first card past it does.
-            assert_eq!(extra_daily_seeds(633), 0);
-            assert_eq!(extra_daily_seeds(641), 0);
-            assert_eq!(extra_daily_seeds(642), 16);
+            assert_eq!(extra_daily_seeds(633, DAILY_FUZZ_SEEDS), 0);
+            assert_eq!(extra_daily_seeds(641, DAILY_FUZZ_SEEDS), 0);
+            assert_eq!(extra_daily_seeds(642, DAILY_FUZZ_SEEDS), 16);
+            assert_eq!(
+                extra_daily_seeds(799, 12_500),
+                0,
+                "a wider FUZZ_SEEDS covers a bigger pool"
+            );
             let today = daily_seeds(633);
             assert!(today <= DAILY_FUZZ_SEEDS, "{today}");
             assert!(
@@ -6196,16 +7971,18 @@ pub(crate) mod tests {
         #[test]
         #[ignore = "daily: the seeds the pool needs past super.yml's FUZZ_SEEDS, in both waves; the per-pull-request test of daily_seeds and the workflow's count holds the rule"]
         fn the_days_extra_seeds_keep_every_pool_card_s_deals_as_the_pool_grows() {
-            let extra = extra_daily_seeds(FUZZ_POOL.len());
+            let played = workflow_seeds();
+            let extra = extra_daily_seeds(FUZZ_POOL.len(), played);
             if extra == 0 {
                 return;
             }
             assert!(
                 extra <= DAILY_TOP_UP_MAX,
-                "the pool of {} cards needs {extra} seeds past super.yml's {DAILY_FUZZ_SEEDS}, over the {DAILY_TOP_UP_MAX} this test plays: a person must widen FUZZ_SEEDS in .github/workflows/super.yml (and its fuzz job's shards and timeout)",
-                FUZZ_POOL.len()
+                "the pool of {} cards needs {extra} seeds past super.yml's {played}, over the {DAILY_TOP_UP_MAX} this test plays: a person must widen FUZZ_SEEDS in .github/workflows/super.yml to at least {} (and check its fuzz job's shards and timeout)",
+                FUZZ_POOL.len(),
+                daily_seeds(FUZZ_POOL.len())
             );
-            let from = DAILY_FUZZ_SEEDS + 1;
+            let from = played + 1;
             for wave in [
                 play_wave(from, extra, &Forcing::default()),
                 play_handicap_wave(from, extra, &Forcing::default()),
@@ -6269,6 +8046,7 @@ pub(crate) mod tests {
 
         /// #2426: the report is the same whatever the thread count, over the same seeds.
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn the_coverage_is_the_same_on_one_thread_and_on_four() {
             let one = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();
             let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
@@ -6391,6 +8169,40 @@ pub(crate) mod tests {
                     "  deals per pool card: fewest 0 ({0}), most 0 ({0})\n",
                     FUZZ_POOL[0]
                 )
+            );
+        }
+
+        /// I18 (#4111): the summary counts the attacks the monitor held to their forecast, summed over
+        /// the wave's games.
+        #[test]
+        fn the_summary_counts_the_attacks_held_to_their_forecast() {
+            assert_eq!(
+                Coverage::default().with_forecast_judged(3).forecast_line(),
+                "  forecast attacks judged: 3\n"
+            );
+            let mut coverage = Coverage::default();
+            coverage.merge(Coverage::default().with_forecast_judged(3));
+            coverage.merge(Coverage::default().with_forecast_judged(4));
+            assert_eq!(coverage.forecast_judged, 7);
+            assert_eq!(
+                Coverage::default().forecast_line(),
+                "  forecast attacks judged: 0\n"
+            );
+        }
+
+        /// I18 (#4111): a wave's games hold their plain attacks to the forecast, and the summary and
+        /// `--json` say how many they judged, so a filter that judges nothing shows.
+        #[test]
+        fn a_wave_holds_its_attacks_to_their_forecast() {
+            let wave = play_wave(1, 1, &Forcing::default());
+            assert!(wave.failures.is_empty(), "{}", report(&wave.failures, 1, 0.0));
+            let judged = wave.json()["forecastJudged"].as_u64().unwrap_or(0);
+            assert!(judged > 0, "seed 1 judged no attack against its forecast");
+            assert!(
+                wave.summary()
+                    .contains(&format!("\n  forecast attacks judged: {judged}\n")),
+                "{}",
+                wave.summary()
             );
         }
     }

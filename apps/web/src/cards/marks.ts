@@ -84,6 +84,18 @@ export const END_OF_TURN_MARK = "endOfTurn";
 /** The engine's `END_OF_TURN_MARK_COLOR` (`effects/delay.rs`). */
 export const END_OF_TURN_MARK_COLOR: MarkColor = "orange";
 
+/** The engine's `DEADLINE_MARK` (`effects/delay.rs`): the mark a Unit a kill deadline watches wears (R3550006). */
+export const DEADLINE_MARK = "deadline";
+
+/** The engine's `DEADLINE_MARK_COLOR` (`effects/delay.rs`). */
+export const DEADLINE_MARK_COLOR: MarkColor = "crimson";
+
+/** The engine's `MEET_MARK` (`hand_order.rs`): the mark a card of a waiting meeting pair wears in its owner's hand (R3558002). */
+export const MEET_MARK = "meet";
+
+/** The engine's `MEET_MARK_COLOR` (`hand_order.rs`): Duo's gold, for a promised Radiance. */
+export const MEET_MARK_COLOR: MarkColor = "gold";
+
 /** #2270: what a card on the field at its last Brittle count wears: Allure's aura in gray, no badge, no mark. */
 export const BRITTLE_LAST_COLOR: MarkColor = "gray";
 
@@ -108,6 +120,16 @@ export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   duo: { name: "Duo", text: "Marked: made Radiant at the start of its marker's next turn" },
   // R2321001: Training Grounds #15 In a hurry's Rush Tokens, while their destroy at the end of this turn waits.
   [END_OF_TURN_MARK]: { name: "End of turn", text: "Marked: destroyed at the end of this turn" },
+  // R3550006: Stinkyscape+ #94 PIP's performance plan, while the kill deadline waits.
+  [DEADLINE_MARK]: {
+    name: "Deadline",
+    text: "Marked: destroyed at the end of its controller's next turn unless it destroys a Unit first",
+  },
+  // R3558002: Stinkyscape+ #98 Doomed Ship's pair, while the meeting waits.
+  [MEET_MARK]: {
+    name: "Meets",
+    text: "Marked: when it and its partner sit side by side in your hand, both become Radiant",
+  },
 };
 
 export const UNKNOWN_MARK_WORDS: MarkWords = { name: "Mark", text: "Marked: an effect is waiting on this card" };

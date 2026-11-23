@@ -8,7 +8,7 @@
 // about a card is a button that opens that card, the face of which the face model works out (`faces.ts`), and
 // the history that joins each view's window to the last (R745, useLogHistory.ts) keeps the lines it was shown.
 
-import { Fragment, memo, useContext, useLayoutEffect, useMemo, useRef, type MouseEvent, type ReactElement } from "react";
+import { Fragment, memo, useContext, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactElement } from "react";
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
@@ -94,7 +94,10 @@ const LogItem = memo(function LogItem({ line }: { line: Line }): ReactElement {
   );
 });
 
-export default function Log({ view, revealed = false }: LogProps): ReactElement {
+function Log({ view: newest, revealed = false }: LogProps): ReactElement {
+  // #3633: the log follows the board a render behind, at low priority, so the frame a view lands in is
+  // not also the one that reads its whole window into lines (R3351000's phone budget).
+  const view = useDeferredValue(newest);
   const locale = useLocale();
   // R243: a match-made card is named from the definition the view carries for it.
   const catalog = useContext(CatalogContext);
@@ -121,15 +124,42 @@ export default function Log({ view, revealed = false }: LogProps): ReactElement 
     return [{ key: history.keys[index] ?? `${view.viewer}-window-${String(index)}`, type: line.event, text: line.text, face: faces[index] ?? null }];
   });
   const shown = [...history.kept, ...windowLines].slice(-LOG_HISTORY_LIMIT);
+  // #4140: the screen-reader announcer's words: the newest shown line's plain words (`RichText.full`,
+  // never an instance id or a def id; CLAUDE.md rule 7). The ref primes silently on mount and on
+  // hotseat hand-over, so history never replays; only a new newest key speaks.
+  const newestLine: Line | null = shown.length === 0 ? null : (shown[shown.length - 1] ?? null);
+  const [said, setSaid] = useState<{ key: string | null; text: string }>({ key: null, text: "" });
+  const lastKey = useRef<{ viewer: PlayerView["viewer"]; key: string | null } | null>(null);
+  useEffect(() => {
+    const key = newestLine?.key ?? null;
+    if (lastKey.current === null || lastKey.current.viewer !== view.viewer) {
+      lastKey.current = { viewer: view.viewer, key };
+      return;
+    }
+    if (key !== lastKey.current.key) {
+      lastKey.current = { viewer: view.viewer, key };
+      setSaid({ key, text: newestLine?.text.full ?? "" });
+    }
+  });
   return (
-    <ol ref={listRef} className="log" data-testid={testid.log} aria-label={t("Game log")}>
-      {shown.map((line, index) => (
-        <Fragment key={line.key}>
-          {/* #757: drawn only; a list holds list items, and the turn's own line names the turn. */}
-          {index > 0 && line.type === "turnStarted" ? <li className="log-divider" aria-hidden="true" /> : null}
-          <LogItem line={line} />
-        </Fragment>
-      ))}
-    </ol>
+    <>
+      <ol ref={listRef} className="log" data-testid={testid.log} aria-label={t("Game log")}>
+        {shown.map((line, index) => (
+          <Fragment key={line.key}>
+            {/* #757: drawn only; a list holds list items, and the turn's own line names the turn. */}
+            {index > 0 && line.type === "turnStarted" ? <li className="log-divider" aria-hidden="true" /> : null}
+            <LogItem line={line} />
+          </Fragment>
+        ))}
+      </ol>
+      {/* #4140: always in the tree (as the draw notices are) so an arriving line is read out; `said`
+          only changes on arrival, so mount, reveal and re-render announce nothing. */}
+      <p className="log-live" data-testid={testid.logLive} role="status" aria-live="polite" aria-atomic="true">
+        <span key={said.key}>{said.text}</span>
+      </p>
+    </>
   );
 }
+
+/** #3633: a queue step re-renders the board but leaves the shown view, so the log draws nothing new and is skipped. */
+export default memo(Log);

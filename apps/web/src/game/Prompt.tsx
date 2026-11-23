@@ -19,12 +19,16 @@
 // focus as it changes (`choiceHover`), and the backs outline the one the opponent's is on.
 // #2757: a Choose one of lanes (`lane-<n>`, Showdown) is no picker at all: LanePick.tsx lights each lane on the
 // board and R514's board answer picks it, so the modal is only its hint and a play's Cancel.
+// #3864: a choice of one board zone (a play's zone, a `cell` prompt, a declared zone target) is the same: a
+// hint and Cancel, answered on the board (`Picker.boardOnly`); only an option naming no cell stays a button.
 
 import {
   Fragment,
   useContext,
   useEffect,
   useId,
+  useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -32,20 +36,22 @@ import {
   type ReactNode,
 } from "react";
 
-import type {
-  ActionBody,
-  CardDef,
-  CardView,
-  MulliganView,
-  PendingView,
-  PlayerId,
-  PlayerView,
-  PromptKind,
-  Selection,
+import {
+  fillParams,
+  type ActionBody,
+  type CardDef,
+  type CardView,
+  type MulliganView,
+  type PendingView,
+  type PlayerId,
+  type PlayerView,
+  type PromptKind,
+  type Selection,
 } from "@jackioh/shared";
 
 import {
   IDLE,
+  hiddenTargetZone,
   highlightFor,
   isBuilding,
   isPlaguePlacementPrompt,
@@ -110,6 +116,8 @@ export type PromptProps = {
   lesson?: boolean;
   /** R2211000: a replay's board: the open prompt as offered, folded and inert; nothing calls `onAction`. */
   readOnly?: boolean;
+  /** R3727003: false on a daily game's board, whose question sequence has no 60-second window (the move's deadline is its window); absent, true (R1563006). */
+  sequenceClock?: boolean;
   /**
    * R2739001: a live online board's relay of card-picker hovers: this seat's engine card picker sends through
    * `emit`, and the opponent's backs outline `opponent`. Absent (hotseat, practice, a replay), nothing is sent.
@@ -223,6 +231,8 @@ type Picker = {
   boardKeys?: ReadonlyMap<string, string>;
   /** #2757: a Choose one of lanes, its lanes in board order: drawn on the board (`LanePick.tsx`), answered by `boardKeys`. */
   lanes?: readonly LaneChoice[];
+  /** #3864: a choice of one board zone, answered on the board alone (`BoardHint`, plus any option naming no cell). */
+  boardOnly?: true;
   /** R1184000: a sequence question's right answers so far, as the view carries them. */
   streak?: number;
   /** R1563006: the sequence question's choice id, which its countdown keys on. */
@@ -294,7 +304,11 @@ function whereOf(view: PlayerView, instanceId: string): string | null {
     if (side.graveyard.some((card) => card.instanceId === instanceId)) return yours ? t("Your graveyard") : t("Enemy graveyard");
     if (side.exile.some((card) => card.instanceId === instanceId)) return yours ? t("Your exile") : t("Enemy exile");
   }
-  return null;
+  // R3777001: a face-down target the viewer may not read is placed by the zone its back lies in.
+  const hidden = hiddenTargetZone(view, instanceId);
+  if (hidden === null) return null;
+  const lane = String(hidden.lane);
+  return hidden.side === "you" ? t("Your backrow, lane {lane}", { lane }) : t("Enemy backrow, lane {lane}", { lane });
 }
 
 function itemForInstance(view: PlayerView, instanceId: string, fallback: string): PickerItem {
@@ -318,8 +332,14 @@ function rowName(row: string): string {
 
 function selectionLabel(view: PlayerView, selection: Selection): string {
   switch (selection.pick) {
-    case "instance":
-      return cardRefFor(view, selection.instanceId)?.defId ?? selection.instanceId;
+    case "instance": {
+      const defId = cardRefFor(view, selection.instanceId)?.defId;
+      if (defId !== undefined) return defId;
+      // R3777001: a face-down target names no card: it reads as a back, told apart by where it lies
+      // (as `ListOption` joins a card's name and its place).
+      const where = hiddenTargetZone(view, selection.instanceId) === null ? null : whereOf(view, selection.instanceId);
+      return where === null ? selection.instanceId : `${t("Face-down card")} — ${where}`;
+    }
     case "hero":
       return sideOf(view, selection.player) === "you" ? t("Your hero") : t("Enemy hero");
     case "zone": {
@@ -345,13 +365,15 @@ function laneAnswers(
   offered: readonly { key: string; option: string }[],
   source: string | undefined,
   radiant: boolean,
+  lookup: CardLookup | null,
+  card?: CardView,
 ): { lanes: LaneChoice[]; boardKeys: Map<string, string> } {
   const lanes: LaneChoice[] = [];
   const boardKeys = new Map<string, string>();
   for (const { key, option } of offered) {
     const lane = laneOf(option);
     if (lane === null) continue;
-    const text = modeText(source, option, radiant);
+    const text = filledModeText(lookup, source, option, radiant, card);
     lanes.push(
       text.detail === undefined
         ? { lane, key, label: t("Lane {lane}", { lane: String(lane) }) }
@@ -362,6 +384,31 @@ function laneAnswers(
   return { lanes: lanes.sort((a, b) => a.lane - b.lane), boardKeys };
 }
 
+/** A mode's translated words with its declared numbers filled from the visible card, or its printed face. */
+function filledModeText(
+  lookup: CardLookup | null,
+  defId: string | undefined,
+  option: string,
+  radiant: boolean,
+  card?: CardView,
+): { label: string; detail?: string } {
+  // Translate while the dictionary can still see the `{key}`s; the same placeholders are then filled in either language.
+  const text = modeText(defId, option, radiant);
+  const def = defId === undefined ? undefined : lookup?.(defId, radiant)?.def;
+  if (def === undefined) return text;
+  const face = radiant ? "radiant" : "base";
+  const fill = (words: string): string =>
+    fillParams(
+      { params: def.params, base: { ...def.base, text: words }, radiant: { ...def.radiant, text: words } },
+      face,
+      card?.params,
+    );
+  return {
+    label: fill(text.label),
+    ...(text.detail === undefined ? {} : { detail: fill(text.detail) }),
+  };
+}
+
 // Route 1: an open `PendingChoice`.
 
 function pickerForPending(
@@ -369,6 +416,7 @@ function pickerForPending(
   view: PlayerView,
   legal: readonly ActionBody[],
   lesson: boolean,
+  lookup: CardLookup | null,
 ): Picker {
   const items = pending.options.map((option): PickerItem => {
     const base: PickerItem = { key: option.key, label: t(option.label) };
@@ -413,7 +461,10 @@ function pickerForPending(
     // the view names the card asking. The label stays the engine's, which can carry a rolled number.
     if (pending.kind === "mode") {
       const selection = selectionForOption(option);
-      const detail = selection.pick === "mode" ? modeText(pending.sourceDefId, selection.option, pending.sourceRadiant === true).detail : undefined;
+      const detail =
+        selection.pick === "mode"
+          ? filledModeText(lookup, pending.sourceDefId, selection.option, pending.sourceRadiant === true).detail
+          : undefined;
       if (detail !== undefined) base.detail = detail;
       // R831004: an option that names a set (#82 KY's Trial's first Discover) wears the set's mark (R503).
       if (option.defId === undefined && setMarkOf(option.label).kind !== "unknown") base.set = option.label;
@@ -475,17 +526,19 @@ function pickerForPending(
   }
   if (laneModes !== null) {
     const offered = pending.options.map((option, at) => ({ key: option.key, option: laneModes[at] ?? "" }));
-    const answers = laneAnswers(offered, pending.sourceDefId, pending.sourceRadiant === true);
+    const answers = laneAnswers(offered, pending.sourceDefId, pending.sourceRadiant === true, lookup);
     picker.lanes = answers.lanes;
     picker.boardKeys = answers.boardKeys;
   }
-  if (pending.kind === "cell") {
+  if (pending.kind === "cell" || pending.kind === "zone") {
     picker.boardKeys = new Map(
       pending.options.flatMap((option) => {
         const where = option.row === undefined ? null : selectionTestid(view, selectionForOption(option));
         return where === null ? [] : [[where, option.key] as const];
       }),
     );
+    // #3864: one cell or zone is a tap on the board; a choice of several, or of none, keeps its list (and Confirm).
+    if (pending.min >= 1 && pending.max <= 1) picker.boardOnly = true;
   }
   return picker;
 }
@@ -576,6 +629,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       return {
         ...common,
         chrome: "zone",
+        boardOnly: true,
         title: t("Choose a zone"),
         items: zonesInBoardOrder(need.zones).map((zone) => ({
           key: zoneKey(zone),
@@ -660,8 +714,12 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       // R81: a declared `target` pick whose selections are all hand cards is rendered with the hand
       // chrome, so the player sees the pick where the cards are; e2e spec 02 asserts it.
       const inHand = isHandPick(need, view);
+      // #3864: one zone, or none, out of zones alone is a tap on the board. Cards and heroes keep their list.
+      const zonesOnly =
+        !inHand && need.min >= 1 && need.max <= 1 && need.selections.length > 0 && need.selections.every((s) => s.pick === "zone");
       return {
         ...common,
+        ...(zonesOnly ? { boardOnly: true as const } : {}),
         chrome: inHand ? "hand" : "target",
         title: inHand ? t("Choose a card in your hand") : t("Choose a target"),
         items: need.selections.map((selection) => {
@@ -750,7 +808,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
     }
     case "mode": {
       // The card being played (or activated, R384) is the one asking; its options read as that
-      // card's words, on the face it is played with (#24's radiant 2X, 4X and X).
+      // card's words, on the face and with the live declared numbers it is played with.
       const played = isBuilding(interaction) ? cardRefFor(view, interaction.instanceId) : null;
       const source = played?.defId ?? undefined;
       const radiant = played?.radiant === true;
@@ -765,7 +823,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         items: need.options.map((option): PickerItem => {
           const arrow = DIRECTIONS.find((d) => d === option);
           if (arrow !== undefined) return { key: option, label: t(option), arrow };
-          const text = modeText(source, option, radiant);
+          const text = filledModeText(lookup, source, option, radiant, played?.card);
           return text.detail === undefined
             ? { key: option, label: text.label }
             : { key: option, label: text.label, detail: text.detail };
@@ -775,7 +833,13 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       if (source !== undefined) picker.sourceDefId = source;
       if (played !== null) picker.sourceCard = played.card;
       if (lanePick) {
-        const answers = laneAnswers(need.options.map((option) => ({ key: option, option })), source, radiant);
+        const answers = laneAnswers(
+          need.options.map((option) => ({ key: option, option })),
+          source,
+          radiant,
+          lookup,
+          played?.card,
+        );
         picker.lanes = answers.lanes;
         picker.boardKeys = answers.boardKeys;
       }
@@ -850,7 +914,8 @@ function CardOption(props: {
   readOnly?: boolean;
   onPick: () => void;
 }) {
-  useLocale();
+  // A language change rebuilds the face, as CardFace's labels redraw (R711000).
+  const locale = useLocale();
   const info = useCardInfo(props.item.defId ?? "", props.item.radiant === true);
   const fieldPower = useFieldPower(props.item.card?.instanceId);
   const copied = useCopiedDef(props.item.card);
@@ -859,25 +924,34 @@ function CardOption(props: {
   const name = props.item.defId === undefined ? props.item.label : nameOf(props.item.defId, info, drawnInChinese(flagged));
   const radiant = props.item.radiant === true;
   const cost = props.item.cost;
-  const drawn =
-    props.item.defId === undefined
-      ? null
-      : props.item.card !== undefined
-        ? liveFace(info, props.item.card, {
-            ...(fieldPower === undefined ? {} : { fieldPower }),
-            ...(copied === undefined ? {} : { copied }),
-          })
-        : faceModel({
-            defId: props.item.defId,
-            def: info.def,
-            name: info.name,
-            radiant,
-            chinese: flagged,
-            ...(cost === undefined ? {} : { liveCost: cost }),
-            inPlay: {},
-          });
-  const face =
-    drawn === null || props.item.price === undefined ? drawn : pricedFace(drawn, props.item.price, props.item.card, info.def);
+  // #4511: the face (with its embiggen price) memoized on exactly the inputs it takes, as
+  // `useLiveFace` does: a board re-render that leaves the options unchanged builds no face.
+  const { defId, card, price } = props.item;
+  const { def: infoDef, name: infoName } = info;
+  const face = useMemo(() => {
+    const drawn =
+      defId === undefined
+        ? null
+        : card !== undefined
+          ? liveFace(info, card, {
+              ...(fieldPower === undefined ? {} : { fieldPower }),
+              ...(copied === undefined ? {} : { copied }),
+            })
+          : faceModel({
+              defId,
+              def: infoDef,
+              name: infoName,
+              radiant,
+              chinese: flagged,
+              ...(cost === undefined ? {} : { liveCost: cost }),
+              inPlay: {},
+            });
+    return drawn === null || price === undefined ? drawn : pricedFace(drawn, price, card, infoDef);
+    // `info` is a fresh object per render; the deps key on its stable contents (`infoDef`/
+    // `infoName`) instead, so an unchanged option never crosses again. The callback still reads
+    // through `info` for `liveFace`, which is sound because a dep change always recomputes with the
+    // latest render's values, and unchanged deps mean unchanged contents.
+  }, [infoDef, infoName, card, fieldPower, copied, radiant, cost, flagged, price, defId, locale]);
   const caption = face === null ? undefined : props.item.caption;
   const pays = face === null || props.item.price === undefined ? undefined : priceLine(face);
   // R247: a number names no card here, so it is drawn on a card back and nothing opens it.
@@ -1072,8 +1146,9 @@ function useAskLabel(picker: Picker): string {
 }
 
 /**
- * A board pick's hint. On an upright phone with drag to play on, a play's zone, target and Tribute picks fold
- * to a bar with no options (prompt.css): the answers glow on the board and are tapped there, and this says so.
+ * A board pick's hint. A choice of one board zone (#3864) is this hint and Cancel at any width. On an upright
+ * phone with drag to play on, a play's target and Tribute picks also fold to a bar with no options
+ * (prompt.css): the answers glow on the board and are tapped there, and this says so.
  */
 const BOARD_HINTS: Partial<Record<PromptKind, string>> = {
   zone: "Tap a highlighted zone on the board.",
@@ -1200,6 +1275,9 @@ function CardChoice(props: {
   );
 }
 
+/** #3633: the attribute an open cell pick sets on its game (prompt.css). */
+export const PROMPT_CELL_MARK = "data-prompt-cell";
+
 function PromptModal(props: {
   picker: Picker;
   /** Which route opened it: an engine prompt (`view.pending`) or a play still being built (R81). */
@@ -1213,12 +1291,15 @@ function PromptModal(props: {
   animating?: string;
   /** R2211000: a replay's picker: folded as it opens, its options greyed, and nothing it draws sends. */
   readOnly?: boolean;
+  /** R3727003: false where the sequence's 60-second countdown is not drawn (a daily game's); absent, drawn. */
+  sequenceClock?: boolean;
   /** R2739001: where an engine card picker sends the option under the pointer or the focus; absent, it sends nothing. */
   onHover?: ((index: number | null) => void) | undefined;
 }) {
   useLocale();
   const { picker } = props;
   const readOnly = props.readOnly === true;
+  const sequenceClock = props.sequenceClock !== false;
   // R2739001: one send per change, and null when the picker folds or closes.
   const hover = useChoiceHoverEmitter(props.onHover);
   const [selected, setSelected] = useState<readonly string[]>(() => picker.initial ?? []);
@@ -1232,6 +1313,15 @@ function PromptModal(props: {
   const fits = (keys: readonly string[]): boolean => picker.budget === undefined || spent(keys) <= picker.budget.limit;
   const inRange = selected.length >= picker.min && selected.length <= picker.max && fits(selected);
   const panel = useRef<HTMLDivElement>(null);
+  // #3633: an open cell pick marks its game, where prompt.css crosses the zones it offers. It read
+  // `.game:has([data-prompt-kind="cell"])`, and a `:has()` on the game made every change under it
+  // restyle the board.
+  useLayoutEffect(() => {
+    const game = picker.chrome === "cell" ? (panel.current?.closest(".game") ?? null) : null;
+    if (game === null) return undefined;
+    game.setAttribute(PROMPT_CELL_MARK, "true");
+    return () => game.removeAttribute(PROMPT_CELL_MARK);
+  }, [picker.chrome]);
   /**
    * #1204: the card picker folded to a bar so the board shows. Never sent; `selected` outlasts it.
    * R2211000: a read-only one opens folded.
@@ -1281,9 +1371,18 @@ function PromptModal(props: {
 
   const pressed = (key: string): boolean => selected.includes(key);
 
+  const live = useRef({ pick, keys: picker.boardKeys, lanes: picker.lanes, boardOnly: picker.boardOnly === true });
+  live.current = { pick, keys: picker.boardKeys, lanes: picker.lanes, boardOnly: picker.boardOnly === true };
   useEffect(() => {
     if (readOnly || !FOCUS_ON_OPEN.has(picker.chrome)) return;
-    const first = panel.current?.querySelector<HTMLElement>('[data-testid^="prompt-option-"]:not([aria-disabled="true"])');
+    // #3864: a board-only cell prompt has no list to focus: its first lit zone takes the focus, and Tab walks the rest.
+    const litZone = live.current.boardOnly
+      ? [...(live.current.keys?.keys() ?? [])]
+          .map((id) => document.querySelector<HTMLElement>(`[data-testid="${id}"]`))
+          .find((element) => element !== null && element !== undefined)
+      : undefined;
+    const first =
+      litZone ?? panel.current?.querySelector<HTMLElement>('[data-testid^="prompt-option-"]:not([aria-disabled="true"])');
     first?.focus({ preventScroll: true });
   }, [picker.chrome, readOnly]);
 
@@ -1291,8 +1390,6 @@ function PromptModal(props: {
   // cell (#2757: or a lane pick's lane, from any of its four zones). The board's own handler builds nothing from a zone while a prompt is open, so this is the
   // one answer. maxi-tail: document listeners for the one board-answered prompt kind; move them into
   // `onClickTarget` (actions.ts) if target prompts are ever answered on the board too.
-  const live = useRef({ pick, keys: picker.boardKeys, lanes: picker.lanes });
-  live.current = { pick, keys: picker.boardKeys, lanes: picker.lanes };
   const answersOnBoard = picker.boardKeys !== undefined && !readOnly;
   useEffect(() => {
     if (!answersOnBoard) return;
@@ -1366,7 +1463,7 @@ function PromptModal(props: {
               {t("Right answers in a row: {count}", { count: picker.streak })}
             </p>
           )}
-          {readOnly || picker.streak === undefined || picker.sequenceChoice === undefined ? null : (
+          {readOnly || !sequenceClock || picker.streak === undefined || picker.sequenceChoice === undefined ? null : (
             <SequenceCountdown choiceId={picker.sequenceChoice} streak={picker.streak} />
           )}
           {isCardLayout(picker) ? (
@@ -1513,6 +1610,7 @@ function PromptModal(props: {
       );
     }
 
+    // #3864: a one-zone choice never gets here (`boardOnly`); this is the list of a choice of several zones, or of none.
     if (picker.chrome === "zone" || picker.chrome === "cell") {
       const groups = [...new Set(items.map((item) => item.group ?? ""))];
       return (
@@ -1577,12 +1675,17 @@ function PromptModal(props: {
     );
   }
 
-  // #2757: a lane pick is its lanes on the board: no panel, list, count or Confirm. R514's effect above answers
-  // it. The modal is the hint (a replay's title, where nothing answers) and a play's Cancel.
-  if (picker.lanes !== undefined) {
+  // #2757: a lane pick is its lanes on the board, and #3864: so is a choice of one board zone: no panel, list,
+  // count or Confirm. A play's zone and a zone target answer through the board's own click (`onClickTarget`),
+  // a lane pick and a cell prompt through R514's effect above. The modal is the hint (a replay's title, where
+  // nothing answers), any option naming no cell ("Done": nowhere on the board to tap for it) and a play's Cancel.
+  if (picker.lanes !== undefined || picker.boardOnly === true) {
+    const named = new Set(picker.boardKeys?.values() ?? []);
+    const extras = picker.lanes === undefined && picker.boardKeys !== undefined ? picker.items.filter((item) => !named.has(item.key)) : [];
+    const cancels = !readOnly && props.onCancel !== undefined;
     return (
       <div className="prompt-scrim" data-testid="prompt-scrim" data-read-only={readOnly ? "true" : undefined}>
-        <LanePick lanes={picker.lanes} readOnly={readOnly} />
+        {picker.lanes === undefined ? null : <LanePick lanes={picker.lanes} readOnly={readOnly} />}
         <div
           ref={panel}
           className={`prompt prompt-${picker.chrome}`}
@@ -1592,7 +1695,8 @@ function PromptModal(props: {
           data-animating={props.animating}
           data-board-testids={props.boardTestids.join(" ")}
           data-read-only={readOnly ? "true" : undefined}
-          data-lane-pick="true"
+          data-lane-pick={picker.lanes === undefined ? undefined : "true"}
+          data-board-pick="true"
           role="dialog"
           aria-modal={false}
           aria-label={askLabel}
@@ -1600,13 +1704,18 @@ function PromptModal(props: {
           {readOnly ? (
             <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} sourceCard={picker.sourceCard} />
           ) : (
-            <BoardHint chrome={picker.chrome} lane />
+            <BoardHint chrome={picker.lanes === undefined ? "zone" : picker.chrome} lane={picker.lanes !== undefined} />
           )}
-          {readOnly || props.onCancel === undefined ? null : (
+          {extras.length === 0 && !cancels ? null : (
             <div className="prompt-actions">
-              <button type="button" data-testid="prompt-cancel" onClick={props.onCancel}>
-                {t("Cancel")}
-              </button>
+              {extras.map((item) => (
+                <PlainOption key={item.key} item={item} pressed={pressed(item.key)} readOnly={readOnly} onPick={() => pick(item.key)} />
+              ))}
+              {cancels ? (
+                <button type="button" data-testid="prompt-cancel" onClick={props.onCancel}>
+                  {t("Cancel")}
+                </button>
+              ) : null}
             </div>
           )}
         </div>
@@ -1894,7 +2003,7 @@ export default function Prompt(props: PromptProps) {
         <PromptModal
           key={pending.choiceId}
           source="engine"
-          picker={pickerForPending(pending, props.view, props.legal ?? [], props.lesson === true)}
+          picker={pickerForPending(pending, props.view, props.legal ?? [], props.lesson === true, lookup)}
           {...(pending.kind === "mulligan" && mulligan !== undefined
             ? { status: <OpponentMulliganStatus mulligan={mulligan} /> }
             : {})}
@@ -1904,6 +2013,7 @@ export default function Prompt(props: PromptProps) {
           {...(props.onInteraction === undefined ? {} : { onInteraction: props.onInteraction })}
           {...(props.onCancel === undefined ? {} : { onCancel: props.onCancel })}
           readOnly={readOnly}
+          sequenceClock={props.sequenceClock !== false}
           // R2739001: an engine prompt only (a play's own picker opens none of the sender's); never the
           // mulligan, whose cards the other seat is never shown a count of (R265), nor a replay's.
           onHover={pending.kind === "mulligan" || readOnly ? undefined : props.choiceHover?.emit}

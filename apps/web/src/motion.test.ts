@@ -32,8 +32,21 @@ const BOARD_SHEETS = SHEETS.filter(
 const MOTION_DURATIONS = 4;
 const MOTION_CURVES = 5;
 
-const DURATIONS = [...read("motion.css").matchAll(/^\s*--motion-([\w-]+):\s*(\d+ms);$/gm)].map((match) => [match[1] ?? "", match[2] ?? ""]);
-const CURVES = [...read("motion.css").matchAll(/^\s*--ease-([\w-]+):\s*(cubic-bezier\([^()]*\));$/gm)].map((match) => [match[1] ?? "", match[2] ?? ""]);
+/**
+ * A token line's captures (#4009: `/^\s*--…$/gm` line patterns rescan newline runs from every
+ * line start); `pattern` is the line without its `m` flag.
+ */
+function tokenLines(text: string, pattern: RegExp): [string, string][] {
+  const out: [string, string][] = [];
+  for (const line of text.split("\n")) {
+    const match = pattern.exec(line);
+    if (match !== null) out.push([match[1] ?? "", match[2] ?? ""]);
+  }
+  return out;
+}
+
+const DURATIONS = tokenLines(read("motion.css"), /^\s*--motion-([\w-]+):\s*(\d+ms);$/);
+const CURVES = tokenLines(read("motion.css"), /^\s*--ease-([\w-]+):\s*(cubic-bezier\([^()]*\));$/);
 
 /** Every time a board sheet keeps of its own, in source order. */
 const KEEP: Record<string, string[]> = {
@@ -44,6 +57,7 @@ const KEEP: Record<string, string[]> = {
   "game/board.css": [
     "90ms", // R434's flip stagger
     ...["420ms", "1600ms", "260ms", "520ms", "2400ms", "700ms"], // the table's tap marks
+    "6s", // R3554000's Black Hole breath, a loop
     ...["250ms", "400ms", "220ms", "250ms", "320ms", "400ms"], // R701's wobbles and flashes
     "1.2s", // the End turn button's loop
     "150ms", // BUILD's `turnEnded` row
@@ -52,7 +66,7 @@ const KEEP: Record<string, string[]> = {
   "game/clock.css": ["200ms", "1s", "500ms", "1s", "200ms", "200ms", "200ms", "140ms", "520ms", "90ms", "1.2s", "700ms"],
   "game/countered.css": ["2.6s", "4.1s"], // loops
   "game/drag/drag.css": ["0.7s", "0.8s"], // loops
-  "game/facedown.css": ["9s", "4.8s"], // loops
+  "game/facedown.css": ["9s", "4.8s", "4.8s"], // loops: the veil, the breath and its light (#3674), on one beat
   "game/highlights.css": ["1.8s", "1.4s"], // loops
   "game/lanePick.css": ["1.6s"], // loop
   "game/market.css": ["3.2s"], // loop
@@ -64,7 +78,7 @@ const KEEP: Record<string, string[]> = {
 
 /** How many durations in each board sheet scale by --anim-scale: none loses the factor. */
 const ANIM_SCALED: Record<string, number> = {
-  "game/activate.css": 1, "game/animations.css": 67, "game/board.css": 13, "game/drag/blocked.css": 1, "game/facedown.css": 2,
+  "game/activate.css": 1, "game/animations.css": 70, "game/board.css": 13, "game/drag/blocked.css": 1, "game/facedown.css": 3,
   "game/dialog.css": 1, "game/highlights.css": 2, "game/prompt.css": 2, "game/reveal.css": 2, "game/spent.css": 1,
 };
 
@@ -98,7 +112,7 @@ const UNTOKENED_MOTION: Record<string, number> = {
   "rank/rankCrest.css": 2,
   "routes/game-banner.css": 6,
   "routes/landing.css": 25,
-  "routes/lobby.css": 14,
+  "routes/lobby.css": 12,
   "routes/stats.css": 4,
   "settings/settings.css": 12,
   "shop/shop.css": 1,
@@ -166,7 +180,9 @@ function ownTimes(sheet: string, css: string): string[] {
       before = value;
       value = value.replace(/var\([^()]*\)/g, "");
     }
-    for (const match of value.matchAll(/(?<![\w.-])(\d*\.?\d+)(ms|s)(?![\w-])/g)) if (Number(match[1]) !== 0) found.push(match[0]);
+    // No `\d*\.?\d+`: its runs trade characters super-linearly; the alternation matches the same
+    // numbers (#4009).
+    for (const match of value.matchAll(/(?<![\w.-])(\d+(?:\.\d+)?|\.\d+)(ms|s)(?![\w-])/g)) if (Number(match[1]) !== 0) found.push(match[0]);
   }
   return found;
 }
@@ -183,7 +199,13 @@ describe("#2110 the motion vocabulary", () => {
       ["overshoot", "cubic-bezier(0.2, 0.9, 0.25, 1.1)"],
     ]);
     expect(CURVES.length).toBe(MOTION_CURVES);
-    const rest = codeOf("motion.css").replace(/^\s*--motion-[\w-]+:\s*\d+ms;$/gm, "").replace(/^\s*--ease-[\w-]+:\s*cubic-bezier\([^()]*\);$/gm, "");
+    // Token lines blanked (#4009: the `/^\s*--…$/gm` patterns rescan newline runs from every line).
+    const rest = codeOf("motion.css")
+      .split("\n")
+      .map((line) =>
+        /^\s*--motion-[\w-]+:\s*\d+ms;$/.test(line) || /^\s*--ease-[\w-]+:\s*cubic-bezier\([^()]*\);$/.test(line) ? "" : line,
+      )
+      .join("\n");
     expect(rest.replace(/\s+/g, "")).toBe(":root{}");
   });
 
@@ -198,7 +220,9 @@ describe("#2110 the motion vocabulary", () => {
     for (const sheet of SHEETS) {
       const css = codeOf(sheet);
       for (const match of css.matchAll(/var\((--(?:motion|ease)-[\w-]+)\)/g)) expect(names.has(match[1] ?? ""), `${sheet}: ${match[0]}`).toBe(true);
-      const declared = [...css.matchAll(/--(?:motion|ease)-[\w-]+\s*:/g)].map((match) => match[0].replace(/\s*:$/, ""));
+      // The name without its trailing colon (#4009: `/\s*:$/` rescans a whitespace run from every
+      // position); the match always ends in the pattern's literal `:`.
+      const declared = [...css.matchAll(/--(?:motion|ease)-[\w-]+\s*:/g)].map((match) => (match[0] ?? "").slice(0, -1).trimEnd());
       expect(new Set(declared), sheet).toEqual(sheet === "motion.css" ? names : new Set());
     }
   });

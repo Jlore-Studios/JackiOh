@@ -7,8 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { at } from "../test/stubServer.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
-import AccessibilityRoute from "./accessibility.tsx";
-import AiRoute from "./ai.tsx";
 import CopyrightRoute from "./copyright.tsx";
 import { PageTitle, PAGE_TITLE_ID, pageTitleTestid } from "./PageTitle.tsx";
 import PrivacyRoute from "./privacy.tsx";
@@ -47,8 +45,6 @@ describe("R3223000 PageTitle", () => {
     ["Terms of service", TermsRoute],
     ["Privacy policy", PrivacyRoute],
     ["Copyright", CopyrightRoute],
-    ["Accessibility", AccessibilityRoute],
-    ["How JackiOh uses AI", AiRoute],
   ])("R3223000 %s has one visible h1, the PageTitle, with the brand as the wordmark and its sections as h2", (name, Route) => {
     render(<Route />);
     expectOnePageTitle(name);

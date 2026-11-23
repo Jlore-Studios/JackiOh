@@ -186,6 +186,7 @@ mod the_lethal_solvers_walks {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn ready_gap_counts_exactly_the_units_legal_actions_lists_an_attack_for_from_either_seat() {
         let mut states: Vec<GameState> = vec![wide_board()];
         states.extend(random_policy_states("lethal-ready-gap", 3, 600));
@@ -432,6 +433,7 @@ mod the_positions_the_search_merges {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn two_one_step_children_with_one_signature_score_the_same_and_offer_the_same_moves() {
         register_cards();
         let mut merged = 0;
@@ -555,7 +557,7 @@ mod free_replays_r1965000 {
     use std::cell::Cell;
 
     use jackioh_ai::{AiOptions, AiTurnResult, decide, play_ai_turn, trim_lethal};
-    use jackioh_engine::testkit::{Action, Scenario, reduce, subsystems};
+    use jackioh_engine::testkit::{Action, Scenario, is_play_of, reduce, subsystems};
 
     const IN_TOO_DEEP: &str = "classic-090";
     const LAST_HURRAH: &str = "classic-037";
@@ -565,7 +567,7 @@ mod free_replays_r1965000 {
     const BASE_CAMP: &str = "meditativeplus-001-1";
     /// Meditative+ #17 Dogpile, (1): 2 damage to an enemy, and casts another Dogpile in hand at it.
     const DOGPILE: &str = "meditativeplus-017";
-    const SPECIESIST: &str = "core-002";
+    const SPECIESIST: &str = "stand-in (2) 4/1 R8/2";
     const SEVEN_SEVEN: &str = "core-025";
     const FELINOR_TOKEN: &str = "core-t-felinor";
     const STOCKPILE: &str = "core-005";
@@ -613,12 +615,10 @@ mod free_replays_r1965000 {
     }
 
     /// How many of the turn's actions play `id`.
-    fn plays_of(turn: &AiTurnResult, id: &str) -> usize {
+    fn plays_made(turn: &AiTurnResult, id: &str) -> usize {
         turn.actions
             .iter()
-            .filter(
-                |action| matches!(&action.body, ActionBody::Play { instance_id, .. } if instance_id == id),
-            )
+            .filter(|action| is_play_of(&action.body, id))
             .count()
     }
 
@@ -653,7 +653,7 @@ mod free_replays_r1965000 {
                 ),
                 "{def} is offered from the graveyard"
             );
-            assert_eq!(plays_of(&turn, &id), 0, "{def}: {}", trace(&turn));
+            assert_eq!(plays_made(&turn, &id), 0, "{def}: {}", trace(&turn));
         }
     }
 
@@ -802,7 +802,7 @@ mod free_replays_r1965000 {
 
         let turn = ai_turn(&start);
         assert_eq!(winner(&turn), Some(AI), "{}", trace(&turn));
-        assert_eq!(plays_of(&turn, &camp), 1, "{}", trace(&turn));
+        assert_eq!(plays_made(&turn, &camp), 1, "{}", trace(&turn));
     }
 }
 
@@ -863,6 +863,8 @@ mod hero_ineligible_attacks {
         let sick = fresh(&ready, "core-032");
         assert_eq!(ready_gap(&sick, AI), 7.0);
         assert_eq!(ready_gap_by_legal_actions(&sick, AI), 7.0);
-        assert_eq!(face_threat(&sick, AI), 0);
+        // R3937000: next turn the smallest attacker that destroys Tommy Tempo (a 3/3 since issue #4154) alone,
+        // Tempo Timmy's 3, breaks it first and Prem Panther's 5 goes face.
+        assert_eq!(face_threat(&sick, AI), 5);
     }
 }

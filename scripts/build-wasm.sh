@@ -221,11 +221,71 @@ if [ "${JACKIOH_WASM_C:-0}" = 1 ]; then
       rustup target add "$WASM_TARGET"
     fi
   fi
-  cargo build -p jackioh-wasm-c --release --target "$WASM_TARGET"
+  # #4275: the C module a port translates carries every byte, so it builds small. Scoped
+  # `CARGO_PROFILE_RELEASE_*` env on this line alone (never exported: the browser module above is
+  # untouched). Measured 2026-11-19 (raw B, `gzip -9` B, wall s; gzip wobbles a few B run to run;
+  # walls are pass 1's trial log, sizes re-measured in pass 2 from its saved artifacts):
+  #   baseline (thin LTO): 42,987,413 raw, 7,453,290 gz, 1587 s cold; name section 6,831,510 B.
+  #   opt-level=z alone: 33,194,775 raw (-9,792,638), 4,779,269 gz, 799 s. Kept (wins in combination).
+  #   opt-level=s alone: 32,710,078 raw (-10,277,335), 5,061,534 gz, 1041 s. Dropped: beats z raw
+  #     alone by ~0.5 MB but loses gzip by ~0.3 MB, and loses the combination by ~4.0 MB raw
+  #     (combo-s 22,729,645 raw / 4,138,727 gz vs combo-z 18,760,875 / 3,438,587, both verified
+  #     imports-empty, answers-identical, panic-readable in pass 2).
+  #   codegen-units=1 alone: 35,720,878 raw (-7,266,535), 7,077,157 gz, 888 s. Kept (composition).
+  #   strip=symbols alone: 36,150,299 raw (-6,837,114), 6,914,487 gz, 959 s; name section gone,
+  #     panic text still readable. Kept.
+  #   Kept together (z + 1 unit + strip): 18,760,875 raw, 3,438,587 gz (pass 2 recorded run:
+  #     `JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh` printed exactly these,
+  #     456 s wall with a cold wasm target dir). Imports [], answers identical to baseline
+  #     (constants/catalog hashes), panic text readable after the trap (checked below; a trap's
+  #     backtrace loses names, the text above still reads).
+  #   Dropped: lto=fat (36,321,030 raw, 7,327,246 gz, 1763 s; the module is INVALID, Node/V8
+  #     reject it: "not enough arguments on the stack"); panic=abort (42,968,386 raw, 7,447,610
+  #     gz, wall not recorded: pass 1 was cut off mid-trial; text still readable when re-probed in
+  #     pass 2, but -19,027 raw is negligible for a panic-strategy constraint); wasm-opt -Oz
+  #     (absent here and on CI, skipped with a message below; nothing to measure).
+  CARGO_PROFILE_RELEASE_OPT_LEVEL=z \
+    CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 \
+    CARGO_PROFILE_RELEASE_STRIP=symbols \
+    cargo build -p jackioh-wasm-c --release --target "$WASM_TARGET"
+  # `wasm-opt -Oz` when it is on PATH, shrinking the module in place; skipped with a message when
+  # it is not (as here and on CI, which have no wasm-opt).
+  if command -v wasm-opt >/dev/null 2>&1; then
+    wasm-opt -Oz "$C_MODULE" -o "$C_MODULE.opt" && mv "$C_MODULE.opt" "$C_MODULE"
+  else
+    echo "build-wasm: no wasm-opt on PATH, skipping -Oz" >&2
+  fi
   if ! command -v node >/dev/null 2>&1; then
     echo "build-wasm: node is needed to check that the C module imports nothing (JACKIOH_WASM_C=1)" >&2
     exit 1
   fi
   node -e 'const fs = require("fs"); const found = WebAssembly.Module.imports(new WebAssembly.Module(fs.readFileSync(process.argv[1]))); if (found.length > 0) { console.error("build-wasm: the C module imports " + JSON.stringify(found)); process.exit(1); }' "$C_MODULE"
-  echo "build-wasm: built $C_MODULE, which imports nothing"
+  # #4273: a `#[no_mangle]` export whose symbol collides with a libm/host symbol (as `log` did with
+  # libm's `log`) links as a trapping `signature_mismatch:` stub, and every `f64::ln` in the module
+  # then traps with `unreachable`. Fail the build on any such stub.
+  if grep -aq 'signature_mismatch:' "$C_MODULE"; then
+    echo "build-wasm: the C module contains a signature_mismatch stub (a #[no_mangle] export colliding with a libm/host symbol); rename the export" >&2
+    exit 1
+  fi
+  # The panic's text must stay readable at jackioh_result_ptr()/jackioh_result_len() after the
+  # trap (crates/wasm/c/README.md, Errors and traps): a huge alloc panics deterministically, and
+  # the hook stows its message before the unreachable trap. Any silence fails the build.
+  node --input-type=module -e '
+    import { readFileSync } from "node:fs";
+    const bytes = readFileSync(process.argv[1]);
+    const { instance } = await WebAssembly.instantiate(bytes, {});
+    instance.exports.init();
+    let trapped = false;
+    try { instance.exports.jackioh_alloc(0xffffffff); } catch { trapped = true; }
+    if (!trapped) { console.error("build-wasm: the C module did not trap on its panic probe"); process.exit(1); }
+    const len = instance.exports.jackioh_result_len();
+    const text = Buffer.from(instance.exports.memory.buffer.slice(instance.exports.jackioh_result_ptr(), instance.exports.jackioh_result_ptr() + len)).toString("utf8");
+    if (!text) { console.error("build-wasm: the C module kept no panic text after the trap"); process.exit(1); }
+  ' "$C_MODULE"
+  # #4332: play the hotseat fixture on the built module through its raw C ABI
+  if ! node "$ROOT/luau/tools/reference-host.mjs" fixture "$C_MODULE"; then
+    echo "build-wasm: luau/tools/reference-host.mjs fixture failed (reproduce with: node luau/tools/reference-host.mjs fixture $C_MODULE)" >&2
+    exit 1
+  fi
+  echo "build-wasm: built $C_MODULE, which imports nothing: $(wc -c <"$C_MODULE") B raw, $(gzip -9 -c "$C_MODULE" | wc -c) B gzipped"
 fi

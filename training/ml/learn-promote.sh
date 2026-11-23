@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Retired by #4159 (R4159000): nothing here reaches the AI; kept while `learn.yml` runs `retrain.sh` and
+# `learn-promote.sh`. The AI compiles no network now, so this script stops where it would put one in.
 # The learn lane's promotion on main as it is now (#466; .github/workflows/learn.yml, training/learn.md
 # "Running unattended"). retrain.sh fits and screens against main as it was when the run began, an hour
 # or two earlier, and main moves about once an hour in what a gate depends on (the AI, the engine, the

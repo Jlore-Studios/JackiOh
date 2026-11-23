@@ -14,7 +14,8 @@ import { PRACTICE_SEED_MAX_LENGTH } from "../practice/config.ts";
 import { createPracticeDriver } from "../practice/driver.ts";
 import type { PracticeResponse } from "../practice/protocol.ts";
 import zhCN from "../i18n/zh-CN.json";
-import { FIELD_GUIDE } from "./discoveries.ts";
+import { baseView, emptySide } from "../test/fixtures.ts";
+import { FIELD_GUIDE, discoveryById } from "./discoveries.ts";
 import { LESSON_GAME_TIMEOUT_MS, playLesson } from "./harness.ts";
 import { TUTORIAL_LESSONS, lessonById, lessonHandicaps, nextLessonOf, type TutorialLesson } from "./lessons.ts";
 import { lessonStartConfig } from "./start.ts";
@@ -272,11 +273,49 @@ describe("R291 the tutorial's lessons", () => {
     expect(response.type).toBe("failed");
   });
 
-  it("R291 seat the human second in the lesson that teaches The Coin, and first before it", () => {
+  it("R291 seat the human first in every lesson, and find The Coin when the opponent gets it", () => {
     for (const lesson of TUTORIAL_LESSONS) {
-      const coin = lesson.discoveries.includes("the-coin");
-      expect(lesson.humanSeat, lesson.id).toBe(coin ? "p2" : "p1");
+      expect(lesson.humanSeat, lesson.id).toBe("p1");
     }
+    const coin = discoveryById("the-coin");
+    expect(coin, "the-coin discovery exists").toBeDefined();
+    const view = baseView({
+      viewer: "p1",
+      opponent: emptySide("p2"),
+      events: [{ type: "addedToHand", player: "p2", instanceId: "hidden", defId: "hidden" }],
+    });
+    expect(coin?.found({ view, legal: [], fresh: [], aiToAct: false }), "fires on view where opponent gets The Coin").toBe(true);
+  });
+
+  it("every Field guide entry that keys on a card or card text can be found in some lesson's human deck", () => {
+    const allHumanCards = TUTORIAL_LESSONS.flatMap((lesson) => lesson.humanDeck);
+    const defs = allHumanCards.map((id) => def(id));
+
+    // Entries keyed on specific cards:
+    expect(allHumanCards, "lanes needs Midlane Menace (traininggrounds-005)").toContain("traininggrounds-005");
+    expect(
+      allHumanCards.some((id) => ["traininggrounds-022", "traininggrounds-006", "traininggrounds-007"].includes(id)),
+      "adjacency needs a neighbour-rewarding card",
+    ).toBe(true);
+    expect(allHumanCards, "copying needs Seance (traininggrounds-037)").toContain("traininggrounds-037");
+    expect(allHumanCards, "tribe needs Big Felinor (traininggrounds-051)").toContain("traininggrounds-051");
+
+    // Entries keyed on card text:
+    expect(defs.some((card) => card.base.text.includes("Cry:")), "cry needs a Cry card").toBe(true);
+    expect(defs.some((card) => card.base.text.includes("Tribute")), "tribute needs a Tribute card").toBe(true);
+    expect(defs.some((card) => card.base.text.includes("Aura:")), "aura needs an Aura card").toBe(true);
+    expect(defs.some((card) => card.base.text.includes("Death:")), "death needs a Death card").toBe(true);
+    expect(defs.some((card) => card.base.text.includes("random")), "random needs a card with random text").toBe(true);
+
+    // Entry that reads a fact every lesson shows:
+    const coin = discoveryById("the-coin");
+    expect(coin, "the-coin exists").toBeDefined();
+    const view = baseView({
+      viewer: "p1",
+      opponent: emptySide("p2"),
+      events: [{ type: "addedToHand", player: "p2", instanceId: "hidden", defId: "hidden" }],
+    });
+    expect(coin?.found({ view, legal: [], fresh: [], aiToAct: false }), "the-coin is found from public setup events").toBe(true);
   });
 
   it("R2205003 R2434001 prints every lesson's words and every line its coach can show in zh-CN too (R711000)", () => {

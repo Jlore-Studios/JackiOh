@@ -1,10 +1,10 @@
 //! Stinkyscape #50 Beam v3 (SPEC §8.10 row 50). Unit 0/2 → 0/4, Weapon, cost 2, Rare.
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn
-//!            cooldown." — damage 5
-//!   Radiant: the same text — damage 10
+//!            cooldown." — damage 2 (3 until issue #4440, 4 until issue #4353, 5 until issue #4154)
+//!   Radiant: the same text — damage 4 (6 until issue #4440, 8 until issue #4353, 10 until issue #4154)
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1862000: the Activate's target is a declared enemy Unit (R81), never a hero (#2521). Cleave is the
@@ -142,8 +142,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     /// The printed `damage`, and the Radiant face's.
-    const DAMAGE: i32 = 5;
-    const RADIANT_DAMAGE: i32 = 10;
+    const DAMAGE: i32 = 2;
+    const RADIANT_DAMAGE: i32 = 4;
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
 
     /// R3291000: an ability's id, and the card and face its `printed_on` names, if any.
@@ -171,6 +171,7 @@ mod tests {
             json!({ "field": [VANILLA] }),
         );
         let host = s.unit_at(P1, 1).id;
+        crate::give_equip(&mut s, ID);
         s.play(ID, json!({ "zone": 1, "equip": true }));
         sources(&s, &host)
     }
@@ -256,6 +257,14 @@ mod tests {
         #[test]
         fn r1862000_the_enemy_hero_is_never_offered_and_is_refused() {
             fam::beam_never_hero(ID, "s050", true);
+        }
+
+        /// R4334000: a launched Starship holding a Radiant copy hits the chosen Unit and each Unit beside it for the Radiant
+        /// `damage` and shows it; one holding a base copy, the base `damage`.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            fam::beam_ship_cleaves(ID, "s050", true, RADIANT_DAMAGE);
+            fam::beam_ship_cleaves(ID, "s050", false, DAMAGE);
         }
     }
 }

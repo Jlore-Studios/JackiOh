@@ -6,6 +6,7 @@
 import { CARDS, CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import type { PlayCardOptions } from "../../support/commands.ts";
 import { seedFor } from "../../support/config.ts";
+import { ensureSeat } from "../../support/hotseat.ts";
 import { BOARD, cardId, ts, zoneId } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId, Side, ZoneRef } from "../../support/types.ts";
 
@@ -31,9 +32,14 @@ const PLAIN_UNIT_COST = 2;
 const COSTS: Record<string, number> = {
   [CARDS.myPawn]: 1,
   [BEAR_HONEYPOT]: 1,
-  [CARDS.sillySilas]: 4,
+  // (6) since issue #4353, past the 4 mana a turn gives: each Float of seat 1's while he is in hand lowers
+  // it (R1563000, R4353025), so he is played once a Float has brought him within reach.
+  [CARDS.sillySilas]: 6,
   [CARDS.pocketChaos]: 4,
 };
+
+/** Bear Honeypot's base face reveals on a play costing this or less (its declared `costLimit`). */
+const HONEYPOT_COST_LIMIT = 1;
 
 /** R14 / §3.1 ring, from seat 1's `you` view (ASSUMPTION A3). */
 const RING: readonly { side: Side; lane: Lane }[] = [
@@ -75,7 +81,7 @@ function nameOf(index: number): string {
   return name;
 }
 
-type Held = { id: string; defId: string };
+type Held = { id: string; defId: string; costMod?: number };
 type SidePeek = {
   mana?: { current: number };
   hand?: Held[];
@@ -89,14 +95,6 @@ function peek(state: GameStateLike, player: PlayerId): SidePeek {
 
 function handOf(state: GameStateLike, player: PlayerId): Held[] {
   return peek(state, player).hand ?? [];
-}
-
-/** BUILD M5-T3: hand the hotseat device to the actor. */
-function ensureSeat(player: PlayerId): void {
-  cy.jackioh().then((handle) => {
-    expect(handle.seat, "window.__jackioh.seat names the seat holding the device").to.not.eq(undefined);
-    if (handle.seat !== player) cy.handOver();
-  });
 }
 
 function passTurn(): void {
@@ -132,8 +130,13 @@ function playWhenDrawn(
   const cost = COSTS[defId] ?? 0;
   advanceUntil(`${player} can pay ${cost} for ${defId}`, (state) => {
     if (state.active !== player) return false;
-    if (!canPay(state, player, cost)) return false;
-    return handOf(state, player).some((card) => card.defId === defId);
+    const held = handOf(state, player).find((card) => card.defId === defId);
+    if (held === undefined) return false;
+    // The price in hand: a Float's `costMod` lowers it, never below (0) (R65, R1563000).
+    const price = Math.max(0, cost + (held.costMod ?? 0));
+    // A card above Bear Honeypot's limit keeps it set, as the board below expects.
+    if (cost > HONEYPOT_COST_LIMIT && price <= HONEYPOT_COST_LIMIT) return false;
+    return canPay(state, player, price);
   });
   ensureSeat(player);
   return cy.instanceInHand(player, defId).then((instanceId) => {
@@ -269,6 +272,7 @@ describe("BUILD M8 12 — Silly Silas rotates one step around the ring and Pocke
     // R14's center crossings make control changes visible in seat 1 lane 5 and seat 2 lane 1.
     const built: Board = {
       yourLane1: { side: "you", row: "units", lane: 1 },
+      // R4353025: since issue #4353 Silas lands in the zone his play names, seat 1's lane 3.
       silas: { side: "you", row: "units", lane: 3 },
       yourLane5: { side: "you", row: "units", lane: 5 },
       theirLane1: { side: "opponent", row: "units", lane: 1 },

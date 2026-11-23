@@ -10,8 +10,8 @@ export type RunPassiveDef = { id: string, name: string, kind: RunPassiveKind, te
  */
 tier: RunTier | null, 
 /**
- * What it does on the map. A Combat or Enemy artifact has none: Looming and Overwhelming Presence
- * act as `run_fight_setup`'s handicaps, and a Combat artifact acts through its `fight_effect`.
+ * What it does on the map. A Combat or Enemy artifact has none: a Combat artifact acts through its
+ * `fight_effect`, and an Enemy one changes nothing (R3586001).
  */
 effect: RunEffect | null, 
 /**

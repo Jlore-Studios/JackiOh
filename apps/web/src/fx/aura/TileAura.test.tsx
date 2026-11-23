@@ -1,6 +1,7 @@
 // R3342000: tests for the TileAura component (issue #3342).
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { Profiler } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PlayerView } from "@jackioh/shared";
@@ -17,8 +18,9 @@ import { setReducedMotion } from "../../test/setup.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { FX_PARTICLE_CAP_MOBILE } from "../constants.ts";
 import { resetFxSettingsForTests, setFxSettings } from "../settings.ts";
-import { resetShedForTests, setShedLevel } from "../shed.ts";
+import { resetShedForTests, setShedLevel, setShedPointer } from "../shed.ts";
 import { TILE_PARTICLE_SHARE, TILE_TOUCH_GAP_MS } from "./config.ts";
+import { TileAura } from "./TileAura.tsx";
 import { tileMoteBudget } from "./tile.ts";
 
 vi.mock("../../haptics/haptics.ts", async () => {
@@ -227,5 +229,41 @@ describe("R3351000 the living game's shared shed order", () => {
       setShedLevel(0);
     });
     expect(zone.querySelectorAll(".tile-aura-mote")).toHaveLength(5);
+  });
+
+  it("R3351000 a shed to motes re-renders no tile aura; far auras does", () => {
+    // #3674: a tile reads only the shed's aura scale, so the motes stage, the faces stage past it and the pointer cost no render.
+    const view = baseView({
+      you: emptySide("p1", { units: [unit("p1", { defId: "core-100", instanceId: "u-shed-2" })] }),
+    });
+    let renders = 0;
+    const { container } = render(
+      <Profiler
+        id="tile"
+        onRender={() => {
+          renders += 1;
+        }}
+      >
+        <TileAura view={view} side="you" row="units" lane={1} />
+      </Profiler>,
+    );
+    expect(container.querySelectorAll(".tile-aura-mote")).toHaveLength(5);
+    const settled = renders;
+    act(() => {
+      setShedLevel(1);
+    });
+    act(() => {
+      setShedPointer({ x: 10, y: 10 });
+    });
+    expect(renders).toBe(settled);
+    act(() => {
+      setShedLevel(2);
+    });
+    expect(renders).toBe(settled + 1);
+    expect(container.querySelectorAll(".tile-aura-mote")).toHaveLength(2);
+    act(() => {
+      setShedLevel(3);
+    });
+    expect(renders).toBe(settled + 1);
   });
 });

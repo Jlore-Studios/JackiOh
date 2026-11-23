@@ -37,21 +37,31 @@ var Retries = 3
 // BackoffSeconds is the wait after the first failed attempt; the n-th waits n times it.
 var BackoffSeconds = 2.0
 
-// Cached holds the answers to conditional GETs (`request`'s `cached`), by token and URL: GitHub
-// answers one whose ETag still matches with 304 Not Modified, which costs no rate limit, so the
-// status loop's read of every running job every two minutes costs a call only for jobs that
-// changed. Kept for the process, since the loop builds a client each tick; the newest
-// `CachedKeep`. (Python's `_CACHED`.)
+// Cached holds the answers to GETs, every one of which is conditional (`Request`), by token and
+// URL: GitHub answers one whose ETag still matches with 304 Not Modified, which costs no rate
+// limit, so a read the status loop repeats (the state file, the open issues, a run, its jobs,
+// every two minutes or more often) costs a call only when what it reads changed. Before #4059
+// only the loop's reads of runs and jobs were conditional, and at 15 runs the loop alone spent
+// the bot token's 5,000 REST calls an hour, 1,460 of them on `GET /issues` with 41 issues open.
+// Kept for the process, since the loop builds a client each tick; the most recently used
+// `CachedKeep`, and no more than `CachedBytes` of text. (Python's `_CACHED`.)
 var Cached = &ETagCache{vals: map[[2]string][2]string{}}
 
 // CachedKeep is how many answers Cached keeps.
-var CachedKeep = 200
+var CachedKeep = 1000
 
-// ETagCache is `_CACHED`: a dict from (token, URL) to (ETag, text) whose oldest entry goes first.
+// CachedBytes is how much text Cached keeps, its ETags included: 64 MiB, about thirty of the
+// largest answers the loop reads (the state file's blob, 2 MB, and the open issues with their
+// bodies, 0.7 MB, in November 2026) beside every small one.
+var CachedBytes = 64 << 20
+
+// ETagCache is `_CACHED`: a dict from (token, URL) to (ETag, text) whose least recently used
+// entry goes first.
 type ETagCache struct {
-	mu   sync.Mutex
-	keys [][2]string
-	vals map[[2]string][2]string
+	mu    sync.Mutex
+	keys  [][2]string
+	vals  map[[2]string][2]string
+	bytes int
 }
 
 // Len is len(_CACHED).
@@ -65,7 +75,14 @@ func (c *ETagCache) Len() int {
 func (c *ETagCache) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.keys, c.vals = nil, map[[2]string][2]string{}
+	c.keys, c.vals, c.bytes = nil, map[[2]string][2]string{}, 0
+}
+
+// Bytes is how much text the cache holds, its ETags included.
+func (c *ETagCache) Bytes() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.bytes
 }
 
 func (c *ETagCache) get(key [2]string) ([2]string, bool) {
@@ -75,22 +92,27 @@ func (c *ETagCache) get(key [2]string) ([2]string, bool) {
 	return v, ok
 }
 
-// put is `_CACHED.pop(key, None); _CACHED[key] = value`, then the oldest dropped down to
-// CachedKeep.
+// put is `_CACHED.pop(key, None); _CACHED[key] = value`, then the least recently used dropped
+// until at most CachedKeep remain, holding at most CachedBytes; the newest stays whatever its
+// size. An answer given again (a 304) is put again, so the reads the loop repeats stay.
 func (c *ETagCache) put(key, value [2]string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if _, ok := c.vals[key]; ok {
+	if old, ok := c.vals[key]; ok {
 		for i, k := range c.keys {
 			if k == key {
 				c.keys = append(c.keys[:i:i], c.keys[i+1:]...)
 				break
 			}
 		}
+		c.bytes -= len(old[0]) + len(old[1])
 	}
 	c.keys = append(c.keys, key)
 	c.vals[key] = value
-	for len(c.keys) > CachedKeep {
+	c.bytes += len(value[0]) + len(value[1])
+	for len(c.keys) > 1 && (len(c.keys) > CachedKeep || c.bytes > CachedBytes) {
+		old := c.vals[c.keys[0]]
+		c.bytes -= len(old[0]) + len(old[1])
 		delete(c.vals, c.keys[0])
 		c.keys = c.keys[1:]
 	}
@@ -193,10 +215,13 @@ func (x *GitHub) URL(path string) string {
 	return API + "/" + path
 }
 
-// Request is one request, retried on 5xx, connection errors and secondary rate limits. A
-// `cached` GET is conditional: its last answer is kept, and given again when GitHub says it has
-// not changed (`_CACHED`). `body` nil sends none; `accept` "" is the API's JSON.
-func (x *GitHub) Request(method string, path string, body any /* = None */, accept string /* = None */, raw bool /* = False */, cached bool /* = False */) any {
+// Request is one request, retried on 5xx, connection errors and secondary rate limits. Every GET
+// is conditional (#4059): its last answer is kept, and given again when GitHub says it has not
+// changed (`Cached`), which costs no rate limit. The last argument, `cached`, is from before, when
+// only the reads of runs and jobs asked for that; it changes nothing now. `body` nil sends none;
+// `accept` "" is the API's JSON.
+func (x *GitHub) Request(method string, path string, body any /* = None */, accept string /* = None */, raw bool /* = False */, _ bool /* cached = False */) any {
+	cached := method == "GET"
 	if method != "GET" && x.DryRun {
 		x.Writes = append(x.Writes, pyjson.New("method", method, "path", path, "body", body))
 		return pyjson.New()
@@ -220,6 +245,8 @@ func (x *GitHub) Request(method string, path string, body any /* = None */, acce
 		}
 		resp, err := x.Open(req, 60*time.Second)
 		if err == nil {
+			Rate.note(x.Token, resp.Header)
+			Rate.spend(x.Token, resp.Header, 200, method, url)
 			text := py.DecodeReplace(resp.Body)
 			etag := resp.Header.Get("ETag")
 			if cached && etag != "" {
@@ -238,8 +265,11 @@ func (x *GitHub) Request(method string, path string, body any /* = None */, acce
 			}
 			continue
 		}
+		Rate.note(x.Token, exc.Header)
+		Rate.spend(x.Token, exc.Header, exc.Code, method, url)
 		if exc.Code == 304 && cached {
 			if kept, ok := Cached.get(key); ok {
+				Cached.put(key, kept) // used again: the most recent now
 				return parsed(kept[1], raw)
 			}
 		}
@@ -301,8 +331,9 @@ func isTransportError(err error) bool {
 	return errors.As(err, &u) || errors.As(err, &t) || errors.As(err, &c)
 }
 
-// Paginate is every item of a paged list, up to `limit` (each page a conditional GET if
-// `cached`). `key` "" is None: the answer is the list itself.
+// Paginate is every item of a paged list, up to `limit`, each page a conditional GET as every
+// GET is (`cached` changes nothing, as `Request`'s). `key` "" is None: the answer is the list
+// itself.
 func (x *GitHub) Paginate(path string, params *pyjson.Object /* = None */, key string /* = None */, limit int /* = 1000 */, cached bool /* = False */) []any {
 	query := params.Copy()
 	query.SetDefault("per_page", 100)

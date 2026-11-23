@@ -74,6 +74,15 @@ describe("R3045000: a fused definition's parts", () => {
   });
 });
 
+describe("R3558003 a filled Smoothie", () => {
+  it("R3558003 a filled card lists what is inside it, the card filled last", () => {
+    // A Smoothie filled with two Fruits fuses as [fruit, fruit, smoothie]: the picks, then the
+    // kept card (`effects::fuse_random_into` with `into`).
+    const filled = fusedDef([def(BEAM), def(HOST), def(MINER)], 9);
+    expect(fusedParts(filled.id, resolver(filled))).toEqual([BEAM, HOST, MINER]);
+  });
+});
+
 describe("R3045000: a fusion holding the Dormant Starship", () => {
   const hull = def(DORMANT_STARSHIP_ID);
 

@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef, Rarity } from "@jackioh/shared";
@@ -27,6 +27,7 @@ import { drawFigure, FIGURE_DEFAULT_LOOK, FIGURE_KIT, FIGURE_LOOKS, figureLookFo
 import { fmt, seededRandom } from "./hash.ts";
 import { motifFor } from "./motifs.ts";
 import { artSeedOf } from "./pictures.ts";
+import { loadSceneData, resetSceneDataForTests } from "./sceneLoader.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MIN, artElements } from "./richness.ts";
 import {
@@ -177,7 +178,14 @@ describe("R3331000 the scene kits", () => {
 
   it("R3331000 SCENE_PALETTE is palette.css's, and no base-face scene colour is in Radiant's gold window", { timeout: SWEEP_TIMEOUT_MS }, () => {
     const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../palette.css"), "utf8");
-    const declared = Object.fromEntries([...css.matchAll(/^\s*--pal-([a-z0-9-]+):\s*(#[0-9a-f]{6});$/gm)].map((match) => [match[1] ?? "", match[2] ?? ""]));
+    // Token lines as entries (#4009: the `/^\s*--pal-…$/gm` pattern rescans newline runs).
+    const declared = Object.fromEntries(
+      css
+        .split("\n")
+        .map((line) => /^\s*--pal-([a-z0-9-]+):\s*(#[0-9a-f]{6});$/.exec(line))
+        .filter((match) => match !== null)
+        .map((match) => [match[1] ?? "", match[2] ?? ""]),
+    );
     expect(Object.keys(declared).length).toBeGreaterThan(0);
     expect(SCENE_PALETTE).toEqual(declared);
     // The window holds palette.css's golds, so the test can fail.
@@ -251,7 +259,7 @@ describe("R3331000 the five proof cards", () => {
     // hold Arg Arg Defender's (stinkyscapeScenes.test.ts); R3352000: and every Classic entry (classicScenes.test.ts).
     const core = Object.values(CATALOG).filter((card) => card.set === "Core").map((card) => card.id);
     const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds" || card.set === "Classic").map((card) => card.id);
-    const checkedElsewhere = (id: string): boolean => id.startsWith("classicplus-") || id.startsWith("meditative-");
+    const checkedElsewhere = (id: string): boolean => id.startsWith("classicplus-") || id.startsWith("meditative-") || id.startsWith("stinkyscapeplus-");
     expect(Object.keys(SCENE_RECIPES).filter((id) => !checkedElsewhere(id) && !Object.hasOwn(STINKYSCAPE_91_RECIPES, id)).sort()).toEqual(
       [...new Set<string>([...PROOFS, ...core, ...passes, ...Object.keys(STINKYSCAPE_RECIPES)])].sort(),
     );
@@ -432,5 +440,26 @@ describe("R3331000 the five proof cards", () => {
       const svg = svgOf(proceduralCardArtUri(def(id), false));
       for (const shape of inked) expect(svg, id).toContain(`d="${shape.d}" fill="${SCENE_PALETTE[shape.paint]}" opacity="${fmt(shape.opacity)}" fill-rule="evenodd" stroke="${SCENE_PALETTE[line.paint]}" stroke-width="${line.width}"`);
     }
+  });
+});
+
+describe("#4222 the scene tables load beside the engine module", () => {
+  afterEach(async () => {
+    await loadSceneData();
+  });
+
+  it("#4222 sceneRecipeOf throws before the tables are installed", async () => {
+    resetSceneDataForTests();
+    // `core-002` has a recipe, so null would be the wrong picture: the throw fails a face drawn too
+    // early instead of caching the painter's picture in `svg.ts`'s `proceduralCache`.
+    expect(() => sceneRecipeOf("core-002")).toThrow("the scene tables are not loaded");
+    await loadSceneData();
+    expect(sceneRecipeOf("core-002")).not.toBeNull();
+  });
+
+  it("#4265 the component specs' support file loads the scene tables beside the module", () => {
+    // The component specs run only in the daily super run, so their setup is held here per pull request.
+    const support = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../../../e2e/support/component.tsx"), "utf8");
+    expect(support).toContain("Promise.all([loadWasm(), loadSceneData()])");
   });
 });

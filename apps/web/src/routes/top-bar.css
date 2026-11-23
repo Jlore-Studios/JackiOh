@@ -67,11 +67,19 @@
      3. the flexible spacer: the line's `flex: 1 1 0`, and the end group's `margin-left: auto` when the
         screen has no line;
      4. the end group, `.screen-nav__end`: the Jlore pill, Friends, the language button, the gear, in
-        this order, a missing one dropping out (R1651000, R1916000), the gear always last.
+        this order, a missing one dropping out (R1651000, R1916000), the gear always last; inside the
+        menus' shell Friends is the shell's navigation's (R3728000);
+     5. the status row, `.screen-nav__status`, inside the menus' shell alone (R3728002): the live game
+        or the queue search, on a row of its own under everything else, and nothing when there is none.
    A phone (the same 600 px as index.css's touch rule) puts the line on a row of its own under Back and
-   the end group, so Back stays top left and the gear top right. */
+   the end group, so Back stays top left and the gear top right.
+   A screen whose extras are too many to sit beside its title (the deck workshop's, from 601 to 1024 px)
+   asks for them on a second row of the bar instead (R3956000), by setting these on an ancestor of the
+   bar, so this sheet stays the one that places the bar's slots: `--bar-line-display: contents` dissolves
+   the line into the bar, so Back, the title and the end group share the first row, and
+   `--bar-extras-order: 2` with `--bar-extras-flex: 1 0 100%` puts the extras on the second, at its end. */
 .screen-nav__line {
-  display: flex;
+  display: var(--bar-line-display, flex);
   flex: 1 1 0;
   flex-wrap: wrap;
   align-items: center;
@@ -81,7 +89,8 @@
 
 .screen-nav__extra {
   display: flex;
-  flex: 1 1 auto;
+  order: var(--bar-extras-order, 0);
+  flex: var(--bar-extras-flex, 1 1 auto);
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
@@ -95,6 +104,16 @@
   align-items: center;
   gap: 18px;
   margin-left: auto;
+}
+
+.screen-nav__status {
+  order: 2;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.screen-nav__status:empty {
+  display: none;
 }
 
 /* A phone, 320 to 600 px: the line takes a row of its own. A fifth control in the bar left no room for

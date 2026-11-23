@@ -54,7 +54,8 @@ fn is_record(value: &Value) -> Option<&Map<String, Value>> {
     value.as_object()
 }
 
-fn is_player_id(value: Option<&Value>) -> Option<PlayerId> {
+/// `"p1"` or `"p2"`; the server's socket parsers read a seat with it too.
+pub fn is_player_id(value: Option<&Value>) -> Option<PlayerId> {
     match value.and_then(Value::as_str) {
         Some("p1") => Some(PlayerId::P1),
         Some("p2") => Some(PlayerId::P2),
@@ -62,7 +63,8 @@ fn is_player_id(value: Option<&Value>) -> Option<PlayerId> {
     }
 }
 
-fn is_row(value: Option<&Value>) -> Option<Row> {
+/// `"units"` or `"backrow"`; the server's socket parser reads a row with it too.
+pub fn is_row(value: Option<&Value>) -> Option<Row> {
     match value.and_then(Value::as_str) {
         Some("units") => Some(Row::Units),
         Some("backrow") => Some(Row::Backrow),

@@ -21,6 +21,10 @@
 //! Brittle 1. Death: Gain 3 random Stinkyscape Resources"; Job Application, a (1) Field Spell, a Quest
 //! whose Death resummons it at Stage 1; The Narcor Project, a (3) Field Spell whose Death pays only on a
 //! Brittle destroy (R1861001); and Sheepish and My Pawn, two (1) Traps.
+//!
+//! R4024000: a Death price is kept per controller, so each side's copy is probed and read on its own
+//! board: a Floodgates beside the AI's units costs the AI, the enemy's alone on its board costs the enemy
+//! nothing.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -75,6 +79,23 @@ fn price_of(prices: &[DeathPrice], def_id: &str) -> f64 {
         .find(|entry| entry.def_id == def_id)
         .map(|entry| entry.price)
         .unwrap_or_else(|| panic!("{def_id}'s Death is priced: {prices:?}"))
+}
+
+/// R4024000: the price of `controller`'s copy of `def_id`, which must be priced.
+fn price_for(prices: &[DeathPrice], def_id: &str, controller: PlayerId) -> f64 {
+    prices
+        .iter()
+        .find(|entry| entry.def_id == def_id && entry.controller == controller)
+        .map(|entry| entry.price)
+        .unwrap_or_else(|| panic!("{controller:?}'s {def_id} is priced: {prices:?}"))
+}
+
+/// R4024000: each entry's card and controller, in the order the probes priced them.
+fn priced_order(prices: &[DeathPrice]) -> Vec<(&str, PlayerId)> {
+    prices
+        .iter()
+        .map(|entry| (entry.def_id.as_str(), entry.controller))
+        .collect()
 }
 
 /// A 3/3 with no text in Attack Position, as `unit_worth` counts it.
@@ -547,6 +568,7 @@ fn r2687000_an_enemy_face_down_card_is_never_probed() {
             .clone()
             .unwrap_or_default(),
         stats_override: None,
+        controller: HUMAN,
         price: 10.0,
     }];
     assert_eq!(
@@ -621,6 +643,79 @@ fn r2687000_backrow_deaths_follow_the_units_and_share_their_budget() {
 }
 
 #[test]
+fn r4024000_a_floodgates_in_the_ai_hand_is_priced_on_the_ai_board_not_the_enemy_s() {
+    let state = sides(
+        "ai-death-mirror",
+        json!({ "hand": [FLOODGATES], "field": [VANILLA, VANILLA] }),
+        json!({ "field": [FLOODGATES] }),
+    );
+    let (prices, used) = priced(&state);
+    assert_eq!(
+        priced_order(&prices),
+        [(FLOODGATES, HUMAN), (FLOODGATES, AI)],
+        "the enemy's board, then the seat's hand"
+    );
+    assert_eq!(
+        used, 5,
+        "a destroy and a remove, then a spawn, a destroy and a remove"
+    );
+    let (own, enemy) = (
+        price_for(&prices, FLOODGATES, AI),
+        price_for(&prices, FLOODGATES, HUMAN),
+    );
+    assert!(own < 0.0, "its Death destroys the AI's two Vanillas: {own}");
+    assert!(
+        enemy > own,
+        "the enemy's destroys nothing of its own: {enemy} against {own}"
+    );
+    let floodgates = unit(&state, HUMAN, FLOODGATES);
+    close(
+        unit_worth(&state, floodgates, &AI_EVAL, &prices_of(prices.clone()))
+            - unit_worth(&state, floodgates, &AI_EVAL, Prices::NONE),
+        AI_EVAL.death * enemy,
+    );
+}
+
+#[test]
+fn r4024000_each_side_s_floodgates_reads_the_price_of_its_own_board() {
+    let state = sides(
+        "ai-death-mirror",
+        json!({ "field": [FLOODGATES, VANILLA, VANILLA] }),
+        json!({ "field": [FLOODGATES] }),
+    );
+    let (prices, used) = priced(&state);
+    assert_eq!(
+        priced_order(&prices),
+        [(FLOODGATES, AI), (FLOODGATES, HUMAN)],
+        "the seat's copy first"
+    );
+    assert_eq!(used, 4, "a destroy and a remove each");
+    let (own, enemy) = (
+        price_for(&prices, FLOODGATES, AI),
+        price_for(&prices, FLOODGATES, HUMAN),
+    );
+    assert!(own < enemy, "{own} against {enemy}");
+    let held = prices_of(prices.clone());
+    for player in [AI, HUMAN] {
+        let floodgates = unit(&state, player, FLOODGATES);
+        close(
+            unit_worth(&state, floodgates, &AI_EVAL, &held)
+                - unit_worth(&state, floodgates, &AI_EVAL, Prices::NONE),
+            AI_EVAL.death * price_for(&prices, FLOODGATES, player),
+        );
+    }
+    let enemy_only: Vec<DeathPrice> = prices
+        .into_iter()
+        .filter(|entry| entry.controller == HUMAN)
+        .collect();
+    let own_floodgates = unit(&state, AI, FLOODGATES);
+    close(
+        unit_worth(&state, own_floodgates, &AI_EVAL, &prices_of(enemy_only)),
+        unit_worth(&state, own_floodgates, &AI_EVAL, Prices::NONE),
+    );
+}
+
+#[test]
 fn r2687000_decide_plays_comet_crash_and_bauble_bubble_when_nothing_else_is_worth_doing() {
     for (card, mana) in [(COMET_CRASH, 2), (BAUBLE_BUBBLE, 1)] {
         let seed = format!("ai-death-play-{card}");
@@ -642,9 +737,9 @@ fn r2687000_decide_plays_comet_crash_and_bauble_bubble_when_nothing_else_is_wort
     }
 }
 
-/// R3038003: the root of the removal test holds a Starship Piece, so a finalist is scored by the hand eval
-/// in every determinization, and the hand eval keeps the vanilla kill above the piece kill by the margin
-/// R2566000's price gives it, whatever the network, fitted before any Starship, would add to either.
+/// R3038003: the root of the removal test holds a Starship Piece, and the hand eval, which scores every
+/// finalist (R4159000), keeps the vanilla kill above the piece kill in every determinization by the margin
+/// R2566000's price gives it.
 #[test]
 fn r3038003_given_one_removal_every_determinization_scores_the_vanilla_kill_above_the_piece_kill() {
     register_cards();
@@ -662,10 +757,6 @@ fn r3038003_given_one_removal_every_determinization_scores_the_vanilla_kill_abov
         .state()
         .clone();
         let public = redact(&state, AI);
-        assert!(
-            holds_starship(&public, AI),
-            "{at}: the enemy's piece is on its field"
-        );
         let ground = det_ground(&public, AI);
         let probe = determinize_on(
             &public,
@@ -677,7 +768,6 @@ fn r3038003_given_one_removal_every_determinization_scores_the_vanilla_kill_abov
         let counter = create_node_counter(AI_BUDGET.nodes * 100, None);
         let prices = Prices {
             deaths: death_prices(&probe, AI, &counter),
-            starship_root: holds_starship(&public, AI),
             ..Prices::default()
         };
         let mut rng = create_rng(&seed, 0);

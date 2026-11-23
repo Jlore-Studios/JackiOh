@@ -17,6 +17,8 @@ import type { Plugin } from "vite";
 
 import { shellTestid } from "./src/auth/testids.ts";
 import { motifFor } from "./src/cards/art/motifs.ts";
+import { installSceneData } from "./src/cards/art/scene.ts";
+import { ALT_SCENE_RECIPES, drawFigure, SCENE_KIT, SCENE_RECIPES } from "./src/cards/art/sceneData.ts";
 import { proceduralArtUri } from "./src/cards/art/svg.ts";
 import { compositionFor, themeFor } from "./src/cards/art/themes.ts";
 import { almanacShelf } from "./src/game/deckbuilder/shelf.ts";
@@ -29,6 +31,11 @@ import { SHIPPED_SETS, fillParams } from "./src/wire/catalog.ts";
 import { DECK_SIZE, HERO_HEALTH, MAX_MANA } from "./src/wire/engineConfig.ts";
 import { MIN_ACCOUNT_AGE_YEARS } from "./src/wire/serverConfig.ts";
 import type { CardCost, CardDefs } from "./src/wire/index.ts";
+
+// #4222: the static pages render outside every gate (the build's `writeBundle`, the dev server's
+// artwork middleware), so the scene tables their faces draw through are installed here, the way
+// `src/test/setup.ts` installs them for jsdom. Build-time only: this module never ships to the client.
+installSceneData({ SCENE_KIT, drawFigure, SCENE_RECIPES, ALT_SCENE_RECIPES });
 
 export type PublicPage = { readonly path: string; readonly description: string };
 
@@ -55,14 +62,6 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
   },
   { path: paths.terms, description: "The terms of playing JackiOh." },
   {
-    path: paths.accessibility,
-    description: "JackiOh's accessibility statement, and how to tell us about a barrier.",
-  },
-  {
-    path: paths.ai,
-    description: "How JackiOh uses AI: its computer opponents, what was made with AI, and what AI does with your data.",
-  },
-  {
     path: paths.copyright,
     description: "How to report content on JackiOh that infringes your copyright, and how to answer a report.",
   },
@@ -83,8 +82,8 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
 const section = (heading: string, body: string): string => `<section><h2>${heading}</h2>${body}</section>`;
 
 /**
- * Each page's own text, after its description, for a reader that runs no script. /privacy, /terms,
- * /accessibility and /copyright quote their routes word for word (static-pages.test.ts renders each to check).
+ * Each page's own text, after its description, for a reader that runs no script. /privacy, /terms
+ * and /copyright quote their routes word for word (static-pages.test.ts renders each to check).
  */
 export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
   [paths.landing]:
@@ -134,7 +133,10 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
       "What we collect",
       `<p>Your email and username, confirmation that you&rsquo;re ${String(MIN_ACCOUNT_AGE_YEARS)} or older, your ` +
         "decks, cards, matches and how you play, your friends, chats and shared replays, and technical info " +
-        "like your IP address and browser.</p>",
+        "like your IP address and browser.</p>" +
+        "<p>For daily games, your notification settings (email on or off, and when we last emailed you or " +
+        "sent a push) and, for each device you turn notifications on for, its push subscription: its push " +
+        "service&rsquo;s address and keys.</p>",
     ) +
     section(
       "Why",
@@ -153,7 +155,9 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
     section(
       "How long",
       "<p>We keep your data while you have an account. Card statistics that don&rsquo;t identify you may be " +
-        "kept indefinitely.</p>",
+        "kept indefinitely.</p>" +
+        "<p>A device&rsquo;s push subscription is kept until you turn its notifications off, sign out on it, " +
+        "or its push service tells us it&rsquo;s gone.</p>",
     ) +
     section(
       "Your choices",
@@ -209,76 +213,6 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
     section(
       "Repeat infringers",
       "<p>We close the accounts of players who repeatedly infringe others&rsquo; copyrights.</p>",
-    ),
-  [paths.ai]:
-    section(
-      "The computer opponents",
-      "<p>JackiOh has three kinds of computer opponent. Each plays by the same rules you do and sees only what a " +
-        "player in its seat could see.</p>" +
-        "<ul><li>In Practice, at the difficulty you pick, and in the tutorial, an opponent that runs in your browser.</li>" +
-        "<li>In ranked, when no one near your rating is free after a short wait, an AI opponent that our server " +
-        "plays. Nothing in the game marks it, as the Terms say.</li>" +
-        "<li>In co-op, the team you and a friend play against.</li></ul>" +
-        "<p>They choose their moves by searching the moves the rules allow, with a game-playing program we wrote " +
-        "and tune on games it plays against itself. They are not chatbots, and they say nothing to you but the " +
-        "emotes a player can send.</p>",
-    ) +
-    section(
-      "Made with AI",
-      "<ul><li>The music, every track and the few bars each Legendary and Mythic card plays, was composed by an AI " +
-        "model, Anthropic&rsquo;s Claude, written as code and played with free instrument sounds. No melody or " +
-        "recording was taken from another work. Where each track came from.</li>" +
-        "<li>The cards&rsquo; spoken lines are read by computer text-to-speech voices, not recorded by actors.</li>" +
-        "<li>Card art is drawn by code from each card&rsquo;s name, type and tags, not by an image-generation model.</li>" +
-        "<li>JackiOh&rsquo;s code is written with the help of AI coding assistants.</li></ul>",
-    ) +
-    section(
-      "What AI does with your data",
-      "<p>We don&rsquo;t send anything you write, or your account&rsquo;s details, to an AI service. Records of " +
-        "online games are used as the Privacy Policy says: for the card statistics, to time the ranked AI " +
-        "opponents&rsquo; moves and habits like a person&rsquo;s, and to choose the decks they bring from decks " +
-        "players have taken into ranked.</p>",
-    ),
-  [paths.accessibility]:
-    section(
-      "Our goal",
-      "<p>We want JackiOh to be usable by as many players as we can make it. It has had an automated " +
-        "check against the Web Content Accessibility Guidelines (WCAG) 2.2 at levels A and AA, and no " +
-        "audit by a person. We do not claim that it conforms to WCAG.</p>",
-    ) +
-    section(
-      "What we checked",
-      "<p>On the date above we checked every screen with axe-core 4.14 in Chrome, at a computer's " +
-        "size and at a phone's, against its WCAG 2.0, 2.1 and 2.2 rules at levels A and AA, and fixed " +
-        "every serious or critical problem it found, except " +
-        "those listed below. The same check runs every day, and fails when a new one appears.</p>" +
-        "<ul><li>The home page, signing in, creating an account, resetting a password, the invite code " +
-        "screen and the screen that asks for your date of birth and agreement to the terms.</li>" +
-        "<li>Play, Decks, Account and the leaderboard.</li>" +
-        "<li>The Almanac, Patch notes and Stats.</li>" +
-        "<li>Practice, its setup and a game, and a game on one device.</li>" +
-        "<li>Replays, Play together and the Collection.</li>" +
-        "<li>The Privacy Policy, the Terms, this page and the Copyright page.</li></ul>",
-    ) +
-    section(
-      "Current support",
-      "<ul><li>Menus, the deck builder, and the board's cards, zones and prompts can be used " +
-        "from the keyboard.</li>" +
-        "<li>Focused controls are marked, and each screen has headings.</li>" +
-        "<li>Card art is decorative and hidden from screen readers; each card's name and text are " +
-        "on the card as text.</li>" +
-        "<li>Reduce motion, effects and sound can be changed in Settings.</li></ul>",
-    ) +
-    section(
-      "Known gaps",
-      "<ul><li>A card shown as a button, on the home page, in the Almanac's card pool and in a game's " +
-        "prompts, is named by a short summary that names the card, not by all the text on its face.</li>" +
-        "<li>Dragging a card to play it needs a mouse or a touch screen. Choosing the card and then where " +
-        "it goes does the same, by click or by Enter on each.</li>" +
-        "<li>With a mouse, the card names in the game log are closer together than 24 pixels; on a touch screen each line is 44 pixels tall.</li>" +
-        "<li>Color contrast is checked only where the tool can measure it, so text over card art and " +
-        "gradients has not been checked.</li>" +
-        "<li>No one has tested JackiOh with a screen reader or other assistive technology yet.</li></ul>",
     ),
 };
 

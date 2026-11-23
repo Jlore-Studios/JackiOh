@@ -85,7 +85,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Pierce: keywords only
     const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // no piece.
     const HIT_JOB: &str = "core-016"; // Hit Job: destroy a Unit
 

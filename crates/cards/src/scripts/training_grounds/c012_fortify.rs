@@ -1,7 +1,7 @@
 //! TG #12 Fortify (SPEC §8.11 row TG 12; §6.1 Armor X, Taunt, Divine Shield, R78, R90, R347): (1)
 //! Spell, Common, a card of the held Training Grounds set (R1420, R2194000).
-//!   Base:    "Give a Unit +{health} Health, +{armor} Armor and Taunt." — 3, 1.
-//!   Radiant: "… +{health} Health, +{armor} Armor, Taunt and Divine Shield." — 6, 2.
+//!   Base:    "Give a Unit +{health} Health, +{armor} Armor and Taunt." — 5, 1 (3 until issue #3951).
+//!   Radiant: "… +{health} Health, +{armor} Armor, Taunt and Divine Shield." — 10, 2 (6 until issue #3951).
 //! Targets any Unit (R90; S #10.3); grants Armor n (§6.1, R78) and Taunt (R347 Indestructible ignores; S #15). Radiant grants Divine Shield.
 
 use jackioh_engine::prelude::*;
@@ -64,10 +64,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": card.id }] })
-    }
-
     fn armor(s: &Scenario, card: &CardInstance) -> i32 {
         s.stats(card).armor
     }
@@ -76,25 +72,13 @@ mod tests {
         s.stats(card).keywords.iter().filter(|keyword| keyword.kind() == kind).count()
     }
 
-    // Differs from Scenario::offered: one card's play targets, not the seat's whole legal list.
-    fn offered(s: &Scenario) -> Vec<Selection> {
-        let fortify = s.card(FORTIFY).id.clone();
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == fortify => targets.unwrap_or_default(),
-                _ => Vec::new(),
-            })
-            .collect()
-    }
-
     mod base {
         use super::*;
 
         #[test]
         fn it_offers_any_unit_on_either_side_and_no_hero() {
             let s = board(false, json!([VANILLA]), json!([VANILLA]));
-            let offered = offered(&s);
+            let offered = s.play_targets(FORTIFY);
             for unit in [s.unit_at(P1, 1), s.unit_at(P2, 1)] {
                 assert!(offered.contains(&Selection::Instance { instance_id: unit.id }));
             }
@@ -102,19 +86,19 @@ mod tests {
         }
 
         #[test]
-        fn the_unit_gains_three_health_current_and_max() {
+        fn the_unit_gains_five_health_current_and_max() {
             let mut s = board(false, json!([{ "def": VANILLA, "lane": 1, "damage": 1 }]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(FORTIFY, on(&unit));
-            s.expect_stats(&unit, json!({ "attack": 4, "health": 6 }));
-            assert_eq!(s.stats(&unit).max_health, 7);
+            s.play(FORTIFY, pick::targets(pick::instance(&unit)));
+            s.expect_stats(&unit, json!({ "attack": 4, "health": 8 }));
+            assert_eq!(s.stats(&unit).max_health, 9);
         }
 
         #[test]
         fn its_armor_rises_by_one_on_top_of_its_printed_armor() {
             let mut s = board(false, json!([ARMORED, VANILLA]), json!([]));
             let (armored, vanilla) = (s.unit_at(P1, 1), s.unit_at(P1, 2));
-            s.play(FORTIFY, on(&armored));
+            s.play(FORTIFY, pick::targets(pick::instance(&armored)));
             assert_eq!(armor(&s, &armored), 8);
             assert_eq!(armor(&s, &vanilla), 0);
         }
@@ -123,7 +107,7 @@ mod tests {
         fn it_gains_taunt() {
             let mut s = board(false, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(FORTIFY, on(&unit));
+            s.play(FORTIFY, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Taunt), 1);
         }
 
@@ -131,7 +115,7 @@ mod tests {
         fn taunt_once_on_a_unit_that_has_it() {
             let mut s = board(false, json!([MENACE]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(FORTIFY, on(&unit));
+            s.play(FORTIFY, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Taunt), 1);
         }
 
@@ -139,7 +123,7 @@ mod tests {
         fn never_taunt_on_an_indestructible_unit() {
             let mut s = board(false, json!([ROCK]), json!([]));
             let rock = s.unit_at(P1, 1);
-            s.play(FORTIFY, on(&rock));
+            s.play(FORTIFY, pick::targets(pick::instance(&rock)));
             assert_eq!(keyword_count(&s, &rock, KeywordKind::Taunt), 0, "R347");
             assert_eq!(armor(&s, &rock), 1);
         }
@@ -148,19 +132,19 @@ mod tests {
         fn an_enemy_unit_may_be_fortified() {
             let mut s = board(false, json!([]), json!([VANILLA]));
             let theirs = s.unit_at(P2, 1);
-            s.play(FORTIFY, on(&theirs));
+            s.play(FORTIFY, pick::targets(pick::instance(&theirs)));
             assert_eq!(armor(&s, &theirs), 1);
-            assert_eq!(s.stats(&theirs).max_health, 7);
+            assert_eq!(s.stats(&theirs).max_health, 9);
         }
 
         #[test]
         fn both_numbers_read_through_param() {
             let mut s = board(false, json!([VANILLA]), json!([]));
-            assert_eq!(upgrade_number(&mut s, FORTIFY, "health"), 4);
+            assert_eq!(upgrade_number(&mut s, FORTIFY, "health"), 6);
             assert_eq!(upgrade_number(&mut s, FORTIFY, "armor"), 2);
             let unit = s.unit_at(P1, 1);
-            s.play(FORTIFY, on(&unit));
-            assert_eq!(s.stats(&unit).max_health, 8);
+            s.play(FORTIFY, pick::targets(pick::instance(&unit)));
+            assert_eq!(s.stats(&unit).max_health, 10);
             assert_eq!(armor(&s, &unit), 2);
         }
 
@@ -168,7 +152,7 @@ mod tests {
         fn no_divine_shield_on_the_base_face() {
             let mut s = board(false, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(FORTIFY, on(&unit));
+            s.play(FORTIFY, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::DivineShield), 0);
         }
 
@@ -179,7 +163,7 @@ mod tests {
             let mut s = board(false, json!([MOON]), json!([]));
             let moon = s.unit_at(P1, 1);
             let printed = armor(&s, &moon);
-            s.play(FORTIFY, on(&moon));
+            s.play(FORTIFY, pick::targets(pick::instance(&moon)));
             assert_eq!(armor(&s, &moon), printed + 1);
         }
     }
@@ -188,11 +172,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn six_health_two_armor_and_taunt() {
+        fn ten_health_two_armor_and_taunt() {
             let mut s = board(true, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(FORTIFY, on(&unit));
-            assert_eq!(s.stats(&unit).max_health, 10);
+            s.play(FORTIFY, pick::targets(pick::instance(&unit)));
+            assert_eq!(s.stats(&unit).max_health, 14);
             assert_eq!(armor(&s, &unit), 2);
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Taunt), 1);
         }
@@ -202,7 +186,7 @@ mod tests {
             let mut s = board(true, json!([SHIELDED]), json!([]));
             let shielded = s.unit_at(P1, 1);
             s.card_mut(&shielded).divine_shield_spent = Some(true);
-            s.play(FORTIFY, on(&shielded));
+            s.play(FORTIFY, pick::targets(pick::instance(&shielded)));
             assert_ne!(s.card(&shielded).divine_shield_spent, Some(true));
             assert!(s.stats(&shielded).keywords.iter().any(|k| k.kind() == KeywordKind::DivineShield));
         }
@@ -211,7 +195,7 @@ mod tests {
         fn divine_shield_on_a_unit_without_one() {
             let mut s = board(true, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(FORTIFY, on(&unit));
+            s.play(FORTIFY, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::DivineShield), 1);
         }
     }

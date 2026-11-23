@@ -860,10 +860,6 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
     const ANCHOR: &str = "core-010";
     const LIBRARY: [&str; 2] = ["core-008", "core-011"];
 
-    fn at_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     fn drew(s: &Scenario) -> usize {
         count_of(s, "drawn")
     }
@@ -875,7 +871,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
         );
 
         assert!(hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
-        s.play(BURN, json!({ "targets": at_hero() }));
+        s.play(BURN, json!({ "targets": pick::hero("p2") }));
         assert_eq!(drew(&s), 1);
     }
 
@@ -886,7 +882,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
         );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
-        s.play(BURN, json!({ "targets": at_hero() }));
+        s.play(BURN, json!({ "targets": pick::hero("p2") }));
         assert_eq!(drew(&s), 0);
     }
 
@@ -898,7 +894,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
         );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
-        s.play(BURN, json!({ "targets": at_hero() }));
+        s.play(BURN, json!({ "targets": pick::hero("p2") }));
         assert_eq!(drew(&s), 0);
     }
 
@@ -910,7 +906,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
         );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
-        s.play(BURN, json!({ "targets": at_hero() }));
+        s.play(BURN, json!({ "targets": pick::hero("p2") }));
         s.expect_mana("p1", 3);
         assert_eq!(drew(&s), 0);
     }
@@ -922,7 +918,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
         );
 
         assert!(hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
-        s.play(BURN, json!({ "targets": at_hero() }));
+        s.play(BURN, json!({ "targets": pick::hero("p2") }));
         assert_eq!(drew(&s), 1);
     }
 
@@ -933,7 +929,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
         );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
-        s.play(BURN, json!({ "targets": at_hero() }));
+        s.play(BURN, json!({ "targets": pick::hero("p2") }));
         assert_eq!(drew(&s), 0);
     }
 
@@ -1178,9 +1174,10 @@ mod meditative_c57_clip_farming_critikal_lights_up_in_hand_once_a_card_was_playe
 mod r195_the_cards_that_declare_condition_met {
     // Classic+ #18 Gullible Treatler, #19.5 Bot Loser and #37 Wardrum prove theirs in their own card
     // files, and so do R662's Core #18, #60, #70, #85, #96 and #100; Meditative #57 Clip-Farming
-    // Critikal proves its own above.
+    // Critikal proves its own above, and R4189000's five (S #4, S #137, S #176, S+ #102, S+ #162)
+    // prove theirs in the mods below and in their own card files.
     #[test]
-    fn r195_r662_are_exactly_c10_c53_c68_c71_and_c93_classic_c22_c36_c40_and_c69_classic_plus_c18_c19_5_c37_and_c50_meditative_c57_and_r662s_c18_c60_c70_c85_c96_and_c100_on_both_faces_so_a_new_hook_cannot_land_untested()
+    fn r195_r662_r4189000_are_exactly_c10_c53_c68_c71_and_c93_classic_c22_c36_c40_and_c69_classic_plus_c18_c19_5_c37_and_c50_meditative_c57_r662s_c18_c60_c70_c85_c96_and_c100_stinkyscape_c4_c137_and_c176_and_stinkyscape_plus_c102_and_c162_on_both_faces_so_a_new_hook_cannot_land_untested()
      {
         let cards = jackioh_cards::scripts_of();
         let mut hooked: Vec<String> = cards
@@ -1212,6 +1209,11 @@ mod r195_the_cards_that_declare_condition_met {
                 "core-096",
                 "core-100",
                 "meditative-057",
+                "stinkyscape-004",
+                "stinkyscape-137",
+                "stinkyscape-176",
+                "stinkyscapeplus-102",
+                "stinkyscapeplus-162",
             ]
         );
 
@@ -1313,5 +1315,447 @@ mod classic_c69_plague_charger_lights_up_while_it_has_a_plague_counter_r195 {
         );
         assert!(!glows(s.view("p1").opponent.units[0].as_ref()));
         assert!(glows(s.view("p2").you.units[0].as_ref()));
+    }
+}
+
+// S+ #102 Cosmic Bard (hand only): Combo, a card played earlier this turn
+
+/// S+ #102 Cosmic Bard lights up in hand once a card was played this turn (R4189000)
+mod stinkyscapeplus_c102_cosmic_bard_lights_up_in_hand_once_a_card_was_played_this_turn_r4189000 {
+    use super::*;
+
+    const BARD: &str = "stinkyscapeplus-102";
+    const CHEAP: &str = "core-011"; // Tempo Timmy: a cheap play that keeps the turn open
+    const STOCKPILE: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: a Unit
+
+    fn bard(seed: &str, radiant: bool) -> Scenario {
+        setup(json!({
+            "seed": seed,
+            "p1": {
+                "hand": [CHEAP, { "def": BARD, "radiant": radiant }, STOCKPILE],
+                "mana": 10,
+                "library": [VANILLA, VANILLA, VANILLA, STOCKPILE],
+            },
+            "p2": { "hand": [STOCKPILE], "library": [VANILLA, VANILLA] },
+        }))
+    }
+
+    fn def_ids(cards: Vec<Instance>) -> Vec<String> {
+        cards.into_iter().map(|card| card.def_id).collect()
+    }
+
+    #[test]
+    fn r4189000_played_first_it_does_not_glow_and_draws_nothing() {
+        let mut s = bard("r4189000-c102-first", false);
+        let card = s.card(BARD).clone();
+        assert!(!hand_glows(&s, &card));
+        s.play(BARD, json!({}));
+        assert_eq!(
+            def_ids(s.hand("p1")),
+            vec![CHEAP.to_string(), STOCKPILE.to_string()]
+        );
+        assert_eq!(s.pile("p1", "library").len(), 4);
+    }
+
+    #[test]
+    fn r4189000_after_a_play_it_glows_in_hand_and_draws_2() {
+        let mut s = bard("r4189000-c102-on", false);
+        let card = s.card(BARD).clone();
+        assert!(!hand_glows(&s, &card));
+        s.play(CHEAP, json!({}));
+        assert!(hand_glows(&s, &card));
+        s.play(BARD, json!({}));
+        // The two topmost Units, top first; the third Vanilla and the Stockpile stay.
+        assert_eq!(
+            def_ids(s.hand("p1")),
+            vec![STOCKPILE.to_string(), VANILLA.to_string(), VANILLA.to_string()]
+        );
+        assert_eq!(
+            def_ids(s.pile("p1", "library")),
+            vec![VANILLA.to_string(), STOCKPILE.to_string()]
+        );
+    }
+
+    #[test]
+    fn r4189000_the_radiant_face_glows_on_the_same_play_and_prices_both_drawn() {
+        let mut s = bard("r4189000-c102-radiant", true);
+        let card = s.card(BARD).clone();
+        assert!(!hand_glows(&s, &card));
+        s.play(CHEAP, json!({}));
+        assert!(hand_glows(&s, &card));
+        s.play(BARD, json!({}));
+        let drawn: Vec<Instance> = s
+            .hand("p1")
+            .into_iter()
+            .filter(|card| card.def_id == VANILLA)
+            .collect();
+        assert_eq!(drawn.len(), 2);
+        assert!(
+            drawn.iter().all(|card| card.cost_override.is_some()),
+            "the Radiant face priced both drawn Units"
+        );
+    }
+
+    #[test]
+    fn r4189000_the_opponents_view_never_carries_the_flag() {
+        let mut s = bard("r4189000-c102-theirs", false);
+        s.play(CHEAP, json!({}));
+        assert!(hand_glows(&s, &s.card(BARD).clone()));
+        assert!(
+            !serde_json::to_string(&s.view("p2"))
+                .unwrap()
+                .contains("conditionActive")
+        );
+    }
+}
+
+// S+ #162 Edwin Van'Spacechief (hand only): Combo, a card played earlier this turn
+
+/// S+ #162 Edwin Van'Spacechief lights up in hand once a card was played this turn (R4189000)
+mod stinkyscapeplus_c162_edwin_vanspacechief_lights_up_in_hand_once_a_card_was_played_this_turn_r4189000 {
+    use super::*;
+
+    const EDWIN: &str = "stinkyscapeplus-162";
+    const CHEAP: &str = "core-011"; // Tempo Timmy: a cheap play that keeps the turn open
+    const STOCKPILE: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
+
+    fn edwin(seed: &str, radiant: bool) -> Scenario {
+        setup(json!({
+            "seed": seed,
+            "p1": {
+                "hand": [CHEAP, { "def": EDWIN, "radiant": radiant }, STOCKPILE],
+                "mana": 10,
+                "library": [STOCKPILE, STOCKPILE, STOCKPILE],
+            },
+            "p2": { "hand": [STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
+        }))
+    }
+
+    #[test]
+    fn r4189000_played_first_it_does_not_glow_and_gains_nothing() {
+        let mut s = edwin("r4189000-c162-first", false);
+        let card = s.card(EDWIN).clone();
+        assert!(!hand_glows(&s, &card));
+        s.play(EDWIN, json!({}));
+        s.expect_stats(EDWIN, json!({ "attack": 2, "health": 2 }));
+    }
+
+    #[test]
+    fn r4189000_after_a_play_it_glows_in_hand_and_gains_2() {
+        let mut s = edwin("r4189000-c162-on", false);
+        let card = s.card(EDWIN).clone();
+        assert!(!hand_glows(&s, &card));
+        s.play(CHEAP, json!({}));
+        assert!(hand_glows(&s, &card));
+        s.play(EDWIN, json!({}));
+        s.expect_stats(EDWIN, json!({ "attack": 2 + 2, "health": 2 + 2 }));
+    }
+
+    #[test]
+    fn r4189000_the_radiant_face_glows_on_the_same_play_and_gains_4() {
+        let mut s = edwin("r4189000-c162-radiant", true);
+        let card = s.card(EDWIN).clone();
+        assert!(!hand_glows(&s, &card));
+        s.play(CHEAP, json!({}));
+        assert!(hand_glows(&s, &card));
+        s.play(EDWIN, json!({}));
+        s.expect_stats(EDWIN, json!({ "attack": 4 + 4, "health": 4 + 4 }));
+    }
+
+    #[test]
+    fn r4189000_the_opponents_view_never_carries_the_flag() {
+        let mut s = edwin("r4189000-c162-theirs", false);
+        s.play(CHEAP, json!({}));
+        assert!(hand_glows(&s, &s.card(EDWIN).clone()));
+        assert!(
+            !serde_json::to_string(&s.view("p2"))
+                .unwrap()
+                .contains("conditionActive")
+        );
+    }
+}
+
+// S #137 Starfleet Commander (hand only): its controller has a Dormant Starship
+
+/// S #137 Starfleet Commander lights up in hand with a Dormant Starship (R4189000)
+mod stinkyscape_c137_starfleet_commander_lights_up_in_hand_with_a_dormant_starship_r4189000 {
+    use super::*;
+
+    const COMMANDER: &str = "stinkyscape-137";
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroys the piece, whose death builds the Starship
+    const PIECE: &str = "stinkyscape-100"; // AP Rounds: a Starship Piece with no text
+    const STOCKPILE: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+
+    /// p1 holds the Commander (Radiant if `radiant`) beside a Dormant Starship, built by a
+    /// Hit Job on its own piece, through public testkit calls alone.
+    fn holding(seed: &str, radiant: bool) -> (Scenario, String) {
+        let mut s = setup(json!({
+            "seed": seed,
+            "p1": {
+                "field": [{ "def": PIECE, "lane": 2 }],
+                "hand": [HIT_JOB, { "def": COMMANDER, "radiant": radiant }, STOCKPILE],
+                "mana": 10,
+                "library": [VANILLA, VANILLA],
+            },
+            "p2": { "hand": [STOCKPILE], "library": [VANILLA, VANILLA] },
+        }));
+        let targets = pick::unit_at(&s, "p1", 2);
+        s.play(HIT_JOB, json!({ "targets": targets }));
+        let ship = dormant_starship_of(s.state(), PlayerId::P1)
+            .expect("the piece's death built a Dormant Starship")
+            .id
+            .clone();
+        (s, ship)
+    }
+
+    fn launched(s: &Scenario) -> bool {
+        s.events()
+            .iter()
+            .any(|event| event.event_type() == GameEventType::StarshipLaunched)
+    }
+
+    #[test]
+    fn r4189000_with_a_dormant_starship_it_glows_in_hand_and_played_now_it_launches_the_starship_and_discovers()
+     {
+        for radiant in [false, true] {
+            let (mut s, ship) = holding(&format!("r4189000-c137-on-{radiant}"), radiant);
+            let card = s.card(COMMANDER).clone();
+            assert!(hand_glows(&s, &card), "radiant {radiant}");
+            s.play(COMMANDER, json!({ "zone": 4 }));
+            assert!(launched(&s), "radiant {radiant}: the Starship launched");
+            assert!(
+                s.state().pending.is_some(),
+                "radiant {radiant}: the Discover opens"
+            );
+            assert_eq!(
+                s.unit("p1", 4).map(|unit| unit.def_id),
+                Some(COMMANDER.to_string())
+            );
+            let launched_ids: Vec<String> = s
+                .events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::StarshipLaunched { instance_id, .. } => Some(instance_id.clone()),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(
+                launched_ids,
+                vec![ship.clone()],
+                "radiant {radiant}: that Starship launched"
+            );
+        }
+    }
+
+    #[test]
+    fn r4189000_without_a_dormant_starship_it_does_not_glow_and_played_now_it_does_nothing() {
+        for radiant in [false, true] {
+            let mut s = setup(json!({
+                "seed": format!("r4189000-c137-off-{radiant}"),
+                "p1": {
+                    "hand": [{ "def": COMMANDER, "radiant": radiant }, STOCKPILE],
+                    "mana": 10,
+                    "library": [VANILLA, VANILLA],
+                },
+                "p2": { "hand": [STOCKPILE], "library": [VANILLA, VANILLA] },
+            }));
+            let card = s.card(COMMANDER).clone();
+            assert!(!hand_glows(&s, &card), "radiant {radiant}");
+            s.play(COMMANDER, json!({ "zone": 1 }));
+            assert!(s.state().pending.is_none(), "no Discover");
+            assert!(!launched(&s), "no launch");
+        }
+    }
+
+    #[test]
+    fn r4189000_the_opponents_view_never_carries_the_flag() {
+        let (s, _ship) = holding("r4189000-c137-theirs", false);
+        assert!(hand_glows(&s, &s.card(COMMANDER).clone()));
+        assert!(
+            !serde_json::to_string(&s.view("p2"))
+                .unwrap()
+                .contains("conditionActive")
+        );
+    }
+}
+
+// S #176 Preemptive Strike (hand only): its controller has a Dormant Starship
+
+/// S #176 Preemptive Strike lights up in hand with a Dormant Starship (R4189000)
+mod stinkyscape_c176_preemptive_strike_lights_up_in_hand_with_a_dormant_starship_r4189000 {
+    use super::*;
+
+    const STRIKE: &str = "stinkyscape-176";
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroys the piece, whose death builds the Starship
+    const PIECE: &str = "stinkyscape-100"; // AP Rounds: a Starship Piece with no text
+    const STOCKPILE: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
+
+    /// p1 holds the Strike (Radiant if `radiant`) beside a Dormant Starship, built by a Hit Job
+    /// on its own piece, through public testkit calls alone.
+    fn holding(seed: &str, radiant: bool) -> (Scenario, String) {
+        let mut s = setup(json!({
+            "seed": seed,
+            "p1": {
+                "field": [{ "def": PIECE, "lane": 2 }],
+                "hand": [HIT_JOB, { "def": STRIKE, "radiant": radiant }, STOCKPILE],
+                "mana": 10,
+                "library": [STOCKPILE, STOCKPILE],
+            },
+            "p2": { "hand": [STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
+        }));
+        let targets = pick::unit_at(&s, "p1", 2);
+        s.play(HIT_JOB, json!({ "targets": targets }));
+        let ship = dormant_starship_of(s.state(), PlayerId::P1)
+            .expect("the piece's death built a Dormant Starship")
+            .id
+            .clone();
+        (s, ship)
+    }
+
+    fn launched(s: &Scenario) -> bool {
+        s.events()
+            .iter()
+            .any(|event| event.event_type() == GameEventType::StarshipLaunched)
+    }
+
+    #[test]
+    fn r4189000_with_a_dormant_starship_it_glows_in_hand_and_cast_now_it_launches_the_starship_and_discovers()
+    {
+        for radiant in [false, true] {
+            let (mut s, _ship) = holding(&format!("r4189000-c176-on-{radiant}"), radiant);
+            let card = s.card(STRIKE).clone();
+            assert!(hand_glows(&s, &card), "radiant {radiant}");
+            s.play(STRIKE, json!({}));
+            assert!(launched(&s), "radiant {radiant}: the Starship launched");
+            assert!(
+                s.state().pending.is_some(),
+                "radiant {radiant}: the Discover opens"
+            );
+            // The cast resolves once the Discover is answered, so it is still resolving here.
+        }
+    }
+
+    #[test]
+    fn r4189000_without_a_dormant_starship_it_does_not_glow_and_cast_now_it_does_nothing() {
+        for radiant in [false, true] {
+            let mut s = setup(json!({
+                "seed": format!("r4189000-c176-off-{radiant}"),
+                "p1": {
+                    "hand": [{ "def": STRIKE, "radiant": radiant }, STOCKPILE],
+                    "mana": 10,
+                    "library": [STOCKPILE, STOCKPILE],
+                },
+                "p2": { "hand": [STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
+            }));
+            let card = s.card(STRIKE).clone();
+            assert!(!hand_glows(&s, &card), "radiant {radiant}");
+            s.play(STRIKE, json!({}));
+            assert!(s.state().pending.is_none(), "no Discover");
+            assert!(!launched(&s), "no launch");
+            s.expect_in_zone(STRIKE, "graveyard");
+        }
+    }
+
+    #[test]
+    fn r4189000_the_opponents_view_never_carries_the_flag() {
+        let (s, _ship) = holding("r4189000-c176-theirs", false);
+        assert!(hand_glows(&s, &s.card(STRIKE).clone()));
+        assert!(
+            !serde_json::to_string(&s.view("p2"))
+                .unwrap()
+                .contains("conditionActive")
+        );
+    }
+}
+
+// S #4 Olivian Expanse (hand only): its controller's library is empty, Radiant only alone in hand
+
+/// S #4 Olivian Expanse lights up in hand while its library is empty (R4189000)
+mod stinkyscape_c004_olivian_expanse_lights_up_in_hand_while_its_library_is_empty_r4189000 {
+    use super::*;
+    use jackioh_engine::effects::WIN_ON_PLAY_KEY;
+
+    const EXPANSE: &str = "stinkyscape-004";
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+
+    /// p1 holds the Expanse (Radiant if `radiant`) with `hand` behind it and `library`, unplayed.
+    fn holding(seed: &str, radiant: bool, hand: Value, library: Value) -> Scenario {
+        let mut cards = vec![json!({ "def": EXPANSE, "radiant": radiant })];
+        cards.extend(hand.as_array().cloned().unwrap_or_default());
+        setup(json!({
+            "seed": seed,
+            "p1": { "hand": cards, "library": library, "mana": 10 },
+            "p2": { "hand": [STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
+        }))
+    }
+
+    /// Plays the held Expanse and takes the Discover's first option into the hand.
+    fn take_first(s: &mut Scenario) -> Instance {
+        s.play(EXPANSE, json!({}));
+        let pending = s.state().pending.as_ref().expect("a Discover is open");
+        assert_eq!(pending.kind, PromptKind::Discover);
+        let options = s.prompt_modes();
+        let choice = options[0].clone();
+        s.answer(json!(choice));
+        s.hand("p1")
+            .into_iter()
+            .find(|card| card.def_id == choice)
+            .expect("the pick is in hand")
+    }
+
+    #[test]
+    fn r4189000_base_with_an_empty_library_it_glows_and_the_pick_costs_0() {
+        let mut s = holding("r4189000-c004-free", false, json!([]), json!([]));
+        let card = s.card(EXPANSE).clone();
+        assert!(hand_glows(&s, &card));
+        let pick = take_first(&mut s);
+        assert_eq!(pick.cost_override, Some(0));
+        assert!(
+            !pick.memory.contains_key(WIN_ON_PLAY_KEY),
+            "the base face carries no win"
+        );
+    }
+
+    #[test]
+    fn r4189000_base_with_a_card_left_it_does_not_glow_and_the_pick_costs_printed() {
+        let mut s = holding("r4189000-c004-printed", false, json!([]), json!([STOCKPILE]));
+        let card = s.card(EXPANSE).clone();
+        assert!(!hand_glows(&s, &card));
+        let pick = take_first(&mut s);
+        assert_eq!(pick.cost_override, None);
+        assert!(!pick.memory.contains_key(WIN_ON_PLAY_KEY));
+    }
+
+    #[test]
+    fn r4189000_radiant_alone_it_glows_and_the_pick_wins() {
+        let mut s = holding("r4189000-c004-wins", true, json!([]), json!([]));
+        let card = s.card(EXPANSE).clone();
+        assert!(hand_glows(&s, &card));
+        let pick = take_first(&mut s);
+        assert_eq!(pick.cost_override, Some(0));
+        assert_eq!(pick.memory.get(WIN_ON_PLAY_KEY), Some(&json!(true)));
+    }
+
+    #[test]
+    fn r4189000_radiant_with_a_second_card_in_hand_it_does_not_glow_and_the_pick_wins_nothing() {
+        let mut s = holding("r4189000-c004-held", true, json!([STOCKPILE]), json!([]));
+        let card = s.card(EXPANSE).clone();
+        assert!(!hand_glows(&s, &card));
+        let pick = take_first(&mut s);
+        assert_eq!(pick.cost_override, Some(0), "it is still free");
+        assert!(!pick.memory.contains_key(WIN_ON_PLAY_KEY));
+    }
+
+    #[test]
+    fn r4189000_the_opponents_view_never_carries_the_flag() {
+        let s = holding("r4189000-c004-theirs", false, json!([]), json!([]));
+        assert!(hand_glows(&s, &s.card(EXPANSE).clone()));
+        assert!(
+            !serde_json::to_string(&s.view("p2"))
+                .unwrap()
+                .contains("conditionActive")
+        );
     }
 }

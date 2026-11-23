@@ -14,14 +14,14 @@
 // cards wear the hand hints that apply (HandHints.tsx, handHints.ts); backs and revealed cards (R434) wear none.
 // revealed cards (R434) wear none.
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 
 import type { CardView, PlayerId, PlayerView } from "@jackioh/shared";
 
 import Card, { isSelected } from "./Card.tsx";
 import { useSetHoveredHandCard } from "./hoveredHandCard.tsx";
 import HandHints from "./HandHints.tsx";
-import type { HandHint } from "./handHints.ts";
+import type { HandHint, HintView } from "./handHints.ts";
 import { testid, type AnimatingMap, type ClickTarget, type Highlight, type Side } from "./contract.ts";
 import { useLanding } from "./drag/landing.ts";
 import { useHandSpring } from "./handSpring.ts";
@@ -106,6 +106,10 @@ export default function Hand(props: HandProps): ReactElement {
   const revealed = !yours && Array.isArray(hand);
   const hoverPreviews = useSetting("hoverPreviews");
   const landing = useLanding();
+  // #3609: what the hint rows read of the view, one object while the viewer's Trades are one, so a new
+  // view draws no hand card again (Card.tsx compares a card's hint row by its props).
+  const trades = view?.trades;
+  const hintView = useMemo<HintView>(() => (trades === undefined ? {} : { trades }), [trades]);
 
   // #3478: the board's hover context, so a pointer re-renders the field's rings and nothing else.
   const contextHover = useSetHoveredHandCard();
@@ -165,7 +169,15 @@ export default function Hand(props: HandProps): ReactElement {
           style={{ "--i": index } as CSSProperties}
           data-lifted={lifted ? "true" : undefined}
           data-landing={yours && landing === card.instanceId ? "true" : undefined}
-          onClickCapture={yours ? () => toggle(card.instanceId) : undefined}
+          // R3893000: a click that reaches here through a React portal (the inspect sheet a touch hold
+          // opened, its Close among it) is no tap on the card.
+          onClickCapture={
+            yours
+              ? (event) => {
+                  if (event.currentTarget.contains(event.target as Node)) toggle(card.instanceId);
+                }
+              : undefined
+          }
           onPointerEnter={yours ? () => report(card.instanceId) : undefined}
           onPointerLeave={yours ? () => report(null) : undefined}
         >
@@ -179,7 +191,7 @@ export default function Hand(props: HandProps): ReactElement {
             highlight={props.highlight}
             animating={props.animating}
             onClick={props.onClick}
-            hintRow={yours && view !== undefined ? <HandHints card={card} view={view} hints={props.hints} /> : undefined}
+            hintRow={yours && view !== undefined ? <HandHints card={card} view={hintView} hints={props.hints} /> : undefined}
           />
         </div>
       );

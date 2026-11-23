@@ -5,7 +5,7 @@
 # exempt: a build legitimately runs for hours.
 #
 # Never the daily super run (super.yml): CI is what every pull request waits on, so its jobs are held
-# under five minutes (docs/v0.3.0/README.md §7, V24), while the super run carries what is slow on
+# under eight minutes (docs/v0.3.0/README.md §7, V24), while the super run carries what is slow on
 # purpose (10,000 fuzz seeds, the full AI gates, coverage, every e2e spec) and waits on nobody. It is
 # left off the list below by design; do not add it. Nor the deploys (promote-production.yml,
 # deploy-staging.yml), whose jobs build the server's image from nothing every time and wait on
@@ -25,7 +25,16 @@
 #
 # A job is timed by its steps, the first one's start to the last one's end, not by the job's own
 # completed_at, which GitHub can stamp minutes after the runner finished: on 2026-10-19 seven jobs
-# were reported at 7–10 minutes whose steps had all run in 2–4 (#1325).
+# were reported at 7–10 minutes whose steps had all run in 2–4 (#1325). Nor does it count the time of
+# a step that only moves an artifact, an unnamed `actions/upload-artifact` or `download-artifact`
+# (`Run actions/upload-artifact@v4`): that is GitHub's artifact service, which no split speeds up.
+# Such a step takes seconds, but on 2026-11-11 the service answered with error pages for half an hour
+# and each of its five attempts waited two minutes, so four jobs whose other steps took under four
+# minutes were reported at 12–14 (#3737). Nor the unnamed checkout (`Run actions/checkout@v4`), for
+# the same reason: that is GitHub's git service, and each job of a split checks out again, so no split
+# speeds it up. It takes 6–10 seconds (a minute or two with all of history), but on 2026-11-12 one
+# job's checkout stalled for 10m 56s while the run's 48 others took 6–94, so `rust (test server)`,
+# whose other steps took 3m 36s, was reported at 14m 32s (#3815).
 #
 # The alert sits above the target on purpose. A job that drifts between the two is left alone, so a
 # few seconds of runner noise never costs a re-split; a job that does trip the alert is split back
@@ -42,10 +51,12 @@ on:
     types: [completed]
 
 env:
-  # What a fix or a new split aims for: every job finishes under this.
-  TARGET_MINUTES: "5"
+  # What a fix or a new split aims for: every job finishes under this. It was 5, and the alert 7,
+  # until CI's runners grew (#3785): a job that boots its own toolchain, server or client takes
+  # 7 to 10 minutes, and reporting each one only queued splits that bought nothing.
+  TARGET_MINUTES: "8"
   # What gets reported: a job that ran longer than this.
-  ALERT_MINUTES: "7"
+  ALERT_MINUTES: "10"
   # Who fixes it: the night bot (.harness/config.json's bot_login).
   BOT_LOGIN: jgoetzmann-bot
 
@@ -85,7 +96,11 @@ jobs:
             | select(.conclusion == "success" or .conclusion == "failure" or .conclusion == "timed_out")
             | (([.steps[]?.started_at | values] | min) // .started_at | fromdateiso8601) as $from
             | (([.steps[]?.completed_at | values] | max) // .completed_at | fromdateiso8601) as $to
-            | ($to - $from) as $s
+            | ([.steps[]?
+                | select(.name | test("^Run actions/((upload|download)-artifact|checkout)@"))
+                | select(.started_at != null and .completed_at != null)
+                | (.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601)] | add // 0) as $github
+            | ($to - $from - $github) as $s
             | select($s > (env.LIMIT_SECONDS | tonumber))
             | "| [\(.name | gsub("\\|"; "\\|"))](\(.html_url)) | \($s / 60 | floor)m \($s % 60)s | \(.conclusion) |"')
           if [ -z "$slow" ]; then

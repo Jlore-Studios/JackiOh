@@ -140,16 +140,19 @@ const NOT_PIECES: [&str; 15] = [
 
 // B17–B20: the weapons.
 /// B17, B18: the weapons that aim at one enemy Unit — id, name, damage on the base and Radiant faces.
+/// #4154 moved the three Beams' damage down: 5, 7 and 9 (Radiant 10, 14 and 18) to 4, 6 and 8 (Radiant 8,
+/// 12 and 16), #4353 to 3, 5 and 7 (Radiant 6, 10 and 14), and Repeater v5's from 3 (Radiant 6) to 2
+/// (Radiant 4), and #4440 the Beams' to 2, 4 and 6 (Radiant 4, 8 and 12).
 const AIMED_WEAPONS: [(&str, &str, i32, i32); 9] = [
-    ("stinkyscape-050", "Beam v3", 5, 10),
-    ("stinkyscape-054", "Beam v4", 7, 14),
-    ("stinkyscape-058", "Beam v5", 11, 22),
+    ("stinkyscape-050", "Beam v3", 2, 4),
+    ("stinkyscape-054", "Beam v4", 4, 8),
+    ("stinkyscape-058", "Beam v5", 6, 12),
     (CANNON_V3, "Cannon v3", 5, 10),
     ("stinkyscape-056", "Cannon v4", 7, 14),
     ("stinkyscape-060", "Cannon v5", 9, 18),
     ("stinkyscape-051", "Repeater v3", 1, 2),
     ("stinkyscape-055", "Repeater v4", 2, 4),
-    ("stinkyscape-059", "Repeater v5", 3, 6),
+    ("stinkyscape-059", "Repeater v5", 2, 4),
 ];
 const FLAK_V5: &str = "stinkyscape-061";
 /// B20: each Flak and its rounds an activation.
@@ -315,10 +318,7 @@ fn swear(s: &mut Scenario, faction: &str) {
             .any(|card| card.def_id == faction && !before.contains(&card.id))
     };
     let mut chosen: Option<(ActionBody, Option<Selection>)> = None;
-    'plays: for play in legal_actions(s.state(), P1) {
-        if !matches!(&play, ActionBody::Play { instance_id, .. } if *instance_id == swear_id) {
-            continue;
-        }
+    'plays: for play in s.plays_of(&swear_id) {
         let played = reduce(s.state(), &Action::new(play.clone(), P1, "swear-probe"));
         if played.error.is_some() {
             continue;
@@ -511,6 +511,46 @@ fn b2_korrelite_prices_its_credits_2_to_5_and_radiant_4_to_10_and_a_card_with_no
         "{prices}"
     );
     assert!(card_def(VANILLA).resource.is_none());
+}
+
+/// R4440000: issue #4440's "Axnit sells for 1 less", "Narcor sells for 2 less" and "Red Narcor sells for 2
+/// less": each end of the base face's sell range that much lower, its `buy` (the range's top) with it, and
+/// the Radiant face's prices twice the base face's, as every Resource's are.
+#[test]
+fn r4440000_axnit_narcor_and_red_narcor_sell_for_less_and_every_radiant_price_is_twice_the_base_one() {
+    let price = |sell_min: i32, sell_max: i32| ResourcePrice {
+        sell_min,
+        sell_max,
+        buy: sell_max,
+    };
+    for (id, base) in [
+        (AXNIT, price(3, 13)),
+        (NARCOR, price(8, 19)),
+        (RED_NARCOR, price(14, 30)),
+    ] {
+        let resource = card_def(id).resource.expect("a Resource carries its prices");
+        assert_eq!(resource.base, base, "{id}");
+    }
+    for id in RESOURCES {
+        let resource = card_def(id).resource.expect("a Resource carries its prices");
+        let doubled = ResourcePrice {
+            sell_min: 2 * resource.base.sell_min,
+            sell_max: 2 * resource.base.sell_max,
+            buy: 2 * resource.base.buy,
+        };
+        assert_eq!(resource.radiant, doubled, "{id}");
+    }
+    // With the Marketplace closed a play pays one draw in the lowered range (R1840001, R2250001).
+    for n in 0..8 {
+        let mut s = game(json!({
+            "seed": format!("r4440000-narcor-{n}"),
+            "p1": { "hand": [NARCOR, ANCHOR], "library": filler(3) },
+            "p2": { "hand": [ANCHOR], "library": filler(3) },
+        }));
+        s.play(NARCOR, json!({}));
+        let paid = s.state().players[P1].market_credits.unwrap_or(0);
+        assert!((8..=19).contains(&paid), "{n}: {paid}");
+    }
 }
 
 #[test]
@@ -1205,14 +1245,15 @@ fn b13_stratos_swarm_leaves_an_occupied_unit_zone_alone() {
 }
 
 #[test]
-fn b14_cloaking_module_is_a_2_cost_2_2_rare_unit_whose_radiant_4_4_adds_immune_to_spells() {
+fn b14_cloaking_module_is_a_1_cost_2_2_rare_unit_whose_radiant_4_4_adds_immune_to_spells() {
     let def = card_def(CLOAKING_MODULE);
     assert_eq!(def.type_, CardType::Unit);
     assert_eq!(def.rarity, Rarity::Rare);
-    assert_eq!(query_cost(&def), 2);
+    // (1) since issue #3951, (2) before.
+    assert_eq!(query_cost(&def), 1);
+    // R4285001: no Equip since issue #4285.
     let printed = vec![
         KeywordKind::StarshipPiece,
-        KeywordKind::Equip,
         KeywordKind::Cloaked,
         KeywordKind::Immutable,
     ];
@@ -1233,8 +1274,10 @@ fn b14_cloaking_module_is_a_2_cost_2_2_rare_unit_whose_radiant_4_4_adds_immune_t
     );
 }
 
+/// R4285001: it prints no Equip since issue #4285, so its equip play is refused; an Equip given in hand
+/// (R1878003) still fuses it into the Unit.
 #[test]
-fn b14_cloaking_module_is_played_onto_a_unit_by_its_equip() {
+fn b14_r4285001_cloaking_module_is_played_onto_a_unit_only_by_a_given_equip() {
     for radiant in [false, true] {
         let mut s = game(json!({
             "p1": {
@@ -1245,6 +1288,14 @@ fn b14_cloaking_module_is_played_onto_a_unit_by_its_equip() {
             },
             "p2": { "hand": [ANCHOR], "library": filler(3) },
         }));
+        s.expect_refused(|s| s.play(CLOAKING_MODULE, json!({ "zone": 1, "equip": true })));
+        let module = s
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == CLOAKING_MODULE)
+            .expect("in hand")
+            .id;
+        s.card_mut(module.as_str()).granted_keywords.push(Keyword::Equip);
         s.play(CLOAKING_MODULE, json!({ "zone": 1, "equip": true }));
         let host = made_of(&s, &s.unit_at(P1, 1).def_id);
         assert!(
@@ -1361,13 +1412,7 @@ fn b15_no_spell_may_target_paragon_x() {
         }));
         let paragon = s.unit_at(P2, 1).id;
         let vanilla = s.unit_at(P2, 2).id;
-        let hit_job = s.card(HIT_JOB).id.clone();
-        let plays: Vec<ActionBody> = legal_actions(s.state(), P1)
-            .into_iter()
-            .filter(
-                |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == hit_job),
-            )
-            .collect();
+        let plays: Vec<ActionBody> = s.plays_of(HIT_JOB);
         assert!(
             plays
                 .iter()
@@ -1589,6 +1634,7 @@ fn repeater_uses_a_turn(def: &str, uses: i32) {
 
 #[test]
 fn b19_repeater_v5_activates_4_times_a_turn_and_the_5th_is_refused() {
+    // Issue #4154 cut its Activate 4 to Activate 3, and issue #4353 put it back to Activate 4.
     repeater_uses_a_turn("stinkyscape-059", 4);
 }
 
@@ -1636,7 +1682,8 @@ fn b20_each_flak_round_hits_the_enemy_units_and_no_hero_v3_once_v4_twice_v5_thre
 #[test]
 fn b20_flak_never_deals_outside_least_to_most_nor_hits_its_own_side_over_many_seeds() {
     for (def, _) in FLAKS {
-        for (radiant, least, most) in [(false, 1, 3), (true, 2, 4)] {
+        // Issue #4292 took the Radiant face back to the base face's 1 to 3 (2 to 4 before).
+        for (radiant, least, most) in [(false, 1, 3), (true, 1, 3)] {
             for i in 0..20 {
                 let shot = volley(def, radiant, &format!("b20-bounds-{i}"), &untuned);
                 assert!(!shot.hits.is_empty(), "{def} (radiant {radiant}), seed {i}");
@@ -1671,24 +1718,24 @@ fn b20_base_flak_weights_its_amounts_60_30_10_lowest_first() {
 
 #[test]
 fn b20_radiant_flak_s_lucky_1_rolls_twice_per_target_and_keeps_the_higher() {
-    // Over 2–4 at 60/30/10, the higher of two rolls is 2 at 36%, 3 at 45% and 4 at 19%; one roll alone
-    // would make 2 the most common and 4 a tenth.
+    // Over 1–3 at 60/30/10 (the base range since issue #4292; 2–4 before), the higher of two rolls is
+    // 1 at 36%, 2 at 45% and 3 at 19%; one roll alone would make 1 the most common and 3 a tenth.
     let rolled = amounts(FLAK_V5, true, "b20-lucky", 200, &untuned);
     assert_eq!(rolled.len(), 200 * ENEMIES_A_ROUND * 3);
-    let (twos, threes, fours) = (tally(&rolled, 2), tally(&rolled, 3), tally(&rolled, 4));
+    let (ones, twos, threes) = (tally(&rolled, 1), tally(&rolled, 2), tally(&rolled, 3));
     assert_eq!(
-        twos + threes + fours,
+        ones + twos + threes,
         rolled.len(),
-        "Radiant Flak rolls 2 to 4 only"
+        "Radiant Flak rolls 1 to 3 only"
     );
     assert!(
-        threes > twos,
-        "the higher kept makes 3 the most common: {twos} 2s, {threes} 3s, {fours} 4s"
+        twos > ones,
+        "the higher kept makes 2 the most common: {ones} 1s, {twos} 2s, {threes} 3s"
     );
-    assert!(twos > fours, "{twos} 2s, {fours} 4s");
+    assert!(ones > threes, "{ones} 1s, {threes} 3s");
     assert!(
-        fours * 100 > rolled.len() * 14,
-        "4 comes near 19%, not 10%: {fours} of {}",
+        threes * 100 > rolled.len() * 14,
+        "3 comes near 19%, not 10%: {threes} of {}",
         rolled.len()
     );
 }

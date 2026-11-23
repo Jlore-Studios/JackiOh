@@ -104,8 +104,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MY_PAWN: &str = "core-096";
-    /// #13 Jlockeed Shredder-10, 6/10 with no keywords: a plain 6-damage swing.
-    const ATTACKER: &str = "core-013";
+    /// A 6-attack Unit with no keywords: a plain 6-damage swing.
+    const ATTACKER: &str = "stand-in (3) 6/8 R12/16";
     /// #73 Anti-oneshot Armor: `staticFlags.antiOneshot`, so §4.4 step 3 clamps to 5 (radiant 3).
     const ANTI_ONESHOT: &str = "core-073";
     /// A 1/1 body to be attacked, so Trample excess has something to spill past (§4.4 step 9).
@@ -690,6 +690,68 @@ mod tests {
         fn r662_radiant_on_its_controller_s_own_turn_it_glows_for_the_blow_on_the_board() {
             crate::register_all();
             glows_on_own_turn(true);
+        }
+    }
+
+    mod n96_my_pawn_behind_a_force_projector_r4032000 {
+        use super::*;
+
+        /// S+ #42 Force Projector: "The first 5 damage allies would take per turn is nullified."
+        const FORCE_PROJECTOR: &str = "stinkyscapeplus-042";
+
+        /// `pawn_game`'s board with a face-up Force Projector beside the trap, p1's 6-attack unit in
+        /// lane 1 not yet swung.
+        fn behind_the_pool(health: i32, face: &str) -> (Scenario, CardInstance) {
+            let s = scenario(json!({
+                "seed": format!("my-pawn-r4032000-{face}-{health}"),
+                "p1": { "field": [ATTACKER], "hand": [STOCKPILE, TIMMY], "library": [GIGA, GIGA, GIGA] },
+                "p2": {
+                    "health": health,
+                    "hand": [STOCKPILE],
+                    "backrow": [
+                        { "def": MY_PAWN, "lane": 1, "faceUp": false, "radiant": face == "radiant" },
+                        { "def": FORCE_PROJECTOR, "lane": 2, "faceUp": true },
+                    ],
+                    "library": [GIGA, GIGA],
+                },
+            }));
+            let unit = s.unit(P1, 1).unwrap_or_else(|| panic!("p1 should have an attacker in lane 1"));
+            (s, unit)
+        }
+
+        #[test]
+        fn r4032000_a_force_projector_that_soaks_the_blow_leaves_my_pawn_face_down() {
+            crate::register_all();
+            for face in ["base", "radiant"] {
+                // 6 less the pool's 5 is 1, short of 4: no lethal blow on the board, and none declared.
+                let (mut s, unit) = behind_the_pool(4, face);
+                assert!(!backrow_glows(&s, 1, P2), "{face}");
+                s.attack(&unit, "hero");
+                s.expect_health(P2, 3);
+                assert!(!any_event(&s, "trapFired"), "{face}");
+                assert_eq!(s.backrow(P2, 1).and_then(|card| card.face_up), Some(false));
+                let projector = s.backrow(P2, 2).expect("the projector stays");
+                assert_eq!(damage_pool_left(s.state(), &projector), Some(0));
+                s.expect_in_zone(&unit, "field");
+            }
+        }
+
+        #[test]
+        fn r4032000_a_blow_the_pool_leaves_lethal_still_fires_it() {
+            crate::register_all();
+            for face in ["base", "radiant"] {
+                // The 1 the pool leaves is lethal at 1, so the trap cancels the blow before it lands.
+                let (mut s, unit) = behind_the_pool(1, face);
+                assert!(backrow_glows(&s, 1, P2), "{face}");
+                s.attack(&unit, "hero");
+                assert!(any_event(&s, "trapFired"), "{face}");
+                assert!(
+                    !events_json(&s)
+                        .iter()
+                        .any(|event| event["type"] == "damage" && event["sourceId"] == unit.id.as_str()),
+                    "{face}: the canceled blow deals nothing"
+                );
+            }
         }
     }
 }

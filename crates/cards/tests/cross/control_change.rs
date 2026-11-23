@@ -13,8 +13,9 @@ use jackioh_engine::testkit::*;
 
 const MAGIC_JAMMED: &str = "core-036";
 const MIND_CONTROL: &str = "core-049";
-/// Issue #3139: Snom Bunny Mind Control costs (5), past the 4 mana a turn gives, so a game gives p1 the mana.
-const MIND_CONTROL_COST: i32 = 5;
+/// Issue #3139: Snom Bunny Mind Control costs (6) (5 until #4154), past the 4 mana a turn gives, so a game
+/// gives p1 the mana.
+const MIND_CONTROL_COST: i32 = 6;
 const KPOP: &str = "core-050";
 const SILAS: &str = "core-052";
 const MROW: &str = "core-086";
@@ -349,6 +350,7 @@ mod r171_with_the_cards_that_change_control {
         let mut g = setup(json!({
             "p1": {
                 "hand": [SILAS, VANILLA],
+                "mana": 10,
                 "field": [
                     { "def": VANILLA, "lane": 2 },
                     { "def": SEVEN_SEVEN, "lane": 3 },
@@ -384,6 +386,7 @@ mod r171_with_the_cards_that_change_control {
         let mut g = setup(json!({
             "p1": {
                 "hand": [{ "def": SILAS, "radiant": true }, VANILLA],
+                "mana": 10,
                 "field": [{ "def": POINTMASTER, "lane": 3 }, { "def": VANILLA, "lane": 5 }],
             },
             "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 1 }, { "def": VANILLA, "lane": 4 }] },
@@ -467,8 +470,8 @@ mod r171_with_the_cards_that_change_control {
     #[test]
     fn r171_c49_radiant_making_a_stolen_c11_radiant_gives_it_charge_so_it_may_attack_the_hero_at_once() {
         let mut g = setup(json!({
-            // #49 costs (5): a sixth mana keeps Mr. Vanilla playable, so the turn does not auto-end
-            // (R82) and hand p2 a fatigue draw before the hero is read.
+            // #49 costs (6) (#4154): a seventh mana keeps Mr. Vanilla playable, so the turn does not
+            // auto-end (R82) and hand p2 a fatigue draw before the hero is read.
             "p1": { "hand": [{ "def": MIND_CONTROL, "radiant": true }, VANILLA], "mana": MIND_CONTROL_COST + 1 },
             "p2": { "field": [{ "def": TIMMY, "lane": 2 }, { "def": VANILLA, "lane": 4 }] },
         }));
@@ -487,7 +490,7 @@ mod r171_with_the_cards_that_change_control {
     #[test]
     fn r171_c52_twice_a_ready_unit_that_crosses_away_and_back_in_one_turn_is_sick_again() {
         let mut g = setup(json!({
-            "p1": { "hand": [SILAS, SILAS], "mana": 10, "field": [{ "def": SEVEN_SEVEN, "lane": 5 }] },
+            "p1": { "hand": [SILAS, SILAS], "mana": 12, "field": [{ "def": SEVEN_SEVEN, "lane": 5 }] },
             "p2": { "field": [{ "def": VANILLA, "lane": 3 }] },
         }));
         let traveller = g.unit_at("p1", 5);
@@ -495,7 +498,8 @@ mod r171_with_the_cards_that_change_control {
 
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
         assert_eq!(g.card(&traveller).controller, PlayerId::P2);
-        // Crater (issue #3136) left lane 1 Locked, so the second Silas goes into the open lane 3.
+        // Each Silas lands in the zone its play names, p1's lane 1 and then lane 3 (issue #4353, R4353025);
+        // the first's Cry carries the traveller to p2's lane 5, and the second's carries it back.
         g.play(SILAS, json!({ "zone": 3, "modes": ["left"] }));
 
         assert_eq!(g.unit("p1", 5).map(|c| c.id), Some(traveller.id.clone()));
@@ -506,15 +510,18 @@ mod r171_with_the_cards_that_change_control {
     #[test]
     fn r171_c52_twice_a_charge_unit_that_attacked_and_made_the_round_trip_may_attack_once_more() {
         let mut g = setup(json!({
-            "p1": { "hand": [SILAS, SILAS], "mana": 10, "field": [{ "def": TIMMY, "radiant": true, "lane": 5 }] },
-            "p2": { "field": [{ "def": VANILLA, "lane": 3 }] },
+            "p1": { "hand": [SILAS, SILAS], "mana": 12, "field": [{ "def": TIMMY, "radiant": true, "lane": 5 }] },
+            // Both Silases are sick and the mana is spent, so p1 has nothing left once Timmy attacks and the
+            // turn ends (R82): p2's draw comes from a library, not fatigue.
+            "p2": { "field": [{ "def": VANILLA, "lane": 3 }], "library": LIBRARY },
         }));
         let timmy = g.unit_at("p1", 5);
         let before = hero_health(&g, PlayerId::P2);
         g.attack(&timmy, "hero");
 
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
-        // Crater (issue #3136) left lane 1 Locked, so the second Silas goes into the open lane 3.
+        // Each Silas lands in the zone its play names, p1's lane 1 and then lane 3 (issue #4353, R4353025);
+        // the first's Cry carries Timmy to p2's lane 5, and the second's carries it back.
         g.play(SILAS, json!({ "zone": 3, "modes": ["left"] }));
 
         expect_entered_now(&g, &timmy);
@@ -624,7 +631,7 @@ mod r61_a_played_permanent_rotated_onto_the_traps_side_is_not_its_own_fuse_targe
      {
         let mut g = setup(json!({
             "seed": "ue-self-0",
-            "p1": { "hand": [SILAS, VANILLA], "library": LIBRARY },
+            "p1": { "hand": [SILAS, VANILLA], "mana": 10, "library": LIBRARY },
             "p2": {
                 "hand": [VANILLA],
                 "field": [{ "def": POINTMASTER, "lane": 2 }],
@@ -669,7 +676,7 @@ mod r14_radiant_silly_silas_bounces_only_the_cards_that_would_move_to_the_oppone
     fn r14_r171_radiant_silly_silas_still_takes_the_opponents_card_that_crosses_to_its_controllers_side_s8_c52_radiant_s8_conventions()
      {
         let mut g = setup(json!({
-            "p1": { "hand": [{ "def": SILAS, "radiant": true }, VANILLA], "library": LIBRARY },
+            "p1": { "hand": [{ "def": SILAS, "radiant": true }, VANILLA], "mana": 10, "library": LIBRARY },
             "p2": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
         }));
         let inbound = g.unit_at("p2", 1);

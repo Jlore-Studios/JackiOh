@@ -212,13 +212,10 @@ mod tests {
 
     /// The lanes `legalActions` offers p1's Showdown for, in order.
     fn offered_lanes(s: &Scenario) -> Vec<String> {
-        let showdown = s.card(SHOWDOWN).id.clone();
-        legal_actions(s.state(), P1)
+        s.plays_of(SHOWDOWN)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play { instance_id, modes, .. } if instance_id == showdown => {
-                    modes.and_then(|modes| modes.first().cloned())
-                }
+                ActionBody::Play { modes, .. } => modes.and_then(|modes| modes.first().cloned()),
                 _ => None,
             })
             .collect()
@@ -303,7 +300,8 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(changes.len(), 4, "the Book is cast on the played card");
+        // Book of Buff Buffs 3 times since issue #4154.
+        assert_eq!(changes.len(), 3, "the Book is cast on the played card");
         // Each Buff draws its row (§6.1: cost, stats or a keyword for a vanilla Unit); every stats
         // Buff adds its 4 across attack and health, and each lands on the played card.
         let stat_totals: Vec<i32> = changes

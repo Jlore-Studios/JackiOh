@@ -9,13 +9,13 @@ import { describe, expect, it } from "vitest";
 import { planEntries } from "../../../game/animations.ts";
 import { sideOf, testid } from "../../../game/contract.ts";
 import { fullBoardView, withEvents } from "../../../test/fixtures.ts";
+import { envOf } from "../../../test/signatures.ts";
 import { CATALOG } from "../../../wire/cards.ts";
 import { frac } from "../../build.ts";
 import { FX_FELINOR_STREAK_AT, FX_FELINOR_STREAK_STEP, FX_INTENSITY_SCALE, FX_SLAM_AT } from "../../constants.ts";
 import { planFx } from "../../cues.ts";
 import { paletteLook } from "../../flavors.ts";
-import { createFxMemory } from "../../memory.ts";
-import type { FxCue, FxPlanEnv, FxShotCue } from "../../types.ts";
+import type { FxCue, FxShotCue } from "../../types.ts";
 import { ENTRANCE_TRAUMA, FOOT } from "../recipe.ts";
 import { GALLERY_FELINORS, GALLERY_FELINOR_LANES, felinorAssembly, felinorBoard, felinorZones } from "./felinorFiender.ts";
 
@@ -24,10 +24,6 @@ const I = FX_INTENSITY_SCALE.normal;
 
 function landingOf(player: PlayerId, lane: number, instanceId = "ff"): Extract<GameEvent, { type: "summoned" }> {
   return { type: "summoned", player, instanceId, defId: FIENDER, row: "units", lane };
-}
-
-function envOf(): FxPlanEnv {
-  return { intensity: I, card: () => undefined, memory: createFxMemory() };
 }
 
 /**

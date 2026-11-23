@@ -55,6 +55,11 @@ pub struct TestAppOptions {
     /// A previous app's store, for a restart over it (19.6's series recovery). Used as it stands:
     /// R144's reseed would wipe it, so no fixtures are written.
     pub db: Option<jackioh_server::db::store::Db>,
+    /// #3727: the daily games' player mail goes to this Resend-shaped endpoint (a test's fake
+    /// mailer) under a test key; no mail is sent when absent.
+    pub mail_api: Option<String>,
+    /// #3727: a VAPID pair (base64url private, public) the daily games push with; no push when absent.
+    pub push_keys: Option<(String, String)>,
 }
 
 impl Default for TestAppOptions {
@@ -66,6 +71,8 @@ impl Default for TestAppOptions {
             skip_fixtures: false,
             deletion: None,
             db: None,
+            mail_api: None,
+            push_keys: None,
         }
     }
 }
@@ -110,6 +117,15 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         let data = FakeData::new(Arc::new(app::now_ms), default_redemption_settings(), None);
         jackioh_server::db::store::Db::Fake(Arc::new(tokio::sync::Mutex::new(data)))
     });
+    let mailer = options.mail_api.map(|api| jackioh_server::daily::Mailer {
+        http: reqwest::Client::new(),
+        api,
+        key: "re_test_player_mail".to_string(),
+    });
+    let push = options.push_keys.map(|(private, public)| {
+        jackioh_server::daily::webpush::PushKeys::from_base64url(&private, &public)
+            .unwrap_or_else(|error| panic!("the test's VAPID pair: {error}"))
+    });
     let app = Arc::new(App {
         env,
         db,
@@ -120,12 +136,14 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
             API_RATE_WINDOW_MS as _,
         ),
         known_profiles: jackioh_server::api::http::KnownProfiles::default(),
+        route_health: jackioh_server::api::http::RouteHealth::default(),
         sign_in_limiter: jackioh_server::api::http::create_rate_limiter(
             jackioh_server::config::USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW,
             jackioh_server::config::USERNAME_SIGN_IN_WINDOW_MS,
         ),
+        code_guesses: jackioh_server::api::guesses::CodeGuesses::default(),
         catalog,
-        breaker: Mutex::new(jackioh_server::api::codes::create_breaker_state()),
+        redemption_pause: Mutex::new(jackioh_server::api::codes::create_pause_state()),
         replays: jackioh_server::api::replays::Replays::default(),
         card_stats: jackioh_server::api::stats::KeptReports::default(),
         queue_presence: jackioh_server::api::queue::QueuePresence::new(),
@@ -134,6 +152,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         duos_again_offers: jackioh_server::duos::again::DuosAgainOffers::default(),
         seats: jackioh_server::seats::Seats::default(),
         social: jackioh_server::social::Social::default(),
+        client_errors: jackioh_server::api::client_errors::ClientErrors::default(),
         engine_thread: test_engine_thread,
         bug_reports: jackioh_server::bug_reports::BugReports::recording(),
         ci_runs: jackioh_server::api::ci_runs::CiRuns::canned(),
@@ -145,6 +164,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         practice_settling: Mutex::new(std::collections::BTreeSet::new()),
         spends: jackioh_server::economy::spend_slots::SpendSlots::default(),
         news: jackioh_server::economy::news::shipped().expect("news.json passes news::parse"),
+        daily: jackioh_server::daily::DailyState::new(mailer, push),
     });
     if options.e2e && !options.skip_fixtures && !restarted {
         jackioh_server::api::e2e::seed_e2e_fixtures(&app)

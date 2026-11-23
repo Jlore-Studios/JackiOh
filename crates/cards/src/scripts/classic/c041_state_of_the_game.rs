@@ -1,4 +1,4 @@
-//! C #41 State of the Game (SPEC §8.6 row 41). Unit 3/3 → 6/6, cost 1, Common.
+//! C #41 State of the Game (SPEC §8.6 row 41). Unit 2/2 → 4/4 (3/3 → 6/6 until issue #3996), cost 1, Common.
 //!   Base:    "Indestructible, Immutable"
 //!   Radiant: "Indestructible, Immutable, Lifesteal" — the adopted Radiant face: a keyword-only Unit's
 //!            Radiant owes one more keyword or a stronger one (R275), and Taunt is out (R347).
@@ -11,9 +11,9 @@
 //!                    ignored), R69 (it still dies if its max health falls to 0), §6.1 (exile, bounce
 //!                    and a Tribute still remove it), R347 (§10.4 drops Taunt whenever it holds
 //!                    Indestructible) and R2179000 (it can't be in Defense Position).
-//!   Immutable      — R23, R386 and R781001: no Transform, Vanilla, Fuse-onto, Nerf or Buff, and while
-//!                    it is in play no Spell, Field Spell or Field Trap targets it; Units, attacks,
-//!                    random picks and "all" effects still reach it.
+//!   Immutable      — R23, R386 and R4353001: no Transform, Vanilla, Fuse-onto, Nerf or Buff, and it
+//!                    bars no targeting, so a Spell may aim at it in play (its damage and destroy then
+//!                    meet Indestructible). Indestructible alone would make it Immutable (R4353000).
 //!   Lifesteal      — §4.4 step 8 heals its controller's hero the amount it actually deals.
 
 use jackioh_engine::prelude::*;
@@ -26,7 +26,7 @@ pub fn script() -> CardScripts {
     CardScripts { radiant: base.clone(), base }
 }
 
-// C #41 State of the Game — SPEC §8.6 row 41, BUILD M9 Classic row C 41 (R347, R2179000, R781001). Both
+// C #41 State of the Game — SPEC §8.6 row 41, BUILD M9 Classic row C 41 (R347, R2179000, R4353001). Both
 // scripts are empty: these fixtures prove the catalog keywords do the work (§4.1, §4.2, §4.4, §4.5). Removal
 // sources, none of them aimed at it: Whirlwind (classicplus-021), Twisting Nether (core-088), Lag in
 // the System (classic-025), Flood (core-017) and Carnivorous Cube (core-022, whose Cry Tributes, R428).
@@ -78,8 +78,8 @@ mod tests {
                 s.attack(STATE, &menace);
 
                 s.expect_in_zone(STATE, "field");
-                s.expect_stats(STATE, json!({ "health": 3, "maxHealth": 3 }));
-                s.expect_stats(&menace, json!({ "health": 6 }));
+                s.expect_stats(STATE, json!({ "health": 2, "maxHealth": 2 }));
+                s.expect_stats(&menace, json!({ "health": 7 }));
                 // R63: the strike back is reduced to nothing, so no damage event names it.
                 let state = s.card(STATE).id.clone();
                 assert_eq!(
@@ -100,7 +100,7 @@ mod tests {
                 s.play(WHIRLWIND, json!({}));
 
                 s.expect_in_zone(&state, "field");
-                s.expect_stats(&state, json!({ "health": 3, "maxHealth": 3 }));
+                s.expect_stats(&state, json!({ "health": 2, "maxHealth": 2 }));
                 assert_eq!(
                     s.events().iter().map(js).filter(|event| event["type"] == "damage" && event["targetId"] == state).count(),
                     0,
@@ -108,17 +108,20 @@ mod tests {
             }
 
             #[test]
-            fn r781001_immutable_no_spell_may_target_it() {
+            fn r4353001_a_spell_may_target_it_and_indestructible_still_leaves_it_on_the_field() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [STATE] },
                     "p2": { "hand": [FLAME, HIT_JOB, FILLER], "mana": 6 },
                     "active": "p2",
                 }));
                 let state = s.card(STATE).id.clone();
+                // Immutable bars no aim: both Spells are played at it, and Indestructible takes the 4 damage
+                // and the destroy as nothing (§4.4 step 4, R46).
                 for spell in [FLAME, HIT_JOB] {
-                    s.expect_refused(|s| s.play(spell, json!({ "targets": [{ "pick": "instance", "instanceId": state }] })));
+                    s.play(spell, json!({ "targets": [{ "pick": "instance", "instanceId": state }] }));
                 }
                 s.expect_in_zone(&state, "field");
+                s.expect_stats(&state, json!({ "health": 2, "maxHealth": 2 }));
                 assert!(keyword_kinds(&s, PlayerId::P1, 1).contains(&"Immutable".to_string()));
             }
 
@@ -209,13 +212,13 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r275_the_radiant_face_is_a_6_6_with_indestructible_immutable_and_lifesteal() {
+            fn r275_the_radiant_face_is_a_4_4_with_indestructible_immutable_and_lifesteal() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": STATE, "radiant": true }] },
                     "p2": { "hand": [FILLER] },
                 }));
 
-                s.expect_stats(STATE, json!({ "attack": 6, "health": 6, "maxHealth": 6 }));
+                s.expect_stats(STATE, json!({ "attack": 4, "health": 4, "maxHealth": 4 }));
                 assert_eq!(keyword_kinds(&s, PlayerId::P1, 1), vec!["Indestructible", "Immutable", "Lifesteal"]);
             }
 
@@ -228,8 +231,8 @@ mod tests {
 
                 s.attack(STATE, "hero");
 
-                s.expect_health(PlayerId::P2, 24);
-                s.expect_health(PlayerId::P1, 26);
+                s.expect_health(PlayerId::P2, 26);
+                s.expect_health(PlayerId::P1, 24);
             }
 
             #[test]
@@ -242,9 +245,9 @@ mod tests {
 
                 s.attack(STATE, &menace);
 
-                s.expect_stats(&menace, json!({ "health": 3 }));
-                s.expect_stats(STATE, json!({ "health": 6, "maxHealth": 6 }));
-                s.expect_health(PlayerId::P1, 16);
+                s.expect_stats(&menace, json!({ "health": 5 }));
+                s.expect_stats(STATE, json!({ "health": 4, "maxHealth": 4 }));
+                s.expect_health(PlayerId::P1, 14);
             }
 
             #[test]
@@ -273,7 +276,7 @@ mod tests {
                 s.play(NETHER, json!({}));
 
                 s.expect_in_zone(&state, "field");
-                s.expect_stats(&state, json!({ "health": 6 }));
+                s.expect_stats(&state, json!({ "health": 4 }));
             }
         }
     }

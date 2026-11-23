@@ -5,7 +5,9 @@
 //! overrides it. A patch takes `PATCH_MIN_REPRINTS` reprinted families, `PATCH_MIN_CARDS` that play
 //! differently or a changed rule every game meets (R2455000, R2499000); else a micro. R2529000: a
 //! change to how cards look (`CARD_VISUALS`) is a micro, a system the owner names (`SYSTEM_RELEASES`)
-//! a patch.
+//! a patch. R3944000: that reading is the classifier's; a change *ships* as `shipped_tier` of it, a
+//! major when a set ships and a micro otherwise, and its pull request's tier label says the same, since
+//! only the day's cut (`patches cut`) makes a patch.
 //!
 //! Stage 1 reads the diff: every catalog field but `WORDING_FIELDS` plays; a script's code is what
 //! `catalog loc` counts; a set that ships is a major unless the owner wraps it into an earlier set's
@@ -14,7 +16,9 @@
 //! card across a BUSTED or complicated threshold (R1846000) plays every shipped reader differently.
 //!
 //! Stage 2 (`--parent-bin`, the base's build) keeps a script-only claim only when its forced games
-//! diverge, so a refactor claims nothing; replays `UNFORCED_GAMES` games for play code, divergences
+//! diverge, so a refactor claims nothing; script-claimed cards share those games in groups of
+//! `FORCED_GROUP_CARDS`, each still in `FORCED_GAMES` games, and a group that diverges falls back
+//! card by card (R4145000); replays `UNFORCED_GAMES` games for play code, divergences
 //! touching no card being a rule at `RULE_MIN_GAMES` (R2455000); and compares self-play logs for an AI
 //! change, identical logs meaning Internal (`--selfplay-side`/`--selfplay-dir` split it across CI jobs,
 //! #2651). It stops at `PATCH_MIN_CARDS` families; without `--parent-bin`, stage 1's answer stands.
@@ -54,6 +58,29 @@ const AI_TOOLING: &[&str] = &["gate.rs", "sweep.rs", "dev_run.rs", "baselines.rs
 /// Stage 2: forced games per card a script change claims. A refactor diverges in none of them.
 const FORCED_GAMES: u32 = 40;
 
+/// R4145000: the script-claimed cards one group of forced games shares, five, each still in
+/// `FORCED_GAMES` games. Ten would force two-fifths of a 25-card deck into every game and would
+/// change what the games play.
+const FORCED_GROUP_CARDS: usize = 5;
+
+/// R3935001: the cards whose change shows only when another card acts on them, each group with the
+/// cards its forced games hold and play after the subject (`steer.rs`): the random policy seldom
+/// plays an Embiggened Wall and then a card that sets or Buffs it. A subject's forced games force
+/// and steer these too, and a divergence the cards that act on it show counts as its own, since only
+/// the subject's change explains it. Stinkyscape+ #64 to #66, the Walls: Meditative+ #21 Harmony
+/// Spirit sets every other Unit to 3/3 and Classic+ #71 Book of Buff Upgrades a permanent, which writes its
+/// `tuning` (a Buff, R1320). Phase Wall
+/// is left out: Immutable refuses a set and a Buff or Nerf (R23, R386), the changes its bonus read, so
+/// the 40 steered games never reach it differently and a fragment claims it only if they do.
+const STEERED_GAMES: &[(&[&str], &[&str])] = &[(
+    &[
+        "stinkyscapeplus-064",
+        "stinkyscapeplus-065",
+        "stinkyscapeplus-066",
+    ],
+    &["meditativeplus-021", "classicplus-071"],
+)];
+
 /// Stage 2: the unforced games a change to play code replays.
 const UNFORCED_GAMES: u32 = 200;
 
@@ -88,10 +115,10 @@ pub(crate) fn wrapped(set: &str) -> bool {
 /// they play, so it is a micro of no family, claimed by a fragment's `visual`.
 const CARD_VISUALS: &str = "apps/web/src/cards/";
 
-/// R2529000: the systems the owner names a patch, each by its tracker issue and a name. The
-/// classifier cannot tell a huge system from a big refactor, so a fragment claims one
-/// (`patches --system <issue>`) and `patches ship` names it a patch whatever its cards earn. Naming
-/// one is the owner's call, never a builder's, as wrapping a set is (R2204000).
+/// R2529000: the systems the owner names, each by its tracker issue and a name. The classifier cannot
+/// tell a huge system from a big refactor, so a fragment claims one (`patches --system <issue>`).
+/// Naming one is the owner's call, never a builder's, as wrapping a set is (R2204000). R3944000: the
+/// claim no longer makes a patch; the system ships as a micro and goes out in the day's patch.
 pub(crate) const SYSTEM_RELEASES: &[(u32, &str)] = &[];
 
 /// R2529000: whether the owner names `issue` a system (`SYSTEM_RELEASES`).
@@ -164,12 +191,30 @@ struct Report<'a> {
 
 /// R1370000: the labels a pull request carries for its kind and its tier (`kind:cards`,
 /// `tier:micro`), as `bot/harness/config.py`'s `LABELS` lists them.
+/// R3944000: the tier label is the tier the change ships as (`shipped_tier`), so a pull request is
+/// `tier:major` or `tier:micro`, never `tier:patch`: only the day's cut makes a patch.
 pub(crate) fn labels(classification: &Classification) -> Vec<String> {
     let mut labels = vec![format!("kind:{}", kind_name(classification.kind))];
     if let Some(tier) = classification.tier {
-        labels.push(format!("tier:{}", format!("{tier:?}").to_lowercase()));
+        labels.push(format!(
+            "tier:{}",
+            format!("{:?}", shipped_tier(tier)).to_lowercase()
+        ));
     }
     labels
+}
+
+/// R3944000: the tier a card change ships as. A set that ships is a major (R1420); everything else is
+/// a micro, however many cards it reprints or plays and whatever rule it meets, since a patch is only
+/// ever the day's cut (`patches cut`), which rolls up the micros since the newest major or patch. The
+/// classifier's own reading (`classify`) still says `Patch` past its bars: the retcon (R1371000) and
+/// the stage-2 tests read it.
+pub(crate) fn shipped_tier(tier: Tier) -> Tier {
+    if tier == Tier::Major {
+        Tier::Major
+    } else {
+        Tier::Micro
+    }
 }
 
 fn kind_name(kind: Kind) -> &'static str {
@@ -274,25 +319,50 @@ fn area(path: &str) -> Area {
 /// Whether a file's code changed, all white space removed (so a reflow is no change): for a card
 /// script the lines `catalog loc` counts, so its `use` lines are no code (R1365000); for any other
 /// Rust or TypeScript file the same lines with its `use` declarations kept, since moving an import
-/// can change which code runs (R2050000); any other file byte for byte.
+/// can change which code runs (R2050000); any other file byte for byte. In TypeScript a comma just
+/// before a closing bracket is layout too, the one a formatter adds when it breaks a call or a list
+/// over lines (R3836000).
 pub(crate) fn code_changed(path: &str, before: Option<&str>, after: Option<&str>) -> bool {
     let lines: fn(&str) -> Vec<String> = if area(path) == Area::Script {
         code_lines
     } else {
         code_lines_with_uses
     };
-    let code =
-        |text: Option<&str>| text.map(|text| lines(text).concat().split_whitespace().collect::<String>());
-    if path.ends_with(".rs") || path.ends_with(".ts") || path.ends_with(".tsx") {
+    let typescript = path.ends_with(".ts") || path.ends_with(".tsx");
+    let code = |text: Option<&str>| {
+        text.map(|text| {
+            let joined: String = lines(text).concat().split_whitespace().collect();
+            if typescript {
+                without_trailing_commas(&joined)
+            } else {
+                joined
+            }
+        })
+    };
+    if path.ends_with(".rs") || typescript {
         code(before) != code(after)
     } else {
         before != after
     }
 }
 
+/// R3836000: `code` with each comma that stands just before a `)`, `]` or `}` taken out. In TypeScript
+/// such a comma changes nothing; in Rust `(a,)` is a tuple, so Rust code keeps it.
+fn without_trailing_commas(code: &str) -> String {
+    let chars: Vec<char> = code.chars().collect();
+    chars
+        .iter()
+        .enumerate()
+        .filter(|(at, ch)| !(**ch == ',' && matches!(chars.get(at + 1), Some(')' | ']' | '}'))))
+        .map(|(_, ch)| *ch)
+        .collect()
+}
+
 /// R1365000: a card's family, the card a token counts with (`meditative-097-6` is `meditative-097`).
 /// A set's own token (`stinkyscape-t-dormant-starship`) is no one card's, so it is its own family.
+/// A past version (`classic-004@v0.3.0c`, R3538002) counts with its card, the id a fragment claims.
 pub(crate) fn family(id: &str) -> String {
+    let id = id.split_once('@').map_or(id, |(card, _)| card);
     let mut parts = id.splitn(3, '-');
     match (parts.next(), parts.next()) {
         (Some(_), Some("t")) => id.to_string(),
@@ -860,29 +930,214 @@ fn summary_counts(stdout: &str) -> Option<(u64, u64)> {
     Some((steps.parse().ok()?, diverged.parse().ok()?))
 }
 
-/// Whether `id`'s own play diverges from the parent's in `FORCED_GAMES` games with it forced in: a
-/// divergence that touches its family, or one that touches no card at all. The other cards of those
-/// games are random, so a divergence one of them explains says nothing of `id`.
-fn forced_diverge(id: &str, head: &Side, parent: &Path) -> Result<bool> {
+/// The cards `STEERED_GAMES` has act on `id`, none for the others, less those `changed` (families a
+/// change of this diff also plays differently, whose own divergence would explain a game's).
+fn steered_with(id: &str, changed: &BTreeSet<String>) -> Vec<String> {
+    STEERED_GAMES
+        .iter()
+        .filter(|(subjects, _)| subjects.iter().any(|subject| family(subject) == family(id)))
+        .flat_map(|(_, actors)| actors.iter())
+        .filter(|actor| !changed.contains(&family(actor)))
+        .map(|actor| actor.to_string())
+        .collect()
+}
+
+/// Whether `FORCED_GAMES` games with `force` in both decks diverge on the parent's build in a way
+/// `watch` explains: a divergence touching one of its families, or one touching no card at all. The
+/// games' other cards are random, so a divergence one of them explains says nothing of the forced
+/// cards. A non-empty `steer` (R3935001) holds those cards and plays them after the forced ones.
+/// R4145000: the shared core behind one card's check and one group's.
+fn forced_games_diverge(
+    force: &[String],
+    steer: &[String],
+    watch: &BTreeSet<String>,
+    head: &Side,
+    parent: &Path,
+) -> Result<bool> {
     let traces = temp_traces();
     let seeds: Vec<u32> = (1..=FORCED_GAMES).collect();
-    record_seeds(&seeds, &[id.to_string()], &traces)?;
+    record_seeds(&seeds, force, steer, &traces)?;
     let (_, report) = parent_check(parent, &traces)?;
     let games = games_in(&traces)?;
-    let own = family(id);
     let mut diverged = false;
     for divergence in divergences(&report) {
         let Some(game) = games.get(&divergence.seed) else {
             continue;
         };
         let touched = touched_by(&divergence, game, head)?;
-        if touched.is_empty() || touched.contains(&own) {
+        if touched.is_empty() || touched.iter().any(|touched| watch.contains(touched)) {
             diverged = true;
             break;
         }
     }
     let _ = fs::remove_file(&traces);
     Ok(diverged)
+}
+
+/// Whether `id`'s own play diverges from the parent's in `FORCED_GAMES` games with it forced in: a
+/// divergence that touches its family, or one that touches no card at all. The other cards of those
+/// games are random, so a divergence one of them explains says nothing of `id`. R3935001: the games of
+/// `STEERED_GAMES` also hold and play the cards that act on `id` (`actors`), and a divergence that
+/// touches one of them counts too.
+fn forced_diverge(id: &str, actors: &[String], head: &Side, parent: &Path) -> Result<bool> {
+    let mut force = vec![id.to_string()];
+    force.extend(actors.iter().cloned());
+    let steer = if actors.is_empty() {
+        Vec::new()
+    } else {
+        force.clone()
+    };
+    let mut watch = BTreeSet::from([family(id)]);
+    watch.extend(actors.iter().map(|actor| family(actor)));
+    forced_games_diverge(&force, &steer, &watch, head, parent)
+}
+
+/// R4145000: whether one group's shared `FORCED_GAMES` games diverge in a way any of its cards
+/// explains: the group's ids forced into both decks, steered by none, watched by each id's family.
+/// A one-card group issues exactly one card's record plus parent check.
+fn forced_group_diverge(ids: &[String], head: &Side, parent: &Path) -> Result<bool> {
+    let watch: BTreeSet<String> = ids.iter().map(|id| family(id)).collect();
+    forced_games_diverge(ids, &[], &watch, head, parent)
+}
+
+/// Today's stop: the tier is already a patch, so what the check leaves counts as without
+/// `--parent-bin`.
+fn patch_stop(play: &BTreeSet<String>, checked: &Checked) -> bool {
+    play.len() + checked.scripts.len() + checked.touched.len() >= PATCH_MIN_CARDS || checked.rule
+}
+
+/// Marks `ids` and the claims from `at` on as skipped, past the families stage 1 already decided,
+/// as the check that stopped once the tier was a patch does.
+fn skip_from(ids: Vec<String>, claims: &[String], at: usize, play: &BTreeSet<String>, checked: &mut Checked) {
+    for id in ids.into_iter().chain(claims[at..].iter().cloned()) {
+        let own = family(&id);
+        if !play.contains(&own) && !checked.scripts.contains(&own) {
+            checked.skipped.insert(id);
+        }
+    }
+}
+
+/// One card's own forced games, counting a card the recorder cannot force as changed, as before.
+fn run_solo(
+    id: &str,
+    changed: &BTreeSet<String>,
+    checked: &mut Checked,
+    solo: &mut dyn FnMut(&str, &[String]) -> Result<bool>,
+) {
+    let diverged = match solo(id, &steered_with(id, changed)) {
+        Ok(diverged) => diverged,
+        Err(error) => {
+            // A card the recorder cannot force counts as changed, never as a refactor.
+            eprintln!("classify: {id} could not be forced ({error:#}); counted as changed");
+            true
+        }
+    };
+    if diverged {
+        checked.scripts.insert(family(id));
+    }
+}
+
+/// Plays the accumulated group, then empties it. A group with no relevant divergence clears every
+/// card in it; a group with one, or one the recorder or the parent cannot play, falls back card by
+/// card. When the stop holds before the group or amid the fallback, plays no further game and
+/// returns the ids it left undecided, for the caller to skip.
+fn run_group(
+    pending: &mut Vec<String>,
+    play: &BTreeSet<String>,
+    changed: &BTreeSet<String>,
+    checked: &mut Checked,
+    group: &mut dyn FnMut(&[String]) -> Result<bool>,
+    solo: &mut dyn FnMut(&str, &[String]) -> Result<bool>,
+) -> Vec<String> {
+    let ids = std::mem::take(pending);
+    if ids.is_empty() {
+        return Vec::new();
+    }
+    if patch_stop(play, checked) {
+        return ids;
+    }
+    if group(ids.as_slice()).unwrap_or(true) {
+        for (at, id) in ids.iter().enumerate() {
+            let own = family(id);
+            if play.contains(&own) || checked.scripts.contains(&own) {
+                continue;
+            }
+            if patch_stop(play, checked) {
+                return ids[at..].to_vec();
+            }
+            run_solo(id, changed, &mut *checked, &mut *solo);
+        }
+    }
+    Vec::new()
+}
+
+/// R4145000: stage 2's script loop over `claims` in order, sharing each card's forced games in
+/// groups of `FORCED_GROUP_CARDS` (R3935001: a card `steered_with` names actors for never joins a
+/// group). `group` plays one group's shared games, `solo` one card's own games as `forced_diverge`
+/// does, so tests drive the grouping without a parent build. The stop is today's: once the tier is
+/// a patch, the remaining cards count as without `--parent-bin`.
+fn check_scripts(
+    claims: &[String],
+    play: &BTreeSet<String>,
+    changed: &BTreeSet<String>,
+    checked: &mut Checked,
+    group: &mut dyn FnMut(&[String]) -> Result<bool>,
+    solo: &mut dyn FnMut(&str, &[String]) -> Result<bool>,
+) {
+    let mut pending: Vec<String> = Vec::new();
+    for (at, id) in claims.iter().enumerate() {
+        let own = family(id);
+        if play.contains(&own) || checked.scripts.contains(&own) {
+            continue;
+        }
+        if !steered_with(id, changed).is_empty() {
+            // A steered subject never joins a group: the pending group plays first.
+            let left = run_group(
+                &mut pending,
+                play,
+                changed,
+                &mut *checked,
+                &mut *group,
+                &mut *solo,
+            );
+            if !left.is_empty() {
+                skip_from(left, claims, at, play, &mut *checked);
+                return;
+            }
+            if patch_stop(play, checked) {
+                skip_from(Vec::new(), claims, at, play, &mut *checked);
+                return;
+            }
+            run_solo(id, changed, &mut *checked, &mut *solo);
+            continue;
+        }
+        pending.push(id.clone());
+        if pending.len() == FORCED_GROUP_CARDS {
+            let left = run_group(
+                &mut pending,
+                play,
+                changed,
+                &mut *checked,
+                &mut *group,
+                &mut *solo,
+            );
+            if !left.is_empty() {
+                skip_from(left, claims, at + 1, play, &mut *checked);
+                return;
+            }
+        }
+    }
+    let left = run_group(
+        &mut pending,
+        play,
+        changed,
+        &mut *checked,
+        &mut *group,
+        &mut *solo,
+    );
+    if !left.is_empty() {
+        skip_from(left, claims, claims.len(), play, &mut *checked);
+    }
 }
 
 /// Starts `bin`'s self-play run into `out`. The head's and the base's run side by side (#2353), since
@@ -998,35 +1253,21 @@ fn plays_selfplay(diff: &Diff) -> bool {
 /// R1365000's stage 2 against the parent build, this binary being the head's.
 fn check(diff: &Diff, head: &Side, parent: &Path, selfplay_dir: Option<&Path>) -> Result<Checked> {
     let mut checked = Checked::default();
-    let enough = |checked: &Checked| {
-        diff.play.len() + checked.scripts.len() + checked.touched.len() >= PATCH_MIN_CARDS || checked.rule
-    };
-    for id in &diff.scripts {
-        let family = family(id);
-        if diff.play.contains(&family) || checked.scripts.contains(&family) {
-            continue;
-        }
-        if enough(&checked) {
-            checked.skipped.insert(id.clone());
-            continue;
-        }
-        let diverged = match forced_diverge(id, head, parent) {
-            Ok(diverged) => diverged,
-            Err(error) => {
-                // A card the recorder cannot force counts as changed, never as a refactor.
-                eprintln!("classify: {id} could not be forced ({error:#}); counted as changed");
-                true
-            }
-        };
-        if diverged {
-            checked.scripts.insert(family);
-        }
-    }
-    checked.play_code_skipped = diff.play_code && enough(&checked);
-    if diff.play_code && !enough(&checked) {
+    let changed: BTreeSet<String> = diff
+        .scripts
+        .iter()
+        .map(|script| family(script))
+        .chain(diff.play.iter().cloned())
+        .collect();
+    let claims: Vec<String> = diff.scripts.iter().cloned().collect();
+    let mut group = |ids: &[String]| forced_group_diverge(ids, head, parent);
+    let mut solo = |id: &str, actors: &[String]| forced_diverge(id, actors, head, parent);
+    check_scripts(&claims, &diff.play, &changed, &mut checked, &mut group, &mut solo);
+    checked.play_code_skipped = diff.play_code && patch_stop(&diff.play, &checked);
+    if diff.play_code && !patch_stop(&diff.play, &checked) {
         let traces = temp_traces();
         let seeds: Vec<u32> = (1..=UNFORCED_GAMES).collect();
-        record_seeds(&seeds, &[], &traces)?;
+        record_seeds(&seeds, &[], &[], &traces)?;
         match parent_check(parent, &traces) {
             Ok((_, report)) => {
                 let games = games_in(&traces)?;
@@ -1239,6 +1480,7 @@ fn print_classification(classification: &Classification) {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::cell::{Cell, RefCell};
 
     #[test]
     fn the_golden_summary_gives_the_steps_and_the_divergences() {
@@ -1254,6 +1496,35 @@ mod tests {
             Some((95, 1))
         );
         assert_eq!(summary_counts("hotseat fixture: folds to a798906b"), None);
+    }
+
+    #[test]
+    fn r3935001_the_walls_are_steered_with_the_cards_that_act_on_them() {
+        register_all();
+        let none = BTreeSet::new();
+        let actors = ["meditativeplus-021".to_string(), "classicplus-071".to_string()];
+        for wall in [
+            "stinkyscapeplus-064",
+            "stinkyscapeplus-065",
+            "stinkyscapeplus-066",
+        ] {
+            assert_eq!(steered_with(wall, &none), actors, "{wall}");
+        }
+        // A card of no entry plays the games it played.
+        assert!(steered_with("core-001", &none).is_empty());
+        // A card that acts on the subject and moves in the same change stays out of the steer.
+        let moved: BTreeSet<String> = ["classicplus-071".to_string()].into();
+        assert_eq!(steered_with("stinkyscapeplus-065", &moved), [actors[0].clone()]);
+        // Every card an entry names can be forced into a deck.
+        for (subjects, acting) in STEERED_GAMES {
+            let ids: Vec<String> = subjects
+                .iter()
+                .chain(acting.iter())
+                .map(|id| id.to_string())
+                .collect();
+            let forced = crate::golden::resolve_force(&ids).expect("forceable");
+            assert_eq!(forced, ids);
+        }
     }
 
     fn card(id: &str, set: &str, cost: i64, text: &str) -> (String, crate::patches::js::Object) {
@@ -1588,6 +1859,31 @@ mod tests {
         assert!(classification.cards.contains(&"stinkyscape-109".to_string()));
     }
 
+    // R3944000: a pull request is labeled by the tier it ships as: the classifier's patch (past its bars,
+    // or a rule) ships as a micro, a set that ships as a major, and no pull request is ever `tier:patch`.
+    #[test]
+    fn r3944000_a_change_that_reads_as_a_patch_is_labeled_and_ships_as_a_micro() {
+        assert_eq!(shipped_tier(Tier::Patch), Tier::Micro);
+        assert_eq!(shipped_tier(Tier::Micro), Tier::Micro);
+        assert_eq!(shipped_tier(Tier::Major), Tier::Major);
+        let labeled = |tier: Tier| {
+            labels(&Classification {
+                kind: Kind::Cards,
+                tier: Some(tier),
+                sets: Vec::new(),
+                cards: Vec::new(),
+                reprinted: Vec::new(),
+                wording: Vec::new(),
+                rule: false,
+                visual: false,
+                stage2: "",
+                unchecked: Vec::new(),
+            })
+        };
+        assert_eq!(labeled(Tier::Patch), vec!["kind:cards", "tier:micro"]);
+        assert_eq!(labeled(Tier::Major), vec!["kind:cards", "tier:major"]);
+    }
+
     // R2529000: how cards look is a micro of no family; its tests and the rest of the client are not.
     #[test]
     fn r2529000_a_change_to_how_cards_look_is_a_micro_of_no_family() {
@@ -1703,6 +1999,145 @@ mod tests {
         );
         assert_eq!(classified.stage2, "ran");
         assert!(classify(&diff, Some(&Checked::default())).unchecked.is_empty());
+    }
+
+    // R4145000: a group of five with no divergence costs one check and clears all five.
+    #[test]
+    fn r4145000_a_group_of_five_with_no_divergence_costs_one_check_and_clears_all_five() {
+        let claims: Vec<String> = (1..=5).map(|k| format!("core-{k:03}")).collect();
+        let (play, changed) = (BTreeSet::new(), BTreeSet::new());
+        let mut checked = Checked::default();
+        let (group_calls, solo_calls) = (Cell::new(0), Cell::new(0));
+        let mut group = |_: &[String]| -> Result<bool> {
+            group_calls.set(group_calls.get() + 1);
+            Ok(false)
+        };
+        let mut solo = |_: &str, _: &[String]| -> Result<bool> {
+            solo_calls.set(solo_calls.get() + 1);
+            Ok(false)
+        };
+        check_scripts(&claims, &play, &changed, &mut checked, &mut group, &mut solo);
+        assert_eq!(group_calls.get(), 1);
+        assert_eq!(solo_calls.get(), 0);
+        assert!(checked.scripts.is_empty());
+        assert!(checked.skipped.is_empty());
+    }
+
+    // R4145000: a group with a divergence falls back card by card, keeping only the cards whose
+    // own games diverge.
+    #[test]
+    fn r4145000_a_group_with_a_divergence_falls_back_card_by_card() {
+        let claims: Vec<String> = (1..=5).map(|k| format!("core-{k:03}")).collect();
+        let (play, changed) = (BTreeSet::new(), BTreeSet::new());
+        let mut checked = Checked::default();
+        let (group_calls, solo_calls) = (Cell::new(0), Cell::new(0));
+        let mut group = |_: &[String]| -> Result<bool> {
+            group_calls.set(group_calls.get() + 1);
+            Ok(true)
+        };
+        let mut solo = |id: &str, _: &[String]| -> Result<bool> {
+            solo_calls.set(solo_calls.get() + 1);
+            Ok(id == "core-003")
+        };
+        check_scripts(&claims, &play, &changed, &mut checked, &mut group, &mut solo);
+        assert_eq!(group_calls.get(), 1);
+        assert_eq!(solo_calls.get(), 5);
+        assert_eq!(checked.scripts, BTreeSet::from(["core-003".to_string()]));
+        assert!(checked.skipped.is_empty());
+    }
+
+    // R4145000: a group the recorder refuses falls back card by card, and a card that cannot be
+    // forced counts as changed, as before.
+    #[test]
+    fn r4145000_a_group_the_recorder_refuses_falls_back_and_an_unforceable_card_counts_as_changed() {
+        let claims: Vec<String> = (1..=5).map(|k| format!("core-{k:03}")).collect();
+        let (play, changed) = (BTreeSet::new(), BTreeSet::new());
+        let mut checked = Checked::default();
+        let (group_calls, solo_calls) = (Cell::new(0), Cell::new(0));
+        let mut group = |_: &[String]| -> Result<bool> {
+            group_calls.set(group_calls.get() + 1);
+            Err(anyhow::anyhow!("the recorder refused the group"))
+        };
+        let mut solo = |id: &str, _: &[String]| -> Result<bool> {
+            solo_calls.set(solo_calls.get() + 1);
+            if id == "core-002" {
+                Err(anyhow::anyhow!("core-002 cannot be forced"))
+            } else {
+                Ok(false)
+            }
+        };
+        check_scripts(&claims, &play, &changed, &mut checked, &mut group, &mut solo);
+        assert_eq!(group_calls.get(), 1);
+        assert_eq!(solo_calls.get(), 5);
+        assert_eq!(checked.scripts, BTreeSet::from(["core-002".to_string()]));
+        assert!(checked.skipped.is_empty());
+    }
+
+    // R4145000: R3935001's steered subjects never join a group; a Wall plays its own steered games.
+    #[test]
+    fn r4145000_the_walls_are_never_grouped() {
+        let claims: Vec<String> = [
+            "core-001",
+            "core-002",
+            "core-003",
+            "core-004",
+            "stinkyscapeplus-064",
+        ]
+        .iter()
+        .map(|id| id.to_string())
+        .collect();
+        let (play, changed) = (BTreeSet::new(), BTreeSet::new());
+        let mut checked = Checked::default();
+        let grouped: RefCell<Vec<Vec<String>>> = RefCell::new(Vec::new());
+        let soloed: RefCell<Vec<String>> = RefCell::new(Vec::new());
+        let mut group = |ids: &[String]| -> Result<bool> {
+            grouped.borrow_mut().push(ids.to_vec());
+            Ok(false)
+        };
+        let mut solo = |id: &str, _: &[String]| -> Result<bool> {
+            soloed.borrow_mut().push(id.to_string());
+            Ok(false)
+        };
+        check_scripts(&claims, &play, &changed, &mut checked, &mut group, &mut solo);
+        assert_eq!(soloed.borrow().as_slice(), ["stinkyscapeplus-064"]);
+        assert_eq!(grouped.borrow().len(), 1);
+        assert!(
+            grouped
+                .borrow()
+                .iter()
+                .flatten()
+                .all(|id| id != "stinkyscapeplus-064")
+        );
+        assert!(checked.scripts.is_empty() && checked.skipped.is_empty());
+    }
+
+    // R4145000: the `PATCH_MIN_CARDS` stop still marks the remaining cards skipped, as
+    // `r1365000_what_the_check_stops_short_of_counts_unconfirmed` has it for one card at a time.
+    #[test]
+    fn r4145000_the_patch_stop_still_marks_the_remaining_cards_skipped() {
+        let claims: Vec<String> = (1..=6).map(|k| format!("core-{k:03}")).collect();
+        let play: BTreeSet<String> = (1..=46).map(|k| format!("play-{k:03}")).collect();
+        assert_eq!(play.len() + 4, PATCH_MIN_CARDS);
+        let changed = BTreeSet::new();
+        let mut checked = Checked::default();
+        let (group_calls, solo_calls) = (Cell::new(0), Cell::new(0));
+        let mut group = |_: &[String]| -> Result<bool> {
+            group_calls.set(group_calls.get() + 1);
+            Ok(true)
+        };
+        let mut solo = |_: &str, _: &[String]| -> Result<bool> {
+            let at = solo_calls.get() + 1;
+            solo_calls.set(at);
+            Ok(at <= 4)
+        };
+        check_scripts(&claims, &play, &changed, &mut checked, &mut group, &mut solo);
+        assert_eq!(group_calls.get(), 1);
+        assert_eq!(solo_calls.get(), 4);
+        assert_eq!(checked.scripts.len(), 4);
+        assert_eq!(
+            checked.skipped,
+            BTreeSet::from(["core-005".to_string(), "core-006".to_string()])
+        );
     }
 
     #[test]
@@ -1913,6 +2348,9 @@ mod tests {
         assert_eq!(family("meditative-097-6"), "meditative-097");
         assert_eq!(family("core-002"), "core-002");
         assert_eq!(family("core-t-rush"), "core-t-rush");
+        assert_eq!(family("classic-004@v0.3.0c"), "classic-004");
+        assert_eq!(family("meditative-097-6@v0.5.11s"), "meditative-097");
+        assert_eq!(family("core-t-rush@v0.5.11s"), "core-t-rush");
         assert_eq!(
             family("stinkyscape-t-dormant-starship"),
             "stinkyscape-t-dormant-starship"
@@ -1923,6 +2361,37 @@ mod tests {
             Some("fn a() { 1 } // one\n")
         ));
         assert!(code_changed("a.json", Some("{}"), Some("{ }")));
+    }
+
+    /// R3836000: a TypeScript call broken over lines, with the comma a formatter adds and a comment
+    /// between its lines, is the same code; a Rust one is not, and a TypeScript comma before an
+    /// argument, or a bracket changed, still is.
+    #[test]
+    fn r3836000_a_typescript_comma_before_a_closing_bracket_is_layout() {
+        let before = "fit(ref, bare ? \"\" : name);\nconst list = [a, b];\n";
+        let after = "fit(\n  ref,\n  bare\n    ? // why the empty key\n      \"\"\n    : name,\n);\nconst list = [\n  a,\n  b,\n];\n";
+        let path = "apps/web/src/cards/CardFace.tsx";
+        assert!(!code_changed(path, Some(before), Some(after)));
+        assert!(!code_changed(
+            "apps/web/src/cards/look.ts",
+            Some(before),
+            Some(after)
+        ));
+        assert!(code_changed(path, Some("go(a, b);"), Some("go(a);")));
+        assert!(code_changed(path, Some("go(a);"), Some("go(a)[0];")));
+        assert!(code_changed(
+            path,
+            Some("const x = { a };"),
+            Some("const x = [a];")
+        ));
+        // In Rust `(a,)` is a tuple and `(a)` its element.
+        assert!(code_changed(
+            "crates/engine/src/a.rs",
+            Some("let x = (a);"),
+            Some("let x = (a,);")
+        ));
+        assert_eq!(without_trailing_commas("f(a,);[b,];{c,}"), "f(a);[b];{c}");
+        assert_eq!(without_trailing_commas("f(a,b)"), "f(a,b)");
     }
 
     // R2050000: outside a card script a `use` line is code, so a moved import is checked.

@@ -3,7 +3,7 @@
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::{CATALOG, card_def};
-use jackioh_engine::{CardDef, FaceKind, ParamBetter, Tag, fill_params, param_placeholders};
+use jackioh_engine::{CardDef, FaceKind, ParamBetter, SetName, Tag, fill_params, param_placeholders};
 use serde_json::{Value, json};
 
 fn entries() -> Vec<&'static CardDef> {
@@ -185,10 +185,10 @@ mod b3_4_params_the_numbers_a_card_declares {
             &first_param("classic-038"),
             &json!({ "key": "plays", "base": 3, "radiant": 2, "better": "down", "min": 2 })
         ));
-        // A percentage: step 10, never above 100, at its bound on both faces (#1828).
+        // A percentage: step 10, never above 100, at its bound on the Radiant face.
         assert!(matches_object(
-            &first_param("classicplus-019-2"),
-            &json!({ "key": "chance", "base": 100, "radiant": 100, "step": 10, "max": 100 })
+            &first_param("core-042"),
+            &json!({ "key": "chance", "base": 50, "radiant": 100, "step": 10, "max": 100 })
         ));
     }
 
@@ -224,6 +224,25 @@ mod b3_4_params_the_numbers_a_card_declares {
                         .iter()
                         .any(|keyword| keyword.kind().as_str().to_lowercase() == param.key);
                 assert!(!named_like_a_keyword, "{} {}", card.id, param.key);
+            }
+        }
+        // An Activate's use count is its label, `Activate:` or `Activate N:`, which Upgrade and Degrade move
+        // through the "Activate" tuning key: a `{param}` there would be a number a Buff moves while the uses
+        // stay, so no face prints one (Stinkyscape+ #8–#11, #35, #38 and #109 among others, #3596).
+        for card in entries() {
+            for face in [&card.base, &card.radiant] {
+                for line in face.text.lines() {
+                    // `Activate: {key}:` or `Activate {key}:`: a param standing as the label. A param in the
+                    // effect after the label (Meditative #97.2's "Activate: {chance}% chance…") is the
+                    // effect's own number.
+                    let label = line
+                        .strip_prefix("Activate")
+                        .map(|rest| rest.trim_start().trim_start_matches(':').trim_start())
+                        .filter(|rest| rest.starts_with('{'))
+                        .and_then(|rest| rest.split_once('}'))
+                        .is_some_and(|(_, after)| after.trim_start().starts_with(':'));
+                    assert!(!label, "{}: {line}", card.id);
+                }
             }
         }
     }
@@ -361,21 +380,24 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             }
         }
         // The thirteen numbers issue #556 marked and issue #1748's two (#21's discards and #42's chance,
-        // R1748003), and the Meditative set's own, which §8.8 tunes "on the base face only": M #14's draws,
-        // M #37's surcharge (R1748003), M #49.1's picks (#529) and M #76's marks. The held sets join batch
-        // by batch (Meditative+, R1178000; Stinkyscape, R1857000; Training Grounds, R2194000, its snapshots'
-        // among them, R2195003): each number is held to the rule above; the pinned lists are the shipped.
+        // R1748003), C #37's `flashback`, the base face's alone since issue #4440 (R4154202), and the
+        // Meditative set's own, which §8.8 tunes "on the base face only": M #14's draws, M #37's surcharge
+        // (R1748003), M #49.1's picks (#529) and M #76's marks (and M #10's price from issue #4154,
+        // R4154211, until issue #4440 took it away). The held sets join batch by batch (Meditative+, R1178000; Stinkyscape, R1857000;
+        // Training Grounds, R2194000, its snapshots' among them, R2195003): each number is held to the rule
+        // above; the pinned lists are the shipped.
         base_only.retain(|entry| {
             !entry.starts_with("meditativeplus-")
                 && !entry.starts_with("stinkyscape-")
                 && !entry.starts_with("traininggrounds-")
+                && !entry.starts_with("stinkyscapeplus-")
         });
         let (meditative, shipped): (Vec<String>, Vec<String>) = base_only
             .into_iter()
             .partition(|entry| entry.starts_with("meditative-"));
         // #2657's Bear Honeypot `tokens`, the base face's "Summon 2" (its Radiant face fills the board), and
         // #3140's C+ #16 Conjure Rush Token+ `tails`, the base face's coin flip, "2 on tails".
-        assert_eq!(shipped.len(), 17, "{shipped:#?}");
+        assert_eq!(shipped.len(), 18, "{shipped:#?}");
         assert_eq!(
             meditative,
             vec![
@@ -441,8 +463,13 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         }
         // Core, Classic and Classic+: the thirty-one numbers issue #824 marked and the thirteen before
         // (C #46's and C #54's among them, R749), less C #59's tokens and C #75's draw, which both faces
-        // print (#2020); and the Meditative set's twenty-two (twenty-three until #3140 made M #81's draw
-        // both faces'), less M #1's draw (both faces), with M #37's and M #38's `setCost` (R1748003).
+        // print (#2020), and C+ #68's `setCost`, which both faces print since issue #3951, and C #37's
+        // `flashback`, the Radiant face's alone from issue #4154 (R4154201) until issue #4440 made it the
+        // base face's; and the Meditative set's
+        // nineteen (twenty until issue #4154 took M #1's Cry and its `mana` away, R4154207; twenty-three
+        // until #3140 made M #81's draw both faces', twenty-two until issue #3951 made M #19.1's `mana`
+        // both faces', twenty-one until issue #3996 took M #78's `discount` away), less M #1's draw (both
+        // faces), with M #37's and M #38's `setCost` (R1748003).
         let meditative = radiant_only
             .iter()
             .filter(|entry| entry.starts_with("meditative-"))
@@ -455,13 +482,14 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                 entry.starts_with("meditativeplus-")
                     || entry.starts_with("stinkyscape-")
                     || entry.starts_with("traininggrounds-")
+                    || entry.starts_with("stinkyscapeplus-")
             })
             .count();
         // #2657's Anti-oneshot Armor `armor`, its Radiant face's "Your hero has Armor 1", and less
         // M #49.1's `radiants`, gone with its start-of-turn text.
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
-            (43, 22),
+            (42, 19),
             "{radiant_only:#?}"
         );
     }
@@ -491,8 +519,8 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                 }
             }
         }
-        // Only #98 Heroic Power's numbers belong to a power, all nine of them.
-        assert_eq!(owned.len(), 9, "{owned:#?}");
+        // Only #98 Heroic Power's numbers belong to a power, all eleven of them (R3551002).
+        assert_eq!(owned.len(), 11, "{owned:#?}");
         assert!(
             owned.iter().all(|entry| entry.starts_with("core-098 ")),
             "{owned:#?}"
@@ -536,9 +564,11 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("classicplus-036-1", KEYWORD),
         ("classicplus-061", KEYWORD),
         ("classicplus-065", KEYWORD),
+        ("classicplus-065-1", KEYWORD),
         ("classicplus-066", KEYWORD),
         ("meditative-036", KEYWORD),
         ("meditative-036", EITHER_WAY),
+        ("meditative-054", KEYWORD),
         ("meditativeplus-006", KEYWORD),
         ("stinkyscape-004-2", KEYWORD),
         ("stinkyscape-004-3", KEYWORD),
@@ -554,6 +584,12 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-t-korrelite", KEYWORD),
         ("stinkyscape-t-axnit", KEYWORD),
         ("traininggrounds-010", KEYWORD),
+        // R3535001: the held Stinkyscape+ set's numbered-keyword counts (S+ #6.1's Tipsy,
+        // #20's Lucky, #55's Armor) and #6.2's Temporary 2 (R3566004).
+        ("stinkyscapeplus-006-1", KEYWORD),
+        ("stinkyscapeplus-006-2", KEYWORD),
+        ("stinkyscapeplus-020", KEYWORD),
+        ("stinkyscapeplus-055", KEYWORD),
         ("core-042", PRICE),
         ("core-046", PRICE),
         ("core-051", PRICE),
@@ -565,6 +601,8 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("classic-004", PRICE),
         ("classic-032", PRICE),
         ("classic-035", PRICE),
+        // R3837004: the fallback pool's "(3) or (4)" Cost.
+        ("classicplus-029", PRICE),
         ("classicplus-036", PRICE),
         ("classicplus-042-1", PRICE),
         ("classicplus-043", PRICE),
@@ -583,6 +621,39 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-004", PRICE),
         ("stinkyscape-012-3", PRICE),
         ("stinkyscape-149", PRICE),
+        // Issue #4154: S #18's and M #7's Tribute 1, a count R3535001 lists the same way for the
+        // Stinkyscape+ set's Tributes.
+        ("stinkyscape-018", PRICE),
+        ("meditative-007", PRICE),
+        // R3535001: the held Stinkyscape+ set's costs, thresholds and launch prices, which no
+        // Buff or Nerf moves (S+ #24's and #138's and #139's embiggen lines; #39's, #52's, #53's,
+        // #57's, #59's, #68's, #69.1's, #75.1's, #82's, #97's, #98's, #103's, #104's, #128's,
+        // #129's, #130's and #131's Tribute counts, #142's, #155's and #166's).
+        ("stinkyscapeplus-024", PRICE),
+        ("stinkyscapeplus-039", PRICE),
+        ("stinkyscapeplus-052", PRICE),
+        ("stinkyscapeplus-053", PRICE),
+        ("stinkyscapeplus-057", PRICE),
+        ("stinkyscapeplus-059", PRICE),
+        ("stinkyscapeplus-068", PRICE),
+        ("stinkyscapeplus-069-1", PRICE),
+        ("stinkyscapeplus-075-1", PRICE),
+        ("stinkyscapeplus-082", PRICE),
+        // R4353023: S+ #96's Embiggened price and the (1) less and (0) it gives the cards it adds.
+        ("stinkyscapeplus-096", PRICE),
+        ("stinkyscapeplus-097", PRICE),
+        ("stinkyscapeplus-098", PRICE),
+        ("stinkyscapeplus-103", PRICE),
+        ("stinkyscapeplus-104", PRICE),
+        ("stinkyscapeplus-128", PRICE),
+        ("stinkyscapeplus-129", PRICE),
+        ("stinkyscapeplus-130", PRICE),
+        ("stinkyscapeplus-131", PRICE),
+        ("stinkyscapeplus-138", PRICE),
+        ("stinkyscapeplus-139", PRICE),
+        ("stinkyscapeplus-142", PRICE),
+        ("stinkyscapeplus-155", PRICE),
+        ("stinkyscapeplus-166", PRICE),
         ("core-038", ENGINE),
         ("core-093", ENGINE),
         ("core-095", ENGINE),
@@ -600,10 +671,15 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-153", ENGINE),
         ("stinkyscape-166", ENGINE),
         ("stinkyscape-167", ENGINE),
+        // R3554002: S+ #78's slash lanes 2, 3 and 4, the engine's SLASH_LANES.
+        ("stinkyscapeplus-078", ENGINE),
         ("core-024", FORMULA),
         ("core-031", FORMULA),
         ("core-070", FORMULA),
         ("classicplus-053", FORMULA),
+        // R3535001: S+ #87's 3X stats, a term of a formula (#162's Combo X gains are on a
+        // Unit, which R1748003 does not hold to this).
+        ("stinkyscapeplus-087", FORMULA),
         ("core-082", STRUCTURE),
         ("classic-074", STRUCTURE),
         ("classicplus-019", STRUCTURE),
@@ -625,7 +701,6 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("classic-029", EITHER_WAY),
         ("classic-064", EITHER_WAY),
         ("traininggrounds-034", EITHER_WAY),
-        ("traininggrounds-052", EITHER_WAY),
         ("classicplus-t-ai-03", AI_PRINTED),
         ("classicplus-t-ai-04", AI_PRINTED),
         ("classicplus-t-ai-05", AI_PRINTED),
@@ -635,6 +710,10 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-t-ai-03", AI_PRINTED),
         ("stinkyscape-t-ai-05", AI_PRINTED),
         ("stinkyscape-t-ai-06", AI_PRINTED),
+        // R3535001: the held Stinkyscape+ set's AI cards print their numbers (ST15).
+        ("stinkyscapeplus-t-ai-01", AI_PRINTED),
+        ("stinkyscapeplus-t-ai-02", AI_PRINTED),
+        ("stinkyscapeplus-t-ai-06", AI_PRINTED),
         ("meditative-080", IMMUTABLE),
         ("stinkyscape-095", CARD_NAME),
         ("stinkyscape-159", CARD_NAME),
@@ -698,5 +777,26 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         let distinct: IndexSet<&str> = reasons.iter().copied().collect();
         assert_eq!(distinct.len(), reasons.len());
         assert!(FIXED.iter().all(|(_, reason)| distinct.contains(reason)));
+    }
+
+    /// R3535001: the Stinkyscape+ set's fixed numbers are listed, each on a card of the set that prints
+    /// one, with the reason its number is no param.
+    #[test]
+    fn r3535001_the_stinkyscape_plus_numbers_are_listed() {
+        jackioh_cards::register_all();
+        let listed: Vec<&(&str, &str)> = FIXED
+            .iter()
+            .filter(|(id, _)| id.starts_with("stinkyscapeplus-"))
+            .collect();
+        assert!(listed.len() > 20, "{} entries", listed.len());
+        for (id, reason) in listed {
+            let card = card_def(id);
+            assert_eq!(card.set, SetName::StinkyscapePlus, "{id}");
+            let prints = [&card.base.text, &card.radiant.text]
+                .iter()
+                .any(|text| literal(text).bytes().any(|byte| byte.is_ascii_digit()));
+            assert!(prints, "{id} prints no number: drop it from the list");
+            assert!(!reason.is_empty(), "{id}");
+        }
     }
 }

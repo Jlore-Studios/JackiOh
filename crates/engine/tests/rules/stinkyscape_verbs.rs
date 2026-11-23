@@ -47,10 +47,6 @@ fn backrow_id(s: &Scenario, player: PlayerId, lane: i32) -> String {
         .id
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
 fn has_flying(s: &Scenario, id: &str) -> bool {
     unit_has(s.state(), s.card(id), KeywordKind::Flying)
 }
@@ -96,7 +92,7 @@ mod r1849000_immune_to_spell_damage {
             json!({ "field": [IMMUNE] }),
         );
         let immune = id_at(&s, P2, 1);
-        s.play(BOLT, pick(&immune));
+        s.play(BOLT, pick::targets(pick::id(&immune)));
         let kinds = types_of(s.last_events());
         assert!(
             !kinds.contains(&GameEventType::Damage),
@@ -118,7 +114,7 @@ mod r1849000_immune_to_spell_damage {
             json!({ "field": [IMMUNE] }),
         );
         let immune = id_at(&s, P2, 1);
-        s.play(RALLY, pick(&immune));
+        s.play(RALLY, pick::targets(pick::id(&immune)));
         s.expect_stats(immune.as_str(), json!({ "attack": 3 }));
     }
 
@@ -151,7 +147,7 @@ mod r1849001_evolve {
         );
         let wasp = id_at(&s, P1, 1);
         assert!(!has_flying(&s, &wasp));
-        s.play(EVOLVER, pick(&wasp));
+        s.play(EVOLVER, pick::targets(pick::id(&wasp)));
         assert!(has_flying(&s, &wasp), "Evolve: gain Flying");
     }
 
@@ -179,7 +175,7 @@ mod r1849001_evolve {
             json!({}),
         );
         let grunt = id_at(&s, P1, 1);
-        s.play(EVOLVER, pick(&grunt));
+        s.play(EVOLVER, pick::targets(pick::id(&grunt)));
         assert!(!types_of(s.last_events()).contains(&GameEventType::KeywordGranted));
         assert!(!has_flying(&s, &grunt));
 
@@ -203,21 +199,41 @@ mod r1849002_destroy_becomes_exile {
     use super::*;
 
     #[test]
-    fn r1849002_a_lethal_hit_exiles_with_no_death_or_reborn() {
+    fn r1849002_r4207000_a_lethal_hit_exiles_its_death_fires_and_its_reborn_returns_it_from_exile() {
         let mut s = board(
             "r1849002-lethal",
             json!({ "hand": [BOLT], "field": [DISINTEGREX] }),
             json!({ "field": [PHOENIX] }),
         );
         let phoenix = id_at(&s, P2, 1);
-        s.play(BOLT, pick(&phoenix));
-        s.expect_in_zone(phoenix.as_str(), "exile");
-        assert!(s.unit(P2, 1).is_none(), "no Reborn body came back");
-        assert!(s.hand(P2).is_empty(), "no Death drew a card");
+        s.play(BOLT, pick::targets(pick::id(&phoenix)));
+        // R4207000: it was destroyed all the same: its Death drew a card and Reborn took it back out of
+        // the exile pile it died into.
+        assert_eq!(id_at(&s, P2, 1), phoenix, "the Reborn body came back from exile");
+        s.expect_in_zone(phoenix.as_str(), "field");
+        assert_eq!(s.hand(P2).len(), 1, "its Death drew a card");
         let kinds = types_of(s.last_events());
-        assert!(kinds.contains(&GameEventType::Exiled));
-        assert!(!kinds.contains(&GameEventType::Destroyed), "{kinds:?}");
-        assert_eq!(s.state().counters.destroyed, 0);
+        assert!(kinds.contains(&GameEventType::Destroyed), "{kinds:?}");
+        assert!(kinds.contains(&GameEventType::Exiled), "{kinds:?}");
+        assert!(kinds.contains(&GameEventType::Summoned), "{kinds:?}");
+        assert_eq!(s.state().counters.destroyed, 1);
+    }
+
+    #[test]
+    fn r4207000_a_reborn_body_that_dies_again_is_exiled_its_death_firing_again() {
+        let mut s = board(
+            "r4207000-twice",
+            json!({ "hand": [BOLT, BOLT], "field": [DISINTEGREX] }),
+            json!({ "field": [PHOENIX] }),
+        );
+        let phoenix = id_at(&s, P2, 1);
+        s.play(BOLT, pick::targets(pick::id(&phoenix)));
+        assert_eq!(id_at(&s, P2, 1), phoenix);
+        s.play(BOLT, pick::targets(pick::id(&phoenix)));
+        s.expect_in_zone(phoenix.as_str(), "exile");
+        assert!(s.unit(P2, 1).is_none(), "no Reborn is left to bring it back");
+        assert_eq!(s.hand(P2).len(), 2, "its Death fired on both deaths (R8)");
+        assert_eq!(s.state().counters.destroyed, 2);
     }
 
     #[test]
@@ -228,12 +244,12 @@ mod r1849002_destroy_becomes_exile {
             json!({ "backrow": [FIELD] }),
         );
         let field = backrow_id(&s, P2, 1);
-        s.play(SMASH, pick(&field));
+        s.play(SMASH, pick::targets(pick::id(&field)));
         s.expect_in_zone(field.as_str(), "exile");
     }
 
     #[test]
-    fn r1849002_the_aura_card_dying_with_them_is_exiled_too() {
+    fn r1849002_r4207000_the_aura_card_dying_with_them_is_exiled_too_and_every_one_is_destroyed() {
         let mut s = board(
             "r1849002-wipe",
             json!({ "hand": [WIPE], "field": [DISINTEGREX, GRUNT] }),
@@ -244,7 +260,20 @@ mod r1849002_destroy_becomes_exile {
         for id in &ids {
             s.expect_in_zone(id.as_str(), "exile");
         }
-        assert!(!types_of(s.last_events()).contains(&GameEventType::Destroyed));
+        let destroyed: Vec<String> = s
+            .last_events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Destroyed { instance_id, .. } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            destroyed,
+            ids.to_vec(),
+            "R4207000: each was destroyed, in R68's order"
+        );
+        assert_eq!(s.state().counters.destroyed, 3);
     }
 
     #[test]
@@ -269,7 +298,7 @@ mod r1849002_destroy_becomes_exile {
             json!({}),
         );
         let grunt = id_at(&s, P1, 2);
-        s.play(OFFERING, pick(&grunt));
+        s.play(OFFERING, pick::targets(pick::id(&grunt)));
         s.expect_in_zone(grunt.as_str(), "graveyard");
         assert!(types_of(s.last_events()).contains(&GameEventType::Destroyed));
     }
@@ -298,7 +327,7 @@ mod r1849003_reflected_damage {
             json!({ "field": [PLATING] }),
         );
         let plating = id_at(&s, P2, 1);
-        s.play(BOLT, pick(&plating));
+        s.play(BOLT, pick::targets(pick::id(&plating)));
         s.expect_stats(plating.as_str(), json!({ "health": 6 - BOLT_DAMAGE }));
         s.expect_health(P1, HERO_HEALTH - BOLT_DAMAGE);
         s.expect_health(P2, HERO_HEALTH);
@@ -327,7 +356,7 @@ mod r1849003_reflected_damage {
             json!({ "field": [PLATING_R] }),
         );
         let plating = id_at(&s, P2, 1);
-        s.play(BOLT, pick(&plating));
+        s.play(BOLT, pick::targets(pick::id(&plating)));
         assert_eq!(
             damage_events(s.last_events()),
             vec![
@@ -546,7 +575,7 @@ mod r1849005_gauntlet_lanes {
         );
         let inside = id_at(&s, P1, 3);
         let taunter = id_at(&s, P2, 2);
-        s.play(GOAD, pick(&taunter));
+        s.play(GOAD, pick::targets(pick::id(&taunter)));
         assert_eq!(forced_attackers(s.last_events()), vec![inside]);
         s.expect_stats(taunter.as_str(), json!({ "health": 1 }));
     }
@@ -594,7 +623,7 @@ mod r1849006_units_cannot_be_in_defense {
         assert!(!offers_switch(&s, &mine));
         s.expect_refused_with(|s| s.switch_position(mine.as_str()), REFUSAL);
         // An effect's switch does nothing either.
-        s.play(SHOVE, pick(&theirs));
+        s.play(SHOVE, pick::targets(pick::id(&theirs)));
         assert_ne!(s.card(theirs.as_str()).position, Some(Position::Def));
         assert!(!types_of(s.last_events()).contains(&GameEventType::PositionSwitched));
         // The aura reaches the other side on its own turn too.
@@ -640,7 +669,7 @@ mod r1849006_units_cannot_be_in_defense {
         );
         let (grunt, warp) = (id_at(&s, P1, 1), backrow_id(&s, P1, 1));
         assert!(!offers_switch(&s, &grunt));
-        s.play(SMASH, pick(&warp));
+        s.play(SMASH, pick::targets(pick::id(&warp)));
         s.expect_in_zone(warp.as_str(), "graveyard");
         assert!(offers_switch(&s, &grunt));
         s.switch_position(grunt.as_str());
@@ -760,7 +789,7 @@ mod r1849008_ally_attacked {
         s.attack(grunt.as_str(), "hero");
         assert!(s.state().pending.is_none(), "an attack on the hero asks nothing");
         s.expect_health(P2, HERO_HEALTH - 3);
-        s.play(GOAD, pick(&asker));
+        s.play(GOAD, pick::targets(pick::id(&asker)));
         assert!(s.state().pending.is_none(), "a forced attack asks nothing (R121)");
         assert_eq!(forced_attackers(s.last_events()), vec![grunt]);
         s.expect_stats(asker.as_str(), json!({ "attack": 1, "health": 2 }));
@@ -902,7 +931,7 @@ mod r1875006_would_die_in_combat {
     #[test]
     fn r1875006_a_spells_hit_or_a_destroy_is_no_death_in_combat() {
         let (mut s, grunt, trap) = reprieved("r1875006-spell", json!({ "hand": [BOLT, SMASH] }));
-        s.play(BOLT, pick(&grunt));
+        s.play(BOLT, pick::targets(pick::id(&grunt)));
         assert!(!types_of(s.last_events()).contains(&GameEventType::TrapFired));
         s.expect_in_zone(grunt.as_str(), "graveyard");
         assert_eq!(backrow_id(&s, P2, 1), trap);
@@ -912,7 +941,7 @@ mod r1875006_would_die_in_combat {
             json!({ "field": [{ "def": GRUNT, "lane": 2 }], "backrow": [REPRIEVE] }),
         );
         let grunt = id_at(&s, P2, 2);
-        s.play(SMASH, pick(&grunt));
+        s.play(SMASH, pick::targets(pick::id(&grunt)));
         assert!(!types_of(s.last_events()).contains(&GameEventType::TrapFired));
         s.expect_in_zone(grunt.as_str(), "graveyard");
     }
@@ -1030,6 +1059,7 @@ mod r1859007_units_have_keyword {
             expiry: ModifierExpiry::Never,
             kind: ModifierKind::UnitsHaveKeyword {
                 keyword: Keyword::Trample,
+                from_spell: None,
             },
         });
         assert!(ours.iter().all(|id| has_trample(&s, id)));
@@ -1051,5 +1081,55 @@ mod r1859007_units_have_keyword {
                 "{viewer:?}: {mods:?}"
             );
         }
+    }
+    /// R4508000: a Spell's "your Units have X" passes a Unit Immune to Spells by, read live, so it lends
+    /// again once the immunity goes; a Trap's (S #4.4 Last Word) still lends to it.
+    #[test]
+    fn r4508000_a_spell_s_units_have_keyword_passes_an_immune_unit_by_and_a_trap_s_lends_to_it() {
+        let mut s = board(
+            "r4508000",
+            json!({
+                "field": [
+                    { "def": "stand-in (1) 4/4 Immune to Spells", "lane": 1 },
+                    { "def": PLAIN, "lane": 2 },
+                    { "def": PLAIN, "lane": 3 },
+                ],
+            }),
+            json!({}),
+        );
+        let (immune, plain_id, granted) = (id_at(&s, P1, 1), id_at(&s, P1, 2), id_at(&s, P1, 3));
+        s.card_mut(granted.as_str())
+            .granted_keywords
+            .push(Keyword::ImmuneToSpells);
+        let lend = |from_spell: Option<bool>| PlayerModifier {
+            id: "r4508000".to_string(),
+            expiry: ModifierExpiry::Never,
+            kind: ModifierKind::UnitsHaveKeyword {
+                keyword: Keyword::Trample,
+                from_spell,
+            },
+        };
+        s.state_mut().players.p1.mods.push(lend(Some(true)));
+        assert!(has_trample(&s, &plain_id));
+        assert!(!has_trample(&s, &immune), "a Spell's lend passes it by");
+        assert!(!has_trample(&s, &granted), "a granted immunity too");
+        assert!(
+            unit_has(s.state(), s.card(immune.as_str()), KeywordKind::ImmuneToSpells),
+            "and it keeps its immunity"
+        );
+        // Read live: once the immunity goes, the lend reaches it.
+        s.card_mut(granted.as_str()).granted_keywords.clear();
+        assert!(has_trample(&s, &granted));
+        // A lend no Spell made reaches it.
+        s.state_mut().players.p1.mods = vec![lend(None)];
+        assert!(has_trample(&s, &immune) && has_trample(&s, &plain_id));
+        // Only a Spell's lend is marked: the badge reads the same.
+        let view = s.view(P1);
+        assert!(
+            view.you
+                .modifiers
+                .iter()
+                .any(|badge| badge.label == "Your Units have Trample")
+        );
     }
 }

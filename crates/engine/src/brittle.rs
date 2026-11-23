@@ -8,7 +8,7 @@
 
 use serde_json::json;
 
-use crate::config::{BACKROW_ZONES, BRITTLE_FIRST_TICK_TURNS, BRITTLE_TICK, UNIT_ZONES};
+use crate::config::{BACKROW_ZONES, BRITTLE_TICK, UNIT_ZONES};
 use crate::prelude::json_as;
 use crate::preview::is_face_down;
 use crate::script::EngineSink;
@@ -21,7 +21,8 @@ pub use crate::brittle_count::{
 
 /// B3.3 rule 2, R638: every card whose count this player's start of turn ticks, in R68's order: units
 /// by lane (each pile's top only; a card dormant under a Stack is not on the field, R13), then the
-/// backrow by lane. Read once, as copies; the tick writes through ids.
+/// backrow by lane. Read once, as copies; the tick writes through ids. A Dormant card's text is off, so
+/// its count waits until it awakens (§6.1 Dormant, R1839000, R4454004).
 fn ticked_cards(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let side = &state.players[player];
     let mut cards: Vec<CardInstance> = Vec::new();
@@ -44,16 +45,14 @@ fn ticked_cards(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
             cards.push(card.clone());
         }
     }
+    cards.retain(|card| !crate::slumber::is_slumbering(card));
     cards
 }
 
 /// B3.3 rule 2: a count's full turn cycle is the rest of the turn it started on (`since`) and a whole
 /// turn of the other player's (B9 #41's t + 2); after it, it ticks at each start of its controller's turn.
 pub fn brittle_due(state: &GameState, card: &CardInstance) -> bool {
-    match &card.brittle {
-        Some(brittle) => state.turn >= brittle.since + BRITTLE_FIRST_TICK_TURNS,
-        None => false,
-    }
+    crate::query::brittle_due_by(card, state.turn)
 }
 
 /// B3.3 rule 3: a count at 0 crumbles its card. That is an ordinary destroy (§6.3), so the next state
@@ -66,11 +65,8 @@ pub(crate) fn crumble(sink: &mut EngineSink<'_>, card: &CardInstance) {
         owner: card.owner,
         zone: ZoneName::Field,
     });
-    let options = crate::resolve::HookOptions {
-        controller: Some(card.controller),
-        ..Default::default()
-    };
-    let mut ctx = crate::resolve::make_context(sink, None, options);
+    // The destroy names its card by id and reads no controller.
+    let mut ctx = crate::resolve::make_context(sink, None, Default::default());
     let effect = crate::effects::destroy::destroy(json_as(json!({
         "target": { "of": "instance", "instanceId": card.id }
     })));

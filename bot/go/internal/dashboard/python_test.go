@@ -45,15 +45,6 @@ func strs(v any) []string {
 	return out
 }
 
-func pairs(v any) [][2]*pyjson.Object {
-	var out [][2]*pyjson.Object
-	for _, p := range pyjson.List(v) {
-		l := pyjson.List(p)
-		out = append(out, [2]*pyjson.Object{pyjson.Obj(l[0]), pyjson.Obj(l[1])})
-	}
-	return out
-}
-
 func TestConstantsMatchPython(t *testing.T) {
 	var slots []any
 	for _, s := range BoxSlots {
@@ -70,16 +61,14 @@ func TestConstantsMatchPython(t *testing.T) {
 		"LEARN_NO_RUNNER": LearnNoRunner, "RUNNERS_MINUTES": RunnersMinutes,
 		"RUNNERS_START": RunnersStart, "RUNNERS_END": RunnersEnd, "EXPLAINED": Explained,
 		"HOSTED_RUNNERS": HostedRunners, "RUNNER_RUNS": RunnerRuns, "RUNNER_ROWS": RunnerRows,
-		"LOCAL_LABEL": LocalLabel, "GATHER_LABEL": GatherLabel, "WORKFLOWS": Workflows,
-		"HOSTED_ROLES": HostedRoles, "LOCAL_ROLES": LocalRoles, "BOXES_NOTE": BoxesNote,
-		"PC_FILE": PCFile, "GATHER_WORKFLOW": GatherWorkflow, "BOX_ROW": BoxRow,
+		"WORKFLOWS": Workflows, "HOSTED_ROLES": HostedRoles, "BOXES_NOTE": BoxesNote,
+		"GATHER_WORKFLOW": GatherWorkflow, "BOX_ROW": BoxRow,
 		"BOX_STEPS": BoxSteps, "RUNNER_LEGEND": RunnerLegend, "STEP_WORDS": StepWords,
-		"RUNNER_WRAP": RunnerWrap, "GHOST_STYLE": GhostStyle, "LEARN_GAMES": LearnGames,
+		"RUNNER_WRAP": RunnerWrap, "GHOST_STYLE": GhostStyle,
 		"PROGRESS_START": ProgressStart, "PROGRESS_END": ProgressEnd, "PROGRESS_CHART": ProgressChart,
 		"BOX_SLOTS": slots, "SECTION_START": SectionStart, "SECTION_END": SectionEnd,
 		"TRAINING_LANES": TrainingLanes, "SHOWN_STEPS": ShownSteps,
 		"TRAINING_STALE": TrainingStale.Seconds(), "LEARN_PR_STALE": LearnPRStale.Seconds(),
-		"PC_QUIET": PCQuiet.Seconds(),
 	}
 	sorted := pyjson.Options{SortKeys: true}
 	python := loadPython(t).Obj("constants")
@@ -189,21 +178,6 @@ func TestLearnMatchesPython(t *testing.T) {
 
 func TestRunnersMatchPython(t *testing.T) {
 	c := loadPython(t)
-	for _, p := range cases(t, c, "pc_load") {
-		if got := pcLoad(pyjson.Obj(p[0]), p[1].(bool)); got != p[2] {
-			t.Errorf("_pc_load(%s, %v) = %q, want %q", pyjson.Dumps(p[0]), p[1], got, p[2])
-		}
-	}
-	for _, p := range cases(t, c, "played") {
-		got := played(pyjson.Obj(p[0]), p[1].(string))
-		want := pyjson.Obj(p[2])
-		switch {
-		case got == nil && want == nil:
-		case got == nil || want == nil || got.games != want.Int("games") || got.done != want.Int("done") ||
-			got.from != want.Int("from") || got.patch != want.Str("patch"):
-			t.Errorf("_played(%s, %q) = %+v, want %s", pyjson.Dumps(p[0]), p[1], got, pyjson.Dumps(p[2]))
-		}
-	}
 	for _, p := range cases(t, c, "where") {
 		order, words := Where(pyjson.Obj(p[0]))
 		want := pyjson.List(p[1])
@@ -233,12 +207,6 @@ func TestRunnersMatchPython(t *testing.T) {
 	for _, p := range cases(t, c, "run_for") {
 		if got := runFor(pyjson.New(), pyjson.New(), pyjson.Obj(p[0])); got != p[1] {
 			t.Errorf("_run_for({}, {}, %s) = %q, want %q", pyjson.Dumps(p[0]), got, p[1])
-		}
-	}
-	for _, p := range cases(t, c, "pc_work") {
-		if got := pcWork(pyjson.Obj(p[0]), pairs(p[1]), p[2].(bool)); got != p[3] {
-			t.Errorf("_pc_work(%s, %s, %v) = %q, want %q", pyjson.Dumps(p[0]), pyjson.Dumps(p[1]),
-				p[2], got, p[3])
 		}
 	}
 }

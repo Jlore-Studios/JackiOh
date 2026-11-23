@@ -1,7 +1,9 @@
-//! C #11 Mind Melt (SPEC §8.6 row 11, §6.3 Look at a hand, §10.6, §10.8; R65, R81, R177). Spell, cost 1,
-//! Common.
-//!   Base:    "Look at your opponent's hand. Exile {cards|card|cards} from it."
-//!   Radiant: "Look at your opponent's hand. Choose a cost. Exile every card of that cost from it."
+//! C #11 Mind Melt (SPEC §8.6 row 11, §6.3 Look at a hand, §10.6, §10.8; R65, R81, R177, R1838000). Spell,
+//! cost 1, Common.
+//!   Base:    "Tradable\nLook at your opponent's hand. Exile {cards|card|cards} from it."
+//!   Radiant: "Tradable\nLook at your opponent's hand. Choose a cost. Exile every card of that cost from it."
+//!   Tradable since issue #4440 (R1838000): catalog data the engine reads in the hand (`trade.rs`), so
+//!   nothing here runs for it, and the shipped catalogs keep it off through v0.6.9n (R767000).
 //!
 //! LOOKING AT THE HAND is the prompt itself (B5 E17): `chooseFromHand({ of: "enemy" })` offers the
 //! opponent's hand cards to you, and `viewFor` shows an open prompt's options to the player it is for
@@ -82,7 +84,7 @@ mod tests {
     const FELINORS: &str = "core-012"; // Duplicating Felinors
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const REPLENISH: &str = "core-010"; // Rapid Replenish: a Spell
-    const SPECIESIST: &str = "core-002"; // Speciesist
+    const SPECIESIST: &str = "stand-in (2) 4/1 R8/2";
     const THEIR_HAND: [&str; 5] = [MENACE, SEVEN, FELINORS, VANILLA, REPLENISH];
 
     fn open(s: &Scenario) -> PendingChoice {
@@ -117,6 +119,27 @@ mod tests {
         events
             .iter()
             .any(|event| matches!(event, GameEvent::Exiled { instance_id, .. } if instance_id == id))
+    }
+
+    /// R1838000: Mind Melt is Tradable on both faces since issue #4440 — Traded from the hand into the deck
+    /// for a draw, at no mana — and a Trade is no play of it (R1838002): it looks at no hand.
+    #[test]
+    fn r1838000_both_faces_trade_into_the_deck_for_a_draw_at_no_mana() {
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": MELT, "radiant": radiant }, FILLER], "library": [FILLER, FILLER] },
+                "p2": { "hand": THEIR_HAND, "library": [FILLER] },
+            }));
+            let melt = s.card(MELT).clone();
+            assert!(is_tradable(s.state(), &melt), "radiant {radiant}: the face prints Tradable");
+            let mana = s.state().players.p1.mana.current;
+            s.trade(&melt.id);
+            s.expect_events(json!(["traded", "shuffledIn", "drawn"]));
+            assert_eq!(s.hand(P1).len(), 2, "one card went in and one came out");
+            assert_eq!(s.state().players.p1.mana.current, mana, "at no mana");
+            assert!(s.state().pending.is_none(), "radiant {radiant}: no hand is looked at");
+            assert_eq!(s.hand(P2).len(), THEIR_HAND.len());
+        }
     }
 
     #[test]
@@ -272,15 +295,8 @@ mod tests {
             s.play(MELT, json!({}));
             let pending = open(&s);
             assert_eq!(pending.player_id, P1);
-            let options: Vec<String> = pending
-                .options
-                .iter()
-                .map(|option| match &option.selection {
-                    Selection::Mode { option } => option.clone(),
-                    _ => "?".to_string(),
-                })
-                .collect();
-            assert_eq!(options, ["0", "1", "2", "3"]);
+            assert_eq!(s.prompt_modes(), ["0", "1", "2", "3"]);
+            assert_eq!(pending.options.len(), 4, "an option other than a Mode is offered");
         }
 
         #[test]
@@ -338,7 +354,7 @@ mod tests {
         fn sec9_3_the_open_prompt_survives_a_json_round_trip_and_resumes_through_reduce() {
             let mut s = melt(true, json!(THEIR_HAND));
             s.play(MELT, json!({}));
-            let result = revive_and_answer(&s, json!([{ "pick": "mode", "option": "2" }]), "mind-melt-radiant-round-trip");
+            let result = revive_and_answer(&s, pick::mode("2"), "mind-melt-radiant-round-trip");
             assert!(result.error.is_none());
             assert!(result.state.pending.is_none());
             let felinors = s.card(FELINORS).id.clone();

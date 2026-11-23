@@ -23,7 +23,7 @@ const PASSWORD = "correct horse battery";
 const CODE = "3f9c6c1e-5a6b-4c2d-9e8f-0a1b2c3d4e5f";
 
 function base64url(text: string): string {
-  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
 }
 
 function jwt(payload: Record<string, unknown>): string {

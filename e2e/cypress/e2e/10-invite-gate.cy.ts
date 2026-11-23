@@ -2,7 +2,8 @@
 // The §9.4 attempt budget permits one screen failure, three HTTP failures, then redemption.
 // R111's activation grant is the starter cards (R1310000, §14.12): enough for a deck Best of 1 accepts
 // (L2, L3, L5, L6; R250, R253), not for a trio's three DECK_SIZE decks of distinct cards (L4).
-// Test order leaves the fixture active.
+// R144's reseed runs in `beforeEach`, so each test and each retry starts from a pending account with an unspent
+// attempt budget and an unspent good code (#4485). Test order leaves the fixture active.
 
 import {
   CODE_ALPHABET,
@@ -122,7 +123,11 @@ describe("10 invite gate — a pending account", () => {
     ]) {
       expectWellFormedInviteCode(code);
     }
-    // R144: the server reseeds the account and code this file spends, so it passes run after run.
+  });
+
+  beforeEach(() => {
+    // R144: the server reseeds the account and code this file spends, so it passes run after run, and before each
+    // test, so a retry starts from a pending account with an unspent attempt budget and an unspent good code.
     cy.request<ReseedBody>({ method: "POST", url: apiUrl(E2E_RESEED_PATH) }).should((response) => {
       expect(response.status, "R144: an E2E server reseeds on demand").to.eq(200);
       expect(response.body.codes, "the good, expired and exhausted codes; never the missing one").to.deep.eq([
@@ -154,7 +159,7 @@ describe("10 invite gate — a pending account", () => {
       headers: bearerHeaders(pendingToken()),
     }).should((response) => {
       expect(response.status).to.eq(200);
-      expect(response.body.redemptionEnabled, "§9.4's circuit breaker is closed").to.eq(true);
+      expect(response.body.redemptionEnabled, "redemption is not paused (R4131000)").to.eq(true);
       expect(response.body.retryAfterMs).to.eq(0);
     });
 

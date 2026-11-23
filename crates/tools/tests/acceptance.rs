@@ -9,13 +9,21 @@
 //!    (part 37);
 //!  - CI scope (#751): `scripts/ci-scope.sh`'s `rust_<group>` lines follow `cargo metadata`'s crate graph: a
 //!    change runs every `rust-test` group that tests its crate or one built on it, and no other; so does a
-//!    file included from outside its crate's directory;
+//!    file included from outside its crate's directory, and so does a file read at run time from outside
+//!    its crate's directory (`repo_root().join(…)`, `repo().join(…)`,
+//!    `Path::new(env!("CARGO_MANIFEST_DIR")).join(…)` and `PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(…)`,
+//!    each a string literal or a same-file const with chained `.join(…)` literals appended);
+//!  - CI scope, e2e (#4219): `crates/tools/src/replay.rs`, outside its `#[cfg(test)]` items, names no other
+//!    module of the crate (`crate::` or `super::`): `scripts/ci-scope.sh` leaves e2e off for the tools' other
+//!    sources because e2e runs only `replay` and `catalog-version`;
 //!  - Daily: every `#[ignore]` under `crates/` reads `#[ignore = "daily: <why>"]`, naming what holds its rule
 //!    per pull request, so an ignore moves a test to super.yml's daily run and never switches one off;
 //!  - Config (BUILD §2, #1640): every `pub const` of the engine's `config.rs` is named, outside comments, by
 //!    a source file under `crates/*/src`, a `build.rs`, `tests/export_config.rs` or another constant;
 //!  - README (#1720): `crates/tools/README.md`'s command table is the built `jackioh`'s clap surface: every
 //!    row's words are the CLI's, and the whole CLI is in some row;
+//!  - README e2e specs (#4287): any end-to-end spec numbers cited in crates/tools/README.md's command table
+//!    exist and exercise that command;
 //!  - Helpers (#1777, #1826): each family of shared test helpers is defined once, in its home, and no file
 //!    under the trees it covers defines its own (docs/ADDING_CARDS.md §2); no card script's test calls
 //!    `register_all();` on the line above a `scenario(`, as `crate::scenario` registers the cards (#2930);
@@ -23,8 +31,15 @@
 //!    list: a preview of a set that ships opens nothing, so the patch that ships it takes its previews out.
 //!  - Dungeon (DR14 B33, #2709): `spec/15-dungeon-run.md`'s table of constants has one row per `pub const`
 //!    of `crates/run/src/config.rs`, and `spec/README.md` maps the note.
+//!  - Discards (#3914): no test under the card scripts or `crates/engine/tests` notes a value and drops it with
+//!    a bare `let _ = <identifier>;`.
 //!  - Statics (#3063): the pure crates' sources declare no `thread_local!`, `static mut` or static holding a
 //!    `Cell`, `RefCell`, `UnsafeCell` or `Atomic*` but the ones CLAUDE.md rule 4 names (`RULE_4_STATICS`).
+//!  - TS (#4426): `crates/wasm/core/Cargo.toml`'s `[dev-dependencies]` name `jackioh-run` and `jackioh-shared`
+//!    with the `ts` feature, so the `tools, wasm` CI group writes their generated types and ci.yml's V20 step
+//!    holds them to the Rust.
+//!  - No network (R4159000): `crates/ai` compiles no trained weights, no learned evaluation and no policy
+//!    prior, and the WebAssembly modules export no `learned_parity`.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -228,6 +243,9 @@ const STRUCTURAL_READERS: &[&str] = &[
     "crates/cards/tests/cross/radiant_standard.rs",
     // SPEC §7's table of tokens, its Token and Index cells, one row per token (R1177001).
     "crates/cards/tests/cross/catalog.rs",
+    // SPEC §8's card tables, each row's Stats cell and the `A/B` its Radiant effect cell opens with,
+    // one row per card (#3804).
+    "crates/cards/tests/cross/radiant_stats.rs",
     // This file names the patterns it looks for, and reads `crates/tools/README.md`'s command
     // table (#1720) and `spec/15-dungeon-run.md`'s table of constants (B33), the first cell of each
     // row only, and the line of `spec/README.md`'s map that links §15.
@@ -603,6 +621,62 @@ fn ci_scope_check_finds_a_crate_or_a_path_dependency_the_map_lacks() {
     );
 }
 
+/// What `patches ship` wrote for v0.6.6d (#4089, #4094).
+const SHIP_FILES: [&str; 6] = [
+    "crates/cards/patches/card_metrics/v0.6.6d.json",
+    "crates/cards/patches/patches.json",
+    "crates/cards/patches/pending/tag-scan.json",
+    "crates/cards/patches/shipped.json",
+    "crates/cards/patches/v0.6.6d.json",
+    "crates/server/.env.example",
+];
+
+fn scope_of(paths: &[&str]) -> Vec<(String, bool)> {
+    let files: Vec<(&str, &str)> = paths.iter().map(|path| (*path, "x\n")).collect();
+    scope_lines(&files)
+}
+
+fn line_is(lines: &[(String, bool)], name: &str) -> bool {
+    lines
+        .iter()
+        .find(|(line, _)| line == name)
+        .unwrap_or_else(|| panic!("no `{name}` line"))
+        .1
+}
+
+#[test]
+fn ci_scope_narrows_a_patches_ship_to_the_groups_that_read_what_it_writes() {
+    let lines = scope_of(&SHIP_FILES);
+    let on: Vec<&str> = lines
+        .iter()
+        .filter(|(_, value)| *value)
+        .map(|(name, _)| name.as_str())
+        .collect();
+    assert_eq!(
+        on,
+        [
+            "full",
+            "rust_cards_lib",
+            "rust_cards",
+            "rust_server",
+            "rust_tools_wasm"
+        ]
+    );
+    for name in ["e2e", "web", "db_deploy", "rust_ai_slow", "clippy"] {
+        assert!(!line_is(&lines, name), "{name}");
+    }
+}
+
+#[test]
+fn ci_scope_leaves_a_patches_ship_plus_an_unrelated_file_at_its_old_scope() {
+    let mut paths = SHIP_FILES.to_vec();
+    paths.push("crates/engine/src/state.rs");
+    let lines = scope_of(&paths);
+    for name in ["e2e", "web", "rust_ai_slow", "rust_engine", "db_deploy"] {
+        assert!(line_is(&lines, name), "{name}");
+    }
+}
+
 /// The file paths `text` includes: the literal after `include_str!(` or `include_bytes!(`, which is
 /// relative to the file (`false`), or after `env!("CARGO_MANIFEST_DIR"),` in a `concat!`, which is
 /// relative to the crate (`true`), each with its line. A marker followed by anything but a string
@@ -632,6 +706,119 @@ fn outside_includes(text: &str) -> Vec<(usize, String, bool)> {
                 literal[..end].to_string(),
                 from_crate,
             ));
+        }
+    }
+    out
+}
+
+/// The string constants `text` defines: each `const NAME … = "…";` line's name and literal, a
+/// `pub` and its `(…)` group aside. A value built any other way (`concat!`, a number) names no
+/// path of its own.
+fn file_string_consts(text: &str) -> BTreeMap<String, String> {
+    let mut out = BTreeMap::new();
+    for line in text.lines() {
+        let mut rest = line.trim_start();
+        if let Some(after_pub) = rest.strip_prefix("pub")
+            && (after_pub.is_empty()
+                || !after_pub.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_'))
+        {
+            rest = after_pub.trim_start();
+            if let Some(after_open) = rest.strip_prefix('(')
+                && let Some(close) = after_open.find(')')
+            {
+                rest = after_open[close + 1..].trim_start();
+            }
+        }
+        let Some(after_const) = rest.strip_prefix("const ") else {
+            continue;
+        };
+        let name: String = after_const
+            .chars()
+            .take_while(|c| !c.is_whitespace() && !matches!(c, ':' | ';' | '='))
+            .collect();
+        if name.is_empty() {
+            continue;
+        }
+        let Some((_, value)) = after_const[name.len()..].split_once('=') else {
+            continue;
+        };
+        let value = value.trim_start();
+        let Some(inner) = value.strip_prefix('"') else {
+            continue;
+        };
+        let Some(end) = inner.find('"') else {
+            continue;
+        };
+        out.insert(name, inner[..end].to_string());
+    }
+    out
+}
+
+/// The repository paths `text` reads at run time: the argument of `repo_root().join(…)` or
+/// `repo().join(…)`, relative to the repository root (`false`), or of
+/// `Path::new(env!("CARGO_MANIFEST_DIR")).join(…)` or `PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(…)`,
+/// relative to the crate (`true`), each with its line. The argument is a string literal or a
+/// same-file const, each chained `.join("…")` after it a literal appended. A variable argument
+/// (`join(&path)`), a receiver (`repo_root.join(…)`) or an unknown name reads no path of its own.
+fn outside_runtime_reads(text: &str) -> Vec<(usize, String, bool)> {
+    let consts = file_string_consts(text);
+    let markers = [
+        ("repo_root().join(", false),
+        ("repo().join(", false),
+        ("Path::new(env!(\"CARGO_MANIFEST_DIR\")).join(", true),
+        ("PathBuf::from(env!(\"CARGO_MANIFEST_DIR\")).join(", true),
+    ];
+    let mut out = Vec::new();
+    for (marker, from_crate) in markers {
+        let mut from = 0;
+        while let Some(found) = text[from..].find(marker) {
+            let marker_at = from + found;
+            from = marker_at + marker.len();
+            let rest = text[from..].trim_start();
+            let (mut joined, mut after) = if let Some(literal) = rest.strip_prefix('"') {
+                let Some(end) = literal.find('"') else {
+                    continue;
+                };
+                (literal[..end].to_string(), &literal[end + 1..])
+            } else {
+                let len = rest
+                    .bytes()
+                    .take_while(|b| b.is_ascii_alphanumeric() || *b == b'_')
+                    .count();
+                if len == 0 {
+                    continue;
+                }
+                let Some(value) = consts.get(&rest[..len]) else {
+                    continue;
+                };
+                (value.clone(), &rest[len..])
+            };
+            let trimmed = after.trim_start();
+            let Some(after_paren) = trimmed.strip_prefix(')') else {
+                continue;
+            };
+            after = after_paren;
+            loop {
+                let chained = after.trim_start();
+                let Some(inner) = chained.strip_prefix(".join(") else {
+                    break;
+                };
+                let inner = inner.trim_start();
+                let Some(literal) = inner.strip_prefix('"') else {
+                    break;
+                };
+                let Some(end) = literal.find('"') else {
+                    break;
+                };
+                let after_literal = literal[end + 1..].trim_start();
+                let Some(after_close) = after_literal.strip_prefix(')') else {
+                    break;
+                };
+                joined.push('/');
+                joined.push_str(&literal[..end]);
+                after = after_close;
+            }
+            out.push((text[..marker_at].matches('\n').count() + 1, joined, from_crate));
         }
     }
     out
@@ -689,8 +876,61 @@ fn ci_scope_runs_a_crates_groups_for_every_file_it_includes_from_outside_it() {
             if relative == "crates/tools/tests/acceptance.rs" {
                 continue;
             }
+            // A file nested in another package (crates/wasm/core in crates/wasm) reads as
+            // the innermost one: its `CARGO_MANIFEST_DIR` is the nested crate's.
+            if packages.iter().any(|other| {
+                other.dir.len() > package.dir.len() && relative.starts_with(&format!("{}/", other.dir))
+            }) {
+                continue;
+            }
             let Ok(text) = fs::read_to_string(&file) else {
                 continue;
+            };
+            let mut check = |line: usize, literal: &str, base: &Path| {
+                let Some(path) = fold(&base.join(literal.trim_start_matches('/'))) else {
+                    missed.push(format!("{relative}:{line}: {literal} leaves the repository"));
+                    return;
+                };
+                if path.is_empty() {
+                    // A read of the repository root itself (the `repo()` helper's
+                    // `join("../..")`): no scope row can name it, and the files it really
+                    // reads go through a variable the scan does not see.
+                    return;
+                }
+                if path.starts_with(&format!("{}/", package.dir)) {
+                    return;
+                }
+                let ignored = Command::new("git")
+                    .args(["check-ignore", "-q", &path])
+                    .current_dir(&root)
+                    .status()
+                    .expect("git runs");
+                // 0 is ignored, 1 is not. Anything else is git's error: no repository, as in
+                // cargo-mutants' copy of the tree (scripts/mutants.sh's `tools` area), which
+                // leaves out every gitignored file, so there a path the tree lacks is one.
+                let ignored = match ignored.code() {
+                    Some(0) => true,
+                    Some(1) => false,
+                    _ => !root.join(&path).exists(),
+                };
+                if ignored {
+                    return;
+                }
+                found.push(path.clone());
+                let check = if root.join(&path).is_dir() {
+                    format!("{path}/lib.rs")
+                } else {
+                    path.clone()
+                };
+                let on = scope_lines(&[(check.as_str(), "x\n")]);
+                if !on
+                    .iter()
+                    .any(|(name, on)| *on && testing.contains(&name.as_str()))
+                {
+                    missed.push(format!(
+                        "{relative}:{line} includes {path}, but scripts/ci-scope.sh runs none of {testing:?} for it"
+                    ));
+                }
             };
             for (line, literal, from_crate) in outside_includes(&text) {
                 let base = if from_crate {
@@ -701,35 +941,26 @@ fn ci_scope_runs_a_crates_groups_for_every_file_it_includes_from_outside_it() {
                         .unwrap_or(Path::new(""))
                         .to_path_buf()
                 };
-                let Some(path) = fold(&base.join(literal.trim_start_matches('/'))) else {
-                    missed.push(format!("{relative}:{line}: {literal} leaves the repository"));
-                    continue;
+                check(line, &literal, &base);
+            }
+            // A run-time read names its path from the repository root (`repo_root()`,
+            // `repo()`) or from the crate (`CARGO_MANIFEST_DIR`), never from the file that
+            // reads it, so it resolves on its own base rather than the include's.
+            for (line, literal, from_crate) in outside_runtime_reads(&text) {
+                let base = if from_crate {
+                    PathBuf::from(&package.dir)
+                } else {
+                    PathBuf::new()
                 };
-                if path.starts_with(&format!("{}/", package.dir)) {
-                    continue;
-                }
-                let ignored = Command::new("git")
-                    .args(["check-ignore", "-q", &path])
-                    .current_dir(&root)
-                    .status()
-                    .expect("git runs");
-                if ignored.success() {
-                    continue;
-                }
-                found.push(path.clone());
-                let on = scope_lines(&[(&path, "x\n")]);
-                if !on
-                    .iter()
-                    .any(|(name, on)| *on && testing.contains(&name.as_str()))
-                {
-                    missed.push(format!(
-                        "{relative}:{line} includes {path}, but scripts/ci-scope.sh runs none of {testing:?} for it"
-                    ));
-                }
+                check(line, &literal, &base);
             }
         }
     }
-    for expected in ["docs/radiant-audit.md", "e2e/support/config.ts"] {
+    for expected in [
+        "docs/radiant-audit.md",
+        "e2e/support/config.ts",
+        "crates/server/migrations/0068_v0_5_retcon.sql",
+    ] {
         assert!(
             found.iter().any(|path| path == expected),
             "the scan found no include of {expected}: {found:?}"
@@ -751,6 +982,132 @@ fn ci_scope_include_scan_finds_each_literal_path() {
             (4, "/../../e2e/y.ts".to_string(), true),
         ]
     );
+}
+
+#[test]
+fn ci_scope_runtime_scan_finds_each_repo_read() {
+    let text = "const REL: &str = \"crates/server/migrations\";\nlet a = repo_root().join(REL).join(\"0068_v0_5_retcon.sql\");\nlet b = repo_root().join(\"crates/cards/catalog.json\");\nlet c = Path::new(env!(\"CARGO_MANIFEST_DIR\")).join(\"../../Cargo.lock\");\nlet d = PathBuf::from(env!(\"CARGO_MANIFEST_DIR\")).join(\"migrations\");\nlet e = repo().join(REL);\nlet f = root.join(REL);\nlet g = repo_root.join(REL);\nlet h = repo_root().join(&path);\n";
+    assert_eq!(
+        outside_runtime_reads(text),
+        [
+            (
+                2,
+                "crates/server/migrations/0068_v0_5_retcon.sql".to_string(),
+                false
+            ),
+            (3, "crates/cards/catalog.json".to_string(), false),
+            (6, "crates/server/migrations".to_string(), false),
+            (4, "../../Cargo.lock".to_string(), true),
+            (5, "migrations".to_string(), true),
+        ]
+    );
+}
+
+/// `line` with the inside of each single-line string literal cut out, so a brace in a format string
+/// is no block's. A literal over several lines, a raw string and a `'"'` are not followed.
+fn without_string_contents(line: &str) -> String {
+    let mut out = String::new();
+    let mut in_string = false;
+    let mut escaped = false;
+    for c in line.chars() {
+        if !in_string {
+            out.push(c);
+            in_string = c == '"';
+        } else if escaped {
+            escaped = false;
+        } else if c == '\\' {
+            escaped = true;
+        } else if c == '"' {
+            out.push(c);
+            in_string = false;
+        }
+    }
+    out
+}
+
+/// What a crate's source names to reach another of its modules.
+const OTHER_MODULES: [&str; 2] = ["crate::", "super::"];
+
+/// The 1-based lines of `text` that name `OTHER_MODULES`, comments aside, outside its `#[cfg(test)]`
+/// items: the code a shipped `jackioh replay` runs. A `#[cfg(test)]` item is the lines after the
+/// attribute alone on its line, up to the `;` that ends it or the `}` that closes its first block.
+/// An out-of-line `mod x;` is not seen.
+fn module_paths_outside_tests(text: &str) -> Vec<usize> {
+    let mut found = Vec::new();
+    // Inside a `#[cfg(test)]` item: the braces still open, and whether a block has opened.
+    let mut test_item: Option<(i32, bool)> = None;
+    for (index, line) in without_line_comments(text).lines().enumerate() {
+        let code = without_string_contents(line);
+        match test_item {
+            None if code.trim() == "#[cfg(test)]" => test_item = Some((0, false)),
+            None => {
+                if OTHER_MODULES.iter().any(|path| code.contains(path)) {
+                    found.push(index + 1);
+                }
+            }
+            Some((depth, opened)) => {
+                let depth = depth
+                    + code
+                        .chars()
+                        .map(|c| match c {
+                            '{' => 1,
+                            '}' => -1,
+                            _ => 0,
+                        })
+                        .sum::<i32>();
+                let opened = opened || code.contains('{');
+                let ended = if opened {
+                    depth <= 0
+                } else {
+                    code.trim_end().ends_with(';')
+                };
+                test_item = if ended { None } else { Some((depth, opened)) };
+            }
+        }
+    }
+    found
+}
+
+#[test]
+fn ci_scope_e2e_replay_names_no_module_the_e2e_case_leaves_off() {
+    let file = "crates/tools/src/replay.rs";
+    let text = fs::read_to_string(repo().join(file)).expect(file);
+    let lines = module_paths_outside_tests(&text);
+    assert!(
+        lines.is_empty(),
+        "{file}:{lines:?}: `jackioh replay`, which e2e specs 01 and 13 run, now reaches another module of the crate, so a change to that module can change what e2e checks: add its file to the keep-on arm of scripts/ci-scope.sh's e2e case (`crates/tools/src/main.rs | replay.rs | catalog.rs | patches.rs`), which leaves e2e off for the rest of crates/tools/src/"
+    );
+}
+
+#[test]
+fn ci_scope_e2e_module_scan_finds_each_path_outside_tests() {
+    let text = r#"use crate::fuzz::decks_for_seed;
+
+/// A doc comment naming crate::duos_fuzz is no call.
+pub fn run() {
+    crate::classify::run();
+    super::fuzz::run();
+}
+
+#[cfg(test)]
+const SEEDS: u32 = 8;
+
+#[cfg(test)]
+pub(crate) fn helper() -> String {
+    crate::fuzz::decks_for_seed(1);
+    format!("{")
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::fuzz::decks_for_seed;
+}
+
+pub fn after() {
+    crate::patches::repo_root();
+}
+"#;
+    assert_eq!(module_paths_outside_tests(text), [1, 5, 6, 24]);
 }
 
 /// The 1-based lines of `text` that ignore a test without saying it runs daily.
@@ -924,7 +1281,7 @@ mod tests {
 }
 
 /// One family of test helpers defined once, in its home, which every test under its trees takes
-/// rather than copying (#1777, #1826, #1997, #2023, #2385, #2160, #2930).
+/// rather than copying (#1777, #1826, #1997, #2023, #2160, #2930, #3913).
 struct SharedHelpers {
     /// The file that defines them, from the repository's root.
     home: &'static str,
@@ -942,18 +1299,29 @@ struct SharedHelpers {
     more_than: usize,
 }
 
-/// The test trees that read the engine testkit, where none of `unit_at`, `must` and a one-instance
-/// pick builder may be copied.
+/// The test trees that read the engine testkit, where none of `unit_at`, `must` and a one-pick
+/// builder (an instance or a hero, bare or as `targets`) may be copied.
 const KIT_READERS: &[&str] = &["crates/engine/tests", "crates/cards", "crates/ai/tests"];
 
-/// The server test trees `tests/server.rs` compiles with `tests/support/`, where no file but a
-/// helper's home may define one (#2385). `tests/store/` builds into `server_store` without them.
-const SERVER_SUPPORT_READERS: &[&str] = &[
-    "crates/server/tests/actor",
-    "crates/server/tests/api",
-    "crates/server/tests/bots",
-    "crates/server/tests/loops",
-    "crates/server/tests/support",
+/// The trees where a card test reads an open prompt's Mode options through `Scenario::prompt_modes` (or
+/// `prompt_modes_of` for a prompt it holds), not by matching `Selection::Mode` itself (#3796). The
+/// engine's and the AI's own tests keep their copies.
+const MODE_READERS: &[&str] = &["crates/cards"];
+
+/// The trees where a test reads one card's offered plays, targets, activations and attacks through the
+/// testkit (#3913); `crates/cards/src` outside the scripts is not test code (`patch_history.rs` has a `plays_of`).
+const PLAY_READERS: &[&str] = &[
+    "crates/cards/src/scripts",
+    "crates/cards/tests",
+    "crates/engine/tests",
+    "crates/ai/tests",
+];
+
+/// PLAY_READERS but the rules tests, whose own `instance_ids` read events (#3913).
+const PICK_READERS: &[&str] = &[
+    "crates/cards/src/scripts",
+    "crates/cards/tests",
+    "crates/ai/tests",
 ];
 
 /// The card scripts, each a card's script with its tests (CLAUDE.md rule 6).
@@ -1007,11 +1375,35 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
     },
     SharedHelpers {
         home: "crates/engine/src/testkit/scenario.rs",
-        names: &["unit_at", "must"],
+        names: &["unit_at", "must", "nonempty", "prompt_modes", "prompt_modes_of"],
         statics: &[],
         structs: &[],
         dirs: KIT_READERS,
         more_than: 800,
+    },
+    SharedHelpers {
+        home: "crates/engine/src/testkit/scenario.rs",
+        names: &[
+            "plays_of",
+            "can_play",
+            "play_targets",
+            "activations_of",
+            "attacks_of",
+            "plays_in",
+            "is_play_of",
+        ],
+        statics: &[],
+        structs: &[],
+        dirs: PLAY_READERS,
+        more_than: 1400,
+    },
+    SharedHelpers {
+        home: "crates/engine/src/testkit/pick.rs",
+        names: &["instance_ids"],
+        statics: &[],
+        structs: &[],
+        dirs: PICK_READERS,
+        more_than: 1000,
     },
     SharedHelpers {
         home: "crates/cards/tests/cross/mod.rs",
@@ -1036,54 +1428,30 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
         dirs: &["crates/ai/tests"],
         more_than: 40,
     },
-    SharedHelpers {
-        home: "crates/server/tests/support/store.rs",
-        names: &[
-            "fake",
-            "fake_ref",
-            "fake_lock",
-            "to_json",
-            "from",
-            "uuid",
-            "advance",
-            "advance_and_yield",
-            "sleep_settled",
-            "table",
-            "fake_read",
-            "fail_on",
-            "stop_failing",
-            "hmac_sha256_hex",
-            "befriend",
-            "named_cards",
-        ],
-        statics: &[],
-        structs: &[],
-        dirs: SERVER_SUPPORT_READERS,
-        more_than: 80,
-    },
-    SharedHelpers {
-        home: "crates/server/tests/support/socket.rs",
-        names: &["read_frame_now"],
-        statics: &[],
-        structs: &[],
-        dirs: SERVER_SUPPORT_READERS,
-        more_than: 80,
-    },
-    SharedHelpers {
-        home: "crates/server/tests/support/engine.rs",
-        names: &["playable"],
-        statics: &[],
-        structs: &[],
-        dirs: SERVER_SUPPORT_READERS,
-        more_than: 80,
-    },
 ];
 
-/// The engine testkit's one-instance pick builders, the only home of one (#1826).
+/// The engine testkit's one-pick builders and `targets`, the only home of one (#1826, #3827).
 const PICK_HOME: &str = "crates/engine/src/testkit/pick.rs";
 
-/// How a one-instance pick builder's body starts.
-const PICK_LITERAL: &str = r#"json!([{ "pick": "instance", "instanceId":"#;
+/// The one-pick builders PICK_HOME defines: `id` and `hero`.
+const PICK_HOME_BUILDERS: usize = 2;
+
+/// How a one-pick builder's body starts, and what closes it: an instance or a hero pick, bare or
+/// as a play's `targets`, or `targets` around a testkit builder (#1826, #3827).
+const PICK_FORMS: &[(&str, &str)] = &[
+    (r#"json!([{ "pick": "instance", "instanceId":"#, "}])"),
+    (r#"json!([{ "pick": "hero", "player":"#, "}])"),
+    (
+        r#"json!({ "targets": [{ "pick": "instance", "instanceId":"#,
+        "}] })",
+    ),
+    (r#"json!({ "targets": [{ "pick": "hero", "player":"#, "}] })"),
+    (r#"json!({ "targets": pick::"#, " })"),
+];
+
+/// The test trees where no file may look a card up in a state under a name of its own: the
+/// harness's `live` and `live_mut` do it (#3827).
+const LOOKUP_READERS: &[&str] = &["crates/engine/tests/rules"];
 
 /// The 1-based lines of `text` that define one of `names` (`fn both(`, `pub fn spread<`, at any
 /// indent), a `//` comment aside.
@@ -1100,6 +1468,29 @@ fn shared_helper_definitions(text: &str, names: &[&str]) -> Vec<usize> {
                             .is_some_and(|rest| rest.starts_with(['(', '<']))
                     })
             })
+        })
+        .map(|(index, _)| index + 1)
+        .collect()
+}
+
+/// The 1-based lines of `text` that read a prompt option's Mode string by hand: an arm
+/// `Selection::Mode { option } => option.clone(),` (or `Some(option.clone())`, `Some(option)`,
+/// `option`) with nothing after it on the line but its comma and, in a one-line `match`, the `_ =>` arm
+/// that skips the rest; a `//` comment aside. An arm that does more than hand the option back is not a
+/// copy of `prompt_modes`. The same read from a prompt as JSON, `option["selection"]["option"]`, counts too.
+fn mode_extraction_lines(text: &str) -> Vec<usize> {
+    const ARM: &str = "Selection::Mode { option } =>";
+    const JSON_READ: &str = r#"["selection"]["option"]"#;
+    const BODIES: [&str; 4] = ["option.clone()", "Some(option.clone())", "Some(option)", "option"];
+    text.lines()
+        .enumerate()
+        .filter(|(_, line)| {
+            let code = line.split("//").next().unwrap_or("");
+            code.contains(JSON_READ)
+                || code.split_once(ARM).is_some_and(|(_, rest)| {
+                    let body = rest.split(", _ =>").next().unwrap_or(rest);
+                    BODIES.contains(&body.trim().trim_end_matches(',').trim())
+                })
         })
         .map(|(index, _)| index + 1)
         .collect()
@@ -1163,9 +1554,9 @@ fn shared_struct_definitions(text: &str, field_sets: &[&[&str]]) -> Vec<usize> {
         .collect()
 }
 
-/// The 1-based header lines of `text`'s one-instance pick builders: a function whose signature
-/// returns a `Value` and whose body, `//` comments aside, holds PICK_LITERAL closed by `}])` with no
-/// second `"pick"`.
+/// The 1-based header lines of `text`'s one-pick builders: a function whose signature returns a
+/// `Value` and whose body, `//` comments aside, holds one of PICK_FORMS on one line, closed by its end
+/// with no second key (`"zone"`, `"ability"`, a second pick) after its start.
 fn pick_builder_definitions(text: &str) -> Vec<usize> {
     let code: Vec<&str> = text
         .lines()
@@ -1190,10 +1581,12 @@ fn pick_builder_definitions(text: &str) -> Vec<usize> {
                 .is_some_and(|(_, returns)| returns.contains("Value"))
                 .then_some(header);
         }
-        let builds_one = code
-            .get(index)
-            .and_then(|line| line.split_once(PICK_LITERAL))
-            .is_some_and(|(_, rest)| rest.contains("}])") && !rest.contains("\"pick\""));
+        let builds_one = code.get(index).is_some_and(|line| {
+            PICK_FORMS.iter().any(|(start, end)| {
+                line.split_once(start)
+                    .is_some_and(|(_, rest)| rest.contains(end) && !rest.contains("\":"))
+            })
+        });
         if let Some(header) = open.filter(|_| builds_one) {
             found.push(header + 1);
             open = None;
@@ -1203,10 +1596,72 @@ fn pick_builder_definitions(text: &str) -> Vec<usize> {
     found
 }
 
+/// `ty` as a reference: whether it is `mut`, and the type it refers to (`&'a mut GameState` is
+/// `(true, "GameState")`); `None` when it is no reference.
+fn reference_to(ty: &str) -> Option<(bool, &str)> {
+    let rest = ty.trim().strip_prefix('&')?.trim_start();
+    let rest = if rest.starts_with('\'') {
+        rest.split_once(char::is_whitespace)?.1.trim_start()
+    } else {
+        rest
+    };
+    Some(match rest.strip_prefix("mut ") {
+        Some(rest) => (true, rest.trim()),
+        None => (false, rest.trim()),
+    })
+}
+
+/// Whether `signature` (a function's header, joined onto one line) looks a card up in a state: two
+/// parameters, a `&GameState` and a `&str`, and a `&CardInstance` back, the state and the card both
+/// `mut` or neither, whatever the names and lifetimes.
+fn is_state_lookup(signature: &str) -> bool {
+    let Some((params, returns)) = signature.split_once("->") else {
+        return false;
+    };
+    let Some((params, _)) = params.split_once('(').and_then(|(_, rest)| rest.rsplit_once(')')) else {
+        return false;
+    };
+    let mut params = params.split(',').map(str::trim).filter(|param| !param.is_empty());
+    let (Some(state), Some(id), None) = (params.next(), params.next(), params.next()) else {
+        return false;
+    };
+    let ty = |param: &str| param.split_once(':').map(|(_, ty)| ty.trim().to_string());
+    let (Some(state), Some(id)) = (ty(state), ty(id)) else {
+        return false;
+    };
+    let returns = returns.split('{').next().unwrap_or("");
+    reference_to(&id) == Some((false, "str"))
+        && matches!(
+            (reference_to(&state), reference_to(returns)),
+            (Some((a, "GameState")), Some((b, "CardInstance"))) if a == b
+        )
+}
+
+/// The 1-based header lines of `text`'s state lookups (`is_state_lookup`), `//` comments aside: a
+/// copy of the harness's `live` or `live_mut` under any name.
+fn state_lookup_definitions(text: &str) -> Vec<usize> {
+    let code: Vec<&str> = text
+        .lines()
+        .map(|line| line.split("//").next().unwrap_or(""))
+        .collect();
+    (0..code.len())
+        .filter(|&index| {
+            code[index].split_whitespace().any(|word| word == "fn") && {
+                let end = code[index..]
+                    .iter()
+                    .position(|line| line.contains(['{', ';']))
+                    .map_or(code.len(), |offset| index + offset + 1);
+                is_state_lookup(&code[index..end].concat())
+            }
+        })
+        .map(|index| index + 1)
+        .collect()
+}
+
 /// Every copy of a shared test helper under `root`, as `<path from root>:<line>`: a definition of
 /// one of a SHARED_TEST_HELPERS row's names, a declaration of one of its statics or a struct of one
-/// of its field lists under its trees outside its home, and a one-instance pick builder under
-/// KIT_READERS.
+/// of its field lists under its trees outside its home, a one-pick builder under KIT_READERS, a state
+/// lookup under LOOKUP_READERS and a hand-written Mode extraction under MODE_READERS.
 fn shared_helper_copies(root: &Path) -> Vec<String> {
     let at =
         |file: &Path, line: usize| format!("{}:{line}", file.strip_prefix(root).unwrap_or(file).display());
@@ -1231,6 +1686,30 @@ fn shared_helper_copies(root: &Path) -> Vec<String> {
             let text = fs::read_to_string(file).unwrap_or_default();
             copies.extend(
                 pick_builder_definitions(&text)
+                    .into_iter()
+                    .map(|line| at(file, line)),
+            );
+        }
+    }
+    for dir in LOOKUP_READERS {
+        let mut files = Vec::new();
+        rust_sources(&root.join(dir), &mut files);
+        for file in &files {
+            let text = fs::read_to_string(file).unwrap_or_default();
+            copies.extend(
+                state_lookup_definitions(&text)
+                    .into_iter()
+                    .map(|line| at(file, line)),
+            );
+        }
+    }
+    for dir in MODE_READERS {
+        let mut files = Vec::new();
+        rust_sources(&root.join(dir), &mut files);
+        for file in &files {
+            let text = fs::read_to_string(file).unwrap_or_default();
+            copies.extend(
+                mode_extraction_lines(&text)
                     .into_iter()
                     .map(|line| at(file, line)),
             );
@@ -1282,14 +1761,14 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
     let picks = fs::read_to_string(root.join(PICK_HOME)).unwrap_or_default();
     assert_eq!(
         pick_builder_definitions(&picks).len(),
-        1,
-        "{PICK_HOME} builds the one-instance pick once"
+        PICK_HOME_BUILDERS,
+        "{PICK_HOME} builds the instance pick and the hero pick once each"
     );
     let copies = shared_helper_copies(&root);
     let homes: Vec<&str> = SHARED_TEST_HELPERS.iter().map(|row| row.home).collect();
     assert!(
         copies.is_empty(),
-        "a test defines its own copy of a shared helper, nonce counter or sink bench (#1777, #1826, #1997, #2023, #2024, #2385): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
+        "a test defines its own copy of a shared helper, nonce counter or sink bench, looks a card up in a state under a name of its own, or reads a prompt's Mode options by hand (#1777, #1826, #1997, #2023, #2024, #3796, #3827, #3913): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
     );
 }
 
@@ -1297,6 +1776,26 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
 fn helpers_the_scan_finds_each_local_copy() {
     let text = "fn both(script: Script) -> CardScripts {\n}\n    pub fn spread(mut base: Value, extra: Value) -> Value {\n}\npub(crate) fn both<T>(script: T) {}\nfn both_faces() {}\nfn spreads(x: i32) {}\n// fn both(script)\nlet scripts = both(script);\n";
     assert_eq!(shared_helper_definitions(text, &["both", "spread"]), [1, 3, 5]);
+}
+
+#[test]
+fn helpers_the_mode_scan_finds_each_hand_written_extraction() {
+    let text = [
+        "x.filter_map(|o| match &o.selection { Selection::Mode { option } => Some(option.clone()), _ => None })",
+        "    Selection::Mode { option } => option.clone(),",
+        "    Selection::Mode { option } => option,",
+        "    Selection::Mode { option } => Some(option),",
+        "// Selection::Mode { option } => option.clone(),",
+        "    Some(Selection::Mode { option }) => option.clone(),",
+        "    [Selection::Mode { option }] => option.clone(),",
+        "    Selection::Mode { option } => option.split_once(','),",
+        "    if let Selection::Mode { option: x } = &y {",
+        "    Selection::Mode { option } => option.clone(), // a comment after the arm",
+        r#"    .map(|option| option["selection"]["option"].as_str().unwrap_or_default().to_string())"#,
+        r#"    // option["selection"]["option"] in a comment"#,
+    ]
+    .join("\n");
+    assert_eq!(mode_extraction_lines(&text), [1, 2, 3, 4, 10, 11]);
 }
 
 #[test]
@@ -1312,7 +1811,7 @@ fn helpers_the_scan_finds_each_sink_bench() {
 }
 
 #[test]
-fn helpers_the_pick_scan_finds_each_one_instance_builder() {
+fn helpers_the_pick_scan_finds_each_one_pick_builder() {
     let text = [
         r#"fn at(card: &CardInstance) -> Value {"#,
         r#"    json!([{ "pick": "instance", "instanceId": card.id }])"#,
@@ -1336,9 +1835,57 @@ fn helpers_the_pick_scan_finds_each_one_instance_builder() {
         r#"// fn at(id: &str) -> Value {"#,
         r#"//     json!([{ "pick": "instance", "instanceId": id }])"#,
         r#"// }"#,
+        r#"fn on(card: &CardInstance) -> Value {"#,
+        r#"    json!({ "targets": pick::instance(card) })"#,
+        r#"}"#,
+        r#"fn at_foe() -> Value {"#,
+        r#"    json!([{ "pick": "hero", "player": "p2" }])"#,
+        r#"}"#,
+        r#"fn at_hero(player: &str) -> Value {"#,
+        r#"    json!({ "targets": [{ "pick": "hero", "player": player }] })"#,
+        r#"}"#,
+        r#"fn in_zone(card: &CardInstance) -> Value {"#,
+        r#"    json!({ "targets": [{ "pick": "instance", "instanceId": card.id }], "zone": 1 })"#,
+        r#"}"#,
+        r#"fn in_lane(card: &CardInstance) -> Value {"#,
+        r#"    json!({ "targets": pick::instance(card), "zone": 1 })"#,
+        r#"}"#,
+        r#"fn burn() -> Value {"#,
+        r#"    json!({ "ability": "burn", "targets": [{ "pick": "hero", "player": "p2" }] })"#,
+        r#"}"#,
+        r#"fn hero_object(player: PlayerId) -> Value {"#,
+        r#"    json!({ "pick": "hero", "player": player.as_str() })"#,
+        r#"}"#,
     ]
     .join("\n");
-    assert_eq!(pick_builder_definitions(&text), [1, 4]);
+    assert_eq!(pick_builder_definitions(&text), [1, 4, 17, 23, 26, 29]);
+}
+
+#[test]
+fn helpers_the_lookup_scan_finds_each_state_lookup() {
+    let text = [
+        "fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {",
+        r#"    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))"#,
+        "}",
+        "pub fn trap_of_mut<'s>(s: &'s mut GameState, trap_id: &str) -> &'s mut CardInstance {",
+        r#"    find_instance_mut(s, trap_id).expect("the trap")"#,
+        "}",
+        "fn card<'a>(",
+        "    state: &'a GameState,",
+        "    id: &str,",
+        ") -> &'a CardInstance {",
+        r#"    find_instance(state, id).expect("the card")"#,
+        "}",
+        "fn owned(state: &GameState, id: &str) -> CardInstance {",
+        "fn in_lane<'a>(state: &'a GameState, lane: i32) -> &'a CardInstance {",
+        "fn mixed<'a>(state: &'a GameState, id: &str) -> &'a mut CardInstance {",
+        "fn seat<'a>(state: &'a GameState, id: &str) -> &'a PlayerState {",
+        "fn three<'a>(state: &'a GameState, id: &str, seat: &str) -> &'a CardInstance {",
+        "// fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {",
+        r#"    let card = by_id(&state, "c1");"#,
+    ]
+    .join("\n");
+    assert_eq!(state_lookup_definitions(&text), [1, 4, 7]);
 }
 
 #[test]
@@ -1380,51 +1927,44 @@ fn helpers_the_check_refuses_a_copy_in_each_covered_directory() {
             );
         }
     }
-    let builder = r#"fn at(id: &str) -> Value { json!([{ "pick": "instance", "instanceId": id }]) }"#;
-    write(PICK_HOME, builder);
+    let builders = [
+        r#"fn at(id: &str) -> Value { json!([{ "pick": "instance", "instanceId": id }]) }"#,
+        r#"fn on(id: &str) -> Value { json!({ "targets": [{ "pick": "instance", "instanceId": id }] }) }"#,
+        r#"fn aim(card: &CardInstance) -> Value { json!({ "targets": pick::instance(card) }) }"#,
+        r#"fn foe() -> Value { json!([{ "pick": "hero", "player": "p2" }]) }"#,
+        r#"fn at_foe() -> Value { json!({ "targets": [{ "pick": "hero", "player": "p2" }] }) }"#,
+    ]
+    .join("\n");
+    write(PICK_HOME, &builders);
     for dir in KIT_READERS {
-        write(&format!("{dir}/pick_copy.rs"), builder);
-        expected.push(format!("{dir}/pick_copy.rs:1"));
+        write(&format!("{dir}/pick_copy.rs"), &builders);
+        expected.extend((1..=5).map(|line| format!("{dir}/pick_copy.rs:{line}")));
     }
+    let lookups = [
+        "fn found<'a>(state: &'a GameState, id: &str) -> &'a CardInstance { find(state, id) }",
+        "fn found_mut<'a>(s: &'a mut GameState, wanted: &str) -> &'a mut CardInstance { find(s, wanted) }",
+        "fn wrapped<'a>(",
+        "    state: &'a GameState,",
+        "    id: &str,",
+        ") -> &'a CardInstance {",
+        "    find(state, id)",
+        "}",
+    ]
+    .join("\n");
+    for dir in LOOKUP_READERS {
+        write(&format!("{dir}/lookup_copy.rs"), &lookups);
+        expected.extend([1, 2, 3].map(|line| format!("{dir}/lookup_copy.rs:{line}")));
+    }
+    write(
+        "crates/cards/mode_copy.rs",
+        "fn m() { x.map(|o| match &o.selection { Selection::Mode { option } => Some(option.clone()), _ => None }); }\n",
+    );
+    expected.push("crates/cards/mode_copy.rs:1".to_string());
     let mut copies = shared_helper_copies(root);
     drop(scratch);
     copies.sort();
     expected.sort();
     assert_eq!(copies, expected);
-}
-
-#[test]
-fn helpers_the_check_refuses_a_copy_in_the_server_tests() {
-    let scratch = Scratch(std::env::temp_dir().join(format!(
-        "jackioh-server-helpers-{}-{}",
-        std::process::id(),
-        SCRATCH.fetch_add(1, Ordering::Relaxed)
-    )));
-    let root = scratch.0.as_path();
-    let _ = fs::remove_dir_all(root);
-    let write = |path: &str, text: &str| {
-        let path = root.join(path);
-        fs::create_dir_all(path.parent().expect("a parent")).expect("its directory");
-        fs::write(path, text).expect("the file");
-    };
-    let from = "fn from<T: DeserializeOwned>(value: Value) -> T {\n    serde_json::from_value(value).expect(\"a value\")\n}\n";
-    write("crates/server/tests/api/planted.rs", from);
-    // tests/store/ builds without tests/support/, so its own copy is not one.
-    write("crates/server/tests/store/planted.rs", from);
-    write(
-        "crates/server/tests/bots/planted.rs",
-        "use super::*;\nfn playable() -> Vec<String> {\n    Vec::new()\n}\n",
-    );
-    let mut copies = shared_helper_copies(root);
-    drop(scratch);
-    copies.sort();
-    assert_eq!(
-        copies,
-        [
-            "crates/server/tests/api/planted.rs:1",
-            "crates/server/tests/bots/planted.rs:2"
-        ]
-    );
 }
 
 /// The 1-based lines of `text` that call `register_all();` on the line above one that calls a
@@ -1471,6 +2011,99 @@ fn helpers_card_tests_take_the_crate_scenario_rather_than_registering_first() {
 fn helpers_the_scan_finds_each_register_above_a_scenario() {
     let text = "crate::register_all();\nlet mut s = scenario(json!({}));\ncrate::register_all();\n\nlet s = scenario(json!({}));\nregister_all();\nlet s = void_scenario(json!({}));\n// crate::register_all();\nlet s = scenario(json!({}));\ncrate::register_all();\nlet n = 1; // scenario(\n";
     assert_eq!(registers_before_scenario(text), [1, 6]);
+}
+
+/// The trees where no test may note a value and drop it with a bare `let _ = <name>;` (#3914), each with
+/// the fewest Rust files a scan of it should find.
+const DISCARD_READERS: &[(&str, usize)] = &[(CARD_SCRIPTS, CARD_SCRIPT_FILES), ("crates/engine/tests", 300)];
+
+/// The 1-based lines of `text` that are a bare `let _ = <identifier>;`, a `//` comment aside: a value a
+/// test noted and never compared. A call, a field, a reference or a typed `let _: T = …;` is no bare one.
+fn bare_discards(text: &str) -> Vec<usize> {
+    text.lines()
+        .enumerate()
+        .filter(|(_, line)| {
+            let code = line.split("//").next().unwrap_or("").trim();
+            let Some(rest) = code.strip_prefix("let _") else {
+                return false;
+            };
+            let Some(rest) = rest.trim_start().strip_prefix('=') else {
+                return false;
+            };
+            let Some(name) = rest.trim().strip_suffix(';') else {
+                return false;
+            };
+            let name = name.trim();
+            name.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_') && name.chars().all(is_identifier)
+        })
+        .map(|(index, _)| index + 1)
+        .collect()
+}
+
+/// `<path from root>:<line>` of each bare discard under DISCARD_READERS' trees of the repository at `root`.
+fn bare_discard_sites(root: &Path) -> Vec<String> {
+    let mut sites = Vec::new();
+    for (dir, _) in DISCARD_READERS {
+        let mut files = Vec::new();
+        rust_sources(&root.join(dir), &mut files);
+        for file in &files {
+            let text = fs::read_to_string(file).unwrap_or_default();
+            let path = file.strip_prefix(root).unwrap_or(file).display().to_string();
+            sites.extend(
+                bare_discards(&text)
+                    .into_iter()
+                    .map(|line| format!("{path}:{line}")),
+            );
+        }
+    }
+    sites
+}
+
+#[test]
+fn discards_no_test_notes_a_value_and_drops_it_with_a_bare_let() {
+    let root = repo();
+    for (dir, more_than) in DISCARD_READERS {
+        let mut files = Vec::new();
+        rust_sources(&root.join(dir), &mut files);
+        assert!(
+            files.len() > *more_than,
+            "only {} files found under {dir}",
+            files.len()
+        );
+    }
+    let found = bare_discard_sites(&root);
+    assert!(
+        found.is_empty(),
+        "a test notes a value and drops it with `let _ = <name>;` (#3914): compare it, or never capture it: {found:?}"
+    );
+}
+
+#[test]
+fn discards_the_scan_finds_each_bare_let() {
+    let text = "let _ = before;\nlet _ = f();\n    let _ = max_before; // noted\nlet _ = s.events;\nlet _x = y;\nlet _: usize = z;\n// let _ = w;\nlet _ = &v;\nlet _ = 5;\nlet _  =  spaced ;\nlet _ = P2;\n";
+    assert_eq!(bare_discards(text), [1, 3, 10, 11]);
+}
+
+#[test]
+fn discards_the_check_refuses_a_planted_let_in_each_covered_tree() {
+    let scratch = Scratch(std::env::temp_dir().join(format!(
+        "jackioh-discards-{}-{}",
+        std::process::id(),
+        SCRATCH.fetch_add(1, Ordering::Relaxed)
+    )));
+    let root = scratch.0.as_path();
+    let _ = fs::remove_dir_all(root);
+    let mut expected = Vec::new();
+    for (dir, _) in DISCARD_READERS {
+        let path = root.join(dir).join("planted.rs");
+        fs::create_dir_all(path.parent().expect("a parent")).expect("its directory");
+        fs::write(&path, "fn t() {\n    let before = 1;\n    let _ = before;\n}\n").expect("the file");
+        expected.push(format!("{dir}/planted.rs:3"));
+    }
+    let mut found = bare_discard_sites(root);
+    found.sort();
+    expected.sort();
+    assert_eq!(found, expected);
 }
 
 /// The built `jackioh`, whose clap surface the README's command table is held to (#1720).
@@ -1695,6 +2328,325 @@ fn table_drift(usages: &[String], tree: &BTreeMap<Vec<String>, CliCommand>) -> V
     problems
 }
 
+/// Strip single-line (`// ...`) and block (`/* ... */`) comments from TypeScript source,
+/// preserving string literals (`"..."`, `'...'`, `` `...` ``) and newline structure so comments
+/// mentioning commands do not count as coverage (#4287).
+fn strip_ts_comments(src: &str) -> String {
+    let mut out = String::with_capacity(src.len());
+    let mut chars = src.chars().peekable();
+
+    #[derive(Copy, Clone, PartialEq, Eq)]
+    enum State {
+        Code,
+        SingleQuote,
+        DoubleQuote,
+        Template,
+        LineComment,
+        BlockComment,
+    }
+
+    let mut state = State::Code;
+    let mut escape = false;
+
+    while let Some(c) = chars.next() {
+        match state {
+            State::Code => {
+                if c == '\'' {
+                    state = State::SingleQuote;
+                    out.push(c);
+                } else if c == '"' {
+                    state = State::DoubleQuote;
+                    out.push(c);
+                } else if c == '`' {
+                    state = State::Template;
+                    out.push(c);
+                } else if c == '/' && chars.peek() == Some(&'/') {
+                    chars.next();
+                    state = State::LineComment;
+                } else if c == '/' && chars.peek() == Some(&'*') {
+                    chars.next();
+                    state = State::BlockComment;
+                } else {
+                    out.push(c);
+                }
+            }
+            State::SingleQuote => {
+                out.push(c);
+                if escape {
+                    escape = false;
+                } else if c == '\\' {
+                    escape = true;
+                } else if c == '\'' {
+                    state = State::Code;
+                }
+            }
+            State::DoubleQuote => {
+                out.push(c);
+                if escape {
+                    escape = false;
+                } else if c == '\\' {
+                    escape = true;
+                } else if c == '"' {
+                    state = State::Code;
+                }
+            }
+            State::Template => {
+                out.push(c);
+                if escape {
+                    escape = false;
+                } else if c == '\\' {
+                    escape = true;
+                } else if c == '`' {
+                    state = State::Code;
+                }
+            }
+            State::LineComment => {
+                if c == '\n' {
+                    out.push('\n');
+                    state = State::Code;
+                }
+            }
+            State::BlockComment => {
+                if c == '\n' {
+                    out.push('\n');
+                } else if c == '*' && chars.peek() == Some(&'/') {
+                    chars.next();
+                    state = State::Code;
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Parse end-to-end spec numbers cited in a table row's description cell (#4287).
+/// Looks for "e2e spec " or "e2e specs " followed by spec numbers and an action verb
+/// (`check`, `checks`, `verify`, `verifies`, `exercise`, `exercises`, `fold`, `folds`, `test`, `tests`).
+fn parse_e2e_spec_citations(does: &str) -> Vec<String> {
+    let mut citations = Vec::new();
+    let mut remaining = does;
+    while let Some(idx) = remaining.find("e2e spec") {
+        let after = &remaining[idx + "e2e spec".len()..];
+        let after_prefix = after.strip_prefix("s ").or_else(|| after.strip_prefix(' '));
+        if let Some(rest) = after_prefix {
+            let mut candidates = Vec::new();
+            let mut found_verb = false;
+            for word in rest.split_whitespace() {
+                let clean = word.trim_matches(|c: char| !c.is_ascii_alphanumeric());
+                if clean.is_empty() {
+                    continue;
+                }
+                if clean == "and" || clean == "or" {
+                    continue;
+                }
+                if clean.chars().all(|c| c.is_ascii_digit()) {
+                    candidates.push(clean.to_string());
+                } else {
+                    let lower = clean.to_ascii_lowercase();
+                    if matches!(
+                        lower.as_str(),
+                        "check"
+                            | "checks"
+                            | "verify"
+                            | "verifies"
+                            | "exercise"
+                            | "exercises"
+                            | "fold"
+                            | "folds"
+                            | "test"
+                            | "tests"
+                    ) {
+                        found_verb = true;
+                    }
+                    break;
+                }
+            }
+            if found_verb && !candidates.is_empty() {
+                citations.extend(candidates);
+            }
+        }
+        remaining = &remaining[idx + "e2e spec".len()..];
+    }
+    citations
+}
+
+/// Whether the comment-stripped TypeScript code invokes the tool or its Cypress task (#4287).
+fn spec_invokes_command(code: &str, cmd: &str) -> bool {
+    let check_helper = format!("{cmd}Check");
+    let hash_task = format!("{cmd}Hash");
+    let task_call = format!("cy.task(\"{cmd}\"");
+    let task_call_single = format!("cy.task('{cmd}'");
+    let task_hash_call = format!("cy.task(\"{cmd}Hash\"");
+    let task_hash_call_single = format!("cy.task('{cmd}Hash'");
+    let jackioh_call = format!("jackioh {cmd}");
+
+    code.contains(&check_helper)
+        || code.contains(&hash_task)
+        || code.contains(&task_call)
+        || code.contains(&task_call_single)
+        || code.contains(&task_hash_call)
+        || code.contains(&task_hash_call_single)
+        || code.contains(&jackioh_call)
+}
+
+/// Split a Markdown table row into its cells, respecting escaped `\|` pipes.
+fn split_table_row(row: &str) -> Vec<&str> {
+    let trimmed = row.trim();
+    if !trimmed.starts_with('|') {
+        return Vec::new();
+    }
+    let inner = if trimmed.ends_with('|') && !trimmed.ends_with("\\|") {
+        &trimmed[1..trimmed.len() - 1]
+    } else {
+        &trimmed[1..]
+    };
+    let mut cells = Vec::new();
+    let mut last = 0;
+    let bytes = inner.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'|' {
+            let mut backslashes = 0;
+            let mut j = i;
+            while j > 0 && bytes[j - 1] == b'\\' {
+                backslashes += 1;
+                j -= 1;
+            }
+            if backslashes % 2 == 0 {
+                cells.push(&inner[last..i]);
+                last = i + 1;
+            }
+        }
+        i += 1;
+    }
+    cells.push(&inner[last..]);
+    cells
+}
+
+/// The e2e spec files in `e2e_dir` whose names start with `number-` (#4287): the number as
+/// written, or zero-padded to two digits.
+fn e2e_spec_files(e2e_dir: &Path, number: &str) -> Vec<PathBuf> {
+    let mut matching_files: Vec<PathBuf> = Vec::new();
+    if let Ok(entries) = fs::read_dir(e2e_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                let alt = number.parse::<u32>().ok().map(|n| format!("{n:02}-"));
+                if file_name.starts_with(&format!("{number}-"))
+                    || alt.as_deref().is_some_and(|prefix| file_name.starts_with(prefix))
+                {
+                    matching_files.push(path);
+                }
+            }
+        }
+    }
+    matching_files.sort();
+    matching_files
+}
+
+/// Find problems where a table row in `crates/tools/README.md` cites an e2e spec that does not exist
+/// or does not invoke the command (#4287).
+fn table_e2e_citation_problems(readme: &str, e2e_dir: &Path) -> Vec<String> {
+    let mut problems = Vec::new();
+    let rows: Vec<&str> = readme
+        .lines()
+        .skip_while(|line| !line.starts_with("| Command |"))
+        .skip(2)
+        .take_while(|line| line.starts_with('|'))
+        .collect();
+
+    for row in rows {
+        let cells = split_table_row(row);
+        if cells.len() < 3 {
+            continue;
+        }
+        let command_cell = cells[0].trim();
+        let cmd = match command_cell
+            .split('`')
+            .nth(1)
+            .and_then(|span| span.split_whitespace().next())
+        {
+            Some(c) => c,
+            None => continue,
+        };
+        let does_cell = cells[2..].join("|");
+        let cited_specs = parse_e2e_spec_citations(&does_cell);
+        for number in cited_specs {
+            let matching_files = e2e_spec_files(e2e_dir, &number);
+            if matching_files.is_empty() {
+                problems.push(format!(
+                    "row `{cmd}` cites e2e spec {number}, but no spec file matching `{number}-*` exists in e2e/cypress/e2e"
+                ));
+            } else {
+                let any_invokes = matching_files.iter().any(|path| {
+                    if let Ok(content) = fs::read_to_string(path) {
+                        let stripped = strip_ts_comments(&content);
+                        spec_invokes_command(&stripped, cmd)
+                    } else {
+                        false
+                    }
+                });
+                if !any_invokes {
+                    let names: Vec<_> = matching_files
+                        .iter()
+                        .filter_map(|p| p.file_name().and_then(|n| n.to_str()))
+                        .collect();
+                    problems.push(format!(
+                        "row `{cmd}` cites e2e spec {number}, but `{}` does not invoke the command or its task",
+                        names.join(", ")
+                    ));
+                }
+            }
+        }
+    }
+    problems
+}
+
+/// Find cited e2e spec numbers whose files `scripts/ci-scope.sh` leaves `rust_tools_wasm` off
+/// for (#4449): renaming a cited spec, or deleting its command call, must still run
+/// `rust (test tools, wasm)`, whose README check reads it. Numbers with no files are the
+/// existing check's to report, so this one skips them.
+fn cited_specs_missing_tools_scope(readme: &str, e2e_dir: &Path) -> Vec<String> {
+    let mut problems = Vec::new();
+    let rows: Vec<&str> = readme
+        .lines()
+        .skip_while(|line| !line.starts_with("| Command |"))
+        .skip(2)
+        .take_while(|line| line.starts_with('|'))
+        .collect();
+
+    let mut seen: Vec<String> = Vec::new();
+    for row in rows {
+        let cells = split_table_row(row);
+        if cells.len() < 3 {
+            continue;
+        }
+        let does_cell = cells[2..].join("|");
+        for number in parse_e2e_spec_citations(&does_cell) {
+            if seen.contains(&number) {
+                continue;
+            }
+            seen.push(number.clone());
+            for path in e2e_spec_files(e2e_dir, &number) {
+                let rel = path
+                    .strip_prefix(repo())
+                    .unwrap_or(&path)
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                if !line_is(&scope_of(&[rel.as_str()]), "rust_tools_wasm") {
+                    problems.push(format!(
+                        "row cites e2e spec {number}, but scripts/ci-scope.sh leaves rust_tools_wasm off for {rel}: name its file in the crate map (#4449)"
+                    ));
+                }
+            }
+        }
+    }
+    problems
+}
+
 #[test]
 fn readme_the_command_table_is_the_clis() {
     let tree = cli_tree();
@@ -1728,6 +2680,110 @@ fn readme_the_command_table_is_the_clis() {
     assert!(
         problems.is_empty(),
         "crates/tools/README.md's command table and `jackioh` disagree (#1720): fix the row, or the CLI: {problems:#?}"
+    );
+}
+
+#[test]
+fn readme_the_command_table_cites_existing_e2e_specs_that_use_the_command() {
+    let readme = fs::read_to_string(repo().join("crates/tools/README.md")).expect("the tools README");
+    let problems = table_e2e_citation_problems(&readme, &repo().join("e2e/cypress/e2e"));
+    assert!(
+        problems.is_empty(),
+        "crates/tools/README.md's command table cites stale, missing or unused e2e specs (#4287): {problems:#?}"
+    );
+}
+
+#[test]
+fn readme_cited_e2e_specs_scope_the_tools_group() {
+    let e2e_dir = repo().join("e2e/cypress/e2e");
+    let readme = fs::read_to_string(repo().join("crates/tools/README.md")).expect("the tools README");
+    let problems = cited_specs_missing_tools_scope(&readme, &e2e_dir);
+    assert!(
+        problems.is_empty(),
+        "a cited e2e spec's file leaves rust_tools_wasm off in scripts/ci-scope.sh (#4449): {problems:#?}"
+    );
+
+    // The specs the README cites today stay scoped.
+    let cited = "\
+| Command | Module | Does |
+| --- | --- | --- |
+| `replay` | `replay.rs` | e2e specs 01 and 13 check the browser's hash with it. |
+";
+    let problems = cited_specs_missing_tools_scope(cited, &e2e_dir);
+    assert!(problems.is_empty(), "unexpected problems: {problems:#?}");
+
+    // Spec 02 exists (02-prompts.cy.ts) but stays unmapped, so citing it fails.
+    let unmapped = "\
+| Command | Module | Does |
+| --- | --- | --- |
+| `replay` | `replay.rs` | e2e spec 02 checks the browser's hash with it. |
+";
+    assert_eq!(
+        cited_specs_missing_tools_scope(unmapped, &e2e_dir),
+        [
+            "row cites e2e spec 02, but scripts/ci-scope.sh leaves rust_tools_wasm off for e2e/cypress/e2e/02-prompts.cy.ts: name its file in the crate map (#4449)"
+        ]
+    );
+}
+
+#[test]
+fn readme_e2e_spec_hold_catches_missing_and_unused_specs() {
+    let e2e_dir = repo().join("e2e/cypress/e2e");
+
+    assert_eq!(
+        parse_e2e_spec_citations("e2e specs 01, 13 and 40 check the browser's hash with it."),
+        ["01", "13", "40"]
+    );
+    assert_eq!(
+        parse_e2e_spec_citations("e2e specs 01 and 13 check the browser's hash with it."),
+        ["01", "13"]
+    );
+    assert_eq!(
+        parse_e2e_spec_citations("e.g. e2e spec 13's PracticeDebug"),
+        Vec::<String>::new()
+    );
+
+    // 1. Missing spec: deleted spec 40
+    let missing_spec_readme = "\
+| Command | Module | Does |
+| --- | --- | --- |
+| `replay` | `replay.rs` | e2e specs 01, 13 and 40 check the browser's hash with it. |
+";
+    let problems_missing = table_e2e_citation_problems(missing_spec_readme, &e2e_dir);
+    assert_eq!(
+        problems_missing,
+        ["row `replay` cites e2e spec 40, but no spec file matching `40-*` exists in e2e/cypress/e2e"]
+    );
+
+    // 2. Unused spec: spec 02 exists (02-prompts.cy.ts) but does not invoke replay
+    let unused_spec_readme = "\
+| Command | Module | Does |
+| --- | --- | --- |
+| `replay` | `replay.rs` | e2e spec 02 checks the browser's hash with it. |
+";
+    let problems_unused = table_e2e_citation_problems(unused_spec_readme, &e2e_dir);
+    assert_eq!(
+        problems_unused,
+        ["row `replay` cites e2e spec 02, but `02-prompts.cy.ts` does not invoke the command or its task"]
+    );
+
+    // 3. Comment-only mention should not count as invocation
+    let comment_only_code = "/* cy.replayCheck(\"01\"); */\n// jackioh replay\nconst x = 1;";
+    let stripped = strip_ts_comments(comment_only_code);
+    assert!(!spec_invokes_command(&stripped, "replay"));
+    let actual_code = "cy.replayCheck(\"01\");";
+    assert!(spec_invokes_command(&strip_ts_comments(actual_code), "replay"));
+
+    // 4. Genuine invocation passes
+    let valid_readme = "\
+| Command | Module | Does |
+| --- | --- | --- |
+| `replay` | `replay.rs` | e2e specs 01 and 13 check the browser's hash with it. |
+";
+    let problems_valid = table_e2e_citation_problems(valid_readme, &e2e_dir);
+    assert!(
+        problems_valid.is_empty(),
+        "unexpected problems: {problems_valid:#?}"
     );
 }
 
@@ -2198,4 +3254,188 @@ fn statics_the_check_refuses_an_unlisted_static_in_each_pure_crate() {
     let problems = static_problems(root, &listed);
     drop(scratch);
     assert_eq!(problems, with_list);
+}
+
+/// The names that only the retired learned evaluation and policy prior used (R4159000): the weights files,
+/// the build script's generated code, the feature layout a network read, the two switches and the parity
+/// export.
+const RETIRED_NETWORK_NAMES: [&str; 6] = [
+    "weights.json",
+    "OUT_DIR",
+    "FEATURES_READ_SINCE",
+    "MoveOrder",
+    "EvalKind",
+    "learned_parity",
+];
+
+/// R4159000, R1010000, R1010001, R1011000, R1171001, R3112001: the AI compiles no network and no prior.
+/// `crates/ai` has no build script, no `learned` or `policy` module and no weights file, and no source of
+/// the AI or of the three WebAssembly crates names what only they used.
+#[test]
+fn r4159000_r1010000_r1010001_r1011000_r1171001_r3112001_the_ai_compiles_no_network_and_no_prior() {
+    let root = repo();
+    for gone in [
+        "crates/ai/build.rs",
+        "crates/ai/src/learned.rs",
+        "crates/ai/src/learned",
+        "crates/ai/src/policy.rs",
+        "crates/ai/src/policy",
+    ] {
+        assert!(!root.join(gone).exists(), "{gone} is back");
+    }
+    let manifest = fs::read_to_string(root.join("crates/ai/Cargo.toml")).expect("crates/ai/Cargo.toml");
+    assert!(
+        !manifest.contains("[build-dependencies]") && !manifest.contains("build ="),
+        "crates/ai builds a script again"
+    );
+    let lib = fs::read_to_string(root.join("crates/ai/src/lib.rs")).expect("crates/ai/src/lib.rs");
+    for module in ["mod learned", "mod policy"] {
+        assert!(!lib.contains(module), "crates/ai/src/lib.rs: `{module}`");
+    }
+    let mut files = Vec::new();
+    for dir in [
+        "crates/ai/src",
+        "crates/wasm/src",
+        "crates/wasm/c/src",
+        "crates/wasm/core/src",
+    ] {
+        sources(&root.join(dir), &mut files);
+    }
+    assert!(files.len() > 20, "only {} source files found", files.len());
+    let mut found: Vec<String> = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        for name in RETIRED_NETWORK_NAMES {
+            if text.contains(name) {
+                found.push(format!(
+                    "{}: `{name}`",
+                    file.strip_prefix(&root).unwrap_or(file).display()
+                ));
+            }
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "the retired network is named again (R4159000): {found:?}"
+    );
+}
+
+/// The crates among `jackioh-run` and `jackioh-shared` that the manifest's `[dev-dependencies]` do not
+/// name, on one line, with the `ts` feature (#4426).
+fn dev_dependencies_missing_ts(manifest: &str) -> Vec<&'static str> {
+    let mut in_dev = false;
+    let mut entries: Vec<&str> = Vec::new();
+    for raw in manifest.lines() {
+        let line = raw.split('#').next().unwrap_or("").trim();
+        if line.starts_with('[') {
+            in_dev = line == "[dev-dependencies]";
+        } else if in_dev && !line.is_empty() {
+            entries.push(line);
+        }
+    }
+    ["jackioh-run", "jackioh-shared"]
+        .into_iter()
+        .filter(|name| {
+            !entries.iter().any(|entry| {
+                entry
+                    .strip_prefix(name)
+                    .and_then(|rest| rest.trim_start().strip_prefix('='))
+                    .is_some_and(|rest| rest.contains("features") && rest.contains("\"ts\""))
+            })
+        })
+        .collect()
+}
+
+/// #4426: nothing but these dev-dependencies turns the run's and the shared logic's `ts` features on, so the
+/// `tools, wasm` group's test build is what writes their types for ci.yml's V20 step to hold.
+#[test]
+fn ts_the_generated_types_are_written_by_the_ci_test_build() {
+    let path = repo().join("crates/wasm/core/Cargo.toml");
+    let manifest = fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+    let missing = dev_dependencies_missing_ts(&manifest);
+    assert!(
+        missing.is_empty(),
+        "crates/wasm/core/Cargo.toml's [dev-dependencies] no longer turn on `ts` for {missing:?}: CI no longer \
+         holds `Run*.ts` and the shared types to the Rust (#4426); restore the `features = [\"ts\"]` lines"
+    );
+}
+
+/// Whether the manifest's `[dev-dependencies]` turn `jackioh-wasm-core`'s `duos` feature on (#4542):
+/// without it no test build compiles the real Duos bodies.
+fn dev_dependency_missing_duos(manifest: &str) -> bool {
+    let mut in_dev = false;
+    for raw in manifest.lines() {
+        let line = raw.split('#').next().unwrap_or("").trim();
+        if line.starts_with('[') {
+            in_dev = line == "[dev-dependencies]";
+        } else if in_dev
+            && !line.is_empty()
+            && line
+                .strip_prefix("jackioh-wasm-core")
+                .and_then(|rest| rest.trim_start().strip_prefix('='))
+                .is_some_and(|rest| rest.contains("features") && rest.contains("\"duos\""))
+        {
+            return false;
+        }
+    }
+    true
+}
+
+/// #4542: the C crate's dev-dependency turns `jackioh-wasm-core`'s `duos` feature on, so every
+/// test build compiles the real Duos bodies while the shipped modules keep their stubs.
+#[test]
+fn duos_the_c_test_build_compiles_the_duos_bodies() {
+    let path = repo().join("crates/wasm/c/Cargo.toml");
+    let manifest = fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+    assert!(
+        !dev_dependency_missing_duos(&manifest),
+        "crates/wasm/c/Cargo.toml's [dev-dependencies] no longer turn on `duos` for \
+         jackioh-wasm-core: no test build compiles the real Duos bodies (#4542); restore the \
+         `features = [\"duos\"]` line"
+    );
+}
+
+#[test]
+fn duos_the_dev_dependency_scan_finds_a_dropped_feature() {
+    let ok = "[dependencies]\njackioh-wasm-core = { path = \"../core\" }\n\n[dev-dependencies]\n\
+              # a comment\njackioh-wasm-core = { path = \"../core\", features = [\"duos\"] }\n";
+    assert!(!dev_dependency_missing_duos(ok));
+    let no_features = "[dev-dependencies]\njackioh-wasm-core = { path = \"../core\" }\n";
+    assert!(dev_dependency_missing_duos(no_features));
+    let other_feature =
+        "[dev-dependencies]\njackioh-wasm-core = { path = \"../core\", features = [\"serde\"] }\n";
+    assert!(dev_dependency_missing_duos(other_feature));
+    let commented =
+        "[dev-dependencies]\n# jackioh-wasm-core = { path = \"../core\", features = [\"duos\"] }\n";
+    assert!(dev_dependency_missing_duos(commented));
+    let linked = "[dependencies]\njackioh-wasm-core = { path = \"../core\", features = [\"duos\"] }\n\n[dev-dependencies]\n";
+    assert!(dev_dependency_missing_duos(linked));
+    assert!(dev_dependency_missing_duos("[package]\nname = \"x\"\n"));
+}
+
+#[test]
+fn ts_the_dev_dependency_scan_finds_a_dropped_feature() {
+    let ok = "[dependencies]\njackioh-run = { workspace = true }\n\n[dev-dependencies]\n\
+              # a comment\njackioh-run = { workspace = true, features = [\"ts\"] }\n\
+              jackioh-shared = { workspace = true, features = [\"ts\"] }\n";
+    assert!(dev_dependencies_missing_ts(ok).is_empty());
+    let no_features = "[dev-dependencies]\njackioh-run = { workspace = true, features = [\"ts\"] }\n\
+                       jackioh-shared = { workspace = true }\n";
+    assert_eq!(dev_dependencies_missing_ts(no_features), ["jackioh-shared"]);
+    let other_feature = "[dev-dependencies]\njackioh-run = { workspace = true, features = [\"serde\"] }\n\
+                         jackioh-shared = { workspace = true, features = [\"ts\"] }\n";
+    assert_eq!(dev_dependencies_missing_ts(other_feature), ["jackioh-run"]);
+    let linked = "[dependencies]\njackioh-run = { workspace = true, features = [\"ts\"] }\n\
+                  jackioh-shared = { workspace = true, features = [\"ts\"] }\n\n[dev-dependencies]\n";
+    assert_eq!(
+        dev_dependencies_missing_ts(linked),
+        ["jackioh-run", "jackioh-shared"]
+    );
+    let commented = "[dev-dependencies]\n# jackioh-run = { workspace = true, features = [\"ts\"] }\n\
+                     jackioh-shared = { workspace = true, features = [\"ts\"] }\n";
+    assert_eq!(dev_dependencies_missing_ts(commented), ["jackioh-run"]);
+    assert_eq!(
+        dev_dependencies_missing_ts("[package]\nname = \"x\"\n"),
+        ["jackioh-run", "jackioh-shared"]
+    );
 }

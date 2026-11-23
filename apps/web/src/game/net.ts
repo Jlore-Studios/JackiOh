@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { ActionBody, Aim, CombatForecast, EmojiEmoteId, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind } from "@jackioh/shared";
 import { isEmoteId, isPortraitId, parseAim } from "@jackioh/shared";
-import { POST_GAME_FRAME_VERSION, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
+import { MATCH_OVER_CLOSE_CODE, POST_GAME_FRAME_VERSION, SEAT_TAKEN_CLOSE_CODE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import type { CardCosmetics } from "../cards/cosmetics.ts";
 import { createLoadoutsHolder, parseCardLoadouts, parseSeatPicks, type CardLoadouts, type SeatLoadouts } from "../cards/loadouts.ts";
@@ -321,7 +321,7 @@ export type Backoff = {
   schedule: () => void;
   /** Drops a waiting step. */
   cancel: () => void;
-  /** Starts the steps over, as an opened socket does. */
+  /** Starts the steps over, as a socket that delivered a view does (R4250000). */
   reset: () => void;
 };
 
@@ -587,8 +587,10 @@ export type ConnectionState =
   | "reconnecting"
   /** The server refused this socket (4401/4403/4404); no reconnect will be attempted, but a 4401 is final only for the token it refused (R1115000). */
   | "refused"
-  /** `close()` was called, or the server closed the socket with VOIDED_CLOSE_CODE (R679): the match is gone, and nothing reopens it until `connect()`. */
-  | "closed";
+  /** `close()` was called, or the server closed the socket with VOIDED_CLOSE_CODE (R679) or MATCH_OVER_CLOSE_CODE (R3694000): the match is gone, and nothing reopens it until `connect()`. */
+  | "closed"
+  /** R3767000: another tab or device took this seat (SEAT_TAKEN_CLOSE_CODE). No reconnect and no backoff, with the last view kept; `connect()` (Play here) opens one socket and takes the seat back. */
+  | "elsewhere";
 
 /** `"none"` leaves the board read-only until a server view provides legal actions. */
 export type LegalSource = "none" | "view";
@@ -787,6 +789,10 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       case "view": {
         const fresh = awaitingFirstView;
         awaitingFirstView = false;
+        // R4250000: only a delivered view proves the server answered, so only it starts the
+        // backoff over; a socket refused after the upgrade climbs the steps, as one that never
+        // opened does.
+        if (fresh) backoff.reset();
         patch({
           view: frame.view,
           jloreCapped: frame.jloreCapped,
@@ -870,6 +876,8 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       return;
     }
     socket = created;
+    // R1115000: a refusal is its handshake's; a socket opened since (Reconnect) is answered afresh.
+    refusedToken = null;
     awaitingFirstView = true;
     wakeProbe.hear();
     if (snapshot.connection !== "reconnecting") patch({ connection: "connecting" });
@@ -877,7 +885,6 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     created.onopen = () => {
       if (socket !== created) return;
       wakeProbe.hear();
-      backoff.reset();
       patch({ connection: "open" });
       // §9.5: `hello` requests a fresh full view.
       try {
@@ -912,8 +919,16 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         patch({ connection: "closed" });
         return;
       }
-      if (event.code === VOIDED_CLOSE_CODE) {
+      // R679: a voided match is gone. R3694000: so is a finished one past its rematch window, whose
+      // last view stays up; neither is reconnected to.
+      if (event.code === VOIDED_CLOSE_CODE || event.code === MATCH_OVER_CLOSE_CODE) {
         patch({ connection: "closed" });
+        return;
+      }
+      // R3767000: another tab or device holds the seat now; reconnecting would take it back, and the two
+      // would take it from each other for as long as both stayed open.
+      if (event.code === SEAT_TAKEN_CLOSE_CODE) {
+        patch({ connection: "elsewhere" });
         return;
       }
       if (REFUSAL_CLOSE_CODES.includes(event.code)) {

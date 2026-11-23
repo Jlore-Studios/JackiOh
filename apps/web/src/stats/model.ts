@@ -361,14 +361,6 @@ export function logSeen(log: GameLog, ids: Iterable<string>): GameLog {
   return changed ? { ...log, seen: [...seen] } : log;
 }
 
-export function logIsEmpty(log: GameLog): boolean {
-  return (
-    log.seen.length === 0 &&
-    log.turns === 0 &&
-    [...SUMMED_COUNTERS, ...MAX_COUNTERS].every((counter) => Object.keys(log[counter]).length === 0)
-  );
-}
-
 export function addGame(stats: PlayerStats, log: GameLog, outcome: GameOutcome): PlayerStats {
   const cards: Record<string, CardCounters> = { ...stats.cards };
   const change = (id: string, counter: CardCounter, to: (held: number) => number): void => {
@@ -410,35 +402,3 @@ export function winPercent(stats: PlayerStats): number | null {
 }
 
 export type CardTally = { readonly id: string; readonly count: number };
-
-/** Highest counts first, then id for stable rendering; exclude zeros. */
-export function topCards(stats: PlayerStats, counter: CardCounter, limit: number): CardTally[] {
-  return Object.entries(stats.cards)
-    .map(([id, counts]) => ({ id, count: counts[counter] }))
-    .filter((entry) => entry.count > 0)
-    .sort((a, b) => b.count - a.count || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
-    .slice(0, Math.max(0, limit));
-}
-
-/** SPEC §9.11, R377: a server-calculated played delta as signed percentage points. */
-export function formatPlayedDelta(delta: number | null): string | null {
-  if (delta === null) return null;
-  const points = Math.round(delta * 100);
-  const sign = points > 0 ? "+" : "";
-  return `${sign}${points}%`;
-}
-
-/**
- * R654, R1147000: a server-calculated rate to show, null when none or below the sample floor: the cards
- * table's Radiant and Normal rates, and the Created cards' (R2089000).
- */
-export function faceRate(
-  games: number | undefined,
-  rate: number | null | undefined,
-  minSample: number,
-): number | null {
-  if (games === undefined || rate === undefined || rate === null || games < minSample) {
-    return null;
-  }
-  return rate;
-}

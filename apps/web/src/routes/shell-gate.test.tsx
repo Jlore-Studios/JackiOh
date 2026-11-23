@@ -22,9 +22,10 @@ import { COOP_LINK_STORAGE_KEY, ROOM_LINK_STORAGE_KEY } from "../net/roomLink.ts
 import { E2E_SESSION_STORAGE_KEY, SESSION_STORAGE_KEY } from "../net/session.ts";
 import { at } from "../test/stubServer.ts";
 import { accountTestid } from "./account.tsx";
-import { playModeTestid, playTestid } from "./play.tsx";
+import { playTestid } from "./play.tsx";
 
 const { App } = await import("../main.tsx");
+const { routeChunks } = await import("./chunks.tsx");
 
 const API = "http://localhost:8787";
 const SLOW = { timeout: 5_000 } as const;
@@ -203,6 +204,30 @@ describe("B40 one gate per screen", () => {
 });
 
 describe("B40 a check that runs long", () => {
+  it("#4517 the gate's Sign out signs out when the account chunk fails to load", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok" }));
+    stubFetch(() => "hang");
+    // The URL first: the stubbed location below is a copy, which reads the path as it is now.
+    at(paths.decks);
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    // The account screen's code never arrives here: Sign out still leaves at once.
+    const load = vi.spyOn(routeChunks.account, "load").mockRejectedValue(new Error("chunk failed"));
+    try {
+      render(<App />);
+      await flushMicrotasks();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(GATE_SLOW_NOTICE_SECONDS * 1000);
+      });
+      fireEvent.click(screen.getByTestId(shellTestid.signOut));
+      expect(assign).toHaveBeenCalledWith(paths.landing);
+      expect(load).not.toHaveBeenCalled();
+    } finally {
+      load.mockRestore();
+    }
+  });
+
   it("B40 'Checking your account…' offers home and sign-out once it has taken a while, and says why", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok" }));
@@ -264,7 +289,7 @@ describe("B40 the gate's error panel", () => {
     );
     at(paths.account);
     render(<App />);
-    // /account is in the entry chunk and the stub answers at once: flushing settles it, no wall clock.
+    // The stub answers at once: flushing settles it, no wall clock.
     await flushMicrotasks();
     expect(screen.getByTestId(shellTestid.error)).toBeInTheDocument();
     expect(screen.getByTestId(shellTestid.retry)).toBeDisabled();
@@ -314,7 +339,7 @@ describe("B40 the gate's error panel", () => {
 describe("R193 an emailed link that lands anywhere but /login", () => {
   function unsignedJwt(payload: Record<string, unknown>): string {
     const part = (value: unknown): string =>
-      btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
     return `${part({ alg: "HS256" })}.${part(payload)}.unsigned`;
   }
 
@@ -447,7 +472,7 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).not.toBeNull();
   });
 
-  it("R767 a room link opened while signed out waits through the sign-in, and the lobby uses it once", async () => {
+  it("R767 R3730006 a room link opened while signed out waits through the sign-in, and then opens its lobby once", async () => {
     stubFetch((url) => {
       if (url.includes("/auth/v1/token")) return json(200, SIGNED_IN);
       if (url === `${API}/api/auth/me`) return json(200, me("active"));
@@ -464,32 +489,20 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     expect(kept).not.toContain(paths.play);
 
     signIn();
+    // R3730006: signed in, the kept link opens its lobby, once.
     await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.landing);
+      expect(window.location.pathname).toBe(paths.lobby("ABC234"));
     }, SLOW);
-    // The Play door opens the hub, whose online panel is the lobby (R1578000); the test walks there directly.
-    // The Play door opens the hub, whose online panel is the lobby; the test walks there directly.
-    act(() => {
-      navigate(paths.play);
-    });
-    expect(await screen.findByTestId(playTestid.joinInput, undefined, SLOW)).toHaveValue("ABC234");
-    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
-    // The hub forgets the link in an effect, which can run just after the form shows.
-    await waitFor(() => {
-      expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
-    });
-
-    // Used once: back to the menu and in again, the form starts empty.
+    expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
     act(() => {
       navigate(paths.landing);
     });
-    act(() => {
-      navigate(paths.play);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(paths.landing);
     });
-    expect(await screen.findByTestId(playTestid.joinInput, undefined, SLOW)).toHaveValue("");
   });
 
-  it("R2094000 a co-op link opened while signed out waits through the sign-in, and /together uses it once", async () => {
+  it("R2094000 R3730006 a co-op link opened while signed out waits through the sign-in, and then opens its lobby once", async () => {
     stubFetch((url) => {
       if (url.includes("/auth/v1/token")) return json(200, SIGNED_IN);
       if (url === `${API}/api/auth/me`) return json(200, me("active"));
@@ -507,26 +520,51 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
 
     signIn();
     await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.landing);
+      expect(window.location.pathname).toBe(paths.lobby("ABC234"));
     }, SLOW);
-    act(() => {
-      navigate(paths.together);
-    });
-    expect(await screen.findByTestId("coop-join-input", undefined, SLOW)).toHaveValue("ABC234");
-    // /together forgets the link in an effect, which can run just after the form shows.
-    await waitFor(() => {
-      expect(window.sessionStorage.getItem(COOP_LINK_STORAGE_KEY)).toBeNull();
-    });
-
-    // Used once: back to the menu and in again, the form starts empty.
-    act(() => {
-      navigate(paths.landing);
-    });
-    act(() => {
-      navigate(paths.together);
-    });
-    expect(await screen.findByTestId("coop-join-input", undefined, SLOW)).toHaveValue("");
+    expect(window.sessionStorage.getItem(COOP_LINK_STORAGE_KEY)).toBeNull();
   });
+
+  it.each([
+    ["a room link", `${paths.play}?room=abc234&mode=bo3`],
+    ["a lobby path", "/lobby/abc234"],
+  ])(
+    "R767 R3730006 %s opened by a pending account waits through the invite page, and opens its lobby once the code is redeemed",
+    async (_what, link) => {
+      window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok" }));
+      let redeemed = false;
+      stubFetch((url) => {
+        if (url === `${API}/api/auth/me`) return json(200, me(redeemed ? "active" : "pending"));
+        if (url === `${API}/api/codes/status`) {
+          return json(200, { redemptionEnabled: true, retryAfterMs: 0, attemptsRemaining: 6 });
+        }
+        if (url === `${API}/api/codes/redeem`) {
+          redeemed = true;
+          return json(200, { status: "active", needsInviteCode: false });
+        }
+        return "hang";
+      });
+      at(link);
+      render(<App />);
+
+      // The gate sends the pending account to the invite page, and the link still waits.
+      fireEvent.change(await screen.findByTestId(inviteTestid.input, undefined, SLOW), { target: { value: GOOD } });
+      expect(window.location.pathname).toBe(paths.invite);
+      expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).not.toBeNull();
+      const submit = screen.getByTestId(inviteTestid.submit);
+      await waitFor(() => {
+        expect(submit).toBeEnabled();
+      }, SLOW);
+      fireEvent.click(submit);
+      fireEvent.click(await screen.findByTestId(inviteTestid.goToDecks, undefined, SLOW));
+
+      // Active now: the next screen's gate opens the lobby, once.
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(paths.lobby("ABC234"));
+      }, SLOW);
+      expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
+    },
+  );
 
   it("B35 the gate remembers no destination: a signed-out visit to a gated screen stores none", async () => {
     stubFetch(() => "hang");
@@ -621,7 +659,7 @@ describe("the landing page's corner while a sleeping server wakes", () => {
 describe("the code screen when the device moves to another account", () => {
   function tokenFor(sub: string): string {
     const part = (value: unknown): string =>
-      btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
     return `${part({ alg: "HS256" })}.${part({ sub })}.sig`;
   }
 

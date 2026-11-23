@@ -150,8 +150,11 @@ func TestACachedGetSendsItsETag(t *testing.T) {
 			t.Fatalf("jobs %v", got)
 		}
 	}
-	client.ListJobs(5, false)
-	if !reflect.DeepEqual(sent, []string{"", `"v1"`, ""}) {
+	// Every GET is conditional now (#4059), whatever its caller asks.
+	if got := client.ListJobs(5, false); len(got) != 1 {
+		t.Fatalf("jobs %v", got)
+	}
+	if !reflect.DeepEqual(sent, []string{"", `"v1"`, `"v1"`}) {
 		t.Fatalf("If-None-Match %q", sent)
 	}
 	if !strings.HasSuffix(o.asked[0].URL, "/repos/o/r/actions/runs/5/jobs?per_page=100&page=1") {
@@ -172,6 +175,121 @@ func TestTheCacheKeepsTheNewest(t *testing.T) {
 	_, hasB := Cached.get([2]string{"t", "b"})
 	if Cached.Len() != 2 || !hasA || hasB {
 		t.Fatalf("kept %v", Cached.keys)
+	}
+}
+
+// #4059: a read the loop repeats costs a call only when what it reads changed. An issue read again
+// unchanged is the answer kept, for nothing (counted apart, as free); a write is never
+// conditional, nor kept.
+func TestEveryGetIsConditionalAndNoWriteIs(t *testing.T) {
+	Cached.Clear()
+	Rate.Clear()
+	t.Cleanup(Cached.Clear)
+	t.Cleanup(Rate.Clear)
+	o := &opener{answer: func(req *Request) (*Response, error) {
+		h := http.Header{"X-Ratelimit-Remaining": {"4000"}, "X-Ratelimit-Limit": {"5000"}}
+		if req.Header.Get("If-None-Match") == `W/"i1"` {
+			return nil, &HTTPError{URL: req.URL, Code: 304, Msg: "Not Modified", Header: h}
+		}
+		resp := jsonAnswer(pyjson.New("number", 7, "title", "kept"))
+		resp.Header = h
+		resp.Header.Set("ETag", `W/"i1"`)
+		return resp, nil
+	}}
+	client := NewGitHub("o/r", "token-for-reads", false, o.open, nil, "")
+	for range 3 {
+		if got := client.GetIssue(7); got.Str("title") != "kept" {
+			t.Fatalf("issue %v", got)
+		}
+	}
+	client.UpdateIssue(7, pyjson.New("title", "new"))
+	client.UpdateIssue(7, pyjson.New("title", "new"))
+	var conditional []string
+	for _, req := range o.asked {
+		conditional = append(conditional, req.Method+" "+req.Header.Get("If-None-Match"))
+	}
+	if !reflect.DeepEqual(conditional, []string{"GET ", `GET W/"i1"`, `GET W/"i1"`, "PATCH ", "PATCH "}) {
+		t.Fatalf("sent %q", conditional)
+	}
+	if free, spent := Rate.TakeFree("token-for-reads", REST), Rate.Take("token-for-reads", REST); free != 2 ||
+		!reflect.DeepEqual(spent, map[string]int{"GET /issues/{n}": 1, "PATCH /issues/{n}": 2}) {
+		t.Fatalf("free %d, spent %v", free, spent)
+	}
+	if Rate.TakeFree("token-for-reads", REST) != 0 {
+		t.Fatal("TakeFree forgets what it gave")
+	}
+}
+
+// The cache holds no more than CachedBytes of text, the least recently used going first, and the
+// newest stays whatever its size; an answer given again (a 304) is the most recent once more.
+func TestTheCacheKeepsWhatItHoldsUnderItsBytes(t *testing.T) {
+	Cached.Clear()
+	t.Cleanup(Cached.Clear)
+	limit := CachedBytes
+	CachedBytes = 12
+	t.Cleanup(func() { CachedBytes = limit })
+	put := func(k, text string) { Cached.put([2]string{"t", k}, [2]string{"e", text}) }
+	has := func(k string) bool { _, ok := Cached.get([2]string{"t", k}); return ok }
+	put("a", "aaaa") // 5 bytes with its ETag
+	put("b", "bbbb")
+	if Cached.Bytes() != 10 || !has("a") || !has("b") {
+		t.Fatalf("held %d", Cached.Bytes())
+	}
+	put("a", "aaaa") // used again: b is the oldest now
+	put("c", "cc")
+	if has("b") || !has("a") || !has("c") || Cached.Bytes() != 8 {
+		t.Fatalf("kept %v, %d bytes", Cached.keys, Cached.Bytes())
+	}
+	put("d", strings.Repeat("d", 40))
+	if Cached.Len() != 1 || !has("d") || Cached.Bytes() != 41 {
+		t.Fatalf("kept %v, %d bytes", Cached.keys, Cached.Bytes())
+	}
+}
+
+// A blob is named by its content: the state file's, read once, is not read again while its sha
+// stands, and the one the loop writes is not read back at all (#4059). A small file, whose content
+// the contents API gives itself, is not kept.
+func TestABlobReadOrWrittenBeforeCostsNoCall(t *testing.T) {
+	Blobs.Clear()
+	t.Cleanup(Blobs.Clear)
+	big := strings.Repeat("{}", 600_000)
+	newer := strings.Repeat("[]", 600_000)
+	current := "abc123"
+	o := &opener{answer: func(req *Request) (*Response, error) {
+		switch {
+		case req.Method == "PUT":
+			return jsonAnswer(pyjson.New("content", pyjson.New("sha", "def456"))), nil
+		case strings.Contains(req.URL, "/contents/"):
+			return jsonAnswer(pyjson.New("type", "file", "encoding", "none", "content", "", "size", len(big),
+				"sha", current)), nil
+		}
+		return jsonAnswer(pyjson.New("sha", "abc123", "content", base64.StdEncoding.EncodeToString([]byte(big)))), nil
+	}}
+	client := NewGitHub("o/r", "token", false, o.open, nil, "")
+	var paths []string
+	read := func(want string) {
+		t.Helper()
+		before := len(o.asked)
+		if text, _ := client.GetFile("state.json", "_bot-state"); text != want {
+			t.Fatalf("read %d characters", len(text))
+		}
+		for _, req := range o.asked[before:] {
+			paths = append(paths, SpendPath(req.Method, req.URL))
+		}
+		paths = append(paths, "|")
+	}
+	read(big)
+	read(big)
+	client.PutFile("state.json", newer, "_bot-state", "abc123", "state")
+	current = "def456"
+	read(newer)
+	client.PutFile("small.json", "{}", "_bot-state", "", "state")
+	if !reflect.DeepEqual(paths, []string{"GET /contents/state.json", "GET /git/blobs/abc123", "|",
+		"GET /contents/state.json", "|", "GET /contents/state.json", "|"}) {
+		t.Fatalf("read %q", paths)
+	}
+	if len(Blobs.order) != 2 {
+		t.Fatalf("kept %v", Blobs.order)
 	}
 }
 
@@ -242,14 +360,14 @@ func TestAFileOver1MBIsReadFromItsBlob(t *testing.T) {
 		}
 		return jsonAnswer(pyjson.New("sha", "abc123", "content", base64.StdEncoding.EncodeToString([]byte(big)))), nil
 	}}
-	text, sha := NewGitHub("o/r", "token", false, o.open, nil, "").GetFile("state.json", "bot-state")
+	text, sha := NewGitHub("o/r", "token", false, o.open, nil, "").GetFile("state.json", "_bot-state")
 	if text != big || sha != "abc123" {
 		t.Fatalf("got %d chars, sha %q", len(text), sha)
 	}
 	if !strings.HasSuffix(o.asked[len(o.asked)-1].URL, "/repos/o/r/git/blobs/abc123") {
 		t.Fatal(o.asked[len(o.asked)-1].URL)
 	}
-	if !strings.HasSuffix(o.asked[0].URL, "/repos/o/r/contents/state.json?ref=bot-state") {
+	if !strings.HasSuffix(o.asked[0].URL, "/repos/o/r/contents/state.json?ref=_bot-state") {
 		t.Fatal(o.asked[0].URL)
 	}
 }
@@ -395,5 +513,122 @@ func TestTheOpenersExceptions(t *testing.T) {
 	var he *HTTPError
 	if !errors.As(err, &he) || err.Error() != "HTTP Error 404: Not Found" || string(he.Body) != `{"message": "Not Found"}` {
 		t.Fatalf("a 404: %v", err)
+	}
+}
+
+// #3675: each answer's X-RateLimit headers are kept for its token, a refusal's too, so the status
+// loop can say how many calls are left without a call of its own.
+func TestEachAnswerKeepsItsTokensCallsLeft(t *testing.T) {
+	Rate.Clear()
+	defer Rate.Clear()
+	left := "4321"
+	o := &opener{answer: func(req *Request) (*Response, error) {
+		header := http.Header{}
+		header.Set("X-RateLimit-Remaining", left)
+		header.Set("X-RateLimit-Limit", "5000")
+		header.Set("X-RateLimit-Reset", "1790000000")
+		if left == "0" {
+			return nil, &HTTPError{URL: req.URL, Code: 404, Msg: "Not Found", Header: header, Body: []byte("{}")}
+		}
+		answer := jsonAnswer(pyjson.New("ok", true))
+		answer.Header = header
+		return answer, nil
+	}}
+	if _, ok := Rate.Left("tok"); ok {
+		t.Fatal("nothing is known before an answer")
+	}
+	client := NewGitHub("o/r", "tok", false, o.open, nil, "")
+	client.Request("GET", "/x", nil, "", false, false)
+	got, ok := Rate.Left("tok")
+	if !ok || got != (RateLeft{Remaining: 4321, Limit: 5000, Reset: time.Unix(1790000000, 0).UTC()}) {
+		t.Fatalf("left %+v %v", got, ok)
+	}
+	left = "0"
+	func() {
+		defer func() { _ = recover() }()
+		client.Request("GET", "/y", nil, "", false, false)
+	}()
+	if got, _ := Rate.Left("tok"); got.Remaining != 0 {
+		t.Fatalf("a refusal's headers: %+v", got)
+	}
+	if _, ok := Rate.Left("other"); ok {
+		t.Fatal("kept by token")
+	}
+}
+
+// #3760: GraphQL's points are a limit of their own, with their own reset, so its answers never
+// stand for REST's; and each REST path's calls are counted, but not a 304 nor the limit's own
+// refusal, which cost nothing.
+func TestRESTAndGraphQLLimitsAreKeptApartAndEachPathsCallsCounted(t *testing.T) {
+	Rate.Clear()
+	defer Rate.Clear()
+	code, res, left := 200, "core", "4000"
+	o := &opener{answer: func(req *Request) (*Response, error) {
+		header := http.Header{}
+		header.Set("X-RateLimit-Remaining", left)
+		header.Set("X-RateLimit-Limit", "5000")
+		header.Set("X-RateLimit-Reset", "1790000000")
+		header.Set("X-RateLimit-Resource", res)
+		if code != 200 {
+			return nil, &HTTPError{URL: req.URL, Code: code, Msg: "no", Header: header, Body: []byte("{}")}
+		}
+		answer := jsonAnswer(pyjson.New("data", pyjson.New()))
+		answer.Header = header
+		return answer, nil
+	}}
+	client := NewGitHub("o/r", "tok", false, o.open, nil, "")
+	call := func(method, path string) {
+		defer func() { _ = recover() }()
+		client.Request(method, path, nil, "", false, false)
+	}
+	call("GET", "/repos/o/r/actions/runs/123/jobs?per_page=100")
+	call("GET", "/repos/o/r/actions/runs/456/jobs")
+	call("GET", "/repos/o/r/issues?state=open")
+	res, left = "graphql", "4900"
+	call("POST", "/graphql")
+	if got, _ := Rate.Left("tok"); got.Remaining != 4000 {
+		t.Fatalf("GraphQL's answer stood for REST's: %+v", got)
+	}
+	if got, ok := Rate.LeftOf("tok", GraphQL); !ok || got.Remaining != 4900 {
+		t.Fatalf("GraphQL's own: %+v %v", got, ok)
+	}
+	res, code, left = "core", 304, "3999"
+	call("GET", "/repos/o/r/issues")
+	code, left = 403, "0"
+	call("GET", "/repos/o/r/issues")
+	if got, _ := Rate.Left("tok"); got.Remaining != 0 {
+		t.Fatalf("the refusal's reading: %+v", got)
+	}
+	spent := Rate.Take("tok", REST)
+	want := map[string]int{"GET /actions/runs/{n}/jobs": 2, "GET /issues": 1}
+	if len(spent) != len(want) || spent["GET /actions/runs/{n}/jobs"] != 2 || spent["GET /issues"] != 1 {
+		t.Fatalf("spent %v, want %v", spent, want)
+	}
+	if again := Rate.Take("tok", REST); len(again) != 0 {
+		t.Fatalf("taken once: %v", again)
+	}
+	if points := Rate.Take("tok", GraphQL); points["POST /graphql"] != 1 {
+		t.Fatalf("GraphQL's calls: %v", points)
+	}
+}
+
+// #3760: a call counts by its method and its path, without the query or the repository's own
+// prefix, numbers and SHAs as {n}; the costliest come first, ties by path.
+func TestSpendPathAndTopSpent(t *testing.T) {
+	for in, want := range map[string]string{
+		API + "/repos/o/r/actions/workflows/bot-night.yml/runs?per_page=100&page=8":    "GET /actions/workflows/bot-night.yml/runs",
+		API + "/repos/o/r/commits/0123456789abcdef0123456789abcdef01234567/check-runs": "GET /commits/{n}/check-runs",
+		"/repos/o/r/contents/state.json?ref=_bot-state":                                "GET /contents/state.json",
+		"/gists/abc123":    "GET /gists/abc123",
+		API + "/repos/o/r": "GET /",
+	} {
+		if got := SpendPath("GET", in); got != want {
+			t.Errorf("SpendPath(%q) = %q, want %q", in, got, want)
+		}
+	}
+	total, top := TopSpent(map[string]int{"GET /b": 3, "GET /a": 3, "GET /c": 9, "GET /d": 1}, 3)
+	if total != 16 || len(top) != 3 || top[0] != (PathCount{"GET /c", 9}) || top[1].Path != "GET /a" ||
+		top[2].Path != "GET /b" {
+		t.Fatalf("TopSpent: %d %v", total, top)
 	}
 }

@@ -26,6 +26,13 @@ const { App } = await import("../main.tsx");
 // Load the Almanac's lazy chunk here, so a test waits on its render and not on transforming the chunk.
 await import("./almanac.tsx");
 
+/** #4180: the engine's arrival, as the menu's `useEngineReady()` gate reads it. */
+const engine = vi.hoisted(() => ({ ready: true }));
+vi.mock("../wasm/useEngineReady.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../wasm/useEngineReady.ts")>();
+  return { ...actual, useEngineReady: () => engine.ready };
+});
+
 /** A lazy route chunk, and a pool of every card, can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
 
@@ -43,6 +50,7 @@ afterEach(() => {
   closeInspect();
   vi.unstubAllGlobals();
   resetLocaleForTests();
+  engine.ready = true;
   at("/");
 });
 
@@ -87,14 +95,14 @@ describe("R2118000 the command menu", () => {
   });
 
   it("R2118000 is not mounted on a board route", () => {
-    for (const path of [paths.match("m1"), paths.series("s1"), paths.watch("m1"), paths.duos("m1"), paths.hotseat, paths.duosDev]) {
+    for (const path of [paths.match("m1"), paths.series("s1"), paths.watch("m1"), paths.duos("m1"), paths.dailyGame("m1"), paths.hotseat, paths.duosDev]) {
       expect(commandMenuOn(path), path).toBe(false);
       render(<CommandMenu path={path} />);
       fireEvent.keyDown(window, { key: "k", ctrlKey: true });
       expect(screen.queryByTestId(commandMenuTestid.dialog), path).toBeNull();
       cleanup();
     }
-    for (const path of ["/", "/practice", "/replays", "/almanac", "/nowhere"]) {
+    for (const path of ["/", "/practice", "/replays", "/almanac", "/daily", "/nowhere"]) {
       expect(commandMenuOn(path), path).toBe(true);
     }
   });
@@ -152,10 +160,10 @@ describe("R2118000 the command menu", () => {
         "page-leaderboard",
         "page-replays",
         "page-together",
+        "page-daily",
         "page-account",
         "page-privacy",
         "page-terms",
-        "page-accessibility",
         "page-copyright",
       ].map((id) => commandEntryTestid(id)),
     );
@@ -183,6 +191,25 @@ describe("R2118000 the command menu", () => {
     expect(screen.getByTestId(commandEntryTestid("page-decks"))).toBeInTheDocument();
     typeQuery(input, "decks");
     expect(screen.queryByTestId(commandEntryTestid("page-decks"))).toBeNull();
+  });
+
+  it("R2118000 without the engine the menu lists actions and pages but no cards; with it, a card query lists cards", () => {
+    engine.ready = false;
+    render(<CommandMenu path="/" />);
+    const input = openMenu();
+    // Actions and pages list with no query; no card does, whatever the query.
+    expect(screen.getByTestId(commandEntryTestid("action-new-deck"))).toBeInTheDocument();
+    expect(screen.getByTestId(commandEntryTestid("page-decks"))).toBeInTheDocument();
+    expect(screen.queryByTestId(commandEntryTestid("card-core-008"))).toBeNull();
+    typeQuery(input, "vanilla");
+    expect(screen.getByTestId(commandMenuTestid.empty)).toBeInTheDocument();
+    cleanup();
+
+    engine.ready = true;
+    render(<CommandMenu path="/" />);
+    const again = openMenu();
+    typeQuery(again, "vanilla");
+    expect(screen.getByTestId(commandEntryTestid("card-core-008"))).toBeInTheDocument();
   });
 
   it("R2118000 arrow keys move the selection, wrapping, and Enter runs it through navigate()", () => {

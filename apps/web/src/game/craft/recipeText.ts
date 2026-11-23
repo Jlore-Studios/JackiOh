@@ -50,7 +50,9 @@ function tokenize(text: string): Token[] {
   const tokens: Token[] = [];
   text.split("\n").forEach((raw, index) => {
     const line = index + 1;
-    const code = raw.replace(/\/\/.*$/, "");
+    // `//` starts a comment: the line holds no newline, so this is the comment to its end (#4009).
+    const comment = raw.indexOf("//");
+    const code = comment === -1 ? raw : raw.slice(0, comment);
     const pattern = /\s*(?:([A-Za-z_][A-Za-z0-9_]*)|(-?\d+)|"([^"]*)"|([{}(),;])|(\S))/gy;
     let match: RegExpExecArray | null;
     while ((match = pattern.exec(code)) !== null) {

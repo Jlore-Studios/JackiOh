@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
+use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated_unique, query};
 use crate::draw::shuffle_into_library;
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::script::Effect;
@@ -39,8 +39,10 @@ pub fn shuffle_random_from_catalog(args: ShuffleRandomFromCatalogArgs) -> Effect
         let mut at = 0;
         while at < args.count && !pool.is_empty() {
             // R673: a card generated into a deck may be Glitch (`catalog::GlitchOdds` is the state).
+            // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
             let Some(def_id) =
-                pick_generated(ctx.sink.rng, &pool, Some(&*ctx.sink.state)).map(|def| def.id.clone())
+                pick_generated_unique(ctx.sink.rng, &pool, Some(&*ctx.sink.state), &mut ctx.draw_tally)
+                    .map(|def| def.id.clone())
             else {
                 return;
             };

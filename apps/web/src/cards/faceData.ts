@@ -5,7 +5,7 @@
 import powerWordsJson from "../../../../crates/shared/data/power-words.json";
 import shortFormsJson from "../../../../crates/shared/data/short-forms.json";
 
-/** §8 #98's thirteen powers, by the view's power name: X, name on each face and words, base and Radiant. */
+/** §8 #98's fourteen powers, by the view's power name: X, name on each face and words, base and Radiant. */
 export const POWER_WORDS: Readonly<Record<string, { x: number; title: string; radiantTitle: string; base: string; radiant: string }>> = powerWordsJson;
 
 /**

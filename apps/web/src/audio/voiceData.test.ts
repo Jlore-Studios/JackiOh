@@ -4,8 +4,8 @@
 // the lines every card must have (B33, B34 do). `withVoiceText` joins the words of `voice-text.json`
 // (written from crates/cards/card-text.yaml, #2498) to the hooks and portraits that speak them.
 
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { PlayerView } from "@jackioh/shared";
@@ -17,18 +17,20 @@ import type { CardAudioTable } from "./types.ts";
 import {
   CARD_AUDIO,
   type CatalogTypes,
+  parseCardAudio,
+  parseCardAudioText,
+  withVoiceText,
+} from "./soundTables.ts";
+import {
   effectFor,
   emoteLineFor,
   emoteVoiceDef,
   entryFor,
   hookFor,
   lineFor,
-  parseCardAudio,
-  parseCardAudioText,
   voiceKey,
   voiceKeysForView,
   voiceUrl,
-  withVoiceText,
 } from "./voiceData.ts";
 import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, resetIds, unit } from "../test/fixtures.ts";
 
@@ -119,9 +121,41 @@ describe("B41 voiceKey, voiceUrl and lineFor", () => {
     expect(voiceKey("core-012", "attack")).toBe("core-012-attack");
   });
 
-  it("B41 voiceUrl serves a key from audio/voice/ under the app's base URL", () => {
-    expect(voiceUrl("core-004-play")).toBe(`${import.meta.env.BASE_URL}audio/voice/core-004-play.m4a`);
-    expect(voiceUrl("core-051-1-cast")).toBe("/audio/voice/core-051-1-cast.m4a");
+  it("B41 voiceUrl serves a key from audio/voice/ with its manifest hash under the app's base URL (#4393)", () => {
+    expect(voiceUrl("core-004-play", "0123456789abcdef")).toBe(
+      `${import.meta.env.BASE_URL}audio/voice/core-004-play.m4a?v=0123456789abcdef`,
+    );
+    expect(voiceUrl("core-051-1-cast", "0123456789abcdef")).toBe(
+      "/audio/voice/core-051-1-cast.m4a?v=0123456789abcdef",
+    );
+  });
+
+  it("#4393 no source outside voiceData.ts and musicData.ts builds an audio/voice/ or audio/music/ path", () => {
+    function findSourceFiles(dir: string): string[] {
+      return readdirSync(dir).flatMap((name) => {
+        const full = join(dir, name);
+        if (statSync(full).isDirectory()) {
+          if (name === "test" || name === "__tests__" || name === "fixtures") return [];
+          return findSourceFiles(full);
+        }
+        if (!name.endsWith(".ts") && !name.endsWith(".tsx")) return [];
+        if (name.includes(".test.") || name.includes(".spec.")) return [];
+        if (name === "voiceData.ts" || name === "musicData.ts") return [];
+        return [full];
+      });
+    }
+
+    const srcDir = resolve(here, "..");
+    const files = findSourceFiles(srcDir);
+    expect(files.length).toBeGreaterThan(10);
+    const offending: string[] = [];
+    for (const file of files) {
+      const content = readFileSync(file, "utf8");
+      if (content.includes("audio/voice/") || content.includes("audio/music/")) {
+        offending.push(file);
+      }
+    }
+    expect(offending).toEqual([]);
   });
 
   it("B41 lineFor gives a unit's play and death text in the voice each hook names", () => {

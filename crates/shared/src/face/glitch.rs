@@ -102,4 +102,49 @@ mod tests {
         assert_ne!(once.text, TEXT);
         assert!(once.cost.chars().all(|c| GLYPHS.contains(c)), "{}", once.cost);
     }
+
+    /// Issue #170: every client prints the same jumble, so it is pinned, each of Glitch's words folded into
+    /// `GLITCH_SEED` and rolled through the LCG, the cost's every character a glyph.
+    #[test]
+    fn glitchs_words_jumble_exactly_so() {
+        let words = glitch_words();
+        assert_eq!(words.name, "\u{d8}l\u{322}i\u{334}\u{2592}ch\u{321}");
+        assert_eq!(words.type_, "S\u{341}\u{25e5}\u{2211}^l");
+        assert_eq!(
+            words.text,
+            "\u{2599}\u{c6}en p\u{315}\\a\u{300}\u{b5}e\u{328}%,\u{328} >h\u{259f}\u{bf}m\u{322}a\u{322}~ch\u{301} \
+             i\u{358}s n\u{2206}!lo\u{300}#g?r\u{31b} t\u{300}h~\u{a7}\u{f0}a\u{2248}^h\u{334}.\u{334}\u{a1}\u{259a}o\
+             \u{b5}\u{25e2}\u{de}^<%\u{2206}!r\u{327}e\u{338}\u{a7}\u{259f}\u{25e5} w\u{358}\u{f0}a\u{259a} #\u{b5} \
+             ^as\u{340}~"
+        );
+        assert_eq!(words.cost, "\u{2248}\u{de}");
+    }
+
+    /// A character becomes a glyph on a roll below `GLITCH_SWAP_IN` (of `GLITCH_ODDS_SCALE`) and gains a mark on
+    /// one below `GLITCH_SWAP_IN + GLITCH_MARK_IN`, never on a roll at either; a space becomes a glyph or stays.
+    #[test]
+    fn a_roll_at_an_odds_edge_falls_past_it() {
+        // A one-character source's first roll: the character folded into the seed, then one step of the LCG.
+        let roll = |source: char, seed: u32| {
+            (seed ^ source as u32)
+                .wrapping_mul(FOLD_PRIME)
+                .wrapping_mul(LCG_MULTIPLIER)
+                .wrapping_add(LCG_INCREMENT)
+                % GLITCH_ODDS_SCALE
+        };
+        let rolling =
+            |source: char, at: u32| (0_u32..).find(|seed| roll(source, *seed) == at).expect("a seed");
+        let kept_and_marked = |out: &str| out.starts_with('a') && out.chars().count() == 2;
+        let mark_in = GLITCH_SWAP_IN + GLITCH_MARK_IN;
+        assert_eq!(corrupt(" ", rolling(' ', GLITCH_SWAP_IN), GLITCH_SWAP_IN), " ");
+        assert_ne!(
+            corrupt(" ", rolling(' ', GLITCH_SWAP_IN - 1), GLITCH_SWAP_IN),
+            " "
+        );
+        let at_swap = corrupt("a", rolling('a', GLITCH_SWAP_IN), GLITCH_SWAP_IN);
+        assert!(kept_and_marked(&at_swap), "{at_swap}");
+        assert_eq!(corrupt("a", rolling('a', mark_in), GLITCH_SWAP_IN), "a");
+        let below_mark = corrupt("a", rolling('a', mark_in - 1), GLITCH_SWAP_IN);
+        assert!(kept_and_marked(&below_mark), "{below_mark}");
+    }
 }

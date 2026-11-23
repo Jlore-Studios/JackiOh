@@ -13,12 +13,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::config::{CAST_ON_DRAW_ACTION_CAP, CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, SETUP_TURN};
+use crate::query::HandSide;
 use crate::script::{DrawLimit, DrawLimitPlayer, EngineSink, HookArgs};
 use crate::state::{CardInstance, DrawCount, GameState, Resume, WorkItem, find_instance_mut, new_instance};
 use crate::wire::{
     CardType, Enchantment, GameEvent, LibraryOverflowOutcome, PLAYER_IDS, PlayerId, Row, SetName, Zone,
     opponent_of,
 };
+use crate::work::engine_resume;
 
 /// R151: a start-of-game hook also runs when its card ARRIVES in a hand or a library, not only at §2.1
 /// step 4, as R43 states the roll as an invariant: a copy arriving later (#72 Reminisce, a bounce, a
@@ -55,6 +57,30 @@ fn infinite_reserves_source(sink: &EngineSink, player: PlayerId) -> Option<CardI
     None
 }
 
+/// R4353020 (S+ #79 A Glimpse into the Endless Sea): whether `player` is immune to fatigue damage, a
+/// `fatigueImmune` modifier on their side, kept for the rest of the game.
+pub fn fatigue_immune(state: &GameState, player: PlayerId) -> bool {
+    state.players[player]
+        .mods
+        .iter()
+        .any(|modifier| matches!(modifier.kind, crate::state::ModifierKind::FatigueImmune))
+}
+
+/// R3553002 (S+ #30): a backrow card that turns its controller's first draw each turn into a
+/// Warhero Token card.
+fn warhero_draws_source(sink: &EngineSink, player: PlayerId) -> Option<CardInstance> {
+    for slot in crate::zones::slots_of(player, Row::Backrow) {
+        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+        if let Some(card) = crate::zones::card_at(sink.state, slot)
+            && !crate::preview::lasting_text_off(sink.state, card)
+            && crate::scripts::script_of(sink.state, card).flags().warhero_draws == Some(true)
+        {
+            return Some(card.clone());
+        }
+    }
+    None
+}
+
 /// Where `add_to_hand` put a card.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
@@ -68,6 +94,16 @@ pub enum AddToHandOutcome {
 /// card that reaches a hand comes through here, so a caller reads where it went from the outcome
 /// rather than testing the hand again.
 pub fn add_to_hand(sink: &mut EngineSink, instance: &mut CardInstance) -> AddToHandOutcome {
+    add_to_hand_at(sink, instance, None)
+}
+
+/// R3558000: `add_to_hand` at the named end of the hand — the left end, or the right end every other
+/// arrival takes (§3). Absent is the right end.
+pub fn add_to_hand_at(
+    sink: &mut EngineSink,
+    instance: &mut CardInstance,
+    at: Option<HandSide>,
+) -> AddToHandOutcome {
     let full = crate::query::room_in(sink.state, instance.owner, crate::zones::OffFieldZone::Hand) == 0;
     if full {
         let landed = crate::zones::move_to_zone(
@@ -89,7 +125,10 @@ pub fn add_to_hand(sink: &mut EngineSink, instance: &mut CardInstance) -> AddToH
         sink.state,
         instance,
         crate::zones::OffFieldZone::Hand,
-        Default::default(),
+        crate::zones::MoveToZoneOptions {
+            hand_left: (at == Some(HandSide::Left)).then_some(true),
+            ..Default::default()
+        },
     );
     sink.events.push(GameEvent::AddedToHand {
         player: instance.owner,
@@ -601,14 +640,7 @@ fn owe_chain(sink: &mut EngineSink, player: PlayerId, link: &ChainLink) {
         Value::from(sink.state.cast_chain.unwrap_or(link.chain)),
     );
     data.insert("owns".to_string(), Value::Bool(link.owns));
-    let resume = Resume {
-        def_id: String::new(),
-        hook: DRAW_CHAIN_WORK.to_string(),
-        step: DRAW_CHAIN_STEP.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    };
+    let resume = engine_resume(DRAW_CHAIN_WORK, DRAW_CHAIN_STEP, data);
     crate::work::owe(sink, resume);
 }
 
@@ -629,14 +661,7 @@ fn owe_draws(sink: &mut EngineSink, player: PlayerId, count: i32) {
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert("player".to_string(), Value::String(player.as_str().to_string()));
     data.insert("count".to_string(), Value::from(count));
-    let resume = Resume {
-        def_id: String::new(),
-        hook: DRAW_COUNT_WORK.to_string(),
-        step: DRAW_COUNT_STEP.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    };
+    let resume = engine_resume(DRAW_COUNT_WORK, DRAW_COUNT_STEP, data);
     crate::work::owe(sink, resume);
 }
 
@@ -709,6 +734,8 @@ pub fn complete_draw(
         return DrawOutcome::Cast;
     }
 
+    // R3548001: the stamp a Tipsy counter now up lays on the drawn card, before it reaches the hand.
+    card.tipsy = crate::tipsy::stamp_for(sink.state, player);
     if add_to_hand(sink, &mut card) == AddToHandOutcome::Burned {
         DrawOutcome::Burned
     } else {
@@ -793,6 +820,32 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
         return DrawOutcome::Limited;
     }
 
+    // R3553002 (S+ #30): the turn's first draw is a Warhero Token card instead, the library top
+    // staying for the next draw. Setup draws are no turn's (SETUP_TURN), and an empty library
+    // still fatigues below.
+    if draws_this_turn(sink.state, player) == 0
+        && sink.state.turn != SETUP_TURN
+        && !sink.state.players[player].library.is_empty()
+        && let Some(source) = warhero_draws_source(sink, player)
+        && let Some(token_def_id) =
+            crate::catalog::def_id_by_index(SetName::StinkyscapePlus, "T-warhero-token")
+    {
+        let mut token = new_instance(sink.state, &token_def_id, player, Zone::Hand { player });
+        token.radiant = source.radiant;
+        crate::generators::record_generator_of(sink.state, &source, &token);
+        sink.state.counters.drawn += 1;
+        let counted = count_draw(sink.state, player);
+        sink.events.push(GameEvent::Drawn {
+            player,
+            instance_id: token.id.clone(),
+            def_id: token.def_id.clone(),
+            turn_draw: counted,
+            emptied: None,
+        });
+        add_to_hand(sink, &mut token);
+        return DrawOutcome::Token;
+    }
+
     if sink.state.players[player].library.is_empty() {
         if let Some(source) = infinite_reserves_source(sink, player) {
             let token_def_id = crate::catalog::def_id_by_index(SetName::Core, "T-rush");
@@ -824,6 +877,11 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
             count: fatigue_count,
             amount,
         });
+        // R4353020: a player immune to fatigue damage takes no hit, no damage instance and no report of
+        // one; the draw still happened, counted and announced above with its nominal hit (R1256000).
+        if fatigue_immune(sink.state, player) {
+            return DrawOutcome::Fatigue;
+        }
         // R240, R1362: a fatigue draw whose hit the hero's Armor takes whole (§4.4 step 2) still happened
         // (the count moved, §10.3); the pipeline reports it by `damageAbsorbed` from no source (R1361),
         // no damage instance (R63), in the place in R68's order R240's `damage` of 0 had.

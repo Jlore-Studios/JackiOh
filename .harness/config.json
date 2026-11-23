@@ -41,7 +41,8 @@
   "suggestions": {
     "enabled": true,
     "max_open": 10,
-    "idle_minutes": 30,
+    "spare_lanes": 1,
+    "idle_minutes": 0,
     "priorities": {
       "fuzz": "low",
       "checks": "low",
@@ -52,7 +53,29 @@
       "security": "medium",
       "polish": "medium",
       "data": "high"
-    }
+    },
+    "areas": [
+      {
+        "id": "rules",
+        "focus": "the rules engine, the cards and the dungeon run: `crates/engine`, `crates/cards`, `crates/run` and the spec they implement (`spec/`): rules, keywords, rulings, card scripts, card data and balance"
+      },
+      {
+        "id": "ai",
+        "focus": "the practice AI and its training: `crates/ai`, `training/` and `analysis/`: how well and how fairly it plays, its quality gates and the data it learns from"
+      },
+      {
+        "id": "server",
+        "focus": "online play: `crates/server`, `crates/shared`, `apps/edge`, `apps/admin` and `infra/`: matches, accounts, the store and its migrations, access rules, the site Worker and the admin app"
+      },
+      {
+        "id": "client",
+        "focus": "the web client: `apps/web`: the board, the screens and their layout on a phone and a desktop, animations, audio, accessibility, translations and how fast it loads"
+      },
+      {
+        "id": "tests",
+        "focus": "tests and tooling: `e2e/`, `crates/tools`, `crates/wasm`, `scripts/` and the checks they run: the fuzz, the golden replays, the performance budgets, mutation testing and how fast and how trustworthy CI is"
+      }
+    ]
   },
   "quiet": {
     "enabled": true,

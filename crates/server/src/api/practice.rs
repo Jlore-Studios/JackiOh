@@ -1,10 +1,12 @@
 //! Practice earning (SPEC §14.8, §9.9, #1303): a practice game pays half rates once the server has
 //! checked it, on a seed the server issued for it.
 //!
-//! - **An issue** keeps the seed with the profile, the game's setup and the human's last board
-//!   ([[R1303003]]), prunes seeds older than `PRACTICE_SEED_TTL_SECONDS` ([[R1303001]]) and refuses
-//!   past `PRACTICE_SEEDS_OPEN_MAX` seeds unclaimed or claimed and not yet settled, counted under
-//!   the account's economy lock ([[R1483000]], [[R3500001]]).
+//! - **An issue** first deals the game its claim would deal and refuses a deck that could never be
+//!   played, writing nothing ([[R4317000]]). It then keeps the seed with the profile, the game's setup
+//!   and the human's last board ([[R1303003]]), prunes seeds older than `PRACTICE_SEED_TTL_SECONDS`
+//!   ([[R1303001]]) and refuses past `PRACTICE_SEEDS_OPEN_MAX` seeds unclaimed or claimed and not yet
+//!   settled, counted under the account's economy lock ([[R1483000]], [[R3500001]]). The retention
+//!   loop prunes every account's lapsed seeds too ([[R4317001]], `purge_lapsed`).
 //! - **A release** gives an unclaimed seed's place back ([[R2379000]]).
 //! - **A claim** burns its seed first, in its own transaction, so it pays once whatever the check
 //!   answers ([[R1303001]]); `economy::practice::verify` folds the log off the runtime, re-running no
@@ -45,7 +47,7 @@ use crate::config::{
     PRACTICE_SEEDS_OPEN_MAX, PRACTICE_SETTLE_GRACE_SECONDS,
 };
 use crate::db::store::{LastBoardKind, StoreResult, Tx};
-use crate::economy::practice::{ClaimBucket, ClaimRefusal, ClaimedResult, Verified, verify};
+use crate::economy::practice::{ClaimBucket, ClaimRefusal, ClaimedResult, Verified, deal_refusal, verify};
 use crate::economy::quests::tally_seat;
 use crate::economy::rewards::{GameEconomy, GameMode, GameSummary, pay_game_rewards};
 use crate::economy::store::{PracticeClaim, PracticeDeck, PracticeOutcome, PracticeSeed, PracticeSetup};
@@ -116,8 +118,9 @@ async fn refuse_unburned(tx: StoreResult<Tx<'_>>, seed: &str, reason: ClaimRefus
 /// `POST /api/practice/seeds` with `{ difficulty, humanSeat, deck, catalog }` (`AuthLevel::Active`).
 /// 201 `{ seed, lastBoard, expiresAt }`; a 409 while the economy is off, for a catalog version
 /// this build cannot fold (R767000), or while the account holds `PRACTICE_SEEDS_OPEN_MAX` seeds
-/// unclaimed or claimed and not yet settled (R1483000, R3500001). It runs in the account's economy turn; past the requests waiting theirs it
-/// is 429 `rate_limited` (R2378000).
+/// unclaimed or claimed and not yet settled (R1483000, R3500001); a 400 for a deck its claim's deal
+/// would refuse, checked before anything is written (R4317000). It runs in the account's economy turn;
+/// past the requests waiting theirs it is 429 `rate_limited` (R2378000).
 pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let request: SeedRequest = body_of(&req.body, "a practice game's setup")?;
@@ -127,17 +130,27 @@ pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
             "Practice games earn nothing yet.",
         ));
     }
-    if Pinned::of(&request.catalog).is_err() {
+    let Ok(pinned) = Pinned::of(&request.catalog) else {
         return Err(ApiError::new(
             ApiErrorCode::Conflict,
             "This game's cards are from a version the server cannot check; reload the page.",
         ));
-    }
+    };
     // R2378000: the account's turn first, so a burst waits here holding no database
     // connection, not on the economy lock below.
     let _turn = app.spends.claim(&profile.id).await?;
     let now = now_ms();
     let seed = crate::api::queue::new_seed();
+    // R4317000: the game this seed's claim would deal, dealt now, before a connection, the lock or a
+    // count: a deck that could never be played writes nothing and holds no place.
+    let mut setup = PracticeSetup {
+        difficulty: request.difficulty,
+        human_seat: request.human_seat,
+        deck: request.deck,
+        last_board: Vec::new(),
+        catalog_version: request.catalog,
+    };
+    refuse_undealable(app, pinned, &seed, &setup).await?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     // R1483000: the account's lock before the count, so two requests at once see each other's seed.
     tx.economy_lock_account(&profile.id).await?;
@@ -157,16 +170,11 @@ pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
         .last_boards_get(&profile.id, LastBoardKind::Practice)
         .await?
         .unwrap_or_default();
+    setup.last_board = last_board.clone();
     tx.economy_practice_seed_insert(&PracticeSeed {
         seed: seed.clone(),
         profile_id: profile.id.clone(),
-        setup: PracticeSetup {
-            difficulty: request.difficulty,
-            human_seat: request.human_seat,
-            deck: request.deck,
-            last_board: last_board.clone(),
-            catalog_version: request.catalog,
-        },
+        setup,
         issued_at: now,
         claimed_at: None,
         claim: None,
@@ -178,6 +186,28 @@ pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
         CREATED,
         json!({ "seed": seed, "lastBoard": last_board, "expiresAt": now + SEED_TTL_MS }),
     ))
+}
+
+/// R4317000: `Ok` when the game `setup` asks for can be dealt on `seed`, else a 400 naming the engine's
+/// reason. Off the runtime, as the claim's check is. A panic (a setup the engine cannot create) is logged
+/// `practice.seed.panicked` and refused too, as the claim refuses it `does_not_fold`.
+async fn refuse_undealable(
+    app: &Arc<App>,
+    pinned: Pinned,
+    seed: &str,
+    setup: &PracticeSetup,
+) -> Result<(), ApiError> {
+    let (seed, setup) = (seed.to_string(), setup.clone());
+    let refusal = engine::off_runtime(app.engine_thread, move || deal_refusal(pinned, &seed, &setup))
+        .await
+        .unwrap_or_else(|panic| {
+            log_warn("practice.seed.panicked", json!({ "panic": panic }));
+            Some("the engine could not create that game".to_string())
+        });
+    match refusal {
+        Some(reason) => Err(bad_request(format!("That deck cannot be played: {reason}"))),
+        None => Ok(()),
+    }
 }
 
 /// `DELETE /api/practice/seeds/:seed` (`AuthLevel::Active`, [[R2379000]]): the caller's unclaimed seed
@@ -511,6 +541,17 @@ pub async fn sweep_unsettled(app: &Arc<App>) -> StoreResult<Swept> {
         );
     }
     Ok(swept)
+}
+
+/// [[R4317001]]: deletes every account's seeds issued over `PRACTICE_SEED_TTL_SECONDS` ago that are
+/// unclaimed or settled, not only the ones whose account asks for another seed ([[R1303001]]); a claim not
+/// yet settled stays for `sweep_unsettled` ([[R2422000]]). Answers how many. Run by the retention loop
+/// every pass, the economy on or off: deleting a lapsed row pays nothing.
+pub async fn purge_lapsed(app: &App) -> StoreResult<u64> {
+    let mut tx = app.db.begin(None).await?;
+    let purged = tx.economy_practice_seeds_purge(now_ms() - SEED_TTL_MS).await?;
+    tx.commit().await?;
+    Ok(purged)
 }
 
 /// `verify` on the blocking pool under a permit, timed and logged. A panic (a setup the engine

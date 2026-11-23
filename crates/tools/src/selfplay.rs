@@ -366,8 +366,7 @@ mod tests {
             crate::positions::fold_game(
                 &line,
                 crate::positions::Every::Turn,
-                jackioh_cards::catalog_version(),
-                false
+                jackioh_cards::catalog_version()
             ),
             Err(crate::positions::Dropped::NoResult)
         );
@@ -422,6 +421,7 @@ mod tests {
 
     /// R1006001: the same base and count give the same lines whatever the thread count.
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn r1006001_the_same_base_and_count_give_byte_identical_lines_on_one_or_four_threads() {
         let one = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();
         let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
@@ -457,12 +457,12 @@ mod tests {
             line.faults
         );
         assert_eq!(
-            crate::positions::fold_game(&line, crate::positions::Every::Turn, build, false),
+            crate::positions::fold_game(&line, crate::positions::Every::Turn, build),
             Err(crate::positions::Dropped::Unclean)
         );
         let mut clean = line.clone();
         clean.faults.clear();
-        assert!(crate::positions::fold_game(&clean, crate::positions::Every::Turn, build, false).is_ok());
+        assert!(crate::positions::fold_game(&clean, crate::positions::Every::Turn, build).is_ok());
         let text = serde_json::to_string(&clean).unwrap();
         assert!(!text.contains("\"faults\""), "{text}");
         assert_eq!(serde_json::from_str::<SelfplayGame>(&text).unwrap(), clean);

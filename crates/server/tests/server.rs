@@ -4,4 +4,6 @@ mod actor;
 mod api;
 mod bots;
 mod loops;
+#[path = "support/shared_helpers.rs"]
+mod shared_helpers;
 mod support;

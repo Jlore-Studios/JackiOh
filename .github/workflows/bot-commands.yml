@@ -23,7 +23,11 @@ on:
   issues:
     types: [labeled, assigned]
   # _target, so the job runs this repository's workflow with its secrets and never code from the
-  # pull request; it checks out the default branch and reads the event payload only.
+  # pull request; it checks out the default branch and reads the event payload only. `pull_request`
+  # would not do: it runs nothing while a pull request has a merge conflict, delivers `closed`
+  # unreliably, and gives a fork no secrets. GitHub blocks `_target` in public repositories from
+  # 2026-12-02 unless an Actions event policy allows it, so this file is on the policy's list
+  # (infra/README.md, "pull_request_target").
   pull_request_target:
     types: [labeled, assigned, closed]
   pull_request_review:
@@ -83,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write        # the state file on the bot-state branch
+      contents: write        # the state file on the _bot-state branch
       issues: write
       pull-requests: write
       actions: write         # start a forced run; the sweep stops a bot pull request's red CI

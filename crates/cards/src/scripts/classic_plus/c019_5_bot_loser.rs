@@ -1,7 +1,8 @@
 //! C+ #19.5 Bot Loser (SPEC §8.7 row 19.5): "After this destroys a Unit", +{attackGain} Attack each time
 //! it is R42's killer and still stands on the field as the kill is dispatched, so dying in that combat
 //! it gains nothing (R1245, R2396000); while Berserk it attacks its own hero at your start and end of
-//! turn; the Radiant face can't go Berserk (R412).
+//! turn; the Radiant face can't go Berserk (R412). `attackGain` is 2, Radiant 4 (3, Radiant 6 until
+//! issue #3837).
 
 use jackioh_engine::prelude::*;
 
@@ -76,6 +77,10 @@ mod tests {
     const BOT: &str = "classicplus-019-5";
     const JUNGLE: &str = "classicplus-019-2";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    /// Dies to the base Bot Loser's First Strike 3 before it can strike back.
+    const PREY: &str = "stand-in (1) 4/3";
+    /// The base Jungle Loser's 3 destroys it; it strikes back for 2.
+    const SOFT: &str = "stand-in (1) 2/3";
     const MOTHS: &str = "core-009"; // Moths to the Flame: start of turn: every enemy Unit attacks this
     const ANTI_ONESHOT: &str = "core-073"; // Anti-oneshot Armor: hits on the hero capped at 5
     const HIT_JOB: &str = "core-016"; // Hit Job: destroy a target Unit
@@ -131,8 +136,8 @@ mod tests {
         use super::*;
 
         #[test]
-        fn base_enters_at_4_4_radiant_unchanged() {
-            for (radiant_face, size) in [(false, 4), (true, 8)] {
+        fn base_enters_at_3_3_radiant_at_6_6() {
+            for (radiant_face, size) in [(false, 3), (true, 6)] {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": BOT, "radiant": radiant_face }, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -147,16 +152,17 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r42_whenever_it_destroys_a_unit_it_gets_3_attack_permanently() {
-                let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
+            fn r42_whenever_it_destroys_a_unit_it_gets_2_attack_permanently() {
+                // Its First Strike 3 destroys the 4/3 before it strikes back: 3 + 2 attack, health untouched.
+                let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": PREY, "lane": 3 }] }));
                 let me = bot(&s, P1);
                 let target = unit_or_blank(&s, P2, 3);
                 s.attack(&me, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 7, "health": 4 }));
+                s.expect_stats(&me, json!({ "attack": 5, "health": 3 }));
                 s.end_turn().end_turn();
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 7 }));
+                s.expect_stats(&me, json!({ "attack": 5 }));
             }
 
             #[test]
@@ -164,17 +170,18 @@ mod tests {
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [FILLER], "field": [{ "def": BOT, "lane": 2 }], "library": DECK },
-                    "p2": { "hand": [FILLER], "field": [{ "def": MOTHS, "lane": 1, "damage": 10 }], "library": DECK },
+                    // The 1/14 Moths at 3 health: the Bot Loser's First Strike 3 destroys it.
+                    "p2": { "hand": [FILLER], "field": [{ "def": MOTHS, "lane": 1, "damage": 11 }], "library": DECK },
                 }));
                 s.start_turn();
                 assert!(s.unit(P2, 1).is_none());
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 7 }));
+                s.expect_stats(&me, json!({ "attack": 5 }));
             }
 
             #[test]
             fn r2396000_after_a_kill_it_dies_in_it_gains_nothing() {
-                // Tempo Timmy's First Strike meets its own: 4 kills the 3/3 as its 3 kills the Bot Loser,
+                // Tempo Timmy's First Strike meets its own: 3 kills the 3/3 as its 3 kills the 3/3 Bot Loser,
                 // 1 damage down already, and "After this destroys a Unit" asks that it still stands.
                 let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": TIMMY, "lane": 3 }] }));
                 let me = bot(&s, P1);
@@ -200,7 +207,7 @@ mod tests {
                 let target = unit_or_blank(&s, P2, 1);
                 s.attack(attacker, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 4 }));
+                s.expect_stats(&me, json!({ "attack": 3 }));
             }
 
             #[test]
@@ -209,12 +216,13 @@ mod tests {
                 let mut s = with_bot(json!({}), false, json!({}));
                 let me = bot(&s, P1);
                 send_berserk(&mut s, &me);
+                // Its 3 at the end of p1's turn, and again at the start of p1's next.
                 s.end_turn();
-                s.expect_health(P1, 26);
+                s.expect_health(P1, 27);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "health": 4 }));
+                s.expect_stats(&me, json!({ "health": 3 }));
                 s.end_turn();
-                s.expect_health(P1, 22);
+                s.expect_health(P1, 24);
                 let own: Vec<bool> = s
                     .events()
                     .iter()
@@ -242,7 +250,7 @@ mod tests {
                 let me = bot(&s, P1);
                 send_berserk(&mut s, &me);
                 s.end_turn();
-                // 10 attack, 2 Armor, then the cap of 4 (5 until #2657).
+                // 9 attack, 2 Armor, then the cap of 4 (5 until #2657).
                 s.expect_health(P1, 26);
             }
 
@@ -276,10 +284,8 @@ mod tests {
                 let mut s = with_bot(
                     json!({ "field": [{ "def": JUNGLE, "lane": 1 }] }),
                     false,
-                    json!({ "field": [{ "def": VANILLA, "lane": 3 }] }),
+                    json!({ "field": [{ "def": SOFT, "lane": 3 }] }),
                 );
-                let jungle = s.unit(P1, 1).unwrap_or_else(|| bot(&s, P1)).id;
-                set_param(s.card_mut(&jungle), "chance", 100);
                 s.end_turn();
                 assert_eq!(bot(&s, P1).berserk, Some(true));
                 assert_eq!(
@@ -289,14 +295,14 @@ mod tests {
             }
 
             #[test]
-            fn r386_the_gain_reads_through_param_an_upgrade_makes_it_4() {
-                let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
+            fn r386_the_gain_reads_through_param_an_upgrade_makes_it_3() {
+                let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": PREY, "lane": 3 }] }));
                 let id = bot(&s, P1).id;
                 step_param(s.card_mut(&id), "attackGain", 1);
                 let target = unit_or_blank(&s, P2, 3);
                 s.attack(&id, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 8 }));
+                s.expect_stats(&me, json!({ "attack": 6 }));
             }
         }
 
@@ -304,13 +310,14 @@ mod tests {
             use super::*;
 
             #[test]
-            fn t_8_8_charge_first_strike_it_gets_6_attack_per_kill() {
+            fn t_6_6_charge_first_strike_it_gets_4_attack_per_kill() {
+                // Its First Strike 6 destroys the 4/4 before it strikes back: 6 + 4 attack, health untouched.
                 let mut s = with_bot(json!({}), true, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
                 let me = bot(&s, P1);
                 let target = unit_or_blank(&s, P2, 3);
                 s.attack(&me, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 14, "health": 8 }));
+                s.expect_stats(&me, json!({ "attack": 10, "health": 6 }));
             }
 
             #[test]
@@ -318,10 +325,8 @@ mod tests {
                 let mut s = with_bot(
                     json!({ "field": [{ "def": JUNGLE, "lane": 1 }] }),
                     true,
-                    json!({ "field": [{ "def": VANILLA, "lane": 3 }] }),
+                    json!({ "field": [{ "def": SOFT, "lane": 3 }] }),
                 );
-                let jungle = s.unit(P1, 1).unwrap_or_else(|| bot(&s, P1)).id;
-                set_param(s.card_mut(&jungle), "chance", 100);
                 s.end_turn();
                 assert!(s.unit(P2, 3).is_none());
                 assert_eq!(bot(&s, P1).berserk, None);
@@ -351,7 +356,7 @@ mod tests {
                 send_berserk(&mut s, &me);
                 assert!(glows(&s));
                 s.end_turn();
-                s.expect_health(P1, 26);
+                s.expect_health(P1, 27);
             }
 
             #[test]

@@ -1,7 +1,8 @@
 // A hero's inspect view (R1330, issue #544): the dialog a hold on either portrait opens, or a
 // right-click, the context-menu key or Shift+F10 on it (R1449; a click hangs the menu off the
-// portrait instead). It shows the portrait large (`PortraitArt`, R1332), its printed words (R660) and
-// the hero's health and Armor, and holds the click's menu inline (R643).
+// portrait instead). It shows the portrait large (`PortraitArt`, R1332), its printed words (R660),
+// the hero's health and Armor and every other counter above 0 (#4251), and holds the click's
+// menu inline (R643).
 // It is the touch sheet's kind of overlay (`useModalOverlay`, cards/inspect/InspectSheet.tsx). It
 // reads only the portrait's id and the viewer's own `PlayerView` (CLAUDE.md rule 7); a portrait and
 // its words are public (R642).
@@ -13,13 +14,13 @@ import type { EmoteGate, EmoteId, PortraitId } from "@jackioh/shared";
 import { PORTRAITS } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
-import { flavourFor } from "../cards/flavour.ts";
+import { flavourFor, useFlavour } from "../cards/flavour.ts";
 import { useModalOverlay } from "../cards/inspect/store.ts";
 import "../cards/inspect/inspect.css";
 import { DialogClose } from "../game/Dialog.tsx";
 import { t } from "../i18n/i18n.ts";
 import { PortraitArt } from "./PortraitArt.tsx";
-import { PORTRAIT_DEFS } from "./portraits.ts";
+import { portraitDefs } from "./portraits.ts";
 import { EmoteMenu, MuteMenu } from "./ui.tsx";
 import "./portrait.css";
 
@@ -31,6 +32,12 @@ export const HERO_INSPECT_TITLE = "hero-inspect-title";
 export const HERO_INSPECT_FLAVOUR = "hero-inspect-flavour";
 export const HERO_INSPECT_HEALTH = "hero-inspect-health";
 export const HERO_INSPECT_ARMOR = "hero-inspect-armor";
+export const HERO_INSPECT_LUCK = "hero-inspect-luck";
+export const HERO_INSPECT_JADE = "hero-inspect-jade";
+export const HERO_INSPECT_BURN = "hero-inspect-burn";
+export const HERO_INSPECT_TOXIC = "hero-inspect-toxic";
+export const HERO_INSPECT_TIPSY = "hero-inspect-tipsy";
+export const HERO_INSPECT_CREDITS = "hero-inspect-credits";
 
 export type HeroInspectProps = {
   side: "you" | "opponent";
@@ -38,6 +45,14 @@ export type HeroInspectProps = {
   /** The hero's true health from the view; the view draws it clamped to 0 like the badge. */
   health: number;
   armor: number;
+  /** #4251: the seat's counters, each drawn only above 0 (Credits whenever the view carries
+      them, 0 included, like the badge). */
+  luck?: number;
+  jade?: number;
+  burn?: number;
+  toxic?: number;
+  tipsy?: number;
+  marketCredits?: number;
   /** Which menu the view holds: your emotes, or the opponent's mute item (R643). */
   menu: "emotes" | "mute";
   /** R1343: the emotes your menu offers — your dealt hand, in the pool's order. */
@@ -54,6 +69,12 @@ export function HeroInspect({
   portrait,
   health,
   armor,
+  luck,
+  jade,
+  burn,
+  toxic,
+  tipsy,
+  marketCredits,
   menu,
   hand,
   gate,
@@ -65,8 +86,9 @@ export function HeroInspect({
   const closeRef = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeRef);
   const nameId = useId();
-  const { defId, def } = PORTRAIT_DEFS[portrait];
-  const flavour = flavourFor(defId)?.flavour;
+  const { defId, def } = portraitDefs()[portrait];
+  const sidecar = useFlavour();
+  const flavour = flavourFor(defId, sidecar ?? {})?.flavour;
 
   return createPortal(
     <div className="inspect-layer hero-inspect-layer" {...modal.layerProps}>
@@ -104,6 +126,46 @@ export function HeroInspect({
             <dt>{t("Armor")}</dt>
             <dd>{armor}</dd>
           </div>
+          {(luck ?? 0) > 0 && (
+            <div className="hero-inspect-stat" data-testid={HERO_INSPECT_LUCK} data-luck={luck}>
+              <dt>{t("Luck")}</dt>
+              <dd>{luck}</dd>
+            </div>
+          )}
+          {(jade ?? 0) > 0 && (
+            <div className="hero-inspect-stat" data-testid={HERO_INSPECT_JADE} data-jade={jade}>
+              <dt>{t("Jade Counter")}</dt>
+              <dd>{jade}</dd>
+            </div>
+          )}
+          {(burn ?? 0) > 0 && (
+            <div className="hero-inspect-stat" data-testid={HERO_INSPECT_BURN} data-burn={burn}>
+              <dt>{t("Burn")}</dt>
+              <dd>{burn}</dd>
+            </div>
+          )}
+          {(toxic ?? 0) > 0 && (
+            <div className="hero-inspect-stat" data-testid={HERO_INSPECT_TOXIC} data-toxic={toxic}>
+              <dt>{t("Toxic")}</dt>
+              <dd>{toxic}</dd>
+            </div>
+          )}
+          {(tipsy ?? 0) > 0 && (
+            <div className="hero-inspect-stat" data-testid={HERO_INSPECT_TIPSY} data-tipsy={tipsy}>
+              <dt>{t("Tipsy")}</dt>
+              <dd>{tipsy}</dd>
+            </div>
+          )}
+          {marketCredits !== undefined && (
+            <div
+              className="hero-inspect-stat"
+              data-testid={HERO_INSPECT_CREDITS}
+              data-credits={marketCredits}
+            >
+              <dt>{t("Credits")}</dt>
+              <dd>{marketCredits}</dd>
+            </div>
+          )}
         </dl>
         {menu === "emotes" ? (
           <EmoteMenu inline side={side} hand={hand} gate={gate} onPick={onPick} onClose={modal.close} />

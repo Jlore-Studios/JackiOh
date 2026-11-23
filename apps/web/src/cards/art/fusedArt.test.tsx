@@ -15,7 +15,7 @@ import { baseView, emptySide, fusedDef, unit } from "../../test/fixtures.ts";
 import { DORMANT_STARSHIP_ID } from "../fused.ts";
 import { CardDefsProvider } from "../refContext.tsx";
 import { CardArt, type CardArtProps } from "./CardArt.tsx";
-import { artSubjectOf, MINER_IDS } from "./fusedArt.ts";
+import { artSubjectOf, fullScreenArtId, MINER_IDS } from "./fusedArt.ts";
 import { type ArtManifest } from "./manifest.ts";
 import { starshipArtOf } from "./starshipHulls.ts";
 import { starshipArtUri } from "./svg.ts";
@@ -256,5 +256,40 @@ describe("R3045000: a Starship keeps its own art", () => {
     const fused = fusedDef([hull, def(BEAM_V3), def(MINER_V2)]);
     const seen = looks(hull, fused, defsWith(fused));
     expect(seen.fusion).toEqual(seen.host);
+  });
+});
+
+describe("R3345000 fullScreenArtId", () => {
+  it("R3345000 a catalog card is its own art", () => {
+    expect(fullScreenArtId(POINTMASTER, null)).toBe(POINTMASTER);
+  });
+
+  it("R3345000 a Weapon fused onto a host resolves to the host", () => {
+    const fusion = fusedDef([def(BEAM_V3), def(POINTMASTER)]);
+    expect(fullScreenArtId(fusion.id, (id) => defsWith(fusion)[id])).toBe(POINTMASTER);
+    expect(fullScreenArtId(fusion.id, null)).toBe(POINTMASTER);
+  });
+
+  it("R3345000 a fusion of fusions resolves to the host", () => {
+    const inner = fusedDef([def(MINER_V2), def(POINTMASTER)], 1);
+    const outer = fusedDef([def(BEAM_V3), inner], 2);
+    const defs = defsWith(inner, outer);
+    expect(fullScreenArtId(outer.id, (id) => defs[id])).toBe(POINTMASTER);
+    expect(fullScreenArtId(outer.id, null)).toBe(POINTMASTER);
+  });
+
+  it("R3345000 a fusion of non-gear ingredients resolves to a catalog ingredient, never to null or itself", () => {
+    const fusion = fusedDef([def(STRATOS), def(OZARK)]);
+    const id = fullScreenArtId(fusion.id, (key) => defsWith(fusion)[key]);
+    expect(id).not.toBeNull();
+    expect(CATALOG[id ?? ""]).toBeDefined();
+  });
+
+  it("R3345000 a digest id hides its ingredients, so no art", () => {
+    expect(fullScreenArtId("t-9:#abcdef", null)).toBeNull();
+  });
+
+  it("R3345000 an id outside the catalog that is no fusion is left as it is", () => {
+    expect(fullScreenArtId("fixture-id", null)).toBe("fixture-id");
   });
 });

@@ -1,6 +1,9 @@
 //! C+ #19.3 Mid Loser (SPEC §8.7 row 19.3): Cry flips a coin (Lucky X: X more flips, heads kept): heads
 //! +{heads}/+{heads}; tails −{tails}/−{tails} and the opponent's next refresh is 1 higher. The coin is
-//! reported to both players before its buff, each Lucky flip with it (R2652001).
+//! reported to both players before its buff, each Lucky flip with it (R2652001). Its own Lucky counts
+//! wherever its Cry runs, a cast's resolving zone included (R1440, #3835). Base heads +3/+3,
+//! tails −3/−3; Radiant (Lucky 1) heads +6/+6, tails −3/−3 (heads +4/+4, tails −2/−2; Radiant heads
+//! +10/+10, tails −2/−2 until issue #3837).
 
 use jackioh_engine::prelude::*;
 
@@ -8,21 +11,41 @@ pub const ID: &str = "classicplus-019-3";
 
 // "your opponent gains 1 mana next turn": the declared number `oppMana` (R386), less being better.
 
-/// One coin, Lucky X times more, heads kept if any of them lands heads (R1440's `lucky_coin`), with
-/// every face it drew (R2652001).
-fn coin(ctx: &mut EffectContext<'_>) -> RollResult {
-    // R987: the controller's Luck flips extra times beside the card's own Lucky.
-    let lucky = match ctx.live_self() {
+/// R1440, R1438: the card's own Lucky, printed plus given, wherever its Cry runs: on the field, or in
+/// the resolving zone of a cast that found no open unit zone (R1).
+fn own_lucky(ctx: &EffectContext<'_>) -> i32 {
+    ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me))
+}
+
+/// R767000: through v0.6.4 its own Lucky counted only on the field, so a cast with no open unit zone
+/// flipped without it (#3835).
+fn own_lucky_v0_6_4(ctx: &EffectContext<'_>) -> i32 {
+    match ctx.live_self() {
         Some(me) if me.zone.z() == ZoneName::Field => {
             numbered_sum(&unit_view(&*ctx.state, me).keywords, KeywordKind::Lucky).unwrap_or(0)
         }
         _ => 0,
-    } + luck_of(&*ctx.state, ctx.controller);
+    }
+}
+
+/// One coin, Lucky X times more, heads kept if any of them lands heads (R1440's `lucky_coin`), with
+/// every face it drew (R2652001).
+fn coin(ctx: &mut EffectContext<'_>, own: fn(&EffectContext<'_>) -> i32) -> RollResult {
+    // R987: the controller's Luck flips extra times beside the card's own Lucky.
+    let lucky = own(ctx) + luck_of(&*ctx.state, ctx.controller);
     flip_coin(ctx, lucky)
 }
 
 fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    let coin = coin(ctx);
+    cry_with(ctx, own_lucky)
+}
+
+fn cry_v0_6_4(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    cry_with(ctx, own_lucky_v0_6_4)
+}
+
+fn cry_with(ctx: &mut EffectContext<'_>, own: fn(&EffectContext<'_>) -> i32) -> Vec<Effect> {
+    let coin = coin(ctx, own);
     // R2652001: the coin is shown before the buff it decided.
     let shown = report_rolls(RollKind::Coin, ROLL_COIN_SIDES, vec![coin.clone()]);
     if coin.heads() {
@@ -46,16 +69,26 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     ]
 }
 
-pub fn script() -> CardScripts {
+fn scripts(cry: fn(&mut EffectContext<'_>) -> Vec<Effect>) -> CardScripts {
     let base = Script {
         cry: Some(hook(cry)),
         ..Script::default()
     };
 
-    // The same script: the Radiant face's Lucky 1 and its heads 10 are catalog data the script reads.
+    // The same script: the Radiant face's Lucky 1 and its heads 6 are catalog data the script reads.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    scripts(cry)
+}
+
+/// R767000, #3835: through v0.6.4 the coin read the card's own Lucky only on the field;
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_4() -> CardScripts {
+    scripts(cry_v0_6_4)
 }
 
 // C+ #19.3 Mid Loser — SPEC §8.7 row 19.3, BUILD M9 Classic+ row C+ 19.3 (R1, R411).
@@ -150,8 +183,8 @@ mod tests {
 
         /// Seeded on the field, so no Cry has flipped (R1): the printed body alone.
         #[test]
-        fn base_enters_at_4_4_radiant_unchanged() {
-            for (radiant_face, size) in [(false, 4), (true, 8)] {
+        fn base_enters_at_3_3_radiant_at_6_6() {
+            for (radiant_face, size) in [(false, 3), (true, 6)] {
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": MID, "lane": 1, "radiant": radiant_face }], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -162,8 +195,8 @@ mod tests {
         }
 
         #[test]
-        fn heads_gives_4_4_on_the_base_face_and_10_10_on_the_radiant() {
-            for (radiant_face, lucky, heads) in [(false, 0, 4), (true, 1, 10)] {
+        fn heads_gives_3_3_on_the_base_face_and_6_6_on_the_radiant() {
+            for (radiant_face, lucky, heads) in [(false, 0, 3), (true, 1, 6)] {
                 let mut s = seeded(from_hand(radiant_face), |each| next_flip(each, lucky) == Flip::Heads);
                 s.play(MID, json!({}));
                 let me = mid(&s);
@@ -175,11 +208,11 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r1_played_from_a_hand_heads_4_4_permanently_and_the_opponent_gains_nothing() {
+            fn r1_played_from_a_hand_heads_3_3_permanently_and_the_opponent_gains_nothing() {
                 let mut s = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Heads);
                 s.play(MID, json!({}));
                 let me = mid(&s);
-                s.expect_stats(&me, json!({ "attack": 8, "health": 8, "maxHealth": 8 }));
+                s.expect_stats(&me, json!({ "attack": 6, "health": 6, "maxHealth": 6 }));
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 0);
             }
 
@@ -203,13 +236,41 @@ mod tests {
                 assert_eq!(flips(true), 2);
             }
 
+            /// R987, R767000: a game played through v0.5.11r folds Feng Shui under its kept script, "You have
+            /// Luck 1", and Mid Loser under its own: on its controller's side the coin flips once more.
             #[test]
-            fn r1_played_from_a_hand_tails_2_2_permanently_and_the_opponent_s_next_refresh_is_1_higher() {
+            fn r987_r767000_a_game_on_v0_5_11r_with_feng_shui_flips_its_coin_once_more() {
+                crate::register_all();
+                const FENG_SHUI: &str = "meditative-040"; // Feng Shui: "You have Luck 1" through v0.5.11r
+                let shipped = crate::shipped_catalog("v0.5.11r").expect("v0.5.11r is carried");
+                jackioh_engine::with_shipped(Some(shipped), || {
+                    let flips = |side: Option<PlayerId>| -> u32 {
+                        let backrow = |player: PlayerId| if side == Some(player) { json!([FENG_SHUI]) } else { json!([]) };
+                        let mut s = scenario(json!({
+                            "seed": "mid-loser-feng-shui",
+                            "p1": { "hand": [MID, FILLER], "backrow": backrow(P1), "library": DECK },
+                            "p2": { "hand": [FILLER], "backrow": backrow(P2), "library": DECK },
+                        }));
+                        let cursor = s.state().rng_cursor;
+                        s.play(MID, json!({}));
+                        s.state().rng_cursor - cursor
+                    };
+                    assert_eq!(flips(None), 1);
+                    assert_eq!(flips(Some(P1)), 2);
+                    assert_eq!(flips(Some(P2)), 1);
+                });
+            }
+
+            /// Tails' −3/−3 leaves the base face's 3/3 at 0/0: it dies at the state check (a token, it ceases
+            /// to exist, R11), and the opponent's mana comes all the same.
+            #[test]
+            fn r1_played_from_a_hand_tails_takes_3_3_which_destroys_the_3_3_and_the_opponent_s_next_refresh_is_1_higher() {
                 let mut s = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Tails);
                 let before = s.state().players[P2].mana.max;
+                let me = s.card(MID).clone();
                 s.play(MID, json!({}));
-                let me = mid(&s);
-                s.expect_stats(&me, json!({ "attack": 2, "health": 2, "maxHealth": 2 }));
+                s.expect_in_zone(&me, "gone");
+                assert!((1..=5).all(|lane| s.unit(P1, lane).is_none()), "no Mid Loser stands");
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 1);
                 s.end_turn();
                 assert_eq!(s.state().players[P2].mana.current, before + 1);
@@ -217,17 +278,17 @@ mod tests {
 
             #[test]
             fn s4_5_tails_on_a_damaged_mid_loser_can_kill_it_at_the_state_check_heads_saves_it() {
-                // The opponent's Tesla, its 4 stepped down to 3, answers the summon: a 4/4 left at 1 health.
+                // The base face's 3/3 dies to tails alone, so the Radiant face's 6/6 (Lucky 1) shows it: the
+                // opponent's Tesla answers the summon with 4, leaving it at 2 health.
                 let tesla = |seed: &str| -> Scenario {
-                    let mut s = scenario(json!({
+                    scenario(json!({
                         "seed": seed,
-                        "p1": { "hand": [MID, FILLER], "library": DECK },
+                        "p1": { "hand": [{ "def": MID, "radiant": true }, FILLER], "library": DECK },
                         "p2": { "hand": [FILLER], "library": DECK, "backrow": [{ "def": TESLA, "lane": 1, "faceUp": false }] },
-                    }));
-                    step_param(s.card_mut(TESLA), "damage", -1);
-                    s
+                    }))
                 };
-                let mut tails = seeded(tesla, |each| next_flip(each, 0) == Flip::Tails);
+                // Two tails: −3/−3 makes it a 3/3 holding 4 damage.
+                let mut tails = seeded(tesla, |each| next_flip(each, 1) == Flip::Tails);
                 let doomed = tails.card(MID).clone();
                 tails.play(MID, json!({}));
                 assert!(
@@ -239,14 +300,15 @@ mod tests {
                 tails.expect_in_zone(&doomed, "gone");
                 assert_eq!(tails.state().players[P2].mana.next_turn_mod, 1);
 
-                let mut heads = seeded(tesla, |each| next_flip(each, 0) == Flip::Heads);
+                // Heads: +6/+6 makes it a 12/12 holding 4 damage.
+                let mut heads = seeded(tesla, |each| next_flip(each, 1) == Flip::Heads);
                 heads.play(MID, json!({}));
                 let me = mid(&heads);
-                heads.expect_stats(&me, json!({ "attack": 8, "health": 5, "maxHealth": 8 }));
+                heads.expect_stats(&me, json!({ "attack": 12, "health": 8, "maxHealth": 12 }));
             }
 
             #[test]
-            fn r1_a_copy_flips_nothing_carnivorous_cube_s_copies_of_an_eaten_mid_loser_are_plain_4_4s() {
+            fn r1_a_copy_flips_nothing_carnivorous_cube_s_copies_of_an_eaten_mid_loser_are_plain_3_3s() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [CUBE, HIT_JOB, FILLER], "field": [{ "def": MID, "lane": 1 }], "mana": 6, "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -268,7 +330,7 @@ mod tests {
                     .collect();
                 assert_eq!(copies.len(), 2);
                 for copy in &copies {
-                    s.expect_stats(copy, json!({ "attack": 4, "health": 4 }));
+                    s.expect_stats(copy, json!({ "attack": 3, "health": 3 }));
                 }
                 assert_eq!(s.state().rng_cursor, cursor);
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 0);
@@ -288,22 +350,22 @@ mod tests {
                 );
                 s.play(LEAGUE, json!({}));
                 let third = unit_or_blank(&s, P1, 3);
-                s.expect_stats(&third, json!({ "attack": 8, "health": 8 }));
+                s.expect_stats(&third, json!({ "attack": 6, "health": 6 }));
             }
 
             #[test]
-            fn r386_heads_and_tails_read_through_param_an_upgrade_makes_heads_5_5_and_tails_1_1() {
+            fn r386_heads_and_tails_read_through_param_an_upgrade_makes_heads_4_4_and_tails_2_2() {
                 let mut heads = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Heads);
                 step_param(heads.card_mut(MID), "heads", 1);
                 heads.play(MID, json!({}));
                 let me = mid(&heads);
-                heads.expect_stats(&me, json!({ "attack": 9, "health": 9 }));
+                heads.expect_stats(&me, json!({ "attack": 7, "health": 7 }));
 
                 let mut tails = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Tails);
                 step_param(tails.card_mut(MID), "tails", -1);
                 tails.play(MID, json!({}));
                 let me = mid(&tails);
-                tails.expect_stats(&me, json!({ "attack": 3, "health": 3 }));
+                tails.expect_stats(&me, json!({ "attack": 1, "health": 1 }));
             }
 
             #[test]
@@ -327,15 +389,24 @@ mod tests {
 
             #[test]
             fn r2652001_base_one_coin_is_reported_before_its_buff() {
-                for (flip, face, size) in [(Flip::Heads, ROLL_HEADS, 8), (Flip::Tails, ROLL_TAILS, 2)] {
+                // Heads makes the 3/3 a 6/6; tails makes it 0/0, so it ceases to exist (R11).
+                for (flip, face, size) in [(Flip::Heads, ROLL_HEADS, Some(6)), (Flip::Tails, ROLL_TAILS, None)] {
                     let mut s = seeded(from_hand(false), |each| next_flip(each, 0) == flip);
+                    let card = s.card(MID).clone();
                     s.play(MID, json!({}));
                     assert_eq!(
                         reports(&s),
                         vec![(vec![RollResult { faces: vec![face], kept: 0 }], true)]
                     );
-                    let me = mid(&s);
-                    s.expect_stats(&me, json!({ "attack": size, "health": size }));
+                    match size {
+                        Some(size) => {
+                            let me = mid(&s);
+                            s.expect_stats(&me, json!({ "attack": size, "health": size }));
+                        }
+                        None => {
+                            s.expect_in_zone(&card, "gone");
+                        }
+                    }
                     for viewer in [P1, P2] {
                         let seen = s.view(viewer).events.iter().filter(|event| event.event_type() == GameEventType::Rolled).count();
                         assert_eq!(seen, 1, "{viewer} sees the coin");
@@ -356,23 +427,23 @@ mod tests {
             use super::*;
 
             #[test]
-            fn s6_1_lucky_1_tails_then_heads_is_heads_10_10() {
+            fn s6_1_lucky_1_tails_then_heads_is_heads_6_6() {
                 let mut s = seeded(from_hand(true), |each| {
                     let mut rng = Rng::new(&each.state().seed, each.state().rng_cursor);
                     !rng.coin() && rng.coin()
                 });
                 s.play(MID, json!({}));
                 let me = mid(&s);
-                s.expect_stats(&me, json!({ "attack": 18, "health": 18 }));
+                s.expect_stats(&me, json!({ "attack": 12, "health": 12 }));
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 0);
             }
 
             #[test]
-            fn s6_1_lucky_1_two_tails_is_tails_2_2_and_a_mana_for_the_opponent() {
+            fn s6_1_lucky_1_two_tails_is_tails_3_3_and_a_mana_for_the_opponent() {
                 let mut s = seeded(from_hand(true), |each| next_flip(each, 1) == Flip::Tails);
                 s.play(MID, json!({}));
                 let me = mid(&s);
-                s.expect_stats(&me, json!({ "attack": 6, "health": 6 }));
+                s.expect_stats(&me, json!({ "attack": 3, "health": 3 }));
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 1);
             }
 
@@ -424,6 +495,72 @@ mod tests {
             assert_eq!(crate::degrade_number(&mut s, MID, "oppMana"), 2);
             s.play(MID, json!({}));
             assert_eq!(s.state().players[P2].mana.next_turn_mod, 2);
+        }
+    }
+
+    /// #3835: a cast that finds every unit zone full still runs its Cry, from the resolving zone (R1).
+    mod a_cast_onto_a_full_board_r1440 {
+        use super::*;
+
+        /// p1's five unit zones full and a Radiant Mid Loser (Lucky 1) cast: the coin's faces and how
+        /// far the rng moved.
+        fn cast_radiant_onto_a_full_board() -> (Vec<RollResult>, u32) {
+            const UNIT: &str = "stand-in (1) 1/1";
+            let mut s = scenario(json!({
+                "seed": "mid-loser-cast-full",
+                "p1": { "hand": [FILLER], "field": [UNIT, UNIT, UNIT, UNIT, UNIT], "library": DECK },
+                "p2": { "hand": [FILLER], "library": DECK },
+            }));
+            let cursor = s.state().rng_cursor;
+            let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
+            let mut events: Vec<GameEvent> = Vec::new();
+            {
+                let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                {
+                    let mut ctx = make_context(
+                        &mut sink,
+                        None,
+                        HookOptions {
+                            controller: Some(P1),
+                            ..HookOptions::default()
+                        },
+                    );
+                    apply_effects(&[cast_new(json_as(json!({ "def": MID, "radiant": true })))], &mut ctx);
+                }
+                settle(&mut sink, SettleOptions::default());
+            }
+            s.state_mut().rng_cursor = rng.cursor();
+            let rolls: Vec<RollResult> = events
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::Rolled { rolls, def_id, .. } if def_id == MID => Some(rolls.clone()),
+                    _ => None,
+                })
+                .flatten()
+                .collect();
+            (rolls, s.state().rng_cursor - cursor)
+        }
+
+        /// R1440, R1438: the Lucky is the flipping card's own, printed plus given, wherever its Cry runs, so a
+        /// Radiant one cast with no open unit zone flips its coin twice, as it does from the field.
+        #[test]
+        fn r1440_a_radiant_one_cast_with_every_unit_zone_full_flips_its_coin_twice() {
+            let (rolls, moved) = cast_radiant_onto_a_full_board();
+            assert_eq!(rolls.len(), 1, "one coin");
+            assert_eq!(rolls[0].faces.len(), 2, "the coin and its Lucky flip");
+            assert_eq!(moved, 2);
+        }
+
+        /// R767000: a game played through v0.6.4 folds under the kept script, whose coin read the card's
+        /// own Lucky only on the field: there the same cast flips once.
+        #[test]
+        fn r767000_a_game_on_v0_6_4_flips_the_cast_s_coin_once() {
+            crate::under_kept(MID, script_v0_6_4(), || {
+                let (rolls, moved) = cast_radiant_onto_a_full_board();
+                assert_eq!(rolls.len(), 1, "one coin");
+                assert_eq!(rolls[0].faces.len(), 1, "no Lucky flip");
+                assert_eq!(moved, 1);
+            });
         }
     }
 }

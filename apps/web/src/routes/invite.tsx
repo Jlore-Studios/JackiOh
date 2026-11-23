@@ -33,7 +33,7 @@ import { AUTH_NOTICES, authMessageOf, resendConfirmation } from "../net/auth.ts"
 import { announceAccountChange, callWithRenewal, useAccount, type Account } from "../net/gate.ts";
 import { loginPath, navigate, paths } from "../net/navigate.ts";
 import { pendingEmailEntry } from "../net/session.ts";
-import { signOut, signOutLabel, useSigningOut } from "./account.tsx";
+import { signOut, signOutLabel, useSigningOut } from "../auth/signOut.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 import { Wordmark } from "./Wordmark.tsx";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
@@ -44,15 +44,10 @@ import "../auth/tavern.css";
 export const INVITE_CODE_INPUT = inviteTestid.input;
 export const INVITE_SUBMIT = inviteTestid.submit;
 export const INVITE_ERROR = inviteTestid.error;
-/** §9.4's circuit breaker is open: the screen says so instead of guessing after a 503. */
+/** The operator paused redemption (R4131000): the screen says so instead of guessing after a 503. */
 export const INVITE_PAUSED = inviteTestid.paused;
 /** An active account reached the code screen; redemption is not for it. */
 export const INVITE_NOT_NEEDED = inviteTestid.notNeeded;
-
-/** What the input shows for `raw`: R191's reading, grouped and separated per §9.4. */
-export function formatInviteCode(raw: string): string {
-  return readCodeInput(raw, INVITE_CODE_FORMAT).formatted;
-}
 
 /** `setTimeout`'s own ceiling (a signed 32-bit millisecond count); a longer wait fires at once. */
 const LONGEST_TIMER_MS = 2_147_483_647;

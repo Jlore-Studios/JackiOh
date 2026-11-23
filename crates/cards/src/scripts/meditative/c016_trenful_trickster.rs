@@ -213,15 +213,17 @@ mod tests {
             assert_eq!(set[0].1, 5);
         }
 
+        /// R3563000: one end of turn is one run, so its two picks are two different traps while the pool
+        /// lasts (R60's repeats no longer stand for a card an effect generates).
         #[test]
-        fn r60_the_two_picks_may_repeat() {
-            let repeated = (0..400).any(|n| {
+        fn r3563000_the_two_picks_are_distinct_until_the_pool_runs_out() {
+            for n in 0..400 {
                 let mut s = board(&format!("trickster-repeat-{n}"), true, 0, false);
                 s.end_turn();
                 let set = picks(&s);
-                set.len() == 2 && set[0].0 == set[1].0
-            });
-            assert!(repeated, "no seed in 0..400 set the same Trap twice");
+                assert_eq!(set.len(), 2, "seed {n}: {set:?}");
+                assert_ne!(set[0].0, set[1].0, "seed {n} set the same Trap twice: {set:?}");
+            }
         }
     }
 }

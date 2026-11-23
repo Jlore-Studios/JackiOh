@@ -56,7 +56,7 @@ fn duos_json(input: Value) -> Result<Value> {
 
 /// Folds one game's JSON: a co-op `{options, log}` through `duos_json`, else `FoldArgs`'s shape under
 /// its pinned catalog; answers `{"hash", "errors"}`.
-fn replay_json(input: Value) -> Result<Value> {
+pub(crate) fn replay_json(input: Value) -> Result<Value> {
     if input.get("options").is_some() {
         return duos_json(input);
     }

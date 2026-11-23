@@ -11,11 +11,11 @@ import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 
 import { getFxSettings, normalizeSpeed } from "../../fx/settings.ts";
 import { readSettings } from "../../settings/index.ts";
-import { IDLE, isBuilding, type Interaction } from "../actions.ts";
+import { IDLE, boardKeyOf, isBuilding, type Interaction } from "../actions.ts";
 import { currentCardMotion } from "../cardMotion.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef } from "../catalog.ts";
 import { byTestid, testid, type ClickTarget } from "../contract.ts";
-import { liveFace } from "../faces.ts";
+import { useLiveFace } from "../faces.ts";
 import BlockedMark, { type Blocked } from "./BlockedMark.tsx";
 import { dragCue } from "./cues.ts";
 import { setLanding } from "./landing.ts";
@@ -56,6 +56,8 @@ type Flight = {
   reticle: Box | null;
   /** #3347: how far the ghost leans, in degrees: by how fast the pointer moves, flat once it rests. */
   tilt: number;
+  /** #2924: `boardKeyOf` the board it was lifted on; `Game` drops the build once the board moves on. */
+  liftedOn: string;
 };
 
 /** `released` is where the dragged card was when the pointer let go: the stand-in's flight starts there (#3347). */
@@ -82,6 +84,8 @@ const ARROW_HEAD_NOTCH_PX = 9;
 const ARROW_BEND_SHARE = 0.22;
 const ARROW_BEND_MAX_PX = 90;
 const ARROW_GLOW_BLUR_PX = 4;
+/** The marching dots are this many copies of the shaft, each one quarter of a dash period on and shown for a quarter of the loop (drag.css; R3608000): a path moves by transform nowhere, so the march is steps of opacity. */
+const PULSE_PHASES = [0, 1, 2, 3] as const;
 const ARROW_GLOW_MARGIN_PX = 40;
 
 function round(n: number): number {
@@ -254,6 +258,11 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       setDrawn(null);
     }
 
+    /** #2924: the board shows another turn, seat or viewer than the one the flight was lifted on. */
+    function movedOn(ending: Flight): boolean {
+      return boardKeyOf(latest.current.view) !== ending.liftedOn;
+    }
+
     /**
      * Back to idle with nothing sent, or (R658) to the build a drag lifted again from its picks. A
      * press that never became a drag is simply forgotten.
@@ -261,6 +270,11 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
     function cancel(): void {
       if (flight === null) {
         press = null;
+        return;
+      }
+      if (movedOn(flight)) {
+        // R658, #2924: as a release would, it restores no build of a board Game has moved on from.
+        stopDragging(false);
         return;
       }
       const missed = flight.plan.missed ?? IDLE;
@@ -366,6 +380,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         spot,
         reticle: reticleFor(spot),
         tilt: 0,
+        liftedOn: boardKeyOf(view),
       };
       tracker = createTiltTracker(() => performance.now());
       tracker.move(pointer.x);
@@ -376,6 +391,12 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
     function onPointerUp(event: PointerEvent): void {
       if (flight !== null) {
         if (event.pointerId !== flight.pointerId) return;
+        if (movedOn(flight)) {
+          // R658, #2924: the board moved on and Game dropped the build, so this release sends and
+          // restores nothing, as a click on the board it shows now sends nothing.
+          stopDragging(false);
+          return;
+        }
         const { view, legal, onInteraction, onAction, onBlocked } = latest.current;
         const spot = spotAt(flight.plan, event.clientX, event.clientY);
         const result = resolveDrop(view, legal, flight.plan, spot);
@@ -636,7 +657,10 @@ function DragGhost(props: {
 }): ReactElement {
   const info = useCardInfo(props.card?.defId ?? "", props.card?.radiant ?? false);
   const copied = useCopiedDef(props.card);
-  const face = props.card === null ? null : liveFace(info, props.card, copied === undefined ? {} : { copied });
+  // #3609: the face memoized on the card's object, so a pointer move, which draws the ghost anew, crosses
+  // into the engine for none (faces.ts, `useLiveFace`).
+  const model = useLiveFace(info, props.card, copied === undefined ? {} : { copied });
+  const face = props.card === null ? null : model;
   const text = face === null ? info.text : face.text.full;
   const stats = face === null ? (info.attack === undefined || info.health === undefined ? null : { attack: info.attack, health: info.health }) : face.stats;
   const style: CSSProperties & Record<`--${string}`, string> = { left: props.at.x, top: props.at.y };
@@ -772,7 +796,9 @@ function DragArrow(props: {
       <g className="drag-arrow-lit" filter="url(#drag-arrow-glow)">
         <path className="drag-arrow-shaft" d={shaft} />
         <path className="drag-arrow-core" d={shaft} />
-        <path className="drag-arrow-pulse" d={shaft} />
+        {PULSE_PHASES.map((phase) => (
+          <path key={phase} className="drag-arrow-pulse" data-phase={phase} d={shaft} />
+        ))}
         {withHead ? <polygon className="drag-arrow-head" points={tip} /> : null}
       </g>
       <circle className="drag-arrow-origin" cx={round(from.x)} cy={round(from.y)} r={7} />

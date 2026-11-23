@@ -116,10 +116,30 @@ function nearOf(cf: HTMLElement): HTMLElement | null {
   return cf.querySelector<HTMLElement>(".cf-art-frame > .cf-immersive > .cf-art--near");
 }
 
+/**
+ * Every `selector { body }` pair of `css` (#4009: `/([^{}]*)\{([^{}]*)\}/g` scans super-linearly on a
+ * long brace-free run); the selector may be empty.
+ */
+function rulePairs(css: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = css.split("}");
+  if (!css.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
+}
+
 /** Every rule of `css` whose selector matches `pattern`: its selector (comments dropped) and declarations. */
 function rulesMatching(css: string, pattern: RegExp): { selector: string; body: string }[] {
-  return [...css.matchAll(/([^{}]*)\{([^{}]*)\}/g)]
-    .map((match) => ({ selector: (match[1] ?? "").replace(/\/\*[^]*?\*\//g, "").trim(), body: match[2] ?? "" }))
+  return rulePairs(css)
+    .map(([selector, body]) => ({ selector: selector.replace(/\/\*[^]*?\*\//g, "").trim(), body }))
     .filter((rule) => pattern.test(rule.selector));
 }
 
@@ -470,7 +490,8 @@ describe("R2944002 R3015000 the levels of part 5's variants", () => {
     }
     // The chrome banner on a base face alone, its name at AA contrast against every stop of its chrome.
     const banner = bodyOf(cardsCss, '.cf[data-version="version-prismatic"]:not([data-radiant-face="true"]) .card-name');
-    const backdrop = /(?:^|[;\s])background:\s*([^;]*);/.exec(banner)?.[1] ?? "";
+    // No `\s*` before the capture (#4009): it trades characters with `[^;]*` super-linearly.
+    const backdrop = (/(?:^|[;\s])background:([^;]*);/.exec(banner)?.[1] ?? "").trimStart();
     const stops = [...backdrop.matchAll(/var\((--pal-[a-z0-9-]+)\)/g)].map((match) => PALETTE.get(match[1] ?? "") ?? "");
     const ink = PALETTE.get(/(?:^|[;\s])color:\s*var\((--pal-[a-z0-9-]+)\);/.exec(banner)?.[1] ?? "") ?? "";
     expect(stops.length).toBeGreaterThan(1);

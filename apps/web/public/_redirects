@@ -24,8 +24,6 @@
 /practice /practice/ 200
 /privacy /privacy/ 200
 /terms /terms/ 200
-/accessibility /accessibility/ 200
-/ai /ai/ 200
 /copyright /copyright/ 200
 /patch-notes /patch-notes/ 200
 /almanac /almanac/ 200
@@ -54,3 +52,9 @@
 /watch/:id/ / 200
 /duos/:id / 200
 /duos/:id/ / 200
+/lobby/:id / 200
+/lobby/:id/ / 200
+/daily / 200
+/daily/ / 200
+/daily/:id / 200
+/daily/:id/ / 200

@@ -1,36 +1,49 @@
 //! Meditative #19.1 Temporal Rift (SPEC §8.8 row 19.1, SPEC §7). (1) Spell, Token (printed Epic); it
 //! cost (2) until patch v0.3.13 (#1194) and (0) until #2657.
-//!   Base:    "Take an extra turn after this one. You can take only one extra turn from Temporal Rift
-//!             each game."
+//!   Base:    "Take an extra turn after this one. Gain {mana} mana. You can take only one extra turn from
+//!             Temporal Rift each game." (mana 1)
 //!   Radiant: "Take an extra turn after this one. Gain {mana} mana and {nextMana} mana next turn. Draw
-//!             {draw} cards. You can take only one extra turn from Temporal Rift each game."
+//!             {draw} cards. You can take only one extra turn from Temporal Rift each game." (mana 3)
 //!
 //! ME-TURN's extra turns (R845–R847): `take_extra_turn` owes the caster one unless their
 //! once-a-game Rift flag is set, and sets it. A later Rift resolves its other effects and grants no
-//! turn. The Radiant face's riders are temporary mana now, #24's next-turn rider (landing on the
-//! extra turn) and a draw.
+//! turn. Both faces gain temporary mana now, the declared `mana` (issue #3951 gave the base face its 1
+//! and the Radiant face 1 more than its 2; through v0.6.4c only the Radiant face gained, which
+//! `script_v0_6_4c` keeps for those replays, R767000); the Radiant face adds #24's next-turn rider
+//! (landing on the extra turn) and a draw.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-019-1";
 
-fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    let mut effects = vec![take_extra_turn(json_as(json!({ "rift": true })))];
-    if ctx.radiant {
-        effects.push(gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") }))));
-        effects.push(next_turn_mana(json_as(json!({ "amount": param(&*ctx, "nextMana") }))));
-        effects.push(draw(json_as(json!({ "count": param(&*ctx, "draw") }))));
-    }
-    effects
-}
-
-pub fn script() -> CardScripts {
+/// `base_gains`: whether the base face gains its `mana` too (since issue #3951).
+fn rift(base_gains: bool) -> CardScripts {
     let base = Script {
-        cry: Some(hook(cry)),
+        cry: Some(hook(move |ctx| {
+            let mut effects = vec![take_extra_turn(json_as(json!({ "rift": true })))];
+            if ctx.radiant || base_gains {
+                effects.push(gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") }))));
+            }
+            if ctx.radiant {
+                effects.push(next_turn_mana(json_as(json!({ "amount": param(&*ctx, "nextMana") }))));
+                effects.push(draw(json_as(json!({ "count": param(&*ctx, "draw") }))));
+            }
+            effects
+        })),
         ..Script::default()
     };
     let radiant = base.clone();
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    rift(true)
+}
+
+/// R767000: the scripts through v0.6.4c, whose base face gained no mana (issue #3951). `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_6_4c() -> CardScripts {
+    rift(false)
 }
 
 // Meditative #19.1 Temporal Rift — SPEC §8.8 row 19.1, SPEC §7, BUILD M10 row M 19.1.
@@ -71,13 +84,24 @@ mod tests {
     mod base {
         use super::*;
 
+        /// Issue #3951: it costs (1) and gives the 1 back the turn it is played.
         #[test]
-        fn costs_1_and_a_play_spends_1() {
+        fn costs_1_and_gains_1_mana_back() {
             crate::register_all();
             assert_eq!(crate::card_def(RIFT).cost, CardCost::Fixed(1));
             let mut s = board(json!([RIFT, FILLER]));
             s.play(RIFT, json!({}));
-            s.expect_mana(P1, 9);
+            s.expect_mana(P1, 10);
+        }
+
+        /// R767000: through v0.6.4c the base face gained no mana (issue #3951).
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_4c_gains_no_mana_on_the_base_face() {
+            crate::under_kept(RIFT, super::super::script_v0_6_4c(), || {
+                let mut s = board(json!([RIFT, FILLER]));
+                s.play(RIFT, json!({}));
+                s.expect_mana(P1, 9);
+            });
         }
 
         #[test]
@@ -208,9 +232,9 @@ mod tests {
             let library = s.state().players.p1.library.len();
             s.play(&shiny.id, json!({}));
             assert_eq!(s.state().players.p1.extra_turns, Some(1), "no second grant");
-            // Its riders still resolve: 2 drawn, 2 mana gained (10 - 1 - 1 + 2).
+            // Its riders still resolve: 2 drawn, 3 mana gained (10 - 1 + 1 - 1 + 3).
             assert_eq!(s.state().players.p1.library.len(), library - 2);
-            assert_eq!(s.state().players.p1.mana.current, 10);
+            assert_eq!(s.state().players.p1.mana.current, 12);
             s.end_turn();
             assert_eq!(s.state().active, P1);
             s.end_turn();
@@ -247,19 +271,19 @@ mod tests {
         use super::*;
 
         #[test]
-        fn radiant_gains_2_now_2_on_the_extra_turn_and_draws_2() {
+        fn radiant_gains_3_now_2_on_the_extra_turn_and_draws_2() {
             crate::register_all();
             let def = crate::card_def(RIFT);
-            for (key, value) in [("mana", 2), ("nextMana", 2), ("draw", 2)] {
+            for (key, base, radiant) in [("mana", 1, 3), ("nextMana", 2, 2), ("draw", 2, 2)] {
                 let param = def.params.as_ref().expect("params").iter().find(|entry| entry.key == key).expect("the param");
-                assert_eq!((param.base, param.radiant), (value, value), "for {key}");
+                assert_eq!((param.base, param.radiant), (base, radiant), "for {key}");
             }
             let mut s = board(json!([{ "def": RIFT, "radiant": true }]));
             s.state_mut().players.p1.mana.current = 2;
             let hand = s.hand(P1).len();
             s.play(RIFT, json!({}));
-            // (1), then 2 now and 2 drawn, the Rift itself leaving the hand.
-            assert_eq!(s.state().players.p1.mana.current, 3);
+            // (1), then 3 now and 2 drawn, the Rift itself leaving the hand.
+            assert_eq!(s.state().players.p1.mana.current, 4);
             assert_eq!(s.hand(P1).len(), hand + 2 - 1);
             // The next-turn 2 lands on the extra turn's refresh.
             s.end_turn();
@@ -277,7 +301,7 @@ mod tests {
             }
             let hand = s.hand(P1).len();
             s.play(RIFT, json!({}));
-            assert_eq!(s.state().players.p1.mana.current, 4);
+            assert_eq!(s.state().players.p1.mana.current, 5);
             assert_eq!(s.hand(P1).len(), hand + 3 - 1);
             s.end_turn();
             assert_eq!(s.state().active, P1);

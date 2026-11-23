@@ -1,12 +1,14 @@
 // R2521001 (issue #2521): `damage_all`'s weighted roll, `odds` and `lucky` (Stinkyscape #53, #57, #61
 // Flak). With `odds`, each target rolls its own amount just before its hit, the units in `cardsInScope`
 // order and then the heroes, as Hearthstone's Lightning Storm rolls each minion apart; Lucky X rolls each
-// X more times and keeps the highest (§6.1). Without `odds` the sweep draws nothing. The fixture ids
-// (`odds-`, indexed from 252100) collide with no other file's.
+// X more times and keeps the highest (§6.1). Without `odds` the sweep draws nothing. R3559000 (issue
+// #3559, S+ #35 Scatter): with `keywordInstead`, a Unit that has the keyword takes the stated amount in
+// place of its roll and draws nothing. The fixture ids (`odds-`, indexed from 252100) collide with no
+// other file's.
 
 use std::collections::BTreeSet;
 
-use jackioh_engine::effects::{DamageAllArgs, DamageOdds, damage_all};
+use jackioh_engine::effects::{DamageAllArgs, DamageOdds, KeywordDamage, damage_all};
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
@@ -42,6 +44,10 @@ const FLAK: &str = "odds-flak";
 const WALL: &str = "odds-wall";
 /// A 1/1 Unit with no text, to draw.
 const PLAIN: &str = "odds-plain";
+/// A 0/40 Unit whose printed keywords are Flying: R3559000's sweep deals it the stated amount.
+const FLYER: &str = "odds-flyer";
+/// What a Flying Unit takes in R3559000's sweep, in place of a roll (Scatter's `damage2`).
+const FLYER_AMOUNT: i32 = 8;
 
 fn card(index: u32, id: &str, stats: (i32, i32), radiant_keywords: Value) -> CardDef {
     let (attack, health) = stats;
@@ -58,6 +64,13 @@ fn card(index: u32, id: &str, stats: (i32, i32), radiant_keywords: Value) -> Car
         "base": { "attack": attack, "health": health, "keywords": [], "text": id },
         "radiant": { "attack": 2 * attack, "health": 2 * health, "keywords": radiant_keywords, "text": id },
     }))
+}
+
+/// `card`, with `Flying` among its printed (base) keywords.
+fn flying_card(index: u32, id: &str, stats: (i32, i32)) -> CardDef {
+    let mut def = card(index, id, stats, json!([]));
+    def.base.keywords = vec![Keyword::Flying];
+    def
 }
 
 /// The flak's Activate, written as a card script writes it: the odds and the card's Lucky stated.
@@ -96,6 +109,7 @@ fn register_odds_fixtures() {
         ),
         card(252101, WALL, (0, 40), json!([])),
         card(252102, PLAIN, (1, 1), json!([])),
+        flying_card(252103, FLYER, (0, 40)),
     ] {
         catalog.insert(def.id.clone(), def);
     }
@@ -358,5 +372,94 @@ mod r2521001_without_odds_nothing_changes {
         assert_eq!(args.lucky, Some(RADIANT_LUCKY));
         assert_eq!(round_trip(&args), args);
         assert_eq!(json_of(&args)["odds"][2], json!({ "amount": 3, "weight": 10 }));
+    }
+}
+
+mod r3559000_a_keyword_takes_its_own_amount {
+    use super::*;
+
+    /// The sweep S+ #35 Scatter makes: each enemy rolls over `ODDS`, a Flying Unit takes
+    /// `FLYER_AMOUNT` instead, and the hero is hit too.
+    fn scatter(with_odds: bool) -> Effect {
+        let mut args = json!({
+            "amount": PLAIN_AMOUNT,
+            "side": "enemy",
+            "heroes": true,
+            "keywordInstead": { "keyword": "Flying", "amount": FLYER_AMOUNT },
+        });
+        if with_odds {
+            args["odds"] = json!(ODDS);
+        }
+        damage_all(json_as(args))
+    }
+
+    /// p2's WALL in lane 1 and FLYER in lane 2.
+    fn wall_and_flyer(seed: &str) -> (GameState, [CardInstance; 2]) {
+        let mut state = new_game(seed, None);
+        register_odds_fixtures();
+        let wall = put(&mut state, WALL, slot(P2, Row::Units, 1), json!({}));
+        let flyer = put(&mut state, FLYER, slot(P2, Row::Units, 2), json!({}));
+        (state, [wall, flyer])
+    }
+
+    #[test]
+    fn r3559000_a_flying_unit_takes_the_stated_amount_and_draws_no_roll() {
+        for seed in 0..SEEDS {
+            let (mut state, [wall, flyer]) = wall_and_flyer(&format!("r3559000-flying-{seed}"));
+            let mut rng = Rng::new(&state.seed, state.rng_cursor);
+            let expected = vec![
+                (wall.id.clone(), read_roll(&mut rng)),
+                (flyer.id.clone(), FLYER_AMOUNT),
+                ("hero-p2".to_string(), read_roll(&mut rng)),
+            ];
+            let start = state.rng_cursor;
+            let hits = damage_hits(&run_effect(&mut state, scatter(true), P1));
+            assert_eq!(hits, expected, "the flyer takes 8 between two rolls");
+            assert_eq!(
+                state.rng_cursor,
+                rng.cursor(),
+                "the wall and the hero each draw a roll, the flyer none"
+            );
+            assert_eq!(rng.cursor() - start, 2, "two draws in all");
+        }
+    }
+
+    #[test]
+    fn r3559000_without_odds_the_keyword_still_swaps_the_amount() {
+        let (mut state, [wall, flyer]) = wall_and_flyer("r3559000-plain");
+        let cursor = state.rng_cursor;
+        let hits = damage_hits(&run_effect(&mut state, scatter(false), P1));
+        assert_eq!(
+            hits,
+            vec![
+                (wall.id.clone(), PLAIN_AMOUNT),
+                (flyer.id.clone(), FLYER_AMOUNT),
+                ("hero-p2".to_string(), PLAIN_AMOUNT),
+            ]
+        );
+        assert_eq!(state.rng_cursor, cursor, "no draw");
+    }
+
+    #[test]
+    fn r3559000_the_args_without_the_keyword_write_no_new_key_and_the_keyword_round_trips() {
+        let plain: DamageAllArgs = json_as(json!({ "amount": PLAIN_AMOUNT, "side": "enemy" }));
+        assert!(plain.keyword_instead.is_none());
+        assert_eq!(
+            json_of(&plain),
+            json!({ "amount": PLAIN_AMOUNT, "side": "enemy" })
+        );
+        let args: DamageAllArgs = json_as(json!({
+            "amount": PLAIN_AMOUNT,
+            "side": "enemy",
+            "keywordInstead": { "keyword": "Flying", "amount": FLYER_AMOUNT },
+        }));
+        assert_eq!(
+            args.keyword_instead,
+            Some(KeywordDamage {
+                keyword: KeywordKind::Flying,
+                amount: FLYER_AMOUNT
+            })
+        );
+        assert_eq!(round_trip(&args), args);
     }
 }

@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { RECONNECT_DELAYS_MS, SILENT_SOCKET_MS, type Timers } from "../game/net.ts";
+import { RECONNECT_DELAYS_MS, SILENT_SOCKET_MS, type SocketFactory, type Timers } from "../game/net.ts";
 import { serverSocketUrl } from "../net/api.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
 import { fakeSockets, type FakeSocket } from "../test/fakeSocket.ts";
@@ -27,9 +27,20 @@ type Harness = {
   wake: () => void;
 };
 
-/** `retryOnDown`: `onLive(false)` asks the socket to retry, as `socialPoll.ts`'s poll does through its tick. */
-function harness(token: string | null = "tok-a", { retryOnDown = false }: { retryOnDown?: boolean } = {}): Harness {
-  const { factory, sockets } = fakeSockets();
+/**
+ * `retryOnDown`: `onLive(false)` asks the socket to retry, as `socialPoll.ts`'s poll does through its tick.
+ * `failOpens`: how many of the first opens the browser refuses to construct, as `game/net.test.ts`'s does.
+ */
+function harness(token: string | null = "tok-a", { retryOnDown = false, failOpens = 0 }: { retryOnDown?: boolean; failOpens?: number } = {}): Harness {
+  const { factory: fakeFactory, sockets } = fakeSockets();
+  let refusals = failOpens;
+  const factory: SocketFactory = (url, protocols) => {
+    if (refusals > 0) {
+      refusals -= 1;
+      throw new Error("the browser refused to construct the socket");
+    }
+    return fakeFactory(url, protocols);
+  };
   let scheduled: { id: number; run: () => void }[] = [];
   const delays: number[] = [];
   let nextId = 1;
@@ -296,6 +307,84 @@ describe("R3214000 the social socket", () => {
     expect(h.pending(), "the stale socket's close is not heard").toBe(0);
   });
 
+  it("R3214000 a restart's drain (1001) and a server fault (1011) are drops", () => {
+    const h = live("tok-a");
+    h.socket().drop(1001, "server restarting");
+    expect(h.pending(), "the drain's close: the backoff").toBe(1);
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+    expect(tokenFromProtocols(h.socket().protocols)).toBe("tok-a");
+
+    h.socket().open();
+    h.socket().drop(1011, "internal error");
+    expect(h.pending(), "a server fault: the backoff too").toBe(1);
+    h.runTimers();
+    expect(h.sockets).toHaveLength(3);
+    expect(h.lives).toEqual([true, false]);
+  });
+
+  it("R3214000 a drop while the wake probe waits cancels it, and a wake while the drop's step waits opens nothing before the step", () => {
+    const h = live("tok-a");
+    h.now(2 * SILENT_SOCKET_MS + 1);
+    h.wake();
+    expect(h.socket().frames()).toEqual([{ type: "hello" }]);
+    expect(h.pending(), "the probe waits").toBe(1);
+
+    h.socket().drop(1006);
+    expect(h.pending(), "the probe is cancelled; only the drop's step waits").toBe(1);
+    expect(h.delays().at(-1)).toBe(RECONNECT_DELAYS_MS[0]);
+
+    h.now(4 * SILENT_SOCKET_MS);
+    h.wake();
+    expect(h.sockets, "a wake with no socket opens nothing").toHaveLength(1);
+    expect(h.pending()).toBe(1);
+    h.runTimers();
+    expect(h.sockets, "the step opens the next one").toHaveLength(2);
+    expect(h.pending()).toBe(0);
+  });
+
+  it("R3214000 a socket that never opened, or is already closing, is replaced at once when the page wakes (R1441)", () => {
+    const h = harness("tok-a");
+    const connecting = h.socket();
+    h.now(SILENT_SOCKET_MS + 1);
+    h.wake();
+    expect(connecting.closedWith).toEqual({ code: 1000, reason: "no answer" });
+    expect(connecting.sent, "no probe for a socket that never opened").toEqual([]);
+    expect(h.sockets).toHaveLength(2);
+
+    h.socket().open();
+    h.socket().deliver(SOCIAL);
+    const closing = h.socket();
+    closing.readyState = 2;
+    h.now(3 * SILENT_SOCKET_MS);
+    h.wake();
+    expect(closing.closedWith).toEqual({ code: 1000, reason: "no answer" });
+    expect(closing.sent, "nor for one the browser is closing").toEqual([]);
+    expect(h.sockets).toHaveLength(3);
+    expect(h.pending()).toBe(0);
+    expect(h.lives).toEqual([true, false]);
+  });
+
+  it("R3214000 a socket the browser cannot construct is retried on the backoff", () => {
+    const h = harness("tok-a", { failOpens: 2 });
+    expect(h.sockets, "the first open threw").toHaveLength(0);
+    expect(h.pending()).toBe(1);
+    h.client.retry();
+    expect(h.sockets, "a retry waits for the step").toHaveLength(0);
+    h.runTimers();
+    expect(h.sockets, "so did the second").toHaveLength(0);
+    h.runTimers();
+    expect(h.sockets).toHaveLength(1);
+    expect(h.delays()).toEqual([RECONNECT_DELAYS_MS[0], RECONNECT_DELAYS_MS[1]]);
+    expect(h.lives, "never live, so never said down").toEqual([]);
+  });
+
+  it("a frame with proto keys does not pollute (#4015)", () => {
+    expect(parseSocialPush('{"type":"friends","__proto__":{"polluted":true}}')).toEqual({ kind: "friends" });
+    expect(parseSocialPush('{"type":"nope","constructor":{"prototype":{"polluted":true}}}')).toBeNull();
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
   it("R3214000 reads social, chat and friends frames and nothing else", () => {
     expect(parseSocialPush(JSON.stringify(SOCIAL))).toEqual({ kind: "social", read: { incoming: [], outgoing: [], unread: { "f-ann": 2 } } });
     expect(parseSocialPush(JSON.stringify({ type: "chat", friendId: "f-ann" }))).toEqual({ kind: "chat", friendId: "f-ann" });
@@ -313,6 +402,64 @@ describe("R3214000 the social socket", () => {
       null,
     ]) {
       expect(parseSocialPush(other), String(other)).toBeNull();
+    }
+  });
+
+  it("R3730000 R3730005 reads a lobby's word and a friend's lobby invite, and nothing malformed", () => {
+    expect(parseSocialPush(JSON.stringify({ type: "lobby", code: "K7Q2XM" }))).toEqual({ kind: "lobby", code: "K7Q2XM" });
+    const from = { profileId: "f-ann", username: "Ann#1" };
+    expect(parseSocialPush(JSON.stringify({ type: "lobbyInvite", code: "K7Q2XM", format: "coop", from }))).toEqual({
+      kind: "lobbyInvite",
+      code: "K7Q2XM",
+      format: "coop",
+      from,
+    });
+    for (const other of [
+      JSON.stringify({ type: "lobby" }),
+      JSON.stringify({ type: "lobbyInvite", code: "K7Q2XM", format: "trio", from }),
+      JSON.stringify({ type: "lobbyInvite", code: "K7Q2XM", format: "duel", from: { profileId: "f-ann" } }),
+      JSON.stringify({ type: "lobbyInvite", format: "duel", from }),
+    ]) {
+      expect(parseSocialPush(other), other).toBeNull();
+    }
+  });
+
+  it("R3731000 an invite to a 2v2 lobby parses", () => {
+    const from = { profileId: "f-ann", username: "Ann#1" };
+    expect(parseSocialPush(JSON.stringify({ type: "lobbyInvite", code: "K7Q2XM", format: "2v2", from }))).toEqual({
+      kind: "lobbyInvite",
+      code: "K7Q2XM",
+      format: "2v2",
+      from,
+    });
+  });
+
+  it("R4039000 a notification frame parses, and the social frame keeps the feed's unread count", () => {
+    const notification = {
+      id: 42,
+      kind: "dailyMove",
+      actor: { profileId: "f-ann", username: "Ann#1" },
+      subject: "m-1",
+      payload: {},
+      createdAt: 1_700_000_000_000,
+      read: false,
+    };
+    expect(parseSocialPush(JSON.stringify({ type: "notification", notification }))).toEqual({ kind: "notification", notification });
+    const gone = { ...notification, id: 43, kind: "replayShared", actor: null, subject: null };
+    expect(parseSocialPush(JSON.stringify({ type: "notification", notification: gone }))).toEqual({ kind: "notification", notification: gone });
+    expect(parseSocialPush(JSON.stringify({ ...SOCIAL, dailyWaiting: 1, notificationsUnread: 3 }))).toEqual({
+      kind: "social",
+      read: { incoming: [], outgoing: [], unread: { "f-ann": 2 }, dailyWaiting: 1, notificationsUnread: 3 },
+    });
+    for (const other of [
+      JSON.stringify({ type: "notification" }),
+      JSON.stringify({ type: "notification", notification: { ...notification, kind: "weather" } }),
+      JSON.stringify({ type: "notification", notification: { ...notification, id: "42" } }),
+      JSON.stringify({ type: "notification", notification: { ...notification, actor: { profileId: "f-ann" } } }),
+      JSON.stringify({ type: "notification", notification: { ...notification, payload: null } }),
+      JSON.stringify({ type: "notification", notification: { ...notification, read: "no" } }),
+    ]) {
+      expect(parseSocialPush(other), other).toBeNull();
     }
   });
 });

@@ -71,11 +71,14 @@ export const HAND_SPRING_MIN_PX = 2;
  * (`--card-h`); `game/cardSizes.test.ts` holds the two together. The desktop also keeps ten hand
  * cards side by side (B30): `(100cqw - widthFixedPx) / widthRows`, the width the 250px sidebar,
  * the column gap and nine `--gap`s leave. `base` is the one-column board of 601–760px, `tablet` the
- * upright tablet, `phone` the portrait phone and `landscape` the phone on its side.
+ * upright tablet, `tabletEnded` the upright tablet once the game has ended and the opponent's hand
+ * is face up, a hand card tall (R434, #4079: four field rows and both hands, 1.3 each), `phone` the
+ * portrait phone and `landscape` the phone on its side.
  */
 export const BOARD_CARD_BUDGET = {
   desktop: { minPx: 56, fixedPx: 203, rows: 5.48, maxPx: 119, widthFixedPx: 316, widthRows: 10.66 },
   tablet: { minPx: 60, fixedPx: 355, rows: 5.3, maxPx: 113 },
+  tabletEnded: { minPx: 60, fixedPx: 305, rows: 6.6, maxPx: 113 },
   base: { minPx: 60, fixedPx: 330, rows: 5.88, maxPx: 112 },
   phone: { minPx: 44, fixedPx: 330, rows: 5.24, maxPx: 94 },
   landscape: { minPx: 40, fixedPx: 28, rows: 4.73, maxPx: 72 },

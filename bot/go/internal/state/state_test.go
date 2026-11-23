@@ -108,7 +108,7 @@ func (f *fakeGitHub) CreateOrphanBranch(branch, path, text, message string, extr
 func TestUpdateMakesTheBranchAndReappliesALostRace(t *testing.T) {
 	g := newFake()
 	slept := 0
-	store := NewStateStore(g, "bot-state", "state.json", func(s float64) {
+	store := NewStateStore(g, "_bot-state", "state.json", func(s float64) {
 		if s < 0.05 || s > 0.3 {
 			t.Errorf("slept %v", s)
 		}
@@ -118,7 +118,7 @@ func TestUpdateMakesTheBranchAndReappliesALostRace(t *testing.T) {
 		t.Errorf("a missing branch loads the default: %s", pyjson.Dumps(got))
 	}
 	after := store.Update(func(s *pyjson.Object) any { Item(s, 12).Set("a", 1); return nil }, "state")
-	if !g.branches["bot-state"] || after.Obj("items").Obj("12").Int("a") != 1 {
+	if !g.branches["_bot-state"] || after.Obj("items").Obj("12").Int("a") != 1 {
 		t.Fatalf("first update: %s", pyjson.Dumps(after))
 	}
 	g.conflicts = 1
@@ -128,7 +128,7 @@ func TestUpdateMakesTheBranchAndReappliesALostRace(t *testing.T) {
 		!pyjson.Equal(after, loaded) {
 		t.Errorf("after a race: slept %d, %s", slept, pyjson.Dumps(loaded))
 	}
-	text, _ := g.GetFile("state.json", "bot-state")
+	text, _ := g.GetFile("state.json", "_bot-state")
 	if text != dump(loaded) {
 		t.Error("the file is the sorted, indented dump")
 	}
@@ -147,11 +147,11 @@ func TestUpdateMakesTheBranchAndReappliesALostRace(t *testing.T) {
 
 func TestAFileThatIsNotJSONStopsTheCaller(t *testing.T) {
 	g := newFake()
-	g.branches["bot-state"] = true
-	g.files[[2]string{"bot-state", "state.json"}] = [2]string{"{oops é", "sha1"}
-	store := NewStateStore(g, "bot-state", "state.json", nil)
+	g.branches["_bot-state"] = true
+	g.files[[2]string{"_bot-state", "state.json"}] = [2]string{"{oops é", "sha1"}
+	store := NewStateStore(g, "_bot-state", "state.json", nil)
 	exc, ok := herr.Catch[*herr.StateUnreadable](func() { store.Load() })
-	if !ok || exc.Msg != "state.json on bot-state is not JSON (7 characters read); left as it is" {
+	if !ok || exc.Msg != "state.json on _bot-state is not JSON (7 characters read); left as it is" {
 		t.Errorf("unreadable: %v", exc)
 	}
 	if _, ok := herr.Catch[*herr.StateUnreadable](func() {
@@ -159,7 +159,7 @@ func TestAFileThatIsNotJSONStopsTheCaller(t *testing.T) {
 	}); !ok || g.puts != 0 {
 		t.Error("an update never writes over an unreadable file")
 	}
-	g.files[[2]string{"bot-state", "state.json"}] = [2]string{"", "sha2"}
+	g.files[[2]string{"_bot-state", "state.json"}] = [2]string{"", "sha2"}
 	if _, ok := herr.Catch[*herr.StateUnreadable](func() { store.Load() }); !ok {
 		t.Error("an empty file that is there is not an empty state")
 	}

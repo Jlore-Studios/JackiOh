@@ -25,6 +25,8 @@ import { withCatalog } from "../test/board.tsx";
 import { baseView, emptySide, faceUpBackrow } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 import { CardFace, faceText } from "./CardFace.tsx";
+import { PREVIEW_TEXT_LIMIT } from "./constants.ts";
+import { overLimit } from "./fit.ts";
 import { questFaceText, questProgress, questWords, stageWords } from "../test/faceWords.ts";
 import { HOVER_DELAY_MS } from "./inspect/constants.ts";
 import { closeInspect } from "./inspect/store.ts";
@@ -530,7 +532,7 @@ describe("R2450000 a Quest card's face prints only the stage it stands at", () =
     expect(printed(HEIST, true)).toBe(
       `${HEIST_CRY.radiant}\nStage 1 of 3, Initiation. Quest: Make an Acclaimed Unit Radiant. Reward: Summon a random Radiant Acclaimed Unit.`,
     );
-    const upload = "Stage 1 of 3, Upload Resume. Quest: Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.";
+    const upload = "Stage 1 of 3, Upload Resume. Quest: Activate this to send a card from your hand in as your resume. Reward: Hear back in 1 to 2 turns.";
     for (const face of FACES) {
       expect(printed(JOB, face.radiant), face.label).toBe(`${JOB_HEAD[face.label]}\n${upload}`);
       // A card in hand is in a game but off the field: its view carries no quest line.
@@ -565,7 +567,7 @@ describe("R2450000 a Quest card's face prints only the stage it stands at", () =
   it("R2450000 waiting to hear back it says the turns left, and a finished line says Quest complete", () => {
     for (const face of FACES) {
       const buffs = face.radiant ? 10 : 5;
-      const interview = `Quest: One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it ${String(buffs)} times. It costs (0).`;
+      const interview = `Quest: One of three, drawn at random: play a card that costs the same as your resume; play 2 cards of different costs in one turn; or take or deal 8 or more damage in one hit. Reward: Add your resume to your hand and Buff it ${String(buffs)} times. It costs (0).`;
       expect(printed(JOB, face.radiant, HEARING), face.label).toBe(
         `${JOB_HEAD[face.label]}\nStage 2 of 3, The Interview, hearing back in 2 turns. ${interview}`,
       );
@@ -594,6 +596,19 @@ describe("R2450000 a Quest card's face prints only the stage it stands at", () =
     }
   });
 
+  it("R2450000 In Too Deep's box is its whole text, no stage: in play it prints less only past the hover preview's limit", () => {
+    // A tree's line is no short form, so the box clamps only where its words outrun PREVIEW_TEXT_LIMIT (#1017).
+    const first = questFace(ITD, false, FIRST);
+    expect(first.inPlay).toBe(true);
+    expect(first.questBox?.less).toBe(false);
+    expect(overLimit(first.questBox?.text.full ?? "", PREVIEW_TEXT_LIMIT)).toBe(false);
+    expect(faceText(first, undefined, false)).toMatchObject({ short: false, less: false });
+    const deeper = questFace(ITD, false, DEEPER);
+    expect(deeper.questBox?.less).toBe(false);
+    expect(overLimit(deeper.questBox?.text.full ?? "", PREVIEW_TEXT_LIMIT)).toBe(true);
+    expect(faceText(deeper, undefined, false)).toMatchObject({ short: false, less: true });
+  });
+
   it("R2450000 a Radiant face keeps its gold marks where they now stand", () => {
     const marked = (face: ReturnType<typeof questFace>): string[] => {
       const text = must(questFaceText(face), face.defId);
@@ -615,7 +630,7 @@ describe("R2450000 a Quest card's face prints only the stage it stands at", () =
     try {
       await setLocale("zh-CN");
       const death = "亡语：重新召唤这张牌，回到第1阶段。";
-      expect(printed(JOB, false)).toBe(`${death}\n第1/3阶段，上传简历。任务：激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：2到6个回合后收到回复。`);
+      expect(printed(JOB, false)).toBe(`${death}\n第1/3阶段，上传简历。任务：激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：1到2个回合后收到回复。`);
       expect(printed(JOB, true, INTERVIEW)).toBe(
         `幸运1\n${death}\n第2/3阶段，面试。任务：Play 3 cards of different costs in one turn（1/3）。奖励：将你的简历置入你的手牌并将其强化10次。其法力值消耗为(0)。`,
       );

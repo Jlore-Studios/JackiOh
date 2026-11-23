@@ -17,7 +17,8 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classic-012";
 
 fn targets() -> Vec<TargetDecl> {
-    vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }))]
+    // R3869003: a harmful Book, its aim declared (R656 reads an unset one as harm too).
+    vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] }, "aim": "harm" }))]
 }
 
 pub fn script() -> CardScripts {
@@ -54,7 +55,7 @@ mod tests {
     const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield";
     const ROCK: &str = "core-066"; // The Rock: Indestructible
     // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 8/8 since issue
-    // #3138, 10/10 from patch v0.3.10): a big body no Immutable keeps a Spell off (R781001).
+    // #3138, 10/10 from patch v0.3.10): a big body with no Immutable, which kept a Spell off until R4353001.
     const TEMPO: &str = "classicplus-026";
     const FILLER: &str = "core-005";
 

@@ -37,8 +37,10 @@ use crate::traps::{
     resume_event_to_traps, trap_controllers_of,
 };
 use crate::wire::{
-    GameEvent, GameEventType, HookKind, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, ZoneRef,
+    ActionType, GameEvent, GameEventType, HookKind, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, ZoneName,
+    ZoneRef,
 };
+use crate::work::engine_resume;
 
 /// The zones a card can hold a trigger from (§10.3). `library`: B5 E26's deck triggers (R464).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -102,12 +104,23 @@ pub const PLAY_WATCH: &str = "@playWatch";
 /// R1882004: the `hook` of a death watcher's queue entry (Stinkyscape #150 Call to Chaos, entry 8).
 pub const DEATH_WATCH: &str = "@deathWatch";
 
+/// R3570004: the `hook` of a launch watcher's queue entry (Stinkyscape+ #142 Call to Chaos, entry 8).
+pub const LAUNCH_WATCH: &str = "@launchWatch";
+
+/// R3536000, R3536003: the `hook` of an Evolve text's queued run (`evolution::begin`): one entry per
+/// run past the inline one, so a prompt in the text pauses the queue rather than dropping the rest.
+/// No card's trigger id starts with `@`.
+pub const EVOLVE_RUN: &str = "@evolve";
+
 /// How many times `settle` may go round before the board is called stuck (§10.3). Each pass resolves
 /// something, so the cap holds every trigger one legal action can set off, as R58 bounds it: #95 draws
 /// up to LIBRARY_CAP cards, each casting up to CAST_ON_DRAW_CHAIN_CAP, each a play (R70) every permanent
 /// on either side may answer (#33 Unstable Clone Machine). Derived from config (CLAUDE.md rule 9).
 pub const SETTLE_PASS_CAP: usize =
     (LIBRARY_CAP * CAST_ON_DRAW_CHAIN_CAP * (UNIT_ZONES + BACKROW_ZONES)) as usize * PLAYER_IDS.len();
+
+// R3925000: the loop cap trips before any loop that `SETTLE_PASS_CAP` bounds can reach its panic.
+const _: () = assert!(crate::config::RESOLUTION_EVENT_CAP < SETTLE_PASS_CAP);
 
 // 1. The registry.
 
@@ -215,6 +228,24 @@ fn creation_number(id: &str) -> i64 {
     }
 }
 
+/// `c17`'s place in creation order, oldest first, for walks over a library that must read the
+/// same in every seat's view (§9.1, R223): never library order, which is hidden from both players.
+fn sort_in_creation_order(cards: &mut Vec<&CardInstance>) {
+    // Stable (SURFACE §4.4.1).
+    cards.sort_by(|a, b| {
+        creation_number(&a.id)
+            .cmp(&creation_number(&b.id))
+            .then_with(|| a.id.cmp(&b.id))
+    });
+}
+
+/// The cards of `player`'s library, oldest first (`sort_in_creation_order`).
+pub(crate) fn library_in_creation_order(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
+    let mut cards: Vec<&CardInstance> = state.players[player].library.iter().collect();
+    sort_in_creation_order(&mut cards);
+    cards
+}
+
 /// B5 E26, R464: a library's holders, the cards whose running face declares `deckTriggers`, in creation
 /// order. Never library order: that is hidden from both players (§9.1, R223).
 fn library_holders(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
@@ -223,12 +254,7 @@ fn library_holders(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
         .iter()
         .filter(|card| !crate::scripts::script_of(state, *card).deck_triggers.is_empty())
         .collect();
-    // Stable (SURFACE §4.4.1).
-    cards.sort_by(|a, b| {
-        creation_number(&a.id)
-            .cmp(&creation_number(&b.id))
-            .then_with(|| a.id.cmp(&b.id))
-    });
+    sort_in_creation_order(&mut cards);
     cards
 }
 
@@ -241,8 +267,10 @@ fn holder_sites(state: &GameState, player: PlayerId) -> Vec<(&CardInstance, Trig
     }
     for slot in crate::zones::slots_of(player, Row::Backrow) {
         // R1081000: a Unit standing in the backrow is a holder above, among the active units, once.
+        // R3556000: a Dormant Field Spell's triggers are off (R1839000).
         if let Some(card) = crate::zones::card_at(state, slot)
             && !crate::zones::is_standing_unit(state, card)
+            && !crate::slumber::is_slumbering(card)
         {
             out.push((card, TriggerZone::Backrow));
         }
@@ -319,8 +347,10 @@ pub fn field_holders_where(state: &GameState, keep: impl Fn(&CardInstance) -> bo
             }
         }
         for slot in crate::zones::slots_of(player, Row::Backrow) {
+            // R3556000: a Dormant Field Spell's triggers are off (R1839000).
             if let Some(card) = crate::zones::card_at(state, slot)
                 && !crate::zones::is_standing_unit(state, card)
+                && !crate::slumber::is_slumbering(card)
                 && keep(card)
             {
                 out.push(holder_of(state, card, TriggerZone::Backrow, player));
@@ -559,6 +589,74 @@ pub fn queue_hook(sink: &mut EngineSink<'_>, holder: &TriggerHolder, hook: HookN
     entry
 }
 
+/// R3558007: the hook of a queued deck cast (`deck_cast::run_deck_cast`): a card whose
+/// `castFromDeckWhen` holds is cast from its owner's library at the settled point. Hidden (R177),
+/// as a library card is (§9.1).
+pub const DECK_CAST: &str = "@deckCast";
+
+/// R3558007: queue one deck cast of `card`, built like `queue_evolve_run`'s entry: the run answers
+/// for the card's owner (R453).
+pub fn queue_deck_cast(sink: &mut EngineSink<'_>, card: &CardInstance) {
+    let (id, seq) = next_entry_id(sink.state, true, "h");
+    let mut data: IndexMap<String, Value> = IndexMap::new();
+    data.insert("controller".to_string(), player_value(card.owner));
+    let (def_id, radiant) = crate::subsystems::unit_text::text_def_of(card);
+    sink.state.trigger_queue.push(QueuedTrigger {
+        id,
+        seq,
+        instance_id: card.id.clone(),
+        hook: DECK_CAST.to_string(),
+        resume: Resume {
+            def_id: def_id.to_string(),
+            hook: DECK_CAST.to_string(),
+            step: TRIGGER_STEP.to_string(),
+            radiant,
+            instance_id: Some(card.id.clone()),
+            data,
+        },
+    });
+}
+
+/// R3536000, R3536003: queue one more run of an evolved card's Evolve text, built like `queue_hook`'s
+/// entry: the running definition is the card's text face now (`unit_text::text_def_of`), and the run
+/// answers for the card's controller.
+pub fn queue_evolve_run(sink: &mut EngineSink<'_>, card: &CardInstance) {
+    let (id, seq) = next_entry_id(sink.state, false, "e");
+    let mut data: IndexMap<String, Value> = IndexMap::new();
+    data.insert("controller".to_string(), player_value(card.controller));
+    let (def_id, radiant) = crate::subsystems::unit_text::text_def_of(card);
+    sink.state.trigger_queue.push(QueuedTrigger {
+        id,
+        seq,
+        instance_id: card.id.clone(),
+        hook: EVOLVE_RUN.to_string(),
+        resume: Resume {
+            def_id: def_id.to_string(),
+            hook: EVOLVE_RUN.to_string(),
+            step: TRIGGER_STEP.to_string(),
+            radiant,
+            instance_id: Some(card.id.clone()),
+            data,
+        },
+    });
+}
+
+/// R3536000: run one queued Evolve-text run: the card is found again now, and runs only while still
+/// evolved and either acting on the field or lying in a graveyard (R3536001's Temporary discard);
+/// anywhere else it fizzles.
+fn run_evolve_entry(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
+    let Some(card) = find_instance(sink.state, &entry.instance_id).cloned() else {
+        return;
+    };
+    if card.evolved != Some(true) {
+        return;
+    }
+    if !crate::zones::acts_on_field(sink.state, &card) && card.zone.z() != ZoneName::Graveyard {
+        return;
+    }
+    crate::prompts::run_evolve(sink, &card, card.controller);
+}
+
 /// Queue one hook across the board in R68's order (§6.2, R62); the caller's `settle` drains it.
 ///
 /// R820, R821 (Meditative #9 Joint Filing): a player's own start- and end-of-turn hooks run 1 + N times under
@@ -616,14 +714,7 @@ pub fn queue_turn_hook_rounds(sink: &mut EngineSink<'_>, player: PlayerId, round
         seq,
         instance_id: String::new(),
         hook: TURN_HOOKS_ROUND.to_string(),
-        resume: Resume {
-            def_id: String::new(),
-            hook: TURN_HOOKS_ROUND.to_string(),
-            step: TRIGGER_STEP.to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
+        resume: engine_resume(TURN_HOOKS_ROUND, TRIGGER_STEP, data),
     });
 }
 
@@ -687,14 +778,7 @@ fn owed_to_traps(
         seq,
         instance_id: String::new(),
         hook: OWED_TO_TRAPS.to_string(),
-        resume: Resume {
-            def_id: String::new(),
-            hook: OWED_TO_TRAPS.to_string(),
-            step: TRIGGER_STEP.to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
+        resume: engine_resume(OWED_TO_TRAPS, TRIGGER_STEP, data),
     };
     let queue = &mut sink.state.trigger_queue;
     match queue.iter().position(|queued| queued.hook != OWED_TO_TRAPS) {
@@ -886,6 +970,8 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
     queued.extend(offer_to_play_watches(sink, event));
     // R1882004: and Call to Chaos (Stinky Edition)'s, a death of a card printing their tag.
     queued.extend(offer_to_death_watches(sink, event));
+    // R3570004: and Call to Chaos (Mindustrial-Swarm Edition)'s, its holder's own Starship launch.
+    queued.extend(offer_to_launch_watches(sink, event));
     // R212: the removal this event reports, if any, has been answered (`stays::note_reported`).
     crate::stays::note_reported(sink.state, event);
     queued
@@ -896,8 +982,8 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
 /// that no play made (`exits_from` absent: a played card answers through its resolution, so once).
 /// Each match queues one `LANE_WATCH` entry, its data holding `instanceId` and `watcher`, in R68's order.
 fn offer_to_lane_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<QueuedTrigger> {
-    // The owner, id and lane of the card the event puts into a lane, if it puts one there.
-    let placed: Option<(PlayerId, String, i32)> = match event {
+    // The owner, id and lanes of the card the event puts into a lane, if it puts one there.
+    let placed: Option<(PlayerId, String, Vec<i32>)> = match event {
         GameEvent::CardResolved {
             permanent,
             player,
@@ -908,22 +994,27 @@ fn offer_to_lane_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<Qu
                 return Vec::new();
             };
             match card.zone {
-                Zone::Field { player: at, lane, .. } if at == *player => {
-                    Some((*player, instance_id.clone(), lane))
+                // R3546001: a GIGA answers its watchers in both its lanes.
+                Zone::Field { player: at, .. } if at == *player => {
+                    Some((*player, instance_id.clone(), crate::giga::lanes_of(card)))
                 }
                 _ => None,
             }
         }
         GameEvent::Summoned {
             player,
-            lane,
-            exits_from: None,
             instance_id,
+            exits_from: None,
             ..
-        } => Some((*player, instance_id.clone(), *lane)),
+        } => {
+            let lanes = find_instance(sink.state, instance_id)
+                .map(crate::giga::lanes_of)
+                .unwrap_or_default();
+            Some((*player, instance_id.clone(), lanes))
+        }
         _ => None,
     };
-    let Some((player, instance_id, lane)) = placed else {
+    let Some((player, instance_id, lanes)) = placed else {
         return Vec::new();
     };
     let mut queued: Vec<QueuedTrigger> = Vec::new();
@@ -955,7 +1046,7 @@ fn offer_to_lane_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<Qu
             })
             .collect();
         for (id, watched, resume) in watches {
-            if watched != lane {
+            if !lanes.contains(&watched) {
                 continue;
             }
             let (entry_id, seq) = next_entry_id(sink.state, false, "w");
@@ -1066,6 +1157,42 @@ fn offer_to_death_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<Q
     queued
 }
 
+/// R3570004: offer one event to the launch watchers (`ModifierKind::LaunchWatch`) of the player whose
+/// Starship it reports. A watch matches its holder's own `starshipLaunched` (the opponent's launch is not
+/// its holder's, as a play watch answers only its owner's plays): one `LAUNCH_WATCH` entry each, its data
+/// holding `watcher` and `instanceId` (the ship), in the order the watches were made.
+fn offer_to_launch_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<QueuedTrigger> {
+    let GameEvent::StarshipLaunched {
+        player, instance_id, ..
+    } = event
+    else {
+        return Vec::new();
+    };
+    let mut answers: Vec<(String, Resume)> = Vec::new();
+    for modifier in &sink.state.players[*player].mods {
+        if let crate::state::ModifierKind::LaunchWatch { resume, .. } = &modifier.kind {
+            answers.push((modifier.id.clone(), resume.clone()));
+        }
+    }
+    let mut queued: Vec<QueuedTrigger> = Vec::new();
+    for (id, resume) in answers {
+        let (entry_id, seq) = next_entry_id(sink.state, false, "w");
+        let mut data = resume.data.clone();
+        data.insert("instanceId".to_string(), Value::String(instance_id.clone()));
+        data.insert("watcher".to_string(), Value::String(player.as_str().to_string()));
+        let entry = QueuedTrigger {
+            id: entry_id,
+            seq,
+            instance_id: id,
+            hook: LAUNCH_WATCH.to_string(),
+            resume: Resume { data, ..resume },
+        };
+        sink.state.trigger_queue.push(entry.clone());
+        queued.push(entry);
+    }
+    queued
+}
+
 /// R2396000: whether this card answers "Whenever this destroys a Unit" even once it is gone: one of its
 /// field triggers on a `destroyed` is `even_if_gone` (Meditative #95.1 CN Golem).
 pub fn answers_kills_when_gone(state: &GameState, card: &CardInstance) -> bool {
@@ -1129,6 +1256,10 @@ fn offer_to_gone_killer(
 /// from queue time: it may have died, been played or moved while it waited, and a trigger its
 /// current zone no longer registers fizzles instead of firing from the wrong zone (R78, R89).
 pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
+    // R3925000: card text is off at the loop cap.
+    if crate::loop_cap::capped(sink) {
+        return;
+    }
     let event = event_of_queued(entry);
     if entry.hook == OWED_TO_TRAPS {
         if let Some(event) = event {
@@ -1140,9 +1271,24 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
         run_turn_hooks_round(sink, entry);
         return;
     }
+    // R3536000: a queued extra run of an Evolve text.
+    if entry.hook == EVOLVE_RUN {
+        run_evolve_entry(sink, entry);
+        return;
+    }
+    // R3558007: a queued deck cast.
+    if entry.hook == DECK_CAST {
+        crate::deck_cast::run_deck_cast(sink, entry);
+        return;
+    }
     // MD-B22, R946: a lane watcher's answer — the stored resume runs as its owner; R1863000: a play
-    // watcher's the same, and R1882004: a death watcher's, as the dead card's controller.
-    if entry.hook == LANE_WATCH || entry.hook == PLAY_WATCH || entry.hook == DEATH_WATCH {
+    // watcher's the same, and R1882004: a death watcher's, as the dead card's controller; R3570004: a
+    // launch watcher's, as the launching player.
+    if entry.hook == LANE_WATCH
+        || entry.hook == PLAY_WATCH
+        || entry.hook == DEATH_WATCH
+        || entry.hook == LAUNCH_WATCH
+    {
         let watcher = entry.resume.data.get("watcher").and_then(Value::as_str);
         let owner = PLAYER_IDS
             .into_iter()
@@ -1297,7 +1443,12 @@ fn queued_trigger_def(holder: &TriggerHolder, entry: &QueuedTrigger) -> Option<T
 /// (R62's delayed effects, each whole, R59; the triggers wait for its loop, R68), as does a cast's §10.5 step
 /// 4 inside its effect (R70).
 pub fn dispatch_pending(sink: &mut SettleSink<'_>) {
-    for _pass in 0..SETTLE_PASS_CAP {
+    for pass in 0..SETTLE_PASS_CAP {
+        // R3925000: at the loop cap nothing more is offered.
+        if crate::loop_cap::halted(sink, pass) {
+            crate::loop_cap::offer_nothing(sink);
+            return;
+        }
         dispatch_new_events(sink);
         if sink.state.pending.is_some() || sink.state.result.is_some() {
             return;
@@ -1339,11 +1490,23 @@ pub struct Frontier {
     /// R2067000: the cast-on-draw cards this action has cast so far, over every chain of it
     /// (`draw::complete_draw`), held to `CAST_ON_DRAW_ACTION_CAP`.
     pub cast_on_draw_casts: i32,
+    /// R3558007: the deck casts this action has queued so far, over every settled check of it
+    /// (`deck_cast::queue_deck_casts`), held to `DECK_CAST_ACTION_CAP`.
+    pub deck_casts: i32,
     /// R2783001: the keyword behind a Unit's coming death, by its id — a Poisonous hit's mark or a First
     /// Strike's kill, the first one recorded kept — which the state check's `destroyed` takes as its
     /// `via` (`state_check::collect`). A cue for the client, never game state: it dies with the action.
     /// Boxed, as it is empty but in a combat, so a sink that owns its frontier stays small.
     pub death_via: Box<IndexMap<String, KeywordKind>>,
+    /// R3925000: where in the action's list the interaction now resolving began (`loop_cap.rs`), so the
+    /// events after it are its count against `RESOLUTION_EVENT_CAP`.
+    pub interaction_from: usize,
+    /// R3925000: the seat and kind of the interaction now resolving, which `loopCapped` names; `None` for
+    /// the setup and a Glitch's reset (R676), which are no seat's.
+    pub interaction: Option<(PlayerId, ActionType)>,
+    /// R3925000: the interaction reached the loop cap, so nothing more is offered and card text is off
+    /// until the next interaction begins.
+    pub capped: bool,
 }
 
 /// Where a sink keeps its `Frontier`: its own for an action's first sink (`EngineSink::new`), its
@@ -1466,10 +1629,20 @@ fn traps_still_owed(state: &GameState) -> bool {
 /// stops while a prompt is open, the game is over, or an `OWED_TO_TRAPS` entry says the previous
 /// event's traps have not all seen it: the traps see events in emission order.
 fn dispatch_new_events(sink: &mut SettleSink<'_>) {
+    // R3925000: a capped interaction offers nothing; a trap answering its own events would otherwise go
+    // round inside this loop with no loop top of the resolution loop's between.
+    if crate::loop_cap::halted(sink, 0) {
+        crate::loop_cap::offer_nothing(sink);
+        return;
+    }
     // Collect first and unconditionally, so a pause below leaves nothing owed on the sink (§9.3).
     collect_events(sink);
     while !sink.state.dispatch.is_empty() {
         if sink.state.pending.is_some() || sink.state.result.is_some() {
+            return;
+        }
+        if crate::loop_cap::halted(sink, 0) {
+            crate::loop_cap::offer_nothing(sink);
             return;
         }
         if traps_still_owed(sink.state) {
@@ -1500,7 +1673,12 @@ pub fn settle(sink: &mut SettleSink<'_>, options: SettleOptions) {
     // §4.5: the check follows something that resolved. Held, it waits until this loop has resolved a
     // piece of owed work or a queued trigger (a trap runs its own check as it fires, `traps::fire_trap`).
     let mut check_due = options.hold_check != Some(true);
-    for _pass in 0..SETTLE_PASS_CAP {
+    for pass in 0..SETTLE_PASS_CAP {
+        // R3925000: at the loop cap the rest is dropped; what is owed drains with its text off.
+        if crate::loop_cap::halted(sink, pass) {
+            crate::loop_cap::settle_capped(sink);
+            return;
+        }
         // First, so a pause below leaves nothing owed on the sink (§9.3).
         dispatch_new_events(sink);
         if sink.state.result.is_some() {

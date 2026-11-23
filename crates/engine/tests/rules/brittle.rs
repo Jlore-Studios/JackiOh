@@ -10,9 +10,12 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{indestructible, plain, stacker};
 use crate::rules::fixtures::harness::{
-    act, act_with_nonce, by, events_of_type, in_hand, input, json_of, live, put, set_library, sink_for, slot,
+    act, act_with_nonce, by, events_of_type, in_hand, input, json_of, live, live_mut, put, set_library,
+    sink_for, slot,
 };
-use crate::rules::fixtures::instance_data::{asker, brittle_trap, brittle_unit, instance_game};
+use crate::rules::fixtures::instance_data::{
+    asker, brittle_set_trap, brittle_trap, brittle_unit, instance_game,
+};
 
 fn instance_ids(events: impl Serialize) -> Vec<String> {
     json_of(events)
@@ -25,20 +28,12 @@ fn instance_ids(events: impl Serialize) -> Vec<String> {
         .unwrap_or_default()
 }
 
-fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
-fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
 fn count_of(state: &GameState, id: &str) -> Option<i32> {
-    by_id(state, id).brittle.map(|brittle| brittle.count)
+    live(state, id).brittle.map(|brittle| brittle.count)
 }
 
 fn zone_of(state: &GameState, id: &str) -> ZoneName {
-    by_id(state, id).zone.z()
+    live(state, id).zone.z()
 }
 
 /// A count, its `printed` absent unless `Some(true)`.
@@ -53,7 +48,7 @@ fn counter(count: i32, since: i32, printed: bool) -> BrittleCounter {
 fn with_live(state: &mut GameState, id: &str, change: impl FnOnce(&GameState, &mut CardInstance)) {
     let mut card = live(state, id);
     change(state, &mut card);
-    *by_id_mut(state, id) = card;
+    *live_mut(state, id) = card;
 }
 
 fn at(turn: i32, active: PlayerId) -> GameState {
@@ -110,7 +105,7 @@ mod r385_b3_3_where_a_brittle_count_lives_and_when_it_starts {
             slot(P1, Row::Units, 1),
             Default::default(),
         );
-        assert_eq!(by_id(&state, &unit.id).brittle, Some(counter(2, 4, true)));
+        assert_eq!(live(&state, &unit.id).brittle, Some(counter(2, 4, true)));
         let radiant = put(
             &mut state,
             &brittle_unit.id,
@@ -125,7 +120,7 @@ mod r385_b3_3_where_a_brittle_count_lives_and_when_it_starts {
             slot(P1, Row::Backrow, 1),
             Default::default(),
         );
-        assert_eq!(by_id(&state, &trap.id).brittle, None);
+        assert_eq!(live(&state, &trap.id).brittle, None);
         let trap = live(&state, &trap.id);
         // The count starts when the card reveals.
         (reveal(Default::default()).apply)(&mut make_context(
@@ -133,7 +128,29 @@ mod r385_b3_3_where_a_brittle_count_lives_and_when_it_starts {
             Some(&trap),
             Default::default(),
         ));
-        assert_eq!(by_id(&state, &trap.id).brittle, Some(counter(3, 4, true)));
+        assert_eq!(live(&state, &trap.id).brittle, Some(counter(3, 4, true)));
+    }
+
+    /// R687: a plain Trap set face-down starts no count either, as a Field Trap does (B3.3 rule 1), and
+    /// its count starts as it reveals.
+    #[test]
+    fn r687_a_plain_trap_set_face_down_starts_no_count_until_it_reveals() {
+        let mut state = at(4, P1);
+        let trap = put(
+            &mut state,
+            &brittle_set_trap.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        assert!(live(&state, &trap.id).face_up != Some(true));
+        assert_eq!(live(&state, &trap.id).brittle, None);
+        let trap = live(&state, &trap.id);
+        (reveal(Default::default()).apply)(&mut make_context(
+            &mut sink_for(&mut state),
+            Some(&trap),
+            Default::default(),
+        ));
+        assert_eq!(count_of(&state, &trap.id), Some(3));
     }
 
     #[test]
@@ -148,7 +165,7 @@ mod r385_b3_3_where_a_brittle_count_lives_and_when_it_starts {
             slot(P1, Row::Units, 1),
             Default::default()
         ));
-        assert_eq!(by_id(&state, &card.id).brittle, Some(counter(5, 6, false)));
+        assert_eq!(live(&state, &card.id).brittle, Some(counter(5, 6, false)));
     }
 
     #[test]
@@ -163,7 +180,7 @@ mod r385_b3_3_where_a_brittle_count_lives_and_when_it_starts {
             slot(P1, Row::Units, 2),
             Default::default()
         ));
-        assert_eq!(by_id(&state, &unit.id).brittle, Some(counter(3, 5, false)));
+        assert_eq!(live(&state, &unit.id).brittle, Some(counter(3, 5, false)));
     }
 
     #[test]
@@ -204,6 +221,19 @@ mod r385_b3_3_where_a_brittle_count_lives_and_when_it_starts {
     }
 
     #[test]
+    fn r385_brittle_due_by_is_the_ticks_turn_test_asked_of_any_turn() {
+        let mut state = at(5, P1);
+        let mut mine = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
+        assert!(!brittle_due_by(&mine, 99));
+        given(&mut state, &mut mine, 1, 5);
+        for turn in 4..=10 {
+            assert_eq!(brittle_due_by(&mine, turn), turn >= 5 + BRITTLE_FIRST_TICK_TURNS);
+            state.turn = turn;
+            assert_eq!(brittle_due(&state, &mine), brittle_due_by(&mine, turn));
+        }
+    }
+
+    #[test]
     fn r638_a_count_in_a_hand_or_a_deck_holds_no_tick_no_crumble_and_no_event_however_long_it_waits() {
         let mut state = at(9, P1);
         let hand_card = in_hand(&mut state, &plain.id, P1, 1).into_iter().next();
@@ -219,10 +249,10 @@ mod r385_b3_3_where_a_brittle_count_lives_and_when_it_starts {
         for turn in [9, 11, 13] {
             assert!(tick_at(&mut state, turn, P1).is_empty());
         }
-        assert_eq!(by_id(&state, &hand_card.id).zone, Zone::Hand { player: P1 });
-        assert_eq!(by_id(&state, &hand_card.id).brittle, Some(counter(1, 3, false)));
+        assert_eq!(live(&state, &hand_card.id).zone, Zone::Hand { player: P1 });
+        assert_eq!(live(&state, &hand_card.id).brittle, Some(counter(1, 3, false)));
         assert_eq!(zone_of(&state, &deck_card.id), ZoneName::Library);
-        assert_eq!(by_id(&state, &deck_card.id).brittle, Some(counter(2, 3, false)));
+        assert_eq!(live(&state, &deck_card.id).brittle, Some(counter(2, 3, false)));
     }
 
     #[test]
@@ -238,7 +268,7 @@ mod r385_b3_3_where_a_brittle_count_lives_and_when_it_starts {
             slot(P1, Row::Units, 1),
             Default::default()
         ));
-        assert_eq!(by_id(&state, &card.id).brittle, Some(counter(2, 9, false)));
+        assert_eq!(live(&state, &card.id).brittle, Some(counter(2, 9, false)));
 
         // Held since turn 1, yet not due at 9: the cycle is the field's.
         tick_at(&mut state, 9, P1);
@@ -307,7 +337,7 @@ mod r385_b3_3_a_crumble {
             json!({ "type": "crumbled", "instanceId": unit.id, "defId": plain.id, "owner": "p1", "zone": "field" })
         );
         // R441: the count that crumbled it is spent, and went with R78's reset.
-        assert_eq!(by_id(&state, &unit.id).brittle, None);
+        assert_eq!(live(&state, &unit.id).brittle, None);
     }
 
     #[test]
@@ -337,7 +367,7 @@ mod r385_b3_3_a_crumble {
     fn r385_a_count_ticks_at_its_controllers_start_of_turn_on_the_field_a_stolen_card_ticks_on_the_thiefs() {
         let mut state = at(7, P1);
         let mut stolen = put(&mut state, &plain.id, slot(P1, Row::Units, 3), Default::default());
-        by_id_mut(&mut state, &stolen.id).owner = P2;
+        live_mut(&mut state, &stolen.id).owner = P2;
         given(&mut state, &mut stolen, 3, 5);
         tick_at(&mut state, 8, P2);
         assert_eq!(count_of(&state, &stolen.id), Some(3));
@@ -393,7 +423,7 @@ mod r385_r441_b3_3_rule_5_vanilla_and_the_count {
         );
         let mut given_to = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
         given(&mut state, &mut given_to, 2, 5);
-        by_id_mut(&mut state, &printed.id).brittle = Some(counter(2, 5, true));
+        live_mut(&mut state, &printed.id).brittle = Some(counter(2, 5, true));
         {
             let mut sink = sink_for(&mut state);
             let mut ctx = make_context(&mut sink, None, by(P1));
@@ -401,16 +431,16 @@ mod r385_r441_b3_3_rule_5_vanilla_and_the_count {
             (vanilla(json_as(json!({ "instanceId": given_to.id }))).apply)(&mut ctx);
         }
 
-        assert_eq!(active_brittle_count(by_id(&state, &printed.id)), None);
+        assert_eq!(active_brittle_count(&live(&state, &printed.id)), None);
         assert!(
-            !unit_view(&state, by_id(&state, &printed.id))
+            !unit_view(&state, &live(&state, &printed.id))
                 .keywords
                 .iter()
                 .any(|keyword| keyword.kind() == KeywordKind::Brittle)
         );
-        assert_eq!(active_brittle_count(by_id(&state, &given_to.id)), Some(2));
+        assert_eq!(active_brittle_count(&live(&state, &given_to.id)), Some(2));
         assert!(
-            unit_view(&state, by_id(&state, &given_to.id))
+            unit_view(&state, &live(&state, &given_to.id))
                 .keywords
                 .contains(&Keyword::Brittle { n: 2 })
         );
@@ -431,18 +461,18 @@ mod r385_r441_b3_3_rule_5_vanilla_and_the_count {
             Default::default(),
         );
         assert_eq!(
-            unit_view(&state, by_id(&state, &unit.id)).keywords,
+            unit_view(&state, &live(&state, &unit.id)).keywords,
             vec![Keyword::Brittle { n: 2 }]
         );
-        by_id_mut(&mut state, &unit.id).brittle = Some(counter(1, 7, true));
+        live_mut(&mut state, &unit.id).brittle = Some(counter(1, 7, true));
         assert_eq!(
-            unit_view(&state, by_id(&state, &unit.id)).keywords,
+            unit_view(&state, &live(&state, &unit.id)).keywords,
             vec![Keyword::Brittle { n: 1 }]
         );
         let mut other = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
         given(&mut state, &mut other, 3, 7);
         assert_eq!(
-            unit_view(&state, by_id(&state, &other.id)).keywords,
+            unit_view(&state, &live(&state, &other.id)).keywords,
             vec![Keyword::Brittle { n: 3 }]
         );
     }
@@ -456,10 +486,10 @@ mod r385_r441_b3_3_rule_5_vanilla_and_the_count {
             slot(P1, Row::Units, 1),
             Default::default(),
         );
-        by_id_mut(&mut state, &unit.id).brittle = Some(counter(1, 5, true));
+        live_mut(&mut state, &unit.id).brittle = Some(counter(1, 5, true));
         tick_at(&mut state, 7, P1);
         assert_eq!(zone_of(&state, &unit.id), ZoneName::Graveyard);
-        assert_eq!(by_id(&state, &unit.id).brittle, None);
+        assert_eq!(live(&state, &unit.id).brittle, None);
         let mut unit = live(&state, &unit.id);
         state.players.p1.graveyard.retain(|card| card.id != unit.id);
         assert!(place_on_field(
@@ -468,7 +498,7 @@ mod r385_r441_b3_3_rule_5_vanilla_and_the_count {
             slot(P1, Row::Units, 1),
             Default::default()
         ));
-        assert_eq!(by_id(&state, &unit.id).brittle, Some(counter(2, 7, true)));
+        assert_eq!(live(&state, &unit.id).brittle, Some(counter(2, 7, true)));
     }
 
     #[test]
@@ -485,12 +515,12 @@ mod r385_r441_b3_3_rule_5_vanilla_and_the_count {
         with_live(&mut state, &bare.id, |state, card| {
             gain_brittle_count(state, card, 2)
         });
-        assert_eq!(by_id(&state, &card.id).brittle, Some(counter(3, 4, false)));
-        assert_eq!(by_id(&state, &bare.id).brittle, Some(counter(2, 4, false)));
+        assert_eq!(live(&state, &card.id).brittle, Some(counter(3, 4, false)));
+        assert_eq!(live(&state, &bare.id).brittle, Some(counter(2, 4, false)));
         with_live(&mut state, &card.id, |state, card| {
             gain_brittle_count(state, card, 2)
         });
-        assert_eq!(by_id(&state, &card.id).brittle, Some(counter(5, 4, false)));
+        assert_eq!(live(&state, &card.id).brittle, Some(counter(5, 4, false)));
     }
 }
 
@@ -576,9 +606,9 @@ mod r113_b3_3_a_crumble_that_pauses_the_settle_after_the_tick_9_3 {
         let mut state = playing("brittle-pause");
         let unit = put(&mut state, &asker.id, slot(P1, Row::Units, 4), Default::default());
         let since = state.turn - BRITTLE_FIRST_TICK_TURNS;
-        by_id_mut(&mut state, &unit.id).brittle = Some(counter(1, since, false));
+        live_mut(&mut state, &unit.id).brittle = Some(counter(1, since, false));
         let other = put(&mut state, &plain.id, slot(P1, Row::Units, 5), Default::default());
-        by_id_mut(&mut state, &other.id).brittle = Some(counter(1, since, false));
+        live_mut(&mut state, &other.id).brittle = Some(counter(1, since, false));
 
         let mut sink = sink_for(&mut state);
         brittle_tick(&mut sink, P1);
@@ -615,7 +645,7 @@ mod r113_b3_3_a_crumble_that_pauses_the_settle_after_the_tick_9_3 {
         let mut state = playing("brittle-quiet");
         let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 4), Default::default());
         let since = state.turn - BRITTLE_FIRST_TICK_TURNS;
-        by_id_mut(&mut state, &unit.id).brittle = Some(counter(1, since, false));
+        live_mut(&mut state, &unit.id).brittle = Some(counter(1, since, false));
         let mut sink = sink_for(&mut state);
         brittle_tick(&mut sink, P1);
         state_check(&mut sink);
@@ -628,4 +658,73 @@ mod r113_b3_3_a_crumble_that_pauses_the_settle_after_the_tick_9_3 {
 /// A second vanilla fixture unit's id, for a deck that is not all one card.
 fn body() -> String {
     "fx-2".to_string()
+}
+
+/// R3996100 (M #56 House Party, "They have Brittle 1, and so do their Reborn copies"): a fill with
+/// Brittle gives every card it summons the count, and the body Reborn returns has it again, a crumble's
+/// spent count (R441) included; a count given otherwise is not renewed.
+mod r3996100_a_fill_with_brittle_renews_it_on_the_reborn_copies {
+    use super::*;
+    use crate::rules::fixtures::harness::Bench;
+    use jackioh_engine::effects::fill_board;
+
+    /// A 1/1 with Reborn, spelled out by its id (#3486).
+    const REBORN: &str = "stand-in (1) 1/1 Reborn";
+
+    fn row(state: &GameState) -> Vec<String> {
+        (1..=5)
+            .map(|lane| {
+                card_at(state, slot(P1, Row::Units, lane))
+                    .map(|card| card.id.clone())
+                    .unwrap_or_default()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn r3996100_each_card_the_fill_summons_has_the_count_and_its_reborn_copy_has_it_again_after_a_crumble() {
+        let mut state = at(5, P1);
+        let mut bench = Bench::new(&state);
+        bench.run(&mut state, |sink| {
+            let mut ctx = make_context(
+                sink,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..HookOptions::default()
+                },
+            );
+            (fill_board(json_as(json!({ "defId": REBORN, "brittle": 1 }))).apply)(&mut ctx);
+        });
+        let ids = row(&state);
+        assert!(ids.iter().all(|id| !id.is_empty()), "{ids:?}");
+        for id in &ids {
+            assert_eq!(live(&state, id).brittle, Some(counter(1, 5, false)));
+        }
+        // p1's turn 7: each crumbles (R385), and Reborn returns its body with Brittle 1, started now.
+        tick_at(&mut state, 7, P1);
+        assert_eq!(row(&state), ids);
+        for id in &ids {
+            let body = live(&state, id);
+            assert_eq!(body.reborn_spent, Some(true));
+            assert_eq!(body.brittle, Some(counter(1, 7, false)));
+        }
+        // The Reborn copies, with no Reborn of their own, crumble at p1's turn 9 and stay gone.
+        tick_at(&mut state, 9, P1);
+        for id in &ids {
+            assert_eq!(zone_of(&state, id), ZoneName::Graveyard);
+        }
+    }
+
+    #[test]
+    fn r3996100_r441_a_count_given_otherwise_is_spent_by_its_crumble_and_the_reborn_copy_has_none() {
+        let mut state = at(5, P1);
+        let mut unit = put(&mut state, REBORN, slot(P1, Row::Units, 1), Default::default());
+        given(&mut state, &mut unit, 1, 5);
+        tick_at(&mut state, 7, P1);
+        let body = live(&state, &unit.id);
+        assert_eq!(body.zone.z(), ZoneName::Field);
+        assert_eq!(body.reborn_spent, Some(true));
+        assert_eq!(body.brittle, None);
+    }
 }

@@ -84,7 +84,7 @@ describe("R3407000 xxFreshJack's signature", () => {
       expect(comet.length).toBeGreaterThan(0);
       expectCuesR200(comet, D, "freshJackComet");
     }
-    const run = planWithOffsets([played("p1"), landing("p1"), ...freshJackCometFixture(view, "fj", "p1")], view, envOf(FX_INTENSITY_SCALE.off));
+    const run = planWithOffsets([played("p1"), landing("p1"), ...freshJackCometFixture(view, "fj", "p1")], view, envOf({ intensity: FX_INTENSITY_SCALE.off }));
     expect(cuesOfRun(run)).toEqual([]);
   });
 

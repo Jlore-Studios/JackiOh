@@ -35,6 +35,14 @@ pub struct ShuffleCardIntoArgs {
 /// A card that no longer exists is skipped.
 pub fn shuffle_card_into(args: ShuffleCardIntoArgs) -> Effect {
     Effect::new("shuffleCardInto", move |ctx| {
+        // R3806000: a set Spell's "shuffle this into your deck" names where its reveal sends it, so as it
+        // resolves at its set under Paranoia it stays set.
+        let is_self = ctx.self_.as_ref().is_some_and(|me| me.id == args.instance_id);
+        if is_self
+            && find_instance(ctx.state, &args.instance_id).is_some_and(crate::alt_play::resolving_at_set)
+        {
+            return;
+        }
         // R1867006: the new owner (and controller, as `new_instance` makes them) goes on the live card,
         // since the move refreshes its working copy from it and would drop a change made on a clone.
         if let Some(spec) = args.player {

@@ -16,7 +16,7 @@ const ALLURE_STEP: &str = "unit";
 /// R1864000: the enemy Units Allure reaches whose tags hold Acclaimed, in its order: the top of each
 /// enemy unit pile in lane order, then the enemy Units standing in the backrow (R1081000), never a
 /// Dormant one (R1839000).
-fn enemy_acclaimed_units(ctx: &EffectContext<'_>) -> Vec<String> {
+fn enemy_acclaimed_units(ctx: &EffectContext<'_>, slash_aware: bool) -> Vec<String> {
     let state: &GameState = &*ctx.state;
     let enemy = opponent_of(ctx.controller);
     let mut units: Vec<&CardInstance> = slots_of(enemy, Row::Units)
@@ -27,6 +27,7 @@ fn enemy_acclaimed_units(ctx: &EffectContext<'_>) -> Vec<String> {
     units
         .into_iter()
         .filter(|unit| !is_slumbering(unit) && tags_of(state, unit).contains(&Tag::Acclaimed))
+        .filter(|unit| !slash_aware || reaches(state, ctx.self_.as_ref(), unit))
         .map(|unit| unit.id.clone())
         .collect()
 }
@@ -45,8 +46,8 @@ fn allure(instance_id: &str) -> Effect {
 }
 
 /// R1864000: the one random pick, drawn as the clause resolves; none to pick draws nothing (R129).
-fn one_enemy_acclaimed_unit(now: &mut EffectContext<'_>) -> Vec<String> {
-    let ids = enemy_acclaimed_units(now);
+fn one_enemy_acclaimed_unit(now: &mut EffectContext<'_>, slash_aware: bool) -> Vec<String> {
+    let ids = enemy_acclaimed_units(now, slash_aware);
     now.rng.pick(&ids).cloned().into_iter().collect()
 }
 
@@ -60,10 +61,10 @@ fn summoned_enemy_units(now: &mut EffectContext<'_>) -> Vec<String> {
         .collect()
 }
 
-fn siva(radiant: bool) -> Script {
+fn siva(radiant: bool, slash_aware: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            if radiant && enemy_acclaimed_units(ctx).is_empty() {
+            if radiant && enemy_acclaimed_units(ctx, slash_aware).is_empty() {
                 return vec![
                     summon_random(json_as(json!({
                         "query": { "type": "Unit", "tags": ["Acclaimed"] },
@@ -82,7 +83,7 @@ fn siva(radiant: bool) -> Script {
                 ];
             }
             vec![for_each_card(ForEachCardArgs {
-                cards: Arc::new(one_enemy_acclaimed_unit),
+                cards: Arc::new(move |now: &mut EffectContext<'_>| one_enemy_acclaimed_unit(now, slash_aware)),
                 each: Arc::new(allure),
             })]
         })),
@@ -92,8 +93,17 @@ fn siva(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: siva(false),
-        radiant: siva(true),
+        base: siva(false, true),
+        radiant: siva(true, true),
+    }
+}
+
+/// v0.6.9k and before: the Cry drew among every enemy Acclaimed Unit, across a slash too (R3554003);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9j() -> CardScripts {
+    CardScripts {
+        base: siva(false, false),
+        radiant: siva(true, false),
     }
 }
 
@@ -112,8 +122,9 @@ mod tests {
     const BIG_MAX: &str = "classic-080";
     const YILEGPT: &str = "meditative-049";
     /// The Acclaimed Units of the sets that ship, Siva 1 aside (R387): the Stinkyscape set's own since
-    /// its release (#1884).
-    const SHIPPED_ACCLAIMED: [&str; 11] = [
+    /// its release (#1884) and Stinkyscape+'s #4 Profe Yates, #5 Dingleberry Droat and #61 Jayaad since
+    /// its (#3573).
+    const SHIPPED_ACCLAIMED: [&str; 14] = [
         WARDRUM,
         BIG_MAX,
         YILEGPT,
@@ -125,6 +136,9 @@ mod tests {
         "stinkyscape-110",
         "stinkyscape-111",
         "stinkyscape-115",
+        "stinkyscapeplus-004",
+        "stinkyscapeplus-005",
+        "stinkyscapeplus-061",
     ];
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-005";
@@ -332,6 +346,63 @@ mod tests {
         assert_eq!(enemy_unit_ids(&s), before, "no room: nothing summoned");
         assert_eq!(s.state().rng_cursor, cursor, "and no draw (R129)");
         assert!(s.state().delayed.is_empty());
+    }
+
+    /// R3554003: Siva 1 in lane 1 reaches only the left half of a board slashed at lane 3, so its Cry
+    /// Allures the Acclaimed Unit there, never the one across the slash, and the steal lands a turn later.
+    #[test]
+    fn r3554003_the_cry_allures_only_an_acclaimed_unit_of_its_own_half() {
+        for seed in 0..8 {
+            let mut s = siva_against(
+                &format!("siva-slashed-{seed}"),
+                false,
+                json!([]),
+                json!([{ "def": WARDRUM, "lane": 2 }, { "def": WARDRUM, "lane": 4 }]),
+            );
+            s.state_mut().slashed_lane = Some(3);
+            let (near, far) = (s.unit_at(P2, 2).id.clone(), s.unit_at(P2, 4).id.clone());
+            let siva = s.card(ID).id.clone();
+            s.play(&siva, json!({ "zone": 1 }));
+
+            assert!(allured_in_both_views(&s, &near), "seed {seed}: the Unit on its half is marked");
+            assert_eq!(marks_in(&s.view(P1), &far), Value::Null, "seed {seed}: the far one is not");
+
+            until_active(&mut s, P2);
+            until_active(&mut s, P1);
+            assert_eq!(s.card(&near).controller, P1, "seed {seed}: stolen at p1's next start");
+            assert_eq!(s.card(&far).controller, P2, "seed {seed}");
+        }
+    }
+
+    /// R3554003, R1864001: "if there isn't one" counts the Acclaimed Units it reaches, so a Radiant
+    /// Siva 1 with one only across the slash summons its own and Allures that.
+    #[test]
+    fn r3554003_radiant_with_none_on_its_half_summons_one_and_allures_that() {
+        for seed in 0..8 {
+            let mut s = siva_against(
+                &format!("siva-slashed-radiant-{seed}"),
+                true,
+                json!([]),
+                json!([{ "def": WARDRUM, "lane": 4 }]),
+            );
+            s.state_mut().slashed_lane = Some(3);
+            let far = s.unit_at(P2, 4).id.clone();
+            let before = enemy_unit_ids(&s);
+            let siva = s.card(ID).id.clone();
+            s.play(&siva, json!({ "zone": 1 }));
+
+            let summoned = new_enemy_units(&s, &before);
+            assert_eq!(summoned.len(), 1, "seed {seed}: one Acclaimed Unit summoned for the opponent");
+            let unit = summoned[0].id.clone();
+            assert!(s.card(&unit).frozen.is_some(), "seed {seed}: it arrives Frozen");
+            assert!(allured_in_both_views(&s, &unit), "seed {seed}: and Allured");
+            assert_eq!(marks_in(&s.view(P1), &far), Value::Null, "seed {seed}: the far one is not");
+
+            until_active(&mut s, P2);
+            until_active(&mut s, P1);
+            assert_eq!(s.card(&unit).controller, P1, "seed {seed}: the summoned Unit is stolen");
+            assert_eq!(s.card(&far).controller, P2, "seed {seed}");
+        }
     }
 
     #[test]

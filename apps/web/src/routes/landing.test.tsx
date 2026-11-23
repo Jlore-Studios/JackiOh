@@ -5,11 +5,14 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import type { ReactElement } from "react";
+
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 import { landingFanCardTestid, landingTestid } from "../auth/testids.ts";
+import { cardDetailChunk, resetCardDetailPrefetchForTests } from "../cards/inspect/cardDetailChunk.ts";
 import { LONG_PRESS_MS } from "../cards/inspect/constants.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../cards/settings.ts";
 import { INSPECT_DETAIL, INSPECT_HOVER } from "../cards/inspect/testids.ts";
@@ -21,17 +24,17 @@ import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION, ROTATION_INTERVAL_MS, ROTATION_
 import { dropPlayerStatsCache } from "../stats/store.ts";
 import { at, jsonResponse, signIn } from "../test/stubServer.ts";
 import { gameBannerTestid } from "./GameBanner.tsx";
+import { MenuShell } from "../shell/MenuShell.tsx";
 import LandingRoute from "./landing.tsx";
 import {
   EVEN,
-  ROTATION_POOL,
+  corePool,
+  shippedPool,
   dealLandingFan,
-  fanPool,
   favoringFullArt,
   featureWeight,
   fitsTheFan,
   rotateFan,
-  rotationPool,
   type FanFace,
   type RandomSource,
 } from "./landingFan.ts";
@@ -44,9 +47,9 @@ const { App } = await import("../main.tsx");
 const FAN_CARDS = 5;
 
 /** R1017002: the page's deal and swap below R639's threshold, with full art on (the default). */
-const coreDeal = (random: RandomSource): FanFace[] => dealLandingFan(random, fanPool(true), favoringFullArt(EVEN, true));
+const coreDeal = (random: RandomSource): FanFace[] => dealLandingFan(random, corePool(), favoringFullArt(EVEN, true), true);
 const coreSwap = (hand: readonly FanFace[], slot: number, random: RandomSource): FanFace[] =>
-  rotateFan(hand, slot, random, fanPool(true), favoringFullArt(EVEN, true));
+  rotateFan(hand, slot, random, corePool(), favoringFullArt(EVEN, true), true);
 
 /** A stubbed round trip can outrun the 1 s default under load. */
 const SLOW = { timeout: 5_000 } as const;
@@ -114,6 +117,7 @@ beforeEach(() => {
   window.localStorage.clear();
   dropPlayerStatsCache();
   setReducedMotion(false);
+  resetCardDetailPrefetchForTests();
   serve("active");
   at("/");
 });
@@ -122,6 +126,7 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   setReducedMotion(false);
+  Reflect.deleteProperty(navigator, "connection");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -522,7 +527,7 @@ describe("R639 the homescreen rotation", () => {
     render(<LandingRoute random={seeded(5)} />);
 
     const mirror = seeded(5);
-    let expected = dealLandingFan(mirror, rotationPool(true), favoringFullArt(featureWeight, true));
+    let expected = dealLandingFan(mirror, shippedPool(), favoringFullArt(featureWeight, true), true);
     expect(shownIds()).toEqual(expected.map(({ def }) => def.id));
 
     for (const slot of [0, 1, 2, 3, 0]) {
@@ -530,7 +535,7 @@ describe("R639 the homescreen rotation", () => {
       act(() => {
         vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
       });
-      expected = rotateFan(expected, slot, mirror, rotationPool(true), favoringFullArt(featureWeight, true));
+      expected = rotateFan(expected, slot, mirror, shippedPool(), favoringFullArt(featureWeight, true), true);
       const after = shownIds();
       expect(after).toEqual(expected.map(({ def }) => def.id));
       expect(after.filter((id, at) => id !== before[at])).toHaveLength(1);
@@ -544,7 +549,7 @@ describe("R639 the homescreen rotation", () => {
     withGames(ROTATION_MIN_GAMES + 40);
     render(<LandingRoute random={seeded(11)} />);
     const sets = new Set<string>();
-    const poolById = new Map(ROTATION_POOL.map((def) => [def.id, def]));
+    const poolById = new Map(shippedPool().map((def) => [def.id, def]));
     for (let step = 0; step < 60; step += 1) {
       for (const id of shownIds()) sets.add(poolById.get(id)?.set ?? "?");
       act(() => {
@@ -567,7 +572,7 @@ describe("R639 the homescreen rotation", () => {
       withGames(games);
       writeCardSettings({ fullArt });
       const view = render(<LandingRoute random={seeded(17)} />);
-      const byId = new Map(ROTATION_POOL.map((def) => [def.id, def]));
+      const byId = new Map(shippedPool().map((def) => [def.id, def]));
       for (let step = 0; step < 40; step += 1) {
         for (const id of shownIds()) {
           const def = byId.get(id);
@@ -634,6 +639,25 @@ describe("R639 a fan card opens at full size", () => {
     fireEvent.keyDown(face, { key: "Enter" });
     expect(await screen.findByTestId(INSPECT_DETAIL, undefined, SLOW)).toBeInTheDocument();
   });
+
+  it("R639 pointer, touch or focus intent on a fan card starts the dialog's chunk once, never while saving data", () => {
+    // A pass-through spy: stubbing the import would poison the chunk's cache for later tests.
+    const load = vi.spyOn(cardDetailChunk, "load");
+    render(<LandingRoute random={seeded(3)} />);
+    const face = screen.getByTestId(landingFanCardTestid(0));
+    fireEvent.pointerEnter(face);
+    fireEvent.focus(face);
+    fireEvent.touchStart(face);
+    expect(load).toHaveBeenCalledTimes(1);
+
+    resetCardDetailPrefetchForTests();
+    load.mockClear();
+    Object.defineProperty(navigator, "connection", { value: { saveData: true }, configurable: true });
+    fireEvent.pointerEnter(face);
+    fireEvent.focus(face);
+    fireEvent.touchStart(face);
+    expect(load).not.toHaveBeenCalled();
+  });
 });
 
 describe("#165 a touch hold on a fan card", () => {
@@ -690,7 +714,7 @@ describe("R639 your table", () => {
       "The record": "4 games: 4 won, 0 lost (100% won)",
       "Familiar face": "in 4 of your 4 games",
       Explorer: "1 different card played",
-      Collector: `seen 1 of ${String(ROTATION_POOL.length)} cards`,
+      Collector: `seen 1 of ${String(shippedPool().length)} cards`,
     };
     const titles = (): string => screen.getByTestId(landingTestid.showcaseTitle).textContent ?? "";
     const seen: string[] = [];
@@ -740,7 +764,8 @@ describe("R639 your table", () => {
 
     const sheet = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "landing.css"), "utf8");
     expect(sheet).toContain(".landing .landing-floor:has(> .landing-stats) {");
-    expect(sheet).toContain("height: 100dvh");
+    // R3728000: one screen inside the menus' shell is the window less its tab bar and insets.
+    expect(sheet).toContain("height: var(--shell-screen-h, 100dvh);");
   });
 });
 
@@ -773,10 +798,19 @@ describe("R765 the main menu's live-game banner", () => {
     );
   }
 
+  /** R3728002: Home draws the menus' shell's status row, as main.tsx mounts it. */
+  function Home(): ReactElement {
+    return (
+      <MenuShell path={paths.landing}>
+        <LandingRoute />
+      </MenuShell>
+    );
+  }
+
   it("R765 a signed-in player whose match is live sees the banner on top, and Rejoin is a link to the board", async () => {
     signIn();
     serveInGame("m-3");
-    render(<LandingRoute />);
+    render(<Home />);
 
     const banner = await screen.findByTestId(gameBannerTestid.live, undefined, SLOW);
     expect(banner).toHaveAttribute("data-kind", "match");
@@ -790,7 +824,7 @@ describe("R765 the main menu's live-game banner", () => {
   it("R765 between the games of a Conquest series it rejoins the series screen", async () => {
     signIn();
     serveInGame(null, "s-3");
-    render(<LandingRoute />);
+    render(<Home />);
     const rejoin = await screen.findByTestId(gameBannerTestid.rejoin, undefined, SLOW);
     expect(rejoin).toHaveAttribute("href", paths.series("s-3"));
   });
@@ -798,7 +832,7 @@ describe("R765 the main menu's live-game banner", () => {
   it("R1566000 a player whose co-op game is live sees the banner, and Rejoin leads to /duos/<id>", async () => {
     signIn();
     serveInGame(null, null, "d-3");
-    render(<LandingRoute />);
+    render(<Home />);
 
     const banner = await screen.findByTestId(gameBannerTestid.live, undefined, SLOW);
     expect(banner).toHaveAttribute("data-kind", "duos");
@@ -808,14 +842,14 @@ describe("R765 the main menu's live-game banner", () => {
   it("R765 no live game, or no account, shows no banner", async () => {
     signIn();
     serveInGame(null);
-    render(<LandingRoute />);
+    render(<Home />);
     await screen.findByTestId(landingTestid.account, undefined, SLOW);
     expect(screen.queryByTestId(gameBannerTestid.live)).toBeNull();
     cleanup();
 
     window.localStorage.clear();
     serveInGame("m-3");
-    render(<LandingRoute />);
+    render(<Home />);
     await screen.findByTestId(landingTestid.signIn, undefined, SLOW);
     expect(screen.queryByTestId(gameBannerTestid.live)).toBeNull();
   });

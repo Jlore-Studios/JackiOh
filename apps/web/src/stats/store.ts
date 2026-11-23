@@ -13,7 +13,7 @@ import {
   type GameOutcome,
   type PlayerStats,
 } from "./model.ts";
-import { isRecord } from "../wire/json.ts";
+import { isRecord, isSafeKey } from "../wire/json.ts";
 import { getStored, setStored } from "../net/storage.ts";
 
 let snapshot: PlayerStats | null = null;
@@ -40,6 +40,7 @@ function parseCounts(raw: unknown): Record<string, number> {
   if (!isRecord(raw)) return {};
   const counts: Record<string, number> = {};
   for (const [id, value] of Object.entries(raw)) {
+    if (!isSafeKey(id)) continue;
     const n = count(value);
     if (n > 0) counts[id] = n;
   }
@@ -60,6 +61,7 @@ export function parsePlayerStats(raw: unknown): PlayerStats {
     const cards: Record<string, CardCounters> = {};
     if (isRecord(value.cards)) {
       for (const [id, counters] of Object.entries(value.cards)) {
+        if (!isSafeKey(id)) continue;
         const parsed = parseCounters(counters);
         if (parsed !== null) cards[id] = parsed;
       }

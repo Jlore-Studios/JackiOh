@@ -5,6 +5,7 @@
 import type { ReactElement } from "react";
 
 import Username from "../../../apps/web/src/auth/Username.tsx";
+import { BOARD_CARD_BUDGET } from "../../../apps/web/src/game/config.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import RankCrest from "../../../apps/web/src/rank/RankCrest.tsx";
 import { baseView, emptySide, faceDownBackrow, fullBoardView, heroPower, unit } from "../../../apps/web/src/test/fixtures.ts";
@@ -209,7 +210,7 @@ describe("#2877 hero plates keep one size however many effects they carry", () =
       ...base,
       you: {
         ...base.you,
-        hero: { ...base.you.hero, power: used, powers: [used] },
+        hero: { ...base.you.hero, power: used, powers: [used], burn: 6, toxic: 2 },
         modifiers: EIGHT,
         secrets: [
           { id: "s-you-1", choice: "greed" as const },
@@ -217,14 +218,18 @@ describe("#2877 hero plates keep one size however many effects they carry", () =
         ],
         riftExtraTurn: true as const,
         jade: 3,
+        luck: 2,
+        tipsy: 4,
       },
       opponent: {
         ...base.opponent,
-        hero: { health: 30, armor: 0, power: used, powers: [used] },
+        hero: { health: 30, armor: 0, power: used, powers: [used], burn: 6, toxic: 2 },
         modifiers: EIGHT,
         secrets: [{ id: "s-foe-1" }, { id: "s-foe-2" }],
         riftExtraTurn: true as const,
         jade: 3,
+        luck: 2,
+        tipsy: 4,
       },
     };
   }
@@ -293,7 +298,7 @@ describe("#2877 hero plates keep one size however many effects they carry", () =
         </div>,
       );
       for (const side of ["you", "opponent"] as const) {
-        cy.get(`[data-testid="tray-${side}"] .modifier-badge`).should("have.length", allowance);
+        cy.get(`[data-testid="tray-${side}"] .modifier-badge:not(.hero-counter)`).should("have.length", allowance);
         cy.get(`[data-testid="tray-more-${side}"]`).should("have.text", `+${hidden}`);
       }
 
@@ -310,7 +315,7 @@ describe("#2877 hero plates keep one size however many effects they carry", () =
         </div>,
       );
       for (const side of ["you", "opponent"] as const) {
-        cy.get(`[data-testid="tray-${side}"] .modifier-badge`).should("have.length", allowance);
+        cy.get(`[data-testid="tray-${side}"] .modifier-badge:not(.hero-counter)`).should("have.length", allowance);
         cy.get(`[data-testid="tray-more-${side}"]`).should("not.exist");
       }
     });
@@ -484,6 +489,14 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
     { label: "phone", width: 360, height: 780 },
     { label: "phone", width: 430, height: 932 },
   ] as const;
+  /** #4427: short phones held upright: an iPhone SE in Safari with its bars showing, a 320 px phone, a small Android in Chrome. */
+  const SHORT_SIZES = [
+    { label: "iPhone SE in Safari", width: 375, height: 548 },
+    { label: "a 320 px phone", width: 320, height: 568 },
+    { label: "a small Android in Chrome", width: 360, height: 560 },
+  ] as const;
+  /** #4427: a field row's floor, `--card-h`'s (`BOARD_CARD_BUDGET.phone.minPx`). */
+  const FIELD_ROW_FLOOR_PX = BOARD_CARD_BUDGET.phone.minPx;
   /** Sub-pixel rounding between layout boxes and their measured rects. */
   const SLACK_PX = 1;
   /** `--field-ratio-min` and `--field-ratio-max` (`position-switch.test.tsx` pins them), and what a measured ratio may stray. */
@@ -1149,10 +1162,10 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
     });
   });
 
-  it("#2876 End turn and your hand stay on screen at 390x664, with and without a rail", () => {
+  function endTurnAndHandOnScreen(width: number, height: number): void {
     for (const rail of [false, true]) {
       const where = rail ? "with a rail" : "with no rail";
-      cy.viewport(390, 664);
+      cy.viewport(width, height);
       mountBoard(rail);
       cy.get('[data-testid="end-turn"]').should("be.visible");
 
@@ -1160,20 +1173,30 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
         const endTurn = doc.querySelector("[data-testid=\"end-turn\"]");
         expect(endTurn, `End turn is mounted ${where}`).to.not.eq(null);
         if (endTurn === null) return;
-        expect(endTurn.getBoundingClientRect().bottom, `End turn stays on screen at 390x664 ${where}`).to.be.at.most(
-          664 + SLACK_PX,
+        expect(endTurn.getBoundingClientRect().bottom, `End turn stays on screen at ${width}x${height} ${where}`).to.be.at.most(
+          height + SLACK_PX,
         );
         const cards = [...doc.querySelectorAll('[data-testid="hand-you"] [data-testid^="hand-card-"]')];
         expect(cards.length, `your hand has cards ${where}`).to.be.greaterThan(0);
         for (const card of cards) {
           expect(
             card.getBoundingClientRect().bottom,
-            `a hand card's bottom edge stays on screen at 390x664 ${where}`,
-          ).to.be.at.most(664 + SLACK_PX);
+            `a hand card's bottom edge stays on screen at ${width}x${height} ${where}`,
+          ).to.be.at.most(height + SLACK_PX);
         }
       });
     }
+  }
+
+  it("#2876 End turn and your hand stay on screen at 390x664, with and without a rail", () => {
+    endTurnAndHandOnScreen(390, 664);
   });
+
+  for (const size of SHORT_SIZES) {
+    it(`#2876 End turn and your hand stay on screen at ${size.width}x${size.height}, with and without a rail`, () => {
+      endTurnAndHandOnScreen(size.width, size.height);
+    });
+  }
 
   it("#2876 your hand keeps its size at 390x844", () => {
     cy.viewport(390, 844);
@@ -1200,4 +1223,71 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
       );
     });
   });
+
+  for (const size of SHORT_SIZES) {
+    const where = `${size.label} ${size.width}x${size.height}`;
+    it(`#4427 at ${where} nothing scrolls, End turn and your whole hand are on the screen, and every field row keeps its floor, with no rail and with the top strip's rail`, () => {
+      // The control bar's own rail (`mountBoard(true)`, which the #2876 rows run) is drawn on an
+      // upright phone only by Duos, whose card budget is `duos.css`'s; every other route passes
+      // `phoneRailTop`. At 375x548 with that rail the page is 1px taller than the screen (End turn
+      // stays on it): the Duos follow-up of #4427.
+      for (const rail of ["none", "top strip"] as const) {
+        cy.viewport(size.width, size.height);
+        if (rail === "top strip") mountTopRail();
+        else mountBoard(false);
+        cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+        if (rail === "top strip") cy.get('[data-testid="game"]').should("have.attr", "data-rail-top", "true");
+
+        const out: { measured?: Record<string, number | string> } = {};
+
+        cy.document({ log: false }).should((doc) => {
+          const at = `at ${where} with ${rail}`;
+          const board = doc.querySelector<HTMLElement>(BOARD);
+          expect(board, `the board is mounted ${at}`).to.not.eq(null);
+          if (board === null) return;
+          const endTurn = doc.querySelector('[data-testid="end-turn"]');
+          expect(endTurn, `End turn is mounted ${at}`).to.not.eq(null);
+          if (endTurn === null) return;
+          const cards = [...doc.querySelectorAll('[data-testid="hand-you"] [data-testid^="hand-card-"]')];
+          const zones = [...doc.querySelectorAll(`${BOARD} .field .zone`)];
+
+          expect(doc.documentElement.scrollHeight, `nothing scrolls vertically ${at}`).to.be.at.most(size.height);
+          expect(doc.documentElement.scrollWidth, `nothing scrolls sideways ${at}`).to.be.at.most(size.width);
+          expect(doc.body.scrollWidth, `the body does not scroll sideways ${at}`).to.be.at.most(size.width);
+          expect(board.scrollWidth, `the board does not scroll sideways ${at}`).to.be.at.most(size.width);
+
+          const end = endTurn.getBoundingClientRect();
+          expect(end.top, `End turn's top is on the screen ${at}`).to.be.at.least(-SLACK_PX);
+          expect(end.bottom, `End turn's bottom is on the screen ${at}`).to.be.at.most(size.height + SLACK_PX);
+
+          expect(cards.length, `your hand has cards ${at}`).to.be.greaterThan(0);
+          for (const card of cards) {
+            const box = card.getBoundingClientRect();
+            expect(box.top, `a hand card's top is on the screen ${at}`).to.be.at.least(-SLACK_PX);
+            expect(box.bottom, `a hand card's bottom is on the screen ${at}`).to.be.at.most(size.height + SLACK_PX);
+          }
+
+          expect(zones, `every field row's zones ${at}`).to.have.length(FIELD_CARD_COUNT);
+          const heights = zones.map((zone) => zone.getBoundingClientRect().height);
+          for (const height of heights) {
+            expect(height, `a field row keeps its ${FIELD_ROW_FLOOR_PX}px floor ${at}`).to.be.at.least(FIELD_ROW_FLOOR_PX - SLACK_PX);
+          }
+          const cardH = cardHPx(board);
+          expect(cardH, `--card-h keeps its floor ${at}`).to.be.at.least(FIELD_ROW_FLOOR_PX - SLACK_PX);
+
+          const tenth = (px: number): number => Math.round(px * 10) / 10;
+          out.measured = {
+            endTurnBottom: tenth(end.bottom),
+            scrollHeight: doc.documentElement.scrollHeight,
+            smallestZone: tenth(Math.min(...heights)),
+            cardH: tenth(cardH),
+          };
+        });
+
+        cy.then(() => {
+          cy.task("layout:report", { issue: 4427, size: where, rail, ...out.measured }, { log: false });
+        });
+      }
+    });
+  }
 });

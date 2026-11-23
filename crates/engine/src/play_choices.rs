@@ -387,8 +387,9 @@ fn accepts_stack(state: &GameState, slot: &ZoneSlot) -> bool {
     crate::zones::accepts_stack_card(state, slot, Default::default())
 }
 
-/// R1081000: whether this card may also be played into a backrow zone: a Unit with Flying, played
-/// face-up, read off its keywords where it is (§10.4).
+/// R1081000: whether this card may also be played into a backrow zone: a Flexible Unit (Flying has
+/// it innately, R3543000), played face-up, read off its keywords where it is (§10.4). R3828000:
+/// Flexible is a Unit's keyword, so a card that is not played as a Unit reads none here.
 fn flies(state: &GameState, card: &CardInstance) -> bool {
     if card.set_as.is_some() {
         return false;
@@ -399,12 +400,13 @@ fn flies(state: &GameState, card: &CardInstance) -> bool {
     if row_for_card(state, card) != Row::Units {
         return false;
     }
-    crate::layers::unit_has(state, card, KeywordKind::Flying)
+    crate::layers::is_flexible(state, card)
 }
 
-/// R1081000: whether a Flying play stands in this backrow zone, the predicate `legal_zones_for` lists
-/// by. Without Stack the zone must be open or freed by the play's own Tribute; with Stack occupancy is
-/// waived, but a carrier takes a Unit only as its Unit (R446, `zones::why_cannot_carry`, R653).
+/// R1081000: whether a Flexible Unit (Flying has it innately, R3543000) play stands in this backrow
+/// zone, the predicate `legal_zones_for` lists by. Without Stack the zone must be open or freed by the
+/// play's own Tribute; with Stack occupancy is waived, but a carrier takes a Unit only as its Unit
+/// (R446, `zones::why_cannot_carry`, R653).
 fn flying_takes_backrow(
     state: &GameState,
     card: &CardInstance,
@@ -470,7 +472,7 @@ pub fn equip_host_at(
             return None;
         }
     }
-    if crate::layers::unit_has(state, top, KeywordKind::Immutable) {
+    if crate::layers::is_immutable(state, top) {
         return None;
     }
     if crate::slumber::is_slumbering(top) {
@@ -565,6 +567,23 @@ pub fn legal_zones_for(
     if !needs_zone(state, card) {
         return Vec::new();
     }
+    // R3546000: a GIGA permanent is offered only the left lanes where it fits in both rows —
+    // no Stack, carrier or Flexible zone ever holds one.
+    if crate::giga::enters_giga(state, card) {
+        let row = row_for_card(state, card);
+        return crate::zones::slots_of(player, row)
+            .into_iter()
+            .filter(|slot| {
+                crate::giga::fits(*slot, |s| {
+                    crate::zones::is_open(state, s) || freed_by_tribute(state, &s, tributes)
+                })
+            })
+            .map(|slot| ZoneChoice {
+                row: slot.row,
+                lane: slot.lane,
+            })
+            .collect();
+    }
     let row = row_for_card(state, card);
     let stack = plays_on_stack(state, card);
     let mut slots: Vec<ZoneSlot> = crate::zones::slots_of(player, row)
@@ -586,7 +605,8 @@ pub fn legal_zones_for(
                 .filter(|slot| !immutable_fuser(state, slot)),
         );
     }
-    // R1081000: a Flying Unit is also offered the backrow zones it stands in, after its unit-row zones.
+    // R1081000: a Flexible Unit (Flying has it innately, R3543000) is also offered the backrow
+    // zones it stands in, after its unit-row zones.
     if flies(state, card) {
         for slot in crate::zones::slots_of(player, Row::Backrow) {
             if flying_takes_backrow(state, card, &slot, tributes) && !slots.contains(&slot) {
@@ -610,7 +630,7 @@ fn immutable_fuser(state: &GameState, slot: &ZoneSlot) -> bool {
         None => false,
         Some(top) => {
             crate::scripts::script_of(state, top).flags().fuses_carried == Some(true)
-                && crate::layers::unit_has(state, top, KeywordKind::Immutable)
+                && crate::layers::is_immutable(state, top)
         }
     }
 }
@@ -647,8 +667,10 @@ pub fn freed_by_tribute(state: &GameState, slot: &ZoneSlot, tributes: &[String])
 }
 
 /// R64, R391: the zone a play that names none takes: the leftmost open zone of its row, else the
-/// leftmost its own Tribute empties; R1081000: a Flying Unit then tries the backrow the same way. One
-/// function for `refuse_zone`'s no-zone arm and §10.5 step 4's assignment, so the two cannot disagree.
+/// leftmost its own Tribute empties; R1081000: a Flexible Unit (Flying has it innately, R3543000) then
+/// tries the backrow the same way. Flexible is read on Units alone (R3828000), so no other card tries
+/// a second row. One function for `refuse_zone`'s no-zone arm and §10.5 step 4's assignment, so the
+/// two cannot disagree.
 pub fn default_zone_for(
     state: &GameState,
     player: PlayerId,
@@ -656,13 +678,26 @@ pub fn default_zone_for(
     tributes: &[String],
 ) -> Option<ZoneSlot> {
     let row = row_for_card(state, card);
+    // R3546000: a GIGA takes the leftmost fit, Tribute-emptied zones counting as R391's do.
+    if crate::giga::enters_giga(state, card) {
+        return crate::giga::first_anchor(player, row, |slot| crate::zones::is_open(state, slot)).or_else(
+            || {
+                crate::giga::first_anchor(player, row, |slot| {
+                    crate::zones::is_open(state, slot) || freed_by_tribute(state, &slot, tributes)
+                })
+            },
+        );
+    }
     let own = crate::zones::first_free_zone(state, player, row).or_else(|| {
         crate::zones::slots_of(player, row)
             .into_iter()
             .find(|slot| freed_by_tribute(state, slot, tributes))
     });
-    if own.is_some() || !flies(state, card) {
+    if own.is_some() {
         return own;
+    }
+    if !flies(state, card) {
+        return None;
     }
     crate::zones::first_free_zone(state, player, Row::Backrow).or_else(|| {
         crate::zones::slots_of(player, Row::Backrow)
@@ -765,15 +800,33 @@ pub fn legal_embiggen_choices(state: &GameState, card: &CardInstance) -> Vec<boo
 
 // #55 Lava Golem "may tribute enemy units", which no other Tribute card may (R101).
 
+/// R3565000: the `memory` key an effect that adds a card to a hand sets its Tribute X in (Stinkyscape
+/// #129's "it has no Tribute condition", #138's "they have Tribute 1"), in place of the printed one.
+pub const TRIBUTE_SET_KEY: &str = "tributeSet";
+
+/// R3565000: the Tribute X an effect set on the card as it added it to a hand, or `None` when none did.
+/// Kept on its `memory` in hand and deck until a graveyard, an exile or the field's reset takes it
+/// (R78, R215), as `float::tribute_lowered` is.
+pub fn tribute_set_on(card: &CardInstance) -> Option<i32> {
+    card.memory
+        .get(TRIBUTE_SET_KEY)
+        .and_then(Value::as_i64)
+        .map(|set| i32::try_from(set).unwrap_or(0).max(0))
+}
+
 /// §6.3 "Tribute X": the number of units playing this card sacrifices, 0 when it asks for none, as a
 /// Nerf or a Buff in a hand or a deck left it (R386), less what its owner's Floats took off (R1841003).
+/// R3565000: an effect that added the card to a hand may have set it in place of the printed one;
+/// the Nerf, the Buff and the Floats still move that.
 pub fn tribute_cost_of(state: &GameState, card: &CardInstance) -> i32 {
     let declared = declared_targets(state, card)
         .into_iter()
         .find(|decl| decl.kind == PromptKind::Tribute)
         .and_then(|decl| decl.amount);
     let flagged = crate::scripts::script_of(state, card).flags();
-    let printed = declared.or(flagged.tribute).unwrap_or(0).max(0);
+    let printed = tribute_set_on(card)
+        .unwrap_or_else(|| declared.or(flagged.tribute).unwrap_or(0))
+        .max(0);
     // R386: a Nerf or a Buff in a hand or a deck moved it (`tuning.x`), never below 1.
     let tuned = crate::tuning::tuned_count(card, crate::numbers::NumberedKey::Tribute.as_str(), printed);
     // R1841003: each of its owner's Floats took one off, never below 0.
@@ -813,7 +866,8 @@ pub fn tribute_value_of(state: &GameState, unit: &CardInstance) -> i32 {
 }
 
 /// §6.3, R1282: your own units, plus the enemy's for a card that says so (#55), plus cheap permanents
-/// of either row and side for a wide Tribute (#97.4, R1282: up to 20 permanents). Dormant cards never.
+/// of either row and side for a wide Tribute (#97.4, R1282: up to 20 permanents). Never a card dormant
+/// beneath a Stack pile (R13), nor a Dormant one (R1839000, R4555000).
 pub fn legal_tribute_units<'a>(
     state: &'a GameState,
     player: PlayerId,
@@ -851,6 +905,7 @@ pub fn legal_tribute_units<'a>(
             for slot in crate::zones::slots_of(side, Row::Backrow) {
                 if let Some(c) = crate::zones::card_at(state, slot)
                     && c.id != card.id
+                    && !crate::slumber::is_slumbering(c)
                     && !out.iter().any(|existing| existing.id == c.id)
                     && !crate::query::is_untributable(state, c)
                     && crate::mana::cost_now(state, c) <= cheap
@@ -1103,8 +1158,8 @@ fn reachable(
     if crate::restrictions::spell_cannot_reach(state, Some(card), candidate) {
         return false;
     }
-    // R781001: a Spell's, Field Spell's or Field Trap's `target` never offers an Immutable card in play.
-    if decl.kind == PromptKind::Target && crate::restrictions::immutable_bars(state, Some(card), candidate) {
+    // R4353002: a Spell's or Field Spell's `target` never offers an Evasive card in play.
+    if decl.kind == PromptKind::Target && crate::restrictions::evasive_bars(state, Some(card), candidate) {
         return false;
     }
     // MD-B1, R940: a harmful declaration whose filter names a tribal tag never offers an immune card.
@@ -1327,8 +1382,8 @@ pub fn interceptor_fits_decl(
     };
     card_allowed(state, decl.filter.as_ref(), &probe, card, player)
         && !crate::restrictions::spell_cannot_reach(state, Some(card), &probe)
-        // R781001: nor to an Immutable one, when the source is one Immutable bars.
-        && !(decl.kind == PromptKind::Target && crate::restrictions::immutable_bars(state, Some(card), &probe))
+        // R4353002: nor to an Evasive one, when the source is one Evasive bars.
+        && !(decl.kind == PromptKind::Target && crate::restrictions::evasive_bars(state, Some(card), &probe))
         // MD-B1, R940: a harmful declaration's tribal filter never diverts to an immune interceptor.
         && !(crate::targeting::target_aim(decl) == crate::wire::TargetAim::Harm
             && {
@@ -1847,20 +1902,19 @@ pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance
     if crate::state::barred_from_play(state, player, card) {
         return Vec::new();
     }
-    // R1223: a card affordable on borrowed mana is listed.
-    let mana = crate::credit::spendable_mana(state, player);
+    // R1223, R3548004: a card affordable on borrowed mana — or on infinite mana — is listed.
     // R1180004: a Spell its player's health price reaches takes no mana, so every price of it is
     // listed, the ones only the health affords included. A face-down play is a Trap's, never priced so.
     let health = crate::mana::health_priced(state, card);
-    let mut out = priced_play_actions(state, player, card, |cost| {
-        if health || cost <= mana {
+    let mut out = priced_play_actions(state, player, card, |_, cost| {
+        if health || crate::credit::can_pay(state, player, cost) {
             vec![PlayPayment::default()]
         } else {
             Vec::new()
         }
     });
     out.extend(face_down_play_actions(state, player, card, |cost| {
-        if cost <= mana {
+        if crate::credit::can_pay(state, player, cost) {
             vec![PlayPayment::default()]
         } else {
             Vec::new()
@@ -1881,13 +1935,13 @@ pub fn hand_play_choices_truncated(state: &GameState, player: PlayerId, card: &C
     {
         return false;
     }
-    let mana = crate::credit::spendable_mana(state, player);
-    // R1180004: a price the health price pays is one the player can pay.
+    // R1180004, R3548004: a price the health price pays — or infinite mana pays — is one the
+    // player can pay.
     let health = crate::mana::health_priced(state, card);
     let cut_prices: Vec<PlayPrice> = play_prices(state, player, card)
         .into_iter()
         .filter(|price| {
-            (health || price.cost <= mana)
+            (health || crate::credit::can_pay(state, player, price.cost))
                 && listed_play_choices(
                     state,
                     player,
@@ -1914,7 +1968,8 @@ pub fn hand_play_choices_truncated(state: &GameState, player: PlayerId, card: &C
 }
 
 /// R783004: every face-down `play` a Cloaked card in hand could legally produce — one per price,
-/// payment, tribute set and open backrow zone. No targets or modes are declared when set.
+/// payment, tribute set and open backrow zone. No targets or modes are declared when set; a Spell that
+/// would resolve as it is set (R3806000) is set only at a price whose text has its needed picks (R703).
 fn face_down_play_actions(
     state: &GameState,
     player: PlayerId,
@@ -1933,6 +1988,9 @@ fn face_down_play_actions(
             ..card.clone()
         };
         for price in play_prices(state, player, &probe) {
+            if set_resolution_blocked(state, player, card, price.x, price.embiggen) {
+                continue;
+            }
             let paid = payments(price.cost);
             if paid.is_empty() {
                 continue;
@@ -1965,6 +2023,24 @@ fn face_down_play_actions(
     out
 }
 
+/// R3806000, R703: a face-down set of this Spell at this X and embiggen that would resolve as it is set
+/// (`alt_play::resolves_as_set`) while a declaration its text needs has no legal pick or its play gate
+/// does not hold (`alt_play::spell_text_can_resolve`), so it is neither listed nor accepted.
+fn set_resolution_blocked(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    x: Option<i32>,
+    embiggen: Option<bool>,
+) -> bool {
+    crate::alt_play::resolves_as_set(state, player, card)
+        && !crate::alt_play::spell_text_can_resolve(
+            state,
+            player,
+            &stamped_for_play(state, card, x, embiggen),
+        )
+}
+
 /// E11, R454: every `play` action `legal_actions` lists for a card in the player's graveyard, crossed as
 /// for a hand card, with the ways a permission lets it be paid (`graveyard_play::graveyard_payments_for`).
 pub fn graveyard_play_actions_for(
@@ -1979,8 +2055,10 @@ pub fn graveyard_play_actions_for(
     {
         return Vec::new();
     }
-    priced_play_actions(state, player, card, |price| {
-        crate::graveyard_play::graveyard_payments_for(state, player, card, price)
+    // R4285000: each price's probe, its X and embiggen stamped, since a Plague payment meets the price
+    // before Flashback's floor.
+    priced_play_actions(state, player, card, |probe, price| {
+        crate::graveyard_play::graveyard_payments_for(state, player, probe, price)
     })
 }
 
@@ -2051,15 +2129,15 @@ pub fn offered_play_costs(state: &GameState, player: PlayerId, card: &CardInstan
 /// then the choices' own costs (R2975000): a card refused at every price is refused whatever the board
 /// holds, then step 1's own order.
 pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &CardInstance) -> Option<String> {
-    // R1223: borrowed mana pays; R1180004: a Spell its player's health price reaches is refused by no mana.
-    let mana = crate::credit::spendable_mana(state, player);
+    // R1223: borrowed mana pays; R3548004: infinite mana pays; R1180004: a Spell its player's health
+    // price reaches is refused by no mana.
     let health = crate::mana::health_priced(state, card);
     why_unplayable(
         state,
         player,
         card,
-        |cost| health || cost <= mana,
-        |cost| {
+        |_, cost| health || crate::credit::can_pay(state, player, cost),
+        |_, cost| {
             crate::credit::why_unaffordable(state, card, cost)
                 .err()
                 .map(|error| error.message)
@@ -2068,13 +2146,14 @@ pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &Card
 }
 
 /// R979000, R1571000: `why_hand_card_unplayable`'s order for any play source: `payable` says whether
-/// a payment meets a price, as the source's listing asks it; `refuse_price` refuses a price none meets.
+/// a payment meets a price, as the source's listing asks it; `refuse_price` refuses a price none meets;
+/// each is given the price's probe, its X and embiggen stamped, with the price.
 fn why_unplayable(
     state: &GameState,
     player: PlayerId,
     card: &CardInstance,
-    payable: impl Fn(i32) -> bool,
-    refuse_price: impl Fn(i32) -> Option<String>,
+    payable: impl Fn(&CardInstance, i32) -> bool,
+    refuse_price: impl Fn(&CardInstance, i32) -> Option<String>,
 ) -> Option<String> {
     // (a) Ban: every X and embiggen combination `play_prices` enumerates, stamped alike, is banned (R455).
     let x_values: Vec<Option<i32>> = if chooses_x(state, card) {
@@ -2130,11 +2209,11 @@ fn why_unplayable(
     }
     let Some(cheapest) = prices
         .iter()
-        .filter(|price| payable(price.cost))
+        .filter(|price| payable(&price.probe, price.cost))
         .min_by_key(|price| price.cost)
     else {
         let cheapest = prices.iter().min_by_key(|price| price.cost)?;
-        return refuse_price(cheapest.cost);
+        return refuse_price(&cheapest.probe, cheapest.cost);
     };
     let tribute_sets = legal_tribute_sets(state, player, card);
     // (c) Zone: no set the Tribute could pay leaves a zone: an open one, one the set empties (R391) or a
@@ -2146,12 +2225,16 @@ fn why_unplayable(
             tribute_sets.iter().map(Vec::as_slice).collect()
         };
         let nowhere = sets.iter().all(|tributes| {
-            default_zone_for(state, player, card, tributes).is_none()
-                && legal_zones_for(state, player, card, tributes).is_empty()
+            // R3546002: read off this price's probe, as the listing reads it, so an
+            // "Embiggen: GIGA" card is refused at its embiggened size.
+            default_zone_for(state, player, &cheapest.probe, tributes).is_none()
+                && legal_zones_for(state, player, &cheapest.probe, tributes).is_empty()
                 && legal_equip_zones_for(state, player, &cheapest.probe, tributes).is_empty()
         });
         if nowhere {
-            return refuse_zone(state, player, card, None, &[])
+            // R3546002: refused at the price's own size, as the zones above are read, so an
+            // "Embiggen: GIGA" card whose only payable price is its embiggened one says why.
+            return refuse_zone(state, player, &cheapest.probe, None, &[])
                 .err()
                 .map(|error| error.message);
         }
@@ -2176,7 +2259,15 @@ fn why_unplayable(
     let probe = PlayAction {
         instance_id: card.id.clone(),
         zone: if needs_zone(state, card) {
-            default_zone_for(state, player, card, paid).map(|slot| ZoneChoice {
+            // R3546002: the probe is the stamped card, so an "Embiggen: GIGA" card takes its
+            // embiggened size here too.
+            default_zone_for(
+                state,
+                player,
+                &stamped_for_play(state, card, cheapest.x, cheapest.embiggen),
+                paid,
+            )
+            .map(|slot| ZoneChoice {
                 row: slot.row,
                 lane: slot.lane,
             })
@@ -2236,8 +2327,8 @@ pub fn why_graveyard_card_unplayable(
         state,
         player,
         card,
-        |cost| !crate::graveyard_play::graveyard_payments_for(state, player, card, cost).is_empty(),
-        |cost| crate::graveyard_play::why_graveyard_price_unpaid(state, player, card, cost),
+        |probe, cost| !crate::graveyard_play::graveyard_payments_for(state, player, probe, cost).is_empty(),
+        |probe, cost| crate::graveyard_play::why_graveyard_price_unpaid(state, player, probe, cost),
     )
 }
 
@@ -2312,7 +2403,7 @@ pub fn with_drawn_target_picks(
             } else {
                 low
             };
-            out.extend(crate::random_targets::draw_picks(
+            let drawn = crate::random_targets::draw_picks(
                 state,
                 rng,
                 player,
@@ -2320,7 +2411,17 @@ pub fn with_drawn_target_picks(
                 low,
                 high,
                 crate::targeting::target_aim(decl),
-            ));
+            );
+            // I22 (#4540): the fuzz monitor holds this draw to the targeting rules (`testkit::seams`).
+            #[cfg(feature = "testkit")]
+            crate::testkit::seams::record_target_draw(
+                state,
+                Some(card),
+                player,
+                crate::testkit::seams::TargetDrawBy::Mayor,
+                &drawn,
+            );
+            out.extend(drawn);
             continue;
         }
         let rest = &given[at.min(given.len())..];
@@ -2339,15 +2440,15 @@ pub fn with_drawn_target_picks(
     Ok(out)
 }
 
-/// R81, R90's enumeration with the payment left to the caller: for each price, `payments` answers the
-/// ways a play may pay it (none: not offered; `{}`: mana alone), a hand card in mana, a graveyard one
+/// R81, R90's enumeration with the payment left to the caller: for each price, `payments` answers, from
+/// the price's probe (its X and embiggen stamped) and the price, the ways a play may pay it (none: not offered; `{}`: mana alone), a hand card in mana, a graveyard one
 /// perhaps with Plague Counters (`graveyard_play.rs`). R455: a banned price is never offered. R391: each
 /// Tribute set is paired with the zones it leaves open, never with a zone another set empties.
 pub fn priced_play_actions(
     state: &GameState,
     player: PlayerId,
     card: &CardInstance,
-    payments: impl Fn(i32) -> Vec<PlayPayment>,
+    payments: impl Fn(&CardInstance, i32) -> Vec<PlayPayment>,
 ) -> Vec<PlayAction> {
     let mut out: Vec<PlayAction> = Vec::new();
     let tribute_sets = legal_tribute_sets(state, player, card);
@@ -2361,7 +2462,7 @@ pub fn priced_play_actions(
         cost,
     } in play_prices(state, player, card)
     {
-        let paid = payments(cost);
+        let paid = payments(&probe, cost);
         if paid.is_empty() {
             continue;
         }
@@ -2375,8 +2476,9 @@ pub fn priced_play_actions(
             // R1086: the plain zones first, then the Equip host zones after them (D14: a game that
             // never plays Equip lists what it listed before).
             let zones: Vec<(Option<ZoneChoice>, Option<bool>)> = if needs_zone(state, card) {
+                // R3546002: an "Embiggen: GIGA" card lists zones at its embiggened size.
                 let mut paired: Vec<(Option<ZoneChoice>, Option<bool>)> =
-                    legal_zones_for(state, player, card, tributes)
+                    legal_zones_for(state, player, &probe, tributes)
                         .into_iter()
                         .map(|zone| (Some(zone), None))
                         .collect();
@@ -2527,12 +2629,27 @@ fn refuse_zone(
         // §3.2: playing a permanent from hand requires an open zone in the right row — or, R391, one the
         // play's own Tribute empties.
         if default_zone_for(state, player, card, tributes).is_none() {
+            // R3546000: a GIGA permanent needs two lanes side by side free in both rows.
+            if crate::giga::enters_giga(state, card) {
+                return refuse(format!(
+                    "{name} is GIGA: it needs two lanes side by side free in both rows"
+                ));
+            }
             return refuse(format!("no free {row} zone"));
         }
         return Ok(());
     };
     if !needs {
         return refuse(format!("{name} takes no zone"));
+    }
+    // R3546000: a GIGA names only a left lane where it fits, as `legal_zones_for` lists them.
+    if crate::giga::enters_giga(state, card) {
+        if legal_zones_for(state, player, card, tributes).contains(zone) {
+            return Ok(());
+        }
+        return refuse(format!(
+            "{name} is GIGA: it needs that lane and the next free in both rows"
+        ));
     }
 
     let row = row_for_card(state, card);
@@ -2828,7 +2945,8 @@ fn refuse_modes(
 
 /// R783004: refusal for a face-down play: a card with no Cloaked (or in a graveyard), a timing other
 /// than Cloaked's (not R1044's three), a named zone outside the open backrow zones, or any target or
-/// mode. X, embiggen and tributes are still checked.
+/// mode. X, embiggen and tributes are still checked, and (R3806000, R703) a Spell that would resolve as
+/// it is set needs its text's picks, as `face_down_play_actions` lists it.
 fn why_face_down_refused(
     state: &GameState,
     player: PlayerId,
@@ -2872,6 +2990,12 @@ fn why_face_down_refused(
         ));
     }
     refuse_x(state, player, card, action.x)?;
+    if set_resolution_blocked(state, player, card, action.x, action.embiggen) {
+        return refuse(format!(
+            "{} cannot resolve as it is set now",
+            name_of(state, &card.def_id)
+        ));
+    }
     // R1181002: a card set face-down is no play Mountaintop Garden reaches, so its prices are read off
     // the card stamped set, as the listing reads them (`face_down_play_actions`).
     let set = CardInstance {
@@ -2915,7 +3039,8 @@ pub fn why_choices_refused(
     if action.equip == Some(true) {
         refuse_equip(state, player, &stamped, action.zone.as_ref(), tributes)?;
     } else {
-        refuse_zone(state, player, card, action.zone.as_ref(), tributes)?;
+        // R3546002: read off the embiggen-stamped card, as the listing does.
+        refuse_zone(state, player, &stamped, action.zone.as_ref(), tributes)?;
     }
     refuse_x(state, player, card, action.x)?;
     refuse_embiggen(state, card, action.embiggen)?;

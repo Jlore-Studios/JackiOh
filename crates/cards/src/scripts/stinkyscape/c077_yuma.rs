@@ -46,7 +46,8 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // Hit Job: a Spell
     const FLOOD: &str = "core-017"; // Flood: a Spell
 
-    // Differs from Scenario::offered: plays Yuma on a board and ends the turn, not the seat's legal actions.
+    /// A board where p1 plays Yuma (Radiant if `radiant`) beside a vanilla Unit, holding `mine`, p2 holding
+    /// `theirs`, then ends the turn.
     fn offered(radiant: bool, seed: &str, mine: Value, theirs: Value) -> Scenario {
         let mut hand = vec![json!({ "def": ID, "radiant": radiant })];
         hand.extend(mine.as_array().cloned().unwrap_or_default());

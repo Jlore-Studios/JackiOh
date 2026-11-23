@@ -16,8 +16,9 @@ use crate::effects::card_scope::{CardScope, Readers, cards_in_card_scope};
 use crate::effects::radiant::RadiantTarget;
 use crate::effects::targets::{PlayerSpec, TargetSpec, instance_by_id_or_spec, player_of, resolve_target};
 use crate::layers::unit_view;
-use crate::script::{Effect, EffectContext};
-use crate::state::{CardInstance, Grant, find_instance, find_instance_mut};
+use crate::params::param;
+use crate::script::{Effect, EffectContext, HookArgs};
+use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut};
 use crate::wire::{GameEvent, Keyword, KeywordKind, PlayerId, ZoneName, has_keyword};
 use crate::zones::active_units_of;
 
@@ -48,6 +49,8 @@ const POOL_KEYWORDS: &[(&str, Keyword)] = &[
     ("Pierce", Keyword::Pierce),
     ("Windfury", Keyword::Windfury),
     ("Deft", Keyword::Deft),
+    // S01 (R3551004): Frenzy joins the pool as its fifteenth entry.
+    ("Frenzy", Keyword::Frenzy),
 ];
 
 /// R21's pool as keywords, in the pool's order: what a random keyword is drawn from (B3.4's Upgrade too).
@@ -139,7 +142,8 @@ pub struct BuffAllUnitsArgs {
     pub health: Option<i32>,
 }
 
-/// "+X/+Y to every unit you control" (#43), in lane order, one `buffed` event each.
+/// "+X/+Y to every unit you control" (#43), in lane order, one `buffed` event each; a Spell's passes a
+/// Unit Immune to Spells by (R4453000).
 pub fn buff_all_units(args: BuffAllUnitsArgs) -> Effect {
     Effect::new("buffAllUnits", move |ctx| {
         let players: Vec<PlayerId> = match args.side {
@@ -159,6 +163,10 @@ pub fn buff_all_units(args: BuffAllUnitsArgs) -> Effect {
                 .cloned()
                 .collect();
             for unit in &units {
+                // R4453000: a Spell's "every Unit" passes a Unit Immune to Spells by (§6.1).
+                if crate::restrictions::unaffected_by(ctx, unit) {
+                    continue;
+                }
                 apply_buff(ctx, unit, &amount, true);
             }
         }
@@ -166,7 +174,7 @@ pub fn buff_all_units(args: BuffAllUnitsArgs) -> Effect {
 }
 
 /// R21, §10.4: the grant itself, on one instance, by the rules `grant_to` states.
-fn grant_onto(unit: &mut CardInstance, keyword: &Keyword) {
+pub(crate) fn grant_onto(unit: &mut CardInstance, keyword: &Keyword) {
     if keyword.kind() == KeywordKind::DivineShield {
         unit.divine_shield_spent = None;
     }
@@ -388,6 +396,95 @@ pub fn drawn_combat_keywords(card: &CardInstance, key: Option<&str>) -> Vec<Keyw
         .get(key.unwrap_or(COMBAT_KEYWORDS_KEY))
         .and_then(|value| serde_json::from_value(value.clone()).ok())
         .unwrap_or_default()
+}
+
+/// R3778000: what a card holding the list `kept` holds for a new draw: every keyword it has from any
+/// source, read through the layers, and every one on the list, shown or not.
+fn held_beside(state: &GameState, card: &CardInstance, kept: &[Keyword]) -> Vec<Keyword> {
+    let mut held = unit_view(state, card).keywords;
+    held.extend(kept.iter().cloned());
+    held
+}
+
+/// R3778000: tops the list `key` of `card`, a card on the field, up to `count`: the card keeps one
+/// ordered list for its stay on the field and never shortens it, so this draws only what `count` asks
+/// beyond it, appended in draw order, by R781004's rules (R21's pool through `candidates_beside`, none
+/// the card holds from any source or has on the list, no Taunt beside Indestructible, every one left
+/// when fewer remain). On a card with no list yet it is the arrival draw, draw for draw.
+fn top_up_onto(ctx: &mut EffectContext<'_>, card: &CardInstance, count: i32, key: &str) {
+    let mut kept = drawn_combat_keywords(card, Some(key));
+    let want = usize::try_from(count).unwrap_or(0);
+    if kept.len() >= want && card.memory.contains_key(key) {
+        return;
+    }
+    let mut held = held_beside(ctx.sink.state, card, &kept);
+    while kept.len() < want {
+        let candidates = candidates_beside(&held);
+        let Some(keyword) = ctx.sink.rng.pick(&candidates).cloned() else {
+            break;
+        };
+        held.push(keyword.clone());
+        kept.push(keyword);
+    }
+    if let Some(live) = find_instance_mut(ctx.sink.state, &card.id) {
+        live.memory.insert(
+            key.to_string(),
+            serde_json::to_value(&kept).unwrap_or(serde_json::Value::Null),
+        );
+    }
+}
+
+/// R3778000: `draw_combat_keywords` for an Aura that follows its number (`aura_combat_keywords`): on
+/// the running card on the field, the list topped up to `count` (`top_up_onto`), where the older verb
+/// keeps any draw the card holds. Its arrival draw and its fusion's.
+pub fn top_up_combat_keywords(args: DrawCombatKeywordsArgs) -> Effect {
+    Effect::new("topUpCombatKeywords", move |ctx| {
+        let key = args.key.as_deref().unwrap_or(COMBAT_KEYWORDS_KEY);
+        let Some(me) = ctx.live_self().cloned() else {
+            return;
+        };
+        if me.zone.z() == ZoneName::Field {
+            top_up_onto(ctx, &me, args.count, key);
+        }
+    })
+}
+
+/// R3778000: what the Aura "Has {number} random combat keywords" gives: the first as many of the
+/// card's list as its number reads now (R386), so a lower number takes the newest off and the number
+/// back returns them. A `conditionalKeywords` read: it draws nothing (§10.4).
+pub fn aura_combat_keywords(args: &HookArgs<'_>, number: &str, key: Option<&str>) -> Vec<Keyword> {
+    let shown = usize::try_from(param(args, number)).unwrap_or(0);
+    drawn_combat_keywords(args.self_, key)
+        .into_iter()
+        .take(shown)
+        .collect()
+}
+
+/// R3778000: run by each verb that may raise a card's declared number on the field (a Buff's Number
+/// row, a number set outright, the card made Radiant) once it has: a card whose text follows the number
+/// (`Script::combat_keywords_follow`) draws what the number, read as its Aura reads it, asks beyond
+/// its list, as the change resolves. Nothing is queued, and every other card is left as it was. A card
+/// holding no list yet has its arrival draw (or its fusion's) still to come, which reads the number as
+/// it is then, so it draws nothing here.
+pub(crate) fn follow_combat_keywords(ctx: &mut EffectContext<'_>, card_id: &str) {
+    let Some(card) = find_instance(ctx.sink.state, card_id).cloned() else {
+        return;
+    };
+    if card.zone.z() != ZoneName::Field || !card.memory.contains_key(COMBAT_KEYWORDS_KEY) {
+        return;
+    }
+    let Some(number) = crate::scripts::script_of(ctx.sink.state, &card).combat_keywords_follow else {
+        return;
+    };
+    let count = param(
+        &HookArgs {
+            state: &*ctx.sink.state,
+            self_: &card,
+            radiant: card.radiant,
+        },
+        number,
+    );
+    top_up_onto(ctx, &card, count, COMBAT_KEYWORDS_KEY);
 }
 
 /// `grantRandomKeywords`' argument.

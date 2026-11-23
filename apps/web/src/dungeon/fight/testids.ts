@@ -17,12 +17,16 @@ export const fightTestid = {
   noSetup: "dungeon-fight-no-setup",
   /** B22: the enemy's name, on the board's rail. */
   enemy: "dungeon-fight-enemy",
+  /** #3586: the enemy's tier, "Tier N" or "Elite, tier N", beside its relic tray. */
+  tier: "dungeon-fight-tier",
   /** B24: the run's time, on the board's rail. */
   timer: "dungeon-fight-timer",
   /** B25: in the result panel, sends the fight's `FightOver` to the run once the worker reported it. */
   continue: "dungeon-fight-continue",
   /** B25: the run's refusal of that `FightOver`; role="alert". */
   actRefusal: "dungeon-fight-act-refusal",
+  /** R3932000: out to the Play menu: mid-fight it opens `leaveDialog`; once the fight has its result it leaves at once. */
+  menu: "dungeon-fight-menu",
   /** R2972000: the question asked before a fight in progress is left. */
   leaveDialog: "dungeon-fight-leave",
   /** R2972000: stay in the fight. */

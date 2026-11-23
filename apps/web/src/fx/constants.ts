@@ -70,6 +70,7 @@ export const FX_ADAPT_SLOW_FACTOR = 1.4;      // …and slow also means this man
 export const FX_ADAPT_DISPLAY_MAX_MS = 34;    // the slowest interval taken for a display's refresh (30 Hz); slower is load
 export const FX_ADAPT_MIN_INTERVAL_MS = 4;    // shorter raw intervals are not a display's refresh (240 Hz is 4.2 ms)
 export const FX_ADAPT_RECOVER_WINDOWS = 3;    // healthy windows in a row that double a lowered cap back up
+export const FX_ADAPT_MOMENT_WINDOW = 8;      // frames: a run whose mean raw frame passes FX_PHONE_FRAME_BUDGET_MS sheds one stage (R3674000)
 export const FX_DEFAULT_SEED = 0x5eed;
 export const FX_MEMORY_LIMIT = 64;            // entries each FxMemory map keeps (oldest evicted)
 export const FX_MEMORY_RECENT = 16;           // R502: the last events the planner keeps in order (a cast on draw is read off them)
@@ -239,6 +240,22 @@ export const FX_MOTIF_MIN_CARDS = 3;
 // R2803000: the audit's phone budget. The heaviest set pieces and a board of four auras hold this
 // mean frame time at the phone particle cap with mobile emulation.
 export const FX_PHONE_FRAME_BUDGET_MS = 50;
+// R4493001: the layer memory the director lets its mounted DOM cues hold on a phone (or a device with
+// little memory), each promoted element's box at its largest scale times the device's pixels: past it, a
+// takeover sheds its optional parts in order (its slices merged, its art, its stage, its rays and wave), never a main beat.
+export const FX_PHONE_LAYER_BUDGET_MB = 200;
+// R4493000: the most layers a takeover's stage draws on a phone: adjacent slices (or planes) merge into
+// one picture each, far, middle and near.
+export const FX_PHONE_STAGE_LAYERS = 3;
+// R4493000: the most screens' worth of area one effect element may cover at its largest scale.
+export const FX_LAYER_MAX_SCREENS = 3;
+// R4493001: a device reporting this much memory or less (`navigator.deviceMemory`, in GB) holds the
+// phone's layer budget at any width.
+export const FX_LOW_DEVICE_MEMORY_GB = 4;
+// R4493001: the bytes one composited pixel holds (RGBA, 8 bits a channel).
+export const FX_LAYER_BYTES_PER_PX = 4;
+// R4493001: the bytes in a megabyte, as FX_PHONE_LAYER_BUDGET_MB counts them.
+export const FX_BYTES_PER_MB = 1_048_576;
 // R3351000: the living game's worst single frame on a phone, about one frame at 8 fps; the mean
 // still holds FX_PHONE_FRAME_BUDGET_MS, so one hitch never costs the scene its budget.
 export const FX_PHONE_FRAME_WORST_MS = 120;
@@ -493,6 +510,8 @@ export const FX_TEXT = {
   diceRolled: "Dice roll",
   /** B5 E10: an effect ended the turn. */
   turnCutShort: "Turn cut short",
+  /** R3925000: a loop reached the loop cap and stopped. */
+  loopCapped: "Loop stopped",
   /** R1183002: the AI plays the rest of the turn (Meditative+ #18). */
   autopilot: "The AI takes the turn",
   /** R2785000: a quest's set-piece banner, the system's climax. */

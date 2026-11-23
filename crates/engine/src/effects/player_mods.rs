@@ -211,16 +211,20 @@ pub struct GiveUnitsKeywordArgs {
 }
 
 /// R1859007 (Stinkyscape #137.1–#137.4, the War Doctrines): "For the rest of the game, your Units have
-/// X" — a `never` modifier lending it to every Unit they control, later ones too (`layers::lent_by_player`).
+/// X" — a `never` modifier lending it to every Unit they control, later ones too (`layers::lent_by_player`),
+/// R4508000: but for one Immune to Spells, when a Spell gives it.
 pub fn give_units_keyword(args: GiveUnitsKeywordArgs) -> Effect {
     Effect::new("giveUnitsKeyword", move |ctx| {
         let player = ctx.controller;
+        // R4508000: a Spell's lend passes a Unit Immune to Spells by (`layers::lent_by_player`).
+        let from_spell = crate::restrictions::effect_is_from_spell(ctx).then_some(true);
         add_modifier(
             ctx,
             player,
             ModifierExpiry::Never,
             ModifierKind::UnitsHaveKeyword {
                 keyword: args.keyword.clone(),
+                from_spell,
             },
         );
     })
@@ -228,11 +232,13 @@ pub fn give_units_keyword(args: GiveUnitsKeywordArgs) -> Effect {
 
 /// R1870004 (Stinkyscape #4.4 Last Word, "the next turn is yours: your Units have Charge during it"):
 /// R1859007's modifier with expiry `nextTurnOf` from this turn, so it lends `keyword` on their next
-/// turn only (`mana::modifier_is_live`); a Unit landing during it has the keyword as it lands.
+/// turn only (`mana::modifier_is_live`); a Unit landing during it has the keyword as it lands. R4508000:
+/// one a Spell gives passes a Unit Immune to Spells by.
 pub fn give_units_keyword_next_turn(args: GiveUnitsKeywordArgs) -> Effect {
     Effect::new("giveUnitsKeywordNextTurn", move |ctx| {
         let player = ctx.controller;
         let turn = ctx.sink.state.turn;
+        let from_spell = crate::restrictions::effect_is_from_spell(ctx).then_some(true);
         add_modifier(
             ctx,
             player,
@@ -242,6 +248,7 @@ pub fn give_units_keyword_next_turn(args: GiveUnitsKeywordArgs) -> Effect {
             },
             ModifierKind::UnitsHaveKeyword {
                 keyword: args.keyword.clone(),
+                from_spell,
             },
         );
     })

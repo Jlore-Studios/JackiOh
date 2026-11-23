@@ -343,6 +343,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
             card.counters = Counters {
                 plague: Some(2),
                 grade: Some(1),
+                ..Default::default()
             };
             card.memory = IndexMap::from([("seen".to_string(), json!(7))]);
             card.summoned_turn = Some(1);
@@ -379,6 +380,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
             Counters {
                 plague: Some(2),
                 grade: Some(1),
+                ..Default::default()
             }
         );
     }

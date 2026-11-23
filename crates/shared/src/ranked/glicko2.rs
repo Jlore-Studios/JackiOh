@@ -86,11 +86,13 @@ fn next_volatility(sigma: f64, phi: f64, v: f64, delta: f64, tau: f64) -> f64 {
     if delta * delta > phi2 + v {
         big_b = (delta * delta - phi2 - v).ln();
     } else {
+        // The bracket's other end below a: the first a - kτ at which f is not negative.
+        let below = |k: u32| a - f64::from(k) * tau;
         let mut k: u32 = 1;
-        while f(a - f64::from(k) * tau) < 0.0 && k < GLICKO_MAX_ITERATIONS {
+        while f(below(k)) < 0.0 && k < GLICKO_MAX_ITERATIONS {
             k += 1;
         }
-        big_b = a - f64::from(k) * tau;
+        big_b = below(k);
     }
 
     let mut f_a = f(big_a);

@@ -1,7 +1,8 @@
-//! Trigger multipliers (docs/meditative-set.md M5, ME-TRIG; R820–R823): how many extra times a
-//! player's hooks of one kind run, a pure-read script hook a card asks while it acts on its
+//! Trigger multipliers (docs/meditative-set.md M5, ME-TRIG; R820–R823, R3536003): how many extra
+//! times a player's hooks of one kind run, a pure-read script hook a card asks while it acts on its
 //! controller's field: `TurnHooks` (Meditative #9 Joint Filing) as the turn's hooks are queued (R821),
-//! `CryAndDeath` (Meditative #10 Double Counting) as a Cry runs (R822, R823) and a Death is collected.
+//! `CryAndDeath` (Meditative #10 Double Counting) as a Cry runs (R822, R823) and a Death is collected,
+//! `Evolutions` (Stinkyscape+ #3 High Evolutionary's Aura) as an Evolve text runs (R3536003).
 //!
 //! Multipliers never stack: the highest acting one holds (R820), as Hearthstone's Drakkari Enchanter
 //! and Brann Bronzebeard do. A face-down card acts on nothing, so it multiplies nothing.
@@ -18,6 +19,8 @@ pub enum Multiplied {
     TurnHooks,
     /// Cry and Death (R822, R823).
     CryAndDeath,
+    /// Evolve texts (R3536003).
+    Evolutions,
 }
 
 impl Multiplied {
@@ -25,6 +28,7 @@ impl Multiplied {
         match self {
             Multiplied::TurnHooks => script.turn_hook_extra.as_ref(),
             Multiplied::CryAndDeath => script.cry_death_extra.as_ref(),
+            Multiplied::Evolutions => script.evolve_extra.as_ref(),
         }
     }
 }

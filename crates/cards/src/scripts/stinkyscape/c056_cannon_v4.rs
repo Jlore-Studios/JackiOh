@@ -1,9 +1,9 @@
 //! Stinkyscape #56 Cannon v4 (SPEC §8.10 row 56). Unit 0/3 → 0/6, Weapon, cost 3, Epic.
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate: Deal {damage} damage to an enemy Unit." — damage 7
 //!   Radiant: the same text — damage 14
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1862000: the Activate's target is a declared enemy Unit (R81), never a hero: since #2521 the enemy
@@ -148,6 +148,14 @@ mod tests {
         #[test]
         fn r1862000_the_enemy_hero_is_never_offered_and_is_refused() {
             fam::can_never_hero(ID, "s056", true);
+        }
+
+        /// R4334000: a launched Starship holding a Radiant copy hits the chosen Unit for the Radiant
+        /// `damage` and shows it; one holding a base copy, the base `damage`.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            fam::shot_ship_hits(ID, "s056", "cannon", true, RADIANT_DAMAGE);
+            fam::shot_ship_hits(ID, "s056", "cannon", false, DAMAGE);
         }
     }
 }

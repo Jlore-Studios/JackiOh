@@ -21,7 +21,9 @@ import {
   type AnimationQueue,
   type RunnerSignal,
 } from "../game/animations.ts";
+import { followPointer, pointerFrames } from "../cards/pointerFrame.ts";
 import { CatalogContext, type CardLookup } from "../game/catalog.ts";
+import { rootVars, type RootVars } from "../game/rootVars.ts";
 import { boardShakeSink, resolveAnchor } from "./anchors.ts";
 import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_MOBILE_WIDTH, FX_NEXT_REFRESH_MODIFIER_ID } from "./constants.ts";
 import { delayCues, planFx, planHandover, planLethal, planResult } from "./cues.ts";
@@ -31,6 +33,7 @@ import { planStarshipStill } from "./starship.ts";
 import { planTerminusStill } from "./terminus/index.ts";
 import { planStage } from "./stage.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "./director.ts";
+import { isPhoneViewport, readDevice, type FxDevice } from "./layers.ts";
 import { createFxMemory } from "./memory.ts";
 import { useFxSettings } from "./settings.ts";
 import { setShedPointer } from "./shed.ts";
@@ -63,6 +66,8 @@ export type FxSeams = {
   viewportWidth: () => number;
   /** The board element a stage cue acts on (stage.ts), by testid. */
   element: (testid: string) => HTMLElement | null;
+  /** R4493001: the device the director's layer budget reads (layers.ts); production reads the browser's (`readDevice`). */
+  device: () => FxDevice;
 };
 
 export type FxLayerProps = {
@@ -80,19 +85,19 @@ export type FxLayerProps = {
 const SQUEEZE = "--anim-squeeze";
 const SCALE = "--anim-scale";
 
+/**
+ * #3633: what the layer marks on its parent, the game, while it is so: its effects on, a turn banner
+ * up, a stand-in held. animations.css, fx.css and drag.css key off these where they read
+ * `.game:has(> .fx-layer[data-fx="on"])`, `.game:has(> .fx-layer [data-fx="banner"])` and
+ * `.game:has(.fx-hold)`: a `:has()` on the game made every change under it restyle the board, a
+ * hundred milliseconds a frame on a throttled phone (R3351000).
+ */
+export const FX_LAYER_MARK = "data-fx-layer";
+export const FX_BANNER_MARK = "data-fx-banner";
+export const FX_HOLD_MARK = "data-fx-hold";
+
 export function defaultNow(): number {
   return performance.now();
-}
-
-/** `requestAnimationFrame`, or a source that never fires where there is none (no timers: R200). */
-export function defaultFrames(): FxFrameSource {
-  if (typeof window.requestAnimationFrame !== "function") {
-    return { request: () => 0, cancel: () => undefined };
-  }
-  return {
-    request: (callback) => window.requestAnimationFrame(callback),
-    cancel: (handle) => window.cancelAnimationFrame(handle),
-  };
 }
 
 export function defaultVisibility(): FxVisibility {
@@ -115,16 +120,21 @@ export function catalogFacts(lookup: CardLookup | null, defId: string): FxCardFa
   return { rarity: info.rarity, attack: info.attack, health: info.health, type: info.type, tags: info.tags };
 }
 
-/** R502: the sides whose next-refresh rider this entry lays or spends. */
+/**
+ * R502: the sides whose next-refresh rider this entry lays or spends. A switch, not `type === … &&`: only a
+ * modifierChanged carries a modifierId, so a type test beside the id test would decide nothing but the types.
+ */
 function riderSides(entry: AnimationEntry): Side[] {
-  return entry.events.flatMap((event) =>
-    event.type === "modifierChanged" && event.modifierId === FX_NEXT_REFRESH_MODIFIER_ID ? [sideOf(entry.view, event.player)] : [],
-  );
+  return entry.events.flatMap((event) => {
+    switch (event.type) {
+      case "modifierChanged":
+        return event.modifierId === FX_NEXT_REFRESH_MODIFIER_ID ? [sideOf(entry.view, event.player)] : [];
+      default:
+        return [];
+    }
+  });
 }
 
-function removeSqueeze(root: HTMLElement | null): void {
-  root?.parentElement?.style.removeProperty(SQUEEZE);
-}
 
 export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerProps): ReactElement {
   const [settings] = useFxSettings();
@@ -139,6 +149,24 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   const lookup = useContext(CatalogContext);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // #3633: `--anim-squeeze` goes onto the elements that read it (game/rootVars.ts), not onto the parent's
+  // own style: there each entry's start restyled the whole game.
+  const squeeze = useRef<RootVars | null>(null);
+  useLayoutEffect(() => {
+    // Stryker disable next-line OptionalChaining: the root div always renders, so its ref is set whenever a layout effect runs
+    const parent = rootRef.current?.parentElement ?? null;
+    if (parent === null) return undefined;
+    const owned = rootVars(parent);
+    squeeze.current = owned;
+    // React runs an effect's cleanup before its next setup, so the ref still holds this run's own.
+    return () => {
+      owned.release();
+      squeeze.current = null;
+    };
+  },
+  // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
+  []);
+  const removeSqueeze = (): void => squeeze.current?.remove(SQUEEZE);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const domRef = useRef<HTMLDivElement | null>(null);
   const director = useRef<FxDirector | null>(null);
@@ -148,6 +176,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   // What the runner's listener reads: a ref, so the subscription is made once per queue and never
   // torn down between two entries of one burst.
   const bigMoments = settings.bigMoments;
+  // Stryker disable next-line ObjectLiteral,LogicalOperator: the next line overwrites this first value in the same render, before anything reads it
   const live = useRef({ enabled, still, intensity, lookup, seams, view, latest: latest ?? view, bigMoments });
   live.current = { enabled, still, intensity, lookup, seams, view, latest: latest ?? view, bigMoments };
 
@@ -162,6 +191,8 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       // R3334001: the Starship's cinematic plays at Big moments "full" only, and a phone's throws fewer particles.
       bigMoments: current.bigMoments,
       compact: (current.seams?.viewportWidth?.() ?? window.innerWidth) < FX_MOBILE_WIDTH,
+      // R4493000: and a phone either way up draws the cinematic's camera no closer than its layer cap allows.
+      phone: isPhoneViewport((current.seams?.device ?? readDevice)()),
     };
   };
 
@@ -170,7 +201,8 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   const markMana = (): void => {
     const current = live.current;
     const sides = riderReached.current;
-    applyManaMarks(document, manaMarks(current.view, sides.size > 0 ? { view: current.latest, sides } : undefined));
+    // manaMarks reads the newest view only for the sides the set holds: none while it is empty.
+    applyManaMarks(document, manaMarks(current.view, { view: current.latest, sides }));
   };
 
   // The director lives exactly as long as the canvas and the DOM root it draws into.
@@ -179,24 +211,25 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     const canvas = canvasRef.current;
     const domRoot = domRef.current!;
     const s = live.current.seams ?? {};
-    // A still layer has no canvas: its callouts are DOM.
-    const surface = enabled && canvas !== null ? (s.surface ?? createSurface)(canvas) : null;
+    // A still layer has no canvas (it renders only while enabled): its callouts are DOM.
+    const surface = canvas !== null ? (s.surface ?? createSurface)(canvas) : null;
     const created = createFxDirector({
       surface,
       domRoot,
       now: s.now ?? defaultNow,
-      frames: s.frames ?? defaultFrames(),
+      frames: s.frames ?? pointerFrames(),
       visibility: s.visibility ?? defaultVisibility(),
       measure: s.measure ?? resolveAnchor,
       shakeSink: s.shakeSink ?? boardShakeSink(document),
       seed: s.seed ?? FX_DEFAULT_SEED,
       capacity: capacityFor(s.viewportWidth?.() ?? window.innerWidth),
-      phone: (s.viewportWidth?.() ?? window.innerWidth) < FX_MOBILE_WIDTH,
       element: s.element,
+      device: s.device ?? readDevice,
     });
     director.current = created;
+    // React runs an effect's cleanup before its next setup, so the ref still holds this run's own.
     return () => {
-      if (director.current === created) director.current = null;
+      director.current = null;
       created.dispose();
       surface?.dispose();
     };
@@ -207,9 +240,38 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     else director.current?.resume();
   }, [paused]);
 
+  // #3633: the marks above. The banner and the holds come and go inside the effects' own root, so they
+  // are read off it as it changes; a mutation's record is read before the frame it lands in is drawn.
+  useLayoutEffect(() => {
+    // Stryker disable next-line OptionalChaining: the root div always renders, so its ref is set whenever a layout effect runs
+    const parent = rootRef.current?.parentElement ?? null;
+    if (parent === null || !enabled) return undefined;
+    parent.setAttribute(FX_LAYER_MARK, "on");
+    return () => parent.removeAttribute(FX_LAYER_MARK);
+  }, [enabled]);
+  useLayoutEffect(() => {
+    // Stryker disable next-line OptionalChaining: the root div always renders, so its ref is set whenever a layout effect runs
+    const parent = rootRef.current?.parentElement ?? null;
+    const domRoot = domRef.current;
+    if (parent === null || domRoot === null) return undefined;
+    const mark = (): void => {
+      parent.toggleAttribute(FX_BANNER_MARK, domRoot.querySelector('[data-fx="banner"]') !== null);
+      parent.toggleAttribute(FX_HOLD_MARK, domRoot.querySelector(".fx-hold") !== null);
+    };
+    mark();
+    const observer = new MutationObserver(mark);
+    observer.observe(domRoot, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      parent.removeAttribute(FX_BANNER_MARK);
+      parent.removeAttribute(FX_HOLD_MARK);
+    };
+  }, [enabled, still]);
+
   // The reduce setting acts like the media query (R200): index.css zeroes --anim-scale on :root,
   // this zeroes it on the game root.
   useLayoutEffect(() => {
+    // Stryker disable next-line OptionalChaining: the root div always renders, so its ref is set whenever a layout effect runs
     const parent = rootRef.current?.parentElement ?? null;
     if (parent === null || !settingReduces) return undefined;
     parent.style.setProperty(SCALE, "0");
@@ -220,26 +282,24 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
 
   /** Entries started since the runner last went idle, and the ones a drain cut short (for planLethal). */
   const played = useRef<AnimationEntry[]>([]);
+  // Stryker disable next-line ArrayDeclaration: the first view effect, at the mount, where no result can play, takes this first value and drops it unread
   const drained = useRef<readonly AnimationEntry[]>([]);
 
   // Runner signals. Declared after the director so a first `start` already has one to play into.
   useLayoutEffect(() => {
     const onSignal = (signal: RunnerSignal): void => {
-      const root = rootRef.current;
       switch (signal.kind) {
         case "start": {
           const entry = signal.entry;
           played.current.push(entry);
           drained.current = [];
           const table = animationRow(entry.type)?.durationMs ?? 0;
-          const parent = root?.parentElement ?? null;
-          if (parent !== null) {
-            // A slam's anticipation and a set piece's hold (R2722001, R2785000) are a wait before the motion, not a slower motion.
-            const motionMs = entry.durationMs - leadMs(entry);
-            // An event type this build does not know has no row (issue #769): no squeeze.
-            if (table > 0) parent.style.setProperty(SQUEEZE, (motionMs / table).toFixed(3));
-            else removeSqueeze(root);
-          }
+          // A slam's anticipation and a set piece's hold (R2722001, R2785000) are a wait before the motion, not a slower motion.
+          const motionMs = entry.durationMs - leadMs(entry);
+          // An event type this build does not know has no row (issue #769): no squeeze. A layer with no parent
+          // owns no variables (the first layout effect), so it writes none.
+          if (table > 0) squeeze.current?.set(SQUEEZE, (motionMs / table).toFixed(3));
+          else removeSqueeze();
           const reached = riderSides(entry);
           if (reached.length > 0) {
             for (const side of reached) riderReached.current.add(side);
@@ -274,12 +334,13 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
           planEnv().memory.remember(signal.entry.events);
           return;
         case "idle":
-          removeSqueeze(root);
+          removeSqueeze();
           played.current = [];
           return;
         case "drain": {
-          removeSqueeze(root);
+          removeSqueeze();
           director.current?.clear();
+          // Stryker disable next-line OptionalChaining: memory.current is set in the first render, before any signal can come
           memory.current?.clear();
           const cut = signal.entries.filter((entry) => !played.current.includes(entry));
           drained.current = [...played.current, ...cut];
@@ -288,12 +349,13 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
         }
         case "skip":
           // R2785000: a skipped set piece cuts to its end; the next entry's start plays on as ever.
-          removeSqueeze(root);
+          removeSqueeze();
           director.current?.cut();
           return;
         case "reset":
-          removeSqueeze(root);
+          removeSqueeze();
           director.current?.clear();
+          // Stryker disable next-line OptionalChaining: memory.current is set in the first render, before any signal can come
           memory.current?.clear();
           played.current = [];
           drained.current = [];
@@ -303,17 +365,16 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     const unsubscribe = queue.subscribeSignals(onSignal);
     return () => {
       unsubscribe();
-      removeSqueeze(rootRef.current);
+      removeSqueeze();
     };
     // `planEnv` reads refs only, so the subscription depends on the queue alone.
   }, [queue]);
 
   // A newer view on the board ends every stage effect (stage.ts). A LAYOUT effect, so the swap and
-  // the release land in the same paint and no frame shows both, or neither.
-  const releasedFor = useRef<PlayerView | null>(null);
+  // the release land in the same paint and no frame shows both, or neither. At the mount the director is
+  // new (the layout effect above) and holds none, so the first view's release lets go of nothing.
   useLayoutEffect(() => {
-    if (releasedFor.current !== null && releasedFor.current !== view) director.current?.release();
-    releasedFor.current = view;
+    director.current?.release();
   }, [view]);
 
   // R502: the crystals the next refresh will not fill, from the shown view. A LAYOUT effect, after
@@ -326,10 +387,19 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   useLayoutEffect(
     () => () => {
       applyManaMarks(document, [
-        { side: "you", run: { from: 0, count: 0 } },
-        { side: "opponent", run: { from: 0, count: 0 } },
+        {
+          side: "you",
+          // Stryker disable next-line ObjectLiteral: applyManaMarks clears a run with no count as it does a count of 0
+          run: { from: 0, count: 0 },
+        },
+        {
+          side: "opponent",
+          // Stryker disable next-line ObjectLiteral: applyManaMarks clears a run with no count as it does a count of 0
+          run: { from: 0, count: 0 },
+        },
       ]);
     },
+    // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
     [],
   );
 
@@ -343,20 +413,29 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     return () => {
       document.removeEventListener("pointerdown", onDown, true);
     };
-  }, []);
+  },
+  // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
+  []);
   // R3351000: the pointer the shed order measures far auras by (shed.ts). One passive listener for
   // the whole layer; the aura layer reads the same store. There was no layer-wide pointer position
-  // before: tilt tracks each face on its own (cards/tilt.ts, R3344001).
+  // before: tilt tracks each face on its own (cards/tilt.ts, R3344001). #3610: the pointer is handled once a frame, the
+  // newest move's, on the layer's frame source (never a timer: a source that never fires gives no pointer, R200).
   useEffect(() => {
-    const onMove = (event: PointerEvent): void => {
+    const follow = followPointer(live.current.seams?.frames ?? pointerFrames(), (event) => {
       setShedPointer({ x: event.clientX, y: event.clientY });
+    });
+    const onMove = (event: PointerEvent): void => {
+      follow.push(event);
     };
     window.addEventListener("pointermove", onMove, { passive: true });
     return () => {
       window.removeEventListener("pointermove", onMove);
+      follow.cancel();
       setShedPointer(null);
     };
-  }, []);
+  },
+  // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
+  []);
   const promptForViewer = view.pending !== null && view.pending.forYou;
   useEffect(() => {
     if (promptForViewer) director.current?.dismissBanner();
@@ -375,7 +454,12 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     const cut = drained.current;
     drained.current = [];
     const target = director.current;
-    if (!live.current.enabled || target === null) return;
+    if (
+      !live.current.enabled ||
+      // Stryker disable next-line ConditionalExpression: TypeScript's narrowing; this passive effect runs after the commit that built the director, which is there whenever the layer is on
+      target === null
+    )
+      return;
     const env = planEnv();
     if (previousResult === null && view.result !== null) {
       // The killing blow first (the drain cleared it before it drew), then the result on its beat.

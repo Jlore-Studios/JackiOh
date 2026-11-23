@@ -387,7 +387,9 @@ mod tests {
                 let mut sets: Vec<SetName> = Vec::new();
                 for _ in 0..60 {
                     let new_card = cast_bottle(&mut s, false);
-                    let def = crate::card_def(&new_card.def_id);
+                    // The card may fuse as it arrives (S+ #17 Smoothie takes two Fruits, its own arrival hook,
+                    // R151), a definition the state holds.
+                    let def = def_of(Some(s.state()), &new_card.def_id);
                     assert_ne!(def.id, BOTTLE, "never itself (R387)");
                     assert!(!def.token, "{} is a token", def.id);
                     if !sets.contains(&def.set) {

@@ -1,5 +1,6 @@
 //! T-AI-1 Helpful Assistant (SPEC §8.7 row T-AI-1, §10.8, R60, R177, R218). (1) Unit, AI, Token; 1/3
-//! Taunt → 2/6 Taunt, Divine Shield. Made by C+ #43 AI Slop and C+ #78 Claude's Datacenter.
+//! Taunt → 2/6 Taunt (its Radiant Divine Shield went in issue #4292). Made by C+ #43 AI Slop and C+ #78
+//! Claude's Datacenter.
 //!   Cry: Discover a card from your deck. Radiant: it costs (1) less.
 //!
 //! A Discover whose pool is your own deck, as Core #51 reveals library cards: up to 3 different cards,
@@ -82,7 +83,6 @@ mod tests {
     }
 
     /// The library cards the open Discover offers, by def id.
-    // Differs from Scenario::offered: the open prompt's options as def ids, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         s.state()
             .pending
@@ -121,7 +121,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_1_3_taunt_radiant_2_6_taunt_and_divine_shield() {
+        fn is_a_1_3_taunt_radiant_2_6_taunt_alone_since_issue_4292() {
             crate::register_all();
             let def = crate::card_def(super::super::ID);
             assert_eq!(def.id, ASSISTANT);
@@ -131,7 +131,8 @@ mod tests {
             s.expect_stats(first.as_str(), json!({ "attack": 1, "health": 3 }));
             assert_eq!(kinds(&s.stats(first.as_str()).keywords), vec!["Taunt"]);
             s.expect_stats(second.as_str(), json!({ "attack": 2, "health": 6 }));
-            assert_eq!(kinds(&s.stats(second.as_str()).keywords), vec!["Taunt", "Divine Shield"]);
+            // Issue #4292 took the Radiant face's Divine Shield: it upgrades its stats and its discount.
+            assert_eq!(kinds(&s.stats(second.as_str()).keywords), vec!["Taunt"]);
         }
 
         mod base {

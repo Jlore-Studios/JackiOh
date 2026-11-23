@@ -52,9 +52,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     // Issue #2521: Stratos (S #68) is no Starship Piece (B9), so a keywords-only piece stands in.
-    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
-    const FLAK_V3: &str = "stinkyscape-053"; // Flak v3: Weapon, Starship Piece, Equip; Radiant Lucky 1
-    const OVERDRIVE: &str = "stinkyscape-101"; // Overdrive Module: Starship Piece, Equip, Brittle 2, Reborn
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Pierce: keywords only
+    const FLAK_V3: &str = "stinkyscape-053"; // Flak v3: Weapon, Starship Piece; Radiant Lucky 1
+    const OVERDRIVE: &str = "stinkyscape-101"; // Overdrive Module: Starship Piece, Brittle 2, Reborn
     const CAPSULE: &str = "stinkyscape-040"; // Poison Capsule: Starship Piece, "Cry: Place 2 Plague Counters."
     const CAPACITOR: &str = "stinkyscape-133"; // Ultra Capacitor: When launched: +attack/+health per other piece.
     const MONKEY: &str = "classic-077"; // Anti-Magic Monkey: Stack, "Aura: Spells cost more."
@@ -417,6 +417,7 @@ mod tests {
             json!([{ "def": FLAK_V3, "lane": 1 }]),
         );
         let host = s.unit_at(P1, 1).id;
+        crate::give_equip(&mut s, AP_ROUNDS);
         s.play(AP_ROUNDS, json!({ "zone": 1, "equip": true }));
         assert_eq!(s.unit_at(P1, 1).id, host, "Flak v3 is the card the Equip keeps");
         let fused = s.card(host.as_str()).def_id.clone();

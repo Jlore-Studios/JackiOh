@@ -343,7 +343,7 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
 });
 
 function base64url(text: string): string {
-  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
 }
 
 /** A token of one provider session: `session_id` is what tells a renewal from a new sign-in. */

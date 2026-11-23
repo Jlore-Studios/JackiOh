@@ -58,7 +58,8 @@ section again.
   (`DELETE /api/admin/news/{id}`). A post pays no reward; a reward goes in `crates/server/news.json` by
   pull request.
 - **Audit** (`src/Audit.tsx`): every admin action, newest first, its request and the state before and
-  after as `JSON.stringify` text.
+  after as `JSON.stringify` text. A filter row narrows the list to one acting account or one route
+  (`?profile_id=`, `?route=`), and Older appends the next page past `nextBeforeId` (`?before_id=`).
 
 ## Sign-in and the session
 
@@ -164,7 +165,9 @@ drives: `admin-sign-in-*` (`email`, `password`, `submit`, `method-password`, `me
 `admin-jlore-*`, `admin-fill`, `admin-unlock-cosmetics`, `admin-bar-<bar>`, `admin-clear-<part>`, `admin-quest-*`,
 `admin-rating-{value,deviation,volatility,hand-set,earned,input,set,reset}-<ladder>`, `admin-ladder-<ladder>`,
 `admin-leaderboard-row` (with `data-profile-id`, `data-kind`, `data-hand-set`, `data-you`), `admin-news-*`
-(`admin-news-row` with `data-post-id`, `data-taken-down`) and `admin-audit-row` (with `data-action-id`).
+(`admin-news-row` with `data-post-id`, `data-taken-down`), `admin-audit-row` (with `data-action-id`),
+`admin-audit-refresh`, `admin-audit-profile`, `admin-audit-route`, `admin-audit-apply`, `admin-audit-clear`
+and `admin-audit-older`.
 
 ## Left to a person
 

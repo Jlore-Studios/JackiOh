@@ -5,17 +5,17 @@
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use crate::effects::targets::{TargetSpec, instance_by_id_or_spec};
 use crate::prompts::{HookInstance, HookResumableOptions, run_hook_resumable};
-use crate::script::{Effect, activation_hook};
+use crate::script::{ActivationDecl, ActivationUses, Effect, activation_hook, hook};
 use crate::state::find_instance_mut;
 use crate::subsystems::activate::{
-    ACTIVATION_DATA_KEY, ActivationPaid, abilities_of, ability_uses_this_turn, is_acting_on_field, mark_use,
-    uses_allowed,
+    ACTIVATION_DATA_KEY, ACTIVATIONS_MEMORY_KEY, ActivationPaid, abilities_of, ability_uses_this_turn,
+    is_acting_on_field, mark_use, uses_allowed,
 };
-use crate::zones::acts_on_field;
+use crate::zones::{StandingAt, acting_on, acts_on_field};
 
 /// R1876000: where a card whose own Activate is refused keeps the refusal. R78's reset clears it with
 /// the rest of `memory` when the card leaves the field.
@@ -39,6 +39,107 @@ pub struct ActivationOfArgs {
     /// once that turn. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spend_use: Option<bool>,
+}
+
+/// R3548003: the engine's Refresh ability id. Fusions number a second one `refresh#2`
+/// (`activation_decls`, R102), which `is_refresh_ability` names along with this one.
+pub const REFRESH_ABILITY_ID: &str = "refresh";
+
+/// R3548003: whether this ability id is a Refresh one: the engine's own, or a fusion's numbered copy.
+pub fn is_refresh_ability(id: &str) -> bool {
+    id == REFRESH_ABILITY_ID || id.starts_with("refresh#")
+}
+
+/// Writes the card's uses record to the state and to the context's own copy, as `hero_power` does,
+/// so later effects of the context see it.
+fn write_uses(ctx: &mut crate::script::EffectContext<'_>, id: &str, record: Value) {
+    if let Some(card) = find_instance_mut(&mut *ctx.sink.state, id) {
+        card.memory
+            .insert(ACTIVATIONS_MEMORY_KEY.to_string(), record.clone());
+    }
+    if let Some(card) = ctx.self_.as_mut().filter(|card| card.id == id) {
+        card.memory.insert(ACTIVATIONS_MEMORY_KEY.to_string(), record);
+    }
+}
+
+/// Drops the card's uses record from the state and from the context's own copy.
+fn drop_uses(ctx: &mut crate::script::EffectContext<'_>, id: &str) {
+    if let Some(card) = find_instance_mut(&mut *ctx.sink.state, id) {
+        card.memory.shift_remove(ACTIVATIONS_MEMORY_KEY);
+    }
+    if let Some(card) = ctx.self_.as_mut().filter(|card| card.id == id) {
+        card.memory.shift_remove(ACTIVATIONS_MEMORY_KEY);
+    }
+}
+
+/// R3548003: "Refresh" for Activates — give back this turn's uses of every Activate on the
+/// controller's permanents, Refresh abilities excepted: each card used this turn keeps only its
+/// Refresh abilities' counts, and its `count` becomes their sum, so every other ability is offered
+/// again whole. `cooldowns` are untouched, and no event is emitted, as `refreshPower` does.
+pub fn refresh_activates() -> Effect {
+    Effect::new("refreshActivates", move |ctx| {
+        let turn = ctx.sink.state.turn;
+        let controller = ctx.controller;
+        let ids: Vec<String> = acting_on(ctx.sink.state, controller, StandingAt::ItsLane)
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
+        for id in ids {
+            let state = &*ctx.sink.state;
+            let Some(card) = crate::state::find_instance(state, &id).cloned() else {
+                continue;
+            };
+            let is_this_turn = card
+                .memory
+                .get(ACTIVATIONS_MEMORY_KEY)
+                .and_then(|raw| raw.get("turn"))
+                .and_then(Value::as_f64)
+                == Some(f64::from(turn));
+            if !is_this_turn {
+                continue;
+            }
+            let refresh: Vec<String> = abilities_of(state, &card)
+                .into_iter()
+                .filter(|decl| is_refresh_ability(&decl.id))
+                .map(|decl| decl.id)
+                .collect();
+            if refresh.is_empty() {
+                drop_uses(ctx, &id);
+                continue;
+            }
+            let mut kept = serde_json::Map::new();
+            let mut count = 0;
+            for ability in &refresh {
+                let uses = ability_uses_this_turn(state, &card, ability);
+                if uses > 0 {
+                    kept.insert(ability.clone(), json!(uses));
+                    count += uses;
+                }
+            }
+            write_uses(
+                ctx,
+                &id,
+                json!({ "turn": turn, "count": count, "abilities": kept }),
+            );
+        }
+    })
+}
+
+/// R3548003: a "Refresh" Activate ability with `uses` uses a turn, as #11 Energy Booster grants it:
+/// running it gives back every other Activate used this turn, while a Refresh used this turn stays
+/// spent. No field is added to `ActivationDecl` for it.
+pub fn refresh_ability(uses: ActivationUses) -> ActivationDecl {
+    ActivationDecl {
+        id: REFRESH_ABILITY_ID.to_string(),
+        label: "Refresh".to_string(),
+        uses,
+        cost: None,
+        targets: Vec::new(),
+        modes: Vec::new(),
+        can_activate: None,
+        has: None,
+        run: hook(|_| vec![refresh_activates()]),
+    }
 }
 
 /// R1876000: "It can't use its own Activate" — the card named, on the field, is refused every use of

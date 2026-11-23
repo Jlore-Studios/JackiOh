@@ -7,12 +7,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
-import { DEFAULT_AUDIO_SETTINGS } from "./settings.ts";
-import type { MusicRequest } from "./music.ts";
+import { DEFAULT_AUDIO_SETTINGS, resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
+import { createAudioEngine } from "./engine.ts";
+import { createMusicPlayer, type MusicRequest } from "./music.ts";
+import { FakeFetch, fakeContextFactory, settle } from "./test/fakeAudio.ts";
+import type { MusicManifest, MusicTrack } from "./types.ts";
 import { MUSIC_ROTATION_KEY } from "./constants.ts";
 import { LOW_HEALTH_AT, createMusicDirector, rotationFor, type MusicDirector } from "./musicDirector.ts";
+import { deferSoundTablesForTests, loadSoundTables, setSoundTablesForTests } from "./soundTablesLoader.ts";
 import type { AudioSettings } from "./types.ts";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
+
+// #4158: the sound tables load lazily; this file reads the shipped ones.
+const TABLES = await loadSoundTables();
 
 /** #97 Zephyrs (a Mythic Spell), #96 My Pawn (a Mythic Trap), #50 K-Pop Fanatic (EDM), #4 Gary (Tavern). */
 const ZEPHYRS = "core-097";
@@ -149,6 +156,22 @@ describe("R631 a match's music opens on its station", () => {
     r.director.onView(midGame({ active: "p2" }));
     r.director.settle();
     expect(r.last()).toEqual({ track: "tavern-1", intro: null, opponentTurn: true });
+  });
+});
+
+describe("R631 a board that mounts before the sound tables load (#4158)", () => {
+  it("R631 asks for no music until the manifest arrives, then opens on the station's sting into this rotation's in-game track", () => {
+    const deferred = deferSoundTablesForTests();
+    try {
+      const r = rig({ rotation: 1 });
+      r.director.onView(opening());
+      r.director.settle();
+      expect(r.requests).toEqual([]);
+      deferred.resolve(TABLES);
+      expect(r.requests).toEqual([{ track: "tavern-2", intro: "tavern-start", opponentTurn: false }]);
+    } finally {
+      setSoundTablesForTests(TABLES);
+    }
   });
 });
 
@@ -608,5 +631,69 @@ describe("R3332002 a Legendary's or a Mythic's sting is its own intro", () => {
     r.director.onView(view);
     r.director.settle();
     expect(r.introPreloads).toEqual([["intro-core-097", "intro-core-052"]]);
+  });
+});
+
+describe("R4363000 the music prefetch waits while the browser asks to save data", () => {
+  /** Tavern station tracks plus one card intro, as in music.test.ts. */
+  function loop(over: Partial<MusicTrack> = {}): MusicTrack {
+    return { hash: "x", bytes: 1, bpm: 120, beatsPerBar: 4, loop: true, intro: 0, duration: 19.5, loopStart: 3, loopEnd: 19, handoff: null, ...over };
+  }
+
+  const MANIFEST: MusicManifest = {
+    version: 1,
+    format: "test",
+    files: {
+      "tavern-1": loop(),
+      "tavern-danger": loop(),
+      victory: loop(),
+      defeat: loop(),
+      draw: loop(),
+      "intro-a": { hash: "x", bytes: 1, bpm: 120, beatsPerBar: 4, loop: false, intro: 4, duration: 5, loopStart: null, loopEnd: null, handoff: 4 },
+    },
+  };
+
+  it("R4363000 a game view under Save-Data fetches no background music, then drains and still stings on demand", async () => {
+    writeAudioSettings({ muted: false, music: 0.5, sfx: 0.8 });
+    const factory = fakeContextFactory({ decodedSeconds: 30 });
+    const engine = createAudioEngine({ createContext: factory.create, speech: null, visibility: () => "visible" });
+    const fetch = new FakeFetch();
+    let saving = true;
+    const player = createMusicPlayer({ engine: () => engine, manifest: MANIFEST, fetchBytes: fetch.fetchBytes, focus: null, saveData: () => saving });
+    const director = createMusicDirector({
+      sink: player,
+      manifest: MANIFEST,
+      cards: { "core-097": { intro: "intro-a" } },
+      settings: () => ({ ...DEFAULT_AUDIO_SETTINGS }),
+      subscribeSettings: () => () => {},
+      rotation: () => 0,
+    });
+    try {
+      engine.unlock();
+      await settle();
+      const view = midGame({ you: emptySide("p1", { hand: [card({ defId: "core-097" })] }) });
+      director.onView(view);
+      director.settle();
+      await settle();
+      // The current track still downloads on demand; nothing in the background does.
+      expect(fetch.urls()).toContain("/audio/music/tavern-1.m4a?v=x");
+      expect(fetch.urls().filter((u) => u.includes("tavern-danger") || u.includes("victory") || u.includes("intro-a"))).toEqual([]);
+
+      saving = false;
+      player.setBusy(true);
+      player.setBusy(false);
+      await settle();
+      expect(fetch.urls()).toContain("/audio/music/tavern-danger.m4a?v=x");
+      expect(fetch.urls()).toContain("/audio/music/intro-a.m4a?v=x");
+
+      director.onEvent(played("core-097"), view);
+      await settle();
+      expect(player.log().filter((e) => e.kind === "start").map((e) => e.track)).toContain("intro-a");
+    } finally {
+      director.dispose();
+      player.dispose();
+      engine.dispose();
+      resetAudioSettingsForTests();
+    }
   });
 });

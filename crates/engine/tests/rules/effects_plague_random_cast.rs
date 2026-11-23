@@ -167,3 +167,168 @@ mod r452_r471_placements_inside_a_random_cast {
         );
     }
 }
+
+/// A permanent put on the field Dormant, stamped Slumber by hand (white-box, as `board_geometry.rs`).
+fn put_dormant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> String {
+    let card = put(state, def_id, at, json!({}));
+    find_instance_mut(state, &card.id).expect("the permanent").slumber = Some(Slumber { turns: Some(2) });
+    card.id
+}
+
+fn plague_of(state: &GameState, id: &str) -> i32 {
+    find_instance(state, id)
+        .and_then(|card| card.counters.plague)
+        .unwrap_or(0)
+}
+
+/// R4322000: a placement drawn at random draws only among the permanents an effect reaches, so it
+/// never lands on a Dormant card (§6.1 Dormant, R1839000), as a placement its caster chooses already
+/// does not. A Mayor's placement (R1200) takes the same random branch over the same pool.
+mod r4322000_a_random_placement_never_lands_on_a_dormant_permanent {
+    use super::*;
+
+    #[test]
+    fn r4322000_beside_an_awake_permanent_every_placement_lands_on_the_awake_one() {
+        for n in 0..16 {
+            let mut state = game(&format!("pr-dormant-{n}"));
+            let awake = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({})).id;
+            let dormant = put_dormant(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1));
+            cast_from_box(&mut state);
+            assert!(state.pending.is_none(), "seed {n}");
+            assert_eq!(
+                plague_of(&state, &dormant),
+                0,
+                "seed {n}: none on the Dormant card"
+            );
+            assert_eq!(
+                plague_of(&state, &awake),
+                TOKENS,
+                "seed {n}: all on the awake one"
+            );
+        }
+    }
+
+    #[test]
+    fn r4322000_with_only_dormant_permanents_the_placements_fizzle() {
+        let mut state = game("pr-dormant-only");
+        put_dormant(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1));
+        put_dormant(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1));
+        cast_from_box(&mut state);
+        assert!(state.pending.is_none());
+        assert_eq!(tokens_on_field(&state), 0);
+    }
+}
+
+fn immune(state: &mut GameState, id: &str) {
+    find_instance_mut(state, id)
+        .expect("the permanent")
+        .granted_keywords
+        .push(Keyword::ImmuneToSpells);
+}
+
+/// `place_plague_tokens` run straight, outside a random cast, by `self_` for P1 (R471's case): the
+/// placement prompt it opens, if any.
+fn place_by(state: &mut GameState, self_: &CardInstance) -> Option<PendingChoice> {
+    let mut rng = Rng::new(&state.seed, state.rng_cursor);
+    let mut events = Vec::new();
+    {
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        let mut ctx = make_context(
+            &mut sink,
+            Some(self_),
+            HookOptions {
+                controller: Some(PlayerId::P1),
+                ..Default::default()
+            },
+        );
+        apply_effects(
+            &[place_plague_tokens(json_as(json!({ "count": TOKENS })))],
+            &mut ctx,
+        );
+    }
+    state.pending.clone()
+}
+
+fn offered(pending: &PendingChoice) -> Vec<String> {
+    pending
+        .options
+        .iter()
+        .filter_map(|option| match &option.selection {
+            Selection::Instance { instance_id } => Some(instance_id.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// R4453000: a Spell's placement, drawn at random or chosen, passes a Unit Immune to Spells by (§6.1:
+/// "Spells can't target it or affect it"), as R4322000's passes a Dormant card by; a Unit's still
+/// reaches it.
+mod r4453000_a_spells_placement_passes_a_unit_immune_to_spells_by {
+    use super::*;
+
+    #[test]
+    fn r4453000_a_random_placement_lands_on_the_other_permanent() {
+        for n in 0..16 {
+            let mut state = game(&format!("pr-immune-{n}"));
+            let open = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({})).id;
+            let warded = put(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1), json!({})).id;
+            immune(&mut state, &warded);
+            cast_from_box(&mut state);
+            assert!(state.pending.is_none(), "seed {n}");
+            assert_eq!(plague_of(&state, &warded), 0, "seed {n}: none on the immune Unit");
+            assert_eq!(plague_of(&state, &open), TOKENS, "seed {n}: all on the other one");
+        }
+    }
+
+    #[test]
+    fn r4453000_with_only_an_immune_unit_the_placements_fizzle() {
+        let mut state = game("pr-immune-only");
+        let warded = put(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1), json!({})).id;
+        immune(&mut state, &warded);
+        cast_from_box(&mut state);
+        assert!(state.pending.is_none());
+        assert_eq!(tokens_on_field(&state), 0);
+    }
+
+    #[test]
+    fn r4453000_a_spells_chosen_placement_offers_no_immune_unit() {
+        // The Spell is in no zone here, so the targeting point (R450), which finds a prompt's source by
+        // its id, has no Spell to judge by: the placement's own pool leaves the immune Unit out.
+        let mut state = game("pr-immune-asked");
+        let open = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({})).id;
+        let warded = put(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1), json!({})).id;
+        immune(&mut state, &warded);
+        let me = new_instance(
+            &mut state,
+            &plague_spell().id,
+            PlayerId::P1,
+            Zone::Resolving { player: PlayerId::P1 },
+        );
+        let pending = place_by(&mut state.clone(), &me).expect("the placement prompt");
+        assert_eq!(offered(&pending), vec![open.clone()]);
+
+        // With only the immune Unit standing, nothing is asked and nothing placed (R129).
+        let mut alone = game("pr-immune-asked-alone");
+        let warded = put(&mut alone, "fx-2", slot(PlayerId::P2, Row::Units, 1), json!({})).id;
+        immune(&mut alone, &warded);
+        let me = new_instance(
+            &mut alone,
+            &plague_spell().id,
+            PlayerId::P1,
+            Zone::Resolving { player: PlayerId::P1 },
+        );
+        assert!(place_by(&mut alone, &me).is_none());
+        assert_eq!(tokens_on_field(&alone), 0);
+    }
+
+    #[test]
+    fn r4453000_a_units_placement_still_offers_it() {
+        let mut state = game("pr-immune-unit");
+        let open = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let warded = put(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1), json!({})).id;
+        immune(&mut state, &warded);
+        let me = find_instance(&state, &open.id).cloned().expect("the unit");
+        let pending = place_by(&mut state, &me).expect("the placement prompt");
+        assert_eq!(offered(&pending), vec![open.id.clone(), warded]);
+    }
+}

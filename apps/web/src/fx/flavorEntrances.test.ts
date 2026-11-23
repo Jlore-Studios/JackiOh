@@ -7,11 +7,11 @@ import { describe, expect, it } from "vitest";
 import { ANIMATIONS, planEntries, type AnimationEntry } from "../game/animations.ts";
 import { testid } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
+import { endOf, envOf } from "../test/signatures.ts";
 import { must } from "../test/stubServer.ts";
 import {
   FX_CRACK_TAIL_MS,
   FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_RING_MS,
   FX_SLAM_AT,
@@ -20,7 +20,6 @@ import {
 import { planFx } from "./cues.ts";
 import { FLAVOR_ENTRANCES } from "./entrances.ts";
 import { chaosFlavor, FLAVOR_LOOKS } from "./flavors.ts";
-import { createFxMemory } from "./memory.ts";
 import type { FxCardFacts, FxCue, FxPlanEnv, FxPoint } from "./types.ts";
 
 type Loose = Record<string, unknown>;
@@ -85,9 +84,8 @@ const FACTS: Record<string, FxCardFacts> = {
   "classic-005": { rarity: "Epic", attack: 0, health: 4 },
 };
 
-function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: (defId) => FACTS[defId], memory: createFxMemory(), ...over };
-}
+/** The shared planning setup, each card read from FACTS. */
+const factsEnv = (over: Partial<FxPlanEnv> = {}): FxPlanEnv => envOf({ card: (defId) => FACTS[defId], ...over });
 
 function entryFor(events: readonly GameEvent[], view: PlayerView, D: number, reduced = false): AnimationEntry {
   const entries = planEntries(events, view, reduced);
@@ -97,7 +95,7 @@ function entryFor(events: readonly GameEvent[], view: PlayerView, D: number, red
 
 function plan(events: readonly GameEvent[], D: number, options: { env?: FxPlanEnv; reduced?: boolean; view?: PlayerView } = {}): FxCue[] {
   const view = withEvents(options.view ?? fullBoardView(), [...events]);
-  const env = options.env ?? envOf();
+  const env = options.env ?? factsEnv();
   const entry = entryFor(events, view, options.reduced === true ? 0 : D, options.reduced);
   env.memory.remember(entry.events);
   return planFx(entry, view, env);
@@ -118,17 +116,6 @@ const summon = (player: "p1" | "p2", instanceId: string, defId: string, row: "un
   row,
   lane,
 });
-
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 const FLAVORS = Object.keys(FLAVOR_LOOKS) as Flavor[];
 const ZONE = testid.zone("you", "units", 3);
@@ -246,8 +233,8 @@ describe("#1445 a Unit's summon entrance takes its flavor", () => {
     // Reduced motion zeroes the entry: no flavor cue, exactly today's ring and burst.
     const reduced = plan([summon("p1", "n1", "core-002", "units", 3)], 0, { reduced: true });
     expectCues(reduced, [ring("dust", tid(ZONE), 0, 0), burst("dust", tid(ZONE, FOOT), "ring", 0)]);
-    expect(plan([summon("p1", "n1", "core-002", "units", 3)], 400, { env: envOf({ intensity: FX_INTENSITY_SCALE.off }) })).toEqual([]);
-    expect(plan([summon("p1", "n1", "core-066", "units", 3)], 400, { env: envOf({ intensity: FX_INTENSITY_SCALE.off }) })).toEqual([]);
+    expect(plan([summon("p1", "n1", "core-002", "units", 3)], 400, { env: factsEnv({ intensity: FX_INTENSITY_SCALE.off }) })).toEqual([]);
+    expect(plan([summon("p1", "n1", "core-066", "units", 3)], 400, { env: factsEnv({ intensity: FX_INTENSITY_SCALE.off }) })).toEqual([]);
   });
 
   it("#1445 tokens and Animated cards take it", () => {

@@ -675,6 +675,42 @@ func TestWorkflows_PullRequestEventsUseTarget(t *testing.T) {
 	assertNotRegex(t, text, `^  pull_request:`)
 }
 
+// From 2026-12-02 GitHub blocks `pull_request_target` in public repositories unless an Actions
+// event policy allows it. The policy allows exactly the workflows infra/README.md lists
+// ("pull_request_target"), so a new one cannot start using it unseen, and none of them checks out
+// anything but the default branch.
+var workflowsTargetAllowed = []string{"bot-commands.yml", "lock-conversations.yml", "squishy-commands.yml"}
+
+var workflowsOnTarget = regexp.MustCompile(`(?m)^  pull_request_target:`)
+
+func TestWorkflows_PullRequestTargetOnlyWhereThePolicyAllowsIt(t *testing.T) {
+	paths, err := filepath.Glob(filepath.Join(workflowsDir, "*.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	using := []string{}
+	for _, path := range paths {
+		text := readText(t, path)
+		if !workflowsOnTarget.MatchString(text) {
+			continue
+		}
+		using = append(using, filepath.Base(path))
+		for _, ref := range workflowsFindall(workflowsRef, text) {
+			assertIn(t, "default_branch", ref, path)
+		}
+		assertNotIn(t, "secrets[", text, path)
+	}
+	sort.Strings(using)
+	assertEqual(t, using, workflowsTargetAllowed)
+	infra := readText(t, filepath.Join(config.RepoRoot, "infra", "README.md"))
+	section := infra[strIndex(t, infra, "\n## pull_request_target\n"):]
+	section = section[:strIndex(t, section[1:], "\n## ")+1]
+	for _, name := range workflowsTargetAllowed {
+		assertIn(t, "| `"+name+"` |", section)
+	}
+	assertEqual(t, strings.Count(section, ".yml` |"), len(workflowsTargetAllowed))
+}
+
 // ---------------------------------------------------------------------------- StatusIssueStepTests
 //
 // The pinned status issue is rewritten after every sweep, and never fails the sweep.
@@ -703,20 +739,23 @@ func workflowsStatus(t *testing.T) string {
 	return workflowsRead(t, "bot-status.yml")
 }
 
-func TestWorkflows_OneJobRewritesItEveryFiveMinutes(t *testing.T) {
+// One job loops (#3675): its sweep every five minutes, on a goroutine of its own, and the issue
+// rewritten every two, as often as the issue says.
+func TestWorkflows_OneJobRewritesItEveryTwoMinutes(t *testing.T) {
 	text := workflowsStatus(t)
 	refresh := workflowsJob(t, text, "refresh")
 	assertIn(t, "runs-on: ubuntu-latest", refresh)
-	assertIn(t, `EVERY_SECONDS: "300"`, text)
-	assertEqual(t, dashboard.EveryMinutes*60, 300) // what the issue says it does
+	assertIn(t, "\n  EVERY_SECONDS: \"300\"\n", text)
+	assertIn(t, `REWRITE_EVERY_SECONDS: "120"`, text)
+	assertEqual(t, dashboard.EveryMinutes*60, 120) // what the issue says it does
 	// The workflow changed (#467): `python -m harness dashboard` is `harness dashboard`.
 	assertIn(t, "harness dashboard --sweep --stats --companions --controller \\\n"+
-		`            --every "${EVERY_SECONDS}" --runners-every `+
-		`"${RUNNERS_EVERY_SECONDS}" \`+"\n"+`            --gate-every "${GATE_EVERY_SECONDS}" --for "${LOOP_SECONDS}"`,
-		refresh)
+		`            --every "${EVERY_SECONDS}" --rewrite-every "${REWRITE_EVERY_SECONDS}" \`+"\n"+
+		`            --runners-every "${RUNNERS_EVERY_SECONDS}" \`+"\n"+
+		`            --gate-every "${GATE_EVERY_SECONDS}" --for "${LOOP_SECONDS}"`, refresh)
 	// Its runners section is redrawn alone between the rewrites, as often as the issue says.
-	assertIn(t, `RUNNERS_EVERY_SECONDS: "120"`, text)
-	assertEqual(t, dashboard.RunnersMinutes*60, 120)
+	assertIn(t, `RUNNERS_EVERY_SECONDS: "60"`, text)
+	assertEqual(t, dashboard.RunnersMinutes*60, 60)
 	// The loop ends inside GitHub's six-hour cap, ahead of its own timeout.
 	loop := workflowsInt(t, workflowsSearch(t, `LOOP_SECONDS: "(\d+)"`, text, 1))
 	timeout := workflowsInt(t, workflowsSearch(t, `timeout-minutes: (\d+)`, refresh, 1))
@@ -759,11 +798,12 @@ var (
 func TestWorkflows_IssuesAndPullRequestsWhenOpenedNeverTheirCode(t *testing.T) {
 	text := workflowsTriage(t)
 	assertRegex(t, text, `issues:\n\s+types: \[opened, labeled\]`)
-	assertRegex(t, text, `pull_request_target:\n\s+types: \[opened\]`)
+	// `pull_request`, not `_target` (infra/README.md, "pull_request_target"): the checkout below is
+	// the default branch's, never the pull request's.
+	assertRegex(t, text, `(?m)^  pull_request:\n\s+types: \[opened\]`)
+	assertNotRegex(t, text, workflowsOnTarget.String())
 	// A person can call it on any thread by number.
 	assertRegex(t, text, `workflow_dispatch:\n\s+inputs:\n\s+number:`)
-	// As the Python: no re.M, so `^` is the start of the file only.
-	assertNotRegex(t, text, `^  pull_request:`, "would run the pull request's code")
 	refs := workflowsFindall(workflowsRef, text)
 	assertEqual(t, len(refs), 1)
 	assertIn(t, "default_branch", refs[0])
@@ -854,21 +894,85 @@ func TestWorkflows_OnlyAPatchOrSetStopsARunAndOnlyBeforeHalfItsShards(t *testing
 	assertIn(t, `[ "$finished" -ge "$LEARN_SET_KEEP_SHARDS" ]`, text)
 }
 
-// gather.yml plays a new patch or set and never a micro: a push plays only when one shipped since
-// the last push run that succeeded, and plays the commit it pushed, so the next run reads exactly
-// what it played.
-func TestWorkflows_GatherPlaysEachNewPatchAndNoMicro(t *testing.T) {
+// gather.yml plays without a pause (#3740): each run plays GATHER_HOURS on the commit that started
+// it, under GitHub's 6-hour job limit, so a rerun plays the same games, and as it ends it starts the
+// next run on main as it is then, with a schedule to start the chain again; no push starts it.
+func TestWorkflows_GatherPlaysTheNewestMainWithoutAPause(t *testing.T) {
 	text := workflowsRead(t, "gather.yml")
+	assertIn(t, "  schedule:\n    - cron: ", text)
+	assertNotIn(t, "  push:", text)
 	job := workflowsJob(t, text, "gather")
-	assertIn(t, "ref: ${{ github.event_name == 'push' && github.sha || 'main' }}", job)
-	due := workflowsScript(t, job, "due (a new patch or set, not a micro)")
-	assertIn(t, "runs?event=push&status=success&per_page=1", due)
-	assertIn(t, `select(.tier != "micro")`, due)
-	for _, step := range []string{"uses: ./.github/actions/setup", "name: build",
-		"name: play (cargo jackioh stats --series gather)"} {
-		assertIn(t, "if: ${{ steps.due.outputs.play == 'true' }}", workflowsStep(t, job, step))
-	}
+	assertIn(t, "ref: ${{ github.sha }}", job)
+	assertIn(t, "runs-on: ubuntu-latest", job)
+	assertIn(t, "timeout-minutes: 350", job)
+	hours := regexp.MustCompile(`(?m)^  GATHER_HOURS: "(\d+)"$`).FindStringSubmatch(text)
+	assertTrue(t, hours != nil, "GATHER_HOURS")
+	// Its hours, and half an hour for the build and the last batch's overrun, within the timeout.
+	assertTrue(t, workflowsInt(t, hours[1])*60+30 <= 350, "GATHER_HOURS fits GitHub's job limit")
+	play := workflowsScript(t, job, workflowsGatherPlay)
+	assertIn(t, `deadline=$(( $(date +%s) + HOURS * 3600 ))`, play)
+	assertIn(t, `[ $(( $(date +%s) + took )) -le "$deadline" ]`, play)
+	next := workflowsJob(t, text, "next")
+	assertIn(t, "if: ${{ !cancelled() && vars.GATHER_ON_PATCH == 'true' }}", next)
+	assertIn(t, `[ "$minutes" -lt "$GATHER_NEXT_MIN_MINUTES" ]`, next)
+	assertIn(t, `gh workflow run gather.yml -R "$REPO" --ref main`, next)
 	assertTrue(t, workflowsLinted(t, "gather.yml"))
+}
+
+// #3740: the training lanes hold 12 of the organization's 60 hosted jobs, the learn lane's export
+// 10 shards at a time and the gather lane's two parts, and every job of theirs runs on GitHub's
+// runners: the owner's PC no longer runs them.
+func TestWorkflows_TheTrainingLanesHoldTwelveOfGithubsRunners(t *testing.T) {
+	shards := workflowsJob(t, workflowsRead(t, "selfplay-shards.yml"), "shard")
+	assertIn(t, "max-parallel: 10\n", shards)
+	gather := workflowsJob(t, workflowsRead(t, "gather.yml"), "gather")
+	assertIn(t, "part: [1, 2]\n", gather)
+	assertEqual(t, strings.Count(workflowsRead(t, "learn.yml"), "    runs-on: ubuntu-latest\n"), 5)
+	assertEqual(t, strings.Count(workflowsRead(t, "selfplay.yml"), "    runs-on: ubuntu-latest\n"), 3)
+	for _, name := range []string{"learn.yml", "selfplay.yml", "selfplay-shards.yml", "gather.yml"} {
+		text := workflowsRead(t, name)
+		assertNotIn(t, "TRAINING_ON_PC", text)
+		assertNotIn(t, "jackioh-selfplay-local", text)
+		assertNotIn(t, "inputs.runner", text)
+		assertTrue(t, workflowsLinted(t, name))
+	}
+}
+
+// workflowsGatherPlay is the name of gather.yml's step that plays and files the games.
+const workflowsGatherPlay = "play and file, a batch at a time (cargo jackioh stats --series gather, stats-import --totals-only)"
+
+// gather.yml and the learn lane's shards file their games into the card statistics about an hour
+// at a time as they play them, each piece one file a database claims once, through
+// training/file-records.sh, so a rerun or learn.yml's import folds no game twice; a shard files a
+// piece only when selfplay finished it, and a dispatched export files nothing.
+func TestWorkflows_GatherAndTheLearnShardsFileTheirGamesAsTheyPlay(t *testing.T) {
+	assertTrue(t, isFile(filepath.Join(config.RepoRoot, "training", "file-records.sh")))
+	gather := workflowsRead(t, "gather.yml")
+	assertTrue(t, regexp.MustCompile(`(?m)^  GATHER_FILE_GAMES: "\d+"$`).MatchString(gather), "GATHER_FILE_GAMES")
+	play := workflowsScript(t, workflowsJob(t, gather, "gather"), workflowsGatherPlay)
+	assertIn(t, `--from "$start" --games "$n"`, play)
+	assertIn(t, `sh training/file-records.sh target/release/jackioh-server "$file"`, play)
+	assertNotIn(t, "stats-import", play)
+
+	shard := workflowsScript(t, workflowsJob(t, workflowsRead(t, "selfplay-shards.yml"), "shard"), "play")
+	assertIn(t, `every=${FILE_EVERY:-$GAMES}`, shard)
+	assertIn(t, `played=${PIPESTATUS[0]}`, shard)
+	assertIn(t, `[ -n "$FILE_EVERY" ] && [ "$played" != 0 ]`, shard)
+	assertIn(t, `"$RUNNER_TEMP/training/file-records.sh" "$bin/jackioh-server" "$records"`, shard)
+
+	selfplay := workflowsRead(t, "selfplay.yml")
+	calls := workflowsJob(t, selfplay, "shards")
+	assertIn(t, "      file_every: ${{ inputs.file_every }}\n", calls)
+	assertIn(t, "      PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}\n", calls)
+	assertIn(t, "training/file-records.sh", workflowsJob(t, selfplay, "build"))
+
+	learn := workflowsRead(t, "learn.yml")
+	export := workflowsJob(t, learn, "export")
+	assertTrue(t, regexp.MustCompile(`(?m)^      file_every: "\d+"$`).MatchString(export), "file_every")
+	assertIn(t, "STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}", export)
+	imported := workflowsJob(t, learn, "import")
+	assertIn(t, `records-${name#selfplay-}`, workflowsScript(t, imported, "file the games (cargo jackioh stats from-selfplay)"))
+	assertIn(t, `sh training/file-records.sh target/release/jackioh-server "${files[@]}"`, imported)
 }
 
 func TestWorkflows_ALearnRunPlansAndBuildsMainAsItIsWhenItStarts(t *testing.T) {
@@ -884,10 +988,9 @@ func TestWorkflows_ALearnRunPlansAndBuildsMainAsItIsWhenItStarts(t *testing.T) {
 // ---------------------------------------------------------------------------- RequiredChecksTests
 
 var (
-	workflowsOnPullRequest = regexp.MustCompile(`(?m)^  pull_request:|^  pull_request_target:\n\s+types: \[[^\]]*` +
-		`\bsynchronize\b`)
-	workflowsJobTitle  = regexp.MustCompile(`(?m)^    name: (.+)$`)
-	workflowsInputName = regexp.MustCompile(`\$\{\{ inputs\.[\w-]+ == '[^']*' && '[^']*' \|\| '([^']*)' \}\}`)
+	workflowsOnPullRequest = regexp.MustCompile(`(?m)^  pull_request:`)
+	workflowsJobTitle      = regexp.MustCompile(`(?m)^    name: (.+)$`)
+	workflowsInputName     = regexp.MustCompile(`\$\{\{ inputs\.[\w-]+ == '[^']*' && '[^']*' \|\| '([^']*)' \}\}`)
 )
 
 func TestWorkflows_EveryRequiredCheckIsAJobThatRunsOnEveryPullRequest(t *testing.T) {
@@ -899,8 +1002,6 @@ func TestWorkflows_EveryRequiredCheckIsAJobThatRunsOnEveryPullRequest(t *testing
 	}
 	for _, path := range paths {
 		text := readText(t, path)
-		// A `pull_request_target` workflow that runs again on every push counts too: the title
-		// check (`pr-title.yml`, #187), should it be made required.
 		if !workflowsOnPullRequest.MatchString(text) {
 			continue
 		}

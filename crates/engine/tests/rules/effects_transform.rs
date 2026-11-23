@@ -442,6 +442,60 @@ mod transform_s6_3_r23_r35_m3_t1 {
     }
 
     #[test]
+    fn r4353000_an_indestructible_card_is_immutable_innately_and_refuses_a_transform_and_a_vanilla() {
+        let mut state = game();
+        let rock = put(
+            &mut state,
+            &combat_fx::plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        live_mut(&mut state, &rock.id)
+            .granted_keywords
+            .push(Keyword::Indestructible);
+        let rock = live(&state, &rock.id);
+        assert!(jackioh_engine::layers::is_immutable(&state, &rock));
+        // Innate, never added: its keywords list Indestructible alone, as Flying lists no Flexible.
+        assert!(!jackioh_engine::layers::unit_has(
+            &state,
+            &rock,
+            KeywordKind::Immutable
+        ));
+
+        assert!(
+            run(
+                &mut state,
+                transform_into(&rock.id, &sheep().id),
+                by(PlayerId::P1)
+            )
+            .is_empty()
+        );
+        assert!(
+            run(
+                &mut state,
+                vanilla(json_as(json!({ "instanceId": rock.id }))),
+                by(PlayerId::P1)
+            )
+            .is_empty()
+        );
+        assert_eq!(live(&state, &rock.id).def_id, combat_fx::plain.id.clone());
+        assert!(
+            live(&state, &rock.id)
+                .granted_keywords
+                .contains(&Keyword::Indestructible)
+        );
+
+        // The same plain unit with no Indestructible is no Immutable one.
+        let plain = put(
+            &mut state,
+            &combat_fx::plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        assert!(!jackioh_engine::layers::is_immutable(&state, &plain));
+    }
+
+    #[test]
     fn r13_keeps_a_stack_pile_the_replacement_is_the_top_and_the_dormant_card_stays_beneath() {
         let mut state = game();
         let beneath = put(

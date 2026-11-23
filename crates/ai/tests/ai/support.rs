@@ -20,9 +20,11 @@ use jackioh_ai::{
     determinize, play_ai_turn,
 };
 use jackioh_engine::testkit::{
-    Action, ActionBody, ActionType, CardInstance, CatalogQueryArgs, CreateGameOptions, DECK_SIZE, GameState,
-    PLAYER_IDS, Phase, PlayerId, Rng, Value, active_units_of, begin_game, create_game, create_rng, json,
-    json_as, legal_actions, opponent_of, query, reduce, seat_to_act, subsystems,
+    Action, ActionBody, ActionType, ActivationDecl, ActivationUses, CardDef, CardInstance, CardScripts,
+    CatalogQueryArgs, CreateGameOptions, DECK_SIZE, GameState, PLAYER_IDS, Phase, PlayerId, Rng, Script,
+    TargetDecl, Value, active_units_of, begin_game, create_game, create_rng, effects, hook, json, json_as,
+    legal_actions, opponent_of, query, reduce, register_catalog_as, register_scripts, seat_to_act,
+    subsystems,
 };
 
 pub use jackioh_engine::testkit::scenario;
@@ -50,6 +52,96 @@ pub fn js<T: serde::Serialize>(value: T) -> Value {
 /// The real catalog and card scripts, once per process.
 pub fn register_cards() {
     jackioh_cards::register_all();
+}
+
+/// R4515000: a full row of five Units, each pinned to its lane: four copies of `unit` (a def id or a
+/// scenario entry) in lanes 1 to 4 and `fifth` in lane 5.
+pub fn row(unit: Value, fifth: &str) -> Value {
+    let unit = if unit.is_string() {
+        json!({ "def": unit })
+    } else {
+        unit
+    };
+    let mut row: Vec<Value> = (1..=4)
+        .map(|lane| {
+            let mut copy = unit.clone();
+            copy["lane"] = json!(lane);
+            copy
+        })
+        .collect();
+    row.push(json!({ "def": fifth, "lane": 5 }));
+    Value::Array(row)
+}
+
+/// R4515000: a test-only 0/6 Unit token with two Activates, as a launched Starship or a fused card
+/// carries them: "ping" deals 1 damage to an enemy Unit, "snipe" 7, each once a turn.
+pub const TWO_GUNS: &str = "ai-test-two-guns";
+
+fn two_guns_def() -> CardDef {
+    let face = json!({
+        "attack": 0,
+        "health": 6,
+        "keywords": [],
+        "text": "Activate: Deal 1 damage to an enemy Unit.\nActivate: Deal 7 damage to an enemy Unit.",
+    });
+    json_as(json!({
+        "id": TWO_GUNS,
+        "index": "ai-test-two-guns-1",
+        "name": "Two Guns (AI test)",
+        "set": "Core",
+        "type": "Unit",
+        "tags": [],
+        "rarity": "Token",
+        "token": true,
+        "cost": 2,
+        "base": face,
+        "radiant": face,
+    }))
+}
+
+/// One of `TWO_GUNS`' Activates, as Cannon v4 declares its own: `amount` damage to a declared enemy Unit.
+fn gun(id: &str, amount: i32) -> ActivationDecl {
+    ActivationDecl {
+        id: id.to_string(),
+        label: format!("Deal {amount} damage to an enemy Unit"),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({ "side": "enemy", "of": ["unit"] }),
+        )],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(move |_ctx| {
+            vec![effects::damage(json_as(
+                json!({ "to": { "of": "chosen" }, "amount": amount }),
+            ))]
+        }),
+    }
+}
+
+/// `TWO_GUNS` on top of the real catalog and scripts, for this thread: a token, so no deck, pool or
+/// determinization deals it.
+pub fn install_two_guns() {
+    register_cards();
+    let mut catalog = (*jackioh_cards::CATALOG).clone();
+    catalog.insert(TWO_GUNS.to_string(), two_guns_def());
+    register_catalog_as(catalog, jackioh_cards::catalog_version());
+    let script = Script {
+        activations: vec![gun("ping", 1), gun("snipe", 7)],
+        ..Script::default()
+    };
+    let mut scripts = jackioh_cards::scripts_of();
+    scripts.insert(
+        TWO_GUNS.to_string(),
+        CardScripts {
+            base: script.clone(),
+            radiant: script,
+        },
+    );
+    register_scripts(scripts);
 }
 
 /// The AI's seat in every scenario-built test (see the header).

@@ -124,13 +124,12 @@ impl<'a> Pattern<'a> {
                 while to < bytes.len() && (bytes[to].is_ascii_alphanumeric() || bytes[to] == b'_') {
                     to += 1;
                 }
+                // The scan goes on from just after the brace: no `{` stands inside a token.
                 if to > at + 1 && bytes.get(to) == Some(&b'}') {
                     literals.push(key[last..at].chars().collect());
                     let enclosed = key[..at].ends_with('(') && key[to + 1..].starts_with(')');
                     tokens.push((&key[at + 1..to], enclosed));
                     last = to + 1;
-                    at = to + 1;
-                    continue;
                 }
             }
             at += 1;
@@ -232,5 +231,28 @@ mod tests {
             Words::new(Locale::En).say_with("Brittle {n}: crumbles at 0", &[("n", "3".into())]),
             "Brittle 3: crumbles at 0"
         );
+    }
+
+    /// An empty `{}` is no token, even where a value has no name, and an unclosed one, at the end or not, is none
+    /// either; a token is in parentheses only between both.
+    #[test]
+    fn an_empty_or_unclosed_brace_is_no_token() {
+        assert_eq!(
+            fill("{} and {a}", &[("", "X".into()), ("a", "1".into())]),
+            "{} and 1"
+        );
+        assert_eq!(fill("{a and", &[("a", "1".into())]), "{a and");
+        assert!(Pattern::of("a {} b").tokens.is_empty());
+        assert!(Pattern::of("a {b c").tokens.is_empty());
+        assert!(Pattern::of("ends with {a").tokens.is_empty());
+        assert_eq!(Pattern::of("costs ({n} now").tokens, vec![("n", false)]);
+        assert_eq!(Pattern::of("costs {n}) now").tokens, vec![("n", false)]);
+    }
+
+    /// A Chinese reader's sentence that no entry holds whole is read through a pattern key, each value in turn.
+    #[test]
+    fn a_chinese_sentence_is_read_through_its_pattern() {
+        let zh = Words::new(Locale::ZhCn);
+        assert_eq!(zh.say("Stage 2 of 3, Comradery"), "第2/3阶段，Comradery");
     }
 }

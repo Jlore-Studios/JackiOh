@@ -1,11 +1,14 @@
 //! S #4.6 The Big Crunch (SPEC §8.10 row S 4.6, SPEC §7; §6.3 Cast, R28, R70, R87, R423, R436, R452,
-//! R1420, R1857002, R1870006): (4) Spell, Terminus, Token (printed Mythic), one of Olivian Expanse's picks.
+//! R1420, R1857002, R1870006, R3869001): (4) Spell, Terminus, Token (printed Mythic), one of Olivian
+//! Expanse's picks.
 //!   Base:    "Cast one of each Call to Chaos."
 //!   Radiant: "Cast a Radiant one of each Call to Chaos."
 //!
-//! Engine: one `cast_new` per Call to Chaos definition, in catalog order (`EDITIONS`): Core #95, C+ #73,
-//! M #95, the set's own two, then Training Grounds #39 from that set's release (issue #2204), each
-//! named by id, so the pool reaches them whether or not their set ships (R1420). Each is a play for
+//! Engine: one `cast_new` per Call to Chaos edition, in catalog order: the Call to Chaos pool
+//! (`query::call_to_chaos_editions`, R3869001), every card tagged Call to Chaos of the sets that ship:
+//! Core #95, C+ #73, M #95, the set's own two, Training Grounds #39 and Stinkyscape+ #142 today, the
+//! seven it named by id through v0.6.2b, in the same order, so no game plays differently, and an edition
+//! a later set prints joins it. Each is a play for
 //! every rule, its choices its caster's (R70), rolling and naming its own effects to both players
 //! (R436), its nested casts held by `CALL_TO_CHAOS_CHAIN_CAP` (R28) and `RANDOM_CAST_CHAIN_CAP`
 
@@ -13,24 +16,14 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-004-6";
 
-/// Every Call to Chaos the catalog holds, in its order.
-pub const EDITIONS: [&str; 6] = [
-    "core-095",
-    "classicplus-073",
-    "meditative-095",
-    "stinkyscape-150",
-    "stinkyscape-151",
-    "traininggrounds-039",
-];
-
 fn crunch(radiant: bool) -> Hook {
     hook(move |_ctx| {
-        EDITIONS
-            .iter()
+        crate::query::pool_ids(&crate::query::call_to_chaos_editions())
+            .into_iter()
             .map(|def_id| {
                 cast_new(CastNewArgs {
                     def: CastNewDef::Def(CastDef {
-                        def_id: (*def_id).to_string(),
+                        def_id,
                         radiant: Some(radiant),
                     }),
                     radiant: None,
@@ -57,12 +50,34 @@ pub fn script() -> CardScripts {
 // S #4.6 The Big Crunch — SPEC §8.10 row S 4.6, BUILD M12 row S 4.6 (#2204, #39, R1870006).
 #[cfg(test)]
 mod tests {
-    use super::EDITIONS;
     use jackioh_engine::config::CALL_TO_CHAOS_CHAIN_CAP;
     use jackioh_engine::testkit::*;
 
     use crate::js;
     use crate::scenario;
+
+    /// R3869001: the editions the pool holds today, pinned so a change to it is deliberate: the seven
+    /// this card named by id through v0.6.2b, in its order.
+    const EDITIONS: [&str; 7] = [
+        "core-095",
+        "classicplus-073",
+        "meditative-095",
+        "stinkyscape-150",
+        "stinkyscape-151",
+        "traininggrounds-039",
+        "stinkyscapeplus-142",
+    ];
+
+    /// The Call to Chaos pool as the Crunch reads it (R3869001): `EDITIONS`, rotated under the pool probe.
+    fn pool() -> Vec<String> {
+        crate::query::pool_ids(&crate::query::call_to_chaos_editions())
+    }
+
+    #[test]
+    fn r3869001_the_call_to_chaos_pool_is_the_seven_it_named_in_the_same_order() {
+        crate::register_all();
+        assert_eq!(with_pool_shift(0, pool), EDITIONS.map(str::to_string).to_vec());
+    }
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -141,7 +156,7 @@ mod tests {
         #[test]
         fn r1870006_casts_the_five_editions_once_each_in_order() {
             let s = played(&plain_seed("big-crunch-order", false), false);
-            assert_eq!(chaos_plays(&s), EDITIONS.map(str::to_string).to_vec());
+            assert_eq!(chaos_plays(&s), pool());
             // Each is its own card, landed in its caster's graveyard after it (R87).
             let graveyard: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect();
             for def_id in EDITIONS.iter().chain([&CRUNCH]) {
@@ -150,22 +165,26 @@ mod tests {
         }
 
         // Issue #2204: Training Grounds #39 is a Call to Chaos the catalog holds, so once its set ships
-        // it is the sixth cast, after Stinkyscape's two.
+        // it is the sixth cast, after Stinkyscape's two; issue #3573: Stinkyscape+ #142 is the seventh.
         #[test]
-        fn r1870006_r2200004_casts_the_training_grounds_edition_last() {
+        fn r1870006_r2200004_casts_the_training_grounds_edition_sixth_and_the_stinkyscape_plus_one_last() {
             assert!(set_ships(SetName::TrainingGrounds));
-            let s = played(&plain_seed("big-crunch-training-grounds", false), false);
-            let plays = chaos_plays(&s);
-            assert_eq!(plays.len(), 6);
-            assert_eq!(plays.last().map(String::as_str), Some("traininggrounds-039"));
+            assert!(set_ships(SetName::StinkyscapePlus));
+            // Which place each edition casts in is the pool's order (R3869001), read as it is.
+            let plays = with_pool_shift(0, || {
+                chaos_plays(&played(&plain_seed("big-crunch-training-grounds", false), false))
+            });
+            assert_eq!(plays.len(), 7);
+            assert_eq!(plays.get(5).map(String::as_str), Some("traininggrounds-039"));
+            assert_eq!(plays.last().map(String::as_str), Some("stinkyscapeplus-142"));
         }
 
         #[test]
         fn r1870006_each_rolls_one_effect_named_to_both() {
             let s = played(&plain_seed("big-crunch-named", false), false);
             let rolled = rolls(&s);
-            let by: Vec<&str> = rolled.iter().map(|(def_id, _)| def_id.as_str()).collect();
-            assert_eq!(by, EDITIONS.to_vec(), "each edition rolls once, in order");
+            let by: Vec<String> = rolled.iter().map(|(def_id, _)| def_id.clone()).collect();
+            assert_eq!(by, pool(), "each edition rolls once, in the pool's order");
             for (def_id, effects) in &rolled {
                 assert_eq!(effects.len(), 1, "{def_id}'s base face rolls one effect");
             }

@@ -26,6 +26,7 @@ use crate::config::{
 };
 use crate::game_over::end_game;
 use crate::layers::AuraTable;
+use crate::loop_cap;
 use crate::modifiers::remove_modifier;
 use crate::play_choices::{PlayAction, graveyard_play_actions_for, play_actions_for};
 use crate::play_steps::run_play_steps;
@@ -96,7 +97,7 @@ pub fn seat_to_act(state: &GameState) -> Option<PlayerId> {
 pub fn attack_target_id(target: &AttackTarget) -> String {
     match target {
         AttackTarget::Unit { instance, .. } => instance.id.clone(),
-        AttackTarget::Hero { player, .. } => format!("hero-{player}"),
+        AttackTarget::Hero { player, .. } => format!("{}{player}", crate::combat::HERO_TARGET_PREFIX),
     }
 }
 
@@ -134,7 +135,7 @@ fn attacker_of(state: &GameState, player: PlayerId, instance_id: &str) -> Option
 /// target never reaches the validator (§4.2 step 2).
 fn attack_target_of(state: &GameState, player: PlayerId, target_id: &str) -> Option<AttackTarget> {
     let enemy = opponent_of(player);
-    if target_id == format!("hero-{enemy}") {
+    if crate::combat::hero_seat_of(target_id) == Some(enemy) {
         return Some(AttackTarget::Hero { player: enemy });
     }
     let unit = crate::zones::units_on_field_of(state, enemy)
@@ -329,9 +330,8 @@ pub(crate) fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result
         ActionBody::MarketBuy { offer } => {
             crate::marketplace::apply_market_buy(sink, action.player_id, *offer)
         }
-        ActionBody::MarketSell { instance_id } => {
-            crate::marketplace::apply_market_sell(sink, action.player_id, instance_id)
-        }
+        // R4410000: kept on the wire so an older client's or log's action reads; always refused.
+        ActionBody::MarketSell { .. } => Err(EngineError::new(crate::marketplace::NOTHING_SELLS)),
         ActionBody::SetAutoEndTurn { enabled } => {
             // R345: a preference, not a move, emitting nothing; `end_due_turns` reads it after this
             // reduction too, so turning it back on with nothing left to do ends the turn at once.
@@ -404,6 +404,8 @@ fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError
                 };
                 pick
             };
+            // R3925000: each answer the timeout gives is an interaction of its own.
+            loop_cap::begin_interaction(sink, Some((who, ActionType::Answer)));
             apply_action(sink, &Action::new(pick, who, action.nonce.clone()))?;
             if !turn_clock {
                 return Ok(());
@@ -416,6 +418,7 @@ fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError
         if !turn_clock || sink.state.phase != Phase::Main {
             return Ok(());
         }
+        loop_cap::begin_interaction(sink, Some((who, ActionType::EndTurn)));
         end_turn(sink);
         settle(sink, SettleOptions::default());
     }
@@ -552,6 +555,8 @@ fn end_due_turns(sink: &mut EngineSink<'_>, drive_autopilot: bool) {
         }
         if let Some(cut) = turn_cut_due(sink.state) {
             let player = sink.state.active;
+            // R3925000: a turn the engine ends for a seat is an interaction of that seat's.
+            loop_cap::begin_interaction(sink, Some((player, ActionType::EndTurn)));
             remove_modifier(sink, player, &cut.id);
             sink.events.push(GameEvent::TurnCutShort {
                 player,
@@ -565,6 +570,7 @@ fn end_due_turns(sink: &mut EngineSink<'_>, drive_autopilot: bool) {
             return;
         }
         let (player, turn) = (sink.state.active, sink.state.turn);
+        loop_cap::begin_interaction(sink, Some((player, ActionType::EndTurn)));
         sink.events.push(GameEvent::TurnAutoEnded { player, turn });
         end_turn(sink);
         settle(sink, SettleOptions::default());
@@ -612,6 +618,8 @@ fn run_autopilot(sink: &mut EngineSink<'_>, player: PlayerId) {
 /// settled, due turns ended) but with no second state copy or nonce in the log: it is part of the
 /// action that handed the turn over, and its events are that one's. A refused one changes nothing.
 fn autopilot_step(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError> {
+    // R3925000: an autopilot action is its seat's interaction.
+    loop_cap::begin_interaction(sink, Some((action.player_id, action.action_type())));
     let (saved, events_at, rng) = (sink.state.clone(), sink.events.len(), sink.rng.clone());
     let counted = turn_action_counted(sink.state, action);
     if let Err(error) = apply_action(sink, action) {
@@ -731,6 +739,8 @@ fn reduce_held(state: &GameState, action: &Action, drive_autopilot: bool) -> Red
     let mut rng = Rng::new(&next.seed, next.rng_cursor);
     {
         let mut sink = EngineSink::new(&mut next, &mut events, &mut rng);
+        // R3925000: the action is an interaction, its events counted against the loop cap.
+        loop_cap::begin_interaction(&mut sink, Some((action.player_id, action_type)));
 
         let counted = turn_action_counted(sink.state, action);
         if let Err(error) = apply_action(&mut sink, action) {
@@ -746,8 +756,10 @@ fn reduce_held(state: &GameState, action: &Action, drive_autopilot: bool) -> Red
         end_due_turns(&mut sink, drive_autopilot);
         // R676: a Glitch's reset goes once the action that drew it has settled.
         if sink.state.reset_owed == Some(true) {
+            loop_cap::begin_interaction(&mut sink, None);
             reset_match(&mut sink);
         }
+        loop_cap::end_interaction(&sink);
     }
 
     next.rng_cursor = rng.cursor();
@@ -772,6 +784,7 @@ fn begin_held(state: &GameState) -> ReduceResult {
     {
         let mut sink = EngineSink::new(&mut next, &mut events, &mut rng);
         begin_setup(&mut sink);
+        loop_cap::end_interaction(&sink);
     }
     next.rng_cursor = rng.cursor();
     ReduceResult {
@@ -948,25 +961,14 @@ pub(crate) fn each_legal_action(
             })?;
         }
     }
-    // R1853003: a buy of each lot offered to the player, in offer order (R2250002), then a sale of each
-    // hand card that sells from there (R1861000), in hand order, while `marketplace.rs`'s refusals (the
-    // view's `reason`) pass them. A closed Marketplace lists neither.
+    // R1853003: a buy of each lot offered to the player, in offer order (R2250002), while
+    // `marketplace.rs`'s refusal (the view's `reason`) passes it. A closed Marketplace lists none, and
+    // nothing sells, so no `marketSell` is listed (R4410000).
     if let Some(market) = &state.marketplace {
         let offered = crate::marketplace::offered_to(market, player).count() as i32;
         for offer in 0..offered {
             if crate::marketplace::why_market_buy_refused(state, player, offer).is_ok() {
                 visit(ActionBody::MarketBuy { offer })?;
-            }
-        }
-        let hand_sales = side
-            .hand
-            .iter()
-            .filter(|card| crate::marketplace::sells_from_hand(state, card));
-        for card in hand_sales {
-            if crate::marketplace::why_market_sell_refused(state, player, &card.id).is_ok() {
-                visit(ActionBody::MarketSell {
-                    instance_id: card.id.clone(),
-                })?;
             }
         }
     }

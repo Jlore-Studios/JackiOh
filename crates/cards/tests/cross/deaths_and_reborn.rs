@@ -254,9 +254,10 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
         // p1's next start of turn A steals Big Felinor first (R68's creation order), the Fiender dies at
         // 5/7 and Reborn returns it; B's target left the field in between, so B fizzles (R76).
         let mut g = scenario(json!({
-            // A (0) Spell keeps p1's turn open after the two plays (R82): the Fanatics' own switch to
-            // Defense Position did until Can't Defend (R2657000).
-            "p1": { "hand": [KPOP, KPOP, VANILLA, "core-010"], "library": LIBRARY },
+            // A (0) Spell keeps p1's turn open after the two plays (R82), whether or not the Fanatics
+            // offer a switch to Defense Position (Can't Defend took it from R2657000 until #4154). The two
+            // (3) Fanatics (#4154) cost 6, past the 4 mana a turn gives.
+            "p1": { "hand": [KPOP, KPOP, VANILLA, "core-010"], "mana": 6, "library": LIBRARY },
             "p2": {
                 "hand": [VANILLA],
                 "field": [
@@ -634,7 +635,7 @@ mod r3039000_an_awakened_dormant_starship_that_returns_is_not_dormant {
         STARSHIP_LAUNCH_ABILITY, dormant_starship_of, is_launched_starship, starship_pieces_of,
     };
 
-    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Pierce: keywords only
 
     /// p1 plays a Hit Job on `id`, mana to spare.
     fn hit(g: &mut Scenario, id: &str) {
@@ -708,5 +709,57 @@ mod r3039000_an_awakened_dormant_starship_that_returns_is_not_dormant {
             starship_pieces_of(g.card(&ship)).is_empty(),
             "nothing fused into the returned one"
         );
+    }
+}
+
+// R4285001 (issue #4285): the Starship Pieces print no Equip, and Starship Piece alone is what fuses a dying
+// card into its controller's Dormant Starship (R1852000), so each still does.
+mod r4285001_starship_pieces_without_equip {
+    use super::*;
+    use jackioh_engine::prelude::{dormant_starship_of, starship_pieces_of};
+
+    /// Core #88 Twisting Nether, "Destroy all permanents": no target, so a piece no Spell may target dies too.
+    const NETHER: &str = "core-088";
+
+    #[test]
+    fn r4285001_every_starship_piece_still_fuses_into_the_dormant_starship_on_death() {
+        jackioh_cards::register_all();
+        let pieces: Vec<String> = jackioh_cards::CATALOG
+            .values()
+            .filter(|def| {
+                def.type_ == CardType::Unit
+                    && def
+                        .base
+                        .keywords
+                        .iter()
+                        .any(|keyword| keyword.kind() == KeywordKind::StarshipPiece)
+            })
+            .map(|def| def.id.clone())
+            .collect();
+        assert!(pieces.len() >= 53, "{}", pieces.len());
+        let mut wrong: Vec<String> = Vec::new();
+        for id in &pieces {
+            let def = jackioh_cards::card_def(id);
+            assert!(
+                !def.base
+                    .keywords
+                    .iter()
+                    .chain(&def.radiant.keywords)
+                    .any(|keyword| keyword.kind() == KeywordKind::Equip),
+                "{id} prints Equip"
+            );
+            let mut g = scenario(json!({
+                "active": "p1",
+                "p1": { "hand": [NETHER, STOCKPILE], "field": [{ "def": id, "lane": 1 }], "library": LIBRARY, "mana": 10 },
+                "p2": { "hand": [STOCKPILE], "library": LIBRARY },
+            }));
+            g.state_mut().players.p1.auto_end_turn = Some(false);
+            g.play(NETHER, json!({}));
+            let fused = dormant_starship_of(g.state(), P1).map(|ship| starship_pieces_of(ship).len());
+            if fused != Some(1) {
+                wrong.push(format!("{id}: {fused:?}"));
+            }
+        }
+        assert!(wrong.is_empty(), "{wrong:#?}");
     }
 }

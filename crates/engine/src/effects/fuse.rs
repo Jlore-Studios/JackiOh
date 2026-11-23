@@ -13,16 +13,18 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-use crate::catalog::{CatalogQueryArgs, excluding_def_id, query};
+use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_unique, query};
 use crate::config::FUSE_MIN_INGREDIENTS;
 use crate::effects::choose::{DiscoverFromCatalogArgs, chosen_options, discover_from_catalog};
 use crate::effects::targets::{PlayerSpec, TargetSpec, instance_of, player_of, self_on_its_stay};
-use crate::layers::unit_has;
+
 use crate::script::{Effect, EffectContext, Hook, hook};
 use crate::state::{CardInstance, GameState, find_instance, new_instance};
 use crate::subsystems::fuse::{FuseArgs, HandPrice, fuse};
-use crate::wire::{CardDef, KeywordKind, PlayerId, Zone, ZoneName};
-use crate::zones::is_buried;
+use crate::wire::{CardDef, CardType, PlayerId, Row, Zone, ZoneName, opponent_of};
+use crate::zones::{
+    StandingAt, ZoneSlot, acting_on, beneath_at, cease_to_exist, first_entry_zone_where, is_buried,
+};
 
 /// R77 and R86: an ingredient that is only a definition, made in `{ z: "gone" }` (where the subsystem
 /// moves a consumed one): in no pile, so no zone event fires and nothing can target or return it.
@@ -106,7 +108,8 @@ pub struct FuseCardsArgs {
 ///
 /// It fizzles silently and the card still resolves (§6.3): an unresolved `instanceIds` entry drops out,
 /// and the subsystem changes nothing for fewer than `FUSE_MIN_INGREDIENTS`, a target off the field or
-/// Immutable (R23), or a call that names neither a target nor a hand.
+/// Immutable (R23), or a call that names neither a target nor a hand. A Dormant card, named as an
+/// ingredient or a target, is passed by as a Transform passes it by (§6.1 Dormant, R1839000, R4454003).
 pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
     Effect::new("fuseCards", move |ctx| {
         // ME-FUSE-RANDOM alone: its ingredient is drawn inside `apply` from the match rng.
@@ -117,7 +120,9 @@ pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
         // Resolved ONCE: every fusion below reuses these, consumed or not.
         let mut ingredients: Vec<CardInstance> = Vec::new();
         for instance_id in args.instance_ids.iter().flatten() {
-            if let Some(found) = find_instance(ctx.sink.state, instance_id) {
+            if let Some(found) = find_instance(ctx.sink.state, instance_id)
+                && !crate::slumber::is_slumbering(found)
+            {
                 ingredients.push(found.clone());
             }
         }
@@ -133,7 +138,9 @@ pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
         };
         let mut targets: Vec<CardInstance> = Vec::new();
         for instance_id in &target_ids {
-            if let Some(found) = find_instance(ctx.sink.state, instance_id) {
+            if let Some(found) = find_instance(ctx.sink.state, instance_id)
+                && !crate::slumber::is_slumbering(found)
+            {
                 targets.push(found.clone());
             }
         }
@@ -268,7 +275,7 @@ fn fuse_random_ingredient(
         .filter(|card| find_instance(ctx.sink.state, &card.id).is_some())
         .filter(|card| {
             find_instance(ctx.sink.state, &card.id)
-                .is_none_or(|live| !unit_has(ctx.sink.state, live, KeywordKind::Immutable))
+                .is_none_or(|live| !crate::layers::is_immutable(ctx.sink.state, live))
         })
         .collect();
     if pool.is_empty() {
@@ -325,7 +332,7 @@ fn keepable(state: &GameState, card: &CardInstance) -> bool {
     if refused {
         return false;
     }
-    !unit_has(state, card, KeywordKind::Immutable)
+    !crate::layers::is_immutable(state, card)
 }
 
 /// `FuseInto`'s pile: a hand or a library.
@@ -378,6 +385,14 @@ pub struct FuseRandomIntoArgs {
     pub radiant: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keep_cost: Option<bool>,
+    /// R3558003: fuse this many random picks into the kept card at once, as one fusion (a Smoothie
+    /// filled with two Fruits). Default 1.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub count: Option<i32>,
+    /// R3558003: the pool leaves out every card already a fusion, judged by its definition
+    /// (`subsystems::fuse::fused_ingredients`) — a filled Smoothie is never filled again.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unfused_only: Option<bool>,
 }
 
 /// E23 (Classic+ #31 Fusion Lab, #73): for each kept card, the one `into.target` names or every card
@@ -396,6 +411,8 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
         if pool.is_empty() {
             return;
         }
+        // R3558003: `count` picks go in as one fusion's ingredients, each drawn in turn (R102).
+        let count = args.count.unwrap_or(1).max(1) as usize;
         for card in kept {
             // A card an earlier fusion of this list has taken off its pile is no longer one to fuse into,
             // and one the Fuse would refuse (R23, R470) draws nothing for it (R129).
@@ -405,19 +422,31 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
             if !keepable(ctx.sink.state, &card) {
                 continue;
             }
-            let Some(picked) = ctx.sink.rng.pick(&pool) else {
-                return;
-            };
-            let picked_id = picked.id.clone();
-            let ingredient = new_instance(
-                &mut *ctx.sink.state,
-                &picked_id,
-                card.owner,
-                Zone::Gone { player: card.owner },
-            );
+            // R3558003: with `unfusedOnly`, a card already a fusion is left alone — a filled
+            // Smoothie is never filled again.
+            if args.unfused_only == Some(true)
+                && crate::subsystems::fuse::fused_ingredients(ctx.sink.state, &card.def_id).is_some()
+            {
+                continue;
+            }
+            let mut ingredients: Vec<CardInstance> = Vec::with_capacity(count);
+            for _ in 0..count {
+                // R3563000: the pick draws through the run's tally, unique while
+                // `UNIQUE_RANDOM_DRAWS` holds.
+                let Some(picked) = pick_unique(ctx.sink.rng, &pool, &mut ctx.draw_tally) else {
+                    return;
+                };
+                let picked_id = picked.id.clone();
+                ingredients.push(new_instance(
+                    &mut *ctx.sink.state,
+                    &picked_id,
+                    card.owner,
+                    Zone::Gone { player: card.owner },
+                ));
+            }
             let on_field = card.zone.z() == ZoneName::Field;
             let radiant_ingredients = if args.radiant == Some(true) {
-                Some(vec![ingredient.id.clone()])
+                Some(ingredients.iter().map(|card| card.id.clone()).collect())
             } else {
                 None
             };
@@ -429,7 +458,7 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
             fuse(
                 ctx,
                 FuseArgs {
-                    ingredients: vec![ingredient],
+                    ingredients,
                     target,
                     into,
                     radiant_ingredients,
@@ -476,6 +505,10 @@ pub struct EquipPicksArgs {
     /// How many picks, each its own fusion. Default 1.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub times: Option<i32>,
+    /// R4285003: how many times a Discover's one pick is fused in, each its own fusion ("Discover a Rare
+    /// Weapon and Equip it into this, twice", S #83 Halo). Default 1.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copies: Option<i32>,
     /// Every pick goes in on its Radiant face (R469).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant: Option<bool>,
@@ -514,6 +547,8 @@ pub fn equip_picks(args: EquipPicksArgs) -> Effect {
                         radiant: args.radiant,
                         // R77: the fused cost, as an Equip play's is.
                         keep_cost: Some(false),
+                        count: None,
+                        unfused_only: None,
                     });
                     (random.apply)(ctx);
                 }
@@ -563,7 +598,8 @@ fn equip_pool(ctx: &EffectContext<'_>, args: &EquipPicksArgs) -> Option<CatalogQ
 }
 
 /// R1841002: the answer to an Equip pick's Discover. The picked card is fused into the unit that
-/// asked, on its Radiant face when the pick was Radiant, and with picks left the next Discover opens.
+/// asked, on its Radiant face when the pick was Radiant, `copies` times (R4285003), and with picks left
+/// the next Discover opens.
 pub fn equip_pick_step() -> Hook {
     hook(|ctx| {
         let Some(pick) = chosen_options(ctx).into_iter().next() else {
@@ -579,12 +615,17 @@ pub fn equip_pick_step() -> Hook {
         else {
             return Vec::new();
         };
-        let mut out = vec![fuse_cards(FuseCardsArgs {
-            def_ids: Some(vec![pick]),
-            target_instance_id: Some(host.id),
-            radiant_ingredients: args.radiant.filter(|radiant| *radiant),
-            ..FuseCardsArgs::default()
-        })];
+        // R4285003: the one pick fused in `copies` times, each its own fusion (R102).
+        let mut out: Vec<Effect> = (0..args.copies.unwrap_or(1).max(1))
+            .map(|_| {
+                fuse_cards(FuseCardsArgs {
+                    def_ids: Some(vec![pick.clone()]),
+                    target_instance_id: Some(host.id.clone()),
+                    radiant_ingredients: args.radiant.filter(|radiant| *radiant),
+                    ..FuseCardsArgs::default()
+                })
+            })
+            .collect();
         let left = args.times.unwrap_or(1) - 1;
         if left > 0 {
             out.push(equip_picks(EquipPicksArgs {
@@ -601,6 +642,8 @@ pub fn equip_pick_step() -> Hook {
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct FuseGeneratedArgs {
+    /// How many picks; `untilCost` ignores it, so it may be left out there (R3558004).
+    #[serde(default)]
     pub count: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub query: Option<CatalogQueryArgs>,
@@ -619,22 +662,52 @@ pub struct FuseGeneratedArgs {
     /// and nothing is fused (R142).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub distinct: Option<bool>,
-    /// R1183001: the fused hand card costs this (a `costOverride`, NA Tech's "It costs (2)"), in
-    /// place of `handPrice`. A card a full hand burns keeps no price, as R77's free one does not.
+    /// R1183001: the fused hand card costs this (a `costOverride`, NA Tech's "It costs (2)" through
+    /// v0.6.6h), in place of `handPrice`. A card a full hand burns keeps no price, as R77's free one does
+    /// not.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_override: Option<i32>,
+    /// R3558004: ignore `count` and `pools` and fuse until the picks' printed costs reach this —
+    /// at least `FUSE_MIN_INGREDIENTS` picks, at most `FUSED_CARDS_CAP`, an empty pool fusing
+    /// nothing (Dingleberry Droat's "until you make one that costs at least (5)").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub until_cost: Option<i32>,
 }
 
-/// E23 (Classic+ #43 AI Slop): `count` independent picks from the pool (they may repeat, R60; never
-/// the running card or its ingredients, B4.1), fused per R77 with no target: the shared type, else the
+/// E23 (Classic+ #43 AI Slop): `count` independent picks from the pool (they may repeat, R60, unless
+/// `UNIQUE_RANDOM_DRAWS` holds, R3563000; never the running card or its ingredients, B4.1), fused per R77 with no target: the shared type, else the
 /// first pick's (R102), a Token when every pick is one; the result a fresh hand card at `handPrice`
 /// (default `"free"`, R352) that a full hand burns (R4). A Radiant pick goes in on its Radiant face
 /// (R469). Fewer than two picks or an empty pool draws nothing (R77, R129).
 pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
     Effect::new("fuseGenerated", move |ctx| {
+        // R3558004: with `untilCost`, fuse until the picks' printed costs reach it — the uncapped
+        // sum of each pick's `printed_cost`, so a scripted cost (R55) counts as it stands. `count`
+        // and `pools` are ignored; an empty pool fuses nothing (R142).
+        let picked_ids: Vec<String> = if let Some(until_cost) = args.until_cost {
+            let pool = pool_for(ctx, args.query.as_ref());
+            if pool.is_empty() {
+                return;
+            }
+            let player = player_of(ctx, args.to_hand.unwrap_or(PlayerSpec::SelfSide));
+            let mut picked_ids: Vec<String> = Vec::new();
+            let mut sum = 0;
+            while picked_ids.len() < crate::config::FUSED_CARDS_CAP {
+                // R3563000: each pick draws through the run's tally, unique while it holds.
+                let Some(picked) = pick_unique(ctx.sink.rng, &pool, &mut ctx.draw_tally) else {
+                    return;
+                };
+                let phantom = new_instance(&mut *ctx.sink.state, &picked.id, player, Zone::Gone { player });
+                sum += crate::mana::printed_cost(ctx.sink.state, &phantom);
+                picked_ids.push(picked.id.clone());
+                if picked_ids.len() >= FUSE_MIN_INGREDIENTS && sum >= until_cost {
+                    break;
+                }
+            }
+            picked_ids
         // MD-D14: with named pools, one `pool_for` pick from each pool, in order — and if any pool
         // is empty, fuse nothing (R142).
-        let picked_ids: Vec<String> = if let Some(pools) = &args.pools {
+        } else if let Some(pools) = &args.pools {
             let mut picked_ids: Vec<String> = Vec::with_capacity(pools.len());
             for pool in pools {
                 let mut pool = pool_for(ctx, Some(pool));
@@ -642,7 +715,8 @@ pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
                 if args.distinct == Some(true) {
                     pool.retain(|def| !picked_ids.contains(&def.id));
                 }
-                let Some(picked) = ctx.sink.rng.pick(&pool) else {
+                // R3563000: each pick draws through the run's tally, unique while it holds.
+                let Some(picked) = pick_unique(ctx.sink.rng, &pool, &mut ctx.draw_tally) else {
                     return;
                 };
                 picked_ids.push(picked.id.clone());
@@ -659,7 +733,8 @@ pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
             }
             let mut picked_ids: Vec<String> = Vec::with_capacity(count as usize);
             for _ in 0..count {
-                let Some(picked) = ctx.sink.rng.pick(&pool) else {
+                // R3563000: each pick draws through the run's tally, unique while it holds.
+                let Some(picked) = pick_unique(ctx.sink.rng, &pool, &mut ctx.draw_tally) else {
                     return;
                 };
                 picked_ids.push(picked.id.clone());
@@ -703,5 +778,95 @@ pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
         {
             card.cost_override = Some(cost);
         }
+    })
+}
+
+/// `fuseBoardInto`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct FuseBoardIntoArgs {
+    /// The fresh card every Unit fuses into: it is the kept card, so its name leads the fusion's.
+    pub def_id: String,
+    /// The fresh card is summoned on its Radiant face (S+ Supernova's Radiant face).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
+}
+
+/// R3569002 (S+ Supernova): "Fuse all Units in the board into an Alnilam". Every Unit on the board,
+/// both sides, that the effect reaches is taken out, as an ingredient of a fusion ceases to exist
+/// (R77, R86: no Death, nothing destroyed), a fresh `defId` is summoned on the caster's side, and it
+/// is the card the ingredients fuse into. A Dormant Unit, an Immutable one, and one the casting Spell
+/// may not affect (Immune to Spells) stay on the board (R1839000, R781001, E35). With no Unit to fuse the
+/// card is summoned alone, and with no room for it, once the Units that stood on the caster's side
+/// are out, nothing changes at all. The subsystem's `fuse` makes the fusion (R77), so the kept card is
+/// kept whatever it is immune to. On a slashed board the room is a unit zone on the half the Spell
+/// resolves on (R4318001), so no ingredient leaves unless the card lands.
+pub fn fuse_board_into(args: FuseBoardIntoArgs) -> Effect {
+    Effect::new("fuseBoardInto", move |ctx| {
+        let caster = ctx.controller;
+        let mut ingredients: Vec<CardInstance> = Vec::new();
+        for player in [caster, opponent_of(caster)] {
+            let units: Vec<CardInstance> = acting_on(ctx.state, player, StandingAt::ItsLane)
+                .into_iter()
+                .filter(|card| crate::faces::card_type_of(ctx.state, card) == CardType::Unit)
+                .filter(|card| {
+                    !crate::restrictions::unaffected_by(ctx, card)
+                        && !crate::restrictions::immutable_in_play(ctx.state, card)
+                })
+                .cloned()
+                .collect();
+            ingredients.extend(units);
+        }
+        // Room: a unit zone for the new card, free now or freed by a Unit of the caster's that goes, on
+        // the half `summon_fresh` lands it on (R4318001, R3554003): the same `allow` its entry zone reads,
+        // and as that zone never the hole's lane (R3554000).
+        let half = super::summon::summoner_half(ctx);
+        let allow = |lane: i32| crate::geometry::lane_in_half(ctx.state, lane, half);
+        let frees_a_zone = ingredients.iter().any(|card| match card.zone {
+            Zone::Field {
+                player,
+                row: Row::Units,
+                lane,
+            } if player == caster => {
+                let slot = ZoneSlot {
+                    player,
+                    row: Row::Units,
+                    lane,
+                };
+                allow(lane)
+                    && !crate::geometry::in_hole(ctx.state, slot)
+                    && beneath_at(ctx.state, slot).is_empty()
+            }
+            _ => false,
+        });
+        if !frees_a_zone && first_entry_zone_where(ctx.state, caster, Row::Units, allow).is_none() {
+            return;
+        }
+        for card in &ingredients {
+            cease_to_exist(ctx.state, &mut card.clone());
+        }
+        let at = super::summon::SummonPlacement {
+            radiant: args.radiant,
+            ..Default::default()
+        };
+        let Some(kept) = super::summon::summon_fresh(ctx, &args.def_id, caster, &at) else {
+            return;
+        };
+        if ingredients.is_empty() {
+            return;
+        }
+        let mut fused = vec![kept.clone()];
+        fused.extend(ingredients);
+        // R4353003: the card just summoned takes the board in though it is an Indestructible Unit.
+        fuse(
+            ctx,
+            FuseArgs {
+                ingredients: fused,
+                target: Some(kept),
+                fresh: Some(true),
+                ..FuseArgs::default()
+            },
+        );
     })
 }

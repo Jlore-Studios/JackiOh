@@ -16,7 +16,16 @@ import { drawnInChinese } from "../cards/chinese.ts";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { conquestText } from "../routes/conquestCopy.ts";
 import { Flavour, showsEasterEgg } from "../cards/inspect/Flavour.tsx";
+import { ANOMALIES } from "../cards/anomalies.ts";
+import { DEFAULT_ORDER } from "../cards/inspect/CardList.tsx";
+import { MARK_WORDS, UNKNOWN_MARK_WORDS } from "../cards/marks.ts";
+import { CARD_SETTINGS_FIELDS } from "../cards/settings.ts";
+import { DRAW_TEXT } from "../game/DrawOffer.tsx";
+import { MODE_TEXT, RADIANT_MODE_TEXT, modeText } from "../game/modeText.ts";
+import { BOARD_NAMES_OPTIONS } from "../settings/controls.tsx";
 import { SETTINGS_SLOTS } from "../settings/slots.ts";
+import { COSMETICS } from "../wire/generated/cosmetics.ts";
+import chineseJson from "../../../../crates/cards/chinese.json";
 import {
   formatDateTime,
   formatDay,
@@ -48,6 +57,9 @@ function literals(node: ts.Expression): (ts.StringLiteral | ts.NoSubstitutionTem
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return [node];
   if (ts.isParenthesizedExpression(node)) return literals(node.expression);
   if (ts.isConditionalExpression(node)) return [...literals(node.whenTrue), ...literals(node.whenFalse)];
+  if (ts.isBinaryExpression(node) && (node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken || node.operatorToken.kind === ts.SyntaxKind.BarBarToken)) {
+    return [...literals(node.left), ...literals(node.right)];
+  }
   return [];
 }
 
@@ -62,6 +74,9 @@ function sentencesIn(path: string, text: string): { at: string; key: string }[] 
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "t") {
       const first = node.arguments[0];
       for (const literal of first === undefined ? [] : literals(first)) {
+        // The empty string reads the same in every language (`t(found ?? "")` means "nothing to
+        // show"), so a `??`/`||` fallback of nothing needs no dictionary entry.
+        if (literal.text.length === 0) continue;
         const line = file.getLineAndCharacterOfPosition(literal.getStart(file)).line + 1;
         out.push({ at: `${relative(SRC, path)}:${String(line)}`, key: literal.text });
       }
@@ -250,6 +265,59 @@ describe("R711000 internationalisation and reader language", () => {
     expect(untranslated(sentences)).toEqual([]);
   });
 
+  it("R711000 every table-fed sentence has a zh-CN entry", () => {
+    // Words that reach `t()` through a variable, a table or `??` are invisible to the literal
+    // scan above (`sentencesIn`), so this walks every such table and fails naming the table and
+    // the value. A new table feeding `t()` joins this walk.
+    const fed: { table: string; value: string }[] = [];
+    const ids = new Set([...Object.keys(MODE_TEXT), ...Object.keys(RADIANT_MODE_TEXT)]);
+    for (const id of ids) {
+      const options = new Set([...Object.keys(MODE_TEXT[id] ?? {}), ...Object.keys(RADIANT_MODE_TEXT[id] ?? {})]);
+      for (const option of options) {
+        for (const radiant of [false, true]) {
+          const text = modeText(id, option, radiant);
+          fed.push({ table: "modeText", value: text.label });
+          if (text.detail !== undefined) fed.push({ table: "modeText", value: text.detail });
+        }
+      }
+    }
+    // `MODE_SHAPES`' cells answer no card's declared list, so no table above names them: one probe cell stands for them.
+    const cell = modeText("classicplus-062", "2,1");
+    fed.push({ table: "modeText", value: cell.label });
+    if (cell.detail !== undefined) fed.push({ table: "modeText", value: cell.detail });
+    for (const anomaly of Object.values(ANOMALIES)) fed.push({ table: "ANOMALIES", value: anomaly.name });
+    for (const cosmetic of COSMETICS) fed.push({ table: "COSMETICS", value: cosmetic.name });
+    for (const words of [...Object.values(MARK_WORDS), UNKNOWN_MARK_WORDS]) {
+      fed.push({ table: "MARK_WORDS", value: words.name });
+      fed.push({ table: "MARK_WORDS", value: words.text });
+    }
+    for (const text of Object.values(DRAW_TEXT)) fed.push({ table: "DRAW_TEXT", value: text });
+    for (const field of CARD_SETTINGS_FIELDS) {
+      fed.push({ table: "CARD_SETTINGS_FIELDS", value: field.label });
+      fed.push({ table: "CARD_SETTINGS_FIELDS", value: field.description });
+    }
+    for (const option of BOARD_NAMES_OPTIONS) fed.push({ table: "boardNames", value: option.label });
+    fed.push({ table: "CardList", value: DEFAULT_ORDER });
+    const missing = [...new Set(fed.filter(({ value }) => !Object.hasOwn(zhCN, value)).map(({ table, value }) => `${table}: ${JSON.stringify(value)}`))];
+    expect(missing).toEqual([]);
+    expect(fed.length).toBeGreaterThan(100);
+  });
+
+  it("R711000 every full-art cosmetic's zh-CN name holds its card's Chinese name", () => {
+    const cards = chineseJson as Record<string, unknown>;
+    let held = 0;
+    for (const cosmetic of COSMETICS) {
+      if (!("card" in cosmetic)) continue;
+      const cardName = (cards[cosmetic.card] as { name: unknown } | undefined)?.name;
+      expect(typeof cardName, `COSMETICS: ${JSON.stringify(cosmetic.name)} has no chinese.json name`).toBe("string");
+      const entry = (zhCN as Record<string, unknown>)[cosmetic.name];
+      expect(typeof entry, `COSMETICS: ${JSON.stringify(cosmetic.name)}`).toBe("string");
+      expect(entry as string, `COSMETICS: ${JSON.stringify(cosmetic.name)}`).toContain(cardName as string);
+      held += 1;
+    }
+    expect(held).toBeGreaterThan(0);
+  });
+
   it("R711000 the t() guard names the file and line of a literal with no entry, in either branch of a conditional", () => {
     const probe = join(SRC, "probe.tsx");
     const text = [
@@ -258,9 +326,23 @@ describe("R711000 internationalisation and reader language", () => {
       'const c = t(won ? "Victory" : `Another new sentence`, { n: 1 });',
       "const d = t(label);",
       'const e = other("Not wrapped in t");',
+      'const f = t(field?.label ?? "Some board label");',
+      'const g = t(cached || "Some art label");',
     ].join("\n");
-    expect(sentencesIn(probe, text).map(({ key }) => key)).toEqual(["Your turn", "Some new sentence", "Victory", "Another new sentence"]);
-    expect(untranslated(sentencesIn(probe, text))).toEqual(['probe.tsx:2: "Some new sentence"', 'probe.tsx:3: "Another new sentence"']);
+    expect(sentencesIn(probe, text).map(({ key }) => key)).toEqual([
+      "Your turn",
+      "Some new sentence",
+      "Victory",
+      "Another new sentence",
+      "Some board label",
+      "Some art label",
+    ]);
+    expect(untranslated(sentencesIn(probe, text))).toEqual([
+      'probe.tsx:2: "Some new sentence"',
+      'probe.tsx:3: "Another new sentence"',
+      'probe.tsx:6: "Some board label"',
+      'probe.tsx:7: "Some art label"',
+    ]);
     // Test files and ts-rs's generated wire types are not walked.
     const walked = sources(SRC).map((path) => relative(SRC, path));
     expect(walked).toContain(join("i18n", "i18n.ts"));

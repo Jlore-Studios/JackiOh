@@ -2756,6 +2756,33 @@ mod r253_what_may_be_queued_through_the_real_validator {
         assert_eq!(status, 200, "{body}");
     }
 
+    /// R1420, R3535000: a deck holding Stinkyscape+ cards queues since the set shipped (#3573): the
+    /// server's catalog and validator hold the set, which they refused while it was held.
+    #[tokio::test(start_paused = true)]
+    async fn r1420_a_stinkyscape_plus_deck_queues_since_it_shipped() {
+        let w = real_wiring().await;
+        let set_cards: Vec<String> = w
+            .pool
+            .iter()
+            .filter(|id| id.starts_with("stinkyscapeplus-"))
+            .take(3)
+            .cloned()
+            .collect();
+        assert_eq!(set_cards.len(), 3, "the set ships: {:?}", w.pool.len());
+        let rest: Vec<String> = w
+            .pool
+            .iter()
+            .filter(|id| !set_cards.contains(id))
+            .take(w.size - 3)
+            .cloned()
+            .collect();
+        let deck: Vec<String> = set_cards.iter().cloned().chain(rest).collect();
+        let deck_id = save_deck_for(&w.app, "real", &deck, "Plus").await;
+        let (status, body) =
+            enqueue_with(&w.app, &w.token, json!({ "mode": "bo1", "deckId": deck_id })).await;
+        assert_eq!(status, 200, "{body}");
+    }
+
     #[tokio::test(start_paused = true)]
     async fn r253_refuses_a_best_of_1_deck_holding_a_token_l3_and_one_the_collection_no_longer_covers_l5() {
         let w = real_wiring().await;

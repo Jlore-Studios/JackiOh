@@ -66,12 +66,14 @@ mod tests {
 
     /// The pool from the sets that ship: the non-token cards that print Lucky or flip a coin (MD-G1,
     /// R1444), C+ #16 Conjure Rush Token+ among them since #3140 (its base face flips a coin, R3140002).
-    /// Meditative's are #36 CN Peptides, #86 Mayor Medinamogger and #102 Catboy Maid SSR+ (not #65
-    /// Keymaster Keenus, R781004, nor Core #42 Selective Breeding, R831014); Stinkyscape's (#1884) #77 Yuma, #112 Job
-    /// Application, #145 Fortify Flesh, #153 Stimmycheck, #166 and #167 (the Scanning Probes) and #53, #57
-    /// and #61 (the Flaks, whose Radiant faces print Lucky 1, #2521); Training Grounds' #49 Reoccurring
-    /// Dream (#2204), the snapshot of Core #23.
-    const SHIPPED_POOL: [&str; 21] = [
+    /// Meditative's are #36 CN Peptides, #54 Money Machine (its end of turn flips a coin since #3786), #86
+    /// Mayor Medinamogger and #102 Catboy Maid SSR+ (not #65 Keymaster Keenus, R781004, nor Core #42
+    /// Selective Breeding, R831014); Stinkyscape's (#1884) #77 Yuma, #112 Job Application, #145 Fortify
+    /// Flesh, #153 Stimmycheck, #166 and #167 (the Scanning Probes) and #53, #57 and #61 (the Flaks, whose
+    /// Radiant faces print Lucky 1, #2521); Training Grounds' #49 Reoccurring Dream (#2204), the snapshot of
+    /// Core #23; and Stinkyscape+'s #20 B-Patch (it flips a coin), #25 Snom Bunny and #55 Thorium Reactor
+    /// (whose Radiant faces print Lucky 1, #3573).
+    const SHIPPED_POOL: [&str; 25] = [
         "core-004",
         "core-023",
         "classic-065",
@@ -81,6 +83,7 @@ mod tests {
         "classicplus-065",
         "classicplus-066",
         "meditative-036",
+        "meditative-054",
         "meditative-086",
         "meditative-102",
         "stinkyscape-053",
@@ -93,6 +96,9 @@ mod tests {
         "stinkyscape-166",
         "stinkyscape-167",
         "traininggrounds-049",
+        "stinkyscapeplus-020",
+        "stinkyscapeplus-025",
+        "stinkyscapeplus-055",
     ];
 
     /// p1 holds Gachaholic (Radiant on `radiant`) and `others` fillers.

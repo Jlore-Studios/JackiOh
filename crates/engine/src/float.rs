@@ -2,7 +2,8 @@
 //! is that much mana, the `turnEnded` event's `unspentMana` (§2.2's end step). "Reveals when any player
 //! Floats" is a trap trigger (#18 Bread and Butter); "Float reduces cost" and "Float reduces Tribute
 //! requirement by 1" (R1841003) are this module's, registered as a hand and a deck trigger (R464),
-//! each under its own id (#29 GIGA Glowy Jelly Bean, M #49.1 YileGPT Prime).
+//! each under its own id (#29 GIGA Glowy Jelly Bean, M #49.1 YileGPT Prime). What a Float would take
+//! off each hand card is `float_cuts_in_hand`, which the AI reads (R3695000).
 
 use serde_json::{Value, json};
 
@@ -10,7 +11,7 @@ use crate::config::FLOAT_TRIBUTE_REDUCTION;
 use crate::effects::set_cost_mod;
 use crate::prelude::json_as;
 use crate::script::{Effect, EffectContext, TriggerDef};
-use crate::state::{CardInstance, find_instance_mut};
+use crate::state::{CardInstance, GameState, find_instance_mut};
 use crate::wire::{GameEvent, GameEventType, PlayerId};
 
 /// R1841003: where a card keeps what its owner's Floats took off its Tribute X.
@@ -33,6 +34,7 @@ pub fn float_of(event: &GameEvent) -> Option<(PlayerId, i32)> {
 pub fn float_reduces_cost(id: &str) -> TriggerDef {
     TriggerDef::new(id, &[GameEventType::TurnEnded], discount)
         .with_when(|ctx, event| float_of(event).is_some_and(|(player, _)| player == ctx.controller))
+        .lowers_cost_on_float()
 }
 
 fn discount(ctx: &mut EffectContext<'_>, event: &GameEvent) -> Vec<Effect> {
@@ -43,6 +45,28 @@ fn discount(ctx: &mut EffectContext<'_>, event: &GameEvent) -> Vec<Effect> {
         })))],
         _ => vec![],
     }
+}
+
+/// R3695000: what a Float of `float` by `player` takes off each of `player`'s hand cards: the
+/// `costMod` change of each "Float reduces cost" hand trigger its script registers (R1563000; the
+/// price floors at 0, this does not). Others are left out; none for a `float` of 0 or less.
+pub fn float_cuts_in_hand(state: &GameState, player: PlayerId, float: i32) -> Vec<(&CardInstance, i32)> {
+    if float <= 0 {
+        return Vec::new();
+    }
+    state.players[player]
+        .hand
+        .iter()
+        .filter_map(|card| {
+            let marks = crate::scripts::script_of(state, card)
+                .hand_triggers
+                .iter()
+                .filter(|trigger| trigger.lowers_cost_on_float)
+                .count();
+            let marks = i32::try_from(marks).unwrap_or(0);
+            (marks > 0).then_some((card, float * marks))
+        })
+        .collect()
 }
 
 /// R1841003: what its owner's Floats have taken off the card's Tribute X so far, 0 when nothing has.

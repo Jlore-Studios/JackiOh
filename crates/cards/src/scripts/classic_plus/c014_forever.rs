@@ -57,10 +57,6 @@ mod tests {
 
     use crate::merged;
 
-    fn at_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     fn forever(radiant: bool, hand: &[&str], p1: Value, p2: Value) -> Scenario {
         let mut cards = vec![json!({ "def": FOREVER, "radiant": radiant })];
         cards.extend(hand.iter().map(|card| json!(card)));
@@ -104,10 +100,10 @@ mod tests {
         fn r410_the_next_spell_resolves_and_comes_back_to_your_hand_and_again_after_every_later_play() {
             let mut s = forever(false, &[LUNAR], json!({}), json!({}));
             let id = lunar_in(&s);
-            s.play(&id, json!({ "targets": at_hero() }));
+            s.play(&id, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, HERO_HEALTH - 3);
             assert_eq!(s.card(&id).zone.z(), ZoneName::Hand);
-            s.play(&id, json!({ "targets": at_hero() }));
+            s.play(&id, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, HERO_HEALTH - 6);
             assert_eq!(s.card(&id).zone.z(), ZoneName::Hand);
             assert!(stamped_with(&s, &id, 2));
@@ -123,7 +119,7 @@ mod tests {
                 .map(|card| card.id)
                 .unwrap_or_default();
             let lunar = lunar_in(&s);
-            s.play(&lunar, json!({ "targets": at_hero() }));
+            s.play(&lunar, json!({ "targets": pick::hero("p2") }));
             s.play(&stockpile, json!({}));
             assert_eq!(s.card(&stockpile).zone.z(), ZoneName::Graveyard);
         }
@@ -133,7 +129,7 @@ mod tests {
             let mut s = forever(false, &[LUNAR, MENACE], json!({}), json!({}));
             s.end_turn().end_turn();
             let id = lunar_in(&s);
-            s.play(&id, json!({ "targets": at_hero() }));
+            s.play(&id, json!({ "targets": pick::hero("p2") }));
             assert_eq!(s.card(&id).zone.z(), ZoneName::Hand);
         }
 
@@ -155,7 +151,7 @@ mod tests {
             s.play(MANA_WELL, json!({}));
             s.play(SHEEPISH, json!({}));
             let id = lunar_in(&s);
-            s.play(&id, json!({ "targets": at_hero() }));
+            s.play(&id, json!({ "targets": pick::hero("p2") }));
             assert_eq!(s.card(&id).zone.z(), ZoneName::Hand);
         }
 
@@ -173,10 +169,10 @@ mod tests {
                 [first, second, ..] => (first.clone(), second.clone()),
                 _ => panic!("two Lunar Eclipses"),
             };
-            s.play(&first, json!({ "targets": at_hero() }));
+            s.play(&first, json!({ "targets": pick::hero("p2") }));
             assert_eq!(cost_of(&s, &first), 2);
             // The second Lunar's discount (the next Spell costs (1) less) cannot take it below the floor.
-            s.play(&second, json!({ "targets": at_hero() }));
+            s.play(&second, json!({ "targets": pick::hero("p2") }));
             assert_eq!(cost_of(&s, &first), 2);
         }
 
@@ -185,7 +181,7 @@ mod tests {
             // Only two cards come back from the library: all three in hand go, the stamped Lunar among them.
             let mut s = forever(false, &[LUNAR, RAPID_DRAW], json!({ "library": [FILLER, FILLER] }), json!({}));
             let id = lunar_in(&s);
-            s.play(&id, json!({ "targets": at_hero() })); // stamped: back in hand
+            s.play(&id, json!({ "targets": pick::hero("p2") })); // stamped: back in hand
             assert_eq!(s.card(&id).zone.z(), ZoneName::Hand);
             s.play(RAPID_DRAW, json!({})); // draws 2, then discards all 3 at random (R682)
             assert!(s.state().pending.is_none());
@@ -201,7 +197,7 @@ mod tests {
             s.play(COUNTERSPELL, json!({})); // p2 sets it on their turn
             s.end_turn();
             let id = lunar_in(&s);
-            s.play(&id, json!({ "targets": at_hero() }));
+            s.play(&id, json!({ "targets": pick::hero("p2") }));
             assert!(
                 s.events()
                     .iter()
@@ -239,7 +235,7 @@ mod tests {
             step_param(s.card_mut(FOREVER), "floor", -5);
             s.play(FOREVER, json!({}));
             let id = lunar_in(&s);
-            s.play(&id, json!({ "targets": at_hero() }));
+            s.play(&id, json!({ "targets": pick::hero("p2") }));
             assert!(stamped_with(&s, &id, 1));
             assert_eq!(cost_of(&s, &id), 1);
         }
@@ -254,7 +250,7 @@ mod tests {
             let held = def_ids(&s.hand(P1));
             assert_eq!(held, vec![LUNAR]);
             let id = lunar_in(&s);
-            s.play(&id, json!({ "targets": at_hero() }));
+            s.play(&id, json!({ "targets": pick::hero("p2") }));
             assert_eq!(s.card(&id).zone.z(), ZoneName::Hand);
             assert!(stamped_with(&s, &id, 1));
             assert_eq!(cost_of(&s, &id), 1);
@@ -270,7 +266,7 @@ mod tests {
             step_param(s.card_mut(FOREVER), "floor", 1);
             s.play(FOREVER, json!({}));
             let id = lunar_in(&s);
-            s.play(&id, json!({ "targets": at_hero() }));
+            s.play(&id, json!({ "targets": pick::hero("p2") }));
             assert!(stamped_with(&s, &id, 2));
         }
     }

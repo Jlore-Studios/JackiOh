@@ -61,7 +61,7 @@ const MEDITATIVE_PREVIEWED: [&str; 2] = ["meditative-008", "meditative-040"];
 /// R2476000: the cards that show what they remember, each proved in its own script file (issue #2476's
 /// pass over the catalog). Palantir's base face Tributes on its first steal, so only its Radiant face
 /// counts; Memory Leak's Radiant face chooses no mode, so only its base face marks one.
-const REMEMBERED: [&str; 33] = [
+const REMEMBERED: [&str; 37] = [
     "core-022",
     "core-039",
     "classic-004",
@@ -93,6 +93,12 @@ const REMEMBERED: [&str; 33] = [
     "stinkyscape-170",
     "stinkyscape-171",
     "stinkyscape-172",
+    "stinkyscapeplus-093",
+    // The Stinkyscape+ release (#3573): #42 Force Projector's and #123 Oct's damage pool left (R3550004),
+    // and the Warhero Token's worth.
+    "stinkyscapeplus-042",
+    "stinkyscapeplus-123",
+    "stinkyscapeplus-t-warhero-token",
     "traininggrounds-025",
     "traininggrounds-057",
 ];
@@ -369,13 +375,21 @@ mod r280_the_core_cards_that_declare_preview {
             labels(ECHOES, FaceKind::Radiant),
             vec!["twice the cards in your exile"]
         );
+        // Its damage line, the last under its Pierce (issue #4154).
+        let damage_line = |face: FaceKind| {
+            text_of(SPITEFUL_STAB, face)
+                .rsplit('\n')
+                .next()
+                .unwrap_or_default()
+                .to_string()
+        };
         assert_eq!(
             labels(SPITEFUL_STAB, FaceKind::Base),
-            vec![text_of(SPITEFUL_STAB, FaceKind::Base)]
+            vec![damage_line(FaceKind::Base)]
         );
         assert_eq!(
             labels(SPITEFUL_STAB, FaceKind::Radiant),
-            vec![text_of(SPITEFUL_STAB, FaceKind::Radiant)]
+            vec![damage_line(FaceKind::Radiant)]
         );
         assert_eq!(
             labels(FED_FAUCI, FaceKind::Base),
@@ -909,12 +923,18 @@ mod r280_a_fused_core_card_lists_its_ingredients_previews_in_order {
             "the fused card's preview",
         );
         // #31's half reads the fused card's own count of plays, none yet (R429): its 1st play, Fib(0 + 1 +
-        // 1) = 1. #70's half reads 20 health (missing 10: +2) and one exiled card: 2 + 2 + 1 = 5.
+        // 1) = 1. #70's half reads 20 health (missing 10: +2) and one exiled card: 2 + 2 + 1 = 5. #70's
+        // label is its damage line, the last under its Pierce (issue #4154).
+        let stab_line = text_of(SPITEFUL_STAB, FaceKind::Base)
+            .rsplit('\n')
+            .next()
+            .unwrap_or_default()
+            .to_string();
         assert_eq!(
             json_of(&list),
             json!([
                 { "label": "Fib(times played + 1)", "value": 1 },
-                { "label": text_of(SPITEFUL_STAB, FaceKind::Base), "value": 5 },
+                { "label": stab_line, "value": 5 },
             ])
         );
         // A fused definition declares no numbers of its own (R102); its text writes its ingredients'
@@ -936,7 +956,8 @@ mod r280_a_fused_core_card_lists_its_ingredients_previews_in_order {
                             max: None,
                             tuned_on: None,
                             power: None,
-                            cry: None,
+                            read: None,
+                            read_on: None,
                         })
                         .collect(),
                 );

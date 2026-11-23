@@ -210,12 +210,10 @@ mod tests {
 
     /// The zones `legal_actions` lists for a play of this card, in its order.
     fn zones_listed(s: &Scenario, card: &CardInstance) -> Vec<(Row, i32)> {
-        legal_actions(s.state(), P1)
+        plays_in(s.state(), P1, &card.id)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play { instance_id, zone: Some(zone), .. } if instance_id == card.id => {
-                    Some((zone.row, zone.lane))
-                }
+                ActionBody::Play { zone: Some(zone), .. } => Some((zone.row, zone.lane)),
                 _ => None,
             })
             .collect()
@@ -250,6 +248,27 @@ mod tests {
 
         mod base {
             use super::*;
+
+            /// Issue #3951: Indestructible and Tradable on both faces; Guy Att's Cry destroys every backrow
+            /// card of yours, and the Tower stands, its fused Unit with it.
+            #[test]
+            fn issue_3951_a_destroy_leaves_the_tower_standing_with_its_fused_unit() {
+                for radiant in [false, true] {
+                    let (mut s, tower, rider) = tower_with(
+                        VANILLA,
+                        TowerOptions { radiant, hand: Some(vec![GUY_ATT, FILLER]), ..TowerOptions::default() },
+                    );
+                    s.expect_in_zone(rider.as_str(), "gone");
+                    s.play(GUY_ATT, json!({ "zone": 1 }));
+                    s.expect_in_zone(tower.as_str(), "field");
+                    let kinds: Vec<KeywordKind> = s.stats(tower.as_str()).keywords.iter().map(Keyword::kind).collect();
+                    assert!(kinds.contains(&KeywordKind::Indestructible), "radiant {radiant}: {kinds:?}");
+                    let def = def_of(Some(s.state()), TOWER);
+                    for face in [&def.base, &def.radiant] {
+                        assert!(face.keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Tradable));
+                    }
+                }
+            }
 
             #[test]
             fn r418_r653_a_unit_you_play_may_name_the_tower_s_zone_its_cry_resolves_then_it_is_fused_into_the_tower() {
@@ -304,13 +323,15 @@ mod tests {
 
             #[test]
             fn r418_the_tower_stays_a_backrow_card_and_the_unit_s_death_lives_on_it_fires_when_the_tower_is_destroyed() {
-                crate::register_all();
-                let (mut s, tower, _rider) =
-                    tower_with(SHEEPLE, TowerOptions { hand: Some(vec![MAGIC_JAMMED, FILLER]), ..TowerOptions::default() });
-                let held = s.hand(P1).len();
-                s.play(MAGIC_JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": tower }] }));
-                s.expect_in_zone(&tower, "graveyard");
-                assert_eq!(s.hand(P1).len(), held - 1 + 2);
+                crate::destructible_ivory_tower(|| {
+                    crate::register_all();
+                    let (mut s, tower, _rider) =
+                        tower_with(SHEEPLE, TowerOptions { hand: Some(vec![MAGIC_JAMMED, FILLER]), ..TowerOptions::default() });
+                    let held = s.hand(P1).len();
+                    s.play(MAGIC_JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": tower }] }));
+                    s.expect_in_zone(&tower, "graveyard");
+                    assert_eq!(s.hand(P1).len(), held - 1 + 2);
+                });
             }
 
             #[test]
@@ -319,11 +340,7 @@ mod tests {
                 let (mut s, _tower, _rider) =
                     tower_with(TOKENS, TowerOptions { hand: Some(vec![MENACE, FILLER]), ..TowerOptions::default() });
                 s.expect_refused(|s| s.play(MENACE, json!({ "zone": 2, "row": "backrow" })));
-                let menace = s.card(MENACE).id.clone();
-                let plays: Vec<ActionBody> = legal_actions(s.state(), P1)
-                    .into_iter()
-                    .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == menace))
-                    .collect();
+                let plays = s.plays_of(MENACE);
                 assert!(!plays.is_empty());
                 // R1194000: the Aura's Flying offers the other backrow zones, never the Tower's own.
                 assert!(!plays.iter().any(|action| matches!(
@@ -334,12 +351,14 @@ mod tests {
 
             #[test]
             fn r653_a_tower_its_unit_s_cry_destroys_fuses_nothing_guy_att_steps_down_into_a_unit_zone_r446() {
-                crate::register_all();
-                let (mut s, tower, rider) = tower_with(GUY_ATT, TowerOptions::default());
-                s.expect_in_zone(&tower, "graveyard");
-                assert_eq!(s.unit(P1, 2).map(|unit| unit.id), Some(rider.clone()));
-                assert!(!any_event(&s, GameEventType::Fused));
-                assert_eq!(s.card(&rider).def_id, GUY_ATT);
+                crate::destructible_ivory_tower(|| {
+                    crate::register_all();
+                    let (mut s, tower, rider) = tower_with(GUY_ATT, TowerOptions::default());
+                    s.expect_in_zone(&tower, "graveyard");
+                    assert_eq!(s.unit(P1, 2).map(|unit| unit.id), Some(rider.clone()));
+                    assert!(!any_event(&s, GameEventType::Fused));
+                    assert_eq!(s.card(&rider).def_id, GUY_ATT);
+                });
             }
 
             #[test]
@@ -399,27 +418,29 @@ mod tests {
 
             #[test]
             fn r1194000_flying_plays_a_unit_into_an_empty_backrow_zone_and_the_aura_ends_with_the_tower() {
-                let mut s = scenario(json!({
-                    "p1": {
-                        "hand": [VANILLA, MAGIC_JAMMED, MENACE],
-                        "backrow": [{ "def": TOWER, "lane": 2 }],
-                        "library": DECK,
-                        "mana": 8,
-                    },
-                    "p2": { "hand": [FILLER], "library": DECK },
-                }));
-                let tower = s.card(TOWER).id.clone();
-                let vanilla = held(&s, P1, VANILLA);
-                s.play(&vanilla.id, json!({ "zone": 4, "row": "backrow" }));
-                assert_eq!(s.backrow(P1, 4).map(|card| card.id), Some(vanilla.id.clone()));
-                s.play(MAGIC_JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": tower }] }));
-                s.expect_in_zone(&tower, "graveyard");
-                // A Unit placed stays where it stands (R1081000); the Units in hand lose both keywords.
-                assert_eq!(s.backrow(P1, 4).map(|card| card.id), Some(vanilla.id.clone()));
-                let menace = held(&s, P1, MENACE);
-                assert_eq!(winged(&s, &menace), (false, false));
-                assert!(!zones_listed(&s, &menace).iter().any(|(row, _)| *row == Row::Backrow));
-                s.expect_refused(|s| s.play(&menace.id, json!({ "zone": 5, "row": "backrow" })));
+                crate::destructible_ivory_tower(|| {
+                    let mut s = scenario(json!({
+                        "p1": {
+                            "hand": [VANILLA, MAGIC_JAMMED, MENACE],
+                            "backrow": [{ "def": TOWER, "lane": 2 }],
+                            "library": DECK,
+                            "mana": 8,
+                        },
+                        "p2": { "hand": [FILLER], "library": DECK },
+                    }));
+                    let tower = s.card(TOWER).id.clone();
+                    let vanilla = held(&s, P1, VANILLA);
+                    s.play(&vanilla.id, json!({ "zone": 4, "row": "backrow" }));
+                    assert_eq!(s.backrow(P1, 4).map(|card| card.id), Some(vanilla.id.clone()));
+                    s.play(MAGIC_JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": tower }] }));
+                    s.expect_in_zone(&tower, "graveyard");
+                    // A Unit placed stays where it stands (R1081000); the Units in hand lose both keywords.
+                    assert_eq!(s.backrow(P1, 4).map(|card| card.id), Some(vanilla.id.clone()));
+                    let menace = held(&s, P1, MENACE);
+                    assert_eq!(winged(&s, &menace), (false, false));
+                    assert!(!zones_listed(&s, &menace).iter().any(|(row, _)| *row == Row::Backrow));
+                    s.expect_refused(|s| s.play(&menace.id, json!({ "zone": 5, "row": "backrow" })));
+                });
             }
 
             #[test]

@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "../wire/cards.ts";
-import { CARD_AUDIO } from "./voiceData.ts";
+import { CARD_AUDIO } from "./soundTables.ts";
 
 const SIGNATURE_IDS = [
   "classicplus-012", "classicplus-012-1", "classicplus-012-2", "classicplus-012-3", "classicplus-012-4",

@@ -6,6 +6,14 @@ import type { CardTier } from "../wire/generated/CardTier.ts";
 
 import "./tier.css";
 
+/** R3022000: the tiers from the top, S (above the band, a nerf candidate) to F (below it, a buff candidate). */
+const TIER_ORDER: readonly CardTier[] = ["S", "A", "B", "C", "D", "F"];
+
+/** R3022000: a tier's place from the bottom, so a descending sort puts S first; -1 for none. */
+export function tierRank(tier: CardTier | null | undefined): number {
+  return tier ? TIER_ORDER.length - TIER_ORDER.indexOf(tier) : -1;
+}
+
 /** R2777000: an adjusted win rate to a tenth of a point, as it moves in tenths near 50%; "—" when there is none. */
 export function adjustedText(rate: number | null | undefined): string {
   return typeof rate === "number" ? `${(rate * 100).toFixed(1)}%` : "—";

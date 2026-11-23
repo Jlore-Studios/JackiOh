@@ -75,7 +75,7 @@ mod tests {
         assert_eq!(s.hand(P1).len(), 3, "the filler and two draws");
     }
 
-    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Pierce
     const HIT_JOB: &str = "core-016"; // Hit Job: "Destroy a Unit."
     const COMMANDER: &str = "stinkyscape-137"; // Starfleet Commander: Cry: launches your Dormant Starship free.
 

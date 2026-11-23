@@ -8,8 +8,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import { fillParams, type ActionBody, type PlayerView } from "@jackioh/shared";
 
+import type { FaceCall } from "../wire/generated/FaceCall.ts";
+
 import { CARD_SETTINGS_DEFAULTS, INSPECT_HOVER, closeInspect, writeCardSettings } from "../cards/index.ts";
 import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { setMarkOf } from "../cards/setMark.ts";
 import type { Interaction } from "./actions.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
@@ -24,6 +27,8 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   writeCardSettings(CARD_SETTINGS_DEFAULTS);
+  faceCalls.length = 0;
+  resetLocaleForTests();
 });
 
 const lookup = lookupFromDefs(CATALOG);
@@ -54,6 +59,20 @@ function renderPrompt(view: PlayerView, onAction = vi.fn()): void {
     </CatalogContext.Provider>,
   );
 }
+
+/** Every `face` call an open picker made since the calls were last cleared, in order. */
+const faceCalls = vi.hoisted(() => [] as FaceCall[]);
+
+vi.mock("../wasm/index.ts", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../wasm/index.ts")>();
+  return {
+    ...real,
+    face: (request: FaceCall) => {
+      faceCalls.push(request);
+      return real.face(request);
+    },
+  };
+});
 
 const DISCOVER = ["core-043", "core-055", "core-066"] as const;
 
@@ -474,17 +493,17 @@ describe("#492 one card picker, front and center, for every short choice", () =>
     expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h1", x: 3 });
   });
 
-  it("R3135002 Appropriations' four options read their numbers on both faces: 2X−2, 2X−2, 6X% and 2X−2, then 4X−3, 4X−1, 16X% and 5X−1", () => {
+  it("R3135002 R3996201 R4154105 Appropriations' four options read their numbers on both faces: ⌊5X/3⌋−2, ⌊5X/3⌋−2, ⌊17X/4⌋% and ⌊5X/3⌋−2, then ⌊17X/5⌋−4, ⌊17X/5⌋−2, 12X% and ⌊17X/5⌋", () => {
     const detail = (option: string, radiant: boolean): string | undefined => modeText(APPROPRIATIONS, option, radiant).detail;
     const where = "Your Units on the field, in your hand and in your deck get";
-    expect(detail("Military", false)).toBe(`${where} +(2X−2) Attack and Rush.`);
-    expect(detail("Education", false)).toBe("Shuffle 2X−2 random Radiant Books into your deck. They have Cast on draw.");
-    expect(detail("Culture", false)).toBe("Each card on your field, in your hand and in your deck has a 6X% chance to become Radiant.");
-    expect(detail("Healthcare", false)).toBe(`${where} +(2X−2) Health and Armor X.`);
-    expect(detail("Military", true)).toBe(`${where} +(4X−3) Attack and Rush.`);
-    expect(detail("Education", true)).toBe("Shuffle 4X−1 random Radiant Books into your deck. They have Cast on draw.");
-    expect(detail("Culture", true)).toBe("Each card on your field, in your hand and in your deck has a 16X% chance to become Radiant.");
-    expect(detail("Healthcare", true)).toBe(`${where} +(5X−1) Health and Armor 2X.`);
+    expect(detail("Military", false)).toBe(`${where} +(⌊5X/3⌋−2) Attack and Rush.`);
+    expect(detail("Education", false)).toBe("Shuffle ⌊5X/3⌋−2 random Radiant Books into your deck. They have Cast on draw.");
+    expect(detail("Culture", false)).toBe("Each card on your field, in your hand and in your deck has a ⌊17X/4⌋% chance to become Radiant.");
+    expect(detail("Healthcare", false)).toBe(`${where} +(⌊5X/3⌋−2) Health and Armor X.`);
+    expect(detail("Military", true)).toBe(`${where} +(⌊17X/5⌋−4) Attack and Rush.`);
+    expect(detail("Education", true)).toBe("Shuffle ⌊17X/5⌋−2 random Radiant Books into your deck. They have Cast on draw.");
+    expect(detail("Culture", true)).toBe("Each card on your field, in your hand and in your deck has a 12X% chance to become Radiant.");
+    expect(detail("Healthcare", true)).toBe(`${where} +⌊17X/5⌋ Health and Armor 2X.`);
   });
 
   it("#492 a short Choose one, an embiggen price and a short X are the one card layout: cards in a row in the middle", () => {
@@ -508,5 +527,35 @@ describe("#492 one card picker, front and center, for every short choice", () =>
       }
       cleanup();
     }
+  });
+});
+
+describe("#4511 an open picker builds no option's face twice", () => {
+  it("#4511 a board re-render that leaves the picker's options unchanged builds no option's face, and a language switch rebuilds every face", async () => {
+    const view = discoverView();
+    const tree = (
+      <CatalogContext.Provider value={lookup}>
+        <Prompt view={view} onAction={vi.fn()} />
+      </CatalogContext.Provider>
+    );
+    const { rerender } = render(tree);
+    for (const defId of DISCOVER) expect(screen.getByTestId(`prompt-option-mode:${defId}`)).toBeInTheDocument();
+    const optionCalls = (defId: string): number =>
+      faceCalls.filter((request) => request.call === "card" && request.source.defId === defId).length;
+    for (const defId of DISCOVER) expect(optionCalls(defId)).toBeGreaterThan(0);
+    faceCalls.length = 0;
+
+    // A board re-render that leaves the picker's options unchanged (a hover, an animation step).
+    rerender(
+      <CatalogContext.Provider value={lookup}>
+        <Prompt view={view} onAction={vi.fn()} />
+      </CatalogContext.Provider>,
+    );
+    expect(faceCalls.filter((request) => request.call === "card")).toHaveLength(0);
+
+    await act(async () => {
+      await setLocale("zh-CN");
+    });
+    for (const defId of DISCOVER) expect(optionCalls(defId)).toBeGreaterThan(0);
   });
 });

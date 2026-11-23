@@ -5,7 +5,7 @@
 import type { ReactElement } from "react";
 import type { CardFlavour } from "@jackioh/cards";
 import { isZhCn, t, useLocale } from "../../i18n/i18n.ts";
-import { CARD_FLAVOUR, flavourFor } from "../flavour.ts";
+import { flavourFor, useFlavour } from "../flavour.ts";
 import { INSPECT_ARTIST, INSPECT_FLAVOUR } from "./testids.ts";
 
 /** R711000: the easter egg line inside the flavour block. */
@@ -15,7 +15,7 @@ type FlavourProps = {
   defId: string;
   /** R711000: the card is one the view flagged Chinese (`FaceModel.flagged`); a Chinese reader gets the egg line. */
   easter?: boolean;
-  /** For tests. Defaults to the shipped sidecar. */
+  /** For tests. Absent: the loaded sidecar, once `loadFlavour()` has filled it. */
   sidecar?: Readonly<Record<string, CardFlavour>>;
 };
 
@@ -24,9 +24,10 @@ export function showsEasterEgg(face: { flagged?: boolean }): boolean {
   return face.flagged === true && isZhCn();
 }
 
-export function Flavour({ defId, sidecar = CARD_FLAVOUR, easter = false }: FlavourProps): ReactElement | null {
+export function Flavour({ defId, sidecar, easter = false }: FlavourProps): ReactElement | null {
   useLocale();
-  const entry = flavourFor(defId, sidecar);
+  const loaded = useFlavour();
+  const entry = flavourFor(defId, sidecar ?? loaded ?? {});
   const egg = easter && isZhCn();
   if (entry === null && !egg) return null;
   return (

@@ -6,7 +6,8 @@
 //! or forced, `summon_copy` of it (R57, into R64's zone, no Cry, R1), made from it before it evolves,
 //! then `evolve` on it, which runs its `Script.evolve` hook: Gain Flying (`grant_keyword`). The copy has
 //! no Flying and the original has it; one that died attacking does nothing, neither copy nor evolve
-//! (R2285001); a full unit row summons no copy. Radiant: the same
+//! (R2285001); a full unit row summons no copy. It evolves once: a later attack copies it again but
+//! evolves nothing (R3536000). Radiant: the same
 //! text, the copy of a Radiant Wasp a Radiant 6/6.
 
 use jackioh_engine::prelude::*;
@@ -118,6 +119,31 @@ mod tests {
             s.attack(&wasp, "hero");
             assert!(copies(&s).is_empty());
             assert!(flies(&s, &wasp), "it evolves all the same");
+        }
+
+        #[test]
+        fn r3536000_a_second_attack_copies_again_but_evolves_it_no_more() {
+            let mut s = board(false, json!([]), json!([]));
+            let wasp = s.unit_at(P1, 1);
+            s.attack(&wasp, "hero");
+            assert!(flies(&s, &wasp));
+            s.end_turn();
+            s.end_turn();
+            s.attack(&wasp, "hero");
+            assert_eq!(copies(&s).len(), 2, "a later attack copies it again");
+            let evolved = s
+                .events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Evolved { .. }))
+                .count();
+            assert_eq!(evolved, 1, "it evolves once");
+            let grants = s
+                .events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::KeywordGranted { .. }))
+                .count();
+            assert_eq!(grants, 1, "its Evolve text runs once");
+            assert!(flies(&s, &wasp));
         }
     }
 

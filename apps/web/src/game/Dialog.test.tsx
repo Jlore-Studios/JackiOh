@@ -11,7 +11,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Dialog, DialogClose, dialogTestid, type DialogAction } from "./Dialog.tsx";
 import { CATALOG } from "@jackioh/cards";
 
-import { CardDetail, closeInspect } from "../cards/inspect/index.ts";
+import { closeInspect } from "../cards/inspect/index.ts";
+import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { useModalOverlay } from "../cards/inspect/store.ts";
 import { INSPECT_DETAIL } from "../cards/inspect/testids.ts";
 import { pressBack } from "../test/history.ts";
@@ -19,6 +20,20 @@ import { readSheet } from "../test/setup.ts";
 import { at } from "../test/stubServer.ts";
 
 afterEach(cleanup);
+
+/**
+ * Whether `text` names a `*-scrim` class, as `/[\w-]+-scrim/` reads it (#4009: the word run before
+ * `-scrim` rescans from every position).
+ */
+function hasScrimToken(text: string): boolean {
+  const token = "-scrim";
+  let at = text.indexOf(token);
+  while (at !== -1) {
+    if (at > 0 && /[\w-]/.test(text.charAt(at - 1))) return true;
+    at = text.indexOf(token, at + 1);
+  }
+  return false;
+}
 
 function press(key: string, options: { shiftKey?: boolean } = {}): void {
   fireEvent.keyDown(document.activeElement ?? document.body, { key, ...options });
@@ -213,7 +228,8 @@ describe("R3220000 the dialog convention", () => {
     const scrim = /\.dialog-scrim\s*\{([^}]*)\}/.exec(sheet)?.[1] ?? "";
     expect(scrim).toMatch(/z-index:\s*var\(--z-dialog\);/);
     expect(scrim).toMatch(/background:\s*color-mix\(in srgb, var\(--pal-wood-950\) 70%, transparent\);/);
-    expect(readSheet("src/surfaces.css")).toMatch(/^\s*--z-dialog: 72;$/m);
+    // A line of its own (#4009: `/^\s*--z-dialog: 72;$/m` rescans newline runs from every line).
+    expect(readSheet("src/surfaces.css").split("\n").some((line) => /^\s*--z-dialog: 72;$/.test(line))).toBe(true);
     for (const source of [
       "src/game/ConfirmConcede.tsx",
       "src/game/ConfirmLeaveMatch.tsx",
@@ -224,11 +240,30 @@ describe("R3220000 the dialog convention", () => {
       const text = readSheet(source);
       expect(text, source).toContain("<Dialog");
       expect(text, source).not.toMatch(/"Escape"/);
-      expect(text, source).not.toMatch(/[\w-]+-scrim/);
+      // No `[\w-]+` name before `-scrim` (#4009: it rescans a word run from every position).
+      expect(hasScrimToken(text), `${source} names no *-scrim class`).toBe(false);
       expect(text, source).not.toMatch(/\buse(?:BackLayer|ModalKeys|Effect|LayoutEffect)\b|\.focus\(/);
     }
     expect(readSheet("src/game/notices.css")).not.toMatch(/concede-(?:scrim|dialog)/);
     expect(readSheet("src/practice/practice.css")).not.toMatch(/practice-leave|practice-result-scrim|practice-result__(title|reason|actions)/);
+  });
+
+  // #4079 (e2e spec 42): a tavern shell is its own stacking context, so the scrim's --z-dialog counts only
+  // inside it, and the toasts beside the shell drew over the Together page's chat.
+  it("R3220000 a tavern shell holding a dialog takes --z-dialog, over the toasts", () => {
+    const sheet = readSheet("src/game/dialog.css").replace(/\/\*[\s\S]*?\*\//g, " ");
+    const holding = /\.tavern\.app-shell:has\(>\s*\.dialog-scrim\)\s*\{([^}]*)\}/.exec(sheet)?.[1] ?? "";
+    expect(holding).toMatch(/z-index:\s*var\(--z-dialog\);/);
+    const tavern = readSheet("src/auth/tavern.css").replace(/\/\*[\s\S]*?\*\//g, " ");
+    const shell = /\.tavern\.app-shell\s*\{([^}]*)\}/.exec(tavern)?.[1] ?? "";
+    expect(shell, "a positioned shell, so its z-index applies").toMatch(/position:\s*relative;/);
+    const token = (name: string): number => {
+      const line = readSheet("src/surfaces.css")
+        .split("\n")
+        .find((text) => text.trim().startsWith(`--z-${name}:`));
+      return Number(line?.split(":")[1]?.replace(";", "").trim());
+    };
+    expect(token("toast")).toBeLessThan(token("dialog"));
   });
 });
 

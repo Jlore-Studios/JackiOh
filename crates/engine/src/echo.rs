@@ -208,14 +208,46 @@ pub fn granted_echo(sink: &mut EngineSink<'_>, player: PlayerId, card: &CardInst
     granted
 }
 
+/// The declared number tuning a "Spells gain Echo +N" aura (`StaticFlags.spell_echo_aura`, R3556001).
+pub const SPELL_ECHO_PARAM: &str = "spellEcho";
+
+/// R3556001: the Echo repeats the auras acting on either side (`acting_texts_of`, as
+/// `damage::spell_damage_auras_for`) give this Spell: each `spellEchoAura` text on `player`'s side
+/// counts, and the opponent's too when it says `both`. A Reveal keeps its stamped Echo (R1045), so
+/// this reads only plays and casts — never a permanent.
+pub fn aura_echo(state: &GameState, player: PlayerId, card: &CardInstance) -> i32 {
+    if card_type_of(state, card) != CardType::Spell {
+        return 0;
+    }
+    let mut total = 0;
+    for side in crate::wire::PLAYER_IDS {
+        for acting in crate::damage::acting_texts_of(state, side) {
+            for text in crate::scripts::texts_of(state, &acting) {
+                let Some(aura) = text.flags.spell_echo_aura else {
+                    continue;
+                };
+                if side == player || aura.both == Some(true) {
+                    total += crate::params::declared_or(state, &acting, SPELL_ECHO_PARAM, aura.amount).max(0);
+                }
+            }
+        }
+    }
+    total
+}
+
 /// Work out what this resolution owes and put it on the queue: the card's printed `Echo X` plus R30's
-/// grant. Returns how many repeats are owed now. Called exactly once per resolution, as §10.5 step 4
-/// plays the card (from hand or cast) and sets the run's `echoQueued` flag (R178), because it
-/// *consumes* the grant.
+/// grant, plus R3556001's Echo aura. Returns how many repeats are owed now. Called exactly once per
+/// resolution, as §10.5 step 4 plays the card (from hand or cast) and sets the run's `echoQueued`
+/// flag (R178), because it *consumes* the grant.
 pub fn queue_echo_repeats(sink: &mut EngineSink<'_>, card: &CardInstance, player: PlayerId) -> i32 {
     let printed = printed_echo(card, sink.state);
     let granted = granted_echo(sink, player, card);
-    add_echo_repeats(sink, card, player, printed + granted)
+    add_echo_repeats(
+        sink,
+        card,
+        player,
+        printed + granted + aura_echo(sink.state, player, card),
+    )
 }
 
 // Where the card lands afterwards, and saying so (§10.5 step 7, R17)

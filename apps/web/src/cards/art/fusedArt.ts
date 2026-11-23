@@ -6,9 +6,11 @@
 // faces that hand CardArt a fused card's id need no change. A Starship keeps its own art already, from its
 // pieces and its launch (R2249000). Presentation only (CLAUDE.md rule 7): the engine's definition is whole.
 
-import type { Tag } from "@jackioh/shared";
+import type { CardDef, Tag } from "@jackioh/shared";
 
-import { fusedParts, type DefOf } from "../fused.ts";
+import { currentCatalog } from "../../game/currentCatalog.ts";
+import { wasmLoaded } from "../../wasm/index.ts";
+import { DORMANT_STARSHIP_ID, fusedParts, type DefOf } from "../fused.ts";
 import { STINKYSCAPE_PREFIX } from "./stinkyscape.ts";
 
 /** What an art window is drawn from: a card's id, its (English) name and its tags. */
@@ -40,4 +42,34 @@ export function artSubjectOf(subject: ArtSubject, defOf: DefOf | null): ArtSubje
   if (!parts.some(gear)) return subject;
   const host = parts.findLast((part) => !gear(part));
   return host?.def === undefined ? subject : { defId: host.id, name: host.def.name, tags: host.def.tags };
+}
+
+/**
+ * R3345000, R3045000, R179: the catalog card whose picture the full-screen view draws for `defId`, or null when none
+ * can be found. A fused id (`t-N:(a+b)`, nested for a fusion of fusions) is in no catalog, so its planes would all
+ * be `url("")` and the view a black screen. A catalog card draws as itself; a fusion holding a Miner or a Weapon
+ * draws the host it was equipped on (`artSubjectOf`); any other fusion draws its Dormant Starship hull, else its last
+ * ingredient the catalog knows. An id that is no fusion is left as it is. A digest id (R468) hides its ingredients,
+ * so it has no art: null.
+ */
+/**
+ * #4180: the module's catalog where the caller's definitions do not reach, or null before the
+ * module is in (ungated screens draw first, so this never throws): then only `defOf` answers,
+ * and a plain card still resolves to itself (`fusedParts` answers `[id]` for one).
+ */
+function knownCards(): Readonly<Record<string, CardDef>> | null {
+  return wasmLoaded() ? currentCatalog().cards : null;
+}
+
+export function fullScreenArtId(defId: string, defOf: DefOf | null): string | null {
+  const catalog = knownCards();
+  if (catalog?.[defId] !== undefined) return defId;
+  const lookup: DefOf = (id) => defOf?.(id) ?? catalog?.[id];
+  const parts = fusedParts(defId, lookup);
+  if (parts === null) return null;
+  if (parts.length < 2) return defId;
+  const host = artSubjectOf({ defId, name: undefined, tags: [] }, lookup).defId;
+  if (host !== defId && catalog?.[host] !== undefined) return host;
+  if (parts.includes(DORMANT_STARSHIP_ID)) return DORMANT_STARSHIP_ID;
+  return parts.findLast((id) => catalog?.[id] !== undefined) ?? null;
 }

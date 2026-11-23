@@ -1,4 +1,4 @@
-//! C #32 Felinor Feelings (SPEC §8.6 row 32). Spell, Felinor, cost 2, Rare.
+//! C #32 Felinor Feelings (SPEC §8.6 row 32). Spell, Felinor, cost 3 (2 until issue #3996), Rare.
 //!   Base:    "Steal an enemy Unit in a lane where you control a (1) Cost Unit."
 //!   Radiant: "Summon a Felinor Token. Then steal an enemy Unit in a lane where you control a (1) Cost
 //!             Unit."
@@ -10,7 +10,8 @@
 //!
 //! Base: a declared target (R81), filtered by `targetChecks` (§10.6). With no such target the play is
 //! still legal and the steal fizzles (§8's conventions, R90). The steal is §6.3's (R15: its own lane
-//! if free, else the first free zone; none, and it stays), an entry that leaves it summoning sick (R171).
+//! if free, else the first free zone; none, and it is destroyed instead, R4205000), an entry that leaves
+//! it summoning sick (R171).
 //!
 //! Radiant: first a Felinor Token in your leftmost open unit zone (R64), then the steal is a prompt, so
 //! the token's lane counts. A full board summons no token; with no such Unit no prompt opens.
@@ -154,23 +155,9 @@ mod tests {
         }
     }
 
-    // Differs from Scenario::offered: one card's play targets as ids, not the seat's whole legal list.
+    /// The instance ids among Felinor Feelings's play targets, in offer order.
     fn offered(s: &Scenario) -> Vec<String> {
-        let card = s.card(FEELINGS).id.clone();
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == card => targets
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter_map(|selection| match selection {
-                        Selection::Instance { instance_id } => Some(instance_id),
-                        _ => None,
-                    })
-                    .collect::<Vec<String>>(),
-                _ => Vec::new(),
-            })
-            .collect()
+        pick::instance_ids(&s.play_targets(FEELINGS))
     }
 
     fn pending_selections(s: &Scenario) -> Option<Vec<Selection>> {
@@ -272,7 +259,7 @@ mod tests {
             }
 
             #[test]
-            fn costs_2_refused_with_1_mana() {
+            fn costs_3_refused_with_2_mana() {
                 crate::register_all();
                 let mut s = setup(
                     json!({ "field": [{ "def": TIMMY, "lane": 2 }] }),
@@ -280,7 +267,7 @@ mod tests {
                     false,
                 );
                 let vanilla = must_unit(&s, P2, 2);
-                crate::expect_costs(&mut s, FEELINGS, 2, json!({ "targets": pick::instance(&vanilla) }));
+                crate::expect_costs(&mut s, FEELINGS, 3, json!({ "targets": pick::instance(&vanilla) }));
             }
 
             #[test]
@@ -360,7 +347,7 @@ mod tests {
             }
 
             #[test]
-            fn r15_with_no_free_zone_on_your_side_the_stolen_card_stays_with_its_owner() {
+            fn r15_r4205000_with_no_free_zone_on_your_side_the_stolen_unit_is_destroyed() {
                 crate::register_all();
                 let mut s = setup(
                     json!({ "field": [TIMMY, VANILLA, VANILLA, VANILLA, VANILLA] }),
@@ -371,8 +358,10 @@ mod tests {
 
                 s.play(FEELINGS, json!({ "targets": pick::instance(&menace) }));
 
-                assert_eq!(s.card(&menace).controller, P2);
-                assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(menace.id.clone()));
+                assert_eq!(s.unit(P2, 1), None);
+                s.expect_in_zone(&menace, "graveyard");
+                assert!(s.pile(P2, "graveyard").iter().any(|card| card.id == menace.id));
+                assert!(!s.events().iter().any(|event| matches!(event, GameEvent::ControlChanged { .. })));
             }
 
             #[test]
@@ -470,8 +459,9 @@ mod tests {
                 assert_eq!(pending_selections(&s), Some(at_selection(&must_unit(&s, P2, 3))));
                 let menace = must_unit(&s, P2, 3);
                 s.answer(pick::instance(&menace));
-                // No free zone: it stays with its owner (R15).
-                assert_eq!(must_unit(&s, P2, 3).controller, P2);
+                // No free zone: it is destroyed where it stands (R15, R4205000).
+                assert_eq!(s.unit(P2, 3), None);
+                s.expect_in_zone(&menace, "graveyard");
             }
 
             #[test]
@@ -487,10 +477,10 @@ mod tests {
             }
 
             #[test]
-            fn costs_2_refused_with_1_mana() {
+            fn costs_3_refused_with_2_mana() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({ "field": [{ "def": MENACE, "lane": 1 }] }), true);
-                crate::expect_costs(&mut s, FEELINGS, 2, json!({}));
+                crate::expect_costs(&mut s, FEELINGS, 3, json!({}));
             }
 
             #[test]
@@ -503,6 +493,91 @@ mod tests {
                 assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(TOKEN.to_string()));
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.card(BEAR).controller, P2);
+            }
+
+            #[test]
+            fn r4353002_radiant_felinor_feelings_random_cast_never_steals_evasive_enemy() {
+                use jackioh_engine::effects::cast_random;
+                use jackioh_engine::resolve::{apply_effects, make_context, HookOptions};
+
+                crate::register_all();
+                let mut s = setup(
+                    json!({}),
+                    json!({ "field": [{ "def": MENACE, "lane": 1 }] }),
+                    true,
+                );
+                let menace = must_unit(&s, P2, 1);
+                s.card_mut(&menace).granted_keywords.push(Keyword::Evasive);
+
+                // Cast Radiant Felinor Feelings at random.
+                let mut events = Vec::new();
+                let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+                {
+                    let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                    let mut ctx = make_context(
+                        &mut sink,
+                        None,
+                        HookOptions {
+                            controller: Some(P1),
+                            ..HookOptions::default()
+                        },
+                    );
+                    apply_effects(
+                        &[cast_random(json_as(json!({
+                            "query": { "defId": FEELINGS },
+                            "count": 1,
+                            "radiant": true,
+                        })))],
+                        &mut ctx,
+                    );
+                    settle(&mut ctx.sink, SettleOptions::default());
+                }
+                s.state_mut().rng_cursor = rng.cursor();
+
+                // Felinor token was summoned in lane 1, but the evasive menace in lane 1 was not stolen and no prompt opened.
+                assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(TOKEN.to_string()));
+                assert!(s.state().pending.is_none());
+                assert_eq!(must_unit(&s, P2, 1).controller, P2);
+
+                // With an evasive enemy in lane 1 and a non-evasive enemy in lane 2 (where P1 also controls a (1)-cost unit),
+                // a random cast steals only the legal non-evasive enemy.
+                let mut s2 = setup(
+                    json!({ "field": [{ "def": TIMMY, "lane": 2 }] }),
+                    json!({ "field": [{ "def": MENACE, "lane": 1 }, { "def": VANILLA, "lane": 2 }] }),
+                    true,
+                );
+                let evasive_menace = must_unit(&s2, P2, 1);
+                s2.card_mut(&evasive_menace).granted_keywords.push(Keyword::Evasive);
+                let vanilla = must_unit(&s2, P2, 2);
+
+                let mut events = Vec::new();
+                let mut rng = Rng::new(&s2.state().seed, s2.state().rng_cursor);
+                {
+                    let mut sink = EngineSink::new(s2.state_mut(), &mut events, &mut rng);
+                    let mut ctx = make_context(
+                        &mut sink,
+                        None,
+                        HookOptions {
+                            controller: Some(P1),
+                            ..HookOptions::default()
+                        },
+                    );
+                    apply_effects(
+                        &[cast_random(json_as(json!({
+                            "query": { "defId": FEELINGS },
+                            "count": 1,
+                            "radiant": true,
+                        })))],
+                        &mut ctx,
+                    );
+                    settle(&mut ctx.sink, SettleOptions::default());
+                }
+                s2.state_mut().rng_cursor = rng.cursor();
+
+                assert_eq!(s2.unit(P1, 1).map(|unit| unit.def_id), Some(TOKEN.to_string()));
+                assert!(s2.state().pending.is_none());
+                assert_eq!(must_unit(&s2, P2, 1).controller, P2);
+                assert_eq!(s2.card(&vanilla).controller, P1);
             }
         }
 

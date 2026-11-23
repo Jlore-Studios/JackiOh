@@ -130,6 +130,7 @@ mod swap_s6_3_r73_m3_t1 {
             card.counters = Counters {
                 plague: Some(2),
                 grade: None,
+                ..Default::default()
             };
             card.position = Some(Position::Def);
             card.summoned_turn = Some(turn - 1);
@@ -199,6 +200,7 @@ mod swap_s6_3_r73_m3_t1 {
             Counters {
                 plague: Some(2),
                 grade: None,
+                ..Default::default()
             }
         );
         assert_eq!(mine_now.position, Some(Position::Def));

@@ -1057,6 +1057,75 @@ mod tests {
         assert!(pay_xp(&tracks, 0, Cause::Track, "m").is_empty());
     }
 
+    /// R1302003: whether the payout unlocks an older track reads the newest track with the payout's XP
+    /// added, so one XP short of the unlock level and one XP more unlocks, as does the whole of it paid onto
+    /// a track not yet written.
+    #[test]
+    fn r1302003_the_unlock_reads_the_newest_track_with_the_payouts_xp_added() {
+        let newest = newest_shipped_set();
+        let unlock = total_xp_for_level(SET_TRACK_UNLOCK_LEVEL);
+        let short = vec![SetTrack {
+            set_id: newest.as_str().to_string(),
+            xp: unlock - 1,
+            level: i64::from(SET_TRACK_UNLOCK_LEVEL) - 1,
+            rewards_claimed: i64::from(SET_TRACK_UNLOCK_LEVEL) - 1,
+        }];
+        let rows = |grants: &[LedgerGrant]| {
+            grants
+                .iter()
+                .filter(|grant| matches!(grant, LedgerGrant::Track { .. }))
+                .count()
+        };
+        assert_eq!(
+            rows(&pay_xp(&short, 1, Cause::Track, "m")),
+            2,
+            "the newest track and one older"
+        );
+        assert_eq!(
+            rows(&pay_xp(&[], unlock, Cause::Quest, "q")),
+            2,
+            "the newest track and one older"
+        );
+    }
+
+    /// R1302003, R1302006: a game that unlocks an older track shows it in its answer from its first level
+    /// with no XP to the level the game's XP reached, every level in between paid.
+    #[test]
+    fn r1302003_r1302006_the_answer_shows_the_unlocked_track_at_the_level_its_xp_reached() {
+        let newest = newest_shipped_set();
+        let older = SHIPPED_SETS
+            .iter()
+            .rev()
+            .skip_while(|set| **set != newest)
+            .nth(1)
+            .copied()
+            .expect("an older shipped set");
+        let xp = game_xp(GameMode::Ladder, 10, true);
+        let short = total_xp_for_level(SET_TRACK_UNLOCK_LEVEL) - xp;
+        let tracks = vec![SetTrack {
+            set_id: newest.as_str().to_string(),
+            xp: short,
+            level: track_level(short),
+            rewards_claimed: track_level(short),
+        }];
+        let paid = pay_game(
+            &records(0, tracks, quiet()),
+            &summary(GameMode::Ladder, Some(true), 10),
+            "s",
+        );
+        let gain = paid
+            .economy
+            .tracks
+            .iter()
+            .find(|gain| gain.set_id == older.as_str())
+            .expect("the unlocked track's gain");
+        assert_eq!(
+            (gain.before.level, gain.after.level, gain.after.xp),
+            (SET_TRACK_FIRST_LEVEL, track_level(xp), xp)
+        );
+        assert_eq!(gain.levels.len() as i64, track_level(xp));
+    }
+
     /// R1304001: a held quest moves by what the game did, never past its target, and completes and pays on
     /// reaching it: its row, its Jlore and its XP onto the tracks.
     #[test]
@@ -1233,5 +1302,157 @@ mod tests {
         assert_eq!(jlore_of(&grants, Cause::Quest), [i64::from(def.jlore)]);
         assert_eq!(complete_quest(&quiet(), &[], &def.id, Cause::Dev, None, AT), None);
         assert_eq!(complete_quest(&book, &[], "no-such", Cause::Dev, None, AT), None);
+    }
+
+    /// R1302005: a point below the last level shows its level's span and the XP to the next level; the last
+    /// level shows neither.
+    #[test]
+    fn r1302005_a_track_point_shows_the_next_level_until_the_last() {
+        let last = i64::from(SET_TRACK_LEVELS);
+        let below = TrackPoint::at(last - 1, total_xp_for_level(SET_TRACK_LEVELS - 1));
+        assert!(below.level_xp.is_some() && below.xp_to_next.is_some());
+        let at_last = TrackPoint::at(last, total_xp_for_level(SET_TRACK_LEVELS));
+        assert_eq!((at_last.level_xp, at_last.xp_to_next), (None, None));
+    }
+
+    /// R1483000: the UTC day an instant falls in runs from that day's midnight to the next, before 1970 too.
+    #[test]
+    fn r1483000_a_utc_day_runs_from_its_midnight_to_the_next() {
+        let midnight = 19_000 * MS_PER_DAY;
+        let day = (midnight, midnight + MS_PER_DAY);
+        assert_eq!(utc_day_bounds(midnight), day);
+        assert_eq!(utc_day_bounds(midnight + MS_PER_DAY - 1), day);
+        assert_eq!(utc_day_bounds(-1), (-MS_PER_DAY, 0));
+    }
+
+    /// R1304001, R1302003: a completed quest's XP lands on the track as the game's own XP left it. Its row
+    /// reads the level and the rewards the game moved the track to, and the payout's gain runs from the track
+    /// before the game to after the quest.
+    #[test]
+    fn r1304001_a_completed_quests_xp_lands_on_the_track_the_games_xp_moved() {
+        let def = pool()
+            .iter()
+            .find(|quest| quest.goal == QuestGoal::PlayGames)
+            .expect("a play-games quest");
+        let newest = newest_shipped_set();
+        // The newest track at its second level, that level's rewards paid.
+        let start_level = SET_TRACK_FIRST_LEVEL + 1;
+        let start_xp = total_xp_for_level(2);
+        let tracks = vec![SetTrack {
+            set_id: newest.as_str().to_string(),
+            xp: start_xp,
+            level: start_level,
+            rewards_claimed: start_level,
+        }];
+        let book = QuestBook {
+            held: vec![HeldQuest {
+                quest_id: def.id.clone(),
+                progress: def.target - 1,
+                arrived_at: AT - 1,
+            }],
+            next_due_at: Some(AT + 1000 * quest_interval_ms()),
+        };
+        let paid = pay_game(
+            &records(0, tracks, book),
+            &summary(GameMode::Ladder, Some(true), 10),
+            "s",
+        );
+        let (game, quest) = (game_xp(GameMode::Ladder, 10, true), quest_xp(def));
+        let after_game = track_level(start_xp + game);
+        let after_quest = track_level(start_xp + game + quest);
+        assert!(
+            start_level < after_game && after_game < after_quest,
+            "PREMISE: the game and the quest each reach a level"
+        );
+        let rows: Vec<(i64, i64, i64, Cause)> = paid
+            .grants
+            .iter()
+            .filter_map(|grant| match grant {
+                LedgerGrant::Track {
+                    set_id,
+                    xp,
+                    levels,
+                    rewards,
+                    cause,
+                    ..
+                } if *set_id == newest.as_str() => Some((*xp, *levels, *rewards, *cause)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            rows,
+            [
+                (
+                    game,
+                    after_game - start_level,
+                    after_game - start_level,
+                    Cause::Track
+                ),
+                (
+                    quest,
+                    after_quest - after_game,
+                    after_quest - after_game,
+                    Cause::Quest
+                ),
+            ]
+        );
+        let gain = paid
+            .economy
+            .tracks
+            .iter()
+            .find(|gain| gain.set_id == newest.as_str())
+            .expect("the newest track's gain");
+        assert_eq!(
+            (gain.before.level, gain.after.level, gain.after.xp),
+            (start_level, after_quest, start_xp + game + quest)
+        );
+        let reached: Vec<i64> = gain.levels.iter().map(|reached| reached.level).collect();
+        assert_eq!(reached, (start_level + 1..=after_quest).collect::<Vec<_>>());
+    }
+
+    /// R1304001: a game moves a held quest by what it did but never past its target, and a held quest the
+    /// game did not move writes no row.
+    #[test]
+    fn r1304001_a_quest_moves_no_further_than_its_target_and_one_not_moved_writes_nothing() {
+        let attacks = pool()
+            .iter()
+            .find(|quest| quest.goal == QuestGoal::AttackWithUnits && quest.target > 1)
+            .expect("an attacks quest");
+        let wins = pool()
+            .iter()
+            .find(|quest| quest.goal == QuestGoal::WinGames)
+            .expect("a wins quest");
+        let held = |def: &QuestDef, progress: i64| HeldQuest {
+            quest_id: def.id.clone(),
+            progress,
+            arrived_at: AT - 1,
+        };
+        let book = QuestBook {
+            held: vec![held(attacks, attacks.target - 1), held(wins, 0)],
+            next_due_at: Some(AT + 1000 * quest_interval_ms()),
+        };
+        let mut lost = summary(GameMode::Ladder, Some(false), 0);
+        lost.tally.attacks = attacks.target + 5;
+        let paid = pay_game(&records(0, Vec::new(), book), &lost, "s");
+        let rows: Vec<(&str, QuestChange, i64)> = paid
+            .grants
+            .iter()
+            .filter_map(|grant| match grant {
+                LedgerGrant::Quest {
+                    quest_id,
+                    change,
+                    progress,
+                    ..
+                } => Some((quest_id.as_str(), *change, *progress)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            rows,
+            [
+                (attacks.id.as_str(), QuestChange::Progressed, 1),
+                (attacks.id.as_str(), QuestChange::Completed, 0)
+            ]
+        );
     }
 }

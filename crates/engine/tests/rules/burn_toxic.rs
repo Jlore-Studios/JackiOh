@@ -1,0 +1,751 @@
+//! Burn and Toxic (issue #3540, R3540000–R3540005; issue #4154, R4154000, R4154001): the counters the verbs
+//! add, the Toxic tick at the start of its owner's turn and the Burn tick at the end of every turn,
+//! the riders and the conversion on a hit, a Vanilla's clearing and the view, proved on the fixtures of
+//! `fixtures/burn_toxic.rs` with no card yet.
+
+use jackioh_engine::testkit::PlayerId::{P1, P2};
+use jackioh_engine::testkit::*;
+
+use crate::rules::fixtures::burn_toxic::*;
+
+/// p1's turn 9, its main phase; each side's setup as given, with plain cards to draw, and no turn that
+/// ends by itself (R345), so each test ends every turn it means to.
+fn board(seed: &str, p1: Value, p2: Value) -> Scenario {
+    register_burn_toxic_fixtures();
+    let mut p1 = p1;
+    let mut p2 = p2;
+    for side in [&mut p1, &mut p2] {
+        if side.get("library").is_none() {
+            side["library"] = json!([PLAIN, PLAIN, PLAIN, PLAIN]);
+        }
+    }
+    let mut s = scenario(json!({ "seed": seed, "active": "p1", "p1": p1, "p2": p2 }));
+    for player in [P1, P2] {
+        s.state_mut().players[player].auto_end_turn = Some(false);
+    }
+    s
+}
+
+fn id_at(s: &Scenario, player: PlayerId, lane: i32) -> String {
+    s.unit(player, lane)
+        .unwrap_or_else(|| panic!("no unit at {player:?}'s lane {lane}"))
+        .id
+}
+
+/// A setup entry for a Unit that already carries counters.
+fn with(def: &str, counters: Value) -> Value {
+    json!({ "def": def, "counters": counters })
+}
+
+fn counter_events(events: &[GameEvent], counter: CounterKind) -> Vec<&GameEvent> {
+    events
+        .iter()
+        .filter(|event| matches!(event, GameEvent::CounterChanged { counter: c, .. } if *c == counter))
+        .collect()
+}
+
+fn burn(s: &Scenario, id: &str) -> i32 {
+    query::burn_on(s.card(id))
+}
+
+fn toxic(s: &Scenario, id: &str) -> i32 {
+    query::toxic_on(s.card(id))
+}
+
+/// The damage events of a step, as (target, amount, via) in the order they happened.
+fn hits(events: &[GameEvent]) -> Vec<(String, i32, Option<KeywordKind>)> {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::Damage {
+                target_id,
+                amount,
+                via,
+                ..
+            } => Some((target_id.clone(), *amount, *via)),
+            _ => None,
+        })
+        .collect()
+}
+
+mod r3540000_counters {
+    use super::*;
+    use crate::rules::fixtures::harness::sink_for;
+    use jackioh_engine::afflictions::{Affliction, afflict};
+
+    /// What `afflict` returns for `target`, and the `counterChanged` events it reported.
+    fn afflicted(state: &mut GameState, target: &DamageTarget, amount: i32) -> (i32, usize) {
+        let mut sink = sink_for(state);
+        let placed = afflict(&mut sink, target, Affliction::Burn, amount);
+        let reported = counter_events(sink.events, CounterKind::Burn).len();
+        (placed, reported)
+    }
+
+    fn unit_target(state: &GameState, id: &str) -> DamageTarget {
+        DamageTarget::Unit {
+            instance: find_instance(state, id).expect("on the board").clone(),
+        }
+    }
+
+    /// R3540000: a count goes on only for an amount above 0, in a game still going, on a Unit that acts in
+    /// a unit zone (or stands in the backrow). A Dormant Unit in its unit zone does not act (R1839000), so it
+    /// carries none; nor does a finished game's Unit, nor an amount of 0: each is 0, nothing set, nothing
+    /// reported.
+    #[test]
+    fn r3540000_a_count_goes_on_only_for_an_amount_above_0_on_an_acting_unit_in_a_game_still_going() {
+        let s = board("r3540000-afflict", json!({}), json!({ "field": [PLAIN, PLAIN] }));
+        let unit = id_at(&s, P2, 1);
+        let dormant = id_at(&s, P2, 2);
+        let mut state = s.state().clone();
+        find_instance_mut(&mut state, &dormant)
+            .expect("the second unit")
+            .slumber = Some(Slumber { turns: None });
+        let burn_of =
+            |state: &GameState, id: &str| query::burn_on(find_instance(state, id).expect("on the board"));
+
+        let on_unit = unit_target(&state, &unit);
+        assert_eq!(afflicted(&mut state, &on_unit, 0), (0, 0));
+        assert_eq!(burn_of(&state, &unit), 0);
+
+        let on_dormant = unit_target(&state, &dormant);
+        assert_eq!(afflicted(&mut state, &on_dormant, BT_BURN), (0, 0));
+        assert_eq!(burn_of(&state, &dormant), 0);
+
+        let mut over = state.clone();
+        over.result = Some(GameResult {
+            winner: Winner::P1,
+            reason: GameOverReason::Concede,
+        });
+        assert_eq!(afflicted(&mut over, &on_unit, BT_BURN), (0, 0));
+        assert_eq!(burn_of(&over, &unit), 0);
+
+        // The acting Unit, in the game still going, takes it.
+        assert_eq!(afflicted(&mut state, &on_unit, BT_BURN), (BT_BURN, 1));
+        assert_eq!(burn_of(&state, &unit), BT_BURN);
+    }
+
+    #[test]
+    fn r3540000_the_verbs_add_to_the_counter_already_there() {
+        let mut s = board(
+            "r3540000-verbs",
+            json!({ "hand": [BURNER, BURNER, TOXICANT, TOXICANT] }),
+            json!({ "field": [PLAIN] }),
+        );
+        let target = id_at(&s, P2, 1);
+        s.play(BURNER, pick::targets(pick::id(&target)));
+        assert_eq!(burn(&s, &target), BT_BURN);
+        s.play(BURNER, pick::targets(pick::id(&target)));
+        assert_eq!(burn(&s, &target), 2 * BT_BURN);
+        let reported: Vec<(i32, Option<i32>)> = counter_events(s.events(), CounterKind::Burn)
+            .into_iter()
+            .map(|event| match event {
+                GameEvent::CounterChanged {
+                    instance_id,
+                    value,
+                    placed,
+                    ..
+                } => {
+                    assert_eq!(instance_id, &target);
+                    (*value, *placed)
+                }
+                _ => unreachable!(),
+            })
+            .collect();
+        assert_eq!(
+            reported,
+            vec![(BT_BURN, Some(BT_BURN)), (2 * BT_BURN, Some(BT_BURN))]
+        );
+
+        s.play(TOXICANT, json!({}));
+        s.play(TOXICANT, json!({}));
+        assert_eq!(query::hero_toxic_of(s.state(), P2), 2 * BT_TOXIC);
+        assert_eq!(s.state().players[P2].hero_toxic, Some(2 * BT_TOXIC));
+        let last = counter_events(s.events(), CounterKind::Toxic)
+            .last()
+            .copied()
+            .cloned();
+        assert_eq!(
+            last,
+            Some(GameEvent::CounterChanged {
+                instance_id: "hero-p2".to_string(),
+                counter: CounterKind::Toxic,
+                value: 2 * BT_TOXIC,
+                placed: Some(BT_TOXIC),
+            })
+        );
+    }
+
+    #[test]
+    fn r3540000_a_sweep_reaches_every_enemy_unit_and_hero_only() {
+        let mut s = board(
+            "r3540000-sweep",
+            json!({ "hand": [SCOURGE], "field": [PLAIN] }),
+            json!({ "field": [PLAIN, FRAIL] }),
+        );
+        let own = id_at(&s, P1, 1);
+        let first = id_at(&s, P2, 1);
+        let second = id_at(&s, P2, 2);
+        s.play(SCOURGE, json!({}));
+        for enemy in [&first, &second] {
+            assert_eq!(burn(&s, enemy), BT_SWEEP);
+            assert_eq!(toxic(&s, enemy), BT_SWEEP);
+        }
+        assert_eq!(query::hero_burn_of(s.state(), P2), BT_SWEEP);
+        assert_eq!(query::hero_toxic_of(s.state(), P2), BT_SWEEP);
+        assert_eq!(burn(&s, &own), 0);
+        assert_eq!(toxic(&s, &own), 0);
+        assert_eq!(query::hero_burn_of(s.state(), P1), 0);
+        assert_eq!(query::hero_toxic_of(s.state(), P1), 0);
+    }
+
+    #[test]
+    fn r3540000_a_unit_leaving_the_field_sheds_both() {
+        let mut s = board(
+            "r3540000-leave",
+            json!({ "hand": [BURNER, BOUNCER] }),
+            json!({ "field": [with(PLAIN, json!({ "toxic": 2 }))] }),
+        );
+        let target = id_at(&s, P2, 1);
+        s.play(BURNER, pick::targets(pick::id(&target)));
+        assert_eq!(burn(&s, &target), BT_BURN);
+        s.play(BOUNCER, pick::targets(pick::id(&target)));
+        s.expect_in_zone(&target, "hand");
+        assert_eq!(burn(&s, &target), 0);
+        assert_eq!(toxic(&s, &target), 0);
+    }
+}
+
+mod r3540001_tick {
+    use super::*;
+
+    #[test]
+    fn r3540001_toxic_ticks_at_its_owners_turn_start_pierces_armor_and_never_fades() {
+        let mut s = board(
+            "r3540001-toxic",
+            json!({ "field": [with(PLAIN, json!({ "toxic": 3 }))] }),
+            json!({ "armor": 5, "field": [with(ARMORED, json!({ "toxic": 3 }))] }),
+        );
+        s.state_mut().players[P2].hero_toxic = Some(2);
+        let armored = id_at(&s, P2, 1);
+        let own = id_at(&s, P1, 1);
+
+        // p1's turn ends: p2's turn starts, and only p2's counters tick.
+        s.end_turn();
+        assert_eq!(
+            hits(s.last_events()),
+            vec![
+                ("hero-p2".to_string(), 2, Some(KeywordKind::Toxic)),
+                (armored.clone(), 3, Some(KeywordKind::Toxic)),
+            ],
+            "the hero first, then the Unit; Toxic pierces both Armors"
+        );
+        for event in s.last_events() {
+            if let GameEvent::Damage { source_id, .. } = event {
+                assert_eq!(source_id, &None, "a tick has no source");
+            }
+        }
+        s.expect_health(P2, HERO_HEALTH - 2);
+        assert_eq!(s.state().players[P2].hero.armor, 5);
+        assert_eq!(s.card(&armored).damage, 3);
+        assert_eq!(s.card(&own).damage, 0);
+
+        // p2's turn ends and p1's own Toxic ticks; a cycle later p2's has not faded.
+        s.end_turn();
+        assert_eq!(s.card(&own).damage, 3);
+        s.end_turn();
+        assert_eq!(toxic(&s, &armored), 3);
+        assert_eq!(query::hero_toxic_of(s.state(), P2), 2);
+        assert_eq!(s.card(&armored).damage, 6);
+    }
+
+    #[test]
+    fn r3540001_a_divine_shield_takes_the_first_toxic_tick() {
+        let mut s = board(
+            "r3540001-shield",
+            json!({}),
+            json!({ "field": [with(SHIELDED, json!({ "toxic": 2 }))] }),
+        );
+        let shielded = id_at(&s, P2, 1);
+        s.end_turn();
+        assert_eq!(s.card(&shielded).divine_shield_spent, Some(true));
+        assert!(s.last_events().iter().any(
+            |event| matches!(event, GameEvent::DivineShieldLost { instance_id } if instance_id == &shielded)
+        ));
+        assert!(hits(s.last_events()).is_empty(), "the shield took the hit whole");
+        assert_eq!(s.card(&shielded).damage, 0);
+        assert_eq!(toxic(&s, &shielded), 2, "Toxic stays whatever its hit did");
+        s.end_turn();
+        s.end_turn();
+        assert_eq!(s.card(&shielded).damage, 2);
+    }
+
+    #[test]
+    fn r3540001_the_toxic_tick_kills_before_the_draw() {
+        let mut s = board(
+            "r3540001-kill",
+            json!({}),
+            json!({ "field": [with(FRAIL, json!({ "toxic": 2 }))] }),
+        );
+        let frail = id_at(&s, P2, 1);
+        s.end_turn();
+        let events = s.last_events();
+        let died = events
+            .iter()
+            .position(
+                |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if instance_id == &frail),
+            )
+            .expect("the tick destroyed the Unit");
+        let drew = events
+            .iter()
+            .position(|event| matches!(event, GameEvent::Drawn { player, .. } if *player == P2))
+            .expect("p2 drew");
+        assert!(died < drew, "the Unit died at the tick, before p2's draw");
+    }
+
+    #[test]
+    fn r3540001_a_lethal_toxic_ends_the_game_at_its_owners_turn() {
+        let mut s = board("r3540001-lethal", json!({}), json!({ "health": 3 }));
+        s.state_mut().players[P2].hero_toxic = Some(5);
+        s.end_turn();
+        let result = s.state().result.expect("the Toxic killed the hero");
+        assert_eq!(result.winner, Winner::P1);
+    }
+}
+
+/// R4154000: Burn ticks once, at the end of every turn, and is then removed.
+mod r4154000_burn_at_turn_end {
+    use super::*;
+
+    #[test]
+    fn r4154000_every_burn_ticks_once_at_the_end_of_the_turn_unpierced_and_is_then_gone() {
+        let mut s = board(
+            "r4154000-burn",
+            json!({ "field": [with(PLAIN, json!({ "burn": 5 }))] }),
+            json!({ "field": [with(ARMORED, json!({ "burn": 8 }))] }),
+        );
+        s.state_mut().players[P2].hero_burn = Some(1);
+        let armored = id_at(&s, P2, 1);
+        let own = id_at(&s, P1, 1);
+
+        // p1's turn ends: both sides' Burns tick, the side on turn first, each hero before its Units.
+        s.end_turn();
+        assert_eq!(
+            hits(s.last_events()),
+            vec![
+                (own.clone(), 5, Some(KeywordKind::Burn)),
+                ("hero-p2".to_string(), 1, Some(KeywordKind::Burn)),
+                (armored.clone(), 6, Some(KeywordKind::Burn)),
+            ],
+            "p1's side, then p2's hero and Unit; Armor 2 took 2 of the 8"
+        );
+        for event in s.last_events() {
+            if let GameEvent::Damage { source_id, .. } = event {
+                assert_eq!(source_id, &None, "a tick has no source");
+            }
+        }
+        s.expect_health(P2, HERO_HEALTH - 1);
+        assert_eq!(s.state().players[P2].hero_burn, None);
+        assert_eq!(s.card(&armored).counters.burn, None);
+        assert_eq!(s.card(&own).counters.burn, None);
+        assert_eq!(s.card(&armored).damage, 6);
+        assert_eq!(s.card(&own).damage, 5);
+        assert!(
+            counter_events(s.last_events(), CounterKind::Burn)
+                .iter()
+                .all(|event| matches!(
+                    event,
+                    GameEvent::CounterChanged {
+                        value: 0,
+                        placed: None,
+                        ..
+                    }
+                ))
+        );
+
+        // Gone: the next turn's end ticks nothing.
+        s.end_turn();
+        assert!(hits(s.last_events()).is_empty());
+        assert_eq!(s.card(&armored).damage, 6);
+        assert_eq!(s.card(&own).damage, 5);
+    }
+
+    #[test]
+    fn r4154000_a_burn_put_on_this_turn_ticks_at_its_end() {
+        let mut s = board(
+            "r4154000-this-turn",
+            json!({ "hand": [BURNER] }),
+            json!({ "field": [PLAIN] }),
+        );
+        let target = id_at(&s, P2, 1);
+        s.play(BURNER, pick::targets(pick::id(&target)));
+        assert_eq!(burn(&s, &target), BT_BURN);
+        assert_eq!(
+            s.card(&target).damage,
+            0,
+            "the Burn waits for the end of the turn"
+        );
+        s.end_turn();
+        assert_eq!(s.card(&target).damage, BT_BURN);
+        assert_eq!(burn(&s, &target), 0);
+    }
+
+    #[test]
+    fn r4154000_a_divine_shield_takes_the_burns_hit_and_the_burn_is_still_gone() {
+        let mut s = board(
+            "r4154000-shield",
+            json!({}),
+            json!({ "field": [with(SHIELDED, json!({ "burn": 4, "toxic": 2 }))] }),
+        );
+        let shielded = id_at(&s, P2, 1);
+        s.end_turn();
+        assert_eq!(s.card(&shielded).divine_shield_spent, Some(true));
+        // The Burn's hit at p1's turn end was the shield's; p2's turn start's Toxic then landed.
+        assert_eq!(
+            hits(s.last_events()),
+            vec![(shielded.clone(), 2, Some(KeywordKind::Toxic))]
+        );
+        assert_eq!(s.card(&shielded).damage, 2);
+        assert_eq!(burn(&s, &shielded), 0, "the Burn goes whatever its hit did");
+        assert_eq!(toxic(&s, &shielded), 2);
+    }
+
+    #[test]
+    fn r4154000_the_burn_kills_at_the_end_of_the_turn_before_the_next_one_starts() {
+        let mut s = board(
+            "r4154000-kill",
+            json!({}),
+            json!({ "field": [with(FRAIL, json!({ "burn": 2 }))] }),
+        );
+        let frail = id_at(&s, P2, 1);
+        s.end_turn();
+        let events = s.last_events();
+        let died = events
+            .iter()
+            .position(
+                |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if instance_id == &frail),
+            )
+            .expect("the tick destroyed the Unit");
+        let started = events
+            .iter()
+            .position(|event| matches!(event, GameEvent::TurnStarted { player, .. } if *player == P2))
+            .expect("p2's turn started");
+        assert!(died < started, "the Unit died at p1's turn end, before p2's turn");
+    }
+
+    #[test]
+    fn r4154000_a_lethal_burn_ends_the_game_at_the_end_of_the_turn() {
+        let mut s = board("r4154000-lethal", json!({}), json!({ "health": 3 }));
+        s.state_mut().players[P2].hero_burn = Some(5);
+        s.end_turn();
+        let result = s.state().result.expect("the Burn killed the hero");
+        assert_eq!(result.winner, Winner::P1);
+        assert!(
+            !s.last_events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::TurnStarted { player, .. } if *player == P2)),
+            "the game ended with p1's turn"
+        );
+    }
+}
+
+/// R4154001: a Unit Immune to Toxic takes none, by a verb, a rider or a conversion, and still takes Burn.
+mod r4154001_immune_to_toxic {
+    use super::*;
+
+    #[test]
+    fn r4154001_immune_to_toxic_takes_no_toxic_from_a_verb_a_rider_or_a_conversion() {
+        let mut s = board(
+            "r4154001-verb",
+            json!({ "hand": [SCOURGE] }),
+            json!({ "field": [IMMUNE] }),
+        );
+        let immune = id_at(&s, P2, 1);
+        s.play(SCOURGE, json!({}));
+        assert_eq!(toxic(&s, &immune), 0, "the sweep's Toxic adds nothing");
+        assert_eq!(burn(&s, &immune), BT_SWEEP, "its Burn still goes on");
+        assert!(counter_events(s.events(), CounterKind::Toxic).iter().all(
+            |event| !matches!(event, GameEvent::CounterChanged { instance_id, .. } if instance_id == &immune)
+        ));
+
+        let mut s = board(
+            "r4154001-rider",
+            json!({ "field": [VENOM] }),
+            json!({ "field": [IMMUNE] }),
+        );
+        let (venom, immune) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        s.attack(&venom, &immune);
+        assert_eq!(s.card(&immune).damage, 3, "the hit lands");
+        assert_eq!(toxic(&s, &immune), 0, "its rider adds nothing");
+
+        let mut s = board(
+            "r4154001-conversion",
+            json!({ "field": [NOXIOUS] }),
+            json!({ "field": [IMMUNE] }),
+        );
+        let (noxious, immune) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        s.attack(&noxious, &immune);
+        assert_eq!(toxic(&s, &immune), 0, "the hit it turned into Toxic adds nothing");
+        assert_eq!(s.card(&immune).damage, 0);
+    }
+}
+
+mod r3540002_riders {
+    use super::*;
+
+    #[test]
+    fn r3540002_no_rider_on_a_hero_the_hit_leaves_at_0() {
+        let mut s = board("r3540002-hero-0", json!({ "field": [MACE] }), json!({}));
+        let mace = id_at(&s, P1, 1);
+        // The Mace's hit takes the hero to exactly 0: no life left, so its Burn does not follow.
+        let attack = unit_view(s.state(), s.card(&mace)).attack;
+        s.state_mut().players[P2].hero.health = attack;
+        s.attack(&mace, "hero");
+        s.expect_health(P2, 0);
+        assert!(counter_events(s.events(), CounterKind::Burn).is_empty());
+        assert_eq!(query::hero_burn_of(s.state(), P2), 0);
+        let result = s.state().result.expect("the hit killed the hero");
+        assert_eq!(result.winner, Winner::P1);
+    }
+
+    #[test]
+    fn r3540002_damage_also_burns_after_each_hit_its_target_survives() {
+        let mut s = board(
+            "r3540002-burn",
+            json!({ "field": [MACE] }),
+            json!({ "field": [PLAIN] }),
+        );
+        let (mace, plain) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        s.attack(&mace, &plain);
+        assert_eq!(burn(&s, &plain), BT_RIDER);
+
+        let mut s = board("r3540002-hero", json!({ "field": [MACE] }), json!({}));
+        let mace = id_at(&s, P1, 1);
+        s.attack(&mace, "hero");
+        s.expect_health(P2, HERO_HEALTH - 3);
+        assert_eq!(query::hero_burn_of(s.state(), P2), BT_RIDER);
+
+        let mut s = board(
+            "r3540002-toxic",
+            json!({ "field": [VENOM] }),
+            json!({ "field": [PLAIN] }),
+        );
+        let (venom, plain) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        s.attack(&venom, &plain);
+        assert_eq!(toxic(&s, &plain), BT_RIDER);
+        assert_eq!(burn(&s, &plain), 0);
+    }
+
+    #[test]
+    fn r3540002_no_rider_on_a_kill_or_a_hit_that_dealt_nothing() {
+        let mut s = board(
+            "r3540002-kill",
+            json!({ "field": [MACE] }),
+            json!({ "field": [FRAIL] }),
+        );
+        let (mace, frail) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        s.attack(&mace, &frail);
+        assert!(
+            s.events().iter().any(
+                |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if instance_id == &frail)
+            ),
+            "the hit killed its target"
+        );
+        assert!(counter_events(s.events(), CounterKind::Burn).is_empty());
+
+        let mut s = board(
+            "r3540002-shield",
+            json!({ "field": [MACE] }),
+            json!({ "field": [SHIELDED] }),
+        );
+        let (mace, shielded) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        s.attack(&mace, &shielded);
+        assert_eq!(s.card(&shielded).divine_shield_spent, Some(true));
+        assert!(counter_events(s.events(), CounterKind::Burn).is_empty());
+        assert_eq!(burn(&s, &shielded), 0);
+    }
+
+    #[test]
+    fn r3540002_an_equip_adds_its_rider_to_its_host() {
+        let mut s = board(
+            "r3540002-equip",
+            json!({ "hand": [ROUNDS], "field": [MACE] }),
+            json!({ "field": [PLAIN] }),
+        );
+        s.play(ROUNDS, json!({ "zone": 1, "equip": true }));
+        let (host, plain) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        s.attack(&host, &plain);
+        assert_eq!(burn(&s, &plain), BT_RIDER + BT_ROUNDS);
+    }
+}
+
+mod r3540003_conversion {
+    use super::*;
+
+    #[test]
+    fn r3540003_damage_dealt_burns_deals_nothing_and_burns_what_it_would_have() {
+        let mut s = board(
+            "r3540003-burns",
+            json!({ "field": [VOLCANIC] }),
+            json!({ "field": [ARMORED] }),
+        );
+        let (volcanic, armored) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        s.attack(&volcanic, &armored);
+        assert_eq!(s.card(&armored).damage, 0);
+        assert_eq!(burn(&s, &armored), 2, "4 damage past Armor 2");
+        assert!(
+            hits(s.events()).iter().all(|(target, _, _)| target != &armored),
+            "no damage event names the target"
+        );
+        assert_eq!(s.card(&volcanic).damage, 2, "the attacker is still struck back");
+
+        let mut s = board("r3540003-hero", json!({ "field": [VOLCANIC] }), json!({}));
+        let volcanic = id_at(&s, P1, 1);
+        s.attack(&volcanic, "hero");
+        s.expect_health(P2, HERO_HEALTH);
+        assert_eq!(query::hero_burn_of(s.state(), P2), 4);
+        assert!(hits(s.events()).iter().all(|(target, _, _)| target != "hero-p2"));
+    }
+
+    #[test]
+    fn r3540003_is_toxic_converts_to_toxic_and_burn_wins_both() {
+        let mut s = board(
+            "r3540003-toxic",
+            json!({ "field": [NOXIOUS] }),
+            json!({ "field": [PLAIN] }),
+        );
+        let (noxious, plain) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        s.attack(&noxious, &plain);
+        assert_eq!(toxic(&s, &plain), 4);
+        assert_eq!(burn(&s, &plain), 0);
+        assert_eq!(s.card(&plain).damage, 0);
+
+        let mut s = board(
+            "r3540003-both",
+            json!({ "field": [BOTH] }),
+            json!({ "field": [PLAIN] }),
+        );
+        let (both, plain) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        s.attack(&both, &plain);
+        assert_eq!(burn(&s, &plain), 4);
+        assert_eq!(toxic(&s, &plain), 0);
+    }
+
+    #[test]
+    fn r3540003_a_shield_or_indestructible_takes_the_hit_whole() {
+        let mut s = board(
+            "r3540003-shield",
+            json!({ "field": [VOLCANIC] }),
+            json!({ "field": [SHIELDED] }),
+        );
+        let (volcanic, shielded) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        s.attack(&volcanic, &shielded);
+        assert_eq!(s.card(&shielded).divine_shield_spent, Some(true));
+        assert_eq!(burn(&s, &shielded), 0);
+
+        let mut s = board(
+            "r3540003-stone",
+            json!({ "field": [VOLCANIC] }),
+            json!({ "field": [STONE] }),
+        );
+        let (volcanic, stone) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        s.attack(&volcanic, &stone);
+        assert_eq!(burn(&s, &stone), 0);
+        assert_eq!(s.card(&stone).damage, 0);
+    }
+}
+
+mod r4064001_the_conversion_read {
+    use super::*;
+    use jackioh_engine::afflictions::Affliction;
+
+    #[test]
+    fn r4064001_converts_to_names_the_counter_a_sources_hits_become() {
+        let s = board(
+            "r4064001-converts-to",
+            json!({ "field": [VOLCANIC, NOXIOUS, BOTH, PLAIN] }),
+            json!({}),
+        );
+        let read: Vec<Option<Affliction>> = (1..=4)
+            .map(|lane| query::converts_to(s.state(), s.card(id_at(&s, P1, lane))))
+            .collect();
+        assert_eq!(
+            read,
+            [
+                Some(Affliction::Burn),
+                Some(Affliction::Toxic),
+                Some(Affliction::Burn),
+                None
+            ]
+        );
+    }
+}
+
+mod r3540004_vanilla {
+    use super::*;
+
+    #[test]
+    fn r3540004_a_vanilla_clears_both_and_a_nerf_keeps_them() {
+        let mut s = board(
+            "r3540004-clear",
+            json!({ "hand": [NERF, VANILLA] }),
+            json!({ "field": [with(PLAIN, json!({ "burn": 5, "toxic": 2 }))] }),
+        );
+        let target = id_at(&s, P2, 1);
+        s.play(NERF, pick::targets(pick::id(&target)));
+        assert_eq!(burn(&s, &target), 5);
+        assert_eq!(toxic(&s, &target), 2);
+
+        s.play(VANILLA, pick::targets(pick::id(&target)));
+        assert_eq!(burn(&s, &target), 0);
+        assert_eq!(toxic(&s, &target), 0);
+        let cleared: Vec<(CounterKind, i32)> = s
+            .last_events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::CounterChanged {
+                    counter,
+                    value,
+                    placed,
+                    ..
+                } => {
+                    assert_eq!(*placed, None, "a clearing is no gain");
+                    Some((*counter, *value))
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(cleared, vec![(CounterKind::Burn, 0), (CounterKind::Toxic, 0)]);
+    }
+}
+
+mod r3540005_view {
+    use super::*;
+
+    #[test]
+    fn r3540005_both_seats_see_the_counters() {
+        let mut s = board(
+            "r3540005-view",
+            json!({ "field": [PLAIN] }),
+            json!({ "field": [with(PLAIN, json!({ "burn": 5, "toxic": 2 }))] }),
+        );
+        s.state_mut().players[P2].hero_burn = Some(6);
+        s.state_mut().players[P2].hero_toxic = Some(1);
+        for viewer in [P1, P2] {
+            let view = s.view(viewer);
+            let side = if viewer == P2 { &view.you } else { &view.opponent };
+            let unit = side
+                .units
+                .iter()
+                .flatten()
+                .next()
+                .unwrap_or_else(|| panic!("{viewer:?} sees p2's unit"));
+            assert_eq!(unit.counters.burn, Some(5));
+            assert_eq!(unit.counters.toxic, Some(2));
+            assert_eq!(side.hero.burn, Some(6));
+            assert_eq!(side.hero.toxic, Some(1));
+            let own = if viewer == P2 { &view.opponent } else { &view.you };
+            assert_eq!(own.hero.burn, None, "p1 has none, so its hero shows none");
+            assert_eq!(own.hero.toxic, None);
+        }
+    }
+}

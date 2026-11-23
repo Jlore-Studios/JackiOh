@@ -2,7 +2,8 @@
 // plans every entry (remember, then plan): each held inside its entry and gone within FX_MAX_TAIL_MS of
 // its end (R200) at every hold Big moments and the speed give it, Dice of Doom's three outcomes drawn
 // each its own way, no cue naming a hidden card from the other seat (R202), the follow-ups the turns
-// they owe open, and the Terminus pool the catalog's own.
+// they owe open, and the Terminus pool the catalog's own: every Terminus card before Stinkyscape+'s, which
+// neither Olivian Expanse's pool nor Dice of Doom's holds (#3596).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -18,10 +19,11 @@ import {
 import { testid } from "../../game/contract.ts";
 import { createPlayTracker } from "../../game/runs.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
+import { endOf, envOf } from "../../test/signatures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { frac } from "../build.ts";
 import { FX_CARD_TABLE } from "../cards/tables.ts";
-import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_TERMINUS_COUNT_AT } from "../constants.ts";
+import { FX_MAX_TAIL_MS, FX_TERMINUS_COUNT_AT } from "../constants.ts";
 import { planFx } from "../cues.ts";
 import type { FxBigMoments } from "../settings.ts";
 import { createFxMemory } from "../memory.ts";
@@ -37,12 +39,11 @@ import {
   wipeClaim,
   type SetPieceKey,
 } from "../setPieces.ts";
-import type { FxCue, FxMemory, FxPlanEnv, FxRollCue, FxSetPieceCue } from "../types.ts";
+import type { FxCue, FxMemory, FxRollCue, FxSetPieceCue } from "../types.ts";
 import { TERMINUS_TUNING } from "./build.ts";
-import { BIG_CRUNCH, DICE_OF_DOOM, EVENT_HORIZON, LAST_WORD, OLIVIAN_EXPANSE, TERMINUS_IDS } from "./ids.ts";
+import { BIG_CRUNCH, DICE_OF_DOOM, EVENT_HORIZON, LAST_WORD, OLIVIAN_EXPANSE, STINKYSCAPE_PLUS_TERMINUS_IDS, TERMINUS_IDS } from "./ids.ts";
 import { TERMINUS_PLANNERS, planTerminus, planTerminusStill } from "./index.ts";
 
-const envOf = (memory: FxMemory = createFxMemory()): FxPlanEnv => ({ intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory });
 const claimOf: SetPieceClaimer = (entry) => wipeClaim(entry) ?? signatureClaim(entry);
 
 /** Every Terminus set piece: the seven signatures and the two Terminus board clears. */
@@ -63,7 +64,7 @@ function play(events: readonly GameEvent[], view: PlayerView, { opts = {} }: Pla
   const planned = planEntries(events, withEvents(view, [...events]), reduced, createPlayTracker(), hasSetPiece, signatureRunOf);
   const scaled = planned.map((entry) => ({ ...entry, durationMs: Math.round(entry.durationMs / (opts.speed ?? 1)) }));
   const entries = setPieceEntries(scaled, claimOf, { reduced, bigMoments: opts.bigMoments ?? "full", speed: opts.speed ?? 1 });
-  const env = envOf(memory);
+  const env = envOf({ memory });
   return entries.map((entry) => {
     memory.remember(entry.events);
     return { entry, cues: planFx(entry, entry.view, env) };
@@ -80,17 +81,6 @@ function pieceEntry(results: ReturnType<typeof play>): { entry: AnimationEntry; 
   const found = results.find(({ entry }) => entry.signature !== undefined || entry.wipe !== undefined);
   if (found === undefined) throw new Error("no set piece entry");
   return found;
-}
-
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
 }
 
 const pieceOf = (cues: readonly FxCue[]): FxSetPieceCue | undefined => cues.find((c): c is FxSetPieceCue => c.kind === "setPiece");
@@ -349,9 +339,9 @@ describe("R3338000 the Terminus set pieces", () => {
     expect(pieceOf(last?.cues ?? [])).toBeUndefined();
   });
 
-  it("R3338000 TERMINUS_IDS are the catalog's Terminus cards, in its order", () => {
+  it("R3338000 TERMINUS_IDS, then Stinkyscape+'s, are the catalog's Terminus cards, in its order", () => {
     const tagged = Object.keys(CATALOG).filter((id) => CATALOG[id]?.tags.includes("Terminus") === true);
-    expect(tagged).toEqual([...TERMINUS_IDS]);
+    expect(tagged).toEqual([...TERMINUS_IDS, ...STINKYSCAPE_PLUS_TERMINUS_IDS]);
     expect(SET_PIECE_KEYS).toEqual(expect.arrayContaining([...TERMINUS_KEYS]));
   });
 });

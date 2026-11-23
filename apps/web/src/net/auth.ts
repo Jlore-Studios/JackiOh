@@ -8,9 +8,10 @@ import {
   AUTH_PROVIDER_TIMEOUT_SECONDS,
   AUTH_SESSION_REFRESH_MARGIN_SECONDS,
 } from "@jackioh/server-config";
+import { claimsOf } from "../auth/claims.ts";
 import { challengeForRequest, forgetVerifier, storedVerifiers, type PkceChallenge, type PkceFlow } from "../auth/pkce.ts";
 import { ApiRequestError, apiRequest } from "./api.ts";
-import { paths } from "./navigate.ts";
+import { paths, stripTrailingSlashes } from "./navigate.ts";
 import {
   forgetPendingAddresses,
   readSession,
@@ -381,7 +382,7 @@ export function authConfig(): AuthConfig | null {
   const publishableKey: unknown = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   if (typeof url !== "string" || url.length === 0) return null;
   if (typeof publishableKey !== "string" || publishableKey.length === 0) return null;
-  return { url: url.replace(/\/+$/u, ""), publishableKey };
+  return { url: stripTrailingSlashes(url), publishableKey };
 }
 
 function requireConfig(): AuthConfig {
@@ -879,19 +880,8 @@ export type TotpFactor = { id: string; verified: boolean };
 
 /** The assurance level an access token's own payload claims (`aal`), read and never verified. */
 export function assuranceLevel(accessToken: string): string | null {
-  const payload = accessToken.split(".")[1];
-  if (payload === undefined || payload.length === 0) return null;
-  try {
-    const base64 = payload.replace(/-/gu, "+").replace(/_/gu, "/");
-    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-    const bytes = Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
-    const claims: unknown = JSON.parse(new TextDecoder().decode(bytes));
-    if (typeof claims !== "object" || claims === null) return null;
-    const aal = (claims as Record<string, unknown>)["aal"];
-    return typeof aal === "string" ? aal : null;
-  } catch {
-    return null;
-  }
+  const aal = claimsOf(accessToken)?.["aal"];
+  return typeof aal === "string" ? aal : null;
 }
 
 function factorsOf(body: unknown): TotpFactor[] {

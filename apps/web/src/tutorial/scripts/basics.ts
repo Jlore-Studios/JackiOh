@@ -1,6 +1,8 @@
 // Lesson 1's coach (SPEC §9.10, R2205000, R2434001): a welcome, then moments that ask rather than tell,
 // and nothing a later lesson teaches. Every pick reads the view and the legal actions (CLAUDE.md rule 7).
 
+import { AI_TUTORIAL, HERO_HEALTH } from "@jackioh/engine/config";
+
 import type { LessonScript } from "../coach.ts";
 import { info, myHand } from "../steps.ts";
 import { finishOf, hitHero, momentOf, tradeUnits, type Pick } from "./kit.ts";
@@ -24,7 +26,8 @@ export const script: LessonScript = {
     info({
       id: "welcome",
       title: "Welcome to the Training Grounds",
-      text: "Your hero is at the bottom and the enemy's is at the top. Bring the enemy hero from 20 health to 0 and you win. You can't lose here, so try things out.",
+      text: "Your hero is at the bottom and the enemy's is at the top. Bring the enemy hero from {enemy} health to 0 and you win. You can't lose here, so try things out.",
+      params: { enemy: AI_TUTORIAL.heroHealth ?? HERO_HEALTH },
     }),
     momentOf({
       id: "afford",
@@ -37,7 +40,8 @@ export const script: LessonScript = {
     momentOf({
       id: "hero",
       title: "The enemy hero",
-      text: "The enemy hero has 20 health. How do you bring it down?",
+      text: "The enemy hero has {enemy} health. How do you bring it down?",
+      params: { enemy: AI_TUTORIAL.heroHealth ?? HERO_HEALTH },
       discovers: ["attack-hero"],
       hints: ["A unit rests the turn it arrives; after that it glows green. Where can it go?", "Drag a green unit onto the enemy hero."],
       pick: hitHero,

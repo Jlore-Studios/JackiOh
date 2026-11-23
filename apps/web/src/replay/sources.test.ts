@@ -18,6 +18,7 @@ import type { PracticeReplay, PracticeSaveStore } from "../practice/saveStore.ts
 import { foldedReplaySteps } from "../test/replay.ts";
 import { ReplayFailure } from "./source.ts";
 import { onlineFailure, onlineReplaySource, openOnlineMatchReplay, practiceFailure, practiceReplaySource } from "./sources.ts";
+import type { PracticeReplayKept } from "./sources.ts";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -40,12 +41,12 @@ function hostOn(saves: PracticeSaveStore): PracticeHost {
   return host;
 }
 
-function config(seed: string): PracticeStartConfig {
-  return { seed, difficulty: "easy", humanSeat: HUMAN, deck: { kind: "random" } };
+function config(seed: string, portraits?: PracticeStartConfig["portraits"]): PracticeStartConfig {
+  return { seed, difficulty: "easy", humanSeat: HUMAN, deck: { kind: "random" }, ...(portraits === undefined ? {} : { portraits }) };
 }
 
-async function concededGame(host: PracticeHost, seed: string): Promise<void> {
-  await host.request({ type: "start", config: config(seed) });
+async function concededGame(host: PracticeHost, seed: string, portraits?: PracticeStartConfig["portraits"]): Promise<void> {
+  await host.request({ type: "start", config: config(seed, portraits) });
   const done = await host.request({ type: "act", action: { type: "concede" } });
   if (done.type !== "snapshot" || done.snapshot.view.result === null) throw new Error("the conceded game did not end");
 }
@@ -133,6 +134,21 @@ describe("the practice source", () => {
     const failure = await failureOf(practiceReplaySource(host, listing).page(0, REPLAY_PAGE_STEPS));
     expect(failure.reason).toBe("error");
     expect(failure.message).toMatch(/in progress/u);
+  });
+
+  it("R3976000 the practice source answers the portraits its summary holds, and null for a kept game named without them", async () => {
+    const host = hostOn(memorySaveStore());
+    await concededGame(host, "replay-source-portraits", { p1: "gary", p2: "shredder" });
+    const [listing] = await listed(host);
+    if (listing === undefined) throw new Error("the conceded game was not kept");
+    expect(listing.portraits).toEqual({ p1: "gary", p2: "shredder" });
+    expect(practiceReplaySource(host, listing).portraits?.()).toEqual({ p1: "gary", p2: "shredder" });
+
+    // Named without them, or with none, the source has none; portraits naming an unknown one are none.
+    expect(practiceReplaySource(host, { game: listing.game, steps: listing.steps }).portraits?.()).toBeNull();
+    expect(practiceReplaySource(host, { game: listing.game, steps: listing.steps, portraits: null }).portraits?.()).toBeNull();
+    const unknown = { game: listing.game, steps: listing.steps, portraits: { p1: "gary", p2: "nobody" } } as unknown as PracticeReplayKept;
+    expect(practiceReplaySource(host, unknown).portraits?.()).toBeNull();
   });
 
   it("reads the worker's refusals by their wording, and anything else as an error", () => {
@@ -235,5 +251,39 @@ describe("the online source", () => {
     const old = onlineReplaySource(TOKEN, listing);
     await old.page(0, REPLAY_PAGE_STEPS);
     expect(old.loadouts?.()).toEqual({ p1: { seat: DEFAULT_CARD_COSMETICS, cards: {} }, p2: { seat: DEFAULT_CARD_COSMETICS, cards: {} } });
+  });
+
+  it("R3976000 an online source answers the first page's portraits, a match id's first page counts, and a page naming none or an unknown one leaves null", async () => {
+    const PORTRAITS = { p1: "gary", p2: "shredder" };
+    const page = (from: number, portraits?: unknown) => ({
+      matchId: "m-1",
+      from,
+      steps: steps.slice(from, from + REPLAY_PAGE_STEPS),
+      total: steps.length,
+      ...(portraits === undefined ? {} : { portraits }),
+    });
+    vi.mocked(getReplaySteps).mockResolvedValueOnce(page(0, PORTRAITS)).mockResolvedValueOnce(page(REPLAY_PAGE_STEPS, PORTRAITS));
+    const source = onlineReplaySource(TOKEN, listing);
+    expect(source.portraits?.()).toBeNull();
+    await source.page(0, REPLAY_PAGE_STEPS);
+    const first = source.portraits?.();
+    expect(first).toEqual(PORTRAITS);
+    // A later page keeps the one object, so the board's props do not change under it.
+    await source.page(REPLAY_PAGE_STEPS, REPLAY_PAGE_STEPS);
+    expect(source.portraits?.()).toBe(first);
+
+    // A finished match's first page, fetched to open it, names them before any later page.
+    vi.mocked(getReplaySteps).mockResolvedValueOnce(page(0, PORTRAITS));
+    const opened = await openOnlineMatchReplay(TOKEN, "m-1");
+    expect(opened.portraits?.()).toEqual(PORTRAITS);
+    expect(getReplaySteps).toHaveBeenCalledTimes(3);
+
+    // An older server's page names none, and a page naming an unknown portrait is read as none.
+    for (const portraits of [undefined, { p1: "gary", p2: "nobody" }, ["gary", "shredder"], "gary"]) {
+      vi.mocked(getReplaySteps).mockResolvedValueOnce(page(0, portraits));
+      const old = onlineReplaySource(TOKEN, listing);
+      await old.page(0, REPLAY_PAGE_STEPS);
+      expect(old.portraits?.(), JSON.stringify(portraits)).toBeNull();
+    }
   });
 });

@@ -79,7 +79,7 @@ func TestScenario(t *testing.T) {
 	out.Set("put", put)
 	gh.PutFile("a/b.txt", "x", "main", "", "m")
 	gh.PutFile("a/c/d.txt", "x", "main", "", "m")
-	gh.CreateOrphanBranch("bot-state", "state.json", "{}", "m", map[string]string{"a": "1", "b": "2"})
+	gh.CreateOrphanBranch("_bot-state", "state.json", "{}", "m", map[string]string{"a": "1", "b": "2"})
 	out.Set("no_branch", ghErr(func() { gh.PutFile("x", "x", "nope", "", "m") }))
 	gh.Runs.Set("2", pyjson.New("id", 2, "status", "queued", "head_sha", "s1"))
 	gh.Runs.Set("1", pyjson.New("id", 1, "status", "queued", "workflow", "x.yml", "head_sha", "s1"))
@@ -124,7 +124,6 @@ func TestScenario(t *testing.T) {
 	out.Set("pin", ghErr(func() { gh.PinIssue("d") }))
 	gh.Commits = []*pyjson.Object{pyjson.New("sha", "a", "author", pyjson.New("login", "jgoetzmann-bot")),
 		pyjson.New("sha", "b", "author", nil), pyjson.New("sha", "c")}
-	gh.Gists = map[string]*pyjson.Object{"g1": pyjson.New("files", pyjson.New("x", pyjson.New("content", "1")))}
 	gh.ArtifactZips[1] = []byte("zip")
 
 	labelNames := []string{}
@@ -201,7 +200,7 @@ func TestScenario(t *testing.T) {
 		"labels", objs(gh.ListLabels()),
 		"issue_types", objs(gh.ListIssueTypes()),
 		"list_dir", gh.ListDir("a", "main"),
-		"list_dir_root", gh.ListDir("", "bot-state"),
+		"list_dir_root", gh.ListDir("", "_bot-state"),
 		"get_file", []any{file, sha},
 		"files", files,
 		"runs_for_sha", objs(gh.RunsForSHA("s1", 30)),
@@ -224,7 +223,6 @@ func TestScenario(t *testing.T) {
 		"repo_info", gh.RepoInfo(), "viewer", gh.Viewer(), "pinned", gh.Pinned,
 		"list_commits", objs(gh.ListCommits("jgoetzmann-bot", 1000)),
 		"list_commits_all", objs(gh.ListCommits("", 2)),
-		"gist", gh.GetGist("g1", false),
 		"artifact", string(gh.DownloadArtifact("1")),
 		"branch_sha", []any{gh.BranchSHA("main"), nope},
 		"required_checks", required,

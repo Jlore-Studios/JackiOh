@@ -79,7 +79,7 @@ import {
   type PendingAddress,
   type Session,
 } from "../net/session.ts";
-import { signOut, signOutLabel, useSigningOut } from "./account.tsx";
+import { signOut, signOutLabel, useSigningOut } from "../auth/signOut.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 import { Wordmark } from "./Wordmark.tsx";
 import { SiteFooter } from "./SiteFooter.tsx";

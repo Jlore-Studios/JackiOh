@@ -11,7 +11,7 @@ tier: RunNodeKind,
  */
 deck: Array<string>, 
 /**
- * The artifacts it carries into the fight: Looming or Overwhelming Presence, a boss's own (DR5).
+ * The artifacts it carries into the fight, a boss's own (DR5); none changes the fight (R3586001).
  */
 artifacts: Array<string>, 
 /**

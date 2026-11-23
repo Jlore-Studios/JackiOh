@@ -105,7 +105,8 @@ export const STARSHIP_DOCK = { moduleShare: 0.22, weldMs: 320, humFull: 8 } as c
  * R3334001: the cinematic, as shares of its hold: the camera pans stern to bow from `panFrom` to `panTo`,
  * the engines light one after another from `enginesFrom` to `enginesTo` (at most `enginesMax`), the name
  * stamps at `stampAt` and the ship climbs out at `climbAt`; the cue outlasts the hold by `tailMs`, into the
- * lift-off. A phone throws `phoneShare` of every particle.
+ * lift-off. A phone throws `phoneShare` of every particle. R4493000: and its camera draws no closer than `phoneZoom`,
+ * so the zoomed picture (a square as big as the window's longer side) stays within FX_LAYER_MAX_SCREENS.
  */
 export const STARSHIP_CINEMATIC = {
   panFrom: 0.06,
@@ -117,6 +118,7 @@ export const STARSHIP_CINEMATIC = {
   enginesMax: 4,
   tailMs: 300,
   phoneShare: 0.5,
+  phoneZoom: 1.15,
 } as const;
 
 /**
@@ -289,11 +291,6 @@ export function starshipUnitOf(view: PlayerView, id: string): { unit: StarshipUn
   return null;
 }
 
-/** R3334002: whether `view` shows `id` as a launched Starship. */
-export function isLaunchedStarship(view: PlayerView, id: string): boolean {
-  return starshipUnitOf(view, id)?.unit.starship.launched !== undefined;
-}
-
 /** R2801000: `side`'s Dormant Starship as the board draws it (a unit, else a backrow Unit), or null. */
 export function dormantStarshipOf(view: PlayerView, side: Side): string | null {
   const sv = view[side];
@@ -370,7 +367,8 @@ function rocketLook(): FlavorLook {
   return paletteLook("Tech/rocket") ?? FLAVOR_LOOKS.Tech;
 }
 
-type Ctx = { i: number; D: number; share: number };
+/** R4493000: `zoomMax`, the closest the cinematic's camera draws (a phone's `phoneZoom`, else Infinity). */
+type Ctx = { i: number; D: number; share: number; zoomMax: number };
 
 /** A burst of the Starship's moments: a phone (`share`) throws fewer particles, never none. */
 function burst(c: Ctx, preset: FxPreset, at: FxAnchor, spread: "point" | "area" | "ring", delayMs: number, tuning: BurstTuning, colors?: readonly string[]): FxCue {
@@ -490,6 +488,7 @@ function cinematicCue(launch: StarshipLaunch, entry: AnimationEntry, view: Playe
   const lit = starshipEnginePoints(ship).slice(0, C.enginesMax);
   const engines: FxTimedPoint[] = lit.map((p, k) => ({ ...share(p), atMs: frac(C.enginesFrom + ((C.enginesTo - C.enginesFrom) * k) / Math.max(1, lit.length - 1), H) }));
   const sparks = c === null ? 0 : Math.max(1, Math.round(tune.sparks * c.share));
+  const zoom = Math.min(tune.zoom, c?.zoomMax ?? tune.zoom);
   return {
     kind: "cinematic",
     art: starshipArtUri(ship),
@@ -498,11 +497,11 @@ function cinematicCue(launch: StarshipLaunch, entry: AnimationEntry, view: Playe
     size,
     tint: tintOf(rocketLook()),
     at: tid(launch.anchor ?? ""),
-    cameraFrom: cameraPoint(stern, tune.zoom),
-    cameraTo: cameraPoint(bow, tune.zoom),
+    cameraFrom: cameraPoint(stern, zoom),
+    cameraTo: cameraPoint(bow, zoom),
     panAtMs: frac(C.panFrom, H),
     panEndMs: frac(C.panTo, H),
-    zoom: tune.zoom,
+    zoom,
     stops,
     engines,
     sparks,
@@ -727,7 +726,7 @@ function planDoctrine(event: Extract<GameEvent, { type: "cardPlayed" }>, view: P
   };
 }
 
-type StarshipEnv = Pick<FxPlanEnv, "intensity"> & Partial<Pick<FxPlanEnv, "bigMoments" | "compact" | "next">>;
+type StarshipEnv = Pick<FxPlanEnv, "intensity"> & Partial<Pick<FxPlanEnv, "bigMoments" | "compact" | "phone" | "next">>;
 
 /**
  * R2801000, R3334000–R3334003: the Starship's cues for a fuse run, a launch, a launched Starship's
@@ -739,7 +738,10 @@ export function planStarship(entry: AnimationEntry, view: PlayerView, env: Stars
   const i = env.intensity;
   const D = entry.durationMs;
   if (!(i > 0) || !(D > 0)) return null;
-  const c: Ctx = { i, D, share: env.compact === true ? STARSHIP_CINEMATIC.phoneShare : 1 };
+  const compact = env.compact === true;
+  // R4493000: a phone either way up (a compact layer is one) caps the cinematic's zoom; only a compact one throws fewer particles.
+  const phone = compact || env.phone === true;
+  const c: Ctx = { i, D, share: compact ? STARSHIP_CINEMATIC.phoneShare : 1, zoomMax: phone ? STARSHIP_CINEMATIC.phoneZoom : Number.POSITIVE_INFINITY };
   if (entry.fuse !== undefined) return planFuse(entry.fuse, entry, view, env.next, c);
   if (entry.launch !== undefined) return planLaunch(entry.launch, entry, view, env, c);
   const first = entry.events[0];

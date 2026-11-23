@@ -5,12 +5,13 @@
 //! 288-card fusion (#998), games that never ended (#2243, R1884003), boards that never settled
 //! (R1884004; #2356, R2197005) and a fused copier's targeting cost that panicked (R1850000).
 //!
-//! The body (a `FUSABLE_UNITS` card: no token, no Immutable card, R23) takes the text as R77 has it
+//! The body (a `FUSABLE_UNITS` card: no token, no Immutable card, R23, R4353000) takes the text as R77 has it
 //! (`fused_into`, R179), plays a fixed script then `PAIR_TURNS` random-policy turns under the invariant
-//! monitor and the fuzz's growth bounds, and fails on a panic, an engine cap, a breach, runaway growth,
-//! an unanswerable prompt or `PAIR_STEP_BOUND` actions. The daily run plays `daily_pair_count` pairs,
-//! `DAILY_PAIR_CYCLE_DAYS` days to the whole walk, drawn from the day's number; a pull request a stride
-//! sample of `PR_PAIRS`, the pinned pairs and a planted looping text that must fail. The clock only
+//! monitor and the fuzz's growth bounds, and fails on a panic, an engine cap (the loop cap's `loopCapped`
+//! among them, R3925000), a breach, runaway growth, an unanswerable prompt or `PAIR_STEP_BOUND` actions.
+//! The daily run plays `daily_pair_count` pairs, `DAILY_PAIR_CYCLE_DAYS` days to the whole walk, drawn
+//! from the day's number; a pull request a stride sample of `PR_PAIRS`, the pinned pairs and a planted
+//! looping text that must fail. The clock only
 //! picks the day's pairs: a pair's game comes from its ids alone, so `--pair` plays a failure again on
 //! any day.
 //!
@@ -288,7 +289,7 @@ struct PairRun {
 
 impl PairRun {
     /// Takes `body` as `seat`, under every check: the step bound, the monitor before and after, the
-    /// engine's own refusal and the growth bounds.
+    /// engine's own refusal, the loop cap (R3925000) and the growth bounds.
     fn step(&mut self, seat: PlayerId, body: ActionBody) -> Result<(), Broke> {
         if self.actions >= PAIR_STEP_BOUND {
             return Err((
@@ -311,6 +312,21 @@ impl PairRun {
         }
         self.state = result.state;
         self.actions += 1;
+        // R3925000: a loop no longer panics; it stops at the loop cap, and this sweep is how a pair's loop
+        // is found, so the cap is a failure here as the panic was.
+        if let Some(GameEvent::LoopCapped { player }) = result
+            .events
+            .iter()
+            .find(|event| matches!(event, GameEvent::LoopCapped { .. }))
+        {
+            return Err((
+                "loop cap",
+                format!(
+                    "\"{action_type}\" by {seat} reached the loop cap for {player}'s interaction (turn {}, R3925000)",
+                    self.state.turn
+                ),
+            ));
+        }
         let mut broken = self.monitor.after(&result.events, &self.state);
         broken.extend(self.monitor.hidden(&self.state));
         broken.extend(self.monitor.unlisted(&self.state));
@@ -666,9 +682,10 @@ mod tests {
 
         let failure =
             play_pair_with(VANILLA, LOOPING, plant).expect_err("a text that loops on its own death settled");
+        // R3925000: the loop stops at the loop cap, where it used to panic.
         assert_eq!(
             failure.stage,
-            "panic",
+            "loop cap",
             "the loop failed some other way: {}",
             failure.report()
         );

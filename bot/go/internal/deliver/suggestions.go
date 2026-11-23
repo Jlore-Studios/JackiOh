@@ -19,18 +19,19 @@ func (x *Deliverer) Suggestions() {
 	if x.Result.Get("status") == "infra" {
 		x.Chain = false
 	}
+	lane := planmod.SurveyLaneOf(x.Plan) // its own record (#4026), or lane 0 for a plan from before
 	if x.Result.Get("status") != "suggested" {
-		// A survey that did not finish gives its slot back: it is due again as before.
+		// A survey that did not finish gives its slot back: it is due again as before, and its
+		// asks wait for the next one.
 		before := pyjson.New("last_run", x.Plan.Get("previous_last_run"),
 			"requested", x.Plan.Truthy("was_requested"),
 			"idle_since", x.Plan.Get("previous_idle_since"))
 
 		unfinished := func(s *pyjson.Object) any {
+			ended := planmod.EndSurvey(s, lane)
 			suggest := s.Obj("suggest")
 			suggest.Update(before)
-			suggest.Set("provider", nil)
-			suggest.Set("run_id", nil)
-			asks.GiveBack(suggest)
+			asks.Add(suggest, planmod.SurveyAsks(ended))
 			return nil
 		}
 
@@ -39,10 +40,7 @@ func (x *Deliverer) Suggestions() {
 		var settled []string
 
 		done := func(s *pyjson.Object) any {
-			suggest := s.Obj("suggest")
-			suggest.Set("provider", nil)
-			suggest.Set("run_id", nil)
-			settled = asks.PopTaken(suggest)
+			settled = planmod.SurveyAsks(planmod.EndSurvey(s, lane))
 			return nil
 		}
 
@@ -78,6 +76,9 @@ func (x *Deliverer) Suggestions() {
 			"Comment `approve` to have it built (the "+
 			"`%s` label works too), and the bot rates its difficulty when "+
 			"it plans it. Comment `reject` to close it without building it.", x.Cfg.BotLogin, config.LabelBuild)
+		if area := x.Plan.Str("area"); area != "" {
+			footer += fmt.Sprintf("\n\nArea: `%s` (`suggestions.areas`).", area) // #4026
+		}
 		labels := []string{config.LabelSuggestion}
 		// Its class sets its priority (#1409); a class with none, or no class, sets nothing.
 		kind := py.OrStr(entry.Get("class"), "")

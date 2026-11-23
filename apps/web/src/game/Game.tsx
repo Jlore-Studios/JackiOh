@@ -20,7 +20,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
   type ReactElement,
   type ReactNode,
 } from "react";
@@ -45,8 +44,8 @@ import DragLayer from "./drag/DragLayer.tsx";
 import OpponentAim from "./aim/OpponentAim.tsx";
 import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
-import { IDLE, answerPlaguePlacement, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
-import { attackOutcomes, hoveredAttack, withOutcomes } from "./attackOutcome.ts";
+import { IDLE, answerPlaguePlacement, boardKeyOf, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
+import { attackOutcomes, hoveredAttack, withOutcomes, type HoveredAttack } from "./attackOutcome.ts";
 import {
   HIDDEN_ID,
   SET_PIECE_SKIP_HINT_MS,
@@ -62,18 +61,19 @@ import {
   type AnimationQueue,
   type SetPieceClaimer,
 } from "./animations.ts";
-import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type ClickTarget, type HeroAside } from "./contract.ts";
+import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type AnimatingMap, type ClickTarget, type Highlight, type HeroAside, type SeatPortraits } from "./contract.ts";
 import { CatalogContext } from "./catalog.ts";
 import { cardMotionLevel } from "./cardMotion.ts";
 import { aimDeal, clearDeal, planOpening, type OpeningPlan } from "./opening.ts";
 import { damageFeel, damageTier, SLAM_LAND_AT, UNIT_SLAM, type DamageTier } from "./damageFeel.ts";
 import { slamSand } from "./SandSurface.tsx";
+import { useSharedView } from "./shareView.ts";
 import { createEntranceResolver, createSlamResolver } from "./slamResolver.ts";
 import TakeoverStill from "./TakeoverStill.tsx";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import { usePhonePortrait } from "./phoneBar.ts";
-import FxLayer from "../fx/FxLayer.tsx";
+import FxLayer, { defaultVisibility } from "../fx/FxLayer.tsx";
 import type { FxVisibility } from "../fx/types.ts";
 import { getFxSettings, useFxSettings } from "../fx/settings.ts";
 import { getAudioEngine } from "../audio/engine.ts";
@@ -89,15 +89,61 @@ import { SHORTCUTS } from "../shortcuts/shortcuts.ts";
 import { isTyping } from "../replay/ReplayToolbar.tsx";
 import "./animations.css";
 import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
-import { defaultVisibility } from "./visibility.ts";
+import { useRootVars, useRootVarValues } from "./rootVars.ts";
 import { useGameStats } from "../stats/useGameStats.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { SidelineStrip } from "../sideline/SidelineStrip.tsx";
 import type { GameSideline } from "../sideline/useSideline.ts";
 
-/** The turn banner, which `Board` does not render: one `turn-banner` (M5-T4, `e2e/support/testids.ts` BANNER). */
-function isTurnEvent(event: GameEvent): event is Extract<GameEvent, { type: "turnStarted" | "turnAutoEnded" }> {
-  return event.type === "turnStarted" || event.type === "turnAutoEnded";
+/** The attribute a mounted Game sets on its parent, the element board.css lays the game screen out by (#3633). */
+export const GAME_HOST_ATTRIBUTE = "data-game-host";
+
+function sameSet(a: ReadonlySet<string> | undefined, b: ReadonlySet<string> | undefined): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined || a.size !== b.size) return false;
+  for (const item of a) if (!b.has(item)) return false;
+  return true;
+}
+
+/** #3633: two highlights that light, select, glow, ring and forecast the same things. */
+export function sameHighlight(a: Highlight, b: Highlight): boolean {
+  if (a === b) return true;
+  if (!sameSet(a.legal, b.legal) || !sameSet(a.selected, b.selected) || !sameSet(a.glow, b.glow) || !sameSet(a.condition, b.condition) || !sameSet(a.counted, b.counted)) return false;
+  return sameOutcomes(a.outcomes, b.outcomes) && sameHoveredAttack(a.hoveredAttack, b.hoveredAttack);
+}
+
+function sameOutcomes(a: Highlight["outcomes"], b: Highlight["outcomes"]): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined || a.size !== b.size) return false;
+  for (const [key, outcome] of a) if (b.get(key) !== outcome) return false;
+  return true;
+}
+
+/** R3615000: two hovered attacks that mark the same attacker and target the same way. */
+function sameHoveredAttack(a: HoveredAttack | undefined, b: HoveredAttack | undefined): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined) return false;
+  return a.attacker === b.attacker && a.target === b.target && a.strikesBack === b.strikesBack && a.overflowOnto === b.overflowOnto;
+}
+
+/**
+ * The turn banner, which `Board` does not render: one `turn-banner` (M5-T4, `e2e/support/testids.ts` BANNER). R3910000: the
+ * events it speaks for are the turn's start, its end by no moves left, its being cut short and the AI's taking it; R3925000:
+ * and a loop stopped at the loop cap.
+ */
+function isTurnEvent(
+  event: GameEvent,
+): event is Extract<
+  GameEvent,
+  { type: "turnStarted" | "turnAutoEnded" | "turnCutShort" | "autopilotEngaged" | "loopCapped" }
+> {
+  return (
+    event.type === "turnStarted" ||
+    event.type === "turnAutoEnded" ||
+    event.type === "turnCutShort" ||
+    event.type === "autopilotEngaged" ||
+    event.type === "loopCapped"
+  );
 }
 
 function bannerText(
@@ -108,6 +154,10 @@ function bannerText(
 ): string | null {
   if (view.result !== null) return t("Game over");
   if (lastType === "turnAutoEnded") return t("No moves left. Turn ended.");
+  // R3910000: the words the effects layer paints (fx/constants.ts), said by the board so they reach a player with the effects Off.
+  if (lastType === "turnCutShort") return t("Turn cut short");
+  if (lastType === "autopilotEngaged") return t("The AI takes the turn");
+  if (lastType === "loopCapped") return t("Loop stopped");
   // #37: while a `turnStarted` entry plays, the board is still the view from before the turn began,
   // so its banner names the turn that is starting. R845: an extra turn's banner says so.
   if (startedFor !== undefined) {
@@ -146,6 +196,12 @@ export type GameProps = {
   autoEndTurn?: boolean;
   /** Server-synchronised route clock, rendered by Board beside End Turn rather than as floating HUD. */
   turnClock?: ReactNode;
+  /** #3727: End turn's words, already translated, where ending the turn sends it on (a daily game's); absent, "End turn". */
+  endTurnLabel?: string;
+  /** R3727003: false on a daily game's board: its question sequence shows no 60-second countdown; absent, shown (R1563006). */
+  sequenceClock?: boolean;
+  /** #3727: why the game ended in the route's words, already translated, over the engine reason's (a daily game's "Lost on time"). */
+  resultReason?: string;
   /** Route connection status, rendered on the board rail rather than above it. */
   matchStatus?: ReactNode;
   /** Route navigation and match-series information, mounted in the board rail. */
@@ -161,7 +217,7 @@ export type GameProps = {
   heroAside?: HeroAside;
   /** A route warning mounted in the board rail. */
   boardNotice?: ReactNode;
-  /** The route's emote session (R643–R644). Absent, the heroes draw default portraits and open no menus. */
+  /** The route's emote session (R643–R644). Absent, the heroes draw `portraits` or the default and open no menus. */
   emotes?: GameEmotes;
   /** R2990004: the watchers' emotes, a networked route's `useSideline`. Absent, no sideline strip. */
   sideline?: GameSideline;
@@ -173,6 +229,8 @@ export type GameProps = {
   deckCosmetics?: DeckCosmetics | null;
   /** R1834004: both seats' frozen loadouts (R1834002): a seat not wearing the device's picks wears its own. */
   loadouts?: SeatLoadouts | null;
+  /** R3976000: each seat's portrait on a board with no emote session (a replay's), drawn read-only; null or absent, the default. */
+  portraits?: SeatPortraits | null;
   /** R738: `emit` sends this seat's aim as it changes; `opponent` is the opponent's as last relayed. */
   aim?: GameAim;
   /** R2739001: `emit` sends the option of this seat's card picker under its pointer; `opponent` is theirs as last relayed. */
@@ -247,7 +305,7 @@ const NOTHING_LEGAL: readonly ActionBody[] = [];
 const ONCE_PER_VIEW: ReadonlySet<ActionBody["type"]> = new Set(["endTurn", "answer", "mulligan"]);
 
 export default function Game({
-  view,
+  view: incoming,
   legal: offered,
   onAction,
   error,
@@ -260,6 +318,9 @@ export default function Game({
   openResultTestId,
   autoEndTurn: pinnedAutoEndTurn,
   turnClock,
+  endTurnLabel,
+  sequenceClock = true,
+  resultReason,
   matchStatus,
   boardRail,
   phoneRailTop = false,
@@ -271,6 +332,7 @@ export default function Game({
   wearCosmetics = false,
   deckCosmetics = null,
   loadouts = null,
+  portraits = null,
   aim,
   choiceHover,
   replay = false,
@@ -286,6 +348,9 @@ export default function Game({
   concedeBody,
 }: GameProps): ReactElement {
   useLocale();
+  // #3609: a view is fresh JSON, so the cards it holds unchanged are made the objects the last one held
+  // (shareView.ts); every card below keys its drawing on its object.
+  const view = useSharedView(incoming);
   // R2118000: no command menu over a board.
   useMarkBoardShown();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
@@ -300,11 +365,26 @@ export default function Game({
     root.current = element;
     setHost(element);
   }, []);
+  // #3633: the shell's layout keys off this instead of `:has(> .game)`, whose universal tail made
+  // Blink restyle the whole document on every effect (board.css, the game screen).
+  useLayoutEffect(() => {
+    const parent = host?.parentElement;
+    if (!parent) return;
+    parent.setAttribute(GAME_HOST_ATTRIBUTE, "true");
+    return () => {
+      // React runs this before it detaches `host`, so only another Game in the same parent keeps the mark.
+      const another = Array.from(parent.children).some((child) => child !== host && child.classList.contains("game"));
+      if (!another) parent.removeAttribute(GAME_HOST_ATTRIBUTE);
+    };
+  }, [host]);
+  // #3633: the root's custom properties, which board.css and animations.css read (rootVars.ts).
+  const vars = useRootVars(root);
   /** The seat whose Concede control asked; a hotseat hand-over or the game's end closes it. */
   const [concedeFor, setConcedeFor] = useState<PlayerId | null>(null);
   /**
-   * R849000: the engine's reason a click on your own unit offered no attack (`UnitView.attackReason`),
-   * held with the view it was read from so it disappears when the board shows another view.
+   * R849000: the engine's reason a click on your own unit offered no attack (`UnitView.attackReason`,
+   * else R3821000's `switchReason`), held with the view it was read from so it disappears when the
+   * board shows another view.
    */
   const [notice, setNotice] = useState<{ text: string; view: PlayerView } | null>(null);
   /**
@@ -352,6 +432,8 @@ export default function Game({
   const portrait = usePhonePortrait();
   const railTop = phoneRailTop && portrait && boardRail !== undefined && boardRail !== null;
   const reducedMotion = useSetting("reduceMotion") || osReducesMotion;
+  // #3633: the board's drag setting, which prompt.css and drag.css read off the game root (Board draws `data-drag` too).
+  const dragToPlay = useSetting("dragToPlay");
   // #3347: how much of the card-motion flourishes the settings allow (game/cardMotion.ts): board.css reads it as `data-card-motion`.
   const [fx] = useFxSettings();
   const motion = cardMotionLevel(reducedMotion || fx.motion === "reduce", fx.intensity);
@@ -531,30 +613,16 @@ export default function Game({
     };
   }, [runner]);
 
-  // #3347: the riffle's and the deal's times, on the root where board.css reads them. Written here and not
-  // in the root's `style` (a conditional object below), so a render never drops them mid-motion.
-  useLayoutEffect(() => {
-    const element = root.current;
-    if (element === null) return undefined;
-    const riffle = inFlight?.riffle;
-    const props: [string, string][] =
-      opening !== null
-        ? [
-            ["--riffle-ms", `${String(opening.riffleMs)}ms`],
-            ["--riffle-delay", "0ms"],
-            ["--deal-ms", `${String(opening.flightMs)}ms`],
-          ]
-        : riffle === undefined
-          ? []
-          : [
-              ["--riffle-ms", `${String(riffle.ms)}ms`],
-              ["--riffle-delay", `${String(riffle.delayMs)}ms`],
-            ];
-    for (const [name, value] of props) element.style.setProperty(name, value);
-    return () => {
-      for (const [name] of props) element.style.removeProperty(name);
-    };
-  }, [inFlight, opening]);
+  // #3347: the riffle's and the deal's times, where board.css reads them. #3633: written onto their
+  // readers rather than the root's own style (rootVars.ts), with the entry's below.
+  const riffle = inFlight?.riffle;
+  const riffleVars: Record<string, string> =
+    opening !== null
+      ? { "--riffle-ms": `${String(opening.riffleMs)}ms`, "--riffle-delay": "0ms", "--deal-ms": `${String(opening.flightMs)}ms` }
+      : riffle === undefined
+        ? {}
+        : { "--riffle-ms": `${String(riffle.ms)}ms`, "--riffle-delay": `${String(riffle.delayMs)}ms` };
+  useRootVarValues(vars, riffleVars);
   // The deal's aim is read from the hands as they are laid out, so after the render that shows `data-dealing`.
   useLayoutEffect(() => {
     if (opening !== null && root.current !== null) aimDeal(root.current, opening);
@@ -704,23 +772,31 @@ export default function Game({
     [pickUp],
   );
 
+  // #3633: what a click reads, as the board last drew it. The handler reads it here rather than closing
+  // over it, so it stays one function while the board shows one view, and the cards it is handed to
+  // (Card.tsx, sameCardProps) are not drawn again whenever the shown view changes.
+  const clickReads = useRef({ shown, legal, interaction });
+  useLayoutEffect(() => {
+    clickReads.current = { shown, legal, interaction };
+  });
   const handleClick = useCallback(
     (target: ClickTarget) => {
+      const { shown: board, legal: moves, interaction: building } = clickReads.current;
       // R821000: "Place N Plague Counters" is answered by a click on the board, not from a list.
-      const placement = answerPlaguePlacement(shown, legal, shown.pending, target);
+      const placement = answerPlaguePlacement(board, moves, board.pending, target);
       if (placement !== null) {
         dispatch(placement);
         return;
       }
-      const next = onClickTarget(shown, legal, interaction, target);
+      const next = onClickTarget(board, moves, building, target);
       setInteraction(next.interaction);
-      setNotice(next.notice === undefined ? null : { text: next.notice, view: shown });
-      if (next.interaction !== interaction && next.interaction.stage === "attacking") {
+      setNotice(next.notice === undefined ? null : { text: next.notice, view: board });
+      if (next.interaction !== building && next.interaction.stage === "attacking") {
         pickUp(next.interaction.attackerId);
       }
       if (next.action !== undefined) onAction(next.action);
     },
-    [shown, legal, interaction, onAction, dispatch, pickUp],
+    [onAction, dispatch, pickUp],
   );
 
   const handleControl = useCallback(
@@ -753,7 +829,7 @@ export default function Game({
   // Keyed on the remembered shown key, never `shown` vs `view`: while an animation holds the
   // board back, `shown` is old and `view` is new, and comparing them would drop the selection
   // mid-animation on every animated turn change.
-  const shownKey = `${String(shown.turn)}:${shown.active}:${shown.viewer}`;
+  const shownKey = boardKeyOf(shown);
   if (selectionKey !== shownKey) {
     setSelectionKey(shownKey);
     if (interaction.stage !== "idle") setInteraction(IDLE);
@@ -805,10 +881,15 @@ export default function Game({
     [replay, showOutcomes, shown, view, interaction, outcomes, hoveredTarget],
   );
   // A replay lights nothing: not even the cells an open prompt in the view names (`pendingHighlight`).
-  const highlight = useMemo(
+  const computedHighlight = useMemo(
     () => withOutcomes(replay ? NO_HIGHLIGHT : highlightFor(shown, legal, interaction), outcomes, hovered),
     [replay, shown, legal, interaction, outcomes, hovered],
   );
+  // #3633: the highlight the cards were drawn with while it lights the same things, so a new view that
+  // only offers its moves later (`legal` held back above) draws no card again (Card.tsx, sameCardProps).
+  const keptHighlight = useRef(computedHighlight);
+  if (keptHighlight.current !== computedHighlight && !sameHighlight(keptHighlight.current, computedHighlight)) keptHighlight.current = computedHighlight;
+  const highlight = keptHighlight.current;
   const animated = useMemo(
     () => [...burst, ...lingering].map((entry) => ({ frames: entry.frames, events: entry.events })),
     [burst, lingering],
@@ -852,7 +933,13 @@ export default function Game({
   // The newest turn event the burst has reached: the banner must not fall back to the held-back
   // view's turn before the board catches up (#37).
   const burstTurn = burst.flatMap((entry) => entry.events).findLast(isTurnEvent);
-  const lastTurnEvent = burstTurn ?? [...shown.events].reverse().find(isTurnEvent);
+  // The standing view's window spans several actions: an autopilotEngaged in it may be long past (an aura hands the turn
+  // back, R1844000), so only the burst's own entries say the AI plays now (R3910000); a loopCapped likewise speaks only
+  // while its burst plays (R3925000), the turn's own words standing after it.
+  const standingTurn = [...shown.events]
+    .reverse()
+    .find((event) => isTurnEvent(event) && event.type !== "autopilotEngaged" && event.type !== "loopCapped");
+  const lastTurnEvent = burstTurn ?? standingTurn;
   const banner = bannerText(
     shown,
     lastTurnEvent?.type,
@@ -861,6 +948,25 @@ export default function Game({
   );
   // R1295000: the seat whose own cards wear the device's picks, for the layers drawn over the board.
   const wearer = wearCosmetics && !replay ? shown.viewer : null;
+  // The entry's times for board.css: its numbers' scale, its slam's, its set piece's hold. #3633: written
+  // onto their readers (rootVars.ts); on the root's own style they restyled the whole game as they changed.
+  useRootVarValues(vars, {
+    ...(impactFeel === undefined ? {} : {
+      "--impact-number-scale": String(impactFeel.numberScale),
+      "--impact-number-linger": `${String(impactFeel.numberLingerMs)}ms`,
+    }),
+    ...(inFlightSlam === undefined ? {} : {
+      "--slam-anticipation": `${String(inFlightSlam.anticipationMs)}ms`,
+      "--slam-land-ms": `${String(Math.round((inFlightMs - inFlightLead) * SLAM_LAND_AT))}ms`,
+    }),
+    ...(setPiece === undefined ? {} : {
+      "--set-piece-hold": `${String(setPiece.holdMs)}ms`,
+      "--set-piece-skip-delay": `${String(SET_PIECE_SKIP_HINT_MS)}ms`,
+    }),
+    ...(takeoverHold <= 0 ? {} : {
+      "--takeover-land-ms": `${String(Math.round(inFlightLead + (inFlightMs - inFlightLead) * SLAM_LAND_AT))}ms`,
+    }),
+  });
 
   return (
     <div
@@ -881,26 +987,14 @@ export default function Game({
       data-dealing={opening !== null && motion === "full" ? "true" : undefined}
       data-riffle={opening !== null ? "you opponent" : inFlight?.riffle?.sides.join(" ")}
       data-takeover={takeoverHold > 0 ? "mythic" : undefined}
+      // #3633: what board.css, animations.css, drag.css and prompt.css read off the game root, where they
+      // read `.game:has(...)`: a card's play animating, the drag setting and the game's end.
+      data-card-played={inFlight?.type === "cardPlayed" || [...(animating as AnimatingMap).values()].includes("cardPlayed") ? "true" : undefined}
+      data-drag={dragToPlay ? "on" : "off"}
+      data-game-over={shown.result !== null ? "true" : undefined}
       data-set-piece={setPiece?.key}
       data-set-piece-shape={setPieceShape}
       data-set-piece-sides={setPieceShape === undefined ? undefined : inFlight?.wipe?.sides.join(" ")}
-      style={impactFeel === undefined && inFlightSlam === undefined && setPiece === undefined ? undefined : {
-        ...(impactFeel === undefined ? {} : {
-          "--impact-number-scale": String(impactFeel.numberScale),
-          "--impact-number-linger": `${String(impactFeel.numberLingerMs)}ms`,
-        }),
-        ...(inFlightSlam === undefined ? {} : {
-          "--slam-anticipation": `${String(inFlightSlam.anticipationMs)}ms`,
-          "--slam-land-ms": `${String(Math.round((inFlightMs - inFlightLead) * SLAM_LAND_AT))}ms`,
-        }),
-        ...(setPiece === undefined ? {} : {
-          "--set-piece-hold": `${String(setPiece.holdMs)}ms`,
-          "--set-piece-skip-delay": `${String(SET_PIECE_SKIP_HINT_MS)}ms`,
-        }),
-        ...(takeoverHold <= 0 ? {} : {
-          "--takeover-land-ms": `${String(Math.round(inFlightLead + (inFlightMs - inFlightLead) * SLAM_LAND_AT))}ms`,
-        }),
-      } as CSSProperties}
     >
       {inFlight === null ? null : (
         <span data-testid="animation-queue" data-animating={inFlight.type} hidden aria-hidden="true" />
@@ -929,6 +1023,7 @@ export default function Game({
         enemyLabel={enemyLabel}
         controlExtras={controlExtras}
         turnClock={turnClock}
+        endTurnLabel={endTurnLabel}
         matchStatus={matchStatus}
         boardRail={railTop ? undefined : boardRail}
         heroAside={heroAside}
@@ -967,6 +1062,7 @@ export default function Game({
         onClick={handleClick}
         onControl={handleControl}
         emotes={heroEmotes}
+        portraits={portraits}
       />
       {/* R502: the effects read the newest view for a number no event carries, and the showcase holds a
           cast on draw up as the runner reaches it. */}
@@ -997,6 +1093,7 @@ export default function Game({
           lesson={lesson}
           // R2211000: a replay's prompt is drawn as offered and sends nothing.
           readOnly={replay}
+          sequenceClock={sequenceClock}
           // R2739001: hovers go both ways until the game ends, as aims do.
           choiceHover={shown.result === null ? choiceHover : undefined}
           // Cancel backs out of a play still being built (R81). An engine prompt has paused the game
@@ -1016,7 +1113,15 @@ export default function Game({
         />
       )}
 
-      {replay || !tradeBar ? null : <TradeBar container={host} view={shown} legal={legal} onTrade={dispatch} />}
+      {replay || !tradeBar ? null : (
+        <TradeBar
+          container={host}
+          view={shown}
+          legal={legal}
+          onTrade={dispatch}
+          onRefused={(reason) => setNotice({ text: reason, view: shown })}
+        />
+      )}
       {sideline === undefined ? null : <SidelineStrip sideline={sideline} />}
 
       {/* R1834004: the opponent's revealed hand (R434) wears their seat's loadout, as their side does. */}
@@ -1027,6 +1132,7 @@ export default function Game({
             viewer={shown.viewer}
             form={resultForm}
             actions={resultActions}
+            reasonText={resultReason}
             animating={animating.get(testid.result)}
             theirHand={theirHandOf(shown)}
             onOpenResult={onOpenResult}

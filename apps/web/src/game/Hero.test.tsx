@@ -33,15 +33,22 @@ describe("R987 the hero's Luck badge", () => {
     const { unmount } = render(
       withCatalog(<Hero view={baseView({ you: emptySide("p1", { luck: 1 }) })} side="you" />),
     );
+    // #4251: Luck rides the tray as a labelled chip, outside the overflow list, not on the
+    // portrait under the health badge.
+    const tray = screen.getByTestId("hero-counters-you");
     const badge = screen.getByTestId("hero-luck");
-    expect(badge.textContent).toBe("1");
+    expect(tray.contains(badge)).toBe(true);
+    expect(badge.textContent).toBe("Luck 1");
     expect(badge.getAttribute("data-luck")).toBe("1");
     expect(badge.getAttribute("title")).toBe(
       "Luck 1: every roll your cards make that keeps a best rolls 1 more times",
     );
+    expect(badge).toHaveAccessibleName("Luck 1");
+    expect(badge.closest('[data-testid^="tray-list-"]')).toBeNull();
     unmount();
     render(withCatalog(<Hero view={baseView()} side="you" />));
     expect(screen.queryByTestId("hero-luck")).toBeNull();
+    expect(screen.queryByTestId("hero-counters-you")).toBeNull();
   });
 });
 
@@ -260,6 +267,40 @@ describe("#2877 a used Heroic Power's mark is an overlay on a fixed-width chip",
     // B45: no seat-wide raise — only the tray itself carries the popover level, so a lifted
     // card's name never slides under a seat.
     expect(boardCss).not.toMatch(/\.seat:has\(\.hero-tray\)/);
+  });
+});
+
+describe("R3540005 the hero's Burn and Toxic badges", () => {
+  it("R3540005 the hero's Burn and Toxic show on either seat above 0, and nothing at none", () => {
+    const counted = { health: 30, armor: 0, powers: [], power: null, burn: 6, toxic: 2 };
+    const view = baseView({
+      you: emptySide("p1", { hero: counted }),
+      opponent: emptySide("p2", { hand: { count: 4 }, hero: counted }),
+    });
+    for (const side of ["you", "opponent"] as const) {
+      const { unmount } = render(withCatalog(<Hero view={view} side={side} />));
+      // #4251: Burn and Toxic ride the tray as labelled chips, outside the overflow list, not on
+      // the portrait under the Armor badge.
+      const tray = document.querySelector(`[data-testid="hero-counters-${side}"]`);
+      expect(tray).not.toBeNull();
+      const burn = tray?.querySelector(".hero-burn[data-burn='6']");
+      const toxic = tray?.querySelector(".hero-toxic[data-toxic='2']");
+      expect(burn?.textContent).toBe("Burn 6");
+      expect(burn?.getAttribute("title")).toBe("Burn counters");
+      expect(burn?.getAttribute("aria-label")).toBe("Burn 6");
+      expect(toxic?.textContent).toBe("Toxic 2");
+      expect(toxic?.getAttribute("title")).toBe("Toxic counters");
+      expect(toxic?.getAttribute("aria-label")).toBe("Toxic 2");
+      expect(burn?.closest('[data-testid^="tray-list-"]')).toBeNull();
+      unmount();
+    }
+    for (const side of ["you", "opponent"] as const) {
+      const { unmount } = render(withCatalog(<Hero view={baseView()} side={side} />));
+      expect(document.querySelector(".hero-burn")).toBeNull();
+      expect(document.querySelector(".hero-toxic")).toBeNull();
+      expect(document.querySelector(`[data-testid="hero-counters-${side}"]`)).toBeNull();
+      unmount();
+    }
   });
 });
 

@@ -44,7 +44,6 @@ import {
   getCollection,
   getDecks,
   getMe,
-  getOpenRooms,
   getOwnRank,
   getPopulation,
   type DecksResponse,
@@ -69,7 +68,6 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     getCollection: vi.fn(),
     getPopulation: vi.fn(),
     getOwnRank: vi.fn(),
-    getOpenRooms: vi.fn(),
   };
 });
 vi.mock("../net/navigate.ts", async (importOriginal) => {
@@ -309,7 +307,7 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     expect(faceDownLabel(2)).toBe("Face-down trap, (2) Cost");
     expect(costPhrase(0)).toBe("(0) Cost");
 
-    render(<ManaCurve cardIds={["core-002", "core-019"]} catalog={{ version: "v", cards: CATALOG }} />);
+    render(<ManaCurve cardIds={["core-001", "core-019"]} catalog={{ version: "v", cards: CATALOG }} />);
     const curve = screen.getByRole("img", { name: /^Mana curve/ });
     expect(curve.getAttribute("aria-label")).toContain("(2) Cost: 1");
     expect(curve.getAttribute("aria-label")).toContain("(3) Cost: 1");
@@ -343,23 +341,26 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     vi.mocked(getOwnRank).mockRejectedValue(new Error("the rank is not this spec's subject"));
     vi.mocked(enqueue).mockResolvedValue({ ticketId: "tk", status: "open", matchId: null, seriesId: null, mode: "bo1" });
     vi.mocked(dequeue).mockResolvedValue({ cancelled: true });
-    vi.mocked(getOpenRooms).mockResolvedValue({ rooms: [] });
 
     render(<PlayRoute token="token" />);
+    // R3729000: the mode's card opens its panel, which holds Find a match.
+    await screen.findByTestId(playTestid.hub);
+    fireEvent.click(screen.getByTestId(playModeTestid("bo1")));
     await screen.findByTestId(playTestid.deckSelect);
     await waitFor(() => {
-      expect(screen.getByTestId(playModeTestid("bo1")).closest("label")).toHaveTextContent("Usually under 50 s");
+      expect(screen.getByTestId(playModeTestid("bo1")).closest("button")).toHaveTextContent("Usually under 50 s");
     });
     expect(screen.getByTestId(playTestid.recentGames)).toHaveTextContent("97 games played in the last hour");
-    const box = screen.getByRole("region", { name: "Find a match" });
+    const box = screen.getByTestId(playTestid.queuePanel);
     const COUNTS = /Usually under|games played|\b(97|50)\b/;
     expect(box).not.toHaveTextContent(COUNTS);
     fireEvent.click(within(box).getByTestId(playTestid.queue));
     const status = await screen.findByTestId(playTestid.status);
     expect(status).toHaveTextContent(`In the ${MODE_LABEL.bo1} queue.`);
     expect(status).not.toHaveTextContent(COUNTS);
-    expect(within(box).getByTestId(playTestid.searching)).toHaveTextContent(`Looking for a ${MODE_LABEL.bo1} opponent`);
-    expect(box).not.toHaveTextContent(COUNTS);
+    const searching = screen.getByRole("region", { name: "Find a match" });
+    expect(within(searching).getByTestId(playTestid.searching)).toHaveTextContent(`Looking for a ${MODE_LABEL.bo1} opponent`);
+    expect(searching).not.toHaveTextContent(COUNTS);
     vi.mocked(getMe).mockReset();
 
     const lobbyCss = readFileSync(join(HERE, "../routes/lobby.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");

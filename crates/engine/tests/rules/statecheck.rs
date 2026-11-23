@@ -7,15 +7,9 @@ use jackioh_engine::effects::health::set_stats_all;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::token_def;
-use crate::rules::fixtures::harness::{Bench, both, events_of_type, ids, json_of, new_game, put, slot};
-
-fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no instance {id}"))
-}
-
-fn card_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no instance {id}"))
-}
+use crate::rules::fixtures::harness::{
+    Bench, both, events_of_type, ids, json_of, live, live_mut, new_game, put, slot,
+};
 
 fn instance_ids(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
     events_of_type(events, kind)
@@ -27,17 +21,6 @@ fn instance_ids(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
             _ => None,
         })
         .collect()
-}
-
-/// The text of a caught panic.
-fn panic_text(payload: Box<dyn std::any::Any + Send>) -> String {
-    if let Some(text) = payload.downcast_ref::<String>() {
-        text.clone()
-    } else if let Some(text) = payload.downcast_ref::<&str>() {
-        (*text).to_string()
-    } else {
-        String::new()
-    }
 }
 
 // Fixture effects: the three verbs these tests need.
@@ -351,7 +334,7 @@ fn game(seed: &str) -> GameState {
 fn lethal_damage(state: &mut GameState, id: &str) {
     let unit = find_instance(state, id).unwrap_or_else(|| panic!("no instance {id}"));
     let max_health = unit_view(state, unit).max_health;
-    card_mut(state, id).damage = max_health;
+    live_mut(state, id).damage = max_health;
 }
 
 fn hero_pings(events: &[GameEvent]) -> Vec<Option<String>> {
@@ -468,11 +451,15 @@ mod the_state_check_m2_t5 {
             card_at(&state, slot(PlayerId::P1, Row::Units, 1)).map(|c| c.id.clone()),
             Some(reborner.id.clone())
         );
-        let view = unit_view(&state, card(&state, &reborner.id));
+        let view = unit_view(&state, &live(&state, &reborner.id));
         assert_eq!(view.max_health, 2);
         assert_eq!(view.health, 1);
-        assert!(!unit_has(&state, card(&state, &reborner.id), KeywordKind::Reborn));
-        assert_eq!(card(&state, &reborner.id).reborn_spent, Some(true));
+        assert!(!unit_has(
+            &state,
+            &live(&state, &reborner.id),
+            KeywordKind::Reborn
+        ));
+        assert_eq!(live(&state, &reborner.id).reborn_spent, Some(true));
         assert_eq!(state.reserved.len(), 0);
         assert_eq!(state.players.p1.graveyard.len(), 0);
         // A Reborn unit only passes through the graveyard, so it reports no stay there (§4.5 step 4).
@@ -483,7 +470,7 @@ mod the_state_check_m2_t5 {
         );
 
         // R8: the second death fires Death again, and this time the unit stays dead.
-        card_mut(&mut state, &reborner.id).damage += 1;
+        live_mut(&mut state, &reborner.id).damage += 1;
         let mut again = Bench::new(&state);
         state_check(&mut again.sink(&mut state));
         let again = again.events;
@@ -554,11 +541,11 @@ mod the_state_check_m2_t5 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        card_mut(&mut state, &warded.id).position = Some(Position::Def);
+        live_mut(&mut state, &warded.id).position = Some(Position::Def);
         // R347: its printed Taunt, and Defense Position's, give way to its Indestructible.
-        assert!(!unit_has(&state, card(&state, &warded.id), KeywordKind::Taunt));
+        assert!(!unit_has(&state, &live(&state, &warded.id), KeywordKind::Taunt));
 
-        card_mut(&mut state, &warded.id).marked_destroyed = Some(true);
+        live_mut(&mut state, &warded.id).marked_destroyed = Some(true);
         let mut sink = Bench::new(&state);
         state_check(&mut sink.sink(&mut state));
         let events = sink.events;
@@ -567,13 +554,13 @@ mod the_state_check_m2_t5 {
             card_at(&state, slot(PlayerId::P1, Row::Units, 1)).map(|c| c.id.clone()),
             Some(warded.id.clone())
         );
-        assert_ne!(card(&state, &warded.id).marked_destroyed, Some(true));
+        assert_ne!(live(&state, &warded.id).marked_destroyed, Some(true));
         assert_eq!(
-            unit_view(&state, card(&state, &warded.id)).position,
+            unit_view(&state, &live(&state, &warded.id)).position,
             Position::Atk
         );
-        assert!(!unit_has(&state, card(&state, &warded.id), KeywordKind::Taunt));
-        assert_eq!(card(&state, &warded.id).taunt_suppressed_turn, Some(3));
+        assert!(!unit_has(&state, &live(&state, &warded.id), KeywordKind::Taunt));
+        assert_eq!(live(&state, &warded.id).taunt_suppressed_turn, Some(3));
         assert_eq!(
             json_of(events_of_type(&events, GameEventType::PositionSwitched)),
             json!([{ "type": "positionSwitched", "instanceId": warded.id, "position": "ATK" }])
@@ -586,7 +573,7 @@ mod the_state_check_m2_t5 {
         // and no `keywordGranted … lost` is reported (R46).
         assert!(events_of_type(&events, GameEventType::KeywordGranted).is_empty());
         state.turn = 4;
-        assert!(!unit_has(&state, card(&state, &warded.id), KeywordKind::Taunt));
+        assert!(!unit_has(&state, &live(&state, &warded.id), KeywordKind::Taunt));
     }
 
     #[test]
@@ -615,10 +602,10 @@ mod the_state_check_m2_t5 {
             json!({}),
         );
         // Damage taken before it became Indestructible: health is negative, max health is not.
-        card_mut(&mut state, &survivor.id).damage = 10;
+        live_mut(&mut state, &survivor.id).damage = 10;
 
-        assert_eq!(unit_view(&state, card(&state, &dying.id)).max_health, 0);
-        let survivor_view = unit_view(&state, card(&state, &survivor.id));
+        assert_eq!(unit_view(&state, &live(&state, &dying.id)).max_health, 0);
+        let survivor_view = unit_view(&state, &live(&state, &survivor.id));
         assert_eq!(survivor_view.max_health, 4);
         assert_eq!(survivor_view.health, -6);
 
@@ -647,7 +634,7 @@ mod the_state_check_m2_t5 {
             card_at(&state, slot(PlayerId::P2, Row::Units, 1)).map(|c| c.id.clone()),
             Some(survivor.id.clone())
         );
-        assert_eq!(unit_view(&state, card(&state, &survivor.id)).health, -6);
+        assert_eq!(unit_view(&state, &live(&state, &survivor.id)).health, -6);
     }
 
     #[test]
@@ -757,7 +744,7 @@ mod the_state_check_m2_t5 {
             json!({}),
         );
         {
-            let live = card_mut(&mut state, &crier.id);
+            let live = live_mut(&mut state, &crier.id);
             live.buffs = AttackHealth { attack: 3, health: 3 };
             live.granted_keywords = vec![Keyword::Taunt];
             live.position = Some(Position::Def);
@@ -773,17 +760,17 @@ mod the_state_check_m2_t5 {
             card_at(&state, slot(PlayerId::P1, Row::Units, 1)).map(|c| c.id.clone()),
             Some(crier.id.clone())
         );
-        let view = unit_view(&state, card(&state, &crier.id));
+        let view = unit_view(&state, &live(&state, &crier.id));
         assert_eq!(view.attack, 2);
         assert_eq!(view.max_health, 2);
         assert_eq!(view.health, 1);
-        assert!(!unit_has(&state, card(&state, &crier.id), KeywordKind::Reborn));
-        assert!(!unit_has(&state, card(&state, &crier.id), KeywordKind::Taunt));
+        assert!(!unit_has(&state, &live(&state, &crier.id), KeywordKind::Reborn));
+        assert!(!unit_has(&state, &live(&state, &crier.id), KeywordKind::Taunt));
         assert_eq!(
-            card(&state, &crier.id).buffs,
+            live(&state, &crier.id).buffs,
             AttackHealth { attack: 0, health: 0 }
         );
-        assert_eq!(card(&state, &crier.id).position, Some(Position::Atk));
+        assert_eq!(live(&state, &crier.id).position, Some(Position::Atk));
         // The Cry would have hit the enemy hero for 5; a Reborn return never fires it (R1, §4.5).
         assert_eq!(state.players.p2.hero.health, enemy_hero);
         assert_eq!(events_of_type(&events, GameEventType::Damage).len(), 0);
@@ -805,7 +792,7 @@ mod the_state_check_m2_t5 {
             json!({}),
         );
         {
-            let live = card_mut(&mut state, &token.id);
+            let live = live_mut(&mut state, &token.id);
             live.stats_override = Some(AttackHealth { attack: 5, health: 5 });
             live.armor_override = Some(2);
             live.granted_keywords.push(Keyword::Reborn);
@@ -824,13 +811,13 @@ mod the_state_check_m2_t5 {
             (set_stats_all(json_as(json!({ "side": "any", "attack": 3, "health": 3 }))).apply)(&mut ctx);
         }
         assert_eq!(
-            card(&state, &token.id).stats_override,
+            live(&state, &token.id).stats_override,
             Some(AttackHealth { attack: 3, health: 3 })
         );
         lethal_damage(&mut state, &token.id);
         state_check(&mut sink.sink(&mut state));
 
-        let reborn = card(&state, &token.id);
+        let reborn = &live(&state, &token.id);
         assert_eq!(
             reborn.stats_override,
             Some(AttackHealth { attack: 5, health: 5 }),
@@ -927,7 +914,7 @@ mod the_state_check_m2_t5 {
             slot(PlayerId::P1, Row::Backrow, 2),
             json!({}),
         );
-        card_mut(&mut state, &placed.id).marked_destroyed = Some(true);
+        live_mut(&mut state, &placed.id).marked_destroyed = Some(true);
 
         let mut sink = Bench::new(&state);
         state_check(&mut sink.sink(&mut state));
@@ -955,7 +942,7 @@ mod the_state_check_m2_t5 {
             slot(PlayerId::P1, Row::Backrow, 1),
             json!({}),
         );
-        card_mut(&mut state, &placed.id).marked_destroyed = Some(true);
+        live_mut(&mut state, &placed.id).marked_destroyed = Some(true);
 
         let mut sink = Bench::new(&state);
         state_check(&mut sink.sink(&mut state));
@@ -965,7 +952,7 @@ mod the_state_check_m2_t5 {
             card_at(&state, slot(PlayerId::P1, Row::Backrow, 1)).map(|c| c.id.clone()),
             Some(placed.id.clone())
         );
-        assert_eq!(card(&state, &placed.id).marked_destroyed, Some(false));
+        assert_eq!(live(&state, &placed.id).marked_destroyed, Some(false));
         assert!(events_of_type(&events, GameEventType::Destroyed).is_empty());
         // a Field Spell has no position
         assert!(events_of_type(&events, GameEventType::PositionSwitched).is_empty());
@@ -982,7 +969,7 @@ mod the_state_check_m2_t5 {
             json!({}),
         );
         {
-            let live = card_mut(&mut state, &eater.id);
+            let live = live_mut(&mut state, &eater.id);
             live.memory.insert("eaten".into(), json!(spawn().id));
             live.marked_destroyed = Some(true);
         }
@@ -992,7 +979,7 @@ mod the_state_check_m2_t5 {
         let events = sink.events;
 
         // R78 wipes the instance's memory on the way out, so the hook must read the snapshot.
-        assert!(card(&state, &eater.id).memory.is_empty());
+        assert!(live(&state, &eater.id).memory.is_empty());
         assert_eq!(ids(&state.players.p1.graveyard), vec![eater.id.clone()]);
         let summoned: Vec<String> = events_of_type(&events, GameEventType::Summoned)
             .iter()
@@ -1024,8 +1011,8 @@ mod the_state_check_m2_t5 {
             slot(PlayerId::P1, Row::Units, 3),
             json!({}),
         );
-        card_mut(&mut state, &unit.id).marked_destroyed = Some(true);
-        card_mut(&mut state, &locker_unit.id).marked_destroyed = Some(true);
+        live_mut(&mut state, &unit.id).marked_destroyed = Some(true);
+        live_mut(&mut state, &locker_unit.id).marked_destroyed = Some(true);
 
         let mut sink = Bench::new(&state);
         state_check(&mut sink.sink(&mut state));
@@ -1063,19 +1050,19 @@ mod what_a_death_reports_r89_m3 {
             json!({}),
         );
         {
-            let live = card_mut(&mut state, &victim.id);
+            let live = live_mut(&mut state, &victim.id);
             // a 4/5 body when it dies
             live.buffs = AttackHealth { attack: 3, health: 4 };
             live.granted_keywords = vec![Keyword::Taunt];
         }
 
-        let view = unit_view(&state, card(&state, &victim.id));
+        let view = unit_view(&state, &live(&state, &victim.id));
         assert_eq!(view.attack, 4);
         assert_eq!(view.max_health, 5);
 
         let mut sink = Bench::new(&state);
-        let source = card(&state, &killer.id).clone();
-        let target = card(&state, &victim.id).clone();
+        let source = live(&state, &killer.id);
+        let target = live(&state, &victim.id);
         deal_damage(
             &mut sink.sink(&mut state),
             DamageArgs {
@@ -1107,10 +1094,10 @@ mod what_a_death_reports_r89_m3 {
 
         // R78 has wiped the instance by now, which is why the event has to carry it.
         assert_eq!(
-            card(&state, &victim.id).buffs,
+            live(&state, &victim.id).buffs,
             AttackHealth { attack: 0, health: 0 }
         );
-        assert_eq!(card(&state, &victim.id).last_damaged_by, None);
+        assert_eq!(live(&state, &victim.id).last_damaged_by, None);
     }
 
     #[test]
@@ -1124,7 +1111,7 @@ mod what_a_death_reports_r89_m3 {
             json!({}),
         );
         // destroyed by an effect, not by a unit's damage
-        card_mut(&mut state, &victim.id).marked_destroyed = Some(true);
+        live_mut(&mut state, &victim.id).marked_destroyed = Some(true);
 
         let mut sink = Bench::new(&state);
         state_check(&mut sink.sink(&mut state));
@@ -1152,12 +1139,13 @@ mod the_pass_cap_s4_5_step_5 {
     use super::*;
 
     #[test]
-    fn throws_when_a_board_cannot_settle_rather_than_returning_a_half_checked_one() {
+    fn r3925000_a_board_that_cannot_settle_stops_at_the_cap_rather_than_returning_a_half_checked_one() {
         let mut state = game("never-settles");
         state.active = PlayerId::P1;
 
         // A unit whose Death summons another of the same kind, each arriving already dead: §4.5 step 5
-        // would repeat for ever, so the cap is what stops it — loudly (STATE_CHECK_PASS_CAP).
+        // would repeat for ever, so the loop cap is what stops it (R3925000), well before the pass cap
+        // that stays behind it as an assertion (STATE_CHECK_PASS_CAP).
         let mut catalog = registered_catalog().clone();
         catalog.insert(endless().id, endless());
         register_catalog(catalog);
@@ -1186,17 +1174,25 @@ mod the_pass_cap_s4_5_step_5 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        card_mut(&mut state, &doomed.id).stats_override = Some(AttackHealth { attack: 0, health: 0 });
+        live_mut(&mut state, &doomed.id).stats_override = Some(AttackHealth { attack: 0, health: 0 });
 
         let mut sink = Bench::new(&state);
-        let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            state_check(&mut sink.sink(&mut state));
-        }));
-        let message = panic_text(caught.expect_err("the state check settled"));
+        sink.run(&mut state, state_check);
+        let capped: Vec<&GameEvent> = sink
+            .events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::LoopCapped { .. }))
+            .collect();
+        assert_eq!(capped, vec![&GameEvent::LoopCapped { player: PlayerId::P1 }]);
+        assert!(sink.events.len() >= RESOLUTION_EVENT_CAP);
+        // The capped check collected the last body without its Death: no unit at 0/0 stands.
         assert!(
-            message.contains("did not settle in 100 passes"),
-            "unexpected panic: {message}"
+            units_on_field_of(&state, PlayerId::P1)
+                .iter()
+                .all(|unit| unit.def_id != endless().id),
+            "a body still stands"
         );
-        assert_eq!(STATE_CHECK_PASS_CAP, 100);
+        assert!(state.reserved.is_empty());
+        const { assert!(STATE_CHECK_PASS_CAP > RESOLUTION_EVENT_CAP) };
     }
 }

@@ -1,6 +1,8 @@
 // R388, R507, R724000: the Patch notes page's body, from fixtures through the context, the empty and
 // failed states, then the real history through the default source. R3012000, R3012001: micro patches
-// nested under their patch, the legend on the side, and art for a major and a patch only.
+// nested under their patch, the legend on the side, and art for a major and a patch only. R3944001: a
+// daily patch holds the micros it rolls up as its snapshots, and the micros no daily patch has rolled up
+// yet wait above the lines.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -16,11 +18,28 @@ import { stubPatchLegendPhone } from "../test/phoneBar.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { PATCH_LEGEND_BAND_MARGIN } from "./constants.ts";
 import { PatchSourceProvider } from "./context.tsx";
-import { FIXTURE_INDEX, FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, M1, M2, TIERED_PATCHES, V1, V2, V3, fixtureSource, tieredSource } from "./fixtures.ts";
+import {
+  DM1,
+  DM2,
+  DM3,
+  DP,
+  FIXTURE_INDEX,
+  FIXTURE_PATCHES,
+  FIXTURE_SNAPSHOTS,
+  M1,
+  M2,
+  TIERED_PATCHES,
+  V1,
+  V2,
+  V3,
+  dailySource,
+  fixtureSource,
+  tieredSource,
+} from "./fixtures.ts";
 import { PatchNotes } from "./PatchNotes.tsx";
 import { countsLine } from "./history.ts";
 import { releaseArtPath } from "./releaseArt.ts";
-import { RELEASES, majors, releaseGroups, tiers, type Release } from "./releases.ts";
+import { RELEASES, cardsBasis, majors, releaseGroups, tiers, type Release } from "./releases.ts";
 import { EMPTY_PATCH_SOURCE, realPatchSource, sourceFromData, type Patch, type PatchSource, type TechnicalEntry } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
@@ -328,11 +347,18 @@ describe("R388 the Patch notes page over the real history", () => {
     );
     // Only the newest opens on load (R507), so v0.2.0, the frozen patch this test reads, is opened by
     // hand; whichever is newest (R743's names for issues #113, #181 and #218) opens with every card it changed.
-    const newest = shipped.at(-1)?.version ?? "";
-    // A newest patch that changed no card has no cards to open: its entry says so instead.
-    if ((shipped.at(-1)?.changes ?? []).length === 0) {
+    const newestPatch = shipped.at(-1);
+    const newest = newestPatch?.version ?? "";
+    // A newest patch that changed no card has no cards to open: its entry says so instead. A daily patch
+    // records no card of its own: its cards are its micros' (R3944002), and each of its snapshots inside
+    // it keeps a cards control of its own, so only the entry's own control counts here.
+    const newestCards = newestPatch === undefined ? [] : cardsBasis(shipped, newestPatch).patch.changes;
+    if (newestCards.length === 0) {
       expect(patchEntry(newest)).toHaveTextContent("No card changed.");
-      expect(within(patchEntry(newest)).queryByTestId(patchTestid.toggle)).toBeNull();
+      const ownToggles = within(patchEntry(newest))
+        .queryAllByTestId(patchTestid.toggle)
+        .filter((toggle) => toggle.closest(`[data-testid="${patchTestid.micro}"]`) === null);
+      expect(ownToggles).toEqual([]);
     } else {
       await within(patchEntry(newest)).findByTestId(patchTestid.cards, undefined, SLOW);
     }
@@ -490,17 +516,23 @@ describe("R724000 the Patch notes page by release line", () => {
     expect([...firsts].reverse().slice(0, REAL_FIRSTS.length)).toEqual(REAL_FIRSTS);
     expect(versions[0]).toBe(REAL_FIRSTS[0]?.[1]);
     openEverySet();
-    // Entries are the majors and patches, newest first; each micro sits inside the one before it (R3012000).
+    // Entries are the majors and patches, newest first. A micro an entry's `includes` names sits inside that
+    // entry; any other inside the one before it (R3012000), but one after the newest major or patch waits
+    // above the lines for the next daily patch (R3944001).
     const tierList = tiers(shipped);
     const hosts = versions.filter((_version, at) => tierList[at] !== "micro");
     const entries = screen.getAllByTestId(patchTestid.patch);
     expect(entries.map((element) => element.dataset.version)).toEqual([...hosts].reverse());
     const micros = screen.getAllByTestId(patchTestid.micro);
     expect(micros.map((element) => element.dataset.version).sort()).toEqual(versions.filter((_version, at) => tierList[at] === "micro").sort());
+    const newestHost = tierList.findLastIndex((tier) => tier !== "micro");
     for (const micro of micros) {
       const at = versions.indexOf(micro.dataset.version ?? "");
-      const host = versions.slice(0, at).findLast((_version, earlier) => tierList[earlier] !== "micro");
+      const includer = shipped.find((patch) => patch.includes?.includes(micro.dataset.version ?? "") === true)?.version;
+      const waits = includer === undefined && at > newestHost;
+      const host = waits ? undefined : (includer ?? versions.slice(0, at).findLast((_version, earlier) => tierList[earlier] !== "micro"));
       expect(micro.closest(`[data-testid="${patchTestid.patch}"]`)?.getAttribute("data-version"), micro.dataset.version).toBe(host);
+      expect(micro.closest(`[data-testid="${patchTestid.pending}"]`) !== null, micro.dataset.version).toBe(waits);
     }
     for (const entry of [...entries, ...micros]) {
       const patch = shipped.find((each) => each.version === entry.dataset.version);
@@ -658,7 +690,7 @@ describe("R3012000 micro patches nested under their patch", () => {
     expect(screen.getAllByTestId(patchTestid.micro)).toHaveLength(2);
     expect(within(patchEntry(V3)).queryAllByTestId(patchTestid.micro)).toEqual([]);
     expect(within(patchEntry(V1)).queryAllByTestId(patchTestid.micro)).toEqual([]);
-    expect(within(host).getByRole("list", { name: "Micro patches" })).toBeInTheDocument();
+    expect(within(host).getByRole("list", { name: "Snapshots" })).toBeInTheDocument();
     const [first, second] = micros;
     expect(within(first ?? host).getByRole("heading", { level: 4 })).toHaveTextContent(`${M1} Knight wording`);
     expect(first).toHaveTextContent("2026-02-10");
@@ -732,7 +764,7 @@ describe("R3012000 micro patches nested under their patch", () => {
     for (const link of links) expect(link.getAttribute("href"), link.dataset.version).toBe(`#${encodeURIComponent(link.dataset.version ?? "")}`);
     // The micros are under V2's item, behind its button, and V3 and V1 hold none.
     const buttons = within(legend).getAllByTestId(patchTestid.legendMicros);
-    expect(buttons.map((button) => [button.dataset.version, button.textContent])).toEqual([[V2, "2 micro patches"]]);
+    expect(buttons.map((button) => [button.dataset.version, button.textContent])).toEqual([[V2, "2 snapshots"]]);
     const item = buttons[0]?.closest("li");
     expect(within(item ?? legend).getAllByTestId(patchTestid.legendLink).map((link) => link.dataset.version)).toEqual([V2, M1, M2]);
     expect(buttons[0]).toHaveAttribute("aria-expanded", "false");
@@ -999,5 +1031,58 @@ describe("R3012000 micro patches nested under their patch", () => {
     expect(rule).not.toBeNull();
     const height = Number(/min-height:\s*(\d+)px/u.exec(rule?.[1] ?? "")?.[1] ?? 0);
     expect(height).toBeGreaterThanOrEqual(MIN_TARGET_PX);
+  });
+});
+
+describe("R3944001 the daily patch on the page", () => {
+  it("R3944001 a daily patch holds its micros as snapshots, says how many it rolls up, and the micros after it wait above the lines", async () => {
+    renderPage(dailySource());
+    await screen.findAllByTestId(patchTestid.patch);
+    // The entries are the daily patch and the major; the micros are no entry of their own.
+    expect(screen.getAllByTestId(patchTestid.patch).map((entry) => [entry.dataset.version, entry.dataset.tier])).toEqual([
+      [DP, "patch"],
+      [V1, "major"],
+    ]);
+    const daily = patchEntry(DP);
+    expect(within(daily).getByRole("list", { name: "Snapshots" })).toBeInTheDocument();
+    expect(within(daily).getAllByTestId(patchTestid.micro).map((micro) => micro.dataset.version)).toEqual([DM1, DM2]);
+    expect(own(daily, patchTestid.rollup)).toHaveTextContent("Rolls up 2 snapshots.");
+    expect(within(daily).getAllByRole("heading", { level: 3 })[0]).toHaveTextContent(`${DP} Knight grows, and 1 more change`);
+    expect(own(daily, patchTestid.note)).toHaveTextContent("Test Knight costs (3), up from (2).");
+    expect(own(daily, patchTestid.note)).toHaveTextContent("Test Bolt deals more damage.");
+    // A daily patch has its art; its micros have none, and the major rolls nothing up.
+    expect(screen.getAllByTestId(patchTestid.releaseArt).map((image) => image.dataset.version)).toEqual([DP, V1]);
+    expect(within(patchEntry(V1)).queryByTestId(patchTestid.rollup)).toBeNull();
+    // DM3 waits above the release lines, in no entry, under its own heading.
+    const pending = screen.getByTestId(patchTestid.pending);
+    expect(within(pending).getByRole("heading", { level: 2 })).toHaveTextContent("Since the last patch (1 snapshot)");
+    expect(pending).toHaveTextContent("Snapshots the next daily patch rolls up.");
+    expect(within(pending).getAllByTestId(patchTestid.micro).map((micro) => micro.dataset.version)).toEqual([DM3]);
+    expect(patchEntry(DM3).closest(`[data-testid="${patchTestid.patch}"]`)).toBeNull();
+    expect(pending.compareDocumentPosition(screen.getAllByTestId(patchTestid.set)[0] ?? pending) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The legend lists the entries and the daily patch's snapshots, and leaves the waiting micro out.
+    const legend = screen.getByTestId(patchTestid.legend);
+    expect(within(legend).getAllByTestId(patchTestid.legendLink).map((link) => link.dataset.version)).toEqual([DP, DM1, DM2, V1]);
+    expect(within(legend).getAllByTestId(patchTestid.legendMicros).map((button) => [button.dataset.version, button.textContent])).toEqual([[DP, "2 snapshots"]]);
+  });
+
+  it("R3944002 a daily patch's cards are its micros', read against the snapshot before the first of them", async () => {
+    const asked: string[] = [];
+    renderPage(dailySource((version) => asked.push(version)));
+    await screen.findAllByTestId(patchTestid.patch);
+    const daily = patchEntry(DP);
+    // The day grew the knight, removed the relic and reworked the bolt. The newest micro, DM3, opens its
+    // own cards on arrival (R507), against DP's snapshot; the daily patch's stay shut until asked.
+    expect(daily).toHaveTextContent("2 cards changed · 1 card removed");
+    expect(own(daily, patchTestid.toggle)).toHaveAttribute("aria-expanded", "false");
+    expect(asked).not.toContain(V1);
+    fireEvent.click(own(daily, patchTestid.toggle));
+    await within(daily).findByTestId(patchTestid.cards);
+    expect(asked).toEqual(expect.arrayContaining([DP, V1]));
+    expect(asked).not.toContain(DM1);
+    const cards = own(daily, patchTestid.cards);
+    expect(byCard(patchTestid.changedCard, "core-001", cards)).toBeInTheDocument();
+    expect(byCard(patchTestid.changedCard, "core-002", cards)).toBeInTheDocument();
+    expect(byCard(patchTestid.removed, "core-003", cards)).toBeInTheDocument();
   });
 });

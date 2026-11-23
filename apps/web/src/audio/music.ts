@@ -31,8 +31,10 @@ import {
   MUSIC_TURN_TC_S,
 } from "./constants.ts";
 import { fetchAudioBytes, getAudioEngine } from "./engine.ts";
-import { MUSIC_MANIFEST, isStationTrack, musicUrl } from "./musicData.ts";
+import { isStationTrack, musicUrl } from "./musicData.ts";
+import { loadSoundTables, onSoundTablesLoaded, soundTablesNow, type SoundTables } from "./soundTablesLoader.ts";
 import { readAudioSettings, subscribeAudioSettings } from "./settings.ts";
+import { savingData } from "../net/saveData.ts";
 import type { AudioEngine, AudioSettings, MusicManifest, MusicTrack } from "./types.ts";
 
 export type MusicRequest = {
@@ -83,6 +85,7 @@ export type MusicPlayerOptions = {
   focus?: FocusPort | null;
   settings?: () => AudioSettings;
   subscribeSettings?: (listener: (s: AudioSettings) => void) => () => void;
+  saveData?: () => boolean; // default shared savingData() (R4363000); tests pass an explicit port
 };
 
 const LOG_MAX = 100;
@@ -148,11 +151,36 @@ function trackTime(voice: Voice, t: number): number {
 
 export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer {
   const engineOf = options.engine ?? getAudioEngine;
-  const manifest = options.manifest ?? MUSIC_MANIFEST;
+  let loadedManifest: MusicManifest | null = options.manifest ?? soundTablesNow()?.musicManifest ?? null;
+  let pendingTableIntro: string | null = null;
+  let pendingTableSting: string | null = null;
+
+  function onTablesLoaded(tables: SoundTables): void {
+    if (disposed) return;
+    if (options.manifest === undefined) loadedManifest = tables.musicManifest;
+    sync();
+    pumpPreload();
+    if (pendingTableIntro !== null) {
+      const id = pendingTableIntro;
+      pendingTableIntro = null;
+      player.playIntro(id);
+    }
+    if (pendingTableSting !== null) {
+      const id = pendingTableSting;
+      pendingTableSting = null;
+      player.playSting(id);
+    }
+  }
+
+  if (loadedManifest === null) {
+    onSoundTablesLoaded(onTablesLoaded);
+    void loadSoundTables().catch(() => {});
+  }
   const fetchBytes = options.fetchBytes ?? ((url: string) => fetchAudioBytes(url, "music"));
   const focusPort = options.focus === undefined ? browserFocus() : options.focus;
   const settings = options.settings ?? readAudioSettings;
   const subscribeSettings = options.subscribeSettings ?? subscribeAudioSettings;
+  const saveData = options.saveData ?? savingData;
 
   let graph: Graph | null = null;
   let voices: Voice[] = [];
@@ -298,9 +326,11 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
       bytes.set(id, cached);
       return cached;
     }
+    const track = loadedManifest?.files[id];
+    if (track === undefined) return Promise.resolve(null);
     const pending = (async (): Promise<ArrayBuffer | null> => {
       try {
-        return await fetchBytes(musicUrl(id));
+        return await fetchBytes(musicUrl(id, track.hash));
       } catch {
         return null;
       }
@@ -363,7 +393,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
 
   function startVoice(id: string, buffer: AudioBuffer, at: number, offset: number, fadeIn: number): Voice | null {
     const g = graph;
-    const track = manifest.files[id];
+    const track = loadedManifest?.files[id];
     if (g === null || track === undefined) return null;
     const source = g.ctx.createBufferSource();
     source.buffer = buffer;
@@ -415,7 +445,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
 
   /** Fades a track in at a sting's speed if it opens on one, else at a crossfade's. */
   function fadeInFor(id: string, offset: number): number {
-    const track = manifest.files[id];
+    const track = loadedManifest?.files[id];
     if (track === undefined) return MUSIC_FADE_S;
     return offset === 0 && (!track.loop || track.intro > 0) ? MUSIC_HANDOFF_FADE_S : MUSIC_FADE_S;
   }
@@ -431,7 +461,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
   function sync(): void {
     if (disposed) return;
     quietly(() => {
-      if (ensureGraph() === null || !running() || graph === null) return;
+      if (ensureGraph() === null || !running() || graph === null || loadedManifest === null) return;
       // Whatever changed while the context was suspended lands now.
       applyTurn();
       applyFocus();
@@ -444,7 +474,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
         return;
       }
       if (top()?.id === target) return;
-      if (!audible() || manifest.files[target] === undefined) return;
+      if (!audible() || loadedManifest.files[target] === undefined) return;
 
       // What is sounding now, and what waits to follow it (a sting's next track).
       const waiting = active.filter((v) => v.startAt > soon);
@@ -452,7 +482,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
       const lead = sounding[sounding.length - 1] ?? null;
       const sting = lead !== null && !lead.track.loop && lead.track.handoff !== null ? lead : null;
       // A sting leads in only from silence or a screen's music, never inside a match's own music.
-      const intro = want.intro !== null && manifest.files[want.intro] !== undefined && sting === null && (lead === null || !isStationTrack(lead.id)) ? want.intro : null;
+      const intro = want.intro !== null && loadedManifest.files[want.intro] !== undefined && sting === null && (lead === null || !isStationTrack(lead.id, loadedManifest)) ? want.intro : null;
 
       const missing = (intro === null ? [target] : [intro, target]).filter((id) => !decoded.has(id));
       // A track that failed waits for the next request that names it, not every idle (setBusy).
@@ -511,24 +541,26 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
   }
 
   function pumpPreload(): void {
-    if (busy || disposed) return;
+    if (busy || disposed || loadedManifest === null) return;
+    // R4363000: while the browser asks to save data, held preloads stay held.
+    if (saveData()) return;
     if (audible()) {
       const ids = heldPreload;
       heldPreload = [];
-      for (const id of ids) if (manifest.files[id] !== undefined) void fetchCached(id);
+      for (const id of ids) if (loadedManifest.files[id] !== undefined) void fetchCached(id);
     }
     // R3332002: an intro is its card's sting too, so it is fetched ahead while either can be heard.
     if (!audible() && !stingAudible()) return;
     const intros = heldIntroPreload;
     heldIntroPreload = [];
-    for (const id of intros) if (manifest.files[id] !== undefined) void fetchIntro(id);
+    for (const id of intros) if (loadedManifest.files[id] !== undefined) void fetchIntro(id);
   }
 
   /* a card's intro (R1350, R1351) */
 
   /** A track that plays once, as every intro is. */
   function isClip(id: string): boolean {
-    const track = manifest.files[id];
+    const track = loadedManifest?.files[id];
     return track !== undefined && !track.loop && track.handoff !== null;
   }
 
@@ -539,9 +571,11 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
       introBytes.set(id, cached);
       return cached;
     }
+    const track = loadedManifest?.files[id];
+    if (track === undefined) return Promise.resolve(null);
     const pending = (async (): Promise<ArrayBuffer | null> => {
       try {
-        return await fetchBytes(musicUrl(id));
+        return await fetchBytes(musicUrl(id, track.hash));
       } catch {
         return null;
       }
@@ -599,7 +633,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
 
   function startClip(id: string, buffer: AudioBuffer): void {
     const g = graph;
-    const track = manifest.files[id];
+    const track = loadedManifest?.files[id];
     if (g === null || track === undefined) return;
     const at = g.ctx.currentTime + MUSIC_LEAD_S;
     if (clip !== null) cutClip(clip, at);
@@ -667,7 +701,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     push({ kind: "sting", track: id, at });
   }
 
-  return {
+  const player: MusicPlayer = {
     request(request) {
       if (disposed) return;
       const intro = request.intro ?? null;
@@ -694,6 +728,11 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     },
     playIntro(id) {
       if (disposed) return;
+      if (loadedManifest === null) {
+        pendingTableIntro = id;
+        void loadSoundTables().catch(() => {});
+        return;
+      }
       quietly(() => {
         if (!isClip(id) || !audible() || pendingIntro?.id === id) return;
         // Nothing waits for a resume: an intro asked for on a stopped context is dropped.
@@ -724,6 +763,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
       });
     },
     stopIntro() {
+      pendingTableIntro = null;
       pendingIntro = null;
       if (disposed || clip === null || graph === null) return;
       quietly(() => {
@@ -737,6 +777,11 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     },
     playSting(id) {
       if (disposed) return;
+      if (loadedManifest === null) {
+        pendingTableSting = id;
+        void loadSoundTables().catch(() => {});
+        return;
+      }
       quietly(() => {
         if (!isClip(id) || !stingAudible() || pendingSting?.id === id) return;
         // Nothing waits for a resume, as no intro does: a sting asked for on a stopped context is dropped.
@@ -789,6 +834,8 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     dispose() {
       if (disposed) return;
       disposed = true;
+      pendingTableIntro = null;
+      pendingTableSting = null;
       unsubscribeSettings();
       unsubscribeFocus?.();
       unwatch?.();
@@ -814,6 +861,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
       entries = [];
     },
   };
+  return player;
 }
 
 let singleton: MusicPlayer | null = null;

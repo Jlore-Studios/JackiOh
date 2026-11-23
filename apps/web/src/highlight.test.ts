@@ -55,11 +55,31 @@ function split(css: string, query: string): { inside: string[]; outside: string 
   return { inside, outside: outside + css.slice(from) };
 }
 
+/**
+ * A piece of CSS's `selector { body }` pairs (#4009: `/([^{}]+)\{([^{}]*)\}/g` scans super-linearly
+ * on a long brace-free run).
+ */
+function rulePairs(css: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = css.split("}");
+  if (!css.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
+}
+
 /** The flat rules of a piece of CSS, selectors with their whitespace collapsed. */
 function rulesIn(css: string): Rule[] {
-  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
-    selector: (match[1] ?? "").replace(/\s+/g, " ").trim(),
-    body: match[2] ?? "",
+  return rulePairs(css).map(([selector, body]) => ({
+    selector: selector.replace(/\s+/g, " ").trim(),
+    body,
   }));
 }
 

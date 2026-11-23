@@ -4,8 +4,10 @@
 //!
 //!  - `code_attempts` (profile id, peppered IP hash, time) after `CODE_ATTEMPT_RETENTION_DAYS`. The
 //!    limits that read them look back `CODE_ATTEMPT_WINDOW_SECONDS` at most.
-//!  - a finished match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended. Only a live
-//!    match is replayed from its log; the result row, and so the rating history, is kept.
+//!  - a finished match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended. A finished
+//!    match's replay answers 410 `expired` once its log is gone (`api::replays`) and a finished daily
+//!    game opens as its stored result (`daily::games`, §9.13, R3934000); the result row, and so the
+//!    rating history, is kept.
 //!  - a finished match's play telemetry `PLAY_TELEMETRY_RETENTION_DAYS` after the match ended (R1442).
 //!  - a chat message, with its reports, `CHAT_RETENTION_DAYS` after it was sent (SPEC S7, B53).
 //!  - a finished co-op match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended (§13.9).
@@ -13,9 +15,12 @@
 //!  - a game record's detail `GAME_RECORD_RAW_RETENTION_DAYS` after it was written, once it is folded
 //!    into the card statistics' totals (R1044001). Its id, source, mode, patch and time are kept.
 //!  - a spend's idempotency key and kept answer `IDEMPOTENCY_KEY_TTL_HOURS` after it was written (R2124000).
+//!  - an expired private lobby, started or not, once its format's TTL past its last change has passed (SPEC §9.5, §13.9, R3730004). Reads already answer 404 for it; the sweep deletes the row, as lobby creation already does opportunistically.
+//!  - a replay share whose match holds no action-log row, in a step of its own right after the purge (`purge_shares`, R4390001).
 //!
 //! In Postgres it is one call to `app.purge_expired_rows` (migration 0013, with 0029's third cutoff
-//! and 0041's fourth).
+//! and 0041's fourth). A practice seed is a step of its own, after the sweep of unsettled claims: every
+//! account's lapsed unclaimed or settled seeds (`api::practice::purge_lapsed`, R4317001).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -32,6 +37,7 @@ use crate::config::{
     PLAY_TELEMETRY_RETENTION_DAYS, RETENTION_PURGE_INTERVAL_SECONDS,
 };
 use crate::db::store::{RetentionPurgeInput, RetentionPurgeResult, StoreError};
+use crate::loops::FailingStreak;
 
 /// The epoch: a range's start every match ended after.
 const EPOCH_MS: i64 = 0;
@@ -47,6 +53,26 @@ pub async fn purge_expired(app: &App) -> Result<RetentionPurgeResult, StoreError
             game_records_recorded_before: now - GAME_RECORD_RAW_RETENTION_DAYS * MS_PER_DAY,
         })
         .await?;
+    tx.commit().await?;
+    Ok(purged)
+}
+
+/// Deletes every private lobby expired at now, started or not (SPEC §9.5, §13.9, R3730004):
+/// the same delete lobby creation already runs opportunistically. Answers how many rows it took.
+pub async fn sweep_lobbies(app: &App) -> Result<u64, StoreError> {
+    let now = now_ms();
+    let mut tx = app.db.begin(None).await?;
+    let reaped = tx.lobbies_reap(now).await?;
+    tx.commit().await?;
+    Ok(reaped)
+}
+
+/// R4390001: deletes every replay share whose match holds no action-log row, the purge having taken
+/// it: `readable_share!`'s `exists` test, negated. A share of a match whose log is held stays. Answers
+/// how many it took.
+pub async fn purge_shares(app: &App) -> Result<i64, StoreError> {
+    let mut tx = app.db.begin(None).await?;
+    let purged = tx.shares_purge_orphaned().await?;
     tx.commit().await?;
     Ok(purged)
 }
@@ -84,10 +110,21 @@ pub async fn refile_unfiled(app: &App) -> Result<usize, StoreError> {
 /// stops after ten idle minutes, apps/edge), then every `RETENTION_PURGE_INTERVAL_SECONDS`; a failure
 /// is logged and the next run tries again.
 pub async fn run_purge(app: Arc<App>) {
+    // #3770: a step that fails on every pass for a while is an alert, not just a warning each time.
+    let mut folding = FailingStreak::new("game_records.fold");
+    let mut refiling = FailingStreak::new("game_records.refile");
+    let mut purging = FailingStreak::new("retention.purge");
+    let mut sharing = FailingStreak::new("shares.purge");
+    let mut chatting = FailingStreak::new("chat.purge");
+    let mut logging = FailingStreak::new("duos.logs.purge");
+    let mut expiring = FailingStreak::new("idempotency.sweep");
+    let mut lobbying = FailingStreak::new("lobbies.sweep");
+    let mut settling = FailingStreak::new("practice.sweep");
+    let mut pruning = FailingStreak::new("practice.prune");
     loop {
         // R1044000: the records written before the totals are folded first, in transactions of their
         // own, so their detail can go on the purge's cutoff like any other's.
-        match fold_pending(&app.db).await {
+        match folding.track(fold_pending(&app.db).await) {
             Ok(done) if done.folded == 0 => {}
             Ok(done) => log_info("game_records.folded", json!({ "records": done.folded })),
             Err(error) => log_warn(
@@ -96,7 +133,7 @@ pub async fn run_purge(app: Arc<App>) {
             ),
         }
         // R1596000: a record whose filing failed is filed again before the purge below can take its log.
-        match refile_unfiled(&app).await {
+        match refiling.track(refile_unfiled(&app).await) {
             Ok(0) => {}
             Ok(filed) => log_info("game_records.refiled", json!({ "records": filed })),
             Err(error) => log_warn(
@@ -104,7 +141,7 @@ pub async fn run_purge(app: Arc<App>) {
                 json!({ "message": error.to_string() }),
             ),
         }
-        match purge_expired(&app).await {
+        match purging.track(purge_expired(&app).await) {
             Ok(purged) => {
                 if purged.code_attempts + purged.match_actions + purged.play_telemetry + purged.game_records
                     > 0
@@ -122,20 +159,26 @@ pub async fn run_purge(app: Arc<App>) {
             }
             Err(error) => log_warn("retention.purge_failed", json!({ "message": error.to_string() })),
         }
+        // R4390001, after the purge that takes the logs: the shares of a replay that is gone.
+        match sharing.track(purge_shares(&app).await) {
+            Ok(0) => {}
+            Ok(purged) => log_info("shares.purged", json!({ "shares": purged })),
+            Err(error) => log_warn("shares.purge_failed", json!({ "message": error.to_string() })),
+        }
         // Play together (#941): B53's chat retention, apart, so one failure never holds the other.
-        match crate::social::chat::purge(&app).await {
+        match chatting.track(crate::social::chat::purge(&app).await) {
             Ok(0) => {}
             Ok(purged) => log_info("chat.purged", json!({ "messages": purged })),
             Err(error) => log_warn("chat.purge_failed", json!({ "message": error.to_string() })),
         }
         // Duos co-op (#936): the co-op logs, apart too.
-        match crate::duos::purge_expired_logs(&app).await {
+        match logging.track(crate::duos::purge_expired_logs(&app).await) {
             Ok(0) => {}
             Ok(purged) => log_info("duos.logs.purged", json!({ "actions": purged })),
             Err(error) => log_warn("duos.logs.purge_failed", json!({ "message": error.to_string() })),
         }
         // R2124000: the spends' idempotency keys past their time, apart too.
-        match crate::economy::idempotency::sweep_expired(&app).await {
+        match expiring.track(crate::economy::idempotency::sweep_expired(&app).await) {
             Ok(0) => {}
             Ok(swept) => log_info("idempotency.swept", json!({ "keys": swept })),
             Err(error) => log_warn(
@@ -143,14 +186,27 @@ pub async fn run_purge(app: Arc<App>) {
                 json!({ "message": error.to_string() }),
             ),
         }
+        // R3730004: expired private lobbies, started or not, apart too.
+        match lobbying.track(sweep_lobbies(&app).await) {
+            Ok(0) => {}
+            Ok(reaped) => log_info("lobbies.reaped", json!({ "lobbies": reaped })),
+            Err(error) => log_warn("lobbies.sweep_failed", json!({ "message": error.to_string() })),
+        }
         // R2422000, last: each claim it settles re-runs its check, the slowest step of the pass.
-        match crate::api::practice::sweep_unsettled(&app).await {
+        match settling.track(crate::api::practice::sweep_unsettled(&app).await) {
             Ok(swept) if swept == Swept::default() => {}
             Ok(swept) => log_info(
                 "practice.swept",
                 json!({ "paid": swept.paid, "refused": swept.refused }),
             ),
             Err(error) => log_warn("practice.sweep_failed", json!({ "message": error.to_string() })),
+        }
+        // R4317001, after the sweep (which settles a lapsed claim, making it deletable): every account's
+        // lapsed seeds, not only the ones whose account asks for another.
+        match pruning.track(crate::api::practice::purge_lapsed(&app).await) {
+            Ok(0) => {}
+            Ok(purged) => log_info("practice.pruned", json!({ "seeds": purged })),
+            Err(error) => log_warn("practice.prune_failed", json!({ "message": error.to_string() })),
         }
         tokio::time::sleep(Duration::from_secs(RETENTION_PURGE_INTERVAL_SECONDS as u64)).await;
     }

@@ -2,7 +2,7 @@
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::new_game;
+use crate::rules::fixtures::harness::{live, live_mut, new_game};
 use crate::rules::fixtures::scripts::{going_long, heroic_power, x_bolt};
 
 fn hand_card(state: &mut GameState, def_id: &str) -> String {
@@ -12,16 +12,8 @@ fn hand_card(state: &mut GameState, def_id: &str) -> String {
     id
 }
 
-fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
-}
-
-fn card_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).expect("the card is in the state")
-}
-
 fn cost(state: &GameState, id: &str) -> i32 {
-    mana::effective_cost(state, card(state, id), CostOptions::default())
+    mana::effective_cost(state, &live(state, id), CostOptions::default())
 }
 
 /// The sink's rng starts at the state's cursor, and nothing writes the cursor back.
@@ -44,12 +36,12 @@ mod r65_cost_calculation_m1_t6 {
     fn starts_from_the_printed_cost_and_adds_the_instances_cost_mod() {
         let mut state = new_game("cost-base", None);
         let id = hand_card(&mut state, "fx-1"); // printed cost 1
-        assert_eq!(mana::printed_cost(&state, card(&state, &id)), 1);
+        assert_eq!(mana::printed_cost(&state, &live(&state, &id)), 1);
         assert_eq!(cost(&state, &id), 1);
 
-        card_mut(&mut state, &id).cost_mod = 2;
+        live_mut(&mut state, &id).cost_mod = 2;
         assert_eq!(cost(&state, &id), 3);
-        card_mut(&mut state, &id).cost_mod = -5;
+        live_mut(&mut state, &id).cost_mod = -5;
         assert_eq!(cost(&state, &id), 0); // floors at 0
     }
 
@@ -58,9 +50,9 @@ mod r65_cost_calculation_m1_t6 {
     fn r65_prefers_cost_override_over_the_printed_cost_then_applies_cost_mod() {
         let mut state = new_game("cost-override", None);
         let id = hand_card(&mut state, "fx-1");
-        card_mut(&mut state, &id).cost_override = Some(4);
+        live_mut(&mut state, &id).cost_override = Some(4);
         assert_eq!(cost(&state, &id), 4);
-        card_mut(&mut state, &id).cost_mod = -1;
+        live_mut(&mut state, &id).cost_mod = -1;
         assert_eq!(cost(&state, &id), 3);
     }
 
@@ -79,7 +71,7 @@ mod r65_cost_calculation_m1_t6 {
 
         let mut state2 = new_game("cost-discount-spell", None);
         let unit2 = hand_card(&mut state2, "fx-1");
-        card_mut(&mut state2, &unit2).cost_mod = 3; // cost 4, so the discount below would otherwise bite
+        live_mut(&mut state2, &unit2).cost_mod = 3; // cost 4, so the discount below would otherwise bite
         add_mod(
             &mut state2,
             PlayerId::P1,
@@ -95,7 +87,7 @@ mod r65_cost_calculation_m1_t6 {
         let mut state = new_game("curvature", None);
         state.turn = 2; // the turn after the one that made the modifier, so it is live (R48)
         let id = hand_card(&mut state, "fx-1");
-        card_mut(&mut state, &id).cost_mod = 3; // printed 1 + 3 = 4
+        live_mut(&mut state, &id).cost_mod = 3; // printed 1 + 3 = 4
         add_mod(
             &mut state,
             PlayerId::P1,
@@ -114,7 +106,7 @@ mod r65_cost_calculation_m1_t6 {
     fn r65_lets_a_general_discount_bring_a_card_to_4_which_curvature_then_discounts() {
         let mut state = new_game("curvature-chain", None);
         let id = hand_card(&mut state, "fx-1");
-        card_mut(&mut state, &id).cost_mod = 4; // printed 1 + 4 = 5
+        live_mut(&mut state, &id).cost_mod = 4; // printed 1 + 4 = 5
         add_mod(
             &mut state,
             PlayerId::P1,
@@ -137,8 +129,8 @@ mod r65_cost_calculation_m1_t6 {
         let bolt = hand_card(&mut state, &x_bolt().id);
         assert_eq!(cost(&state, &bolt), 0); // out of play, X counts as 0
 
-        card_mut(&mut state, &bolt).x = Some(3);
-        card_mut(&mut state, &bolt).cost_mod = -2;
+        live_mut(&mut state, &bolt).x = Some(3);
+        live_mut(&mut state, &bolt).cost_mod = -2;
         add_mod(
             &mut state,
             PlayerId::P1,
@@ -148,7 +140,7 @@ mod r65_cost_calculation_m1_t6 {
         assert_eq!(cost(&state, &bolt), 3);
 
         // An override makes it free, whatever the override's own number says (R65).
-        card_mut(&mut state, &bolt).cost_override = Some(2);
+        live_mut(&mut state, &bolt).cost_override = Some(2);
         assert_eq!(cost(&state, &bolt), 0);
     }
 
@@ -158,7 +150,7 @@ mod r65_cost_calculation_m1_t6 {
         let mut state = new_game("curvature-timing", None);
         state.turn = 1;
         let id = hand_card(&mut state, "fx-1");
-        card_mut(&mut state, &id).cost_mod = 3; // cost 4, which is what Curvature looks for
+        live_mut(&mut state, &id).cost_mod = 3; // cost 4, which is what Curvature looks for
         let from_turn = state.turn;
         add_mod(
             &mut state,
@@ -178,9 +170,9 @@ mod r65_cost_calculation_m1_t6 {
         let mut state = new_game("cost-embiggen", None);
         let id = hand_card(&mut state, &going_long().id); // 2 embiggen 4
         assert_eq!(cost(&state, &id), 2);
-        card_mut(&mut state, &id).embiggened = Some(true);
+        live_mut(&mut state, &id).embiggened = Some(true);
         assert_eq!(cost(&state, &id), 4);
-        card_mut(&mut state, &id).cost_mod = -1;
+        live_mut(&mut state, &id).cost_mod = -1;
         assert_eq!(cost(&state, &id), 3);
     }
 
@@ -191,20 +183,10 @@ mod r65_cost_calculation_m1_t6 {
         let power = hand_card(&mut state, &heroic_power().id);
         assert_eq!(cost(&state, &power), 0);
         // X 3, paid as the power is activated, never to play the card
-        card_mut(&mut state, &power)
+        live_mut(&mut state, &power)
             .memory
             .insert("power".to_string(), json!("tricks"));
         assert_eq!(cost(&state, &power), 0);
-    }
-
-    #[test]
-    fn can_afford_compares_against_current_mana_temporary_mana_included() {
-        let mut state = new_game("afford", None);
-        let id = hand_card(&mut state, "fx-1");
-        state.players.p1.mana.current = 0;
-        assert!(!mana::can_afford(&state, card(&state, &id)));
-        mana::gain_mana(&mut state.players.p1, 1);
-        assert!(mana::can_afford(&state, card(&state, &id)));
     }
 
     /// "refreshes to min(turns started, 4) plus persistent modifiers, and the one-shot moves only
@@ -240,6 +222,31 @@ mod r65_cost_calculation_m1_t6 {
         assert_eq!(side.mana.current, MAX_MANA + 4); // temporary mana may exceed max
         mana::spend_mana(side, 10);
         assert_eq!(side.mana.current, 0); // and never goes below 0
+    }
+
+    /// R4440052: a refresh's standing bonus ("You have +N mana per turn") counts as the rider does: on top
+    /// of max mana, which it leaves where it is, with the rider alone under no natural mana (R941), and
+    /// not at all on a lost refresh (R844).
+    #[test]
+    fn r4440052_a_refresh_bonus_adds_past_max_and_a_lost_refresh_gives_none() {
+        let mut state = new_game("refresh-bonus", None);
+        let side = &mut state.players.p1;
+        side.turns_started = 9;
+        mana::refresh_mana_with_bonus(side, true, 2);
+        assert_eq!((side.mana.current, side.mana.max), (MAX_MANA + 2, MAX_MANA));
+
+        side.mana.next_turn_mod = -1;
+        mana::refresh_mana_with_bonus(side, false, 2);
+        assert_eq!(side.mana.current, 1, "no natural mana: the rider and the bonus");
+        assert_eq!(side.mana.next_turn_mod, 0, "the one-shot rider is spent");
+
+        side.lost_refresh_through = Some(side.turns_started);
+        mana::refresh_mana_with_bonus(side, true, 2);
+        assert_eq!(side.mana.current, 0, "a lost refresh gives none of it");
+
+        side.lost_refresh_through = None;
+        mana::refresh_mana(side);
+        assert_eq!(side.mana.current, MAX_MANA, "no bonus: the refresh as it was");
     }
 
     /// §2.3, R1854003 (#3514): max mana is the turns started up to `MAX_MANA`, below, at and past it,

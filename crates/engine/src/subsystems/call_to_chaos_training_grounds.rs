@@ -2,14 +2,20 @@
 //! R2200000–R2200004, R3135000): its table of ten effects, which Core #95's subsystem (`call_to_chaos.rs`)
 //! rolls, announces and resolves, so one rule serves every edition. Every entry is built when it resolves
 //! (`lazy_part`), as the other editions' are (R87, R113).
+//!
+//! Issue #4154 cut entries 1 to 5 and 7 by a step each (R4154304). The table they had through v0.6.6h,
+//! `CHAOS_TG_EFFECTS_V0_6_6H`, the same builders over the `_V0_6_6H` numbers and labels, is the one the
+//! card's kept script rolls for those replays (R767000).
 
 use indexmap::IndexMap;
 use serde_json::{Value, json};
 
 use crate::config::{
-    CHAOS_TG_ALTERNATE_CAP, CHAOS_TG_ARMY_TOKENS, CHAOS_TG_CARD_COST, CHAOS_TG_CARDS, CHAOS_TG_CARDS_MANA,
-    CHAOS_TG_DRAW, CHAOS_TG_EVERY, CHAOS_TG_MANA, CHAOS_TG_PERMANENTS, CHAOS_TG_RADIANT_CARDS,
-    CHAOS_TG_RADIANT_MANA, CHAOS_TG_REFRESH, CHAOS_TG_RUSH_TOKENS,
+    CHAOS_TG_ALTERNATE_CAP, CHAOS_TG_ARMY_TOKENS, CHAOS_TG_ARMY_TOKENS_V0_6_6H, CHAOS_TG_CARD_COST,
+    CHAOS_TG_CARDS, CHAOS_TG_CARDS_MANA, CHAOS_TG_CARDS_V0_6_6H, CHAOS_TG_DRAW, CHAOS_TG_EVERY,
+    CHAOS_TG_MANA, CHAOS_TG_MANA_V0_6_6H, CHAOS_TG_PERMANENTS, CHAOS_TG_PERMANENTS_V0_6_6H,
+    CHAOS_TG_RADIANT_CARDS, CHAOS_TG_RADIANT_MANA, CHAOS_TG_REFRESH, CHAOS_TG_REFRESH_V0_6_6H,
+    CHAOS_TG_RUSH_TOKENS, CHAOS_TG_RUSH_TOKENS_V0_6_6H,
 };
 use crate::effects::add_to_hand::AddToHandArgs;
 use crate::effects::delay::ForRestOfGameArgs;
@@ -104,8 +110,10 @@ fn add_cards(name: &'static str, count: i32, radiant: bool, mana: i32) -> Effect
 fn add_random_call() -> Effect {
     Effect::new("callToChaosTrainingGrounds:addCall", |ctx| {
         let pool = crate::catalog::query(&json_as(json!({ "tags": [CHAOS_TAG] })));
+        // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
         let Some(def_id) =
-            crate::catalog::pick_generated(&mut *ctx.sink.rng, &pool, None).map(|def| def.id.clone())
+            crate::catalog::pick_generated_unique(&mut *ctx.sink.rng, &pool, None, &mut ctx.draw_tally)
+                .map(|def| def.id.clone())
         else {
             return;
         };
@@ -155,17 +163,17 @@ pub fn alternate_step() -> Hook {
     })
 }
 
-/// 1. R2200001: three base Rush Tokens (§7), then Taunt and Divine Shield for the caster's Unit cards
-///    on the field, in hand and in the deck (C+ #40's scope); a hidden card changes silently (R440).
-fn build_fortify() -> Effect {
-    entry("fortify", |_ctx| {
+/// 1. R2200001, R4154304: `tokens` base Rush Tokens (§7), then Taunt and Divine Shield for the caster's Unit
+///    cards on the field, in hand and in the deck (C+ #40's scope); a hidden card changes silently (R440).
+fn fortify(tokens: i32) -> Effect {
+    entry("fortify", move |_ctx| {
         let scope = json!({
             "side": "self",
             "zones": ["field", "hand", "library"],
             "rows": ["units"],
             "types": ["Unit"],
         });
-        let mut effects = summon_many(SetName::Core, RUSH_TOKEN_INDEX, CHAOS_TG_RUSH_TOKENS);
+        let mut effects = summon_many(SetName::Core, RUSH_TOKEN_INDEX, tokens);
         for kind in ["Taunt", "Divine Shield"] {
             effects.push(crate::effects::grant_keyword_cards(json_as(
                 json!({ "scope": scope, "keyword": { "kind": kind } }),
@@ -175,10 +183,10 @@ fn build_fortify() -> Effect {
     })
 }
 
-/// 2. R2200001: Goetzmann Game Designs (#40) until the hand is full (S #88 Siva 2's fill), then §6.3
-///    Refresh 3 (R364, R3135000).
-fn build_designs() -> Effect {
-    entry("designs", |ctx| {
+/// 2. R2200001, R4154304: Goetzmann Game Designs (#40) until the hand is full (S #88 Siva 2's fill), then
+///    §6.3 Replenish `refresh` (R364, R3135000).
+fn designs(refresh: i32) -> Effect {
+    entry("designs", move |ctx| {
         let room = room_in(ctx.state, ctx.controller, OffFieldZone::Hand);
         let mut effects: Vec<Effect> = match def_id_of(SetName::TrainingGrounds, DESIGN_INDEX) {
             None => vec![],
@@ -187,33 +195,28 @@ fn build_designs() -> Effect {
                 .collect(),
         };
         effects.push(crate::effects::mana::refresh_mana(json_as(
-            json!({ "amount": CHAOS_TG_REFRESH }),
+            json!({ "amount": refresh }),
         )));
         effects
     })
 }
 
-/// 3. R2200000, R3135000: four random Training Grounds cards at (1), then 2 mana.
-fn build_cards() -> Effect {
-    add_cards("cards", CHAOS_TG_CARDS, false, CHAOS_TG_CARDS_MANA)
-}
-
-/// 4. Temporary mana that may pass max (§2.3), then two draws (R3135000: 6 mana).
-fn build_mana() -> Effect {
-    entry("mana", |_ctx| {
+/// 4. Temporary mana that may pass max (§2.3), then two draws (R3135000, R4154304: `gain` mana).
+fn mana_entry(gain: i32) -> Effect {
+    entry("mana", move |_ctx| {
         vec![
-            crate::effects::gain_mana(json_as(json!({ "amount": CHAOS_TG_MANA }))),
+            crate::effects::gain_mana(json_as(json!({ "amount": gain }))),
             crate::effects::draw(json_as(json!({ "count": CHAOS_TG_DRAW }))),
         ]
     })
 }
 
-/// 5. R2200000, R3135000: five independent picks (R60) of the set's non-token permanents, each summoned by
-///    its type (a Trap or Field Trap face-down, §3.2) with no Cry and no Tribute (R1), drawn only when its
-///    zone is open (R129).
-fn build_permanents() -> Effect {
-    entry("permanents", |_ctx| {
-        (0..CHAOS_TG_PERMANENTS)
+/// 5. R2200000, R3135000, R4154304: `count` independent picks (R60) of the set's non-token permanents, each
+///    summoned by its type (a Trap or Field Trap face-down, §3.2) with no Cry and no Tribute (R1), drawn
+///    only when its zone is open (R129).
+fn permanents(count: i32) -> Effect {
+    entry("permanents", move |_ctx| {
+        (0..count)
             .map(|_| {
                 crate::effects::summon_random(json_as(json!({
                     "query": {
@@ -231,11 +234,11 @@ fn build_radiant() -> Effect {
     add_cards("radiant", CHAOS_TG_RADIANT_CARDS, true, CHAOS_TG_RADIANT_MANA)
 }
 
-/// 7. R2200003, R3135000: three base Rush Tokens, then three `unitsHaveKeyword` modifiers on the caster
-///    (R1859007), so Units that arrive later have them too, kept when the card is gone.
-fn build_army() -> Effect {
-    entry("army", |_ctx| {
-        let mut effects = summon_many(SetName::Core, RUSH_TOKEN_INDEX, CHAOS_TG_ARMY_TOKENS);
+/// 7. R2200003, R3135000, R4154304: `tokens` base Rush Tokens, then three `unitsHaveKeyword` modifiers on the
+///    caster (R1859007), so Units that arrive later have them too, kept when the card is gone.
+fn army(tokens: i32) -> Effect {
+    entry("army", move |_ctx| {
+        let mut effects = summon_many(SetName::Core, RUSH_TOKEN_INDEX, tokens);
         for kind in ["Rush", "Trample", "Pierce"] {
             effects.push(crate::effects::player_mods::give_units_keyword(json_as(
                 json!({ "keyword": { "kind": kind } }),
@@ -277,32 +280,84 @@ fn build_alternate() -> Effect {
     })
 }
 
+// The entries that issue #4154 cut, each built over today's number and over v0.6.6h's (R4154304).
+
+fn build_fortify() -> Effect {
+    fortify(CHAOS_TG_RUSH_TOKENS)
+}
+
+fn build_fortify_v0_6_6h() -> Effect {
+    fortify(CHAOS_TG_RUSH_TOKENS_V0_6_6H)
+}
+
+fn build_designs() -> Effect {
+    designs(CHAOS_TG_REFRESH)
+}
+
+fn build_designs_v0_6_6h() -> Effect {
+    designs(CHAOS_TG_REFRESH_V0_6_6H)
+}
+
+/// 3. R2200000, R3135000, R4154304: three random Training Grounds cards at (1), then 2 mana.
+fn build_cards() -> Effect {
+    add_cards("cards", CHAOS_TG_CARDS, false, CHAOS_TG_CARDS_MANA)
+}
+
+fn build_cards_v0_6_6h() -> Effect {
+    add_cards("cards", CHAOS_TG_CARDS_V0_6_6H, false, CHAOS_TG_CARDS_MANA)
+}
+
+fn build_mana() -> Effect {
+    mana_entry(CHAOS_TG_MANA)
+}
+
+fn build_mana_v0_6_6h() -> Effect {
+    mana_entry(CHAOS_TG_MANA_V0_6_6H)
+}
+
+fn build_permanents() -> Effect {
+    permanents(CHAOS_TG_PERMANENTS)
+}
+
+fn build_permanents_v0_6_6h() -> Effect {
+    permanents(CHAOS_TG_PERMANENTS_V0_6_6H)
+}
+
+fn build_army() -> Effect {
+    army(CHAOS_TG_ARMY_TOKENS)
+}
+
+fn build_army_v0_6_6h() -> Effect {
+    army(CHAOS_TG_ARMY_TOKENS_V0_6_6H)
+}
+
 /// §8.11 row 39's ten entries, in the order the card prints them. Each `label` is the clause as the card
-/// prints it, which `chaosRolled` names to both players (R436).
+/// prints it, which `chaosRolled` names to both players (R436). Issue #4154 cut entries 1 to 5 and 7 a step
+/// each (R4154304).
 pub const CHAOS_TG_EFFECTS: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "fortify",
-        label: "Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield",
+        label: "Summon 2 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield",
         build: build_fortify,
     },
     ChaosEffectDef {
         name: "designs",
-        label: "Fill your hand with Goetzmann Game Designs and refresh 3 mana",
+        label: "Fill your hand with Goetzmann Game Designs and replenish 2 mana",
         build: build_designs,
     },
     ChaosEffectDef {
         name: "cards",
-        label: "Add 4 random Training Grounds cards to your hand, which cost (1), and gain 2 mana",
+        label: "Add 3 random Training Grounds cards to your hand, which cost (1), and gain 2 mana",
         build: build_cards,
     },
     ChaosEffectDef {
         name: "mana",
-        label: "Gain 6 mana and draw 2 cards",
+        label: "Gain 5 mana and draw 2 cards",
         build: build_mana,
     },
     ChaosEffectDef {
         name: "permanents",
-        label: "Summon 5 random Training Grounds permanents",
+        label: "Summon 4 random Training Grounds permanents",
         build: build_permanents,
     },
     ChaosEffectDef {
@@ -312,7 +367,7 @@ pub const CHAOS_TG_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "army",
-        label: "Summon 3 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce",
+        label: "Summon 2 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce",
         build: build_army,
     },
     ChaosEffectDef {
@@ -326,6 +381,62 @@ pub const CHAOS_TG_EFFECTS: &[ChaosEffectDef] = &[
         build: build_alternate,
     },
     // 10. Core's recursion, the chain counting casts of every edition (R28, R87).
+    ChaosEffectDef {
+        name: "recast",
+        label: "Cast a random Call to Chaos",
+        build: cast_random_call_to_chaos,
+    },
+];
+
+/// R4154304, R767000: §8.11 row 39's ten entries as they were through v0.6.6h, before issue #4154 cut entries 1
+/// to 5 and 7: the same names and builders over the `_V0_6_6H` numbers, each `label` the clause the card
+/// printed then. The card's kept script (`script_v0_6_6h`) rolls it for those replays.
+pub const CHAOS_TG_EFFECTS_V0_6_6H: &[ChaosEffectDef] = &[
+    ChaosEffectDef {
+        name: "fortify",
+        label: "Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield",
+        build: build_fortify_v0_6_6h,
+    },
+    ChaosEffectDef {
+        name: "designs",
+        label: "Fill your hand with Goetzmann Game Designs and replenish 3 mana",
+        build: build_designs_v0_6_6h,
+    },
+    ChaosEffectDef {
+        name: "cards",
+        label: "Add 4 random Training Grounds cards to your hand, which cost (1), and gain 2 mana",
+        build: build_cards_v0_6_6h,
+    },
+    ChaosEffectDef {
+        name: "mana",
+        label: "Gain 6 mana and draw 2 cards",
+        build: build_mana_v0_6_6h,
+    },
+    ChaosEffectDef {
+        name: "permanents",
+        label: "Summon 5 random Training Grounds permanents",
+        build: build_permanents_v0_6_6h,
+    },
+    ChaosEffectDef {
+        name: "radiant",
+        label: "Add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana",
+        build: build_radiant,
+    },
+    ChaosEffectDef {
+        name: "army",
+        label: "Summon 3 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce",
+        build: build_army_v0_6_6h,
+    },
+    ChaosEffectDef {
+        name: "golem",
+        label: "Summon a Training-Grounds Golem",
+        build: build_golem,
+    },
+    ChaosEffectDef {
+        name: "alternate",
+        label: CHAOS_TG_ALTERNATE_LABEL,
+        build: build_alternate,
+    },
     ChaosEffectDef {
         name: "recast",
         label: "Cast a random Call to Chaos",

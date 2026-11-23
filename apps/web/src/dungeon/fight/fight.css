@@ -49,6 +49,21 @@
   background: var(--pal-violet-300);
 }
 
+/* #3586: the enemy's tier, then its tray, beside its hero. */
+.dungeon-fight__enemy-aside {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.dungeon-fight__tier {
+  color: var(--text-dim);
+  font-size: var(--type-sm);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 /* The list opens under the tray, toward the field; your own, at the bottom of the board, above it. */
 .artifact-tray__list {
   position: absolute;
@@ -97,7 +112,8 @@
   line-height: 1.3;
 }
 
-/* The board's rail: the enemy's name, the run's time and "AI is thinking…". */
+/* The board's rail, a centered row (practice.css): the modifier chip when any is live (R3912000), then the
+   enemy's name, the run's time and "AI is thinking…". */
 .dungeon-fight__status {
   display: flex;
   flex-wrap: wrap;

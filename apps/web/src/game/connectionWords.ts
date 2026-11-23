@@ -1,4 +1,4 @@
-// A match socket's state in a player's words: the match bar's and the Duos screen's, whose DuosConnection names the same five states (#2644).
+// A match socket's state in a player's words: the match bar's and the Duos screen's, whose DuosConnection names the same six states (#2644, R3767000).
 
 import { t } from "../i18n/i18n.ts";
 import type { ConnectionState } from "./net.ts";
@@ -16,5 +16,7 @@ export function connectionWords(state: ConnectionState): string {
       return t("This match isn't available");
     case "closed":
       return t("Disconnected");
+    case "elsewhere":
+      return t("This game is open in another tab or on another device");
   }
 }

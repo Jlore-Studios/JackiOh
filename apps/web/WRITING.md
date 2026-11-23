@@ -77,9 +77,9 @@ Each page has exactly one name, shared across its heading (`PageTitle`), the com
 | `/privacy` | Privacy policy |
 | `/terms` | Terms of service |
 | `/account` | Account |
-| `/ai` | How JackiOh uses AI |
 | `/dungeon` | Dungeon run |
 | `/play` | Play |
+| `/daily` | Daily games |
 
 ### Verbs and actions
 

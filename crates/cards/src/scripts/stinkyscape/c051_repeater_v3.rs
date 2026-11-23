@@ -1,9 +1,9 @@
 //! Stinkyscape #51 Repeater v3 (SPEC §8.10 row 51). Unit 0/2 → 0/4, Weapon, cost 2, Rare.
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate 3: Deal {damage} damage to an enemy Unit, with Pierce." — damage 1
 //!   Radiant: the same text — damage 2
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: onto one of your Units it fuses
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it fuses
 //! into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1862000: the target is a declared enemy Unit (R81), never a hero (#2521). Pierce is `ignoreArmor`
@@ -165,6 +165,14 @@ mod tests {
         #[test]
         fn r1857003_n_uses_a_turn_the_last_lands_and_the_next_is_refused() {
             fam::rep_uses_a_turn(ID, "s051", true, USES, RADIANT_DAMAGE);
+        }
+
+        /// R4334000: a launched Starship holding a Radiant copy hits the chosen Unit for the Radiant
+        /// `damage` and shows it; one holding a base copy, the base `damage`.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            fam::shot_ship_hits(ID, "s051", "repeater", true, RADIANT_DAMAGE);
+            fam::shot_ship_hits(ID, "s051", "repeater", false, DAMAGE);
         }
     }
 }

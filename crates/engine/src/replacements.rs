@@ -358,10 +358,7 @@ pub fn lethal_hit_window(
         DamageTarget::Hero { player } => *player,
         DamageTarget::Unit { instance } => instance.controller,
     };
-    let target_id = match target {
-        DamageTarget::Hero { player } => format!("hero-{player}"),
-        DamageTarget::Unit { instance } => instance.id.clone(),
-    };
+    let target_id = crate::reduce::attack_target_id(target);
     let event = ReplacedEvent::LethalHit {
         player: controller,
         amount,
@@ -426,10 +423,7 @@ pub fn lethal_hit_window(
                 }
             };
         let fired = fire(sink, &mut cand);
-        let to_id = match &destination {
-            DamageTarget::Hero { player } => format!("hero-{player}"),
-            DamageTarget::Unit { instance } => instance.id.clone(),
-        };
+        let to_id = crate::reduce::attack_target_id(&destination);
         sink.events.push(GameEvent::Redirected {
             what: RedirectWhat::Damage,
             from_id: target_id.clone(),
@@ -708,7 +702,8 @@ pub fn would_die_window(
 }
 
 /// R1849002 (Stinkyscape #105 Disintegrex): whether this collected card, which no "would die"
-/// replacement took, is exiled instead of destroyed: a card acting on either side says "anytime
+/// replacement took, is exiled instead of going to its graveyard, destroyed all the same (R4207000): a
+/// card acting on either side says "anytime
 /// something would be Destroyed, it is Exiled instead", or its Radiant "an enemy permanent" of the
 /// opponent's. Read before any card moves, so a dying aura card exiles what dies beside it and itself.
 pub fn destroy_exiles(state: &GameState, card: &CardInstance) -> bool {

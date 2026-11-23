@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
@@ -510,11 +511,20 @@ func (x *GitHub) GetFile(path string, ref string) (string, string) {
 		return "", ""
 	}
 	content := py.OrStr(data.Get("content"), "")
-	if content == "" && data.Truthy("size") && data.Truthy("sha") {
+	sha := ""
+	if v := data.Get("sha"); v != nil {
+		sha = py.Str(v)
+	}
+	big := content == "" && data.Truthy("size") && data.Truthy("sha")
+	if big {
 		// Over 1 MB the contents API leaves `content` empty (`encoding: "none"`); the blob API
 		// serves up to 100 MB. Read as empty, state.json was wiped on 2026-10-25
-		// (reviews/2026-10-27-muse-usage.md, finding 5).
-		blob := x.Request("GET", x.r()+"/git/blobs/"+py.Str(data.Get("sha")), nil, "", false, false)
+		// (reviews/2026-10-27-muse-usage.md, finding 5). A blob never changes: one read or
+		// written before costs no call (`Blobs`, #4059).
+		if text, ok := Blobs.get(sha); ok {
+			return text, sha
+		}
+		blob := x.Request("GET", x.r()+"/git/blobs/"+sha, nil, "", false, false)
 		content = ""
 		if b, ok := blob.(*pyjson.Object); ok {
 			content = py.OrStr(b.Get("content"), "")
@@ -524,11 +534,64 @@ func (x *GitHub) GetFile(path string, ref string) (string, string) {
 	if err != nil {
 		herr.Raise(&ValueError{Msg: err.Error()})
 	}
-	sha := ""
-	if v := data.Get("sha"); v != nil {
-		sha = py.Str(v)
+	text := py.DecodeReplace(raw)
+	if big {
+		Blobs.put(sha, text)
 	}
-	return py.DecodeReplace(raw), sha
+	return text, sha
+}
+
+// Blobs is the text of the last large files `GetFile` read through the blob API, or `PutFile`
+// wrote, by blob sha (#4059). A blob is named by its content, so a read of one already here costs
+// no call: the state file the loop just wrote is here when it reads it back, as it does before
+// each change, where it cost a call for its contents and another for its blob (183 an hour of each
+// at 15 runs). The newest `BlobsKeep`.
+var Blobs = &BlobCache{text: map[string]string{}}
+
+// BlobsKeep is how many files Blobs keeps: the state file's last few versions (2 MB each).
+var BlobsKeep = 4
+
+// BlobInline is the size up to which the contents API gives a file's content itself, so that
+// only a larger one's blob is read (`GetFile`), and only a larger one goes in Blobs once
+// written: GitHub's 1 MB, read as the smaller million bytes, so a file at the edge goes in too.
+var BlobInline = 1_000_000
+
+// BlobCache is Blobs: blob sha to text, the oldest dropped first.
+type BlobCache struct {
+	mu    sync.Mutex
+	order []string
+	text  map[string]string
+}
+
+func (c *BlobCache) get(sha string) (string, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	text, ok := c.text[sha]
+	return text, ok
+}
+
+func (c *BlobCache) put(sha string, text string) {
+	if sha == "" {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, ok := c.text[sha]; ok {
+		return
+	}
+	c.order = append(c.order, sha)
+	c.text[sha] = text
+	for len(c.order) > BlobsKeep {
+		delete(c.text, c.order[0])
+		c.order = c.order[1:]
+	}
+}
+
+// Clear forgets every blob (for the tests).
+func (c *BlobCache) Clear() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.order, c.text = nil, map[string]string{}
 }
 
 // b64decode is base64.b64decode(text): the characters outside the alphabet (GitHub's line
@@ -558,7 +621,13 @@ func (x *GitHub) PutFile(path string, text string, branch string, sha string, me
 	if sha != "" {
 		payload.Set("sha", sha)
 	}
-	x.Request("PUT", x.r()+"/contents/"+quote(path, "/"), payload, "", false, false)
+	answer := x.Request("PUT", x.r()+"/contents/"+quote(path, "/"), payload, "", false, false)
+	if len(text) > BlobInline {
+		// The new blob is what the next `GetFile` reads (#4059).
+		if written, ok := answer.(*pyjson.Object); ok {
+			Blobs.put(py.OrStr(written.Obj("content").Get("sha"), ""), text)
+		}
+	}
 }
 
 // ListDir is `(name, blob sha)` of each file in a directory on `ref`; empty when there is none.
@@ -682,11 +751,6 @@ func (x *GitHub) ListRuns(workflow string, status string /* = "" */, limit int /
 		params.Set("status", status)
 	}
 	return objs(x.Paginate(x.r()+"/actions/workflows/"+workflow+"/runs", params, "workflow_runs", limit, cached))
-}
-
-// GetGist is a gist, by id (the owner's PC's heartbeat, `dashboard.PC_FILE`).
-func (x *GitHub) GetGist(gistID string, cached bool /* = False */) *pyjson.Object {
-	return obj(x.Request("GET", "/gists/"+quote(gistID, "/"), nil, "", false, cached))
 }
 
 // ListRepoRuns is the runs of every workflow with `status` (`in_progress`, `queued`), newest

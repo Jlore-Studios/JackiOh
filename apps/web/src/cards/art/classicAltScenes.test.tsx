@@ -39,6 +39,7 @@ import { composeScene, SCENE_LAYERS, sceneRecipeOf, sceneUse, type SceneLayer, t
 import { SCENE_KIT, type SceneryPartId } from "./sceneKit.ts";
 import { CLASSIC_ALT_KIT } from "./sceneKitClassicAlt.ts";
 import { STINKY_ALT_KIT } from "./sceneKitStinkyAlt.ts";
+import { STINKY_EARLY_ALT_KIT } from "./sceneKitStinkyEarlyAlt.ts";
 import { ALT_PICTURE_CHANGE_MIN, ALT_SCENE_RECIPES, SCENE_RECIPES } from "./sceneRecipes.ts";
 import { proceduralArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
@@ -367,12 +368,13 @@ describe("R3388000 Classic Alt art restaged", () => {
     }
   });
 
-  it("R3388000 the frog and the shark join the kit just before the Stinkyscape Alt art pass's parts, and only their scenes draw them", () => {
+  it("R3388000 the frog and the shark join the kit just before the Stinkyscape Alt art passes' parts, and only their scenes draw them", () => {
     const added = Object.keys(CLASSIC_ALT_KIT);
     expect(Object.keys(NEW_PARTS).sort()).toEqual([...added].sort());
-    // They follow Classic's own parts and come before R3406000's, which stay last (stinkyscape91AltScenes.test.tsx),
-    // each as itself, so none takes the place of an earlier part (an id spread twice keeps its first place).
-    const stinky = Object.keys(STINKY_ALT_KIT).length;
+    // They follow Classic's own parts and come before R3406000's and then R3394000's, which stay last
+    // (stinkyscape91AltScenes.test.tsx, stinkyscapeAltScenes.test.tsx), each as itself, so none takes the place of an
+    // earlier part (an id spread twice keeps its first place).
+    const stinky = Object.keys(STINKY_ALT_KIT).length + Object.keys(STINKY_EARLY_ALT_KIT).length;
     expect(Object.keys(SCENE_KIT).slice(-(stinky + added.length), -stinky)).toEqual(added);
     for (const [id, part] of Object.entries(CLASSIC_ALT_KIT)) {
       expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);

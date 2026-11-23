@@ -22,6 +22,9 @@
 // one that landed anywhere else (Supabase's Site URL fallback) is handed to `/login` (R193); a room link
 // on /play is kept for this tab (net/roomLink.ts), so the gate's way to /login cannot lose it (R767).
 //
+// A CRASH REACHES THE OWNERS (#3619): the boundary below, an uncaught error and an unhandled rejection each send
+// one report (`net/clientErrors.ts`).
+//
 // THE QUEUE FOLLOWS THE PLAYER (R765): `useQueueFollow` (`net/liveGame.ts`) watches the account on
 // every screen but `/play`, and takes a paired player to the game (`QueueFound`).
 //
@@ -33,6 +36,11 @@
 // The presence heartbeat and the challenge toast (#936, B47, B57) are this file's, so neither waits
 // on a screen's gate nor restarts with it. Ctrl+K opens the command menu (R2118000) on every menu
 // screen, never over a board (`game/boardShown.ts`), keyed by the path so a move closes it.
+//
+// THE MENUS' SHELL (R3728000): every menu screen renders inside `MenuShell` (`shell/MenuShell.tsx`), its
+// navigation, its status row and its friends drawer; a board's path, the series screen and the dev screens
+// do not (`menuShellOn`). The shell stays mounted from one menu to the next, and the screen's boundary,
+// keyed by the path, still remounts inside it.
 
 import {
   Component,
@@ -58,14 +66,17 @@ import { useProficiencyAccountSync } from "./cards/proficiencySync.ts";
 import { ViewerAccountCosmetics, ViewerFullArt } from "./cards/ownedFullArt.ts";
 import { FullScreenArtHost } from "./cards/index.ts";
 import { countLocaleVisit, initLocale, t, useLocale } from "./i18n/i18n.ts";
+import { installClientErrorReports, reportClientError } from "./net/clientErrors.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { SITE_NAME, canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
-import { adoptCoopLink, adoptRoomLink, readRoomLink } from "./net/roomLink.ts";
+import { adoptCoopLink, adoptRoomLink, readRoomLink, useKeptLinkOpensLobby } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
   currentPath,
+  dailyIdOf,
   duosIdOf,
+  lobbyCodeOf,
   loginPath,
   matchIdOf,
   navigate,
@@ -78,18 +89,25 @@ import { readSession } from "./net/session.ts";
 import type { MeResponse } from "./net/api.ts";
 import { GlitchPath, NotFoundPlay } from "./notfound/NotFoundPlay.tsx";
 import { ChallengeToast } from "./together/ChallengeToast.tsx";
+import { LobbyInviteToast } from "./lobby/LobbyInviteToast.tsx";
+import { NotificationToast } from "./inbox/NotificationToast.tsx";
 import { usePresenceHeartbeat } from "./together/presence.ts";
 import { watchCoopOf, watchFriendOf } from "./together/watchLink.ts";
 // Static, not lazy: the gate's own panels offer "Sign out", which must work synchronously from a
-// screen that failed to load anything else, so account.tsx is in the entry chunk either way.
-import AccountRoute, { signOut, signOutLabel, useSigningOut } from "./routes/account.tsx";
+// screen that failed to load anything else, so `auth/signOut.ts` is in the entry chunk on purpose
+// while the account screen itself rides `routeChunks.account`.
+import { signOut, signOutLabel, useSigningOut } from "./auth/signOut.ts";
 import CommandMenu from "./routes/CommandMenu.tsx";
 import { QueueFound } from "./routes/GameBanner.tsx";
 import { routeChunks, startScreen, watchRouteIntent } from "./routes/chunks.tsx";
 import LandingRoute from "./routes/landing.tsx";
 import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
+import { MenuShell, menuShellOn } from "./shell/MenuShell.tsx";
 import { Skeleton, useShownAfterDelay, type SkeletonVariant } from "./skeleton/Skeleton.tsx";
+import { loadSceneData, sceneDataReady } from "./cards/art/sceneLoader.ts";
+import { loadCardTables } from "./cards/chinese.ts";
+import { loadFlavour } from "./cards/flavour.ts";
 import { loadWasm, wasmLoaded } from "./wasm/index.ts";
 
 import "./index.css";
@@ -99,6 +117,7 @@ const HotseatRoute = routeChunks.hotseat?.Screen ?? null;
 const DevDuosRoute = routeChunks.duosDev?.Screen ?? null;
 const FxGalleryRoute = routeChunks.fxGallery?.Screen ?? null;
 const DuosRoute = routeChunks.duos.Screen;
+const LobbyScreen = routeChunks.lobby.Screen;
 const ReplaysRoute = routeChunks.replays.Screen;
 const LoginRoute = routeChunks.login.Screen;
 const ResetPasswordRoute = routeChunks.resetPassword.Screen;
@@ -113,16 +132,17 @@ const DungeonStatsRoute = routeChunks.dungeonStats.Screen;
 const PrivacyRoute = routeChunks.privacy.Screen;
 const TermsRoute = routeChunks.terms.Screen;
 const PurchasesRoute = routeChunks.purchases.Screen;
-const AccessibilityRoute = routeChunks.accessibility.Screen;
-const AiRoute = routeChunks.ai.Screen;
 const CopyrightRoute = routeChunks.copyright.Screen;
 const PatchNotesRoute = routeChunks.patchNotes.Screen;
 const AlmanacRoute = routeChunks.almanac.Screen;
 const LeaderboardRoute = routeChunks.leaderboard.Screen;
 const CollectionRoute = routeChunks.collection.Screen;
 const ShopRoute = routeChunks.shop.Screen;
+const AccountRoute = routeChunks.account.Screen;
 const StatsRoute = routeChunks.stats.Screen;
 const TogetherRoute = routeChunks.together.Screen;
+const DailyRoute = routeChunks.daily.Screen;
+const DailyBoardRoute = routeChunks.dailyGame.Screen;
 const WatchRoute = routeChunks.watch.Screen;
 
 /** This file's chrome testids, kept in `auth/testids.ts` for Cypress and re-exported for existing imports. */
@@ -172,7 +192,7 @@ function HomeLink({ testId, label }: { testId: string; label?: string }): ReactE
   );
 }
 
-/** "Sign out": `routes/account.tsx` clears the device, revokes the session and reloads `/`. */
+/** "Sign out": `auth/signOut.ts` clears the device, revokes the session and reloads `/`. */
 function SignOutButton(): ReactElement {
   const leaving = useSigningOut();
   return (
@@ -308,6 +328,8 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, LoadF
   override componentDidCatch(error: unknown, info: ErrorInfo): void {
     // Kept for whoever opens the console; the player gets the panel below.
     console.error("A screen failed to load", error, info.componentStack);
+    // #3619: and to the owners, unless it is a lazy chunk that failed (the panel below covers that).
+    reportClientError("boundary", error);
   }
 
   override render(): ReactNode {
@@ -344,21 +366,30 @@ type EngineLoad = "loading" | "ready" | "failed";
 /**
  * Holds a screen that calls the engine until its module is in. A module that did not arrive gets a panel
  * whose retry asks `loadWasm()` again in place: a failed download is not cached (`wasm/index.ts`).
+ * #4180, R1301: the Chinese card tables load beside the module, best-effort, so a tables-chunk
+ * failure never bricks a gated screen: readiness is the module alone, and a flagged view's card
+ * falls back to English until the tables arrive. #4222: the scene tables load beside the module too,
+ * and the gate waits for both, failing closed to this panel on a scene-chunk failure: a painter
+ * fallback would draw the wrong picture and cache it.
  */
 function EngineGate({ children }: { children: ReactNode }): ReactElement {
-  const [load, setLoad] = useState<EngineLoad>(() => (wasmLoaded() ? "ready" : "loading"));
+  const [load, setLoad] = useState<EngineLoad>(() => (wasmLoaded() && sceneDataReady() ? "ready" : "loading"));
   useEffect(() => {
     if (load !== "loading") return;
     let live = true;
-    void loadWasm().then(
+    void Promise.all([loadWasm(), loadSceneData()]).then(
       () => {
         if (live) setLoad("ready");
       },
       (cause: unknown) => {
         if (!live) return;
-        console.error("the engine's WebAssembly module did not load", cause);
+        console.error("the engine's WebAssembly module or the scene tables did not load", cause);
         setLoad("failed");
       },
+    );
+    void loadCardTables().then(
+      () => undefined,
+      () => undefined,
     );
     return () => {
       live = false;
@@ -461,6 +492,8 @@ export function Gated({ allowPending = false, consentExempt = false, engine = fa
   useCardPicksAccountSync(account);
   // R3013001: and its card proficiency, which only the account holds, and the stamp each card wears.
   useProficiencyAccountSync(account);
+  // R767, R3730006: a link kept through the sign-in opens its lobby once this account is active.
+  useKeptLinkOpensLobby(account);
   const target = redirectFor(account, allowPending);
   // R1435: renders the gate again once the prompt is answered here, since the page-wide set above
   // renders nothing by changing.
@@ -723,8 +756,6 @@ export function App(): ReactElement {
     if (path === paths.terms) return <TermsRoute />;
     // R1665000: the page is public, its disclaimer anyone's; with a session it reads the odds and the account's counters itself.
     if (path === paths.purchases) return <PurchasesRoute />;
-    if (path === paths.accessibility) return <AccessibilityRoute />;
-    if (path === paths.ai) return <AiRoute />;
     if (path === paths.copyright) return <CopyrightRoute />;
     // R388: the patch history is public, like the catalog it records.
     if (path === paths.patchNotes) {
@@ -761,6 +792,31 @@ export function App(): ReactElement {
           {() => (
             <EngineGate>
               <TogetherRoute />
+            </EngineGate>
+          )}
+        </Gated>
+      );
+    }
+
+    // #3727: daily games ask for an active account the way Play together does.
+    if (path === paths.daily) {
+      return (
+        <Gated key={path} engine>
+          {() => (
+            <EngineGate>
+              <DailyRoute />
+            </EngineGate>
+          )}
+        </Gated>
+      );
+    }
+    const dailyId = dailyIdOf(path);
+    if (dailyId !== null) {
+      return (
+        <Gated key={path} engine>
+          {(account) => (
+            <EngineGate>
+              <DailyBoardRoute key={sessionKeyOf(account.token)} matchId={dailyId} />
             </EngineGate>
           )}
         </Gated>
@@ -811,6 +867,20 @@ export function App(): ReactElement {
       );
     }
 
+    // R3730000: a private lobby, 1v1 or co-op, behind the gate; a signed-out visitor's code waits through the sign-in (R3730006).
+    const lobbyCode = lobbyCodeOf(path);
+    if (lobbyCode !== null) {
+      return (
+        <Gated key={path} engine>
+          {(account) => (
+            <EngineGate>
+              <LobbyScreen key={sessionKeyOf(account.token)} token={account.token} code={lobbyCode.toUpperCase()} />
+            </EngineGate>
+          )}
+        </Gated>
+      );
+    }
+
     // #936: a Duos co-op match, behind the same gate as a match; its socket carries the gate's token (R1115000).
     const duosId = duosIdOf(path);
     if (duosId !== null) {
@@ -850,13 +920,20 @@ export function App(): ReactElement {
   })();
 
   // Keyed by the path, so moving to another screen clears a failed load's panel.
+  const boundary = (
+    <RouteErrorBoundary key={path}>
+      <Suspense fallback={<Loading what="Loading…" slow skeleton="panel" />}>{route}</Suspense>
+    </RouteErrorBoundary>
+  );
   return (
     <>
-      <RouteErrorBoundary key={path}>
-        <Suspense fallback={<Loading what="Loading…" slow skeleton="panel" />}>{route}</Suspense>
-      </RouteErrorBoundary>
+      {/* R3728000: see THE MENUS' SHELL above. */}
+      {menuShellOn(path) ? <MenuShell path={path}>{boundary}</MenuShell> : boundary}
       <QueueFound game={found} />
       {signedIn ? <ChallengeToast /> : null}
+      {signedIn ? <LobbyInviteToast /> : null}
+      {/* R4039001: the newest row of the notification feed, and its desktop notification. */}
+      {signedIn ? <NotificationToast /> : null}
       {/* Keyed by the path, so a move closes it; its own key, as the boundary above holds `path`. */}
       <CommandMenu key={`command-menu:${path}`} path={path} />
       <FullScreenArtHost />
@@ -873,6 +950,8 @@ if (import.meta.env.MODE !== "test") {
   const host = document.getElementById("root");
   if (host === null) throw new Error("index.html is missing #root");
 
+  // #3619: an uncaught error or an unhandled rejection reaches the owners, as the boundary's does.
+  installClientErrorReports();
   // The settings store's first read puts `data-reduce-motion` on <html> (index.css), so the player's
   // "Reduce motion" holds from the first paint of every screen, not only once a board has read it.
   readSettings();
@@ -882,8 +961,13 @@ if (import.meta.env.MODE !== "test") {
   // R1916000: one more boot on this device's language.
   countLocaleVisit();
   const localeReady = initLocale();
-  // #778: see THE ENGINE LOADS ALONGSIDE above.
+  // #778: see THE ENGINE LOADS ALONGSIDE above. #4222: the scene tables start beside it, so the
+  // first cards wait on both in `EngineGate` and `useEngineReady`, never on the entry chunk's bytes.
+  // #4435: the flavour sidecar starts beside it too, best-effort, as the Chinese card tables do (#4180):
+  // no screen waits on it, and a failed load shows no flavour and breaks nothing.
   void loadWasm().catch(() => undefined);
+  void loadSceneData().catch(() => undefined);
+  void loadFlavour().catch(() => undefined);
   void localeReady.then(() => {
     createRoot(host).render(
       <StrictMode>
@@ -893,4 +977,7 @@ if (import.meta.env.MODE !== "test") {
   });
   // Polish 2: UI ticks and the audio unlock on every screen, off the first paint (audio/appAudio.ts).
   void import("./audio/appAudio.ts").then((audio) => audio.retainAppAudio());
+  // #4428: the sound-effect recipes start beside the page-wide sound, off the first paint, without
+  // waiting on the WebAssembly module; the engine's `unlock()` is the backstop on the first gesture.
+  void import("./audio/sfxLoader.ts").then((sfx) => sfx.loadSfx()).catch(() => undefined);
 }

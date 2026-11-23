@@ -34,7 +34,7 @@ use crate::api::http::{
 use crate::api::queue::{new_seed, new_uuid, seed_override_of};
 use crate::app::{App, now_ms};
 use crate::config::{DUOS_ROOM_TTL_MS, MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH};
-use crate::duos::engine::{self, Pinned};
+use crate::duos::engine::{self, Pinned, TeamBChoices};
 use crate::duos::live_match_of;
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
@@ -86,16 +86,17 @@ fn forget_seed(code: &str) {
 
 // Reading a request
 
-/// S6: `difficulty`, one of §9.9's three tiers.
-fn read_difficulty(body: &Value) -> Result<Difficulty, ApiError> {
+/// S6: `difficulty`, one of §9.9's three tiers. A co-op lobby's settings read it too (R3730003).
+pub(crate) fn read_difficulty(body: &Value) -> Result<Difficulty, ApiError> {
     body.get("difficulty")
         .and_then(Value::as_str)
         .and_then(|text| text.parse::<Difficulty>().ok())
         .ok_or_else(|| bad_request(r#""difficulty" must be "easy", "medium" or "hard""#))
 }
 
-/// S6: exactly one of `deckId` or `random: true` (with lean, R924000, R1372).
-fn read_choice(body: &Value) -> Result<ModeChoiceInput, ApiError> {
+/// S6: exactly one of `deckId` or `random: true` (with lean, R924000, R1372). A co-op lobby's pick
+/// reads it too (R3730001).
+pub(crate) fn read_choice(body: &Value) -> Result<ModeChoiceInput, ApiError> {
     let deck_id = body.get("deckId").filter(|value| !value.is_null());
     let random = match body.get("random") {
         None | Some(Value::Null) => false,
@@ -114,10 +115,19 @@ fn read_choice(body: &Value) -> Result<ModeChoiceInput, ApiError> {
 /// R253: the deck is checked legal now, under the running catalog, and frozen with that catalog's
 /// version; a random choice keeps its lean for the deal.
 async fn freeze(app: &App, profile_id: &str, choice: &ModeChoiceInput) -> Result<DuosChoice, ApiError> {
-    match freeze_choice(app, profile_id, choice).await? {
+    duos_choice_of(
+        freeze_choice(app, profile_id, choice).await?,
+        &app.catalog.version,
+    )
+}
+
+/// A frozen choice as a co-op seat holds it, with the catalog it was checked against: a room's, or a
+/// co-op lobby's pick at its Start (R3730002).
+pub(crate) fn duos_choice_of(frozen: FrozenChoice, catalog_version: &str) -> Result<DuosChoice, ApiError> {
+    match frozen {
         FrozenChoice::Bo1 { deck } => Ok(DuosChoice::Deck {
             deck,
-            catalog_version: app.catalog.version.clone(),
+            catalog_version: catalog_version.to_string(),
         }),
         FrozenChoice::Random { lean } => Ok(DuosChoice::Random { lean }),
         FrozenChoice::Bo3 { .. } => Err(ApiError::internal("a trio reached a co-op room")),
@@ -125,7 +135,7 @@ async fn freeze(app: &App, profile_id: &str, choice: &ModeChoiceInput) -> Result
 }
 
 /// The code a path names, normalized, or none when it could never be a room code.
-fn code_of(req: &Req) -> Option<String> {
+pub(crate) fn code_of(req: &Req) -> Option<String> {
     let code = normalize_code(req.params.get("code").map(String::as_str).unwrap_or(""));
     is_well_formed_code(&code, ROOM_CODE_LENGTH).then_some(code)
 }
@@ -193,7 +203,10 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
             created_at: now,
             expires_at,
         };
-        let created = one_tx!(app.db, |t| t.duos_rooms_create(&room).await?)?;
+        // R3730006: a code a private lobby holds is its lobby's, so a room never shares it.
+        let created = one_tx!(app.db, |t| {
+            t.lobbies_get(&code).await?.is_none() && t.duos_rooms_create(&room).await?
+        })?;
         if !created {
             continue;
         }
@@ -213,9 +226,18 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
 /// `GET /api/duos/rooms/:code`: the room as its lobby shows it, the match id once the guest joined.
 pub async fn get_room(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    let room = room_of(app, &req, &profile.id).await?;
+    let found = room_of(app, &req, &profile.id).await;
+    // R4008000: the host and the guest reading their own room are not guessing.
+    let own = matches!(&found, Ok(room) if room.host == profile.id || room.guest.as_deref() == Some(profile.id.as_str()));
+    app.code_guesses.claim(&req, &profile.id, own)?;
+    room_view(app, &profile.id, found).await
+}
+
+/// `get_room`'s answer for the room `found`.
+async fn room_view(app: &App, profile_id: &str, found: Result<DuosRoom, ApiError>) -> ApiResult {
+    let room = found?;
     // §13.9: a joined room is its two people's; to anyone else it is as gone as an unknown code.
-    let member = room.host == profile.id || room.guest.as_deref() == Some(profile.id.as_str());
+    let member = room.host == profile_id || room.guest.as_deref() == Some(profile_id);
     if room.guest.is_some() && !member {
         return Err(not_open());
     }
@@ -251,6 +273,17 @@ pub(crate) struct CoopStart<'a> {
     pub difficulty: Difficulty,
     pub seed: Option<String>,
     pub claim_room: Option<String>,
+    /// R3731002: a 2v2's team B, two more people; none for the AI team at `difficulty`.
+    pub team_b: Option<CoopTeamB<'a>>,
+}
+
+/// R3731002: a 2v2's team B, its two people and their picks.
+#[derive(Clone, Copy)]
+pub(crate) struct CoopTeamB<'a> {
+    pub b1: &'a str,
+    pub b2: &'a str,
+    pub b1_choice: &'a DuosChoice,
+    pub b2_choice: &'a DuosChoice,
 }
 
 /// What `start_coop_match`'s transaction found. `Blocked` and `Unavailable` are the room claim's:
@@ -261,10 +294,10 @@ pub(crate) enum CoopStartOutcome {
     Unavailable,
 }
 
-/// Starts one co-op match for `a1` and `a2` (host is a1, §13.9), shared with Play again (R2092000).
-/// Pins running catalog (R767000), deals and begins under `catch_unwind`, reserves seats in
-/// ledger (R1523000), and in one transaction claims the room, writes match row, and cancels
-/// open tickets. Actor starts after commit.
+/// Starts one co-op match for `a1` and `a2` (host is a1, §13.9), shared with Play again (R2092000),
+/// or a 2v2 with `team_b`'s people at b1 and b2 (R3731002). Pins running catalog (R767000), deals and
+/// begins under `catch_unwind`, reserves every person's seat in ledger (R1523000), and in one
+/// transaction claims the room, writes match row, and cancels open tickets. Actor starts after commit.
 pub(crate) async fn start_coop_match(
     app: &Arc<App>,
     start: CoopStart<'_>,
@@ -277,18 +310,29 @@ pub(crate) async fn start_coop_match(
             "the running catalog {catalog_version} cannot be played: {reason}"
         ))
     })?;
-    // R1523000: both people's seats before writing. A busy seat meets `busy` refusal (R1065000).
+    // R1523000: every person's seat before writing. A busy seat meets `busy` refusal (R1065000).
+    let mut people = vec![start.a1, start.a2];
+    if let Some(team_b) = start.team_b {
+        people.extend([team_b.b1, team_b.b2]);
+    }
     let lease = app
         .seats
-        .reserve(&[start.a1, start.a2], Seat::Duos(start.match_id.clone()))
+        .reserve(&people, Seat::Duos(start.match_id.clone()))
         .map_err(busy)?;
     let seed = start.seed.unwrap_or_else(new_seed);
+    let team_b = match start.team_b {
+        Some(team_b) => TeamBChoices::People {
+            b1: team_b.b1_choice,
+            b2: team_b.b2_choice,
+        },
+        None => TeamBChoices::Ai(start.difficulty),
+    };
     let options = catch_unwind(AssertUnwindSafe(|| {
         engine::match_options(
             pinned,
             &catalog_version,
             &seed,
-            start.difficulty,
+            team_b,
             start.host_choice,
             start.guest_choice,
         )
@@ -300,6 +344,14 @@ pub(crate) async fn start_coop_match(
         seed,
         a1: start.a1.to_string(),
         a2: start.a2.to_string(),
+        b1: start
+            .team_b
+            .map(|team_b| team_b.b1.to_string())
+            .unwrap_or_default(),
+        b2: start
+            .team_b
+            .map(|team_b| team_b.b2.to_string())
+            .unwrap_or_default(),
         difficulty: start.difficulty,
         options,
         created_at: now,
@@ -329,7 +381,7 @@ pub(crate) async fn start_coop_match(
             }
         }
         t.duos_matches_create(&row).await?;
-        for profile_id in [&row.a1, &row.a2] {
+        for profile_id in &people {
             if let Some(stale) = t.tickets_open_for_profile(profile_id).await? {
                 t.tickets_cancel(&stale.id, now).await?;
             }
@@ -341,7 +393,7 @@ pub(crate) async fn start_coop_match(
             // R1523000: the record holds the match now, so the ledger holds both seats until its
             // ending.
             lease.commit();
-            registry(app).start(app, row, state, pinned);
+            registry(app).start(app, row, state, pinned).await;
         }
         CoopStartOutcome::Blocked | CoopStartOutcome::Unavailable => {}
     }
@@ -354,7 +406,10 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let choice = read_choice(&req.body)?;
     let joiner_seed = seed_override_of(app, &req.body)?;
-    let room = room_of(app, &req, &profile.id).await?;
+    let room = app
+        .code_guesses
+        .lookup(&req, &profile.id, room_of(app, &req, &profile.id))
+        .await?;
     if room.host == profile.id {
         return refused(
             409,
@@ -391,6 +446,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             difficulty: room.difficulty,
             seed: take_seed(&room.code, joiner_seed),
             claim_room: Some(room.code.clone()),
+            team_b: None,
         },
         // R1523000: a guest who holds a game meets the refusal `assert_free_to_play` answers, and a
         // host who holds one the host's (R1065000).
@@ -422,6 +478,7 @@ pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
     };
     let room = one_tx!(app.db, |t| t.duos_rooms_get(&code).await?)?;
     let Some(room) = room.filter(|room| room.host == profile.id) else {
+        app.code_guesses.claim(&req, &profile.id, false)?;
         return Err(not_open());
     };
     if room.guest.is_some() {

@@ -35,10 +35,6 @@ fn id_at(s: &Scenario, player: PlayerId, lane: i32) -> String {
         .id
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
 fn hero_health(s: &Scenario, player: PlayerId) -> i32 {
     s.state().players[player].hero.health
 }
@@ -111,7 +107,7 @@ mod r1848000_freeze_forever_never_thaws {
             json!([{ "def": plain.id, "lane": 1 }]),
         );
         let unit = id_at(&s, P2, 1);
-        s.play(absolute_zero.id.as_str(), pick(&unit));
+        s.play(absolute_zero.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(s.card(&unit).frozen, Some(FROZEN_FOREVER));
         assert_eq!(
             frozen_marks(s.last_events(), &unit),
@@ -148,16 +144,16 @@ mod r1848000_freeze_forever_never_thaws {
             json!([{ "def": plain.id, "lane": 1 }]),
         );
         let unit = id_at(&s, P2, 1);
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(
             s.card(&unit).frozen,
             Some(10),
             "an ordinary freeze on turn 9 thaws at turn 10's cleanup"
         );
         assert_eq!(shown_forever(&s, P1, P2, 1), None);
-        s.play(absolute_zero.id.as_str(), pick(&unit));
+        s.play(absolute_zero.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(s.card(&unit).frozen, Some(FROZEN_FOREVER));
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(
             s.card(&unit).frozen,
             Some(FROZEN_FOREVER),
@@ -176,21 +172,21 @@ mod r1848000_freeze_forever_never_thaws {
             json!([{ "def": plain.id, "lane": 1 }, { "def": plain.id, "lane": 2 }]),
         );
         let stolen = id_at(&s, P2, 1);
-        s.play(absolute_zero.id.as_str(), pick(&stolen));
-        s.play(grab.id.as_str(), pick(&stolen));
+        s.play(absolute_zero.id.as_str(), pick::targets(pick::id(&stolen)));
+        s.play(grab.id.as_str(), pick::targets(pick::id(&stolen)));
         assert_eq!(s.card(&stolen).controller, P1);
         assert_eq!(
             s.card(&stolen).frozen,
             Some(FROZEN_FOREVER),
             "no thaw to stamp again on the new side"
         );
-        s.play(hush.id.as_str(), pick(&stolen));
+        s.play(hush.id.as_str(), pick::targets(pick::id(&stolen)));
         assert_eq!(s.card(&stolen).frozen, None, "a Vanilla removes it");
         assert_eq!(frozen_marks(s.last_events(), &stolen), vec![false]);
 
         let bounced = id_at(&s, P2, 2);
-        s.play(absolute_zero.id.as_str(), pick(&bounced));
-        s.play(recall.id.as_str(), pick(&bounced));
+        s.play(absolute_zero.id.as_str(), pick::targets(pick::id(&bounced)));
+        s.play(recall.id.as_str(), pick::targets(pick::id(&bounced)));
         assert_eq!(s.card(&bounced).frozen, None, "leaving the field ends it (R78)");
     }
 }
@@ -224,7 +220,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
         let mut s = meteor_board("r1848001", false, json!([]), three_plains());
         let (left, target, right) = (id_at(&s, P2, 1), id_at(&s, P2, 2), id_at(&s, P2, 3));
         let before = s.state().rng_cursor;
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         let hits = hits(&s);
         assert_eq!(hits.len(), 3, "{hits:?}");
         assert_eq!(
@@ -254,7 +250,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
     fn r1848001_the_radiant_face_sends_what_passes_both_neighbours_on_to_their_hero() {
         let mut s = meteor_board("r1848001-radiant", true, json!([]), three_plains());
         let target = id_at(&s, P2, 2);
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert_eq!(hero_health(&s, P2), HERO_HEALTH - (20 - 9));
         let hero = format!("hero-{}", P2.as_str());
         assert_eq!(hits(&s).last(), Some(&(hero, 11)));
@@ -278,7 +274,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             let mut s = setup();
             s.state_mut().rng_cursor = cursor;
             let target = id_at(&s, P2, 2);
-            s.play(meteor.id.as_str(), pick(&target));
+            s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
             hits(&s)
         };
         let probe = setup();
@@ -302,7 +298,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
         );
         let before = s.state().rng_cursor;
         let target = id_at(&s, P2, 1);
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert_eq!(hits(&s).len(), 2);
         assert_eq!(s.state().rng_cursor, before, "a lone neighbour is no draw");
 
@@ -313,7 +309,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             json!([{ "def": plain.id, "lane": 3 }]),
         );
         let target = id_at(&s, P2, 3);
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert_eq!(hero_health(&s, P2), HERO_HEALTH - 17);
         let mut s = meteor_board(
             "r1848001-none-base",
@@ -322,7 +318,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             json!([{ "def": plain.id, "lane": 3 }]),
         );
         let target = id_at(&s, P2, 3);
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert_eq!(hits(&s).len(), 1);
         assert_eq!(hero_health(&s, P2), HERO_HEALTH);
     }
@@ -337,7 +333,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             json!([{ "def": plain.id, "lane": 1 }, { "def": shielded.id, "lane": 2 }]),
         );
         let (target, shield) = (id_at(&s, P2, 1), id_at(&s, P2, 2));
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert!(s.last_events().iter().any(
             |event| matches!(event, GameEvent::DivineShieldLost { instance_id } if *instance_id == shield)
         ));
@@ -358,10 +354,36 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
         );
         let before = s.state().rng_cursor;
         let (ward, target, right) = (id_at(&s, P2, 1), id_at(&s, P2, 2), id_at(&s, P2, 3));
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert_eq!(hits(&s), vec![(target, 3), (right, 3)]);
         assert_eq!(s.card(&ward).damage, 0);
         assert_eq!(s.state().rng_cursor, before);
+    }
+
+    #[test]
+    fn r4453000_a_dormant_neighbour_is_passed_by_and_the_excess_goes_on() {
+        // A Dormant card acts not (§6.1 Dormant, R1839000): it is no neighbour, so the excess skips it
+        // whichever way a draw would have gone, rather than stopping on a card `land` refuses.
+        let dormant_board = |seed: &str, radiant: bool| {
+            let mut s = meteor_board(seed, radiant, json!([]), three_plains());
+            let sleeper = id_at(&s, P2, 1);
+            find_instance_mut(s.state_mut(), &sleeper)
+                .expect("the sleeper")
+                .slumber = Some(Slumber { turns: Some(2) });
+            s
+        };
+        let mut s = dormant_board("r4453000-dormant", false);
+        let before = s.state().rng_cursor;
+        let (sleeper, target, right) = (id_at(&s, P2, 1), id_at(&s, P2, 2), id_at(&s, P2, 3));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
+        assert_eq!(hits(&s), vec![(target, 3), (right, 3)]);
+        assert_eq!(s.card(&sleeper).damage, 0);
+        assert_eq!(s.state().rng_cursor, before, "a lone neighbour is no draw");
+
+        let mut s = dormant_board("r4453000-dormant-radiant", true);
+        let target = id_at(&s, P2, 2);
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
+        assert_eq!(hero_health(&s, P2), HERO_HEALTH - (20 - 6));
     }
 
     #[test]
@@ -374,7 +396,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             json!([{ "def": armored.id, "lane": 1 }, { "def": plain.id, "lane": 2 }]),
         );
         let (target, right) = (id_at(&s, P2, 1), id_at(&s, P2, 2));
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert_eq!(hits(&s), vec![(target, 7), (right, 1)]);
 
         let mut s = meteor_board(
@@ -384,7 +406,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             json!([{ "def": indestructible.id, "lane": 1 }, { "def": plain.id, "lane": 2 }]),
         );
         let target = id_at(&s, P2, 1);
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert!(
             hits(&s).is_empty(),
             "Indestructible takes nothing, so nothing passes it"
@@ -401,7 +423,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             json!([{ "def": plain.id, "lane": 5 }]),
         );
         let target = id_at(&s, P2, 5);
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         // 20 + 2 = 22; the 3/3 counts 3 and the hero takes the 19 left, not 21.
         assert_eq!(hero_health(&s, P2), HERO_HEALTH - 19);
     }
@@ -468,7 +490,7 @@ mod r1848002_a_spell_with_poisonous_destroys_a_unit_it_damages {
             .filter(|card| card.def_id == ping.id)
             .map(|card| card.id.clone())
             .collect();
-        s.play(pings[0].as_str(), pick(&first));
+        s.play(pings[0].as_str(), pick::targets(pick::id(&first)));
         assert!(s.last_events().iter().any(|event| matches!(
             event,
             GameEvent::KeywordGranted { instance_id, keyword: Keyword::Poisonous, .. } if *instance_id == pings[0]
@@ -478,7 +500,7 @@ mod r1848002_a_spell_with_poisonous_destroys_a_unit_it_damages {
         // R78: the keyword went with the resolution.
         assert!(s.card(&pings[0]).granted_keywords.is_empty());
 
-        s.play(pings[1].as_str(), pick(&second));
+        s.play(pings[1].as_str(), pick::targets(pick::id(&second)));
         s.expect_in_zone(second.as_str(), "field");
         assert_eq!(s.card(&second).damage, 1);
     }
@@ -508,7 +530,7 @@ mod r1848002_a_spell_with_poisonous_destroys_a_unit_it_damages {
             .unwrap()
             .id
             .clone();
-        s.play(ping_id.as_str(), pick(&unit));
+        s.play(ping_id.as_str(), pick::targets(pick::id(&unit)));
         s.expect_in_zone(unit.as_str(), "field");
     }
 }
@@ -524,11 +546,11 @@ mod r1848003_an_x_card_whose_x_is_set_is_played_for_that_x {
             .collect()
     }
 
-    fn plays_of(s: &Scenario, id: &str) -> Vec<Option<i32>> {
-        legal_actions(s.state(), P1)
-            .iter()
+    fn play_xs(s: &Scenario, id: &str) -> Vec<Option<i32>> {
+        plays_in(s.state(), P1, id)
+            .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play { instance_id, x, .. } if instance_id == id => Some(*x),
+                ActionBody::Play { x, .. } => Some(x),
                 _ => None,
             })
             .collect()
@@ -581,7 +603,7 @@ mod r1848003_an_x_card_whose_x_is_set_is_played_for_that_x {
             } else {
                 vec![]
             };
-            assert_eq!(plays_of(&s, &card.id), expected, "X {:?}", card.fixed_x);
+            assert_eq!(play_xs(&s, &card.id), expected, "X {:?}", card.fixed_x);
         }
     }
 
@@ -1075,16 +1097,11 @@ mod r1868000_an_x_cards_declared_target_reads_the_x_of_its_play {
     use crate::rules::fixtures::spell_verbs::{nono_x, riser, stable};
 
     /// Each play of `id` that `legal_actions` lists, as its X and the ids it targets.
-    fn plays_of(s: &Scenario, id: &str) -> Vec<(Option<i32>, Vec<String>)> {
-        legal_actions(s.state(), P1)
+    fn play_xs_and_targets(s: &Scenario, id: &str) -> Vec<(Option<i32>, Vec<String>)> {
+        plays_in(s.state(), P1, id)
             .iter()
             .filter_map(|action| match action {
-                ActionBody::Play {
-                    instance_id,
-                    x,
-                    targets,
-                    ..
-                } if instance_id == id => Some((
+                ActionBody::Play { x, targets, .. } => Some((
                     *x,
                     targets
                         .iter()
@@ -1131,7 +1148,7 @@ mod r1868000_an_x_cards_declared_target_reads_the_x_of_its_play {
     fn r1868000_legal_actions_pair_each_x_with_the_units_below_four_times_it() {
         let s = plain_and_big("r1868000-legal");
         let (three, five) = (id_at(&s, P2, 1), id_at(&s, P2, 2));
-        let plays = plays_of(&s, &s.card(nono_x.id.as_str()).id);
+        let plays = play_xs_and_targets(&s, &s.card(nono_x.id.as_str()).id);
         // A 3-Attack Unit is below 4 × 1; a 5-Attack one is not, and is below 4 × 2 and up.
         assert_eq!(targets_at(&plays, Some(1)), vec![three.clone()]);
         for x in 2..=4 {
@@ -1160,7 +1177,7 @@ mod r1868000_an_x_cards_declared_target_reads_the_x_of_its_play {
     #[test]
     fn r1868000_an_x_with_no_unit_below_its_limit_is_not_offered_and_is_refused() {
         let mut s = nono_board("r1868000-needed", json!([{ "def": big_body.id, "lane": 1 }]));
-        let plays = plays_of(&s, &s.card(nono_x.id.as_str()).id);
+        let plays = play_xs_and_targets(&s, &s.card(nono_x.id.as_str()).id);
         // R703: the pick is needed, so an X whose limit no Unit is below is no play.
         assert!(plays.iter().all(|(x, _)| *x != Some(1)), "{plays:?}");
         assert_eq!(targets_at(&plays, Some(2)), vec![id_at(&s, P2, 1)]);
@@ -1175,7 +1192,7 @@ mod r1868000_an_x_cards_declared_target_reads_the_x_of_its_play {
         let mut s = plain_and_big("r1868000-set");
         let three = id_at(&s, P2, 1);
         s.card_mut(nono_x.id.as_str()).fixed_x = Some(1);
-        let plays = plays_of(&s, &s.card(nono_x.id.as_str()).id);
+        let plays = play_xs_and_targets(&s, &s.card(nono_x.id.as_str()).id);
         assert_eq!(plays, vec![(None, vec![three])]);
     }
 
@@ -1190,5 +1207,67 @@ mod r1868000_an_x_cards_declared_target_reads_the_x_of_its_play {
             GameEvent::Buffed { instance_id, attack: 2, .. } if *instance_id == risen
         )));
         s.expect_in_zone(risen.as_str(), "graveyard");
+    }
+}
+
+// Issue #4508: I21's fuzz found S #150 Call to Chaos's "Allure every enemy Unit" marking a Unit Immune to
+// Spells: the Allure walk passed only a Dormant card by (R4453000).
+mod r4453000_a_spells_allure_passes_a_unit_immune_to_spells_by {
+    use super::*;
+    use jackioh_engine::effects::allure_enemy_units;
+
+    /// `allure_enemy_units` applied as `source`'s, p1's, and the ids it marked.
+    fn allured_by(s: &mut Scenario, source: &CardInstance) -> Vec<String> {
+        let mut events: Vec<GameEvent> = Vec::new();
+        let state = s.state_mut();
+        let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
+        {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            let options = HookOptions {
+                controller: Some(P1),
+                ..Default::default()
+            };
+            let mut ctx = make_context(&mut sink, Some(source), options);
+            (allure_enemy_units().apply)(&mut ctx);
+        }
+        events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Marked {
+                    instance_id,
+                    added: true,
+                    ..
+                } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn r4453000_a_spells_allure_passes_a_unit_immune_to_spells_by_and_a_units_reaches_it() {
+        let mut s = board(
+            "p1",
+            "r4453000-allure",
+            json!(["stand-in (0) Spell"]),
+            json!([{ "def": "stand-in (1) 1/1", "lane": 1 }]),
+            json!([plain.id]),
+            json!([
+                { "def": "stand-in (1) 4/4 Immune to Spells", "lane": 1 },
+                { "def": "stand-in (1) 4/4", "lane": 2 },
+            ]),
+        );
+        let (immune, exposed) = (id_at(&s, P2, 1), id_at(&s, P2, 2));
+        let spell = s.card("stand-in (0) Spell").clone();
+        assert_eq!(
+            allured_by(&mut s, &spell),
+            vec![exposed.clone()],
+            "the Spell passes it by"
+        );
+        let unit = s.unit(P1, 1).expect("the Unit");
+        let mut by_unit = allured_by(&mut s, &unit);
+        by_unit.sort();
+        let mut both = vec![immune, exposed];
+        both.sort();
+        assert_eq!(by_unit, both, "a Unit's Allure reaches it");
     }
 }

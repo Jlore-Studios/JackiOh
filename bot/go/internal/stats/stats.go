@@ -1,8 +1,9 @@
 // Package stats is bot/harness/stats.py.
 //
 // The statistics in the pinned status issue (#148): what the night bot has done over the last six
-// hours, the last day, the last week and all time, counted afresh every 30 minutes by the
-// `bot-status` loop (`dashboard --stats`) and kept in the issue between counts (`kept`).
+// hours, the last day, the last week and all time, counted afresh every 10 minutes by the
+// `bot-status` loop (`dashboard --stats`), on a goroutine of its own (#3675), and kept in the issue
+// between counts (`kept`).
 //
 // Where the rest of the issue says what the bot is doing now, this block keeps the record. It opens
 // with one table that sets the four windows side by side and charts of the last two weeks, then
@@ -43,6 +44,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
@@ -60,8 +62,9 @@ var (
 )
 
 // StatsEvery is how often the loop counts afresh: often enough that the six-hour window is current.
-// (A count reads every bot comment and pull request, a few hundred calls, so not at every rewrite.)
-var StatsEvery = 30 * time.Minute
+// A count reads every bot comment and pull request, so it runs on a goroutine of its own, off the
+// rewrite's clock, and reads a closed pull request only once a loop (`Pulls`, #3675).
+var StatsEvery = 10 * time.Minute
 
 // NamedSpan is one of WINDOWS: a window's name and how far back it reaches, nil for all time.
 type NamedSpan struct {
@@ -302,6 +305,56 @@ func Joined(events []*Event) []*Event {
 // Collect is stats.collect; a variable so the tests can replace it.
 var Collect = collect
 
+// Pulls keeps each closed pull request's detail between counts (#3675), by its number and its
+// `updated_at`, which any change to it moves: the status loop counts every ten minutes, and most of
+// a count was one `GetPull` for each of the bot's pull requests, closed ones that never change
+// among them. The loop sets it for its run and puts nil back; nil keeps nothing, so a count outside
+// the loop reads every one, as it always did.
+var Pulls *PullCache
+
+// PullCache is Pulls: a closed pull request's detail by number, with the `updated_at` it had.
+type PullCache struct {
+	mu   sync.Mutex
+	kept map[int][2]any // number -> (updated_at, detail)
+}
+
+// NewPullCache is an empty PullCache.
+func NewPullCache() *PullCache { return &PullCache{kept: map[int][2]any{}} }
+
+// get is the detail kept for `pull` (an item of the list of pull requests), or nil when none is
+// kept, it has changed since, or there is no cache.
+func (c *PullCache) get(number int, pull *pyjson.Object) *pyjson.Object {
+	if c == nil {
+		return nil
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	kept, ok := c.kept[number]
+	if !ok || !pyjson.Equal(kept[0], pull.Get("updated_at")) {
+		return nil
+	}
+	return kept[1].(*pyjson.Object)
+}
+
+// put keeps `detail` when the pull request is closed and its list item says when it last
+// changed: an open one changes with every push, review and label.
+func (c *PullCache) put(number int, pull *pyjson.Object, detail *pyjson.Object) {
+	if c == nil || detail == nil || !pyjson.Equal(detail.Get("state"), "closed") ||
+		!pyjson.Truthy(pull.Get("updated_at")) {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.kept[number] = [2]any{pull.Get("updated_at"), detail}
+}
+
+// Len is how many details the cache keeps.
+func (c *PullCache) Len() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.kept)
+}
+
 func loginOf(thing *pyjson.Object) string {
 	return strings.ToLower(py.OrStr(thing.Obj("user").Get("login"), ""))
 }
@@ -321,11 +374,15 @@ func collect(ctx *hctx.Context) *Facts {
 		if loginOf(pull) != bot {
 			continue
 		}
-		var detail *pyjson.Object
-		if _, failed := herr.Catch[*herr.GitHubError](func() {
-			detail = gh.GetPull(py.MustInt(pull.Get("number")))
-		}); failed {
-			detail = pull
+		number := py.MustInt(pull.Get("number"))
+		detail := Pulls.get(number, pull)
+		if detail == nil {
+			if _, failed := herr.Catch[*herr.GitHubError](func() {
+				detail = gh.GetPull(number)
+				Pulls.put(number, pull, detail)
+			}); failed {
+				detail = pull
+			}
 		}
 		facts.Pulls = append(facts.Pulls, pull.Copy().Update(detail))
 	}

@@ -230,10 +230,24 @@ describe("R2940002 R3015000 the levels of Alt art and the Sketch", () => {
     // set only on a base face with no border.
     const here = dirname(fileURLToPath(import.meta.url));
     const css = ["cards.css", "cosmetics.css"].map((name) => readFileSync(join(here, name), "utf8")).join("\n");
-    const frames = [...css.matchAll(/([^{}]*\[data-version="version-sketch"\][^{}]*)\{([^}]*)\}/g)].map((match) => ({
-      selector: match[1]?.trim() ?? "",
-      body: match[2] ?? "",
-    }));
+    // A rule whose selector names the Sketch (#4009: the character class around the literal scans
+    // super-linearly on a long brace-free run).
+    const frames: { selector: string; body: string }[] = [];
+    const chunks = css.split("}");
+    if (!css.endsWith("}")) chunks.pop();
+    for (const chunk of chunks) {
+      let start = 0;
+      let open = chunk.indexOf("{", start);
+      while (open !== -1) {
+        const selector = chunk.slice(start, open);
+        if (selector.includes('[data-version="version-sketch"]')) {
+          frames.push({ selector: selector.trim(), body: chunk.slice(open + 1) });
+          break;
+        }
+        start = open + 1;
+        open = chunk.indexOf("{", start);
+      }
+    }
     const setting = frames.filter((rule) => /--cf-(bezel|edge)\s*:/.test(rule.body));
     expect(setting.length).toBeGreaterThan(0);
     for (const rule of setting) {

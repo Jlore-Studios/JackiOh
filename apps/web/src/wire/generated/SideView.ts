@@ -71,6 +71,17 @@ reserved: RowFlags, fatigueCount: number,
  */
 jade?: number, 
 /**
+ * R3548000: this seat's Tipsy counter, shown to both seats beside its hero. Absent at none,
+ * so a game without one sends the view it always did.
+ */
+tipsy?: number, 
+/**
+ * R3548004: while a card giving infinite mana acts on this seat's field, its mana is not spent
+ * by paying costs, and the tray shows infinity. Public on both seats; absent otherwise. Only
+ * ever `Some(true)`.
+ */
+infiniteMana?: true, 
+/**
  * R1840005: this seat's Credits, shown to both seats. Absent until first gained (D14); named
  * apart from the credit line's `credit` (R1223).
  */

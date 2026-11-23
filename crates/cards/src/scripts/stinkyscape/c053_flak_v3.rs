@@ -1,10 +1,10 @@
 //! Stinkyscape #53 Flak v3 (SPEC §8.10 row 53; R2521001). Unit 0/2 → 0/4, Weapon, cost 2, Rare.
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate: Deal a random {least} to {most} damage to each enemy Unit." — 1 to 3
-//!   Radiant: "Starship Piece, Equip, Lucky 1
-//!            Activate: …the same…" — 2 to 4
+//!   Radiant: "Starship Piece, Lucky 1
+//!            Activate: …the same…" — 1 to 3, the base range since issue #4292 (2 to 4 before)
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses its base version into its owner's Dormant Starship
 //! (R1852000, R2521000).
@@ -199,7 +199,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1862001_r2521001_each_enemy_rolls_2_to_4_twice_keeping_the_higher() {
+        fn r1862001_r2521001_each_enemy_rolls_1_to_3_twice_keeping_the_higher() {
             let seen = fam::flak_over_the_seeds(
                 ID,
                 "s053",
@@ -218,7 +218,7 @@ mod tests {
                 "{counts:?}"
             );
             assert!((lo..=hi).all(|amount| counts.contains_key(&amount)), "{counts:?}");
-            // Lucky 1 lifts the odds off the low end: a 2 needs both rolls to be 2s (36%, not 60%).
+            // Lucky 1 lifts the odds off the low end: a 1 needs both rolls to be 1s (36%, not 60%).
             let low = counts.get(&fam::FLAK_RADIANT_RANGE.0).copied().unwrap_or(0);
             assert!(2 * low < total, "{counts:?}");
         }

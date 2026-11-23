@@ -34,12 +34,8 @@ fn exertion(attacked: bool, switched: bool) -> Exertion {
     }
 }
 
-fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
 fn view_of(state: &GameState, id: &str) -> UnitView {
-    unit_view(state, by_id(state, id))
+    unit_view(state, &live(state, id))
 }
 
 fn end_turns(state: &GameState, count: usize) -> GameState {
@@ -352,7 +348,7 @@ mod positions_and_exertion_m2_t1 {
         let (to_defense_events, to_defense_error) = switch_by_effect(&mut state, &unit, None);
         assert_eq!(to_defense_error, None);
         assert_eq!(view_of(&state, &unit.id).position, Position::Def);
-        assert_eq!(by_id(&state, &unit.id).exertion, exertion(false, false));
+        assert_eq!(live(&state, &unit.id).exertion, exertion(false, false));
         expect_match(
             json_of(events_of_type(
                 &to_defense_events,
@@ -367,12 +363,12 @@ mod positions_and_exertion_m2_t1 {
         assert_eq!(view_of(&state, &unit.id).position, Position::Atk);
         assert!(has_exertion(
             &state,
-            by_id(&state, &unit.id),
+            &live(&state, &unit.id),
             ExertionKind::Attack
         ));
         assert!(has_exertion(
             &state,
-            by_id(&state, &unit.id),
+            &live(&state, &unit.id),
             ExertionKind::Switch
         ));
 
@@ -389,12 +385,12 @@ mod positions_and_exertion_m2_t1 {
             );
         }
         assert_eq!(state.players.p2.hero.health, 27);
-        assert_eq!(by_id(&state, &unit.id).exertion, exertion(true, false));
+        assert_eq!(live(&state, &unit.id).exertion, exertion(true, false));
 
         // And an effect may still flip a unit that has spent its exertion.
         assert_eq!(switch_by_effect(&mut state, &unit, None).1, None);
         assert_eq!(view_of(&state, &unit.id).position, Position::Def);
-        assert_eq!(by_id(&state, &unit.id).exertion, exertion(true, false));
+        assert_eq!(live(&state, &unit.id).exertion, exertion(true, false));
     }
 
     #[test]
@@ -404,7 +400,7 @@ mod positions_and_exertion_m2_t1 {
         let open = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
         let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default());
 
-        assert_eq!(attack_targets(&state, by_id(&state, &attacker.id)).len(), 3); // both units and the hero
+        assert_eq!(attack_targets(&state, &live(&state, &attacker.id)).len(), 3); // both units and the hero
 
         switch_by_effect(&mut state, &defender, Some(Position::Def));
         let view = view_of(&state, &defender.id);
@@ -412,7 +408,7 @@ mod positions_and_exertion_m2_t1 {
         assert!(has_keyword(&view.keywords, KeywordKind::Taunt));
 
         // The granted Taunt is the real thing: it is now the only legal target (§4.2 step 3).
-        let targets = attack_targets(&state, by_id(&state, &attacker.id));
+        let targets = attack_targets(&state, &live(&state, &attacker.id));
         assert_eq!(targets.len(), 1);
         assert!(matches!(targets[0], AttackTarget::Unit { .. }));
         let first = match &targets[0] {
@@ -430,7 +426,7 @@ mod positions_and_exertion_m2_t1 {
             &view_of(&state, &defender.id).keywords,
             KeywordKind::Taunt
         ));
-        assert_eq!(attack_targets(&state, by_id(&state, &attacker.id)).len(), 3);
+        assert_eq!(attack_targets(&state, &live(&state, &attacker.id)).len(), 3);
     }
 
     #[test]
@@ -543,7 +539,7 @@ mod positions_and_exertion_m2_t1 {
         assert_eq!(after.position, Position::Atk);
         assert!(!has_keyword(&after.keywords, KeywordKind::Taunt));
         assert_eq!(after.armor, 0);
-        assert_eq!(by_id(&state, &pillow.id).exertion, exertion(false, false));
+        assert_eq!(live(&state, &pillow.id).exertion, exertion(false, false));
 
         // The refusal costs nothing, so the unit's exertion is still there next action.
         let other = unit_in(&state, P1, 2).id;
@@ -622,7 +618,7 @@ mod positions_and_exertion_m2_t1 {
         }
         assert!(has_exertion(
             &state,
-            by_id(&state, &windfury.id),
+            &live(&state, &windfury.id),
             ExertionKind::Attack
         ));
         assert!(switch_agrees(&state, &sick.id));
@@ -722,7 +718,7 @@ mod r2179000_indestructible_never_in_defense {
         let after = view_of(&state, &unit.id);
         assert_eq!(after.position, Position::Atk);
         assert!(!has_keyword(&after.keywords, KeywordKind::Taunt));
-        assert_eq!(by_id(&state, &unit.id).exertion, exertion(false, false));
+        assert_eq!(live(&state, &unit.id).exertion, exertion(false, false));
     }
 
     #[test]
@@ -743,9 +739,9 @@ mod r2179000_indestructible_never_in_defense {
         let events = sink.events.clone();
         drop(sink);
 
-        assert_eq!(by_id(&state, &unit.id).position, Some(Position::Atk));
-        assert!(!by_id(&state, &unit.id).exertion.switched);
-        assert_eq!(by_id(&state, &other.id).position, Some(Position::Def));
+        assert_eq!(live(&state, &unit.id).position, Some(Position::Atk));
+        assert!(!live(&state, &unit.id).exertion.switched);
+        assert_eq!(live(&state, &other.id).position, Some(Position::Def));
         let switched: Vec<String> = events
             .iter()
             .filter_map(|event| match event {
@@ -767,7 +763,7 @@ mod r2179000_indestructible_never_in_defense {
             &state,
             input(json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1" })),
         );
-        assert_eq!(by_id(&state, &unit.id).position, Some(Position::Def));
+        assert_eq!(live(&state, &unit.id).position, Some(Position::Def));
         find_instance_mut(&mut state, &unit.id)
             .expect("the unit")
             .granted_keywords
@@ -775,7 +771,7 @@ mod r2179000_indestructible_never_in_defense {
         let mut sink = sink_for(&mut state);
         state_check(&mut sink);
         drop(sink);
-        assert_eq!(by_id(&state, &unit.id).position, Some(Position::Atk));
+        assert_eq!(live(&state, &unit.id).position, Some(Position::Atk));
 
         // A Vanilla takes a printed Indestructible off (§6.3), and the switch is offered again.
         let printed = put(

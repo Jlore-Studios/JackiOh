@@ -13,7 +13,8 @@
   position: relative;
   width: 100%;
   min-height: 100vh;
-  min-height: 100dvh;
+  /* R3728000: inside the menus' shell, the window less its tab bar and insets. */
+  min-height: var(--shell-screen-h, 100dvh);
   overflow-x: hidden;
   overflow-x: clip;
   background: var(--tavern-night);
@@ -44,7 +45,7 @@
   isolation: isolate;
   padding: 12px var(--tavern-gutter) 44px;
   min-height: min(100vh, 900px);
-  min-height: min(100dvh, 900px);
+  min-height: min(var(--shell-screen-h, 100dvh), 900px);
 }
 
 .landing .landing-backdrop {
@@ -168,6 +169,11 @@
   gap: 10px;
   max-width: var(--tavern-content);
   margin: 8px auto 0;
+}
+
+/* R3728002: no live game and no queue search, no row. */
+.landing .landing-banners:empty {
+  display: none;
 }
 
 .landing .landing-hero-inner {
@@ -484,6 +490,17 @@
   color: var(--tavern-gold-pale);
 }
 
+/* R2122000 under a finger or on a phone: the dev build's hotseat link is --hit-min tall itself. On a short
+   desktop (1280x720, R3728000's sizes) the doors above it sit closer than half its shortfall, and its band
+   took their taps; on a phone the band reached down over the news' bookmark (#3958). */
+@media (pointer: coarse), (max-width: 600px) {
+  .landing a.landing-dev-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--hit-min);
+  }
+}
+
 .landing a:focus-visible {
   outline: 2px solid var(--tavern-gold);
   outline-offset: 3px;
@@ -514,7 +531,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 2px;
-  width: 36px;
+  width: 44px;
   height: 54px;
   padding: 0 0 14px;
   border: none;
@@ -634,11 +651,11 @@
   color: var(--tavern-parchment);
 }
 
-/* R2875002: the news' ribbon hangs beside the quests' (22px in, 36px wide), or in its place when no
+/* R2875002: the news' ribbon hangs beside the quests' (22px in, 44px wide), or in its place when no
    quests' shows, with a red bubble on its glyph counting the unclaimed entries, as the friends button's
    badge sits on its icon; the box's rim covers the ribbon's top 12px, so the bubble starts below it. */
 .landing .landing-quests ~ .landing-news button.landing-news-bookmark {
-  left: 66px;
+  left: 74px;
 }
 
 .landing .landing-news-count {
@@ -991,7 +1008,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  height: 100dvh;
+  height: var(--shell-screen-h, 100dvh);
 }
 
 .landing .landing-floor:has(> .landing-stats) > .landing-stats {

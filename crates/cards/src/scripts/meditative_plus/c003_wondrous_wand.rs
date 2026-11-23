@@ -1,5 +1,5 @@
-//! M+ #3 Wondrous Wand (SPEC §8.9 row 3, BUILD M11 row M+ 3): (2, Embiggened 4) Spell, Epic.
-//!   Base and Radiant: "Draw {draw|card|cards}. They cost ({setCost}). Embiggened (4): Draw
+//! M+ #3 Wondrous Wand (SPEC §8.9 row 3, BUILD M11 row M+ 3): (1, Embiggened 3) Spell, Epic ((2, Embiggened 4) until issue #3996).
+//!   Base and Radiant: "Draw {draw|card|cards}. They cost ({setCost}). Embiggened (3): Draw
 //!   {embiggenedDraw} instead." (1/2, (1); 2/4, (0) since issue #2179: (0) and 2/5 before)
 //!
 //! C #79 Risky Die pattern: library noted in remember, draws run (R81, R58, §2.4), then drawn cards get costOverride (R766).
@@ -126,12 +126,12 @@ mod tests {
     }
 
     #[test]
-    fn played_embiggened_at_4_draws_2_both_cost_1() {
+    fn played_embiggened_at_3_draws_2_both_cost_1() {
         crate::register_all();
         // Mana to spare, so the (1) cards do not leave a turn with nothing to do, which ends itself (R82).
         let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER], "mana": 10 } }));
         s.play(WAND, json!({ "embiggen": true }));
-        s.expect_mana(P1, 6);
+        s.expect_mana(P1, 7);
         assert_eq!(drawn_ids(s.last_events(), P1).len(), 2);
         for card in s.hand(P1) {
             if card.def_id == FILLER {

@@ -11,8 +11,8 @@ line only after that review.
   (copyright.gov/dmca-directory, $6). The contact is public. The agent needs a street address (a post
   office box only with the Office's waiver) and a telephone number, as well as the email.
 - The site's contact email, for legal notices, data requests and questions, is `CONTACT_EMAIL` in
-  `apps/web/src/routes/SiteFooter.tsx`. The footer, `/terms`, `/privacy`, `/copyright`,
-  `/accessibility` and `apps/web/public/.well-known/security.txt` name it. Register the agent with
+  `apps/web/src/routes/SiteFooter.tsx`. The footer, `/terms`, `/privacy`, `/copyright`
+  and `apps/web/public/.well-known/security.txt` name it. Register the agent with
   the same email, or change all of them together. Changing it changes the Terms' and the Privacy
   Policy's text, so follow section 4.
 - The registration lapses after three years. Put a renewal reminder in the calendar for a month
@@ -54,9 +54,8 @@ line only after that review.
   critical WCAG 2.2 A/AA violation not listed with its reason in `e2e/support/axe-exceptions.ts`.
   An exception that no longer fires fails it too, so the list only holds what is still true.
 - Lighthouse is run by hand: Chrome's DevTools, Lighthouse, Accessibility only, on the deployed
-  site. Write what it found into `/accessibility` with the date.
-- `/accessibility` says what was checked, with what and when, and what falls short. It claims no
-  conformance; keep it that way until a person has audited the site with assistive technology.
+  site; file what it finds as an issue.
+- No page claims conformance; keep it that way until a person has audited the site with assistive technology.
 
 ## 4. Changing the Terms or the Privacy Policy (R757001)
 
@@ -131,19 +130,3 @@ friend (#3110); the bots themselves did not change (R1452).
 - Whether this is enough under the EU AI Act's rule that people be told when they deal with an AI
   (Article 50, applying since 2 August 2026) is the lawyer's call; marking a bot's seat would be the
   change if it is not.
-
-## 9. How JackiOh uses AI (R2631000)
-
-`/ai` (`apps/web/src/routes/ai.tsx`) is the public statement of where AI is used: the computer
-opponents, what was made with AI, and what AI does with a player's data. It is no part of the Terms,
-so changing it asks no one to agree again, but it must stay true.
-
-- A change to where AI is used changes the page in the same pull request: a new kind of computer
-  opponent, AI-made art, cards, text or sound, or any AI service a player's data reaches (the last
-  also changes the Privacy Policy, section 4). Change `AI_LAST_UPDATED` and re-quote the page in
-  `apps/web/static-pages.ts`.
-- Keep the records the page points to: `assets/music/LICENSES.md` for the music and
-  `assets/voice/SOURCES.md` for the voice lines.
-- The voice lines' licence is open: they are spoken by Apple's and Microsoft's system voices, whose
-  licences limit what their output may be used for. Confirm both with the lawyer, or re-render with a
-  voice licensed for distribution (`assets/voice/SOURCES.md` says how).

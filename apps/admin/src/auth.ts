@@ -52,13 +52,22 @@ export class AuthError extends Error {
 
 export type AuthConfig = { url: string; publishableKey: string };
 
+/**
+ * `url` without its trailing slashes (#4009: `/\/+$/` scans super-linearly on a long slash run).
+ */
+function stripTrailingSlashes(url: string): string {
+  let end = url.length;
+  while (end > 0 && url.charCodeAt(end - 1) === 0x2f) end--;
+  return url.slice(0, end);
+}
+
 /** The build's Supabase project (.env.production, .env.staging); `null` in a build without one. */
 export function authConfig(): AuthConfig | null {
   const url: unknown = import.meta.env.VITE_SUPABASE_URL;
   const publishableKey: unknown = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   if (typeof url !== "string" || url.length === 0) return null;
   if (typeof publishableKey !== "string" || publishableKey.length === 0) return null;
-  return { url: url.replace(/\/+$/u, ""), publishableKey };
+  return { url: stripTrailingSlashes(url), publishableKey };
 }
 
 function requireConfig(): AuthConfig {

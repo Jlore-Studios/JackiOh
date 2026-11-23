@@ -4,6 +4,7 @@
 // `zone`, `tribute`, `direction`, `x` and `embiggen` are the card's own play choices, driven by the
 // in-flight `Interaction` with `view.pending` null, and submit a `play`.
 
+import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, CraftRecipe, PendingOption, PendingView, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import Prompt from "./Prompt.tsx";
 import { IDLE, type Interaction } from "./actions.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, testid } from "./contract.ts";
+import { withCatalog } from "../test/board.tsx";
 import { baseView, card, emptySide, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
 afterEach(cleanup);
@@ -171,9 +173,7 @@ describe("prompt-driven pickers answer the open PendingChoice (§10.6)", () => {
 // The five R81 kinds: no prompt is open, and each submits a `play`.
 
 describe("R81 inline pickers submit a play with no PendingChoice at all", () => {
-  it("zone shows a grid of the zones the candidates name", () => {
-    const onAction = vi.fn();
-    const onInteraction = vi.fn();
+  it("R3864000 zone opens no grid: the hint and Cancel, and the board answers (PromptBoardZone.test.tsx)", () => {
     const view = viewWith();
     const interaction = playing([
       { type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } },
@@ -185,23 +185,15 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
         view={view}
         interaction={interaction}
         legal={interaction.stage === "playing" ? interaction.candidates : []}
-        onAction={onAction}
-        onInteraction={onInteraction}
+        onAction={vi.fn()}
+        onInteraction={vi.fn()}
       />,
     );
 
     expect(view.pending).toBeNull();
     expect(kindOfModal()).toBe("zone");
-    expect(optionTestids()).toEqual(["prompt-option-units:3", "prompt-option-units:5"]);
-
-    fireEvent.click(screen.getByTestId("prompt-option-units:5"));
-
-    expect(onAction).toHaveBeenCalledWith({
-      type: "play",
-      instanceId: "h1",
-      zone: { row: "units", lane: 5 },
-    });
-    expect(onInteraction).toHaveBeenCalledWith(IDLE);
+    expect(optionTestids()).toEqual([]);
+    expect(document.querySelector(".prompt-zones")).toBeNull();
   });
 
   it("tribute is a multi-select gated by min and max", () => {
@@ -289,29 +281,58 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h3", modes: ["board"] });
   });
 
-  it("#24 Efficiency Dividend's options say X, 4X and X on its base face and 2X, 8X and X+1 on its Radiant face (§8 #24)", () => {
+  it("#24 Efficiency Dividend's choices read printed and live params from the card (§8 #24)", () => {
+    const def = CATALOG["core-024"];
+    const damage = def?.params?.find((param) => param.key === "damage");
+    const heal = def?.params?.find((param) => param.key === "heal");
+    if (def === undefined || damage === undefined || heal === undefined || heal.step === undefined) {
+      throw new Error("core-024 must declare damage and a stepped heal param");
+    }
+
     const modes = ["damage", "heal", "mana"];
-    const pickerFor = (radiant: boolean): void => {
+    const pickerFor = (radiant: boolean, params?: Record<string, number>): void => {
       const view = viewWith({
-        you: emptySide("p1", { hand: [card({ instanceId: "h24", defId: "core-024", radiant })] }),
+        you: emptySide("p1", {
+          hand: [card({ instanceId: "h24", defId: "core-024", radiant, ...(params === undefined ? {} : { params }) })],
+        }),
       });
       const interaction = playing(
         modes.map((mode): ActionBody => ({ type: "play", instanceId: "h24", x: 2, modes: [mode] })),
         "h24",
       );
-      render(<Prompt view={view} interaction={interaction} onAction={vi.fn()} />);
+      render(withCatalog(<Prompt view={view} interaction={interaction} onAction={vi.fn()} />));
+    };
+    const expectOption = (option: string, label: string, detail: string): void => {
+      const choice = screen.getByTestId(`prompt-option-${option}`);
+      expect(choice.querySelector(".choice-card-name")).toHaveTextContent(label);
+      expect(choice.querySelector(".choice-card-text")).toHaveTextContent(detail);
     };
 
     pickerFor(false);
-    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal X damage.");
-    expect(screen.getByTestId("prompt-option-heal")).toHaveTextContent("Heal a target by four times X.");
-    expect(screen.getByTestId("prompt-option-mana")).toHaveTextContent("Gain X mana next turn.");
+    expectOption("damage", "Deal X damage", "Deal X damage.");
+    expectOption("heal", `Heal ${String(heal.base)}X`, `Heal a target by ${String(heal.base)} times X.`);
+    expectOption("mana", "Mana next turn", "Gain X mana next turn.");
     cleanup();
 
     pickerFor(true);
-    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal twice X damage.");
-    expect(screen.getByTestId("prompt-option-heal")).toHaveTextContent("Heal a target by eight times X.");
-    expect(screen.getByTestId("prompt-option-mana")).toHaveTextContent("Gain X plus 1 mana next turn.");
+    expectOption("damage", `Deal ${String(damage.radiant)}X damage`, `Deal ${String(damage.radiant)}X damage.`);
+    expectOption("heal", `Heal ${String(heal.radiant)}X`, `Heal a target by ${String(heal.radiant)} times X.`);
+    expectOption("mana", "Mana next turn", "Gain X plus 1 mana next turn.");
+    cleanup();
+
+    const pending = viewWith({
+      pending: pendingFor("mode", [{ key: "mode:heal", label: "Heal" }], {
+        sourceDefId: def.id,
+        sourceRadiant: true,
+      }),
+    });
+    render(withCatalog(<Prompt view={pending} onAction={vi.fn()} />));
+    expectOption("mode:heal", "Heal", `Heal a target by ${String(heal.radiant)} times X.`);
+    cleanup();
+
+    const liveHeal = heal.base + heal.step;
+    pickerFor(false, { damage: damage.base, heal: liveHeal });
+    expectOption("heal", `Heal ${String(liveHeal)}X`, `Heal a target by ${String(liveHeal)} times X.`);
   });
 
   it("an option no card text covers is its own word, capitalised", () => {
@@ -474,6 +495,24 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     });
   });
 
+  it("R3777001 a declared target the viewer may not read is listed as a face-down card where its back lies, and picked by its id", () => {
+    const onAction = vi.fn();
+    const interaction = playing([
+      { type: "play", instanceId: "h2", targets: [{ pick: "instance", instanceId: "t1" }] },
+      { type: "play", instanceId: "h2", targets: [{ pick: "instance", instanceId: "e1" }] },
+    ]);
+    const view = viewWith({ hiddenTargets: [{ instanceId: "t1", zone: { player: "p2", row: "backrow", lane: 2 } }] });
+
+    render(<Prompt view={view} interaction={interaction} onAction={onAction} />);
+
+    const option = screen.getByTestId("prompt-option-instance:t1");
+    expect(option.textContent).toContain("Face-down card");
+    expect(option.textContent).toContain("Enemy backrow, lane 2");
+    expect(option.textContent).not.toContain("t1");
+    fireEvent.click(option);
+    expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h2", targets: [{ pick: "instance", instanceId: "t1" }] });
+  });
+
   it("a play's zone, target and Tribute picks say to tap the board; prompt.css shows it only where the picker is a bar with no options", () => {
     const hint = (): string | null => document.querySelector(".prompt-board-hint")?.textContent ?? null;
     const cases: [ActionBody[], string][] = [
@@ -506,7 +545,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
       cleanup();
     }
 
-    // An engine prompt keeps its sheet on every layout, so it has no hint.
+    // R3864000: an engine zone prompt of one zone is a board pick too, so it has the hint.
     render(
       <Prompt
         view={viewWith({
@@ -515,7 +554,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
         onAction={vi.fn()}
       />,
     );
-    expect(hint()).toBeNull();
+    expect(hint()).toBe("Tap a highlighted zone on the board.");
   });
 
   it("renders nothing when the play in flight needs no further choice", () => {
@@ -537,7 +576,6 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
 
 describe("the R81 kinds render the same picker when the engine does open them as prompts", () => {
   const cases: [string, Parameters<typeof pendingFor>[1], string][] = [
-    ["zone", [{ key: "zone:p1:units:1", label: "Unit lane 1", player: "p1", row: "units", lane: 1 }], "prompt-option-zone:p1:units:1"],
     ["tribute", [{ key: "instance:u1", label: "One", instanceId: "u1" }], "prompt-option-instance:u1"],
     ["direction", [{ key: "mode:left", label: "left" }, { key: "mode:right", label: "right" }], "direction-left"],
     // More X values than the card picker takes keep the stepper; a few are cards (#492, below).
@@ -559,18 +597,19 @@ describe("the R81 kinds render the same picker when the engine does open them as
     });
   }
 
+  it("R3864000 zone is a board pick: its data-prompt-kind and no list", () => {
+    const view = viewWith({
+      pending: pendingFor("zone", [{ key: "zone:p1:units:1", label: "Unit lane 1", player: "p1", row: "units", lane: 1 }]),
+    });
+    render(<Prompt view={view} onAction={vi.fn()} />);
+    expect(kindOfModal()).toBe("zone");
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-board-pick", "true");
+    expect(optionTestids()).toEqual([]);
+  });
+
   // Each of the five answers its PendingChoice: the picker's answer is the `answer` action, with the
   // selection the engine stored for the option picked (`selectionForOption`).
   const answers: [string, Parameters<typeof pendingFor>[1], () => void, ActionBody][] = [
-    [
-      "zone",
-      [
-        { key: "zone:p1:units:1", label: "Unit lane 1", player: "p1", row: "units", lane: 1 },
-        { key: "zone:p1:units:2", label: "Unit lane 2", player: "p1", row: "units", lane: 2 },
-      ],
-      () => fireEvent.click(screen.getByTestId("prompt-option-zone:p1:units:2")),
-      { type: "answer", choiceId: "ch1", selection: [{ pick: "zone", player: "p1", row: "units", lane: 2 }] },
-    ],
     [
       "tribute",
       [
@@ -1248,13 +1287,7 @@ describe("R2211000 a read-only prompt, a replay's", () => {
         { prompt: "482 − 197 = ?", streak: 1 },
       ),
     ],
-    [
-      "cell",
-      pendingFor("cell", [
-        { key: "zone:p2:units:2", label: "p2 units 2", player: "p2", row: "units", lane: 2 },
-        { key: "none", label: "Done" },
-      ]),
-    ],
+    // R3864000: a one-zone `cell` is a board pick: no peek, the title stays (PromptBoardZone.test.tsx).
     [
       "reward",
       pendingFor(

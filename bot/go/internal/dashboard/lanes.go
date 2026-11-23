@@ -11,6 +11,7 @@ import (
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -444,8 +445,8 @@ func LaneLimits(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 	})
 	atOnce := fmt.Sprintf("- **At once:** GitHub's runners take %d of the bots' runs, planning "+
 		"runs too (%d now: ", pool.MaxParallel, held) + strings.Join(runsText, ", ") +
-		fmt.Sprintf("), the organization's %d hosted jobs less the %d kept for CI (#1455).",
-			HostedRunners, HostedRunners-pool.MaxParallel)
+		fmt.Sprintf("), of the organization's %d hosted jobs: the other %d are CI's, the training "+
+			"lanes' and the bots' own short jobs (#3740).", HostedRunners, HostedRunners-pool.MaxParallel)
 	if onGitHub > pool.MaxParallel {
 		atOnce += fmt.Sprintf(" So the %d %s never all run at once: past %d, a lane lets work go "+
 			"to an account with room while others are capped or outside their hours.", onGitHub,
@@ -468,7 +469,7 @@ func LaneLimits(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 	if pool.PlanLanes != 0 {
 		planning := 0
 		for _, l := range lanesIn(live) {
-			if l.number != 0 && queue.PlanningPool(status.Record(state, l.number)) { // an in-lane plan holds its own lane (#2903)
+			if !plan.IsSurveyLane(l.number) && queue.PlanningPool(status.Record(state, l.number)) { // an in-lane plan holds its own lane (#2903)
 				planning++
 			}
 		}

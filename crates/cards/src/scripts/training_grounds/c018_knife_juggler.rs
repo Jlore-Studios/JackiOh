@@ -31,12 +31,10 @@ fn arrival(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
             (*row == Row::Units || stands_in_backrow(state, unit)).then(|| instance_id.clone())?
         }
         GameEvent::CardResolved {
-            permanent,
-            def_id,
-            instance_id,
-            ..
+            permanent, instance_id, ..
         } => {
-            if !*permanent || def_of(Some(state), def_id).type_ != CardType::Unit {
+            // R783005: the play as it counts, so a Unit set by its Cloaked is the Trap it was set as.
+            if !*permanent || played_type_of(state, event) != Some(CardType::Unit) {
                 return None;
             }
             let unit = find_instance(state, instance_id)?;
@@ -89,6 +87,7 @@ mod tests {
     const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself.
     const ZAO_GAO: &str = "core-080"; // Zao Gao: discard 2 random cards, summon 2 Rush Tokens
     const RUSH_TOKEN: &str = "core-t-rush";
+    const FIELD_SPELL: &str = "stand-in (1) Field Spell";
 
     /// p1, active with 10 mana, has a Knife Juggler (`radiant` its face) in lane 5 and `hand`; p2 has a
     /// 1/14 in lane 1 so a hit may land on a Unit.
@@ -149,6 +148,14 @@ mod tests {
             let resolved = types.iter().position(|t| *t == GameEventType::CardResolved);
             let hit = types.iter().rposition(|t| *t == GameEventType::Damage);
             assert!(resolved < hit, "{types:?}");
+        }
+
+        /// R783005: a Unit set face-down by its Cloaked is a Trap play, no Unit played.
+        #[test]
+        fn r783005_a_unit_you_set_face_down_by_its_cloaked_throws_no_knife() {
+            let mut s = board(false, json!([crate::CLOAKED_UNIT, FILLER]), crate::filler(4));
+            crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 1);
+            assert!(throws(&s).is_empty(), "{:?}", throws(&s));
         }
 
         #[test]
@@ -214,6 +221,19 @@ mod tests {
             }));
             s.play(ID, json!({ "zone": 5 }));
             assert!(crate::hits(s.last_events()).is_empty());
+        }
+
+        #[test]
+        fn r2197000_a_field_spell_you_play_draws_no_hit() {
+            // §8.11 row 18: only a Unit's arrival throws. A Field Spell is still in play once it resolves
+            // (`permanent`), on its controller's field, but it is no Unit.
+            let mut s = board(false, json!([FIELD_SPELL, FILLER]), crate::filler(4));
+            s.play(FIELD_SPELL, json!({}));
+            assert!(s.last_events().iter().any(|event| matches!(
+                event,
+                GameEvent::CardResolved { def_id, permanent: true, .. } if def_id == FIELD_SPELL
+            )));
+            assert!(throws(&s).is_empty());
         }
 
         #[test]

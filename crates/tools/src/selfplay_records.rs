@@ -185,8 +185,8 @@ pub fn run(args: &Args) -> anyhow::Result<()> {
 mod tests {
     use super::*;
     use jackioh_engine::{
-        CardStatsFilter, DEV_RECORD_ID_PREFIX, PLAYER_IDS, PilotFilter, SourceFilter, Tally, Winner,
-        card_stats, forced_series, game_report,
+        CardStatsFilter, DEV_RECORD_ID_PREFIX, PLAYER_IDS, PilotFilter, SeatOutcome, SourceFilter, Tally,
+        card_stats, forced_series, game_report, seat_outcome,
     };
 
     use crate::arena::TEST_BUDGET;
@@ -213,7 +213,9 @@ mod tests {
     }
 
     /// The tally a card's breakdown has over the seats of `record` whose deck holds `card` and whose
-    /// summary `held` answers true for: counted the long way, from the game's own summary.
+    /// summary `held` answers true for: counted the long way, from the game's own summary, each seat
+    /// through `seat_outcome` as `card_stats` reads it (R1843004: a fled game is the fleer's win and
+    /// the other seat's draw, which the raw winner does not say).
     fn tallied(
         record: &GameRecord,
         card: &str,
@@ -224,8 +226,11 @@ mod tests {
             let summary = &record.game.seats[seat];
             if summary.deck.iter().any(|id| id == card) && held(summary) {
                 tally.games += 1;
-                tally.wins += i32::from(record.game.winner == Winner::from(seat));
-                tally.draws += i32::from(record.game.winner == Winner::Draw);
+                match seat_outcome(record.game.winner, record.game.reason, seat) {
+                    SeatOutcome::Win => tally.wins += 1,
+                    SeatOutcome::Draw => tally.draws += 1,
+                    SeatOutcome::Loss => {}
+                }
             }
         }
         tally
@@ -278,6 +283,15 @@ mod tests {
         cards.dedup();
         let rows: Vec<&str> = stats.cards.iter().map(|row| row.card.as_str()).collect();
         assert_eq!(rows, cards);
+        // R4279000: a card an effect cast or summoned from the deck or the hand went into play too.
+        let played = |seat: &jackioh_engine::SeatSummary, card: &str| {
+            seat.played.iter().any(|id| id == card)
+                || seat
+                    .cast_or_summoned
+                    .iter()
+                    .flatten()
+                    .any(|cast| cast.card == card)
+        };
         for row in &stats.cards {
             let card = row.card.as_str();
             assert_eq!(row.in_deck, tallied(&record, card, |_| true), "{card}");
@@ -288,14 +302,14 @@ mod tests {
             );
             assert_eq!(
                 row.played,
-                tallied(&record, card, |seat| seat.played.iter().any(|id| id == card)),
+                tallied(&record, card, |seat| played(seat, card)),
                 "{card}"
             );
             assert_eq!(
                 row.drawn_not_played,
                 tallied(&record, card, |seat| {
                     let reached = seat.opening.iter().chain(&seat.drawn).any(|id| id == card);
-                    reached && !seat.played.iter().any(|id| id == card)
+                    reached && !played(seat, card)
                 }),
                 "{card}"
             );

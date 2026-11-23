@@ -30,9 +30,9 @@ fn watched(seed: &str) -> GameState {
 }
 
 fn play_body(state: &GameState, player: PlayerId, instance_id: &str) -> ActionBody {
-    jackioh_engine::reduce::legal_actions(state, player)
+    plays_in(state, player, instance_id)
         .into_iter()
-        .find(|body| matches!(body, ActionBody::Play { instance_id: id, .. } if id == instance_id))
+        .next()
         .unwrap_or_else(|| panic!("no play for {instance_id}"))
 }
 

@@ -1,5 +1,7 @@
 // #2877: the hero's status tray: its modifiers, secrets and Rift flag in one row hung off the
 // plate, out of flow so the plate keeps one size however many effects the seat carries.
+// #4251: the hero's counters (Luck, Burn, Toxic, Tipsy) ride the same row as labelled chips,
+// outside the overflow allowance, so every counter reads at once.
 //
 // The badges read the `SideView` alone and decide nothing (CLAUDE.md rule 7). R169's list stays
 // the `modifiers-<side>` element, always in the DOM so `modifierChanged` has an element to fade
@@ -17,6 +19,7 @@ import type { ModifierView, SideView } from "@jackioh/shared";
 /** One secret of a seat, as `SideView.secrets` carries it (R860). */
 type SecretView = NonNullable<SideView["secrets"]>[number];
 
+import { Icon } from "../cards/index.ts";
 import { t } from "../i18n/i18n.ts";
 import { animTestid } from "./animations.ts";
 import { bubblePlacement, ModifierBadge } from "./ModifierBadge.tsx";
@@ -27,6 +30,42 @@ import { secretBadgeText } from "./secrets.ts";
 /** R847: the badge a side wears once a Temporal Rift has granted it its one extra turn, and its tooltip. */
 export const RIFT_SPENT_LABEL = "Rift turn used";
 export const RIFT_SPENT_NOTE = "Temporal Rift has granted this player's one extra turn this game; another Rift grants none";
+
+type CounterKind = "luck" | "burn" | "toxic" | "tipsy";
+
+/**
+ * #4251: one of the hero's counters (R987's Luck, R3540000's Burn and Toxic, R3548000's Tipsy)
+ * as a labelled chip in the tray, its name as text beside its count, so a touch screen reads
+ * which counter it is with no hover. The class, `data-*` attribute and (for Luck) testid are the
+ * portrait badges' own, only their parent moved, so no counter hides under the health, Armor or
+ * Credits badges; each still draws only above 0.
+ */
+function CounterChip({ kind, value }: { kind: CounterKind; value: number }): ReactElement {
+  const name = kind === "luck" ? t("Luck") : kind === "burn" ? t("Burn") : kind === "toxic" ? t("Toxic") : t("Tipsy");
+  const title =
+    kind === "luck"
+      ? t("Luck {luck}: every roll your cards make that keeps a best rolls {luck} more times", { luck: String(value) })
+      : kind === "burn"
+        ? t("Burn counters")
+        : kind === "toxic"
+          ? t("Toxic counters")
+          : t("Tipsy counter");
+  return (
+    <span
+      className={`modifier-badge hero-counter hero-${kind}`}
+      data-luck={kind === "luck" ? value : undefined}
+      data-burn={kind === "burn" ? value : undefined}
+      data-toxic={kind === "toxic" ? value : undefined}
+      data-tipsy={kind === "tipsy" ? value : undefined}
+      data-testid={kind === "luck" ? "hero-luck" : undefined}
+      title={title}
+      aria-label={`${name} ${String(value)}`}
+    >
+      {kind === "tipsy" ? <Icon name="stein" /> : null}
+      <span className="hero-counter-name">{name}</span> <span className="hero-counter-n">{value}</span>
+    </span>
+  );
+}
 
 type TrayEntry =
   | { kind: "modifier"; modifier: ModifierView }
@@ -61,6 +100,14 @@ export default function HeroTray({
   const allowance = useHeroTrayAllowance();
   const modifiers = seat.modifiers ?? [];
   const secrets = seat.secrets ?? [];
+
+  // #4251: the hero's counters above 0, outside the overflow allowance: they are never folded
+  // into the `+N` list, so every counter reads at once however many effects the seat carries.
+  const counters: { kind: CounterKind; value: number }[] = [];
+  if ((seat.luck ?? 0) > 0) counters.push({ kind: "luck", value: seat.luck ?? 0 });
+  if ((seat.hero.burn ?? 0) > 0) counters.push({ kind: "burn", value: seat.hero.burn ?? 0 });
+  if ((seat.hero.toxic ?? 0) > 0) counters.push({ kind: "toxic", value: seat.hero.toxic ?? 0 });
+  if ((seat.tipsy ?? 0) > 0) counters.push({ kind: "tipsy", value: seat.tipsy ?? 0 });
 
   const entries: TrayEntry[] = [
     ...modifiers.map((modifier): TrayEntry => ({ kind: "modifier", modifier })),
@@ -124,6 +171,16 @@ export default function HeroTray({
           entry.kind === "modifier" ? <ModifierBadge key={entry.modifier.id} modifier={entry.modifier} /> : null,
         )}
       </span>
+
+      {/* #4251: the hero's counters above 0, beside the modifiers and outside the `+N`
+          allowance, so gaining one never moves the plate and none ever folds away. */}
+      {counters.length > 0 && (
+        <span className="hero-counters" data-testid={`hero-counters-${side}`}>
+          {counters.map((counter) => (
+            <CounterChip key={counter.kind} kind={counter.kind} value={counter.value} />
+          ))}
+        </span>
+      )}
 
       {/* R860: one badge per secret this seat holds, in the view's order. The badge names the
           choice only where the view carries it — the owner's seat, or anyone once revealed —

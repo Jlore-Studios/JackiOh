@@ -18,7 +18,8 @@ import { glossaryFor } from "../../test/faceWords.ts";
 import { faceModel, type FaceModel } from "../model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { CLICK_SUPPRESS_MS, HOVER_DELAY_MS, LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./constants.ts";
-import { CardDetail, closeInspect, isInspectKey, useInspectTrigger, type InspectOptions, type InspectSubject } from "./index.ts";
+import { closeInspect, isInspectKey, useInspectTrigger, type InspectOptions, type InspectSubject } from "./index.ts";
+import { CardDetail } from "./CardDetail.tsx";
 import {
   INSPECT_CLOSE,
   INSPECT_DETAIL,
@@ -690,6 +691,37 @@ describe("long-press (B24)", () => {
     longPress(screen.getByTestId("a"));
     expect(onLongPress).toHaveBeenCalledTimes(1);
     expect(openOverlays()).toEqual([]);
+  });
+
+  it("B24 R3893000 with touchSheet true a touch hold opens the inspect sheet directly even with hoverPreviews on", () => {
+    render(
+      <Scene>
+        <Trigger id="a" subject={subjectOf("b24-touch-sheet", "core-043")} options={{ touchSheet: true }} />
+      </Scene>,
+    );
+    const trigger = screen.getByTestId("a");
+    press(trigger, "touch");
+    advance(LONG_PRESS_MS);
+    const sheet = screen.getByTestId(INSPECT_SHEET);
+    expect(document.body.contains(sheet)).toBe(true);
+    expect(sheet).toHaveAttribute("role", "dialog");
+    expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
+  });
+
+  it("B24 R3893000 with touchSheet true a mouse click-and-hold calls onLongPress instead of opening the sheet", () => {
+    const onLongPress = vi.fn();
+    render(
+      <Trigger
+        id="a"
+        subject={subjectOf("b24-mouse-hold", "core-043")}
+        options={{ touchSheet: true, holdAnyPointer: true, onLongPress }}
+      />,
+    );
+    const trigger = screen.getByTestId("a");
+    press(trigger, "mouse");
+    advance(LONG_PRESS_MS);
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
   });
 
   it("B24 a touch that moves more than LONG_PRESS_SLOP_PX cancels the long-press", () => {

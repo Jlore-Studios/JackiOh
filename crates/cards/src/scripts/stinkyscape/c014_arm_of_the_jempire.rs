@@ -1,4 +1,4 @@
-//! S #14 Arm of the Jempire (SPEC §8.10 row 14): (2) Unit, Human, Common, 4/5 → 8/10, of the
+//! S #14 Arm of the Jempire (SPEC §8.10 row 14): (2) Unit, Human, Common, 3/8 → 6/16 (4/5 → 8/10 until issue #4154), of the
 //! Stinkyscape set.
 //!   Base:    "When one of your Taunt Units is attacked, give it +{buff} Attack."
 //!   Radiant: "When one of your Taunt Units is attacked, give it +{buff} Attack."
@@ -48,7 +48,7 @@ mod tests {
     const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
     const VANILLA: &str = "core-008"; // Mr. Vanilla
     const MENACE: &str = "core-019"; // Midrange Menace: Taunt
-    const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: lives through a strike back of 9, not one of 11
+    const SHREDDER: &str = "stand-in (3) 6/8 R12/16"; // lives through a strike back of 9, not one of 11
     const MOTHS: &str = "core-009"; // Moths to the Flame: at its controller's start of turn every enemy Unit attacks it.
     const TRAITOROUS_BLOOD: &str = "meditative-064"; // Traitorous Blood: re-aims an attack at the attacker's neighbour
 
@@ -87,7 +87,7 @@ mod tests {
             let arm = s.unit_at(P1, 1);
             s.attack(s.unit_at(P2, 1), &mine);
             s.attack(s.unit_at(P2, 2), &arm);
-            assert_eq!(attack_of(&s, &arm), 4, "the Arm has no Taunt of its own");
+            assert_eq!(attack_of(&s, &arm), 3, "the Arm has no Taunt of its own");
             assert!(!s.events().iter().any(|event| matches!(event, GameEvent::Buffed { .. })));
         }
 
@@ -161,9 +161,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn buffs_by_4_and_is_8_10() {
+        fn buffs_by_4_and_is_6_16() {
             let mut s = board(true, json!([MENACE]), json!([VANILLA]));
-            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 8, "health": 10 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 6, "health": 16 }));
             let menace = s.unit_at(P1, 2);
             s.attack(s.unit_at(P2, 1), &menace);
             assert_eq!(attack_of(&s, &menace), 13);

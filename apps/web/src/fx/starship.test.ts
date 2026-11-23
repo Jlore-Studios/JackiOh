@@ -25,11 +25,11 @@ import {
 import { testid } from "../game/contract.ts";
 import { createPlayTracker } from "../game/runs.ts";
 import { baseView, dormantStarship, emptySide, unit } from "../test/fixtures.ts";
+import { endOf } from "../test/signatures.ts";
 import { planCardMotif } from "./cardFx.ts";
 import { FX_CARD_TABLE } from "./cards/tables.ts";
 import {
   FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_STARSHIP_FUSE_LAND_AT,
   FX_STARSHIP_FUSE_STAGGER_MS,
@@ -51,19 +51,6 @@ const SEQUENCER = "stinkyscape-t-ai-05";
 const ROCKET = FLAVOR_SUB_LOOKS.Tech?.rocket?.colors;
 
 const env = (intensity: number = FX_INTENSITY_SCALE.normal): FxPlanEnv => ({ intensity, card: () => undefined, memory: createFxMemory() });
-
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 /** p1's board: `pieces` on its units from lane 1, and its Dormant Starship in lane 5. */
 function board(pieces: readonly UnitView[] = []): PlayerView {

@@ -9,25 +9,28 @@
 #             gained a set, every non-token card of that set. Anything else (the sweep's own pull request
 #             changes `shadowBan`, never `generation`) is due nothing, and the run stops there. A sweep
 #             pull request still open is superseded: its ids (its body's marker) join this run's, and it
-#             is closed once this run's report is written.
-#   sweep     R390's two passes at both tiers, as the sweeps of record ran them (training/history/
-#             sweep-2026-10-22.md, How it ran): SWEEP_LANES processes at once on the runner's four cores,
-#             one card per process, the ids dealt to the lanes in turn; pass 1 (`--json`) over every due
-#             id, then pass 2 (`--pass2` over every pass-1 file) over each of them, which plays only the
-#             ones at risk. A card whose process passes SWEEP_CARD_MINUTES, or fails, is cut short: its files are
-#             left out of the report, so it keeps the row an earlier report gave it, and the report says
-#             so. On GitHub's runners, never the owner's PC: its runner throttles a job to half a CPU while
-#             the PC is in use, which would read as timeouts (R977000's re-timer would mostly catch it,
-#             but the record should not lean on that).
-#   deliver   on main as it is when the sweep ends: the report under training/history/ as a report of
-#             record, `sweep --write` over the header's reports and it, generation.json's `shadowBan`,
-#             and, when SHADOW_BAN changed, the practice-claim fixture recorded again (R1303002) since the
-#             AI's practice deck deals from the live ban. When neither table changed it opens nothing
-#             and says so; the report stays the run's artifact. Otherwise it pushes sweep/shadow-ban and opens
-#             `Patch: the shadow ban swept again …` with auto-merge on, which CI holds to `sweep --check`
-#             like any other pull request. A record `--write` refuses (more than half a set banned, or a
-#             ban of a set that may not hold bans yet, as a set that just shipped until a ruling adds it)
-#             opens an issue for a person instead.
+#             is closed once this run's report is written. It builds the binary once for every later job
+#             (`sweep-bin`) and deals the ids to ⌈ids / SWEEP_IDS_PER_SHARD⌉ shards, at most SWEEP_SHARDS_MAX.
+#   pass1     R390's pass 1 (`--json`), one job per shard (#4486): a sweep of record plays every card on
+#             both faces since #4466, twice the games, and the one-job sweep had already run past GitHub's
+#             limit at half of that (training/history/sweep-2026-11-13.md). Each shard runs as the sweeps
+#             of record ran (training/history/sweep-2026-10-22.md, How it ran): SWEEP_LANES processes at
+#             once on the runner's four cores, one card per process, its ids dealt to the lanes in turn.
+#   pass2     R390's pass 2 (`--pass2`), one job per shard, after every pass-1 shard: the at-risk list
+#             and the filler boost are over the whole sweep (R390), so each shard reads every shard's
+#             pass-1 files, and plays only its own ids, of which only the ones at risk play at all.
+#             A card whose process passes SWEEP_CARD_MINUTES, or fails, or whose shard was lost, is cut
+#             short: its files are left out of the report, so it keeps the row an earlier report gave it,
+#             and the report says so.
+#   record    the shards merged into one report, then deliver: on main as it is when the sweep ends, the
+#             report under training/history/ as a report of record, `sweep --write` over the header's
+#             reports and it, generation.json's `shadowBan`, and, when SHADOW_BAN changed, the
+#             practice-claim fixture recorded again (R1303002) since the AI's practice deck deals from the
+#             live ban. When neither table changed it opens nothing and says so; the report stays the run's
+#             artifact. Otherwise it pushes sweep/shadow-ban and opens `Patch: the shadow ban swept again …`
+#             with auto-merge on, which CI holds to `sweep --check` like any other pull request. A record
+#             `--write` refuses (more than half a set banned, or a ban of a set that may not hold bans yet,
+#             as a set that just shipped until a ruling adds it) opens an issue for a person instead.
 #
 # Pushing sweep/shadow-ban and opening its pull request take LEARN_LANE_TOKEN (training/learn.md, Setting it up):
 # a pull request opened with the run's own token would start no CI. Without it, a changed record stops
@@ -49,10 +52,16 @@ permissions:
   contents: read
 
 env:
-  # Sweep processes at once: the sweeps of record ran three lanes on four cores, one core spare.
+  # Sweep processes at once in each shard job: the sweeps of record ran three lanes on four cores, one
+  # core spare. More would read as timeouts on a busier runner (R977000's yardstick).
   SWEEP_LANES: "3"
-  # A card whose one pass runs longer than this is cut short and left out of the report.
-  SWEEP_CARD_MINUTES: "45"
+  # A card whose one pass runs longer than this is cut short and left out of the report. A card's process
+  # plays both faces since #4466, twice the games it played when this was 45.
+  SWEEP_CARD_MINUTES: "90"
+  # The ids each shard job takes (8 cards a lane at 3 lanes), and the most shard jobs a pass runs at
+  # once, of the organization's hosted runners that CI and the learn lane share. Lower it if CI waits.
+  SWEEP_IDS_PER_SHARD: "24"
+  SWEEP_SHARDS_MAX: "10"
   # The branch every sweep's pull request comes from: never under ai/, whose pull requests CI holds to a
   # training lane's promotion (ci.yml's `rust (training gate)`).
   SWEEP_BRANCH: sweep/shadow-ban
@@ -63,21 +72,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  sweep:
-    name: sweep, report, deliver
+  due:
+    name: what is due
     # The AI that ships: a dispatch from another branch would sweep that branch's and write to main's.
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
-    # GitHub's limit is six hours; a set as big as Meditative (102 cards) took about two (2026-10-12).
-    timeout-minutes: 350
+    timeout-minutes: 60
     permissions:
       contents: read
-      issues: write
-      pull-requests: write
+      pull-requests: read
+    outputs:
+      run: ${{ steps.due.outputs.run }}
+      ids: ${{ steps.due.outputs.ids }}
+      why: ${{ steps.due.outputs.why }}
+      superseded: ${{ steps.due.outputs.superseded }}
+      generation: ${{ steps.due.outputs.generation }}
+      shards: ${{ steps.due.outputs.shards }}
+      shard_total: ${{ steps.due.outputs.shard_total }}
     steps:
       - uses: actions/checkout@v4
         with:
-          # `--due` reads the push's base, and deliver starts from main as it is when the sweep ends.
+          # `--due` reads the push's base.
           fetch-depth: 0
           persist-credentials: false
       # Most pushes that start this (the sweep's own pull request among them) moved neither the
@@ -101,12 +116,21 @@ jobs:
         if: ${{ steps.worth.outputs.build == 'true' }}
         with:
           node: "false"
+      # A tarball keeps the executable bit an artifact would drop.
       - name: build
         if: ${{ steps.worth.outputs.build == 'true' }}
         run: |
           set -euo pipefail
           cargo build --release -p jackioh-tools
           cp "${CARGO_TARGET_DIR:-target}/release/jackioh" "$RUNNER_TEMP/jackioh"
+          tar -czf "$RUNNER_TEMP/jackioh.tgz" -C "$RUNNER_TEMP" jackioh
+      - uses: actions/upload-artifact@v4
+        if: ${{ steps.worth.outputs.build == 'true' }}
+        with:
+          name: sweep-bin
+          path: ${{ runner.temp }}/jackioh.tgz
+          if-no-files-found: error
+          retention-days: 3
       - name: what is due (sweep --due)
         id: due
         if: ${{ steps.worth.outputs.build == 'true' }}
@@ -147,30 +171,75 @@ jobs:
             echo "run=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # The shards: SWEEP_IDS_PER_SHARD ids each, at most SWEEP_SHARDS_MAX of them.
+          n=$(wc -w <<< "$ids")
+          k=$(( (n + SWEEP_IDS_PER_SHARD - 1) / SWEEP_IDS_PER_SHARD ))
+          [ "$k" -le "$SWEEP_SHARDS_MAX" ] || k=$SWEEP_SHARDS_MAX
           {
             echo "run=true"
             echo "ids=$ids"
             echo "why=$why"
             echo "superseded=$superseded"
             echo "generation=$(jq -r .generation "$RUNNER_TEMP/due.json")"
+            echo "shards=$(jq -nc "[range($k)]")"
+            echo "shard_total=$k"
           } >> "$GITHUB_OUTPUT"
-          echo "the sweep after $why: $(wc -w <<< "$ids") card(s), $ids" >> "$GITHUB_STEP_SUMMARY"
-      - name: the two passes
-        if: ${{ steps.due.outputs.run == 'true' }}
+          echo "the sweep after $why: $n card(s) in $k shard(s), $ids" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sweep-due
+          path: ${{ runner.temp }}/due.json
+          if-no-files-found: ignore
+          retention-days: 3
+
+  # Each pass's shard writes `<pass>-<id>.jsonl` only for a card whose process finished (it writes to
+  # `.part` and renames), `<pass>-<id>.log` for every card it started, `cut-<pass>-<shard>` for the cards
+  # it cut and `times-<pass>-<shard>` (`source`-able, epoch seconds). The names never clash across shards,
+  # so `merge-multiple` puts them side by side.
+  pass1:
+    name: pass 1 (${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: due
+    if: ${{ needs.due.outputs.run == 'true' }}
+    runs-on: ubuntu-latest
+    # Each shard job has its own limit; the step's is under it, so a slow shard still uploads what it finished.
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.due.outputs.shards || '[0]') }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sweep-bin
+          path: ${{ runner.temp }}
+      - name: unpack the binary
+        run: tar -xzf "$RUNNER_TEMP/jackioh.tgz" -C "$RUNNER_TEMP"
+      - name: pass 1 (shard)
+        timeout-minutes: 330
         env:
-          IDS: ${{ steps.due.outputs.ids }}
+          IDS: ${{ needs.due.outputs.ids }}
+          SHARD: ${{ matrix.shard }}
+          TOTAL: ${{ needs.due.outputs.shard_total }}
         run: |
           set -uo pipefail
           bin="$RUNNER_TEMP/jackioh"
           out="$RUNNER_TEMP/sweep"
+          cut="$out/cut-p1-$SHARD"
           mkdir -p "$out"
-          read -ra ids <<< "$IDS"
-          # One card per process, its pass's files kept only when it finished.
+          # This shard's ids: every TOTAL-th id from SHARD.
+          read -ra all <<< "$IDS"
+          ids=()
+          for i in "${!all[@]}"; do [ $((i % TOTAL)) = "$SHARD" ] && ids+=("${all[$i]}"); done
+          # One card per process, its pass's file kept only when it finished.
           card() {
             local pass=$1 id=$2
             shift 2
-            if ! timeout "${SWEEP_CARD_MINUTES}m" "$bin" sweep "$@" "$id" > "$out/$pass-$id.jsonl" 2> "$out/$pass-$id.log"; then
-              echo "$id" >> "$out/cut"
+            if timeout "${SWEEP_CARD_MINUTES}m" "$bin" sweep "$@" "$id" > "$out/$pass-$id.part" 2> "$out/$pass-$id.log"; then
+              mv "$out/$pass-$id.part" "$out/$pass-$id.jsonl"
+            else
+              rm -f "$out/$pass-$id.part"
+              echo "$id" >> "$cut"
             fi
           }
           lanes() {
@@ -179,7 +248,7 @@ jobs:
             for lane in $(seq 0 $((SWEEP_LANES - 1))); do
               (
                 for i in "${!ids[@]}"; do
-                  if [ $((i % SWEEP_LANES)) = "$lane" ] && ! grep -qx "${ids[$i]}" "$out/cut" 2> /dev/null; then
+                  if [ $((i % SWEEP_LANES)) = "$lane" ]; then
                     card "$pass" "${ids[$i]}" "$@"
                   fi
                 done
@@ -188,37 +257,199 @@ jobs:
             wait
           }
           # Read back with `source`, so each value is quoted.
-          at() { printf '%s=%q\n' "$1" "$2" >> "$out/times"; }
+          at() { printf '%s=%q\n' "$1" "$2" >> "$out/times-p1-$SHARD"; }
           at machine "$(nproc) cores ($(sed -n 's/^model name[[:space:]]*: //p' /proc/cpuinfo | head -n 1))"
-          at pass1_from "$(date -u +%H:%M)"
+          at from "$(date -u +%s)"
           lanes p1 --json
-          at pass1_to "$(date -u +%H:%M)"
-          first=()
-          for file in "$out"/p1-*.jsonl; do
-            id=$(basename "$file" .jsonl)
-            grep -qx "${id#p1-}" "$out/cut" 2> /dev/null || first+=("$file")
-          done
-          if [ "${#first[@]}" = 0 ] || [ ! -e "${first[0]}" ]; then
+          at to "$(date -u +%s)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sweep-p1-${{ matrix.shard }}
+          path: |
+            ${{ runner.temp }}/sweep/p1-*
+            ${{ runner.temp }}/sweep/cut-p1-*
+            ${{ runner.temp }}/sweep/times-p1-*
+            !${{ runner.temp }}/sweep/*.part
+          if-no-files-found: ignore
+          retention-days: 3
+
+  pass2:
+    name: pass 2 (${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: [due, pass1]
+    # On with the pass-1 shards that finished: a lost one's cards are cut short.
+    if: ${{ !cancelled() && needs.due.outputs.run == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.due.outputs.shards || '[0]') }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sweep-bin
+          path: ${{ runner.temp }}
+      - name: unpack the binary
+        run: tar -xzf "$RUNNER_TEMP/jackioh.tgz" -C "$RUNNER_TEMP"
+      # Every shard's pass-1 files: the at-risk list and the filler boost are over the whole sweep (R390).
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sweep-p1-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/sweep
+      - name: pass 2 (shard)
+        timeout-minutes: 330
+        env:
+          IDS: ${{ needs.due.outputs.ids }}
+          SHARD: ${{ matrix.shard }}
+          TOTAL: ${{ needs.due.outputs.shard_total }}
+        run: |
+          set -uo pipefail
+          shopt -s nullglob
+          bin="$RUNNER_TEMP/jackioh"
+          out="$RUNNER_TEMP/sweep"
+          cut="$out/cut-p2-$SHARD"
+          mkdir -p "$out"
+          # Only finished cards have a pass-1 file; one any shard cut has none.
+          first=("$out"/p1-*.jsonl)
+          if [ "${#first[@]}" = 0 ]; then
             echo "::error::no card finished pass 1"
             exit 1
           fi
+          # This shard's ids, dealt as in pass 1, each that finished pass 1.
+          read -ra all <<< "$IDS"
+          ids=()
+          for i in "${!all[@]}"; do
+            [ $((i % TOTAL)) = "$SHARD" ] && [ -e "$out/p1-${all[$i]}.jsonl" ] && ids+=("${all[$i]}")
+          done
+          card() {
+            local pass=$1 id=$2
+            shift 2
+            if timeout "${SWEEP_CARD_MINUTES}m" "$bin" sweep "$@" "$id" > "$out/$pass-$id.part" 2> "$out/$pass-$id.log"; then
+              mv "$out/$pass-$id.part" "$out/$pass-$id.jsonl"
+            else
+              rm -f "$out/$pass-$id.part"
+              echo "$id" >> "$cut"
+            fi
+          }
+          lanes() {
+            local pass=$1
+            shift
+            for lane in $(seq 0 $((SWEEP_LANES - 1))); do
+              (
+                for i in "${!ids[@]}"; do
+                  if [ $((i % SWEEP_LANES)) = "$lane" ]; then
+                    card "$pass" "${ids[$i]}" "$@"
+                  fi
+                done
+              ) &
+            done
+            wait
+          }
+          at() { printf '%s=%q\n' "$1" "$2" >> "$out/times-p2-$SHARD"; }
+          at from "$(date -u +%s)"
           lanes p2 --pass2 "$(IFS=,; echo "${first[*]}")"
-          at pass2_to "$(date -u +%H:%M)"
-          if [ -f "$out/cut" ]; then
-            sort -u -o "$out/cut" "$out/cut"
-            while read -r id; do rm -f "$out/p1-$id.jsonl" "$out/p2-$id.jsonl"; done < "$out/cut"
-            echo "::warning::cut short (past $SWEEP_CARD_MINUTES minutes, or its process failed: its log is in the artifact), so left out, each keeping its row: $(paste -sd' ' "$out/cut")"
-          fi
+          at to "$(date -u +%s)"
+      # Only this shard's own files: the merge gets no second copy of the pass-1 ones.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sweep-p2-${{ matrix.shard }}
+          path: |
+            ${{ runner.temp }}/sweep/p2-*
+            ${{ runner.temp }}/sweep/cut-p2-*
+            ${{ runner.temp }}/sweep/times-p2-*
+            !${{ runner.temp }}/sweep/*.part
+          if-no-files-found: ignore
+          retention-days: 3
+
+  record:
+    name: report, deliver
+    needs: [due, pass1, pass2]
+    if: ${{ !cancelled() && needs.due.outputs.run == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Deliver starts from main as it is when the sweep ends.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: sweep-bin
+          path: ${{ runner.temp }}
+      - name: unpack the binary
+        run: tar -xzf "$RUNNER_TEMP/jackioh.tgz" -C "$RUNNER_TEMP"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sweep-p*
+          merge-multiple: true
+          path: ${{ runner.temp }}/sweep
+      - uses: actions/download-artifact@v4
+        with:
+          name: sweep-due
+          path: ${{ runner.temp }}
+      - name: the shards, merged
+        env:
+          IDS: ${{ needs.due.outputs.ids }}
+        run: |
+          set -uo pipefail
           shopt -s nullglob
-          "$bin" sweep --report "$out"/p1-*.jsonl "$out"/p2-*.jsonl > "$out/report.md"
+          out="$RUNNER_TEMP/sweep"
+          mkdir -p "$out"
+          # Cut short: every card a shard cut, and every card with no finished file for a pass, whose
+          # shard was lost or ran out of time.
+          {
+            cat /dev/null "$out"/cut-p1-* "$out"/cut-p2-*
+            for id in $IDS; do
+              [ -e "$out/p1-$id.jsonl" ] && [ -e "$out/p2-$id.jsonl" ] || echo "$id"
+            done
+          } | grep . | sort -u > "$out/cut"
+          [ -s "$out/cut" ] || rm -f "$out/cut"
+          if [ -f "$out/cut" ]; then
+            while read -r id; do rm -f "$out/p1-$id.jsonl" "$out/p2-$id.jsonl"; done < "$out/cut"
+            echo "::warning::cut short (past $SWEEP_CARD_MINUTES minutes, or its process or its shard failed: its log is in the artifact), so left out, each keeping its row: $(paste -sd' ' "$out/cut")"
+          fi
+          first=("$out"/p1-*.jsonl)
+          if [ "${#first[@]}" = 0 ]; then
+            echo "::error::no card finished both passes"
+            exit 1
+          fi
+          # The passes' spans over every shard, and the machines the shards ran on.
+          field() {
+            local key=$1
+            shift
+            # shellcheck disable=SC1090 # a shard's times file, as its pass job's `at` wrote it.
+            for f in "$@"; do (source "$f" && echo "${!key:-}"); done | grep .
+          }
+          hhmm() { date -u -d "@${1:-0}" +%H:%M; }
+          p1_from=$(field from "$out"/times-p1-* | sort -n | head -n 1)
+          p1_to=$(field to "$out"/times-p1-* | sort -n | tail -n 1)
+          p2_from=$(field from "$out"/times-p2-* | sort -n | head -n 1)
+          p2_to=$(field to "$out"/times-p2-* | sort -n | tail -n 1)
+          machine=$(field machine "$out"/times-p1-* | sort -u | paste -sd';' | sed 's/;/; /g')
+          at() { printf '%s=%q\n' "$1" "$2" >> "$out/times"; }
+          at machine "$machine"
+          at pass1_from "$(hhmm "$p1_from")"
+          at pass1_to "$(hhmm "$p1_to")"
+          at pass2_from "$(hhmm "$p2_from")"
+          at pass2_to "$(hhmm "$p2_to")"
+          "$RUNNER_TEMP/jackioh" sweep --report "$out"/p1-*.jsonl "$out"/p2-*.jsonl > "$out/report.md" || exit 1
           sed -n '/^Run /p' "$out/report.md" >> "$GITHUB_STEP_SUMMARY"
       - name: the report of record and the tables (sweep --write)
         id: record
-        if: ${{ steps.due.outputs.run == 'true' }}
+        if: ${{ needs.due.outputs.run == 'true' }}
         env:
-          WHY: ${{ steps.due.outputs.why }}
-          IDS: ${{ steps.due.outputs.ids }}
-          GENERATION: ${{ steps.due.outputs.generation }}
+          WHY: ${{ needs.due.outputs.why }}
+          IDS: ${{ needs.due.outputs.ids }}
+          GENERATION: ${{ needs.due.outputs.generation }}
+          SHARDS: ${{ needs.due.outputs.shard_total }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -246,10 +477,11 @@ jobs:
             echo
             echo "- **Tree**: \`main\` at \`$(git rev-parse --short=7 "$GITHUB_SHA")\`, AI generation $GENERATION."
             echo "- **Machine**: GitHub's \`ubuntu-latest\`, $machine, with nothing else running. Each pass ran as"
-            echo "  $SWEEP_LANES lanes, one card per process, the ids dealt to the lanes in turn:"
+            echo "  $SHARDS shard job(s), each $SWEEP_LANES lanes, one card per process, the ids dealt to the shards and then"
+            echo "  to the lanes in turn:"
             echo "  - pass 1: \`jackioh sweep --json <id>\` over the ids, $pass1_from to $pass1_to UTC;"
-            echo "  - pass 2: \`jackioh sweep --pass2 <every pass-1 file> <id>\` over the same ids, which plays the"
-            echo "    ones at risk, $pass1_to to $pass2_to UTC;"
+            echo "  - pass 2: \`jackioh sweep --pass2 <every shard's pass-1 files> <id>\` over the same ids, which plays"
+            echo "    the ones at risk, $pass2_from to $pass2_to UTC;"
             echo "  - the report: \`jackioh sweep --report <the pass-1 files> <the pass-2 files>\`."
             echo "- **Ids**: $IDS."
             if [ -n "$cut" ]; then
@@ -305,11 +537,11 @@ jobs:
           JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts
           pnpm --dir apps/web exec vitest run src/practice/claim.test.ts
       - name: close the superseded pull request
-        if: ${{ steps.due.outputs.superseded != '' && steps.record.outputs.changed != '' }}
+        if: ${{ needs.due.outputs.superseded != '' && steps.record.outputs.changed != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          SUPERSEDED: ${{ steps.due.outputs.superseded }}
+          SUPERSEDED: ${{ needs.due.outputs.superseded }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         # Before deliver pushes the branch again, which would close it without a word.
         run: |
@@ -319,9 +551,9 @@ jobs:
         env:
           LEARN_LANE_TOKEN: ${{ secrets.LEARN_LANE_TOKEN }}
           REPO: ${{ github.repository }}
-          WHY: ${{ steps.due.outputs.why }}
-          IDS: ${{ steps.due.outputs.ids }}
-          SUPERSEDED: ${{ steps.due.outputs.superseded }}
+          WHY: ${{ needs.due.outputs.why }}
+          IDS: ${{ needs.due.outputs.ids }}
+          SUPERSEDED: ${{ needs.due.outputs.superseded }}
           REPORT: ${{ steps.record.outputs.path }}
           SUMMARY: ${{ steps.record.outputs.summary }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -364,7 +596,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          WHY: ${{ steps.due.outputs.why }}
+          WHY: ${{ needs.due.outputs.why }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail

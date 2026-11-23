@@ -28,6 +28,11 @@ const FROZEN_GLYPH: &str = "\u{2744}\u{FE0E}";
 const DORMANT_GLYPH: &str = "\u{263E}\u{FE0E}";
 /// R1852000: the Starship badge's glyph, a comet in text presentation (U+FE0E).
 const STARSHIP_GLYPH: &str = "\u{2604}\u{FE0E}";
+/// R3536005: the Evolved badge's glyph, a star in text presentation (U+FE0E).
+pub const EVOLVED_GLYPH: &str = "\u{2726}\u{FE0E}";
+/// R3536005, §6.3: what an Evolved card's badge says.
+pub const EVOLVED_WORDS: &str =
+    "Evolved: its Evolve has happened, or happens as it enters the field; it evolves only once";
 
 /// B5 E35, §6.1: what a Berserk unit's badge says.
 const BERSERK_WORDS: &str = "Berserk: at the start and end of its controller's turn it attacks its own hero";
@@ -246,6 +251,7 @@ pub struct BadgeFacts<'a> {
     pub dormant: Option<&'a DormantFace>,
     pub starship: Option<&'a StarshipFace>,
     pub created: bool,
+    pub evolved: bool,
 }
 
 fn data(pairs: &[(&str, String)]) -> IndexMap<String, String> {
@@ -383,6 +389,16 @@ pub fn state_badges(facts: &BadgeFacts<'_>) -> Vec<StateBadge> {
             )]),
         });
     }
+    // R3536005: an Evolved card, its Evolve behind or ahead of it.
+    if facts.evolved {
+        badges.push(StateBadge {
+            kind: StateBadgeKind::Evolved,
+            text: Some(EVOLVED_GLYPH.to_string()),
+            icon: None,
+            words: words.say(EVOLVED_WORDS),
+            data: data(&[("data-evolved", "true".to_string())]),
+        });
+    }
     if let Some(dormant) = facts.dormant {
         badges.push(StateBadge {
             kind: StateBadgeKind::Dormant,
@@ -496,5 +512,126 @@ mod tests {
             temporary_words(en, 3),
             "Temporary 3: discarded after 3 of its owner's ends of turn"
         );
+    }
+
+    fn open(cost: Option<i32>) -> QuestOpenView {
+        serde_json::from_value(serde_json::json!({
+            "id": "q", "text": "Draw 2 cards", "progress": 1, "goal": 3, "rewards": [], "cost": cost,
+        }))
+        .expect("an open quest")
+    }
+
+    /// R404, R1854002: an open quest in words, its progress after it, and the cost its play must have where it names one.
+    #[test]
+    fn r404_an_open_quest_says_its_goal_and_progress() {
+        let en = Words::new(Locale::En);
+        assert_eq!(quest_progress(&open(None)), "1/3");
+        assert_eq!(quest_words(en, &open(None)), "Quest: Draw 2 cards (1/3)");
+        assert_eq!(
+            quest_words(en, &open(Some(2))),
+            "Quest: Draw 2 cards, a card that costs (2) (1/3)"
+        );
+    }
+
+    /// R1854000: a staged quest's words: complete once every stage is done, else the stage it stands at, and nothing
+    /// for a line with no stages.
+    #[test]
+    fn r1854000_a_staged_quests_words_are_complete_or_its_stage() {
+        let en = Words::new(Locale::En);
+        let done = [
+            stage("Initiation", QuestStageState::Done, None),
+            stage("Comradery", QuestStageState::Done, None),
+        ];
+        assert_eq!(stage_words(en, &done), "Quest complete");
+        let current = [
+            stage("Initiation", QuestStageState::Done, None),
+            stage("Comradery", QuestStageState::Current, None),
+        ];
+        assert_eq!(stage_words(en, &current), "Stage 2 of 2, Comradery");
+        assert_eq!(stage_words(en, &[]), "");
+    }
+
+    /// E39, R432, R671: each enchantment in words, Classic #55's swap a Radiant Book's on a Radiant card.
+    #[test]
+    fn r432_each_enchantment_in_words() {
+        let en = Words::new(Locale::En);
+        assert_eq!(
+            enchantment_words(en, &Enchantment::ReturnAfterResolve { floor: 2 }, false),
+            "Returns to hand · can't cost less than (2)"
+        );
+        assert_eq!(
+            enchantment_words(en, &Enchantment::CastOnDraw, false),
+            "Cast on draw"
+        );
+        assert_eq!(
+            enchantment_words(en, &Enchantment::TargetEnemies, false),
+            "Targets enemies"
+        );
+        let swap = Enchantment::SwapsBook {
+            from: "classic-055".to_string(),
+        };
+        assert_eq!(
+            enchantment_words(en, &swap, false),
+            "End of turn: Become a random other Book"
+        );
+        assert_eq!(
+            enchantment_words(en, &swap, true),
+            "End of turn: Become a random other Radiant Book"
+        );
+    }
+
+    /// R1852003, R1852005, R1839001: a Starship's words before and after it launches, and a Dormant card's
+    /// countdown: none, one turn left, or more.
+    #[test]
+    fn r1839001_a_starships_and_a_dormant_cards_words() {
+        let en = Words::new(Locale::En);
+        assert_eq!(
+            starship_words(en, 3, true),
+            "Starship: launched with 3 Starship Pieces fused into it"
+        );
+        assert_eq!(
+            starship_words(en, 3, false),
+            "Dormant Starship: 3 Starship Pieces fused into it; its Activate launches it"
+        );
+        assert_eq!(dormant_words(en, None), en.say(DORMANT_WORDS));
+        assert_eq!(dormant_words(en, Some(1)), en.say(DORMANT_NEXT_TURN_WORDS));
+        assert_eq!(
+            dormant_words(en, Some(3)),
+            "Dormant: it awakens 3 of its controller's turns from now; until then nothing reaches it"
+        );
+        assert_ne!(
+            DORMANT_WORDS, DORMANT_NEXT_TURN_WORDS,
+            "PREMISE: the two read differently"
+        );
+    }
+
+    /// R383: an Animated card's words, standing as a Unit or going back to its lane.
+    #[test]
+    fn r383_an_animated_cards_words() {
+        let en = Words::new(Locale::En);
+        assert_eq!(
+            animated_words(en, &AnimatedFace { home: None }, CardType::FieldSpell),
+            "Animated: this Field Spell stands in a unit zone as a Unit"
+        );
+        assert_eq!(
+            animated_words(en, &AnimatedFace { home: Some(2) }, CardType::Trap),
+            "Animated on your turn: back to its backrow (lane 2) at the end of its controller's turn"
+        );
+    }
+
+    /// E39: each distinct enchantment once, in order; a badge's data is its pairs, by key.
+    #[test]
+    fn each_enchantment_once_and_a_badges_data_by_key() {
+        let list = [
+            Enchantment::CastOnDraw,
+            Enchantment::TargetEnemies,
+            Enchantment::CastOnDraw,
+        ];
+        assert_eq!(
+            distinct_enchantments(&list),
+            vec![&Enchantment::CastOnDraw, &Enchantment::TargetEnemies]
+        );
+        let pairs = data(&[("count", "2".to_string())]);
+        assert_eq!(pairs.get("count").map(String::as_str), Some("2"));
     }
 }

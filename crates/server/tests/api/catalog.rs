@@ -9,7 +9,6 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Request};
 use indexmap::IndexMap;
 use serde::Serialize;
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
@@ -19,6 +18,8 @@ use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::bug_reports::BUG_REPORTS_HEADER;
 use jackioh_server::env::load_env;
+
+use crate::support::deps::from_json;
 
 // Harness
 
@@ -91,10 +92,6 @@ async fn get(app: &Arc<App>, path: &str, token: Option<&str>) -> Reply {
         headers,
         text: String::from_utf8(bytes.to_vec()).expect("the body is UTF-8"),
     }
-}
-
-fn from_json<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value).expect("the literal has the port's JSON shape")
 }
 
 /// The catalog file the server loads, as raw defs, so the tests count it and not a transcription.

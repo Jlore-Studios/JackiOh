@@ -133,7 +133,7 @@ with BUILD.md's). Parts cite them; part 37's coverage check lists any V that no 
 | V21 | All 35 e2e specs pass on Chrome | daily super run |
 | V22 | The Docker image boots on Render's command with the env contract of `docs/architecture.md` | `test:deploy` |
 | V23 | No test reads prose from a Markdown file | part 28's grep |
-| V24 | Per-PR CI's slowest job finishes under 5 minutes | `ci-duration.yml` |
+| V24 | Per-PR CI's slowest job finishes under 8 minutes (5 until #3785) | `ci-duration.yml` |
 | V25 | The daily super run opens or updates one issue on failure and closes it on success | its workflow |
 | V26 | `cargo jackioh promote` promotes exactly by §8's table, and writes `generation.json` and the history line | `crates/tools` tests |
 | V27 | A training lane runs forever, survives a reboot, and logs one `GameRecord` per game it plays | part 39's check on the box |
@@ -152,7 +152,7 @@ tests run in seconds. So:
 |---|---|---|
 | `rust` | `cargo fmt --check`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test --workspace` (engine rules tests, every card test, golden replay, AI unit tests, server tests on the fake store, tools tests); `cargo jackioh catalog check`; `patches check`; `spec check`; `fuzz --seeds 200` | < 5 min with `Swatinem/rust-cache` |
 | `web` | `scripts/build-wasm.sh`; `pnpm --dir apps/web typecheck`; `eslint apps/web e2e`; `vitest run --project web`; the `ts-rs` diff check (V20) | < 5 min |
-| `e2e smoke` | Chrome only, specs 01 (hotseat game and replay hash), 06 (networked match), 10 (invite gate), 13 (practice against the AI), 19 (queue modes and series), against a release build of `jackioh-server` | < 5 min |
+| `e2e smoke` | Chrome only, specs 01 (hotseat game and replay hash), 06 (networked match), 10 (invite gate), 13 (practice against the AI), 19 (queue modes and series) and 51 (the menus' shell), against a release build of `jackioh-server`; specs 46 and 47 run daily only (#4092) | < 5 min |
 | `db` | `test:sql`, `test:db`, `test:deploy`, only when `crates/server/migrations/**`, `crates/server/src/db/**`, `crates/server/Dockerfile` or `render.yaml` changed (a skip passes the check) | < 5 min |
 | `bot selftest` | unchanged | — |
 

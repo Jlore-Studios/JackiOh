@@ -1,4 +1,4 @@
-//! S #88 Siva 2 (SPEC §8.10 row 88): (3) Unit, Human, Acclaimed, Legendary, 4/4 → 8/8, of the
+//! S #88 Siva 2 (SPEC §8.10 row 88): (3) Unit, Human, Acclaimed, Legendary, 5/4 → 10/8 (4/4 → 8/8 through v0.6.7k, issue #4285), of the
 //! Stinkyscape set.
 //!   Base:    "Aura: Your Humans have Poisonous."
 //!   Radiant: "Aura: Your Humans have Poisonous. / Cry: Fill your hand with Speciesists."
@@ -84,7 +84,7 @@ mod tests {
         assert!(poisonous(&s, &s.unit_at(P1, 3)), "Siva 2 itself");
         assert!(!poisonous(&s, &s.unit_at(P1, 2)), "a non-Human");
         assert!(!poisonous(&s, &s.unit_at(P2, 1)), "an enemy Human");
-        s.expect_stats(ID, json!({ "attack": 4, "health": 4 }));
+        s.expect_stats(ID, json!({ "attack": 5, "health": 4 }));
     }
 
     #[test]
@@ -105,7 +105,7 @@ mod tests {
     }
 
     #[test]
-    fn r275_radiant_8_8_fills_your_hand_with_speciesists_none_burned() {
+    fn r275_radiant_10_8_fills_your_hand_with_speciesists_none_burned() {
         let mut s = board(true);
         s.play(ID, json!({ "zone": 3 }));
         let hand = s.hand(P1);
@@ -113,6 +113,6 @@ mod tests {
         assert_eq!(hand.iter().filter(|card| card.def_id == SPECIESIST).count() as i32, HAND_CAP - 1);
         assert!(!s.last_events().iter().any(|event| matches!(event, GameEvent::Burned { .. })));
         assert!(poisonous(&s, &s.unit_at(P1, 1)));
-        s.expect_stats(ID, json!({ "attack": 8, "health": 8 }));
+        s.expect_stats(ID, json!({ "attack": 10, "health": 8 }));
     }
 }

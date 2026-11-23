@@ -20,10 +20,6 @@ fn board(seed: &str) -> GameState {
     state
 }
 
-fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
 /// `declare_attack` with the attacker read live off the sink.
 fn declare(sink: &mut EngineSink<'_>, attacker_id: &str, target: AttackTarget) -> Option<String> {
     let attacker = live(sink.state, attacker_id);
@@ -107,7 +103,7 @@ fn r1124_shield_indestructible_zero_stop_it() {
         declare(sink, &attacker.id, on_unit(sink.state, &defender.id))
     });
     assert!(exiled_ids(&events).is_empty());
-    assert_eq!(by_id(&state, &defender.id).divine_shield_spent, Some(true));
+    assert_eq!(live(&state, &defender.id).divine_shield_spent, Some(true));
 
     // Indestructible takes nothing: nothing marked or exiled; only the Banisher dies, to the strike back.
     let mut state = board("r1124-indestructible");
@@ -128,8 +124,8 @@ fn r1124_shield_indestructible_zero_stop_it() {
     });
     assert!(exiled_ids(&events).is_empty());
     assert_eq!(destroyed_ids(&events), vec![attacker.id.clone()]);
-    assert_eq!(by_id(&state, &defender.id).zone.z(), ZoneName::Field);
-    assert_eq!(by_id(&state, &defender.id).marked_exiled, None);
+    assert_eq!(live(&state, &defender.id).zone.z(), ZoneName::Field);
+    assert_eq!(live(&state, &defender.id).marked_exiled, None);
 
     // The zero rule: a 0-damage hit from the Banisher marks nothing.
     let mut state = board("r1124-zero");

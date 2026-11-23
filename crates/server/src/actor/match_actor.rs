@@ -53,8 +53,9 @@ use crate::api::rematch::{RematchStakes, offer_for_bot, rematch_seen};
 use crate::app::now_ms;
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
-    MATCH_CHECKPOINT_MIN_ACTIONS, MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS,
-    MATCH_VOIDED_CLOSE_CODE, POST_GAME_FRAME_VERSION,
+    MATCH_CHECKPOINT_MIN_ACTIONS, MATCH_OVER_CLOSE_CODE, MATCH_RECORD_RESULT_ATTEMPTS,
+    MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE, POST_GAME_FRAME_VERSION, SEAT_TAKEN_CLOSE_CODE,
+    SEAT_TAKEN_CLOSE_REASON,
 };
 use crate::db::store::{
     BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, PlayTelemetry, QueueMode,
@@ -214,8 +215,10 @@ enum Task {
     },
     /// Resolves once every task queued before it has run.
     Idle(oneshot::Sender<()>),
-    /// #1169: the restart drain's checkpoint, answered once it is written or passed over.
-    Checkpoint(oneshot::Sender<()>),
+    /// #4224: a checkpoint of the state after the log's newest row. `Some` is the restart drain's,
+    /// answered once it is written or passed over; `None` is the one every
+    /// `MATCH_CHECKPOINT_MIN_ACTIONS`-th row queues while the match is played.
+    Checkpoint(Option<oneshot::Sender<()>>),
     /// R1452: the move the search for a bot home came back with, decided on the state as it stood
     /// when the log's next seq was `version`, in turn `turn`.
     Decided {
@@ -300,6 +303,8 @@ struct Core {
     /// R835001: bumped on every `attach` (the first included, so generations start at 1), keying
     /// `hello_pending` so a reattach's Hello is never swallowed by the older socket's queued one.
     socket_generation: PerPlayer<u64>,
+    /// R3694000: the close `halt_with` gave its sockets; a socket handed to the stopped actor gets it too.
+    halted_with: Option<(u16, &'static str)>,
     /// R643: recent emote sends for the shared `emote_gate`, which the client runs too.
     emote_history: PerPlayer<Vec<i64>>,
     /// R1351000: mutes emotes if either blocks the other; never cleared until the next match.
@@ -406,7 +411,7 @@ fn answer_message(nonce: &str, answer: ActionAnswer) -> ServerMessage {
             "the action could not be recorded; try again",
             Some(nonce),
         ),
-        // Only a co-op host answers so; a 1v1 nonce is the seat's, whoever sends it.
+        // R4013000: a 1v1 nonce is its own seat's duplicate check, as a co-op host's is: another seat's copy is taken.
         ActionAnswer::NonceTaken => error_message(
             SocketErrorCode::Malformed,
             "that nonce is already taken",
@@ -468,9 +473,9 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
     );
 
     let next_seq = log.iter().fold(0, |highest, row| highest.max(row.seq)) + 1;
-    let acked: Vec<(String, i64)> = log
+    let acked: Vec<(String, PlayerId, i64)> = log
         .iter()
-        .map(|row| (row.action.nonce.clone(), row.seq))
+        .map(|row| (row.action.nonce.clone(), row.action.player_id, row.seq))
         .collect();
 
     let portraits = match_row
@@ -513,6 +518,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         guards: PerPlayer::new(SeatGuard::default(), SeatGuard::default()),
         hello_pending: PerPlayer::new(None, None),
         socket_generation: PerPlayer::new(0, 0),
+        halted_with: None,
         emote_history: PerPlayer::new(Vec::new(), Vec::new()),
         emotes_blocked: false,
         jlore_capped: PerPlayer::new(false, false),
@@ -635,7 +641,9 @@ impl MatchActor {
             }
             Task::Checkpoint(done) => {
                 self.write_checkpoint().await;
-                let _ = done.send(());
+                if let Some(done) = done {
+                    let _ = done.send(());
+                }
             }
             Task::Decided {
                 home,
@@ -815,11 +823,11 @@ impl MatchActor {
             DuelOutput::Changed { .. } => {}
             // R645: a bot's emote goes out as a person's does (the hand, the rate gate, the relay).
             DuelOutput::BotEmote { home, emote } => self.relay_emote(core, home, emote),
-            DuelOutput::Pushed { snapshot } => {
+            DuelOutput::Pushed { snapshot, mut views } => {
                 // R1442: a seat's think time runs from this push.
                 core.telemetry.on_pushed(&snapshot, now_ms());
                 // Social (#939): B50, the watchers' record of the change, sent SPECTATE_DELAY_MS on.
-                self.spectate_record_in(core);
+                self.spectate_record_in(core, &mut views);
             }
             DuelOutput::Decide { request } => self.spawn_bot(core, request),
             DuelOutput::OfferRematch { home, stakes, reply } => {
@@ -859,11 +867,18 @@ impl MatchActor {
                         }
                     }
                 };
+                // #4224: every MATCH_CHECKPOINT_MIN_ACTIONS-th row is checkpointed, queued behind this
+                // task so no answer waits on the write.
+                let due = outcome == jackioh_shared::host::LogOutcome::Written
+                    && seq % MATCH_CHECKPOINT_MIN_ACTIONS == 0;
                 let outputs = {
                     let mut core = self.lock();
                     self.step_in(&mut core, DuelEvent::Logged { outcome })
                 };
                 self.exec(outputs, answers).await;
+                if due {
+                    self.enqueue(Task::Checkpoint(None));
+                }
             }
             DuelOutput::Record { request } => self.on_record(request, answers).await,
             DuelOutput::Voided { at } => self.on_void(at).await,
@@ -1603,10 +1618,6 @@ impl MatchActor {
 
     // The actor's surface
 
-    pub fn match_id(&self) -> &str {
-        &self.shared.match_row.id
-    }
-
     /// The seats as the match began: `.0` is the account that started in p1.
     pub fn seats(&self) -> &(MatchSeat, MatchSeat) {
         &self.shared.seats
@@ -1638,13 +1649,36 @@ impl MatchActor {
         seated
     }
 
-    /// Hands a connection to the account that began in `home` (`seat_of`). Replaces (and closes) a
-    /// socket that account already held.
+    /// Hands a connection to the account that began in `home` (`seat_of`). Replaces (and closes, with
+    /// `SEAT_TAKEN_CLOSE_CODE`, R3767000) a socket that account already held.
     pub fn attach(&self, home: PlayerId, socket: Socket) {
+        // A socket that went before its handler was in has no close left to run: it takes no seat,
+        // steps nothing and closes nothing. The seat keeps what it held, `socket_generation`, the
+        // rematch push and `Task::Attach` are left alone, and `Registry::attach` still answers `Ok`.
+        // An empty seat stays empty, so R744's absent grace starts as the other seat attaches (R744,
+        // R3767000).
+        if !socket.is_open() {
+            return;
+        }
         let previous = {
             let mut core = self.lock();
             if core.host.is_voided() {
                 None
+            } else if core.host.is_stopped() {
+                // #3678: a stopped actor (`halt`: a restart's drain, the reaper, R776000's let-go) has let
+                // its sockets go and left the registry, so a socket handed to it now (a held handle, as
+                // `Registry::attach` holds one between finding the actor and this call) would be greeted
+                // by an actor nothing reaches again, and its greeting would write the match's stored
+                // clocks. It is closed as `halt` closed the ones it held, so the client reconnects and the
+                // registry rebuilds the match (§9.5), as `DuosActor::attach` does; R3694000: when the
+                // reaper let a finished match go, with `MATCH_OVER_CLOSE_CODE`, which no client
+                // reconnects on.
+                let (code, reason) = core
+                    .halted_with
+                    .unwrap_or((CLOSE_GOING_AWAY, "the actor is going away"));
+                drop(core);
+                socket.close(Some(code), Some(reason));
+                return;
             } else {
                 let previous = core.sockets[home].replace(socket.clone());
                 // R744: the account has now been here, so no grace starts for it as another attaches.
@@ -1679,10 +1713,18 @@ impl MatchActor {
                 }
             }),
         });
+        // The socket may have dropped while it was being seated; its close handler was not in yet, so
+        // nothing will report it. `on_socket_gone` acts only when the seat holds a closed socket, so
+        // this starts the grace exactly as any other drop does (§9.5).
+        if !socket.is_open() {
+            self.on_socket_gone(home);
+        }
         if let Some(previous) = previous
             && previous != socket
         {
-            previous.close(Some(1000), Some("replaced by a new socket"));
+            // R3767000: the seat was never empty (no grace, R744), and the replaced socket's client
+            // must not reconnect by itself, or two tabs of one account take the seat in turn.
+            previous.close(Some(SEAT_TAKEN_CLOSE_CODE), Some(SEAT_TAKEN_CLOSE_REASON));
         }
 
         let player = playing(&self.lock(), home);
@@ -1728,13 +1770,14 @@ impl MatchActor {
         let _ = drained.await;
     }
 
-    /// #1169: resolves once the checkpoint of the state after the log's newest row is written (or
-    /// passed over, `write_checkpoint`), after every task queued before it. The restart drain calls it
-    /// before `stop`; a crash or the reaper's `stop` writes none, and the next rebuild folds from the
-    /// last checkpoint there is or from the start.
+    /// #1169, #4224: resolves once the checkpoint of the state after the log's newest row is
+    /// written (or passed over, `write_checkpoint`), after every task queued before it. The restart
+    /// drain calls it before `stop`; a crash or the reaper's `stop` writes none, and the next rebuild
+    /// folds from the last checkpoint there is (the drain's, or the last periodic one) or from the
+    /// start.
     pub async fn checkpoint(&self) {
         let (done, written) = oneshot::channel();
-        if self.shared.inbox.send(Task::Checkpoint(done)).is_err() {
+        if self.shared.inbox.send(Task::Checkpoint(Some(done))).is_err() {
             return;
         }
         let _ = written.await;
@@ -1797,9 +1840,20 @@ impl MatchActor {
         engine::snapshot(self.lock().host.game())
     }
 
-    /// For the registry's hash checks and the reaper; never sent to a socket.
+    /// For the server's tests (`crates/server/tests/actor/`); never sent to a socket.
     pub fn engine_state(&self) -> EngineState {
         self.lock().host.game().clone()
+    }
+
+    /// For the server's tests (`crates/server/tests/actor/`): how many frames the record has encoded for a
+    /// watcher, none while nobody watches.
+    pub fn spectate_frames_encoded(&self) -> u64 {
+        self.lock().spectate.encoded
+    }
+
+    /// For the server's tests (`crates/server/tests/actor/`): how many engine views the machine has built.
+    pub fn seat_views_built(&self) -> u64 {
+        self.lock().host.views_built()
     }
 
     pub fn clocks(&self) -> MatchClocks {
@@ -1812,10 +1866,25 @@ impl MatchActor {
         self.idle().await;
     }
 
+    /// R3694000: `stop` for a finished match past its rematch window: its seats' and watchers' sockets
+    /// close with `MATCH_OVER_CLOSE_CODE`.
+    pub async fn stop_match_over(&self) {
+        self.halt_with(MATCH_OVER_CLOSE_CODE, MATCH_OVER_CLOSE_REASON);
+        self.idle().await;
+    }
+
     /// `stop` without waiting for the queue to drain, so a task on the queue can call it.
     fn halt(&self) {
+        self.halt_with(CLOSE_GOING_AWAY, "the actor is going away");
+    }
+
+    /// `halt`, its sockets closed with `code` and `reason`.
+    fn halt_with(&self, code: u16, reason: &'static str) {
         let sockets = {
             let mut core = self.lock();
+            // R3694000: kept under the lock that stops the machine, for a socket `attach` is handed later;
+            // a second stop finds no socket left to close, so the first close is the one kept.
+            core.halted_with.get_or_insert((code, reason));
             // The machine stops its clocks and relays, and takes their timers back.
             let outputs = self.step_in(&mut core, DuelEvent::Stop);
             self.exec_now(&mut core, outputs);
@@ -1823,11 +1892,11 @@ impl MatchActor {
         };
         for socket in sockets.into_iter().flatten() {
             if socket.is_open() {
-                socket.close(Some(1001), Some("the actor is going away"));
+                socket.close(Some(code), Some(reason));
             }
         }
         // Social (#939): and so do its watchers.
-        self.spectate_close(CLOSE_GOING_AWAY, "the actor is going away");
+        self.spectate_close(code, reason);
     }
 
     /// R672: seats with an open socket, read by the registry's `presence_of`. R1452: bot seats are
@@ -1907,7 +1976,8 @@ pub use jackioh_shared::host::relay::{aim_is_public, hover_is_shown};
 
 use crate::actor::protocol::{spectator_emote_message, spectator_hand_message, watchers_frame};
 // A watcher's socket closes with `CLOSE_NORMAL` when a newer socket of its account replaces it or
-// after a finished match's last view (R1107000), and with `CLOSE_GOING_AWAY` when the actor goes.
+// after a finished match's last view (R1107000), and with `CLOSE_GOING_AWAY` when the actor goes, or
+// `MATCH_OVER_CLOSE_CODE` when the reaper lets a finished match go past its window (R3694000).
 use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, WS_CLOSE};
 use crate::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
 use crate::social::watch::{
@@ -1921,14 +1991,40 @@ pub const WATCH_NOT_ALLOWED: &str = "you may not watch this match";
 /// R1107000: what a finished match's watcher's close says, once it has been sent its seat's last view.
 pub(crate) const MATCH_OVER_CLOSE_REASON: &str = "the match is over";
 
-/// One recorded view of a seat: its encoded `view` frame (`legal: []`, B50), when the state it shows
-/// was reached, and its place in the record. R1834003: and the `(seat, card)` pairs it shows
-/// (`shown_defs`), whose card picks follow it to a watcher that has not had them.
+/// What a recorded view is kept as: the view the seat was sent, until a watcher is first due it, then its
+/// encoded `view` frame (`legal: []`, B50), which every watcher of that seat is sent as it is.
+enum FrameBody {
+    View(Box<PlayerView>),
+    Encoded(String),
+}
+
+/// One recorded view of a seat: its `view` frame (`legal: []`, B50), encoded the first time a watcher is
+/// due it, when the state it shows was reached, and its place in the record. R1834003: and the
+/// `(seat, card)` pairs it shows (`shown_defs`), whose card picks follow it to a watcher that has not had
+/// them.
 struct SpectateFrame {
     seq: u64,
     shown_at: i64,
-    frame: String,
+    body: FrameBody,
     shown: BTreeSet<(PlayerId, String)>,
+}
+
+impl SpectateFrame {
+    /// The encoded frame, encoding it now if no watcher has been due it yet (`encoded` counts that).
+    fn text(&mut self, encoded: &mut u64) -> &str {
+        if matches!(self.body, FrameBody::View(_))
+            && let FrameBody::View(view) =
+                std::mem::replace(&mut self.body, FrameBody::Encoded(String::new()))
+        {
+            // R3477000: a watcher is shown no forecast, as it is shown no legal action.
+            self.body = FrameBody::Encoded(encode(&view_message(*view, &[], None, false, None)));
+            *encoded += 1;
+        }
+        match &self.body {
+            FrameBody::Encoded(text) => text,
+            FrameBody::View(_) => unreachable!("the body was just encoded"),
+        }
+    }
 }
 
 /// One watching socket: the account behind it, the seat its friend began the match in, the last
@@ -1965,6 +2061,8 @@ fn send_cards_due(
 struct Spectate {
     records: PerPlayer<VecDeque<SpectateFrame>>,
     watchers: Vec<Watcher>,
+    /// How many frames have been encoded for a watcher: none while nobody watches. For tests.
+    encoded: u64,
     next_seq: u64,
     next_id: u64,
     /// The one wait armed for the next view due to a watcher, and when it is due.
@@ -1981,6 +2079,7 @@ impl Spectate {
         Spectate {
             records: PerPlayer::new(VecDeque::new(), VecDeque::new()),
             watchers: Vec::new(),
+            encoded: 0,
             next_seq: 0,
             next_id: 0,
             timer: None,
@@ -2180,13 +2279,16 @@ impl MatchActor {
             return;
         }
         let Spectate {
-            records, watchers, ..
+            records,
+            watchers,
+            encoded,
+            ..
         } = &mut core.spectate;
         let Some(watcher) = watchers.iter_mut().find(|watcher| watcher.id == id) else {
             return;
         };
         let Some(record) = records[watcher.home]
-            .iter()
+            .iter_mut()
             .find(|record| watcher.sent == Some(record.seq))
         else {
             return;
@@ -2196,7 +2298,7 @@ impl MatchActor {
         if !watcher.guard.hello_answer_allowed(id, now_ms()) {
             return;
         }
-        watcher.socket.send(record.frame.as_str());
+        watcher.socket.send(record.text(encoded));
     }
 
     /// R2609000: a frame of a watcher's that is neither a hello nor an emote is still unanswered
@@ -2327,27 +2429,29 @@ impl MatchActor {
     /// B50: the record's first views, of the state the actor opens on.
     fn spectate_record(&self) {
         let mut core = self.lock();
-        self.spectate_record_in(&mut core);
+        self.spectate_record_in(&mut core, &mut PerPlayer::new(None, None));
     }
 
     /// B50: records each seat's view of the state as it stands now, the clock's time left in it as
-    /// its player was shown, and sends whatever has come due.
-    fn spectate_record_in(&self, core: &mut Core) {
+    /// its player was shown, and sends whatever has come due. `pushed` holds the views the machine just
+    /// sent each seat, which the record takes as they were; it builds a view only for a seat sent none.
+    fn spectate_record_in(&self, core: &mut Core, pushed: &mut PerPlayer<Option<Box<PlayerView>>>) {
         if core.spectate.closed {
             return;
         }
         let now = now_ms();
         for home in PLAYERS {
-            let view = self.view_of(core, playing(core, home));
+            let view = match pushed[home].take() {
+                Some(view) => view,
+                None => Box::new(self.view_of(core, playing(core, home))),
+            };
             let shown = shown_defs(&view, &self.shared.dealt_cards);
-            // R3477000: a watcher is shown no forecast, as it is shown no legal action.
-            let frame = encode(&view_message(view, &[], None, false, None));
             let seq = core.spectate.next_seq;
             core.spectate.next_seq += 1;
             core.spectate.records[home].push_back(SpectateFrame {
                 seq,
                 shown_at: now,
-                frame,
+                body: FrameBody::View(view),
                 shown,
             });
         }
@@ -2361,6 +2465,7 @@ impl MatchActor {
         let Spectate {
             records,
             watchers,
+            encoded,
             timer,
             closed,
             ..
@@ -2369,14 +2474,14 @@ impl MatchActor {
             return;
         }
         for watcher in watchers.iter_mut() {
-            for record in &records[watcher.home] {
+            for record in records[watcher.home].iter_mut() {
                 if record.shown_at + SPECTATE_DELAY_MS > now {
                     break;
                 }
                 if watcher.sent.is_some_and(|sent| record.seq <= sent) {
                     continue;
                 }
-                watcher.socket.send(record.frame.as_str());
+                watcher.socket.send(record.text(encoded));
                 watcher.sent = Some(record.seq);
                 // R1834003: the card picks of what this view newly shows, after it.
                 send_cards_due(

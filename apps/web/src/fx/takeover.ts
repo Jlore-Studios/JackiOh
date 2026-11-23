@@ -27,7 +27,8 @@
 import { isStinkyscapeArt } from "../cards/art/stinkyscape.ts";
 import { stinkyscapeArtUri } from "../cards/art/svg.ts";
 import { HIDDEN_ID, leadMs, type AnimationEntry } from "../game/animations.ts";
-import { ART_PLANES, artPlaneBackground } from "../cards/art/pictures.ts";
+import { ART_PLANES } from "../cards/art/pictures.ts";
+import { artPlaneBackground } from "../cards/art/planes.ts";
 import { dioramaOf, dioramaSliceBackground } from "../cards/art/dioramas/index.ts";
 import { signatureFaceOf } from "../cards/signatureFaces.ts";
 import { sideOf, testid } from "../game/contract.ts";

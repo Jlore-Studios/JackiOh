@@ -5,8 +5,8 @@
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::{
-    Action, ActionBody, Aim, CombatForecast, EmoteId, GameEventType, GameResult, LastBoardEntry, PlayerId,
-    PlayerView, PromptKind,
+    Action, ActionBody, Aim, CombatForecast, EmoteId, GameEventType, GameResult, LastBoardEntry, PerPlayer,
+    PlayerId, PlayerView, PromptKind,
 };
 
 use crate::bots::decide::BotChoice;
@@ -58,7 +58,7 @@ pub enum ActionAnswer {
     Panicked,
     /// The log did not take the row: the action was not applied, and may be sent again.
     NotRecorded,
-    /// Duos: the nonce was first used by the other seat (§9.3), so it is neither acked nor applied.
+    /// Duos and 1v1: the nonce was first used by the other seat (§9.3, R4013000), so it is neither acked nor applied.
     NonceTaken,
 }
 
@@ -372,8 +372,15 @@ pub enum DuelOutput {
     /// The change produced `fresh` events, which a bot's persona reads (R645).
     Changed { fresh: usize },
     /// Every view, prompt and clock of a change has been sent: the point a think time starts from, and
-    /// where watchers' views are recorded.
-    Pushed { snapshot: MatchSnapshot },
+    /// where watchers' views are recorded. `views` is each home's view as it was sent, clock included,
+    /// `None` for a home with no socket; it is for a host in the same process, and is not serialized (a
+    /// caller that gets none builds the view itself).
+    Pushed {
+        snapshot: MatchSnapshot,
+        #[serde(skip)]
+        #[cfg_attr(feature = "ts", ts(skip))]
+        views: PerPlayer<Option<Box<PlayerView>>>,
+    },
     /// Decide a move for a seat the host plays.
     Decide { request: DecideRequest },
     /// The game is over: record it. Feed [`DuelEvent::ResultRecorded`] once written.
@@ -423,4 +430,30 @@ pub enum DuelOutput {
 pub struct ExpiryRun {
     pub expiry: ClockExpiry,
     pub queue: Vec<(PlayerId, ActionBody)>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// §9.3: only the reducer's refusal is the action's own fault, and only a panic or a missed log row the
+    /// host's.
+    #[test]
+    fn s9_3_an_answer_says_whether_the_action_or_the_host_failed() {
+        let illegal = ActionAnswer::Illegal {
+            reason: "no".to_string(),
+        };
+        assert!(illegal.is_illegal() && !illegal.is_internal());
+        for answer in [
+            ActionAnswer::Ack { seq: 1 },
+            ActionAnswer::MatchOver,
+            ActionAnswer::Panicked,
+            ActionAnswer::NotRecorded,
+            ActionAnswer::NonceTaken,
+        ] {
+            assert!(!answer.is_illegal(), "{answer:?}");
+        }
+        assert!(ActionAnswer::Panicked.is_internal() && ActionAnswer::NotRecorded.is_internal());
+        assert!(!ActionAnswer::MatchOver.is_internal());
+    }
 }

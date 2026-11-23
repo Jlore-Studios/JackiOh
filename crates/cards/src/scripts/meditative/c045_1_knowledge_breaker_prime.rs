@@ -4,10 +4,11 @@
 //! Base:    "Rush
 //!           Cry: Summon {traps|random Trap|random Traps}. Destroy every other CN or KY permanent.
 //!           Aura: Your Units have Cloaked."
-//! Radiant: "Rush, Poisonous
+//! Radiant: "Rush
 //!           Cry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY
 //!           permanent.
 //!           Aura: Your Units have Cloaked."
+//!          (Poisonous too until issue #4292.)
 //! Engine: five `summon_random` Traps then `destroy_all` (Radiant: `exile_all`), a card in Chinese
 //! being CN (R1176000), then the Aura: Knowledge Breaker's, Cloaked for the Units in its
 //! controller's hand (`cloak_hand_aura`, R1043).
@@ -78,7 +79,7 @@ mod tests {
     const VANILLA: &str = "core-008";
     const ROCK: &str = "core-066"; // The Rock: Indestructible
     const MANA_WELL: &str = "core-006"; // Mana Well: An untagged Field Spell.
-    const BEAUTY: &str = "meditative-039-5"; // Jade Beauty: CN, Indestructible.
+    const BEAUTY: &str = "meditative-039-5"; // Jade Beauty: CN (Indestructible through v0.6.7k, issue #4285).
 
     fn trap_count(s: &Scenario, player: PlayerId) -> usize {
         s.state().players[player]
@@ -177,6 +178,9 @@ mod tests {
                     "library": [VANILLA],
                 },
             }));
+            // The Beauty prints no Indestructible since issue #4285: it is given it, the CN permanent that stays.
+            let beauty = s.unit(P2, 2).expect("the Beauty").id;
+            s.card_mut(beauty.as_str()).granted_keywords.push(Keyword::Indestructible);
             // A CN/KY unit set face-down is a permanent too: set the spare CN Unit first, Cloaked by
             // the Breaker's Aura.
             let spare = s.hand(P1).iter().find(|card| card.def_id == CN_UNIT).cloned().unwrap();
@@ -188,7 +192,7 @@ mod tests {
             assert!(s.unit(P1, 2).is_none());
             assert!(s.unit(P2, 1).is_none());
             assert!(s.backrow(P1, 1).is_none());
-            // The Indestructible Jade Beauty, CN, stays (R46); the untagged Rock is not reached;
+            // The Indestructible (given) Jade Beauty, CN, stays (R46); the untagged Rock is not reached;
             // the Prime is not "other".
             assert_eq!(s.unit(P2, 2).map(|card| card.def_id), Some(BEAUTY.to_string()));
             assert_eq!(s.unit(P1, 3).map(|card| card.def_id), Some(ROCK.to_string()));
@@ -234,11 +238,10 @@ mod tests {
                     .iter()
                     .any(|keyword| keyword.kind() == KeywordKind::Cloaked)
             );
-            let set_plays: Vec<_> = legal_actions(s.state(), P1)
+            let set_plays: Vec<_> = s
+                .plays_of(&unit)
                 .into_iter()
-                .filter(|action| {
-                    matches!(action, ActionBody::Play { instance_id, face_down: Some(_), .. } if instance_id == &unit.id)
-                })
+                .filter(|action| matches!(action, ActionBody::Play { face_down: Some(_), .. }))
                 .collect();
             assert!(!set_plays.is_empty());
             assert!(
@@ -274,7 +277,9 @@ mod tests {
         #[test]
         fn r1042_radiant_exiles_with_radiant_traps() {
             let def = crate::card_def(PRIME);
-            assert!(def.radiant.keywords.contains(&Keyword::Poisonous));
+            // Rush alone, as the base: its Radiant face printed Poisonous too until issue #4292.
+            assert_eq!(def.radiant.keywords, vec![Keyword::Rush]);
+            assert_eq!(def.base.keywords, def.radiant.keywords);
             let mut s = scenario(json!({
                 "seed": "prime-exile",
                 "p1": {
@@ -291,8 +296,10 @@ mod tests {
             }));
             let prime = s.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
             s.play(&prime.id, json!({ "zone": 2 }));
-            // Exiled, not destroyed: neither graveyard holds them, and the exile beats the
-            // Indestructible Jade Beauty.
+            let worn = keywords_of(s.state(), s.card(&prime.id));
+            assert!(worn.contains(&Keyword::Rush) && !worn.contains(&Keyword::Poisonous), "{worn:?}");
+            // Exiled, not destroyed: neither graveyard holds them, and the exile would beat an
+            // Indestructible Jade Beauty (through v0.6.7k, issue #4285) as it does any card.
             assert!(s.unit(P1, 1).is_none());
             assert!(s.unit(P2, 1).is_none());
             assert!(s.unit(P2, 2).is_none());

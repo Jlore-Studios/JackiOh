@@ -81,10 +81,12 @@ mod tests {
     const FILLER: &str = "core-005";
 
     /// The AI generated cards of the sets that ship (§7, R1421): T-AI-1 to T-AI-10 of Classic+ and of
-    /// Stinkyscape (#1884), M+ #1.1 Base Camp, #1.2 Spa Day and Bob's Plan's two AI tokens (#1187).
+    /// Stinkyscape (#1884), T-AI-1 to T-AI-7 of Stinkyscape+ (#3573), M+ #1.1 Base Camp, #1.2 Spa Day and
+    /// Bob's Plan's two AI tokens (#1187).
     fn ai_ids() -> Vec<String> {
         let mut ids: Vec<String> = (1..=10).map(|n| format!("classicplus-t-ai-{n:02}")).collect();
         ids.extend((1..=10).map(|n| format!("stinkyscape-t-ai-{n:02}")));
+        ids.extend((1..=7).map(|n| format!("stinkyscapeplus-t-ai-{n:02}")));
         ids.extend(
             [
                 "meditativeplus-001-1",
@@ -98,7 +100,7 @@ mod tests {
     }
 
     /// R1828001 (#1828): the (1) Cost AI generated cards, the pool, in the query's index order.
-    const ONE_COST: [&str; 13] = [
+    const ONE_COST: [&str; 17] = [
         "classicplus-t-ai-01",
         "classicplus-t-ai-04",
         "classicplus-t-ai-07",
@@ -112,6 +114,10 @@ mod tests {
         "stinkyscape-t-ai-05",
         "stinkyscape-t-ai-06",
         "stinkyscape-t-ai-09",
+        "stinkyscapeplus-t-ai-02",
+        "stinkyscapeplus-t-ai-03",
+        "stinkyscapeplus-t-ai-05",
+        "stinkyscapeplus-t-ai-06",
     ];
 
     /// Whether `id` is a card of the pool: an AI generated card of printed cost (1).
@@ -155,7 +161,7 @@ mod tests {
         }
 
         #[test]
-        fn r1828001_the_pool_is_the_thirteen_1_cost_ai_generated_cards() {
+        fn r1828001_the_pool_is_the_seventeen_1_cost_ai_generated_cards() {
             crate::register_all();
             // The pool as it is, not as the pool probe (#3117) rotates it: this tests its content and order.
             let pool: Vec<String> = jackioh_engine::testkit::with_pool_shift(0, || {
@@ -215,17 +221,16 @@ mod tests {
             assert!(shapes.contains("mixed"));
         }
 
+        /// R3563000: the picks of one fusion are different cards while the pool lasts (R60's repeats no longer
+        /// stand for a card an effect generates): three picks from the seventeen are three cards.
         #[test]
-        fn r60_picks_are_independent_a_card_may_come_up_twice() {
-            let mut repeated = false;
-            let mut n = 0;
-            while n < 40 && !repeated {
+        fn r3563000_the_picks_are_distinct_until_the_pool_runs_out() {
+            for n in 0..40 {
                 let ids: Vec<String> =
                     specs(&played(&format!("slop-repeat-{n}"), false, None)).into_iter().map(|spec| spec.def_id).collect();
-                repeated = ids.iter().collect::<IndexSet<_>>().len() < ids.len();
-                n += 1;
+                assert_eq!(ids.len(), 3, "slop-repeat-{n}");
+                assert_eq!(ids.iter().collect::<IndexSet<_>>().len(), ids.len(), "slop-repeat-{n}: {ids:?}");
             }
-            assert!(repeated);
         }
 
         #[test]

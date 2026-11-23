@@ -189,7 +189,7 @@ mod tests {
     #[test]
     fn r3038002_it_has_flying_and_ranged_is_never_launched_and_takes_no_piece() {
         use jackioh_engine::prelude::{STARSHIP_LAUNCH_ABILITY, is_launched_starship, tags_of};
-        const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce
+        const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Pierce
         for radiant in [false, true] {
             let (mut s, ship) = crate::built_starship(
                 "r3038002-shield",

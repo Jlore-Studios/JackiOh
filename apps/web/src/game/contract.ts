@@ -56,6 +56,9 @@ export function laneIndex(lane: number): number {
   return lane - 1;
 }
 
+/** The words a greyed Activate control gives when the view lists no reason for it (R3768000). */
+export const NOT_NOW = "can't be activated right now";
+
 /** The `data-testid`s BUILD M5-T1 fixes. Every clickable element gets its id from here. */
 export const testid = {
   zone: (side: Side, row: Row, lane: number): string => `zone-${side}-${row}-${lane}`,
@@ -76,7 +79,11 @@ export const testid = {
   power: "power",
   concede: "concede",
   log: "log",
+  /** #4140: the log's screen-reader announcer: the newest shown line's plain words. */
+  logLive: "log-live",
   board: "board",
+  /** R3554000: the Black Hole lane's swallowed count (`"n/capacity"`). */
+  blackHoleCount: "black-hole-count",
   seatSwitch: "seat-switch",
   result: "result-overlay",
   banner: "turn-banner",
@@ -141,8 +148,6 @@ export const testid = {
   matchMenuPanel: "match-menu-panel",
   /** R1853003: "Buy" under the Marketplace's lot `offer` (its index, which `marketBuy` names). */
   marketBuy: (offer: number): string => `market-buy-${offer}`,
-  /** R1853003: the sale of a Resource in the viewer's own tray, at the Marketplace's quote. */
-  marketSell: (instanceId: string): string => `market-sell-${instanceId}`,
   /**
    * R3477000: the attack outcome on a legal target of the aimed attack (AttackOutcome.tsx), `target` its
    * `card-…` or `hero-…` testid. No drag target reads it (drag/targets.ts), so a press walks up to the target.
@@ -153,6 +158,16 @@ export const testid = {
    * (`taken` on the forecast entry; AttackOutcome.tsx). `attacker` is its `card-…` testid.
    */
   attackOutcomeTaken: (attacker: string): string => `outcome-taken-${attacker}`,
+  /**
+   * R4290000: the marker on a unit a hovered Cleave attack strikes beside its target, wearing its splash
+   * (the forecast entry's `splash`; AttackOutcome.tsx). `unit` is its `card-…` testid.
+   */
+  attackOutcomeSplash: (unit: string): string => `outcome-splash-${unit}`,
+  /**
+   * R4290000: the marker on the hero a hovered Trample attack on a unit reaches, wearing its overflow (the
+   * forecast entry's `overflow`; AttackOutcome.tsx). `hero` is its `hero-…` testid.
+   */
+  attackOutcomeOverflow: (hero: string): string => `outcome-overflow-${hero}`,
 } as const;
 
 /** The CSS selector for the element whose testid is `id`, its quotes and backslashes escaped. */
@@ -163,15 +178,6 @@ export function testidSelector(id: string): string {
 /** The page's element whose testid is `id`, or null. */
 export function byTestid(id: string): Element | null {
   return document.querySelector(testidSelector(id));
-}
-
-/**
- * R384, R510, R1751000: the `ability` an Activate control names. Under R1751000, board Activate
- * controls on cards with multiple abilities target `{ on: "activate", instanceId }` (without ability)
- * to open the Discover choice modal; `namedAbility` is retained for backwards compatibility.
- */
-export function namedAbility(abilityCount: number, ability: string): string | undefined {
-  return abilityCount > 1 ? ability : undefined;
 }
 
 export function sideOf(view: PlayerView, player: PlayerId): Side {
@@ -192,6 +198,32 @@ export function playerOf(view: PlayerView, side: Side): PlayerId {
 
 export function sideView(view: PlayerView, side: Side) {
   return side === "you" ? view.you : view.opponent;
+}
+
+/** R1088: the defId the view reads on `instanceId`, or undefined when it shows the card nowhere. */
+export function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
+  for (const side of ["you", "opponent"] as const) {
+    const sv = side === "you" ? view.you : view.opponent;
+    for (const unit of sv.units) {
+      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
+    }
+    for (const unit of sv.carried ?? []) {
+      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
+    }
+    for (const slot of sv.backrow) {
+      if (slot !== null && !slot.faceDown && slot.instanceId === instanceId) return slot.defId;
+    }
+    for (const card of sv.resolving) {
+      if (card.instanceId === instanceId) return card.defId;
+    }
+  }
+  const hand = view.you.hand;
+  if (Array.isArray(hand)) {
+    for (const card of hand) {
+      if (card.instanceId === instanceId) return card.defId;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -286,6 +318,9 @@ export type HeroEmotes = {
   onCloseMenu: () => void;
 };
 
+/** R642: both seats' portraits, by seat. */
+export type SeatPortraits = Readonly<Record<PlayerId, PortraitId>>;
+
 /**
  * DR14 (#2706): a route's slot beside each hero, as `boardRail` is one in the rail: `own` beside the
  * viewer's hero, `enemy` beside the opponent's. The board draws what it is handed and reads nothing
@@ -312,6 +347,8 @@ export type BoardProps = {
   animated?: readonly AnimationFrames[];
   /** A route's server-synchronised clock, mounted in the physical End Turn housing. */
   turnClock?: ReactNode;
+  /** #3727: End turn's words on a route whose turn end is sent on (a daily game's "End turn and send"); absent, "End turn". */
+  endTurnLabel?: string;
   /** A route status line, mounted on the board rail rather than a floating match bar. */
   matchStatus?: ReactNode;
   /** Route chrome carved into the same physical side rail as the controls. */
@@ -332,6 +369,11 @@ export type BoardProps = {
   onControl?: (control: BoardControl) => void;
   /** One hero's emote surface per side, or undefined where a route does not run emotes. */
   emotes?: (side: Side) => HeroEmotes | undefined;
+  /**
+   * R3976000: each seat's portrait on a board with no emote session (a replay's), drawn and nothing
+   * more; a hero's emote surface wins over it. Null or absent, the default.
+   */
+  portraits?: SeatPortraits | null;
   /**
    * R1295000: the viewer's own cards wear the device's card cosmetics (game/wearer.ts). A board
    * the viewer plays sets it; absent, every card draws the defaults.

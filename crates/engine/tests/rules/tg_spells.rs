@@ -33,10 +33,6 @@ fn id_at(s: &Scenario, player: PlayerId, lane: i32) -> String {
         .id
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
 /// The set fixture played into lane 4 with `id` chosen.
 fn dino_on(id: &str) -> Value {
     json!({ "zone": 4, "targets": [{ "pick": "instance", "instanceId": id }] })
@@ -138,7 +134,7 @@ mod r2198001_an_exact_copy_keeps_the_field_copy_and_the_price {
             card.granted_keywords.push(Keyword::Taunt);
             card.cost_mod = -1;
         }
-        s.play(spell, pick(&theirs));
+        s.play(spell, pick::targets(pick::id(&theirs)));
         (s, theirs)
     }
 

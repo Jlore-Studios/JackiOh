@@ -1,7 +1,8 @@
 // The top bar's geometry (R3218000, issue #3218): on a menu, Back is the leftmost control of BackLink's bar and
-// the settings gear the rightmost, whatever else the bar holds (the pill, Friends, language, the screen's
-// extras) and at both of BUILD M5-T1's sizes. A measure of the drawn boxes, so it fails a control that is
-// out of order however the stylesheets place it. Spec 46 calls it on every menu; spec 13 on the replay's bar.
+// the settings gear the rightmost, whatever else the bar holds (the pill, language, the screen's extras; Friends
+// off the menus' shell, R3728000) and at every one of `MENU_SIZES`. A measure of the drawn boxes, so it fails a
+// control that is out of order however the stylesheets place it. Spec 46 calls it on every menu; spec 13 on the
+// replay's bar.
 
 import { NAV_BACK, ts } from "./testids.ts";
 import { SETTINGS_OPEN_NAV } from "./ux.ts";

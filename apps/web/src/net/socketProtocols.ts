@@ -12,7 +12,9 @@ export const WS_BEARER_PROTOCOL_PREFIX = "jackioh.bearer.";
 function base64url(text: string): string {
   let binary = "";
   for (const byte of new TextEncoder().encode(text)) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/=+$/u, "");
+  // btoa pads with at most two `=`, so one bounded match strips them all (#4009: `/=+$/` scans
+  // super-linearly on a long `=` run).
+  return btoa(binary).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/(?:==?)?$/u, "");
 }
 
 /** `jackioh.v1` first, then the credential. */

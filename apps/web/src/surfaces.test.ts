@@ -61,10 +61,10 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "cards/setmark.css": 6,
   "cards/stamps.css": 1,
   "cards/wheel/wheel.css": 6,
-  "collection/collection.css": 25,
+  "collection/collection.css": 24,
   "collection/cosmeticLook.css": 1,
   "collection/tokenOffer.css": 1,
-  "duos/duos.css": 23,
+  "duos/duos.css": 22,
   "economy/economy.css": 8,
   "economy/jlore-pill.css": 4,
   "economy/spend.css": 1,
@@ -90,7 +90,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "routes/entry-card.css": 3,
   "routes/game-banner.css": 7,
   "routes/landing.css": 61,
-  "routes/lobby.css": 37,
+  "routes/lobby.css": 29,
   "routes/replays.css": 1,
   "routes/site-footer.css": 1,
   "routes/stats.css": 10,
@@ -100,24 +100,31 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "shop/shop.css": 1,
   "skeleton/skeleton.css": 4,
   "stats/tier.css": 1,
-  "together/together.css": 7,
+  "together/together.css": 6,
   "tutorial/path-visibility.css": 2,
   "tutorial/tutorial.css": 42,
   "undo/undo.css": 3,
 };
 
-const RADII = [...read("surfaces.css").matchAll(/^\s*--radius-([\w-]+):\s*([\d.]+px|[\d.]+%);$/gm)].map((match) => [
-  match[1] ?? "",
-  match[2] ?? "",
+/**
+ * A token line's captures (#4009: `/^\s*--…$/gm` line patterns rescan newline runs from every line
+ * start); `pattern` is the line without its `m` flag.
+ */
+function tokenLines(text: string, pattern: RegExp): [string, string][] {
+  const out: [string, string][] = [];
+  for (const line of text.split("\n")) {
+    const match = pattern.exec(line);
+    if (match !== null) out.push([match[1] ?? "", match[2] ?? ""]);
+  }
+  return out;
+}
+
+const RADII = tokenLines(read("surfaces.css"), /^\s*--radius-([\w-]+):\s*([\d.]+px|[\d.]+%);$/);
+const SHADOWS = tokenLines(read("surfaces.css"), /^\s*--shadow-([\w-]+):([^;]+);$/).map(([name, value]) => [
+  name,
+  value.trim().replace(/\s+/g, " "),
 ]);
-const SHADOWS = [...read("surfaces.css").matchAll(/^\s*--shadow-([\w-]+):\s*([^;]+);$/gm)].map((match) => [
-  match[1] ?? "",
-  (match[2] ?? "").trim().replace(/\s+/g, " "),
-]);
-const LAYERS = [...read("surfaces.css").matchAll(/^\s*--z-([a-z-]+):\s*(-?\d+);$/gm)].map((match) => [
-  match[1] ?? "",
-  Number(match[2]),
-]);
+const LAYERS = tokenLines(read("surfaces.css"), /^\s*--z-([a-z-]+):\s*(-?\d+);$/).map(([name, value]) => [name, Number(value)]);
 
 /** The background gradients the board keeps. Everything else goes flat. */
 const GRADIENT_KEEP = [
@@ -127,17 +134,43 @@ const GRADIENT_KEEP = [
   /var\(--drag-reticle-color\)/, // the drop reticle and its tick bars
   /\/\s*(\d+px\s+100%|100%\s+\d+px)\s+no-repeat/, // R514's cell-pick crosshair bars
   /calc\(50% [-+] 1\.5px\)/, // the countered badge's struck-circle strike
+  /^radial-gradient\(ellipse at center, var\(--pal-black\) 0%, var\(--pal-slate-900\) 55%/, // R3554000's Black Hole, a dark well
 ];
 
 /** The playmat and its marks: the tavern table is board.css's `.field`, and each playmat's tap marks and
  * sand cracks are its own cosmetic (SandSurface's TAP_FAMILY); these rules keep their gradients and shadows. */
 const TABLE_RULE = /^\.(field|sand-mark(--\w+)?|tap-mark--\w+)$/;
 
+/**
+ * `css` without the table's own rules (#4009: `/([^{}]+)\{[^{}]*\}/g` rescans a brace-free run from
+ * every position).
+ */
 function withoutTable(css: string): string {
-  return css.replace(/([^{}]+)\{[^{}]*\}/g, (rule, selector: string) => {
+  const kept: string[] = [];
+  const chunks = css.split("}");
+  const terminated = css.endsWith("}");
+  chunks.forEach((chunk, index) => {
+    if (index === chunks.length - 1 && !terminated) {
+      kept.push(chunk);
+      return;
+    }
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) {
+      kept.push(chunk);
+      return;
+    }
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) {
+      kept.push(chunk);
+      return;
+    }
+    const rule = `${selector}{${body}}`;
     const parts = selector.split(",").map((part) => part.trim());
-    return parts.every((part) => TABLE_RULE.test(part)) ? "" : rule;
+    if (!parts.every((part) => TABLE_RULE.test(part))) kept.push(rule);
   });
+  return kept.join("}");
 }
 
 /** A box-shadow layer that is a glow or a selection ring rather than a neutral shadow. */
@@ -235,10 +268,17 @@ describe("#2109 the surface scale", () => {
     ]);
     expect(LAYERS.length).toBe(SURFACE_LAYERS);
     const text = read("surfaces.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    // Token lines blanked (#4009: the `/^\s*--…$/gm` patterns rescan newline runs from every line).
+    const blanked = (line: string): string =>
+      /^\s*--radius-[\w-]+:\s*[\d.]+(?:px|%);$/.test(line) ||
+      /^\s*--shadow-[\w-]+:[^;]+;$/.test(line) ||
+      /^\s*--z-[a-z-]+:\s*-?\d+;$/.test(line)
+        ? ""
+        : line;
     const rest = text
-      .replace(/^\s*--radius-[\w-]+:\s*[\d.]+(?:px|%);$/gm, "")
-      .replace(/^\s*--shadow-[\w-]+:\s*[^;]+;$/gm, "")
-      .replace(/^\s*--z-[a-z-]+:\s*-?\d+;$/gm, "");
+      .split("\n")
+      .map(blanked)
+      .join("\n");
     expect(rest.replace(/\s+/g, "")).toBe(":root{}");
   });
 

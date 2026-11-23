@@ -14,11 +14,12 @@ use crate::wire::{CardCost, CardType, GameEvent, GameEventType, ManaSpentFor, PL
 /// §2.3, R181: max mana is min(turns started + the seat's mana bonus, its mana cap), plus persistent
 /// modifiers, floored at 0; with no handicap, §2.3's "min(number of turns you have started, 4), plus
 /// persistent modifiers". `nextTurnMod` is a one-shot rider the refresh spends, never max mana; other
-/// modifiers apply on top of the capped value as for a human. R1854003: moved crystals count in the cap.
+/// modifiers apply on top of the capped value as for a human. R1854003: moved crystals count in the cap;
+/// R4331001: stolen crystals count on top of it.
 pub fn max_mana_for(side: &PlayerState) -> i32 {
     let handicap = handicap_of(side);
     let base = mana_crystal_count(side).min(handicap.mana_cap);
-    (base + side.mana.perm_mod).max(0)
+    (base + stolen_mana_crystals_of(side) + side.mana.perm_mod).max(0)
 }
 
 /// R1854003: a player's mana crystals before the cap (Hearthstone's count): the turns they have started
@@ -27,27 +28,57 @@ pub fn mana_crystal_count(side: &PlayerState) -> i32 {
     side.turns_started + handicap_of(side).mana_bonus + side.mana_crystals.unwrap_or(0)
 }
 
+/// R4331001: the crystals a player stole, which stand on top of the cap.
+pub fn stolen_mana_crystals_of(side: &PlayerState) -> i32 {
+    side.stolen_mana_crystals.unwrap_or(0)
+}
+
+/// How a steal counts the thief's gain: past the cap (R4331001, the steal since issue #4331), or inside
+/// it, a thief at the cap gaining none (R1854003, the steal v0.6.9c and before ran, kept, R767000).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CrystalGain {
+    PastTheCap,
+    ToTheCap,
+}
+
 /// R1854003: `thief` steals `victim`'s mana crystals: the victim's max mana falls to their persistent
-/// modifiers alone and their current mana by as much, never below 0, the crystals coming back one a
-/// turn (§2.3); the thief gains as many, full, up to their cap. Returns the max mana the victim lost and
-/// the crystals the thief gained; the caller reports each side whose mana changed (`mana_event`).
-pub fn move_mana_crystals(state: &mut GameState, thief: PlayerId, victim: PlayerId) -> (i32, i32) {
+/// modifiers alone and their current mana by as much, never below 0, their own crystals coming back one
+/// a turn (§2.3) and the ones they had stolen gone for good (R4331001); the thief gains as many, full,
+/// past the cap or up to it as `gain` says. Returns the max mana the victim lost and the crystals the
+/// thief gained; the caller reports each side whose mana changed (`mana_event`).
+pub fn move_mana_crystals(
+    state: &mut GameState,
+    thief: PlayerId,
+    victim: PlayerId,
+    gain: CrystalGain,
+) -> (i32, i32) {
     let side = &mut state.players[victim];
     let count = mana_crystal_count(side);
     let before = side.mana.max;
     if count > 0 {
         side.mana_crystals = Some(side.mana_crystals.unwrap_or(0) - count).filter(|moved| *moved != 0);
     }
+    side.stolen_mana_crystals = None;
     side.mana.max = max_mana_for(side);
     let lost = (before - side.mana.max).max(0);
     side.mana.current = (side.mana.current - lost).max(0);
 
     let side = &mut state.players[thief];
-    let room = (handicap_of(side).mana_cap - mana_crystal_count(side)).max(0);
-    let gained = lost.min(room);
+    let gained = match gain {
+        CrystalGain::PastTheCap => lost,
+        CrystalGain::ToTheCap => lost.min((handicap_of(side).mana_cap - mana_crystal_count(side)).max(0)),
+    };
     if gained > 0 {
         let held = side.mana.max;
-        side.mana_crystals = Some(side.mana_crystals.unwrap_or(0) + gained).filter(|moved| *moved != 0);
+        match gain {
+            CrystalGain::PastTheCap => {
+                side.stolen_mana_crystals = Some(stolen_mana_crystals_of(side) + gained);
+            }
+            CrystalGain::ToTheCap => {
+                side.mana_crystals =
+                    Some(side.mana_crystals.unwrap_or(0) + gained).filter(|moved| *moved != 0);
+            }
+        }
         side.mana.max = max_mana_for(side);
         side.mana.current += side.mana.max - held;
     }
@@ -71,9 +102,15 @@ pub fn refresh_mana(side: &mut PlayerState) {
 /// refresh sets max mana as usual but current mana to the next-turn rider only. A lost refresh
 /// still gives 0 first (`refresh_is_lost`).
 pub fn refresh_mana_with(side: &mut PlayerState, natural: bool) {
+    refresh_mana_with_bonus(side, natural, 0);
+}
+
+/// R4440052: `refresh_mana_with`, the refresh giving `bonus` more on top, a standing rider beside the
+/// one-shot one (`mana_per_turn_of`): max mana is unmoved, and a lost refresh gives none of it.
+pub fn refresh_mana_with_bonus(side: &mut PlayerState, natural: bool, bonus: i32) {
     let max = max_mana_for(side);
     side.mana.max = max;
-    side.mana.current = refreshed_mana(side, max, natural);
+    side.mana.current = refreshed_mana_with_bonus(side, max, natural, bonus);
     side.mana.next_turn_mod = 0;
     // R1224: ME-TURN's repayment schedule — the next instalment comes off the refresh, after any
     // rider. A lost refresh forgives the instalment: there is nothing to take it from.
@@ -95,13 +132,39 @@ pub fn refresh_is_lost(side: &PlayerState) -> bool {
 /// natural generation (MD-B2) it gives the rider alone; otherwise max plus the rider. Never below 0.
 /// MB23's repayment schedule (#89) comes off afterwards (`credit::take_instalment`).
 pub fn refreshed_mana(side: &PlayerState, max: i32, natural: bool) -> i32 {
+    refreshed_mana_with_bonus(side, max, natural, 0)
+}
+
+/// R4440052: `refreshed_mana` with `bonus` more, which counts as the rider does: with it under MD-B2's
+/// aura, against it when it is negative, and not at all on a lost refresh. Never below 0.
+pub fn refreshed_mana_with_bonus(side: &PlayerState, max: i32, natural: bool, bonus: i32) -> i32 {
+    let rider = side.mana.next_turn_mod + bonus;
     if refresh_is_lost(side) {
         0
     } else if natural {
-        (max + side.mana.next_turn_mod).max(0)
+        (max + rider).max(0)
     } else {
-        side.mana.next_turn_mod.max(0)
+        rider.max(0)
     }
+}
+
+/// R4440052: the declared number a "You have +N mana per turn" flag stands for (C #28 Second Wind's).
+pub const MANA_PER_TURN_PARAM: &str = "mana";
+
+/// R4440052: what `player`'s refresh gives on top of max mana, read as their turn begins, before it: the
+/// sum of the `mana_per_turn` flags of the face-up cards acting on their side of the field, a Unit a
+/// carrier holds included (R446, R1824000), each the card's declared `mana` as tunes moved it (R386) and
+/// never below 0. 0 with none.
+pub fn mana_per_turn_of(state: &GameState, player: PlayerId) -> i32 {
+    crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane)
+        .into_iter()
+        .filter(|card| !crate::preview::is_face_down(state, card))
+        .filter_map(|card| {
+            crate::scripts::flags_of(state, card)
+                .mana_per_turn
+                .map(|flag| crate::params::declared_or(state, card, MANA_PER_TURN_PARAM, flag).max(0))
+        })
+        .sum()
 }
 
 /// R844: how many lost refreshes this player has left past this one, never below 0.
@@ -183,11 +246,18 @@ pub fn push_mana_spent(sink: &mut EngineSink<'_>, player: PlayerId, amount: i32,
 }
 
 /// The printed cost as it stands: X uses the chosen X, an embiggen card the chosen price (R65).
-/// R1848003: an X-cost card whose X is set (`fixed_x`) costs that X wherever it is.
+/// R1848003: an X-cost card whose X is set (`fixed_x`) costs that X wherever it is. R4350000: an
+/// embiggen card with no Embiggen premium (Meditative+ #23) prints its normal price for both versions.
 pub fn printed_cost(state: &GameState, instance: &CardInstance) -> i32 {
     let script = crate::scripts::script_of(state, instance);
     if let Some(cost) = script.cost.as_ref() {
         return cost(CostArgs { state, instance }).max(0);
+    }
+    // R3560001: the graveyard price reads in the graveyard (S+ #120 Crawler).
+    if let Some(price) = crate::scripts::flags_of(state, instance).graveyard_price
+        && matches!(instance.zone, Zone::Graveyard { .. })
+    {
+        return price.max(0);
     }
 
     let cost: CardCost = def_of(Some(state), &instance.def_id).cost;
@@ -195,7 +265,8 @@ pub fn printed_cost(state: &GameState, instance: &CardInstance) -> i32 {
         CardCost::X => instance.x.or(instance.fixed_x).unwrap_or(0).max(0),
         CardCost::Fixed(n) => n,
         CardCost::Embiggen { base, embiggen } => {
-            if instance.embiggened == Some(true) {
+            // R4350000: no Embiggen premium prices the Embiggened version at the normal price.
+            if instance.embiggened == Some(true) && instance.no_embiggen_premium != Some(true) {
                 embiggen
             } else {
                 base
@@ -251,7 +322,8 @@ struct Price {
 ///
 /// R455 (E15) adds its rungs through `cost_rules.rs`: after R65's discounts the flat price rules, then the
 /// threshold rules on the number the flat ones left (as R363 reads Curvature), then "costs (N)" sets, then
-/// the card's own floor (Forever&'s), which holds in every zone and alone reaches X, then 0.
+/// the card's own floor (Forever&'s), which holds in every zone and alone reaches X, then 0. R4285000: last,
+/// a play by Flashback from the graveyard costs at least FLASHBACK_MIN_PRICE (`flashback_floor`), X included.
 pub fn effective_cost(state: &GameState, instance: &CardInstance, options: CostOptions) -> i32 {
     price_of(state, instance, options).cost
 }
@@ -259,6 +331,12 @@ pub fn effective_cost(state: &GameState, instance: &CardInstance, options: CostO
 /// R454, R455: what a play of this card now costs, wherever the play takes it from.
 pub fn play_cost(state: &GameState, instance: &CardInstance) -> i32 {
     effective_cost(state, instance, CostOptions { as_play: Some(true) })
+}
+
+/// R4285000: what a play of this card now costs before Flashback's floor: the price a Plague payment
+/// meets (`graveyard_play::plague_price`), since such a play is its permission's and spends no Flashback.
+pub fn play_cost_before_flashback_floor(state: &GameState, instance: &CardInstance) -> i32 {
+    priced(state, instance, CostOptions { as_play: Some(true) }, false).cost
 }
 
 /// R455: the `costRule` modifiers a play of this card at this price spends — the ones "until used" that
@@ -323,15 +401,19 @@ pub fn garden_offers_radiant(state: &GameState, card: &CardInstance) -> bool {
 
 /// R1181002, R1563004: the price a Garden sets on the dearer play of a card that is not Radiant: its
 /// normal price plus the premium, in place of an embiggen card's Embiggened price; else `None`.
+/// R4350000: a card with no Embiggen premium (Meditative+ #23) pays no Garden premium either, so its
+/// dearer choice costs its normal price, and is still the Garden's (`Some`, which stamps it Radiant).
 pub fn garden_dearer_price(state: &GameState, card: &CardInstance) -> Option<i32> {
     if card.embiggened != Some(true) || card.radiant {
         return None;
     }
+    let premium = garden_premium_for(state, card)?;
+    // R4350000: a card with no Embiggen premium (M+ #23) has none under a Garden either.
+    let waived = card.no_embiggen_premium == Some(true);
+    let premium = if waived { 0 } else { premium };
     match def_of(Some(state), &card.def_id).cost {
-        CardCost::Embiggen { base, .. } => Some(base + garden_premium_for(state, card)?),
-        _ if garden_offers_radiant(state, card) => {
-            Some(printed_cost(state, card) + garden_premium_for(state, card)?)
-        }
+        CardCost::Embiggen { base, .. } => Some(base + premium),
+        _ if garden_offers_radiant(state, card) => Some(printed_cost(state, card) + premium),
         _ => None,
     }
 }
@@ -347,6 +429,18 @@ pub fn override_of(card: &CardInstance) -> Option<i32> {
 }
 
 fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) -> Price {
+    priced(state, instance, options, true)
+}
+
+/// `price_of`, with Flashback's floor (R4285000) held or not.
+fn priced(state: &GameState, instance: &CardInstance, options: CostOptions, flashback_floor: bool) -> Price {
+    let floored = |cost: i32| {
+        if flashback_floor {
+            crate::graveyard_play::flashback_floor(state, instance, cost)
+        } else {
+            cost
+        }
+    };
     let side = &state.players[instance.controller];
     let override_ = override_of(instance);
     let floor = cost_floor_of(instance);
@@ -366,8 +460,9 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
         } else {
             printed_cost(state, instance)
         };
+        // R4285000: Flashback's floor holds for an X card too.
         return Price {
-            cost: 0.max(printed).max(floor),
+            cost: floored(0.max(printed).max(floor)),
             used_rules: Vec::new(),
         };
     }
@@ -376,7 +471,8 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
     // price plus the premium.
     let mut cost = override_.unwrap_or_else(|| {
         garden_dearer_price(state, instance).unwrap_or_else(|| printed_cost(state, instance))
-    }) + instance.cost_mod;
+    }) + instance.cost_mod
+        + crate::hand_order::hand_aura_cost_delta(state, instance);
     // R65: a player's discounts price a play, and a play takes a card from its hand — or from its
     // graveyard, while a permission lets its player play it from there (E11, R454).
     let for_play = options.as_play == Some(true)
@@ -441,8 +537,9 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
     let rules = price_rules_for(state, instance.controller, instance, live);
     let climbed = climb_price_rules(cost, &rules, curvature);
 
+    // R4285000: a play by Flashback from the graveyard costs at least (1), each embiggen price apart.
     Price {
-        cost: 0.max(climbed.price).max(floor),
+        cost: floored(0.max(climbed.price).max(floor)),
         used_rules: climbed.used,
     }
 }
@@ -481,11 +578,10 @@ pub fn mana_due_now(state: &GameState, instance: &CardInstance, cost: i32) -> i3
     if health_priced(state, instance) { 0 } else { cost }
 }
 
-pub fn can_afford(state: &GameState, instance: &CardInstance) -> bool {
-    // R1223: affordability reads the one function — current mana plus the credit line's offer.
-    // R1180004: a play its health price reaches takes no mana.
-    let cost = effective_cost(state, instance, CostOptions::default());
-    mana_due_now(state, instance, cost) <= crate::credit::spendable_mana(state, instance.controller)
+/// R3548004: whether `player`'s mana is infinite now: a card giving it acts on their field (a
+/// Dormant one sleeps through it, a face-down one's text with it, as every flag read this way).
+pub fn has_infinite_mana(state: &GameState, player: PlayerId) -> bool {
+    crate::query::acting_with_flag(state, player, |flags| flags.infinite_mana)
 }
 
 /// R396 (Classic #10, #18, #25, #32, #39): what a card costs wherever a rule or a card script compares

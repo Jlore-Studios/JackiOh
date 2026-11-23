@@ -126,10 +126,7 @@ fn dev_records(contents: &str) -> anyhow::Result<Vec<GameRecord>> {
 
 /// The SHA-256 of a file's contents, in lowercase hex: its batch (R1976000).
 pub fn batch_of(contents: &str) -> String {
-    Sha256::digest(contents.as_bytes())
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    crate::api::crypto::hex(&Sha256::digest(contents.as_bytes()))
 }
 
 pub async fn import_dev_records(db: &Db, contents: &str) -> anyhow::Result<ImportOutcome> {

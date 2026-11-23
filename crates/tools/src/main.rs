@@ -7,6 +7,7 @@ mod agent;
 mod arena;
 mod board;
 mod card_lists;
+mod carried;
 mod catalog;
 mod changed;
 mod claims;
@@ -14,6 +15,7 @@ mod classify;
 mod dealt_fit;
 mod duos_fuzz;
 mod duos_gate;
+mod fork_screen;
 mod fused_pairs;
 mod fuzz;
 mod fx_census;
@@ -32,11 +34,14 @@ mod seed_watch;
 mod selfplay;
 mod selfplay_records;
 mod spec;
+mod spec_cards;
 mod stats;
+mod steer;
 mod sweep;
 mod technical;
 mod think;
 mod trace;
+mod winrates;
 
 use std::process::ExitCode;
 
@@ -51,10 +56,12 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Random-policy games as `fuzz.test.ts` deals them, I1–I4 each step, replay hash checked (part 22).
+    /// Random-policy games as `fuzz.test.ts` deals them, I1–I22 each step, replay hash checked (part 22).
     Fuzz(fuzz::Args),
     /// Each triggered card's text fused onto each fusable Unit and played until the board settles; a daily sample, or one pair (#2381).
     FusedPairs(fused_pairs::Args),
+    /// Each card's era on every older carried catalog, played and folded back as a replay pinned to it (#4382).
+    Carried(carried::Args),
     /// Whole dungeon runs with the AI in the player's seat, and how each kind of fight goes (#3065).
     RunSim(run_sim::Args),
     /// What each card's plays and hooks do on the board, from seeded games, with a suggested motif (#2788).
@@ -93,10 +100,12 @@ enum Command {
     Agent(agent::Args),
     /// The promotion gate (part 29).
     Promote(promote::Args),
-    /// Self-play game logs for the learned evaluation (#1006).
+    /// Self-play game logs (#1006; they fed the learned evaluation, retired by R4159000).
     Selfplay(selfplay::Args),
-    /// Self-play logs folded into the learned evaluation's training rows (#1006).
+    /// Self-play logs folded into training rows (#1006; they fed the learned evaluation, retired: R4159000).
     Positions(positions::Args),
+    /// `winrates --refresh <report.json>`: the win rates of record from production's windowed card figures, once per patch (R3882000).
+    Winrates(winrates::Args),
 }
 
 fn main() -> ExitCode {
@@ -104,6 +113,7 @@ fn main() -> ExitCode {
     let result = match parsed.command {
         Command::Fuzz(args) => fuzz::run(args),
         Command::FusedPairs(args) => fused_pairs::run(args),
+        Command::Carried(args) => carried::run(args),
         Command::RunSim(args) => run_sim::run(args),
         Command::Fx(args) => fx_census::run(args),
         Command::Replay(args) => replay::run(args),
@@ -125,7 +135,18 @@ fn main() -> ExitCode {
         Command::Promote(args) => promote::run(args),
         Command::Selfplay(args) => selfplay::run(args),
         Command::Positions(args) => positions::run(args),
+        Command::Winrates(args) => winrates::run(args),
     };
+    // R3925000: the measurement behind `RESOLUTION_EVENT_CAP`, the most events one interaction emitted in
+    // the run (crates/tools/README.md, `JACKIOH_LOOP_PEAK`).
+    if std::env::var_os("JACKIOH_LOOP_PEAK").is_some() {
+        let peak = jackioh_engine::testkit::loop_peak::peak();
+        let kind = peak.kind.map_or("setup", |kind| kind.as_str());
+        eprintln!(
+            "loop peak: {} events in one interaction ({kind}, turn {}); {} interaction(s) capped",
+            peak.events, peak.turn, peak.capped
+        );
+    }
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {

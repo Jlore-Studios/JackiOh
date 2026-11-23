@@ -1,10 +1,13 @@
-//! S #133 Ultra Capacitor (SPEC §8.10 row 133; R1852000, R1852003, R1852005, R1859001, R1859004): (1)
-//! Unit, Common ((2) until #3041), 2/2 → 4/4, Starship Piece, a card of the Stinkyscape set.
+//! S #133 Ultra Capacitor (SPEC §8.10 row 133; R1852000, R1852003, R1852005, R1859001, R1859004,
+//! R4334000): (1) Unit, Common ((2) until #3041), 2/2 → 4/4, Starship Piece, a card of the Stinkyscape
+//! set.
 //!
 //! Base:    "Starship Piece\nWhen launched, your Starship gains +{per}/+{per} for each other Starship
 //!          Piece fused into it."
 //! Radiant: "Starship Piece\nWhen launched, your Starship gains +{per}/+{per} for each Starship Piece
 //!          fused into it." Per 1, Radiant 2.
+//! Its `per` is read through `param` on the face the piece fused on (R4334000); the face its script
+//! was built for decides whether it counts itself.
 
 use jackioh_engine::prelude::*;
 
@@ -21,7 +24,7 @@ fn ultra_capacitor(radiant: bool) -> Script {
             if counted <= 0 {
                 return vec![];
             }
-            let gain = counted * piece_number(ctx, ID, radiant, "per");
+            let gain = counted * param(ctx, "per");
             vec![buff(json_as(json!({
                 "target": { "of": "self" },
                 "attack": gain,
@@ -46,7 +49,7 @@ mod tests {
     use crate::{built_starship, launch_starship};
     use jackioh_engine::testkit::*;
 
-    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Pierce: keywords only
 
     /// p1's Starship holding the Capacitor (lane 1) and `others` AP Rounds, launched; its stats before
     /// and after the launch.

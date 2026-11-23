@@ -56,23 +56,8 @@ mod tests {
     }
 
     /// The instance ids `legalActions` offers Book of Stats as targets.
-    // Differs from Scenario::offered: one card's play targets as ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
-        let book = s.card(BOOK).id.clone();
-        legal_actions(s.state(), PlayerId::P1)
-            .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == book => targets
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter_map(|pick| match pick {
-                        Selection::Instance { instance_id } => Some(instance_id),
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>(),
-                _ => Vec::new(),
-            })
-            .collect()
+        pick::instance_ids(&s.play_targets(BOOK))
     }
 
     #[test]
@@ -125,16 +110,17 @@ mod tests {
         }
 
         #[test]
-        fn r781001_its_own_controllers_immutable_unit_in_play_is_no_target() {
+        fn r4353001_its_own_controllers_immutable_unit_in_play_is_a_target_and_gets_5_5() {
             let mut s = scenario(json!({
                 "p1": { "hand": [BOOK, FILLER], "field": [{ "def": "core-019", "radiant": true }] },
                 "p2": { "hand": [FILLER] },
             }));
             let unit = unit_id(&s, PlayerId::P1, 1);
-            assert!(!offered(&s).contains(&unit));
+            // Immutable bars no aim, and a +5/+5 changes no text, so it lands as on any Unit.
+            assert!(offered(&s).contains(&unit));
             let targets = pick::unit_at(&s, PlayerId::P1, 1);
-            s.expect_refused(|s| s.play(BOOK, json!({ "targets": targets })));
-            s.expect_stats(&unit, json!({ "attack": 18, "health": 18 }));
+            s.play(BOOK, json!({ "targets": targets }));
+            s.expect_stats(&unit, json!({ "attack": 23, "health": 23, "maxHealth": 23 }));
         }
 
         #[test]

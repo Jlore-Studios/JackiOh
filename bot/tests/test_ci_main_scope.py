@@ -51,6 +51,10 @@ def on(lines):
     return sorted(name for name, value in lines.items() if value == "true")
 
 
+#: What main runs after a queue build that ran everything: the lines in ALWAYS, `db` and `full`.
+ALWAYS_ON = sorted({name for name, _ in main_scope.ALWAYS} | {"db", "full"})
+
+
 class MainScopeTests(unittest.TestCase):
     def test_what_the_queue_ran_is_off_and_what_it_skipped_runs(self):
         # 6a8b8d5b0's build (2026-11-09): the web, e2e, the Rust tools and infra ran; the rest did not.
@@ -67,10 +71,20 @@ class MainScopeTests(unittest.TestCase):
         lines, _ = main_scope.scope(EVERY, queue(true=("web",)), [])
         self.assertEqual(list(lines), list(EVERY) + ["bot"])
 
-    def test_a_queue_that_ran_everything_leaves_nothing_to_run(self):
+    def test_a_queue_that_ran_everything_leaves_only_the_deploy_rehearsal(self):
         built = queue(true=[name for name in EVERY if name not in ("full", "db")], bot="true")
         lines, _ = main_scope.scope(EVERY, built, ["crates/engine/src/lib.rs"])
-        self.assertEqual(on(lines), [])
+        self.assertEqual(on(lines), ALWAYS_ON)
+
+    def test_the_deploy_rehearsal_runs_on_main_even_when_the_queue_ran_it(self):
+        # Its `deploy-image` artifact is what staging's deploy loads (scripts/server-image.sh, step
+        # 2), read from the push-to-main run alone, so the queue's run of it cannot stand in.
+        built = queue(true=("db_sql", "db_store", "db_deploy", "rust_server"))
+        lines, why = main_scope.scope(EVERY, built, ["crates/server/src/main.rs"])
+        self.assertEqual((lines["db_sql"], lines["db_store"], lines["rust_server"]), ("false",) * 3)
+        self.assertEqual((lines["db_deploy"], lines["db"], lines["full"]), ("true",) * 3)
+        self.assertIn("what main always runs (db_deploy)", why)
+        self.assertNotIn("db_deploy", why.split("what main always runs")[0])
 
     def test_bot_selftest_runs_unless_the_queue_ran_it(self):
         self.assertEqual(main_scope.scope(EVERY, queue(bot="false"), [])[0]["bot"], "true")
@@ -109,7 +123,8 @@ class MainScopeTests(unittest.TestCase):
         lines, _ = main_scope.scope(EVERY, queue(true=("db_sql",)), [])
         self.assertEqual((lines["db_sql"], lines["db_store"], lines["db"]), ("false", "true", "true"))
         lines, _ = main_scope.scope(EVERY, queue(true=("db_sql", "db_store", "db_deploy")), [])
-        self.assertEqual(lines["db"], "false")
+        self.assertEqual((lines["db_sql"], lines["db_store"]), ("false", "false"))
+        self.assertEqual((lines["db_deploy"], lines["db"]), ("true", "true"))
 
     def test_with_no_build_or_no_range_everything_runs(self):
         for built, changed in ((None, []), (queue(true=("web",)), None)):
@@ -127,7 +142,7 @@ class MainScopeTests(unittest.TestCase):
             self.assertIn(path, why)
         for path in ("crates/engine/src/Cargo.toml.md", "apps/web/package.json", "docs/github.md"):
             lines, _ = main_scope.scope(EVERY, built, [path])
-            self.assertEqual(on(lines), [], path)
+            self.assertEqual(on(lines), ALWAYS_ON, path)
 
     def test_every_scope_is_one_a_pull_request_could_have(self):
         # What the summary jobs rely on: `db` is any of its suites, `web_promote` only with `web`,
@@ -150,6 +165,14 @@ class MainScopeTests(unittest.TestCase):
                     self.assertEqual(lines[name], "true", f"{name} skipped by the build, so it runs")
             if built["bot"] != "true":
                 self.assertEqual(lines["bot"], "true")
+            for name, _ in main_scope.ALWAYS:
+                self.assertEqual(lines[name], "true", f"{name} always runs on main")
+
+    def test_every_line_that_always_runs_is_one_ci_scope_prints(self):
+        # A line renamed in scripts/ci-scope.sh would otherwise leave ALWAYS holding nothing.
+        for name, why in main_scope.ALWAYS:
+            self.assertIn(name, EVERY)
+            self.assertTrue(why)
 
 
 class CommandTests(unittest.TestCase):
@@ -218,6 +241,14 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn("--event merge_group --commit \"$SHA\"", push)
         self.assertIn("--name ci-scope", push)
         self.assertIn('python3 .github/ci/main_scope.py "$every" "$queue/scope.lines" "$changed"', push)
+
+    def test_the_deploy_image_comes_from_the_rehearsal_main_always_runs(self):
+        # main_scope.ALWAYS keeps `db_deploy` on for the job that uploads `deploy-image`.
+        job = self.text[self.text.index("  db-deploy-image:\n"):]
+        job = job[:job.index("\n\n")]
+        self.assertIn("needs.changes.outputs.db_deploy == 'true'", job)
+        self.assertIn("name: deploy-image", job)
+        self.assertIn("db_deploy", [name for name, _ in main_scope.ALWAYS])
 
     def test_the_changes_job_may_read_runs(self):
         job = self.text[self.text.index("  changes:\n"):]

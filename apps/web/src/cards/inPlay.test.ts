@@ -1,5 +1,5 @@
 // The words a face in play prints where play and print part ways (SPEC §10.10), worked out by jackioh-shared's
-// face model (`face/power.rs`). `POWER_WORDS` is the crate's data file of §8 #98's thirteen powers, keyed by the
+// face model (`face/power.rs`). `POWER_WORDS` is the crate's data file of §8 #98's fourteen powers, keyed by the
 // view's power name (R243). The engine holds the same clauses, so this test keeps the two tables one.
 
 import { describe, expect, it } from "vitest";
@@ -45,16 +45,16 @@ describe("#98 Heroic Power's rolled power, in words (R752)", () => {
 
   it("prints the keyword line, then the one power's name and its Activate, and nothing of the other twelve", () => {
     const text = powerFace("recruit", false);
-    expect(text).toBe("Indestructible\nExpedition Map\nActivate: Spend (3): Recruit a permanent.");
+    expect(text).toBe("Indestructible\nExpedition Map\nActivate: Spend (2): Recruit a permanent.");
     for (const other of ["Life Tap", "Deal 1 damage", "Rush Token", "Felinor Token", "Discover a Unit"]) {
       expect(text).not.toContain(other);
     }
   });
 
   it("prints the Radiant words and name on a radiant face, filling the card's numbers", () => {
-    expect(powerFace("discover", true)).toMatch(/Witness Value\nActivate: Spend \(2\): Discover a Radiant Unit\.$/u);
-    expect(powerFace("armor", true, { armor: 4 })).toMatch(/Tank Up\nActivate: Spend \(1\): Your hero gains 4 Armor, then this power refreshes\.$/u);
-    expect(powerFace("burn", false, { shot: 6 })).toMatch(/Steady Shot\nActivate: Spend \(1\): Deal 6 damage to the enemy hero\.$/u);
+    expect(powerFace("discover", true)).toMatch(/Witness Value\nActivate: Spend \(1\): Discover a Radiant Unit\.$/u);
+    expect(powerFace("armor", true, { armor: 4 })).toMatch(/Tank Up\nActivate: Spend \(0\): Your hero gains 4 Armor, then this power refreshes\.$/u);
+    expect(powerFace("burn", false, { shot: 6 })).toMatch(/Steady Shot\nActivate: Spend \(0\): Deal 6 damage to the enemy hero\.$/u);
     expect(POWER_WORDS["armor"]?.title).toBe("Armor Up");
   });
 
@@ -70,15 +70,19 @@ describe("#98 Heroic Power's rolled power, in words (R752)", () => {
     const params = CATALOG[HEROIC_POWER_ID]?.params ?? [];
     for (const [name, words] of Object.entries(POWER_WORDS)) {
       const written = [...`${words.base} ${words.radiant}`.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? "");
-      const own = params.filter((param) => param.power === name).map((param) => param.key);
+      // R3551002: End Times' price is its own declared number (the engine's END_TIMES_PRICE_PARAM), which
+      // prints as its (X), not in its words.
+      const price = name === "endTimes" ? "endTimes" : undefined;
+      const own = params.filter((param) => param.power === name && param.key !== price).map((param) => param.key);
       expect([...new Set(written)].sort(), name).toEqual([...own].sort());
     }
   });
 });
 
 describe("Call to Chaos in play", () => {
-  it("conceals exactly the cards that carry the Call to Chaos tag: Core #95, the Classic+ Edition #73, the Meditative Edition #95, the Stinkyscape set's two and the Training-Grounds Edition #39", () => {
-    // R1857000: the Stinkyscape set's two editions (#150, #151, #1884); Training Grounds' #39 (#2204).
+  it("conceals exactly the cards that carry the Call to Chaos tag: Core #95, the Classic+ Edition #73, the Meditative Edition #95, the Stinkyscape set's two, the Training-Grounds Edition #39 and the Stinkyscape+ Mindustrial/Swarm Edition #142", () => {
+    // R1857000: the Stinkyscape set's two editions (#150, #151, #1884); Training Grounds' #39 (#2204);
+    // Stinkyscape+'s #142 (#3573).
     const concealed = Object.values(CATALOG).filter((def) => setShips(def.set) && concealedInPlay(def.tags));
     expect(concealed.map((def) => def.id)).toEqual([
       "core-095",
@@ -87,6 +91,7 @@ describe("Call to Chaos in play", () => {
       "stinkyscape-150",
       "stinkyscape-151",
       "traininggrounds-039",
+      "stinkyscapeplus-142",
     ]);
     expect(CATALOG["core-095"]?.tags).toContain(CONCEALED_TAG);
   });

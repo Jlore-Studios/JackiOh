@@ -6,7 +6,9 @@ import { isVoiceEmote } from "@jackioh/shared";
 
 import type { SfxId, SoundSink } from "../audio/types.ts";
 import { VOICE_PRIORITY } from "../audio/constants.ts";
-import { CARD_AUDIO, emoteLineFor, emoteVoiceDef } from "../audio/voiceData.ts";
+import { soundTablesNow } from "../audio/soundTablesLoader.ts";
+import type { CardAudioTable } from "../audio/types.ts";
+import { emoteLineFor, emoteVoiceDef } from "../audio/voiceData.ts";
 import {
   EMOTE_BUBBLE_MAX_MS,
   EMOTE_BUBBLE_MIN_MS,
@@ -43,8 +45,10 @@ export const EMOJI_SFX: Record<EmojiEmoteId, SfxId> = {
  * spans aren't in the client, so the estimate is the line's words at its persona's rate plus
  * Felinors' echoed tail.
  */
-export function voiceBubbleMs(portrait: PortraitId, emote: VoiceEmoteId): number {
-  const line = emoteLineFor(CARD_AUDIO, portrait, emote);
+export function voiceBubbleMs(portrait: PortraitId, emote: VoiceEmoteId, table?: CardAudioTable): number {
+  const t = table ?? soundTablesNow()?.cardAudio;
+  if (!t) return EMOTE_BUBBLE_MIN_MS;
+  const line = emoteLineFor(t, portrait, emote);
   if (line === null) return EMOTE_BUBBLE_MIN_MS;
   const words = line.text.split(/\s+/).filter((word) => word.length > 0).length;
   const wpm =
@@ -57,19 +61,22 @@ export function voiceBubbleMs(portrait: PortraitId, emote: VoiceEmoteId): number
 }
 
 /** The bubble text for a voice emote, or null when the voice table can't resolve it. */
-export function voiceBubbleText(portrait: PortraitId, emote: VoiceEmoteId): string | null {
-  return emoteLineFor(CARD_AUDIO, portrait, emote)?.text ?? null;
+export function voiceBubbleText(portrait: PortraitId, emote: VoiceEmoteId, table?: CardAudioTable): string | null {
+  const t = table ?? soundTablesNow()?.cardAudio;
+  if (!t) return null;
+  return emoteLineFor(t, portrait, emote)?.text ?? null;
 }
 
 /** What an emote shows: voice lines' bubble, emoji's sticker and their spans. */
 export function emoteShowInfo(
   portrait: PortraitId,
   emote: EmoteId,
+  table?: CardAudioTable,
 ): { text: string | null; holdMs: number } {
   if (!isVoiceEmote(emote)) return { text: null, holdMs: EMOTE_EMOJI_MS };
   return {
-    text: voiceBubbleText(portrait, emote),
-    holdMs: voiceBubbleMs(portrait, emote),
+    text: voiceBubbleText(portrait, emote, table),
+    holdMs: voiceBubbleMs(portrait, emote, table),
   };
 }
 

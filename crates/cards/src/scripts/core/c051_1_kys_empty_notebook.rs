@@ -10,6 +10,8 @@
 //! R11: a SPELL token goes to the GY like any spell (§3.2), so Discover can find it (R50, #72 Reminisce).
 //!
 //! Through v0.4.9 it was "Draw {draw}."; `script_v0_4_9` keeps that for those versions' replays (R767000).
+//! Through v0.2.5f it printed "Draw 1" and "Draw 2" and declared no number, so the kept script reads
+//! those printed numbers there (R2657006, R4382001).
 
 use jackioh_engine::effects::shuffle_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -30,10 +32,19 @@ fn notebook() -> Script {
     }
 }
 
-/// Through v0.4.9: draws `draw`, 1 on the base face and 2 on the Radiant.
-fn notebook_v0_4_9() -> Script {
+/// R4382001: what the base face drew through v0.2.5f, printed before `draw` was declared.
+const PRINTED_DRAW: i32 = 1;
+
+/// R4382001: what the Radiant face drew through v0.2.5f.
+const PRINTED_RADIANT_DRAW: i32 = 2;
+
+/// Through v0.4.9: draws `draw`, 1 on the base face and 2 on the Radiant; `printed` before v0.2.6 declared
+/// it (R2657006).
+fn notebook_v0_4_9(printed: i32) -> Script {
     Script {
-        cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
+        cry: Some(hook(move |ctx| {
+            vec![draw(json_as(json!({ "count": param_or(&*ctx, "draw", printed) })))]
+        })),
         ..Script::default()
     }
 }
@@ -46,9 +57,10 @@ pub fn script() -> CardScripts {
 
 /// R767000: through v0.4.9 the card drew; `KEPT_SCRIPTS` keeps it.
 pub fn script_v0_4_9() -> CardScripts {
-    let base = notebook_v0_4_9();
-    let radiant = base.clone();
-    CardScripts { base, radiant }
+    CardScripts {
+        base: notebook_v0_4_9(PRINTED_DRAW),
+        radiant: notebook_v0_4_9(PRINTED_RADIANT_DRAW),
+    }
 }
 
 // #51.1 KY's Empty Notebook (SPEC §8.3, §7, §5.1, §6.3 Shuffle into; R11, R50, R60, R1828002).
@@ -166,6 +178,7 @@ mod tests {
                     "meditative-045-1",
                     "meditativeplus-020-1",
                     "stinkyscape-004-2",
+                    "stinkyscapeplus-t-ai-07",
                 ]
                 .map(String::from)
             );
@@ -220,6 +233,25 @@ mod tests {
             jackioh_engine::with_shipped(crate::catalog_at("v0.4.9"), || {
                 for (radiant, draws) in [(false, 1), (true, 2)] {
                     let (s, added) = shuffled("notebook-kept", radiant, 0);
+                    assert!(added.is_empty());
+                    assert_eq!(s.pile(P1, "library").len(), LIBRARY.len() - draws);
+                    assert_eq!(s.pile(P1, "hand").len(), 1 + draws);
+                }
+            });
+        }
+
+        /// R4382001: through v0.2.5f the card declared no `draw` and printed "Draw 1" and "Draw 2", and a
+        /// replay of then folds under the same kept script, which draws those.
+        #[test]
+        fn r4382001_a_game_on_v0_2_5f_draws_its_printed_1_and_2_radiant() {
+            use super::super::{ID, PRINTED_DRAW, PRINTED_RADIANT_DRAW};
+            crate::register_all();
+            let carried = crate::catalog_defs_at("v0.2.5f").expect("v0.2.5f is carried");
+            assert!(carried[ID].params.is_none(), "v0.2.5f's Notebook declares a number");
+            jackioh_engine::with_shipped(crate::catalog_at("v0.2.5f"), || {
+                for (radiant, draws) in [(false, PRINTED_DRAW), (true, PRINTED_RADIANT_DRAW)] {
+                    let draws = usize::try_from(draws).expect("a count");
+                    let (s, added) = shuffled("notebook-printed", radiant, 0);
                     assert!(added.is_empty());
                     assert_eq!(s.pile(P1, "library").len(), LIBRARY.len() - draws);
                     assert_eq!(s.pile(P1, "hand").len(), 1 + draws);

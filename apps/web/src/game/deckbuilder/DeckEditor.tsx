@@ -3,7 +3,7 @@
 // full decks (D2, D4), and compared cards (R251); existing clashes stay visible. The store autosaves
 // (R256); completing a deck saves immediately.
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactElement } from "react";
+import { useCallback, useEffect, useId, useMemo, useState, type ReactElement } from "react";
 
 import type { CatalogSnapshot, Collection, LoadoutError } from "@jackioh/validator";
 import { portraitOrDefault } from "@jackioh/shared";
@@ -18,6 +18,7 @@ import { deckChanges, type NewestChanges } from "../../patches/deckChanges.ts";
 import CardBrowser, { type BrowserDetail } from "./CardBrowser.tsx";
 import { encodeDeckCode } from "./deckCode.ts";
 import DeckPatchBadge from "./DeckPatchBadge.tsx";
+import DeckDrag from "./DeckDrag.tsx";
 import DeckSidebar from "./DeckSidebar.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
 import { visiblePool, type PoolFilter, type PoolSort } from "./filters.ts";
@@ -32,7 +33,6 @@ import {
   DECK_DELETE,
   DECK_DUPLICATE,
   DECK_DUPLICATE_REASON,
-  DECK_DRAG_MIME,
   DECK_EDITOR,
   DECK_NAME_INPUT,
   DECK_SAVE_ERROR,
@@ -108,19 +108,6 @@ export type DeckEditorProps = {
   history: ReactElement;
 };
 
-function droppedCardId(event: DragEvent<HTMLElement>, held: string | null): string | null {
-  if (held !== null && held.length > 0) return held;
-  for (const mime of [DECK_DRAG_MIME, "text/plain"]) {
-    try {
-      const carried = event.dataTransfer.getData(mime);
-      if (carried.length > 0) return carried;
-    } catch {
-      // No DataTransfer on a synthesised event: try the next type, then give up.
-    }
-  }
-  return null;
-}
-
 export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const { deck, decks, trios, catalog, collection, limits, saved, refusal, practicePath, patch } = props;
   const { filter, onFilter, sort, onSort, onRename, onRenameDone, onPortrait, onCards, onDelete, onDuplicate, onSaveNow, onBack, history } = props;
@@ -133,7 +120,6 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
   const [codeShown, setCodeShown] = useState(false);
   const [awaitingComplete, setAwaitingComplete] = useState(false);
-  const dragged = useRef<string | null>(null);
   const nameId = useId();
   const verdictTitleId = useId();
   const duplicateReasonId = useId();
@@ -238,32 +224,6 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     [deck.cards, nameOf, onCards],
   );
 
-  const startDrag = useCallback((cardId: string, event: DragEvent<HTMLElement>) => {
-    dragged.current = cardId;
-    // A drag is not an inspection: any preview still open would sit over the drop target.
-    closeInspect();
-    try {
-      event.dataTransfer.setData(DECK_DRAG_MIME, cardId);
-      event.dataTransfer.setData("text/plain", cardId);
-      event.dataTransfer.effectAllowed = "move";
-    } catch {
-      // Cypress and jsdom lack DataTransfer; drops read `dragged` first.
-    }
-  }, []);
-
-  const endDrag = useCallback(() => {
-    dragged.current = null;
-  }, []);
-
-  const drop = useCallback(
-    (event: DragEvent<HTMLElement>) => {
-      event.preventDefault();
-      const cardId = droppedCardId(event, dragged.current);
-      if (cardId !== null) add(cardId);
-    },
-    [add],
-  );
-
   const openDetail = useCallback((cardId: string) => {
     closeInspect();
     setDetailCardId(cardId);
@@ -338,7 +298,8 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     <div className="ws-editor-head">
       <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onBack}>
         <ArrowIcon direction="back" />
-        {t("Back to decks")}
+        {/* R3956000: a phone shows the arrow alone, so the name field has the width; the words stay for a reader. */}
+        <span className="ws-back-label">{t("Back to decks")}</span>
       </button>
       {/* Issue §8: the deck's portrait. The picker holds the portraits the account owns (R1827000)
           and the previews; picking one saves like any edit. `null` in the store reads `vanilla` (R641). */}
@@ -379,6 +340,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
 
   return (
     <section className="ws-editor ws-editor--deck" data-testid={DECK_EDITOR} data-deck={deck.id} aria-label={t("Deck: {deck}", { deck: label })}>
+      <DeckDrag onDrop={add} nameOf={nameOf} />
       <div className="db-layout">
         <DeckSidebar
           deckName={label}
@@ -393,7 +355,6 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
               {patch === null ? null : <DeckPatchBadge deckId={deck.id} cards={deckChanges(deck, patch)} version={patch.version} />}
             </>
           }
-          onDropCard={drop}
           onRemove={remove}
           onInspect={openDetail}
         >
@@ -574,8 +535,6 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
             holders,
             refusedCardId,
             onAdd: add,
-            onDragStart: startDrag,
-            onDragEnd: endDrag,
           }}
           status={
             // A non-blocking, polite toast keeps pool-side changes audible on phones (deckbuilder.css).

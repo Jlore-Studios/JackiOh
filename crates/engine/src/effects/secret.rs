@@ -105,6 +105,7 @@ pub fn keep_secret(args: KeepSecretArgs) -> Effect {
                 radiant: None,
                 cost_override: link.cost_override,
                 embiggen_cost_override: None,
+                no_embiggen_premium: None,
                 cost_mod: None,
                 temporary: None,
                 chinese: None,
@@ -116,6 +117,7 @@ pub fn keep_secret(args: KeepSecretArgs) -> Effect {
                 exact: None,
                 memory: Some(memory),
                 fixed_x: None,
+                at: None,
             })
             .apply)(ctx);
         }

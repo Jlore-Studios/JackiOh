@@ -152,7 +152,11 @@ pub fn cloak_units() -> CardDef {
     def(7844, "cloak-units", "Field Spell", 1, json!([]))
 }
 
-/// "Aura: The Spells in your hand have Cloaked."
+/// The Echo the Radiant `cloak_spells` adds to a Spell its controller reveals.
+pub const REVEAL_ECHO: i32 = 1;
+
+/// "Aura: The Spells in your hand have Cloaked." — Meditative #99 Paranoia's shape, its Radiant face
+/// adding "Spells you reveal have Echo +`REVEAL_ECHO`" (R1045).
 pub fn cloak_spells() -> CardDef {
     def(7845, "cloak-spells", "Field Spell", 1, json!([]))
 }
@@ -218,6 +222,12 @@ pub fn crater_moon() -> CardDef {
 /// A Spell that summons a Crater 2/2.
 pub fn summon_crater() -> CardDef {
     def(7854, "summon-crater", "Spell", 1, json!([]))
+}
+
+/// R4327000: a Spell at (1) whose Cry summons a mourner, a token and a plain unit given Cloaked, each set
+/// face-down by its Cloaked.
+pub fn summon_set() -> CardDef {
+    def(7876, "summon-set", "Spell", 1, json!([]))
 }
 
 /// A Spell that Recruits.
@@ -325,6 +335,30 @@ pub fn cloaked_mourner() -> CardDef {
     unit(7863, "cloaked-mourner", 1, 1, 1, json!([{ "kind": "Cloaked" }]))
 }
 
+/// R4237000: a Cloaked 2/2 with Rush.
+pub fn cloaked_rusher() -> CardDef {
+    unit(
+        7874,
+        "cloaked-rusher",
+        1,
+        2,
+        2,
+        json!([{ "kind": "Cloaked" }, { "kind": "Rush" }]),
+    )
+}
+
+/// R4237000: a Cloaked 2/2 with Charge.
+pub fn cloaked_charger() -> CardDef {
+    unit(
+        7875,
+        "cloaked-charger",
+        1,
+        2,
+        2,
+        json!([{ "kind": "Cloaked" }, { "kind": "Charge" }]),
+    )
+}
+
 /// A Cloaked 1/1 Unit token: set face-down it is still the unit token it was printed as (R11, R2855000).
 pub fn cloaked_token() -> CardDef {
     json_as(spread(
@@ -340,6 +374,27 @@ pub fn cloaked_token() -> CardDef {
         json!({ "token": true, "rarity": "Token" }),
     ))
 }
+
+// R3806000: a set Spell resolves as it is set too
+
+/// Meditative #99 Paranoia's shape: "Aura: Your Spells have Cloaked. Spells you set face-down resolve as
+/// you set them and again as you reveal them."
+pub fn set_resolver() -> CardDef {
+    def(7871, "set-resolver", "Field Spell", 1, json!([]))
+}
+
+/// A Cloaked Spell at (1) with Echo 1 that deals 1 to the enemy hero.
+pub fn cloaked_echo() -> CardDef {
+    def(7872, "cloaked-echo", "Spell", 1, json!([{ "kind": "Cloaked" }]))
+}
+
+/// A Cloaked Spell at (1) whose text asks its controller a question, then deals 1 to the enemy hero.
+pub fn cloaked_asker() -> CardDef {
+    def(7873, "cloaked-asker", "Spell", 1, json!([{ "kind": "Cloaked" }]))
+}
+
+/// `cloaked_asker`'s step after its question.
+const ASKER_STEP: &str = "asked";
 
 pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
@@ -369,6 +424,7 @@ pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         crater_trap(),
         crater_moon(),
         summon_crater(),
+        summon_set(),
         recruiter(),
         flicker_all(),
         stacker(),
@@ -384,6 +440,11 @@ pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         cloaked_mourner(),
         cloaked_field_trap(),
         cloaked_token(),
+        set_resolver(),
+        cloaked_echo(),
+        cloaked_asker(),
+        cloaked_rusher(),
+        cloaked_charger(),
     ]
 });
 
@@ -431,6 +492,8 @@ pub static KW_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         flying_stacker(),
         flying_reborner(),
         crater_field(),
+        cloaked_rusher(),
+        cloaked_charger(),
     ] {
         table.insert(card.id, both(Script::default()));
     }
@@ -517,8 +580,48 @@ pub static KW_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
     );
     table.insert(
         cloak_spells().id,
+        CardScripts {
+            base: Script {
+                aura: Some(cloak_hand(CardType::Spell)),
+                ..Script::default()
+            },
+            radiant: Script {
+                aura: Some(cloak_hand(CardType::Spell)),
+                reveal_echo: Some(read_hook(|_args| REVEAL_ECHO)),
+                ..Script::default()
+            },
+        },
+    );
+    table.insert(
+        set_resolver().id,
         both(Script {
             aura: Some(cloak_hand(CardType::Spell)),
+            resolves_set_spells: true,
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        cloaked_echo().id,
+        both(Script {
+            static_flags: Some(StaticFlags {
+                echo: Some(1),
+                ..StaticFlags::default()
+            }),
+            cry: Some(hook(|_ctx| ping())),
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        cloaked_asker().id,
+        both(Script {
+            cry: Some(hook(|_ctx| {
+                vec![effects::choose_mode(json_as(json!({
+                    "options": ["ping"],
+                    "step": ASKER_STEP,
+                    "prompt": "Asker: go on?",
+                })))]
+            })),
+            resume: IndexMap::from([(ASKER_STEP, hook(|_ctx| ping()))]),
             ..Script::default()
         }),
     );
@@ -591,6 +694,27 @@ pub static KW_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         both(Script {
             cry: Some(hook(|_ctx| {
                 vec![effects::summon(json_as(json!({ "defId": crater_unit().id })))]
+            })),
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        summon_set().id,
+        both(Script {
+            cry: Some(hook(|_ctx| {
+                vec![
+                    effects::summon(json_as(
+                        json!({ "defId": cloaked_mourner().id, "setCloaked": true }),
+                    )),
+                    effects::summon(json_as(
+                        json!({ "defId": cloaked_token().id, "setCloaked": true }),
+                    )),
+                    effects::summon(json_as(json!({
+                        "defId": plain_unit().id,
+                        "setCloaked": true,
+                        "keywords": [{ "kind": "Cloaked" }],
+                    }))),
+                ]
             })),
             ..Script::default()
         }),

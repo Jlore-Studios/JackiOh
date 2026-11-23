@@ -76,7 +76,7 @@ async function refusal(promise: Promise<unknown>): Promise<AuthError> {
 /** An unsigned token whose payload claims `claims` (the client never verifies one). */
 function tokenWith(claims: Record<string, unknown>): string {
   const encode = (value: unknown): string =>
-    btoa(JSON.stringify(value)).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/=+$/u, "");
+    btoa(JSON.stringify(value)).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/(?:==?)?$/u, "");
   return `${encode({ alg: "none" })}.${encode(claims)}.signature`;
 }
 

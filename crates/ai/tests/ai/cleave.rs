@@ -5,8 +5,10 @@
 //!
 //! The cards: Nurse Cleaver 3/6 Cleave, Zoomerbin Oomen 1/2, Paul Allen's Ghost 5/6 Divine Shield, Jay Fungus
 //! 3/6 Taunt, Midrange Menace 9/9 Taunt, Voidwalker 6/3, and Tempo Timmy 3/3, the non-Cleave control
-//! attacker. The shield is the Ghost rather than Jilliax, whose Taunt would bind every reply attack to itself
-//! and whose direct hit pops the shield even without Cleave.
+//! attacker; for a GIGA wall (R4257000), the Jlockeed Large Language Model token 2/5 GIGA Taunt, Thorium Wall
+//! 0/8 Taunt and the CN Golem token 10/10 Poisonous Cleave Pierce. The shield is the Ghost rather than
+//! Jilliax, whose Taunt would bind every reply attack to itself and whose direct hit pops the shield even
+//! without Cleave.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -57,6 +59,55 @@ mod threat {
     fn without_cleave_the_same_board_threatens_nothing() {
         // Each attacker is spent on one Taunt: with no splash nothing reaches the face.
         assert_eq!(face_threat(&wall(), HUMAN), 0);
+    }
+
+    #[test]
+    fn r2179005_a_cleave_splash_on_anime_armor_is_capped_and_it_still_binds() {
+        // Zoomerbin Oomen (1/2) and Anime Armor (3/3), both Taunts, side by side. The Cleave Voidwalker's 6
+        // destroys the Oomen and splashes Anime Armor, whose own guard caps the splash at 1, so it still
+        // stands to take Menace's 9 (capped at 1 too) and nothing goes face. Uncapped, the splash destroyed
+        // Anime Armor and Menace's 9 went face, 1 through the hero's same cap.
+        let mut state = board(json!({
+            "seed": "ai-cleave-anime-armor",
+            "p1": { "field": [{ "def": "core-067", "lane": 1 }, { "def": "classicplus-011", "lane": 2 }] },
+            "p2": { "field": ["classic-050", "core-019"] },
+        }));
+        grant(&mut state, AI, "core-067", Keyword::Taunt);
+        grant(&mut state, AI, "classicplus-011", Keyword::Taunt);
+        grant(&mut state, HUMAN, "classic-050", Keyword::Cleave);
+        assert_eq!(face_threat(&state, HUMAN), 0);
+    }
+
+    /// Issue #4257's board: p1 at 6 life behind the Jlockeed Large Language Model token (a 2/5 GIGA Taunt) in
+    /// lanes 1-2 and Thorium Wall (S+ #65, a 0/10 Taunt) in lane 3; p2's CN Golem token (10/10, Poisonous,
+    /// Cleave, Pierce) and Voidwalker (6).
+    fn giga_wall() -> GameState {
+        board(json!({
+            "seed": "ai-cleave-giga-wall",
+            "p1": {
+                "health": 6,
+                "field": [
+                    { "def": "stinkyscapeplus-t-ai-04", "lane": 1 },
+                    { "def": "stinkyscapeplus-065", "lane": 3 },
+                ],
+            },
+            "p2": { "field": ["meditative-095-1", "classic-050"] },
+        }))
+    }
+
+    #[test]
+    fn r4257000_face_threat_counts_the_splash_through_a_giga_wall() {
+        // The Golem goes in first at the GIGA: its splash meets the Wall beside the GIGA's second lane and
+        // its Poisonous hit destroys both, so Voidwalker's 6 goes face for the lethal. The one-lane splash
+        // never reaches the Wall, and Voidwalker breaking the GIGA first leaves the Golem on the Wall.
+        let state = giga_wall();
+        assert_eq!(face_threat(&state, HUMAN), 6);
+        let one_lane = EvalWeights {
+            giga_cleave_read: false,
+            ..AI_EVAL
+        };
+        assert_eq!(face_threat_with(&state, HUMAN, &one_lane), 0);
+        assert_eq!(face_threat_with(&state, HUMAN, &GREEDY_EVAL), 0);
     }
 }
 

@@ -10,7 +10,7 @@ import type { ReactElement, ReactNode } from "react";
 import type { Tag } from "@jackioh/shared";
 import type { CatalogSnapshot } from "@jackioh/validator";
 
-import { CardDetail } from "../../cards/index.ts";
+import { CardDetail } from "../../cards/inspect/CardDetail.tsx";
 import { t } from "../../i18n/i18n.ts";
 import FilterBar from "./FilterBar.tsx";
 import type { PoolFilter, PoolSort } from "./filters.ts";

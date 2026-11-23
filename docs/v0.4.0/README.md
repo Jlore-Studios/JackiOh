@@ -14,8 +14,9 @@ notes each part left beside this file while the tree was built; they stay in git
 - **`PORTING.md`**, how a card moved from Rust to Luau and how the move was proved, was removed in
   #2156 once v0.5.0 (#902) had brought every official card back to Rust (section 8). The sections
   below that cite it are the record; `git show 32d123284:docs/v0.4.0/PORTING.md` prints it.
-- **[api-gaps.md](api-gaps.md)** is what the Luau API binds, what it does not, and the fifteen gaps
-  part 28 fixed with their Luau forms.
+- **`api-gaps.md`**, what the Luau API bound, what it did not, and the fifteen gaps part 28 fixed
+  with their Luau forms, was removed in #3670 once the Luau host was gone (#2956). The sections
+  below that cite it are the record; `git show 13bd66f47:docs/v0.4.0/api-gaps.md` prints it.
 - **`perf.json`**, the performance baseline at the branch point (section 5.5), was removed: the
   gate measures parent and current live, and section 5.5 quotes the baseline;
   `git show 3c5c7a81:docs/v0.4.0/perf.json` prints it.

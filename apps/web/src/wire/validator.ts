@@ -98,7 +98,8 @@ function snapshotFor(catalog: CatalogSnapshot, decks: readonly LoadoutDeck[]): C
   for (const deck of decks) {
     for (const cardId of deck.cards) {
       const def = catalog.cards[cardId];
-      if (def !== undefined && !Object.hasOwn(cards, cardId)) cards[cardId] = def;
+      // Stryker disable next-line ConditionalExpression: an id the catalog lacks would be written as undefined, which JSON.stringify leaves out as the snapshot crosses (copying none is the loop body's BlockStatement mutant)
+      if (def !== undefined) cards[cardId] = def;
     }
   }
   return { ...catalog, cards };
@@ -128,6 +129,7 @@ const PRACTICE_DECK_RULES: readonly LoadoutRule[] = ["L2", "L3", "L6"];
  */
 export function practiceDeckIssues(deck: LoadoutDeck): LoadoutError[] {
   const verdict = validateDeck({ deck, catalog: { version: catalogVersion(), cards: registeredCatalog() }, collection: {} });
+  // Stryker disable next-line ArrayDeclaration: never returned: against an empty collection every card fails L5 and an empty deck fails L2, so the verdict is never ok
   return verdict.ok ? [] : verdict.errors.filter((issue) => PRACTICE_DECK_RULES.includes(issue.rule));
 }
 
@@ -154,8 +156,9 @@ export function checkDeckDraft(input: DeckDraftInput): DraftIssue[] {
     name: input.name,
     cards: input.cards,
     deckable,
-    ...(portrait === undefined ? {} : { portrait }),
-    ...(portraitKnown === undefined ? {} : { portraitKnown }),
+    // JSON.stringify leaves an undefined field out, so an absent portrait or answer crosses as absent.
+    portrait,
+    portraitKnown,
     nameMaxLength: input.nameMaxLength,
   });
 }

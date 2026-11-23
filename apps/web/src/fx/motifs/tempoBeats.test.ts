@@ -11,6 +11,7 @@ import { KEYWORD_CALLOUT_ICONS } from "../../cards/keywordVisuals.ts";
 import { animTestid, planEntries, type AnimationEntry } from "../../game/animations.ts";
 import { testid } from "../../game/contract.ts";
 import { card, fullBoardView, withEvents } from "../../test/fixtures.ts";
+import { endOf, envOf } from "../../test/signatures.ts";
 import { must } from "../../test/stubServer.ts";
 import {
   FX_CALLOUT_MS,
@@ -18,12 +19,10 @@ import {
   FX_CHARGE_LINE_SPREAD,
   FX_DEFT_FEINT_STEP,
   FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_STACK_LAND,
   FX_ZONE_COUNT_AT,
 } from "../constants.ts";
-import { createFxMemory } from "../memory.ts";
 import { extraDraws, rollBatchOf, rollLandAt } from "../rolls.ts";
 import type { FxCardFacts, FxCue, FxPlanEnv } from "../types.ts";
 import { FX_BEAT_KEYWORDS, planBeats, planStillCallouts } from "./beats.ts";
@@ -38,8 +37,6 @@ const POISONER = id("you", 1);
 /** The opponent's lane-1 unit: Divine Shield only. */
 const FOE = id("opponent", 0);
 const FOE_2 = id("opponent", 1);
-
-const envOf = (over: Partial<FxPlanEnv> = {}): FxPlanEnv => ({ intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over });
 
 /** The board with `MINE`'s keywords replaced. */
 function viewWith(keywords: readonly Keyword[]): PlayerView {
@@ -99,21 +96,6 @@ function stream(events: readonly GameEvent[], view: PlayerView = fullBoardView()
 }
 
 const kinds = (cues: readonly FxCue[]): string[] => cues.map((cue) => `${cue.kind}@${String(cue.delayMs)}`);
-
-/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS). */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 /** R200: every cue starts inside the entry, a flight lands inside it and no tail outlives FX_MAX_TAIL_MS. */
 function expectInside(cues: readonly FxCue[], D: number, label: string): void {

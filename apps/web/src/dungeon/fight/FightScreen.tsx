@@ -2,9 +2,10 @@
 // `fight`), the page plays it as a practice game against the AI (§9.9, R2706000). The run writes the
 // game's setup (`runFightSetup`: the run deck, its HP and its Radiant and buffed cards against the
 // enemy's deck and strength), the practice worker plays it with the AI as the enemy, whose name the
-// board's rail shows beside the run's timer (B22, B24), and each side's relics sit in a tray beside its
-// hero (B23). There is no Play again: once the game is over the page asks the worker for its report,
-// the run's `FightOver` (B25), and Continue sends it to the run, which a lost fight ends (B26).
+// board's rail shows beside the run's timer and the chip that lists the live modifiers (B22, B24,
+// R3912000), and each side's relics sit in a tray beside its hero (B23). There is no Play again: once
+// the game is over the page asks the worker for its report, the run's `FightOver` (B25), and Continue
+// sends it to the run, which a lost fight ends (B26).
 //
 // The board is the practice route's (`routes/practice.tsx`): the same controller, pacing
 // (`practice/aiTable.ts`: the AI waits on `data-animating`, `data-showcase` and `data-speaking`, #2925),
@@ -30,6 +31,7 @@ import "../../auth/tavern.css";
 import Game from "../../game/Game.tsx";
 import { reducedMotionNow } from "../../game/animations.ts";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
+import { ModifierList } from "../../game/ModifierList.tsx";
 import { t } from "../../i18n/i18n.ts";
 import { PRACTICE_PACING, PRACTICE_PACING_REDUCED, type PracticePacing } from "../../practice/config.ts";
 import { useBoardBusy, useControllerState, useShowcaseHold, useVoiceHold } from "../../practice/aiTable.ts";
@@ -38,7 +40,7 @@ import { usePracticeEmotes } from "../../practice/emotes.ts";
 import { createPracticeHost, type PracticeHost } from "../../practice/host.ts";
 import type { PracticeStartConfig } from "../../practice/protocol.ts";
 import { ThinkIndicator } from "../../practice/ThinkIndicator.tsx";
-import { guardLeaving } from "../../net/navigate.ts";
+import { guardLeaving, navigate, paths } from "../../net/navigate.ts";
 import { messageOf } from "../../net/errors.ts";
 import "../../practice/practice.css";
 import { PageTitle } from "../../routes/PageTitle.tsx";
@@ -176,6 +178,9 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     },
     [controller],
   );
+  const onMenu = useCallback(() => {
+    navigate(paths.play);
+  }, []);
 
   const snapshot = state.snapshot;
 
@@ -252,6 +257,10 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     ...(run?.blessings ?? []).map((id) => ({ id, level: null })),
   ];
   const enemyItems: TrayItem[] = setup.enemy.artifacts.map((id) => ({ id, level: null }));
+  // R3586001: the enemy's tier beside its relics, an elite's named so (its own table, §15.6).
+  const node = run === null || run.row === null ? undefined : run.map[run.row]?.[run.col];
+  const tier = String(setup.enemy.tier);
+  const tierLabel = node?.kind === "elite" ? t("Elite, tier {tier}", { tier }) : t("Tier {tier}", { tier });
 
   const resultActions = (
     <>
@@ -284,6 +293,21 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     </>
   );
 
+  // R3932000: out to Play; mid-fight it asks first, and leaves once the fight has its result.
+  const menuButton = (
+    <button
+      type="button"
+      className="control control-practice-menu"
+      data-testid={fightTestid.menu}
+      aria-haspopup={!over ? "dialog" : undefined}
+      aria-label={t("Main menu")}
+      title={t("Main menu")}
+      onClick={onMenu}
+    >
+      {t("Menu")}
+    </button>
+  );
+
   const board = (
     <Game
       view={snapshot.view}
@@ -300,18 +324,32 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
       showOfferDraw={false}
       // R2291000: the lethal hint, as in every game against the AI, which the setting turns off.
       lethalHint={lethalOn && snapshot.lethal === true}
+      controlExtras={menuButton}
       matchStatus={
-        <span className="dungeon-fight__status">
-          <strong className="dungeon-fight__enemy" data-testid={fightTestid.enemy}>
-            {enemy}
-          </strong>
-          <RunTimer elapsedMs={dungeon.elapsedMs} resumedAt={dungeon.resumedAt} />
-          <ThinkIndicator thinking={state.thinking} />
-        </span>
+        <>
+          {/* R3912000: every live modifier in full, as every other table's rail lists them (R169), the
+              enemy's name over its list. Beside the text, not inside it: the chip is 32px tall and the
+              text wraps, so inside it a phone's one-row control bar would grow a line taller. */}
+          <ModifierList view={snapshot.view} opponentLabel={enemy} />
+          <span className="dungeon-fight__status">
+            <strong className="dungeon-fight__enemy" data-testid={fightTestid.enemy}>
+              {enemy}
+            </strong>
+            <RunTimer elapsedMs={dungeon.elapsedMs} resumedAt={dungeon.resumedAt} />
+            <ThinkIndicator thinking={state.thinking} />
+          </span>
+        </>
       }
       heroAside={{
         own: <ArtifactTray side="own" items={ownItems} passives={content.passives} />,
-        enemy: <ArtifactTray side="enemy" items={enemyItems} passives={content.passives} />,
+        enemy: (
+          <div className="dungeon-fight__enemy-aside">
+            <span className="dungeon-fight__tier" data-testid={fightTestid.tier}>
+              {tierLabel}
+            </span>
+            <ArtifactTray side="enemy" items={enemyItems} passives={content.passives} />
+          </div>
+        ),
       }}
       resultActions={resultActions}
       // R2972000: a lost fight ends the run for good (§15.6), so the Concede dialog says so.

@@ -229,9 +229,9 @@ var workflowLabels = []labelDef{
 	{"kind:ai", "5319e7", "It changes the practice and ladder AI's decisions; no version (#1360)"},
 	{"kind:app", "1d76db", "It changes the client or the server, what players see and use; no version (#1360)"},
 	{"kind:internal", "c5def5", "CI, bots, tooling, docs, tests or a refactor; no version (#1360)"},
-	{"tier:major", "b60205", "A set ships: the next v0.Z.0 (#1360)"},
-	{"tier:patch", "fbca04", "15 reprinted, 50 that play differently, or a rule every game meets: the next v0.Z.X (#1360, #2499)"},
-	{"tier:micro", "fef2c0", "Fewer cards, or their words alone: the next letter (#1360)"},
+	{"tier:major", "b60205", "A set ships: the next v0.X.0 (#1360, #3944)"},
+	{"tier:patch", "fbca04", "The day's patch, patches cut: the next v0.X.Y, rolling up the micros since the last (#3944)"},
+	{"tier:micro", "fef2c0", "Any card change that ships no set, whatever its size: the next letter (#1360, #3944)"},
 }
 
 // KindLabels are the labels the classifier puts on a pull request (#1370), its kind first.
@@ -606,6 +606,13 @@ var LabelPriorityMedium string = "priority:medium"
 // LabelPriorityLow is LABEL_PRIORITY_LOW.
 var LabelPriorityLow string = "priority:low"
 
+// SuggestionArea is one of `suggestions.areas` (#4026): its id, and what a survey of it reads
+// (its directories and concerns), which its prompt names.
+type SuggestionArea struct {
+	ID    string
+	Focus string
+}
+
 // SuggestionClasses are the classes a suggestion survey files each suggestion under
 // (`prompts/suggest.md`, #1409). `suggestions.priorities` maps a class to the `priority:*` level
 // its suggestions open with; a class it leaves out (`feature`, the owner's call) opens with none.
@@ -695,14 +702,21 @@ type Config struct {
 	CIReruns           int // `ci_reruns`: CI runs again on a head with no commit at most this often (#2948)
 	SuggestionsEnabled bool
 	SuggestionsMaxOpen int
-	// SuggestionsIdleMinutes: a survey is due once a free lane has had nothing to start for this
-	// long (#797).
+	// SuggestionsIdleMinutes: a survey is due once the excess compute has stood at
+	// `SuggestionsSpareLanes` or more for this long (#797, #3659).
 	SuggestionsIdleMinutes int
+	// SuggestionsSpareLanes: the spare lanes (`plan.Spare`, the excess compute) a survey waits for
+	// (#3659): lanes free on subscriptions that may start a build or a plan now, with nothing queued
+	// they can start.
+	SuggestionsSpareLanes int
 	// SuggestionPriorities: suggestion class -> the priority level it opens with (#1409).
 	SuggestionPriorities map[string]string
-	Quiet                *Quiet
-	ForbiddenPaths       []string
-	ReviewPaths          []string
+	// SuggestionAreas: the parts of the repository a survey keeps to (#4026), one survey at a time
+	// each, so as many surveys run at once as there are areas. None: one survey, of everything.
+	SuggestionAreas []SuggestionArea
+	Quiet           *Quiet
+	ForbiddenPaths  []string
+	ReviewPaths     []string
 	// MigrationPaths and LockFiles are the paths that merge themselves on a condition (#2986,
 	// `merge.go`): a migration with no data-losing or access-changing statement that changes no
 	// migration `main` has, and a lock that gains no package. The config's `migration_paths` and
@@ -776,9 +790,6 @@ type Config struct {
 	RunID       string            // default: ""
 	ServerURL   string            // default: "https://github.com"
 	NowOverride string            // default: ""
-	// PCGist is the gist the owner's PC writes its heartbeat to (the repository variable
-	// JACKIOH_PC_GIST, which its supervisor sets; bot/machine/README.md, The local runner).
-	PCGist string // default: ""
 	// Secrets says which provider secrets the workflow has; the plan job learns that, never their
 	// values.
 	Secrets *providers.Secrets // default: field(default_factory=lambda: Secrets(frozenset(), False))

@@ -52,7 +52,7 @@ describe("R3407000 Stimmycheck's signature", () => {
       expect(cues.length).toBeGreaterThan(0);
       expectCuesR200(cues, D, STIMMY, SIGNATURE_SPELL_MAX_TRAUMA);
     }
-    expect(cuesOfRun(planWithOffsets(playOf("p1"), view, envOf(FX_INTENSITY_SCALE.off)))).toEqual([]);
+    expect(cuesOfRun(planWithOffsets(playOf("p1"), view, envOf({ intensity: FX_INTENSITY_SCALE.off })))).toEqual([]);
   });
 
   it("R3407000 its gallery play ends within the Legendary Spell's ceiling", () => {

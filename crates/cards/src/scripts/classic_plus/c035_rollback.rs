@@ -194,10 +194,10 @@ mod tests {
             let hand = s.hand(P1);
             let (plain, shiny) = (hand.first().map(|card| card.id.clone()), hand.get(1).map(|card| card.id.clone()));
             let plays = |id: Option<String>| -> Vec<Value> {
-                legal_actions(s.state(), P1)
-                    .into_iter()
+                id.iter()
+                    .flat_map(|id| plays_in(s.state(), P1, id))
                     .filter_map(|action| match action {
-                        ActionBody::Play { instance_id, modes, .. } if Some(&instance_id) == id.as_ref() => Some(js(&modes)),
+                        ActionBody::Play { modes, .. } => Some(js(&modes)),
                         _ => None,
                     })
                     .collect()

@@ -13,6 +13,7 @@ import type { ManaState } from "./ManaState";
 import type { PlayerModifier } from "./PlayerModifier";
 import type { RowFlags } from "./RowFlags";
 import type { StarscapeMap } from "./StarscapeMap";
+import type { TipsyCounter } from "./TipsyCounter";
 import type { TurnLog } from "./TurnLog";
 import type { VoteTally } from "./VoteTally";
 
@@ -93,6 +94,13 @@ tradesPerTurn?: number,
  */
 deathWatchCasts?: DrawCount, 
 /**
+ * R3570004: how many launches S+ #142's launch watch (entry 8) has answered for this player on turn
+ * `turn`, kept as `death_watch_casts` is: a count kept for an earlier turn reads as 0
+ * (`call_to_chaos_mindustrial_swarm::launch_watch_answers_this_turn`). Absent until the watch first
+ * answers, so a game without one hashes as it did before this field existed (D14).
+ */
+launchWatchCasts?: DrawCount, 
+/**
  * R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
  * #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
  * (`query::hand_cap_of`). Absent means `HAND_CAP`, so a game that never sets one hashes as it did
@@ -112,11 +120,19 @@ jade?: number,
 lostRefreshThrough?: number, 
 /**
  * R1854003: the mana crystals effects have moved on this player's count (§2.3's "turns you have
- * started", inside the cap): negative once theirs were stolen, positive once they stole some
- * (`mana::max_mana_for`). Absent (never 0 stored) while none moved, so a game without a steal
- * hashes as it did before this field existed (D3).
+ * started", inside the cap): negative once theirs were stolen, positive once they stole some under
+ * the steal of v0.6.9c and before (`mana::max_mana_for`; R4331001 counts a steal's gain apart).
+ * Absent (never 0 stored) while none moved, so a game without a steal hashes as it did before this
+ * field existed (D3).
  */
 manaCrystals?: number, 
+/**
+ * R4331001: the mana crystals this player stole (`mana::move_mana_crystals`), counted on top of
+ * the cap rather than inside it, so a steal can take them past it; a steal from this player takes
+ * them too. Absent (never 0 stored) while none were stolen, so a game without a steal hashes as it
+ * did before this field existed (D3).
+ */
+stolenManaCrystals?: number, 
 /**
  * R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
  * starting their turn again. Absent (never 0 stored) while none is owed, so a game without one
@@ -185,4 +201,28 @@ starscape?: StarscapeMap,
  * scans have missed (`effects::scan_for_anomaly`), each adding to their later scans' chances.
  * Absent until the first miss, so a game without one hashes as before this field existed (D3).
  */
-anomalyMisses?: number, };
+anomalyMisses?: number, 
+/**
+ * R3536004: how many of this player's cards evolved this game (`evolution::begin`). Absent
+ * until the first, so a game without one hashes as before this field existed (D3).
+ */
+evolutions?: number, 
+/**
+ * R3540000: the Burn on this player's hero (`afflictions::afflict`), ticking once at the end of the
+ * turn (R4154000). Absent at none, so a game without one hashes as before this field existed (D3).
+ */
+heroBurn?: number, 
+/**
+ * R3540000: the Toxic on this player's hero, as `hero_burn`.
+ */
+heroToxic?: number, 
+/**
+ * R3548000: this player's Tipsy counter, public on both seats. Absent at none, so a game
+ * without one hashes as it did before this field existed.
+ */
+tipsy?: TipsyCounter, 
+/**
+ * R3560000: the once-a-game firsts this player has used, by key (S+ #120, #121). Absent until
+ * the first, so a game without one hashes as before.
+ */
+onceAGame?: Array<string>, };

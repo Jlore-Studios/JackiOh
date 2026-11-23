@@ -30,7 +30,7 @@ import { dioramaOf } from "../../../apps/web/src/cards/art/dioramas/index.ts";
 import { planAuras } from "../../../apps/web/src/fx/aura/plan.ts";
 import { planTileAuras } from "../../../apps/web/src/fx/aura/tile.ts";
 import { FX_CARD_TABLE } from "../../../apps/web/src/fx/cards/tables.ts";
-import { FX_PARTICLE_CAP_MOBILE, FX_PHONE_FRAME_BUDGET_MS, FX_SETTINGS_KEY, FX_SPEED_MIN } from "../../../apps/web/src/fx/constants.ts";
+import { FX_PARTICLE_CAP_MOBILE, FX_PHONE_FRAME_BUDGET_MS, FX_PHONE_STAGE_LAYERS, FX_SETTINGS_KEY, FX_SPEED_MIN } from "../../../apps/web/src/fx/constants.ts";
 import { capacityFor } from "../../../apps/web/src/fx/director.ts";
 import {
   PHONE_HEAVIEST_SIGNATURES,
@@ -296,8 +296,12 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       ]);
       cy.get(GAME).should("have.attr", "data-takeover", "mythic");
       cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-planes`).should("exist");
-      // R3350000: the camera flies through Ceaseless Void's diorama, one plane a slice.
-      cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-plane[data-slice]`).should("have.length", dioramaOf("core-100")?.slices.length ?? 0);
+      // R3350000: the camera flies through Ceaseless Void's diorama, one plane a slice; R4493000: on a phone its
+      // adjacent slices merge into at most FX_PHONE_STAGE_LAYERS pictures.
+      cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-plane[data-slice]`).should(
+        "have.length",
+        Math.min(FX_PHONE_STAGE_LAYERS, dioramaOf("core-100")?.slices.length ?? 0),
+      );
       cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-signature`).should("exist");
       cy.get(CANVAS).should("exist");
       return sampleFrames();

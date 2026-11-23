@@ -15,8 +15,8 @@
 //! `chosenExertion` snapshots the chosen attacker's or switcher's identity and layered Deft before
 //! reduction, since combat may take it off the field before its event.
 //!
-//! The fifteen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups one
-//! bug):
+//! The twenty-two checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups
+//! one bug):
 //!   I1 no sick attack is offered (§4.1, §6.1, R83, R171): not in `attack_targets`, not as the chosen
 //!      `attack`.
 //!   I2 one declared attack per stint per turn, two with Windfury (R636); forced attacks are skipped (R53).
@@ -27,13 +27,15 @@
 //!      zones, never from `view_for`'s rules (R763, R764; a Glitch's reset or boards, R676, R678).
 //!   I7 no orphaned work (§9.3, §10.3, R113): a live game with no prompt open (§10.6, R265) has `work` empty;
 //!      a game over keeps its debt (I5; Classic #52 Final Gambit, #56 Spell Tyrant).
-//!   I8 every attack, switch, activation and play `reduce` accepts is listed (§4.1, §4.2, §9.1, §10.2,
-//!      §10.5; #1192, #2978), as the server reduces without `legal_actions`. Not probed: R345, R923000,
-//!      R79 and a well-formed `answer` (R90, #992); a malformed one is the fuzz's probe (#1574, #1694).
-//!      Under a Mayor (R1200) a target is refused.
+//!   I8 every attack, switch, activation, play, Trade, shop buy and shop sale `reduce` accepts is listed
+//!      (§4.1, §4.2, §6.3, §9.1, §10.2, §10.5; R1838000, R1853003; #1192, #2978, #4143), as the server
+//!      reduces without `legal_actions`. Not probed: R345, R923000, R79 and a well-formed `answer` (R90,
+//!      #992); a malformed one is the fuzz's probe (#1574, #1694). Under a Mayor (R1200) a target is
+//!      refused.
 //!   I9 the wire tells the truth (§10.3, §10.10, #1719): `turnEnded` names the turn under way (§2.2), each
 //!      `fatigue` is the next draw's `FATIGUE_DAMAGE(count)` (§2.4, R3, R315; #1902), the last `manaChanged`
-//!      is `mana` (§2.3).
+//!      is `mana` (§2.3), and no 1v1 hero's health moves without its `damage`, `healthLost`, `healed`,
+//!      `healthSet` or health `swapped` (R2201000).
 //!   I10 no opponent-held prompt on its holder's off turn (§10.6, R1279000; #2568): a `pending` whose
 //!      `player_id` is not `state.active` and whose `prompt_owner_of` is another player is a violation.
 //!   I11 no definition-level Unit token sits in a graveyard, an exile pile or `held` (§3, §3.2, R11), read
@@ -50,33 +52,96 @@
 //!      sampled with it; a seat barred to the tutorial's cards (R2533000) is not asked.
 //!   I14 every action `legal_actions` lists, `reduce` accepts (§10.2; #3062), I8's converse: each seat's
 //!      listing is reduced on a copy of the state, at most `I14_ACTION_CAP` of a long one spread over it,
-//!      and a refusal or a panic is reported with the action and the seed. Run at setup (the mulligan's
-//!      subsets) and every `I14_GATE_STRIDE`-th state; not in Duos.
+//!      verifying that `reduce` accepts it without refusal or panic, and verifying the resulting state
+//!      and events with the stateless invariants (I5, I7, I10, I11, I16 and I17; #4057), and I19 and I21
+//!      against the state it was reduced from (#4454, #4508); invariants requiring shadow history (I2, I3, I4, I9's
+//!      health tally, I12, I20's damage tally) remain on the played path. Run at setup (the mulligan's subsets) and every
+//!      `I14_GATE_STRIDE`-th state; not in Duos.
 //!   I15 every Activate ability a seat may see is held to the listing (§10.8, R384, R3061000): while it may
 //!      act, each shown on a unit or backrow top of either side is `usable` exactly when `legal_actions`
 //!      lists an `activate` of it and carries `reason` exactly when not; read off I6's view and listing in
 //!      `hidden`, as I13 is; a carried Unit is not asked.
+//!   I16 every card's own record agrees with the pile that holds it (§3.2, R78, R766): `zone` names the pile
+//!      (a field slot's side, row and lane too), a field card's `controller` is its side, a hand, library,
+//!      graveyard or exile card is owned and controlled by its side (R747, R2618000, R73, R12), a card off
+//!      the field holds nothing `zones::reset_instance` (R78's reset) would clear, bar the keeps its pile
+//!      lawfully allows (`field_state_held`), nor a graveyard or exile card R766's price.
+//!   I17 the state check ran (§4.5): on I7's settled state no field unit at layered health 0 or less but
+//!      an Indestructible one with max health above 0 (R69) or a Dormant one (R3539003), no unit in Defense
+//!      Position while it is Indestructible, has Can't Defend or is Evasive, or while an aura bars Defense
+//!      (§4.5 step 1: R2179000, R2657000, R3543002, R1849006), and no seat that `can_lose` (R2201000) at
+//!      hero health 0 or less (a Duos seat's is its pool's, §13.4); on every state
+//!      mana and card `damage` are 0 or more (§2.3), and every `damage` event deals more than 0 (R63,
+//!      R1361, R1362).
+//!   I18 every plain attack does what its seat's forecast said (R3100000, R4111000; #4111): `before` keeps
+//!      the `combat_forecast` entry of a chosen `attack`, and `after` holds `PlayedAttack::read` of the
+//!      step to it, a Cleave attack's splash and a Trample attack's overflow included (R4290000); what it
+//!      skips is `foreseeable_attack`'s and `plain_combat`'s (a hook, a trap, a redirect, a damage chain,
+//!      a reflection, a prompt or a turn end). 1v1 only.
+//!   I19 nothing reaches a Dormant card (§6.1 Dormant, §3.2, R1839000; #4454): `before` notes each Dormant
+//!      field card and its record (`SLUMBER_KEPT`); `after` fails an event that changes one and names it
+//!      (`reached_ids`) before its `awakened`, `starshipLaunched` or own `activated` (R1839001, R1839002),
+//!      and one whose record changed with no event. Lawful: a hull's `fused` then `starshipFused`
+//!      (R1852000, R3539004), an exile in a `BOARD_SWEEPS` card's run (R3539002, R3554002, R3567000), a
+//!      `controlChanged` or `bounced` after a board `swapped` or a `rotated` (R4454000), a board
+//!      restore's after its `rolledBack` (R4454002), and a `radiantSet` under Tears of the Kwzki Tree's
+//!      world (R4454001). A card Dormant mid-step is judged from the next; I14's branches and each Duos
+//!      duel run it.
+//!   I20 stored damage is what its events say (§4.4, §10.3, R78; #4478): each field card's `damage` is 0 on
+//!      arrival (`summoned`, `cardPlayed`), plus each `damage` on it, less each `healed`, as I9 holds a hero's
+//!      health; re-anchored by the lawful silent writers (`transformed`, `numberChanged` "health", a
+//!      `summoned` via Reborn, `flickered`, `rolledBack`, a Glitch's reset or boards); dropped when the card
+//!      leaves the field. Played path only (shadow history, so not on I14's copies); each Duos duel's
+//!      monitor runs it.
+//!   I21 no Spell changes a Unit Immune to Spells on the field (§6.1, R4453000; #4508): `before` notes each
+//!      field Unit immune by its layered keywords; `after` fails an event that changes one and names it
+//!      (`reached_ids`, I19's) while the card running is a Spell: its face's printed type in the catalog,
+//!      from its `hookResolving` (or the prompt its answer continues) to the next marker, trap, AI turn or
+//!      turn edge, a play nested in it being its own until its `cardResolved`, and a card set face-down
+//!      running as a Trap (M #99's row, R3806000). Lawful: anything inside an attack (R4508002), a
+//!      `controlChanged` or `bounced` after a board `swapped`, a `rotated` or a `rolledBack` and a
+//!      restore's `radiantSet` (R4508001), an exile in a `LANE_TAKERS` card's run (R4508004), a
+//!      `radiantSet` under Tears of the Kwzki Tree's world (R4508003), and the state check's switch out of
+//!      a barred Defense and a Burn or Toxic tick (R4508005). A Unit is judged only while still on the
+//!      field and immune after the step, or gone from it with its own keywords immune. Reads the events
+//!      and the catalog, never `restrictions::unaffected_by`; I14's branches and each Duos duel run it.
+//!   I22 every `target` pick is one its source may aim at (§10.5 step 1, R450; #4540): no Dormant card,
+//!      whatever the source or none (R1839000); no face-up Evasive card in play from a Spell or Field
+//!      Spell, the source read as R781001 reads it (R4353002); no face-up card Immune to Spells from a
+//!      Spell (R450). Read off the board (zones, `slumber`, face-down state, layered keywords), never
+//!      through `restrictions`, `targeting` or the targeting point; a face-down card's Immune to Spells,
+//!      which the engine also bars, is not read. `before` opens `seams`' record of the random `target`
+//!      draws nobody is asked for (a random cast's, R452; a Mayor's, R1200) and `after` judges each on
+//!      the state it was drawn on; `hidden` judges each `target` declaration of a listed play or
+//!      activation (none while a Mayor acts, whose plays name none) and each option of an open `target`
+//!      prompt. A random pick an effect makes is no targeting and is not recorded (R4353002: "a random
+//!      enemy" may land on an Evasive card). Each Duos duel runs it; I14's branches do not.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Map, Value};
 
+use crate::combat::{HERO_TARGET_PREFIX, hero_seat_of};
 use crate::config::{
     BACKROW_ZONES, FATIGUE_DAMAGE, MIN_CHOSEN_X, MIN_PLAGUE_PAYMENT, UNIT_ZONES, WINDFURY_ATTACKS,
 };
 use crate::damage::DamageTarget;
 use crate::duos::{DuosState, duos_view_for};
+use crate::layers::AuraTable;
 use crate::play_choices::PlayAction;
 use crate::prompts::prompt_owner_of;
 use crate::reduce::ReduceResult;
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::subsystems::activate::ActivateAction;
+use crate::testkit::played_attack::PlayedAttack;
+use crate::testkit::seams::{TargetDraw, TargetDrawBy};
 use crate::wire::{
     Action, ActionBody, ActivationView, BackrowView, CardType, CardView, DUOS_DUELS, DUOS_SEATS,
     DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment, GameEvent, GameResult, HandView, KeywordKind,
-    PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId, PlayerView, PromptKind, RedirectWhat, RevealAt, Row,
-    Selection, Team, TuningChange, Zone, ZoneChoice, ZoneName, has_keyword, opponent_of,
+    PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId, PlayerView, Position, PromptKind, RedirectWhat,
+    RevealAt, Row, Selection, SwapWhat, Team, TuningChange, Zone, ZoneChoice, ZoneName, has_keyword,
+    opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -87,6 +152,8 @@ pub const I6_GATE_STRIDE: usize = 5;
 /// I8 under the 1,000-seed waves: every this-many-th state (#1192); the test sweep checks every state.
 /// Measured on 2026-10-18 (2 cores), seeds 1–1000: `cargo jackioh fuzz` 103 s before I8, 104 s with
 /// this stride (`--handicap` 130 s, 129 s); I8 on every state, 314 s and 417 s.
+/// Measured on 2026-11-18 (4 cores), seeds 1–200, after #4143's Trade and Marketplace forges:
+/// `cargo jackioh fuzz` 50 s before, 51 s after, at this stride.
 pub const I8_GATE_STRIDE: usize = 100;
 
 /// I14 under every wave and the test sweep: every this-many-th state, and setup's always (#3062).
@@ -181,19 +248,7 @@ fn awaiting_shuffle(state: &GameState) -> Vec<Returned> {
 
 /// Every card the state holds, in every pile (`find_instance`'s piles) and beneath a holder (R1850003).
 fn cards_of(state: &GameState) -> Vec<&CardInstance> {
-    let mut out: Vec<&CardInstance> = Vec::new();
-    for player in PLAYER_IDS {
-        let side = &state.players[player];
-        out.extend(side.hand.iter());
-        out.extend(side.library.iter());
-        out.extend(side.graveyard.iter());
-        out.extend(side.exile.iter());
-        out.extend(side.units.iter().flatten().flatten());
-        out.extend(side.backrow.iter().flatten());
-        out.extend(side.backrow_piles.iter().flatten().flatten());
-        out.extend(side.carried.iter().flatten().flatten());
-        out.extend(side.resolving.iter());
-    }
+    let mut out: Vec<&CardInstance> = crate::state::every_instance(state).collect();
     // R1850003: a card held beneath another, face-up when it was taken (`effects::hold`).
     out.extend(state.held.iter().flatten().map(|entry| &entry.card));
     out
@@ -471,6 +526,1418 @@ fn unit_token_pile_findings(state: &GameState) -> Vec<String> {
         }
     }
     found
+}
+
+/// A card in a pile or a field slot (I16): the zone its own record must hold, and what holds it.
+struct Placed<'a> {
+    card: &'a CardInstance,
+    zone: Zone,
+    holder: &'static str,
+}
+
+impl Placed<'_> {
+    /// Where it sits, for a finding: "p1's graveyard", "p2's unit zone 3".
+    fn slot(&self) -> String {
+        match self.zone {
+            Zone::Field { player, lane, .. } => format!("{player}'s {} {lane}", self.holder),
+            _ => format!("{}'s {}", self.zone.player(), self.holder),
+        }
+    }
+}
+
+/// Every card in a pile or a field slot, each with the zone it must record. A card `held` beneath another
+/// is in no pile (`Zone::Gone`, R1850003) and is not walked.
+fn placed_cards(state: &GameState) -> Vec<Placed<'_>> {
+    let mut out = Vec::new();
+    for player in PLAYER_IDS {
+        let side = &state.players[player];
+        for (zone, holder, pile) in [
+            (Zone::Hand { player }, "hand", &side.hand),
+            (Zone::Library { player }, "library", &side.library),
+            (Zone::Graveyard { player }, "graveyard", &side.graveyard),
+            (Zone::Exile { player }, "exile", &side.exile),
+            (Zone::Resolving { player }, "resolving", &side.resolving),
+        ] {
+            out.extend(pile.iter().map(|card| Placed {
+                card,
+                zone: zone.clone(),
+                holder,
+            }));
+        }
+        // Lane N is index N - 1 in each of the four field slots (§3.2).
+        let on_field = |card, row, index: usize, holder| Placed {
+            card,
+            zone: Zone::Field {
+                player,
+                row,
+                lane: index as i32 + 1,
+            },
+            holder,
+        };
+        for (index, pile) in side.units.iter().enumerate() {
+            out.extend(
+                pile.iter()
+                    .flatten()
+                    .map(|card| on_field(card, Row::Units, index, "unit zone")),
+            );
+        }
+        for (index, top) in side.backrow.iter().enumerate() {
+            out.extend(
+                top.iter()
+                    .map(|card| on_field(card, Row::Backrow, index, "backrow zone")),
+            );
+        }
+        for (index, beneath) in side.backrow_piles.iter().flatten().enumerate() {
+            out.extend(
+                beneath
+                    .iter()
+                    .map(|card| on_field(card, Row::Backrow, index, "backrow pile")),
+            );
+        }
+        for (index, carried) in side.carried.iter().flatten().enumerate() {
+            out.extend(
+                carried
+                    .iter()
+                    .map(|card| on_field(card, Row::Backrow, index, "carried unit")),
+            );
+        }
+    }
+    out
+}
+
+/// A zone as a finding spells it.
+fn zone_text(zone: &Zone) -> String {
+    match zone {
+        Zone::Field { player, row, lane } => format!("{player}'s {row} {lane}"),
+        other => format!("{}'s {}", other.player(), other.z()),
+    }
+}
+
+/// The names among `checks` whose test holds.
+fn held_names(checks: &[(bool, &'static str)]) -> Vec<&'static str> {
+    checks
+        .iter()
+        .filter(|(held, _)| *held)
+        .map(|(_, name)| *name)
+        .collect()
+}
+
+/// What R78's reset changes and a card off the field may hold in every pile (I16), by field name:
+/// `controller` (I16's owner check holds it to the pile's side on its own), `memory` (R1841003's
+/// `tributeLowered` rides a hand or a deck; a graveyard card keeps R429's `@returnPrice`, R766, and R178's
+/// `@exileOnLanding`) and `brittle` (R385, R441: the count rides every zone; the reset drops a spent one).
+const KEPT_IN_EVERY_PILE: [&str; 3] = ["controller", "memory", "brittle"];
+
+/// What a hand or a library card may hold and a graveyard or an exile card may not: a Buff's and a grant's
+/// state, which rides it onto the field (`effects/buff.rs`, B5 E38) and which R215 takes as it reaches a
+/// graveyard or an exile pile (`buffs`, `grantedKeywords`, `grants`, `vanilla`, `counters`); a copy's
+/// `statsOverride` and `armorOverride` (R57, R1242, R2198001; R175 reads them before R78's reset takes
+/// them); and the `tipsy` stamp (R3548001) a card is given as it is drawn (`draw.rs`), which only a hand
+/// or the field reads (`tipsy::blur_for`) and a hand card carries into a library.
+const KEPT_IN_HAND_OR_LIBRARY: [&str; 8] = [
+    "buffs",
+    "grantedKeywords",
+    "grants",
+    "vanilla",
+    "counters",
+    "statsOverride",
+    "armorOverride",
+    "tipsy",
+];
+
+/// What a graveyard or an exile card that evolved there may hold: R3566004's Stinky Cheese keeps what its
+/// Evolve gave it, for the Flashback play that brings it back (S+ #6.2). Leaving the field clears `evolved`
+/// (R3536000), so a card that holds it off the field evolved there.
+const KEPT_BY_AN_EVOLVE: [&str; 4] = ["evolved", "buffs", "grantedKeywords", "statsOverride"];
+
+/// I19 (§6.1 Dormant, R1839000): what a Dormant card keeps while it sleeps, by field name: whatever an
+/// effect would change by reaching it. Left out on purpose: `slumber`, the countdown, which its
+/// controller's turns count down (R1839001); `summonedTurn` and `exertion`, the entry stamp a lawful
+/// carry gives it (R171); `memory` and `starship`, the engine's bookkeeping (a hull's pieces, R1852000);
+/// `zone`, which a board move along its own side changes with no event (R14); and `brittle`, its own
+/// text's count, which waits while it sleeps (R4454004) and whose tick `counterChanged` reports.
+const SLUMBER_KEPT: [&str; 20] = [
+    "defId",
+    "radiant",
+    "controller",
+    "position",
+    "damage",
+    "buffs",
+    "grantedKeywords",
+    "vanilla",
+    "costMod",
+    "costOverride",
+    "counters",
+    "statsOverride",
+    "armorOverride",
+    "markedDestroyed",
+    "markedExiled",
+    "tuning",
+    "enchantments",
+    "frozen",
+    "grants",
+    "grantedTags",
+];
+
+/// I19: the cards whose run is a board sweep, each with the ruling that lets it exile a Dormant card:
+/// a sweep is no effect reaching for a card (R3539002, R3554002). Its `exiled` looks the same as The
+/// Maestro's random pick did before #4322 (R4322000), so the card running is the only signature; a new
+/// sweep joins the table with its ruling. A fusion holding one sweeps too (R43, R102). A kept version's
+/// id (`<id>@v<version>`, R767000) sweeps only where its own script did.
+const BOARD_SWEEPS: [(&str, &str); 5] = [
+    // S+ #4 Profe Yates through v0.6.5b, a past version a fuzz game still plays: every card named with
+    // M, O, U, S or E, Dormant cards included (`exile_named`).
+    ("stinkyscapeplus-004@v0.6.5b", "R3567000"),
+    // S+ #78 Slashed Dream Cries in Red: the slashed lane, Dormant cards included.
+    ("stinkyscapeplus-078", "R3554002"),
+    // S+ #79 A Glimpse into the Endless Sea: every permanent (R4154200's `exile_board`).
+    ("stinkyscapeplus-079", "R3539002"),
+    // S+ #80 The Last Voyage: its caster's board, the Radiant face's both.
+    ("stinkyscapeplus-080", "R3539002"),
+    // S+ #81 Doomsayer: its controller's board at the start of their turn.
+    ("stinkyscapeplus-081", "R3539002"),
+];
+
+/// A card's fields as JSON, by name: each optional field is absent when unset.
+fn card_fields(card: &CardInstance) -> Map<String, Value> {
+    match serde_json::to_value(card).expect("a CardInstance serializes") {
+        Value::Object(fields) => fields,
+        other => panic!("a CardInstance serializes as an object, not {other}"),
+    }
+}
+
+/// R78's reset of a card leaving the field, read on a card off it in `zone` (I16): the field-only state it
+/// still holds, by field name. The fields are `zones::reset_instance`'s own, not a list kept here: the card
+/// is cloned, reset and both serialized, and every field that differs is held, but for what `zone` lawfully
+/// keeps (the constants above). A field a later set gives the reset is checked from the day it lands; one a
+/// card may lawfully keep in a pile is named above, with its ruling, once a wave reports it.
+fn field_state_held(card: &CardInstance, zone: &Zone) -> Vec<String> {
+    let mut reset = card.clone();
+    crate::zones::reset_instance(&mut reset);
+    // Nearly every card off the field holds nothing the reset takes: no serializing for those.
+    if reset == *card {
+        return Vec::new();
+    }
+    let (held, clean) = (card_fields(card), card_fields(&reset));
+    let in_hand_or_library = matches!(zone, Zone::Hand { .. } | Zone::Library { .. });
+    let evolved_here =
+        matches!(zone, Zone::Graveyard { .. } | Zone::Exile { .. }) && card.evolved == Some(true);
+    let lawful = |field: &str| {
+        KEPT_IN_EVERY_PILE.contains(&field)
+            || (in_hand_or_library && KEPT_IN_HAND_OR_LIBRARY.contains(&field))
+            || (evolved_here && KEPT_BY_AN_EVOLVE.contains(&field))
+    };
+    held.keys()
+        .chain(clean.keys().filter(|field| !held.contains_key(*field)))
+        .filter(|field| held.get(*field) != clean.get(*field) && !lawful(field))
+        .cloned()
+        .collect()
+}
+
+/// R766's price on a card in a graveyard or an exile pile (I16), by field name. `@returnPrice`, the climb
+/// R766 keeps for #31's return, lives in `memory`, which no check here reads.
+fn price_held(card: &CardInstance) -> Vec<&'static str> {
+    held_names(&[
+        (card.cost_mod != 0, "costMod"),
+        (card.cost_override.is_some(), "costOverride"),
+        (card.embiggen_cost_override.is_some(), "embiggenCostOverride"),
+        (card.no_embiggen_premium.is_some(), "noEmbiggenPremium"),
+        (card.fixed_x.is_some(), "fixedX"),
+    ])
+}
+
+/// R636, R3556008: whether an aura gives Windfury: a unit gone by an action's end may have attacked
+/// under one that woke inside it (S+ #63 Overdrive Dome, fuzz seeds 1596, 2217), and so may an animated
+/// card back in its backrow by then (R383, M #66 Fiery Waraxe, fuzz seed 1013, #4079).
+fn aura_gives_windfury(state: &GameState) -> bool {
+    crate::layers::aura_entries(state).iter().any(|entry| {
+        entry
+            .mod_
+            .keywords
+            .as_deref()
+            .is_some_and(|keywords| has_keyword(keywords, KeywordKind::Windfury))
+    })
+}
+
+/// I16: each card's own `zone`, `owner` and `controller` agree with the pile or slot that holds it, and a
+/// card off the field holds none of R78's field-only state or, in a graveyard or an exile pile, R766's
+/// price (§3.2). `find_instance` reads the piles and never `zone`, so the two can drift unseen.
+fn card_record_findings(state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    for placed in placed_cards(state) {
+        let Placed { card, zone, .. } = &placed;
+        let (named, slot, turn) = (
+            format!("{} ({})", card.id, card.def_id),
+            placed.slot(),
+            state.turn,
+        );
+        if card.zone != *zone {
+            found.push(format!(
+                "I16 zone drift: {named} says {} but sits in {slot} on turn {turn} (§3.2)",
+                zone_text(&card.zone)
+            ));
+        }
+        match zone {
+            // A card mid-play holds what its play set (`x`, a Buff) and may be a stolen Spell (R12): only
+            // its zone is read.
+            Zone::Resolving { .. } => {}
+            Zone::Field { player, .. } => {
+                if card.controller != *player {
+                    found.push(format!(
+                        "I16 controller drift: {named} is controlled by {} but sits in {slot} on turn {turn} \
+                         (§3.2)",
+                        card.controller
+                    ));
+                }
+            }
+            _ => {
+                let side = zone.player();
+                if card.owner != side || card.controller != side {
+                    found.push(format!(
+                        "I16 owner drift: {named} is owned by {} and controlled by {} but sits in {slot} on \
+                         turn {turn} (§3.2, R747, R2618000)",
+                        card.owner, card.controller
+                    ));
+                }
+                let gone = matches!(zone, Zone::Graveyard { .. } | Zone::Exile { .. });
+                let state_held = field_state_held(card, zone);
+                if !state_held.is_empty() {
+                    found.push(format!(
+                        "I16 field state off the field: {named} in {slot} still holds {} on turn {turn} (R78)",
+                        state_held.join(", ")
+                    ));
+                }
+                let price = if gone { price_held(card) } else { Vec::new() };
+                if !price.is_empty() {
+                    found.push(format!(
+                        "I16 price kept in a pile: {named} in {slot} still holds {} on turn {turn} (R766)",
+                        price.join(", ")
+                    ));
+                }
+            }
+        }
+    }
+    found
+}
+
+/// I17: why §4.5 step 1 (`state_check::leave_defense`) would switch this unit out of Defense, or None.
+fn forbidden_defense(auras: &AuraTable<'_>, unit: &CardInstance, barred: bool) -> Option<&'static str> {
+    if auras.unit_has(unit, KeywordKind::Indestructible) {
+        Some("it is Indestructible (R2179000)")
+    } else if auras.unit_has(unit, KeywordKind::CantDefend) {
+        Some("it has Can't Defend (R2657000)")
+    } else if auras.unit_has(unit, KeywordKind::Evasive) {
+        Some("it is Evasive (R3543002)")
+    } else if barred {
+        Some("an aura bars Defense Position (R1849006)")
+    } else {
+        None
+    }
+}
+
+/// I17 (the header's): what §4.5's state check and §4.4's pipeline leave (§2.3, R63, R69, R2201000,
+/// R3539003, R2179000, R2657000, R3543002, R1849006). A Duos seat's hero is its team's pool's (§13.4),
+/// bounded by `DuosInvariantMonitor::after`: B15's `sync_pools` writes the pool into a spent hero in the
+/// other duel, where no state check runs.
+fn state_check_findings(events: &[GameEvent], state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    let turn = state.turn;
+    for event in events {
+        if let GameEvent::Damage {
+            target_id, amount, ..
+        } = event
+            && *amount <= 0
+        {
+            found.push(format!(
+                "I17 empty damage: a damage event of {amount} on {target_id} on turn {turn}; a hit of 0 \
+                 emits none (§4.4, R63)"
+            ));
+        }
+    }
+    for player in PLAYER_IDS {
+        let mana = state.players[player].mana;
+        if mana.current < 0 || mana.max < 0 {
+            found.push(format!(
+                "I17 negative mana: {player} holds {} of {} mana on turn {turn} (§2.3)",
+                mana.current, mana.max
+            ));
+        }
+    }
+    for placed in placed_cards(state) {
+        let card = placed.card;
+        if card.damage < 0 {
+            found.push(format!(
+                "I17 negative damage: {} ({}) in {} holds damage {} on turn {turn} (§4.4)",
+                card.id,
+                card.def_id,
+                placed.slot(),
+                card.damage
+            ));
+        }
+    }
+    if state.result.is_some() || state.pending.is_some() || state.mulligan.is_some() {
+        return found;
+    }
+    let auras = AuraTable::new(state);
+    let barred = crate::restrictions::defense_barred(state);
+    for player in PLAYER_IDS {
+        for unit in crate::zones::units_on_field_of(state, player) {
+            // §4.5 step 1's switch out of Defense (`leave_defense`) passes a Dormant card by (R4454005).
+            if unit.position == Some(Position::Def)
+                && !crate::slumber::is_slumbering(unit)
+                && let Some(rule) = forbidden_defense(&auras, unit, barred)
+            {
+                found.push(format!(
+                    "I17 forbidden Defense: {} stands in Defense Position on turn {turn} with no prompt open, \
+                     but {rule} (§4.1, §4.5 step 1)",
+                    name_of(unit)
+                ));
+            }
+            // R3539003: no health judges a Dormant card, so a 0/0 hull stands.
+            if crate::slumber::is_slumbering(unit) {
+                continue;
+            }
+            let view = auras.unit_view(unit);
+            let stands = has_keyword(&view.keywords, KeywordKind::Indestructible) && view.max_health > 0;
+            if view.health <= 0 && !stands {
+                found.push(format!(
+                    "I17 dead unit left standing: {} is at {} health of {} on turn {turn} with no prompt \
+                     open (§4.5, R69)",
+                    name_of(unit),
+                    view.health,
+                    view.max_health
+                ));
+            }
+        }
+        let side = &state.players[player];
+        if side.duos.is_none() && crate::state::can_lose(state, player) && side.hero.health <= 0 {
+            found.push(format!(
+                "I17 live hero at 0: {player}'s hero has {} health on turn {turn} and the game goes on \
+                 (§2.5, §4.5, R2201000)",
+                side.hero.health
+            ));
+        }
+    }
+    found
+}
+
+/// I5: the check that ends the game is the last thing that happens (§2.5, R216).
+fn game_over_findings(events: &[GameEvent], state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    if let Some(over) = events
+        .iter()
+        .position(|event| matches!(event, GameEvent::GameOver { .. }))
+        && over + 1 < events.len()
+    {
+        let later: Vec<&str> = events[over + 1..]
+            .iter()
+            .map(|event| event.event_type().as_str())
+            .collect();
+        found.push(format!(
+            "I5 event after game over: {} followed gameOver on turn {} (§2.5, R216)",
+            later.join(", "),
+            state.turn
+        ));
+    }
+    found
+}
+
+/// I7: a live game with no prompt open owes no paused sequence (§9.3, §10.3, R113).
+fn orphaned_work_findings(state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    if state.result.is_none()
+        && state.pending.is_none()
+        && state.mulligan.is_none()
+        && (!state.work.is_empty() || state.work_cursor != 0)
+    {
+        let owed: Vec<String> = state
+            .work
+            .iter()
+            .map(|item| {
+                format!(
+                    "{} ({}, {}, {})",
+                    item.id, item.resume.def_id, item.resume.hook, item.resume.step
+                )
+            })
+            .collect();
+        found.push(format!(
+            "I7 orphaned work: {} item(s) owed [{}] with work cursor {} on turn {} and no prompt open \
+             (§9.3, §10.3, R113)",
+            state.work.len(),
+            owed.join(", "),
+            state.work_cursor,
+            state.turn
+        ));
+    }
+    found
+}
+
+/// I10: no prompt held by the opponent while its holder is not the active player (§10.6, R1279000).
+fn opponent_prompt_findings(state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    if state.result.is_none()
+        && let Some(pending) = &state.pending
+        && pending.player_id != state.active
+        && prompt_owner_of(pending) != pending.player_id
+    {
+        let asked_by = pending.resume.instance_id.as_deref();
+        let asker = match asked_by.and_then(|id| find_instance(state, id)) {
+            Some(card) => name_of(card),
+            None => format!(
+                "{} ({})",
+                asked_by.unwrap_or("no instance"),
+                pending.resume.def_id
+            ),
+        };
+        found.push(format!(
+            "I10 opponent prompt off turn: {asker} opened prompt {} for {}, held for {}, on turn {} while {} \
+             is the active player (§10.6, R1279000)",
+            pending.id,
+            pending.player_id,
+            prompt_owner_of(pending),
+            state.turn,
+            state.active
+        ));
+    }
+    found
+}
+
+/// The stateless invariants gathered for one post-action state (§10.2, #4057): I5, I7, I10, I11, I16
+/// and I17. Each reads only the state and the action's events, so it runs on both the played path and
+/// every branch action I14 reduces.
+pub fn branch_state_findings(events: &[GameEvent], state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    found.extend(game_over_findings(events, state));
+    found.extend(orphaned_work_findings(state));
+    found.extend(opponent_prompt_findings(state));
+    found.extend(unit_token_pile_findings(state));
+    found.extend(card_record_findings(state));
+    found.extend(state_check_findings(events, state));
+    found
+}
+
+/// I19: a field card Dormant as a step begins (§6.1 Dormant, R1839000): its name then, for the message,
+/// and what it keeps while it sleeps (`SLUMBER_KEPT`).
+#[derive(Clone, Debug)]
+struct SlumberMark {
+    label: String,
+    /// The side whose field holds it as the step begins.
+    side: PlayerId,
+    kept: Map<String, Value>,
+}
+
+/// I19: a board move the step is inside, from its event to the next `hookResolving`, trap or turn edge:
+/// a board swap or a rotation (`Swapped` of the board, `Rotated`; R73, R14), or a board restore
+/// (`RolledBack`: C+ #35 Rollback, S+ #84 Bogos Binted; R419, R3550007).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum BoardMove {
+    Carry,
+    Restore,
+}
+
+/// I19: the Dormant field cards a step begins with, by instance id, and the run an answer step
+/// continues (`state.pending`'s resume: its card's definition and instance), which marks no
+/// `hookResolving` of its own (R2783000).
+#[derive(Clone, Debug)]
+struct SlumberStep {
+    marks: IndexMap<String, SlumberMark>,
+    pending_def: Option<String>,
+    pending_instance: Option<String>,
+    /// R4524002: the field cards that run a copied board sweep as the step begins, a copied Spell's
+    /// (`copies_a_sweep`) or a copied Unit's (Stinkyscape #20 Tnack Trav, R1850000): read before the
+    /// step, since a sweep of its own side exiles the copier with its copy (R78).
+    sweepers: IndexSet<String>,
+}
+
+/// I19: a Dormant card's `SLUMBER_KEPT` fields.
+fn kept_record(card: &CardInstance) -> Map<String, Value> {
+    let mut fields = card_fields(card);
+    fields.retain(|field, _| SLUMBER_KEPT.contains(&field.as_str()));
+    fields
+}
+
+/// I19: the state a step begins on, as I19 reads it: every Dormant card in a field slot, a pile's, a
+/// backrow pile's and a carried one's included (R1839003, R446). A card `held` beneath another is in no
+/// slot (R1850003).
+fn slumber_step(state: &GameState) -> SlumberStep {
+    let marks = placed_cards(state)
+        .into_iter()
+        .filter(|placed| {
+            matches!(placed.zone, Zone::Field { .. }) && crate::slumber::is_slumbering(placed.card)
+        })
+        .map(|placed| {
+            let mark = SlumberMark {
+                label: name_of(placed.card),
+                side: placed.zone.player(),
+                kept: kept_record(placed.card),
+            };
+            (placed.card.id.clone(), mark)
+        })
+        .collect();
+    let sweepers = placed_cards(state)
+        .into_iter()
+        .filter(|placed| matches!(placed.zone, Zone::Field { .. }))
+        .filter(|placed| runs_a_copied_sweep(state, placed.card))
+        .map(|placed| placed.card.id.clone())
+        .collect();
+    let resume = state.pending.as_ref().map(|pending| &pending.resume);
+    SlumberStep {
+        marks,
+        pending_def: resume.map(|resume| resume.def_id.clone()),
+        pending_instance: resume.and_then(|resume| resume.instance_id.clone()),
+        sweepers,
+    }
+}
+
+/// I19: whether `def_id`'s run is a board sweep (`BOARD_SWEEPS`): a card the table names, or a fusion
+/// holding one, which carries its text (R43, R102).
+fn is_board_sweep(state: &GameState, def_id: &str) -> bool {
+    BOARD_SWEEPS.iter().any(|(sweep, _)| *sweep == def_id)
+        || crate::subsystems::fuse::fused_ingredients(state, def_id)
+            .is_some_and(|parts| parts.iter().any(|part| is_board_sweep(state, part)))
+}
+
+/// I19 (R4524002): whether `card` runs a copied board sweep's text, a copied Unit's (Stinkyscape #20
+/// Tnack Trav, R1850000) or a copied Spell's (`copies_a_sweep`), so that a hook it resolves is a sweep.
+pub fn runs_a_copied_sweep(state: &GameState, card: &CardInstance) -> bool {
+    crate::subsystems::unit_text::unit_text_of(card).is_some_and(|copy| is_board_sweep(state, &copy.def_id))
+        || copies_a_sweep(state, &card.id)
+}
+
+/// I19: whether the card `source_id` runs a copied Spell's text that is a board sweep (C #57 Echo
+/// copying S+ #80 The Last Voyage, R399, R546): the copy its play fixed, kept in its memory in every pile.
+fn copies_a_sweep(state: &GameState, source_id: &str) -> bool {
+    find_instance(state, source_id)
+        .and_then(|card| crate::subsystems::copied_text::copied_text_of(state, card))
+        .is_some_and(|copy| is_board_sweep(state, &copy.def_id))
+}
+
+/// I19: the cards an event changes and names (§10.3): the floor of what reaches a card, each id once.
+fn reached_ids(event: &GameEvent) -> Vec<&str> {
+    let mut ids: Vec<&str> = match event {
+        GameEvent::Damage { target_id, .. }
+        | GameEvent::DamageAbsorbed { target_id, .. }
+        | GameEvent::Healed { target_id, .. } => vec![target_id],
+        GameEvent::AttackDeclared {
+            attacker_id,
+            target_id,
+            ..
+        } => vec![attacker_id, target_id],
+        GameEvent::DivineShieldLost { instance_id }
+        | GameEvent::Buffed { instance_id, .. }
+        | GameEvent::KeywordGranted { instance_id, .. }
+        | GameEvent::CounterChanged { instance_id, .. }
+        | GameEvent::CostChanged { instance_id, .. }
+        | GameEvent::RadiantSet { instance_id, .. }
+        | GameEvent::Deradianted { instance_id, .. }
+        | GameEvent::Degraded { instance_id, .. }
+        | GameEvent::Upgraded { instance_id, .. }
+        | GameEvent::NumberChanged { instance_id, .. }
+        | GameEvent::Evolved { instance_id, .. }
+        | GameEvent::Transformed { instance_id, .. }
+        | GameEvent::PositionSwitched { instance_id, .. }
+        | GameEvent::Stolen { instance_id, .. }
+        | GameEvent::Bounced { instance_id, .. }
+        | GameEvent::Destroyed { instance_id, .. }
+        | GameEvent::Crumbled { instance_id, .. }
+        | GameEvent::Exiled { instance_id, .. }
+        | GameEvent::Held { instance_id, .. }
+        | GameEvent::Flickered { instance_id, .. }
+        | GameEvent::Animated { instance_id, .. }
+        | GameEvent::Deanimated { instance_id, .. }
+        | GameEvent::Translated { instance_id } => vec![instance_id],
+        // R437: a mark added is something aimed at the card; one taken off says the effect that waited
+        // has gone (its own run is judged by its events), and a thaw's change shows in the record.
+        GameEvent::Marked {
+            instance_id,
+            added: true,
+            ..
+        } => vec![instance_id],
+        GameEvent::ControlChanged {
+            instance_id,
+            former_id,
+            ..
+        } => std::iter::once(instance_id.as_str())
+            .chain(former_id.as_deref())
+            .collect(),
+        GameEvent::Fused {
+            instance_ids,
+            result_instance_id,
+            ..
+        } => instance_ids
+            .iter()
+            .chain(std::iter::once(result_instance_id))
+            .map(String::as_str)
+            .collect(),
+        _ => Vec::new(),
+    };
+    let mut seen: IndexSet<&str> = IndexSet::new();
+    ids.retain(|id| seen.insert(*id));
+    ids
+}
+
+/// I19 (§6.1 Dormant, §3.2, R1839000): nothing reaches a card Dormant as the step began (`step`) until
+/// it wakes. The step's events are walked in order: a card's `awakened`, `starshipLaunched` or own
+/// `activated` (its waking Activate, the one ability it keeps, R1839001, R1839002, R3539004) frees it,
+/// and before that every event that changes it and names it (`reached_ids`) is a finding, but for the
+/// lawful ones:
+/// - a hull's fuse, `fused` with `starshipFused` naming the card right after it (`starship::fuse_copy_into`,
+///   R1852000, R3539004); an Equip's (R2260000) or any other fuse onto it is not;
+/// - an `exiled` inside a `BOARD_SWEEPS` card's run, or a copier's running one's text (`copies_a_sweep`),
+///   from its `hookResolving` (or the prompt its answer continues) to the next marker, trap or turn edge
+///   (R3539002, R3554002, R3567000);
+/// - a `controlChanged` or a `bounced` after a board `swapped` or a `rotated`, in the same window: the
+///   board move carries the card whole (R4454000; the bounce is R73's and R14's at a Locked, reserved or
+///   void zone, R3554002);
+/// - a board restore's (`rolledBack`), in the same window: every card on a side it restores goes back as
+///   the snapshot holds it, or to its hand with a `bounced`, a `controlChanged` for one that enters the
+///   side and a `radiantSet` for Bogos Binted's Radiant face (R4454002);
+/// - a `radiantSet` while Tears of the Kwzki Tree's world holds every card Radiant (`radiantWorld`,
+///   R3569000, R4454001), which is no record change either.
+///
+/// A card still the same instance, still Dormant and still on the field after the step, neither freed
+/// nor carried, holds the record it began with (`SLUMBER_KEPT`), which catches a change made with no
+/// event. A card that turns Dormant inside the step is judged from the next. Draws nothing.
+fn slumber_reach_findings(step: &SlumberStep, events: &[GameEvent], after: &GameState) -> Vec<String> {
+    let mut found: Vec<String> = Vec::new();
+    if step.marks.is_empty() {
+        return found;
+    }
+    // A Dormant card's own Activate answered by a prompt continues its run (R1839002).
+    let mut released: IndexSet<&str> = step
+        .pending_instance
+        .as_deref()
+        .filter(|id| step.marks.contains_key(*id))
+        .into_iter()
+        .collect();
+    let mut carried: IndexSet<&str> = IndexSet::new();
+    let mut running: Option<&str> = step.pending_def.as_deref();
+    let mut sweeping = running.is_some_and(|def_id| is_board_sweep(after, def_id))
+        || step
+            .pending_instance
+            .as_deref()
+            .is_some_and(|id| copies_a_sweep(after, id) || step.sweepers.contains(id));
+    let mut moving: Option<BoardMove> = None;
+    // R4454001: under Tears of the Kwzki Tree every card is Radiant, the Dormant ones too (R3569000).
+    let radiant_world = after.radiant_world == Some(true);
+    for (at, event) in events.iter().enumerate() {
+        match event {
+            GameEvent::HookResolving {
+                source_id, def_id, ..
+            } => {
+                running = Some(def_id);
+                sweeping = is_board_sweep(after, def_id)
+                    || copies_a_sweep(after, source_id)
+                    || step.sweepers.contains(source_id.as_str());
+                moving = None;
+                continue;
+            }
+            GameEvent::TrapFired { def_id, .. } => {
+                running = Some(def_id);
+                sweeping = false;
+                moving = None;
+                continue;
+            }
+            GameEvent::TurnStarted { .. } | GameEvent::TurnEnded { .. } => {
+                running = None;
+                sweeping = false;
+                moving = None;
+                continue;
+            }
+            GameEvent::Swapped {
+                what: SwapWhat::Board,
+            }
+            | GameEvent::Rotated { .. } => {
+                moving = Some(BoardMove::Carry);
+                continue;
+            }
+            GameEvent::RolledBack { sides, .. } => {
+                moving = Some(BoardMove::Restore);
+                // R4454002: what stood on a restored side goes back as the snapshot holds it, awake if
+                // it was then, so for the rest of the step it is no longer the Dormant card the step
+                // began with (R4524001); one the snapshot holds Dormant is marked again from the next.
+                released.extend(
+                    step.marks
+                        .iter()
+                        .filter(|(_, mark)| sides.contains(&mark.side))
+                        .map(|(id, _)| id.as_str()),
+                );
+                continue;
+            }
+            GameEvent::Awakened { instance_id, .. }
+            | GameEvent::StarshipLaunched { instance_id, .. }
+            | GameEvent::Activated { instance_id, .. } => {
+                released.insert(instance_id);
+                continue;
+            }
+            _ => {}
+        }
+        for id in reached_ids(event) {
+            let Some((id, mark)) = step.marks.get_key_value(id) else {
+                continue;
+            };
+            let id = id.as_str();
+            if released.contains(id) {
+                continue;
+            }
+            match event {
+                // R1852000, R3539004: a piece fusing into its hull.
+                GameEvent::Fused { .. }
+                    if matches!(
+                        events.get(at + 1),
+                        Some(GameEvent::StarshipFused { instance_id, .. }) if instance_id == id
+                    ) =>
+                {
+                    carried.insert(id);
+                }
+                // R3539002, R3554002, R3567000: a board sweep.
+                GameEvent::Exiled { .. } if sweeping => {
+                    released.insert(id);
+                }
+                // R4454000, R4454002: a board move carries it whole, or bounces it on the way.
+                GameEvent::ControlChanged { .. } if moving.is_some() => {
+                    carried.insert(id);
+                }
+                GameEvent::Bounced { .. } if moving.is_some() => {
+                    released.insert(id);
+                }
+                // R4454002: Bogos Binted's Radiant face rebuilds its side Radiant.
+                GameEvent::RadiantSet { .. } if moving == Some(BoardMove::Restore) => {
+                    carried.insert(id);
+                }
+                // R4454001: Tears of the Kwzki Tree's world.
+                GameEvent::RadiantSet { .. } if radiant_world => {}
+                _ => {
+                    found.push(format!(
+                        "I19 reached Dormant: {} names {} on turn {} while it is Dormant, in {}'s run (§6.1 \
+                         Dormant, R1839000)",
+                        event.event_type().as_str(),
+                        mark.label,
+                        after.turn,
+                        running.unwrap_or("no card")
+                    ));
+                    released.insert(id);
+                }
+            }
+        }
+    }
+    for (id, mark) in &step.marks {
+        if released.contains(id.as_str()) || carried.contains(id.as_str()) {
+            continue;
+        }
+        let Some(card) = find_instance(after, id) else {
+            continue;
+        };
+        if !crate::slumber::is_slumbering(card) {
+            continue;
+        }
+        let now = kept_record(card);
+        let changed: Vec<&str> = SLUMBER_KEPT
+            .into_iter()
+            .filter(|field| !(radiant_world && *field == "radiant"))
+            .filter(|field| now.get(*field) != mark.kept.get(*field))
+            .collect();
+        if !changed.is_empty() {
+            found.push(format!(
+                "I19 Dormant record changed: {} holds a different {} after the step on turn {}, with no event \
+                 naming it (§6.1 Dormant, R1839000)",
+                mark.label,
+                changed.join(", "),
+                after.turn
+            ));
+        }
+    }
+    found
+}
+
+/// I21: a Unit Immune to Spells on the field as the step begins (§6.1).
+#[derive(Clone, Debug)]
+struct ImmuneMark {
+    label: String,
+    /// Whether its own keywords hold the immunity (`layers::card_keywords` and its conditional ones), so
+    /// it is still judged once the step takes it off the field, where no aura reaches it.
+    own: bool,
+}
+
+/// I21: the Units Immune to Spells a step begins with, by instance id; the cards then set face-down on
+/// either field, whose runs are a Trap's; and the run an answer step continues (`state.pending`'s
+/// resume), which marks no `hookResolving` of its own (R2783000).
+#[derive(Clone, Debug)]
+struct ImmuneStep {
+    marks: IndexMap<String, ImmuneMark>,
+    set: IndexSet<String>,
+    pending_def: Option<String>,
+    pending_instance: Option<String>,
+}
+
+/// I21: the state a step begins on, as I21 reads it: every Unit on either field (`zones::active_units_of`,
+/// a carried and a standing one included) that has Immune to Spells through the layers (§10.4).
+fn immune_step(state: &GameState) -> ImmuneStep {
+    let table = AuraTable::new(state);
+    let marks = PLAYER_IDS
+        .into_iter()
+        .flat_map(|player| crate::zones::active_units_of(state, player))
+        .filter(|unit| table.unit_has(unit, KeywordKind::ImmuneToSpells))
+        .map(|unit| {
+            let own = has_keyword(
+                &crate::layers::card_keywords(state, unit),
+                KeywordKind::ImmuneToSpells,
+            ) || has_keyword(
+                &crate::layers::conditional_keywords_of(state, unit),
+                KeywordKind::ImmuneToSpells,
+            );
+            let mark = ImmuneMark {
+                label: name_of(unit),
+                own,
+            };
+            (unit.id.clone(), mark)
+        })
+        .collect();
+    let set = placed_cards(state)
+        .into_iter()
+        .filter(|placed| matches!(placed.zone, Zone::Field { .. }) && placed.card.set_as.is_some())
+        .map(|placed| placed.card.id.clone())
+        .collect();
+    let resume = state.pending.as_ref().map(|pending| &pending.resume);
+    ImmuneStep {
+        marks,
+        set,
+        pending_def: resume.map(|resume| resume.def_id.clone()),
+        pending_instance: resume.and_then(|resume| resume.instance_id.clone()),
+    }
+}
+
+/// I21: the Spells whose run takes a whole lane, an immune Unit with it, each with the ruling that lets
+/// it: the board loses the lane with all it holds, which is no effect reaching for the card (R4508004). A
+/// fusion holding one takes it too (R43, R102), and so does a copier running its text.
+const LANE_TAKERS: [(&str, &str); 2] = [
+    // S+ #77 Black Hole: the state check swallows what stands in the hole's lane (R3554000).
+    ("stinkyscapeplus-077", "R4508004"),
+    // S+ #78 Slashed Dream Cries in Red: the slashed lane is exiled and voided (R3554002).
+    ("stinkyscapeplus-078", "R4508004"),
+];
+
+/// I21: whether `def_id`'s run takes a lane (`LANE_TAKERS`), or a fusion's holding one (R43, R102).
+fn takes_a_lane(state: &GameState, def_id: &str) -> bool {
+    LANE_TAKERS.iter().any(|(taker, _)| *taker == def_id)
+        || crate::subsystems::fuse::fused_ingredients(state, def_id)
+            .is_some_and(|parts| parts.iter().any(|part| takes_a_lane(state, part)))
+}
+
+/// I21: whether the card `source_id` runs a copied Spell's text that takes a lane (C #57 Echo, R399).
+fn copies_a_lane_taker(state: &GameState, source_id: &str) -> bool {
+    find_instance(state, source_id)
+        .and_then(|card| crate::subsystems::copied_text::copied_text_of(state, card))
+        .is_some_and(|copy| takes_a_lane(state, &copy.def_id))
+}
+
+/// I21: whether the run of `def_id`, the card `source_id` names, is a Spell's: the face it runs on (the
+/// card's own, read where it is now, else the base face) printed as a Spell in the catalog, not a Field
+/// Spell or a Trap. A card set face-down runs as a Trap, as it is set and as it reveals (M #99's row,
+/// R3806000: Immune to Spells does not stop it): one set as the step began (`set`), one whose trap fired
+/// in it (`fired`) or one set as it ends. Read off the catalog, never `restrictions::effect_is_from_spell`.
+fn runs_a_spell(
+    state: &GameState,
+    def_id: &str,
+    source_id: Option<&str>,
+    set: &IndexSet<String>,
+    fired: &IndexSet<&str>,
+) -> bool {
+    if def_id.is_empty() || crate::catalog::find_def(Some(state), def_id).is_none() {
+        return false;
+    }
+    let source = source_id.and_then(|id| find_instance(state, id));
+    if source_id.is_some_and(|id| set.contains(id) || fired.contains(id))
+        || source.is_some_and(|card| card.set_as.is_some())
+    {
+        return false;
+    }
+    let radiant = source.is_some_and(|card| card.radiant);
+    crate::faces::card_type_of_face(state, def_id, radiant) == CardType::Spell
+}
+
+/// I21: a window a Spell's run is inside, from its event to the next `hookResolving`, trap or turn edge.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ImmuneWindow {
+    /// A board swap or a rotation (`Swapped` of the board, `Rotated`; R73, R14).
+    Carry,
+    /// A board restore (`RolledBack`: C+ #35 Rollback, S+ #84 Bogos Binted; R419, R3550007).
+    Restore,
+    /// An attack the Spell forced or declared for its controller (`AttackDeclared`).
+    Combat,
+}
+
+/// I21: the card running as the walk reads it: its definition, whether its run is a Spell's, whether
+/// it takes a lane, and the window it is inside.
+#[derive(Clone, Copy, Debug)]
+struct ImmuneRun<'e> {
+    running: Option<&'e str>,
+    spell: bool,
+    takes_lane: bool,
+    window: Option<ImmuneWindow>,
+}
+
+impl ImmuneRun<'_> {
+    const NONE: ImmuneRun<'static> = ImmuneRun {
+        running: None,
+        spell: false,
+        takes_lane: false,
+        window: None,
+    };
+}
+
+/// I21: whether `event` is an affliction's tick on `id` (R4508005): a sourceless hit via Burn or Toxic
+/// (`afflictions::tick_burn_at_turn_end`, `tick_at_turn_start`; R4154000, R3540001), or the Burn's
+/// removal right after its hit.
+fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, id: &str) -> bool {
+    let tick = |event: &GameEvent| match event {
+        GameEvent::Damage {
+            source_id: None,
+            target_id,
+            via: Some(KeywordKind::Burn | KeywordKind::Toxic),
+            ..
+        }
+        | GameEvent::DamageAbsorbed {
+            source_id: None,
+            target_id,
+            via: Some(KeywordKind::Burn | KeywordKind::Toxic),
+            ..
+        } => target_id == id,
+        _ => false,
+    };
+    tick(event)
+        || matches!(
+            event,
+            GameEvent::CounterChanged {
+                counter: crate::wire::CounterKind::Burn,
+                value: 0,
+                ..
+            }
+        ) && previous.is_some_and(tick)
+}
+
+/// I21 (§6.1 Immune to Spells, R4453000): no Spell changes a Unit Immune to Spells on the field. The
+/// step's events are walked in order, tracking the card running (`hookResolving`, a trap, a turn edge
+/// and the AI's turn; a play nested in a run is its own from its `cardPlayed` to its `cardResolved`,
+/// whose unmarked hooks are no Spell's): while it is a Spell (`runs_a_spell`), every event that changes
+/// and names (`reached_ids`) a Unit immune as the step began (`step`) is a finding, once per Unit, but for
+/// the lawful ones:
+/// - anything inside an attack the Spell declared or forced, its combat, hooks and deaths (R4508002):
+///   §6.1's immunity is no restriction on attacks, and the attacking Unit is what reaches its target;
+/// - a `controlChanged` or a `bounced` after a board `swapped`, a `rotated` or a `rolledBack`, and a
+///   board restore's `radiantSet` (R4508001; R4454000, R4454002): the board move carries it whole;
+/// - an `exiled` in a `LANE_TAKERS` card's run (R4508004): the lane goes with all it holds;
+/// - a `radiantSet` while Tears of the Kwzki Tree's world holds every card Radiant (R4508003, R4454001);
+/// - the game's own rules that run inside the Spell's run with no marker (R4508005): §4.5 step 1's
+///   switch out of Defense of a Unit the board bars from it (`forbidden_defense`, I17's), and a Burn or
+///   Toxic tick (`ticks_on`).
+///
+/// A Unit is judged only when it is still on the field and still immune after the step (an aura that
+/// dropped mid-step, or a step that first took its immunity away, makes no finding), or when it is gone
+/// from the field and its own keywords held the immunity. A Spell's delayed effect, and its run after a
+/// nested marker, carry no marker of the Spell's, so I21 cannot see them. Draws nothing.
+fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameState) -> Vec<String> {
+    let mut found: Vec<String> = Vec::new();
+    if step.marks.is_empty() {
+        return found;
+    }
+    let table = AuraTable::new(after);
+    let judged: IndexSet<&str> = step
+        .marks
+        .iter()
+        .filter(|(id, mark)| match find_instance(after, id) {
+            Some(card) if matches!(card.zone, Zone::Field { .. }) => {
+                table.unit_has(card, KeywordKind::ImmuneToSpells)
+            }
+            _ => mark.own,
+        })
+        .map(|(id, _)| id.as_str())
+        .collect();
+    if judged.is_empty() {
+        return found;
+    }
+    let barred = crate::restrictions::defense_barred(after);
+    let mut released: IndexSet<&str> = IndexSet::new();
+    // The ids a `trapFired` named so far: a card set face-down whose trap fires runs as a Trap.
+    let mut fired: IndexSet<&str> = IndexSet::new();
+    let pending = step.pending_instance.as_deref();
+    let mut run = ImmuneRun {
+        running: step.pending_def.as_deref(),
+        spell: step
+            .pending_def
+            .as_deref()
+            .is_some_and(|def_id| runs_a_spell(after, def_id, pending, &step.set, &fired)),
+        takes_lane: step
+            .pending_def
+            .as_deref()
+            .is_some_and(|def_id| takes_a_lane(after, def_id))
+            || pending.is_some_and(|id| copies_a_lane_taker(after, id)),
+        window: None,
+    };
+    // The runs a nested play interrupted, each with the card it plays, innermost last.
+    let mut nested: Vec<(&str, ImmuneRun<'_>)> = Vec::new();
+    // R4508003: under Tears of the Kwzki Tree every card is Radiant (R3569000).
+    let radiant_world = after.radiant_world == Some(true);
+    for (at, event) in events.iter().enumerate() {
+        match event {
+            GameEvent::HookResolving {
+                source_id, def_id, ..
+            } => {
+                run = ImmuneRun {
+                    running: Some(def_id),
+                    spell: runs_a_spell(after, def_id, Some(source_id), &step.set, &fired),
+                    takes_lane: takes_a_lane(after, def_id) || copies_a_lane_taker(after, source_id),
+                    window: None,
+                };
+                continue;
+            }
+            GameEvent::TrapFired {
+                instance_id, def_id, ..
+            } => {
+                fired.insert(instance_id);
+                run = ImmuneRun {
+                    running: Some(def_id),
+                    ..ImmuneRun::NONE
+                };
+                continue;
+            }
+            GameEvent::TurnStarted { .. }
+            | GameEvent::TurnEnded { .. }
+            | GameEvent::AutopilotEngaged { .. } => {
+                run = ImmuneRun::NONE;
+                continue;
+            }
+            // A play begins its own run (its `onPlayHook`s and its arrival are no Spell's), and the run it
+            // interrupted goes on once it resolves.
+            GameEvent::CardPlayed { instance_id, .. } => {
+                nested.push((instance_id, run));
+                run = ImmuneRun::NONE;
+                continue;
+            }
+            GameEvent::CardResolved { instance_id, .. } => {
+                if let Some(at) = nested.iter().rposition(|(played, _)| played == instance_id) {
+                    run = nested[at].1;
+                    nested.truncate(at);
+                }
+                continue;
+            }
+            GameEvent::Swapped {
+                what: SwapWhat::Board,
+            }
+            | GameEvent::Rotated { .. } => {
+                run.window = Some(ImmuneWindow::Carry);
+                continue;
+            }
+            GameEvent::RolledBack { .. } => {
+                run.window = Some(ImmuneWindow::Restore);
+                continue;
+            }
+            GameEvent::AttackDeclared { .. } => {
+                run.window = Some(ImmuneWindow::Combat);
+                continue;
+            }
+            _ => {}
+        }
+        if !run.spell {
+            continue;
+        }
+        for id in reached_ids(event) {
+            let Some((id, mark)) = step.marks.get_key_value(id) else {
+                continue;
+            };
+            let id = id.as_str();
+            if released.contains(id) || !judged.contains(id) {
+                continue;
+            }
+            let lawful = match event {
+                // R4508002: an attack, the Spell's forced one included.
+                _ if run.window == Some(ImmuneWindow::Combat) => true,
+                // R4508005: an affliction's tick.
+                _ if ticks_on(event, at.checked_sub(1).and_then(|before| events.get(before)), id) => true,
+                // R4508001: a board move carries it whole, or bounces it on the way.
+                GameEvent::ControlChanged { .. } | GameEvent::Bounced { .. } => run.window.is_some(),
+                // R4508001: Bogos Binted's Radiant face rebuilds its side Radiant (R4454002); R4508003:
+                // Tears of the Kwzki Tree's world.
+                GameEvent::RadiantSet { .. } => run.window == Some(ImmuneWindow::Restore) || radiant_world,
+                // R4508004: a lane the board loses.
+                GameEvent::Exiled { .. } => run.takes_lane,
+                // R4508005: §4.5 step 1 switches it out of a Defense Position the board bars it from.
+                GameEvent::PositionSwitched {
+                    position: Position::Atk,
+                    ..
+                } => find_instance(after, id).is_some_and(|card| {
+                    matches!(card.zone, Zone::Field { .. })
+                        && card.position == Some(Position::Atk)
+                        && forbidden_defense(&table, card, barred).is_some()
+                }),
+                _ => false,
+            };
+            if lawful {
+                continue;
+            }
+            found.push(format!(
+                "I21 Spell reached Immune to Spells: {} names {} on turn {} in {}'s run (§6.1, R4453000)",
+                event.event_type().as_str(),
+                mark.label,
+                after.turn,
+                run.running.unwrap_or("no card")
+            ));
+            released.insert(id);
+        }
+    }
+    found
+}
+
+/// I22: what bars a field card as a `target` pick, read off the board (§6.1, §10.5 step 1).
+#[derive(Clone, Copy, Debug)]
+struct PickBars {
+    /// Dormant: nothing targets it (R1839000).
+    dormant: bool,
+    /// Face-up and Evasive through the layers (R4353002).
+    evasive: bool,
+    /// Face-up and Immune to Spells through the layers (R450).
+    immune: bool,
+}
+
+/// I22 (R1487000, R4353002): a Trap or Field Trap, a card set face-down among them, neither flipped nor
+/// revealed. Its keywords sleep, so I22 reads neither Evasive nor Immune to Spells off it.
+fn face_down_now(state: &GameState, card: &CardInstance) -> bool {
+    matches!(
+        crate::faces::card_type_of(state, card),
+        CardType::Trap | CardType::FieldTrap
+    ) && card.face_up != Some(true)
+        && card.revealed != Some(true)
+}
+
+/// I22: the barred field cards among `picks` on `state`, by instance id, in pick order; each card read
+/// once, through one aura table built only when a pick names a field card. A hero, a zone, a mode or a
+/// card in a hand or a pile bars nothing.
+fn barred_picks<'p>(
+    state: &GameState,
+    picks: impl IntoIterator<Item = &'p Selection>,
+) -> IndexMap<String, PickBars> {
+    let named: IndexSet<&str> = picks
+        .into_iter()
+        .filter_map(|pick| match pick {
+            Selection::Instance { instance_id } => Some(instance_id.as_str()),
+            _ => None,
+        })
+        .collect();
+    let on_field: Vec<&CardInstance> = named
+        .into_iter()
+        .filter_map(|id| find_instance(state, id))
+        .filter(|card| matches!(card.zone, Zone::Field { .. }))
+        .collect();
+    if on_field.is_empty() {
+        return IndexMap::new();
+    }
+    let auras = AuraTable::new(state);
+    on_field
+        .into_iter()
+        .filter_map(|card| {
+            let face_up = !face_down_now(state, card);
+            let bars = PickBars {
+                dormant: crate::slumber::is_slumbering(card),
+                evasive: face_up && auras.unit_has(card, KeywordKind::Evasive),
+                immune: face_up && auras.unit_has(card, KeywordKind::ImmuneToSpells),
+            };
+            (bars.dormant || bars.evasive || bars.immune).then(|| (card.id.clone(), bars))
+        })
+        .collect()
+}
+
+/// I22: why `source`'s targeting may not aim at a card `bars` describes, with the ruling, or `None` when
+/// it may. A Dormant card bars every source, and no card at all (R1839000). Evasive bars a Spell and a
+/// Field Spell, the source read as R781001 reads it: a Unit while it stands in a unit zone, else its
+/// face's printed type, so a Spell set face-down still aims as one (R4353002). Immune to Spells bars a
+/// Spell read where it is (E35, R450): a Spell set face-down is a Trap there, and a Field Spell no Spell.
+fn source_barred(
+    state: &GameState,
+    source: Option<&CardInstance>,
+    bars: PickBars,
+) -> Option<(&'static str, &'static str)> {
+    if bars.dormant {
+        return Some(("a Dormant card, which nothing targets", "R1839000"));
+    }
+    let source = source?;
+    let aims_as = match source.zone {
+        Zone::Field { row: Row::Units, .. } => CardType::Unit,
+        _ => crate::faces::card_type_of_face(state, &source.def_id, source.radiant),
+    };
+    if bars.evasive && matches!(aims_as, CardType::Spell | CardType::FieldSpell) {
+        return Some((
+            "an Evasive card in play, which no Spell or Field Spell targets",
+            "R4353002",
+        ));
+    }
+    if bars.immune && crate::faces::card_type_of(state, source) == CardType::Spell {
+        return Some(("a card Immune to Spells, which no Spell targets", "R450"));
+    }
+    None
+}
+
+/// I22 (#4540): every pick of one random `target` draw (`testkit::seams`) is one its source may aim at,
+/// judged on the state it was drawn on: R452's random cast and R1200's Mayor draw only from what the
+/// targeting point leaves.
+pub fn target_draw_findings(draw: &TargetDraw) -> Vec<String> {
+    let (under, drawn_by) = match draw.by {
+        TargetDrawBy::RandomCast => ("a random cast", "R452"),
+        TargetDrawBy::Mayor => ("a Mayor", "R1200"),
+    };
+    let source = draw.source.as_ref();
+    barred_picks(&draw.state, &draw.picks)
+        .into_iter()
+        .filter_map(|(id, bars)| {
+            let (what, rule) = source_barred(&draw.state, source, bars)?;
+            Some(format!(
+                "I22 unlawful random target: {} drew {} for {} on turn {} under {under}: {what} ({rule}, {drawn_by})",
+                source.map_or_else(|| "no card".to_string(), name_of),
+                card_label(&draw.state, &id),
+                draw.seat,
+                draw.state.turn,
+            ))
+        })
+        .collect()
+}
+
+/// I22 (#4540): every `target` pick a listed play or activation of `viewer`'s declares is one its source
+/// may aim at (§10.5 step 1, R450). I8 and I14 hold the listing and the reducer to each other, so a
+/// filter both read passes both. A pick is matched to its declaration by the reducer's own reading
+/// (`play_choices::targeting_decls_of`), and only a `target` declaration's is judged: a Spell may Tribute
+/// its controller's own Evasive Unit. While a Mayor acts no listed action names a target (R1200), and
+/// the record judges the draws instead. A face-down play declares nothing (R1044).
+pub fn listed_target_findings(state: &GameState, viewer: PlayerId, legal: &[ActionBody]) -> Vec<String> {
+    if crate::random_targets::targets_random(state) {
+        return Vec::new();
+    }
+    let barred = barred_picks(
+        state,
+        legal.iter().flat_map(|body| match body {
+            ActionBody::Play {
+                targets: Some(targets),
+                face_down: None,
+                ..
+            }
+            | ActionBody::Activate {
+                targets: Some(targets),
+                ..
+            } => targets.as_slice(),
+            _ => &[],
+        }),
+    );
+    if barred.is_empty() {
+        return Vec::new();
+    }
+    let mut found: IndexSet<String> = IndexSet::new();
+    let names_barred = |targets: &[Selection]| {
+        targets.iter().any(
+            |pick| matches!(pick, Selection::Instance { instance_id } if barred.contains_key(instance_id)),
+        )
+    };
+    for body in legal {
+        let (verb, source, targets, decls) = match body {
+            ActionBody::Play {
+                instance_id,
+                targets: Some(targets),
+                modes,
+                face_down: None,
+                ..
+            } if names_barred(targets) => {
+                let (Some(card), Some(play)) =
+                    (find_instance(state, instance_id), PlayAction::from_body(body))
+                else {
+                    continue;
+                };
+                let face = crate::play_choices::face_for_action(state, viewer, card, &play);
+                let modes = modes.as_deref().unwrap_or(&[]);
+                let decls =
+                    crate::play_choices::targeting_decls_of(state, viewer, &face, targets, modes, None);
+                ("play", face, targets, decls)
+            }
+            ActionBody::Activate {
+                instance_id,
+                ability,
+                targets: Some(targets),
+                modes,
+                ..
+            } if names_barred(targets) => {
+                let Some(card) = find_instance(state, instance_id) else {
+                    continue;
+                };
+                let abilities = crate::subsystems::activate::abilities_of(state, card);
+                let Some(decl) = (match ability {
+                    Some(ability) => abilities.into_iter().find(|decl| decl.id == *ability),
+                    None => abilities.into_iter().next(),
+                }) else {
+                    continue;
+                };
+                let modes = modes.as_deref().unwrap_or(&[]);
+                let decls = crate::play_choices::targeting_decls_of(
+                    state,
+                    viewer,
+                    card,
+                    targets,
+                    modes,
+                    Some(decl.targets.as_slice()),
+                );
+                ("activation", card.clone(), targets, decls)
+            }
+            _ => continue,
+        };
+        for (pick, decl) in targets.iter().zip(decls) {
+            let (Selection::Instance { instance_id }, Some(_)) = (pick, decl) else {
+                continue;
+            };
+            let Some(bars) = barred.get(instance_id) else {
+                continue;
+            };
+            if let Some((what, rule)) = source_barred(state, Some(&source), *bars) {
+                found.insert(format!(
+                    "I22 unlawful listed target: {viewer}'s {verb} of {} offers {} on turn {}: {what} ({rule})",
+                    name_of(&source),
+                    card_label(state, instance_id),
+                    state.turn
+                ));
+            }
+        }
+    }
+    found.into_iter().collect()
+}
+
+/// I22 (#4540): every option an open `target` prompt offers is one its source may aim at (R450): the
+/// targeting point filters each such prompt as it opens (`prompts::open_prompt`). The source is the card
+/// the prompt's resume names, as the targeting point reads it.
+pub fn offered_target_findings(state: &GameState) -> Vec<String> {
+    let Some(pending) = state
+        .pending
+        .as_ref()
+        .filter(|pending| pending.kind == PromptKind::Target)
+    else {
+        return Vec::new();
+    };
+    let barred = barred_picks(state, pending.options.iter().map(|option| &option.selection));
+    if barred.is_empty() {
+        return Vec::new();
+    }
+    let source = pending
+        .resume
+        .instance_id
+        .as_deref()
+        .and_then(|id| find_instance(state, id));
+    barred
+        .into_iter()
+        .filter_map(|(id, bars)| {
+            let (what, rule) = source_barred(state, source, bars)?;
+            Some(format!(
+                "I22 unlawful target offered: prompt {} of {} offers {} to {} on turn {}: {what} ({rule})",
+                pending.id,
+                source.map_or_else(|| pending.resume.def_id.clone(), name_of),
+                card_label(state, &id),
+                pending.player_id,
+                state.turn
+            ))
+        })
+        .collect()
 }
 
 /// The events that take a card out of a zone and name the definition it left as (`Lineage::gone_as`).
@@ -805,6 +2272,19 @@ fn drop_launched_pieces(shown: &mut Value, launched: &[String]) {
     }
 }
 
+/// R1852000, R1852005: a fusion names its dead piece with the definition it died as, face up, the public
+/// memory of a public death whatever has become of the piece's card or its Starship since (a Classic+ #35
+/// Rollback that took the Starship back to its owner's hand while a copy of the piece waits in that
+/// owner's library: fuzz seed 5912, issue #3800). The definition the engine's own event named is taken out
+/// of the view's copy of it, as a launch's pieces are; the piece's id is still scanned.
+fn drop_fused_piece(shown: &mut Value, piece_def: &str) {
+    if let Some(object) = shown.as_object_mut()
+        && object.get("defId").and_then(Value::as_str) == Some(piece_def)
+    {
+        object.remove("defId");
+    }
+}
+
 /// Every string and object inside `value`, with the path it was found at. Values only, never keys.
 fn walk(
     value: &Value,
@@ -865,8 +2345,20 @@ fn is_pending_option_instance_id(at: &str) -> bool {
     !index.is_empty() && index.bytes().all(|byte| byte.is_ascii_digit()) && tail == ".instanceId"
 }
 
+/// Whether `at` is `view.hiddenTargets[<n>].instanceId` (R3777001), by hand as the one above.
+fn is_hidden_target_instance_id(at: &str) -> bool {
+    let Some(rest) = at.strip_prefix("view.hiddenTargets[") else {
+        return false;
+    };
+    let Some((index, tail)) = rest.split_once(']') else {
+        return false;
+    };
+    !index.is_empty() && index.bytes().all(|byte| byte.is_ascii_digit()) && tail == ".instanceId"
+}
+
 /// I6 for one seat on one state: what `view_for` and `legal_actions` sent it names no card it may not
-/// read (§10.8); `legal` may offer a face-down trap's bare id as a target (R177) and nothing else.
+/// read (§10.8); `legal` may offer a face-down trap's bare id as a target (R177) and nothing else, and
+/// the view may name that bare id in `hiddenTargets` (R3777001) only while `legal` offers it.
 pub fn hidden_information_violations(
     state: &GameState,
     viewer: PlayerId,
@@ -904,6 +2396,9 @@ pub fn hidden_information_violations(
         if let Some(GameEvent::StarshipLaunched { pieces, .. }) = source {
             drop_launched_pieces(&mut shown, pieces);
         }
+        if let Some(GameEvent::StarshipFused { def_id, .. }) = source {
+            drop_fused_piece(&mut shown, def_id);
+        }
         events.push(shown);
     }
     // `defs` (R243) is left out: a definition is copied only for an id the rest of the view names, and
@@ -914,6 +2409,18 @@ pub fn hidden_information_violations(
         object.insert("events".to_string(), Value::Array(events));
     }
 
+    let mut offered: IndexMap<String, String> = IndexMap::new();
+    let legal_json = serde_json::to_value(legal).expect("ActionBodies serialize");
+    walk(
+        &legal_json,
+        "legal",
+        &mut |text, at| {
+            if !offered.contains_key(text) {
+                offered.insert(text.to_string(), at.to_string());
+            }
+        },
+        &mut |_| {},
+    );
     let mut named: IndexMap<String, String> = IndexMap::new();
     walk(
         &scanned,
@@ -923,20 +2430,12 @@ pub fn hidden_information_violations(
             if offered_bare.contains(text) && is_pending_option_instance_id(at) {
                 return;
             }
+            // R3777001: the view names the zone of a face-down card `legal` offers as a target, by its bare id.
+            if bare.contains(text) && offered.contains_key(text) && is_hidden_target_instance_id(at) {
+                return;
+            }
             if !named.contains_key(text) {
                 named.insert(text.to_string(), at.to_string());
-            }
-        },
-        &mut |_| {},
-    );
-    let mut offered: IndexMap<String, String> = IndexMap::new();
-    let legal_json = serde_json::to_value(legal).expect("ActionBodies serialize");
-    walk(
-        &legal_json,
-        "legal",
-        &mut |text, at| {
-            if !offered.contains_key(text) {
-                offered.insert(text.to_string(), at.to_string());
             }
         },
         &mut |_| {},
@@ -1224,11 +2723,13 @@ type PlayZoneGroup = (
     Option<RevealAt>,
 );
 
-/// I8 for one seat: every `switchPosition`, `attack`, `activate`, `activatePower` and `play` that
-/// `legal` does not hold and `reduce` accepts (§4.1, §4.2, §9.1, §10.2, §10.5; #2978). Switches,
-/// attacks and activations are built from the board alone; plays are forged at the card level (a
-/// playable hand or graveyard card no listed play names) and at the zone level (a real lane no listed
-/// play of an otherwise listed card names). Empty when clean.
+/// I8 for one seat: every `switchPosition`, `attack`, `activate`, `activatePower`, `trade`,
+/// `marketBuy`, `marketSell` and `play` that `legal` does not hold and `reduce` accepts (§4.1, §4.2,
+/// §6.3, §9.1, §10.2, §10.5; #2978, #4143). Switches, attacks and activations are built from the board
+/// alone; a `trade` and a `marketSell` are forged for every hand card and a `marketBuy` for every offer
+/// index in the Marketplace (#4143); plays are forged at the card level (a playable hand or graveyard
+/// card no listed play names) and at the zone level (a real lane no listed play of an otherwise listed
+/// card names). Empty when clean.
 pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBody]) -> Vec<String> {
     let mut probed = state.clone();
     probed.applied = Vec::new();
@@ -1291,6 +2792,48 @@ pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBod
                     state.turn
                 ));
             }
+        }
+    }
+    // I8's forged deals (§10.2, §6.3; #4143): a `trade` and a `marketSell` for every hand card, whatever it
+    // is, and a `marketBuy` for every offer index the Marketplace holds, the other seat's lots among them.
+    // `why_trade_refused` and `why_market_buy_refused` are the reducer's own refusals (the limit, the
+    // Credits, the stock, the phase) and the listing's, so these fire only where the reducer's acceptance
+    // and the listing part ways; a `marketSell` is always refused (R4410000), so it stays silent.
+    for card in &state.players[player].hand {
+        if accepts(ActionBody::Trade {
+            instance_id: card.id.clone(),
+        }) {
+            found.push(format!(
+                "I8 unlisted trade accepted: {player} may trade {} on turn {}, though legalActions does not \
+                 list it (§10.2, R1838000)",
+                name_of(card),
+                state.turn
+            ));
+        }
+        if accepts(ActionBody::MarketSell {
+            instance_id: card.id.clone(),
+        }) {
+            found.push(format!(
+                "I8 unlisted marketSell accepted: {player} may sell {} on turn {}, though legalActions does \
+                 not list it (§10.2, R1853003, R1861000)",
+                name_of(card),
+                state.turn
+            ));
+        }
+    }
+    let offers = state.marketplace.as_ref().map_or(0, |market| market.offers.len());
+    for offer in 0..offers as i32 {
+        if accepts(ActionBody::MarketBuy { offer }) {
+            let lot = state
+                .marketplace
+                .as_ref()
+                .and_then(|market| crate::marketplace::offered_to(market, player).nth(offer as usize))
+                .map_or("no such offer", |(_, lot)| lot.def_id.as_str());
+            found.push(format!(
+                "I8 unlisted marketBuy accepted: {player} may buy offer {offer} ({lot}) on turn {}, though \
+                 legalActions does not list it (§10.2, R1853003, R2250002)",
+                state.turn
+            ));
         }
     }
     // I8's forged plays (§10.2, §10.5; #2978): a `play` `reduce` accepts that `legal` never lists.
@@ -1418,8 +2961,10 @@ fn sampled(legal: &[ActionBody], rotate: u32) -> Vec<&ActionBody> {
         .collect()
 }
 
-/// I14 for one seat (§10.2; #3062): each action of `legal` (at most `I14_ACTION_CAP`, spread over the list)
-/// sent to `reducer` on a copy of `state`; each it refuses or panics on is a finding. Empty when clean.
+/// I14 for one seat (§10.2; #3062, #4057): each action of `legal` (at most `I14_ACTION_CAP`, spread over the
+/// list) sent to `reducer` on a copy of `state`; each it refuses, panics on, or leaves with a stateless
+/// invariant violation on the resulting board, or with I19's or I21's against the state it was reduced
+/// from (#4454, #4508), is a finding. Empty when clean.
 pub fn listed_refused(
     state: &GameState,
     player: PlayerId,
@@ -1428,6 +2973,9 @@ pub fn listed_refused(
 ) -> Vec<String> {
     let mut probed = state.clone();
     probed.applied = Vec::new();
+    // I19: the Dormant cards every branch begins with (#4454); I21: its Units Immune to Spells (#4508).
+    let slumber = slumber_step(&probed);
+    let immune = immune_step(&probed);
     let mut found: Vec<String> = Vec::new();
     for body in sampled(legal, state.rng_cursor) {
         let action = Action::new(body.clone(), player, I14_NONCE);
@@ -1440,6 +2988,17 @@ pub fn listed_refused(
                          lists it, and reduce refused it: {error} (§10.2)",
                         state.turn, state.seed
                     ));
+                } else {
+                    let branch = branch_state_findings(&result.events, &result.state)
+                        .into_iter()
+                        .chain(slumber_reach_findings(&slumber, &result.events, &result.state))
+                        .chain(immune_reach_findings(&immune, &result.events, &result.state));
+                    for finding in branch {
+                        found.push(format!(
+                            "I14 branch: after {player} sent {sent} (listed, not played) on turn {} (seed {}): {finding}",
+                            state.turn, state.seed
+                        ));
+                    }
                 }
             }
             Err(payload) => found.push(format!(
@@ -1754,9 +3313,6 @@ struct ChosenExertion {
     deft: bool,
 }
 
-/// A hero is a target `hero-<player>` (the combat's facts, `after_attack_of`).
-const HERO_TARGET_PREFIX: &str = "hero-";
-
 /// B5 E35, R1869002: the fresh exertion a kill gave its attacker in one stint on one turn: `at` is how
 /// many attacks it had declared there then (none once a settling took it back), `before` the credit it
 /// held there before it.
@@ -1780,6 +3336,18 @@ struct ShadowAttack {
     answered: bool,
 }
 
+/// I18 (R3100000, #4111): the forecast entry of the attack `before` saw chosen, with what it was told
+/// of the step: the turn and both cards' labels are read before the attack, since it may remove the
+/// attacker, and `foreseeable` is `foreseeable_attack` on the board it was chosen on.
+#[derive(Clone, Debug)]
+struct KeptForecast {
+    entry: crate::query::AttackForecast,
+    turn: i32,
+    attacker: String,
+    target: String,
+    foreseeable: bool,
+}
+
 /// Every card on the field, a card dormant under a Stack pile and the backrow included (§3.2).
 fn field_cards(state: &GameState) -> Vec<&CardInstance> {
     let mut out: Vec<&CardInstance> = Vec::new();
@@ -1789,6 +3357,15 @@ fn field_cards(state: &GameState) -> Vec<&CardInstance> {
         out.extend(side.backrow.iter().flatten());
     }
     out
+}
+
+/// I20: every card `field_cards_of` finds on either side, with the damage it stores.
+fn field_damage(state: &GameState) -> IndexMap<String, i32> {
+    PLAYER_IDS
+        .into_iter()
+        .flat_map(|player| field_cards_of(state, player))
+        .map(|card| (card.id.clone(), card.damage))
+        .collect()
 }
 
 /// R1829000: the cards dormant beneath the top of a unit pile or a backrow pile (§3.2, R13).
@@ -1829,10 +3406,185 @@ fn name_of(card: &CardInstance) -> String {
     format!("{} ({}, {}'s)", card.id, card.def_id, card.controller)
 }
 
+/// I18: a card as its message names it, `<id> (<def id> "<name>")`, or a hero's `hero-<player>` id.
+/// The name is the catalog's, `?` for a definition no catalog lists (`def_of` would panic).
+fn card_label(state: &GameState, id: &str) -> String {
+    match find_instance(state, id) {
+        Some(card) => {
+            let name =
+                crate::catalog::find_def(Some(state), &card.def_id).map_or("?", |def| def.name.as_str());
+            format!("{id} ({} \"{name}\")", card.def_id)
+        }
+        None => id.to_string(),
+    }
+}
+
+/// I18 (#4111): whether the board `attacker_id`'s attack on `target_id` is chosen on lets its forecast
+/// foretell all of it. Each `false` is a source R3100000's forecast leaves out, since the board does
+/// not show what it will do:
+/// - no attacker card;
+/// - the attacker, a Unit target or a unit its Cleave strikes (R4290000) in a split or shared damage
+///   chain (§4.4 steps 0b and 8b, R3554007), which R4032000 leaves unprojected;
+/// - the attacker's "When this attacks" (R2285000) or "After this attacks" (R2285001), or the Unit
+///   target's "After this is attacked" (MD-C26);
+/// - a card acting for the attacker's side with "After one of your Units attacks" (R2199000), or for
+///   the target's side with "When one of your Units is attacked" (R1849008). `hook_marks.rs` marks none
+///   of these attack hooks with a `hookResolving`, so `plain_combat` cannot see them run;
+/// - for a Unit target, a card acting for its side that reflects an attacker's strike back onto it
+///   (Stinkyscape #104 Reflective Plating's Radiant face, §4.4 step 8a, R1849003): the forecast's
+///   `taken` is the strike back alone (fuzz seed 1298), until the forecast projects it;
+/// - for a Unit target, a card acting for its side that reflects what it takes onto the attacker's hero
+///   (Reflective Plating's base face, R1849003) while the attacker's side has a damage pool to soak it
+///   (Stinkyscape+ #42 Force Projector, R3550004): the reflection spends the pool before the strike back
+///   lands, which the forecast reads against the pool as the board shows it (R4221004; fuzz seed 9305);
+/// - the attacker, a Unit target or a unit its Cleave strikes (R4290000) with cards dormant beneath it
+///   in its pile (R1829000; its count is shown, R13) or holding one (Stinkyscape #135.1 Sack's Unit,
+///   R1850003): its leaving the field brings them in at the state check after the combat, where an aura
+///   among them may exile a combatant (Stinkyscape #115 Scornboi), and the forecast foretells nothing
+///   past the combat (R4221002; fuzz seeds 4897 and 6161);
+/// - a card acting for either side with a "would die" replacement (Classic #14 Shadowstep's Radiant
+///   face, Stinkyscape #138 Pocket Peptides; §4.5 step 1, R4221000): it answers the death check after
+///   the combat, a flicker or its own `then`, with no `trapFired` or `hookResolving` for `plain_combat`
+///   to see, and the forecast projects no replacement (fuzz seed 9561);
+/// - a Unit the state check after the combat takes off, as the forecast settles it (R4379000; a Cleave
+///   neighbour, §4.4 step 10, a sweep's other hit, R3554008, or one an aura no longer holds up), with a
+///   card dormant beneath it or held by it (R4221002's reason, R4318000): its leaving brings that card
+///   in, which the forecast is not shown;
+/// - for a Unit target, an attacker that reflects what it takes onto the enemy hero (Stinkyscape #104
+///   Reflective Plating, either face, R1849003): its strike back is dealt again to the target's hero
+///   after any Trample excess and may end the game, and the forecast projects no reflection (R4555001;
+///   fuzz seed 4338).
+fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> bool {
+    let Some(attacker) = find_instance(state, attacker_id) else {
+        return false;
+    };
+    let (target, target_side) = match hero_seat_of(target_id) {
+        Some(seat) => (None, seat),
+        None => match find_instance(state, target_id) {
+            Some(unit) => (Some(unit), unit.controller),
+            None => return false,
+        },
+    };
+    // R4290000: a Cleave attack's other units are judged too, so they are skipped as its target is.
+    let struck: Vec<CardInstance> = target.map_or_else(Vec::new, |unit| {
+        crate::query::cleave_struck(state, attacker, unit)
+    });
+    let chained = |card: &CardInstance| card.split_chain.is_some() || card.shared_chain.is_some();
+    if chained(attacker) || struck.iter().any(chained) {
+        return false;
+    }
+    let script = crate::scripts::script_of(state, attacker);
+    if script.when_attacks.is_some() || script.after_attack.is_some() {
+        return false;
+    }
+    if target.is_some_and(|unit| crate::scripts::script_of(state, unit).after_attacked.is_some()) {
+        return false;
+    }
+    let attacking_side = crate::damage::acting_texts_of(state, attacker.controller);
+    if attacking_side
+        .iter()
+        .any(|card| crate::scripts::script_of(state, card).ally_attack.is_some())
+    {
+        return false;
+    }
+    let defending_side = crate::damage::acting_texts_of(state, target_side);
+    if defending_side
+        .iter()
+        .any(|card| crate::scripts::script_of(state, card).ally_attacked.is_some())
+    {
+        return false;
+    }
+    let takes_deaths = |card: &CardInstance| {
+        crate::scripts::script_of(state, card)
+            .replacements
+            .iter()
+            .any(|def| def.on == crate::script::ReplacementMoment::WouldDie)
+    };
+    if attacking_side.iter().chain(&defending_side).any(takes_deaths) {
+        return false;
+    }
+    let brings_in = |card: &CardInstance| {
+        crate::zones::slot_of(state, card)
+            .is_some_and(|slot| !crate::zones::beneath_at(state, slot).is_empty())
+            || !crate::query::held_beneath(state, card).is_empty()
+    };
+    if brings_in(attacker) || struck.iter().any(brings_in) {
+        return false;
+    }
+    let Some(aimed) = crate::combat::attack_target_of(state, target_id) else {
+        return false;
+    };
+    let settled = crate::query::attack_deaths(state, attacker, &aimed);
+    if settled
+        .gone()
+        .filter_map(|id| find_instance(state, id))
+        .any(brings_in)
+    {
+        return false;
+    }
+    // R4555001: an attacker that reflects what it takes onto the enemy hero (Reflective Plating, R1849003).
+    if target.is_some() && crate::scripts::flags_of(state, attacker).reflects_damage == Some(true) {
+        return false;
+    }
+    let pool_soaks_reflection = crate::query::damage_pool_of(state, attacker.controller, false) > 0;
+    !(target.is_some()
+        && defending_side.iter().any(|card| {
+            let flags = crate::scripts::flags_of(state, card);
+            flags.reflects_to_attacker == Some(true)
+                || (pool_soaks_reflection && flags.reflects_damage == Some(true))
+        }))
+}
+
+/// I18 (#4111): whether one step's `events`, and the `state` it left, were `entry`'s attack and nothing
+/// the forecast does not foretell. All of these hold:
+/// - no prompt is open after it (R3477000: an answer is still to come);
+/// - exactly one `attackDeclared`, with the entry's ids, not forced (R53) and no substitute's (R1202);
+/// - no `hookResolving` (R2783000: a hook ran), `trapFired` (R3477000), `attackCancelled` or
+///   `redirected` (of the attack, R1122, or of a hit, §4.4 steps 0a and 4a, which R4032000 leaves
+///   unprojected);
+/// - no `turnEnded`, `turnAutoEnded` or `turnCutShort`: the next turn's hits would read as the
+///   attack's (R82).
+fn plain_combat(events: &[GameEvent], state: &GameState, entry: &crate::query::AttackForecast) -> bool {
+    if state.pending.is_some() {
+        return false;
+    }
+    let mut declared = 0;
+    for event in events {
+        match event {
+            GameEvent::AttackDeclared {
+                attacker_id,
+                target_id,
+                forced,
+                instead_of,
+            } => {
+                if *attacker_id != entry.attacker_id
+                    || *target_id != entry.target_id
+                    || *forced
+                    || instead_of.is_some()
+                {
+                    return false;
+                }
+                declared += 1;
+            }
+            GameEvent::HookResolving { .. }
+            | GameEvent::TrapFired { .. }
+            | GameEvent::AttackCancelled { .. }
+            | GameEvent::Redirected { .. }
+            | GameEvent::TurnEnded { .. }
+            | GameEvent::TurnAutoEnded { .. }
+            | GameEvent::TurnCutShort { .. } => return false,
+            _ => {}
+        }
+    }
+    declared == 1
+}
+
 /// The monitor, made by `create_invariant_monitor`: the shadow of this file's header and the checks
-/// run against it. `before` is I1, I3 and I12's chosen-action snapshot, `after` feeds one action's
-/// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11 and I12, `hidden` is I6, I13 and I15 for both
-/// seats, `unlisted` is I8 and `listed` is I14.
+/// run against it. `before` is I1, I3, I12's chosen-action snapshot, I18's kept forecast, I19's
+/// Dormant cards, I21's immune Units and I22's open record, `after` feeds one action's events into the
+/// shadow and runs I2, I4, I5, I7, I9, I10, I11, I12, I16, I17, I18, I19, I20, I21 and I22's recorded
+/// draws, `hidden` is I6, I13, I15 and I22's listed targets for both seats and I22's open prompt,
+/// `unlisted` is I8 and `listed` is I14 (I19 and I21 on each branch).
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -1857,6 +3609,12 @@ pub struct InvariantMonitor {
     /// R636, R781004: the units `note_drawn_windfury` read as maybe Windfury, whose drawn keywords a
     /// change of control keeps (the card stays on the field).
     drawn_windfury: IndexSet<String>,
+    /// R3543003: the stint in which each field unit was seen with Frenzy as the action began, read by
+    /// `before`. A kill inside the action is answered by the Frenzy its attacker had then, though the
+    /// state the action leaves no longer shows it: the autopilot's whole turn kills, attacks again and
+    /// loses the attacker to a trap's exile or a counter-hit, which resets the keywords a Drone Corvette
+    /// drew (R78, R781004; fuzz seeds 8022 and 7429, issue #3800).
+    frenzy: IndexMap<String, i32>,
     /// The cards that fired as traps this turn: one animates as its firing's last step, not at the
     /// start of the turn, and that is an entry even on its controller's turn (R383, R1062).
     fired: IndexSet<String>,
@@ -1868,6 +3626,10 @@ pub struct InvariantMonitor {
     unsettled_credits: IndexSet<String>,
     /// R424: the latest attack, and whether its attacker destroyed its target (R42).
     attack: Option<ShadowAttack>,
+    /// R1203: the Primes' attacks held behind their joiners, outermost first: each joiner declares a
+    /// forced attack on the Prime's target, and the Prime's own combat follows with no declaration, so its
+    /// kill is its own and not the latest joiner's (fuzz seed 867).
+    behind_joiners: Vec<ShadowAttack>,
     /// R424, R1869002: whether the last action left a prompt or work owed, so a combat it declared may
     /// still be resolving (an ambush's Discovers, S #22) and its attack is kept for the next action.
     attack_open: bool,
@@ -1876,8 +3638,29 @@ pub struct InvariantMonitor {
     /// I9: each seat's fatigue draws as the stream counted them (§2.4, R3, R315): the start state's
     /// `fatigue_count`, one more per `fatigue` event, and the new game's count after a Glitch's reset (R676).
     fatigue: PerPlayer<i32>,
+    /// I9: each seat's hero health as the stream's events moved it (§10.3): the start state's, less each
+    /// `damage` on the hero and `healthLost`, plus each `healed`, set by `healthSet`, swapped by `swapped`
+    /// (health), held to the seat's hero floor as `duos_life` holds it (R2201000); a Glitch's reset (R676)
+    /// starts it again from the state it left.
+    health: PerPlayer<i32>,
+    /// I20: each field card's stored damage as the stream's `damage` and `healed` events moved it (§4.4,
+    /// §10.3): 0 on arrival, plus each `damage` on it, less each `healed`; `counted_damage` re-anchors it
+    /// where a lawful writer moves the field with no such event and drops a card that left the field.
+    unit_damage: IndexMap<String, i32>,
     /// R1829000: the cards dormant beneath a pile's top, either row, in the last state read.
     dormant: IndexSet<String>,
+    /// I18: whether this monitor holds attacks to their forecast; `new` sets it, and the Duos monitor
+    /// clears it on its duels (#4111).
+    judge_forecast: bool,
+    /// I18: the forecast of the attack `before` saw chosen, for `after` to judge.
+    forecast_kept: Option<KeptForecast>,
+    /// I18: how many attacks `after` held to their forecast, so a filter that judges nothing shows.
+    forecast_judged: usize,
+    /// I19: the Dormant cards the step began with, noted by `before` (or the Duos monitor's for the duel
+    /// not acting) and judged by `after`, which takes them: an `after` with no `before` judges none.
+    slumber_step: Option<SlumberStep>,
+    /// I21: the Units Immune to Spells the step began with, noted and taken as `slumber_step` is.
+    immune_step: Option<ImmuneStep>,
 }
 
 /// R781004: whether `later`, the rest of an action's events, summons `id` again (back through Reborn): an
@@ -1905,17 +3688,41 @@ impl InvariantMonitor {
             chosen_exertion: None,
             windfury: IndexMap::new(),
             carried_windfury: IndexSet::new(),
+            frenzy: IndexMap::new(),
             drawn_windfury: IndexSet::new(),
             fired: IndexSet::new(),
             readied: IndexSet::new(),
             kill_credits: IndexMap::new(),
             unsettled_credits: IndexSet::new(),
             attack: None,
+            behind_joiners: Vec::new(),
             attack_open: false,
             resets: start.resets,
             fatigue: start.players.map(|_, side| side.fatigue_count),
+            health: start.players.map(|_, side| side.hero.health),
+            unit_damage: field_damage(start),
             dormant: dormant_cards(start),
+            judge_forecast: true,
+            forecast_kept: None,
+            forecast_judged: 0,
+            slumber_step: None,
+            immune_step: None,
         }
+    }
+
+    /// I19: the Dormant cards `state` holds as a step begins on it, for `after` to judge.
+    fn note_slumber(&mut self, state: &GameState) {
+        self.slumber_step = Some(slumber_step(state));
+    }
+
+    /// I21: the Units Immune to Spells `state` holds as a step begins on it, for `after` to judge.
+    fn note_immune(&mut self, state: &GameState) {
+        self.immune_step = Some(immune_step(state));
+    }
+
+    /// I18: how many attacks this monitor held to their forecast (#4111).
+    pub fn forecast_judged(&self) -> usize {
+        self.forecast_judged
     }
 
     fn stint_of(&self, id: &str) -> i32 {
@@ -1927,6 +3734,17 @@ impl InvariantMonitor {
             if crate::layers::unit_has(state, card, KeywordKind::Windfury) {
                 let stint = self.stint_of(&card.id);
                 self.windfury.insert(card.id.clone(), stint);
+            }
+        }
+    }
+
+    /// R3543003: the field units with Frenzy as the action begins, each in its stint (`frenzy`).
+    fn note_frenzy(&mut self, state: &GameState) {
+        self.frenzy.clear();
+        for card in field_cards(state) {
+            if crate::layers::unit_has(state, card, KeywordKind::Frenzy) {
+                let stint = self.stint_of(&card.id);
+                self.frenzy.insert(card.id.clone(), stint);
             }
         }
     }
@@ -1963,14 +3781,43 @@ impl InvariantMonitor {
         }
     }
 
+    /// R636, R3778000: a change that raises such a unit's number on the field draws the rest of its list
+    /// as it resolves (`effects::buff::follow_combat_keywords`), which no `keywordGranted` reports. On
+    /// the field at the end in the same stint, its list, never shortened in a stay, says whether it drew
+    /// Windfury; gone, or back in a later stint, it reads as `note_drawn_windfury` reads it.
+    fn note_topped_up_windfury(&mut self, id: &str, def_id: &str, state: &GameState, back_later: bool) {
+        match find_instance(state, id) {
+            Some(card) if card.zone.z() == ZoneName::Field && !back_later => {
+                let drawn = crate::effects::drawn_combat_keywords(card, None);
+                if has_keyword(&drawn, KeywordKind::Windfury) {
+                    let stint = self.stint_of(id);
+                    self.windfury.insert(id.to_string(), stint);
+                }
+            }
+            _ => self.note_drawn_windfury(id, def_id, state, back_later),
+        }
+    }
+
     /// R636: a unit that just entered and carries Windfury, as it was before the action
-    /// (`carried_windfury`) or as the action left it, has it in this stint.
+    /// (`carried_windfury`) or as the action left it, has it in this stint. One gone from the field by
+    /// the action's end is also read standing in its controller's unit row, so an aura still acting
+    /// there (S+ #62 Overdrive Projector's "All Units gain Windfury") gives it the Windfury it had while
+    /// it stood: played, swinging twice and destroyed in one autopilot turn (fuzz seed 160).
     fn note_entry_windfury(&mut self, id: &str, state: &GameState) {
         let left_with = find_instance(state, id).is_some_and(|card| {
             let keywords = if card.zone.z() == ZoneName::Field {
                 crate::layers::keywords_of(state, card)
             } else {
-                crate::layers::card_keywords(state, card)
+                let mut standing = card.clone();
+                standing.zone = Zone::Field {
+                    player: card.controller,
+                    row: Row::Units,
+                    lane: 1,
+                };
+                let mut keywords = crate::layers::card_keywords(state, card);
+                // R89: as a dead card's snapshot is read, no pile's top holds the auras off it.
+                keywords.extend(crate::layers::unit_view_as_it_died(state, &standing).keywords);
+                keywords
             };
             has_keyword(&keywords, KeywordKind::Windfury)
         });
@@ -2111,10 +3958,14 @@ impl InvariantMonitor {
     /// (R212): a card dormant in the last state read that acts now (not on a side a `rolledBack` restored,
     /// R566, nor a fusion's kept card, R77, R1086), on the turn `summonedTurn` names from `began_on`, else
     /// the last. One uncovered unseen (dormant, or in a zone R14 names) takes `summonedTurn`'s word only for
-    /// a turn of the action.
+    /// a turn of the action. So does a card the action's own `summoned` or `controlChanged` named, wherever it
+    /// stands now: the hole's pull at a turn's start moves a pile one lane and no event says so (R3554001),
+    /// so a Drone Battleship's layer summoned beneath its Shield, uncovered on a later turn of the one action
+    /// and pulled on, stands in no zone an event named (fuzz handicap seed 6708, issue #3800).
     fn note_uncoverings(&mut self, events: &[GameEvent], state: &GameState, began_on: i32) {
         let mut restored: Vec<PlayerId> = Vec::new();
         let mut landed: Vec<(PlayerId, Row, i32)> = Vec::new();
+        let mut arrived: Vec<&str> = Vec::new();
         let mut kept: Vec<&str> = Vec::new();
         // §8 #52: the rotating player is the one whose card played (`RotationArgs.perspective`).
         let mut playing: Option<PlayerId> = None;
@@ -2137,14 +3988,25 @@ impl InvariantMonitor {
                 }
                 GameEvent::RolledBack { sides, .. } => restored.extend(sides.iter().copied()),
                 GameEvent::Summoned {
-                    player, row, lane, ..
-                } => landed.push((*player, *row, *lane)),
+                    player,
+                    row,
+                    lane,
+                    instance_id,
+                    ..
+                } => {
+                    landed.push((*player, *row, *lane));
+                    arrived.push(instance_id);
+                }
                 GameEvent::ControlChanged {
                     controller,
                     row,
                     lane,
+                    instance_id,
                     ..
-                } => landed.push((*controller, *row, *lane)),
+                } => {
+                    landed.push((*controller, *row, *lane));
+                    arrived.push(instance_id);
+                }
                 GameEvent::Animated {
                     player, unit_lane, ..
                 } => landed.push((*player, Row::Units, *unit_lane)),
@@ -2177,7 +4039,8 @@ impl InvariantMonitor {
                 && !restored.contains(&player)
                 && !kept.contains(&card.id.as_str())
                 && crate::zones::acts_on_field(state, card);
-            let may_have_been = was_dormant || landed.contains(&(player, row, lane));
+            let may_have_been =
+                was_dormant || landed.contains(&(player, row, lane)) || arrived.contains(&card.id.as_str());
             let during = card.summoned_turn.filter(|turn| (began_on..=now).contains(turn));
             let at = match during {
                 Some(turn) if may_have_been => Some(turn),
@@ -2312,9 +4175,171 @@ impl InvariantMonitor {
         found
     }
 
-    /// I1 and I3 on the state the next action is chosen in, plus I12's chosen exertion snapshot.
-    /// Empty when clean.
+    /// I9 on the state one action left: each 1v1 seat's hero health is what the stream's `damage`,
+    /// `healthLost`, `healed`, `healthSet` and health `swapped` events left it (§10.3, R2201000). A
+    /// Duos seat is skipped, as I17's hero bound is: `duos::reduce` copies the team pool into a spent
+    /// hero with no event (`duos/reduce.rs`). A Glitch's reset (R676) starts the tally again from the
+    /// state it left. A silent move is reported once: the tally then follows the state.
+    fn counted_health(&mut self, state: &GameState, reset: bool) -> Vec<String> {
+        let mut found: Vec<String> = Vec::new();
+        for seat in PLAYER_IDS {
+            let side = &state.players[seat];
+            let held = side.hero.health;
+            if reset || side.duos.is_some() {
+                self.health[seat] = held;
+                continue;
+            }
+            let counted = self.health[seat];
+            if counted != held {
+                found.push(format!(
+                    "I9 silent hero health: {seat} holds hero health {held} on turn {}, but the stream's tally for \
+                     {seat} is {counted} (§10.3, R2201000)",
+                    state.turn
+                ));
+                self.health[seat] = held;
+            }
+        }
+        found
+    }
+
+    /// I20: feeds one event into the stored-damage tally (§4.4, §10.3, R78). `anchored` collects the cards
+    /// whose damage a lawful writer moved with no `damage` or `healed` (the tally then takes the state's),
+    /// and `anchor_all` is a board put back or dealt again. A blind spot, accepted: `numberChanged`
+    /// "health" is also a health tuning that leaves damage as it was, so that card is not held in that step.
+    fn feed_damage(&mut self, event: &GameEvent, anchored: &mut IndexSet<String>, anchor_all: &mut bool) {
+        match event {
+            // §4.4 step 5: the amount is what got through; the pipeline adds exactly it to `damage`.
+            GameEvent::Damage {
+                target_id, amount, ..
+            } => {
+                if let Some(held) = self.unit_damage.get_mut(target_id) {
+                    *held += *amount;
+                }
+            }
+            // `heal_unit_by` removes what it healed and emits only when that is above 0.
+            GameEvent::Healed {
+                target_id, amount, ..
+            } => {
+                if let Some(held) = self.unit_damage.get_mut(target_id) {
+                    *held -= *amount;
+                }
+            }
+            // R78: a card arrives with its damage reset.
+            GameEvent::CardPlayed { instance_id, .. } => {
+                self.unit_damage.insert(instance_id.clone(), 0);
+            }
+            GameEvent::Summoned { instance_id, via, .. } => {
+                self.unit_damage.insert(instance_id.clone(), 0);
+                // `reborn_step` returns a card with `max_health - 1` damage, announced by this `summoned`.
+                if matches!(via, Some(KeywordKind::Reborn)) {
+                    anchored.insert(instance_id.clone());
+                }
+            }
+            // Vanilla's "stays alive at 1 health" writes stored damage on the card it makes; the
+            // transform redefines the card, so both ids take the state's.
+            GameEvent::Transformed {
+                instance_id,
+                new_instance_id,
+                ..
+            } => {
+                anchored.insert(instance_id.clone());
+                anchored.insert(new_instance_id.clone());
+            }
+            // `set_stats_on` clears `damage` with no `healed`, announced only by this.
+            GameEvent::NumberChanged { instance_id, key, .. } if key == "health" => {
+                anchored.insert(instance_id.clone());
+            }
+            // R78: a card that left the field and came back at once is reset, with no `healed`.
+            GameEvent::Flickered { instance_id, .. } => {
+                anchored.insert(instance_id.clone());
+            }
+            // `restore_board` puts records back and a Glitch's boards deal both fields again, with no
+            // event per card.
+            GameEvent::RolledBack { .. }
+            | GameEvent::Glitched {
+                outcome: crate::wire::GlitchOutcome::Boards,
+                ..
+            } => *anchor_all = true,
+            _ => {}
+        }
+    }
+
+    /// I20 on the state one action left: each field card's stored `damage` is what the stream's `damage`
+    /// and `healed` events left it (§4.4, §10.3, R78), as `counted_health` holds a hero's health. A card
+    /// the tally has not seen (a Stack pile's uncovering, a Glitch's deal) and one `anchored` or under
+    /// `reset` (R676) takes the state's; a card that left the field is dropped (R78 zeroed it). A silent
+    /// move is reported once: the tally then follows the state.
+    ///
+    /// No stride: the tally is fed from every event and read in one pass over the field's cards with no
+    /// clone, so a stride would only delay a report. Measured on 2026-11-22 (4 cores, seeds 1–200, the
+    /// release `cargo jackioh fuzz`): 52 s before I20 and 54–57 s with it for the 1v1 wave (an
+    /// unloaded repeat, 54 s), 146 s before and 151–152 s with it for the Duos wave, checked on every
+    /// state; the handicapped wave 51 s with it. Each is under the 10% that would call for a stride.
+    fn counted_damage(&mut self, state: &GameState, reset: bool, anchored: &IndexSet<String>) -> Vec<String> {
+        let mut found: Vec<String> = Vec::new();
+        let held_now = field_damage(state);
+        self.unit_damage.retain(|id, _| held_now.contains_key(id));
+        for (id, held) in held_now {
+            let counted = match self.unit_damage.get(&id) {
+                Some(counted) if !reset && !anchored.contains(&id) => *counted,
+                _ => held,
+            };
+            if counted != held {
+                let name = find_instance(state, &id).map_or("a card", |card| card.def_id.as_str());
+                found.push(format!(
+                    "I20 silent card damage: {name} ({id}) holds damage {held} on turn {}, but the stream's tally \
+                     for it is {counted} (§4.4, §10.3, R78)",
+                    state.turn
+                ));
+            }
+            self.unit_damage.insert(id, held);
+        }
+        found
+    }
+
+    /// R2201000: a floored hero's tally reads its floor after any move that would take it lower.
+    fn hold_hero_floor(&mut self, seat: PlayerId, state: &GameState) {
+        if let Some(floor) = crate::state::hero_floor_of(state, seat)
+            && self.health[seat] < floor
+        {
+            self.health[seat] = floor;
+        }
+    }
+
+    fn hero_loses(&mut self, seat: PlayerId, amount: i32, state: &GameState) {
+        self.health[seat] -= amount;
+        self.hold_hero_floor(seat, state);
+    }
+
+    /// I1 and I3 on the state the next action is chosen in, plus I12's chosen exertion snapshot, the
+    /// forecast I18 holds a chosen attack to, the Dormant cards I19 holds untouched and the Units Immune
+    /// to Spells I21 does; opens I22's record of random `target` draws (`testkit::seams`). Empty when
+    /// clean.
     pub fn before(&mut self, state: &GameState, player: PlayerId, action: &ActionBody) -> Vec<String> {
+        // I22: the random target draws from here to `after` are the step's (#4540).
+        crate::testkit::seams::start_target_draws();
+        // I18: the forecast the seat was shown for the attack it chose, kept for `after` (R3100000).
+        self.forecast_kept = None;
+        self.note_slumber(state);
+        self.note_immune(state);
+        if self.judge_forecast
+            && let ActionBody::Attack {
+                attacker_id,
+                target_id,
+            } = action
+        {
+            self.forecast_kept = crate::query::combat_forecast(state, player)
+                .attacks
+                .into_iter()
+                .find(|entry| entry.attacker_id == *attacker_id && entry.target_id == *target_id)
+                .map(|entry| KeptForecast {
+                    turn: state.turn,
+                    attacker: card_label(state, attacker_id),
+                    target: card_label(state, target_id),
+                    foreseeable: foreseeable_attack(state, attacker_id, target_id),
+                    entry,
+                });
+        }
         let mut found: Vec<String> = Vec::new();
         self.chosen_exertion = match action {
             ActionBody::Attack { attacker_id, .. } => {
@@ -2334,6 +4359,7 @@ impl InvariantMonitor {
             })
         });
         self.note_windfury(state);
+        self.note_frenzy(state);
         self.carried_windfury = PLAYER_IDS
             .into_iter()
             .flat_map(|player| {
@@ -2396,10 +4422,7 @@ impl InvariantMonitor {
             }
             let targets: Vec<String> = crate::combat::attack_targets(state, unit)
                 .iter()
-                .map(|target| match target {
-                    DamageTarget::Hero { player } => format!("hero-{player}"),
-                    DamageTarget::Unit { instance } => instance.id.clone(),
-                })
+                .map(crate::reduce::attack_target_id)
                 .collect();
             if let Some(violation) = InvariantMonitor::sick_attack(state, unit, &targets, "offered") {
                 found.push(violation);
@@ -2421,9 +4444,15 @@ impl InvariantMonitor {
         found
     }
 
-    /// Feeds one action's events into the shadow, then I2, I4, I5, I7 and I9–I12 against the
-    /// resulting state.
+    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9–I12 and I16–I21 against the
+    /// resulting state, and I22 on each random `target` draw the step made, on the state it was drawn on.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
+        // I18: a kept forecast is this step's alone, and so are I19's Dormant cards, I21's immune Units
+        // and I22's draws.
+        let kept = self.forecast_kept.take();
+        let slumber = self.slumber_step.take();
+        let immune = self.immune_step.take();
+        let draws = crate::testkit::seams::take_target_draws();
         let mut found: Vec<String> = Vec::new();
         // R1829000: the turn the action began on; an uncovering inside it happened on a turn from here on.
         let began_on = self.turn;
@@ -2432,31 +4461,19 @@ impl InvariantMonitor {
         // still resolving then (R1869002: a kill an ambush's Discovers delayed credits on landing).
         if !self.attack_open {
             self.attack = None;
+            self.behind_joiners.clear();
         }
 
-        // I5: the check that ends the game is the last thing that happens (§2.5, R216).
-        if let Some(over) = events
-            .iter()
-            .position(|event| matches!(event, GameEvent::GameOver { .. }))
-            && over + 1 < events.len()
-        {
-            let later: Vec<&str> = events[over + 1..]
-                .iter()
-                .map(|event| event.event_type().as_str())
-                .collect();
-            found.push(format!(
-                "I5 event after game over: {} followed gameOver on turn {} (§2.5, R216)",
-                later.join(", "),
-                self.turn
-            ));
-        }
-
+        let mut anchored: IndexSet<String> = IndexSet::new();
+        let mut anchor_all = false;
         for (index, event) in events.iter().enumerate() {
+            self.feed_damage(event, &mut anchored, &mut anchor_all);
             match event {
                 GameEvent::TurnStarted { player, turn, .. } => {
                     self.turn = *turn;
                     self.active = *player;
                     self.attack = None;
+                    self.behind_joiners.clear();
                     self.fired.clear();
                 }
                 GameEvent::TurnEnded { player, turn, .. } | GameEvent::TurnAutoEnded { player, turn } => {
@@ -2494,6 +4511,33 @@ impl InvariantMonitor {
                              turn {}, but FATIGUE_DAMAGE({count}) is {dealt} (§2.4, R3, R315)",
                             self.turn
                         ));
+                    }
+                }
+                GameEvent::Damage {
+                    target_id, amount, ..
+                } => {
+                    // I9: the amount is what got through Armor (§4.4 step 5); a unit's hit moves no hero.
+                    if let Some(seat) = hero_seat_of(target_id) {
+                        self.hero_loses(seat, *amount, state);
+                    }
+                }
+                GameEvent::HealthLost { player, amount } => self.hero_loses(*player, *amount, state),
+                GameEvent::Healed {
+                    target_id, amount, ..
+                } => {
+                    if let Some(seat) = hero_seat_of(target_id) {
+                        self.health[seat] += *amount;
+                    }
+                }
+                GameEvent::HealthSet { player, health, .. } => self.health[*player] = *health,
+                GameEvent::Swapped {
+                    what: SwapWhat::Health,
+                } => {
+                    let (one, other) = (self.health[PlayerId::P1], self.health[PlayerId::P2]);
+                    self.health[PlayerId::P1] = other;
+                    self.health[PlayerId::P2] = one;
+                    for seat in PLAYER_IDS {
+                        self.hold_hero_floor(seat, state);
                     }
                 }
                 GameEvent::CardPlayed { instance_id, .. }
@@ -2539,8 +4583,9 @@ impl InvariantMonitor {
                     ..
                 } => {
                     // R383: moving into the unit row is entering it, but not for a carried Unit leaving its
-                    // carrier (C+ #33), a set Unit (ME-ALTPLAY, R1041) or an "Animated on your turn" card at
-                    // its controller's start of turn (R1062, R1126) that did not fire as a trap (#1216).
+                    // carrier (C+ #33) or an "Animated on your turn" card at its controller's start of turn
+                    // (R1062, R1126) that did not fire as a trap (#1216). A set Unit's reveal enters, as any
+                    // Unit that comes into a unit zone does (R4237000).
                     if *carried != Some(true)
                         && (self.fired.contains(instance_id)
                             || !self.on_its_side_before_this_turn(
@@ -2550,14 +4595,8 @@ impl InvariantMonitor {
                                 &events[index + 1..],
                             ))
                     {
-                        let is_unit_def = find_instance(state, instance_id).is_some_and(|card| {
-                            crate::catalog::def_of(Some(state), &card.def_id).type_
-                                == crate::wire::CardType::Unit
-                        });
-                        if !is_unit_def {
-                            self.enter(instance_id);
-                            self.note_entry_windfury(instance_id, state);
-                        }
+                        self.enter(instance_id);
+                        self.note_entry_windfury(instance_id, state);
                     }
                 }
                 GameEvent::Transformed {
@@ -2588,17 +4627,36 @@ impl InvariantMonitor {
                     killer_id,
                     ..
                 } => {
-                    if let Some(attack) = self.attack.as_mut()
-                        && attack.target_id == *instance_id
-                        && killer_id.as_deref() == Some(attack.attacker_id.as_str())
-                        && !attack.killed
-                    {
-                        attack.killed = true;
-                        // R1869002: a kill readies its attacker only through its own `afterAttack` text.
-                        let attacker_id = attack.attacker_id.clone();
-                        let answers = find_instance(state, &attacker_id).is_some_and(|attacker| {
-                            crate::scripts::script_of(state, attacker).after_attack.is_some()
+                    // R1203: the latest attack's, or a Prime's held behind its joiners, whose combat is last.
+                    let killed_by = self
+                        .attack
+                        .iter_mut()
+                        .chain(self.behind_joiners.iter_mut().rev())
+                        .find(|attack| {
+                            attack.target_id == *instance_id
+                                && killer_id.as_deref() == Some(attack.attacker_id.as_str())
+                                && !attack.killed
+                        })
+                        .map(|attack| {
+                            attack.killed = true;
+                            attack.attacker_id.clone()
                         });
+                    if let Some(attacker_id) = killed_by {
+                        // R1869002: a kill readies its attacker only through its own `afterAttack` text;
+                        // R3543003: or its Frenzy, which answers the same kill.
+                        // R3543003: the Frenzy it began the action with, in the stint it still attacks in.
+                        let began_frenzied =
+                            self.frenzy.get(&attacker_id) == Some(&self.stint_of(&attacker_id));
+                        let answers = began_frenzied
+                            || find_instance(state, &attacker_id).is_some_and(|attacker| {
+                                crate::scripts::script_of(state, attacker).after_attack.is_some()
+                                    || crate::layers::unit_has(state, attacker, KeywordKind::Frenzy)
+                            })
+                            // R3543003, R781004: a unit that drew its keywords (`note_drawn_windfury`) and is
+                            // gone by the end may have drawn Frenzy (a Drone Corvette, Duos seed 1778, #4079).
+                            || (self.drawn_windfury.contains(&attacker_id)
+                                && find_instance(state, &attacker_id)
+                                    .is_none_or(|card| card.zone.z() != ZoneName::Field));
                         if answers {
                             self.credit_kill(&attacker_id);
                         }
@@ -2659,6 +4717,22 @@ impl InvariantMonitor {
                         self.windfury.insert(instance_id.clone(), stint);
                     }
                 }
+                // R3778000: a raised number tops up a drawn-keywords Aura's list with no `keywordGranted`.
+                GameEvent::Upgraded {
+                    instance_id,
+                    def_id,
+                    change: TuningChange::Number { .. },
+                    ..
+                }
+                | GameEvent::NumberChanged {
+                    instance_id, def_id, ..
+                }
+                | GameEvent::RadiantSet {
+                    instance_id, def_id, ..
+                } => {
+                    let back_later = summoned_later(instance_id, &events[index + 1..]);
+                    self.note_topped_up_windfury(instance_id, def_id, state, back_later);
+                }
                 GameEvent::PositionSwitched { instance_id, .. } => {
                     // R20: an effect's switch emits the same event but spends nothing. I12 counts only
                     // the event that confirms the chosen `switchPosition` action.
@@ -2713,9 +4787,41 @@ impl InvariantMonitor {
                     forced,
                     instead_of,
                 } => {
+                    // R3139004: the attack before this one inside the action, on a Unit it did not kill, readied an attacker
+                    // whose own `afterAttack` answers it (Core #89 Corpse Eater), as the action's end credits it below; read
+                    // here, since its second attack is counted before the end (daily fuzz seed 11162).
+                    if let Some(attack) = self.attack.as_mut().filter(|attack| {
+                        !attack.killed
+                            && !attack.answered
+                            && !attack.target_id.starts_with(HERO_TARGET_PREFIX)
+                    }) {
+                        attack.answered = true;
+                        let previous = attack.attacker_id.clone();
+                        if find_instance(state, &previous).is_some_and(|attacker| {
+                            crate::scripts::script_of(state, attacker).after_attack.is_some()
+                        }) {
+                            self.credit_kill(&previous);
+                        }
+                    }
                     // R53: a forced attack is not a declaration and spends nothing (nor readies a
                     // transform, R424); its kill may still earn a kill credit (R1869002).
-                    self.attack = None;
+                    let previous = self.attack.take();
+                    // R1203: a Prime's joiners attack its target first, each declaring a forced attack, and
+                    // its own combat follows with no declaration, so its attack is held behind them.
+                    if *forced {
+                        self.behind_joiners.retain(|prime| prime.target_id == *target_id);
+                        if let Some(prime) = previous.filter(|prime| {
+                            !prime.killed
+                                && prime.target_id == *target_id
+                                && find_instance(state, &prime.attacker_id).is_some_and(|card| {
+                                    crate::scripts::flags_of(state, card).attack_joiners == Some(true)
+                                })
+                        }) {
+                            self.behind_joiners.push(prime);
+                        }
+                    } else {
+                        self.behind_joiners.clear();
+                    }
                     if *forced {
                         self.attack = Some(ShadowAttack {
                             attacker_id: attacker_id.clone(),
@@ -2787,11 +4893,26 @@ impl InvariantMonitor {
                             _ => 1,
                         },
                     };
-                    let per_turn = if self.windfury.get(declarer) == Some(&current) {
+                    // R3550001: a Unit that "can attack N times per turn" declares N attacks.
+                    // R636, R3556008: one gone by the end may have had an aura's Windfury, read where the action left it.
+                    // R383: an animated card back in its backrow by the action's end is read as a gone unit (fuzz
+                    // seed 1013, #4079).
+                    let gone = find_instance(state, declarer).is_none_or(|card| {
+                        card.zone.z() != ZoneName::Field
+                            || (!matches!(card.zone, Zone::Field { row: Row::Units, .. })
+                                && crate::animated::face_type_of(state, card) != CardType::Unit)
+                    });
+                    let per_turn = if self.windfury.get(declarer) == Some(&current)
+                        || (gone && aura_gives_windfury(state))
+                    {
                         WINDFURY_ATTACKS
                     } else {
                         1
                     };
+                    let per_turn = per_turn.max(
+                        find_instance(state, declarer)
+                            .map_or(1, |card| crate::combat::attacks_per_turn(state, card)),
+                    );
                     // R1869002: a kill credit's fresh exertion counts the attacks of a turn again from there.
                     let allowed = per_turn + self.credited_at(declarer).unwrap_or(0);
                     if mark.count > allowed {
@@ -2843,6 +4964,8 @@ impl InvariantMonitor {
         self.resets = state.resets;
         found.extend(InvariantMonitor::announced_state(events, state, reset));
         found.extend(self.counted_fatigue(state, reset));
+        found.extend(self.counted_health(state, reset));
+        found.extend(self.counted_damage(state, reset || anchor_all, &anchored));
 
         // R1829000: a card a Stack pile uncovers has entered, though no event says so (R212).
         if !reset {
@@ -2882,68 +5005,54 @@ impl InvariantMonitor {
             }
         }
 
-        // I7: a live game with no prompt open owes no paused sequence (§9.3, §10.3, R113).
-        if state.result.is_none()
-            && state.pending.is_none()
-            && state.mulligan.is_none()
-            && (!state.work.is_empty() || state.work_cursor != 0)
+        found.extend(branch_state_findings(events, state));
+        // I19: nothing reached a card Dormant as the step began (§6.1 Dormant, R1839000).
+        if let Some(step) = &slumber {
+            found.extend(slumber_reach_findings(step, events, state));
+        }
+        // I21: no Spell reached a Unit Immune to Spells as the step began (§6.1, R4453000).
+        if let Some(step) = &immune {
+            found.extend(immune_reach_findings(step, events, state));
+        }
+        // I22: every random target draw aimed where its source may (R452, R1200).
+        found.extend(draws.iter().flat_map(target_draw_findings));
+        // I18: a plain attack did what its seat's forecast said (R3100000, R4111000).
+        if let Some(kept) = kept
+            && kept.foreseeable
+            && plain_combat(events, state, &kept.entry)
         {
-            let owed: Vec<String> = state
-                .work
+            self.forecast_judged += 1;
+            let forecast = PlayedAttack::forecast(&kept.entry);
+            let splashed: Vec<String> = kept
+                .entry
+                .splash
                 .iter()
-                .map(|item| {
-                    format!(
-                        "{} ({}, {}, {})",
-                        item.id, item.resume.def_id, item.resume.hook, item.resume.step
-                    )
-                })
+                .map(|hit| hit.instance_id.clone())
                 .collect();
-            found.push(format!(
-                "I7 orphaned work: {} item(s) owed [{}] with work cursor {} on turn {} and no prompt open \
-                 (§9.3, §10.3, R113)",
-                state.work.len(),
-                owed.join(", "),
-                state.work_cursor,
-                state.turn
-            ));
+            let played = PlayedAttack::read(
+                events,
+                state,
+                &kept.entry.attacker_id,
+                &kept.entry.target_id,
+                &splashed,
+            );
+            if played != forecast {
+                found.push(format!(
+                    "I18 forecast drift: {} attacking {} on turn {} was forecast {forecast} but did {played} \
+                     (R3100000)",
+                    kept.attacker, kept.target, kept.turn
+                ));
+            }
         }
-
-        // I10: no prompt held by the opponent while its holder is not the active player (§10.6, R1279000).
-        if state.result.is_none()
-            && let Some(pending) = &state.pending
-            && pending.player_id != state.active
-            && prompt_owner_of(pending) != pending.player_id
-        {
-            let asked_by = pending.resume.instance_id.as_deref();
-            let asker = match asked_by.and_then(|id| find_instance(state, id)) {
-                Some(card) => name_of(card),
-                None => format!(
-                    "{} ({})",
-                    asked_by.unwrap_or("no instance"),
-                    pending.resume.def_id
-                ),
-            };
-            found.push(format!(
-                "I10 opponent prompt off turn: {asker} opened prompt {} for {}, held for {}, on turn {} while {} \
-                 is the active player (§10.6, R1279000)",
-                pending.id,
-                pending.player_id,
-                prompt_owner_of(pending),
-                state.turn,
-                state.active
-            ));
-        }
-
-        // I11: a definition-level Unit token never reaches an off-field pile (§3, §3.2, R11).
-        found.extend(unit_token_pile_findings(state));
         // A chosen action can confirm at most this one reduction. In Duos, `after` also visits the
         // untouched duel, so no marker may survive to match another duel's later event.
         self.chosen_exertion = None;
         found
     }
 
-    /// I6, I13 and I15 for both seats on a state the fuzz reached, setup's included. Empty when clean. A
-    /// panic in `view_for` or `legal_actions` is reported, not raised.
+    /// I6, I13, I15 and I22's listed declarations for both seats on a state the fuzz reached, setup's
+    /// included, and I22's open prompt. Empty when clean. A panic in `view_for` or `legal_actions` is
+    /// reported, not raised.
     pub fn hidden(&self, state: &GameState) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
         for viewer in PLAYER_IDS {
@@ -2954,6 +5063,8 @@ impl InvariantMonitor {
                 let mut violations = hidden_information_violations(state, viewer, &view, &legal);
                 violations.extend(play_reason_violations(state, viewer, &view, &legal));
                 violations.extend(activation_reason_violations(state, viewer, &view, &legal));
+                // I22: and every target the listing declares (R450, #4540).
+                violations.extend(listed_target_findings(state, viewer, &legal));
                 violations
             }));
             match checked {
@@ -2967,11 +5078,13 @@ impl InvariantMonitor {
                 }
             }
         }
+        // I22: every option an open target prompt offers (R450, #4540).
+        found.extend(offered_target_findings(state));
         found
     }
 
     /// I8 on a state the fuzz reached, for the seat that may act: every unlisted attack, switch,
-    /// activation and play `reduce` accepts. Empty when clean.
+    /// activation, play, Trade, buy and sale `reduce` accepts. Empty when clean.
     pub fn unlisted(&self, state: &GameState) -> Vec<String> {
         let Some(player) = crate::reduce::seat_to_act(state) else {
             return Vec::new();
@@ -3059,11 +5172,14 @@ pub fn create_duos_invariant_monitor(start: &DuosState) -> DuosInvariantMonitor 
 
 impl DuosInvariantMonitor {
     pub fn new(start: &DuosState) -> DuosInvariantMonitor {
+        // I18 judges no Duos attack: Duos is out of #4111's scope, and a Duos seat is shown a subset of
+        // its duel's forecast entries.
+        let duel = |index: usize| InvariantMonitor {
+            judge_forecast: false,
+            ..InvariantMonitor::new(&start.duels[index])
+        };
         DuosInvariantMonitor {
-            monitors: [
-                InvariantMonitor::new(&start.duels[0]),
-                InvariantMonitor::new(&start.duels[1]),
-            ],
+            monitors: [duel(0), duel(1)],
             view_tamper: None,
         }
     }
@@ -3072,7 +5188,9 @@ impl DuosInvariantMonitor {
         &mut self.monitors[duel]
     }
 
-    /// I1 and I3 on the state the next Duos action is chosen in, plus I12's chosen exertion snapshot.
+    /// I1 and I3 on the state the next Duos action is chosen in, plus I12's chosen exertion snapshot, and
+    /// I19's Dormant cards and I21's immune Units in every duel, since an action in one may reach into the
+    /// other (#4454, #4508).
     pub fn before(&mut self, state: &DuosState, seat: DuosSeat, action: &DuosActionBody) -> Vec<String> {
         let duel = seat.duel();
         let violations = match action {
@@ -3083,15 +5201,27 @@ impl DuosInvariantMonitor {
                 self.monitors[duel].before(&state.duels[duel], seat.player(), &ActionBody::EndTurn)
             }
         };
+        for (other, monitor) in self.monitors.iter_mut().enumerate() {
+            if other != duel
+                && let Some(other_state) = state.duels.get(other)
+            {
+                monitor.note_slumber(other_state);
+                monitor.note_immune(other_state);
+            }
+        }
         violations
             .into_iter()
             .map(|v| format!("duel {duel}: {v}"))
             .collect()
     }
 
-    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7 and I9–I12 against both
-    /// duels, and checks pool bounds (§13.4) for both teams.
+    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7, I9–I12, I16, I17 and I19–I21
+    /// against both duels and I22 on each random `target` draw under the duel it was drawn in, and checks
+    /// pool bounds (§13.4) for both teams.
     pub fn after(&mut self, events: &[DuosEvent], state: &DuosState) -> Vec<String> {
+        // I22: the action's draws, taken before the duels' own `after`s, which would file them all under
+        // the first. A draw's state carries its duel's seed (`duos_duel_seed`), which names the duel.
+        let draws = crate::testkit::seams::take_target_draws();
         let mut found = Vec::new();
         let mut duel_events: [Vec<GameEvent>; DUOS_DUELS] = [Vec::new(), Vec::new()];
         for event in events {
@@ -3108,6 +5238,13 @@ impl DuosInvariantMonitor {
                 found.extend(violations.into_iter().map(|v| format!("duel {duel}: {v}")));
             }
         }
+        for draw in &draws {
+            let duel = state.duels.iter().position(|duel| duel.seed == draw.state.seed);
+            found.extend(target_draw_findings(draw).into_iter().map(|v| match duel {
+                Some(duel) => format!("duel {duel}: {v}"),
+                None => v,
+            }));
+        }
         for &team in Team::ALL {
             let pool = state.teams[team].pool;
             let cap = state.teams[team].rules.pool_health;
@@ -3123,7 +5260,8 @@ impl DuosInvariantMonitor {
         found
     }
 
-    /// I6, I13 and I15 for all seats: both duels' 1v1 checks, plus `duos_view_for` redaction for each seat.
+    /// I6, I13, I15 and I22's listed and offered targets for all seats: both duels' 1v1 checks, plus
+    /// `duos_view_for` redaction for each seat.
     pub fn hidden(&self, state: &DuosState) -> Vec<String> {
         let mut found = Vec::new();
         for (duel, monitor) in self.monitors.iter().enumerate() {
@@ -3196,6 +5334,16 @@ mod tests {
         }
     }
 
+    /// I18 (#4111): a Duos seat is shown a subset of its duel's forecast entries, so neither duel's
+    /// monitor judges an attack by the duel's own forecast; a 1v1 monitor does.
+    #[test]
+    fn i18_a_duos_duel_monitor_judges_no_forecast() {
+        let state = crate::testkit::duos_scenario::duos_scenario("i18-duos", test_decks(), None);
+        let monitor = create_duos_invariant_monitor(&state);
+        assert!(monitor.monitors.iter().all(|duel| !duel.judge_forecast));
+        assert!(create_invariant_monitor(&state.duels[0]).judge_forecast);
+    }
+
     #[test]
     fn duos_monitor_clean_on_fresh_game() {
         let decks = test_decks();
@@ -3255,5 +5403,259 @@ mod tests {
                 .iter()
                 .any(|f| f.contains("pool bound: live game has team a pool 0 <= 0"))
         );
+    }
+
+    #[test]
+    fn duos_monitor_leaves_a_duos_seat_s_hero_to_the_pool_bound_but_holds_its_mana_i17() {
+        let mut state = crate::testkit::duos_scenario::duos_scenario("i17-duos", test_decks(), None);
+        let monitor = create_duos_invariant_monitor(&state);
+        // The premise: duel 0 is settled and its p1 is a Duos seat, so only the `duos` guard stops I17.
+        let duel = &state.duels[0];
+        assert!(duel.result.is_none() && duel.pending.is_none() && duel.mulligan.is_none());
+        assert!(duel.players[PlayerId::P1].duos.is_some());
+        let i17 = |found: Vec<String>| -> Vec<String> {
+            found.into_iter().filter(|f| f.contains(": I17 ")).collect()
+        };
+
+        // B15's `sync_pools` writes the pool into a spent hero where no state check runs (§13.4).
+        state.duels[0].players[PlayerId::P1].hero.health = 0;
+        assert_eq!(i17(monitor.clone().after(&[], &state)), Vec::<String>::new());
+
+        // The contrast: the same hero on a 1v1 seat is a live hero at 0.
+        let mut one_v_one = state.clone();
+        one_v_one.duels[0].players[PlayerId::P1].duos = None;
+        let found = i17(monitor.clone().after(&[], &one_v_one));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("duel 0: I17 live hero at 0"), "{}", found[0]);
+
+        state.duels[0].players[PlayerId::P1].mana.current = -1;
+        let found = i17(monitor.clone().after(&[], &state));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("duel 0: I17 negative mana"), "{}", found[0]);
+    }
+    #[test]
+    fn duos_monitor_skips_a_duos_seat_s_hero_health_i9() {
+        let mut state = crate::testkit::duos_scenario::duos_scenario("i9-duos-health", test_decks(), None);
+        let monitor = create_duos_invariant_monitor(&state);
+        assert!(state.duels[0].players[PlayerId::P1].duos.is_some());
+        let silent = |found: Vec<String>| -> Vec<String> {
+            found
+                .into_iter()
+                .filter(|f| f.contains(": I9 silent hero health"))
+                .collect()
+        };
+
+        // `duos::reduce` copies the team pool into a spent hero with no event (§13.4).
+        state.duels[0].players[PlayerId::P1].hero.health = 7;
+        assert_eq!(silent(monitor.clone().after(&[], &state)), Vec::<String>::new());
+
+        // The contrast: the same silent move on a 1v1 seat is reported.
+        let mut one_v_one = state.clone();
+        one_v_one.duels[0].players[PlayerId::P1].duos = None;
+        let found = silent(monitor.clone().after(&[], &one_v_one));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with("duel 0: I9 silent hero health: p1"),
+            "{}",
+            found[0]
+        );
+    }
+
+    /// I19 (#4454): each Duos duel's monitor judges the Dormant cards its duel began the step with,
+    /// whichever duel the acting seat sits in, and an `after` with no `before` judges none.
+    #[test]
+    fn i19_each_duos_duel_judges_its_dormant_cards() {
+        let mut state = crate::testkit::duos_scenario::duos_scenario("i19-duos", test_decks(), None);
+        let duel = &mut state.duels[1];
+        let def_id = duel.players[PlayerId::P1].hand[0].def_id.clone();
+        let at = Zone::Field {
+            player: PlayerId::P1,
+            row: Row::Units,
+            lane: 1,
+        };
+        let mut card = crate::state::new_instance(duel, &def_id, PlayerId::P1, at);
+        card.slumber = Some(crate::state::Slumber { turns: Some(2) });
+        let id = card.id.clone();
+        duel.players[PlayerId::P1].units[0] = Some(vec![card]);
+        let hit: GameEvent = serde_json::from_value(serde_json::json!({
+            "type": "damage",
+            "sourceId": null,
+            "targetId": id,
+            "amount": 1,
+            "combat": false,
+        }))
+        .expect("a damage event");
+        let events = [DuosEvent::Duel { duel: 1, event: hit }];
+        let i19 = |found: Vec<String>| -> Vec<String> {
+            found.into_iter().filter(|f| f.contains(": I19 ")).collect()
+        };
+        let end_turn = DuosActionBody::Duel {
+            body: ActionBody::EndTurn,
+        };
+        // A seat of duel 0 acts, and duel 1 judges its own Dormant card; a seat of duel 1 likewise.
+        for seat in [DuosSeat::A1, DuosSeat::A2] {
+            let mut monitor = create_duos_invariant_monitor(&state);
+            monitor.before(&state, seat, &end_turn);
+            let found = i19(monitor.after(&events, &state));
+            assert_eq!(found.len(), 1, "{seat}: {found:?}");
+            assert!(
+                found[0].starts_with("duel 1: I19 reached Dormant"),
+                "{}",
+                found[0]
+            );
+            assert!(found[0].contains(&id), "{}", found[0]);
+        }
+        let mut unprimed = create_duos_invariant_monitor(&state);
+        assert_eq!(i19(unprimed.after(&events, &state)), Vec::<String>::new());
+    }
+
+    /// I21 (#4508): each Duos duel's monitor judges the Units Immune to Spells its duel began the step
+    /// with, whichever duel the acting seat sits in, and an `after` with no `before` judges none.
+    #[test]
+    fn i21_each_duos_duel_judges_its_immune_units() {
+        let mut state = crate::testkit::duos_scenario::duos_scenario("i21-duos", test_decks(), None);
+        let duel = &mut state.duels[1];
+        let at = Zone::Field {
+            player: PlayerId::P1,
+            row: Row::Units,
+            lane: 1,
+        };
+        let card = crate::state::new_instance(duel, "stand-in (1) 4/4 Immune to Spells", PlayerId::P1, at);
+        let id = card.id.clone();
+        duel.players[PlayerId::P1].units[0] = Some(vec![card]);
+        let event = |value: serde_json::Value| -> DuosEvent {
+            DuosEvent::Duel {
+                duel: 1,
+                event: serde_json::from_value(value).expect("an event"),
+            }
+        };
+        let events = [
+            event(serde_json::json!({
+                "type": "hookResolving",
+                "sourceId": "i21-source",
+                "defId": "stand-in (0) Spell",
+                "controller": "p2",
+                "hook": "cry",
+            })),
+            event(serde_json::json!({ "type": "buffed", "instanceId": id, "attack": 1, "health": 1 })),
+        ];
+        let i21 = |found: Vec<String>| -> Vec<String> {
+            found.into_iter().filter(|f| f.contains(": I21 ")).collect()
+        };
+        let end_turn = DuosActionBody::Duel {
+            body: ActionBody::EndTurn,
+        };
+        // A seat of duel 0 acts, and duel 1 judges its own immune Unit; a seat of duel 1 likewise.
+        for seat in [DuosSeat::A1, DuosSeat::A2] {
+            let mut monitor = create_duos_invariant_monitor(&state);
+            monitor.before(&state, seat, &end_turn);
+            let found = i21(monitor.after(&events, &state));
+            assert_eq!(found.len(), 1, "{seat}: {found:?}");
+            assert!(
+                found[0].starts_with("duel 1: I21 Spell reached Immune to Spells"),
+                "{}",
+                found[0]
+            );
+            assert!(found[0].contains(&id), "{}", found[0]);
+        }
+        let mut unprimed = create_duos_invariant_monitor(&state);
+        assert_eq!(i21(unprimed.after(&events, &state)), Vec::<String>::new());
+    }
+
+    /// I20 (#4478): each Duos duel's monitor holds its own cards' stored damage to its own events.
+    #[test]
+    fn i20_each_duos_duel_s_monitor_holds_its_stored_damage() {
+        let mut state = crate::testkit::duos_scenario::duos_scenario("i20-duos", test_decks(), None);
+        let duel = &mut state.duels[1];
+        let def_id = duel.players[PlayerId::P1].hand[0].def_id.clone();
+        let at = Zone::Field {
+            player: PlayerId::P1,
+            row: Row::Units,
+            lane: 1,
+        };
+        let card = crate::state::new_instance(duel, &def_id, PlayerId::P1, at);
+        let id = card.id.clone();
+        duel.players[PlayerId::P1].units[0] = Some(vec![card]);
+        let monitor = create_duos_invariant_monitor(&state);
+        let i20 = |found: Vec<String>| -> Vec<String> {
+            found.into_iter().filter(|f| f.contains(": I20 ")).collect()
+        };
+        let hit: GameEvent = serde_json::from_value(serde_json::json!({
+            "type": "damage",
+            "sourceId": null,
+            "targetId": id,
+            "amount": 1,
+            "combat": false,
+        }))
+        .expect("a damage event");
+        let events = [DuosEvent::Duel { duel: 1, event: hit }];
+
+        // A bump with no event is reported by the duel that holds the card.
+        let bump = |state: &mut DuosState| {
+            let card = state.duels[1].players[PlayerId::P1].units[0]
+                .as_mut()
+                .and_then(|pile| pile.first_mut())
+                .expect("the unit");
+            card.damage += 1;
+        };
+        bump(&mut state);
+        let found = i20(monitor.clone().after(&[], &state));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with("duel 1: I20 silent card damage"),
+            "{}",
+            found[0]
+        );
+        // The same bump with its `damage` event is clean.
+        assert_eq!(i20(monitor.clone().after(&events, &state)), Vec::<String>::new());
+    }
+
+    /// I22 (#4540): a random target draw made while a Duos action runs is judged under the duel it was
+    /// drawn in, whichever duel the acting seat sits in, and once.
+    #[test]
+    fn i22_a_duos_draw_is_judged_under_the_duel_it_was_drawn_in() {
+        let mut state = crate::testkit::duos_scenario::duos_scenario("i22-duos", test_decks(), None);
+        let duel = &mut state.duels[1];
+        let def_id = duel.players[PlayerId::P1].hand[0].def_id.clone();
+        let at = Zone::Field {
+            player: PlayerId::P1,
+            row: Row::Units,
+            lane: 1,
+        };
+        let mut card = crate::state::new_instance(duel, &def_id, PlayerId::P1, at);
+        card.slumber = Some(crate::state::Slumber { turns: Some(2) });
+        let pick = Selection::Instance {
+            instance_id: card.id.clone(),
+        };
+        let id = card.id.clone();
+        duel.players[PlayerId::P1].units[0] = Some(vec![card]);
+        let i22 = |found: Vec<String>| -> Vec<String> {
+            found.into_iter().filter(|f| f.contains("I22 ")).collect()
+        };
+        let end_turn = DuosActionBody::Duel {
+            body: ActionBody::EndTurn,
+        };
+        let mut monitor = create_duos_invariant_monitor(&state);
+        monitor.before(&state, DuosSeat::A1, &end_turn);
+        crate::testkit::seams::record_target_draw(
+            &state.duels[1],
+            None,
+            PlayerId::P1,
+            TargetDrawBy::Mayor,
+            std::slice::from_ref(&pick),
+        );
+        let found = i22(monitor.after(&[], &state));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with("duel 1: I22 unlawful random target"),
+            "{}",
+            found[0]
+        );
+        assert!(
+            found[0].contains(&id) && found[0].contains("R1839000"),
+            "{}",
+            found[0]
+        );
+        assert_eq!(i22(monitor.after(&[], &state)), Vec::<String>::new());
     }
 }

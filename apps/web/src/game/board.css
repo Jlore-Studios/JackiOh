@@ -50,6 +50,9 @@
   --hand-lift-rise: 0.1;
   --selected: var(--pal-sky-300);
   --seat-radius: var(--radius-md);
+  --board-notices-max-w: 480px;
+  --board-notices-bottom: var(--space-2);
+  --board-notices-gap: var(--space-2);
 
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -180,13 +183,18 @@
   font-size: var(--type-2xs-em);
   font-weight: 650;
   letter-spacing: 0.08em;
+  /* A long name is cut with an ellipsis, so it cannot push the hero's width (#3698). */
+  min-width: 0;
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .hero-health,
 .hero-armor,
 .hero-jade,
-.hero-credits,
-.hero-luck {
+.hero-credits {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -215,6 +223,30 @@
 .hero-jade {
   border: 1px solid color-mix(in srgb, var(--pal-jade-400) 55%, transparent);
   background: var(--pal-green-700);
+}
+
+/* R3540000: the hero's Burn and Toxic, ember and green beside the Jade Counter's. #4251: the
+   chips ride the tray now, so the rules name the chip, beating `.modifier-badge`'s own border
+   and background at the same weight the portrait's looser pills once did. */
+.hero-counter.hero-burn {
+  border: 1px solid color-mix(in srgb, var(--burn) 55%, transparent);
+  background: color-mix(in srgb, var(--burn) 70%, var(--pal-black));
+}
+
+.hero-counter.hero-toxic {
+  border: 1px solid color-mix(in srgb, var(--toxic) 55%, transparent);
+  background: color-mix(in srgb, var(--toxic) 70%, var(--pal-black));
+}
+
+/* R3548000: the Tipsy counter, amber ale beside the Credits' gold, with its stein. #4251: as above. */
+.hero-counter.hero-tipsy {
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 55%, transparent);
+  background: color-mix(in srgb, var(--pal-brass-500) 70%, var(--pal-black));
+}
+
+.hero-tipsy .cf-icon {
+  width: 14px;
+  height: 14px;
 }
 
 /* R1840005: the Credits, gold beside the Jade Counter's green. */
@@ -387,6 +419,32 @@ button.modifier-badge[data-open="true"] {
   max-width: 14ch;
 }
 
+/* #4251: the hero's counters ride the tray as labelled chips beside the modifiers, outside the
+   overflow allowance. The row stays one line like the modifiers'; a chip keeps its counter's pill
+   colors over `.modifier-badge`'s own, with white text and a bold count. */
+.hero-tray .hero-counters {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.hero-tray .hero-counter {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  height: auto;
+  font-weight: inherit;
+  text-shadow: none;
+  box-shadow: none;
+  color: var(--pal-white);
+}
+
+.hero-tray .hero-counter .hero-counter-n {
+  font-weight: 700;
+}
+
 /* The overflow list (`tray-list-<side>`) reads like a badge bubble, one entry a row. */
 .hero-tray-list {
   display: flex;
@@ -397,11 +455,15 @@ button.modifier-badge[data-open="true"] {
 
 /* #2877: the Jade Counter (R961) and the Credits (R1840005) ride on the portrait as health and
    armor do (`emotes.css` anchors those): Jade top left, Credits top right, at the badges'
-   overlay metrics, so gaining or spending one never moves the plate. */
+   overlay metrics, so gaining or spending one never moves the plate. #4251: Luck, Burn, Toxic
+   and Tipsy ride the tray now (`HeroTray.tsx`), so the oval's two top corners stay one badge each. */
 .hero-portrait .hero-jade,
 .hero-portrait .hero-credits {
   position: absolute;
   top: -6px;
+  /* #4270: above the portrait's open button (z 1, `emotes/portrait.css`), which covers them on a
+     phone, at the layer `emotes.css` lifts health and armor to (2, a named layer here, #2109). */
+  z-index: var(--z-raised);
   min-width: 22px;
   height: 22px;
   padding: 0 var(--space-2);
@@ -410,6 +472,18 @@ button.modifier-badge[data-open="true"] {
 
 .hero-portrait .hero-jade {
   left: -6px;
+}
+
+/* R3548001: the Tipsy blur, on the owner's view alone. The card's root names which of it blurs;
+   a blurred name word or term wears `.tipsy-blur`, the keyword chip marks itself. */
+.tipsy-blur,
+.card[data-tipsy-blur="cost"] .cf-gem,
+.card[data-tipsy-blur="attack"] .stat-attack,
+.card[data-tipsy-blur="attack"] .cf-atk,
+.card[data-tipsy-blur="health"] .stat-health,
+.card[data-tipsy-blur="health"] .cf-hp,
+.keyword-icon[data-tipsy-blur="true"] {
+  filter: blur(3px);
 }
 
 .hero-portrait .hero-credits {
@@ -1258,6 +1332,111 @@ button.modifier-badge[data-open="true"] {
   border-radius: var(--radius-round);
 }
 
+/* R3546004: a GIGA permanent draws across its four zones — its anchor's card spans two lanes in
+   both rows, while the three covered zones read empty. The anchor's lane paints above the next,
+   which the span reaches into; the span grows toward its side's other row (down for your units
+   and the enemy backrow, up for the other two). */
+.lane:has(> .zone[data-giga="anchor"]) {
+  z-index: var(--z-raised);
+}
+
+.zone[data-side="you"][data-row="units"][data-giga="anchor"] > .card,
+.zone[data-side="opponent"][data-row="backrow"][data-giga="anchor"] > .card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: auto;
+  width: calc(200% + var(--gap));
+  height: calc(200% + var(--gap));
+  max-width: none;
+  aspect-ratio: auto;
+}
+
+.zone[data-side="opponent"][data-row="units"][data-giga="anchor"] > .card,
+.zone[data-side="you"][data-row="backrow"][data-giga="anchor"] > .card {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  top: auto;
+  width: calc(200% + var(--gap));
+  height: calc(200% + var(--gap));
+  max-width: none;
+  aspect-ratio: auto;
+}
+
+.zone[data-giga="covered"] {
+  border-color: transparent;
+  background: transparent;
+}
+
+/* R3554000: the Black Hole lane is a dark well that breathes, with its swallowed count; still under
+   `prefers-reduced-motion` (BUILD M5-T6). The well is a layer of its own whose opacity loops, so the
+   loop composites (#3706). R3554002: the slashed lane is a deep red edge over a
+   dark sea-blue centre, its zones hidden — the red mark that reveals the endless sea. R3554007:
+   chained Units wear dashed outlines, shared and split each their own color. */
+.lane[data-lane-mark="blackHole"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-below);
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, var(--pal-black) 0%, var(--pal-slate-900) 55%, transparent 75%);
+  animation: jk-hole-breath 6s linear infinite alternate;
+}
+
+.lane[data-lane-mark="blackHole"] > .zone {
+  border-style: dashed;
+  border-color: var(--pal-slate-700);
+  background: transparent;
+}
+
+.black-hole-count {
+  align-self: center;
+  color: var(--pal-violet-300);
+  font-size: var(--type-sm);
+}
+
+@keyframes jk-hole-breath {
+  from {
+    opacity: 0.7;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.lane[data-lane-mark="slashed"] {
+  border-left: 3px solid var(--pal-red-900);
+  border-right: 3px solid var(--pal-red-900);
+  background: color-mix(in srgb, var(--pal-blue-900) 40%, var(--pal-black));
+}
+
+.lane[data-lane-mark="slashed"] > .zone {
+  visibility: hidden;
+}
+
+.zone[data-chain="shared"] > .card {
+  outline: 2px dashed var(--pal-sky-400);
+  outline-offset: 2px;
+}
+
+.zone[data-chain="split"] > .card {
+  outline: 2px dashed var(--pal-orange-400);
+  outline-offset: 2px;
+}
+
+.zone[data-chain="both"] > .card {
+  outline: 2px dashed var(--pal-purple-400);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lane[data-lane-mark="blackHole"]::before {
+    animation: none;
+  }
+}
+
 .resolving {
   display: inline-flex;
   gap: var(--gap);
@@ -1566,6 +1745,19 @@ button.modifier-badge[data-open="true"] {
   left: 18px;
   bottom: 2px;
   background: var(--grade);
+}
+
+/* R3540000: a Unit's Burn and Toxic follow the grade badge along the bottom edge. */
+.counter-burn {
+  left: 34px;
+  bottom: 2px;
+  background: var(--burn);
+}
+
+.counter-toxic {
+  left: 50px;
+  bottom: 2px;
+  background: var(--toxic);
 }
 
 /* R90 (#992): the viewer's own hand card whose listed plays were cut (Card.tsx): an ellipsis pill
@@ -2256,10 +2448,9 @@ button.modifier-badge[data-open="true"] {
   margin-inline-start: auto;
 }
 
-/* Route controls, alerts and series information are hardware in the same rail as End turn, not
+/* Route controls and series information are hardware in the same rail as End turn, not
    page chrome above the table. Their source components retain their existing test ids and actions. */
-.board-rail,
-.board-notices {
+.board-rail {
   flex: 1 1 100%;
   min-width: 0;
   padding: var(--space-2) var(--space-3);
@@ -2267,13 +2458,30 @@ button.modifier-badge[data-open="true"] {
   border-radius: var(--radius-sm);
   background: var(--bg-raised);
   box-shadow: var(--shadow-inset-top);
-}
-
-.board-rail {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3) var(--space-5);
+}
+
+/* Board notices (action error, attack reason, lethal hint, draw offer) draw in an overlay layer
+   anchored over the field near the viewer's side, never altering board dimensions or flow. */
+.board-notices {
+  position: absolute;
+  bottom: var(--board-notices-bottom);
+  left: 50%;
+  translate: -50% 0;
+  width: min(calc(100% - var(--space-9)), var(--board-notices-max-w));
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: var(--board-notices-gap);
+  pointer-events: none;
+  z-index: var(--z-strip);
+}
+
+.board-notices :is(button, a) {
+  pointer-events: auto;
 }
 
 .board-rail .screen-nav,
@@ -2399,7 +2607,16 @@ button.modifier-badge[data-open="true"] {
   box-shadow: var(--primary-shadow), 0 0 13px color-mix(in srgb, var(--pal-yellow-400) 36%, transparent);
 }
 
-.board .control.control-end-turn[data-turn-state="waiting"] {
+/* The waiting pulse is a yellow halo drawn once on the button's `::after`, whose opacity breathes
+   (R3608000): the button's own shadow never changes, so the loop repaints nothing. */
+.board .control.control-end-turn[data-turn-state="waiting"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--pal-yellow-400) 62%, transparent);
+  opacity: 0;
+  pointer-events: none;
   animation: end-turn-ready-pulse 1.2s var(--ease-in-out) infinite;
 }
 
@@ -2431,7 +2648,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 @keyframes end-turn-ready-pulse {
-  50% { box-shadow: var(--primary-shadow), 0 0 18px color-mix(in srgb, var(--pal-yellow-400) 62%, transparent); }
+  50% { opacity: 1; }
 }
 
 /* "Confirm end turn" (B25): the first click armed it, the second ends the turn. */
@@ -2532,6 +2749,22 @@ button.modifier-badge[data-open="true"] {
    not `display: none`, so its animation still runs and ends). The active seat's glow and End turn's
    label already show whose turn it is. */
 .game > .turn-banner {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
+}
+
+/* #4140: the log's screen-reader announcer (Log.tsx, `log-live`): the same visually-hidden
+   pattern as the turn banner, but under `.board` rather than `.game`, and its own class rather
+   than `.log`, so it stays in the accessibility tree on phones too, where `.log` is
+   `display: none` until the toggle opens it: arrivals are announced while the popover is closed. */
+.board > .log-live {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -2756,6 +2989,12 @@ button.modifier-badge[data-open="true"] {
     grid-template-rows: auto 1fr auto auto auto;
   }
 
+  /* R434: at the game's end the opponent's hand turns face up, a hand card tall, so the field rows give that height
+     back (four field rows and both hands, 1.3 each). At 768x1024 the board ran 92px past its box (#4079). */
+  .board:has(> .hand-opponent[data-revealed="true"]) {
+    --card-h: clamp(60px, calc((100cqh - 305px) / 6.6), 113px);
+  }
+
   .board > * {
     grid-column: 1 / -1;
   }
@@ -2858,11 +3097,20 @@ button.modifier-badge[data-open="true"] {
   }
 
   .seat .hero-health,
-  .seat .hero-armor,
-  .seat .hero-luck {
+  .seat .hero-armor {
     min-width: 32px;
     height: 32px;
     font-size: var(--type-xl-em);
+  }
+
+  /* #4270: two 32px badges on the 44px oval at the base -6px overlapped each other by 8px, so here
+     each stands 4px further out. */
+  .seat .hero-portrait .hero-armor {
+    left: -10px;
+  }
+
+  .seat .hero-portrait .hero-health {
+    right: -10px;
   }
 
   /* Your hand's cards are drawn 1.3 to 1.5 times the field's here, so their type comes up to
@@ -3035,8 +3283,7 @@ button.modifier-badge[data-open="true"] {
   }
 
   .hero-health,
-  .hero-armor,
-  .hero-luck {
+  .hero-armor {
     min-width: 26px;
     height: 26px;
   }
@@ -3173,6 +3420,8 @@ button.modifier-badge[data-open="true"] {
        2px the tray stands off the plate. */
     --tray-chip-h: 14px;
     --tray-channel: calc(var(--tray-chip-h) + 2px);
+    /* #4270: the height of the seat's pill row, which the opponent's tray steps past. */
+    --seat-pile-h: 14px;
     /* Your hand takes the height a phone held upright still has spare under the controls, so its
        cards read without a tap; B30's strips still hold for a 7- and a 10-card hand. */
     --hand-card-h: calc(var(--card-h) * 1.24);
@@ -3184,15 +3433,30 @@ button.modifier-badge[data-open="true"] {
   }
 
   /* #2876: the lanes share the field's height, so no band of mat stays above the opponent's
-     backrow or below yours (the roomy pattern: the field is the board's `1fr` row). */
+     backrow or below yours (the roomy pattern: the field is the board's `1fr` row).
+
+     #3633: the field and its row of lanes state their minimum height, the lanes' four rows at
+     their floor (`--lane-row-min`) and the three gaps, instead of having Blink learn it. Learning
+     it laid the lanes out twice on every layout that reached them, a shake's, a hand's or a
+     card's: once with no height, where each row is at its floor, and once in the field, where each
+     row is the lanes' share. Each zone is a size container and its card is sized off it (`cqw`,
+     `cqh`, below), so both passes restyled every field card, over a hundred milliseconds a time on
+     a phone throttled 4x (R3351000). The minimum is the one Blink learnt: `content-box` makes the
+     field's `min-height` its rows', whatever its padding and border, so every box is where it was. */
   .field {
+    --lane-row-min: var(--card-h);
+    --lanes-min: calc(4 * var(--lane-row-min) + 3 * var(--gap));
+
+    box-sizing: content-box;
+    min-height: var(--lanes-min);
+    grid-template-rows: minmax(var(--lanes-min), 1fr);
     align-content: stretch;
   }
 
   .lane {
     align-self: center;
     height: 100%;
-    grid-template-rows: repeat(4, minmax(var(--card-h), 1fr));
+    grid-template-rows: repeat(4, minmax(var(--lane-row-min), 1fr));
   }
 
   /* #2876: a zone answers its card's size to itself, so the card below reads the zone's own
@@ -3275,13 +3539,6 @@ button.modifier-badge[data-open="true"] {
     flex-wrap: nowrap;
   }
 
-  /* Except while the notices strip has something to say (a draw offer, a refused action): then it
-     takes a row of its own above the controls, as it does on a wider screen. In the one row it was
-     squeezed to 16px, and the offer and its Accept and Decline spilled out over End turn. */
-  .board .control-bar:has(> .board-notices > :not(:empty)) {
-    flex-wrap: wrap;
-  }
-
   /* And while it holds a rail (an online match's Back, chat and ranks; a replay's or a watch's way
      back): squeezed into the one row, the rail took End turn's width and still stood 130px tall,
      its buttons stacked in a 16px column and its rank line cut to nothing. It takes a row of its
@@ -3334,19 +3591,6 @@ button.modifier-badge[data-open="true"] {
     padding-inline: var(--space-2);
     line-height: 1.1;
     white-space: normal;
-  }
-
-  /* With nothing to say, the notices strip (the draw offer's live region, waiting) leaves the row:
-     squeezed in beside End turn it was an empty 16px pill, and the width End turn needed. It stays
-     in the accessibility tree, hidden the visually-hidden way, so the live region still announces. */
-  .board .control-bar .board-notices:not(:has(> :not(:empty))) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    border: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
   }
 
   /* From seven cards the fan overlaps so far that a covered card shows a strip under 50px wide, and
@@ -3483,6 +3727,11 @@ button.modifier-badge[data-open="true"] {
     line-height: 1;
   }
 
+  /* #4270: a seat's pills are pinned at the height the opponent's tray steps past (below). */
+  .seat .pile {
+    height: var(--seat-pile-h);
+  }
+
   .pile::before {
     width: 11px;
     height: 11px;
@@ -3495,11 +3744,56 @@ button.modifier-badge[data-open="true"] {
     z-index: var(--z-content);
   }
 
+  /* R2122000: the pills stand right under the 44px portrait and the hand's outer cards rise into
+     that strip, so a band centred on the pill took the bottom of the portrait's button and the
+     corner of your first card from them. It starts at the pill's top and stops partway into the
+     strip, still 44px across. */
+  .seat .pile--browsable::after {
+    --pile-band-below: 10px;
+    top: 0;
+    height: calc(100% + var(--pile-band-below));
+    transform: translateX(-50%);
+  }
+
+  /* The opponent's seat has no hand below it, so its pills' band reaches the whole half of --hit-min
+     below the pill's centre; the hero plate above still keeps its own taps. */
+  .seat-opponent .pile--browsable::after {
+    height: calc(50% + var(--hit-min) / 2);
+  }
+
   .hero-tray .modifier-badge,
   .hero button.modifier-badge {
     height: var(--tray-chip-h);
     padding: 0 var(--space-2);
     line-height: calc(var(--tray-chip-h) - 2px);
+  }
+
+  /* #4251: four labelled chips beside the modifiers overflow a centered tray past the screen's
+     edge on the tight phone plate, so a tray carrying counters starts at the plate's portrait
+     end instead of its middle. A tray without counters stays centered, as #2877 placed it. */
+  .hero-tray:has(.hero-counters) {
+    left: var(--space-2);
+    transform: none;
+  }
+
+  /* #4270: the opponent's seat stacks its plate, its mana and pills, then the tray channel, so a
+     tray hung 2px under the plate lay on the pills. It hangs past the pill row, in the channel.
+     A `data-legal="false"` plate's opacity makes it a stacking context, which kept the tray under
+     the pills' tap bands (`.seat .pile--browsable`, z 1), so the opponent's plate stands one layer
+     up; `:where` keeps the glowing hero's and the emote's layers winning, and the bands start at
+     the pill's top, so the plate covers none of them. */
+  :where(.board > .seat-opponent) > .hero {
+    z-index: var(--z-raised);
+  }
+
+  .hero-opponent .hero-tray {
+    top: calc(100% + var(--seat-pile-h) + 2px);
+  }
+
+  /* #4270: that tray has only the plate's width, so its counters show their counts alone; the
+     name stays in each chip's title and label and in the hold-to-inspect list (R3540005). */
+  .hero-opponent .hero-tray .hero-counter-name {
+    display: none;
   }
 
   /* #2932: a route's rail (a match's, a replay's, a watch's: Back and the rank line) rides the top
@@ -3715,21 +4009,10 @@ button.modifier-badge[data-open="true"] {
 
   /* A rail tops the column: Back and chat fill its width, so the rank line takes a line of its own
      under them. Under the opponent's hand the column had no height for it, and the opponent's backs
-     were drawn over Back and chat, so the column gives up a row: the empty notices pill leaves (as
-     from the row of a phone held upright), the language button steps aside (the gear's Gameplay tab
-     holds Language, #785), and the turn plate says its two lines on one. */
+     were drawn over Back and chat, so the column gives up a row: the language button steps aside
+     (the gear's Gameplay tab holds Language, #785), and the turn plate says its two lines on one. */
   .match-ranks {
     flex-basis: 100%;
-  }
-
-  .board .control-bar:has(> .board-rail) .board-notices:not(:has(> :not(:empty))) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    border: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
   }
 
   .board .control-bar:has(> .board-rail) .language-button--game {
@@ -3786,6 +4069,23 @@ button.modifier-badge[data-open="true"] {
   .hand-you .hand-slot[data-lifted="true"]:has(> .card[data-selected="true"]) {
     transform: translateY(calc(var(--hand-card-h) * -0.5 - 8px));
   }
+
+  /* #4270: the seat column is 224px wide, so a centred tray of named counters (about 324px) ran off
+     the screen and over the field's first lane; with their counts alone (the name in each chip's
+     title and label, R3540005) it is about 220px. Both trays hang above their plates, in the seat's
+     free half, clear of the opponent's pills and of the badges' 4px overhang. */
+  .hero-tray .hero-counter-name {
+    display: none;
+  }
+
+  .hero-opponent .hero-tray {
+    top: auto;
+    bottom: calc(100% + var(--space-2));
+  }
+
+  .hero-you .hero-tray {
+    bottom: calc(100% + var(--space-2));
+  }
 }
 
 /* ------------------------------------------------------------------------ the game screen --- */
@@ -3801,8 +4101,13 @@ button.modifier-badge[data-open="true"] {
    End turn, and on a phone held landscape your whole hand, below the screen.
 
    Only the top edge is padded for a notch here: the board pads its own sides and bottom
-   (`env(safe-area-inset-*)`, the phone layouts above), and the chrome row is inset to match. */
-.app-shell.app-shell--wide:has(> .game) {
+   (`env(safe-area-inset-*)`, the phone layouts above), and the chrome row is inset to match.
+
+   The shell is the game's host by `[data-game-host]`, which Game sets on its parent while it is
+   mounted (Game.tsx), not by `:has(> .game)`: a `:has()` followed by `> *` or `> :not(.game)`
+   made Blink restyle the whole shell, the board and its effects included, on every change under
+   it, a hundred milliseconds a time on a throttled phone (#3633; hasSelectors.test.ts). */
+.app-shell.app-shell--wide[data-game-host] {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-rows: auto auto auto minmax(0, 1fr);
@@ -3812,24 +4117,24 @@ button.modifier-badge[data-open="true"] {
   padding-top: max(var(--space-6), env(safe-area-inset-top));
 }
 
-.app-shell--wide:has(> .game) > * {
+.app-shell--wide[data-game-host] > * {
   grid-column: 1 / -1;
   min-width: 0;
   margin: 0 0 var(--space-4);
 }
 
-.app-shell--wide:has(> .game) > .screen-nav {
+.app-shell--wide[data-game-host] > .screen-nav {
   grid-column: 1;
   grid-row: 1;
   align-self: center;
 }
 
-.app-shell--wide:has(> .game) > .screen-nav + .match-bar {
+.app-shell--wide[data-game-host] > .screen-nav + .match-bar {
   grid-column: 2;
   grid-row: 1;
 }
 
-.app-shell--wide:has(> .game) > :not(.game) {
+.app-shell--wide[data-game-host] > :not(.game) {
   margin-inline: max(0px, calc(env(safe-area-inset-left) - var(--space-6))) max(0px, calc(env(safe-area-inset-right) - var(--space-6)));
 }
 
@@ -3850,25 +4155,25 @@ button.modifier-badge[data-open="true"] {
 /* Phones: the shell's frame and the chrome row come down to what a thumb needs. The match bar is
    one line, cut with an ellipsis rather than wrapped into a second. */
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
-  .app-shell.app-shell--wide:has(> .game) {
+  .app-shell.app-shell--wide[data-game-host] {
     padding: max(var(--space-3), env(safe-area-inset-top)) var(--space-6) var(--space-3);
   }
 
-  .app-shell--wide:has(> .game) > * {
+  .app-shell--wide[data-game-host] > * {
     margin-bottom: var(--space-3);
   }
 
-  .app-shell--wide:has(> .game) > .game {
+  .app-shell--wide[data-game-host] > .game {
     margin-bottom: 0;
   }
 
-  .app-shell--wide:has(> .game) > .match-bar {
+  .app-shell--wide[data-game-host] > .match-bar {
     flex-wrap: nowrap;
     padding: var(--space-2) var(--space-4);
     font-size: var(--type-sm);
   }
 
-  .app-shell--wide:has(> .game) > .match-bar > span:first-child {
+  .app-shell--wide[data-game-host] > .match-bar > span:first-child {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3878,7 +4183,7 @@ button.modifier-badge[data-open="true"] {
   /* B46: the clock keeps its words on one line beside the cut first span (clock.css keeps the
      urgent pill's words too). Squeezed word-by-word it stood the bar three lines tall, and the
      board's cards — already at their 44px floor at 390x664 — spilled 9px past the screen. */
-  .app-shell--wide:has(> .game) > .match-bar > .clock {
+  .app-shell--wide[data-game-host] > .match-bar > .clock {
     flex: none;
     white-space: nowrap;
   }

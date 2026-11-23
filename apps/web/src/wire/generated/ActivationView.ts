@@ -8,6 +8,11 @@ import type { ActivationSource } from "./ActivationSource";
  */
 export type ActivationView = { ability: string, label: string, usesLeft: number | null, usable: boolean, reason?: string, 
 /**
+ * R3550003: how many of its user's turns the ability still sits out. Absent when it is not
+ * cooling down.
+ */
+cooldownTurnsLeft?: number, 
+/**
  * R3291000: the fused ingredient whose text prints the ability (a Starship's Weapon piece, an
  * Equipped Unit's Weapon), whose art the Activate picker's choice card wears. Absent when the
  * ability is the card's own text or the engine's (the Dormant Starship's launch, a Cloaked card's

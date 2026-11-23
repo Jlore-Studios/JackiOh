@@ -3,6 +3,8 @@
 //! `legal_actions` lists every play they allow and the search tries each through `reduce`. Supply
 //! Drop's countdown is a payoff and a threat past the opponent's reply (#1995).
 
+use std::cell::Cell;
+
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
@@ -27,10 +29,6 @@ fn library() -> Value {
 
 fn decide_at(state: &GameState, seed: &str) -> Decision {
     decide(state, AI, &mut AiOptions::new(create_rng(seed, 0))).expect("the AI acts")
-}
-
-fn is_play_of(action: &ActionBody, card: &str) -> bool {
-    matches!(action, ActionBody::Play { instance_id, .. } if instance_id == card)
 }
 
 /// The instance id of the AI's hand card of `def_id`.
@@ -269,7 +267,7 @@ fn r1181001_the_ai_weighs_both_supply_drop_modes_at_each_price_it_can_pay() {
 
 // M+ #22 Mountaintop Garden: the dearer choice (R1181002)
 
-/// The AI holds Wondrous Wand (2, Embiggened 4) and a filler at `mana`, a Garden (Radiant on
+/// The AI holds Wondrous Wand (1, Embiggened 3) and a filler at `mana`, a Garden (Radiant on
 /// `radiant`) face-up in its backrow.
 fn garden_game(seed: &str, radiant: bool, mana: i32) -> GameState {
     register_cards();
@@ -289,9 +287,9 @@ fn garden_game(seed: &str, radiant: bool, mana: i32) -> GameState {
 
 #[test]
 fn r1181002_the_ai_is_offered_the_gardens_dearer_choice_only_when_it_can_pay_the_premium() {
-    // The base Garden's premium is 2 and the Radiant one's 1, over the Wand's normal (2): the Radiant
-    // Garden's dearer choice costs 3, below the (4) the Wand prints.
-    for (radiant, dearer) in [(false, 4), (true, 3)] {
+    // The base Garden's premium is 2 and the Radiant one's 1, over the Wand's normal (1, since issue
+    // #3996): the Radiant Garden's dearer choice costs 2, below the (3) the Wand prints.
+    for (radiant, dearer) in [(false, 3), (true, 2)] {
         for mana in [dearer, dearer - 1] {
             let seed = format!("ai-garden-{radiant}-{mana}");
             let state = garden_game(&seed, radiant, mana);
@@ -364,6 +362,145 @@ fn the_ai_casts_supply_drop_in_combat_mode_against_three_3_health_units() {
         "{:?}",
         decision.action
     );
+}
+
+/// R3696000: Supply Drop beside two castable Vanillas, against three Curvatures.
+fn supply_drop_beside_two_vanillas() -> GameState {
+    register_cards();
+    scenario(json!({
+        "seed": "ai-supply-drop-combat",
+        "p1": { "hand": [SUPPLY_DROP, VANILLA, VANILLA], "mana": 2, "library": library() },
+        "p2": {
+            "hand": [VANILLA],
+            "field": [
+                { "def": CURVATURE, "lane": 1 },
+                { "def": CURVATURE, "lane": 2 },
+                { "def": CURVATURE, "lane": 3 },
+            ],
+            "library": library(),
+        },
+    }))
+    .state()
+    .clone()
+}
+
+/// The board above with two castable Vanillas beside Supply Drop: their plays in each lane outscore
+/// the cast on the static score and fill every place the reply scores, so the countdown, worth only
+/// once the reply weighs it, keeps a place of its own (R3696000): the decision replies to one line
+/// past the shortlist.
+///
+/// R4132000: before that change, four of the six places held one board, both Vanillas attacking,
+/// with the Vanillas in each other's lanes or the second in lane 2 or 3, and the cast beat it after
+/// the reply. Those are one line now, and a place goes to a Vanilla set in Defense Position, which the
+/// reply scores above the cast, so the decision plays it. R4159000: the hand eval alone, which no network
+/// corrects any more, scores a Vanilla's line above the cast's too, so the AI plays a Vanilla first.
+#[test]
+fn r3696000_r4159000_beside_two_castable_vanillas_the_hand_eval_plays_a_vanilla_first() {
+    let state = supply_drop_beside_two_vanillas();
+    let decision = decide_at(&state, "ai-supply-drop-combat");
+    assert!(decision.stats.replied > SHORTLIST, "{:?}", decision.stats);
+    let ActionBody::Play { instance_id, .. } = &decision.action else {
+        panic!("{:?}", decision.action);
+    };
+    let played = state.players[AI]
+        .hand
+        .iter()
+        .find(|card| card.id == *instance_id)
+        .map(|card| card.def_id.as_str());
+    assert_eq!(played, Some(VANILLA), "{:?}", decision.action);
+}
+
+/// The lines `shortlist_lines` takes at the browser's budget, before the payoff line (R3696000).
+const SHORTLIST: usize = AI_BUDGET.finalists * AI_SEARCH.lines_per_action as usize;
+
+/// R3696000: on every budget from one too tight to reply to the Supply Drop line to one that spares it,
+/// a decision that replies to it still scores its finalists on every sampled world: its reply draws only
+/// on the nodes the other worlds do not keep back.
+#[test]
+fn r3696000_on_a_tight_budget_the_supply_drop_line_costs_no_world_its_score() {
+    let state = supply_drop_beside_two_vanillas();
+    let decisions: Vec<Decision> = (60..=200)
+        .step_by(5)
+        .map(|nodes| {
+            decide(
+                &state,
+                AI,
+                &mut AiOptions::with_budget(
+                    create_rng("ai-supply-drop-combat", 0),
+                    SearchBudget { nodes, ..AI_BUDGET },
+                ),
+            )
+            .expect("the AI acts")
+        })
+        .collect();
+    for decision in &decisions {
+        assert!(
+            decision.stats.replied <= SHORTLIST || decision.stats.worlds_scored == AI_BUDGET.determinizations,
+            "{:?}",
+            decision.stats
+        );
+    }
+    assert!(
+        decisions
+            .iter()
+            .any(|decision| decision.stats.replied > SHORTLIST),
+        "PREMISE: some budget replies to the Supply Drop line"
+    );
+    assert!(
+        decisions.iter().any(|decision| {
+            decision.stats.replied == SHORTLIST
+                && decision.stats.worlds_scored == AI_BUDGET.determinizations
+                && decision.stats.stopped_by == StoppedBy::Budget
+        }),
+        "PREMISE: some budget scores every world only by leaving the Supply Drop line out"
+    );
+}
+
+/// R3696000, R3498000: past the host's wrap-up the Supply Drop line is not replied to, while the
+/// shortlist and every other world still are. The beam never reaches its own poll (its floor is the root's
+/// `root_branching` and endTurn), so the one poll is the search's, before that line.
+#[test]
+fn r3696000_past_the_wrap_up_the_supply_drop_line_is_not_replied_to() {
+    let state = supply_drop_beside_two_vanillas();
+    let budget = SearchBudget {
+        root_branching: AI_BUDGET.nodes,
+        ..AI_BUDGET
+    };
+    let plain = decide(
+        &state,
+        AI,
+        &mut AiOptions::with_budget(create_rng("ai-supply-drop-combat", 0), budget),
+    )
+    .expect("the AI acts");
+    assert_eq!(
+        plain.stats.replied,
+        SHORTLIST + 1,
+        "PREMISE: with no clock the Supply Drop line is replied to: {:?}",
+        plain.stats
+    );
+    assert_eq!(plain.stats.stopped_by, StoppedBy::Exhausted);
+
+    let polls = Cell::new(0usize);
+    let fired = || {
+        polls.set(polls.get() + 1);
+        true
+    };
+    let wrapped = decide(
+        &state,
+        AI,
+        &mut AiOptions {
+            rng: create_rng("ai-supply-drop-combat", 0),
+            budget,
+            should_stop: None,
+            wrap_up: Some(&fired),
+        },
+    )
+    .expect("the AI acts");
+    assert_eq!(polls.get(), 1);
+    assert_eq!(wrapped.stats.lines, plain.stats.lines, "one beam");
+    assert_eq!(wrapped.stats.replied, SHORTLIST, "{:?}", wrapped.stats);
+    assert_eq!(wrapped.stats.worlds_scored, AI_BUDGET.determinizations);
+    assert_eq!(wrapped.stats.stopped_by, StoppedBy::Clock);
 }
 
 /// The AI's turn after p2 cast Supply Drop in Combat mode (the cast ends p2's turn: nothing is left

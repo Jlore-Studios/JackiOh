@@ -1,8 +1,9 @@
 //! #23 Reoccurring Dream (SPEC §8.2, R60, R68, §5.1).
 //!
 //! Base: "30% chance a random card in your hand becomes Radiant. End of turn: returns from the GY to
-//! your hand". Radiant restates the roll only — "Lucky 1 (two rolls, keep the success) at 40%" — so
-//! the return-from-the-graveyard clause is kept (§8 Conventions).
+//! your hand". Radiant restates the roll only — "Lucky 1 (two rolls, keep the success) at 30%", the
+//! base face's chance since issue #4292 (40% before) — so the return-from-the-graveyard clause is
+//! kept (§8 Conventions).
 //! Seeded RNG roll (CLAUDE.md rule 4, R60; Lucky X §6.1).
 //! Graveyard trigger in §2.2 cleanup (R68, §10.5) returns to hand (burns if full, R4, §2.4; R129, R987, R177, §9.1).
 //! Radiant stays through zone moves (R1438). Kept face v0.4.0f (R767000, R1748003).
@@ -11,7 +12,8 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-023";
 
-/// "30%" and "40%" as v0.4.4b printed them, before they were the declared `chance` (R1748003).
+/// "30%" and "40%" as v0.4.4b printed them, before they were the declared `chance` (R1748003); the
+/// kept v0.4.4b script still reads both, though the Radiant face declares 30 since issue #4292.
 const BASE_CHANCE: f64 = 0.3;
 const RADIANT_CHANCE: f64 = 0.4;
 
@@ -91,7 +93,8 @@ fn dream(declared: bool) -> CardScripts {
     };
 
     let radiant = Script {
-        // Lucky 1: roll twice and keep the success (§6.1), each roll at 40%.
+        // Lucky 1: roll twice and keep the success (§6.1), each roll at its declared chance (30%; 40%
+        // until issue #4292), or at the 40% v0.4.4b printed.
         cry: Some(hook(move |ctx| {
             if !any_to_make_radiant(ctx) {
                 return vec![];
@@ -119,7 +122,8 @@ pub fn script_v0_4_4b() -> CardScripts {
 }
 
 // #23 Reoccurring Dream — SPEC §8.2, BUILD M4-T4 row 23 (R60).
-// Tests verify seeded rolls, end-of-turn return, hand full burn, and Radiant Lucky 1 at 40%.
+// Tests verify seeded rolls, end-of-turn return, hand full burn, and Radiant Lucky 1 at its declared
+// chance (30%; 40% until issue #4292).
 #[cfg(test)]
 mod tests {
     use super::script;
@@ -223,8 +227,43 @@ mod tests {
         fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_chance() {
             crate::under_kept(DREAM, super::super::script_v0_4_4b(), || {
                 // Seven Buffs move the declared number, which the kept script never reads: it rolls
-                // its printed 30%, and some seed misses.
-                assert!(SEEDS.iter().any(|seed| radiants_buffed(seed, 7) == 0));
+                // its printed 30%, so some seed misses and some seed hits.
+                let rolls: Vec<usize> = SEEDS.iter().map(|seed| radiants_buffed(seed, 7)).collect();
+                assert!(rolls.contains(&0));
+                assert!(rolls.contains(&1));
+            });
+        }
+
+        /// R987, R767000: a game folded under v0.5.11r or before, where Feng Shui's kept script gave its
+        /// controller Luck 1 (R3140000), rolls the Dream once more for it, as a Lucky 1 given to the card
+        /// does: the same hand cards turn Radiant on the same draws, on either face.
+        #[test]
+        fn r987_r767000_its_controllers_luck_rolls_as_a_lucky_given_to_it_does() {
+            const FENG_SHUI: &str = "meditative-040"; // Feng Shui: "You have Luck 1" through v0.5.11r
+            crate::under_kept(FENG_SHUI, crate::scripts::meditative::c040_feng_shui::script_v0_5_11o(), || {
+                let cast = |seed: &str, radiant: bool, luck: bool| -> (Vec<String>, u32) {
+                    let mut hand = vec![json!({ "def": DREAM, "radiant": radiant })];
+                    hand.extend(OTHERS.iter().map(|def| json!(def)));
+                    let backrow = if luck { json!([FENG_SHUI]) } else { json!([]) };
+                    let mut s = crate::scenario(json!({
+                        "seed": seed,
+                        "p1": { "hand": hand, "backrow": backrow },
+                        "p2": { "hand": ["core-005"] },
+                    }));
+                    if !luck {
+                        crate::give_lucky(&mut s, DREAM, 1);
+                    }
+                    assert_eq!(luck_of(s.state(), P1), i32::from(luck));
+                    s.play(DREAM, json!({}));
+                    let flagged = s.hand(P1).into_iter().filter(|card| card.radiant).map(|card| card.id);
+                    (flagged.collect(), s.state().rng_cursor)
+                };
+                for radiant in [false, true] {
+                    for seed in &SEEDS {
+                        let (luck, lucky) = (cast(seed, radiant, true), cast(seed, radiant, false));
+                        assert_eq!(luck, lucky, "{seed}, radiant {radiant}");
+                    }
+                }
             });
         }
 
@@ -310,13 +349,52 @@ mod tests {
                 s.expect_in_zone(&dream, "graveyard");
                 s.expect_events(json!(["burned"]));
             }
+
+            /// R77, §5.1: fused onto a Unit, the Dream's end-of-turn text runs on the field, and it
+            /// returns the card only on the turn it was played: a Unit already on the field stays.
+            #[test]
+            fn r77_fused_onto_a_unit_already_on_the_field_it_returns_nothing_at_the_end_of_the_turn() {
+                const BODY: &str = "stand-in (1) 2/2";
+                let mut s = crate::scenario(json!({
+                    "seed": "dream-fused",
+                    "p1": { "hand": [DREAM, "core-005"], "field": [BODY], "library": ["core-005"] },
+                    "p2": { "hand": ["core-005"], "library": ["core-005"] },
+                }));
+                let body = s.card(BODY).clone();
+                let dream = s.card(DREAM).clone();
+                let mut rng = Rng::new(&s.state().seed.clone(), s.state().rng_cursor);
+                let mut events: Vec<GameEvent> = Vec::new();
+                let fused = {
+                    let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                    let args = json!({ "ingredients": [dream], "target": body });
+                    subsystems::fuse::fuse(&mut sink, json_as(args))
+                };
+                assert_eq!(fused.map(|card| card.id), Some(body.id.clone()));
+
+                s.end_turn();
+
+                s.expect_in_zone(&body, "field");
+            }
         }
 
         mod radiant {
             use super::*;
 
+            /// Issue #4292: the Radiant face declares the base face's `chance`, 30 (40 before), and
+            /// keeps its printed Lucky 1.
             #[test]
-            fn lucky_1_at_40_hits_wherever_the_base_30_hits_and_at_more_seeds_besides() {
+            fn declares_the_base_30_since_issue_4292() {
+                crate::register_all();
+                for is_radiant in [false, true] {
+                    let s = dream_in("dream-declared", is_radiant, &OTHERS);
+                    let chance = param_value(s.state(), Some(s.card(DREAM)), "chance", ParamValueOptions::default());
+                    assert_eq!(chance, 30, "radiant {is_radiant}");
+                }
+                assert_eq!(crate::card_def(DREAM).radiant.keywords, vec![Keyword::Lucky { n: 1 }]);
+            }
+
+            #[test]
+            fn lucky_1_at_30_hits_wherever_the_base_hits_and_at_more_seeds_besides() {
                 crate::register_all();
                 let base_hits: Vec<&str> = SEEDS
                     .iter()
@@ -333,7 +411,7 @@ mod tests {
                 for seed in &base_hits {
                     assert!(radiant_hits.contains(seed));
                 }
-                // Two rolls at 40% beat one at 30%: 64% against 30% over enough seeds.
+                // Two rolls at 30% beat one: 51% against 30% over enough seeds.
                 assert!(radiant_hits.len() > base_hits.len());
                 // R60: still one card at a time.
                 assert!(SEEDS.iter().all(|seed| radiants_after_playing(seed, true) <= 1));

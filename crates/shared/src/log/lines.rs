@@ -10,9 +10,9 @@
 
 use jackioh_engine::game_over::{SeatOutcome, seat_outcome};
 use jackioh_engine::wire::{
-    CounterKind, FengShuiOutcome, GameEvent, GameOverReason, GlitchOutcome, LibraryOverflowOutcome, PlayerId,
-    PlayerView, PredictOutcome, PromptKind, RedirectWhat, RotationDirection, Row, SecretChoice, Winner,
-    ZoneName,
+    CounterKind, FengShuiOutcome, GameEvent, GameOverReason, GlitchOutcome, KeywordKind,
+    LibraryOverflowOutcome, PlayerId, PlayerView, PredictOutcome, PromptKind, RedirectWhat,
+    RotationDirection, Row, SecretChoice, Winner, ZoneName,
 };
 
 use crate::face::chinese::{list_separator, reader_keyword};
@@ -24,7 +24,7 @@ use crate::face::types::Span;
 use super::chaos::chaos_effect_name;
 use super::curve::curve_equation;
 use super::names::{Names, find_card};
-use super::say::{Part, capitalised, capitalised_spans, plain_words, sentence};
+use super::say::{Part, capitalised, capitalised_spans, plain_words, sentence, signed};
 
 fn p<T: Into<Part>>(name: &'static str, value: T) -> (&'static str, Part) {
     (name, value.into())
@@ -324,6 +324,17 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
     let s = |english: &str, parts: Vec<(&'static str, Part)>| sentence(w, english, &parts);
     let cap = capitalised_spans;
     let hidden = |id: &str| id == HIDDEN_CARD;
+    // R2783001: the line ends with the keyword behind its event, where the event names one.
+    let by = |text: Vec<Span>, via: Option<KeywordKind>| match via {
+        Some(kind) => s(
+            "{sentence} ({keyword})",
+            vec![
+                p("sentence", text),
+                p("keyword", keyword_span(names, kind.as_str())),
+            ],
+        ),
+        None => text,
+    };
     let seat = |player: PlayerId| names.seat(player);
     let whose = |player: PlayerId| names.whose(player);
     // "Your hero", "A unit": the target as the line opens.
@@ -359,6 +370,7 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             def_id,
             row,
             lane,
+            via,
             ..
         } => {
             // R370: a card set face down is a trap the viewer may not read; the line says so, with the
@@ -377,7 +389,14 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                 }));
             }
             parts.push(p("card", names.card(instance_id, def_id)));
-            cap(s("{card} entered {whose} {zone}", parts))
+            // A hidden card's keyword is not the viewer's to read, though the view drops it already (R97).
+            let via = via.filter(|_| !hidden(def_id));
+            let text = if via == Some(KeywordKind::Reborn) {
+                s("{card} came back in {whose} {zone}", parts)
+            } else {
+                s("{card} entered {whose} {zone}", parts)
+            };
+            cap(by(text, via))
         }
         GameEvent::Damage {
             source_id,
@@ -385,6 +404,7 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             amount,
             combat,
             absorbed,
+            via,
             ..
         } => {
             // A hit off combat names what dealt it where the viewer may name it; a hidden or null source
@@ -394,7 +414,7 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             } else {
                 source_id.as_deref().and_then(|id| names.known(id))
             };
-            if let Some(source) = source {
+            let text = if let Some(source) = source {
                 let dealt = vec![
                     p("source", capitalised(&source)),
                     p("target", names.instance(target_id, None)),
@@ -425,13 +445,15 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                     (false, true) => s("{target} took {amount} damage in combat", hit),
                     (false, false) => s("{target} took {amount} damage", hit),
                 }
-            }
+            };
+            by(text, *via)
         }
         GameEvent::DamageAbsorbed {
             source_id,
             target_id,
             absorbed,
             combat,
+            via,
             ..
         } => {
             // R1361: the Armor took the whole hit, so nothing was dealt.
@@ -441,7 +463,7 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             } else {
                 source_id.as_deref().and_then(|id| names.known(id))
             };
-            match source {
+            let text = match source {
                 Some(source) => {
                     let mut hit = hit;
                     hit.push(p("source", source));
@@ -449,8 +471,14 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                 }
                 None if *combat => s("{target}'s Armor absorbed {absorbed} damage in combat", hit),
                 None => s("{target}'s Armor absorbed {absorbed} damage", hit),
-            }
+            };
+            by(text, *via)
         }
+        // R3857000: a hero's kept Armor gain, named by its side.
+        GameEvent::ArmorGained { player, amount, .. } => s(
+            "{whose} hero gained {amount} Armor",
+            vec![p("whose", capitalised(&whose(*player))), p("amount", *amount)],
+        ),
         // R860: the line names only that a secret is held, never the choice.
         GameEvent::SecretChosen { player, .. } => s("{seat} kept a secret", vec![p("seat", seat(*player))]),
         // R864: revealed, the choice is public history.
@@ -479,20 +507,31 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             vec![p("seat", seat(*player)), p("amount", *amount)],
         ),
         GameEvent::Healed {
-            target_id, amount, ..
-        } => s(
-            "{target} healed {amount}",
-            vec![p("target", target(target_id)), p("amount", *amount)],
+            target_id,
+            amount,
+            via,
+        } => by(
+            s(
+                "{target} healed {amount}",
+                vec![p("target", target(target_id)), p("amount", *amount)],
+            ),
+            *via,
         ),
         GameEvent::DivineShieldLost { instance_id } => s(
             "{target} lost its Divine Shield",
             vec![p("target", target(instance_id))],
         ),
         GameEvent::Destroyed {
-            instance_id, def_id, ..
-        } => cap(s(
-            "{card} was destroyed",
-            vec![p("card", names.card(instance_id, def_id))],
+            instance_id,
+            def_id,
+            via,
+            ..
+        } => cap(by(
+            s(
+                "{card} was destroyed",
+                vec![p("card", names.card(instance_id, def_id))],
+            ),
+            via.filter(|_| !hidden(def_id)),
         )),
         GameEvent::CardResolved { .. } => return None,
         GameEvent::EnteredGraveyard {
@@ -563,7 +602,8 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             vec![p("seat", seat(*player))],
         ),
         // R177: a buff on a card this seat may not read arrives as the sentinel with 0/0, which says
-        // nothing of its size, so the line does not claim one.
+        // nothing of its size, so the line does not claim one. A change below 0 is written signed (U+2212),
+        // so it never prints "+-".
         GameEvent::Buffed {
             instance_id,
             attack,
@@ -571,6 +611,15 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
         } => {
             if hidden(instance_id) {
                 s("A hidden card was buffed", vec![])
+            } else if *attack < 0 || *health < 0 {
+                s(
+                    "{target} got {attack}/{health}",
+                    vec![
+                        p("target", target(instance_id)),
+                        p("attack", signed(*attack)),
+                        p("health", signed(*health)),
+                    ],
+                )
             } else {
                 s(
                     "{target} gained +{attack}/+{health}",
@@ -608,7 +657,15 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                 CounterKind::Plague => "{target} plague counters: {value}",
                 CounterKind::Grade => "{target} grade counters: {value}",
                 CounterKind::Brittle => "{target} brittle counters: {value}",
+                CounterKind::Burn => "{target} burn counters: {value}",
+                CounterKind::Toxic => "{target} toxic counters: {value}",
+                CounterKind::Tipsy => "{target} Tipsy counter: {value}",
+                CounterKind::Warhero => "Warhero Tokens are worth {value} Credits",
             };
+            // R3548002: the game-wide worth, which names no card.
+            if *counter == CounterKind::Warhero {
+                return Some(s(english, vec![p("value", *value)]));
+            }
             s(
                 english,
                 vec![p("target", target(instance_id)), p("value", *value)],
@@ -1019,6 +1076,11 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                 vec![p("seat", seat(*player)), p("equation", equation)],
             ),
         },
+        // R3554005: the board draws the line; the line names whose it was, positions only.
+        GameEvent::LineDrawn { player, .. } => s(
+            "{seat} drew a line across the board",
+            vec![p("seat", seat(*player))],
+        ),
         GameEvent::RolledBack { turns_ago, .. } => {
             if *turns_ago == 1 {
                 s("The board went back {n} turn", vec![p("n", *turns_ago)])
@@ -1080,6 +1142,11 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
         GameEvent::TurnCutShort { player, .. } => {
             cap(s("{whose} turn was cut short", vec![p("whose", whose(*player))]))
         }
+        // R3925000: the loop cap stopped the resolution loop of that seat's interaction.
+        GameEvent::LoopCapped { player } => cap(s(
+            "{whose} chain of effects was stopped at the loop cap",
+            vec![p("whose", whose(*player))],
+        )),
         // R1183002: the engine plays the rest of that turn; its actions log as their own lines.
         GameEvent::AutopilotEngaged { player, .. } => s(
             "The AI plays the rest of {whose} turn",
@@ -1087,6 +1154,8 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
         ),
         // R1839002: a Dormant card awakened, its countdown run out or an effect's doing.
         GameEvent::Awakened { def_id, .. } => s("{card} awakened", vec![p("card", names.def(def_id))]),
+        // R3536005: a card evolved, its Evolve text running next.
+        GameEvent::Evolved { def_id, .. } => s("{card} evolved", vec![p("card", names.def(def_id))]),
         // R1838001: a Trade names its player alone; the card going in and the one drawn log as their own.
         GameEvent::Traded { player } => s("{seat} traded a card", vec![p("seat", seat(*player))]),
         // R1840005: Credits are public.

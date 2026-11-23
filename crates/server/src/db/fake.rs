@@ -42,12 +42,12 @@ use crate::db::store::{
     CollectionEntry, CollectionGrant, ConsentRow, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow,
     FavoriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode,
     LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks,
-    MatchPhase, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
-    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
-    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult,
-    ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck,
-    SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
+    MatchPhase, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode,
+    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
+    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
+    RedeemResult, ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
+    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
     StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
     TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
     UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step,
@@ -206,6 +206,9 @@ pub struct FakeTables {
     /// Duos co-op (#946), Fullsend SPEC S6: the co-op rooms, matches and their log (migration 0039).
     /// Their store methods are `crate::duos::store`'s.
     pub duos: crate::duos::store::DuosTables,
+    /// Private lobbies (#3730, R3730000): migration 0090's `public.lobbies`. Their store methods are
+    /// `crate::lobby::store`'s.
+    pub lobbies: Vec<crate::lobby::store::Lobby>,
     /// Economy (SPEC §14, #1299), §14.11: migration 0045's holdings and their ledgers. Their store
     /// methods are `crate::economy::store`'s.
     pub economy: crate::economy::store::EconomyTables,
@@ -214,6 +217,12 @@ pub struct FakeTables {
     pub admin: crate::admin::store::AdminTables,
     /// R1523000: migration 0054's `app.seat_epoch`, its one row's epoch (0 in an empty store).
     pub seat_epoch: i64,
+    /// Daily games (SPEC §9.13, #3727): migration 0089's games, invites, notice settings and push
+    /// subscriptions.
+    pub daily: DailyTables,
+    /// The notification feed (#4039, R4039000): migration 0093's `public.notifications`. Its store
+    /// methods are `crate::notifications::store`'s.
+    pub notifications: crate::notifications::store::NotificationTables,
 }
 
 pub fn empty_tables() -> FakeTables {
@@ -1037,6 +1046,7 @@ pub fn profiles_remove(f: &mut FakeTx<'_>, profile_id: &str) -> Result<bool, Sto
     let tables = f.tables();
     if tables.profiles.iter().any(|row| row.id == profile_id) {
         crate::duos::store::refuse_live_seat(&tables.duos, profile_id)?;
+        refuse_running_daily_seat(tables, profile_id)?;
     }
     Ok(remove_profile_rows(tables, profile_id))
 }
@@ -1176,18 +1186,6 @@ pub fn redemption_set_enabled(f: &mut FakeTx<'_>, enabled: bool) -> Result<bool,
     Ok(previous)
 }
 
-/// §9.4: the server-side circuit breaker's input — system-wide failures in a window (R106).
-pub fn codes_count_failures(f: &mut FakeTx<'_>, since: i64) -> Result<i64, StoreError> {
-    call(f, "codes.countFailures")?;
-    let count = f
-        .tables()
-        .attempts
-        .iter()
-        .filter(|a| a.result == CodeAttemptResult::Rejected && a.at >= since)
-        .count();
-    Ok(count as i64)
-}
-
 // Collection (§9.4's entitlement ledger)
 
 pub fn collection_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<CollectionEntry>, StoreError> {
@@ -1305,6 +1303,21 @@ pub fn matches_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<MatchRow
     Ok(f.tables().matches.iter().find(|row| row.id == match_id).cloned())
 }
 
+/// #4510: the portrait pairs of the asked matches, as Postgres answers them (`live` and `over` rows only;
+/// the fake holds no `open` reservation, and a non-uuid matches nothing).
+pub fn matches_portraits(
+    f: &mut FakeTx<'_>,
+    match_ids: &[String],
+) -> Result<Vec<MatchPortraits>, StoreError> {
+    call(f, "matches.portraits")?;
+    Ok(f.tables()
+        .matches
+        .iter()
+        .filter(|row| match_ids.contains(&row.id))
+        .map(|row| (row.id.clone(), row.portraits))
+        .collect())
+}
+
 /// Append-only (§9.3), as `app.append_match_action` is (R776000): a nonce already logged at the row's
 /// own seq is answered with that row and writes nothing, so a write that committed and whose answer was
 /// lost can be sent again; a seq held under another nonce, or a nonce held at another seq, is a
@@ -1377,16 +1390,19 @@ pub fn matches_put_checkpoint(f: &mut FakeTx<'_>, row: &MatchCheckpointRow) -> R
     if !live || !logged {
         return Ok(false);
     }
-    match tables
-        .match_checkpoints
-        .iter_mut()
-        .find(|existing| existing.match_id == row.match_id)
-    {
-        None => tables.match_checkpoints.push(row.clone()),
+    Ok(put_newer_checkpoint(&mut tables.match_checkpoints, row))
+}
+
+/// #1169: `row` stored as its match's checkpoint when the match has none or an older one (a lower
+/// `seq`), as Postgres's upsert does; false when the one held is as new or newer. A match's and a
+/// co-op match's fake (`duos::store`) both keep theirs so.
+pub(crate) fn put_newer_checkpoint(rows: &mut Vec<MatchCheckpointRow>, row: &MatchCheckpointRow) -> bool {
+    match rows.iter_mut().find(|existing| existing.match_id == row.match_id) {
+        None => rows.push(row.clone()),
         Some(existing) if existing.seq < row.seq => *existing = row.clone(),
-        Some(_) => return Ok(false),
+        Some(_) => return false,
     }
-    Ok(true)
+    true
 }
 
 pub fn matches_checkpoint(
@@ -1426,12 +1442,14 @@ pub fn matches_finish(f: &mut FakeTx<'_>, match_id: &str, at: i64) -> Result<(),
     Ok(())
 }
 
+/// A daily game's match is left out (migration 0089's `app.live_matches()`): no actor holds it.
 pub fn matches_live(f: &mut FakeTx<'_>) -> Result<Vec<MatchRow>, StoreError> {
     call(f, "matches.live")?;
-    Ok(f.tables()
+    let tables: &FakeTables = f.tables();
+    Ok(tables
         .matches
         .iter()
-        .filter(|row| row.status == MatchStatus::Live)
+        .filter(|row| row.status == MatchStatus::Live && !is_daily_match(tables, &row.id))
         .cloned()
         .collect())
 }
@@ -2427,6 +2445,22 @@ pub fn player_settings_get(
         .cloned())
 }
 
+/// R4403000 (#4418): the locked entry point both stores expose for `put_settings`' keep-out
+/// filter. The fake holds its one lock for the whole transaction, so this is already serial and
+/// reads exactly what `player_settings_get` does; the method exists so both stores share the
+/// same locked read.
+pub fn player_settings_get_for_update(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+) -> Result<Option<PlayerSettingsRow>, StoreError> {
+    call(f, "playerSettings.getForUpdate")?;
+    Ok(f.tables()
+        .player_settings
+        .iter()
+        .find(|existing| existing.profile_id == profile_id)
+        .cloned())
+}
+
 pub fn player_settings_merge(
     f: &mut FakeTx<'_>,
     input: &PlayerSettingsMergeInput,
@@ -3168,9 +3202,11 @@ pub fn player_stats_list_public(
     let term = username_key(options.search.clone().unwrap_or_default().trim());
     let all = f.tables();
     // Each profile's username as shown, and what a search reads of it.
+    // R3911000: banned profiles drop off the public players list and its search.
     let profile_map: IndexMap<&str, (String, String)> = all
         .profiles
         .iter()
+        .filter(|p| p.status != ProfileStatus::Banned)
         .map(|p| {
             let searched = match p.username_tag {
                 Some(tag) => format!("{}#{tag}", p.username_key),
@@ -3290,11 +3326,17 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     // Duos co-op (#946, R1497000): 0039's rooms cascade with either person; 0051 empties the
     // person's seat on each co-op match, which stays with its log.
     crate::duos::store::remove_duos_rows(&mut tables.duos, profile_id);
+    // Private lobbies (#3730): 0090's lobbies cascade with their host or guest.
+    crate::lobby::store::remove_lobby_rows(&mut tables.lobbies, profile_id);
     // Economy (#1299): 0045's holdings and ledgers cascade with the profile.
     crate::economy::store::remove_economy_rows(&mut tables.economy, profile_id);
     // The dev dashboard (#3074): 0080's hand-set ratings and rating ledger cascade with the
     // profile; its audit rows and posts stay and forget it (`on delete set null`).
     crate::admin::store::remove_admin_rows(&mut tables.admin, profile_id);
+    // Daily games (#3727): 0089's rows cascade with the profile.
+    remove_daily_rows(&mut tables.daily, profile_id);
+    // The notification feed (#4039): 0093's rows cascade with the profile they tell or name.
+    crate::notifications::store::remove_notification_rows(&mut tables.notifications, profile_id);
     true
 }
 
@@ -3315,6 +3357,8 @@ pub fn forget_voided_rows(tables: &mut FakeTables, match_id: &str) {
     keep_only(&mut tables.match_actions, |row| row.match_id != match_id);
     // #1169: 0042's checkpoint goes with the match (`on delete cascade`).
     keep_only(&mut tables.match_checkpoints, |row| row.match_id != match_id);
+    // #3727: so does 0089's daily game.
+    keep_only(&mut tables.daily.games, |row| row.match_id != match_id);
     for profile in tables.profiles.iter_mut() {
         if profile.in_match_id.as_deref() == Some(match_id) {
             profile.in_match_id = None;
@@ -4439,7 +4483,7 @@ pub fn presence_in_duos(
         .filter_map(|id| {
             matches
                 .iter()
-                .filter(|row| row.ended_at.is_none() && (row.a1 == *id || row.a2 == *id))
+                .filter(|row| row.ended_at.is_none() && row.seat_of(id).is_some())
                 .max_by(|a, b| a.created_at.cmp(&b.created_at).then_with(|| b.id.cmp(&a.id)))
                 .map(|row| (id.clone(), row.id.clone()))
         })
@@ -4488,8 +4532,9 @@ pub fn presence_duos_blocked(
             tables.duos.matches.iter().any(|row| {
                 row.id == **id
                     && tables.social.blocks.iter().any(|block| {
-                        joins(&block.blocker, &block.blocked, viewer, &row.a1)
-                            || joins(&block.blocker, &block.blocked, viewer, &row.a2)
+                        row.people()
+                            .into_iter()
+                            .any(|(_, person)| joins(&block.blocker, &block.blocked, viewer, person))
                     })
             })
         })
@@ -4638,18 +4683,6 @@ pub fn challenges_accept_room(
         }
     }
     Ok(accepted)
-}
-
-pub fn challenges_expire(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<ChallengeRow>, StoreError> {
-    call(f, "challenges.expire")?;
-    let mut expired = Vec::new();
-    for row in f.tables().social.challenges.iter_mut() {
-        if row.state == ChallengeState::Open && row.expires_at <= now {
-            row.state = ChallengeState::Expired;
-            expired.push(row.clone());
-        }
-    }
-    Ok(expired)
 }
 
 pub fn challenges_purge(f: &mut FakeTx<'_>, now: i64) -> Result<i64, StoreError> {
@@ -4860,7 +4893,7 @@ fn remove_watch_rows(tables: &mut FakeTables, profile_id: &str) {
     });
 }
 
-pub fn shares_put(f: &mut FakeTx<'_>, share: &ReplayShare) -> Result<(), StoreError> {
+pub fn shares_put(f: &mut FakeTx<'_>, share: &ReplayShare) -> Result<bool, StoreError> {
     call(f, "shares.put")?;
     let tables = f.tables();
     let exists = |id: &str| tables.profiles.iter().any(|row| row.id == id);
@@ -4874,10 +4907,11 @@ pub fn shares_put(f: &mut FakeTx<'_>, share: &ReplayShare) -> Result<(), StoreEr
     let held = tables.replay_shares.iter().any(|row| {
         row.match_id == share.match_id && row.sharer == share.sharer && row.friend == share.friend
     });
-    if !held {
-        tables.replay_shares.push(share.clone());
+    if held {
+        return Ok(false);
     }
-    Ok(())
+    tables.replay_shares.push(share.clone());
+    Ok(true)
 }
 
 pub fn shares_remove(
@@ -4897,6 +4931,17 @@ pub fn shares_remove_between(f: &mut FakeTx<'_>, x: &str, y: &str) -> Result<i64
     call(f, "shares.removeBetween")?;
     let gone = keep_only(&mut f.tables().replay_shares, |row| {
         !((row.sharer == x && row.friend == y) || (row.sharer == y && row.friend == x))
+    });
+    Ok(gone as i64)
+}
+
+/// R4390001: a share survives only while its match holds an action-log row.
+pub fn shares_purge_orphaned(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
+    call(f, "shares.purgeOrphaned")?;
+    let tables = f.tables();
+    let logs = &tables.match_actions;
+    let gone = keep_only(&mut tables.replay_shares, |share| {
+        logs.iter().any(|row| row.match_id == share.match_id)
     });
     Ok(gone as i64)
 }
@@ -4947,4 +4992,620 @@ pub fn shares_by(f: &mut FakeTx<'_>, match_id: &str, sharer: &str) -> Result<Vec
         .collect();
     shares.sort_by(|a, b| (a.created_at, &a.friend).cmp(&(b.created_at, &b.friend)));
     Ok(shares.into_iter().map(|row| row.friend.clone()).collect())
+}
+
+// Daily games (SPEC §9.13, #3727)
+// Migration 0089's four tables, in memory. Strict where Postgres is strict: one game per match and only
+// beside its match row, one open challenge per sender and friend and one open seek per sender, mode and
+// days per move (the two partial unique keys), each table's checks, one subscription per endpoint, and
+// every row goes with the profile it names (`remove_daily_rows`) and a game with its match.
+
+use crate::db::store::{
+    DailyGameRow, DailyInviteKind, DailyInviteRow, DailyInviteState, DailyNotifyRow, PushSubRow,
+};
+use jackioh_shared::host::daily::{DailyBoard, DailyClock, is_daily_time};
+
+/// The tables migrations 0089 and 0092 add.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct DailyTables {
+    pub games: Vec<DailyGameRow>,
+    pub invites: Vec<DailyInviteRow>,
+    pub notify: Vec<DailyNotifyRow>,
+    pub push_subs: Vec<PushSubRow>,
+    /// Migration 0092's `daily_email_days`: the player emails taken each UTC day, by its start (#3843).
+    pub email_days: IndexMap<i64, i32>,
+}
+
+/// Every daily row naming the profile, as 0089's `on delete cascade` takes them.
+pub fn remove_daily_rows(daily: &mut DailyTables, profile_id: &str) {
+    keep_only(&mut daily.games, |row| {
+        row.players.0 != profile_id && row.players.1 != profile_id
+    });
+    keep_only(&mut daily.invites, |row| {
+        row.from_profile != profile_id && row.to_profile.as_deref() != Some(profile_id)
+    });
+    keep_only(&mut daily.notify, |row| row.profile_id != profile_id);
+    keep_only(&mut daily.push_subs, |row| row.profile_id != profile_id);
+}
+
+/// 0012's `matches_seats_filled_unless_over_check` on a daily game's match (R3727008): a profile seated
+/// in a daily game whose match is not over is not deleted, since its seat would empty mid-game.
+fn refuse_running_daily_seat(tables: &FakeTables, profile_id: &str) -> Result<(), StoreError> {
+    let running = tables.daily.games.iter().find(|row| {
+        (row.players.0 == profile_id || row.players.1 == profile_id)
+            && tables
+                .matches
+                .iter()
+                .any(|game| game.id == row.match_id && game.status != MatchStatus::Finished)
+    });
+    match running {
+        Some(row) => Err(StoreError::from(format!(
+            "matches_seats_filled_unless_over_check: profile {profile_id} holds a seat in running daily game {}",
+            row.match_id
+        ))),
+        None => Ok(()),
+    }
+}
+
+/// Whether a match id is a daily game's, which `matches_live` leaves out as `app.live_matches()` does.
+fn is_daily_match(tables: &FakeTables, match_id: &str) -> bool {
+    tables.daily.games.iter().any(|row| row.match_id == match_id)
+}
+
+/// `daily_games_mode_check` and `daily_invites_mode_check`: a daily game is Best-of-1 or All Random.
+fn check_daily_mode(table: &str, mode: QueueMode) -> Result<(), StoreError> {
+    match mode {
+        QueueMode::Bo1 | QueueMode::Random => Ok(()),
+        QueueMode::Bo3 => Err(StoreError::from(format!("{table}_mode_check: {mode}"))),
+    }
+}
+
+/// `daily_games_per_move_days_check` and `daily_invites_per_move_days_check`.
+fn check_daily_days(table: &str, days: i32) -> Result<(), StoreError> {
+    if is_daily_time(days) {
+        Ok(())
+    } else {
+        Err(StoreError::from(format!("{table}_per_move_days_check: {days}")))
+    }
+}
+
+/// `daily_notify.profile_id` and `push_subscriptions.profile_id` reference the profile.
+fn check_daily_profile(tables: &FakeTables, table: &str, profile_id: &str) -> Result<(), StoreError> {
+    if tables.profiles.iter().any(|row| row.id == profile_id) {
+        Ok(())
+    } else {
+        Err(StoreError::from(format!(
+            "{table}_profile_id_fkey: no profile {profile_id}"
+        )))
+    }
+}
+
+/// Whether two invites share the key one open invite may hold (`daily_invites_open_challenge_key`,
+/// `daily_invites_open_seek_key`).
+fn same_invite_key(a: &DailyInviteRow, b: &DailyInviteRow) -> bool {
+    a.kind == b.kind
+        && a.from_profile == b.from_profile
+        && match a.kind {
+            DailyInviteKind::Challenge => a.to_profile == b.to_profile,
+            DailyInviteKind::Seek => a.mode == b.mode && a.per_move_days == b.per_move_days,
+        }
+}
+
+fn by_age(rows: &mut [DailyInviteRow]) {
+    rows.sort_by(|a, b| (a.created_at, &a.id).cmp(&(b.created_at, &b.id)));
+}
+
+/// The row with the table's defaults: email on, a fresh token, never emailed or pushed.
+fn daily_notify_row<'t>(
+    tables: &'t mut FakeTables,
+    profile_id: &str,
+) -> Result<&'t mut DailyNotifyRow, StoreError> {
+    check_daily_profile(tables, "daily_notify", profile_id)?;
+    let notify = &mut tables.daily.notify;
+    let at = match notify.iter().position(|row| row.profile_id == profile_id) {
+        Some(at) => at,
+        None => {
+            notify.push(DailyNotifyRow {
+                profile_id: profile_id.to_string(),
+                email_on: true,
+                unsubscribe_token: uuid::Uuid::new_v4().to_string(),
+                last_email_at: None,
+                last_push_at: None,
+            });
+            notify.len() - 1
+        }
+    };
+    Ok(&mut notify[at])
+}
+
+// daily games
+
+pub fn daily_games_create(f: &mut FakeTx<'_>, row: &DailyGameRow) -> Result<(), StoreError> {
+    call(f, "dailyGames.create")?;
+    check_daily_mode("daily_games", row.mode)?;
+    check_daily_days("daily_games", row.per_move_days)?;
+    if row.players.0 == row.players.1 {
+        return Err(StoreError::from(format!(
+            "daily_games_seats_check: {} in both seats",
+            row.players.0
+        )));
+    }
+    let tables = f.tables();
+    if !tables.matches.iter().any(|existing| existing.id == row.match_id) {
+        return Err(StoreError::from(format!(
+            "daily_games_match_id_fkey: no match {}",
+            row.match_id
+        )));
+    }
+    if is_daily_match(tables, &row.match_id) {
+        return Err(StoreError::from(format!(
+            "daily_games.match_id is unique: {}",
+            row.match_id
+        )));
+    }
+    tables.daily.games.push(row.clone());
+    Ok(())
+}
+
+pub fn daily_games_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<DailyGameRow>, StoreError> {
+    call(f, "dailyGames.get")?;
+    Ok(f.tables()
+        .daily
+        .games
+        .iter()
+        .find(|row| row.match_id == match_id)
+        .cloned())
+}
+
+pub fn daily_games_of(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    recent_finished: i64,
+) -> Result<Vec<DailyGameRow>, StoreError> {
+    call(f, "dailyGames.of")?;
+    let seated = |row: &&DailyGameRow| row.players.0 == profile_id || row.players.1 == profile_id;
+    let games = &f.tables().daily.games;
+    let mut running: Vec<DailyGameRow> = games
+        .iter()
+        .filter(seated)
+        .filter(|row| row.ended_at.is_none())
+        .cloned()
+        .collect();
+    running.sort_by(|a, b| (a.created_at, &a.match_id).cmp(&(b.created_at, &b.match_id)));
+    let mut ended: Vec<DailyGameRow> = games
+        .iter()
+        .filter(seated)
+        .filter(|row| row.ended_at.is_some())
+        .cloned()
+        .collect();
+    ended.sort_by(|a, b| (b.ended_at, &b.match_id).cmp(&(a.ended_at, &a.match_id)));
+    ended.truncate(usize::try_from(recent_finished).unwrap_or(0));
+    running.extend(ended);
+    Ok(running)
+}
+
+pub fn daily_games_put(
+    f: &mut FakeTx<'_>,
+    match_id: &str,
+    after: i64,
+    clock: &DailyClock,
+    board: &DailyBoard,
+    next_deadline_at: Option<i64>,
+    ended_at: Option<i64>,
+) -> Result<bool, StoreError> {
+    call(f, "dailyGames.put")?;
+    let Some(row) = f
+        .tables()
+        .daily
+        .games
+        .iter_mut()
+        .find(|row| row.match_id == match_id && row.ended_at.is_none() && row.seq == after)
+    else {
+        return Ok(false);
+    };
+    row.seq = after + 1;
+    row.clock = clock.clone();
+    row.board = board.clone();
+    row.next_deadline_at = next_deadline_at;
+    row.ended_at = ended_at;
+    Ok(true)
+}
+
+// Postgres reads the running games and the finished ones apart (#4510) and merges them in this order.
+pub fn daily_games_due(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<String>, StoreError> {
+    call(f, "dailyGames.due")?;
+    let tables = f.tables();
+    // A game over whose match is still `live`: its result's write failed, and the sweep writes it.
+    let live: IndexSet<&str> = tables
+        .matches
+        .iter()
+        .filter(|row| row.status == MatchStatus::Live)
+        .map(|row| row.id.as_str())
+        .collect();
+    let mut due: Vec<(i64, String)> = tables
+        .daily
+        .games
+        .iter()
+        .filter_map(|row| match row.ended_at {
+            None => row
+                .next_deadline_at
+                .filter(|deadline| *deadline <= now)
+                .map(|deadline| (deadline, row.match_id.clone())),
+            Some(ended) => {
+                (ended <= now && live.contains(row.match_id.as_str())).then(|| (ended, row.match_id.clone()))
+            }
+        })
+        .collect();
+    due.sort();
+    Ok(due.into_iter().map(|(_, match_id)| match_id).collect())
+}
+
+pub fn daily_games_running(f: &mut FakeTx<'_>) -> Result<Vec<DailyGameRow>, StoreError> {
+    call(f, "dailyGames.running")?;
+    let mut running: Vec<DailyGameRow> = f
+        .tables()
+        .daily
+        .games
+        .iter()
+        .filter(|row| row.ended_at.is_none())
+        .cloned()
+        .collect();
+    running.sort_by(|a, b| (a.created_at, &a.match_id).cmp(&(b.created_at, &b.match_id)));
+    Ok(running)
+}
+
+pub fn daily_active_count(f: &mut FakeTx<'_>, profile_id: &str, now: i64) -> Result<i64, StoreError> {
+    call(f, "daily.activeCount")?;
+    let daily = &f.tables().daily;
+    let games = daily
+        .games
+        .iter()
+        .filter(|row| row.ended_at.is_none() && (row.players.0 == profile_id || row.players.1 == profile_id))
+        .count();
+    let invites = daily
+        .invites
+        .iter()
+        .filter(|row| {
+            row.from_profile == profile_id && row.state == DailyInviteState::Open && row.expires_at > now
+        })
+        .count();
+    Ok((games + invites) as i64)
+}
+
+/// Every fake transaction runs alone (it holds the store's one lock until it ends), so it holds the
+/// account's daily lock already; charged to the hooks like every call.
+pub fn daily_lock_account(f: &mut FakeTx<'_>, _profile_id: &str) -> Result<(), StoreError> {
+    call(f, "daily.lock")?;
+    Ok(())
+}
+
+// daily invites
+
+/// The two partial unique keys are on the open rows, so a lapsed open row of the key is marked expired
+/// before the insert, as `pg::daily_invites_create` does.
+pub fn daily_invites_create(f: &mut FakeTx<'_>, row: &DailyInviteRow, now: i64) -> Result<bool, StoreError> {
+    call(f, "dailyInvites.create")?;
+    check_daily_mode("daily_invites", row.mode)?;
+    check_daily_days("daily_invites", row.per_move_days)?;
+    if (row.kind == DailyInviteKind::Challenge) != row.to_profile.is_some() {
+        return Err(StoreError::from(format!(
+            "daily_invites_to_check: a {} with to_profile {:?}",
+            row.kind, row.to_profile
+        )));
+    }
+    if row.to_profile.as_deref() == Some(row.from_profile.as_str()) {
+        return Err(StoreError::from(
+            "daily_invites_self_check: a challenge to oneself".to_string(),
+        ));
+    }
+    if !row.choice.is_object() {
+        return Err(StoreError::from(
+            "daily_invites_choice_check: a choice that is no object".to_string(),
+        ));
+    }
+    let invites = &mut f.tables().daily.invites;
+    let open_of_key = |existing: &DailyInviteRow| {
+        existing.state == DailyInviteState::Open && same_invite_key(existing, row)
+    };
+    for existing in invites.iter_mut() {
+        if open_of_key(existing) && existing.expires_at <= now {
+            existing.state = DailyInviteState::Expired;
+        }
+    }
+    // The open key first, as Postgres's `on conflict` checks its arbiter before the primary key.
+    if row.state == DailyInviteState::Open && invites.iter().any(open_of_key) {
+        return Ok(false);
+    }
+    if invites.iter().any(|existing| existing.id == row.id) {
+        return Err(StoreError::from(format!(
+            "daily_invites.id is unique: {}",
+            row.id
+        )));
+    }
+    invites.push(row.clone());
+    Ok(true)
+}
+
+pub fn daily_invites_get(f: &mut FakeTx<'_>, invite_id: &str) -> Result<Option<DailyInviteRow>, StoreError> {
+    call(f, "dailyInvites.get")?;
+    Ok(f.tables()
+        .daily
+        .invites
+        .iter()
+        .find(|row| row.id == invite_id)
+        .cloned())
+}
+
+pub fn daily_invites_open_of(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    now: i64,
+) -> Result<Vec<DailyInviteRow>, StoreError> {
+    call(f, "dailyInvites.openOf")?;
+    let tables = f.tables();
+    // R4019000: a banned challenger's challenge waits out the ban, off every inbox.
+    let challenger_active = |from: &str| {
+        tables
+            .profiles
+            .iter()
+            .any(|p| p.id == from && p.status == ProfileStatus::Active)
+    };
+    let mut rows: Vec<DailyInviteRow> = tables
+        .daily
+        .invites
+        .iter()
+        .filter(|row| {
+            (row.from_profile == profile_id || row.to_profile.as_deref() == Some(profile_id))
+                && row.state == DailyInviteState::Open
+                && row.expires_at > now
+                && (row.kind != DailyInviteKind::Challenge || challenger_active(&row.from_profile))
+        })
+        .cloned()
+        .collect();
+    by_age(&mut rows);
+    Ok(rows)
+}
+
+pub fn daily_invites_close(
+    f: &mut FakeTx<'_>,
+    invite_id: &str,
+    state: DailyInviteState,
+    match_id: Option<&str>,
+) -> Result<Option<DailyInviteRow>, StoreError> {
+    call(f, "dailyInvites.close")?;
+    let Some(row) = f
+        .tables()
+        .daily
+        .invites
+        .iter_mut()
+        .find(|row| row.id == invite_id && row.state == DailyInviteState::Open)
+    else {
+        return Ok(None);
+    };
+    row.state = state;
+    if let Some(match_id) = match_id {
+        row.match_id = Some(match_id.to_string());
+    }
+    Ok(Some(row.clone()))
+}
+
+pub fn daily_invites_close_between(
+    f: &mut FakeTx<'_>,
+    x: &str,
+    y: &str,
+    state: DailyInviteState,
+) -> Result<Vec<DailyInviteRow>, StoreError> {
+    call(f, "dailyInvites.closeBetween")?;
+    let mut closed = Vec::new();
+    for row in f.tables().daily.invites.iter_mut() {
+        let Some(to_profile) = row.to_profile.as_deref() else {
+            continue;
+        };
+        if row.kind == DailyInviteKind::Challenge
+            && row.state == DailyInviteState::Open
+            && joins(&row.from_profile, to_profile, x, y)
+        {
+            row.state = state;
+            closed.push(row.clone());
+        }
+    }
+    by_age(&mut closed);
+    Ok(closed)
+}
+
+pub fn daily_seek_claim(
+    f: &mut FakeTx<'_>,
+    mode: QueueMode,
+    per_move_days: i32,
+    me: &str,
+    match_id: &str,
+    now: i64,
+) -> Result<Option<DailyInviteRow>, StoreError> {
+    call(f, "daily.seekClaim")?;
+    let tables = f.tables();
+    let blocks = &tables.social.blocks;
+    let blocked = |from: &str| {
+        blocks
+            .iter()
+            .any(|block| joins(&block.blocker, &block.blocked, from, me))
+    };
+    // R4019000: a banned account's open seeks pair with no one, until an unban.
+    let seeker_active = |from: &str| {
+        tables
+            .profiles
+            .iter()
+            .any(|p| p.id == from && p.status == ProfileStatus::Active)
+    };
+    let Some(at) = tables
+        .daily
+        .invites
+        .iter()
+        .enumerate()
+        .filter(|(_, row)| {
+            row.kind == DailyInviteKind::Seek
+                && row.state == DailyInviteState::Open
+                && row.mode == mode
+                && row.per_move_days == per_move_days
+                && row.from_profile != me
+                && row.expires_at > now
+                && !blocked(&row.from_profile)
+                && seeker_active(&row.from_profile)
+        })
+        .min_by(|(_, a), (_, b)| (a.created_at, &a.id).cmp(&(b.created_at, &b.id)))
+        .map(|(at, _)| at)
+    else {
+        return Ok(None);
+    };
+    let row = &mut tables.daily.invites[at];
+    row.state = DailyInviteState::Paired;
+    row.match_id = Some(match_id.to_string());
+    Ok(Some(row.clone()))
+}
+
+pub fn daily_invites_expire(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<DailyInviteRow>, StoreError> {
+    call(f, "dailyInvites.expire")?;
+    let mut expired = Vec::new();
+    for row in f.tables().daily.invites.iter_mut() {
+        if row.state == DailyInviteState::Open && row.expires_at <= now {
+            row.state = DailyInviteState::Expired;
+            expired.push(row.clone());
+        }
+    }
+    by_age(&mut expired);
+    Ok(expired)
+}
+
+/// R4390000: every invite lapsed by `now`, in any state.
+pub fn daily_invites_purge(f: &mut FakeTx<'_>, now: i64) -> Result<i64, StoreError> {
+    call(f, "dailyInvites.purge")?;
+    let gone = keep_only(&mut f.tables().daily.invites, |row| row.expires_at > now);
+    Ok(gone as i64)
+}
+
+// daily notices
+
+pub fn daily_notify_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<DailyNotifyRow, StoreError> {
+    call(f, "dailyNotify.get")?;
+    Ok(daily_notify_row(f.tables(), profile_id)?.clone())
+}
+
+pub fn daily_notify_put(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    email_on: bool,
+) -> Result<DailyNotifyRow, StoreError> {
+    call(f, "dailyNotify.put")?;
+    let row = daily_notify_row(f.tables(), profile_id)?;
+    row.email_on = email_on;
+    Ok(row.clone())
+}
+
+pub fn daily_notify_sent(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    email_at: Option<i64>,
+    push_at: Option<i64>,
+) -> Result<(), StoreError> {
+    call(f, "dailyNotify.sent")?;
+    let row = daily_notify_row(f.tables(), profile_id)?;
+    if email_at.is_some() {
+        row.last_email_at = email_at;
+    }
+    if push_at.is_some() {
+        row.last_push_at = push_at;
+    }
+    Ok(())
+}
+
+pub fn daily_notify_unsubscribe(f: &mut FakeTx<'_>, token: &str) -> Result<bool, StoreError> {
+    call(f, "dailyNotify.unsubscribe")?;
+    let Some(row) = f
+        .tables()
+        .daily
+        .notify
+        .iter_mut()
+        .find(|row| row.unsubscribe_token == token)
+    else {
+        return Ok(false);
+    };
+    row.email_on = false;
+    Ok(true)
+}
+
+// the player mail's days
+
+/// 0092's one-statement claim: one more on the day's count while it is under `cap`.
+pub fn daily_email_claim(f: &mut FakeTx<'_>, day: i64, cap: i32) -> Result<bool, StoreError> {
+    call(f, "dailyEmail.claim")?;
+    let days = &mut f.tables().daily.email_days;
+    let sent = days.get(&day).copied().unwrap_or(0);
+    if sent >= cap {
+        return Ok(false);
+    }
+    days.insert(day, sent + 1);
+    Ok(true)
+}
+
+/// One back on the day's count, never below 0.
+pub fn daily_email_release(f: &mut FakeTx<'_>, day: i64) -> Result<(), StoreError> {
+    call(f, "dailyEmail.release")?;
+    if let Some(sent) = f.tables().daily.email_days.get_mut(&day) {
+        *sent = (*sent - 1).max(0);
+    }
+    Ok(())
+}
+
+// push subscriptions
+
+/// One row per endpoint: a row already under it keeps its id and takes the rest; a reused id under
+/// another endpoint raises, as the primary key does.
+pub fn push_subs_add(f: &mut FakeTx<'_>, row: &PushSubRow) -> Result<(), StoreError> {
+    call(f, "pushSubs.add")?;
+    let tables = f.tables();
+    check_daily_profile(tables, "push_subscriptions", &row.profile_id)?;
+    let subs = &mut tables.daily.push_subs;
+    if subs
+        .iter()
+        .any(|existing| existing.id == row.id && existing.endpoint != row.endpoint)
+    {
+        return Err(StoreError::from(format!(
+            "push_subscriptions.id is unique: {}",
+            row.id
+        )));
+    }
+    match subs.iter_mut().find(|existing| existing.endpoint == row.endpoint) {
+        Some(existing) => {
+            *existing = PushSubRow {
+                id: existing.id.clone(),
+                ..row.clone()
+            };
+        }
+        None => subs.push(row.clone()),
+    }
+    Ok(())
+}
+
+pub fn push_subs_of(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<PushSubRow>, StoreError> {
+    call(f, "pushSubs.of")?;
+    let mut rows: Vec<PushSubRow> = f
+        .tables()
+        .daily
+        .push_subs
+        .iter()
+        .filter(|row| row.profile_id == profile_id)
+        .cloned()
+        .collect();
+    rows.sort_by(|a, b| (a.created_at, &a.id).cmp(&(b.created_at, &b.id)));
+    Ok(rows)
+}
+
+pub fn push_subs_delete(
+    f: &mut FakeTx<'_>,
+    endpoint: &str,
+    profile_id: Option<&str>,
+) -> Result<bool, StoreError> {
+    call(f, "pushSubs.delete")?;
+    Ok(keep_only(&mut f.tables().daily.push_subs, |row| {
+        !(row.endpoint == endpoint && profile_id.is_none_or(|id| row.profile_id == id))
+    }) > 0)
 }

@@ -15,13 +15,14 @@ pub fn script() -> CardScripts {
     let cry: Hook = hook(|ctx| vec![degrade(json_as(json!({ "target": { "of": "chosen" }, "times": param(ctx, "times") })))]);
 
     let base = Script {
-        targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))],
+        // R3869003: a harmful Book, its aim declared (R656 reads an unset one as harm too).
+        targets: vec![TargetDecl { aim: Some(TargetAim::Harm), ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] })) }],
         cry: Some(cry.clone()),
         ..Script::default()
     };
 
     let radiant = Script {
-        targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow", "hand"] }))],
+        targets: vec![TargetDecl { aim: Some(TargetAim::Harm), ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow", "hand"] })) }],
         cry: Some(cry),
         ..Script::default()
     };
@@ -55,17 +56,8 @@ mod tests {
     }
 
     /// The instance ids a play of the Book is offered (`legalActions`).
-    // Differs from Scenario::offered: one card's play targets as ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
-        let own = s.card(BOOK).id.clone();
-        legal_actions(s.state(), P1)
-            .iter()
-            .map(js)
-            .filter(|action| action["type"] == json!("play") && action["instanceId"] == json!(own))
-            .flat_map(|action| action["targets"].as_array().cloned().unwrap_or_default())
-            .filter(|selection| selection["pick"] == json!("instance"))
-            .map(|selection| selection["instanceId"].as_str().unwrap_or("").to_string())
-            .collect()
+        pick::instance_ids(&s.play_targets(BOOK))
     }
 
     fn book(radiant: bool, seed: Option<&str>) -> Scenario {
@@ -152,11 +144,15 @@ mod tests {
         }
 
         #[test]
-        fn r781001_r386_an_immutable_unit_in_play_is_no_target_and_stays_unchanged() {
+        fn r4353001_r386_an_immutable_unit_in_play_may_be_its_target_and_stays_unchanged() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] } }));
             let menace = s.unit(P2, 1).expect("Midrange Menace");
-            s.expect_refused(|s| s.play(BOOK, json!({ "targets": pick::id(&menace.id) })));
+            // Immutable bars no aim (R4353001); it still stops every Degrade, so none is drawn (R386).
+            assert!(offered(&s).contains(&menace.id));
+            s.play(BOOK, json!({ "targets": pick::id(&menace.id) }));
+            s.expect_in_zone(BOOK, "graveyard");
             assert!(degrades(s.events()).is_empty());
+            assert!(s.card(&menace.id).tuning.is_none());
             s.expect_stats(&menace.id, json!({ "attack": 18, "maxHealth": 18 }));
         }
 

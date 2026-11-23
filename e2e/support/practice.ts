@@ -4,17 +4,12 @@
 
 import { timeouts } from "./config.ts";
 import { ANIMATING, BOARD, END_TURN, PROMPT, PROMPT_SUBMIT, RESULT_OVERLAY, promptOf, promptOptionId, ts } from "./testids.ts";
+import { isPicked } from "./ux.ts";
 
 /** Prompts the human may meet on the way to its main phase: a rare cast-on-draw card's (R58), a card's own question, a Discover. */
 const PROMPT_BUDGET = 10;
 
 const ANY_PROMPT_OPTION = `[data-testid^="${promptOptionId("")}"]`;
-
-function isPicked($option: JQuery<HTMLElement>): boolean {
-  const marked = $option.closest("[aria-pressed], [data-selected]");
-  const element = marked.length > 0 ? marked : $option;
-  return element.attr("aria-pressed") === "true" || element.attr("data-selected") === "true";
-}
 
 /** The AI can take whole turns between board settlements. */
 export function settledThroughAiTurn(): void {

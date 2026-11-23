@@ -22,6 +22,7 @@ use crate::state::{
 };
 use crate::stays::LaterMoves;
 use crate::wire::{GameEvent, GameEventType, PlayerId, Row, ZoneName};
+use crate::work::engine_resume;
 
 /// A trap trigger. R99: a trap fires when its trigger's `on` matches the event **and** its `when` admits
 /// it. R61 makes `run` returning `[]` mean "fired, consumed, did nothing", so a condition that must leave
@@ -65,10 +66,10 @@ pub type TrapControllers = IndexMap<String, PlayerId>;
 
 /// An immediate dispatch, as `triggers.rs` parks and resumes it: the traps still owed the event in the
 /// dispatch's order (R68, fixed as it began), who each answers for, and the stays it began with (R174).
+/// Only a dispatch that owes a trap is parked, so with none owed nothing reads the rest.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ImmediateDispatch {
     pub fired: Vec<String>,
-    pub paused: bool,
     pub owed: Vec<String>,
     pub controllers: TrapControllers,
     pub mark: u32,
@@ -300,6 +301,10 @@ pub fn fire_trap(
     event: &GameEvent,
     controller: Option<PlayerId>,
 ) -> bool {
+    // R3925000: at the loop cap card text is off, so no trap fires.
+    if crate::loop_cap::capped(sink) {
+        return false;
+    }
     let trap = &trap_match.trap;
     let controller = controller.unwrap_or(trap.controller);
     let armed: Vec<String> = {
@@ -498,35 +503,18 @@ fn owe_firing(sink: &mut EngineSink<'_>, firing: TrapFiring) {
         "firing".to_string(),
         serde_json::to_value(&firing).expect("a trap firing is plain JSON (§10.1)"),
     );
-    let resume = Resume {
-        def_id: String::new(),
-        hook: TRAP_FIRING_WORK.to_string(),
-        step: "firing".to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    };
+    let resume = engine_resume(TRAP_FIRING_WORK, "firing", data);
     crate::work::owe(sink, resume);
 }
 
 /// `work.rs`'s arm for a firing a prompt interrupted (`"@trapFiring"`): the same trap, where it
-/// stopped (R113). The payload came through JSON, so it is read back defensively.
+/// stopped (R113). The payload came through JSON, so it is read back defensively: an object, as
+/// `owe_firing` wrote it (serde would read a struct's fields off an array too), whose every field
+/// serde finds, of its type (a missing one or one of another type is no firing).
 pub fn run_owed_firing(sink: &mut EngineSink<'_>, item: &WorkItem) {
-    let Some(raw) = item.resume.data.get("firing") else {
+    let Some(raw) = item.resume.data.get("firing").filter(|raw| raw.is_object()) else {
         return;
     };
-    if !raw.is_object() {
-        return;
-    }
-    if !raw.get("trapId").is_some_and(Value::is_string) || !raw.get("at").is_some_and(Value::is_number) {
-        return;
-    }
-    if !raw.get("triggers").is_some_and(Value::is_array) || raw.get("event").is_none() {
-        return;
-    }
-    if !matches!(raw.get("controller").and_then(Value::as_str), Some("p1" | "p2")) {
-        return;
-    }
     let Ok(firing) = serde_json::from_value::<TrapFiring>(raw.clone()) else {
         return;
     };
@@ -704,21 +692,14 @@ pub fn offer_event_to_traps(
     event: &GameEvent,
     later: &dyn Fn(&EngineSink<'_>) -> LaterMoves,
 ) -> ImmediateDispatch {
-    let mark = crate::stays::exit_mark(sink.state);
     if is_trap_window_event(event) {
-        return ImmediateDispatch {
-            mark,
-            ..ImmediateDispatch::default()
-        };
+        return ImmediateDispatch::default();
     }
     let watching = traps_watching(sink.state, event);
     if watching.is_empty() {
-        return ImmediateDispatch {
-            paused: crate::work::paused(sink),
-            mark,
-            ..ImmediateDispatch::default()
-        };
+        return ImmediateDispatch::default();
     }
+    let mark = crate::stays::exit_mark(sink.state);
     let moves = later(sink);
     let matches: Vec<TrapMatch> = watching
         .into_iter()
@@ -728,7 +709,6 @@ pub fn offer_event_to_traps(
     if crate::work::paused(sink) {
         return ImmediateDispatch {
             fired: Vec::new(),
-            paused: true,
             owed: matches
                 .iter()
                 .map(|trap_match| trap_match.trap.id.clone())
@@ -740,7 +720,6 @@ pub fn offer_event_to_traps(
     let run = dispatch(sink, event, &matches, mark, &controllers);
     ImmediateDispatch {
         fired: run.fired,
-        paused: run.paused,
         owed: run.owed,
         controllers,
         mark,
@@ -775,7 +754,6 @@ pub fn resume_event_to_traps(
     let run = dispatch(sink, event, &matches, mark, controllers);
     ImmediateDispatch {
         fired: run.fired,
-        paused: run.paused,
         owed: run.owed,
         controllers: controllers.clone(),
         mark,
@@ -908,14 +886,7 @@ fn owe_window(
         Value::Object(kept.into_iter().collect()),
     );
     data.insert("mark".to_string(), Value::from(mark));
-    let resume = Resume {
-        def_id: String::new(),
-        hook: TRAP_WINDOW_WORK.to_string(),
-        step: TRAP_WINDOW_STEP.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    };
+    let resume = engine_resume(TRAP_WINDOW_WORK, TRAP_WINDOW_STEP, data);
     // R177: the remainder exists only when a trap still owed the event watches it, and whether a
     // face-down one does is its controller's to know (R33), so it takes no number (`owe_unnumbered`).
     crate::work::owe_unnumbered(sink, resume, None);

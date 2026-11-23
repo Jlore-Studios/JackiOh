@@ -1044,6 +1044,38 @@ mod tests {
         assert_eq!(placed, Some(grant(ids[3], Mythic, &ids[2..3])));
     }
 
+    /// R3015003: the skip draw is one integer below TIER_WEIGHT_TOTAL, and a slot skips below
+    /// LEVEL_SKIP_WEIGHT, never at it: with nothing held, a Mythic slot whose first draw is one under the
+    /// weight places the signed level, and one whose first draw is the weight does not.
+    #[test]
+    fn r3015003_a_slot_skips_below_the_skip_weight_and_not_at_it() {
+        use crate::cosmetics::LevelAdds;
+        use crate::economy::test_support::level;
+        let signed = "version-a-signed";
+        let droppable = vec![
+            level("version-a", "a", 1, LevelAdds::Art, Rare),
+            level("version-a-full-art", "a", 2, LevelAdds::FullArt, Epic),
+            level("version-a-animated", "a", 3, LevelAdds::Animated, Legendary),
+            level(signed, "a", 4, LevelAdds::Signed, Mythic),
+        ];
+        let pool = vec![card("core-022", PrintedRarity::Epic)];
+        let nothing = CosmeticHoldings {
+            owned: owning(&["core-022"]),
+            ..wearing("core-022", &[])
+        };
+        let drawing = |wanted: u32| {
+            (0..100_000)
+                .find(|seed| tier_draw(&mut Rng::new("r3015003-edge", *seed)) == wanted)
+                .unwrap_or_else(|| panic!("no seed draws {wanted} first"))
+        };
+        let placed = |seed: u32| {
+            let mut rng = Rng::new("r3015003-edge", seed);
+            slot_grant(Mythic, Common, &pool, &droppable, &nothing, &mut rng)
+        };
+        assert_eq!(named(&placed(drawing(LEVEL_SKIP_WEIGHT - 1))), Some(signed));
+        assert_ne!(named(&placed(drawing(LEVEL_SKIP_WEIGHT))), Some(signed));
+    }
+
     #[test]
     fn r3343000_a_slot_never_places_a_default_look_and_places_the_level_above_it_in_order() {
         use crate::cosmetics::{VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID, registry};

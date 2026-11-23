@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AUTH_SESSION_REFRESH_MARGIN_SECONDS } from "@jackioh/server-config";
 import { inviteTestid, shellTestid } from "../auth/testids.ts";
-import { signOut } from "../routes/account.tsx";
+import { signOut } from "../auth/signOut.ts";
 import InviteRoute from "../routes/invite.tsx";
 import { jsonResponse } from "../test/stubServer.ts";
 import { ApiRequestError } from "./api.ts";
@@ -29,7 +29,7 @@ const SLOW = { timeout: 5_000 } as const;
 const SLOW_TEST = { timeout: 30_000 } as const;
 
 function base64url(text: string): string {
-  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
 }
 
 /** A token whose payload names a user id; the client reads it, the provider and server verify it. */
@@ -623,7 +623,7 @@ describe("R194 the token an open screen holds is kept fresh", SLOW_TEST, () => {
     );
     window.history.replaceState(null, "", paths.play);
     render(<App />);
-    await screen.findByTestId("play-queue", undefined, SLOW);
+    await screen.findByTestId("play-hub", undefined, SLOW);
     expect(refreshes).toHaveLength(0);
 
     // The phone slept (its timers frozen) and is unlocked just before the token runs out.

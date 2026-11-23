@@ -11,8 +11,9 @@ the Rust's figures for the same files).
     records.seat_cards  one row per game, seat and distinct card in that seat's deck
     card_stats(records, source="all", mode="random")
 
-`load_sweep` reads a shadow-ban sweep's pass-1 lines (`cargo jackioh sweep --json`) and `load_generations` the
-AI's generations (`crates/ai/generation.json` and `training/history/*.jsonl`); neither is a record file.
+`load_sweep` reads a shadow-ban sweep's pass-1 lines (`cargo jackioh sweep --json`), `load_sweep_pass2` its
+pass-2 lines (`--pass2`, the pass that bans) and `load_generations` the AI's generations
+(`crates/ai/generation.json` and `training/history/*.jsonl`); none is a record file.
 
 Only the fields named below are read; a field a record grows later is ignored. A record id is unique among
 records (R376), so `load` refuses a second record with an id it has read: files that overlap are the caller's
@@ -21,6 +22,7 @@ to trim, where `stats report` would count the game twice.
 
 from __future__ import annotations
 
+import functools
 import json
 import re
 from collections.abc import Iterable
@@ -33,11 +35,13 @@ __all__ = [
     "BREAKDOWNS",
     "CATALOG_PATH",
     "Records",
+    "ai_sweep",
     "card_stats",
     "load",
     "load_catalog",
     "load_generations",
     "load_sweep",
+    "load_sweep_pass2",
 ]
 
 SEATS = ("p1", "p2")
@@ -165,8 +169,13 @@ def _read_record(record: dict, games: list[dict], seats: list[dict], seat_cards:
         )
         opening = set(summary["opening"])
         drawn = set(summary["drawn"])
-        played = set(summary["played"])
+        # R4279000: a card an effect cast or summoned from the deck or the hand went into play, so it is played.
+        cast = summary.get("castOrSummoned") or []
+        played = set(summary["played"]) | {use["card"] for use in cast}
         first_played = _first_turns(summary["played"], summary.get("playedTurns"))
+        for use in cast:
+            if use["card"] not in first_played or use["turn"] < first_played[use["card"]]:
+                first_played[use["card"]] = use["turn"]
         # Each deck once per game, in the order the deck first names a card (R377).
         for card in dict.fromkeys(summary["deck"]):
             seat_cards.append(
@@ -238,9 +247,13 @@ def load_catalog(path: str | Path = CATALOG_PATH) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["id", "name", "set", "rarity", "cost", "type", "tags"]).set_index("id")
 
 
+# The faces a sweep deals its forced card on (#4466): a line with no `face` is a base one.
+SWEEP_FACES = ("base", "radiant")
+
 SWEEP_COLUMNS = {
     "card": "str",
     "tier": "str",
+    "face": "str",
     "games": "int64",
     "drawn_games": "int64",
     "affordable_turns": "int64",
@@ -257,9 +270,13 @@ SWEEP_COLUMNS = {
 
 def _sweep_row(line: dict) -> dict:
     count = line["evalDeltaCount"]
+    face = line.get("face", "base")
+    if face not in SWEEP_FACES:
+        raise ValueError(f"face {face!r}")
     return {
         "card": line["defId"],
         "tier": line["tier"],
+        "face": face,
         "games": line["games"],
         "drawn_games": line["drawnGames"],
         "affordable_turns": line["affordableTurns"],
@@ -276,19 +293,20 @@ def _sweep_row(line: dict) -> dict:
 
 
 def load_sweep(paths: str | Path | Iterable[str | Path]) -> pd.DataFrame:
-    """A sweep's pass-1 lines (`cargo jackioh sweep --json`) as one row per card and tier.
+    """A sweep's pass-1 lines (`cargo jackioh sweep --json`) as one row per card, tier and face.
 
-    Columns: card, tier, games, drawn_games, affordable_turns, plays, errors, timeouts, eval_delta_sum,
+    Columns: card, tier, face (`base` or `radiant`, the face the card was dealt on, #4466; `base` for a line
+    with none), games, drawn_games, affordable_turns, plays, errors, timeouts, eval_delta_sum,
     eval_delta_count, eval_delta_mean (NaN with no plays), flags (a list of `error`, `timeout`, `neverPlayed`
     and `selfHarm`, as the sweep wrote them) and unswept (never once affordable in hand: no evidence either
     way). A pass-2 line (`--pass2`'s, which names a `forced` card) is skipped, so the files of a whole sweep
-    may be named together. A blank line is skipped; a line that is not a result, or a card and tier an earlier
-    line holds, raises a ValueError naming its file and line.
+    may be named together. A blank line is skipped; a line that is not a result, or a card, tier and face an
+    earlier line holds, raises a ValueError naming its file and line.
     """
     if isinstance(paths, (str, Path)):
         paths = [paths]
     rows: list[dict] = []
-    where: dict[tuple[str, str], str] = {}
+    where: dict[tuple[str, str, str], str] = {}
     for path in paths:
         with open(path, encoding="utf-8") as lines:
             for number, line in enumerate(lines, start=1):
@@ -302,12 +320,206 @@ def load_sweep(paths: str | Path | Iterable[str | Path]) -> pd.DataFrame:
                     row = _sweep_row(parsed)
                 except (KeyError, TypeError, ValueError) as error:
                     raise ValueError(f"{here}: not a sweep result ({error!r})") from error
-                key = (row["card"], row["tier"])
+                card, tier, face = key = (row["card"], row["tier"], row["face"])
                 if key in where:
-                    raise ValueError(f"{here}: {key[0]} at {key[1]} is also at {where[key]}")
+                    named = tier if face == "base" else f"{tier} ({face})"
+                    raise ValueError(f"{here}: {card} at {named} is also at {where[key]}")
                 where[key] = here
                 rows.append(row)
     return pd.DataFrame(rows, columns=list(SWEEP_COLUMNS)).astype(SWEEP_COLUMNS)
+
+
+# The sweep's own thresholds (`AI_SWEEP` in `crates/ai/src/sweep.rs`), read off the Rust so none is restated.
+SWEEP_SOURCE_PATH = Path(__file__).resolve().parents[2] / "crates" / "ai" / "src" / "sweep.rs"
+AI_SWEEP_FIELDS = (
+    "min_affordable_turns",
+    "self_harm_delta",
+    "ban_affordable_turns",
+    "ban_harm_plays",
+    "min_losing_plays",
+    "ban_losing_plays",
+)
+
+
+@functools.cache
+def ai_sweep(path: str | Path = SWEEP_SOURCE_PATH) -> dict[str, float]:
+    """The sweep's judgement thresholds (`AI_SWEEP`) as `AI_SWEEP_FIELDS` to numbers, read off `sweep.rs`."""
+    text = Path(path).read_text(encoding="utf-8")
+    block = re.search(r"pub const AI_SWEEP: AiSweep = AiSweep \{(.*?)\n\};", text, re.DOTALL)
+    if block is None:
+        raise ValueError(f"{path}: no AI_SWEEP")
+    rules = {}
+    for name in AI_SWEEP_FIELDS:
+        found = re.search(rf"^\s*{name}: (-?\d+(?:\.\d+)?),", block[1], re.MULTILINE)
+        if found is None:
+            raise ValueError(f"{path}: AI_SWEEP has no {name}")
+        rules[name] = float(found[1])
+    return rules
+
+
+PASS2_COLUMNS = {
+    "card": "str",
+    "tier": "str",
+    "face": "str",
+    "forced": "bool",
+    "games": "int64",
+    "drawn_games": "int64",
+    "affordable_turns": "int64",
+    "playable_turns": "int64",
+    "plays": "int64",
+    "errors": "int64",
+    "timeouts": "int64",
+    "eval_delta_sum": "float64",
+    "eval_delta_count": "int64",
+    "eval_delta_mean": "float64",
+    "losing_plays": "int64",
+    "flags": "object",
+    "half_flags": "object",
+    "status": "str",
+}
+
+# The numbers a pass-2 entry carries, as the column they sum into and the key the sweep writes them under.
+PASS2_NUMBERS = {
+    "games": "games",
+    "drawn_games": "drawnGames",
+    "affordable_turns": "affordableTurns",
+    "playable_turns": "playableTurns",
+    "plays": "plays",
+    "errors": "errors",
+    "timeouts": "timeouts",
+    "eval_delta_sum": "evalDeltaSum",
+    "eval_delta_count": "evalDeltaCount",
+    "losing_plays": "losingPlays",
+}
+
+# An older slice has no playableTurns or losingPlays: read as 0, as the Rust's `#[serde(default)]` does.
+PASS2_OPTIONAL = ("playable_turns", "losing_plays")
+
+
+def _pass2_entry(tier: str, entry: dict) -> tuple[tuple[str, str, str], dict]:
+    face = entry.get("face", "base")
+    if face not in SWEEP_FACES:
+        raise ValueError(f"face {face!r}")
+    numbers = {
+        column: entry.get(name, 0) if column in PASS2_OPTIONAL else entry[name]
+        for column, name in PASS2_NUMBERS.items()
+    }
+    return (entry["defId"], tier, face), numbers
+
+
+def _pass2_mean(totals: dict) -> float:
+    return totals["eval_delta_sum"] / max(totals["eval_delta_count"], 1)
+
+
+def _pass2_flags(totals: dict, rules: dict[str, float]) -> list[str]:
+    """The flags pass 2's own numbers raise at ban strength, in `judge_card`'s order (R390, R2425000, R601)."""
+    flags = []
+    if totals["errors"] > 0:
+        flags.append("error")
+    if totals["timeouts"] > 0:
+        flags.append("timeout")
+    if totals["playable_turns"] >= rules["ban_affordable_turns"] and totals["plays"] == 0:
+        flags.append("neverPlayed")
+    if totals["eval_delta_count"] >= rules["ban_harm_plays"] and _pass2_mean(totals) < rules["self_harm_delta"]:
+        flags.append("selfHarm")
+    if totals["losing_plays"] >= rules["ban_losing_plays"]:
+        flags.append("selfKill")
+    return flags
+
+
+def _pass2_half_flags(totals: dict, rules: dict[str, float]) -> list[str]:
+    """The same flags at half strength, which keep a card on the watch list (`half_flags` in the Rust)."""
+    flags = []
+    if totals["playable_turns"] >= rules["min_affordable_turns"] and totals["plays"] <= 1:
+        flags.append("neverPlayed")
+    if totals["eval_delta_count"] > 0 and _pass2_mean(totals) < rules["self_harm_delta"] / 2:
+        flags.append("selfHarm")
+    if totals["losing_plays"] >= max(int(rules["min_losing_plays"]) // 2, 1):
+        flags.append("selfKill")
+    return flags
+
+
+def load_sweep_pass2(paths: str | Path | Iterable[str | Path]) -> pd.DataFrame:
+    """A sweep's pass-2 lines (`cargo jackioh sweep --pass2`, the pass that bans) as one row per card, tier and face.
+
+    A pass-2 line forces one at-risk card and lists, in `cards`, that card first and every other at-risk
+    card the AI was dealt as filler. A row sums a card's numbers over every pass-2 game it was dealt in,
+    forced or filler, as `pass2_stats` does for the verdict, and `forced` is true when some line forced it
+    (a filler-only row is in the frame and was judged by no line of its own).
+
+    Columns: card, tier, face (`base` or `radiant`), forced, games, drawn_games, affordable_turns,
+    playable_turns, plays, errors, timeouts, eval_delta_sum, eval_delta_count, eval_delta_mean (NaN with no
+    plays), losing_plays, flags (what pass 2's numbers raise at ban strength: `error`, `timeout`,
+    `neverPlayed`, `selfHarm`, `selfKill`, in the sweep's order), half_flags (the same at half strength,
+    which keeps a card on the watch list) and status: `banned` (a flag), else `watched` (cleared of a ban,
+    a half flag keeps it watched), else `unswept` (never affordable in these games: no evidence either
+    way), else `cleared`. The status reads pass 2 alone; `cargo jackioh sweep --report` over the pass-1
+    files too is the verdict of record (a pass-1 error or timeout also bans, pass-1 half flags also watch).
+
+    Pass-1 lines are skipped, so the files of a whole sweep may be named together. A blank line is
+    skipped; a line that is neither, or a second line forcing a card, tier and face an earlier one forced,
+    raises a ValueError naming its file and line.
+    """
+    if isinstance(paths, (str, Path)):
+        paths = [paths]
+    rules = ai_sweep()
+    totals: dict[tuple[str, str, str], dict] = {}
+    where: dict[tuple[str, str, str], str] = {}
+    for path in paths:
+        with open(path, encoding="utf-8") as lines:
+            for number, line in enumerate(lines, start=1):
+                if not line.strip():
+                    continue
+                here = f"{path}: line {number}"
+                try:
+                    parsed = json.loads(line)
+                    if not isinstance(parsed, dict):
+                        raise ValueError("not an object")
+                    if "forced" not in parsed:
+                        if "defId" in parsed:
+                            continue
+                        raise ValueError("neither a pass-1 nor a pass-2 line")
+                    forced, tier = parsed["forced"], parsed["tier"]
+                    entries = [_pass2_entry(tier, entry) for entry in parsed["cards"]]
+                except (KeyError, TypeError, ValueError) as error:
+                    raise ValueError(f"{here}: not a sweep result ({error!r})") from error
+                face = next((key[2] for key, _ in entries if key[0] == forced), "base")
+                key = (forced, tier, face)
+                if key in where:
+                    named = tier if face == "base" else f"{tier} ({face})"
+                    raise ValueError(f"{here}: {forced} at {named} is also at {where[key]}")
+                where[key] = here
+                for entry_key, numbers in entries:
+                    total = totals.setdefault(entry_key, dict.fromkeys(PASS2_NUMBERS, 0))
+                    for column, value in numbers.items():
+                        total[column] += value
+    rows = []
+    for (card, tier, face), total in totals.items():
+        flags = _pass2_flags(total, rules)
+        half_flags = _pass2_half_flags(total, rules)
+        if flags:
+            status = "banned"
+        elif half_flags:
+            status = "watched"
+        elif total["affordable_turns"] == 0:
+            status = "unswept"
+        else:
+            status = "cleared"
+        count = total["eval_delta_count"]
+        rows.append(
+            {
+                "card": card,
+                "tier": tier,
+                "face": face,
+                "forced": (card, tier, face) in where,
+                **total,
+                "eval_delta_mean": total["eval_delta_sum"] / count if count > 0 else float("nan"),
+                "flags": flags,
+                "half_flags": half_flags,
+                "status": status,
+            }
+        )
+    return pd.DataFrame(rows, columns=list(PASS2_COLUMNS)).astype(PASS2_COLUMNS)
 
 
 GENERATION_COLUMNS = {

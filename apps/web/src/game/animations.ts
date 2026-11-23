@@ -113,7 +113,9 @@ export function locateInstance(view: PlayerView, instanceId: string): string | n
       if (unit !== null && unit.instanceId === instanceId) return testid.card(instanceId);
     }
     for (const slot of sv.backrow) {
-      if (slot !== null && slot.faceDown === false && slot.instanceId === instanceId) {
+      // One guard for an empty zone and a face-down card (#3490): a face-down card has no `instanceId`, so a
+      // guard against it alone could never change the answer.
+      if (slot?.faceDown === false && slot.instanceId === instanceId) {
         return testid.card(instanceId);
       }
     }
@@ -687,6 +689,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
+  // R3925000: a banner says a loop reached the loop cap and stopped.
+  loopCapped: {
+    animation: "jk-banner",
+    durationMs: 600,
+    testid: "turn-banner",
+    fx: { recipe: "banner" },
+    target: () => testid.banner,
+  },
   // R437: the mark's sigil brands the card in the mark's colors (fx/brand.ts), and its aura stays
   // on the card while the view lists the mark (cards/CardMarks.tsx).
   marked: {
@@ -740,6 +750,15 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
       return side !== null ? testid.hero(side) : locateInstance(view, e.targetId);
     },
   },
+  // R3857000: a hero kept Armor; its Armor badge ticks and the effects layer blooms a full shield
+  // over the hero (fx/shield.ts), with no shake, since nothing struck it.
+  armorGained: {
+    animation: "jk-badge-tick",
+    durationMs: 300,
+    testid: "hero-<side>",
+    fx: { recipe: "armor" },
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
   // R961 (Meditative #39.2): the Jade Counter rose; the hero's Jade badge ticks, no fx.
   jadeChanged: {
     animation: "jk-badge-tick",
@@ -776,6 +795,15 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "curve" },
     target: () => testid.board,
   },
+  // S+ #109 Lancer, #126 Vela, #127 Corvus (R3554005): the line is drawn from the source's zone
+  // through the lattice cells to the tile, before what it meets is hit.
+  lineDrawn: {
+    animation: "jk-line-drawn",
+    durationMs: 700,
+    testid: "board",
+    fx: { recipe: "line" },
+    target: () => testid.board,
+  },
   // R1183002: a banner says the AI plays the rest of the turn; the actions it takes follow as their
   // own events, each animated as a player's would be.
   autopilotEngaged: {
@@ -787,6 +815,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
   },
   // R1839002: a Dormant card awakens where it lies; its Dormant badge falls away with the next view.
   awakened: {
+    animation: "jk-radiant-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    fx: { recipe: "brand" },
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // R3536005: a card evolves where it lies; its Evolved badge arrives with the next view.
+  evolved: {
     animation: "jk-radiant-pulse",
     durationMs: 400,
     testid: "card-<instanceId>",
@@ -1781,12 +1817,9 @@ export function sameOccurrence(a: unknown, b: unknown): boolean {
   if (!isRecord(a) || !isRecord(b)) return false;
   const redacted = a["instanceId"] === HIDDEN_ID || b["instanceId"] === HIDDEN_ID;
   const rewritten = redacted ? (REWRITTEN_WITH_IDENTITY[a["type"] as GameEventType] ?? NOTHING_REWRITTEN) : NOTHING_REWRITTEN;
+  // A field one copy lacks matches only another that lacks it: nothing else is the same as undefined.
   for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
-    if (rewritten.includes(key)) continue;
-    const left = a[key];
-    const right = b[key];
-    if (left === undefined && right === undefined) continue;
-    if (left === undefined || right === undefined || !sameOccurrence(left, right)) return false;
+    if (!rewritten.includes(key) && !sameOccurrence(a[key], b[key])) return false;
   }
   return true;
 }
@@ -1801,8 +1834,9 @@ export function sameOccurrence(a: unknown, b: unknown): boolean {
  * match the runner's entries by identity.
  */
 export function newEventsSince(prev: readonly GameEvent[], next: readonly GameEvent[]): GameEvent[] {
-  if (prev.length === 0 || next.length === 0) return [...next];
+  // Stryker disable next-line MethodExpression: a longer overlap reads past the start of `prev` or the end of `next`, where an undefined meets an event, which it never matches, so the search finds what it finds from the shorter one
   const most = Math.min(prev.length, next.length);
+  // Stryker disable next-line EqualityOperator: an overlap of 0 compares nothing and hands over next.slice(0), all of `next`, as the line after the loop does
   for (let overlap = most; overlap > 0; overlap -= 1) {
     const from = prev.length - overlap;
     let matches = true;
@@ -1857,22 +1891,20 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
 
   /** Squeezes `queue[from..to)` to fit `budgetMs`; a pinned entry keeps its time, out of the budget first. */
   function squeeze(from: number, to: number, budgetMs: number): void {
+    const segment = queue.slice(from, to);
     let fixed = 0;
     let total = 0;
-    for (let i = from; i < to; i += 1) {
-      const entry = queue[i];
-      if (entry === undefined) continue;
+    for (const entry of segment) {
       if (pinned(entry)) fixed += entry.durationMs;
       else total += entry.durationMs;
     }
     const room = Math.max(0, budgetMs - fixed);
     if (total <= room) return;
     const factor = room / total;
-    for (let i = from; i < to; i += 1) {
-      const entry = queue[i];
-      if (entry === undefined || entry.durationMs <= 0 || pinned(entry)) continue;
-      queue[i] = { ...entry, durationMs: Math.max(minEntryMs, Math.round(entry.durationMs * factor)) };
-    }
+    const squeezed = segment.map((entry) =>
+      entry.durationMs <= 0 || pinned(entry) ? entry : { ...entry, durationMs: Math.max(minEntryMs, Math.round(entry.durationMs * factor)) },
+    );
+    queue.splice(from, segment.length, ...squeezed);
   }
 
   /**
@@ -1881,11 +1913,10 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
    */
   function fitBudget(budgetMs: number, castBudgetMs: number): void {
     let start = 0;
-    let budget = budgetMs;
-    if (queue[0]?.cast !== undefined) budget = castBudgetMs;
-    else if (current?.cast !== undefined) budget = Math.max(0, castBudgetMs - current.durationMs);
-    for (let k = 0; k < queue.length; k += 1) {
-      if (queue[k]?.cast === undefined || k === start) continue;
+    // A cast in flight has spent part of its segment already; a cast at the head starts its own in the loop.
+    let budget = current?.cast === undefined ? budgetMs : Math.max(0, castBudgetMs - current.durationMs);
+    for (const [k, entry] of queue.entries()) {
+      if (entry.cast === undefined) continue;
       squeeze(start, k, budget);
       start = k;
       budget = castBudgetMs;
@@ -1931,10 +1962,7 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
       const reduced = reducedMotion || settings.motion === "reduce" || readPanelSettings().reduceMotion;
       const planned = planEntries(events, view, reduced, plays, options.wipeOf, options.signatureOf);
       const slammed = options.slamOf === undefined ? planned : slamEntries(planned, options.slamOf, reduced);
-      const scaled = slammed.map((entry) => {
-        const durationMs = scaleForSpeed(entry.durationMs, settings.speed);
-        return durationMs === entry.durationMs ? entry : { ...entry, durationMs };
-      });
+      const scaled = slammed.map((entry) => ({ ...entry, durationMs: scaleForSpeed(entry.durationMs, settings.speed) }));
       // #3347: with the effects off there are no leaves to wait for, so the riffle takes no time (its sound stays).
       const riffled = riffleEntries(scaled, { reduced: reduced || settings.intensity === "off", speed: settings.speed });
       const entranced = options.entranceOf === undefined ? riffled : entranceEntries(riffled, options.entranceOf, { seen: entered });
@@ -1945,10 +1973,11 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
           ? entranced
           : setPieceEntries(entranced, claimOf, {
               reduced: reduced || settings.intensity === "off",
+              // Stryker disable next-line StringLiteral: setPieceHoldMs reads only "off" and "short", so a Big moments of "" holds as "full" does
               bigMoments: settings.bigMoments ?? "full",
               speed: settings.speed,
             });
-      if (entries.length > 0) queue.push(...entries);
+      queue.push(...entries);
       owed = true;
       const speed = normalizeSpeed(settings.speed);
       fitBudget(burstBudgetMs / speed, castBudgetMs / speed);

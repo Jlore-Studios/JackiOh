@@ -1,4 +1,4 @@
-//! SPEC §8.11 Training Grounds 5 Midlane Menace: (2) Unit, Human, Common, 3/3 → 6/6, a card of the held
+//! SPEC §8.11 Training Grounds 5 Midlane Menace: (2) Unit, Human, Common, 2/2 → 4/4 (3/3 → 6/6 until issue #4154), a card of the held
 //! Training Grounds set (R1420, R2194000).
 //! Base:    "Cry: If this is in midlane, it gains +5/+5 and Rush."
 //! Radiant: "Cry: If this is in midlane, it gains +10/+10 and Rush."
@@ -12,8 +12,9 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(self_) = ctx.live_self().cloned() else {
         return vec![];
     };
-    let lane = slot_of(&*ctx.state, &self_).map_or(-1, |slot| slot.lane);
-    let in_midlane = midlane_lanes_of(&*ctx.state, ctx.controller).contains(&lane)
+    // R3546001: a GIGA is in midlane when any of its lanes is.
+    let mids = midlane_lanes_of(&*ctx.state, ctx.controller);
+    let in_midlane = lanes_of(&self_).iter().any(|lane| mids.contains(lane))
         && in_units_row_or_standing(&*ctx.state, &self_);
     if !in_midlane {
         return vec![];
@@ -66,13 +67,41 @@ mod tests {
         s.stats(MENACE).keywords.iter().any(|keyword| matches!(keyword, Keyword::Rush))
     }
 
+    /// R3546001: Menace made GIGA while held, played with its anchor at `lane`.
+    fn giga_played_into(radiant: bool, lane: i32) -> Scenario {
+        let mut s = menace(radiant);
+        let id = s.card(MENACE).id.clone();
+        crate::give_giga(&mut s, &id);
+        s.play(MENACE, json!({ "zone": lane }));
+        assert_eq!(s.card(MENACE).giga, Some(true));
+        s
+    }
+
     mod base {
         use super::*;
 
         #[test]
-        fn r685_played_into_lane_3_it_is_an_8_8_with_rush() {
+        fn r3546001_a_giga_over_the_midlane_from_lane_2_or_3_is_in_midlane() {
+            for lane in [2, 3] {
+                let mut s = giga_played_into(false, lane);
+                s.expect_stats(MENACE, json!({ "attack": 7, "health": 7 }));
+                assert!(has_rush(&s), "anchor {lane}");
+            }
+        }
+
+        #[test]
+        fn r3546001_a_giga_clear_of_the_midlane_is_not() {
+            for lane in [1, 4] {
+                let mut s = giga_played_into(false, lane);
+                s.expect_stats(MENACE, json!({ "attack": 2, "health": 2 }));
+                assert!(!has_rush(&s), "anchor {lane}");
+            }
+        }
+
+        #[test]
+        fn r685_played_into_lane_3_it_is_a_7_7_with_rush() {
             let mut s = played_into(false, 3);
-            s.expect_stats(MENACE, json!({ "attack": 8, "health": 8, "maxHealth": 8 }));
+            s.expect_stats(MENACE, json!({ "attack": 7, "health": 7, "maxHealth": 7 }));
             assert!(has_rush(&s));
             assert_eq!(s.count(GameEventType::Buffed), 1);
             assert_eq!(s.count(GameEventType::KeywordGranted), 1);
@@ -93,10 +122,10 @@ mod tests {
         }
 
         #[test]
-        fn r685_played_into_lanes_1_2_4_or_5_it_is_a_summoning_sick_3_3() {
+        fn r685_played_into_lanes_1_2_4_or_5_it_is_a_summoning_sick_2_2() {
             for lane in [1, 2, 4, 5] {
                 let mut s = played_into(false, lane);
-                s.expect_stats(MENACE, json!({ "attack": 3, "health": 3 }));
+                s.expect_stats(MENACE, json!({ "attack": 2, "health": 2 }));
                 assert!(!has_rush(&s), "lane {lane}");
                 let body = s.unit_at(P2, 1);
                 s.expect_refused(|s| s.attack(MENACE, &body));
@@ -107,7 +136,7 @@ mod tests {
         fn s10_4_the_buff_and_the_rush_stay_after_the_turn() {
             let mut s = played_into(false, 3);
             s.end_turn().end_turn();
-            s.expect_stats(MENACE, json!({ "attack": 8, "health": 8 }));
+            s.expect_stats(MENACE, json!({ "attack": 7, "health": 7 }));
             assert!(has_rush(&s));
             assert!(s.card(MENACE).granted_keywords.iter().any(|keyword| matches!(keyword, Keyword::Rush)));
         }
@@ -121,7 +150,7 @@ mod tests {
                 P1,
             );
             let summoned = s.unit_at(P1, 3);
-            s.expect_stats(&summoned, json!({ "attack": 3, "health": 3 }));
+            s.expect_stats(&summoned, json!({ "attack": 2, "health": 2 }));
             assert!(events.iter().all(|event| event.event_type() != GameEventType::Buffed));
             assert!(s.stats(&summoned).keywords.is_empty());
         }
@@ -150,7 +179,7 @@ mod tests {
             let copy = s.unit_at(P1, 3);
             assert_eq!(copy.def_id, MENACE);
             assert_ne!(copy.id, source.id);
-            s.expect_stats(&copy, json!({ "attack": 3, "health": 3 }));
+            s.expect_stats(&copy, json!({ "attack": 2, "health": 2 }));
             assert!(s.stats(&copy).keywords.is_empty());
             assert!(events.iter().all(|event| event.event_type() != GameEventType::Buffed));
             assert!(events.iter().all(|event| event.event_type() != GameEventType::KeywordGranted));
@@ -162,7 +191,7 @@ mod tests {
                 let mut s = menace(false);
                 step_param(s.card_mut(MENACE), "buff", step);
                 s.play(MENACE, json!({ "zone": 3 }));
-                s.expect_stats(MENACE, json!({ "attack": 3 + gain, "health": 3 + gain }));
+                s.expect_stats(MENACE, json!({ "attack": 2 + gain, "health": 2 + gain }));
             }
         }
     }
@@ -171,17 +200,28 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r685_in_lane_3_a_16_16_with_rush() {
+        fn r3546001_a_giga_over_the_midlane_gains_10_10_and_rush() {
+            for lane in [2, 3] {
+                let mut s = giga_played_into(true, lane);
+                s.expect_stats(MENACE, json!({ "attack": 14, "health": 14 }));
+                assert!(has_rush(&s), "anchor {lane}");
+            }
+            let s = giga_played_into(true, 4);
+            assert!(!has_rush(&s));
+        }
+
+        #[test]
+        fn r685_in_lane_3_a_14_14_with_rush() {
             let mut s = played_into(true, 3);
-            s.expect_stats(MENACE, json!({ "attack": 16, "health": 16 }));
+            s.expect_stats(MENACE, json!({ "attack": 14, "health": 14 }));
             assert!(has_rush(&s));
         }
 
         #[test]
-        fn r685_elsewhere_a_6_6_and_nothing() {
+        fn r685_elsewhere_a_4_4_and_nothing() {
             for lane in [1, 2, 4, 5] {
                 let mut s = played_into(true, lane);
-                s.expect_stats(MENACE, json!({ "attack": 6, "health": 6 }));
+                s.expect_stats(MENACE, json!({ "attack": 4, "health": 4 }));
                 assert!(!has_rush(&s), "lane {lane}");
             }
         }

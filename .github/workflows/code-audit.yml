@@ -1,6 +1,7 @@
 # The code audit: every three days, one issue that hands the night bot #900's audit again (dead code,
-# duplicated logic, zombie routes; `bot:build`, `difficulty:hard`), for one pull request a person
-# reviews and merges (`person merges`).
+# duplicated logic, zombie routes) and a map of the states the code holds without naming them, checked
+# against what each should do (`bot:build`, `difficulty:hard`), for one pull request a person reviews
+# and merges (`person merges`).
 # Its text is .github/hygiene/code.md, where no bot may change it, and it opens through the weekly
 # hygiene run's own `branches.py issue`, which opens none while the last code audit is still open, so
 # the audits never stack up. Nothing here deletes or merges anything. At 22:17 UTC on the 1st, 4th, 7th

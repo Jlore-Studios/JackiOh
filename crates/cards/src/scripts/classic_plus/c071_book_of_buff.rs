@@ -1,6 +1,6 @@
 //! C+ #71 Book of Buff (SPEC §8.7 row 71, R386; BUILD M9 row C+ 71). (1) Spell, Book, Epic.
-//!   Base:    "Buff a permanent {times|time|times}." — times 4
-//!   Radiant: "Buff a card {times|time|times}. It may be a card in your hand." — times 8
+//!   Base:    "Buff a permanent {times|time|times}." — times 3 (4 until issue #4154)
+//!   Radiant: "Buff a card {times|time|times}. It may be a card in your hand." — times 6 (8 until issue #4154)
 //!
 //! A declared target (R81): a permanent on either side, and on the Radiant face also a card in your own
 //! hand (a broader scope, R275, as C+ #72 Book of Nerf's). `times` separate Upgrades, each its own draw
@@ -122,13 +122,13 @@ mod tests {
         }
 
         #[test]
-        fn r386_upgrades_a_unit_4_times_each_its_own_draw() {
+        fn r386_upgrades_a_unit_3_times_each_its_own_draw() {
             crate::register_all();
             let mut s = book(false);
             let unit = s.unit(P2, 1).expect("p2's unit");
             s.play(BOOK, json!({ "targets": pick::id(&unit.id) }));
             let events = upgrades(s.events());
-            assert_eq!(events.len(), 4);
+            assert_eq!(events.len(), 3);
             assert!(events.iter().all(|event| event["instanceId"] == json!(unit.id)));
             assert!(events.iter().all(|event| event["change"]["kind"] != json!("none")));
         }
@@ -149,16 +149,18 @@ mod tests {
             let mut s = book(false);
             let trap = s.backrow(P2, 1).expect("p2's trap");
             s.play(BOOK, json!({ "targets": pick::id(&trap.id) }));
-            assert_eq!(upgrades(s.events()).len(), 4);
+            assert_eq!(upgrades(s.events()).len(), 3);
             assert!(upgrades(&s.view(P1).events).iter().all(|event| event["instanceId"] == json!(hidden_id)));
             assert!(upgrades(&s.view(P2).events).iter().all(|event| event["instanceId"] == json!(trap.id)));
         }
 
         #[test]
-        fn r781001_r386_an_immutable_unit_in_play_is_no_target_and_stays_unchanged() {
+        fn r4353001_r386_an_immutable_unit_in_play_may_be_its_target_and_stays_unchanged() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] } }));
             let menace = s.unit(P2, 1).expect("Midrange Menace");
-            s.expect_refused(|s| s.play(BOOK, json!({ "targets": pick::id(&menace.id) })));
+            // Immutable bars no aim (R4353001); it still stops every Upgrade, so none is drawn (R386).
+            s.play(BOOK, json!({ "targets": pick::id(&menace.id) }));
+            s.expect_in_zone(BOOK, "graveyard");
             assert!(upgrades(s.events()).is_empty());
             assert!(s.card(&menace.id).tuning.is_none());
             s.expect_stats(&menace.id, json!({ "attack": 18, "maxHealth": 18 }));
@@ -173,9 +175,9 @@ mod tests {
         }
 
         #[test]
-        fn r386_the_count_reads_through_param_an_upgrade_of_times_makes_5_a_degrade_3() {
+        fn r386_the_count_reads_through_param_an_upgrade_of_times_makes_4_a_degrade_2() {
             crate::register_all();
-            for (steps, count) in [(1, 5), (-1, 3)] {
+            for (steps, count) in [(1, 4), (-1, 2)] {
                 let mut s = book(false);
                 step_param(s.card_mut(BOOK), "times", steps);
                 let target = s.unit(P1, 1).expect("p1's unit").id;
@@ -189,12 +191,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r386_upgrades_its_target_8_times() {
+        fn r386_upgrades_its_target_6_times() {
             crate::register_all();
             let mut s = book(true);
             let unit = s.unit(P1, 1).expect("p1's unit");
             s.play(BOOK, json!({ "targets": pick::id(&unit.id) }));
-            assert_eq!(upgrades(s.events()).len(), 8);
+            assert_eq!(upgrades(s.events()).len(), 6);
             assert!(upgrades(s.events()).iter().all(|event| event["instanceId"] == json!(unit.id)));
         }
 
@@ -205,11 +207,11 @@ mod tests {
             let mut s = book(true);
             let held = s.hand(P1).into_iter().find(|card| card.def_id == UNIT).expect("Mr. Vanilla in hand");
             s.play(BOOK, json!({ "targets": pick::id(&held.id) }));
-            assert_eq!(upgrades(s.events()).len(), 8);
+            assert_eq!(upgrades(s.events()).len(), 6);
             let live = s.card(&held.id);
             assert!(live.tuning.is_some() || live.cost_mod != 0);
             let theirs = upgrades(&s.view(P2).events);
-            assert_eq!(theirs.len(), 8);
+            assert_eq!(theirs.len(), 6);
             assert!(theirs.iter().all(|event| event["instanceId"] == json!(hidden_id) && event["defId"] == json!(hidden_id)));
             assert!(upgrades(&s.view(P1).events).iter().all(|event| event["instanceId"] == json!(held.id)));
         }
@@ -225,7 +227,7 @@ mod tests {
                 let mut s = book(false);
                 let held = s.hand(P1).into_iter().find(|card| card.def_id == UNIT).expect("Mr. Vanilla in hand");
                 s.play(BOOK, json!({ "targets": pick::id(&held.id) }));
-                assert_eq!(upgrades(s.events()).len(), 4);
+                assert_eq!(upgrades(s.events()).len(), 3);
             });
         }
     }

@@ -537,7 +537,7 @@ function ShardBar({
             return (
               <div key={cosmetic.id} className="token-row" data-rarity={cosmetic.rarity}>
                 <span>
-                  {cosmetic.name} · {t(cosmetic.rarity)}
+                  {t(cosmetic.name)} · {t(cosmetic.rarity)}
                   {cosmetic.chase ? ` · ${t("Chase")}` : null}
                 </span>
                 {/* R1833000: the chase's look, a per-card one on the card it would go on. */}
@@ -548,7 +548,7 @@ function ShardBar({
                 ) : null}
                 {isPerCardKind(cosmetic.kind) && open.length > 1 ? (
                   <label className="token-card-choice">
-                    {t("Card for {name}", { name: cosmetic.name })}
+                    {t("Card for {name}", { name: t(cosmetic.name) })}
                     <select
                       data-testid={shopTestid.chaseCards(cosmetic.id)}
                       value={chosen ?? ""}

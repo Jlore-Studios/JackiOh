@@ -160,6 +160,12 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Starship" },
   // Issue #2657's keyword (R2657000).
   { kind: "Can't Defend" },
+  // Stinkyscape+'s printed kinds (R3535002, R3548000, R3572000): the Unprinted ones (Evolve, Burn, Toxic) are not here.
+  { kind: "GIGA" },
+  { kind: "Flexible" },
+  { kind: "Frenzy" },
+  { kind: "Evasive" },
+  { kind: "Tipsy", n: 2 },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {

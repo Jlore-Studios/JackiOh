@@ -132,21 +132,17 @@ mod tests {
             assert!(seen.iter().all(|id| !def_of(Some(fresh.state()), id).token));
         }
 
+        /// R3563000: the Books of one play are different cards while the pool lasts (R60's repeats no longer
+        /// stand for a card an effect generates): the pool holds fifteen, so two never match.
         #[test]
-        fn r60_repeats_are_allowed() {
-            let mut repeated = false;
-            let mut i = 0;
-            while i < 80 && !repeated {
+        fn r3563000_the_picks_are_distinct_until_the_pool_runs_out() {
+            for i in 0..80 {
                 let mut s = book(false, Some(&format!("repeat-{i}")), None);
-                i += 1;
                 s.play(BOOK, json!({}));
                 let found = added(&s);
-                repeated = match (found.first(), found.get(1)) {
-                    (Some(a), Some(b)) => a.1 == b.1,
-                    _ => false,
-                };
+                assert_eq!(found.len(), 2, "repeat-{i}");
+                assert_ne!(found[0].1, found[1].1, "repeat-{i}: {found:?}");
             }
-            assert!(repeated);
         }
 
         #[test]

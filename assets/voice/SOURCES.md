@@ -1,8 +1,7 @@
 # Voice line sources
 
 Where every spoken card line the client plays came from (issue #2631, R2631000), beside the music's
-`assets/music/LICENSES.md`. `/ai` says the lines are computer text-to-speech; this is the record
-behind that sentence.
+`assets/music/LICENSES.md`. The lines are computer text-to-speech; this is the record of how they are made.
 
 ## How the lines are made
 

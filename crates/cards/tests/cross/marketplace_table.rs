@@ -12,15 +12,21 @@ use jackioh_engine::config::{
 use jackioh_engine::testkit::scenario;
 use jackioh_engine::{
     DORMANT_STARSHIP_DEF_ID, KeywordKind, PlayerId, Rng, SetName, Tag, find_def, has_keyword, made_by_a_rule,
-    market_card_price, registered_catalog, roll_offers, tuned_price,
+    market_card_price, registered_catalog, roll_offers, set_is_open, set_ships, tuned_price,
 };
 use serde_json::json;
 
 /// The ids a lot's pool holds in the registered catalog, as `marketplace::pool_ids` reads it: a set
-/// lot's no token and no card only a rule makes (R1857001).
+/// lot's no token and no card only a rule makes (R1857001), and an open-ids lot's only those whose set
+/// is open (R3571001).
 fn pool(pool: MarketPool) -> Vec<String> {
     match pool {
         MarketPool::Ids(ids) => ids.iter().map(|id| (*id).to_string()).collect(),
+        MarketPool::OpenIds(ids) => ids
+            .iter()
+            .filter(|id| find_def(None, id).is_some_and(|def| set_is_open(def.set)))
+            .map(|id| (*id).to_string())
+            .collect(),
         MarketPool::Set(set) => registered_catalog()
             .values()
             .filter(|def| def.set == set && !def.token && !made_by_a_rule(def))
@@ -36,7 +42,73 @@ fn pool(pool: MarketPool) -> Vec<String> {
             })
             .map(|def| def.id.clone())
             .collect(),
+        MarketPool::Tagged {
+            sets,
+            tag,
+            tokens,
+            name,
+        } => registered_catalog()
+            .values()
+            .filter(|def| {
+                sets.contains(&def.set)
+                    && set_is_open(def.set)
+                    && def.is_token() == tokens
+                    && !made_by_a_rule(def)
+                    && def.tags.contains(&tag)
+                    && name.is_none_or(|(text, holds)| def.name.contains(text) == holds)
+            })
+            .map(|def| def.id.clone())
+            .collect(),
     }
+}
+
+/// R3869004: the lots that named their cards by id through v0.6.2b, pinned so a change to what they
+/// read is deliberate: each reads the same cards in the same order.
+const WEAPONS_V0_6_2B: [&str; 12] = [
+    "stinkyscape-050",
+    "stinkyscape-051",
+    "stinkyscape-052",
+    "stinkyscape-053",
+    "stinkyscape-054",
+    "stinkyscape-055",
+    "stinkyscape-056",
+    "stinkyscape-057",
+    "stinkyscape-058",
+    "stinkyscape-059",
+    "stinkyscape-060",
+    "stinkyscape-061",
+];
+const DRONE_CORES_V0_6_2B: [&str; 10] = [
+    "stinkyscape-027",
+    "stinkyscape-028",
+    "stinkyscape-029",
+    "stinkyscape-030",
+    "stinkyscape-031",
+    "stinkyscape-032",
+    "stinkyscape-033",
+    "stinkyscape-034",
+    "stinkyscape-035",
+    "stinkyscape-036",
+];
+const LAUNCHERS_V0_6_2B: [&str; 4] = [
+    "stinkyscape-140",
+    "stinkyscape-141",
+    "stinkyscape-142",
+    "stinkyscape-143",
+];
+
+#[test]
+fn r3869004_the_tagged_lots_read_the_cards_they_named_in_the_same_order() {
+    register_all();
+    let ids = |list: &[&str]| list.iter().map(|id| (*id).to_string()).collect::<Vec<String>>();
+    assert_eq!(pool(MARKETPLACE_WEAPONS), ids(&WEAPONS_V0_6_2B));
+    assert_eq!(pool(MARKETPLACE_DRONE_CORES), ids(&DRONE_CORES_V0_6_2B));
+    assert_eq!(pool(MARKETPLACE_LAUNCHERS), ids(&LAUNCHERS_V0_6_2B));
+    let ai: Vec<String> = (1..=10)
+        .map(|n| format!("stinkyscape-t-ai-{n:02}"))
+        .chain((1..=7).map(|n| format!("stinkyscapeplus-t-ai-{n:02}")))
+        .collect();
+    assert_eq!(pool(MARKETPLACE_AI_CARDS), ai);
 }
 
 #[test]
@@ -48,7 +120,7 @@ fn r1881006_every_lots_pool_resolves_to_cards_the_catalog_holds_at_least_its_cou
         "ST3's lots but its Resources (R2250002)"
     );
     for lot in MARKETPLACE_TABLE {
-        if let MarketPool::Ids(ids) = lot.pool {
+        if let MarketPool::Ids(ids) | MarketPool::OpenIds(ids) = lot.pool {
             for id in ids {
                 assert!(find_def(None, id).is_some(), "{id} is in the catalog");
             }
@@ -77,11 +149,13 @@ fn r1881006_each_named_pool_is_the_kind_st3_names() {
             assert!(is(id), "{id} is {what}");
         }
     };
-    named(MARKETPLACE_WEAPONS, "a v3–v5 Weapon", &|id| {
+    let weapons = pool(MARKETPLACE_WEAPONS);
+    let weapons: Vec<&str> = weapons.iter().map(String::as_str).collect();
+    named(&weapons, "a v3–v5 Weapon", &|id| {
         let def = card_def(id);
         def.tags.contains(&Tag::Weapon) && ["v3", "v4", "v5"].iter().any(|v| def.name.ends_with(v))
     });
-    assert_eq!(MARKETPLACE_WEAPONS.len(), 12);
+    assert_eq!(weapons.len(), 12);
     named(MARKETPLACE_WARP_DISRUPTORS, "a Warp Disruptor", &|id| {
         card_def(id).name.starts_with("Warp Disruptor")
     });
@@ -92,25 +166,31 @@ fn r1881006_each_named_pool_is_the_kind_st3_names() {
     named(MARKETPLACE_PROBE_MK2, "Scanning Probe Mk2", &|id| {
         card_def(id).name == "Scanning Probe Mk2"
     });
-    named(MARKETPLACE_DRONE_CORES, "a Drone Core", &|id| {
+    let drone_cores = pool(MARKETPLACE_DRONE_CORES);
+    let drone_cores: Vec<&str> = drone_cores.iter().map(String::as_str).collect();
+    named(&drone_cores, "a Drone Core", &|id| {
         card_def(id).tags.contains(&Tag::DroneCore)
     });
     assert_eq!(
-        MARKETPLACE_DRONE_CORES.len(),
+        drone_cores.len(),
         registered_catalog()
             .values()
             .filter(|def| def.tags.contains(&Tag::DroneCore))
             .count(),
         "every Drone Core"
     );
-    named(MARKETPLACE_LAUNCHERS, "a Launcher", &|id| {
+    let launchers = pool(MARKETPLACE_LAUNCHERS);
+    let launchers: Vec<&str> = launchers.iter().map(String::as_str).collect();
+    named(&launchers, "a Launcher", &|id| {
         card_def(id).name.ends_with("Launcher")
     });
-    named(MARKETPLACE_AI_CARDS, "an AI card of the set", &|id| {
+    let ai_cards = pool(MARKETPLACE_AI_CARDS);
+    let ai_cards: Vec<&str> = ai_cards.iter().map(String::as_str).collect();
+    named(&ai_cards, "an AI card of Stinkyscape or Stinkyscape+", &|id| {
         let def = card_def(id);
-        def.set == SetName::Stinkyscape && def.tags.contains(&Tag::Ai)
+        matches!(def.set, SetName::Stinkyscape | SetName::StinkyscapePlus) && def.tags.contains(&Tag::Ai)
     });
-    assert_eq!(MARKETPLACE_AI_CARDS.len(), 10);
+    assert_eq!(ai_cards.len(), 17);
     for id in pool(MarketPool::SetKeyword(
         SetName::Stinkyscape,
         KeywordKind::StarshipPiece,
@@ -183,5 +263,47 @@ fn r1857001_the_marketplace_never_offers_the_dormant_starship() {
             offers.iter().all(|offer| offer.def_id != DORMANT_STARSHIP_DEF_ID),
             "seed {seed} offers the Dormant Starship"
         );
+    }
+}
+
+#[test]
+fn r3571001_the_ai_lot_offers_stinkyscape_plus_s_seven_only_once_the_set_ships() {
+    register_all();
+    let lot = *MARKETPLACE_TABLE.last().expect("the AI lot is the table's last");
+    assert_eq!(lot.count, 1, "R2250002: its share is unchanged");
+    assert_eq!(
+        lot.pool, MARKETPLACE_AI_CARDS,
+        "R3869004: the AI lot reads its cards' tag"
+    );
+    // The ten Stinkyscape cards keep their place and order, then Stinkyscape+'s seven.
+    let ids = pool(lot.pool);
+    let (stinkyscape, stinkyscape_plus) = ids.split_at(10);
+    let ten: Vec<String> = (1..=10).map(|n| format!("stinkyscape-t-ai-{n:02}")).collect();
+    let seven: Vec<String> = (1..=7).map(|n| format!("stinkyscapeplus-t-ai-{n:02}")).collect();
+    assert_eq!(stinkyscape, ten.as_slice());
+    assert_eq!(stinkyscape_plus, seven.as_slice());
+
+    let s = scenario(json!({ "seed": "r3571001-ai-lot" }));
+    // Every roll takes the lot's four cards alone, so its offers show which cards it draws from.
+    let offered = |tag: &str| -> Vec<String> {
+        let mut seen: Vec<String> = Vec::new();
+        for seed in 0..200 {
+            let mut rng = Rng::new(&format!("r3571001-{tag}-{seed}"), 0);
+            for offer in roll_offers(s.state(), &mut rng, &[lot], PlayerId::P1) {
+                if !seen.contains(&offer.def_id) {
+                    seen.push(offer.def_id);
+                }
+            }
+        }
+        seen
+    };
+
+    // Stinkyscape+ ships (#3573's release), so the lot is the seventeen with no preview. The held set's
+    // ten is the engine's fixture test (`rules/marketplace.rs`, `r3571001_an_open_ids_lot_…`).
+    assert!(set_ships(SetName::StinkyscapePlus));
+    assert_eq!(pool(lot.pool).len(), 17);
+    let seen = offered("open");
+    for id in &seven {
+        assert!(seen.contains(id), "{id} is offered once the set is open");
     }
 }

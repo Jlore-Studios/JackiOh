@@ -32,6 +32,7 @@ use crate::echo::{
 };
 use crate::enchantments::{EnchantmentKind, has_enchantment};
 use crate::faces::card_type_of;
+use crate::geometry::Half;
 use crate::graveyard_play::{in_own_graveyard, mana_due, spend_plague_tokens, why_graveyard_play_refused};
 use crate::mana::{cost_rules_spent_by, is_x_cost, mana_event, modifier_is_live, play_cost, push_mana_spent};
 use crate::modifiers::remove_modifier;
@@ -75,8 +76,9 @@ use crate::triggers::{
     run_queued_trigger, settle, trigger_holder_for, trigger_holders_with_hook,
 };
 use crate::wire::{
-    CardCost, CardType, CounterKind, FengShuiOutcome, GameEvent, ManaSpentFor, PLAYER_IDS, PlagueSpend,
-    PlayedFrom, PlayerId, PromptKind, RevealAt, Row, Selection, TargetAim, TargetDecl, Zone, opponent_of,
+    CardCost, CardType, CounterKind, FengShuiOutcome, GameEvent, ManaSpentFor, PLAYER_IDS, Phase,
+    PlagueSpend, PlayedFrom, PlayerId, PromptKind, RevealAt, Row, Selection, TargetAim, TargetDecl, Zone,
+    opponent_of,
 };
 use crate::work::{begin_work_cascade, drain_work, drop_work, paused, paused_of, push_work};
 use crate::zones::{
@@ -98,6 +100,13 @@ fn snapshot(state: &GameState, instance_id: &str) -> Option<CardInstance> {
 fn set_x(state: &mut GameState, instance_id: &str, value: i32) {
     if let Some(card) = find_instance_mut(state, instance_id) {
         card.x = Some(value);
+    }
+}
+
+/// `set_x` for the half a Spell is cast on (R3554004).
+fn set_half(state: &mut GameState, instance_id: &str, value: Half) {
+    if let Some(card) = find_instance_mut(state, instance_id) {
+        card.half = Some(value);
     }
 }
 
@@ -206,6 +215,8 @@ pub enum Awaiting {
     EchoTarget,
     EchoMode,
     CastX,
+    /// R3554004: a Spell's caster is choosing which half of a slashed board to cast on.
+    Half,
 }
 
 /// `PlayRun.source`: E11, R454 — the card is played from its player's graveyard.
@@ -253,6 +264,9 @@ pub struct PlayRun {
     /// Where a permanent goes; null for a Spell, which resolves instead (§10.5 step 4).
     #[serde(default)]
     pub zone: Option<ZoneSlot>,
+    /// R3546003: the other three zones a GIGA play holds with its anchor (R210), released at step 4.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub giga_zones: Option<Vec<ZoneSlot>>,
     #[serde(default)]
     pub targets: Vec<Selection>,
     #[serde(default)]
@@ -372,6 +386,10 @@ pub struct PlayRun {
     /// R453: the X its caster chose for a cast X card (the `number` prompt's answer), until it is set.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cast_x: Option<i32>,
+    /// R3554004: the half of a slashed board this Spell is cast on (the `mode` prompt's answer),
+    /// until it is stamped on the card. Absent on an unslashed board (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub half: Option<Half>,
     // play pipeline A (E1, E5, Devil's Pact)
     /// B5 E1, R448: the announce has gone out and the card waits in the resolving zone; the step is
     /// re-entered at its window, which a response's question can pause.
@@ -387,6 +405,9 @@ pub struct PlayRun {
     /// resolved (`draw_complete.rs`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub drawn_as: Option<String>,
+    /// R3920001: a cast from the deck (`deck_cast.rs`), a cast and no play as a cast on draw is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from_deck: Option<bool>,
     /// R1086: the host an Equip play fuses into at step 7 (ME-EQUIP), read at step 1 (D14).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub equip_host: Option<String>,
@@ -430,6 +451,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         player,
         cost_paid: 0,
         zone: None,
+        giga_zones: None,
         targets: Vec::new(),
         modes: Vec::new(),
         tributes: Vec::new(),
@@ -465,10 +487,12 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         fizzled: None,
         mana_before: None,
         cast_x: None,
+        half: None,
         announced: None,
         countered: None,
         replaced: None,
         drawn_as: None,
+        from_deck: None,
         copied: None,
         extra_cries: None,
         aim_at: None,
@@ -803,16 +827,23 @@ fn tributes_an_enemy(state: &GameState, run: &PlayRun) -> bool {
     })
 }
 
-/// R360: where #55's base face lands when its Tribute took an opposing unit: the opponent's zone in
-/// the named lane if open, else their leftmost open unit zone (R15). With none it stays where named,
-/// as a steal with no zone does (R15). A Flying Golem named into the backrow goes to the unit row
-/// (R1081000).
+/// Where a played card that is summoned for the opponent lands, if it is. R3837000: one that always
+/// is (§8 #52's base face) takes the opponent's leftmost open unit zone (R64); with none it stays where
+/// named (R3837001). R360: #55's base face, when its Tribute took an opposing unit, takes the
+/// opponent's zone in the named lane if open, else their leftmost open unit zone (R15); with none it
+/// stays where named. A Flying Golem named into the backrow goes to the unit row (R1081000).
 fn handed_over_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Option<ZoneSlot> {
-    if run.enemy_tributed != Some(true) {
+    // R4265000: a Cloaked play is set face-down in its player's own backrow, its text inert (§6.1
+    // Cloaked), so no hand-over moves it, and its reveal animates it on its controller's side.
+    if card.set_as.is_some() {
         return None;
     }
     let zone = run.zone?;
-    if crate::scripts::flags_of(state, card).enemy_tribute_hands_over != Some(true) {
+    let flags = crate::scripts::flags_of(state, card);
+    if flags.summon_for_opponent == Some(true) {
+        return first_free_zone(state, opponent_of(run.player), Row::Units);
+    }
+    if run.enemy_tributed != Some(true) || flags.enemy_tribute_hands_over != Some(true) {
         return None;
     }
     let opponent = opponent_of(run.player);
@@ -933,6 +964,16 @@ fn pay_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         && !run.tributes.is_empty()
     {
         reserve_zone(sink.state, zone);
+        // R3546003: a GIGA play holds its other three zones with its anchor (R210).
+        if crate::giga::enters_giga(sink.state, &card)
+            && let Some(span) = crate::giga::spanned_slots(zone)
+        {
+            let rest: Vec<ZoneSlot> = span.into_iter().filter(|slot| *slot != zone).collect();
+            for slot in &rest {
+                reserve_zone(sink.state, *slot);
+            }
+            run.giga_zones = Some(rest);
+        }
     }
     if tributes_an_enemy(sink.state, run) {
         run.enemy_tributed = Some(true);
@@ -1315,7 +1356,12 @@ fn answers_announce(entry: &QueuedTrigger, instance_id: &str) -> bool {
 /// cancels the play: later triggers find no card (`is_announce_live`), traps are not offered it
 /// (`traps::standing_event`). Stops at a prompt, the rest owed in state.
 fn run_announce_window(sink: &mut EngineSink<'_>, run: &PlayRun) {
-    for _ in 0..SETTLE_PASS_CAP {
+    for pass in 0..SETTLE_PASS_CAP {
+        // R3925000: at the loop cap the window closes with nothing more offered.
+        if crate::loop_cap::halted(sink, pass) {
+            crate::loop_cap::offer_nothing(sink);
+            return;
+        }
         dispatch_pending(sink);
         if paused(sink) {
             return;
@@ -1394,10 +1440,10 @@ fn claim_win_on_play(sink: &mut EngineSink<'_>, player: PlayerId, instance_id: &
     sink.state.players[player].won_by_effect = Some(true);
 }
 
-/// R2179002: whether this run is §2.4's cast on draw (`PlayRun.drawn_as`): a cast and no play, counted
-/// and answered as none.
+/// R2179002: whether this run is §2.4's cast on draw (`PlayRun.drawn_as`) or R3920001's cast from the deck
+/// (`PlayRun.from_deck`): a cast and no play, counted and answered as none.
 pub(crate) fn cast_on_draw(run: &PlayRun) -> bool {
-    run.drawn_as.is_some()
+    run.drawn_as.is_some() || run.from_deck == Some(true)
 }
 
 fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, former_id: Option<String>) {
@@ -1537,6 +1583,12 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     if let Some(zone) = run.zone {
         release_zone(sink.state, zone);
     }
+    // R3546003: a GIGA play's other three zones go with it.
+    if let Some(zones) = run.giga_zones.take() {
+        for slot in zones {
+            release_zone(sink.state, slot);
+        }
+    }
     let Some(mut card) = snapshot(sink.state, &run.instance_id) else {
         return false;
     };
@@ -1554,15 +1606,17 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
         run.zone = if type_ == CardType::Spell {
             None
         } else {
-            first_free_zone(
-                sink.state,
-                run.player,
-                if type_ == CardType::Unit {
-                    Row::Units
-                } else {
-                    Row::Backrow
-                },
-            )
+            let row = if type_ == CardType::Unit {
+                Row::Units
+            } else {
+                Row::Backrow
+            };
+            // R3546000: a cast or replaced GIGA takes the leftmost fit, not the leftmost zone.
+            if crate::giga::enters_giga(sink.state, &card) {
+                crate::giga::first_anchor(run.player, row, |slot| is_open(sink.state, slot))
+            } else {
+                first_free_zone(sink.state, run.player, row)
+            }
         };
     } else {
         // R360: #55's base face, paid for with an opposing unit, is summoned for the opponent: still
@@ -1622,8 +1676,9 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
             let stack = plays_on_stack(sink.state, &card) || base.is_some() || run.equip_host.is_some();
             let options = PlaceOnFieldOptions { stack: Some(stack) };
             if zone.row == Row::Backrow {
-                // R1081000: a Unit played into the backrow was vetted as Flying in hand
-                // (`play_choices::flies`) or carried, so it stands whatever its keywords read now.
+                // R1081000: a Unit played into the backrow was vetted as a Flexible Unit (Flying has
+                // it innately, R3543000) in hand (`play_choices::flies`) or carried, so it stands
+                // whatever its keywords read now.
                 place_standing_on_field(sink.state, &mut card, zone, options)
             } else {
                 place_on_field(sink.state, &mut card, zone, options)
@@ -1658,7 +1713,13 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     // R2179002: a cast on draw is a cast and no play, so none of a play's counts and records takes it.
     if !cast_on_draw(run) {
         {
+            let in_the_end = sink.state.phase == Phase::End;
             let side = &mut sink.state.players[run.player];
+            // R3800003: the first play the end of turn makes marks how many came before the end began,
+            // so a game with none in its end hashes as it did (R767000).
+            if in_the_end && side.turn_log.played_before_end.is_none() {
+                side.turn_log.played_before_end = i32::try_from(side.turn_log.played_ids.len()).ok();
+            }
             side.turn_log.played_ids.push(card.id.clone());
             side.turn_log.cards_played += 1;
             // R213: what this play paid, which the next play's Gifted Program check counts (R56, R70).
@@ -1680,6 +1741,15 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     if !cast_on_draw(run) {
         record_play(sink.state, run.player, &card);
     }
+    // R3548001: the stamp a Tipsy counter now up lays on the played card, read off the state before
+    // its own Tipsy counts: the card arrives at the level already there, then raises it.
+    if let Some(stamp) = crate::tipsy::stamp_for(sink.state, run.player)
+        && let Some(live) = crate::state::find_instance_mut(sink.state, &card.id)
+    {
+        live.tipsy = Some(stamp);
+    }
+    // R3548000: playing a card with Tipsy X raises its controller's counter.
+    crate::tipsy::add_on_play(sink, run.player, &card);
 
     played_events(sink, run, &card, former_id);
     // R1870000: a card carrying the win wins as it is played, a cast too (R70); the closing state
@@ -1991,6 +2061,10 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     if run.fizzled == Some(true) {
         return;
     }
+    // R3554004: a Spell on a slashed board is cast on one half, chosen here.
+    if !cast_half_chosen(sink, run) {
+        return;
+    }
     for (at, part) in RESOLVE_PARTS.iter().enumerate().skip(run.resolve_at) {
         run.resolve_at = at + 1;
         let Some(card) = still_resolving(sink.state, run) else {
@@ -2000,6 +2074,9 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         match part {
             ResolvePart::Quickstriker => quickstriker_combo(sink, run, &card),
             ResolvePart::ComboDraw => combo_draw_step(sink, run),
+            // R783004, R3806000: a card played face-down as a Trap runs no Cry at its play, its text
+            // dormant; only a Spell set under Paranoia resolves its text now, and stays set.
+            ResolvePart::Script if card.set_as.is_some() => crate::alt_play::resolve_at_set(sink, &card),
             ResolvePart::Script => {
                 // B5 E14, R399: a copier resolves the copied Spell's script, itself as "this".
                 let face = text_face_of(sink.state, &card);
@@ -2173,6 +2250,88 @@ fn cast_x_chosen(
     }
     run.awaiting = None;
     set_x(sink.state, &card.id, most);
+    true
+}
+
+/// R3554004: the half of a slashed board a Spell is cast on, the caster's choice at resolution
+/// (`cast_x_chosen` for X): the run's answer first, then the half of an on-field `Instance` among
+/// its targets, then a random cast's draw — else a `mode` prompt. False while the prompt waits.
+fn cast_half_chosen(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
+    if sink.state.slashed_lane.is_none() {
+        return true;
+    }
+    // R3561001: a Spell's half is settled as its resolution begins, so a board its own Cry slashes
+    // (S+ #78's Radiant face, which comes back here after its lane pick) asks none.
+    if run.resolve_at > 0 {
+        return true;
+    }
+    let Some(card) = still_resolving(sink.state, run) else {
+        return true;
+    };
+    // A permanent lands on its zone's half, and a stamped card keeps it.
+    if is_permanent(sink.state, &card) || card.half.is_some() {
+        return true;
+    }
+    if let Some(half) = run.half {
+        set_half(sink.state, &card.id, half);
+        return true;
+    }
+    // A targeted Spell takes its target's half, unasked.
+    for selection in run.targets.clone() {
+        let Selection::Instance { instance_id } = selection else {
+            continue;
+        };
+        if let Some(target) = find_instance(sink.state, &instance_id)
+            && matches!(target.zone, Zone::Field { .. })
+            && let Some(half) = crate::geometry::half_of_card(sink.state, target)
+        {
+            set_half(sink.state, &card.id, half);
+            return true;
+        }
+    }
+    if run.random == Some(true) || random_cast_of(sink.state, run.player).is_some() {
+        let halves = [Half::Left, Half::Right];
+        let half = sink.rng.pick(&halves).copied().unwrap_or(Half::Left);
+        set_half(sink.state, &card.id, half);
+        return true;
+    }
+    run.awaiting = Some(Awaiting::Half);
+    let name = def_of(Some(&*sink.state), &card.def_id).name.clone();
+    let opened = open_prompt(
+        sink,
+        OpenPromptArgs {
+            player: run.player,
+            kind: PromptKind::Mode,
+            aim: None,
+            prompt: format!("{name}: choose the half to cast on"),
+            options: [Half::Left, Half::Right]
+                .iter()
+                .map(|half| {
+                    let option = half.option().to_string();
+                    PromptOption {
+                        key: format!("mode:{option}"),
+                        label: match half {
+                            Half::Left => "Left half".to_string(),
+                            Half::Right => "Right half".to_string(),
+                        },
+                        selection: Selection::Mode { option },
+                        cost: None,
+                        radiant: None,
+                    }
+                })
+                .collect(),
+            min: None,
+            max: None,
+            budget: None,
+            owner: None,
+            resume: resume_for(run, step_index(PlayStepName::Resolve)),
+        },
+    );
+    if opened.is_some() {
+        return false;
+    }
+    run.awaiting = None;
+    set_half(sink.state, &card.id, Half::Left);
     true
 }
 
@@ -2358,6 +2517,15 @@ fn ask_repeat_targets(
                 decl.max,
                 crate::targeting::target_aim(decl),
             );
+            // I22 (#4540): the fuzz monitor holds this draw to the targeting rules (`testkit::seams`).
+            #[cfg(feature = "testkit")]
+            crate::testkit::seams::record_target_draw(
+                sink.state,
+                Some(card),
+                run.player,
+                crate::testkit::seams::TargetDrawBy::Mayor,
+                &picks,
+            );
             if let Some(repeat) = run.repeat.as_mut() {
                 repeat.targets.extend(picks);
             }
@@ -2366,6 +2534,17 @@ fn ask_repeat_targets(
         // R452: a random cast makes this pick itself, at random, and asks nobody.
         if run.random == Some(true) || random_cast_of(sink.state, run.player).is_some() {
             let picks = random_picks(sink.rng, &options, decl.min, decl.max);
+            // I22 (#4540): a `target` pick only; a Tribute or a hand pick is no targeting.
+            #[cfg(feature = "testkit")]
+            if decl.kind == PromptKind::Target {
+                crate::testkit::seams::record_target_draw(
+                    sink.state,
+                    Some(card),
+                    run.player,
+                    crate::testkit::seams::TargetDrawBy::RandomCast,
+                    &picks,
+                );
+            }
             if let Some(repeat) = run.repeat.as_mut() {
                 repeat.targets.extend(picks);
             }
@@ -2855,6 +3034,14 @@ fn drive_steps(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
 /// File an answered selection in the bucket the pause was waiting on (§10.5 step 6).
 fn file_selection(run: &mut PlayRun, selection: &[Selection]) {
     let awaiting = run.awaiting.take();
+    // R3554004: the half a Spell's caster chose, filed for `cast_half_chosen` to stamp.
+    if awaiting == Some(Awaiting::Half) {
+        run.half = selection.iter().find_map(|pick| match pick {
+            Selection::Mode { option } => Half::from_option(option),
+            _ => None,
+        });
+        return;
+    }
     if awaiting == Some(Awaiting::CastX) {
         // R453: the X a cast's caster chose, applied to the card as the step goes on (`cast_x_chosen`).
         let picked = selection.iter().find_map(|pick| match pick {
@@ -2986,6 +3173,7 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
 
     let mut run = blank_run(card.id.clone(), card.def_id.clone(), player);
     run.drawn_as = drawn_as;
+    run.from_deck = options.from_deck;
     run.cost_paid = 0;
     run.zone = None;
     run.target_slices = slices_for(sink.state, player, &card, 0, &targets, &modes);

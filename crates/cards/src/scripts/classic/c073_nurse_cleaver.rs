@@ -1,4 +1,5 @@
-//! C #73 Nurse Cleaver (SPEC §8.6 row 73). (2) Unit, Common, 3/4 → 6/8 (3/6 → 6/12 until issue #3136).
+//! C #73 Nurse Cleaver (SPEC §8.6 row 73). (2) Unit, Common, 2/4 → 4/8 (3/4 → 6/8 until issue #3837;
+//! 3/6 → 6/12 until issue #3136).
 //!   Base:    "Rush, Cleave, Lifesteal"
 //!   Radiant: "Charge, Cleave, Lifesteal"
 //!   Engine:  "Keywords only. Tunes: none."
@@ -23,7 +24,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #73 Nurse Cleaver (SPEC §8.6 row 73; BUILD M9 row C 73). (2) Unit, Common, 3/4 → 6/8: Rush,
+// C #73 Nurse Cleaver (SPEC §8.6 row 73; BUILD M9 row C 73). (2) Unit, Common, 2/4 → 4/8: Rush,
 // Cleave, Lifesteal; Radiant: Charge, Cleave, Lifesteal.
 
 /// `describe("C #73 Nurse Cleaver")`.
@@ -37,6 +38,8 @@ mod tests {
 
     const CLEAVER: &str = "classic-073";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    /// Smaller than a Radiant Cleaver's hit, so the hit is more than the target's health.
+    const SMALL: &str = "stand-in (1) 2/2";
     const STOCKPILE: &str = "core-005";
 
     use crate::scenario;
@@ -72,15 +75,15 @@ mod tests {
 
         /// §4.1 Rush: it attacks a Unit the turn it enters, never the hero
         #[test]
-        fn issue_3136_s4_1_a_3_4_with_rush_it_attacks_a_unit_the_turn_it_enters_never_the_hero() {
+        fn issue_3837_s4_1_a_2_4_with_rush_it_attacks_a_unit_the_turn_it_enters_never_the_hero() {
             let mut s = scenario(json!({ "p1": { "hand": [CLEAVER, STOCKPILE], "library": spare()["library"] }, "p2": row() }));
             s.play(CLEAVER, json!({}));
-            s.expect_stats(CLEAVER, json!({ "attack": 3, "health": 4 }));
+            s.expect_stats(CLEAVER, json!({ "attack": 2, "health": 4 }));
             s.expect_refused(|s| s.attack(CLEAVER, "hero"));
             let middle = s.unit(P2, 2).expect("p2's middle unit");
             s.attack(CLEAVER, &middle);
             let middle = s.unit(P2, 2).expect("p2's middle unit");
-            assert_eq!(s.card(&middle).damage, 3);
+            assert_eq!(s.card(&middle).damage, 2);
         }
 
         /// §4.4 step 10 Cleave: the defender's neighbours are hit too, each as a separate instance
@@ -97,7 +100,7 @@ mod tests {
             expected.sort();
             assert_eq!(hits, expected);
             let damage: Vec<i32> = [&left, &middle, &right].iter().map(|unit| s.card(*unit).damage).collect();
-            assert_eq!(damage, vec![3, 3, 3]);
+            assert_eq!(damage, vec![2, 2, 2]);
         }
 
         /// §4.4 step 8 Lifesteal: your hero heals for each hit it deals, the Cleave hits included
@@ -106,39 +109,39 @@ mod tests {
             let mut s = scenario(json!({ "p1": merged(json!({ "field": [CLEAVER], "health": 10 }), spare()), "p2": row() }));
             let middle = s.unit(P2, 2).expect("p2's middle unit");
             s.attack(CLEAVER, &middle);
-            s.expect_health(P1, 19);
+            s.expect_health(P1, 16);
         }
     }
 
     mod radiant {
         use super::*;
 
-        /// §4.1 6/8 Charge, Cleave, Lifesteal: it may attack the hero the turn it enters
+        /// §4.1 4/8 Charge, Cleave, Lifesteal: it may attack the hero the turn it enters
         #[test]
-        fn issue_3136_s4_1_6_8_charge_cleave_lifesteal_it_may_attack_the_hero_the_turn_it_enters() {
+        fn issue_3837_s4_1_4_8_charge_cleave_lifesteal_it_may_attack_the_hero_the_turn_it_enters() {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": CLEAVER, "radiant": true }, STOCKPILE], "health": 10, "library": spare()["library"] },
                 "p2": spare(),
             }));
             s.play(CLEAVER, json!({}));
-            s.expect_stats(CLEAVER, json!({ "attack": 6, "health": 8 }));
+            s.expect_stats(CLEAVER, json!({ "attack": 4, "health": 8 }));
             s.attack(CLEAVER, "hero");
-            s.expect_health(P2, 24).expect_health(P1, 16);
+            s.expect_health(P2, 26).expect_health(P1, 14);
         }
 
-        /// §4.4 its Cleave and Lifesteal: three hits of 6 heal 18
+        /// §4.4 its Cleave and Lifesteal: three hits of 4 heal 12
         #[test]
-        fn s4_4_its_cleave_and_lifesteal_three_hits_of_6_heal_18() {
+        fn s4_4_its_cleave_and_lifesteal_three_hits_of_4_heal_12() {
             let mut s = scenario(json!({
                 "p1": merged(json!({ "field": [{ "def": CLEAVER, "radiant": true }], "health": 10 }), spare()),
-                "p2": merged(json!({ "field": [VANILLA, VANILLA, VANILLA] }), spare()),
+                "p2": merged(json!({ "field": [SMALL, SMALL, SMALL] }), spare()),
             }));
             let middle = s.unit(P2, 2).expect("p2's middle unit");
             s.attack(CLEAVER, &middle);
-            // Three hits of 6 (no Trample, so each deals its whole 6, R63), and each heals.
+            // Three hits of 4 on 2/2s (no Trample, so each deals its whole 4, R63), and each heals.
             let dealt: Vec<i32> = cleaver_hits(&s).into_iter().map(|(_, amount)| amount).collect();
-            assert_eq!(dealt, vec![6, 6, 6]);
-            s.expect_health(P1, 28);
+            assert_eq!(dealt, vec![4, 4, 4]);
+            s.expect_health(P1, 22);
         }
     }
 }

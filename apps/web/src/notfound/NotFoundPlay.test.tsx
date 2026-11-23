@@ -2,12 +2,13 @@
 // words stay the element's text; a face-down way out turns over on its first tap and follows on the
 // next; the lost card speaks through the audio engine; under Reduce motion all of it lies still.
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
-import { flavourFor } from "../cards/flavour.ts";
+import { deferSceneDataForTests, loadSceneData, resetSceneDataForTests } from "../cards/art/sceneLoader.ts";
+import { flavourFor, loadFlavour } from "../cards/flavour.ts";
 import { GLITCH_GLYPHS } from "../cards/glitch.ts";
 
 const reduced = vi.hoisted(() => ({ value: false }));
@@ -27,6 +28,9 @@ vi.mock("../net/navigate.ts", async (importOriginal) => ({
   navigate: navigateTo,
 }));
 
+const { loadSoundTables } = await import("../audio/soundTablesLoader.ts");
+await loadSoundTables();
+await loadFlavour();
 const { GlitchPath, NotFoundPlay, notFoundTestid } = await import("./NotFoundPlay.tsx");
 const { GLITCH_SETTLE_STEP_MS, LOST_CARDS, WAYS_OUT, glitchedPath, lostCardFor, lostCardLine } = await import("./lost.ts");
 
@@ -40,6 +44,27 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+});
+
+describe("#4270 the ways out wait for the scene tables", () => {
+  // A failed run leaves the held load pending, so the real tables are put back from an empty slot.
+  afterEach(async () => {
+    resetSceneDataForTests();
+    await loadSceneData();
+  });
+
+  it("#4270 the 404 panel draws while the scene tables load, and each way's face once they are in", async () => {
+    // A built client loads the scene tables beside the module (#4222), so the panel can draw before they
+    // arrive. First in the file, so no earlier render has memoised a way's picture (`svg.ts`), which
+    // would hide the throw a face drawn too early meets.
+    const deferred = deferSceneDataForTests();
+    render(<NotFoundPlay path="/nope" />);
+    for (const way of WAYS_OUT) expect(screen.getByTestId(notFoundTestid.way(way.key)).querySelector(".choice-card"), way.key).toBeNull();
+    await deferred.resolve();
+    await waitFor(() => {
+      for (const way of WAYS_OUT) expect(screen.getByTestId(notFoundTestid.way(way.key)).querySelector(".choice-card"), way.key).not.toBeNull();
+    });
+  });
 });
 
 describe("R3119000 the 404 panel's play", () => {

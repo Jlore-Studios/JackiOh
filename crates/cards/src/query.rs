@@ -7,9 +7,12 @@
 //! 4. Ascending §5 index order set by set; seeded RNG replays identically (§9.3, R58, R60).
 //! 5. Registered catalog cards only; transient defs never generate.
 //!
-//! Scripts reach it through `use crate::query::*;`: [`query`], [`pool`], [`query_cost`], [`TRAP_TYPES`].
+//! Scripts reach it through `use crate::query::*;`: [`query`], [`pool`], [`query_cost`], [`TRAP_TYPES`],
+//! and the named pools [`POOLS`] lists, which `spec/CARDS.md` shows (#3804).
 
-use jackioh_engine::{CardDef, CardType, CatalogQueryArgs, KeywordKind, OneOrMany, SetName};
+use jackioh_engine::{
+    CardDef, CardType, CatalogQueryArgs, KeywordKind, OneOrMany, PrintedRarity, Rarity, SetName, Tag,
+};
 
 /// §5.1's query arguments: `{ type, cost, costRange, tags, notTags, rarity, set, excludeDefId,
 /// withTokens }`, plus the engine's identity fields (`defId`, `token`) for a pool a card names card by
@@ -43,6 +46,12 @@ pub fn pool(own_id: &str, args: &CardQuery) -> Vec<&'static CardDef> {
     ))
 }
 
+/// The ids of `query`'s pool, in its order: for a card that acts on every member of a pool, one of
+/// each (S #4.6 The Big Crunch's editions, S #154 Dice of Doom's Terminus cards).
+pub fn pool_ids(args: &CardQuery) -> Vec<String> {
+    query(args).into_iter().map(|def| def.id.clone()).collect()
+}
+
 /// MD-G1, R1444: "a random Luck-based card" (Meditative #101 Gachaholic): every non-token card that
 /// prints Lucky on either face or flips a coin (`jackioh_engine::catalog::is_luck_based`), from the
 /// sets that ship (R1420).
@@ -73,6 +82,227 @@ pub fn starship_pieces() -> CardQuery {
         ..CardQuery::default()
     }
 }
+
+/// R278: "a random Jlockeed card" (C+ #48, C+ #52, M+ #4, S #130): every non-token card tagged
+/// Jlockeed, from the sets that ship (R380, R1420); the card drawing it leaves itself out (R387).
+pub fn jlockeed_cards() -> CardQuery {
+    CardQuery {
+        tags: Some(vec![Tag::Jlockeed]),
+        ..CardQuery::default()
+    }
+}
+
+/// R1862002: "Discover N `rarity` Weapons" (Stinkyscape #81 to #83, #85, #86): the Weapon-tagged cards
+/// of that rarity. It names its set, so it reaches them whether or not the set ships (R1420).
+pub fn weapons_of(rarity: Rarity) -> CardQuery {
+    CardQuery {
+        set: Some(OneOrMany::One(SetName::Stinkyscape)),
+        tags: Some(vec![Tag::Weapon]),
+        rarity: Some(OneOrMany::One(rarity)),
+        ..CardQuery::default()
+    }
+}
+
+/// R1421: "a random Prime card" (Meditative #31's Radiant face, #55 Dragon Fruit): every card tagged
+/// Prime, each a token, which a pool that names the tag reaches.
+pub fn prime_cards() -> CardQuery {
+    CardQuery {
+        tags: Some(vec![Tag::Prime]),
+        ..CardQuery::default()
+    }
+}
+
+/// R3869000: "a Terminus card" (S #4 Olivian Expanse, S #154 Dice of Doom, S+ #81, #82, #89, #156):
+/// every card and token tagged Terminus, from the sets that ship (R380, R1420). Terminus is no
+/// `POOL_TOKEN_TAGS` tag (R382), so the pool asks for its tokens.
+pub fn terminus_cards() -> CardQuery {
+    CardQuery {
+        tags: Some(vec![Tag::Terminus]),
+        with_tokens: Some(true),
+        ..CardQuery::default()
+    }
+}
+
+/// R3869001: "a Call to Chaos" (S #4.6 The Big Crunch, S #149 Wildar, S+ #154 Chaos Accelerator):
+/// every edition, the cards tagged Call to Chaos, from the sets that ship (R380, R1420). Cards, as the
+/// ruling reads, not tokens: no token carries the tag.
+pub fn call_to_chaos_editions() -> CardQuery {
+    CardQuery {
+        tags: Some(vec![Tag::CallToChaos]),
+        ..CardQuery::default()
+    }
+}
+
+/// R3869001: "a War Doctrine" (S #137 Starfleet Commander, S #176 Preemptive Strike): the tokens tagged
+/// War Doctrine (R1857002), from the sets that ship.
+pub fn war_doctrines() -> CardQuery {
+    CardQuery {
+        tags: Some(vec![Tag::WarDoctrine]),
+        with_tokens: Some(true),
+        ..CardQuery::default()
+    }
+}
+
+/// R3869002: what a Miner's name holds (S #62 Miner v1 to S #66 Miner v5).
+pub const MINER_NAME: &str = "Miner";
+
+/// R3869002: "a random Miner" (S #78 Ozark, #79 Orca, #80 Galaxy): every non-token card whose name holds
+/// "Miner", from the sets that ship (`nameContains`, R3558005), the Stinkyscape set's five today. No
+/// tag marks a Miner, so its name does, as a Grape's does.
+pub fn miners() -> CardQuery {
+    CardQuery {
+        name_contains: Some(MINER_NAME.to_string()),
+        ..CardQuery::default()
+    }
+}
+
+/// R1881000: the rarities "a random Common or Rare … Resource" rolls over.
+pub const COMMON_OR_RARE: [PrintedRarity; 2] = [PrintedRarity::Common, PrintedRarity::Rare];
+
+/// R1881000, R3869001: the ids of the Resources (`resources::resource_def_ids`, sorted) of `set` that
+/// roll as one of `rarities`: S T-AI-2 Mining Subroutine's "a random Common or Rare Stinkyscape
+/// Resource". A Resource a later printing of the set adds joins it.
+pub fn resources_of(set: SetName, rarities: &[PrintedRarity]) -> Vec<String> {
+    let catalog = jackioh_engine::catalog::registered_catalog();
+    jackioh_engine::resources::resource_def_ids()
+        .into_iter()
+        .filter(|id| {
+            catalog.get(id).is_some_and(|def| {
+                def.set == set
+                    && def
+                        .resource
+                        .is_some_and(|resource| rarities.contains(&resource.rarity))
+            })
+        })
+        .collect()
+}
+
+/// One random pool `spec/CARDS.md` lists (#3804), which `cargo jackioh spec index` writes from this
+/// table: the pool's members as the catalog holds them now and the cards whose scripts draw from it, so
+/// that no spec row lists either by hand.
+pub struct NamedPool {
+    /// Its heading in `spec/CARDS.md`, which a spec row links as `[[CARDS#<name>]]`.
+    pub name: &'static str,
+    /// What decides its members, in one line of the spec's words, its sections and rulings cited as
+    /// plain text (`R1444`), since `spec/CARDS.md` holds no `[[…]]` link for `spec check` to resolve.
+    pub rule: &'static str,
+    /// The function a script calls to draw from it. Every script under `src/scripts/` whose code calls
+    /// it is a card that draws from the pool.
+    pub call: &'static str,
+    /// Its members by part, each part with its label (`""` for a pool of one part).
+    pub parts: fn() -> PoolParts,
+}
+
+/// A named pool's members, part by part: each part's label and its definitions.
+pub type PoolParts = Vec<(&'static str, Vec<&'static CardDef>)>;
+
+/// One part, the whole pool.
+fn whole(args: CardQuery) -> PoolParts {
+    vec![("", query(&args))]
+}
+
+/// The rarities a Weapon is printed at, each a part of the Weapons' pool.
+const WEAPON_RARITIES: [Rarity; 3] = [Rarity::Rare, Rarity::Epic, Rarity::Legendary];
+
+/// Every pool `spec/CARDS.md` lists, in its order (#3804). A pool a spec row would list card by card
+/// goes here, and the row states its rule and links its heading instead.
+pub const POOLS: &[NamedPool] = &[
+    NamedPool {
+        name: "luck-based",
+        rule: "The Luck-based cards (R1444): every non-token card that prints Lucky on either face or whose text says \"Flip a coin\", read off the definition, from the sets that ship (R380, R1420).",
+        call: "luck_based",
+        parts: || whole(luck_based()),
+    },
+    NamedPool {
+        name: "embiggen",
+        rule: "The embiggen cards (R1178001): every non-token card that prints two prices, from the sets that ship.",
+        call: "embiggen_cards",
+        parts: || whole(embiggen_cards()),
+    },
+    NamedPool {
+        name: "starship-pieces",
+        rule: "The Starship Pieces (R1878000): every non-token Stinkyscape card that prints Starship Piece on its base face, which leaves out the Dormant Starship (R1857001).",
+        call: "starship_pieces",
+        parts: || whole(starship_pieces()),
+    },
+    NamedPool {
+        name: "jlockeed",
+        rule: "The Jlockeed cards (R278): every non-token card tagged Jlockeed, from the sets that ship (R380, R1420); the card drawing it leaves itself out (R387).",
+        call: "jlockeed_cards",
+        parts: || whole(jlockeed_cards()),
+    },
+    NamedPool {
+        name: "weapons",
+        rule: "The Weapons (R1862002): the Weapon-tagged Stinkyscape cards of the rarity the text names, the pool naming its set (R1420).",
+        call: "weapons_of",
+        parts: || {
+            WEAPON_RARITIES
+                .iter()
+                .map(|rarity| (rarity.as_str(), query(&weapons_of(*rarity))))
+                .collect()
+        },
+    },
+    NamedPool {
+        name: "prime",
+        rule: "The Prime cards (R1421): every card tagged Prime, each a token, which a pool that names the tag reaches.",
+        call: "prime_cards",
+        parts: || whole(prime_cards()),
+    },
+    NamedPool {
+        name: "terminus",
+        rule: "The Terminus cards (R3869000): every card and token tagged Terminus, from the sets that ship (R380, R1420).",
+        call: "terminus_cards",
+        parts: || whole(terminus_cards()),
+    },
+    NamedPool {
+        name: "call-to-chaos",
+        rule: "The Call to Chaos editions (R3869001): every card tagged Call to Chaos, from the sets that ship (R380, R1420).",
+        call: "call_to_chaos_editions",
+        parts: || whole(call_to_chaos_editions()),
+    },
+    NamedPool {
+        name: "war-doctrines",
+        rule: "The War Doctrines (R3869001): every token tagged War Doctrine (R1857002), from the sets that ship.",
+        call: "war_doctrines",
+        parts: || whole(war_doctrines()),
+    },
+    NamedPool {
+        name: "miners",
+        rule: "The Miners (R3869002): every non-token card whose name holds \"Miner\", from the sets that ship (R380, R1420, R3558005).",
+        call: "miners",
+        parts: || whole(miners()),
+    },
+    NamedPool {
+        name: "common-or-rare-stinkyscape-resources",
+        rule: "The Common and Rare Stinkyscape Resources (R1881000, R3869001): every Stinkyscape Resource that rolls as Common or Rare.",
+        call: "resources_of",
+        parts: || {
+            let catalog = jackioh_engine::catalog::registered_catalog();
+            vec![(
+                "",
+                resources_of(SetName::Stinkyscape, &COMMON_OR_RARE)
+                    .iter()
+                    .filter_map(|id| catalog.get(id))
+                    .collect(),
+            )]
+        },
+    },
+    NamedPool {
+        name: "resources",
+        rule: "The Resources (R1840002): every Resource the catalog holds, shipped or not, rolled over the rarities they hold; a gain that names its own pool rolls over that one.",
+        call: "gain_resources",
+        parts: || {
+            let ids = jackioh_engine::resources::resource_def_ids();
+            vec![(
+                "",
+                jackioh_engine::catalog::registered_catalog()
+                    .values()
+                    .filter(|def| ids.contains(&def.id))
+                    .collect(),
+            )]
+        },
+    },
+];
 
 /// Both trap types, for a pool or filter saying "Trap" (SPEC §8 #51, #85/R61, R35).
 /// Prevents dropping #18 and #71.

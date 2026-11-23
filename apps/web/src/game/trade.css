@@ -37,8 +37,9 @@
   color: var(--text-dim);
 }
 
-.trade-control:disabled {
+.trade-control[aria-disabled="true"] {
   opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* A finger's target grows to 40px on a touch screen, as the pass control's does (B29). */

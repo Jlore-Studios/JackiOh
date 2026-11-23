@@ -12,8 +12,11 @@ const SRC = dirname(fileURLToPath(import.meta.url));
 /** A spacing declaration: gap, padding, margin (and their longhands), and the `--gap` the board's rows read. */
 const SPACING =
   /(?<![\w-])((?:grid-)?(?:row-|column-)?gap|padding(?:-(?:top|right|bottom|left|inline|block)(?:-(?:start|end))?)?|margin(?:-(?:top|right|bottom|left|inline|block)(?:-(?:start|end))?)?|--gap)\s*:\s*([^;}]+)/g;
-/** A length of the sheet's own: a px or rem number that is not 0. An em, %, viewport or container term, or an env(), is relative. */
-const FIXED = /(?<![\w.])(\d*\.?\d+)(?:px|rem)\b/g;
+/**
+ * A length of the sheet's own: a px or rem number that is not 0. An em, %, viewport or container term, or an env(), is relative.
+ * No `\d*\.?\d+`: its runs trade characters super-linearly; the alternation matches the same numbers (#4009).
+ */
+const FIXED = /(?<![\w.])(\d+(?:\.\d+)?|\.\d+)(?:px|rem)\b/g;
 
 /** Every fixed length a gap, padding or margin states, as `property: length (value)`. */
 function rawSpacing(css: string): string[] {
@@ -58,11 +61,11 @@ const UNMIGRATED: Record<string, number> = {
   "cards/marks.css": 2,
   "cards/tallies.css": 3,
   "cards/wheel/wheel.css": 13,
-  "collection/collection.css": 40,
+  "collection/collection.css": 30,
   "collection/tokenOffer.css": 1,
   "dungeon/dungeon.css": 14,
   "dungeon/fight/fight.css": 11,
-  "dungeon/map/run.css": 37,
+  "dungeon/map/run.css": 34,
   "dungeon/stats/dungeon-stats.css": 20,
   "duos/duos.css": 60,
   "economy/economy.css": 21,
@@ -83,19 +86,19 @@ const UNMIGRATED: Record<string, number> = {
   "rank/rankCrest.css": 2,
   "rank/streakFlame.css": 1,
   "replay/replay.css": 2,
-  "routes/account.css": 11,
+  "routes/account.css": 9,
   "routes/command-menu.css": 7,
   "routes/dev-panel.css": 2,
   "routes/entry-card.css": 9,
   "routes/game-banner.css": 9,
   "routes/landing.css": 54,
   "routes/leaderboard.css": 3,
-  "routes/lobby.css": 129,
+  "routes/lobby.css": 70,
   "routes/privacy.css": 4,
   "routes/purchases.css": 2,
   "routes/replays.css": 5,
   "routes/site-footer.css": 5,
-  "routes/stats.css": 66,
+  "routes/stats.css": 63,
   "routes/top-bar.css": 9,
   "settings/changeEmail.css": 4,
   "settings/settings.css": 35,
@@ -104,19 +107,36 @@ const UNMIGRATED: Record<string, number> = {
   "sideline/sideline.css": 7,
   "skeleton/skeleton.css": 5,
   "stats/tier.css": 2,
-  "together/together.css": 41,
+  "together/together.css": 39,
   "tutorial/path-visibility.css": 12,
   "tutorial/tutorial.css": 104,
   "undo/undo.css": 3,
 };
 
-const STEPS = [...read("spacing.css").matchAll(/^\s*--space-(\d+):\s*(\d+)px;$/gm)].map((match) => ({ name: Number(match[1]), px: Number(match[2]) }));
+/**
+ * A token line's captures (#4009: `/^\s*--…$/gm` line patterns rescan newline runs from every line
+ * start); `pattern` is the line without its `m` flag.
+ */
+function tokenLines(text: string, pattern: RegExp): [string, string][] {
+  const out: [string, string][] = [];
+  for (const line of text.split("\n")) {
+    const match = pattern.exec(line);
+    if (match !== null) out.push([match[1] ?? "", match[2] ?? ""]);
+  }
+  return out;
+}
+
+const STEPS = tokenLines(read("spacing.css"), /^\s*--space-(\d+):\s*(\d+)px;$/).map(([name, px]) => ({ name: Number(name), px: Number(px) }));
 
 describe("#3225 the spacing scale", () => {
   it("#3225 spacing.css names eleven lengths in px, smallest first, as --space-1 up, and nothing else", () => {
     expect(STEPS.map((step) => step.px)).toEqual([2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40]);
     expect(STEPS.map((step) => step.name)).toEqual(STEPS.map((_, i) => i + 1));
-    const rest = codeOf("spacing.css").replace(/^\s*--space-\d+:\s*\d+px;$/gm, "");
+    // Token lines blanked (#4009: the `/^\s*--…$/gm` pattern rescans newline runs from every line).
+    const rest = codeOf("spacing.css")
+      .split("\n")
+      .map((line) => (/^\s*--space-\d+:\s*\d+px;$/.test(line) ? "" : line))
+      .join("\n");
     expect(rest.replace(/\s+/g, "")).toBe(":root{}");
     expect(read("index.css")).toMatch(
       /^@import "\.\/fonts\.css";\n@import "\.\/palette\.css";\n@import "\.\/typescale\.css";\n@import "\.\/surfaces\.css";\n@import "\.\/motion\.css";\n@import "\.\/spacing\.css";\n/,

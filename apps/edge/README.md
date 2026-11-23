@@ -6,7 +6,7 @@ One Cloudflare Worker per environment serves the whole site at one origin (`wran
 | --- | --- | --- |
 | Worker | `jackioh` (the config's top level) | `jackioh-staging` (`env.staging`) |
 | Address | https://jackioh.com, and `jackioh.<account>.workers.dev` | https://staging.jackioh.com, behind Cloudflare Access; no workers.dev or preview address |
-| Deployed by | `promote-production.yml`, from `production` | `deploy-staging.yml`, from `main` once its CI passes |
+| Deployed by | `promote-production.yml`, from `_production` | `deploy-staging.yml`, from `main` once its CI passes |
 | Container | `jackioh-server` | `jackioh-staging-server` |
 
 Every path but `/api/*`, `/ws/*` and the engine's module is a static file from `apps/web/dist`, served by
@@ -33,13 +33,39 @@ custom domains and Access are `infra/cloudflare.tf`'s.
   got a 500). An open WebSocket counts as a request in flight, so a live match, a watcher or a co-op room keeps it
   awake, and a signed-in tab keeps it awake with its presence beat (`PRESENCE_HEARTBEAT_MS`, 45 s).
   Memory and disk are billed only while it is awake.
-- **A deploy reaches the running server.** A container keeps the image it started with, so the
-  first request after a deploy asks the running server's `/healthz` for its `x-deployed-commit`; if
-  that is not the Worker's `DEPLOYED_COMMIT`, it stops the old server (giving it `RETIRE_WAIT_MS` to
-  drain) and the request starts the new one. Live matches rebuild from their seed and log when
-  their sockets return (SPEC §9.5).
+- **A deploy reaches the running server.** A container keeps the image and the settings it started
+  with, so the first request after a deploy asks the running server's `/healthz` for its
+  `x-deployed-commit`; if that is not the Worker's `DEPLOYED_COMMIT`, it stops the old server (giving
+  it `RETIRE_WAIT_MS` to drain) and the request starts the new one. Live matches rebuild from their
+  seed and log when their sockets return (SPEC §9.5). #4118: a server on the deployed commit is
+  stopped the same way when the Worker's settings are not the ones it started with, which is what a
+  redeploy after changing a secret needs (a redeploy names the same commit). The Worker keeps a SHA-256
+  fingerprint of the container's environment in the object's storage (`SETTINGS_FINGERPRINT_KEY`,
+  never logged or sent), stores it when no server runs or a retire settles, and logs
+  `server.settings_changed`, naming no setting, when a running server's differs. A missing
+  fingerprint counts as changed. One that cannot be read leaves the server running
+  (`server.settings_unreadable`) and a later request asks again; one that cannot be written
+  (`server.settings_unwritten`) costs at most one extra restart at a later deploy. A check that fails
+  (the old server does not answer `/healthz` with a success within `IMAGE_CHECK_TIMEOUT_MS`, or the stop
+  errors) is logged (`server.image_check_failed`, `server.retire_failed`), the request goes through,
+  and a later request asks again, no sooner than `IMAGE_CHECK_RETRY_MS` after the last try.
 - **Once a day** (`triggers.crons`) the Worker requests `/readyz`, which wakes the server: its hourly
   loops run, and the Supabase project sees a query, so a quiet week does not pause a free project.
+- **Once an hour** (`DAILY_SWEEP_CRON`, #3727) the Worker posts to the server's `/daily-sweep`
+  (`DAILY_SWEEP_PATH`), which ends the daily games whose move ran out and sends the "your move" emails
+  and pushes while nobody else wakes it (SPEC §9.13). The path is outside `/api/*` and `/ws/*`, so
+  nobody else reaches it through the Worker. The daily wake-up stays as it was (CLAUDE.md rule 13).
+- **When it cannot reach the server** (#3618). A server that cannot boot, or that the Worker cannot reach,
+  tells nobody itself, so the Worker raises `server.unreachable` (`src/alerts.ts`) when a request's start
+  threw or outran `START_WAIT_MS`, and when the daily `/readyz` fails. It tells people as the server's own
+  alerts do (`crates/server/README.md`, Alerts): an issue `Patch: alert server.unreachable on <site>`
+  (`architecture`, `human`) through `CREATE_ISSUES_TOKEN`, or a comment while one is open, and an email through
+  Resend to `ALERT_EMAILS` with the same `Idempotency-Key` (one per new issue, else one per site a day), so it
+  never spends the 100 emails a day the sign-in mail shares. The `Server` object keeps when it last told in its
+  storage, so a server failing on every request tells once an hour (`ALERT_WINDOW_MS`), not once a request, and
+  a restart does not forget. Every send runs under `ctx.waitUntil`, never while a player's request waits. The
+  issue names no field, since the repository is public: the cause is in the email and the Worker's logs. A
+  request whose client hung up is no alert, and neither is the hourly sweep that fails.
 - **The caller's address.** The Worker replaces `X-Forwarded-For` with the address Cloudflare saw
   (`CF-Connecting-IP`), and `TRUSTED_PROXY_HOPS` is 1 (R190). Calibrate it once after the first
   deploy: the server's `api.forwarded_for` log line shows the entries it received; if the platform
@@ -61,10 +87,14 @@ pnpm exec wrangler secret put CODE_PEPPER --config ../../wrangler.jsonc --env=""
 and the same three with `--env staging`. `CREATE_ISSUES_TOKEN`, `DEV_PROFILE_IDS`, `ALERT_RESEND_API_KEY`
 and `ALERT_EMAILS` are optional. The last two email the server's alerts (#3595, `crates/server/README.md`,
 Alerts): a Resend API key with Sending access for jackioh.com, and the addresses, comma-separated, kept a
-secret since the repository is public.
+secret since the repository is public. The Worker reads `CREATE_ISSUES_TOKEN`, `ALERT_RESEND_API_KEY` and
+`ALERT_EMAILS` itself too, for its own alert when the server cannot be reached (#3618, above). `PLAYER_RESEND_API_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_PUBLIC_KEY`
+are optional too: the daily games' "your move" email and Web Push (#3727, `docs/deploy-cloudflare.md` section 3
+says how to make the VAPID pair); with one unset its channel is off.
 `DATABASE_URL` is Supabase's pooler URI (Connect -> Session pooler), which works over IPv4; the
 direct database host is IPv6 only. A container reads its settings when it starts, so after changing
-one, deploy again (or wait for the next sleep).
+one, deploy again: the first request after the deploy restarts a running server whose settings
+changed (above).
 
 ## Commands
 

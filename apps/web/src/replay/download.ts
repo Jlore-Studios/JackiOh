@@ -6,10 +6,11 @@
 import { CATALOG_VERSION, versionNameFrom } from "@jackioh/cards";
 import type { ReplayStep } from "@jackioh/engine";
 
+import type { SeatPortraits } from "../game/contract.ts";
 import type { OnlineReplayListing } from "../net/api.ts";
 import type { PracticeReplaySummary } from "../practice/protocol.ts";
 import { REPLAY_GIF_REVOKE_MS, REPLAY_JSON_MAX_BYTES, REPLAY_JSON_MAX_STEPS } from "./config.ts";
-import { ReplayFailure } from "./source.ts";
+import { ReplayFailure, seatPortraitsOf } from "./source.ts";
 import type { ReplaySource } from "./source.ts";
 import { createStepCache, loadClip } from "./steps.ts";
 import { isRecord } from "../wire/json.ts";
@@ -133,6 +134,14 @@ export function replayStepsOf(json: Record<string, unknown>): ReplayStep[] {
     checked.push({ step: index, turn, view: step.view as ReplayStep["view"] });
   }
   return checked;
+}
+
+/**
+ * R3976000: the seats' portraits a file `replayJsonFile` wrote holds (its `game.portraits`), read as
+ * untrusted: null for a file without them or naming one this build does not know, which draws the default.
+ */
+export function replayPortraitsOf(json: Record<string, unknown>): SeatPortraits | null {
+  return isRecord(json.game) ? seatPortraitsOf(json.game.portraits) : null;
 }
 
 export async function parseReplayJsonFile(file: File): Promise<ReplayStep[]> {

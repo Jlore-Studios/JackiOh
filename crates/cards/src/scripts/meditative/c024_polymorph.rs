@@ -3,7 +3,7 @@
 //! Base:    "Transform a Unit into a Sheep Token."
 //! Radiant: "Transform a Unit and the Units adjacent to it into Sheep Tokens."
 //! Engine: a declared target, any Unit on either side (R81), then `transform` of it into a Sheep Token
-//! (Core #41 Sheepish's verb): in place, no Cry (R691); an Immutable Unit in play is no target (R781001), and one beside the target is left alone (R23). The Radiant
+//! (Core #41 Sheepish's verb): in place, no Cry (R691); an Immutable Unit, an Indestructible one included (R4353000), may be the target (R4353001) and is left alone, as is one beside the target (R23). The Radiant
 //! face first lists the Units next to the target, on the target's side and row (§3.1), and transforms
 //! each into a base Sheep, as Core #34 Collateral Damage reaches its neighbours before its target. The
 //! neighbours change whether or not the target does. A Spell's unlabeled one-time text is its Cry.
@@ -87,10 +87,6 @@ mod tests {
         json!([VANILLA, VANILLA, VANILLA])
     }
 
-    fn at(unit: &CardInstance) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": unit.id }] })
-    }
-
     fn lane_def(s: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
         s.unit(player, lane).map(|unit| unit.def_id)
     }
@@ -131,7 +127,7 @@ mod tests {
             let mut s = board(false, json!([]), json!([VANILLA, { "def": VANILLA, "damage": 1 }]));
             let victim = s.unit(P2, 2).map(|unit| unit.id).unwrap_or_default();
             let victim = s.card(victim.as_str()).clone();
-            s.play(ID, at(&victim));
+            s.play(ID, pick::targets(pick::instance(&victim)));
             assert_base_sheep(&mut s, P2, 2);
             s.expect_in_zone(&victim, "gone");
             assert!(s.pile(P2, "graveyard").is_empty());
@@ -144,20 +140,23 @@ mod tests {
             let mut s = board(false, json!([VANILLA]), json!([VANILLA]));
             let mine = s.unit(P1, 1).map(|unit| unit.id).unwrap_or_default();
             let mine = s.card(mine.as_str()).clone();
-            s.play(ID, at(&mine));
+            s.play(ID, pick::targets(pick::instance(&mine)));
             assert_base_sheep(&mut s, P1, 1);
             assert_eq!(lane_def(&s, P2, 1), Some(VANILLA.to_string()));
         }
 
         #[test]
-        fn r781001_an_immutable_unit_in_play_is_no_target() {
-            let mut s = board(false, json!([]), json!([{ "def": ROCK, "radiant": true }]));
-            let rock = s.card(ROCK).clone();
-            s.expect_refused(|s| s.play(ID, at(&rock)));
-            // With no other Unit it is played with no pick and fizzles (R90).
-            s.play(ID, json!({}));
-            assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(rock.id));
-            s.expect_in_zone(ID, "graveyard");
+        fn r4353000_r4353001_an_immutable_unit_in_play_an_indestructible_one_included_may_be_its_target_and_is_left_as_it_is() {
+            // The Radiant Rock prints Immutable; the base Rock prints Indestructible alone, Immutable
+            // innately (R4353000).
+            for radiant in [true, false] {
+                let mut s = board(false, json!([]), json!([{ "def": ROCK, "radiant": radiant }]));
+                let rock = s.card(ROCK).clone();
+                // Immutable bars no aim (R4353001), and it still refuses the Transform (R23).
+                s.play(ID, pick::targets(pick::instance(&rock)));
+                assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(rock.id));
+                s.expect_in_zone(ID, "graveyard");
+            }
         }
 
         #[test]
@@ -165,7 +164,7 @@ mod tests {
             let mut s = board(false, json!([]), three_vanillas());
             let middle = s.unit(P2, 2).map(|unit| unit.id).unwrap_or_default();
             let middle = s.card(middle.as_str()).clone();
-            s.play(ID, at(&middle));
+            s.play(ID, pick::targets(pick::instance(&middle)));
             assert_base_sheep(&mut s, P2, 2);
             assert_eq!(lane_def(&s, P2, 1), Some(VANILLA.to_string()));
             assert_eq!(lane_def(&s, P2, 3), Some(VANILLA.to_string()));
@@ -180,7 +179,7 @@ mod tests {
             let mut s = board(true, three_vanillas(), three_vanillas());
             let middle = s.unit(P2, 2).map(|unit| unit.id).unwrap_or_default();
             let middle = s.card(middle.as_str()).clone();
-            s.play(ID, at(&middle));
+            s.play(ID, pick::targets(pick::instance(&middle)));
             for lane in [1, 2, 3] {
                 assert_base_sheep(&mut s, P2, lane);
             }
@@ -195,26 +194,33 @@ mod tests {
             let mut s = board(true, json!([]), three_vanillas());
             let first = s.unit(P2, 1).map(|unit| unit.id).unwrap_or_default();
             let first = s.card(first.as_str()).clone();
-            s.play(ID, at(&first));
+            s.play(ID, pick::targets(pick::instance(&first)));
             assert_base_sheep(&mut s, P2, 1);
             assert_base_sheep(&mut s, P2, 2);
             assert_eq!(lane_def(&s, P2, 3), Some(VANILLA.to_string()));
         }
 
         #[test]
-        fn r781001_r23_an_immutable_neighbour_is_reached_but_no_target_and_its_text_leaves_it_as_it_is() {
+        fn r4353001_r23_an_immutable_unit_is_reached_as_a_neighbour_or_as_its_target_and_its_text_leaves_it_as_it_is() {
             let theirs = json!([{ "def": ROCK, "radiant": true }, VANILLA, VANILLA]);
-            let mut s = board(true, json!([]), theirs);
+            let polymorph = json!({ "def": ID, "radiant": true });
+            let mut s = crate::scenario(json!({
+                "p1": { "hand": [polymorph.clone(), polymorph, FILLER], "library": [VANILLA, VANILLA], "mana": 8 },
+                "p2": { "field": theirs, "hand": [FILLER], "library": [VANILLA, VANILLA] },
+            }));
             let rock = s.card(ROCK).clone();
-            s.expect_refused(|s| s.play(ID, at(&rock)));
-            // A neighbour is no target (R450), so Polymorph reaches the Rock beside its target, and
-            // Immutable's text half leaves it as it is (R23).
+            // Polymorph reaches the Rock beside its target, and Immutable's text half leaves it as it is
+            // (R23).
             let middle = s.unit(P2, 2).map(|unit| unit.id).unwrap_or_default();
             let middle = s.card(middle.as_str()).clone();
-            s.play(ID, at(&middle));
-            assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(rock.id));
+            s.play(ID, pick::targets(pick::instance(&middle)));
+            assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(rock.id.clone()));
             assert_base_sheep(&mut s, P2, 2);
             assert_base_sheep(&mut s, P2, 3);
+            // A Spell may target it in play too (R4353001): it is left as it is, its neighbour changes.
+            s.play(ID, pick::targets(pick::instance(&rock)));
+            assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(rock.id));
+            assert_base_sheep(&mut s, P2, 2);
         }
     }
 }

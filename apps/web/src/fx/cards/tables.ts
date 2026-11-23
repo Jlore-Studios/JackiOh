@@ -45,6 +45,7 @@ import rawMeditative from "./meditative.json5?raw";
 import rawMeditativePlus from "./meditativeplus.json5?raw";
 import rawStinkyscape1 from "./stinkyscape-1.json5?raw";
 import rawStinkyscape2 from "./stinkyscape-2.json5?raw";
+import rawStinkyscapePlus from "./stinkyscapeplus.json5?raw";
 import rawTrainingGrounds from "./traininggrounds.json5?raw";
 
 /** One table file: its name in `fx/cards/`, the set it holds and its text. */
@@ -60,6 +61,7 @@ export const FX_CARD_FILES: readonly FxCardFile[] = [
   { file: "stinkyscape-1.json5", set: "Stinkyscape", source: rawStinkyscape1 },
   { file: "stinkyscape-2.json5", set: "Stinkyscape", source: rawStinkyscape2 },
   { file: "traininggrounds.json5", set: "Training Grounds", source: rawTrainingGrounds },
+  { file: "stinkyscapeplus.json5", set: "Stinkyscape+", source: rawStinkyscapePlus },
 ];
 
 /** The first card of Stinkyscape's second file. */
@@ -321,5 +323,5 @@ export function isSignature(entry: FxCardEntry | undefined): boolean {
   return entry !== undefined && entry.kind !== "none" && entry.signature === true;
 }
 
-/** Every card's entry, all eight files merged. */
+/** Every card's entry, all nine files merged. */
 export const FX_CARD_TABLE: ReadonlyMap<string, FxCardEntry> = new Map(FX_CARD_FILES.flatMap(({ file, source }) => [...parseFxCardTable(file, source)]));

@@ -12,10 +12,15 @@ AI-against-AI figures for every card beside its live games, whether or not anyon
 
 Since #1676 they come from the learn lane's exports, which `cargo jackioh stats from-selfplay` files as
 development records (R1676000; `training/README.md`, The gather lane), and since #1976 `learn.yml` files
-every export's games itself and imports them as totals only (R1976000). On the owner's PC,
-`.github/workflows/gather.yml` plays 5,000 games of each new patch or set as it ships (never a micro) the way this lane did, `stats
---series gather`, game `n` of run `r` being `gather:<(r - 1) × 100,000 + n>`, once the repository variable
-`GATHER_ON_PATCH` is `true`. No box runs this lane since 2026-11-04: the training box (the Muse box
+every export's games itself and imports them as totals only (R1976000). On two of GitHub's runners
+since #3740, `.github/workflows/gather.yml` plays without a pause the way this lane did, `stats --series
+gather` on the newest version on `main`, game `n` of run `r` being `gather:<(r - 1) × 100,000 + n>` and
+each of a run's two parts playing its own half of that range, while the repository variable
+`GATHER_ON_PATCH` is `true`. Each part plays five hours (`GATHER_HOURS`) and files its games as totals
+only into both projects' databases 400 at a time as they finish (`GATHER_FILE_GAMES`, about an hour),
+so the newest version's figures grow every hour; each run starts the next as it ends. Until #3740 it
+played 5,000 games of each new patch or set (never a micro) once, on the owner's PC. The learn lane's shards file theirs the same way, 1,250 at a
+time (`training/learn.md`, step 7), with `training/file-records.sh`. No box runs this lane since 2026-11-04: the training box (the Muse box
 now, `bot/machine/README.md`) ran it until then, filing staging's database alone where gather.yml files
 both (R1933001), so `jackioh-train@gather` is disabled there. What follows is its contract for any box
 that still runs `loop.sh gather`.
@@ -62,7 +67,7 @@ until `main` ships another.
 - `cards-<patch>.txt` and `.json`, the patch's card figures from every game held, rewritten each cycle:
   per card, the win rate and the games behind it for the decks that held it (in deck), held it in the
   opening hand, went first or second with it, played it, or drew it and never played it, and the played
-  delta; a card's play rate is its played games over its in-deck games;
+  delta; a card's play rate is its played games over its seen ones (played plus drawn and not played, R3950000);
 - `games-<patch>.txt` and `.json`, the patch's game figures from every game held, rewritten each cycle:
   the games and the draws, how many the first seat won with the 95% interval of that share, a count per
   ending, the turn quartiles, and, over the games whose records carry R1256000's counts, the share with

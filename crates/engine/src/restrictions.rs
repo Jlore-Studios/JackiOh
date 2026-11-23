@@ -2,11 +2,14 @@
 //! step or an attack validator asks whether a card is out of an effect's reach, so the answer a client
 //! greys a pick out by and the answer the reducer refuses it by are one call (§10.2).
 //!
-//!  * Immune to Spells: targeting is `play_choices`'s; "doesn't affect it" is `effects/targets.rs`'s, which
-//!    asks `effect_is_from_spell` for every card a target or a scope names.
-//!  * Immutable's targeting half (R781001, R450): every declaration and `target` prompt asks
-//!    `immutable_bars`, as does a Field Trap naming its one card (Classic #5 Tesla, Classic+ #74); random
-//!    picks, scopes and attacks still reach it. Its text half (R23) is read at each verb.
+//!  * Immune to Spells: targeting is `play_choices`'s; "doesn't affect it" is `unaffected_by`, which
+//!    `effects/targets.rs` asks of every card a target or a board scope names and, since R4453000,
+//!    `card_scope::cards_in_card_scope` of each field card, `buff_all_units`, `switch_all_positions`, the
+//!    Radiant picks' field pool and a Plague Counter placement (`effect_is_from_spell` there).
+//!  * Evasive's targeting half (R4353002, R450): every declaration and `target` prompt asks
+//!    `evasive_bars`, which bars a Spell's and a Field Spell's aim; random picks, scopes, Traps, Field
+//!    Traps and Units still reach it. Immutable bars no aim since R4353001: its text half (R23) is read
+//!    at each verb, through `layers::is_immutable`, which every Indestructible card answers too (R4353000).
 //!  * The attack restrictions (Classic+ #51, #19.1, a carried Unit's R446, Flying's #783, the Gauntlet's
 //!    R1849005): `combat.rs` asks `attack_restriction` for a declared attack (§4.2 step 2), the Taunt wall
 //!    (step 3: a Taunt binds only who may attack it) and every forced attack, which skips steps 1 to 3
@@ -57,9 +60,10 @@ pub fn effect_is_from_spell(ctx: &EffectContext<'_>) -> bool {
     }
 }
 
-/// E35: the "doesn't affect it" half, as `effects/targets.rs` asks it of every card an effect names:
-/// a Spell's effects pass an immune unit on the field by. R1839000: every effect, whatever its
-/// source, passes a Dormant card by; only `effects::awaken` names it.
+/// E35: the "doesn't affect it" half, as `effects/targets.rs` asks it of every card an effect names
+/// and every walk of the field asks it of each card it meets (a card scope, every Unit, a random pick,
+/// R4453000): a Spell's effects pass an immune unit on the field by. R1839000: every effect, whatever
+/// its source, passes a Dormant card by; only `effects::awaken` names it.
 pub fn unaffected_by(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
     if crate::slumber::is_slumbering(card) {
         return true;
@@ -69,9 +73,9 @@ pub fn unaffected_by(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
         && immune_to_spells(ctx.sink.state, card)
 }
 
-/// R781001: the type Immutable's targeting rule reads off a source: a Unit in a unit zone (an Animated
-/// card included), else its running face's printed type, so a revealed face-down Spell (ME-ALTPLAY,
-/// R1044) is a Spell and a Field Trap firing from the backrow a Field Trap, even if it animates later.
+/// R4353002: the type Evasive's targeting rule reads off a source (R781001's reading, kept): a Unit in a
+/// unit zone (an Animated card included), else its running face's printed type, so a revealed face-down
+/// Spell (ME-ALTPLAY, R1044) is a Spell and a Field Spell acting from the backrow a Field Spell.
 pub fn targeting_type_of(state: &GameState, source: &CardInstance) -> CardType {
     if let Zone::Field { row: Row::Units, .. } = source.zone {
         return CardType::Unit;
@@ -79,25 +83,34 @@ pub fn targeting_type_of(state: &GameState, source: &CardInstance) -> CardType {
     card_type_of_face(state, &source.def_id, source.radiant)
 }
 
-/// R781001: whether the card is Immutable in play: on the field, face-up (a face-down card's text is
-/// dormant, and reading it would tell the opponent what it is), with the keyword now.
+/// R781001, R4353000: whether the card is Immutable in play: on the field, face-up (a face-down card's
+/// text is dormant, and reading it would tell the opponent what it is), Immutable now, by the keyword or
+/// by Indestructible (`layers::is_immutable`).
 pub fn immutable_in_play(state: &GameState, card: &CardInstance) -> bool {
     matches!(card.zone, Zone::Field { .. })
         && !crate::preview::is_face_down(state, card)
-        && unit_has(state, card, KeywordKind::Immutable)
+        && crate::layers::is_immutable(state, card)
 }
 
-/// R781001: "While in play, Spells, Field Spells and Field Traps can't target it": true when `source`
-/// is one of those (`targeting_type_of`) and `card` is Immutable in play, its controller's own cards
-/// included. A Unit, a Trap that is not a Field Trap, and no source at all may target it.
-pub fn immutable_bars(state: &GameState, source: Option<&CardInstance>, card: &CardInstance) -> bool {
+/// R4353002: whether the card is Evasive in play: on the field and face-up, with the keyword now.
+pub fn evasive_in_play(state: &GameState, card: &CardInstance) -> bool {
+    matches!(card.zone, Zone::Field { .. })
+        && !crate::preview::is_face_down(state, card)
+        && unit_has(state, card, KeywordKind::Evasive)
+}
+
+/// R4353002: "Spells and Field Spells can't target it": true when `source` is one of those
+/// (`targeting_type_of`) and `card` is Evasive in play, its controller's own cards included, as with
+/// Hearthstone's Elusive. A Unit, a Trap or a Field Trap, and no source at all, may target it.
+/// Immutable bars no targeting since R4353001: what it stops is the change, never the aim.
+pub fn evasive_bars(state: &GameState, source: Option<&CardInstance>, card: &CardInstance) -> bool {
     let Some(source) = source else {
         return false;
     };
     matches!(
         targeting_type_of(state, source),
-        CardType::Spell | CardType::FieldSpell | CardType::FieldTrap
-    ) && immutable_in_play(state, card)
+        CardType::Spell | CardType::FieldSpell
+    ) && evasive_in_play(state, card)
 }
 
 /// MD-B1, R940: whether the card holds the tribal-hate immunity now (a static flag).
@@ -156,7 +169,11 @@ pub fn gauntlet_acts(state: &GameState) -> bool {
 /// R1849005: whether the unit stands in the Gauntlet — a unit zone of one of `GAUNTLET_LANES`, on either
 /// side. A Unit a carrier holds or one standing in the backrow is outside it.
 pub fn in_gauntlet(state: &GameState, unit: &CardInstance) -> bool {
-    slot_of(state, unit).is_some_and(|at| at.row == Row::Units && GAUNTLET_LANES.contains(&at.lane))
+    // R3546001: a GIGA is in the Gauntlet in either of its lanes.
+    slot_of(state, unit).is_some_and(|at| at.row == Row::Units)
+        && crate::giga::lanes_of(unit)
+            .iter()
+            .any(|lane| GAUNTLET_LANES.contains(lane))
 }
 
 /// R1849006: whether an aura that Units cannot be in Defense Position acts on the field now (Stinkyscape
@@ -170,6 +187,10 @@ pub fn defense_barred(state: &GameState) -> bool {
 /// R1839000: why a Dormant card may neither attack, be attacked, switch its position nor be picked —
 /// the one reason `legal_actions`, the reducer and the view all give.
 pub const SLUMBER_REFUSAL: &str = "that card is Dormant";
+
+/// R3554003: why a Unit may not attack across the slash — the one reason `legal_actions`, the
+/// reducer and the view all give.
+pub const SLASH_REFUSAL: &str = "that unit is across the slash";
 
 /// E35: this unit may make no attack, declared or forced ("can't attack or be attacked").
 pub fn cannot_attack(state: &GameState, unit: &CardInstance) -> bool {
@@ -218,6 +239,27 @@ pub fn attack_restriction_in(
     if inside != target_inside && gauntlet_acts(state) {
         return Err(EngineError::new("the Gauntlet's Units fight only each other"));
     }
+    // R3554003: a Unit attacks only Units on its own half of a slashed board — declared or
+    // forced, which both read this, and a Taunt across the slash walls nothing on this half. Heroes
+    // are shared by both halves (health stays shared), so they are attacked from either.
+    if let DamageTarget::Unit { instance } = target
+        && !crate::geometry::reaches(state, Some(attacker), instance)
+    {
+        return Err(EngineError::new(SLASH_REFUSAL));
+    }
+    // R3550001: a Unit that "can only attack the unit directly across from it" attacks only the
+    // enemy Unit across, never a hero — declared or forced, which both read this.
+    if crate::scripts::flags_of(state, attacker).attacks_only_across == Some(true) {
+        let across = match target {
+            DamageTarget::Hero { .. } => false,
+            DamageTarget::Unit { instance } => crate::combat::stands_across(state, attacker, instance),
+        };
+        if !across {
+            return Err(EngineError::new(
+                "this Unit can only attack the Unit directly across from it",
+            ));
+        }
+    }
     let defender = match target {
         DamageTarget::Hero { .. } => return Ok(()),
         DamageTarget::Unit { instance } => instance,
@@ -225,19 +267,13 @@ pub fn attack_restriction_in(
     if crate::slumber::is_slumbering(defender) {
         return Err(EngineError::new(SLUMBER_REFUSAL));
     }
-    if cannot_be_attacked(state, defender) {
+    // R3543002: Evasive is "Can't be attacked" as a keyword.
+    if cannot_be_attacked(state, defender) || auras.unit_has(defender, KeywordKind::Evasive) {
         return Err(EngineError::new("that unit cannot be attacked"));
     }
-    if attackable_only_from_lane(state, defender) {
-        let from = slot_of(state, attacker);
-        let to = slot_of(state, defender);
-        let same_lane = match (from, to) {
-            (Some(from), Some(to)) => from.lane == to.lane,
-            _ => false,
-        };
-        if !same_lane {
-            return Err(EngineError::new("only a unit in its lane may attack that unit"));
-        }
+    // R3546001: a GIGA meets "this lane" from either of its lanes (Top Loser's attacker included).
+    if attackable_only_from_lane(state, defender) && !crate::giga::lanes_meet(attacker, defender) {
+        return Err(EngineError::new("only a unit in its lane may attack that unit"));
     }
     if flies_out_of_reach(auras, attacker, defender) {
         return Err(EngineError::new(

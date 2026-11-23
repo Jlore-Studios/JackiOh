@@ -1,20 +1,20 @@
 // #3119, R3119000: the 404 panel's play (main.tsx `NotFound`). Three face-down cards deal in and each
 // turns over into a way out; a lost card picked by the path says its line when tapped; the path the
-// panel names glitches and settles. Presentation only (CLAUDE.md rule 7): it reads the bundle's
+// panel names glitches and settles. Presentation only (CLAUDE.md rule 7): it reads the module's
 // catalog, its flavour and its voice lines, and sends nothing but a move to another screen.
 
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement } from "react";
 
-import { CATALOG } from "@jackioh/cards";
-
 import { VOICE_PRIORITY } from "../audio/constants.ts";
 import { getAudioEngine } from "../audio/engine.ts";
+import { useSoundTables } from "../audio/soundTablesLoader.ts";
 import { CardBack } from "../cards/CardBack.tsx";
 import { CardFace } from "../cards/CardFace.tsx";
 import { readerName } from "../cards/chinese.ts";
-import { flavourFor } from "../cards/flavour.ts";
+import { flavourFor, useFlavour } from "../cards/flavour.ts";
 import { GlitchBlob } from "../cards/GlitchBlob.tsx";
 import { faceModel } from "../cards/model.ts";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import { useEngineReady } from "../wasm/useEngineReady.ts";
 import { ChoiceCard } from "../game/ChoiceCard.tsx";
 import { t } from "../i18n/i18n.ts";
@@ -81,6 +81,8 @@ function WayOutCard({ way, faceUp }: { way: WayOut; faceUp: boolean }): ReactEle
   const [up, setUp] = useState(faceUp);
   // A mouse turns a card over as it arrives, a moment before its click: the click reads this, not a render's `up`.
   const upNow = useRef(faceUp);
+  // #4270: the face's picture draws from the scene tables, which throw until they load (#4222), so it waits as `LostCard`'s face does.
+  const ready = useEngineReady();
   const turnOver = (): void => {
     upNow.current = true;
     setUp(true);
@@ -115,7 +117,7 @@ function WayOutCard({ way, faceUp }: { way: WayOut; faceUp: boolean }): ReactEle
           <CardBack />
         </span>
         <span className="not-found-way__side not-found-way__side--face" aria-hidden="true">
-          <ChoiceCard seed={`not-found:${way.key}`} label={label} detail={t(way.detail)} />
+          {ready ? <ChoiceCard seed={`not-found:${way.key}`} label={label} detail={t(way.detail)} /> : null}
         </span>
       </span>
     </a>
@@ -124,11 +126,14 @@ function WayOutCard({ way, faceUp }: { way: WayOut; faceUp: boolean }): ReactEle
 
 /** The lost card: tapped, it says its line through the audio engine (muting is the engine's, R630). */
 function LostCard({ path }: { path: string }): ReactElement | null {
+  const tables = useSoundTables();
+  const sidecar = useFlavour();
   const defId = lostCardFor(path);
-  const def = CATALOG[defId];
-  const [speaking, setSpeaking] = useState(false);
   // This page is engine-free (#778): the card's face is worked out by the module (jackioh-shared), so it is drawn once that is in.
   const ready = useEngineReady();
+  // #4180: the definition comes from the module's catalog, so nothing shows until it is in.
+  const def = ready ? currentCatalog().cards[defId] : undefined;
+  const [speaking, setSpeaking] = useState(false);
   useEffect(() => {
     if (!speaking) return undefined;
     const timer = window.setTimeout(() => {
@@ -138,9 +143,9 @@ function LostCard({ path }: { path: string }): ReactElement | null {
       window.clearTimeout(timer);
     };
   }, [speaking]);
-  if (def === undefined) return null;
-  const line = lostCardLine(defId);
-  const flavour = flavourFor(defId)?.flavour;
+  if (def === undefined || tables === null) return null;
+  const line = lostCardLine(defId, tables.cardAudio);
+  const flavour = flavourFor(defId, sidecar ?? {})?.flavour;
   const speak = (): void => {
     if (line === null) return;
     const engine = getAudioEngine();

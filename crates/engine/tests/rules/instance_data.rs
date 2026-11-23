@@ -47,10 +47,9 @@ fn play_of(
     card: &CardInstance,
     pick: Option<&dyn Fn(&ActionBody) -> bool>,
 ) -> ActionInput {
-    let play = legal_actions(state, PlayerId::P1).into_iter().find(|action| {
-        matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id)
-            && pick.is_none_or(|pick| pick(action))
-    });
+    let play = plays_in(state, PlayerId::P1, &card.id)
+        .into_iter()
+        .find(|action| pick.is_none_or(|pick| pick(action)));
     let Some(play) = play else {
         panic!("no play for {}", card.def_id)
     };

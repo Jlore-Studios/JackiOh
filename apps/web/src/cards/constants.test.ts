@@ -7,7 +7,6 @@ import {
   ART_DWELL_MS,
   ART_NEAR_MARGIN_PX,
   ART_SMALL_FACE_LIFT,
-  ART_WEAR_LEVELS,
   CARD_DEPTH_FACE_PX,
   CARD_DEPTH_STEP_CQW,
   CARD_DEPTH_STEP_PX,
@@ -142,12 +141,11 @@ describe("cards constants", () => {
     expect(SHIPYARD_IDLE_SPARKS).toBe(5);
   });
 
-  it("pins the small-face lift, the minion art foot, the hand growth and wear/fullscreen", () => {
+  it("pins the small-face lift, the minion art foot, the hand growth and fullscreen", () => {
     expect(ART_SMALL_FACE_LIFT).toEqual({ saturate: 1.15, contrast: 1.06 });
     expect(MINION_ART_FOOT_SHARE).toBe(0.5);
     expect(HAND_ART_GROW_CQH).toBe(4);
     expect(HAND_TEXT_BOX_MIN_CQH).toBe(12);
-    expect(ART_WEAR_LEVELS).toBe(4);
     expect(FULLSCREEN_HOLD_MS).toBe(450);
     expect(FULLSCREEN_SLOP_PX).toBe(10);
   });

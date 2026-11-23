@@ -57,6 +57,8 @@ vi.doMock("../wasm/index.ts", async (importOriginal) => {
 
 const wasm = await import("../wasm/index.ts");
 const { App } = await import("../main.tsx");
+// After the mock, like `main.tsx`: a static import would load the real module before `doMock`.
+const { commandEntryTestid, commandMenuTestid } = await import("./CommandMenu.tsx");
 const { CosmeticLook } = await import("../collection/CosmeticLook.tsx");
 const { WhenEngineReady } = await import("../wasm/WhenEngineReady.tsx");
 
@@ -145,8 +147,6 @@ describe("#778 the screens that never call the engine", () => {
     ["/reset-password", resetTestid.screen],
     ["/privacy", "privacy-screen"],
     ["/terms", "terms-screen"],
-    ["/accessibility", "accessibility-screen"],
-    ["/ai", "ai-screen"],
   ])("#778 %s paints while the module is still loading", async (path, testId) => {
     serveAs("active");
     at(path);
@@ -237,6 +237,23 @@ describe("#778 the screens that never call the engine", () => {
     expect(await screen.findByTestId(inviteTestid.input, undefined, SLOW)).toBeTruthy();
     expect(window.location.pathname).toBe("/invite");
     expect(screen.queryByTestId(shellTestid.engineLoading)).toBeNull();
+  });
+
+  it("#4180 the entry screens import and render without the module, and the menu opens card-free", async () => {
+    // Every catalog read waits for the module (`game/currentCatalog.ts` throws before it loads),
+    // so the landing, the lost card and the command menu must all stand aside until it is in.
+    serveAs("active");
+    for (const path of ["/", "/nowhere"]) {
+      at(path);
+      render(<App />);
+      fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+      expect(await screen.findByTestId(commandMenuTestid.dialog, undefined, SLOW)).toBeTruthy();
+      expect(screen.getByTestId(commandEntryTestid("action-new-deck"))).toBeTruthy();
+      expect(screen.queryByTestId(shellTestid.loadFailed)).toBeNull();
+      cleanup();
+      at("/");
+    }
+    expect(arrived).toBe(false);
   });
 });
 

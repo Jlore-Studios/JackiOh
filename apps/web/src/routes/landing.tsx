@@ -1,7 +1,9 @@
 // Landing's front door (B37-B39): a fan of real cards and one call to action; CSS stays scoped to
-// `.landing` so it cannot affect the board layout. R765 shows an active online game.
+// `.landing` so it cannot affect the board layout. R765 shows an active online game: inside the menus'
+// shell, Home, it draws the shell's status row under its corner (R3728002), and Friends is the shell's
+// navigation's (R3728000).
 
-import { Suspense, lazy, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactElement, type RefObject } from "react";
+import { Suspense, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactElement, type RefObject } from "react";
 
 import { ECONOMY_LIVE, GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 
@@ -9,40 +11,41 @@ import type { CardDef } from "@jackioh/shared";
 
 import { landingFanCardTestid, landingTestid } from "../auth/testids.ts";
 import { CardBack } from "../cards/CardBack.tsx";
+import { cardDetailChunk, prefetchCardDetail } from "../cards/inspect/cardDetailChunk.ts";
 import { CardFace } from "../cards/CardFace.tsx";
 import { useInspectTrigger } from "../cards/inspect/useInspectTrigger.tsx";
-import { faceModel } from "../cards/model.ts";
 import { readerName } from "../cards/chinese.ts";
+import { useFaceModel } from "../game/faces.ts";
 import { useCardSettings } from "../cards/settings.ts";
 import JlorePill from "../economy/JlorePill.tsx";
 import LanguageButton from "../i18n/LanguageButton.tsx";
+import { InboxBell } from "../inbox/InboxBell.tsx";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { useAccount, type Account } from "../net/gate.ts";
 import { BackLayer } from "../net/backLayers.ts";
-import { useLiveGame } from "../net/liveGame.ts";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
 import { paths } from "../net/navigate.ts";
+import { useKeptLinkOpensLobby } from "../net/roomLink.ts";
 import { readSession } from "../net/session.ts";
 import { useEngineReady } from "../wasm/useEngineReady.ts";
 import { SettingsButton } from "../settings/index.ts";
-import { FriendsButton } from "../together/FriendsButton.tsx";
+import { useMenuShell } from "../shell/context.ts";
 import { useSetting } from "../settings/store.ts";
 import { ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES, ROTATION_SWAP_MS } from "../stats/config.ts";
 import { PlayerStatsCard } from "../stats/PlayerStatsCard.tsx";
 import { readPlayerStats, usePlayerStats } from "../stats/store.ts";
 import {
   EVEN,
+  corePool,
   dealLandingFan,
-  fanPool,
   favoringFullArt,
   featureWeight,
   rotateFan,
-  rotationPool,
+  shippedPool,
   type FanFace,
   type RandomSource,
 } from "./landingFan.ts";
 import { DevButton } from "./DevButton.tsx";
-import { LiveGameBanner } from "./GameBanner.tsx";
 import { NewsList, useNews } from "./NewsPanel.tsx";
 import { QuestsView, useQuests } from "./QuestsPanel.tsx";
 import { followInApp } from "./nav.tsx";
@@ -55,7 +58,7 @@ import "./top-bar.css";
 const DEV_ONLY = import.meta.env.MODE !== "production";
 
 /** R639: the card's detail dialog, loaded when a fan card is first opened, so the first screen stays light. */
-const CardDetail = lazy(() => import("../cards/inspect/CardDetail.tsx").then((module) => ({ default: module.CardDetail })));
+const CardDetailDialog = cardDetailChunk.Screen;
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
@@ -170,18 +173,23 @@ function LandingFanSlot({ face, index, onOpen, onHold }: {
   return (
     <div className="landing-fan-slot">
       <LandingFanCard key={face.def.id} def={face.def} radiant={face.radiant} index={index} swapped={leaving !== null} onOpen={onOpen} onHold={onHold} />
-      {leaving === null ? null : (
-        <div
-          key={leaving.def.id}
-          className="landing-fan-card landing-fan-card--leaving"
-          data-testid={landingTestid.fanLeaving}
-          data-def-id={leaving.def.id}
-          data-radiant={leaving.radiant ? "true" : undefined}
-          aria-hidden="true"
-        >
-          <CardFace face={faceModel({ defId: leaving.def.id, def: leaving.def, radiant: leaving.radiant })} />
-        </div>
-      )}
+      {leaving === null ? null : <LeavingGhost key={leaving.def.id} face={leaving} />}
+    </div>
+  );
+}
+
+/** R704's outgoing card as a decorative, inert ghost; its face is built once, as the fan card's is. */
+function LeavingGhost({ face }: { face: FanFace }): ReactElement {
+  const model = useFaceModel({ defId: face.def.id, def: face.def, radiant: face.radiant });
+  return (
+    <div
+      className="landing-fan-card landing-fan-card--leaving"
+      data-testid={landingTestid.fanLeaving}
+      data-def-id={face.def.id}
+      data-radiant={face.radiant ? "true" : undefined}
+      aria-hidden="true"
+    >
+      <CardFace face={model} />
     </div>
   );
 }
@@ -202,7 +210,8 @@ function LandingFanCard({
   onOpen: (def: CardDef) => void;
   onHold: (held: boolean) => void;
 }): ReactElement {
-  const face = faceModel({ defId: def.id, def, radiant });
+  // #4511: built once per card, so hovering or swapping elsewhere never rebuilds it.
+  const face = useFaceModel({ defId: def.id, def, radiant });
   const inspect = useInspectTrigger(
     { key: `landing-fan-${def.id}`, face },
     { hover: false, prefer: "above" },
@@ -230,6 +239,16 @@ function LandingFanCard({
         tabIndex={0}
         aria-label={t("Read {name}", { name: readerName(def) })}
         {...inspect.handlers}
+        onPointerEnter={(event) => {
+          prefetchCardDetail();
+          inspect.handlers.onPointerEnter(event);
+        }}
+        onFocus={() => {
+          prefetchCardDetail();
+        }}
+        onTouchStart={() => {
+          prefetchCardDetail();
+        }}
         onClick={() => {
           onOpen(def);
         }}
@@ -590,7 +609,9 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
   const account = useAccount();
   // R634: the first screen most visits see keeps an active account's settings level with this device's.
   useSettingsAccountSync(account);
-  const liveGame = useLiveGame(account);
+  // R767, R3730006: a sign-in lands here, so a link kept through it opens its lobby once the account is active.
+  useKeptLinkOpensLobby(account);
+  const shell = useMenuShell();
   const motion = useMotion();
   // R2035000, R2875002: GET /api/quests and GET /api/news answer an active account alone.
   const economyToken =
@@ -603,18 +624,19 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
   // for (#778): the fan is dealt once it is in.
   const engineReady = useEngineReady();
   const [dealt, setHand] = useState<readonly FanFace[] | null>(() =>
+    // #4511: the deal samples the raw pool, checking only the cards it draws, not every card's faces.
     !engineReady
       ? null
       : readPlayerStats().games >= ROTATION_MIN_GAMES
-        ? dealLandingFan(random, rotationPool(fullArt), favoringFullArt(featureWeight, fullArt))
-        : dealLandingFan(random, fanPool(fullArt), favoringFullArt(EVEN, fullArt)),
+        ? dealLandingFan(random, shippedPool(), favoringFullArt(featureWeight, fullArt), fullArt)
+        : dealLandingFan(random, corePool(), favoringFullArt(EVEN, fullArt), fullArt),
   );
   useEffect(() => {
     if (dealt !== null || !engineReady) return;
     setHand(
       readPlayerStats().games >= ROTATION_MIN_GAMES
-        ? dealLandingFan(random, rotationPool(fullArt), favoringFullArt(featureWeight, fullArt))
-        : dealLandingFan(random, fanPool(fullArt), favoringFullArt(EVEN, fullArt)),
+        ? dealLandingFan(random, shippedPool(), favoringFullArt(featureWeight, fullArt), fullArt)
+        : dealLandingFan(random, corePool(), favoringFullArt(EVEN, fullArt), fullArt),
     );
   }, [dealt, engineReady, fullArt, random]);
   const hand = dealt ?? NO_FAN;
@@ -634,8 +656,8 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
         current === null
           ? current
           : fullPool
-          ? rotateFan(current, at, random, rotationPool(fullArt), favoringFullArt(featureWeight, fullArt))
-          : rotateFan(current, at, random, fanPool(fullArt), favoringFullArt(EVEN, fullArt)),
+          ? rotateFan(current, at, random, shippedPool(), favoringFullArt(featureWeight, fullArt), fullArt)
+          : rotateFan(current, at, random, corePool(), favoringFullArt(EVEN, fullArt), fullArt),
       );
     }, ROTATION_INTERVAL_MS);
     return () => {
@@ -662,17 +684,15 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
             <DevButton account={account} />
             <Corner account={account} />
             <JlorePill />
-            <FriendsButton placement="nav" />
+            {/* R3729002: the inbox's bell, for a signed-in account, after the pill. */}
+            <InboxBell />
             <LanguageButton placement="nav" />
             <SettingsButton placement="nav" />
           </div>
         </header>
 
-        {liveGame === null ? null : (
-          <div className="landing-banners">
-            <LiveGameBanner game={liveGame} />
-          </div>
-        )}
+        {/* R3728002: the shell's status row, the live game or the queue search. */}
+        {shell === null ? null : <div className="landing-banners">{shell.status}</div>}
 
         <div className="landing-hero-inner">
           <div className="landing-title-block">
@@ -693,7 +713,7 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
 
         {open === null ? null : (
           <Suspense fallback={null}>
-            <CardDetail
+            <CardDetailDialog
               def={open}
               onClose={() => {
                 setOpen(null);

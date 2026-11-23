@@ -35,6 +35,7 @@ mod tests {
 
     use crate::scenario;
     use crate::filler;
+    use crate::stinkyscape_family as fam;
 
     const NANOBOTS: &str = "stinkyscape-093";
     const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
@@ -99,6 +100,27 @@ mod tests {
 
             s.expect_in_zone(NANOBOTS, "graveyard");
             s.expect_health(PlayerId::P1, 41);
+        }
+
+        const RADIANT_HEAL: i32 = 12;
+
+        /// R4334000: a launched Starship holding a Radiant copy heals its hero the Radiant `heal`
+        /// when it dies, and shows it.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            let (mut s, ship) = fam::piece_ship(
+                ID,
+                "s093-piece-ship",
+                true,
+                json!({ "hand": [HIT_JOB], "health": 10 }),
+                json!({}),
+            );
+            assert_eq!(fam::shown_number(&s, &ship, "heal"), Some(RADIANT_HEAL));
+            // The piece's own Death healed its hero already, as it died to build the Starship.
+            let before = s.state().players.p1.hero.health;
+            s.state_mut().players.p1.mana.current = 10;
+            s.play(HIT_JOB, json!({ "targets": pick::id(&ship) }));
+            s.expect_health(PlayerId::P1, before + RADIANT_HEAL);
         }
     }
 }

@@ -6,7 +6,7 @@
 // "Readable" is the design's word: the defId is not the sentinel and the table has an entry for it.
 
 import { GAME_EVENT_TYPES, type GameEvent, type GameEventType, type PlayerId, type UnitView } from "@jackioh/shared";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
@@ -44,7 +44,8 @@ import {
   type PlayFrame,
 } from "./cues.ts";
 import { battleshipCues } from "./battleshipCues.ts";
-import { MUSIC_CARDS } from "./musicData.ts";
+import { MUSIC_CARDS } from "./soundTables.ts";
+import { loadSoundTables } from "./soundTablesLoader.ts";
 import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
 import { signatureCues } from "./signatureCues.ts";
 import type { SfxId, SoundCue, CardAudioTable } from "./types.ts";
@@ -56,6 +57,10 @@ import { lookupFromDefs } from "../game/catalog.ts";
 import { baseView, emptySide, unit } from "../test/fixtures.ts";
 
 /* Fixtures */
+
+beforeAll(async () => {
+  await loadSoundTables();
+});
 
 const LINES: CardAudioTable = {
   voices: {
@@ -220,6 +225,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   flickered: { type: "flickered", player: "p1", instanceId: "u2", defId: UNIT, row: "units", lane: 2 },
   drawLimited: { type: "drawLimited", player: "p2" },
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
+  loopCapped: { type: "loopCapped", player: "p2" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
   fengShui: { type: "fengShui", instanceId: "c1", sourceId: "c2", player: "p1", outcome: "positive" },
@@ -228,6 +234,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
   // MN05.
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  // R3857000.
+  armorGained: { type: "armorGained", player: "p2", amount: 2, armor: 2 },
   // Meditative #39.2, R961.
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
   // Meditative MB05 (ME-SECRET).
@@ -236,9 +244,13 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
   // #831's patch (C+ #62, R831003).
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
+  // Stinkyscape+ E7 (R3554005).
+  lineDrawn: { type: "lineDrawn", player: "p1", cells: [{ player: "p1", row: "units", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   // Stinkyscape's Dormant (R1839002).
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
+  // Stinkyscape+ Evolve (R3536005).
+  evolved: { type: "evolved", player: "p1", instanceId: "u1", defId: "core-008" },
   // Issue #1838 (Tradable, R1838001).
   traded: { type: "traded", player: "p1" },
   // Issue #1840 (Credits, R1840005); its Resources are hand cards since #2250 (R2250000).
@@ -332,6 +344,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   flickered: "poof",
   drawLimited: "cancel",
   turnCutShort: "notify",
+  loopCapped: "notify",
   marked: "brand",
   glitched: "whoosh",
   fengShui: "radiant",
@@ -340,6 +353,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   discardPrevented: "cancel",
   // MN05.
   damageAbsorbed: "armorRing",
+  // R3857000: the sweep of a stat gained; the ring stays the whole hit's (R1365's own sounds).
+  armorGained: "buff",
   // Meditative #39.2, R961.
   jadeChanged: "uiClick",
   // Meditative MB05 (ME-SECRET).
@@ -347,8 +362,10 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   secretRevealed: "trapSting",
   predicted: "notify",
   curveDrawn: "whoosh",
+  lineDrawn: "whoosh",
   autopilotEngaged: "notify",
   awakened: "radiant",
+  evolved: "radiant",
   traded: "whoosh",
   marketCreditsChanged: "uiClick",
   marketBought: "draw",
@@ -392,6 +409,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "turnAutoEnded",
   "autopilotEngaged",
   "awakened",
+  "evolved",
   // R1838001: a Trade's whoosh, whatever the seat.
   "traded",
   // R1840005: the Credits' sound, whatever the seat.
@@ -424,6 +442,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "marked",
   "discardPrevented",
   "damageAbsorbed",
+  "armorGained",
 ];
 
 describe("B17 SOUND_CUES is total over GameEvent types", () => {
@@ -1578,6 +1597,13 @@ describe("R1363 Armor clanks when it takes half or more of a hit, and rings when
   it("R1363 R203 a hidden source changes nothing: the sound reads the event's numbers alone", () => {
     expect(ids({ type: "damageAbsorbed", sourceId: HIDDEN_DEF_ID, targetId: "u6", absorbed: 4, combat: false })).toEqual(["armorRing"]);
     expect(ids({ ...hitOn("hero-p1", 1, 4), sourceId: HIDDEN_DEF_ID })).toEqual(["impact", "armorClank"]);
+  });
+
+  it("R3857000 an Armor gain sweeps up as a stat gained, centered on the hero, and never rings as a hit Armor took whole", () => {
+    const view = baseView();
+    expect(cuesFor({ type: "armorGained", player: "p2", amount: 2, armor: 2 }, ctx({ view }))).toEqual([{ kind: "sfx", id: "buff", delayMs: 0 }]);
+    expect(cuesFor({ type: "armorGained", player: "p1", amount: 4, armor: 9 }, ctx({ view }))).toEqual([{ kind: "sfx", id: "buff", delayMs: 0 }]);
+    expect(GAME_EVENT_TYPES.filter((type) => SOUND_CUES[type].sfx === "armorRing")).toEqual(["damageAbsorbed"]);
   });
 });
 

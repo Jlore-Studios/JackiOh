@@ -35,6 +35,7 @@ mod tests {
 
     use crate::scenario;
     use crate::filler;
+    use crate::stinkyscape_family as fam;
 
     const CRYSTAL: &str = "stinkyscape-132";
     const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
@@ -96,6 +97,30 @@ mod tests {
 
             s.expect_in_zone(CRYSTAL, "graveyard");
             assert_eq!(armor_of(&s, PlayerId::P1), 2);
+        }
+
+        const RADIANT_HERO_ARMOR: i32 = 2;
+
+        /// R4334000: a launched Starship holding a Radiant copy gives its hero the Radiant
+        /// `heroArmor` when it dies, and shows it.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            let (mut s, ship) = fam::piece_ship(
+                ID,
+                "s132-piece-ship",
+                true,
+                json!({ "hand": [HIT_JOB] }),
+                json!({}),
+            );
+            assert_eq!(
+                fam::shown_number(&s, &ship, "heroArmor"),
+                Some(RADIANT_HERO_ARMOR)
+            );
+            // The piece's own Death gave its hero Armor already, as it died to build the Starship.
+            let before = armor_of(&s, PlayerId::P1);
+            s.state_mut().players.p1.mana.current = 10;
+            s.play(HIT_JOB, json!({ "targets": pick::id(&ship) }));
+            assert_eq!(armor_of(&s, PlayerId::P1), before + RADIANT_HERO_ARMOR);
         }
     }
 }

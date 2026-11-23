@@ -68,6 +68,24 @@ function markedView(marks: readonly CardMark[] = [STEAL]): { view: PlayerView; i
   return { view: next, ids: { mine: mine.instanceId, theirs: theirs.instanceId, myField: myField.instanceId, theirField: theirField.instanceId } };
 }
 
+/**
+ * The property names `body` sets, each directly before its colon, as `/([a-z-]+):/g` names them
+ * (#4009: the name before `:` scans super-linearly on long runs).
+ */
+function declaredNames(body: string): (string | undefined)[] {
+  const names: (string | undefined)[] = [];
+  let at = 0;
+  while (at < body.length) {
+    const colon = body.indexOf(":", at);
+    if (colon === -1) return names;
+    let name = colon;
+    while (name > 0 && /[a-z-]/.test(body.charAt(name - 1))) name--;
+    if (name < colon) names.push(body.slice(name, colon));
+    at = colon + 1;
+  }
+  return names;
+}
+
 function aura(root: ParentNode, instanceId: string): HTMLElement | null {
   return root.querySelector<HTMLElement>(`[data-testid="${marksTestid(instanceId)}"]`);
 }
@@ -379,7 +397,7 @@ describe("R437 reduced motion", () => {
     const bodies = [...css.matchAll(/@keyframes [\w-]+ \{([\s\S]*?)\n\}/g)].map((match) => match[1] ?? "");
     expect(bodies.length).toBeGreaterThanOrEqual(4);
     for (const body of bodies) {
-      for (const decl of body.matchAll(/([a-z-]+):/g)) expect(["transform", "opacity"]).toContain(decl[1]);
+      for (const decl of declaredNames(body)) expect(["transform", "opacity"]).toContain(decl);
     }
   });
 });

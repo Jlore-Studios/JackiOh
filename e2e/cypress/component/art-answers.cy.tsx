@@ -1,9 +1,8 @@
 // R3340000: a board card's art answers the player, in a real browser. apps/web's vitest suite proves which faces move and
-// in which slots, the marks a unit's view draws and the rules artLive.css declares (cards/artLive.test.tsx,
-// cards/art/wear.test.ts); what only a style engine can say is measured here, on a procedural card (Gary the Gambler), a
+// in which slots, the marks a unit's view draws and the rules artLive.css declares (cards/artLive.test.tsx); what only a style engine can say is measured here, on a procedural card (Gary the Gambler), a
 // Stinkyscape card (ZolarKeth) and a Training Grounds card (Celestial Caller): a pointer over it leans the subject toward it and
 // scatters the motes, a press flinches it and a lift springs it back, an attack swings it and fires the motes, and a
-// damaged, a buffed and a frozen unit's art wears its cracks, its glow and its frost. Each state is captured at a desktop
+// damaged unit's art wears no cracks, a buffed one's its glow and a frozen one's its frost. Each state is captured at a desktop
 // viewport and at 390x844.
 // R3350000: a Mythic whose normal picture has a diorama (Tylannt) draws its slices on the board in place of the live layers:
 // its window swells on a hover and presses in on a press, and on an attack its slices over the farthest swing toward the
@@ -199,18 +198,12 @@ for (const viewport of VIEWPORTS) {
         shot("attack");
       });
 
-      it(`R3340000 ${card.family}: a damaged unit's art shows cracks, a buffed one's a glow in its colours, a frozen one's frost`, () => {
+      it(`R3776000 ${card.family}: a damaged unit's art wears no cracks, a buffed one's a glow in its colours, a frozen one's frost`, () => {
         cy.mount(<Stage id={card.id} box={viewport.box} over={{ health: 1, maxHealth: 4 }} />);
-        cy.get(`${ART}[data-art-damage="3"]`).should("exist");
-        cy.get(`${ART} .cf-art-cracks path`).should("have.length", 3).and(($paths) => {
-          const style = computed($paths[0] as unknown as HTMLElement);
-          expect(style.stroke, "cracks are drawn").not.to.eq("none");
-          expect(Number.parseFloat(style.strokeWidth), "with a stroke").to.be.greaterThan(0);
-        });
-        cy.get(`${ART} .cf-art-cracks`).should(($cracks) => {
-          const box = $cracks[0]?.getBoundingClientRect();
-          expect(box?.width, "across the art").to.be.greaterThan(20);
-        });
+        cy.get(ART).should("exist");
+        cy.get(`${ART}[data-art-damage]`).should("not.exist");
+        cy.get(`${ART} .cf-art-cracks`).should("not.exist");
+        cy.get(`${ART} .cf-art-wear`).should("not.exist");
         shot("damage");
 
         cy.mount(<Stage id={card.id} box={viewport.box} buffed />);

@@ -3,6 +3,7 @@
 import type { ActionBody, CardView, GameEvent, PlayerView, UnitView } from "@jackioh/shared";
 
 import { sideView, type Side } from "../game/contract.ts";
+import type { Params } from "../i18n/i18n.ts";
 import type { CoachAnchor, CoachCtx, CoachStep, CoachTip } from "./coach.ts";
 
 export function isMyTurn(view: PlayerView): boolean {
@@ -83,6 +84,7 @@ type Common = {
   id: string;
   title: CoachStep["title"];
   text: StepText;
+  params?: Params;
   when?: (ctx: CoachCtx) => boolean;
   anchor?: CoachStep["anchor"];
   holdAi?: boolean;
@@ -190,29 +192,6 @@ export function keepHand(options: Common): CoachStep {
       const pending = ctx.view.pending;
       if (action.type !== "mulligan" || pending === null || !pending.forYou) return false;
       return action.keep.length === pending.options.length;
-    },
-  };
-}
-
-export function switchPosition(options: Common & { defId: string; to: "ATK" | "DEF" }): CoachStep {
-  const { defId, to, when, ...rest } = options;
-  const legalSwitch = (ctx: CoachCtx): boolean => {
-    const unit = unitOf(ctx.view, "you", defId);
-    return unit !== undefined && unit.position !== to && ctx.legal.some((action) => action.type === "switchPosition" && action.instanceId === unit.instanceId);
-  };
-  return {
-    kind: "act",
-    anchor: { kind: "unit", side: "you", defId },
-    ...rest,
-    when: (ctx) => myMain(ctx) && legalSwitch(ctx) && (when === undefined || when(ctx)),
-    done: (ctx) => {
-      const unit = unitOf(ctx.view, "you", defId);
-      return unit === undefined || unit.position === to;
-    },
-    moot: (ctx, since) => since !== null && ctx.view.turn !== since.turn,
-    expect: (action, ctx) => {
-      const unit = unitOf(ctx.view, "you", defId);
-      return unit !== undefined && action.type === "switchPosition" && action.instanceId === unit.instanceId;
     },
   };
 }

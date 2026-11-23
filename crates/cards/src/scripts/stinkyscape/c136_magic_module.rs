@@ -1,23 +1,24 @@
 //! S #136 Magic Module (SPEC §8.10 row 136; R380, R1086, R1748001, R1852000, R1852003, R1859001,
-//! R1859005): (2) Unit, Common, 4/3 → 8/6, Starship Piece, Equip, Spell Damage +2 (Radiant +4), a card
+//! R1859005, R4334000): (2) Unit, Common, 4/3 → 8/6, Starship Piece, Spell Damage +2 (Radiant +4), a card
 //! of the Stinkyscape set.
 //!
-//! Base and Radiant: "Starship Piece, Equip, Spell Damage +N\nWhen launched, add {spells|random Spell
+//! Base and Radiant: "Starship Piece, Spell Damage +N\nWhen launched, add {spells|random Spell
 //! that deals damage|random Spells that deal damage} to your hand." Spells 1, Radiant 2.
 //! Engine: its keywords are catalog data — Equip fuses it into a Unit of yours (R1086), its Spell
 //! Damage going with it into a host and into the Starship — and its death fuses a copy into its
-//! owner's Dormant Starship (R1852000).
+//! owner's Dormant Starship (R1852000). Its `spells` is read through `param` on the face the piece
+//! fused on (R4334000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-136";
 
-fn magic_module(radiant: bool) -> Script {
+fn magic_module() -> Script {
     Script {
-        triggers: vec![when_launched("magic-module", move |ctx, _event| {
+        triggers: vec![when_launched("magic-module", |ctx, _event| {
             vec![add_random_from_catalog(json_as(json!({
                 "query": { "type": "Spell", "dealsDamage": true },
-                "count": piece_number(ctx, ID, radiant, "spells"),
+                "count": param(ctx, "spells"),
             })))]
         })],
         ..Script::default()
@@ -25,9 +26,10 @@ fn magic_module(radiant: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
+    let base = magic_module();
     CardScripts {
-        base: magic_module(false),
-        radiant: magic_module(true),
+        base: base.clone(),
+        radiant: base,
     }
 }
 
@@ -39,7 +41,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const LUNAR: &str = "core-035"; // Lunar Eclipse: deal 3 damage
-    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Pierce: keywords only
 
     fn added_on_launch(seed: &str, radiant: bool) -> Vec<CardDef> {
         let (mut s, ship) = built_starship(

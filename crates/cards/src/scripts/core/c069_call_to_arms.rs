@@ -5,7 +5,7 @@
 //! A Spell's script hangs off `cry`, its on-resolve hook (§10.9).
 //!
 //! §6.3: the engine's `recruit` is one top-down scan, so "Recruit 3" is three in order; a card a scan
-//! cannot place stays in the library, so a full board stops the recruiting.
+//! cannot place is passed over and stays in the library (R4238000), so a full row stops the recruiting.
 //! R64: no named zone takes the leftmost empty, unlocked, unreserved zone of its row.
 //! R1: Recruit never fires a Cry, which is why #12 Duplicating Felinors cannot fill a board for 2 mana.
 //! R65: the filter reads each def's cost out of play; its `type: "Unit"` keeps out other permanents.
@@ -204,8 +204,8 @@ mod tests {
             }));
             s.play(CALL, json!({}));
 
-            // Two free zones, three scans: the third finds Timmy but no zone (`summon_existing` looks
-            // for the zone first), so he stays in the library.
+            // Two free zones, three scans: the third passes Timmy over, since no zone takes him, and
+            // finds no other Unit that can land (R4238000), so he stays in the library.
             assert_eq!(
                 unit_ids(&s),
                 row([Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(DEFENDER), Some(VANILLA)])

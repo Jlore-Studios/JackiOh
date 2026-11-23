@@ -9,9 +9,9 @@ import { describe, expect, it } from "vitest";
 import { ANIMATIONS, MIN_ENTRY_MS, planEntries, scaleForSpeed, setPieceEntries, setPieceHoldMs, type AnimationEntry } from "../game/animations.ts";
 import { testid } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
+import { envOf } from "../test/signatures.ts";
 import { must } from "../test/stubServer.ts";
 import {
-  FX_INTENSITY_SCALE,
   FX_JADE_SCALE_MAX,
   FX_JADE_SCALE_STEP,
   FX_MAX_TAIL_MS,
@@ -23,10 +23,9 @@ import {
 } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { FLAVOR_LOOKS } from "./flavors.ts";
-import { createFxMemory } from "./memory.ts";
 import { systemMomentFixture } from "./motifs/gallery.ts";
 import { SYSTEM_MOMENTS, questClaim, transmuteCues, planSystemMoment, QUEST_SET_PIECE } from "./systemMoments.ts";
-import type { FxCue, FxPlanEnv } from "./types.ts";
+import type { FxCue } from "./types.ts";
 
 const VIEW: PlayerView = fullBoardView();
 
@@ -37,10 +36,6 @@ function unitId(side: "you" | "opponent", index: number): string {
 const MINE = unitId("you", 0);
 const MINE_3 = unitId("you", 2);
 const ENEMY = unitId("opponent", 0);
-
-function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
-}
 
 function entryFor(events: readonly GameEvent[], view: PlayerView, D: number): AnimationEntry {
   const entries = planEntries(events, view, false);

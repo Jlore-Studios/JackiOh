@@ -162,6 +162,16 @@ describe("#128 the tab the player used last opens next", () => {
     expect(shown()).toEqual(["audio"]);
   });
 
+  it("is kept under jackioh.settings.tab, the key players' browsers already hold", async () => {
+    // The module as a page first loads it, so its key is the one a player's first visit evaluated.
+    vi.resetModules();
+    const fresh = await import("./tabs.ts");
+    localStorage.setItem("jackioh.settings.tab", "audio");
+    expect(fresh.readRememberedTab(["gameplay", "visuals", "audio"])).toBe("audio");
+    fresh.rememberTab("visuals");
+    expect(localStorage.getItem("jackioh.settings.tab")).toBe("visuals");
+  });
+
   it("readRememberedTab only returns a tab the dialog has", () => {
     rememberTab("audio");
     expect(readRememberedTab(["gameplay", "visuals", "audio"])).toBe("audio");

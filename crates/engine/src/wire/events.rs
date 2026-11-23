@@ -35,6 +35,14 @@ string_union! {
         Plague = "plague",
         Grade = "grade",
         Brittle = "brittle",
+        /// R3540000: a Unit's or a hero's Burn.
+        Burn = "burn",
+        /// R3540000: a Unit's or a hero's Toxic.
+        Toxic = "toxic",
+        /// R3548000: a player's Tipsy counter.
+        Tipsy = "tipsy",
+        /// R3548002: the game-wide worth of every Warhero Token.
+        Warhero = "warhero",
     }
 }
 
@@ -307,9 +315,9 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         exits_from: Option<u32>,
-        /// R2179002: the card was cast by the draw that drew it (Cast on draw), a cast that is no play:
-        /// nothing that counts plays counted it, and no trigger answers this event. Public, as the
-        /// cast is. Only ever `Some(true)`.
+        /// R2179002: the card was cast by the draw that drew it (Cast on draw), or from its deck
+        /// (R3920001), a cast that is no play: nothing that counts plays counted it, and no trigger
+        /// answers this event. Public, as the cast is. Only ever `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         on_draw: Option<bool>,
@@ -361,9 +369,9 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         answer: Option<SpellAnswer>,
-        /// R2179002: the card was cast by the draw that drew it, a cast that is no play: a card whose
-        /// text answers a play ("after you play", "when your opponent plays") passes this event by.
-        /// Public, as the cast is. Only ever `Some(true)`.
+        /// R2179002: the card was cast by the draw that drew it, or from its deck (R3920001), a cast
+        /// that is no play: a card whose text answers a play ("after you play", "when your opponent
+        /// plays") passes this event by. Public, as the cast is. Only ever `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         on_draw: Option<bool>,
@@ -455,6 +463,21 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         radiant: Option<bool>,
+        /// R4395001: set when a Field Spell, Trap or Field Trap died standing in a unit zone, as a Unit
+        /// (Animated, R383), which its definition alone does not tell. Only ever `Some(true)`; left out
+        /// of the events the trigger loop holds (`as_rules_read`), so a script reads it off the action's
+        /// own `events`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        animated: Option<bool>,
+        /// R4423000: what the card was on the field as it died (`faces::card_type_of`), only when that is
+        /// not its face's printed type: a card set by its Cloaked dies as a Field Trap or a Trap (R3777000,
+        /// R783008), an Animated one standing in a unit zone as a Unit (R383). Unlike `animated`, the rules
+        /// read it (`as_rules_read` keeps it, `query::is_unit_death`), and a view that hides the card hides
+        /// it too (R97).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        died_as: Option<CardType>,
         /// R2783001: the keyword behind this event — Poisonous when a Poisonous hit marked the unit, else
         /// First Strike when it fell to the strike §4.3 moved ahead and so struck nothing back — for the
         /// client's cue; the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5). No
@@ -523,6 +546,11 @@ pub enum GameEvent {
         instance_id: String,
         def_id: String,
         owner: PlayerId,
+        /// R3536001: Temporary discarded it (`temporary::discard_temporary_cards`). Only ever
+        /// `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        by_temporary: Option<bool>,
     },
     /// `turnDraw` (B5 E4, R457): this draw's number among `player`'s draws this turn, whoever's turn it
     /// is (1 for the first; a fatigue draw counts, a limited one does not). Public: the hand count and
@@ -581,7 +609,9 @@ pub enum GameEvent {
     },
     /// `brittle` is B3.3's count (R385). `placed` (B5 E19) is how many Plague Counters one placement put
     /// on the card — set on a placement only, so "whenever Plague Counters are placed on this" answers the
-    /// placement once however many tokens it placed, and never a removal.
+    /// placement once however many tokens it placed, and never a removal. R3540000: for `burn` and
+    /// `toxic`, `instance_id` may be `hero-<player>` (a hero holds them too), and `placed` is the amount a
+    /// gain added; a tick's drop and a Vanilla's clearing carry none.
     CounterChanged {
         instance_id: String,
         counter: CounterKind,
@@ -1015,6 +1045,20 @@ pub enum GameEvent {
         #[cfg_attr(feature = "ts", ts(optional))]
         via: Option<KeywordKind>,
     },
+    /// R3857000: `player`'s hero gained `amount` Armor it keeps (`effects::gain_hero_armor`); `armor` is
+    /// its Armor after, as the view's badge reads it (`damage::hero_armor_of`, §10.8). A report nothing
+    /// answers: it takes no number in R68's order. Public: a player and two numbers.
+    ArmorGained {
+        player: PlayerId,
+        amount: i32,
+        armor: i32,
+    },
+    /// R3925000, §10.3: the interaction `player` began reached `RESOLUTION_EVENT_CAP` events, so its
+    /// resolution loop stopped: the rest was dropped and card text is off until the next interaction
+    /// (`loop_cap.rs`). A report nothing answers. Public: a seat.
+    LoopCapped {
+        player: PlayerId,
+    },
     // -------------------------------------------------------------------------------------------
     // Patch v0.3.X (docs/meditative-set.md M5, MB10's ME-JADE). Its BUILD M5-T4 row, `ANIMATIONS`
     // and `SOUND_CUES` rows came with it, and `viewFor` sends it to both seats as it is.
@@ -1053,6 +1097,15 @@ pub enum GameEvent {
         player: PlayerId,
         cells: Vec<ZoneRef>,
     },
+    /// R3554005 (S+ #109 Lancer, #126 Vela, #127 Corvus): the line was drawn for `player`: the
+    /// source's zone first, then the lattice cells to the tile. Public: board positions only.
+    LineDrawn {
+        player: PlayerId,
+        cells: Vec<ZoneRef>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        laser: Option<bool>,
+    },
     /// R1183002 (Meditative+ #18 Cognitive Offloading): the engine plays the rest of `player`'s
     /// turn `turn` (the autopilot); the actions it takes follow as their own events. Public: a player
     /// and a number.
@@ -1064,6 +1117,14 @@ pub enum GameEvent {
     /// out at the start of their turn, or an effect awakened it — and is a Unit for every rule from now
     /// on; its own "When this awakens" answers this (§6.2). Public: the card was face-up on the field.
     Awakened {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+    },
+    /// R3536000, R3536005: `player`'s card evolved — its `evolved` mark landed — and its Evolve text
+    /// runs next (inline, or queued behind extra runs). Public: the card was acting on the field or
+    /// lying in a graveyard its viewer may read.
+    Evolved {
         player: PlayerId,
         instance_id: String,
         def_id: String,
@@ -1102,7 +1163,7 @@ pub enum GameEvent {
     },
     /// R1853003, R1861000: `player` sold a card that sells from the hand at the Marketplace for
     /// `credits` Credits, and it ceased to exist; the `marketCreditsChanged` after it says the new
-    /// count. Public, as a discarded card is.
+    /// count. Public, as a discarded card is. Nothing emits it since issue #4410 (R4410000).
     MarketSold {
         player: PlayerId,
         instance_id: String,
@@ -1364,13 +1425,17 @@ string_union! {
         Deradianted = "deradianted",
         ManaSpent = "manaSpent",
         DamageAbsorbed = "damageAbsorbed",
+        ArmorGained = "armorGained",
+        LoopCapped = "loopCapped",
         JadeChanged = "jadeChanged",
         SecretChosen = "secretChosen",
         SecretRevealed = "secretRevealed",
         Predicted = "predicted",
         CurveDrawn = "curveDrawn",
+        LineDrawn = "lineDrawn",
         AutopilotEngaged = "autopilotEngaged",
         Awakened = "awakened",
+        Evolved = "evolved",
         Traded = "traded",
         MarketCreditsChanged = "marketCreditsChanged",
         MarketBought = "marketBought",
@@ -1405,6 +1470,9 @@ impl GameEvent {
     /// did before any of them existed (D14), and a recorded game's replay keeps its final hash (R768).
     /// R2783001: a `damage`, a `damageAbsorbed`, a `healed`, a `destroyed` and a `summoned` without their
     /// `via`, the client's cue (the `hookResolving` marker never reaches the loop at all, R2783000).
+    /// R4395001: a `destroyed` without its `animated`, which only a script reading the action's own
+    /// `events` consults, so no state hash moves for it either. R4423000: a `destroyed` keeps its
+    /// `diedAs`, which the rules read.
     /// Every other event is itself.
     pub fn as_rules_read(&self) -> GameEvent {
         match self {
@@ -1456,6 +1524,8 @@ impl GameEvent {
                 max_health,
                 killer_id,
                 radiant,
+                animated: _,
+                died_as,
                 via: _,
             } => GameEvent::Destroyed {
                 instance_id: instance_id.clone(),
@@ -1466,6 +1536,8 @@ impl GameEvent {
                 max_health: *max_health,
                 killer_id: killer_id.clone(),
                 radiant: *radiant,
+                animated: None,
+                died_as: *died_as,
                 via: None,
             },
             GameEvent::ControlChanged {
@@ -1629,13 +1701,17 @@ impl GameEvent {
             GameEvent::Deradianted { .. } => GameEventType::Deradianted,
             GameEvent::ManaSpent { .. } => GameEventType::ManaSpent,
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
+            GameEvent::ArmorGained { .. } => GameEventType::ArmorGained,
+            GameEvent::LoopCapped { .. } => GameEventType::LoopCapped,
             GameEvent::JadeChanged { .. } => GameEventType::JadeChanged,
             GameEvent::SecretChosen { .. } => GameEventType::SecretChosen,
             GameEvent::SecretRevealed { .. } => GameEventType::SecretRevealed,
             GameEvent::Predicted { .. } => GameEventType::Predicted,
             GameEvent::CurveDrawn { .. } => GameEventType::CurveDrawn,
+            GameEvent::LineDrawn { .. } => GameEventType::LineDrawn,
             GameEvent::AutopilotEngaged { .. } => GameEventType::AutopilotEngaged,
             GameEvent::Awakened { .. } => GameEventType::Awakened,
+            GameEvent::Evolved { .. } => GameEventType::Evolved,
             GameEvent::Traded { .. } => GameEventType::Traded,
             GameEvent::MarketCreditsChanged { .. } => GameEventType::MarketCreditsChanged,
             GameEvent::MarketBought { .. } => GameEventType::MarketBought,
@@ -1740,8 +1816,10 @@ mod tests {
         // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002); the starscape map one,
         // `starscapeTravelled` (R1847001); #1850's one, `held` (R1850003); the Marketplace's two,
         // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000); and
-        // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000).
-        assert_eq!(GAME_EVENT_TYPES.len(), 93);
+        // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000); and Stinkyscape+'s
+        // `evolved` (R3536005); and E7's `lineDrawn` (R3554005); and #3857's `armorGained` (R3857000);
+        // and #3925's `loopCapped` (R3925000).
+        assert_eq!(GAME_EVENT_TYPES.len(), 97);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
@@ -1789,6 +1867,39 @@ mod tests {
         // Appended to the list (later sets append after it: M #39's `jadeChanged`, R961, and MB05's
         // secret events, R860–R865).
         assert!(GAME_EVENT_TYPES.contains(&GameEventType::DamageAbsorbed));
+    }
+
+    /// R3857000: a kept Armor gain names its player, the amount and the hero's Armor after, and the
+    /// rules read it as it is.
+    #[test]
+    fn r3857000_armor_gained_serializes_as_a_player_and_two_numbers() {
+        let event = GameEvent::ArmorGained {
+            player: PlayerId::P2,
+            amount: 2,
+            armor: 5,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(
+            json,
+            r#"{"type":"armorGained","player":"p2","amount":2,"armor":5}"#
+        );
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
+        assert_eq!(event.event_type().as_str(), "armorGained");
+        assert_eq!(event.as_rules_read(), event);
+        assert!(GAME_EVENT_TYPES.contains(&GameEventType::ArmorGained));
+    }
+
+    /// R3925000: the loop cap's report names the seat whose interaction it stopped, and the rules read
+    /// it as it is.
+    #[test]
+    fn r3925000_loop_capped_serializes_as_its_player() {
+        let event = GameEvent::LoopCapped { player: PlayerId::P1 };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(json, r#"{"type":"loopCapped","player":"p1"}"#);
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
+        assert_eq!(event.event_type().as_str(), "loopCapped");
+        assert_eq!(event.as_rules_read(), event);
+        assert!(GAME_EVENT_TYPES.contains(&GameEventType::LoopCapped));
     }
 
     /// R2783000: the marker names its card, its definition, who runs the hook and which hook; the seats
@@ -1870,6 +1981,8 @@ mod tests {
                 max_health: 1,
                 killer_id: Some("c4".into()),
                 radiant: None,
+                animated: None,
+                died_as: None,
                 via: Some(KeywordKind::Poisonous),
             },
             GameEvent::Summoned {
@@ -1891,5 +2004,32 @@ mod tests {
             assert!(read.get("via").is_none(), "{read}");
             assert!(serde_json::to_value(&event).unwrap().get("via").is_some());
         }
+    }
+
+    /// R4423000: a `destroyed` names what its card died as only when it is not the printed type, so an
+    /// ordinary death's JSON is what it was; the rules keep it.
+    #[test]
+    fn r4423000_died_as_rides_the_wire_only_when_set_and_the_rules_read_it() {
+        let died = |died_as: Option<CardType>| GameEvent::Destroyed {
+            instance_id: "c9".into(),
+            def_id: "core-001".into(),
+            owner: PlayerId::P2,
+            controller: PlayerId::P2,
+            attack: 1,
+            max_health: 1,
+            killer_id: None,
+            radiant: None,
+            animated: None,
+            died_as,
+            via: None,
+        };
+        let plain = serde_json::to_value(died(None)).unwrap();
+        assert!(plain.get("diedAs").is_none(), "{plain}");
+
+        let set = died(Some(CardType::FieldTrap));
+        let json = serde_json::to_string(&set).unwrap();
+        assert!(json.contains(r#""diedAs":"Field Trap""#), "{json}");
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), set);
+        assert_eq!(set.as_rules_read(), set);
     }
 }

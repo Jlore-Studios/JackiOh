@@ -9,7 +9,7 @@ import type { ReactElement } from "react";
 import { registeredCatalog } from "@jackioh/engine";
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 
-import { DISCONNECT_GRACE_SECONDS, MULLIGAN_CLOCK_MS, POST_GAME_FRAME_VERSION, RANK_STREAK_FLAME_LENGTH as N, SERIES_MAX_GAMES, SERIES_POLL_SECONDS, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
+import { DISCONNECT_GRACE_SECONDS, MATCH_OVER_CLOSE_CODE, MULLIGAN_CLOCK_MS, POST_GAME_FRAME_VERSION, RANK_STREAK_FLAME_LENGTH as N, SEAT_TAKEN_CLOSE_CODE, SERIES_MAX_GAMES, SERIES_POLL_SECONDS, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
 import { MATCH_RANKS_READ_ATTEMPTS, MATCH_RANKS_RETRY_MS } from "../game/config.ts";
 
@@ -1010,6 +1010,66 @@ describe("R169 the modifier list at the online table", () => {
   });
 });
 
+describe("R3933000 the online board's opponent hero", () => {
+  const RANK = { tier: "raisin", placementsPlayed: 2, placementGames: 5 };
+
+  /** A fetch that answers `/ranks` with the body and the catalog with an empty one. */
+  function stubFetch(ranks: unknown): ReturnType<typeof vi.fn> {
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () =>
+          Promise.resolve(
+            JSON.stringify(String(url).includes("/ranks") ? ranks : { version: "v1", defs: {} }),
+          ),
+      } as unknown as Response),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  const ranksNaming = (opponent: string): unknown => ({
+    ranked: false,
+    seats: {
+      p1: { profileId: "id-1", username: "Max#3", rank: RANK, you: true },
+      p2: { profileId: "id-2", username: opponent, rank: RANK, you: false },
+    },
+  });
+
+  const seatLabel = (testId: string): HTMLElement | null =>
+    screen.getByTestId(testId).querySelector<HTMLElement>(".hero-seat");
+
+  it("R3933000 the opponent hero reads the opponent's username and your own still reads You", async () => {
+    stubFetch(ranksNaming("Bob#12"));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    await screen.findByTestId(matchTestid.ranks);
+
+    await waitFor(() => expect(seatLabel("hero-opponent")).toHaveTextContent("Bob#12"));
+    expect(seatLabel("hero-you")).toHaveTextContent("You");
+  });
+
+  it("R3933000 with no ranks read yet the opponent hero reads Opponent", () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("offline"))));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+
+    expect(seatLabel("hero-opponent")).toHaveTextContent("Opponent");
+    expect(seatLabel("hero-you")).toHaveTextContent("You");
+  });
+
+  it("R3933000 an empty username reads Opponent", async () => {
+    const fetchMock = stubFetch(ranksNaming(""));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    await screen.findByTestId(matchTestid.ranks);
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/ranks"), expect.anything());
+    expect(seatLabel("hero-opponent")).toHaveTextContent("Opponent");
+  });
+});
+
 describe("R2990004 the watchers' emotes at the online table", () => {
   function deliver(frame: Record<string, unknown>): void {
     act(() => {
@@ -1465,6 +1525,67 @@ describe("R3213000 the post-game frames on the board", () => {
     await settle({ advance: PERIOD });
     expect(reads.series()).toBe(mounted + 2);
   });
+
+  it("R3694000 a finished match's socket closed with MATCH_OVER_CLOSE_CODE keeps the result panel, shows no error line, offers no rematch and reads its status once", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const reads = stubPostGameFetch(null);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    deliver({ type: "rematch", v: POST_GAME_FRAME_VERSION, youOffered: null, opponentOffer: null, opponentHere: true, matchId: null, mode: "bo1" });
+    pushView(FINISHED);
+    await settle({ advance: 0 });
+    expect(screen.getByTestId("rematch-offer")).toBeInTheDocument();
+
+    // The rematch window is over: the server closes the socket for good.
+    act(() => {
+      live().onclose?.({ code: MATCH_OVER_CLOSE_CODE, reason: "the match is over", wasClean: true });
+    });
+    await settle({ advance: 0 });
+
+    expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "closed");
+    expect(screen.getByTestId("result-overlay")).toBeInTheDocument();
+    expect(screen.getByTestId("result-back")).toBeInTheDocument();
+    for (const absent of ["action-error", "match-gone", "rematch-offer", "rematch-double", "rematch-incoming"]) {
+      expect(screen.queryByTestId(absent), absent).toBeNull();
+    }
+    // Nothing reconnects, and the status is read once (a rematch made in the window's last moment).
+    expect(sockets).toHaveLength(1);
+    expect(reads.rematch()).toBe(1);
+    await settle({ advance: 3 * PERIOD });
+    expect(reads.rematch()).toBe(1);
+  });
+
+  it("R3791000 the board's result panel says the opponent has left once the socket's rematch frame says so, and the waiting line gives way", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    stubPostGameFetch(null);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    deliver({ type: "rematch", v: POST_GAME_FRAME_VERSION, youOffered: 1, opponentOffer: null, opponentHere: true, matchId: null, mode: "bo1" });
+    pushView(FINISHED);
+    await settle({ advance: 0 });
+    expect(screen.getByTestId("rematch-status")).toHaveTextContent(/waiting for your opponent/i);
+    expect(screen.queryByTestId("rematch-left")).toBeNull();
+
+    deliver({ type: "rematch", v: POST_GAME_FRAME_VERSION, youOffered: 1, opponentOffer: null, opponentHere: false, matchId: null, mode: "bo1" });
+    await settle({ advance: 0 });
+    expect(screen.getByTestId("rematch-left")).toHaveTextContent("Your opponent has left.");
+    for (const absent of ["rematch-status", "rematch-offer", "rematch-double"]) {
+      expect(screen.queryByTestId(absent), absent).toBeNull();
+    }
+  });
+
+  it("R3791000 a game that ended by the opponent's disconnect leaves the saying to the result", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    stubPostGameFetch(null);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    deliver({ type: "rematch", v: POST_GAME_FRAME_VERSION, youOffered: null, opponentOffer: null, opponentHere: false, matchId: null, mode: "bo1" });
+    pushView(baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "disconnect" } }));
+    await settle({ advance: 0 });
+
+    expect(screen.getByTestId("result-overlay")).toHaveTextContent("Your opponent left the match.");
+    expect(screen.queryByTestId("rematch-left")).toBeNull();
+  });
 });
 
 describe("a socket refused mid-game", () => {
@@ -1532,6 +1653,53 @@ describe("a match voided mid-game (#1899)", () => {
     expect(status).toHaveTextContent("Reconnecting…");
     expect(screen.getByTestId("match-reconnect")).toHaveTextContent("Reconnect now");
     expect(screen.queryByTestId("match-gone")).toBeNull();
+  });
+});
+
+describe("R3767000 a game another tab or device took the seat of", () => {
+  function seatTaken(): void {
+    act(() => {
+      live().onclose?.({ code: SEAT_TAKEN_CLOSE_CODE, reason: "", wasClean: true });
+    });
+  }
+
+  it("R3767000 before the first view the replaced tab says the game is open elsewhere with Play here, not Joining; a press opens one socket", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    seatTaken();
+    expect(screen.getByTestId("match-elsewhere")).toHaveTextContent(
+      "This game is open in another tab or on another device.",
+    );
+    expect(screen.queryByTestId("gate-loading")).toBeNull();
+    expect(screen.queryByTestId("match-reconnect")).toBeNull();
+    expect(sockets).toHaveLength(1);
+
+    fireEvent.click(screen.getByTestId("match-play-here"));
+    expect(sockets).toHaveLength(2);
+
+    attach({ legal: [{ type: "endTurn" }] });
+    expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "open");
+    expect(screen.queryByTestId("match-elsewhere")).toBeNull();
+    expect(screen.queryByTestId("match-play-here")).toBeNull();
+  });
+
+  it("R3767000 on a live board the status line says so and offers Play here, never Reconnect now or the gone notice", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+    seatTaken();
+
+    const status = screen.getByTestId("match-status");
+    expect(status).toHaveAttribute("data-connection", "elsewhere");
+    expect(status).toHaveTextContent("This game is open in another tab or on another device");
+    expect(status).toHaveTextContent(connectionWords("elsewhere"));
+    expect(screen.getByTestId("match-play-here")).toHaveTextContent("Play here");
+    expect(screen.queryByTestId("match-reconnect")).toBeNull();
+    expect(screen.queryByTestId("match-gone")).toBeNull();
+    expect(screen.getByTestId("hero-you")).toBeInTheDocument();
+    expect(sockets).toHaveLength(1);
+
+    fireEvent.click(screen.getByTestId("match-play-here"));
+    expect(sockets).toHaveLength(2);
+    expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "connecting");
   });
 });
 
@@ -1604,7 +1772,7 @@ describe("R768000 a finished match's replay from its result panel", () => {
   const steps = foldedReplaySteps();
 
   /** `GET /api/replays/m-1?from=&count=` answers the folded game's steps; anything else the catalog. */
-  function stubReplayFetch(): string[] {
+  function stubReplayFetch(ranks?: unknown): string[] {
     const asked: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -1617,11 +1785,13 @@ describe("R768000 a finished match's replay from its result panel", () => {
               const count = Number(address.searchParams.get("count") ?? "1");
               return { matchId: "m-1", from, steps: steps.slice(from, from + count), total: steps.length };
             })()
-          : address.pathname.endsWith("/series")
-            ? { series: null }
-            : address.pathname.endsWith("/rematch")
-              ? { youOffered: null, opponentOffer: null, opponentHere: false, matchId: null }
-              : { version: "v1", defs: {} };
+          : address.pathname.endsWith("/ranks") && ranks !== undefined
+            ? ranks
+            : address.pathname.endsWith("/series")
+              ? { series: null }
+              : address.pathname.endsWith("/rematch")
+                ? { youOffered: null, opponentOffer: null, opponentHere: false, matchId: null }
+                : { version: "v1", defs: {} };
         return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify(body)) } as unknown as Response);
       }),
     );
@@ -1644,6 +1814,23 @@ describe("R768000 a finished match's replay from its result panel", () => {
     fireEvent.click(screen.getByTestId(replayTestid.back));
     expect(await screen.findByTestId(matchTestid.watchReplay)).toBeInTheDocument();
     expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+  });
+
+  it("#3698 the match's replay names the opponent as the ranks read does", async () => {
+    stubReplayFetch({
+      ranked: false,
+      seats: {
+        p1: { profileId: "id-1", username: "Max#3", rank: { tier: "raisin", placementsPlayed: 2, placementGames: 5 }, you: true },
+        p2: { profileId: "id-2", username: "Bob#12", rank: { tier: "raisin", placementsPlayed: 2, placementGames: 5 }, you: false },
+      },
+    });
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+    await screen.findByTestId(matchTestid.ranks);
+
+    fireEvent.click(await screen.findByTestId(matchTestid.watchReplay));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(screen.getByTestId("hero-opponent").querySelector(".hero-seat")).toHaveTextContent("Bob#12");
   });
 
   it("R768000 Share the last turn opens it at its last step with Share as GIF open", async () => {

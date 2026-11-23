@@ -112,11 +112,11 @@ type Identity struct {
 	Command       string // default: "harness"
 	LabelPrefix   string // default: "bot:"
 	BranchPrefix  string // default: "bot/"
-	StateBranch   string // default: "bot-state"
-	JournalBranch string // default: "bot-journal"
+	StateBranch   string // default: "_bot-state"
+	JournalBranch string // default: "_bot-journal"
 	// UsageBranch is where the status loop keeps every subscription's usage history (#2749,
-	// `internal/usage`): the night bot's `bot-usage`. "" keeps none, as Squishy's identity says.
-	UsageBranch string // default: "bot-usage"
+	// `internal/usage`): the night bot's `_bot-usage`. "" keeps none, as Squishy's identity says.
+	UsageBranch string // default: "_bot-usage"
 	// Workflow is the workflow a run is (`bot-night.yml`): dispatched to start one, read to list
 	// the runs.
 	Workflow string // default: "bot-night.yml"
@@ -138,9 +138,9 @@ func NewIdentity() *Identity {
 		Command:       "harness",
 		LabelPrefix:   "bot:",
 		BranchPrefix:  "bot/",
-		StateBranch:   "bot-state",
-		JournalBranch: "bot-journal",
-		UsageBranch:   "bot-usage",
+		StateBranch:   "_bot-state",
+		JournalBranch: "_bot-journal",
+		UsageBranch:   "_bot-usage",
 		Workflow:      "bot-night.yml",
 		Marker:        "<!-- jackioh-bot -->",
 		Trust:         ".harness/trust.txt",

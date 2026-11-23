@@ -18,8 +18,12 @@ import type { Tuning } from "./Tuning";
  * A card the view lists as far as a face reads it: a `CardView`, a `UnitView` or a face-up backrow card,
  * whichever the view gave. A field the view does not carry is absent.
  */
-export type LiveCard = { instanceId: string, defId: string, radiant: boolean, chinese?: boolean, created?: boolean, createdBy?: string, cost?: number, embiggenCost?: number, fixedX?: number, attack?: number, health?: number, 
+export type LiveCard = { instanceId: string, defId: string, radiant: boolean, chinese?: boolean, created?: boolean, 
+/**
+ * R3536005: the card has evolved, or is marked to enter the field evolved.
+ */
+evolved?: boolean, createdBy?: string, cost?: number, embiggenCost?: number, fixedX?: number, attack?: number, health?: number, 
 /**
  * A unit's, and what makes the card one (with `keywords`).
  */
-maxHealth?: number, keywords?: Array<Keyword>, power?: string, label?: string, vanilla?: boolean, preview?: Array<PreviewValue>, type?: CardType, tags?: Array<Tag>, brittle?: number, element?: CardElement, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, marks?: Array<CardMark>, quest?: QuestView, copies?: CopiedTextView, animated?: AnimatedView, berserk?: boolean, frozen?: boolean, slumber?: Slumber, frozenForever?: boolean, starship?: StarshipMemory, grants?: Array<string>, attackReason?: string, tallies?: Array<TallyView>, playReason?: string, };
+maxHealth?: number, keywords?: Array<Keyword>, power?: string, label?: string, vanilla?: boolean, preview?: Array<PreviewValue>, type?: CardType, tags?: Array<Tag>, brittle?: number, element?: CardElement, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, marks?: Array<CardMark>, quest?: QuestView, copies?: CopiedTextView, animated?: AnimatedView, berserk?: boolean, frozen?: boolean, slumber?: Slumber, frozenForever?: boolean, starship?: StarshipMemory, grants?: Array<string>, attackReason?: string, switchReason?: string, tallies?: Array<TallyView>, playReason?: string, };

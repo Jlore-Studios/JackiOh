@@ -1,8 +1,8 @@
-// Tests for a card's tier fit on /stats (SPEC §9.11, R3184001).
+// Tests for a card's tier fit on /stats (SPEC §9.11, R3184001), a deck card's or a Created card's (R4083000).
 
 import { describe, expect, it } from "vitest";
 
-import type { PublicCardStat, PublicStatsTiers } from "../net/api.ts";
+import type { PublicCardStat, PublicCreatedStat, PublicStatsTiers } from "../net/api.ts";
 import { cardTierFit, tierBand, tierFit } from "./tierFit.ts";
 
 /** R3022000's band, 45% to 55%: A to D are 2.5 points each. */
@@ -77,5 +77,24 @@ describe("R3184001 tier fit", () => {
     expect(cardTierFit({ ...CARD, adjustedLow: null }, TIERS)).toBeNull();
     expect(cardTierFit({ ...CARD, adjustedHigh: undefined }, TIERS)).toBeNull();
     expect(cardTierFit(CARD, undefined)).toBeNull();
+  });
+
+  it("R4083000 a Created card's row fits its tier as a deck card's does", () => {
+    const made: PublicCreatedStat = {
+      id: "core-t-rush",
+      name: "Rush Token",
+      cost: 1,
+      rarity: "token",
+      set: "core",
+      games: 50,
+      adjustedWinRate: 0.51,
+      adjustedLow: 0.49,
+      adjustedHigh: 0.53,
+      tier: "B",
+      hasEnoughGames: true,
+      window: { from: "v0.5.0b", liveGames: 50, source: "live", counted: ["v0.5.0b"] },
+    };
+    expect(cardTierFit(made, TIERS)).toBeCloseTo(0.625, 12);
+    expect(cardTierFit({ ...made, hasEnoughGames: false }, TIERS)).toBeNull();
   });
 });

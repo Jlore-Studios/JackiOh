@@ -142,20 +142,10 @@ mod tests {
         s.hand(player).iter().filter(|card| card.def_id == COIN).count()
     }
 
-    fn options(s: &Scenario) -> Vec<String> {
-        let pending = s.state().pending.clone().expect("the Discover is open");
-        pending
-            .options
-            .iter()
-            .map(|option| match &option.selection {
-                Selection::Mode { option } => option.clone(),
-                other => panic!("not a Discover option: {other:?}"),
-            })
-            .collect()
-    }
-
     fn first_option(s: &Scenario) -> String {
-        options(s)[0].clone()
+        let modes = s.prompt_modes();
+        assert_eq!(s.state().pending.as_ref().map(|p| p.options.len()), Some(modes.len()), "every option is a Mode");
+        modes[0].clone()
     }
 
     mod base {
@@ -209,10 +199,11 @@ mod tests {
         fn r703_with_no_enemy_unit_the_take_is_not_offered_and_the_rest_are() {
             let s = bob("bob-no-target", false, json!([FILLER, FILLER]), json!([]));
             let me = s.hand(P1).into_iter().find(|card| card.def_id == ID).expect("Bob");
-            let offered: Vec<Vec<String>> = legal_actions(s.state(), P1)
+            let offered: Vec<Vec<String>> = s
+                .plays_of(&me)
                 .into_iter()
                 .filter_map(|action| match action {
-                    ActionBody::Play { instance_id, modes, .. } if instance_id == me.id => modes,
+                    ActionBody::Play { modes, .. } => modes,
                     _ => None,
                 })
                 .collect();
@@ -235,8 +226,9 @@ mod tests {
         fn mode_3_discovers_among_3_different_units_and_the_pick_is_radiant() {
             let mut s = bob("bob-discover", false, json!([FILLER, FILLER]), json!([]));
             s.play(ID, json!({ "zone": 1, "modes": [DISCOVER] }));
-            let ids = options(&s);
+            let ids = s.prompt_modes();
             assert_eq!(ids.len(), 3);
+            assert_eq!(s.state().pending.as_ref().map(|p| p.options.len()), Some(3), "every option is a Mode");
             for id in &ids {
                 let def = def_of(Some(s.state()), id);
                 assert_eq!(def.type_, CardType::Unit, "{id}");

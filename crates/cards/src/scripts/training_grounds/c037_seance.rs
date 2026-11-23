@@ -62,10 +62,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": card.id }] })
-    }
-
     /// The copies of `def_id` in p1's hand.
     fn copies(s: &Scenario, def_id: &str) -> Vec<CardInstance> {
         s.hand(P1).into_iter().filter(|card| card.def_id == def_id).collect()
@@ -83,7 +79,7 @@ mod tests {
                 card.buffs = AttackHealth { attack: 2, health: 1 };
                 card.granted_keywords.push(Keyword::Taunt);
             }
-            s.play(SEANCE, on(&theirs));
+            s.play(SEANCE, pick::targets(pick::instance(&theirs)));
             let made = copies(&s, VANILLA);
             assert_eq!(made.len(), 1);
             let copy = &made[0];
@@ -100,7 +96,7 @@ mod tests {
             let mut s = board(false, json!([]), json!([VANILLA]), json!([]));
             let theirs = s.unit_at(P2, 1);
             s.card_mut(&theirs).cost_mod = -1;
-            s.play(SEANCE, on(&theirs));
+            s.play(SEANCE, pick::targets(pick::instance(&theirs)));
             let copy = &copies(&s, VANILLA)[0];
             assert_eq!(cost_now(s.state(), copy), 0, "printed (1), one less");
         }
@@ -109,7 +105,7 @@ mod tests {
         fn the_source_stays() {
             let mut s = board(false, json!([]), json!([VANILLA]), json!([]));
             let theirs = s.unit_at(P2, 1);
-            s.play(SEANCE, on(&theirs));
+            s.play(SEANCE, pick::targets(pick::instance(&theirs)));
             s.expect_in_zone(&theirs, "field");
             assert_eq!(s.card(&theirs).controller, P2);
         }
@@ -118,12 +114,12 @@ mod tests {
         fn a_field_spell_or_a_trap_can_be_copied() {
             let mut s = board(false, json!([]), json!([]), json!([{ "def": WEAPONS, "lane": 1 }, { "def": TRAP, "lane": 2 }]));
             let weapons = s.backrow(P2, 1).unwrap();
-            s.play(SEANCE, on(&weapons));
+            s.play(SEANCE, pick::targets(pick::instance(&weapons)));
             assert_eq!(copies(&s, WEAPONS).len(), 1);
 
             let mut s = board(false, json!([]), json!([]), json!([{ "def": TRAP, "lane": 2 }]));
             let trap = s.backrow(P2, 2).unwrap();
-            s.play(SEANCE, on(&trap));
+            s.play(SEANCE, pick::targets(pick::instance(&trap)));
             assert_eq!(copies(&s, TRAP).len(), 1);
         }
 
@@ -136,7 +132,7 @@ mod tests {
                 card.brittle = Some(BrittleCounter { count: 2, since: 1, printed: None });
                 card.times_played = Some(3);
             }
-            s.play(SEANCE, on(&theirs));
+            s.play(SEANCE, pick::targets(pick::instance(&theirs)));
             let copy = &copies(&s, VANILLA)[0];
             assert!(copy.brittle.is_none());
             assert!(copy.times_played.is_none());
@@ -147,7 +143,7 @@ mod tests {
             // With the Seance gone, a hand of HAND_CAP fillers is full as the copy arrives.
             let mut s = board(false, json!(vec![FILLER; HAND_CAP as usize]), json!([VANILLA]), json!([]));
             let theirs = s.unit_at(P2, 1);
-            s.play(SEANCE, on(&theirs));
+            s.play(SEANCE, pick::targets(pick::instance(&theirs)));
             assert!(copies(&s, VANILLA).is_empty(), "burned (§2.4)");
             assert!(s.state().players[P1].graveyard.iter().any(|card| card.def_id == VANILLA));
         }
@@ -161,7 +157,7 @@ mod tests {
             let mut s = board(true, json!([]), json!([VANILLA]), json!([]));
             let theirs = s.unit_at(P2, 1);
             s.card_mut(&theirs).cost_mod = 2;
-            s.play(SEANCE, on(&theirs));
+            s.play(SEANCE, pick::targets(pick::instance(&theirs)));
             let copy = &copies(&s, VANILLA)[0];
             assert_eq!(cost_now(s.state(), copy), 0);
         }
@@ -171,7 +167,7 @@ mod tests {
             let mut s = board(true, json!([]), json!([VANILLA]), json!([]));
             let theirs = s.unit_at(P2, 1);
             s.card_mut(&theirs).buffs = AttackHealth { attack: 1, health: 1 };
-            s.play(SEANCE, on(&theirs));
+            s.play(SEANCE, pick::targets(pick::instance(&theirs)));
             assert_eq!(copies(&s, VANILLA)[0].buffs, AttackHealth { attack: 1, health: 1 });
         }
 
@@ -181,7 +177,7 @@ mod tests {
             assert_eq!(degrade_number(&mut s, SEANCE, "setCost"), 1);
             let theirs = s.unit_at(P2, 1);
             s.card_mut(&theirs).cost_mod = 3;
-            s.play(SEANCE, on(&theirs));
+            s.play(SEANCE, pick::targets(pick::instance(&theirs)));
             assert_eq!(cost_now(s.state(), &copies(&s, VANILLA)[0]), 1);
         }
     }

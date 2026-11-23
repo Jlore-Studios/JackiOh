@@ -63,10 +63,14 @@ async function advance(ms: number): Promise<void> {
   });
 }
 
-async function open(source: FakeReplaySource = fakeReplaySource(steps), onLeave: () => void = vi.fn()): Promise<FakeReplaySource> {
+async function open(
+  source: FakeReplaySource = fakeReplaySource(steps),
+  onLeave: () => void = vi.fn(),
+  opponentLabel?: string,
+): Promise<FakeReplaySource> {
   render(
     <CatalogContext.Provider value={lookup}>
-      <ReplayPlayer source={source} onLeave={onLeave} />
+      <ReplayPlayer source={source} onLeave={onLeave} {...(opponentLabel === undefined ? {} : { opponentLabel })} />
     </CatalogContext.Provider>,
   );
   await flush();
@@ -382,6 +386,31 @@ describe("the board a replay draws", () => {
     expect(screen.getByTestId(INSPECT_HOVER)).toBeInTheDocument();
   });
 
+  it("R3976000 each hero wears its seat's portrait from the source and opens no emote menu; a source with none draws vanilla", async () => {
+    const viewer = steps[0]?.view.viewer ?? "p1";
+    const portraits = viewer === "p1" ? { p1: "gary", p2: "shredder" } as const : { p1: "shredder", p2: "gary" } as const;
+    await open({ ...fakeReplaySource(steps), portraits: () => portraits });
+    const portraitOf = (side: "you" | "opponent"): string | null =>
+      screen.getByTestId(testid.hero(side)).querySelector(".hero-portrait")?.getAttribute("data-portrait") ?? null;
+    expect([portraitOf("you"), portraitOf("opponent")]).toEqual(["gary", "shredder"]);
+
+    // Drawn and nothing more: no menu opens, by a click or by the portrait's own button, which is not there.
+    for (const side of ["you", "opponent"] as const) {
+      fireEvent.click(screen.getByTestId(testid.hero(side)));
+      await flush();
+    }
+    expect(screen.queryByTestId("emote-menu")).toBeNull();
+    expect(screen.queryByTestId("emote-mute-menu")).toBeNull();
+    expect(document.querySelector(".hero-portrait-open")).toBeNull();
+    // A step on keeps them.
+    await press(replayTestid.forwardStep);
+    expect([portraitOf("you"), portraitOf("opponent")]).toEqual(["gary", "shredder"]);
+
+    cleanup();
+    await open();
+    expect([portraitOf("you"), portraitOf("opponent")]).toEqual(["vanilla", "vanilla"]);
+  });
+
   it("a step forward runs the animation queue; back and a jump remount without animating and the log reports no gap", async () => {
     const animated = firstAnimatedStep();
     await open();
@@ -589,6 +618,29 @@ describe("R169 the modifier list in the replay", () => {
     expect(shownStep()).toBe(0);
     expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
     expect(screen.queryByTestId(modifierListTestid.panel)).toBeNull();
+  });
+});
+
+describe("#3698 the replay names the opponent it is given", () => {
+  const seat = (side: "you" | "opponent"): string | null => screen.getByTestId(testid.hero(side)).querySelector(".hero-seat")?.textContent ?? null;
+
+  async function openModifiers(opponentLabel?: string): Promise<string | null> {
+    await open(fakeReplaySource(withModifiersAt(1)), vi.fn(), opponentLabel);
+    await press(replayTestid.forwardStep);
+    fireEvent.click(screen.getByTestId(modifierListTestid.chip));
+    return Array.from(screen.getByTestId(modifierListTestid.panel).querySelectorAll(".modifier-list__who"), (who) => who.textContent).join("|");
+  }
+
+  it("#3698 opponentLabel names the opponent hero's seat and the modifier list", async () => {
+    expect(await openModifiers("Bob#12")).toBe("You|Bob#12");
+    expect(seat("opponent")).toBe("Bob#12");
+    expect(seat("you")).toBe("You");
+  });
+
+  it("#3698 without opponentLabel the seat and the modifier list say Opponent", async () => {
+    expect(await openModifiers()).toBe("You|Opponent");
+    expect(seat("opponent")).toBe("Opponent");
+    expect(seat("you")).toBe("You");
   });
 });
 

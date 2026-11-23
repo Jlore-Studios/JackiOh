@@ -3,7 +3,7 @@
 //!   Base:    "One random effect: Add a Radiant Faction: ETHICS and a Radiant Faction: Vanguard Coalition to
 //!            your hand; add A Very Dandy Lad and an Arctic Citadel to your hand, which cost (0); summon 3
 //!            random Quest or Wincon Field Spells into your backrow; add a random Acclaimed Stinkyscape
-//!            Unit to your hand and refresh as much mana as it costs; switch every enemy Unit to Attack
+//!            Unit to your hand and replenish as much mana as it costs; switch every enemy Unit to Attack
 //!            Position and Freeze them; fill your board with random Human Stinkyscape Units; Allure every
 //!            enemy Unit; for the rest of the game, whenever an Acclaimed card dies, its controller casts a
 //!            random Call to Chaos; summon a Stinkyscape Golem; cast a random Call to Chaos."
@@ -301,7 +301,7 @@ mod tests {
         }
 
         #[test]
-        fn r1882002_entry_acclaimed_adds_an_acclaimed_unit_and_refreshes_its_cost() {
+        fn r1882002_entry_acclaimed_adds_an_acclaimed_unit_and_replenishes_its_cost() {
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": side(false, json!([])),
@@ -324,7 +324,7 @@ mod tests {
         }
 
         #[test]
-        fn r1882002_a_full_hand_burns_the_unit_and_refreshes_nothing() {
+        fn r1882002_a_full_hand_burns_the_unit_and_replenishes_nothing() {
             let extra: Vec<Value> = (0..(HAND_CAP - 1)).map(|_| json!(FILLER)).collect();
             let mut s = scenario(json!({
                 "seed": SEED,
@@ -371,9 +371,19 @@ mod tests {
 
         #[test]
         fn entry_humans_fills_the_board_with_human_stinkyscape_units() {
-            let mut p1 = side(false, json!([]));
-            p1["field"] = json!([{ "def": VANILLA, "lane": 2 }]);
-            let s = chaos("humans", p1, json!({ "hand": [VANILLA] }));
+            // A Human may move or end a unit as it arrives, and which Humans arrive moves with every card joining
+            // the pool (#848): the seed is one whose Humans leave the board as they filled it.
+            let humans = |seed: &str| {
+                let mut p1 = side(false, json!([]));
+                p1["field"] = json!([{ "def": VANILLA, "lane": 2 }]);
+                chaos_in(seed, cursor_in(seed, "humans"), p1, json!({ "hand": [VANILLA] }))
+            };
+            let seed = seed_where("chaos-stinky-humans", |seed| {
+                let s = humans(seed);
+                s.unit(P1, 2).is_some_and(|unit| unit.def_id == VANILLA)
+                    && [1, 3, 4, 5].into_iter().all(|lane| s.unit(P1, lane).is_some())
+            });
+            let s = humans(&seed);
             assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(VANILLA.to_string()));
             for lane in [1, 3, 4, 5] {
                 let unit = s.unit(P1, lane).expect("a Human");

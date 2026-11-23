@@ -47,20 +47,26 @@ async fn read(app: &Arc<App>, who: &Account, path: &str) -> Value {
     body
 }
 
-/// `GET /api/challenges` and `GET /api/chat/unread` as one answer, `{incoming, outgoing, unread}`.
-fn merged(challenges: &Value, unread: &Value) -> Value {
+/// `GET /api/challenges` and `GET /api/chat/unread` as one answer, `{incoming, outgoing, unread}`, and
+/// the social read's `dailyWaiting` (#3727), which neither route answers: none of these accounts has a
+/// daily game, so none waits on them. R4039000: its `notificationsUnread` is the unread count
+/// `GET /api/notifications` answers (`feed`), since making friends writes the feed.
+fn merged(challenges: &Value, unread: &Value, feed: &Value) -> Value {
     json!({
         "incoming": challenges["incoming"],
         "outgoing": challenges["outgoing"],
         "unread": unread["unread"],
+        "dailyWaiting": 0,
+        "notificationsUnread": feed["unread"],
     })
 }
 
-/// What `who` reads from the two routes the social read stands in for.
+/// What `who` reads from the two routes the social read stands in for, and the feed's unread count.
 async fn two_reads(app: &Arc<App>, who: &Account) -> Value {
     let challenges = read(app, who, "/api/challenges").await;
     let unread = read(app, who, "/api/chat/unread").await;
-    merged(&challenges, &unread)
+    let feed = read(app, who, "/api/notifications").await;
+    merged(&challenges, &unread, &feed)
 }
 
 /// `friend`'s status as `viewer`'s friends list reads it.

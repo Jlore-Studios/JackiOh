@@ -62,7 +62,7 @@ mod tests {
 
     const INNER_FIRE: &str = "stinkyscape-010-1";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your units have +2 Attack
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your units have +1 Attack
     const IMMUNE: &str = "classicplus-019-1"; // Top Loser: Radiant: Immune to Spells.
     const FILLER: &str = "core-005";
 
@@ -103,7 +103,7 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             let unit = s.unit_at(P1, 1);
-            s.expect_stats(&unit, json!({ "attack": 6 }));
+            s.expect_stats(&unit, json!({ "attack": 5 }));
 
             s.play(INNER_FIRE, json!({ "targets": pick::instance(&unit) }));
 

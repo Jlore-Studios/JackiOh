@@ -612,16 +612,6 @@ pub fn choose_action(
     to_json(&json!({ "action": action, "rngCursor": rng.cursor() }))
 }
 
-/// R1011000: the learned evaluation's parity fixture (`crates/ai/tests/fixtures/learned-parity.json`) as
-/// this build computes it: its integer network's correction for each case, in order. The web's tests hold
-/// the WASM build to the fixture's numbers bit for bit, as `cargo test -p jackioh-ai` does the native one.
-pub fn learned_parity(fixture_json: &str) -> Result<String, String> {
-    let fixture: serde_json::Value = serde_json::from_str(fixture_json)
-        .map_err(|error| format!("the parity fixture is not JSON: {error}"))?;
-    let answers = jackioh_ai::parity_answers(&fixture)?;
-    to_json(&answers)
-}
-
 // The engine's tables the web's tests read (`subsystems.*`)
 
 /// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, so the
@@ -1073,6 +1063,91 @@ mod duos_bodies {
 }
 
 pub use duos_bodies::{duos_begin, duos_create, duos_legal_actions, duos_reduce, duos_view_for};
+
+#[cfg(test)]
+mod engine_body_tests {
+    use super::*;
+
+    /// A new game's arguments: two of the AI's decks at the standard size, as `crates/wasm/c`'s tests deal
+    /// them.
+    fn args(seed: &str) -> String {
+        jackioh_cards::register_all();
+        let deck = |rng_seed: &str| -> Value {
+            let options = json!({ "rngSeed": rng_seed, "size": engine::config::DECK_SIZE }).to_string();
+            let built: Value = serde_json::from_str(&build_ai_deck(&options).unwrap()).unwrap();
+            built["deck"].clone()
+        };
+        json!({ "seed": seed, "decks": [deck("deck-a"), deck("deck-b")] }).to_string()
+    }
+
+    /// SURFACE §6.1: `createGame`, `beginGame` and `reduce` answer the engine's own results exactly as
+    /// serde writes them, a refused action's `error` among them.
+    #[test]
+    fn engine_bodies_answer_the_engines_results_as_serde_writes_them() {
+        let text = args("bodies");
+        let setup: CreateGameArgs = serde_json::from_str(&text).unwrap();
+        let state = engine::create_game(&setup);
+        let created = create_game(&text).unwrap();
+        assert_eq!(created, to_json(&state).unwrap());
+
+        let begun = engine::begin_game(&state);
+        assert_eq!(begin_game(&created).unwrap(), to_json(&begun).unwrap());
+
+        let action = json!({ "type": "play", "instanceId": "no-such-card", "playerId": "p1", "nonce": "n" });
+        let refused = engine::reduce(&begun.state, &serde_json::from_value(action.clone()).unwrap());
+        assert!(refused.error.is_some(), "no card is no-such-card");
+        let answered = reduce(&to_json(&begun.state).unwrap(), &action.to_string()).unwrap();
+        assert_eq!(answered, to_json(&refused).unwrap());
+    }
+
+    /// R184: a deck one card short is refused before the engine sees it, in `validate_setup`'s own words.
+    #[test]
+    fn create_game_refuses_a_short_deck_with_the_engines_message() {
+        let mut setup: CreateGameArgs = serde_json::from_str(&args("short")).unwrap();
+        setup.decks.0.pop();
+        let refusal = engine::validate_setup(&setup, engine::registered_catalog(), SetupKind::New)
+            .expect_err("a deck one card short");
+        assert_eq!(create_game(&to_json(&setup).unwrap()), Err(refusal.to_string()));
+    }
+
+    /// The state cache: a state handed back, bare or in its envelope, is the one kept under its text, and
+    /// it stays kept beside a second game's.
+    #[test]
+    fn a_state_handed_back_is_the_one_kept_under_its_text() {
+        let a = create_game(&args("cache-a")).unwrap();
+        let first = state_of("test", &a).unwrap();
+        assert!(Rc::ptr_eq(&first, &state_of("test", &a).unwrap()));
+        assert!(Rc::ptr_eq(
+            &first,
+            &state_of("test", &format!("[\"\u{a0}\",{a}]")).unwrap()
+        ));
+        create_game(&args("cache-b")).unwrap();
+        assert!(Rc::ptr_eq(&first, &state_of("test", &a).unwrap()));
+    }
+
+    /// A text one byte off the kept one is parsed, never matched, so the answer never hangs on the cache.
+    #[test]
+    fn a_text_one_byte_off_is_parsed_not_matched() {
+        let a = create_game(&args("cache-a")).unwrap();
+        let b = a.replace("\"cache-a\"", "\"cache-b\"");
+        assert_eq!((a.len(), a == b), (b.len(), false));
+        assert_eq!(state_of("test", &a).unwrap().seed, "cache-a");
+        assert_eq!(state_of("test", &b).unwrap().seed, "cache-b");
+    }
+
+    /// SURFACE §11.3, R767000: the catalog, its version and the versions carried for replays, as the cards
+    /// crate holds them.
+    #[test]
+    fn catalog_bodies_answer_the_catalog_its_version_and_the_carried_versions() {
+        jackioh_cards::register_all();
+        assert_eq!(catalog().unwrap(), to_json(engine::registered_catalog()).unwrap());
+        assert_eq!(catalog_version(), jackioh_cards::catalog_version());
+        assert_eq!(
+            carried_versions().unwrap(),
+            to_json(&jackioh_cards::carried_versions()).unwrap()
+        );
+    }
+}
 
 #[cfg(test)]
 mod run_body_tests {

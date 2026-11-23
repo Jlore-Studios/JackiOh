@@ -274,8 +274,8 @@ pub enum ActionBody {
     MarketBuy {
         offer: i32,
     },
-    /// R1853003, R1861000: sell a card that sells from the sender's hand at the Marketplace, for its
-    /// quote this turn (`marketplace.rs`).
+    /// R1853003, R4410000: refused since issue #4410 (`marketplace::NOTHING_SELLS`): nothing sells at the
+    /// Marketplace. Kept so an older client's or log's action reads.
     MarketSell {
         instance_id: String,
     },

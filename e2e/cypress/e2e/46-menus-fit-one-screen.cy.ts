@@ -1,22 +1,35 @@
 // 46 — every menu fits one screen (issue #1581, part of #1576, R1581000): each test opens one menu at
-// BUILD M5-T1's two sizes (`viewports`, support/config.ts) and asserts, by a retried assertion, that
-// the document scrolls neither way, but for the tavern home (`LANDING_SCREENS`). A big list of cards
-// and a menu's own region scroll inside the menu, never the page. Not asked: the boards, and the
-// static legal pages (spec 38 holds those to axe). Per pull request: SMOKE in scripts/shard-specs.mjs
-// holds 46. Networked: the signed-in menus need `E2E=1 cargo run --release -p jackioh-server`.
+// each of issue #3728's sizes (`MENU_SIZES`, support/config.ts, R3728000) and asserts, by a retried
+// assertion, that the document scrolls neither way, but for the tavern home (`LANDING_SCREENS`). A big
+// list of cards and a menu's own region scroll inside the menu, never the page. A menu inside the menus'
+// shell draws its navigation inside the window (`expectShellNav`, support/shell.ts); practice's setup and
+// a series are outside the shell. Not asked: the boards, and the static legal pages (spec 38 holds those
+// to axe). Daily only (issue #4092): a pull request's `e2e smoke` plays only SMOKE in
+// scripts/shard-specs.mjs, which does not hold 46, since it took a smoke shard to itself (7 minutes);
+// super.yml plays it. Networked: the signed-in menus need `E2E=1 cargo run --release -p jackioh-server`.
 
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../../../apps/web/src/auth/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
+import { menuShellTestid } from "../../../apps/web/src/shell/testids.ts";
 import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "../../../apps/web/src/wire/serverConfig.ts";
 import { allCardIds, cardId } from "../../support/cards.ts";
-import { accounts, constants, routes, timeouts, viewports, type MenuViewport } from "../../support/config.ts";
+import { MENU_SIZES, accounts, constants, routes, timeouts, type MenuSize } from "../../support/config.ts";
 import { visitStatsFigures } from "../../support/stats.ts";
 import {
   CARD_POOL,
+  COLLECTION_DECKS,
+  COLLECTION_GRID,
   COLLECTION_JLORE,
   COLLECTION_SCREEN,
-  PLAY_QUEUE,
+  DB_SIDEBAR,
+  DECK_COMPARE_SELECT,
+  DECK_DELETE,
+  DECK_EDITOR,
+  DECK_LIST,
+  DECK_NAME_INPUT,
+  NAV_BACK,
+  PLAY_HUB,
   PLAY_SIGN_IN,
   REPLAYS_ROOT,
   SERIES_SCORE,
@@ -26,6 +39,7 @@ import {
   deckRowId,
   ts,
 } from "../../support/testids.ts";
+import { expectShellNav } from "../../support/shell.ts";
 import { expectBackLinkBarOrder, expectLandingCornerOrder } from "../../support/topBar.ts";
 import { SETTINGS_OPEN_NAV, SETTINGS_PANEL } from "../../support/ux.ts";
 
@@ -36,8 +50,21 @@ const ONE_SCREEN = 1;
 
 /** A box's edge may sit this far past the window's (a sub-pixel border) and still be inside it. */
 const EDGE_SLACK_PX = 1;
+/** How many of the boxes an overflow starts in its message names (#4375). */
+const PAST_EDGE_NAMED = 5;
+/** How far past the editor's edge a box must reach for that message to name it: more than rounding. */
+const PAST_EDGE_MIN_PX = 0.5;
+
+/** #4349: Chrome's select arrow and the gap before it, measured (Inter at 16 px: whole at a 218 px select with 8 px of padding, cut at 214, so 18 to 19.6); 20 rounds up. */
+const SELECT_ARROW_PX = 20;
 
 const MS_PER_SECOND = 1000;
+
+/** R3218000: at this width and under the bar's title sits under Back, and the editor is one column (R3956000). */
+const PHONE_MAX_WIDTH_PX = 600;
+
+/** R3956000: the names the deck builder's rail must show whole (each at most 14 characters). */
+const DECK_NAMES = ["Pyre Control", "Tide Pool", "Quick Draw"] as const;
 
 /** The series the intercept answers: a v4 UUID's shape, nothing the server holds. */
 const SERIES_ID = "00000000-0000-4000-8000-000000001581";
@@ -52,8 +79,12 @@ const SCREEN = {
   almanac: "almanac",
 } as const;
 
-/** R1581000: the page is no taller than `screens` windows and no wider than one. */
-function expectOnScreen(viewport: MenuViewport, screens: number): void {
+/**
+ * R1581000: the page is no taller than `screens` windows and no wider than one. R4335000: and it fits without
+ * squeezing a tab row: each shows its tabs whole. `/stats` once fit by crushing its tab row, which scrolls sideways and
+ * so may shrink to nothing, to a 14 px sliver that cut off every tab, and the page's height alone passed it.
+ */
+function expectOnScreen(viewport: MenuSize, screens: number): void {
   cy.window().should((win) => {
     const where = `${String(viewport.width)}x${String(viewport.height)}`;
     expect(win.innerWidth, "the viewport asked for").to.eq(viewport.width);
@@ -61,12 +92,102 @@ function expectOnScreen(viewport: MenuViewport, screens: number): void {
     const page = win.document.documentElement;
     expect(page.scrollHeight, `the page's height at ${where}`).to.be.at.most(win.innerHeight * screens);
     expect(page.scrollWidth, `the page's width at ${where}`).to.be.at.most(win.innerWidth);
+    for (const row of win.document.querySelectorAll<HTMLElement>('[role="tablist"]')) {
+      const name = row.getAttribute("aria-label") ?? row.className;
+      // A pixel's give for rounding: a squeezed row is short by most of a tab's height.
+      expect(row.clientHeight, `the tab row "${name}" shows its tabs whole at ${where}`).to.be.at.least(row.scrollHeight - 1);
+    }
   });
 }
 
+/** The box of the first element `selector` matches, which must be drawn. */
+function boxOf(doc: Document, selector: string): DOMRect {
+  const found = doc.querySelector(selector);
+  expect(found, selector).to.not.eq(null);
+  const box = found?.getBoundingClientRect();
+  expect(box?.width, `${selector} is drawn`).to.be.greaterThan(0);
+  return box ?? new DOMRect();
+}
+
+/** R4349000: the Compare with picker's label and the option it shows are whole. A native select's scrollWidth never says its text is cut, so the text is measured in the select's own font. */
+function expectComparePickerWhole(select: HTMLSelectElement, where: string): void {
+  const doc = select.ownerDocument;
+  const style = getComputedStyle(select);
+  const shown = select.selectedOptions[0]?.textContent ?? "";
+  expect(shown, "the option the picker shows").to.not.eq("");
+  const probe = doc.createElement("span");
+  probe.textContent = shown;
+  probe.style.cssText = "position: absolute; visibility: hidden; white-space: nowrap;";
+  probe.style.fontFamily = style.fontFamily;
+  probe.style.fontSize = style.fontSize;
+  probe.style.fontWeight = style.fontWeight;
+  probe.style.letterSpacing = style.letterSpacing;
+  doc.body.append(probe);
+  const textPx = probe.getBoundingClientRect().width;
+  probe.remove();
+  const room = select.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - SELECT_ARROW_PX;
+  expect(textPx, `"${shown}" is whole in the picker at ${where}`).to.be.at.most(room);
+
+  const pick = select.closest<HTMLElement>(".ws-compare-pick");
+  const label = pick?.querySelector<HTMLElement>(".ws-field-label");
+  expect(pick, "the picker's row").to.not.eq(null);
+  expect(label, "the picker's label").to.not.eq(null);
+  if (pick === null || pick === undefined || label === null || label === undefined) return;
+  const labelBox = label.getBoundingClientRect();
+  const selectBox = select.getBoundingClientRect();
+  expect(Math.ceil(labelBox.right), `the label ends inside the picker at ${where}`).to.be.at.most(Math.ceil(pick.getBoundingClientRect().right));
+  expect(
+    labelBox.bottom <= selectBox.top + EDGE_SLACK_PX || labelBox.right <= selectBox.left + EDGE_SLACK_PX,
+    `the label clears the select at ${where}`,
+  ).to.eq(true);
+  const sidebar = doc.querySelector<HTMLElement>(ts(DB_SIDEBAR));
+  expect(sidebar, "the sidebar").to.not.eq(null);
+  if (sidebar === null) return;
+  expect(sidebar.scrollWidth, `the sidebar does not scroll sideways at ${where}`).to.be.at.most(sidebar.clientWidth + EDGE_SLACK_PX);
+  expect(Math.ceil(selectBox.right), `the select ends inside the sidebar at ${where}`).to.be.at.most(Math.ceil(sidebar.getBoundingClientRect().right));
+  const editor = doc.querySelector<HTMLElement>(ts(DECK_EDITOR));
+  const past = editor === null ? "" : pastRightEdge(editor);
+  expect(editor?.scrollWidth, `the editor does not overflow sideways at ${where}${past}`).to.be.at.most((editor?.clientWidth ?? 0) + EDGE_SLACK_PX);
+}
+
 /**
- * The code and consent screens as a pending account meets them, drawn for p1. Spec 10 redeems the
- * pending fixture until the server restarts (R144) and may share this shard, so p1's own read of the
+ * Where `box`'s sideways overflow comes from (#4375): the deepest of its descendants that reach past its
+ * right padding edge, by their own box or by what they lay out past it (`overflow-x: visible`, so a
+ * positioned `::before` or `::after` counts), the furthest first, each with its parent's name and how far
+ * past the edge it reaches.
+ */
+function pastRightEdge(box: HTMLElement): string {
+  const boxRect = box.getBoundingClientRect();
+  const edge = boxRect.left + box.clientLeft + box.clientWidth;
+  const reachOf = (element: HTMLElement): number => {
+    const rect = element.getBoundingClientRect();
+    const laidOut = getComputedStyle(element).overflowX === "visible" ? rect.left + element.clientLeft + element.scrollWidth : -Infinity;
+    return Math.max(rect.right, laidOut);
+  };
+  const past = [...box.querySelectorAll<HTMLElement>("*")].filter((element) => reachOf(element) > edge + PAST_EDGE_MIN_PX);
+  const deepest = past.filter((element) => !past.some((other) => other !== element && element.contains(other)));
+  deepest.sort((a, b) => reachOf(b) - reachOf(a));
+  const named = (element: Element | null): string =>
+    element === null ? "none" : `${element.tagName.toLowerCase()}${[...element.classList].map((name) => `.${name}`).join("")}`;
+  const parts = deepest.slice(0, PAST_EDGE_NAMED).map((element) => {
+    const rect = element.getBoundingClientRect();
+    return `${named(element)} in ${named(element.parentElement)}: box ${(rect.right - edge).toFixed(1)}px, laid out ${(reachOf(element) - edge).toFixed(1)}px past (scroll ${element.scrollWidth}, client ${element.clientWidth})`;
+  });
+  const style = getComputedStyle(box);
+  return ` (the editor's overflow-x ${style.overflowX}, padding-right ${style.paddingRight}; ${deepest.length} box(es) past its edge${parts.length === 0 ? "" : `: ${parts.join("; ")}`})`;
+}
+
+/**
+ * The signed-in screens that draw nothing of p1's own (its decks, collection and replays) sign in as p3,
+ * which only spec 55 uses and which nothing here writes to. R109 refuses an account past 300 requests a
+ * minute, and every signed-in screen also makes the inbox's reads (#3902): fifteen screens a size as p1 spent
+ * its minute before the last of them drew, and the invite screens met a 429. Split, each opens under ten.
+ */
+const SPARE = accounts.p3;
+
+/**
+ * The code and consent screens as a pending account meets them, drawn for `SPARE`. Spec 10 redeems the
+ * pending fixture until the server restarts (R144) and may share this shard, so `SPARE`'s own read of the
  * account says pending, `owes` adding what it owes: the screens draw only from it (CLAUDE.md rule 7).
  */
 function asPending(owes: Record<string, boolean> = {}): void {
@@ -125,8 +246,8 @@ function seriesPicking(now: number): Record<string, unknown> {
 }
 
 describe("46 — every menu fits one screen (issue #1581)", () => {
-  for (const viewport of [viewports.desktop, viewports.phone]) {
-    describe(`${viewport.label}, ${String(viewport.width)}x${String(viewport.height)}`, () => {
+  for (const viewport of MENU_SIZES) {
+    describe(`R3728000 ${viewport.label}`, () => {
       beforeEach(() => {
         cy.viewport(viewport.width, viewport.height);
       });
@@ -145,6 +266,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
             for (const card of $cards.toArray()) expect(getComputedStyle(card).opacity, "a dealt card").to.eq("1");
           });
           expectLandingCornerOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, LANDING_SCREENS);
         });
 
@@ -166,6 +288,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visit(routes.login());
           cy.get(ts(loginTestid.form), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -175,6 +298,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.get(ts(loginTestid.form)).should("have.attr", "data-mode", "signUp");
           cy.get(ts(consentTestid.birthYear)).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -182,6 +306,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visit("/reset-password");
           cy.get(ts(resetTestid.screen), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -190,6 +315,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.get(ts(SCREEN.almanac), { timeout: timeouts.view }).should("be.visible");
           cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -197,12 +323,14 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visit("/patch-notes");
           cy.get(ts(patchTestid.screen), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 R3218000 R3324000 /stats", () => {
+        it("R1581000 R3218000 R3324000 R4335000 /stats", () => {
           visitStatsFigures();
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -210,6 +338,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visit(routes.practice());
           cy.get(ts(practiceTestid.setup), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          cy.get(ts(menuShellTestid.root)).should("not.exist");
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -217,6 +346,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visit(routes.play());
           cy.get(ts(PLAY_SIGN_IN), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -224,12 +354,14 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visit(routes.replays());
           cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
         it("R1581000 a path nothing is at", () => {
           cy.visit("/no-such-menu");
           cy.get(ts(shellTestid.notFound), { timeout: timeouts.view }).should("be.visible");
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -246,12 +378,14 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
       describe("signed in", () => {
         before(() => {
           cy.freeAccount(accounts.p1());
+          cy.freeAccount(SPARE());
         });
 
         it("R1581000 R3218000 /play", () => {
           cy.visitAs(accounts.p1(), routes.play());
-          cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(PLAY_HUB), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -259,6 +393,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), routes.deckbuilder());
           cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -269,11 +404,77 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.saveDeck(accounts.p1(), { name: "Fits", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
             cy.visitAs(accounts.p1(), routes.deckbuilder());
             cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
-            // A phone shows the list alone until a deck is opened (a desktop opens it already).
+            // A window of 600 px or less shows the list alone until a deck is opened (a wider one, the split
+            // from 601 px, R3734001, opens it already).
             cy.get(ts(deckRowId(deckId))).click();
             cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
             expectBackLinkBarOrder();
+            expectShellNav(true);
             expectOnScreen(viewport, ONE_SCREEN);
+          });
+        });
+
+        // R3956000: from 601 px the pool and the deck sit side by side (an iPad mini's 744 px too), a deck's name is
+        // whole in the rail, the title is beside Back, and the editor's last action is in view at 1280x720.
+        it("R3956000 /decks, a deck open: the pool beside the deck, names whole, the title beside Back, the actions in view", () => {
+          const cards = allCardIds().slice(0, constants.DECK_SIZE);
+          cy.clearDecks(accounts.p1());
+          cy.saveDeck(accounts.p1(), { name: DECK_NAMES[0], cards }).then((firstId) => {
+            cy.saveDeck(accounts.p1(), { name: DECK_NAMES[1], cards });
+            cy.saveDeck(accounts.p1(), { name: DECK_NAMES[2], cards });
+            cy.visitAs(accounts.p1(), routes.deckbuilder());
+            cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
+            cy.get(ts(deckRowId(firstId))).click();
+            cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
+            expectOnScreen(viewport, ONE_SCREEN);
+            cy.document().should((doc) => {
+              if (viewport.width <= PHONE_MAX_WIDTH_PX) {
+                // The editor's Back shows its arrow alone, so the name field has the room for the whole name.
+                const input = doc.querySelector<HTMLInputElement>(ts(DECK_NAME_INPUT));
+                expect(input, "the name field").to.not.eq(null);
+                expect(input?.scrollWidth, "the name field shows the name whole").to.be.at.most(input?.clientWidth ?? 0);
+                return;
+              }
+              const pool = boxOf(doc, ts(CARD_POOL));
+              const sidebar = boxOf(doc, ts(DB_SIDEBAR));
+              expect(pool.right, "the pool ends where the deck's sidebar begins").to.be.at.most(sidebar.left + EDGE_SLACK_PX);
+              expect(Math.min(pool.bottom, sidebar.bottom), "the pool and the deck share the screen's rows").to.be.greaterThan(
+                Math.max(pool.top, sidebar.top),
+              );
+
+              const names = Array.from(doc.querySelectorAll<HTMLElement>(`${ts(DECK_LIST)} .ws-row-name`));
+              expect(names.map((name) => name.textContent).sort(), "the rail's deck names").to.deep.equal([...DECK_NAMES].sort());
+              for (const name of names) {
+                expect(name.scrollWidth, `${name.textContent ?? ""} is not cut across`).to.be.at.most(name.clientWidth + EDGE_SLACK_PX);
+                expect(name.scrollHeight, `${name.textContent ?? ""} is not cut down`).to.be.at.most(name.clientHeight + EDGE_SLACK_PX);
+              }
+
+              const back = boxOf(doc, `nav.screen-nav ${ts(NAV_BACK)}`);
+              const title = boxOf(doc, "nav.screen-nav .page-title");
+              expect(Math.min(back.bottom, title.bottom), "the title is on Back's row").to.be.greaterThan(Math.max(back.top, title.top));
+              expect(title.left, "the title starts after Back's right edge").to.be.at.least(back.right - EDGE_SLACK_PX);
+
+              expect(boxOf(doc, ts(DECK_DELETE)).bottom, "the editor's last action is in view").to.be.at.most(viewport.height);
+              const side = doc.querySelector(ts(DB_SIDEBAR));
+              expect(side?.scrollHeight, "the sidebar does not scroll").to.be.at.most((side?.clientHeight ?? 0) + EDGE_SLACK_PX);
+            });
+          });
+        });
+
+        // R4349000: the Compare with picker reads in full at every size (it was cut to "Another (" at 744x1133).
+        it("R4349000 /decks, a deck open: the Compare with picker reads in full", () => {
+          const cards = allCardIds().slice(0, constants.DECK_SIZE);
+          cy.clearDecks(accounts.p1());
+          cy.saveDeck(accounts.p1(), { name: DECK_NAMES[0], cards }).then((firstId) => {
+            cy.saveDeck(accounts.p1(), { name: DECK_NAMES[1], cards });
+            cy.visitAs(accounts.p1(), routes.deckbuilder());
+            cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
+            cy.get(ts(deckRowId(firstId))).click();
+            cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
+            expectOnScreen(viewport, ONE_SCREEN);
+            cy.get(ts(DECK_COMPARE_SELECT)).should(($select) => {
+              expectComparePickerWhole($select[0] as HTMLSelectElement, `${String(viewport.width)}x${String(viewport.height)}`);
+            });
           });
         });
 
@@ -281,13 +482,15 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), "/account");
           cy.get(ts(SCREEN.accountRank), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
         it("R1581000 R3218000 /leaderboard", () => {
-          cy.visitAs(accounts.p1(), "/leaderboard");
+          cy.visitAs(SPARE(), "/leaderboard");
           cy.get(ts(SCREEN.leaderboardSeason), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -295,63 +498,104 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), routes.replays());
           cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).find('[role="status"]').should("not.exist");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
         it("R1581000 R3218000 /together", () => {
-          cy.visitAs(accounts.p1(), "/together");
+          cy.visitAs(SPARE(), "/together");
           cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 R3218000 /collection", () => {
+        // R3734000: the Collection is four tabs, each one screen tall at every size: the grid, the deck tiles, the
+        // equipped looks and the wallet and quests scroll inside the screen, never the page.
+        it("R1581000 R3218000 R3734000 /collection, Cards", () => {
           cy.visitAs(accounts.p1(), routes.collection());
+          cy.get(ts(COLLECTION_GRID), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
+          expectShellNav(true);
+          expectOnScreen(viewport, ONE_SCREEN);
+        });
+
+        // R3956000: every set's name is whole in the progress row, whose right edge fades where it scrolls.
+        it("R3956000 /collection, Cards: every set name is whole and the row fades where it scrolls", () => {
+          cy.visitAs(accounts.p1(), routes.collection());
+          cy.get(ts(COLLECTION_GRID), { timeout: timeouts.view }).should("be.visible");
+          cy.get(".collection-set__name").should(($names) => {
+            expect($names.length, "the set names drawn").to.be.greaterThan(0);
+            for (const name of $names.toArray()) {
+              expect(name.scrollWidth, `${name.textContent ?? ""} is not cut`).to.be.at.most(name.clientWidth + EDGE_SLACK_PX);
+              const next = name.closest(".collection-set")?.nextElementSibling;
+              if (next === null || next === undefined) continue;
+              expect(name.getBoundingClientRect().right, `${name.textContent ?? ""} ends before the next set begins`).to.be.at.most(
+                next.getBoundingClientRect().left + EDGE_SLACK_PX,
+              );
+            }
+          });
+          cy.get(".collection-set-list").should(($list) => {
+            const style = getComputedStyle($list[0] as HTMLElement);
+            const mask = style.getPropertyValue("mask-image") || style.getPropertyValue("-webkit-mask-image");
+            expect(mask, "the row's fade").to.not.eq("none");
+            expect(mask, "the row's fade").to.not.eq("");
+          });
+        });
+
+        it("R1581000 R3218000 R3734000 /collection, Decks", () => {
+          cy.visitAs(accounts.p1(), routes.collectionTab("decks"));
+          cy.get(ts(COLLECTION_DECKS), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
+          expectShellNav(true);
+          expectOnScreen(viewport, ONE_SCREEN);
+        });
+
+        it("R1581000 R3218000 R3734000 /collection, Cosmetics", () => {
+          cy.visitAs(accounts.p1(), routes.collectionTab("cosmetics"));
           cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 R3218000 /collection, Cards", () => {
-          cy.visitAs(accounts.p1(), routes.collectionCards());
+        it("R1581000 R3218000 R3734000 /collection, Progress", () => {
+          cy.visitAs(accounts.p1(), routes.collectionProgress());
           cy.get(ts(COLLECTION_JLORE), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
-          expectOnScreen(viewport, ONE_SCREEN);
-        });
-
-        it("R1581000 R3218000 /collection, Cosmetics", () => {
-          cy.visitAs(accounts.p1(), `${routes.collection()}?section=cosmetics`);
-          cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
-          expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
         it("R1581000 R3218000 /shop", () => {
-          cy.visitAs(accounts.p1(), routes.shop());
+          cy.visitAs(SPARE(), routes.shop());
           cy.get(ts(SHOP_PANEL), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
         it("R1581000 R3218000 /series, choosing a deck", () => {
           cy.intercept("GET", `**/api/series/${SERIES_ID}`, { statusCode: 200, body: seriesPicking(Date.now()) });
-          cy.visitAs(accounts.p1(), routes.series(SERIES_ID));
+          cy.visitAs(SPARE(), routes.series(SERIES_ID));
           cy.get(ts(SERIES_SCORE), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          cy.get(ts(menuShellTestid.root)).should("not.exist");
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
         it("R1581000 R3218000 /invite, the code screen", () => {
           asPending();
-          cy.visitAs(accounts.p1(), routes.invite());
+          cy.visitAs(SPARE(), routes.invite());
           cy.get(ts(inviteTestid.input), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
         it("R1581000 /invite, the consent screen", () => {
           asPending({ ageCheckOwed: true, termsOwed: true });
-          cy.visitAs(accounts.p1(), routes.invite());
+          cy.visitAs(SPARE(), routes.invite());
           cy.get(ts(consentTestid.birthMonth), { timeout: timeouts.view }).should("be.visible");
           expectOnScreen(viewport, ONE_SCREEN);
         });

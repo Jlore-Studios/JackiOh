@@ -1,17 +1,18 @@
 # The daily super run (#306, docs/v0.3.0/README.md §7): everything too slow or too statistical to
-# hold every pull request to, once a day on `staging` (07:17 UTC, #3275) and on demand on any branch
+# hold every pull request to, once a day on `_staging` (07:17 UTC, #3275) and on demand on any branch
 # (`gh workflow run super.yml --ref <branch>`). CI (ci.yml) keeps the essential checks per pull
 # request; this keeps the rest from rotting.
 #
-#   fuzz            `jackioh fuzz` seeds 1-10,000, plain and with the rotating handicap, and the Duos
+#   fuzz            `jackioh fuzz` seeds 1-12,500, plain and with the rotating handicap, and the Duos
 #                   co-op wave's seeds 1-2,000 (`fuzz --duos`), in quarters (V7, V9, #936 B25)
 #   ai gates        `jackioh gate --full` in shards, held together by `gate merge` (V10)
 #   golden          `jackioh golden check`: every recorded TypeScript trace replays identically (V4)
 #   daily tests     every Rust test `#[ignore = "daily: …"]` leaves out of a pull request's cargo test:
-#                   the many-game sweeps, whose rule a cheaper test holds per pull request
+#                   the many-game sweeps, whose rule a cheaper test holds per pull request, in three
+#                   legs: every crate but the tools, the tools, and the tools' pool probe (#4375)
 #   coverage        cargo llvm-cov over engine, cards and ai, failing under .github/coverage-floor.txt
 #                   (90% at the start, raised by hand as it climbs toward #306's 99%)
-#   e2e             all 35 e2e specs on Chrome, in shards, and the component specs (V21)
+#   e2e             all 35 e2e specs on Chrome, in shards, and the component specs in three (V21)
 #   web             the audio, fx and asset unit tests and the two promotion tests, which the pull
 #                   requests leave out, and the tutorial lessons' whole sweeps (JACKIOH_DAILY=1)
 #   db              sql invariants, the store contract and the deploy rehearsal against a real Postgres
@@ -22,29 +23,38 @@
 # when it is already open, naming each failed job with a link to its log; a run that passes closes it
 # (V25). The run is long on purpose and ci-duration.yml does not watch it.
 #
-# It is also production's gate (#2750). The daily run tests `staging`, not main (#3275, the owners'
-# call of 2026-11-05): promote-staging.yml moves `staging` to a green commit of main every two hours,
+# It is also production's gate (#2750). The daily run tests `_staging`, not main (#3275, the owners'
+# call of 2026-11-05): promote-staging.yml moves `_staging` to a green commit of main every two hours,
 # so the run tests one commit that holds still instead of a main that moves many times an hour. A
 # schedule always runs on the default branch, so the scheduled run's one job, `daily`, starts this
-# workflow on `staging` and every other job skips; that dispatched run's `head_sha` is the commit it
-# tested. The daily promotion: when the run on `staging` passes every job, promote-production.yml,
-# woken by its completion, merges the commit it tested into `production` and deploys it. Sooner: a
-# `/promote` on the production issue opens a pull request of staging's commit into `production`,
+# workflow on `_staging` and every other job skips; that dispatched run's `head_sha` is the commit it
+# tested. The daily promotion: when the run on `_staging` passes every job, promote-production.yml,
+# woken by its completion, merges the commit it tested into `_production` and deploys it. Sooner: a
+# `/promote` on the production issue opens a pull request of staging's commit into `_production`,
 # this workflow runs on it (`pull_request` below), and
 # promote-production.yml merges it only once every job here passed. A red run on such a pull request
 # opens its own issue, CANDIDATE_TITLE, handed to the night bot as `priority:high` and
 # `difficulty:hard`, since production waits on it; the pull request stays open, and re-running the
 # failed jobs merges it once they pass. A run that passes on one closes that issue, never the daily one.
 #
-# A failed run on `staging` (or on the default branch, whose commits reach `staging` within two
+# A failed run on `_staging` (or on the default branch, whose commits reach `_staging` within two
 # hours) hands the issue to the night bot (.harness/config.json's bot_login), as ci-duration.yml hands
 # over its report: a new issue is assigned to it and queued with bot:build and `priority:high`
-# (production waits for the next run on `staging` that passes), and an open one nobody is assigned to
+# (production waits for the next run on `_staging` that passes), and an open one nobody is assigned to
 # is handed over the same way, so the red run is worked on without anyone asking. The bot takes this
 # issue, found by its title, before every other queued item, `priority:high` ones included
-# (bot/go/internal/queue `GateTitles`, #3275). Only a run on `staging`, on the default branch or on a
+# (bot/go/internal/queue `GateTitles`, #3275). Only a run on `_staging`, on the default branch or on a
 # promotion pull request closes it. A dispatched run on any other branch tests that branch's change,
 # so it is reported but never handed over, and its report says the branch's author owns it.
+#
+# The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): every first job of a
+# run (one that needs no other) waits in the environment the repository variable CI_GATE_ENVIRONMENT
+# names (`ci-runners`, infra/github.tf), holding no runner, until the night bot's status loop
+# approves the run once it has a slot: only six CI and CD runs go at once, and staging's and
+# production's checks (at most two) take theirs after the merge queue's builds and the deploys and
+# before `main`'s CI and pull requests' (the owner's order of 2026-11-13). Every other job needs one
+# of them, so the whole run waits. The schedule's `daily` only starts a run and never waits; with the
+# variable unset nothing does.
 #
 # The release binaries and the built client travel between jobs as artifacts, built once per run:
 # both binaries in one `rust-build` job at Cargo.toml's opt-levels (ci.yml splits them in two,
@@ -52,14 +62,14 @@
 name: super
 
 on:
-  # The daily run, on `staging`: the `daily` job below starts it there.
+  # The daily run, on `_staging`: the `daily` job below starts it there.
   schedule:
     - cron: "17 7 * * *"
   workflow_dispatch:
   # A promotion pull request (promote-production.yml): its head is a commit of staging, so the run
   # tests exactly what production would get.
   pull_request:
-    branches: [production]
+    branches: [_production]
 
 # One run per branch at a time; a run is never cancelled for the next one, so every day reports.
 concurrency:
@@ -72,7 +82,7 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   # The fuzz wave's size (README §7); `fuzz` splits it evenly over its matrix.
-  FUZZ_SEEDS: "10000"
+  FUZZ_SEEDS: "12500"
   # The Duos wave's (§13, #936 B25), ten times `fuzz --duos`'s 200: a Duos game is four seats and a
   # pool, several times a 1v1 game's work. Split the same way.
   DUOS_FUZZ_SEEDS: "2000"
@@ -82,9 +92,12 @@ jobs:
   # builds, once per run
   # ------------------------------------------------------------------------------------------------
 
-  # The scheduled run starts the daily run on `staging` (the header says why) and does nothing else:
+  # The scheduled run starts the daily run on `_staging` (the header says why) and does nothing else:
   # every job below skips on `schedule`, those that need one through it. The Actions token may start a
-  # workflow_dispatch.
+  # workflow_dispatch. A commit a finished run already tested is not run again: while that run is red,
+  # staging holds still for the night bot's fix (scripts/promote-staging.sh, the freeze, the owners'
+  # call of 2026-11-10), which starts the run itself on the commit that carries the fix, and a second
+  # run on the same commit would only open a second issue for the same failures.
   daily:
     name: start the daily run on staging
     if: github.event_name == 'schedule'
@@ -93,17 +106,26 @@ jobs:
     permissions:
       actions: write
     steps:
-      - name: gh workflow run super.yml --ref staging
+      - name: gh workflow run super.yml --ref _staging
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh workflow run super.yml --ref staging
-          echo "### started the daily super run on \`staging\` ($(gh api "repos/$GH_REPO/commits/staging" --jq '.sha[0:12]'))" >> "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          sha=$(gh api "repos/$GH_REPO/commits/_staging" --jq .sha)
+          tested=$(gh run list --workflow super.yml --branch _staging --commit "$sha" --status completed --limit 20 \
+            --json conclusion --jq '[.[] | select(.conclusion != "cancelled" and .conclusion != "skipped")] | length')
+          if [ "$tested" != 0 ]; then
+            echo "### \`_staging\` (${sha:0:12}) has a finished super run already, so none starts today" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          gh workflow run super.yml --ref _staging
+          echo "### started the daily super run on \`_staging\` (${sha:0:12})" >> "$GITHUB_STEP_SUMMARY"
 
   rust-build:
     name: release build
     if: github.event_name != 'schedule'
+    environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -126,6 +148,7 @@ jobs:
   wasm:
     name: wasm and client build
     if: github.event_name != 'schedule'
+    environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -153,7 +176,7 @@ jobs:
 
   # Seeds 1-FUZZ_SEEDS, each quarter plain and then with the handicap (fuzz-handicap.test.ts's
   # rotation), as `--from` and `--seeds` ranges: a seed is its own game whatever run it sits in, so
-  # the quarters together play exactly `fuzz --seeds 10000` and `fuzz --seeds 10000 --handicap`. Then
+  # the quarters together play exactly `fuzz --seeds 12500` and `fuzz --seeds 12500 --handicap`. Then
   # the quarter's share of the Duos co-op wave, seeds 1-DUOS_FUZZ_SEEDS (`fuzz --duos`), which no
   # pull request plays beyond the tools crate's three seeds.
   fuzz:
@@ -275,12 +298,33 @@ jobs:
   # The Rust tests too slow or too statistical for every pull request: each `#[ignore = "daily: …"]`
   # in the workspace, its reason naming what holds the same rule per pull request (acceptance.rs
   # holds every ignore to that form), and nothing else. `--tests` leaves out the doc-tests, whose
-  # `ignore` blocks are not tests at all. Most of the job is compiling the workspace.
+  # `ignore` blocks are not tests at all. Three legs that together run each ignored test once
+  # (#4375): as one job they ran past its 60 minutes once the pool probe took the AI's, the server's
+  # and the tools' suites too (#4249). The tools leg leaves the probe's four tests to their own leg.
+  # That leg builds only jackioh-tools, which does not depend on the server, so it fetches every
+  # crate first for the probe's nested `cargo test --offline` builds.
   daily-tests:
-    name: daily tests (cargo test -- --ignored)
+    name: daily tests (${{ matrix.leg }})
     if: github.event_name != 'schedule'
+    environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: every crate but the tools
+            key: crates
+            targets: "--workspace --exclude jackioh-tools --tests"
+            skip: ""
+          - leg: tools
+            key: tools
+            targets: "-p jackioh-tools --tests"
+            skip: "--skip _passes_with_every_random_pool_rotated"
+          - leg: pool probe
+            key: pool-probe
+            targets: "-p jackioh-tools --test pool_probe"
+            skip: ""
     env:
       CARGO_PROFILE_TEST_DEBUG: "0"
     steps:
@@ -288,13 +332,22 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node: "false"
-          cache-key: daily-tests
-      - name: every test a pull request leaves to the daily run
-        run: cargo test --workspace --tests --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored
+          cache-key: daily-tests-${{ matrix.key }}
+      - name: every crate in Cargo.lock, for the probe's offline builds
+        if: ${{ matrix.key == 'pool-probe' }}
+        run: cargo fetch
+      - name: this leg's tests a pull request leaves to the daily run
+        env:
+          TARGETS: ${{ matrix.targets }}
+          SKIP: ${{ matrix.skip }}
+        run: |
+          # shellcheck disable=SC2086 # TARGETS and SKIP are several arguments on purpose.
+          cargo test $TARGETS --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored $SKIP
 
   coverage:
     name: coverage (engine, cards, ai)
     if: github.event_name != 'schedule'
+    environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -341,13 +394,17 @@ jobs:
   # BUILD M5-T1's "without layout overflow at 1280x720 and 390x844": jsdom has no layout engine, so
   # Cypress component testing mounts the 10-unit/10-backrow fixture board in a real browser. No
   # client build and no server: the component dev server compiles apps/web/src itself, on port 5273,
-  # and only needs the WASM module. All the specs in one job: 16 minutes on 2026-11-07, cut off at 20
-  # on 2026-11-08 (#3439) as the art and animation specs grew, so it gets 60 until it is sharded.
+  # and only needs the WASM module. Three shards by measured time (e2e/scripts/shard-specs.mjs
+  # --component): all 78 specs in one job took 45 of its 60 minutes in run 43123557600 (#3744).
   component:
-    name: e2e component (chrome)
+    name: e2e component (${{ matrix.shard }}/${{ strategy.job-total }})
     needs: wasm
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -360,12 +417,18 @@ jobs:
       - name: unpack the WASM module
         run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
       - name: the fixture board's layout, measured in a browser
-        run: pnpm --dir e2e exec cypress run --component --browser chrome
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ strategy.job-total }}
+        run: |
+          specs=$(cd e2e && node scripts/shard-specs.mjs --component "$SHARD" "$SHARDS")
+          echo "component shard $SHARD/$SHARDS: ${specs//,/ }"
+          pnpm --dir e2e exec cypress run --component --browser chrome --spec "$specs"
       - name: keep the evidence when it fails
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: cypress-component
+          name: cypress-component-${{ matrix.shard }}
           path: e2e/artifacts/component/screenshots
           if-no-files-found: warn
 
@@ -406,6 +469,7 @@ jobs:
   notebooks:
     name: notebooks
     if: github.event_name != 'schedule'
+    environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -428,6 +492,7 @@ jobs:
   db:
     name: db (${{ matrix.suite }})
     if: github.event_name != 'schedule'
+    environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -461,7 +526,7 @@ jobs:
   # ------------------------------------------------------------------------------------------------
 
   # One issue, found by its exact title: opened (or commented on) when anything above did not pass,
-  # closed when everything did on `staging`, the default branch or a promotion, and handed to the
+  # closed when everything did on `_staging`, the default branch or a promotion, and handed to the
   # night bot when the red run is on one of those. It never checks out or runs code; the job names it quotes reach the shell through the
   # API's JSON and env, never through `${{ }}` in the script.
   report:
@@ -494,7 +559,7 @@ jobs:
           # Who fixes the red run: the night bot (.harness/config.json's bot_login).
           BOT_LOGIN: jgoetzmann-bot
           # The branch the daily run tests and production takes its commits from (#3275).
-          STAGING_BRANCH: staging
+          STAGING_BRANCH: _staging
         run: |
           set -euo pipefail
           red=false
@@ -507,13 +572,13 @@ jobs:
           # comments on, the daily one.
           candidate=false
           TITLE=$DAILY_TITLE
-          if [ "$EVENT" = pull_request ] && [ "$BASE" = production ]; then
+          if [ "$EVENT" = pull_request ] && [ "$BASE" = _production ]; then
             candidate=true
             TITLE=$CANDIDATE_TITLE
           fi
           export TITLE
-          # The runs the daily issue belongs to: on `staging` (the daily run, production's gate) and on
-          # the default branch, whose commits reach `staging` within two hours. Any other branch's run
+          # The runs the daily issue belongs to: on `_staging` (the daily run, production's gate) and on
+          # the default branch, whose commits reach `_staging` within two hours. Any other branch's run
           # tests that branch's change.
           gate=false
           if [ "$candidate" = false ] && { [ "$REF" = "$STAGING_BRANCH" ] || [ "$REF" = "$DEFAULT_BRANCH" ]; }; then
@@ -556,7 +621,7 @@ jobs:
           if [ "$candidate" = true ]; then
             owner="Night bot: production waits on this run, so it is yours and it comes first (\`priority:high\`, and you take it before every other queued item). #$PR promotes \`${SHA:0:12}\`, a commit of \`$STAGING_BRANCH\` (and so of \`$DEFAULT_BRANCH\`), so the fix lands on \`$DEFAULT_BRANCH\` like any other. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). Say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them. Once the fix is on \`$DEFAULT_BRANCH\`, promote-staging.yml brings it to \`$STAGING_BRANCH\` within two hours; the next daily run there that passes promotes it, or a \`/promote\` on the production issue tests staging's newer commit sooner."
           elif [ "$gate" = true ]; then
-            owner="Night bot: this run is on \`$REF\`, so it is yours, and it comes first (\`priority:high\`, and you take it before every other queued item): production promotes itself only from a daily run on \`$STAGING_BRANCH\` that passes every job, so it waits on this fix. The fix lands on \`$DEFAULT_BRANCH\` like any other, and promote-staging.yml brings it to \`$STAGING_BRANCH\` within two hours; the next daily run there that passes promotes it, or a \`/promote\` on the production issue tests staging's newer commit sooner. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
+            owner="Night bot: this run is on \`$REF\`, so it is yours, and it comes first (\`priority:high\`, and you take it before every other queued item): production promotes itself only from a daily run on \`$STAGING_BRANCH\` that passes every job, so it waits on this fix, and \`$STAGING_BRANCH\` holds still until this issue closes (scripts/promote-staging.sh, the freeze). Fix every failed job here, in the one pull request on \`$DEFAULT_BRANCH\` that closes this: when it closes, \`$STAGING_BRANCH\` takes main's first green commit after the close and the super run starts on it at once, and a run still red opens a new issue. Before you start, look for an open pull request or issue already fixing one of these jobs, and build on it instead of fixing the same test twice. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
           else
             owner="This run is on \`$REF\`, not \`$STAGING_BRANCH\` or \`$DEFAULT_BRANCH\`: it tests that branch's change, so the branch's author fixes it, and it is not handed to the night bot."
           fi
@@ -576,9 +641,10 @@ jobs:
             "_Posted by \`.github/workflows/super.yml\`._")
 
           # Hands the issue to the night bot: assigned to it and queued, as a person assigning it
-          # would, for a red run on `staging`, the default branch or a promotion pull request only, all
-          # as high priority since production waits on them, the promotion's as hard too
-          # (docs/issues-and-patches.md). A failure here leaves the report standing for a person.
+          # would, for a red run on `_staging`, the default branch or a promotion pull request only, all
+          # as high priority and hard since production waits on them (docs/issues-and-patches.md; the
+          # daily one too since 2026-11-10, after a medium plan fixed part of a red run). A failure here
+          # leaves the report standing for a person.
           hand_over() {
             if [ "$candidate" = true ]; then
               gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
@@ -592,7 +658,7 @@ jobs:
               return 0
             fi
             gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
-              --add-label "priority:high" \
+              --add-label "priority:high" --add-label "difficulty:hard" \
               && echo "handed #$1 to @$BOT_LOGIN, high priority" \
               || echo "::warning::could not hand #$1 to @$BOT_LOGIN"
           }

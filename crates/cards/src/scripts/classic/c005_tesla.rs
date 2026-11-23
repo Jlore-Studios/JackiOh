@@ -39,9 +39,10 @@ fn arrival(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
             }
             Some(instance_id.clone())
         }
-        GameEvent::CardResolved { permanent, def_id, instance_id, .. } => {
+        GameEvent::CardResolved { permanent, instance_id, .. } => {
             let state: &GameState = &*ctx.state;
-            if !*permanent || def_of(Some(state), def_id).type_ != CardType::Unit {
+            // R783005: the play as it counts, so a Unit set by its Cloaked is the Trap it was set as.
+            if !*permanent || played_type_of(state, event) != Some(CardType::Unit) {
                 return None;
             }
             let unit = find_instance(state, instance_id)?;
@@ -69,19 +70,16 @@ fn zap() -> TriggerDef {
         if has_revealed(ctx) {
             return vec![];
         }
-        // R781001: a Field Trap can't target an Immutable Unit in play, so Tesla still fires and
-        // animates but deals it nothing.
-        let state: &GameState = &*ctx.state;
-        let shielded = find_instance(state, &target).is_some_and(|unit| immutable_bars(state, ctx.live_self(), unit));
-        let mut effects = vec![remember(json_as(json!({ "key": REVEALED, "value": true })))];
-        if !shielded {
-            effects.push(damage(json_as(json!({
+        // R4353001: a Field Trap may target an Immutable Unit in play, so Tesla deals it the damage too
+        // (an Indestructible one takes none, as ever).
+        vec![
+            remember(json_as(json!({ "key": REVEALED, "value": true }))),
+            damage(json_as(json!({
                 "to": { "of": "instance", "instanceId": target },
                 "amount": param(&*ctx, "damage"),
-            }))));
-        }
-        effects.push(animate(json_as(json!({ "position": "DEF" }))));
-        effects
+            }))),
+            animate(json_as(json!({ "position": "DEF" }))),
+        ]
     })
     .with_when(|ctx, event| !has_revealed(ctx) && arrival(ctx, event).is_some())
 }
@@ -121,6 +119,7 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
     const FEELINGS: &str = "classic-032"; // Felinor Feelings: Steal an enemy permanent in a lane where you control a Unit
     const FILLER: &str = "core-010";
+    const FIELD_SPELL: &str = "stand-in (1) Field Spell";
 
     use crate::js;
 
@@ -177,22 +176,32 @@ mod tests {
                 ));
             }
 
+            /// R783005: a Unit set face-down by its Cloaked is a Trap play, no Unit played.
             #[test]
-            fn r781002_an_immutable_unit_it_fires_on_takes_no_damage_and_tesla_still_animates() {
+            fn r783005_a_unit_set_face_down_by_its_cloaked_leaves_tesla_set() {
+                crate::register_all();
+                let mut s = setup(json!({ "hand": [crate::CLOAKED_UNIT, FILLER], "mana": 10 }), json!({}), false);
+                crate::set_cloaked(&mut s, P2, crate::CLOAKED_UNIT, 1);
+                assert!(!s.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
+                assert_eq!(s.backrow(P1, 3).map(|card| card.def_id).as_deref(), Some(TESLA));
+            }
+
+            #[test]
+            fn r4353001_an_immutable_unit_it_fires_on_takes_its_damage_and_tesla_animates() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [{ "def": MENACE, "radiant": true }, FILLER], "mana": 10 }), json!({}), false);
                 let menace = s.card(MENACE).clone();
 
                 s.play(&menace, json!({ "zone": 2 }));
 
-                // A Field Trap can't target an Immutable Unit in play (R781001): Tesla fires and animates,
-                // but its hit passes the Radiant Menace by, so its Lifesteal heals nothing.
+                // A Field Trap may target an Immutable Unit in play (R4353001): Tesla's hit lands on the
+                // Radiant Menace, its Lifesteal heals the 4 dealt, and Tesla animates.
                 let tesla = s.card(TESLA).clone();
                 assert!(matches_object(&js(&tesla.zone), &json!({ "z": "field", "row": "units", "lane": 3 })));
                 assert_eq!(s.count("trapFired"), 1);
-                assert_eq!(s.count("damage"), 0);
-                s.expect_stats(&menace, json!({ "health": 18 }));
-                s.expect_health(P1, 20);
+                assert_eq!(s.count("damage"), 1);
+                s.expect_stats(&menace, json!({ "health": 14, "maxHealth": 18 }));
+                s.expect_health(P1, 24);
             }
 
             #[test]
@@ -303,6 +312,22 @@ mod tests {
 
                 assert_eq!(s.count("trapFired"), 0);
                 assert_eq!(s.card(TESLA).face_up, Some(false));
+            }
+
+            /// §8.6 row 5: "when your opponent summons a Unit". A Field Spell the opponent plays stays on
+            /// the field as a permanent too, and is no Unit: it leaves Tesla set.
+            #[test]
+            fn s8_6_an_opponents_field_spell_resolving_into_play_is_no_unit_and_leaves_it_set() {
+                crate::register_all();
+                let mut s = setup(json!({ "hand": [FIELD_SPELL, FILLER] }), json!({}), false);
+                let field_spell = s.card(FIELD_SPELL).clone();
+
+                s.play(&field_spell, json!({ "zone": 2 }));
+
+                s.expect_in_zone(&field_spell, "field");
+                assert_eq!(s.count("trapFired"), 0);
+                assert_eq!(s.card(TESLA).face_up, Some(false));
+                assert!(matches_object(&js(&s.card(TESLA).zone), &json!({ "row": "backrow", "lane": 3 })));
             }
 
             #[test]

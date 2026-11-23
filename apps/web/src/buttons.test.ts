@@ -93,13 +93,33 @@ const oneOff = (compound: string): boolean =>
 const buttonish = (compound: string): boolean =>
   /(?<![\w.#-])button(?![\w-])/.test(compound) || /\.(?:[\w-]*[-_])?(?:button|btn)(?:[-_][\w-]*)?(?![\w-])/.test(compound) || oneOff(compound);
 
+/**
+ * Each innermost rule of `sheet` as written (#4009: `/([^{}]+)\{([^{}]*)\}/g` scans super-linearly on
+ * a long brace-free run).
+ */
+function rulePairs(sheet: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = sheet.split("}");
+  if (!sheet.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
+}
+
 /** Each innermost rule of `sheet`: its selectors' subjects and its body. */
 function rules(sheet: string): [string[], string][] {
-  return [...code(sheet).matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => [
-    splitTop(match[1] ?? "", ",")
-      .filter((selector) => !selector.includes("::") && !selector.startsWith("@"))
+  return rulePairs(code(sheet)).map(([selector, body]) => [
+    splitTop(selector, ",")
+      .filter((part) => !part.includes("::") && !part.startsWith("@"))
       .map(subject),
-    match[2] ?? "",
+    body,
   ]);
 }
 

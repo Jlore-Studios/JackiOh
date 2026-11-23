@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Retired by #4159 (R4159000): nothing here reaches the AI; kept while `learn.yml` runs `retrain.sh` and
+# `learn-promote.sh`. The AI compiles no network now, so this script stops where it would put one in.
 # The learned evaluation's retrain, start to end, with no LLM inside it (#466, #1012;
 # docs/learned-eval.md D2): one script exports, fits, screens, and names the gate only after a
 # passing screen. A person, the learn lane's workflow (.github/workflows/learn.yml) or a session runs
@@ -115,7 +117,8 @@ uv run --frozen --project training/ml python -m jackioh_ml.fit "$out/positions.j
 gain=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['decision']['gain'])" "$out/fit/report.json")
 if ! python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) > 0 else 1)" "$gain"; then
   say "the network does not beat the calibrated hand eval on held-out turns 4-10 (gain $gain): no screen"
-  printf '{"stage":"fit","gain":%s,"screened":false}\n' "$gain" > "$out/summary.json"
+  pull=$(python3 -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))['largestPull']))" "$out/fit/report.json")
+  printf '{"stage":"fit","gain":%s,"screened":false,"largestPull":%s}\n' "$gain" "$pull" > "$out/summary.json"
   exit 1
 fi
 
@@ -145,7 +148,8 @@ for s in "${order[@]}"; do
 done
 if [ -z "$shipped" ]; then
   say "no seed's network passes the AI's tests with the switch on: no screen"
-  printf '{"stage":"tests","gain":%s,"screened":false}\n' "$gain" > "$out/summary.json"
+  pull=$(python3 -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))['largestPull']))" "$out/fit/report.json")
+  printf '{"stage":"tests","gain":%s,"screened":false,"largestPull":%s}\n' "$gain" "$pull" > "$out/summary.json"
   exit 1
 fi
 say "seed $shipped's network ships"
@@ -177,6 +181,7 @@ say "the screen: $screen_games paired games on improve-dev, decided in advance"
 python3 - "$out" "$gain" <<'PY'
 import json, sys
 out, gain = sys.argv[1], float(sys.argv[2])
+fit_report = json.load(open(f"{out}/fit/report.json", encoding="utf-8"))
 tally, worst = None, 0
 for line in open(f"{out}/screen.txt", encoding="utf-8"):
     line = line.strip()
@@ -188,6 +193,7 @@ for line in open(f"{out}/screen.txt", encoding="utf-8"):
     elif "msP95" in row:
         worst = max(worst, row["msP95"])
 summary = {"stage": "screen", "gain": gain, "screened": True, "tally": tally, "maxMsP95": worst,
+           "largestPull": fit_report["largestPull"],
            "passed": bool(tally and tally["edgeLow"] > 0)}
 json.dump(summary, open(f"{out}/summary.json", "w"), indent=1)
 print(json.dumps(summary))

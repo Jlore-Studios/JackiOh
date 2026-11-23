@@ -270,11 +270,16 @@ fn to_placeholder(card: &mut CardInstance) {
     card.set_as = None;
     // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.
     card.created = None;
+    // R3536002, CLAUDE.md rule 7: a hidden card carries neither Evolve mark.
+    card.evolved = None;
+    card.enters_evolved = None;
     card.buffs = AttackHealth { attack: 0, health: 0 };
     card.damage = 0;
     card.cost_override = None;
     // R1181003: the price of the Embiggened version alone (Enormous Elderberry's (0)) goes with its face.
     card.embiggen_cost_override = None;
+    // R4350000: and so does its no-premium mark (Enormous Elderberry's no extra mana).
+    card.no_embiggen_premium = None;
     card.x = None;
     card.embiggened = None;
     card.return_to_hand_at_end_of_turn = None;
@@ -308,6 +313,8 @@ fn to_placeholder_json(card: &mut Value) {
         "costOverride",
         // R1181003: the Embiggened version's own price.
         "embiggenCostOverride",
+        // R4350000: and its no-premium mark.
+        "noEmbiggenPremium",
         "x",
         "embiggened",
         "returnToHandAtEndOfTurn",
@@ -325,6 +332,9 @@ fn to_placeholder_json(card: &mut Value) {
         "setAs",
         // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.
         "created",
+        // R3536002, CLAUDE.md rule 7: a hidden card carries neither Evolve mark.
+        "evolved",
+        "entersEvolved",
     ] {
         object.remove(key);
     }
@@ -547,6 +557,19 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     // maxi-tail: dropped whole, so the AI simulates a Rollback as restoring nothing; redact each snapshot's
     // hidden cards instead if the AI should ever plan around one.
     next.board_history = None;
+    // R3560000: the opponent's once-a-game marks (a hand arrival's among them) are theirs alone.
+    next.players[opp].once_a_game = None;
+    // R3550007: a side snapshot on the opponent's cards is theirs alone (§10.8) — what their Bogos
+    // Binted's Cry saw never reaches the seat's simulation.
+    for (player, place) in every_place(&next) {
+        if player != opp {
+            continue;
+        }
+        if let Some(card) = card_at_mut(&mut next, player, place) {
+            card.memory
+                .shift_remove(jackioh_engine::subsystems::board_history::SIDE_SNAPSHOT_KEY);
+        }
+    }
     // R676, R678: the decks the match began with and the boards a Glitch may lay down are no seat's to
     // read; dropped whole, so the AI simulates a Glitch reset as nothing and its boards as empty fields.
     next.opening = None;
@@ -564,6 +587,20 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             if secret.owner == opp && secret.revealed != Some(true) {
                 secret.choice = None;
             }
+        }
+    }
+    // R3558001, R3558002: a waiting meet and a lend are their side's hand order made legible — the
+    // seat keeps its own, the opponent's go, and an emptied list goes as `None`.
+    if let Some(meets) = next.hand_meets.as_mut() {
+        meets.retain(|meet| meet.player == seat);
+        if meets.is_empty() {
+            next.hand_meets = None;
+        }
+    }
+    if let Some(lends) = next.radiance_lends.as_mut() {
+        lends.retain(|lend| lend.player == seat);
+        if lends.is_empty() {
+            next.radiance_lends = None;
         }
     }
 
@@ -754,11 +791,11 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         .into_iter()
         .filter(|def_id| next.transient_defs.contains_key(def_id))
         .collect();
+    // `keep` takes only transient definitions, so each is walked the first time it is kept.
     while let Some(def_id) = keep.pop() {
-        if !next.transient_defs.contains_key(&def_id) || transient.contains(&def_id) {
+        if !transient.insert(def_id.clone()) {
             continue;
         }
-        transient.insert(def_id.clone());
         for id in subsystems::fused_ingredients(&next, &def_id).unwrap_or_default() {
             if next.transient_defs.contains_key(&id) {
                 keep.push(id);

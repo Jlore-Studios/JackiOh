@@ -79,6 +79,26 @@ const cardsCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "car
 const cardStateCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "cardstate.css"), "utf8");
 const inspectCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "inspect", "inspect.css"), "utf8");
 
+/**
+ * A sheet's `selector { body }` pairs (#4009: `/([^{}]+)\{([^{}]*)\}/g` scans super-linearly on a
+ * long brace-free run).
+ */
+function rulePairs(css: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = css.split("}");
+  if (!css.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
+}
+
 function def(id: string): CardDef {
   const found = CATALOG[id];
   if (found === undefined) throw new Error(`the catalog has no ${id}`);
@@ -109,6 +129,28 @@ function gemText(gem: Element): string {
   const copy = gem.cloneNode(true) as Element;
   for (const alt of copy.querySelectorAll(".cf-cost-alt")) alt.remove();
   return (copy.textContent ?? "").trim();
+}
+
+type CardFaceModule = typeof import("./CardFace.tsx");
+
+/**
+ * The module as a page load builds it, inside the test that reads it (`vi.resetModules()`): the art's shapes by type,
+ * the planes over the far one and a full art's empty text are built as the module loads, and Stryker turns a mutant on
+ * only after a test file has loaded its imports, so one built wrong fails only in a module imported afresh (#3490).
+ */
+async function freshCardFace(): Promise<CardFaceModule> {
+  vi.resetModules();
+  // #4222: the reset drops the scene tables with the modules, so the fresh `scene.ts` is installed
+  // as `test/setup.ts` did before the face it draws reads them.
+  const scene = await import("./art/scene.ts");
+  const data = await import("./art/sceneData.ts");
+  scene.installSceneData({
+    SCENE_KIT: data.SCENE_KIT,
+    drawFigure: data.drawFigure,
+    SCENE_RECIPES: data.SCENE_RECIPES,
+    ALT_SCENE_RECIPES: data.ALT_SCENE_RECIPES,
+  });
+  return import("./CardFace.tsx");
 }
 
 /**
@@ -215,6 +257,28 @@ describe("B12: the full face's DOM", () => {
     }
   });
 
+  it("B12 R3344000 the tables a page load builds: the art's shape by type, the planes over the far one, a full art's empty box", async () => {
+    const fresh = await freshCardFace();
+    const draw = (id: string): HTMLElement => {
+      const { container } = render(<fresh.CardFace face={faceModel({ defId: id, def: def(id), radiant: false })} />);
+      return one(container, ".cf");
+    };
+    for (const [type, id, shape] of TYPE_CARD) {
+      const art = one(draw(id), ".cf-art-frame > .cf-art");
+      expect(art.classList.contains(`cf-art--${shape}`), `${type} (${id})`).toBe(true);
+      cleanup();
+    }
+    // An Epic face draws its picture as depth planes: the far one in the window, the rest stacked over it.
+    const epic = draw("core-022");
+    expect(epic.getAttribute("data-depth")).toBe("true");
+    const planes = [...epic.querySelectorAll(".cf-art-frame > .cf-planes > .cf-plane")].map((plane) => plane.getAttribute("data-plane"));
+    expect(planes).toEqual(["middle", "near", "nearest"]);
+    cleanup();
+    // R1017001: a full-art face prints no words: its box is the empty text, and it prints less than its text.
+    const itd = faceModel({ defId: "classic-090", def: def("classic-090"), radiant: false });
+    expect(fresh.faceText(itd, undefined, true)).toStrictEqual({ shown: { full: "", spans: [] }, short: false, less: true });
+  });
+
   it("B12 .cf-gem carries the rarity for Common, Rare, Epic, Legendary and Mythic", () => {
     for (const [rarity, id] of RARITY_CARD) {
       const cf = catalogFace(id);
@@ -243,8 +307,10 @@ describe("B12: the full face's DOM", () => {
     expect([...human].map((tag) => tag.getAttribute("data-tag"))).toEqual(["Human"]);
   });
 
-  it("B12 a card with no tags renders no .cf-tag", () => {
-    expect(catalogFace("core-005").querySelectorAll(".cf-tag")).toHaveLength(0);
+  it("B12 a card with no tags renders no .cf-tag, nor an empty .cf-tags row", () => {
+    const cf = catalogFace("core-005");
+    expect(cf.querySelectorAll(".cf-tag")).toHaveLength(0);
+    expect(cf.querySelector(".cf-tags")).toBeNull();
   });
 
   it("B12 .card-text is present and empty when the card has no text", () => {
@@ -391,7 +457,7 @@ describe("B10: RulesText marks terms in bold", () => {
     const term = one(cry, ".card-text strong.cf-term");
     expect(term.getAttribute("data-term")).toBe("Cry");
     expect(term.textContent).toBe("Cry:");
-    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: Destroy an enemy non-Human Unit.");
+    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: Destroy an enemy non-Human Unit. You have 1 less mana next turn.");
     cleanup();
 
     const start = one(catalogFace("core-040"), '.card-text strong.cf-term[data-term="Start of turn"]');
@@ -438,9 +504,9 @@ describe("B10: RulesText marks terms in bold", () => {
   it("B10 a term keeps the rules box's ink in a tavern screen, whose own bold words are pale gold (#85)", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const rules = (file: string): { selector: string; body: string }[] =>
-      [...readFileSync(join(here, file), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
-        selector: (match[1] ?? "").trim(),
-        body: match[2] ?? "",
+      rulePairs(readFileSync(join(here, file), "utf8").replace(/\/\*[\s\S]*?\*\//g, "")).map(([selector, body]) => ({
+        selector: selector.trim(),
+        body,
       }));
     /** [ids, classes, types] of a selector made of ids, classes and type names, as both of these are. */
     const specificity = (selector: string): number[] => [
@@ -634,7 +700,7 @@ describe("B14: the radiant face", () => {
 
   it("B14 a clause the radiant cell restates is printed once, in its radiant form (core-002, core-046)", () => {
     const speciesist = one(catalogFace("core-002", true), ".card-text");
-    expect(speciesist.textContent).toBe("Cry: Destroy all enemy non-Human Units.");
+    expect(speciesist.textContent).toBe("Cry: Destroy all enemy non-Human Units. You have 1 less mana next turn.");
     expect(speciesist.querySelectorAll('strong.cf-term[data-term="Cry"]')).toHaveLength(1);
     cleanup();
     expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nEmbiggened (4): −4/−4 instead.");
@@ -754,13 +820,37 @@ describe("B15: length tiers, and useFitText without layout", () => {
       ["core-093", false, "l"],
       ["core-095", true, "m"],
       ["meditative-022-1", false, "l"],
+      // A written short form is what the face prints (R3941001).
+      ["meditative-045", true, "l"],
       // A clamp prints its whole text.
-      ["meditative-045", true, "xl"],
+      ["stinkyscape-116", false, "xl"],
     ];
     for (const [id, radiant, tier] of cases) {
       expect(catalogFace(id, radiant).getAttribute("data-text-tier"), `${id} radiant=${String(radiant)}`).toBe(tier);
       cleanup();
     }
+  });
+
+  it("R280 B15 .cf's data-text-tier counts the values a face in play prints after its words", () => {
+    const words = "Your two largest piles add effects.";
+    const spell: CardDef = { ...def("core-005"), id: "t-values", base: { ...def("core-005").base, keywords: [], text: words } };
+    const face = faceModel({
+      defId: spell.id,
+      def: spell,
+      radiant: false,
+      inPlay: {
+        preview: [
+          { label: "Your two largest piles", value: 5, display: "Deck" },
+          { label: "Your two largest piles", value: 3, display: "Graveyard" },
+        ],
+      },
+    });
+    expect(face.text.full).toBe(words);
+    expect(textTier(words)).toBe("s");
+    // The box prints "{Deck} {Graveyard}" after the label, 19 characters more: past the small tier's TEXT_TIER_MAX.s.
+    expect(words.length + " {Deck} {Graveyard}".length).toBeGreaterThan(TEXT_TIER_MAX.s);
+    const { container } = render(<CardFace face={face} />);
+    expect(one(container, ".cf").getAttribute("data-text-tier")).toBe("m");
   });
 
   it("B15 useFitText is a no-op on an element with no layout: no --cf-fit, no data-clamped, on content change too", () => {
@@ -935,6 +1025,21 @@ describe("R503: the set mark and a token's printed rarity", () => {
     expect(face.getAttribute("data-set-mark")).toBe("training-grounds");
     expect(face.getAttribute("aria-label")).toBe("Training Grounds set");
     expect(face.querySelector("img")?.getAttribute("src")).toBe(mark.src);
+  });
+
+  it("R3572000 the Stinkyscape+ mark is Stinkyscape's planet with the plus, not the diamond", () => {
+    const mark = setMarkOf("Stinkyscape+");
+    expect(mark.kind).toBe("stinkyscape-plus");
+    expect(mark.label).toBe("Stinkyscape+ set");
+    const others = ["Stinkyscape", "Classic+", "Meditative+", "Boss"].map((set) => setMarkOf(set).src);
+    expect(others).not.toContain(mark.src);
+    const svg = decodeURIComponent(mark.src);
+    expect(svg).toContain("fill='#7fd23e'");
+    expect(svg).toContain("M17.6 0.8H21.2");
+    expect(svg).toContain("scale(0.8)");
+    expect(svg).not.toContain("<text");
+    expect(svg).not.toContain("<title");
+    expect(one(catalogFace("stinkyscapeplus-001"), ".cf-set").getAttribute("data-set-mark")).toBe("stinkyscape-plus");
   });
 
   it("R503 a set with no glyph of its own gets the fallback, still named; an unknown card shows no set", () => {
@@ -1159,6 +1264,15 @@ describe("R1177001: every token's type line says Token", () => {
   });
 });
 
+describe("§10.10: a face in play ends its rules box with the keywords it gained", () => {
+  it("§10.10 .cf-text-gained names each gained keyword by its key, a | between two", () => {
+    const keywords: Keyword[] = [{ kind: "Taunt" }, { kind: "Armor", n: 3 }];
+    const u = unit("p1", { defId: "core-002", keywords });
+    const cf = catalogFace("core-002", false, "full", { inPlay: {}, live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords } });
+    expect(one(cf, ".cf-text-gained").getAttribute("data-gained")).toBe("Taunt|Armor 3");
+  });
+});
+
 describe("R1107: a granted Death ability prints on its own line", () => {
   it("R1107 prints a granted ability after the gained keywords and inside the printed text", () => {
     const grant = "Death: Add 1 random Book to your hand.";
@@ -1221,6 +1335,13 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     expect(box.getAttribute("title")).toContain("Ascent 0:");
   });
 
+  it("#912: with hover previews off, a face with no text has no tooltip at all, not an empty one", () => {
+    writeCardSettings({ hoverPreviews: false });
+    const box = one(catalogFace("core-t-felinor"), ".card-text");
+    expect(box.textContent).toBe("");
+    expect(box.hasAttribute("title")).toBe(false);
+  });
+
   it("#1017: a Summit without a level prints its short form, its header ending in \"…\", as does one past its lines", () => {
     for (const level of [null, 99]) {
       const box = summitBox(level);
@@ -1231,19 +1352,20 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     }
 
     // A level means nothing off the Summit: Heroic Power prints its own short form, the header over
-    // its thirteen powers.
+    // its fourteen powers.
     const { container } = render(
       <CardFace face={faceModel({ defId: "core-098", def: def("core-098"), radiant: false })} ascentLevel={3} />,
     );
     flushFits();
     const heroic = one(container, ".card-text");
     expect(heroic.getAttribute("data-short")).toBe("true");
-    expect(heroic.textContent).toContain("Discover one of 13 powers");
+    expect(heroic.textContent).toContain("Discover one of 14 powers");
     expect(heroic.textContent).not.toContain("Expedition Map");
   });
 
   it("#1017: a face that fits prints its whole text, and a clamp prints its whole text as printing less", () => {
-    // Silly Silas's base face: its Radiant face has been a clamp since Crater joined it (issue #3136).
+    // Silly Silas's base face: issue #4353 took off the line that made it clamp (issue #3837), and his Radiant
+    // face prints words written for it.
     const { container } = render(<CardFace face={faceModel({ defId: "core-052", def: def("core-052"), radiant: false })} />);
     flushFits();
     const fits = one(container, ".card-text");
@@ -1251,7 +1373,8 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     expect(fits.hasAttribute("data-less")).toBe(false);
     cleanup();
 
-    const clamp = faceModel({ defId: "meditative-049-2", def: def("meditative-049-2"), radiant: false });
+    // Megabase's keyword line alone fills four of the box's six lines, so its base face still clamps (R3941001).
+    const clamp = faceModel({ defId: "stinkyscape-116", def: def("stinkyscape-116"), radiant: false });
     const view = render(<CardFace face={clamp} />);
     flushFits();
     const box = one(view.container, ".card-text");

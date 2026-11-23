@@ -6,7 +6,7 @@
 import type { ActionBody, CardDef, CombatForecast, GameEvent, PlayerView, Row } from "@jackioh/shared";
 
 import type { Side } from "../game/contract.ts";
-import { t } from "../i18n/i18n.ts";
+import { t, type Params } from "../i18n/i18n.ts";
 import { TUTORIAL_BUBBLES_PER_MOVE_MAX, TUTORIAL_MOMENT_TURNS_MAX, TUTORIAL_STEP_TURNS_MAX } from "./config.ts";
 import { FIELD_GUIDE, type Discovery } from "./discoveries.ts";
 import { lessonById } from "./lessons.ts";
@@ -53,6 +53,8 @@ export type CoachStep = {
   title: Text;
   /** A `moment`'s question: the goal, never the click. */
   text: Text;
+  /** Values for `{name}` tokens in `title` and `text`, filled where shown. */
+  params?: Params;
   anchor?: AnchorOf;
   /** `info`: "Got it" completes it. `act`: its `done` completes it. `moment`: finding what it `discovers`, or its `done`. */
   kind: "info" | "act" | "moment";
@@ -82,6 +84,8 @@ export type CoachTip = {
   id: string;
   title: Text;
   text: Text;
+  /** Values for `{name}` tokens in `title` and `text`, filled where shown. */
+  params?: Params;
   anchor?: AnchorOf;
   when: (ctx: CoachCtx) => boolean;
   holdAi?: boolean;
@@ -148,8 +152,8 @@ export function coachStart(known: readonly string[]): CoachState {
   return known.length === 0 ? COACH_START : { ...COACH_START, known: [...known] };
 }
 
-export function textOf(text: Text, ctx: CoachCtx): string {
-  return typeof text === "function" ? text(ctx) : t(text);
+export function textOf(text: Text, ctx: CoachCtx, params?: Params): string {
+  return typeof text === "function" ? text(ctx) : t(text, params);
 }
 
 export function anchorOf(anchor: AnchorOf | undefined, ctx: CoachCtx): CoachAnchor | null {
@@ -419,7 +423,7 @@ export type CoachDisplay =
 
 /** An entry's rule as a sentence of its own: it is written to follow "You found {name}:". */
 export function ruleSentence(entry: Discovery): string {
-  const rule = t(entry.rule);
+  const rule = t(entry.rule, entry.params);
   return rule.charAt(0).toUpperCase() + rule.slice(1);
 }
 
@@ -454,8 +458,8 @@ export function coachDisplay(script: LessonScript, state: CoachState, ctx: Coach
     return {
       mode: "tip",
       id: tip.id,
-      title: textOf(tip.title, ctx),
-      text: textOf(tip.text, ctx),
+      title: textOf(tip.title, ctx, tip.params),
+      text: textOf(tip.text, ctx, tip.params),
       anchor: anchorOf(tip.anchor, ctx),
       ack: true,
       holdAi: tip.holdAi === true,
@@ -473,12 +477,12 @@ export function coachDisplay(script: LessonScript, state: CoachState, ctx: Coach
   return {
     mode: "step",
     id: step.id,
-    title: textOf(step.title, ctx),
-    text: textOf(step.text, ctx),
+    title: textOf(step.title, ctx, step.params),
+    text: textOf(step.text, ctx, step.params),
     anchor: anchorOf(pointed ? (step.hintAnchor ?? step.anchor) : step.anchor, ctx),
     ack: step.kind === "info",
     holdAi: step.kind === "info" && step.holdAi === true,
-    hint: hint === undefined ? null : textOf(hint, ctx),
+    hint: hint === undefined ? null : textOf(hint, ctx, step.params),
     canHint: level < hints.length,
     stepNumber,
     stepCount,

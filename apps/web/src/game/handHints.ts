@@ -1,12 +1,20 @@
-// #2267: the hand hints, one list in drawing order. A hint reads the card's `CardView` flags, the
-// `PlayerView` and the card's face the way `Card.tsx` reads it (`liveFace`, B5 E38, R243) and nothing
-// else (CLAUDE.md rule 7, SPEC §10.8). Adding a hint is one entry here plus its icon in
-// `cards/icons.tsx`. The list ships the Tradable pip (#2269, #2574, R2574000) and the Tribute pip (#2268).
+// #2267: the hand hints, one list in drawing order. A hint reads the card's `CardView` flags, the part of
+// the `PlayerView` `HintView` names (#3609: add a field there to read more of it) and the card's face the
+// way `Card.tsx` reads it (`liveFace`, B5 E38, R243) and nothing else (CLAUDE.md rule 7, SPEC §10.8).
+// Adding a hint is one entry here plus its icon in `cards/icons.tsx`. The list ships the Tradable pip
+// (#2269, #2574, R2574000) and the Tribute pip (#2268).
 
 import type { CardView, PlayerView } from "@jackioh/shared";
 
 import type { FaceModel, IconName } from "../cards/index.ts";
 import { t } from "../i18n/i18n.ts";
+
+/**
+ * #3609: what of the view a hint reads. A hand card's hint row is an element its `Card` compares by props, so
+ * it is handed this, which stays the same object while the viewer's Trades do, and not the whole view, which
+ * is new with every view and would draw every hand card each time.
+ */
+export type HintView = Pick<PlayerView, "trades">;
 
 export type HintShown = {
   /** One short number the pip prints, when the hint has one. */
@@ -22,7 +30,7 @@ export type HandHint = {
   id: string;
   icon: IconName;
   /** Null when the hint does not apply to this card. */
-  applies: (card: CardView, view: PlayerView, face: FaceModel) => HintShown | null;
+  applies: (card: CardView, view: HintView, face: FaceModel) => HintShown | null;
 };
 
 /**
@@ -55,7 +63,7 @@ export const HAND_HINTS: readonly HandHint[] = [TRADABLE, TRIBUTE_HINT];
 
 export function hintsFor(
   card: CardView,
-  view: PlayerView,
+  view: HintView,
   face: FaceModel,
   hints: readonly HandHint[] = HAND_HINTS,
 ): { hint: HandHint; shown: HintShown }[] {

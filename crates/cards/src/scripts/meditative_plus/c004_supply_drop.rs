@@ -18,9 +18,6 @@ pub const ID: &str = "meditativeplus-004";
 const COMBAT: &str = "combat";
 const SUPPLIES: &str = "supplies";
 
-/// The tag Supplies draws from.
-const JLOCKEED: &str = "Jlockeed";
-
 fn modes() -> Vec<ModeDecl> {
     vec![ModeDecl {
         kind: PromptKind::Mode,
@@ -94,7 +91,10 @@ fn supplies_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
         return vec![];
     }
     vec![add_random_from_catalog(json_as(json!({
-        "query": { "tags": [JLOCKEED], "excludeDefId": ID },
+        "query": crate::query::CardQuery {
+            exclude_def_id: Some(OneOrMany::One(ID.to_string())),
+            ..crate::query::jlockeed_cards()
+        },
         "count": count,
         "radiant": true,
         "costOverride": cost,

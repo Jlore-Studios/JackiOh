@@ -1,28 +1,22 @@
 //! S #176 Preemptive Strike (SPEC §8.10 row 176; R70, R113, R1839002, R1852003, R1852005, R1852006,
-//! R1857002, R1859006): (2) Spell, Legendary, a card of the Stinkyscape set (#2521).
+//! R1857002, R1859006, R3869001): (2) Spell, Legendary, a card of the Stinkyscape set (#2521).
 //!
 //! Base:    "If you have a Dormant Starship, launch it, then Discover a War Doctrine and cast it."
 //! Radiant: "If you have a Dormant Starship, launch it, then Discover a Radiant War Doctrine and cast it."
 //! Engine: S #137 Starfleet Commander's Cry as a Spell, its resolution hanging off `cry` (Core #5
 //! Stockpile's shape): with a Dormant Starship (`building_a_ship`, R1852005), `awaken` it, which
 //! launches it for nothing, spending no launch price (R1839002, R1852003, R1852006); then a Discover
-//! (§6.3) of three of the four War Doctrines, S #137.1 to S #137.4, named by id (R1857002), and a
+//! (§6.3) of three of the four War Doctrines, S #137.1 to S #137.4 (R1857002), the War Doctrine pool
+//! (`query::war_doctrines`, R3869001, which named them by id through v0.6.2b), and a
 //! `cast_new` of the pick, free and counted as played (R70), Radiant on the Radiant face. The Doctrine
 //! resolves before the Starship's fused When launched answers the launch (R113, R1859006). With no
-//! Dormant Starship, nothing: no launch and no Discover. The prompt names the card as the game's
+//! Dormant Starship, nothing: no launch and no Discover. R4189000: in hand the card glows while
+//! its controller has a Dormant Starship. The prompt names the card as the game's
 //! catalog spells it (`def_of`). Declares no numbers.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-176";
-
-/// The four War Doctrines, S #137.1 to S #137.4: the Discover's pool (R1857002).
-const WAR_DOCTRINES: [&str; 4] = [
-    "stinkyscape-137-1",
-    "stinkyscape-137-2",
-    "stinkyscape-137-3",
-    "stinkyscape-137-4",
-];
 
 /// The resume step the Discover's answer comes back to (§10.6).
 const PICKED: &str = "picked";
@@ -30,6 +24,12 @@ const PICKED: &str = "picked";
 fn preemptive_strike(radiant: bool) -> Script {
     let doctrine = if radiant { "a Radiant War Doctrine" } else { "a War Doctrine" };
     Script {
+        // R4189000: in hand the card glows while its controller has a Dormant Starship, the same
+        // fact the Cry branches on.
+        condition_met: Some(condition_hook(|ctx: ConditionContext<'_>| {
+            ctx.zone == ConditionZone::Hand
+                && dormant_starship_of(ctx.state, ctx.controller).is_some()
+        })),
         cry: Some(hook(move |ctx| {
             let Some(ship) = dormant_starship_of(&*ctx.state, ctx.controller) else {
                 return vec![];
@@ -40,7 +40,7 @@ fn preemptive_strike(radiant: bool) -> Script {
                 awaken(json_as(json!({ "target": { "of": "instance", "instanceId": ship.id } }))),
                 discover_from_catalog(json_as(json!({
                     "step": PICKED,
-                    "query": { "defId": WAR_DOCTRINES },
+                    "query": crate::query::war_doctrines(),
                     "prompt": prompt,
                 }))),
             ]
@@ -68,33 +68,26 @@ pub fn script() -> CardScripts {
 // S #176 Preemptive Strike — SPEC §8.10 row 176, BUILD M12 row S 176 (R1852006, R70, R1859006).
 #[cfg(test)]
 mod tests {
-    use super::{ID, WAR_DOCTRINES};
+    use super::ID;
+
+    /// R3869001: the War Doctrine pool today, S #137.1 to S #137.4, pinned so a change to it is
+    /// deliberate: the four this card named by id through v0.6.2b.
+    const WAR_DOCTRINES: [&str; 4] = [
+        "stinkyscape-137-1",
+        "stinkyscape-137-2",
+        "stinkyscape-137-3",
+        "stinkyscape-137-4",
+    ];
     use crate::built_starship;
     use jackioh_engine::prelude::{building_a_ship, is_launched_starship};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
-    const CHASSIS: &str = "stinkyscape-048"; // Ultralight Chassis: Starship Piece, Equip, Rush: keywords only
+    const CHASSIS: &str = "stinkyscape-048"; // Ultralight Chassis: Starship Piece, Rush: keywords only
     const CAPACITOR: &str = "stinkyscape-133"; // Ultra Capacitor: When launched: +attack/+health per other piece.
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     /// Its printed cost, (2).
     const COST: i32 = 2;
-
-    /// The def ids the open Discover offers.
-    // Differs from Scenario::offered: the open Discover's options, not the seat's legal actions.
-    fn offered(s: &Scenario) -> Vec<String> {
-        s.state()
-            .pending
-            .as_ref()
-            .expect("the Discover")
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect()
-    }
 
     /// p1's Starship (an Ultralight Chassis and an Ultra Capacitor), and Preemptive Strike (Radiant if
     /// `radiant`) cast from hand.
@@ -137,7 +130,7 @@ mod tests {
             assert!(!building_a_ship(s.state(), P1));
             let prompt = &s.state().pending.as_ref().expect("the Discover").prompt;
             assert!(prompt.starts_with("Preemptive Strike:"), "{prompt}");
-            let options = offered(&s);
+            let options = s.prompt_modes();
             assert_eq!(options.len(), DISCOVER_OPTIONS as usize, "{options:?}");
             assert!(options.iter().all(|option| WAR_DOCTRINES.contains(&option.as_str())));
             let mut distinct = options.clone();
@@ -151,7 +144,7 @@ mod tests {
             let (mut s, ship) = cast("s176-cast", false);
             let max_health = s.stats(ship.as_str()).max_health;
             let mana = s.state().players.p1.mana.current;
-            let pick = offered(&s)[0].clone();
+            let pick = s.prompt_modes()[0].clone();
             s.answer(json!(pick));
             assert_eq!(s.state().players.p1.mana.current, mana, "the cast is free");
             let events = s.last_events();
@@ -192,6 +185,63 @@ mod tests {
             );
             s.expect_in_zone(ID, "graveyard");
         }
+
+        /// p1's Starship built and Preemptive Strike (Radiant if `radiant`) in hand, unplayed.
+        fn holding(seed: &str, radiant: bool) -> (Scenario, String) {
+            built_starship(
+                seed,
+                json!([{ "def": CHASSIS, "lane": 1 }, { "def": CAPACITOR, "lane": 2 }]),
+                json!({ "hand": [{ "def": ID, "radiant": radiant }] }),
+                json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
+            )
+        }
+
+        /// R4189000: with a Dormant Starship the Strike glows in hand, and the cast it
+        /// promised launches the Starship and opens the Discover.
+        #[test]
+        fn r4189000_glows_with_a_dormant_starship_and_the_cast_then_launches_it() {
+            for radiant in [false, true] {
+                let (mut s, ship) = holding(&format!("r4189000-glow-{radiant}"), radiant);
+                let strike = s.card(ID).id.clone();
+                assert!(hand_glows(&s, &strike, P1), "radiant {radiant}");
+                assert!(
+                    !serde_json::to_string(&s.view(PlayerId::P2)).unwrap().contains("conditionActive"),
+                    "the opponent never sees the flag"
+                );
+                s.play(ID, json!({}));
+                assert!(is_launched_starship(s.card(ship.as_str())), "radiant {radiant}");
+                assert!(s.state().pending.is_some(), "the Discover opens");
+            }
+        }
+
+        /// R4189000: with no Dormant Starship it stays dark, and the cast does nothing.
+        #[test]
+        fn r4189000_dark_without_a_dormant_starship_and_the_cast_then_does_nothing() {
+            for radiant in [false, true] {
+                let mut s = crate::scenario(json!({
+                    "seed": format!("r4189000-dark-{radiant}"),
+                    "active": "p1",
+                    "p1": { "hand": [{ "def": ID, "radiant": radiant }, VANILLA], "mana": 10, "library": crate::filler(4) },
+                    "p2": { "hand": crate::filler(1), "library": crate::filler(4) },
+                }));
+                let strike = s.card(ID).id.clone();
+                assert!(!hand_glows(&s, &strike, P1), "radiant {radiant}");
+                s.play(ID, json!({}));
+                assert!(s.state().pending.is_none(), "no Discover");
+                assert!(
+                    !s.last_events()
+                        .iter()
+                        .any(|event| event.event_type() == GameEventType::StarshipLaunched)
+                );
+                assert!(
+                    !s.last_events().iter().any(|event| matches!(
+                        event,
+                        GameEvent::CardResolved { def_id, .. } if WAR_DOCTRINES.contains(&def_id.as_str())
+                    )),
+                    "no Doctrine cast"
+                );
+            }
+        }
     }
 
     mod radiant {
@@ -203,7 +253,7 @@ mod tests {
             assert!(is_launched_starship(s.card(ship.as_str())));
             let prompt = &s.state().pending.as_ref().expect("the Discover").prompt;
             assert!(prompt.contains("Radiant War Doctrine"), "{prompt}");
-            let pick = offered(&s)[0].clone();
+            let pick = s.prompt_modes()[0].clone();
             s.answer(json!(pick));
             assert!(cast_doctrine(&s, &pick).radiant, "the Doctrine is cast Radiant");
         }

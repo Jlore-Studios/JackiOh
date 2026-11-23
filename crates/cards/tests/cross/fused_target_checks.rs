@@ -36,13 +36,6 @@ fn craft(s: &mut Scenario, ingredients: [CardInstance; 2]) -> CardInstance {
     }
 }
 
-fn plays_of(s: &Scenario, card: &CardInstance) -> Vec<ActionBody> {
-    legal_actions(s.state(), P1)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
-        .collect()
-}
-
 mod r102_a_fused_cards_declared_targets_keep_working_when_two_ingredients_define_targetchecks {
     use super::*;
 
@@ -59,7 +52,7 @@ mod r102_a_fused_cards_declared_targets_keep_working_when_two_ingredients_define
         let fused = craft(&mut s, [rewind, constant]);
 
         let _listed = legal_actions(s.state(), P1);
-        assert!(plays_of(&s, &fused).iter().any(
+        assert!(s.plays_of(&fused).iter().any(
             |play| matches!(play, ActionBody::Play { targets: Some(targets), .. } if targets.len() == 2)
         ));
     }
@@ -83,6 +76,6 @@ mod r102_a_fused_cards_declared_targets_keep_working_when_two_ingredients_define
         let fused = craft(&mut s, [first, second]);
 
         let _listed = legal_actions(s.state(), P1);
-        assert!(!plays_of(&s, &fused).is_empty());
+        assert!(s.can_play(&fused));
     }
 }

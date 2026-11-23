@@ -14,25 +14,43 @@ import { liveFace } from "../game/faces.ts";
 import { card, fusedDef, unit } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 import { CardFace } from "./CardFace.tsx";
-import { CHINESE, CHINESE_TERMS, chineseDef, chineseName } from "./chinese.ts";
+import {
+  CHINESE,
+  CHINESE_TERMS,
+  cardTablesReady,
+  chineseDef,
+  chineseName,
+  loadCardTables,
+  readerName,
+  readerTerms,
+  resetCardTablesForTests,
+} from "./chinese.ts";
+import { LOCALE_STORAGE_KEY, getLocale, initLocale, resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
+import { resetCosmeticsForTests, writeCardLevel } from "./cosmetics.ts";
 import { DORMANT_STARSHIP_ID } from "./fused.ts";
 import { Glossary } from "./inspect/Glossary.tsx";
 import { MinionFace } from "./MinionFace.tsx";
 import { faceModel, type FaceModel } from "./model.ts";
 import { CardDefsProvider } from "./refContext.tsx";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
+import { VERSION_IMMERSIVE_ID, VERSION_OUT_OF_FRAME_ID } from "./versions.ts";
 import { GLOSSARY, legacyText, markedText } from "../test/faceData.ts";
 
 /** The glossary entries a face names (jackioh-shared `face/glossary.rs`). */
 const glossaryOf = (face: FaceModel): FaceModel["glossary"] => face.glossary;
 
 // R1017001: a full-art face prints none of its words, so full art is off here (fullArt.test.tsx).
-beforeEach(() => {
+beforeEach(async () => {
   writeCardSettings({ fullArt: false });
+  resetLocaleForTests();
+  // #4180: the tables load on demand; every test below starts with them in, English reading.
+  await loadCardTables();
 });
 
 afterEach(() => {
   cleanup();
+  resetCosmeticsForTests();
+  resetLocaleForTests();
   writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
 });
 
@@ -83,11 +101,51 @@ describe("R1303 the frame's words", () => {
   });
 });
 
+describe("#4180 the card tables on demand", () => {
+  it("R711000 before the tables arrive a lookup falls back to English", async () => {
+    resetCardTablesForTests();
+    expect(cardTablesReady()).toBe(false);
+    const target = def("core-002");
+    // No entry and no terms: the card reads exactly as given, as `t()` does for a missing entry.
+    expect(chineseName(target.id, target.name)).toBe(target.name);
+    expect(chineseDef(target)).toBe(target);
+    expect(readerTerms()).toBeUndefined();
+    await loadCardTables();
+    expect(cardTablesReady()).toBe(true);
+    expect(chineseName(target.id, target.name)).toBe(must(CHINESE[target.id], target.id).name);
+  });
+
+  it("R711000 initLocale with stored Chinese paints Chinese names on the first render", async () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "zh-CN");
+    await initLocale();
+    expect(getLocale()).toBe("zh-CN");
+    expect(readerName(def("core-002"))).toBe(must(CHINESE["core-002"], "core-002").name);
+    expect(readerTerms()).toBe(CHINESE_TERMS);
+  });
+
+  it("R711000 setLocale to Chinese paints Chinese names once it resolves", async () => {
+    await setLocale("zh-CN");
+    expect(getLocale()).toBe("zh-CN");
+    expect(readerName(def("core-002"))).toBe(must(CHINESE["core-002"], "core-002").name);
+    expect(readerTerms()).toBe(CHINESE_TERMS);
+  });
+
+  it("R1301 an English reader's gated screen names a flagged view's card in Chinese", () => {
+    // `main.tsx`'s EngineGate loads `loadCardTables()` best-effort beside the module, so a gated
+    // screen draws with the tables in whatever the reader reads: English here, the flag's Chinese on the face.
+    expect(getLocale()).toBe("en");
+    expect(cardTablesReady()).toBe(true);
+    const root = draw(inPlay(card({ defId: "core-002", cost: 3, chinese: true })));
+    expect(text(root, ".card-name")).toBe(zh("core-002").name);
+  });
+});
+
 describe("R1301 a Chinese card in a match", () => {
   it("R1301 a Chinese card in play draws its Chinese name, text, type line and tags", () => {
     const root = draw(inPlay(card({ defId: "core-002", cost: 3, chinese: true })));
     expect(text(root, ".card-name")).toBe(zh("core-002").name);
-    expect(text(root, ".cf-text-base")).toBe(zh("core-002").base);
+    // Its {mana} prints the card's 1 (#4353), as each face fills its numbers (B3.4 rule 5).
+    expect(text(root, ".cf-text-base")).toBe(zh("core-002").base.replace("{mana}", "1"));
     expect(text(root, ".card-type")).toBe(CHINESE_TERMS.types.Unit);
     expect([...root.querySelectorAll(".cf-tag")].map((tag) => tag.textContent)).toEqual([CHINESE_TERMS.tags.Human]);
     // No English shows; the machine-read attributes keep the catalog's words.
@@ -96,7 +154,7 @@ describe("R1301 a Chinese card in a match", () => {
     expect(root.querySelector(".cf-tag")).toHaveAttribute("data-tag", "Human");
     // The Radiant face's gold marks are read off the two Chinese faces (R1302).
     const radiant = inPlay(card({ defId: "core-002", cost: 3, radiant: true, chinese: true }));
-    expect(radiant.text.full).toBe(zh("core-002").radiant);
+    expect(radiant.text.full).toBe(zh("core-002").radiant.replace("{mana}", "1"));
     expect(markedText(radiant.text.full, legacyText(radiant.text).marks)).toEqual(["所有"]);
   });
 
@@ -106,7 +164,7 @@ describe("R1301 a Chinese card in a match", () => {
       const root = draw(face);
       expect(face.chinese).toBeUndefined();
       expect(text(root, ".card-name")).toBe(def("core-002").name);
-      expect(text(root, ".cf-text-base")).toBe(def("core-002").base.text);
+      expect(text(root, ".cf-text-base")).toBe(def("core-002").base.text.replace("{mana}", "1"));
       expect(text(root, ".card-type")).toBe("Unit");
       expect(text(root, ".cf-tag")).toBe("Human");
       cleanup();
@@ -138,12 +196,14 @@ describe("R1301 a Chinese card in a match", () => {
   });
 
   it("R1384 R1301 a Meditative card in Chinese: its words, its ensō and its new glossary rows", () => {
-    // Meditative #78 Occidentless Mandate: a CN Spell that Exiles.
-    const exile = inPlay(card({ defId: "meditative-078", cost: 4, chinese: true }));
-    const root = draw(exile);
+    // Meditative #78 Occidentless Mandate: a CN Spell.
+    const mandate = inPlay(card({ defId: "meditative-078", cost: 4, chinese: true }));
+    const root = draw(mandate);
     expect(text(root, ".card-name")).toBe(zh("meditative-078").name);
     expect([...root.querySelectorAll(".cf-tag")].map((tag) => tag.textContent)).toEqual([CHINESE_TERMS.tags.CN]);
     expect(root.querySelector(".cf-set")).toHaveAttribute("data-set-mark", "meditative");
+    // #48 Tranquility Exiles itself (#78 Destroys since issue #4154).
+    const exile = inPlay(card({ defId: "meditative-048", cost: 2, chinese: true }));
     expect(glossaryOf(exile).find((entry) => entry.id === "Exile")).toMatchObject(must(CHINESE_TERMS.glossary.Exile, "Exile"));
     // #79 Touched by KY sets the hand size; #76 Do or Die marks cards in a hand.
     const size = glossaryOf(inPlay(card({ defId: "meditative-079", cost: 3, chinese: true })));
@@ -191,7 +251,7 @@ describe("R1301 a Chinese card in a match", () => {
     }
   });
 
-  it("R1301 a fused Chinese card joins its ingredients' Chinese", () => {
+  it("R1301 R3941002 a fused Chinese card joins its ingredients' Chinese", () => {
     // R468: Core #11 Tempo Timmy fused with Core #89 Corpse Eater, as the engine joins the English.
     const fused = fusedDef([def("core-011"), def("core-089")]);
     const base = faceModel({ defId: fused.id, def: fused, radiant: false, chinese: true, inPlay: {} });
@@ -200,13 +260,14 @@ describe("R1301 a Chinese card in a match", () => {
     const radiant = faceModel({ defId: fused.id, def: fused, radiant: true, chinese: true, inPlay: {} });
     expect(radiant.text.full).toBe(`${zh("core-011").radiant}\n${zh("core-089").radiant}`);
     // R102, R1302: each Chinese Radiant line is marked against its own Chinese base line (the Corpse Eater's
-    // 易碎3 against 易碎1, issue #3139, among them).
-    expect(markedText(radiant.text.full, legacyText(radiant.text).marks)).toEqual(["冲锋", "圣盾", "3", "两倍"]);
+    // 易碎3 against 易碎1, issue #3139, among them; its Radiant 圣盾 went in issue #4292).
+    expect(markedText(radiant.text.full, legacyText(radiant.text).marks)).toEqual(["冲锋", "3", "两倍"]);
     // R469: an ingredient fused on its Radiant face puts that face into the base form too.
     const forced = { ...fused, ingredients: [{ defId: "core-011", radiant: true as const }, { defId: "core-089" }] };
     expect(chineseDef(forced).base.text).toBe(`${zh("core-011").radiant}\n${zh("core-089").base}`);
-    // The English of the same fusion is what the glossary reads.
-    expect(base.englishText).toBe(fused.base.text);
+    // The English of the same fusion, its keyword lines as one (R3941002), is what the glossary reads.
+    const [, ...corpseEater] = def("core-089").base.text.split("\n");
+    expect(base.englishText).toBe(["Rush, First Strike, Brittle 1", ...corpseEater].join("\n"));
   });
 
   it("R3045000 a fused Dormant Starship is named for the hull in Chinese, a launched one for its drawn name", () => {
@@ -246,5 +307,23 @@ describe("R1301 a Chinese card in a match", () => {
     // Its name plate is Chinese, and its art keeps the English name's motif.
     expect(text(minion, ".card-name")).toBe(zh("core-002").name);
     expect(face.englishName).toBe(def("core-002").name);
+  });
+
+  it("R1301 R2943001 R2944001 a Chinese face's cut-out subject and near layer keep the English name's motif too", () => {
+    const id = "classic-080"; // BOOM! Big Max: its English name draws a bomb (R503), and it is offered both looks.
+    const looks = [
+      [VERSION_OUT_OF_FRAME_ID, ".cf-art-frame > .cf-art--cutout"],
+      [VERSION_IMMERSIVE_ID, ".cf-art-frame > .cf-immersive > .cf-art--near"],
+    ] as const;
+    for (const [version, selector] of looks) {
+      writeCardLevel(id, version);
+      const face = faceModel({ defId: id, def: def(id), radiant: false, chinese: true, inPlay: {} });
+      expect(face.name, version).toBe(zh(id).name);
+      expect(face.englishName, version).toBe(def(id).name);
+      const root = render(<CardFace face={face} layout="full" worn />).container;
+      expect(root.querySelector(".cf")?.getAttribute("data-version"), version).toBe(version);
+      expect(root.querySelector(selector)?.getAttribute("data-art-motif"), version).toBe("bomb");
+      cleanup();
+    }
   });
 });

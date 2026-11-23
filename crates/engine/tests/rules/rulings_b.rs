@@ -14,7 +14,7 @@ use std::collections::BTreeSet;
 use jackioh_engine::effects;
 use jackioh_engine::subsystems::activate::{activate_ability, why_cannot_activate_ability};
 use jackioh_engine::subsystems::fuse::fuse;
-use jackioh_engine::subsystems::hero_power::{ensure_power, power_abilities, power_of};
+use jackioh_engine::subsystems::hero_power::{PowerEdition, ensure_power, power_abilities, power_of};
 use jackioh_engine::subsystems::{
     AI_SKIPPED_ACTIONS, PolicyOptions, choose_action, is_lethal, policy_actions, projected_damage,
 };
@@ -421,7 +421,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         HEROIC.into(),
         both(Script {
-            activations: power_abilities(false),
+            activations: power_abilities(false, PowerEdition::Thirteen),
             ..Script::default()
         }),
     );
@@ -769,10 +769,6 @@ fn def_at(state: &GameState, zone: ZoneSlot) -> Option<String> {
     card_at(state, zone).map(|card| card.def_id.clone())
 }
 
-fn plays_card(action: &ActionBody, instance: &str) -> bool {
-    matches!(action, ActionBody::Play { instance_id, .. } if instance_id == instance)
-}
-
 fn pluck(events: &[Value], key: &str) -> Vec<Value> {
     events.iter().map(|event| event[key].clone()).collect()
 }
@@ -835,7 +831,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
             live.memory.insert("power".to_string(), json!("recruit"));
         });
         let recruiting = instance_in(sink.state, &card.id);
-        assert_eq!(power_of(&recruiting).map(|power| power.x), Some(3));
+        assert_eq!(power_of(&recruiting).map(|power| power.x), Some(2));
         assert_eq!(effective_cost(sink.state, &recruiting, Default::default()), 0);
 
         // Expedition Map's "Recruit a permanent": the Spell on top of the library is skipped.
@@ -2165,17 +2161,9 @@ mod spec_11_rulings_r43_r84_m3_gate {
         live.players.p1.hand = vec![];
         let six = hand_card(&mut live, GIGA, P1);
         assert_eq!(price_now(&live, &six), 6);
-        assert!(
-            !legal_actions(&live, P1)
-                .iter()
-                .any(|action| plays_card(action, &six.id))
-        );
+        assert!(plays_in(&live, P1, &six.id).is_empty());
         live.players.p1.mana.current = 6;
-        assert!(
-            legal_actions(&live, P1)
-                .iter()
-                .any(|action| plays_card(action, &six.id))
-        );
+        assert!(!plays_in(&live, P1, &six.id).is_empty());
     }
 
     #[test]
@@ -2601,19 +2589,16 @@ mod spec_11_rulings_r43_r84_m3_gate {
             .filter(|action| action.action_type() == ActionType::Play)
             .collect();
         assert_eq!(
-            plays.iter().filter(|action| plays_card(action, &unit.id)).count(),
+            plays.iter().filter(|action| is_play_of(action, &unit.id)).count(),
             UNIT_ZONES as usize
         );
         // R348: X from 1 up to current mana (1 here).
         assert_eq!(
             plays
                 .iter()
+                .filter(|action| is_play_of(action, &x.id))
                 .filter_map(|action| match action {
-                    ActionBody::Play {
-                        instance_id,
-                        x: chosen,
-                        ..
-                    } if *instance_id == x.id => Some(*chosen),
+                    ActionBody::Play { x: chosen, .. } => Some(*chosen),
                     _ => None,
                 })
                 .collect::<Vec<_>>(),

@@ -50,7 +50,7 @@ const PROVIDER_MSG = "PROVIDER-MSG-91c2";
 // links: unsigned three-part JWTs with a base64url JSON payload
 
 function base64url(text: string): string {
-  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
 }
 
 function jwt(payload: Record<string, unknown>): string {

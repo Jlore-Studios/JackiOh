@@ -1,5 +1,5 @@
-//! S #44 Great Paperclip Theory (SPEC §8.10 row 44): (1) Spell, Quickdraw, Mythic, a card of the
-//! Stinkyscape set. Its name is the designer's satire, kept.
+//! S #44 Great Paperclip Theory I (SPEC §8.10 row 44): (1) Spell, Quickdraw, Paperclip, Mythic, a
+//! card of the Stinkyscape set. Its name is the designer's satire, kept, with S01's numeral.
 //!   Base:    "Add a Drone Core I to your hand. For the rest of the game, the first time you play each tier
 //!            of Drone Core, add the next tier to your hand."
 //!   Radiant: "Add a Radiant Drone Core I to your hand. For the rest of the game, the first time you play
@@ -104,7 +104,7 @@ mod tests {
         p2["library"] = filler(6);
         scenario(json!({
             "seed": "great-paperclip",
-            "p1": { "hand": cards, "library": filler(6), "mana": 40 },
+            "p1": { "hand": cards, "library": filler(6), "mana": 42 },
             "p2": p2,
         }))
     }

@@ -1,6 +1,8 @@
 //! The run's rules on the placeholder content (`placeholder.json`).
 
 use super::*;
+use crate::config::{RUN_ELITE_TIERS, RUN_TIERS};
+use jackioh_engine::config::{HUMAN_HANDICAP, Handicap};
 
 fn content() -> RunContent {
     run_placeholder_content()
@@ -34,12 +36,14 @@ fn won(hp: i32) -> RunAction {
     }
 }
 
-/// A player who always takes the first node, wins every fight at 20 HP, takes every artifact, opens
+/// A player who always takes the first node it may step onto, wins every fight at 20 HP, takes every artifact, opens
 /// the first pack and keeps its first cards, extracts the first card at a mini-boss and nothing at the
 /// final boss, leaves shops, rests at campfires, walks away from events and takes the first blessing.
 fn autoplay(state: &RunState) -> RunAction {
     match &state.phase {
-        RunPhase::Map => RunAction::Go { col: 0 },
+        RunPhase::Map => RunAction::Go {
+            col: run_next_cols(state)[0],
+        },
         RunPhase::Fight => won(20),
         RunPhase::Reward {
             artifact: Some(_), ..
@@ -92,21 +96,21 @@ fn a_seed_is_six_capital_letters_and_the_daily_one_is_the_same_for_everyone() {
 }
 
 #[test]
-fn the_map_holds_sixteen_fights_three_of_them_bosses_each_after_a_campfire() {
+fn the_map_holds_three_acts_each_ending_at_a_lone_boss_with_its_drop() {
     let content = content();
     let state = start(&content);
-    assert_eq!(state.map.iter().filter(|row| row[0].kind.is_fight()).count(), 16);
+    assert_eq!(state.map.len(), RUN_ACTS * (RUN_ACT_ROWS + 1));
     let bosses: Vec<usize> = (0..state.map.len())
-        .filter(|r| state.map[*r][0].kind.is_boss())
+        .filter(|r| state.map[*r].iter().any(|node| node.kind.is_boss()))
         .collect();
-    assert_eq!(bosses.len(), 3);
-    assert_eq!(state.map[bosses[2]][0].kind, RunNodeKind::Boss);
-    assert_eq!(
-        state.map[bosses[2]][0].artifact.as_deref(),
-        Some("temp-final-relic")
-    );
+    let expected: Vec<usize> = (0..RUN_ACTS).map(|a| (a + 1) * (RUN_ACT_ROWS + 1) - 1).collect();
+    assert_eq!(bosses, expected);
+    let last = bosses[RUN_ACTS - 1];
+    assert_eq!(state.map[last].len(), 1);
+    assert_eq!(state.map[last][0].kind, RunNodeKind::Boss);
+    assert_eq!(state.map[last][0].artifact.as_deref(), Some("temp-final-relic"));
     for r in bosses {
-        assert_eq!(state.map[r - 1][0].kind, RunNodeKind::Campfire);
+        assert_eq!(state.map[r].len(), 1, "row {r} holds its boss alone");
         let drop = state.map[r][0]
             .artifact
             .as_deref()
@@ -262,12 +266,16 @@ fn a_run_played_to_the_end_wins_and_its_file_folds_back_to_the_same_state() {
     let setup = setup(&content);
     let (end, log) = play_out(&content, &setup);
     assert_eq!(end.phase, RunPhase::Won);
-    assert_eq!(end.stats.fights_won, 16);
+    assert!(
+        (RUN_ROUTE_FIGHTS_MIN..=RUN_ROUTE_FIGHTS_MAX).contains(&end.stats.fights_won),
+        "R3583001: {} fights on the route",
+        end.stats.fights_won
+    );
     // R3584000: every won fight raised the max, and HP is refilled to it.
     let rests = log.iter().filter(|a| **a == RunAction::GainMaxHp).count() as i32;
     assert_eq!(
         end.max_hp_bonus,
-        16 * RUN_WIN_MAX_HP + rests * RUN_CAMPFIRE_MAX_HP
+        end.stats.fights_won * RUN_WIN_MAX_HP + rests * RUN_CAMPFIRE_MAX_HP
     );
     assert_eq!(end.hp, run_max_hp(&end, &content));
     assert_eq!(end.stats.mini_bosses_won, 2);
@@ -287,6 +295,31 @@ fn a_run_played_to_the_end_wins_and_its_file_folds_back_to_the_same_state() {
     };
     let json = serde_json::to_string(&file).unwrap();
     let back: RunFile = serde_json::from_str(&json).unwrap();
+    assert_eq!(run_fold(&back, &content), Ok(end));
+}
+
+#[test]
+fn an_old_heal_rest_reads_as_gain_max_hp_and_folds() {
+    let content = content();
+    let setup = setup(&content);
+    let (end, log) = play_out(&content, &setup);
+    assert!(log.contains(&RunAction::GainMaxHp));
+    // New writes keep the new name: the alias reads only.
+    assert_eq!(
+        serde_json::to_value(RunAction::GainMaxHp).unwrap(),
+        serde_json::json!({ "type": "gainMaxHp" })
+    );
+    let file = RunFile {
+        setup,
+        unlocks: RunUnlocks::default(),
+        log,
+    };
+    // What the device kept before #3644: the campfire screen sent `{ type: "heal" }`.
+    let json = serde_json::to_string(&file)
+        .unwrap()
+        .replace("\"gainMaxHp\"", "\"heal\"");
+    let back: RunFile = serde_json::from_str(&json).unwrap();
+    assert!(back.log.contains(&RunAction::GainMaxHp));
     assert_eq!(run_fold(&back, &content), Ok(end));
 }
 
@@ -326,6 +359,90 @@ fn a_lost_fight_ends_the_run() {
     assert_eq!(state.phase, RunPhase::Dead);
     assert_eq!(state.hp, 0);
     assert!(run_reduce(&state, &content, &RunAction::Go { col: 0 }).is_err());
+}
+
+/// `state` played on by `autoplay` until it is back on the map.
+fn back_on_the_map(state: &RunState, content: &RunContent) -> RunState {
+    let mut state = state.clone();
+    while state.phase != RunPhase::Map {
+        let action = autoplay(&state);
+        state = act(&state, content, action);
+    }
+    state
+}
+
+#[test]
+fn r3583000_go_steps_only_onto_a_node_the_one_stood_on_leads_to() {
+    let content = content();
+    let state = start(&content);
+    assert_eq!(
+        run_next_cols(&state),
+        (0..state.map[0].len()).collect::<Vec<_>>(),
+        "any start before the first step"
+    );
+    let (mut accepted, mut refused) = (false, false);
+    for col in 0..state.map[0].len() {
+        let at = back_on_the_map(&act(&state, &content, RunAction::Go { col }), &content);
+        assert_eq!((at.row, at.col), (Some(0), col));
+        let next = &at.map[0][col].next;
+        assert_eq!(&run_next_cols(&at), next);
+        for to in 0..at.map[1].len() {
+            match run_reduce(&at, &content, &RunAction::Go { col: to }) {
+                Ok(after) => {
+                    assert!(next.contains(&to), "({col}) -> {to} is no edge");
+                    assert_eq!((after.row, after.col), (Some(1), to));
+                    accepted = true;
+                }
+                Err(error) => {
+                    assert!(!next.contains(&to), "({col}) -> {to} is an edge");
+                    assert_eq!(error, "no path leads there from here");
+                    refused = true;
+                }
+            }
+        }
+    }
+    assert!(accepted && refused);
+}
+
+#[test]
+fn r3583000_a_mini_boss_leads_to_every_node_of_the_next_acts_first_row() {
+    let content = content();
+    let state = start(&content);
+    let row = mini_boss_rows(&state)[0];
+    let at = back_on_the_map(&act(&fighting_on(&state, row), &content, won(20)), &content);
+    let first: Vec<usize> = (0..at.map[row + 1].len()).collect();
+    assert_eq!(first.len(), RUN_MAP_PATHS);
+    assert_eq!(run_next_cols(&at), first);
+    for col in first {
+        let after = act(&at, &content, RunAction::Go { col });
+        assert_eq!((after.row, after.col), (Some(row + 1), col));
+    }
+}
+
+#[test]
+fn r3583000_a_log_stepping_off_the_paths_does_not_fold() {
+    let content = content();
+    let mut state = start(&content);
+    let mut log = Vec::new();
+    while log.is_empty() || state.phase != RunPhase::Map {
+        let action = autoplay(&state);
+        state = act(&state, &content, action.clone());
+        log.push(action);
+    }
+    let off = (0..state.map[1].len())
+        .find(|col| !run_next_cols(&state).contains(col))
+        .expect("a node of the second row the first step does not lead to");
+    log.push(RunAction::Go { col: off });
+    let step = log.len() - 1;
+    let file = RunFile {
+        setup: setup(&content),
+        unlocks: RunUnlocks::default(),
+        log,
+    };
+    assert_eq!(
+        run_fold(&file, &content),
+        Err(format!("step {step}: no path leads there from here"))
+    );
 }
 
 /// The map's mini-boss rows, the first act's first.
@@ -458,6 +575,47 @@ fn r3286000_with_no_relic_left_to_offer_the_reward_has_none() {
         let reward = act(&fighting_on(&state, row), &content, won(20));
         assert!(
             matches!(reward.phase, RunPhase::Reward { artifact: None, ref packs } if !packs.is_empty()),
+            "{:?}",
+            reward.phase
+        );
+    }
+}
+
+/// R3286000: a won mini-boss dealt no drop rolls Gold-or-better-or-nothing, never a lower relic,
+/// even with Bronze and Silver relics open. The deal leaves no drop exactly when no unheld
+/// Gold-or-better relic was left as the map was made, which the placeholder content never does,
+/// so this trims those relics from the content.
+#[test]
+fn r3286000_a_won_mini_boss_dealt_no_drop_rolls_gold_or_better_or_none() {
+    let full = content();
+    let mut content = full.clone();
+    content.passives.retain(|p| {
+        !(matches!(p.kind, RunPassiveKind::Combat | RunPassiveKind::Economic)
+            && !p.unobtainable
+            && p.tier >= Some(RUN_MINI_BOSS_DROP_TIER))
+    });
+    assert!(
+        content.passives.iter().any(|p| {
+            matches!(p.kind, RunPassiveKind::Combat | RunPassiveKind::Economic) && !p.unobtainable
+        }),
+        "a lower relic is still open"
+    );
+    let run_setup = RunSetup {
+        artifacts: vec!["temp-picky".into()],
+        ..setup(&full)
+    };
+    let state = run_create(&run_setup, &RunUnlocks::default(), &content).unwrap();
+    let rows = mini_boss_rows(&state);
+    assert!(!rows.is_empty());
+    for row in rows {
+        assert_eq!(
+            state.map[row][0].artifact, None,
+            "row {row}: no Gold-or-better relic was left to deal"
+        );
+        let reward = act(&fighting_on(&state, row), &content, won(20));
+        assert_eq!(offered(&reward), None, "row {row}");
+        assert!(
+            matches!(reward.phase, RunPhase::Reward { ref packs, .. } if !packs.is_empty()),
             "{:?}",
             reward.phase
         );
@@ -628,6 +786,25 @@ fn r3584001_an_event_refused_below_one_max_hp_leaves_the_state_unchanged() {
     let err = run_reduce(&state, &content, &RunAction::Choose { index: 1 }).unwrap_err();
     assert!(err.contains("not enough max HP"), "{err}");
     assert_eq!(state, before, "a refused option leaves the state unchanged");
+}
+
+/// R3584001: the floor is max HP 1, not 2: an option that leaves exactly 1 is taken, one that would leave 0 is
+/// refused.
+#[test]
+fn an_event_option_may_leave_exactly_one_max_hp() {
+    let content = content();
+    let mut state = start(&content);
+    // The stranger's second option costs 5 max HP: from a max of 6 it leaves 1.
+    state.max_hp_bonus = 6 - RUN_MAX_HP;
+    state.hp = 6;
+    assert_eq!(run_max_hp(&state, &content), 6);
+    state.phase = RunPhase::Event {
+        id: "temp-event-stranger".into(),
+    };
+    let state = act(&state, &content, RunAction::Choose { index: 1 });
+    assert_eq!(run_max_hp(&state, &content), 1);
+    assert_eq!(state.hp, 1);
+    assert_eq!(state.phase, RunPhase::Map);
 }
 
 #[test]
@@ -842,6 +1019,46 @@ fn the_score_counts_every_row_win_and_report_point_at_its_own_weight() {
     assert_eq!(run_score(&state, &content), expected);
 }
 
+/// DR9: the score's terms are its five weighted sums before the percents, each on its own, and with no
+/// boss beaten and no curse taken they add up to the score.
+#[test]
+fn the_score_terms_are_its_weighted_sums_before_the_percents() {
+    let content = content();
+    let mut state = start(&content);
+    let rows = 5;
+    let (normal, elites, ghosts) = (4, 2, 3);
+    let (dealt, healed, drawn) = (7, 11, 13);
+    state.row = Some(rows - 1);
+    state.stats = RunStats {
+        fights_won: normal + elites + ghosts,
+        elites_won: elites,
+        ghosts_won: ghosts,
+        damage_dealt: dealt,
+        healing_done: healed,
+        cards_drawn: drawn,
+        ..RunStats::default()
+    };
+    let win = |kind: RunNodeKind, n: i32| i64::from(RUN_SCORE_FIGHT.of(kind)) * i64::from(n);
+    let terms = run_score_terms(&state);
+    assert_eq!(
+        terms,
+        RunScoreTerms {
+            rows: RUN_SCORE_ROW * i64::try_from(rows).unwrap(),
+            wins: win(RunNodeKind::Fight, normal)
+                + win(RunNodeKind::Elite, elites)
+                + win(RunNodeKind::Ghost, ghosts),
+            damage: RUN_SCORE_DAMAGE * i64::from(dealt),
+            healing: RUN_SCORE_HEALING * i64::from(healed),
+            drawn: RUN_SCORE_CARD_DRAWN * i64::from(drawn),
+        }
+    );
+    assert_eq!(
+        terms.sum(),
+        terms.rows + terms.wins + terms.damage + terms.healing + terms.drawn
+    );
+    assert_eq!(terms.sum(), run_score(&state, &content));
+}
+
 /// §15.10: beating the final boss counts its win, then multiplies the score by
 /// `RUN_SCORE_FINAL_BOSS_PERCENT`.
 #[test]
@@ -915,6 +1132,53 @@ fn an_unknown_curse_and_content_missing_an_enemy_tier_or_an_event_are_refused() 
     assert!(refused.contains("no event"), "{refused}");
 }
 
+/// R4067000: a setup listing a curse twice is refused by the setup check, the create and the
+/// fold, naming the curse.
+#[test]
+fn r4067000_a_curse_listed_twice_is_refused() {
+    let content = content();
+    let id = content.curses[0].id.clone();
+    let mut cursed = setup(&content);
+    cursed.curses = vec![id.clone(), id.clone()];
+    let refused = run_check_setup(&cursed, &RunUnlocks::default(), &content).unwrap_err();
+    assert!(refused.contains(&id), "{refused}");
+    assert!(refused.contains("is taken twice"), "{refused}");
+    let refused = run_create(&cursed, &RunUnlocks::default(), &content).unwrap_err();
+    assert!(refused.contains(&id), "{refused}");
+    assert!(refused.contains("is taken twice"), "{refused}");
+    let file = RunFile {
+        setup: cursed,
+        unlocks: RunUnlocks::default(),
+        log: Vec::new(),
+    };
+    let refused = run_fold(&file, &content).unwrap_err();
+    assert!(refused.contains(&id), "{refused}");
+    assert!(refused.contains("is taken twice"), "{refused}");
+}
+
+/// R4067000: distinct curses are accepted as before, worth their points' sum in the score.
+#[test]
+fn r4067000_distinct_curses_are_accepted_unchanged() {
+    let content = content();
+    let mut distinct = setup(&content);
+    distinct.curses = vec![content.curses[0].id.clone(), content.curses[1].id.clone()];
+    assert_eq!(
+        run_check_setup(&distinct, &RunUnlocks::default(), &content),
+        Ok(())
+    );
+    let state = run_create(&distinct, &RunUnlocks::default(), &content).unwrap();
+    let points: i32 = content.curses[..2].iter().map(|c| c.points).sum();
+    assert_eq!(run_curse_points(&state, &content), points);
+    let mut scored = state;
+    scored.row = Some(0);
+    scored.stats.fights_won = 1;
+    let base = RUN_SCORE_ROW + i64::from(RUN_SCORE_FIGHT.fight);
+    assert_eq!(
+        run_score(&scored, &content),
+        base * (i64::from(PERCENT) + i64::from(points) * RUN_SCORE_CURSE_POINT_PERCENT) / i64::from(PERCENT)
+    );
+}
+
 /// §15.5: tiles are dealt by `RUN_TILE_WEIGHTS`: a roll under the first weight is the first item,
 /// and each weight after it takes the next span of rolls.
 #[test]
@@ -942,20 +1206,6 @@ fn a_weighted_draw_gives_each_item_its_own_span_of_rolls() {
     }
     for roll in 0..total {
         assert!(rolled.contains(&roll), "roll {roll} came up");
-    }
-}
-
-/// §15.5: fight and tile rows hold `RUN_ROW_WIDTH_MIN` to `RUN_ROW_WIDTH_MAX` nodes, and each width
-/// comes up.
-#[test]
-fn a_row_holds_the_fewest_to_the_most_nodes() {
-    let widths: Vec<i32> = (0..256)
-        .map(|cursor| row_width(&mut Rng::new("width", cursor)))
-        .collect();
-    let range = RUN_ROW_WIDTH_MIN..=RUN_ROW_WIDTH_MAX;
-    assert!(widths.iter().all(|w| range.contains(w)), "{widths:?}");
-    for width in range {
-        assert!(widths.contains(&width), "width {width} came up");
     }
 }
 
@@ -1023,6 +1273,8 @@ fn a_chest_pays_its_coins_and_tickets_and_the_stats_count_them() {
         enemy: None,
         event: None,
         artifact: None,
+        column: 0,
+        next: Vec::new(),
     }];
     let opened = act(&state, &content, RunAction::Go { col: 0 });
     assert_eq!(
@@ -1412,6 +1664,8 @@ fn a_shrine_offers_only_blessings_not_held_and_the_stats_count_nodes_events_and_
         enemy: None,
         event,
         artifact: None,
+        column: 0,
+        next: Vec::new(),
     };
     state.map[0] = vec![tile(RunNodeKind::Shrine, None)];
     let shrine = act(&state, &content, RunAction::Go { col: 0 });
@@ -1445,6 +1699,8 @@ fn a_chest_holds_a_relic_on_a_roll_under_its_percent_not_at_it() {
         enemy: None,
         event: None,
         artifact: None,
+        column: 0,
+        next: Vec::new(),
     }];
     let relics_at = |roll: i32| {
         let mut at = state.clone();
@@ -1513,4 +1769,336 @@ fn a_pack_shows_its_size_plus_the_relics_and_only_cards_of_its_kind() {
             .all(|id| enemy.deck.contains(id) && !in_deck(&state, id)),
         "{boss:?}"
     );
+}
+
+/// DR3: an artifact's points are its tier's in `RUN_TIER_POINTS`; an id that is no artifact (a retired
+/// Presence, an unknown one) is worth nothing.
+#[test]
+fn an_artifacts_points_follow_its_tier() {
+    let content = content();
+    for (id, tier) in [
+        ("temp-picky", RunTier::Bronze),
+        ("temp-wide-net", RunTier::Silver),
+        ("temp-greedy", RunTier::Gold),
+        ("temp-war-chest", RunTier::Platinum),
+        ("temp-crown", RunTier::Diamond),
+    ] {
+        let expected = RUN_TIER_POINTS
+            .iter()
+            .find(|(t, _)| *t == tier)
+            .map(|(_, points)| *points)
+            .unwrap();
+        assert_eq!(run_artifact_points(&content, id), expected, "{id}");
+    }
+    // Hand-checked against DR3's table: bronze 1 up to diamond 5.
+    assert_eq!(run_artifact_points(&content, "temp-picky"), 1);
+    assert_eq!(run_artifact_points(&content, "temp-crown"), 5);
+    assert_eq!(run_artifact_points(&content, "looming-presence"), 0);
+    assert_eq!(run_artifact_points(&content, "no-such-artifact"), 0);
+}
+
+/// §15 (the map): the node stood on is none before the first step, and the node at `row`, `col` after it.
+#[test]
+fn the_node_stood_on_is_none_before_the_first_step_and_the_map_node_after() {
+    let content = content();
+    let state = start(&content);
+    assert!(run_node(&state).is_none());
+    let state = act(&state, &content, RunAction::Go { col: 1 });
+    let node = run_node(&state).expect("a step stands on a node");
+    assert_eq!(state.row, Some(0));
+    assert_eq!(state.col, 1);
+    assert_eq!(node, &state.map[0][1]);
+}
+
+/// DR8: the run's curse points are the sum of the points of the curses it holds; one the content does not
+/// define counts nothing.
+#[test]
+fn the_curse_points_are_the_sum_of_the_curses_held() {
+    let content = content();
+    let mut state = start(&content);
+    assert_eq!(run_curse_points(&state, &content), 0);
+    state.curses = vec!["temp-curse-1".into()];
+    assert_eq!(run_curse_points(&state, &content), 1);
+    state.curses = vec![
+        "temp-curse-3".into(),
+        "temp-curse-2".into(),
+        "no-such-curse".into(),
+    ];
+    assert_eq!(run_curse_points(&state, &content), 5);
+}
+
+/// DR2: a seed is exactly `RUN_SEED_LENGTH` capital letters: one short and one past are refused, by the seed
+/// check and by the setup check alike.
+#[test]
+fn a_seed_one_letter_short_or_past_the_length_is_refused() {
+    let content = content();
+    for (length, ok) in [
+        (RUN_SEED_LENGTH - 1, false),
+        (RUN_SEED_LENGTH, true),
+        (RUN_SEED_LENGTH + 1, false),
+    ] {
+        let seed = "A".repeat(length);
+        assert_eq!(seed_is_valid(&seed), ok, "{length} letters");
+        let setup = RunSetup {
+            seed,
+            ..setup(&content)
+        };
+        assert_eq!(
+            run_check_setup(&setup, &RunUnlocks::default(), &content).is_ok(),
+            ok,
+            "{length} letters"
+        );
+    }
+}
+
+/// DR6: a pack keeps `RUN_KEEP` cards, more with a keep-more artifact by its level, never more than
+/// `RUN_KEEP_MAX`, nor more than the pack shows or the deck has room for (R2701000).
+#[test]
+fn a_pack_keeps_no_more_than_the_keep_max_the_cards_shown_or_the_room_in_the_deck() {
+    let content = content();
+    let mut state = start(&content);
+    let greedy = state
+        .artifacts
+        .iter_mut()
+        .find(|a| a.id == "temp-greedy")
+        .expect("the starting Greedy");
+    // Keep 1 more per level: level 1 keeps one past `RUN_KEEP`; a level that would pass the max stops at it.
+    greedy.level = 1;
+    assert_eq!(keep_count(&state, &content, RUN_PACK_SIZE), RUN_KEEP + 1);
+    state.artifacts[0].level = RUN_ARTIFACT_LEVEL_MAX;
+    assert!(RUN_KEEP + RUN_ARTIFACT_LEVEL_MAX as usize > RUN_KEEP_MAX);
+    assert_eq!(keep_count(&state, &content, RUN_PACK_SIZE), RUN_KEEP_MAX);
+    // Fewer cards shown than the keep.
+    assert_eq!(keep_count(&state, &content, 2), 2);
+    // A deck one card from the cap has room for one.
+    state.deck.truncate(RUN_DECK_MAX - 1);
+    while state.deck.len() < RUN_DECK_MAX - 1 {
+        state.deck.push(state.deck[0].clone());
+    }
+    assert_eq!(keep_count(&state, &content, RUN_PACK_SIZE), 1);
+}
+
+/// DR7: a shop stocks `RUN_SHOP_CARDS` cards the deck lacks and then `RUN_SHOP_ARTIFACTS` artifacts it does
+/// not hold, each at its price.
+#[test]
+fn a_shop_stocks_its_cards_and_its_artifacts() {
+    let content = content();
+    let state = start(&content);
+    let stock = roll_shop(&state, &content, &mut Rng::new("SHOPPY", 0));
+    let cards: Vec<&RunShopItem> = stock
+        .iter()
+        .filter(|item| matches!(item.good, RunShopGood::Card { .. }))
+        .collect();
+    let artifacts: Vec<&RunShopItem> = stock
+        .iter()
+        .filter(|item| matches!(item.good, RunShopGood::Artifact { .. }))
+        .collect();
+    assert_eq!(cards.len(), RUN_SHOP_CARDS);
+    assert_eq!(artifacts.len(), RUN_SHOP_ARTIFACTS);
+    assert_eq!(stock.len(), RUN_SHOP_CARDS + RUN_SHOP_ARTIFACTS);
+    assert!(stock.iter().all(|item| !item.sold));
+    for item in &cards {
+        let RunShopGood::Card { id } = &item.good else {
+            unreachable!()
+        };
+        assert!(!in_deck(&state, id), "{id} is in the deck already");
+        assert_eq!(
+            item.price,
+            by(&RUN_CARD_PRICE, card_def(&content, id).unwrap().rarity)
+        );
+    }
+    let mut seen: Vec<&str> = state.artifacts.iter().map(|a| a.id.as_str()).collect();
+    for item in &artifacts {
+        let RunShopGood::Artifact { id } = &item.good else {
+            unreachable!()
+        };
+        assert!(!seen.contains(&id.as_str()), "{id} is held or twice in the stock");
+        seen.push(id);
+        let tier = passive_def(&content, id).and_then(|p| p.tier).unwrap();
+        assert_eq!(item.price, by(&RUN_ARTIFACT_PRICE, tier));
+    }
+}
+
+/// DR3: a starting deck holds exactly `RUN_STARTER_SIZE` cards: one fewer (`a_starting_deck_fits_its_levels_slots`)
+/// and one more are both refused, with the count they hold named.
+#[test]
+fn a_starting_deck_one_card_past_the_size_is_refused() {
+    let content = content();
+    let mut setup = setup(&content);
+    setup.starter = content.starter_access[..RUN_STARTER_SIZE + 1].to_vec();
+    let refused = run_check_setup(&setup, &RunUnlocks::default(), &content).unwrap_err();
+    assert!(
+        refused.contains(&format!(
+            "holds {RUN_STARTER_SIZE} cards, not {}",
+            RUN_STARTER_SIZE + 1
+        )),
+        "{refused}"
+    );
+}
+
+/// #3678 (`docs/implicit-states.md`, state 3, row D2): §15.8's "abandoning at any time ends a run, lost"
+/// before the first step leaves it off the map, HP at the max, scored, and refusing every action; its
+/// one-action log folds back to it.
+#[test]
+fn abandoning_before_the_first_step_ends_the_run_off_the_map() {
+    let content = content();
+    let gone = act(&start(&content), &content, RunAction::Abandon);
+    assert_eq!(gone.row, None);
+    assert_eq!(gone.phase, RunPhase::Dead);
+    assert_eq!(gone.hp, run_max_hp(&gone, &content));
+    assert!(run_node(&gone).is_none());
+    assert!(run_enemy(&gone).is_none());
+    assert_eq!(
+        run_reduce(&gone, &content, &RunAction::Go { col: 0 }),
+        Err("the run is over".to_string())
+    );
+    assert_eq!(
+        run_reduce(&gone, &content, &RunAction::Abandon),
+        Err("the run is over".to_string())
+    );
+    assert!(run_score(&gone, &content) >= 0);
+    let file = RunFile {
+        setup: setup(&content),
+        unlocks: RunUnlocks::default(),
+        log: vec![RunAction::Abandon],
+    };
+    assert_eq!(run_fold(&file, &content), Ok(gone));
+}
+
+/// #3678 (`docs/implicit-states.md`, state 3, row D7): abandoning in a fight ends the run on the node it
+/// stands on, and keeps the HP it held, where a lost fight drops it to zero (§15.6): which of the two
+/// an abandoned fight should leave is unspecified, so this pins what the run does.
+#[test]
+fn abandoning_in_a_fight_ends_the_run_where_it_stands_with_its_hp_left() {
+    let content = content();
+    let fighting = act(&start(&content), &content, RunAction::Go { col: 0 });
+    assert_eq!(fighting.phase, RunPhase::Fight);
+    assert!(run_enemy(&fighting).is_some());
+    let gone = act(&fighting, &content, RunAction::Abandon);
+    assert_eq!((gone.row, gone.col), (Some(0), 0));
+    assert_eq!(gone.phase, RunPhase::Dead);
+    assert_eq!(gone.hp, fighting.hp);
+    assert!(gone.hp > 0);
+    assert!(run_enemy(&gone).is_none());
+    assert_eq!(
+        run_reduce(&gone, &content, &RunAction::Go { col: 0 }),
+        Err("the run is over".to_string())
+    );
+}
+
+/// #3678 (`docs/implicit-states.md`, Not states): versions, not states. A `FightOver` kept before its
+/// report's fields (`serde(default)`) reads as a report of nothing and still folds; a `RunState` written
+/// before `max_hp_bonus` reads with no bonus.
+#[test]
+fn a_fight_over_kept_before_its_report_and_a_state_before_its_max_hp_bonus_still_read() {
+    let content = content();
+    let setup = setup(&content);
+    let (end, log) = play_out(&content, &setup);
+    let file = RunFile {
+        setup,
+        unlocks: RunUnlocks::default(),
+        log,
+    };
+    let mut old = serde_json::to_value(&file).unwrap();
+    let mut stripped = 0;
+    for action in old["log"].as_array_mut().unwrap() {
+        if action["type"] == "fightOver" {
+            let fields = action.as_object_mut().unwrap();
+            for field in ["damageDealt", "healingDone", "cardsDrawn", "turns"] {
+                assert!(fields.remove(field).is_some());
+            }
+            stripped += 1;
+        }
+    }
+    assert_eq!(stripped, end.stats.fights_won);
+    let back: RunFile = serde_json::from_value(old).unwrap();
+    let folded = run_fold(&back, &content).unwrap();
+    assert_eq!(folded.phase, RunPhase::Won);
+    assert_eq!((folded.stats.damage_dealt, folded.stats.cards_drawn), (0, 0));
+    assert_eq!(folded.hp, end.hp);
+
+    let fresh = start(&content);
+    let mut before = serde_json::to_value(&fresh).unwrap();
+    assert!(before.as_object_mut().unwrap().remove("maxHpBonus").is_some());
+    let read: RunState = serde_json::from_value(before).unwrap();
+    assert_eq!(read.max_hp_bonus, 0);
+    assert_eq!(read, fresh);
+}
+
+#[test]
+fn r3586001_no_placeholder_enemy_carries_a_presence_and_a_boss_only_its_own() {
+    // R3586001: the Presence artifacts retired with the tiers, and a boss carries only the artifact it
+    // drops, which changes nothing in its fight.
+    assert!(
+        !include_str!("placeholder.json")
+            .to_lowercase()
+            .contains("presence"),
+        "placeholder.json names a Presence"
+    );
+    let content = content();
+    for enemy in &content.enemies {
+        assert!(
+            enemy.artifacts.iter().all(|id| enemy.drop.as_ref() == Some(id)),
+            "{} carries {:?}",
+            enemy.id,
+            enemy.artifacts
+        );
+    }
+    assert!(
+        content
+            .enemies
+            .iter()
+            .any(|enemy| enemy.tier == RunNodeKind::Boss && !enemy.artifacts.is_empty()),
+        "the final boss still carries its own"
+    );
+}
+
+#[test]
+fn dr6_a_number_by_fight_is_each_fights_own_and_none_for_a_room_without_one() {
+    let by_fight = RunByFight {
+        fight: 1,
+        elite: 2,
+        ghost: 3,
+        mini_boss: 4,
+        boss: 5,
+    };
+    let kinds = [
+        RunNodeKind::Fight,
+        RunNodeKind::Elite,
+        RunNodeKind::Ghost,
+        RunNodeKind::MiniBoss,
+        RunNodeKind::Boss,
+        RunNodeKind::Shop,
+        RunNodeKind::Campfire,
+        RunNodeKind::Event,
+        RunNodeKind::Chest,
+        RunNodeKind::Shrine,
+    ];
+    assert_eq!(
+        kinds.map(|kind| by_fight.of(kind)),
+        [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]
+    );
+}
+
+#[test]
+fn r3586001_a_tier_row_is_its_mana_cap_and_bonus_its_openings_its_draws_and_its_hero() {
+    let row = |cap, bonus, extra, fewer, draw_every, hero| Handicap {
+        mana_cap: cap,
+        mana_bonus: bonus,
+        extra_opening_cards: extra,
+        fewer_opening_cards: fewer,
+        draw_every,
+        hero_health: Some(hero),
+        ..HUMAN_HANDICAP
+    };
+    // Tier 1: two cards short, a turn draw every other turn (R3582000).
+    assert_eq!(RUN_TIERS[0], row(2, 0, 0, Some(2), Some(2), 10));
+    // Tier 4: one card short, a draw every turn, which is no `draw_every` at all.
+    assert_eq!(RUN_TIERS[3], row(3, 0, 0, Some(1), None, 16));
+    // Tier 6: a whole hand, so no card short either.
+    assert_eq!(RUN_TIERS[5], row(3, 0, 0, None, None, 18));
+    // The last elite: a mana bonus and an opening card more (R181, R182).
+    let (tier, last) = RUN_ELITE_TIERS[RUN_ELITE_TIERS.len() - 1];
+    assert_eq!(tier, 14);
+    assert_eq!(last, row(7, 1, 1, None, None, 38));
 }

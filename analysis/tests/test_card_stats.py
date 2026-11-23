@@ -13,7 +13,17 @@ from pathlib import Path
 import pandas as pd
 import pytest
 from helpers import record, seat, write_records
-from jackioh_records import BREAKDOWNS, card_stats, load, load_catalog, load_generations, load_sweep
+from jackioh_records import (
+    AI_SWEEP_FIELDS,
+    BREAKDOWNS,
+    ai_sweep,
+    card_stats,
+    load,
+    load_catalog,
+    load_generations,
+    load_sweep,
+    load_sweep_pass2,
+)
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 RATE_TOLERANCE = 1e-9
@@ -302,10 +312,14 @@ def sweep_line(card, tier, **fields):
 
 def test_load_sweep_reads_the_fixtures_lines_one_row_per_card_and_tier():
     sweep = load_sweep(FIXTURES / "sweep-small.jsonl")
+    # The fixture also holds pass-2 lines, which `load_sweep` skips.
     lines = [json.loads(line) for line in (FIXTURES / "sweep-small.jsonl").read_text(encoding="utf-8").splitlines()]
+    lines = [line for line in lines if "defId" in line]
 
     assert [(row.card, row.tier) for row in sweep.itertuples()] == [(line["defId"], line["tier"]) for line in lines]
     assert len(sweep) == 8 and set(sweep["tier"]) == {"easy", "hard"}
+    # The fixture's lines predate faces (#4466): every one reads as a base line.
+    assert set(sweep["face"]) == {"base"}
     for row, line in zip(sweep.to_dict("records"), lines, strict=True):
         assert row["games"] == line["games"]
         assert row["drawn_games"] == line["drawnGames"]
@@ -368,6 +382,230 @@ def test_load_sweep_names_the_file_and_line_it_cannot_read_and_a_card_and_tier_i
     )
     with pytest.raises(ValueError, match=r"again\.jsonl: line 3: a at easy is also at .*again\.jsonl: line 1"):
         load_sweep(again)
+
+
+def test_load_sweep_reads_each_face_and_a_line_without_one_as_base(tmp_path):
+    path = write_records(
+        tmp_path / "faces.jsonl",
+        [
+            sweep_line("a", "easy", face="base"),
+            sweep_line("a", "easy", face="radiant", flags=["error"], errors=1),
+            sweep_line("b", "easy"),
+        ],
+    )
+    sweep = load_sweep(path)
+    assert list(sweep["face"]) == ["base", "radiant", "base"]
+    assert list(sweep.columns[:3]) == ["card", "tier", "face"]
+    by_face = sweep.set_index(["card", "tier", "face"])
+    assert by_face.loc[("a", "easy", "base"), "flags"] == []
+    assert by_face.loc[("a", "easy", "radiant"), "flags"] == ["error"]
+    assert by_face.loc[("a", "easy", "radiant"), "errors"] == 1
+
+
+def test_load_sweep_refuses_a_card_tier_and_face_it_has_read_and_a_face_it_does_not_know(tmp_path):
+    again = write_records(
+        tmp_path / "again.jsonl",
+        [sweep_line("a", "easy", face="radiant"), sweep_line("a", "easy"), sweep_line("a", "easy", face="radiant")],
+    )
+    with pytest.raises(ValueError, match=r"again\.jsonl: line 3: a at easy \(radiant\) is also at .*again\.jsonl: line 1"):
+        load_sweep(again)
+    golden = write_records(tmp_path / "golden.jsonl", [sweep_line("a", "easy", face="golden")])
+    with pytest.raises(ValueError, match=r"golden\.jsonl: line 1: not a sweep result"):
+        load_sweep(golden)
+
+
+def pass2_entry(card, **fields):
+    entry = {
+        "defId": card,
+        "games": 24,
+        "drawnGames": 18,
+        "affordableTurns": 30,
+        "playableTurns": 30,
+        "plays": 12,
+        "errors": 0,
+        "timeouts": 0,
+        "evalDeltaSum": 24.0,
+        "evalDeltaCount": 12,
+        "losingPlays": 0,
+    }
+    entry.update(fields)
+    return entry
+
+
+def pass2_line(forced, tier, *entries):
+    return {"forced": forced, "tier": tier, "games": 24, "cards": list(entries), "suspects": []}
+
+
+def test_load_sweep_pass2_reads_the_fixtures_pass_2_lines():
+    fixture = FIXTURES / "sweep-small.jsonl"
+    lines = [json.loads(line) for line in fixture.read_text(encoding="utf-8").splitlines()]
+    pass2 = [line for line in lines if "forced" in line]
+    assert pass2, "the fixture holds no pass-2 line: remake it with `sweep --pass2` (analysis/README.md)"
+
+    table = load_sweep_pass2(fixture)
+    forced = table[table["forced"]]
+
+    def face_of_forced(line):
+        return next(card.get("face", "base") for card in line["cards"] if card["defId"] == line["forced"])
+
+    assert [(row.card, row.tier, row.face) for row in forced.itertuples()] == [
+        (line["forced"], line["tier"], face_of_forced(line)) for line in pass2
+    ]
+    assert table["games"].sum() == sum(card["games"] for line in pass2 for card in line["cards"])
+    assert set(table["status"]) <= {"banned", "watched", "cleared", "unswept"}
+    # Pass-1 lines are the same eight rows with or without the pass-2 ones beside them.
+    assert len(load_sweep(fixture)) == 8
+
+
+def test_load_sweep_pass2_sums_a_card_over_every_game_it_was_dealt_in_forced_or_filler(tmp_path):
+    path = write_records(
+        tmp_path / "pass2.jsonl",
+        [
+            pass2_line(
+                "a",
+                "easy",
+                pass2_entry("a", games=10, plays=3, evalDeltaSum=-30.0, evalDeltaCount=3),
+                pass2_entry("b", games=6, plays=2, evalDeltaSum=10.0, evalDeltaCount=2),
+            ),
+            pass2_line(
+                "b",
+                "easy",
+                pass2_entry("b", games=8, plays=0, evalDeltaSum=0.0, evalDeltaCount=0),
+                pass2_entry("a", games=4, plays=1, evalDeltaSum=-10.0, evalDeltaCount=1),
+            ),
+            pass2_line("a", "easy", pass2_entry("a", face="radiant", games=24)),
+        ],
+    )
+    table = load_sweep_pass2(path)
+    assert [(row.card, row.tier, row.face, row.forced) for row in table.itertuples()] == [
+        ("a", "easy", "base", True),
+        ("b", "easy", "base", True),
+        ("a", "easy", "radiant", True),
+    ]
+    by_key = table.set_index(["card", "tier", "face"])
+    # a: forced in 10 games and dealt as filler in 4 more; the verdict counts the 14 together.
+    assert by_key.loc[("a", "easy", "base"), "games"] == 14
+    assert by_key.loc[("a", "easy", "base"), "plays"] == 4
+    assert by_key.loc[("a", "easy", "base"), "eval_delta_count"] == 4
+    assert by_key.loc[("a", "easy", "base"), "eval_delta_mean"] == pytest.approx(-10.0)
+    assert by_key.loc[("b", "easy", "base"), "games"] == 14
+    assert by_key.loc[("b", "easy", "base"), "eval_delta_mean"] == pytest.approx(5.0)
+    assert by_key.loc[("a", "easy", "radiant"), "games"] == 24
+    # No plays, no mean (not a mean of zero).
+    no_plays = [pass2_line("c", "hard", pass2_entry("c", plays=0, evalDeltaSum=0.0, evalDeltaCount=0))]
+    assert math.isnan(load_sweep_pass2(write_records(tmp_path / "none.jsonl", no_plays)).loc[0, "eval_delta_mean"])
+    assert list(table.columns) == [
+        "card", "tier", "face", "forced", "games", "drawn_games", "affordable_turns", "playable_turns", "plays",
+        "errors", "timeouts", "eval_delta_sum", "eval_delta_count", "eval_delta_mean", "losing_plays", "flags",
+        "half_flags", "status",
+    ]  # fmt: skip
+    for name in ("games", "drawn_games", "affordable_turns", "playable_turns", "plays", "errors", "timeouts"):
+        assert table[name].dtype == "int64"
+    assert table["eval_delta_sum"].dtype == "float64" and table["eval_delta_mean"].dtype == "float64"
+    assert table["forced"].dtype == "bool"
+
+
+def test_load_sweep_pass2_flags_at_the_sweeps_thresholds_and_names_the_status(tmp_path):
+    rules = ai_sweep()
+    ban_turns = int(rules["ban_affordable_turns"])
+    min_turns = int(rules["min_affordable_turns"])
+    harm_plays = int(rules["ban_harm_plays"])
+    ban_losing = int(rules["ban_losing_plays"])
+    def harm(plays, mean):
+        return dict(plays=plays, evalDeltaSum=mean * plays, evalDeltaCount=plays)
+
+    cases = {
+        # card: (entry fields, flags, half_flags, status)
+        "never": (dict(playableTurns=ban_turns, plays=0), ["neverPlayed"], ["neverPlayed"], "banned"),
+        "never-short": (dict(playableTurns=ban_turns - 1, plays=0), [], ["neverPlayed"], "watched"),
+        "never-once": (dict(playableTurns=ban_turns, plays=1), [], ["neverPlayed"], "watched"),
+        "half-never": (dict(playableTurns=min_turns, plays=1), [], ["neverPlayed"], "watched"),
+        "harm": (harm(harm_plays, -60.0), ["selfHarm"], ["selfHarm"], "banned"),
+        "harm-few": (harm(harm_plays - 1, -60.0), [], ["selfHarm"], "watched"),
+        "harm-mild": (harm(harm_plays, -25.0), [], ["selfHarm"], "watched"),
+        "kill": (dict(losingPlays=ban_losing), ["selfKill"], ["selfKill"], "banned"),
+        "kill-short": (dict(losingPlays=ban_losing - 1), [], ["selfKill"], "watched"),
+        "error": (dict(errors=1), ["error"], [], "banned"),
+        "timeout": (dict(timeouts=1), ["timeout"], [], "banned"),
+        "fine": ({}, [], [], "cleared"),
+        "dormant": (
+            dict(affordableTurns=0, playableTurns=0, plays=0, evalDeltaSum=0.0, evalDeltaCount=0),
+            [], [], "unswept",
+        ),
+    }  # fmt: skip
+    lines = [pass2_line(card, "easy", pass2_entry(card, **fields)) for card, (fields, *_rest) in cases.items()]
+    table = load_sweep_pass2(write_records(tmp_path / "pass2.jsonl", lines)).set_index("card")
+    for card, (_fields, flags, half_flags, status) in cases.items():
+        assert table.loc[card, "flags"] == flags, card
+        assert table.loc[card, "half_flags"] == half_flags, card
+        assert table.loc[card, "status"] == status, card
+
+
+def test_load_sweep_pass2_reads_older_slices(tmp_path):
+    entry = pass2_entry("a")
+    del entry["playableTurns"], entry["losingPlays"]
+    path = write_records(tmp_path / "old.jsonl", [pass2_line("a", "easy", entry)])
+    row = load_sweep_pass2(path).iloc[0]
+    assert (row["playable_turns"], row["losing_plays"], row["face"]) == (0, 0, "base")
+
+
+def test_load_sweep_pass2_skips_pass_1_lines_and_load_sweep_is_unchanged_by_pass_2_lines(tmp_path):
+    pass1 = [sweep_line("a", "easy"), sweep_line("a", "hard")]
+    mixed = write_records(tmp_path / "mixed.jsonl", [*pass1, pass2_line("a", "easy", pass2_entry("a"))])
+    pass1_only = write_records(tmp_path / "pass1.jsonl", pass1)
+    pd.testing.assert_frame_equal(load_sweep(mixed), load_sweep(pass1_only))
+
+    assert load_sweep_pass2(pass1_only).empty
+    assert list(load_sweep_pass2(pass1_only).columns) == list(load_sweep_pass2(mixed).columns)
+    # A whole sweep's files named together: pass 2's rows are the same wherever pass 1's lines sit.
+    other = write_records(tmp_path / "other.jsonl", [pass2_line("b", "hard", pass2_entry("b"))])
+    both = load_sweep_pass2([str(pass1_only), mixed, other])
+    assert [(row.card, row.tier) for row in both.itertuples()] == [("a", "easy"), ("b", "hard")]
+    empty = tmp_path / "empty.jsonl"
+    empty.write_text("\n", encoding="utf-8")
+    assert load_sweep_pass2(empty).empty and "status" in load_sweep_pass2(empty).columns
+
+
+def test_load_sweep_pass2_names_the_file_and_line_it_cannot_read_and_a_card_tier_and_face_it_has_read(tmp_path):
+    good = json.dumps(pass2_line("a", "easy", pass2_entry("a")))
+    golden = json.dumps(pass2_line("a", "hard", pass2_entry("a", face="golden")))
+    for name, bad in (
+        ("garbled", "not json"),
+        ("partial", json.dumps({"forced": "a"})),
+        ("neither", json.dumps({"x": 1})),
+        ("list", json.dumps([1])),
+        ("golden", golden),
+    ):
+        path = tmp_path / f"{name}.jsonl"
+        path.write_text(good.replace('"a"', '"z"') + "\n" + bad + "\n", encoding="utf-8")
+        with pytest.raises(ValueError, match=rf"{name}\.jsonl: line 2: not a sweep result"):
+            load_sweep_pass2(path)
+    # A pass 2 run again writes its cards twice; the table would count their games twice.
+    a_easy, a_hard = pass2_line("a", "easy", pass2_entry("a")), pass2_line("a", "hard", pass2_entry("a"))
+    again = write_records(tmp_path / "again.jsonl", [a_easy, a_hard, a_easy])
+    with pytest.raises(ValueError, match=r"again\.jsonl: line 3: a at easy is also at .*again\.jsonl: line 1"):
+        load_sweep_pass2(again)
+    a_radiant = pass2_line("a", "easy", pass2_entry("a", face="radiant"))
+    radiant = write_records(tmp_path / "radiant.jsonl", [a_radiant, a_easy, a_radiant])
+    with pytest.raises(ValueError, match=r"radiant\.jsonl: line 3: a at easy \(radiant\) is also at .*radiant\.jsonl: line 1"):
+        load_sweep_pass2(radiant)
+    # One card forced on both faces is two rows, not a repeat.
+    faces = write_records(
+        tmp_path / "faces.jsonl",
+        [pass2_line("a", "easy", pass2_entry("a")), pass2_line("a", "easy", pass2_entry("a", face="radiant"))],
+    )
+    assert list(load_sweep_pass2(faces)["face"]) == ["base", "radiant"]
+
+
+def test_ai_sweep_reads_the_numbers_off_the_rust(tmp_path):
+    rules = ai_sweep()
+    assert tuple(rules) == AI_SWEEP_FIELDS
+    assert rules["ban_affordable_turns"] >= rules["min_affordable_turns"]
+    assert rules["self_harm_delta"] < 0
+    empty = tmp_path / "sweep.rs"
+    empty.write_text("pub const OTHER: u32 = 1;\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="no AI_SWEEP"):
+        ai_sweep(empty)
 
 
 def test_load_generations_reads_the_fixture_repository_oldest_first():

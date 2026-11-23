@@ -60,7 +60,7 @@ mod tests {
     /// #19 Midrange Menace 9/9 and #11 Tempo Timmy 3/3.
     const MENACE: &str = "core-019";
     const TIMMY: &str = "core-011";
-    /// C #41 State of the Game, 3/3 Indestructible.
+    /// C #41 State of the Game, Indestructible.
     const UNBREAKABLE: &str = "classic-041";
     /// C #80, Indestructible and no Immutable, so a Spell may target it (State of the Game may not since #2179).
     const BIG_MAX: &str = "classic-080";
@@ -162,7 +162,7 @@ mod tests {
             fn r46_an_indestructible_one_is_knocked_down_with_no_damaged_enemy_nothing_happens() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": EXECUTE, "radiant": true }, FILLER] },
-                    "p2": { "field": [{ "def": UNBREAKABLE, "damage": 2, "position": "DEF" }] },
+                    "p2": { "field": [{ "def": UNBREAKABLE, "damage": 1, "position": "DEF" }] },
                 }));
                 s.play(EXECUTE, json!({}));
                 s.expect_in_zone(UNBREAKABLE, "field");

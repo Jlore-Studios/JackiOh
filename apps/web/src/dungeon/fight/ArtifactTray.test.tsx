@@ -61,11 +61,11 @@ describe("B23 the relic tray", () => {
   });
 
   it("B23 the enemy's tray names its relics, and one the content does not know shows its id", () => {
-    render(<ArtifactTray side="enemy" items={[{ id: "war-drum", level: null }, { id: "looming-presence", level: null }]} passives={PASSIVES} />);
+    render(<ArtifactTray side="enemy" items={[{ id: "war-drum", level: null }, { id: "unknown-banner", level: null }]} passives={PASSIVES} />);
     fireEvent.click(screen.getByRole("button", { name: "The enemy's relics: 2" }));
     const list = screen.getByTestId(fightTestid.trayList("enemy"));
     expect(within(list).getByTestId(fightTestid.trayItem("enemy", "war-drum"))).toHaveTextContent("War Drum");
-    expect(within(list).getByTestId(fightTestid.trayItem("enemy", "looming-presence"))).toHaveTextContent("looming-presence");
+    expect(within(list).getByTestId(fightTestid.trayItem("enemy", "unknown-banner"))).toHaveTextContent("unknown-banner");
   });
 
   it("B23 Escape closes the list and gives the focus back to the button; a press outside closes it too", () => {

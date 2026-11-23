@@ -16,7 +16,15 @@
 //! #52's Radiant face; issue #3140: Meditative #40, #54 and #81 and Meditative+ #22, whose new Activate, Cry and
 //! draw lines put them over; issue #3138: Classic+ #37 Wardrum and Meditative #20 Aestheticize the Game, whose
 //! new keyword line (Divine Shield, Tradable) makes a seventh line; and Meditative #9's Radiant face, whose Cry
-//! and Aura run to seven lines (R3134001).
+//! and Aura ran to seven lines (R3134001) until issue #4440 put an Activate in the Cry's place; issue #4440:
+//! Classic #28 Second Wind's faces, whose Aura gained a mana line.
+//!
+//! Issue #3941 (R3941001) wrote the words of every face that clamped but five, the in-game text a face prints on
+//! the board and in a hand, an object `{ "en": … }` in the same file: its `{key}`s are filled as its whole text's
+//! are (the view's numbers, R386, and a Radiant face's marks against its base face's written words, R277), and
+//! the whole text stays where it stood. The five still clamp: the Quest faces, which print one stage
+//! (R2450000), and S #116 Megabase, whose keyword line alone fills four of the box's six lines. A face printed
+//! in Chinese clamps where its written form has no Chinese words of its own (`zh`).
 //!
 //! Only a face printing its catalog text takes a short form (in play #98 prints its rolled power and a Call
 //! to Chaos "???", `power.rs`). In play the Summit prints only its header and the next Ascent line (#814,
@@ -65,11 +73,35 @@ pub fn short_form_of(def_id: &str, radiant: bool) -> Option<ShortForm> {
     if radiant { *on_radiant } else { *base }
 }
 
-/// The words a number or "colon" short form prints, ending in "…". `None` when there is nothing to cut and
-/// for "clamp", which prints the whole text.
+/// R3941001: the form a face takes in the reader's language. A written form with no Chinese words of its own
+/// clamps on a Chinese face, as that face did before its English words were written.
+pub fn in_language(form: ShortForm, chinese: bool) -> ShortForm {
+    match form {
+        ShortForm::Written { zh: None, .. } if chinese => ShortForm::Clamp,
+        other => other,
+    }
+}
+
+/// R3941001: the words written for a face in the reader's language, `{key}`s unfilled; `None` for a face with
+/// none.
+pub fn written_words(def_id: &str, radiant: bool, chinese: bool) -> Option<&'static str> {
+    match short_form_of(def_id, radiant)? {
+        ShortForm::Written { en, zh } => {
+            if chinese {
+                zh
+            } else {
+                Some(en)
+            }
+        }
+        _ => None,
+    }
+}
+
+/// The words a number or "colon" short form prints, ending in "…". `None` when there is nothing to cut, for
+/// "clamp", which prints the whole text, and for a written form, which `model.rs` fills as a face's text.
 pub fn cut_text(full: &[char], form: ShortForm) -> Option<Vec<char>> {
     match form {
-        ShortForm::Clamp => None,
+        ShortForm::Clamp | ShortForm::Written { .. } => None,
         ShortForm::Colon => {
             let at = full.iter().position(|c| is_colon(*c))?;
             if at + 1 == full.len() {
@@ -202,7 +234,66 @@ mod tests {
     fn a_card_has_a_form_per_face() {
         assert_eq!(short_form_of("core-098", false), Some(ShortForm::Lines(2)));
         assert_eq!(short_form_of("classic-023", true), None);
-        assert_eq!(short_form_of("classic-023", false), Some(ShortForm::Clamp));
+        assert!(matches!(
+            short_form_of("classic-023", false),
+            Some(ShortForm::Written { .. })
+        ));
+        assert_eq!(short_form_of("stinkyscape-116", false), Some(ShortForm::Clamp));
         assert_eq!(short_form_of("core-001", false), None);
+    }
+
+    /// R3941001: a written form prints its English words on an English face, and on a Chinese one its Chinese
+    /// words, or clamps where none are written.
+    #[test]
+    fn r3941001_a_written_form_reads_in_the_readers_language() {
+        let english_only = ShortForm::Written {
+            en: "Draw {draw}.",
+            zh: None,
+        };
+        let both = ShortForm::Written {
+            en: "Draw {draw}.",
+            zh: Some("抽{draw}张牌。"),
+        };
+        assert_eq!(in_language(english_only, false), english_only);
+        assert_eq!(in_language(english_only, true), ShortForm::Clamp);
+        assert_eq!(in_language(both, true), both);
+        assert_eq!(in_language(ShortForm::Colon, true), ShortForm::Colon);
+        assert!(written_words("classic-023", false, false).is_some());
+        assert_eq!(written_words("classic-023", false, true), None);
+        assert_eq!(written_words("core-001", false, false), None);
+    }
+
+    /// #814: the ellipsis takes a last stop's place only: a cut ending in a word keeps it, one ending in spaces loses
+    /// them first, and one of nothing but spaces is the ellipsis alone.
+    #[test]
+    fn the_ellipsis_replaces_only_a_last_stop_after_the_spaces_go() {
+        assert_eq!(
+            string(cut_text(&chars("One\nTwo\nThree"), ShortForm::Lines(2))),
+            Some("One\nTwo…".to_string())
+        );
+        assert_eq!(
+            string(cut_text(&chars("One.\nTwo. \nThree."), ShortForm::Lines(2))),
+            Some("One.\nTwo…".to_string())
+        );
+        assert_eq!(
+            string(cut_text(&chars(" \nTwo."), ShortForm::Lines(1))),
+            Some("…".to_string())
+        );
+    }
+
+    /// R280: an Ascent line is "Ascent N:", its colon the line's last character or not; a line that names a level
+    /// with no colon after it is the header's.
+    #[test]
+    fn r280_an_ascent_line_is_its_number_and_its_colon() {
+        let bare = chars("Header.\nAscent 1:\nAscent 2: Two.");
+        assert_eq!(
+            string(summit_short_text(SUMMIT_DEF_ID, &bare, Some(1))),
+            Some("Header.\nAscent 1:".to_string())
+        );
+        let named = chars("Header.\nAscent 2 is near.\nAscent 1: One.\nAscent 2: Two.");
+        assert_eq!(
+            string(summit_short_text(SUMMIT_DEF_ID, &named, Some(2))),
+            Some("Header.\nAscent 2 is near.\nAscent 2: Two.".to_string())
+        );
     }
 }

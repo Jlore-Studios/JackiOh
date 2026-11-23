@@ -8,9 +8,12 @@
 //! it by every one of its controller's Units that may attack it, in lane order, each its own combat and
 //! state check, the run stopping once the arrival has left the field (`forced_attacks` without
 //! `random`, R1849007, R53). Radiant: its controller's Units have First Strike too. Tunes: attack 3 ↑.
+//! The end (REVIEW A3.6, R3800004): as S #23's, it answers each card once a turn.
 
 use jackioh_engine::effects::forced_attacks;
 use jackioh_engine::prelude::*;
+
+use crate::scripts::stinkyscape::c023_warp_disruptor::{remember_answered, unanswered};
 
 pub const ID: &str = "stinkyscape-024";
 
@@ -35,12 +38,10 @@ fn arrival(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
             (*row == Row::Units || stands_in_backrow(state, unit)).then(|| instance_id.clone())
         }
         GameEvent::CardResolved {
-            permanent,
-            def_id,
-            instance_id,
-            ..
+            permanent, instance_id, ..
         } => {
-            if !*permanent || def_of(Some(state), def_id).type_ != CardType::Unit {
+            // R783005: the play as it counts, so a Unit set by its Cloaked is the Trap it was set as.
+            if !*permanent || played_type_of(state, event) != Some(CardType::Unit) {
                 return None;
             }
             let unit = find_instance(state, instance_id)?;
@@ -78,21 +79,31 @@ fn disruptor_aura(radiant: bool) -> AuraHook {
     })
 }
 
-fn disruptor(radiant: bool) -> Script {
+/// The answer: `once` (R3800004) lets it answer each card once a turn; without it, as through v0.6.3.
+fn disruptor_with(radiant: bool, once: bool) -> Script {
     let answer = TriggerDef::new(
         "warp-disruptor-ii",
         &[GameEventType::Summoned, GameEventType::CardResolved],
-        |ctx, event| {
-            let Some(target) = arrival(ctx, event) else {
+        move |ctx, event| {
+            let found = arrival(ctx, event);
+            let Some(target) = (if once { unanswered(ctx, found) } else { found }) else {
                 return Vec::new();
             };
-            vec![forced_attacks(json_as(json!({
+            let attack = forced_attacks(json_as(json!({
                 "attackers": { "side": "self" },
                 "target": { "instanceId": target },
-            })))]
+            })));
+            if once {
+                vec![remember_answered(ctx, &target), attack]
+            } else {
+                vec![attack]
+            }
         },
     )
-    .with_when(|ctx, event| arrival(ctx, event).is_some());
+    .with_when(move |ctx, event| {
+        let found = arrival(ctx, event);
+        if once { unanswered(ctx, found) } else { found }.is_some()
+    });
     Script {
         static_flags: Some(StaticFlags {
             units_never_defense: Some(true),
@@ -104,10 +115,23 @@ fn disruptor(radiant: bool) -> Script {
     }
 }
 
+fn disruptor(radiant: bool) -> Script {
+    disruptor_with(radiant, true)
+}
+
 pub fn script() -> CardScripts {
     CardScripts {
         base: disruptor(false),
         radiant: disruptor(true),
+    }
+}
+
+/// R767000, R3800004: through v0.6.3 it answered every arrival, a card it had answered this turn
+/// included; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_3() -> CardScripts {
+    CardScripts {
+        base: disruptor_with(false, false),
+        radiant: disruptor_with(true, false),
     }
 }
 
@@ -179,6 +203,19 @@ mod tests {
             assert_eq!(s.stats(MOTHS).attack, 1 + ATTACK);
         }
 
+        /// R783005: a Unit set face-down by its Cloaked is a Trap play, no Unit played.
+        #[test]
+        fn r783005_a_unit_set_face_down_by_its_cloaked_is_not_attacked() {
+            let mut s = played(
+                false,
+                json!([{ "def": MOTHS, "lane": 1 }, { "def": MOTHS, "lane": 2 }, { "def": MOTHS, "lane": 3 }]),
+                json!([crate::CLOAKED_UNIT, FILLER]),
+            );
+            their_turn(&mut s);
+            crate::set_cloaked(&mut s, P2, crate::CLOAKED_UNIT, 1);
+            assert!(forced(&s).is_empty(), "{:?}", forced(&s));
+        }
+
         #[test]
         fn r1849007_each_of_its_units_attacks_the_arrival_in_lane_order() {
             let mut s = played(
@@ -242,6 +279,52 @@ mod tests {
             assert!(!unit_has(s.state(), s.card(VANILLA), KeywordKind::FirstStrike));
             s.expect_in_zone(VANILLA, "graveyard");
             s.expect_stats(mine.as_str(), json!({ "health": 7 }));
+        }
+    }
+
+    /// R3800004: S #23's end of daily fuzz seed 9999's loop, on Warp Disruptor II's every-Unit answer.
+    mod r3800004_it_answers_each_card_once_a_turn {
+        use super::*;
+
+        const JOB_APPLICATION: &str = "stinkyscape-112";
+
+        #[test]
+        fn r3800004_a_self_resummoning_unit_it_kills_is_answered_once_and_stays() {
+            let mut s = crate::scenario(json!({
+                "seed": "warp-disruptor-ii",
+                "p1": {
+                    "hand": [{ "def": ID, "radiant": true }, FILLER],
+                    "field": [GREASER],
+                    "library": crate::filler(8),
+                    "mana": 10,
+                },
+                "p2": { "hand": [FILLER], "field": [VANILLA], "library": crate::filler(8), "mana": 10 },
+            }));
+            for player in [P1, P2] {
+                s.state_mut().players[player].auto_end_turn = Some(false);
+            }
+            s.play(ID, json!({ "zone": 1 }));
+            let mine = s.unit_at(P1, 1).id;
+            let body = s.unit_at(P2, 1).id;
+            crate::run_as(
+                &mut s,
+                jackioh_engine::effects::fuse_cards(json_as(json!({
+                    "instanceIds": [body],
+                    "defIds": [JOB_APPLICATION],
+                    "targetInstanceId": body,
+                }))),
+                P2,
+            );
+            s.attack(mine.as_str(), body.as_str());
+            let deaths = s
+                .last_events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == body))
+                .count();
+            assert_eq!(deaths, 2, "it died to the attack and to the one answer");
+            assert_eq!(forced(&s), vec![mine.clone()]);
+            s.expect_in_zone(body.as_str(), "field");
+            assert!(s.state().result.is_none());
         }
     }
 }

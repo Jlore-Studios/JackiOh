@@ -12,7 +12,7 @@
 // `activations` are Activate controls beside the face. R2321000: `tallies` pills (cards/Tallies.tsx). R3338002: a
 // Ceaseless Void in the viewer's own hand drains its gem as its cost falls (cards/gemDrain.ts); no other card's does.
 
-import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
+import { isValidElement, memo, useMemo, type DragEvent, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
 import type { CardMark, CardType, CardView, PlayerId, RevealAt, UnitView } from "@jackioh/shared";
 
@@ -31,6 +31,7 @@ import {
   TermTips,
   UNREVEALED_NOTE,
   useCanOpenFullScreen,
+  useFullScreenArtId,
   faceDownLabel,
   isHeld,
   isInspectKey,
@@ -51,10 +52,12 @@ import { BRITTLE_LAST_COUNT, TEMPORARY_LAST_COUNT } from "../cards/keywordVisual
 import { TheirCopy } from "../cards/loadouts.ts";
 import { BRITTLE_LAST_COLOR, TEMPORARY_LAST_COLOR, marksOf } from "../cards/marks.ts";
 import ActivateControls from "./ActivateControl.tsx";
-import { AttackTakenPreview, AttackTargetPreview } from "./AttackOutcome.tsx";
-import { outcomeFor } from "./attackOutcome.ts";
+import { AttackSplashPreview, AttackTakenPreview, AttackTargetPreview } from "./AttackOutcome.tsx";
+import { outcomeFor, splashFor } from "./attackOutcome.ts";
+import { sameHighlightAt } from "./cardHighlight.ts";
 import FieldBadges from "./FieldBadges.tsx";
 import { usePhonePortrait } from "./phoneBar.ts";
+import { TipsyBlurProvider } from "./tipsy.tsx";
 import { useCardInfo, useCopiedDef, useFieldPower, useTallies } from "./catalog.ts";
 import { useLiveFace } from "./faces.ts";
 import { printedCost } from "./decks.ts";
@@ -66,6 +69,7 @@ import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlig
 import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, countedAttr, glowAttr, paretoAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
 import { t } from "../i18n/i18n.ts";
+import { EventTag } from "./EventTag.tsx";
 import { SHORTCUTS } from "../shortcuts/shortcuts.ts";
 
 import "./facedown.css";
@@ -91,7 +95,7 @@ export function isSelected(highlight: Highlight | undefined, testId: string | un
   return (highlight ?? NO_HIGHLIGHT).selected.has(testId);
 }
 
-/** `data-legal` is the only gate on firing `onClick` but R979000's reason; see the drag note below. */
+/** `data-legal` is the only gate on firing `onClick` but R979000's and R3821000's reasons; see the drag note below. */
 export function legalAttr(legal: boolean): "true" | "false" {
   return legal ? "true" : "false";
 }
@@ -185,7 +189,7 @@ export type CardProps = {
    */
   backOf?: PlayerId;
   /** `gradeLetter` is the letter the view names #93's grade by (R372); the badge prints it. */
-  counters?: { plague?: number; grade?: number; gradeLetter?: string };
+  counters?: { plague?: number; grade?: number; gradeLetter?: string; burn?: number; toxic?: number };
   /**
    * R370: a face-down backrow trap's back; absent for every other back. `at` names its zone ("opponent-3"),
    * which keys its inspect overlay (a back has no instance id). R437, R33: `marks`. R471: Plague Counters, public.
@@ -234,7 +238,7 @@ function cardTitle(name: string, unit: UnitView | null | undefined, card: CardVi
   return reason === undefined ? name : t("{name}: {reason}", { name, reason: t(reason) });
 }
 
-export default function Card(props: CardProps): ReactElement {
+function Card(props: CardProps): ReactElement {
   const { card, unit, target, testId } = props;
   const info = useCardInfo(card?.defId ?? "", card?.radiant ?? false);
   const fieldPower = useFieldPower(card?.instanceId);
@@ -258,6 +262,8 @@ export default function Card(props: CardProps): ReactElement {
 
   // The card in play: the unit's view when it is one, else the card's own. A back has no face at all.
   const shown = unit ?? card;
+  // R3548001: the owner's-view-only Tipsy blur of this card, from the unit's view when it is one.
+  const blur = unit?.tipsyBlur ?? card?.tipsyBlur ?? null;
   // #3478: the face memoized on the view object, the definition, the live facts and the language.
   const model: FaceModel = useLiveFace(info, shown, {
     ...(props.type === undefined ? {} : { type: props.type }),
@@ -268,7 +274,8 @@ export default function Card(props: CardProps): ReactElement {
   });
   // A face-up backrow card is drawn as the type its `BackrowView` names: the view is what the
   // client renders (CLAUDE.md rule 7), and the catalog only fills in what the view leaves out.
-  const face: FaceModel = props.type === undefined ? model : { ...model, type: props.type };
+  // #3633: one object while its parts are, so the face (memoized, CardFace.tsx) is not drawn again.
+  const face: FaceModel = useMemo(() => (props.type === undefined ? model : { ...model, type: props.type }), [model, props.type]);
 
   // Hooks run on every render, backs included. A back in the backrow (R370) opens what the view
   // says of it; any other back opens nothing. A full face sits in a row, so its preview rises over
@@ -300,9 +307,12 @@ export default function Card(props: CardProps): ReactElement {
         : null;
   // R3345000: Mythic / full-art view trigger. On the board, only own cards and not while the queue drains: `draining`
   // is subscribed, so the hold follows the queue, and the callback asks again as the hold fires.
-  const draining = useIsHeld();
   const inHand = props.inOwnHand === true;
   const opensFullScreen = useCanOpenFullScreen(card === null ? null : face, card?.defId ?? "", worn);
+  const fullScreenArt = useFullScreenArtId(card?.defId ?? "");
+  // #3633: only a worn unit of the viewer's that could open full screen reads the hold, so the queue
+  // starting or stopping draws no other card again.
+  const draining = useIsHeld(card !== null && opensFullScreen && !inHand && unit !== undefined && unit !== null && worn);
   const canFullScreen =
     card !== null &&
     opensFullScreen &&
@@ -313,6 +323,7 @@ export default function Card(props: CardProps): ReactElement {
     prefer: form === "full" ? "above" : "beside",
     showLoc: false,
     keyHint: SHORTCUTS.inspect,
+    touchSheet: canFullScreen,
     holdAnyPointer: canFullScreen ? true : undefined,
     onLongPress: canFullScreen
       ? (pointerId) => {
@@ -322,6 +333,7 @@ export default function Card(props: CardProps): ReactElement {
             radiant: card.radiant,
             name: face.name,
             heldPointerId: pointerId,
+            artId: fullScreenArt ?? undefined,
           });
         }
       : undefined,
@@ -339,6 +351,8 @@ export default function Card(props: CardProps): ReactElement {
     hovered !== undefined && hovered.attacker === testId && hovered.strikesBack
       ? outcomeFor(props.highlight, hovered.target)
       : undefined;
+  // R4290000: the Cleave hit the card takes when it stands beside the hovered target.
+  const splash = splashFor(props.highlight, testId);
   // #1598: a `keywordGranted` that takes the keyword away plays as the icon going (keywordLoss.ts).
   const keywordLost = useKeywordLost(testId);
   // #2435: an `awakened` in flight breaks the card's Dormant seal until the board catches up
@@ -346,11 +360,16 @@ export default function Card(props: CardProps): ReactElement {
   const awakening = useAwakening(testId);
   // R979000: a card in your hand the view says cannot be played stays greyed out, as `legal` offers
   // it nothing, but its click still reaches the board, which shows `playReason` and sends nothing.
-  const explains = card?.playReason !== undefined;
+  // R3821000: likewise your own unit in a unit zone the view says cannot switch (or, R849000, attack)
+  // now, a spent one among them, whose click also goes on to its zone, which a play being built may
+  // pick (a Stack's or an Equip's), since the card's own click changes nothing then (`onClickTarget`).
+  const explainsUnit =
+    target?.on === "unit" && (unit?.switchReason !== undefined || unit?.attackReason !== undefined);
+  const explains = card?.playReason !== undefined || explainsUnit;
 
   function fire(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>): void {
     if (!clickable || !(legal || explains)) return;
-    event.stopPropagation();
+    if (legal || !explainsUnit) event.stopPropagation();
     props.onClick?.(target);
   }
 
@@ -380,6 +399,8 @@ export default function Card(props: CardProps): ReactElement {
     "data-animating": animatingEvent,
     "data-lost": keywordLost ? "true" : undefined,
     "data-awakening": awakening ? "true" : undefined,
+    // R3536005: an Evolved unit is marked on its card, as its face is (MinionFace.tsx).
+    "data-evolved": unit?.evolved === true ? "true" : undefined,
     "data-glow": glowAttr(props.highlight, testId),
     "aria-disabled": clickable && !legal ? ("true" as const) : undefined,
     onClick: clickable ? fire : undefined,
@@ -492,6 +513,8 @@ export default function Card(props: CardProps): ReactElement {
       data-marks={marks.length > 0 ? marks.map((entry) => entry.mark).join(" ") : undefined}
       data-unrevealed={props.unrevealed === true ? "true" : undefined}
       data-position={position}
+      // R3548001: which of this card blurs on its owner's view alone; never on a back.
+      data-tipsy-blur={blur?.kind}
       // `canAct` is drawn as state, never read as permission: legality is `props.highlight`.
       data-can-act={unit === undefined || unit === null ? undefined : unit.canAct ? "true" : "false"}
       // #258: no exertion left on the acting side's turn (spent.ts), drawn dimmed with a "Zz".
@@ -503,25 +526,27 @@ export default function Card(props: CardProps): ReactElement {
       // with it (R849000) the engine's reason a unit of yours cannot attack now.
       title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
     >
-      {unit !== undefined && unit !== null ? (
-        <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} attacking={animatingEvent === "attackDeclared"} />
-      ) : (
-        // Issue #814: a Summit in play shortens to its header and next Ascent line; the overlays keep it all.
-        // R2098000: its terms show their rule on hover and on a long press (cards/TermTip.tsx); a tap on one still reaches this root.
-        // R2723000: a full-art card in the viewer's own hand draws its art alone; its inspect overlays draw it whole.
-        <TermTips>
-          <CardFace
-            face={face}
-            layout={form === "compact" ? "compact" : "full"}
-            ascentLevel={face.ascent}
-            worn={worn}
-            ownHand={worn && props.inOwnHand === true}
-            onBoard={form === "compact"}
-            gemDrain={gemDrain}
-            tilt="host"
-          />
-        </TermTips>
-      )}
+      <TipsyBlurProvider blur={blur}>
+        {unit !== undefined && unit !== null ? (
+          <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} attacking={animatingEvent === "attackDeclared"} />
+        ) : (
+          // Issue #814: a Summit in play shortens to its header and next Ascent line; the overlays keep it all.
+          // R2098000: its terms show their rule on hover and on a long press (cards/TermTip.tsx); a tap on one still reaches this root.
+          // R2723000: a full-art card in the viewer's own hand draws its art alone; its inspect overlays draw it whole.
+          <TermTips>
+            <CardFace
+              face={face}
+              layout={form === "compact" ? "compact" : "full"}
+              ascentLevel={face.ascent}
+              worn={worn}
+              ownHand={worn && props.inOwnHand === true}
+              onBoard={form === "compact"}
+              gemDrain={gemDrain}
+              tilt="host"
+            />
+          </TermTips>
+        )}
+      </TipsyBlurProvider>
 
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the
           face has `pointer-events: none`. */}
@@ -547,6 +572,7 @@ export default function Card(props: CardProps): ReactElement {
       {/* #2267: the hint row takes no pointer event (handHints.css). */}
       {props.hintRow}
       {position !== undefined && <span className="position-tag">{t(position)}</span>}
+      <EventTag host={testId} animating={animatingEvent} />
 
       {counters?.plague !== undefined && (
         <span className="counter counter-plague" data-counter="plague" title={t("Plague counters")}>
@@ -564,6 +590,18 @@ export default function Card(props: CardProps): ReactElement {
           title={counters.gradeLetter === undefined ? t("Grade counters") : t("Grade {letter}", { letter: counters.gradeLetter })}
         >
           {counters.gradeLetter ?? counters.grade}
+        </span>
+      )}
+      {counters?.burn !== undefined && (
+        // R3540000: the Burn the Unit takes once at the end of the turn (R4154000; board.css `.counter-burn`).
+        <span className="counter counter-burn" data-counter="burn" title={t("Burn counters")}>
+          {counters.burn}
+        </span>
+      )}
+      {counters?.toxic !== undefined && (
+        // R3540000: and its Toxic (board.css `.counter-toxic`).
+        <span className="counter counter-toxic" data-counter="toxic" title={t("Toxic counters")}>
+          {counters.toxic}
         </span>
       )}
 
@@ -608,6 +646,7 @@ export default function Card(props: CardProps): ReactElement {
       {takenOutcome !== undefined && takenOutcome.taken > 0 && testId !== undefined && (
         <AttackTakenPreview outcome={takenOutcome} attacker={testId} />
       )}
+      {splash !== undefined && testId !== undefined && <AttackSplashPreview hit={splash} unit={testId} />}
     </div>
   );
 
@@ -631,26 +670,108 @@ export default function Card(props: CardProps): ReactElement {
         />
       )}
       {props.switchTarget === true && unit !== undefined && unit !== null && (
-        <SwitchButton instanceId={unit.instanceId} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
+        <SwitchButton
+          instanceId={unit.instanceId}
+          reason={unit.switchReason}
+          highlight={props.highlight}
+          animating={props.animating}
+          onClick={props.onClick}
+        />
       )}
       <OwnCopy own={worn}>{inspect.overlay}</OwnCopy>
     </TheirCopy>
   );
 }
 
+/**
+ * #3633: the keys of the board's `animating` map a card's tree reads: its own testid, its unit's `card-`
+ * one (its Activate controls flash on it) and its switch's. A queue step hands every card a new map; a
+ * card whose keys all name what they named draws nothing new.
+ */
+export function cardAnimatingKeys(props: Pick<CardProps, "testId" | "card" | "unit">): string[] {
+  const keys = props.testId === undefined ? [] : [props.testId];
+  const instanceId = (props.unit ?? props.card)?.instanceId;
+  if (instanceId !== undefined) keys.push(testid.card(instanceId), testid.switchPosition(instanceId));
+  return keys;
+}
+
+/** Equal plain data: what a parent builds inline for a card on each render (its target, pops, back and counters). */
+function sameData(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null || Array.isArray(a) !== Array.isArray(b)) return false;
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every((key) => Object.hasOwn(right, key) && sameData(left[key], right[key]));
+}
+
+/** The same element with the same props: a hand card's hint row, built inline on each render. */
+function sameElement(a: ReactNode, b: ReactNode): boolean {
+  if (Object.is(a, b)) return true;
+  if (!isValidElement(a) || !isValidElement(b) || a.type !== b.type || a.key !== b.key) return false;
+  const left = a.props as Record<string, unknown>;
+  const right = b.props as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every((key) => Object.hasOwn(right, key) && Object.is(left[key], right[key]));
+}
+
+/**
+ * #3633: whether a card would draw what it drew. Every prop is the same object as before, but for the
+ * `animating` map, of which only `cardAnimatingKeys` count, and the inline data and hint row a parent
+ * builds anew on every render, which count by what they hold. Without it every queue step drew every
+ * card on the board again, the slowest work of a throttled phone's frame (R3351000). #3609: `highlight`
+ * counts by the card's own slice of it (cardHighlight.ts).
+ */
+export function sameCardProps(prev: Readonly<CardProps>, next: Readonly<CardProps>): boolean {
+  const keys = new Set([...Object.keys(prev), ...Object.keys(next)] as (keyof CardProps)[]);
+  for (const key of keys) {
+    const a = prev[key];
+    const b = next[key];
+    if (Object.is(a, b)) continue;
+    switch (key) {
+      case "animating":
+        if (cardAnimatingKeys(next).some((id) => prev.animating?.get(id) !== next.animating?.get(id))) return false;
+        continue;
+      case "hintRow":
+        if (!sameElement(prev.hintRow, next.hintRow)) return false;
+        continue;
+      case "highlight":
+        if (!sameHighlightAt(prev.highlight, next.highlight, { testId: next.testId, instanceId: (next.unit ?? next.card)?.instanceId })) return false;
+        continue;
+      case "target":
+      case "pops":
+      case "faceDown":
+      case "counters":
+        if (!sameData(a, b)) return false;
+        continue;
+      default:
+        return false;
+    }
+  }
+  return true;
+}
+
+export default memo(Card, sameCardProps);
+
 function SwitchButton({
   instanceId,
+  reason,
   highlight,
   animating,
   onClick,
 }: {
   instanceId: string;
+  /** R3821000: the engine's reason the viewer's own unit cannot switch now (`UnitView.switchReason`). */
+  reason: string | undefined;
   highlight?: Highlight;
   animating?: AnimatingMap;
   onClick?: (target: ClickTarget) => void;
 }): ReactElement {
   const testId = testid.switchPosition(instanceId);
   const legal = isLegal(highlight, testId);
+  // R3821000: a greyed switch names the engine's reason, in its accessible name and its tooltip.
+  const name = t("Switch position");
+  const label = legal || reason === undefined ? name : t("{name}: {reason}", { name, reason: t(reason) });
   return (
     <button
       type="button"
@@ -661,8 +782,8 @@ function SwitchButton({
       data-animating={animating?.get(testId)}
       aria-disabled={legal ? undefined : "true"}
       disabled={!legal}
-      title={t("Switch position")}
-      aria-label={t("Switch position")}
+      title={label}
+      aria-label={label}
       onClick={(event) => {
         event.stopPropagation();
         if (!legal) return;

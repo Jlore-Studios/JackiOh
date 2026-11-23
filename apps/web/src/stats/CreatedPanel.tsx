@@ -1,76 +1,61 @@
-// The Created cards of /stats (SPEC §9.11, R2089000), below the Cards tab's table, in two sections that share no
+// The Created cards of /stats (SPEC §9.11, R2089000), on the Tokens tab (R4279001), in two sections that share no
 // row (R3324002): the catalog's tokens, and every other card made during a game (generated and Discovered cards,
-// copies, transforms' results, The Coin). A row counts the seats that made a copy: Win rate pools them, used or
-// not (R2370000), Used splits by a copy Radiant at its first use, and Not used is the baseline. The figures and
-// R654's floor ("—" below it) are the server's, and Win rate is read off them, nothing counted anew (CLAUDE.md
-// rule 7). The rows open on Win rate, best first, and every header sorts them (R3184002). It scrolls, never fixed
-// (R1646000).
+// copies, transforms' results, The Coin). A row counts the seats that made a copy, used or not (R2370000). R4082000:
+// Tier and Adjusted are the server's, each card read against the other Created cards, and R654's floor ("—" below
+// it) is the server's too, nothing counted anew (CLAUDE.md rule 7). R4083000: those two are the only figures, with
+// Games behind the tab's Columns toggle (R4155000); the rows sort as the deck table's, by the tab's one sort, which
+// every header sets (R3184002), Tier by tier fit within a tier (R3184001); the Table and Grid views and the 95%
+// ranges are the deck table's too. R4155000: a row opens the same drill-down a deck row opens. It scrolls, never
+// fixed (R1646000). R3887000: with the Plain text button on, a catalog card's name cell, or its grid card, holds
+// the card as plain text.
 
-import { useId, useState, type ReactElement } from "react";
-import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
-import type { PublicCreatedStat } from "../net/api.ts";
-import { faceRate, formatPlayedDelta } from "./model.ts";
+import { useId, type ReactElement, type ReactNode } from "react";
+import { t, useLocale } from "../i18n/i18n.ts";
+import type { PublicCreatedStat, PublicStatsTiers } from "../net/api.ts";
+import { ADJUSTED_RANGE_DIGITS } from "./config.ts";
+import { RangeText, TierFitText } from "./RangeText.tsx";
 import { TableScroll } from "./TableScroll.tsx";
 import { statsTestid } from "./testids.ts";
+import { TierChip, adjustedText, tierRank } from "./TierChip.tsx";
+import { cardTierFit } from "./tierFit.ts";
 
 /** Unit conversion, not configuration: a share of 0..1 as a percentage. */
 const PERCENT = 100;
 
-/** A rate as the cards table shows one, or "—" when there is none or it is below the floor. */
-export function rateText(games: number, rate: number | null, minSample: number): string {
-  const shown = faceRate(games, rate, minSample);
-  return shown === null ? "—" : `${Math.round(shown * PERCENT)}%`;
-}
+/** R3184002, R4083000: the Created tables' columns, every one sortable, named as the deck table's sort names them. */
+export type CreatedColumn = "name" | "games" | "tier" | "adjustedWinRate";
 
-/**
- * R2370000: a Created card's win rate: the wins of the seats that made one, used or not, over their games (each
- * side's rate times its games, rounded, as the Sets tab pools its cards'); null with none.
- */
-export function createdWinRate(card: PublicCreatedStat): number | null {
-  if (card.games === 0) return null;
-  const wins =
-    Math.round((card.createdPlayedWinRate ?? 0) * card.createdPlayedGames) +
-    Math.round((card.createdNotPlayedWinRate ?? 0) * card.createdNotPlayedGames);
-  return wins / card.games;
-}
-
-/** R3184002: the Created tables' columns, every one sortable. */
-export type CreatedColumn = "name" | "games" | "winRate" | "used" | "notUsed" | "usedRadiant" | "usedNormal" | "delta";
+/** R4083000: the columns the Created tables sort by, in the deck table's order: the Tokens tab's sort select. */
+export const CREATED_SORT_COLUMNS: readonly CreatedColumn[] = ["name", "games", "tier", "adjustedWinRate"];
 
 /** R3184002: a header's sort: the column and its direction. */
 export type CreatedSort = { col: CreatedColumn; dir: "asc" | "desc" };
 
-/** R3324002: the sort a table opens on, its Win rate best first, as the deck table opens on its own headline rate. */
-export const CREATED_DEFAULT_SORT: CreatedSort = { col: "winRate", dir: "desc" };
+/** R4082000: the sort a table opens on, its Adjusted best first, as the deck table opens on its own headline rate. */
+export const CREATED_DEFAULT_SORT: CreatedSort = { col: "adjustedWinRate", dir: "desc" };
 
-/** R3184002: a column's figure as the row shows it: its games, or its rate or delta, null for "—". */
-function figure(card: PublicCreatedStat, col: Exclude<CreatedColumn, "name">, minSample: number): number | null {
-  switch (col) {
-    case "games":
-      return card.games;
-    case "winRate":
-      return faceRate(card.games, createdWinRate(card), minSample);
-    case "used":
-      return faceRate(card.createdPlayedGames, card.createdPlayedWinRate, minSample);
-    case "notUsed":
-      return faceRate(card.createdNotPlayedGames, card.createdNotPlayedWinRate, minSample);
-    case "usedRadiant":
-      return faceRate(card.createdPlayedRadiantGames, card.createdPlayedRadiantWinRate, minSample);
-    case "usedNormal":
-      return faceRate(card.createdPlayedNormalGames, card.createdPlayedNormalWinRate, minSample);
-    case "delta":
-      return card.createdPlayedDelta;
-  }
+/**
+ * R4083000: the page's one sort as the Created tables read it: a column they lack (the deck table's Win rate or
+ * Play rate) reads as Adjusted, keeping its direction.
+ */
+export function createdSortOf(col: string, dir: "asc" | "desc"): CreatedSort {
+  return { col: CREATED_SORT_COLUMNS.find((known) => known === col) ?? "adjustedWinRate", dir };
+}
+
+/** R4082000: a card's adjusted win rate as the row shows it, null below the floor or from an older server. */
+function adjustedOf(card: PublicCreatedStat): number | null {
+  return card.hasEnoughGames ? (card.adjustedWinRate ?? null) : null;
 }
 
 /**
  * R3184002: the rows in a header's order: a row with no figure (below the floor, or none) after those with one,
- * either way, and rows that tie in the server's order.
+ * either way, and rows that tie in the server's order. R4082000: by tier, S first descending, then by Adjusted;
+ * R4083000: within a tier by tier fit first (R3184001), a card with none after, as the deck table sorts.
  */
 export function sortCreated(
   created: readonly PublicCreatedStat[],
   sort: CreatedSort,
-  minSample: number,
+  tiers: Pick<PublicStatsTiers, "bandLow" | "bandHigh"> | undefined,
   nameOf: (id: string, name: string) => string,
   language?: string,
 ): PublicCreatedStat[] {
@@ -78,8 +63,17 @@ export function sortCreated(
   const { col } = sort;
   return [...created].sort((a, b) => {
     if (col === "name") return nameOf(a.id, a.name).localeCompare(nameOf(b.id, b.name), language) * flip;
-    const x = figure(a, col, minSample);
-    const y = figure(b, col, minSample);
+    if (col === "games") return (a.games - b.games) * flip;
+    if (col === "tier") {
+      const x = tierRank(a.hasEnoughGames ? a.tier : null);
+      const y = tierRank(b.hasEnoughGames ? b.tier : null);
+      if (x !== y) return x < 0 || y < 0 ? (x < 0 ? 1 : -1) : (x - y) * flip;
+      const p = cardTierFit(a, tiers);
+      const q = cardTierFit(b, tiers);
+      if (p !== q) return p === null || q === null ? (p === null ? 1 : -1) : (p - q) * flip;
+    }
+    const x = adjustedOf(a);
+    const y = adjustedOf(b);
     if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1;
     return (x - y) * flip;
   });
@@ -123,28 +117,52 @@ export type CreatedKind = "tokens" | "other";
 export function CreatedPanel({
   kind,
   created,
-  minSample,
+  sort,
+  onSort,
+  view,
+  showRanges,
+  tiers,
   nameOf,
+  faceOf,
+  plainCardOf,
+  visibleThumbnail,
+  visibleGames,
+  onOpen,
 }: {
   kind: CreatedKind;
   created: readonly PublicCreatedStat[];
-  minSample: number;
+  /** R4083000: the tab's sort, which a header asks the tab to change, as the deck table's headers do. */
+  sort: CreatedSort;
+  onSort: (next: CreatedSort) => void;
+  /** R4083000: the tab's Table or Grid view and its Show 95% ranges, as the deck cards show them. */
+  view: "table" | "grid";
+  showRanges: boolean;
+  /** R3184001: the band a tier fit reads; absent from a server deployed before it. */
+  tiers: Pick<PublicStatsTiers, "bandLow" | "bandHigh"> | undefined;
   /** A card's name as the page shows it. */
   nameOf: (id: string, name: string) => string;
+  /** R4083000: a card's face in the Grid, as the deck grid draws it; null for an id with none. */
+  faceOf: (id: string) => ReactNode;
+  /** R3887000: a card's plain text, or null for an id with none; the name stands in for it. */
+  plainCardOf?: (id: string) => ReactNode;
+  /** R4155000: the tab's Columns toggle, honoured as the deck table honours it. */
+  visibleThumbnail: boolean;
+  visibleGames: boolean;
+  /** R4155000: a row opens the card's drill-down, as a deck row does. */
+  onOpen: (id: string, opener: HTMLElement) => void;
 }): ReactElement | null {
   const locale = useLocale();
   const titleId = useId();
-  const [sort, setSort] = useState<CreatedSort>(CREATED_DEFAULT_SORT);
   if (created.length === 0) return null;
 
-  const onSort = (col: CreatedColumn): void =>
-    setSort((now) =>
-      now.col === col
-        ? { col, dir: now.dir === "asc" ? "desc" : "asc" }
+  const pressed = (col: CreatedColumn): void =>
+    onSort(
+      sort.col === col
+        ? { col, dir: sort.dir === "asc" ? "desc" : "asc" }
         : { col, dir: col === "name" ? "asc" : "desc" },
     );
-  const rows = sortCreated(created, sort, minSample, nameOf, locale === "en" ? undefined : locale);
-  const header = { sort, onSort };
+  const rows = sortCreated(created, sort, tiers, nameOf, locale === "en" ? undefined : locale);
+  const header = { sort, onSort: pressed };
   const tokens = kind === "tokens";
 
   return (
@@ -152,55 +170,117 @@ export function CreatedPanel({
       <h2 id={titleId} className="stats-games-title">
         {tokens ? t("Tokens") : t("Other created cards")}
       </h2>
-      <p className="stats-sample-hint stats-games-note">
-        {tokens
-          ? t("Tokens made during the game.")
-          : t("Every other card made during the game: generated and Discovered cards, copies and The Coin.")}{" "}
-        {t(
-          "Win rate is of the seats that made one, used or not; Used of those that used one, Not used of those that made one and used none. Each needs {minSample} games.",
-          { minSample },
-        )}
-      </p>
-      <TableScroll labeledBy={titleId}>
-        <table className="stats-table" data-testid={tokens ? statsTestid.tokensTable : statsTestid.createdTable}>
-          <thead>
-            <tr>
-              <SortHeader col="name" label={tokens ? t("Token") : t("Card")} {...header} />
-              <SortHeader col="games" label={t("Games")} {...header} />
-              <SortHeader col="winRate" label={t("Win rate")} {...header} />
-              <SortHeader col="used" label={t("Used")} {...header} />
-              <SortHeader col="notUsed" label={t("Not used")} {...header} />
-              <SortHeader col="usedRadiant" label={t("Used Radiant")} {...header} />
-              <SortHeader col="usedNormal" label={t("Used normal")} {...header} />
-              <SortHeader col="delta" label={t("Used vs not used")} {...header} />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((card) => (
-              <tr key={card.id} className="stats-tr" data-card-id={card.id}>
-                <th scope="row" className="stats-td stats-td--name">
-                  {nameOf(card.id, card.name)}
-                </th>
-                <td className="stats-td">{formatNumber(card.games)}</td>
-                <td className="stats-td">{rateText(card.games, createdWinRate(card), minSample)}</td>
-                <td className="stats-td">
-                  {rateText(card.createdPlayedGames, card.createdPlayedWinRate, minSample)}
-                </td>
-                <td className="stats-td">
-                  {rateText(card.createdNotPlayedGames, card.createdNotPlayedWinRate, minSample)}
-                </td>
-                <td className="stats-td">
-                  {rateText(card.createdPlayedRadiantGames, card.createdPlayedRadiantWinRate, minSample)}
-                </td>
-                <td className="stats-td">
-                  {rateText(card.createdPlayedNormalGames, card.createdPlayedNormalWinRate, minSample)}
-                </td>
-                <td className="stats-td">{formatPlayedDelta(card.createdPlayedDelta) ?? "—"}</td>
+      {view === "grid" ? (
+        <ul
+          className={`stats-grid${plainCardOf ? " stats-grid--plain" : ""}`}
+          data-testid={tokens ? statsTestid.tokensGrid : statsTestid.createdGrid}
+          aria-labelledby={titleId}
+        >
+          {rows.map((card) => {
+            const plainCard = plainCardOf?.(card.id) ?? null;
+            const adjusted = adjustedOf(card);
+            return (
+              <li key={card.id} className="stats-grid-item" data-card-id={card.id}>
+                <button
+                  type="button"
+                  className={`stats-grid-card${plainCard === null ? "" : " stats-grid-card--plain"}`}
+                  onClick={(e) => onOpen(card.id, e.currentTarget)}
+                  aria-label={nameOf(card.id, card.name)}
+                >
+                  {plainCard ?? faceOf(card.id)}
+                </button>
+                <dl className="stats-grid-figures">
+                  <dt>{t("Tier")}</dt>
+                  <dd>
+                    <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.createdTierCell} />
+                    {showRanges && <TierFitText fit={cardTierFit(card, tiers)} />}
+                  </dd>
+                  <dt>{t("Adjusted")}</dt>
+                  <dd data-testid={statsTestid.createdAdjustedCell}>
+                    {adjustedText(adjusted)}
+                    {showRanges && adjusted !== null && (
+                      <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                    )}
+                  </dd>
+                  <dt>{t("Games")}</dt>
+                  <dd>{card.games}</dd>
+                </dl>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <TableScroll labeledBy={titleId}>
+          <table className="stats-table" data-testid={tokens ? statsTestid.tokensTable : statsTestid.createdTable}>
+            <thead>
+              <tr>
+                {visibleThumbnail && (
+                  <th className="stats-th--thumb" scope="col">
+                    {t("Card")}
+                  </th>
+                )}
+                <SortHeader col="name" label={t("Name")} {...header} />
+                {visibleGames && <SortHeader col="games" label={t("Games")} {...header} />}
+                <SortHeader col="tier" label={t("Tier")} {...header} />
+                <SortHeader col="adjustedWinRate" label={t("Adjusted")} {...header} />
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </TableScroll>
+            </thead>
+            <tbody>
+              {rows.map((card) => {
+                const plainCard = plainCardOf?.(card.id) ?? null;
+                const adjusted = adjustedOf(card);
+                return (
+                  <tr
+                    key={card.id}
+                    className="stats-tr"
+                    data-card-id={card.id}
+                    onClick={(e) => onOpen(card.id, e.currentTarget)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onOpen(card.id, e.currentTarget);
+                      }
+                    }}
+                  >
+                    {visibleThumbnail && (
+                      <td className="stats-td stats-td--thumb">
+                        <span className="stats-card-thumb-badge" data-rarity={card.rarity}>
+                          {card.cost}
+                        </span>
+                      </td>
+                    )}
+                    <td className="stats-td stats-td--name">
+                      {plainCard ?? <span className="stats-card-name-link">{nameOf(card.id, card.name)}</span>}
+                    </td>
+                    {visibleGames && <td className="stats-td">{card.games}</td>}
+                    <td className="stats-td">
+                      <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.createdTierCell} />
+                      {showRanges && <TierFitText fit={cardTierFit(card, tiers)} />}
+                    </td>
+                    <td className="stats-td" data-testid={statsTestid.createdAdjustedCell}>
+                      {adjusted === null ? (
+                        "—"
+                      ) : (
+                        <div className="stats-winrate-cell">
+                          <span className="stats-winrate-text">{adjustedText(adjusted)}</span>
+                          <div className="stats-confidence-bar">
+                            <div className="stats-confidence-fill" style={{ width: `${Math.round(adjusted * PERCENT)}%` }} />
+                          </div>
+                          {showRanges && (
+                            <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </TableScroll>
+      )}
     </section>
   );
 }

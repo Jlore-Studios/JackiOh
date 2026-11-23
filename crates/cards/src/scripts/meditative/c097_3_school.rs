@@ -89,7 +89,8 @@ mod tests {
             .collect()
     }
 
-    /// R380, R1420: "any set" is the sets that ship; their non-token Units at that printed cost.
+    /// R380, R1420: "any set" is the sets that ship; their non-token Units at that printed cost, which
+    /// R65 reads out of play: an embiggen card (S+ #67 Phase Wall, base (1)) at its base price.
     fn pool(cost: i32) -> Vec<String> {
         crate::register_all();
         crate::CATALOG
@@ -97,7 +98,7 @@ mod tests {
             .filter(|def| {
                 def.type_ == CardType::Unit
                     && !def.token
-                    && matches!(def.cost, CardCost::Fixed(printed) if printed == cost)
+                    && jackioh_engine::catalog::query_cost(def) == cost
                     && jackioh_engine::set_ships(def.set)
             })
             .map(|def| def.id.clone())

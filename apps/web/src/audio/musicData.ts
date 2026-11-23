@@ -1,11 +1,10 @@
-// Music data access (SPEC §10.11 "Music", R631). `music-manifest.json` (written by
-// `apps/web/scripts/gen-music.mjs`) and `music-cards.json` (a card's station or intro, R1350; no card plays a theme, R822000) are imported
-// here and nowhere else, and checked once at import, so a malformed table fails at load. A card's entry is
-// looked up by a defId the viewer can read: the sentinel is never in the table.
+// Music data access (SPEC §10.11 "Music", R631; #4130).
+//
+// Pure lookup helpers for music tracks and stations. The manifests load lazily in `soundTables.ts`
+// through `soundTablesLoader.ts`.
 
 import { MUSIC_ROTATION_KEY, MUSIC_STATIONS } from "./constants.ts";
-import rawCards from "./music-cards.json";
-import rawManifest from "./music-manifest.json";
+import { soundTablesNow } from "./soundTablesLoader.ts";
 import type { MusicCardEntry, MusicManifest, MusicStation, MusicTrack } from "./types.ts";
 import { isRecord } from "../wire/json.ts";
 import { getStored, setStored } from "../net/storage.ts";
@@ -86,17 +85,16 @@ export function parseMusicCards(raw: unknown, manifest: MusicManifest): Record<s
   return cards;
 }
 
-export const MUSIC_MANIFEST: MusicManifest = parseMusicManifest(rawManifest);
-export const MUSIC_CARDS: Readonly<Record<string, MusicCardEntry>> = parseMusicCards(rawCards, MUSIC_MANIFEST);
-
-export function musicUrl(id: string): string {
-  return `${import.meta.env.BASE_URL}audio/music/${id}.m4a`;
+export function musicUrl(id: string, hash: string): string {
+  return `${import.meta.env.BASE_URL}audio/music/${id}.m4a?v=${hash}`;
 }
 
 /** A station's in-game tracks, `<station>-1`, `<station>-2`, …, in order: the ones a match rotates through. */
-export function stationTracks(station: MusicStation, manifest: MusicManifest = MUSIC_MANIFEST): string[] {
+export function stationTracks(station: MusicStation, manifest?: MusicManifest): string[] {
+  const m = manifest ?? soundTablesNow()?.musicManifest;
+  if (!m) return [];
   const prefix = `${station}-`;
-  return Object.keys(manifest.files)
+  return Object.keys(m.files)
     .filter((id) => id.startsWith(prefix) && /^\d+$/.test(id.slice(prefix.length)))
     .sort((a, b) => Number(a.slice(prefix.length)) - Number(b.slice(prefix.length)));
 }
@@ -110,8 +108,12 @@ export function startTrack(station: MusicStation): string {
 }
 
 /** A station's own music (in-game or low health), which picks up where it left off within a match. */
-export function isStationTrack(id: string): boolean {
-  return MUSIC_STATIONS.some((station) => id === dangerTrack(station) || stationTracks(station).includes(id));
+export function isStationTrack(id: string, manifest?: MusicManifest): boolean {
+  const m = manifest ?? soundTablesNow()?.musicManifest;
+  if (m) {
+    return MUSIC_STATIONS.some((station) => id === dangerTrack(station) || stationTracks(station, m).includes(id));
+  }
+  return MUSIC_STATIONS.some((station) => id === dangerTrack(station) || (id.startsWith(`${station}-`) && /^\d+$/.test(id.slice(`${station}-`.length))));
 }
 
 export function readRotation(): number {

@@ -6,13 +6,20 @@
 # with the survivors under it, and each area's full report stays an artifact for 30 days, which is
 # what an audit pull request sorts (#3490 part 4).
 #
-# It reports and gates nothing: it stays outside super.yml, so production waits on no number nobody
-# has seen yet. Once the scores settle, a floor joins .github/coverage-floor.txt's, raised by hand.
+# The `report` job then holds each area's score to its line of .github/mutants-floor.txt, beside
+# coverage's floor (#3519): a run that scores an area under its floor fails, naming the area, and
+# the floor file's header says how it is raised. A scheduled run then files the week's sorting as an
+# issue of its own, `Patch: sort week <k>'s mutation survivors`, with the table, every survivor and
+# each area job that measured nothing, handed to the night bot (#4038). A pull request's twenty mutants are a sample, not
+# a score, so its run checks the floor's lines and holds no score to them. The workflow stays
+# outside super.yml: production waits on no five-hour weekly job.
 #
 # The weeks since 1970 pick each area's shard (`sh scripts/mutants.sh <area> <k>` runs shard
 # k mod n), so the weeks walk every shard of every area in turn. Sunday at 03:17 UTC, three Rust and
 # three web jobs at a time so CI keeps runners, and on demand: `gh workflow run mutants.yml` (every
-# area, this week's shards), `-f area=<area>` for one, `-f shard=<k>` for another week's. A pull
+# area, this week's shards), `-f area=<area>` for one, `-f shard=<k>` for another week's, and
+# `-f shards=<list>` (`0-11`, `3,5,40-47`) for many of an area's shards in one run, `-f parallel=<n>`
+# of them at once (3 unless given): an audit walks a whole area so (#3490). A pull
 # request that changes the tooling runs twenty mutants of the run crate and of a card set (whose
 # scripts only scripts/mutants.sh's copy of the tree lets cargo-mutants find) and the Worker's, so a
 # broken setting shows before it merges.
@@ -31,11 +38,20 @@ on:
         description: "The shard k to run (k mod each area's shard count); empty: this week's"
         type: string
         default: ""
+      shards:
+        description: "Many shards in one run, as ranges and numbers (0-11, 3,5,40-47); empty: the shard above"
+        type: string
+        default: ""
+      parallel:
+        description: "Shards run at once, of the Rust areas and of the web's each; empty: 3"
+        type: string
+        default: ""
   pull_request:
     paths:
       - .cargo/mutants.toml
       - .github/workflows/mutants.yml
       - scripts/mutants.sh
+      - scripts/mutants-runner.sh
       - apps/web/stryker.config.mjs
       - apps/edge/stryker.config.mjs
 
@@ -59,7 +75,8 @@ jobs:
     outputs:
       rust: ${{ steps.plan.outputs.rust }}
       web: ${{ steps.plan.outputs.web }}
-      shard: ${{ steps.plan.outputs.shard }}
+      shards: ${{ steps.plan.outputs.shards }}
+      parallel: ${{ steps.plan.outputs.parallel }}
       size: ${{ steps.plan.outputs.size }}
     steps:
       - name: the areas and the shard
@@ -68,14 +85,29 @@ jobs:
           EVENT: ${{ github.event_name }}
           INPUT_AREA: ${{ inputs.area }}
           INPUT_SHARD: ${{ inputs.shard }}
+          INPUT_SHARDS: ${{ inputs.shards }}
+          INPUT_PARALLEL: ${{ inputs.parallel }}
         run: |
           rust='["engine","cards","ai","run","shared","server","tools","wasm"]'
           web='["web-animations","web-effects","web-audio","web-cards","web-drag","web-settings","web-wire","web-wasm","edge"]'
           case "$INPUT_AREA$INPUT_SHARD" in *[!a-z0-9_-]*) echo "area and shard are names and numbers" >&2; exit 1 ;; esac
+          case "$INPUT_SHARDS" in *[!0-9,-]*) echo "shards are numbers and ranges (0-11, 3,5)" >&2; exit 1 ;; esac
+          case "$INPUT_PARALLEL" in *[!0-9]*) echo "parallel is a number" >&2; exit 1 ;; esac
           shard=${INPUT_SHARD:-$(($(date -u +%s) / 604800))}
+          # The shards, as a JSON list: each range a-b is a, a+1… b.
+          shards=$(echo "${INPUT_SHARDS:-$shard}" | tr ',' '\n' | while read -r part; do
+            case "$part" in
+              "") ;;
+              *-*) seq "${part%-*}" "${part#*-}" ;;
+              *) echo "$part" ;;
+            esac
+          done | sort -nu | paste -sd, -)
+          [ -n "$shards" ] || { echo "no shard to run" >&2; exit 1; }
+          parallel=${INPUT_PARALLEL:-3}
+          [ "$parallel" -ge 1 ] || { echo "parallel is at least 1" >&2; exit 1; }
           size=
           if [ "$EVENT" = pull_request ]; then
-            rust='["run","cards"]' web='["edge"]' shard=0 size=20
+            rust='["run","cards"]' web='["edge"]' shards=0 parallel=3 size=20
           elif [ -n "$INPUT_AREA" ]; then
             case "$INPUT_AREA" in
               web-* | edge) rust='[]' web="[\"$INPUT_AREA\"]" ;;
@@ -85,7 +117,8 @@ jobs:
           {
             echo "rust=$rust"
             echo "web=$web"
-            echo "shard=$shard"
+            echo "shards=[$shards]"
+            echo "parallel=$parallel"
             echo "size=$size"
           } | tee -a "$GITHUB_OUTPUT"
 
@@ -114,16 +147,17 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
   rust:
-    name: cargo-mutants (${{ matrix.area }})
+    name: cargo-mutants (${{ matrix.area }} ${{ matrix.shard }})
     needs: plan
     if: needs.plan.outputs.rust != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 330
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: ${{ fromJSON(needs.plan.outputs.parallel) }}
       matrix:
         area: ${{ fromJSON(needs.plan.outputs.rust) }}
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -140,28 +174,29 @@ jobs:
         timeout-minutes: 300
         env:
           AREA: ${{ matrix.area }}
-          SHARD: ${{ needs.plan.outputs.shard }}
+          SHARD: ${{ matrix.shard }}
           MUTANTS_SHARD_SIZE: ${{ needs.plan.outputs.size }}
         run: sh scripts/mutants.sh "$AREA" "$SHARD"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mutants-${{ matrix.area }}
+          name: mutants-${{ matrix.area }}-${{ matrix.shard }}
           path: target/mutants/
           if-no-files-found: ignore
           retention-days: 30
 
   web:
-    name: stryker (${{ matrix.area }})
+    name: stryker (${{ matrix.area }} ${{ matrix.shard }})
     needs: plan
     if: needs.plan.outputs.web != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 330
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: ${{ fromJSON(needs.plan.outputs.parallel) }}
       matrix:
         area: ${{ fromJSON(needs.plan.outputs.web) }}
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -178,38 +213,51 @@ jobs:
         timeout-minutes: 300
         env:
           AREA: ${{ matrix.area }}
-          SHARD: ${{ needs.plan.outputs.shard }}
-          MUTANTS_SHARD_SIZE: ${{ needs.plan.outputs.size }}
+          SHARD: ${{ matrix.shard }}
         run: sh scripts/mutants.sh "$AREA" "$SHARD"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mutants-${{ matrix.area }}
+          name: mutants-${{ matrix.area }}-${{ matrix.shard }}
           path: target/mutants/
           if-no-files-found: ignore
           retention-days: 30
 
   report:
     name: report
-    needs: [rust, web]
+    needs: [plan, rust, web]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # The week's issue (below): its jobs read, the issue filed and handed over.
+    permissions:
+      contents: read
+      actions: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-          sparse-checkout: scripts
+          # The floor's file, and the card sets its areas are checked against.
+          sparse-checkout: |
+            scripts
+            .github
+            crates/cards/src/scripts
+      # Each shard's artifact in a directory of its own (mutants-<area>-<k>/<area>/), since two shards of an
+      # area write the same names.
       - uses: actions/download-artifact@v4
         with:
           pattern: mutants-*
-          path: target/mutants
-          merge-multiple: true
+          path: target/shards
       - name: the scores
         run: |
-          mkdir -p target/mutants
-          for dir in target/mutants/*/; do
-            if [ -d "$dir" ]; then sh scripts/mutants.sh score "$(basename "$dir")"; fi
+          mkdir -p target/shards target/mutants
+          for dir in target/shards/*/*/; do
+            [ -d "$dir" ] || continue
+            area=$(basename "$dir")
+            rm -rf "target/mutants/$area"
+            cp -R "$dir" "target/mutants/$area"
+            sh scripts/mutants.sh score "$area"
           done >"$RUNNER_TEMP/scores.md"
           {
             echo "## Mutation scores"
@@ -222,3 +270,99 @@ jobs:
             echo
             grep -v '^|' "$RUNNER_TEMP/scores.md" || true
           } | tee -a "$GITHUB_STEP_SUMMARY"
+      # A step of its own, as the scores' pipe into tee would lose its exit code. A pull request's
+      # twenty mutants are a sample, not a score: it checks only the floor's lines, against no score.
+      - name: the floor
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          scores=$RUNNER_TEMP/scores.md
+          if [ "$EVENT" = pull_request ]; then
+            scores=$RUNNER_TEMP/no-scores.md
+            : >"$scores"
+          fi
+          sh scripts/mutants.sh floor "$scores"
+      # A scheduled week's survivors become an issue of their own (#4038), one a week: the table, the jobs
+      # that measured nothing (a failure, the step's five hours, a lost runner), every survivor, and what
+      # the sort owes, handed to the night bot (.harness/config.json's bot_login) the way ci-duration.yml
+      # hands it a slow job: assigned and queued with bot:build. A week with nothing to sort files nothing;
+      # a dispatch or a pull request never does. A write by this job's token starts no other workflow, so
+      # the label queues it directly (the planner reads its queue from the labels).
+      - name: the week's issue
+        if: always() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          SHARDS: ${{ needs.plan.outputs.shards }}
+          BOT_LOGIN: jgoetzmann-bot
+          # An issue body holds 65,536 characters; the survivors' lists are cut to fit under it.
+          SURVIVORS_CHARS: "50000"
+        run: |
+          week=$(echo "$SHARDS" | tr -d '[] ')
+          title="Patch: sort week $week's mutation survivors"
+          scores=$RUNNER_TEMP/scores.md
+          # The area jobs that measured nothing: failed, out of the step's five hours, or a lost runner's.
+          failed=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate --jq '.jobs[]
+            | select(.name | test("^(cargo-mutants|stryker) \\("))
+            | select(.conclusion != "success" and .conclusion != "skipped")
+            | "- [\(.name)](\(.html_url)): \(.conclusion // .status)"')
+          if ! grep -q ' survived</summary>' "$scores" && [ -z "$failed" ]; then
+            echo "week $week: no survivor, and every area measured"
+            exit 0
+          fi
+          # The survivors' lists, cut at a line to fit, with any block the cut leaves open closed.
+          lists=$RUNNER_TEMP/lists.md
+          grep -v '^|' "$scores" | sed 's/\x1b\[[0-9;]*m//g' | awk -v most="$SURVIVORS_CHARS" '
+            { size += length($0) + 1; if (size > most) { cut = 1; exit } print }
+            END { if (cut) print "CUT" }' >"$lists"
+          if [ "$(tail -n 1 "$lists")" = CUT ]; then
+            sed -i '$d' "$lists"
+            [ $(($(grep -c '^```' "$lists") % 2)) -eq 0 ] || echo '```' >>"$lists"
+            [ "$(grep -c '<details>' "$lists")" = "$(grep -c '</details>' "$lists")" ] || echo '</details>' >>"$lists"
+            printf '\nThe rest is cut to fit an issue: every list is in [the run'"'"'s summary](%s).\n' "$RUN_URL" >>"$lists"
+          fi
+          body=$RUNNER_TEMP/issue.md
+          {
+            # shellcheck disable=SC2016 # Markdown's backticks, printed as they are.
+            printf 'The [scheduled mutants run](%s) of week %s, on `main` at `%s`: one shard of every area (#4038).\n\n' \
+              "$RUN_URL" "$week" "$(echo "$SHA" | cut -c1-7)"
+            echo "| area | shard | killed | survived | timed out | unviable | left out | score |"
+            echo "|---|---|---:|---:|---:|---:|---:|---:|"
+            grep '^|' "$scores" || echo "| no area reported | | | | | | | |"
+            if [ -n "$failed" ]; then
+              printf '\n### Areas that measured nothing\n\n%s\n\n' "$failed"
+              # shellcheck disable=SC2016 # Markdown's backticks, printed as they are.
+              printf 'Find why and fix it, so each measures next week. A lost runner leaves no log: run its shard (`sh scripts/mutants.sh <area> %s`) and watch its memory.\n' "$week"
+            fi
+            cat <<'TEXT'
+
+          ### What to do
+
+          One pull request for the week, `Closes` this issue:
+          1. Give every survivor below one of #3490's four verdicts: a test that kills it (citing the spec section or ruling it holds); an `exclude_re` entry in `.cargo/mutants.toml` or a Stryker disable on the line before, with the reason it is equivalent; dead code removed (CLAUDE.md rule 13); or an issue for a real bug. A survivor in a file changed since the run may be gone: say so.
+          2. Apply each killed mutant by hand and see its test fail. A narrowed run is quickest: cargo-mutants on a file (`-f`), Stryker on a file with only its test files.
+          3. Put a table in the pull request: each area's shard, killed, survived, excluded, its score before and after, and each survivor's verdict.
+          4. Name a line of `.github/mutants-floor.txt` to raise once an area's shards have settled (#3519): that file is a person's to change.
+
+          ### Survivors
+
+          TEXT
+            cat "$lists"
+            # shellcheck disable=SC2016 # Markdown's backticks, printed as they are.
+            printf '\n---\n_Posted by `.github/workflows/mutants.yml`._\n'
+          } >"$body"
+          open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" \
+            --json number,title --jq "map(select(.title == env.title)) | .[0].number // empty")
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$REPO" --body-file "$body"
+            echo "commented on #$open"
+            exit 0
+          fi
+          url=$(gh issue create --repo "$REPO" --title "$title" --label architecture --label difficulty:hard --body-file "$body")
+          echo "opened $url"
+          gh issue edit "${url##*/}" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
+            && echo "handed ${url##*/} to @$BOT_LOGIN" \
+            || echo "::warning::could not hand ${url##*/} to @$BOT_LOGIN"

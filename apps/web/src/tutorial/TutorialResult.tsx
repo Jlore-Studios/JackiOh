@@ -105,7 +105,7 @@ function StillToFind({ ids }: { ids: readonly string[] }): ReactElement {
         {ids.map((id) => {
           const entry = discoveryById(id);
           if (entry === undefined) return null;
-          return <li key={id}>{t("{name}: {rule}", { name: t(entry.name), rule: t(entry.rule) })}</li>;
+          return <li key={id}>{t("{name}: {rule}", { name: t(entry.name), rule: t(entry.rule, entry.params) })}</li>;
         })}
       </ul>
     </section>

@@ -1,4 +1,5 @@
-//! BUILD M6-T1: integration tests for SPEC §9.4's redemption transaction and circuit breaker.
+//! BUILD M6-T1: integration tests for SPEC §9.4's redemption transaction and the operator's pause
+//! (R4131000: no global breaker, one profile or address blocked for its hour).
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -7,24 +8,20 @@ use axum::body::Body;
 use axum::http::{Request, Response};
 use indexmap::IndexMap;
 use serde::Serialize;
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
-use tokio::sync::Mutex;
 use tower::ServiceExt;
-use tracing_subscriber::layer::SubscriberExt;
 
 use jackioh_server::api::codes::{DEFAULT_INVITE_CODE_MAX_USES, MintDeps, MintInput, mint_invite_code};
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_IP_PER_HOUR, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
-    INVITE_CODE_LENGTH, MIN_ACCOUNT_AGE_YEARS, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD,
-    REDEMPTION_IDENTICAL_ERROR, REDEMPTION_RESPONSE_FLOOR_MS, TERMS_VERSION,
+    INVITE_CODE_LENGTH, MIN_ACCOUNT_AGE_YEARS, REDEMPTION_IDENTICAL_ERROR, REDEMPTION_RESPONSE_FLOOR_MS,
+    TERMS_VERSION,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, StoreError, TermsSource};
+use jackioh_server::db::store::{StoreError, TermsSource};
 
-use crate::support::deps;
-use crate::support::store::hmac_sha256_hex;
+use crate::support::deps::{self, from_json};
+use crate::support::store::{fake, hmac_sha256_hex};
 
 /// A well-formed code (16 symbols, all inside the alphabet) that was never minted.
 const UNMINTED_CODE: &str = "ABCD-EFGH-JKLM-NPQR";
@@ -119,38 +116,11 @@ impl Server {
 async fn code_server() -> Server {
     let env = app::load_server_env(&test_env()).expect("the test environment loads");
     let app = app::build(env).await.expect("the test app builds");
-    store_of(&app).lock().await.reset();
+    fake(&app).lock().await.reset();
     Server {
         router: app::router(app.clone()),
         app,
     }
-}
-
-/// A second App over `store`: a second router on the same deps.
-async fn server_sharing(store: Arc<Mutex<FakeData>>) -> Server {
-    let env = app::load_server_env(&test_env()).expect("the test environment loads");
-    let built = Arc::try_unwrap(app::build(env).await.expect("the test app builds"))
-        .ok()
-        .expect("app::build keeps no second handle on the App it returns");
-    let app = Arc::new(App {
-        db: Db::Fake(store),
-        ..built
-    });
-    Server {
-        router: app::router(app.clone()),
-        app,
-    }
-}
-
-fn store_of(app: &App) -> Arc<Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => data.clone(),
-        Db::Pg(_) => panic!("E2E=1 builds the in-memory store"),
-    }
-}
-
-fn from_json<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value).expect("the literal has the port's JSON shape")
 }
 
 fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
@@ -160,15 +130,15 @@ fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
 }
 
 async fn attempts(server: &Server) -> Vec<Value> {
-    json_rows(&store_of(&server.app).lock().await.tables.attempts)
+    json_rows(&fake(&server.app).lock().await.tables.attempts)
 }
 
 async fn codes(server: &Server) -> Vec<Value> {
-    json_rows(&store_of(&server.app).lock().await.tables.codes)
+    json_rows(&fake(&server.app).lock().await.tables.codes)
 }
 
 async fn profiles(server: &Server) -> Vec<Value> {
-    json_rows(&store_of(&server.app).lock().await.tables.profiles)
+    json_rows(&fake(&server.app).lock().await.tables.profiles)
 }
 
 async fn status_of(server: &Server, id: &str) -> Value {
@@ -242,7 +212,7 @@ async fn seed_caller(server: &Server, id: &str, status: &str, email_verified: bo
         email_verified,
     );
     // `resolve_caller` finds a profile by auth user id, so the seeded row must carry the same one.
-    let _ = store_of(&server.app)
+    let _ = fake(&server.app)
         .lock()
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": status }));
@@ -289,71 +259,6 @@ async fn redeem(server: &Server, token: &str, code: &str, ip: &str) -> Reply {
     server.send(redeem_request(token, code, ip)).await
 }
 
-/// One logged event; `alert` is `tracing`'s ERROR.
-#[derive(Clone, Debug)]
-struct Entry {
-    level: tracing::Level,
-    event: String,
-}
-
-#[derive(Clone, Default)]
-struct Recording(Arc<std::sync::Mutex<Vec<Entry>>>);
-
-impl Recording {
-    fn named(&self, event: &str) -> Vec<Entry> {
-        self.0
-            .lock()
-            .expect("the recording")
-            .iter()
-            .filter(|entry| entry.event == event)
-            .cloned()
-            .collect()
-    }
-}
-
-/// The event's name: its `event` field, else its message.
-#[derive(Default)]
-struct EventName {
-    event: Option<String>,
-    message: Option<String>,
-}
-
-impl tracing::field::Visit for EventName {
-    fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
-        match field.name() {
-            "event" => self.event = Some(value.to_string()),
-            "message" => self.message = Some(value.to_string()),
-            _ => {}
-        }
-    }
-    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
-        match field.name() {
-            "event" => self.event = Some(format!("{value:?}")),
-            "message" => self.message = Some(format!("{value:?}")),
-            _ => {}
-        }
-    }
-}
-
-impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for Recording {
-    fn on_event(&self, event: &tracing::Event<'_>, _context: tracing_subscriber::layer::Context<'_, S>) {
-        let mut name = EventName::default();
-        event.record(&mut name);
-        let event_name = name.event.or(name.message).unwrap_or_default();
-        self.0.lock().expect("the recording").push(Entry {
-            level: *event.metadata().level(),
-            event: event_name,
-        });
-    }
-}
-
-/// Every event this thread logs, until the guard drops.
-fn record() -> (Recording, tracing::subscriber::DefaultGuard) {
-    let recording = Recording::default();
-    let guard = crate::support::deps::set_log_default(tracing_subscriber::registry().with(recording.clone()));
-    (recording, guard)
-}
-
 /// `count` rejected attempts by other accounts, each from an address of its own, so neither the
 /// per-profile nor the per-IP window of the caller under test moves.
 async fn neighbours_failed(server: &Server, count: usize) {
@@ -371,12 +276,6 @@ async fn neighbours_failed(server: &Server, count: usize) {
         )
         .await;
     }
-}
-
-/// Brings the system-wide failures that §9.4's breaker counts to `short_by` below the production
-/// threshold.
-async fn near_threshold(server: &Server, short_by: usize) {
-    neighbours_failed(server, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD as usize - short_by).await;
 }
 
 // Step 1 — "reject unless the account is pending with a verified email"
@@ -435,7 +334,7 @@ mod r145_section_9_4_step_1_pending_account_with_a_verified_email {
     async fn r757001_redeem_refuses_consent_owed_without_an_attempt() {
         let server = code_server().await;
         let token = deps::add_user(&server.app, "user-owes", "owes@example.test", true);
-        let _ = store_of(&server.app).lock().await.seed_profile(json!({
+        let _ = fake(&server.app).lock().await.seed_profile(json!({
             "id": "owes", "userId": "user-owes", "status": "pending", "consent": false,
         }));
         let minted = mint(&server, None, None).await;
@@ -474,7 +373,7 @@ mod r145_section_9_4_step_1_pending_account_with_a_verified_email {
         let server = code_server().await;
         let caller = pending_caller(&server, "vanishes").await;
         let minted = mint(&server, None, None).await;
-        let store = store_of(&server.app);
+        let store = fake(&server.app);
 
         let held = store.lock().await;
         let in_flight = tokio::spawn(server.router.clone().oneshot(redeem_request(
@@ -705,7 +604,7 @@ mod section_9_4_step_5_the_lookup {
         let caller = pending_caller(&server, "revoked").await;
         let minted = mint(&server, None, None).await;
         {
-            let store = store_of(&server.app);
+            let store = fake(&server.app);
             let mut data = store.lock().await;
             let stored = data
                 .tables
@@ -909,11 +808,10 @@ async fn timing_server() -> Timed {
     let server = code_server().await;
     let calls = Arc::new(AtomicU64::new(0));
     let counter = calls.clone();
-    store_of(&server.app).lock().await.on_call =
-        Some(Arc::new(move |_method: &str| -> Result<(), StoreError> {
-            counter.fetch_add(1, Ordering::SeqCst);
-            Ok(())
-        }));
+    fake(&server.app).lock().await.on_call = Some(Arc::new(move |_method: &str| -> Result<(), StoreError> {
+        counter.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+    }));
     Timed { server, calls }
 }
 
@@ -977,11 +875,6 @@ mod r107_the_constant_time_failure_floor_build_m6_t1 {
 
                 // All three really are the refusal under test, not some other rejection.
                 assert_eq!(response.status, 400, "{name} sample {sample}");
-
-                // The production threshold stays, so each failure leaves the breaker's window as soon
-                // as it is measured; otherwise §9.4's breaker would trip part-way through and turn the
-                // remaining samples into 503s, a different branch than the three under test.
-                store_of(&server.app).lock().await.tables.attempts.clear();
             }
         }
 
@@ -1005,129 +898,87 @@ mod r107_the_constant_time_failure_floor_build_m6_t1 {
     }
 }
 
-// "A global circuit breaker disables redemption and alerts"
+// R4131000 — no global breaker: one profile or address is blocked for its hour, never everyone
 
-mod section_9_4_the_global_circuit_breaker {
+mod r4131000_one_fingerprint_is_blocked_never_everyone {
     use super::*;
 
-    #[tokio::test(start_paused = true)]
-    async fn opens_at_the_threshold_answers_503_and_alerts_exactly_once() {
-        let (log, _guard) = record();
-        let threshold = 3;
-        let server = code_server().await;
-        let caller = pending_caller(&server, "brute-forcer").await;
-        near_threshold(&server, threshold).await;
+    /// Failed redemptions from other accounts, each from an address of its own: ten times what
+    /// R106's breaker opened at (100 in 600 s).
+    const SPRAY: usize = 1000;
 
-        for _ in 0..threshold {
-            let response = redeem(&server, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
-            assert_eq!(response.status, 400);
-        }
-
-        let blocked = redeem(&server, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
-        assert_eq!(blocked.status, 503);
-        assert_eq!(blocked.error_code(), "unavailable");
-
-        // Blocked before step 1, so nothing more was logged.
-        assert_eq!(
-            attempts(&server).await.len(),
-            REDEMPTION_CIRCUIT_FAILURE_THRESHOLD as usize
-        );
-        let own = attempts(&server)
+    async fn redemption_enabled(server: &Server, token: &str) -> Value {
+        server
+            .send(json_request(
+                "GET",
+                "/api/codes/status",
+                None,
+                Some(token),
+                DEFAULT_IP,
+            ))
             .await
-            .into_iter()
-            .filter(|row| row["profileId"] == json!(caller.profile_id))
-            .count();
-        assert_eq!(own, threshold);
-
-        let again = redeem(&server, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
-        assert_eq!(again.status, 503);
-
-        let alerts = log.named("codes.breaker_open");
-        assert_eq!(alerts.len(), 1);
-        assert_eq!(alerts[0].level, tracing::Level::ERROR);
+            .json()["redemptionEnabled"]
+            .clone()
     }
 
     #[tokio::test(start_paused = true)]
-    async fn closes_over_a_good_code_while_it_is_still_shut() {
+    async fn r106_r4131000_failures_spread_over_many_addresses_never_pause_redemption() {
         let server = code_server().await;
-        let flood = pending_caller(&server, "flood").await;
+        let guesser = pending_caller(&server, "guesser").await;
         let holder = pending_caller(&server, "holder").await;
         let minted = mint(&server, None, None).await;
-        near_threshold(&server, 2).await;
+        neighbours_failed(&server, SPRAY).await;
+        assert_eq!(attempts(&server).await.len(), SPRAY);
 
-        redeem(&server, &flood.token, UNMINTED_CODE, DEFAULT_IP).await;
-        redeem(&server, &flood.token, UNMINTED_CODE, DEFAULT_IP).await;
+        // One more miss is still R145's identical error, not a pause…
+        let missed = redeem(&server, &guesser.token, UNMINTED_CODE, "198.51.100.1").await;
+        assert_eq!(missed.status, 400);
+        assert_eq!(missed.error_message(), REDEMPTION_IDENTICAL_ERROR);
+        assert_eq!(redemption_enabled(&server, &holder.token).await, json!(true));
 
-        // A legitimate code is refused too: §9.4's breaker "disables redemption", not just failures.
-        let response = redeem(&server, &holder.token, &minted.formatted, DEFAULT_IP).await;
-        assert_eq!(response.status, 503);
-        assert_eq!(status_of(&server, "holder").await, json!("pending"));
+        // …and a good code still activates its holder.
+        let redeemed = redeem(&server, &holder.token, &minted.formatted, DEFAULT_IP).await;
+        assert_eq!(redeemed.status, 200);
+        assert_eq!(status_of(&server, "holder").await, json!("active"));
     }
 
     #[tokio::test(start_paused = true)]
-    async fn reports_itself_through_get_api_codes_status() {
+    async fn r4131000_a_flooded_address_is_blocked_for_its_hour_while_every_other_address_redeems() {
         let server = code_server().await;
-        let caller = pending_caller(&server, "watcher").await;
-        near_threshold(&server, 1).await;
+        let behind = pending_caller(&server, "behind-the-flood").await;
+        let elsewhere = pending_caller(&server, "elsewhere").await;
+        let minted = mint(&server, None, None).await;
+        let other = mint(&server, None, None).await;
+        let at = now_ms();
+        for i in 0..CODE_ATTEMPTS_PER_IP_PER_HOUR as usize + 1 {
+            log_attempt(
+                &server,
+                json!({
+                    "profileId": format!("flooder-{i}"),
+                    "ipHash": ip_hash(DEFAULT_IP),
+                    "result": "rejected",
+                    "reason": "missing",
+                    "at": at,
+                }),
+            )
+            .await;
+        }
 
-        let before = server
-            .send(json_request(
-                "GET",
-                "/api/codes/status",
-                None,
-                Some(&caller.token),
-                DEFAULT_IP,
-            ))
-            .await
-            .json();
-        assert_eq!(before["redemptionEnabled"], json!(true));
+        // The flooded address is blocked, a good code included…
+        let blocked = redeem(&server, &behind.token, &minted.formatted, DEFAULT_IP).await;
+        assert_eq!(blocked.status, 429);
+        assert_eq!(blocked.error_code(), "rate_limited");
+        assert_eq!(status_of(&server, "behind-the-flood").await, json!("pending"));
 
-        redeem(&server, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
+        // …another address is not…
+        let redeemed = redeem(&server, &elsewhere.token, &other.formatted, "198.51.100.2").await;
+        assert_eq!(redeemed.status, 200);
 
-        let after = server
-            .send(json_request(
-                "GET",
-                "/api/codes/status",
-                None,
-                Some(&caller.token),
-                DEFAULT_IP,
-            ))
-            .await
-            .json();
-        assert_eq!(after["redemptionEnabled"], json!(false));
-        assert!(
-            after["retryAfterMs"].as_f64().unwrap_or_default() > 0.0,
-            "{after}"
-        );
-    }
-
-    /// The breaker belongs to the App, so fresh routes start closed: the fresh one is a second App
-    /// over the same store.
-    #[tokio::test(start_paused = true)]
-    async fn is_per_router_not_module_state_fresh_routes_start_closed() {
-        let first = code_server().await;
-        let caller = pending_caller(&first, "second-router").await;
-        near_threshold(&first, 1).await;
-
-        redeem(&first, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
-        assert_eq!(
-            redeem(&first, &caller.token, UNMINTED_CODE, DEFAULT_IP)
-                .await
-                .status,
-            503
-        );
-
-        let second = server_sharing(store_of(&first.app)).await;
-        let token = deps::add_user(
-            &second.app,
-            "user-second-router",
-            "second-router@example.test",
-            true,
-        );
-        // Same store, so the failures are still on record; the new App's breaker re-opens on the
-        // next failure rather than inheriting an open one.
-        let response = redeem(&second, &token, UNMINTED_CODE, DEFAULT_IP).await;
-        assert_eq!(response.status, 400);
+        // …and the block is temporary: once the flood leaves the window, the address redeems.
+        tokio::time::advance(std::time::Duration::from_millis(WINDOW_MS as u64 + 1)).await;
+        let later = redeem(&server, &behind.token, &minted.formatted, DEFAULT_IP).await;
+        assert_eq!(later.status, 200);
+        assert_eq!(status_of(&server, "behind-the-flood").await, json!("active"));
     }
 }
 
@@ -1265,7 +1116,7 @@ mod r2124000_idempotency_key {
         assert_eq!(codes(&server).await[0]["uses"], json!(1));
         assert_eq!(attempts(&server).await.len(), 1);
         assert_eq!(
-            store_of(&server.app)
+            fake(&server.app)
                 .lock()
                 .await
                 .tables
@@ -1304,7 +1155,7 @@ mod r2124000_idempotency_key {
         let caller = pending_caller(&server, "refused-first").await;
         let minted = mint(&server, None, None).await;
         let set_revoked = |revoked: bool| {
-            let store = store_of(&server.app);
+            let store = fake(&server.app);
             let id = minted.id.clone();
             async move {
                 let mut data = store.lock().await;
@@ -1323,7 +1174,7 @@ mod r2124000_idempotency_key {
         assert_eq!(refused.status, 400, "{}", refused.text);
         assert_eq!(refused.error_message(), REDEMPTION_IDENTICAL_ERROR);
         assert!(
-            store_of(&server.app)
+            fake(&server.app)
                 .lock()
                 .await
                 .tables

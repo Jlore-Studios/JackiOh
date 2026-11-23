@@ -55,6 +55,8 @@ var repoMetaAutomated = []string{
 	"patches ship: v0.3.1", // patches-ship.yml
 	"patches ship: v0.2.16b, v0.2.17",
 	"patches ship: v0.5.13z, v0.5.13aa",                      // R3631000: a micro past `z` takes `aa`
+	"patches cut: v0.6.3",                                    // #3944: the day's patch alone
+	"patches ship: v0.6.2c, v0.6.2d; patches cut: v0.6.3",    // #3944: a ship and the day's patch
 	"patches log: 6d44be2..c9ca419",                          // promote-production.yml's technical log
 	"Promote main to production: 28 commit(s) up to 6d44be2", // scripts/promote-production.sh
 	"Promote main to production: 1 commit(s) up to c9ca419",
@@ -125,8 +127,13 @@ func TestRepoMeta_EveryOtherTitleFails(t *testing.T) {
 
 // Each tool's title, as its source writes it, so a change to one fails here first.
 func TestRepoMeta_TheAutomatedTitlesAreTheOnesTheirToolsWrite(t *testing.T) {
-	assertIn(t, `--title "patches ship: $versions"`, workflowsRead(t, "patches-ship.yml"))
-	assertIn(t, `versions=$(sed -n 's/^patches ship: shipped //p'`, workflowsRead(t, "patches-ship.yml"))
+	ship := workflowsRead(t, "patches-ship.yml")
+	assertIn(t, `--title "$title"`, ship)
+	assertIn(t, `title="patches ship: $versions"`, ship)
+	assertIn(t, `title="patches cut: $cut"`, ship)
+	assertIn(t, `title="patches ship: $versions; patches cut: $cut"`, ship)
+	assertIn(t, `versions=$(sed -n 's/^patches ship: shipped //p'`, ship)
+	assertIn(t, `cut=$(sed -n 's/^patches cut: cut \([^,]*\),.*/\1/p'`, ship)
 	assertIn(t, `--title "patches log: $range"`, workflowsRead(t, "promote-production.yml"))
 	assertIn(t, `range="${OLD:0:7}..${NEW:0:7}"`, workflowsRead(t, "promote-production.yml"))
 	promote := repoMetaRead(t, "scripts", "promote-production.sh")
@@ -173,9 +180,11 @@ func TestRepoMeta_ABotThatHasNoPassingTitleWritesOne(t *testing.T) {
 
 func TestRepoMeta_EveryTitleAndHeadIsCheckedNeverWithThePullRequestsCode(t *testing.T) {
 	text := workflowsRead(t, "pr-title.yml")
-	assertRegex(t, text, `pull_request_target:\n\s+types: \[opened, edited, reopened, `+
+	// `pull_request`, not `_target` (infra/README.md, "pull_request_target"): it needs no secret
+	// and no write, and the checkout below is the default branch's, never the pull request's.
+	assertRegex(t, text, `(?m)^  pull_request:\n\s+types: \[opened, edited, reopened, `+
 		`synchronize\]`)
-	assertNotRegex(t, text, `(?m)^  pull_request:`, "would run the pull request's code")
+	assertNotRegex(t, text, workflowsOnTarget.String())
 	assertEqual(t, workflowsFindall(workflowsRef, text),
 		[]string{"${{ github.event.repository.default_branch }}"})
 	assertIn(t, "persist-credentials: false", text)

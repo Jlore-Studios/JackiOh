@@ -8,7 +8,7 @@ use jackioh_engine::{Action, ActionBody, GameState, PlayerId, Winner, legal_acti
 use jackioh_server::actor::clock::initial_clocks;
 use jackioh_server::actor::engine::{hash_state, seat_played_by};
 use jackioh_server::app::{App, now_ms};
-use jackioh_server::config::SHARED_REPLAYS_LIST_MAX;
+use jackioh_server::config::{REPLAY_SHARES_PER_HOUR, SHARED_REPLAYS_LIST_MAX};
 use jackioh_server::db::store::{MatchActionRow, MatchRow, ReplayShare, ResultRow, StoreError};
 
 use crate::support::deps::{call, empty_test_app};
@@ -641,5 +641,226 @@ mod r1435000_the_sharer_reads_its_shares {
         assert_eq!(shares_of(&w, &w.match_id, &w.d).await, unknown);
         // And a seat holder's answer for a match id that is no UUID is the same.
         assert_eq!(shares_of(&w, "not-a-match", &w.a).await, unknown);
+    }
+}
+
+// R4039000: a share tells the friend in its notification feed
+
+mod r4039000_the_share_feed {
+    use super::*;
+    use crate::support::store::feed;
+
+    /// `who`'s `replayShared` rows as `(actor, subject)`, newest first.
+    async fn shares_told(w: &World, who: &Account) -> Vec<(Value, Value)> {
+        feed(&w.app, who).await["notifications"]
+            .as_array()
+            .expect("a page of rows")
+            .iter()
+            .filter(|row| row["kind"] == "replayShared")
+            .map(|row| (row["actor"]["profileId"].clone(), row["subject"].clone()))
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn r4039000_a_share_tells_the_friend() {
+        let w = world("share-feed").await;
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        assert_eq!(
+            shares_told(&w, &w.c).await,
+            vec![(json!(w.a.id), json!(w.match_id))]
+        );
+        for who in [&w.a, &w.b, &w.d] {
+            assert_eq!(shares_told(&w, who).await, Vec::new(), "{}", who.name);
+        }
+        // A share refused (a stranger) tells nobody.
+        let (status, _) = w.share(&w.a, &w.d).await;
+        assert_eq!(status, 404);
+        assert_eq!(shares_told(&w, &w.d).await, Vec::new());
+    }
+}
+
+mod r4233000_read_on_open {
+    //! R4233000 (#4233): a friend's read of a replay shared with them marks its `replayShared`
+    //! row read.
+    use super::*;
+    use crate::support::store::feed;
+
+    #[tokio::test]
+    async fn r4233000_a_friends_read_of_a_shared_replay_marks_its_row() {
+        let w = world("share-read").await;
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        let rows = feed(&w.app, &w.c).await;
+        assert_eq!(rows["unread"], 1, "{rows}");
+        assert_eq!(rows["notifications"][0]["kind"], "replayShared", "{rows}");
+        assert_eq!(rows["notifications"][0]["read"], false, "{rows}");
+
+        // Opening the shared replay marks its row read; the row stays listed.
+        let (status, body) = w.replay(&w.c).await;
+        assert_eq!(status, 200, "{body}");
+        let rows = feed(&w.app, &w.c).await;
+        assert_eq!(rows["unread"], 0, "{rows}");
+        assert_eq!(rows["notifications"][0]["kind"], "replayShared", "{rows}");
+        assert_eq!(rows["notifications"][0]["read"], true, "{rows}");
+
+        // The sharer's own opens mark nothing: their count stands as it was.
+        let before = feed(&w.app, &w.a).await["unread"].clone();
+        let (status, _) = w.replay(&w.a).await;
+        assert_eq!(status, 200);
+        assert_eq!(feed(&w.app, &w.a).await["unread"], before);
+    }
+
+    /// #4291 (F10): a seat may share the match with the other seat, a friend of theirs; that friend's
+    /// read is a read of a replay shared with them too, though they read it as their own seat.
+    #[tokio::test]
+    async fn r4233000_a_seated_friends_read_of_a_replay_shared_with_them_marks_its_row() {
+        let w = world("share-read-seated").await;
+        befriend(&w.app, &w.a, &w.b).await;
+        let before = feed(&w.app, &w.b).await["unread"].as_i64().expect("unread");
+        let (status, body) = w.share(&w.a, &w.b).await;
+        assert_eq!(status, 204, "{body}");
+        let rows = feed(&w.app, &w.b).await;
+        assert_eq!(rows["unread"], before + 1, "{rows}");
+        assert_eq!(rows["notifications"][0]["kind"], "replayShared", "{rows}");
+        assert_eq!(rows["notifications"][0]["read"], false, "{rows}");
+
+        let (status, body) = w.replay(&w.b).await;
+        assert_eq!(status, 200, "{body}");
+        let rows = feed(&w.app, &w.b).await;
+        assert_eq!(rows["unread"], before, "{rows}");
+        assert_eq!(rows["notifications"][0]["kind"], "replayShared", "{rows}");
+        assert_eq!(rows["notifications"][0]["read"], true, "{rows}");
+    }
+
+    /// #4291 (F11): both seats share the match with one friend, two rows on one subject; the friend's
+    /// one read marks both.
+    #[tokio::test]
+    async fn r4233000_one_read_marks_every_sharers_row_for_the_match() {
+        let w = world("share-read-twice").await;
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        let (status, body) = w.share(&w.b, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        let shared = |rows: &Value| -> Vec<(Value, Value)> {
+            rows["notifications"]
+                .as_array()
+                .expect("notifications")
+                .iter()
+                .filter(|row| row["kind"] == "replayShared")
+                .map(|row| (row["actor"]["profileId"].clone(), row["read"].clone()))
+                .collect()
+        };
+        let rows = feed(&w.app, &w.c).await;
+        assert_eq!(
+            shared(&rows),
+            vec![(json!(w.b.id), json!(false)), (json!(w.a.id), json!(false))],
+            "{rows}"
+        );
+        let before = rows["unread"].as_i64().expect("unread");
+
+        let (status, body) = w.replay(&w.c).await;
+        assert_eq!(status, 200, "{body}");
+        let rows = feed(&w.app, &w.c).await;
+        assert_eq!(rows["unread"], before - 2, "{rows}");
+        assert_eq!(
+            shared(&rows),
+            vec![(json!(w.b.id), json!(true)), (json!(w.a.id), json!(true))],
+            "{rows}"
+        );
+    }
+}
+
+mod r4391000_share_limits {
+    //! R4391000 (#4391): a share already held tells the friend nothing again, and an account's
+    //! shares count against an hourly limit.
+    use super::*;
+    use crate::support::store::{advance, feed};
+
+    async fn unshare(w: &World, sharer: &Account, friend: &Account) {
+        let (status, body) = api(
+            &w.app,
+            "DELETE",
+            &format!("/api/replays/{}/shares/{}", w.match_id, friend.id),
+            &sharer.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+    }
+
+    #[tokio::test]
+    async fn r4391000_a_share_already_held_answers_204_and_tells_the_friend_nothing_again() {
+        let w = world("share-quiet").await;
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        let first = feed(&w.app, &w.c).await;
+        assert_eq!(first["unread"], 1, "{first}");
+        assert_eq!(first["notifications"][0]["kind"], "replayShared", "{first}");
+        // The friend reads it.
+        let (status, body) = w.replay(&w.c).await;
+        assert_eq!(status, 200, "{body}");
+        let read = feed(&w.app, &w.c).await;
+        assert_eq!(read["unread"], 0, "{read}");
+        assert_eq!(read["notifications"][0]["read"], true, "{read}");
+
+        // Sharing it again answers 204 and changes nothing.
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        let again = feed(&w.app, &w.c).await;
+        assert_eq!(again["unread"], 0, "{again}");
+        assert_eq!(again["notifications"], read["notifications"], "{again}");
+        assert_eq!(w.shared_with(&w.c).await.len(), 1);
+
+        // Unsharing, then sharing, writes a fresh row and tells again.
+        unshare(&w, &w.a, &w.c).await;
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        let fresh = feed(&w.app, &w.c).await;
+        assert_eq!(fresh["unread"], 1, "{fresh}");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r4391000_past_replay_shares_per_hour_a_share_answers_429_until_the_hour_has_passed() {
+        let w = world("share-limit").await;
+        for n in 0..REPLAY_SHARES_PER_HOUR {
+            let (status, body) = w.share(&w.a, &w.c).await;
+            assert_eq!(status, 204, "share {n}: {body}");
+        }
+        unshare(&w, &w.a, &w.c).await;
+        let before = feed(&w.app, &w.c).await;
+
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 429, "{body}");
+        assert_eq!(body["error"]["code"], "rate_limited", "{body}");
+        assert!(
+            body["error"]["details"]["retryAfterMs"].as_i64().unwrap_or(0) > 0,
+            "{body}"
+        );
+        assert!(
+            w.shared_with(&w.c).await.is_empty(),
+            "the refused share wrote nothing"
+        );
+        assert_eq!(feed(&w.app, &w.c).await["unread"], before["unread"]);
+
+        // Another account's allowance is its own.
+        let (status, body) = w.share(&w.b, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+
+        advance(3_600_001_u64).await;
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        assert_eq!(w.shared_with(&w.c).await.len(), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r4391000_a_refused_share_still_counts_against_the_limit() {
+        let w = world("share-refused-counts").await;
+        for n in 0..REPLAY_SHARES_PER_HOUR {
+            let (status, body) = w.share(&w.a, &w.d).await;
+            assert_eq!(status, 404, "attempt {n}: {body}");
+        }
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 429, "{body}");
     }
 }

@@ -76,7 +76,7 @@ mod tests {
     const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
     const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: End of turn: deal 2 damage to each enemy.
     const FELINORS: &str = "core-012"; // Duplicating Felinors: Cry: Summon a copy of this.
-    const TIGER_DOJO: &str = "core-014"; // Jlockeed's Weapons: Aura: your Units have +2 attack, Rush and First Strike.
+    const TIGER_DOJO: &str = "core-014"; // Jlockeed's Weapons: Aura: your Units have +1 attack, Rush and First Strike.
     const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
     const HINDER: &str = "core-021"; // Hinder: a Spell, cast on draw
     const TIMMY: &str = "core-011"; // Tempo Timmy
@@ -125,7 +125,7 @@ mod tests {
             .map(js)
     }
 
-    fn plays_of(s: &Scenario) -> i32 {
+    fn twice_forward_plays(s: &Scenario) -> i32 {
         subsystems::twice_forward_plays(&trap_of(s))
     }
 
@@ -214,7 +214,7 @@ mod tests {
             fn r425_r99_their_1st_play_is_counted_and_leaves_it_face_down_and_unfired() {
                 let mut s = their_turn();
                 s.play(RAPID, json!({}));
-                assert_eq!(plays_of(&s), 1);
+                assert_eq!(twice_forward_plays(&s), 1);
                 assert!(trap_of(&s).face_up != Some(true));
                 assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::TrapFired));
             }
@@ -285,7 +285,7 @@ mod tests {
             }
 
             #[test]
-            fn r781002_an_immutable_unit_in_play_is_not_fused_in_and_it_still_fires_and_gains_its_brittle() {
+            fn r4353001_a_copy_of_an_immutable_unit_in_play_is_fused_in_and_it_gains_its_brittle_and_animates() {
                 let mut s = set_then_their_turn(
                     false,
                     json!({}),
@@ -295,18 +295,20 @@ mod tests {
                 s.play(RAPID, json!({}));
                 let menace = s.card(MENACE).clone();
                 s.play(MENACE, json!({ "zone": 1 }));
-                // A Field Trap can't target an Immutable card in play (R781001): it fires, fuses nothing in
-                // and gains its Brittle.
+                // A Field Trap may target an Immutable card in play (R4353001): a copy of the Radiant
+                // Menace's definition is fused in (a plain one, on the base face), the Menace staying where
+                // it is, and it gains its Brittle.
                 s.expect_in_zone(&menace, "field");
-                assert_eq!(fused_events(&s), 0);
+                assert_eq!(fused_events(&s), 1);
                 let trap = trap_of(&s);
+                assert_eq!(part_of(&s, &trap.def_id, MENACE), Some(json!({ "defId": MENACE })));
                 assert_eq!(trap.face_up, Some(true));
                 assert_eq!(active_brittle_count(&trap), Some(3));
-                // Nothing fused gives it no stats, so the last step of its firing leaves it in its zone
-                // (R2280000).
-                s.expect_events(json!(["cardResolved", "trapFired"]));
-                assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Animated));
-                assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(trap.id.clone()));
+                // The copy gives it the Menace's stats, so the last step of its firing animates it (R2280000).
+                s.expect_events(json!(["cardResolved", "trapFired", "fused", "animated"]));
+                assert!(s.backrow(P1, 2).is_none());
+                assert_eq!(s.unit(P1, 2).map(|card| card.id), Some(trap.id.clone()));
+                s.expect_stats(&trap, json!({ "attack": 9, "health": 9 }));
             }
 
             #[test]
@@ -328,7 +330,7 @@ mod tests {
                 assert_eq!(trap.face_up, Some(true));
                 assert!(s.unit(P1, 2).is_none());
                 s.play(VANILLA, json!({ "zone": 1 }));
-                assert_eq!(plays_of(&s), 3);
+                assert_eq!(twice_forward_plays(&s), 3);
                 assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(trap.id.clone()));
                 s.play(VANILLA, json!({ "zone": 3 }));
                 assert_eq!(fused_events(&s), 2);
@@ -364,14 +366,14 @@ mod tests {
                     json!({ "hand": [STOCKPILE, RAPID, VANILLA], "library": library }),
                     |_| {},
                 );
-                assert_eq!(plays_of(&s), 0);
+                assert_eq!(twice_forward_plays(&s), 0);
                 let graveyard = def_ids(&s.pile(P2, "graveyard"));
                 assert_eq!(graveyard, vec![HINDER]);
                 s.play(RAPID, json!({}));
-                assert_eq!(plays_of(&s), 1);
+                assert_eq!(twice_forward_plays(&s), 1);
                 assert_eq!(fused_events(&s), 0);
                 s.play(STOCKPILE, json!({}));
-                assert_eq!(plays_of(&s), 2);
+                assert_eq!(twice_forward_plays(&s), 2);
                 let fused: Vec<String> = s
                     .events()
                     .iter()
@@ -398,7 +400,7 @@ mod tests {
                     json!({ "hand": [STOCKPILE, RAPID, VANILLA], "library": library }),
                     |_| {},
                 );
-                assert_eq!(plays_of(&s), 0);
+                assert_eq!(twice_forward_plays(&s), 0);
                 s.play(STOCKPILE, json!({}));
                 let played: Vec<String> = s
                     .events()
@@ -410,10 +412,10 @@ mod tests {
                     .collect();
                 // The Hinder is logged as cast (`onDraw`), but it is no play.
                 assert_eq!(played, vec![STOCKPILE, HINDER]);
-                assert_eq!(plays_of(&s), 1);
+                assert_eq!(twice_forward_plays(&s), 1);
                 assert_eq!(fused_events(&s), 0);
                 s.play(RAPID, json!({}));
-                assert_eq!(plays_of(&s), 2);
+                assert_eq!(twice_forward_plays(&s), 2);
                 assert_eq!(
                     ingredient_ids(&s, &trap_of(&s).def_id),
                     Some(vec![RAPID.to_string(), FORWARD.to_string()])
@@ -434,9 +436,9 @@ mod tests {
                 let target = id_or_empty(s.unit(P1, 1));
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": target }] }));
                 assert!(s.events().iter().any(|event| event.event_type() == GameEventType::Countered));
-                assert_eq!(plays_of(&s), 0);
+                assert_eq!(twice_forward_plays(&s), 0);
                 s.play(RAPID, json!({}));
-                assert_eq!(plays_of(&s), 1);
+                assert_eq!(twice_forward_plays(&s), 1);
             }
 
             #[test]
@@ -445,7 +447,7 @@ mod tests {
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
                 s.play(VANILLA, json!({ "zone": 1 }));
-                assert_eq!(plays_of(&s), 0);
+                assert_eq!(twice_forward_plays(&s), 0);
             }
 
             #[test]
@@ -463,7 +465,7 @@ mod tests {
             }
 
             #[test]
-            fn r102_a_fused_aura_covers_your_side_a_fused_tiger_dojo_gives_your_units_plus_2_attack() {
+            fn r102_a_fused_aura_covers_your_side_a_fused_tiger_dojo_gives_your_units_plus_1_attack() {
                 let mut s = set_then_their_turn(
                     false,
                     json!({ "field": [TIMMY] }),
@@ -473,7 +475,7 @@ mod tests {
                 let before = s.stats(id_or_empty(s.unit(P1, 1)).as_str()).attack;
                 s.play(RAPID, json!({})).play(TIGER_DOJO, json!({ "zone": 1 }));
                 assert_eq!(s.backrow(P2, 1).map(|card| card.def_id), Some(TIGER_DOJO.to_string()));
-                assert_eq!(s.stats(id_or_empty(s.unit(P1, 1)).as_str()).attack, before + 2);
+                assert_eq!(s.stats(id_or_empty(s.unit(P1, 1)).as_str()).attack, before + 1);
             }
 
             #[test]
@@ -498,7 +500,7 @@ mod tests {
                 for _ in 0..4 {
                     s.play(RAPID, json!({}));
                 }
-                assert_eq!(plays_of(&s), 4);
+                assert_eq!(twice_forward_plays(&s), 4);
                 assert_eq!(fused_events(&s), 2);
                 assert_eq!(active_brittle_count(&trap_of(&s)), Some(4));
             }
@@ -552,7 +554,7 @@ mod tests {
                 let next_ref = next.map(|card| card.id).unwrap_or_else(|| RAPID.to_string());
                 s.play(next_ref.as_str(), json!({}));
                 assert_eq!(hash_state(&resumed.state), hash_state(s.state()));
-                assert_eq!(plays_of(&s), 3);
+                assert_eq!(twice_forward_plays(&s), 3);
             }
 
             #[test]
@@ -632,7 +634,7 @@ mod tests {
             }
 
             #[test]
-            fn r781002_neither_an_immutable_unit_in_play_nor_a_copy_of_it_is_fused_in() {
+            fn r4353001_a_radiant_copy_of_an_immutable_unit_in_play_is_fused_in_the_unit_staying_where_it_is() {
                 let mut s = set_then_their_turn(
                     true,
                     json!({}),
@@ -641,8 +643,10 @@ mod tests {
                 );
                 s.play(RAPID, json!({}));
                 s.play(MENACE, json!({ "zone": 1 }));
-                assert_eq!(fused_events(&s), 0);
+                assert_eq!(fused_events(&s), 1);
+                assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id), Some(MENACE.to_string()));
                 let trap = trap_of(&s);
+                assert_eq!(part_of(&s, &trap.def_id, MENACE), Some(json!({ "defId": MENACE, "radiant": true })));
                 assert_eq!(trap.face_up, Some(true));
                 assert_eq!(active_brittle_count(&trap), Some(5));
             }

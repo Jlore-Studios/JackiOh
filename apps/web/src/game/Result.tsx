@@ -34,6 +34,11 @@ export function outcomeFor(result: Result, viewer: PlayerId): ResultOutcome {
   return seatOutcome(result.winner, result.reason, viewer);
 }
 
+/** R3791000: whether the result's own words already say the opponent left ("Your opponent left the match."): their disconnect, this seat's win. */
+export function resultSaysOpponentLeft(result: Result, viewer: PlayerId): boolean {
+  return result.reason === "disconnect" && outcomeFor(result, viewer) === "win";
+}
+
 /** BUILD M5-T4's overlay words, which e2e reads (`cy.expectResult`). */
 export const RESULT_WORD: Readonly<Record<ResultOutcome, string>> = { win: "Win", loss: "Loss", draw: "Draw" };
 
@@ -125,6 +130,8 @@ type GameResultProps = {
   form: ResultForm;
   /** The route's ways on, shown in the panel form. */
   actions?: ReactNode;
+  /** #3727: why the game ended in the route's words, already translated, over `resultReason`'s. */
+  reasonText?: string;
   /** The animation-runner marker (BUILD M5-T4). */
   animating?: string;
   /** R434: the opponent's hand, once the view reveals it (`revealedOpponentHand`), and its view. */
@@ -135,7 +142,17 @@ type GameResultProps = {
   openResultTestId?: string;
 };
 
-export function GameResult({ result, viewer, form, actions, animating, theirHand = null, onOpenResult, openResultTestId }: GameResultProps): ReactElement {
+export function GameResult({
+  result,
+  viewer,
+  form,
+  actions,
+  reasonText,
+  animating,
+  theirHand = null,
+  onOpenResult,
+  openResultTestId,
+}: GameResultProps): ReactElement {
   useLocale();
   const outcome = outcomeFor(result, viewer);
   // Only the first appearance waits for the effects layer; a fold or an unfold is immediate.
@@ -183,7 +200,7 @@ export function GameResult({ result, viewer, form, actions, animating, theirHand
         style={delay}
       >
         <strong className="result-overlay__word">{t(RESULT_WORD[outcome])}</strong>
-        <span className="result-overlay__reason">{t(resultReason(outcome, result.reason, result.winner))}</span>
+        <span className="result-overlay__reason">{reasonText ?? t(resultReason(outcome, result.reason, result.winner))}</span>
         {shownForm === "panel" && theirHand !== null ? <TheirHand view={theirHand.view} cards={theirHand.cards} /> : null}
         {shownForm === "panel" ? (
           <div className="result-overlay__actions" ref={firstAction}>

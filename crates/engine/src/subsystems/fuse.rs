@@ -25,10 +25,10 @@ use crate::script::{
     ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
     ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
     FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, PlayAllowedHook, PreviewHook,
-    QuestBook, Script, SetStat, SetStatHook, SpellDamageAura, StatMod, StaticFlags, TargetCheck,
-    TributeWhenHook, TriggerDef, TriggerExtraHook, TriggerRun, TriggerWhen, TuneMultiplier, WouldCounterHook,
-    attack_mod_hook, aura_hook, condition_hook, hook, mode_allowed_hook, play_allowed_hook, read_hook,
-    target_check, would_counter_hook,
+    QuestBook, Script, SetStat, SetStatHook, SpellDamageAura, SpellEchoAura, StatMod, StaticFlags,
+    TargetCheck, TributeWhenHook, TriggerDef, TriggerExtraHook, TriggerRun, TriggerWhen, TuneMultiplier,
+    WouldCounterHook, attack_mod_hook, aura_hook, condition_hook, hook, mode_allowed_hook, play_allowed_hook,
+    read_hook, target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -96,6 +96,11 @@ pub struct FuseArgs {
     /// or, for an X-cost or embiggen card with none, that printed cost form on the fused definition.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keep_cost: Option<bool>,
+    /// R4353003: the kept `target` was made by the same effect for this fusion (Stinkyscape+
+    /// T-Supernova's Alnilam), so its being Immutable refuses nothing: the fusion is how the card is
+    /// made, not a change to a card that stood in play.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fresh: Option<bool>,
 }
 
 /// R352: the two prices a fused hand card can have.
@@ -576,6 +581,7 @@ fn derive_context<'b>(ctx: &'b mut EffectContext<'_>) -> EffectContext<'b> {
     let chosen_from = ctx.chosen_from;
     let event_stay = ctx.event_stay.clone();
     let summoned = ctx.summoned.clone();
+    let draw_tally = ctx.draw_tally.clone();
     let self_resolving = ctx.self_resolving;
     let controller = ctx.controller;
     let self_ = ctx.self_.clone();
@@ -594,6 +600,7 @@ fn derive_context<'b>(ctx: &'b mut EffectContext<'_>) -> EffectContext<'b> {
         chosen_from,
         event_stay,
         summoned,
+        draw_tally,
         self_resolving,
         controller,
         self_,
@@ -704,16 +711,24 @@ fn in_ingredient(effect: Effect, patch: IndexMap<String, Value>) -> Effect {
     let apply = effect.apply.clone();
     let apply_patch = patch.clone();
     let run = move |ctx: &mut EffectContext<'_>| {
-        let mut inner = in_place(ctx, &apply_patch);
-        apply(&mut inner);
+        // R3563000: the inner run's draws join the outer run's tally.
+        let tally = {
+            let mut inner = in_place(ctx, &apply_patch);
+            apply(&mut inner);
+            inner.draw_tally
+        };
+        ctx.draw_tally = tally;
     };
     match effect.expand.clone() {
         None => Effect::new(effect.kind, run),
         Some(expand) => Effect::with_expand(effect.kind, run, move |ctx, memo| {
-            let built = {
+            // R3563000: the inner run's draws join the outer run's tally.
+            let (built, tally) = {
                 let mut inner = in_place(ctx, &patch);
-                expand(&mut inner, memo)
+                let built = expand(&mut inner, memo);
+                (built, inner.draw_tally)
             };
+            ctx.draw_tally = tally;
             EffectPart {
                 effects: built
                     .effects
@@ -734,10 +749,13 @@ fn ingredient_part(
 ) -> Effect {
     crate::resolve::lazy_part(part_kind(index), move |at, _memo| {
         let patch = part_data(&at.data, index);
-        let effects = {
+        // R3563000: the inner run's draws join the outer run's tally.
+        let (effects, tally) = {
             let mut inner = in_place(at, &patch);
-            build(&mut inner)
+            let effects = build(&mut inner);
+            (effects, inner.draw_tally)
         };
+        at.draw_tally = tally;
         // The part needs nothing handed to its rebuild; `null` says so in a form JSON keeps, where an
         // absent memo would sit in a paused list's `memo` array as `undefined` and come back as `null`,
         // so the paused state and its JSON round trip would differ (§9.3).
@@ -1005,6 +1023,19 @@ fn summed_spell_damage_aura(
     })
 }
 
+/// R3556001 (Stinkyscape+ #62, #63): a fused card's Spell Echo auras add up, as two standing apart
+/// do, and reach the opponent too when either ingredient's does.
+fn summed_spell_echo_aura(values: impl IntoIterator<Item = Option<SpellEchoAura>>) -> Option<SpellEchoAura> {
+    let defined: Vec<SpellEchoAura> = values.into_iter().flatten().collect();
+    if defined.is_empty() {
+        return None;
+    }
+    Some(SpellEchoAura {
+        amount: defined.iter().map(|aura| aura.amount).sum(),
+        both: defined.iter().any(|aura| aura.both == Some(true)).then_some(true),
+    })
+}
+
 /// R1160 (Meditative #84 Volatility, ME-TUNEMULT): a fused card's tune multipliers multiply — each
 /// direction the product of the ingredients naming it, a direction none names none.
 fn multiplied_tune(values: impl IntoIterator<Item = Option<TuneMultiplier>>) -> Option<TuneMultiplier> {
@@ -1046,8 +1077,9 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
             Some(StaticFlags {
                 cast_on_draw: flags(|f| f.cast_on_draw),
                 quickdraw: flags(|f| f.quickdraw),
-                hand_sale: flags(|f| f.hand_sale),
+                pays_credits: flags(|f| f.pays_credits),
                 infinite_reserves: flags(|f| f.infinite_reserves),
+                warhero_draws: flags(|f| f.warhero_draws),
                 never_defense: flags(|f| f.never_defense),
                 echo: numbers(|f| f.echo),
                 echo_grant: sum_defined(defined.iter().map(|f| f.echo_grant)),
@@ -1057,6 +1089,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 tribute_worth: numbers(|f| f.tribute_worth),
                 tribute_enemies: flags(|f| f.tribute_enemies),
                 enemy_tribute_hands_over: flags(|f| f.enemy_tribute_hands_over),
+                summon_for_opponent: flags(|f| f.summon_for_opponent),
                 anti_oneshot: flags(|f| f.anti_oneshot),
                 hero_armor: summed_count(defined.iter().map(|f| f.hero_armor)),
                 counts_plays: flags(|f| f.counts_plays),
@@ -1087,10 +1120,13 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 stack_base_buffs: numbers(|f| f.stack_base_buffs),
                 tribute_cheap: numbers(|f| f.tribute_cheap),
                 lane_multiplier: numbers(|f| f.lane_multiplier),
+                sweep_lane: numbers(|f| f.sweep_lane),
+                sweep_adjacent: numbers(|f| f.sweep_adjacent),
                 credit_line: numbers(|f| f.credit_line),
                 credit_instalments: numbers(|f| f.credit_instalments),
                 credit_lapses: flags(|f| f.credit_lapses),
                 no_natural_mana: flags(|f| f.no_natural_mana),
+                mana_per_turn: sum_defined(defined.iter().map(|f| f.mana_per_turn)),
                 feng_shui: flags(|f| f.feng_shui),
                 luck: sum_defined(defined.iter().map(|f| f.luck)),
                 spell_damage_aura: summed_spell_damage_aura(defined.iter().map(|f| f.spell_damage_aura)),
@@ -1101,7 +1137,12 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 slumber: defined.iter().find_map(|f| f.slumber.clone()),
                 // R1852000: a fusion the Dormant Starship is in is still its hull.
                 starship_hull: any_flag(defined.iter().map(|f| f.starship_hull)),
+                // R3539000: a fusion a sealed hull is in still can't be launched by hand.
+                no_hand_launch: flags(|f| f.no_hand_launch),
+                // R3539004: a fusion a shipyard is in is still a yard.
+                starship_yard: flags(|f| f.starship_yard),
                 immune_to_spell_damage: flags(|f| f.immune_to_spell_damage),
+                immune_to_toxic: flags(|f| f.immune_to_toxic),
                 destroyed_exiled: flags(|f| f.destroyed_exiled),
                 enemy_destroyed_exiled: flags(|f| f.enemy_destroyed_exiled),
                 reflects_damage: flags(|f| f.reflects_damage),
@@ -1118,6 +1159,24 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 pilots_turn: flags(|f| f.pilots_turn),
                 hints_plays: flags(|f| f.hints_plays),
                 lends_equip: flags(|f| f.lends_equip),
+                burns_on_damage: sum_defined(defined.iter().map(|f| f.burns_on_damage)),
+                toxic_on_damage: sum_defined(defined.iter().map(|f| f.toxic_on_damage)),
+                damage_burns: flags(|f| f.damage_burns),
+                damage_is_toxic: flags(|f| f.damage_is_toxic),
+                infinite_mana: flags(|f| f.infinite_mana),
+                // Stinkyscape+ E8 (issue #3558).
+                starts_at_bottom: flags(|f| f.starts_at_bottom),
+                // Stinkyscape+ E6 (issue #3550).
+                attacks_per_turn: numbers(|f| f.attacks_per_turn),
+                attacks_only_across: flags(|f| f.attacks_only_across),
+                freezes_damaged: flags(|f| f.freezes_damaged),
+                damage_pool: sum_defined(defined.iter().map(|f| f.damage_pool)),
+                counters_ranged: numbers(|f| f.counters_ranged),
+                counters_ranged_all: flags(|f| f.counters_ranged_all),
+                // Stinkyscape+ S13 (issue #3560).
+                graveyard_price: numbers(|f| f.graveyard_price),
+                ignores_taunt: flags(|f| f.ignores_taunt),
+                spell_echo_aura: summed_spell_echo_aura(defined.iter().map(|f| f.spell_echo_aura)),
             })
         }
     }
@@ -1202,6 +1261,7 @@ fn combine_objects(records: &[Script]) -> Script {
         cost_aura: eager_read(records.iter().map(|s| s.cost_aura.clone()).collect()),
         graveyard_play: eager_read(records.iter().map(|s| s.graveyard_play.clone()).collect()),
         reveal_echo: largest_read(records.iter().map(|s| s.reveal_echo.clone()).collect()),
+        resolves_set_spells: records.iter().any(|s| s.resolves_set_spells),
         targeting_discards: None,
         records_play_as: None,
         draw_limit: eager_read(records.iter().map(|s| s.draw_limit.clone()).collect()),
@@ -1211,6 +1271,9 @@ fn combine_objects(records: &[Script]) -> Script {
         conditional_keywords: without_lent_piece(eager_read(
             records.iter().map(|s| s.conditional_keywords.clone()).collect(),
         )),
+        // R3778000: the fused card's Aura follows the number its first such ingredient names, read off
+        // the fused definition as the Aura reads it.
+        combat_keywords_follow: records.iter().find_map(|s| s.combat_keywords_follow),
         when_attacks: hooks(|s| s.when_attacks.clone(), "whenAttacks"),
         after_attack: hooks(after_attack_part, "afterAttack"),
         // R2396000: a fusion runs its `afterAttack` for a gone attacker when any ingredient's is a
@@ -1234,6 +1297,11 @@ fn combine_objects(records: &[Script]) -> Script {
         start_of_opponent_turn: hooks(|s| s.start_of_opponent_turn.clone(), "startOfOpponentTurn"),
         turn_hook_extra: None,
         cry_death_extra: None,
+        // R3536001, R3536003, R3542000: a fusion drops "Evolves when", the evolution multiplier and a
+        // stat line its text gave, as it drops `tributeWhen` (R403).
+        evolves_when: None,
+        evolve_extra: None,
+        stat_line_when: None,
         // R1487000, R767000: a fusion's text works face-down when any ingredient's did.
         live_face_down: records.iter().any(|s| s.live_face_down),
         // R1850002, R1850005: every ingredient's exile auras, and the first keyword count printed.
@@ -1241,6 +1309,10 @@ fn combine_objects(records: &[Script]) -> Script {
         radiant_at_keywords: records.iter().find_map(|s| s.radiant_at_keywords),
         // R1864004: the most Trades a turn any ingredient gives.
         trades_per_turn: largest_read(records.iter().map(|s| s.trades_per_turn.clone()).collect()),
+        // Stinkyscape+ E8 (#3558): a fusion lends each ingredient's hand aura (R3558001), and drops
+        // the deck-cast hook, as `evolvesWhen` (R3558007).
+        hand_aura: eager_read(records.iter().map(|s| s.hand_aura.clone()).collect()),
+        cast_from_deck_when: None,
     }
 }
 
@@ -1339,6 +1411,9 @@ fn script_record(script: &Script, def_id: &str, radiant: bool, index: usize) -> 
         would_counter: None,
         turn_hook_extra: None,
         cry_death_extra: None,
+        evolves_when: None,
+        evolve_extra: None,
+        stat_line_when: None,
         triggers: namespaced(&script.triggers),
         hand_triggers: namespaced(&script.hand_triggers),
         deck_triggers: namespaced(&script.deck_triggers),
@@ -1594,10 +1669,15 @@ fn with_choices(effect: Effect, targets: Vec<Selection>, modes: Vec<String>) -> 
     Effect {
         kind: effect.kind,
         apply: effect_apply(move |ctx| {
-            let mut inner = derive_context(ctx);
-            inner.targets = targets.clone();
-            inner.modes = modes.clone();
-            apply(&mut inner);
+            // R3563000: the inner run's draws join the outer run's tally.
+            let tally = {
+                let mut inner = derive_context(ctx);
+                inner.targets = targets.clone();
+                inner.modes = modes.clone();
+                apply(&mut inner);
+                inner.draw_tally
+            };
+            ctx.draw_tally = tally;
         }),
         expand: effect.expand,
     }
@@ -1670,12 +1750,15 @@ fn fused_cry(faces: &[Face]) -> Option<Hook> {
                 ingredient_part(index, move |at| match &cry {
                     None => Vec::new(),
                     Some(cry) => {
-                        let built = {
+                        // R3563000: the inner run's draws join the outer run's tally.
+                        let (built, tally) = {
                             let mut inner = derive_context(at);
                             inner.targets = targets.clone();
                             inner.modes = modes.clone();
-                            cry(&mut inner)
+                            let built = cry(&mut inner);
+                            (built, inner.draw_tally)
                         };
+                        at.draw_tally = tally;
                         built
                             .into_iter()
                             .map(|effect| with_choices(effect, targets.clone(), modes.clone()))
@@ -1887,6 +1970,28 @@ pub fn is_trap_ingredient_trigger(state: &GameState, def_id: &str, trigger_id: &
     })
 }
 
+/// R3806002: whether fused def `def_id`'s `endOfTurn` hook is a Spell's text alone: every ingredient whose
+/// face (Radiant when `radiant` is or its own mark says so, R469) carries one is printed a Spell, a fused
+/// ingredient judged by its own ingredients. A permanent's end-of-turn text works from the field (R153),
+/// so a Spell it was fused into never answers it from a graveyard (R155). `true` for a definition naming
+/// no fusion.
+pub fn end_of_turn_is_spell_text(state: &GameState, def_id: &str, radiant: bool) -> bool {
+    let Some(specs) = fused_specs(state, def_id) else {
+        return true;
+    };
+    specs.iter().all(|spec| {
+        let radiant = radiant || spec.radiant == Some(true);
+        if fused_specs(state, &spec.def_id).is_some() {
+            return end_of_turn_is_spell_text(state, &spec.def_id, radiant);
+        }
+        crate::scripts::face_ref(state, &spec.def_id, radiant)
+            .end_of_turn
+            .is_none()
+            || crate::catalog::find_def(Some(state), &spec.def_id)
+                .is_some_and(|def| def.type_ == CardType::Spell)
+    })
+}
+
 /// The ingredients `compose_fused_scripts` composes from: the def's own list (R468) with R77's minimum,
 /// else the id's; `None` when it names no fusion.
 fn fused_def_specs(state: &GameState, def: &CardDef) -> Option<Vec<FusedIngredient>> {
@@ -2030,7 +2135,7 @@ fn keep_instance(
 /// §5.2: "newly gained keywords apply at once". The fused face can print a keyword the kept card's face did
 /// not — Jilliax's Divine Shield onto a K-Pop Fanatic, a Radiant Saintess's Reborn onto a unit back through
 /// a granted one — and the card gains it with the new text, so a spent shield or Reborn is up again (as
-/// radiant #50's), while one the kept face already printed stays spent. A Vanilla unit prints nothing (§6.3).
+/// radiant #50's was until issue #4292), while one the kept face already printed stays spent. A Vanilla unit prints nothing (§6.3).
 fn gain_printed_keywords(kept: &mut CardInstance, before: &CardDef, after: &CardDef) {
     if kept.vanilla {
         return;
@@ -2180,7 +2285,7 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
         if !allowed {
             return None;
         }
-        if crate::layers::unit_has(sink.state, target, KeywordKind::Immutable) {
+        if args.fresh != Some(true) && crate::layers::is_immutable(sink.state, target) {
             return None;
         }
     } else if to_hand.is_none() {

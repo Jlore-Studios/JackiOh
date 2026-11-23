@@ -51,8 +51,9 @@ pub struct AiOptions<'a> {
     /// Wall-clock safety cap, polled before every node; true = stop and answer with the best so far.
     /// The browser's clock (SURFACE §10.1): this crate never reads one.
     pub should_stop: Option<&'a dyn Fn() -> bool>,
-    /// R3498000: polled only by the beam, before each of its nodes; true = explore no further, while the
-    /// reply and the other determinizations run on until `should_stop`. A host with a clock fires it at
+    /// R3498000: polled by the beam, before each of its nodes, and once before the reply to R3696000's
+    /// payoff line, which it then skips; true = explore no further, while the reply to the shortlist and the
+    /// other determinizations run on until `should_stop`. A host with a clock fires it at
     /// `AI_WRAP_UP_SHARE` of its limit (`wrap_up_after_ms`).
     pub wrap_up: Option<&'a dyn Fn() -> bool>,
 }
@@ -162,6 +163,11 @@ pub struct SearchStats {
     /// the decision never reached step 6's finalists.
     #[serde(default)]
     pub worlds_scored: usize,
+    /// R4447000: the finalist replays on determinizations 1 and on, over the worlds every finalist was
+    /// scored on, that met a step their world does not offer; an answer to the seat's own prompt there
+    /// (#1636) is not one. 0 when the decision never reached its finalists.
+    #[serde(default)]
+    pub replays_cut: usize,
     /// Mean score of the chosen line across determinizations (0 for forced/mulligan/draw-offer).
     pub score: f64,
 }
@@ -215,4 +221,8 @@ pub trait NodeCounter {
     }
     /// Counts one panic, keeping its message when it is the first.
     fn record_sim_panic(&self, _message: &str) {}
+    /// R3575603: the decision's memo of its expensive steps (`simulate::SimMemo`), if it keeps one.
+    fn sim_memo(&self) -> Option<&crate::simulate::SimMemo> {
+        None
+    }
 }

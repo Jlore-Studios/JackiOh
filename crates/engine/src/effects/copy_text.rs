@@ -8,7 +8,7 @@ use crate::effects::targets::{TargetSpec, instance_by_id_or_spec};
 use crate::script::Effect;
 use crate::state::{find_instance, find_instance_mut};
 use crate::subsystems::unit_text::{UNIT_TEXT_KEY, text_def_of};
-use crate::wire::{CardType, GameEvent, KeywordKind};
+use crate::wire::{CardType, GameEvent};
 
 /// `copyUnitText`'s argument: the Unit whose text is copied (the first chosen one by default), and
 /// `radiant: true` to copy its Radiant text whatever face it wears.
@@ -38,8 +38,7 @@ pub fn copy_unit_text(args: CopyUnitTextArgs) -> Effect {
         else {
             return;
         };
-        if !crate::zones::acts_on_field(ctx.state, &copier)
-            || crate::layers::unit_has(ctx.state, &copier, KeywordKind::Immutable)
+        if !crate::zones::acts_on_field(ctx.state, &copier) || crate::layers::is_immutable(ctx.state, &copier)
         {
             return;
         }

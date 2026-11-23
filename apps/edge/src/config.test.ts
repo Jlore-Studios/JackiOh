@@ -7,7 +7,17 @@ import { fileURLToPath } from "node:url";
 import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
-import { HEALTH_PATH, MODULE_CACHE_CONTROL, READY_PATH, SERVER_SECRETS, SERVER_VARS, WORKER_ROUTES } from "./routing.ts";
+import {
+  DAILY_SWEEP_CRON,
+  forServer,
+  HEALTH_PATH,
+  MODULE_CACHE_CONTROL,
+  READY_PATH,
+  SECURITY_HEADERS,
+  SERVER_SECRETS,
+  SERVER_VARS,
+  WORKER_ROUTES,
+} from "./routing.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -55,13 +65,29 @@ describe.each(ENVIRONMENTS)("wrangler.jsonc, $label", ({ worker, name, origin })
     expect(container?.image_build_context).toBe(".");
     expect(worker.durable_objects.bindings).toEqual([{ name: "SERVER", class_name: "Server" }]);
     expect(worker.migrations).toEqual([{ tag: "v1", new_sqlite_classes: ["Server"] }]);
-    expect(worker.triggers.crons).toHaveLength(1);
+    // CLAUDE.md rule 13: the daily wake-up stays; #3727 adds the daily games' hourly sweep.
+    expect(worker.triggers.crons).toEqual(["23 14 * * *", DAILY_SWEEP_CRON]);
   });
 
   it("holds the server's settings that are not secrets, its own origin among them, and no secret", () => {
     expect(Object.keys(worker.vars).sort()).toEqual([...SERVER_VARS].sort());
     expect(worker.vars.PUBLIC_ORIGINS).toBe(origin);
     for (const secret of SERVER_SECRETS) expect(worker.vars).not.toHaveProperty(secret);
+  });
+
+  // #4005 (R190): more trusted hops than the Worker writes would hand the rate limits' key back to
+  // whatever the caller put in the header.
+  it("trusts exactly as many X-Forwarded-For entries as the Worker writes", () => {
+    const spoofed = new Request(`${origin}/api/catalog`, {
+      headers: { "X-Forwarded-For": "203.0.113.9, 198.51.100.1", "CF-Connecting-IP": "192.0.2.7" },
+    });
+    const written = forServer(spoofed).headers.get("X-Forwarded-For")?.split(",") ?? [];
+    expect(worker.vars.TRUSTED_PROXY_HOPS).toBe(String(written.length));
+  });
+
+  // #3999: a version's preview address would run the Worker, and reach the server, at an address of its own.
+  it("has no preview address", () => {
+    expect(worker.preview_urls).toBe(false);
   });
 });
 
@@ -85,11 +111,63 @@ describe("the server's probes the Worker calls", () => {
   });
 });
 
+describe("#4011 nothing in front caches /api/*", () => {
+  it("caches nothing in wrangler.jsonc", () => {
+    const wrangler = readFileSync(join(ROOT, "wrangler.jsonc"), "utf8");
+    expect(wrangler).not.toMatch(/cache/i);
+  });
+
+  it("caches nothing in infra/cloudflare.tf", () => {
+    const tf = readFileSync(join(ROOT, "infra/cloudflare.tf"), "utf8");
+    expect(tf).not.toMatch(/cache/i);
+  });
+
+  it("never calls the Cache API from the Worker", () => {
+    const sources = ["apps/edge/src/index.ts", "apps/edge/src/routing.ts"]
+      .map((file) => readFileSync(join(ROOT, file), "utf8"))
+      .join("\n");
+    expect(sources).not.toMatch(/\bcaches\b/);
+    expect(sources).not.toMatch(/cacheTtl|cacheEverything/i);
+  });
+
+  it("gives /api/* no rule in public/_headers", () => {
+    const headers = readFileSync(join(ROOT, "apps/web/public/_headers"), "utf8");
+    expect(headers).not.toMatch(/^\/api/m);
+  });
+});
+
 describe("#3183 the module's cache rule", () => {
   // The Worker gives the module `_headers`' rule for every built file should the binding's answer lack it.
   it("is the one public/_headers gives /assets/*", () => {
     const headers = readFileSync(join(ROOT, "apps/web/public/_headers"), "utf8");
     const rule = /^\/assets\/\*\n\s+Cache-Control: (.+)$/mu.exec(headers)?.[1];
     expect(rule).toBe(MODULE_CACHE_CONTROL);
+  });
+});
+
+describe("#4297 the Worker's security headers", () => {
+  it("is exactly the four static headers, no CSP and no Permissions-Policy", () => {
+    expect(Object.keys(SECURITY_HEADERS).sort()).toEqual([
+      "Referrer-Policy",
+      "Strict-Transport-Security",
+      "X-Content-Type-Options",
+      "X-Frame-Options",
+    ]);
+  });
+
+  it("matches the /* block of public/_headers value for value", () => {
+    const headers = readFileSync(join(ROOT, "apps/web/public/_headers"), "utf8");
+    const lines = headers.split("\n");
+    // The file's only other blocks (`/fonts/*`, `/assets/*`) hold one `Cache-Control` line, so a
+    // line scan for these names reads the `/*` block alone.
+    const value = (name: string): string | undefined =>
+      lines
+        .find((line) => line.trim().startsWith(`${name}:`))
+        ?.trim()
+        .slice(name.length + 1)
+        .trim();
+    for (const [name, expected] of Object.entries(SECURITY_HEADERS)) {
+      expect(value(name), name).toBe(expected);
+    }
   });
 });

@@ -1,19 +1,27 @@
 //! M #1 Disruptive Disruptor (SPEC §8.8 row 1, BUILD M10 row M 1). (2) Field Spell, Common.
-//!   Base:    "Aura: You can't be forced to discard cards during your opponent's turn.\nCry: Draw
-//!            {draw|card|cards}." (1)
-//!   Radiant: the Aura, plus "Cry: Draw {draw} and gain {mana} mana." (2, 2)
+//!   Base:    "Aura: You can't be forced to discard cards during your opponent's turn.\nActivate: Your
+//!            opponent discards a random card."
+//!   Radiant: the Aura, plus "Activate: Your opponent discards a random Radiant card, or a random card if
+//!            they hold none."
 //!
 //! The Aura is a discard guard (R800): a pure-read hook beside `draw_limit` (R457), read off the cards
 //! acting on the field while it is not the guarded player's turn. An effect's discard from a guarded
 //! hand moves nothing, draws no random number (R129) and reports one public `discardPrevented`. A
 //! discard paid as a price (an Activate's cost, R384; a targeting cost, R450) never asks the guard.
-//! The Radiant Cry's mana comes when played or cast (R1). Both numbers are declared and read through
-//! `param` (R386); the base face prints no mana (R749, R824000).
+//! Issue #4154 took its Cry (and `draw` and `mana`) away and gave it an Activate, once a turn and free
+//! (R384): an effect's discard of the opponent's (R16's "random", R682), so the opponent's own guard stops
+//! it, drawing nothing (R800). The Radiant face's draws among the Radiant cards of that hand, and among
+//! all of them when it holds none (R4154207); one card to draw from draws no random number (R129).
+//! Through v0.6.6h it had "Cry: Draw {draw}" (Radiant: "and gain {mana} mana", R1), which
+//! `script_v0_6_6h` keeps (R767000).
 
-use jackioh_engine::effects::{draw, gain_mana};
+use jackioh_engine::effects::{discard, discard_random, draw, gain_mana};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-001";
+
+/// The Activate's id.
+const DISRUPT: &str = "disrupt";
 
 /// "You can't be forced to discard cards during your opponent's turn": the controller's own side,
 /// guarded on every turn but their own (`draw::discard_guarded`).
@@ -24,7 +32,68 @@ fn disruptor() -> Script {
     }
 }
 
+/// R4154207: the card of the opponent's hand the Radiant face discards: a random Radiant one, else a
+/// random one; none from an empty hand. A guarded hand (R800) is drawn from by no random number: its
+/// first card is named, and the discard's guard stops it.
+fn radiant_pick(c: &mut EffectContext<'_>) -> Vec<String> {
+    let opponent = opponent_of(c.controller);
+    let hand = zone_cards(&*c.state, opponent, OffFieldZone::Hand);
+    if jackioh_engine::draw::discard_guarded(&*c.state, opponent) {
+        return hand.into_iter().take(1).map(|card| card.id).collect();
+    }
+    let radiant: Vec<CardInstance> = hand.iter().filter(|card| card.radiant).cloned().collect();
+    let pool = if radiant.is_empty() { hand } else { radiant };
+    if pool.len() <= 1 {
+        return pool.into_iter().map(|card| card.id).collect();
+    }
+    c.sink.rng.pick(&pool).map(|card| card.id.clone()).into_iter().collect()
+}
+
+/// "Activate: Your opponent discards a random (Radiant) card." (R384, R4154207): once a turn, free.
+fn disrupt(radiant: bool) -> ActivationDecl {
+    ActivationDecl {
+        id: DISRUPT.to_string(),
+        label: if radiant {
+            "Your opponent discards a random Radiant card, or a random card if they hold none".to_string()
+        } else {
+            "Your opponent discards a random card".to_string()
+        },
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: Vec::new(),
+        modes: Vec::new(),
+        can_activate: None,
+        has: None,
+        run: hook(move |_ctx| {
+            if !radiant {
+                return vec![discard_random(json_as(json!({ "player": "enemy" })))];
+            }
+            vec![for_each_card(ForEachCardArgs {
+                cards: Arc::new(|c: &mut EffectContext<'_>| radiant_pick(c)),
+                each: Arc::new(|instance_id: &str| {
+                    discard(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+                }),
+            })]
+        }),
+    }
+}
+
 pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            activations: vec![disrupt(false)],
+            ..disruptor()
+        },
+        radiant: Script {
+            activations: vec![disrupt(true)],
+            ..disruptor()
+        },
+    }
+}
+
+/// R767000: the scripts through v0.6.6h, the Aura and a Cry: "Draw {draw}" (Radiant: "and gain {mana}
+/// mana"), which issue #4154 replaced with the Activate. `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
         base: Script {
             // "Cry: Draw {draw}" (patch v0.3.10, #831): the declared number `draw` (R386).
@@ -92,8 +161,9 @@ mod tests {
             let scripts = script();
             assert!(scripts.base.discard_guard.is_some());
             assert!(scripts.radiant.discard_guard.is_some());
-            assert!(scripts.base.cry.is_some());
-            assert!(scripts.radiant.cry.is_some());
+            assert!(scripts.base.cry.is_none() && scripts.radiant.cry.is_none(), "no Cry since issue #4154");
+            assert_eq!(scripts.base.activations.len(), 1);
+            assert_eq!(scripts.radiant.activations.len(), 1);
         }
 
         #[test]
@@ -169,72 +239,200 @@ mod tests {
             assert_eq!(count(s.last_events(), "discardPrevented"), 0);
         }
 
-        #[test]
-        fn its_cry_draws_1_and_gains_no_mana() {
-            let mut s = scenario(json!({
-                "p1": { "hand": [DISRUPTOR, FILLER], "mana": 9, "library": [VANILLA, VANILLA] },
-                "p2": { "hand": [FILLER] },
-            }));
-
-            s.play(DISRUPTOR, json!({}));
-
-            // One played, one drawn: the hand holds the filler and the draw.
-            assert_eq!(s.hand(P1).len(), 2);
-            assert_eq!(s.pile(P1, "library").len(), 1);
-            s.expect_mana(P1, 7);
-            s.expect_in_zone(DISRUPTOR, "field");
-        }
-
-        #[test]
-        fn r386_its_draw_reads_through_param() {
-            let mut s = scenario(json!({
-                "p1": { "hand": [DISRUPTOR, FILLER], "mana": 9, "library": [VANILLA, VANILLA, VANILLA] },
-                "p2": { "hand": [FILLER] },
-            }));
-            step_param(s.card_mut(DISRUPTOR), "draw", 1);
-
-            s.play(DISRUPTOR, json!({}));
-
-            assert_eq!(s.hand(P1).len(), 3);
-        }
-
-        #[test]
-        fn radiant_cry_draws_2_and_gains_2_mana() {
-            let mut s = scenario(json!({
-                "p1": {
-                    "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
-                    "mana": 9,
-                    "library": [VANILLA, VANILLA, VANILLA],
+        /// R767000: `run` under the scripts v0.6.6h ran and its declared `draw` (1, Radiant 2) and `mana`
+        /// (2, the Radiant face's), which issue #4154 took off.
+        fn v0_6_6h<T>(run: impl FnOnce() -> T) -> T {
+            crate::under_kept_as(
+                ID,
+                script_v0_6_6h(),
+                |def| {
+                    def.params = Some(vec![
+                        json_as(json!({ "key": "draw", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1, "read": "cry" })),
+                        json_as(json!({
+                            "key": "mana", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1,
+                            "tunedOn": "radiant", "read": "cry",
+                        })),
+                    ]);
                 },
-                "p2": { "hand": [FILLER] },
+                run,
+            )
+        }
+
+        /// p1's Disruptor face-up on its backrow, with mana and a card in hand, against p2's `hand`.
+        fn disrupting(radiant: bool, hand: Value) -> Scenario {
+            let mut s = scenario(json!({
+                "p1": { "hand": [FILLER], "mana": 9, "backrow": [backrow(DISRUPTOR, radiant)], "library": [VANILLA, VANILLA] },
+                "p2": { "hand": hand, "library": [VANILLA, VANILLA] },
             }));
-
-            s.play(DISRUPTOR, json!({}));
-
-            // One played, two drawn: the hand holds the filler and the draws.
-            assert_eq!(s.hand(P1).len(), 3);
-            assert_eq!(s.pile(P1, "library").len(), 1);
-            s.expect_mana(P1, 9);
-            s.expect_in_zone(DISRUPTOR, "field");
+            s.state_mut().players.p1.auto_end_turn = Some(false);
+            s
         }
 
         #[test]
-        fn r386_radiant_draw_and_mana_read_through_param() {
-            let mut s = scenario(json!({
-                "p1": {
-                    "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
-                    "mana": 9,
-                    "library": [VANILLA, VANILLA, VANILLA, VANILLA],
-                },
-                "p2": { "hand": [FILLER] },
-            }));
-            step_param(s.card_mut(DISRUPTOR), "draw", 1);
-            step_param(s.card_mut(DISRUPTOR), "mana", 1);
+        fn r384_r4154207_its_activate_makes_the_opponent_discard_a_random_card_once_a_turn() {
+            for radiant in [false, true] {
+                let mut s = disrupting(radiant, json!([VANILLA, FILLER, FILLER]));
+                let held = ids(&s.hand(P2));
+                s.activate(DISRUPTOR, json!({}));
+                assert_eq!(s.hand(P2).len(), 2, "radiant {radiant}");
+                let gone: Vec<Value> =
+                    s.last_events().iter().map(js).filter(|event| event["type"] == "discarded").collect();
+                assert_eq!(gone.len(), 1);
+                assert_eq!(gone[0]["owner"], "p2");
+                assert!(held.contains(&gone[0]["instanceId"].as_str().unwrap_or_default().to_string()));
+                assert_eq!(s.hand(P1).len(), 1, "its own hand is untouched");
+                s.expect_in_zone(DISRUPTOR, "field");
+                s.expect_refused(|s| s.activate(DISRUPTOR, json!({})));
+            }
+        }
 
-            s.play(DISRUPTOR, json!({}));
+        #[test]
+        fn r800_r4154207_the_opponents_own_disruptor_stops_it_and_no_random_number_is_drawn() {
+            for radiant in [false, true] {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "mana": 9, "backrow": [backrow(DISRUPTOR, radiant)], "library": [VANILLA] },
+                    "p2": {
+                        "hand": [VANILLA, { "def": FILLER, "radiant": true }, VANILLA],
+                        "backrow": [backrow(DISRUPTOR, false)],
+                        "library": [VANILLA],
+                    },
+                }));
+                s.state_mut().players.p1.auto_end_turn = Some(false);
+                let mine = s.backrow(P1, 1).expect("p1's Disruptor").id;
+                let cursor = s.state().rng_cursor;
+                s.activate(&mine, json!({}));
+                assert_eq!(s.hand(P2).len(), 3, "radiant {radiant}");
+                assert_eq!(count(s.last_events(), "discardPrevented"), 1);
+                assert_eq!(s.state().rng_cursor, cursor, "radiant {radiant}");
+            }
+        }
 
-            assert_eq!(s.hand(P1).len(), 4);
-            s.expect_mana(P1, 10);
+        #[test]
+        fn r4154207_an_empty_hand_discards_nothing() {
+            let mut s = disrupting(true, json!([]));
+            s.activate(DISRUPTOR, json!({}));
+            assert_eq!(count(s.last_events(), "discarded"), 0);
+        }
+
+        #[test]
+        fn r4154207_radiant_discards_the_radiant_card_the_hand_holds() {
+            let mut s = disrupting(true, json!([VANILLA, { "def": FILLER, "radiant": true }, VANILLA]));
+            s.activate(DISRUPTOR, json!({}));
+            let left = s.hand(P2);
+            assert_eq!(left.len(), 2);
+            assert!(left.iter().all(|card| !card.radiant), "the Radiant card goes");
+        }
+
+        #[test]
+        fn r4154207_radiant_discards_a_random_card_from_a_hand_with_no_radiant_one() {
+            let mut s = disrupting(true, json!([VANILLA, FILLER]));
+            s.activate(DISRUPTOR, json!({}));
+            assert_eq!(s.hand(P2).len(), 1);
+            assert_eq!(count(s.last_events(), "discarded"), 1);
+        }
+
+        #[test]
+        fn r767000_its_cry_draws_1_and_gains_no_mana() {
+            v0_6_6h(|| {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [DISRUPTOR, FILLER], "mana": 9, "library": [VANILLA, VANILLA] },
+                    "p2": { "hand": [FILLER] },
+                }));
+
+                s.play(DISRUPTOR, json!({}));
+
+                // One played, one drawn: the hand holds the filler and the draw.
+                assert_eq!(s.hand(P1).len(), 2);
+                assert_eq!(s.pile(P1, "library").len(), 1);
+                s.expect_mana(P1, 7);
+                s.expect_in_zone(DISRUPTOR, "field");
+            });
+        }
+
+        #[test]
+        fn r767000_r386_its_draw_reads_through_param() {
+            v0_6_6h(|| {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [DISRUPTOR, FILLER], "mana": 9, "library": [VANILLA, VANILLA, VANILLA] },
+                    "p2": { "hand": [FILLER] },
+                }));
+                step_param(s.card_mut(DISRUPTOR), "draw", 1);
+
+                s.play(DISRUPTOR, json!({}));
+
+                assert_eq!(s.hand(P1).len(), 3);
+            });
+        }
+
+        #[test]
+        fn r767000_radiant_cry_draws_2_and_gains_2_mana() {
+            v0_6_6h(|| {
+                let mut s = scenario(json!({
+                    "p1": {
+                        "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
+                        "mana": 9,
+                        "library": [VANILLA, VANILLA, VANILLA],
+                    },
+                    "p2": { "hand": [FILLER] },
+                }));
+
+                s.play(DISRUPTOR, json!({}));
+
+                // One played, two drawn: the hand holds the filler and the draws.
+                assert_eq!(s.hand(P1).len(), 3);
+                assert_eq!(s.pile(P1, "library").len(), 1);
+                s.expect_mana(P1, 9);
+                s.expect_in_zone(DISRUPTOR, "field");
+            });
+        }
+
+        #[test]
+        fn r767000_r386_radiant_draw_and_mana_read_through_param() {
+            v0_6_6h(|| {
+                let mut s = scenario(json!({
+                    "p1": {
+                        "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
+                        "mana": 9,
+                        "library": [VANILLA, VANILLA, VANILLA, VANILLA],
+                    },
+                    "p2": { "hand": [FILLER] },
+                }));
+                step_param(s.card_mut(DISRUPTOR), "draw", 1);
+                step_param(s.card_mut(DISRUPTOR), "mana", 1);
+
+                s.play(DISRUPTOR, json!({}));
+
+                assert_eq!(s.hand(P1).len(), 4);
+                s.expect_mana(P1, 10);
+            });
+        }
+
+        #[test]
+        fn r767000_r1_radiant_cry_fires_when_cast() {
+            v0_6_6h(|| {
+                let mut s = scenario(json!({
+                    "p1": {
+                        "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
+                        "mana": 3,
+                        "library": [VANILLA, VANILLA],
+                    },
+                    "p2": { "hand": [FILLER] },
+                }));
+                let disruptor = s.card(DISRUPTOR).clone();
+                let mut events: Vec<GameEvent> = Vec::new();
+                let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+                {
+                    let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                    cast_card(&mut sink, &disruptor, Default::default());
+                    settle(&mut sink, SettleOptions::default());
+                }
+
+                s.expect_in_zone(&disruptor, "field");
+                // A cast is free: 3 kept, plus the Cry's temporary 2; the draw took two cards.
+                s.expect_mana(P1, 5);
+                assert_eq!(s.pile(P1, "library").len(), 0);
+                assert_eq!(s.hand(P1).len(), 3);
+            });
         }
 
         /// Apply one effect as `controller`'s, the way `resolve.rs` runs a hook's effects.
@@ -349,15 +547,8 @@ mod tests {
             assert_eq!(pending.player_id, P1);
             // The guard stops only discards off the holder's turn: on p1's own turn it
             // sleeps, so "discard" is offered.
-            let offered: Vec<String> = pending
-                .options
-                .iter()
-                .map(|option| match &option.selection {
-                    Selection::Mode { option } => option.clone(),
-                    _ => "?".to_string(),
-                })
-                .collect();
-            assert_eq!(offered, vec!["discard", "exile", "draw"]);
+            assert_eq!(s.prompt_modes(), vec!["discard", "exile", "draw"]);
+            assert_eq!(pending.options.len(), 3, "an option other than a Mode is offered");
         }
 
         #[test]
@@ -377,30 +568,5 @@ mod tests {
             assert_eq!(count(s.last_events(), "discardPrevented"), 0);
         }
 
-        #[test]
-        fn r1_radiant_cry_fires_when_cast() {
-            let mut s = scenario(json!({
-                "p1": {
-                    "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
-                    "mana": 3,
-                    "library": [VANILLA, VANILLA],
-                },
-                "p2": { "hand": [FILLER] },
-            }));
-            let disruptor = s.card(DISRUPTOR).clone();
-            let mut events: Vec<GameEvent> = Vec::new();
-            let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
-            {
-                let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
-                cast_card(&mut sink, &disruptor, Default::default());
-                settle(&mut sink, SettleOptions::default());
-            }
-
-            s.expect_in_zone(&disruptor, "field");
-            // A cast is free: 3 kept, plus the Cry's temporary 2; the draw took two cards.
-            s.expect_mana(P1, 5);
-            assert_eq!(s.pile(P1, "library").len(), 0);
-            assert_eq!(s.hand(P1).len(), 3);
-        }
     }
 }

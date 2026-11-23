@@ -2298,6 +2298,44 @@ mod r1398000_the_end_screen_window {
     }
 }
 
+// R3694000 — a finished co-op match's sockets close once its window ends
+
+/// Past `REMATCH_OFFER_TTL_MS` from its end a finished co-op game's sockets still open are closed
+/// with `MATCH_OVER_CLOSE_CODE`, and its actor leaves memory with them.
+mod r3694000_a_finished_coop_match_lets_its_sockets_go_with_its_window {
+    use super::*;
+    use jackioh_server::config::MATCH_OVER_CLOSE_CODE;
+
+    #[tokio::test(start_paused = true)]
+    async fn r3694000_a_finished_coop_match_closes_its_sockets_and_leaves_memory_once_its_window_ends() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.concede_both(&a1, &a2).await;
+        let held = registry(&h.app);
+        let ended = held
+            .get(&h.match_id)
+            .and_then(|actor| actor.finished_at())
+            .expect("the concedes finished the game");
+
+        // Inside the window, both people's sockets and the actor stay.
+        assert!(held.reap_finished(ended + REMATCH_OFFER_TTL_MS).await.is_empty());
+        assert!(held.has(&h.match_id));
+        settle().await;
+        assert_eq!((a1.close_code(), a2.close_code()), (None, None));
+
+        // Past it, both are closed for good and the actor goes with them.
+        assert_eq!(
+            held.reap_finished(ended + REMATCH_OFFER_TTL_MS + 1).await,
+            vec![h.match_id.clone()]
+        );
+        for client in [&a1, &a2] {
+            assert_eq!(client.wait_closed(PROMPTLY).await, Some(MATCH_OVER_CLOSE_CODE));
+        }
+        assert!(!held.has(&h.match_id));
+    }
+}
+
 // R1047000 — the hard ceiling (§9.5)
 
 mod r1047000_the_ceiling {
@@ -2957,6 +2995,37 @@ mod r2881000_watching_a_coop_game {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn a_coop_game_nobody_watches_encodes_no_watcher_frame_and_a_newcomer_is_sent_the_newest_due_view()
+    {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let _a2 = h.seat(&h.guest).await;
+        h.ai_mulligans_answered(&a1).await;
+        h.keep(&a1, "a1-keep").await;
+        tokio::time::sleep(ms(SPECTATE_DELAY_MS) + DELAY_SLACK).await;
+        settle().await;
+        let actor = jackioh_server::duos::registry(&h.app)
+            .get(&h.match_id)
+            .expect("the live co-op match");
+        assert_eq!(actor.spectate_frames_encoded(), 0);
+
+        let fan = account(&h.app, 4, "Fay").await;
+        befriend(&h.app, &fan, &h.host).await;
+        let watcher = watch(&h, &fan, &h.host).await;
+        assert_admitted(&watcher);
+
+        let views = watcher.of_type("view");
+        assert_eq!(views.len(), 1, "{:?}", watcher.frames());
+        assert_eq!(views[0]["legal"], json!([]), "{}", views[0]);
+        assert!(
+            mulligan_answered(&views[0]["view"]["own"]),
+            "the newest due view: {}",
+            views[0]
+        );
+        assert_eq!(actor.spectate_frames_encoded(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn r3477000_a_duos_seats_view_frames_carry_a_forecast_and_its_watchers_none() {
         let h = duos("easy").await;
         let a1 = h.seat(&h.host).await;
@@ -3385,5 +3454,693 @@ mod r2881000_watching_a_coop_game {
 
         jackioh_server::duos::sweep(&h.app).await.expect("the sweep");
         assert!(!held.has(&h.match_id), "reaped once its watcher had the result");
+    }
+}
+
+// #3678 (`docs/implicit-states.md`, state 1): a person's seat, its queued Hello and its socket
+// generation, each combination reached through `attach`, a frame, a dropped transport or `stop`
+
+mod seat_states_3678 {
+    use super::*;
+    use crate::support::socket::{FakeSocket, create_fake_socket};
+    use jackioh_server::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL};
+    use jackioh_server::config::{SEAT_TAKEN_CLOSE_CODE, SEAT_TAKEN_CLOSE_REASON};
+
+    const HELLO: &str = r#"{"type":"hello"}"#;
+
+    /// Lets a fake socket's frames cross to the actor and the actor's queue drain.
+    async fn quiet(actor: &jackioh_server::duos::actor::DuosActor) {
+        settle().await;
+        actor.idle().await;
+        settle().await;
+    }
+
+    fn views(socket: &FakeSocket) -> usize {
+        socket.of_type("view").len()
+    }
+
+    /// S9, S10: a stopped actor closes the sockets it held with 1001, and one handed to it later the same.
+    #[tokio::test(start_paused = true)]
+    async fn a_socket_handed_to_a_stopped_duos_actor_is_closed_going_away() {
+        let h = duos("easy").await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let held = create_fake_socket();
+        actor.attach(DuosSeat::A1, held.socket());
+        quiet(&actor).await;
+        actor.stop().await;
+        assert_eq!(held.close_code(), Some(CLOSE_GOING_AWAY));
+
+        let late = create_fake_socket();
+        actor.attach(DuosSeat::A1, late.socket());
+        quiet(&actor).await;
+        assert_eq!(late.close_code(), Some(CLOSE_GOING_AWAY));
+        assert_eq!(views(&late), 0);
+    }
+
+    /// S10, R3694000: once the reaper let a finished co-op game go past its window, a socket handed to
+    /// its actor through a held handle hears `MATCH_OVER_CLOSE_CODE`, as the sockets it held did, and no
+    /// view: a 1001 would send its client back into R1285000's refusal.
+    #[tokio::test(start_paused = true)]
+    async fn r3694000_a_socket_handed_to_a_coop_actor_the_reaper_let_go_hears_the_match_is_over() {
+        use jackioh_server::config::MATCH_OVER_CLOSE_CODE;
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.concede_both(&a1, &a2).await;
+        let held = registry(&h.app);
+        let actor = held.get(&h.match_id).expect("the live actor");
+        let ended = actor.finished_at().expect("the concedes finished the game");
+        assert_eq!(
+            held.reap_finished(ended + REMATCH_OFFER_TTL_MS + 1).await,
+            vec![h.match_id.clone()]
+        );
+        assert_eq!(a1.wait_closed(PROMPTLY).await, Some(MATCH_OVER_CLOSE_CODE));
+
+        let late = create_fake_socket();
+        actor.attach(DuosSeat::A1, late.socket());
+        quiet(&actor).await;
+        assert_eq!(late.close_code(), Some(MATCH_OVER_CLOSE_CODE));
+        assert_eq!(views(&late), 0);
+    }
+
+    /// S12, R3767000: a second socket for one seat takes it; the first is closed with
+    /// `SEAT_TAKEN_CLOSE_CODE`, which its client does not reconnect on, and no grace starts: the seat was
+    /// never empty (R744).
+    #[tokio::test(start_paused = true)]
+    async fn r3767000_a_second_socket_for_one_duos_seat_replaces_the_first_with_seat_taken() {
+        let h = duos("easy").await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let first = create_fake_socket();
+        actor.attach(DuosSeat::A1, first.socket());
+        quiet(&actor).await;
+        let second = create_fake_socket();
+        actor.attach(DuosSeat::A1, second.socket());
+        quiet(&actor).await;
+
+        assert_eq!(first.close_code(), Some(SEAT_TAKEN_CLOSE_CODE));
+        assert_eq!(first.close_reason().as_deref(), Some(SEAT_TAKEN_CLOSE_REASON));
+        assert_eq!(second.close_code(), None);
+        assert!(second.is_open());
+        assert_eq!(views(&second), 1);
+        assert_eq!(actor.presence(), [true, false]);
+        for clock in second.of_type("clock") {
+            assert!(
+                clock["graceDeadlines"]["a1"].is_null(),
+                "no grace starts: {clock}"
+            );
+        }
+    }
+
+    /// S7: a Hello queued as its socket drops runs on an empty seat and greets no one; the next
+    /// socket's Hello is a new generation (R835001), answered beside the attach's own view.
+    #[tokio::test(start_paused = true)]
+    async fn a_hello_queued_as_its_duos_socket_drops_answers_no_one_and_the_next_socket_is_greeted() {
+        let h = duos("easy").await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let first = create_fake_socket();
+        actor.attach(DuosSeat::A1, first.socket());
+        quiet(&actor).await;
+        first.receive(HELLO);
+        first.drop();
+        quiet(&actor).await;
+        assert_eq!(actor.presence(), [false, false]);
+
+        let revived = create_fake_socket();
+        actor.attach(DuosSeat::A1, revived.socket());
+        revived.receive(HELLO);
+        quiet(&actor).await;
+        assert_eq!(views(&revived), 2);
+        assert_eq!(actor.presence(), [true, false]);
+    }
+
+    /// S13: an AI seat holds no socket. The routes never name one (`DuosActor::seat_of` answers a1 or
+    /// a2), and a socket handed to one is closed with 1000 and never greeted.
+    #[tokio::test(start_paused = true)]
+    async fn a_socket_handed_to_an_ai_seat_is_closed_and_never_greeted() {
+        let h = duos("easy").await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        assert_eq!(actor.seat_of(&h.outsider.id), None);
+        let stray = create_fake_socket();
+        actor.attach(DuosSeat::B1, stray.socket());
+        quiet(&actor).await;
+        assert_eq!(stray.close_code(), Some(CLOSE_NORMAL));
+        assert_eq!(views(&stray), 0);
+        assert_eq!(actor.presence(), [false, false]);
+    }
+
+    /// A dropped socket takes no co-op seat: the running grace is left alone, so the AI takes the
+    /// seat over once it ends, and no held socket is pushed out (R744, R3767000, B37).
+    #[tokio::test(start_paused = true)]
+    async fn a_dropped_socket_takes_no_coop_seat_so_the_grace_runs_and_the_ai_takes_over() {
+        let h = duos("easy").await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let first = create_fake_socket();
+        actor.attach(DuosSeat::A1, first.socket());
+        quiet(&actor).await;
+        let second = create_fake_socket();
+        actor.attach(DuosSeat::A2, second.socket());
+        quiet(&actor).await;
+
+        first.drop();
+        quiet(&actor).await;
+        assert_eq!(actor.presence(), [false, true]);
+
+        let doomed = create_fake_socket();
+        doomed.drop();
+        settle().await;
+        actor.attach(DuosSeat::A1, doomed.socket());
+        quiet(&actor).await;
+
+        assert!(doomed.of_type("view").is_empty());
+        assert_eq!(first.close_code(), Some(ABNORMAL_CLOSE));
+        assert_eq!(actor.presence(), [false, true]);
+        let latest = second
+            .of_type("clock")
+            .last()
+            .cloned()
+            .expect("a clock frame reached A2");
+        assert!(!latest["graceDeadlines"]["a1"].is_null(), "{latest}");
+
+        tokio::time::sleep(ms(DISCONNECT_GRACE_MS) + PROMPTLY).await;
+        quiet(&actor).await;
+        assert!(actor.ai_playing(DuosSeat::A1));
+    }
+}
+
+// R3731002, R3731003: a 2v2 between people, made in a private lobby (R3731000), team B two more
+// sockets.
+
+mod two_v_two {
+    use super::*;
+    use jackioh_server::config::JLORE_COOP_WIN;
+
+    const SEATS: [&str; 4] = ["a1", "a2", "b1", "b2"];
+    /// The seed every 2v2 here starts from (R143: the test app is in end-to-end mode, which takes a
+    /// lobby's seed). A random pick freezes only its lean, so a fresh seed dealt fresh decks, and about
+    /// one in a hundred drew a Cognitive Offloading in round 1 or 2, whose autopilot ended that seat's
+    /// turn before the test could (#3564's flake, in `versus`).
+    const VERSUS_SEED: &str = "seed-r3731002";
+
+    /// A 2v2 started from a four-account lobby over HTTP; nobody connected yet.
+    struct Versus {
+        app: Arc<App>,
+        served: Served,
+        /// The lobby's four accounts, host first.
+        lobby: Vec<Account>,
+        /// Which of them sits at a1, a2, b1 and b2, as the seed's coin seated them (R3731001).
+        at: [usize; 4],
+        outsider: Account,
+        match_id: String,
+    }
+
+    async fn versus() -> Versus {
+        jackioh_cards::register_all();
+        let app = empty_test_app().await;
+        let mut lobby = Vec::new();
+        for (n, name) in [(1, "Hana"), (2, "Gus"), (3, "Ivy"), (4, "Jo")] {
+            lobby.push(account(&app, n, name).await);
+        }
+        let outsider = account(&app, 5, "Otto").await;
+        let (status, created) = api(
+            &app,
+            "POST",
+            "/api/lobbies",
+            &lobby[0].token,
+            json!({ "format": "2v2" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{created}");
+        let code = created["code"].as_str().expect("a lobby code").to_string();
+        for (n, who) in lobby.iter().enumerate() {
+            let enter = (n > 0).then(|| ("enter", json!({})));
+            let verbs = enter.into_iter().chain([
+                ("pick", json!({ "random": true })),
+                ("ready", json!({ "ready": true })),
+            ]);
+            for (verb, body) in verbs {
+                let path = format!("/api/lobbies/{code}/{verb}");
+                let (status, answer) = api(&app, "POST", &path, &who.token, body).await;
+                assert!(status == 200 || status == 204, "{verb}: {status} {answer}");
+            }
+        }
+        let path = format!("/api/lobbies/{code}/start");
+        let (status, started) = api(
+            &app,
+            "POST",
+            &path,
+            &lobby[0].token,
+            json!({ "seed": VERSUS_SEED }),
+        )
+        .await;
+        assert_eq!(status, 200, "{started}");
+        let match_id = started["matchId"].as_str().expect("a match id").to_string();
+        let mut t = app.db.begin(None).await.expect("a transaction");
+        let row = t
+            .duos_matches_get(&match_id)
+            .await
+            .expect("the match")
+            .expect("the 2v2's row");
+        t.commit().await.expect("the commit");
+        let at = [row.a1.as_str(), row.a2.as_str(), row.b1.as_str(), row.b2.as_str()].map(|id| {
+            lobby
+                .iter()
+                .position(|who| who.id == id)
+                .expect("a lobby member at each seat")
+        });
+        let served = serve(&app);
+        Versus {
+            app,
+            served,
+            lobby,
+            at,
+            outsider,
+            match_id,
+        }
+    }
+
+    impl Versus {
+        /// The person at `slot` (a1, a2, b1, b2).
+        fn person(&self, slot: usize) -> &Account {
+            &self.lobby[self.at[slot]]
+        }
+
+        /// Every seat's socket, said hello, each with its first view in, by slot.
+        async fn seat_all(&self) -> Vec<WsClient> {
+            let mut clients = Vec::new();
+            for (slot, seat) in SEATS.into_iter().enumerate() {
+                let client = self.served.connect(DUOS_PATH, &self.person(slot).token).await;
+                client.send_json(hello(&self.match_id)).await;
+                client
+                    .wait_for(0, PROMPTLY, |frame| frame["type"] == "view")
+                    .await
+                    .unwrap_or_else(|| panic!("hello pushed {seat} no view: {:?}", client.frames()));
+                clients.push(client);
+            }
+            settle().await;
+            clients
+        }
+
+        /// Team B's two people concede, which ends the game for team A.
+        async fn team_b_concedes(&self, clients: &[WsClient]) {
+            for (client, nonce) in [(&clients[2], "b1-concede"), (&clients[3], "b2-concede")] {
+                let answer = act(client, nonce, concede()).await;
+                assert_eq!(answer["type"], "ack", "{answer}");
+            }
+            settle().await;
+        }
+
+        async fn logged(&self) -> Vec<DuosActionRow> {
+            let mut t = self.app.db.begin(None).await.expect("a transaction");
+            let log = t.duos_actions(&self.match_id).await.expect("the log");
+            t.commit().await.expect("the commit");
+            log
+        }
+    }
+
+    fn won_by_a(client: &WsClient) -> bool {
+        last_view(client)["view"]["result"] == json!({ "outcome": "win", "winner": "a", "reason": "concede" })
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3731002_four_sockets_play_a_two_v_two_to_its_end() {
+        let v = versus().await;
+        let clients = v.seat_all().await;
+        for (client, seat) in clients.iter().zip(SEATS) {
+            assert_eq!(last_view(client)["view"]["seat"], seat);
+        }
+        // Each person keeps their own hand, team B's as team A's.
+        for (n, client) in clients.iter().enumerate() {
+            let keep = keep_whole_hand(&last_view(client)).expect("a mulligan is owed");
+            let answer = act(client, &format!("m-{n}"), keep).await;
+            assert_eq!(answer["type"], "ack", "{} {answer}", SEATS[n]);
+        }
+        settle().await;
+        assert!(clients.iter().all(|client| round_of(&last_view(client)) == 1));
+        // Team A plays round 1 and hands the round to team B's people.
+        for (n, client) in clients[..2].iter().enumerate() {
+            let answer = act(client, &format!("a-end-{n}"), duel(json!({ "type": "endTurn" }))).await;
+            assert_eq!(answer["type"], "ack", "{answer}");
+        }
+        settle().await;
+        for (n, client) in clients[2..].iter().enumerate() {
+            let frame = last_view(client);
+            assert_eq!(round_of(&frame), 2, "{frame}");
+            assert!(
+                legal(&frame).iter().any(|entry| is_duel(entry, "endTurn")),
+                "{frame}"
+            );
+            let answer = act(client, &format!("b-end-{n}"), duel(json!({ "type": "endTurn" }))).await;
+            assert_eq!(answer["type"], "ack", "{answer}");
+        }
+        settle().await;
+        assert!(clients.iter().all(|client| round_of(&last_view(client)) == 3));
+        // Nothing of team B's was the AI's: every row of theirs is a person's own.
+        for row in v.logged().await {
+            let seat = row.action["seat"].as_str().unwrap_or_default();
+            if seat.starts_with('b') {
+                assert!(!row.nonce.starts_with(SERVER_NONCE_PREFIX), "{row:?}");
+            }
+        }
+        // Team B concedes: all four see team A's win, and every seat of the ledger is free.
+        v.team_b_concedes(&clients).await;
+        assert!(
+            clients.iter().all(won_by_a),
+            "{:?}",
+            clients.iter().map(last_view).collect::<Vec<_>>()
+        );
+        for (slot, seat) in SEATS.into_iter().enumerate() {
+            assert_eq!(v.app.seats.of(&v.person(slot).id), None, "{seat}");
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3731002_a_team_b_disconnect_hands_the_seat_to_the_ai_and_its_return_takes_it_back() {
+        let v = versus().await;
+        let clients = v.seat_all().await;
+        let (a1, b1, b2) = (&clients[0], &clients[2], &clients[3]);
+        let (a1_from, from) = (a1.received(), b2.received());
+        let dropped = Instant::now();
+        let dropped_ms = now_ms();
+        b1.hang_up().await;
+        // b1's teammate is shown its grace, and then that the AI plays it.
+        let (_, _, clock) = b2
+            .wait_for(from, PROMPTLY, |frame| {
+                frame["type"] == "clock" && !frame["graceDeadlines"]["b1"].is_null()
+            })
+            .await
+            .unwrap_or_else(|| panic!("no clock frame named b1's grace: {:?}", b2.frames()));
+        assert_eq!(
+            clock["graceDeadlines"]["b1"],
+            json!(dropped_ms + int(DISCONNECT_GRACE_MS)),
+            "{clock}"
+        );
+        let (_, taken_at, taken) = b2
+            .wait_for(from, ms(DISCONNECT_GRACE_MS) + PROMPTLY, |frame| {
+                frame["type"] == "teammate" && frame["aiPlaying"] == true
+            })
+            .await
+            .unwrap_or_else(|| panic!("b2 was never told the AI took b1 over: {:?}", b2.frames()));
+        assert!(
+            taken_at >= dropped + ms(DISCONNECT_GRACE_MS),
+            "not before the grace has run"
+        );
+        assert_eq!(taken["connected"], json!(false), "{taken}");
+        // Team A hears nothing of the other team's people.
+        assert!(
+            a1.of_type_since(a1_from, "teammate").is_empty(),
+            "{:?}",
+            a1.frames()
+        );
+        // No loss by disconnect.
+        assert!(last_view(b2)["view"]["result"].is_null());
+        // b1 is back: their seat is theirs again, and b2 is told.
+        let back = v.served.connect(DUOS_PATH, &v.person(2).token).await;
+        let from = b2.received();
+        back.send_json(hello(&v.match_id)).await;
+        let (_, _, view) = back
+            .wait_for(0, PROMPTLY, |frame| frame["type"] == "view")
+            .await
+            .expect("b1's view on its return");
+        assert_eq!(view["view"]["seat"], "b1");
+        b2.wait_for(from, PROMPTLY, |frame| {
+            frame["type"] == "teammate" && frame["connected"] == true && frame["aiPlaying"] == false
+        })
+        .await
+        .unwrap_or_else(|| panic!("b2 was never told b1 is back: {:?}", b2.frames()));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3731002_each_seats_view_hides_the_other_teams_hands() {
+        let v = versus().await;
+        let clients = v.seat_all().await;
+        for (client, seat) in clients.iter().zip(SEATS) {
+            let view = &last_view(client)["view"];
+            assert_eq!(view["seat"], seat);
+            for duel in ["own", "teammate"] {
+                // The team's own hands are shown, card by card; the other team's by their count alone.
+                assert!(view[duel]["you"]["hand"].is_array(), "{seat} {duel}: {view}");
+                assert!(
+                    view[duel]["opponent"]["hand"]["count"].is_number(),
+                    "{seat} {duel}: {view}"
+                );
+                assert!(
+                    !view[duel]["opponent"]["hand"].is_array(),
+                    "{seat} {duel}: {view}"
+                );
+            }
+            assert!(hand_len(&view["own"]) > 0, "{seat}");
+        }
+        // A team B person's teammate duel is the teammate's own seat's view.
+        let b1 = &last_view(&clients[2])["view"];
+        let b2 = &last_view(&clients[3])["view"];
+        assert_eq!(hand_ids(&b1["teammate"]), hand_ids(&b2["own"]));
+        assert_eq!(hand_ids(&b2["teammate"]), hand_ids(&b1["own"]));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3731002_a_ping_never_reaches_the_other_team() {
+        let v = versus().await;
+        let clients = v.seat_all().await;
+        let since = |clients: &[WsClient]| clients.iter().map(WsClient::received).collect::<Vec<_>>();
+        // b1 names its own hand (duel 0's Player 2): b2 alone hears it.
+        let own_hand = json!({ "duel": 0, "at": "hand", "side": "p2", "index": 0 });
+        let from = since(&clients);
+        clients[2].send_json(ping("thumbsUp", own_hand.clone())).await;
+        settle().await;
+        assert_eq!(
+            clients[3].of_type_since(from[3], "ping"),
+            vec![relayed("b1", "thumbsUp", &own_hand)]
+        );
+        for n in [0, 1, 2] {
+            assert!(
+                clients[n].of_type_since(from[n], "ping").is_empty(),
+                "{}",
+                SEATS[n]
+            );
+        }
+        // a1's ping reaches a2 and never team B.
+        let hero = json!({ "duel": 0, "at": "hero", "side": "p2" });
+        let from = since(&clients);
+        clients[0].send_json(ping("killThis", hero.clone())).await;
+        settle().await;
+        assert_eq!(
+            clients[1].of_type_since(from[1], "ping"),
+            vec![relayed("a1", "killThis", &hero)]
+        );
+        for n in [0, 2, 3] {
+            assert!(
+                clients[n].of_type_since(from[n], "ping").is_empty(),
+                "{}",
+                SEATS[n]
+            );
+        }
+        // A team B ping naming team A's hand is dropped (R643).
+        let their_hand = json!({ "duel": 0, "at": "hand", "side": "p1", "index": 0 });
+        let from = since(&clients);
+        clients[2].send_json(ping("careful", their_hand)).await;
+        settle().await;
+        for n in 0..SEATS.len() {
+            assert!(
+                clients[n].of_type_since(from[n], "ping").is_empty(),
+                "{}",
+                SEATS[n]
+            );
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3731002_a_teams_concede_needs_both_its_players() {
+        let v = versus().await;
+        let clients = v.seat_all().await;
+        // b1 offers its team's concede: b2 sees the offer, team A sees none of it, and nothing ends.
+        let answer = act(&clients[2], "b1-concede", concede()).await;
+        assert_eq!(answer["type"], "ack", "{answer}");
+        settle().await;
+        assert_eq!(last_view(&clients[3])["view"]["concedeOfferedBy"], "b1");
+        assert!(last_view(&clients[0])["view"]["concedeOfferedBy"].is_null());
+        // a1's offer is team A's own, and neither takes nor clears team B's.
+        let answer = act(&clients[0], "a1-concede", concede()).await;
+        assert_eq!(answer["type"], "ack", "{answer}");
+        settle().await;
+        assert_eq!(last_view(&clients[1])["view"]["concedeOfferedBy"], "a1");
+        assert_eq!(last_view(&clients[3])["view"]["concedeOfferedBy"], "b1");
+        assert!(
+            clients
+                .iter()
+                .all(|client| last_view(client)["view"]["result"].is_null())
+        );
+        // b2 confirms: team B has conceded, and team A wins.
+        let answer = act(&clients[3], "b2-concede", concede()).await;
+        assert_eq!(answer["type"], "ack", "{answer}");
+        settle().await;
+        assert!(clients.iter().all(won_by_a));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3731002_a_friend_watches_a_team_b_persons_seat() {
+        use jackioh_server::actor::ws_server::WATCH_PATH;
+        use jackioh_server::config::SPECTATE_DELAY_MS;
+
+        let v = versus().await;
+        let clients = v.seat_all().await;
+        let b1 = v.person(2);
+        crate::support::store::befriend(&v.app, &v.outsider, b1).await;
+        let watcher = v.served.connect(WATCH_PATH, &v.outsider.token).await;
+        watcher
+            .send_json(json!({ "type": "hello", "matchId": v.match_id, "friendId": b1.id }))
+            .await;
+        settle().await;
+        assert!(watcher.of_type("error").is_empty(), "{:?}", watcher.frames());
+        assert!(watcher.close_code().is_none(), "the watcher is let in");
+        // b1 keeps their hand: the watcher sees it from b1's seat, SPECTATE_DELAY_MS late, offered nothing.
+        let keep = keep_whole_hand(&last_view(&clients[2])).expect("a mulligan is owed");
+        assert_eq!(act(&clients[2], "b1-keep", keep).await["type"], "ack");
+        let (_, _, frame) = watcher
+            .wait_for(0, ms(SPECTATE_DELAY_MS) + PROMPTLY, |frame| {
+                frame["type"] == "view" && mulligan_answered(&frame["view"]["own"])
+            })
+            .await
+            .unwrap_or_else(|| panic!("the watcher never saw b1's keep: {:?}", watcher.frames()));
+        assert_eq!(frame["view"]["seat"], "b1", "{frame}");
+        assert_eq!(frame["legal"], json!([]), "{frame}");
+        // Every person hears the one watcher, team A's too.
+        for client in &clients {
+            assert!(
+                client.of_type("watchers").iter().any(|frame| frame["count"] == 1),
+                "{:?}",
+                client.frames()
+            );
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3731003_each_of_the_four_opens_its_own_seats_replay_and_is_paid() {
+        let v = versus().await;
+        let clients = v.seat_all().await;
+        v.team_b_concedes(&clients).await;
+        assert!(clients.iter().all(won_by_a));
+        let path = format!("/api/duos/matches/{}/replay", v.match_id);
+        for (slot, seat) in SEATS.into_iter().enumerate() {
+            let who = v.person(slot);
+            let (status, replay) = api(&v.app, "GET", &path, &who.token, Value::Null).await;
+            assert_eq!(status, 200, "{seat}: {replay}");
+            assert_eq!(replay["seat"], seat);
+            let steps = replay["steps"].as_array().expect("a replay's steps");
+            assert!(
+                !steps.is_empty() && steps.iter().all(|step| step["seat"] == seat),
+                "{seat}"
+            );
+            let mut t = v.app.db.begin(None).await.expect("a transaction");
+            let ledger = t.economy_ledger_get(&who.id).await.expect("the ledger");
+            t.commit().await.expect("the commit");
+            let paid: Vec<i64> = ledger
+                .jlore
+                .iter()
+                .filter(|grant| grant.reason == JloreReason::Game)
+                .map(|grant| grant.delta)
+                .collect();
+            let rate = if slot < 2 { JLORE_COOP_WIN } else { JLORE_COOP_LOSS };
+            assert_eq!(paid, vec![i64::from(rate)], "{seat}");
+        }
+        let (status, _) = api(&v.app, "GET", &path, &v.outsider.token, Value::Null).await;
+        assert_eq!(status, 404);
+    }
+}
+
+// #4114 (`docs/implicit-states.md`, state 8, A10 and A10b): a co-op rebuild that lands after the
+// restart drain, in flight across it or begun after it
+
+mod registry_states_4114 {
+    use super::*;
+    use crate::support::socket::create_fake_socket;
+    use crate::support::store::fake_ref;
+    use jackioh_server::actor::ws_server::CLOSE_GOING_AWAY;
+
+    /// A10: the drain stops every co-op actor in memory (#936). A rebuild already reading the store
+    /// when it runs lands after it, and is stopped too, never left live to write its log after the
+    /// store closes; a socket handed to it hears 1001 and no view.
+    #[tokio::test(start_paused = true)]
+    async fn a_coop_rebuild_in_flight_across_the_restart_drain_is_stopped_too() {
+        let h = duos("easy").await;
+        let held = registry(&h.app);
+        held.stop(&h.match_id).await;
+
+        let guard = fake_ref(&h.app).lock().await;
+        let (app, match_id) = (Arc::clone(&h.app), h.match_id.clone());
+        let rebuilding = tokio::spawn(async move { registry(&app).actor_for(&app, &match_id).await });
+        for _ in 0..4 {
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(held.drain().await, 0);
+        drop(guard);
+
+        let actor = rebuilding
+            .await
+            .expect("the rebuild ran")
+            .expect("the rebuild folded the match");
+        assert!(!held.has(&h.match_id), "left live after the drain");
+        let late = create_fake_socket();
+        actor.attach(DuosSeat::A1, late.socket());
+        settle().await;
+        actor.idle().await;
+        assert_eq!(late.close_code(), Some(CLOSE_GOING_AWAY));
+        assert!(late.of_type("view").is_empty());
+    }
+
+    /// A10b: a socket upgraded before the drain whose sign-in is still being read when it runs says
+    /// hello after it, so its rebuild begins after the drain. It is stopped too: the socket hears 1001
+    /// and no view, and nothing is left live.
+    #[tokio::test(start_paused = true)]
+    async fn a_coop_rebuild_begun_after_the_restart_drain_is_stopped_too() {
+        let h = duos("easy").await;
+        let held = registry(&h.app);
+        held.stop(&h.match_id).await;
+        assert_eq!(held.drain().await, 0);
+
+        let late = h.served.connect(DUOS_PATH, &h.host.token).await;
+        late.send_json(hello(&h.match_id)).await;
+        assert_eq!(late.wait_closed(PROMPTLY).await, Some(CLOSE_GOING_AWAY));
+        assert!(late.of_type("view").is_empty(), "{:?}", late.frames());
+        assert!(!held.has(&h.match_id), "left live after the drain");
+    }
+
+    /// A10c: a co-op match a join starts once the drain has begun has its row written and its actor
+    /// stopped at once, never kept live; its people's sockets hear 1001 and reconnect to the next
+    /// process. Every co-op `start` is a request's, which the drain waits for, so this guards the order
+    /// rather than a path found in production.
+    #[tokio::test(start_paused = true)]
+    async fn a_coop_match_started_after_the_restart_drain_is_stopped_too() {
+        let h = duos("easy").await;
+        let held = registry(&h.app);
+        let late_guest = account(&h.app, 4, "Dee").await;
+        let (status, created) = api(
+            &h.app,
+            "POST",
+            "/api/duos/rooms",
+            &h.outsider.token,
+            json!({ "difficulty": "easy", "random": true }),
+        )
+        .await;
+        assert_eq!(status, 201, "{created}");
+        let code = created["code"].as_str().expect("a room code");
+        assert_eq!(held.drain().await, 1);
+
+        let (status, joined) = api(
+            &h.app,
+            "POST",
+            &format!("/api/duos/rooms/{code}/join"),
+            &late_guest.token,
+            json!({ "random": true }),
+        )
+        .await;
+        assert_eq!(status, 200, "{joined}");
+        let late_id = joined["matchId"].as_str().expect("a match id").to_string();
+        assert!(!held.has(&late_id), "left live after the drain");
+
+        let late = h.served.connect(DUOS_PATH, &h.outsider.token).await;
+        late.send_json(hello(&late_id)).await;
+        assert_eq!(late.wait_closed(PROMPTLY).await, Some(CLOSE_GOING_AWAY));
+        assert!(late.of_type("view").is_empty(), "{:?}", late.frames());
+        assert!(!held.has(&late_id), "left live after the drain");
     }
 }

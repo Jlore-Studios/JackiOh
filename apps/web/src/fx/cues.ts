@@ -13,7 +13,7 @@ import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { animationRow, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry, type EntrySlam } from "../game/animations.ts";
-import { sideOf, testid, type Side } from "../game/contract.ts";
+import { defIdOfInstance, sideOf, testid, type Side } from "../game/contract.ts";
 import { armorTookHalf, damageFeel, damageTier, playTier, UNIT_SLAM, type PlayTier } from "../game/damageFeel.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { brandCues } from "./brand.ts";
@@ -515,16 +515,19 @@ const impact: Recipe = (event, p) => {
   return [...cues, ...impactTail(event, p, p.D, look.particle)];
 };
 
-/** R1363: the Armor took the whole hit (`damageAbsorbed`). R2803000 folds `ward` into the rows: the full shield in Holy, landing with the hit. */
+/**
+ * R1363: the Armor took the whole hit (`damageAbsorbed`). R2803000 folds `ward` into the rows: the full shield in Holy, landing with the hit.
+ * R3857000: a hero's kept Armor gain (`armorGained`) blooms the same shield over the hero, with no shake.
+ */
 const armor: Recipe = (event, p) => {
-  if (event.type !== "damageAbsorbed") return [];
+  if (event.type !== "damageAbsorbed" && event.type !== "armorGained") return [];
   const at = anchor(p.tgt);
   const land = frac(FX_MOTIF_PHASES.land, p.D);
   const cues: FxCue[] = [];
   for (const cue of shieldCues("full", at, p.D, land, p.env.intensity)) {
     cues.push(cue.kind === "burst" ? { ...cue, colors: FLAVOR_LOOKS.Holy.colors } : cue);
   }
-  pushShake(cues, p.env.intensity, FX_ARMOR_TRAUMA, land);
+  if (event.type === "damageAbsorbed") pushShake(cues, p.env.intensity, FX_ARMOR_TRAUMA, land);
   return cues;
 };
 
@@ -786,6 +789,8 @@ const turnBanner: Recipe = (event, p) => {
   if (event.type === "turnAutoEnded") return [banner(p.D, FX_TEXT.autoEnded, "muted")];
   // B5 E10: an effect cut the turn short.
   if (event.type === "turnCutShort") return [banner(p.D, FX_TEXT.turnCutShort, "muted")];
+  // R3925000: a loop reached the loop cap and stopped.
+  if (event.type === "loopCapped") return [banner(p.D, FX_TEXT.loopCapped, "muted")];
   // R1183002: the AI plays the rest of the turn.
   if (event.type === "autopilotEngaged") return [banner(p.D, FX_TEXT.autopilot, "muted")];
   // R1843000, R1843002: a player voted out, and an escape, in that player's colors.
@@ -954,37 +959,28 @@ const curve: Recipe = (event, p) => {
   return cues;
 };
 
+/** S+ #109 Lancer, #126 Vela, #127 Corvus (R3554005): the line drawn to its tile — a ring at each
+ * cell after the first and one beam from the first cell to the last, fire for a laser. */
+const line: Recipe = (event, p) => {
+  if (event.type !== "lineDrawn") return [];
+  const cells = event.cells.map((cell) => anchor(testid.zone(sideOf(p.view, cell.player), cell.row, cell.lane)));
+  if (cells.length < 2) return [];
+  const preset = event.laser === true ? "fire" : "arcane";
+  const step = Math.floor(p.D / Math.max(1, cells.length - 1));
+  const cues: FxCue[] = cells.slice(1).map((cell, i) => ring(p.D, preset, cell, (i + 1) * step));
+  const from = cells[0];
+  const to = cells[cells.length - 1];
+  if (from !== undefined && to !== undefined) {
+    cues.push({ ...projectile(p.env.intensity, preset, from, to, p.D), delayMs: 0 });
+  }
+  return cues;
+};
+
 /* Issue #124: the runner's new entry shapes (game/runs.ts), each planned as one */
 
 /** The public facts of a readable defId; undefined for R97's sentinel or an unknown id (R202). */
 function factsOf(defId: string, env: FxPlanEnv): FxCardFacts | undefined {
   return defId === HIDDEN_ID ? undefined : env.card(defId);
-}
-
-/** The defId the view reads on `instanceId`, or undefined when it shows the card nowhere. */
-function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
-  for (const side of SIDES) {
-    const sv = side === "you" ? view.you : view.opponent;
-    for (const unit of sv.units) {
-      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
-    }
-    for (const unit of sv.carried ?? []) {
-      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
-    }
-    for (const slot of sv.backrow) {
-      if (slot !== null && !slot.faceDown && slot.instanceId === instanceId) return slot.defId;
-    }
-    for (const card of sv.resolving) {
-      if (card.instanceId === instanceId) return card.defId;
-    }
-  }
-  const hand = view.you.hand;
-  if (Array.isArray(hand)) {
-    for (const card of hand) {
-      if (card.instanceId === instanceId) return card.defId;
-    }
-  }
-  return undefined;
 }
 
 /** The public facts of the card a non-combat hit's source instance is (R202: undefined when hidden). */
@@ -1153,6 +1149,7 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   rewind,
   armor,
   curve,
+  line,
 };
 
 /* Public planners (S6) */

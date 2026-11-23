@@ -147,7 +147,7 @@ describe("audio constants", () => {
   });
 
   it("pins the voice budget R501 caps and the per-hook word caps", () => {
-    expect(VOICE_BUDGET_BYTES).toBe(16 * 1024 * 1024);
+    expect(VOICE_BUDGET_BYTES).toBe(24 * 1024 * 1024);
     expect(VOICE_FILE_MAX_MS).toBe(4000);
     expect(VOICE_MAX_WORDS).toEqual({ play: 8, attack: 4, death: 6, cast: 8, trigger: 8 });
   });
@@ -202,7 +202,7 @@ describe("audio constants", () => {
     expect(MUSIC_LOW_HEALTH_FRACTION).toBe(0.25);
     expect(MUSIC_DECODED_MAX).toBe(3);
     expect(MUSIC_BYTES_MAX).toBe(8);
-    expect(MUSIC_BUDGET_BYTES).toBe(49 * 1024 * 1024);
+    expect(MUSIC_BUDGET_BYTES).toBe(51 * 1024 * 1024); // R3572000: 49 MiB until the Stinkyscape+ intros
   });
 
   it("pins the v0.2.X polish stings, pans and ducks", () => {

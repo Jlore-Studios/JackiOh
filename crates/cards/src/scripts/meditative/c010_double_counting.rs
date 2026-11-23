@@ -1,26 +1,126 @@
 //! Meditative #10 Double Counting (SPEC §8.8 row 10; docs/meditative-set.md M6 #10; ME-TRIG (b); R820,
-//! R822, R823). (2) Field Spell, Epic.
-//!   Base:    "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}." (extra 1)
-//!   Radiant: the same, extra 2.
+//! R822, R823, R4154211). (3) Field Spell, Epic ((2) until issue #4440).
+//!   Base:    "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}.\nActivate:
+//!            Discover a Cry or Death card." (extra 1)
+//!   Radiant: "Aura: …\nActivate: Discover a Cry or Death card." (extra 2)
+//!   Through v0.6.9n the base face's Activate read "Pay ({price}) to Discover a Cry or Death card." (price 1,
+//!   `script_v0_6_9n`, kept, R767000; issue #4440 made it free and took the `price` off).
 //!
 //! The engine's Cry and Death multiplier (`Script.cry_death_extra`), Hearthstone's Brann Bronzebeard and
 //! Baron Rivendare in one card: while this acts on its controller's field, the Cry of a permanent they
 //! play or cast (§10.5 step 5) or trigger (C #54 Rewind) runs extra more times with the same choices,
 //! and the Death of a card that died under their control runs extra more times on its snapshot (§4.5
 //! step 3). A Spell's resolution is no Cry (R822). Several multipliers do not add: the highest holds (R820).
+//! Issue #4154 added the Activate (R384, once a turn; through v0.6.9n the base face's price the declared
+//! `price`, R386, free on both faces since issue #4440):
+//! a Discover (§6.3) of the shipped cards that print a Cry or a Death, read off each one's base face's
+//! script — a Death on any card, a Cry on a Unit or a Field Spell, since a Spell's resolution is no Cry
+//! (R822) — its pick to the hand on its base face (R4154211). Through v0.6.6h it had the Aura alone,
+//! which `script_v0_6_6h` keeps (R767000).
 
+use jackioh_engine::effects::{add_to_hand, discover_from_catalog};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-010";
 
-pub fn script() -> CardScripts {
-    let base = Script {
+/// The Activate's id, and the resume step the Discover's answer comes back to (§10.6).
+const TALLY: &str = "tally";
+const PICKED: &str = "picked";
+/// "Pay (1)": the base face's price as written through v0.6.9n; the declared `price` was what was paid (R386).
+const PRICE: i32 = 1;
+
+/// R4154211: the shipped cards that print a Cry or a Death, off their base face's script.
+fn cry_or_death_ids() -> Vec<String> {
+    query(&CatalogQueryArgs::default())
+        .into_iter()
+        .filter(|def| {
+            jackioh_engine::scripts::registered_entry(&def.id).is_some_and(|entry| {
+                entry.base.death.is_some()
+                    || (entry.base.cry.is_some() && matches!(def.type_, CardType::Unit | CardType::FieldSpell))
+            })
+        })
+        .map(|def| def.id.clone())
+        .collect()
+}
+
+/// "Activate: (Pay (1) to) Discover a Cry or Death card." (R384, R4154211).
+fn tally(paid: bool) -> ActivationDecl {
+    ActivationDecl {
+        id: TALLY.to_string(),
+        label: if paid {
+            "Pay (1) to Discover a Cry or Death card".to_string()
+        } else {
+            "Discover a Cry or Death card".to_string()
+        },
+        uses: ActivationUses::Count(1),
+        cost: paid.then(|| ActivationCost {
+            mana: Some(PRICE),
+            mana_param: Some("price"),
+            ..ActivationCost::default()
+        }),
+        targets: Vec::new(),
+        modes: Vec::new(),
+        can_activate: None,
+        has: None,
+        run: hook(|_ctx| {
+            let mut discover: DiscoverFromCatalogArgs = json_as(json!({
+                "step": PICKED,
+                "prompt": "Discover a Cry or Death card",
+            }));
+            // Read as the Discover applies, never again when the hook is rebuilt to resume.
+            discover.query_fn = Some(Arc::new(|_at: &mut EffectContext<'_>| {
+                json_as::<CatalogQueryArgs>(json!({ "defId": cry_or_death_ids() }))
+            }));
+            vec![discover_from_catalog(discover)]
+        }),
+    }
+}
+
+/// The Aura; with `activate`, the Activate too, paid on the base face (`paid`).
+fn counting(activate: bool, paid: bool) -> Script {
+    Script {
         cry_death_extra: Some(read_hook(|args| param(&args, "extra"))),
+        activations: if activate { vec![tally(paid)] } else { Vec::new() },
+        resume: if activate {
+            IndexMap::from([(
+                PICKED,
+                // A Discover's pick arrives as a `mode` selection carrying a catalog id (§10.6).
+                hook(|ctx| {
+                    let Some(picked) = chosen_options(ctx).into_iter().next() else {
+                        return vec![];
+                    };
+                    vec![add_to_hand(json_as(json!({ "defId": picked })))]
+                }),
+            )])
+        } else {
+            IndexMap::new()
+        },
         ..Script::default()
-    };
+    }
+}
+
+pub fn script() -> CardScripts {
     CardScripts {
-        radiant: base.clone(),
-        base,
+        base: counting(true, false),
+        radiant: counting(true, false),
+    }
+}
+
+/// R767000: after v0.6.6h through v0.6.9n the base face paid (`price`) to activate (issue #4440).
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9n() -> CardScripts {
+    CardScripts {
+        base: counting(true, true),
+        radiant: counting(true, false),
+    }
+}
+
+/// R767000: the scripts through v0.6.6h, the Aura alone (issue #4154). `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_6_6h() -> CardScripts {
+    CardScripts {
+        base: counting(false, false),
+        radiant: counting(false, false),
     }
 }
 
@@ -203,6 +303,93 @@ mod tests {
             s.play(ARMOR, json!({}));
             assert_eq!(s.hand(P1).len(), 4);
         }
+    }
+
+    /// R4154211: p1's Double Counting on its backrow, with `mana`.
+    fn tallying(radiant: bool, mana: i32) -> Scenario {
+        let mut s = scenario(json!({
+            "p1": side(json!({ "backrow": [{ "def": ID, "radiant": radiant }], "mana": mana })),
+            "p2": side(json!({})),
+        }));
+        s.state_mut().players.p1.auto_end_turn = Some(false);
+        s
+    }
+
+    /// Whether `def_id`'s base face prints a Cry (on a Unit or a Field Spell) or a Death.
+    fn prints_cry_or_death(def_id: &str) -> bool {
+        let def = crate::card_def(def_id);
+        let scripts = jackioh_engine::scripts::registered_entry(def_id).expect("a registered card");
+        scripts.base.death.is_some()
+            || (scripts.base.cry.is_some() && matches!(def.type_, CardType::Unit | CardType::FieldSpell))
+    }
+
+    /// Issue #4440: the base face's Activate is free, as the Radiant face's.
+    #[test]
+    fn r4154211_the_base_face_discovers_a_cry_or_death_card_for_free_once_a_turn() {
+        let mut s = tallying(false, 5);
+        s.activate(ID, json!({}));
+        assert_eq!(s.state().players.p1.mana.current, 5, "it pays nothing");
+        let options = s.prompt_modes();
+        assert_eq!(options.len(), 3);
+        for option in &options {
+            assert!(prints_cry_or_death(option), "{option} prints a Cry or a Death");
+            assert!(!crate::card_def(option).token, "{option} is no token");
+        }
+        let held = s.hand(P1).len();
+        s.answer(json!(options[0]));
+        let hand = s.hand(P1);
+        assert_eq!(hand.len(), held + 1);
+        let added = hand.last().expect("the pick");
+        assert_eq!(added.def_id, options[0]);
+        assert!(!added.radiant);
+        s.expect_refused(|s| s.activate(ID, json!({})));
+    }
+
+    #[test]
+    fn r4154211_the_base_face_needs_no_mana() {
+        let mut s = tallying(false, 0);
+        s.activate(ID, json!({}));
+        assert_eq!(s.prompt_modes().len(), 3);
+    }
+
+    /// Issue #4440: (3), and the `price` is gone.
+    #[test]
+    fn it_costs_3_and_declares_extra_alone() {
+        let def = crate::card_def(ID);
+        assert_eq!(def.cost, CardCost::Fixed(3));
+        let keys: Vec<&str> = def.params.iter().flatten().map(|param| param.key.as_str()).collect();
+        assert_eq!(keys, ["extra"]);
+    }
+
+    /// R767000: after v0.6.6h through v0.6.9n the base face paid (1), and with no mana could not activate.
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_9n_pays_1_on_the_base_face() {
+        crate::under_kept(ID, super::script_v0_6_9n(), || {
+            let mut s = tallying(false, 0);
+            s.expect_refused(|s| s.activate(ID, json!({})));
+            let mut s = tallying(false, 5);
+            s.activate(ID, json!({}));
+            assert_eq!(s.state().players.p1.mana.current, 4, "it pays (1)");
+        });
+    }
+
+    #[test]
+    fn r4154211_the_radiant_face_discovers_for_free() {
+        let mut s = tallying(true, 0);
+        s.activate(ID, json!({}));
+        assert_eq!(s.state().players.p1.mana.current, 0);
+        let options = s.prompt_modes();
+        assert!(options.iter().all(|option| prints_cry_or_death(option)));
+        s.answer(json!(options[0]));
+        assert!(s.hand(P1).iter().any(|card| card.def_id == options[0] && !card.radiant));
+    }
+
+    /// R767000: through v0.6.6h it had no Activate (issue #4154).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_6h_has_no_activate() {
+        let kept = super::script_v0_6_6h();
+        assert!(kept.base.activations.is_empty() && kept.radiant.activations.is_empty());
+        assert!(kept.base.cry_death_extra.is_some());
     }
 
     mod radiant {

@@ -1,10 +1,10 @@
 //! Stinkyscape #54 Beam v4 (SPEC §8.10 row 54). Unit 0/3 → 0/6, Weapon, cost 3, Epic.
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn
-//!            cooldown." — damage 7
-//!   Radiant: the same text — damage 14
+//!            cooldown." — damage 4 (5 until issue #4440, 6 until issue #4353, 7 until issue #4154)
+//!   Radiant: the same text — damage 8 (10 until issue #4440, 12 until issue #4353, 14 until issue #4154)
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: onto one of your Units it fuses
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it fuses
 //! into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1862000: the target is a declared enemy Unit (R81), never a hero (#2521). Cleave is the same hit
@@ -137,8 +137,8 @@ mod tests {
     use crate::stinkyscape_family as fam;
 
     /// The printed `damage`, and the Radiant face's.
-    const DAMAGE: i32 = 7;
-    const RADIANT_DAMAGE: i32 = 14;
+    const DAMAGE: i32 = 4;
+    const RADIANT_DAMAGE: i32 = 8;
     mod base {
         use super::*;
 
@@ -194,6 +194,14 @@ mod tests {
         #[test]
         fn r1862000_the_enemy_hero_is_never_offered_and_is_refused() {
             fam::beam_never_hero(ID, "s054", true);
+        }
+
+        /// R4334000: a launched Starship holding a Radiant copy hits the chosen Unit and each Unit beside it for the Radiant
+        /// `damage` and shows it; one holding a base copy, the base `damage`.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            fam::beam_ship_cleaves(ID, "s054", true, RADIANT_DAMAGE);
+            fam::beam_ship_cleaves(ID, "s054", false, DAMAGE);
         }
     }
 }

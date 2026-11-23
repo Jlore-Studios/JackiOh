@@ -73,7 +73,8 @@ fn contents_of(state: &GameState, slot: &ZoneSlot) -> Vec<CardInstance> {
 /// nothing, so R688's Lock does not stop it), while one reserved for a dying Reborn unit counts as
 /// occupied for every other card (§3.2, R64).
 fn can_accept(state: &GameState, slot: &ZoneSlot) -> bool {
-    !crate::zones::is_reserved(state, slot)
+    // R3554002: a void destination bounces the card instead of panicking in `place_contents`.
+    !crate::zones::is_reserved(state, slot) && !crate::geometry::is_void(state, *slot)
 }
 
 /// A pile is rebuilt from the bottom up, so the same card stays on top acting for the zone (§3.2).
@@ -163,7 +164,12 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
 
     let mut result = RotationResult::default();
 
-    for entry in &entries {
+    // R3546003: entries whose top is no GIGA land first, then the GIGA ones, so a GIGA's fit reads
+    // the board the others left.
+    let (plain, giga): (Vec<&RingEntry>, Vec<&RingEntry>) = entries
+        .iter()
+        .partition(|entry| !entry.cards.first().is_some_and(crate::giga::is_giga));
+    for entry in plain.into_iter().chain(giga) {
         let crosses = entry.to.player != entry.from.player;
 
         // #52 radiant: a card leaving the rotating player's side bounces home costing 0 instead (R747);
@@ -179,6 +185,19 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
         // R14, R88: a card whose destination is reserved is bounced to its controller's hand instead; a
         // Locked one takes it (R831000).
         if !can_accept(sink.state, &entry.to) {
+            for card in &entry.cards {
+                bounce_home(sink, card, None);
+                result.bounced.push(card.id.clone());
+            }
+            continue;
+        }
+        // R3546003: a GIGA rotates whole or bounces like a reserved destination's: every spanned
+        // slot must take it, checked before `place_contents`, which panics on a refusal.
+        if entry.cards.first().is_some_and(crate::giga::is_giga)
+            && !crate::giga::fits(entry.to, |slot| {
+                can_accept(sink.state, &slot) && crate::zones::is_empty(sink.state, slot)
+            })
+        {
             for card in &entry.cards {
                 bounce_home(sink, card, None);
                 result.bounced.push(card.id.clone());

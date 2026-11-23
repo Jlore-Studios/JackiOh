@@ -21,7 +21,7 @@ use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, GameState, active_first, find_instance, find_instance_mut};
 use crate::stays::moves_in;
 use crate::wire::{
-    CardType, GameEvent, GameEventType, PLAYER_IDS, PlayerId, QuestItemView, QuestOpenView, QuestStageState,
+    CardType, GameEvent, GameEventType, PlayerId, QuestItemView, QuestOpenView, QuestStageState,
     QuestStageView, QuestView, Row, Tag, ZoneName, opponent_of,
 };
 use crate::zones::{active_units_of, card_at, slots_of};
@@ -462,6 +462,16 @@ pub fn hold_quest_aura(reward_id: impl Into<String>) -> Effect {
     })
 }
 
+/// R4331000: whether a quest line is over with nothing of it lasting: no quest open, waiting to count,
+/// met for the next check or to hear back with, and no reward's aura held (In Too Deep's L and M).
+pub(crate) fn line_spent(memory: &QuestMemory) -> bool {
+    memory.active.is_empty()
+        && memory.waiting.is_empty()
+        && memory.met.is_empty()
+        && memory.hear_back.is_none()
+        && memory.auras.is_empty()
+}
+
 /// The running card as it stands now, if on the field on its run's stay (R174) with a quest tree.
 pub(crate) fn quest_card_of(ctx: &EffectContext<'_>) -> Option<CardInstance> {
     let on_stay = crate::effects::targets::self_on_its_stay(ctx)?;
@@ -621,16 +631,10 @@ fn quest_cards_in_order(state: &GameState) -> Vec<CardInstance> {
     out
 }
 
-fn hero_side(id: &str) -> Option<PlayerId> {
-    PLAYER_IDS
-        .into_iter()
-        .find(|player| id == format!("hero-{}", player.as_str()))
-}
-
 /// R212: the side a card or hero stood on when an event happened: off a later change of control or
 /// `destroyed`, else off the card where it is now.
 fn side_when(state: &GameState, id: &str, after: &[GameEvent]) -> Option<PlayerId> {
-    if let Some(hero) = hero_side(id) {
+    if let Some(hero) = crate::combat::hero_seat_of(id) {
         return Some(hero);
     }
     for event in after {
@@ -679,14 +683,23 @@ fn entered_exile(state: &GameState, def_id: &str) -> bool {
 /// R1854002: whether the card an event names is a Unit with `tag` (any Unit for none), by its type and
 /// tags now, or its definition's once it has ceased to exist (a unit token, R11).
 fn is_unit_tagged(state: &GameState, instance_id: &str, def_id: &str, tag: Option<Tag>) -> bool {
-    let (card_type, tags) = match find_instance(state, instance_id) {
-        Some(card) => (card_type_of(state, card), crate::query::tags_of(state, card)),
-        None => {
-            let def = def_of(Some(state), def_id);
-            (def.type_, def.tags.clone())
-        }
+    let card_type = match find_instance(state, instance_id) {
+        Some(card) => card_type_of(state, card),
+        None => def_of(Some(state), def_id).type_,
     };
-    card_type == CardType::Unit && tag.is_none_or(|tag| tags.contains(&tag))
+    card_type == CardType::Unit && has_tag(state, instance_id, def_id, tag)
+}
+
+/// R1854002: whether the card an event names has `tag` (any card for none), by its tags now, or its
+/// definition's once it has ceased to exist (a unit token, R11).
+fn has_tag(state: &GameState, instance_id: &str, def_id: &str, tag: Option<Tag>) -> bool {
+    let Some(tag) = tag else {
+        return true;
+    };
+    match find_instance(state, instance_id) {
+        Some(card) => crate::query::tags_of(state, card).contains(&tag),
+        None => def_of(Some(state), def_id).tags.contains(&tag),
+    }
 }
 
 /// What one event adds to a quest of `goal` on a card `me` controls; `after` is the events since.
@@ -748,16 +761,24 @@ fn credit_of(
                 zone,
             },
         ) => i32::from(zone.player() == me && is_unit_tagged(state, instance_id, def_id, *tag)),
-        // R1854002, R172: a Unit with the tag that died under your control.
+        // R1854002, R172: a Unit with the tag that died under your control; R4423000: a Unit by what the
+        // card was as it died, which the graveyard card no longer tells (`byPrint` reads it there, R767000).
         (
-            QuestGoal::UnitsDied { tag, .. },
+            QuestGoal::UnitsDied { tag, by_print, .. },
             GameEvent::Destroyed {
                 instance_id,
                 def_id,
                 controller,
                 ..
             },
-        ) => i32::from(*controller == me && is_unit_tagged(state, instance_id, def_id, *tag)),
+        ) => {
+            let unit = if *by_print == Some(true) {
+                is_unit_tagged(state, instance_id, def_id, *tag)
+            } else {
+                crate::query::is_unit_death(state, event) && has_tag(state, instance_id, def_id, *tag)
+            };
+            i32::from(*controller == me && unit)
+        }
         // R1854002, R56, R70: a card of yours played (a cast included) at the cost the goal names.
         (
             QuestGoal::PlayCosting { .. },
@@ -781,7 +802,7 @@ fn credit_of(
             let dealt = source_id
                 .as_ref()
                 .is_some_and(|source| side_when(state, source, after) == Some(me));
-            let taken = hero_side(target_id) == Some(me);
+            let taken = crate::combat::hero_seat_of(target_id) == Some(me);
             i32::from(dealt || taken)
         }
         _ => 0,

@@ -1,7 +1,7 @@
 //! #78 /fullsend (SPEC §8.3, R62, R65, R364, §2.2, §2.3, §10.5 step 5, §10.1).
-//! Base: "Refresh 3 mana. Your cards cost (1) less this turn. End of turn: Exile your hand." Radiant adds
+//! Base: "Replenish 3 mana. Your cards cost (1) less this turn. End of turn: Exile your hand." Radiant adds
 //! "gain 'Combo: Draw 1'" to the discount. §8's Engine cell: "Turn-scoped player modifiers plus an
-//! end-of-turn delayed exile": refresh mana (§6.3, R364, §2.3); turn cost discount (R65, R78, R280).
+//! end-of-turn delayed exile": replenish mana (§6.3, R364, §2.3); turn cost discount (R65, R78, R280).
 //! End-of-turn delayed exile (§10.1, §10.5 step 5, §2.2, R62, §8, R241, R155, R127, R68).
 
 use jackioh_engine::effects::{add_player_modifier, delay, exile_hand, refresh_mana};
@@ -9,7 +9,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-078";
 
-// The numbers are declared (R386): `refresh`, §6.3 Refresh's 3 (R364: spent mana given back, never past
+// The numbers are declared (R386): `refresh`, §6.3 Replenish's 3 (R364: spent mana given back, never past
 // max); `discount`, "Your cards cost (1) less this turn"; and `comboDraw`, the Radiant "Combo: Draw 1".
 
 /// The step name the delayed effect carries; it labels the pause.
@@ -91,15 +91,9 @@ mod tests {
     const FULLSEND: &str = "core-078";
 
     const COST_0: &str = "core-010"; // Rapid Replenish: a discount floors at 0 (R65)
-    const COST_3: &str = "core-070"; // Spiteful Stab: Flood costs 4 since patch v0.2.0
+    const COST_3: &str = "stand-in (3) Spell";
     const COST_4: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
     const X_CARD: &str = "core-074"; // Adaptive UI
-
-    /// R81: #74 Adaptive UI declares one target with its play, so the `play` action must carry it. The
-    /// enemy hero is always a legal pick, and the X damage lands off to one side.
-    fn at_enemy_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
 
     const LIBRARY: [&str; 4] = ["core-008", "core-008", "core-008", "core-008"];
 
@@ -147,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn r386_an_upgrade_refreshes_4_and_a_degrade_2() {
+    fn r386_an_upgrade_replenishes_4_and_a_degrade_2() {
         for (upgrade, refresh) in [(true, 4), (false, 2)] {
             crate::register_all();
             let mut s = board(false);
@@ -158,7 +152,7 @@ mod tests {
             };
             assert_eq!(moved, refresh);
             s.play(FULLSEND, json!({}));
-            // 4 paid of 4, then the refresh, never past max (R364).
+            // 4 paid of 4, then the replenish, never past max (R364).
             s.expect_mana(P1, refresh);
         }
     }
@@ -180,7 +174,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r364_refreshes_3_mana_paying_4_of_4_leaves_0_and_3_come_back() {
+        fn r364_replenishes_3_mana_paying_4_of_4_leaves_0_and_3_come_back() {
             crate::register_all();
             let mut s = board(false);
 
@@ -192,7 +186,7 @@ mod tests {
         }
 
         #[test]
-        fn r364_a_refresh_never_goes_past_max_temporary_mana_above_it_is_not_topped_up() {
+        fn r364_a_replenish_never_goes_past_max_temporary_mana_above_it_is_not_topped_up() {
             let mut s = scenario(json!({
                 "p1": { "hand": [FULLSEND, COST_0], "library": LIBRARY, "mana": 6 },
                 "p2": { "hand": ["core-005"], "field": ["core-019"], "library": LIBRARY }
@@ -248,7 +242,7 @@ mod tests {
             s.play(FULLSEND, json!({}));
             s.expect_mana(P1, 3);
 
-            s.play(X_CARD, json!({ "x": 2, "targets": at_enemy_hero() }));
+            s.play(X_CARD, json!({ "x": 2, "targets": pick::hero("p2") }));
 
             // Exactly 2, not 1: "costMod and discounts don't change it" (R65).
             s.expect_mana(P1, 1);
@@ -373,7 +367,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r364_radiant_refreshes_3_mana_and_its_cards_still_cost_only_1_less_patch_v0_1_1() {
+        fn r364_radiant_replenishes_3_mana_and_its_cards_still_cost_only_1_less_patch_v0_1_1() {
             crate::register_all();
             let mut s = board(true);
 
@@ -429,7 +423,7 @@ mod tests {
             let mut s = board(true);
             s.play(FULLSEND, json!({}));
 
-            s.play(X_CARD, json!({ "x": 2, "targets": at_enemy_hero() }));
+            s.play(X_CARD, json!({ "x": 2, "targets": pick::hero("p2") }));
 
             s.expect_mana(P1, 1);
         }

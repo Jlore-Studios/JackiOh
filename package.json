@@ -24,6 +24,7 @@
     "@stryker-mutator/vitest-runner": "10.1.1",
     "@types/node": "24.13.5",
     "eslint": "10.10.0",
+    "eslint-plugin-regexp": "3.3.3",
     "fast-check": "4.10.1",
     "tsx": "4.23.13",
     "typescript": "6.0.3",

@@ -24,12 +24,14 @@
 //!   - R1074000: a Duos pass (B20) takes a hand card out unseen, so in a duel a card in no pile reads to the
 //!     player whose hand the events last show it in, else to all if a token (R11), else nobody.
 //!   - R177: a prompt option offering a face-down card names it by id only (and its zone, R821000); an
-//!     unreadable card's cost, buff amounts and Replace go with its identity.
+//!     unreadable card's cost, buff amounts and Replace go with its identity. R3777001: so does
+//!     `hiddenTargets`, for a face-down card one of the viewer's listed actions declares as a target.
 //!   - R169: the player modifiers (§10.1 `mods`) travel on both seats as `{ id, label }`.
 //!   - R434: once the game is over the opponent's hand travels in full; the rest stays hidden.
 //!   - R437: a mark (#50's pending steal) rides every view of the card in both seats, a back included.
-//!   - R195, R280, R667, #492, #992, R1844001, R2268000, R849000, R979000, R1571000: what the engine works
-//!     out for a card rides the viewer's own cards only, except `preview` and `sick` (every unit).
+//!   - R195, R280, R667, #492, #992, R1844001, R2268000, R849000, R979000, R1571000, R3821000: what the
+//!     engine works out for a card rides the viewer's own cards only, except `preview` and `sick` (every
+//!     unit).
 //!
 //! Stats are recomputed on read (`layers.unitView`, §10.4), so no stored total reaches the client. The
 //! boundary is SURFACE §4.1, §6.1, §6.4 and §6.6; `VIEW_EVENT_LIMIT` lives in `crate::config`.
@@ -40,7 +42,10 @@ use serde_json::{Map, Value};
 use crate::animated::is_animated;
 use crate::announce::announced_face_down_to;
 use crate::catalog::{find_def, registered_catalog};
-use crate::combat::{ExertionKind, has_exertion_in, is_asleep, why_cannot_declare_in};
+use crate::combat::{
+    ExertionKind, has_exertion_in, is_asleep, position_after_switch, why_cannot_declare_in,
+    why_cannot_switch_in,
+};
 use crate::condition::condition_active;
 use crate::config::{DRAW_OFFER_BLOCK_TURNS, PROMPT_CARD_OPTION_LIMIT, VIEW_EVENT_LIMIT};
 use crate::cost_rules::{cost_rule_text, enchant_next_spell_label};
@@ -66,17 +71,18 @@ use crate::state::{
 use crate::subsystems::activate::activation_views_for;
 use crate::subsystems::combo_index::grade_name;
 use crate::subsystems::copied_text::{copied_text_of, text_face_of};
-use crate::subsystems::hero_power::{power_of, power_title_of, used_this_turn};
+use crate::subsystems::hero_power::{power_of, power_price, power_title_of, used_this_turn};
 use crate::subsystems::pareto::pareto_hint_ids;
 use crate::subsystems::quests::quest_view_of;
 use crate::turn::standing_draw_offer;
 use crate::wire::{
-    AnimatedView, BackrowCounters, BackrowView, CardDef, CardMark, CardType, CardView, CopiedTextView,
-    CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult, GlitchOutcome,
-    HandView, HeroPowerView, HeroView, Keyword, KeywordKind, LibraryOverflowOutcome, ManaView, ModifierView,
-    MulliganView, PLAYER_IDS, PendingElsewhereView, PendingOption, PendingPromptView, PendingView, PlayerId,
-    PlayerView, PreviewValue, PromptKind, PublicBackrowView, Row, RowFlags, Selection, SideView,
-    TuningChange, UnitView, Zone, ZoneName, opponent_of,
+    ActionBody, AnimatedView, BackrowCounters, BackrowView, BlackHoleView, CardDef, CardMark, CardType,
+    CardView, CopiedTextView, CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType,
+    GameResult, GlitchOutcome, HandView, HeroPowerView, HeroView, HiddenTargetView, Keyword, KeywordKind,
+    LibraryOverflowOutcome, ManaView, ModifierView, MulliganView, PLAYER_IDS, PendingElsewhereView,
+    PendingOption, PendingPromptView, PendingView, PlayerId, PlayerView, PreviewValue, PromptKind,
+    PublicBackrowView, Row, RowFlags, Selection, SideView, TuningChange, UnitView, Zone, ZoneName, ZoneRef,
+    opponent_of,
 };
 use crate::zones::{
     beneath_at, carried_at, carried_units_of, home_of, is_reserved, is_standing_unit, slot_of, slots_of,
@@ -479,6 +485,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         chinese: None,
         created: None,
         created_by: None,
+        evolved: None,
         cost,
         // filled in by `card_view` from the instance data; bare views carry none.
         tags: None,
@@ -508,6 +515,8 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         quest: None,
         copies: None,
         fixed_x: None,
+        // R3548001: a bare view carries no blur.
+        tipsy_blur: None,
     }
 }
 
@@ -538,10 +547,14 @@ fn card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardVi
     view.chinese = card.chinese;
     // MD-B6, R943: so is Created.
     view.created = card.created;
+    // R3536005: so is Evolved: evolved, or marked to enter the field evolved.
+    view.evolved = (card.evolved == Some(true) || card.enters_evolved == Some(true)).then_some(true);
     // R1956001: and the card that generated it, to its owner alone.
     view.created_by = crate::generators::generator_shown_to(state, card, viewer);
-    // R1848003: a set X is the card's price, read where the card is.
+    // R1848003: a set X is the card's price, read where the card is. R3548001: and a Tipsy
+    // stamp blurs the card for its owner's view alone.
     view.fixed_x = card.fixed_x.filter(|_| crate::mana::is_x_cost(state, card));
+    view.tipsy_blur = crate::tipsy::blur_for(state, card, viewer);
     view
 }
 
@@ -580,6 +593,14 @@ fn hand_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> C
         .map(str::to_string);
     if let Some(keywords) = keywords {
         view.keywords = Some(keywords);
+    }
+    // R3558002: a card of a waiting pair wears the meet mark in its owner's view alone — never in
+    // `marks_on`, so R1141's marked-card count leaks nothing of it.
+    if crate::hand_order::meets_partner(state, &card.id).is_some() {
+        view.marks.get_or_insert_with(Vec::new).push(CardMark {
+            mark: crate::hand_order::MEET_MARK.to_string(),
+            color: crate::hand_order::MEET_MARK_COLOR.to_string(),
+        });
     }
     view
 }
@@ -714,6 +735,52 @@ fn with_trade_reason(
         view.trade_reason = Some(refusal.message);
     }
     view
+}
+
+/// R3777001: each card the viewer may not read (`is_face_down_to`) that one of their listed plays,
+/// activations or Heroic Powers names as a declared target, by the bare id `legal_actions` already
+/// offers it by (R177, R227), with the zone its back lies in, as a prompt option names one (R821000).
+/// `None` when there is none, and without asking `legal_actions` when no card on the field is face-down
+/// to the viewer.
+fn hidden_targets_of(state: &GameState, viewer: PlayerId) -> Option<Vec<HiddenTargetView>> {
+    let any_face_down = PLAYER_IDS.iter().any(|&side| {
+        slots_of(side, Row::Backrow)
+            .into_iter()
+            .filter_map(|slot| crate::zones::card_at(state, slot))
+            .any(|card| is_face_down_to(state, card, viewer))
+    });
+    if !any_face_down {
+        return None;
+    }
+    let mut out: Vec<HiddenTargetView> = Vec::new();
+    for action in crate::reduce::legal_actions(state, viewer) {
+        let (ActionBody::Play { targets, .. }
+        | ActionBody::Activate { targets, .. }
+        | ActionBody::ActivatePower { targets, .. }) = &action
+        else {
+            continue;
+        };
+        for selection in targets.as_deref().unwrap_or(&[]) {
+            let Selection::Instance { instance_id } = selection else {
+                continue;
+            };
+            if out.iter().any(|entry| entry.instance_id == *instance_id) {
+                continue;
+            }
+            let Some(card) = find_instance(state, instance_id) else {
+                continue;
+            };
+            if let Zone::Field { player, row, lane } = card.zone
+                && is_face_down_to(state, card, viewer)
+            {
+                out.push(HiddenTargetView {
+                    instance_id: instance_id.clone(),
+                    zone: ZoneRef { player, row, lane },
+                });
+            }
+        }
+    }
+    (!out.is_empty()).then_some(out)
 }
 
 /// R2574000: whether the viewer's own hand card may be Traded (`trade::is_tradable`),
@@ -866,6 +933,13 @@ fn unit_view_of(
         // MD-B6, R943: likewise.
         created: card.created,
         created_by: card.created_by,
+        // R3536005: likewise.
+        evolved: card.evolved,
+        // R3546004: the size it stands in, from the instance; the covered zones read empty.
+        giga: top.giga,
+        // R3554007: the damage chains it is in, public on both seats like the unit itself.
+        shared_chain: top.shared_chain,
+        split_chain: top.split_chain,
         // ME-GRANT (MD-D13): the granted Death abilities, as the Unit's lines read them.
         grants: crate::grants::grant_texts(state, top),
         // R849000: summoning sick with neither Rush nor Charge, from public facts on the field.
@@ -874,7 +948,10 @@ fn unit_view_of(
         } else {
             None
         },
+        // R3548001: the field card's blur, if its stamp blurs it for this viewer.
+        tipsy_blur: card.tipsy_blur,
         attack_reason: attack_reason_of(state, auras, top, viewer),
+        switch_reason: switch_reason_of(state, auras, top, viewer),
         // R2321000: the counts cards on the field the viewer may read keep on it.
         tallies: crate::preview::tallies_on(state, top, viewer),
     })
@@ -894,6 +971,23 @@ fn attack_reason_of(
         return None;
     }
     why_cannot_declare_in(auras, top).err().map(|error| error.message)
+}
+
+/// R3821000: why the viewer's own unit cannot make its own switch now, in the words `switch_position`
+/// refuses with (`reduce::can_switch` lists the switch by the same call). Gated by `turn_open_to`
+/// alone, not `can_act`, so a unit with no exertion left says it has already acted.
+fn switch_reason_of(
+    state: &GameState,
+    auras: &AuraTable<'_>,
+    top: &CardInstance,
+    viewer: PlayerId,
+) -> Option<String> {
+    if top.controller != viewer || !turn_open_to(state, top) {
+        return None;
+    }
+    why_cannot_switch_in(auras, top, position_after_switch(top), true)
+        .err()
+        .map(|error| error.message)
 }
 
 /// MD-D5, R1121: the yellow a dragged attack paints, the enemy Units an `attack_mods` entry would
@@ -969,6 +1063,8 @@ fn backrow_view(
             plague: plague_shown,
             buried,
             marks: with_marks(state, &card.id),
+            // R3546004: the size is public on a face-down card too.
+            giga: card.giga,
         }));
     }
     let grade = card.counters.grade;
@@ -980,6 +1076,9 @@ fn backrow_view(
         chinese: view.chinese,
         created: view.created,
         created_by: view.created_by,
+        evolved: view.evolved,
+        // R3546004: the size it stands in, from the instance.
+        giga: card.giga,
         tags: view.tags,
         cost: view.cost,
         attack: view.attack,
@@ -1005,6 +1104,9 @@ fn backrow_view(
             grade,
             grade_letter: grade.map(|grade| grade_name(grade).to_string()),
             plague: plague_shown,
+            // R3540000: a standing Unit's Burn and Toxic are public like its keywords.
+            burn: card.counters.burn,
+            toxic: card.counters.toxic,
         },
         owner: card.owner,
         controller: card.controller,
@@ -1031,6 +1133,10 @@ fn backrow_view(
         } else {
             None
         },
+        // R3556000: a Dormant Field Spell in the backrow wears its countdown (R1839000).
+        slumber: card.slumber,
+        // R3548001: the backrow card's blur, if its stamp blurs it for this viewer.
+        tipsy_blur: view.tipsy_blur,
     }))
 }
 
@@ -1074,7 +1180,7 @@ fn hero_powers_of(state: &GameState, player: PlayerId) -> Vec<HeroPowerView> {
                 def_id: card.def_id.clone(),
                 name: power.name.to_string(),
                 title: power_title_of(power, card.radiant).to_string(),
-                x: power.x,
+                x: power_price(state, card).unwrap_or(power.x),
                 used_this_turn: used_this_turn(state, card),
             });
         }
@@ -1169,6 +1275,8 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ModifierKind::HeroArmor { amount } => format!("Your hero has {amount} Armor until your next turn"),
         // MD-C21: Tranquility's immunity badge.
         ModifierKind::HeroImmune => "Your hero is immune to damage until your next turn".to_string(),
+        // R4353020: S+ #79 A Glimpse into the Endless Sea's, for the rest of the game.
+        ModifierKind::FatigueImmune => "You are immune to fatigue damage".to_string(),
         ModifierKind::ReplacePlays { def_id, radiant } => {
             let name = find_def_in(state, def_id).map_or_else(|| def_id.clone(), |def| def.name.clone());
             format!(
@@ -1186,6 +1294,8 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ModifierKind::PlayWatch { label, .. } => label.clone(),
         // R1882004: Stinkyscape #150's death watcher, in the card's own words.
         ModifierKind::DeathWatch { label, .. } => label.clone(),
+        // R3570004: Stinkyscape+ #142's launch watcher, in the card's own words.
+        ModifierKind::LaunchWatch { label, .. } => label.clone(),
         // R1180001: Meditative+ #11 Living Mana Potion's "Spell Damage +N this turn".
         ModifierKind::SpellDamage { amount } => format!("You have Spell Damage +{amount} this turn"),
         // R1180004: Meditative+ #6 Bloodbloom's health price, and the Echo the Radiant one adds.
@@ -1204,7 +1314,7 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ),
         // R1859007: Stinkyscape's War Doctrines' "for the rest of the game, your Units have X". R1870004:
         // #4.4 Last Word's "your Units have Charge during it", the turn named until it comes.
-        ModifierKind::UnitsHaveKeyword { keyword } => format!(
+        ModifierKind::UnitsHaveKeyword { keyword, .. } => format!(
             "Your Units have {}{}",
             crate::wire::keyword_key(keyword),
             if crate::mana::modifier_is_live(state, modifier) {
@@ -1412,6 +1522,9 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             // §10.8's "armor": the number §4.4 step 2 will subtract, never the stored field alone, with
             // every backrow grant (#84 Going Long) summed per R124.
             armor: hero_armor_of(state, player),
+            // R3540000: a hero's Burn and Toxic, public on both seats, absent at none.
+            burn: side.hero_burn,
+            toxic: side.hero_toxic,
             power: powers.first().cloned(),
             powers,
             // #936 S3: a Duos duel's pool and spent flag, public on both seats (absent in 1v1).
@@ -1492,6 +1605,10 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         fatigue_count: side.fatigue_count,
         // R961: public on both seats, and absent until it first rises (D14).
         jade: side.jade.filter(|value| *value > 0),
+        // R3548000: public on both seats, and absent at none, as Jade is.
+        tipsy: side.tipsy.map(|counter| counter.count).filter(|count| *count > 0),
+        // R3548004: public on both seats, while a card giving it acts on this seat's field.
+        infinite_mana: crate::mana::has_infinite_mana(state, player).then_some(true),
         // R1840005: public on both seats, and absent until first gained.
         market_credits: side.market_credits,
         // R846, R847: owed extra turns and the Rift flag, public on both seats.
@@ -2107,6 +2224,10 @@ fn redact_event(
             let killer_hidden = nullable_at(&shown, "killerId").is_some_and(|killer| hidden(&killer));
             if hidden(&instance) {
                 shown.remove("radiant");
+                // R4395001: what it stood as is the card's too.
+                shown.remove("animated");
+                // R4423000: what it died as is the card's too.
+                shown.remove("diedAs");
                 // R2783001: the keyword it died by is the card's.
                 shown.remove("via");
                 hide(&mut shown, &["instanceId", "defId"]);
@@ -2406,6 +2527,10 @@ fn redact_event(
         | GameEventType::GameOver
         // R961: the Jade Counter is public, a player and a number.
         | GameEventType::JadeChanged
+        // R3857000: a hero's Armor is public, a player and two numbers.
+        | GameEventType::ArmorGained
+        // R3925000: a seat, public.
+        | GameEventType::LoopCapped
         // R860, R864: a kept secret names only its player and id, and a reveal and a prediction
         // are public once they happen.
         | GameEventType::SecretChosen
@@ -2413,6 +2538,8 @@ fn redact_event(
         | GameEventType::Predicted
         // R831003: the curve is board positions only.
         | GameEventType::CurveDrawn
+        // R3554005: the line is board positions only.
+        | GameEventType::LineDrawn
         // R1183002: the autopilot names a player and a turn.
         | GameEventType::AutopilotEngaged
         // R1838001: a Trade names its player alone; its `shuffledIn` and `drawn` are judged as any are.
@@ -2581,7 +2708,10 @@ fn redact_event(
         | GameEventType::Deanimated
         | GameEventType::Flickered
         // R1839002: an awakening names a card face-up on the field, public as the card is.
-        | GameEventType::Awakened => {
+        // R3536005: an evolution names a card acting on the field or lying readable in a
+        // graveyard, public as the card is.
+        | GameEventType::Awakened
+        | GameEventType::Evolved => {
             if !hidden(&instance) {
                 return event.clone();
             }
@@ -2767,8 +2897,14 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
     let newest_from = all.len() - state.applied.last().map_or(0, |entry| entry.events.len());
     // R2783000: a `hookResolving` marker takes no room in R168's floor, so the window holds the events
     // it would had no hook been marked, each marker among them beside them, and the markers just before
-    // its first event with it (a hook's marker comes before its first effect).
-    let marker = |at: &usize| matches!(all[*at], GameEvent::HookResolving { .. });
+    // its first event with it (a hook's marker comes before its first effect). R3857000: an `armorGained`
+    // report likewise takes none, so the window holds what it held before the report existed.
+    let marker = |at: &usize| {
+        matches!(
+            all[*at],
+            GameEvent::HookResolving { .. } | GameEvent::ArmorGained { .. }
+        )
+    };
     let counted: Vec<usize> = read.iter().copied().filter(|at| !marker(at)).collect();
     let newest = counted.iter().filter(|at| **at >= newest_from).count();
     let window = VIEW_EVENT_LIMIT.max(newest);
@@ -2874,6 +3010,14 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
         trades: trades_view(state, player_id),
         // R1853000, R1853003: the Marketplace as the viewer reads it, once it is open.
         marketplace: crate::marketplace::marketplace_view(state, player_id),
+        // R3554000, R3554002: the hole and the slash, public on both seats.
+        black_hole: state
+            .black_hole
+            .as_ref()
+            .map(|hole| BlackHoleView::of(hole, hole.closes_at())),
+        slashed_lane: state.slashed_lane,
+        // R3777001: the zones of the face-down cards the viewer's listed actions target.
+        hidden_targets: hidden_targets_of(state, player_id),
     };
     let defs = match_defs_in(state, &view);
     if !defs.is_empty() {

@@ -66,10 +66,6 @@ mod tests {
     const FILLER: &str = "core-005";
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
-    fn enemy_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     /// p1 holds Blood Moon face-down in backrow lane 1; p2 is the active enemy who heals.
     fn moon_up(radiant_face: bool, p2: Value, p1: Value) -> Scenario {
         crate::register_all();
@@ -132,7 +128,7 @@ mod tests {
             #[test]
             fn r413_an_enemy_heal_fires_it_and_is_itself_converted_20_healing_becomes_20_pierce_damage() {
                 let mut s = moon_up(false, json!({ "hand": [FIG, FILLER] }), json!({}));
-                s.play(FIG, json!({ "targets": enemy_hero() }));
+                s.play(FIG, json!({ "targets": pick::hero("p2") }));
                 assert!(fired(&s));
                 s.expect_health(P2, 10);
                 assert_eq!(moon_hits(&s), vec![20]);
@@ -183,7 +179,7 @@ mod tests {
             fn every_enemy_heal_for_the_rest_of_that_turn_converts_the_trap_already_in_the_graveyard() {
                 let mut s = moon_up(false, json!({ "hand": [FIG, FIG, FILLER], "mana": 6 }), json!({}));
                 let (first, second) = two_figs(&s);
-                s.play(&first, json!({ "targets": enemy_hero() }));
+                s.play(&first, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 10);
                 s.play(&second, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
                 s.expect_health(P2, -10);
@@ -193,17 +189,17 @@ mod tests {
             fn the_conversion_ends_at_that_turn_s_cleanup_the_next_turn_s_heal_heals() {
                 let mut s = moon_up(false, json!({ "hand": [FIG, FIG, FILLER], "health": 40 }), json!({}));
                 let (first, second) = two_figs(&s);
-                s.play(&first, json!({ "targets": enemy_hero() }));
+                s.play(&first, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 20);
                 s.end_turn().end_turn();
-                s.play(&second, json!({ "targets": enemy_hero() }));
+                s.play(&second, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 40);
             }
 
             #[test]
             fn r346_the_damage_is_pierce_the_hero_s_armor_is_skipped() {
                 let mut s = moon_up(false, json!({ "hand": [FIG, FILLER], "armor": 5 }), json!({}));
-                s.play(FIG, json!({ "targets": enemy_hero() }));
+                s.play(FIG, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 10);
             }
 
@@ -214,7 +210,7 @@ mod tests {
                     json!({ "hand": [FIG, FILLER], "backrow": [{ "def": ANTI_ONESHOT, "lane": 2 }] }),
                     json!({}),
                 );
-                s.play(FIG, json!({ "targets": enemy_hero() }));
+                s.play(FIG, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 26);
             }
 
@@ -238,7 +234,7 @@ mod tests {
                     json!({ "hand": [FIG, FILLER] }),
                     json!({ "field": [{ "def": SOLARIUS, "lane": 1 }] }),
                 );
-                s.play(FIG, json!({ "targets": enemy_hero() }));
+                s.play(FIG, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 10);
             }
 
@@ -290,14 +286,14 @@ mod tests {
                 assert!(matches_object(&js(&before), &json!({ "faceDown": true })));
                 assert!(!serde_json::to_string(&before).expect("JSON").contains(MOON));
                 assert!(!serde_json::to_string(&s.view(P2)).expect("JSON").contains(MOON));
-                s.play(FIG, json!({ "targets": enemy_hero() }));
+                s.play(FIG, json!({ "targets": pick::hero("p2") }));
                 assert!(serde_json::to_string(&s.view(P2).opponent.graveyard).expect("JSON").contains(MOON));
             }
 
             #[test]
             fn the_state_after_it_fired_is_plain_json() {
                 let mut s = moon_up(false, json!({ "hand": [FIG, FILLER] }), json!({}));
-                s.play(FIG, json!({ "targets": enemy_hero() }));
+                s.play(FIG, json!({ "targets": pick::hero("p2") }));
                 let round: GameState = serde_json::from_value(js(s.state())).expect("a state");
                 assert_eq!(&round, s.state());
             }
@@ -332,7 +328,7 @@ mod tests {
             #[test]
             fn r413_fires_on_an_enemy_heal_converts_it_and_stays_face_up_on_the_field() {
                 let mut s = moon_up(true, json!({ "hand": [FIG, FILLER] }), json!({}));
-                s.play(FIG, json!({ "targets": enemy_hero() }));
+                s.play(FIG, json!({ "targets": pick::hero("p2") }));
                 assert!(fired(&s));
                 s.expect_health(P2, 10);
                 let moon = s.backrow(P1, 1);
@@ -344,10 +340,10 @@ mod tests {
             fn keeps_converting_every_enemy_heal_on_later_turns_while_it_stays() {
                 let mut s = moon_up(true, json!({ "hand": [FIG, FIG, FILLER], "health": 60 }), json!({}));
                 let (first, second) = two_figs(&s);
-                s.play(&first, json!({ "targets": enemy_hero() }));
+                s.play(&first, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 40);
                 s.end_turn().end_turn();
-                s.play(&second, json!({ "targets": enemy_hero() }));
+                s.play(&second, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 20);
                 assert_eq!(
                     s.events().iter().filter(|event| event.event_type() == GameEventType::TrapFired).count(),
@@ -373,12 +369,12 @@ mod tests {
                     json!({}),
                 );
                 let (first, second) = two_figs(&s);
-                s.play(&first, json!({ "targets": enemy_hero() }));
+                s.play(&first, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 40);
                 let moon = s.backrow(P1, 1).expect("the Field Trap left");
                 s.play(NETHER, json!({}));
                 s.expect_in_zone(&moon, "graveyard");
-                s.play(&second, json!({ "targets": enemy_hero() }));
+                s.play(&second, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 60);
             }
 
@@ -389,7 +385,7 @@ mod tests {
                     json!({ "hand": [FIG, FILLER] }),
                     json!({ "hand": [FIG, FILLER], "health": 5 }),
                 );
-                s.play(FIG, json!({ "targets": enemy_hero() }));
+                s.play(FIG, json!({ "targets": pick::hero("p2") }));
                 s.end_turn();
                 s.play(FIG, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
                 s.expect_health(P1, 25);

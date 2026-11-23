@@ -16,8 +16,9 @@ use crate::config::{AI_END_TURN_PROBABILITY, AI_PLAYOUT_STEP_CAP};
 use crate::reduce::ReduceResult;
 use crate::rng::Rng;
 use crate::script::EngineSink;
-use crate::state::{GameState, Resume, WorkItem};
+use crate::state::{GameState, WorkItem};
 use crate::wire::{Action, ActionBody, ActionType, Phase, PlayerId};
+use crate::work::engine_resume;
 
 /// Actions the policy does not take. `legal_actions` always offers `concede`, so §10.7's "ending the
 /// turn when it is the only option" reads on the set without these, and R44's AI plays the turn out
@@ -194,12 +195,16 @@ pub fn play_out_turn(sink: &mut EngineSink<'_>, player: PlayerId, options: Polic
             };
         }
 
+        // R3925000: the AI's action is its seat's interaction, which its `reduce` counted; what follows
+        // here counts from after its events.
+        crate::loop_cap::begin_interaction(sink, Some((player, action.action_type())));
         adopt_state(sink, result.state);
         // §10.3: `reduce`'s own loop has run these, so they are reported (R168's window), never
         // offered to the traps and triggers again.
         let delivered = result.events.clone();
         sink.events.extend(result.events);
         crate::triggers::mark_dispatched(sink, &delivered);
+        crate::loop_cap::skip_nested(sink);
         actions.push(action);
     }
 
@@ -216,17 +221,7 @@ fn owe_ai_turn(sink: &mut EngineSink<'_>, player: PlayerId, turn: i32) {
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert("player".to_string(), json!(player));
     data.insert("turn".to_string(), json!(turn));
-    let _ = crate::work::owe(
-        sink,
-        Resume {
-            def_id: String::new(),
-            hook: AI_TURN_WORK.to_string(),
-            step: "turn".to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
-    );
+    let _ = crate::work::owe(sink, engine_resume(AI_TURN_WORK, "turn", data));
 }
 
 /// `work.rs`'s handler for `AI_TURN_WORK`: the same AI turn, going on once the answer's events and

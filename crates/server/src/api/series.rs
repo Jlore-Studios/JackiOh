@@ -32,6 +32,7 @@ use crate::db::store::{
     MatchSeat, ProfileKind, RatedGameKind, RatedReason, SeriesRow, SeriesSeat, SeriesStatus, StartMatchInput,
     StoreError, Tx,
 };
+use crate::loops::FailingStreak;
 use crate::ranked::ladder::Ladder;
 use crate::seats::Seat;
 use jackioh_shared::bots::pick::{bot_pick, pick_is_due};
@@ -140,15 +141,16 @@ pub async fn start_series(
 
 // Starting a game
 
-/// Starts the game `series.next_match_id` names when the series is `playing` and that match is
-/// neither running in this process nor written to the store (R263). Safe to call from several
-/// places at once (the pick request, the result whose automatic picks began the game (R332), the
-/// sweeper): a start that loses finds the row the winner wrote and stops.
+/// `start_series_game` without its answer, for the server's tests.
 pub async fn ensure_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<(), SeriesError> {
     start_series_game(app, series).await.map(|_| ())
 }
 
-/// `ensure_series_game`, answering whether this call is the one that started the match.
+/// Starts the game `series.next_match_id` names when the series is `playing` and that match is
+/// neither running in this process nor written to the store (R263), answering whether this call is
+/// the one that started the match. Safe to call from several places at once (the pick request, the
+/// result whose automatic picks began the game (R332), the sweeper): a start that loses finds the row
+/// the winner wrote and stops.
 async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, SeriesError> {
     if !matches!(series.status, SeriesStatus::Playing) {
         return Ok(false);
@@ -684,9 +686,11 @@ pub async fn sweep_series(app: &Arc<App>) -> Result<SeriesSweep, StoreError> {
 pub async fn run_sweeper(app: Arc<App>) {
     let interval =
         Duration::from_millis(u64::try_from(SERIES_SWEEP_INTERVAL_SECONDS * MS_PER_SECOND).unwrap_or(0));
+    // #3770: a sweep that fails on every pass for a while is an alert, not just a warning each time.
+    let mut sweeping = FailingStreak::new("series.sweeper");
     loop {
         tokio::time::sleep(interval).await;
-        if let Err(error) = sweep_series(&app).await {
+        if let Err(error) = sweeping.track(sweep_series(&app).await) {
             tracing::warn!(event = "series.sweeper_failed", message = %error);
         }
     }

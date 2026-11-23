@@ -12,11 +12,15 @@ import { firstReveal, isFaceDownSet } from "../game/entrance.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { HIDDEN_DEF_ID, MUSIC_LOW_HEALTH_FRACTION } from "./constants.ts";
 import type { MusicRequest } from "./music.ts";
-import { MUSIC_CARDS, MUSIC_MANIFEST, RESULT_TRACKS, dangerTrack, nextRotation, startTrack } from "./musicData.ts";
+import { RESULT_TRACKS, dangerTrack, nextRotation, startTrack } from "./musicData.ts";
 import { chooseMusic, type MusicMoment } from "./musicPlan.ts";
 import { readAudioSettings, subscribeAudioSettings } from "./settings.ts";
+import { onSoundTablesLoaded, soundTablesNow } from "./soundTablesLoader.ts";
 import type { AudioSettings, CardAudioTable, MusicCardEntry, MusicManifest, MusicStation } from "./types.ts";
-import { CARD_AUDIO, entryFor } from "./voiceData.ts";
+import { entryFor } from "./voiceData.ts";
+
+const EMPTY_CARDS: Readonly<Record<string, MusicCardEntry>> = {};
+const EMPTY_LINES: CardAudioTable = { voices: {}, effects: {}, cards: {}, emotes: {} };
 
 /** Where the director's choices go: the scene, which plays them while this board holds the music. */
 export type MusicSink = {
@@ -101,9 +105,9 @@ function arrivalOf(event: GameEvent, playedUnits: ReadonlySet<string>): string |
 
 export function createMusicDirector(options: MusicDirectorOptions): MusicDirector {
   const { sink } = options;
-  const manifest = options.manifest ?? MUSIC_MANIFEST;
-  const cards = options.cards ?? MUSIC_CARDS;
-  const lines = options.lines ?? CARD_AUDIO;
+  const getManifest = (): MusicManifest | undefined => options.manifest ?? soundTablesNow()?.musicManifest;
+  const getCards = (): Readonly<Record<string, MusicCardEntry>> => options.cards ?? soundTablesNow()?.musicCards ?? EMPTY_CARDS;
+  const getLines = (): CardAudioTable => options.lines ?? soundTablesNow()?.cardAudio ?? EMPTY_LINES;
   const settings = options.settings ?? readAudioSettings;
   const subscribeSettings = options.subscribeSettings ?? subscribeAudioSettings;
   const rotationOf = options.rotation ?? rotationFor;
@@ -130,6 +134,10 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
 
   function push(): void {
     if (disposed || viewer === null) return;
+    // #4158: until the music manifest loads, the board asks for nothing (the menu theme plays on) and keeps
+    // its opening sting for the push the tables' arrival makes.
+    const manifest = getManifest();
+    if (manifest === undefined) return;
     const dynamic = settings().dynamicMusic;
     if (!dynamic) sink.stopIntro();
     const choice = chooseMusic({ station: station(), rotation, dynamic, result, lowHealth, opponentTurn }, manifest);
@@ -155,6 +163,7 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
   function preloadHand(view: PlayerView): void {
     if (!Array.isArray(view.you.hand)) return;
     const ids: string[] = [];
+    const cards = getCards();
     for (const card of view.you.hand) {
       const id = cards[card.defId]?.intro;
       if (id === undefined || preloaded.has(id)) continue;
@@ -165,6 +174,7 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
   }
 
   const unsubscribe = subscribeSettings(() => push());
+  const unsubscribeTables = onSoundTablesLoaded(() => push());
 
   return {
     onView(view) {
@@ -199,6 +209,8 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
 
     onEvent(event, view) {
       if (disposed || viewer === null || view.viewer !== viewer) return;
+      const lines = getLines();
+      const cards = getCards();
       const cast = castOf(event, lines, fired);
       if (cast !== null && event.type === "cardPlayed" && entryFor(lines, cast.defId)?.kind === "unit") playedUnits.add(event.instanceId);
       // R1350: the card's intro first, so the station it may switch to comes in under it. R3332002: the
@@ -224,6 +236,7 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
       disposed = true;
       sink.stopIntro();
       unsubscribe();
+      unsubscribeTables();
     },
   };
 }

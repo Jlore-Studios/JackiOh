@@ -698,3 +698,91 @@ mod matches_scope {
         }));
     }
 }
+
+// R3806001: a hand pick an earlier effect of the same run put into a graveyard is gone for the effects after it.
+
+mod r3806001_a_hand_pick_put_away_by_its_own_run {
+    use jackioh_engine::effects::{DiscardArgs, discard, grant_keyword};
+    use jackioh_engine::script::Effect;
+
+    use super::super::fixtures::harness::in_hand;
+    use super::*;
+
+    /// Runs `effects` as one run of p1's, its first choice the hand card `picked`; the run's events.
+    fn run_on(state: &mut GameState, picked: &str, effects: Vec<Effect>) -> Vec<GameEvent> {
+        let mut events = Vec::new();
+        let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
+        {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            let mut ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions {
+                    controller: Some(PlayerId::P1),
+                    targets: Some(vec![Selection::Instance {
+                        instance_id: picked.to_string(),
+                    }]),
+                    ..HookOptions::default()
+                },
+            );
+            for effect in effects {
+                (effect.apply)(&mut ctx);
+            }
+        }
+        events
+    }
+
+    fn grant_indestructible() -> Effect {
+        grant_keyword(json_as(json!({
+            "target": { "of": "chosen" },
+            "keyword": { "kind": "Indestructible" },
+        })))
+    }
+
+    #[test]
+    fn r3806001_a_grant_after_its_pick_was_discarded_lands_nowhere_and_one_in_the_hand_lands() {
+        let mut state = game();
+        let kept = in_hand(&mut state, &human().id, PlayerId::P1, 1).remove(0);
+        let thrown = in_hand(&mut state, &human().id, PlayerId::P1, 1).remove(0);
+
+        // Still in the hand, the pick takes the grant there (R1878003).
+        let events = run_on(&mut state, &kept.id, vec![grant_indestructible()]);
+        assert!(
+            events
+                .iter()
+                .any(|event| matches!(event, GameEvent::KeywordGranted { .. }))
+        );
+        assert_eq!(live(&state, &kept.id).granted_keywords.len(), 1);
+
+        // Discarded by an earlier effect of the same run, it is gone for the grant after it (R174's rule,
+        // off the field): no keyword on a graveyard card (R78), no event.
+        let events = run_on(
+            &mut state,
+            &thrown.id,
+            vec![discard(DiscardArgs::default()), grant_indestructible()],
+        );
+        let gone = live(&state, &thrown.id);
+        assert_eq!(gone.zone, Zone::Graveyard { player: PlayerId::P1 });
+        assert!(gone.granted_keywords.is_empty(), "{:?}", gone.granted_keywords);
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, GameEvent::KeywordGranted { .. }))
+        );
+    }
+
+    #[test]
+    fn r3806001_a_card_already_in_the_graveyard_when_the_run_began_is_still_the_card_chosen() {
+        let mut state = game();
+        let card = in_hand(&mut state, &human().id, PlayerId::P1, 1).remove(0);
+        run_on(&mut state, &card.id, vec![discard(DiscardArgs::default())]);
+        // A later run (a graveyard pick's) still finds it: only its own run's effects put it away.
+        let found = with_ctx(&mut state, None, |ctx| {
+            ctx.targets = vec![Selection::Instance {
+                instance_id: card.id.clone(),
+            }];
+            resolve_target(ctx, &json_as(json!({ "of": "chosen" }))).is_some()
+        });
+        assert!(found);
+    }
+}

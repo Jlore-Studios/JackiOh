@@ -75,6 +75,10 @@ fn push_marker(
     hook: HookKind,
     hidden: Vec<PlayerId>,
 ) {
+    // R3925000: at the loop cap card text is off, so no hook resolves to be marked.
+    if crate::loop_cap::capped(sink) {
+        return;
+    }
     sink.events.push(GameEvent::HookResolving {
         source_id,
         def_id,

@@ -84,10 +84,6 @@ mod tests {
     /// Pile On with C+ #39 Book Worm fused in, as R179 names it: a Spell, its first ingredient's type.
     const FUSED_PILE_ON: &str = "t-1:classic-060+classicplus-039";
 
-    fn at_p2() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     use crate::js;
 
     fn round_trip(state: &GameState) -> GameState {
@@ -160,12 +156,12 @@ mod tests {
             #[test]
             fn r3048000_once_a_spell_has_been_played_it_is_copied_and_the_coin_is_not() {
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, ECHO, VANILLA] }, "p2": { "field": [MENACE] } }));
-                s.play(WILDFIRE, json!({ "targets": at_p2() }));
+                s.play(WILDFIRE, json!({ "targets": pick::hero("p2") }));
                 assert_eq!(
                     own_view(&s, PlayerId::P1).map(|card| card["copies"]["defId"].clone()),
                     Some(json!(WILDFIRE)),
                 );
-                s.play(ECHO, json!({ "targets": at_p2() }));
+                s.play(ECHO, json!({ "targets": pick::hero("p2") }));
                 assert_eq!(hits(s.events(), "hero-p2"), vec![4, 4]);
                 // Wildfire (1) and Echo (1): no mana came from The Coin.
                 s.expect_mana(PlayerId::P1, 2);
@@ -234,7 +230,7 @@ mod tests {
                     "p1": { "hand": [WILDFIRE, ECHO], "backrow": [GRAND] },
                     "p2": { "hand": [STOCKPILE, VANILLA] },
                 }));
-                s.play(WILDFIRE, json!({ "targets": at_p2() }));
+                s.play(WILDFIRE, json!({ "targets": pick::hero("p2") }));
                 s.end_turn();
                 s.play(STOCKPILE, json!({}));
                 assert!(s.last_events().iter().map(js).any(|event| event["type"] == "countered"));
@@ -244,7 +240,7 @@ mod tests {
             #[test]
             fn r399_a_field_spell_is_never_a_spell_playing_one_leaves_the_record_as_it_was() {
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, ARMOR, ECHO], "library": [VANILLA], "mana": 9 } }));
-                s.play(WILDFIRE, json!({ "targets": at_p2() }));
+                s.play(WILDFIRE, json!({ "targets": pick::hero("p2") }));
                 s.play(ARMOR, json!({}));
                 assert_eq!(js(&last_spell_played(s.state())), json!({ "defId": WILDFIRE, "radiant": false }));
             }
@@ -252,7 +248,7 @@ mod tests {
             #[test]
             fn r399_r243_in_its_owners_hand_its_view_carries_that_spells_face_and_numbers_under_echos_name_and_cost() {
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": WILDFIRE, "radiant": true }, ECHO] } }));
-                s.play(WILDFIRE, json!({ "targets": at_p2() }));
+                s.play(WILDFIRE, json!({ "targets": pick::hero("p2") }));
                 let card = own_view(&s, PlayerId::P1).expect("Echo in p1's hand view");
                 assert_eq!(card["defId"], ECHO);
                 assert_eq!(card["cost"], 1);
@@ -264,7 +260,7 @@ mod tests {
             #[test]
             fn r97_hidden_from_the_opponent_like_any_hand_card_their_view_never_names_it_nor_what_it_copies() {
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, ECHO] } }));
-                s.play(WILDFIRE, json!({ "targets": at_p2() }));
+                s.play(WILDFIRE, json!({ "targets": pick::hero("p2") }));
                 let theirs = js(&s.view(PlayerId::P2));
                 assert_eq!(theirs["opponent"]["hand"], json!({ "count": 1 }));
                 assert!(!theirs.to_string().contains(ECHO));
@@ -279,7 +275,7 @@ mod tests {
                 let (Some(first), Some(second)) = (wildfires.first().cloned(), wildfires.get(1).cloned()) else {
                     panic!("setup");
                 };
-                s.play(&first, json!({ "targets": at_p2() }));
+                s.play(&first, json!({ "targets": pick::hero("p2") }));
                 let wildfire_targets: Vec<Value> = legal_actions(s.state(), PlayerId::P1)
                     .iter()
                     .map(js)
@@ -299,7 +295,7 @@ mod tests {
             #[test]
             fn r399_r386_it_resolves_the_copied_script_on_the_face_recorded_with_that_faces_declared_number() {
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": WILDFIRE, "radiant": true }, ECHO] }, "p2": { "field": [MENACE] } }));
-                s.play(WILDFIRE, json!({ "targets": at_p2() }));
+                s.play(WILDFIRE, json!({ "targets": pick::hero("p2") }));
                 let menace = s.card(MENACE).id.clone();
                 s.play(ECHO, json!({ "targets": [{ "pick": "instance", "instanceId": menace }] }));
                 s.expect_stats(MENACE, json!({ "health": 1 }));
@@ -315,10 +311,10 @@ mod tests {
                 let (Some(one), Some(two)) = (echoes.first().cloned(), echoes.get(1).cloned()) else {
                     panic!("setup");
                 };
-                s.play(WILDFIRE, json!({ "targets": at_p2() }));
-                s.play(&one, json!({ "targets": at_p2() }));
+                s.play(WILDFIRE, json!({ "targets": pick::hero("p2") }));
+                s.play(&one, json!({ "targets": pick::hero("p2") }));
                 assert_eq!(js(&last_spell_played(s.state())), json!({ "defId": WILDFIRE, "radiant": false }));
-                s.play(&two, json!({ "targets": at_p2() }));
+                s.play(&two, json!({ "targets": pick::hero("p2") }));
                 assert_eq!(hits(s.events(), "hero-p2"), vec![4, 4, 4]);
                 assert_eq!(js(&last_spell_played(s.state())), json!({ "defId": WILDFIRE, "radiant": false }));
             }
@@ -337,7 +333,7 @@ mod tests {
                 assert_eq!(card["cost"], 1);
                 assert_eq!(card["copies"]["defId"], WILDFIRE);
                 s.end_turn();
-                s.play(ECHO, json!({ "targets": at_p2() }));
+                s.play(ECHO, json!({ "targets": pick::hero("p2") }));
                 assert!(s.state().pending.is_none());
                 let played = s
                     .last_events()
@@ -354,7 +350,7 @@ mod tests {
             #[test]
             fn r545_an_x_cost_text_x_is_chosen_with_the_play_from_1_up_to_the_mana_left_once_echos_1_is_paid() {
                 let mut s = scenario(json!({ "p1": { "hand": [ADAPTIVE, ECHO], "library": [VANILLA, VANILLA, VANILLA], "mana": 9 } }));
-                s.play(ADAPTIVE, json!({ "x": 1, "targets": at_p2() }));
+                s.play(ADAPTIVE, json!({ "x": 1, "targets": pick::hero("p2") }));
                 s.state_mut().players.p1.mana.current = 4;
                 let mut xs: Vec<Value> = Vec::new();
                 for play in echo_plays(&s, PlayerId::P1) {
@@ -364,10 +360,10 @@ mod tests {
                 }
                 assert_eq!(xs, vec![json!(1), json!(2), json!(3)]);
                 s.expect_refused_with(
-                    |s| s.play(ECHO, json!({ "x": 4, "targets": at_p2() })),
+                    |s| s.play(ECHO, json!({ "x": 4, "targets": pick::hero("p2") })),
                     "X is above",
                 );
-                s.play(ECHO, json!({ "x": 3, "targets": at_p2() }));
+                s.play(ECHO, json!({ "x": 3, "targets": pick::hero("p2") }));
                 assert_eq!(hits(s.last_events(), "hero-p2"), vec![3]);
                 s.expect_mana(PlayerId::P1, 3);
                 // The first Adaptive UI's 1/1 Ghoul holds lane 1; Echo's 3/3 lands beside it (R64).
@@ -380,11 +376,11 @@ mod tests {
             #[test]
             fn r545_with_nothing_left_once_echos_1_is_paid_an_x_cost_text_cannot_be_played_absent_and_refused() {
                 let mut s = scenario(json!({ "p1": { "hand": [ADAPTIVE, ECHO], "library": [VANILLA, VANILLA, VANILLA], "mana": 9 } }));
-                s.play(ADAPTIVE, json!({ "x": 1, "targets": at_p2() }));
+                s.play(ADAPTIVE, json!({ "x": 1, "targets": pick::hero("p2") }));
                 s.state_mut().players.p1.mana.current = 1;
                 assert!(echo_plays(&s, PlayerId::P1).is_empty());
                 s.expect_refused_with(
-                    |s| s.play(ECHO, json!({ "x": 1, "targets": at_p2() })),
+                    |s| s.play(ECHO, json!({ "x": 1, "targets": pick::hero("p2") })),
                     "X is above",
                 );
                 s.expect_in_zone(ECHO, "hand");
@@ -508,8 +504,8 @@ mod tests {
                     "p1": { "hand": [WILDFIRE, { "def": ECHO, "radiant": true }, VANILLA] },
                     "p2": { "field": [MENACE], "hand": [VANILLA] },
                 }));
-                s.play(WILDFIRE, json!({ "targets": at_p2() }));
-                s.play(ECHO, json!({ "targets": at_p2() }));
+                s.play(WILDFIRE, json!({ "targets": pick::hero("p2") }));
+                s.play(ECHO, json!({ "targets": pick::hero("p2") }));
                 assert!(js(&s.state().pending)["prompt"].as_str().is_some_and(|prompt| prompt.contains("Echo")));
                 let menace = s.card(MENACE).id.clone();
                 s.answer(json!([{ "pick": "instance", "instanceId": menace }]));
@@ -528,14 +524,14 @@ mod tests {
                 let (Some(plain), Some(shining)) = (plain, shining) else {
                     panic!("setup");
                 };
-                s.play(WILDFIRE, json!({ "targets": at_p2() }));
-                s.play(&plain, json!({ "targets": at_p2() }));
+                s.play(WILDFIRE, json!({ "targets": pick::hero("p2") }));
+                s.play(&plain, json!({ "targets": pick::hero("p2") }));
                 assert_eq!(
                     js(&subsystems::copied_text_of(s.state(), s.card(&shining))),
                     json!({ "defId": WILDFIRE, "radiant": false }),
                 );
-                s.play(&shining, json!({ "targets": at_p2() }));
-                s.answer(at_p2());
+                s.play(&shining, json!({ "targets": pick::hero("p2") }));
+                s.answer(pick::hero("p2"));
                 assert_eq!(hits(s.events(), "hero-p2"), vec![4, 4, 4, 4]);
             }
 
@@ -546,10 +542,10 @@ mod tests {
                 let echo = find_instance_mut(s.state_mut(), &id).expect("the Echo is in p1's hand");
                 let tuning = tuning_of(echo);
                 tuning.x = Some(add_step(tuning.x.as_ref(), "Echo", 1));
-                s.play(WILDFIRE, json!({ "targets": at_p2() }));
-                s.play(ECHO, json!({ "targets": at_p2() }));
-                s.answer(at_p2());
-                s.answer(at_p2());
+                s.play(WILDFIRE, json!({ "targets": pick::hero("p2") }));
+                s.play(ECHO, json!({ "targets": pick::hero("p2") }));
+                s.answer(pick::hero("p2"));
+                s.answer(pick::hero("p2"));
                 assert_eq!(hits(s.events(), "hero-p2"), vec![4, 4, 4, 4]);
             }
 
@@ -570,9 +566,9 @@ mod tests {
                     "p1": { "hand": [WILDFIRE, { "def": ECHO, "radiant": true }, VANILLA] },
                     "p2": { "field": [MENACE], "hand": [VANILLA] },
                 }));
-                s.play(WILDFIRE, json!({ "targets": at_p2() }));
-                s.play(ECHO, json!({ "targets": at_p2() }));
-                s.answer(at_p2());
+                s.play(WILDFIRE, json!({ "targets": pick::hero("p2") }));
+                s.play(ECHO, json!({ "targets": pick::hero("p2") }));
+                s.answer(pick::hero("p2"));
                 assert_eq!(hits(s.events(), "hero-p2"), vec![4, 4, 4]);
                 s.expect_mana(PlayerId::P1, 2);
             }

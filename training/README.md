@@ -1,16 +1,20 @@
 # The AI training lanes
 
-**Since 2026-10-25 the AI improves itself through the `learn` lane alone**, with no LLM in the loop
-([`learn.md`](learn.md)). On the owner's PC, one run after another, a script plays the AI on `main`
-against itself, retrains the learned evaluation on those games, and gates the result against the AI
-on `main`. A pass opens its own pull request with auto-merge on, and every run's games go into the
-card statistics as development records (#1976). #682's audit
+**The learn lane is retired (#4159, R4159000)**: the AI plays its hand-written evaluation `AI_EVAL`
+alone, and the learned network and the policy prior are gone from it. From 2026-10-25 the AI improved
+itself through the `learn` lane alone, with no LLM in the loop ([`learn.md`](learn.md)). On GitHub's
+runners (the owner's PC until #3740), one run after another, a script played the AI on `main` against
+itself, retrained the learned evaluation on those games, and gated the result against the AI on
+`main`. A pass opened its own pull request with auto-merge on, and every run's games went into the
+card statistics as development records (#1976). It promoted once, generation 13 (2026-10-21), and
+could not keep up with daily patches, so the owner retired it on 2026-11-18; its workflows run until a
+person removes them (CLAUDE.md rule 13). #682's audit
 (`reviews/2026-10-22-issue-682-subscriptions.md`) stopped the two LLM lanes, `improve` and `unban`:
 they made no fair promotion in about 427 hours of Muse and Devin sessions, while `learn` made
 generation 13 (#1677). The shadow ban is now measured by a sweep of record, which #1675's took from
 17 cards to 1 and #1889's to none, and fixed through ordinary issues. Since #1678 a sweep of record runs
 by itself after every promotion and every set that ships, on GitHub's runners
-(`.github/workflows/sweep.yml`, R1678000), so the table keeps step with the AI the learn lane promotes.
+(`.github/workflows/sweep.yml`, R1678000), so the table keeps step with the AI on `main`.
 
 The lanes below improve JackiOh's AI (`crates/ai/`, SPEC §9.9), each gated by a fixed number of
 games against the AI on `main`, and nothing else: since generation 9 they play no games against
@@ -22,12 +26,13 @@ docs/v0.3.0/SURFACE.md §14.
 |---|---|---|
 | `improve` | **stopped (#1677).** A stronger AI: pass the sequential test against its predecessor on paired deals (R850000, R1679000) | [`improve.md`](improve.md) |
 | `unban` | **stopped (#1677).** An AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, and the same test passed | [`unban.md`](unban.md) |
-| `gather` | no change to the AI: development records for the card win rates (R378), without end; since #1676 the development records come from the learn lane's exports (The gather lane) | [`gather.md`](gather.md) |
-| `learn` | a stronger learned evaluation, retrained on fresh self-play by a script with no LLM in it: the same test, on deals of its own (R1012000) | [`learn.md`](learn.md) |
+| `gather` | no change to the AI: development records for the card win rates (R378), without end; since #1676 the development records come from the learn lane's exports and `gather.yml`'s, which keeps filing them on its own once the retired learn lane's workflow is removed (The gather lane) | [`gather.md`](gather.md) |
+| `learn` | **retired (#4159).** A stronger learned evaluation, retrained on fresh self-play by a script with no LLM in it: the same test, on deals of its own (R1012000) | [`learn.md`](learn.md) |
 
 The `gather` lane runs no model session and opens no pull request (The gather lane, below). The
-`learn` lane runs no model session either and needs no box: it is a GitHub workflow,
-`.github/workflows/learn.yml`, and its contract is [`learn.md`](learn.md).
+`learn` lane, **retired (#4159)**, ran no model session either and needed no box: it is a GitHub
+workflow, `.github/workflows/learn.yml`, which runs until a person removes it, and its contract is
+[`learn.md`](learn.md). The AI it retrained no longer compiles a network (R4159000).
 
 Generation 8 (`training/history/unban.jsonl`, 2026-10-10) removed the last ban on the earlier sets,
 Core, Classic and Classic+. Generation 9 (#732, `training/history/meditative.jsonl`) brought the
@@ -224,8 +229,8 @@ deals against the parent until its sequential test decides (R1679000, `TRAINING_
   by that one rule, and neither is shaped by the lane's dealt-quality table (`DEALT_Q`; the deck
   builder's `shape` option, off), so the gate's decks are drawn as practice's and the daily gates'
   are (R976000). Until issue #976 the builder shaped every seat whose ban list was this build's
-  own, so in the unban lane the candidate's seat was always shaped and the parent's never. Both AIs
-  still mulligan by `mulligan_keep_shaped`, which is part of how the AI plays;
+  own, so in the unban lane the candidate's seat was always shaped and the parent's never. Each AI
+  mulligans by its own build's `mulligan_keep_curved`, which is part of how the AI plays;
 - the AI plays at `AI_GATE_BUDGET`, the browser's own budget, so the gate measures the AI that ships.
 
 **The test.** Each deal gives the candidate an edge, its wins less the parent's over the deal's two
@@ -290,13 +295,25 @@ thread count.
   the log replays, decision times) and a tally at the end: the wins, draws and games without a
   result, and agent `a`'s win share with its 95% Wilson interval (`aShare`, `aLow`, `aHigh`); a
   paired series adds `deals` and `edge`, the mean over deals of `a`'s wins less `b`'s over the deal's
-  two games (−1 to 1), with its 95% interval (`edgeLow`, `edgeHigh`). The gate's report gives the
-  same intervals for its wins. A base that is a lane's name, or one followed by `:`, is refused:
-  those are the gates' own seeds (R850001).
-- `cargo jackioh arena --a … --b … --set improve-dev [--games N]` plays the improve lane's fixed dev
-  set, deals `improve-dev:1` to `:200`, paired, 400 games unless `--games` says more, never fewer
-  (R850001). The improve lane screens every change on it (`improve.md`, How you measure); the gate's
-  hold-out deals are never a screen's.
+  two games (−1 to 1), with its 95% interval (`edgeLow`, `edgeHigh`), then `decided` (the deals
+  whose edge is not 0, split into `wonBoth` and `lostBoth`) and `diverged` (the deals whose two
+  games end on different hashes). The gate's report gives the same intervals for its wins. A base
+  that is a lane's name, or one followed by `:`, is refused: those are the gates' own seeds
+  (R850001).
+- `cargo jackioh arena --a … --b … --set improve-dev [--games N] [--extend]` plays the improve
+  lane's fixed dev set, deals `improve-dev:1` to `:200`, paired, 400 games unless `--games` says
+  more, never fewer (R850001). A screen with fewer than `SCREEN_MIN_DECIDED` (20) decided deals
+  prints `inconclusive: true` and says nothing: it neither keeps nor drops the change (R4319000).
+  `--extend` plays on in 100-deal batches until `SCREEN_MIN_DECIDED` deals are decided or
+  `SCREEN_MAX_GAMES` (2,000) games are played, reading the edge only at the end. The improve lane
+  screens every change on it (`improve.md`, How you measure); the gate's hold-out deals are never
+  a screen's.
+- `cargo jackioh arena --a … --b … --set improve-dev --forks [--extend]` is the fork screen
+  (R4397000): the trunk plays each dev-set deal once with the control on both seats, and wherever
+  the candidate would have made a different move that position is played out `FORK_ROLLOUTS` (8)
+  pairs both ways, both arms on with the control. The tally's `forkEdge` measures the change at the
+  moves it changes; it keeps a change when `forkEdgeLow` is above 0 and reads `inconclusive: true`
+  below `SCREEN_MIN_DECIDED` live forks.
 - `cargo jackioh agent` is this build's AI speaking JSON lines on stdin and stdout (`info`,
   `decide`, `quit`; SURFACE §14.1). `bin:<path>` spawns `<path> agent`. The referee holds the true
   state and sends each agent only `redact(state, seat)` (R185). The agent's answers name its rng
@@ -304,28 +321,33 @@ thread count.
 
 ## The gather lane
 
-Since #1676 the development games come from the learn lane's exports. `cargo jackioh stats
+Since #1676 the development games come from the learn lane's exports (the lane is retired by #4159 and
+files them only until a person removes its workflow; `gather.yml`, below, keeps filing on its own). `cargo jackioh stats
 from-selfplay <shards>… --out <file>` files each game of an export that still replays under the
 catalog it was played on, finished and clean, as a development record `dev:<patch>:selfplay:<base>:<n>`,
 and counts the rest (R1676000). Since #1976 `learn.yml` does it after every export (its `import` job,
 `learn.md` step 7) and loads the file with `jackioh-server stats-import --totals-only` (R1976000): the
 records' counts go into the totals and no row is kept per game, so each project's database (both file
-the development lanes' games, R1933001) grows with the patches and not the games. Runs follow one another, so an export comes about every two days; a
-patch shipped between two has none until the next. `.github/workflows/gather.yml` plays `GATHER_GAMES`
-(5,000) games of each new patch or set as it ships (a `patch` or `major` tier, never a micro), on the
-PC's gather half while the learn lane trains on the other, and files them the same way, but only
-while the repository variable `GATHER_ON_PATCH` is `true`: each patch's development totals take about
-3 MB of the database however few its games. A push that ships only micros plays nothing, so a micro's
-changed cards wait for the next patch's games or the next export's.
+the development lanes' games, R1933001) grows with the patches and not the games. Runs follow one another, so an export comes about every half
+day on GitHub's runners. Beside them, `.github/workflows/gather.yml` plays without a pause since #3740
+(it played 5,000 games of each new patch or set, once, on the PC's gather half, before): two of
+GitHub's runners each play `GATHER_HOURS` (5) hours of the newest version on `main`, `GATHER_FILE_GAMES`
+(400, about an hour) at a time, and file each batch the same way as it finishes, so the card statistics
+take fresh games of the version that is live every hour. As a run ends it starts the next on `main` as
+it is then, so a version shipped meanwhile is played from the next run on, within five hours, and a
+schedule every six hours starts the lane again should that chain stop. It runs only while the
+repository variable `GATHER_ON_PATCH` is `true`: each version's development totals take about 3 MB of
+the database however few its games, and the lane files every version it plays, micros among them.
 
-5,000 games are still too few for the card win rates (#2888). A card's rate counts only the games
+5,000 games were too few for the card win rates (#2888). A card's rate counts only the games
 where exactly one seat holds it (R1284000), about 375 of the 5,000 for a typical card (150 of 2,000,
 the number before), so its 95% interval is about ±5 points. `cargo jackioh stats sample-size` prints the games a run needs at
 this build's deal pool, and the number grows with the catalog: 29000 at 633 cards when it landed.
 `--explain` shows the working, `--sigma` and `--rho` set its two guesses, and
-`crates/tools/README.md` has the formula. Pointing `gather.yml` at it, with the dispatch's
-`games` input kept as an override, is a person's change, since the bots never edit `.github/`;
-so is growing `GATHER_STRIDE` (100,000), which N passes at about 2,000 cards.
+`crates/tools/README.md` has the formula. The lane playing without a pause reaches it for a version
+that stays the newest about a day and a half (two runners at about 400 games an hour), and the learn lane's
+exports add theirs. A change to `gather.yml` is a person's, since the bots never edit `.github/`;
+so is growing `GATHER_STRIDE` (100,000), which a run's games pass only past about 50,000 a part.
 
 To file an export by hand: `gh run download <run> --pattern 'selfplay-<base>-*'`,
 `cargo jackioh stats from-selfplay <shards>… --out <file>`, then `jackioh-server stats-import
@@ -396,7 +418,8 @@ jackioh-server stats-cards --patch=<patch> --pilot=ai             # the ladder b
 Each row of the report is a card: the win rate, with the games behind it, of the decks that held it
 (in deck), held it in the opening hand, went first or second with it, played it, or drew it and never
 played it, the decks that never drew it, and its drawn delta (the drawn win rate less the never-drawn one, in points). A
-card's play rate is its played games over its in-deck games, both printed in the row. `--json` has the
+card's play rate is how often it was played when seen: its played games over its seen ones (played plus drawn and
+not played), each printed in the row, as `/stats` reads it (R3950000). `--json` has the
 same figures as numbers, and `stats-cards --source=all` reads both sources at once. Development and
 live games are never added together unless asked (R378, R1451).
 
@@ -428,20 +451,18 @@ The live games' records are what the gather lane's figures sit beside, and they 
 
 ## Where the exports come from
 
-The learned evaluation (#466, `docs/learned-eval.md`) learns from self-play exports: game logs
+The self-play exports (which fed the learned evaluation, retired by #4159; #466, `docs/learned-eval.md`) are game logs
 `cargo jackioh selfplay` plays, which `cargo jackioh positions` folds into training rows (R1006001,
 R1006003). An export is dispatched, never played on the training box, whose two vCPUs the lanes need:
-`gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=20] [-f
-runner=ubuntu-latest]` plays it in shards on the local runner by default (`bot/machine/README.md`,
-The local runner), two shards at a time while the PC is idle, one on each half (about 40 hours of an
-idle PC for 100,000 at the 2,500 games an hour one six-CPU runner played, somewhat less on both
-halves, in five rounds), or on GitHub's runners when asked (free for this
-public repository, about 1,500 games an hour each, at most 12 at once: 100,000 games in 20 shards
-take two rounds, about seven hours), and keeps each shard's log file as an artifact for up to 90
-days. The local runner is the default because an export on GitHub's runners holds 12 of the
-organization's 20 hosted jobs for hours, and CI waits behind it: 70 to 110 minutes a run on
-2026-10-20, against 10 to 16 without one (#1455). The learn lane's own exports play on the local
-runner alone, as every job of the lane does ([`learn.md`](learn.md), How it runs). Its last job runs
+`gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=80]` plays it in shards on
+GitHub's runners (free for this public repository; about 400 games an hour each at the AI's budget
+since #2628, measured on 2026-11-12, 10 at once: 100,000 games in 80 shards of 1,250, each about 3
+hours and under GitHub's 6-hour job limit, take about a day), and keeps each shard's log file as an
+artifact for up to 90 days. The organization's Team plan runs 60 hosted jobs at once (#3740), of
+which the training lanes take 12, the export's 10 and gather's 2; whatever they leave idle, CI and
+the bots take. On the Free plan's 20 an export held 12, and CI waited behind it, 70 to 110 minutes a
+run on 2026-10-20 against 10 to 16 without one, so from #1455 until #3740 the exports played on the
+owner's PC. The learn lane's own exports play the same way ([`learn.md`](learn.md), How it runs). Its last job runs
 `positions` over the whole export and writes the counts (games, positions, games that no longer
 replay) and the games an hour to the run's summary. The same base and game numbers always play the
 same games, so an export can be played again on any runner, and a base never names a gate's

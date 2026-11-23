@@ -51,7 +51,7 @@ func TestClosed_ItsRunKeepsItsLane(t *testing.T) {
 	assertIn(t, "`gpt` is busy", planned.Str("reason")) // its lane is still the closed #5's
 	text := status.Report(ctx)
 	// Its six runs are on the machine, whose slots are apart from GitHub's lanes.
-	assertIn(t, "0 of 8 lanes on GitHub's runners, 8 free; 6 of "+
+	assertIn(t, "0 of 16 lanes on GitHub's runners, 16 free; 6 of "+
 		fmt.Sprintf("%d on the night box", ctx.Cfg.Pool.MachineParallel), text)
 	assertIn(t, "`gpt` (codex", text)
 }

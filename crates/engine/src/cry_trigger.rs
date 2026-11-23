@@ -29,7 +29,7 @@ use crate::state::{
 use crate::state_check::state_check;
 use crate::stays::{exit_mark, left_field_after};
 use crate::wire::{CardType, PlayerId, PromptKind, Row, Selection, TargetAim, Zone};
-use crate::work::{RUN_MARKS_KEY, begin_work_cascade, drain_work, paused, push_work};
+use crate::work::{RUN_MARKS_KEY, begin_work_cascade, drain_work, engine_resume, paused, push_work};
 
 /// `resume.hook` of a prompt this sequence opened for itself: no card script holds the name.
 pub const TRIGGER_CRY_HOOK: &str = "@triggerCry";
@@ -109,7 +109,11 @@ pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> 
     let card_type = crate::faces::card_type_of(state, card);
     // R1873003: a face-up Field Spell on the field runs its Cry as itself (R411). A face-down one reads
     // as the Trap it was set as (`card_type_of`), and out of a graveyard only a Unit's Cry is triggered.
-    if card_type == CardType::FieldSpell && matches!(card.zone, Zone::Field { .. }) {
+    if card_type == CardType::FieldSpell
+        && matches!(card.zone, Zone::Field { .. })
+        // R3556000: no effect re-triggers a Dormant Field Spell's Cry (R1839000).
+        && !crate::slumber::is_slumbering(card)
+    {
         crate::scripts::script_of(state, card).cry.as_ref()?;
         return Some(CryPlace::Field);
     }
@@ -165,18 +169,13 @@ fn trigger(sink: &mut EngineSink, card: &CardInstance, controller: PlayerId, ran
     continue_run(sink, run);
 }
 
-/// ME-ALTPLAY, R1044, R1045: resolve a set Spell from the backrow with `repeats` Echo repeats.
-/// R703 is read as it reveals: a required declaration the board cannot satisfy fizzles the reveal, as
-/// a play gate that does not hold does (R1851001).
+/// ME-ALTPLAY, R1044, R1045: resolve a set Spell from the backrow with `repeats` Echo repeats, as it
+/// reveals or (R3806000) as it is set under Paranoia (`alt_play::resolve_at_set`). R703 is read as it
+/// resolves: a required declaration the board cannot satisfy fizzles it, as a play gate that does not
+/// hold does (R1851001, `alt_play::spell_text_can_resolve`).
 pub fn reveal_set_spell(sink: &mut EngineSink, card: &CardInstance, controller: PlayerId, repeats: u32) {
-    if !crate::play_choices::play_allowed(sink.state, controller, card) {
+    if !crate::alt_play::spell_text_can_resolve(sink.state, controller, card) {
         return;
-    }
-    for decl in crate::play_choices::declared_targets(sink.state, card) {
-        let offered = crate::play_choices::legal_selections_for(sink.state, controller, card, &decl);
-        if crate::play_choices::unmet_requirement(&decl, offered.len()) {
-            return;
-        }
     }
     let run = CryRun {
         instance_id: card.id.clone(),
@@ -204,6 +203,20 @@ pub fn run_owed_repeat(sink: &mut EngineSink, item: &WorkItem) {
     }
 }
 
+/// R3806000: the work hook a set Spell's resolution as it was set waits behind when its last run's
+/// text paused (R113), so it goes dormant again only once that text has all run.
+pub const SET_RESOLVED_HOOK: &str = "@setResolved";
+
+/// Where an owed `SET_RESOLVED_HOOK` keeps the set Spell's id.
+const SET_RESOLVED_KEY: &str = "instanceId";
+
+/// R3806000: end the resolution as it was set of the Spell an owed `SET_RESOLVED_HOOK` names.
+pub fn run_owed_set_resolved(sink: &mut EngineSink, item: &WorkItem) {
+    if let Some(id) = item.resume.data.get(SET_RESOLVED_KEY).and_then(Value::as_str) {
+        crate::alt_play::end_set_resolution(sink.state, id);
+    }
+}
+
 /// The Unit still where the trigger found it, or `None`: on the same stay (R174), or in a graveyard.
 fn standing(state: &GameState, run: &CryRun) -> Option<CardInstance> {
     let card = find_instance(state, &run.instance_id)?;
@@ -222,14 +235,7 @@ fn resume_for(run: &CryRun) -> Resume {
         RUN_KEY.to_string(),
         serde_json::to_value(run).unwrap_or(Value::Null),
     );
-    Resume {
-        def_id: String::new(),
-        hook: TRIGGER_CRY_HOOK.to_string(),
-        step: "choose".to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    }
+    engine_resume(TRIGGER_CRY_HOOK, "choose", data)
 }
 
 fn label_of(state: &GameState, selection: &Selection, chooser: PlayerId) -> String {
@@ -246,15 +252,21 @@ fn label_of(state: &GameState, selection: &Selection, chooser: PlayerId) -> Stri
     }
 }
 
+/// The title of a prompt the run opens: a Cry's, or a set Spell's as it reveals (R1044) or, under
+/// Paranoia, as it is set (R3806000).
+fn title_of(state: &GameState, run: &CryRun, card: &CardInstance) -> String {
+    let name = name_of(state, &card.def_id);
+    match run.place {
+        CryPlace::Backrow if crate::alt_play::resolving_at_set(card) => format!("Set: {name}"),
+        CryPlace::Backrow => format!("Reveal: {name}"),
+        CryPlace::Field | CryPlace::Graveyard => format!("Cry: {name}"),
+    }
+}
+
 /// The mode declarations still to ask; false while one is waiting (R81).
 fn ask_modes(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bool {
     let modes = declared_modes(sink.state, card);
-    let name = name_of(sink.state, &card.def_id);
-    let title = if run.place == CryPlace::Backrow {
-        format!("Reveal: {name}")
-    } else {
-        format!("Cry: {name}")
-    };
+    let title = title_of(sink.state, run, card);
     for (at, decl) in modes.iter().enumerate().skip(run.mode_at) {
         run.mode_at = at + 1;
         if decl.options.is_empty() {
@@ -307,12 +319,7 @@ fn ask_modes(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bo
 /// The target declarations still to ask; false while one is waiting (R81, R90).
 fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bool {
     let decls = active_target_decls(&declared_targets(sink.state, card), &run.modes);
-    let name = name_of(sink.state, &card.def_id);
-    let title = if run.place == CryPlace::Backrow {
-        format!("Reveal: {name}")
-    } else {
-        format!("Cry: {name}")
-    };
+    let title = title_of(sink.state, run, card);
     for (at, decl) in decls.iter().enumerate().skip(run.decl_at) {
         run.decl_at = at + 1;
         let options = legal_selections_for(sink.state, run.controller, card, decl);
@@ -329,7 +336,7 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
         }
         // R1200: while a Mayor acts a `target` Cry pick is drawn at random, and nobody is asked.
         if decl.kind == PromptKind::Target && crate::random_targets::targets_random(sink.state) {
-            run.targets.extend(crate::random_targets::draw_picks(
+            let picks = crate::random_targets::draw_picks(
                 sink.state,
                 &mut *sink.rng,
                 run.controller,
@@ -337,7 +344,17 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
                 decl.min,
                 decl.max,
                 crate::targeting::target_aim(decl),
-            ));
+            );
+            // I22 (#4540): the fuzz monitor holds this draw to the targeting rules (`testkit::seams`).
+            #[cfg(feature = "testkit")]
+            crate::testkit::seams::record_target_draw(
+                sink.state,
+                Some(card),
+                run.controller,
+                crate::testkit::seams::TargetDrawBy::Mayor,
+                &picks,
+            );
+            run.targets.extend(picks);
             continue;
         }
         // R452: a random cast's caster is never asked; its picks are drawn at random, each aimed by its
@@ -356,8 +373,19 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
             } else {
                 options
             };
-            run.targets
-                .extend(random_picks(sink.rng, &pool, decl.min, decl.max));
+            let picks = random_picks(sink.rng, &pool, decl.min, decl.max);
+            // I22 (#4540): a `target` pick only; a hand or zone pick is no targeting.
+            #[cfg(feature = "testkit")]
+            if decl.kind == PromptKind::Target {
+                crate::testkit::seams::record_target_draw(
+                    sink.state,
+                    Some(card),
+                    run.controller,
+                    crate::testkit::seams::TargetDrawBy::RandomCast,
+                    &picks,
+                );
+            }
+            run.targets.extend(picks);
             continue;
         }
         run.awaiting = Some(CryAwaiting::Target);
@@ -488,14 +516,7 @@ fn owe_extra_cries(sink: &mut EngineSink, run: &CryRun, left: u32, exits_from: u
     data.insert(EXTRA_EXITS_KEY.to_string(), json!(exits_from));
     push_work(
         sink,
-        Resume {
-            def_id: String::new(),
-            hook: EXTRA_CRY_HOOK.to_string(),
-            step: "run".to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
+        engine_resume(EXTRA_CRY_HOOK, "run", data),
         Some(run.controller),
     );
 }
@@ -567,17 +588,22 @@ fn run_cry_once(sink: &mut EngineSink, run: &CryRun, card: &CardInstance, exits_
                     RUN_KEY.to_string(),
                     serde_json::to_value(&next).unwrap_or(Value::Null),
                 );
-                let resume = Resume {
-                    def_id: String::new(),
-                    hook: SET_REPEAT_HOOK.to_string(),
-                    step: "repeat".to_string(),
-                    radiant: false,
-                    instance_id: None,
-                    data: repeat_data,
-                };
+                let resume = engine_resume(SET_REPEAT_HOOK, "repeat", repeat_data);
                 crate::work::owe(sink, resume);
             } else {
                 continue_run(sink, next);
+            }
+        } else if run.place == CryPlace::Backrow
+            && find_instance(sink.state, &run.instance_id).is_some_and(crate::alt_play::resolving_at_set)
+        {
+            // R3806000: its last run as it was set is over, or will be once its parked tail has run.
+            // Only this resolution owes the item: a reveal takes no new work number.
+            if ran {
+                crate::alt_play::end_set_resolution(sink.state, &run.instance_id);
+            } else {
+                let mut data: IndexMap<String, Value> = IndexMap::new();
+                data.insert(SET_RESOLVED_KEY.to_string(), json!(run.instance_id));
+                crate::work::owe(sink, engine_resume(SET_RESOLVED_HOOK, "end", data));
             }
         }
         return;

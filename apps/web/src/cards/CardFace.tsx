@@ -112,7 +112,7 @@
 // Collection's grid, `turn`) it turns up to DIORAMA_TURN_MAX_DEG, its parallax scaled with it; in hand CARD_TILT_MAX_DEG.
 // It never breaks the frame: its subject stands in slices of more than one plane.
 
-import { useRef, type CSSProperties, type ReactElement } from "react";
+import { memo, useRef, type CSSProperties, type ReactElement } from "react";
 
 import { keywordKey, type CardType, type Rarity } from "@jackioh/shared";
 
@@ -141,6 +141,7 @@ import {
 import { breaksFrame, glareFor, hasDepth, useDepthMotion } from "./depth.ts";
 import { nameTier, overLimit, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
+import { TipsyName } from "../game/tipsy.tsx";
 import { isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
 import { artMotionOf, boardLookOf, boardNameOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
@@ -253,6 +254,11 @@ function printedText(face: FaceModel, text: string): string {
     .join(" ");
 }
 
+/** R3838001: whether `face` has any words to print: its text, a Resource's Credits line, gained keywords or grants. */
+export function printsText(face: FaceModel): boolean {
+  return printedText(face, face.text.full) !== "";
+}
+
 /** What a face's rules box prints (issues #814, #1017). */
 export type RulesBox = {
   /** The words the rules box prints: the whole text, or a short form ending in "…". */
@@ -272,7 +278,7 @@ export type RulesBox = {
  * setting decides. `ascentLevel` is the Summit's level where the surface gives it.
  */
 export function faceText(face: FaceModel, ascentLevel?: number | null, fullArtOn?: boolean): RulesBox {
-  if (showsFullArt(face, fullArtOn)) return { shown: EMPTY_TEXT, short: false, less: printedText(face, face.text.full) !== "" };
+  if (showsFullArt(face, fullArtOn)) return { shown: EMPTY_TEXT, short: false, less: printsText(face) };
   // R2450000: a staged Quest prints one stage, a short form of its own; In Too Deep in play also clamps.
   const quest = face.questBox;
   if (quest !== null) {
@@ -353,7 +359,7 @@ export function hasCrest(face: FaceModel): boolean {
   return crested(frameRarity(face));
 }
 
-export function CardFace({
+function CardFace({
   face,
   layout = "full",
   className,
@@ -393,7 +399,13 @@ export function CardFace({
   const printed = printedText(face, shown.full);
   const names = nameTier(face.name);
   const texts = textTier(printed);
-  useFitText(nameRef, bare ? "" : showStaticName ? face.name : `hover ${face.name}`);
+  useFitText(
+    nameRef,
+    bare
+      ? // Stryker disable next-line StringLiteral: a bare face's name holds no nameRef, so nothing fits, and this key differs from both name keys either way, so a fit runs on the same renders
+        ""
+      : showStaticName ? face.name : `hover ${face.name}`,
+  );
   // The rules box only exists on a full face; keying on the layout refits it when one appears. A face
   // that prints less than its text clamps at once, its art whole (#1017; fit.ts).
   useFitText(textRef, full ? printed : "", { floorPx: FIT_FLOOR_PX, long: !less });
@@ -667,7 +679,7 @@ export function CardFace({
         </span>
 
         {bare ? (
-          <span className="cf-hand-name">{face.name}</span>
+          <span className="cf-hand-name"><TipsyName name={face.name} /></span>
         ) : showStaticName ? (
           <span
             className="card-name"
@@ -675,12 +687,12 @@ export function CardFace({
             data-pixel-name={pixelName !== null ? "true" : undefined}
             style={pixelName !== null ? ({ "--cf-pixel-name": `url("${pixelName}")` } as CSSProperties) : undefined}
           >
-            {face.name}
+            <TipsyName name={face.name} />
           </span>
         ) : (
           // R3339000: transparent until hover or focus, and in the accessibility tree all the while: the name is read as it was.
           <span className="card-name card-name-hover" ref={nameRef}>
-            {face.name}
+            <TipsyName name={face.name} />
           </span>
         )}
 
@@ -778,3 +790,10 @@ export function CardFace({
     </span>
   );
 }
+
+/**
+ * #3633: a card drawn again with the face it had (its hint row, its highlight or a queue step changed
+ * around it) does not draw the face again: the art, the text and the marks are most of a card's work.
+ */
+const MemoCardFace = memo(CardFace);
+export { MemoCardFace as CardFace };

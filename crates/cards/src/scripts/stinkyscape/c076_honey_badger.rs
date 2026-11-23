@@ -1,6 +1,7 @@
 //! SPEC §8.10 Stinkyscape 76 Honey Badger, a card of the Stinkyscape set.
-//!   Base:    "Rush\nWhen this attacks, gain a random Stinkyscape Resource." (4/6)
-//!   Radiant: "Rush\nWhen this attacks, gain a random Radiant Stinkyscape Resource." (8/12)
+//!   Base:    "Rush\nWhen this attacks, gain a random Stinkyscape Resource." (2/5; 4/6 until issue #4440)
+//!   Radiant: "Rush\nWhen this attacks, gain a random Radiant Stinkyscape Resource." (4/10; 8/12 until issue
+//!            #4440)
 //!
 //! S #75 Badger's line ("when this attacks" is the `whenAttacks` hook, R2396000, before any damage: declared
 //! or forced attacks, R53, R2285000, never a defense or an attack called off, R44) with Rush (§6.1), a

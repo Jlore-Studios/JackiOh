@@ -67,10 +67,23 @@ const NO_PINGS: readonly ReceivedPing[] = [];
 /** R2990001: no hand dealt yet, or none to offer while the socket is not open. */
 const NO_HAND: readonly EmojiEmoteId[] = [];
 
+/** What ends a query string: without these, `/\?.*$/` would cross lines (#4009). */
+const QUERY_LINE_END = /[\n\r\u2028\u2029]/;
+
+/**
+ * `url` without its `?…` query (#4009: `/\?.*$/` scans super-linearly on a long `?` run).
+ * Like the pattern, a query reaching another line is left alone.
+ */
+function stripQuery(url: string): string {
+  const at = url.indexOf("?");
+  if (at === -1) return url;
+  return QUERY_LINE_END.test(url.slice(at + 1)) ? url : url.slice(0, at);
+}
+
 /** The watch socket's address beside the match socket's, with no token: it is offered as a subprotocol (R1379000). */
 export function watchSocketUrl(matchId: string, friendId: string, base: string = matchSocketUrl()): string {
   const query = new URLSearchParams({ matchId, friendId }).toString();
-  return `${serverSocketUrl(WATCH_PATH, base).replace(/\?.*$/u, "")}?${query}`;
+  return `${stripQuery(serverSocketUrl(WATCH_PATH, base))}?${query}`;
 }
 
 /**

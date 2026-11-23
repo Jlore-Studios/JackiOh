@@ -11,19 +11,25 @@
 // `social` frame came) the server pushes the same read whenever it changes, and the poll sends nothing;
 // it reads at once when the socket drops and goes on at its pace until another is live. The socket's
 // `chat` and `friends` pushes go to their listeners (`onChatPush`, `onFriendsPush`): an open chat and an
-// open friends list read again.
+// open friends list read again; its `lobby` and `lobbyInvite` pushes go to `onLobbyPush` and
+// `onLobbyInvitePush` (R3730000, R3730005): an open lobby reads again, and an invite shows a toast.
 // R3576000: a tab hidden for `HIDDEN_QUIET_MS` closes its socket, so the server can sleep, and the poll
 // takes over as for any drop (paused while hidden, R3205000); it opens again when the tab shows.
+// R4039000: the read also counts the notification feed's unread rows (`notificationsUnread`), and the socket's
+// `notification` push, a row the server just wrote, goes to `onNotificationPush`'s listeners (R4039001: the
+// inbox's Recent section, the toast and the desktop notification).
 
 import { useEffect, useSyncExternalStore } from "react";
 
+import { dailyWaitingOf } from "../daily/order.ts";
 import { pollWhileVisible, quietWhileHidden } from "../game/net.ts";
 import { readSession } from "../net/session.ts";
-import { getSocial, type Challenge, type SocialRead } from "../net/social.ts";
+import type { FeedNotification } from "../net/notifications.ts";
+import { getSocial, type Challenge, type PlayerRef, type SocialRead } from "../net/social.ts";
 import { HIDDEN_QUIET_MS, SOCIAL_POLL_MS } from "./config.ts";
 import { followingChallenge } from "./follow.ts";
 import { isRefusedSession, unreadCountsOf } from "./session.ts";
-import { openSocialSocket, socialSocketFactory, type SocialPush, type SocialSocket } from "./socialSocket.ts";
+import { openSocialSocket, socialSocketFactory, type LobbyFormat, type SocialPush, type SocialSocket } from "./socialSocket.ts";
 import { isQueueMode } from "../net/api.ts";
 
 export type SocialReads = {
@@ -39,6 +45,10 @@ export type SocialReads = {
   readonly refused: boolean;
   /** R3214000: the tab's social socket is live, so the server pushes these reads and no poll is sent. */
   readonly live: boolean;
+  /** #3727: how many daily games wait on the player (the Play screen's Daily games badge); 0 when unread. */
+  readonly dailyWaiting: number;
+  /** R4039000: how many rows of the notification feed are unread (the bell's dot); 0 until read. */
+  readonly notificationsUnread: number;
 };
 
 const NO_CHALLENGES: readonly Challenge[] = Object.freeze([]);
@@ -52,6 +62,8 @@ const EMPTY: SocialReads = Object.freeze({
   requests: 0,
   refused: false,
   live: false,
+  dailyWaiting: 0,
+  notificationsUnread: 0,
 });
 
 let reads: SocialReads = EMPTY;
@@ -68,6 +80,12 @@ let socket: SocialSocket | null = null;
 let stopQuiet: (() => void) | null = null;
 const chatListeners = new Set<(friendId: string) => void>();
 const friendsListeners = new Set<() => void>();
+const lobbyListeners = new Set<(code: string) => void>();
+const lobbyInviteListeners = new Set<(invite: LobbyInvite) => void>();
+const notificationListeners = new Set<(notification: FeedNotification) => void>();
+
+/** R3730005: a friend's invite into their private lobby, as the `lobbyInvite` frame carries it. */
+export type LobbyInvite = { code: string; format: LobbyFormat; from: PlayerRef };
 
 function publish(next: SocialReads): void {
   if (next === reads) return;
@@ -100,18 +118,22 @@ function applySocial(answer: SocialRead): void {
     challengeReads: reads.challengeReads + 1,
     unread: unreadCountsOf(answer),
     refused: false,
+    dailyWaiting: dailyWaitingOf(answer.dailyWaiting),
+    notificationsUnread: dailyWaitingOf(answer.notificationsUnread),
   });
 }
 
 function tick(): void {
   const token = readSession()?.accessToken ?? null;
   if (token === null) {
+    // R3214000: the signed-out session's socket goes; with no token none opens.
+    socket?.retry();
     refusedToken = null;
     publish(EMPTY);
     return;
   }
   if (token === refusedToken) {
-    if (!reads.refused) publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true });
+    if (!reads.refused) publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true, dailyWaiting: 0, notificationsUnread: 0 });
     return;
   }
   // R3214000: a socket that is down (never opened, refused for an older token) opens again with this
@@ -128,7 +150,7 @@ function tick(): void {
     (cause: unknown) => {
       if (started !== generation || !isRefusedSession(cause)) return;
       refusedToken = token;
-      publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true });
+      publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true, dailyWaiting: 0, notificationsUnread: 0 });
     },
   );
 }
@@ -158,6 +180,15 @@ function onPush(push: SocialPush): void {
       return;
     case "friends":
       for (const listener of [...friendsListeners]) listener();
+      return;
+    case "lobby":
+      for (const listener of [...lobbyListeners]) listener(push.code);
+      return;
+    case "lobbyInvite":
+      for (const listener of [...lobbyInviteListeners]) listener({ code: push.code, format: push.format, from: push.from });
+      return;
+    case "notification":
+      for (const listener of [...notificationListeners]) listener(push.notification);
       return;
   }
 }
@@ -249,6 +280,30 @@ export function onFriendsPush(listener: () => void): () => void {
   friendsListeners.add(listener);
   return () => {
     friendsListeners.delete(listener);
+  };
+}
+
+/** R3730000: calls `listener` with the code of a private lobby the server says changed; returns its unsubscribe. */
+export function onLobbyPush(listener: (code: string) => void): () => void {
+  lobbyListeners.add(listener);
+  return () => {
+    lobbyListeners.delete(listener);
+  };
+}
+
+/** R3730005: calls `listener` with each friend's lobby invite the socket carries; returns its unsubscribe. */
+export function onLobbyInvitePush(listener: (invite: LobbyInvite) => void): () => void {
+  lobbyInviteListeners.add(listener);
+  return () => {
+    lobbyInviteListeners.delete(listener);
+  };
+}
+
+/** R4039000: calls `listener` with each row the server writes to the account's notification feed; returns its unsubscribe. */
+export function onNotificationPush(listener: (notification: FeedNotification) => void): () => void {
+  notificationListeners.add(listener);
+  return () => {
+    notificationListeners.delete(listener);
   };
 }
 

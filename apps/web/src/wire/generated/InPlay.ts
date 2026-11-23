@@ -96,6 +96,10 @@ starship?: StarshipIn,
  */
 created?: boolean, 
 /**
+ * R3536005: the card has evolved.
+ */
+evolved?: boolean, 
+/**
  * R1956001: the card that generated the viewer's own Created card.
  */
 createdBy?: string, 
@@ -119,6 +123,10 @@ grants?: Array<string>,
  * R849000: why the viewer's own unit cannot attack now.
  */
 attackReason?: string, 
+/**
+ * R3821000: why the viewer's own unit cannot switch now, absent where it repeats the attack reason.
+ */
+switchReason?: string, 
 /**
  * R2321000: the counts cards on the field keep on the unit.
  */

@@ -198,6 +198,9 @@ string_union! {
     /// Issue #3038 adds Starship (the Stinkyscape set's Dormant Starship, on both faces, so every
     /// Starship, Dormant or launched): a family tag with a rule, a card holding it having Flying and
     /// Ranged through the layers (R3038000), which the server admits from migration 0080.
+    /// Issue #3535 adds Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω,
+    /// Automa-ζ and Paperclip (the Stinkyscape+ set's family tags, R3535002), which the server
+    /// admits from migration 0087.
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -229,6 +232,15 @@ string_union! {
         Resource = "Resource",
         Faction = "Faction",
         Starship = "Starship",
+        Mindustrial = "Mindustrial",
+        Mineral = "Mineral",
+        AutomaAlpha = "Automa-α",
+        AutomaBeta = "Automa-β",
+        AutomaGamma = "Automa-γ",
+        AutomaDelta = "Automa-δ",
+        AutomaOmega = "Automa-Ω",
+        AutomaZeta = "Automa-ζ",
+        Paperclip = "Paperclip",
         Token = "Token",
     }
 }
@@ -326,8 +338,8 @@ macro_rules! set_table {
         string_union! {
             /// §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
             /// issue #1173, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and
-            /// Training Grounds (issue #2193, R2194000; released by #2204) ship; Boss and Boss-X are
-            /// reserved.
+            /// Training Grounds (issue #2193, R2194000; released by #2204) and Stinkyscape+ (issue #3535,
+            /// R3535000; released by #3573) ship; Boss and Boss-X are reserved.
             pub enum SetName { $( $variant = $name ),+ }
         }
 
@@ -393,7 +405,8 @@ const SINGLE_PLAYER_STAGES: &[SetStage] = &[SetStage::SinglePlayer];
 /// when it ships, so a seeded pick over a pool replays the same before and after (R1420).
 /// Meditative+ follows Meditative (issue #1173, R1178000), and the Stinkyscape set follows
 /// Meditative+ (issue #1857, R1857000; shipped by issue #1884), and the Training Grounds set
-/// follows Stinkyscape (issue #2194, R2194000; shipped by issue #2204). The set table's
+/// follows Stinkyscape (issue #2194, R2194000; shipped by issue #2204), and the held Stinkyscape+
+/// set follows Training Grounds (issue #3535, R3535000). The set table's
 /// `Shipped` and `Held` rows, in its order (R3114000).
 pub const CATALOG_SETS: [SetName; count_in(CATALOG_STAGES)] = sets_in(CATALOG_STAGES);
 
@@ -454,6 +467,7 @@ set_table![
     TrainingGrounds = "Training Grounds" { stage: Shipped, segment: "traininggrounds", abbreviation: Some("TG"), shadow_ban_share: Some((1, 2)) },
     Boss = "Boss" { stage: SinglePlayer, segment: "boss", abbreviation: None, shadow_ban_share: None },
     BossX = "Boss-X" { stage: SinglePlayer, segment: "bossx", abbreviation: None, shadow_ban_share: None },
+    StinkyscapePlus = "Stinkyscape+" { stage: Shipped, segment: "stinkyscapeplus", abbreviation: Some("S+"), shadow_ban_share: Some((1, 5)) },
 ];
 
 /// R924000: what "More cards from" picks for a player's dealt Random deck (R1372, R1373): the newest
@@ -689,6 +703,30 @@ pub enum Keyword {
     /// keyword that took over from "Can't be in Defense Position" (`StaticFlags::never_defense`).
     #[serde(rename = "Can't Defend")]
     CantDefend,
+    /// R3535002: declared for SP3 E1; no rule yet.
+    Evolve,
+    /// R3535002: declared for SP3 E2; no rule yet.
+    Burn {
+        n: i32,
+    },
+    /// R3535002: declared for SP3 E2; no rule yet.
+    Toxic {
+        n: i32,
+    },
+    /// R3535002: declared for SP3 E4. R3546000: two lanes wide in both rows, four zones (`giga.rs`).
+    #[serde(rename = "GIGA")]
+    Giga,
+    /// R3535002: declared for SP3 E3. R3543000: a Unit's backrow placement, which Flying has
+    /// innately; R3828000: a Unit's alone, no other card reading it.
+    Flexible,
+    /// R3535002: declared for SP3 E3. R3543003: after it attacks and destroys a Unit, it may attack again.
+    Frenzy,
+    /// R3535002: declared for SP3 E3. R3543002: "Can't be attacked" as a keyword, implying Can't Defend.
+    Evasive,
+    /// R3535002: declared for SP3 E5; no rule yet.
+    Tipsy {
+        n: i32,
+    },
 }
 
 string_union! {
@@ -738,6 +776,25 @@ string_union! {
         StarshipPiece = "Starship Piece",
         Starship = "Starship",
         CantDefend = "Can't Defend",
+        /// R3535002: declared for SP3 E1; no rule yet.
+        Evolve = "Evolve",
+        /// R3535002: declared for SP3 E2; no rule yet. R3540001: the `via` of its tick's hit; the counter
+        /// is `Counters.burn`, not this keyword.
+        Burn = "Burn",
+        /// R3535002: declared for SP3 E2; no rule yet. R3540001: the `via` of its tick's hit; the counter
+        /// is `Counters.toxic`, not this keyword.
+        Toxic = "Toxic",
+        /// R3535002: declared for SP3 E4. R3546000: two lanes wide in both rows, four zones (`giga.rs`).
+        Giga = "GIGA",
+        /// R3535002: declared for SP3 E3. R3543000: a Unit's backrow placement, which Flying has
+        /// innately; R3828000: a Unit's alone, no other card reading it.
+        Flexible = "Flexible",
+        /// R3535002: declared for SP3 E3. R3543003: after it attacks and destroys a Unit, it may attack again.
+        Frenzy = "Frenzy",
+        /// R3535002: declared for SP3 E3. R3543002: "Can't be attacked" as a keyword, implying Can't Defend.
+        Evasive = "Evasive",
+        /// R3535002: declared for SP3 E5; no rule yet.
+        Tipsy = "Tipsy",
     }
 }
 
@@ -793,6 +850,14 @@ impl Keyword {
             Keyword::StarshipPiece => KeywordKind::StarshipPiece,
             Keyword::Starship => KeywordKind::Starship,
             Keyword::CantDefend => KeywordKind::CantDefend,
+            Keyword::Evolve => KeywordKind::Evolve,
+            Keyword::Burn { .. } => KeywordKind::Burn,
+            Keyword::Toxic { .. } => KeywordKind::Toxic,
+            Keyword::Giga => KeywordKind::Giga,
+            Keyword::Flexible => KeywordKind::Flexible,
+            Keyword::Frenzy => KeywordKind::Frenzy,
+            Keyword::Evasive => KeywordKind::Evasive,
+            Keyword::Tipsy { .. } => KeywordKind::Tipsy,
         }
     }
 
@@ -806,6 +871,9 @@ impl Keyword {
             Keyword::Armor { n }
             | Keyword::Lucky { n }
             | Keyword::Brittle { n }
+            | Keyword::Burn { n }
+            | Keyword::Toxic { n }
+            | Keyword::Tipsy { n }
             | Keyword::SpellDamage { n } => Some(n),
             Keyword::Temporary { n } => n,
             _ => None,
@@ -853,6 +921,14 @@ impl Keyword {
             KeywordKind::StarshipPiece => Keyword::StarshipPiece,
             KeywordKind::Starship => Keyword::Starship,
             KeywordKind::CantDefend => Keyword::CantDefend,
+            KeywordKind::Evolve => Keyword::Evolve,
+            KeywordKind::Burn => Keyword::Burn { n },
+            KeywordKind::Toxic => Keyword::Toxic { n },
+            KeywordKind::Giga => Keyword::Giga,
+            KeywordKind::Flexible => Keyword::Flexible,
+            KeywordKind::Frenzy => Keyword::Frenzy,
+            KeywordKind::Evasive => Keyword::Evasive,
+            KeywordKind::Tipsy => Keyword::Tipsy { n },
         }
     }
 }
@@ -949,6 +1025,22 @@ string_union! {
 }
 
 string_union! {
+    /// `Param.read`, when a declared number is read (R1748000, R3888001): only by a line that runs
+    /// once — the card's Cry, its Combo, its Cast on draw, its "When awoken:" or its Evolve — or only
+    /// while the card is in a hand or a deck, or in a graveyard. R3888000's table says where a Buff or
+    /// a Nerf of such a number is live.
+    pub enum ParamRead {
+        Cry = "cry",
+        Combo = "combo",
+        CastOnDraw = "castOnDraw",
+        Awaken = "awaken",
+        Evolve = "evolve",
+        HandOrDeck = "handOrDeck",
+        Graveyard = "graveyard",
+    }
+}
+
+string_union! {
     /// `"base" | "radiant"`: which face of a card (`fillParams`'s `face`, and every reader that
     /// indexes `def[face]`).
     pub enum FaceKind {
@@ -1000,11 +1092,18 @@ pub struct Param {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub power: Option<String>,
-    /// R1748000: only the card's Cry reads it, so while the card is on the field no Nerf or Buff draws
-    /// it (KY's Constant still may): on every face, or on the one face it names (R2261001).
+    /// R3888001 (after R1748000's `cry`): when the number is read, where only one kind of line reads
+    /// it, so a Nerf or a Buff draws it only where R3888000's table calls that live (KY's Constant
+    /// still may). Absent, the card's lasting text reads it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
-    pub cry: Option<ParamCry>,
+    pub read: Option<ParamRead>,
+    /// R3888001 (after R2261001): the one face `read` holds on, for a number that face's one kind of
+    /// line reads while the other face's lasting text reads it too; on the other face it is read as
+    /// lasting text. Absent, every face that writes it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub read_on: Option<FaceKind>,
 }
 
 impl Param {
@@ -1016,33 +1115,15 @@ impl Param {
         }
     }
 
-    /// R1748000, R2261001: whether only the card's Cry reads it on the face `radiant` says the card
-    /// shows.
-    pub fn cry_only_on(&self, radiant: bool) -> bool {
-        match self.cry {
-            None => false,
-            Some(ParamCry::Every(every)) => every,
-            Some(ParamCry::Face(FaceKind::Base)) => !radiant,
-            Some(ParamCry::Face(FaceKind::Radiant)) => radiant,
+    /// R3888001: when the number is read on the face `radiant` says the card shows — `read`, unless
+    /// `read_on` names the other face, where its lasting text reads it (`None`).
+    pub fn read_on_face(&self, radiant: bool) -> Option<ParamRead> {
+        match self.read_on {
+            Some(FaceKind::Base) if radiant => None,
+            Some(FaceKind::Radiant) if !radiant => None,
+            _ => self.read,
         }
     }
-}
-
-/// `Param.cry`: `true` when only the card's Cry reads the number on every face that writes it
-/// (R1748000), or the one face whose Cry alone reads it while the other face's lasting text reads it
-/// too (R2261001: Meditative #101 Gachaholic's base Cry and Radiant Activate).
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "ts",
-    derive(ts_rs::TS),
-    ts(export, export_to = "../../../apps/web/src/wire/generated/")
-)]
-#[serde(untagged)]
-pub enum ParamCry {
-    /// Every face; only ever `true`.
-    Every(bool),
-    /// That face only.
-    Face(FaceKind),
 }
 
 /// A tunable number in a face's text (B3.4 rule 5, R482): `{key}` is the number alone ("Deal {damage}
@@ -1407,7 +1488,7 @@ impl<T: PartialEq> OneOrMany<T> {
     }
 }
 
-/// `{ min?: number; max?: number }`: `CatalogQuery.costRange` and `TargetFilter.costRange`.
+/// `{ min?: number; max?: number }`: `TargetFilter.costRange`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(
     feature = "ts",
@@ -1422,60 +1503,6 @@ pub struct CostRange {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub max: Option<i32>,
-}
-
-/// §5.1: the one query every random pool and Discover goes through. Every field narrows; `{}` is every
-/// non-token card of every set (R380: a pool that names no set draws from all of them).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
-#[cfg_attr(
-    feature = "ts",
-    derive(ts_rs::TS),
-    ts(export, export_to = "../../../apps/web/src/wire/generated/")
-)]
-#[serde(rename_all = "camelCase")]
-pub struct CatalogQuery {
-    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub type_: Option<OneOrMany<CardType>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub cost: Option<i32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub cost_range: Option<CostRange>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub tags: Option<Vec<Tag>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub not_tags: Option<Vec<Tag>>,
-    /// R1422: has at least one of these tags ("a random Human, Book, CN, or AI-Generated card"), where
-    /// `tags` asks for every one of its tags. A Fruit or Prime tag here takes its tokens as `tags`
-    /// does (R382, R1421).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub any_tags: Option<Vec<Tag>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub rarity: Option<OneOrMany<Rarity>>,
-    /// A set, or several ("Classic or Classic+"). Absent is every set that ships (R380, R1420).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub set: Option<OneOrMany<SetName>>,
-    /// R387: never these definitions, by catalog id — a card's own id, so it never generates itself
-    /// (§5.1, B4.1). An index is unique only within its set, so a pool never excludes by index.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub exclude_def_id: Option<OneOrMany<String>>,
-    /// R382: tokens may come out of this pool beside the cards — Dropshipping's "(including tokens)".
-    /// Without it a pool holds no token, except that a Fruit pool holds the Grapes.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub with_tokens: Option<bool>,
-    /// R1080: the printed base attack and health a pool asks for (M #51's "random 1/1s").
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub stats: Option<AttackHealth>,
 }
 
 string_union! {
@@ -1850,7 +1877,8 @@ mod tests {
             max: None,
             tuned_on: None,
             power: None,
-            cry: None,
+            read: None,
+            read_on: None,
         }
     }
 
@@ -2022,6 +2050,54 @@ mod tests {
                 .all(|set| set_row(*set).stage != SetStage::Held || !set_ships(*set))
         );
         assert_eq!(SINGLE_PLAYER_SETS, [Boss, BossX]);
+    }
+
+    // R3535002: the new kinds and tags read and write their printed names (CLAUDE.md rule 3).
+    #[test]
+    fn r3535002_the_new_kinds_and_tags_read_and_write_their_printed_names() {
+        let kinds: Vec<Keyword> = vec![
+            Keyword::Evolve,
+            Keyword::Burn { n: 2 },
+            Keyword::Toxic { n: 3 },
+            Keyword::Giga,
+            Keyword::Flexible,
+            Keyword::Frenzy,
+            Keyword::Evasive,
+            Keyword::Tipsy { n: 1 },
+        ];
+        let names = [
+            "Evolve", "Burn", "Toxic", "GIGA", "Flexible", "Frenzy", "Evasive", "Tipsy",
+        ];
+        for (keyword, name) in kinds.iter().zip(names) {
+            assert_eq!(keyword.kind().as_str(), name);
+            let json = serde_json::to_value(keyword).expect("keyword serializes");
+            assert_eq!(json["kind"], name);
+            let back: Keyword = serde_json::from_value(json).expect("keyword reads back");
+            assert_eq!(&back, keyword);
+        }
+        assert_eq!(Keyword::Burn { n: 2 }.n(), Some(2));
+        assert_eq!(Keyword::Toxic { n: 3 }.n(), Some(3));
+        assert_eq!(Keyword::Tipsy { n: 1 }.n(), Some(1));
+        assert_eq!(Keyword::Evolve.n(), None);
+        assert_eq!(Keyword::Giga.n(), None);
+        for tag in [
+            Tag::Mindustrial,
+            Tag::Mineral,
+            Tag::AutomaAlpha,
+            Tag::AutomaBeta,
+            Tag::AutomaGamma,
+            Tag::AutomaDelta,
+            Tag::AutomaOmega,
+            Tag::AutomaZeta,
+            Tag::Paperclip,
+        ] {
+            let json = serde_json::to_value(tag).expect("tag serializes");
+            let back: Tag = serde_json::from_value(json).expect("tag reads back");
+            assert_eq!(back, tag);
+        }
+        assert_eq!(Tag::AutomaAlpha.as_str(), "Automa-α");
+        assert_eq!(Tag::AutomaOmega.as_str(), "Automa-Ω");
+        assert_eq!(Tag::AutomaZeta.as_str(), "Automa-ζ");
     }
 
     // R3114001: a set's shadow-ban ceiling is its share of its non-token cards, rounded down.

@@ -916,6 +916,11 @@ pub fn run_resumable_list(
         if ctx.state.result.is_some() {
             return ListStatus::Over;
         }
+        // R3925000: at the loop cap card text is off, so the rest of the list never resolves either; it is
+        // done, not over, as the game goes on (a combat stops on `Over`).
+        if crate::loop_cap::capped(&ctx.sink) {
+            return ListStatus::Done;
+        }
 
         let effect = top.effects[top.at].clone();
         if let Some(expand) = &effect.expand {
@@ -1288,18 +1293,18 @@ fn cast_prompt_shape(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<
     if has_answerer(&args.resume.hook) {
         return Some(args);
     }
+    // R450, R452: a prompt opened inside a cast filters its options through the targeting point
+    // first, so a random answer is one a player could pick and an aimed cast counts only legal targets.
+    let options = crate::targeting_point::targetable_options(sink.state, &args);
+    if options.is_empty() {
+        return None;
+    }
+    let args = OpenPromptArgs { options, ..args };
     // R1200: while a Mayor acts a `target` prompt is answered at once at random, for whichever player
     // it opened for, meeting no targeting point (as R452's picks). R1201: the opener's Lucky rolls again.
     if args.kind == PromptKind::Target && crate::random_targets::targets_random(sink.state) {
-        let shaped = OpenPromptArgs {
-            options: crate::targeting_point::targetable_options(sink.state, &args),
-            ..args
-        };
-        if shaped.options.is_empty() {
-            return None;
-        }
-        let luck = crate::random_targets::mayor_luck(sink.state, shaped.player);
-        answer_at_random(sink, &shaped, luck);
+        let luck = crate::random_targets::mayor_luck(sink.state, args.player);
+        answer_at_random(sink, &args, luck);
         return None;
     }
     let Some(mode) =
@@ -1414,6 +1419,21 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32)
         return;
     };
     let targets = in_offered_order(&probe, selection);
+    // I22 (#4540): the fuzz monitor holds this draw to the targeting rules (`testkit::seams`).
+    #[cfg(feature = "testkit")]
+    if args.kind == PromptKind::Target {
+        let by = if crate::random_targets::targets_random(state) {
+            crate::testkit::seams::TargetDrawBy::Mayor
+        } else {
+            crate::testkit::seams::TargetDrawBy::RandomCast
+        };
+        let source = args
+            .resume
+            .instance_id
+            .as_deref()
+            .and_then(|id| find_instance(state, id));
+        crate::testkit::seams::record_target_draw(state, source, args.player, by, &targets);
+    }
     let chosen_from = crate::stays::exit_mark(sink.state);
     run_resume(
         sink,

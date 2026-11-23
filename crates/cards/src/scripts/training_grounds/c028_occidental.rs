@@ -6,7 +6,7 @@
 //! Engine: C+ #24 Crushing Walls' sweep on one lane, each zone's top card (§3: lanes run left to right
 //! from each owner's seat, so the rightmost is the board's last,
 //! `UNIT_ZONES`), both sides and both rows (Radiant: the enemy's alone), passing a Unit standing on an
-//! Ivory Tower as its play resolves (R446, R653). The base face destroys itself there too, as
+//! Ivory Tower as its play resolves (R446, R653). A GIGA covering the lane is in it (R3546001). The base face destroys itself there too, as
 //! Hearthstone's "destroy all minions" (R2196003). TG #29 Easterner mirrors it on lane 1.
 
 use jackioh_engine::prelude::*;
@@ -21,7 +21,8 @@ fn sweep(side: ScopeSide) -> Script {
         cards_in_scope(ctx, &json_as(json!({ "side": side, "rows": ["units", "backrow"] })))
             .into_iter()
             .filter(|card| !is_carried(&*ctx.state, card))
-            .filter(|card| slot_of(&*ctx.state, card).is_some_and(|at| at.lane == RIGHTMOST))
+            // R3546001: a GIGA covering the rightmost lane is in it.
+            .filter(|card| lanes_of(card).contains(&RIGHTMOST))
             .map(|card| card.id.clone())
             .collect()
     };
@@ -65,6 +66,8 @@ mod tests {
     const FLAGBEARER: &str = "classicplus-046"; // Felinor Flagbearer: Death: shuffle a Felinor Flagbearer Prime into your deck
     const PRIME: &str = "classicplus-046-1";
     const FILLER: &str = "core-005";
+    const GIGA_BODY: &str = "stand-in (1) 4/4 GIGA R12/12";
+    const AIRBLAST_DRILL: &str = "stinkyscapeplus-052"; // Airblast Drill: a printed GIGA Field Spell
 
     /// Both sides hold Mr. Vanillas and backrow cards in lanes 2 and 5, p1's lane-5 one a face-down Trap.
     fn swept(radiant: bool, zone: i32) -> Scenario {
@@ -104,6 +107,38 @@ mod tests {
             assert!(s.unit(P1, 1).is_some_and(|card| card.def_id == OCCIDENTAL));
             assert_eq!(holds(&s, P1, 2), (true, true));
             assert_eq!(holds(&s, P2, 2), (true, true));
+        }
+
+        #[test]
+        fn r3546001_a_giga_anchored_in_lane_4_dies_in_both_rows() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [OCCIDENTAL, FILLER] },
+                "p2": {
+                    "hand": [FILLER],
+                    "field": [{ "def": GIGA_BODY, "lane": LANE - 1 }],
+                },
+            }));
+            let giga = s.unit(P2, LANE - 1).expect("setup").id;
+            s.play(OCCIDENTAL, json!({ "zone": 1 }));
+            s.expect_in_zone(&giga, "graveyard");
+            let mut s = scenario(json!({
+                "p1": { "hand": [OCCIDENTAL, FILLER] },
+                "p2": { "hand": [FILLER], "backrow": [{ "def": AIRBLAST_DRILL, "lane": LANE - 1 }] },
+            }));
+            let drill = s.backrow(P2, LANE - 1).expect("setup").id;
+            s.play(OCCIDENTAL, json!({ "zone": 1 }));
+            s.expect_in_zone(&drill, "graveyard");
+        }
+
+        #[test]
+        fn r3546001_a_giga_in_lanes_3_and_4_survives() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [OCCIDENTAL, FILLER] },
+                "p2": { "hand": [FILLER], "field": [{ "def": GIGA_BODY, "lane": LANE - 2 }] },
+            }));
+            let giga = s.unit(P2, LANE - 2).expect("setup").id;
+            s.play(OCCIDENTAL, json!({ "zone": 1 }));
+            s.expect_in_zone(&giga, "field");
         }
 
         #[test]
@@ -150,6 +185,22 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn r3546001_destroys_only_the_enemy_giga_in_lanes_4_and_5() {
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [{ "def": OCCIDENTAL, "radiant": true }, FILLER],
+                    "field": [{ "def": GIGA_BODY, "lane": LANE - 1 }],
+                },
+                "p2": { "hand": [FILLER], "field": [{ "def": GIGA_BODY, "lane": LANE - 1 }] },
+            }));
+            let mine = s.unit(P1, LANE - 1).expect("setup").id;
+            let theirs = s.unit(P2, LANE - 1).expect("setup").id;
+            s.play(OCCIDENTAL, json!({ "zone": 1 }));
+            s.expect_in_zone(&mine, "field");
+            s.expect_in_zone(&theirs, "graveyard");
+        }
 
         #[test]
         fn r2196003_an_18_10_that_destroys_only_the_enemy_s_lane_5_cards() {

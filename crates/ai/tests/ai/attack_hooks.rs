@@ -227,6 +227,7 @@ fn r2688000_the_twin_is_scored_with_its_text_back() {
         expiry: ModifierExpiry::Never,
         kind: ModifierKind::UnitsHaveKeyword {
             keyword: Keyword::Poisonous,
+            from_spell: None,
         },
     });
     assert!(unit_has(&lent, unit(&lent, AI, BADGER), KeywordKind::Poisonous));

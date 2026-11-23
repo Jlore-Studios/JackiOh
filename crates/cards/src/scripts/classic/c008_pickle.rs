@@ -290,15 +290,10 @@ mod tests {
         must(s.state().pending.clone(), "open prompt")
     }
 
-    fn modes(s: &Scenario) -> Vec<String> {
-        open(s)
-            .options
-            .iter()
-            .map(|option| match &option.selection {
-                Selection::Mode { option } => option.clone(),
-                _ => "?".to_string(),
-            })
-            .collect()
+    /// The open prompt offers exactly these Mode options in this order and nothing else.
+    fn assert_modes(s: &Scenario, want: &[&str]) {
+        assert_eq!(s.prompt_modes(), want);
+        assert_eq!(open(s).options.len(), want.len(), "an option other than a Mode is offered");
     }
 
     fn labels(s: &Scenario) -> Vec<String> {
@@ -371,7 +366,7 @@ mod tests {
                 assert_eq!(s.state().active, P2);
                 assert_eq!(pending.player_id, P2);
                 assert_eq!(pending.kind, PromptKind::Mode);
-                assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
+                assert_modes(&s, &["discard", "exile", "draw"]);
                 s.answer(json!("exile"));
                 s.answer(json!("discard"));
                 s.answer(json!("draw"));
@@ -407,7 +402,7 @@ mod tests {
                 assert_eq!(s.state().active, P2);
                 assert_eq!(pending.player_id, P2);
                 assert_eq!(pending.kind, PromptKind::Mode);
-                assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
+                assert_modes(&s, &["discard", "exile", "draw"]);
                 s.answer(json!("draw"));
                 assert_eq!(open(&s).player_id, P2);
                 assert_eq!(def_ids(&s.pile(P1, "hand")), vec![FILLER, MY_DECK[0]]);
@@ -424,7 +419,23 @@ mod tests {
                     assert_eq!(s.state().active, P1);
                     assert_eq!(pending.player_id, P2);
                     assert_eq!(pending.kind, PromptKind::Mode);
-                    assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
+                    assert_modes(&s, &["discard", "exile", "draw"]);
+                });
+            }
+
+            #[test]
+            fn r767000_a_game_on_v0_3_15_answers_through_the_kept_chosen_step_you_draw_and_the_second_question_opens() {
+                crate::register_all();
+                let shipped = crate::shipped_catalog("v0.4.0").expect("v0.4.0 is carried");
+                jackioh_engine::with_shipped(Some(shipped), || {
+                    let mut s = pickle(false, Piles::default());
+                    s.play(PICKLE, json!({}));
+                    s.answer(json!("draw"));
+                    assert_eq!(def_ids(&s.pile(P1, "hand")), vec![FILLER, MY_DECK[0]]);
+                    let second = open(&s);
+                    assert_eq!(second.player_id, P2);
+                    assert_eq!(second.prompt, "Pickle: your choice (2 of 3)");
+                    assert_modes(&s, &["discard", "exile", "draw"]);
                 });
             }
 
@@ -445,7 +456,7 @@ mod tests {
                     }));
                     s.play(PICKLE, json!({}));
                     assert_eq!(s.state().active, P1);
-                    assert_eq!(modes(&s), vec!["exile", "draw"]);
+                    assert_modes(&s, &["exile", "draw"]);
                 });
             }
 
@@ -524,7 +535,7 @@ mod tests {
                 );
                 s.play(PICKLE, json!({}));
                 s.end_turn();
-                assert_eq!(modes(&s), vec!["draw"]);
+                assert_modes(&s, &["draw"]);
             }
 
             #[test]
@@ -533,9 +544,9 @@ mod tests {
                 let mut s = pickle(false, Piles { their_deck: Some(vec!["core-006"]), ..Piles::default() });
                 s.play(PICKLE, json!({}));
                 s.end_turn();
-                assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
+                assert_modes(&s, &["discard", "exile", "draw"]);
                 s.answer(json!("exile"));
-                assert_eq!(modes(&s), vec!["discard", "draw"]);
+                assert_modes(&s, &["discard", "draw"]);
             }
 
             #[test]
@@ -547,10 +558,10 @@ mod tests {
                 );
                 s.play(PICKLE, json!({}));
                 s.end_turn();
-                assert_eq!(modes(&s), vec!["discard", "draw"]);
+                assert_modes(&s, &["discard", "draw"]);
                 s.answer(json!("discard"));
                 assert_eq!(def_ids(&s.pile(P2, "graveyard")), vec!["core-008"]);
-                assert_eq!(modes(&s), vec!["draw"]);
+                assert_modes(&s, &["draw"]);
             }
 
             #[test]
@@ -659,7 +670,7 @@ mod tests {
                         "type": "answer",
                         "playerId": "p2",
                         "choiceId": second.id,
-                        "selection": [{ "pick": "mode", "option": "exile" }],
+                        "selection": pick::mode("exile"),
                         "nonce": "pickle-round-trip-1",
                     }),
                 );
@@ -673,13 +684,32 @@ mod tests {
                         "type": "answer",
                         "playerId": "p2",
                         "choiceId": third.id,
-                        "selection": [{ "pick": "mode", "option": "draw" }],
+                        "selection": pick::mode("draw"),
                         "nonce": "pickle-round-trip-2",
                     }),
                 );
                 assert!(picked.error.is_none());
                 assert!(picked.state.pending.is_none());
                 assert!(picked.state.work.is_empty());
+            }
+
+            /// §10.6: the chain's numbers ride the prompt's data as JSON and come back narrowed, never cast
+            /// (SURFACE §4.4 item 10): a question number that is not a whole number is no chain, so the
+            /// answer runs nothing and asks nothing more.
+            #[test]
+            fn s10_6_a_carried_question_number_that_is_not_whole_ends_the_chain_unanswered() {
+                crate::register_all();
+                let mut s = pickle(false, Piles::default());
+                s.play(PICKLE, json!({}));
+                s.end_turn();
+                let hand = def_ids(&s.pile(P1, "hand"));
+                let Some(pending) = s.state_mut().pending.as_mut() else {
+                    panic!("the first question is open");
+                };
+                pending.resume.data.insert("n".to_string(), json!(1.5));
+                s.answer(json!("draw"));
+                assert!(s.state().pending.is_none());
+                assert_eq!(def_ids(&s.pile(P1, "hand")), hand);
             }
 
             #[test]
@@ -780,7 +810,7 @@ mod tests {
                 }));
                 s.play(PICKLE, json!({}));
                 s.end_turn();
-                assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
+                assert_modes(&s, &["discard", "exile", "draw"]);
                 s.answer(json!("discard"));
                 assert_eq!(def_ids(&s.pile(P2, "graveyard")).len(), 1);
                 assert_eq!(
@@ -858,7 +888,7 @@ mod tests {
                 s.play(PICKLE, json!({}));
                 s.end_turn();
                 s.answer(json!("exile"));
-                assert_eq!(modes(&s), vec!["discard", "draw"]);
+                assert_modes(&s, &["discard", "draw"]);
             }
         }
     }

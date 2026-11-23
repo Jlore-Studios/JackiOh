@@ -167,4 +167,52 @@ describe("scripts/build-wasm.sh's directories", () => {
     expect(alone.builds).toEqual(["build -p jackioh-wasm-c --release --target wasm32-unknown-unknown"]);
     expect(files(pkg(root))).toEqual({});
   });
+
+  it("plays the hotseat fixture on the built C module using reference-host.mjs (#4332)", () => {
+    const root = world();
+    const nodeLog = join(root, "node.log");
+    writeFileSync(nodeLog, "");
+    sh(
+      join(root, "bin/node"),
+      `echo "$*" >> "${nodeLog}"
+exit 0`,
+    );
+    run(root, "fixture", { JACKIOH_WASM_C: "1", JACKIOH_WASM_NORMAL: "0" });
+    const calls = readFileSync(nodeLog, "utf8").split("\n").filter(Boolean);
+    const fixtureCall = calls.find((line) => line.includes("reference-host.mjs"));
+    expect(fixtureCall).toBe(
+      `${join(root, "luau/tools/reference-host.mjs")} fixture ${join(root, "target/wasm32-unknown-unknown/release/jackioh_wasm_c.wasm")}`,
+    );
+  });
+
+  it("fails the build and names the reference host when the fixture run fails (#4332)", () => {
+    const root = world();
+    sh(
+      join(root, "bin/node"),
+      `case "$*" in
+    *"reference-host.mjs fixture"*)
+      echo "reference-host.mjs: hash mismatch" >&2
+      exit 1
+      ;;
+    *) exit 0 ;;
+  esac`,
+    );
+    const result = spawnSync("sh", [join(root, "scripts/build-wasm.sh")], {
+      encoding: "utf8",
+      env: {
+        PATH: `${join(root, "bin")}:${process.env.PATH ?? ""}`,
+        HOME: root,
+        CARGO_LOG: join(root, "cargo-fixture-fail.log"),
+        RUN: "fixture-fail",
+        JACKIOH_WASM_PREVIEW: "0",
+        JACKIOH_WASM_NORMAL: "0",
+        JACKIOH_WASM_C: "1",
+      },
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("luau/tools/reference-host.mjs fixture failed");
+    expect(result.stderr).toContain(
+      `reproduce with: node luau/tools/reference-host.mjs fixture ${join(root, "target/wasm32-unknown-unknown/release/jackioh_wasm_c.wasm")}`,
+    );
+  });
 });

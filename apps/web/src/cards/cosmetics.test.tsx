@@ -136,6 +136,27 @@ function rules(css: string): { selector: string; body: string; at: number }[] {
   return out;
 }
 
+/**
+ * The property names `body` sets, as `/([a-z-]+)\s*:/g` names them (#4009: the name plus optional
+ * whitespace before `:` scans super-linearly on long runs); `extra` holds further name characters
+ * (`styles` below reads `[a-z0-9-]` names).
+ */
+function propertyNames(body: string, extra = ""): (string | undefined)[] {
+  const names: (string | undefined)[] = [];
+  let at = 0;
+  while (at < body.length) {
+    const colon = body.indexOf(":", at);
+    if (colon === -1) return names;
+    let start = colon;
+    while (start > 0 && /\s/.test(body.charAt(start - 1))) start--;
+    let name = start;
+    while (name > 0 && (/[a-z-]/.test(body.charAt(name - 1)) || extra.includes(body.charAt(name - 1)))) name--;
+    if (name < start) names.push(body.slice(name, start));
+    at = colon + 1;
+  }
+  return names;
+}
+
 /** The rules of `css` inside its motion gates (the Collection's sheet has two). */
 function gatedRules(css: string): { selector: string; body: string }[] {
   const gates = [...css.matchAll(/@media \(prefers-reduced-motion: no-preference\)\s*\{/g)];
@@ -432,7 +453,7 @@ describe("R1295000 the cosmetics stylesheet", () => {
     expect(frames.length).toBeGreaterThan(0);
     for (const frame of frames) {
       const body = blockFrom(cosmeticsCss, (frame.index ?? 0) + frame[0].length - 1);
-      const properties = [...body.matchAll(/([a-z-]+)\s*:/g)].map((match) => match[1]);
+      const properties = propertyNames(body);
       expect(properties.length, frame[1]).toBeGreaterThan(0);
       for (const property of properties) expect(["transform", "opacity"], `${frame[1] ?? ""}: ${property ?? ""}`).toContain(property);
     }
@@ -570,7 +591,7 @@ describe("R1297000 the deck slots", () => {
     expect(frames.length).toBe(cosmeticsOf("field").filter((cosmetic) => !cosmetic.default).length);
     for (const frame of frames) {
       const body = blockFrom(tableCss, (frame.index ?? 0) + frame[0].length - 1);
-      const properties = [...body.matchAll(/([a-z-]+)\s*:/g)].map((match) => match[1]);
+      const properties = propertyNames(body);
       expect(properties.length, frame[1]).toBeGreaterThan(0);
       for (const property of properties) expect(["transform", "opacity"], `${frame[1] ?? ""}: ${property ?? ""}`).toContain(property);
     }
@@ -663,6 +684,17 @@ describe("R1655000 the picks of each card", () => {
     localStorage.setItem(CARD_PICKS_SETTINGS_KEY, "{not json");
     resetCosmeticsForTests();
     expect(readCardPicks(OWN)).toEqual({});
+  });
+
+  it("stored card picks ignore proto ids (#4015)", () => {
+    localStorage.setItem(
+      CARD_PICKS_SETTINGS_KEY,
+      `{"__proto__":{"foil":"${PICKS.foil}"},"constructor":{"foil":"${PICKS.foil}"},"${OWN}":{"foil":"${PICKS.foil}"}}`,
+    );
+    resetCosmeticsForTests();
+    expect(readCardPicks(OWN)).toEqual({ foil: PICKS.foil });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+    expect(({} as Record<string, unknown>)["foil"]).toBeUndefined();
   });
 
   it("R1655000 a write starts from what storage holds now: another tab's picks and a newer client's kinds stand", () => {
@@ -979,7 +1011,7 @@ describe("R1956000 R1956001 picks across tabs, and a Created card's generator", 
 describe("R1833000 the 36 earned cosmetics' looks", () => {
   /** Whether some rule of `css` whose selector holds `needle` declares something. */
   function styles(css: string, needle: string): boolean {
-    return rules(css).some((rule) => rule.selector.includes(needle) && /[a-z0-9-]+\s*:/.test(rule.body));
+    return rules(css).some((rule) => rule.selector.includes(needle) && propertyNames(rule.body, "0123456789").length > 0);
   }
 
   /** A selector list's selectors: split at its commas, those inside `:not(…)` and `:is(…)` kept. */
@@ -1083,7 +1115,7 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
       expect(frames.length).toBeGreaterThan(0);
       for (const frame of frames) {
         const body = blockFrom(css, (frame.index ?? 0) + frame[0].length - 1);
-        for (const property of [...body.matchAll(/([a-z-]+)\s*:/g)].map((match) => match[1])) {
+        for (const property of propertyNames(body)) {
           expect(["transform", "opacity"], `${frame[1] ?? ""}: ${property ?? ""}`).toContain(property);
         }
       }
@@ -1171,7 +1203,7 @@ describe("R2655003 the full-art tiers' motion", () => {
       const at = cosmeticsCss.indexOf(`@keyframes ${name} {`);
       expect(at, name).toBeGreaterThanOrEqual(0);
       const body = blockFrom(cosmeticsCss, cosmeticsCss.indexOf("{", at));
-      const properties = [...body.matchAll(/([a-z-]+)\s*:/g)].map((match) => match[1]);
+      const properties = propertyNames(body);
       expect(properties.length, name).toBeGreaterThan(0);
       for (const property of properties) expect(["transform", "opacity"], `${name}: ${property ?? ""}`).toContain(property);
     }
@@ -1214,7 +1246,8 @@ describe("R2720000 every finish on a full-art face", () => {
     expect(base).toMatch(/pointer-events:\s*none/);
     expect(base).toContain(`opacity: ${FULL_ART_FINISH_OPACITY};`);
     expect(base).toMatch(/z-index:\s*1\b/);
-    const mask = /mask-image:\s*([^;]+);/.exec(base)?.[1] ?? "";
+    // No `\s*` before the capture (#4009): it trades characters with `[^;]+` super-linearly.
+    const mask = (/mask-image:([^;]+);/.exec(base)?.[1] ?? "").trimStart();
     expect(mask).toContain("transparent 14%, transparent 86%");
     expect(mask).toContain("transparent 10%, transparent 90%");
     // The band lies over the art and its scrim, and under everything the face prints.

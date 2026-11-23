@@ -12,7 +12,8 @@ use jackioh_engine::effects;
 // The verbs as a card script names them, through the prelude (CLAUDE.md rule 5).
 use jackioh_engine::prelude::{
     ActivationDecl, ActivationUses, HearBackArgs, QuestGoal, QuestStage, QuestStageGoal, QuestStageReward,
-    complete_quests, complete_this_quest, hear_back, next_stage, open_stage, steal_mana_crystals, subsystems,
+    complete_quests, complete_this_quest, end_quest_line, hear_back, next_stage, open_stage,
+    steal_mana_crystals, subsystems,
 };
 use jackioh_engine::testkit::*;
 
@@ -312,6 +313,54 @@ fn goal_stages(kind: GoalKind) -> Vec<QuestStage> {
     }]
 }
 
+// Ending a line (R4331000)
+
+/// A one-stage quest, completed by an effect, whose reward gains 1 mana and ends the line: single-use.
+pub static spent: LazyLock<CardDef> =
+    LazyLock::new(|| def(18569, "spent", "Field Spell", 1, json!(["Quest"]), None));
+/// The same, whose reward is an Aura (`hold_quest_aura`) before it ends the line.
+pub static lasting: LazyLock<CardDef> =
+    LazyLock::new(|| def(18570, "lasting", "Field Spell", 1, json!(["Quest"]), None));
+/// Two stages, the first's reward opening the second and then ending the line: the line is not over.
+pub static unfinished: LazyLock<CardDef> =
+    LazyLock::new(|| def(18571, "unfinished", "Field Spell", 1, json!(["Quest"]), None));
+
+/// The ending fixtures' mana reward, and the aura `lasting` holds.
+pub const SPENT_MANA: i32 = 1;
+pub const LASTING_AURA: &str = "lasting";
+
+fn by_effect_stages(count: usize) -> Vec<QuestStage> {
+    (1..=count)
+        .map(|n| QuestStage {
+            name: format!("Stage {n}"),
+            goals: vec![QuestStageGoal {
+                id: format!("goal-{n}"),
+                text: "Completed by an effect".to_string(),
+                goal: QuestGoal::ByEffect,
+            }],
+            reward: QuestStageReward {
+                id: format!("reward-{n}"),
+                text: "A reward".to_string(),
+            },
+        })
+        .collect()
+}
+
+fn ending_script(count: usize, reward: fn() -> Vec<Effect>) -> Script {
+    Script {
+        stages: by_effect_stages(count),
+        triggers: vec![TriggerDef::new(
+            "stage-completed",
+            &[GameEventType::QuestCompleted],
+            move |ctx, event| match subsystems::completed_stage_of(ctx, event) {
+                Some(_) => reward(),
+                None => vec![],
+            },
+        )],
+        ..Script::default()
+    }
+}
+
 // Tylannt
 
 /// Stinkyscape #6 Tylannt's shape: "Cry: Complete the current stage on all your Quests."
@@ -403,6 +452,25 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         .expect("the quest fixtures' tree");
     IndexMap::from([
         (heist.id.clone(), both(heist_script())),
+        (
+            spent.id.clone(),
+            both(ending_script(1, || {
+                vec![
+                    effects::gain_mana(json_as(json!({ "amount": SPENT_MANA }))),
+                    end_quest_line(),
+                ]
+            })),
+        ),
+        (
+            lasting.id.clone(),
+            both(ending_script(1, || {
+                vec![subsystems::hold_quest_aura(LASTING_AURA), end_quest_line()]
+            })),
+        ),
+        (
+            unfinished.id.clone(),
+            both(ending_script(2, || vec![next_stage(), end_quest_line()])),
+        ),
         (application.id.clone(), both(application_script())),
         (
             untagged_stages.id.clone(),
@@ -533,6 +601,9 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
 pub static STAGED_QUEST_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
         heist.clone(),
+        spent.clone(),
+        lasting.clone(),
+        unfinished.clone(),
         application.clone(),
         untagged_stages.clone(),
         quest_tree.clone(),

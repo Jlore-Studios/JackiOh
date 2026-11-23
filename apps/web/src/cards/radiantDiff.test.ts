@@ -110,28 +110,39 @@ describe("R277 the word diff", () => {
     }).map((card) => card.id);
     // Faces with no marks: Core #55 Lava Golem's is its base text less the drawback, a pure deletion by design (its
     // doubled stats carry its marks, R277), as are Classic #60 Pile On's and Classic+ #5 Guy Att's, the brief's own
-    // Radiant texts (docs/classic-sets.md, B6, B7), Classic+ #34 Memory Leak's (less "Choose one.") and Classic #28
-    // Second Wind's (less the exile replacement; its base face has the same minimum price). The designer's own:
-    // Meditative #89 Jlarna's (less the end-of-turn Tribute, R1225), #22.1 Fortify Mind's (R862), #48 Tranquility's
-    // (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's Living potions (less the Tribute they
-    // activate with) and Stinkyscape #9 Ticketed's (less Brittle 3, R1857000). #149 Wildar's is marked (#2657): its
+    // Radiant texts (docs/classic-sets.md, B6, B7), and Classic+ #34 Memory Leak's (less "Choose one."); Classic #28
+    // Second Wind's was one (less "exile", issue #3951) until issue #4440's "+2 mana per turn" marked it. The designer's own:
+    // Meditative #89 Jlarna's (less the end-of-turn Tribute, R1225), #22.1 Fortify Mind's (R862), #47 饕餮's (less
+    // "then Freeze this.", issue #3996), #48 Tranquility's (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's Living potions (less the Tribute they
+    // activate with) and Stinkyscape #9 Ticketed's (less Brittle 3, R1857000), and Training Grounds #31 Level Up!'s (less "if it destroyed an enemy Unit",
+    // issue #3951). #149 Wildar's is marked (#2657): its
     // Radiant face keeps the opponent's Call to Chaos and makes its own cost (0) too. Core #79 Twinspell's is its base
-    // text less "Then this goes to the graveyard.", so it stays on the field to serve each turn (R3044000).
+    // text less "Then this goes to the graveyard.", so it stays on the field to serve each turn (R3044000). Stinkyscape+
+    // (§8.12) adds four of the designer's: #31 Soul Read's (less the Tribute when another seen card comes first), #72
+    // Foreshadow's and #73 Ripple's (less Can't attack) and #85 Body Snatch's (less "in Defense Position"). Classic+
+    // #73.1 Classic Golem's is its base text less "Radiant" since issue #4292 gave it First Strike back in place of
+    // Divine Shield: the Unit it attacks becomes a base-face one, and its doubled stats carry its marks.
     expect(silent).toEqual([
       "core-055",
       "core-079",
-      "classic-028",
       "classic-029",
       "classic-060",
       "classicplus-005",
       "classicplus-034",
+      "classicplus-073-1",
       "meditative-022-1",
+      "meditative-047",
       "meditative-048",
       "meditative-089",
       "meditativeplus-011",
       "meditativeplus-012",
       "meditativeplus-013",
       "stinkyscape-009",
+      "traininggrounds-031",
+      "stinkyscapeplus-031",
+      "stinkyscapeplus-072",
+      "stinkyscapeplus-073",
+      "stinkyscapeplus-085",
     ]);
   });
 });

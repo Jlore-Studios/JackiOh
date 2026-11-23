@@ -1,4 +1,4 @@
-// `/privacy`, `/terms`, `/accessibility` and `/copyright`, the footer that links them, the terms box
+// `/privacy`, `/terms` and `/copyright`, the footer that links them, the terms box
 // on "Create account" (R757001), and the tab title and canonical link `App` keeps for every path.
 
 import { createHash } from "node:crypto";
@@ -17,7 +17,6 @@ import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
 import { consentTestid } from "../auth/testids.ts";
 import { SITE_ORIGIN, paths } from "../net/navigate.ts";
 import { at } from "../test/stubServer.ts";
-import AccessibilityRoute, { ACCESSIBILITY_LAST_UPDATED, accessibilityTestid } from "./accessibility.tsx";
 import CopyrightRoute, { COPYRIGHT_LAST_UPDATED, copyrightTestid } from "./copyright.tsx";
 import LandingRoute from "./landing.tsx";
 import LoginRoute, { signUpPrivacyTestid } from "./login.tsx";
@@ -45,6 +44,8 @@ const AGREED_TEXT: Readonly<Record<string, string>> = {
   "2026-10-31/2026-11-01": "b21cb121e8ed21750bf3a141392ed8f0238f8cb657b05833d802e55094387dd2",
   // Re-hashed for #3230 (R3230000): BackLink uses ArrowIcon instead of a literal arrow; the legal words are unchanged.
   "2026-11-05/2026-11-05": "daf8cb7f19204c9efe9cff990b48b1eced1d26f81f577ca80fac279de82c4745",
+  // #3727: the policy names the daily games' notification settings and each device's push subscription.
+  "2026-11-05/2026-11-11": "8f47e1386a3ab0e16492d992ed53398a9f5134ee77ab24a3bdcd5e7d76dc4502",
 };
 
 /** Both pages' English text, the Terms then the Privacy Policy, as rendered. */
@@ -90,7 +91,7 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-11-05");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-11-11");
   });
 
   it("R757000 R3110000 both pages name the minimum age, and the policy keeps only confirmation of it", () => {
@@ -169,6 +170,17 @@ describe("the privacy policy", () => {
     );
   });
 
+  it("#3727 the policy names the daily games' notification settings and push subscriptions, and how long a subscription is kept", () => {
+    render(<PrivacyRoute />);
+    expect(region("What we collect")).toHaveTextContent(
+      "For daily games, your notification settings (email on or off, and when we last emailed you or sent a push)",
+    );
+    expect(region("What we collect")).toHaveTextContent("its push subscription: its push service’s address and keys.");
+    expect(region("How long")).toHaveTextContent(
+      "A device’s push subscription is kept until you turn its notifications off, sign out on it, or its push service tells us it’s gone.",
+    );
+  });
+
   it("R2615001 the policy says the player stats are public", () => {
     render(<PrivacyRoute />);
     expect(region("Who sees it")).toHaveTextContent("Your player stats are public.");
@@ -182,18 +194,10 @@ describe("the privacy policy", () => {
 });
 
 describe("the legal pages", () => {
-  it("serves terms and accessibility with their updated dates", () => {
-    render(
-      <>
-        <TermsRoute />
-        <AccessibilityRoute />
-      </>,
-    );
+  it("serves terms with its updated date", () => {
+    render(<TermsRoute />);
     expect(screen.getByTestId(termsTestid.updated)).toHaveTextContent(`Last updated ${TERMS_LAST_UPDATED}`);
     expect(TERMS_LAST_UPDATED).toBe("2026-11-05");
-    expect(screen.getByTestId(accessibilityTestid.updated)).toHaveTextContent(
-      `Last updated ${ACCESSIBILITY_LAST_UPDATED}`,
-    );
   });
 
   it("R640001 R2614000 R3110000 the terms say ranked may match an AI opponent, and that nothing marks it", () => {
@@ -209,7 +213,7 @@ describe("the legal pages", () => {
   });
 
   it("open as drafts for the owner: their first source lines say so", () => {
-    for (const file of ["terms.tsx", "accessibility.tsx", "copyright.tsx"]) {
+    for (const file of ["terms.tsx", "copyright.tsx"]) {
       const source = readFileSync(join(HERE, file), "utf8");
       expect(source.split("\n")[0], file).toBe("// DRAFT — needs owner and legal review");
     }
@@ -218,7 +222,6 @@ describe("the legal pages", () => {
   it("are in the sitemap", () => {
     const sitemap = sitemapXml(PUBLIC_PAGES);
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/terms</loc>`);
-    expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/accessibility</loc>`);
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/copyright</loc>`);
   });
 
@@ -262,7 +265,6 @@ describe("the legal pages", () => {
       [TermsRoute, "Contact"],
       [PrivacyRoute, "Who we are"],
       [CopyrightRoute, "Contact"],
-      [AccessibilityRoute, "Report an issue"],
     ] as const) {
       render(<Page />);
       const section = screen.getByRole("region", { name });
@@ -275,14 +277,10 @@ describe("the legal pages", () => {
     expect(security).toContain(`Contact: ${CONTACT_URL}`);
   });
 
-  it("serves /terms, /accessibility and /copyright with no account needed", async () => {
+  it("serves /terms and /copyright with no account needed", async () => {
     at(paths.terms);
     render(<App />);
     expect(await screen.findByTestId(termsTestid.screen, undefined, SLOW)).toBeInTheDocument();
-    cleanup();
-    at(paths.accessibility);
-    render(<App />);
-    expect(await screen.findByTestId(accessibilityTestid.screen, undefined, SLOW)).toBeInTheDocument();
     cleanup();
     at(paths.copyright);
     render(<App />);
@@ -296,10 +294,6 @@ describe("the site footer", () => {
     const footer = screen.getByTestId(siteFooterTestid.root);
     expect(within(footer).getByTestId(siteFooterTestid.privacy)).toHaveAttribute("href", paths.privacy);
     expect(within(footer).getByTestId(siteFooterTestid.terms)).toHaveAttribute("href", paths.terms);
-    expect(within(footer).getByTestId(siteFooterTestid.accessibility)).toHaveAttribute(
-      "href",
-      paths.accessibility,
-    );
     expect(within(footer).getByTestId(siteFooterTestid.copyright)).toHaveAttribute("href", paths.copyright);
     expect(within(footer).getByTestId(siteFooterTestid.contact)).toHaveAttribute("href", CONTACT_URL);
   });
@@ -353,7 +347,6 @@ describe("the tab title and the canonical link", () => {
     expect(documentTitleFor(paths.invite)).toBe("Invite code · JackiOh");
     expect(documentTitleFor(paths.privacy)).toBe("Privacy policy · JackiOh");
     expect(documentTitleFor(paths.terms)).toBe("Terms of service · JackiOh");
-    expect(documentTitleFor(paths.accessibility)).toBe("Accessibility · JackiOh");
     expect(documentTitleFor(paths.copyright)).toBe("Copyright · JackiOh");
     expect(documentTitleFor(paths.match("m-1"))).toBe("Match · JackiOh");
     expect(documentTitleFor("/nope")).toBe("Page not found · JackiOh");

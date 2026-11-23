@@ -78,3 +78,39 @@ describe("R97 sameOccurrence matches an event across the view that hid its card 
     expect(sameOccurrence(open, hiddenOther)).toBe(false);
   });
 });
+
+describe("R97 sameOccurrence compares like with like", () => {
+  it("R97 the sentinel stands for an id, a string: never for a number, a list, a record or nothing", () => {
+    for (const other of [0, 7, ["c84"], { instanceId: "c84" }, null, undefined]) {
+      expect(sameOccurrence(HIDDEN_ID, other)).toBe(false);
+      expect(sameOccurrence(other, HIDDEN_ID)).toBe(false);
+    }
+  });
+
+  it("R97 two lists are one occurrence item by item, at one length, and a list is never a string or a record", () => {
+    expect(sameOccurrence(["c84", HIDDEN_ID], ["c84", "c12"])).toBe(true);
+    expect(sameOccurrence(["c84"], ["c84", "c12"])).toBe(false);
+    expect(sameOccurrence(["c84", "c12"], ["c84"])).toBe(false);
+    expect(sameOccurrence(["c84"], ["c12"])).toBe(false);
+    expect(sameOccurrence(["7"], "7")).toBe(false);
+    expect(sameOccurrence("7", ["7"])).toBe(false);
+  });
+
+  it("R97 a record is never the same as what is no record", () => {
+    for (const other of [0, null, "x"]) {
+      expect(sameOccurrence({}, other)).toBe(false);
+      expect(sameOccurrence(other, {})).toBe(false);
+      expect(sameOccurrence({ type: "manaChanged" }, other)).toBe(false);
+    }
+  });
+
+  it("R97 a field one copy carries and the other lacks makes two occurrences, unless the engine rewrites it", () => {
+    const lacking = { type: "counterChanged", instanceId: "c84", counter: "brittle" };
+    const full = { ...lacking, value: 2 };
+
+    expect(sameOccurrence(full, lacking)).toBe(false);
+    expect(sameOccurrence(lacking, full)).toBe(false);
+    // Where the card is hidden the engine rewrites the count with it, so the copies still match.
+    expect(sameOccurrence({ ...lacking, instanceId: HIDDEN_ID }, full)).toBe(true);
+  });
+});

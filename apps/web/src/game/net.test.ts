@@ -4,12 +4,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, CombatForecast, PlayerView } from "@jackioh/shared";
-import { POST_GAME_FRAME_VERSION, SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
+import {
+  MATCH_OVER_CLOSE_CODE,
+  POST_GAME_FRAME_VERSION,
+  SEAT_TAKEN_CLOSE_CODE,
+  SPECTATOR_EMOTE_HAND_SIZE,
+  WS_PING_INTERVAL_SECONDS,
+} from "@jackioh/server-config";
 
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf, type CardCosmetics, type CosmeticKind } from "../cards/cosmetics.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
 import { baseView, pendingFor } from "../test/fixtures.ts";
 import {
+  RECONNECT_DELAYS_MS,
   awaitsYou,
   createMatchClient,
   parseServerFrame,
@@ -105,6 +112,8 @@ type HarnessOptions = {
   random?: () => number;
   /** Leave the client to listen for the page itself (`visibilitychange`, `online`). */
   pageEvents?: boolean;
+  /** How many of the first sockets the browser cannot construct: the factory throws for each. */
+  failOpens?: number;
 };
 
 /** How long a socket must have said nothing before a woken page doubts it (R1441). */
@@ -117,6 +126,7 @@ function harness(options: HarnessOptions = {}): Harness {
   let nextId = 1;
   let monotonicNow = 0;
   let onWake: (() => void) | null = null;
+  let failOpens = options.failOpens ?? 0;
 
   const timers: Timers = {
     setTimeout: (handler, ms) => {
@@ -136,6 +146,10 @@ function harness(options: HarnessOptions = {}): Harness {
     token: options.token ?? "tok",
     baseUrl: "ws://server.test/ws/match",
     socketFactory: (url, protocols) => {
+      if (failOpens > 0) {
+        failOpens -= 1;
+        throw new Error("the browser refused to construct the socket");
+      }
       const socket = new FakeSocket(url, protocols);
       sockets.push(socket);
       return socket;
@@ -409,6 +423,17 @@ describe("parseServerFrame", () => {
     expect(parseServerFrame(JSON.stringify({ type: "view" }))).toBeNull();
     expect(parseServerFrame(JSON.stringify({ type: "clock", now: 1 }))).toBeNull();
     expect(parseServerFrame("[]")).toBeNull();
+  });
+
+  it("a frame with proto keys does not pollute (#4015)", () => {
+    expect(parseServerFrame('{"type":"nope","__proto__":{"polluted":true}}')).toBeNull();
+    expect(parseServerFrame('{"type":"nope","constructor":{"prototype":{"polluted":true}}}')).toBeNull();
+    expect(parseServerFrame('{"type":"ack","nonce":"n","seq":1,"__proto__":{"polluted":true}}')).toEqual({
+      type: "ack",
+      nonce: "n",
+      seq: 1,
+    });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
   });
 });
 
@@ -856,6 +881,22 @@ describe("reconnect", () => {
     expect(h.pending()).toBe(0);
   });
 
+  it("R3694000 a finished match's close (MATCH_OVER_CLOSE_CODE) is final: no reconnect, no error, the last view kept", () => {
+    const h = connected();
+    h.socket().deliver({ type: "view", view: baseView({ turn: 4, result: { winner: "p1", reason: "hero-death" } }) });
+    h.socket().drop(MATCH_OVER_CLOSE_CODE, "the match is over");
+    expect(h.client.snapshot().connection).toBe("closed");
+    expect(h.client.snapshot().error).toBeNull();
+    expect(h.client.snapshot().view?.turn).toBe(4);
+    expect(h.pending()).toBe(0);
+
+    // A wake long after opens nothing either.
+    h.now(SILENCE_MS + 1);
+    h.wake();
+    h.runTimers();
+    expect(h.sockets).toHaveLength(1);
+  });
+
   it("close() stops the reconnect and the socket", () => {
     const h = connected();
     h.client.close();
@@ -936,6 +977,90 @@ describe("reconnect", () => {
     h.client.connect();
     expect(h.sockets).toHaveLength(2);
   });
+
+  it("R3694000 a close with 1001, a restart's drain, reconnects with a backoff", () => {
+    const h = connected();
+    h.socket().drop(1001, "the server is restarting");
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+    expect(h.pending()).toBe(1);
+
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+  });
+
+  it("a socket the browser cannot construct is retried on the backoff, with a transport error", () => {
+    const h = harness({ failOpens: 1 });
+    h.client.connect();
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+    expect(h.client.snapshot().errorCode).toBe("transport");
+    expect(h.client.snapshot().error).toBe("the browser refused to construct the socket");
+    expect(h.sockets).toHaveLength(0);
+    expect(h.pending()).toBe(1);
+
+    h.runTimers();
+    expect(h.sockets).toHaveLength(1);
+    h.socket().open();
+    expect(h.client.snapshot().connection).toBe("open");
+  });
+
+  it("R1441 the backoff's last step repeats, and a socket that delivered a view starts the steps over", () => {
+    const h = connected();
+    for (let round = 0; round <= RECONNECT_DELAYS_MS.length; round += 1) {
+      h.socket().drop(1006);
+      h.runTimers();
+    }
+    expect(h.delays()).toEqual([...RECONNECT_DELAYS_MS, RECONNECT_DELAYS_MS.at(-1)]);
+
+    h.socket().open();
+    h.socket().deliver({ type: "view", view: baseView() });
+    h.socket().drop(1006);
+    expect(h.delays().at(-1)).toBe(RECONNECT_DELAYS_MS[0]);
+  });
+
+  it("R4250000 a socket refused with 4429 after open climbs the backoff", () => {
+    const h = harness();
+    h.client.connect();
+    for (let round = 0; round < RECONNECT_DELAYS_MS.length + 1; round += 1) {
+      h.socket().open();
+      expect(h.socket().frames()).toEqual([{ type: "hello", token: "tok", matchId: "m-1" }]);
+      h.socket().drop(4429, "too many requests; slow down");
+      expect(h.client.snapshot().connection).toBe("reconnecting");
+      expect(h.pending()).toBe(1);
+      h.runTimers();
+    }
+    expect(h.delays()).toEqual([...RECONNECT_DELAYS_MS, RECONNECT_DELAYS_MS.at(-1)]);
+  });
+
+  it("R4250000 a socket closed with 1011 after open climbs the backoff", () => {
+    const h = harness();
+    h.client.connect();
+    for (let round = 0; round < RECONNECT_DELAYS_MS.length + 1; round += 1) {
+      h.socket().open();
+      h.socket().drop(1011, "the server faulted");
+      expect(h.client.snapshot().connection).toBe("reconnecting");
+      expect(h.pending()).toBe(1);
+      h.runTimers();
+    }
+    expect(h.delays()).toEqual([...RECONNECT_DELAYS_MS, RECONNECT_DELAYS_MS.at(-1)]);
+  });
+
+  it("R4250000 a socket that delivered a view starts the backoff over", () => {
+    const h = harness();
+    h.client.connect();
+    h.socket().open();
+    h.socket().drop(1006);
+    h.runTimers();
+    h.socket().open();
+    h.socket().drop(1006);
+    h.runTimers();
+    expect(h.delays()).toEqual(RECONNECT_DELAYS_MS.slice(0, 2));
+
+    h.socket().open();
+    h.socket().deliver({ type: "view", view: baseView() });
+    h.socket().drop(1006);
+    h.runTimers();
+    expect(h.delays().at(-1)).toBe(RECONNECT_DELAYS_MS[0]);
+  });
 });
 
 const HELLO = { type: "hello", token: "tok", matchId: "m-1" };
@@ -1012,6 +1137,18 @@ describe("a silent socket", () => {
     expect(h.sockets).toHaveLength(2);
   });
 
+  it("R1441 a socket already closing when the page wakes is replaced at once", () => {
+    const h = connected();
+    const closing = h.socket();
+    closing.readyState = 2;
+    h.now(SILENCE_MS + 1);
+    h.wake();
+    expect(closing.closedWith).toEqual({ code: 1000, reason: "replaced" });
+    expect(closing.frames()).toEqual([HELLO]);
+    expect(h.sockets).toHaveLength(2);
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+  });
+
   it("R1441 by default the tab turning visible and the network coming back wake it", () => {
     const h = connected({ pageEvents: true });
     const live = h.socket();
@@ -1037,6 +1174,90 @@ describe("a silent socket", () => {
     window.dispatchEvent(new Event("online"));
     expect(live.frames()).toHaveLength(3);
     expect(h.sockets).toHaveLength(1);
+  });
+});
+
+describe("R3767000 a seat another tab or device took", () => {
+  it("R3767000 a close with SEAT_TAKEN_CLOSE_CODE leaves the client elsewhere: no backoff, no socket however far the clock goes, the last view kept, no error", () => {
+    const h = connected();
+    h.socket().deliver({ type: "view", view: baseView({ turn: 4 }) });
+    h.socket().drop(SEAT_TAKEN_CLOSE_CODE, "this game is open somewhere else");
+    expect(h.client.snapshot().connection).toBe("elsewhere");
+    expect(h.client.snapshot().error).toBeNull();
+    expect(h.client.snapshot().view?.turn).toBe(4);
+    expect(h.pending()).toBe(0);
+
+    h.now(10 * SILENCE_MS);
+    h.wake();
+    h.runTimers();
+    expect(h.sockets).toHaveLength(1);
+    expect(h.client.snapshot().connection).toBe("elsewhere");
+  });
+
+  it("R3767000 a close with 1000 still reconnects", () => {
+    const h = connected();
+    h.socket().drop(1000, "replaced by a new socket");
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+    expect(h.pending()).toBe(1);
+
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+  });
+
+  it("R3767000 connect() takes the seat back by opening exactly one socket", () => {
+    const h = connected();
+    h.socket().drop(SEAT_TAKEN_CLOSE_CODE, "this game is open somewhere else");
+
+    h.client.connect();
+    expect(h.sockets).toHaveLength(2);
+    expect(h.client.snapshot().connection).toBe("connecting");
+    h.client.connect();
+    expect(h.sockets).toHaveLength(2);
+
+    h.socket().open();
+    expect(h.client.snapshot().connection).toBe("open");
+    expect(h.socket().frames()).toEqual([HELLO]);
+  });
+
+  it("R3767000 a tab's own replacement of a stale socket never reaches elsewhere", () => {
+    const h = connected();
+    const old = h.socket();
+    h.now(SILENCE_MS + 1);
+    h.wake();
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+
+    // The server closes the stale socket with SEAT_TAKEN_CLOSE_CODE as the successor attaches; this tab let
+    // that socket go itself, so the close is not its seat taken.
+    old.drop(SEAT_TAKEN_CLOSE_CODE, "this game is open somewhere else");
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+
+    h.socket().open();
+    expect(h.client.snapshot().connection).toBe("open");
+    expect(h.sockets).toHaveLength(2);
+  });
+
+  it("R3767000 a wake probe waiting when the seat is taken is dropped", () => {
+    const h = connected();
+    h.now(SILENCE_MS + 1);
+    h.wake();
+    expect(h.pending()).toBe(1);
+
+    h.socket().drop(SEAT_TAKEN_CLOSE_CODE, "this game is open somewhere else");
+    expect(h.pending()).toBe(0);
+    expect(h.client.snapshot().connection).toBe("elsewhere");
+  });
+
+  it("R3767000 a renewed token while elsewhere opens no socket, and Play here carries it", () => {
+    const h = connected();
+    h.socket().drop(SEAT_TAKEN_CLOSE_CODE, "this game is open somewhere else");
+    h.client.setToken("new");
+    expect(h.sockets).toHaveLength(1);
+    expect(h.client.snapshot().connection).toBe("elsewhere");
+
+    h.client.connect();
+    expect(h.sockets).toHaveLength(2);
+    expect(handshakeToken(h.socket())).toBe("new");
   });
 });
 
@@ -1115,6 +1336,26 @@ describe("a socket refused for its sign-in", () => {
       afterRetry.client.setToken("newer");
       expect(afterRetry.sockets).toHaveLength(2);
       expect(afterRetry.client.snapshot().connection).toBe("refused");
+    }
+  });
+
+  it("R1115000 a socket opened after a 4401 forgets the refusal: a renewal once the seat is taken or the match is gone opens nothing", () => {
+    for (const [code, connection] of [
+      [SEAT_TAKEN_CLOSE_CODE, "elsewhere"],
+      [4410, "closed"],
+    ] as const) {
+      const h = connected();
+      h.socket().drop(4401, "sign in first");
+      // The page's Reconnect opens a socket on the same token, and the server takes it this time.
+      h.client.connect();
+      h.socket().open();
+      h.socket().drop(code, "gone");
+      expect(h.client.snapshot().connection).toBe(connection);
+
+      h.client.setToken("new");
+      expect(h.sockets, String(code)).toHaveLength(2);
+      expect(h.client.snapshot().connection).toBe(connection);
+      expect(h.pending()).toBe(0);
     }
   });
 });

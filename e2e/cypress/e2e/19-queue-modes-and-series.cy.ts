@@ -1,7 +1,8 @@
 // BUILD M8 spec 19: Best-of-1, All random, Conquest, and rooms (R257, R258, R264, R330, R338, R765).
 // #21 Hinder is the selected deck's observable opening-hand card.
 // Browser p1 uses the UI; p2 seeds matches over HTTP/socket (R143). Opening hands prove selected decks (R245; §10.8).
-// Balance each fixture account's rated endings and clean both before every test; pairing allows §9.5's R108 window.
+// Free both fixture accounts, then reseed (R144) before every test, so each starts at the starting rating and pairing never
+// waits on §9.5's R108 window widening after an earlier rated game.
 
 import {
   MATCHMAKER_SWEEP_INTERVAL_SECONDS,
@@ -10,8 +11,10 @@ import {
   SERIES_WINS_NEEDED,
 } from "../../../apps/web/src/wire/serverConfig.ts";
 import { TOKEN_NAMES, tokenId } from "../../support/cards.ts";
-import { INSTALLED_TRIO_NAME, type InstalledLoadout } from "../../support/commands.ts";
+import type { InstalledLoadout } from "../../support/commands.ts";
+import { openQueuePanel } from "../../support/play.ts";
 import {
+  E2E_RESEED_PATH,
   accounts,
   apiUrl,
   bearerHeaders,
@@ -26,11 +29,8 @@ import {
   LIVE_GAME_BANNER,
   LIVE_GAME_REJOIN,
   NAV_BACK,
-  PLAY_CREATE_ROOM,
   PLAY_DECK_SELECT,
   PLAY_QUEUE,
-  PLAY_ROOM_CODE,
-  PLAY_ROOM_MODE,
   PLAY_STATUS,
   PLAY_TRIO_SELECT,
   PLAY_VERDICT,
@@ -238,8 +238,7 @@ function openLobby(account: E2EAccount, mode: QueueMode): void {
     const shown = $body.find(ts(playModeId(mode))).length > 0;
     expect(shown, `the lobby's ${mode} chip; the page shows: ${$body.text().replace(/\s+/gu, " ").slice(0, 400)}`).to.eq(true);
   });
-  cy.get(ts(playModeId(mode)), { timeout: timeouts.view }).check();
-  cy.get(ts(playModeId(mode))).should("be.checked");
+  openQueuePanel(mode);
 }
 
 /** Queue browser first and pin seat two to p2, so R1989000's coin leaves the browser as series seat p1 and R335's alternation runs from there. */
@@ -269,6 +268,8 @@ describe("19 queue modes and series — Best of 1, All random, Conquest and room
   beforeEach(() => {
     cy.freeAccount(accounts.p1());
     cy.freeAccount(accounts.p2());
+    // R144: both fixture accounts back at the starting rating, so no rated game before this test leaves a gap R108's window must widen across.
+    cy.request({ method: "POST", url: apiUrl(E2E_RESEED_PATH) }).its("status").should("eq", 200);
   });
 
   it("Best of 1 plays the deck the player chose, not the first saved one (R257, R253)", () => {
@@ -360,7 +361,7 @@ describe("19 queue modes and series — Best of 1, All random, Conquest and room
           expect(hand.length, "seat two was dealt a deck and drew from it").to.be.at.least(constants.OPENING_DRAW[0]);
           for (const card of hand) {
             // R258/R380 can deal from every set.
-            expect(card, "a catalog id").to.match(/^(core|classic|classicplus|meditative|meditativeplus|stinkyscape|traininggrounds)-\d{3}$/);
+            expect(card, "a catalog id").to.match(/^(core|classic|classicplus|meditative|meditativeplus|stinkyscape|traininggrounds|stinkyscapeplus)-\d{3}$/);
           }
         },
       );
@@ -610,25 +611,32 @@ describe("19 queue modes and series — Best of 1, All random, Conquest and room
     const seed = seedFor("19-room");
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();
+    let mine: InstalledLoadout | null = null;
     let theirs: InstalledLoadout | null = null;
     let code = "";
     let seriesId = "";
 
-    cy.installLoadout(seatOne, "19-modes-a", { deckIndex: CHOSEN_DECK_INDEX });
+    cy.installLoadout(seatOne, "19-modes-a", { deckIndex: CHOSEN_DECK_INDEX }).then((value) => {
+      mine = value;
+    });
     cy.installLoadout(seatTwo, "19-modes-b").then((value) => {
       theirs = value;
     });
 
-    openLobby(seatOne, "bo3");
-    cy.get(ts(PLAY_TRIO_SELECT), { timeout: timeouts.view }).find("option:selected").should("have.text", INSTALLED_TRIO_NAME);
-    cy.get(ts(PLAY_CREATE_ROOM)).should("not.be.disabled").click();
-    cy.get(ts(PLAY_ROOM_MODE), { timeout: timeouts.view }).should("have.attr", "data-mode", "bo3");
-    cy.get(ts(PLAY_ROOM_CODE))
-      .invoke("text")
-      .then((text) => {
-        code = text.trim();
+    // R3730006: the client makes friend games in a private lobby now; a classic room is an older client's or a
+    // challenge's, so this one is made by its route.
+    cy.then(() => {
+      cy.request<{ code: string; mode: string }>({
+        method: "POST",
+        url: apiUrl("/api/rooms"),
+        headers: bearerHeaders(seatOne.token),
+        body: { mode: "bo3", trioId: installed(mine).trioId },
+      }).should((response) => {
+        expect(response.body.mode, "R264: the room plays the mode it was made with").to.eq("bo3");
+        code = response.body.code;
         expect(code, "R79: a room code").to.have.length(constants.ROOM_CODE_LENGTH);
       });
+    });
 
     cy.then(() => {
       cy.request<ErrorBody>({
@@ -660,8 +668,11 @@ describe("19 queue modes and series — Best of 1, All random, Conquest and room
       });
     });
 
-    landedOn(SERIES_PATH, SERIES_POLL_TIMEOUT_MS).then((id) => {
-      expect(id, "the host lands on the series the join made").to.eq(seriesId);
+    me(seatOne).its("currentSeriesId").should((id) => {
+      expect(id, "the host is in the series the join made").to.eq(seriesId);
+    });
+    cy.then(() => {
+      cy.visitAs(seatOne, routes.series(seriesId));
     });
     cy.get(ts(SERIES_SCREEN), { timeout: timeouts.view }).should("have.attr", "data-status", "picking");
 

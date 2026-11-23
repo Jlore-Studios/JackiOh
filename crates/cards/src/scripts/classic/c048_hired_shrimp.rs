@@ -82,7 +82,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // Mr. Vanilla: a Unit with very few
     const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell with few
     const HONEYPOT: &str = "core-060"; // Bear Honeypot: a Trap with more
-    const ROCK: &str = "core-066"; // The Rock: Indestructible, few lines
+    const HEADQUARTERS: &str = "meditative-097-9"; // Jlockeed's Headquarters: Indestructible, many more lines
     const SPECIESIST: &str = "core-002";
     const GARY: &str = "core-004";
     const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
@@ -102,32 +102,22 @@ mod tests {
         loc(SHRIMP)
     }
 
-    // Differs from Scenario::offered: one card's play targets as an id set, not the seat's whole legal list.
+    /// The instance ids among the play targets of the Hired Shrimp in `player`'s hand, each once; each
+    /// target must be a bare instance pick.
     fn offered(s: &Scenario, player: PlayerId) -> IndexSet<String> {
         let Some(shrimp) = s.hand(player).into_iter().find(|card| card.def_id == SHRIMP) else {
             panic!("Hired Shrimp should be in hand");
         };
-        let mut out = IndexSet::new();
-        for action in legal_actions(s.state(), player) {
-            let ActionBody::Play { instance_id, targets, .. } = action else {
-                continue;
-            };
-            if instance_id != shrimp.id {
-                continue;
-            }
-            for selection in targets.unwrap_or_default() {
-                let mut keys: Vec<String> = js(&selection)
-                    .as_object()
-                    .map(|object| object.keys().cloned().collect())
-                    .unwrap_or_default();
-                keys.sort();
-                assert_eq!(keys, vec!["instanceId", "pick"]);
-                if let Selection::Instance { instance_id } = selection {
-                    out.insert(instance_id);
-                }
-            }
+        let targets = s.play_targets(&shrimp);
+        for selection in &targets {
+            let mut keys: Vec<String> = js(selection)
+                .as_object()
+                .map(|object| object.keys().cloned().collect())
+                .unwrap_or_default();
+            keys.sort();
+            assert_eq!(keys, vec!["instanceId", "pick"]);
         }
-        out
+        pick::instance_ids(&targets).into_iter().collect()
     }
 
     fn set_of(ids: &[&str]) -> IndexSet<String> {
@@ -272,15 +262,18 @@ mod tests {
             }
 
             #[test]
-            fn r46_an_indestructible_target_with_more_lines_survives_a_fused_the_rock_and_carnivorous_cube() {
+            fn r46_an_indestructible_target_with_more_lines_survives_jlockeeds_headquarters() {
+                // Not a fused The Rock: Indestructible, it is Immutable (R4353000), and nothing fuses onto it.
                 crate::register_all();
-                let (mut s, fused_id) = fused(ROCK, CUBE, false);
-                let fused_loc = def_of(Some(s.state()), &s.card(&fused_id).def_id).loc;
-                assert_eq!(fused_loc, Some(loc(ROCK) + loc(CUBE)));
-                assert!(fused_loc.unwrap_or(0) > shrimp_loc());
-                s.play(SHRIMP, json!({ "targets": pick::id(&fused_id) }));
-                s.expect_in_zone(&fused_id, "field");
-                assert_eq!(js(&s.stats(&fused_id).position), json!("ATK"));
+                assert!(loc(HEADQUARTERS) > shrimp_loc());
+                let mut s = scenario(json!({
+                    "p1": { "hand": [SHRIMP, FILLER], "field": [HEADQUARTERS] },
+                    "p2": { "hand": [FILLER] },
+                }));
+                let headquarters = s.card(HEADQUARTERS).id.clone();
+                s.play(SHRIMP, json!({ "targets": pick::id(&headquarters) }));
+                s.expect_in_zone(&headquarters, "field");
+                assert_eq!(js(&s.stats(&headquarters).position), json!("ATK"));
             }
 
             #[test]

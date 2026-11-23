@@ -5594,5 +5594,907 @@
     "title": "two-step sign-in shows its QR code: the auth server's own SVG is drawn",
     "kind": "app",
     "player": "Turning on two-step sign-in shows the QR code to scan again, not only the key."
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "5afc00a43a9e5329cf1a829696420a6e7cdd52be",
+    "pr": 3268,
+    "title": "phone board: empty zones keep a card shape, keyword and Activate badges inside their own zone's top-left",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "38d6e4794d32389e77e1018799307bc2cb8fcb9f",
+    "pr": 3304,
+    "title": "one rematch poll, slower queue-population and live-game polls, one account read per screen",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "952de68e32622cf2ca0920bedf7e8378e0565d01",
+    "pr": 3307,
+    "title": "bot: build pass 1 for #3305",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "93ee2f108a3ce40671aa62e06b1d8de8bd929ce8",
+    "pr": 3309,
+    "title": "bot: build pass 1 for #3286",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "e60a0f0b08280bc511cbd6b6770c9b9c1b6dbbe7",
+    "pr": 3310,
+    "title": "bot: build pass 1 for #3285",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "1f3e13ac44955056f4da0c2a5d3d2c2c50f8d932",
+    "pr": 3311,
+    "title": "patches ship: v0.5.12d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "8f9f0dcbb788e803e08340b995815e4273ae1dd4",
+    "pr": 3312,
+    "title": "bot: build pass 1 for #3290",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "5043388c26f14c7cbb32ef09eb9a2b66b350b984",
+    "pr": 3313,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "fbfe94062a163b7315ed1c9509cf27c317f1cdb0",
+    "pr": 3215,
+    "title": "one pure Rust practice session replaces the web's practice core and the server's copy of it",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "5b563a1ca49134736fafb323c9c5572be679cae9",
+    "pr": 3318,
+    "title": "bot: build pass 1 for #3314",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "ced31f77b565da4ab7819a59d68ea3d0a45ca4c9",
+    "pr": 3272,
+    "title": "one page-title treatment for every menu screen",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "7dc37d7f04589fcf0c275b1735b31b0b23dcee47",
+    "pr": 3316,
+    "title": "bot: build pass 1 for #3315",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "31dffe37a58d4d560b948804458133c14d97b902",
+    "pr": 3279,
+    "title": "the PC runner is two equal halves, gather plays 5,000 games of each new patch and never a micro, and a new patch stops an early learn export",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "96d387d599d941afa2ecdcdb6a4ba980005bda64",
+    "pr": 3321,
+    "title": "bot: work in progress (`claude-4` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-06T18:00:00Z)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "c4f65cd68990456bca63717b728a27b9a9fd1d09",
+    "pr": 3322,
+    "title": "bot: build pass 1 for #3308",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "62504c103d770d14403520b85f39064d84bfcebc",
+    "pr": 3323,
+    "title": "bot: build pass 1 for #3228",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "41458d7b54989e7b6a4fe4bfcd5b3ef8067ca10e",
+    "pr": 3319,
+    "title": "bot: build pass 1 for #3213",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "db7a53dd28ddf70d72b096a15260a957027065a3",
+    "pr": 3306,
+    "title": "The runner gate: a pull request's CI and a merge-queue build wait, holding no runner, until there is room",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "f330f5b3e6b9a3a2aa8b53e4305e2f02c1461031",
+    "pr": 3245,
+    "title": "one set of button roles (primary, secondary, danger, text) across the menus and the board",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "552a13d86006970ef75a42c1bba17bba45dff568",
+    "pr": 3326,
+    "title": "no rust (classify) on a promotion into production",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "737b00ea56d1b8177e447260c3481eb46156e838",
+    "pr": 3325,
+    "title": "bot: build pass 1 for #3320",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "40661f450f35fd3886659bd1b8cf23f8a697142e",
+    "pr": 3354,
+    "title": "patches ship: v0.5.12e",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "9e9f8f9127fe162b9bb9ab0e6b8084e9aebe116a",
+    "pr": 3355,
+    "title": "one Tabs and one segmented-toggle component for the menus' tabs and filters",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "abe3471c89603b826f709de9898e51227ed69ad9",
+    "pr": 3357,
+    "title": "bot: build pass 1 for #3220",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "98e7f807765707339d7778db050bdfb751e17314",
+    "pr": 3353,
+    "title": "challenges and chat arrive over one live connection",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "b1a40c7bf8319ff71e78b4e013232f8005613bfd",
+    "pr": 3359,
+    "title": "signature animations for every Legendary and Mythic, the frame: entrances and takeovers for any card, loudness budgets, and a ratchet that ends shared motifs on them",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "9eaace8d47f09ab1d47ee3d66c88d49d4b0af5db",
+    "pr": 3364,
+    "title": "patches ship: v0.5.12f",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "59100d5bd8bbba4bffb4bf36b4317b1f1b62bdfa",
+    "pr": 3368,
+    "title": "patches ship: v0.5.12g",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "2f8ce3a34d8a31835d69ddc2839bc467206b733a",
+    "pr": 3365,
+    "title": "a living arena: every tile answers a tap, and each playmat hides things in its corners to find, escalate and, rarely, surprise you",
+    "kind": "app",
+    "player": "Every tile now answers a tap with a ripple and a sound, and each playmat hides corner props to find, tap again and again for a payoff and, once in a thousand taps, a surprise."
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "0c60c5023e23b973748ea440258f5757888dd269",
+    "pr": 3374,
+    "title": "patches ship: v0.5.12h, v0.5.12i",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "307394f04a6ef4640a4c6eec4676066378ea6ef0",
+    "pr": 3366,
+    "title": "cards that move like cards: a flight from hand to tile, a deck that riffles when shuffled, an opening deal, a hand that springs, and a drag that tilts with its speed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "9bbd28f2f46af804aaf4191541d3bf9468dc2f7a",
+    "pr": 3378,
+    "title": "patches ship: v0.5.12j, v0.5.12k",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "26b675581d96d776deae96dfdc164f41d9d1bc5b",
+    "pr": 3385,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "ef6032a8464bb67bf6c451152a6b87affa5a6179",
+    "pr": 3379,
+    "title": "plays that land with weight: an impact under every play scaled by the mana it cost, by card type, beside the voice line, with a board shake and a buzz for the biggest",
+    "kind": "app",
+    "player": "Cards now land with weight: costlier plays hit harder, with a shake and a buzz on the biggest."
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "0034744a53f672863388df9db887597e23f810c9",
+    "pr": 3328,
+    "title": "a tab for each patch on /stats, a new patch's tab says its data is still being collected, the current patch shown, one Tokens table",
+    "kind": "app",
+    "player": "The statistics page has a tab for each patch, says when a new patch's data is still being collected, shows the current patch, and lists tokens in a table of their own."
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "3f127f68c1667bd5632b9b87944c955c407301f4",
+    "pr": 3413,
+    "title": "bot: build pass 1 for #3410",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "0d4105d91211983632f5ed80d8dd6917957a5480",
+    "pr": 3417,
+    "title": "Test: the walk over every patch's diffs gets the time its sibling has",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "5ad6d40346ab4772a73d541659484d804b3ba2d2",
+    "pr": 3371,
+    "title": "tiles that belong to their card: every Legendary and Mythic on the board marks its tile with an aura in its own colours that answers a touch",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "03e0cbaf9d4af6778fde7354ca2901650d8bae44",
+    "pr": 3409,
+    "title": "daily super run failed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "15d6be1d15dd86a2c58e4f2a2f36e0b84291673e",
+    "pr": 3420,
+    "title": "patches ship: v0.5.12l, v0.5.12m, v0.5.12n, v0.5.12o, v0.5.12p",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "01473ab1b3f497419f524f4191b8af1d540f5c63",
+    "pr": 3422,
+    "title": "patches ship: v0.5.12q",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "6ea0b88fd19299636469a18455402fd90bf504ce",
+    "pr": 3380,
+    "title": "sentence case and one word per action across the client's labels and page names",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "1fbbecc15e2bf83b6a25c550f9dbec5c977a5ae4",
+    "pr": 3421,
+    "title": "a signature animation for every Meditative+ and Training Grounds Legendary and Mythic, one concept per card",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "197311a554a884798356190d0ef4e5143b5e5569",
+    "pr": 3425,
+    "title": "bot: build pass 1 for #3389",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "e82bd5bc638c6e0297c92397e7d9982d10324ea0",
+    "pr": 3440,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "41a9e93012f74da140de19a0da2d1a7af53e49d4",
+    "pr": 3432,
+    "title": "a signature animation for every Stinkyscape (cards 91 to 178 and its tokens) Legendary and Mythic, one concept per card",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "918defb9d263650f3f482347a206d61979d7ce16",
+    "pr": 3442,
+    "title": "a signature animation for every Meditative Legendary and Mythic, one concept per card",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "b170423920351d81a3161c3ae22febdccefe0ede",
+    "pr": 3414,
+    "title": "a planner's \"Human required: none.\" with an aside after it no longer hands the issue to people",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "26bbf2b1a872b8b90e507ac163e1d09829557146",
+    "pr": 3450,
+    "title": "the runner gate counts a run until it asks for its jobs, starts ready pull requests first, and the merge queue builds three at a time",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "6e9b0e5148a7c6f4b00eefab4f38e96b24126ce2",
+    "pr": 3448,
+    "title": "the component specs get 60 minutes, as they outgrew 20",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "3c2d05a95deec4eaa1aa95ddae25bbf6c476752c",
+    "pr": 3452,
+    "title": "patches ship: v0.5.12r, v0.5.12s, v0.5.12t, v0.5.12u, v0.5.12v, v0.5.12w, v0.5.12x",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "31af522cf0568cdddd12de8f948b58d0753a8e14",
+    "pr": 3453,
+    "title": "bot: build pass 1 for #3418",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "bad4402e5238e0e49d77bf10a51c233ab6953479",
+    "pr": 3455,
+    "title": "bot: build pass 1 for #3436",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "f00a43f67bc9efc4cd2d8984df224ff17a54931a",
+    "pr": 3446,
+    "title": "a pull request whose merge-queue build fails a required job of its own leaves the queue at once",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "aacca9acaab6e58d7c05007c4a8f47a4dd5909b4",
+    "pr": 3416,
+    "title": "a stuck patches log is escalated again when its issue closes without its entries, and #2395's four entries reach the technical log",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "f1469d3f0bb2b4d75c66b7275c9eb3a654b2e07f",
+    "pr": 3449,
+    "title": "a card's statistics name the patch they were collected on while a newer patch gathers its games",
+    "kind": "app",
+    "player": "A card's statistics now say which patch they were collected on while a new patch is still gathering its games."
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "53a41e899aa5e904879bb72714fc01edaafb5e67",
+    "pr": 3424,
+    "title": "a signature animation for every Classic+ Legendary and Mythic, one concept per card",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "be37671f767124766ff4052053774985cbbfded7",
+    "pr": 3463,
+    "title": "bot: build pass 1 for #3459",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "782c85136a05733dd977312d5f1784c460a8f9b6",
+    "pr": 3465,
+    "title": "bot: build pass 1 for #3429",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "c4a2b561aa605f73f8a349dc42fa6b86be3b7a7b",
+    "pr": 3466,
+    "title": "patches ship: v0.5.12y",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "019339cecb6e239aa9cfd726965cf55be7ae8a32",
+    "pr": 3460,
+    "title": "unlocks worth the wait: a new variant level is revealed on its own card, Legendary and Mythic pulls take the screen, and the Collection shows off what you earned",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "137b06027f3be4acf8a59c98c94fa689a4034735",
+    "pr": 3437,
+    "title": "a signature animation for every Stinkyscape (cards 1 to 90) Legendary and Mythic, one concept per card",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "8bc196cf7817d925a43ab6b85ebf194e735324ea",
+    "pr": 3469,
+    "title": "patches ship: v0.5.12z",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "f08c8fdd83964ba02d39e19d13867aa5fe97a936",
+    "pr": 3470,
+    "title": "bot: build pass 1 for #3468",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "f7ec3ec20192b97ac9b6b2c3d97119094881a3df",
+    "pr": 3472,
+    "title": "bot: build pass 1 for #3471",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "d1857b55fb611a28c2c9afb7f5ada6949aa67b1f",
+    "pr": 3473,
+    "title": "patches ship: v0.5.13, v0.5.13b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "fea5348b87dffbddb74eb367c8d92651e671cb50",
+    "pr": 3474,
+    "title": "patches ship: v0.5.13c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "ca75d33eb0c5fcc9ebf441ecf860b390fed3dc62",
+    "pr": 3484,
+    "title": "patches ship: v0.5.13d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "b5832e567690427e019e794af23443f66ddc5598",
+    "pr": 3487,
+    "title": "patches ship: v0.5.13e",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "3f8896c61dfa5f03681695ac31204429cafd7c85",
+    "pr": 3489,
+    "title": "bot: build pass 1 for #3478",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "3b60b126411494e3a6dd8f55bbd96fa35615ea75",
+    "pr": 3491,
+    "title": "bot: build pass 1 for #3481",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "60d45a41ef64eac9afd40070c22ee8bb21e7c3bc",
+    "pr": 3492,
+    "title": "bot: build pass 1 for #3476",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "ad23906594d86b377c826ddbecbe9553f19a62fb",
+    "pr": 3494,
+    "title": "patches ship: v0.5.13f",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "a52cde4f26605370688a2e096e32ed236da1787d",
+    "pr": 3495,
+    "title": "bot: build pass 1 for #3479",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "6a8b8d5b02c506a296b590820779f97c2a25f486",
+    "pr": 3488,
+    "title": "bot: build pass 1 for #3485",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "a9475a47c6e0dcfaf016f84adb0a76016248c2a4",
+    "pr": 3509,
+    "title": "Meditative's fx tests let Claude's Datacenter land by its own entrance under YileGPT Prime's Cry",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "49ab208b8126aea6e9bf829c79e3cbf877d074d2",
+    "pr": 3510,
+    "title": "the night bot counts a comment from Squishy's account as Squishy's only with Squishy's marker",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "25f522ec4cc3420251577f5090b26a858fa96267",
+    "pr": 3506,
+    "title": "aiming an attack shows what it will do: the damage each side takes and whether either dies",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "7e22565cba16c46ae7e6b2ddd6ea534dfc1d716b",
+    "pr": 3521,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "93d7cd7b7562c79e04326e6797b0db01dfc9e1dd",
+    "pr": 3522,
+    "title": "bot: build pass 1 for #3501",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "7d83b3f4e8e171b53c9dbd8d558e2e18c8a09b3f",
+    "pr": 3505,
+    "title": "card tests build helper units from stand-in ids that spell out their cost and stats, so no comment restates a real card's numbers",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "1ccfe15d24dcf108041c75323e8c6e089d4302bc",
+    "pr": 3523,
+    "title": "bot: build pass 1 for #3502",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "096283aaf851662fad9880be2f742168e25c701e",
+    "pr": 3512,
+    "title": "mutation testing's tooling: cargo-mutants over the crates, Stryker over the web and the Worker, and a weekly report",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "2149a901cfa1b4970a295f30e5ae81f1e537e3d2",
+    "pr": 3528,
+    "title": "Opus reviews medium own reviews, Sonnet may build hard parts, Sonnet effort test",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "f3ed6b531366a214ac023258463f32eca288e85d",
+    "pr": 3525,
+    "title": "bot: build pass 1 for #3500",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "94416395ffa3ab3c3442abf5b8712f5843a8e5f7",
+    "pr": 3426,
+    "title": "a signature animation for every Core Legendary and Mythic, one concept per card",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "2f21b571978745a20b42e9f801adc8d0a230897e",
+    "pr": 3527,
+    "title": "/stats counts a patch's micros' games, so a patch shipped with its micro keeps its tab",
+    "kind": "app",
+    "player": "The statistics page gives v0.5.11 and v0.5.12 their own patch tabs, and the newest tab is the current patch."
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "eb94b3f277431a096e168a09dcf5e645e1afe64b",
+    "pr": 3532,
+    "title": "patches ship: v0.5.13g",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "2186417b267441d421f4933ba32303a944c30687",
+    "pr": 3576,
+    "title": "hidden tabs go quiet and the game server sleeps after five idle minutes",
+    "kind": "app",
+    "player": "A JackiOh tab left in the background for a couple of minutes now shows you offline to your friends until you come back to it."
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "1d36bfc5d16dcc5820d9ef6c07e5d3950e671aef",
+    "pr": 3520,
+    "title": "show the linked Roblox account's username and avatar on the account screen",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "d077e293ec48ea82d43e6771521f4c475bb71580",
+    "pr": 3578,
+    "title": "bot: build pass 1 for #3498",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "83c9c7751aff7d4391e33ccf30022ec2f0dea0e0",
+    "pr": 3524,
+    "title": "bot: build pass 1 for #3497",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "7d584b3767e30d7a20ff2495ac626a516c3ac141",
+    "pr": 3493,
+    "title": "the Stinkyscape weapon, Miner, Drone Core and Asteroid families share their test bodies instead of copying them card by card",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "442c884399730b8c2092cf3add9cc1c23a6e0f43",
+    "pr": 3585,
+    "title": "bot: build pass 1 for #3580",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "58900682c90803a88c71ba340ef736b378f74bd7",
+    "pr": 3590,
+    "title": "bot: build pass 1 for #3503",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "576efcfda59dfc9775025bf3c49682bf79168898",
+    "pr": 3599,
+    "title": "patches ship: v0.5.13h",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "b050f7f5ca0629edccbb978b6be5e0646c429a05",
+    "pr": 3614,
+    "title": "bot: build pass 1 for #3582",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "eb6b293ea1dd639d137adc75554421527759c741",
+    "pr": 3617,
+    "title": "bot: build pass 1 for #3600",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "f811a74c33ffa1db7ee489ce3d30f0dc2d70c4e1",
+    "pr": 3531,
+    "title": "a dungeon run in progress survives a card patch",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "636fc8842c8bff9b27eb81cf134baf4694203034",
+    "pr": 3625,
+    "title": "the CI matrix test expects server api's four shards",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "c90baa34ff6bb382b4392a985bfe12a945cac121",
+    "pr": 3620,
+    "title": "a server alert opens a GitHub issue and emails the owners",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "4de1c2471137a677455be0d5274981c05cbe9be6",
+    "pr": 3592,
+    "title": "dungeon packs drawn and opened as real packs",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "9bc3eca17dbadef24e890b2622227b8ab56878b8",
+    "pr": 3577,
+    "title": "the PC runner and the starter read pending runs, so a queued gather job gets a runner",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "85ace75c28c76f0ce31a3f53c5566e6197ef5d17",
+    "pr": 3598,
+    "title": "the merge queue lets go of a pull request whose build ended with a required check unreported",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "e864271bc6646a8298d93a193964470f9908b040",
+    "pr": 3597,
+    "title": "main's CI runs only what the merge queue's build of the same commit skipped",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "48a8587363aee5f875a61b78971b359e19160e26",
+    "pr": 3593,
+    "title": "the run crate's mutation audit, a test for every survivor",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "f956e3333406c15bbf7fb49a7a91ce883dac52a3",
+    "pr": 3579,
+    "title": "bot: build pass 1 for #3504",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "26fd44534fa42c434d3bc28527acf09890a9f939",
+    "pr": 3612,
+    "title": "releases.yml builds the WASM module the release script needs, so GitHub releases publish again",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "c704b537148b70266a4ea2d6e6bef6cfa903a755",
+    "pr": 3594,
+    "title": "start a dungeon run from a preset deck, or build your own in the deck workshop's card browser",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "abc4ae23e669f8a9c9b6e3ce702abee2d049adea",
+    "pr": 3530,
+    "title": "the component specs that merged without running hold the board as it now stands",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "903d3480b0334afbbd9fe82fc6295247d534268d",
+    "pr": 3636,
+    "title": "bot: build pass 1 for #3629",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "3ad365689b43cb555d7a77990f1cb7e0fa233ea5",
+    "pr": 3638,
+    "title": "bot: build pass 1 for #3516",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "f71baee09bbeda72da52a5435a471e56f3de72c6",
+    "pr": 3639,
+    "title": "bot: build pass 1 for #3515",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "c398f74b167da1ade85c073a22b92ffd9f347edf",
+    "pr": 3634,
+    "title": "a micro past z takes two letters (aa, ab, …), and the v0.5.13 retcon renames that line by them",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "fa50b9cacadc3cfa9c42a790bdb7d39db80a6118",
+    "pr": 3640,
+    "title": "bot: build pass 1 for #3564",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "317174aa76af268a3d06b635dfea39c06b73348b",
+    "pr": 3642,
+    "title": "the shared crate's first two shards, a test for every survivor and a build timeout",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "ff0215660e1f5dcec63576e51cf72d8a6717d899",
+    "pr": 3646,
+    "title": "the mutation audit of the engine (crates/engine), #3490 part 3",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "8da2ff85177e22ec62d024c1df9cd5ae3b6bde1c",
+    "pr": 3647,
+    "title": "bot: build pass 1 for #3637",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "f176362b90b6f40479c7b948d42539a1cd4e1539",
+    "pr": 3626,
+    "title": "the attack preview's numbers on both cards, only for the hovered target, drawn as tentative hit markers",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "590023988aadf0b14c9f3ed41526f5c9872f3dad",
+    "pr": 3643,
+    "title": "a failed releases run opens an issue instead of failing unseen",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "a58bcb80a949c5131211298734d460d9bac88942",
+    "pr": 3529,
+    "title": "the first page load stops downloading the whole patch history to read one version number",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "ed2bb8b964129555d49949333c44e92aa28d4d45",
+    "pr": 3649,
+    "title": "bot: build pass 1 for #3517",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "62b8ed2e3d69493ed774ffd64b66b2d36df2bbae",
+    "pr": 3644,
+    "title": "dungeon HP refills after every fight, and each win adds 5 max HP",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "cdb595d3f69e874f463f1154a95f182d79c3096b",
+    "pr": 3628,
+    "title": "a busy-board frame probe: frame times for a full, animated board in a real browser",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "b7268555e62c2508c56027c6c429189d9ba28e83",
+    "pr": 3653,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "daaeeb54cb325a6deccd9441782c26c2616e8054",
+    "pr": 3654,
+    "title": "patches ship: v0.5.12ai, v0.5.12aj, v0.5.12ak",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "9adf30ded3a959cc904caba38086c2fb8f514630",
+    "pr": 3623,
+    "title": "the mutation audit of the web's layers and the Worker (apps/web, apps/edge), #3490 part 7",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.12",
+    "commit": "4327b2b49daee326be791ff8d9ef88d52e4fd3c8",
+    "pr": 3641,
+    "title": "bot: build pass 1 for #3630",
+    "kind": "internal"
   }
 ]

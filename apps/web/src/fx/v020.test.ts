@@ -8,10 +8,10 @@ import { describe, expect, it } from "vitest";
 import { ANIMATIONS, planEntries, type AnimationEntry } from "../game/animations.ts";
 import { testid } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
-import { FX_FLICKER_RETURN_AT, FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_REDIRECT_FLIGHT_FRACTION } from "./constants.ts";
+import { envOf } from "../test/signatures.ts";
+import { FX_FLICKER_RETURN_AT, FX_MAX_TAIL_MS, FX_REDIRECT_FLIGHT_FRACTION } from "./constants.ts";
 import { planFx } from "./cues.ts";
-import { createFxMemory } from "./memory.ts";
-import type { FxAnchor, FxCue, FxPlanEnv } from "./types.ts";
+import type { FxAnchor, FxCue } from "./types.ts";
 
 const VIEW: PlayerView = fullBoardView();
 
@@ -25,10 +25,6 @@ const MINE = unitOf("you", 0);
 const ENEMY = unitOf("opponent", 0);
 const ME = VIEW.viewer;
 const THEM = ME === "p1" ? "p2" : "p1";
-
-function envOf(): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
-}
 
 function plan(events: readonly GameEvent[], view: PlayerView = VIEW): { cues: FxCue[]; D: number } {
   const shown = withEvents(view, [...events]);

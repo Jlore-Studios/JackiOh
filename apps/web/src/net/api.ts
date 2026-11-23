@@ -14,6 +14,7 @@ import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 import type { CardTier } from "../wire/generated/CardTier.ts";
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import type { FleetTrackView } from "../wire/generated/FleetTrackView.ts";
+import { stripTrailingSlashes } from "./navigate.ts";
 import {
   forgetRead,
   freshRead,
@@ -34,7 +35,7 @@ const DEFAULT_HTTP_URL = "http://localhost:8787";
 export function apiBaseUrl(): string {
   const configured: unknown = import.meta.env.VITE_SERVER_HTTP_URL;
   const base = typeof configured === "string" && configured.length > 0 ? configured : DEFAULT_HTTP_URL;
-  return base.replace(/\/+$/, "");
+  return stripTrailingSlashes(base);
 }
 
 const DEFAULT_WS_URL = "ws://localhost:8787/ws/match";
@@ -55,7 +56,7 @@ export function serverSocketUrl(path: string, base: string = matchSocketUrl()): 
     return url.toString();
   } catch {
     // A relative test address.
-    return MATCH_SOCKET_PATH.test(base) ? base.replace(MATCH_SOCKET_PATH, path) : `${base.replace(/\/+$/u, "")}${path}`;
+    return MATCH_SOCKET_PATH.test(base) ? base.replace(MATCH_SOCKET_PATH, path) : `${stripTrailingSlashes(base)}${path}`;
   }
 }
 
@@ -393,6 +394,8 @@ export type ProfileResponse = {
   record: { wins: number; losses: number; draws: number };
   /** 0..1, or null when nothing has been played. Computed server-side so the two cannot differ. */
   winRate: number | null;
+  /** R3733000: epoch ms the account was made; an older server omits it. */
+  createdAt?: number;
 };
 
 export function getProfile(token: string): Promise<ProfileResponse> {
@@ -1376,12 +1379,10 @@ export function getPopulation(token: string): Promise<PopulationResponse> {
   return apiRequest<PopulationResponse>("/api/queue/population", { token });
 }
 
-/** `POST /api/rooms` / `POST /api/rooms/:code/join` (§9.5, R264). */
-export type CreateRoomResponse = { code: string; expiresAt: number; mode: QueueMode };
-
 /**
- * A join answers with the match or the series (Conquest) it made. A choice in another mode than the
- * room's is a 409 `conflict` with the room's `details.mode`, so the lobby can ask for the right one.
+ * `POST /api/rooms/:code/join` (§9.5, R264). A join answers with the match or the series (Conquest) it
+ * made. A choice in another mode than the room's is a 409 `conflict` with the room's `details.mode`, so
+ * the lobby can ask for the right one.
  */
 export type JoinRoomResponse = {
   matchId: string | null;
@@ -1391,37 +1392,12 @@ export type JoinRoomResponse = {
   mode: QueueMode;
 };
 
-export function createRoom(token: string, choice: ModeChoice): Promise<CreateRoomResponse> {
-  return apiRequest<CreateRoomResponse>("/api/rooms", { method: "POST", token, body: choice });
-}
-
 export function joinRoom(token: string, code: string, choice: ModeChoice): Promise<JoinRoomResponse> {
   return apiRequest<JoinRoomResponse>(`/api/rooms/${encodeURIComponent(code)}/join`, {
     method: "POST",
     token,
     body: choice,
   });
-}
-
-/** `GET /api/rooms` (R1075000): the caller's rooms nobody has joined yet, newest first. */
-export type OpenRoomsResponse = { rooms: CreateRoomResponse[] };
-
-export function getOpenRooms(token: string): Promise<OpenRoomsResponse> {
-  return apiRequest<OpenRoomsResponse>("/api/rooms", { token });
-}
-
-/** `DELETE /api/rooms/:code`: `cancelled: false` when no unjoined room of the caller's held it. */
-export function cancelRoom(token: string, code: string): Promise<{ cancelled: boolean }> {
-  return apiRequest<{ cancelled: boolean }>(`/api/rooms/${encodeURIComponent(code)}`, { method: "DELETE", token });
-}
-
-/** The room's mode from a mode-mismatch refusal (R264), or null for any other error. */
-export function roomModeOf(error: unknown): QueueMode | null {
-  if (!(error instanceof ApiRequestError) || error.code !== "conflict") return null;
-  const details = error.details;
-  if (typeof details !== "object" || details === null) return null;
-  const mode = (details as { mode?: unknown }).mode;
-  return isQueueMode(mode) ? mode : null;
 }
 
 // The Conquest series (SPEC §9.5, R330–R336). The server's projection for the caller: the other
@@ -1602,7 +1578,8 @@ export type OnlineReplayList = { replays: OnlineReplayListing[]; nextOffset: num
 
 /**
  * `GET /api/replays/:matchId`. R1834003: with both seats' frozen loadouts (all defaults before
- * R1834002) and this page's cards' picks, read as untrusted (`cards/loadouts.ts`).
+ * R1834002) and this page's cards' picks, read as untrusted (`cards/loadouts.ts`). R3976000: with both
+ * seats' portraits, read as untrusted (`replay/source.ts`'s `seatPortraitsOf`); an older server names none.
  */
 export type OnlineReplaySteps = {
   matchId: string;
@@ -1611,6 +1588,7 @@ export type OnlineReplaySteps = {
   total: number;
   loadouts?: unknown;
   cardLoadouts?: unknown;
+  portraits?: unknown;
 };
 
 export function getReplays(token: string, offset = 0): Promise<OnlineReplayList> {
@@ -1727,8 +1705,8 @@ export type PublicCardWindow = {
 };
 
 /**
- * R2089000: a Created card's figures, over the seats that made a copy of it during a game. Used: the
- * seats that used one (split by Radiant at its first use); Not used, the delta's baseline: those that used none.
+ * R2089000: a Created card's figures, over the seats that made a copy of it during a game. R4083000: the used
+ * and unused figures are no longer sent.
  */
 export type PublicCreatedStat = {
   id: string;
@@ -1736,20 +1714,31 @@ export type PublicCreatedStat = {
   cost: number;
   rarity: string;
   set: string;
-  /** The seats counted: `createdPlayedGames` and `createdNotPlayedGames`. */
+  /** The seats counted: every one that made a copy, used or not. */
   games: number;
-  createdPlayedGames: number;
-  createdPlayedWinRate: number | null;
-  createdNotPlayedGames: number;
-  createdNotPlayedWinRate: number | null;
-  createdPlayedRadiantGames: number;
-  createdPlayedRadiantWinRate: number | null;
-  createdPlayedNormalGames: number;
-  createdPlayedNormalWinRate: number | null;
-  /** Used's win rate less Not used's, as a fraction; null until both sides have `minSample` games. */
-  createdPlayedDelta: number | null;
+  /**
+   * R4082000: the made games' win rate read against the Created cards (`tiers.created`), an average one reading
+   * 50%, and its 95% range; absent from a server deployed before it.
+   */
+  adjustedWinRate?: number | null;
+  adjustedLow?: number | null;
+  adjustedHigh?: number | null;
+  /** R4082000: the card's balance tier from its adjusted rate and range (R3022000); null below the floor. */
+  tier?: CardTier | null;
   hasEnoughGames: boolean;
   window: PublicCardWindow;
+};
+
+/** R4082000: what a Created card a card's text makes is read against, as fractions. */
+type PublicCreatedTiers = {
+  /** How much more the seats that make an average Created card win than the average deck; 0 when too few were read. */
+  center: number;
+  /** The spread (one standard deviation) of real Created cards' lifts; the deck cards' when too few were read. */
+  spread: number;
+  /** The Created cards the field was read from; 0 when too few, and each is read against the average deck. */
+  cards: number;
+  /** The win rate of the seats that make an average Created card, which reads 50%. */
+  baseline: number;
 };
 
 /** R3022000: what the tiers are read against: the field of every card in the report, and the band, as fractions. */
@@ -1764,6 +1753,8 @@ export type PublicStatsTiers = {
   baseline?: number;
   bandLow: number;
   bandHigh: number;
+  /** R4082000: the field the Created cards are read against; absent from a server deployed before it. */
+  created?: PublicCreatedTiers;
 };
 
 /** R654, R1367000: which records a window's figures count. */

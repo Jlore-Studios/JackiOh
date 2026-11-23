@@ -52,7 +52,6 @@ const BASE_CAMP: &str = "meditativeplus-001-1";
 const AESTHETICIZE_THE_GAME: &str = "meditative-020";
 const CN_TECH: &str = "meditative-050";
 const NA_TECH: &str = "meditativeplus-002";
-const LUNAR_ECLIPSE: &str = "core-035";
 const INFINITE_RESERVES: &str = "core-075";
 const BIG_D_FENDER: &str = "core-001";
 const FRUIT_LAUNCHER: &str = "stinkyscape-141";
@@ -69,8 +68,9 @@ const METEOR_DAMAGE: i32 = 15;
 /// B32: Star Chart's `nodes`, base and Radiant.
 const STAR_CHART_NODES: i32 = 2;
 const RADIANT_STAR_CHART_NODES: i32 = 4;
-/// B36: the census of the two new tags.
-const RESOURCE_CARDS: usize = 6;
+/// B36: the census of the two new tags: the six Stinkyscape Resources and, since the Stinkyscape+
+/// release (#3573), its Warhero Token.
+const RESOURCE_CARDS: usize = 7;
 const FACTION_CARDS: usize = 5;
 
 // Shared helpers
@@ -636,7 +636,8 @@ const COSTS: [(&str, bool, i32); 5] = [
     // #2657 took The Syndicate to (0).
     (THE_SYNDICATE, false, 0),
     (SWEAR_LOYALITIES, false, 0),
-    (MEMORY_LEAK, true, 2),
+    // #4154 took Memory Leak to (1).
+    (MEMORY_LEAK, true, 1),
 ];
 
 fn priced(card: &str, radiant: bool, mana: i32) -> Scenario {
@@ -654,20 +655,12 @@ fn b26_the_catalog_prints_the_new_costs() {
     }
 }
 
-fn plays_listed(s: &Scenario, card: &str) -> Vec<ActionBody> {
-    let held = s.card(card).id.clone();
-    legal_actions(s.state(), P1)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == held))
-        .collect()
-}
-
 #[test]
 fn b26_one_mana_short_of_the_new_cost_is_refused() {
     for (card, radiant, cost) in COSTS.into_iter().filter(|(_, _, cost)| *cost > 0) {
         let mut s = priced(card, radiant, cost - 1);
         assert!(
-            plays_listed(&s, card).is_empty(),
+            s.plays_of(card).is_empty(),
             "{card} is not offered at {} mana",
             cost - 1
         );
@@ -683,7 +676,8 @@ fn b26_one_mana_short_of_the_new_cost_is_refused() {
 fn b26_exactly_the_new_cost_plays_it() {
     for (card, radiant, cost) in COSTS {
         let mut s = priced(card, radiant, cost);
-        let play = plays_listed(&s, card)
+        let play = s
+            .plays_of(card)
             .into_iter()
             .next()
             .unwrap_or_else(|| panic!("{card} is offered at {cost} mana"));
@@ -881,12 +875,10 @@ fn memory_leak_into_lane_2(radiant: bool) -> Scenario {
         !is_locked(s.state(), slot(P1, Row::Backrow, 2)),
         "not Locked before"
     );
-    let play = legal_actions(s.state(), P1)
+    let play = s
+        .plays_of(&leak)
         .into_iter()
-        .find(|action| {
-            matches!(action, ActionBody::Play { instance_id, zone: Some(at), .. }
-                if *instance_id == leak.id && *at == zone)
-        })
+        .find(|action| matches!(action, ActionBody::Play { zone: Some(at), .. } if *at == zone))
         .expect("a play of Memory Leak into backrow lane 2 is listed");
     s.act(play, P1, "play Memory Leak into backrow lane 2");
     if s.state().pending.is_some() {
@@ -900,21 +892,24 @@ fn memory_leak_into_lane_2(radiant: bool) -> Scenario {
     s
 }
 
+/// B28's Crater (R1850006) held from #2521 through v0.6.7k; issue #4285 took it off both faces, so the zone
+/// Memory Leak enters stays open (catalog data, which a replay of those versions folds under, R767000).
 #[test]
-fn b28_memory_leak_locks_its_backrow_zone_as_it_enters() {
-    assert!(
-        card_def(MEMORY_LEAK)
-            .base
-            .keywords
-            .iter()
-            .any(|keyword| keyword.kind() == KeywordKind::Crater),
-        "Memory Leak prints Crater"
-    );
+fn b28_issue_4285_memory_leak_no_longer_locks_its_backrow_zone_as_it_enters() {
+    for face in [card_def(MEMORY_LEAK).base, card_def(MEMORY_LEAK).radiant] {
+        assert!(
+            !face
+                .keywords
+                .iter()
+                .any(|keyword| keyword.kind() == KeywordKind::Crater),
+            "Memory Leak prints no Crater"
+        );
+    }
     for radiant in [false, true] {
         let s = memory_leak_into_lane_2(radiant);
         assert!(
-            is_locked(s.state(), slot(P1, Row::Backrow, 2)),
-            "radiant {radiant}: its zone is Locked"
+            !is_locked(s.state(), slot(P1, Row::Backrow, 2)),
+            "radiant {radiant}: its zone stays open"
         );
     }
 }
@@ -1341,35 +1336,40 @@ fn cn_tech_adds(seed: &str, radiant: bool, rows: &[(&str, i32, i32)]) -> Vec<(St
         .collect()
 }
 
+/// R3869005: whether `id` may stand in for a win-rate card the table cannot name: a non-token card of a
+/// set that ships, never the card `own` that adds it.
+fn a_random_stand_in(id: &str, own: &str) -> bool {
+    let def = card_def(id);
+    !def.is_token() && set_ships(def.set) && id != own
+}
+
 #[test]
-fn b33_cn_tech_with_an_empty_table_adds_lunar_eclipse_on_its_face() {
+fn b33_r3869005_cn_tech_with_an_empty_table_adds_a_random_card_on_its_face() {
     for radiant in [false, true] {
         for seed in ["b33-empty-a", "b33-empty-b", "b33-empty-c"] {
-            assert_eq!(
-                cn_tech_adds(seed, radiant, &[]),
-                vec![(LUNAR_ECLIPSE.to_string(), radiant)],
-                "{seed}, radiant {radiant}: Lunar Eclipse, never a random card"
-            );
+            let added = cn_tech_adds(seed, radiant, &[]);
+            assert_eq!(added.len(), 1, "{seed}: one card: {added:?}");
+            assert!(a_random_stand_in(&added[0].0, CN_TECH), "{seed}: {added:?}");
+            assert_eq!(added[0].1, radiant, "{seed}: on CN Tech's face");
         }
     }
 }
 
 #[test]
-fn b33_cn_tech_with_no_row_of_enough_games_adds_lunar_eclipse() {
+fn b33_r3869005_cn_tech_with_no_row_of_enough_games_adds_a_random_card() {
     let short = [(VANILLA, CN_TECH_MIN_GAMES - 1, CN_TECH_MIN_GAMES - 1)];
-    assert_eq!(
-        cn_tech_adds("b33-short", false, &short),
-        vec![(LUNAR_ECLIPSE.to_string(), false)]
-    );
+    let added = cn_tech_adds("b33-short", false, &short);
+    assert_eq!(added.len(), 1, "{added:?}");
+    assert!(a_random_stand_in(&added[0].0, CN_TECH), "{added:?}");
 }
 
 #[test]
-fn b33_cn_tech_naming_only_itself_adds_lunar_eclipse() {
+fn b33_r3869005_cn_tech_naming_only_itself_adds_a_random_card_never_itself() {
     let itself = [(CN_TECH, CN_TECH_MIN_GAMES, CN_TECH_MIN_GAMES)];
-    assert_eq!(
-        cn_tech_adds("b33-itself", true, &itself),
-        vec![(LUNAR_ECLIPSE.to_string(), true)]
-    );
+    let added = cn_tech_adds("b33-itself", true, &itself);
+    assert_eq!(added.len(), 1, "{added:?}");
+    assert!(a_random_stand_in(&added[0].0, CN_TECH), "{added:?}");
+    assert!(added[0].1, "Radiant on the Radiant face");
 }
 
 #[test]
@@ -1404,27 +1404,33 @@ fn na_tech_ends(seed: &str, radiant: bool, rows: &[(&str, i32, i32)]) -> Vec<Str
 }
 
 #[test]
-fn b34_na_tech_with_an_empty_table_fuses_infinite_reserves_and_lunar_eclipse() {
+fn b34_r3869005_na_tech_with_an_empty_table_fuses_two_different_random_cards() {
     for radiant in [false, true] {
         for seed in ["b34-empty-a", "b34-empty-b", "b34-empty-c"] {
-            assert_eq!(
-                na_tech_ends(seed, radiant, &[]),
-                vec![LUNAR_ECLIPSE.to_string(), INFINITE_RESERVES.to_string()],
-                "{seed}, radiant {radiant}: both fallbacks, never a random card"
-            );
+            let ends = na_tech_ends(seed, radiant, &[]);
+            assert_ne!(ends[0], ends[1], "{seed}: two different cards");
+            for end in &ends {
+                assert!(
+                    a_random_stand_in(end, NA_TECH),
+                    "{seed}, radiant {radiant}: {end}"
+                );
+            }
         }
     }
 }
 
 #[test]
-fn b34_na_tech_falls_back_to_infinite_reserves_for_the_end_the_table_cannot_name() {
+fn b34_r3869005_na_tech_takes_a_random_card_for_the_end_the_table_cannot_name() {
     // One row qualifies: it is the leader, and nothing is left for the trailer.
     let one = [(VANILLA, CN_TECH_MIN_GAMES - 1, CN_TECH_MIN_GAMES)];
     for seed in ["b34-one-a", "b34-one-b"] {
-        assert_eq!(
-            na_tech_ends(seed, false, &one),
-            vec![VANILLA.to_string(), INFINITE_RESERVES.to_string()]
+        let ends = na_tech_ends(seed, false, &one);
+        assert!(
+            ends.contains(&VANILLA.to_string()),
+            "{seed}: the leader: {ends:?}"
         );
+        let other = ends.iter().find(|end| *end != VANILLA).expect("another end");
+        assert!(a_random_stand_in(other, NA_TECH), "{seed}: {other}");
     }
 }
 
@@ -1526,13 +1532,15 @@ fn b35_fruit_launcher_casts_nothing_but_a_fruit_of_a_set_that_ships() {
 
 // B36 the Resource and Faction tags
 
-const RESOURCES: [&str; 6] = [
+const RESOURCES: [&str; 7] = [
     "stinkyscape-t-reknite",
     "stinkyscape-t-korrelite",
     "stinkyscape-t-gellium",
     "stinkyscape-t-axnit",
     "stinkyscape-t-narcor",
     "stinkyscape-t-red-narcor",
+    // R3548002: the Stinkyscape+ set's Warhero Token is a Resource (a Spell token, the Credits it pays).
+    "stinkyscapeplus-t-warhero-token",
 ];
 const FACTIONS: [&str; 5] = [
     "stinkyscape-159",
@@ -1586,7 +1594,7 @@ fn b36_the_two_tags_sit_after_swarm_and_before_token_in_that_order() {
 }
 
 #[test]
-fn b36_the_census_counts_six_resources_and_five_factions() {
+fn b36_the_census_counts_seven_resources_and_five_factions() {
     assert_eq!(carrying(Tag::Resource).len(), RESOURCE_CARDS);
     assert_eq!(carrying(Tag::Faction).len(), FACTION_CARDS);
 }
@@ -1596,7 +1604,7 @@ fn b36_no_other_card_carries_either_tag() {
     assert_eq!(
         carrying(Tag::Resource),
         sorted(&RESOURCES),
-        "only the six Resources"
+        "only the seven Resources"
     );
     assert_eq!(
         carrying(Tag::Faction),

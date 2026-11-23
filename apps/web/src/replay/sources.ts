@@ -7,10 +7,11 @@ import type { PracticeReplaySummary } from "../practice/protocol.ts";
 import { REPLAY_PAGE_STEPS } from "@jackioh/engine/config";
 
 import { createLoadoutsHolder, type LoadoutsHolder } from "../cards/loadouts.ts";
+import type { SeatPortraits } from "../game/contract.ts";
 import { ApiRequestError, getReplaySteps } from "../net/api.ts";
 import type { OnlineReplayListing } from "../net/api.ts";
 import { REPLAY_OPEN_ATTEMPTS, REPLAY_OPEN_RETRY_MS } from "./config.ts";
-import { ReplayFailure, replayFailureOf } from "./source.ts";
+import { ReplayFailure, replayFailureOf, seatPortraitsOf } from "./source.ts";
 import type { ReplaySource } from "./source.ts";
 
 /**
@@ -25,14 +26,16 @@ export function practiceFailure(message: string): ReplayFailure {
   return new ReplayFailure("error", message);
 }
 
+/** R3976000: a kept practice game as a source opens it: its number, its length and, where known, its seats' portraits. */
+export type PracticeReplayKept = Pick<PracticeReplaySummary, "game" | "steps"> & { portraits?: SeatPortraits | null };
+
 /**
  * A practice game kept on this device: `listing` is the row `replays` answered (or the finished game's
  * snapshot's `replay`), `host` the worker, or anything that sends it requests (the controller's queue).
+ * R3976000: it answers the portraits `listing` holds, read as untrusted, and null for none.
  */
-export function practiceReplaySource(
-  host: Pick<PracticeHost, "request">,
-  listing: Pick<PracticeReplaySummary, "game" | "steps">,
-): ReplaySource {
+export function practiceReplaySource(host: Pick<PracticeHost, "request">, listing: PracticeReplayKept): ReplaySource {
+  const portraits = seatPortraitsOf(listing.portraits);
   return {
     total: listing.steps,
     async page(from, count) {
@@ -41,6 +44,7 @@ export function practiceReplaySource(
       if (response.type === "failed") throw practiceFailure(response.message);
       throw new ReplayFailure("error", `the practice worker answered ${response.type} to a replay request`);
     },
+    portraits: () => portraits,
   };
 }
 
@@ -61,11 +65,19 @@ export function onlineFailure(cause: unknown): ReplayFailure {
 
 /** An online match the account played, by its listing: its pages are the server's, fetched with the account's token. */
 export function onlineReplaySource(token: string, listing: Pick<OnlineReplayListing, "matchId" | "steps">): ReplaySource {
-  return onlinePages(token, listing, createLoadoutsHolder());
+  return onlinePages(token, listing, createLoadoutsHolder(), { current: null });
 }
 
-/** `onlineReplaySource` merging each page's loadouts into `held` (R1834003). */
-function onlinePages(token: string, listing: Pick<OnlineReplayListing, "matchId" | "steps">, held: LoadoutsHolder): ReplaySource {
+/**
+ * `onlineReplaySource` merging each page's loadouts into `held` (R1834003) and keeping the first
+ * portraits a page names in `portraits` (R3976000): every page carries the same pair.
+ */
+function onlinePages(
+  token: string,
+  listing: Pick<OnlineReplayListing, "matchId" | "steps">,
+  held: LoadoutsHolder,
+  portraits: { current: SeatPortraits | null },
+): ReplaySource {
   return {
     total: listing.steps,
     async page(from, count) {
@@ -76,9 +88,11 @@ function onlinePages(token: string, listing: Pick<OnlineReplayListing, "matchId"
         throw onlineFailure(cause);
       }
       held.page(answer);
+      portraits.current ??= seatPortraitsOf(answer.portraits);
       return answer.steps;
     },
     loadouts: held.current,
+    portraits: () => portraits.current,
   };
 }
 
@@ -104,10 +118,13 @@ export async function openOnlineMatchReplay(
   }
   const held = createLoadoutsHolder();
   held.page(first);
-  const later = onlinePages(token, { matchId, steps: first.total }, held);
+  // R3976000: the first page's portraits, so the board draws them from step 0.
+  const portraits = { current: seatPortraitsOf(first.portraits) };
+  const later = onlinePages(token, { matchId, steps: first.total }, held, portraits);
   return {
     total: first.total,
     page: (from, count) => (from === 0 ? Promise.resolve(first.steps.slice(0, count)) : later.page(from, count)),
     loadouts: held.current,
+    portraits: () => portraits.current,
   };
 }

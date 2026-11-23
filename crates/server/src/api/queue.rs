@@ -21,6 +21,7 @@ use jackioh_engine::LeanPick;
 
 use crate::actor::contracts::one_tx;
 use crate::api::collection::caller_profile;
+use crate::api::crypto::SystemIds;
 use crate::api::decks::{
     FrozenChoice, ModeChoiceInput, already_in_match, assert_free_to_play, freeze_choice, read_mode_choice,
 };
@@ -36,6 +37,7 @@ use crate::db::store::{
     BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket,
     TicketStatus, ladder_of_mode,
 };
+use crate::loops::FailingStreak;
 use crate::seats::{Lease, Seat};
 use jackioh_shared::bots::fallback::{
     bot_match_gap_passed, bot_match_gap_since, bot_matches, choose_bot, choose_bot_pair, fallback_due_keyed,
@@ -43,18 +45,16 @@ use jackioh_shared::bots::fallback::{
 };
 use jackioh_shared::series::{NewSeriesInput, NewSeriesSide};
 
-// Small private copies (fullsend rule 5): the clock, the id minters and the error shapes
+// The id minters: SystemIds's (every id and seed comes from there), under the names the routes call.
 
 /// A random v4 id.
 pub(crate) fn new_uuid() -> String {
-    uuid::Uuid::new_v4().to_string()
+    SystemIds.uuid()
 }
 
 /// 16 random bytes as lower-case hex. The engine is seeded only from this (SPEC §9.3).
 pub(crate) fn new_seed() -> String {
-    let mut bytes = [0u8; 16];
-    getrandom::fill(&mut bytes).expect("the system's random source failed");
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    SystemIds.seed()
 }
 
 /// R1453: the key every fallback time is drawn with beside its ticket's id, drawn as the process
@@ -282,7 +282,6 @@ fn older_first<'a>(a: &'a Ticket, b: &'a Ticket) -> (&'a Ticket, &'a Ticket) {
 /// One pair of a sweep whose claim or start failed after the whole-sweep reads, and the error a caller
 /// whose ticket is among them answers with. A lost claim race is no failure: another matcher took it.
 pub struct FailedStart {
-    pub match_id: String,
     pub ticket_ids: Vec<String>,
     pub error: ApiError,
 }
@@ -824,7 +823,6 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
                 Err(error) => {
                     tracing::warn!(event = "queue.start_failed", matchId = %match_id, tickets = %json_list(&[a.id.clone(), b.id.clone()]), message = %error.message);
                     report.failed.push(FailedStart {
-                        match_id,
                         ticket_ids: vec![a.id.clone(), b.id.clone()],
                         error,
                     });
@@ -861,7 +859,6 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
                 Err(error) => {
                     tracing::warn!(event = "queue.start_failed", matchId = %match_id, tickets = %json_list(&[a.id.clone(), b.id.clone()]), message = %error.message);
                     report.failed.push(FailedStart {
-                        match_id,
                         ticket_ids: vec![a.id.clone(), b.id.clone()],
                         error,
                     });
@@ -928,7 +925,6 @@ async fn pair_with_bots(
                 Err(error) => {
                     tracing::warn!(event = "queue.start_failed", matchId = %match_id, tickets = %json_list(std::slice::from_ref(&ticket.id)), message = %error.message);
                     failed.push(FailedStart {
-                        match_id,
                         ticket_ids: vec![ticket.id.clone()],
                         error,
                     });
@@ -965,7 +961,6 @@ async fn pair_with_bots(
             Err(error) => {
                 tracing::warn!(event = "queue.start_failed", matchId = %match_id, tickets = %json_list(std::slice::from_ref(&ticket.id)), message = %error.message);
                 failed.push(FailedStart {
-                    match_id,
                     ticket_ids: vec![ticket.id.clone()],
                     error,
                 });
@@ -983,7 +978,6 @@ async fn pair_with_bots(
         if let Err(error) = start_bot_match(app, ticket, bot, &match_id, lease).await {
             tracing::warn!(event = "queue.start_failed", matchId = %match_id, tickets = %json_list(std::slice::from_ref(&ticket.id)), message = %error.message);
             failed.push(FailedStart {
-                match_id,
                 ticket_ids: vec![ticket.id.clone()],
                 error,
             });
@@ -1362,6 +1356,8 @@ pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<Strin
 /// `MATCHMAKER_SWEEP_INTERVAL_SECONDS`); `app.rs` spawns it (SURFACE §11.2). Each sweep starts one
 /// interval after the last, on tokio's clock, so a test drives it with `tokio::time::advance`.
 pub async fn run_matchmaker(app: Arc<App>) {
+    // #3770: a sweep that fails on every pass for a while is an alert, not just a warning each time.
+    let mut failing = FailingStreak::new("matchmaker");
     loop {
         tokio::time::sleep(Duration::from_secs(MATCHMAKER_SWEEP_INTERVAL_SECONDS as u64)).await;
         // R1454: a bot (and its player) a cut-off start still holds is let go before the sweep,
@@ -1369,7 +1365,7 @@ pub async fn run_matchmaker(app: Arc<App>) {
         if let Err(error) = crate::bots::pool::release_stale_starts(&app, now_ms()).await {
             tracing::warn!(event = "bots.start.release_failed", message = %error);
         }
-        if let Err(error) = try_pair(&app).await {
+        if let Err(error) = failing.track(try_pair(&app).await) {
             // A failed sweep must not kill the sweeper: the next one may well succeed.
             tracing::warn!(event = "matchmaker.sweep_failed", message = %error.message);
         }

@@ -1,20 +1,24 @@
-// `/stats`: public card and player statistics, signed out and in (SPEC §9.11, R654), on three tabs: Cards
-// (the filters, not columns, cover cost, rarity and keyword, R2446000), Sets (R1966000) and Players (public
-// aggregates, fun stats from #125). No provisional banner and no reading notes (R2325000): the page never
-// names a data source or the gate (R661). Below the per-row floor a row reads "not enough games". The Adjusted
-// win rate leads (R2777000), so the table shows no When drawn, Drawn vs not drawn, Radiant or Normal (R3184000);
-// with the ranges shown, a tier says how much of the card's range is in it (R3184001). The patch bar
-// (R1973002): a patch is the window the cards share (R1973001), so a micro is never a step of its own; each
-// offered patch is a tab, and the newest, short of games, says its data is still being collected (R3324000).
-// The header names the current patch (R3324001), and the games tile the patch its games were collected on
-// (R3447000). The Cards tab also holds the games panel (R1994000) and the cards made during a game, the Tokens and
-// the Other created cards, two sortable sections that share no row (R2089000, R2370000, R3184002, R3324002); its
-// on/off controls are the Segmented's pressed buttons (R3324003). The card drill-down shows the faces (a full-art
-// card's still Epic while the Full-art cards setting is on, R3011000), patch history, turn curve and co-played
-// synergy.
+// `/stats`: public card and player statistics, signed out and in (SPEC §9.11, R654), on four tabs, each a raised
+// button showing its name alone (R4279001, R4335000): Cards (the filters, not columns, cover cost, rarity and keyword,
+// R2446000), Tokens (R4279001), Sets (R1966000) and Players (public aggregates, fun stats from #125). No
+// provisional banner and no reading notes (R2325000): the page never names a data source or the gate (R661).
+// Below the per-row floor a row reads "not enough games". The Adjusted win rate leads (R2777000), so the table
+// shows no When drawn, Drawn vs not drawn, Radiant or Normal (R3184000); with the ranges shown, a tier says how
+// much of the card's range is in it (R3184001). The patch bar (R1973002): a patch is the window the cards share
+// (R1973001), so a micro is never a step of its own; each offered patch is a tab, and the newest, short of games,
+// says its data is still being collected (R3324000). The header names the current patch (R3324001), and the games
+// tile the patch its games were collected on (R3447000). The Cards tab also holds the games panel (R1994000). The
+// Tokens tab holds the cards made during a game, the Tokens and the Other created cards, two sections that share
+// no row and show the deck table's columns, opening a row's drill-down as a deck row does, under the Cards tab's
+// filters (R2089000, R2370000, R3184002, R3324002, R4155000, R4279001); R4083000: Tier and Adjusted alone, sorted,
+// viewed and ranged by the Cards tab's own controls, the keyword filter among them. The page's on/off controls are
+// the Segmented's pressed buttons (R3324003). The card drill-down shows the faces (a full-art card's still Epic while
+// the Full-art cards setting is on, R3011000), patch history, turn curve and co-played synergy. R3838000: its
+// "Show card text" button, the Almanac's, prints every face's words, no full art (cardText.tsx). R3887000: the
+// Cards and Tokens tabs' "Plain text" button prints each card they list, and the drill-down's text and its
+// Reference cards, as readable text, no face (PlainText.tsx).
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
-import catalogJson from "@jackioh/cards/catalog.json";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { KEYWORD_KINDS, SHIPPED_SETS, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
 import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
@@ -25,6 +29,8 @@ import { faceModel } from "../cards/model.ts";
 import { useCardSettings } from "../cards/settings.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { Dialog } from "../game/Dialog.tsx";
+import { currentCatalog } from "../game/currentCatalog.ts";
+import { useFaceModel } from "../game/faces.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   cardStatsPath,
@@ -36,7 +42,6 @@ import {
   type PublicPlayerSummary,
   type PublicStatsCardsResponse,
 } from "../net/api.ts";
-import type { CardTier } from "../wire/generated/CardTier.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -48,7 +53,7 @@ import {
   SET_STATS_OUTLIER_Z,
   WIN_RATE_RANGE_DIGITS,
 } from "../stats/config.ts";
-import { CreatedPanel } from "../stats/CreatedPanel.tsx";
+import { CREATED_SORT_COLUMNS, CreatedPanel, createdSortOf, type CreatedSort } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
 import {
   currentVersion,
@@ -60,25 +65,34 @@ import {
   patchTarget,
   type PatchWindow,
 } from "../stats/patches.ts";
+import { PlainCard, PlainTextButton, usePlainText } from "../stats/PlainText.tsx";
+import { RangeText, TierFitText } from "../stats/RangeText.tsx";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
-import { TierChip, adjustedText } from "../stats/TierChip.tsx";
+import { TierChip, adjustedText, tierRank } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
+import { CardTextButton, CardTextFaces, cardTextTestid, useCardText, type CardText } from "./cardText.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import { Segmented, Tabs } from "../tabs/index.ts";
 
 import "../auth/tavern.css";
 import "./stats.css";
 
-const CATALOG = catalogJson as unknown as CardDefs;
-
 /** Unit conversion, not configuration: a rate as a percentage has two more decimal places than as a fraction. */
 const PERCENT_PLACES = 2;
 
+/**
+ * #4180: the module's catalog (`game/currentCatalog.ts`), read in a call, never at import: the page
+ * sits behind `EngineGate` (`main.tsx`), so the module is in before any of these run.
+ */
+function catalog(): CardDefs {
+  return currentCatalog().cards;
+}
+
 /** A card's name as the reader reads it: the catalog's Chinese for a reader of Chinese, else the server's own. */
 function shownName(id: string, name: string): string {
-  return drawnInChinese(false) ? chineseName(id, name, CATALOG[id]) : name;
+  return drawnInChinese(false) ? chineseName(id, name, catalog()[id]) : name;
 }
 
 /** Whether a card answers the search box: the server's name, the name as the reader reads it, or the id holds the text. */
@@ -92,7 +106,7 @@ function matchesSearch(card: { id: string; name: string }, search: string): bool
 }
 
 function keywordKinds(id: string): KeywordKind[] {
-  const def = CATALOG[id];
+  const def = catalog()[id];
   if (!def) return [];
   const kinds = new Set<KeywordKind>();
   for (const kw of def.base?.keywords ?? []) {
@@ -108,12 +122,58 @@ function keywordName(kind: KeywordKind): string {
   return readerTerms()?.keywords[kind] ?? kind;
 }
 
-/** The tokens a card's text names (`CardDef.refs`, R279), the card itself left out: what the drill-down shows it makes. */
-function tokensOf(def: CardDef): CardDef[] {
-  return (def.refs ?? []).flatMap((id) => {
-    const named = CATALOG[id];
-    return named !== undefined && named.token && id !== def.id ? [named] : [];
+/** R279, R3887000: every card a card's text names, token or not, the card itself left out, in the text's order. */
+function referencesOf(def: CardDef): CardDef[] {
+  return [...new Set(def.refs ?? [])].flatMap((id) => {
+    const named = catalog()[id];
+    return named !== undefined && id !== def.id ? [named] : [];
   });
+}
+
+/** The tokens a card's text names (R279), the card itself left out: what the drill-down shows it makes. */
+function tokensOf(def: CardDef): CardDef[] {
+  return referencesOf(def).filter((named) => named.token);
+}
+
+/** R3887000: a card as plain text, or null for an id the catalog holds no card of. */
+function plainCardOf(id: string): ReactElement | null {
+  const def = catalog()[id];
+  return def === undefined ? null : <PlainCard def={def} />;
+}
+
+/**
+ * #4511: one grid card's face, built once per card (the deck builder's `PoolCard`, #2266): the memo
+ * holds it across the search box's keystrokes, and the hook rebuilds it on a language switch
+ * (R711000). Null for an id the catalog holds no card of.
+ */
+const StatsGridFace = memo(function StatsGridFace({ defId }: { defId: string }): ReactElement | null {
+  const def = catalog()[defId];
+  if (def === undefined) return null;
+  return <StatsGridFaceInner defId={defId} def={def} />;
+});
+
+function StatsGridFaceInner({ defId, def }: { defId: string; def: CardDef }): ReactElement {
+  const face = useFaceModel({ defId, def, radiant: false });
+  return (
+    <div className="stats-grid-face">
+      <CardFace face={face} layout="full" lazyArt />
+    </div>
+  );
+}
+
+/** #4511: a drill-down token's face, built once per token, as the grid card's face is. */
+const StatsDrillDownTokenFace = memo(function StatsDrillDownTokenFace({ def }: { def: CardDef }): ReactElement {
+  const face = useFaceModel({ defId: def.id, def, radiant: false });
+  return (
+    <span className="stats-drilldown-token-face">
+      <CardFace face={face} layout="full" lazyArt />
+    </span>
+  );
+});
+
+/** R4083000: a Created card's face in the Grid, as the deck grid draws a deck card's; null for an id the catalog holds no card of. */
+function gridFaceOf(id: string): ReactElement | null {
+  return <StatsGridFace defId={id} />;
 }
 
 /**
@@ -139,7 +199,7 @@ function setPercent(rate: number, signed = false): string {
   });
 }
 
-type TabKey = "cards" | "sets" | "players";
+type TabKey = "cards" | "tokens" | "sets" | "players";
 type ViewKey = "table" | "grid";
 type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "winRate" | "playRate";
 type SortDirection = "asc" | "desc";
@@ -157,42 +217,6 @@ const SORT_LABELS: Record<SortColumn, string> = {
 
 function defaultDirection(col: SortColumn): SortDirection {
   return col === "name" ? "asc" : "desc";
-}
-
-/**
- * R2895000: a rate's 95% range under its figure, its ends to `digits` decimals of a percent (Adjusted's tenths,
- * Win rate's whole points); nothing when the server sent none.
- */
-function RangeText({ low, high, digits, testid }: { low?: number | null; high?: number | null; digits: number; testid: string }): ReactElement | null {
-  if (typeof low !== "number" || typeof high !== "number") return null;
-  return (
-    <span className="stats-sample-hint stats-range" data-testid={testid}>
-      {`${(low * 100).toFixed(digits)}–${(high * 100).toFixed(digits)}%`}
-    </span>
-  );
-}
-
-/** R3022000: the tiers from the top, S (above the band, a nerf candidate) to F (below it, a buff candidate). */
-const TIER_ORDER: readonly CardTier[] = ["S", "A", "B", "C", "D", "F"];
-
-/** R3022000: a tier's place from the bottom, so a descending sort puts S first; -1 for none. */
-function tierRank(tier: CardTier | null | undefined): number {
-  return tier ? TIER_ORDER.length - TIER_ORDER.indexOf(tier) : -1;
-}
-
-/** R3022000: a band edge or a spread as the tiers' note reads it, a percent to a tenth at most ("45%", "52.5%"). */
-function percentText(fraction: number): string {
-  return `${String(Number((fraction * 100).toFixed(1)))}%`;
-}
-
-/** R3184001: under a tier, the share of the card's Adjusted range inside the tier's band, to a whole percent; nothing without one. */
-function TierFitText({ fit }: { fit: number | null }): ReactElement | null {
-  if (fit === null) return null;
-  return (
-    <span className="stats-sample-hint stats-range" data-testid={statsTestid.tierFit}>
-      {`${Math.round(fit * 100)}%`}
-    </span>
-  );
 }
 
 /** R2777000: the table's default order, the adjusted win rate descending. */
@@ -272,13 +296,23 @@ function CollectingNote({
   );
 }
 
+/** R3838000: the page below its Show card text, which the Almanac shares: every face prints its words while it is pressed. */
 export default function StatsRoute(): ReactElement {
+  const cardText = useCardText();
+  return (
+    <CardTextFaces shown={cardText.shown}>
+      <StatsPage cardText={cardText} />
+    </CardTextFaces>
+  );
+}
+
+function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const locale = useLocale();
   const initialParams = useMemo(() => new URLSearchParams(window.location.search), []);
 
   const [tab, setTab] = useState<TabKey>(() => {
     const asked = initialParams.get("tab");
-    return asked === "sets" || asked === "players" ? asked : "cards";
+    return asked === "tokens" || asked === "sets" || asked === "players" ? asked : "cards";
   });
   const [patch, setPatch] = useState<string>(initialParams.get("patch") ?? "");
   const [search, setSearch] = useState<string>(initialParams.get("search") ?? "");
@@ -331,6 +365,8 @@ export default function StatsRoute(): ReactElement {
   // The drill-down's "Show Radiant": the Radiant face beside the normal one, kept from card to card.
   const [drillDownRadiant, setDrillDownRadiant] = useState(false);
   const { fullArt: fullArtSetting } = useCardSettings();
+  // R3887000: the Cards tab's Plain text button, kept on the device.
+  const plain = usePlainText();
 
   // R1966000: every set's cards, unfiltered, and the previous patch's for the change.
   const [setsData, setSetsData] = useState<PublicStatsCardsResponse | null>(null);
@@ -526,7 +562,6 @@ export default function StatsRoute(): ReactElement {
     if (opener !== null && opener.isConnected) opener.focus({ preventScroll: true });
   }, [drillDownOpen]);
 
-  const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
   // R3022000: the field and band the tiers are read against; absent from a server deployed before them.
   const tiers = cardStatsData?.tiers;
 
@@ -545,7 +580,7 @@ export default function StatsRoute(): ReactElement {
 
   const keywordOptions = useMemo(() => {
     const present = new Set<KeywordKind>();
-    for (const [id, def] of Object.entries(CATALOG)) {
+    for (const [id, def] of Object.entries(catalog())) {
       if (def.token) continue;
       for (const kind of keywordKinds(id)) {
         present.add(kind);
@@ -561,6 +596,14 @@ export default function StatsRoute(): ReactElement {
       setSortCol(col);
       setSortDir(defaultDirection(col));
     }
+  };
+
+  // R4083000: the Tokens tab sorts by the Cards tab's one sort, kept in the address, a column its tables lack read as
+  // Adjusted; a Created header sets it as a deck header does.
+  const createdSort = createdSortOf(sortCol, sortDir);
+  const sortCreatedBy = (next: CreatedSort): void => {
+    setSortCol(next.col);
+    setSortDir(next.dir);
   };
 
   const filteredCards = useMemo(() => {
@@ -629,23 +672,229 @@ export default function StatsRoute(): ReactElement {
     return list;
   }, [cardStatsData, search, keywordFilter, sortCol, sortDir, locale, tiers]);
 
-  // R2089000: the Created cards the search box asks for, as it asks for the deck rows; R3324002: the tokens
-  // among them in a section of their own, and every other in its own, so no card is in both.
-  const createdCards = (cardStatsData?.created ?? []).filter((card) => matchesSearch(card, search));
-  const tokenCards = createdCards.filter((card) => CATALOG[card.id]?.token === true);
-  const otherCreatedCards = createdCards.filter((card) => CATALOG[card.id]?.token !== true);
+  // R2089000: the Created cards the search box asks for, as it asks for the deck rows, and R4083000 the keyword;
+  // R3324002: the tokens among them in a section of their own, and every other in its own, so no card is in both.
+  const createdCards = (cardStatsData?.created ?? []).filter(
+    (card) =>
+      matchesSearch(card, search) && (!keywordFilter || keywordKinds(card.id).includes(keywordFilter as KeywordKind)),
+  );
+  const tokenCards = createdCards.filter((card) => catalog()[card.id]?.token === true);
+  const otherCreatedCards = createdCards.filter((card) => catalog()[card.id]?.token !== true);
 
   const summary = cardStatsData?.summary;
 
 
-  const drillDownDef = cardDrillDownId ? CATALOG[cardDrillDownId] : undefined;
-  const drillDownFace = drillDownDef ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: false }) : null;
-  const drillDownRadiantFace =
-    drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null;
+  const drillDownDef = cardDrillDownId ? catalog()[cardDrillDownId] : undefined;
+  // #4511: built once per card, so a keystroke elsewhere on the page never rebuilds the open drill-down's faces.
+  const drillDownFace = useMemo(
+    () => (drillDownDef ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: false }) : null),
+    [drillDownDef, locale],
+  );
+  const drillDownRadiantFace = useMemo(
+    () =>
+      drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null,
+    [drillDownDef, drillDownRadiant, locale],
+  );
   const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
+  // R3887000: every card its text names, for the breakdown's Reference cards while Plain text is on.
+  const drillDownRefs = drillDownDef ? referencesOf(drillDownDef) : [];
+
+  // R4279001: the Cards and Tokens tabs' filters, one set of state: the search, the set, rarity and cost the
+  // read asks for, the match type, and the keyword, which both tabs read (R4083000).
+  const cardFilters = (): ReactElement => (
+    <>
+      <input
+        type="search"
+        className="stats-search-input"
+        data-testid={statsTestid.searchInput}
+        placeholder={t("Search card by name or id…")}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
+      <div className="stats-filter-selects">
+        <select
+          className="stats-select"
+          value={setFilter}
+          onChange={(e) => setSetFilter(e.target.value)}
+          aria-label={t("Filter by set")}
+        >
+          <option value="">{t("All sets")}</option>
+          {/* R1420: every set that ships, and only those. The server compares the value with each card's set, case folded. */}
+          {SHIPPED_SETS.map((set) => (
+            <option key={set} value={set.toLowerCase()}>
+              {t(set)}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="stats-select"
+          value={rarityFilter}
+          onChange={(e) => setRarityFilter(e.target.value)}
+          aria-label={t("Filter by rarity")}
+        >
+          <option value="">{t("All rarities")}</option>
+          <option value="Common">{t("Common")}</option>
+          <option value="Rare">{t("Rare")}</option>
+          <option value="Epic">{t("Epic")}</option>
+          <option value="Legendary">{t("Legendary")}</option>
+          <option value="Mythic">{t("Mythic")}</option>
+        </select>
+
+        <select
+          className="stats-select"
+          value={costFilter}
+          onChange={(e) => setCostFilter(e.target.value)}
+          aria-label={t("Filter by cost")}
+        >
+          <option value="">{t("All costs")}</option>
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6+</option>
+        </select>
+
+        <select
+          className="stats-select"
+          value={keywordFilter}
+          onChange={(e) => setKeywordFilter(e.target.value)}
+          aria-label={t("Filter by keyword")}
+        >
+          <option value="">{t("All keywords")}</option>
+          {keywordOptions.map((kind) => (
+            <option key={kind} value={kind}>
+              {keywordName(kind)}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="stats-select"
+          data-testid={statsTestid.modeSelect}
+          value={mode}
+          onChange={(e) => setMode(modeOf(new URLSearchParams({ mode: e.target.value })))}
+          aria-label={t("Filter by match type")}
+        >
+          {MODES.map((known) => (
+            <option key={known} value={known}>
+              {t(MODE_LABELS[known])}
+            </option>
+          ))}
+        </select>
+      </div>
+    </>
+  );
+
+  // R3324003: how the cards show, one row of labelled groups, every on/off control a pressed button. R4083000: the
+  // Tokens tab shows the same row, its sort select offering only the columns its tables have and no Play rate column.
+  const cardOptions = (created: boolean): ReactElement => {
+    const columns: readonly SortColumn[] = created ? CREATED_SORT_COLUMNS : SORT_COLUMNS;
+    return (
+      <div className="stats-options">
+        <div className="stats-sort">
+          <span className="stats-sort-label" id="stats-sort-label">
+            {t("Sort")}
+          </span>
+          <select
+            className="stats-select"
+            aria-labelledby="stats-sort-label"
+            data-testid={statsTestid.sortSelect}
+            value={created ? createdSort.col : sortCol}
+            onChange={(e) => {
+              const next = e.target.value as SortColumn;
+              setSortCol(next);
+              setSortDir(defaultDirection(next));
+            }}
+          >
+            {columns.map((col) => (
+              <option key={col} value={col}>
+                {t(SORT_LABELS[col])}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="stats-sort-dir"
+            data-testid={statsTestid.sortDir}
+            aria-label={sortDir === "asc" ? t("Ascending; switch to descending") : t("Descending; switch to ascending")}
+            title={sortDir === "asc" ? t("Ascending") : t("Descending")}
+            onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+          >
+            {sortDir === "asc" ? "↑" : "↓"}
+          </button>
+        </div>
+
+        <div className="stats-view-toggle">
+          <span className="stats-sort-label" aria-hidden="true">
+            {t("View")}
+          </span>
+          <Segmented
+            label={t("View")}
+            value={view}
+            onChange={setView}
+            options={[
+              { value: "table", label: t("Table"), testId: statsTestid.viewTable, className: "stats-view-btn" },
+              { value: "grid", label: t("Grid"), testId: statsTestid.viewGrid, className: "stats-view-btn" },
+            ]}
+          />
+        </div>
+
+        {/* R2895000: the 95% ranges, off by default; R3324003: an on/off button in the Segmented's look */}
+        <div className="segmented">
+          <button
+            type="button"
+            className={`segmented__item stats-view-btn ${showRanges ? "segmented__item--selected" : ""}`}
+            data-testid={statsTestid.rangesToggle}
+            aria-pressed={showRanges}
+            onClick={() => setShowRanges((shown) => !shown)}
+          >
+            {t("Show 95% ranges")}
+          </button>
+        </div>
+
+        {/* R3887000: every card as plain text, no face; the device keeps it, apart from Show card text */}
+        <PlainTextButton shown={plain.shown} onToggle={plain.toggle} />
+
+        {/* Column visibility toggles: each on or off on its own, so buttons in the Segmented's look, not one of a few */}
+        {view === "table" && (
+          <div className="stats-view-toggle" role="group" aria-labelledby="stats-columns-label">
+            <span className="stats-sort-label" id="stats-columns-label">
+              {t("Columns")}
+            </span>
+            <div className="segmented">
+              <button
+                type="button"
+                className={`segmented__item stats-view-btn ${visibleCols.games ? "segmented__item--selected" : ""}`}
+                data-testid={statsTestid.columnGames}
+                aria-pressed={visibleCols.games}
+                onClick={() => setVisibleCols((c) => ({ ...c, games: !c.games }))}
+              >
+                {t("Games")}
+              </button>
+              {!created && (
+                <button
+                  type="button"
+                  className={`segmented__item stats-view-btn ${visibleCols.playRate ? "segmented__item--selected" : ""}`}
+                  data-testid={statsTestid.columnPlayRate}
+                  aria-pressed={visibleCols.playRate}
+                  onClick={() => setVisibleCols((c) => ({ ...c, playRate: !c.playRate }))}
+                >
+                  {t("Play rate")}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <CardDefsProvider defs={CATALOG}>
+    <CardDefsProvider defs={catalog()}>
       <div className="app-shell app-shell--wide tavern stats-page one-screen" data-testid={statsTestid.screen}>
         <header>
           <BackLink title={t("Statistics")}>
@@ -653,6 +902,7 @@ export default function StatsRoute(): ReactElement {
             <span className="stats-current-patch" data-testid={statsTestid.currentPatch}>
               {t("Current patch {patch}", { patch: currentVersion(patchList) })}
             </span>
+            <CardTextButton shown={cardText.shown} onToggle={cardText.toggle} />
           </BackLink>
         </header>
 
@@ -746,186 +996,9 @@ export default function StatsRoute(): ReactElement {
 
             {/* Filter controls */}
             <div className="stats-filter-bar">
-              <input
-                type="search"
-                className="stats-search-input"
-                data-testid={statsTestid.searchInput}
-                placeholder={t("Search card by name or id…")}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+              {cardFilters()}
 
-              <div className="stats-filter-selects">
-                <select
-                  className="stats-select"
-                  value={setFilter}
-                  onChange={(e) => setSetFilter(e.target.value)}
-                  aria-label={t("Filter by set")}
-                >
-                  <option value="">{t("All sets")}</option>
-                  {/* R1420: every set that ships, and only those. The server compares the value with each card's set, case folded. */}
-                  {SHIPPED_SETS.map((set) => (
-                    <option key={set} value={set.toLowerCase()}>
-                      {t(set)}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="stats-select"
-                  value={rarityFilter}
-                  onChange={(e) => setRarityFilter(e.target.value)}
-                  aria-label={t("Filter by rarity")}
-                >
-                  <option value="">{t("All rarities")}</option>
-                  <option value="Common">{t("Common")}</option>
-                  <option value="Rare">{t("Rare")}</option>
-                  <option value="Epic">{t("Epic")}</option>
-                  <option value="Legendary">{t("Legendary")}</option>
-                  <option value="Mythic">{t("Mythic")}</option>
-                </select>
-
-                <select
-                  className="stats-select"
-                  value={costFilter}
-                  onChange={(e) => setCostFilter(e.target.value)}
-                  aria-label={t("Filter by cost")}
-                >
-                  <option value="">{t("All costs")}</option>
-                  <option value="0">0</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                  <option value="6">6+</option>
-                </select>
-
-                <select
-                  className="stats-select"
-                  value={keywordFilter}
-                  onChange={(e) => setKeywordFilter(e.target.value)}
-                  aria-label={t("Filter by keyword")}
-                >
-                  <option value="">{t("All keywords")}</option>
-                  {keywordOptions.map((kind) => (
-                    <option key={kind} value={kind}>
-                      {keywordName(kind)}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="stats-select"
-                  data-testid={statsTestid.modeSelect}
-                  value={mode}
-                  onChange={(e) => setMode(modeOf(new URLSearchParams({ mode: e.target.value })))}
-                  aria-label={t("Filter by match type")}
-                >
-                  {MODES.map((known) => (
-                    <option key={known} value={known}>
-                      {t(MODE_LABELS[known])}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* R3324003: how the cards show, one row of labelled groups, every on/off control a pressed button */}
-              <div className="stats-options">
-              <div className="stats-sort">
-                <span className="stats-sort-label" id="stats-sort-label">
-                  {t("Sort")}
-                </span>
-                <select
-                  className="stats-select"
-                  aria-labelledby="stats-sort-label"
-                  data-testid={statsTestid.sortSelect}
-                  value={sortCol}
-                  onChange={(e) => {
-                    const next = e.target.value as SortColumn;
-                    setSortCol(next);
-                    setSortDir(defaultDirection(next));
-                  }}
-                >
-                  {SORT_COLUMNS.map((col) => (
-                    <option key={col} value={col}>
-                      {t(SORT_LABELS[col])}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="stats-sort-dir"
-                  data-testid={statsTestid.sortDir}
-                  aria-label={
-                    sortDir === "asc"
-                      ? t("Ascending; switch to descending")
-                      : t("Descending; switch to ascending")
-                  }
-                  title={sortDir === "asc" ? t("Ascending") : t("Descending")}
-                  onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-                >
-                  {sortDir === "asc" ? "↑" : "↓"}
-                </button>
-              </div>
-
-              <div className="stats-view-toggle">
-                <span className="stats-sort-label" aria-hidden="true">
-                  {t("View")}
-                </span>
-                <Segmented
-                  label={t("View")}
-                  value={view}
-                  onChange={setView}
-                  options={[
-                    { value: "table", label: t("Table"), testId: statsTestid.viewTable, className: "stats-view-btn" },
-                    { value: "grid", label: t("Grid"), testId: statsTestid.viewGrid, className: "stats-view-btn" },
-                  ]}
-                />
-              </div>
-
-              {/* R2895000: the 95% ranges, off by default; R3324003: an on/off button in the Segmented's look */}
-              <div className="segmented">
-                <button
-                  type="button"
-                  className={`segmented__item stats-view-btn ${showRanges ? "segmented__item--selected" : ""}`}
-                  data-testid={statsTestid.rangesToggle}
-                  aria-pressed={showRanges}
-                  onClick={() => setShowRanges((shown) => !shown)}
-                >
-                  {t("Show 95% ranges")}
-                </button>
-              </div>
-
-              {/* Column visibility toggles: each on or off on its own, so buttons in the Segmented's look, not one of a few */}
-              {view === "table" && (
-                <div className="stats-view-toggle" role="group" aria-labelledby="stats-columns-label">
-                  <span className="stats-sort-label" id="stats-columns-label">
-                    {t("Columns")}
-                  </span>
-                  <div className="segmented">
-                    <button
-                      type="button"
-                      className={`segmented__item stats-view-btn ${visibleCols.games ? "segmented__item--selected" : ""}`}
-                      data-testid={statsTestid.columnGames}
-                      aria-pressed={visibleCols.games}
-                      onClick={() => setVisibleCols((c) => ({ ...c, games: !c.games }))}
-                    >
-                      {t("Games")}
-                    </button>
-                    <button
-                      type="button"
-                      className={`segmented__item stats-view-btn ${visibleCols.playRate ? "segmented__item--selected" : ""}`}
-                      data-testid={statsTestid.columnPlayRate}
-                      aria-pressed={visibleCols.playRate}
-                      onClick={() => setVisibleCols((c) => ({ ...c, playRate: !c.playRate }))}
-                    >
-                      {t("Play rate")}
-                    </button>
-                  </div>
-                </div>
-              )}
-              </div>
+              {cardOptions(false)}
             </div>
 
             {/* Table or Grid */}
@@ -941,24 +1014,19 @@ export default function StatsRoute(): ReactElement {
             ) : filteredCards.length === 0 ? (
               <EmptyState text={t("No cards match the selected filters.")} />
             ) : view === "grid" ? (
-              <ul className="stats-grid" data-testid={statsTestid.cardsGrid}>
+              <ul className={`stats-grid${plain.shown ? " stats-grid--plain" : ""}`} data-testid={statsTestid.cardsGrid}>
                 {filteredCards.map((card) => {
-                  const def = CATALOG[card.id];
-                  const face = def ? faceModel({ defId: card.id, def, radiant: false }) : null;
+                  const plainCard = plain.shown ? plainCardOf(card.id) : null;
 
                   return (
                     <li key={card.id} className="stats-grid-item" data-card-id={card.id}>
                       <button
                         type="button"
-                        className="stats-grid-card"
+                        className={`stats-grid-card${plainCard === null ? "" : " stats-grid-card--plain"}`}
                         onClick={(e) => openDrillDown(card.id, e.currentTarget)}
                         aria-label={shownName(card.id, card.name)}
                       >
-                        {face && (
-                          <div className="stats-grid-face">
-                            <CardFace face={face} layout="full" lazyArt />
-                          </div>
-                        )}
+                        {plainCard ?? <StatsGridFace defId={card.id} />}
                       </button>
                       <dl className="stats-grid-figures">
                         <dt>{t("Tier")}</dt>
@@ -1095,6 +1163,7 @@ export default function StatsRoute(): ReactElement {
                   </thead>
                   <tbody>
                     {filteredCards.map((card) => {
+                      const plainCard = plain.shown ? plainCardOf(card.id) : null;
                       return (
                         <tr
                           key={card.id}
@@ -1118,33 +1187,40 @@ export default function StatsRoute(): ReactElement {
                             </td>
                           )}
                           <td className="stats-td stats-td--name">
-                            <span className="stats-card-name-link">{shownName(card.id, card.name)}</span>
+                            {plainCard ?? <span className="stats-card-name-link">{shownName(card.id, card.name)}</span>}
                           </td>
                           {visibleCols.games && <td className="stats-td">{card.games}</td>}
                           <td className="stats-td">
                             <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.tierCell} />
                             {showRanges && <TierFitText fit={cardTierFit(card, tiers)} />}
                           </td>
+                          {/* R4084000: the bar lives in the Adjusted cell, sized by the adjusted rate on the same 0–100% scale the Win rate bar used. */}
                           <td className="stats-td" data-testid={statsTestid.adjustedCell}>
-                            {card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}
-                            {showRanges && card.hasEnoughGames && (
-                              <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                            {card.hasEnoughGames && typeof card.adjustedWinRate === "number" ? (
+                              <div className="stats-winrate-cell">
+                                <span className="stats-winrate-text">{adjustedText(card.adjustedWinRate)}</span>
+                                <div className="stats-confidence-bar">
+                                  <div
+                                    className="stats-confidence-fill"
+                                    style={{ width: `${Math.round(card.adjustedWinRate * 100)}%` }}
+                                  />
+                                </div>
+                                {showRanges && (
+                                  <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                                )}
+                              </div>
+                            ) : (
+                              "—"
                             )}
                           </td>
                           <td className="stats-td stats-td--winrate">
                             {card.hasEnoughGames && card.winRate !== null ? (
-                              <div className="stats-winrate-cell">
+                              <>
                                 <span className="stats-winrate-text">{Math.round(card.winRate * 100)}%</span>
-                                <div className="stats-confidence-bar">
-                                  <div
-                                    className="stats-confidence-fill"
-                                    style={{ width: `${Math.round(card.winRate * 100)}%` }}
-                                  />
-                                </div>
                                 {showRanges && (
                                   <RangeText low={card.winRateLow} high={card.winRateHigh} digits={WIN_RATE_RANGE_DIGITS} testid={statsTestid.winRateRange} />
                                 )}
-                              </div>
+                              </>
                             ) : (
                               <span className="stats-not-enough">{t("not enough games")}</span>
                             )}
@@ -1159,50 +1235,70 @@ export default function StatsRoute(): ReactElement {
                 </table>
               </TableScroll>
             )}
+          </>
+        ),
+      },
+      {
+        id: "tokens",
+        label: t("Tokens"),
+        testId: statsTestid.tabTokens,
+        panelClassName: "stats-panel one-screen__body",
+        // R4279001: the cards made during a game, a tab of their own beside the deck cards' (R2089000, R3324002,
+        // R4155000): the tokens, then every other, no card in both, in the deck table's columns, each row
+        // opening the drill-down, under the Cards tab's filters. R4083000: the Cards tab's sort, view, ranges and
+        // keyword too, one state for both tabs. R3324000: a collecting patch shows no figures.
+        panel: collecting ? (
+          <CollectingNote patch={shownPatchName} previous={previousWindow} onPrevious={choosePatch} />
+        ) : (
+          <>
+            <div className="stats-filter-bar">
+              {cardFilters()}
+              {cardOptions(true)}
+            </div>
 
-            {/* R3022000: what the tiers mean, and the field the cards are read against */}
-            {tiers && !cardStatsLoading && !cardStatsError && filteredCards.length > 0 && (
-              <div className="stats-sample-hint stats-tiers-note" data-testid={statsTestid.tiersNote}>
-                <p>
-                  {t("Tier S is above {high} with its whole 95% range above 50%: a nerf candidate. Tier F is below {low} with its whole range below 50%: a buff candidate. A, B, C and D split the {low} to {high} band into quarters from the top.", {
-                    high: percentText(tiers.bandHigh),
-                    low: percentText(tiers.bandLow),
-                  })}
-                </p>
-                <p>
-                  {tiers.cards > 0
-                    ? t("Read against {cards} cards: the average card reads 50%, and real cards differ by about {spread} points (one standard deviation).", {
-                        cards: formatNumber(tiers.cards),
-                        spread: (tiers.spread * 100).toFixed(1),
-                      })
-                    : t("Too few cards have enough games to measure the rest against: the average card is taken to read 50%, and real cards to differ by about {spread} points.", {
-                        spread: (tiers.spread * 100).toFixed(1),
-                      })}
-                </p>
-                {typeof tiers.baseline === "number" && (
-                  <p>
-                    {t("A card that is almost never left undrawn, such as a Quickdraw card, and the Dormant Starship are read against the average deck, which wins {baseline} of its games.", {
-                      baseline: percentText(tiers.baseline),
-                    })}
-                  </p>
-                )}
+            {cardStatsLoading ? (
+              <Skeleton variant={view === "grid" ? "grid" : "table"} label={t("Loading card statistics…")} />
+            ) : cardStatsError ? (
+              <div className="stats-error">
+                <p>{t("The card statistics didn't load.")}</p>
+                <button type="button" className="stats-retry-btn" onClick={() => setCardStatsAttempt((n) => n + 1)}>
+                  {t("Retry")}
+                </button>
               </div>
-            )}
-
-            {/* R2895000: what a range means, while they show */}
-            {showRanges && !cardStatsLoading && !cardStatsError && filteredCards.length > 0 && (
-              <p className="stats-sample-hint" data-testid={statsTestid.rangesNote}>
-                {t("A range is where the card's true rate most likely sits, 95% sure. Two cards whose ranges overlap may be no different.")}
-                {tiers && ` ${t("The percentage under a tier is how much of the card's Adjusted range lies inside that tier.")}`}
-              </p>
-            )}
-
-            {/* R2089000, R3324002: the cards made during a game, apart from the deck cards above: the tokens, then
-                every other, no card in both */}
-            {!cardStatsLoading && !cardStatsError && (
+            ) : tokenCards.length === 0 && otherCreatedCards.length === 0 ? (
+              <EmptyState text={t("No tokens or created cards match the selected filters.")} />
+            ) : (
               <>
-                <CreatedPanel kind="tokens" created={tokenCards} minSample={minSample} nameOf={shownName} />
-                <CreatedPanel kind="other" created={otherCreatedCards} minSample={minSample} nameOf={shownName} />
+                <CreatedPanel
+                  kind="tokens"
+                  created={tokenCards}
+                  sort={createdSort}
+                  onSort={sortCreatedBy}
+                  view={view}
+                  showRanges={showRanges}
+                  tiers={tiers}
+                  nameOf={shownName}
+                  faceOf={gridFaceOf}
+                  plainCardOf={plain.shown ? plainCardOf : undefined}
+                  visibleThumbnail={visibleCols.thumbnail}
+                  visibleGames={visibleCols.games}
+                  onOpen={(id, opener) => openDrillDown(id, opener)}
+                />
+                <CreatedPanel
+                  kind="other"
+                  created={otherCreatedCards}
+                  sort={createdSort}
+                  onSort={sortCreatedBy}
+                  view={view}
+                  showRanges={showRanges}
+                  tiers={tiers}
+                  nameOf={shownName}
+                  faceOf={gridFaceOf}
+                  plainCardOf={plain.shown ? plainCardOf : undefined}
+                  visibleThumbnail={visibleCols.thumbnail}
+                  visibleGames={visibleCols.games}
+                  onOpen={(id, opener) => openDrillDown(id, opener)}
+                />
               </>
             )}
           </>
@@ -1236,12 +1332,6 @@ export default function StatsRoute(): ReactElement {
               <EmptyState text={t("No games on patch {patch} yet.", { patch: setsData.patch })} />
             ) : (
               <>
-                <p className="stats-player-note">
-                  {t(
-                    "How each set's cards do on patch {patch}, in decks that mix every set. A set's win rate pools its cards' games; its mean and median are over its cards with {minSample} games or more.",
-                    { patch: setsData.patch, minSample: setsMinSample },
-                  )}
-                </p>
                 <section className="stats-summary-tiles stats-sets-leaders" data-testid={statsTestid.setsLeaders} aria-label={t("Best sets")}>
                   <div className="stats-summary-tile">
                     <span className="stats-summary-label">{t("Highest win rate")}</span>
@@ -1385,12 +1475,6 @@ export default function StatsRoute(): ReactElement {
                     </section>
                   ))}
                 </div>
-                <p className="stats-sample-hint stats-sets-note">
-                  {t(
-                    "★ marks the highest win rate. ± is the margin: about how far luck alone can move a win rate. The true margin is wider, since one game counts every card in both decks, so sets less than two or three margins apart are too close to call. A card is strong or weak when it is {z} of its own margins or more over or under 50%.",
-                    { z: SET_STATS_OUTLIER_Z },
-                  )}
-                </p>
               </>
             )}
           </>
@@ -1411,9 +1495,6 @@ export default function StatsRoute(): ReactElement {
                 value={playerSearch}
                 onChange={(e) => setPlayerSearch(e.target.value)}
               />
-              <p className="stats-player-note">
-                {t("Player stats are public by default. Ratings and ranks are not shown here.")}
-              </p>
             </div>
 
             {playersLoading ? (
@@ -1444,7 +1525,7 @@ export default function StatsRoute(): ReactElement {
                     {playersList.map((p) => {
                       const rate = p.winRate !== null ? `${Math.round(p.winRate * 100)}%` : "—";
                       const topCard = p.favouriteCards?.[0];
-                      const favCardDef = topCard ? CATALOG[topCard.id] : undefined;
+                      const favCardDef = topCard ? catalog()[topCard.id] : undefined;
                       const favCardName = topCard ? (favCardDef ? readerName(favCardDef) : topCard.id) : "—";
                       return (
                         <tr key={p.profileId} className="stats-tr">
@@ -1554,8 +1635,15 @@ export default function StatsRoute(): ReactElement {
                       >
                         {t("View in Almanac")}
                       </a>
+                      {/* R3939000: the dialog covers the header's Show card text, so it holds one of its own below View in Almanac, the same choice */}
+                      <CardTextButton
+                        shown={cardText.shown}
+                        onToggle={cardText.toggle}
+                        testid={cardTextTestid.dialog}
+                        className="stats-drilldown-action"
+                      />
                     </div>
-                    {drillDownTokens.length > 0 && (
+                    {!plain.shown && drillDownTokens.length > 0 && (
                       <section className="stats-drilldown-section stats-drilldown-tokens" data-testid={statsTestid.drillDownTokens}>
                         <h3>{t("Tokens this card makes")}</h3>
                         <ul className="stats-drilldown-token-list">
@@ -1567,9 +1655,7 @@ export default function StatsRoute(): ReactElement {
                                 onClick={followInApp(paths.almanacCard(token.id))}
                                 aria-label={t("View {name} in the Almanac", { name: readerName(token) })}
                               >
-                                <span className="stats-drilldown-token-face">
-                                  <CardFace face={faceModel({ defId: token.id, def: token, radiant: false })} layout="full" lazyArt />
-                                </span>
+                                <StatsDrillDownTokenFace def={token} />
                                 <span className="stats-drilldown-token-name">{readerName(token)}</span>
                               </a>
                             </li>
@@ -1581,6 +1667,39 @@ export default function StatsRoute(): ReactElement {
                 )}
 
                 <div className="stats-drilldown-details">
+                  {/* R3887000: with Plain text on, the card's base and Radiant text, then every card it names */}
+                  {plain.shown && drillDownDef && (
+                    <>
+                      <section className="stats-drilldown-section" data-testid={statsTestid.drillDownPlain}>
+                        <PlainCard def={drillDownDef} />
+                      </section>
+                      {drillDownRefs.length > 0 && (
+                        <section className="stats-drilldown-section" data-testid={statsTestid.drillDownRefs}>
+                          <h3>{t("Reference cards")}</h3>
+                          <ul className="plain-refs">
+                            {drillDownRefs.map((named) => (
+                              <li
+                                key={named.id}
+                                className="plain-refs__item"
+                                data-card-id={named.id}
+                                data-testid={statsTestid.drillDownRef}
+                              >
+                                <PlainCard def={named} />
+                                <a
+                                  className="stats-drilldown-action button-secondary"
+                                  href={paths.almanacCard(named.id)}
+                                  onClick={followInApp(paths.almanacCard(named.id))}
+                                  aria-label={t("View {name} in the Almanac", { name: readerName(named) })}
+                                >
+                                  {t("View in Almanac")}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      )}
+                    </>
+                  )}
                   {drillDownLoading ? (
                     <Skeleton variant="rows" label={t("Loading this card's details…")} />
                   ) : drillDownError ? (

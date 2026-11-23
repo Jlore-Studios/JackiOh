@@ -10,11 +10,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::damage_combat::{
     gone_killer, grunt, notes, playing, reborn_gone_killer, recorder, replays_to, turncoat,
 };
-use crate::rules::fixtures::harness::{act, input, put, slot};
-
-fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
+use crate::rules::fixtures::harness::{act, input, live_mut, put, slot};
 
 fn in_graveyard(state: &GameState, player: PlayerId, id: &str) -> bool {
     state.players[player].graveyard.iter().any(|card| card.id == id)
@@ -52,7 +48,7 @@ mod r2396000_whenever_this_destroys_a_unit {
             slot(P1, Row::Units, 1),
             Default::default(),
         );
-        by_id_mut(&mut state, &killer.id).buffs = AttackHealth { attack: 0, health: 3 };
+        live_mut(&mut state, &killer.id).buffs = AttackHealth { attack: 0, health: 3 };
         let victim = put(&mut state, &grunt.id, slot(P2, Row::Units, 1), Default::default());
         let mut game = recorder(&state);
         game.play(input(json!({

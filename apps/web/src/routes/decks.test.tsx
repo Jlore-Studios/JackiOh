@@ -4,7 +4,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_AUTOSAVE_DEBOUNCE_MS } from "@jackioh/server-config";
-import { PORTRAIT_IDS } from "@jackioh/shared";
+import { PORTRAIT_IDS, type CardDef, type PortraitId } from "@jackioh/shared";
+import { portraitDefs } from "../emotes/portraits.ts";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import {
   fixtureCardId,
@@ -27,6 +28,7 @@ import {
   type DecksResponse,
 } from "../net/api.ts";
 import { GATE_RATE_LIMITED_MESSAGE } from "../net/gate.ts";
+import { deckPath } from "../net/navigate.ts";
 import { rememberRead } from "../net/readCache.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { SKELETON_DELAY_MS, skeletonTestid } from "../skeleton/Skeleton.tsx";
@@ -52,11 +54,32 @@ vi.mock("../game/currentCatalog.ts", async (importOriginal) => {
   return { ...actual, currentCatalog: vi.fn() };
 });
 
+vi.mock("../emotes/portraits.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../emotes/portraits.ts")>();
+  return { ...actual, portraitDefs: vi.fn() };
+});
+
 const TOKEN = "e2e-token-p1";
 const PROFILE = "profile-p1";
 const catalog = fixtureCatalog();
 const collection = fixtureCollection();
 const [ONE = [], TWO = []] = legalDecks();
+
+/**
+ * #4180: portraits resolve against the module catalog, which this file replaces with a
+ * fixture that names none of the portrait cards. The picker under test offers portrait ids,
+ * never defs, so each portrait reads one of the fixture's own defs here.
+ */
+function fixturePortraitDefs(): Readonly<Record<PortraitId, { defId: string; def: CardDef }>> {
+  return Object.fromEntries(
+    PORTRAIT_IDS.map((id, index) => {
+      const defId = fixtureCardId(index + 1);
+      const def = catalog.cards[defId];
+      if (def === undefined) throw new Error(`decks.test: no fixture def ${defId} for portrait ${id}`);
+      return [id, { defId, def }];
+    }),
+  ) as Record<PortraitId, { defId: string; def: CardDef }>;
+}
 
 function meBody(status: "pending" | "active" | "banned", needsInviteCode: boolean) {
   return {
@@ -81,6 +104,7 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/decks");
   vi.mocked(getMe).mockResolvedValue(meBody("active", false));
   vi.mocked(currentCatalog).mockReturnValue(catalog);
+  vi.mocked(portraitDefs).mockReturnValue(fixturePortraitDefs());
   vi.mocked(getCollection).mockResolvedValue(collectionBody());
   vi.mocked(getDecks).mockResolvedValue(
     decksResponse(
@@ -189,13 +213,14 @@ describe("the gate (§9.4)", () => {
     });
   });
 
-  it("R1579000 the workshop's Back leads to the Collection hub", async () => {
+  it("R1579000 the workshop's Back leads to the Collection's Decks tab", async () => {
     await mount();
     fireEvent.click(screen.getByTestId(navTestid.back));
     expect(window.location.pathname).toBe("/collection");
+    expect(window.location.search).toBe("?section=decks");
   });
 
-  it("R1579000 the Shell's Back, shown when /api/auth/me cannot be read, leads to the Collection hub", async () => {
+  it("R1579000 the Shell's Back, shown when /api/auth/me cannot be read, leads to the Collection's Decks tab", async () => {
     vi.mocked(getMe).mockRejectedValue(new Error("the server could not be reached"));
     render(<DecksRoute />);
     await waitFor(() => {
@@ -203,6 +228,7 @@ describe("the gate (§9.4)", () => {
     });
     fireEvent.click(screen.getByTestId(navTestid.back));
     expect(window.location.pathname).toBe("/collection");
+    expect(window.location.search).toBe("?section=decks");
   });
 
   it("#1485 offers Back when /api/auth/me cannot be read", async () => {
@@ -254,6 +280,18 @@ describe("what the screen opens with", () => {
     expect(screen.getByTestId("deck-row-d-tempo")).toHaveTextContent("Tempo");
     expect(screen.getByTestId("trio-row-t-ladder")).toHaveTextContent("Ladder");
     expect(screen.getByTestId("sync-status")).toHaveAttribute("data-state", "saved");
+  });
+
+  it("R3734000 ?deck=<id> opens that deck, as a tile of the Collection links to it; an id this account does not hold opens the first", async () => {
+    window.history.replaceState(null, "", deckPath("d-tempo"));
+    await mount();
+    expect(screen.getByTestId("deck-editor")).toHaveAttribute("data-deck", "d-tempo");
+    expect(screen.getByTestId("deck-row-d-tempo")).toHaveAttribute("aria-current", "true");
+    cleanup();
+
+    window.history.replaceState(null, "", deckPath("d-someone-elses"));
+    await mount();
+    expect(screen.getByTestId("deck-editor")).toHaveAttribute("data-deck", "d-aggro");
   });
 
   it("opens an empty workshop, and not an error, for a profile that has saved nothing", async () => {

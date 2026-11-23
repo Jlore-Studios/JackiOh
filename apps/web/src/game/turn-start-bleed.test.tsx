@@ -1,6 +1,7 @@
 // #37, Global Cosmetic: the mulligan (and a turn passing) bled into the start-turn animation. Game
 // holds the previous view while a burst's entries play, which left two stale things on screen over
 // the `turnStarted` entry: the banner and a prompt that had faded out.
+// R3910000: the banner also says when a turn was cut short and when the AI takes it.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
@@ -9,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ANIMATIONS, type AnimationEntry } from "./animations.ts";
 import Game from "./Game.tsx";
 import { promptOver } from "./promptOver.ts";
+import { FX_TEXT } from "../fx/constants.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
 import { baseView, card, emptySide, pendingFor, withEvents } from "../test/fixtures.ts";
 
@@ -71,6 +73,110 @@ describe("#37 the turn banner names the turn it announces", () => {
     rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
 
     expect(banner()).toHaveAttribute("data-animating", "turnStarted");
+    expect(banner()).toHaveTextContent("Your turn");
+  });
+});
+
+describe("R3910000 the turn banner says when a turn was cut short or the AI took it", () => {
+  const started: GameEvent = { type: "turnStarted", player: "p1", turn: 3 };
+  const cut: GameEvent = { type: "turnCutShort", player: "p1", byInstanceId: null };
+  const engaged: GameEvent = { type: "autopilotEngaged", player: "p1", turn: 3 };
+  const mana: GameEvent = { type: "manaChanged", player: "p1", current: 2, max: 4 };
+  const ended: GameEvent = { type: "turnEnded", player: "p1", turn: 3, unspentMana: 0 };
+  const theirs: GameEvent = { type: "turnStarted", player: "p2", turn: 4 };
+  const queue = (): string | null => screen.queryByTestId("animation-queue")?.getAttribute("data-animating") ?? null;
+
+  it("R3910000 reads Turn cut short while its entry plays and the next turn's words after the last", () => {
+    const before = withEvents(baseView({ active: "p1", turn: 3 }), [started]);
+    const after = withEvents(baseView({ active: "p2", turn: 4 }), [started, cut, ended, theirs]);
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    expect(banner()).toHaveTextContent("Your turn");
+    rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
+
+    expect(queue()).toBe("turnCutShort");
+    expect(banner()).toHaveAttribute("data-animating", "turnCutShort");
+    expect(banner()).toHaveTextContent(FX_TEXT.turnCutShort);
+
+    // The words stay while the turn's end plays, since no later turn event has started.
+    advance(ANIMATIONS.turnCutShort.durationMs);
+    expect(queue()).toBe("turnEnded");
+    expect(banner()).not.toHaveAttribute("data-animating");
+    expect(banner()).toHaveTextContent(FX_TEXT.turnCutShort);
+
+    advance(ANIMATIONS.turnEnded.durationMs);
+    expect(queue()).toBe("turnStarted");
+    expect(banner()).toHaveTextContent("Opponent's turn");
+
+    advance(ANIMATIONS.turnStarted.durationMs);
+    expect(queue()).toBeNull();
+    expect(banner()).toHaveTextContent("Opponent's turn");
+  });
+
+  it("R3910000 reads The AI takes the turn from its entry until the next turnStarted", () => {
+    const before = withEvents(baseView({ active: "p1", turn: 3 }), [started]);
+    const after = withEvents(baseView({ active: "p2", turn: 4 }), [started, engaged, mana, ended, theirs]);
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
+
+    expect(queue()).toBe("autopilotEngaged");
+    expect(banner()).toHaveAttribute("data-animating", "autopilotEngaged");
+    expect(banner()).toHaveTextContent(FX_TEXT.autopilot);
+
+    advance(ANIMATIONS.autopilotEngaged.durationMs);
+    expect(queue()).toBe("manaChanged");
+    expect(banner()).toHaveTextContent(FX_TEXT.autopilot);
+
+    advance(ANIMATIONS.manaChanged.durationMs);
+    expect(queue()).toBe("turnEnded");
+    expect(banner()).toHaveTextContent(FX_TEXT.autopilot);
+
+    advance(ANIMATIONS.turnEnded.durationMs);
+    expect(queue()).toBe("turnStarted");
+    expect(banner()).toHaveTextContent("Opponent's turn");
+
+    advance(ANIMATIONS.turnStarted.durationMs);
+    expect(queue()).toBeNull();
+    expect(banner()).toHaveTextContent("Opponent's turn");
+  });
+
+  it("R3925000 reads Loop stopped while its entry plays and the turn's words after the burst", () => {
+    const capped: GameEvent = { type: "loopCapped", player: "p1" };
+    const before = withEvents(baseView({ active: "p1", turn: 3 }), [started]);
+    const after = withEvents(baseView({ active: "p1", turn: 3 }), [started, capped, mana]);
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    expect(banner()).toHaveTextContent("Your turn");
+    rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
+
+    expect(queue()).toBe("loopCapped");
+    expect(banner()).toHaveAttribute("data-animating", "loopCapped");
+    expect(banner()).toHaveTextContent(FX_TEXT.loopCapped);
+
+    advance(ANIMATIONS.loopCapped.durationMs);
+    expect(queue()).toBe("manaChanged");
+    expect(banner()).toHaveTextContent(FX_TEXT.loopCapped);
+
+    // Once the burst has played, the standing view's turn speaks again: the game goes on.
+    advance(ANIMATIONS.manaChanged.durationMs);
+    expect(queue()).toBeNull();
+    expect(banner()).toHaveTextContent("Your turn");
+  });
+
+  it("R3910000 the AI's words do not outlast the entries that play them", () => {
+    // An aura hands the turn back (R1844000): the engagement stays in the view's event window while its player acts again.
+    const view = withEvents(baseView({ active: "p1", turn: 3 }), [started, engaged, mana]);
+    const { rerender } = render(<Game view={withEvents(baseView({ active: "p1", turn: 3 }), [started])} legal={[]} onAction={vi.fn()} />);
+    rerender(<Game view={view} legal={[]} onAction={vi.fn()} />);
+
+    expect(queue()).toBe("autopilotEngaged");
+    expect(banner()).toHaveTextContent(FX_TEXT.autopilot);
+
+    advance(ANIMATIONS.autopilotEngaged.durationMs + ANIMATIONS.manaChanged.durationMs);
+    expect(queue()).toBeNull();
+    expect(banner()).toHaveTextContent("Your turn");
+
+    // A game opened on that same view has no burst at all: the window alone does not say the AI plays now.
+    cleanup();
+    render(<Game view={view} legal={[]} onAction={vi.fn()} />);
     expect(banner()).toHaveTextContent("Your turn");
   });
 });

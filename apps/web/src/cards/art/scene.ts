@@ -6,24 +6,25 @@
 // the Radiant face, which only repaints, keeps every shape. `withScene` lays a composed scene into the
 // procedural painter's `ArtSpec`, so every painter that hands it a recipe card prints, moves, splits
 // (Out of frame) and restyles it as it does any other picture. A card with no recipe never reaches
-// here and draws its picture byte for byte. R3396000, R3397000, R3404000, R3398000, R3406000, R3388000: a
-// Classic+, Meditative+, Training Grounds, Meditative, Core or Classic card offered Alt art, and one of Stinkyscape's
-// later cards #3406 lists, draws an alt recipe of its own (sceneRecipes.ts `ALT_SCENE_RECIPES`) under its Alt art
-// seed alone. R3391000: a seventh kind of scenery, craft (ships, drones and vehicles), and a placement may turn a
-// pointing part (`rotate`); a placement with none draws from its stream exactly as before. Presentation only
+// here and draws its picture byte for byte. R3396000, R3397000, R3404000, R3398000, R3406000, R3394000, R3388000: a
+// Classic+, Meditative+, Training Grounds, Meditative, Core or Classic card offered Alt art, one of Stinkyscape's
+// later cards #3406 lists, and one of its cards 1 to 90 or the Dormant Starship #3394 lists (Olivian Expanse and the
+// early Starship Pieces among them), draws an alt recipe of its own (sceneRecipes.ts `ALT_SCENE_RECIPES`) under its
+// Alt art seed alone. R3391000: a seventh kind of scenery, craft (ships, drones and vehicles), and a placement may
+// turn a pointing part (`rotate`); a placement with none draws from its stream exactly as before. Presentation only
 // (CLAUDE.md rule 7): the art reads a card's id, never anything hidden.
 
 import { hashId, round2, seededRandom } from "./hash.ts";
-import { drawFigure, type FigureLook, type PoseId, type FigurePartId } from "./figureKit.ts";
+import type { drawFigure, FigureLook, PoseId, FigurePartId } from "./figureKit.ts";
 import type { ShowcaseFamily } from "./pictures.ts";
 import type { ArtSpec, RidgeRole } from "./procedural.ts";
-import { SCENE_KIT, type SceneryPartId } from "./sceneKit.ts";
-import { ALT_SCENE_RECIPES, SCENE_RECIPES } from "./sceneRecipes.ts";
+import type { SCENE_KIT, SceneryPartId } from "./sceneKit.ts";
+import type { ALT_SCENE_RECIPES, SCENE_RECIPES } from "./sceneRecipes.ts";
 import { mixHex, RADIANT_MIX, RADIANT_PALETTE } from "./themes.ts";
 
 export type Rng = () => number;
 
-export { SCENE_BOX } from "./sceneKit.ts";
+export { SCENE_BOX } from "./kitDraw.ts";
 
 /** A scene's layers, back to front. */
 export type SceneLayer = "sky" | "far" | "mid" | "subject" | "near" | "light" | "particles";
@@ -240,13 +241,53 @@ function faded<T extends KitShape>(shape: T, fade: number | undefined): T {
 }
 
 /**
+ * The four tables a scene is drawn from. They reach the client in a chunk `loadSceneData()`
+ * (`sceneLoader.ts`) fetches beside the engine module, so the first load carries none of the kits
+ * or recipes (#4222). `scene.ts` keeps the API, the types and the small constants; the data arrives
+ * here through `installSceneData`.
+ */
+export type SceneTables = {
+  readonly SCENE_KIT: typeof SCENE_KIT;
+  readonly SCENE_RECIPES: typeof SCENE_RECIPES;
+  readonly ALT_SCENE_RECIPES: typeof ALT_SCENE_RECIPES;
+  readonly drawFigure: typeof drawFigure;
+};
+
+let installed: SceneTables | null = null;
+
+/** Fill the slot `sceneRecipeOf` and `composeScene` read. Idempotent: the same tables again are fine. */
+export function installSceneData(tables: SceneTables): void {
+  installed = tables;
+}
+
+/** Whether `loadSceneData()` has filled the slot: every face waits for it behind a gate (#4222). */
+export function sceneDataReady(): boolean {
+  return installed !== null;
+}
+
+/** Tests only: empty the slot, back to before `loadSceneData()`. */
+export function clearSceneDataForTests(): void {
+  installed = null;
+}
+
+/** The slot, or a clear error naming the load: a face drawn too early fails instead of drawing the painter's picture (mirrors `wasm/index.ts`'s `call`). */
+function tables(name: string): SceneTables {
+  if (installed === null) {
+    throw new Error(`the scene tables are not loaded: await loadSceneData() before calling ${name}`);
+  }
+  return installed;
+}
+
+/**
  * The card's recipe, read by its id alone (a picture's own seed keeps the card's), or null. R3396000, R3397000,
- * R3404000, R3398000, R3406000, R3388000: a Classic+, Meditative+, Training Grounds, Meditative, Core or Classic card
- * offered Alt art, and one of Stinkyscape's later cards #3406 lists, draws its alt recipe under its Alt art seed
- * (`<id>#alt`) alone; every other seed of it, a repaint's among them, keeps its recipe (or, for a card with none, its
- * painter's picture).
+ * R3404000, R3398000, R3406000, R3394000, R3388000: a Classic+, Meditative+, Training Grounds, Meditative, Core or
+ * Classic card offered Alt art, one of Stinkyscape's later cards #3406 lists, and one of its cards 1 to 90 or the
+ * Dormant Starship #3394 lists (Olivian Expanse and the early Starship Pieces among them), draws its alt recipe under
+ * its Alt art seed (`<id>#alt`) alone; every other seed of it, a repaint's among them, keeps its recipe (or, for a card
+ * with none, its painter's picture).
  */
 export function sceneRecipeOf(seedId: string): SceneRecipe | null {
+  const { SCENE_RECIPES, ALT_SCENE_RECIPES } = tables("sceneRecipeOf");
   const cut = seedId.indexOf(SCENE_SEED_SEPARATOR);
   const id = cut < 0 ? seedId : seedId.slice(0, cut);
   if (cut >= 0 && seedId.slice(cut + SCENE_SEED_SEPARATOR.length) === SCENE_ALT_PICTURE && Object.hasOwn(ALT_SCENE_RECIPES, id)) return ALT_SCENE_RECIPES[id] ?? null;
@@ -255,6 +296,7 @@ export function sceneRecipeOf(seedId: string): SceneRecipe | null {
 
 /** Every shape of the scene, back to front, drawn from `seedId`'s scene stream; the same on both faces. */
 export function composeScene(recipe: SceneRecipe, seedId: string): SceneShape[] {
+  const { SCENE_KIT, drawFigure } = tables("composeScene");
   const rng = seededRandom((hashId(seedId) ^ SCENE_SALT) >>> 0);
   const out: SceneShape[] = [];
   for (const layer of SCENE_LAYERS) {

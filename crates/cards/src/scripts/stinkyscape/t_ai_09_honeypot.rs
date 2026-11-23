@@ -7,7 +7,6 @@
 //!   controller's leftmost open unit zone (R64), the `keywords` rider giving it Taunt as it lands (R1881005); one that
 //!   rolled Taunt keeps it. With no open zone nothing. Radiant: two of them. Declares no numbers (R482).
 
-use jackioh_engine::catalog::def_of;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-t-ai-09";
@@ -20,10 +19,11 @@ const RADIANT_DECOYS: usize = 2;
 
 /// §8: "your opponent plays a Unit".
 fn opponent_played_a_unit(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
-    let GameEvent::CardPlayed { player, def_id, .. } = event else {
+    let GameEvent::CardPlayed { player, .. } = event else {
         return false;
     };
-    *player != ctx.controller && def_of(Some(&*ctx.state), def_id).type_ == CardType::Unit
+    // R783005: the play as it counts, so a Unit set by its Cloaked is the Trap it was set as.
+    *player != ctx.controller && played_type_of(&*ctx.state, event) == Some(CardType::Unit)
 }
 
 fn face(decoys: usize) -> Script {
@@ -100,6 +100,15 @@ mod tests {
         assert!(!made[0].radiant);
         assert!(keywords_of(s.state(), s.card(made[0].id.as_str())).contains(&Keyword::Taunt));
         s.expect_in_zone(HONEYPOT, "graveyard");
+    }
+
+    /// R783005: a Unit set face-down by its Cloaked is a Trap play, no Unit played.
+    #[test]
+    fn r783005_a_unit_set_face_down_by_its_cloaked_leaves_honeypot_set() {
+        let mut s = set(false, crate::CLOAKED_UNIT);
+        crate::set_cloaked(&mut s, PlayerId::P2, crate::CLOAKED_UNIT, 1);
+        assert!(!fired(&s));
+        assert!(decoys(&s).is_empty());
     }
 
     #[test]

@@ -237,6 +237,9 @@ mod summarize_game_over_real_cards_s9_11 {
                 // The Radiant changes the step has made so far, for a card no play holds yet: one a hand
                 // trigger casts later in the step is played on the face it has by then (R1147000).
                 let mut radiant_here: IndexMap<String, bool> = IndexMap::new();
+                // The cards a replacement took the place of in this step, by the new card's id, for a card
+                // no play holds yet: a hand trigger's cast Devil's Pact replaces (R449) names the new card.
+                let mut replaced_here: IndexMap<String, String> = IndexMap::new();
                 for event in events {
                     match event {
                         GameEvent::AddedToHand { instance_id, .. }
@@ -255,6 +258,9 @@ mod summarize_game_over_real_cards_s9_11 {
                             to_def_id,
                             ..
                         } => {
+                            if open_play(&plays, instance_id).is_none() {
+                                replaced_here.insert(new_instance_id.clone(), instance_id.clone());
+                            }
                             if let Some((seat, at)) = open_play(&plays, instance_id)
                                 && !plays[seat][at].announced
                             {
@@ -310,7 +316,10 @@ mod summarize_game_over_real_cards_s9_11 {
                                 && let Some(card) = state.players[*caster]
                                     .hand
                                     .iter()
-                                    .find(|card| card.id == *instance_id)
+                                    .find(|card| {
+                                        card.id == *instance_id
+                                            || replaced_here.get(instance_id) == Some(&card.id)
+                                    })
                                     .or_else(|| {
                                         added_here
                                             .contains(&instance_id.as_str())
@@ -321,12 +330,22 @@ mod summarize_game_over_real_cards_s9_11 {
                                 // A card cast from the hand it stood in as the step began, or that the step
                                 // added to it, counts as a play with no `play` logged: M+ #17 Dogpile's hand
                                 // trigger (R1180005; summary-cards-35, -45, #1705, #2204). A Created one the
-                                // step made Radiant is played Radiant (R2368000; summary-cards-54).
+                                // step made Radiant is played Radiant (R2368000; summary-cards-54). One a
+                                // replacement took the place of is its new card, Created (R449, R943; a fused
+                                // M+ #17 Dogpile's cast under C #23 Devil's Pact, summary-cards-39).
+                                let replaced = replaced_here.contains_key(instance_id);
+                                if replaced {
+                                    replaced_plays += 1;
+                                }
                                 plays[*caster].push(Play {
                                     id: card.id.clone(),
                                     def_id: def_id.clone(),
-                                    radiant: radiant_here.get(instance_id).copied().unwrap_or(card.radiant),
-                                    created: card.created == Some(true),
+                                    radiant: if replaced {
+                                        find_instance(&result.state, instance_id).is_some_and(|c| c.radiant)
+                                    } else {
+                                        radiant_here.get(instance_id).copied().unwrap_or(card.radiant)
+                                    },
+                                    created: replaced || card.created == Some(true),
                                     placed: true,
                                     open: false,
                                     announced: true,
@@ -446,6 +465,7 @@ mod summarize_game_over_real_cards_s9_11 {
                                 instance_id,
                                 def_id,
                                 owner,
+                                ..
                             } = event
                                 && !drawn_here.contains(&instance_id)
                                 && !created(instance_id)
@@ -828,9 +848,7 @@ mod r1256000_per_seat_counts {
     }
 
     fn play_offer(state: &GameState, player: PlayerId, instance_id: &str) -> Option<ActionBody> {
-        legal_actions(state, player)
-            .into_iter()
-            .find(|body| matches!(body, ActionBody::Play { instance_id: id, .. } if id == instance_id))
+        plays_in(state, player, instance_id).into_iter().next()
     }
 
     fn summarize(seed: String, decks: (Vec<String>, Vec<String>), log: Vec<Action>) -> GameSummary {
@@ -1433,5 +1451,178 @@ mod r2089000_created_cards {
         assert_eq!(p2.created_used, None);
         assert!(!p2.opening.iter().any(|id| id == COIN_DEF_ID));
         assert_eq!(summary.seats.p1.created_unused, None);
+    }
+}
+
+/// R4279000: the dealt cards an effect cast or summoned from their seat's own deck or hand, read off
+/// `scenario()` steps through `SummaryReader`, and how the card statistics count them: played, so seen,
+/// and never among the never-drawn.
+mod r4279000_cast_or_summoned {
+    use super::*;
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
+
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: a Human Unit with no text, so a tribal play.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell left in the deck.
+    // Tatches the Totem: after you play a tribal card, summon this from your deck (and from your hand through
+    // v0.6.7k, issue #4285, R4285004).
+    const TATCHES: &str = "meditative-087";
+    const TOMMY: &str = "classicplus-026"; // Tommy Tempo: a Unit cast on draw; it ends your turn.
+    const HINDER: &str = "core-021"; // Hinder: a Spell cast on draw; then draw again.
+
+    fn step(reader: &mut SummaryReader, s: &mut Scenario, verb: impl FnOnce(&mut Scenario)) {
+        let before = s.state().clone();
+        let from = s.events().len();
+        verb(s);
+        reader.step(&before, &s.events()[from..], s.state());
+    }
+
+    fn cast(card: &str, turn: i32) -> CreatedUse {
+        CreatedUse {
+            card: card.to_string(),
+            turn,
+            radiant: false,
+        }
+    }
+
+    fn list(ids: &[&str]) -> Vec<String> {
+        ids.iter().map(|id| id.to_string()).collect()
+    }
+
+    /// `card`'s figures over one live game p1 won with `p1`.
+    fn figures(p1: SeatSummary, card: &str) -> CardStats {
+        let record = GameRecord {
+            id: "r4279000".to_string(),
+            patch: "v0.0.1".to_string(),
+            source: GameSource::Live,
+            mode: GameMode::Bo1,
+            pilots: PerPlayer::new(Pilot::Human, Pilot::Human),
+            game: GameSummary {
+                first: P1,
+                winner: Winner::P1,
+                reason: GameOverReason::HeroDeath,
+                turns: 2,
+                seats: PerPlayer::new(p1, SeatSummary::default()),
+            },
+            build: None,
+        };
+        card_stats(&[record], &DEFAULT_CARD_STATS_FILTER)
+            .cards
+            .into_iter()
+            .find(|row| row.card == card)
+            .unwrap_or_else(|| panic!("a row for {card}"))
+    }
+
+    /// Played, so seen, and no game among the never-drawn.
+    fn counted_as_played(stats: &CardStats) {
+        assert_eq!((stats.played.games, stats.played.wins), (1, 1), "{stats:?}");
+        assert_eq!(stats.drawn_not_played.games, 0, "{stats:?}");
+        assert_eq!(jackioh_engine::wire::not_drawn(stats).games, 0, "{stats:?}");
+    }
+
+    #[test]
+    fn r4279000_tatches_summoned_from_the_deck_by_a_tribal_play_is_its_seat_s_and_counts_as_played() {
+        register_all();
+        let mut s = scenario(json!({
+            "p1": { "mana": 10, "hand": [VANILLA], "library": [FILLER, TATCHES, FILLER] },
+            "p2": { "hand": [VANILLA], "library": [FILLER, FILLER, FILLER, FILLER] },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        let turn = s.state().turn;
+        step(&mut reader, &mut s, |s| {
+            s.play(VANILLA, json!({}));
+        });
+        assert!(
+            !s.state().players[P1]
+                .library
+                .iter()
+                .any(|card| card.def_id == TATCHES),
+            "Tatches left the deck"
+        );
+
+        let p1 = reader.seat(P1, list(&[VANILLA, FILLER, TATCHES, FILLER]));
+        assert_eq!(p1.played, [VANILLA]);
+        assert!(p1.drawn.is_empty());
+        assert_eq!(p1.cast_or_summoned, Some(vec![cast(TATCHES, turn)]));
+        assert_eq!(reader.seat(P2, Vec::new()).cast_or_summoned, None);
+        counted_as_played(&figures(p1, TATCHES));
+    }
+
+    /// R767000: `run` under Tatches' script kept for v0.6.7k, which summoned it from the hand too.
+    fn tatches_from_the_hand<T>(run: impl FnOnce() -> T) -> T {
+        register_all();
+        let (_, _, kept) = jackioh_cards::KEPT_SCRIPTS
+            .iter()
+            .find(|(id, version, _)| *id == TATCHES && *version == "v0.6.7k")
+            .expect("Tatches' v0.6.7k script is kept");
+        let shipped: &'static jackioh_engine::ShippedCatalog =
+            Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
+                "kept",
+                CATALOG.clone(),
+                IndexMap::from([(TATCHES.to_string(), kept())]),
+            )));
+        jackioh_engine::with_shipped(Some(shipped), run)
+    }
+
+    /// Through v0.6.7k (the hand's summon, issue #4285 took it out, R4285004).
+    #[test]
+    fn r4279000_tatches_summoned_from_the_hand_is_its_seat_s_once() {
+        tatches_from_the_hand(|| {
+            let mut s = scenario(json!({
+                "p1": { "mana": 10, "hand": [VANILLA, TATCHES], "library": [FILLER, FILLER] },
+                "p2": { "hand": [VANILLA], "library": [FILLER, FILLER, FILLER, FILLER] },
+            }));
+            let mut reader = SummaryReader::new(s.state());
+            let turn = s.state().turn;
+            step(&mut reader, &mut s, |s| {
+                s.play(VANILLA, json!({}));
+            });
+            assert!(!s.hand(P1).iter().any(|card| card.def_id == TATCHES));
+
+            let p1 = reader.seat(P1, list(&[VANILLA, TATCHES, FILLER, FILLER]));
+            assert_eq!(p1.played, [VANILLA]);
+            assert_eq!(p1.cast_or_summoned, Some(vec![cast(TATCHES, turn)]));
+            counted_as_played(&figures(p1, TATCHES));
+        });
+    }
+
+    /// Tommy Tempo, a Unit (whose cast's own `summoned` is no second summon), and Hinder, a Spell, each on
+    /// top of p1's deck as p2 ends its turn: p1's start-of-turn draw casts it, never a draw into the hand
+    /// nor a play (§2.4, R2179002).
+    #[test]
+    fn r4279000_a_card_cast_on_its_draw_is_its_seat_s_cast_once_and_counts_as_played() {
+        register_all();
+        for card in [TOMMY, HINDER] {
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": { "hand": [VANILLA], "library": [card, VANILLA, VANILLA, VANILLA, VANILLA] },
+                "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] },
+            }));
+            let mut reader = SummaryReader::new(s.state());
+            step(&mut reader, &mut s, |s| {
+                s.end_turn();
+            });
+            let Some(turn) = s.events().iter().find_map(|event| match event {
+                GameEvent::TurnStarted { player: P1, turn, .. } => Some(*turn),
+                _ => None,
+            }) else {
+                panic!("{card}: p1's turn began");
+            };
+            assert!(
+                s.events().iter().any(|event| matches!(
+                    event,
+                    GameEvent::CardPlayed { player: P1, def_id, on_draw: Some(true), .. } if def_id == card
+                )),
+                "{card} was cast on its draw"
+            );
+
+            let deck = list(&[card, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA]);
+            let p1 = reader.seat(P1, deck);
+            assert!(p1.played.is_empty(), "{card}: {:?}", p1.played);
+            assert!(!p1.drawn.iter().any(|id| id == card), "{card}: {:?}", p1.drawn);
+            assert_eq!(p1.cast_or_summoned, Some(vec![cast(card, turn)]), "{card}");
+            counted_as_played(&figures(p1, card));
+        }
     }
 }

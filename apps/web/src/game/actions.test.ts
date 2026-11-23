@@ -1,7 +1,7 @@
 // M5-T2: the client asks `legalActions` and narrows. These tests exist to prove that it never
 // computes legality itself.
 
-import type { ActionBody, CraftRecipe, PendingOption, PendingView, PlayerView, RevealAt, Selection } from "@jackioh/shared";
+import type { ActionBody, ActivationView, CraftRecipe, PendingOption, PendingView, PlayerView, RevealAt, Selection } from "@jackioh/shared";
 import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
 import { describe, expect, it } from "vitest";
 
@@ -11,6 +11,7 @@ import {
   answerPlaguePlacement,
   attackTargetTestid,
   heroTargetId,
+  hiddenTargetZone,
   highlightFor,
   isPlaguePlacementPrompt,
   onClickTarget,
@@ -23,8 +24,8 @@ import {
   selectionTestid,
   type Interaction,
 } from "./actions.ts";
-import { testid, type ClickTarget } from "./contract.ts";
-import { baseView, card, emptySide, faceUpBackrow, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
+import { NOT_NOW, testid, type ClickTarget } from "./contract.ts";
+import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
 function seatedView(over: Partial<PlayerView> = {}): PlayerView {
   return baseView({
@@ -517,6 +518,40 @@ describe("R446 a Unit placed on your Ivory Tower by clicking the Tower", () => {
       side: "you",
       lane: 4,
     });
+
+    expect(result.action).toBeUndefined();
+    expect(result.interaction).toBe(playing);
+  });
+});
+
+describe("R3864000 R391 a Tribute played into its own zone by clicking the unit standing in it", () => {
+  // e2e spec 48 (#4079): the one Tribute is fixed, so the play asks only its zone, and the unit's own zone is one.
+  const view = seatedView({
+    you: emptySide("p1", {
+      hand: [card({ instanceId: "h1", defId: "traininggrounds-054", cost: 4 })],
+      units: [unit("p1", { instanceId: "u1" }), null, null, null, null],
+    }),
+    opponent: emptySide("p2", { units: [unit("p2", { instanceId: "e1" }), null, null, null, null] }),
+  });
+  const rock = (lane: number): ActionBody => ({
+    type: "play",
+    instanceId: "h1",
+    zone: { row: "units", lane },
+    tributes: ["u1"],
+  });
+  const legal: ActionBody[] = [1, 2, 3, 4, 5].map(rock);
+  const playing = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+
+  it("R3864000 R391 asks only the zone, and a click on the unit plays it into the unit's own zone", () => {
+    expect(outstandingNeed(playing)?.kind).toBe("zone");
+    const result = onClickTarget(view, legal, playing, { on: "unit", instanceId: "u1", side: "you", lane: 1 });
+
+    expect(result.action).toEqual(rock(1));
+    expect(result.interaction).toEqual(IDLE);
+  });
+
+  it("R3864000 an opponent's unit changes nothing", () => {
+    const result = onClickTarget(view, legal, playing, { on: "unit", instanceId: "e1", side: "opponent", lane: 1 });
 
     expect(result.action).toBeUndefined();
     expect(result.interaction).toBe(playing);
@@ -1065,6 +1100,26 @@ describe("R1044 playing face-down as a Trap", () => {
   });
 });
 
+describe("R3543000 a Flexible play lights both rows", () => {
+  const view = seatedView();
+
+  it("R3543000 a unit-row and a backrow play of one card light both zones, and the backrow click sends that play", () => {
+    const backrow = { type: "play", instanceId: "h1", zone: { row: "backrow", lane: 1 } } as const;
+    const legal: ActionBody[] = [playZone("h1", 3), backrow];
+    const playing = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+
+    const { legal: lit } = highlightFor(view, legal, playing);
+
+    expect(lit.has(testid.zone("you", "units", 3))).toBe(true);
+    expect(lit.has(testid.zone("you", "backrow", 1))).toBe(true);
+    expect(lit.has(testid.zone("you", "units", 1))).toBe(false);
+
+    const result = onClickTarget(view, legal, playing, { on: "zone", side: "you", row: "backrow", lane: 1 });
+
+    expect(result.action).toEqual(backrow);
+  });
+});
+
 describe("R1086 Equip plays (issue #532)", () => {
   it("R1086 an Equip card onto a friendly Unit sends equip: true", () => {
     const legal: ActionBody[] = [
@@ -1215,5 +1270,95 @@ describe("R821000 a Plague Counter placement is answered on the board", () => {
     expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, target)).toBeNull();
     expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, waitingPending)).toBeNull();
     expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, null)).toBeNull();
+  });
+});
+
+describe("R3777001 a face-down enemy backrow card is a play's target by the zone its back lies in", () => {
+  const hiddenTargets: NonNullable<PlayerView["hiddenTargets"]> = [
+    { instanceId: "t1", zone: { player: "p2", row: "backrow", lane: 2 } },
+  ];
+  // Their lane 2 is a back with no id (R33); their lane 4 is a public Field Spell.
+  const backrow = [null, faceDownBackrow, null, faceUpBackrow("p2", { instanceId: "b1" }), null];
+  const view = (withHidden = true): PlayerView => {
+    const seated = seatedView();
+    return {
+      ...seated,
+      opponent: { ...seated.opponent, backrow },
+      ...(withHidden ? { hiddenTargets } : {}),
+    };
+  };
+  const aimed = (instanceId: string): ActionBody => ({
+    type: "play",
+    instanceId: "h1",
+    targets: [{ pick: "instance", instanceId }],
+  });
+  const legal: ActionBody[] = [aimed("t1"), aimed("b1"), { type: "endTurn" }];
+  const building = (shown: PlayerView): Interaction => onClickTarget(shown, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+
+  it("R3777001 names the zone of the hidden target, and nothing for an id it does not list", () => {
+    expect(hiddenTargetZone(view(), "t1")).toEqual({ side: "opponent", row: "backrow", lane: 2 });
+    expect(hiddenTargetZone(view(), "b1")).toBeNull();
+    expect(hiddenTargetZone(view(false), "t1")).toBeNull();
+    expect(selectionTestid(view(), { pick: "instance", instanceId: "t1" })).toBe(testid.zone("opponent", "backrow", 2));
+    expect(selectionTestid(view(), { pick: "instance", instanceId: "b1" })).toBe(testid.card("b1"));
+  });
+
+  it("R3777001 lights the zone of the face-down target while the play is built", () => {
+    const shown = view();
+    const lit = highlightFor(shown, legal, building(shown));
+    expect(lit.legal.has(testid.zone("opponent", "backrow", 2))).toBe(true);
+    expect(lit.glow?.has(testid.zone("opponent", "backrow", 2))).toBe(true);
+    expect(lit.legal.has(testid.card("b1"))).toBe(true);
+    // Without the view's word for it, the back's zone is not lit: nothing says which id lies there.
+    const bare = view(false);
+    expect(highlightFor(bare, legal, building(bare)).legal.has(testid.zone("opponent", "backrow", 2))).toBe(false);
+  });
+
+  it("R3777001 a click on that zone sends the play naming the hidden id, and no other zone sends anything", () => {
+    const shown = view();
+    const lane = (side: "you" | "opponent", at: number): ClickTarget => ({ on: "zone", side, row: "backrow", lane: at });
+    expect(onClickTarget(shown, legal, building(shown), lane("opponent", 2)).action).toEqual(aimed("t1"));
+    expect(onClickTarget(shown, legal, building(shown), lane("opponent", 3)).action).toBeUndefined();
+    expect(onClickTarget(shown, legal, building(shown), lane("you", 2)).action).toBeUndefined();
+    const bare = view(false);
+    expect(onClickTarget(bare, legal, building(bare), lane("opponent", 2)).action).toBeUndefined();
+    // Not building a play, the zone's click is nothing at all.
+    expect(onClickTarget(shown, legal, IDLE, lane("opponent", 2)).action).toBeUndefined();
+  });
+});
+
+describe("R3768000 a greyed Activate press returns the view's reason", () => {
+  const ACTIVATE = { on: "activate", instanceId: "u1" } as const;
+  const SPENT = "that ability has already been used this turn";
+  const viewWith = (activations?: ActivationView[]): PlayerView =>
+    seatedView({
+      you: emptySide("p1", { units: [unit("p1", { instanceId: "u1", ...(activations === undefined ? {} : { activations }) }), null, null, null, null] }),
+    });
+  const ping = (reason?: string): ActivationView => ({ ability: "ping", label: "x", usesLeft: 0, usable: false, ...(reason === undefined ? {} : { reason }) });
+
+  it("R3768000 an activate click with no listed activation returns the reason as its notice", () => {
+    const result = onClickTarget(viewWith([ping(SPENT)]), [{ type: "endTurn" }], IDLE, ACTIVATE);
+    expect(result).toEqual({ interaction: IDLE, notice: SPENT });
+    expect(result.action).toBeUndefined();
+  });
+
+  it("R3768000 a named ability takes its own reason, and an unlisted one gives no notice", () => {
+    const view = viewWith([ping(SPENT), { ...ping("not enough mana"), ability: "zap" }]);
+    expect(onClickTarget(view, [], IDLE, { ...ACTIVATE, ability: "zap" }).notice).toBe("not enough mana");
+    expect(onClickTarget(view, [], IDLE, { ...ACTIVATE, ability: "nope" })).toEqual({ interaction: IDLE });
+  });
+
+  it("R3768000 a card the view lists no activations for gives no notice, and a missing reason falls back to NOT_NOW", () => {
+    expect(onClickTarget(viewWith(), [], IDLE, ACTIVATE)).toEqual({ interaction: IDLE });
+    expect(onClickTarget(viewWith([ping()]), [], IDLE, ACTIVATE).notice).toBe(NOT_NOW);
+  });
+
+  it("R3768000 an Activate press while an attack is picked is greyed too: a notice, no activation, the attack kept", () => {
+    const view = viewWith([{ ...ping(), usable: true, usesLeft: 1 }]);
+    const activate: ActionBody = { type: "activate", instanceId: "u1", ability: "ping" };
+    const attacking: Interaction = { stage: "attacking", attackerId: "u2", candidates: [] };
+    const result = onClickTarget(view, [activate], attacking, ACTIVATE);
+    expect(result).toEqual({ interaction: attacking, notice: NOT_NOW });
+    expect(result.action).toBeUndefined();
   });
 });

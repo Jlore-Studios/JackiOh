@@ -2,7 +2,7 @@
 // data: callers pass damage amounts and landing tiers already present in the rendered event stream.
 
 import { CROWD_FEEL, damageFeel, UNIT_SLAM, type SlamTier } from "../game/damageFeel.ts";
-import { noiseBuffer } from "./sfx.ts";
+import { noiseBuffer } from "./noise.ts";
 import type { AudioEngine } from "./types.ts";
 
 type CrowdOutput = { context: AudioContext; crowd: AudioNode };

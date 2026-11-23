@@ -2,13 +2,14 @@
 // guard still holds one. The labels are built per call, from a render, never cached across a
 // language switch. Presentation only (CLAUDE.md rule 7).
 
-import catalogJson from "@jackioh/cards/catalog.json";
 import type { CardDefs } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import { almanacShelf } from "../game/deckbuilder/shelf.ts";
 import { t } from "../i18n/i18n.ts";
 import {
+  dailyIdOf,
   duosIdOf,
   matchIdOf,
   newDeckPath,
@@ -16,9 +17,6 @@ import {
   seriesIdOf,
   watchIdOf,
 } from "../net/navigate.ts";
-
-/** JSON widens the unions to strings; the catalog is proved against SPEC §8 in crates/cards. */
-const CATALOG = catalogJson as unknown as CardDefs;
 
 /** R2118000: how many card results the menu lists at most, in catalog order, unranked. */
 export const COMMAND_MENU_CARDS_SHOWN = 8;
@@ -39,6 +37,7 @@ export function commandMenuOn(path: string): boolean {
   if (path === paths.hotseat || path === paths.duosDev) return false;
   if (matchIdOf(path) !== null || seriesIdOf(path) !== null) return false;
   if (watchIdOf(path) !== null || duosIdOf(path) !== null) return false;
+  if (dailyIdOf(path) !== null) return false;
   return true;
 }
 
@@ -68,11 +67,11 @@ export function commandPages(): CommandEntry[] {
     { id: "page-stats", kind: "page", label: t("Statistics"), path: paths.stats },
     { id: "page-leaderboard", kind: "page", label: t("Leaderboard"), path: paths.leaderboard },
     { id: "page-replays", kind: "page", label: t("Replays"), path: paths.replays },
-    { id: "page-together", kind: "page", label: t("Play together"), path: paths.together },
+    { id: "page-together", kind: "page", label: t("Friends"), path: paths.together },
+    { id: "page-daily", kind: "page", label: t("Daily games"), path: paths.daily },
     { id: "page-account", kind: "page", label: t("Account"), path: paths.account },
     { id: "page-privacy", kind: "page", label: t("Privacy policy"), path: paths.privacy },
     { id: "page-terms", kind: "page", label: t("Terms of service"), path: paths.terms },
-    { id: "page-accessibility", kind: "page", label: t("Accessibility"), path: paths.accessibility },
     { id: "page-copyright", kind: "page", label: t("Copyright"), path: paths.copyright },
   ];
 }
@@ -81,7 +80,7 @@ export function commandPages(): CommandEntry[] {
  * The Almanac shelf's cards (R1420: no unshipped card), each opening its inspect detail (R630), named
  * in the reader's language (R711000).
  */
-export function commandCards(cards: CardDefs = CATALOG): CommandEntry[] {
+export function commandCards(cards: CardDefs = currentCatalog().cards): CommandEntry[] {
   return almanacShelf(cards).flatMap((id): CommandEntry[] => {
     const def = cards[id];
     if (def === undefined) return [];
@@ -96,7 +95,7 @@ export function matchesQuery(label: string, query: string): boolean {
   return words.every((word) => lowered.includes(word));
 }
 
-export function commandEntries(query: string, cards: CardDefs = CATALOG): CommandEntry[] {
+export function commandEntries(query: string, cards: CardDefs = currentCatalog().cards): CommandEntry[] {
   const actions = commandActions().filter((entry) => matchesQuery(entry.label, query));
   const pages = commandPages().filter((entry) => matchesQuery(entry.label, query));
   if (query.trim().length === 0) return [...actions, ...pages];

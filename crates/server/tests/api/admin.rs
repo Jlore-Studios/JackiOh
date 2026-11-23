@@ -7,8 +7,14 @@ use std::sync::Arc;
 use indexmap::IndexMap;
 use serde_json::{Value, json};
 
-use jackioh_server::admin::store::{NewsPost, RatingChange};
+use jackioh_server::admin::store::{
+    MODERATE_BAN_ROUTE, MODERATE_REDEMPTION_ROUTE, MODERATE_REVOKE_CODE_ROUTE, MODERATE_UNBAN_ROUTE,
+    NewAdminAction, NewsPost, RatingChange,
+};
+use jackioh_server::api::codes::{MintDeps, MintInput, mint_invite_code};
+use jackioh_server::api::crypto::canonical_invite_code;
 use jackioh_server::app::{self, App, now_ms};
+use jackioh_server::cli::moderate::{ban_profile, revoke_code, set_redemption, unban_profile};
 use jackioh_server::config::{
     DEV_JLORE_PER_REQUEST_MAX, DEV_RATING_MAX, DEV_RATING_MIN, DEV_XP_PER_REQUEST_MAX, MS_PER_DAY,
     NEWS_TTL_DAYS, RANK_PLACEMENT_GAMES, RATING_START,
@@ -379,6 +385,372 @@ async fn r3074000_every_dev_and_admin_write_leaves_its_audit_row_and_a_read_none
     assert!(
         ids.windows(2).all(|pair| pair[0] > pair[1]),
         "newest first: {ids:?}"
+    );
+    assert_eq!(audit["nextBeforeId"], Value::Null, "a short page names no cursor");
+}
+
+#[tokio::test]
+async fn audit_read_pages_by_cursor_and_filters() {
+    let (app, tokens) = admin_app(true).await;
+    let dev = &tokens.dev_aal2;
+    expect(&app, "POST", "/api/dev/jlore", dev, json!({ "jlore": 40 }), 200).await;
+    expect(
+        &app,
+        "PUT",
+        "/api/admin/rating",
+        dev,
+        json!({ "ladder": "random", "rating": 1700 }),
+        200,
+    )
+    .await;
+    expect(
+        &app,
+        "POST",
+        "/api/admin/news",
+        dev,
+        json!({ "title": "Hello", "summary": "A word from the team." }),
+        201,
+    )
+    .await;
+
+    // No params still answers the newest page as today, plus its cursor.
+    let first = expect(&app, "GET", "/api/admin/audit", dev, Value::Null, 200).await;
+    let actions = first["actions"].as_array().expect("actions");
+    assert_eq!(actions.len(), 3);
+    assert_eq!(first["nextBeforeId"], Value::Null, "a short page names no cursor");
+    let ids: Vec<i64> = actions.iter().filter_map(|row| row["id"].as_i64()).collect();
+    assert!(
+        ids.windows(2).all(|pair| pair[0] > pair[1]),
+        "newest first: {ids:?}"
+    );
+
+    // A second read with the cursor answers the next older page, with no repeats.
+    let older = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?before_id={}", ids[1]),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    let older = older["actions"].as_array().expect("actions");
+    assert_eq!(older.len(), 1);
+    assert_eq!(older[0]["id"], json!(ids[2]));
+
+    // The acting account narrows the read to its rows alone.
+    let by_profile = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?profile_id={DEV}"),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    let by_profile = by_profile["actions"].as_array().expect("actions");
+    assert_eq!(by_profile.len(), 3);
+    assert!(by_profile.iter().all(|row| row["profileId"] == DEV));
+    let nobody = expect(
+        &app,
+        "GET",
+        "/api/admin/audit?profile_id=no-such-account",
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert!(nobody["actions"].as_array().expect("actions").is_empty());
+
+    // The route narrows the read to its rows alone.
+    let by_route = expect(
+        &app,
+        "GET",
+        "/api/admin/audit?route=PUT%20%2Fapi%2Fadmin%2Frating",
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    let by_route = by_route["actions"].as_array().expect("actions");
+    assert_eq!(by_route.len(), 1);
+    assert_eq!(by_route[0]["route"], "PUT /api/admin/rating");
+
+    // A cursor that is no whole number is refused.
+    expect(
+        &app,
+        "GET",
+        "/api/admin/audit?before_id=abc",
+        dev,
+        Value::Null,
+        400,
+    )
+    .await;
+}
+
+/// #4298: `since`/`until` narrow the audit to one epoch-millisecond window, inclusive, composed
+/// with the other filters and `before_id` paging; a blank bound is no bound, and a bad one is 400.
+#[tokio::test]
+async fn audit_read_filters_by_since_and_until() {
+    let (app, tokens) = admin_app(true).await;
+    let dev = &tokens.dev_aal2;
+    // Pinned timestamps: writes in one process share a millisecond, so the rows are seeded through
+    // the store with `at` values a window can tell apart.
+    let base = now_ms();
+    let jlore = "POST /api/dev/jlore";
+    let rating = "PUT /api/admin/rating";
+    let news = "POST /api/admin/news";
+    let mut tx = app.db.begin(Some(DEV)).await.expect("a transaction");
+    let mut ids = Vec::new();
+    for (who, route, at) in [
+        (DEV, jlore, base),
+        (OTHER, rating, base + 1),
+        (DEV, news, base + 2),
+    ] {
+        ids.push(
+            tx.admin_actions_append(&NewAdminAction {
+                profile_id: Some(who.to_string()),
+                route: route.to_string(),
+                request: json!({}),
+                before: Value::Null,
+                after: Value::Null,
+                at,
+            })
+            .await
+            .expect("an audit row"),
+        );
+    }
+    tx.commit().await.expect("commit");
+
+    let rows_of = |answer: Value| {
+        answer["actions"]
+            .as_array()
+            .expect("actions")
+            .iter()
+            .filter_map(|row| row["id"].as_i64())
+            .collect::<Vec<_>>()
+    };
+
+    // The window keeps its rows, newest first, on both ends inside.
+    let windowed = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?since={base}&until={}", base + 2),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(windowed), vec![ids[2], ids[1], ids[0]]);
+    // A point window keeps the row written at it.
+    let point = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?since={}&until={}", base + 1, base + 1),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(point), vec![ids[1]]);
+    // One bound alone constrains its end alone.
+    let from = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?since={}", base + 2),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(from), vec![ids[2]]);
+    let to = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?until={base}"),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(to), vec![ids[0]]);
+
+    // The window composes with the acting account and the route.
+    let of_dev = expect(
+        &app,
+        "GET",
+        &format!(
+            "/api/admin/audit?since={base}&until={}&profile_id={DEV}",
+            base + 2
+        ),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(of_dev), vec![ids[2], ids[0]]);
+    let of_rating = expect(
+        &app,
+        "GET",
+        &format!(
+            "/api/admin/audit?since={base}&until={}&route=PUT%20%2Fapi%2Fadmin%2Frating",
+            base + 2
+        ),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(of_rating), vec![ids[1]]);
+
+    // `before_id` pages inside the window.
+    let older = expect(
+        &app,
+        "GET",
+        &format!(
+            "/api/admin/audit?since={base}&until={}&before_id={}",
+            base + 2,
+            ids[2]
+        ),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(older), vec![ids[1], ids[0]]);
+
+    // A window past every row answers nothing, and a blank bound is no bound.
+    let empty = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?since={}&until={}", base + 10, base + 20),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert!(empty["actions"].as_array().expect("actions").is_empty());
+    let blank = expect(
+        &app,
+        "GET",
+        "/api/admin/audit?since=%20&until=%20",
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    let unfiltered = expect(&app, "GET", "/api/admin/audit", dev, Value::Null, 200).await;
+    assert_eq!(blank["actions"], unfiltered["actions"]);
+
+    // What is no whole number, and a `since` past its `until`, are refused.
+    for path in [
+        "/api/admin/audit?since=abc".to_string(),
+        "/api/admin/audit?until=abc".to_string(),
+        format!("/api/admin/audit?since={}&until={base}", base + 2),
+    ] {
+        expect(&app, "GET", &path, dev, Value::Null, 400).await;
+    }
+}
+
+/// #4291: a filter that is blank once trimmed is no filter, as the stats reads' `query_trimmed` (one
+/// helper since #4291) takes theirs: the read lists what an unfiltered one lists.
+#[tokio::test]
+async fn admin_audit_reads_a_blank_filter_as_none() {
+    let (app, tokens) = admin_app(true).await;
+    let dev = &tokens.dev_aal2;
+    expect(&app, "POST", "/api/dev/jlore", dev, json!({ "jlore": 40 }), 200).await;
+    expect(
+        &app,
+        "PUT",
+        "/api/admin/rating",
+        dev,
+        json!({ "ladder": "random", "rating": 1700 }),
+        200,
+    )
+    .await;
+    let unfiltered = expect(&app, "GET", "/api/admin/audit", dev, Value::Null, 200).await;
+    assert_eq!(unfiltered["actions"].as_array().expect("actions").len(), 2);
+    let blank = expect(
+        &app,
+        "GET",
+        "/api/admin/audit?profile_id=%20&route=%20",
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(blank["actions"], unfiltered["actions"]);
+}
+
+/// #4141: the moderation levers' rows read back on the audit as they are, naming no account (the
+/// operator holds none), and a revoked code shows only as its stored hash.
+#[tokio::test]
+async fn the_moderation_levers_rows_read_back_on_the_audit_naming_no_account() {
+    let (app, tokens) = admin_app(true).await;
+    assert_eq!(
+        ban_profile(&app.db, OTHER).await.expect("the ban lands"),
+        format!("banned {OTHER}")
+    );
+    assert_eq!(
+        unban_profile(&app.db, OTHER).await.expect("the unban lands"),
+        format!("unbanned {OTHER}")
+    );
+    assert_eq!(
+        set_redemption(&app.db, false).await.expect("the switch flips"),
+        "redemption paused"
+    );
+    let minted = mint_invite_code(
+        MintDeps {
+            db: &app.db,
+            code_pepper: &app.env.code_pepper,
+        },
+        MintInput::default(),
+    )
+    .await
+    .expect("a code is minted");
+    let canonical = canonical_invite_code(&minted.formatted).expect("a minted code is canonical");
+    assert_eq!(
+        revoke_code(&app.db, &app.env.code_pepper, &minted.formatted)
+            .await
+            .expect("the revoke lands"),
+        format!("revoked {canonical}")
+    );
+
+    let audit = expect(
+        &app,
+        "GET",
+        "/api/admin/audit",
+        &tokens.dev_aal2,
+        Value::Null,
+        200,
+    )
+    .await;
+    let actions = audit["actions"].as_array().expect("actions");
+    let routes: Vec<&str> = actions
+        .iter()
+        .rev()
+        .map(|row| row["route"].as_str().unwrap_or(""))
+        .collect();
+    assert_eq!(
+        routes,
+        vec![
+            MODERATE_BAN_ROUTE,
+            MODERATE_UNBAN_ROUTE,
+            MODERATE_REDEMPTION_ROUTE,
+            MODERATE_REVOKE_CODE_ROUTE,
+        ]
+    );
+    for row in actions {
+        assert_eq!(row["profileId"], "", "{row}");
+        assert_eq!(row["username"], "", "{row}");
+    }
+    assert_eq!(actions[3]["request"], json!({ "profileId": OTHER }));
+    assert_eq!(actions[3]["before"], json!({ "status": "active" }));
+    assert_eq!(actions[3]["after"], json!({ "status": "banned" }));
+    let text = audit.to_string();
+    assert!(
+        !text.contains(&minted.formatted) && !text.contains(&canonical),
+        "the audit holds the code: {text}"
     );
 }
 

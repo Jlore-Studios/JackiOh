@@ -74,7 +74,8 @@ type HeaderBlock = { path: string; headers: Header[] };
 const lines = (text: string): string[] =>
   text
     .split("\n")
-    .map((line) => line.replace(/\s+$/u, ""))
+    // No `/\s+$/`: it rescans a whitespace run from every position (#4009); `trimEnd` cuts the same.
+    .map((line) => line.trimEnd())
     .filter((line) => line.trim() !== "" && !line.trim().startsWith("#"));
 
 function blocks(): HeaderBlock[] {
@@ -109,8 +110,8 @@ function csp(): string {
 }
 
 describe("public/_headers", () => {
-  it("has three blocks: every path, the fonts and the bundle", () => {
-    expect(blocks().map((block) => block.path)).toEqual(["/*", "/fonts/*", "/assets/*"]);
+  it("has four blocks: every path, the fonts, the bundle and the audio", () => {
+    expect(blocks().map((block) => block.path)).toEqual(["/*", "/fonts/*", "/assets/*", "/audio/*"]);
   });
 
   it("sends the security headers on every path, with an enforced CSP", () => {
@@ -191,5 +192,9 @@ describe("public/_headers", () => {
     expect(blocks().find((block) => block.path === "/assets/*")?.headers).toEqual(IMMUTABLE);
     // Only Vite writes /assets/: nothing in public/ is served there under a name without a hash.
     expect(readdirSync(PUBLIC)).not.toContain("assets");
+  });
+
+  it("lets a browser keep voice lines and music a year (#4393): every audio fetch carries its manifest's hash (?v=)", () => {
+    expect(blocks().find((block) => block.path === "/audio/*")?.headers).toEqual(IMMUTABLE);
   });
 });

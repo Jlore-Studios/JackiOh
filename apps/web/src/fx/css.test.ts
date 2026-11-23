@@ -4,117 +4,120 @@
 // formatting, ordering and grouping are the stylesheet author's choice.
 
 import { describe, expect, it } from "vitest";
+import { keyframeBodies, parseDecls, parseSheet, type Rule, type Sheet } from "../test/cssSheet.ts";
 import { readSheet } from "../test/setup.ts";
 import { FX_FIGURES } from "./figures.ts";
 import { TAKEOVER_ART_PARTS } from "./takeoverArt.ts";
 
-/* Reading and parsing */
+/* Reading and parsing: src/test/cssSheet.ts */
 
-type Rule = { selectors: string[]; decls: Map<string, string>; media: string | null };
-type Sheet = { rules: Rule[]; keyframes: Set<string>; text: string };
-
-function closingBrace(src: string, open: number): number {
-  let depth = 0;
-  for (let i = open; i < src.length; i += 1) {
-    const ch = src[i];
-    if (ch === "{") depth += 1;
-    else if (ch === "}") {
-      depth -= 1;
-      if (depth === 0) return i;
-    }
-  }
-  return src.length;
-}
-
-/** Splits on `sep` at bracket depth 0, so `:is(a, b)` and `rgb(1, 2, 3)` stay whole. */
-function splitTop(text: string, sep: string): string[] {
-  const out: string[] = [];
-  let depth = 0;
-  let start = 0;
-  for (let i = 0; i < text.length; i += 1) {
-    const ch = text[i];
-    if (ch === "(" || ch === "[") depth += 1;
-    else if (ch === ")" || ch === "]") depth -= 1;
-    else if (ch === sep && depth === 0) {
-      out.push(text.slice(start, i));
-      start = i + 1;
-    }
-  }
-  out.push(text.slice(start));
-  return out.map((part) => part.trim()).filter((part) => part !== "");
-}
-
-function parseDecls(text: string): Map<string, string> {
-  const decls = new Map<string, string>();
-  for (const part of splitTop(text, ";")) {
-    const colon = part.indexOf(":");
-    if (colon <= 0) continue;
-    decls.set(part.slice(0, colon).trim().toLowerCase(), part.slice(colon + 1).trim().replace(/\s+/g, " "));
-  }
-  return decls;
-}
-
-/** Native nesting: `&` stands for the parent, and a bare child selector is a descendant of it. */
-function nest(parents: readonly string[] | null, selectors: readonly string[]): string[] {
-  if (parents === null) return [...selectors];
-  return parents.flatMap((parent) =>
-    selectors.map((child) => (child.includes("&") ? child.replaceAll("&", parent) : `${parent} ${child}`)),
-  );
-}
-
-function walk(src: string, media: string | null, parents: string[] | null, sheet: Sheet): string {
-  let flat = "";
+/**
+ * Whitespace collapsed to one space (#4009: `/\s+/g` on its own is linear; the helpers below cover
+ * the adjacent-quantifier shapes around operators and brackets).
+ */
+function collapseSpaces(value: string): string {
+  let out = "";
   let i = 0;
-  while (i < src.length) {
-    const open = src.indexOf("{", i);
-    if (open < 0) {
-      flat += src.slice(i);
-      break;
-    }
-    const head = src.slice(i, open);
-    const cut = Math.max(head.lastIndexOf(";"), head.lastIndexOf("}"));
-    flat += head.slice(0, cut + 1);
-    const prelude = head.slice(cut + 1).trim();
-    const close = closingBrace(src, open);
-    const body = src.slice(open + 1, close);
-    if (/^@(-webkit-)?keyframes\s/.test(prelude)) {
-      sheet.keyframes.add(prelude.replace(/^@(-webkit-)?keyframes\s+/, "").trim());
-    } else if (prelude.startsWith("@media")) {
-      walk(body, prelude, parents, sheet);
-    } else if (prelude.startsWith("@")) {
-      walk(body, media, parents, sheet);
+  while (i < value.length) {
+    const char = value.charAt(i);
+    if (/\s/.test(char)) {
+      out += " ";
+      while (i < value.length && /\s/.test(value.charAt(i))) i++;
     } else {
-      const selectors = nest(parents, splitTop(prelude, ","));
-      const own = walk(body, media, selectors, sheet);
-      sheet.rules.push({ selectors, decls: parseDecls(own), media });
+      out += char;
+      i++;
     }
-    i = close + 1;
   }
-  return flat;
+  return out;
 }
 
-function parseSheet(css: string): Sheet {
-  const text = css.replace(/\/\*[\s\S]*?\*\//g, "");
-  const sheet: Sheet = { rules: [], keyframes: new Set(), text };
-  walk(text, null, null, sheet);
-  return sheet;
+/**
+ * Whitespace touching any of `chars` dropped, as the `\s*([>,+~=])\s*` to `"$1"` rewrite does
+ * (#4009: the class plus whitespace rescans from every position).
+ */
+function tightenAround(value: string, chars: string): string {
+  let out = "";
+  let i = 0;
+  while (i < value.length) {
+    const char = value.charAt(i);
+    if (/\s/.test(char)) {
+      let end = i;
+      while (end < value.length && /\s/.test(value.charAt(end))) end++;
+      const left = i > 0 && chars.includes(value.charAt(i - 1));
+      const right = end < value.length && chars.includes(value.charAt(end));
+      if (!left && !right) out += value.slice(i, end);
+      i = end;
+    } else {
+      out += char;
+      i++;
+    }
+  }
+  return out;
+}
+
+/**
+ * Whitespace directly before any of `chars` dropped, as `/\s+\)/g` with `")"` does (#4009: the
+ * class plus bracket rescans from every position).
+ */
+function dropWsBefore(value: string, chars: string): string {
+  let out = "";
+  let i = 0;
+  while (i < value.length) {
+    const char = value.charAt(i);
+    if (/\s/.test(char)) {
+      let end = i;
+      while (end < value.length && /\s/.test(value.charAt(end))) end++;
+      if (end >= value.length || !chars.includes(value.charAt(end))) out += value.slice(i, end);
+      i = end;
+    } else {
+      out += char;
+      i++;
+    }
+  }
+  return out;
 }
 
 /** Selector text with quotes dropped and the whitespace that carries no meaning removed. */
 function normSelector(selector: string): string {
-  return selector
-    .replace(/['"]/g, "")
-    .replace(/\s+/g, " ")
-    .replace(/\s*([>,+~=])\s*/g, "$1")
-    .replace(/\(\s+/g, "(")
-    .replace(/\s+\)/g, ")")
-    .replace(/\[\s+/g, "[")
-    .replace(/\s+\]/g, "]")
-    .trim();
+  return dropWsBefore(
+    dropWsBefore(
+      tightenAround(collapseSpaces(selector.replace(/['"]/g, "")), ">,+~=").replace(/\(\s+/g, "(").replace(/\[\s+/g, "["),
+      ")",
+    ),
+    "]",
+  ).trim();
 }
 
 function normValue(value: string): string {
-  return value.replace(/\s+/g, " ").replace(/\s*,\s*/g, ",").replace(/\(\s+/g, "(").replace(/\s+\)/g, ")").trim().toLowerCase();
+  return dropWsBefore(tightenAround(collapseSpaces(value), ",").replace(/\(\s+/g, "("), ")").trim().toLowerCase();
+}
+
+/**
+ * Whether `selector` is `.fx-dom`, alone or parenting everything (`*`), as `/^\.fx-dom\s*>?\s*\*$/`
+ * reads it (#4009: the whitespace runs trade characters super-linearly).
+ */
+function isFxDomChild(selector: string): boolean {
+  const head = ".fx-dom";
+  if (!selector.startsWith(head)) return false;
+  let i = head.length;
+  while (i < selector.length && /\s/.test(selector.charAt(i))) i++;
+  if (selector.charAt(i) === ">") i++;
+  while (i < selector.length && /\s/.test(selector.charAt(i))) i++;
+  return selector.charAt(i) === "*" && i + 1 === selector.length;
+}
+
+/**
+ * Whether `selector` opens with `.fx-dom` parenting everything: the head, whitespace, an optional
+ * `>` and whitespace, then `*` (#4009: the whitespace runs trade characters super-linearly).
+ */
+function startsFxDom(selector: string): boolean {
+  const head = ".fx-dom";
+  if (!selector.startsWith(head)) return false;
+  let i = head.length;
+  while (i < selector.length && /\s/.test(selector.charAt(i))) i++;
+  if (selector.charAt(i) === ">") i++;
+  while (i < selector.length && /\s/.test(selector.charAt(i))) i++;
+  return selector.charAt(i) === "*";
 }
 
 const REDUCED = /prefers-reduced-motion\s*:\s*reduce/;
@@ -201,19 +204,8 @@ const DOM_KINDS = {
   figure: "fx-figure-in",
 } as const;
 
-const POP_GATE = normSelector('.game:has(> .fx-layer[data-fx="on"])');
-const COCOON = '.game:has(> .fx-layer[data-fx="on"]) [data-testid^="card-"]:has([data-keyword="Divine Shield"])::after';
-
-/** Every `@keyframes name { … }` body in a sheet's comment-free text. */
-function keyframeBodies(sheet: Sheet): Map<string, string> {
-  const out = new Map<string, string>();
-  const head = /@(?:-webkit-)?keyframes\s+([\w-]+)\s*\{/g;
-  for (let match = head.exec(sheet.text); match !== null; match = head.exec(sheet.text)) {
-    const open = match.index + match[0].length - 1;
-    out.set(match[1]!, sheet.text.slice(open + 1, closingBrace(sheet.text, open)));
-  }
-  return out;
-}
+const POP_GATE = normSelector('.game[data-fx-layer][data-fx-layer="on"]');
+const COCOON = '.game[data-fx-layer][data-fx-layer="on"] [data-testid^="card-"]:has([data-keyword="Divine Shield"])::after';
 
 /** The property: value pairs a keyframes body animates, every stop together. */
 function animatedDecls(body: string): { name: string; value: string }[] {
@@ -290,7 +282,7 @@ describe("B40 — fx.css", () => {
     const childRule = fx.rules.some(
       (rule) =>
         !isReduced(rule) &&
-        rule.selectors.some((s) => /^\.fx-dom\s*>?\s*\*$/.test(normSelector(s))) &&
+        rule.selectors.some((s) => isFxDomChild(normSelector(s))) &&
         normValue(rule.decls.get("position") ?? "") === "absolute",
     );
     const everyKind = Object.keys(DOM_KINDS).every((kind) =>
@@ -312,7 +304,7 @@ describe("B40 — fx.css", () => {
           !isReduced(rule) &&
           rule.selectors.some((s) => {
             const n = normSelector(s);
-            return n.includes(`.fx-${kind}`) || n.includes(`[data-fx=${kind}]`) || /^\.fx-dom\s*>?\s*\*/.test(n);
+            return n.includes(`.fx-${kind}`) || n.includes(`[data-fx=${kind}]`) || startsFxDom(n);
           }),
       );
       const values = rules.flatMap((rule) =>
@@ -422,12 +414,12 @@ describe("B40 — fx.css", () => {
     for (const rule of cocoonRules) {
       for (const selector of rule.selectors) expect(normSelector(selector).startsWith(POP_GATE), selector).toBe(true);
     }
-    const pop = declsFor(fx, '.game:has(> .fx-layer[data-fx="on"]) [data-testid^="card-"][data-animating="divineShieldLost"]:has([data-keyword="Divine Shield"])::after');
+    const pop = declsFor(fx, '.game[data-fx-layer][data-fx-layer="on"] [data-testid^="card-"][data-animating="divineShieldLost"]:has([data-keyword="Divine Shield"])::after');
     expect(pop.get("animation")).toContain("fx-shield-pop");
   });
 
   it("B40 the cocoon reads at a glance: a bright rim inside the card and a shell outside it that leaves a focus ring alone", () => {
-    const shell = declsFor(fx, '.game:has(> .fx-layer[data-fx="on"]) [data-testid^="card-"]:has([data-keyword="Divine Shield"]):not(:focus-visible)');
+    const shell = declsFor(fx, '.game[data-fx-layer][data-fx-layer="on"] [data-testid^="card-"]:has([data-keyword="Divine Shield"]):not(:focus-visible)');
     expect(shell.get("outline")).toMatch(/^2px solid/);
     expect(normValue(shell.get("outline-offset") ?? "")).toBe("2px");
     const bubble = declsFor(fx, COCOON);
@@ -435,7 +427,7 @@ describe("B40 — fx.css", () => {
   });
 
   it("B40 while a layer banner is up, the classic turn status steps aside (hidden, still in the DOM)", () => {
-    const rule = declsFor(fx, '.game:has(> .fx-layer [data-fx="banner"]) > .turn-banner');
+    const rule = declsFor(fx, '.game[data-fx-layer][data-fx-banner] > .turn-banner');
     expect(rule.get("visibility")).toBe("hidden");
     expect(rule.has("display")).toBe(false);
   });
@@ -521,7 +513,7 @@ describe("B40 — animations.css follows the squeeze and loses nothing", () => {
     expect(layerOf(overlay.get("z-index"))).toBe("39");
     expect(normValue(overlay.get("max-width") ?? "")).toBe("calc(100vw - 32px)");
     expect(overlay.get("animation-name")).toBe("jk-result-overlay");
-    const banner = declsFor(anim, '.game:has(> [data-testid="result-overlay"]) > [data-testid="turn-banner"]');
+    const banner = declsFor(anim, '.game[data-game-over] > [data-testid="turn-banner"]');
     expect(banner.get("visibility")).toBe("hidden");
   });
 
@@ -549,7 +541,7 @@ describe("B45 — a summon lands a silhouette, a dying card burns away", () => {
   });
 
   it("B46 with the layer on, the silhouette steps aside for the stand-in, so the card is never in two places", () => {
-    const hidden = declsFor(anim, '.game:has(> .fx-layer[data-fx="on"]) .zone[data-animating="summoned"]::after');
+    const hidden = declsFor(anim, '.game[data-fx-layer][data-fx-layer="on"] .zone[data-animating="summoned"]::after');
     expect(hidden.get("content")).toBe("none");
   });
 
@@ -562,7 +554,7 @@ describe("B45 — a summon lands a silhouette, a dying card burns away", () => {
   });
 
   it("B45 played from a hand, the silhouette waits for the card to leave it", () => {
-    const delayed = declsFor(anim, '.game:has([data-animating="cardPlayed"]) .zone[data-animating="summoned"]::after');
+    const delayed = declsFor(anim, '.game[data-card-played] .zone[data-animating="summoned"]::after');
     expect(normValue(delayed.get("animation-delay") ?? "")).toContain("var(--anim-squeeze,1)");
   });
 

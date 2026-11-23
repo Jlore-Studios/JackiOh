@@ -1,6 +1,7 @@
 //! S #145 Fortify Flesh (SPEC §8.10 row S 145; §4.4, §6.1, R124, R1438, R1867008): (4) Spell, Rare.
 //!   Base:    "Your hero gains a random {least} to {most} Armor." — 3 to 5.
-//!   Radiant: "Lucky 1 / Your hero gains a random {least} to {most} Armor." — 3 to 7.
+//!   Radiant: "Lucky 1 / Your hero gains a random {least} to {most} Armor." — 3 to 5, the base range
+//!            since issue #4292 (3 to 7 before).
 //!
 //! Engine: one luck-based roll from the match rng, uniform from the declared least to the declared
 //! most, both ends included (a Buff that lifts the low end past the high one rolls between the
@@ -105,6 +106,29 @@ mod tests {
             assert_eq!(armor_of(&s, P1), armor, "Armor stays");
         }
 
+        /// R3857000: the gain is reported on the caster's hero, its roll and the Armor after it, to
+        /// both seats.
+        #[test]
+        fn r3857000_the_gain_is_reported_on_the_casters_hero() {
+            let mut s = scenario(json!({
+                "seed": "fortify-reported",
+                "p1": { "hand": [FORTIFY, FILLER], "armor": 2 },
+                "p2": { "hand": [FILLER] },
+            }));
+            s.play(FORTIFY, json!({}));
+            let armor = armor_of(&s, P1);
+            let gained = GameEvent::ArmorGained {
+                player: P1,
+                amount: armor - 2,
+                armor,
+            };
+            assert!((3..=5).contains(&(armor - 2)), "a roll of 3 to 5: {armor}");
+            assert_eq!(s.events_of(GameEventType::ArmorGained), vec![gained.clone()]);
+            for viewer in [P1, P2] {
+                assert!(s.view(viewer).events.contains(&gained), "{viewer:?} sees the gain");
+            }
+        }
+
         #[test]
         fn r1867008_a_lift_of_the_low_end_past_the_high_one_rolls_between_the_two() {
             for seed in 0..40 {
@@ -146,15 +170,15 @@ mod tests {
         }
 
         #[test]
-        fn r1867008_radiant_rolls_3_to_7_twice_keeping_the_higher() {
+        fn r1867008_radiant_rolls_3_to_5_twice_keeping_the_higher() {
             let mut seen: IndexSet<i32> = IndexSet::new();
             for seed in 0..200 {
                 let (gained, draws) = radiant_gained(&format!("fortify-radiant-{seed}"));
-                assert!((3..=7).contains(&gained), "{gained} in 3 to 7");
+                assert!((3..=5).contains(&gained), "{gained} in 3 to 5");
                 assert_eq!(draws, 2, "Lucky 1 rolls twice");
                 seen.insert(gained);
             }
-            assert!(seen.contains(&3) && seen.contains(&7), "{seen:?}");
+            assert!(seen.contains(&3) && seen.contains(&5), "{seen:?}");
         }
 
         #[test]

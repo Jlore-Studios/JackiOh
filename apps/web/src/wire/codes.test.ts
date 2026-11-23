@@ -9,7 +9,7 @@
 // The format comes from the server's config (`@jackioh/server-config`, generated from
 // `crates/server/src/config.rs`, CLAUDE.md rule 9); nothing below restates its length or groups.
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { CODE_ALPHABET, INVITE_CODE_FORMAT, ROOM_CODE_FORMAT } from "@jackioh/server-config";
 
@@ -21,6 +21,7 @@ import {
   formatCodeCharacters,
   formattedCaret,
   readCodeInput,
+  type CodeFormat,
   type CodeInputProblem,
 } from "./codes.ts";
 
@@ -198,6 +199,83 @@ describe("R191 B4 findCodeInText", () => {
     expect(find("Abcd-efgh-jkmn-pqrs or Abcd-efgh-jkmn-pqrt")).toBeNull();
     // An extra group joined on is still one character too long.
     expect(find("Abcd-efgh-jkmn-pqrs-t is it")).toBeNull();
+  });
+
+  it("R191 B4 finds a code that the shared reading takes whole, whatever the case of its groups", () => {
+    // Read straight through, before any chain: groups of different cases never chain together.
+    expect(find("ABCD-efgh-JKMN-pqrs")).toBe(BASE);
+  });
+
+  it("R191 B4 keeps a word of another case out of a code, even joined to it by a dash", () => {
+    // A strict chain joins words of one case only: a capitalised word is no group of a mixed-case
+    // code, and a word in capitals no group of a lower-case one.
+    expect(find("Here-aBcD-eFgH-jKmN-pQrS")).toBe(BASE);
+    expect(find("HERE-abcd-efgh-jkmn-pqrs")).toBe(BASE);
+  });
+
+  it("R191 B4 the sentence-case reading reads only a capitalised word as lower case, never one in capitals", () => {
+    expect(find("HERE-Abcd-efgh-jkmn-pqrs")).toBe(BASE);
+  });
+
+  it("R191 B4 chains a group of digits, which has no case, with the groups of either side", () => {
+    expect(find("Your code: 2345-abcd-6789-efgh.")).toBe("2345ABCD6789EFGH");
+  });
+
+  it("R191 B4 counts a run of separators between two words as one join", () => {
+    // " - " joins each group and the word after the code alike; the word, in another case, is not
+    // a group, and the empty places between the separators are no words.
+    expect(find("ABCD - EFGH - JKMN - PQRS - see you")).toBe(BASE);
+  });
+
+  it("R191 B4 returns null for groups split by punctuation and a space, as by punctuation alone", () => {
+    expect(find("ABCD, EFGH, JKMN, PQRS")).toBeNull();
+    expect(find("abcd. efgh. jkmn. pqrs")).toBeNull();
+  });
+
+  it("R191 B4 never cuts a code out from beside two whole groups joined on", () => {
+    // Whole groups could belong to the code however many there are, so the chain is too long
+    // (the server's malformed, R145), never a code with them left off.
+    expect(find("ABCD-EFGH-JKMN-PQRS-TUVWXYZ2")).toBeNull();
+  });
+
+  it("R191 B4 never cuts a lone word of a code's length out of the chain it is joined to", () => {
+    expect(find("HERE ABCDEFGHJKMNPQRS")).toBeNull();
+  });
+
+  it("R191 B4 cuts an embedded code out of its chain only at whole groups", () => {
+    expect(find("HERE ABC-DEFGH-JKMN-PQRS")).toBeNull();
+  });
+
+  it("R191 B4 finds the whole code beside a refused one", () => {
+    // The first code has a fifth group, so it is refused; the second is whole.
+    expect(find("Not ABCD-EFGH-JKMN-PQRS-T but ABCD-EFGH-JKMN-PQRT")).toBe("ABCDEFGHJKMNPQRT");
+  });
+
+  it("R191 B4 reads a chain as written, its separators counted against the input cap", () => {
+    // R191: input longer than the cap is malformed unread, and a chain is input as the paste wrote it.
+    const gap = " ".repeat(FORMAT.maxInputLength);
+    expect(find("Code: ABCD    EFGH-JKMN-PQRS!")).toBe(BASE);
+    expect(find(`Code: ABCD${gap}EFGH-JKMN-PQRS!`)).toBeNull();
+  });
+
+  it("R191 B4 finds no code in a text with no letters or digits, under any format", () => {
+    // An alphabet of every ASCII letter and digit, and a length a short word could fill.
+    const wide: CodeFormat = { ...FORMAT, alphabet: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", length: 9, groupSize: 9 };
+    for (const text of ["", " - ", "!?"]) {
+      expect(findCodeInText(text, wide), JSON.stringify(text)).toBeNull();
+    }
+  });
+});
+
+// The reading's constants (its separators, the ASCII letters and digits) are built once, as the module
+// is first imported. Importing it afresh inside a test builds them again while the test runs, which is
+// when Stryker builds a mutant into them (apps/web/stryker.config.mjs).
+describe("R191 the reading's constants", () => {
+  it("R191 B1 B2 a fresh import reads separators and names the excluded characters as the table does", async () => {
+    vi.resetModules();
+    const fresh = await import("./codes.ts");
+    expect(fresh.canonicalCode("abcd–efgh jkmn​pqrs", FORMAT)).toBe(BASE);
+    expect(fresh.excludedCharacters(FORMAT)).toEqual(["0", "1", "I", "O"]);
   });
 });
 

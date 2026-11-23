@@ -6,6 +6,7 @@
 
 use std::sync::LazyLock;
 
+use jackioh_engine::GRAPE_ODDS;
 use jackioh_engine::testkit::*;
 
 use super::catalog::{spell_def, unit_def};
@@ -58,25 +59,34 @@ pub static golem: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-/// The pools: a Fruit and a Grape token (R382), a Book of another set and a Book token, Classic cards.
+/// The pools: a Fruit and the five Grape tokens (R382), a Book of another set and a Book token, Classic cards.
 pub static fruit: LazyLock<CardDef> = LazyLock::new(|| {
     spell_def(
         973,
         json!({ "id": "fx-cp-fruit", "name": "Fixture Fruit", "set": "Classic+", "tags": ["Fruit"] }),
     )
 });
-pub static grape: LazyLock<CardDef> = LazyLock::new(|| {
-    spell_def(
-        974,
-        json!({
-            "id": "fx-cp-grape",
-            "name": "Fixture Grape",
-            "set": "Classic+",
-            "tags": ["Fruit", "Token"],
-            "rarity": "Token",
-            "token": true,
-        }),
-    )
+/// The five Grapes, stand-ins under their own ids: of the Fruit tokens a Fruit pool takes only these
+/// (R382, `GRAPE_ODDS`), and a pick of one is rolled again on `GRAPE_ODDS`, which may name any of them.
+pub static grapes: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
+    GRAPE_ODDS
+        .iter()
+        .enumerate()
+        .map(|(at, odds)| {
+            spell_def(
+                974,
+                json!({
+                    "id": odds.def_id,
+                    "index": format!("65.{}", at + 1),
+                    "name": format!("Fixture Grape {}", at + 1),
+                    "set": "Classic+",
+                    "tags": ["Fruit", "Token"],
+                    "rarity": "Token",
+                    "token": true,
+                }),
+            )
+        })
+        .collect()
 });
 pub static book: LazyLock<CardDef> = LazyLock::new(|| {
     spell_def(
@@ -139,7 +149,6 @@ pub fn chaos_plus_catalog(base: CardDefs) -> CardDefs {
         &*core95,
         &*golem,
         &*fruit,
-        &*grape,
         &*book,
         &*book_token,
         &*classic,
@@ -148,6 +157,9 @@ pub fn chaos_plus_catalog(base: CardDefs) -> CardDefs {
         &*hard_field,
     ] {
         defs.insert(entry.id.clone(), entry.clone());
+    }
+    for grape in grapes.iter() {
+        defs.insert(grape.id.clone(), grape.clone());
     }
     defs
 }

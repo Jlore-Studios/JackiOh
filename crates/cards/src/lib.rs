@@ -59,8 +59,8 @@ pub mod census;
 mod history;
 
 pub use history::{
-    KEPT_SCRIPTS, KeptScript, carried_versions, catalog_at, catalog_defs_at, has_script_at, shipped_catalog,
-    shipped_versions,
+    KEPT_SCRIPTS, KeptScript, card_eras, carried_versions, catalog_at, catalog_defs_at, has_script_at,
+    shipped_catalog, shipped_versions,
 };
 
 /// R1367000: the card patch history as a card's stats window reads it.
@@ -159,6 +159,12 @@ pub fn register_all() {
         });
         jackioh_engine::scripts::register_scripts(scripts_of());
         jackioh_engine::catalog::register_shipped(history::shipped_catalog);
+        jackioh_engine::catalog::register_past_versions(jackioh_engine::catalog::PastVersions {
+            ids: history::past_ids,
+            def: history::past_def,
+            kept: history::past_scripts,
+            record: history::record_at,
+        });
     });
 }
 
@@ -175,6 +181,33 @@ pub(crate) fn never_defense_kept(mut scripts: CardScripts, base: bool, radiant: 
         }
     }
     scripts
+}
+
+/// R4396000, R89: the `(attack, max_health)` a Death's card died with: those of its own latest `destroyed`
+/// event, read by §4.5 step 1 with the auras on before any collected card left, so an aura whose source
+/// died in the same pass still counts. A Death that runs in a later action (after an earlier Death's
+/// prompt) no longer holds the event and reads the board's auras as they stand (R1884004).
+pub(crate) fn stats_as_it_died(
+    ctx: &jackioh_engine::prelude::EffectContext<'_>,
+    me: &jackioh_engine::prelude::CardInstance,
+) -> (i32, i32) {
+    use jackioh_engine::prelude::{GameEvent, unit_view_as_it_died};
+    ctx.events
+        .iter()
+        .rev()
+        .find_map(|event| match event {
+            GameEvent::Destroyed {
+                instance_id,
+                attack,
+                max_health,
+                ..
+            } if *instance_id == me.id => Some((*attack, *max_health)),
+            _ => None,
+        })
+        .unwrap_or_else(|| {
+            let view = unit_view_as_it_died(&*ctx.state, me);
+            (view.attack, view.max_health)
+        })
 }
 
 /// #3483: the Stinkyscape families' shared card-test bodies (beam, repeater, cannon, flak,
@@ -331,6 +364,51 @@ pub(crate) fn stand_in_backrow(s: &mut jackioh_engine::testkit::Scenario, id: &s
     ));
 }
 
+#[cfg(test)]
+pub(crate) const CLOAKED_UNIT: &str = "classic-006"; // Cloaked Toe Cracker: a Unit that prints Cloaked
+
+/// R783004, R783005: sets `card` from `player`'s hand face-down by its Cloaked into backrow `lane`, a
+/// Trap play; the set card's fresh id (R227).
+#[cfg(test)]
+pub(crate) fn set_cloaked(
+    s: &mut jackioh_engine::testkit::Scenario,
+    player: jackioh_engine::PlayerId,
+    card: &str,
+    lane: i32,
+) -> String {
+    use jackioh_engine::testkit::json;
+    s.play(
+        card,
+        json!({ "zone": lane, "row": "backrow", "faceDown": "cloaked" }),
+    );
+    s.backrow(player, lane)
+        .expect("the card set face-down by its Cloaked")
+        .id
+}
+
+/// R383: an Animated Field Trap, Meditative #68 Catnip (5/5, Radiant 10/10), which animates into its lane's
+/// unit zone after its opponent's Spell.
+#[cfg(test)]
+pub(crate) const ANIMATED_TRAP: &str = "meditative-068";
+
+/// R4423000: what the `destroyed` of `id` among the scenario's last events says its card died as.
+#[cfg(test)]
+pub(crate) fn died_as_of(
+    s: &jackioh_engine::testkit::Scenario,
+    id: &str,
+) -> Option<jackioh_engine::CardType> {
+    use jackioh_engine::prelude::*;
+    s.events()
+        .iter()
+        .find_map(|event| match event {
+            GameEvent::Destroyed {
+                instance_id, died_as, ..
+            } if instance_id == id => Some(*died_as),
+            _ => None,
+        })
+        .expect("a destroyed of the card")
+}
+
 /// R1852000, #1859: builds p1's Dormant Starship from pieces fused via Core #16 Hit Jobs.
 #[cfg(test)]
 pub(crate) fn built_starship(
@@ -404,6 +482,22 @@ pub(crate) fn give_flying(s: &mut jackioh_engine::testkit::Scenario, id: &str) {
     use jackioh_engine::prelude::*;
     let card = find_instance_mut(s.state_mut(), id).expect("the card exists");
     card.granted_keywords.push(Keyword::Flying);
+}
+
+/// R783004: grants Cloaked to the card `id` while it is held, so it may be set face-down by it.
+#[cfg(test)]
+pub(crate) fn give_cloaked(s: &mut jackioh_engine::testkit::Scenario, id: &str) {
+    use jackioh_engine::prelude::*;
+    let card = find_instance_mut(s.state_mut(), id).expect("the card exists");
+    card.granted_keywords.push(Keyword::Cloaked);
+}
+
+/// R3546002: grants GIGA to the card `id` while it is held, so it enters the field GIGA when played.
+#[cfg(test)]
+pub(crate) fn give_giga(s: &mut jackioh_engine::testkit::Scenario, id: &str) {
+    use jackioh_engine::prelude::*;
+    let card = find_instance_mut(s.state_mut(), id).expect("the card exists");
+    card.granted_keywords.push(Keyword::Giga);
 }
 
 /// An engine value as its JSON, for the card tests' comparisons.
@@ -575,6 +669,27 @@ pub(crate) fn upgrade_number(s: &mut jackioh_engine::testkit::Scenario, card: &s
     tune_number(s, card, key, jackioh_engine::effects::TuneDirection::Upgrade)
 }
 
+/// R4285001: gives Equip in hand (R1878003) to `card`, the first hand card with that instance or def id: a
+/// Starship Piece prints no Equip since issue #4285, so a test of a piece's text on a host Equips it as a
+/// lent Equip would (S #16 Rod of Ages, R1869000).
+#[cfg(test)]
+pub(crate) fn give_equip(s: &mut jackioh_engine::testkit::Scenario, card: &str) {
+    let state = s.state_mut();
+    let held = jackioh_engine::PLAYER_IDS
+        .into_iter()
+        .find_map(|player| {
+            state.players[player]
+                .hand
+                .iter()
+                .position(|held| held.id == card || held.def_id == card)
+                .map(|at| (player, at))
+        })
+        .unwrap_or_else(|| panic!("{card} is in no hand"));
+    state.players[held.0].hand[held.1]
+        .granted_keywords
+        .push(jackioh_engine::Keyword::Equip);
+}
+
 /// R1438: grants Lucky `n` to `card`.
 #[cfg(test)]
 pub(crate) fn give_lucky(s: &mut jackioh_engine::testkit::Scenario, card: &str, n: i32) {
@@ -612,6 +727,44 @@ pub(crate) fn can_degrade_number(s: &jackioh_engine::testkit::Scenario, card: &s
 #[cfg(test)]
 pub(crate) fn degrade_number(s: &mut jackioh_engine::testkit::Scenario, card: &str, key: &str) -> i32 {
     tune_number(s, card, key, jackioh_engine::effects::TuneDirection::Degrade)
+}
+
+/// C+ #71 Book of Buff: "Buff a permanent {times} times".
+#[cfg(test)]
+pub(crate) const BOOK_OF_BUFF: &str = "classicplus-071";
+
+/// R3778000: Book of Buff, its `times` set to 1, played by p1 on the card `build(seed)` names, with the
+/// Book in p1's hand, on the first seed `<prefix>-n` whose one Buff draws the Number row of `key` (B3.4
+/// rule 3): the seed, the scenario after the cast, and the card.
+#[cfg(test)]
+pub(crate) fn buff_number_once(
+    prefix: &str,
+    key: &str,
+    build: impl Fn(&str) -> (jackioh_engine::testkit::Scenario, String),
+) -> (String, jackioh_engine::testkit::Scenario, String) {
+    use jackioh_engine::prelude::{ParamValueOptions, param_value, set_param};
+    let cast = |seed: &str| {
+        let (mut s, target) = build(seed);
+        let number = |s: &jackioh_engine::testkit::Scenario| {
+            param_value(
+                s.state(),
+                Some(s.card(target.as_str())),
+                key,
+                ParamValueOptions::default(),
+            )
+        };
+        let before = number(&s);
+        set_param(s.card_mut(BOOK_OF_BUFF), "times", 1);
+        s.play(
+            BOOK_OF_BUFF,
+            serde_json::json!({ "targets": [{ "pick": "instance", "instanceId": target }] }),
+        );
+        let raised = number(&s) == before + 1;
+        (s, target, raised)
+    };
+    let seed = jackioh_engine::testkit::seed_where(prefix, |seed| cast(seed).2);
+    let (s, target, _) = cast(&seed);
+    (seed, s, target)
 }
 
 /// The unit's instance id, or blank for an empty lane.
@@ -656,6 +809,46 @@ pub(crate) fn weapon_board(
         s.state_mut().players[player].auto_end_turn = Some(false);
     }
     s
+}
+
+/// Issue #3951 made C+ #33 Ivory Tower Indestructible and Tradable: a test of what follows its destruction
+/// (R418, R653, R1194000) runs `run` on its definition through v0.6.4c, which printed neither.
+#[cfg(test)]
+pub(crate) fn destructible_ivory_tower<T>(run: impl FnOnce() -> T) -> T {
+    use jackioh_engine::KeywordKind;
+    let id = scripts::classic_plus::c033_ivory_tower::ID;
+    under_kept_as(
+        id,
+        scripts::classic_plus::c033_ivory_tower::script(),
+        |def| {
+            for face in [&mut def.base, &mut def.radiant] {
+                face.keywords.retain(|keyword| {
+                    !matches!(
+                        keyword.kind(),
+                        KeywordKind::Indestructible | KeywordKind::Tradable
+                    )
+                });
+            }
+        },
+        run,
+    )
+}
+
+/// Issue #3951: M #87 Tatches the Totem leaves its owner's hand for the field after a tribal play, the play
+/// that put it in the hand included, so a test counting what a tribal card added to the hand reads `player`'s
+/// hand and every Tatches on their field.
+#[cfg(test)]
+pub(crate) fn hand_and_summoned_tatches(
+    s: &jackioh_engine::testkit::Scenario,
+    player: jackioh_engine::PlayerId,
+) -> Vec<jackioh_engine::CardInstance> {
+    let mut cards = s.hand(player);
+    cards.extend(
+        (1..=jackioh_engine::config::UNIT_ZONES)
+            .filter_map(|lane| s.unit(player, lane))
+            .filter(|unit| unit.def_id == scripts::meditative::c087_tatches_the_totem::ID),
+    );
+    cards
 }
 
 /// Ends turns until it is `player`'s again: their next turn.

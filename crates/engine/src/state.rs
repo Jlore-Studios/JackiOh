@@ -20,6 +20,7 @@ use crate::config::{
     LIBRARY_CAP, MAX_COPIES, SETUP_TURN, UNIT_ZONES,
 };
 use crate::effects::tune::{TuneDirection, tune_once};
+use crate::geometry::{BlackHole, Half};
 use crate::resolve::{HookOptions, make_context};
 use crate::rng::Rng;
 use crate::script::EngineSink;
@@ -161,6 +162,11 @@ pub struct StarshipMemory {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub launched: Option<u32>,
+    /// R3539000 (S+ #155 The Far Vagabond): the price of its launch by hand, set by the card that
+    /// made it; absent launches for `launch_cost` as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub price: Option<i32>,
 }
 
 /// R1852005: one piece a Starship holds — the definition its copy fused in on, and whether on its
@@ -234,9 +240,17 @@ pub struct CardInstance {
     /// R1181003 (Meditative+ #23 Enormous Elderberry's "its Embiggened version costs (0)"): the price of
     /// the Embiggened version alone, in place of its printed dearer price and of `costOverride` for it,
     /// before every modifier (R65); the normal version keeps its price. A price, so R766 takes it off.
+    /// Since #4350 only games of v0.6.8d and before carry it (R4350000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub embiggen_cost_override: Option<i32>,
+    /// R4350000 (Meditative+ #23 Enormous Elderberry's "Their Embiggened version costs no extra mana"):
+    /// no Embiggen premium. The Embiggened version (under a Garden, the dearer choice) starts from the
+    /// normal price (`mana::printed_cost`, `mana::garden_dearer_price`), so every modifier moves both
+    /// prices alike. Price-like, so R766 takes it off.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub no_embiggen_premium: Option<bool>,
     pub counters: Counters,
     #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>"))]
     pub memory: IndexMap<String, Value>,
@@ -290,6 +304,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub marked_exiled: Option<bool>,
+    /// R4205000: marked destroyed by a steal that had no room for it (§6.3 Steal). Nothing keeps it on the
+    /// field: Indestructible drops no mark (R46), no "would die" replacement is offered it; a
+    /// destroy-to-exile aura still exiles it (R1849002). Only ever `Some(true)`; R78's reset clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub unpreventable_destroy: Option<bool>,
     /// Came back through Reborn, so it no longer has it (§4.5 step 4).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -429,12 +449,45 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub hidden_nerfs: Option<i32>,
+    /// R3536000: has evolved, so it evolves no more; R78's reset takes it off; only `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub evolved: Option<bool>,
+    /// R3536002: marked to enter the field evolved; rides every zone until the state check after it enters.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub enters_evolved: Option<bool>,
+    /// R3546000: fills four zones; stamped as it enters the field, fixed there, taken off by R78's reset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub giga: Option<bool>,
+    /// R3548001: the Tipsy counter stamped on this card as it arrived, if one was up. Taken off by
+    /// R78's reset with the card leaving the field; only its owner's view reads it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tipsy: Option<TipsyStamp>,
+    /// R3554003: the half of a slashed board this card was cast on (a Spell in the resolving zone)
+    /// or stands on. Taken off by R78's reset with the card leaving the field. Absent on every other
+    /// card, so a game nothing slashes serializes and hashes as before (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub half: Option<Half>,
+    /// R3554007: the shared damage chain this Unit is in (S+ #7 Churnwalker). Taken off by R78's
+    /// reset with the card leaving the field. Absent on every other card (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub shared_chain: Option<u32>,
+    /// R3554007: the split damage chain this Unit is in. As `shared_chain`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub split_chain: Option<u32>,
 }
 
 /// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
 /// it reveals (`cloaked`, by its Reveal; the three timings are from before patch v0.3.7), the turn it
-/// was set in, the Echo stamped as it was set (none since then, R1045), and, once a set Spell has
-/// turned face-up, that its own text now resolves (`revealing`).
+/// was set in, the Echo stamped as it was set (none since then, R1045), and that a set Spell's own text
+/// resolves now (`revealing`): once it has turned face-up as it reveals, or (R3806000) still face-down
+/// as it is set under Meditative #99 Paranoia.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "ts",
@@ -450,7 +503,8 @@ pub struct SetAs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub echo: Option<i32>,
-    /// R1044: a set Spell has fired and its Spell text is resolving now. Only ever `Some(true)`.
+    /// R1044: a set Spell's Spell text is resolving now, as it reveals or (R3806000) as it is set under
+    /// Paranoia. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub revealing: Option<bool>,
@@ -718,15 +772,35 @@ pub enum ModifierKind {
         resume: Resume,
         label: String,
     },
+    // ---- Stinkyscape+'s Calls to Chaos (issue #3570) ----
+    /// R3570004 (Stinkyscape+ #142 Call to Chaos (Mindustrial-Swarm Edition), entry 8): "for the rest of
+    /// the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) cost
+    /// Weapon": after each `starshipLaunched` of its holder, `resume` re-enters its step as the holder.
+    /// Expiry `never`; several stack, each its own record. `label` is its badge (R169).
+    LaunchWatch {
+        resume: Resume,
+        label: String,
+    },
     // ---- Stinkyscape's War Doctrines (issue #1859) ----
     /// R1859007: "For the rest of the game, your Units have Trample": every Unit this player controls
     /// on the field has `keyword` (§10.4, beside the auras' grants), those that arrive later too, but
     /// a Vanilla, Dormant or buried one (`layers::lent_by_player`). Expiry `never`; it outlasts the
     /// War Doctrine that gave it. R1870004: Stinkyscape #4.4 Last Word's "your Units have Charge during
     /// it" is the same modifier with expiry `nextTurnOf`, lending only while live (`mana::modifier_is_live`).
+    /// R4508000: one a Spell made lends nothing to a Unit Immune to Spells (§6.1, R4453000).
     UnitsHaveKeyword {
         keyword: Keyword,
+        /// R4508000: set when a Spell made it (`restrictions::effect_is_from_spell`), so it passes a Unit
+        /// Immune to Spells by (§6.1, R4453000). Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        from_spell: Option<bool>,
     },
+    // ---- Stinkyscape+ Balance Changes V (issue #4353) ----
+    /// R4353020 (Stinkyscape+ #79 A Glimpse into the Endless Sea, "You are immune to fatigue damage"):
+    /// this player's draws from an empty library still happen, counted and announced (`fatigue`, its
+    /// nominal hit), but deal their hero no damage (`draw::draw_one`). Expiry `never`; several are one.
+    FatigueImmune,
 }
 
 /// `{ id; expiry } & (kind union)`: one player-level modifier (§10.1 `PlayerState.mods`). The kind's
@@ -1082,6 +1156,14 @@ pub struct TurnLog {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub mana_locked: Option<i32>,
+    /// R3800003: how many entries `playedIds` held as this turn's end began (§2.2), set on a player's log
+    /// by the first card it plays or casts during the end (absent, every play came before it, so a game
+    /// with none hashes as before, R767000): Classic+ #37 Wardrum's end of turn casts from the plays
+    /// before it, so what the end of turn itself plays or casts (another Wardrum's copies) joins no pool.
+    /// `startTurn` rebuilds the log, which clears it, and a game over clears it too.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub played_before_end: Option<i32>,
 }
 
 /// `PlayerState.hero`.
@@ -1271,6 +1353,36 @@ pub struct StarscapeMap {
     pub travelled_on: i32,
 }
 
+/// R3548000: a player's Tipsy counter (`tipsy.rs`): the count, and the turn it first rose on,
+/// which a stamp newer than a clearing reads. Absent at none, so a game without one hashes as before.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TipsyCounter {
+    pub count: i32,
+    pub since: i32,
+}
+
+/// R3548001: what a card carries of the Tipsy counter that was up as it arrived: whose, how high and
+/// on which turn. Written as the card is drawn, played or summoned while the counter is up; R78's
+/// reset takes it off as the card leaves the field.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TipsyStamp {
+    pub player: PlayerId,
+    pub level: i32,
+    pub turn: i32,
+}
+
 /// #936 S3: a Duos duel's side — its team's shared pool, the pool's cap, and whether this seat's own
 /// HP is spent (B12–B15, `duos_life.rs`). Present only in a duel a `DuosState` holds, so a 1v1 state
 /// hashes as before (B3).
@@ -1380,6 +1492,13 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub death_watch_casts: Option<DrawCount>,
+    /// R3570004: how many launches S+ #142's launch watch (entry 8) has answered for this player on turn
+    /// `turn`, kept as `death_watch_casts` is: a count kept for an earlier turn reads as 0
+    /// (`call_to_chaos_mindustrial_swarm::launch_watch_answers_this_turn`). Absent until the watch first
+    /// answers, so a game without one hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub launch_watch_casts: Option<DrawCount>,
     // ---- Meditative player fields (docs/meditative-set.md M5, ME-HANDCAP) ----
     /// R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
     /// #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
@@ -1400,12 +1519,20 @@ pub struct PlayerState {
     #[cfg_attr(feature = "ts", ts(optional))]
     pub lost_refresh_through: Option<i32>,
     /// R1854003: the mana crystals effects have moved on this player's count (§2.3's "turns you have
-    /// started", inside the cap): negative once theirs were stolen, positive once they stole some
-    /// (`mana::max_mana_for`). Absent (never 0 stored) while none moved, so a game without a steal
-    /// hashes as it did before this field existed (D3).
+    /// started", inside the cap): negative once theirs were stolen, positive once they stole some under
+    /// the steal of v0.6.9c and before (`mana::max_mana_for`; R4331001 counts a steal's gain apart).
+    /// Absent (never 0 stored) while none moved, so a game without a steal hashes as it did before this
+    /// field existed (D3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub mana_crystals: Option<i32>,
+    /// R4331001: the mana crystals this player stole (`mana::move_mana_crystals`), counted on top of
+    /// the cap rather than inside it, so a steal can take them past it; a steal from this player takes
+    /// them too. Absent (never 0 stored) while none were stolen, so a game without a steal hashes as it
+    /// did before this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub stolen_mana_crystals: Option<i32>,
     /// R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
     /// starting their turn again. Absent (never 0 stored) while none is owed, so a game without one
     /// hashes as it did before this field existed.
@@ -1476,6 +1603,30 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub anomaly_misses: Option<i32>,
+    /// R3536004: how many of this player's cards evolved this game (`evolution::begin`). Absent
+    /// until the first, so a game without one hashes as before this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub evolutions: Option<i32>,
+    /// R3540000: the Burn on this player's hero (`afflictions::afflict`), ticking once at the end of the
+    /// turn (R4154000). Absent at none, so a game without one hashes as before this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hero_burn: Option<i32>,
+    /// R3540000: the Toxic on this player's hero, as `hero_burn`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hero_toxic: Option<i32>,
+    /// R3548000: this player's Tipsy counter, public on both seats. Absent at none, so a game
+    /// without one hashes as it did before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tipsy: Option<TipsyCounter>,
+    /// R3560000: the once-a-game firsts this player has used, by key (S+ #120, #121). Absent until
+    /// the first, so a game without one hashes as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub once_a_game: Option<Vec<String>>,
 }
 
 /// R1843000: one player's votes to remove them from the game, on turn `turn` (`PlayerState.votes`).
@@ -1714,6 +1865,41 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub marketplace: Option<Marketplace>,
+    /// R3548002: every Warhero Token's worth in Credits, game-wide. Absent until the first one is
+    /// minted, so a game without one hashes as it did before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub warhero_worth: Option<i32>,
+    /// R3554000: the open Black Hole (S+ #77), if any. Absent until one opens (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub black_hole: Option<BlackHole>,
+    /// R3554002: the lane the slash voided (S+ #78), if any. Absent until one slashes (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub slashed_lane: Option<i32>,
+    /// R3554007: how many damage chains have been made (S+ #7 Churnwalker), so the next stamps a
+    /// fresh id. Absent until the first is made (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub chains_made: Option<u32>,
+    /// R3558002: the pairs of cards of each hand that become Radiant when they meet, in the order
+    /// they were made. Absent until the first pair, so a game without one hashes as it did before
+    /// this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_meets: Option<Vec<HandMeet>>,
+    /// R3558001: the Radiance each hand card lends its neighbour now, in hand order, so the state
+    /// check can take back what no longer sits beside its lender. Absent while nothing is lent, so
+    /// a game without a lend hashes as it did before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub radiance_lends: Option<Vec<RadianceLend>>,
+    /// R3569000: Tears of the Kwzki Tree resolved: every card is Radiant for the rest of the game, a
+    /// card made later at the next settled check. Absent until then (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub radiant_world: Option<bool>,
     /// R1956001: each Created card's generator by instance id: the catalog id of the card whose
     /// script minted it, or that card's own generator when it was Created too
     /// (`generators::record_generator`). Presentation only (CLAUDE.md rule 7): no rule reads it,
@@ -1812,6 +1998,40 @@ pub struct MarkRecord {
     pub delayed_id: String,
 }
 
+/// R3558002: two cards of one player's hand that become Radiant together the moment they sit side by
+/// side ("when they meet"), each by its id, with the price they take then (`cost`, absent keeping
+/// theirs).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct HandMeet {
+    pub player: PlayerId,
+    pub left: String,
+    pub right: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub cost: Option<i32>,
+}
+
+/// R3558001: the Radiance a hand card lends its neighbour while the lender sits beside it — the lent
+/// card, and the card lending it — so the state check can take it back when the pair parts.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct RadianceLend {
+    pub player: PlayerId,
+    pub lender: String,
+    pub card: String,
+}
+
 /// R419: one side of the field as a turn began — its zones' cards whole, its Locks, the homes held then.
 /// (TS `Pick<PlayerState, "units" | "backrow" | "backrowPiles" | "carried" | "locks"> & { homes? }`.)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -1873,19 +2093,79 @@ pub fn side_snapshot_instances_mut(side: &mut SideSnapshot) -> Vec<&mut CardInst
 pub fn rename_in_board_history(state: &mut GameState, from: &str, to: &str) {
     for snapshot in state.board_history.iter_mut().flatten() {
         for player in PLAYER_IDS {
-            let side = &mut snapshot.sides[player];
-            for card in side_snapshot_instances_mut(side) {
-                if card.id == from {
-                    card.id = to.to_string();
-                }
-            }
-            for home in side.homes.iter_mut().flatten() {
-                if home.instance_id == from {
-                    home.instance_id = to.to_string();
-                }
-            }
+            rename_in_side(&mut snapshot.sides[player], from, to);
         }
     }
+    // R227, R3550007: Bogos Binted's Cry keeps its side in memory, so a card set again under a fresh id goes
+    // back as itself (Duos seed 1616, #4079). Only a note it renamed is written back.
+    for player in PLAYER_IDS {
+        for card in side_cards_mut(&mut state.players[player]) {
+            rename_in_side_note(card, from, to);
+        }
+    }
+}
+
+/// R3550007: rename_in_board_history on one card's side snapshot note (SIDE_SNAPSHOT_KEY). Only a note it renamed is written back.
+fn rename_in_side_note(card: &mut CardInstance, from: &str, to: &str) {
+    let key = crate::subsystems::board_history::SIDE_SNAPSHOT_KEY;
+    let Some(slot) = card.memory.get_mut(key).and_then(|note| note.get_mut("side")) else {
+        return;
+    };
+    let Ok(mut side) = serde_json::from_value::<SideSnapshot>(slot.clone()) else {
+        return;
+    };
+    if rename_in_side(&mut side, from, to)
+        && let Ok(renamed) = serde_json::to_value(&side)
+    {
+        *slot = renamed;
+    }
+}
+
+/// R4265001: the fresh ids `events` gave (R227's `formerId`), followed in the side snapshot notes of
+/// `cards`, the copies a Death pass still owes, which no zone holds for `rename_in_board_history` to
+/// reach: a Death run again (R823) resets the side its last run left (Duos fuzz seed 476, #4265).
+pub(crate) fn follow_fresh_ids(cards: &mut [CardInstance], events: &[GameEvent]) {
+    for event in events {
+        let (GameEvent::CardPlayed {
+            instance_id,
+            former_id: Some(former),
+            ..
+        }
+        | GameEvent::Summoned {
+            instance_id,
+            former_id: Some(former),
+            ..
+        }
+        | GameEvent::ControlChanged {
+            instance_id,
+            former_id: Some(former),
+            ..
+        }) = event
+        else {
+            continue;
+        };
+        for card in cards.iter_mut() {
+            rename_in_side_note(card, former, instance_id);
+        }
+    }
+}
+
+/// `rename_in_board_history` on one side: its cards and their homes. Whether it renamed anything.
+fn rename_in_side(side: &mut SideSnapshot, from: &str, to: &str) -> bool {
+    let mut renamed = false;
+    for card in side_snapshot_instances_mut(side) {
+        if card.id == from {
+            card.id = to.to_string();
+            renamed = true;
+        }
+    }
+    for home in side.homes.iter_mut().flatten() {
+        if home.instance_id == from {
+            home.instance_id = to.to_string();
+            renamed = true;
+        }
+    }
+    renamed
 }
 
 /// R174, R212, R436: what a queued trigger answering an event carries — the cards the event names,
@@ -2097,6 +2377,7 @@ pub fn create_player_state() -> PlayerState {
         jade: None,
         lost_refresh_through: None,
         mana_crystals: None,
+        stolen_mana_crystals: None,
         extra_turns: None,
         rift_extra_turn: None,
         won_by_effect: None,
@@ -2107,11 +2388,17 @@ pub fn create_player_state() -> PlayerState {
         trades: None,
         trades_per_turn: None,
         death_watch_casts: None,
+        launch_watch_casts: None,
         market_credits: None,
         votes: None,
         fled: None,
         starscape: None,
         anomaly_misses: None,
+        evolutions: None,
+        hero_burn: None,
+        hero_toxic: None,
+        tipsy: None,
+        once_a_game: None,
     }
 }
 
@@ -2523,11 +2810,25 @@ pub fn validate_setup(
 /// bare counter (fuse's scratch numbering, `{ nextId: 0 }` in TS).
 pub trait NextId {
     fn next_id_mut(&mut self) -> &mut u32;
+    /// R3548002, R3538002: a card of this definition was minted. A scratch counter keeps none of it.
+    fn minted(&mut self, _def_id: &str) {}
 }
 
 impl NextId for GameState {
     fn next_id_mut(&mut self) -> &mut u32 {
         &mut self.next_id
+    }
+
+    fn minted(&mut self, def_id: &str) {
+        crate::warhero::note_minted(self, def_id);
+        // R3538002: a past version's definition rides along in `transient_defs`, so the view ships
+        // it (R243). Nothing for any other id.
+        if crate::catalog::split_past_id(def_id).is_some()
+            && !self.transient_defs.contains_key(def_id)
+            && let Some(def) = crate::catalog::find_def(None, def_id)
+        {
+            self.transient_defs.insert(def_id.to_string(), def.clone());
+        }
     }
 }
 
@@ -2557,6 +2858,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         x: None,
         embiggened: None,
         embiggen_cost_override: None,
+        no_embiggen_premium: None,
         counters: Counters::default(),
         memory: IndexMap::new(),
         exertion: Exertion {
@@ -2574,6 +2876,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         divine_shield_spent: None,
         marked_destroyed: None,
         marked_exiled: None,
+        unpreventable_destroy: None,
         reborn_spent: None,
         known_as: None,
         tuning: None,
@@ -2597,8 +2900,18 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         grants: None,
         fixed_x: None,
         hidden_nerfs: None,
+        evolved: None,
+        enters_evolved: None,
+        giga: None,
+        tipsy: None,
+        half: None,
+        shared_chain: None,
+        split_chain: None,
     };
     *next_id += 1;
+    // R3548002: minting a Warhero Token starts its worth at 0, wherever the card is minted; R3538002:
+    // a past version's definition rides along.
+    state.minted(def_id);
     instance
 }
 
@@ -2721,6 +3034,13 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         sandbox: options.sandbox.filter(|sandbox| *sandbox),
         held: None,
         marketplace: None,
+        warhero_worth: None,
+        black_hole: None,
+        slashed_lane: None,
+        chains_made: None,
+        hand_meets: None,
+        radiance_lends: None,
+        radiant_world: None,
         generators: IndexMap::new(),
         win_rates: None,
         fused_scripts: crate::scripts::FusedScripts::default(),
@@ -2912,7 +3232,7 @@ pub fn active_first(state: &GameState) -> [PlayerId; 2] {
 }
 
 /// Every place a card can be, in `find_instance`'s order, for one side.
-fn side_cards(side: &PlayerState) -> impl Iterator<Item = &CardInstance> {
+pub(crate) fn side_cards(side: &PlayerState) -> impl Iterator<Item = &CardInstance> {
     side.hand
         .iter()
         .chain(side.library.iter())
@@ -2941,10 +3261,16 @@ fn side_cards_mut(side: &mut PlayerState) -> impl Iterator<Item = &mut CardInsta
         .chain(side.resolving.iter_mut())
 }
 
-pub fn find_instance<'a>(state: &'a GameState, instance_id: &str) -> Option<&'a CardInstance> {
+/// Every card instance both sides hold, in `find_instance`'s order: p1's zones, then p2's, each side
+/// in `side_cards`'s order.
+pub fn every_instance(state: &GameState) -> impl Iterator<Item = &CardInstance> {
     PLAYER_IDS
         .into_iter()
-        .find_map(|player| side_cards(&state.players[player]).find(|card| card.id == instance_id))
+        .flat_map(|player| side_cards(&state.players[player]))
+}
+
+pub fn find_instance<'a>(state: &'a GameState, instance_id: &str) -> Option<&'a CardInstance> {
+    every_instance(state).find(|card| card.id == instance_id)
 }
 
 /// `find_instance`, mutably: TS handed back the live object, which its callers wrote through.

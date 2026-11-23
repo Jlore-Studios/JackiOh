@@ -260,7 +260,7 @@ describe("R3342000 tile aura planner", () => {
             ? TILE_PATTERN_OF_FAMILY.classic
             : def.set === "Meditative" || def.set === "Meditative+"
               ? TILE_PATTERN_OF_FAMILY.meditative
-              : def.set === "Stinkyscape"
+              : def.set === "Stinkyscape" || def.set === "Stinkyscape+"
                 ? TILE_PATTERN_OF_FAMILY.stinkyscape
                 : TILE_PATTERN_OF_FAMILY["training-grounds"];
       expect(aura?.pattern).toBe(expectedPattern);

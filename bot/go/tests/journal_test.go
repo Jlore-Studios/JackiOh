@@ -233,7 +233,7 @@ func TestJournal_ACutOffRunJournalsAndTheNextPicksUp(t *testing.T) {
 	assertIn(t, "| review (`opus`) | review of round 1", text)
 	assertIn(t, "Tried a table of rules: too slow, dropped.", text)
 	comments := h.gh.BotComments(12)
-	assertIn(t, "blob/bot-journal/12.md", comments[len(comments)-1]) // the pause links it
+	assertIn(t, "blob/_bot-journal/12.md", comments[len(comments)-1]) // the pause links it
 
 	seen := map[string]string{}
 	pickingUp := func(request *runner.RunRequest) *runner.RunResult {
@@ -264,7 +264,7 @@ func TestJournal_ACutOffRunJournalsAndTheNextPicksUp(t *testing.T) {
 	assertEqual(t, len(journal.RunsIn(text)), 2)
 	assertIn(t, "· approved", journal.RunsIn(text)[1])
 	pr := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
-	assertIn(t, "blob/bot-journal/12.md", pr.Str("body"))
+	assertIn(t, "blob/_bot-journal/12.md", pr.Str("body"))
 }
 
 // The journal is a record, never a gate: a read that fails in the claim and a write that fails

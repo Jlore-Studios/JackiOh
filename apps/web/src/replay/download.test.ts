@@ -4,17 +4,19 @@
 import { CATALOG_VERSION } from "@jackioh/cards";
 import { describe, expect, it } from "vitest";
 
+import type { PortraitId } from "@jackioh/shared";
+
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
 import { REPLAY_JSON_MAX_BYTES, REPLAY_JSON_MAX_STEPS } from "./config.ts";
-import { REPLAY_JSON_FORMAT, REPLAY_JSON_VERSION, parseReplayJsonFile, practiceGame, replayJsonFile } from "./download.ts";
+import { REPLAY_JSON_FORMAT, REPLAY_JSON_VERSION, parseReplayJsonFile, practiceGame, readReplayJsonFile, replayJsonFile, replayPortraitsOf } from "./download.ts";
 import { ReplayFailure, memoryReplaySource } from "./source.ts";
 import { createStepCache } from "./steps.ts";
 
 const steps = foldedReplaySteps();
 
 /** The file a practice game's download makes, over the folded steps. */
-function written(): Promise<File> {
-  const game = practiceGame({ game: 1, endedAt: 0, result: "loss", turns: steps.at(-1)?.turn ?? 0, steps: steps.length, portraits: { p1: "vanilla", p2: "vanilla" } });
+function written(portraits: { p1: PortraitId; p2: PortraitId } = { p1: "vanilla", p2: "vanilla" }): Promise<File> {
+  const game = practiceGame({ game: 1, endedAt: 0, result: "loss", turns: steps.at(-1)?.turn ?? 0, steps: steps.length, portraits });
   return replayJsonFile(game, fakeReplaySource(steps), 0);
 }
 
@@ -130,5 +132,18 @@ describe("R1141000 opening a downloaded replay", () => {
     const opened = await parseReplayJsonFile(fileOf({ steps: [{ ...first, seed: "hunter2", log: [] }] }));
     expect(opened).toEqual([first]);
     expect(Object.keys(opened[0] ?? {}).sort()).toEqual(["step", "turn", "view"]);
+  });
+});
+
+describe("R3976000 a downloaded replay's portraits", () => {
+  it("R3976000 replayPortraitsOf reads a file's game portraits, and null without them or with an unknown id", async () => {
+    const json = await readReplayJsonFile(await written({ p1: "gary", p2: "shredder" }));
+    expect(replayPortraitsOf(json)).toEqual({ p1: "gary", p2: "shredder" });
+
+    // A file without them (one written before portraits), and one naming an unknown one, have none.
+    const games: unknown[] = [undefined, {}, [], { portraits: { p1: "gary", p2: "nobody" } }, { portraits: ["gary", "shredder"] }];
+    for (const game of games) {
+      expect(replayPortraitsOf({ ...json, game }), JSON.stringify(game)).toBeNull();
+    }
   });
 });

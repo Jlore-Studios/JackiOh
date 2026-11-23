@@ -326,6 +326,7 @@ mod r942 {
             side: Some(ScopeSide::Any),
             radiant_for: None,
             chinese: None,
+            brittle: None,
         })
         .apply)(&mut ctx);
         // Both backrows filled for their owners, the Locked zone skipped.

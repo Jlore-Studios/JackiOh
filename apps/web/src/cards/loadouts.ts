@@ -17,7 +17,7 @@ import { createElement, type ReactElement, type ReactNode } from "react";
 import type { PlayerId } from "@jackioh/shared";
 
 import { COSMETIC_KINDS } from "../wire/generated/cosmetics.ts";
-import { isRecord } from "../wire/json.ts";
+import { isRecord, isSafeKey } from "../wire/json.ts";
 import {
   CARD_SLOT_KINDS,
   DEFAULT_CARD_COSMETICS,
@@ -100,11 +100,11 @@ export function parseCardLoadouts(raw: unknown): CardLoadouts | null {
   if (!isRecord(raw) || !isSeat(raw.seat) || !Array.isArray(raw.cards)) return null;
   const cards: Record<string, CardPicks> = {};
   for (const entry of raw.cards as unknown[]) {
-    if (isRecord(entry) && typeof entry.cardId === "string") cards[entry.cardId] = cardPicksOf(entry);
+    if (isRecord(entry) && typeof entry.cardId === "string" && isSafeKey(entry.cardId)) cards[entry.cardId] = cardPicksOf(entry);
   }
   const stamps: Record<string, number> = {};
   for (const entry of Array.isArray(raw.stamps) ? (raw.stamps as unknown[]) : []) {
-    if (isRecord(entry) && typeof entry.cardId === "string" && isStampLevel(entry.stamp)) stamps[entry.cardId] = entry.stamp;
+    if (isRecord(entry) && typeof entry.cardId === "string" && isSafeKey(entry.cardId) && isStampLevel(entry.stamp)) stamps[entry.cardId] = entry.stamp;
   }
   return Object.keys(stamps).length > 0 ? { seat: raw.seat, cards, stamps } : { seat: raw.seat, cards };
 }

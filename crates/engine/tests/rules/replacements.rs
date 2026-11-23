@@ -1,10 +1,10 @@
 // B5 E5 replacement windows, with E8's heal conversion and E9's redirects (docs/classic-sets.md B5;
-// SPEC §4.2, §4.4, §4.5, §3.2; R460, R461, R462, R463). Each moment is proved through a fixture card
+// SPEC §4.2, §4.4, §4.5, §3.2; R460, R461, R462, R463, R4207000). Each moment is proved through a fixture card
 // shaped like the Classic or Classic+ card that uses it. Scenarios through `reduce` are replayed from
 // their start state (§9.3), paused ones from a JSON round trip, and hidden-card moments are checked
 // from the other seat's view (R97, R177).
 
-use jackioh_engine::effects::{discard, heal};
+use jackioh_engine::effects::{discard, exile, heal};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{
@@ -822,7 +822,8 @@ mod e5_would_go_to_a_graveyard {
     use super::*;
 
     #[test]
-    fn r461_a_unit_exiled_instead_of_dying_has_not_died_no_death_no_reborn_no_destroyed_count() {
+    fn r461_r4207000_a_unit_exiled_instead_of_reaching_its_graveyard_still_died_death_fires_reborn_returns_destroyed_counts()
+     {
         let mut state = playing("dc-void");
         put(
             &mut state,
@@ -851,14 +852,26 @@ mod e5_would_go_to_a_graveyard {
         ));
         let after = game.state().clone();
 
-        assert!(in_pile(&after, P2, ZoneName::Exile, &bird.id));
+        // R4207000 (superseding R461): both died, so the phoenix's Reborn takes it back out of its exile
+        // pile and the rattle's Death fires, the rattle staying where the aura sent it.
+        let back = unit_in(&after, P2, 1).expect("the phoenix is Reborn from exile");
+        assert_eq!(back.id, bird.id);
+        assert_eq!(back.reborn_spent, Some(true));
+        assert!(!in_pile(&after, P2, ZoneName::Exile, &bird.id));
         assert!(in_pile(&after, P1, ZoneName::Exile, &bell.id));
-        assert!(unit_in(&after, P2, 1).is_none());
+        assert_eq!(notes(&after), strings(&["rattle:death:p1"]));
         assert!(after.reserved.is_empty());
-        assert!(events_json(&result.events, GameEventType::Destroyed).is_empty());
-        assert!(notes(&after).is_empty());
-        assert_eq!(after.counters.destroyed, 0);
-        // The Spell itself, on its way to its graveyard, is exiled too; three exiles in all.
+        let mut destroyed: Vec<String> = field_of(&result.events, GameEventType::Destroyed, "instanceId")
+            .into_iter()
+            .map(|id| id.as_str().unwrap_or_default().to_string())
+            .collect();
+        destroyed.sort();
+        let mut dead = vec![bird.id.clone(), bell.id.clone()];
+        dead.sort();
+        assert_eq!(destroyed, dead);
+        assert_eq!(after.counters.destroyed, 2);
+        // The Spell itself, on its way to its graveyard, is exiled too; three exiles in all, the Reborn
+        // body's included, which its return does not take back.
         assert!(in_pile(&after, P1, ZoneName::Exile, &spell.id));
         assert_eq!(after.counters.exiled, exiled_before + 3);
         let mut exiled: Vec<String> = field_of(&result.events, GameEventType::Exiled, "instanceId")
@@ -869,8 +882,149 @@ mod e5_would_go_to_a_graveyard {
         let mut expected = vec![bird.id.clone(), bell.id.clone(), spell.id.clone()];
         expected.sort();
         assert_eq!(exiled, expected);
+        assert_eq!(
+            field_of(&result.events, GameEventType::Summoned, "instanceId"),
+            vec![json!(bird.id)]
+        );
         assert!(events_json(&result.events, GameEventType::EnteredGraveyard).is_empty());
         assert!(replays_to(&game.start, &game.log, &after));
+    }
+
+    #[test]
+    fn r4207000_a_reborn_body_that_dies_again_under_the_aura_is_exiled_and_stays_there() {
+        let mut state = playing("dc-void-twice");
+        put(
+            &mut state,
+            &voidwalker.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let bird = put(
+            &mut state,
+            &phoenix.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
+        live_mut(&mut state, &bird).marked_destroyed = Some(true);
+        let mut b = Bench::new(&state);
+        state_check(&mut b.sink(&mut state));
+        assert_eq!(
+            unit_in(&state, P2, 1).map(|card| card.id.clone()),
+            Some(bird.id.clone())
+        );
+        assert!(!in_pile(&state, P2, ZoneName::Exile, &bird.id));
+
+        // Now without Reborn: its second death is exiled and nothing brings it back.
+        live_mut(&mut state, &bird).marked_destroyed = Some(true);
+        let mut again = Bench::new(&state);
+        state_check(&mut again.sink(&mut state));
+        assert!(unit_in(&state, P2, 1).is_none());
+        assert!(in_pile(&state, P2, ZoneName::Exile, &bird.id));
+        assert!(state.reserved.is_empty());
+        assert_eq!(state.counters.destroyed, 2);
+    }
+
+    #[test]
+    fn r4207000_a_sacrificed_unit_the_aura_exiles_still_fires_its_death() {
+        let mut state = playing("dc-void-sacrifice");
+        put(
+            &mut state,
+            &voidwalker.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
+        let bell = put(
+            &mut state,
+            &rattle.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
+        let mut b = Bench::new(&state);
+        sacrifice_now(&mut b.sink(&mut state), &bell);
+        assert_eq!(notes(&state), strings(&["rattle:death:p1"]));
+        assert!(in_pile(&state, P1, ZoneName::Exile, &bell.id));
+        assert!(!in_pile(&state, P1, ZoneName::Graveyard, &bell.id));
+        assert_eq!(
+            field_of(&b.events, GameEventType::Destroyed, "instanceId"),
+            vec![json!(bell.id)]
+        );
+    }
+
+    #[test]
+    fn r4207000_a_discarded_death_card_the_aura_exiles_fires_nothing() {
+        let mut state = playing("dc-void-discard");
+        put(
+            &mut state,
+            &voidwalker.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
+        let held = first_in_hand(&mut state, &rattle.id, P1);
+        let mut b = Bench::new(&state);
+        apply(
+            &mut b,
+            &mut state,
+            None,
+            HookOptions {
+                controller: Some(P1),
+                ..Default::default()
+            },
+            vec![discard(json_as(
+                json!({ "target": { "of": "instance", "instanceId": held.id } }),
+            ))],
+        );
+        assert!(in_pile(&state, P1, ZoneName::Exile, &held.id));
+        assert!(notes(&state).is_empty());
+        assert!(events_json(&b.events, GameEventType::Destroyed).is_empty());
+        assert_eq!(state.counters.destroyed, 0);
+    }
+
+    #[test]
+    fn r4207000_a_plain_exile_is_still_no_death_and_no_reborn() {
+        let mut state = playing("dc-void-plain-exile");
+        put(
+            &mut state,
+            &voidwalker.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let bell = put(
+            &mut state,
+            &rattle.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
+        let bird = put(
+            &mut state,
+            &phoenix.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
+        let mut b = Bench::new(&state);
+        apply(
+            &mut b,
+            &mut state,
+            None,
+            HookOptions {
+                controller: Some(P1),
+                ..Default::default()
+            },
+            vec![
+                exile(json_as(
+                    json!({ "target": { "of": "instance", "instanceId": bell.id } }),
+                )),
+                exile(json_as(
+                    json!({ "target": { "of": "instance", "instanceId": bird.id } }),
+                )),
+            ],
+        );
+        state_check(&mut b.sink(&mut state));
+        assert!(in_pile(&state, P1, ZoneName::Exile, &bell.id));
+        assert!(in_pile(&state, P2, ZoneName::Exile, &bird.id));
+        assert!(unit_in(&state, P2, 1).is_none());
+        assert!(notes(&state).is_empty());
+        assert!(events_json(&b.events, GameEventType::Destroyed).is_empty());
+        assert_eq!(state.counters.destroyed, 0);
     }
 
     #[test]
@@ -924,7 +1078,8 @@ mod e5_would_go_to_a_graveyard {
         state_check(&mut b.sink(&mut state));
         assert!(in_pile(&state, P1, ZoneName::Graveyard, &own.id));
         assert!(in_pile(&state, P2, ZoneName::Exile, &foe.id));
-        assert_eq!(notes(&state), strings(&["rattle:death:p1"]));
+        // R4207000: the exiled one died all the same, so both Deaths fire, in R68's order.
+        assert_eq!(notes(&state), strings(&["rattle:death:p1", "rattle:death:p2"]));
     }
 
     #[test]

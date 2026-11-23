@@ -156,6 +156,13 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `duos_rooms` | rooms you host or joined | `auth.uid() in (host, guest)` | none |
 | `duos_matches` | **none** | no policy | none — holds the seed and, in `options`, all four decks, the AI team's included: §3.1's reason for `matches` (SPEC §13.9) |
 | `duos_match_actions` | **none** | no policy | none — the co-op log, which with the seed is every hidden card (§3.1) |
+| `duos_match_checkpoints` | **none** | no policy | none — a live co-op match's whole state, every hand and library (#4169) |
+| `daily_games` | rows you play in | `app.current_profile_id() in (p1_profile_id, p2_profile_id)` | none — a daily game's clock and its public board (turn, both heroes' life, result); its seed, decks and log stay in `matches` and `match_actions` (SPEC §9.13, #3727) |
+| `daily_invites` | rows you sent or received, every column but `choice` | `app.current_profile_id() in (from_profile, to_profile)` | none — `choice` is the sender's frozen deck, hidden from the friend it challenges (§3.1), so the column grant leaves it out |
+| `daily_notify` | **none** | no policy | none — the email setting, its unsubscribe token and when each channel was last sent |
+| `daily_email_days` | **none** | no policy | none — how many "your move" emails the server took each UTC day, held to `DAILY_PLAYER_EMAILS_PER_DAY` (#3843) |
+| `notifications` | **none** | no policy | none — each account's in-game notification feed, kept until read, at most `NOTIFICATIONS_KEEP` rows and `NOTIFICATIONS_KEEP_DAYS` old; the client reads its own through `GET /api/notifications` (R4039000, #4039) |
+| `push_subscriptions` | **none** | no policy | none — each device's push endpoint and keys, which anyone holding them could push to |
 
 Three Supabase-specific traps this schema avoids on purpose:
 
@@ -231,7 +238,7 @@ What "operating a server" costs us, and the mitigation each cost already has in 
 ### 4.2 The deployment config
 
 `wrangler.jsonc` deploys both halves §3's table describes, the client and the server, as one
-Cloudflare Worker per environment: `jackioh` at jackioh.com (production, from the `production`
+Cloudflare Worker per environment: `jackioh` at jackioh.com (production, from the `_production`
 branch) and `jackioh-staging` at staging.jackioh.com (staging, from main, behind Cloudflare Access).
 `docs/deploy-cloudflare.md` is the runbook and `apps/edge/README.md` the Worker's contract. Four
 things in it are not obvious:
@@ -258,7 +265,10 @@ things in it are not obvious:
   shared-logic crates beside it.
 - **A deploy restarts the server.** A container keeps the image it started with, so the first
   request after a deploy compares the running server's `/healthz` `x-deployed-commit` with the
-  commit the deploy named (`DEPLOYED_COMMIT`) and stops a server on an older one; live matches
+  commit the deploy named (`DEPLOYED_COMMIT`) and stops a server on an older one. It also stops a
+  server on the deployed commit whose settings, the secrets among them, are not the Worker's now,
+  told by a fingerprint of the container's environment kept in the object's storage (#4118), so a
+  redeploy after a secret change takes effect; live matches
   rebuild from `(seed, log)` when their sockets return (§6). The web build and the server deploy in
   the same job, so a client is never ahead of its server.
 
@@ -371,11 +381,11 @@ Notes that matter:
 | One socket drops | start the grace timer, write `grace_deadline_at`, push the countdown to the other player; **the clock keeps running** (SPEC §9.5) |
 | Reconnect inside grace | fresh `viewFor`, never a replay (SPEC §9.5); cancel the grace timer |
 | Grace expires | submit `disconnectExpired` → a loss (R79) |
-| Terminal state | `api::results::record_result` (`crates/server/src/api/results.rs`) writes one `results` row, applies the rating move when the match is ranked (R604), clears both `profiles.current_match_id` and any queued ticket — all in one transaction. The actor stays in the map, where a rematch's presence reads its sockets (R672), until a reaper tick finds `REMATCH_OFFER_TTL_MS` passed since the end and no seat's socket open, and drops it (`Registry::reap_finished`). An actor rebuilt on a finished match counts that window from the rebuild |
+| Terminal state | `api::results::record_result` (`crates/server/src/api/results.rs`) writes one `results` row, applies the rating move when the match is ranked (R604), clears both `profiles.current_match_id` and any queued ticket — all in one transaction. The actor stays in the map, where a rematch's presence reads its sockets (R672), until a reaper tick finds `REMATCH_OFFER_TTL_MS` passed since the end and drops it (`Registry::reap_finished`), closing any socket still open with `MATCH_OVER_CLOSE_CODE` (R3694000). An actor rebuilt on a finished match counts that window from the rebuild |
 | The result's write fails | tried again, `MATCH_RECORD_RESULT_ATTEMPTS` tries in all with a doubling wait from `MATCH_RECORD_RESULT_BACKOFF_MS`; if none lands, the match row stays `live` with both players in it, the actor is dropped from the map and both sockets close (1001), and the next socket rebuilds the actor, which writes the result as it arms (R1437) |
 | A clock's action can't be written | its clock runs out again `MATCH_SERVER_ACTION_RETRY_MS` later until the row lands, the match ends or the actor stops; a new turn, an answered prompt, a closed mulligan window or a reconnect cancels it (R776000) |
 | The log already holds the actor's next seq | `StoreError::SeqClash`: the actor is dropped from the map, both sockets close (1001), and the next socket rebuilds it from the log (R776000) |
-| Process boot | nothing: no actor is rebuilt until a socket for its match arrives, when `actor/registry.rs` folds `(seed, decks, log)`, from the checkpoint the last drain stored when it passes (#1169); the rebuilt clock restarts the turn clock from full and keeps the ceiling from `started_at` |
+| Process boot | nothing: no actor is rebuilt until a socket for its match arrives, when `actor/registry.rs` folds `(seed, decks, log)`, from the checkpoint the last drain, or every `MATCH_CHECKPOINT_MIN_ACTIONS`-th row as the match is played (#4224), stored when it passes (#1169); the rebuilt clock restarts the turn clock from full and keeps the ceiling from `started_at` |
 | First socket on an actor while the other seat has never attached to it (a restart, a no-show) | start that seat's grace at its stored `grace_deadline_at` if the restart left one (never later than a fresh window, at once if already past), else a fresh 60 s; it expires as a loss like any other. A match no socket returns to is the reaper's ceiling draw (R112, R744) |
 | Idle | The process has no hibernation; an actor with no sockets and an expired grace has already ended. The container stops once no request or socket has reached it for ten minutes (`apps/edge`), and the next request boots it, which is a process boot. On Durable Objects this row would read "hibernate". |
 
@@ -472,10 +482,13 @@ migration 0014 is applied loses records (each logged as `game.record.failed`), n
 
 One snapshot, and only beside the log. ARCHITECTURE-CCG §2.2: "Append each action as it resolves;
 don't persist snapshots. Periodic snapshots are an optimization for later if replay gets slow." A
-30-player-turn cap (R2) bounds a log's length, so nothing is written as a match is played. The
-restart drain alone stores one checkpoint per live match (`match_checkpoints`, migration 0042,
-#1169), which the very next boot's rebuild resumes when every check passes, folding only the rows
-after it, and otherwise ignores for the whole log; a finished match drops it, and no replay reads it.
+30-player-turn cap (R2) bounds a log's length, so the only thing written beside the log
+as a match is played is its checkpoint. Each
+live match's actor stores one checkpoint every `MATCH_CHECKPOINT_MIN_ACTIONS` rows as played, and
+the restart drain stores one per live match as before (`match_checkpoints`, migration 0042,
+#1169, #4224), which the very next boot's rebuild resumes when every check passes, folding only
+the rows after it, and otherwise ignores for the whole log; a finished match drops it, and no
+replay reads it.
 
 `match_actions` is append-only as a **database** property: `app.deny_row_mutation()` is attached
 `before update or delete`. `collection_grants` gets the same trigger for the same reason.
@@ -483,7 +496,10 @@ after it, and otherwise ignores for the whole log; a finished match drops it, an
 A co-op match is folded the same way (SPEC §13.9): `duos_matches.seed` and `options` (the four decks,
 the teams' rules and the AI seats' handicaps) with `duos_match_actions` reconstruct it through
 `duos_fold`, its duel `d` seeded `{seed}:duel{d}`, and both tables stay out of every client's reach
-for §3.1's reason. A co-op replay (`GET /api/duos/matches/:matchId/replay`) sends a human seat its own
+for §3.1's reason. Its actor keeps a checkpoint as a match's does (`duos_match_checkpoints`, migration
+0097, #4169), stored by the restart drain and also every `MATCH_CHECKPOINT_MIN_ACTIONS` rows while the
+game is played, so a crashed actor's rebuild folds at most that many rows; one that fails a 1v1
+checkpoint's checks is ignored for the whole log, and the end drops it. A co-op replay (`GET /api/duos/matches/:matchId/replay`) sends a human seat its own
 Duos views, step by step, and nothing else.
 
 ---
@@ -553,7 +569,10 @@ whole of what it can reach. Legacy `anon` JWT keys still work and are compatibil
 | `TRUSTED_PROXY_HOPS` | no (`0`) | R190: how many `X-Forwarded-For` entries, counted from the right, this deployment's own proxies write. The per-IP limits (§9.4 step 3, R157) key on that entry and ignore everything the caller wrote to its left; `CF-Connecting-IP` and `X-Real-IP` are never read. `0` to `5`; `0` (the default) ignores the header and keys on the socket's peer address, which is right with no proxy in front | `wrangler.jsonc` sets it to `1`, the one entry the site's Worker writes (`CF-Connecting-IP`), which can only over-group; set it to the count your own request shows in the `api.forwarded_for` log (§10, step 8); leave unset for a local server |
 | `DEPLOYED_COMMIT` | no | the git commit this deploy was built from: the deploy names it (`wrangler deploy --var DEPLOYED_COMMIT:<sha>`), the site's Worker passes it to the container, and it is unset anywhere else. `GET /api/catalog`, `/healthz` and `/readyz` report it in the `x-deployed-commit` response header (the body is untouched, R163); the deploy jobs' live checks wait for it, and the Worker stops a container whose `/healthz` names another, so a deploy reaches the running server. Only a hex SHA is kept | set by the deploy; leave unset for a local server |
 | `LADDER_BOTS` | no (`off`) | R1453, R1454, R1452, R641000: `on` seats a ladder bot, which this process plays itself, against a ranked ticket of any mode that waited past its fallback time with no person inside its window (a Conquest ticket's in a series), and sizes the bot pool at boot and hourly. Off unless `on`: unset or `off` seats no bot and keeps no pool, and any other value refuses the boot | the operator; turning it on wants a host with room for the AI's search beside the matches, such as the container's `basic` instance (`wrangler.jsonc`) |
-| `DEV_PROFILE_IDS` | no (none) | SPEC §14.10, R1300000: the dev accounts, comma-separated profile ids; `/api/auth/me` says `isDev` to a listed account, which may use the `/api/dev/*` tools on its own economy (under `E2E=1` the `e2e-econ` fixture is one too, R1310004). Only the server's boot reads it: since no catalog stamp grants anyone (R1310001), `seed-catalog` does not. A malformed id refuses the boot, naming it; the boot logs only how many are listed | the operator: each developer's account secret ID, from `/account` → "Manage sign-in & account" → "Show account secret ID"; leave unset for a local server without dev tools |
+| `PLAYER_RESEND_API_KEY` | no | SPEC §9.13, #3727: a Resend key with Sending access for jackioh.com, apart from the alerts' `ALERT_RESEND_API_KEY`, for the daily games' "your move" emails; unset, no player is emailed | Resend → API Keys, once its domain is verified; `wrangler secret put` per environment (`docs/deploy-cloudflare.md` §3) |
+| `VAPID_PRIVATE_KEY` | no | SPEC §9.13, #3727: the daily games' Web Push signing key (RFC 8292), the raw P-256 private scalar in base64url; unset, or no pair with `VAPID_PUBLIC_KEY`, no push is sent | generated once per environment (`docs/deploy-cloudflare.md` §3); rotating it orphans every device's subscription |
+| `VAPID_PUBLIC_KEY` | no | its public half, the raw uncompressed point in base64url. Public by nature: the browser subscribes with it, read from `GET /api/daily/settings` rather than a `VITE_` variable, so the pair is set in one place and never drifts | generated with the private key |
+| `DEV_PROFILE_IDS` | no (none) | SPEC §14.10, R1300000: the dev accounts, comma-separated profile ids; `/api/auth/me` says `isDev` to a listed account, which may use the `/api/dev/*` tools on its own economy (under `E2E=1` the `e2e-econ` fixture is one too, R1310004). Only the server's boot reads it: since no catalog stamp grants anyone (R1310001), `seed-catalog` does not. A malformed id refuses the boot, naming it; the boot logs only how many are listed | the operator: each developer's account secret ID, from `/account` → "Sign-in & security" → "Reveal"; leave unset for a local server without dev tools |
 
 `crates/server/src/env.rs` loads these from the process environment (the binary reads no `.env`
 file), reports **every** missing or malformed variable in one error naming where to get each, and
@@ -645,7 +664,9 @@ step that is not yet implemented says which BUILD task delivers it.
    `graphql_public` only.
 2. **Enable email/password auth with confirmations.** Auth → Providers → Email: enabled,
    "Confirm email" on. Hosted: configure SMTP now. SPEC §9.4 makes a verified email a precondition of
-   redemption, so this is not optional.
+   redemption, so this is not optional. Supabase refuses a password over 72 bytes, counted in bytes as
+   bcrypt reads them, which is the client's own limit (`AUTH_PASSWORD_MAX_LENGTH`; #4000). Leave SSO
+   (SAML 2.0) off: nothing here uses it, and both projects had it off on 2026-11-16 (#4001).
    Then Auth → URL Configuration, which decides where every emailed link lands:
    - **Site URL:** the site's origin (`site_url` in `infra/supabase.tf`). Left at its default
      (`http://localhost:3000`), every confirmation and reset link pointed at the reader's own machine.
@@ -671,7 +692,9 @@ step that is not yet implemented says which BUILD task delivers it.
      the Redirect URLs above already allow, and it is a PKCE link (R323).
    - **Two-step sign-in (R665).** Auth → Multi-Factor: **TOTP (App Authenticator)** enabled (it is
      on by default on a new project). Leave phone MFA off: the client offers only an authenticator
-     app, and the server's `aal2` rule counts only a verified TOTP factor.
+     app, and the server's `aal2` rule counts only a verified TOTP factor. Supabase Auth never records
+     a used code: its v2.197.0 takes the same code again in a new challenge for about 90 seconds
+     (#4003; issue #4041 accepts the window: exploiting it needs the account's password and a live code seen within about 90 seconds, and the revisit is the MFA verification attempt hook if the projects move to a plan that offers it).
    - **OAuth providers (R666),** for each provider wanted: create an OAuth app at the provider
      (Google Cloud console, GitHub developer settings, Discord developer portal, …) whose
      authorised redirect URI is `https://<ref>.supabase.co/auth/v1/callback`; then Auth → Sign In /
@@ -689,13 +712,21 @@ step that is not yet implemented says which BUILD task delivers it.
      same address, then try the password. If the password still signs in, Supabase kept an
      unconfirmed account's password through linking (a pre-account takeover); do not enable
      providers until that is resolved.
+     Microsoft (`azure`, which `OAUTH_PROVIDER_LABELS` still names) stays off in both projects: it is
+     the provider the nOAuth attack was found on, where an `email` claim a user can set to any address
+     was trusted as their identity. Before turning it on, repeat #4002's check on staging: make an
+     email-and-password account for an address, then sign in with Microsoft for that same address. The
+     Microsoft sign-in must not land in the existing account unless Microsoft truly verified the
+     address; if it does, leave Microsoft off.
    - **Roblox (R3147000),** a custom OIDC provider, since Supabase has no built-in one: at
      create.roblox.com → Creations → OAuth 2.0 Apps, an app with the scopes `openid` and `profile`
      and the redirect URL `https://<ref>.supabase.co/auth/v1/callback` (each project's own); then
      Auth → Sign In / Providers → Custom Providers → a new OIDC provider with the identifier
      `custom:roblox` exactly (the client sends that name, and it cannot be changed later), the issuer
      `https://apis.roblox.com/oauth/`, the app's client id and secret, and the scopes `openid profile`.
-     Roblox gives third-party apps no email address, so its sign-in never matches an account by one:
+     Keep those two scopes: Roblox names an address only for its `email` scope, so with `openid profile`
+     alone its sign-in carries none and never matches an account by one (#4002; asking for `email` would
+     let automatic linking join a Roblox sign-in to the account holding that address):
      a Roblox sign-up is a new pending account with no address, which adds one on the code screen
      (R3147001), and a player who already has an account links Roblox from `/account` (R3147002).
      Both projects have it (#3147).
@@ -835,7 +866,7 @@ step that is not yet implemented says which BUILD task delivers it.
 6. **Seed the catalog.** `target/release/jackioh-server seed-catalog`. It writes the catalog compiled
    into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → the entries
    `cargo jackioh catalog check` counts on its second line (`<n> entries (<cards> cards + <tokens> tokens)`:
-   every card and token of the seven shipped sets, spec §8) and `select app.catalog_version();` → your
+   every card and token of the eight shipped sets, spec §8) and `select app.catalog_version();` → your
    `CATALOG_VERSION`, the latest card patch's version (R388).
    In the same transaction it writes the cosmetics registry compiled in, `crates/shared/cosmetics.json`
    (R1295000), into `public.cosmetics`: `select count(*) from public.cosmetics;` → 12. Before its

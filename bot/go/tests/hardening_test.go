@@ -213,8 +213,11 @@ func TestHardening_ARefusedBotTokenFallsBackToTheActionsToken(t *testing.T) {
 // ---------------------------------------------------------------------------- ConditionalGetTests
 
 // The status loop reads every running job every two minutes: GitHub answers 304 to a conditional
-// GET whose ETag still matches, which costs no rate limit.
+// GET whose ETag still matches, which costs no rate limit. Every GET is conditional (#4059), what
+// its caller asks for or not.
 func TestHardening_ACachedGetSendsItsEtagAndKeepsTheAnswerGithubSaysIsUnchanged(t *testing.T) {
+	gh.Cached.Clear()
+	t.Cleanup(gh.Cached.Clear)
 	sent := []any{}
 	opener := func(req *gh.Request, timeout time.Duration) (*gh.Response, error) {
 		// req.headers.get("If-none-match"): None when it has none.
@@ -235,8 +238,8 @@ func TestHardening_ACachedGetSendsItsEtagAndKeepsTheAnswerGithubSaysIsUnchanged(
 	assertEqual(t, client.ListJobs(5, true), []*pyjson.Object{pyjson.New("id", 1)})
 	assertEqual(t, client.ListJobs(5, true), []*pyjson.Object{pyjson.New("id", 1)}) // the 304, answered as kept
 	assertEqual(t, sent, []any{nil, `"v1"`})
-	client.ListJobs(5, false) // a plain GET stays unconditional
-	assertEqual(t, lastOf(t, sent), nil)
+	assertEqual(t, client.ListJobs(5, false), []*pyjson.Object{pyjson.New("id", 1)}) // conditional too
+	assertEqual(t, lastOf(t, sent), `"v1"`)
 }
 
 // ---------------------------------------------------------------------------- DeliverTests
@@ -372,5 +375,5 @@ func TestHardening_AnUnfinishedSurveyIsDueAgain(t *testing.T) {
 		"reason", "the usage limit was reached"))
 	hardeningDeliver(h, planned, out)
 	assertIsNone(t, dig(t, h.ctx.Store.Load(), "suggest", "last_run"))
-	assertTrue(t, plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), false))
+	assertTrue(t, plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), false, h.ctx.Cfg.SuggestionsSpareLanes))
 }

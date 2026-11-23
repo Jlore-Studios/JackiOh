@@ -1,7 +1,8 @@
-//! #13 Jlockeed Shredder-10 (SPEC §8.1): 6/8 → 12/16 Unit, cost 3 (6/10 → 12/20 until issue #3136). Base "End of turn: deal 2 damage
-//! to each enemy unit and the enemy hero", radiant "4 damage" — a radiant cell that changes only a
-//! number changes only that number (§8 Conventions). §8's Engine cell: "One damage instance per
-//! target, controller's end of turn".
+//! #13 Jlockeed Shredder-10 (SPEC §8.1): 4/6 → 8/12 Unit, cost 3 (5/7 → 10/14 until issue #3996, 6/8 →
+//! 12/16 until issue #3837, 6/10 → 12/20 until issue #3136). Base "End of turn: deal 2 damage to each
+//! enemy unit and the enemy hero", radiant "4 damage" — a radiant cell that changes only a number changes
+//! only that number (§8 Conventions).
+//! §8's Engine cell: "One damage instance per target, controller's end of turn".
 //!
 //! R51: ONE damage instance per target, each meeting that target's Armor, Divine Shield and
 //! Anti-oneshot cap (§4.4). R59: `damage_all` is one effect, and no state check runs between its hits,
@@ -152,8 +153,8 @@ mod tests {
         }
 
         #[test]
-        fn issue_3136_enters_as_a_6_8_and_radiant_a_12_16() {
-            for (radiant, attack, health, amount) in [(false, 6, 8, 2), (true, 12, 16, 4)] {
+        fn issue_3996_enters_as_a_4_6_and_radiant_an_8_12() {
+            for (radiant, attack, health, amount) in [(false, 4, 6, 2), (true, 8, 12, 4)] {
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": "core-013", "radiant": radiant }, "core-005"],

@@ -5,6 +5,7 @@
 //!            backrow zone (a dormant card under a backrow pile is not on the field, R13, §3.2).
 //!            Indestructible cards stay (#98 Heroic Power, C #84 Lockdown, C #90 In Too Deep). An
 //!            animated card (Animated, §6.1, R383) is in the unit row and is not backrow. Tunes: none."
+//!   A card set face-down by its Cloaked is a backrow card, whatever it prints (R3777000).
 //!
 //! Stack (§6.2) buries the card beneath it. The Death is §4.5 step 3's hook: any death fires it (a
 //! destroy, a Tribute, §6.3, a combat), a bounce or an exile never. The next state check collects the
@@ -151,6 +152,22 @@ mod tests {
                 hit(&mut s, BACK_BREAKER);
                 assert!(backrow_ids(&s, P2)[0].is_none());
                 assert_eq!(s.backrow(P2, 2).map(|card| card.id), Some(standing));
+            }
+
+            /// R3777000: a card set face-down by its Cloaked (C #6) is a backrow card, no Unit: it goes too.
+            #[test]
+            fn r3777000_a_set_cloaked_unit_is_a_backrow_card_it_destroys() {
+                let mut s = scenario(json!({
+                    "active": "p2",
+                    "p1": { "field": [BACK_BREAKER], "hand": [HIT_JOB, STOCKPILE], "library": spare_library() },
+                    "p2": { "hand": ["classic-006", STOCKPILE], "library": spare_library() },
+                }));
+                s.play("classic-006", json!({ "zone": 2, "row": "backrow", "faceDown": "cloaked" }));
+                assert!(s.backrow(P2, 2).is_some_and(|card| card.set_as.is_some()));
+                s.end_turn();
+                hit(&mut s, BACK_BREAKER);
+                assert!(s.backrow(P2, 2).is_none());
+                assert!(def_ids(&s.pile(P2, "graveyard")).iter().any(|card| card == "classic-006"));
             }
 
             #[test]

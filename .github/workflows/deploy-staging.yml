@@ -1,8 +1,8 @@
-# Deploys the `staging` branch to staging, https://staging.jackioh.com (the `jackioh-staging` Worker,
+# Deploys the `_staging` branch to staging, https://staging.jackioh.com (the `jackioh-staging` Worker,
 # wrangler.jsonc's `env.staging`), each time it moves: the site and its game server together, as
-# promote-production.yml's `deploy` job puts `production` on jackioh.com, with the same setup and
+# promote-production.yml's `deploy` job puts `_production` on jackioh.com, with the same setup and
 # staging's own build (`build:staging`, apps/web/.env.staging) and bundle check. promote-staging.yml
-# moves `staging` every two hours to main's newest commit whose push-to-main CI passed (#3275), so
+# moves `_staging` every two hours to main's newest commit whose push-to-main CI passed (#3275), so
 # what deploys here has passed CI on exactly that commit. docs/deploy-cloudflare.md is the plan.
 #
 # Two ways in:
@@ -10,7 +10,7 @@
 #                      this: staging's new head. A push runs the workflow file of the commit pushed,
 #                      so a change to this file reaches staging with the commit that makes it.
 #   workflow_dispatch  by hand (Actions -> deploy staging -> Run workflow): the `sha` given, which must
-#                      be on `staging`, or staging's head. To deploy a newer commit of main, move
+#                      be on `_staging`, or staging's head. To deploy a newer commit of main, move
 #                      staging first (Actions -> promote staging -> Run workflow).
 #
 # One deploy at a time, and the one running finishes: GitHub keeps one more waiting, the newest, and
@@ -40,7 +40,7 @@ name: deploy staging
 
 on:
   push:
-    branches: [staging]
+    branches: [_staging]
   workflow_dispatch:
     inputs:
       sha:
@@ -95,19 +95,19 @@ jobs:
           set -euo pipefail
           # A push deploys what it pushed (a newer push's run waits its turn, and GitHub cancels an
           # older one still waiting); a dispatch deploys the commit named, or staging's head.
-          head=$(gh api "repos/$GH_REPO/commits/staging" --jq .sha)
+          head=$(gh api "repos/$GH_REPO/commits/_staging" --jq .sha)
           if [ "$EVENT" = push ]; then
             sha=$PUSHED
           else
             sha=${INPUT_SHA:-$head}
             sha=$(gh api "repos/$GH_REPO/commits/$sha" --jq .sha) || { echo "::error::$INPUT_SHA is not a commit of $GH_REPO."; exit 1; }
-            case $(gh api "repos/$GH_REPO/compare/$sha...staging" --jq .status) in
+            case $(gh api "repos/$GH_REPO/compare/$sha..._staging" --jq .status) in
               ahead | identical) ;;
-              *) echo "::error::$sha is not on staging. Move staging first (Actions -> promote staging -> Run workflow)."; exit 1 ;;
+              *) echo "::error::$sha is not on _staging. Move _staging first (Actions -> promote staging -> Run workflow)."; exit 1 ;;
             esac
           fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          echo "deploying ${sha:0:12} to staging (staging's head is ${head:0:12})"
+          echo "deploying ${sha:0:12} to staging (_staging's head is ${head:0:12})"
 
       - uses: actions/checkout@v4
         with:

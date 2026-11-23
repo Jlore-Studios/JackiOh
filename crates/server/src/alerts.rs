@@ -1,7 +1,7 @@
 //! Alerts told to people (#3595). Not in SPEC, and no R-row: operational, as `bug_reports.rs` is.
 //!
-//! An alert is an error log line with `alert = true`: `api::http::log_alert`'s, and the two of
-//! `loops.rs`. Before #3595 one reached only the Worker's log. `AlertLayer`, beside the JSON log
+//! An alert is an error log line with `alert = true`: `api::http::log_alert`'s (a player's browser
+//! crash is one too, `api/client_errors.rs`, #3619), and `loops.rs`'s. Before #3595 one reached only the Worker's log. `AlertLayer`, beside the JSON log
 //! (`app::init_logging`), now hands each to one task, which makes at most one notice per event in
 //! `ALERT_WINDOW_MS` per process (the rest are counted, logged as `alert.held`, and the next notice
 //! says how many) and tells people two ways:
@@ -33,6 +33,7 @@ use tracing::field::{Field, Visit};
 use tracing_subscriber::layer::Context;
 
 use crate::api::http::now_ms;
+use crate::bug_reports::github_answer;
 use crate::config::{
     ALERT_EMAIL_API_URL, ALERT_EMAIL_DAY_MS, ALERT_EMAIL_FROM, ALERT_EMAILS_PER_DAY, ALERT_ISSUE_LABELS,
     ALERT_QUEUE, ALERT_TIMEOUT_MS, ALERT_WINDOW_MS, ALERTS_FILED_ELSEWHERE, BUG_REPORT_API_URL,
@@ -301,7 +302,7 @@ impl Notifier {
             &[("q", query.as_str()), ("per_page", "10")],
         )
         .map_err(|error| error.to_string())?;
-        let found = answer(crate::bug_reports::github(self.http.get(search), &github.token)).await?;
+        let found = github_answer(crate::bug_reports::github(self.http.get(search), &github.token)).await?;
         // The search matches words, so only an issue with exactly this title is the event's.
         let open = found["items"]
             .as_array()
@@ -311,7 +312,7 @@ impl Notifier {
                 .as_u64()
                 .ok_or_else(|| "GitHub answered an issue with no number".to_string())?;
             let url = open["html_url"].as_str().unwrap_or_default().to_string();
-            answer(github_post(
+            github_answer(github_post(
                 &self.http,
                 github,
                 &format!("issues/{number}/comments"),
@@ -320,7 +321,7 @@ impl Notifier {
             .await?;
             return Ok(Issue::Commented(url));
         }
-        let created = answer(github_post(
+        let created = github_answer(github_post(
             &self.http,
             github,
             "issues",
@@ -371,18 +372,6 @@ fn github_post(http: &reqwest::Client, github: &GitHub, path: &str, body: Value)
     .json(&body)
 }
 
-/// A request's JSON answer, or why there is none.
-async fn answer(request: reqwest::RequestBuilder) -> Result<Value, String> {
-    request
-        .send()
-        .await
-        .and_then(reqwest::Response::error_for_status)
-        .map_err(|error| error.to_string())?
-        .json()
-        .await
-        .map_err(|error| error.to_string())
-}
-
 /// The email's `Idempotency-Key`, which Resend keeps a day and sends once: one email per new issue,
 /// and otherwise one per event and site per UTC day. Each process's window and allowance are its own,
 /// and the container restarts many times a day (it sleeps when idle), so without it an alert raised at
@@ -415,12 +404,33 @@ pub fn issue_title(event: &str, site: &str) -> String {
     format!("Patch: alert {event} on {site}")
 }
 
+/// What an alert says when `meaning` has no text for it; a test fails on any alert that gets it.
+const UNDESCRIBED: &str = "An alert `alerts::meaning` does not describe yet (crates/server/src/alerts.rs).";
+
+/// The text of a `<step>.failing` alert (#3770): the step's job, what players notice, and the tail every
+/// such text shares. Literals only, so it stays a `&'static str`; no number is written here, so none drifts
+/// from `config.rs`.
+macro_rules! failing_step {
+    ($job:literal, $players:literal) => {
+        concat!(
+            $job,
+            " ",
+            $players,
+            " It has failed on every pass for at least `LOOP_FAILING_ALERT_MS` and at least \
+             `LOOP_FAILING_ALERT_PASSES` passes in a row (crates/server/src/config.rs). The email's \
+             `message` field holds the error."
+        )
+    };
+}
+
 /// What an event means, for a person reading the notice on a phone.
 pub fn meaning(event: &str) -> &'static str {
     match event {
         "loop.crashed" => {
-            "A background loop (the matchmaker, the reaper, the series sweeper, the retention purge, the bot \
-             pool or the store's heartbeat) panicked. It restarts by itself, but the panic is a bug."
+            "A background loop (the matchmaker, the series sweeper, the match reaper, the retention purge, \
+             the challenge sweeper, the co-op sweeper, the daily-games sweeper, the store's heartbeat or \
+             the bot pool) panicked. The email's `loop` field names it. It restarts by itself, but the \
+             panic is a bug."
         }
         "loop.returned" => "A background loop returned, which none should. It restarts by itself.",
         "api.rejections.unusual" => {
@@ -441,11 +451,92 @@ pub fn meaning(event: &str) -> &'static str {
             "GitHub refused CREATE_ISSUES_TOKEN, so neither bug reports nor alerts can open issues until \
              it is renewed (crates/server/README.md, A match its log does not reproduce)."
         }
+        "api.route.failing" => {
+            "An API route, or a socket's upgrade, answered an internal error to every request for a minute \
+             or more (#3826); the email names it."
+        }
+        "client.error" => {
+            "A player's browser crashed: a screen the error boundary caught, an uncaught error or an \
+             unhandled promise rejection (POST /api/client-errors, #3619). The message, a trimmed stack \
+             and the route are in the email; this issue holds none of them."
+        }
         "bug.found" => {
             "A match did not replay from its own log, or the engine panicked on a live action. Its bug \
              report has an issue of its own for the night bot."
         }
-        _ => "An alert `alerts::meaning` does not describe yet (crates/server/src/alerts.rs).",
+        "matchmaker.failing" => failing_step!(
+            "The matchmaker, which pairs queued tickets into matches every few seconds (§9.5), is failing.",
+            "Queued players are not being paired: nobody who queues gets a game."
+        ),
+        "matches.reaper.failing" => failing_step!(
+            "The match reaper, which ends live matches past their ceiling (R79), is failing, or at least one match would not reap.",
+            "Stalled matches are not ended, so their players stay seated and cannot start another game, and rating results wait."
+        ),
+        "matches.open_reaper.failing" => failing_step!(
+            "The open-room reap (R1450), which deletes rooms nobody joined and starts that never happened, is failing.",
+            "Such rooms keep their room codes and both players, so those players cannot queue or host again."
+        ),
+        "seats.reconcile.failing" => failing_step!(
+            "The seat reconcile (R1523000), which checks the in-memory seat ledger against the database on each reaper tick, is failing.",
+            "A seat left by a game that ended may stay held, so a player is told they are already in a game."
+        ),
+        "series.sweeper.failing" => failing_step!(
+            "The Conquest series sweeper (R263), which runs the pick clock and starts games a restart left unstarted, is failing.",
+            "Conquest series stall between games: picks never time out and a next game may not start."
+        ),
+        "duos.sweeper.failing" => failing_step!(
+            "The co-op sweeper, which reaps expired rooms, drops finished actors and folds back live matches with no actor, is failing, or at least one co-op match would not end.",
+            "Co-op rooms and matches may hang instead of ending."
+        ),
+        "challenges.sweeper.failing" => failing_step!(
+            "The challenge sweeper (B49), which deletes lapsed friend challenges, is failing.",
+            "Lapsed challenges stay listed instead of expiring."
+        ),
+        "daily.sweeper.failing" => failing_step!(
+            "The daily-games sweeper (§9.13), which expires invites, settles overdue daily games and sends the notices, is failing while the server is awake.",
+            "Overdue daily games are not settled and players are not emailed or pushed about them."
+        ),
+        "game_records.fold.failing" => failing_step!(
+            "The statistics fold (R1044000), which adds finished game records to the card statistics, is failing.",
+            "Card statistics stop updating, and the purge may hold records it cannot empty."
+        ),
+        "game_records.refile.failing" => failing_step!(
+            "The record refile (R1596000), which files finished matches whose record never landed, is failing.",
+            "Some finished games may miss the statistics before their log is purged."
+        ),
+        "retention.purge.failing" => failing_step!(
+            "The retention purge, which deletes old code attempts, match logs, play telemetry and raw game records, is failing.",
+            "Nothing players see yet, but the database keeps growing and old logs stay past their retention."
+        ),
+        "chat.purge.failing" => failing_step!(
+            "The chat purge (B53), which deletes messages past `CHAT_RETENTION_DAYS`, is failing.",
+            "Old chat messages stay stored past their retention."
+        ),
+        "duos.logs.purge.failing" => failing_step!(
+            "The co-op log purge, which deletes co-op match logs past `MATCH_ACTION_RETENTION_DAYS`, is failing.",
+            "Old co-op logs and their replays stay past their retention."
+        ),
+        "idempotency.sweep.failing" => failing_step!(
+            "The idempotency sweep (R2124000), which deletes spend keys past `IDEMPOTENCY_KEY_TTL_HOURS`, is failing.",
+            "Nothing players see yet: expired keys pile up."
+        ),
+        "lobbies.sweep.failing" => failing_step!(
+            "The lobby sweep (R3730004), which deletes expired private lobbies past their format's TTL, is failing.",
+            "Nothing players see yet: expired lobbies pile up with their deck picks."
+        ),
+        "shares.purge.failing" => failing_step!(
+            "The replay share purge (R4390001), which deletes shares whose replay's log the retention purge took, is failing.",
+            "Nothing players see yet: dead replay shares pile up in the database."
+        ),
+        "practice.sweep.failing" => failing_step!(
+            "The practice settle sweep (R2422000), which settles practice claims unsettled after `PRACTICE_SETTLE_GRACE_SECONDS`, is failing.",
+            "Practice claims are not paid or refused, so rewards are late."
+        ),
+        "practice.prune.failing" => failing_step!(
+            "The practice seed prune (R4317001), which deletes every account's practice seeds issued over `PRACTICE_SEED_TTL_SECONDS` ago that are unclaimed or settled, is failing.",
+            "Nothing players see yet: lapsed practice seeds pile up in the database."
+        ),
+        _ => UNDESCRIBED,
     }
 }
 
@@ -653,6 +744,28 @@ mod tests {
     }
 
     #[test]
+    fn a_client_error_alert_keeps_its_details_out_of_the_public_issue() {
+        let raised = Alert {
+            event: "client.error".to_string(),
+            fields: [("data".to_string(), "TypeError: boom-secret-message".to_string())]
+                .into_iter()
+                .collect(),
+            at: 1_762_776_000_000,
+        };
+        let body = issue_body("jackioh.com", Some("abc1234"), &raised, 0);
+        let comment = comment_of(Some("abc1234"), &raised, 0);
+        for public in [&body, &comment] {
+            assert!(!public.contains("boom-secret-message"), "{public}");
+        }
+        assert!(
+            body.contains("`client.error`") && body.contains("#3619"),
+            "{body}"
+        );
+        let (_, text) = email_of("jackioh.com", None, &raised, 0, &Issue::NotFiled);
+        assert!(text.contains("boom-secret-message"), "{text}");
+    }
+
+    #[test]
     fn the_email_key_is_one_per_new_issue_or_else_one_per_event_site_and_day() {
         let at = 1_794_312_000_000; // 2026-11-10T12:00:00Z
         let raised = alert("bug.reports.refused", at);
@@ -676,10 +789,104 @@ mod tests {
         assert!(per_issue.len() <= 256, "Resend's longest key");
     }
 
+    /// The alert names a source file raises: each `FailingStreak::new("<step>")` as `<step>.failing`, each
+    /// `log_alert("<event>"` and each `event = "<event>", alert = true` (no regex: the crate has none).
+    fn alert_names(source: &str) -> Vec<String> {
+        let literal = |rest: &str| -> Option<String> {
+            let rest = rest.strip_prefix('"')?;
+            Some(rest[..rest.find('"')?].to_string())
+        };
+        let mut names = Vec::new();
+        let step = "FailingStreak::new(\"";
+        for (at, _) in source.match_indices(step) {
+            if let Some(name) = literal(&source[at + step.len() - 1..]) {
+                names.push(format!("{name}.failing"));
+            }
+        }
+        let call = "log_alert(";
+        for (at, _) in source.match_indices(call) {
+            if let Some(name) = literal(source[at + call.len()..].trim_start()) {
+                names.push(name);
+            }
+        }
+        for (at, _) in source.match_indices("alert = true") {
+            let before = &source[..at];
+            let Some(event) = before.rfind("event = ") else {
+                continue;
+            };
+            let after = &before[event + "event = ".len()..];
+            if !after.contains(';')
+                && let Some(name) = literal(after)
+            {
+                names.push(name);
+            }
+        }
+        names
+    }
+
+    /// The names among `names` that `meaning` has no text for.
+    fn unexplained(names: &[String]) -> Vec<String> {
+        names
+            .iter()
+            .filter(|name| meaning(name) == UNDESCRIBED)
+            .cloned()
+            .collect()
+    }
+
+    /// Every `.rs` file under `dir`, `alerts.rs` aside (its tests raise made-up names).
+    fn sources(dir: &std::path::Path, found: &mut Vec<std::path::PathBuf>) {
+        for entry in std::fs::read_dir(dir).expect("src is readable") {
+            let path = entry.expect("a directory entry").path();
+            if path.is_dir() {
+                sources(&path, found);
+            } else if path.extension().is_some_and(|ext| ext == "rs") && !path.ends_with("alerts.rs") {
+                found.push(path);
+            }
+        }
+    }
+
+    /// Every alert name the server's source raises, sorted.
+    fn source_alert_names() -> Vec<String> {
+        let mut files = Vec::new();
+        sources(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+            &mut files,
+        );
+        let mut names: Vec<String> = files
+            .iter()
+            .flat_map(|file| alert_names(&std::fs::read_to_string(file).expect("a source file")))
+            .collect();
+        names.sort();
+        names.dedup();
+        names
+    }
+
+    const FAILING_STEPS: [&str; 18] = [
+        "matchmaker",
+        "matches.reaper",
+        "seats.reconcile",
+        "matches.open_reaper",
+        "game_records.fold",
+        "game_records.refile",
+        "retention.purge",
+        "shares.purge",
+        "chat.purge",
+        "duos.logs.purge",
+        "idempotency.sweep",
+        "lobbies.sweep",
+        "practice.sweep",
+        "practice.prune",
+        "series.sweeper",
+        "duos.sweeper",
+        "challenges.sweeper",
+        "daily.sweeper",
+    ];
+
     #[test]
     fn every_alert_the_server_raises_says_what_it_means() {
-        let fallback = meaning("no.such.event");
-        for event in [
+        let names = source_alert_names();
+        // A scanner that finds nothing would pass, so the names known today must be found.
+        let known = [
             "loop.crashed",
             "loop.returned",
             "api.rejections.unusual",
@@ -688,8 +895,105 @@ mod tests {
             "game_records.fold_poison",
             "bug.reports.refused",
             "bug.found",
+            "api.route.failing",
+            "client.error",
+        ]
+        .map(String::from)
+        .into_iter()
+        .chain(FAILING_STEPS.map(|step| format!("{step}.failing")));
+        for name in known {
+            assert!(names.contains(&name), "the scan did not find {name}: {names:?}");
+        }
+        assert_eq!(
+            unexplained(&names),
+            Vec::<String>::new(),
+            "alerts the server raises with no text in alerts::meaning"
+        );
+    }
+
+    #[test]
+    fn a_made_up_step_with_no_text_is_found_unexplained() {
+        let unexplained_in = |source: &str| unexplained(&alert_names(source));
+        assert_eq!(
+            unexplained_in("let mut s = FailingStreak::new(\"made.up\");"),
+            ["made.up.failing"]
+        );
+        assert_eq!(
+            unexplained_in("log_alert(\n    \"made.up.event\",\n    data)"),
+            ["made.up.event"]
+        );
+        assert_eq!(
+            unexplained_in("tracing::error!(event = \"made.up.crashed\", alert = true, x = 1)"),
+            ["made.up.crashed"]
+        );
+        assert!(unexplained_in("FailingStreak::new(\"matchmaker\")").is_empty());
+    }
+
+    #[test]
+    fn the_scan_skips_what_is_no_literal_alert() {
+        for source in [
+            "FailingStreak::new(step)",
+            "fn log_alert(event: &str, data: Value) {",
+            "tracing::error!(event = event, alert = true)",
+            "tracing::warn!(event = \"x.y\"); foo(alert = true)",
         ] {
-            assert_ne!(meaning(event), fallback, "{event}");
+            assert!(alert_names(source).is_empty(), "{source}");
+        }
+    }
+
+    #[test]
+    fn every_failing_step_names_its_job_and_what_players_notice() {
+        for step in FAILING_STEPS {
+            let text = meaning(&format!("{step}.failing"));
+            assert_ne!(text, UNDESCRIBED, "{step}");
+            for part in ["LOOP_FAILING_ALERT_MS", "LOOP_FAILING_ALERT_PASSES", "`message`"] {
+                assert!(text.contains(part), "{step}: {part}");
+            }
+        }
+        let body = issue_body(
+            "jackioh.com",
+            Some("abc1234"),
+            &alert("matchmaker.failing", 1_762_776_000_000),
+            0,
+        );
+        assert!(body.contains("not being paired"), "{body}");
+        assert!(!body.contains(UNDESCRIBED), "{body}");
+    }
+
+    #[test]
+    fn loop_crashed_names_every_loop_spawn_loops_starts() {
+        let app =
+            std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/app.rs")).expect("app.rs");
+        let start = "loops::spawn_supervised(";
+        let loops: Vec<&str> = app
+            .match_indices(start)
+            .filter_map(|(at, _)| {
+                let rest = app[at + start.len()..].trim_start().strip_prefix('"')?;
+                Some(&rest[..rest.find('"')?])
+            })
+            .collect();
+        assert!(loops.len() >= 9, "{loops:?}");
+        let crashed = meaning("loop.crashed");
+        // The text speaks of loops in words; the names below are the ones `spawn_loops` gives each.
+        let words = [
+            ("matchmaker", "matchmaker"),
+            ("series.sweeper", "series sweeper"),
+            ("matches.reaper", "match reaper"),
+            ("retention.purge", "retention purge"),
+            ("challenges.sweeper", "challenge sweeper"),
+            ("duos.sweeper", "co-op sweeper"),
+            ("daily.sweeper", "daily-games sweeper"),
+            ("db.heartbeat", "heartbeat"),
+            ("bots.pool", "bot pool"),
+        ];
+        for name in &loops {
+            let (_, word) = words
+                .iter()
+                .find(|(loop_name, _)| loop_name == name)
+                .unwrap_or_else(|| {
+                    panic!("spawn_loops starts {name}, which this test and loop.crashed do not know")
+                });
+            assert!(crashed.contains(word), "loop.crashed does not name {name}");
         }
     }
 

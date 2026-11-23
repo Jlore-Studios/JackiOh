@@ -1085,9 +1085,7 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
                 .iter()
                 .find(|card| card.def_id == HEROIC_POWER)
                 .map(|card| card.id.clone());
-            let play = legal_actions(&state, PlayerId::P2).into_iter().find(|body| {
-                matches!(body, ActionBody::Play { instance_id, .. } if Some(instance_id) == power.as_ref())
-            });
+            let play = power.and_then(|power| plays_in(&state, PlayerId::P2, &power).into_iter().next());
             act(
                 &mut state,
                 &mut nonce,
@@ -1330,14 +1328,7 @@ fn type_matches(state: &GameState, def_id: &str, want: &str) -> bool {
 }
 
 fn most_matching(pending: &PendingChoice, count: impl Fn(&str) -> usize) -> String {
-    let mut options: Vec<String> = pending
-        .options
-        .iter()
-        .filter_map(|option| match &option.selection {
-            Selection::Mode { option } => Some(option.clone()),
-            _ => None,
-        })
-        .collect();
+    let mut options = prompt_modes_of(pending);
     options.sort_by_key(|option| std::cmp::Reverse(count(option.as_str())));
     must(options.into_iter().next(), "a mode option")
 }
@@ -2053,8 +2044,9 @@ mod r243_what_the_view_carries_of_a_card_beyond_its_printed_face {
         let power = g.card(&power.id).clone();
         let rolled = must(power_of(&power), "a power on the Heroic Power");
         let entry = hand_entry(&g.view("p1"), &power.id);
-        // The card costs (0) whatever power it holds (R752), so the cost in the view does not say which it is.
-        assert_eq!(entry["cost"], json!(0));
+        // The card costs (1) whatever power it holds (R752, since issue #3996), so the cost in the view does
+        // not say which it is.
+        assert_eq!(entry["cost"], json!(1));
         assert_eq!(
             entry["power"],
             json!(rolled.name.to_string()),

@@ -3,8 +3,9 @@
 //!            Embiggened (4): Your board too."
 //!   Radiant: "... with a random Radiant Legendary." — the same zones with `radiant: true` on every
 //!            replacement (§8 Conventions).
-//! Embiggened (4) in play action (R81, R65, §10.6). Replaces cards with random Legendaries (R35; §5.1, R387, R60; CLAUDE.md rule 4, §9.3).
+//! Embiggened (4) in play action (R81, R65, §10.6). Replaces cards with random Legendaries (R35; §5.1, R387, R60, R3563000; CLAUDE.md rule 4, §9.3).
 //! Board replacement transforms units (R57, §6.3, §10.4; traps/field spells replaced in place).
+//! A Dormant board card is left out: it stays as it is and draws nothing (R129, R4424000).
 
 use jackioh_engine::prelude::*;
 
@@ -48,8 +49,9 @@ fn same_type_legendaries(type_: CardType) -> Vec<&'static CardDef> {
 }
 
 /// §3.2, R13: "your board" is top of each zone pile.
-/// R35, R23, R129: Immutable board card stays and draws no random number.
-fn board_cards(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
+/// R35, R23, R129: Immutable board card stays and draws no random number; R4424000: a Dormant
+/// board card stays too, drawing nothing as an Immutable card draws nothing.
+fn board_cards(ctx: &EffectContext<'_>, kept: bool) -> Vec<CardInstance> {
     [Row::Units, Row::Backrow]
         .into_iter()
         .flat_map(|row| {
@@ -57,7 +59,7 @@ fn board_cards(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
                 .into_iter()
                 .filter_map(|slot| {
                     let card = card_at(ctx.state, slot)?;
-                    if unit_has(ctx.state, card, KeywordKind::Immutable) {
+                    if is_immutable(ctx.state, card) || (!kept && is_slumbering(card)) {
                         None
                     } else {
                         Some(card.clone())
@@ -80,8 +82,9 @@ fn pile_cards(ctx: &EffectContext<'_>, zone: OffFieldZone) -> Vec<CardInstance> 
 }
 
 /// §6.3 Replace: one card, one random Legendary from its pool, named by instance (R81 does not apply).
+/// R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
 fn replace(ctx: &mut EffectContext<'_>, card: &CardInstance, pool: &[&'static CardDef], radiant_result: bool) -> Vec<Effect> {
-    let Some(pick) = ctx.rng.pick(pool) else {
+    let Some(pick) = pick_unique(&mut *ctx.sink.rng, pool, &mut ctx.draw_tally) else {
         return vec![];
     };
     vec![transform(json_as(json!({
@@ -92,7 +95,12 @@ fn replace(ctx: &mut EffectContext<'_>, card: &CardInstance, pool: &[&'static Ca
 }
 
 /// The faces differ only in whether the cards that arrive are Radiant (§5.2, R74).
-fn transmogulate(radiant_result: bool, piles: &'static [OffFieldZone], board: Board) -> Script {
+fn transmogulate(
+    radiant_result: bool,
+    piles: &'static [OffFieldZone],
+    board: Board,
+    kept: bool,
+) -> Script {
     Script {
         // A Spell's script hangs off `cry`: that is its on-resolve hook (§10.9).
         cry: Some(hook(move |ctx| {
@@ -100,7 +108,7 @@ fn transmogulate(radiant_result: bool, piles: &'static [OffFieldZone], board: Bo
             // The board first, each card by its own type (R35); lane order, so the rng draws are fixed.
             // Since #2179 only the Embiggened version reaches it (R81: `instance.embiggened`).
             if board == Board::Always || ctx.embiggened {
-                for card in board_cards(ctx) {
+                for card in board_cards(ctx, kept) {
                     let type_ = def_of(Some(&*ctx.state), &card.def_id).type_;
                     let pool = same_type_legendaries(type_);
                     effects.extend(replace(ctx, &card, &pool, radiant_result));
@@ -121,9 +129,9 @@ fn transmogulate(radiant_result: bool, piles: &'static [OffFieldZone], board: Bo
 }
 
 pub fn script() -> CardScripts {
-    let base = transmogulate(false, OFF_FIELD_ZONES, Board::Embiggened);
+    let base = transmogulate(false, OFF_FIELD_ZONES, Board::Embiggened, false);
     // "Random Radiant Legendaries": the same zones, every replacement Radiant.
-    let radiant = transmogulate(true, OFF_FIELD_ZONES, Board::Embiggened);
+    let radiant = transmogulate(true, OFF_FIELD_ZONES, Board::Embiggened, false);
     CardScripts { base, radiant }
 }
 
@@ -131,8 +139,17 @@ pub fn script() -> CardScripts {
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
-        base: transmogulate(false, OFF_FIELD_ZONES_V0_5_2, Board::Always),
-        radiant: transmogulate(true, OFF_FIELD_ZONES_V0_5_2, Board::Always),
+        base: transmogulate(false, OFF_FIELD_ZONES_V0_5_2, Board::Always, true),
+        radiant: transmogulate(true, OFF_FIELD_ZONES_V0_5_2, Board::Always, true),
+    }
+}
+
+/// R767000: through v0.6.9l a Dormant board card drew a random Legendary it was never replaced by
+/// (issue #4424); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9l() -> CardScripts {
+    CardScripts {
+        base: transmogulate(false, OFF_FIELD_ZONES, Board::Embiggened, true),
+        radiant: transmogulate(true, OFF_FIELD_ZONES, Board::Embiggened, true),
     }
 }
 
@@ -450,6 +467,29 @@ mod tests {
         }
 
         #[test]
+        fn r3563000_under_unique_draws_every_replacement_is_a_different_legendary() {
+            crate::register_all();
+            for n in 0..5 {
+                let library = vec!["core-020"; 20];
+                let s = with_unique_draws(true, || {
+                    let mut s = scenario(json!({
+                        "seed": format!("r3563000-transmogulate-{n}"),
+                        "p1": { "hand": [TRANSMOGULATE], "library": library },
+                        "p2": { "field": ["core-011"], "library": ["core-020"] },
+                    }));
+                    s.play(TRANSMOGULATE, json!({}));
+                    s
+                });
+                let replaced = def_ids(&s.pile(P1, "library"));
+                assert_eq!(replaced.len(), 20, "seed {n}");
+                let mut sorted = replaced.clone();
+                sorted.sort();
+                sorted.dedup();
+                assert_eq!(sorted.len(), 20, "seed {n}: {replaced:?}");
+            }
+        }
+
+        #[test]
         fn r13_a_card_dormant_under_a_stack_is_not_on_your_board_only_the_top_of_the_pile_is_replaced() {
             crate::register_all();
             // #92 Felinor Fiender (Stack) on top of #43 Big Felinor in lane 1; the Big Felinor is dormant.
@@ -487,6 +527,69 @@ mod tests {
             assert!(!transformed.contains(&buried.id));
             s.expect_in_zone(&buried, "field");
             assert_eq!(s.card(&buried).def_id, "core-043");
+        }
+
+        /// The Dormant board card the Embiggened version leaves alone: a Dormant Smith beside the
+        /// lane-1 Unit.
+        fn dormant_board(seed: &str) -> Scenario {
+            scenario(json!({
+                "seed": seed,
+                "p1": {
+                    "hand": [TRANSMOGULATE, "core-056"],
+                    "field": ["core-011", { "def": "stinkyscape-017", "slumber": { "turns": 2 } }],
+                    "library": ["core-020", "core-025"],
+                },
+                "p2": { "field": ["core-011"], "library": ["core-020"] },
+            }))
+        }
+
+        #[test]
+        fn r4424000_an_embiggened_transmogulate_leaves_a_dormant_board_card_alone() {
+            crate::register_all();
+            let mut s = dormant_board("transmogulate-dormant");
+            let dormant = s.unit(P1, 2).map(|card| card.id.clone()).expect("the Smith");
+            s.play(TRANSMOGULATE, embiggened());
+
+            // The Dormant card kept its instance, its def and its countdown; nothing transformed it.
+            let smith = s.unit(P1, 2).expect("the Smith still stands");
+            assert_eq!(smith.id, dormant);
+            assert_eq!(smith.def_id, "stinkyscape-017");
+            assert_eq!(slumber_turns_of(&smith), Some(2));
+            assert!(!s.events().iter().any(|event| matches!(
+                event,
+                GameEvent::Transformed { instance_id, .. } if *instance_id == dormant
+            )));
+        }
+
+        #[test]
+        fn r4424000_the_other_replacements_are_the_draws_they_would_get_with_it_absent() {
+            crate::register_all();
+            let seed = "transmogulate-dormant-absent";
+            // The same seed with the Dormant card gone and its lane empty: every other replacement
+            // draws what it draws beside the Dormant card, which draws nothing.
+            let mut with = dormant_board(seed);
+            with.play(TRANSMOGULATE, embiggened());
+            let mut without = scenario(json!({
+                "seed": seed,
+                "p1": {
+                    "hand": [TRANSMOGULATE, "core-056"],
+                    "field": ["core-011"],
+                    "library": ["core-020", "core-025"],
+                },
+                "p2": { "field": ["core-011"], "library": ["core-020"] },
+            }));
+            without.play(TRANSMOGULATE, embiggened());
+
+            assert_eq!(unit_def(&with, P1, 1), unit_def(&without, P1, 1));
+            assert!(legendary_units().contains(&unit_def(&with, P1, 1)));
+            assert_eq!(
+                def_ids(&with.pile(P1, "library")),
+                def_ids(&without.pile(P1, "library"))
+            );
+            assert_eq!(
+                with.hand(Some(P1)).into_iter().map(|card| card.def_id).collect::<Vec<_>>(),
+                without.hand(Some(P1)).into_iter().map(|card| card.def_id).collect::<Vec<_>>()
+            );
         }
     }
 

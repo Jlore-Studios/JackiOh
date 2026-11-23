@@ -197,6 +197,18 @@ mod tests {
         (1..=5).filter_map(|lane| s.unit(P1, lane)).collect()
     }
 
+    /// The first `<prefix>-<n>` seed whose base cast leaves its two hand cards in the hand: the CN card
+    /// the hand becomes may leave it by itself (M #87 Tatches the Totem summons itself, #3951), and which
+    /// card that is moves with every CN card joining the pool (#848). `prepare` runs before the play.
+    fn kept_hand(prefix: &str, prepare: impl Fn(&mut Scenario)) -> String {
+        seed_where(prefix, |seed| {
+            let mut s = casting(seed, false);
+            prepare(&mut s);
+            s.play(SPIRITUALLY, json!({}));
+            s.hand(P1).len() == 2
+        })
+    }
+
     mod m32_spiritually_zhongguo {
         use super::*;
 
@@ -204,7 +216,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn all_three_in_order_the_learning_the_hand_and_five_cn_units() {
+            fn all_three_in_order_the_learning_the_hand_and_three_cn_units() {
                 let mut s = casting("spiritually-all", false);
                 s.play(SPIRITUALLY, json!({}));
                 for card in s.hand(P2) {
@@ -223,7 +235,7 @@ mod tests {
                 assert!(defs.iter().all(|def| *def == defs[0]));
                 assert!(CN_IDS.contains(&defs[0].as_str()));
                 let units = units_of(&s);
-                assert_eq!(units.len(), 5);
+                assert_eq!(units.len(), 3);
                 for unit in &units {
                     let def = crate::card_def(&unit.def_id);
                     assert_eq!(def.type_, CardType::Unit);
@@ -272,10 +284,13 @@ mod tests {
                     let mut s = casting(&format!("spiritually-prices-{n}"), false);
                     s.play(SPIRITUALLY, json!({}));
                     let hand = s.hand(P1);
-                    let def = crate::card_def(&hand[0].def_id);
-                    assert_eq!(effective_cost(s.state(), &hand[0], CostOptions::default()), printed_cost(s.state(), &hand[0]));
+                    // Issue #3951: a hand made Tatches the Totem summons itself into the lanes the three
+                    // Units leave open (five filled the row until issue #3996), leaving no hand to read.
+                    let Some(card) = hand.first() else { continue };
+                    let def = crate::card_def(&card.def_id);
+                    assert_eq!(effective_cost(s.state(), card, CostOptions::default()), printed_cost(s.state(), card));
                     if let CardCost::Fixed(price) = def.cost {
-                        assert_eq!(printed_cost(s.state(), &hand[0]), price);
+                        assert_eq!(printed_cost(s.state(), card), price);
                         prices.insert(price);
                     }
                 }
@@ -303,7 +318,10 @@ mod tests {
 
             #[test]
             fn units_reads_through_param() {
-                let mut s = casting("spiritually-param", false);
+                let seed = kept_hand("spiritually-param", |s| {
+                    set_param(s.card_mut(SPIRITUALLY), "units", 2);
+                });
+                let mut s = casting(&seed, false);
                 set_param(s.card_mut(SPIRITUALLY), "units", 2);
                 s.play(SPIRITUALLY, json!({}));
                 assert_eq!(units_of(&s).len(), 2);
@@ -330,7 +348,7 @@ mod tests {
                     assert_eq!(card.cost_override, None);
                 }
                 let units = units_of(&s);
-                assert_eq!(units.len(), 5);
+                assert_eq!(units.len(), 3);
                 for unit in &units {
                     assert!(unit.radiant);
                 }
@@ -371,7 +389,8 @@ mod tests {
             #[test]
             fn r767000_a_game_on_v0_5_9f_makes_the_hand_cost_0() {
                 crate::under_kept(SPIRITUALLY, script_v0_5_9f(), || {
-                    let mut s = casting("spiritually-kept-9e", false);
+                    let seed = kept_hand("spiritually-kept-9e", |_| {});
+                    let mut s = casting(&seed, false);
                     s.play(SPIRITUALLY, json!({}));
                     assert!(!s.hand(P1).is_empty());
                     for card in s.hand(P1) {
@@ -395,7 +414,9 @@ mod tests {
                         saw[effect as usize] = true;
                         s.play(SPIRITUALLY, json!({}));
                         let transformed = s.events().iter().any(|event| event.event_type() == GameEventType::Transformed);
-                        let summoned = !units_of(&s).is_empty();
+                        // Issue #3951: a hand transformed into Tatches the Totem summons itself after this CN
+                        // play resolves, which is no summon of this card's.
+                        let summoned = units_of(&s).iter().any(|unit| unit.def_id != crate::scripts::meditative::c087_tatches_the_totem::ID);
                         let learned = s.hand(P2).iter().all(|card| card.chinese == Some(true));
                         assert_eq!((learned, transformed, summoned), (effect == 0, effect == 1, effect == 2), "{seed}");
                     }

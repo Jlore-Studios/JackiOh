@@ -1,4 +1,4 @@
-// Tests for CardStatsBlock (SPEC §9.11, R654, R3185000, R3447000).
+// Tests for CardStatsBlock (SPEC §9.11, R654, R3185000, R3447000, R4082000, R4083000).
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -142,6 +142,66 @@ describe("R3185000 CardStatsBlock", () => {
     expect(screen.getByTestId(statsTestid.cardStatsTier)).not.toHaveClass("stats-tier");
     expect(screen.getByTestId(statsTestid.cardStatsAdjusted)).toHaveTextContent("—");
     expect(screen.getByText("60%")).toBeInTheDocument();
+  });
+});
+
+describe("R4082000 a card no deck holds reads its Created figures", () => {
+  /** A token's Created row: 50 seats made one, read against the other Created cards (R4083000: nothing else is sent). */
+  const TOKEN = {
+    id: "core-t-sheep",
+    name: "Sheep",
+    cost: 1,
+    rarity: "token",
+    set: "core",
+    games: 50,
+    adjustedWinRate: 0.4871,
+    adjustedLow: 0.43,
+    adjustedHigh: 0.54,
+    tier: "C",
+    hasEnoughGames: true,
+    window: { from: "0.2.0", liveGames: 1200, source: "live", counted: ["0.2.0"] },
+  };
+
+  function serveCreated(created: Record<string, unknown>, cards: Record<string, unknown>[] = []): void {
+    const body = { ...mockStatsResponse(SPARK_PUP), cards, created: [created] };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 })));
+  }
+
+  it("R4083000 a token shows its games, tier and adjusted win rate alone, no Win rate or Play rate", async () => {
+    serveCreated(TOKEN);
+    render(<CardStatsBlock cardId="core-t-sheep" />);
+    await screen.findByText("Adjusted win rate", undefined, SLOW);
+    expect(figures()).toEqual([
+      ["Games", "50"],
+      ["Tier", "C"],
+      ["Adjusted win rate", "48.7%"],
+    ]);
+    expect(screen.getByTestId(INSPECT_STATS)).not.toHaveTextContent(/Win rate|Play rate/);
+  });
+
+  it("R4083000 below the floor a token reads its games and — for tier and adjusted", async () => {
+    serveCreated({ ...TOKEN, games: 12, tier: null, hasEnoughGames: false });
+    render(<CardStatsBlock cardId="core-t-sheep" />);
+    await screen.findByText("Adjusted win rate", undefined, SLOW);
+    expect(figures()).toEqual([
+      ["Games", "12"],
+      ["Tier", "—"],
+      ["Adjusted win rate", "—"],
+    ]);
+    expect(screen.getByTestId(INSPECT_STATS)).not.toHaveTextContent(/not enough games|Win rate|Play rate/);
+  });
+
+  it("R4082000 a card a deck holds keeps its deck figures, Created copies or not", async () => {
+    serveCreated({ ...TOKEN, id: "core-001" }, [SPARK_PUP]);
+    render(<CardStatsBlock cardId="core-001" />);
+    await screen.findByText("Adjusted win rate", undefined, SLOW);
+    expect(figures()[0]).toEqual(["Games", "60"]);
+    expect(figures()[1]).toEqual(["Tier", "A"]);
+    // R4083000: a deck card keeps its Win rate and Play rate.
+    expect(figures().slice(3)).toEqual([
+      ["Win rate", "60%"],
+      ["Play rate", "50%"],
+    ]);
   });
 });
 

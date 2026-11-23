@@ -35,10 +35,17 @@ export const routes = {
   landing: () => env("landingRoute", "/"),
   /** #1307. */
   collection: () => env("collectionRoute", "/collection"),
-  /** R1579000: the Cards section. */
+  /** R1579000, R3734000: the Cards tab. */
   collectionCards: () => `${env("collectionRoute", "/collection")}?section=cards`,
+  /** Issue #3734, R3734000: the Progress tab: the wallet, the set tracks, the Fleet track and the quests. */
+  collectionProgress: () => `${env("collectionRoute", "/collection")}?section=progress`,
+  /** Issue #3734, R3734000: a Collection tab by its name: cards, decks, cosmetics or progress. */
+  collectionTab: (tab: "cards" | "decks" | "cosmetics" | "progress") => `${env("collectionRoute", "/collection")}?section=${tab}`,
   /** #1577, R1580000: where spec 45 buys, opens and redeems. */
   shop: () => env("shopRoute", "/shop"),
+  /** #3727: the Daily screen, and one daily game's board. */
+  daily: () => env("dailyRoute", "/daily"),
+  dailyGame: (matchId: string) => `${env("dailyRoute", "/daily")}/${matchId}`,
 };
 
 /** A6: `WS_PATH` is `/ws/match`; support type-checks without `apps/*`. */
@@ -93,12 +100,15 @@ export const TUTORIAL_HANDICAP = {
 export type E2EAccount = { email: string; password: string; token: string };
 
 /**
- * A6: `pending` waits at the spec-10 invite gate; `p1`/`p2` own every card. R1310004: `econ` waits there
- * too, for spec 45 to redeem (R1310000); the E2E server counts it alone as a dev account.
+ * A6: `pending` waits at the spec-10 invite gate; `p1`/`p2` own every card, as do `p3`/`p4`, a 2v2 lobby's
+ * other two people (spec 55, R3731000). R1310004: `econ` waits there too, for spec 45 to redeem (R1310000);
+ * the E2E server counts it alone as a dev account.
  */
-export const accounts: Record<"p1" | "p2" | "pending" | "econ", () => E2EAccount> = {
+export const accounts: Record<"p1" | "p2" | "p3" | "p4" | "pending" | "econ", () => E2EAccount> = {
   p1: () => ({ email: env("p1Email", "e2e-p1@jackioh.test"), password: env("p1Password", "e2e-p1-password"), token: env("p1Token", "e2e-token-p1") }),
   p2: () => ({ email: env("p2Email", "e2e-p2@jackioh.test"), password: env("p2Password", "e2e-p2-password"), token: env("p2Token", "e2e-token-p2") }),
+  p3: () => ({ email: env("p3Email", "e2e-p3@jackioh.test"), password: env("p3Password", "e2e-p3-password"), token: env("p3Token", "e2e-token-p3") }),
+  p4: () => ({ email: env("p4Email", "e2e-p4@jackioh.test"), password: env("p4Password", "e2e-p4-password"), token: env("p4Token", "e2e-token-p4") }),
   pending: () => ({ email: env("pendingEmail", "e2e-pending@jackioh.test"), password: env("pendingPassword", "e2e-pending-password"), token: env("pendingToken", "e2e-token-pending") }),
   econ: () => ({ email: env("econEmail", "e2e-econ@jackioh.test"), password: env("econPassword", "e2e-econ-password"), token: env("econToken", "e2e-token-econ") }),
 };
@@ -123,12 +133,29 @@ export const timeouts = {
   axe: 30_000,
 };
 
-/** BUILD M5-T1's two sizes; spec 46 holds every menu to one screen at both (R1581000). */
+/** BUILD M5-T1's two sizes; spec 47 measures the board at the phone's. The menus run at `MENU_SIZES`. */
 export const viewports = {
   desktop: { label: "desktop", width: 1280, height: 720 },
   phone: { label: "phone", width: 390, height: 844 },
 } as const;
 export type MenuViewport = (typeof viewports)[keyof typeof viewports];
+
+/**
+ * Issue #3728's device sizes (R3728000), the one list every menu layout spec runs: spec 46 holds each
+ * menu to one screen at every one (R1581000), spec 47 measures its tap areas (R2122000), spec 51 follows
+ * the menus' shell and spec 38 runs axe on it: two desktops, iPads held either way, an iPad mini upright
+ * and BUILD M5-T1's phone.
+ */
+export const MENU_SIZES = [
+  { label: "desktop-1440x900", width: 1440, height: 900 },
+  { label: "desktop-1280x720", width: 1280, height: 720 },
+  { label: "ipad-landscape-1180x820", width: 1180, height: 820 },
+  { label: "ipad-landscape-1366x1024", width: 1366, height: 1024 },
+  { label: "ipad-portrait-820x1180", width: 820, height: 1180 },
+  { label: "ipad-mini-portrait-744x1133", width: 744, height: 1133 },
+  { label: "phone-390x844", width: 390, height: 844 },
+] as const;
+export type MenuSize = (typeof MENU_SIZES)[number];
 
 /** SPEC §2 / BUILD §2 constants so specs do not hard-code them. */
 export const constants = {

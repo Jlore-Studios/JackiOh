@@ -41,7 +41,7 @@ import {
 } from "./constants.ts";
 import { buildMix, mixLevels, type Mix } from "./mix.ts";
 import { readAudioSettings, subscribeAudioSettings } from "./settings.ts";
-import { SFX, renderSfx } from "./sfx.ts";
+import { loadSfx, onSfxLoaded, sfxNow, type SfxRecipes } from "./sfxLoader.ts";
 import type {
   AudioEngine,
   AudioSettings,
@@ -58,7 +58,9 @@ import type {
   VoiceOutcome,
   VoicePriority,
 } from "./types.ts";
-import { CARD_AUDIO, VOICE_MANIFEST, effectFor, lineFor, voiceKey, voiceUrl } from "./voiceData.ts";
+import { effectFor, lineFor, voiceKey, voiceUrl } from "./voiceData.ts";
+import { loadSoundTables, onSoundTablesLoaded, soundTablesNow, type SoundTables } from "./soundTablesLoader.ts";
+import { savingData } from "../net/saveData.ts";
 
 export type SpeechPort = {
   speak(text: string, voice: { pitch: number; rate: number; volume: number }, onEnd: () => void): void;
@@ -132,8 +134,9 @@ export type AudioEngineOptions = {
   fetchBytes?: (url: string) => Promise<ArrayBuffer>;  // default fetch; rejects on !ok
   now?: () => number;                                  // ms; default performance.now()
   visibility?: () => DocumentVisibilityState;          // default document.visibilityState ("visible" without a document)
-  lines?: CardAudioTable;                              // default CARD_AUDIO
-  manifest?: VoiceManifest;                            // default VOICE_MANIFEST
+  lines?: CardAudioTable;                              // default loaded tables
+  manifest?: VoiceManifest;                            // default loaded tables
+  saveData?: () => boolean;                            // default shared savingData() (R4316000); tests pass an explicit port
   random?: () => number;                               // [0, 1); an effect's pitch variation (R655); default Math.random
 };
 
@@ -254,9 +257,56 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   const fetchBytes = options.fetchBytes ?? ((url: string) => fetchAudioBytes(url));
   const now = options.now ?? defaultNow;
   const visibility = options.visibility ?? defaultVisibility;
-  const lines = options.lines ?? CARD_AUDIO;
-  const manifest = options.manifest ?? VOICE_MANIFEST;
+  const saveData = options.saveData ?? savingData;
+  let loadedLines: CardAudioTable | null = options.lines ?? soundTablesNow()?.cardAudio ?? null;
+  let loadedManifest: VoiceManifest | null = options.manifest ?? soundTablesNow()?.voiceManifest ?? null;
+  // #4428: the sound-effect recipes arrive lazily (sfxLoader.ts), so a sound asked for before they
+  // land is skipped, never built. `SFX` and `renderSfx` below read through this, never the module.
+  let loadedSfx: SfxRecipes | null = sfxNow();
   const random = options.random ?? Math.random;
+
+  type WaitingVoice = {
+    defId: string;
+    lineKind: PlayableLineKind;
+    delayMs: number;
+    priority: VoicePriority;
+    requestedAt: number;
+    requestCtxTime: number;
+  };
+  let waitingForTables: WaitingVoice[] = [];
+
+  function onTablesLoaded(tables: SoundTables): void {
+    if (disposed) return;
+    if (loadedLines === null) loadedLines = tables.cardAudio;
+    if (loadedManifest === null) loadedManifest = tables.voiceManifest;
+    const queued = waitingForTables;
+    waitingForTables = [];
+    for (const item of queued) {
+      queueOrPlayVoice(
+        item.defId,
+        item.lineKind,
+        item.delayMs,
+        item.priority,
+        item.requestedAt,
+        ctx !== null ? ctx.currentTime : item.requestCtxTime,
+      );
+    }
+    if (heldPreload !== null) {
+      const held = heldPreload;
+      heldPreload = null;
+      preloadVoices(held);
+    }
+  }
+
+  function setSfx(recipes: SfxRecipes): void {
+    if (disposed) return;
+    if (loadedSfx === null) loadedSfx = recipes;
+  }
+
+  onSoundTablesLoaded(onTablesLoaded);
+  void loadSoundTables().catch(() => {});
+  const unsubscribeSfx = onSfxLoaded(setSfx);
+  void loadSfx().catch(() => {});
 
   let ctx: AudioContext | null = null;
   let buses: Mix | null = null;
@@ -401,6 +451,9 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
   function unlock(): void {
     if (factory === null || broken || disposed) return;
+    void loadSoundTables().then(onTablesLoaded).catch(() => {});
+    // #4428: the first gesture is the backstop that starts the recipes no earlier kick did.
+    void loadSfx().then(setSfx).catch(() => {});
     if (ctx !== null && ctx.state === "closed") teardownClosed();
     if (ctx === null) createFresh();
     if (ctx === null || ctx.state === "running") return;
@@ -491,7 +544,15 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   function playSfx(id: SfxId, params?: SfxParams, delayMs?: number): boolean {
     try {
       if (!accepting() || ctx === null || buses === null) return false;
-      const spec = SFX[id];
+      // #4428: before the recipes land the cue is skipped, never built or logged; the kick keeps
+      // one tap behind the chunk, not behind silence. A late click is dropped, not queued: an sfx
+      // is timed to an animation entry, so sounding late is worse than staying silent.
+      const recipes = loadedSfx;
+      if (recipes === null) {
+        void loadSfx().then(setSfx).catch(() => {});
+        return false;
+      }
+      const spec = recipes.SFX[id];
       const t = now();
       const delay = delayMs ?? 0;
       const logged = (): Extract<PlayedCue, { kind: "sfx" }> =>
@@ -547,7 +608,12 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     try {
       if (!accepting() || ctx === null || buses === null) return false;
       if (defId === HIDDEN_DEF_ID) return false;
-      const found = effectFor(lines, defId, hook);
+      const recipes = loadedSfx;
+      if (loadedLines === null || recipes === null) {
+        if (recipes === null) void loadSfx().then(setSfx).catch(() => {});
+        return false;
+      }
+      const found = effectFor(loadedLines, defId, hook);
       if (found === null) return false;
       const t = now();
       const logged: EffectEntry = { kind: "effect", defId, hook, effect: found.name, delayMs: delay, atMs: t };
@@ -564,11 +630,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
       const { effect } = found;
       const cue = ctx.createGain();
-      cue.gain.value = SFX[effect.sfx].gain * effect.gain;
+      cue.gain.value = recipes.SFX[effect.sfx].gain * effect.gain;
       cue.connect(buses.sfx);
       const startAt = ctx.currentTime + delay / 1000;
       const pitch = effect.pitch * (1 + (random() * 2 - 1) * EFFECT_PITCH_JITTER);
-      const lengthMs = renderSfx(effect.sfx, ctx, cue, startAt, effect.params ?? {}, pitch) * 1000;
+      const lengthMs = recipes.renderSfx(effect.sfx, ctx, cue, startAt, effect.params ?? {}, pitch) * 1000;
 
       lastEffectAt.set(found.name, t);
       sfxEnds.push(t + delay + lengthMs);
@@ -601,10 +667,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     try {
       if (!accepting() || ctx === null) return false;
       if (defId === HIDDEN_DEF_ID) return false;
-      const hasEffect = effectFor(lines, defId, "attack") !== null;
+      if (loadedLines === null || loadedManifest === null) return false;
+      const hasEffect = effectFor(loadedLines, defId, "attack") !== null;
       const key = voiceKey(defId, "attack");
       const hasLine =
-        readAudioSettings().voiceOn && (Object.hasOwn(manifest.files, key) || lineFor(lines, defId, "attack") !== null);
+        readAudioSettings().voiceOn && (Object.hasOwn(loadedManifest.files, key) || lineFor(loadedLines, defId, "attack") !== null);
       if (!hasEffect && !hasLine) return false;
       const t = now();
       if (lastPickupAt !== null && t - lastPickupAt < PICKUP_MIN_GAP_MS) return false;
@@ -634,9 +701,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   function fetchCached(key: VoiceKey): Promise<ArrayBuffer | null> {
     const cached = bytes.get(key);
     if (cached !== undefined) return cached;
+    const hash = loadedManifest?.files[key]?.hash;
+    if (hash === undefined) return Promise.resolve(null);
     const pending = (async (): Promise<ArrayBuffer | null> => {
       try {
-        return await fetchBytes(voiceUrl(key));
+        return await fetchBytes(voiceUrl(key, hash));
       } catch {
         return null;
       }
@@ -685,7 +754,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   function pumpPrefetch(): void {
     const rest = prefetchRest;
     if (rest === null) return;
-    while (prefetchInFlight < VOICE_PREFETCH_CONCURRENCY && backgroundFree()) {
+    while (prefetchInFlight < VOICE_PREFETCH_CONCURRENCY && !saveData() && backgroundFree()) {
       const key = rest.shift();
       if (key === undefined) return;
       if (bytes.has(key)) continue;
@@ -698,12 +767,13 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /** Once the context runs: every line's bytes, a few at a time, so no first line waits on the network. */
+  /** After the first preload on a running context (never on tables landing alone, never while the browser asks to save data): every line's bytes, a few at a time, so no first line waits on the network. */
   function schedulePrefetch(): void {
-    if (prefetchScheduled) return;
+    if (prefetchScheduled || loadedManifest === null || saveData()) return;
     prefetchScheduled = true;
     later(VOICE_PREFETCH_DELAY_MS, () => {
-      prefetchRest = (Object.keys(manifest.files) as VoiceKey[]).filter((key) => !bytes.has(key));
+      if (loadedManifest === null || saveData()) return;
+      prefetchRest = (Object.keys(loadedManifest.files) as VoiceKey[]).filter((key) => !bytes.has(key));
       pumpPrefetch();
     });
   }
@@ -768,6 +838,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     if (channel !== null) cut(channel);
     for (const line of waiting) setOutcome(line, "dropped");
     waiting = [];
+    waitingForTables = [];
     notifySpeaking();
   }
 
@@ -917,69 +988,91 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
+  function queueOrPlayVoice(
+    defId: string,
+    lineKind: PlayableLineKind,
+    delay: number,
+    rank: VoicePriority,
+    t: number,
+    requestCtxTime: number,
+  ): boolean {
+    if (loadedLines === null || loadedManifest === null) {
+      waitingForTables.push({
+        defId,
+        lineKind,
+        delayMs: delay,
+        priority: rank,
+        requestedAt: t,
+        requestCtxTime,
+      });
+      void loadSoundTables().then(onTablesLoaded).catch(() => {});
+      return true;
+    }
+    const key = voiceKey(defId, lineKind);
+    const hasFile = Object.hasOwn(loadedManifest.files, key);
+    const spoken = lineFor(loadedLines, defId, lineKind);
+    if (!hasFile && spoken === null) return false;
+
+    const entry = (outcome: VoiceOutcome): VoiceEntry => ({
+      kind: "voice",
+      defId,
+      line: lineKind,
+      delayMs: delay,
+      atMs: t,
+      outcome,
+      priority: rank,
+    });
+
+    if (!running()) {
+      pushLog(entry("suspended"));
+      return true;
+    }
+
+    // Where the line goes: the free channel, over a less important line, or into the queue.
+    const busy = voiceBusy();
+    let displaced: VoiceLine | undefined;
+    if (busy && channel !== null && !cutsIn(rank, channel.line.priority) && waiting.length >= VOICE_QUEUE_MAX) {
+      for (const w of waiting) if (displaced === undefined || w.priority < displaced.priority) displaced = w;
+      if (displaced === undefined || displaced.priority >= rank) return false;
+    }
+
+    const line: VoiceLine = {
+      entry: entry("pending"),
+      key,
+      spoken,
+      hasFile,
+      priority: rank,
+      requestedAt: t,
+      requestCtxTime,
+      delayMs: delay,
+    };
+    pushLog(line.entry);
+    // Start fetching now, so a line that waits in the queue is decoded by its turn.
+    if (hasFile) void load(key);
+
+    if (!busy) {
+      begin(line);
+    } else if (channel !== null && cutsIn(rank, channel.line.priority)) {
+      cut(channel);
+      begin(line);
+    } else {
+      if (displaced !== undefined) {
+        setOutcome(displaced, "dropped");
+        waiting = waiting.filter((w) => w !== displaced);
+      }
+      waiting.push(line);
+    }
+    return true;
+  }
+
   function playVoice(defId: string, lineKind: PlayableLineKind, delayMs?: number, priority?: VoicePriority): boolean {
     try {
       if (!accepting() || ctx === null) return false;
       if (!readAudioSettings().voiceOn) return false;
       if (defId === HIDDEN_DEF_ID) return false;
-      const key = voiceKey(defId, lineKind);
-      const hasFile = Object.hasOwn(manifest.files, key);
-      const spoken = lineFor(lines, defId, lineKind);
-      if (!hasFile && spoken === null) return false;
-
-      const t = now();
       const delay = delayMs ?? 0;
       const rank = priority ?? VOICE_PRIORITY.play;
-      const entry = (outcome: VoiceOutcome): VoiceEntry => ({
-        kind: "voice",
-        defId,
-        line: lineKind,
-        delayMs: delay,
-        atMs: t,
-        outcome,
-        priority: rank,
-      });
-
-      if (!running()) {
-        pushLog(entry("suspended"));
-        return true;
-      }
-
-      // Where the line goes: the free channel, over a less important line, or into the queue.
-      const busy = voiceBusy();
-      let displaced: VoiceLine | undefined;
-      if (busy && channel !== null && !cutsIn(rank, channel.line.priority) && waiting.length >= VOICE_QUEUE_MAX) {
-        for (const w of waiting) if (displaced === undefined || w.priority < displaced.priority) displaced = w;
-        if (displaced === undefined || displaced.priority >= rank) return false;
-      }
-
-      const line: VoiceLine = {
-        entry: entry("pending"),
-        key,
-        spoken,
-        hasFile,
-        priority: rank,
-        requestedAt: t,
-        requestCtxTime: ctx.currentTime,
-        delayMs: delay,
-      };
-      pushLog(line.entry);
-      // Start fetching now, so a line that waits in the queue is decoded by its turn.
-      if (hasFile) void load(key);
-
-      if (!busy) {
-        begin(line);
-      } else if (channel !== null && cutsIn(rank, channel.line.priority)) {
-        cut(channel);
-        begin(line);
-      } else {
-        if (displaced !== undefined) {
-          setOutcome(displaced, "dropped");
-          waiting = waiting.filter((w) => w !== displaced);
-        }
-        waiting.push(line);
-      }
-      return true;
+      return queueOrPlayVoice(defId, lineKind, delay, rank, now(), ctx.currentTime);
     } catch {
       return false;
     }
@@ -989,13 +1082,18 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     try {
       if (ctx === null || disposed) return;
       if (!voiceWanted()) return;
+      if (loadedManifest === null) {
+        heldPreload = [...keys];
+        void loadSoundTables().then(onTablesLoaded).catch(() => {});
+        return;
+      }
       if (busy) {
         heldPreload = [...keys];
         return;
       }
       let started = 0;
       for (const key of keys) {
-        if (!Object.hasOwn(manifest.files, key)) continue;
+        if (!Object.hasOwn(loadedManifest.files, key)) continue;
         if (decoded.has(key)) {
           load(key); // a cache hit: only marks it recently used
           continue;
@@ -1032,6 +1130,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     for (const id of timers) clearTimeout(id);
     timers.clear();
     unsubscribeLifecycle?.();
+    unsubscribeSfx();
     unsubscribe?.();
     unsubscribe = null;
     if (channel?.phase === "speaking") {
@@ -1045,6 +1144,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     speakingListeners.clear();
     stateListeners.clear();
     waiting = [];
+    waitingForTables = [];
     heldPreload = null;
     prefetchRest = null;
     if (ctx !== null) {
@@ -1083,7 +1183,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     },
     musicOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.music }),
     sfxOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.sfx }),
-    crowdOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, crowd: buses.crowd }),
+    // R4512000: the crowd bus is closed while the page is hidden, as effects and voices are.
+    crowdOutput: () =>
+      ctx === null || buses === null || disposed || visibility() === "hidden"
+        ? null
+        : { context: ctx, crowd: buses.crowd },
     subscribeState: (listener) => {
       stateListeners.add(listener);
       return () => {

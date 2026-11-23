@@ -425,6 +425,48 @@ mod tests {
             );
         }
 
+        /// A crafted Trap that reveals when the opponent plays a Unit and summons a Sheep Token.
+        fn unit_play_trap() -> Value {
+            let mut recipe = attack_trap();
+            recipe["hats"][0]["hat"] = json!("opponentPlaysUnit");
+            recipe
+        }
+
+        /// R783005: a Unit set face-down by its Cloaked is a Trap play, so a crafted reveal on a Unit play
+        /// passes it by and fires on the next Unit played face-up.
+        #[test]
+        fn r783005_a_crafted_reveal_on_a_unit_play_passes_a_cloaked_set_by() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [ID, "core-005"], "mana": 10 },
+                "p2": { "hand": [crate::CLOAKED_UNIT, "core-008"], "library": ["core-001", "core-002"] },
+            }));
+            s.play(ID, json!({}));
+            s.answer(json!(["2"]));
+            if let Some(pending) = s.state_mut().pending.as_mut() {
+                pending.craft_offer = Some(whole_palette());
+            }
+            s.answer(json!([{ "pick": "craft", "recipe": unit_play_trap() }]));
+            let trap = s
+                .hand(P1)
+                .into_iter()
+                .find(|card| card.def_id.starts_with("craft:"))
+                .expect("the crafted trap");
+            s.play(&trap, json!({}));
+            let trap = s.backrow(P1, 1).expect("the trap is set").id;
+            s.end_turn();
+            s.state_mut().players[P2].mana.current = 10;
+
+            crate::set_cloaked(&mut s, P2, crate::CLOAKED_UNIT, 1);
+            assert!(!s.last_events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
+            assert_eq!(s.backrow(P1, 1).map(|card| card.id), Some(trap), "the trap stays set");
+
+            s.play("core-008", json!({ "zone": 1 }));
+            assert!(
+                s.last_events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })),
+                "a Unit played face-up reveals it"
+            );
+        }
+
         #[test]
         fn r880_the_cost_is_a_number_prompt_from_0_to_4() {
             let mut s = scenario(json!({

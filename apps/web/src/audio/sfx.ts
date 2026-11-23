@@ -9,7 +9,9 @@ import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP, IMPACT_HEADROOM } from "./constant
 import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";
 import { isAnomalyCode, type AnomalyCode } from "../cards/anomalies.ts";
 import { damageTier, PLAY_IMPACT_TIERS, SLAM_PITCH_SPREAD, UNIT_SLAM } from "../game/damageFeel.ts";
-import { createRng } from "../fx/rng.ts";
+import { noiseBuffer } from "./noise.ts";
+
+export { noiseBuffer };
 
 export const SFX_IDS: readonly SfxId[] = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
@@ -56,24 +58,6 @@ export const SFX_TIMBRES: readonly SfxTimbre[] = [
 /** Schedules one sound starting at `at` (context seconds) into `out`; returns its length in seconds. */
 export type SfxRecipe = (ctx: BaseAudioContext, out: AudioNode, at: number, params: SfxParams) => number;
 export type SfxSpec = { recipe: SfxRecipe; /** upper bound over all params */ durationMs: number; gain: number };
-
-// Noise
-
-const NOISE_SEED = 0x4a41434b; // "JACK"
-const noiseCache = new WeakMap<BaseAudioContext, AudioBuffer>();
-
-/** 1 s of mono white noise, cached per context (WeakMap), filled from a fixed-seed mulberry32 so every run is identical. */
-export function noiseBuffer(ctx: BaseAudioContext): AudioBuffer {
-  const cached = noiseCache.get(ctx);
-  if (cached !== undefined) return cached;
-  const length = Math.round(ctx.sampleRate);
-  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-  const random = createRng(NOISE_SEED);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < length; i += 1) data[i] = random() * 2 - 1;
-  noiseCache.set(ctx, buffer);
-  return buffer;
-}
 
 // The bit-crushed wavetable (the AI family, R506)
 
@@ -3166,6 +3150,7 @@ const tillRattle: SfxRecipe = (ctx, out, at) => {
   run(k, motor, 0, 0.34);
   // The ball rattles round the wheel, slowing as it settles.
   const bounces: number[] = [];
+  // Stryker disable next-line EqualityOperator: the bounces land at 0.4 plus a growing gap (0.973, then 1.106), never on 1.0.
   for (let t = 0.4, gap = 0.03; t < 1.0; gap *= 1.18) {
     bounces.push(t);
     t += gap;
@@ -3372,6 +3357,7 @@ const kazooRatchet: SfxRecipe = (ctx, out, at) => {
   chain(squelch, gut, envelope(k, 0, 0.01, 0.48, 0.24), out);
   run(k, squelch, 0, 0.24);
   const ratchet: number[] = [];
+  // Stryker disable next-line EqualityOperator: t steps from 0.728 to 0.756, never onto 0.74.
   for (let t = 0.28; t < 0.74; t += 0.028) ratchet.push(t);
   clickTrain(k, out, ratchet, 1700, 6, 0.72, 0.018);
   // The kazoo's buzz: each note's saw through one nasal band, chopped by a fast square.

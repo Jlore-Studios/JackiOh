@@ -2,11 +2,12 @@
 // canonical link, linked from the footer, served by public/_redirects (net/deploy-routes.test.ts reads
 // `paths`) and in the sitemap: every card through the deck builder's browse pane, read-only, asking
 // no server anything but the R654 public aggregates. Filter and sort semantics are filters.test.ts's.
+// The tests that open it through `App` are almanac.virtual.test.tsx's: with no layout, this file's grid
+// draws every card, which held such a test on the route's "Loading…" panel for seconds.
 
 import type { CardDef, Tag } from "@jackioh/shared";
 import { SHIPPED_SETS, setShips } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
@@ -15,7 +16,7 @@ import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
 import { CHINESE } from "../cards/chinese.ts";
 import { resetCosmeticsForTests, writeCardPick } from "../cards/cosmetics.ts";
 import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
-import { CARD_FLAVOUR } from "../cards/flavour.ts";
+import { flavourNow, loadFlavour } from "../cards/flavour.ts";
 import { INSPECT_FLAVOUR, INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { ALMANAC_CHIP_TAGS, DEFAULT_FILTER, DEFAULT_SORT, almanacPool, costBucket } from "../game/deckbuilder/filters.ts";
 import { poolCardLabel } from "../game/deckbuilder/PoolGrid.tsx";
@@ -42,25 +43,24 @@ import { NEW_RIBBON_SET } from "../patches/ribbon.ts";
 import { collectionOwning } from "../collection/fixtures.ts";
 import { at, meBody, signIn, stubServer } from "../test/stubServer.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
-import AlmanacRoute, { ALMANAC_CATALOG, almanacMeta, almanacTestid } from "./almanac.tsx";
+import AlmanacRoute, { almanacMeta, almanacTestid } from "./almanac.tsx";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import { useAlmanacOwnCopies } from "./almanacOwnership.ts";
-import LandingRoute from "./landing.tsx";
-import LoginRoute from "./login.tsx";
-import { siteFooterTestid } from "./SiteFooter.tsx";
 
-const { App, canonicalUrlFor, documentTitleFor } = await import("../main.tsx");
+const { canonicalUrlFor, documentTitleFor } = await import("../main.tsx");
+await loadFlavour();
 
 /** A lazily-imported route chunk, and a pool of every card, can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
 
 /** R674, R1420: every card the almanac shows: the catalog's from the sets that ship, Glitch excepted. */
-const CARDS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards).filter(
+const CARDS: readonly CardDef[] = Object.values(currentCatalog().cards).filter(
   (def) => def.id !== GLITCH_DEF_ID && setShips(def.set),
 );
 const TOKENS: readonly CardDef[] = CARDS.filter((def) => def.token);
 
 function cardOf(id: string): CardDef {
-  const def = ALMANAC_CATALOG.cards[id];
+  const def = currentCatalog().cards[id];
   if (def === undefined) throw new Error(`the catalog has no ${id}`);
   return def;
 }
@@ -89,15 +89,6 @@ afterEach(() => {
 const SLOW_GRID = { timeout: 30_000 } as const;
 
 describe("R630 the /almanac route", SLOW_GRID, () => {
-  it("R630 is served at /almanac signed out, with no redirect and no call to the server", async () => {
-    at(paths.almanac);
-    render(<App />);
-    expect(await screen.findByTestId(almanacTestid.screen, undefined, SLOW)).toBeInTheDocument();
-    expect(window.location.pathname).toBe(paths.almanac);
-    expect(document.title).toBe("Almanac · JackiOh");
-    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
-  });
-
   it("R630 has a tab title, a canonical link, a heading and Back", () => {
     expect(paths.almanac).toBe("/almanac");
     expect(documentTitleFor(paths.almanac)).toBe("Almanac · JackiOh");
@@ -112,33 +103,13 @@ describe("R630 the /almanac route", SLOW_GRID, () => {
     const sitemap = sitemapXml(PUBLIC_PAGES);
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/almanac</loc>`);
   });
-
-  it("R630 the site footer links it beside Patch notes on the landing page and the sign-in screen, and opens it in place", async () => {
-    render(<LandingRoute />);
-    const footer = screen.getByTestId(siteFooterTestid.root);
-    const link = within(footer).getByTestId(siteFooterTestid.almanac);
-    expect(link).toHaveAttribute("href", paths.almanac);
-    expect(link).toHaveTextContent("Almanac");
-    expect(link.previousElementSibling).toBe(within(footer).getByTestId(siteFooterTestid.patchNotes));
-    cleanup();
-
-    render(<LoginRoute />);
-    expect(within(screen.getByTestId(siteFooterTestid.root)).getByTestId(siteFooterTestid.almanac)).toBeInTheDocument();
-    cleanup();
-
-    at(paths.landing);
-    render(<App />);
-    await userEvent.click(screen.getByTestId(siteFooterTestid.almanac));
-    expect(window.location.pathname).toBe(paths.almanac);
-    expect(await screen.findByTestId(almanacTestid.screen, undefined, SLOW)).toBeInTheDocument();
-  });
 });
 
 describe("R630 the almanac's browse pane", SLOW_GRID, () => {
   it("R630 shows every catalog card, tokens included, cost ascending with no filter", () => {
     render(<AlmanacRoute />);
     const ids = shownIds();
-    expect(ids).toEqual([...almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT)]);
+    expect(ids).toEqual([...almanacPool(currentCatalog(), DEFAULT_FILTER, DEFAULT_SORT)]);
     expect([...ids].sort()).toEqual(CARDS.map((def) => def.id).sort());
     expect(TOKENS.length).toBeGreaterThan(0);
     for (const token of TOKENS) expect(ids, token.id).toContain(token.id);
@@ -147,10 +118,10 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
   });
 
   it("R674 never shows Glitch, though the catalog holds it", () => {
-    expect(ALMANAC_CATALOG.cards[GLITCH_DEF_ID]).toBeDefined();
+    expect(currentCatalog().cards[GLITCH_DEF_ID]).toBeDefined();
     render(<AlmanacRoute />);
     expect(shownIds()).not.toContain(GLITCH_DEF_ID);
-    expect(almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT)).not.toContain(GLITCH_DEF_ID);
+    expect(almanacPool(currentCatalog(), DEFAULT_FILTER, DEFAULT_SORT)).not.toContain(GLITCH_DEF_ID);
   });
 
   it("R3223000 the screen has one visible h1, the PageTitle, which names its main region", () => {
@@ -232,7 +203,7 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
     for (const id of ["core-001", "core-t-sheep"]) {
       fireEvent.click(screen.getByTestId(poolCardId(id)));
       const flavour = within(screen.getByTestId(INSPECT_DETAIL)).getByTestId(INSPECT_FLAVOUR);
-      expect(flavour).toHaveTextContent(CARD_FLAVOUR[id]?.flavour ?? "missing");
+      expect(flavour).toHaveTextContent(flavourNow()?.[id]?.flavour ?? "missing");
       closeInspect();
     }
   });
@@ -324,10 +295,10 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
   it("R630 the sort key and its direction order the pool", () => {
     render(<AlmanacRoute />);
     fireEvent.change(screen.getByTestId(DB_SORT), { target: { value: "name" } });
-    expect(shownIds()).toEqual([...almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, { key: "name", dir: "asc" })]);
+    expect(shownIds()).toEqual([...almanacPool(currentCatalog(), DEFAULT_FILTER, { key: "name", dir: "asc" })]);
     fireEvent.click(screen.getByTestId(DB_SORT_DIR));
     expect(screen.getByTestId(DB_SORT_DIR)).toHaveAttribute("data-dir", "desc");
-    expect(shownIds()).toEqual([...almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, { key: "name", dir: "desc" })]);
+    expect(shownIds()).toEqual([...almanacPool(currentCatalog(), DEFAULT_FILTER, { key: "name", dir: "desc" })]);
   });
 
   it("R711000 under zh-CN the search finds a card by its Chinese name, live across a switch and back", async () => {

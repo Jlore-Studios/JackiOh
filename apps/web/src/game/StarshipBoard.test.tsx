@@ -15,6 +15,7 @@ import Game from "./Game.tsx";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, dormantStarship, emptySide, unit, withEvents } from "../test/fixtures.ts";
+import { readRootVar } from "./rootVars.ts";
 
 const lookup = lookupFromDefs(CATALOG);
 const HULL = "stinkyscape-t-dormant-starship";
@@ -84,7 +85,7 @@ describe("R2801000 a Starship's launch on the board", () => {
     expect(game).toHaveAttribute("data-set-piece", STARSHIP_SET_PIECE);
     // No board clear's twist: the launch draws over the ship alone.
     expect(game).not.toHaveAttribute("data-set-piece-shape");
-    expect(game.style.getPropertyValue("--set-piece-hold")).toBe(`${String(STARSHIP_LAUNCH_HOLD_MS)}ms`);
+    expect(readRootVar(game, "--set-piece-hold")).toBe(`${String(STARSHIP_LAUNCH_HOLD_MS)}ms`);
     expect(screen.getByTestId(SKIP_HINT)).toBeInTheDocument();
     expect(screen.getByTestId("card-ship")).toHaveAttribute("data-animating", "starshipLaunched");
     // The hold, then the lift-off and the landing, and the board shows the launched Starship.
@@ -109,7 +110,7 @@ describe("R2801000 a Starship's launch on the board", () => {
     setFxSettings({ bigMoments: "short" });
     const short = launch();
     expect(short).toHaveAttribute("data-set-piece", STARSHIP_SET_PIECE);
-    expect(short.style.getPropertyValue("--set-piece-hold")).toBe(`${String(SET_PIECE_SHORT_HOLD_MS)}ms`);
+    expect(readRootVar(short, "--set-piece-hold")).toBe(`${String(SET_PIECE_SHORT_HOLD_MS)}ms`);
     cleanup();
 
     setFxSettings({ bigMoments: "off" });
@@ -131,7 +132,7 @@ describe("R2801000 a Starship's launch on the board", () => {
     setFxSettings({ speed: 2 });
     const game = launch();
     expect(game).toHaveAttribute("data-set-piece", STARSHIP_SET_PIECE);
-    expect(game.style.getPropertyValue("--set-piece-hold")).toBe(`${String(scaleForSpeed(STARSHIP_LAUNCH_HOLD_MS, 2))}ms`);
+    expect(readRootVar(game, "--set-piece-hold")).toBe(`${String(scaleForSpeed(STARSHIP_LAUNCH_HOLD_MS, 2))}ms`);
     expect(scaleForSpeed(STARSHIP_LAUNCH_HOLD_MS, 2)).toBe(STARSHIP_LAUNCH_HOLD_MS / 2);
   });
 
@@ -144,7 +145,7 @@ describe("R2801000 a Starship's launch on the board", () => {
     const game = launch();
     expect(game).toHaveAttribute("data-reduced-motion", "true");
     expect(game).not.toHaveAttribute("data-set-piece");
-    expect(game.style.getPropertyValue("--set-piece-hold")).toBe("");
+    expect(readRootVar(game, "--set-piece-hold")).toBe("");
     expect(screen.queryByTestId(SKIP_HINT)).toBeNull();
     expect(inFlight()).toBeNull();
     act(() => {

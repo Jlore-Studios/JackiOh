@@ -1,12 +1,12 @@
 # `jackioh-cards`
 
-The catalog entries of the seven shipped sets, Core (spec §8.1–§8.5), Classic (§8.6, and Glitch, a
+The catalog entries of the eight shipped sets, Core (spec §8.1–§8.5), Classic (§8.6, and Glitch, a
 hidden token), Classic+ (§8.7), Meditative (§8.8), Meditative+ (§8.9, shipped in v0.3.15 by #1187),
-Stinkyscape (§8.10, the Dormant Starship among its cards, shipped by #1884, R1857000) and Training
-Grounds (§8.11, shipped by #2204, R2194000), each set's counts written once in `src/census.rs` (#2581).
+Stinkyscape (§8.10, the Dormant Starship among its cards, shipped by #1884, R1857000), Training
+Grounds (§8.11, shipped by #2204, R2194000) and Stinkyscape+ (§8.12, shipped by #3573, R3535000), each set's counts written once in `src/census.rs` (#2581).
 A set the catalog holds before it ships, as Meditative was while issue #496 built it, Meditative+
-while issue #1173 did (R1178000), Stinkyscape while issue #1836 did, and Training Grounds while tracker
-#2193 did, is in no pool that names no set, no deck and no random deck until the patch that lists it in `SHIPPED_SETS`
+while issue #1173 did (R1178000), Stinkyscape while issue #1836 did, Training Grounds while tracker
+#2193 did, and Stinkyscape+ while tracker #3533 did (R3535000), is in no pool that names no set, no deck and no random deck until the patch that lists it in `SHIPPED_SETS`
 (R1420), counts toward none of the census's totals, and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
 catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
 for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
@@ -40,7 +40,8 @@ crates/cards
 │   ├── meditative/     one Meditative card or token per file (shipped in v0.3.5, R1420)
 │   ├── meditative_plus/ one Meditative+ card or token per file (shipped in v0.3.15, R1178000)
 │   ├── stinkyscape/    one Stinkyscape card or token per file (shipped by #1884, R1857000)
-│   └── training_grounds/ one Training Grounds card or token per file (shipped by #2204, R2194000)
+│   ├── training_grounds/ one Training Grounds card or token per file (shipped by #2204, R2194000)
+│   └── stinkyscape_plus/ one Stinkyscape+ card or token per file (shipped by #3573, R3535000)
 └── tests/cards.rs      the cross-card tests: tests/cross/<x>.rs (catalog, query, references, radiant
                         standard, flavour, condition_active, preview, invariants, …)
 ```
@@ -143,6 +144,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `cards_played_this_turn(state, player)` | §10.5 step 4's counter, counting the card being played |
 | `unspent_mana_of(state, player)`, `max_mana_of(state, player)` | the mana a player holds now; §2.3's max mana |
 | `played_ids_this_turn`, `played_earlier`, `was_played_this_turn` | the turn's plays, §6.2's Combo count, the one-shot gate of §5.1's "return to hand" spells |
+| `played_type_of(state, event)` | the type a `cardPlayed` or `cardResolved` play counts as: a card set by its Cloaked the Trap it was set as, else its face's type (R783005); every script typing a play reads it |
 | `active_units_of`, `dormant_units_of`, `card_at`, `slots_of`, `slot_of` | the field, by lane (§3.2, R13) |
 | `units_on_field_of`, `is_slumbering`, `slumber_turns_of` | the Units filling a side's zones, Dormant ones included, which `active_units_of` leaves out; whether a card is Dormant and its countdown (§6.1, R1839000) |
 | `building_a_ship`, `dormant_starship_of`, `is_dormant_starship`, `launched_starship_of`, `is_launched_starship`, `starship_pieces_of`, `launch_cost`, `when_launched` | the Starship (§6.1, §6.2, R1852000–R1852006): whether a player has a Dormant Starship and which, a player's launched Starship, the pieces a Starship holds, what a launch costs now, and a piece's "When launched" trigger; the price rule is the verb `starship_launch_costs` |
@@ -156,6 +158,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `armor_on_field(state)` | every point of Armor on the field, Units through §10.4 and both heroes (R1064) |
 | `find_instance(state, id)` | an instance id, wherever the card has since landed (R98) |
 | `instance_of(ctx, spec)` | the card a `TargetSpec` names on the stay the run aimed at (R174) |
+| `recruit_takes(ctx, args)` | the card a `recruit` of those arguments would take now, by the scan the verb runs: the first match that can be summoned, R690's order kept (R4238000, C #1's forced attacker) |
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write; R102) |
 | `killer_of(state, card)` | the Unit that destroyed a card, while it still acts (R42, R361) |
 | `when_attacks_of(ctx)` | in a `when_attacks` hook, its attack's facts, before any damage (R2285000) |
@@ -196,9 +199,11 @@ every Radiant face meets R275's standard (`tests/cross/radiant_standard.rs` agai
 - `params`: the numbers a Nerf, a Buff and KY's Constant may change (R386), per face, written
   `{key}` in the text. A script reads `param(ctx, key)`, never a literal. Players read Nerf and Buff
   for the engine's Degrade and Upgrade, whose verbs keep their names (`degrade`, `upgrade`, R1320).
-  `cry: true` marks a number only the card's Cry reads, which no Nerf or Buff draws on the field
-  (R1748000), and `cry: "base"` or `"radiant"` one only that face's Cry reads while the other face's
-  lasting text reads it too (R2261001); `catalog check` holds both to the text. A number a Spell or a Field Spell prints is
+  `read` marks a number every line writing it reads at one time or in one place (`"cry"`, `"combo"`,
+  `"castOnDraw"`, `"awaken"`, `"evolve"`, `"handOrDeck"`, `"graveyard"`), which a Nerf or a Buff draws
+  only where §6.3's table calls it live (R1748000, R3888000, R3888001), and `readOn: "base"` or
+  `"radiant"` one only that face's such lines read while the other face's lasting text reads it too
+  (R2261001); `catalog check` holds both to the text. A number a Spell or a Field Spell prints is
   declared, or `tests/cross/params.rs` names why it stays fixed (R1748003).
 - `dealsDamage: true`: a Spell or a Field Spell that deals damage, which a Buff may give Pierce or
   Lifesteal (R1748001). `usesPlague: true`: a Field Spell that uses the Plague Counters on itself, on
@@ -242,6 +247,14 @@ order, set by set and each by index, so a seeded pick replays (§9.3, R60). Neve
 dedupe a pool yourself afterwards. `"type": "Trap"` drops the Field Traps; where the spec says a
 Field Trap counts as a Trap, pass `TRAP_TYPES`.
 
+A pool the spec would otherwise list card by card is a named function there (`luck_based`,
+`jlockeed_cards`, `weapons_of`, `prime_cards`, …) and a row of `POOLS`, its name, its rule and the
+function a script calls (#3804). `cargo jackioh spec index` writes `spec/CARDS.md` from that table:
+each pool's members as the catalog holds them and the cards whose scripts call its function, beside
+every card by keyword and by tag. A script that draws from such a pool calls its function rather than
+writing the query inline, so the list it shows is the pool the game draws from; a spec row states the
+rule and links the heading (`[[CARDS#jlockeed]]`).
+
 ## 4. The registry
 
 `build.rs` walks `src/scripts/<set>/*.rs`, reads each `pub const ID`, and writes the module tree and
@@ -263,7 +276,8 @@ card's number, or a catalog id with no file. It also compiles in `CATALOG_VERSIO
 of `patches/patches.json`.
 
 `register_all()` hands the catalog and every script to the engine, once per process, and where the
-older shipped catalogs are found (`register_shipped`); the WASM module, the server and the tools
+older shipped catalogs are found (`register_shipped`) and where a card's past versions are found
+(`register_past_versions`, R3538002); the WASM module, the server and the tools
 call it at start. A card test calls `crate::register_all()` first.
 
 R767000: `build.rs` also writes `$OUT_DIR/history.json`, how each shipped version but the newest
@@ -272,6 +286,8 @@ time a replay of a game played on it asks (`shipped_catalog`, `carried_versions`
 the build's own, except a script kept for that version in `KEPT_SCRIPTS` (§6). The browser's
 module (a `wasm32` target) carries only the versions from `build.rs`'s `BROWSER_CARRIED_FROM` on:
 it folds only practice games, and one folds on a carried version only with the setup it kept.
+`card_eras` lists a card's runs of carried versions over which its definition and its covering kept
+script stay the same, which `cargo jackioh carried` plays and folds back (R4382000).
 
 ## 5. Tests
 

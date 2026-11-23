@@ -8,7 +8,10 @@
 //! Engine: `cast_random` over `{ anyTags: [Human, Book, CN, AI] }` (R1422, R1421), each definition
 //! once, never Eschews (R387); a trigger on `destroyed` of your Units counts in `memory.deaths`
 //! since entry (R78 resets it); `tribute_when` Tributes it at the next state check once the count
-//! reaches `{deaths}` (C #88, R403).
+//! reaches `{deaths}` (C #88, R403). R4423000: a Unit's death is read by what the card was on the field as
+//! it died (`is_unit_death`), so a Unit set face-down by its Cloaked and destroyed before it reveals is not
+//! counted and an Animated Field Spell or Trap killed in a unit zone is; `script_v0_6_9i` keeps the face's
+//! printed type for v0.6.9l and before (R767000).
 
 use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random};
 use jackioh_engine::prelude::*;
@@ -40,7 +43,8 @@ fn preview() -> PreviewHook {
     })
 }
 
-fn eschews(radiant: bool) -> Script {
+/// `by_print` reads a death by the dead card's printed face, as v0.6.9l and before did (R767000).
+fn eschews(radiant: bool, by_print: bool) -> Script {
     Script {
         end_of_turn: Some(hook(move |ctx| {
             vec![cast_random(CastRandomArgs {
@@ -56,7 +60,7 @@ fn eschews(radiant: bool) -> Script {
         triggers: vec![TriggerDef::new(
             "eschews-deaths",
             &[GameEventType::Destroyed],
-            |ctx, event| {
+            move |ctx, event| {
                 let GameEvent::Destroyed {
                     controller,
                     def_id,
@@ -69,7 +73,12 @@ fn eschews(radiant: bool) -> Script {
                 if *controller != ctx.controller {
                     return Vec::new();
                 }
-                if card_type_of_face(ctx.state, def_id, *radiant == Some(true)) != CardType::Unit {
+                let unit = if by_print {
+                    card_type_of_face(ctx.state, def_id, *radiant == Some(true)) == CardType::Unit
+                } else {
+                    is_unit_death(ctx.state, event)
+                };
+                if !unit {
                     return Vec::new();
                 }
                 let count = recalled(ctx, DEATHS).and_then(|value| value.as_i64()).unwrap_or(0) + 1;
@@ -87,8 +96,17 @@ fn eschews(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: eschews(false),
-        radiant: eschews(true),
+        base: eschews(false, false),
+        radiant: eschews(true, false),
+    }
+}
+
+/// R767000: a Unit's death read by the dead card's printed face (R4423000), through v0.6.9l;
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9i() -> CardScripts {
+    CardScripts {
+        base: eschews(false, true),
+        radiant: eschews(true, true),
     }
 }
 
@@ -109,10 +127,6 @@ mod tests {
     const TIMMY: &str = "core-011";
     /// (1) Spell, deals 3 to a target; each cast makes the next Spell cost (1) less.
     const ECLIPSE: &str = "core-035";
-
-    fn eclipse(target: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": target }] })
-    }
 
     /// p1 holds Eschews (`radiant_face`) with five Timmies on the field to die and five Eclipses to
     /// kill them with on the same turn — before any end-of-turn cast could interfere.
@@ -136,7 +150,7 @@ mod tests {
     /// Kill the Timmy in `lane` with an Eclipse.
     fn kill_timmy(s: &mut Scenario, lane: i32) {
         let id = s.unit(P1, lane).expect("a timmy").id.clone();
-        s.play(ECLIPSE, eclipse(&id));
+        s.play(ECLIPSE, pick::targets(pick::id(&id)));
     }
 
     fn eschews_on_field(s: &Scenario) -> bool {
@@ -250,6 +264,77 @@ mod tests {
                 });
                 assert!(radiant_cast, "the cast resolved Radiant");
             }
+        }
+    }
+
+    /// R4423000: a death of yours is counted by what the card was on the field as it died.
+    mod r4423000_what_it_died_as {
+        use super::*;
+
+        const MAGIC_JAMMED: &str = "core-036";
+        const HIT_JOB: &str = "core-016";
+
+        fn counted(s: &Scenario) -> i64 {
+            deaths_counted(&s.card(ESCHEWS).memory)
+        }
+
+        /// p1 sets a Cloaked Toe Cracker face-down and destroys it with Magic Jammed before it reveals,
+        /// its Eschews face-up in backrow lane 1; the set card's id.
+        fn jammed() -> (Scenario, String) {
+            let mut s = scenario(json!({
+                "seed": "eschews-cloaked",
+                "p1": {
+                    "mana": 10,
+                    "hand": [crate::CLOAKED_UNIT, MAGIC_JAMMED, FILLER],
+                    "backrow": [{ "def": ESCHEWS, "faceUp": true, "lane": 1 }],
+                    "library": filler(3),
+                },
+                "p2": { "hand": [FILLER], "library": filler(4) },
+            }));
+            let set = crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 2);
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&set) }));
+            (s, set)
+        }
+
+        #[test]
+        fn r4423000_a_set_cloaked_unit_destroyed_before_it_reveals_is_no_unit_death_for_it() {
+            let (s, set) = jammed();
+            assert_eq!(crate::died_as_of(&s, &set), Some(CardType::FieldTrap));
+            assert_eq!(counted(&s), 0);
+        }
+
+        /// p1's set Catnip animates after p2's Spell, and p2's Hit Job kills it in its unit zone.
+        #[test]
+        fn r4423000_an_animated_field_trap_killed_in_a_unit_zone_is_a_unit_death_for_it() {
+            let mut s = scenario(json!({
+                "seed": "eschews-animated",
+                "active": "p2",
+                "p1": {
+                    "hand": [FILLER],
+                    "backrow": [
+                        { "def": ESCHEWS, "faceUp": true, "lane": 1 },
+                        { "def": crate::ANIMATED_TRAP, "faceUp": false, "lane": 2 },
+                    ],
+                    "library": filler(3),
+                },
+                "p2": { "mana": 10, "hand": [FILLER, HIT_JOB, FILLER], "library": filler(4) },
+            }));
+            s.play(FILLER, json!({}));
+            let catnip = s.card(crate::ANIMATED_TRAP).id.clone();
+            assert!(s.unit(P1, 2).is_some_and(|unit| unit.id == catnip), "Catnip animated");
+            s.play(HIT_JOB, json!({ "targets": pick::id(&catnip) }));
+
+            assert_eq!(crate::died_as_of(&s, &catnip), Some(CardType::Unit));
+            assert_eq!(counted(&s), 1);
+        }
+
+        /// R767000: v0.6.9l and before counted the set card's death, by the printed face's type.
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_9i_counts_a_set_cloaked_unit_s_death() {
+            crate::under_kept(ID, script_v0_6_9i(), || {
+                let (s, _) = jammed();
+                assert_eq!(counted(&s), 1);
+            });
         }
     }
 }

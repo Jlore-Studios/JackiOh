@@ -5,6 +5,7 @@ import type { Counters } from "./Counters";
 import type { Enchantment } from "./Enchantment";
 import type { Exertion } from "./Exertion";
 import type { Grant } from "./Grant";
+import type { Half } from "./Half";
 import type { Keyword } from "./Keyword";
 import type { KnownAs } from "./KnownAs";
 import type { PlayerId } from "./PlayerId";
@@ -13,6 +14,7 @@ import type { SetAs } from "./SetAs";
 import type { Slumber } from "./Slumber";
 import type { StarshipMemory } from "./StarshipMemory";
 import type { Tag } from "./Tag";
+import type { TipsyStamp } from "./TipsyStamp";
 import type { Tuning } from "./Tuning";
 import type { Zone } from "./Zone";
 
@@ -21,8 +23,16 @@ export type CardInstance = { id: string, defId: string, owner: PlayerId, control
  * R1181003 (Meditative+ #23 Enormous Elderberry's "its Embiggened version costs (0)"): the price of
  * the Embiggened version alone, in place of its printed dearer price and of `costOverride` for it,
  * before every modifier (R65); the normal version keeps its price. A price, so R766 takes it off.
+ * Since #4350 only games of v0.6.8d and before carry it (R4350000).
  */
-embiggenCostOverride?: number, counters: Counters, memory: Record<string, unknown>, 
+embiggenCostOverride?: number, 
+/**
+ * R4350000 (Meditative+ #23 Enormous Elderberry's "Their Embiggened version costs no extra mana"):
+ * no Embiggen premium. The Embiggened version (under a Garden, the dearer choice) starts from the
+ * normal price (`mana::printed_cost`, `mana::garden_dearer_price`), so every modifier moves both
+ * prices alike. Price-like, so R766 takes it off.
+ */
+noEmbiggenPremium?: boolean, counters: Counters, memory: Record<string, unknown>, 
 /**
  * §4.1: `attacked` and `switched` spend the turn's exertion. R636: `attacks` counts the attacks
  * declared this turn once there is a second one (absent, it is 1 when `attacked` and 0 otherwise)
@@ -69,6 +79,12 @@ markedDestroyed?: boolean,
  * `Some(true)`.
  */
 markedExiled?: true, 
+/**
+ * R4205000: marked destroyed by a steal that had no room for it (§6.3 Steal). Nothing keeps it on the
+ * field: Indestructible drops no mark (R46), no "would die" replacement is offered it; a
+ * destroy-to-exile aura still exiles it (R1849002). Only ever `Some(true)`; R78's reset clears it.
+ */
+unpreventableDestroy?: true, 
 /**
  * Came back through Reborn, so it no longer has it (§4.5 step 4).
  */
@@ -206,4 +222,36 @@ fixedX?: number,
  * without them (R57). Absent on every other card, so a game nothing hides a Nerf in serializes
  * and hashes as before (D3).
  */
-hiddenNerfs?: number, };
+hiddenNerfs?: number, 
+/**
+ * R3536000: has evolved, so it evolves no more; R78's reset takes it off; only `Some(true)`.
+ */
+evolved?: true, 
+/**
+ * R3536002: marked to enter the field evolved; rides every zone until the state check after it enters.
+ */
+entersEvolved?: true, 
+/**
+ * R3546000: fills four zones; stamped as it enters the field, fixed there, taken off by R78's reset.
+ */
+giga?: true, 
+/**
+ * R3548001: the Tipsy counter stamped on this card as it arrived, if one was up. Taken off by
+ * R78's reset with the card leaving the field; only its owner's view reads it.
+ */
+tipsy?: TipsyStamp, 
+/**
+ * R3554003: the half of a slashed board this card was cast on (a Spell in the resolving zone)
+ * or stands on. Taken off by R78's reset with the card leaving the field. Absent on every other
+ * card, so a game nothing slashes serializes and hashes as before (D14).
+ */
+half?: Half, 
+/**
+ * R3554007: the shared damage chain this Unit is in (S+ #7 Churnwalker). Taken off by R78's
+ * reset with the card leaving the field. Absent on every other card (D14).
+ */
+sharedChain?: number, 
+/**
+ * R3554007: the split damage chain this Unit is in. As `shared_chain`.
+ */
+splitChain?: number, };

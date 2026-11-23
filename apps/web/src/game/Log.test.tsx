@@ -17,6 +17,7 @@ import { EMPTY_LOG_HISTORY, advanceLogHistory } from "./useLogHistory.ts";
 import { CHINESE } from "../cards/chinese.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { baseView, emptySide, fullBoardView, fusedDef, unit, withEvents } from "../test/fixtures.ts";
+import { readSheet } from "../test/setup.ts";
 
 afterEach(() => {
   cleanup();
@@ -867,5 +868,95 @@ describe("#2252 a play names what it aimed at, and a hit off combat what dealt i
     ]);
 
     expect(lines(withEvents(board(), [play(), hit()]))).toEqual([`Opponent played ${nameOf(SPELL)} for 1`, DEALT]);
+  });
+});
+
+describe("#4140 the log speaks its newest line to screen readers", () => {
+  const lost = (n: number): GameEvent => ({ type: "healthLost", player: "p1", amount: n });
+  const said = (n: number): string => `You lost ${String(n)} health`;
+  const announcer = (): HTMLElement => screen.getByTestId(testid.logLive);
+
+  it("#4140 a mount with history says nothing", () => {
+    render(<Log view={withEvents(baseView(), [lost(1), lost(2)])} />);
+    const live = announcer();
+    expect(live).toHaveAttribute("aria-live", "polite");
+    expect(live).toHaveAttribute("aria-atomic", "true");
+    expect(live.textContent).toBe("");
+  });
+
+  it("#4140 a new line is announced once when it lands", () => {
+    const first = [lost(1)];
+    const { rerender } = render(<Log view={withEvents(baseView(), first)} />);
+    expect(announcer().textContent).toBe("");
+    const both = withEvents(baseView(), [...first, lost(2)]);
+    rerender(<Log view={both} />);
+    expect(announcer().textContent).toBe(said(2));
+    rerender(<Log view={both} />);
+    expect(announcer().textContent).toBe(said(2));
+  });
+
+  it("#4174 repeated words still announce each arrival", () => {
+    const { rerender } = render(<Log view={withEvents(baseView(), [lost(1)])} />);
+    expect(announcer().textContent).toBe("");
+    const primed = announcer().firstElementChild;
+    rerender(<Log view={withEvents(baseView(), [lost(1), lost(1)])} />);
+    expect(announcer().textContent).toBe(said(1));
+    const first = announcer().firstElementChild;
+    expect(first).not.toBeNull();
+    expect(first).not.toBe(primed);
+    rerender(<Log view={withEvents(baseView(), [lost(1), lost(1), lost(1)])} />);
+    expect(announcer().textContent).toBe(said(1));
+    const second = announcer().firstElementChild;
+    expect(second).not.toBeNull();
+    expect(second).not.toBe(first);
+  });
+
+  it("#4140 revealing the phone log and re-rendering announces nothing extra", () => {
+    const view = withEvents(baseView(), [lost(1), lost(2)]);
+    const { rerender } = render(<Log view={view} />);
+    expect(announcer().textContent).toBe("");
+    rerender(<Log view={view} revealed />);
+    expect(announcer().textContent).toBe("");
+    rerender(<Log view={withEvents(baseView(), [lost(1), lost(2)])} />);
+    expect(announcer().textContent).toBe("");
+  });
+
+  it("#4140 a redacted arrival announces its shown redacted words", () => {
+    const trap: GameEvent = { type: "trapFired", instanceId: "hidden", defId: "hidden", controller: "p2", row: "backrow", lane: 2 };
+    const { rerender } = render(<Log view={withEvents(baseView(), [])} />);
+    expect(announcer().textContent).toBe("");
+    rerender(<Log view={withEvents(baseView(), [trap])} />);
+    expect(announcer().textContent).toBe("The opponent's face-down trap fired");
+    expect(announcer().textContent).not.toMatch(/hidden|core-\d+|\bc\d+\b/);
+  });
+
+  it("#4140 a new turn announces the turn's own line", () => {
+    const third: GameEvent = { type: "turnStarted", player: "p1", turn: 3 };
+    const { rerender } = render(<Log view={withEvents(baseView(), [third])} />);
+    expect(announcer().textContent).toBe("");
+    rerender(<Log view={withEvents(baseView(), [third, { type: "turnStarted", player: "p2", turn: 4 }])} />);
+    expect(announcer().textContent).toBe("Turn 4: Opponent");
+  });
+});
+
+// WCAG 2.5.8: with a mouse each card-naming log line is a 24 px target, while the log
+// still reads as the same dense list; on a touch screen each line keeps its 44 px row.
+// jsdom cannot measure pixels, so these hold the stylesheet text, not a layout.
+describe("the log's card-name target size", () => {
+  const css = readSheet("src/game/inspectable.css");
+
+  it("with anything but a finger each card-naming log line is a 24px target while the list stays inline", () => {
+    // "Not coarse", so a pointer-less headless browser (the e2e axe run) gets the target too.
+    expect(css).toMatch(
+      /@media not all and \(pointer: coarse\)\s*\{\s*\.log \.log-card\s*\{[^}]*display: inline-block;[^}]*min-height: 24px;[^}]*\}\s*\}/,
+    );
+    // The dense-list look for the fallback: the base rule still reads as the line it is.
+    expect(css).toMatch(/\.log \.log-card\s*\{[^}]*display: inline;/);
+  });
+
+  it("on a touch screen each log line keeps its 44px row", () => {
+    expect(css).toMatch(
+      /@media \(pointer: coarse\)\s*\{\s*\.log \.log-card\s*\{\s*display: flex;\s*align-items: center;\s*width: 100%;\s*min-height: 44px;\s*\}\s*\}/,
+    );
   });
 });

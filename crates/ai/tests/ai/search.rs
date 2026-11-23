@@ -324,24 +324,66 @@ mod candidate_actions_b14 {
         let deeper = (1..=5).take(cap).collect::<Vec<i32>>();
         assert_eq!(offered_lanes(&crowded, "core-008"), deeper);
         assert_eq!(root_offered_lanes(&crowded, "core-008"), vec![1, 2, 3, 4, 5]);
-        let root = root_expansion(
-            &crowded,
-            AI,
-            AI_BUDGET.root_branching,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let root = root_expansion(&crowded, AI, AI_BUDGET.root_branching, Prices::NONE);
         assert_eq!(lanes_of(&crowded, "core-008", &root), vec![1, 2, 3, 4, 5]);
-        let deeper_expansion = expansion(
-            &crowded,
-            AI,
-            AI_BUDGET.branching,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let deeper_expansion = expansion(&crowded, AI, AI_BUDGET.branching, Prices::NONE);
         assert_eq!(lanes_of(&crowded, "core-008", &deeper_expansion), deeper);
+    }
+
+    /// B14 (#1014): a placement reads the seat's other zone of the lane too. With the AI's own
+    /// face-down card behind lane 3 only, lane 3 is a placement of its own, and lanes 2 and 4, with
+    /// nothing beside, behind or opposite them, are one placement outside the midlane, which keeps its
+    /// lowest lane.
+    #[test]
+    fn b14_a_placement_reads_the_seats_other_zone_and_keeps_its_lowest_lane_outside_the_midlane() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-other-row",
+            "p1": { "hand": ["core-008"], "backrow": [{ "def": "core-041", "lane": 3 }] },
+            "p2": { "hand": ["core-005"] },
+        }))
+        .state()
+        .clone();
+        assert_eq!(midlane_lanes_of(&state, AI), vec![3]);
+        let zone = |lane: i32| ZoneChoice {
+            row: Row::Units,
+            lane,
+        };
+        assert_ne!(placement(&state, AI, &zone(2)), placement(&state, AI, &zone(3)));
+        assert_eq!(placement(&state, AI, &zone(2)), placement(&state, AI, &zone(4)));
+        assert_eq!(root_offered_lanes(&state, "core-008"), vec![1, 2, 3, 5]);
+    }
+
+    /// R1086: an Equip play lands on its host, so it is no lane variant of the plain play and none of
+    /// its hosts is cut at AI_SEARCH.zone_variants: Sentient Cat Ears (M #67, a (1) Equip Unit) is
+    /// offered onto each of three Mr. Vanillas, and as a plain play into the free lanes.
+    #[test]
+    fn r1086_an_equip_play_onto_each_host_is_kept_past_the_zone_cap() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-equip-hosts",
+            "p1": { "hand": ["meditative-067"], "field": ["core-008", "core-008", "core-008"] },
+            "p2": { "hand": ["core-005"] },
+        }))
+        .state()
+        .clone();
+        let ears = hand_id(&state, "meditative-067");
+        let equips: Vec<i32> = candidate_actions(&state, AI, Prices::NONE)
+            .iter()
+            .filter_map(|action| match action {
+                ActionBody::Play {
+                    instance_id,
+                    zone: Some(zone),
+                    equip: Some(true),
+                    ..
+                } if *instance_id == ears => Some(zone.lane),
+                _ => None,
+            })
+            .collect();
+        assert!(equips.len() > AI_SEARCH.zone_variants as usize);
+        let mut hosts = equips.clone();
+        hosts.sort();
+        assert_eq!(hosts, vec![1, 2, 3]);
     }
 
     /// #1635: only the search's root keeps every placement. The lethal solver (lethal.rs
@@ -451,25 +493,13 @@ mod candidate_actions_b14 {
         let kept = AI_SEARCH.position_switches as usize;
         assert!(0 < kept && kept < stand_downs.len());
 
-        for order in [MoveOrder::Heuristic, MoveOrder::Learned] {
-            let expanded = expansion(&state, AI, width, order, &POLICY_PRIOR, Prices::NONE);
-            assert_eq!(expanded.len(), width + kept + 1, "{expanded:?}");
-            assert_eq!(expanded[..width], candidates[..width]);
-            assert_eq!(expanded[width..width + kept], stand_downs[..kept]);
-            assert_eq!(expanded.last(), Some(&ActionBody::EndTurn));
-        }
+        let expanded = expansion(&state, AI, width, Prices::NONE);
+        assert_eq!(expanded.len(), width + kept + 1, "{expanded:?}");
+        assert_eq!(expanded[..width], candidates[..width]);
+        assert_eq!(expanded[width..width + kept], stand_downs[..kept]);
+        assert_eq!(expanded.last(), Some(&ActionBody::EndTurn));
 
-        assert_eq!(
-            expansion(
-                &state,
-                AI,
-                candidates.len(),
-                MoveOrder::Heuristic,
-                &POLICY_PRIOR,
-                Prices::NONE
-            ),
-            candidates
-        );
+        assert_eq!(expansion(&state, AI, candidates.len(), Prices::NONE), candidates);
     }
 
     /// R1759000: the stand-downs kept are the first the cut left out, not the first overall. With one
@@ -497,14 +527,7 @@ mod candidate_actions_b14 {
         let width = first + 1;
         let kept = AI_SEARCH.position_switches as usize;
         assert!(stand_downs.len() > kept);
-        let expanded = expansion(
-            &state,
-            AI,
-            width,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let expanded = expansion(&state, AI, width, Prices::NONE);
         assert_eq!(expanded[..width], candidates[..width]);
         assert_eq!(expanded[width..width + kept], stand_downs[1..1 + kept]);
         assert_eq!(expanded.len(), width + kept + 1, "{expanded:?}");
@@ -530,14 +553,7 @@ mod candidate_actions_b14 {
                 .any(|action| matches!(action, ActionBody::SwitchPosition { .. }))
         );
         assert!(!candidates.iter().any(|action| stands_down(&state, action)));
-        let expanded = expansion(
-            &state,
-            AI,
-            width,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let expanded = expansion(&state, AI, width, Prices::NONE);
         assert_eq!(expanded.len(), width + 1, "{expanded:?}");
     }
 
@@ -570,14 +586,7 @@ mod candidate_actions_b14 {
                 .position(|action| matches!(action, ActionBody::SwitchPosition { .. }))
                 .is_some_and(|first| first > width)
         );
-        let expanded = expansion(
-            &state,
-            AI,
-            width,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let expanded = expansion(&state, AI, width, Prices::NONE);
         assert_eq!(switches(&expanded), 0, "{expanded:?}");
         assert_eq!(expanded.len(), width + 1);
     }
@@ -921,8 +930,7 @@ mod wall_switches_2976 {
 
     /// R2976000: at 7 life against three 4/4s (12 face damage), the 7/7's switch to Defense would wall
     /// every attacker, yet no 4/4 beats it, so it is no stand-down, and it comes past both widths. It is
-    /// kept, once, after the first `width` moves and before endTurn, at the root and below, in either
-    /// move order.
+    /// kept, once, after the first `width` moves and before endTurn, at the root and below.
     #[test]
     fn r2976000_the_switch_that_stops_lethal_is_kept_past_the_cut_at_every_level() {
         let state = facing_three_4_4s(7);
@@ -950,36 +958,17 @@ mod wall_switches_2976 {
             "{candidates:?}"
         );
 
-        for order in [MoveOrder::Heuristic, MoveOrder::Learned] {
-            for (expanded, at) in [
-                (
-                    root_expansion(&state, AI, root_width, order, &POLICY_PRIOR, Prices::NONE),
-                    root_width,
-                ),
-                (
-                    expansion(&state, AI, width, order, &POLICY_PRIOR, Prices::NONE),
-                    width,
-                ),
-            ] {
-                let walls = expanded.iter().filter(|action| **action == wall).count();
-                assert_eq!(walls, 1, "{order:?}: {expanded:?}");
-                assert_eq!(expanded.len(), at + 2, "{order:?}: {expanded:?}");
-                assert_eq!(
-                    expanded.last(),
-                    Some(&ActionBody::EndTurn),
-                    "{order:?}: {expanded:?}"
-                );
-            }
+        for (expanded, at) in [
+            (root_expansion(&state, AI, root_width, Prices::NONE), root_width),
+            (expansion(&state, AI, width, Prices::NONE), width),
+        ] {
+            let walls = expanded.iter().filter(|action| **action == wall).count();
+            assert_eq!(walls, 1, "{expanded:?}");
+            assert_eq!(expanded.len(), at + 2, "{expanded:?}");
+            assert_eq!(expanded.last(), Some(&ActionBody::EndTurn), "{expanded:?}");
         }
 
-        let root = root_expansion(
-            &state,
-            AI,
-            root_width,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let root = root_expansion(&state, AI, root_width, Prices::NONE);
         assert_eq!(root[..root_width], root_candidates[..root_width]);
         assert_eq!(root[root_width], wall);
     }
@@ -995,16 +984,37 @@ mod wall_switches_2976 {
         assert!(wall_switches(&state, AI, &root_candidates).is_empty());
 
         let wall = switch_of(&state, BIG, Position::Atk);
-        let root = root_expansion(
-            &state,
-            AI,
-            root_width,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let root = root_expansion(&state, AI, root_width, Prices::NONE);
         assert!(!root.contains(&wall), "{root:?}");
         assert_eq!(root.len(), root_width + 1, "{root:?}");
+    }
+
+    /// R4188000: prices carrying a pool's coming loss of 1, read for `seat`.
+    fn loss_of_one(seat: PlayerId) -> Prices {
+        Prices {
+            pool_loss: Some((seat, 1)),
+            ..Prices::default()
+        }
+    }
+
+    /// R4188000: at 13 life against the 12 the 4/4s could deal, a pool's coming loss of 1 in the other
+    /// duel brings the threat to lethal, so the 7/7's switch walls it and is kept past the root's cut.
+    /// A loss read for the other seat walls nothing.
+    #[test]
+    fn r4188000_the_wall_switches_read_the_life_less_the_pools_coming_loss() {
+        let state = facing_three_4_4s(13);
+        let root_width = AI_BUDGET.root_branching;
+        let root_candidates = root_candidate_actions(&state, AI, Prices::NONE);
+        let wall = switch_of(&state, BIG, Position::Atk);
+        assert!(wall_switches(&state, AI, &root_candidates).is_empty());
+        assert_eq!(
+            wall_switches_priced(&state, AI, &root_candidates, &loss_of_one(AI)),
+            vec![wall.clone()]
+        );
+        assert!(wall_switches_priced(&state, AI, &root_candidates, &loss_of_one(HUMAN)).is_empty());
+
+        let root = root_expansion(&state, AI, root_width, &loss_of_one(AI));
+        assert_eq!(root[root_width], wall, "{root:?}");
     }
 
     /// R2976000: at 7 life against four 7/7s (21 face damage), p1's 7/7 in Defense would soak all four
@@ -1059,11 +1069,35 @@ mod wall_switches_2976 {
         assert!(0 < kept && kept < walls.len());
         assert!(!walls.iter().any(|wall| stands_down(&state, wall)));
 
-        let expanded = expansion(&state, AI, 1, MoveOrder::Heuristic, &POLICY_PRIOR, Prices::NONE);
+        let expanded = expansion(&state, AI, 1, Prices::NONE);
         assert_eq!(expanded.len(), 1 + kept + 1, "{expanded:?}");
         assert_eq!(expanded[..1], candidates[..1]);
         assert_eq!(expanded[1..1 + kept], walls[..kept]);
         assert_eq!(expanded.last(), Some(&ActionBody::EndTurn));
+    }
+
+    /// R3937000, #3937: the issue's board. p1 at 6 life guards with a Mr. Vanilla in Defense Position at 3
+    /// health (Armor 1) against two 3/4s and a 4/4. The 4 destroys the guard alone and both 3s go face for
+    /// 6, lethal, where smallest first sends the 3s into it and counts 4. So the switch of p1's other
+    /// Vanilla to Defense, which leaves 0 in either order, is offered as a wall.
+    #[test]
+    fn r3937000_a_lone_breaker_makes_the_threat_lethal_so_the_second_guard_is_offered() {
+        jackioh_cards::register_all();
+        let three = json!({ "def": VANILLA, "statsOverride": { "attack": 3, "health": 4 } });
+        let state = scenario(json!({
+            "seed": "search-wall-switch-breaker",
+            "p1": { "health": 6, "field": [{ "def": VANILLA, "position": "DEF", "damage": 1 }, VANILLA] },
+            "p2": { "field": [three.clone(), three, VANILLA] },
+        }))
+        .state()
+        .clone();
+        assert_eq!(face_threat(&state, HUMAN), 6);
+        assert_eq!(face_threat_with(&state, HUMAN, &GREEDY_EVAL), 4);
+        assert_eq!(effective_life(&state, AI), 6);
+        assert_eq!(
+            wall_switches(&state, AI, &candidate_actions(&state, AI, Prices::NONE)),
+            vec![switch_of(&state, VANILLA, Position::Atk)]
+        );
     }
 }
 
@@ -1376,6 +1410,205 @@ mod lanes_that_play_differently {
         };
         assert_eq!(lane(&neighbour), Some(1), "{}", trace(&turn));
         assert!(lane(&vanilla).is_some_and(|lane| lane >= 3), "{}", trace(&turn));
+    }
+
+    /// C #6 Mana Well, a (2) Field Spell.
+    const MANA_WELL: &str = "core-006";
+    /// TG #21 Flame Tongue Totem: "Adjacent Units have +3 Attack."
+    const TOTEM: &str = "traininggrounds-021";
+    /// C #41 Sheepish, a Trap.
+    const SHEEPISH: &str = "core-041";
+    /// C #96 My Pawn, a Trap.
+    const MY_PAWN: &str = "core-096";
+
+    /// The lanes `lines` open by playing the AI's hand card of `def_id` into, lowest first, each once.
+    fn opening_lanes(state: &GameState, def_id: &str, lines: &[Line]) -> Vec<i32> {
+        let mut lanes: Vec<i32> = lines
+            .iter()
+            .flat_map(|line| lanes_of(state, def_id, line.actions.get(..1).unwrap_or_default()))
+            .collect();
+        lanes.sort();
+        lanes.dedup();
+        lanes
+    }
+
+    /// Every line's actions, for a failure's message.
+    fn line_keys(lines: &[Line]) -> String {
+        lines
+            .iter()
+            .map(|line| line.actions.iter().map(action_key).collect::<Vec<_>>().join(" "))
+            .collect::<Vec<_>>()
+            .join(" | ")
+    }
+
+    /// One of the AI's Mr. Vanillas standing in lane 2 (in Defense Position, so it adds no attack to
+    /// the search), another in its hand: lane 1 is left of the standing unit, lanes 3 to 5 right of it.
+    fn standing_vanilla_board() -> GameState {
+        jackioh_cards::register_all();
+        scenario(json!({
+            "seed": "search-r4132000-sides",
+            "p1": {
+                "hand": [VANILLA],
+                "field": [{ "def": VANILLA, "lane": 2, "position": "DEF" }],
+                "library": LIBRARY,
+            },
+            "p2": { "library": LIBRARY },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// R4132000: the root offers Mana Well in three backrow lanes, which the evaluation cannot tell
+    /// apart. They take one line of the beam between them (and at most `AI_SEARCH.zone_variants` of
+    /// them end their turn beside it), so a line that opens with the vanilla keeps its place.
+    #[test]
+    fn r4132000_a_field_spells_backrow_lanes_take_one_beam_line_and_leave_room_for_another_play() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-r4132000-backrow",
+            "p1": { "hand": [MANA_WELL, VANILLA], "library": LIBRARY },
+            "p2": { "library": LIBRARY },
+        }))
+        .state()
+        .clone();
+        let cap = AI_SEARCH.zone_variants as usize;
+        assert!(root_offered_lanes(&state, MANA_WELL).len() > cap);
+
+        let lines = beam_search(
+            &state,
+            AI,
+            &create_node_counter(AI_BUDGET.nodes, None),
+            AI_BUDGET,
+            Prices::NONE,
+        );
+        let keys = line_keys(&lines);
+        assert!(opening_lanes(&state, MANA_WELL, &lines).len() <= cap, "{keys}");
+        assert!(!opening_lanes(&state, VANILLA, &lines).is_empty(), "{keys}");
+    }
+
+    /// R4132000: a vanilla played left of the AI's standing unit or right of it lists the two units in
+    /// another order, yet it is one play in two lanes: the beam opens with at most
+    /// `AI_SEARCH.zone_variants` of its placements, as it does for placements on one side (#1797).
+    #[test]
+    fn r4132000_a_unit_either_side_of_a_standing_unit_opens_at_most_zone_variants_lines_of_the_beam() {
+        let state = standing_vanilla_board();
+        let lanes = root_offered_lanes(&state, VANILLA);
+        assert!(
+            lanes.contains(&1) && lanes.iter().filter(|lane| **lane > 2).count() >= 2,
+            "{lanes:?}"
+        );
+
+        let lines = beam_search(
+            &state,
+            AI,
+            &create_node_counter(AI_BUDGET.nodes, None),
+            AI_BUDGET,
+            Prices::NONE,
+        );
+        assert!(
+            opening_lanes(&state, VANILLA, &lines).len() <= AI_SEARCH.zone_variants as usize,
+            "{}",
+            line_keys(&lines)
+        );
+    }
+
+    /// R4132000: a vanilla played into lane 1, left of the AI's standing unit, or into lane 3, right of
+    /// it, is two positions to the beam's duplicate check (`search_signature` and `unit_lanes`) and to
+    /// the lethal solver, and one position without where its cards stand.
+    #[test]
+    fn r4132000_a_unit_left_or_right_of_a_standing_unit_signs_alike_without_its_lanes() {
+        let state = standing_vanilla_board();
+        let vanilla = hand_id(&state, VANILLA);
+        let into = |lane: i32| {
+            act(
+                &state,
+                AI,
+                body(
+                    json!({ "type": "play", "instanceId": vanilla, "zone": { "row": "units", "lane": lane } }),
+                ),
+            )
+        };
+        let (left, right) = (into(1), into(3));
+        assert_ne!(search_signature(&left, AI), search_signature(&right, AI));
+        assert_ne!(unit_lanes(&left), unit_lanes(&right));
+        assert_eq!(lane_free_signature(&left, AI), lane_free_signature(&right, AI));
+    }
+
+    /// R4132000: the lane-free signature still splits what a lane does not explain (two different
+    /// backrow cards, one card face-down or face-up, a damaged unit, a unit an adjacency aura buffs in
+    /// one lane only) and signs alike, where `search_signature` does not, one backrow card in two lanes,
+    /// two backrow cards in each other's lanes and a unit either side of the aura it stands in.
+    #[test]
+    fn r4132000_the_lane_free_signature_keeps_what_a_lane_does_not_explain() {
+        jackioh_cards::register_all();
+        let board = |p1: Value| {
+            scenario(json!({ "seed": "search-r4132000-apart", "p1": p1, "p2": { "library": LIBRARY } }))
+                .state()
+                .clone()
+        };
+        let vanilla_attack = |p1: Value| {
+            let state = board(p1);
+            let vanilla = active_units_of(&state, AI)
+                .into_iter()
+                .find(|unit| unit.def_id == VANILLA)
+                .expect("the vanilla stands");
+            unit_view(&state, vanilla).attack
+        };
+        let beside_totem = json!({ "field": [{ "def": TOTEM, "lane": 2 }, { "def": VANILLA, "lane": 3 }] });
+        let away_from_totem =
+            json!({ "field": [{ "def": TOTEM, "lane": 2 }, { "def": VANILLA, "lane": 5 }] });
+        assert!(vanilla_attack(beside_totem.clone()) > vanilla_attack(away_from_totem.clone()));
+
+        let apart = [
+            (
+                json!({ "backrow": [{ "def": SHEEPISH, "lane": 2 }] }),
+                json!({ "backrow": [{ "def": MY_PAWN, "lane": 2 }] }),
+            ),
+            (
+                json!({ "backrow": [{ "def": MANA_WELL, "lane": 2, "faceUp": false }] }),
+                json!({ "backrow": [{ "def": MANA_WELL, "lane": 2, "faceUp": true }] }),
+            ),
+            (
+                json!({ "field": [{ "def": VANILLA, "lane": 2 }] }),
+                json!({ "field": [{ "def": VANILLA, "lane": 2, "damage": 2 }] }),
+            ),
+            (beside_totem, away_from_totem),
+        ];
+        for (one, other) in apart {
+            assert_ne!(
+                lane_free_signature(&board(one.clone()), AI),
+                lane_free_signature(&board(other.clone()), AI),
+                "{one} / {other}"
+            );
+        }
+
+        let alike = [
+            (
+                json!({ "backrow": [{ "def": SHEEPISH, "lane": 2 }] }),
+                json!({ "backrow": [{ "def": SHEEPISH, "lane": 3 }] }),
+            ),
+            (
+                json!({ "backrow": [{ "def": SHEEPISH, "lane": 2 }, { "def": MY_PAWN, "lane": 4 }] }),
+                json!({ "backrow": [{ "def": SHEEPISH, "lane": 4 }, { "def": MY_PAWN, "lane": 2 }] }),
+            ),
+            (
+                json!({ "field": [{ "def": TOTEM, "lane": 2 }, { "def": VANILLA, "lane": 1 }] }),
+                json!({ "field": [{ "def": TOTEM, "lane": 2 }, { "def": VANILLA, "lane": 3 }] }),
+            ),
+        ];
+        for (one, other) in alike {
+            let (one_state, other_state) = (board(one.clone()), board(other.clone()));
+            assert_ne!(
+                search_signature(&one_state, AI),
+                search_signature(&other_state, AI),
+                "{one} / {other}"
+            );
+            assert_eq!(
+                lane_free_signature(&one_state, AI),
+                lane_free_signature(&other_state, AI),
+                "{one} / {other}"
+            );
+        }
     }
 }
 
@@ -1784,10 +2017,10 @@ mod enemy_targets_first {
     }
 
     /// The action keys of `actions`' plays of `instance_id`, in order.
-    fn plays_of(actions: &[ActionBody], instance_id: &str) -> Vec<String> {
+    fn play_keys(actions: &[ActionBody], instance_id: &str) -> Vec<String> {
         actions
             .iter()
-            .filter(|action| matches!(action, ActionBody::Play { instance_id: id, .. } if id == instance_id))
+            .filter(|action| is_play_of(action, instance_id))
             .map(action_key)
             .collect()
     }
@@ -1814,11 +2047,11 @@ mod enemy_targets_first {
     fn a_sources_variants_alternate_enemy_first_with_the_enemy_hero_first() {
         let state = burn_board();
         let burn = hand_id(&state, "classic-036");
-        let legal = plays_of(&legal_actions(&state, AI), &burn);
+        let legal = play_keys(&legal_actions(&state, AI), &burn);
         assert_eq!(legal.len(), 6, "{legal:?}");
         let expected: Vec<String> = [5, 0, 4, 1, 2, 3].iter().map(|&at| legal[at].clone()).collect();
         assert_eq!(
-            plays_of(&candidate_actions(&state, AI, Prices::NONE), &burn),
+            play_keys(&candidate_actions(&state, AI, Prices::NONE), &burn),
             expected
         );
     }
@@ -1843,8 +2076,8 @@ mod enemy_targets_first {
         let candidates = candidate_actions(&state, AI, Prices::NONE);
         for def_id in ["classicplus-065-4", "core-008"] {
             let id = hand_id(&state, def_id);
-            let kept = plays_of(&candidates, &id);
-            let offered: Vec<String> = plays_of(&legal, &id)
+            let kept = play_keys(&candidates, &id);
+            let offered: Vec<String> = play_keys(&legal, &id)
                 .into_iter()
                 .filter(|key| kept.contains(key))
                 .collect();
@@ -2115,7 +2348,7 @@ mod rescored_own_prompts_1636 {
         let score = rescore(&world, &line, &counter).unwrap_or_else(|| panic!("the counter ran out"));
         assert_ne!(
             score,
-            finalist_score(&at_prompt, AI, NextSwing::Enemy, Prices::NONE)
+            evaluate_priced(&at_prompt, AI, NextSwing::Enemy, &AI_EVAL, Prices::NONE)
         );
         // The Scarab, each answer tried, the closing endTurn, and the reply's own steps past them.
         assert!(counter.used() > 2 + offered.len(), "{} nodes", counter.used());
@@ -2130,6 +2363,33 @@ mod rescored_own_prompts_1636 {
             })
             .collect();
         assert!(answered.contains(&score), "{score} is none of {answered:?}");
+    }
+
+    /// R4447000: the line [Scarab, its answer] replayed on a world whose offer lacks that answer is not
+    /// cut: that world's own Discover is answered there (#1636), so the fill, on or off, changes nothing.
+    #[test]
+    fn r4447000_an_own_prompt_answer_another_world_does_not_offer_is_not_a_cut() {
+        let found_on = scarab_turn("search-rescore-a", 1);
+        let play = play_of(&found_on, SCARAB);
+        let answer = answers(&act(&found_on, AI, &play))
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| panic!("the Discover is not open"));
+        let line = [play, answer];
+        let world = scarab_turn("search-rescore-b", 1);
+        let replay = |fill: ReplayFill| {
+            let counter = create_node_counter(AI_BUDGET.nodes, None);
+            replay_line(&world, AI, &line, &counter, None, Prices::NONE, fill)
+                .unwrap_or_else(|| panic!("the counter ran out"))
+        };
+        let off = replay(ReplayFill::OFF);
+        let on = replay(ReplayFill {
+            steps: 3,
+            width: AI_BUDGET.branching,
+        });
+        assert!(!off.cut);
+        assert!(!on.cut);
+        assert_eq!(on, off);
     }
 
     /// #1636: a line cut at a refused play, no prompt open, is scored as before: where it stopped,
@@ -2189,14 +2449,7 @@ mod ways_of_being_played {
         .state()
         .clone();
 
-        let expanded = root_expansion(
-            &state,
-            AI,
-            AI_BUDGET.root_branching,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let expanded = root_expansion(&state, AI, AI_BUDGET.root_branching, Prices::NONE);
 
         let billy_id = hand_id(&state, "classicplus-069");
         let going_long_id = hand_id(&state, "core-084");
@@ -2252,14 +2505,7 @@ mod ways_of_being_played {
         .clone();
 
         let billy_id = hand_id(&state, "classicplus-069");
-        let root = root_expansion(
-            &state,
-            AI,
-            AI_BUDGET.root_branching,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let root = root_expansion(&state, AI, AI_BUDGET.root_branching, Prices::NONE);
         assert!(
             root.iter().any(|action| {
                 matches!(action, ActionBody::Play { instance_id, x: Some(4), .. } if *instance_id == billy_id)

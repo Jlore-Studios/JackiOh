@@ -1,4 +1,5 @@
-//! S #106 Warpfield Amplifier (SPEC §8.10 row 106; R20, R91, R1852000, R1852003, R1859001, R1859002):
+//! S #106 Warpfield Amplifier (SPEC §8.10 row 106; R20, R91, R1852000, R1852003, R1859001, R1859002,
+//! R4334000):
 //! (1) Unit, Rare, 2/3 → 4/6, Starship Piece, a card of the Stinkyscape set.
 //!
 //! Base and Radiant: "Starship Piece\nWhen launched, switch each of your Units to Attack Position and
@@ -7,7 +8,8 @@
 //! (`when_launched`, R1852003) runs only as part of that Starship. Then, for each Unit its controller
 //! has as the Starship launches, the Starship among them, in lane order: `switch_position_of` to Attack,
 //! a Unit already there staying (R91), an effect's switch spending no exertion (R20); then
-//! `buff_all_units` +N Attack on each, lasting (R1859002).
+//! `buff_all_units` +N Attack on each, lasting (R1859002). Its `attackGain` is read through `param` on
+//! the face the piece fused on (R4334000).
 
 use std::sync::Arc;
 
@@ -15,10 +17,10 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-106";
 
-fn warpfield(radiant: bool) -> Script {
+fn warpfield() -> Script {
     Script {
-        triggers: vec![when_launched("warpfield-amplifier", move |ctx, _event| {
-            let gain = piece_number(ctx, ID, radiant, "attackGain");
+        triggers: vec![when_launched("warpfield-amplifier", |ctx, _event| {
+            let gain = param(ctx, "attackGain");
             vec![
                 for_each_card(ForEachCardArgs {
                     cards: Arc::new(|ctx: &mut EffectContext<'_>| -> Vec<String> {
@@ -42,9 +44,10 @@ fn warpfield(radiant: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
+    let base = warpfield();
     CardScripts {
-        base: warpfield(false),
-        radiant: warpfield(true),
+        base: base.clone(),
+        radiant: base,
     }
 }
 
@@ -58,7 +61,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Pierce: keywords only
 
     fn launched(seed: &str, radiant: bool) -> (Scenario, String) {
         let (mut s, ship) = built_starship(

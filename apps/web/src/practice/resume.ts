@@ -2,7 +2,7 @@
 // rule 7). R765 records Save and leave; malformed or inaccessible storage is no resume.
 
 import { DIFFICULTIES } from "@jackioh/engine/config";
-import { isLeanPick } from "@jackioh/shared";
+import { isLeanPick, isPortraitId } from "@jackioh/shared";
 
 import type { PracticeDeckChoice, PracticeStartConfig } from "./protocol.ts";
 import { getStored, removeStored, setStored } from "../net/storage.ts";
@@ -29,6 +29,13 @@ function isDeck(value: unknown): value is PracticeDeckChoice {
   }
 }
 
+/** R3976000: the portraits a game was dealt with, each seat a known one. */
+function isPortraits(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  const portraits = value as Record<string, unknown>;
+  return isPortraitId(portraits.p1) && isPortraitId(portraits.p2);
+}
+
 function isConfig(value: unknown): value is PracticeStartConfig {
   if (typeof value !== "object" || value === null) return false;
   const config = value as Record<string, unknown>;
@@ -40,6 +47,7 @@ function isConfig(value: unknown): value is PracticeStartConfig {
     (config.sandbox === undefined || config.sandbox === true) &&
     (config.earning === undefined || config.earning === true) &&
     (config.dailyDeal === undefined || typeof config.dailyDeal === "string") &&
+    (config.portraits === undefined || isPortraits(config.portraits)) &&
     config.lesson === undefined
   );
 }
@@ -64,20 +72,17 @@ export function readPracticeResumeState(): PracticeResume | null {
   }
 }
 
-export function readPracticeResume(): PracticeStartConfig | null {
-  return readPracticeResumeState()?.config ?? null;
-}
-
 /** R765: lessons clear because they cannot resume. */
 export function writePracticeResume(config: PracticeStartConfig, options: { saved?: boolean } = {}): void {
   if (config.lesson !== undefined) {
     clearPracticeResume();
     return;
   }
-  const { seed, difficulty, humanSeat, deck, sandbox, earning, dailyDeal } = config;
+  const { seed, difficulty, humanSeat, deck, sandbox, earning, dailyDeal, portraits } = config;
   // R923000: a sandbox game is picked up as a sandbox.
   // R1303001: a game on a server seed is picked up as one, so its end is still claimed.
   // R2882000: today's deal is picked up as one, so Play again deals it again.
+  // R3976000: a game is picked up wearing the portraits it was dealt, which its replay draws.
   const setup = {
     seed,
     difficulty,
@@ -86,6 +91,7 @@ export function writePracticeResume(config: PracticeStartConfig, options: { save
     ...(sandbox === true ? { sandbox } : {}),
     ...(earning === true ? { earning } : {}),
     ...(dailyDeal === undefined ? {} : { dailyDeal }),
+    ...(portraits === undefined ? {} : { portraits }),
   };
   const kept = options.saved === true ? { ...setup, saved: true } : setup;
   // Blocked or full storage: a reload starts at the setup.

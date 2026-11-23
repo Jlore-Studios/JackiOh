@@ -233,3 +233,76 @@ mod r603_one_rated_game_is_one_rating_period {
         );
     }
 }
+
+mod r603_step_5_to_the_bit {
+    use super::*;
+    use jackioh_shared::config::{BOT_PROMOTION_DEVIATION_BOOST, GLICKO_SCALE};
+    use jackioh_shared::ranked::glicko2::widen_for_promotions;
+
+    /// R603: step 5 solves for the new volatility only to GLICKO_CONVERGENCE, about 3e-8 of a volatility, so a
+    /// reference held to 1e-8 cannot see the step taken another way. These hold it exactly as Glickman's §5 sets
+    /// it out (f, the bracket's start on either side of Δ² against φ² + v, the Illinois update and its halving),
+    /// to the bit: on the paper's period, and on a result far from the expected one, each way.
+    #[test]
+    fn r603_the_volatility_step_is_glickmans_section_5_to_the_bit() {
+        let paper = period(
+            glicko(1500.0, 200.0),
+            &[
+                game(glicko(1400.0, 30.0), 1.0),
+                game(glicko(1550.0, 100.0), 0.0),
+                game(glicko(1700.0, 300.0), 0.0),
+            ],
+        );
+        assert_eq!(
+            paper,
+            glicko_with(1464.050670819693, 151.5165219259256, 0.05999598428664987),
+            "{paper:?}"
+        );
+        let win = period(glicko(1500.0, 50.0), &[game(glicko(2400.0, 30.0), 1.0)]);
+        assert_eq!(
+            win,
+            glicko_with(1514.8564101846532, 51.062871777196214, 0.06001314423490439),
+            "{win:?}"
+        );
+        // Δ is negative here: Δ² > φ² + v all the same.
+        let loss = period(glicko(1500.0, 50.0), &[game(glicko(600.0, 30.0), 0.0)]);
+        assert_eq!(
+            loss,
+            glicko_with(1485.1435898153468, 51.062871777196214, 0.06001314423490439),
+            "{loss:?}"
+        );
+    }
+
+    /// R603: a period with no games keeps the rating and the volatility and widens the deviation by the volatility
+    /// in quadrature (Glickman's step 6 alone).
+    #[test]
+    fn r603_a_period_with_no_games_widens_only_the_deviation() {
+        let after = period(glicko(1500.0, 200.0), &[]);
+        let phi = 200.0 / GLICKO_SCALE;
+        let widened = (phi * phi + 0.06 * 0.06).sqrt() * GLICKO_SCALE;
+        assert_eq!((after.rating, after.volatility), (1500.0, 0.06));
+        assert!(
+            (after.deviation - widened).abs() < 1e-9,
+            "{after:?} against {widened}"
+        );
+    }
+
+    /// R1560000: each promotion widens a bot's deviation by BOT_PROMOTION_DEVIATION_BOOST in quadrature, under the
+    /// cap, and leaves its rating and volatility.
+    #[test]
+    fn r1560000_each_promotion_widens_the_deviation_in_quadrature_under_the_cap() {
+        let settled = glicko(1500.0, 50.0);
+        for promotions in [1_i64, 2] {
+            let widened = widen_for_promotions(&settled, promotions);
+            let expected = (50.0_f64 * 50.0
+                + promotions as f64 * BOT_PROMOTION_DEVIATION_BOOST * BOT_PROMOTION_DEVIATION_BOOST)
+                .sqrt();
+            assert!(expected < RATING_DEVIATION_START, "PREMISE: under the cap");
+            assert!(
+                (widened.deviation - expected).abs() < 1e-9,
+                "{promotions}: {widened:?} against {expected}"
+            );
+            assert_eq!((widened.rating, widened.volatility), (1500.0, 0.06));
+        }
+    }
+}

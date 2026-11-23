@@ -69,15 +69,19 @@ fn may_preview(state: &GameState, card: &CardInstance, viewer: PlayerId, zone: C
     }
 }
 
-/// R3047004: the label of the Credits a Resource in hand sells for this turn, printed in braces.
+/// R3047004: the label of the Credits a Resource in hand sells for this turn, printed in braces; a
+/// `paysCredits` card's too (R4410000).
 pub const SELL_QUOTE_LABEL: &str = "Credits";
 
 /// R3047004: a Resource in its owner's hand while the Marketplace is open sells for its quote this turn
 /// (`marketplace::sell_quote`, R1853002), the Credits it pays as it is played or discarded (R2250001):
-/// that number as an R280 preview. Nothing for a card that is no Resource, one outside a hand or a
-/// closed Marketplace, none of which has a quote.
+/// that number as an R280 preview, and so does a card that pays Credits as a Resource does (R4410000).
+/// Nothing for any other card, one outside a hand or a closed Marketplace, none of which has a quote.
 fn sell_quote_preview(state: &GameState, card: &CardInstance, zone: ConditionZone) -> Option<PreviewValue> {
-    if zone != ConditionZone::Hand || !crate::resources::is_resource_card(state, card) {
+    if zone != ConditionZone::Hand
+        || !(crate::resources::is_resource_card(state, card)
+            || crate::resources::pays_credits_like_a_resource(card))
+    {
         return None;
     }
     let quote = crate::marketplace::sell_quote(state, card)?;
@@ -87,7 +91,7 @@ fn sell_quote_preview(state: &GameState, card: &CardInstance, zone: ConditionZon
 /// R280: the labeled numbers `viewer` sees on `card`, or `None` for none. Pure: it copies what the
 /// hook returns, so the view holds no reference into a script, and it calls the hook at most once.
 /// R3047004: a Resource in hand adds the Credits it sells for this turn, whether or not its script
-/// declares a `preview`.
+/// declares a `preview`, as does a card that pays Credits as one does (R4410000).
 pub fn preview_of(
     state: &GameState,
     card: &CardInstance,

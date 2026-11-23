@@ -2687,9 +2687,9 @@ mod r3582000_fewer_opening_cards_and_draw_every {
         assert_eq!(skipped.state.active, PlayerId::P2);
         assert_eq!(drawn_by(&skipped.events, PlayerId::P2), Vec::<String>::new());
 
-        let play = legal_actions(&skipped.state, PlayerId::P2)
+        let play = plays_in(&skipped.state, PlayerId::P2, &card.id)
             .into_iter()
-            .find(|body| matches!(body, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
+            .next()
             .expect("Stockpile is playable");
         let cast = step(&skipped.state, player_input(PlayerId::P2, play));
         assert_eq!(drawn_by(&cast.events, PlayerId::P2).len(), 2);

@@ -76,23 +76,30 @@ mod tests {
         }
     }
 
+    /// R3563000: one play is one run, so its picks are different Potions while the pool of three lasts
+    /// (R60's repeats no longer stand for a card an effect generates): two picks are two Potions, and the
+    /// third pick of a Buffed Pouch brings the last one, so all three come once.
     #[test]
-    fn r1179003_repeats_are_allowed() {
+    fn r1179003_r3563000_the_picks_are_distinct_until_the_pool_runs_out() {
         crate::register_all();
-        let seed = seed_where("m+014-repeat", |seed| {
+        for n in 0..60 {
+            let s = pouched(&format!("m+014-distinct-{n}"), false);
+            let added = added(&s);
+            assert_eq!(added.len(), 2, "seed {n}");
+            assert_ne!(added[0], added[1], "seed {n}: {added:?}");
+        }
+        for n in 0..20 {
             let mut s = scenario(json!({
-                "seed": seed,
+                "seed": format!("m+014-whole-{n}"),
                 "p1": { "hand": [POUCH, FILLER] },
                 "p2": { "hand": [FILLER] },
             }));
+            step_param(s.card_mut(POUCH), "cards", 1);
             s.play(POUCH, json!({}));
-            let added = added(&s);
-            added.len() == 2 && added[0] == added[1]
-        });
-        let s = pouched(&seed, false);
-        let added = added(&s);
-        assert_eq!(added.len(), 2);
-        assert_eq!(added[0], added[1]);
+            let mut added = added(&s);
+            added.sort();
+            assert_eq!(added, POTIONS.map(String::from).to_vec(), "seed {n}");
+        }
     }
 
     #[test]

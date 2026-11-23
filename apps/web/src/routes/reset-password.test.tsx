@@ -261,7 +261,7 @@ describe("B31 show and hide", () => {
 
 function unsignedJwt(payload: Record<string, unknown>): string {
   const part = (value: unknown): string =>
-    btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
   return `${part({ alg: "HS256" })}.${part(payload)}.unsigned`;
 }
 

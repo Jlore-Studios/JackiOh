@@ -312,7 +312,9 @@ under the card (`fx/aura/TileAura.tsx`, `tile.css`).
 
 `apps/web/src/fx/cards/<set>.json5`, one per set: `core`, `classic`, `classicplus`, `meditative`,
 `meditativeplus`, `stinkyscape-1` (`stinkyscape-001` to `-090`, with the tokens listed among them),
-`stinkyscape-2` (`-091` to the end, its `stinkyscape-t-*` tokens included) and `traininggrounds`.
+`stinkyscape-2` (`-091` to the end, its `stinkyscape-t-*` tokens included), `traininggrounds` and
+`stinkyscapeplus` (since its release, #3596: shared motifs and looks, its Legendaries' and Mythics'
+signatures pending).
 Stinkyscape is split so its two set passes merge without conflicts.
 
 ```json5

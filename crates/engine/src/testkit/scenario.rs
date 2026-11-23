@@ -82,6 +82,7 @@ thread_local! {
         const { Cell::new(None) };
     static CODE_BLOCKS_OVERRIDE: Cell<Option<crate::catalog::CodeBlocks>> = const { Cell::new(None) };
     static SHIPPED_OVERRIDE: Cell<Option<&'static [crate::catalog::ShippedCatalog]>> = const { Cell::new(None) };
+    static PAST_DEFS_OVERRIDE: Cell<Option<&'static [CardDef]>> = const { Cell::new(None) };
     static CARD_METRICS_OVERRIDE: Cell<Option<crate::catalog::CardMetrics>> = const { Cell::new(None) };
     static MARKETPLACE_TABLE_OVERRIDE: Cell<Option<&'static [crate::config::MarketLot]>> =
         const { Cell::new(None) };
@@ -162,6 +163,18 @@ pub fn shipped_override() -> Option<&'static [crate::catalog::ShippedCatalog]> {
     SHIPPED_OVERRIDE.with(Cell::get)
 }
 
+/// R3538002: the past definitions (`<card>@<version>`, oldest first) `catalog::past_ids_of` and
+/// `catalog::past_def` read on this thread, in place of the provider `register_past_versions` hands
+/// over.
+pub fn register_past_defs(defs: Vec<CardDef>) {
+    let defs: &'static [CardDef] = Box::leak(defs.into_boxed_slice());
+    PAST_DEFS_OVERRIDE.with(|cell| cell.set(Some(defs)));
+}
+
+pub fn past_defs_override() -> Option<&'static [CardDef]> {
+    PAST_DEFS_OVERRIDE.with(Cell::get)
+}
+
 /// R1846000: each fixture card's code lines, and the BUSTED and complicated lists `crates/cards/build.rs`
 /// would compile from them, in place of the compiled ones (`catalog::card_metrics`), sorted by id.
 pub fn register_code_lines(lines: Vec<(&str, usize)>) {
@@ -213,6 +226,7 @@ pub struct ThreadOverrides {
     win_rates: Option<&'static crate::win_rates::WinRateTable>,
     code_blocks: Option<crate::catalog::CodeBlocks>,
     shipped: Option<&'static [crate::catalog::ShippedCatalog]>,
+    past_defs: Option<&'static [CardDef]>,
     card_metrics: Option<crate::catalog::CardMetrics>,
     marketplace_table: Option<&'static [crate::config::MarketLot]>,
     pool_shift: usize,
@@ -228,6 +242,7 @@ impl ThreadOverrides {
         WIN_RATES_OVERRIDE.with(|cell| cell.set(self.win_rates));
         CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(self.code_blocks));
         SHIPPED_OVERRIDE.with(|cell| cell.set(self.shipped));
+        PAST_DEFS_OVERRIDE.with(|cell| cell.set(self.past_defs));
         CARD_METRICS_OVERRIDE.with(|cell| cell.set(self.card_metrics));
         MARKETPLACE_TABLE_OVERRIDE.with(|cell| cell.set(self.marketplace_table));
         crate::testkit::pool_probe::install_pool_shift(self.pool_shift);
@@ -243,6 +258,7 @@ pub fn thread_overrides() -> ThreadOverrides {
         win_rates: win_rates_override(),
         code_blocks: code_blocks_override(),
         shipped: shipped_override(),
+        past_defs: past_defs_override(),
         card_metrics: card_metrics_override(),
         marketplace_table: marketplace_table_override(),
         pool_shift: crate::testkit::pool_probe::pool_shift(),
@@ -257,6 +273,7 @@ pub fn clear_overrides() {
     WIN_RATES_OVERRIDE.with(|cell| cell.set(None));
     CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(None));
     SHIPPED_OVERRIDE.with(|cell| cell.set(None));
+    PAST_DEFS_OVERRIDE.with(|cell| cell.set(None));
     CARD_METRICS_OVERRIDE.with(|cell| cell.set(None));
     MARKETPLACE_TABLE_OVERRIDE.with(|cell| cell.set(None));
 }
@@ -735,6 +752,16 @@ struct Placement {
     lane: Option<i32>,
 }
 
+/// R3543000: whether the definition prints a Flexible keyword on either face (Flying has it
+/// innately), so a setup may lay the Unit in the backrow standing, as a Flexible play may.
+fn prints_flexible(def: &CardDef) -> bool {
+    [&def.base, &def.radiant].iter().any(|face| {
+        face.keywords
+            .iter()
+            .any(|keyword| crate::layers::grants_flexible(keyword.kind()))
+    })
+}
+
 /// §3.2: the def's type picks the row and the entry's `row` overrides it, so `field` and `backrow`
 /// accept the same entries: naming the list is a convenience, not a second rule.
 fn normalize_placement(
@@ -772,6 +799,8 @@ fn normalize_placement(
             def.name
         ));
     }
+    // R3543000: a Flexible Unit (Flying has it innately) stands in the backrow as a Flexible play
+    // may; R3828000: Flexible is a Unit's, so no other card is laid in a unit zone.
     if row == Row::Units && def.type_ != CardType::Unit {
         return Err(format!(
             "{label}: \"{}\" is a {}; the unit zones hold Units only",
@@ -779,7 +808,7 @@ fn normalize_placement(
             def.type_.as_str()
         ));
     }
-    if row == Row::Backrow && def.type_ == CardType::Unit {
+    if row == Row::Backrow && def.type_ == CardType::Unit && !prints_flexible(&def) {
         return Err(format!(
             "{label}: \"{}\" is a Unit; the backrow holds Field Spells and Traps",
             def.name
@@ -894,6 +923,8 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
         card.counters = counters;
     }
     apply_cost_setup(&mut card, Some(&entry.entry.cost));
+    // R3546000: a fixture card printing GIGA is placed at its size, as `place_with` stamps one.
+    card.giga = crate::giga::enters_giga(&*sink.state, &card).then_some(true);
     let id = card.id.clone();
 
     // §3.2 Stack: `place_on_field` puts the arriving card on top of whatever the lane holds.
@@ -905,9 +936,9 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
             None
         },
     };
-    // R1081000: a Flying Unit set in a backrow zone stands there, as one played into it does.
-    let stands =
-        row == Row::Backrow && crate::layers::unit_has(&*sink.state, &card, crate::wire::KeywordKind::Flying);
+    // R1081000: a Flexible Unit (Flying has it innately, R3543000) set in a backrow zone stands
+    // there, as one played into it does.
+    let stands = row == Row::Backrow && crate::layers::is_flexible(&*sink.state, &card);
     let placed = if stands {
         crate::zones::place_standing_on_field(&mut *sink.state, &mut card, slot, options)
     } else {
@@ -1178,6 +1209,32 @@ fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
     String::from("(a panic with no message)")
 }
 
+/// A prompt's Mode options in the order offered, for a test that holds the `PendingChoice` itself.
+pub fn prompt_modes_of(pending: &PendingChoice) -> Vec<String> {
+    pending
+        .options
+        .iter()
+        .filter_map(|option| match &option.selection {
+            Selection::Mode { option } => Some(option.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Whether `action` is a play of the instance `card_id`.
+pub fn is_play_of(action: &ActionBody, card_id: &str) -> bool {
+    matches!(action, ActionBody::Play { instance_id, .. } if instance_id == card_id)
+}
+
+/// `seat`'s legal plays of the instance `card_id` in `state`, in offer order: for a test that holds a
+/// state, or asks a seat other than the card's owner.
+pub fn plays_in(state: &GameState, seat: PlayerId, card_id: &str) -> Vec<ActionBody> {
+    crate::reduce::legal_actions(state, seat)
+        .into_iter()
+        .filter(|action| is_play_of(action, card_id))
+        .collect()
+}
+
 /// What `run` panicked with, or `None` when it ran through.
 fn refusal_of(run: impl FnOnce()) -> Option<String> {
     match catch_unwind(AssertUnwindSafe(run)) {
@@ -1186,15 +1243,9 @@ fn refusal_of(run: impl FnOnce()) -> Option<String> {
     }
 }
 
-/// Any panic passes, so it is for a call that is not a refused step: `scenario(…)` itself, a harness
-/// check that fails loudly (`Scenario::expect_refused` takes a refusal only).
-pub fn expect_throw(run: impl FnOnce()) {
-    if refusal_of(run).is_none() {
-        panic!("expect_throw: the call ran through; it should have been refused");
-    }
-}
-
-/// `expect_throw` whose panic message contains `text`.
+/// Passes when `run` panics with a message containing `text`: for a call that is not a refused step
+/// (`scenario(…)` itself, a harness check that fails loudly; `Scenario::expect_refused` takes a
+/// refusal only).
 pub fn expect_throw_with(run: impl FnOnce(), text: &str) {
     match refusal_of(run) {
         None => {
@@ -1211,6 +1262,15 @@ pub fn expect_throw_with(run: impl FnOnce(), text: &str) {
 /// rules test shares (#2023; crates/tools/tests/acceptance.rs refuses a test's own copy).
 pub fn must<T>(value: Option<T>, what: &str) -> T {
     value.unwrap_or_else(|| panic!("expected {what}"))
+}
+
+/// `items`, or a panic naming what the test expected in them when there are none: a loop that checks each
+/// item passes on an empty list, so it goes through this first (#3914; acceptance.rs refuses a copy).
+pub fn nonempty<T>(items: Vec<T>, what: &str) -> Vec<T> {
+    if items.is_empty() {
+        panic!("expected at least one of {what}");
+    }
+    items
 }
 
 fn or_fail<T>(result: Result<T, String>) -> T {
@@ -1310,6 +1370,58 @@ impl Scenario {
     /// The seat's legal actions in the live state (`reduce::legal_actions`, §10.2); `()` is the active seat.
     pub fn offered(&self, player: impl SeatRef) -> Vec<ActionBody> {
         crate::reduce::legal_actions(&self.current, player.seat_or(self.current.active))
+    }
+
+    /// The card's owner's legal plays of it in the live state, in offer order (`plays_in` for another seat).
+    pub fn plays_of(&self, card: impl Into<CardRef>) -> Vec<ActionBody> {
+        let id = or_fail(self.resolve(&card.into(), Where::Any, "plays_of"));
+        let card = self.live(&id);
+        plays_in(&self.current, card.owner, &id)
+    }
+
+    /// Whether the card's owner may play it now.
+    pub fn can_play(&self, card: impl Into<CardRef>) -> bool {
+        !self.plays_of(card).is_empty()
+    }
+
+    /// The targets of the card's owner's legal plays of it, flattened in offer order.
+    pub fn play_targets(&self, card: impl Into<CardRef>) -> Vec<Selection> {
+        self.plays_of(card)
+            .into_iter()
+            .flat_map(|play| match play {
+                ActionBody::Play { targets, .. } => targets.unwrap_or_default(),
+                _ => Vec::new(),
+            })
+            .collect()
+    }
+
+    /// The card's controller's legal activations of it in the live state, in offer order.
+    pub fn activations_of(&self, card: impl Into<CardRef>) -> Vec<ActionBody> {
+        let id = or_fail(self.resolve(&card.into(), Where::Any, "activations_of"));
+        let card = self.live(&id);
+        crate::reduce::legal_actions(&self.current, card.controller)
+            .into_iter()
+            .filter(|action| matches!(action, ActionBody::Activate { instance_id, .. } if *instance_id == id))
+            .collect()
+    }
+
+    /// The unit's controller's legal attacks with it in the live state, in offer order.
+    pub fn attacks_of(&self, card: impl Into<CardRef>) -> Vec<ActionBody> {
+        let id = or_fail(self.resolve(&card.into(), Where::Any, "attacks_of"));
+        let card = self.live(&id);
+        crate::reduce::legal_actions(&self.current, card.controller)
+            .into_iter()
+            .filter(|action| matches!(action, ActionBody::Attack { attacker_id, .. } if *attacker_id == id))
+            .collect()
+    }
+
+    /// The open prompt's Mode options in the order offered (non-Mode options are skipped); panics when no
+    /// prompt is open. A test that also checks the prompt's kind, seat or resume step asserts that itself.
+    pub fn prompt_modes(&self) -> Vec<String> {
+        let Some(pending) = self.current.pending.as_ref() else {
+            panic!("prompt_modes: no prompt is open");
+        };
+        prompt_modes_of(pending)
     }
 
     // Refs
@@ -3120,6 +3232,17 @@ mod tests {
         }
 
         #[test]
+        fn nonempty_hands_back_the_items_and_fails_loudly_naming_what_is_missing() {
+            assert_eq!(nonempty(vec![1, 2], "the numbers"), [1, 2]);
+            expect_throw_with(
+                || {
+                    nonempty(Vec::<i32>::new(), "the cards the Spell drew");
+                },
+                "expected at least one of the cards the Spell drew",
+            );
+        }
+
+        #[test]
         fn every_pick_builder_is_the_one_instance_selection() {
             let s = board();
             let unit = s.unit_at("p1", 1);
@@ -3128,6 +3251,71 @@ mod tests {
             assert_eq!(pick::instance(&unit), one);
             assert_eq!(pick::card(&s, "core-043"), one);
             assert_eq!(pick::unit_at(&s, "p1", 1), one);
+        }
+
+        #[test]
+        fn pick_mode_is_the_one_mode_selection() {
+            assert_eq!(pick::mode("a"), json!([{ "pick": "mode", "option": "a" }]));
+            assert_eq!(pick::mode(String::from("a")), pick::mode("a"));
+        }
+
+        /// A prompt opened by hand with three options: Mode "x", a non-Mode option, Mode "y".
+        fn prompt_with_modes() -> Scenario {
+            let mut s = board();
+            let prompt: PendingChoice = serde_json::from_value(json!({
+                "id": "q1",
+                "playerId": "p1",
+                "kind": "answer",
+                "prompt": "test prompt",
+                "options": [
+                    { "key": "1", "label": "X", "selection": { "pick": "mode", "option": "x" } },
+                    { "key": "2", "label": "N", "selection": { "pick": "none" } },
+                    { "key": "3", "label": "Y", "selection": { "pick": "mode", "option": "y" } },
+                ],
+                "min": 1,
+                "max": 1,
+                "resume": { "defId": "core-025", "hook": "q", "step": "q", "radiant": false, "data": {} },
+            }))
+            .expect("a prompt literal reads as a PendingChoice");
+            s.state_mut().pending = Some(prompt);
+            s
+        }
+
+        #[test]
+        fn prompt_modes_keeps_only_mode_options_in_offered_order() {
+            let s = prompt_with_modes();
+            assert_eq!(s.prompt_modes(), ["x", "y"]);
+            let pending = s.state().pending.as_ref().expect("the prompt is open");
+            assert_eq!(prompt_modes_of(pending), ["x", "y"]);
+        }
+
+        #[test]
+        fn instance_ids_keeps_the_instance_picks_in_order() {
+            let selections = [
+                Selection::Instance {
+                    instance_id: String::from("c1"),
+                },
+                Selection::Hero { player: PlayerId::P2 },
+                Selection::Mode {
+                    option: String::from("a"),
+                },
+                Selection::Instance {
+                    instance_id: String::from("c2"),
+                },
+            ];
+            assert_eq!(pick::instance_ids(&selections), ["c1", "c2"]);
+            assert!(pick::instance_ids(&[]).is_empty());
+        }
+
+        #[test]
+        fn prompt_modes_panics_naming_the_missing_prompt() {
+            let s = board();
+            expect_throw_with(
+                || {
+                    s.prompt_modes();
+                },
+                "no prompt is open",
+            );
         }
     }
 
@@ -3248,6 +3436,54 @@ mod tests {
             assert!(!s.offered("p1").iter().any(
                 |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == unit)
             ));
+        }
+
+        #[test]
+        fn plays_of_and_can_play_read_one_cards_plays_for_its_owner() {
+            let mut s = scenario(json!({
+                "p1": { "hand": ["core-025", "core-010"], "field": [anchor()] },
+                "p2": { "hand": [HAND_ANCHOR], "field": [anchor()] },
+            }));
+            let id = s.card("core-025").id.clone();
+            let plays = s.plays_of("core-025");
+            assert!(!plays.is_empty());
+            assert!(plays.iter().all(|play| is_play_of(play, &id)));
+            let by_hand: Vec<ActionBody> = s
+                .offered(PlayerId::P1)
+                .into_iter()
+                .filter(|action| is_play_of(action, &id))
+                .collect();
+            assert_eq!(plays, by_hand);
+            assert_eq!(plays, plays_in(s.state(), PlayerId::P1, &id));
+            assert!(plays_in(s.state(), PlayerId::P2, &id).is_empty());
+            assert!(s.can_play("core-025"));
+            assert!(!s.can_play(s.hand("p2")[0].clone()));
+            assert!(s.play_targets("core-025").is_empty());
+
+            s.state_mut().players[PlayerId::P1].mana.current = 3;
+            assert!(!s.can_play("core-025"));
+            assert!(s.can_play("core-010"));
+        }
+
+        #[test]
+        fn attacks_of_and_activations_of_read_one_units_actions_for_its_controller() {
+            let s = scenario(json!({
+                "p1": { "field": ["core-025", anchor()] },
+                "p2": { "field": [anchor()] },
+            }));
+            let unit = s.unit_at("p1", 5);
+            let attacks = s.attacks_of(&unit);
+            assert!(!attacks.is_empty());
+            let by_unit = |action: &ActionBody| matches!(action, ActionBody::Attack { attacker_id, .. } if *attacker_id == unit.id);
+            assert!(attacks.iter().all(by_unit));
+            let by_hand: Vec<ActionBody> = s
+                .offered("p1")
+                .into_iter()
+                .filter(|action| by_unit(action))
+                .collect();
+            assert_eq!(attacks, by_hand);
+            assert!(s.attacks_of(s.unit_at("p2", 5)).is_empty());
+            assert!(s.activations_of(&unit).is_empty());
         }
     }
 }

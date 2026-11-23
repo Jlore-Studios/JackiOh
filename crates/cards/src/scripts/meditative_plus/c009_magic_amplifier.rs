@@ -106,10 +106,6 @@ mod tests {
         crate::scenario(sides)
     }
 
-    fn hero(player: PlayerId) -> Value {
-        json!([{ "pick": "hero", "player": player.as_str() }])
-    }
-
     fn health(s: &Scenario, player: PlayerId) -> i32 {
         s.state().players[player].hero.health
     }
@@ -121,7 +117,7 @@ mod tests {
             json!({ "backrow": [ID], "hand": [TRUE_STRIKE] }),
             json!({}),
         );
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         assert_eq!(health(&s, P2), 24);
     }
 
@@ -133,7 +129,7 @@ mod tests {
             json!({ "hand": [TRUE_STRIKE, FILLER] }),
         );
         s.end_turn();
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P1) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P1) }));
         assert_eq!(health(&s, P1), 24);
     }
 
@@ -145,7 +141,7 @@ mod tests {
             json!({}),
         );
         assert_eq!(spell_damage_of(s.state(), P1), 4);
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         assert_eq!(health(&s, P2), 22);
     }
 
@@ -227,7 +223,7 @@ mod tests {
             json!({}),
         );
         assert_eq!(spell_damage_of(s.state(), P2), 4);
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         assert_eq!(health(&s, P2), 22);
     }
 

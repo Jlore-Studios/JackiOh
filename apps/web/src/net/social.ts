@@ -1,4 +1,4 @@
-// Play together's REST surface (#936, SPEC S7), one wrapper per route.
+// Play together's REST surface (#936, SPEC S7), one wrapper per route the client calls.
 //
 // CLAUDE.md rule 7: who may befriend, challenge, chat with or watch whom is the server's (B43–B53); a
 // refusal is an `ApiRequestError` whose sentence a screen shows as it is. Every route is
@@ -23,7 +23,16 @@ export type Friend = PlayerRef & {
   watchable: boolean;
   duos?: boolean;
   since: string;
+  /** R3732001: an offline friend's last heartbeat, ISO-8601, when presence kept one. */
+  lastSeenAt?: string;
+  /** R3732001: the turn of the 1v1 game the friend is in, while the player may watch it. */
+  turn?: number;
+  /** R3732001: the code of an online friend's open lobby, one the player may enter (R3730000). */
+  lobbyCode?: string;
 };
+
+/** R3732000: someone the player lately played an unranked game with, when that game ended. */
+export type RecentOpponent = PlayerRef & { playedAt: string };
 
 export type FriendRequest = { requestId: string; from: PlayerRef; to: PlayerRef; createdAt: string };
 
@@ -139,8 +148,18 @@ export async function heartbeat(): Promise<void> {
 
 // The social poll (R3210000)
 
-/** What `getChallenges` and `getUnread` answer, in one read. */
-export type SocialRead = { incoming: Challenge[]; outgoing: Challenge[]; unread: Record<string, number> };
+/**
+ * What GET /api/challenges and GET /api/chat/unread answer, in one read. #3727: `dailyWaiting`, how many
+ * daily games wait on the caller (absent from an older server: none). R4039000: `notificationsUnread`, how
+ * many rows of the caller's notification feed are unread (absent from an older server: none).
+ */
+export type SocialRead = {
+  incoming: Challenge[];
+  outgoing: Challenge[];
+  unread: Record<string, number>;
+  dailyWaiting?: number;
+  notificationsUnread?: number;
+};
 
 /** The social poll's one read: the caller's open, unexpired challenges, both ways, and its unread counts. */
 export function getSocial(): Promise<SocialRead> {
@@ -154,11 +173,6 @@ export function createChallenge(
   body: Record<string, unknown> & { friendId: string },
 ): Promise<{ challengeId: string; roomCode: string }> {
   return social<{ challengeId: string; roomCode: string }>("/api/challenges", { method: "POST", body });
-}
-
-/** The caller's open, unexpired challenges, both ways. */
-export function getChallenges(): Promise<{ incoming: Challenge[]; outgoing: Challenge[] }> {
-  return social<{ incoming: Challenge[]; outgoing: Challenge[] }>("/api/challenges");
 }
 
 export async function declineChallenge(challengeId: string): Promise<void> {
@@ -182,11 +196,6 @@ export function sendChat(friendId: string, body: string): Promise<{ message: Cha
   return social<{ message: ChatMessage }>(`/api/chat/${part(friendId)}`, { method: "POST", body: { body } });
 }
 
-/** Unread messages by the friend who sent them. */
-export function getUnread(): Promise<{ unread: Record<string, number> }> {
-  return social<{ unread: Record<string, number> }>("/api/chat/unread");
-}
-
 export async function reportMessage(messageId: string, reason: string): Promise<void> {
   await social<null>(`/api/chat/messages/${part(messageId)}/report`, { method: "POST", body: { reason } });
 }
@@ -207,6 +216,11 @@ export function getReplayShares(matchId: string): Promise<{ friendIds: string[] 
 }
 
 /** The replays friends have shared with the caller. */
+/** R3732000: the opponents of the player's recent unranked games; never one the queue paired. */
+export function getRecentOpponents(): Promise<{ recent: RecentOpponent[] }> {
+  return social<{ recent: RecentOpponent[] }>("/api/friends/recent");
+}
+
 export function getSharedReplays(): Promise<{ shared: SharedReplay[] }> {
   return social<{ shared: SharedReplay[] }>("/api/replays/shared");
 }

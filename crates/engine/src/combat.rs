@@ -24,7 +24,7 @@ use crate::state::{
     find_instance, find_instance_mut,
 };
 use crate::wire::{GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, has_keyword, opponent_of};
-use crate::work::{PausedStep, WorkPlan, owe, paused as is_paused, paused_of};
+use crate::work::{PausedStep, WorkPlan, engine_resume, owe, paused as is_paused, paused_of};
 use crate::zones::live_or;
 
 /// What an attack can be declared on (§4.2 step 2), the damage pipeline's own target type.
@@ -121,17 +121,6 @@ fn note_first_strike_kill(sink: &mut EngineSink<'_>, id: &str) {
     }
 }
 
-fn engine_resume(hook: &str, step: &str, data: IndexMap<String, Value>) -> Resume {
-    Resume {
-        def_id: String::new(),
-        hook: hook.to_string(),
-        step: step.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    }
-}
-
 /// The state one of the five attack hooks owes while it waits (R113), saved as JSON under `KEY` in a
 /// `WORK` item whose step is `"hook"`: `work.rs` hands that item back to the hook's `run_owed_*`.
 trait OwedHook: Serialize + DeserializeOwned {
@@ -204,11 +193,35 @@ pub fn attacks_per_turn(state: &GameState, unit: &CardInstance) -> i32 {
 
 /// `attacks_per_turn` read through a sweep's `AuraTable` (#892).
 pub fn attacks_per_turn_in(auras: &AuraTable<'_>, unit: &CardInstance) -> i32 {
-    if auras.unit_has(unit, KeywordKind::Windfury) {
+    let windfury = if auras.unit_has(unit, KeywordKind::Windfury) {
         WINDFURY_ATTACKS
     } else {
         1
-    }
+    };
+    // R3550001: "Can attack N times per turn" gives N attacks, the larger of N and Windfury's two.
+    let printed = crate::scripts::flags_of(auras.state(), unit)
+        .attacks_per_turn
+        .map_or(1, |n| {
+            crate::params::declared_or(auras.state(), unit, "attacks", n)
+        });
+    windfury.max(printed)
+}
+
+/// R3550001 (Stinkyscape+ #37 Scorch): whether two Units stand directly across from each other — in
+/// each other's lane on opposite sides. The test `lane_multiplier_for` reads for "across its lane".
+pub fn stands_across(state: &GameState, a: &CardInstance, b: &CardInstance) -> bool {
+    let Some(a_slot) = crate::zones::slot_of(state, a) else {
+        return false;
+    };
+    let Some(b_slot) = crate::zones::slot_of(state, b) else {
+        return false;
+    };
+    // R1081000: a Unit standing in a backrow zone is in that zone's lane, as one in its unit zone is.
+    // R3546001: a GIGA meets a lane in either of its lanes.
+    crate::zones::in_units_row_or_standing(state, a)
+        && crate::zones::in_units_row_or_standing(state, b)
+        && a_slot.player != b_slot.player
+        && crate::giga::lanes_meet(a, b)
 }
 
 /// §4.1: one exertion per turn, so a unit that attacked cannot switch and one that switched cannot
@@ -336,12 +349,14 @@ pub fn why_cannot_switch_in(
     // §4.1: a Unit with Can't Defend cannot be switched to Defense Position, by an action or by an
     // effect (R2657000; `never_defense` is the flag it took over from, as #65.1 Spikey Pillow printed it),
     // nor can any Unit while an aura says Units cannot be (R1849006, Stinkyscape #23 Warp Disruptor), nor
-    // an Indestructible one, whatever made it so (R2179000).
+    // an Indestructible one, whatever made it so (R2179000), nor an Evasive one, which implies Can't
+    // Defend as an Indestructible one does (R3543002).
     if to == Position::Def
         && (crate::scripts::flags_of(auras.state(), unit).never_defense == Some(true)
             || auras.unit_has(unit, KeywordKind::CantDefend)
             || crate::restrictions::defense_barred(auras.state())
-            || auras.unit_has(unit, KeywordKind::Indestructible))
+            || auras.unit_has(unit, KeywordKind::Indestructible)
+            || auras.unit_has(unit, KeywordKind::Evasive))
     {
         return Err(EngineError::new("that unit cannot be in Defense Position"));
     }
@@ -529,7 +544,13 @@ pub fn why_cannot_attack_in(
     }
 
     // Step 3: while any enemy unit this attacker may attack has Taunt, the target must be one of them.
-    let wall = taunt_wall(auras, attacker, enemy);
+    // R3560007: an attacker that Ignores Taunt skips it (S+ #121).
+    let ignores = crate::scripts::flags_of(state, attacker).ignores_taunt == Some(true);
+    let wall = if ignores {
+        Vec::new()
+    } else {
+        taunt_wall(auras, attacker, enemy)
+    };
     let in_wall = match target {
         DamageTarget::Unit { instance } => wall.iter().any(|unit| unit.id == instance.id),
         DamageTarget::Hero { .. } => false,
@@ -569,23 +590,22 @@ pub fn attack_targets_in(auras: &AuraTable<'_>, attacker: &CardInstance) -> Vec<
         .collect()
 }
 
-/// §4.2 step 2's two possibilities as one id: an enemy unit's instance id, or `hero-<player>`.
-const HERO_TARGET_PREFIX: &str = "hero-";
+/// §4.2 step 2's two possibilities as one id: an enemy unit's instance id, or `hero-<player>`
+/// (`crate::reduce::attack_target_id` writes it, `hero_seat_of` reads it).
+pub(crate) const HERO_TARGET_PREFIX: &str = "hero-";
 
-fn target_id_of(target: &AttackTarget) -> String {
-    match target {
-        DamageTarget::Unit { instance } => instance.id.clone(),
-        DamageTarget::Hero { player } => format!("{HERO_TARGET_PREFIX}{player}"),
-    }
+/// The seat a `hero-<player>` target id names, or None for any other id.
+pub fn hero_seat_of(target_id: &str) -> Option<PlayerId> {
+    let named = target_id.strip_prefix(HERO_TARGET_PREFIX)?;
+    PLAYER_IDS.into_iter().find(|seat| seat.as_str() == named)
 }
 
-/// The inverse of `target_id_of`: the target an `attackDeclared` event or an open `declaredAttack`
+/// The inverse of `attack_target_id`: the target an `attackDeclared` event or an open `declaredAttack`
 /// names (#96 My Pawn reads the event, §4.2 step 5 the state). The `hero-<player>` spelling is this
-/// module's, so nobody else should be parsing it.
+/// module's (`hero_seat_of`), so nobody else should be parsing it.
 pub fn attack_target_of(state: &GameState, target_id: &str) -> Option<AttackTarget> {
-    if let Some(named) = target_id.strip_prefix(HERO_TARGET_PREFIX) {
-        let player = PLAYER_IDS.into_iter().find(|id| id.as_str() == named)?;
-        return Some(DamageTarget::Hero { player });
+    if target_id.starts_with(HERO_TARGET_PREFIX) {
+        return hero_seat_of(target_id).map(|player| DamageTarget::Hero { player });
     }
     let unit = find_instance(state, target_id)?;
     Some(DamageTarget::Unit {
@@ -597,7 +617,8 @@ pub fn attack_target_of(state: &GameState, target_id: &str) -> Option<AttackTarg
 /// the question §4.5 step 1 will: 0 or less health or a destroy mark, while an Indestructible unit
 /// falls only to max health 0 or less (R69).
 fn has_fallen(state: &GameState, unit: &CardInstance) -> bool {
-    if !is_active_on_field(state, unit) {
+    // R4205000: nor does a unit a steal had no room for, Indestructible or not.
+    if !is_active_on_field(state, unit) || unit.unpreventable_destroy == Some(true) {
         return true;
     }
     let view = crate::layers::unit_view(state, unit);
@@ -640,8 +661,56 @@ pub fn attack_mod_for(state: &GameState, attacker: &CardInstance, defender: &Car
     out
 }
 
-/// MD-F14, R1283: multiplier for attacks across its lane in combat.
+/// R3554008 (S+ #107 Fuse): the weight a sweep of `striker` puts on `struck`: `sweepLane` for
+/// lanes that meet, `sweepAdjacent` (defaulting to 1) for lanes one apart, else none. Only when
+/// the striker sweeps, the two are on opposite sides, and both are in unit rows or standing.
+pub fn sweep_weight(state: &GameState, striker: &CardInstance, struck: &CardInstance) -> Option<i32> {
+    let flags = crate::scripts::flags_of(state, striker);
+    let lane = flags.sweep_lane?;
+    let striker_slot = crate::zones::slot_of(state, striker)?;
+    let struck_slot = crate::zones::slot_of(state, struck)?;
+    if striker_slot.player == struck_slot.player {
+        return None;
+    }
+    if !crate::zones::in_units_row_or_standing(state, striker)
+        || !crate::zones::in_units_row_or_standing(state, struck)
+    {
+        return None;
+    }
+    let striker_lanes = crate::giga::lanes_of(striker);
+    let struck_lanes = crate::giga::lanes_of(struck);
+    if striker_lanes.iter().any(|lane| struck_lanes.contains(lane)) {
+        Some(crate::params::declared_or(state, striker, "sweepLane", lane))
+    } else if striker_lanes
+        .iter()
+        .any(|a| struck_lanes.iter().any(|b| (a - b).abs() == 1))
+    {
+        Some(crate::params::declared_or(
+            state,
+            striker,
+            "sweepAdjacent",
+            flags.sweep_adjacent.unwrap_or(1),
+        ))
+    } else {
+        None
+    }
+}
+
+/// MD-F14, R1283, R3554008: the multiplier on an attacker's strike: a sweep's weight first, else lane
+/// strike's (`strike_back_multiplier_for`).
 pub fn lane_multiplier_for(state: &GameState, striker: &CardInstance, struck: &CardInstance) -> i32 {
+    // R3554008: a sweep's weight first, so the projections in `lethal.rs` and `query.rs` agree
+    // with combat.
+    if let Some(weight) = sweep_weight(state, striker, struck) {
+        return weight;
+    }
+    strike_back_multiplier_for(state, striker, struck)
+}
+
+/// R4156000: the multiplier on a strike back, lane strike's alone (MD-F14, R1283: across its lane in
+/// combat, whichever side attacked). A sweep's weight belongs to the sweeper's own attacks (R3554008), so
+/// a sweeper that is attacked strikes back with its plain attack.
+pub fn strike_back_multiplier_for(state: &GameState, striker: &CardInstance, struck: &CardInstance) -> i32 {
     let Some(printed) = crate::scripts::flags_of(state, striker).lane_multiplier else {
         return 1;
     };
@@ -652,10 +721,11 @@ pub fn lane_multiplier_for(state: &GameState, striker: &CardInstance, struck: &C
         return 1;
     };
     // R1081000: a Unit standing in a backrow zone is in that zone's lane, as one in its unit zone is.
+    // R3546001: a GIGA meets a lane in either of its lanes.
     if crate::zones::in_units_row_or_standing(state, striker)
         && crate::zones::in_units_row_or_standing(state, struck)
         && striker_slot.player != struck_slot.player
-        && striker_slot.lane == struck_slot.lane
+        && crate::giga::lanes_meet(striker, struck)
     {
         crate::params::declared_or(state, striker, "multiplier", printed)
     } else {
@@ -686,13 +756,16 @@ fn cleave(
     let Some(defender) = live_card(sink.state, instance) else {
         return;
     };
-    let Some(at) = crate::zones::slot_of(sink.state, &defender) else {
-        return;
-    };
-    for slot in crate::zones::adjacent(at) {
-        let Some(neighbour) = crate::zones::card_at(sink.state, slot).cloned() else {
+    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the target is hit once.
+    let mut met: Vec<String> = vec![defender.id.clone()];
+    for slot in crate::giga::adjacent_slots(sink.state, &defender) {
+        let Some(neighbour) = crate::giga::occupant_at(sink.state, slot).cloned() else {
             continue;
         };
+        if met.contains(&neighbour.id) {
+            continue;
+        }
+        met.push(neighbour.id.clone());
         // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
         if !crate::zones::is_adjacent_card(sink.state, &defender, &neighbour) {
             continue;
@@ -733,6 +806,54 @@ fn strike(
     );
     let source = live_or(sink.state, attacker);
     cleave(sink, &source, target, cleave_amount, poisonous);
+    let source = live_or(sink.state, attacker);
+    sweep(sink, &source, target, cleave_amount, poisonous);
+}
+
+/// R3554008: a sweep's other hits: every other enemy Unit with a weight takes `cleave_amount *
+/// weight` as one damage instance each (`attack_flags`). A walk of `active_units_of`, which no
+/// half narrows (R3554003).
+fn sweep(
+    sink: &mut EngineSink<'_>,
+    attacker: &CardInstance,
+    target: &AttackTarget,
+    cleave_amount: i32,
+    poisonous: bool,
+) {
+    if crate::scripts::flags_of(sink.state, attacker)
+        .sweep_lane
+        .is_none()
+    {
+        return;
+    }
+    let enemy = opponent_of(attacker.controller);
+    let struck = match target {
+        DamageTarget::Unit { instance } => Some(instance.id.clone()),
+        DamageTarget::Hero { .. } => None,
+    };
+    let units: Vec<CardInstance> = crate::zones::active_units_of(sink.state, enemy)
+        .into_iter()
+        .cloned()
+        .collect();
+    for unit in &units {
+        if struck.as_deref() == Some(unit.id.as_str()) {
+            continue;
+        }
+        let Some(weight) = sweep_weight(sink.state, attacker, unit) else {
+            continue;
+        };
+        deal_damage(
+            sink,
+            DamageArgs {
+                source: Some(attacker.clone()),
+                target: DamageTarget::Unit {
+                    instance: unit.clone(),
+                },
+                amount: cleave_amount * weight,
+                flags: attack_flags(poisonous),
+            },
+        );
+    }
 }
 
 /// The defender's strike back; `via` as on `strike`.
@@ -805,7 +926,9 @@ pub fn resolve_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target
     let attack = attack + bonus.attack;
 
     let hit = attack * lane_multiplier_for(sink.state, &attacker, &defender);
-    let strike_back_attack = strike_back_attack * lane_multiplier_for(sink.state, &defender, &attacker);
+    // R4156000: lane strike's multiplier alone, never a sweep's weight.
+    let strike_back_attack =
+        strike_back_attack * strike_back_multiplier_for(sink.state, &defender, &attacker);
 
     // R783000: a Ranged attacker's strike lands alone — no strike back, a First Strike one included —
     // unless the defender is Ranged too. Its Cleave splashes as ever (R783001).
@@ -1092,7 +1215,7 @@ fn fight_declared(sink: &mut EngineSink<'_>, open: DeclaredAttack, since: u32, b
                 sink,
                 &crate::attack_summon::OwedAttackSummon {
                     attacker_id: attacker.id.clone(),
-                    target_id: target_id_of(&target),
+                    target_id: crate::reduce::attack_target_id(&target),
                     forced: false,
                     bounce,
                     declared: Some(open),
@@ -1263,7 +1386,7 @@ pub(crate) fn declare_instead(
         return Ok(());
     }
 
-    let target_id = target_id_of(&target);
+    let target_id = crate::reduce::attack_target_id(&target);
     let declared = DeclaredAttack {
         id: format!("d{}", sink.state.next_seq),
         attacker_id: attacker.id.clone(),
@@ -1295,6 +1418,8 @@ pub(crate) fn declare_instead(
     let declaration = sink.events[at].clone();
     crate::triggers::mark_dispatched(sink, &[declaration]);
 
+    // R3550005: a counter cancels a declared Ranged attack before the window.
+    crate::countering::counter_declared_attack(sink, &attacker);
     // Step 4's second sentence: the traps answer the declaration, before any damage.
     crate::traps::run_trap_window(sink, &event);
     let since: Vec<GameEvent> = sink
@@ -1426,7 +1551,7 @@ pub(crate) fn force_attack_instead(
 ) {
     sink.events.push(GameEvent::AttackDeclared {
         attacker_id: attacker.id.clone(),
-        target_id: target_id_of(target),
+        target_id: crate::reduce::attack_target_id(target),
         forced: true,
         instead_of: instead_of.map(str::to_string),
     });
@@ -1446,7 +1571,7 @@ fn forced_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: &At
     }
     let owed = OwedWhenAttacks {
         attacker_id: attacker.id.clone(),
-        target_id: target_id_of(target),
+        target_id: crate::reduce::attack_target_id(target),
         declared: None,
         since: crate::stays::exit_mark(sink.state),
         stage: None,
@@ -1715,7 +1840,7 @@ pub fn force_attack_own_hero(sink: &mut EngineSink<'_>, attacker: &CardInstance)
     }
     sink.events.push(GameEvent::AttackDeclared {
         attacker_id: attacker.id.clone(),
-        target_id: target_id_of(&target),
+        target_id: crate::reduce::attack_target_id(&target),
         forced: true,
         instead_of: None,
     });
@@ -2037,6 +2162,9 @@ struct OwedAfterAttack {
     /// Judged once, as the hook first runs, when the check has closed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     survived: Option<bool>,
+    /// R3543003: whether Frenzy answers, judged once with survived.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    frenzy: Option<bool>,
     /// The hook is done and only the state check that follows it is owed. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     check_only: Option<bool>,
@@ -2192,11 +2320,12 @@ fn close_combat(
     // read as the check closes; they run after the combatants' own hooks. None, nothing runs.
     let allies = OwedAllyAttack {
         attacker_id: snapshot.id.clone(),
-        target_id: target_id_of(target),
+        target_id: crate::reduce::attack_target_id(target),
         forced,
         since,
         holders: ally_attack_holders(sink.state, snapshot.controller),
         survived: None,
+        destroyed_enemy: destroyed_an_enemy(sink, &snapshot, from).then_some(true),
         check_only: None,
     };
     combatant_hooks(sink, snapshot, defender_snapshot, target, forced, since, from);
@@ -2220,10 +2349,11 @@ fn combatant_hooks(
     from: usize,
 ) {
     let attacker_id = snapshot.id.clone();
-    if crate::scripts::script_of(sink.state, &snapshot)
+    let hooked = crate::scripts::script_of(sink.state, &snapshot)
         .after_attack
-        .is_some()
-    {
+        .is_some();
+    // R3543003: a Frenzy Unit answers its combat as an `afterAttack` hook does, judged when it runs.
+    if hooked || crate::layers::unit_has(sink.state, &snapshot, KeywordKind::Frenzy) {
         let destroyed_ids: Vec<String> = sink.events[from.min(sink.events.len())..]
             .iter()
             .filter_map(|event| match event {
@@ -2237,19 +2367,21 @@ fn combatant_hooks(
             .collect();
         let owed = OwedAfterAttack {
             attacker_id: snapshot.id.clone(),
-            target_id: target_id_of(target),
+            target_id: crate::reduce::attack_target_id(target),
             snapshot,
             destroyed_ids,
             forced,
             since,
             survived: None,
+            frenzy: None,
             check_only: None,
         };
         if is_paused(sink) {
+            // R1026, R113: owed behind the check, and the defender's `afterAttacked` is owed after it below.
             owe_engine_hook(sink, &owed);
-            return;
+        } else {
+            run_after_attack(sink, &owed, None);
         }
-        run_after_attack(sink, &owed, None);
     }
     // MD-C26: then the defender's `afterAttacked`, once per combat it was attacked in (never a hero).
     if let Some(defender) = defender_snapshot
@@ -2278,9 +2410,7 @@ fn combatant_hooks(
 /// The attacker's hook, from `paused` when a question split it, then the check that follows it.
 fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: Option<PausedStep>) {
     let script = crate::scripts::script_of(sink.state, &owed.snapshot);
-    let Some(hook) = script.after_attack.clone() else {
-        return;
-    };
+    let hook = script.after_attack.clone();
     if sink.state.result.is_some() {
         return;
     }
@@ -2291,6 +2421,17 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
                 && !crate::stays::left_field_after(sink.state, owed.since, &live.id)
         })
     });
+    // R3543003: judged once, as `survived` is: Frenzy as the check closes, and its target among its kills.
+    let frenzy = owed.frenzy.unwrap_or_else(|| {
+        survived
+            && owed.destroyed_ids.contains(&owed.target_id)
+            && live
+                .as_ref()
+                .is_some_and(|live| crate::layers::unit_has(sink.state, live, KeywordKind::Frenzy))
+    });
+    if hook.is_none() && !frenzy {
+        return;
+    }
     // R2285001, R2396000 (above): an "After this attacks" for a gone attacker does nothing and owes no
     // check; a "Whenever this attacks" runs as the snapshot it fought with, as `run_after_attacked` runs
     // a dead defender; a Reborn body is not it, so it runs once.
@@ -2301,6 +2442,7 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
     };
     let mut judged = OwedAfterAttack {
         survived: Some(survived),
+        frenzy: Some(frenzy),
         ..owed.clone()
     };
     // `{ ...facts, ...(survived ? {} : { [SELF_KEY]: snapshot }) }`, in that key order.
@@ -2314,6 +2456,24 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
     }
     // R426: its controller in that combat, though a Death in the check took it since.
     let controller = owed.snapshot.controller;
+    // R3543003: Frenzy's "this may attack again" runs first in the step, before the card's own
+    // "After this attacks".
+    let hook: Hook = std::sync::Arc::new(move |ctx: &mut crate::script::EffectContext<'_>| {
+        let mut effects = Vec::new();
+        if frenzy {
+            effects.push(crate::effects::may_attack_again(
+                crate::effects::MayAttackAgainArgs {
+                    target: crate::effects::targets::TargetSpec::SelfCard,
+                    keep_sick: Some(true),
+                    lift_sick: None,
+                },
+            ));
+        }
+        if let Some(hook) = &hook {
+            effects.extend(hook(ctx));
+        }
+        effects
+    });
     let status = run_engine_hook(sink, hook, &self_card, controller, &judged, data, paused);
     match status {
         crate::prompts::ListStatus::Done => crate::state_check::state_check(sink),
@@ -2616,7 +2776,8 @@ pub fn run_owed_ally_attacked(sink: &mut EngineSink<'_>, item: &WorkItem) {
 pub const ALLY_ATTACK_WORK: &str = "@allyAttack";
 
 /// The facts an `allyAttack` hook is handed in its `ctx.data` (`ally_attack_of` reads them back): the
-/// attacker's id, the target, `forced` (R53) and whether the attacker still stands as the hook starts.
+/// attacker's id, the target, `forced` (R53), whether the attacker still stands as the hook starts, and
+/// whether it destroyed an enemy Unit in the combat (R3951000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AllyAttackFacts {
@@ -2624,6 +2785,9 @@ pub struct AllyAttackFacts {
     pub target_id: String,
     pub forced: bool,
     pub survived: bool,
+    /// R3951000: the combat's closing check destroyed a Unit of the attacker's opponent with the attacker
+    /// its killer (R42): the defender or a Unit its Cleave hit.
+    pub destroyed_enemy: bool,
 }
 
 /// The facts an `allyAttack` hook was handed, or `None` outside one.
@@ -2634,7 +2798,24 @@ pub fn ally_attack_of(ctx: &crate::script::EffectContext<'_>) -> Option<AllyAtta
         target_id: data.get("targetId")?.as_str()?.to_string(),
         forced: data.get("forced")?.as_bool()?,
         survived: data.get("survived")?.as_bool()?,
+        destroyed_enemy: data.get(DESTROYED_ENEMY_KEY).and_then(Value::as_bool) == Some(true),
     })
+}
+
+/// R3951000: the key of `AllyAttackFacts::destroyed_enemy` in a hook's data, written only when true.
+const DESTROYED_ENEMY_KEY: &str = "destroyedEnemy";
+
+/// R3951000: whether the events since `from` hold the death of a Unit of `attacker`'s opponent whose R42
+/// killer was `attacker`.
+fn destroyed_an_enemy(sink: &EngineSink<'_>, attacker: &CardInstance, from: usize) -> bool {
+    sink.events
+        .get(from.min(sink.events.len())..)
+        .unwrap_or(&[])
+        .iter()
+        .any(|event| {
+            matches!(event, GameEvent::Destroyed { controller, killer_id: Some(killer), .. }
+                if *killer == attacker.id && *controller != attacker.controller)
+        })
 }
 
 /// What an owed `@allyAttack` carries, all JSON: the combat's facts and the holders still to answer
@@ -2651,6 +2832,10 @@ struct OwedAllyAttack {
     /// The first holder's `survived`, judged once as its hook starts, so a pause re-reads the same.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     survived: Option<bool>,
+    /// R3951000: the attacker destroyed an enemy Unit in the combat, read as its closing check ends. Only
+    /// ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    destroyed_enemy: Option<bool>,
     /// The first holder's hook is done; only its state check is owed. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     check_only: Option<bool>,
@@ -2714,6 +2899,9 @@ fn answer_ally_attack(sink: &mut EngineSink<'_>, mut owed: OwedAllyAttack, mut p
         data.insert("targetId".to_string(), json!(owed.target_id));
         data.insert("forced".to_string(), json!(owed.forced));
         data.insert("survived".to_string(), json!(survived));
+        if owed.destroyed_enemy == Some(true) {
+            data.insert(DESTROYED_ENEMY_KEY.to_string(), json!(true));
+        }
         let status = run_engine_hook(sink, hook, &card, card.controller, &owed, data, resumed);
         match status {
             crate::prompts::ListStatus::Done => {
@@ -2745,4 +2933,21 @@ pub fn run_owed_ally_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
         return;
     };
     answer_ally_attack(sink, owed, paused_of(&item.resume.data));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hero_target_ids_round_trip() {
+        for seat in PLAYER_IDS {
+            let id = crate::reduce::attack_target_id(&DamageTarget::Hero { player: seat });
+            assert_eq!(id, format!("hero-{seat}"));
+            assert_eq!(hero_seat_of(&id), Some(seat));
+        }
+        for other in ["hero-", "hero-p3", "p1", ""] {
+            assert_eq!(hero_seat_of(other), None, "{other:?}");
+        }
+    }
 }

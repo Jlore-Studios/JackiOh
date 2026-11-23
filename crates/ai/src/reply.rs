@@ -2,10 +2,14 @@
 //! the turn is worth what remains after the opponent answers, scored one turn deeper.
 //!
 //! Rule order:
-//! 1. Play handed cards (e.g. bounced units).
-//! 2. Face-up activations (up to AI_REPLY.visible_activations).
+//! 1. Play handed cards (e.g. bounced units); one drawn guess at a secret of the seat's, and every play
+//!    judged after the turn's end while a handed card would be discarded there (R3696001).
+//! 2. Face-up activations (up to AI_REPLY.visible_activations): the seat's hero first, then dealt over
+//!    every source and ability at the seat's most valuable cards (R4515000).
 //! 3. Static trades: best value attack (lethal, kill, trade up, face; Deft trials R49).
-//! 4. Defense switches up to AI_REPLY.defense_switches (#1696).
+//! 4. Defense switches up to AI_REPLY.defense_switches (#1696), and switches back to Attack of units
+//!    without Deft up to AI_REPLY.attack_switches (R4433000); facing lethal, walls weighed against the
+//!    best attack (R4187000).
 //!
 //! Step evaluation uses real `reduce` calls (catching unwinds, SURFACE §4.4.9). Countdowns
 //! waiting where reply ends are blended via `AI_REPLY.countdown_share` (#1995, R1181000).
@@ -13,19 +17,23 @@
 use std::cmp::Ordering;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
+use jackioh_engine::afflictions::Affliction;
 use jackioh_engine::{
     Action, ActionBody, AttackTarget, CardInstance, DelayedAt, GameState, KeywordKind, Phase, PlayerId,
-    Position, Selection, effective_life, find_instance, has_countdown, has_keyword, legal_actions, pierces,
-    reduce_unpiloted, subsystems, takes_strike_back, unit_view,
+    Position, Rng, SECRET_KEY, Selection, active_units_of, burn_on, card_keywords, converts_to,
+    effective_life, find_instance, has_countdown, has_keyword, legal_actions, pierces, reduce_unpiloted,
+    secret_of, subsystems, takes_strike_back, temporary_number, toxic_on, unit_view,
 };
 
-use crate::candidates::{Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
-use crate::config::{AI_EVAL, AI_REPLY};
-use crate::evaluate::{
-    NextSwing, Prices, coming_mana, evaluate_priced, heal_converted, heal_worth, kill_worth, unit_worth,
+use crate::candidates::{
+    Blow, Exchange, Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of, wall_switches,
 };
-use crate::learned::finalist_score;
+use crate::config::{AI_EVAL, AI_GUESS_SEED, AI_REPLY};
+use crate::evaluate::{
+    NextSwing, Prices, coming_mana, evaluate_priced, float_credit, heal_converted, heal_worth,
+    hero_ticks_added, kill_worth, unit_worth,
+};
 use crate::lethal::{deft_ready_switch, ready_gap};
 use crate::simulate::{
     AnswersTried, LineStatus, best_auto_answer, charge_announced, line_status, note_sim_panic, simulate,
@@ -41,13 +49,110 @@ pub(crate) struct Trade {
     pub(crate) splash_kills: bool,
 }
 
+/// §4.4 step 8: what a Lifesteal hit's heal of `amount` is worth to `healer`: `heal_worth` on the hero
+/// curve, or, when a heal converter turns it into damage (E8, R413), minus that much Pierce damage on
+/// `healer`'s own hero (#3858).
+fn lifesteal_value(state: &GameState, healer: PlayerId, amount: i32) -> f64 {
+    if heal_converted(state, healer) {
+        // E8, R413: the heal becomes that much Pierce damage on the healing hero instead,
+        // on the stated amount (`damage.rs`: a replaced heal is never multiplied), ignoring
+        // Armor, so `reply_face_value` without `projected_hero_damage`'s Armor pass.
+        -reply_face_value(state, healer, amount)
+    } else {
+        heal_worth(state, healer, amount, &AI_EVAL)
+    }
+}
+
+/// One attack on a unit as the static trader reads it (`fight`).
+pub(crate) struct Fight {
+    pub(crate) a: Side,
+    pub(crate) t: Side,
+    pub(crate) combat: Exchange,
+    /// The attacker's blow on the target: nothing when a First Strike defender destroys the attacker
+    /// first (§4.3 step 1, R4171000).
+    pub(crate) out: Blow,
+    /// The target's strike back on the attacker: nothing when none reaches it (R783000) or a First Strike
+    /// attacker destroys the target first (§4.3 step 1).
+    pub(crate) back: Blow,
+    /// Whether the blow destroys the target: never when a First Strike defender destroys the attacker
+    /// first.
+    pub(crate) kills: bool,
+    /// Whether the strike back destroys the attacker (or exiles it, R4065001): never when a First Strike
+    /// attacker destroys the target first.
+    pub(crate) dies: bool,
+    /// Whether the blow lands at all (§4.3 step 1).
+    pub(crate) lands: bool,
+}
+
+/// §4.3 for `attacker` hitting the Unit `target`: each blow through `blow` (its cap included, R2179005),
+/// First Strike deciding who strikes first and no strike back on a Ranged attacker unless the target is
+/// Ranged too (R783000).
+pub(crate) fn fight(state: &GameState, attacker: &CardInstance, target: &CardInstance) -> Fight {
+    let a = side_of(state, attacker);
+    let t = side_of(state, target);
+    // R1120, R1283: each strike as the combat reads it, the bonus and the lane multiplier included.
+    let combat = exchange(state, attacker, &a.view, target, &t.view);
+    let mut out = blow(&a, combat.hit, combat.poisonous, &t);
+    let mut back = if takes_strike_back(state, attacker, target) {
+        blow(&t, combat.strike_back, t.poisonous, &a)
+    } else {
+        Blow::default()
+    };
+    // §4.3 step 1: a First Strike attacker that destroys its target first takes no strike back.
+    if a.first_strike && !t.first_strike && out.kills {
+        back = Blow::default();
+    }
+    // §4.3 step 1, R4171000: an attacker a First Strike defender destroys first strikes nothing at all.
+    let lands = !(t.first_strike && !a.first_strike && back.kills);
+    if !lands {
+        out = Blow::default();
+    }
+    Fight {
+        a,
+        t,
+        combat,
+        kills: out.kills,
+        dies: back.kills,
+        out,
+        back,
+        lands,
+    }
+}
+
+/// R4064001: what `amount` more of `kind` costs `unit`, as `afflicted` prices its counters (R3822000):
+/// the worth it loses with them on. A hit that Burns or is Toxic instead is worth this to its striker.
+fn counter_price(
+    state: &GameState,
+    unit: &CardInstance,
+    kind: Affliction,
+    amount: i32,
+    prices: &Prices,
+) -> f64 {
+    if amount <= 0 {
+        return 0.0;
+    }
+    let mut afflicted = unit.clone();
+    match kind {
+        Affliction::Burn => afflicted.counters.burn = Some(burn_on(unit).saturating_add(amount)),
+        Affliction::Toxic => afflicted.counters.toxic = Some(toxic_on(unit).saturating_add(amount)),
+    }
+    (unit_worth(state, unit, &AI_EVAL, prices) - unit_worth(state, &afflicted, &AI_EVAL, prices)).max(0.0)
+}
+
 /// The opponent's static value of `attacker` hitting `target` (§4.3): what killing the target removes
-/// (`kill_worth`, #1796), less what its own death removes when it dies too, with First Strike deciding
-/// who strikes first and no strike back on a Ranged attacker unless the target is Ranged too (R783000).
-/// A hit that kills nothing is worth a little per point dealt, so a second attacker can finish what the
-/// first started. A Cleave splash is priced at `AI_REPLY.cleave_share` of what it kills or unshields
-/// (R63), a Trample excess as a face hit and a Lifesteal heal by `heal_worth` (#1820). The move order
-/// reads `kills` and `splash_kills` too (`candidates.rs`'s even trades, #1779, #1821).
+/// (`kill_worth`, #1796; its whole `unit_worth` when the attacker exiles what it damages, R4065001), less
+/// what its own death removes when it dies too (its whole `unit_worth` when the target's strike back
+/// exiles it), with First Strike deciding who strikes first and no strike back on a Ranged attacker
+/// unless the target is Ranged too (R783000). A hit that kills nothing is worth a little per point dealt,
+/// so a second attacker can finish what the first started; an attacker a First Strike defender destroys
+/// first deals nothing and pops nothing, so it is worth only its own loss (R4171000). A Cleave splash is
+/// priced at `AI_REPLY.cleave_share` of what it kills or unshields (R63), its neighbours the engine's
+/// (`cleaved_neighbours`: a GIGA in both its lanes, R3546001, R4257000), a Trample excess as a face hit
+/// and a Lifesteal heal by `heal_worth` (#1820). With
+/// `AI_EVAL.pool_and_conversion_read`, a blow that Burns or is Toxic instead kills nothing and heals
+/// nothing and is worth its counter (`counter_price`, R4064001), and the target side's damage pools soak
+/// the blow, then its splashes (R4064000). The move order reads `kills` and `splash_kills` too
+/// (`candidates.rs`'s even trades, #1779, #1821).
 pub(crate) fn trade_value(
     state: &GameState,
     attacker: &CardInstance,
@@ -61,22 +166,16 @@ pub(crate) fn trade_value(
             splash_kills: false,
         };
     };
-    let a = side_of(state, attacker);
-    let t = side_of(state, target);
-    // R1120, R1283: each strike as the combat reads it, the bonus and the lane multiplier included.
-    let combat = exchange(state, attacker, &a.view, target, &t.view);
-    let out = blow(&a, combat.hit, combat.poisonous, &t);
-    let mut kills = out.kills;
-    let mut dies =
-        takes_strike_back(state, attacker, target) && blow(&t, combat.strike_back, t.poisonous, &a).kills;
-    if a.first_strike && !t.first_strike && kills {
-        dies = false;
-    }
-    if t.first_strike && !a.first_strike && dies {
-        kills = false;
-    }
-    // §4.3 step 1: an attacker a First Strike defender destroys first strikes nothing at all.
-    let lands = !(t.first_strike && !a.first_strike && dies);
+    let Fight {
+        a,
+        t,
+        combat,
+        out,
+        back,
+        kills,
+        dies,
+        lands,
+    } = fight(state, attacker, target);
     // §4.4 step 5: a Trample attacker's hit counts on a unit only up to its health, the rest being step
     // 9's hit on the hero.
     let trample = has_keyword(&a.view.keywords, KeywordKind::Trample);
@@ -94,29 +193,55 @@ pub(crate) fn trade_value(
     let mut splashed = 0;
     let mut splash_kills = false;
     if has_keyword(&a.view.keywords, KeywordKind::Cleave) && lands {
+        // R4064000: the blow spent the target side's pools first; each splash spends what it left.
+        let mut pool = t.pool - out.soaked;
         for neighbour in cleaved_neighbours(state, attacker, target) {
-            let n = side_of(state, &neighbour);
+            let mut n = side_of(state, &neighbour);
+            n.pool = pool;
             let splash = blow(&a, combat.splash, combat.poisonous, &n);
+            pool -= splash.soaked;
             splashed += on_unit(splash.dealt, &n);
             if splash.kills {
                 splash_kills = true;
                 cleave_value += AI_REPLY.cleave_share * unit_worth(state, &neighbour, &AI_EVAL, prices);
             } else if splash.pops_shield {
                 cleave_value += AI_REPLY.cleave_share * AI_EVAL.keyword.divine_shield;
+            } else if let Some(kind) = a.converts {
+                cleave_value +=
+                    AI_REPLY.cleave_share * counter_price(state, &neighbour, kind, splash.converted, prices);
             }
         }
     }
 
+    // R1124, R4065001: what a blow that exiles removes is the whole unit, with no Death left behind and no
+    // Reborn body back (`unit_worth`), where a kill removes `kill_worth`.
+    let removed = |side: &Side, unit: &CardInstance| {
+        if side.exiles {
+            unit_worth(state, unit, &AI_EVAL, prices)
+        } else {
+            kill_worth(state, unit, &AI_EVAL, prices)
+        }
+    };
     let mut value = if kills {
-        kill_worth(state, target, &AI_EVAL, prices)
+        removed(&a, target)
     } else {
         AI_REPLY.chip_per_damage * f64::from(out.dealt.min(t.view.health))
     };
     if out.pops_shield {
         value += AI_EVAL.keyword.divine_shield;
     }
+    // R4064001: a blow that converts is worth the counter it adds, a strike back that does costs the
+    // attacker its own, unless the attacker destroys the target first.
+    if lands && let Some(kind) = a.converts {
+        value += counter_price(state, target, kind, out.converted, prices);
+    }
     if dies {
-        value -= kill_worth(state, attacker, &AI_EVAL, prices);
+        value -= removed(&t, attacker);
+    }
+    if let Some(kind) = t.converts
+        && !(a.first_strike && !t.first_strike && kills)
+    {
+        value -= counter_price(state, attacker, kind, back.converted, prices);
     }
     // §4.4 step 9: what the attack's hits deal beyond each unit's health goes on to the target's hero
     // through its Armor and caps (`projected_damage`: a Cleave's hits too, R176, and nothing when a
@@ -139,14 +264,7 @@ pub(crate) fn trade_value(
     // not cap at the unit's health but for a Trample hit, whose rest heals as it lands on the hero.
     if lands && has_keyword(&a.view.keywords, KeywordKind::Lifesteal) {
         let amount = on_unit(out.dealt, &t) + splashed + trampled;
-        if heal_converted(state, attacker.controller) {
-            // E8, R413: the heal becomes that much Pierce damage on the healing hero instead,
-            // on the stated amount (`damage.rs`: a replaced heal is never multiplied), ignoring
-            // Armor, so `reply_face_value` without `projected_hero_damage`'s Armor pass.
-            value -= reply_face_value(state, attacker.controller, amount);
-        } else {
-            value += heal_worth(state, attacker.controller, amount, &AI_EVAL);
-        }
+        value += lifesteal_value(state, attacker.controller, amount);
     }
     Trade {
         value: value + cleave_value,
@@ -167,8 +285,11 @@ pub fn reply_face_value(state: &GameState, seat: PlayerId, damage: i32) -> f64 {
 
 /// The static trader's value of `attacker` hitting `defender`'s hero: `AI_EVAL.win` when
 /// `face_is_lethal`, else `reply_face_value` of what the hit deals through the hero's Armor and caps
-/// (`projected_hero_damage`). The reply's ranking and the seat's own move order (`candidates.rs`,
-/// #2825) read it alike.
+/// (`projected_hero_damage`), and with `AI_EVAL.pool_and_conversion_read` its side's damage pools
+/// (R4064000); a hit that Burns or is Toxic instead is worth `face_per_damage` of `hero_affliction` of
+/// the life its counter's ticks add (R4064001). A Lifesteal attacker's hit that is not lethal adds the
+/// heal of what it deals (`lifesteal_value`, the term `trade_value` adds for a hit on a unit, #3858).
+/// The reply's ranking and the seat's own move order (`candidates.rs`, #2825) read it alike.
 pub(crate) fn face_value(
     state: &GameState,
     attacker: &CardInstance,
@@ -178,10 +299,29 @@ pub(crate) fn face_value(
     if face_is_lethal {
         return AI_EVAL.win;
     }
+    let view = unit_view(state, attacker);
     let pierce = pierces(state, Some(attacker), None);
-    let damage =
-        subsystems::projected_hero_damage(state, defender, unit_view(state, attacker).attack, pierce);
-    reply_face_value(state, defender, damage)
+    let read = AI_EVAL.pool_and_conversion_read;
+    // R4064001: a converting hit deals the hero nothing; it is worth the life its counter's ticks add.
+    if read && let Some(kind) = converts_to(state, attacker) {
+        let struck = subsystems::projected_hero_damage(state, defender, view.attack, pierce);
+        return AI_REPLY.face_per_damage
+            * AI_EVAL.hero_affliction
+            * f64::from(hero_ticks_added(state, defender, kind, struck, &AI_EVAL));
+    }
+    // R4064000: the hit meets what the hero's side's damage pools have left (`projected_damage`, R4032000).
+    let damage = if read {
+        subsystems::projected_damage(state, attacker, &AttackTarget::Hero { player: defender })
+    } else {
+        subsystems::projected_hero_damage(state, defender, view.attack, pierce)
+    };
+    let hit = reply_face_value(state, defender, damage);
+    // §4.4 step 8: Lifesteal heals the attacker's hero by what the hit deals, on a hero as on a unit
+    // (#3858). A lethal hit is the win, whatever it heals.
+    if hit >= AI_EVAL.win || !has_keyword(&view.keywords, KeywordKind::Lifesteal) {
+        return hit;
+    }
+    hit + lifesteal_value(state, attacker.controller, damage)
 }
 
 /// Ranked attacks worth making from `legal`. When `face_is_lethal`, every hero attack is `AI_EVAL.win` (#1634).
@@ -259,7 +399,59 @@ pub(crate) enum Known {
     Played(Box<GameState>),
 }
 
-/// Step 1: best play of a known hand card not in `hidden` if beating standing still.
+/// R3696001: whether `opp` holds a hand card the seat can see (not in `hidden`) that this turn's
+/// cleanup discards: Temporary with a count of 1 left (R637, R2179001).
+fn doomed_known_card(state: &GameState, opp: PlayerId, hidden: &IndexSet<String>) -> bool {
+    state.players[opp].hand.iter().any(|card| {
+        !hidden.contains(&card.id)
+            && temporary_number(&card_keywords(state, card)).is_some_and(|left| left <= 1)
+    })
+}
+
+/// R3696001: whether a play of `instance_id` guesses a secret of `seat`'s it may not read: the card's
+/// link names a secret `seat` owns that is not revealed (R862, R860).
+fn guesses_secret(state: &GameState, seat: PlayerId, instance_id: &str) -> bool {
+    find_instance(state, instance_id)
+        .and_then(|card| card.memory.get(SECRET_KEY))
+        .and_then(|link| link.as_str())
+        .and_then(|id| secret_of(state, id))
+        .is_some_and(|secret| secret.owner == seat && secret.revealed != Some(true))
+}
+
+/// R3696001: `plays` with each `guesses_secret` card's plays cut to one, in the first one's place,
+/// drawn on `AI_GUESS_SEED`'s stream before any evaluation, so it never reads the secret (R185, R860).
+fn one_guess_per_card(state: &GameState, seat: PlayerId, plays: Vec<ActionBody>) -> Vec<ActionBody> {
+    let guessed = |play: &ActionBody| match play {
+        ActionBody::Play { instance_id, .. } if guesses_secret(state, seat, instance_id) => {
+            Some(instance_id.clone())
+        }
+        _ => None,
+    };
+    let mut settled: IndexSet<String> = IndexSet::new();
+    let mut out: Vec<ActionBody> = Vec::with_capacity(plays.len());
+    for play in &plays {
+        let Some(card) = guessed(play) else {
+            out.push(play.clone());
+            continue;
+        };
+        if !settled.insert(card.clone()) {
+            continue;
+        }
+        let guesses: Vec<&ActionBody> = plays
+            .iter()
+            .filter(|other| guessed(other).as_deref() == Some(card.as_str()))
+            .collect();
+        let stream = format!("{AI_GUESS_SEED}:{}:{card}", state.seed);
+        let picked = Rng::new(&stream, 0).pick(&guesses).copied().unwrap_or(play);
+        out.push(picked.clone());
+    }
+    out
+}
+
+/// Step 1: best play of a known hand card not in `hidden` if beating standing still. R3696001: a card
+/// guessing an unrevealed secret of the seat's is tried with one guess (`one_guess_per_card`), and while
+/// a known card would be discarded at the end of `opp`'s turn (`doomed_known_card`), every play and
+/// standing still are compared after that end.
 fn known_play(
     state: &GameState,
     seat: PlayerId,
@@ -274,17 +466,52 @@ fn known_play(
         .filter(
             |action| matches!(action, ActionBody::Play { instance_id, .. } if !hidden.contains(instance_id)),
         )
+        .collect();
+    let plays: Vec<ActionBody> = one_guess_per_card(state, seat, plays)
+        .into_iter()
         .take(AI_REPLY.known_plays.max(0) as usize)
         .collect();
-    best_try(state, opp, &plays, counter, prices)
+    best_try(
+        state,
+        opp,
+        &plays,
+        doomed_known_card(state, opp, hidden),
+        counter,
+        prices,
+    )
+}
+
+/// `opp`'s own evaluation of `state`, or with `at_close` of the position once it ends its turn there
+/// (R3696001), `state`'s own when the end of turn is refused. `None` when the counter refused a node.
+fn judged(
+    state: &GameState,
+    opp: PlayerId,
+    at_close: bool,
+    counter: &dyn NodeCounter,
+    prices: &Prices,
+) -> Option<f64> {
+    let closed = if at_close {
+        simulate(state, opp, &ActionBody::EndTurn, counter, prices)?.ok()
+    } else {
+        None
+    };
+    Some(evaluate_priced(
+        closed.as_ref().unwrap_or(state),
+        opp,
+        NextSwing::Enemy,
+        &AI_EVAL,
+        prices,
+    ))
 }
 
 /// The best of `tries` for `opp` by its own evaluation: one that wins the game at once, else the one
-/// whose result beats standing still by the most (ties keep the list's order).
+/// whose result beats standing still by the most (ties keep the list's order). With `at_close`, each
+/// try and standing still are judged after `opp` ends its turn there (`judged`, R3696001).
 fn best_try(
     state: &GameState,
     opp: PlayerId,
     tries: &[ActionBody],
+    at_close: bool,
     counter: &dyn NodeCounter,
     prices: &Prices,
 ) -> Known {
@@ -292,7 +519,9 @@ fn best_try(
         return Known::Nothing;
     }
     let mut best: Option<GameState> = None;
-    let mut best_value = evaluate_priced(state, opp, NextSwing::Enemy, &AI_EVAL, prices);
+    let Some(mut best_value) = judged(state, opp, at_close, counter, prices) else {
+        return Known::Cut;
+    };
     for action in tries {
         let next = match simulate(state, opp, action, counter, prices) {
             None => return Known::Cut,
@@ -305,7 +534,9 @@ fn best_try(
         {
             return Known::Played(Box::new(next));
         }
-        let value = evaluate_priced(&next, opp, NextSwing::Enemy, &AI_EVAL, prices);
+        let Some(value) = judged(&next, opp, at_close, counter, prices) else {
+            return Known::Cut;
+        };
         // Strictly greater, so ties keep move order.
         if value > best_value {
             best_value = value;
@@ -329,14 +560,19 @@ enum Aim {
     Other,
 }
 
-/// Where `action` aims, read off the targets it carries.
-fn aim_of(state: &GameState, seat: PlayerId, action: &ActionBody) -> Aim {
-    let targets: &[Selection] = match action {
+/// The targets `action` carries.
+fn targets_of(action: &ActionBody) -> &[Selection] {
+    match action {
         ActionBody::Activate { targets, .. } | ActionBody::ActivatePower { targets, .. } => {
             targets.as_deref().unwrap_or(&[])
         }
         _ => &[],
-    };
+    }
+}
+
+/// Where `action` aims, read off the targets it carries.
+fn aim_of(state: &GameState, seat: PlayerId, action: &ActionBody) -> Aim {
+    let targets = targets_of(action);
     if targets
         .iter()
         .any(|target| matches!(target, Selection::Hero { player } if *player == seat))
@@ -361,10 +597,140 @@ fn visible_source(state: &GameState, hidden: &IndexSet<String>, action: &ActionB
         && find_instance(state, instance_id).is_some_and(|card| subsystems::is_acting_on_field(state, card))
 }
 
-/// Step 2: the best of the opponent's activations whose source the seat can see, by the opponent's own
-/// evaluation, when it beats standing still. At most AI_REPLY.visible_activations are tried, ordered by
-/// `aim_of`: `legal_actions` lists the activating side's own targets first, so the seat's hero would
-/// otherwise come last. R2564000: the root's activation probes try each unit's uses through it too.
+/// R4515000: the pick `action` makes (its source, ability, modes and targets), without the Tribute set
+/// that pays for it.
+fn pick_of(action: &ActionBody) -> ActionBody {
+    let mut pick = action.clone();
+    if let ActionBody::Activate { tributes, .. } = &mut pick {
+        *tributes = None;
+    }
+    pick
+}
+
+/// R4515000: a card's id and the ability of it a try uses (`None` for a Heroic Power's).
+type Source = (String, Option<String>);
+
+/// R4515000: the card and ability `action` uses.
+fn source_of(action: &ActionBody) -> Source {
+    match action {
+        ActionBody::Activate {
+            instance_id, ability, ..
+        } => (instance_id.clone(), ability.clone()),
+        ActionBody::ActivatePower { instance_id, .. } => (instance_id.clone(), None),
+        _ => (String::new(), None),
+    }
+}
+
+/// R4515000: the highest of `worths` (each of the seat's Units' `unit_worth`) among the cards `action`
+/// targets; `f64::NEG_INFINITY` when it targets none of them (another card of the seat's), so it ranks
+/// last.
+fn aimed_worth(worths: &[(&str, f64)], action: &ActionBody) -> f64 {
+    targets_of(action)
+        .iter()
+        .filter_map(|target| match target {
+            Selection::Instance { instance_id } => worths
+                .iter()
+                .find(|(id, _)| *id == instance_id.as_str())
+                .map(|(_, worth)| *worth),
+            _ => None,
+        })
+        .fold(f64::NEG_INFINITY, f64::max)
+}
+
+/// The order a reply step tries `tries` (the visible activations, in `legal_actions` order) in, before
+/// the cut. `legal_actions` lists the activating side's own targets first and each source's targets
+/// lane by lane, so a cut of that order would leave the seat's hero, its fifth lane and a second source
+/// or ability out of reach. R4515000, with `spread`:
+/// 1. every try aimed at the seat's hero, in legal order, each of its Tribute sets included;
+/// 2. then the tries aimed at a card of the seat's, one per pick (`pick_of`), dealt round-robin over
+///    each source and ability (`source_of`) in legal order: each one's best target, then each one's
+///    second, and so on, its targets ranked by `aimed_worth`, the seat's `unit_worth` of the Unit aimed
+///    at, highest first (ties, and the seat's other cards after its Units, keep legal order);
+/// 3. then the later Tribute sets of those picks, in legal order;
+/// 4. then every other try, in legal order.
+///
+/// Without `spread` they are sorted by `aim_of` alone, as before R4515000. Either reads only the tries'
+/// targets and the seat's own Units (R185).
+fn ordered_tries(
+    state: &GameState,
+    seat: PlayerId,
+    mut tries: Vec<ActionBody>,
+    spread: bool,
+    prices: &Prices,
+) -> Vec<ActionBody> {
+    if !spread {
+        // Stable, so each aim keeps legal_actions order.
+        tries.sort_by_key(|action| aim_of(state, seat, action));
+        return tries;
+    }
+    // Built at the first try aimed at a card of the seat's, so a step with none reads no unit.
+    let mut worths: Option<Vec<(&str, f64)>> = None;
+    let mut ordered: Vec<ActionBody> = Vec::with_capacity(tries.len());
+    let mut groups: IndexMap<Source, Vec<(f64, ActionBody)>> = IndexMap::new();
+    let mut picked: IndexSet<ActionBody> = IndexSet::new();
+    let mut waiting: Vec<ActionBody> = Vec::new();
+    let mut rest: Vec<ActionBody> = Vec::new();
+    for action in tries {
+        match aim_of(state, seat, &action) {
+            Aim::SeatHero => ordered.push(action),
+            Aim::Other => rest.push(action),
+            // A pick already dealt, paid by an earlier Tribute set, waits; a new one is noted here.
+            Aim::SeatCard if !picked.insert(pick_of(&action)) => waiting.push(action),
+            Aim::SeatCard => {
+                let table = worths.get_or_insert_with(|| {
+                    active_units_of(state, seat)
+                        .into_iter()
+                        .map(|unit| (unit.id.as_str(), unit_worth(state, unit, &AI_EVAL, prices)))
+                        .collect()
+                });
+                let worth = aimed_worth(table, &action);
+                groups
+                    .entry(source_of(&action))
+                    .or_default()
+                    .push((worth, action));
+            }
+        }
+    }
+    for picks in groups.values_mut() {
+        // Highest worth first; `sort_by` is stable, so equal worths keep legal_actions order.
+        picks.sort_by(|a, b| b.0.total_cmp(&a.0));
+    }
+    let deepest = groups.values().map(Vec::len).max().unwrap_or(0);
+    for round in 0..deepest {
+        ordered.extend(
+            groups
+                .values()
+                .filter_map(|picks| picks.get(round))
+                .map(|(_, pick)| pick.clone()),
+        );
+    }
+    ordered.extend(waiting);
+    ordered.extend(rest);
+    ordered
+}
+
+/// Step 2's tries: `legal`'s activations whose source the seat can see (`visible_source`), in
+/// `ordered_tries`' order, cut to AI_REPLY.visible_activations.
+fn visible_tries(
+    state: &GameState,
+    seat: PlayerId,
+    legal: &[ActionBody],
+    hidden: &IndexSet<String>,
+    spread: bool,
+    prices: &Prices,
+) -> Vec<ActionBody> {
+    let tries: Vec<ActionBody> = legal
+        .iter()
+        .filter(|action| visible_source(state, hidden, action))
+        .cloned()
+        .collect();
+    let mut tries = ordered_tries(state, seat, tries, spread, prices);
+    tries.truncate(AI_REPLY.visible_activations.max(0) as usize);
+    tries
+}
+
+/// Step 2: the best of `visible_tries` by the opponent's own evaluation, when it beats standing still
+/// (R4515000's order). R2564000: the root's activation probes try each card's uses through it too.
 pub(crate) fn visible_activation(
     state: &GameState,
     seat: PlayerId,
@@ -373,15 +739,8 @@ pub(crate) fn visible_activation(
     counter: &dyn NodeCounter,
     prices: &Prices,
 ) -> Known {
-    let mut tries: Vec<ActionBody> = legal
-        .iter()
-        .filter(|action| visible_source(state, hidden, action))
-        .cloned()
-        .collect();
-    // Stable, so each aim keeps legal_actions order.
-    tries.sort_by_key(|action| aim_of(state, seat, action));
-    tries.truncate(AI_REPLY.visible_activations.max(0) as usize);
-    best_try(state, seat.opponent(), &tries, counter, prices)
+    let tries = visible_tries(state, seat, legal, hidden, AI_REPLY.spread_activations, prices);
+    best_try(state, seat.opponent(), &tries, false, counter, prices)
 }
 
 /// Step 3, R49: the opponent's Deft units in Defense Position may switch to Attack and still attack.
@@ -421,8 +780,10 @@ fn deft_switch(
     Known::Nothing
 }
 
-/// Step 4 (#1696): trials switching up to `AI_REPLY.defense_switches` units from Attack to
-/// Defense when no attack is worth making (§4.1, R49).
+/// Step 4 (#1696): once no attack is worth making, trials the switches `defense_switch_tries` lists,
+/// one node each, and keeps the best by the opponent's own evaluation when it beats standing still
+/// (`best_try`): to Defense of units in Attack (§4.1, R49), and back to Attack of units in Defense
+/// without Deft (R4433000), a switch that spends the unit's exertion, so it attacks from its next turn.
 fn defense_switch(
     state: &GameState,
     seat: PlayerId,
@@ -430,17 +791,87 @@ fn defense_switch(
     counter: &dyn NodeCounter,
     prices: &Prices,
 ) -> Known {
-    let tries: Vec<ActionBody> = legal
+    let tries = defense_switch_tries(
+        state,
+        legal,
+        AI_REPLY.defense_switches.max(0) as usize,
+        AI_REPLY.attack_switches.max(0) as usize,
+    );
+    best_try(state, seat.opponent(), &tries, false, counter, prices)
+}
+
+/// Step 4's tries, in `legal` order: the switches to Defense Position of the opponent's units in Attack,
+/// up to `defense_cap`, then the switches back to Attack of its units in Defense without Deft, up to
+/// `attack_cap` (R4433000). A Deft unit in Defense is step 3's (`deft_switch`, R49), whose Defense
+/// already counts its whole attack. `legal` lists no switch a unit has spent (§4.1), so none flips twice.
+fn defense_switch_tries(
+    state: &GameState,
+    legal: &[ActionBody],
+    defense_cap: usize,
+    attack_cap: usize,
+) -> Vec<ActionBody> {
+    let mut to_defense = Vec::new();
+    let mut to_attack = Vec::new();
+    for action in legal {
+        let ActionBody::SwitchPosition { instance_id } = action else {
+            continue;
+        };
+        let Some(unit) = find_instance(state, instance_id) else {
+            continue;
+        };
+        let view = unit_view(state, unit);
+        match view.position {
+            Position::Atk if to_defense.len() < defense_cap => to_defense.push(action.clone()),
+            Position::Def
+                if to_attack.len() < attack_cap && !has_keyword(&view.keywords, KeywordKind::Deft) =>
+            {
+                to_attack.push(action.clone());
+            }
+            _ => {}
+        }
+    }
+    to_defense.extend(to_attack);
+    to_defense
+}
+
+/// Step 4, R4187000: facing lethal, the switches to Defense Position that lower the seat's threat
+/// (`wall_switches`, R2976000), up to `AI_REPLY.defense_switches`, tried with `attack`, the best-ranked
+/// attack, first, one node each; the best by the opponent's own evaluation is kept (`best_try`), so a
+/// winning attack still goes first and a wall only when it beats both that attack and standing still.
+/// Nothing while the opponent's attacks left reach the seat's face together (`ready_gap`), nor for a Deft
+/// unit that may still attack, which keeps its switch for after its attack (R49).
+fn lethal_wall(
+    state: &GameState,
+    seat: PlayerId,
+    legal: &[ActionBody],
+    attack: &ActionBody,
+    counter: &dyn NodeCounter,
+    prices: &Prices,
+) -> Known {
+    let opp = seat.opponent();
+    let attacks_first = |instance_id: &str| {
+        legal.iter().any(
+            |action| matches!(action, ActionBody::Attack { attacker_id, .. } if attacker_id == instance_id),
+        ) && find_instance(state, instance_id)
+            .is_some_and(|unit| has_keyword(&unit_view(state, unit).keywords, KeywordKind::Deft))
+    };
+    let switches: Vec<ActionBody> = legal
         .iter()
         .filter(|action| {
-            matches!(action, ActionBody::SwitchPosition { instance_id }
-                if find_instance(state, instance_id)
-                    .is_some_and(|unit| unit_view(state, unit).position == Position::Atk))
+            matches!(action, ActionBody::SwitchPosition { instance_id } if !attacks_first(instance_id))
         })
-        .take(AI_REPLY.defense_switches.max(0) as usize)
         .cloned()
         .collect();
-    best_try(state, seat.opponent(), &tries, counter, prices)
+    let walls = wall_switches(state, opp, &switches);
+    if walls.is_empty() || ready_gap(state, opp) <= 0.0 {
+        return Known::Nothing;
+    }
+    let mut tries = vec![attack.clone()];
+    tries.extend(walls.into_iter().take(AI_REPLY.defense_switches.max(0) as usize));
+    if tries.len() < 2 {
+        return Known::Nothing;
+    }
+    best_try(state, opp, &tries, false, counter, prices)
 }
 
 /// The ids of the cards the opponent holds unseen: its hand and its library, as sampled.
@@ -500,7 +931,7 @@ pub fn simulate_reply_with(
         }
 
         // One legal_actions serves the known-play try (its ordered candidates), the visible
-        // activations, the Deft switches, the static trader's attack list and the switches to Defense.
+        // activations, the Deft switches, the static trader's attack list and the position switches.
         let legal = legal_actions(&current, opp);
         match known_play(&current, seat, &legal, hidden, counter, prices) {
             Known::Cut => return None,
@@ -533,16 +964,20 @@ pub fn simulate_reply_with(
             .into_iter()
             .next();
         // #1696: no attack is worth making, so before it ends its turn the opponent switches a unit
-        // its evaluation would rather have in Defense Position.
-        if attack.is_none() {
-            match defense_switch(&current, seat, &legal, counter, prices) {
-                Known::Cut => return None,
-                Known::Played(switched) => {
-                    current = *switched;
-                    continue;
-                }
-                Known::Nothing => {}
+        // its evaluation would rather have in Defense Position, or (R4433000) one without Deft it would
+        // rather have back in Attack.
+        // R4187000: facing lethal, it weighs a wall against that attack.
+        let walled = match &attack {
+            None => defense_switch(&current, seat, &legal, counter, prices),
+            Some(best) => lethal_wall(&current, seat, &legal, best, counter, prices),
+        };
+        match walled {
+            Known::Cut => return None,
+            Known::Played(switched) => {
+                current = *switched;
+                continue;
             }
+            Known::Nothing => {}
         }
         if !counter.take() {
             return None;
@@ -578,10 +1013,9 @@ pub fn reply_score(
     if status == LineStatus::Over {
         return Some(static_score(end, seat, root_turn, prices));
     }
-    // A line that stopped on the seat's own prompt keeps its static score, from the evaluation that
-    // scores the finalists (#1010).
+    // A line that stopped on the seat's own prompt keeps its static score, the hand eval's.
     if status == LineStatus::Open {
-        return Some(finalist_score(end, seat, NextSwing::Enemy, prices));
+        return Some(evaluate_priced(end, seat, NextSwing::Enemy, &AI_EVAL, prices));
     }
     let unspent = if status == LineStatus::Passed {
         end.players[seat].turn_log.unspent_at_end.unwrap_or(0)
@@ -600,8 +1034,9 @@ pub fn reply_score(
     Some(first + share * (second - first))
 }
 
-/// A passed line's score at `after`, where the reply from `end` stopped: the finalists' evaluation
-/// with whoever swings next, less the crystals the line left `unspent`.
+/// A passed line's score at `after`, where the reply from `end` stopped: the hand eval
+/// with whoever swings next, less the crystals the line left `unspent`, plus what that Float brought
+/// its Float-discount cards at `end` (R3695000).
 fn replied_score(end: &GameState, after: &GameState, seat: PlayerId, unspent: i32, prices: &Prices) -> f64 {
     let next = if after.active == seat {
         NextSwing::Seat
@@ -615,7 +1050,8 @@ fn replied_score(end: &GameState, after: &GameState, seat: PlayerId, unspent: i3
     } else {
         0.0
     };
-    finalist_score(after, seat, next, prices) + spent - AI_EVAL.unspent_mana * f64::from(unspent)
+    evaluate_priced(after, seat, next, &AI_EVAL, prices) + spent - AI_EVAL.unspent_mana * f64::from(unspent)
+        + float_credit(end, seat, unspent, &AI_EVAL)
 }
 
 /// #1995: advances countdowns waiting at `after` (public badges, R1181000, R169, R185) to seat's
@@ -654,6 +1090,7 @@ mod tests {
     use jackioh_engine::{ModifierExpiry, ModifierKind, PlayerModifier};
 
     use super::*;
+    use crate::simulate::create_node_counter;
 
     /// C+ #13 Mommy Barker, whose Radiant face is a 4/4 Reborn.
     const BARKER: &str = "classicplus-013";
@@ -663,13 +1100,22 @@ mod tests {
     const VANILLA: &str = "core-008";
     /// #67 Zoomerbin Oomen, a 1/2.
     const OOMEN: &str = "core-067";
-    /// #20 Pointmaster, a 7/1 First Strike.
+    /// #20 Pointmaster, a 6/1 Rush, First Strike (Radiant 12/2, Divine Shield too).
     const POINTMASTER: &str = "core-020";
     /// M+ #7 Life Mage, whose Radiant face makes healing its controller's hero twice as effective
     /// (R1180003).
     const LIFE_MAGE: &str = "meditativeplus-007";
     /// C+ #22 Blood Moon, whose Radiant face is a face-up Field Trap converting enemy heals.
     const MOON: &str = "classicplus-022";
+    /// M #22 Mind Games: a choice kept secret, its reward at the caster's next turn start, a Fortify
+    /// Mind handed to the other side.
+    const MIND_GAMES: &str = "meditative-022";
+    /// M #22.1 Fortify Mind: Temporary, a guess at the Mind Games; discarded, all three penalties.
+    const FORTIFY: &str = "meditative-022-1";
+    /// #5 Stockpile, left in p1's hand so that its turn does not end by itself after the cast.
+    const STOCKPILE: &str = "core-005";
+    /// Mind Games' three choices, Fortify Mind's three guesses.
+    const GUESSES: [&str; 3] = ["greed", "attack", "defend"];
 
     /// p1's `attacker` facing p2's Radiant Mommy Barker.
     fn facing_barker(attacker: Value) -> Scenario {
@@ -883,16 +1329,103 @@ mod tests {
             &[Keyword::Lifesteal],
         );
         let trade = trade_value(s.state(), s.card(VANILLA), &s.card(POINTMASTER).id, Prices::NONE);
-        // §4.3 step 1: the Pointmaster's 7 destroys the Vanilla before it strikes.
+        // §4.3 step 1: the Pointmaster's 6 destroys the Vanilla before it strikes, so its blow deals
+        // nothing, chips nothing and heals nothing (R4171000).
         assert!(!trade.kills);
-        let expected =
-            AI_REPLY.chip_per_damage * 1.0 - kill_worth(s.state(), s.card(VANILLA), &AI_EVAL, Prices::NONE);
+        let expected = -kill_worth(s.state(), s.card(VANILLA), &AI_EVAL, Prices::NONE);
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
     }
 
-    /// p2's best reply attack at `health`: its Lifesteal Mr. Vanilla and its Radiant Professor
+    /// R4171000: an attacker without First Strike that a First Strike defender destroys first lands no
+    /// blow, so the static trader prices the attack as the attacker lost and nothing else: no chip on a
+    /// plain Pointmaster's 1 health, no pop of a Radiant one's Divine Shield.
+    #[test]
+    fn r4171000_a_blow_a_first_strike_defender_stops_earns_no_chip_and_no_shield_pop() {
+        jackioh_cards::register_all();
+        for (attacker, radiant) in [(VANILLA, false), (OOMEN, true)] {
+            let s = scenario(json!({
+                "p1": { "field": [attacker] },
+                "p2": { "field": [{ "def": POINTMASTER, "radiant": radiant }] },
+            }));
+            let (unit, pointmaster) = (s.card(attacker), s.card(POINTMASTER));
+            let read = fight(s.state(), unit, pointmaster);
+            assert!(
+                read.t.first_strike && !read.a.first_strike,
+                "{attacker} into {POINTMASTER}"
+            );
+            assert_eq!(read.t.shield, radiant, "{attacker} into {POINTMASTER}");
+            assert!(
+                !read.lands && read.dies && !read.kills,
+                "{attacker} into {POINTMASTER}"
+            );
+            assert_eq!((read.out.dealt, read.out.pops_shield), (0, false), "{attacker}");
+            let trade = trade_value(s.state(), unit, &pointmaster.id, Prices::NONE);
+            let expected = -kill_worth(s.state(), unit, &AI_EVAL, Prices::NONE);
+            assert!(!trade.kills && !trade.splash_kills, "{attacker}");
+            assert!(
+                (trade.value - expected).abs() < 1e-9,
+                "{attacker}: {} vs {expected}",
+                trade.value
+            );
+        }
+    }
+
+    /// p1's Mr. Vanilla's `face_value` on p2's hero in `setup`, with Lifesteal and without.
+    fn face_twins(setup: Value, face_is_lethal: bool) -> (Scenario, f64, f64) {
+        let steal = vanilla_with(setup.clone(), &[Keyword::Lifesteal]);
+        let plain = vanilla_with(setup, &[]);
+        let steal_value = face_value(steal.state(), steal.card(VANILLA), PlayerId::P2, face_is_lethal);
+        let plain_value = face_value(plain.state(), plain.card(VANILLA), PlayerId::P2, face_is_lethal);
+        (steal, steal_value, plain_value)
+    }
+
+    #[test]
+    fn a_lifesteal_hit_on_the_hero_is_worth_the_heal_of_all_it_deals() {
+        let (s, steal, plain) = face_twins(json!({ "p1": { "health": 10, "field": [VANILLA] } }), false);
+        assert!((plain - AI_REPLY.face_per_damage * 4.0).abs() < 1e-9, "{plain}");
+        let heal = heal_worth(s.state(), PlayerId::P1, 4, &AI_EVAL);
+        assert!(heal > 0.0 && (heal - healed(10, 4)).abs() < 1e-9, "{heal}");
+        assert!((steal - plain - heal).abs() < 1e-9, "{steal} {plain}");
+    }
+
+    #[test]
+    fn a_lifesteal_hit_on_the_hero_heals_what_the_heros_armor_leaves() {
+        let (_, steal, plain) = face_twins(
+            json!({ "p1": { "health": 10, "field": [VANILLA] }, "p2": { "armor": 1 } }),
+            false,
+        );
+        assert!((plain - AI_REPLY.face_per_damage * 3.0).abs() < 1e-9, "{plain}");
+        assert!((steal - plain - healed(10, 3)).abs() < 1e-9, "{steal} {plain}");
+    }
+
+    #[test]
+    fn a_lifesteal_hit_on_the_hero_under_a_face_up_blood_moon_is_worth_self_damage() {
+        let (s, steal, plain) = face_twins(
+            json!({
+                "p1": { "health": 10, "field": [VANILLA] },
+                "p2": { "backrow": [{ "def": MOON, "radiant": true, "faceUp": true }] },
+            }),
+            false,
+        );
+        assert!(steal < plain, "{steal} {plain}");
+        let burn = reply_face_value(s.state(), PlayerId::P1, 4);
+        assert!((plain - steal - burn).abs() < 1e-9, "{steal} {plain}");
+    }
+
+    #[test]
+    fn a_lethal_lifesteal_hit_on_the_hero_scores_the_win_and_no_more() {
+        let (_, steal, _) = face_twins(
+            json!({ "p1": { "health": 10, "field": [VANILLA] }, "p2": { "health": 4 } }),
+            false,
+        );
+        assert_eq!(steal.to_bits(), AI_EVAL.win.to_bits(), "{steal}");
+        let (_, steal, _) = face_twins(json!({ "p1": { "health": 10, "field": [VANILLA] } }), true);
+        assert_eq!(steal.to_bits(), AI_EVAL.win.to_bits(), "{steal}");
+    }
+
+    /// p2's reply attacks at `health`, best first: its Lifesteal Mr. Vanilla and its Radiant Professor
     /// Curvature, a 6/6, facing p1's Zoomerbin Oomen.
-    fn best_reply_attack(health: i32) -> (Scenario, ActionBody) {
+    fn reply_attack_order(health: i32) -> (Scenario, Vec<ActionBody>) {
         let s = vanilla_with(
             json!({
                 "active": "p2",
@@ -901,38 +1434,465 @@ mod tests {
             }),
             &[Keyword::Lifesteal],
         );
-        let best = ranked_attacks(
+        let ranked = ranked_attacks(
             s.state(),
             PlayerId::P1,
             &legal_actions(s.state(), PlayerId::P2),
             false,
             Prices::NONE,
-        )
-        .into_iter()
-        .next()
-        .expect("an attack worth making");
-        (s, best)
+        );
+        (s, ranked)
+    }
+
+    /// `s`'s attack of `attacker` on `target_id`.
+    fn attack_of(s: &Scenario, attacker: &str, target_id: &str) -> ActionBody {
+        ActionBody::Attack {
+            attacker_id: s.card(attacker).id.clone(),
+            target_id: target_id.to_owned(),
+        }
     }
 
     #[test]
-    fn at_low_life_the_lifesteal_trade_outranks_a_plain_face_hit() {
-        // At 3 life the Oomen's kill and the heal of 4 outweigh the Curvature's 6 on the face.
-        let (s, best) = best_reply_attack(3);
+    fn at_low_life_both_lifesteal_hits_outrank_a_plain_face_hit() {
+        // At 3 life the heal of 4 is worth about 5.00 wherever the Vanilla hits: on the hero 4 + 5.00,
+        // on the Oomen its kill's 3.20 + 5.00, both above the Curvature's 6 on the face (#1820, #3858).
+        let (s, ranked) = reply_attack_order(3);
+        let oomen = s.card(OOMEN).id.clone();
         assert_eq!(
-            best,
-            ActionBody::Attack {
-                attacker_id: s.card(VANILLA).id.clone(),
-                target_id: s.card(OOMEN).id.clone(),
-            }
+            ranked,
+            vec![
+                attack_of(&s, VANILLA, "hero-p1"),
+                attack_of(&s, VANILLA, &oomen),
+                attack_of(&s, CURVATURE, "hero-p1"),
+                attack_of(&s, CURVATURE, &oomen),
+            ]
         );
-        // At full life the same heal is worth less than the face hit.
-        let (s, best) = best_reply_attack(HERO_HEALTH);
+        // At full life the same heal is worth about 1.94, so the Curvature's 6 on the face comes first.
+        let (s, ranked) = reply_attack_order(HERO_HEALTH);
+        let oomen = s.card(OOMEN).id.clone();
         assert_eq!(
-            best,
-            ActionBody::Attack {
-                attacker_id: s.card(CURVATURE).id.clone(),
-                target_id: "hero-p1".to_owned(),
-            }
+            ranked,
+            vec![
+                attack_of(&s, CURVATURE, "hero-p1"),
+                attack_of(&s, VANILLA, "hero-p1"),
+                attack_of(&s, VANILLA, &oomen),
+                attack_of(&s, CURVATURE, &oomen),
+            ]
         );
+    }
+
+    /// p2's turn after p1 cast Mind Games keeping `kept` secret and ended its turn, the Fortify Mind it
+    /// handed p2 in p2's hand; with the ids p2 held unseen before the cast (`hidden`, so the Fortify
+    /// Mind, which the AI watched arrive, is known).
+    fn mind_games_cast(kept: &str) -> (Scenario, IndexSet<String>) {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({
+            "seed": "reply-fortify",
+            "p1": { "hand": [MIND_GAMES, STOCKPILE], "library": [VANILLA, VANILLA, VANILLA], "mana": 10 },
+            "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA, VANILLA], "mana": 10 },
+        }));
+        let hidden = hidden_card_ids(s.state(), PlayerId::P1);
+        s.play(MIND_GAMES, json!({ "modes": [kept] })).end_turn();
+        assert_eq!(s.state().active, PlayerId::P2, "{kept}: p2's turn");
+        (s, hidden)
+    }
+
+    /// p2's candidate plays of its Fortify Mind, one per guess.
+    fn fortify_plays(s: &Scenario) -> Vec<ActionBody> {
+        let fortify = &s.card(FORTIFY).id;
+        candidate_actions_in(
+            s.state(),
+            PlayerId::P2,
+            legal_actions(s.state(), PlayerId::P2),
+            Prices::NONE,
+        )
+        .into_iter()
+        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == fortify))
+        .collect()
+    }
+
+    /// Whether p1's Mind Games reward still waits.
+    fn holds_reward(state: &GameState) -> bool {
+        state
+            .delayed
+            .iter()
+            .any(|entry| entry.owner == PlayerId::P1 && entry.resume.def_id == MIND_GAMES)
+    }
+
+    /// Before R3696001 the reply compared each guess with the position now, where no guess pays, and
+    /// kept the card into cleanup's three penalties; judged after its turn ends, it plays it.
+    #[test]
+    fn r3696001_the_opponent_plays_the_fortify_mind_it_would_otherwise_discard() {
+        for kept in GUESSES {
+            let (s, hidden) = mind_games_cast(kept);
+            let state = s.state();
+            let guess = one_guess_per_card(state, PlayerId::P1, fortify_plays(&s));
+            let now = best_try(
+                state,
+                PlayerId::P2,
+                &guess,
+                false,
+                &create_node_counter(200, None),
+                Prices::NONE,
+            );
+            assert!(
+                matches!(now, Known::Nothing),
+                "{kept}: judged now, the card is kept"
+            );
+            let legal = legal_actions(state, PlayerId::P2);
+            let Known::Played(next) = known_play(
+                state,
+                PlayerId::P1,
+                &legal,
+                &hidden,
+                &create_node_counter(200, None),
+                Prices::NONE,
+            ) else {
+                panic!("{kept}: the Fortify Mind is played");
+            };
+            assert_eq!(next.active, PlayerId::P2, "{kept}");
+            let fortify = &s.card(FORTIFY).id;
+            assert!(
+                next.players[PlayerId::P2]
+                    .hand
+                    .iter()
+                    .all(|card| card.id != *fortify),
+                "{kept}: the Fortify Mind left p2's hand"
+            );
+        }
+    }
+
+    /// The one guess tried is drawn before anything is weighed, so it is the same whichever choice
+    /// the AI kept: it wins against exactly one of them (R864), and only there is the reward gone.
+    #[test]
+    fn r3696001_the_guess_is_the_same_whichever_choice_the_ai_kept_secret() {
+        let mut drawn: Vec<ActionBody> = Vec::new();
+        let mut cancelled = 0;
+        for kept in GUESSES {
+            let (s, hidden) = mind_games_cast(kept);
+            let state = s.state();
+            let plays = fortify_plays(&s);
+            assert_eq!(plays.len(), 3, "{kept}: one play per guess");
+            assert!(holds_reward(state), "{kept}: the reward waits");
+            let one = one_guess_per_card(state, PlayerId::P1, plays);
+            assert_eq!(one.len(), 1, "{kept}: one guess is tried");
+            drawn.push(one[0].clone());
+            let legal = legal_actions(state, PlayerId::P2);
+            let Known::Played(next) = known_play(
+                state,
+                PlayerId::P1,
+                &legal,
+                &hidden,
+                &create_node_counter(200, None),
+                Prices::NONE,
+            ) else {
+                panic!("{kept}: the Fortify Mind is played");
+            };
+            if !holds_reward(&next) {
+                cancelled += 1;
+            }
+        }
+        assert!(drawn.iter().all(|play| *play == drawn[0]), "{drawn:?}");
+        assert_eq!(cancelled, 1, "the one guess wins against one choice");
+    }
+
+    /// A revealed secret is no guess, so every play of the card is tried; and the guess is the
+    /// world's: other seeds draw other guesses.
+    #[test]
+    fn r3696001_a_revealed_secret_keeps_every_guess_and_other_worlds_draw_other_guesses() {
+        let (mut s, _) = mind_games_cast("greed");
+        let plays = fortify_plays(&s);
+        let mut revealed = s.state().clone();
+        for secret in revealed.secrets.iter_mut().flatten() {
+            secret.revealed = Some(true);
+        }
+        assert_eq!(one_guess_per_card(&revealed, PlayerId::P1, plays.clone()), plays);
+        let mut guesses: IndexSet<String> = IndexSet::new();
+        for world in 0..30 {
+            s.state_mut().seed = format!("w{world}");
+            let one = one_guess_per_card(s.state(), PlayerId::P1, plays.clone());
+            let [
+                ActionBody::Play {
+                    modes: Some(modes), ..
+                },
+            ] = one.as_slice()
+            else {
+                panic!("one guess with its mode: {one:?}");
+            };
+            guesses.insert(modes.join(","));
+        }
+        assert!(guesses.len() > 1, "{guesses:?}");
+    }
+
+    /// M #100 Greaser, a vanilla 7/7.
+    const GREASER: &str = "meditative-100";
+    /// #45 Deft Duelist, a 4/3 Charge with Deft.
+    const DUELIST: &str = "core-045";
+
+    /// R4433000: with `attack_switches` at 0, step 4 tries exactly the switches to Defense it tried
+    /// before (#1696's filter, kept here as it read); on, the switch back of the Greaser in Defense comes
+    /// after them, and the Deft Duelist's, though legal, is never among them (step 3's, R49).
+    #[test]
+    fn r4433000_attack_switches_at_zero_leave_the_tries_as_they_were() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "active": "p2",
+            "p2": { "field": [
+                VANILLA,
+                { "def": GREASER, "position": "DEF" },
+                { "def": DUELIST, "position": "DEF" },
+            ] },
+        }));
+        let state = s.state();
+        let legal = legal_actions(state, PlayerId::P2);
+        let switch = |def_id: &str| ActionBody::SwitchPosition {
+            instance_id: s.card(def_id).id.clone(),
+        };
+        assert!(legal.contains(&switch(DUELIST)));
+        let before: Vec<ActionBody> = legal
+            .iter()
+            .filter(|action| {
+                matches!(action, ActionBody::SwitchPosition { instance_id }
+                    if find_instance(state, instance_id)
+                        .is_some_and(|unit| unit_view(state, unit).position == Position::Atk))
+            })
+            .cloned()
+            .collect();
+        assert_eq!(before, vec![switch(VANILLA)]);
+        assert_eq!(defense_switch_tries(state, &legal, 4, 0), before);
+        assert_eq!(
+            defense_switch_tries(state, &legal, 4, 4),
+            vec![switch(VANILLA), switch(GREASER)]
+        );
+        assert_eq!(defense_switch_tries(state, &legal, 0, 4), vec![switch(GREASER)]);
+    }
+
+    /// S #52 Cannon v3: "Activate: Deal 5 damage to an enemy Unit."
+    const CANNON_V3: &str = "stinkyscape-052";
+    /// S #56 Cannon v4: "Activate: Deal 7 damage to an enemy Unit."
+    const CANNON_V4: &str = "stinkyscape-056";
+    /// C #21 Turtinator: "Activate: Tribute another Unit. Deal damage equal to its Attack" to a Unit or
+    /// hero.
+    const TURTINATOR: &str = "classic-021";
+
+    /// p1's row: four copies of `unit` in lanes 1 to 4 and a Greaser in lane 5.
+    fn row(unit: Value) -> Value {
+        let unit = if unit.is_string() {
+            json!({ "def": unit })
+        } else {
+            unit
+        };
+        let mut row: Vec<Value> = (1..=4)
+            .map(|lane| {
+                let mut copy = unit.clone();
+                copy["lane"] = json!(lane);
+                copy
+            })
+            .collect();
+        row.push(json!({ "def": GREASER, "lane": 5 }));
+        Value::Array(row)
+    }
+
+    /// p2's turn with `p1`'s and `p2`'s sides, the seat p1.
+    fn p2_to_act(p1: Value, p2: Value) -> Scenario {
+        jackioh_cards::register_all();
+        scenario(json!({ "active": "p2", "p1": p1, "p2": p2 }))
+    }
+
+    /// p1's unit in `lane`'s id.
+    fn seat_unit(s: &Scenario, lane: i32) -> String {
+        s.unit(PlayerId::P1, lane).expect("p1 holds a unit there").id
+    }
+
+    /// The one Activate in `legal` of `source` at `target` paid by `tributes`.
+    fn aimed(
+        legal: &[ActionBody],
+        source: &str,
+        target: Selection,
+        tributes: Option<&[String]>,
+    ) -> ActionBody {
+        legal
+            .iter()
+            .find(|action| {
+                matches!(action, ActionBody::Activate { instance_id, targets: Some(targets), tributes: paid, .. }
+                    if instance_id == source && *targets == [target.clone()] && paid.as_deref() == tributes)
+            })
+            .cloned()
+            .unwrap_or_else(|| panic!("{source} at {target:?} paid by {tributes:?} is legal: {legal:?}"))
+    }
+
+    /// `p2`'s visible tries at the seat p1, `spread` or not.
+    fn tries_of(state: &GameState, spread: bool) -> Vec<ActionBody> {
+        visible_tries(
+            state,
+            PlayerId::P1,
+            &legal_actions(state, PlayerId::P2),
+            &hidden_card_ids(state, PlayerId::P1),
+            spread,
+            Prices::NONE,
+        )
+    }
+
+    /// R4515000: two Cannons facing four 3/6s and a Greaser in lane 5. Before it, the four tries were
+    /// the first Cannon's at lanes 1 to 4; now each Cannon's is at the Greaser first, then each one's at
+    /// lane 1 (equal worths keep legal order).
+    #[test]
+    fn r4515000_spread_deals_both_cannons_at_the_lane_5_unit_and_off_keeps_the_first_cannons_lanes() {
+        let s = p2_to_act(
+            json!({ "field": row(json!({ "def": VANILLA, "statsOverride": { "attack": 3, "health": 6 } })) }),
+            json!({ "field": [{ "def": CANNON_V3, "lane": 1 }, { "def": CANNON_V4, "lane": 2 }] }),
+        );
+        let state = s.state();
+        let worth = |lane: i32| {
+            let unit = s.unit(PlayerId::P1, lane).expect("p1 holds a unit there");
+            unit_worth(state, &unit, &AI_EVAL, Prices::NONE)
+        };
+        for lane in 2..=4 {
+            assert!((worth(lane) - worth(1)).abs() < 1e-9, "lane {lane}");
+        }
+        assert!(worth(5) > worth(1), "{} against {}", worth(5), worth(1));
+        let legal = legal_actions(state, PlayerId::P2);
+        let (v3, v4) = (s.card(CANNON_V3).id.clone(), s.card(CANNON_V4).id.clone());
+        let at = |source: &str, lane: i32| {
+            aimed(
+                &legal,
+                source,
+                Selection::Instance {
+                    instance_id: seat_unit(&s, lane),
+                },
+                None,
+            )
+        };
+        assert_eq!(
+            tries_of(state, false),
+            vec![at(&v3, 1), at(&v3, 2), at(&v3, 3), at(&v3, 4)]
+        );
+        assert_eq!(
+            tries_of(state, true),
+            vec![at(&v3, 5), at(&v4, 5), at(&v3, 1), at(&v4, 1)]
+        );
+    }
+
+    /// R4515000: Turtinator, with two Units to tribute, hits the seat's hero once per Tribute set, and
+    /// both hits come first; its hits on the seat's Units follow once each, the Greaser's first, paid by
+    /// the first set, and the same hits paid by the second set wait behind them.
+    #[test]
+    fn r4515000_every_hero_try_comes_first_and_a_second_tribute_set_of_a_pick_waits() {
+        let s = p2_to_act(
+            json!({ "field": [
+                { "def": VANILLA, "statsOverride": { "attack": 1, "health": 2 }, "lane": 1 },
+                { "def": VANILLA, "lane": 2 },
+                { "def": GREASER, "lane": 3 },
+            ] }),
+            json!({ "field": [
+                { "def": TURTINATOR, "lane": 1 },
+                { "def": VANILLA, "lane": 2 },
+                { "def": VANILLA, "lane": 3 },
+            ] }),
+        );
+        let state = s.state();
+        let worth = |lane: i32| {
+            let unit = s.unit(PlayerId::P1, lane).expect("p1 holds a unit there");
+            unit_worth(state, &unit, &AI_EVAL, Prices::NONE)
+        };
+        assert!(worth(1) < worth(2) && worth(2) < worth(3));
+        let legal = legal_actions(state, PlayerId::P2);
+        let hidden = hidden_card_ids(state, PlayerId::P1);
+        let tries: Vec<ActionBody> = legal
+            .iter()
+            .filter(|action| visible_source(state, &hidden, action))
+            .cloned()
+            .collect();
+        let at_hero: Vec<ActionBody> = tries
+            .iter()
+            .filter(|action| aim_of(state, PlayerId::P1, action) == Aim::SeatHero)
+            .cloned()
+            .collect();
+        let paid_by = |action: &ActionBody| match action {
+            ActionBody::Activate {
+                tributes: Some(tributes),
+                ..
+            } => tributes.clone(),
+            other => panic!("a Tribute is paid: {other:?}"),
+        };
+        let [first, second] = at_hero.as_slice() else {
+            panic!("one hit on p1's hero per Tribute set: {at_hero:?}");
+        };
+        let (first, second) = (paid_by(first), paid_by(second));
+        assert_ne!(first, second);
+        let turtinator = s.card(TURTINATOR).id.clone();
+        let at = |lane: i32, tributes: &[String]| {
+            aimed(
+                &legal,
+                &turtinator,
+                Selection::Instance {
+                    instance_id: seat_unit(&s, lane),
+                },
+                Some(tributes),
+            )
+        };
+
+        let ordered = ordered_tries(state, PlayerId::P1, tries, true, Prices::NONE);
+        assert_eq!(ordered[..2], at_hero[..]);
+        assert_eq!(ordered[2..5], [at(3, &first), at(2, &first), at(1, &first)]);
+        let waits = ordered
+            .iter()
+            .position(|action| *action == at(3, &second))
+            .expect("the second set's hit on the Greaser is still tried");
+        assert!(waits > 4, "{waits}");
+
+        assert_eq!(tries_of(state, true), ordered[..4]);
+        let mut off = at_hero.clone();
+        off.extend([at(1, &first), at(2, &first)]);
+        assert_eq!(tries_of(state, false), off);
+    }
+
+    /// R4515000: a Cannon v4 facing four 4/4s and a Greaser in lane 5 is tried four times either way, one
+    /// node each; only the spread tries the lane-5 Greaser, so only then does the reply destroy it.
+    #[test]
+    fn r4515000_a_step_spends_the_same_nodes_on_and_off_and_only_the_spread_reaches_the_lane_5_unit() {
+        let s = p2_to_act(
+            json!({ "field": row(json!(VANILLA)) }),
+            json!({ "field": [CANNON_V4] }),
+        );
+        let state = s.state();
+        let greaser = s.card(GREASER).id.clone();
+        let mut spent: Vec<usize> = Vec::new();
+        for spread in [true, false] {
+            let tries = tries_of(state, spread);
+            assert_eq!(tries.len(), AI_REPLY.visible_activations as usize, "{spread}");
+            let counter = create_node_counter(20, None);
+            let Known::Played(after) = best_try(state, PlayerId::P2, &tries, false, &counter, Prices::NONE)
+            else {
+                panic!("{spread}: the Cannon fires");
+            };
+            spent.push(counter.used());
+            let left = active_units_of(&after, PlayerId::P1);
+            let stands = left.iter().any(|unit| unit.id == greaser);
+            if spread {
+                assert!(!stands, "the spread destroys the Greaser");
+            } else {
+                assert!(stands, "the first four lanes leave the Greaser");
+                assert_eq!(left.len(), 4);
+            }
+        }
+        assert_eq!(spent[0], spent[1]);
+    }
+
+    /// R4515000, R185: the tries read only the visible sources and the seat's own Units, so a hand card
+    /// of the opponent's the seat cannot see changes none of them.
+    #[test]
+    fn r4515000_the_tries_read_nothing_the_seat_cannot_see() {
+        let s = p2_to_act(
+            json!({ "field": row(json!(VANILLA)) }),
+            json!({ "hand": [VANILLA], "field": [CANNON_V4] }),
+        );
+        let state = s.state();
+        let mut twin = state.clone();
+        twin.players[PlayerId::P2].hand[0].def_id = CANNON_V3.to_string();
+        assert!(hidden_card_ids(state, PlayerId::P1).contains(&state.players[PlayerId::P2].hand[0].id));
+        for spread in [true, false] {
+            assert_eq!(tries_of(state, spread), tries_of(&twin, spread), "{spread}");
+        }
     }
 }

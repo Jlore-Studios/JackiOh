@@ -9,20 +9,20 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::{
-    ANSWER_KEY, ANSWER_STOP_KEY, Action, ActionBody, CardInstance, GameEvent, GameState, KY_COMPETITION_MAX,
-    PLAYER_IDS, Phase, PlayerId, PromptKind, ReduceResult, Rng, Selection, TurnLog, active_units_of,
-    effective_life, find_instance, is_sick, legal_actions, max_mana_for, opponent_of, owed_mana_of,
-    reduce_unpiloted, self_def_ids, slot_of, stop_answer, subsystems, unit_view, units_on_field_of,
+    ANSWER_KEY, ANSWER_STOP_KEY, Action, ActionBody, AppliedAction, CardInstance, GameEvent, GameState,
+    KY_COMPETITION_MAX, NONCE_HISTORY, PLAYER_IDS, Phase, PlayerId, PromptKind, ReduceResult, Rng, Selection,
+    TurnLog, active_units_of, effective_life, find_instance, is_sick, legal_actions, max_mana_for,
+    opponent_of, owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, stop_answer, subsystems, unit_view,
+    units_on_field_of,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::candidates::action_key;
+use crate::candidates::{action_key, plague_aims_first, plague_placement_open};
 use crate::config::{
     AI_EVAL, AI_KY_COMPETITION_EXPECTED_STREAK, AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK, AI_SEARCH,
 };
-use crate::evaluate::{NextSwing, Prices, evaluate_priced};
-use crate::learned::{line_score, open_score};
+use crate::evaluate::{NextSwing, Prices, evaluate_priced, feng_shui_acts, float_credit};
 use crate::types::{NodeCounter, StoppedBy};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -55,6 +55,7 @@ enum CounterKind<'a> {
         sim_errors: Cell<usize>,
         sim_panics: Cell<usize>,
         first_sim_panic: OnceCell<String>,
+        memo: SimMemo,
     },
     Sub {
         parent: &'a dyn NodeCounter,
@@ -245,6 +246,107 @@ impl NodeCounter for CountingNodeCounter<'_> {
             CounterKind::Sub { parent, .. } => parent.record_sim_panic(message),
         }
     }
+
+    fn sim_memo(&self) -> Option<&SimMemo> {
+        match &self.kind {
+            CounterKind::Root { memo, .. } => Some(memo),
+            CounterKind::Sub { parent, .. } => parent.sim_memo(),
+        }
+    }
+}
+
+/// R3575603: one step a decision simulated and found expensive (`is_expensive_step`): the state it
+/// stepped from, the seat and the action, and the engine's answer.
+struct MemoEntry {
+    state: GameState,
+    seat: PlayerId,
+    action: ActionBody,
+    stepped: ReduceResult,
+}
+
+/// R3575603: the expensive steps one decision has simulated, at most `AI_SEARCH.memo_steps`, so the
+/// same step from the same state (the lethal solver's and the beam's on one world, a line scored again,
+/// the same play reached by two orders) is answered by the engine once. A step is a function of its
+/// state and action: its random draws read the state's seed and cursor (CLAUDE.md rule 4), and nothing
+/// it does reads the nonces of the steps before it (`GameState.applied`), which only the dedupe asks.
+/// So two states are the same step's input when they differ in those nonces alone, and the answer is
+/// the one a second run would give, its record of nonces rebuilt as the engine's `remember_nonce` builds
+/// it: the input's, then this step's nonce with the events it produced, the oldest dropped past
+/// `NONCE_HISTORY`.
+#[derive(Default)]
+pub struct SimMemo {
+    entries: Cell<Vec<MemoEntry>>,
+}
+
+/// Whether `a` and `b` are the same state but for their nonce records (`GameState.applied`).
+fn same_but_nonces(a: &GameState, b: &GameState) -> bool {
+    if a.applied == b.applied {
+        return a == b;
+    }
+    let mut other = b.clone();
+    other.applied.clone_from(&a.applied);
+    *a == other
+}
+
+impl SimMemo {
+    /// The steps kept.
+    pub fn len(&self) -> usize {
+        let entries = self.entries.take();
+        let len = entries.len();
+        self.entries.set(entries);
+        len
+    }
+
+    /// Whether no step is kept.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn find(
+        &self,
+        state: &GameState,
+        seat: PlayerId,
+        action: &ActionBody,
+        nonce: &str,
+    ) -> Option<ReduceResult> {
+        let entries = self.entries.take();
+        let found = entries
+            .iter()
+            .find(|entry| {
+                entry.seat == seat && entry.action == *action && same_but_nonces(&entry.state, state)
+            })
+            .map(|entry| entry.stepped.clone());
+        self.entries.set(entries);
+        let mut stepped = found?;
+        let mut applied = state.applied.clone();
+        applied.push(AppliedAction {
+            nonce: nonce.to_string(),
+            events: stepped.events.clone(),
+        });
+        let excess = applied.len().saturating_sub(NONCE_HISTORY);
+        applied.drain(0..excess);
+        stepped.state.applied = applied;
+        Some(stepped)
+    }
+
+    fn keep(&self, state: &GameState, seat: PlayerId, action: &ActionBody, stepped: &ReduceResult) {
+        let mut entries = self.entries.take();
+        if entries.len() < AI_SEARCH.memo_steps.max(0) as usize {
+            entries.push(MemoEntry {
+                state: state.clone(),
+                seat,
+                action: action.clone(),
+                stepped: stepped.clone(),
+            });
+        }
+        self.entries.set(entries);
+    }
+}
+
+/// R3575603: whether the step `action` took from `state` to `stepped` is one the search pays more than
+/// its node for (`surcharge_nodes`, `announced_surcharge_nodes`): the only steps `SimMemo` keeps.
+fn is_expensive_step(state: &GameState, seat: PlayerId, action: &ActionBody, stepped: &ReduceResult) -> bool {
+    surcharge_nodes(state, seat, action) > 0 || announced_surcharge_nodes(state, action, stepped) > 0
 }
 
 pub fn create_node_counter<'a>(
@@ -260,6 +362,7 @@ pub fn create_node_counter<'a>(
             sim_errors: Cell::new(0),
             sim_panics: Cell::new(0),
             first_sim_panic: OnceCell::new(),
+            memo: SimMemo::default(),
         },
     }
 }
@@ -425,7 +528,9 @@ pub(crate) enum AnswersTried {
 }
 
 /// The answers `best_auto_answer` tries of `answerer`'s prompt (excluding Concede).
-/// `Drawn` (#1382) sorts by `action_key` and samples up to `AI_SEARCH.max_auto_answer_options` (R185).
+/// `Drawn` (#1382) sorts by `action_key` and samples up to `AI_SEARCH.max_auto_answer_options` (R185), but
+/// takes every answer of a Plague Counter's placement under a Living Bomb, the enemy's permanents first
+/// (`plague_aims_first`, R4154402).
 fn auto_answers(state: &GameState, answerer: PlayerId, tried: AnswersTried) -> Vec<ActionBody> {
     let answers = legal_actions(state, answerer)
         .into_iter()
@@ -436,6 +541,11 @@ fn auto_answers(state: &GameState, answerer: PlayerId, tried: AnswersTried) -> V
     let mut keyed: Vec<(String, ActionBody)> = answers.map(|answer| (action_key(&answer), answer)).collect();
     keyed.sort_by(|a, b| a.0.cmp(&b.0));
     let ordered: Vec<ActionBody> = keyed.into_iter().map(|(_, answer)| answer).collect();
+    // R4154402: a Plague Counter placed under a Living Bomb is a destroy aimed, so every answer is tried,
+    // the enemy's permanents first, never a draw of a few.
+    if plague_placement_open(state, answerer) {
+        return plague_aims_first(state, answerer, ordered);
+    }
     let cap = AI_SEARCH.max_auto_answer_options.max(1) as usize;
     if ordered.len() <= cap {
         return ordered;
@@ -573,7 +683,7 @@ fn step_answer(
 /// how the beam ranks a child that waits there (search.rs): every prompt open on the way, either seat's,
 /// gets its holder's best auto-answer (`best_auto_answer`, each answer one node of `counter`), but the
 /// seat's own question it works out answered as `decide` would (`worked_step`, #2929), at most
-/// AI_SEARCH.max_auto_answers prompts, and the state reached is scored by `open_score`. Only a score: the
+/// AI_SEARCH.max_auto_answers prompts, and the state reached is scored by the hand eval. Only a score: the
 /// child stays at its prompt, and keeps its plain evaluation on `None`.
 pub fn own_prompt_score(
     state: &GameState,
@@ -608,7 +718,13 @@ pub fn own_prompt_score(
                 best_auto_answer(&current, answerer, AnswersTried::Drawn, counter, "ahead", prices)?.ok()?;
             answered += 1;
         }
-        Some(open_score(&current, seat, NextSwing::Enemy, prices))
+        Some(evaluate_priced(
+            &current,
+            seat,
+            NextSwing::Enemy,
+            &AI_EVAL,
+            prices,
+        ))
     }));
     run.unwrap_or_else(|payload| {
         note_sim_panic(counter, payload.as_ref());
@@ -666,10 +782,22 @@ fn simulate_answering(
         }
     }
     let run = catch_unwind(AssertUnwindSafe(|| -> Option<SimStep> {
-        let first = reduce_unpiloted(
-            state,
-            &Action::new(action.clone(), seat, format!("sim:{}", counter.used())),
-        );
+        // R3575603: an expensive step this decision already took from this state is answered again.
+        let nonce = format!("sim:{}", counter.used());
+        let memo = counter.sim_memo();
+        let first = match memo.and_then(|memo| memo.find(state, seat, action, &nonce)) {
+            Some(stepped) => stepped,
+            None => {
+                let stepped = reduce_unpiloted(state, &Action::new(action.clone(), seat, nonce));
+                if let Some(memo) = memo
+                    && stepped.error.is_none()
+                    && is_expensive_step(state, seat, action, &stepped)
+                {
+                    memo.keep(state, seat, action, &stepped);
+                }
+                stepped
+            }
+        };
         if let Some(error) = first.error {
             note_sim_error(counter);
             return Some(Err(error));
@@ -721,10 +849,13 @@ fn simulate_answering(
     }
 }
 
-/// A passed turn's value: the line's score (`line_score`), less the crystals the seat left unspent.
+/// A passed turn's value: the line's hand eval, less the crystals the seat left unspent,
+/// plus what that Float brought its Float-discount cards (R3695000).
 fn passed_score(state: &GameState, seat: PlayerId, prices: &Prices) -> f64 {
     let unspent = state.players[seat].turn_log.unspent_at_end.unwrap_or(0);
-    line_score(state, seat, NextSwing::Enemy, prices) - AI_EVAL.unspent_mana * f64::from(unspent)
+    evaluate_priced(state, seat, NextSwing::Enemy, &AI_EVAL, prices)
+        - AI_EVAL.unspent_mana * f64::from(unspent)
+        + float_credit(state, seat, unspent, &AI_EVAL)
 }
 
 /// `closeLine`'s step: the line's turn ended here, or `None` where the line stays as it stands.
@@ -763,12 +894,12 @@ pub fn static_score(state: &GameState, seat: PlayerId, root_turn: i32, prices: &
     if line_status(state, seat, root_turn) == LineStatus::Passed {
         passed_score(state, seat, prices)
     } else {
-        line_score(state, seat, NextSwing::Enemy, prices)
+        evaluate_priced(state, seat, NextSwing::Enemy, &AI_EVAL, prices)
     }
 }
 
 /// A line's value: `static_score`, but an open line is first closed with an endTurn if the seat is in its
-/// main phase and a node is left (R1012002).
+/// main phase and a node is left.
 pub fn terminal_score(
     state: &GameState,
     seat: PlayerId,
@@ -779,7 +910,7 @@ pub fn terminal_score(
     let status = line_status(state, seat, root_turn);
     if status == LineStatus::Open {
         return match close_line_step(state, seat, root_turn, counter, prices) {
-            None => line_score(state, seat, NextSwing::Enemy, prices),
+            None => evaluate_priced(state, seat, NextSwing::Enemy, &AI_EVAL, prices),
             Some(closed) => static_score(&closed, seat, root_turn, prices),
         };
     }
@@ -849,7 +980,7 @@ fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
     )
 }
 
-/// Non-default player parts for `search_signature` (mana, riders R844, locks, fatigue, graveyard, R1854003, R1224, #898).
+/// Non-default player parts for `search_signature` (mana, riders R844, locks, fatigue, graveyard, R1854003, R4331001, R1224, #898).
 fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>) {
     let side = &state.players[player];
     let mana = &side.mana;
@@ -866,6 +997,10 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
     // R1854003: mana crystals a steal moved, which every later refresh reads, only while some are.
     if let Some(crystals) = side.mana_crystals {
         parts.push(format!("C{player}{crystals}"));
+    }
+    // R4331001: crystals a steal took past the cap, only while some stand.
+    if let Some(crystals) = side.stolen_mana_crystals {
+        parts.push(format!("S{player}{crystals}"));
     }
     if side
         .locks
@@ -948,8 +1083,21 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
     }
 }
 
-/// Position signature for beam deduplication and lethal visited set (R1224, #898, #1797).
+/// Position signature for beam deduplication and lethal visited set (R1224, #898, #1797, R3772000).
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
+    position_signature(state, seat, false)
+}
+
+/// R4132000: `search_signature` without where its cards stand: each side's unit parts sorted (each
+/// leads with its unit's id, so the order is canonical) and its backrow signed as its cards sorted,
+/// empty zones left out. The beam's lane variants read it; a lane that changes a card (an aura's
+/// stats, a Cry's work) still splits two positions.
+pub fn lane_free_signature(state: &GameState, seat: PlayerId) -> String {
+    position_signature(state, seat, true)
+}
+
+/// The two signatures' one body; `lane_free` is R4132000's.
+fn position_signature(state: &GameState, seat: PlayerId, lane_free: bool) -> String {
     let opp = opponent_of(seat);
     let mut parts: Vec<String> = vec![
         format!(
@@ -976,30 +1124,38 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
         ),
     ];
     for player in PLAYER_IDS {
-        for unit in active_units_of(state, player) {
-            let attacks = unit
-                .exertion
-                .attacks
-                .unwrap_or(if unit.exertion.attacked { 1 } else { 0 });
-            // R1829000: a card a Stack pile uncovers keeps its id and is summoning sick again, so the
-            // sickness is part of the position, or two children that differ only in it would merge.
-            let exerted = format!(
-                "{}{}{}",
-                attacks,
-                if unit.exertion.switched { 1 } else { 0 },
-                if is_sick(state, unit) { "z" } else { "" }
-            );
-            parts.push(format!(
-                "{}:{}:{}/{}:{}:{}:{}",
-                unit.id,
-                unit.damage,
-                unit.buffs.attack,
-                unit.buffs.health,
-                exerted,
-                unit.position.map_or("ATK", |position| position.as_str()),
-                unit_play_signature(state, unit),
-            ));
+        let mut units: Vec<String> = active_units_of(state, player)
+            .into_iter()
+            .map(|unit| {
+                let attacks = unit
+                    .exertion
+                    .attacks
+                    .unwrap_or(if unit.exertion.attacked { 1 } else { 0 });
+                // R1829000: a card a Stack pile uncovers keeps its id and is summoning sick again, so the
+                // sickness is part of the position, or two children that differ only in it would merge.
+                let exerted = format!(
+                    "{}{}{}",
+                    attacks,
+                    if unit.exertion.switched { 1 } else { 0 },
+                    if is_sick(state, unit) { "z" } else { "" }
+                );
+                format!(
+                    "{}:{}:{}/{}:{}:{}:{}",
+                    unit.id,
+                    unit.damage,
+                    unit.buffs.attack,
+                    unit.buffs.health,
+                    exerted,
+                    unit.position.map_or("ATK", |position| position.as_str()),
+                    unit_play_signature(state, unit),
+                )
+            })
+            .collect();
+        // R4132000: the lane-free signature lists no lane order.
+        if lane_free {
+            units.sort();
         }
+        parts.extend(units);
         // R1839000: a Dormant card is no active unit, yet it fills its zone and counts down: it is part of
         // the position, said only when there is one, so every other signature stays as it was.
         for unit in units_on_field_of(state, player) {
@@ -1011,24 +1167,28 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
                 parts.push(format!("s{}:{}:{}", unit.id, unit.def_id, ship.pieces.len()));
             }
         }
-        let backrow = state.players[player]
-            .backrow
-            .iter()
-            .map(|card| {
-                card.as_ref().map_or("-".to_string(), |card| {
-                    // R686: a revealed card shows its face but is not face-up (a Trap of it still fires).
-                    let face = if card.face_up == Some(true) {
-                        "^"
-                    } else if card.revealed == Some(true) {
-                        "~"
-                    } else {
-                        ""
-                    };
-                    format!("{}{face}:{:?}", card_signature(card), card.counters)
-                })
+        let zones = state.players[player].backrow.iter().map(|card| {
+            card.as_ref().map(|card| {
+                // R686: a revealed card shows its face but is not face-up (a Trap of it still fires).
+                let face = if card.face_up == Some(true) {
+                    "^"
+                } else if card.revealed == Some(true) {
+                    "~"
+                } else {
+                    ""
+                };
+                format!("{}{face}:{:?}", card_signature(card), card.counters)
             })
-            .collect::<Vec<_>>()
-            .join(",");
+        });
+        // R4132000: the lane-free signature signs the backrow's cards alone, sorted.
+        let backrow = if lane_free {
+            sorted(zones.flatten())
+        } else {
+            zones
+                .map(|zone| zone.unwrap_or_else(|| "-".to_string()))
+                .collect::<Vec<_>>()
+                .join(",")
+        };
         parts.push(format!("b{backrow}"));
         push_side_parts(state, player, &mut parts);
     }
@@ -1068,6 +1228,22 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
         );
         parts.push(format!("K{marks}"));
     }
+    // R3772000: the secrets a Mind Games kept, by the same rule: each one's owner, choice and whether
+    // it is revealed, sorted and without the id the engine minted it, so the three choices of one cast
+    // stay three positions.
+    if let Some(secrets) = &state.secrets
+        && !secrets.is_empty()
+    {
+        let secrets = sorted(secrets.iter().map(|secret| {
+            format!(
+                "{}:{}:{}",
+                secret.owner,
+                secret.choice.map_or("-", |choice| choice.as_str()),
+                if secret.revealed == Some(true) { "r" } else { "" }
+            )
+        }));
+        parts.push(format!("S{secrets}"));
+    }
     // R1853004: an open Marketplace's deals change the seat's Credits and its stock, which are part of
     // the position only while it is open, so every other signature stays as it was (a card bought or
     // sold is in the hand's part).
@@ -1082,6 +1258,14 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
                 .map(|offer| offer.bought[seat])
                 .collect::<Vec<_>>()
         ));
+    }
+    // R3951100: while a Feng Shui acts, the seat's last element judges its next play and the evaluation
+    // reads it (`feng_shui_outlook`), so two orders of the same plays that end on different elements are
+    // two positions; said only then, so every other signature stays as it was.
+    if feng_shui_acts(state)
+        && let Some(element) = subsystems::feng_shui::last_element(state, seat)
+    {
+        parts.push(format!("E{}", element.as_str()));
     }
     parts.join("|")
 }

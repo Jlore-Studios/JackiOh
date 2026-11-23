@@ -17,6 +17,7 @@ const FILTERED: PoolFilter = {
   costs: new Set(["2", "6+"]),
   types: new Set(["Unit"]),
   tags: new Set(["Human"]),
+  keywords: new Set(["Taunt", "Rush"]),
   rarities: new Set(["Epic"]),
   search: "taunt",
   ownedOnly: false,
@@ -31,6 +32,23 @@ describe("savedBrowse", () => {
     const storage = memoryStorage();
     saveBrowse(storage, { filter: FILTERED, sort: { key: "name", dir: "desc" } });
     expect(loadBrowse(storage)).toEqual({ filter: FILTERED, sort: { key: "name", dir: "desc" } });
+  });
+
+  it("R3734000 round-trips the keyword chips, a copy saved before them reads as none, and a chip no card prints is dropped", () => {
+    const storage = memoryStorage();
+    saveBrowse(storage, { filter: { ...DEFAULT_FILTER, keywords: new Set(["Taunt"]) }, sort: DEFAULT_SORT });
+    expect([...loadBrowse(storage).filter.keywords]).toEqual(["Taunt"]);
+    saveBrowse(storage, { filter: DEFAULT_FILTER, sort: { key: "newest", dir: "asc" } });
+    expect(loadBrowse(storage).sort).toEqual({ key: "newest", dir: "asc" });
+    // A copy an older build wrote has no `keywords`.
+    storage.setItem(SAVED_BROWSE_KEY, JSON.stringify({ costs: ["2"], sort: { key: "cost", dir: "asc" } }));
+    expect(loadBrowse(storage).filter.keywords.size).toBe(0);
+    storage.setItem(SAVED_BROWSE_KEY, JSON.stringify({ keywords: ["Taunt", "Retired keyword"] }));
+    expect([...loadBrowse(storage).filter.keywords]).toEqual(["Taunt"]);
+    // Only keywords chosen: not the defaults, so the key stays.
+    saveBrowse(storage, { filter: { ...DEFAULT_FILTER, keywords: new Set(["Rush"]) }, sort: DEFAULT_SORT });
+    expect(storage.data.has(SAVED_BROWSE_KEY)).toBe(true);
+    expect(isDefaultFilter({ ...DEFAULT_FILTER, keywords: new Set(["Rush"]) })).toBe(false);
   });
 
   it("removes the key when filter and sort are both back at their defaults", () => {

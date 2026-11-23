@@ -35,11 +35,11 @@ afterEach(() => {
 });
 
 describe("R1371 the newest set that ships", () => {
-  it("R1371 newestShippedSet is SHIPPED_SETS' last entry, Training Grounds since the patch that ships it", () => {
+  it("R1371 newestShippedSet is SHIPPED_SETS' last entry, Stinkyscape+ since the patch that ships it", () => {
     expect(newestShippedSet()).toBe(SHIPPED_SETS[SHIPPED_SETS.length - 1]);
     expect(setShips(newestShippedSet())).toBe(true);
-    // Each set's release (issues #553, #1187, #1884, #2204) changed this line and no other.
-    expect(newestShippedSet()).toBe("Training Grounds");
+    // Each set's release (issues #553, #1187, #1884, #2204, #3573) changed this line and no other.
+    expect(newestShippedSet()).toBe("Stinkyscape+");
   });
 
   it("R1371 the picker's newest choice names it, and the share it asks for is the deck builder's own number", () => {

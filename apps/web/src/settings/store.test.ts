@@ -2,17 +2,45 @@
 // unknown keys are dropped, writes notify, and the panel's switch reaches the document. One `it` per
 // rule; the store is reset before and after each test, as `settings/wiring.test.tsx` does.
 
+import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   DEFAULT_SETTINGS,
   SETTINGS_STORAGE_KEY,
   __resetSettingsForTests,
+  parseSettings,
   readSettings,
   resetSettings,
   subscribeSettings,
+  useSetting,
+  useSettings,
   writeSettings,
+  type Settings,
 } from "./store.ts";
+
+/** S8's defaults, written out: what a new player gets. */
+const NEW_PLAYER: Settings = {
+  dragToPlay: true,
+  confirmEndTurn: false,
+  autoEndTurn: true,
+  hoverPreviews: true,
+  lethalHint: true,
+  attackOutcomes: true,
+  reduceMotion: false,
+  muteOpponentEmotes: false,
+  muteSpectatorEmotes: false,
+};
+
+/** Every kept key the other way round from its default. */
+const ALL_FLIPPED = Object.fromEntries(Object.entries(NEW_PLAYER).map(([key, on]) => [key, !on])) as Settings;
+
+const noop = (): void => undefined;
+
+/** Another tab's write (or, keyless, a clear), as the browser tells this one. */
+function storageEvent(key: string | null, newValue: string | null): void {
+  window.dispatchEvent(new StorageEvent("storage", { key, newValue }));
+}
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -106,6 +134,18 @@ describe("stored settings", () => {
     }
   });
 
+  it("parseSettings ignores proto keys (#4015)", () => {
+    window.localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      `{"dragToPlay":false,"__proto__":{"polluted":true},"constructor":{"prototype":{"polluted":true}}}`,
+    );
+    __resetSettingsForTests();
+    const read = readSettings();
+    expect(read.dragToPlay).toBe(false);
+    expect(read).not.toHaveProperty("polluted");
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
   it("follows another tab's storage event and ignores other keys", () => {
     const listener = vi.fn();
     const stop = subscribeSettings(listener);
@@ -128,5 +168,146 @@ describe("stored settings", () => {
     } finally {
       stop();
     }
+  });
+});
+
+// The store's module as a page first loads it: evaluated afresh, so its constants are the ones a
+// player's first visit, and the settings their browser already holds, meet.
+describe("S8 a fresh page", () => {
+  it("gives a new player S8's defaults and keeps them under jackioh.settings, the key browsers hold", async () => {
+    vi.resetModules();
+    const fresh = await import("./store.ts");
+    try {
+      expect(fresh.DEFAULT_SETTINGS).toEqual(NEW_PLAYER);
+      expect(fresh.readSettings()).toEqual(NEW_PLAYER);
+      fresh.writeSettings({ confirmEndTurn: true });
+      expect(JSON.parse(window.localStorage.getItem("jackioh.settings") ?? "null")).toEqual({
+        ...NEW_PLAYER,
+        confirmEndTurn: true,
+      });
+    } finally {
+      fresh.__resetSettingsForTests();
+    }
+  });
+
+  it("R2000000 reads every kept key a browser holds, and applies reduce motion on that first read", async () => {
+    window.localStorage.setItem("jackioh.settings", JSON.stringify(ALL_FLIPPED));
+    vi.resetModules();
+    const fresh = await import("./store.ts");
+    try {
+      expect(fresh.readSettings()).toEqual(ALL_FLIPPED);
+      expect(document.documentElement.getAttribute("data-reduce-motion")).toBe("true");
+    } finally {
+      fresh.__resetSettingsForTests();
+    }
+  });
+});
+
+describe("parseSettings", () => {
+  it("takes an object as it is, keeping only its booleans", () => {
+    expect(parseSettings({ hoverPreviews: false, reduceMotion: "yes", dragToPlay: 1 })).toEqual({
+      ...NEW_PLAYER,
+      hoverPreviews: false,
+    });
+  });
+
+  it("holds an array to be no settings, whatever keys it carries", () => {
+    expect(parseSettings(Object.assign([], { hoverPreviews: false }))).toEqual(NEW_PLAYER);
+  });
+
+  it("never throws: a record whose field throws on read takes every default", () => {
+    const hostile = {
+      dragToPlay: false,
+      get confirmEndTurn(): boolean {
+        throw new Error("unreadable");
+      },
+    };
+    expect(parseSettings(hostile)).toEqual(NEW_PLAYER);
+  });
+});
+
+describe("one settings object while nothing changes (S8: useSyncExternalStore needs that)", () => {
+  it("keeps the object through a write that changes nothing, and replaces it on one that does", () => {
+    const before = readSettings();
+    expect(writeSettings({ hoverPreviews: before.hoverPreviews })).toBe(before);
+    expect(writeSettings({ hoverPreviews: !before.hoverPreviews })).not.toBe(before);
+  });
+
+  it("keeps the object through another tab's write of what this one holds", () => {
+    const stop = subscribeSettings(noop);
+    try {
+      const before = readSettings();
+      storageEvent(SETTINGS_STORAGE_KEY, JSON.stringify(before));
+      expect(readSettings()).toBe(before);
+    } finally {
+      stop();
+    }
+  });
+});
+
+describe("S8 another tab's storage events", () => {
+  it("follows one that comes before this page has read its settings, reduce motion included", () => {
+    const stop = subscribeSettings(noop);
+    try {
+      storageEvent(SETTINGS_STORAGE_KEY, JSON.stringify({ hoverPreviews: false, reduceMotion: true }));
+      expect(readSettings()).toEqual({ ...NEW_PLAYER, hoverPreviews: false, reduceMotion: true });
+      expect(document.documentElement.getAttribute("data-reduce-motion")).toBe("true");
+    } finally {
+      stop();
+    }
+  });
+
+  it("re-reads storage on a keyless event (a clear somewhere), keeping what is still stored", () => {
+    const stop = subscribeSettings(noop);
+    try {
+      writeSettings({ hoverPreviews: false });
+      storageEvent(null, null);
+      expect(readSettings().hoverPreviews).toBe(false);
+      window.localStorage.clear();
+      storageEvent(null, null);
+      expect(readSettings()).toEqual(NEW_PLAYER);
+    } finally {
+      stop();
+    }
+  });
+
+  it("listens while any subscriber is left and lets go after the last", () => {
+    const remove = vi.spyOn(window, "removeEventListener");
+    try {
+      const stopFirst = subscribeSettings(noop);
+      const stopSecond = subscribeSettings(noop);
+      stopFirst();
+      storageEvent(SETTINGS_STORAGE_KEY, JSON.stringify({ hoverPreviews: false }));
+      expect(readSettings().hoverPreviews).toBe(false);
+      expect(remove).not.toHaveBeenCalledWith("storage", expect.any(Function));
+      stopSecond();
+      expect(remove).toHaveBeenCalledWith("storage", expect.any(Function));
+    } finally {
+      remove.mockRestore();
+    }
+  });
+});
+
+describe("useSettings and useSetting", () => {
+  it("re-render a component on a write", () => {
+    const all = renderHook(() => useSettings());
+    const one = renderHook(() => useSetting("hoverPreviews"));
+    expect(all.result.current).toEqual(NEW_PLAYER);
+    expect(one.result.current).toBe(true);
+    act(() => {
+      writeSettings({ hoverPreviews: false });
+    });
+    expect(all.result.current.hoverPreviews).toBe(false);
+    expect(one.result.current).toBe(false);
+    all.unmount();
+    one.unmount();
+  });
+});
+
+describe("__resetSettingsForTests", () => {
+  it("leaves the document as a fresh page finds it", () => {
+    writeSettings({ reduceMotion: true });
+    __resetSettingsForTests();
+    expect(document.documentElement.hasAttribute("data-reduce-motion")).toBe(false);
   });
 });

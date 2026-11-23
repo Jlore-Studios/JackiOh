@@ -45,6 +45,7 @@ export function placeOf(zone: Element): Place | null {
 
 function enclosingZone(element: Element): Element | null {
   for (let at = element.parentElement; at !== null; at = at.parentElement) {
+    // Stryker disable next-line StringLiteral: the stand-in for a missing testid only has to fail ZONE, which "" and Stryker's "Stryker was here!" both do.
     if (ZONE.test(at.getAttribute("data-testid") ?? "")) return at;
   }
   return null;
@@ -79,6 +80,7 @@ export function targetFromElement(element: Element): { target: ClickTarget; test
         if (place === null) return null;
         const instanceId = card[1] as string;
         // R1081000: a Unit standing in a backrow zone is a unit for every press and drag (Backrow.tsx).
+        // Stryker disable next-line ConditionalExpression: dropping the row test only makes `standing` true for a Unit in a units zone, which reads as a unit either way.
         const standing = place.row === "backrow" && at.classList.contains("card-unit");
         return {
           target:
@@ -129,6 +131,7 @@ export function lockedZoneAt(
     const { side, row } = hit.target;
     if (side !== "you" || plan.dropTestids.has(hit.testid)) return null;
     const zone = element.closest(`[data-testid="${hit.testid}"]`);
+    // Stryker disable next-line ConditionalExpression: the hit's zone is `element` or one of its ancestors (targetFromElement walked up to it), so `closest` always finds it and `zone === null` never holds.
     if (zone === null || zone.getAttribute("data-locked") !== "true") return null;
     const offered = [...plan.dropTestids].some((id) => id.startsWith(`zone-you-${row}-`));
     return offered ? { testid: hit.testid, zone } : null;

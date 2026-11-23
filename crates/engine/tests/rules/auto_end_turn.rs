@@ -250,10 +250,7 @@ mod r82_the_automatic_turn_end_looks_no_further_than_the_first_action_that_holds
         assert_eq!(PRICED.load(Ordering::SeqCst), 0);
 
         // The card is still on offer: the full list prices it and lists its play.
-        let plays: Vec<ActionBody> = legal_actions(&result.state, P1)
-            .into_iter()
-            .filter(|body| matches!(body, ActionBody::Play { instance_id, .. } if *instance_id == later.id))
-            .collect();
+        let plays: Vec<ActionBody> = plays_in(&result.state, P1, &later.id);
         assert!(!plays.is_empty());
         assert!(PRICED.load(Ordering::SeqCst) > 0);
     }

@@ -201,4 +201,63 @@ mod tests {
         );
         assert_eq!(names_of(&def("t-5", "The Coin")), vec!["The Coin", "Coin"]);
     }
+
+    /// R961, R2198004: a name inside a rules phrase names nothing ("Jade" in "Jade Counter", at the text's start
+    /// too), a name that is the whole phrase names its card, and the name outside the phrase still names its own.
+    #[test]
+    fn r961_a_name_inside_a_rules_phrase_names_nothing_and_the_whole_phrase_itself() {
+        let jade = def("m-39", "Jade");
+        let fortify = def("tg-12", "Fortify");
+        let mind = def("m-22", "Fortify Mind");
+        assert!(found("Gain a Jade Counter.", std::slice::from_ref(&jade)).is_empty());
+        assert!(found("Jade Counter: gain one.", std::slice::from_ref(&jade)).is_empty());
+        assert_eq!(
+            found("A Jade Counter, then Jade.", &[jade]),
+            vec![(21, 25, "m-39".to_string(), false)]
+        );
+        assert!(found("Cast Fortify Mind.", std::slice::from_ref(&fortify)).is_empty());
+        assert_eq!(
+            found("Fortify Mind: draw a card.", std::slice::from_ref(&mind)),
+            vec![(0, 12, "m-22".to_string(), false)]
+        );
+        assert_eq!(
+            found("Fortify, then Fortify Mind.", &[fortify, mind]),
+            vec![
+                (0, 7, "tg-12".to_string(), false),
+                (14, 26, "m-22".to_string(), false)
+            ]
+        );
+    }
+
+    /// R279: a name at the text's start, two names apart and two that touch are each a name; a hyphen joins a word, so
+    /// a name after one is inside it.
+    #[test]
+    fn r279_names_at_the_start_apart_or_touching_are_names_and_a_hyphen_joins_a_word() {
+        let ghoul = def("t-1", "Ghoul Token");
+        assert_eq!(
+            found("Ghoul Token arrives.", std::slice::from_ref(&ghoul)),
+            vec![(0, 11, "t-1".to_string(), false)]
+        );
+        assert!(found("An Anti-Ghoul Token.", &[ghoul]).is_empty());
+        assert_eq!(
+            found(
+                "Rush, then a Rush Token.",
+                &[def("t-2", "Rush"), def("t-3", "Rush Token")]
+            ),
+            vec![
+                (0, 4, "t-2".to_string(), false),
+                (13, 23, "t-3".to_string(), false)
+            ]
+        );
+        assert_eq!(
+            found("Bang!!Pow", &[def("a", "Bang!"), def("b", "!Pow")]),
+            vec![(0, 5, "a".to_string(), false), (5, 9, "b".to_string(), false)]
+        );
+    }
+
+    /// A name that is all parenthesis has nothing before it.
+    #[test]
+    fn a_name_that_is_all_parenthesis_has_no_bare_name() {
+        assert_eq!(bare_name("(Edition)"), "");
+    }
 }

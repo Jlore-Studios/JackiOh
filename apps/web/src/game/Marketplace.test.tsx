@@ -1,11 +1,10 @@
 // R1853003, R2250002: the Marketplace's shop (Marketplace.tsx), mounted by Game and read off the view and
-// `legal` alone. The view is a fixture shaped as the engine's `marketplace_view` builds it, the
-// viewer's priced hand cards that sell among it (R1861000); the shop must send exactly the `marketBuy`
-// or `marketSell` `legal` lists, and nothing for an offer or a sale it does not (CLAUDE.md rule 7).
-// R3047002: a Buffed or Nerfed offer carries its count beside its price. R2127000: Back closes the open
-// shop, as Escape does.
+// `legal` alone. The view is a fixture shaped as the engine's `marketplace_view` builds it; the shop must
+// send exactly the `marketBuy` `legal` lists, and nothing for an offer it does not (CLAUDE.md rule 7).
+// R4410000: nothing sells, so the shop has no Sell section. R3047002: a Buffed or Nerfed offer carries its
+// count beside its price. R2127000: Back closes the open shop, as Escape does.
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -25,20 +24,19 @@ afterEach(cleanup);
 const lookup = lookupFromDefs(CATALOG);
 
 const BUY_0: ActionBody = { type: "marketBuy", offer: 0 };
-const SELL_R9: ActionBody = { type: "marketSell", instanceId: "r9" };
 const END_TURN: ActionBody = { type: "endTurn" };
 const REASON = "Zao Gao costs 60 Credits and you have 45";
 
-/** Mr. Vanilla at 40 Credits, a Radiant Zao Gao at 60 the engine refuses, and the hand's `r9` quoted at 2. */
+/** Mr. Vanilla at 40 Credits and a Radiant Zao Gao at 60 the engine refuses. */
 const MARKET: MarketplaceView = {
   offers: [
     { offer: 0, defId: "core-008", price: 40, left: 2 },
     { offer: 1, defId: "core-080", radiant: true, price: 60, left: 1, reason: REASON },
   ],
-  sales: [{ instanceId: "r9", defId: "fx-res-rare", credits: 2 }],
+  sales: [],
 };
 
-/** p1's main phase with 45 Credits and a card that sells in hand, at `market` (absent: still closed). */
+/** p1's main phase with 45 Credits and a Resource in hand, at `market` (absent: still closed). */
 function marketView(market?: MarketplaceView): PlayerView {
   return baseView({
     you: emptySide("p1", { hand: [card({ instanceId: "r9", defId: "fx-res-rare" })], marketCredits: 45 }),
@@ -75,11 +73,10 @@ describe("R1853003 the Marketplace's shop", () => {
     renderGame(marketView(), [END_TURN]);
     expect(screen.queryByTestId(testid.marketplace)).toBeNull();
     expect(screen.queryByTestId(testid.marketplacePanel)).toBeNull();
-    expect(screen.queryByTestId(testid.marketSell("r9"))).toBeNull();
   });
 
   it("R1853003 a listed offer's Buy sends exactly its marketBuy", () => {
-    const onAction = renderGame(marketView(MARKET), [BUY_0, SELL_R9, END_TURN]);
+    const onAction = renderGame(marketView(MARKET), [BUY_0, END_TURN]);
     expect(screen.queryByTestId(testid.marketplacePanel)).toBeNull();
     const panel = openShop();
     expect(panel).toHaveTextContent("45 Credits");
@@ -125,24 +122,20 @@ describe("R1853003 the Marketplace's shop", () => {
     expect(marketSent(waiting)).toEqual([]);
   });
 
-  it("R1853003 R1861000 a priced hand card's Sell sends its marketSell", () => {
-    const onAction = renderGame(marketView(MARKET), [BUY_0, SELL_R9, END_TURN]);
-    openShop();
-    const sell = button(testid.marketSell("r9"));
-    expect(sell.disabled).toBe(false);
-    expect(sell).toHaveTextContent("Sell fx-res-rare for 2 Credits");
-    fireEvent.click(sell);
-    const sent = marketSent(onAction);
-    expect(sent).toEqual([SELL_R9]);
-    expect(sent[0]).toBe(SELL_R9);
-    cleanup();
-    // A sale `legal` does not list is greyed and sends nothing.
-    const unlisted = renderGame(marketView(MARKET), [END_TURN]);
-    openShop();
-    const greyed = button(testid.marketSell("r9"));
-    expect(greyed.disabled).toBe(true);
-    fireEvent.click(greyed);
-    expect(marketSent(unlisted)).toEqual([]);
+  it("R4410000 the shop has no Sell section, even with a sale in the view and a marketSell in legal", () => {
+    // An older engine's view and listing (the engine's `sales` is always empty now): the shop draws
+    // none of it and sends nothing but the listed buy.
+    const sell: ActionBody = { type: "marketSell", instanceId: "r9" };
+    const older: MarketplaceView = { ...MARKET, sales: [{ instanceId: "r9", defId: "fx-res-rare", credits: 2 }] };
+    const onAction = renderGame(marketView(older), [BUY_0, sell, END_TURN]);
+    const panel = openShop();
+    expect(panel.querySelector(".marketplace-sales")).toBeNull();
+    expect(within(panel).queryByText("Sell")).toBeNull();
+    expect(within(panel).queryByText(/^Sell /)).toBeNull();
+    const buttons = within(panel).getAllByRole("button");
+    expect(buttons.map((each) => each.getAttribute("data-testid"))).toEqual([testid.marketBuy(0), testid.marketBuy(1)]);
+    for (const each of buttons) fireEvent.click(each);
+    expect(marketSent(onAction)).toEqual([BUY_0]);
   });
 });
 
@@ -213,7 +206,7 @@ describe("R2127000 Back closes the Marketplace", () => {
       held.push(leave);
     });
     try {
-      render(tree(marketView(MARKET), [BUY_0, SELL_R9, END_TURN], vi.fn()));
+      render(tree(marketView(MARKET), [BUY_0, END_TURN], vi.fn()));
       openShop();
       button(testid.marketBuy(0)).focus();
       await pressBack();
@@ -237,7 +230,7 @@ describe("R2127000 Back closes the Marketplace", () => {
       held.push(leave);
     });
     try {
-      render(tree(marketView(MARKET), [BUY_0, SELL_R9, END_TURN], vi.fn()));
+      render(tree(marketView(MARKET), [BUY_0, END_TURN], vi.fn()));
       openShop();
       const buy = button(testid.marketBuy(0));
       buy.focus();

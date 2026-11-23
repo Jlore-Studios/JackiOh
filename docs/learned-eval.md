@@ -1,5 +1,9 @@
 # A learned evaluation for the AI (#466): options and a plan
 
+> **Retired by #4159** (R4159000): the AI plays the hand evaluation `AI_EVAL` alone; the network, the
+> policy prior and `learned_parity` are gone. The learn lane's workflows stay until a person removes
+> them. This note is the record.
+
 Issue #466 proposes a small neural network, trained in Python on self-play and run in Rust inside
 `crates/ai`, to replace or blend with the hand-written evaluation (`crates/ai/src/evaluate.rs`, SPEC
 §9.9 "Evaluation"). This note is its planning pass of 2026-10-15. It sets out what changed since
@@ -239,6 +243,15 @@ and 0.6117 (seed 1; seeds 2 and 3 at 0.7 and 0.3 alike), so the choice is made i
 table). `fit.py` fits (c) on the outcomes, then twice more from the same start (`TD_RELABELS`), each
 on TD(0.3) targets from the fit before it.
 
+**Priced rows (2026-11-16, #4070).** The search corrects `evaluate_priced`, the hand eval priced with
+the Death, turn-hook, Activate, attack-hook and awakening prices its decision's root probes (SPEC §9.9), after
+a reply simulated with them. Until #4070 the rows held the unpriced `evaluate` after an unpriced reply,
+so the network learned those values as residuals on a card's features and the search counted them
+twice: Core #37 Gravedigger's return to hand, for one. `positions` now prices each row as the decision
+at its root prices it (`decision_prices_at`; a reply row by the decision that ended the turn, whose
+prices also play its reply), so its `hand` is the one the search corrects (R4070000). The network that
+ships was fitted before this change, so the gain arrives only with the learn lane's next refit.
+
 ### D5. The network's shape
 
 The search calls the evaluation about once per node, a few hundred to a thousand times a decision,
@@ -256,6 +269,11 @@ gets no sparse feature and is valued by its dense stats alone, so a new card
 never breaks the AI. Since `FEATURES_VERSION` 3 (#3112, R3112000) it also has keys for what it is
 (its type, cost, tags, keywords, printed stats and Radiant face), so it shares what the network
 learned of cards like it.
+
+Dense inputs standardize by their own spread, floored at `MIN_SPREAD` 0.25 (the spread of a 0/1
+feature in about one row in sixteen), so one more count of even a rare keyword moves a standardized
+input by at most 4 units instead of swinging a line by hundreds of points through a spread near
+zero (#4109). A feature that never varies keeps a spread of one.
 
 ### D6. Where it plugs into the search
 
@@ -356,6 +374,12 @@ question, so it needs no quantisation. Quantise only a network worth shipping. I
 the browser's download small, and part 6's parity fixture (#1011) proves agreement either way. The
 weights go in as text (`include_str!`, rule 4). i8 stored as base64 in a JSON field keeps that
 small.
+
+Every fit also reports each dense feature's pull: the median change in hand-eval points from one
+more count of the feature over the validation rows, read from the integer network at the full
+correction. `report.json` holds the whole table (`pulls`) and the largest by size (`largestPull`),
+`report.md` lists the ten largest, and `summary.json` names the largest pull at every stage that
+writes it, so the next refit cannot relearn a rare keyword's outsized swing unseen (#4109).
 
 ### D8. Where the training code lives, and in what language
 

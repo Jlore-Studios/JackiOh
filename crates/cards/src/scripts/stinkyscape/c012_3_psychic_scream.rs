@@ -78,7 +78,7 @@ mod tests {
     const SCREAM: &str = "stinkyscape-012-3";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const MENACE: &str = "core-019"; // Midrange Menace
-    const SILAS: &str = "core-052"; // Silly Silas
+    const FOUR: &str = "stand-in (4) 7/7 R14/14"; // a (4) Unit (Silly Silas, until #4353 made him (6))
     const WELL: &str = "core-006"; // Mana Well: a Field Spell
     const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
     const SHEEP: &str = "core-t-sheep"; // Sheep Token: Unit token.
@@ -227,7 +227,7 @@ mod tests {
         fn r1867006_each_card_costs_2_more_there_a_3_card_4_and_a_4_card_still_4() {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": SCREAM, "radiant": true }, FILLER] },
-                "p2": { "hand": [FILLER], "field": [MENACE, SILAS] },
+                "p2": { "hand": [FILLER], "field": [MENACE, FOUR] },
             }));
             let three = s.unit_at(P2, 1).id.clone();
             let four = s.unit_at(P2, 2).id.clone();

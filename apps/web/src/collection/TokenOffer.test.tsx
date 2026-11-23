@@ -89,7 +89,6 @@ function cardViewOf(read: (token: string) => Promise<OwnedByCard>): void {
       <OwnedCards collection={collectionOf()} defs={[CARD]} token={TOKEN} />
     </ViewerFullArt>,
   );
-  fireEvent.click(screen.getByTestId(T.setToggle("Core")));
   fireEvent.click(screen.getByTestId(T.card("core-001")));
 }
 
@@ -531,7 +530,6 @@ describe("R2730000 a card token is spent from the locked card's preview", () => 
   /** The grid's card `cardId` with the set open, under no ownership provider. */
   function gridOf(cardIds: readonly string[]): void {
     render(<OwnedCards collection={collectionOf()} defs={cardIds.map((id) => CATALOG[id]!)} token={TOKEN} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
   }
 
   /** The preview of the grid's locked `cardId`, opened with the inspect key. */

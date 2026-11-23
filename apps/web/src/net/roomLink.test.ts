@@ -12,17 +12,21 @@ import {
   adoptRoomLink,
   coopLinkOf,
   coopLinkPath,
-  coopLinkUrl,
   findRoomLinkInText,
+  lobbyLinkPath,
+  lobbyLinkUrl,
   forgetCoopLink,
   forgetRoomLink,
   readCoopLink,
   readRoomLink,
   roomLinkOf,
   roomLinkPath,
-  roomLinkUrl,
   sendRoomLink,
+  stripTrailingPunct,
 } from "./roomLink.ts";
+
+/** #4009: an adversarial input must finish in milliseconds, not the exponential blowup it replaces. */
+const REDOS_BUDGET_MS = 1_000;
 
 function visit(url: string): void {
   window.history.replaceState(null, "", url);
@@ -44,7 +48,6 @@ describe("R767 the room link", () => {
   it("R767 roomLinkPath builds /play?room=<code>&mode=<mode>, and roomLinkOf reads it back", () => {
     expect(roomLinkPath("ABC234", "bo1")).toBe("/play?room=ABC234&mode=bo1");
     expect(roomLinkPath("ABC234", "bo3")).toBe("/play?room=ABC234&mode=bo3");
-    expect(roomLinkUrl("ABC234", "random")).toBe(`${window.location.origin}/play?room=ABC234&mode=random`);
     for (const mode of ["bo1", "bo3", "random"] as const) {
       const search = roomLinkPath("QRSTUV", mode).slice("/play".length);
       expect(roomLinkOf(search)).toEqual({ code: "QRSTUV", mode });
@@ -172,7 +175,6 @@ describe("R767 sending the link", () => {
 describe("R2094000 the co-op room link", () => {
   it("R2094000 coopLinkPath builds /together?coop=<code>, and coopLinkOf reads it back R191-style", () => {
     expect(coopLinkPath("ABC234")).toBe("/together?coop=ABC234");
-    expect(coopLinkUrl("ABC234")).toBe(`${window.location.origin}/together?coop=ABC234`);
     expect(coopLinkOf(coopLinkPath("QRSTUV").slice("/together".length))).toBe("QRSTUV");
   });
 
@@ -258,26 +260,25 @@ describe("R2094000 the co-op room link", () => {
 describe("R2094000 a room link in chat text", () => {
   const origin = window.location.origin;
 
-  it("R2094000 findRoomLinkInText accepts this origin's /play?room= and /together?coop= links and refuses another origin, a malformed code, or no link", () => {
-    // Full URLs and bare paths both count; the code is canonicalized.
-    expect(findRoomLinkInText(`join here: ${origin}/together?coop=abc234`, origin)).toEqual({
-      path: "/together?coop=ABC234",
-    });
-    expect(findRoomLinkInText("join here: /together?coop=ABC234", origin)).toEqual({ path: "/together?coop=ABC234" });
-    expect(findRoomLinkInText(`join here: ${origin}/play?room=abc234&mode=bo1`, origin)).toEqual({
-      path: "/play?room=ABC234&mode=bo1",
-    });
-    // A 1v1 link with no usable mode still joins: the code fills in, the mode stays the last choice.
-    expect(findRoomLinkInText(`join here: ${origin}/play?room=abc234`, origin)).toEqual({ path: "/play?room=ABC234" });
+  it("R2094000 R3730006 findRoomLinkInText reads this origin's /play?room=, /together?coop= and /lobby/ links as their lobby, and refuses another origin, a malformed code, or no link", () => {
+    // Full URLs and bare paths both count; the code is canonicalized, and every link opens the lobby screen.
+    expect(findRoomLinkInText(`join here: ${origin}/together?coop=abc234`, origin)).toEqual({ path: "/lobby/ABC234" });
+    expect(findRoomLinkInText("join here: /together?coop=ABC234", origin)).toEqual({ path: "/lobby/ABC234" });
+    expect(findRoomLinkInText(`join here: ${origin}/play?room=abc234&mode=bo1`, origin)).toEqual({ path: "/lobby/ABC234" });
+    expect(findRoomLinkInText(`join here: ${origin}/play?room=abc234`, origin)).toEqual({ path: "/lobby/ABC234" });
+    expect(findRoomLinkInText(`come in: ${origin}/lobby/k7q2xm`, origin)).toEqual({ path: "/lobby/K7Q2XM" });
+    expect(findRoomLinkInText("come in: /lobby/K7Q2XM/", origin)).toEqual({ path: "/lobby/K7Q2XM" });
     // The invite's own sentence carries the link beside trailing punctuation.
     expect(findRoomLinkInText(`Join my co-op game against the AI here: ${origin}/together?coop=ABC234 (room code ABC234).`, origin)).toEqual({
-      path: "/together?coop=ABC234",
+      path: "/lobby/ABC234",
     });
 
     expect(findRoomLinkInText("join here: https://evil.test/together?coop=ABC234", origin)).toBeNull();
     expect(findRoomLinkInText("join here: https://evil.test/play?room=ABC234&mode=bo1", origin)).toBeNull();
+    expect(findRoomLinkInText("join here: https://evil.test/lobby/ABC234", origin)).toBeNull();
     expect(findRoomLinkInText(`join here: ${origin}/together?coop=abc123`, origin)).toBeNull();
     expect(findRoomLinkInText(`join here: ${origin}/play?room=abc123&mode=bo1`, origin)).toBeNull();
+    expect(findRoomLinkInText(`join here: ${origin}/lobby/abc123`, origin)).toBeNull();
     // A link on the wrong path draws no button.
     expect(findRoomLinkInText(`join here: ${origin}/play?coop=ABC234`, origin)).toBeNull();
     expect(findRoomLinkInText(`join here: ${origin}/together?room=ABC234&mode=bo1`, origin)).toBeNull();
@@ -287,8 +288,43 @@ describe("R2094000 a room link in chat text", () => {
 
   it("R2094000 findRoomLinkInText reads only the first valid link", () => {
     expect(findRoomLinkInText(`nope https://evil.test/together?coop=ABC234 then ${origin}/together?coop=QRSTUV`, origin)).toEqual({
-      path: "/together?coop=QRSTUV",
+      path: "/lobby/QRSTUV",
     });
+  });
+
+  it("#4009 findRoomLinkInText is linear on long adversarial chat text", () => {
+    // Another player's message reaches this scan, so a punctuation run must not stall the tab: the
+    // old `/[.,;:!?)\]]+$/u` strip rescanned a failed trailing run from every position, so the
+    // adversarial input is a long punctuation run closed by a non-punctuation character (#4009).
+    const tripping = `${".".repeat(50_000)}y`;
+    const started = performance.now();
+    expect(findRoomLinkInText(`/lobby/${tripping}`, origin)).toBeNull();
+    expect(findRoomLinkInText(`${origin}/lobby/${tripping}`, origin)).toBeNull();
+    const elapsed = performance.now() - started;
+    console.log(`findRoomLinkInText adversarial: ${elapsed.toFixed(1)}ms`);
+    expect(elapsed).toBeLessThan(REDOS_BUDGET_MS);
+    // The trailing non-punctuation keeps the candidate unchanged, exactly as the old strip did.
+    expect(stripTrailingPunct(tripping)).toBe(tripping);
+    expect(stripTrailingPunct("...")).toBe("");
+    expect(stripTrailingPunct("abc")).toBe("abc");
+  });
+});
+
+describe("R3730006 the lobby link", () => {
+  afterEach(() => {
+    window.sessionStorage.clear();
+  });
+
+  it("R3730006 lobbyLinkUrl is the lobby's path on this origin, and a signed-out visitor's lobby path waits through the sign-in", () => {
+    expect(lobbyLinkPath("K7Q2XM")).toBe("/lobby/K7Q2XM");
+    expect(lobbyLinkUrl("K7Q2XM")).toBe(`${window.location.origin}/lobby/K7Q2XM`);
+    visit("/lobby/k7q2xm");
+    expect(adoptRoomLink()).toBe(true);
+    expect(readRoomLink()).toEqual({ code: "K7Q2XM", mode: null });
+    forgetRoomLink();
+    visit("/lobby/abc123");
+    expect(adoptRoomLink()).toBe(false);
+    expect(readRoomLink()).toBeNull();
   });
 });
 
@@ -300,5 +336,26 @@ describe("R2094000 sending the co-op link", () => {
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     await expect(sendRoomLink(LINK)).resolves.toBe("copied");
     expect(writeText).toHaveBeenCalledWith(LINK);
+  });
+});
+
+describe("#4015 prototype pollution", () => {
+  it("room/coop links ignore proto params", () => {
+    expect(roomLinkOf("?room=abc234&__proto__=x&constructor[prototype]=y")).toEqual({ code: "ABC234", mode: null });
+    expect(roomLinkOf("?room=abc234&mode=bo1&__proto__[polluted]=true")).toEqual({ code: "ABC234", mode: "bo1" });
+    expect(coopLinkOf("?coop=abc234&__proto__=x")).toBe("ABC234");
+    expect(coopLinkOf("?coop=abc234&constructor[prototype]=y")).toBe("ABC234");
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
+  it("readRoomLink reads past hostile stored keys", () => {
+    window.sessionStorage.setItem(
+      ROOM_LINK_STORAGE_KEY,
+      `{"__proto__":{"polluted":true},"code":"abc234","mode":null}`,
+    );
+    visit("/");
+    expect(readRoomLink()).toEqual({ code: "ABC234", mode: null });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+    forgetRoomLink();
   });
 });

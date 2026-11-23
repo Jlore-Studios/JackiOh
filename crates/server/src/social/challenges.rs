@@ -26,6 +26,7 @@ use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::{CHALLENGE_SWEEP_INTERVAL_SECONDS, CHALLENGE_TTL_MS};
 use crate::db::store::{ChallengeRow, ChallengeState, QueueMode, StoreError, Tx};
+use crate::loops::FailingStreak;
 use crate::social::friends::are_friends;
 use crate::social::live::{push_social, push_social_after};
 use crate::social::presence::{Status, standings};
@@ -259,8 +260,10 @@ pub async fn sweep(app: &App) -> Result<i64, ApiError> {
 /// The challenge sweeper: once now and then every `CHALLENGE_SWEEP_INTERVAL_SECONDS`. A failure is
 /// logged and the next tick tries again. Never returns; `app.rs` spawns it.
 pub async fn run_sweeper(app: Arc<App>) {
+    // #3770: a sweep that fails on every pass for a while is an alert, not just a warning each time.
+    let mut sweeping = FailingStreak::new("challenges.sweeper");
     loop {
-        match sweep(&app).await {
+        match sweeping.track(sweep(&app).await) {
             Ok(0) => {}
             Ok(purged) => log_info("challenges.purged", json!({ "count": purged })),
             Err(error) => log_warn("challenges.sweep_failed", json!({ "message": error.message })),

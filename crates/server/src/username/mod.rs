@@ -95,9 +95,17 @@ pub fn normalize_username(raw: &str) -> Result<String, UsernameRefusal> {
 }
 
 /// R1434: the key two base names clash on, the NFKC form of the full case fold of the stored
-/// (NFKC) form: `Max`, `max` and `MAX` give `max`; `Straße` and `STRASSE` give `strasse`.
+/// (NFKC) form: `Max`, `max` and `MAX` give `max`; `Straße` and `STRASSE` give `strasse`. The fold
+/// and NFKC run twice, because NFKC can turn a character the fold left alone into a capital (the
+/// modifier `ᴮ` into `B`): the key of a key is then the key, so no name's key depends on how often
+/// it was normalized (Spotify's 2013 takeover, `ᴮᴵᴳᴮᴵᴿᴰ` → `BIGBIRD` → `bigbird`).
 pub fn username_key(display: &str) -> String {
-    default_case_fold_str(display).nfkc().collect()
+    fold_nfkc(&fold_nfkc(display))
+}
+
+/// One round of [`username_key`]: the full case fold, then NFKC.
+fn fold_nfkc(text: &str) -> String {
+    default_case_fold_str(text).nfkc().collect()
 }
 
 pub fn render_username(base: &str, tag: Option<i64>) -> String {
@@ -527,6 +535,12 @@ mod tests {
     }
 
     #[test]
+    fn r1433_reads_every_small_capital_as_its_letter() {
+        // The whole alphabet but x, which has no small capital that NFKC leaves alone.
+        assert_eq!(fold("ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘꞯʀꜱᴛᴜᴠᴡʏᴢ"), "abcdefghijklmnopqrstuvwyz");
+    }
+
+    #[test]
     fn r1432_a_name_shares_one_writing_by_script_extensions() {
         // The kana length mark is Common by script but kana by extension.
         assert!(check_scripts("ラーメン").is_ok());
@@ -575,5 +589,47 @@ mod tests {
         }
         assert_eq!(sign_in_name(&"x".repeat(USERNAME_INPUT_MAX_CHARS + 1)), None);
         assert!(sign_in_name(&"x".repeat(USERNAME_INPUT_MAX_CHARS)).is_some());
+    }
+
+    #[test]
+    fn r1434_the_key_of_a_name_is_stable_when_applied_twice() {
+        let mut accepted = 0_usize;
+        let mut failures: Vec<String> = Vec::new();
+        for c in (0..=0xFFFF_u32).filter_map(char::from_u32) {
+            // R1434's stability is held on the character alone and after a base letter.
+            for typed in [c.to_string(), format!("a{c}")] {
+                let Ok(stored) = normalize_username(&typed) else {
+                    continue;
+                };
+                accepted += 1;
+                let key = username_key(&typed);
+                if username_key(&key) != key {
+                    failures.push(format!(
+                        "U+{:04X} {typed:?}: key {key:?} is not its own key",
+                        u32::from(c)
+                    ));
+                }
+                match normalize_username(&stored) {
+                    Ok(again) if again == stored && username_key(&again) == username_key(&stored) => {}
+                    other => failures.push(format!(
+                        "U+{:04X} {typed:?}: stored {stored:?} normalizes again to {other:?}",
+                        u32::from(c)
+                    )),
+                }
+            }
+        }
+        assert!(accepted >= 1_000, "only {accepted} names were accepted");
+        assert!(
+            failures.is_empty(),
+            "{} of {accepted}: {failures:#?}",
+            failures.len()
+        );
+    }
+
+    #[test]
+    fn r1434_a_modifier_letter_name_keys_as_its_plain_spelling() {
+        assert_eq!(normalize_username("ᴮᴵᴳᴮᴵᴿᴰ").as_deref(), Ok("BIGBIRD"));
+        assert_eq!(username_key("ᴮᴵᴳᴮᴵᴿᴰ"), "bigbird");
+        assert_eq!(username_key("ᴮᴵᴳᴮᴵᴿᴰ"), username_key("BIGBIRD"));
     }
 }

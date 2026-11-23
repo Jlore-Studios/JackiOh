@@ -1,4 +1,4 @@
-// #936 S8: `/together`, the Play together page (B54–B56, B59). The page renders what the social
+// #936 S8: `/together`, the Friends page (B54–B56, B59; R3732002: five tabs). The page renders what the social
 // routes answer and sends intent (CLAUDE.md rule 7). The server is a stubbed `fetch`
 // (`test/stubServer.ts`); the signed-in session is put where `net/session.ts` reads it.
 
@@ -6,17 +6,23 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { manualClock } from "../game/deckbuilder/testkit.ts";
-import type { Friend, FriendRequest, PlayerRef, SharedReplay } from "../net/social.ts";
+import { openFriendMenu, pressFriendMenuItem } from "../test/friendMenu.ts";
+import type { Friend, FriendRequest, PlayerRef, RecentOpponent, SharedReplay } from "../net/social.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { UNDO_REPEAT_MS, UNDO_WINDOW_MS, type UndoTimer } from "../undo/hold.ts";
 import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
+import { navigate } from "../net/navigate.ts";
+import { sharedWithMePath } from "./anchors.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { stopFollowingChallenge } from "./follow.ts";
-import { togetherTestid } from "./testids.ts";
+import { takeInviteRefusal } from "../lobby/inviteRefusal.ts";
+import { lobbyTestid } from "../lobby/testids.ts";
+import { challengeKindTestid, togetherTestid } from "./testids.ts";
+import type { FriendsSection } from "./anchors.ts";
 import { TogetherRoute } from "./TogetherRoute.tsx";
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
@@ -39,7 +45,6 @@ const TESTID = {
   watch: "together-watch",
   chatOpen: "together-chat-open",
   chatInput: "chat-input",
-  coopCreate: "coop-create",
   sharedRetry: "together-shared-retry",
   sharedRow: "together-shared-row",
   friendsError: "together-friends-error",
@@ -81,6 +86,7 @@ type World = {
   outgoing: FriendRequest[];
   blocked: PlayerRef[];
   shared: SharedReplay[];
+  recent: RecentOpponent[];
 };
 
 function world(over: Partial<World> = {}): World {
@@ -91,6 +97,7 @@ function world(over: Partial<World> = {}): World {
     outgoing: [OUTGOING],
     blocked: [GUS],
     shared: [SHARED],
+    recent: [],
     ...over,
   };
 }
@@ -120,6 +127,7 @@ function serve(state: World, special?: (call: Call) => Reply | undefined): StubS
     }
     if (method === "GET" && path === "/api/social") return { status: 200, body: { incoming: [], outgoing: [], unread: {} } };
     if (method === "GET" && path === "/api/replays/shared") return { status: 200, body: { shared: state.shared } };
+    if (method === "GET" && path === "/api/friends/recent") return { status: 200, body: { recent: state.recent } };
     if (method === "GET" && path.startsWith("/api/chat/")) return { status: 200, body: { messages: [], nextCursor: null } };
     if (method === "GET" && path === "/api/duos/live") return { status: 200, body: { matchId: null } };
     if (method === "GET" && path === "/api/decks") return { status: 200, body: DECKS };
@@ -158,15 +166,37 @@ afterEach(() => {
 
 // reading the page
 
+/**
+ * The page on `section` (the Friends tab when none). On the Friends tab Offline is collapsed, so the page's
+ * tests, which read every friend, open it first (R3732002).
+ */
 async function renderPage(
   state: World = world(),
   special?: (call: Call) => Reply | undefined,
   undoTimer?: UndoTimer,
+  section: FriendsSection = "friends",
 ): Promise<StubServer> {
   signIn("tok-together");
+  if (section !== "friends") at(`/together?section=${section}`);
   const server = serve(state, special);
   render(<TogetherRoute {...(undoTimer === undefined ? {} : { undoTimer })} />);
+  if (section !== "friends") {
+    await waitFor(() => {
+      expect(screen.getByTestId(togetherTestid.root)).toHaveAttribute("data-section", section);
+    }, SLOW);
+    // The list the tab draws has been read before a test reaches for a row of it.
+    if (section === "requests" && state.incoming.length + state.outgoing.length > 0) {
+      await screen.findAllByTestId(togetherTestid.requestRow, undefined, SLOW);
+    }
+    if (section === "blocked" && state.blocked.length > 0) await screen.findAllByTestId(togetherTestid.blockedRow, undefined, SLOW);
+    return server;
+  }
   if (state.friends.length > 0) {
+    await waitFor(() => {
+      expect(screen.getAllByTestId(TESTID.friendRow).length).toBeGreaterThan(0);
+    }, SLOW);
+    const toggle = screen.queryByTestId(togetherTestid.offlineToggle);
+    if (toggle !== null && toggle.getAttribute("aria-expanded") !== "true") fireEvent.click(toggle);
     await waitFor(() => {
       expect(screen.getAllByTestId(TESTID.friendRow)).toHaveLength(state.friends.length);
     }, SLOW);
@@ -222,7 +252,7 @@ function buttonNear(text: string, name: RegExp): HTMLElement {
  * row, request or co-op control (so it is that entry's own control, not another part of the page's).
  */
 function controlNear(text: string): HTMLElement {
-  const foreign = `[data-testid="${TESTID.friendRow}"], [data-testid^="together-request-"], [data-testid^="coop-"]`;
+  const foreign = `[data-testid="${TESTID.friendRow}"], [data-testid^="together-request-"], [data-testid^="lobby-"]`;
   for (const anchor of screen.getAllByText(wholeText(text))) {
     let node: HTMLElement | null = anchor;
     for (let depth = 0; node !== null && depth < 6; depth += 1) {
@@ -270,6 +300,142 @@ function press(key: string, options: { shiftKey?: boolean } = {}): void {
 }
 
 const IN_MATCH = /in[\s_-]?(a\s)?(match|game)|playing/i;
+
+// R3732002: the page's tabs, R3732000: Recently played
+
+describe("R3732002 /together is Friends with five tabs", () => {
+  it("R3732002 the page has the five tabs, the friends first, and a press on one moves ?section= in place", async () => {
+    await renderPage();
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["Friends", "Requests", "Recently played", "Blocked", "Shared with me"]);
+    expect(screen.getByRole("tab", { name: "Friends" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId(togetherTestid.root)).toHaveAttribute("data-section", "friends");
+
+    fireEvent.click(screen.getByRole("tab", { name: "Recently played" }));
+    await waitFor(() => {
+      expect(screen.getByTestId(togetherTestid.root)).toHaveAttribute("data-section", "recent");
+    }, SLOW);
+    expect(window.location.pathname).toBe("/together");
+    expect(window.location.search).toBe("?section=recent");
+    expect(screen.getByRole("tab", { name: "Recently played" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("R3732002 the Friends tab shows the requests, in a game, online and offline groups in order, each with its count", async () => {
+    await renderPage();
+    const groups = screen.getAllByTestId(togetherTestid.group);
+    expect(groups.map((group) => group.getAttribute("data-group"))).toEqual(["requests", "inGame", "online", "offline"]);
+    expect(groups.map((group) => within(group).getByRole("heading").textContent?.replace(/[▸▾]\s*/u, ""))).toEqual([
+      "Requests (1)",
+      "In a game (2)",
+      "Online (1)",
+      "Offline (1)",
+    ]);
+    // The request in the first group answers Accept and Decline; the outgoing one is on the Requests tab.
+    expect(within(groups[0] as HTMLElement).getAllByTestId(TESTID.requestAccept)).toHaveLength(1);
+    expect(within(groups[0] as HTMLElement).getAllByTestId(TESTID.requestDecline)).toHaveLength(1);
+    expect(screen.queryAllByTestId(togetherTestid.requestBlock)).toHaveLength(0);
+    // Each group's rows are its own, the server's order within.
+    expect(within(groups[1] as HTMLElement).getAllByTestId(TESTID.friendRow).map((row) => row.getAttribute("data-profile-id"))).toEqual(["f-bob", "f-dee"]);
+    expect(within(groups[2] as HTMLElement).getAllByTestId(TESTID.friendRow).map((row) => row.getAttribute("data-profile-id"))).toEqual(["f-ann"]);
+    expect(within(groups[3] as HTMLElement).getAllByTestId(TESTID.friendRow).map((row) => row.getAttribute("data-profile-id"))).toEqual(["f-cy"]);
+    // One primary button each, and the other actions in ⋯.
+    for (const row of rows()) {
+      const primaries = [TESTID.watch, TESTID.challenge, togetherTestid.join].filter((testid) => within(row).queryByTestId(testid) !== null);
+      expect(primaries, row.getAttribute("data-profile-id") ?? "").toHaveLength(1);
+    }
+  });
+
+  it("R3732002 each tab opens by ?section=, and #shared still opens Shared with me", async () => {
+    for (const section of ["requests", "recent", "blocked", "shared"] as const) {
+      await renderPage(world(), undefined, undefined, section);
+      expect(screen.getByRole("tab", { name: { requests: "Requests", recent: "Recently played", blocked: "Blocked", shared: "Shared with me" }[section] })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      cleanup();
+    }
+    // An unknown section is the Friends tab.
+    at("/together?section=nope");
+    signIn("tok-together");
+    serve(world());
+    render(<TogetherRoute />);
+    await waitFor(() => {
+      expect(screen.getByTestId(togetherTestid.root)).toHaveAttribute("data-section", "friends");
+    }, SLOW);
+    cleanup();
+
+    at("/together#shared");
+    serve(world());
+    render(<TogetherRoute />);
+    await waitFor(() => {
+      expect(screen.getByTestId(togetherTestid.root)).toHaveAttribute("data-section", "shared");
+    }, SLOW);
+    expect(await screen.findByTestId(TESTID.sharedRow, undefined, SLOW)).toBeInTheDocument();
+  });
+
+  it("R3732002 the Requests tab lists the requests in and then out", async () => {
+    await renderPage(world(), undefined, undefined, "requests");
+    const rowsOf = screen.getAllByTestId(togetherTestid.requestRow);
+    expect(rowsOf.map((row) => row.getAttribute("data-direction"))).toEqual(["incoming", "outgoing"]);
+  });
+});
+
+describe("R3732000 Recently played", () => {
+  const HAL: RecentOpponent = { profileId: "p-hal", username: "Hal#9", playedAt: "2026-11-10T10:00:00.000Z" };
+  const IVY: RecentOpponent = { profileId: "p-ivy", username: "Ivy#10", playedAt: "2026-11-09T10:00:00.000Z" };
+
+  it("R3732000 the tab lists the opponents the server names, newest first, each with Add friend", async () => {
+    const server = await renderPage(world({ recent: [HAL, IVY] }), undefined, undefined, "recent");
+    const listed = await screen.findAllByTestId(togetherTestid.recentRow, undefined, SLOW);
+    expect(listed.map((row) => row.getAttribute("data-profile-id"))).toEqual(["p-hal", "p-ivy"]);
+    expect(server.to("GET", "/api/friends/recent")).toHaveLength(1);
+    expect(listed[0]).toHaveTextContent("Hal#9");
+    for (const row of listed) expect(within(row).getByTestId(togetherTestid.recentAdd)).toHaveTextContent("Add friend");
+  });
+
+  it("R3732000 Add friend sends the request the add form sends, and shows the server's refusal in its own words", async () => {
+    let refuse = true;
+    const server = await renderPage(
+      world({ recent: [HAL] }),
+      (call) =>
+        call.method === "POST" && call.path === "/api/friends/requests" && refuse
+          ? refusal(409, "friend_cap", "Their friend list is full.")
+          : undefined,
+      undefined,
+      "recent",
+    );
+    const row = await screen.findByTestId(togetherTestid.recentRow, undefined, SLOW);
+    fireEvent.click(within(row).getByTestId(togetherTestid.recentAdd));
+    expect(await within(row).findByRole("alert", undefined, SLOW)).toHaveTextContent("Their friend list is full.");
+    expect(within(row).getByTestId(togetherTestid.recentAdd)).toBeEnabled();
+
+    refuse = false;
+    fireEvent.click(within(row).getByTestId(togetherTestid.recentAdd));
+    await waitFor(() => {
+      expect(within(row).getByTestId(togetherTestid.recentAdd)).toHaveTextContent("Request sent");
+    }, SLOW);
+    expect(within(row).getByTestId(togetherTestid.recentAdd)).toBeDisabled();
+    expect(server.to("POST", "/api/friends/requests").map((call) => call.body)).toEqual([{ username: "Hal#9" }, { username: "Hal#9" }]);
+  });
+
+  it("R3732000 with nobody to list the tab says so, and a failed read offers Try again", async () => {
+    await renderPage(world({ recent: [] }), undefined, undefined, "recent");
+    expect(await screen.findByTestId(togetherTestid.noRecent, undefined, SLOW)).toBeInTheDocument();
+    cleanup();
+
+    let down = true;
+    await renderPage(
+      world({ recent: [HAL] }),
+      (call) => (down && call.method === "GET" && call.path === "/api/friends/recent" ? refusal(500, "internal", "Something went wrong.") : undefined),
+      undefined,
+      "recent",
+    );
+    expect(await screen.findByTestId(togetherTestid.recentError, undefined, SLOW)).toHaveTextContent("Something went wrong.");
+    down = false;
+    fireEvent.click(screen.getByTestId(togetherTestid.recentRetry));
+    expect(await screen.findByTestId(togetherTestid.recentRow, undefined, SLOW)).toHaveAttribute("data-profile-id", "p-hal");
+  });
+});
 
 // B54: the gate, as /play's
 
@@ -322,7 +488,7 @@ describe("B54 /together is gated as /play is", () => {
 describe("B55 the friends list", () => {
   it("R3223000 the page has one visible h1, the PageTitle, and the wordmark is no heading", async () => {
     await renderPage();
-    expectOnePageTitle("Play together");
+    expectOnePageTitle("Friends");
     expect(screen.queryByRole("heading", { name: "JackiOh" })).toBeNull();
   });
 
@@ -380,8 +546,9 @@ describe("B55 the friends list", () => {
 
     refused = false;
     fireEvent.click(screen.getByTestId(TESTID.friendsRetry));
+    // Offline is collapsed: Bob, Dee and Ann are drawn, Cy waits behind its toggle.
     await waitFor(() => {
-      expect(rows()).toHaveLength(4);
+      expect(rows()).toHaveLength(3);
     }, SLOW);
     expect(screen.queryByTestId(TESTID.friendsError)).toBeNull();
     expect(screen.queryByTestId(TESTID.friendsRetry)).toBeNull();
@@ -410,19 +577,28 @@ describe("B55 the friends list", () => {
     expect(screen.getByTestId(TESTID.addSubmit)).toBeInTheDocument();
   });
 
-  it("#2115 the friends and the shared replays are rows skeletons while their reads are pending, then the rows", async () => {
+  it("#2115 the friends are a rows skeleton while their read is pending, then the rows", async () => {
     signIn("tok-together");
-    serve(world({ friends: [ANN], shared: [SHARED] }));
+    serve(world({ friends: [ANN] }));
     render(<TogetherRoute />);
     // Right after render no stubbed read has answered yet.
     expectSkeleton(screen.getByText("Loading your friends…"), "rows");
-    expectSkeleton(screen.getByText("Loading…"), "rows");
 
     await waitFor(() => {
       expect(rows()).toHaveLength(1);
     }, SLOW);
-    await screen.findByTestId(TESTID.sharedRow, undefined, SLOW);
     expect(screen.queryByText("Loading your friends…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
+  });
+
+  it("#2115 the shared replays are a rows skeleton while their read is pending, then the rows", async () => {
+    signIn("tok-together");
+    at("/together?section=shared");
+    serve(world({ friends: [ANN], shared: [SHARED] }));
+    render(<TogetherRoute />);
+    expectSkeleton(screen.getByText("Loading…"), "rows");
+
+    await screen.findByTestId(TESTID.sharedRow, undefined, SLOW);
     expect(screen.queryByText("Loading…")).toBeNull();
     expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
   });
@@ -516,14 +692,14 @@ describe("B55 requests both ways and the blocked list", () => {
   });
 
   it("B55 an outgoing request offers no Accept or Decline: only the incoming one does", async () => {
-    await renderPage(world({ incoming: [] }));
+    await renderPage(world({ incoming: [] }), undefined, undefined, "requests");
     expect(screen.queryAllByTestId(TESTID.requestAccept)).toHaveLength(0);
     expect(screen.queryAllByTestId(TESTID.requestDecline)).toHaveLength(0);
     expect(document.body).toHaveTextContent(FAY.username);
   });
 
   it("B55 an outgoing request offers Cancel, which deletes the request", async () => {
-    const server = await renderPage();
+    const server = await renderPage(world(), undefined, undefined, "requests");
     fireEvent.click(buttonNear(FAY.username, /^cancel/i));
     await waitFor(() => {
       expect(server.to("DELETE", "/api/friends/requests/rq-out")).toHaveLength(1);
@@ -531,7 +707,7 @@ describe("B55 requests both ways and the blocked list", () => {
   });
 
   it("B55 a blocked player is listed with Unblock, which deletes the block", async () => {
-    const server = await renderPage();
+    const server = await renderPage(world(), undefined, undefined, "blocked");
     fireEvent.click(buttonNear(GUS.username, /^unblock/i));
     await waitFor(() => {
       expect(server.to("DELETE", "/api/blocks/p-gus")).toHaveLength(1);
@@ -539,15 +715,15 @@ describe("B55 requests both ways and the blocked list", () => {
   });
 
   it("B55 a blocked player is offered no Challenge, Watch or Chat", async () => {
-    await renderPage(world({ friends: [ANN] }));
-    for (const testid of [TESTID.challenge, TESTID.watch, TESTID.chatOpen]) {
-      const offered = screen.queryAllByTestId(testid).filter((control) => !rowOf(ANN).contains(control));
-      expect(offered, testid).toHaveLength(0);
+    await renderPage(world({ friends: [ANN] }), undefined, undefined, "blocked");
+    expect(screen.getAllByTestId(togetherTestid.blockedRow)).toHaveLength(1);
+    for (const testid of [TESTID.challenge, TESTID.watch, TESTID.chatOpen, togetherTestid.menu]) {
+      expect(screen.queryAllByTestId(testid), testid).toHaveLength(0);
     }
   });
 
   it("#2684 a first press on an incoming request's Block sends nothing and asks, naming the sender", async () => {
-    const server = await renderPage();
+    const server = await renderPage(world(), undefined, undefined, "requests");
     fireEvent.click(within(incomingRequestRow()).getByTestId(togetherTestid.requestBlock));
     await settle();
     expect(server.to("POST", "/api/blocks")).toHaveLength(0);
@@ -559,7 +735,7 @@ describe("B55 requests both ways and the blocked list", () => {
   });
 
   it("#2684 Block in the request's question sends one block of the sender", async () => {
-    const server = await renderPage();
+    const server = await renderPage(world(), undefined, undefined, "requests");
     fireEvent.click(within(incomingRequestRow()).getByTestId(togetherTestid.requestBlock));
     fireEvent.click(within(incomingRequestRow()).getByTestId(togetherTestid.confirm));
     await waitFor(() => {
@@ -571,7 +747,7 @@ describe("B55 requests both ways and the blocked list", () => {
   });
 
   it("#2684 Keep in the request's question sends nothing and puts back Accept, Decline and Block", async () => {
-    const server = await renderPage();
+    const server = await renderPage(world(), undefined, undefined, "requests");
     fireEvent.click(within(incomingRequestRow()).getByTestId(togetherTestid.requestBlock));
     fireEvent.click(within(incomingRequestRow()).getByTestId(togetherTestid.keep));
     await settle();
@@ -594,15 +770,31 @@ describe("B56 each friend row's controls", () => {
     expect(offers(rowOf(ANN), TESTID.challenge)).toBe(true);
   });
 
-  it("B56 an offline friend is not offered Challenge", async () => {
+  it("B56 #3727 an offline friend is offered Challenge to a daily game, never a live one", async () => {
     await renderPage();
-    expect(offers(rowOf(CY), TESTID.challenge)).toBe(false);
+    expect(offers(rowOf(ANN), TESTID.challenge)).toBe(true);
+    expect(within(rowOf(ANN)).getByTestId(TESTID.challenge)).toHaveAttribute("data-live", "true");
+    expect(offers(rowOf(CY), TESTID.challenge)).toBe(true);
+    expect(within(rowOf(CY)).getByTestId(TESTID.challenge)).toHaveAttribute("data-live", "false");
+    fireEvent.click(within(rowOf(CY)).getByTestId(TESTID.challenge));
+    const form = await screen.findByTestId(TESTID.challengeForm, undefined, SLOW);
+    expect(form).toHaveAttribute("data-kind", "daily");
+    expect(screen.getByTestId(challengeKindTestid("live"))).toBeDisabled();
+    expect(screen.queryByTestId(TESTID.challengeModeBo1)).toBeNull();
   });
 
-  it("B56 a friend in a match is not offered Challenge", async () => {
+  it("B56 #3727 R3732002 a friend in a match is offered a daily challenge, never a live one: Daily on the row, or in the menu beside Watch", async () => {
     await renderPage();
-    expect(offers(rowOf(BOB), TESTID.challenge)).toBe(false);
-    expect(offers(rowOf(DEE), TESTID.challenge)).toBe(false);
+    // A game that cannot be watched: Daily is the row's one button.
+    expect(offers(rowOf(DEE), TESTID.challenge)).toBe(true);
+    expect(within(rowOf(DEE)).getByTestId(TESTID.challenge)).toHaveAttribute("data-live", "false");
+    expect(within(rowOf(DEE)).getByTestId(TESTID.challenge)).toHaveAttribute("data-action", "daily");
+    // A game that can: Watch is the row's, and the daily challenge is the menu's.
+    expect(within(rowOf(BOB)).queryByTestId(TESTID.challenge)).toBeNull();
+    fireEvent.click(within(openFriendMenu(rowOf(BOB))).getByTestId(togetherTestid.daily));
+    const form = await screen.findByTestId(TESTID.challengeForm, undefined, SLOW);
+    expect(form).toHaveAttribute("data-kind", "daily");
+    expect(screen.getByTestId(challengeKindTestid("live"))).toBeDisabled();
   });
 
   it("B56 a watchable friend is offered Watch", async () => {
@@ -622,9 +814,11 @@ describe("B56 each friend row's controls", () => {
     await expectLeadsTo(must(within(rowOf(BOB)).queryByTestId(TESTID.watch), "watch"), "/watch/m-bob");
   });
 
-  it("B56 every friend is offered Chat, whatever their status", async () => {
+  it("B56 every friend is offered Chat in the ⋯ menu, whatever their status", async () => {
     await renderPage();
     for (const friend of [ANN, BOB, CY, DEE]) {
+      expect(within(rowOf(friend)).queryByTestId(TESTID.chatOpen), `${friend.username} closed`).toBeNull();
+      openFriendMenu(rowOf(friend));
       expect(offers(rowOf(friend), TESTID.chatOpen), friend.username).toBe(true);
     }
   });
@@ -632,7 +826,7 @@ describe("B56 each friend row's controls", () => {
   it("B56 Chat opens the conversation with that friend", async () => {
     const server = await renderPage();
     expect(screen.queryByTestId(TESTID.chatInput)).toBeNull();
-    fireEvent.click(must(within(rowOf(CY)).queryByTestId(TESTID.chatOpen), "chat"));
+    pressFriendMenuItem(rowOf(CY), TESTID.chatOpen);
     expect(await screen.findByTestId(TESTID.chatInput, undefined, SLOW)).toBeInTheDocument();
     await waitFor(() => {
       expect(server.to("GET", "/api/chat/f-cy").length).toBeGreaterThan(0);
@@ -643,8 +837,7 @@ describe("B56 each friend row's controls", () => {
   it("B56 every friend is offered Remove, which deletes the friendship", async () => {
     const clock = manualClock();
     const server = await renderPage(world(), undefined, clock);
-    const remove = within(rowOf(ANN)).getByRole("button", { name: /^remove/i });
-    fireEvent.click(remove);
+    pressFriendMenuItem(rowOf(ANN), togetherTestid.remove);
     expect(server.to("DELETE", "/api/friends/f-ann"), "R2119000: held for the undo window").toHaveLength(0);
     await act(async () => {
       await clock.advance(UNDO_WINDOW_MS);
@@ -657,7 +850,7 @@ describe("B56 each friend row's controls", () => {
 
   it("B56 every friend is offered Block, which posts the block", async () => {
     const server = await renderPage();
-    const block = within(rowOf(CY)).getByRole("button", { name: /^block/i });
+    const block = within(openFriendMenu(rowOf(CY))).getByRole("menuitem", { name: /^block/i });
     await clickConfirmed(block, () => server.to("POST", "/api/blocks").length > 0);
     await waitFor(() => {
       expect(server.to("POST", "/api/blocks")).toHaveLength(1);
@@ -697,7 +890,7 @@ describe("R2119000 removing a friend is undone, not asked", () => {
       },
       clock,
     );
-    fireEvent.click(within(rowOf(ANN)).getByRole("button", { name: /^remove/i }));
+    pressFriendMenuItem(rowOf(ANN), togetherTestid.remove);
     return {
       server,
       tick: async (ms) => {
@@ -712,9 +905,13 @@ describe("R2119000 removing a friend is undone, not asked", () => {
     return rows().map((row) => row.getAttribute("data-profile-id"));
   }
 
+  /** The groups' order (R3732002): in a game, then online, then offline, each by name. */
+  const ALL = [BOB.profileId, DEE.profileId, ANN.profileId, CY.profileId];
+  const WITHOUT_ANN = [BOB.profileId, DEE.profileId, CY.profileId];
+
   it("R2119000 Remove takes the friend off at once behind \"Friend removed · Undo\", asks nothing and sends nothing", async () => {
     const { server, tick } = await removeAnn();
-    expect(listed()).toEqual([BOB.profileId, CY.profileId, DEE.profileId]);
+    expect(listed()).toEqual(WITHOUT_ANN);
     expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("Friend removed · Undo");
     expect(screen.queryByRole("alertdialog")).toBeNull();
     await tick(UNDO_WINDOW_MS - 1);
@@ -724,8 +921,8 @@ describe("R2119000 removing a friend is undone, not asked", () => {
   it("R3059000 two quick Remove presses remove one friend", async () => {
     const { server, tick } = await removeAnn();
     await tick(UNDO_REPEAT_MS - 1);
-    fireEvent.click(within(rowOf(BOB)).getByRole("button", { name: /^remove/i }));
-    expect(listed()).toEqual([BOB.profileId, CY.profileId, DEE.profileId]);
+    pressFriendMenuItem(rowOf(BOB), togetherTestid.remove);
+    expect(listed()).toEqual(WITHOUT_ANN);
     expect(screen.getAllByTestId(UNDO_TOAST)).toHaveLength(1);
     expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("Friend removed · Undo");
     expect(server.to("DELETE", ANN_PATH)).toHaveLength(0);
@@ -736,13 +933,13 @@ describe("R2119000 removing a friend is undone, not asked", () => {
       expect(server.to("DELETE", ANN_PATH)).toHaveLength(1);
     }, SLOW);
     expect(server.to("DELETE", "/api/friends/f-bob")).toHaveLength(0);
-    expect(listed()).toEqual([BOB.profileId, CY.profileId, DEE.profileId]);
+    expect(listed()).toEqual(WITHOUT_ANN);
   });
 
   it("R2119000 Undo puts the friend back in their place and sends nothing", async () => {
     const { server, tick } = await removeAnn();
     fireEvent.click(screen.getByTestId(UNDO_TOAST_UNDO));
-    expect(listed()).toEqual([ANN.profileId, BOB.profileId, CY.profileId, DEE.profileId]);
+    expect(listed()).toEqual(ALL);
     expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
     await tick(UNDO_WINDOW_MS * 2);
     expect(server.to("DELETE", ANN_PATH)).toHaveLength(0);
@@ -761,7 +958,7 @@ describe("R2119000 removing a friend is undone, not asked", () => {
     }, SLOW);
     await tick(UNDO_WINDOW_MS * 2);
     expect(server.to("DELETE", ANN_PATH)).toHaveLength(1);
-    expect(listed()).toEqual([BOB.profileId, CY.profileId, DEE.profileId]);
+    expect(listed()).toEqual(WITHOUT_ANN);
   });
 
   it("R2119000 pagehide sends the unfriend at once, with keepalive", async () => {
@@ -780,7 +977,7 @@ describe("R2119000 removing a friend is undone, not asked", () => {
     const { tick } = await removeAnn(refusal(404, "not_found", "That player is not your friend."));
     await tick(UNDO_WINDOW_MS);
     await waitFor(() => {
-      expect(listed()).toEqual([ANN.profileId, BOB.profileId, CY.profileId, DEE.profileId]);
+      expect(listed()).toEqual(ALL);
     }, SLOW);
     expect(screen.getByTestId(togetherTestid.error)).toHaveTextContent("That player is not your friend.");
   });
@@ -791,22 +988,25 @@ describe("R2119000 removing a friend is undone, not asked", () => {
 describe("B59 Shared with me", () => {
   // Ann shares a replay but is no friend row here, so her name on the page is the shared entry's.
   const ONLY_CY: Partial<World> = { friends: [CY] };
+  /** R3732002: the shared replays are the page's last tab. */
+  const shared = (state: World, special?: (call: Call) => Reply | undefined): Promise<StubServer> =>
+    renderPage(state, special, undefined, "shared");
 
   it("B59 lists the replays friends shared under Shared with me, each naming its sharer", async () => {
-    await renderPage(world(ONLY_CY));
+    await shared(world(ONLY_CY));
     expect(await screen.findByText(/shared with me/i, undefined, SLOW)).toBeInTheDocument();
     expect((await screen.findAllByText(wholeText("Ann#2"), undefined, SLOW)).length).toBeGreaterThan(0);
   });
 
   it("B59 reads the list from GET /api/replays/shared", async () => {
-    const server = await renderPage(world(ONLY_CY));
+    const server = await shared(world(ONLY_CY));
     await waitFor(() => {
       expect(server.to("GET", "/api/replays/shared").length).toBeGreaterThan(0);
     }, SLOW);
   });
 
   it("B59 opening a shared replay asks for that match's replay (or goes to it)", async () => {
-    const server = await renderPage(world(ONLY_CY));
+    const server = await shared(world(ONLY_CY));
     await screen.findAllByText(wholeText("Ann#2"), undefined, SLOW);
     const open = controlNear(SHARED.sharer.username);
     const href = open.closest("a")?.getAttribute("href") ?? null;
@@ -821,7 +1021,7 @@ describe("B59 Shared with me", () => {
 
   it("B59 with nothing shared, no shared replay is listed and none is asked for", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
-    const server = await renderPage(world({ ...ONLY_CY, shared: [] }));
+    const server = await shared(world({ ...ONLY_CY, shared: [] }));
     await waitFor(() => {
       expect(server.to("GET", "/api/replays/shared").length).toBeGreaterThan(0);
     }, SLOW);
@@ -833,7 +1033,7 @@ describe("B59 Shared with me", () => {
 
   it("#1568 a Shared with me list that could not be read offers Try again, which reads it again and lists it", async () => {
     let reads = 0;
-    const server = await renderPage(world(ONLY_CY), (call) => {
+    const server = await shared(world(ONLY_CY), (call) => {
       if (call.method === "GET" && call.path === "/api/replays/shared") {
         reads += 1;
         if (reads === 1) return refusal(500, "internal", "The shared replays are out of reach.");
@@ -854,10 +1054,13 @@ describe("B59 Shared with me", () => {
 
 // the co-op panel lives on the page
 
-describe("B60 the page holds the co-op panel", () => {
-  it("B60 /together shows the co-op panel's create control", async () => {
-    await renderPage();
-    expect(await screen.findByTestId(TESTID.coopCreate, undefined, SLOW)).toBeInTheDocument();
+describe("B60 the page holds no lobby panel", () => {
+  it("B60 R3730000 R3732002 no tab of /together shows a lobby panel: a co-op lobby is made on /play", async () => {
+    for (const section of ["friends", "requests", "recent", "blocked", "shared"] as const) {
+      await renderPage(world(), undefined, undefined, section);
+      expect(screen.queryByTestId(lobbyTestid.panel), section).toBeNull();
+      cleanup();
+    }
   });
 });
 
@@ -898,15 +1101,22 @@ describe("the challenge dialog's focus (#1569)", () => {
     const deck = screen.getByTestId(TESTID.challengeDeck);
     const send = screen.getByTestId(TESTID.challengeSend);
     const cancel = screen.getByTestId(TESTID.challengeClose);
+    // #3727: Live or Daily comes first, a button each.
+    const live = screen.getByTestId(challengeKindTestid("live"));
+    const daily = screen.getByTestId(challengeKindTestid("daily"));
 
-    // R3221000: it opens on Cancel, before Send at the end, so the walk starts there: Send, then round to the
-    // mode and the deck.
+    // R3221000: it opens on Cancel, before Send at the end, so the walk starts there: Send, then round to
+    // Live and Daily, the mode and the deck.
     await waitFor(() => {
       expect(send).toBeEnabled();
     }, SLOW);
     expect(cancel).toHaveFocus();
     press("Tab");
     expect(send).toHaveFocus();
+    press("Tab");
+    expect(live).toHaveFocus();
+    press("Tab");
+    expect(daily).toHaveFocus();
     press("Tab");
     expect(mode).toHaveFocus();
     press("Tab");
@@ -921,7 +1131,7 @@ describe("the challenge dialog's focus (#1569)", () => {
     const behind = screen.getByTestId(TESTID.addInput);
     behind.focus();
     press("Tab");
-    expect(mode).toHaveFocus();
+    expect(live).toHaveFocus();
     behind.focus();
     press("Tab", { shiftKey: true });
     expect(send).toHaveFocus();
@@ -965,36 +1175,13 @@ describe("the challenge dialog's focus (#1569)", () => {
   });
 });
 
-describe("R2094000 a co-op link opens Play together filled", () => {
+describe("R2094000 a co-op link in chat opens its lobby", () => {
   afterEach(() => {
     window.sessionStorage.clear();
     at("/together");
   });
 
-  it("R2094000 opening /together?coop=abc234 signed in shows the co-op panel with ABC234 filled and Join focused", async () => {
-    window.sessionStorage.clear();
-    at("/together?coop=abc234");
-    await renderPage();
-    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
-    expect(input).toHaveValue("ABC234");
-    expect(window.location.pathname).toBe("/together");
-    expect(window.location.search).toBe("");
-    await waitFor(() => {
-      expect(screen.getByTestId("coop-join-submit")).toHaveFocus();
-    }, SLOW);
-  });
-
-  it("R2094000 an invalid code opens nothing filled", async () => {
-    window.sessionStorage.clear();
-    at("/together?coop=abc123");
-    await renderPage();
-    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
-    expect(input).toHaveValue("");
-    expect(window.location.search).toBe("");
-    expect(window.sessionStorage.getItem("jackioh.together.coopLink")).toBeNull();
-  });
-
-  it("R2094000 a chat Join on the same screen fills the already-mounted join form and focuses Join", async () => {
+  it("R2094000 R3730006 a chat Join opens the co-op room's lobby", async () => {
     window.sessionStorage.clear();
     at("/together");
     const origin = window.location.origin;
@@ -1018,16 +1205,10 @@ describe("R2094000 a co-op link opens Play together filled", () => {
           }
         : undefined,
     );
-    fireEvent.click(must(within(rowOf(ANN)).queryByTestId(TESTID.chatOpen), "chat"));
+    pressFriendMenuItem(rowOf(ANN), TESTID.chatOpen);
     fireEvent.click(await screen.findByTestId("chat-join", undefined, SLOW));
-    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
     await waitFor(() => {
-      expect(input).toHaveValue("ABC234");
-    }, SLOW);
-    expect(window.location.pathname).toBe("/together");
-    expect(window.location.search).toBe("");
-    await waitFor(() => {
-      expect(screen.getByTestId("coop-join-submit")).toHaveFocus();
+      expect(window.location.pathname).toBe("/lobby/ABC234");
     }, SLOW);
   });
 });
@@ -1035,13 +1216,168 @@ describe("R2094000 a co-op link opens Play together filled", () => {
 describe("R2615000 watching has no switch", () => {
   it("R2615000 the Watching panel says friends may always watch and how to stop one, and offers no switch", async () => {
     const server = await renderPage();
-    const panel = must(screen.getByRole("heading", { name: "Watching" }).closest("section"), "the Watching panel");
-    expect(within(panel).getByTestId(togetherTestid.watchingNote)).toHaveTextContent(
+    const note = screen.getByTestId(togetherTestid.watchingNote);
+    const panel = must(note.closest("section"), "the panel the note is in");
+    expect(note).toHaveTextContent(
       "Your friends can always watch your online games, a few seconds behind. To stop someone watching, remove them as a friend or block them.",
     );
     expect(within(panel).queryByRole("checkbox")).toBeNull();
     expect(within(panel).queryByRole("switch")).toBeNull();
     // Nothing on the page reads or writes a watching setting.
     expect(server.calls.some((call) => call.path === "/api/settings")).toBe(false);
+  });
+});
+
+// R3874000: a friend's Lobby
+
+describe("R3874000 a friend's Lobby makes one lobby and opens it", () => {
+  const LOBBY_CODE = "LBY234";
+  const CREATE = "/api/lobbies";
+  const INVITE = `/api/lobbies/${LOBBY_CODE}/invite`;
+
+  /** The create answers LOBBY_CODE, the invite `invite`. */
+  function lobbies(invite: Reply): (call: Call) => Reply | undefined {
+    return (call) => {
+      if (call.method === "POST" && call.path === CREATE) return { status: 201, body: { code: LOBBY_CODE } };
+      if (call.method === "POST" && call.path === INVITE) return invite;
+      return undefined;
+    };
+  }
+
+  afterEach(() => {
+    takeInviteRefusal(LOBBY_CODE);
+    at("/together");
+  });
+
+  it("R3874000 one press makes a Best of 1 lobby, invites the friend into it and opens it", async () => {
+    const server = await renderPage(world(), lobbies({ status: 204 }));
+    pressFriendMenuItem(rowOf(ANN), togetherTestid.lobby);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(`/lobby/${LOBBY_CODE}`);
+    }, SLOW);
+    expect(server.to("POST", CREATE).map((call) => call.body)).toEqual([{ format: "duel", mode: "bo1" }]);
+    expect(server.to("POST", INVITE).map((call) => call.body)).toEqual([{ profileId: ANN.profileId }]);
+    expect(takeInviteRefusal(LOBBY_CODE)).toBeNull();
+    expect(screen.queryByTestId(togetherTestid.error)).toBeNull();
+  });
+
+  it("R3874000 a double press makes one lobby and sends one invite", async () => {
+    const server = await renderPage(world(), lobbies({ status: 204 }));
+    pressFriendMenuItem(rowOf(ANN), togetherTestid.lobby);
+    // One of the page's requests: its controls wait for the answer, the menu's among them.
+    expect(within(rowOf(ANN)).getByTestId(togetherTestid.challenge)).toBeDisabled();
+    const again = within(openFriendMenu(rowOf(ANN))).getByTestId(togetherTestid.lobby);
+    expect(again).toBeDisabled();
+    fireEvent.click(again);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(`/lobby/${LOBBY_CODE}`);
+    }, SLOW);
+    await settle();
+    expect(server.to("POST", CREATE)).toHaveLength(1);
+    expect(server.to("POST", INVITE)).toHaveLength(1);
+  });
+
+  it("R3874000 a refused invite still opens the lobby made, its refusal held for that lobby's screen", async () => {
+    const message = "too many invites; try again later";
+    const server = await renderPage(world(), lobbies(refusal(429, "rate_limited", message)));
+    pressFriendMenuItem(rowOf(ANN), togetherTestid.lobby);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(`/lobby/${LOBBY_CODE}`);
+    }, SLOW);
+    expect(server.to("POST", CREATE)).toHaveLength(1);
+    expect(server.to("POST", INVITE)).toHaveLength(1);
+    expect(screen.queryByTestId(togetherTestid.error)).toBeNull();
+    expect(takeInviteRefusal("OTHER2")).toBeNull();
+    expect(takeInviteRefusal(LOBBY_CODE)).toBe(message);
+    expect(takeInviteRefusal(LOBBY_CODE)).toBeNull();
+  });
+
+  it("R3874000 a refused create opens nothing and says why on the page", async () => {
+    const message = "you have too many lobbies open; close one or let one expire";
+    const server = await renderPage(world(), (call) =>
+      call.method === "POST" && call.path === CREATE ? refusal(409, "conflict", message) : undefined,
+    );
+    pressFriendMenuItem(rowOf(ANN), togetherTestid.lobby);
+    expect(await screen.findByTestId(togetherTestid.error, undefined, SLOW)).toHaveTextContent(message);
+    expect(window.location.pathname).toBe("/together");
+    expect(server.to("POST", INVITE)).toHaveLength(0);
+    await waitFor(() => {
+      openFriendMenu(rowOf(ANN));
+      expect(offers(rowOf(ANN), togetherTestid.lobby)).toBe(true);
+    }, SLOW);
+  });
+});
+
+describe("R3729002 ?replay= opens a shared replay", () => {
+  const ONLY_CY: Partial<World> = { friends: [CY] };
+
+  /** The replay steps the page asked for: the match's replay is read, 404 here, so the player's view is its failure and Back. */
+  function replayReads(server: StubServer, matchId: string): number {
+    return server.calls.filter((call) => call.method === "GET" && call.path === `/api/replays/${matchId}`).length;
+  }
+
+  it("R3729002 the path names the replay: sharedWithMePath() is the list, sharedWithMePath(id) the list with that replay to open", () => {
+    expect(sharedWithMePath()).toBe("/together?section=shared");
+    expect(sharedWithMePath("m-shared-1")).toBe("/together?section=shared&replay=m-shared-1");
+    expect(sharedWithMePath("a b&c")).toBe("/together?section=shared&replay=a%20b%26c");
+  });
+
+  it("R3729002 ?replay= opens the shared replay it names once the list is read, and asks for it once", async () => {
+    at(`/together?section=shared&replay=${SHARED.matchId}`);
+    signIn("tok-together");
+    const server = serve(world(ONLY_CY));
+    render(<TogetherRoute />);
+    await waitFor(() => {
+      expect(replayReads(server, SHARED.matchId)).toBe(1);
+    }, SLOW);
+    // The page gives way to the replay's own screen, with its way back.
+    expect(screen.queryByTestId(togetherTestid.root)).toBeNull();
+    expect(await screen.findByTestId("replay-back", undefined, SLOW)).toBeInTheDocument();
+    await settle({ macrotasks: 3 });
+    expect(replayReads(server, SHARED.matchId)).toBe(1);
+  });
+
+  it("R3729002 leaving the replay clears the link, so the page shows again and a second Watch for it opens it again", async () => {
+    at(`/together?section=shared&replay=${SHARED.matchId}`);
+    signIn("tok-together");
+    const server = serve(world(ONLY_CY));
+    render(<TogetherRoute />);
+    fireEvent.click(await screen.findByTestId("replay-back", undefined, SLOW));
+    expect(await screen.findByTestId(togetherTestid.root, undefined, SLOW)).toBeInTheDocument();
+    expect(window.location.search).toBe("?section=shared");
+    expect(replayReads(server, SHARED.matchId)).toBe(1);
+
+    act(() => {
+      navigate(sharedWithMePath(SHARED.matchId));
+    });
+    await waitFor(() => {
+      expect(replayReads(server, SHARED.matchId)).toBe(2);
+    }, SLOW);
+  });
+
+  it("R3729002 a link to a replay already on the page opens it too (the inbox's Watch from Play together)", async () => {
+    at("/together?section=shared");
+    signIn("tok-together");
+    const server = serve(world(ONLY_CY));
+    render(<TogetherRoute />);
+    await screen.findByTestId(TESTID.sharedRow, undefined, SLOW);
+    expect(replayReads(server, SHARED.matchId)).toBe(0);
+    act(() => {
+      navigate(sharedWithMePath(SHARED.matchId));
+    });
+    await waitFor(() => {
+      expect(replayReads(server, SHARED.matchId)).toBe(1);
+    }, SLOW);
+  });
+
+  it("R3729002 a link naming a match the list does not hold opens nothing", async () => {
+    at("/together?section=shared&replay=m-not-shared");
+    signIn("tok-together");
+    const server = serve(world(ONLY_CY));
+    render(<TogetherRoute />);
+    await screen.findByTestId(TESTID.sharedRow, undefined, SLOW);
+    await settle({ macrotasks: 3 });
+    expect(screen.getByTestId(togetherTestid.root)).toBeInTheDocument();
+    expect(server.calls.some((call) => call.path.startsWith("/api/replays/m-"))).toBe(false);
   });
 });

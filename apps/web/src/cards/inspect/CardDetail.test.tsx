@@ -2,19 +2,21 @@
 // catalog. Its close paths and focus return are B25, in inspect.test.tsx.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
 import { VOICE_PRIORITY } from "../../audio/constants.ts";
 import { setAudioEngineForTests } from "../../audio/engine.ts";
+import { loadSoundTables } from "../../audio/soundTablesLoader.ts";
 import { fakeAudioEngine } from "../../audio/test/fakeAudio.ts";
 import type { AudioEngine } from "../../audio/types.ts";
 import { locWords } from "./locWords.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { detailMetaLine } from "./CardDetail.tsx";
-import { CardDetail, closeInspect } from "./index.ts";
+import { CardDetail } from "./CardDetail.tsx";
+import { closeInspect } from "./index.ts";
 import {
   INSPECT_CLOSE,
   INSPECT_DETAIL,
@@ -53,6 +55,10 @@ function termsInDetail(): (string | null)[] {
 function precedes(a: Node, b: Node): boolean {
   return (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 }
+
+beforeAll(async () => {
+  await loadSoundTables();
+});
 
 afterEach(() => {
   act(() => {

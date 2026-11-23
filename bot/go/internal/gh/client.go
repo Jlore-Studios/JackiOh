@@ -69,7 +69,6 @@ type Client interface {
 	DispatchWorkflow(workflow string, ref string, inputs map[string]string)
 	GetRun(runID any) *pyjson.Object
 	ListRuns(workflow string, status string, limit int, cached bool) []*pyjson.Object
-	GetGist(gistID string, cached bool) *pyjson.Object
 	ListRepoRuns(status string, limit int, cached bool) []*pyjson.Object
 	ListCommits(author string, limit int) []*pyjson.Object
 	RunsForSHA(sha string, limit int) []*pyjson.Object

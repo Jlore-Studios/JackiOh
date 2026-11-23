@@ -997,6 +997,13 @@ impl Tx<'_> {
         economy_dispatch!(self, practice_seeds_prune(profile_id, issued_before))
     }
 
+    /// R4317001: deletes every profile's seeds issued before `issued_before` that are unclaimed or
+    /// settled (the per-account prune's rows, any account's), and answers how many. A claim not yet
+    /// settled stays until it settles (R2422000).
+    pub async fn economy_practice_seeds_purge(&mut self, issued_before: i64) -> StoreResult<u64> {
+        economy_dispatch!(self, practice_seeds_purge(issued_before))
+    }
+
     /// #2884: adds one to `bucket`'s count on the UTC day of `at`. The caller counts last in the
     /// transaction that decided the outcome, so the day's row is held only until it commits.
     pub async fn economy_practice_claim_count(&mut self, bucket: ClaimBucket, at: i64) -> StoreResult<()> {
@@ -1285,7 +1292,8 @@ mod pg {
         Ok(())
     }
 
-    /// One aggregate over the profile's rows (`jlore_grants_profile_idx` leads it).
+    /// One aggregate over the profile's `game` rows from `from` until `until`, read as one range of
+    /// `jlore_grants_profile_reason_at_idx` (migration 0098, tests/sql CHECK 27).
     pub async fn game_jlore_totals(
         t: &mut PgTx<'_>,
         profile_id: &str,
@@ -2648,6 +2656,20 @@ mod pg {
         Ok(())
     }
 
+    /// R4317001: the prune's rows of every profile, so it runs as no subject: `service_role` bypasses RLS.
+    pub async fn practice_seeds_purge(t: &mut PgTx<'_>, issued_before: i64) -> Result<u64, StoreError> {
+        run_as(t, None).await?;
+        let done = sqlx::query(
+            "delete from public.practice_seeds
+              where issued_at < to_timestamp($1::double precision / 1000.0)
+                and (claim is null or settled_at is not null)",
+        )
+        .bind(issued_before)
+        .execute(&mut **t)
+        .await?;
+        Ok(done.rows_affected())
+    }
+
     /// Migration 0078: one statement, adding to the day's row or writing it. No profile's row, so
     /// it runs as no subject.
     pub async fn practice_claim_count(
@@ -3626,6 +3648,15 @@ mod fake {
                 || (held.claim.is_some() && held.settled.is_none())
         });
         Ok(())
+    }
+
+    pub fn practice_seeds_purge(f: &mut FakeTx<'_>, issued_before: i64) -> Result<u64, StoreError> {
+        let tables = call(f, "economy.practiceSeeds.purge")?;
+        let before = tables.practice_seeds.len();
+        tables.practice_seeds.retain(|held| {
+            held.issued_at >= issued_before || (held.claim.is_some() && held.settled.is_none())
+        });
+        Ok(u64::try_from(before - tables.practice_seeds.len()).unwrap_or(u64::MAX))
     }
 
     pub fn practice_claim_count(f: &mut FakeTx<'_>, bucket: ClaimBucket, at: i64) -> Result<(), StoreError> {

@@ -13,12 +13,16 @@ Every value is a constant of `crates/run/src/config.rs`. One the plan marks a st
 | Constant | What it holds | Where |
 | --- | --- | --- |
 | `RUN_SEED_LENGTH` | The letters of a seed | [[§15.2]] |
-| `RUN_ACT_FIGHTS` | The fights before each act's boss | [[§15.5]] |
-| `RUN_ROW_WIDTH_MIN` | The fewest nodes a row of the map offers | [[§15.5]] |
-| `RUN_ROW_WIDTH_MAX` | The most nodes a row of the map offers | [[§15.5]] |
+| `RUN_ACTS` | The map's acts, each ending at its boss's row: a mini-boss's, then the final boss's for the last | [[§15.5]] |
+| `RUN_ACT_ROWS` | The rows of nodes in each act before its boss's row; a strawman | [[§15.5]] |
+| `RUN_MAP_COLUMNS` | The columns of the grid the map's rows lie on; a strawman | [[§15.5]] |
+| `RUN_MAP_PATHS` | The seeded walks up each act, each from its own column of the act's first row; a strawman | [[§15.5]] |
+| `RUN_ROUTE_FIGHTS_MIN` | The fewest fights on any route from a start to the final boss, the bosses counted | [[§15.5]] |
+| `RUN_ROUTE_FIGHTS_MAX` | The most fights on any route from a start to the final boss, the bosses counted | [[§15.5]] |
+| `RUN_ROUTE_TILES_MIN` | The fewest tiles on any route from a start to the final boss | [[§15.5]] |
 | `RUN_ELITE_PERCENT` | The chance, in percent, that a fight node of the map is an elite | [[§15.5]] |
 | `RUN_GHOST_PERCENT` | The chance, in percent, that a fight node that is no elite is a ghost | [[§15.5]] |
-| `RUN_TILE_WEIGHTS` | The weights of the tiles a row between two fight rows deals; a campfire also always stands on the row before each boss | [[§15.5]] |
+| `RUN_TILE_WEIGHTS` | The weights of a tile node's kind | [[§15.5]] |
 | `RUN_STARTER_SIZE` | The cards of a starting deck, at every level | [[§15.3]] |
 | `RUN_SLOT_LADDER` | The starting deck's slots at each level, from level 1, as counts of Common, Rare, Epic, Legendary, Mythic and Anything slots, each row holding `RUN_STARTER_SIZE`; a strawman | [[§15.3]] |
 | `RUN_STARTER_CARDS` | The cards any starting deck may hold before anything is extracted; placeholders until the designer's list, the Training Grounds Commons and Rares with the fewest script lines, in catalog order, the first `RUN_STARTER_SIZE` fitting level 1's slots | [[§15.3]] |
@@ -28,9 +32,9 @@ Every value is a constant of `crates/run/src/config.rs`. One the plan marks a st
 | `RUN_STARTER_ARTIFACT_POINTS` | The most points of artifacts a run starts with | [[§15.3]], [[§15.4]] |
 | `RUN_TIER_POINTS` | An artifact's points by its tier | [[§15.3]], [[§15.4]] |
 | `RUN_MAX_HP` | The health a run starts with, before wins, campfires, events and passives raise it | [[§15.4]] |
-| `RUN_ENEMY_HEALTH` | Each enemy's hero health by its kind of fight; a strawman | [[§15.6]] |
-| `RUN_LOOMING_PRESENCE` | The enemy artifact that gives its carrier the Medium AI's resources in a fight | [[§15.6]] |
-| `RUN_OVERWHELMING_PRESENCE` | The enemy artifact that gives its carrier the Hard AI's resources in a fight, outranking Looming Presence when an enemy carries both | [[§15.6]] |
+| `RUN_ACT_TIERS` | The enemy tiers each act's rows spread over, from its first row to its last before the boss, whose own is one tier higher | [[§15.6]] |
+| `RUN_TIERS` | Each tier's enemy, from tier 1: its handicap and hero health, for every fight but an elite; tiers 5, 10 and 15, the bosses', are Easy's, Medium's and Hard's resources with their own hero health; a strawman | [[§15.6]] |
+| `RUN_ELITE_TIERS` | An elite's own rows, one for each tier an elite stands on, each stronger than that tier's `RUN_TIERS` row; a strawman | [[§15.6]] |
 | `RUN_ENEMY_DECK_SIZE` | An enemy's deck: its own cards first and the rest dealt from the pool | [[§15.6]] |
 | `RUN_MINI_BOSS_DROP_TIER` | The lowest tier of a mini-boss's drop when its content names none | [[§15.6]] |
 | `RUN_ARTIFACT_PERCENT` | The chance, in percent, that a won fight offers an artifact; a boss's drop is preseeded | [[§15.7]] |
@@ -108,7 +112,7 @@ Embers buy the next level at `RUN_LEVEL_EMBERS`, up to the ladder's top.
 
 Artifacts: at most `RUN_STARTER_ARTIFACTS_MAX`, distinct, worth at most `RUN_STARTER_ARTIFACT_POINTS` by `RUN_TIER_POINTS`. Each is Combat or Economic, not Unobtainable, and a starter or extracted ([[§15.4]]).
 
-Curses: any of the content's ([[§15.9]]).
+Curses: any of the content's, each at most once ([[§15.9]], [[R4067000]]).
 
 The start screen offers the named starting decks of `RUN_PRESET_DECKS` (placeholders until the designer's lists): each holds `RUN_STARTER_SIZE` distinct cards of `RUN_STARTER_CARDS` fitting level 1's slots, so any player may pick any of them from their first run, then tweak the picks in the builder.
 
@@ -122,7 +126,7 @@ A run starts at max HP, with no Coins or Tickets, artifacts at level 1 and no ca
 
 - Combat: works inside a fight: its fight effect changes the human's side of each fight's setup, once per level ([[§15.6]], [[R2922001]]).
 - Economic: works on the map.
-- Enemy: carried by enemies only (Looming Presence, Overwhelming Presence, a boss's own).
+- Enemy: carried by enemies only (a boss's own), changing nothing in a fight ([[R3586001]]).
 - Blessing: a shrine's, from a god.
 
 A player's artifact has a tier, Bronze to Diamond, which sets its strength, its points (`RUN_TIER_POINTS`) and its price (`RUN_ARTIFACT_PRICE`).
@@ -152,17 +156,21 @@ A few artifacts start unlocked (the content's starters). Final bosses unlock the
 
 ### 15.5 The map
 
-One act per entry of `RUN_ACT_FIGHTS`; the entry is the act's fights before its boss.
+The map is `RUN_ACTS` acts. Each act is `RUN_ACT_ROWS` rows of nodes, then its boss's row of one node: a mini-boss for each act but the last, the final boss for the last.
 
-An act is its fight rows with a tile row between each two, then a row of one campfire, then its boss's row. Each act but the last ends at a mini-boss; the last ends at the final boss.
+The rows lie on a grid `RUN_MAP_COLUMNS` wide. `RUN_MAP_PATHS` seeded walks go up each act, each from a column of its own on the act's first row. Each step goes to the column left, the same or right, never across an edge an earlier walk took. Every node a walk visits is kept with every edge it takes, so the paths split and merge ([[R3583000]]).
 
-Fight and tile rows hold `RUN_ROW_WIDTH_MIN` to `RUN_ROW_WIDTH_MAX` nodes.
+A boss stands on the middle column. Every node of its act's last row leads to it, and a mini-boss leads to every node of the next act's first row. Those fans are the only edges wider than a column, and every route passes both mini-bosses and the final boss.
 
-A fight node is an Elite at `RUN_ELITE_PERCENT`, else a Ghost at `RUN_GHOST_PERCENT`, else a Fight. A tile is a Shop, Campfire, Event, Chest or Shrine, by `RUN_TILE_WEIGHTS`.
+Before the first step the player steps onto any node of the first row. After it, only a node of the next row that the node stood on leads to may be chosen; any other step is refused, the run unchanged ([[R3583000]]).
 
-The whole map (enemies, decks, bosses' drops, events) is dealt at the start, and the whole act ahead is shown.
+The first row's nodes are all fights, so a run opens on one. A fight node is an Elite at `RUN_ELITE_PERCENT`, else a Ghost at `RUN_GHOST_PERCENT`, else a Fight. A tile is a Shop, Campfire, Event, Chest or Shrine, by `RUN_TILE_WEIGHTS`. A row may mix fights and tiles.
 
-The player steps onto any node of the next row.
+Every route from a start to the final boss holds `RUN_ROUTE_FIGHTS_MIN` to `RUN_ROUTE_FIGHTS_MAX` fights, the bosses counted, and at least `RUN_ROUTE_TILES_MIN` tiles. The deal holds the bounds for every route, not on average ([[R3583001]]). A route with fewer fights is the fast way, one with more the slow way.
+
+The whole map (its paths, enemies, decks, bosses' drops and events) is dealt at the start from the seed, and the whole of it is shown.
+
+A run kept from before the map had paths is folded on the map its seed deals today. It ends lost at its first refused step and still banks what it had extracted ([[R3496000]]); one whose every step that map accepts plays on.
 
 Between fights the top bar shows HP, Coins, Tickets, the deck's size, the relics held and the score, and a Your run panel lists the deck (Radiant and buffed cards marked), the relics and blessings held with their text, the curses taken with their names and text, and the seed, which can be copied.
 
@@ -170,15 +178,15 @@ Between fights the top bar shows HP, Coins, Tickets, the deck's size, the relics
 
 **The human:** the run deck in order, with `HUMAN_HANDICAP`, its deck size the deck's length and its hero health the run's HP, always the max ([[R180]], [[R290]], [[R3584000]]). At setup, before the opening draw, each Radiant card is dealt Radiant ([[§5.2]]) and each buff is applied as one Buff ([[§6.3]]). A fight's game is built under the current catalog, as a fight started today is: a card the run holds that the catalog no longer knows is left out of the fight's deck, and stays in the run ([[R3496000]]).
 
-**The enemy:** its deck, with Easy's handicap (`AI_DIFFICULTY`), Medium's when it carries Looming Presence and Hard's with Overwhelming Presence; elites and bosses carry them. Its deck size is its deck's length and its hero health is `RUN_ENEMY_HEALTH` by kind.
+**The enemy:** its deck, with its tier's handicap and hero health ([[R3586001]]). A fight node's tier is set by its row ([[R3586000]]): each act's `RUN_ACT_ROWS` rows spread evenly over its `RUN_ACT_TIERS` tiers, from its lowest on its first row to its highest on its last row before the boss, and its boss stands one tier higher, so the mini-bosses are tiers 5 and 10 and the final boss is tier 15. Every route meets the tiers in rising order, and a route with fewer fights skips some. An elite plays its tier's row of `RUN_ELITE_TIERS`, each stronger than the same tier's normal row; every other fight, ghosts and bosses included, plays its row of `RUN_TIERS`, and tiers 5, 10 and 15 are `AI_DIFFICULTY`'s Easy, Medium and Hard resources ([[R180]]) with their own hero health. Its deck size is its deck's length. The map labels each fight node with its tier, and the fight shows it beside the enemy's relics, an elite's as "Elite, tier N". An enemy's own artifacts change nothing in a fight.
 
-The game seed is the run's seed, row and column. A fight left unfinished waits where it stood: when the run, still on its fight, starts it again, the kept fight is resumed on its turn ([[R3476000]]). Leaving still asks first ([[R2706000]], [[R2972000]]).
+The game seed is the run's seed, row and column. A fight left unfinished waits where it stood: when the run, still on its fight, starts it again, the kept fight is resumed on its turn ([[R3476000]]). Leaving still asks first ([[R2706000]], [[R2972000]]). The fight's controls carry Menu, which leaves to the Play menu after asking ([[R3932000]], [[R2972000]]). The fight's rail lists every live modifier in full, under You and the enemy's name, as every other table's does ([[R3912000]], [[R169]]).
 
 Enemy decks are random for now: the enemy's own cards, then the open pool up to `RUN_ENEMY_DECK_SIZE`.
 
 Boss cards are the single-player sets' cards ([[R1846001]]). Only a boss's deck and its pack deal them.
 
-**Ghosts as built:** a random open-pool deck, no artifacts, the ghost health. **The second stage:** decks of real players who died near that point, never boss cards, from friends' runs, some pre-seeded, from snapshots.
+**Ghosts as built:** a random open-pool deck, no artifacts, at its row's tier ([[R3586001]]). **The second stage:** decks of real players who died near that point, never boss cards, from friends' runs, some pre-seeded, from snapshots.
 
 A mini-boss always drops its content's artifact, or else one of `RUN_MINI_BOSS_DROP_TIER` or better. The final boss drops its own Unobtainable artifact.
 
@@ -186,7 +194,7 @@ A mini-boss always drops its content's artifact, or else one of `RUN_MINI_BOSS_D
 
 A win of any kind adds `RUN_WIN_MAX_HP` to the max for the rest of the run, then refills HP to the new max, whatever the hero's final health was ([[R3584000]]). Any other end drops HP to zero and ends the run.
 
-**Curses and Combat artifacts** change the two handicaps after Presence ([[R2922001]]). Each curse taken changes the enemy's once: more hero health, more opening cards, or more crystals every turn, bonus and cap together ([[R181]]). Each Combat artifact held changes the human's once per level: more opening cards ([[R182]]) or starting Armor ([[R2922000]]). A negative amount counts as none, and an enemy's own artifacts other than Presence change nothing. The placeholders' numbers are strawmen ([[§15.13]]).
+**Curses and Combat artifacts** change the two handicaps after the tier's row ([[R2922001]]). Each curse taken changes the enemy's once: more hero health, more opening cards, or more crystals every turn, bonus and cap together ([[R181]]). Each Combat artifact held changes the human's once per level: more opening cards ([[R182]]) or starting Armor ([[R2922000]]). A negative amount counts as none, and an enemy's own artifacts change nothing. The placeholders' numbers are strawmen ([[§15.13]]).
 
 ### 15.7 After a fight
 
@@ -280,13 +288,13 @@ Today, beating the final boss ends the run, won.
 
 ### 15.12 What is built
 
-**The first stage, the Sandbox:** `crates/run`'s core; fights that read the run (HP, Presence, Radiant and buffed cards); the Sandbox screens and device store; Economic artifacts and blessings; Combat artifacts and curses inside fights; real cards, with placeholder enemies, artifacts, blessings, events and curses.
+**The first stage, the Sandbox:** `crates/run`'s core; fights that read the run (HP, the enemy's tier, Radiant and buffed cards); the Sandbox screens and device store; Economic artifacts and blessings; Combat artifacts and curses inside fights; real cards, with placeholder enemies, artifacts, blessings, events and curses.
 
 **The second stage:** the Campaign, ghosts from real players, the extended campaign.
 
 The designer's content replaces the placeholders.
 
-**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill, from level 1 with no artifact or curse unless `--level`, `--artifacts` and `--curses` set them (each refused when the content lacks it), and prints each kind of fight's and each act's win rate, HP cost and turns, the max HP at each boss, the rows reached, the score by term (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add) and the Embers (#3065, #3481): a guide to tuning the strawmen, not a target.
+**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill, from level 1 with no artifact or curse unless `--level`, `--artifacts` and `--curses` set them (each refused when the content lacks it), and prints each kind of fight's, each act's and each tier's win rate, HP cost and turns, the elites apart ([[R3586001]]), the max HP at each boss, the rows reached, the fights on each run's route, the score by term (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add), the Embers (#3065, #3481) and the economy (the Coins and Tickets earned, the shops entered, what is held entering one, the cheapest shop card and the Remove, Radiant and buff prices charged): a guide to tuning the strawmen, not a target. A per-pull-request test holds the strawmen to wide win-rate bands at the tiny budget: tier 1's first fights stay clearly winnable, the final boss clearly hard and an elite harder than the normal fight at its tier ([[R3586000]], [[R3586001]]); a deliberate retune of the tiers moves the bands in the same patch. A second test holds the economy to wide bands in the same way: Coins and Tickets earned by a won run, the cheapest shop card affordable by a run's first shop, Remove, Radiant and buff payable over a run, and the score and Embers a run pays stay within a factor of two of the measured figures; a deliberate retune of the prices, the drops or the score row moves the bands in the same patch.
 
 ### 15.13 Open questions
 
@@ -297,4 +305,5 @@ These are the plan's DR13 open questions, not decided here:
 - the starting cards and starter artifacts;
 - the prestige artifacts;
 - ghost snapshots;
+- the enemy tiers, `RUN_TIERS` and `RUN_ELITE_TIERS`, strawmen to tune against run-sim's table by tier ([[R3586000]], [[R3586001]]);
 - tuning the strawmen, against [[§15.12]]'s `cargo jackioh run-sim`.

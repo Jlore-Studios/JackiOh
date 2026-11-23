@@ -38,6 +38,8 @@ const PASS: readonly string[] = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
 const TABLE_LAST = 90;
 /** The cards other issues draw (#3333's shipyard, #3338's Olivian Expanse). */
 const OWNED_ELSEWHERE: readonly string[] = ["stinkyscape-004", "stinkyscape-t-dormant-starship"];
+/** The Orca, which printed Starship Piece until #4154 and is still drawn as the ship it shipped as. */
+const FORMER_PIECES: readonly string[] = ["stinkyscape-079"];
 /** The ladder, bottom to top. */
 const LADDER: readonly Rarity[] = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
 /** The rarer than Rare: a scene with a foreground, a middle and a background. */
@@ -195,8 +197,8 @@ describe("R3391000 Stinkyscape's scenes", () => {
     expect(new Set(PASS.map((id) => STINKYSCAPE_RECIPES[id])).size).toBe(PASS.length);
     for (const id of OWNED_ELSEWHERE) expect(sceneRecipeOf(id), id).toBeNull();
     // No other Stinkyscape card draws a scene but #3403's table (R3403000: the later cards and the early cards' tokens it
-    // names, stinkyscape91Scenes.test.ts), and every card numbered 1 to 90 the table leaves out prints Starship Piece or
-    // is another issue's.
+    // names, stinkyscape91Scenes.test.ts), and every card numbered 1 to 90 the table leaves out prints Starship Piece (or
+    // printed it, the Orca) or is another issue's.
     for (const id of PASS) expect(Object.hasOwn(STINKYSCAPE_91_RECIPES, id), id).toBe(false);
     for (const card of Object.values(CATALOG)) {
       if (isStinkyscapeArt(card.id) && !PASS.includes(card.id) && !Object.hasOwn(STINKYSCAPE_91_RECIPES, card.id)) expect(sceneRecipeOf(card.id), card.id).toBeNull();
@@ -206,7 +208,9 @@ describe("R3391000 Stinkyscape's scenes", () => {
       return number !== undefined && Number(number) <= TABLE_LAST && !PASS.includes(card.id);
     });
     expect(rest.length).toBeGreaterThan(0);
-    for (const card of rest) expect(STARSHIP_PIECES.has(card.id) || OWNED_ELSEWHERE.includes(card.id), card.id).toBe(true);
+    for (const card of rest) {
+      expect(STARSHIP_PIECES.has(card.id) || FORMER_PIECES.includes(card.id) || OWNED_ELSEWHERE.includes(card.id), card.id).toBe(true);
+    }
   });
 
   it("R3391000 each places every part its brief names", () => {
@@ -312,7 +316,10 @@ describe("R3391000 Stinkyscape's scenes", () => {
     // No two recipes place the same parts in the same places.
     const layouts = PASS.map((id) => JSON.stringify(recipe(id).layers));
     expect(new Set(layouts).size).toBe(PASS.length);
-    for (const id of PASS) {
+    // R3394000: an entry of #3394's table draws an alt recipe of its own instead (stinkyscapeAltScenes.test.tsx).
+    const regrown = PASS.filter((id) => !Object.hasOwn(ALT_SCENE_RECIPES, id));
+    expect(regrown).toHaveLength(30);
+    for (const id of regrown) {
       const scene = recipe(id);
       const normal = composeScene(scene, id);
       const seed = artSeedOf(id, "alt");

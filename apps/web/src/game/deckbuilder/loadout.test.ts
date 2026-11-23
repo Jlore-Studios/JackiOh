@@ -29,4 +29,23 @@ describe("the pool", () => {
   it("collectionFrom projects the ledger's entries to quantities", () => {
     expect(collectionFrom([{ cardId: "core-001", quantity: 1 }])).toEqual({ "core-001": 1 });
   });
+
+  it("#4015 collectionFrom drops prototype-pollution card ids", () => {
+    const owned = collectionFrom([
+      { cardId: "core-001", quantity: 1 },
+      { cardId: "__proto__", quantity: 2 },
+      { cardId: "constructor", quantity: 2 },
+    ]);
+    expect(owned).toEqual({ "core-001": 1 });
+    expect(Object.hasOwn(owned, "constructor")).toBe(false);
+    expect(owned.constructor).toBe(Object);
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
+  it("#4015 collectionFrom keeps an object quantity off the result's prototype", () => {
+    const owned = collectionFrom([{ cardId: "__proto__", quantity: { polluted: true } as unknown as number }]);
+    expect(Object.getPrototypeOf(owned)).toBe(Object.prototype);
+    expect((owned as Record<string, unknown>)["polluted"]).toBeUndefined();
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
 });

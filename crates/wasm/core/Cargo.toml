@@ -22,3 +22,11 @@ jackioh-run = { workspace = true }
 jackioh-shared = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[dev-dependencies]
+# #4426: turns the run's and the shared logic's `ts` features on in every test build of the workspace, so the
+# `tools, wasm` CI group (`cargo test --workspace --exclude …`) writes their types into
+# `apps/web/src/wire/generated/` and ci.yml's V20 step fails on any diff. Dev-dependency features never
+# reach the WebAssembly modules or the release binaries. `crates/tools/tests/acceptance.rs` holds both.
+jackioh-run = { workspace = true, features = ["ts"] }
+jackioh-shared = { workspace = true, features = ["ts"] }

@@ -1,9 +1,10 @@
 //! The turn loop of SPEC §2.2 in R62's order, cleanup, the turn cap and the ways a game ends (§2.5, R79,
 //! R389). Each part belongs to its module: the turn hooks to `triggers::queue_hooks_in_trigger_order` (R68's
 //! order), the end-of-turn trap window to `traps::run_trap_window` (R100), the delayed effects to
-//! `modifiers::due_delayed`, mana to `mana.rs`. A turn starts: refresh → Brittle tick (B3.3), Dormant
-//! countdowns (R1839001), quests' waits (R1854004) → animate (B3.1) → delayed effects, rest-of-game ones
-//! among them (B5 E28, R458) → start-of-turn triggers → draw. Animated cards go home last in cleanup.
+//! `modifiers::due_delayed`, mana to `mana.rs`. A turn starts: refresh → Tipsy decay (R3548000) → Brittle
+//! tick (B3.3), Dormant countdowns (R1839001), quests' waits (R1854004), Burn and Toxic ticks (R3540001) →
+//! animate (B3.1) → delayed effects, rest-of-game ones among them (B5 E28, R458) → start-of-turn triggers →
+//! draw. Animated cards go home last in cleanup, after the Warhero worth's growth (R3548002).
 //!
 //! Any part can pause on a question (§9.3, §10.6), so both boundaries are resumable: a pause parks the
 //! rest of R62's order on `state.work` through `owe`, and `run_owed_start_of_turn` / `run_owed_end_of_turn`
@@ -23,6 +24,7 @@ use crate::state::{
     handicap_of, takes_turn_draws,
 };
 use crate::wire::{GameEvent, GameOverReason, PLAYER_IDS, Phase, PlayerId, Winner, opponent_of};
+use crate::work::engine_resume;
 
 /// R846 (Meditative #19.1): the id owed extra turns travel under, one badge per player: `modifierChanged`
 /// names it as turns are owed and the last is taken, and the view lists it while any is owed (R169).
@@ -292,14 +294,7 @@ fn boundary_resume(hook: &str, player: PlayerId, step: &str, due_before: Option<
         };
         data.insert("dueBefore".to_string(), mark);
     }
-    Resume {
-        def_id: String::new(),
-        hook: hook.to_string(),
-        step: step.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    }
+    engine_resume(hook, step, data)
 }
 
 /// The mark a parked delayed stage began at; a record without one owes every entry due (R68).
@@ -363,11 +358,13 @@ fn begin_turn(sink: &mut EngineSink, player: PlayerId, extra: bool) {
     crate::subsystems::autopilot::engage_aura(sink, player);
     // R2250002, R1853002: an open Marketplace rolls the player their offers and quotes its prices.
     crate::marketplace::marketplace_turn_start(sink, player);
-    // MD-B2, R941: the aura is read before the refresh, off the field as it stands now.
+    // MD-B2, R941: the aura is read before the refresh, off the field as it stands now; so is R4440052's
+    // "+N mana per turn".
     let natural = crate::mana::natural_mana_on(sink.state);
+    let bonus = crate::mana::mana_per_turn_of(sink.state, player);
     let side = &mut sink.state.players[player];
     let rider = side.mana.next_turn_mod;
-    crate::mana::refresh_mana_with(side, natural);
+    crate::mana::refresh_mana_with_bonus(side, natural, bonus);
     let lost_spent = crate::mana::spend_lost_refresh(side);
     sink.events.push(crate::mana::mana_event(player, side));
     // R169: the refresh spends the rider (§6.3 Mana), and its badge goes with it.
@@ -387,6 +384,8 @@ fn begin_turn(sink: &mut EngineSink, player: PlayerId, extra: bool) {
         });
     }
 
+    // R3548000: the Tipsy decay, after the lost-refresh badge and before the stages below.
+    crate::tipsy::decay_at_turn_start(sink, player);
     // R62: the delayed effects due at this start are the ones that exist as the turn begins, so the
     // mark is taken here and carried through the two stages before them.
     let due_before = sink.state.next_seq;
@@ -408,9 +407,15 @@ fn start_of_turn_brittle(sink: &mut EngineSink, player: PlayerId, due_before: u3
     // R1839001: then `player`'s Dormant cards count down and one whose countdown ends awakens, in this
     // stage so its events settle with the tick's.
     crate::slumber::awaken_at_turn_start(sink, player);
+    // R3539004: then each of `player`'s shipyards fuses in a random Starship Piece.
+    crate::starship::yard_at_turn_start(sink, player);
     // R1854004: then `player`'s quests waiting to hear back count the turn; one whose wait ends opens
     // its stage.
     crate::subsystems::quests::hear_back_at_turn_start(sink, player);
+    // R3540001: then the Toxic ticks, settled with the stage (Burn ticks at the end of the turn, R4154000).
+    crate::afflictions::tick_at_turn_start(sink, player);
+    // R3554001: then the Black Hole draws `player`'s permanents one lane toward it.
+    crate::geometry::pull_at_turn_start(sink, player);
     after_start_stage(sink, player, START_BRITTLE_STEP, due_before);
 }
 
@@ -632,6 +637,8 @@ fn cleanup(sink: &mut EngineSink, player: PlayerId) {
     crate::modifiers::expire_modifiers(sink, player);
     // R1174000: beside the "this turn" modifiers, `player`'s Frozen Units whose thaw is due thaw.
     crate::freeze::thaw_at_cleanup(sink, player);
+    // R3548002: then the Warhero Tokens' game-wide worth grows, once any has been minted.
+    crate::warhero::grow_at_cleanup(sink);
     let side = &mut sink.state.players[player];
     side.turn_log.unspent_at_end = Some(side.mana.current);
     let handed_over = side.ai_turn;
@@ -770,6 +777,12 @@ fn end_of_turn_after_window(sink: &mut EngineSink, player: PlayerId, due_before:
         return;
     }
 
+    // R4154000: then every Burn ticks once and is removed, settled with the delayed effects before
+    // cleanup.
+    crate::afflictions::tick_burn_at_turn_end(sink, player);
+    // R4440050: then a Black Hole that pulls at the end of turns draws `player`'s permanents one lane
+    // toward it, as it would at the start after the Toxic tick (R3554001).
+    crate::geometry::pull_at_turn_end(sink, player);
     end_of_turn_delayed_settle(sink, player);
 }
 

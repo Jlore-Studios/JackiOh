@@ -38,9 +38,11 @@ export function slamTier(stats: SlamStats): SlamTier {
 
 /**
  * The card's printed "Tribute N". The view carries no Tribute cost, so the client reads it off the
- * face's text. A Cry that tributes ("Tribute one of your other Units") is an effect, not a cost.
+ * face's text, where its keyword line prints it among the keywords that open the text. A Cry that tributes
+ * ("Tribute one of your other Units") is an effect, not a cost, and a Tribute the card gives other cards
+ * (Stinkyscape+ #138's "Embiggened (4): They have Tribute 1.") is not its own.
  */
-const TRIBUTE_COST = /\bTribute (\d+)\b/;
+const TRIBUTE_COST = /^(?:[A-Z][\w' -]*, )*Tribute (\d+)\b/;
 
 export function printedTributes(text: string | undefined): number {
   const match = text === undefined ? null : TRIBUTE_COST.exec(text);

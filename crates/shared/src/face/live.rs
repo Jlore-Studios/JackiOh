@@ -46,6 +46,10 @@ pub struct LiveCard {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created: Option<bool>,
+    /// R3536005: the card has evolved, or is marked to enter the field evolved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub evolved: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created_by: Option<String>,
@@ -139,6 +143,9 @@ pub struct LiveCard {
     pub attack_reason: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
+    pub switch_reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub tallies: Option<Vec<TallyView>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -153,6 +160,7 @@ impl From<&CardView> for LiveCard {
             radiant: card.radiant,
             chinese: card.chinese,
             created: card.created,
+            evolved: card.evolved,
             created_by: card.created_by.clone(),
             cost: Some(card.cost),
             embiggen_cost: card.embiggen_cost,
@@ -187,6 +195,7 @@ impl From<&UnitView> for LiveCard {
             radiant: unit.radiant,
             chinese: unit.chinese,
             created: unit.created,
+            evolved: unit.evolved,
             created_by: unit.created_by.clone(),
             cost: Some(unit.cost),
             attack: Some(unit.attack),
@@ -214,6 +223,7 @@ impl From<&UnitView> for LiveCard {
             starship: unit.starship.clone(),
             grants: unit.grants.clone(),
             attack_reason: unit.attack_reason.clone(),
+            switch_reason: unit.switch_reason.clone(),
             tallies: unit.tallies.clone(),
             ..LiveCard::default()
         }
@@ -232,6 +242,7 @@ impl LiveCard {
             radiant: card.radiant,
             chinese: card.chinese,
             created: card.created,
+            evolved: card.evolved,
             created_by: card.created_by.clone(),
             cost: Some(card.cost),
             attack: card.attack,
@@ -240,6 +251,7 @@ impl LiveCard {
             power: card.power.clone(),
             vanilla: card.vanilla,
             preview: card.preview.clone(),
+            slumber: card.slumber,
             type_: Some(card.type_),
             tags: card.tags.clone(),
             brittle: card.brittle,
@@ -344,10 +356,8 @@ pub fn live_source(
     in_play.berserk = (unit && card.berserk == Some(true)).then_some(true);
     in_play.frozen = (unit && card.frozen == Some(true)).then_some(true);
     // R1839000, R1839001: a Dormant card, with its countdown.
-    in_play.dormant = card
-        .slumber
-        .filter(|_| unit)
-        .map(|slumber| DormantFace { turns: slumber.turns });
+    // R3556000: a Dormant Field Spell in the backrow too.
+    in_play.dormant = card.slumber.map(|slumber| DormantFace { turns: slumber.turns });
     in_play.frozen_forever = (unit && card.frozen_forever == Some(true)).then_some(true);
     // R1852000, R1852004: a Starship, with the pieces fused into it and the name it launched under.
     // R2249000: and the pieces themselves, which its face lists in place of its text.
@@ -370,12 +380,22 @@ pub fn live_source(
     if card.created == Some(true) {
         in_play.created = Some(true);
     }
+    // R3536005: an Evolved card, wherever the view carries the mark.
+    if card.evolved == Some(true) {
+        in_play.evolved = Some(true);
+    }
     in_play.created_by = card.created_by.clone();
     // ME-GRANT, R1107: the Death abilities other cards granted the unit, as its lines read them.
     if unit {
         in_play.grants = card.grants.clone().filter(|list| !list.is_empty());
         // R849000: the inspect notes spell it out.
         in_play.attack_reason = card.attack_reason.clone();
+        // R3821000: and why it cannot switch now, said once where it repeats the attack reason (a Frozen
+        // unit's is both).
+        in_play.switch_reason = card
+            .switch_reason
+            .clone()
+            .filter(|reason| card.attack_reason.as_ref() != Some(reason));
     }
     // R2321000: and the counts the field keeps on the unit.
     in_play.tallies = facts.tallies.clone().filter(|list| !list.is_empty());
@@ -593,4 +613,310 @@ pub fn named_face(words: Words, view: &PlayerView, named: &NamedCard) -> Option<
         ..FaceSource::default()
     };
     Some(face_model(words, &source, &Lookup { defs: &defs }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::{Value, json};
+
+    fn from_json<T: serde::de::DeserializeOwned>(value: Value) -> T {
+        serde_json::from_value(value).expect("a view's JSON")
+    }
+
+    /// A card as every view gives one, each field a conversion copies set to something other than its default.
+    fn shared_fields() -> Value {
+        json!({
+            "instanceId": "c1",
+            "defId": "core-008",
+            "radiant": true,
+            "chinese": true,
+            "created": true,
+            "createdBy": "core-020",
+            "cost": 4,
+            "attack": 3,
+            "health": 5,
+            "keywords": [{ "kind": "Taunt" }],
+            "power": "Fireblast",
+            "preview": [{ "label": "damage", "value": 7 }],
+            "type": "Unit",
+            "tags": ["Human"],
+            "brittle": 2,
+            "element": "水",
+            "params": { "x": 4 },
+            "tuning": { "attack": 1 },
+            "enchantments": [{ "kind": "castOnDraw" }],
+            "marks": [{ "mark": "m", "color": "purple" }],
+            "quest": { "open": [], "auras": [] },
+            "copies": { "defId": "core-020", "radiant": false },
+        })
+    }
+
+    const SHARED_KEYS: [&str; 22] = [
+        "instanceId",
+        "defId",
+        "radiant",
+        "chinese",
+        "created",
+        "createdBy",
+        "cost",
+        "attack",
+        "health",
+        "keywords",
+        "power",
+        "preview",
+        "type",
+        "tags",
+        "brittle",
+        "element",
+        "params",
+        "tuning",
+        "enchantments",
+        "marks",
+        "quest",
+        "copies",
+    ];
+
+    /// `shared_fields()` with `more` laid over it.
+    fn view_json(more: Value) -> Value {
+        let mut out = shared_fields();
+        for (key, value) in more.as_object().expect("an object") {
+            out[key] = value.clone();
+        }
+        out
+    }
+
+    /// R243: the face reads `keys` as the view gave them: each the view sets reaches its `LiveCard` unchanged.
+    fn carries(view: &impl Serialize, live: &LiveCard, keys: &[&str]) {
+        let view = serde_json::to_value(view).expect("a view");
+        let live = serde_json::to_value(live).expect("a live card");
+        for key in keys {
+            assert!(view.get(*key).is_some(), "PREMISE: the view sets {key}");
+            assert_eq!(live.get(*key), view.get(*key), "{key}");
+        }
+    }
+
+    /// R243: a card the view lists as a `CardView` (a hand's, a pile's) stands as the view gave it.
+    #[test]
+    fn r243_a_card_view_reaches_its_face_as_the_view_gave_it() {
+        let card: CardView = from_json(view_json(json!({
+            "embiggenCost": 6,
+            "fixedX": 2,
+            "label": "FO",
+            "playReason": "no mana",
+        })));
+        let keys = [
+            &SHARED_KEYS[..],
+            &["embiggenCost", "fixedX", "label", "playReason"][..],
+        ]
+        .concat();
+        carries(&card, &LiveCard::from(&card), &keys);
+    }
+
+    /// R243: a unit on the field stands as its `UnitView` gives it, its statuses with it.
+    #[test]
+    fn r243_a_unit_view_reaches_its_face_as_the_view_gave_it() {
+        let unit: UnitView = from_json(view_json(json!({
+            "owner": "p1",
+            "controller": "p1",
+            "maxHealth": 6,
+            "armor": 0,
+            "position": "ATK",
+            "counters": {},
+            "buried": 0,
+            "canAct": true,
+            "vanilla": true,
+            "animated": { "home": 1 },
+            "berserk": true,
+            "frozen": true,
+            "slumber": { "turns": 2 },
+            "frozenForever": true,
+            "starship": { "pieces": [] },
+            "grants": ["g"],
+            "attackReason": "why",
+            "switchReason": "why not",
+            "tallies": [{ "defId": "trainingground-031", "value": 1, "goal": 3 }],
+        })));
+        let unit_keys = [
+            "maxHealth",
+            "vanilla",
+            "animated",
+            "berserk",
+            "frozen",
+            "slumber",
+            "frozenForever",
+            "starship",
+            "grants",
+            "attackReason",
+            "switchReason",
+            "tallies",
+        ];
+        carries(
+            &unit,
+            &LiveCard::from(&unit),
+            &[&SHARED_KEYS[..], &unit_keys[..]].concat(),
+        );
+    }
+
+    /// R243: a face-up backrow card stands as its `BackrowView` gives it; a face-down one has no face.
+    #[test]
+    fn r243_a_face_up_backrow_card_reaches_its_face_and_a_face_down_one_has_none() {
+        let backrow: BackrowView = from_json(view_json(json!({
+            "faceDown": false,
+            "counters": {},
+            "owner": "p1",
+            "controller": "p1",
+            "vanilla": true,
+        })));
+        let live = LiveCard::from_backrow(&backrow).expect("a face-up card has a face");
+        carries(&backrow, &live, &[&SHARED_KEYS[..], &["vanilla"][..]].concat());
+        let face_down: BackrowView = from_json(json!({ "faceDown": true }));
+        assert_eq!(LiveCard::from_backrow(&face_down), None);
+    }
+
+    /// R243: a unit on the field (one the view gives a max health and keywords) wears its field statuses, the pieces
+    /// of its Starship and its grants, and none of a hand card's facts: no hand stats or keywords, no Temporary
+    /// count, no reason it cannot be played. Empty lists are no lists.
+    #[test]
+    fn r243_a_unit_wears_its_field_statuses_and_no_hand_cards_facts() {
+        let unit = LiveCard {
+            attack: Some(3),
+            health: Some(5),
+            max_health: Some(6),
+            keywords: Some(vec![Keyword::Taunt]),
+            berserk: Some(true),
+            frozen: Some(true),
+            frozen_forever: Some(true),
+            starship: Some(from_json(json!({
+                "pieces": [{ "defId": "a", "radiant": true }, { "defId": "b" }],
+            }))),
+            grants: Some(vec!["g".to_string()]),
+            play_reason: Some("no mana".to_string()),
+            preview: Some(Vec::new()),
+            enchantments: Some(Vec::new()),
+            marks: Some(Vec::new()),
+            ..LiveCard::default()
+        };
+        let facts = LiveFacts {
+            in_hand: Some(true),
+            tallies: Some(Vec::new()),
+            ..LiveFacts::default()
+        };
+        let source = live_source(&unit, None, None, &facts);
+        assert_eq!(source.chinese, Some(false));
+        let in_play = source.in_play.expect("in play");
+        assert!(in_play.hand_stats.is_none() && in_play.hand_keywords.is_none());
+        assert!(in_play.in_hand.is_none() && in_play.play_reason.is_none());
+        assert_eq!(
+            (in_play.berserk, in_play.frozen, in_play.frozen_forever),
+            (Some(true), Some(true), Some(true))
+        );
+        let pieces = in_play
+            .starship
+            .and_then(|ship| ship.list)
+            .expect("the Starship's pieces");
+        assert_eq!(
+            pieces.iter().map(|piece| piece.radiant).collect::<Vec<_>>(),
+            vec![true, false]
+        );
+        assert_eq!(in_play.grants, Some(vec!["g".to_string()]));
+        assert!(in_play.preview.is_none() && in_play.enchantments.is_none());
+        assert!(in_play.marks.is_none() && in_play.tallies.is_none());
+    }
+
+    /// R3821000: a unit's switch refusal reaches its face for the inspect notes, said once: where it is the
+    /// attack reason word for word (a Frozen unit's is both) only the attack reason stands. A card off the field
+    /// carries none.
+    #[test]
+    fn r3821000_a_units_switch_reason_reaches_its_face_unless_it_repeats_its_attack_reason() {
+        let in_play_of = |card: &LiveCard| {
+            live_source(card, None, None, &LiveFacts::default())
+                .in_play
+                .expect("in play")
+        };
+        let unit = |attack_reason: Option<&str>, switch_reason: Option<&str>| LiveCard {
+            max_health: Some(4),
+            keywords: Some(Vec::new()),
+            attack_reason: attack_reason.map(str::to_string),
+            switch_reason: switch_reason.map(str::to_string),
+            ..LiveCard::default()
+        };
+        const ACTED: &str = "that unit has already acted this turn";
+        const NO_DEFENSE: &str = "that unit cannot be in Defense Position";
+        const ASLEEP: &str = "that unit is summoning sick";
+        const FROZEN: &str = "that Unit is Frozen";
+
+        let alone = in_play_of(&unit(None, Some(ACTED)));
+        assert_eq!(
+            (alone.attack_reason.as_deref(), alone.switch_reason.as_deref()),
+            (None, Some(ACTED))
+        );
+
+        let both = in_play_of(&unit(Some(ASLEEP), Some(NO_DEFENSE)));
+        assert_eq!(
+            (both.attack_reason.as_deref(), both.switch_reason.as_deref()),
+            (Some(ASLEEP), Some(NO_DEFENSE))
+        );
+
+        let frozen = in_play_of(&unit(Some(FROZEN), Some(FROZEN)));
+        assert_eq!(
+            (frozen.attack_reason.as_deref(), frozen.switch_reason.as_deref()),
+            (Some(FROZEN), None)
+        );
+
+        let off_the_field = LiveCard {
+            keywords: Some(Vec::new()),
+            switch_reason: Some(ACTED.to_string()),
+            ..LiveCard::default()
+        };
+        assert_eq!(in_play_of(&off_the_field).switch_reason, None);
+    }
+
+    /// R243, #2437, R979000: a card off the field (keywords but no max health) wears a hand card's facts, its stats
+    /// and keywords, its Temporary count where it lies in a hand and the reason it cannot be played, and none of a
+    /// unit's statuses.
+    #[test]
+    fn r243_a_card_off_the_field_wears_its_hand_facts_and_no_field_statuses() {
+        let card = LiveCard {
+            attack: Some(3),
+            health: Some(5),
+            keywords: Some(vec![Keyword::Taunt]),
+            vanilla: Some(true),
+            chinese: Some(true),
+            preview: Some(from_json(json!([{ "label": "damage", "value": 7 }]))),
+            enchantments: Some(vec![Enchantment::CastOnDraw]),
+            marks: Some(from_json(json!([{ "mark": "m", "color": "purple" }]))),
+            berserk: Some(true),
+            frozen: Some(true),
+            frozen_forever: Some(true),
+            grants: Some(vec!["g".to_string()]),
+            play_reason: Some("no mana".to_string()),
+            ..LiveCard::default()
+        };
+        let tally = NamedTally {
+            name: "Level Up!".to_string(),
+            value: 1,
+            goal: 3,
+        };
+        let facts = LiveFacts {
+            in_hand: Some(true),
+            tallies: Some(vec![tally]),
+            ..LiveFacts::default()
+        };
+        let source = live_source(&card, None, None, &facts);
+        assert_eq!(source.chinese, Some(true));
+        let in_play = source.in_play.expect("in play");
+        let stats = in_play.hand_stats.expect("hand stats");
+        assert_eq!((stats.attack, stats.health), (3, 5));
+        assert_eq!(in_play.hand_keywords, Some(vec![Keyword::Taunt]));
+        assert_eq!((in_play.vanilla, in_play.in_hand), (Some(true), Some(true)));
+        assert_eq!(in_play.play_reason.as_deref(), Some("no mana"));
+        assert!(in_play.preview.is_some() && in_play.enchantments.is_some());
+        assert!(in_play.marks.is_some() && in_play.tallies.is_some());
+        assert!(in_play.berserk.is_none() && in_play.frozen.is_none());
+        assert!(in_play.frozen_forever.is_none() && in_play.grants.is_none());
+        // Where it lies outside a hand, it carries no Temporary count.
+        let elsewhere = live_source(&card, None, None, &LiveFacts::default());
+        assert!(elsewhere.in_play.expect("in play").in_hand.is_none());
+    }
 }

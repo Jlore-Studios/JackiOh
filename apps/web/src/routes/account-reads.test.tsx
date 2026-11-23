@@ -8,6 +8,7 @@ import { DECKBUILDER_RETRY } from "../game/deckbuilder/testids.ts";
 import { paths } from "../net/navigate.ts";
 import { settle } from "../test/settle.ts";
 import { at, meBody, signIn, stubServer, type Reply, type StubServer } from "../test/stubServer.ts";
+import { accountTestid } from "./account.tsx";
 import { playTestid } from "./play.tsx";
 
 const { App } = await import("../main.tsx");
@@ -56,6 +57,17 @@ describe("R3207003 one account read per screen", () => {
     await settle({ macrotasks: 5 });
 
     // R3206000's fresh-answer window already made this one before the screen took the gate's account.
+    expect(server.to("GET", ME_PATH)).toHaveLength(1);
+  });
+
+  it("R3733000 mounting /account sends one /api/auth/me", async () => {
+    const server = serve();
+    at(paths.account);
+    render(<App />);
+    // No profile is served, so the screen ends on its error with Try again; the count is what is read.
+    await screen.findByTestId(accountTestid.retry, undefined, SLOW);
+    await settle({ macrotasks: 5 });
+
     expect(server.to("GET", ME_PATH)).toHaveLength(1);
   });
 });

@@ -230,7 +230,8 @@ fn a_heroic_power_prints_only_the_power_it_rolled() {
     );
     assert_eq!(
         face.text.full,
-        "Indestructible\nExpedition Map\nActivate: Spend (3): Recruit a permanent."
+        // R3551002: Expedition Map costs (2) since S01, (1) less than its old (3).
+        "Indestructible\nExpedition Map\nActivate: Spend (2): Recruit a permanent."
     );
     assert!(face.printed.is_some(), "the collection's text is shown beside it");
     let radiant = in_play(
@@ -696,6 +697,28 @@ fn r3045000_the_hull_itself_and_every_other_fusion_are_named_as_they_were() {
     assert_eq!(printed("core-020", false, Locale::En).name, "Pointmaster");
 }
 
+/// R3941002 (issue #3941): a fused face prints its ingredients' keyword lines as one, at its head, each keyword
+/// once, and every other line in its place; a card that is no fusion prints its lines as they are.
+#[test]
+fn r3941002_a_fused_face_prints_its_ingredients_keyword_lines_as_one() {
+    // TG #41 Legacy: Speciesist, whose Cry line has no number (Core #2's gained one in #4353).
+    let parts = ["core-011", "traininggrounds-041", "core-003"].map(catalog_def);
+    let mut def = fused(4, &[&parts[0], &parts[1], &parts[2]]);
+    def.base.text = parts
+        .iter()
+        .map(|part| part.base.text.as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert_eq!(
+        face_of_def(&def, false, Locale::En, json!({})).text.full,
+        "Rush, First Strike, Taunt, Divine Shield, Reborn, Can't Defend\nCry: Destroy an enemy non-Human Unit."
+    );
+    assert_eq!(
+        printed("core-003", false, Locale::En).text.full,
+        "Taunt, Divine Shield, Reborn, Can't Defend"
+    );
+}
+
 #[test]
 fn r3045000_a_chinese_face_names_a_fused_dormant_starship_for_the_hull_in_chinese() {
     let hull = catalog_def(HULL);
@@ -788,19 +811,26 @@ fn r3134001_the_faces_the_balance_pass_put_over_the_limit_clamp() {
         "meditative-081",
         "meditativeplus-022",
     ];
+    // They clamped until issue #3941 wrote each its in-game words (R3941001).
+    let written =
+        |id: &str, radiant: bool| matches!(short_form_of(id, radiant), Some(ShortForm::Written { .. }));
     for id in both {
         for radiant in [false, true] {
-            assert_eq!(
-                short_form_of(id, radiant),
-                Some(ShortForm::Clamp),
-                "{id} {radiant}"
-            );
+            assert!(written(id, radiant), "{id} {radiant}");
         }
     }
-    for id in ["core-052", "meditative-009"] {
-        assert_eq!(short_form_of(id, true), Some(ShortForm::Clamp), "{id}");
-        assert_eq!(short_form_of(id, false), None, "{id}");
-    }
+    // Issue #4440 put an Activate in Meditative #9's Cry's place, and both its faces fit whole again.
+    assert_eq!(short_form_of("meditative-009", true), None);
+    assert_eq!(short_form_of("meditative-009", false), None);
+    // Issue #4440's "You have +N mana per turn" put both of Classic #28 Second Wind's faces a line over: each
+    // prints words written for it.
+    assert!(written("classic-028", false));
+    assert!(written("classic-028", true));
+    // Issue #3837: Silly Silas's base face gained "Summon this for your opponent." and clamped, and his
+    // Radiant face, Crater gone, fit. Issue #4353 took that line off and gave both faces "Float reduces
+    // cost.": the base face fits, and the Radiant face prints words written for it.
+    assert_eq!(short_form_of("core-052", false), None);
+    assert!(written("core-052", true));
     // Training Grounds #38's text is one short line since issue #3139.
     assert_eq!(short_form_of("traininggrounds-038", true), None);
 }
@@ -844,4 +874,471 @@ fn r3337001_an_anomaly_found_holding_a_board_names_it() {
         json!({ "inPlay": { "label": "WH" } }),
     );
     assert_eq!(other.anomaly, None);
+}
+
+#[test]
+fn r3556000_a_dormant_field_spell_in_the_backrow_wears_its_countdown() {
+    use jackioh_engine::testkit::scenario;
+    use jackioh_shared::face::live::{LiveCard, view_faces};
+    use jackioh_shared::face::words::Words;
+
+    jackioh_cards::register_all();
+    // p1 plays S+ #62 Overdrive Projector from hand: a Dormant Field Spell in the backrow.
+    let mut built = scenario(json!({
+        "seed": "r3556000-face",
+        "active": "p1",
+        "p1": { "hand": ["stinkyscapeplus-062"], "library": ["core-005", "core-005"] },
+        "p2": { "library": ["core-005", "core-005"] },
+    }));
+    built.play("stinkyscapeplus-062", json!({ "zone": 1 }));
+    let state = built.state().clone();
+    let view = jackioh_engine::view_for(&state, PlayerId::P1);
+    let backrow = view
+        .you
+        .backrow
+        .iter()
+        .flatten()
+        .find_map(|entry| match entry {
+            jackioh_engine::wire::BackrowView::Public(public) => Some(public.clone()),
+            _ => None,
+        })
+        .expect("the Projector stands face-up in lane 1");
+    assert_eq!(backrow.def_id, "stinkyscapeplus-062");
+    let live = LiveCard::from_backrow(&jackioh_engine::wire::BackrowView::Public(backrow))
+        .expect("a face-up backrow card");
+    assert_eq!(
+        live.slumber,
+        Some(jackioh_engine::state::Slumber { turns: Some(1) }),
+        "LiveCard carries the countdown off the backrow view"
+    );
+    let faces = view_faces(Words::new(Locale::En), &view);
+    let face = faces.get(&live.instance_id).expect("a face for the Projector");
+    assert!(
+        face.badges.iter().any(|badge| {
+            serde_json::to_value(badge.kind)
+                .unwrap()
+                .as_str()
+                .is_some_and(|kind| kind == "dormant")
+        }),
+        "its face wears the dormant badge"
+    );
+}
+
+// ---- The view's cards and the face's facts (#3513, the shared crate's eleventh shard) -------------------------
+
+/// A card the view lists in a pile, from its JSON.
+fn pile_card(value: Value) -> jackioh_engine::wire::CardView {
+    serde_json::from_value(value).expect("a card view")
+}
+
+fn named(
+    def_id: &str,
+    radiant: bool,
+    instance_id: Option<&str>,
+    cost: Option<i32>,
+) -> jackioh_shared::face::NamedCard {
+    jackioh_shared::face::NamedCard {
+        def_id: def_id.to_string(),
+        radiant,
+        instance_id: instance_id.map(str::to_string),
+        cost,
+    }
+}
+
+fn named_face(view: &jackioh_engine::wire::PlayerView, named: jackioh_shared::face::NamedCard) -> FaceModel {
+    face_of(apply(&FaceCall::Named {
+        view: Box::new(view.clone()),
+        named,
+        locale: Locale::En,
+    }))
+}
+
+fn view_faces(view: jackioh_engine::wire::PlayerView) -> indexmap::IndexMap<String, FaceModel> {
+    let FaceAnswer::Faces { faces } = apply(&FaceCall::View {
+        view: Box::new(view),
+        locale: Locale::En,
+    }) else {
+        panic!("faces")
+    };
+    faces
+}
+
+/// R243: a card an event names that the view still lists is drawn as it stands there, at the view's cost whatever
+/// the event's; one the view lists nowhere is its definition, on the face and at the cost the event names.
+#[test]
+fn r243_a_named_card_the_view_lists_is_drawn_as_it_stands() {
+    let view = a_view();
+    let jackioh_engine::wire::HandView::Cards(hand) = &view.you.hand else {
+        panic!("the viewer sees their own hand")
+    };
+    // A card of a fixed cost, whose gem prints its number (an X card's prints X).
+    let card = hand
+        .iter()
+        .find(|card| {
+            matches!(
+                catalog_def(&card.def_id).cost,
+                jackioh_engine::wire::CardCost::Fixed(_)
+            )
+        })
+        .expect("a hand card of a fixed cost");
+    let listed = named_face(
+        &view,
+        named(&card.def_id, false, Some(&card.instance_id), Some(99)),
+    );
+    assert_eq!(listed.cost.text, card.cost.to_string());
+    let unlisted = named_face(&view, named("core-020", true, None, Some(5)));
+    assert_eq!(
+        (
+            unlisted.def_id.as_str(),
+            unlisted.radiant,
+            unlisted.in_play,
+            unlisted.cost.text.as_str()
+        ),
+        ("core-020", true, true, "5")
+    );
+}
+
+/// R3045000, R243: a fused Dormant Starship an event names, which the view lists nowhere but whose definition it
+/// carries, is named for its hull.
+#[test]
+fn r3045000_a_named_fused_starship_the_view_only_defines_is_named_for_its_hull() {
+    let mut view = a_view();
+    let ship = fused(31, &[&catalog_def(HULL), &catalog_def(MINER)]);
+    view.defs = Some([(ship.id.clone(), ship.clone())].into_iter().collect());
+    assert_eq!(
+        named_face(&view, named(&ship.id, false, None, None)).name,
+        "Dormant Starship"
+    );
+}
+
+/// #2437, R2179001: a Temporary card the view lists outside a hand carries no count, though the viewer holds cards.
+#[test]
+fn r2179001_a_temporary_card_outside_a_hand_shows_no_count() {
+    let mut view = a_view();
+    view.you.graveyard.push(pile_card(json!({
+        "instanceId": "g1",
+        "defId": "meditative-022-1",
+        "radiant": false,
+        "cost": 1,
+        "keywords": [{ "kind": "Temporary", "n": 2 }],
+    })));
+    assert_eq!(
+        named_face(&view, named("meditative-022-1", false, Some("g1"), None)).temporary,
+        None
+    );
+    assert_eq!(view_faces(view)["g1"].temporary, None);
+}
+
+/// #2437, R2179001: in its owner's hand a Temporary card shows its count, a plain Temporary's 1.
+#[test]
+fn r2179001_a_temporary_card_in_hand_shows_its_count() {
+    let face = in_play(
+        "meditative-022-1",
+        false,
+        Locale::En,
+        json!({ "inPlay": { "inHand": true } }),
+    );
+    assert_eq!(face.temporary, Some(1));
+}
+
+/// R97: a card the view lists under the hidden sentinel, or under no id, has no face.
+#[test]
+fn r97_a_listed_card_under_the_sentinel_or_no_id_has_no_face() {
+    let mut view = a_view();
+    for (instance, def) in [("r1", "hidden"), ("r2", "")] {
+        view.opponent.resolving.push(pile_card(json!({
+            "instanceId": instance,
+            "defId": def,
+            "radiant": false,
+            "cost": 0,
+        })));
+    }
+    let faces = view_faces(view);
+    assert!(!faces.contains_key("r1") && !faces.contains_key("r2"));
+}
+
+/// R43, R243: a Heroic Power the view lists in a pile, with no power on the card, prints the power its hero's list
+/// rolled for that instance.
+#[test]
+fn r43_a_heroic_power_off_the_field_reads_its_rolled_power_off_the_heros_list() {
+    let mut view = a_view();
+    view.you.graveyard.push(pile_card(json!({
+        "instanceId": "h98",
+        "defId": "core-098",
+        "radiant": false,
+        "cost": 3,
+    })));
+    let unrolled = view_faces(view.clone())["h98"].text.full.clone();
+    view.you.hero.powers.push(
+        serde_json::from_value(json!({
+            "instanceId": "h98",
+            "defId": "core-098",
+            "name": "recruit",
+            "title": "Recruit",
+            "x": 3,
+            "usedThisTurn": false,
+        }))
+        .expect("a hero's power"),
+    );
+    let rolled = view_faces(view)["h98"].text.full.clone();
+    assert!(rolled.contains("Recruit a permanent"), "{rolled}");
+    assert_ne!(rolled, unrolled);
+}
+
+/// R280, R1301: a Chinese card's preview labels in play are its template's Chinese.
+#[test]
+fn r1301_a_chinese_cards_preview_labels_are_its_templates_chinese() {
+    let face = in_play(
+        "core-022",
+        false,
+        Locale::En,
+        json!({ "chinese": true, "inPlay": { "preview": [{ "label": "remember it", "value": 2 }] } }),
+    );
+    let labels: Vec<&str> = face.values.iter().map(|value| value.label.as_str()).collect();
+    assert_eq!(labels, vec!["记住它"]);
+}
+
+/// Issue #170: Glitch's gem prints its glyphs, never a number.
+#[test]
+fn glitchs_gem_prints_its_glyphs() {
+    let face = printed("classic-t-glitch", false, Locale::En);
+    assert_eq!(face.cost.text, jackioh_shared::face::glitch::glitch_words().cost);
+}
+
+/// MD-B15, R923: in play a card's tags are the view's where it gives them (a granted tag), not its definition's.
+#[test]
+fn r923_in_play_the_views_tags_are_the_cards() {
+    assert!(
+        printed("core-022", false, Locale::En).tags.is_empty(),
+        "PREMISE: the catalog's Carnivorous Cube has no tag"
+    );
+    let face = in_play("core-022", false, Locale::En, json!({ "tags": ["Human"] }));
+    assert_eq!(face.tags, vec![jackioh_engine::wire::Tag::Human]);
+}
+
+/// R279: a face mentions each card its text names other than itself, once.
+#[test]
+fn r279_a_text_mentions_the_cards_it_names() {
+    let face = printed("core-015", false, Locale::En);
+    let mentioned: Vec<&str> = face
+        .mentions
+        .iter()
+        .map(|mention| mention.def_id.as_str())
+        .collect();
+    assert_eq!(mentioned, vec!["core-t-rush"]);
+}
+
+/// R243: a card in play the view gives no keywords of its own (no live stats, none in hand) gains none, its text
+/// gone or not.
+#[test]
+fn r243_a_card_in_play_with_no_keywords_of_its_own_gains_none() {
+    let face = in_play(
+        "core-020",
+        false,
+        Locale::En,
+        json!({ "inPlay": { "vanilla": true } }),
+    );
+    assert!(face.gained.is_empty(), "{:?}", face.gained);
+}
+
+/// R1848000: a unit Frozen forever says so; one the view does not say it of does not.
+#[test]
+fn r1848000_a_unit_frozen_forever_says_so() {
+    assert!(
+        in_play(
+            "core-008",
+            false,
+            Locale::En,
+            json!({ "inPlay": { "frozenForever": true } })
+        )
+        .frozen_forever
+    );
+    assert!(!in_play("core-008", false, Locale::En, json!({})).frozen_forever);
+}
+
+/// A face shortens only the text it prints: in play with other words (its text gone) it has no short form; and
+/// only a clamped form clamps.
+#[test]
+fn a_short_form_is_the_printed_texts_and_only_a_clamped_one_clamps() {
+    assert!(
+        printed("core-093", false, Locale::En).has_short_form,
+        "PREMISE: core-093's base face has a short form"
+    );
+    let vanilla = in_play(
+        "core-093",
+        false,
+        Locale::En,
+        json!({ "inPlay": { "vanilla": true } }),
+    );
+    assert!(!vanilla.has_short_form);
+    assert!(printed("stinkyscape-116", false, Locale::En).clamp);
+    assert!(!printed("core-065", false, Locale::En).clamp);
+    assert!(!printed("core-020", false, Locale::En).clamp);
+}
+
+/// R3941001 (issue #3941): a face over the limit prints words written for it, filled as its whole text is, in the
+/// collection and in play alike, and its whole text stands beside them. A Radiant face marks what its base
+/// face's written words lack (R277).
+#[test]
+fn r3941001_a_written_face_prints_its_words_filled_and_keeps_its_whole_text() {
+    let face = printed("meditative-081", false, Locale::En);
+    assert!(face.has_short_form && !face.clamp);
+    assert_eq!(
+        face.short.as_ref().map(|short| short.full.as_str()),
+        Some(
+            "Shuffle a copy of this and of each card in your hand into your deck. Draw 1 card.\n\
+             Embiggened (1): Copies 25% Radiant."
+        )
+    );
+    assert!(
+        face.text
+            .full
+            .starts_with("Shuffle a copy of each card in your hand, and of this, into your deck."),
+        "{}",
+        face.text.full
+    );
+    // In play, its numbers as printed, it prints the same words (a tuned face prints its whole text, R386).
+    let played = in_play("meditative-081", false, Locale::En, json!({}));
+    assert_eq!(
+        played.short.map(|short| short.full),
+        face.short.map(|short| short.full)
+    );
+    let radiant = printed("stinkyscapeplus-089", true, Locale::En);
+    let spans = radiant.short.expect("a written Radiant face").spans;
+    assert!(
+        marked(&spans).iter().any(|mark| mark.contains("Radiant")),
+        "{spans:?}"
+    );
+}
+
+/// R3941001: a face's written words are its catalog text's, so a face printing other text under the same id (a
+/// shipped patch's older face on the Patch notes page, a replay's older catalog) clamps as it did.
+#[test]
+fn r3941001_an_older_text_of_a_written_face_clamps() {
+    let mut older = catalog_def("meditative-081");
+    older.base.text = format!("{} Older.", older.base.text);
+    let face = face_of_def(&older, false, Locale::En, json!({}));
+    assert!(face.clamp && face.short.is_none());
+    assert!(
+        face_of_def(&catalog_def("meditative-081"), false, Locale::En, json!({}))
+            .short
+            .is_some()
+    );
+}
+
+/// R3941001: a face printed in Chinese whose written form has no Chinese words of its own clamps, as it did.
+#[test]
+fn r3941001_a_chinese_face_without_written_words_clamps() {
+    let face = printed("meditative-081", false, Locale::ZhCn);
+    assert!(face.has_short_form && face.clamp && face.short.is_none());
+}
+
+/// R3941001: a written face prints only the numbers its face declares, so the view fills each one, in either
+/// language.
+#[test]
+fn r3941001_every_written_face_names_only_its_faces_numbers() {
+    use jackioh_shared::face::data::{SHORT_FORMS, ShortForm};
+    ready();
+    let keys = |text: &str| -> Vec<String> {
+        let mut out: Vec<String> = text
+            .split('{')
+            .skip(1)
+            .filter_map(|rest| rest.split(['}', '|']).next())
+            .map(str::to_string)
+            .collect();
+        out.sort();
+        out.dedup();
+        out
+    };
+    let mut written = 0;
+    for (id, (base, radiant)) in SHORT_FORMS {
+        let def = registered_catalog()
+            .get(*id)
+            .unwrap_or_else(|| panic!("{id} is in the catalog"));
+        for (form, face) in [(base, &def.base), (radiant, &def.radiant)] {
+            let Some(ShortForm::Written { en, zh }) = form else {
+                continue;
+            };
+            written += 1;
+            let declared = keys(&face.text);
+            for words in std::iter::once(*en).chain(*zh) {
+                let named = keys(words);
+                assert!(
+                    named.iter().all(|key| declared.contains(key)),
+                    "{id}: {named:?} not all in {declared:?}"
+                );
+            }
+        }
+    }
+    assert!(written > 0, "PREMISE: some face has written words");
+}
+
+/// R3941001: a written face says what the face does in fewer words, never a rule its whole text lacks.
+/// Short forms must not mislead on targets, conditions or outcomes.
+#[test]
+fn r3941001_written_words_describe_their_cards_effect_honestly() {
+    // S+ #61.1 Shawarma Law: a Unit eats at most three, so no fourth Shawarma freezes it (R4154302).
+    for radiant in [false, true] {
+        let face = printed("stinkyscapeplus-061-1", radiant, Locale::En);
+        let short = face.short.expect("Shawarma Law has written words").full;
+        assert!(
+            short.contains("no more"),
+            "Shawarma Law (radiant: {radiant}) must say the Units stop at three, got: {short}"
+        );
+        assert!(
+            !short.contains("Freeze"),
+            "Shawarma Law (radiant: {radiant}) must not promise a Freeze, got: {short}"
+        );
+    }
+
+    // S+ #55 Thorium Reactor: blows up on hit; only its own Activate discard skips the roll.
+    for radiant in [false, true] {
+        let face = printed("stinkyscapeplus-055", radiant, Locale::En);
+        let short = face.short.expect("Thorium Reactor has written words").full;
+        assert!(
+            short.contains("blow up"),
+            "Thorium Reactor (radiant: {radiant}) must state blow up outcome, got: {short}"
+        );
+        assert!(
+            short.contains("Activate: Discard a Thorium: skip it"),
+            "Thorium Reactor (radiant: {radiant}) must state Activate skip condition, got: {short}"
+        );
+        assert!(
+            !short.contains("unless you discarded a Thorium"),
+            "Thorium Reactor (radiant: {radiant}) must not imply external discards count, got: {short}"
+        );
+    }
+
+    // S+ #123 Oct: allies share one single nullification pool per card (R3550004), not 'their first'.
+    let oct_base = printed("stinkyscapeplus-123", false, Locale::En);
+    let oct_short = oct_base.short.expect("Oct base has written words").full;
+    assert!(
+        oct_short.contains("Allies ignore the first"),
+        "Oct base must state shared pool ('the first'), got: {oct_short}"
+    );
+    assert!(
+        !oct_short.contains("their first"),
+        "Oct base must not suggest separate per-ally pools ('their first'), got: {oct_short}"
+    );
+
+    // C+ #34 Memory Leak: locks only after a Unit or Field Spell is played, not Traps. Since issue #4285
+    // took its Crater its base face fits whole, so it prints its own words, which say so.
+    let leak_base = printed("classicplus-034", false, Locale::En);
+    assert!(leak_base.short.is_none(), "Memory Leak base fits whole");
+    let leak_text = leak_base.text.full;
+    assert!(
+        leak_text.contains("Unit or Field Spell"),
+        "Memory Leak base must specify Unit or Field Spell, got: {leak_text}"
+    );
+
+    // S #39 The Narcor Project (Radiant): both Narcor and Red Narcor can be discarded for Activate.
+    let narcor_radiant = printed("stinkyscape-039", true, Locale::En);
+    let narcor_short = narcor_radiant
+        .short
+        .expect("The Narcor Project radiant has written words")
+        .full;
+    assert!(
+        narcor_short.contains("Discard a Narcor or Red Narcor:"),
+        "The Narcor Project radiant must permit either Narcor or Red Narcor, got: {narcor_short}"
+    );
 }

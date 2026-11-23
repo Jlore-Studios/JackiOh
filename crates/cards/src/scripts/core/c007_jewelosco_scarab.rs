@@ -90,7 +90,6 @@ mod tests {
     }
 
     /// The def ids a Discover put on offer, in the order they were offered.
-    // Differs from Scenario::offered: the open Discover's def ids, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         discover(s)
             .options
@@ -130,7 +129,6 @@ mod tests {
                 assert!(!def.token);
                 assert!(!def.tags.contains(&Tag::Token));
                 // §5.1: a random pool never offers the card that generated it; the engine adds that.
-                assert_ne!(def.index, "7");
                 assert_ne!(def.id, "core-007");
             }
 
@@ -206,7 +204,7 @@ mod tests {
                 let def = crate::card_def(id);
                 assert_eq!(def.cost, CardCost::Fixed(3));
                 assert!(!def.token);
-                assert_ne!(def.index, "7");
+                assert_ne!(def.id, "core-007");
             }
 
             let chosen = ids[0].clone();

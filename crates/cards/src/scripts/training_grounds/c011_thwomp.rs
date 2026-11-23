@@ -1,8 +1,8 @@
-//! TG #11 Thwomp (SPEC §8.11 row TG 11; §4.4, R81, R90, R781001): (2) Spell, Common, a card of the
+//! TG #11 Thwomp (SPEC §8.11 row TG 11; §4.4, R81, R90, R4353001): (2) Spell, Common, a card of the
 //! held Training Grounds set (R1420, R2194000).
 //!   Base:    "Deal {damage} damage to a Unit." — 10.
 //!   Radiant: the same text — 100.
-//! C #12 Book of Blood without Lifesteal: target unit (not hero, R90; R781001 Immutable). Spell Damage adds (§4.4 step 0).
+//! C #12 Book of Blood without Lifesteal: target unit (not hero, R90; an Immutable one too, R4353001). Spell Damage adds (§4.4 step 0).
 
 use jackioh_engine::prelude::*;
 
@@ -47,10 +47,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": card.id }] })
-    }
-
     /// What the last step's hits dealt to `card` (`damage` events, after Armor and the shield): read
     /// off the events, since a lethal hit leaves no damage on a Unit gone to the graveyard.
     fn dealt(s: &Scenario, card: &CardInstance) -> Vec<i32> {
@@ -63,19 +59,6 @@ mod tests {
             .collect()
     }
 
-    /// Every selection a legal play of the Thwomp offers.
-    // Differs from Scenario::offered: one card's play targets, not the seat's whole legal list.
-    fn offered(s: &Scenario) -> Vec<Selection> {
-        let thwomp = s.card(THWOMP).id.clone();
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == thwomp => targets.unwrap_or_default(),
-                _ => Vec::new(),
-            })
-            .collect()
-    }
-
     mod base {
         use super::*;
 
@@ -83,7 +66,7 @@ mod tests {
         fn it_offers_every_unit_on_both_sides_and_no_hero() {
             let s = board(false, json!([GREASER]), json!([GREASER]));
             let (mine, theirs) = (s.unit_at(P1, 1), s.unit_at(P2, 1));
-            let offered = offered(&s);
+            let offered = s.play_targets(THWOMP);
             for unit in [&mine, &theirs] {
                 assert!(offered.contains(&Selection::Instance {
                     instance_id: unit.id.clone()
@@ -96,7 +79,7 @@ mod tests {
         fn one_hit_of_ten_on_the_chosen_unit() {
             let mut s = board(false, json!([]), json!([BIG, GREASER]));
             let (big, other) = (s.unit_at(P2, 1), s.unit_at(P2, 2));
-            s.play(THWOMP, on(&big));
+            s.play(THWOMP, pick::targets(pick::instance(&big)));
             assert_eq!(dealt(&s, &big), vec![10], "one hit of 10");
             assert!(dealt(&s, &other).is_empty());
         }
@@ -105,7 +88,7 @@ mod tests {
         fn its_casters_spell_damage_raises_it() {
             let mut s = board(false, json!([ARCH_MAGE]), json!([BIG]));
             let big = s.unit_at(P2, 1);
-            s.play(THWOMP, on(&big));
+            s.play(THWOMP, pick::targets(pick::instance(&big)));
             assert_eq!(dealt(&s, &big), vec![13]);
         }
 
@@ -113,7 +96,7 @@ mod tests {
         fn armor_lowers_it() {
             let mut s = board(false, json!([]), json!([ARMORED]));
             let armored = s.unit_at(P2, 1);
-            s.play(THWOMP, on(&armored));
+            s.play(THWOMP, pick::targets(pick::instance(&armored)));
             assert_eq!(dealt(&s, &armored), vec![3], "10 less Armor 7");
         }
 
@@ -121,7 +104,7 @@ mod tests {
         fn a_divine_shield_takes_it_whole_and_is_spent() {
             let mut s = board(false, json!([]), json!([SHIELDED]));
             let shielded = s.unit_at(P2, 1);
-            s.play(THWOMP, on(&shielded));
+            s.play(THWOMP, pick::targets(pick::instance(&shielded)));
             s.expect_in_zone(&shielded, "field");
             assert_eq!(s.card(&shielded).damage, 0);
             assert_eq!(s.card(&shielded).divine_shield_spent, Some(true));
@@ -132,7 +115,7 @@ mod tests {
             let mut s = board(false, json!([]), json!([BIG]));
             assert_eq!(upgrade_number(&mut s, THWOMP, "damage"), 12);
             let big = s.unit_at(P2, 1);
-            s.play(THWOMP, on(&big));
+            s.play(THWOMP, pick::targets(pick::instance(&big)));
             assert_eq!(dealt(&s, &big), vec![12]);
         }
     }
@@ -144,7 +127,7 @@ mod tests {
         fn one_hit_of_one_hundred() {
             let mut s = board(true, json!([]), json!([BIG]));
             let big = s.unit_at(P2, 1);
-            s.play(THWOMP, on(&big));
+            s.play(THWOMP, pick::targets(pick::instance(&big)));
             assert_eq!(dealt(&s, &big), vec![100]);
         }
     }

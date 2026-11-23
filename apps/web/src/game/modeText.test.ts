@@ -5,14 +5,26 @@
 // cardModes.json, and the ones an engine prompt asks as a card resolves, built at run time and so
 // listed here by hand, each from its script.
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { CATALOG } from "@jackioh/cards";
 import { SHIPPED_SETS } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
+import zhCN from "../i18n/zh-CN.json";
 import CARD_MODES from "./cardModes.json";
 import { DISCOVER_OPTION_LIMIT } from "./contract.ts";
-import { modeText } from "./modeText.ts";
+import { MODE_TEXT, RADIANT_MODE_TEXT, modeText } from "./modeText.ts";
 
 type Face = "base" | "radiant";
+
+const NUMBER_WORD = "once|twice|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty";
+const RAW_X_MULTIPLIER = new RegExp(
+  String.raw`\b(?:\d+(?:X|\s+times?\s+X)|(?:${NUMBER_WORD})(?:\s+times?)?\s+X)\b`,
+  "gi",
+);
 
 /** The card scripts' declared Choose ones, by card and face; `"//"` says where the file comes from. */
 const DECLARED = CARD_MODES as unknown as Readonly<Record<string, string | Partial<Record<Face, readonly (readonly string[])[]>>>>;
@@ -39,12 +51,14 @@ const ENGINE_MODES: readonly { id: string; faces: readonly Face[]; options: read
   // crates/cards/src/scripts/core/c051_kys_private_tutor.rs: TypeOption, then BracketOption.
   { id: "core-051", faces: ["base", "radiant"], options: ["Spell", "Unit", "Field Spell", "Trap"] },
   { id: "core-051", faces: ["base", "radiant"], options: ["0-1", "2", "3", "4+"] },
-  // crates/engine/src/subsystems/hero_power.rs: `discover_power` offers three of HERO_POWER_NAMES (R3134002).
+  // crates/engine/src/subsystems/hero_power.rs: `discover_power` offers three of the fourteen names (R3134002, R3551002).
   {
     id: "core-098",
     faces: ["base", "radiant"],
-    options: ["recruit", "draw", "ping", "burn", "rush", "felinor", "discover", "stitching", "armor", "insect", "brainstorm", "pluck", "tricks"],
+    options: ["recruit", "draw", "ping", "burn", "rush", "felinor", "discover", "stitching", "armor", "insect", "brainstorm", "pluck", "tricks", "endTimes"],
   },
+  // crates/cards/src/scripts/meditative/c054_money_machine.rs: the Cry's declared print (R3551001).
+  { id: "meditative-054", faces: ["base", "radiant"], options: ["coin", "warhero"] },
   // crates/cards/src/scripts/core/c065_masochism_mask.rs: base_options, radiant_options ("lose" and its `loss`).
   { id: "core-065", faces: ["base"], options: ["exile bottom", "lose 3", "summon Spikey Pillow"] },
   { id: "core-065", faces: ["radiant"], options: ["nothing", "exile bottom", "lose 3", "summon Spikey Pillow"] },
@@ -66,6 +80,34 @@ const ENGINE_MODES: readonly { id: string; faces: readonly Face[]; options: read
   { id: "classicplus-062", faces: ["base", "radiant"], options: ["0,0", "2,1", "4,3", "done"] },
 ];
 
+describe("declared numbers in mode words", () => {
+  it("a card with params uses placeholders for its X multipliers", () => {
+    const violations = ([
+      ["base", MODE_TEXT],
+      ["radiant", RADIANT_MODE_TEXT],
+    ] as const).flatMap(([face, map]) =>
+      Object.entries(map).flatMap(([id, options]) =>
+        CATALOG[id]?.params === undefined
+          ? []
+          : Object.entries(options).flatMap(([option, text]) =>
+              Object.values(text).flatMap((words) =>
+                (words.match(RAW_X_MULTIPLIER) ?? []).map(() => `${id} ${face} ${option}: ${words}`),
+              ),
+            ),
+      ),
+    );
+
+    expect(violations).toEqual([]);
+    expect("{heal}X".match(RAW_X_MULTIPLIER), "a declared-number placeholder is allowed").toBeNull();
+    expect("X".match(RAW_X_MULTIPLIER), "plain X is allowed").toBeNull();
+    expect("X plus 1".match(RAW_X_MULTIPLIER), "the fixed X plus 1 form is allowed").toBeNull();
+    expect("4X".match(RAW_X_MULTIPLIER)).toEqual(["4X"]);
+    expect("3 times X".match(RAW_X_MULTIPLIER)).toEqual(["3 times X"]);
+    expect("twice X".match(RAW_X_MULTIPLIER)).toEqual(["twice X"]);
+    expect("four times X".match(RAW_X_MULTIPLIER)).toEqual(["four times X"]);
+  });
+});
+
 describe("#2646 every short choice card has its words", () => {
   it("#2646 every declared Choose one of DISCOVER_OPTION_LIMIT options or fewer has MODE_TEXT's words", () => {
     const missing = Object.entries(DECLARED).flatMap(([id, faces]) =>
@@ -74,11 +116,75 @@ describe("#2646 every short choice card has its words", () => {
     expect(missing).toEqual([]);
     // The export is read, and holds the cards it should: Pocket Chaos's three on both faces.
     expect(DECLARED["core-087"]).toMatchObject({ base: [["health", "board", "library"]] });
+    // R711000: every visited option's label and detail has a zh-CN entry, on both faces.
+    const untranslated = Object.entries(DECLARED).flatMap(([id, faces]) =>
+      typeof faces === "string"
+        ? []
+        : (["base", "radiant"] as const).flatMap((face) =>
+            (faces[face] ?? []).flatMap((options) =>
+              options.length <= DISCOVER_OPTION_LIMIT && !drawnOtherwise(options)
+                ? options.flatMap((option) => {
+                    const text = modeText(id, option, face === "radiant");
+                    const words = text.detail === undefined ? [text.label] : [text.label, text.detail];
+                    return words.filter((word) => !Object.hasOwn(zhCN, word)).map((word) => `${id} ${face} ${option}: ${word}`);
+                  })
+                : [],
+            ),
+          ),
+    );
+    expect(untranslated).toEqual([]);
   });
 
   it("#2646 every option an engine Choose one offers has MODE_TEXT's words", () => {
     const missing = ENGINE_MODES.flatMap(({ id, faces, options }) => faces.flatMap((face) => options.flatMap((option) => (modeText(id, option, face === "radiant").detail === undefined ? [`${id} ${face} ${option}`] : []))));
     expect(missing).toEqual([]);
+    // R711000: every engine-offered option's label and detail has a zh-CN entry, on both faces (Heroic Power's 14 among them).
+    const untranslated = ENGINE_MODES.flatMap(({ id, faces, options }) =>
+      faces.flatMap((face) =>
+        options.flatMap((option) => {
+          const text = modeText(id, option, face === "radiant");
+          const words = text.detail === undefined ? [text.label] : [text.label, text.detail];
+          return words.filter((word) => !Object.hasOwn(zhCN, word)).map((word) => `${id} ${face} ${option}: ${word}`);
+        }),
+      ),
+    );
+    expect(untranslated).toEqual([]);
+  });
+
+  it("R711000 Heroic Power's prompt names each power as its Chinese face does", () => {
+    const faces = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../../crates/cards/chinese.json"), "utf8")) as Record<
+      string,
+      { base: string; radiant: string }
+    >;
+    const heroic = faces["core-098"];
+    expect(heroic).toBeDefined();
+    if (heroic === undefined) throw new Error("core-098 has no entry in crates/cards/chinese.json");
+    // Each base power's dictionary name is printed on the card's Chinese face, so the prompt and the card agree.
+    const base = [
+      "Expedition Map",
+      "Life Tap",
+      "Ping",
+      "Steady Shot",
+      "Ranching",
+      "Cat Cafe",
+      "Witness Value",
+      "Stitching",
+      "Armor Up",
+      "Die Insect",
+      "KY Brainstorm",
+      "Pluck",
+      "Terminus Tricks",
+      "End Times",
+    ];
+    for (const name of base) {
+      const shown: unknown = zhCN[name as keyof typeof zhCN];
+      expect(typeof shown, `no zh-CN entry for Heroic Power "${name}"`).toBe("string");
+      expect(heroic.base, `Heroic Power "${name}" reads differently on its Chinese face`).toContain(shown as string);
+    }
+    // The Radiant face renames Armor Up to Tank Up (R3134002); its name agrees the same way.
+    const tankUp: unknown = zhCN["Tank Up"];
+    expect(typeof tankUp, 'no zh-CN entry for Heroic Power "Tank Up"').toBe("string");
+    expect(heroic.radiant, 'Heroic Power "Tank Up" reads differently on its Radiant Chinese face').toContain(tankUp as string);
   });
 
   it("#2646 an option nobody wrote words for still has none, so the tests above can fail", () => {

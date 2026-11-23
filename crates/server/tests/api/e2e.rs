@@ -528,6 +528,27 @@ mod r144_the_reseed_at_boot {
         );
     }
 
+    /// R144, R3210000 (#4221): an account heard from just before a reseed is online again at its first
+    /// signed-in request after it, as after a boot, though the router's touch wrote within its
+    /// `PRESENCE_TOUCH_EVERY_MS`: the reseed wiped that row (spec 57's challenge was 409 `offline`).
+    #[tokio::test(start_paused = true)]
+    async fn a_reseed_leaves_no_touch_mark_so_the_next_request_writes_presence() {
+        let app = harness().await;
+        seed_e2e_fixtures(&app).await.expect("the reseed");
+        let (status, _headers, _me) = call(&app, "GET", "/api/auth/me", Some(p1().token), Value::Null).await;
+        assert_eq!(status, 200);
+        seed_e2e_fixtures(&app).await.expect("the second reseed");
+
+        let (status, _headers, me) = call(&app, "GET", "/api/auth/me", Some(p1().token), Value::Null).await;
+        assert_eq!(status, 200);
+        let id = me["profile"]["id"].as_str().unwrap_or_default().to_string();
+        let seen = store!(app.db, presence_last_seen(std::slice::from_ref(&id)));
+        assert!(
+            seen.contains_key(&id),
+            "the request after the reseed wrote {id}'s presence: {seen:?}"
+        );
+    }
+
     #[tokio::test(start_paused = true)]
     async fn seeds_the_good_expired_and_exhausted_codes_and_never_the_missing_one() {
         let app = harness().await;
@@ -820,7 +841,7 @@ mod r1310000_going_live {
             let profile = store!(app.db, profiles_get_by_user_id(fixture.user_id))
                 .unwrap_or_else(|| panic!("{} has a profile", fixture.user_id));
             let owned = store!(app.db, collection_get(&profile.id)).len();
-            let active = fixture.user_id == "e2e-p1" || fixture.user_id == "e2e-p2";
+            let active = fixture.status == jackioh_server::api::e2e::E2EAccountStatus::Active;
             assert_eq!(
                 owned,
                 if active { every_card(&app) } else { 0 },
@@ -950,6 +971,32 @@ mod r144_the_reseed_on_demand {
         }))
         .await;
     }
+
+    /// `E2E` as `1` or `true` fills every unset variable with its placeholder, so an environment of
+    /// that flag alone boots (`e2e/README.md`); unset, `0` or `false`, the boot is `load_env`'s exactly
+    /// and a missing variable fails it by name, never filled in.
+    #[test]
+    fn r144_only_e2e_on_fills_the_placeholders() {
+        for on in ["1", "true"] {
+            let source = IndexMap::from([("E2E".to_string(), on.to_string())]);
+            let env = app::load_server_env(&source).unwrap_or_else(|error| panic!("E2E={on}: {error}"));
+            assert!(env.e2e, "E2E={on}");
+        }
+        let mut without_pepper = production_source();
+        without_pepper.shift_remove("CODE_PEPPER");
+        without_pepper.shift_remove("NODE_ENV");
+        for off in [None, Some("0"), Some("false")] {
+            let mut source = without_pepper.clone();
+            if let Some(off) = off {
+                source.insert("E2E".to_string(), off.to_string());
+            }
+            let refused = app::load_server_env(&source).expect_err("no CODE_PEPPER");
+            assert!(
+                refused.to_string().contains("CODE_PEPPER"),
+                "E2E={off:?}: {refused}"
+            );
+        }
+    }
 }
 
 // R143
@@ -1069,7 +1116,8 @@ mod r143_the_optional_seed {
     #[tokio::test(start_paused = true)]
     async fn still_mints_a_seed_when_none_is_supplied_9_3_the_server_owns_it() {
         let h = queue_harness(true).await;
-        for index in 0..h.tokens.len() {
+        // The first two active fixtures make one pair (the 2v2's other two, R3731000, stay out).
+        for index in 0..2 {
             let (status, _) = enqueue(&h, index, None).await;
             assert_eq!(status, 200);
         }

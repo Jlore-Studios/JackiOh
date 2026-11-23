@@ -8,19 +8,15 @@ import { describe, expect, it } from "vitest";
 
 import { ANIMATIONS, planEntries, type AnimationEntry } from "../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
+import { envOf } from "../../test/signatures.ts";
 import { must } from "../../test/stubServer.ts";
-import { FX_INTENSITY_SCALE, FX_MOTIF_TITHE_MAX, FX_MOTIF_TRAUMA } from "../constants.ts";
+import { FX_MOTIF_TITHE_MAX, FX_MOTIF_TRAUMA } from "../constants.ts";
 import { planFx } from "../cues.ts";
 import { FLAVOR_LOOKS } from "../flavors.ts";
-import { createFxMemory } from "../memory.ts";
 import type { FxCue, FxPlanEnv } from "../types.ts";
 import type { MotifSpec } from "./build.ts";
 import { planMotif } from "./index.ts";
 import type { DrawnMotif } from "./names.ts";
-
-function envOf(): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
-}
 
 function entryFor(events: readonly GameEvent[], view: PlayerView): AnimationEntry {
   const entries = planEntries(events, view, false);

@@ -209,7 +209,7 @@ fn render(found: &Inspection) -> String {
             out.push_str(&format!("   line: {}\n", found.line_described.join(" | ")));
             out.push_str(&format!(
                 "   stats nodes {} determinizations {} lines {} simErrors {} simPanics {} stoppedBy {} \
-                 replied {} worldsScored {} score {}\n",
+                 replied {} worldsScored {} replaysCut {} score {}\n",
                 stats.nodes,
                 stats.determinizations,
                 stats.lines,
@@ -218,6 +218,7 @@ fn render(found: &Inspection) -> String {
                 stats.stopped_by.as_str(),
                 stats.replied,
                 stats.worlds_scored,
+                stats.replays_cut,
                 to_fixed(stats.score, EVAL_DECIMALS)
             ));
             if found.fell_short {
@@ -429,6 +430,7 @@ mod tests {
             "stoppedBy ",
             " replied ",
             " worldsScored ",
+            " replaysCut ",
         ] {
             assert!(text.contains(needle), "{needle:?} missing from:\n{text}");
         }

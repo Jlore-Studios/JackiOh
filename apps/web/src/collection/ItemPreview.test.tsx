@@ -131,7 +131,6 @@ describe("R2730000 holding or inspecting an item previews it fullscreen", () => 
   it("R2730000 holding a grid card opens its preview, not its view; a click opens the view", async () => {
     render(<OwnedCards collection={collectionOf()} defs={[LOCKED_CARD]} />);
     await settle();
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     const card = screen.getByTestId(T.card("core-002"));
     expect(card).toHaveAttribute("data-owned", "false");
 
@@ -157,7 +156,6 @@ describe("R2730000 holding or inspecting an item previews it fullscreen", () => 
       </ViewerFullArt>,
     );
     await settle();
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.click(screen.getByTestId(T.card("core-001")));
     const item = screen.getByTestId(T.stripItem("foil-galaxy"));
 
@@ -196,7 +194,6 @@ describe("R2730000 holding or inspecting an item previews it fullscreen", () => 
       </ViewerFullArt>,
     );
     await settle();
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.click(screen.getByTestId(T.card("core-001")));
     fireEvent.keyDown(screen.getByTestId(T.stripItem("foil-galaxy")), { key: "I" });
     expect(screen.getByTestId(T.preview)).toHaveAttribute("data-item", "foil-galaxy");
@@ -205,7 +202,6 @@ describe("R2730000 holding or inspecting an item previews it fullscreen", () => 
     cleanup();
     render(<OwnedCards collection={collectionOf()} defs={[LOCKED_CARD]} />);
     await settle();
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.keyDown(screen.getByTestId(T.card("core-002")), { key: "F10", shiftKey: true });
     expect(screen.getByTestId(T.preview)).toHaveAttribute("data-item", "core-002");
   });
@@ -258,7 +254,6 @@ describe("R2730000 holding or inspecting an item previews it fullscreen", () => 
       </>,
     );
     await settle();
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
 
     // No preview open: no spend button anywhere.
     expect(document.querySelector('[data-testid^="collection-token-offer-"]')).toBeNull();

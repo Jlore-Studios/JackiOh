@@ -15,7 +15,7 @@ use serde_json::{Map, Value};
 
 use jackioh_engine::{
     ActionBody, ActionType, Aim, CombatForecast, EmoteId, PlagueSpend, PlayerId, PlayerView, PortraitId,
-    PromptKind, RevealAt, Row, Selection, ZoneChoice, is_emote_id, parse_aim,
+    PromptKind, RevealAt, Selection, ZoneChoice, is_emote_id, is_player_id, is_row, parse_aim,
 };
 
 use crate::db::store::MatchClocks;
@@ -385,23 +385,6 @@ pub(crate) fn is_int(value: Option<&Value>) -> Option<f64> {
     }
 }
 
-fn is_row(value: Option<&Value>) -> Option<Row> {
-    match value.and_then(Value::as_str) {
-        Some("units") => Some(Row::Units),
-        Some("backrow") => Some(Row::Backrow),
-        _ => None,
-    }
-}
-
-/// `"p1"` or `"p2"`; the co-op parser reads a ping's side with it (`duos::protocol`).
-pub(crate) fn is_player_id(value: Option<&Value>) -> Option<PlayerId> {
-    match value.and_then(Value::as_str) {
-        Some("p1") => Some(PlayerId::P1),
-        Some("p2") => Some(PlayerId::P2),
-        _ => None,
-    }
-}
-
 fn malformed(reason: impl Into<String>) -> MalformedMessage {
     MalformedMessage {
         reason: reason.into(),
@@ -471,7 +454,7 @@ fn parse_selections(value: &Value) -> Option<Vec<Selection>> {
 /// Structural validation only. Whether the action is *legal* is the reducer's call (§9.3), so this
 /// checks shapes and nothing else — but it rebuilds the body field by field, which is what keeps a
 /// client-supplied `playerId` (or any other smuggled key) from reaching `reduce`.
-fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMessage> {
+pub(crate) fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMessage> {
     let Some(type_) = is_string(raw.get("type")) else {
         return Err(malformed(r#""action.type" must be a string"#));
     };
@@ -865,6 +848,7 @@ pub fn watchers_frame(count: usize) -> String {
 /// client send is read as sent, and anything else is refused with its reason.
 #[cfg(test)]
 mod tests {
+    use jackioh_engine::Row;
     use serde_json::json;
 
     use super::*;

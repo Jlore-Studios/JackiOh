@@ -10,11 +10,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::field::{flush, playing, tower};
-use crate::rules::fixtures::harness::{act_result, by, in_hand, input, put, sink_for, slot};
-
-fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
+use crate::rules::fixtures::harness::{act_result, by, in_hand, input, live, put, sink_for, slot};
 
 /// p1 plays a plain body on top of a Tower in backrow lane 2; the state after, and the carried Unit.
 fn carried(seed: &str) -> (GameState, CardInstance) {
@@ -63,7 +59,7 @@ mod r446_a_carried_unit_takes_damage {
             },
         );
         assert_eq!(dealt, 2);
-        let view = unit_view(&state, by_id(&state, &rider.id));
+        let view = unit_view(&state, &live(&state, &rider.id));
         assert_eq!(view.health, view.max_health - 2);
     }
 
@@ -76,7 +72,7 @@ mod r446_a_carried_unit_takes_damage {
             None,
             by(P2),
         ));
-        let view = unit_view(sink.state, by_id(sink.state, &rider.id));
+        let view = unit_view(sink.state, &live(sink.state, &rider.id));
         assert_eq!(view.health, view.max_health - 1);
         assert!(sink.events.iter().any(|event| matches!(
             event,
@@ -105,7 +101,7 @@ mod r53_r446_a_carried_unit_is_out_of_a_random_forced_attack {
         .apply)(&mut make_context(&mut sink, Some(&striker), Default::default()));
         assert!(sink.events.is_empty());
         assert_eq!(sink.rng.cursor(), cursor);
-        assert_eq!(by_id(sink.state, &rider.id).damage, 0);
+        assert_eq!(live(sink.state, &rider.id).damage, 0);
     }
 
     #[test]
@@ -113,7 +109,7 @@ mod r53_r446_a_carried_unit_is_out_of_a_random_forced_attack {
         let (mut state, rider) = carried("carried-random-attacker");
         put(&mut state, &plain.id, slot(P2, Row::Units, 3), Default::default());
         assert!(
-            random_attack_targets(&state, by_id(&state, &rider.id), json_as(json!("enemies"))).is_empty()
+            random_attack_targets(&state, &live(&state, &rider.id), json_as(json!("enemies"))).is_empty()
         );
     }
 }

@@ -23,12 +23,14 @@ matrix = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(matrix)
 
 #: ci.yml's `rust (test <group>)` jobs as #2964 left them, in order: the move to the generator kept
-#: every one, under its name; `server api` is four shards since #3585 (scripts/ci-shards.toml).
+#: every one, under its name; `server api` is four shards since #3585 and `tools, wasm` four since
+#: #4432 (scripts/ci-shards.toml).
 JOBS = [
     "engine rules", "engine rules 2", "engine rules 3", "engine", "engine golden", "cards lib",
     "cards", "server", "server api 1/4", "server api 2/4", "server api 3/4", "server api 4/4",
     "server practice", "server practice rulings", "ai", "ai slow",
-    "tools fuzz", "tools duos, selfplay", "tools, wasm",
+    "tools fuzz", "tools duos, selfplay",
+    "tools, wasm 1/4", "tools, wasm 2/4", "tools, wasm 3/4", "tools, wasm 4/4",
 ]
 
 RULES = ("-p jackioh-engine --features jackioh-engine/testkit --test {} "
@@ -72,7 +74,7 @@ class MatrixTests(unittest.TestCase):
         out = matrix.outputs()
         self.assertEqual([job["group"] for job in out["rust_test"]], JOBS)
         self.assertEqual(out["web_unit_shards"], [1, 2, 3, 4, 5, 6, 7, 8])
-        self.assertEqual(out["e2e_smoke_shards"], [1, 2])
+        self.assertEqual(out["e2e_smoke_shards"], [1, 2, 3, 4])
         jobs = {job["group"]: job for job in out["rust_test"]}
         for n, name in enumerate(["rules", "rules_2", "rules_3"]):
             self.assertEqual(jobs[JOBS[n]]["test"], RULES.format(name))
@@ -82,7 +84,7 @@ class MatrixTests(unittest.TestCase):
         self.assertEqual({name for name, job in jobs.items() if job["doc"]}, {"engine", "cards", "ai"})
         self.assertEqual({(job["shard"], job["shards"]) for job in jobs.values()},
                          {(1, 1), (1, 4), (2, 4), (3, 4), (4, 4)})
-        self.assertEqual(jobs["tools, wasm"]["test"].split(" -- ")[1],
+        self.assertEqual(jobs["tools, wasm 1/4"]["test"].split(" -- ")[1],
                          "--skip fuzz:: --skip selfplay:: --skip positions::")
 
     def test_a_new_rules_binary_gets_a_job_and_the_binaries_check_by_itself(self):
@@ -117,9 +119,9 @@ class MatrixTests(unittest.TestCase):
 
     def test_the_web_and_e2e_counts_come_from_the_file(self):
         self.repo.edit(matrix.COUNTS, "unit = 8", "unit = 5")
-        self.repo.edit(matrix.COUNTS, "smoke = 2", "smoke = 3")
+        self.repo.edit(matrix.COUNTS, "smoke = 4", "smoke = 5")
         out = self.repo.outputs()
-        self.assertEqual((out["web_unit_shards"], out["e2e_smoke_shards"]), ([1, 2, 3, 4, 5], [1, 2, 3]))
+        self.assertEqual((out["web_unit_shards"], out["e2e_smoke_shards"]), ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
 
     def test_it_refuses_what_could_hide_a_job_or_flood_the_runners(self):
         for old, new, says in [
@@ -131,7 +133,7 @@ class MatrixTests(unittest.TestCase):
             ('"cards" = 1', '"cards" = 1\n"card" = 2', "names no group"),
             ("unit = 8", "unit = 0", "from 1 to 8"),
             ("unit = 8", "units = 8", "holds only `unit`"),
-            ("[e2e]\nsmoke = 2", "[e2e]", "has no `smoke`"),
+            ("[e2e]\nsmoke = 4", "[e2e]", "has no `smoke`"),
             ("[web]", "[wbe]\nunit = 1\n[web]", "no job reads the table wbe"),
         ]:
             with self.subTest(new=new):

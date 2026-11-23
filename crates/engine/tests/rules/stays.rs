@@ -30,6 +30,8 @@ fn destroyed(id: &str) -> GameEvent {
         max_health: 1,
         killer_id: None,
         radiant: None,
+        animated: None,
+        died_as: None,
         via: None,
     }
 }
@@ -131,6 +133,7 @@ mod stays_the_landing_of_a_move_is_that_move_r212 {
             instance_id: id.into(),
             def_id: "fx".into(),
             owner: PlayerId::P1,
+            by_temporary: None,
         }
     }
 

@@ -3,8 +3,8 @@
 // here, not beside the art, because it changes no card's look: it reads the art's own builders
 // (cards/art/svg.ts) and adds nothing to them.
 //
-// It makes the choices `CardArt` makes, in its order (R503, R2170000, R2202000, R2511000, R2724000):
-// a Stinkyscape card and a Training Grounds card draw their set's own family, a Legacy card its own
+// It makes the choices `CardArt` makes, in its order (R503, R2170000, R2202000, R2511000, R2724000, R3572001):
+// a Stinkyscape, Stinkyscape+ or Training Grounds card draws its set's own family, a Legacy card its own
 // yard picture with its Core card's subject read by the Core card's name, and every other card its
 // theme, composition (its own where it has one, R3338001's `compositionOf`) and motif.
 
@@ -12,7 +12,8 @@ import type { CardDef } from "@jackioh/shared";
 
 import { motifFor } from "../cards/art/motifs.ts";
 import { isStinkyscapeArt } from "../cards/art/stinkyscape.ts";
-import { legacyArtUri, proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "../cards/art/svg.ts";
+import { isStinkyscapePlusArt } from "../cards/art/stinkyscapeplus.ts";
+import { legacyArtUri, proceduralArtUri, stinkyscapeArtUri, stinkyscapePlusArtUri, trainingGroundsArtUri } from "../cards/art/svg.ts";
 import { compositionOf, themeFor } from "../cards/art/themes.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf } from "../cards/art/traininggrounds.ts";
 
@@ -21,6 +22,7 @@ export function proceduralCardArtUri(def: Pick<CardDef, "id" | "name" | "tags" |
   const coreId = snapshotArtOf(def.id);
   const name = coreId === null ? def.name : def.name.replace(LEGACY_PREFIX, "");
   if (isStinkyscapeArt(def.id)) return stinkyscapeArtUri(def.id, name, def.tags, def.type, radiant);
+  if (isStinkyscapePlusArt(def.id)) return stinkyscapePlusArtUri(def.id, name, def.tags, def.type, radiant);
   if (isTrainingGroundsArt(def.id)) return trainingGroundsArtUri(def.id, name, def.tags, def.type, radiant);
   if (coreId !== null) return legacyArtUri(def.id, coreId, name, def.tags, def.type, radiant);
   return proceduralArtUri(def.id, theme, compositionOf(def.id, def.type), radiant, motifFor(name, theme));

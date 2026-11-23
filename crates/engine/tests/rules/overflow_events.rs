@@ -198,6 +198,46 @@ mod r315_fatigue {
         assert_eq!(drawn, vec![json!(TOKEN)]);
         assert_eq!(state.players.p1.fatigue_count, 0);
     }
+
+    /// R4353020 (S+ #79's "You are immune to fatigue damage"): a fatigue-immune player's draws from an
+    /// empty library are counted and announced as any are, each `fatigue` naming its nominal hit, and deal
+    /// their hero nothing: no `damage`, no `damageAbsorbed`. The other player's fatigue still hits.
+    #[test]
+    fn r4353020_a_fatigue_immune_players_fatigue_draws_are_counted_and_announced_and_deal_no_damage() {
+        let mut state = new_game("r4353020", None);
+        set_library(&mut state, PlayerId::P1, &[] as &[&str]);
+        set_library(&mut state, PlayerId::P2, &[] as &[&str]);
+        state.players.p1.mods.push(PlayerModifier {
+            id: "fatigue-immune".to_string(),
+            expiry: ModifierExpiry::Never,
+            kind: ModifierKind::FatigueImmune,
+        });
+        let health = state.players.p1.hero.health;
+        let mut sink = Bench::new(&state);
+        let _ = sink.run(&mut state, |s| draw::draw(s, PlayerId::P1, 2));
+        let events = values(&sink.events);
+        let pairs: Vec<Value> = of_type(&events, "fatigue")
+            .iter()
+            .map(|event| json!([event["player"], event["count"], event["amount"]]))
+            .collect();
+        assert_eq!(
+            Value::Array(pairs),
+            json!([["p1", 1, FATIGUE_DAMAGE(1)], ["p1", 2, FATIGUE_DAMAGE(2)]])
+        );
+        assert_eq!(of_type(&events, "damage"), Vec::<Value>::new());
+        assert_eq!(of_type(&events, "damageAbsorbed"), Vec::<Value>::new());
+        assert_eq!(state.players.p1.fatigue_count, 2);
+        assert_eq!(state.players.p1.hero.health, health);
+
+        // The immunity is its holder's alone: p2's empty library still hits p2's hero.
+        let mut sink = Bench::new(&state);
+        let outcome = sink.run(&mut state, |s| draw::draw_one(s, PlayerId::P2, None));
+        assert!(matches!(outcome, DrawOutcome::Fatigue));
+        assert_eq!(
+            first_field(&values(&sink.events), "damage", "targetId"),
+            json!("hero-p2")
+        );
+    }
 }
 
 mod r316_library_overflow {

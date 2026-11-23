@@ -32,20 +32,29 @@
 //! (R2195003): it steals an enemy Unit only.
 //!
 //! Since issue #3139 it is its own card in earnest, moving its own way where Core #49 moved another
-//! (R2195003): the base face reads "Steal an enemy Unit. Set its stats to 4/4." (`set_stats` on the stolen
-//! Unit, the number `SET_TO`, a fixed one: whether 4/4 helps hangs on the Unit picked, params.rs) and the
-//! Radiant face, literally, "Steal an enemy card.": the target is any enemy permanent as Core #49's is
-//! (R3139002), and it no longer makes the card Radiant. Both effects run in a list, so a steal that finds no
-//! free zone (R15) still sets the Unit's stats, as Core #49's Radiant face still makes it Radiant. `script_v0_5_11o`
-//! keeps the earlier Unit-only steal, whose Radiant face made it Radiant, for the replays of v0.5.11r and
-//! before (R767000).
+//! (R2195003). Since issue #3996 it costs (3) and both faces read "Steal an enemy Unit. Next turn, lose
+//! ({loss}) mana.", 2 on the base face and 1 on the Radiant: the target is an enemy Unit, and the loss is
+//! `next_turn_mana` on its caster (R1848004), their next refresh giving their max mana less it, never below
+//! 0, a badge both seats read. Once the Spell resolves with its target, the loss is paid whatever the
+//! steal does (R3996101): both effects run in a list, so a steal that finds no free zone (R15), which
+//! destroys the Unit instead (R4205000), still costs the mana, as Hearthstone's Overload is locked in as its card is played. With no enemy Unit to target the
+//! Spell fizzles whole (§8's Conventions), and nothing is lost.
+//!
+//! Kept for replays (R767000): from issue #3139 through v0.6.5b the base face read "Steal an enemy Unit.
+//! Set its stats to 2/2." (`set_stats` on the stolen Unit, a fixed number; 4/4 through v0.6.4c, issue
+//! #3951) and the Radiant face, literally, "Steal an enemy card.": any enemy permanent as Core #49's is
+//! (R3139002), not made Radiant (`script_v0_6_5b`, `script_v0_6_4c`); `script_v0_5_11o` keeps the earlier
+//! Unit-only steal, whose Radiant face made it Radiant, for the replays of v0.5.11r and before.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-052";
 
-/// "Set its stats to 4/4": the Attack and Health the stolen Unit is set to (§6.3 Set stats, R2198000).
-const SET_TO: i32 = 4;
+/// From issue #3139 through v0.6.5b: "Set its stats to 2/2", the Attack and Health the stolen Unit was set
+/// to (§6.3 Set stats, R2198000).
+const SET_TO_V0_6_5B: i32 = 2;
+/// Through v0.6.4c (issue #3951): "Set its stats to 4/4".
+const SET_TO_V0_6_4C: i32 = 4;
 
 /// "An enemy Unit": the enemy's Units, never a card of the backrow's other types.
 fn enemy_unit() -> Vec<TargetDecl> {
@@ -62,14 +71,37 @@ fn steal_chosen() -> Effect {
     steal(json_as(json!({ "target": { "of": "chosen" } })))
 }
 
+/// Issue #3996, both faces: "Steal an enemy Unit. Next turn, lose ({loss}) mana." (R1848004, R3996101).
+fn steal_and_lose() -> Script {
+    Script {
+        targets: enemy_unit(),
+        cry: Some(hook(|ctx| {
+            vec![
+                steal_chosen(),
+                next_turn_mana(json_as(json!({ "amount": -param(&*ctx, "loss") }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
 pub fn script() -> CardScripts {
+    CardScripts {
+        base: steal_and_lose(),
+        radiant: steal_and_lose(),
+    }
+}
+
+/// From issue #3139: the base face sets the stolen Unit to `set_to`/`set_to`, and the Radiant face steals
+/// any enemy permanent.
+fn mind_control(set_to: i32) -> CardScripts {
     CardScripts {
         base: Script {
             targets: enemy_unit(),
-            cry: Some(hook(|_ctx| {
+            cry: Some(hook(move |_ctx| {
                 vec![
                     steal_chosen(),
-                    set_stats(json_as(json!({ "target": { "of": "chosen" }, "attack": SET_TO, "health": SET_TO }))),
+                    set_stats(json_as(json!({ "target": { "of": "chosen" }, "attack": set_to, "health": set_to }))),
                 ]
             })),
             ..Script::default()
@@ -80,6 +112,18 @@ pub fn script() -> CardScripts {
             ..Script::default()
         },
     }
+}
+
+/// R767000: the scripts after v0.6.4c through v0.6.5b, setting the stolen Unit to 2/2 (issue #3996).
+/// `KEPT_SCRIPTS` folds those versions' replays under it.
+pub fn script_v0_6_5b() -> CardScripts {
+    mind_control(SET_TO_V0_6_5B)
+}
+
+/// R767000: the scripts v0.5.12 to v0.6.4c ran, setting the stolen Unit to 4/4 (issue #3951).
+/// `KEPT_SCRIPTS` folds those versions' replays under it.
+pub fn script_v0_6_4c() -> CardScripts {
+    mind_control(SET_TO_V0_6_4C)
 }
 
 /// R767000: the scripts v0.5.11r and every version before it ran: a steal of an enemy Unit, whose Radiant
@@ -101,15 +145,16 @@ pub fn script_v0_5_11o() -> CardScripts {
     }
 }
 
+
 // TG #52 Legacy: Snom Bunny Mind Control — SPEC §8.11, BUILD M13 row TG 52, R15, R12, R22, R74, §6.3,
-// R3139002. Steal placement per R15; the base face sets the stolen Unit to 4/4 and the Radiant face steals
-// any enemy permanent; props (#25, #20, #45, #11, #8, #15, #41, #14).
+// R1848004, R3996101. Steal placement per R15; both faces steal an enemy Unit and cost their caster mana
+// at the next refresh, 2 on the base face and 1 on the Radiant; props (#25, #20, #45, #11, #8, #15, #41, #14).
 #[cfg(test)]
 mod tests {
-    use super::script_v0_5_11o;
+    use super::{script_v0_5_11o, script_v0_6_4c, script_v0_6_5b};
     use jackioh_engine::testkit::*;
 
-    use crate::scenario;
+    use crate::{filler, scenario};
 
     const MIND_CONTROL: &str = "traininggrounds-052";
     const SEVEN_SEVEN: &str = "core-025";
@@ -124,31 +169,34 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     /// The target lists of every `play` `legal_actions` offers p1 for this card (R81).
-    // Differs from Scenario::offered: that card's targets as ids, per play, not the seat's whole legal list.
     fn offered(state: &GameState, card: &CardInstance) -> Vec<Vec<String>> {
-        legal_actions(state, P1)
+        plays_in(state, P1, &card.id)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play {
-                    instance_id, targets, ..
-                } if instance_id == card.id => Some(
-                    targets
-                        .unwrap_or_default()
-                        .into_iter()
-                        .filter_map(|target| match target {
-                            Selection::Instance { instance_id } => Some(instance_id),
-                            _ => None,
-                        })
-                        .collect(),
-                ),
+                ActionBody::Play { targets, .. } => Some(pick::instance_ids(&targets.unwrap_or_default())),
                 _ => None,
             })
             .collect()
     }
 
-    /// The radiant face in hand, so the radiant text is the one that resolves (§5.2).
+    /// The face of the card in hand, so that face's text is the one that resolves (§5.2).
+    fn mind_control(radiant: bool) -> Value {
+        json!({ "def": MIND_CONTROL, "radiant": radiant })
+    }
+
+    /// The radiant face in hand.
     fn radiant_mind_control() -> Value {
-        json!({ "def": MIND_CONTROL, "radiant": true })
+        mind_control(true)
+    }
+
+    /// What p1's next refresh is changed by (§6.3 Mana, R1848004).
+    fn next_refresh(g: &Scenario) -> i32 {
+        g.state().players[P1].mana.next_turn_mod
+    }
+
+    /// The mana each face costs its caster at their next refresh.
+    fn loss(radiant: bool) -> i32 {
+        if radiant { 1 } else { 2 }
     }
 
     mod n49_snom_bunny_mind_control {
@@ -170,25 +218,50 @@ mod tests {
             assert_eq!(g.card(&prey).controller, PlayerId::P1);
             assert_eq!(g.card(&prey).owner, PlayerId::P2);
             g.expect_events(json!(["cardPlayed", "controlChanged", "enteredGraveyard"]));
-            // It costs (4) (#40), out of the harness's 4.
-            g.expect_mana(PlayerId::P1, 0);
+            // It costs (3) (issue #3996), out of the harness's 4.
+            g.expect_mana(PlayerId::P1, 1);
         }
 
-        /// Issue #3139: the base face sets the stolen Unit to 4/4, whatever it was, damaged or not.
+        /// Issue #3996: the stolen Unit keeps its stats, damage included, on both faces; the 2/2 is gone.
         #[test]
-        fn base_the_stolen_unit_is_set_to_4_4_a_big_one_down_and_a_small_one_up() {
-            for (def, damage) in [(SEVEN_SEVEN, 0), (DUELIST, 2), (TOKEN_MAKER, 0)] {
+        fn the_stolen_unit_keeps_its_stats_on_both_faces() {
+            for radiant in [false, true] {
                 let mut g = scenario(json!({
-                    "p1": { "hand": [MIND_CONTROL] },
-                    "p2": { "field": [{ "def": def, "lane": 2, "damage": damage }] },
+                    "p1": { "hand": [mind_control(radiant)] },
+                    "p2": { "field": [{ "def": DUELIST, "lane": 2, "damage": 2 }] },
                 }));
-                let prey = g.unit(PlayerId::P2, 2).expect("setup: the prey").clone();
+                let prey = g.unit(PlayerId::P2, 2).expect("setup: p2 should hold Deft Duelist").clone();
+                g.expect_stats(&prey, json!({ "attack": 4, "maxHealth": 3, "health": 1 }));
 
                 g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
 
-                assert_eq!(g.unit(PlayerId::P1, 2).map(|u| u.id.clone()), Some(prey.id.clone()), "{def}");
-                g.expect_stats(&prey, json!({ "attack": 4, "maxHealth": 4, "health": 4 }));
-                assert!(!g.card(&prey).radiant, "{def}");
+                assert_eq!(g.unit(PlayerId::P1, 2).map(|u| u.id.clone()), Some(prey.id.clone()));
+                g.expect_stats(&prey, json!({ "attack": 4, "maxHealth": 3, "health": 1 }));
+                assert!(!g.card(&prey).radiant, "radiant {radiant}");
+                assert!(!g.events().iter().any(|event| event.event_type().as_str() == "radiantSet"));
+            }
+        }
+
+        /// Issue #3996, R1848004: "Next turn, lose (2) mana" (Radiant: 1) is its caster's next refresh,
+        /// a badge until then, and the refresh after it is whole again.
+        #[test]
+        fn r3996101_next_turn_its_caster_has_2_mana_less_and_1_on_the_radiant_face() {
+            for radiant in [false, true] {
+                let mut g = scenario(json!({
+                    "p1": { "hand": [mind_control(radiant), "core-005"], "library": filler(4) },
+                    "p2": { "hand": ["core-005"], "field": [{ "def": VANILLA, "lane": 1 }], "library": filler(4) },
+                }));
+                let prey = g.unit(PlayerId::P2, 1).expect("setup: p2's Vanilla").clone();
+                g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+                assert_eq!(next_refresh(&g), -loss(radiant), "radiant {radiant}");
+                g.end_turn().end_turn();
+                assert_eq!(g.state().active, P1);
+                let mana = g.state().players[P1].mana;
+                assert_eq!(mana.current, mana.max - loss(radiant), "radiant {radiant}");
+                assert_eq!(next_refresh(&g), 0);
+                g.end_turn().end_turn();
+                let mana = g.state().players[P1].mana;
+                assert_eq!(mana.current, mana.max, "one turn only");
             }
         }
 
@@ -208,8 +281,9 @@ mod tests {
             assert!(g.unit(PlayerId::P2, 3).is_none());
         }
 
+        /// R3996101, R4205000: a full row destroys the card, and the mana is lost all the same.
         #[test]
-        fn r15_base_a_full_row_leaves_the_card_with_the_opponent_and_the_spell_still_resolves() {
+        fn r15_r3996101_r4205000_a_full_row_destroys_the_card_and_the_mana_is_still_lost() {
             let mut g = scenario(json!({
                 "p1": {
                     "hand": [MIND_CONTROL],
@@ -227,30 +301,37 @@ mod tests {
 
             g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
 
-            assert_eq!(g.unit(PlayerId::P2, 3).map(|u| u.id.clone()), Some(prey.id.clone()));
-            assert_eq!(g.card(&prey).controller, PlayerId::P2);
+            assert_eq!(g.unit(PlayerId::P2, 3), None);
+            g.expect_in_zone(&prey, "graveyard");
+            assert!(g.events().iter().any(
+                |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == prey.id)
+            ));
             g.expect_in_zone(MIND_CONTROL, "graveyard");
             assert!(!g.events().iter().any(|event| event.event_type().as_str() == "controlChanged"));
+            assert_eq!(next_refresh(&g), -2);
         }
 
+        /// Issue #3996: "an enemy Unit" on both faces, so neither offers an enemy Field Spell or Trap.
         #[test]
-        fn units_only_the_base_face_offers_no_enemy_field_spell_or_trap() {
-            let mut g = scenario(json!({
-                "p1": { "hand": [MIND_CONTROL] },
-                "p2": {
-                    "field": [{ "def": VANILLA, "lane": 2 }],
-                    "backrow": [{ "def": WEAPONS, "lane": 1 }, { "def": SHEEPISH, "lane": 3 }],
-                },
-            }));
-            let vanilla = g.unit(PlayerId::P2, 2).expect("setup: p2's Vanilla").clone();
-            let weapons = g.backrow(PlayerId::P2, 1).expect("setup: p2's Weapons").clone();
-            let card = g.card(MIND_CONTROL).clone();
+        fn units_only_neither_face_offers_an_enemy_field_spell_or_trap() {
+            for radiant in [false, true] {
+                let mut g = scenario(json!({
+                    "p1": { "hand": [mind_control(radiant)] },
+                    "p2": {
+                        "field": [{ "def": VANILLA, "lane": 2 }],
+                        "backrow": [{ "def": WEAPONS, "lane": 1 }, { "def": SHEEPISH, "lane": 3 }],
+                    },
+                }));
+                let vanilla = g.unit(PlayerId::P2, 2).expect("setup: p2's Vanilla").clone();
+                let weapons = g.backrow(PlayerId::P2, 1).expect("setup: p2's Weapons").clone();
+                let card = g.card(MIND_CONTROL).clone();
 
-            assert_eq!(offered(g.state(), &card), vec![vec![vanilla.id.clone()]]);
-            // Named anyway, the Field Spell is refused (R90): the reducer reads the same declaration.
-            let named = json!({ "targets": [{ "pick": "instance", "instanceId": weapons.id }] });
-            g.expect_refused_with(|g| g.play(MIND_CONTROL, named.clone()), "not a legal target");
-            assert_eq!(g.card(&weapons).controller, PlayerId::P2);
+                assert_eq!(offered(g.state(), &card), vec![vec![vanilla.id.clone()]], "radiant {radiant}");
+                // Named anyway, the Field Spell is refused (R90): the reducer reads the same declaration.
+                let named = json!({ "targets": [{ "pick": "instance", "instanceId": weapons.id }] });
+                g.expect_refused_with(|g| g.play(MIND_CONTROL, named.clone()), "not a legal target");
+                assert_eq!(g.card(&weapons).controller, PlayerId::P2);
+            }
         }
 
         #[test]
@@ -264,71 +345,23 @@ mod tests {
             assert_eq!(offered(g.state(), &card), vec![vec![vanilla.id.clone()]]);
         }
 
+        /// §8's Conventions, R3996101: an enemy board with no Unit offers nothing, and a Spell whose target
+        /// set is empty fizzles whole, though it still counts as played: no mana is lost.
         #[test]
-        fn s8_an_enemy_board_with_no_unit_offers_nothing_and_the_spell_fizzles() {
-            let mut g = scenario(json!({
-                "p1": { "hand": [MIND_CONTROL] },
-                "p2": { "backrow": [{ "def": WEAPONS, "lane": 1 }, { "def": SHEEPISH, "lane": 2 }] },
-            }));
-            let weapons = g.backrow(PlayerId::P2, 1).expect("setup: p2's Weapons").clone();
+        fn s8_r3996101_an_enemy_board_with_no_unit_offers_nothing_and_the_spell_fizzles_whole_losing_no_mana() {
+            for radiant in [false, true] {
+                let mut g = scenario(json!({
+                    "p1": { "hand": [mind_control(radiant)] },
+                    "p2": { "backrow": [{ "def": WEAPONS, "lane": 1 }, { "def": SHEEPISH, "lane": 2 }] },
+                }));
+                let weapons = g.backrow(PlayerId::P2, 1).expect("setup: p2's Weapons").clone();
 
-            g.play(MIND_CONTROL, json!({}));
+                g.play(MIND_CONTROL, json!({}));
 
-            g.expect_in_zone(MIND_CONTROL, "graveyard");
-            assert_eq!(g.card(&weapons).controller, PlayerId::P2);
-            assert!(!g.events().iter().any(|event| event.event_type().as_str() == "controlChanged"));
-        }
-
-        /// Issue #3139: "Steal an enemy card." and nothing more: the card is not made Radiant and keeps its
-        /// stats, damage included, where the base face sets the Unit to 4/4.
-        #[test]
-        fn r3139002_radiant_steals_the_card_and_neither_makes_it_radiant_nor_sets_its_stats() {
-            let mut g = scenario(json!({
-                "p1": { "hand": [radiant_mind_control()] },
-                "p2": { "field": [{ "def": DUELIST, "lane": 2, "damage": 2 }] },
-            }));
-            let prey = g.unit(PlayerId::P2, 2).expect("setup: p2 should hold Deft Duelist").clone();
-            g.expect_stats(&prey, json!({ "attack": 4, "maxHealth": 3, "health": 1 }));
-
-            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
-
-            assert_eq!(g.unit(PlayerId::P1, 2).map(|u| u.id.clone()), Some(prey.id.clone()));
-            assert!(!g.card(&prey).radiant);
-            g.expect_stats(&prey, json!({ "attack": 4, "maxHealth": 3, "health": 1 }));
-            assert_eq!(g.card(&prey).damage, 2);
-            assert!(!g.events().iter().any(|event| event.event_type().as_str() == "radiantSet"));
-        }
-
-        /// Issue #3139, R3139002: "card" is any enemy permanent on the Radiant face: a Unit, a Field Spell, a
-        /// Trap, the face-down one by its id alone (R177). The base face was not offered them.
-        #[test]
-        fn r3139002_radiant_steals_an_enemy_unit_field_spell_or_face_down_trap() {
-            let board = || {
-                json!({
-                    "p1": { "hand": [radiant_mind_control()] },
-                    "p2": {
-                        "field": [{ "def": VANILLA, "lane": 2 }],
-                        "backrow": [{ "def": WEAPONS, "lane": 1, "faceUp": true }, { "def": SHEEPISH, "lane": 3, "faceUp": false }],
-                    },
-                })
-            };
-            let g = scenario(board());
-            let card = g.card(MIND_CONTROL).clone();
-            let mut want: Vec<String> = [VANILLA, WEAPONS, SHEEPISH].iter().map(|def| g.card(*def).id.clone()).collect();
-            let mut offers: Vec<String> = offered(g.state(), &card).into_iter().flatten().collect();
-            want.sort();
-            offers.sort();
-            assert_eq!(offers, want);
-
-            for def in [VANILLA, WEAPONS, SHEEPISH] {
-                let mut g = scenario(board());
-                let prey = g.card(def).clone();
-
-                g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
-
-                assert_eq!(g.card(&prey).controller, PlayerId::P1, "{def}");
-                assert_eq!(g.card(&prey).owner, PlayerId::P2, "{def}");
-                assert!(!g.card(&prey).radiant, "{def}");
+                g.expect_in_zone(MIND_CONTROL, "graveyard");
+                assert_eq!(g.card(&weapons).controller, PlayerId::P2);
+                assert!(!g.events().iter().any(|event| event.event_type().as_str() == "controlChanged"));
+                assert_eq!(next_refresh(&g), 0, "radiant {radiant}");
             }
         }
 
@@ -352,25 +385,87 @@ mod tests {
         }
 
         #[test]
-        fn r81_the_base_face_declares_one_enemy_unit_and_the_radiant_face_one_enemy_permanent() {
+        fn r81_both_faces_declare_one_enemy_unit() {
             crate::register_all();
             let def = crate::card_def(super::super::ID);
             assert_eq!(def.id, MIND_CONTROL);
             assert_eq!(serde_json::to_value(def.type_).unwrap(), json!("Spell"));
-            assert_eq!(serde_json::to_value(def.cost).unwrap(), json!(4));
+            assert_eq!(serde_json::to_value(def.cost).unwrap(), json!(3));
             let scripts = super::super::script();
-            assert_eq!(
-                serde_json::to_value(&scripts.base.targets).unwrap(),
-                json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }])
-            );
-            assert_eq!(
-                serde_json::to_value(&scripts.radiant.targets).unwrap(),
-                json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit", "backrow"] } }])
-            );
             for face in [&scripts.base, &scripts.radiant] {
+                assert_eq!(
+                    serde_json::to_value(&face.targets).unwrap(),
+                    json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }])
+                );
                 assert!(face.modes.is_empty());
             }
         }
+    }
+
+    /// R767000, R3139002: after v0.6.4c through v0.6.5b the base face set the stolen Unit to 2/2 and the
+    /// Radiant face stole any enemy permanent, a face-down Trap by its id alone (R177), not making it
+    /// Radiant nor setting its stats; neither cost mana (issue #3996).
+    #[test]
+    fn r767000_r3139002_the_script_kept_for_v0_6_5b_sets_a_unit_to_2_2_and_its_radiant_face_steals_any_enemy_permanent() {
+        crate::under_kept(super::ID, script_v0_6_5b(), || {
+            let mut g = scenario(json!({
+                "p1": { "hand": [MIND_CONTROL] },
+                "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },
+            }));
+            let prey = g.unit(PlayerId::P2, 3).expect("setup: the 7/7").clone();
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+            assert_eq!(g.card(&prey).controller, PlayerId::P1);
+            g.expect_stats(&prey, json!({ "attack": 2, "maxHealth": 2, "health": 2 }));
+            assert_eq!(next_refresh(&g), 0);
+
+            let board = || {
+                json!({
+                    "p1": { "hand": [radiant_mind_control()] },
+                    "p2": {
+                        "field": [{ "def": DUELIST, "lane": 2, "damage": 2 }],
+                        "backrow": [{ "def": WEAPONS, "lane": 1, "faceUp": true }, { "def": SHEEPISH, "lane": 3, "faceUp": false }],
+                    },
+                })
+            };
+            let g = scenario(board());
+            let card = g.card(MIND_CONTROL).clone();
+            let mut want: Vec<String> = [DUELIST, WEAPONS, SHEEPISH].iter().map(|def| g.card(*def).id.clone()).collect();
+            let mut offers: Vec<String> = offered(g.state(), &card).into_iter().flatten().collect();
+            want.sort();
+            offers.sort();
+            assert_eq!(offers, want);
+            for def in [DUELIST, WEAPONS, SHEEPISH] {
+                let mut g = scenario(board());
+                let prey = g.card(def).clone();
+                g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+                assert_eq!(g.card(&prey).controller, PlayerId::P1, "{def}");
+                assert_eq!(g.card(&prey).owner, PlayerId::P2, "{def}");
+                assert!(!g.card(&prey).radiant, "{def}");
+                assert_eq!(next_refresh(&g), 0, "{def}");
+            }
+            let duelist = {
+                let mut g = scenario(board());
+                let prey = g.card(DUELIST).clone();
+                g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+                g.stats(&prey)
+            };
+            assert_eq!((duelist.attack, duelist.max_health), (4, 3));
+        });
+    }
+
+    /// R767000: from v0.5.12 through v0.6.4c the base face set the stolen Unit to 4/4 (issue #3951).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_4c_sets_the_stolen_unit_to_4_4() {
+        crate::under_kept(super::ID, script_v0_6_4c(), || {
+            let mut g = scenario(json!({
+                "p1": { "hand": [MIND_CONTROL] },
+                "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },
+            }));
+            let prey = g.unit(PlayerId::P2, 3).expect("setup: the 7/7").clone();
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+            assert_eq!(g.card(&prey).controller, PlayerId::P1);
+            g.expect_stats(&prey, json!({ "attack": 4, "maxHealth": 4, "health": 4 }));
+        });
     }
 
     /// R767000: through v0.5.11r the base face stole an enemy Unit and the Radiant face made it Radiant, the
@@ -403,28 +498,24 @@ mod tests {
         });
     }
 
-    /// R2195003, issue #3139: the snapshot is its own copy of Core #49, frozen against its later patches and now
-    /// moved by its own: the base face sets the stolen Unit to 4/4 and the Radiant face does not make it Radiant,
-    /// where Core #49's base face only steals and its Radiant face makes it Radiant.
+    /// R2195003, issues #3139 and #3996: the snapshot is its own copy of Core #49, frozen against its later
+    /// patches and moved by its own: its faces cost mana next turn and its Radiant face does not make the Unit
+    /// Radiant, where Core #49's base face only steals and its Radiant face makes it Radiant.
     #[test]
     fn r2195003_the_legacy_card_is_its_own_copy_and_no_longer_plays_as_core_049() {
         crate::register_all();
         let game = |id: &str, radiant: bool| {
             let mut g = scenario(json!({
-                "p1": { "hand": [{ "def": id, "radiant": radiant }], "mana": 5 },
+                "p1": { "hand": [{ "def": id, "radiant": radiant }], "mana": 6 },
                 "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },
             }));
             let prey = g.unit(PlayerId::P2, 3).expect("setup: the 7/7").clone();
             g.play(id, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
-            (g.card(&prey).radiant, g.stats(&prey))
+            (g.card(&prey).radiant, next_refresh(&g))
         };
-        let (_, legacy_base) = game(MIND_CONTROL, false);
-        let (_, core_base) = game("core-049", false);
-        assert_eq!((legacy_base.attack, legacy_base.max_health), (4, 4));
-        assert_eq!((core_base.attack, core_base.max_health), (7, 7));
-        let (legacy_radiant, _) = game(MIND_CONTROL, true);
-        let (core_radiant, _) = game("core-049", true);
-        assert!(!legacy_radiant);
-        assert!(core_radiant);
+        assert_eq!(game(MIND_CONTROL, false), (false, -2));
+        assert_eq!(game("core-049", false), (false, 0));
+        assert_eq!(game(MIND_CONTROL, true), (false, -1));
+        assert_eq!(game("core-049", true), (true, 0));
     }
 }

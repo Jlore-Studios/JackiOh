@@ -1,6 +1,6 @@
 //! #19 Midrange Menace (SPEC §8.1): 9/9 → 18/18, "Taunt; End of turn: heal to full", radiant
 //! "Taunt, Immutable; same". Engine cell: "Heal removes all damage".
-//! Printed keywords (§10.4, R23, R781001; #41, #13, §8). End of turn (§6.2) heals to full (§6.3, §4; R17, R78, §10.8, §9.3).
+//! Printed keywords (§10.4, R23, R4353001; #41, #13, §8). End of turn (§6.2) heals to full (§6.3, §4; R17, R78, §10.8, §9.3).
 
 use jackioh_engine::prelude::*;
 
@@ -156,9 +156,9 @@ mod tests {
         }
     }
 
-    // R781001: the Radiant face prints Immutable, so while it is in play no Spell, Field Spell or Field
-    // Trap can target it, its controller's own included; a Unit's Cry can, and an effect on every Unit or
-    // a random pick still reaches it.
+    // R4353001: the Radiant face prints Immutable, which bars no targeting: in play a Spell, its
+    // controller's own included, a Field Spell's Activate and a Unit's Cry may all target it, and an
+    // effect on every Unit or a random pick reaches it too.
     mod n19_midrange_menace_radiant_immutable {
         use super::*;
 
@@ -181,12 +181,11 @@ mod tests {
         }
 
         #[test]
-        fn r781001_a_spell_cannot_target_it_and_a_units_cry_can() {
+        fn r4353001_a_units_cry_and_a_spell_may_both_target_it_and_the_spells_destroy_lands() {
             crate::register_all();
             let mut s = menace_board(json!({ "hand": [HIT_JOB, { "def": POSTDOC, "radiant": true }, FILLER] }));
             let menace = s.card("core-019").id.clone();
 
-            s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": pick::id(&menace) })));
             s.play(POSTDOC, json!({ "targets": pick::id(&menace) }));
 
             let copies = (1..=5)
@@ -195,10 +194,14 @@ mod tests {
                 .count();
             assert_eq!(copies, 1, "the Postdoc's Cry named it and copied it");
             s.expect_in_zone(&menace, "field");
+
+            // Immutable stops no destroy: Hit Job, a Spell, destroys it as any Unit.
+            s.play(HIT_JOB, json!({ "targets": pick::id(&menace) }));
+            s.expect_in_zone(&menace, "graveyard");
         }
 
         #[test]
-        fn r781001_an_effect_on_every_unit_still_reaches_it() {
+        fn r4353001_an_effect_on_every_unit_reaches_it() {
             crate::register_all();
             let mut s = menace_board(json!({ "hand": [WHIRLWIND, FILLER] }));
 
@@ -208,7 +211,7 @@ mod tests {
         }
 
         #[test]
-        fn r781001_a_random_pick_still_reaches_it() {
+        fn r4353001_a_random_pick_reaches_it() {
             let mut s = scenario(json!({
                 "p1": { "hand": [SOUL_SHOT, FILLER], "library": [FILLER, FILLER], "mana": 10 },
                 "p2": { "field": [{ "def": "core-019", "radiant": true }], "library": [FILLER, FILLER] },
@@ -221,14 +224,16 @@ mod tests {
         }
 
         #[test]
-        fn r781001_a_field_spells_activate_cannot_target_it() {
+        fn r4353001_a_field_spells_activate_may_target_it_and_marks_it_for_its_destroy() {
             crate::register_all();
             let mut s = menace_board(json!({ "hand": [FILLER, FILLER], "backrow": [PUNISH] }));
             let menace = s.card("core-019").id.clone();
-            let other = s.card("core-012").id.clone();
 
-            s.expect_refused(|s| s.activate(PUNISH, json!({ "modes": [DOOM], "targets": pick::id(&menace) })));
-            s.activate(PUNISH, json!({ "modes": [DOOM], "targets": pick::id(&other) }));
+            s.activate(PUNISH, json!({ "modes": [DOOM], "targets": pick::id(&menace) }));
+            assert!(s.events().iter().any(|event| matches!(
+                event,
+                GameEvent::Marked { instance_id, mark, .. } if *instance_id == menace && mark == "destroy"
+            )));
         }
     }
 }

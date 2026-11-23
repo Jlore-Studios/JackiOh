@@ -78,17 +78,9 @@
   margin: 0;
 }
 
-.stats-games-note {
-  margin: 6px 0 0;
-}
-
-/* R2089000: the Created cards, below the Cards tab's table; their rows open nothing, so take no pointer. */
+/* R2089000, R4155000: the Created cards, below the Cards tab's table, in the deck table's columns. */
 .stats-created-panel {
   margin-top: 16px;
-}
-
-.stats-created-panel .stats-tr {
-  cursor: inherit;
 }
 
 /* Filter bar */
@@ -363,11 +355,7 @@
 
 /* R3022000: a card's balance tier chip is stats/tier.css's, which the card detail shares (R3185000) */
 
-.stats-tiers-note p {
-  margin: 4px 0;
-}
-
-/* R2895000: a figure's 95% range, on its own line under it (in the Win rate cell, under its text and bar) */
+/* R2895000: a figure's 95% range, on its own line under it (in a figure cell, under its text and — in the Adjusted cell, R4084000 — its bar) */
 .stats-range {
   display: block;
   white-space: nowrap;
@@ -387,12 +375,6 @@
   flex-direction: column;
   gap: 8px;
   margin-top: 16px;
-}
-
-.stats-player-note {
-  margin: 0;
-  font-size: 12.5px;
-  color: var(--text-dim, #9aa1b8);
 }
 
 .stats-loading,
@@ -683,10 +665,6 @@
   gap: 4px;
 }
 
-.stats-sets-note {
-  margin-top: 16px;
-}
-
 /* R1973002, R3324000: the patch bar: the patch before, the patch tabs (a Segmented, #3222, each its patch's name
    over its games) and the patch after. The tabs scroll sideways on a narrow screen rather than wrap. */
 .stats-patch-bar {
@@ -731,9 +709,45 @@
 
 /* R2122000 on a phone or under a finger: a sortable header's band stops at the first row, its neighbour
    0 px below. A select or a field draws no ::before, so the filters (tabs.css's shared select) and the
-   search are --hit-min tall themselves everywhere, as tall as the page's buttons (R3324003). */
+   search are --hit-min tall themselves everywhere, as tall as the page's buttons (R3324003). A row opens
+   its card's breakdown and a table row takes no band (index.css), so it is --hit-min tall itself: on a
+   phone its cells' text wraps past that, and on an iPad's width (spec 47 at #3728's sizes, R3728000) it
+   was 39 px. */
 @media (pointer: coarse), (max-width: 600px) {
   .stats-th--sortable::before {
     bottom: 0;
   }
+
+  .stats-tr {
+    height: var(--hit-min);
+  }
 }
+
+/* R4279001, R4335000: the page's views (Cards, Tokens, Sets, Players) as raised buttons showing their names alone, the
+   one open filled and ringed in the selected colour, so the row reads as places to go and not as headings. tabs.css
+   draws the rest (the hit size, the focus ring, a row that never shrinks). */
+.stats-tabs {
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 0;
+}
+
+.stats-tabs .stats-tab {
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--text);
+  font-size: var(--type-md);
+  font-weight: 700;
+}
+
+.stats-tabs .stats-tab:hover:not(:disabled) {
+  border-color: var(--text-dim);
+}
+
+.stats-tabs .stats-tab[aria-selected="true"] {
+  border-color: var(--selected);
+  background: color-mix(in srgb, var(--selected) 12%, var(--bg-raised));
+  box-shadow: inset 0 0 0 1px var(--selected);
+}
+

@@ -4,7 +4,8 @@
 // inside the rules box.
 
 import { CATALOG } from "@jackioh/cards";
-import { CardDefsProvider, CardDetail, CardFace, faceModel } from "../../../apps/web/src/cards/index.ts";
+import { CardDefsProvider, CardFace, faceModel } from "../../../apps/web/src/cards/index.ts";
+import { CardDetail } from "../../../apps/web/src/cards/inspect/CardDetail.tsx";
 
 type CardDef = (typeof CATALOG)[string];
 

@@ -12,9 +12,11 @@
    image and no web font: gradients, shadows and the system's serif. */
 
 /* The top bar's three colors (routes/top-bar.css, #3189). BackLink's nav also sits on screens that are not
-   `.tavern` (the replays, the deck screens), where they would be undefined, so the nav carries them. */
+   `.tavern` (the replays, the deck screens), where they would be undefined, so the nav carries them, and so
+   does the menus' shell (shell/menu-shell.css, R3728000), whose rail is drawn in them. */
 .tavern,
-.screen-nav {
+.screen-nav,
+.menu-shell {
   --tavern-brass: #c9953f;
   --tavern-gold: #f3c969;
   --tavern-gold-pale: #fbe7b0;
@@ -53,7 +55,7 @@
   isolation: isolate;
   max-width: none;
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--shell-screen-h, 100dvh);
   margin: 0;
   padding: 14px var(--tavern-gutter) 56px;
   gap: 14px;
@@ -347,9 +349,10 @@
    its role's, or `button-secondary`'s where it names none (buttons.css): this rule only sets the
    tavern's size. Not in the deck builder (/decks), whose chips, tiles and card buttons are sized to
    its pixel budget by deckbuilder.css, and not the top bar's buttons, which draw themselves
-   (routes/top-bar.css), nor a dialog's ✕, which keeps its own round size (game/dialog.css, R3221000);
+   (routes/top-bar.css), nor a dialog's ✕, which keeps its own round size (game/dialog.css, R3221000), nor the Friends list's Offline
+   heading, which keeps the heading's face as in the drawer (together.css, #3955);
    `:where()` leaves the rule's weight as it was, so the sheets that outrank it still do. */
-.tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):where(:not(.dialog__close)) {
+.tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):where(:not(.dialog__close, .together-group__toggle)) {
   min-height: 44px;
   padding: 8px 18px;
   border-radius: 10px;

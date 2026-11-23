@@ -39,16 +39,64 @@ const SCRIPTS = files(
   .map(relativeToSrc)
   .sort();
 
-/** Every `@media` prelude in a sheet, its whitespace collapsed. */
+/**
+ * Every `@media` prelude in a sheet, its whitespace collapsed (#4009: `/@media\s+([^{;]+)\{/g`
+ * rescans a brace-free run from every position).
+ */
 function preludes(css: string): string[] {
-  return [...css.matchAll(/@media\s+([^{;]+)\{/g)].map((match) => (match[1] ?? "").replace(/\s+/g, " ").trim());
+  const out: string[] = [];
+  let at = 0;
+  for (;;) {
+    const found = css.indexOf("@media", at);
+    if (found === -1) return out;
+    let i = found + "@media".length;
+    let spaces = 0;
+    while (/\s/.test(css.charAt(i))) {
+      i++;
+      spaces++;
+    }
+    const open = css.indexOf("{", i);
+    if (open === -1) return out;
+    if (spaces > 0 && !css.slice(i, open).includes(";")) {
+      out.push(css.slice(i, open).replace(/\s+/g, " ").trim());
+      at = open + 1;
+    } else {
+      at = found + 1;
+    }
+  }
 }
 
-/** Every `(min-|max-)(width|height)` feature in a query, as `(max-width: 600px)`. */
+const FEATURES = ["min-width", "max-width", "min-height", "max-height"];
+
+/**
+ * Every `(min-|max-)(width|height)` feature in a query, as `(max-width: 600px)` (#4009: the
+ * `/\(\s*((?:min|max)-(?:width|height))\s*:\s*([^)]*?)\s*\)/g` scan this replaces trades characters
+ * between its runs super-linearly).
+ */
 function sizes(query: string): string[] {
-  return [...query.matchAll(/\(\s*((?:min|max)-(?:width|height))\s*:\s*([^)]*?)\s*\)/g)].map(
-    (match) => `(${match[1] ?? ""}: ${match[2] ?? ""})`,
-  );
+  const out: string[] = [];
+  let at = 0;
+  for (;;) {
+    const open = query.indexOf("(", at);
+    if (open === -1) return out;
+    let i = open + 1;
+    while (/\s/.test(query.charAt(i))) i++;
+    const feature = FEATURES.find((name) => query.startsWith(name, i));
+    if (feature === undefined) {
+      at = open + 1;
+      continue;
+    }
+    let j = i + feature.length;
+    while (/\s/.test(query.charAt(j))) j++;
+    if (query.charAt(j) !== ":") {
+      at = open + 1;
+      continue;
+    }
+    const close = query.indexOf(")", j + 1);
+    if (close === -1) return out;
+    out.push(`(${feature}: ${query.slice(j + 1, close).trim()})`);
+    at = close + 1;
+  }
 }
 
 const NAMES = Object.keys(BREAKPOINT_PX) as Breakpoint[];
@@ -67,8 +115,6 @@ const KEEP: Record<string, string[]> = {
   "game/board.css": ["(max-width: 380px)"],
   // The filters fold under about 860 px tall, where three chip rows left one row of cards.
   "game/deckbuilder/deckbuilder.css": ["(max-height: 860px)"],
-  // Rail, pool and sidebar side by side need 1101 px (DeckWorkshop.tsx's WORKSHOP_SPLIT_MIN_WIDTH_PX).
-  "game/deckbuilder/workshop.css": ["(min-width: 1101px)", "(max-width: 1100px)"],
   // A dialog's answers stack on the narrowest phones only (R3220000).
   "game/dialog.css": ["(max-width: 360px)"],
   // 480: 21vh cards two by two suit a phone upright; at 600 a 568x320 phone draws them 67 px wide. 701: 224 px Discover cards.
@@ -77,10 +123,10 @@ const KEEP: Record<string, string[]> = {
   "practice/practice.css": ["(max-height: 820px)", "(max-width: 420px)"],
   // #1577: the hero shrinks up to 800 px tall (1280x720, 1280x800); 390x844 keeps it whole.
   "routes/landing.css": ["(max-height: 800px)", "(max-height: 800px)"],
+  // #3958: the Play hub's cards tighten up to 800 px tall (1280x720, 1280x800), as the landing's hero does.
+  "routes/play-hub.css": ["(max-height: 800px)"],
   // A row stacks up to 412 px; 430 keeps it.
   "routes/replays.css": ["(max-width: 420px)"],
-  // 820: one column up to an iPad Air upright; 760 squeezes 768 px, 899 takes 844x390.
-  "together/together.css": ["(max-width: 820px)"],
   // The coach's lines, measured at phones' heights: 2 up to 679 px (390x664), 1 up to 655 (360x640).
   "tutorial/tutorial.css": ["(max-height: 679px)", "(max-height: 655px)"],
 };
@@ -97,8 +143,9 @@ const SCRIPT_QUERIES: Record<string, string> = {
   TOUCH_ONLY_QUERY,
 };
 
-/** The scripts that spell a size query of their own: the workshop's split mirrors workshop.css's 1100 px. */
-const SCRIPT_KEEP: Record<string, number> = { "game/deckbuilder/DeckWorkshop.tsx": 1 };
+/** The scripts that spell a size query of their own: none. The workshop's split (R3734001) needs no exception: its
+ *  turn-taking is the named phone breakpoint, `upTo("phone")`. */
+const SCRIPT_KEEP: Record<string, number> = {};
 
 describe("#3227 the named breakpoints", () => {
   it("#3227 names five breakpoints, each a max N beside a min N + 1", () => {
@@ -158,18 +205,29 @@ describe("#3227 the named breakpoints", () => {
     }
   });
 
-  it("#3227 no script but breakpoints.ts spells a width or height query, but the workshop's split", () => {
+  it("#3227 no script but breakpoints.ts spells a width or height query", () => {
     expect(SCRIPTS.length).toBeGreaterThan(0);
     const spelled: Record<string, number> = {};
     for (const script of SCRIPTS) {
-      const text = code(script).replace(/^\s*\/\/.*$/gm, "");
+      // Full-line comments cut (#4009: `/^\s*\/\/.*$/gm` rescans newline runs from every line).
+      const text = code(script)
+        .split("\n")
+        .map((line) => (/^\s*\/\/.*$/.test(line) ? "" : line))
+        .join("\n");
       const count = [...text.matchAll(/\((?:min|max)-(?:width|height)\s*:/g)].length;
       if (count > 0) spelled[script] = count;
     }
     expect(spelled).toEqual(SCRIPT_KEEP);
-    expect(read("game/deckbuilder/DeckWorkshop.tsx")).toContain("WORKSHOP_SPLIT_MIN_WIDTH_PX = 1101;");
-    const workshop = read("game/deckbuilder/workshop.css");
-    expect(workshop).toContain("@media (max-width: 1100px) {");
-    expect(workshop).toContain("@media (min-width: 1101px) {");
+  });
+
+  it("R3734001 the workshop's halves sit side by side from 601 px and take turns at 600 px and under, on the named phone breakpoint", () => {
+    const script = code("game/deckbuilder/DeckWorkshop.tsx");
+    expect(script).not.toContain("WORKSHOP_SPLIT_MIN_WIDTH_PX");
+    expect(script).toContain('upTo("phone")');
+    const workshop = code("game/deckbuilder/workshop.css");
+    expect(workshop).toContain("@media (min-width: 601px) {");
+    expect(workshop).toContain("@media (max-width: 600px) {");
+    expect(workshop).not.toContain("1277px");
+    expect(workshop).not.toContain("1276px");
   });
 });

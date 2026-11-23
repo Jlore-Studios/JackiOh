@@ -32,10 +32,6 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
             .id
     }
 
-    fn pick(id: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-    }
-
     fn thaw_of(s: &Scenario, id: &str) -> Option<i32> {
         s.card(id).frozen
     }
@@ -104,7 +100,7 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
             json!([{ "def": plain.id, "lane": 5 }]),
         );
         let unit = id_at(&s, P1, 1);
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(
             thaw_of(&s, &unit),
             Some(10),
@@ -168,7 +164,7 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         );
         let unit = id_at(&s, P1, 1);
         s.attack(unit.as_str(), "hero");
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(thaw_of(&s, &unit), Some(10));
 
         s.end_turn();
@@ -201,7 +197,7 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
             json!([]),
         );
         let unit = id_at(&s, P1, 1);
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(thaw_of(&s, &unit), Some(9));
         assert!(!offers_attack(&s, &unit));
         assert!(!offers_switch(&s, &unit));
@@ -225,7 +221,7 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         let unit = id_at(&s, P1, 1);
         s.attack(unit.as_str(), "hero");
         assert!(offers_attack(&s, &unit), "Windfury: a second attack is left");
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(thaw_of(&s, &unit), Some(9));
         assert!(!offers_attack(&s, &unit));
 
@@ -245,7 +241,7 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         let unit = id_at(&s, P1, 1);
         s.attack(unit.as_str(), "hero");
         assert!(offers_switch(&s, &unit), "Deft: the switch is left");
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(thaw_of(&s, &unit), Some(9));
         assert!(!offers_switch(&s, &unit));
 
@@ -265,7 +261,7 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         s.play(plain.id.as_str(), json!({ "zone": 2 }));
         let unit = id_at(&s, P1, 2);
         assert!(offers_switch(&s, &unit), "a sick unit may still switch (§4.1)");
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(thaw_of(&s, &unit), Some(9));
         assert!(!offers_switch(&s, &unit));
 
@@ -338,16 +334,16 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         );
         let unit = id_at(&s, P1, 1);
         s.attack(unit.as_str(), "hero");
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(thaw_of(&s, &unit), Some(10));
         // A fresh exertion leaves it an action, which a freeze landing now would thaw after this turn;
         // the later thaw it has stands.
-        s.play(rally.id.as_str(), pick(&unit));
+        s.play(rally.id.as_str(), pick::targets(pick::id(&unit)));
         assert!(
             !offers_attack(&s, &unit),
             "a fresh exertion is no attack while Frozen"
         );
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(thaw_of(&s, &unit), Some(10));
         s.end_turn();
         assert_eq!(thaw_of(&s, &unit), Some(10));
@@ -363,13 +359,13 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
             json!([{ "def": plain.id, "lane": 5 }]),
         );
         let unit = id_at(&s, P2, 5);
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(
             thaw_of(&s, &unit),
             Some(10),
             "frozen on its controller's opponent's turn"
         );
-        s.play(grab.id.as_str(), pick(&unit));
+        s.play(grab.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(s.card(unit.as_str()).controller, P1);
         assert_eq!(
             thaw_of(&s, &unit),
@@ -393,9 +389,9 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
             json!([{ "def": plain.id, "lane": 5 }]),
         );
         let unit = id_at(&s, P2, 5);
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert!(thaw_of(&s, &unit).is_some());
-        s.play(hush.id.as_str(), pick(&unit));
+        s.play(hush.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(thaw_of(&s, &unit), None);
         assert_eq!(frost_marks(s.last_events(), &unit), vec![false]);
     }
@@ -410,8 +406,8 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
             json!([]),
         );
         let unit = id_at(&s, P1, 1);
-        s.play(chill.id.as_str(), pick(&unit));
-        s.play(recall.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
+        s.play(recall.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(s.card(unit.as_str()).zone.z(), ZoneName::Hand);
         assert_eq!(thaw_of(&s, &unit), None);
         s.play(unit.as_str(), json!({ "zone": 3 }));
@@ -433,8 +429,8 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
             json!([]),
         );
         let unit = id_at(&s, P1, 1);
-        s.play(chill.id.as_str(), pick(&unit));
-        s.play(shove.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
+        s.play(shove.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(
             s.card(unit.as_str()).position,
             Some(Position::Def),

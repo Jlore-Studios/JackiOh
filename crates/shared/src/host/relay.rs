@@ -124,3 +124,85 @@ pub fn hover_is_shown(index: i32, sender: PlayerId, view: &PlayerView) -> bool {
         _ => false,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jackioh_engine::PlayerId::{P1, P2};
+    use jackioh_engine::wire::Row;
+    use serde_json::{Value, json};
+
+    /// A side whose rows have `zones` zones each, holding `hand`.
+    fn side(player: &str, zones: usize, hand: Value) -> Value {
+        let flags = vec![false; zones];
+        let empty = vec![Value::Null; zones];
+        json!({
+            "player": player,
+            "hero": { "health": 30, "armor": 0, "powers": [] },
+            "modifiers": [],
+            "mana": { "current": 4, "max": 4 },
+            "hand": hand,
+            "libraryCount": 12,
+            "graveyard": [], "exile": [], "resolving": [],
+            "units": empty, "backrow": empty,
+            "locks": { "units": flags, "backrow": flags },
+            "reserved": { "units": flags, "backrow": flags },
+            "fatigueCount": 0,
+        })
+    }
+
+    /// p2's view: its own five-zone rows and an empty hand, p1's rows of `p1_zones` and three cards in hand,
+    /// and `pending`.
+    fn p2_view(p1_zones: usize, pending: Value) -> PlayerView {
+        serde_json::from_value(json!({
+            "viewer": "p2", "turn": 3, "active": "p1", "phase": "main",
+            "you": side("p2", 5, json!([])),
+            "opponent": side("p1", p1_zones, json!({ "count": 3 })),
+            "pending": pending, "events": [], "result": null, "clockMs": null,
+        }))
+        .expect("a PlayerView")
+    }
+
+    fn aim(source: AimEnd, target: Option<AimEnd>) -> Aim {
+        Aim { source, target }
+    }
+
+    /// R738, R97: a hand card aims from an index of its sender's hand as the viewer counts it, the other seat's
+    /// by its count; a zone is public while the side it names has that lane in that row.
+    #[test]
+    fn r738_an_aims_ends_are_public_by_the_senders_hand_and_the_named_sides_zones() {
+        let view = p2_view(3, Value::Null);
+        let hand = |player, index| AimEnd::Hand { player, index };
+        assert!(aim_is_public(&aim(hand(P1, 2), None), P1, &view));
+        assert!(!aim_is_public(&aim(hand(P1, 3), None), P1, &view));
+        assert!(!aim_is_public(&aim(hand(P2, 0), None), P2, &view));
+        let zone = |player, lane| AimEnd::Zone {
+            player,
+            row: Row::Units,
+            lane,
+        };
+        let hero = AimEnd::Hero { player: P1 };
+        assert!(aim_is_public(&aim(zone(P2, 5), Some(hero)), P2, &view));
+        assert!(!aim_is_public(&aim(zone(P1, 5), Some(hero)), P1, &view));
+        assert!(aim_is_public(&aim(hero, Some(zone(P1, 3))), P2, &view));
+        assert!(!aim_is_public(&aim(hero, Some(zone(P1, 4))), P2, &view));
+    }
+
+    /// R2739001, R2739000: a hover is shown over the sender's own open picker only, at an index under the count
+    /// the view gives it.
+    #[test]
+    fn r2739001_a_hover_is_shown_only_over_the_senders_picker_under_its_count() {
+        let elsewhere = |count: Option<i32>| {
+            p2_view(
+                5,
+                json!({ "forYou": false, "pendingFor": "p1", "optionCount": count }),
+            )
+        };
+        let view = elsewhere(Some(3));
+        assert!(hover_is_shown(0, P1, &view) && hover_is_shown(2, P1, &view));
+        assert!(!hover_is_shown(3, P1, &view) && !hover_is_shown(-1, P1, &view));
+        assert!(!hover_is_shown(0, P2, &view));
+        assert!(!hover_is_shown(0, P1, &elsewhere(None)));
+        assert!(!hover_is_shown(0, P1, &p2_view(5, Value::Null)));
+    }
+}

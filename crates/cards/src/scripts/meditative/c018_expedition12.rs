@@ -149,30 +149,9 @@ mod tests {
         }))
     }
 
-    fn pick(s: &Scenario, card: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": s.card(card).id }] })
-    }
-
     /// The hand cards `legalActions` offers as the expedition's pick.
-    // Differs from Scenario::offered: one card's play targets as ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
-        let expedition_id = s.card(EXPEDITION).id.clone();
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == expedition_id => {
-                    targets
-                        .unwrap_or_default()
-                        .into_iter()
-                        .filter_map(|target| match target {
-                            Selection::Instance { instance_id } => Some(instance_id),
-                            _ => None,
-                        })
-                        .collect::<Vec<_>>()
-                }
-                _ => vec![],
-            })
-            .collect()
+        pick::instance_ids(&s.play_targets(EXPEDITION))
     }
 
     fn radiant_hand(state: &GameState) -> Vec<String> {
@@ -193,7 +172,7 @@ mod tests {
         fn next_turn_gives_2_less_and_the_turn_after_is_normal() {
             crate::register_all();
             let mut s = board(json!([EXPEDITION, FILLER]));
-            s.play(EXPEDITION, pick(&s, FILLER));
+            s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
             assert_eq!(radiant_hand(s.state()), vec![s.card(FILLER).id.clone()]);
             assert_eq!(s.state().players.p1.mana.next_turn_mod, -2);
 
@@ -216,7 +195,7 @@ mod tests {
                 "p1": { "hand": [EXPEDITION, FILLER], "field": [VANILLA], "library": [FILLER, FILLER], "mana": 10 },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "library": [FILLER, FILLER] },
             }));
-            s.play(EXPEDITION, pick(&s, FILLER));
+            s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
             s.state_mut().players.p1.mana.next_turn_mod -= 5;
             next_turn(&mut s);
             assert_eq!(s.state().players.p1.mana.current, 0);
@@ -226,7 +205,7 @@ mod tests {
         fn mana_gained_during_that_turn_still_adds() {
             crate::register_all();
             let mut s = board(json!([EXPEDITION, FILLER, COIN]));
-            s.play(EXPEDITION, pick(&s, FILLER));
+            s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
             next_turn(&mut s);
             let before = s.state().players.p1.mana.current;
             // The Coin's gain is an effect, not the refresh: it adds.
@@ -238,7 +217,7 @@ mod tests {
         fn r845_an_extra_turn_taken_next_is_the_one_that_loses_it() {
             crate::register_all();
             let mut s = board(json!([EXPEDITION, FILLER]));
-            s.play(EXPEDITION, pick(&s, FILLER));
+            s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
             s.state_mut().players.p1.extra_turns = Some(1);
             s.end_turn();
             assert_eq!(s.state().active, P1);
@@ -256,7 +235,7 @@ mod tests {
                 crate::register_all();
                 let mut s = board(json!([EXPEDITION, FILLER]));
                 step_param(s.card_mut(EXPEDITION), "loss", steps);
-                s.play(EXPEDITION, pick(&s, FILLER));
+                s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
                 assert_eq!(s.state().players.p1.mana.next_turn_mod, -loss);
             }
         }
@@ -273,7 +252,7 @@ mod tests {
             assert!(!offered_ids.contains(&s.card(EXPEDITION).id.clone()));
             let shiny = s.hand(P1).into_iter().find(|held| held.radiant).expect("the Radiant card").id.clone();
             assert!(!offered_ids.contains(&shiny), "no Radiant card is offered");
-            s.play(EXPEDITION, pick(&s, FILLER));
+            s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
             assert!(s.card(FILLER).radiant, "the pick becomes Radiant");
         }
 
@@ -281,7 +260,7 @@ mod tests {
         fn base_face_has_no_cleave_only_the_pick_becomes_radiant() {
             crate::register_all();
             let mut s = board(json!([EXPEDITION, VANILLA, FILLER, TIMMY]));
-            s.play(EXPEDITION, pick(&s, FILLER));
+            s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
             assert_eq!(radiant_hand(s.state()), vec![s.card(FILLER).id.clone()]);
         }
 
@@ -319,7 +298,7 @@ mod tests {
                 TIMMY,
                 MENACE,
             ]));
-            s.play(EXPEDITION, pick(&s, FILLER));
+            s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
             assert!(s.card(FILLER).radiant, "the pick");
             assert!(s.card(VANILLA).radiant, "the card before it");
             assert!(s.card(TIMMY).radiant, "the card after it");
@@ -333,10 +312,62 @@ mod tests {
         fn r1563001_a_pick_at_the_end_of_the_hand_has_one_card_beside_it() {
             crate::register_all();
             let mut s = board(json!([{ "def": EXPEDITION, "radiant": true }, MENACE, VANILLA, FILLER]));
-            s.play(EXPEDITION, pick(&s, FILLER));
+            s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
             assert!(s.card(FILLER).radiant);
             assert!(s.card(VANILLA).radiant);
             assert!(!s.card(MENACE).radiant);
+        }
+    }
+
+    /// R767000: the script kept for the replays of v0.4.0f and before: "Lose all mana next turn"
+    /// (R844's lost refresh), and Echo 1 on the Radiant face.
+    mod v0_4_0f {
+        use super::*;
+
+        #[test]
+        fn r640_r767000_the_kept_script_is_quickdraw_on_both_faces_and_echo_1_on_the_radiant_one() {
+            crate::register_all();
+            let kept = script_v0_4_0f();
+            for face in [&kept.base, &kept.radiant] {
+                assert_eq!(face.flags().quickdraw, Some(true));
+            }
+            assert_eq!(kept.base.flags().echo, None);
+            assert_eq!(kept.radiant.flags().echo, Some(1));
+        }
+
+        #[test]
+        fn r844_r767000_the_kept_base_face_makes_a_non_radiant_pick_radiant_and_loses_next_turns_refresh() {
+            crate::under_kept(EXPEDITION, script_v0_4_0f(), || {
+                let mut s = board(json!([EXPEDITION, FILLER, { "def": VANILLA, "radiant": true }]));
+                assert_eq!(offered(&s), vec![s.card(FILLER).id.clone()], "only the other non-Radiant card");
+                s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
+                assert!(s.card(FILLER).radiant, "the pick becomes Radiant");
+                assert!(s.state().pending.is_none(), "no Echo on the base face");
+                // No next-turn rider: the whole refresh is lost (R844).
+                assert_eq!(s.state().players.p1.mana.next_turn_mod, 0);
+
+                next_turn(&mut s);
+                assert_eq!(s.state().players.p1.mana.current, 0);
+                next_turn(&mut s);
+                let side = &s.state().players.p1;
+                assert_eq!(side.mana.current, side.mana.max);
+            });
+        }
+
+        #[test]
+        fn r767000_the_kept_radiant_face_echoes_once_with_a_fresh_pick_and_no_cleave() {
+            crate::under_kept(EXPEDITION, script_v0_4_0f(), || {
+                let mut s = board(json!([{ "def": EXPEDITION, "radiant": true }, FILLER, MENACE]));
+                s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
+                assert!(s.card(FILLER).radiant);
+                assert!(!s.card(MENACE).radiant, "no Cleave reaches the card beside the pick");
+                // Echo 1: the repeat asks a pick of its own.
+                assert!(s.state().pending.is_some());
+                let menace = s.card(MENACE).id.clone();
+                s.answer(pick::id(&menace));
+                assert!(s.card(MENACE).radiant);
+                assert!(s.state().pending.is_none());
+            });
         }
     }
 }

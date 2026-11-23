@@ -622,12 +622,7 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
             BTreeSet::from(["left".to_string(), "right".to_string()])
         );
 
-        let plays: Vec<ActionBody> = legal_actions(&state, PlayerId::P1)
-            .into_iter()
-            .filter(
-                |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id),
-            )
-            .collect();
+        let plays: Vec<ActionBody> = plays_in(&state, PlayerId::P1, &card.id);
         assert!(!plays.is_empty());
         for play in &plays {
             let ActionBody::Play {
@@ -733,9 +728,7 @@ mod r703_a_pick_the_play_needs {
     use super::*;
 
     fn offers(state: &GameState, card: &CardInstance) -> bool {
-        legal_actions(state, PlayerId::P1)
-            .iter()
-            .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
+        !plays_in(state, PlayerId::P1, &card.id).is_empty()
     }
 
     #[test]

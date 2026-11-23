@@ -10,7 +10,7 @@ import { SESSION_STORAGE_KEY, linkAfterSignIn, readSession } from "../net/sessio
 import MoveToExisting, { moveTestid, signedUpWith } from "./MoveToExisting.tsx";
 
 function base64url(text: string): string {
-  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
 }
 
 /** A token whose account signed up with `provider`. */

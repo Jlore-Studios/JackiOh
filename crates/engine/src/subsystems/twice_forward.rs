@@ -22,7 +22,7 @@ use crate::effects::fuse::fuse_cards;
 use crate::params::param;
 use crate::prelude::json_as;
 use crate::script::{Effect, EffectContext, TriggerDef};
-use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
+use crate::state::{CardInstance, GameState, find_instance_mut};
 use crate::wire::{GameEvent, GameEventType, ZoneName};
 
 /// §10.1: where the card keeps the opponent's plays since it was set (R425).
@@ -76,19 +76,17 @@ fn opponents_play(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<Resolved
     }
 }
 
-/// R781002: the played card if it is still in play or in a graveyard — the one place an Immutable
-/// card bars the trap from copying it (R781001).
-fn still_there<'s>(state: &'s GameState, play: &Resolved) -> Option<&'s CardInstance> {
-    let card = find_instance(state, &play.instance_id)?;
-    matches!(card.zone.z(), ZoneName::Field | ZoneName::Graveyard).then_some(card)
-}
-
 /// R687: turn the card face-up and start the printed Brittle its face-down arrival never started, so no
-/// Brittle ever sits on an unrevealed card.
+/// Brittle ever sits on an unrevealed card. A card an earlier trigger of the same firing has taken off the
+/// field (a fused ingredient's attack that killed it, an exile) has no face to turn up: R78 reset it as
+/// it left, so nothing is written to it there.
 fn reveal_self(state: &mut GameState, self_id: &str) {
     let Some(live) = find_instance_mut(state, self_id) else {
         return;
     };
+    if live.zone.z() != ZoneName::Field {
+        return;
+    }
     live.face_up = Some(true);
     let mut card = live.clone();
     // Started on a copy of the face-up card, the count is written back by id.
@@ -146,18 +144,13 @@ fn fire(radiant_copy: bool, ctx: &mut EffectContext<'_>, event: &GameEvent) -> V
     let Some(play) = opponents_play(ctx, event) else {
         return Vec::new();
     };
-    // R781001: no copy of an Immutable card in play is fused in; the trap still fires and gains Brittle.
-    let shielded = still_there(ctx.sink.state, &play)
-        .is_some_and(|card| crate::restrictions::immutable_bars(ctx.sink.state, Some(&self_), card));
     // R687: firing turned it face-up; its printed Brittle starts now, before the gain lands on it.
     reveal_self(ctx.sink.state, &self_.id);
     let gain = gain_brittle(json_as(json!({ "instanceId": self_.id, "n": param(ctx, GAIN) })));
     // §6 Animated, R831011: the last step of its firing; a card already a Unit stays where it is.
     let animated = animate(AnimateArgs::default());
-    if shielded {
-        return vec![gain, animated];
-    }
-    // R831011: a copy of the played card's definition; the card itself stays where it is.
+    // R831011, R4353001: a copy of the played card's definition, an Immutable card's too, since Immutable
+    // bars no Field Trap's aim any more; the card itself stays where it is.
     let fused = fuse_cards(json_as(json!({
         "defIds": [play.def_id],
         "targetInstanceId": self_.id,
@@ -185,5 +178,6 @@ pub fn twice_forward_trigger(args: TwiceForwardArgs) -> TriggerDef {
         })),
         run: Arc::new(move |ctx: &mut EffectContext<'_>, event: &GameEvent| fire(radiant_copy, ctx, event)),
         even_if_gone: false,
+        lowers_cost_on_float: false,
     }
 }

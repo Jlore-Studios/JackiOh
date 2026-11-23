@@ -17,15 +17,35 @@ const CSS = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "auth.css
 
 type Block = { selector: string; declarations: Map<string, string> };
 
+/**
+ * Every `selector { declarations }` pair (#4009: `/([^{}]+)\{([^{}]*)\}/g` scans super-linearly on a
+ * long brace-free run); the sheet's at-rules nest only rules these tests do not name.
+ */
+function rulePairs(css: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = css.split("}");
+  if (!css.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
+}
+
 /** Every `selector { declarations }` pair; the sheet's at-rules nest only rules these tests do not name. */
 function blocks(): Block[] {
-  return [...CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => {
+  return rulePairs(CSS).map(([selector, body]) => {
     const declarations = new Map<string, string>();
-    for (const line of (match[2] ?? "").split(";")) {
+    for (const line of body.split(";")) {
       const colon = line.indexOf(":");
       if (colon > 0) declarations.set(line.slice(0, colon).trim(), line.slice(colon + 1).trim());
     }
-    return { selector: (match[1] ?? "").trim(), declarations };
+    return { selector: selector.trim(), declarations };
   });
 }
 

@@ -1,0 +1,94 @@
+/* R3887000: a card as plain text (PlainText.tsx), at reading size, on the Statistics page's dark ground. Tokens only. */
+
+.plain-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 60ch;
+  font-size: var(--type-lg);
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: start;
+}
+
+.plain-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+
+.plain-card__name {
+  font-size: var(--type-xl);
+}
+
+.plain-card__cost,
+.plain-card__line,
+.plain-card__stats {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--type-md);
+}
+
+.plain-card__label {
+  margin: 0;
+  color: var(--radiant);
+  font-size: var(--type-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.plain-card__text {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.plain-card__face {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.plain-card__face[data-face="radiant"] {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+/* The default mark ink is the dark gold for parchment, unreadable on this page. */
+.plain-card .cf-mark {
+  color: var(--mark-ink-on-dark);
+  background: none;
+  text-decoration-color: var(--mark-ink-on-dark);
+}
+
+.plain-card .cf-mark .cf-term {
+  color: inherit;
+}
+
+/* The Grid, with every card as text: wider cells, and a button that is no 5:7 card. */
+.stats-grid.stats-grid--plain {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+}
+
+.app-shell.stats-page .stats-grid-card.stats-grid-card--plain {
+  aspect-ratio: auto;
+  text-align: start;
+}
+
+/* The breakdown's Reference cards. */
+.plain-refs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plain-refs__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}

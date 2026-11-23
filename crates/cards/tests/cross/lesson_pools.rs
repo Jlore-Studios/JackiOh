@@ -5,7 +5,7 @@
 //! show some, so the sweep reaches the pools it guards.
 
 use jackioh_cards::{CATALOG, register_all};
-use jackioh_engine::catalog::{HELD_RARITIES, deckable, made_by_a_rule};
+use jackioh_engine::catalog::{HELD_RARITIES, deckable, made_by_a_rule, self_def_ids};
 use jackioh_engine::testkit::*;
 
 const GAMES: i32 = 15;
@@ -21,7 +21,38 @@ const NAMES_A_HELD_CARD: &[&str] = &[
     // YileGPT Prime, a token: "Cry: … summon Claude's Datacenters". A random game reaches it as a
     // Marketplace buy at (0) since #3047 (R3047001).
     "meditative-049-1",
+    // The Stinkyscape+ release (#3573): the two cards of the set that name a held card, as a Faction's
+    // text does, so no pool is drawn.
+    "stinkyscapeplus-120", // Crawler: "add a Toxopid to your hand" (S+ #121, Legendary).
+    "stinkyscapeplus-136", // Crawler Assembly Line: "Summon a Crawler", whose Death adds a Toxopid.
+    "stinkyscapeplus-137", // The Perfect Pair: "The pairs are Scepter and Reign, … Quad and Oct, …" (R3565004).
 ];
+/// A held card the text of another card names, so it reaches a game wherever that other card stands, not
+/// only as it is played: Toxopid (S+ #121) comes with each Crawler (#120), which any Mindustrial pool
+/// can generate and which adds it by name as it dies, however it arrived.
+const NAMED_BY_A_CARD_IN_PLAY: &[(&str, &str)] = &[("stinkyscapeplus-121", "stinkyscapeplus-120")];
+
+/// Whether `def_id` is one of `ids`, or a fused card (R179) with one of them among its ingredients:
+/// a fused card runs every ingredient's scripts (R77), so it names whatever they name.
+fn stands_for_any(state: Option<&GameState>, def_id: &str, ids: &[&str]) -> bool {
+    self_def_ids(state, def_id)
+        .iter()
+        .any(|id| ids.contains(&id.as_str()))
+}
+
+/// Whether `state` holds a card whose text names the held card `id` (`NAMED_BY_A_CARD_IN_PLAY`).
+fn named_by_a_card_in_play(state: &GameState, id: &str) -> bool {
+    let text = serde_json::to_string(state).expect("the state serializes");
+    NAMED_BY_A_CARD_IN_PLAY.iter().any(|(named, namer)| {
+        *named == id
+            && text
+                .split("\"defId\":\"")
+                .skip(1)
+                .filter_map(|piece| piece.split('"').next())
+                .any(|def_id| stands_for_any(Some(state), def_id, &[*namer]))
+    })
+}
+
 const MAX_ACTIONS: usize = 3000;
 
 fn unheld_pool() -> Vec<String> {
@@ -90,7 +121,7 @@ fn sweep(n: i32, hold: bool) -> Vec<(String, usize)> {
         };
         let names_one = match &chosen {
             ActionBody::Play { instance_id, .. } => find_instance(&state, instance_id)
-                .is_some_and(|card| NAMES_A_HELD_CARD.contains(&card.def_id.as_str())),
+                .is_some_and(|card| stands_for_any(Some(&state), &card.def_id, NAMES_A_HELD_CARD)),
             _ => false,
         };
         let result = reduce(&state, &Action::new(chosen, player, format!("s{steps}")));
@@ -100,11 +131,14 @@ fn sweep(n: i32, hold: bool) -> Vec<(String, usize)> {
         let names_one = names_one
             || result.events.iter().any(|event| {
                 matches!(event, GameEvent::CardPlayed { def_id, .. }
-                    if NAMES_A_HELD_CARD.contains(&def_id.as_str()))
+                    if stands_for_any(Some(&result.state), def_id, NAMES_A_HELD_CARD))
             });
         state = result.state;
         steps += 1;
         for id in held_named(&state) {
+            if named_by_a_card_in_play(&state, &id) {
+                continue;
+            }
             if names_one && !seen.iter().any(|(named, _)| *named == id) {
                 named_made.push(id.clone());
             }
@@ -134,5 +168,31 @@ mod r2201001_a_held_lesson_shows_no_legendary_or_mythic_card {
             unheld_shown > 0,
             "no unheld game showed a Legendary or Mythic card: the sweep reaches no pool"
         );
+    }
+
+    #[test]
+    fn r2201001_a_fused_card_names_the_held_cards_its_ingredients_name() {
+        // The Perfect Pair fused (R77, R179) still adds Quad and Oct by name: the sweep's game 4 at
+        // v0.6.7k (#4272) played this very card.
+        let fused = "t-13:stinkyscapeplus-137+stinkyscapeplus-135";
+        assert!(stands_for_any(None, fused, NAMES_A_HELD_CARD));
+        assert!(stands_for_any(
+            None,
+            "t-2:(t-1:stinkyscapeplus-135+stinkyscapeplus-137)+core-001",
+            NAMES_A_HELD_CARD
+        ));
+        assert!(stands_for_any(None, "stinkyscapeplus-137", NAMES_A_HELD_CARD));
+        assert!(!stands_for_any(None, "stinkyscapeplus-135", NAMES_A_HELD_CARD));
+        assert!(!stands_for_any(
+            None,
+            "t-1:stinkyscapeplus-135+core-001",
+            NAMES_A_HELD_CARD
+        ));
+        // A fused Crawler adds its Toxopid as the bare Crawler does.
+        assert!(stands_for_any(
+            None,
+            "t-3:stinkyscapeplus-120*+core-001",
+            &["stinkyscapeplus-120"]
+        ));
     }
 }

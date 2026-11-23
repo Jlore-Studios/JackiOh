@@ -1,22 +1,23 @@
-//! S #90 After Burner (SPEC §8.10 row 90; R21, R1852000, R1852003, R1859000, R1859001): (2) Unit,
+//! S #90 After Burner (SPEC §8.10 row 90; R21, R1852000, R1852003, R1859000, R1859001, R4334000): (2) Unit,
 //! Common, 4/8 → 8/16, Starship Piece, a card of the Stinkyscape set.
 //!
 //! Base and Radiant: "Starship Piece\nWhen launched, your Starship gains {keywords|random combat
 //! keyword|random combat keywords}." Keywords 2, Radiant 4.
 //! Engine: Starship Piece is catalog data: its death fuses a copy into its owner's Dormant Starship
 //! (R1852000). When launched (`when_launched`, R1852003) runs only as part of that Starship, after its
-//! fused Cries; on the field it does nothing.
+//! fused Cries; on the field it does nothing. Its `keywords` is read through `param` on the face the
+//! piece fused on (R4334000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-090";
 
-fn after_burner(radiant: bool) -> Script {
+fn after_burner() -> Script {
     Script {
-        triggers: vec![when_launched("after-burner", move |ctx, _event| {
+        triggers: vec![when_launched("after-burner", |ctx, _event| {
             vec![grant_random_keywords(json_as(json!({
                 "target": { "of": "self" },
-                "count": piece_number(ctx, ID, radiant, "keywords"),
+                "count": param(ctx, "keywords"),
             })))]
         })],
         ..Script::default()
@@ -24,9 +25,10 @@ fn after_burner(radiant: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
+    let base = after_burner();
     CardScripts {
-        base: after_burner(false),
-        radiant: after_burner(true),
+        base: base.clone(),
+        radiant: base,
     }
 }
 
@@ -38,7 +40,7 @@ mod tests {
     use jackioh_engine::prelude::{dormant_starship_of, random_pool_keywords};
     use jackioh_engine::testkit::*;
 
-    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Pierce: keywords only
 
     fn kinds(s: &Scenario, id: &str) -> Vec<KeywordKind> {
         s.stats(id).keywords.iter().map(Keyword::kind).collect()

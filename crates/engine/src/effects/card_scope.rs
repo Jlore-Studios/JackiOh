@@ -1,8 +1,9 @@
 //! How a verb names cards on the field, in a hand or in a deck (docs/classic-sets.md B3.3, B3.4, B5
 //! E38, E39); `targets::BoardScope` names the field only. A card dormant under a Stack (§3.2, R13) is
-//! in no scope. The walk is in R242's order: what everyone reads, then what only its owner reads (§9.1,
-//! R33), then what nobody reads (§3), each side by side (the active player's first, R68), so a hidden
-//! card's place among a verb's events says only its group.
+//! in no scope, nor, in a Spell's walk, a field card Immune to Spells (R4453000). The walk is in R242's
+//! order: what everyone reads, then what only its owner reads (§9.1, R33), then what nobody reads (§3),
+//! each side by side (the active player's first, R68), so a hidden card's place among a verb's events
+//! says only its group.
 
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +14,8 @@ use crate::state::{CardInstance, GameState};
 use crate::wire::{CardType, PlayerId, Row, Tag, Zone, opponent_of};
 use crate::zones::{active_units_of, card_at, is_standing_unit, slots_of};
 
-/// The piles a card scope reaches: the field (both rows unless `rows` narrows it), a hand, a deck.
+/// The piles a card scope reaches: the field (both rows unless `rows` narrows it), a hand, a deck, and
+/// (R3569001) a graveyard or an exile pile.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -21,6 +23,8 @@ pub enum CardZone {
     Field,
     Hand,
     Library,
+    Graveyard,
+    Exile,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -30,7 +34,8 @@ pub struct CardScope {
     /// Sides, relative to `ctx.controller`. Default "self".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub side: Option<super::targets::ScopeSide>,
-    /// Which piles. A hand and a deck are their owner's; the field is its controller's.
+    /// Which piles. A hand, a deck, a graveyard and an exile pile are their owner's; the field is its
+    /// controller's.
     pub zones: Vec<CardZone>,
     /// Field rows. Default both.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -181,7 +186,7 @@ pub fn cards_in_card_scope(
         Some(scope.side.unwrap_or(super::targets::ScopeSide::SelfSide)),
     ) {
         let side = &state.players[player];
-        let piles: [(CardZone, Vec<CardInstance>); 3] = [
+        let piles: [(CardZone, Vec<CardInstance>); 5] = [
             (
                 CardZone::Field,
                 if scope.zones.contains(&CardZone::Field) {
@@ -206,6 +211,22 @@ pub fn cards_in_card_scope(
                     Vec::new()
                 },
             ),
+            (
+                CardZone::Graveyard,
+                if scope.zones.contains(&CardZone::Graveyard) {
+                    side.graveyard.clone()
+                } else {
+                    Vec::new()
+                },
+            ),
+            (
+                CardZone::Exile,
+                if scope.zones.contains(&CardZone::Exile) {
+                    side.exile.clone()
+                } else {
+                    Vec::new()
+                },
+            ),
         ];
         for (zone, cards) in piles {
             for card in cards {
@@ -220,6 +241,12 @@ pub fn cards_in_card_scope(
                         scope.not_tags.as_deref(),
                     )
                 {
+                    matches = false;
+                }
+                // R4453000: a Spell's walk passes a field card it may not affect by (Immune to Spells,
+                // §6.1), as its aimed picks and board scopes do; a hand or a deck is no field, so a copy
+                // there is reached. Marked unmatched, not dropped, so a hidden pile stays whole (R440).
+                if matches && zone == CardZone::Field && crate::restrictions::unaffected_by(ctx, &card) {
                     matches = false;
                 }
                 let readers = readers_of(state, &card);

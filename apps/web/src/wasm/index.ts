@@ -141,6 +141,7 @@ function call<T>(name: string, run: () => T): T {
   try {
     return run();
   } catch (cause) {
+    // Stryker disable next-line ConditionalExpression,StringLiteral: the catch runs only once the module is loaded, which takes WebAssembly, so `typeof WebAssembly !== "undefined"` is always true here (and typeof never answers ""); the panic tests in index.test.ts hold the rest of the condition.
     if (typeof WebAssembly !== "undefined" && cause instanceof WebAssembly.RuntimeError) {
       throw new Error(`the engine panicked in ${name} (the console has its message): ${cause.message}`, { cause });
     }
@@ -312,14 +313,6 @@ export function registeredCatalog(): CardDefs {
     catalogCache ??= parsed<CardDefs>(normal.catalog());
     return catalogCache;
   });
-}
-
-/**
- * R1011000: the learned evaluation's parity fixture, its integer network's correction for each case.
- * Only the tests call it.
- */
-export function learnedParity(fixtureJson: string): number[] {
-  return call("learnedParity", () => parsed<number[]>(normal.learned_parity(fixtureJson)));
 }
 
 /** The catalog version compiled into the module (the newest entry of patches.json). */
@@ -534,6 +527,31 @@ export function practiceConstants(): PracticeConstants {
   });
 }
 
+/** Daily games' numbers (`crates/shared/src/config.rs`, #3727): the times per move, the urgent color's hours, the lists' sizes. */
+export type DailyConstants = {
+  MS_PER_HOUR: number;
+  MS_PER_DAY: number;
+  /** The times per move a daily game may be played at, in days, shortest first. */
+  DAILY_TIME_PER_MOVE_DAYS: readonly number[];
+  DAILY_CHALLENGE_TTL_DAYS: number;
+  DAILY_SEEK_TTL_DAYS: number;
+  DAILY_MAX_ACTIVE_GAMES: number;
+  DAILY_REMINDER_HOURS: number;
+  DAILY_EMAIL_MIN_GAP_HOURS: number;
+  /** Under this many hours left, a move's time shows in the urgent color. */
+  DAILY_URGENT_HOURS: number;
+  DAILY_RECENT_FINISHED: number;
+};
+
+let dailyConstantsCache: DailyConstants | null = null;
+
+export function dailyConstants(): DailyConstants {
+  return call("constants", () => {
+    dailyConstantsCache ??= parsed<DailyConstants>(normal.constants());
+    return dailyConstantsCache;
+  });
+}
+
 // the AI (SURFACE §9)
 
 export function aiToAct(state: GameState, seat: PlayerId): boolean {
@@ -711,6 +729,6 @@ export function face(request: FaceCall): FaceAnswer {
  * wire types. The catalog is the module's own and the locale is an argument, so each line is final text as
  * spans for the reader's language (`game/logLines.ts` wraps the calls the log makes).
  */
-export function log(request: LogCall): LogAnswer {
-  return call("log", () => parsed<LogAnswer>(normal.log(json(request))));
+export function gameLog(request: LogCall): LogAnswer {
+  return call("gameLog", () => parsed<LogAnswer>(normal.game_log(json(request))));
 }

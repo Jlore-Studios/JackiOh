@@ -17,7 +17,7 @@ import { REPLAY_GIF_FALLBACK_FPS, REPLAY_GIF_FPS, REPLAY_GIF_MAX_BYTES, REPLAY_G
 import { assetsFor, attemptsFor, exportGif, renderGif } from "./export.ts";
 import type { GifProgress, GifRender } from "./export.ts";
 import { faceKey, planFrames } from "./plan.ts";
-import type { GifPlan } from "./plan.ts";
+import type { GifItem, GifPlan } from "./plan.ts";
 
 const lookup = lookupFromDefs(CATALOG);
 const clip: ReplayStep[] = foldedReplaySteps().slice(8, 14);
@@ -156,6 +156,26 @@ describe("what the raster is given", () => {
     expect(known.faces["core-004"]?.art?.variant).toBe("base");
     const blank = assetsFor(plan, one, null);
     expect(blank.faces["core-004"]).toEqual({ name: "core-004", type: "Unit", rarity: null, art: null });
+  });
+
+  it("#4015 assetsFor keeps prototype-pollution defIds out of the faces", () => {
+    const card = (defId: string): GifItem => ({ kind: "card", x: 0, y: 0, w: 1, h: 1, defId, radiant: false, cost: 0, attack: null, health: null });
+    const plan: GifPlan = {
+      width: 8,
+      height: 8,
+      fps: 10,
+      frames: [{ step: 0, delayCs: 10, items: [card("__proto__"), card("constructor"), card("core-004")] }],
+    };
+    const blank = assetsFor(plan, [], null);
+    expect(blank.faces["core-004"]).toEqual({ name: "core-004", type: "Unit", rarity: null, art: null });
+    const resolved = assetsFor(plan, [], lookup);
+    expect(resolved.faces["core-004"]?.name, "the real card still resolves").not.toBe("");
+    for (const assets of [blank, resolved]) {
+      expect(Object.hasOwn(assets.faces, "__proto__")).toBe(false);
+      expect(Object.hasOwn(assets.faces, "constructor")).toBe(false);
+      expect(Object.getPrototypeOf(assets.faces)).toBe(Object.prototype);
+    }
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
   });
 
   it("assetsFor reads a match-made card from its step's own definitions (R243)", () => {

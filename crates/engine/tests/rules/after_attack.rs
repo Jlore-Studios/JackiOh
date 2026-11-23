@@ -15,11 +15,7 @@ use crate::rules::fixtures::damage_combat::{
     reborn_even_veteran, reborn_veteran, recorder, replays_to, round_trip, turncoat, veteran, veteran_asker,
     wall,
 };
-use crate::rules::fixtures::harness::{by, input, put, sink_for, slot};
-
-fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
+use crate::rules::fixtures::harness::{by, input, live_mut, put, sink_for, slot};
 
 fn top_id(pile: &Option<Pile>) -> Option<&str> {
     pile.as_ref()
@@ -39,7 +35,7 @@ mod script_after_attack {
             slot(P1, Row::Units, 1),
             Default::default(),
         );
-        by_id_mut(&mut state, &striker.id).buffs = AttackHealth { attack: 1, health: 3 };
+        live_mut(&mut state, &striker.id).buffs = AttackHealth { attack: 1, health: 3 };
         let victim = put(&mut state, &grunt.id, slot(P2, Row::Units, 1), Default::default());
         let mut game = recorder(&state);
         game.play(input(json!({
@@ -62,7 +58,7 @@ mod script_after_attack {
             Default::default(),
         );
         let blocker = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
-        by_id_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 4, health: 0 };
+        live_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 4, health: 0 };
         let mut game = recorder(&state);
         game.play(input(json!({
             "type": "attack", "attackerId": striker.id, "targetId": blocker.id, "playerId": "p1"
@@ -293,7 +289,7 @@ mod r2396000_whenever_this_attacks {
             Default::default(),
         );
         let blocker = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
-        by_id_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 4, health: 0 };
+        live_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 4, health: 0 };
         let mut game = recorder(&state);
         game.play(input(json!({
             "type": "attack", "attackerId": striker.id, "targetId": blocker.id, "playerId": "p1"
@@ -322,7 +318,7 @@ mod r2396000_whenever_this_attacks {
             slot(P1, Row::Units, 1),
             Default::default(),
         );
-        by_id_mut(&mut state, &striker.id).buffs = AttackHealth { attack: 1, health: 3 };
+        live_mut(&mut state, &striker.id).buffs = AttackHealth { attack: 1, health: 3 };
         let victim = put(&mut state, &grunt.id, slot(P2, Row::Units, 1), Default::default());
         let mut game = recorder(&state);
         game.play(input(json!({
@@ -345,7 +341,7 @@ mod r2396000_whenever_this_attacks {
             Default::default(),
         );
         let blocker = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
-        by_id_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 4, health: 0 };
+        live_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 4, health: 0 };
         let mut game = recorder(&state);
         game.play(input(json!({
             "type": "attack", "attackerId": striker.id, "targetId": blocker.id, "playerId": "p1"
@@ -371,7 +367,7 @@ mod r2396000_whenever_this_attacks {
             Default::default(),
         );
         let blocker = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
-        by_id_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 4, health: 0 };
+        live_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 4, health: 0 };
         let mut game = recorder(&state);
         game.play(input(json!({
             "type": "attack", "attackerId": striker.id, "targetId": blocker.id, "playerId": "p1"
@@ -414,7 +410,7 @@ mod r2396000_whenever_this_attacks {
         )
         .expect("the two fuse");
         let blocker = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
-        by_id_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 9, health: 0 };
+        live_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 9, health: 0 };
         let mut game = recorder(&state);
         game.play(input(json!({
             "type": "attack", "attackerId": fused.id, "targetId": blocker.id, "playerId": "p1"

@@ -68,13 +68,9 @@ mod tests {
         scenario(opts)
     }
 
-    fn at_enemy_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     fn at_unit(s: &Scenario, seat: &str, lane: i32, what: &str) -> Value {
         let unit = must(s.unit(seat, lane), what);
-        json!({ "targets": [{ "pick": "instance", "instanceId": unit.id }] })
+        pick::targets(pick::instance(&unit))
     }
 
     /// p1 holds the eclipse, a (3) Cost spell and a (1) Cost unit; both sides keep a unit on the board.
@@ -92,7 +88,7 @@ mod tests {
         #[test]
         fn deals_3_damage_to_the_target_through_the_sec4_4_pipeline() {
             let mut s = board();
-            s.play("35", json!({ "targets": at_enemy_hero() }));
+            s.play("35", json!({ "targets": pick::hero("p2") }));
             s.expect_health("p2", 27);
             s.expect_events(json!(["cardPlayed", "damage"]));
         }
@@ -110,7 +106,7 @@ mod tests {
             let mut s = board();
             s.expect_mana("p1", 4);
 
-            s.play("35", json!({ "targets": at_enemy_hero() }));
+            s.play("35", json!({ "targets": pick::hero("p2") }));
             s.expect_mana("p1", 3);
 
             let hit_job = at_unit(&s, "p2", 1, "p2 lane 1");
@@ -121,7 +117,7 @@ mod tests {
         #[test]
         fn a_unit_play_does_not_consume_the_discount() {
             let mut s = board();
-            s.play("35", json!({ "targets": at_enemy_hero() }));
+            s.play("35", json!({ "targets": pick::hero("p2") }));
             s.expect_mana("p1", 3);
 
             // #15 is a Unit, so `onlyType: "Spell"` leaves it at its printed 1 and the discount stands.
@@ -141,7 +137,7 @@ mod tests {
                 "p2": { "field": ["15", "15"], "library": ["15", "15", "15"] },
             }));
 
-            s.play("35", json!({ "targets": at_enemy_hero() }));
+            s.play("35", json!({ "targets": pick::hero("p2") }));
             s.expect_mana("p1", 5);
             let first = at_unit(&s, "p2", 1, "p2 lane 1");
             s.play("16", first);
@@ -154,7 +150,7 @@ mod tests {
         #[test]
         fn the_discount_expires_at_cleanup() {
             let mut s = board();
-            s.play("35", json!({ "targets": at_enemy_hero() }));
+            s.play("35", json!({ "targets": pick::hero("p2") }));
             assert_eq!(s.state().players.p1.mods.len(), 1);
 
             s.end_turn();
@@ -165,7 +161,7 @@ mod tests {
         #[test]
         fn a_spell_on_a_later_turn_pays_full_price() {
             let mut s = board();
-            s.play("35", json!({ "targets": at_enemy_hero() }));
+            s.play("35", json!({ "targets": pick::hero("p2") }));
 
             s.end_turn();
             s.end_turn();
@@ -185,7 +181,7 @@ mod tests {
         fn radiant_deals_6_damage() {
             let mut s = board();
             s.card_mut("35").radiant = true;
-            s.play("35", json!({ "targets": at_enemy_hero() }));
+            s.play("35", json!({ "targets": pick::hero("p2") }));
             s.expect_health("p2", 24);
         }
 
@@ -194,7 +190,7 @@ mod tests {
             let mut s = board();
             s.card_mut("35").radiant = true;
 
-            s.play("35", json!({ "targets": at_enemy_hero() }));
+            s.play("35", json!({ "targets": pick::hero("p2") }));
             s.expect_mana("p1", 3);
 
             let hit_job = at_unit(&s, "p2", 1, "p2 lane 1");
@@ -207,7 +203,7 @@ mod tests {
         fn the_radiant_discount_expires_at_cleanup_too() {
             let mut s = board();
             s.card_mut("35").radiant = true;
-            s.play("35", json!({ "targets": at_enemy_hero() }));
+            s.play("35", json!({ "targets": pick::hero("p2") }));
             assert_eq!(s.state().players.p1.mods.len(), 1);
 
             s.end_turn();
@@ -226,7 +222,7 @@ mod tests {
                 crate::degrade_number(&mut s, "35", "damage")
             };
             assert_eq!(moved, amount);
-            s.play("35", json!({ "targets": at_enemy_hero() }));
+            s.play("35", json!({ "targets": pick::hero("p2") }));
             s.expect_health("p2", 30 - amount);
         }
     }
@@ -242,7 +238,7 @@ mod tests {
                 crate::degrade_number(&mut s, "35", "discount")
             };
             assert_eq!(moved, discount);
-            s.play("35", json!({ "targets": at_enemy_hero() }));
+            s.play("35", json!({ "targets": pick::hero("p2") }));
             s.expect_mana("p1", 3);
             let hit_job = at_unit(&s, "p2", 1, "p2 lane 1");
             s.play("16", hit_job);

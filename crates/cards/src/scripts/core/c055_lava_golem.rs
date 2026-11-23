@@ -5,6 +5,7 @@
 //!   Radiant: "Taunt, Tribute 3. Can use enemy Units as Tributes."
 //! Tribute targets chosen at play time (§10.5, R81, R90); enemy tributes sacrifice enemy units (R360; control is field-only, R15).
 //! If any enemy tribute chosen, summons for opponent (R101; leftmost open zone, R64; §3.2, R4, R11, R65).
+//! A face-down play by a lent Cloaked (M #45) is set on the player's own side whatever it tributed (R4265000).
 
 use jackioh_engine::prelude::*;
 
@@ -223,6 +224,25 @@ mod tests {
             assert_eq!(golem.summoned_turn, Some(turn));
         }
 
+        /// R4265000: set by M #45's lent Cloaked, the Golem paid with an opposing unit stays in p1's backrow (fuzz handicapped seed 6928).
+        #[test]
+        fn r4265000_a_cloaked_play_paid_with_an_opposing_unit_is_set_in_the_player_s_own_backrow() {
+            let mut s = scenario(json!({
+                "p1": { "mana": 10, "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }, { "def": "core-053", "lane": 2 }, { "def": "meditative-045", "lane": 4 }] },
+                "p2": { "field": [{ "def": "core-053", "lane": 1 }] },
+            }));
+            let golem = s.card("core-055").id.clone();
+            let mut tributes = ids_at(&s, P1, &[1, 2]);
+            tributes.push(s.unit_at(P2, 1).id);
+            s.play("core-055", json!({ "row": "backrow", "zone": 3, "tributes": tributes, "faceDown": "cloaked" }));
+            let set = s.backrow(P1, 3).expect("set in p1's backrow");
+            assert_eq!(set.def_id, "core-055");
+            assert_eq!(set.controller, P1);
+            assert!(set.set_as.is_some());
+            assert_ne!(set.id, golem, "a set card takes a fresh id (R227)");
+            assert!(s.state().players.p2.units.iter().all(Option::is_none));
+        }
+
         /// R1081000: a Flying Golem named into a backrow zone is still summoned for the opponent, into
         /// their unit zone of that lane.
         #[test]
@@ -337,8 +357,9 @@ mod tests {
             s.end_turn();
             s.attack("core-054", "core-055");
 
-            s.expect_stats("core-055", json!({ "health": 2, "attack": 20, "maxHealth": 10 }));
-            // The 20-attack retaliation still kills the 8/8 attacker.
+            // Straaza (#54) is a 6/6 since issue #4154: its 6 lands on the 20/10.
+            s.expect_stats("core-055", json!({ "health": 4, "attack": 20, "maxHealth": 10 }));
+            // The 20-attack retaliation still kills the 6/6 attacker.
             s.expect_in_zone("core-054", "graveyard");
         }
 

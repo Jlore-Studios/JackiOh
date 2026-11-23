@@ -100,11 +100,6 @@ mod tests {
         }))
     }
 
-    /// The pick of the victim, as the play action carries it (R81).
-    fn pick(id: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-    }
-
     /// The coins the match rng would flip for a scenario built but not yet played: one, or two on
     /// the Radiant face.
     fn coins(s: &Scenario, radiant_face: bool) -> Vec<bool> {
@@ -144,7 +139,7 @@ mod tests {
                     let mut s = aiming(&seed, false, P1, 1, VANILLA);
                     let victim = s.unit(P1, 1).expect("the victim");
                     let heads = coins(&s, false)[0];
-                    s.play(PEPTIDES, pick(&victim.id));
+                    s.play(PEPTIDES, pick::targets(pick::id(&victim.id)));
                     if heads {
                         saw_heads = true;
                         // Seven separate Buffs (R386), and the victim stands.
@@ -173,7 +168,7 @@ mod tests {
                 }
                 let mut s = s.expect("a tails seed over 32 tries");
                 let wall = s.unit(P1, 1).expect("the wall");
-                s.play(PEPTIDES, pick(&wall.id));
+                s.play(PEPTIDES, pick::targets(pick::id(&wall.id)));
                 // Tails destroys, and the Indestructible wall ignores the mark (R46).
                 assert!(upgraded(s.events()).is_empty());
                 assert!(destroyed(s.events()).is_empty());
@@ -206,7 +201,7 @@ mod tests {
                 let mut s = heads.expect("a heads seed over 32 tries");
                 set_param(s.card_mut(PEPTIDES), "times", 3);
                 let victim = s.unit(P1, 1).expect("the victim");
-                s.play(PEPTIDES, pick(&victim.id));
+                s.play(PEPTIDES, pick::targets(pick::id(&victim.id)));
                 assert_eq!(upgraded(s.events()).len(), 3);
             }
         }
@@ -223,7 +218,7 @@ mod tests {
                 let victim = s.unit(P1, 1).expect("the victim");
                 let pair = coins(&s, true);
                 pairs.insert((pair[0], pair[1]));
-                s.play(PEPTIDES, pick(&victim.id));
+                s.play(PEPTIDES, pick::targets(pick::id(&victim.id)));
                 if pair[0] || pair[1] {
                     assert_eq!(upgraded(s.events()).len(), 7, "{seed}");
                     assert!(destroyed(s.events()).is_empty(), "{seed}");
@@ -248,7 +243,7 @@ mod tests {
                     let pair = coins(&s, true);
                     pairs.insert((pair[0], pair[1]));
                     let heads = pair[0] || pair[1];
-                    s.play(PEPTIDES, pick(&victim.id));
+                    s.play(PEPTIDES, pick::targets(pick::id(&victim.id)));
                     if heads {
                         assert_eq!(upgraded(s.events()).len(), 10, "{seed}");
                         assert!(destroyed(s.events()).is_empty(), "{seed}");
@@ -270,7 +265,7 @@ mod tests {
                     let pair = coins(&s, true);
                     pairs.insert((pair[0], pair[1]));
                     let heads = pair[0] && pair[1];
-                    s.play(PEPTIDES, pick(&victim.id));
+                    s.play(PEPTIDES, pick::targets(pick::id(&victim.id)));
                     if heads {
                         assert_eq!(upgraded(s.events()).len(), 10, "{seed}");
                         assert!(destroyed(s.events()).is_empty(), "{seed}");

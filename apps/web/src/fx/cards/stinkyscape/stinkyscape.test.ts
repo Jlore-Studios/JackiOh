@@ -10,9 +10,9 @@ import { describe, expect, it } from "vitest";
 import { SET_PIECE_HOLD_CAP_MS, planEntries, type AnimationEntry } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { fullBoardView, withEvents } from "../../../test/fixtures.ts";
+import { endOf, envOf } from "../../../test/signatures.ts";
 import {
   FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_SHIP_ARRIVAL_BEATS,
   FX_SHIP_DOME_TRAUMA,
@@ -21,7 +21,6 @@ import {
 } from "../../constants.ts";
 import { planCardFx } from "../../cardFx.ts";
 import { planFx } from "../../cues.ts";
-import { createFxMemory } from "../../memory.ts";
 import { motifScale, timesOf } from "../../motifs/build.ts";
 import type { FxAnchor, FxCue, FxPlanEnv } from "../../types.ts";
 import { CARD_RECIPES } from "../bespoke.ts";
@@ -31,10 +30,6 @@ import { STINKYSCAPE_SIGNATURE_BOARDS } from "./signatureFixtures.ts";
 const MAGI = "stinkyscape-018";
 const WARP = "stinkyscape-036";
 
-function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
-}
-
 /** Plans each entry of `events` in order, as FxLayer does on every `start`: remember, then plan. */
 function planAll(events: readonly GameEvent[], view: PlayerView, env: FxPlanEnv = envOf(), D?: number): { entry: AnimationEntry; cues: FxCue[] }[] {
   const planned = planEntries(events, withEvents(view, [...events]), false);
@@ -43,21 +38,6 @@ function planAll(events: readonly GameEvent[], view: PlayerView, env: FxPlanEnv 
     env.memory.remember(entry.events);
     return { entry, cues: planFx(entry, entry.view, env) };
   });
-}
-
-/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS). */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
 }
 
 const tid = (value: string, at?: { x: number; y: number }): FxAnchor => (at === undefined ? { kind: "testid", testid: value } : { kind: "testid", testid: value, at });

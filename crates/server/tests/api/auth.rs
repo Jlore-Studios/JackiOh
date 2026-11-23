@@ -678,6 +678,42 @@ mod r159_how_long_a_verified_email_stays_verified {
         assert_eq!(provider.confirmed_count(), 2);
     }
 
+    /// R159: a remembered yes answers up to a full window and not at it, where the provider is asked
+    /// again (#3836: the read's `<` taken as `<=` lived).
+    #[tokio::test]
+    async fn r159_a_remembered_email_answers_up_to_its_window_and_is_asked_again_at_it() {
+        let h = Harness::new().await;
+        let alice = h.token_for(ALICE);
+        assert!(
+            h.auth
+                .verify(&alice)
+                .await
+                .expect("alice verifies")
+                .email_verified
+        );
+        assert_eq!(h.gotrue.lookups(), counts(&[(ALICE, 1)]));
+
+        h.clock.charge(EMAIL_CONFIRMED_CACHE_TTL_MS - 1).await;
+        assert!(
+            h.auth
+                .verify(&alice)
+                .await
+                .expect("alice verifies")
+                .email_verified
+        );
+        assert_eq!(h.gotrue.lookups(), counts(&[(ALICE, 1)]));
+
+        h.clock.charge(1).await;
+        assert!(
+            h.auth
+                .verify(&alice)
+                .await
+                .expect("alice verifies")
+                .email_verified
+        );
+        assert_eq!(h.gotrue.lookups(), counts(&[(ALICE, 2)]));
+    }
+
     #[tokio::test]
     async fn r159_never_caches_the_no_so_an_account_that_has_just_clicked_its_link_is_unlocked_at_once() {
         let h = Harness::new().await;
@@ -1200,6 +1236,49 @@ mod r1443_username_sign_in {
         );
     }
 
+    /// A lifetime the provider gives as zero seconds is no lifetime: the session answers none.
+    #[tokio::test]
+    async fn r1443_a_zero_second_lifetime_from_the_provider_answers_no_lifetime() {
+        let h = Harness::new().await;
+        h.gotrue.answer_grant(GrantReply::Tokens(json!({
+            "access_token": "access-1",
+            "expires_in": 0,
+            "user": { "id": "e2e-p1", "email_confirmed_at": "2026-10-01T00:00:00Z" },
+        })));
+        let app = h.app().await;
+
+        let (status, text) = sign_in(&app, "e2e_p1", "pw").await;
+        assert_eq!(status, 200, "{text}");
+        assert_eq!(
+            body_of(&text)["session"],
+            json!({ "accessToken": "access-1", "refreshToken": null, "expiresIn": null })
+        );
+    }
+
+    /// R665: the code the session still needs is the first factor that is both an authenticator app
+    /// (`totp`) and verified: not a verified factor of another kind, nor an app still unverified.
+    #[tokio::test]
+    async fn r665_the_second_factor_is_the_first_verified_authenticator_app() {
+        let h = Harness::new().await;
+        h.gotrue.answer_grant(GrantReply::Tokens(json!({
+            "access_token": "access-1",
+            "user": {
+                "id": "e2e-p1",
+                "email_confirmed_at": "2026-10-01T00:00:00Z",
+                "factors": [
+                    { "id": "phone-1", "factor_type": "phone", "status": "verified" },
+                    { "id": "app-unverified", "factor_type": "totp", "status": "unverified" },
+                    { "id": "app-verified", "factor_type": "totp", "status": "verified" },
+                ],
+            },
+        })));
+        let app = h.app().await;
+
+        let (status, text) = sign_in(&app, "e2e_p1", "pw").await;
+        assert_eq!(status, 200, "{text}");
+        assert_eq!(body_of(&text)["secondFactor"], json!("app-verified"));
+    }
+
     #[tokio::test]
     async fn r1443_turns_the_providers_refusal_limit_and_outage_into_ours() {
         let h = Harness::new().await;
@@ -1381,6 +1460,15 @@ mod api_profile_reports_identity_and_the_ladder_record {
         assert_eq!(body["winRate"], Value::Null);
     }
 
+    /// R3733000: the account screen's "Member since" reads when the profile was made.
+    #[tokio::test]
+    async fn r3733000_the_profile_carries_when_it_was_made() {
+        let app = test_app().await;
+        let (_, _, body) = call(&app, "GET", "/api/profile", Some(TOKEN), Value::Null).await;
+        let made = body["createdAt"].as_i64();
+        assert!(matches!(made, Some(n) if n > 0), "createdAt was {made:?}");
+    }
+
     /// A winnerless row is a DRAW (§9.5 makes the ceiling, a mutual hero death and an accepted draw
     /// all winnerless), and a draw counts as played while being neither a win nor a loss — so one
     /// win, one loss and one draw is a third, not a half.
@@ -1482,6 +1570,28 @@ mod r665_two_step_sign_in_an_account_with_an_authenticator_app_needs_an_aal2_tok
                 .user_id,
             BOB
         );
+    }
+
+    /// R3074000: a verified token's `aal2` is its session's proof of the second factor, which a strict
+    /// server's admin routes ask for; `aal1`, or no `aal` claim, proves none. The same whether the
+    /// provider's session check or its admin lookup answers.
+    #[tokio::test]
+    async fn r665_only_an_aal2_token_says_its_session_proved_the_second_factor() {
+        let looked_up = Harness::new().await;
+        let checked = with_sessions(|_| UserReply::Live(confirmed_user(ALICE))).await;
+        let cases = [
+            (&looked_up, looked_up.token_at(ALICE, "aal2", None), true),
+            (&looked_up, looked_up.token_at(ALICE, "aal1", None), false),
+            (&looked_up, looked_up.token_for(ALICE), false),
+            (&checked, checked.token_at(ALICE, "aal2", Some("s-1")), true),
+            (&checked, checked.token_at(ALICE, "aal1", Some("s-2")), false),
+            (&checked, checked.session_token_for(ALICE, "s-3"), false),
+        ];
+        for (h, token, proved) in cases {
+            let user = h.auth.verify(&token).await.expect("verifies");
+            assert_eq!(user.second_factor, proved, "{token}");
+        }
+        assert_eq!(checked.gotrue.user_calls(), 3);
     }
 
     #[tokio::test]
@@ -1701,6 +1811,43 @@ mod r1144000_a_failed_key_set_refresh_keeps_the_last_good_keys {
         let before = gotrue.jwks_calls();
         assert!(auth.verify(&token).await.is_err());
         assert_eq!(gotrue.jwks_calls(), before + 1);
+    }
+
+    /// R1144000: inside a failed refetch's cooldown the stale set answers up to its cap and not on it:
+    /// at `JWKS_CACHE_MAX_AGE_MS + JWKS_STALE_MAX_MS` it is refused, and the cooldown fetches nothing
+    /// (#3836: the cap's `<` taken as `<=`, its `+` as `*`, or its `&&` as `||` lived).
+    #[tokio::test]
+    async fn r1144000_inside_the_cooldown_the_stale_set_ends_at_its_cap() {
+        let (gotrue, clock, auth) = no_secret().await;
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+        let token = token_for(&gotrue, ALICE);
+        assert!(auth.verify(&token).await.is_ok());
+
+        // A refetch fails a moment before the cap: the stale set still answers.
+        clock.charge(JWKS_CACHE_MAX_AGE_MS + JWKS_STALE_MAX_MS - 1).await;
+        gotrue.answer_jwks(JwksReply::Fail);
+        assert!(auth.verify(&token).await.is_ok());
+        assert_eq!(gotrue.jwks_calls(), 2);
+
+        // On the cap, inside the cooldown, it is refused, and nothing is fetched.
+        clock.charge(1).await;
+        assert!(auth.verify(&token).await.is_err());
+        assert_eq!(gotrue.jwks_calls(), 2);
+    }
+
+    /// R1144000: a refetch that fails on the cap refuses the stale set: once no fetch is running the
+    /// cache serves it up to its cap and not on it (#3836: `served`'s `<` taken as `<=` lived).
+    #[tokio::test]
+    async fn r1144000_a_refetch_failing_on_the_cap_refuses_the_stale_set() {
+        let (gotrue, clock, auth) = no_secret().await;
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+        let token = token_for(&gotrue, ALICE);
+        assert!(auth.verify(&token).await.is_ok());
+
+        clock.charge(JWKS_CACHE_MAX_AGE_MS + JWKS_STALE_MAX_MS).await;
+        gotrue.answer_jwks(JwksReply::Fail);
+        assert!(auth.verify(&token).await.is_err());
+        assert_eq!(gotrue.jwks_calls(), 2);
     }
 
     #[tokio::test(start_paused = true)]
@@ -2152,5 +2299,281 @@ mod an_expired_token_is_refused {
                 .is_err()
         );
         assert_eq!(h.gotrue.user_calls(), 0);
+    }
+}
+
+// Forged tokens are refused on both doors: `GET /api/auth/me` answers 401 and the match
+// socket closes with 4401. The socket never creates a profile, so every socket case seeds
+// Alice's first: a 4401 then means the token was refused, not that the profile is missing.
+mod jwt_forgeries_are_refused_over_rest_and_the_socket {
+    use super::*;
+    use crate::api::es256_test_only as es256;
+    use crate::support::socket::{create_fake_socket, settle};
+    use jackioh_server::actor::ws_server::{WS_CLOSE, handle_match_socket};
+
+    /// `GET /api/auth/me` through the real router: its status for `token`.
+    async fn rest_status(app: &Arc<App>, token: &str) -> u16 {
+        let (status, _, _) = call(app, "GET", "/api/auth/me", Some(token), Value::Null).await;
+        status
+    }
+
+    /// The match-socket upgrade's close code for `token`, once the upgrade has settled.
+    async fn socket_close(app: &Arc<App>, token: &str) -> Option<u16> {
+        let fake = create_fake_socket();
+        let half = fake.socket();
+        let uri: axum::http::Uri = "/ws/match".parse().expect("a uri");
+        handle_match_socket(app, &half, &uri, Some(token.to_string())).await;
+        settle().await;
+        fake.close_code()
+    }
+
+    /// The profile the socket's account lookup finds for Alice, so only the token can fail.
+    async fn seed_alice(app: &Arc<App>) {
+        fake_of(app)
+            .lock()
+            .await
+            .seed_profile(json!({"id": "profile-alice", "userId": ALICE, "status": "active"}));
+    }
+
+    /// Both doors refuse `token`: 401 over REST, 4401 on the socket.
+    async fn refused_everywhere(app: &Arc<App>, token: &str) {
+        assert_eq!(rest_status(app, token).await, 401, "REST refuses {token}");
+        assert_eq!(
+            socket_close(app, token).await,
+            Some(WS_CLOSE.unauthorized),
+            "the socket refuses {token}"
+        );
+    }
+
+    fn b64url(bytes: &[u8]) -> String {
+        use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+        URL_SAFE_NO_PAD.encode(bytes)
+    }
+
+    /// An HS256 token over `claims` with `secret`, setting only `sub` and `exp`: the caller
+    /// sets `iss` and `aud` itself, unlike `sign` which always sets the honest ones.
+    fn hs256_with_secret(user_id: &str, claims: Value, secret: &[u8]) -> String {
+        let mut claims = claims;
+        claims["sub"] = json!(user_id);
+        claims["exp"] = json!(FAR_FUTURE);
+        jsonwebtoken::encode(
+            &Header::new(Algorithm::HS256),
+            &claims,
+            &EncodingKey::from_secret(secret),
+        )
+        .expect("an HS256 token")
+    }
+
+    fn sign_claims(gotrue: &GoTrue, user_id: &str, claims: Value) -> String {
+        let _ = gotrue;
+        hs256_with_secret(user_id, claims, JWT_SECRET.as_bytes())
+    }
+
+    fn honest_claims(gotrue: &GoTrue) -> Value {
+        json!({"iss": gotrue.issuer(), "aud": "authenticated"})
+    }
+
+    #[tokio::test]
+    async fn refuses_hs256_keyed_with_the_jwks_public_key() {
+        let h = Harness::new().await;
+        h.gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+        // Classic confusion: an HS256 token HMAC-keyed with the published key's own bytes.
+        let confusing = hs256_with_secret(
+            ALICE,
+            honest_claims(&h.gotrue),
+            es256::TEST_ONLY_ES256_JWK_X.as_bytes(),
+        );
+        let app = h.app().await;
+        seed_alice(&app).await;
+        refused_everywhere(&app, &confusing).await;
+        assert_eq!(
+            (h.gotrue.total(), h.gotrue.user_calls(), h.gotrue.jwks_calls()),
+            (0, 0, 0),
+            "no provider call"
+        );
+    }
+
+    #[tokio::test]
+    async fn refuses_alg_none() {
+        let h = Harness::new().await;
+        let header = b64url(br#"{"alg":"none","typ":"JWT"}"#);
+        let payload = b64url(
+            serde_json::to_vec(&json!({
+                "sub": ALICE,
+                "iss": h.gotrue.issuer(),
+                "aud": "authenticated",
+                "exp": FAR_FUTURE,
+            }))
+            .expect("a payload")
+            .as_slice(),
+        );
+        let none_token = format!("{header}.{payload}.");
+        let app = h.app().await;
+        seed_alice(&app).await;
+        refused_everywhere(&app, &none_token).await;
+        assert_eq!(
+            (h.gotrue.total(), h.gotrue.user_calls(), h.gotrue.jwks_calls()),
+            (0, 0, 0),
+            "no provider call"
+        );
+    }
+
+    #[tokio::test]
+    async fn refuses_a_token_signed_with_a_published_oct_key() {
+        let h = Harness::new().await;
+        let secret = b"attacker-oct-secret-1";
+        assert_ne!(secret, JWT_SECRET.as_bytes(), "premise: not the shared secret");
+        h.gotrue.answer_jwks(JwksReply::Serve(json!({"keys": [{
+            "kty": "oct",
+            "k": b64url(secret),
+            "kid": "attacker-oct",
+            "alg": "HS256",
+            "use": "sig",
+        }]})));
+        let oct_token = hs256_with_secret(ALICE, honest_claims(&h.gotrue), secret);
+        let app = h.app().await;
+        seed_alice(&app).await;
+        refused_everywhere(&app, &oct_token).await;
+        assert_eq!(
+            (h.gotrue.total(), h.gotrue.user_calls()),
+            (0, 0),
+            "no provider call"
+        );
+    }
+
+    #[tokio::test]
+    async fn refuses_an_es256_token_with_a_swapped_alg_header() {
+        let h = Harness::new().await;
+        h.gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+        let honest = es256::sign(
+            &h.gotrue.issuer(),
+            ALICE,
+            json!({ "email": format!("{ALICE}@example.test") }),
+        );
+        let parts: Vec<&str> = honest.split('.').collect();
+        assert_eq!(parts.len(), 3, "premise: a three-part token");
+        let swapped = |alg: &str| {
+            let header = b64url(
+                serde_json::to_vec(&json!({
+                    "alg": alg,
+                    "typ": "JWT",
+                    "kid": es256::TEST_ONLY_ES256_KID,
+                }))
+                .expect("a header")
+                .as_slice(),
+            );
+            format!("{header}.{}.{}", parts[1], parts[2])
+        };
+        let app = h.app().await;
+        seed_alice(&app).await;
+        // The signature is the ES256 one: neither an RS256 nor an HS256 reading verifies it.
+        refused_everywhere(&app, &swapped("RS256")).await;
+        refused_everywhere(&app, &swapped("HS256")).await;
+        assert_eq!(
+            (h.gotrue.total(), h.gotrue.user_calls()),
+            (0, 0),
+            "no provider call"
+        );
+    }
+
+    #[tokio::test]
+    async fn refuses_wrong_or_missing_iss_or_aud() {
+        let h = Harness::new().await;
+        let issuer = h.gotrue.issuer();
+        let cases = [
+            json!({"iss": "https://evil.test/auth/v1", "aud": "authenticated"}),
+            json!({"iss": issuer, "aud": "evil"}),
+            json!({"aud": "authenticated"}),
+            json!({"iss": issuer}),
+        ];
+        let app = h.app().await;
+        seed_alice(&app).await;
+        for claims in cases {
+            refused_everywhere(&app, &sign_claims(&h.gotrue, ALICE, claims)).await;
+        }
+        assert_eq!(
+            (h.gotrue.total(), h.gotrue.user_calls(), h.gotrue.jwks_calls()),
+            (0, 0, 0),
+            "no provider call"
+        );
+    }
+
+    #[tokio::test]
+    async fn refuses_an_unknown_kid() {
+        let gotrue = GoTrue::start().await;
+        let clock = Clock::new();
+        let auth = supabase_auth_no_secret(&gotrue, &clock);
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+        let app = app_with(auth).await;
+        // Premise: the published key verifies through the same set.
+        let known = es256::sign(
+            &gotrue.issuer(),
+            ALICE,
+            json!({ "email": format!("{ALICE}@example.test") }),
+        );
+        assert_eq!(
+            app.auth
+                .verify(&known)
+                .await
+                .expect("the known key verifies")
+                .user_id,
+            ALICE
+        );
+        assert_eq!(gotrue.jwks_calls(), 1);
+        seed_alice(&app).await;
+        let unknown = es256::sign_with_kid(
+            "unknown-kid",
+            &gotrue.issuer(),
+            ALICE,
+            json!({ "email": format!("{ALICE}@example.test") }),
+        );
+        refused_everywhere(&app, &unknown).await;
+        assert_eq!(gotrue.jwks_calls(), 1, "one fetch; the miss reads the fresh set");
+        assert_eq!(
+            (gotrue.total(), gotrue.user_calls()),
+            (1, 0),
+            "no call past the premise's admin lookup"
+        );
+    }
+
+    #[tokio::test]
+    async fn refuses_a_forged_hs256_with_no_secret_configured() {
+        let gotrue = GoTrue::start().await;
+        let clock = Clock::new();
+        let auth = supabase_auth_no_secret(&gotrue, &clock);
+        gotrue.answer_user(|_| UserReply::Ended);
+        let app = app_with(auth).await;
+        seed_alice(&app).await;
+        let forged = hs256_with_secret(ALICE, honest_claims(&gotrue), b"some-unknown-secret");
+        assert_eq!(rest_status(&app, &forged).await, 401);
+        assert_eq!(gotrue.user_calls(), 1, "the legacy path asked the provider once");
+        assert_eq!(socket_close(&app, &forged).await, Some(WS_CLOSE.unauthorized));
+        assert_eq!(
+            gotrue.user_calls(),
+            2,
+            "once per door; a miss is never remembered"
+        );
+        assert_eq!(gotrue.total(), 0, "no admin lookup");
+    }
+
+    #[tokio::test]
+    async fn honest_tokens_still_pass_both_doors() {
+        let h = Harness::new().await;
+        let token = h.token_for(ALICE);
+        assert_eq!(
+            h.auth
+                .verify(&token)
+                .await
+                .expect("an honest token verifies")
+                .user_id,
+            ALICE
+        );
+        let app = h.app().await;
+        // Seed before the first verified request: the REST door creates a pending profile for
+        // an unknown account, and the socket must find the active one.
+        seed_alice(&app).await;
+        assert_eq!(rest_status(&app, &token).await, 200);
+        // 4404, not 4401: the token verified and only the match lookup failed.
+        assert_eq!(socket_close(&app, &token).await, Some(WS_CLOSE.not_found));
     }
 }

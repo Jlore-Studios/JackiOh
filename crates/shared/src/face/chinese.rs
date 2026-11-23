@@ -239,4 +239,53 @@ mod tests {
         assert_eq!(reader_keyword(zh, "Nothing"), "Nothing");
         assert_eq!(reader_keyword(Words::new(Locale::En), "Armor 2"), "Armor 2");
     }
+
+    /// Glitch (issue #170, SPEC §7) is the one card whose words are corrupted wherever a lookup answers.
+    #[test]
+    fn only_glitch_is_glitch() {
+        assert!(is_glitch(GLITCH_DEF_ID));
+        assert!(!is_glitch("core-008"));
+    }
+
+    /// R1303, R1382, R943: the frame's words from the terms table: a tag's, the five tribes' together, the
+    /// Created badge's and the Radiant reference's.
+    #[test]
+    fn r1303_the_frames_words_are_the_terms_tables() {
+        assert_eq!(tag_word(Tag::Human), "人类");
+        assert_eq!(all_tribes_word(), "全部种族");
+        assert_eq!(created_word(), "生成");
+        assert_eq!(radiant_word(), "光辉");
+    }
+
+    /// R280, R1301: a preview label a card's template fills in English comes back as that template's Chinese,
+    /// and one no template fills comes back as it is.
+    #[test]
+    fn r1301_a_preview_label_reads_as_its_templates_chinese() {
+        jackioh_cards::register_all();
+        let def = jackioh_cards::CATALOG.get("core-022").expect("core-022");
+        assert_eq!(chinese_preview_label(def, false, "remember it", None), "记住它");
+        assert_eq!(
+            chinese_preview_label(def, false, "no such label", None),
+            "no such label"
+        );
+    }
+
+    /// R711000: a text naming two terms, one the start of the other, reads as the longer, the one it names,
+    /// whichever the tables list first.
+    #[test]
+    fn r711000_a_text_reads_as_the_longest_term_it_names() {
+        let zh = Words::new(Locale::ZhCn);
+        assert_eq!(reader_keyword(zh, "Animated on your turn"), "你的回合活化");
+        assert_eq!(reader_keyword(zh, "Starship Piece 2"), "星舰部件2");
+    }
+
+    /// R1301: a card with no entry, fused from nothing and no hull, keeps the English name it is given.
+    #[test]
+    fn r1301_a_card_with_no_entry_keeps_the_english_name_given() {
+        jackioh_cards::register_all();
+        let mut def = jackioh_cards::CATALOG.get("core-008").expect("core-008").clone();
+        def.id = "no-such-card".to_string();
+        def.ingredients = None;
+        assert_eq!(chinese_name("no-such-card", "Given", Some(&def)), "Given");
+    }
 }

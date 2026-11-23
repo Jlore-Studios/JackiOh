@@ -92,7 +92,9 @@ apps/web/src/audio/
   types.ts            slice 1  shared types (below, verbatim)
   constants.ts        slice 1  every number another module or a test reads
   settings.ts         slice 1  settings store (localStorage key "jackioh.audio.v1")
-  sfx.ts              slice 1  SFX_IDS, SFX table of procedural recipes, noiseBuffer
+  sfx.ts              slice 1  SFX_IDS, SFX table of procedural recipes (lazy: sfxLoader.ts)
+  sfxLoader.ts        slice 1  the recipes' dynamic import (off the first paint, unlock() at latest)
+  noise.ts            slice 1  the shared noiseBuffer leaf (re-exported by sfx.ts)
   engine.ts           slice 1  createAudioEngine, getAudioEngine, setAudioEngineForTests, browserSpeechPort
   unlock.ts           slice 1  installAudioUnlock, UNLOCK_EVENTS
   voiceData.ts        slice 1  CARD_AUDIO, VOICE_MANIFEST, parseCardAudio, voiceKey, voiceUrl, lineFor, effectFor, voiceKeysForView
@@ -283,8 +285,15 @@ export const SFX: { readonly [K in SfxId]: SfxSpec };
 export function noiseBuffer(ctx: BaseAudioContext): AudioBuffer;
 ```
 
-`sfx.ts` imports only `./types.ts` and `./constants.ts`, because the Cypress component spec imports
-it on its own. The recipe contract, which tests B14 and B15 check:
+`sfx.ts` imports only small leaf modules (`./types.ts`, `./constants.ts`, `./noise.ts`,
+`../cards/anomalies.ts`, `../game/damageFeel.ts`), so the Cypress component spec keeps importing it
+on its own. The shared `noiseBuffer` lives in `audio/noise.ts` (re-exported from `sfx.ts`), which
+imports only `../fx/rng.ts`, so the crowd reads it without pulling the recipes into the entry chunk.
+The recipes reach the client through `import()` from `audio/sfxLoader.ts` (#4428): `main.tsx` starts
+that load off the first paint beside the page-wide sound, and the engine's `unlock()` is the backstop
+at the latest, never behind `loadWasm()` (the recipes parse against no catalog). A sound asked for
+before they land returns false unlogged — skipped, never queued — and the kick keeps one tap behind
+the chunk, not behind silence. The recipe contract, which tests B14 and B15 check:
 
 - a recipe schedules nothing before `at`, stops every source it starts by `at + returned`, and
   `returned ≤ durationMs / 1000`;
@@ -300,6 +309,9 @@ it on its own. The recipe contract, which tests B14 and B15 check:
   use `createDynamicsCompressor`, `decodeAudioData`, `resume`, `close` and `state`.
 
 The recipe sketches below are the designer's intent; builders tune them by ear within `durationMs`.
+What each recipe builds once tuned is a golden in `apps/web/src/audio/sfxGraphs.test.ts` (#4516): a sound
+tuned on purpose updates its golden with `pnpm --dir apps/web exec vitest run src/audio/sfxGraphs.test.ts -u`,
+and the diff shows what moved.
 
 | SfxId | durationMs | gain | sketch |
 |---|---|---|---|
@@ -382,7 +394,8 @@ Engine semantics, all observable through `state()`, `log()`, `contextsCreated()`
 - **SFX.** A cue is refused if the same id was accepted less than `SFX_RETRIGGER_MS` ago (an id in
   `SCHEDULED_SFX`, a fuse run's docks sent at once each delayed to its landing, compares the times
   they sound instead, R3334000), or if `SFX_MAX_VOICES` accepted cues are still sounding (end =
-  accept time + delay + recipe length, by `now()`). Otherwise the engine creates a per-cue GainNode
+  accept time + delay + recipe length, by `now()`). A cue asked for before the recipes have loaded
+  is refused too, silently and unlogged (#4428). Otherwise the engine creates a per-cue GainNode
   (`SFX[id].gain`) into the sfx bus and calls the recipe at `currentTime + delayMs / 1000`.
 - **Voice.** One channel with priorities (review fix, B47–B49): `playVoice(defId, line, delayMs,
   priority = VOICE_PRIORITY.play)`. A request more important than the line holding the channel cuts
@@ -968,7 +981,7 @@ against the code and fixed, and each has a test.
 48. **B48**: When the channel frees, the most important waiting line starts, the oldest on a tie; one that has waited over `VOICE_QUEUE_WAIT_MS` is logged `"late"`; with the queue full, a more important request displaces the least important waiting line (`"dropped"`) (engine.test.ts).
 49. **B49**: A rendered line plays `start(at, offset, duration)` over its audible span (samples above `VOICE_TRIM_THRESHOLD`, less `VOICE_TRIM_LEAD_S` before and plus `VOICE_TRIM_TAIL_S` after) and holds the channel for that span only; a buffer with no audible sample plays whole (engine.test.ts).
 50. **B50**: Muting cancels a spoken fallback line and drops every waiting line; turning voice lines off stops a playing file line, and the voice bus is 0 while they are off (engine.test.ts).
-51. **B51**: At most `VOICE_DECODED_MAX` lines stay decoded (least recently used evicted); an evicted line decodes again from its cached bytes with no second fetch. `VOICE_PREFETCH_DELAY_MS` after the first preload on a running context, every manifest line's bytes are fetched once, `VOICE_PREFETCH_CONCURRENCY` at a time; a context that is not running prefetches nothing (engine.test.ts).
+51. **B51**: At most `VOICE_DECODED_MAX` lines stay decoded (least recently used evicted); an evicted line decodes again from its cached bytes with no second fetch. `VOICE_PREFETCH_DELAY_MS` after the first preload on a running context, every manifest line's bytes are fetched once, `VOICE_PREFETCH_CONCURRENCY` at a time; a context that is not running prefetches nothing, and the bulk prefetch never starts when the tables land with no preload asked for, nor while the browser asks to save data (engine.test.ts).
 52. **B52**: `retainAppAudio()` (held by `main.tsx` for the page's life and by every mounted `Game`) installs one set of unlock and UI-sound listeners however many hold it, removes them when the last holder releases, and reaches whichever engine is the singleton at each event: a click in a Game under the app root ticks and unlocks once, and a menu button outside any Game ticks (ui.test.tsx).
 53. **B53**: Inside `.app-shell`, at 1280×720 and 390×844, the mute toggle computes to a 44 px circle (`border-radius: 50%`, `padding: 0`) with a 22 × 22 icon (audio-toggle.cy.tsx).
 54. **B54**: Unmuting with the toggle plays `uiClick` once the store says unmuted, and muting plays nothing more; moving the master or effects slider ticks, and releasing the voice slider (pointer or key) speaks `VOICE_PREVIEW_DEF_ID`'s play line at `VOICE_PRIORITY.summon` (ui.test.tsx).
@@ -990,7 +1003,7 @@ Cypress logs each one in a reporter that shares the page's main thread, so the r
 timers slipped past 4 s. The runner is timed by main-thread timers, so any background work is
 charged to the burst, and that holds for a slow phone as much as for Cypress.
 
-58. **B58**: While `setBusy(true)` holds (useGameAudio sets it while the runner has an entry in flight, before that entry's cues, and clears it at idle after the flush's, and on unmount), the prefetch starts no new request (one already in flight finishes), and `preloadVoices` is held, the newest call only, and run when it clears. A line asked to play is fetched at once. While muted or with voice lines off, nothing is preloaded or prefetched, and turning voice lines back on resumes the prefetch. With the real engine inside `Game`, an R82-style burst that straddles the prefetch's due time makes no voice request until the board is still (engine.test.ts, ui.test.tsx).
+58. **B58**: While `setBusy(true)` holds (useGameAudio sets it while the runner has an entry in flight, before that entry's cues, and clears it at idle after the flush's, and on unmount), the prefetch starts no new request (one already in flight finishes), and `preloadVoices` is held, the newest call only, and run when it clears. A line asked to play is fetched at once. While muted or with voice lines off, nothing is preloaded or prefetched, and turning voice lines back on resumes the prefetch; while the browser asks to save data, only the targeted preload and a line asked to play fetch anything, never the bulk prefetch. With the real engine inside `Game`, an R82-style burst that straddles the prefetch's due time makes no voice request until the board is still (engine.test.ts, ui.test.tsx).
 
 ## Tests
 

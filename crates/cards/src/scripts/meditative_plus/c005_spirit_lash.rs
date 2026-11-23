@@ -3,8 +3,9 @@
 //!   Radiant: "Echo 1, Flashback" plus the same: it resolves a second time.
 //!
 //! Flashback (issue #3138) is the catalog keyword (§6.1, R783012): the script is unchanged. The card lies
-//! in the graveyard after its play and is offered from there once, at both of its prices, (0) and
-//! Embiggened (1) (R3138000); either play spends the Flashback (R783013, upheld by R3039001).
+//! in the graveyard after its play and is offered from there once, at both of its prices (R3138000), each at
+//! least (1) there since issue #4285 (R4285000): (1) and Embiggened (1), where a hand plays it at (0) and (1);
+//! either play spends the Flashback (R783013, upheld by R3039001).
 //!
 //! One `damage_all` over every Unit on both sides ("any", no hero), one hit each, all landing
 //! before the state check (R59, R1179000). Played Embiggened, each hit carries Lifesteal (R85)
@@ -78,10 +79,10 @@ mod tests {
     /// The prices `legal_actions` offers p1 for the graveyard card `id`: `Some(false)` is the base price,
     /// `Some(true)` the Embiggened one.
     fn graveyard_prices(state: &GameState, id: &str) -> Vec<Option<bool>> {
-        legal_actions(state, P1)
+        plays_in(state, P1, id)
             .iter()
             .filter_map(|action| match action {
-                ActionBody::Play { instance_id, embiggen, .. } if instance_id == id => Some(*embiggen),
+                ActionBody::Play { embiggen, .. } => Some(*embiggen),
                 _ => None,
             })
             .collect()
@@ -102,10 +103,10 @@ mod tests {
     }
 
     /// Issue #3138: both faces print Flashback, so after a play the card lies in the graveyard and is played
-    /// from there once at (0), dealing its hit to every Unit again; that play spends the Flashback, so it is
-    /// never offered from there again (R783013, upheld by R3039001).
+    /// from there once, at (1) since issue #4285 (R4285000), dealing its hit to every Unit again; that play
+    /// spends the Flashback, so it is never offered from there again (R783013, upheld by R3039001).
     #[test]
-    fn issue_3138_r3039001_it_is_played_from_the_graveyard_once_at_0_on_both_faces() {
+    fn issue_3138_r3039001_r4285000_it_is_played_from_the_graveyard_once_at_1_on_both_faces() {
         for radiant in [false, true] {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": LASH, "radiant": radiant }, FILLER], "field": [{ "def": BODY, "lane": 1 }] },
@@ -121,7 +122,7 @@ mod tests {
             let mana = state.players.p1.mana.current;
             let (error, state) = graveyard_play(&state, &grave.id, false, 1);
             assert!(error.is_none(), "radiant {radiant}: {error:?}");
-            assert_eq!(state.players.p1.mana.current, mana, "radiant {radiant}: (0)");
+            assert_eq!(state.players.p1.mana.current, mana - 1, "radiant {radiant}: (1)");
             // Every Unit took the first play's hits and the Flashback's.
             for id in [&own, &enemy] {
                 let unit = find_instance(&state, id).expect("the 9/9");
@@ -135,8 +136,8 @@ mod tests {
         }
     }
 
-    /// R3138000: a Flashback play of an embiggen card is offered at both of its prices, (0) and
-    /// Embiggened (1), as a play from the hand is; the Embiggened one carries Lifesteal and Pierce, and
+    /// R3138000: a Flashback play of an embiggen card is offered at both of its prices, (1) since issue
+    /// #4285 (R4285000) and Embiggened (1), as a play from the hand is; the Embiggened one carries Lifesteal and Pierce, and
     /// spends the Flashback as the base one does (R783013).
     #[test]
     fn r3138000_a_flashback_of_an_embiggen_card_offers_both_prices_and_either_spends_it() {
@@ -170,6 +171,36 @@ mod tests {
 
             // It lies there again, its Flashback spent: neither price is on offer.
             assert_eq!(graveyard_prices(&state, &grave.id), Vec::<Option<bool>>::new(), "radiant {radiant}: spent");
+        }
+    }
+
+    /// R4285000, R3138000: from the graveyard each of its two prices is at least (1), a discount taking
+    /// neither below it, where the same card in a hand costs (0) and Embiggened (1).
+    #[test]
+    fn r4285000_r3138000_both_prices_are_at_least_1_from_the_graveyard_and_0_from_hand() {
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": LASH, "radiant": radiant }, FILLER], "graveyard": [{ "def": LASH, "radiant": radiant }] },
+                "p2": { "hand": [FILLER] },
+            }));
+            let state = s.state().clone();
+            let held = state.players.p1.hand.iter().find(|card| card.def_id == LASH).expect("in hand");
+            assert_eq!(play_cost(&state, held), 0, "radiant {radiant}: (0) from hand");
+            assert_eq!(embiggen_play_cost(&state, held), Some(1), "radiant {radiant}");
+            let grave = state.players.p1.graveyard.iter().find(|card| card.def_id == LASH).expect("in the graveyard");
+            assert_eq!(play_cost(&state, grave), 1, "radiant {radiant}: (1) from the graveyard");
+            assert_eq!(embiggen_play_cost(&state, grave), Some(1), "radiant {radiant}");
+
+            // A (1) discount takes neither graveyard price below (1).
+            let id = grave.id.clone();
+            s.card_mut(id.as_str()).cost_mod = -1;
+            let state = s.state().clone();
+            let grave = find_instance(&state, &id).expect("in the graveyard");
+            assert_eq!(play_cost(&state, grave), 1, "radiant {radiant}");
+            assert_eq!(embiggen_play_cost(&state, grave), Some(1), "radiant {radiant}");
+            let mut broke = state.clone();
+            broke.players.p1.mana.current = 0;
+            assert_eq!(graveyard_prices(&broke, &id), Vec::<Option<bool>>::new(), "radiant {radiant}: unaffordable");
         }
     }
 

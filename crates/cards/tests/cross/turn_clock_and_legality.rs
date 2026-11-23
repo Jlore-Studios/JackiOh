@@ -278,7 +278,7 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
     }
 
     #[test]
-    fn r752_r65_heroic_power_costs_0_legal_actions_offers_no_x_choice_a_play_naming_one_is_refused_and_a_play_pays_0_2_3()
+    fn r752_r65_heroic_power_costs_1_legal_actions_offers_no_x_choice_a_play_naming_one_is_refused_and_a_play_pays_1_2_3()
      {
         let mut g = scenario(json!({ "p1": { "hand": [HEROIC, RENO], "mana": 4 } }));
         let first = must(
@@ -287,12 +287,7 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
         );
         let card = with_power(&mut g, &first, "ping");
 
-        let plays: Vec<ActionBody> = legal_actions(g.state(), PlayerId::P1)
-            .into_iter()
-            .filter(
-                |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id),
-            )
-            .collect();
+        let plays: Vec<ActionBody> = g.plays_of(&card);
         let per_zone: IndexSet<String> = plays
             .iter()
             .map(|play| match play {
@@ -325,7 +320,8 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
             GameEvent::CardPlayed { cost_paid, .. } => Some(*cost_paid),
             _ => None,
         });
-        assert_eq!(played, Some(0));
+        // Heroic Power costs (1) since issue #3996 (R752).
+        assert_eq!(played, Some(1));
     }
 }
 
@@ -436,7 +432,19 @@ mod s9_1_legal_actions_and_a_face_down_trap_s_instance_id {
         assert_eq!(set.def_id, SHEEPISH);
         assert_ne!(set.id, trap_id);
         assert!(!to_json(&g.view(PlayerId::P1)).contains(&format!("\"{trap_id}\"")));
-        assert!(!to_json(&g.view(PlayerId::P1)).contains(&format!("\"{}\"", set.id)));
+        // R3777001: the fresh id rides p1's view only where `hiddenTargets` names the zone of the
+        // face-down target `legalActions` offers (Magic Jammed's), and nowhere else.
+        let mut view = serde_json::to_value(g.view(PlayerId::P1)).expect("the view serializes");
+        let hidden = must(
+            view.as_object_mut()
+                .and_then(|object| object.remove("hiddenTargets")),
+            "p1's view names its hidden targets",
+        );
+        assert_eq!(
+            hidden,
+            json!([{ "instanceId": set.id, "zone": { "player": "p2", "row": "backrow", "lane": 1 } }])
+        );
+        assert!(!to_json(&view).contains(&format!("\"{}\"", set.id)));
 
         let actions = legal_actions(g.state(), PlayerId::P1);
         assert_eq!(
@@ -579,13 +587,6 @@ mod r221_10_2_10_6_every_answer_reduce_accepts_is_one_legal_actions_offers {
 
 const EDGE_VANILLA: &str = "core-008";
 
-fn plays_of(s: &Scenario, player: PlayerId, card: &CardInstance) -> Vec<ActionBody> {
-    legal_actions(s.state(), player)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
-        .collect()
-}
-
 mod r123_a_declared_tribute_names_the_same_units_in_targets_and_tributes {
     use super::*;
 
@@ -615,7 +616,7 @@ mod r123_a_declared_tribute_names_the_same_units_in_targets_and_tributes {
         let a = must(s.unit(PlayerId::P1, 1), "p1's first unit");
         let b = must(s.unit(PlayerId::P1, 2), "p1's second unit");
 
-        let plays = plays_of(&s, PlayerId::P1, &devourer);
+        let plays = plays_in(s.state(), PlayerId::P1, &devourer.id);
         assert!(!plays.is_empty());
         let mismatched: Vec<&ActionBody> = plays
             .iter()
@@ -710,7 +711,7 @@ mod r221_r90_10_2_a_play_s_picks_for_one_declaration_are_a_set {
         let b = must(s.unit(PlayerId::P2, 2), "p2's lane-2 unit");
 
         assert_eq!(
-            plays_of(&s, PlayerId::P1, &spell)
+            plays_in(s.state(), PlayerId::P1, &spell.id)
                 .iter()
                 .map(|play| {
                     targets_of(play)

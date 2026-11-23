@@ -1,13 +1,13 @@
-//! TG #34 Dino-size (SPEC §8.11 row TG 34; §6.3 Set stats, §10.4, R23, R78, R81, R781001, R1185002,
+//! TG #34 Dino-size (SPEC §8.11 row TG 34; §6.3 Set stats, §10.4, R23, R78, R81, R4353001, R1185002,
 //! R2198000): (3) Spell, Epic, a card of the held Training Grounds set (R1420, R2194000).
 //!   Base:    "Set a Unit's Attack and Health to 10/10."
 //!   Radiant: "Set a Unit's Attack and Health to 20/20."
 //!
 //! Engine: R2198000's `set_stats` on any Unit on either side (R81), M+ #21 Harmony Spirit's set
 //! (R1185002): layer 1 is 10/10, buffs and the stat half of its tuning go, damage healed, auras still
-//! add (§10.4); R78's reset takes it off as the card leaves the field. An Immutable Unit is never offered
-//! to a Spell (R781001), so never set (R23). The 10/10 is no param: which way is better hangs on whose
-//! Unit is picked (R1748003).
+//! add (§10.4); R78's reset takes it off as the card leaves the field. An Immutable Unit may be its target
+//! (R4353001) and is never set (R23). The 10/10 is no param: which way is better hangs on whose Unit is
+//! picked (R1748003).
 
 use jackioh_engine::prelude::*;
 
@@ -45,8 +45,8 @@ mod tests {
 
     const DINO: &str = "traininggrounds-034";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +2 Attack.
-    const PARAGON: &str = "stinkyscape-074"; // Paragon-X: Immutable
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +1 Attack.
+    const MENACE: &str = "core-019"; // Midrange Menace: Immutable on its Radiant face.
 
     fn board(radiant: bool, mine: Value, my_backrow: Value, theirs: Value) -> Scenario {
         scenario(json!({
@@ -61,22 +61,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": card.id }] })
-    }
-
-    // Differs from Scenario::offered: one card's play targets, not the seat's whole legal list.
-    fn offered(s: &Scenario) -> Vec<Selection> {
-        let dino = s.card(DINO).id.clone();
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == dino => targets.unwrap_or_default(),
-                _ => Vec::new(),
-            })
-            .collect()
-    }
-
     mod base {
         use super::*;
 
@@ -84,7 +68,7 @@ mod tests {
         fn r2198000_the_target_is_ten_ten_its_damage_healed() {
             let mut s = board(false, json!([{ "def": VANILLA, "lane": 1, "damage": 3 }]), json!([]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(DINO, on(&unit));
+            s.play(DINO, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 10, "health": 10 }));
             assert_eq!(s.card(&unit).damage, 0);
             assert_eq!(s.stats(&unit).max_health, 10);
@@ -95,35 +79,36 @@ mod tests {
             let mut s = board(false, json!([VANILLA]), json!([WEAPONS]), json!([]));
             let unit = s.unit_at(P1, 1);
             s.card_mut(&unit).buffs = AttackHealth { attack: 2, health: 2 };
-            s.play(DINO, on(&unit));
+            s.play(DINO, pick::targets(pick::instance(&unit)));
             assert_eq!(s.card(&unit).buffs, AttackHealth { attack: 0, health: 0 });
-            s.expect_stats(&unit, json!({ "attack": 12, "health": 10 }));
+            s.expect_stats(&unit, json!({ "attack": 11, "health": 10 }));
         }
 
         #[test]
         fn r2198000_an_enemy_unit_can_be_targeted() {
             let mut s = board(false, json!([]), json!([]), json!([VANILLA]));
             let theirs = s.unit_at(P2, 1);
-            s.play(DINO, on(&theirs));
+            s.play(DINO, pick::targets(pick::instance(&theirs)));
             s.expect_stats(&theirs, json!({ "attack": 10, "health": 10 }));
         }
 
         #[test]
-        fn an_immutable_unit_is_never_offered_so_unchanged() {
-            let s = board(false, json!([PARAGON, VANILLA]), json!([]), json!([]));
-            let (paragon, vanilla) = (s.unit_at(P1, 1), s.unit_at(P1, 2));
-            let before = s.stats(&paragon);
-            let offered = offered(&s);
-            assert!(!offered.contains(&Selection::Instance { instance_id: paragon.id.clone() }));
+        fn r4353001_r23_an_immutable_unit_may_be_its_target_and_is_left_unchanged() {
+            let mut s = board(false, json!([{ "def": MENACE, "radiant": true }, VANILLA]), json!([]), json!([]));
+            let (menace, vanilla) = (s.unit_at(P1, 1), s.unit_at(P1, 2));
+            let before = s.stats(&menace);
+            let offered = s.play_targets(DINO);
+            assert!(offered.contains(&Selection::Instance { instance_id: menace.id.clone() }));
             assert!(offered.contains(&Selection::Instance { instance_id: vanilla.id }));
-            assert_eq!(s.stats(&paragon), before);
+            s.play(DINO, pick::targets(pick::instance(&menace)));
+            assert_eq!(s.stats(&menace), before);
         }
 
         #[test]
         fn r2198000_bounced_it_is_its_printed_card_again() {
             let mut s = board(false, json!([VANILLA]), json!([]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(DINO, on(&unit));
+            s.play(DINO, pick::targets(pick::instance(&unit)));
             run_as(&mut s, jackioh_engine::effects::bounce(json_as(json!({ "target": { "of": "instance", "instanceId": unit.id } }))), P1);
             s.expect_in_zone(&unit, "hand");
             assert!(s.card(&unit).stats_override.is_none());
@@ -138,7 +123,7 @@ mod tests {
         fn r2198000_twenty_twenty() {
             let mut s = board(true, json!([{ "def": VANILLA, "lane": 1, "damage": 1 }]), json!([]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(DINO, on(&unit));
+            s.play(DINO, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 20, "health": 20 }));
         }
     }

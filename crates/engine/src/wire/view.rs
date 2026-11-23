@@ -10,10 +10,11 @@ use indexmap::IndexMap;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::geometry::BlackHole;
 use crate::state::{DuosLife, Slumber, StarshipMemory};
 use crate::wire::actions::RevealAt;
 use crate::wire::catalog_types::{
-    CardDef, CardElement, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag,
+    CardDef, CardElement, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag, ZoneRef,
 };
 use crate::wire::craft::CraftRecipe;
 use crate::wire::events::{GameEvent, GameResult, Position, SecretChoice, StarscapeReward};
@@ -29,6 +30,24 @@ string_union! {
         End = "end",
         Over = "over",
     }
+}
+
+/// R3548001: what of a Tipsy-stamped card its owner's view blurs: one word of its name, its
+/// cost, its attack, its health, or one keyword kind it carries. The client renders the blur and
+/// never changes a rule (CLAUDE.md rule 7).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum TipsyBlur {
+    Name { word: i32 },
+    Cost,
+    Attack,
+    Health,
+    Keyword { keyword: KeywordKind },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -59,6 +78,12 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created_by: Option<String>,
+    /// R3536005: the card has evolved, or is marked to enter the field evolved
+    /// (`CardInstance.evolved`, `.enters_evolved`). Only on a card the viewer may read, as `created`
+    /// is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub evolved: Option<bool>,
     /// Cost as it stands now (§6.3 Cost, R65); "X" cards show 0 until X is chosen.
     pub cost: i32,
     /// #492, R81, §10.8: an "A embiggen B" card in the viewer's own hand, what a play of it at its
@@ -221,6 +246,11 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub fixed_x: Option<i32>,
+    /// R3548001: what of this card the owner's Tipsy stamp blurs on their view alone, or nothing.
+    /// Never on the opponent's view of it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tipsy_blur: Option<TipsyBlur>,
 }
 
 /// One reward on offer, or one aura held, as `QuestView` lists it: `{ id, text }`.
@@ -413,6 +443,11 @@ pub struct ActivationView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub reason: Option<String>,
+    /// R3550003: how many of its user's turns the ability still sits out. Absent when it is not
+    /// cooling down.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub cooldown_turns_left: Option<i32>,
     /// R3291000: the fused ingredient whose text prints the ability (a Starship's Weapon piece, an
     /// Equipped Unit's Weapon), whose art the Activate picker's choice card wears. Absent when the
     /// ability is the card's own text or the engine's (the Dormant Starship's launch, a Cloaked card's
@@ -499,6 +534,14 @@ pub struct Counters {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub grade: Option<i32>,
+    /// R3540000: the Burn on the Unit, absent at none; it ticks once at the end of the turn (R4154000).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub burn: Option<i32>,
+    /// R3540000: the Toxic on the Unit, absent at none; it ticks at the start of its controller's turn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub toxic: Option<i32>,
 }
 
 /// `UnitView.animated`: B3.1, R383.
@@ -655,6 +698,17 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created_by: Option<String>,
+    /// R3536005: the card has evolved, or is marked to enter the field evolved
+    /// (`CardInstance.evolved`, `.enters_evolved`). Only on a card the viewer may read, as `created`
+    /// is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub evolved: Option<bool>,
+    /// R3546004: fills four zones from here, the three others empty in the view; public,
+    /// face-down too. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub giga: Option<bool>,
     /// ME-GRANT (MD-D13): the Death abilities other cards granted this Unit, as its lines read them
     /// (`grants::grant_texts`). Absent when it holds none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -671,11 +725,31 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub attack_reason: Option<String>,
+    /// R3821000: why the viewer's own unit cannot make its own switch now (`combat::why_cannot_switch_in`
+    /// to the other position, spending its exertion), as `attack_reason` is for an attack. Only in its
+    /// controller's main phase with no prompt open, `canAct` or not, so a spent unit says it has already
+    /// acted; absent when that switch is legal, and never on the opponent's units.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub switch_reason: Option<String>,
     /// R2321000: the counts cards on the field the viewer may read keep on this Unit, in R68's order
     /// of the cards keeping them. Absent when none does, never `[]`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub tallies: Option<Vec<TallyView>>,
+    /// R3548001: what of this Unit the owner's Tipsy stamp blurs on their view alone, or nothing.
+    /// Never on the opponent's view of it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tipsy_blur: Option<TipsyBlur>,
+    /// R3554007: the shared damage chain this Unit is in, on both seats. Absent otherwise (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub shared_chain: Option<u32>,
+    /// R3554007: the split damage chain this Unit is in, on both seats. Absent otherwise (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub split_chain: Option<u32>,
 }
 
 /// A public backrow card's counters: `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the
@@ -698,6 +772,14 @@ pub struct BackrowCounters {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub plague: Option<i32>,
+    /// R3540000: the Burn on a Unit standing in the backrow, absent at none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub burn: Option<i32>,
+    /// R3540000: the Toxic on a Unit standing in the backrow, absent at none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub toxic: Option<i32>,
 }
 
 /// The public member of `BackrowView`: `CardView & { faceDown: false; type: CardType; … }`. Every
@@ -732,6 +814,17 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created_by: Option<String>,
+    /// R3536005: the card has evolved, or is marked to enter the field evolved
+    /// (`CardInstance.evolved`, `.enters_evolved`). Only on a card the viewer may read, as `created`
+    /// is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub evolved: Option<bool>,
+    /// R3546004: fills four zones from here, the three others empty in the view; public,
+    /// face-down too. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub giga: Option<bool>,
     pub cost: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -821,6 +914,19 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub unit: Option<UnitView>,
+    /// R1839000, R1839001, R3556000: the card is Dormant (a status, public on the field on both
+    /// seats): it can neither attack, be attacked, be targeted nor be reached by an effect until it
+    /// awakens, and `turns` is how many more of its controller's turns start before it does (absent:
+    /// until an effect awakens it). What the board's Dormant badge and its countdown read. Absent
+    /// otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub slumber: Option<Slumber>,
+    /// R3548001: what of this card the owner's Tipsy stamp blurs on their view alone, or nothing.
+    /// Never on a face-down card, and never on the opponent's view of it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tipsy_blur: Option<TipsyBlur>,
 }
 
 /// The face-down member of `BackrowView`: a marker. §10.8 grants the non-controller the fact that
@@ -856,6 +962,26 @@ pub struct FaceDownBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub marks: Option<Vec<CardMark>>,
+    /// R3546004: fills four zones from here, the three others empty in the view; public,
+    /// face-down too. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub giga: Option<bool>,
+}
+
+/// R3777001: a card the viewer may not read (an enemy face-down backrow card) that one of their listed
+/// actions names as a declared target, by the id `legalActions` already carries (R177, R227), with the
+/// zone its back lies in, which is public (R821000's position). Nothing else of the card.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct HiddenTargetView {
+    pub instance_id: String,
+    pub zone: ZoneRef,
 }
 
 /// A backrow zone: a public card or a face-down trap (§3, §10.8); an empty zone is `None` where it is
@@ -931,6 +1057,14 @@ pub struct HeroView {
     /// Long), which R124 adds up. So it drops back when a granting card leaves the backrow, exactly
     /// like a unit's `armor` above.
     pub armor: i32,
+    /// R3540000: the Burn on this hero, absent at none; it ticks once at the end of the turn (R4154000).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub burn: Option<i32>,
+    /// R3540000: the Toxic on this hero, absent at none; it ticks at the start of its owner's turn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub toxic: Option<i32>,
     /// Every Heroic Power this player controls, in board order. Usually none or one, but #36 radiant
     /// and #49 steal a backrow permanent and a Field Spell is one (§3), so a player holding their own
     /// #98 can come to control the opponent's as well — and each is separately once-per-turn (R43).
@@ -1196,6 +1330,17 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub jade: Option<i32>,
+    /// R3548000: this seat's Tipsy counter, shown to both seats beside its hero. Absent at none,
+    /// so a game without one sends the view it always did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tipsy: Option<i32>,
+    /// R3548004: while a card giving infinite mana acts on this seat's field, its mana is not spent
+    /// by paying costs, and the tray shows infinity. Public on both seats; absent otherwise. Only
+    /// ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub infinite_mana: Option<bool>,
     /// R1840005: this seat's Credits, shown to both seats. Absent until first gained (D14); named
     /// apart from the credit line's `credit` (R1223).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1436,8 +1581,8 @@ pub struct TradesView {
 }
 
 /// R1853000–R1853003, R2250002, §10.8: the open Marketplace as the viewer reads it
-/// (`marketplace::marketplace_view`): the lots offered to them and the sale prices of their own hand
-/// sales (R1861000). Which buys and sales are offered stays `legal_actions`' answer.
+/// (`marketplace::marketplace_view`): the lots offered to them. Which buys are offered stays
+/// `legal_actions`' answer.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1449,6 +1594,9 @@ pub struct MarketplaceView {
     /// The viewer's own offers (R2250002, R3047000): the four rolled at the start of their turn, then
     /// the lots an effect added for them (R1853005).
     pub offers: Vec<MarketOfferView>,
+    /// R4410000: always empty since issue #4410, nothing selling at the Marketplace. Kept on the wire,
+    /// as `marketSell` and `marketSold` are, so every view that holds the Marketplace reads as it did
+    /// and an older client that reads it still finds it.
     pub sales: Vec<MarketSaleView>,
 }
 
@@ -1496,7 +1644,7 @@ pub struct MarketOfferView {
 }
 
 /// R1853002, R1853003, R1861000: a card in the viewer's hand that sells from there, and what it sells
-/// for this turn.
+/// for this turn. None since issue #4410 (R4410000): `MarketplaceView.sales` is always empty.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1512,6 +1660,31 @@ pub struct MarketSaleView {
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub radiant: Option<bool>,
     pub credits: i32,
+}
+
+/// R3554000: the open Black Hole as the view reads it: its lane, what it has swallowed, and its
+/// capacity. Public on both seats.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct BlackHoleView {
+    pub lane: i32,
+    pub swallowed: i32,
+    pub capacity: i32,
+}
+
+impl BlackHoleView {
+    pub fn of(hole: &BlackHole, capacity: i32) -> BlackHoleView {
+        BlackHoleView {
+            lane: hole.lane,
+            swallowed: hole.swallowed_count(),
+            capacity,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -1591,6 +1764,22 @@ pub struct PlayerView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub marketplace: Option<MarketplaceView>,
+    /// R3554000: the open Black Hole, on both seats. Absent while none is open (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub black_hole: Option<BlackHoleView>,
+    /// R3554002: the lane the slash voided, on both seats. Absent on an unslashed board (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub slashed_lane: Option<i32>,
+    /// R3777001: each card the viewer may not read that one of their listed actions names as a declared
+    /// target (an enemy face-down backrow card, #36's), with the zone its back lies in, so a client can
+    /// light and click that zone; the id is the one `legalActions` already sends (R177), and which
+    /// targets are offered stays its answer. Only ever the viewer's own (CLAUDE.md rule 7). Absent when
+    /// none, so every other view is what it was.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hidden_targets: Option<Vec<HiddenTargetView>>,
 }
 
 #[cfg(test)]

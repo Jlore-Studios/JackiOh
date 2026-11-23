@@ -52,8 +52,8 @@ export function createRng(seed: string, cursor = 0): Rng {
       if (n <= 0) return 0;
       return Math.floor(rng.next() * n) % n;
     },
+    /** An empty list's `int(0)` is 0 and draws nothing, so it picks undefined without a draw. */
     pick<T>(list: readonly T[]): T | undefined {
-      if (list.length === 0) return undefined;
       return list[rng.int(list.length)];
     },
     /** Fisher-Yates, top down, so the result depends only on (seed, cursor). */
@@ -68,8 +68,9 @@ export function createRng(seed: string, cursor = 0): Rng {
       }
       return out;
     },
+    /** `next() < 0.5`, the engine's `coin`. */
     coin(): boolean {
-      return rng.next() < 0.5;
+      return rng.chance(0.5);
     },
     chance(p: number): boolean {
       return rng.next() < p;

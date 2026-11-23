@@ -1,6 +1,7 @@
 // Rematch offers after an online match (SPEC §9.5, R672).
 // UI sends server intent and renders server status only (CLAUDE.md rule 7).
 // R1372, R924000: All random offers may carry the player's "More cards from" pick; Best-of-1 offers do not.
+// R3791000: says so when the opponent has left.
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
@@ -22,6 +23,7 @@ export const rematchTestid = {
   double: "rematch-double",
   incoming: "rematch-incoming",
   status: "rematch-status",
+  left: "rematch-left",
   leanNewest: "rematch-lean-newest",
 } as const;
 
@@ -32,6 +34,8 @@ export type RematchButtonsProps = {
   ranked: boolean;
   /** R3213000: the match socket's last `rematch` frame (`MatchSnapshot.rematch`); while it is held, nothing is read. */
   pushed?: RematchStatusResponse | null;
+  /** R3791000: the result's own words already say the opponent left, so this component says it no more. */
+  opponentLeftInResult?: boolean;
 };
 
 const MS_PER_SECOND = 1000;
@@ -110,26 +114,43 @@ function joinRematchStatus(token: string, matchId: string, listener: Listener): 
   };
 }
 
+/** R3694000: the socket closed for good, the window over: one read (a rematch made in its last moment), no poll. */
+function readRematchOnce(token: string, matchId: string, listener: Listener): () => void {
+  let left = false;
+  rematchStatus(token, matchId).then(
+    (answer) => {
+      if (!left) listener(answer);
+    },
+    () => undefined,
+  );
+  return () => {
+    left = true;
+  };
+}
+
 /**
  * One status poll per match serves buttons and watcher (R3207002), so their navigation cannot drift apart.
  * R3213000: while the match socket holds a pushed status, that is the answer and nothing is read; once it
- * goes back to null (the socket dropped) the poll starts again, one read at once.
+ * goes back to null (the socket dropped) the poll starts again, one read at once. R3694000: once `over`
+ * (the socket closed for good on a finished match) it is read once and polled no longer.
  */
 function useRematchStatus(
   token: string,
   matchId: string,
   pushed: RematchStatusResponse | null,
   onStatus: (answer: RematchStatusResponse) => void,
+  over = false,
 ): void {
   const latest = useRef(onStatus);
   latest.current = onStatus;
   const live = pushed !== null;
   useEffect(() => {
     if (live) return;
-    return joinRematchStatus(token, matchId, (answer) => {
+    const hear = (answer: RematchStatusResponse): void => {
       latest.current(answer);
-    });
-  }, [token, matchId, live]);
+    };
+    return over ? readRematchOnce(token, matchId, hear) : joinRematchStatus(token, matchId, hear);
+  }, [token, matchId, live, over]);
   useEffect(() => {
     if (pushed !== null) latest.current(pushed);
   }, [pushed]);
@@ -140,19 +161,35 @@ export function RematchWatcher({
   token,
   matchId,
   pushed = null,
+  over = false,
 }: {
   token: string;
   matchId: string;
   /** R3213000: as `RematchButtonsProps.pushed`. */
   pushed?: RematchStatusResponse | null;
+  /** R3694000: the finished match's socket closed for good: its status is read once, not polled. */
+  over?: boolean;
 }): ReactElement | null {
-  useRematchStatus(token, matchId, pushed, (answer) => {
-    if (answer.matchId !== null) navigate(paths.match(answer.matchId));
-  });
+  useRematchStatus(
+    token,
+    matchId,
+    pushed,
+    (answer) => {
+      if (answer.matchId !== null) navigate(paths.match(answer.matchId));
+    },
+    over,
+  );
   return null;
 }
 
-export default function RematchButtons({ token, matchId, connection, ranked, pushed = null }: RematchButtonsProps): ReactElement | null {
+export default function RematchButtons({
+  token,
+  matchId,
+  connection,
+  ranked,
+  pushed = null,
+  opponentLeftInResult = false,
+}: RematchButtonsProps): ReactElement | null {
   const [status, setStatus] = useState<RematchStatusResponse | null>(null);
   const [offering, setOffering] = useState<RematchStakes | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -163,7 +200,18 @@ export default function RematchButtons({ token, matchId, connection, ranked, pus
     if (answer.matchId !== null) navigate(paths.match(answer.matchId));
   });
 
-  if (connection !== "open" || status === null || !status.opponentHere) return null;
+  if (connection !== "open" || status === null) return null;
+  // R3791000: the opponent is gone (a person who left, or a ladder bot's linger over, which read the same, R1452):
+  // one line in place of the offers, the wait, the picker and a refusal; nothing when the result says it already.
+  if (!status.opponentHere) {
+    return opponentLeftInResult ? null : (
+      <div className="rematch rematch--left">
+        <p className="rematch-status" data-testid={rematchTestid.left} role="status">
+          {t("Your opponent has left.")}
+        </p>
+      </div>
+    );
+  }
 
   const random = status.mode === "random";
 

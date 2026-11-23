@@ -4,7 +4,7 @@
 # Squishy has one subscription, its own Claude Max account (`claude-squishy`), and its model job
 # always runs on GitHub's ubuntu-latest: no job here touches the bot's machine. Its labels,
 # commands, branches, state and journal are its own (`squishy:build`, `/squishy`,
-# `squishy/issue-<n>`, `squishy-state`, `squishy-journal`), and it never takes an issue that is
+# `squishy/issue-<n>`, `_squishy-state`, `_squishy-journal`), and it never takes an issue that is
 # the night bot's (`queue.Owner`). Beside a plain build it has three modes: `oneshot` (the whole
 # issue in one run with fullsend), `split` (sub-issues it builds) and `split-bot` (sub-issues the
 # night bot builds).
@@ -124,7 +124,7 @@ jobs:
       group: squishy-run-plan
       cancel-in-progress: false
     permissions:
-      contents: write        # the state file on the squishy-state branch
+      contents: write        # the state file on the _squishy-state branch
       issues: write
       pull-requests: write
       actions: write         # whether a run that holds an item is alive; start one more run

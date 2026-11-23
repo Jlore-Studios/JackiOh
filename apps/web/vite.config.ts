@@ -53,7 +53,7 @@ export default defineConfig({
   // chunk an ES module, so a dynamic import inside it cannot break the build the way it would an
   // IIFE worker bundle. A worker's bundle runs its own plugin list, none of the page's, and the
   // practice worker reaches `wire/cards.ts`, so it needs `patchMeta()` too: without it
-  // `#jackioh-patch-meta` resolves to the real file, whose `node:fs` is an empty stub in a browser.
+  // `#jackioh-patch-meta` resolves to the browser file, bundling the 650 KB history into the worker.
   worker: { format: "es", plugins: () => [patchMeta()] },
   build: {
     // Rollup warns about nothing else, so keep warnings fatal.

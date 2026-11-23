@@ -65,8 +65,8 @@ export const PAIR_OFFSET_MS = 220;       // cues of the 2nd event of a collapsed
 export const FLUSH_MAX_SFX = 5;
 export const FLUSH_GAP_MS = 90;
 export const UI_HOVER_THROTTLE_MS = 80;
-/** R501: §10.11's cap on the pre-rendered voice set (R1448, R1884000). */
-export const VOICE_BUDGET_BYTES = 16 * 1024 * 1024;
+/** R501: §10.11's cap on the pre-rendered voice set (R1448, R1884000, R3596000). */
+export const VOICE_BUDGET_BYTES = 24 * 1024 * 1024;
 export const VOICE_FILE_MAX_MS = 4000;   // longest rendered line (gen-voice.mjs MAX_SECONDS; B35)
 /** An attack line can repeat while the player fiddles with the Unit (R655), so it is the shortest. */
 export const VOICE_MAX_WORDS = { play: 8, attack: 4, death: 6, cast: 8, trigger: 8 } as const satisfies Record<CardHook, number>;
@@ -179,9 +179,9 @@ export const MUSIC_BYTES_MAX = 8;
  * Meditative set's 22 come with its release, at the same encoding. Raised again from 28 MiB when the
  * owner's auditions gave each station three to seven in-game tracks (about 40.5 MiB on disk), with
  * room left for the card intros later sets bring, and by R2722000 from 42 MiB for the intros'
- * fanfares, about half as long again.
+ * fanfares, about half as long again, and by R3572000 from 49 MiB for the Stinkyscape+ set's 59.
  */
-export const MUSIC_BUDGET_BYTES = 49 * 1024 * 1024;
+export const MUSIC_BUDGET_BYTES = 51 * 1024 * 1024;
 
 // ---- Patch v0.2.X sound polish (#259, R669): stings, the mix's panning, ducking and reverb ----
 /** A played card's rarity sting starts this long after the card whoosh, so the two read as one. */

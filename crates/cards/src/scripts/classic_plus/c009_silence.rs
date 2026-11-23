@@ -22,7 +22,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #9 Silence — SPEC §8.7 row 9, BUILD M9 Classic+ row C+ 9 (§10.4, R781001, R781003, R97, R177).
+// C+ #9 Silence — SPEC §8.7 row 9, BUILD M9 Classic+ row C+ 9 (§10.4, R4353001, R781003, R97, R177).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -34,7 +34,7 @@ mod tests {
     const MENACE: &str = "core-019"; // Midrange Menace: Taunt. End of turn: heal to full. Radiant: Immutable.
     const SURGERY: &str = "core-063"; // Plastic Surgery: Give target Unit +attack/+health and 1 random keyword.
     const VANILLA: &str = "core-008"; // Mr. Vanilla
-    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +2 attack, Rush and First Strike.
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +1 attack, Rush and First Strike.
     const SHEEPISH: &str = "core-041"; // Sheepish: transforms the opponent's played Unit
     const TESLA: &str = "classic-005"; // Tesla: Animated Field Trap: fires when the opponent summons a Unit
     const FROSTSPATULA: &str = "classicplus-012-8"; // Frostspatula: Field Spell token: Animated on your turn, Rush.
@@ -154,19 +154,19 @@ mod tests {
         }
 
         #[test]
-        fn r781001_r23_an_immutable_unit_in_play_is_no_target_and_keeps_its_text() {
+        fn r4353001_r23_an_immutable_unit_in_play_may_be_its_target_and_keeps_its_text() {
             crate::register_all();
             let mut s = setup(json!({}), json!({ "field": [{ "def": MENACE, "radiant": true }] }), false);
             let menace = s.card(MENACE).clone();
 
-            s.expect_refused(|s| s.play(SILENCE, json!({ "targets": pick::id(&menace.id) })));
-            // With no other Unit it is played with no pick and fizzles (R90).
-            s.play(SILENCE, json!({}));
+            // Immutable bars no aim (R4353001), and it still refuses the Vanilla (R23).
+            s.play(SILENCE, json!({ "targets": pick::id(&menace.id) }));
 
             assert!(!s.card(&menace).vanilla);
             let now = kinds(&s, &menace.id);
             assert!(now.contains(&KeywordKind::Taunt));
             assert!(now.contains(&KeywordKind::Immutable));
+            assert_eq!(s.count("transformed"), 0);
             s.expect_in_zone(SILENCE, "graveyard");
         }
 
@@ -192,7 +192,7 @@ mod tests {
         fn r407_a_vanilla_field_spell_s_aura_stops() {
             crate::register_all();
             let mut s = setup(json!({ "field": [VANILLA], "backrow": [WEAPONS] }), json!({}), true);
-            s.expect_stats(VANILLA, json!({ "attack": 6 }));
+            s.expect_stats(VANILLA, json!({ "attack": 5 }));
 
             let weapons = s.card(WEAPONS).id.clone();
             s.play(SILENCE, json!({ "targets": pick::id(&weapons) }));
@@ -227,11 +227,7 @@ mod tests {
             crate::register_all();
             let mut s = setup(json!({}), json!({ "backrow": [{ "def": SHEEPISH, "faceUp": false, "lane": 2 }] }), true);
             let trap = s.backrow(P2, 2).unwrap();
-            let silence = s.card(SILENCE).clone();
-            let offers: Vec<ActionBody> = legal_actions(s.state(), P1)
-                .into_iter()
-                .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == silence.id))
-                .collect();
+            let offers = s.plays_of(SILENCE);
             let offered = serde_json::to_string(&offers).unwrap();
             assert!(offered.contains(&trap.id));
             assert!(!offered.contains(SHEEPISH));

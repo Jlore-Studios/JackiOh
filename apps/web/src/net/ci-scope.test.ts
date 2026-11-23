@@ -12,6 +12,8 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { stripTrailingSlashes } from "./navigate.ts";
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "../../../..");
 const SCRIPT = join(ROOT, "scripts/ci-scope.sh");
@@ -161,6 +163,23 @@ describe("scripts/ci-scope.sh", () => {
     expect(onFor("analysis/notebooks/01-card-win-rates.ipynb", "analysis/jackioh_records/load.py", "analysis/uv.lock")).toEqual([]);
   });
 
+  it("skips the heavy jobs for a diff of only the mutation-testing tooling or the pool probe", () => {
+    for (const file of [".cargo/mutants.toml", "scripts/mutants.sh", "scripts/mutants-runner.sh", "scripts/pool-probe.sh"]) {
+      expect(onFor(file), file).toEqual([]);
+      expect(onFor("bot/harness/state.py", file), `bot + ${file}`).toEqual([]);
+    }
+  });
+
+  it("scopes a shared-crate change beside .cargo/mutants.toml as the shared crate alone", () => {
+    expect(answerFor(".cargo/mutants.toml")).toEqual(every(false));
+    expect(answerFor("crates/shared/src/lib.rs", ".cargo/mutants.toml")).toEqual(answerFor("crates/shared/src/lib.rs"));
+  });
+
+  it("scopes a run-crate change beside scripts/mutants.sh as the run crate alone", () => {
+    expect(answerFor("scripts/mutants.sh")).toEqual(every(false));
+    expect(answerFor("crates/run/src/lib.rs", "scripts/mutants.sh")).toEqual(answerFor("crates/run/src/lib.rs"));
+  });
+
   // One case per file: each makes four processes, so a case never nears vitest's time limit.
   it.each([
     "crates/engine/src/reduce.rs",
@@ -199,6 +218,7 @@ describe("scripts/ci-scope.sh", () => {
     ".github/workflows/ci.yml",
     ".github/workflows/super.yml",
     ".github/coverage-floor.txt",
+    ".github/mutants-floor.txt",
     // promote-production.test.ts runs the script and reads the workflow; promote-staging.test.ts too.
     ".github/workflows/promote-production.yml",
     "scripts/promote-production.sh",
@@ -387,13 +407,13 @@ describe("scripts/ci-scope.sh", () => {
         // `web (wasm c module)` builds the C module and reads its imports (#3093, #3097).
         "crates/wasm/c/Cargo.toml",
         "crates/wasm/c/src/lib.rs",
+        "luau/tools/reference-host.mjs",
         "crates/server/src/env.rs",
         // apps/edge's config test holds the probe routes the Worker calls.
         "crates/server/src/app.rs",
         "crates/server/Dockerfile",
         "crates/server/tests/deploy/rehearse.sh",
         "crates/engine/tests/fixtures/code-input-cases.json",
-        "crates/ai/tests/fixtures/learned-parity.json",
         "crates/server/tests/fixtures/practice-claim.json",
         // The shared crate's quest pool: the quests panel's test holds its titles to zh-CN (#3104).
         "crates/shared/quests.json",
@@ -437,6 +457,11 @@ describe("scripts/ci-scope.sh", () => {
         "crates/server/src/main.rs",
         "crates/server/migrations/0034_new.sql",
         "crates/tools/src/replay.rs",
+        // The two commands e2e runs, replay and catalog-version, run these four sources (#4219); a manifest is loaded by every cargo command.
+        "crates/tools/src/main.rs",
+        "crates/tools/src/catalog.rs",
+        "crates/tools/src/patches.rs",
+        "crates/tools/Cargo.toml",
         "crates/cards/catalog.json",
         "crates/engine/tests/golden/01-hotseat-full-game.json",
         "package.json",
@@ -450,6 +475,10 @@ describe("scripts/ci-scope.sh", () => {
         "crates/cards/README.md",
         "crates/wasm/c/src/lib.rs",
         "crates/wasm/c/README.md",
+        // The fuzz, the classifier and the fuzz's records: no command e2e runs reads them (#4219).
+        "crates/tools/src/fuzz.rs",
+        "crates/tools/src/classify.rs",
+        "crates/tools/fuzz-corpus/seed-8-v0.4.12d.json",
         "apps/web/src/net/ci-scope.test.ts",
         "apps/web/src/game/Board.test.tsx",
         "docs/architecture.md",
@@ -484,6 +513,33 @@ describe("scripts/ci-scope.sh", () => {
       expect(answerFor(ENGINE, file)[line], `engine + ${file}`).toBe(true);
     });
   }
+
+  // #4219: a diff of the fuzz plus any file that turns e2e on still turns it on, wherever the skip arm sits.
+  it.each([
+    "crates/tools/src/replay.rs",
+    "crates/tools/src/main.rs",
+    "crates/tools/src/catalog.rs",
+    "crates/tools/src/patches.rs",
+    "crates/tools/Cargo.toml",
+    "apps/web/src/main.tsx",
+  ])("#4219 keeps e2e on for a diff of crates/tools/src/fuzz.rs and %s", (file) => {
+    expect(answerFor("crates/tools/src/fuzz.rs", file).e2e, file).toBe(true);
+  });
+
+  it("#4219 changes only the e2e line for the tools' sources", () => {
+    expect(onFor("crates/tools/src/fuzz.rs")).toEqual(["full", "clippy", "rust_tools_wasm"]);
+    expect(onFor("crates/tools/fuzz-corpus/seed-8-v0.4.12d.json")).toEqual(["full", "rust_tools_wasm"]);
+    expect(onFor("crates/tools/src/replay.rs")).toEqual(["full", "clippy", "rust_tools_wasm", "e2e"]);
+    expect(onFor("crates/tools/Cargo.toml")).toEqual(["full", "clippy", "rust_tools_wasm", "web", "e2e"]);
+  });
+
+  it("#4371 leaves e2e off for a dashboard-only diff but on for the dashboard's test ids", () => {
+    expect(onFor("apps/admin/src/Dashboard.tsx")).toEqual(["full", "web"]);
+    expect(onFor("apps/admin/src/testids.ts")).toEqual(["full", "web", "e2e"]);
+    expect(answerFor("apps/admin/src/Dashboard.tsx", "apps/admin/headers.ts").e2e).toBe(false);
+    expect(answerFor("apps/admin/src/Dashboard.tsx", "crates/server/src/main.rs").e2e).toBe(true);
+    expect(answerFor("apps/admin/src/Dashboard.tsx", "apps/web/src/main.tsx").e2e).toBe(true);
+  });
 
   // `web (promote-production)` runs promote-production.test.ts on its own line; an `on` path turns `web` on too, so that job runs.
   const PROMOTE = {
@@ -530,6 +586,9 @@ describe("scripts/ci-scope.sh", () => {
   it.each(["infra/versions.tf", "infra/.terraform.lock.hcl", "infra/README.md"])("runs infra/'s terraform steps, and nothing else, for %s", (file) => {
     expect(onFor(file), file).toEqual(["full", "infra"]);
   });
+  it("runs infra/'s terraform steps and web, and nothing else, for infra/cloudflare.tf, which the Worker's config test reads", () => {
+    expect(onFor("infra/cloudflare.tf")).toEqual(["full", "web", "infra"]);
+  });
   it.each([
     "crates/engine/src/reduce.rs",
     "apps/web/src/main.tsx",
@@ -550,8 +609,9 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/cards/catalog.json", [...RUST]],
     ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_ai_slow", "rust_tools_wasm"]],
     ["crates/server/src/api/queue.rs", ["rust_server"]],
-    // acceptance.rs holds the server tests' helpers to tests/support/ (#2385); tests/store/ is not scanned.
-    ["crates/server/tests/api/queue.rs", ["rust_server", "rust_tools_wasm"]],
+    ["crates/server/migrations/0068_v0_5_retcon.sql", ["rust_server", "rust_tools_wasm"]],
+    // The server binary holds these tests' helpers to tests/support/ (#2385); tests/store/ is not scanned.
+    ["crates/server/tests/api/queue.rs", ["rust_server"]],
     ["crates/server/tests/store/contract.rs", ["rust_server"]],
     ["crates/tools/src/fuzz.rs", ["rust_tools_wasm"]],
     ["crates/wasm/src/lib.rs", ["rust_tools_wasm"]],
@@ -564,6 +624,9 @@ describe("scripts/ci-scope.sh", () => {
     ["docs/radiant-audit.md", ["rust_cards"]],
     ["spec/07-tokens.md", ["rust_cards"]],
     ["e2e/support/config.ts", ["rust_server"]],
+    // The tools' README check reads the cited e2e specs, so their files run its group (#4449).
+    ["e2e/cypress/e2e/01-hotseat-full-game.cy.ts", ["rust_tools_wasm"]],
+    ["e2e/cypress/e2e/13-practice-vs-ai.cy.ts", ["rust_tools_wasm"]],
     ["apps/web/.env.production", ["rust_tools_wasm"]],
     ["packages/engine/src/x.ts", ["rust_tools_wasm"]],
     ["apps/server/src/x.ts", ["rust_tools_wasm"]],
@@ -593,7 +656,7 @@ describe("scripts/ci-scope.sh", () => {
   }
   it.each([
     "apps/web/src/main.tsx",
-    "e2e/cypress/e2e/01-hotseat-full-game.cy.ts",
+    "e2e/cypress/e2e/02-prompts.cy.ts",
     "docs/architecture.md",
     "spec/rulings/R0195.md",
     "SPEC.md",
@@ -614,7 +677,7 @@ describe("scripts/ci-scope.sh", () => {
     };
     expect(tools({ "crates/server/src/x.rs": 'const X: &str = include_str!("x.json");\n' })).toBe(true);
     expect(tools({ "crates/server/src/x.rs": 'const X: &[u8] = include_bytes!("x.bin");\n' })).toBe(true);
-    expect(tools({ "crates/server/src/x.rs": "let s = std::fs::read_to_string(path);\n" })).toBe(true);
+    expect(tools({ "crates/server/tests/api/x.rs": "let s = std::fs::read_to_string(path);\n" })).toBe(true);
     expect(tools({ "crates/server/src/x.rs": 'const X: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/x.json");\n' })).toBe(true);
     expect(tools({ "apps/web/src/x.test.ts": 'const t = readFileSync(join(ROOT, "x.json"), "utf8");\n' })).toBe(true);
     // acceptance.rs holds every ignore to the daily form (super.yml's daily tests).
@@ -624,6 +687,64 @@ describe("scripts/ci-scope.sh", () => {
     expect(tools({ "apps/web/src/x.test.ts": "export const x = 1;\n" })).toBe(false);
     expect(tools({ "crates/server/src/x.rs": "pub const X: u32 = 1;\n" })).toBe(false);
     expect(tools({ "docs/x.json": "readFileSync(\n" })).toBe(false);
+  });
+
+  // #4094: what `patches ship` (v0.6.6d, #4089) wrote.
+  const SHIP = [
+    "crates/cards/patches/card_metrics/v0.6.6d.json",
+    "crates/cards/patches/patches.json",
+    "crates/cards/patches/pending/tag-scan.json",
+    "crates/cards/patches/shipped.json",
+    "crates/cards/patches/v0.6.6d.json",
+    "crates/server/.env.example",
+  ];
+  const SHIP_ON: Name[] = ["full", "rust_cards_lib", "rust_cards", "rust_server", "rust_tools_wasm"];
+
+  it("#4094 runs only the cards, server and tools groups for a patches ship diff", () => {
+    expect(onFor(...SHIP)).toEqual(SHIP_ON);
+    const answer = answerFor(...SHIP);
+    for (const line of ["e2e", "web", "web_promote", "rust_ai", "rust_ai_slow", "rust_engine", "rust_engine_rules", "clippy", "db", "db_deploy", "infra"] as const) {
+      expect(answer[line], line).toBe(false);
+    }
+  });
+
+  it("#4094 turns web on for a ship that changes apps/web/.env.production, and e2e stays off", () => {
+    const files = [...SHIP, "apps/web/.env.production"];
+    expect(onFor(...files)).toEqual([...SHIP_ON, "web"]);
+    expect(answerFor(...files).e2e).toBe(false);
+  });
+
+  it("#4094 treats a patches cut's files the same way", () => {
+    const cut = [
+      "crates/cards/patches/v0.6.7.json",
+      "crates/cards/patches/patches.json",
+      "crates/cards/patches/shipped.json",
+      "crates/cards/patches/index.json",
+      "crates/cards/patches/card_metrics/v0.6.7.json",
+      "crates/cards/patches/records/v0.6.7.json",
+      "crates/server/.env.example",
+    ];
+    expect(onFor(...cut)).toEqual(SHIP_ON);
+  });
+
+  it("#4094 scopes a ship plus one unrelated file as it does without the ship case", () => {
+    const engine = "crates/engine/src/state.rs";
+    const answer = answerFor(...SHIP, engine);
+    for (const line of ["full", "clippy", "web", "e2e", "db_deploy", ...RUST] as const) {
+      expect(answer[line], line).toBe(true);
+    }
+    expect(answer).toEqual(answerFor(engine, "crates/cards/patches/v0.6.6d.json", "crates/server/.env.example"));
+    expect(answerFor("crates/cards/patches/aliases.json", ...SHIP).e2e).toBe(true);
+    expect(answerFor("apps/web/src/main.tsx", ...SHIP).e2e).toBe(true);
+  });
+
+  it("#4094 leaves a diff without both patches.json and shipped.json on today's scope", () => {
+    const partial = answerFor("crates/cards/patches/v0.6.6d.json", "crates/cards/patches/patches.json");
+    expect(partial.e2e).toBe(true);
+    expect(partial.rust_ai).toBe(true);
+    const env = answerFor("crates/server/.env.example");
+    expect(env.db_deploy).toBe(true);
+    expect(env.e2e).toBe(true);
   });
 });
 
@@ -660,7 +781,7 @@ function readings(file: string, literal: string): string[] {
 }
 
 function named(reading: string, literal: string): string | undefined {
-  const path = posix.normalize(reading.replaceAll("*", "x")).replace(/\/+$/, "");
+  const path = stripTrailingSlashes(posix.normalize(reading.replaceAll("*", "x")));
   const first = path.split("/")[0] ?? "";
   if (!TOP.has(first) || NOT_NAMED.has(first) || /\s/.test(path)) return undefined;
   const stat = statSync(join(ROOT, path), { throwIfNoEntry: false });
@@ -686,7 +807,8 @@ function namedPaths(roots: string[], keep: (file: string) => boolean): Map<strin
   return found;
 }
 
-/** What the web's typecheck, lint and unit tests read. ci-scope.test.ts, build-wasm-cache.test.ts and
+/** What the web job's typecheck, lint and unit tests read: the web's, the Worker's (apps/edge)
+ * and the dashboard's (apps/admin) sources. ci-scope.test.ts, build-wasm-cache.test.ts and
  * server-image.test.ts name paths only as data for their throwaway repos (the second reads only
  * scripts/build-wasm.sh for real, and the third scripts/server-image.sh and wrangler.jsonc, which run
  * web anyway). */
@@ -696,7 +818,19 @@ const DATA_ONLY = [
   "apps/web/src/net/server-image.test.ts",
 ];
 const WEB = namedPaths(
-  ["apps/web/src", "apps/web/scripts", "apps/web/vite.config.ts", "apps/web/vitest.config.ts", "apps/web/static-pages.ts"],
+  [
+    "apps/web/src",
+    "apps/web/scripts",
+    "apps/web/vite.config.ts",
+    "apps/web/vitest.config.ts",
+    "apps/web/static-pages.ts",
+    "apps/edge/src",
+    "apps/admin/src",
+    "apps/admin/worker",
+    "apps/admin/headers.test.ts",
+    "apps/admin/build.test.ts",
+    "apps/admin/wrangler.test.ts",
+  ],
   (file) => !DATA_ONLY.includes(file),
 );
 /** What e2e smoke's client build and specs read. */
@@ -707,7 +841,9 @@ const E2E = namedPaths(
 
 describe("scripts/ci-scope.sh against the paths the sources name", () => {
   it("finds the paths it must, so a scan that broke cannot pass empty", () => {
-    expect([...WEB.keys()]).toEqual(expect.arrayContaining(["crates/server/src/env.rs", "crates/engine/tests/fixtures/code-input-cases.json"]));
+    expect([...WEB.keys()]).toEqual(
+      expect.arrayContaining(["crates/server/src/env.rs", "crates/engine/tests/fixtures/code-input-cases.json", "infra/cloudflare.tf"]),
+    );
     expect([...E2E.keys()]).toEqual(expect.arrayContaining(["crates/cards/catalog.json"]));
   });
 

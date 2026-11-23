@@ -154,7 +154,7 @@
 /* R1580000: the page never scrolls; the board shrinks and the body scrolls inside it (as R1579000). */
 .tavern.app-shell.shop-screen {
   height: 100vh;
-  height: 100dvh;
+  height: var(--shell-screen-h, 100dvh);
   padding-bottom: 14px;
 }
 

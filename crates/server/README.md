@@ -29,7 +29,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 
 | Layer | Modules | Rule |
 | --- | --- | --- |
-| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, each live match checkpointed and its actor stopped with 1001, every practice claim still settling waited for, R2422000, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
+| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop; the sweeps feed each step's result to a `loops::FailingStreak`, #3770), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, each live match checkpointed and its actor stopped with 1001, and each co-op actor checkpointed, then stopped, #4169; both registries marked draining first, so a match `start` or a rebuild makes once the drain has begun, a rebuild in flight across it or begun after it among them, is stopped the same way, never kept live, every practice claim still settling waited for, R2422000, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
 | Handlers | `api/*.rs` | `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; no SQL of their own |
 | Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs`, `seats.rs` | state in memory; time from `tokio::time`. The 1v1 actor decides no clock, reconnect or rematch rule (#3101): `jackioh_shared::host`'s pure machine does (`step(host, event, now) -> (host, outputs)`: which clock runs and what an expiry becomes, the disconnect grace, the order every view is sent in, the aim relay, a bot's turn, what a rematch offer meets), and the actor feeds it events and carries out its outputs: a tokio timer (`clock.rs` is only that), a socket send, a store write. The Duos actor is the same driver over `host::duos`'s machine (the mulligan, round and prompt clocks, the grace after which the AI plays a person's seat, the AI's pause and fallback, the ceiling's retry), and `duos/again.rs` keeps the request, the store reads and the wake-up of an offer waiting on a create around `host::again`'s book. `seats.rs` is the seat ledger, the one game each profile holds (a match, a series not over or a co-op match), which every door into a game reserves all its seats through in one step before it writes; the in-match flag stays its record and second guard, boot fills it from the database after bumping `app.seat_epoch`, the reaper's tick reconciles it (`seats.drift`), and a claim on an older epoch writes nothing (R1523000) |
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
@@ -39,7 +39,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Cosmetics | `cosmetics.rs` (a re-export of `jackioh_shared::cosmetics`, which holds the registry and its `cosmetics.json` since #3104), `loadout.rs` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, the full arts, an Epic, a Legendary and a Mythic on each full-art card, and its Animated art, a second Epic `animated-<slug>` (R2715000), the registry being the list of those cards (R2655000, R2655001), and the hero portraits, one per portrait id) and its check: no id twice, ids a settings text can carry, one default per kind a player picks and per portrait, a full art naming its own card, its id `full-art-…` or `animated-…`, an `animated-…` one Epic, no default and no second full art of its rarity, or second Animated art, on its card (R1295000, R1297000, R1313000, R2655000, R2715000), an account cosmetic other than its kind's default at `GLOBAL_COSMETIC_FLOOR_RARITY` or better (R1661000), and one `portrait-<id>` entry per portrait id, vanilla the default (R1827000); `is_id_of` checks a deck's pick, `owns_portrait` and `owns_account_cosmetic` whether an account owns a portrait or another account cosmetic (R1833000), and `global_cosmetics` lists what a duplicate's global roll may drop (R1661001), the five portraits but vanilla and #1833's 18 playmats, backdrops and card backs on the shipped registry; the versions are the levels of the variants' ladders (`level`, `ladder`, `levels_below`, `is_next`), each ladder held to its shape, its rarities and its first level's offer by `level_problems` (R3015000, R3015001), and a retired full art or augment owns the levels it maps to (`implied_by`, `row_owns`, R3015006); a level may be a card rarity's default look (`is_default_look`, `default_look`), which every account owns on those cards with no row and which is offered nowhere there (R3343000); `check_pick` refuses a pick that is not of its slot's kind, not offered or not owned where it is worn (R1834001, R2725001), and `level_of_pick` reads which level a card's pick names, an older shape mapped, and `worn_level` the one it wears (R3015005). `loadout.rs` names `jackioh_shared::loadout`, which freezes each seat's loadout as its match starts and says which cards' picks a view makes due (R1834002, R1834003), and reads a seat's picks off the ledger, the settings row and the proficiency rows (`read_seat_picks`) |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares, the watch socket and the social socket (§9.4, §9.5, R3214000) |
-| Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings), `finish_match`, which writes a result once and pays both people (R1502000), and `live_match_of` (§13) |
+| Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, or a 2v2's team B two more people, R3731002; the round clock, team pings), `finish_match`, which writes a result once and pays every person (R1502000, R3731003), and `live_match_of` (§13) |
 | Economy | `economy/store.rs`, `grants.rs`, `rewards.rs`, `packs.rs`, `cosmetic_packs.rs`, `practice.rs`, `quests.rs`, `idempotency.rs`, `news.rs`, `news.json`, `proficiency.rs` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, `economy_lock_account`, an opening's lock on its account (R1301003), 0047's practice seeds, and 0067's idempotency keys, a spend's key and the answer it committed, read and written in the spend's transaction under that lock so a retry replays its answer and spends nothing again (R2124000); `grants.rs`, which writes an economy outcome (the `LedgerGrant`s `jackioh_shared::economy` answers, in order, each as its holding's new value and its ledger row) and reads an account's counter rows into the plain counters a decision takes; the pure math, the level curve and pity, forced on top of a card pack's rolled slots (R1298000, R1339001), the tiered roll every drop goes through, one integer draw on a weight table whose lowest tier is the fallback, a floor a fallback too, and the odds it answers (R1339000), the card pack roll, its slots' tiered rarities, the card draw and the dupe chain with a duplicate's global roll for an account cosmetic, in R1339002's draw order (R1301001, R1301002, R1339000–R1339002, R1661001), the token bars (every slot adding its rolled rarity's points to both whatever it grants, `slot_points`, R1953000, R1999000; each bar paying when it reaches its size, R1305000), the cosmetic pack roll and a set track's reward table are `jackioh-shared`'s `economy` since #3104, which `packs.rs` and `cosmetic_packs.rs` call as `decide(records, inputs, seed, now_ms) -> outcome`. A finished game's pay is another (#3104 part 2): `jackioh_shared::economy::rewards::pay_game` decides the Jlore and XP at each mode's rate, the daily cap's partial pay, the track levels and the quests (the pool, `crates/shared/quests.json`, the rhythm, the draws and what each goal counts) from the records `rewards.rs` reads under the account's lock, and `rewards.rs` and `quests.rs` write its grants; the reward hook a finished game pays through (§14.8), for ladder, unranked, Conquest, practice and co-op games at each one's rates (R1502000), holding the Jlore an account's games pay to `JLORE_GAMES_DAILY_CAP` over the UTC day under the account's lock (R1483000), and answering what it paid (`GameEconomy`: each set track's XP before and after and each level it reached, `TrackGain`, and each quest it completed) for the result to animate (#1657); buying and opening a pack, what an opening did to each token bar answered as `BarsSettled`, each in one transaction, the opening's catalog version, cosmetics, seed and result logged in its rows' `ref` (R1301003); opening a cosmetic pack, its slots' cosmetic rarities tiered rolls from a seed and logged the same way (R1306003), and the Chase Shard bar it fills and what the bar buys (R1306000–R1306003); a practice claim's check, its log folded from the seed's setup to the claimed result, no AI move re-run (§14.8, R1303000–R1303003, R2560000); each claim's outcome counted by UTC day in 0078's `practice_claim_counts` (`ClaimBucket`, #2884); and the daily quests (§14.9): their pool and its check (every payout from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry paying more), a quest for the cards of every set that ships, and position switches and Radiant upgrades counted as the game's record counts them (R2253000), their rhythm and top-up, the store's read locking the account's schedule so two top-ups at once bring a quest once (R1304000), what a finished game moves through the reward hook and the payout of one that completes (R1304001), and a held quest's daily replace by a fresh draw, counted from the day's `removed` rows (R2210000); and the news (§14.13): `news.json`'s entries, checked at boot (a slug id, a summary of at most `NEWS_SUMMARY_MAX_SENTENCES` sentences, a patch's version in `patches.json`, a known reward, a left-out one defaulting by its patch, R2875003), each live `NEWS_TTL_DAYS` from its `postedAt` (R2875001), and its reward's claim, once per account and entry (R2875000); and card proficiency (§14.14): each seat's own dealt plays from hand (`proficiency_plays`), counted by the reward hook for a ladder, unranked or Conquest game in the result's transaction, each card's level on `PROFICIENCY_LEVEL_PLAYS`, never falling (R3013000) |
 | Dev tools | `api/dev.rs` | a dev account's own grants and clears (§14.10, R1300000): XP, Jlore, the fill, every cosmetic alone (R3156001), the clears and a token bar filled so it pays (R1310003), each one transaction of ledger rows marked `dev`; 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (and, under `E2E=1`, to any but the `e2e-econ` fixture, R1310004) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
@@ -113,14 +113,18 @@ reseeds the database itself. Both steps are idempotent.
   and the reaper owns the in-flight game (the account-deletion posture, so a ban lands at once
   even mid-match). `moderate revoke-code <CODE>` revokes an invite code by its hash, which then
   redeems exactly as an exhausted one. `moderate redemption off` / `moderate redemption on`
-  pause and resume redemption through §9.4's database-side circuit breaker, touching no account
-  or session. Each lever is idempotent and prints what changed (`banned <id>`, `already banned
+  pause and resume redemption for everyone, the only global pause (§9.4, R4131000: no count of
+  failures pauses it), touching no account or session. Each lever is idempotent and prints what changed (`banned <id>`, `already banned
   <id>`, `revoked <CODE>`, `redemption paused`, …); an unknown profile or code is refused
   without writing anything, and a pending account is never unbanned — that would skip the
   invite gate and R111's launch grant, so ban pending accounts only to stop abuse. Like
   `mint-code` it reads the whole environment, because a `CODE_PEPPER` that differs from the
-  running server's revokes a hash redemption will never look up. Stdout is the audit trail:
-  the CLI has no log pipeline, so the line it prints is the record of the lever.
+  running server's revokes a hash redemption will never look up. A lever that changes something
+  leaves two records: the line it prints, and one `admin_actions` row in its own transaction
+  (R3074000's audit, migration 0096) with no profile, its route (`MODERATE_ROUTES`, such as `CLI
+  moderate ban`), the request and the state before and after; a revoked code by its stored hash,
+  never the code. A lever that changes nothing (an `already …`, an unknown profile or code, a
+  pending account's unban) writes no row. The dev dashboard's Audit page shows the rows.
   `moderate chat-reports` is the one read among them, and writes nothing: every chat report the
   store holds (B53), oldest first, each with when and why it was made, the reporter's and the
   sender's profile ids and the message as stored. A report goes with its message after
@@ -155,6 +159,9 @@ placeholders (`app::load_server_env`).
 | `DEV_PROFILE_IDS` | no | the dev accounts (§14.10, R1300000): comma-separated profile ids, each the account secret ID `/account` shows; unset, none. A malformed id refuses the boot, naming it. Only the boot reads it: no catalog stamp grants anyone (R1310001), so `seed-catalog` does not. The boot logs how many, never which |
 | `ALERT_RESEND_API_KEY` | no | a Resend API key with Sending access for jackioh.com, with which an alert is emailed to `ALERT_EMAILS` ([Alerts](#alerts), #3595); unset, no alert is emailed. Secret |
 | `ALERT_EMAILS` | no | the addresses an alert is emailed to, comma-separated; an entry that is not an address is left out with a warning that never prints it, and nothing here refuses the boot. A Worker secret, since the repository is public; the boot logs how many, never which |
+| `PLAYER_RESEND_API_KEY` | no | a Resend API key with Sending access for jackioh.com, apart from the alerts' key, with which the daily games' "your move" emails go ([Daily games](#daily-games-913-3727), #3727); unset, no player is emailed. Secret |
+| `VAPID_PRIVATE_KEY` | no | the daily games' Web Push signing key (RFC 8292): the raw P-256 private scalar, base64url without padding; unset, or no pair with `VAPID_PUBLIC_KEY` (logged as `daily.push.keys_refused`), no push is sent. Changing the pair makes every push service answer 403 to the subscriptions made under the old one, and the next push deletes them; each device turns push on again. Secret |
+| `VAPID_PUBLIC_KEY` | no | its public half, the raw uncompressed point (65 bytes) in base64url, which `GET /api/daily/settings` gives the browser to subscribe with; a Worker secret beside the private half, so the two always match |
 | `DEV_STRICT` | no | the dev dashboard's strict mode (§14.10, R3074000): `on` (the default when unset) makes every `/api/admin/*` route need the two-step code (`aal2`) and keeps a hand-set rating off the public ladder until it is reset (R3074001); `off` skips both. wrangler.jsonc sets `on` for production and `off` for staging, and end-to-end mode defaults it to `off`. Any other value refuses the boot |
 
 `mint-code`, `moderate` and `seed-accounts` read the same environment (`seed-accounts` also
@@ -185,11 +192,11 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `POST` | `/api/e2e/reseed` | none | E2E mode only, elsewhere a path nobody serves (404): R144's reseed on demand, which spec 10 calls first; answers `{ profiles, grantedCards, codes }`. The fixtures: `e2e-p1` and `e2e-p2`, active and granted every card past their starter cards; `e2e-pending`, pending, for spec 10; and `e2e-econ`, pending and a dev account in E2E mode alone, for spec 45, the one that walks the economy (R1310004) |
 | `POST` | `/api/auth/username-signin` | none | a username and password: the session, never the address; limited per address and per username (R1443) |
 | `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match, series and live co-op match (`currentDuosMatchId`, R1566000), the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), `ageCheckOwed` and `termsOwed` (R757000, R757001), `queued` (R897000), and `isDev`, whether `DEV_PROFILE_IDS` lists the caller (R1300000) |
-| `GET` | `/api/profile` | active | the account screen: who the caller is and their record |
+| `GET` | `/api/profile` | active | the account screen: who the caller is, their record and when the account was made (`createdAt`, R3733000) |
 | `GET` | `/api/username/preview?name=…` | active | the exact username a save would give, tag included, or why it is refused (R1432–R1435) |
 | `PUT` | `/api/username` | active | save the previewed username; 409 with a fresh preview when the outcome changed (R1434, R1435) |
 | `POST` | `/api/username/skip` | active | answer the username prompt by keeping `Player#n` (R1435) |
-| `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match, series or co-op match |
+| `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match, series, co-op match or running daily game (each past its deadline lost on time first, R3727008) |
 | `POST` | `/api/account/consent` | user | `{ termsVersion, birthYear?, birthMonth? }`: the age screen's answer (an account under `MIN_ACCOUNT_AGE_YEARS` is deleted, 403 `under_age`) and agreement to `TERMS_VERSION` (409 `update_required` for any other); stores only that the age check passed, never the birth date (R757000, R757001) |
 | `GET` | `/api/catalog` | none | `{ version, defs }`, the bytes the client ships (R163); `x-deployed-commit` |
 | `GET` | `/api/catalog/:version` | none | the snapshot shipped patch `version` left, in `/api/catalog`'s shape; 404 for a version never shipped (SPEC §9.4, R388) |
@@ -213,7 +220,7 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `POST` | `/api/news/claim-all` | active | Claim all: one spend, with an optional `Idempotency-Key` kept under its own route, in the account's turn: in one transaction under the account's economy lock it claims every entry live now and every dev post standing now that the caller has not claimed, the test one entry's claim puts, writing the claims in one statement and the rewards in one statement per ledger, each entry its own `news` ledger row, `ref` its id; answers what `GET /api/news` answers. Nothing left to claim writes nothing. 409 `conflict` while the economy is off, writing nothing (R3191000) |
 | `POST` | `/api/dev/quests` | active | a dev tool: a quest at once, drawn as an arrival is and marked `dev`, `{ quest }`; 409 at `QUEST_MAX_HELD`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (R1300000) |
 | `POST` | `/api/dev/quests/:questId/complete` | active | a dev tool: completes a held quest and pays it, every row marked `dev`, `{ completed, jlore, xp }`; 404 for a quest not held. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (R1300000) |
-| `POST` | `/api/practice/seeds` | active | `{ difficulty, humanSeat, deck, catalog }`: a practice game's seed, kept with that setup and the last board the server holds for the caller (R1303003), 201 `{ seed, lastBoard, expiresAt }`; prunes the caller's seeds older than `PRACTICE_SEED_TTL_SECONDS` (R1303001); 409 while the economy is off, for a catalog it cannot fold, or while the caller holds `PRACTICE_SEEDS_OPEN_MAX` seeds unclaimed or claimed and not yet settled, which it counts under the account's economy lock and issues nothing for (R1483000, R3500001) |
+| `POST` | `/api/practice/seeds` | active | `{ difficulty, humanSeat, deck, catalog }`: a practice game's seed, kept with that setup and the last board the server holds for the caller (R1303003), 201 `{ seed, lastBoard, expiresAt }`; 400 for a deck its claim's deal would refuse (`economy::practice::deal_refusal`, dealt off the runtime before a connection opens), checked before anything is written (R4317000); prunes the caller's seeds older than `PRACTICE_SEED_TTL_SECONDS` (R1303001); 409 while the economy is off, for a catalog it cannot fold, or while the caller holds `PRACTICE_SEEDS_OPEN_MAX` seeds unclaimed or claimed and not yet settled, which it counts under the account's economy lock and issues nothing for (R1483000, R3500001) |
 | `DELETE` | `/api/practice/seeds/:seed` | active | the caller's unclaimed seed given back, deleted under the account's economy lock so its place among `PRACTICE_SEEDS_OPEN_MAX` is free at once and a later claim of it is `unknown_seed`; 200 `{ released: true }`; 404, changing nothing, for another account's seed, a claimed one or one never issued (R2379000) |
 | `POST` | `/api/practice/claims` | active | `{ seed, result, log }`: a finished practice game, folded to its result, no AI move re-run (R2560000), at most `PRACTICE_VERIFY_CONCURRENCY` at once, the rest waiting; 200 `{ paid: true, jlore, xp, jloreCapped, tracks, quests }` (`jlore` what was paid, short of the game's rate when `jloreCapped` says the day's cap held some back, R1483000; `tracks` each set track the game moved, its level and XP `before` and `after` and every level it reached with its rewards, and `quests` each quest it completed, `economy::rewards::GameEconomy`), or `{ paid: false, reason }` for every refusal; the seed is burned first, so it pays once (R1303001); a pay the store fails is tried again, `PRACTICE_PAY_ATTEMPTS` tries in all, and one that never lands is a 500 that leaves the seed burned (R1688000); the claim is kept with its seed until it settles, paid or refused, once, and the retention loop pays one still unsettled `PRACTICE_SETTLE_GRACE_SECONDS` after it was made, with no board, and skips one this process is still settling (R2422000, R3500001) |
 | `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
@@ -227,7 +234,7 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `GET` | `/api/admin/leaderboard` | active | `?ladder=`: every season row of the ladder, highest rating first, `{ season, ladder, rows: [{ profileId, username, kind: person \| bot, rating, games, wins, losses, draws, rank, handSet, you, bot: { strength, persona, retired } \| null }] }`: the one read that marks a bot (R3074002) |
 | `GET`, `POST` | `/api/admin/news` | active | the newest `NEWS_POSTS_PAGE` posts, `{ posts: [{ id, title, summary, postedAt, postedBy, takenDownAt }] }`; `POST { title, summary }` posts one with no reward, checked as `news.json`'s entries are, 201 `{ post }`, 400 naming every problem (R3074003) |
 | `DELETE` | `/api/admin/news/:postId` | active | takes a post down, `{ post }`; 404 for no such post, 409 for one down already (R3074003) |
-| `GET` | `/api/admin/audit` | active | the newest `ADMIN_AUDIT_PAGE` audit rows, `{ actions: [{ id, profileId, username, route, request, before, after, at }] }`, newest first (R3074000) |
+| `GET` | `/api/admin/audit` | active | the newest `ADMIN_AUDIT_PAGE` audit rows matching `?before_id=<id>&profile_id=<id>&route=<METHOD path>` (all optional: `before_id` an exclusive upper bound on the row id, the other two exact matches), `{ actions: [{ id, profileId, username, route, request, before, after, at }], nextBeforeId: <id> \| null }`, newest first; `nextBeforeId` is the last row's id when the page is full, else `null` (R3074000); a moderation lever's row (`CLI moderate …`, #4141) has `profileId` and `username` empty |
 | `POST` | `/api/dev/bar/:bar` | active | a dev tool: fills the caller's `card` or `cosmetic` token bar so it pays at once, a card token or the cosmetic token cycle's next step, the cosmetic bar to its current step's size (R1305000, R1305001, R2728000), every row reason `dev`, marked `dev`; 404 `no such bar` for any other `:bar`. 403 `forbidden` to any account that is not a dev account (R1310003) |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641), a portrait the account owns (R1827000), and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000), and a playmat, backdrop and card back the account owns (R1833000, R1834001) |
 | `POST` | `/api/decks/sync` | active | the deck workshop's autosave pass in one request (R3212001): `{ decks, trios, deletedTrios, deletedDecks }`, each deck and trio its `PUT` body with its `id`, each deletion an id, at most `DECK_SYNC_ITEMS_MAX` items in all (else 400, running none); run in that order, each as its own `PUT` or `DELETE` in its own transaction; answers the four lists index-aligned, each item `{ id, deck }`, `{ id, trio }`, `{ id, deleted }` or, refused, `{ id, status, error }` as its route would answer; a refused item refuses alone, and a server fault fails the request. No spend: no turn, no key |
@@ -236,29 +243,34 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
 | `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is canceled before it can pair (R897000); 409 `already_in_match` in a live match, a series or a co-op match (R264, R1065000); 409 `already_queued` for a caller already queued, its open ticket's id as `details.ticketId`; a pair's start fails, through its failed-start cleanup, for a seat the ledger finds taken, and a sweep on an older epoch claims no pair, leaving both tickets open (R1523000) |
 | `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002), counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS` and kept for every caller (R1996000) |
-| `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000), the ledger's answer to a join racing another door (R1523000); 503 `unavailable` while a newer server holds the seats (R1523000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000) |
+| `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000), the ledger's answer to a join racing another door (R1523000); 503 `unavailable` while a newer server holds the seats (R1523000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000); a code past R4008000's allowance is 429 `rate_limited` |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId`, `username` and win `streak` (R604, R612, R1436, R2101000), and once a ranked match's rated record is written its `rankBefore` and `rankAfter` off it, a ranked series' on its last game (R2388000) |
 | `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672), which swap the finished match's seats: its P2 takes P1 (R1989000); 409 `update_required` for a match played on another catalog version (R1638000); an offer past `REMATCH_OFFER_TTL_MS` of the match's end lapses silently, recording nothing (R2685000) |
 | `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436). R2778000: each on `?ladder=` (`constructed`, the default, or `random`), named in the body's `ladder` |
-| `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; friends may always watch, so the settings carry no watching switch (R2615000); a `cosmetics` group's six picks must each be of its kind and owned, or the write is 400 `bad_request` (R1834001) |
+| `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; friends may always watch, so the settings carry no watching switch (R2615000); a `cosmetics` group's six picks must each be of its kind, or the write is 400 `bad_request` (R1834001); a pick the account does not own is left out of the write, keeping the stored one (R4403000) |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000); every window and history is cut from one snapshot of every patch's totals, kept `CARD_STATS_CACHE_TTL_SECONDS` and loaded once, and a patch the server does not ship reads only its own totals and is never kept (R3067000) |
 | `GET` | `/api/stats/play-rates` | none | each card's play rate, the share of the human seats of every live game that played it, for cards `PLAY_RATES_MIN_GAMES` seats held; kept `PLAY_RATES_REFRESH_SECONDS` (R1583000) |
 | `GET` | `/api/stats/games` | none | the patch's game figures (the first seat's wins with their interval, the endings, the turns, R1256000's counts) over the window every card shares, under R654's gate, split by both seats' pilots, through the engine's `windowed_game_figures`; kept and cached as the cards' (R1994000) |
 | `GET` | `/api/stats/ci` | none | the daily super run's last `CI_RUNS_LISTED` runs on `main` and a failed run's jobs that did not pass, read from GitHub's Actions API (with `CREATE_ISSUES_TOKEN` when set) and kept `CI_RUNS_CACHE_TTL_SECONDS`; `unavailable` when GitHub cannot be read; none on the end-to-end server (`api/ci_runs.rs`, R1935000) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654); a PUT keeps only R1142000's summary inputs, for catalog cards (R1771000) |
-| `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5), each page with both seats' frozen `loadouts` and the `cardLoadouts` of the cards its steps show (R1834003); a page of a replay kept in memory waits for nothing, while an opening that is not kept folds its whole game behind `REPLAY_FOLDS_RUNNING_MAX` folds at once for the whole server (the co-op replays' too), a concurrent opening of the same match sharing that fold, and one that waits past `REPLAY_FOLD_WAIT_MS` is 429 `rate_limited` with `retryAfterMs` (`REPLAY_FOLD_RETRY_AFTER_MS`, R192, R3500000) |
-| `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`), whether they may be watched and, `duos: true`, whether the game holding them is a co-op one (R2881000), the requests in and out, and the players the caller blocks (§9.4), read in one transaction by a fixed number of set-based queries whatever the number of friends |
-| `POST`, `DELETE` | `/api/friends/requests`, `/:id/accept`, `/:id/decline`, `/api/friends/requests/:id`, `/api/friends/:profileId` | active | a request by exact `name#tag` (an unknown name and a blocked pair answer the same 404; `self`, `already_friends`, `already_requested`, `friend_cap` are 409; past `FRIEND_REQUESTS_PER_HOUR` is 429; a mutual request is accepted at once), its answer or its cancel, and removing a friend (which deletes the replay shares between the two, either way, cancels every open challenge between them and frees its room (R1689000), and lets go a watch of either by the other) |
+| `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5), each page with both seats' frozen `loadouts` and the `cardLoadouts` of the cards its steps show (R1834003) and both seats' `portraits` (R3976000, `vanilla` before them); a page of a replay kept in memory waits for nothing, while an opening that is not kept folds its whole game behind `REPLAY_FOLDS_RUNNING_MAX` folds at once for the whole server (the co-op replays' too), a concurrent opening of the same match sharing that fold, and one that waits past `REPLAY_FOLD_WAIT_MS` is 429 `rate_limited` with `retryAfterMs` (`REPLAY_FOLD_RETRY_AFTER_MS`, R192, R3500000) |
+| `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`), whether they may be watched and, `duos: true`, whether the game holding them is a co-op one (R2881000), for an offline friend `lastSeenAt` when presence kept a heartbeat, for a friend in a watchable 1v1 game its `turn`, for an online friend with an unstarted lobby with an empty seat its `lobbyCode` (R3732001), the requests in and out, and the players the caller blocks (§9.4), read in one transaction by a fixed number of set-based queries whatever the number of friends |
+| `GET` | `/api/friends/recent` | active | `{ recent: [{ profileId, username, playedAt }] }`: the opponents of the caller's newest `RECENT_OPPONENTS_SCAN` games that were not ranked (a room, lobby, challenge or daily game, never one the queue paired, so a ladder bot is never listed, R1452), newest first, at most `RECENT_OPPONENTS_MAX`, each once, leaving out the caller, friends and anyone a block stands between (R3732000) |
+| `POST`, `DELETE` | `/api/friends/requests`, `/:id/accept`, `/:id/decline`, `/api/friends/requests/:id`, `/api/friends/:profileId` | active | a request by exact `name#tag` (an unknown name and a blocked pair answer the same 404; `self`, `already_friends`, `already_requested`, `friend_cap` are 409; past `FRIEND_REQUESTS_PER_HOUR` per account, `FRIEND_REQUESTS_PER_ADDRESS_PER_HOUR` per address (R4008001), is 429; a mutual request is accepted at once), its answer or its cancel, and removing a friend (which deletes the replay shares between the two, either way, cancels every open challenge between them and frees its room (R1689000), and lets go a watch of either by the other) |
 | `POST`, `DELETE` | `/api/blocks`, `/api/blocks/:profileId` | active | block (removing the friendship, every request and every replay share either way, letting go a watch of either by the other, and muting the two's emotes in a live match between them, R1351000) and unblock |
 | `POST` | `/api/presence` | active | the heartbeat, which a client sends only after `PRESENCE_HEARTBEAT_MS` with no other signed-in request (R3210000); a friend reads as online for `PRESENCE_TTL_MS` after the last write; records nothing while the account owes the terms (R970002) |
-| `GET` | `/api/social` | active | the social poll's one read (R3210000): `{incoming, outgoing, unread}`, what `GET /api/challenges` and `GET /api/chat/unread` answer, read in one transaction for the caller alone |
+| `GET` | `/api/social` | active | the social poll's one read (R3210000): `{incoming, outgoing, unread}`, what `GET /api/challenges` and `GET /api/chat/unread` answer, read in one transaction for the caller alone, with `dailyWaiting` (#3727) and `notificationsUnread`, the caller's unread feed rows (R4039000) |
+| `GET` | `/api/notifications?before=<id>&limit=<n>` | active | the caller's notification feed (`notifications/`, R4039000), newest first: `{notifications: [{id, kind, actor, subject, payload, createdAt, read}], nextBefore, unread}`, `limit` from 1 to `NOTIFICATIONS_PAGE_MAX` (`NOTIFICATIONS_PAGE` without it) and `nextBefore` the next page's `before` or null; any other `before` or `limit` is 400. A `lobbyInvite` whose lobby is gone, started or expired is deleted as it is read |
+| `POST` | `/api/notifications/read` | active | `{upTo?}`: marks the caller's unread rows up to that id, inclusive, or all of them, read: `{unread}`; nobody else's; an `upTo` that is no positive whole number is 400 |
 | `GET`, `POST`, `DELETE` | `/api/challenges`, `/:id/decline`, `/api/challenges/:id` | active | challenge an online, idle friend with `POST /api/rooms`'s body plus `friendId`, making the room and the challenge (409 `busy`, `offline`, `already_challenged`); the open challenges in and out; a challenge's room joined by its friend alone, while the two are still friends, anyone else getting an unknown code's 404 (R1689000); decline, cancel; `CHALLENGE_TTL_MS` frees an unanswered one's room, and the sweeper then deletes every challenge row that old; past `CHALLENGES_PER_HOUR` an hour a challenger gets 429 |
 | `GET`, `POST` | `/api/chat/:friendId`, `/api/chat/unread`, `/api/chat/messages/:id/report` | active | a page of a conversation (`CHAT_PAGE`, newest last, marked read, `nextCursor` the opaque cursor of the page before it, R1384000), a message to a friend (1 to `CHAT_MAX_CHARS` once trimmed, 422 `empty` or `too_long`, masked, `CHAT_MESSAGES_PER_MINUTE` a sender), unread counts, a report |
-| `GET`, `POST`, `DELETE` | `/api/replays/shared`, `/api/replays/:matchId/shares`, `/api/replays/:matchId/shares/:friendId` | active | the newest `SHARED_REPLAYS_LIST_MAX` replays shared with the caller; the friends the caller shared a finished match it held a seat in with (`GET`, R1435000), share it with a friend, and unshare it |
-| `POST`, `GET`, `DELETE` | `/api/duos/rooms`, `/api/duos/rooms/:code`, `/api/duos/rooms/:code/join` | active | a co-op room with a difficulty and the host's deck or a random one (`201 {code}`); the room; the guest's join, which starts the match (host A1, guest A2, the AI B1 and B2; 409 `full`, `own_room`, `update_required` for a host's deck frozen under another catalog; `conflict` for a host's fourth open room, R1047002; `already_in_match` for a guest in a game and `conflict` for a host in one, R1065000, the ledger's answer to a join racing another door, and 503 `unavailable` while a newer server holds the seats, R1523000); the host's cancel before anyone joins. A room nobody joins lapses after `DUOS_ROOM_TTL_MS`; to a blocked pair, and once joined to anyone but its two people, a room reads as an unknown code (404) (§13.9) |
+| `GET`, `POST`, `DELETE` | `/api/replays/shared`, `/api/replays/:matchId/shares`, `/api/replays/:matchId/shares/:friendId` | active | the newest `SHARED_REPLAYS_LIST_MAX` replays shared with the caller; the friends the caller shared a finished match it held a seat in with (`GET`, R1435000), share it with a friend, and unshare it; a share counts against `REPLAY_SHARES_PER_HOUR` (R4391000), the next is 429, and a share already held answers 204 and tells the friend nothing |
+| `POST`, `GET`, `DELETE` | `/api/duos/rooms`, `/api/duos/rooms/:code`, `/api/duos/rooms/:code/join` | active | a co-op room with a difficulty and the host's deck or a random one (`201 {code}`); the room; the guest's join, which starts the match (host A1, guest A2, the AI B1 and B2; 409 `full`, `own_room`, `update_required` for a host's deck frozen under another catalog; `conflict` for a host's fourth open room, R1047002; `already_in_match` for a guest in a game and `conflict` for a host in one, R1065000, the ledger's answer to a join racing another door, and 503 `unavailable` while a newer server holds the seats, R1523000); the host's cancel before anyone joins. A room nobody joins lapses after `DUOS_ROOM_TTL_MS`; to a blocked pair, and once joined to anyone but its two people, a room reads as an unknown code (404) (§13.9); a code past R4008000's allowance is 429 `rate_limited` |
+| `POST`, `GET` | `/api/lobbies`, `/api/lobbies/:code`, `/api/lobbies/:code/{enter,leave,remove,settings,pick,ready,invite,start,team,move}` | active | a private lobby (`lobby/`, R3730000 to R3730006, R3731000): `{format: "duel", mode}`, `{format: "coop", difficulty}` or `{format: "2v2"}` makes one (`201 {code}`, `conflict` past `MAX_OPEN_ROOMS_PER_HOST` of a format); the caller's lobbies not started; the lobby as the caller sees it (`kind: "lobby"`: settings, `you`, `yourPick`, two seats of `{role, player {profileId, username, status}, state: choosing\|chosen\|ready, deck, random}` (a 2v2's four, `host`, `guest`, `guest2`, `guest3`, in two teams), a 1v1 opponent's deck and a 2v2's other team's never named, `startedAt`, `matchId`, `seriesId`), or with no lobby a classic room still open under the code (`kind: "room"` or `"coopRoom"`, R3730006), else 404. `enter` takes the empty seat; `leave` frees it, the host's closes the lobby; `remove {profileId}` is the host's; `settings {mode}` or `{difficulty}` the host's, taking every Ready off; `pick` takes the queue's choice in the lobby's mode (a 1v1 lobby, R264) or a co-op room's, frozen (R253), and takes the caller's Ready off; `ready {ready}`; `invite {profileId}` a friend, a `lobbyInvite` toast, counted against `CHALLENGES_PER_HOUR`; `start` the host's, once every seat is ready (`200 {matchId, seriesId}`; a 2v2's a Duos match whose team A the seed's coin picks, R3731001, taking an end-to-end server's `seed`); a 2v2's `team` moves a member but the host to the other team's empty seat and the host's `move {profileId, seat}` seats a member at `guest`, `guest2` or `guest3`, swapping, each taking every Ready off. A member's refusal is `409 conflict` with `details.reason`: `full`, `own_lobby`, `not_host`, `started`, `not_ready`, `no_pick`, `already_in`, `changed`, `busy`, `mode` (with `details.mode`), and a 2v2's `team_full` and `host_stays`. Every change is a `lobby` frame to its members (R3730000); a code past R4008000's allowance is 429 `rate_limited` |
 | `GET` | `/api/duos/live`, `/api/duos/matches/:matchId/replay` | active | the caller's live co-op match, for the menus' way back (R765); a human seat's own Duos views of a finished co-op match, step by step, folded once on the blocking pool under the match's catalog version and kept as the 1v1 replays are, 404 to anyone else, 409 while it is live, 410 once its log is purged, 422 `replay_unavailable` (`earlier_patch`, `rules_changed`) when it cannot be folded to its recorded end, held to `REPLAY_REQUESTS_PER_MINUTE`, and an opening not kept in memory folds behind the same `REPLAY_FOLDS_RUNNING_MAX` as the 1v1 replays', sharing one fold per match, and is 429 `rate_limited` with `retryAfterMs` past `REPLAY_FOLD_WAIT_MS` (§13.9, R3500000) |
-| `POST`, `GET` | `/api/duos/matches/:matchId/again` | active | Play again after a finished co-op match: either human seat's offer, and the game both offers make with the same seats and difficulty under a fresh seed (a saved deck replayed, a dealt one dealt afresh on its latest pick; 404 to a non-seat and an unknown id, 409 while it is live, an offer past `REMATCH_OFFER_TTL_MS` lapsing silently, 409 `update_required` on a stale catalog, `already_in_match` for a seat in another game, an unknown code's 404 to a blocked pair), and what each seat offered with whether the teammate is still here (R2092000) |
+| `POST`, `GET` | `/api/duos/matches/:matchId/again` | active | Play again after a finished co-op match (none for a 2v2: the offer is 409 and the status `unavailable: true`, R3731003): either human seat's offer, and the game both offers make with the same seats and difficulty under a fresh seed (a saved deck replayed, a dealt one dealt afresh on its latest pick; 404 to a non-seat and an unknown id, 409 while it is live, an offer past `REMATCH_OFFER_TTL_MS` lapsing silently, 409 `update_required` on a stale catalog, `already_in_match` for a seat in another game, an unknown code's 404 to a blocked pair), and what each seat offered with whether the teammate is still here (R2092000) |
+| `POST` | `/api/client-errors` | none | #3619: a crash in a player's browser, `{ trigger, message, stack, route?, catalogVersion? }` (`trigger` is `boundary`, `error` or `unhandledrejection`); a body over `CLIENT_ERROR_BODY_MAX_BYTES` or an unknown trigger is 400, and `CLIENT_ERROR_REPORTS_PER_ADDRESS` per address, and, with a verifying bearer token, `CLIENT_ERROR_REPORTS_PER_ACCOUNT` per account, in `CLIENT_ERROR_WINDOW_MS` is 429; an unverifiable token counts as none. Each field is cut to its cap and nothing else is kept; raises the `client.error` alert, whose details go by email and never into the public issue |
 | `GET` | `/healthz` | none | liveness: `{ status, version }` and `x-deployed-commit`; reads nothing from the store (#861) |
 | `GET` | `/readyz` | none | readiness, what the Worker's daily cron requests to wake the server: the same once the store answers `select 1`, else 503 `unavailable` (`READINESS_PROBE_TIMEOUT_MS`) |
 
@@ -273,7 +285,7 @@ UUID (`economy/idempotency.rs`); anything else there is 400 `bad_request`, and a
 as before. Under the account's economy lock, in the spend's transaction, a key the account committed a
 spend with answers that spend's status and body again and spends nothing, the same key with another route
 or body is 422 `idempotency_key_reused`, and a new key's answer is written with its grant. A refusal keeps
-nothing. A redemption reads its key before the breaker and R145's account checks, and every outcome is
+nothing. A redemption reads its key before the pause and R145's account checks, and every outcome is
 padded (R107). Keys are per account, kept `IDEMPOTENCY_KEY_TTL_HOURS` and swept by the retention loop;
 the body is kept as an HMAC under `<CODE_PEPPER>:body`. CORS allows the header (`api/cors.rs`), without
 which the browser's preflight refuses every spend; `apps/web/src/net/api.ts` mints a key per press and
@@ -288,15 +300,77 @@ once; the next ones wait their turn in the process, in the order sent, holding n
 burst never holds the pool's connections waiting on the economy lock. One sent while `ECONOMY_SPENDS_WAITING_MAX` already wait is 429
 `rate_limited` with `SPEND_BUSY_RETRY_AFTER_MS`, and writes and keeps nothing.
 
+**Guessable values** (#4008, part of #3897; the part of #2629 §4's inventory of every write route's limits that guards secrets). A limit on a guessable
+value counts **guesses**, not requests or frames, and each door below takes one guess in a request or frame, so a batch carries no more (R4008000). A new
+route or frame that answers right or wrong to a value a caller could guess adds its line here and its test to `tests/api/guess_limits.rs`. The address is
+R190's, hashed.
+
+| Door | Guessed value | Per account | Per address | Per request or frame | Test |
+| --- | --- | --- | --- | --- | --- |
+| `POST /api/codes/redeem` | an invite code, 80 bits | `CODE_ATTEMPTS_PER_PROFILE_PER_HOUR` (the 7th is refused, 429) | `CODE_ATTEMPTS_PER_IP_PER_HOUR` (migration 0006) | one; an array is 400 | `r4008000_invite_code_guesses_…`, `r4008000_a_redeem_request_carries_one_code` |
+| `POST /api/auth/username-signin` | a username's password | `USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW` per name (R1443) | `USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW` per address (R1443) | one; an array is 400 | `auth.rs`'s `r1443_limits_attempts_per_address_and_per_name`, `r4008000_username_sign_in_reads_one_guess_a_request` |
+| `GET` and `POST /api/daily/unsubscribe?token=` | a UUID v4 token, 122 bits | none (an open route) | the general `API_REQUESTS_PER_MINUTE` | one; only the first `token` is read | `r4008000_the_unsubscribe_link_is_…`, `r4008000_an_unsubscribe_request_reads_one_token` |
+| `POST /api/friends/requests` | a `name#tag` | `FRIEND_REQUESTS_PER_HOUR` (R4008001) | `FRIEND_REQUESTS_PER_ADDRESS_PER_HOUR` (R4008001) | one; an array is 400 | `r4008001_…` |
+| The code doors: `POST /api/rooms/:code/join`, `DELETE /api/rooms/:code`, `GET`, `POST …/join` and `DELETE /api/duos/rooms/:code`, `GET /api/lobbies/:code`, `POST /api/lobbies/:code/enter` | a room's, co-op room's or lobby's code, 30 bits | `CODE_TRIES_PER_ACCOUNT_PER_HOUR` distinct codes tried, right or wrong, in `CODE_TRY_WINDOW_SECONDS`, claimed before the answer; then every lookup is 429 | `CODE_TRIES_PER_ADDRESS_PER_HOUR`, the same | one, the path's | `r4008000_…` rooms, at once, right code, doors, address, people |
+| Socket frames (`/ws/match`, `/ws/duos`, `/ws/watch`, `/ws/social`) | nothing guessable: `hello` ignores `token`, `matchId` and `roomCode`, `joinRoom` is `malformed`, a watcher's `hello {matchId, friendId}` needs a friend (UUIDs), an action is one a frame at `MATCH_ACTIONS_PER_SECOND` | n/a | the upgrade is one `API_REQUESTS_PER_MINUTE` request (R2478000), and `WS_MAX_CONNECTIONS_PER_ADDRESS` | one | `r4008000_no_socket_frame_carries_a_code_or_checks_one` |
+
+Left out: a UUID id (122 bits, and ownership-checked, so a wrong one is 404 as an unknown one is); the auth provider's sign-in, sign-up, reset, email
+confirmation and authenticator code (the provider's own dashboard limits, not this crate's); and the e2e-only `/api/auth/signin`.
+
+**Comparing secrets** (#4014, part of #3897). A secret a caller sends is compared in constant time or looked up by its keyed hash, never compared with
+`==` or `!=` (the rule is in Conventions). The table lists every comparison the audit checked, the Worker's among them; a new door that takes a secret adds
+its row, and `tests/api/secret_comparisons.rs` fails on an equality operator beside the name of a hash, a token, a pepper or a password in `src/`.
+
+| Value | Where | How it is compared |
+| --- | --- | --- |
+| An invite code | `POST /api/codes/redeem`, `mint-code`, `moderate revoke-code` | `Hashes::code` (HMAC-SHA256 under `<CODE_PEPPER>:code`), then SQL `where code_hash = …` (`app.redeem_invite_code`, `codes_find_by_hash`, `codes_revoke_by_hash`): a lookup by keyed hash. |
+| An unsubscribe token | `GET` and `POST /api/daily/unsubscribe` | Parsed as a UUID, then SQL `where unsubscribe_token = $1::uuid` (`daily_notify_unsubscribe`): a lookup. The in-memory store's `==` (`db/fake.rs`) is test-only and is left. |
+| A room's, co-op room's or lobby's code | the code doors above | SQL lookup by the code (`rooms_get`, `duos_rooms_get`, `lobbies_get`; the in-memory stores' `==` are test-only). A code is 30 bits and short-lived, behind the per-account and per-address guess limits, and is not stored hashed. |
+| `Idempotency-Key` | `economy/idempotency.rs` | The key is looked up in SQL by account and UUID (`economy_idempotency_get`). The stored body's HMAC against the request's was `!=` and is now `api::crypto::constant_time_eq`: the one fix of this audit. |
+| The session JWT and passwords | `auth.rs` | `jsonwebtoken` checks an HS256 signature with `hmac`'s `verify_slice`, and an ES256 or RS256 one against the provider's published public keys. A password goes to the provider (`password_grant`), which compares it. `SUPABASE_SECRET_KEY`, `CREATE_ISSUES_TOKEN`, the Resend keys and `VAPID_PRIVATE_KEY` are only sent out, never compared. |
+| Fixtures | `E2eAuth` in `auth.rs`, `db/fake.rs` | `E2eAuth` compares a fixture password and looks tokens up in a map; `E2E=1` with `NODE_ENV=production` refuses to boot (`env.rs`), so it is unreachable in production. `db/fake.rs` is test-only. Both are left. |
+| Not secrets | `actor/checkpoint.rs`, `DEV_PROFILE_IDS`, CORS origins | An FNV-1a checksum of the server's own stored row; profile ids of an already verified session; public origins. |
+| The Worker | `apps/edge`, `apps/admin/worker` | `apps/edge` compares the running server's `x-deployed-commit` (its own answer, a public commit SHA) with `DEPLOYED_COMMIT`. `apps/admin/worker` matches paths only. Neither compares a caller's value with a secret, and no shared-secret header exists: `/daily-sweep` is reachable only through the Worker, which forwards only `/api` and `/ws` from the public. |
+
+A lookup in Postgres is not constant-time at the byte level; the keyed hash, the UUID's 122 bits and the guess limits above are what keep it from being a
+side channel worth timing.
+
 **Custom cards are gone** (#2956, migration 0082). `/api/custom-cards` answers as any unknown route does,
 and the store has no custom-card methods. Players' saved custom cards were deleted with their table, with no
 export. The server never ran a game that used one (R915005: they played in practice only) and never stored one,
 so no log it folds names a custom card; a practice claim whose deck names a custom id does not fold
 (`DoesNotFold`).
 
+**Daily games** (SPEC §9.13, #3727; `daily/`, [below](#daily-games-913-3727)). Plain HTTPS with a bearer
+token, no socket, no cookie and no engine in the client, so any client can play one:
+
+| Route | Auth | What it does |
+| --- | --- | --- |
+| `GET /api/daily` | Active | `{games, challenges: {incoming, outgoing}, seeks, waiting}`: the caller's running games and its newest `DAILY_RECENT_FINISHED` finished ones, its open challenges both ways and its open seeks, and how many games wait on its move; a game past its deadline is ended first (R3727000) |
+| `POST /api/daily/challenges` | Active | `{friendId, mode: "bo1"\|"random", perMoveDays, deckId?, leanSet?}`: 201 `{id}`. Any friend, online or not, in a game or not; 404 for anyone else, 422 `bad_mode` or `bad_time`, 409 `already_challenged` (one open per friend) or `daily_full` (R3727004); counted against `CHALLENGES_PER_HOUR` with the live ones. Lapses `DAILY_CHALLENGE_TTL_DAYS` after it was sent |
+| `POST /api/daily/challenges/:id/accept` | Active | `{mode, deckId?, leanSet?}`, the friend's own deck: 201 `{matchId}`; 409 `mode_mismatch`, `daily_full`; 404 once closed or lapsed |
+| `POST /api/daily/challenges/:id/decline`, `DELETE /api/daily/challenges/:id` | Active | the friend declines, the challenger cancels: 204 |
+| `POST /api/daily/seeks` | Active | `{mode, perMoveDays, deckId?, leanSet?}`: 201 `{matchId}` when it pairs at once with the oldest open seek of the same mode and time from someone neither blocks, else 201 `{seekId}`; never a ladder bot. 409 `already_seeking`, `daily_full`. Lapses `DAILY_SEEK_TTL_DAYS` later |
+| `DELETE /api/daily/seeks/:id` | Active | cancels the caller's seek: 204 |
+| `GET /api/daily/games/:matchId` | Active | `{matchId, seat, view, legal, forecast, seq, holds, hasMove, perMoveDays, mode, catalogVersion, olderCatalog, opponent, over, lostOnTime, nextGame}`: the caller's own `view_for`, legal actions and `forecast` only (`forecast` is the engine's `combat_forecast` for the seat kept to the attacks `legal` lists, R3855000; `legal` holds only a concede and `forecast` is empty while the move is the other player's), under the game's catalog (R3727005); 404 for a game the caller does not play. A finished game whose log the retention purge took answers 200 with its list row (the stored board's turn, life and result, and when it ended) plus `expired: true` and no `view`, `legal` or `forecast`, never folded (R3934000) |
+| `POST /api/daily/games/:matchId/actions` | Active | `{after, nonce, action}`, `after` the `seq` it was read at: 200 with the read. A nonce already logged answers 200 and applies nothing; 409 `stale` (the log moved on, or another request sent after the same `seq` was logged first: the clock is written only on `daily_games.seq` still at `after`), `time_up` or `over`; 422 `not_your_move` (anything but `concede` from a seat holding no move, R3727006's offerer among them) or `illegal`. Every refusal carries `game`, the read as it stands. A finished game whose log the purge took answers 409 `over` (`time_up` if it was lost on time) with its `expired` read as `game`, and logs nothing (R3934000) |
+| `GET /api/daily/settings`, `PUT /api/daily/settings` | Active | `{emailOn, hasEmail, vapidPublicKey, pushDevices, emailAvailable}`, `emailAvailable` whether the server sends player email at all (`PLAYER_RESEND_API_KEY` set, R4039000); the `PUT` takes `{emailOn}` |
+| `POST /api/daily/push` | Active | `{endpoint, keys: {p256dh, auth}}`, this device's subscription (an `https` endpoint at a browser's push service, one of `PUSH_SERVICE_HOSTS` or a subdomain of one, else 400; past `PUSH_MAX_DEVICES` the oldest goes): 204 |
+| `DELETE /api/daily/push` | User | `{endpoint}`: the device's subscription goes, as the web signs out: 204 |
+| `GET /api/daily/unsubscribe?token=`, `POST …` | None | the email's own link: a small page whose button posts the `POST`, so opening it (a mail scanner following every link) changes nothing; the `POST` is RFC 8058's one-click, emails off for the token's account (a form-encoded or `multipart/form-data` body of `List-Unsubscribe=One-Click` is read as empty): a small page saying so |
+| `POST /daily-sweep` | None | the Worker's hourly cron: `{expired, settled, purged, emailed, pushed}`. Outside `/api` and `/ws`, which the Worker never forwards from the public |
+| `POST /api/e2e/daily-clock` | None | `{offsetMs}`, end-to-end mode only (404 elsewhere): the daily clock reads that far ahead, for spec 53 |
+
+`GET /api/social` and the `social` frame carry `dailyWaiting`, and a daily match's
+`POST /api/matches/:matchId/rematch` is 409 `daily` (its rematch is a new daily challenge).
+
 ## WebSocket surface
 
-One socket per player per match, at `/ws/match` on the same port. The token comes from an offered
+One socket per player per match, at `/ws/match` on the same port. A second socket of the same account
+takes the seat and the first is closed with `SEAT_TAKEN_CLOSE_CODE` (4412, R3767000), which no client
+reconnects on; a watcher's replacement stays 1000. A socket already closed when it reaches a seat
+(`/ws/match` or `/ws/duos`) takes none — the seat keeps what it held and no other socket is closed —
+and one that drops while it is being seated starts the seat's grace like any other drop (R744, R3767000). The token comes from an offered
 `jackioh.bearer.` subprotocol, its UTF-8 in base64url without padding (R1379000; `?token=` only when
 none is offered, for the previous day's client); only `jackioh.v1` is echoed, and `/ws/duos`,
 `/ws/watch` and `/ws/social` read the token the same way. The message union is `actor/protocol.rs`:
@@ -308,7 +382,10 @@ hand, eight of the pool dealt from the match seed (R1341, R1342), and the actor 
 the sender's hand as silently as a rate-limited one, and relays nothing between two accounts either of which blocks the other (R1351000). A frame over `MAX_FRAME_BYTES` closes the socket with 1009.
 A profile opens it onto the match it is in, or onto a finished match it held a seat in until
 `REMATCH_OFFER_TTL_MS` after that match ended; past that it is refused as a stranger is (4403), and a
-finished match whose log the retention purge took is not found (4404, R1285000).
+finished match whose log the retention purge took is not found (4404, R1285000). Sockets still open
+on a finished match once that window has passed, its watchers' included, are closed on the reaper's next
+tick with `MATCH_OVER_CLOSE_CODE` (4411), and its actor goes; the co-op sweep does the same from the
+game's end (R3694000).
 An upgrade whose token verifies counts as one request against its account's `API_REQUESTS_PER_MINUTE`;
 one past it gets the `forbidden` frame and close 4429, which the match and co-op clients retry on their backoff
 (the watch page takes the frame as a refusal; R2478000), and `/ws/duos`, `/ws/watch` and `/ws/social` count
@@ -333,12 +410,13 @@ What the actor holds, each with a test named after it:
   (R2686000).
 - Every resolved action is appended to `match_actions`. A rebuilt actor folds `(seed, decks, log)`
   with the last boards, Glitch boards and dealt seats frozen into the match at its start (R417, R678,
-  R433), and a reconnect gets a fresh view, never a log replay (§9.5). The restart drain stores a
-  checkpoint of each live match of `MATCH_CHECKPOINT_MIN_ACTIONS` actions or more
+  R433), and a reconnect gets a fresh view, never a log replay (§9.5). Each live match's actor
+  stores a checkpoint every `MATCH_CHECKPOINT_MIN_ACTIONS`-th row as it is played, and the restart
+  drain stores one of each live match of `MATCH_CHECKPOINT_MIN_ACTIONS` actions or more
   (`match_checkpoints`, migration 0042, `actor/checkpoint.rs`), and the next rebuild folds only the
   rows after it when it passes every check (`MATCH_CHECKPOINT_VERSION`, the build's rules
   fingerprint from `build.rs`, the catalog, its row's seq and nonce, its hash), or else logs
-  `match.checkpoint.refused` with the reason and folds the whole log; finishing drops it (#1169).
+  `match.checkpoint.refused` with the reason and folds the whole log; finishing drops it (#1169, #4224).
   A match is played, rebuilt, reaped and recorded under the catalog version it started on (R388,
   R767000): a start on a version this build neither is nor carries is refused, and a rebuild of such
   a match logs `match.catalog.unpinned` and plays on this build's catalog, as Duos's does.
@@ -370,13 +448,15 @@ concede) and `ping {ping, target}`; the server sends `view {view, legal, forecas
 `DuosView`, its legal actions and the forecast of the attacks among them, R3477000, which a watcher's
 view never carries), `ack {nonce, seq}`, `error {code, message, nonce?}` (`malformed`,
 `illegal_action`, `forbidden`, `rate_limited`, `match_over`, `internal`), `clock {now, roundDeadline,
-graceDeadlines}`, `teammate {connected, aiPlaying}` and the teammate's `ping`. Before its hello the
+graceDeadlines {a1, a2, b1?, b2?}}` (team B's only while a 2v2 person's grace runs), `teammate {connected,
+aiPlaying}` and the teammate's `ping`. Before its hello the
 socket waits behind `actor::guard::HelloGate`: a frame that is not the hello is answered `malformed`
 and past `MALFORMED_FRAMES_PER_WINDOW` of them the socket is closed with 1008, and a hello that does not
 come within `WS_IDLE_TIMEOUT_SECONDS` is refused (R835002). The co-op actor holds what the match actor
 holds, with four seats:
 
-- the seat is stamped from the verified token, the host's A1 and the guest's A2; B1 and B2 are the
+- the seat is stamped from the verified token, the host's A1 and the guest's A2 (a 2v2's four people
+  each at the seat its row names, `b1` and `b2` among them, R3731002); B1 and B2 are otherwise the
   AI's, played here through `duos_decide` at `DUOS_AI_BUDGET` (R2575000), one action every
   `DUOS_AI_STEP_DELAY_MS`, whenever they owe one;
 - every applied action goes to `duos_match_actions` and pushes fresh views to both human seats; an
@@ -384,8 +464,12 @@ holds, with four seats:
   log with `duos_fold` on the blocking pool, only for a profile that holds a seat and, once the match
   has ended, only within `REMATCH_OFFER_TTL_MS` of its `ended_at` (past that the seat is not found,
   4404, and nothing is folded: R1398000), and the end writes the result and `ended_at` once, unranked,
-  for both humans; every engine call runs under the catalog version the match was dealt from
-  (`DuosMatchOptions::catalog_version`, R767000);
+  for every person; every engine call runs under the catalog version the match was dealt from
+  (`DuosMatchOptions::catalog_version`, R767000). The actor stores a checkpoint of its `DuosState`
+  (`duos_match_checkpoints`, migration 0097, `duos/checkpoint.rs`) when the restart drain stops it and
+  after every `MATCH_CHECKPOINT_MIN_ACTIONS`-th row it logs, and a rebuild folds only the rows after one
+  that passes a 1v1 checkpoint's checks (the same `actor::checkpoint::verify_body`), or else logs
+  `duos.checkpoint.refused` with the reason and folds the whole log; finishing drops it (#4169);
 - a nonce starting `srv-` or `duos:` (the engine's round's own) is `malformed`, and a `hello` repeated
   while one from the same socket is still queued is absorbed (R835001's rule); one that finds none
   queued is dropped unanswered when it comes less than `WATCH_HELLO_INTERVAL_MS` after the socket's
@@ -414,7 +498,8 @@ holds, with four seats:
 A friend watches at `/ws/watch`, authenticated as `/ws/match` is: `hello {matchId, friendId}` for a
 friend's live match, ranked or unranked, that has fewer than `SPECTATORS_PER_MATCH` watchers; no setting of the
 friend's refuses it, and unfriending or a block ends a watch already running (R2615000). The watcher gets `view {view, legal: []}`, the friend's seat's
-`view_for`, each `SPECTATE_DELAY_MS` after the state it shows; anything else is `error forbidden` and a
+`view_for`, each `SPECTATE_DELAY_MS` after the state it shows (the record keeps the view the seat was sent and
+encodes it when a watcher is first due it, so a match nobody watches encodes nothing); anything else is `error forbidden` and a
 close. It is sent `loadouts` as it attaches and a `cardLoadouts` after each delayed view that newly
 shows a dealt card, by the match sockets' rule (R1834003). Before its hello the socket waits behind the same `actor::guard::HelloGate` as `/ws/duos`: a
 frame that is not the hello is answered `malformed`, past `MALFORMED_FRAMES_PER_WINDOW` of them it is
@@ -442,7 +527,8 @@ clock as that seat was shown it, each `SPECTATE_DELAY_MS` late, and nothing else
 `clock` or `teammate` frame, `jloreCapped` or `economy`), and no loadouts; `watchers {count}` to both
 people's `/ws/duos` sockets, and again to one that reattaches; the hello answers, the malformed budget and
 the revokes of an unfriend, a block or a deleted account. A finished game's actor is reaped only once its
-watchers have had the result's view and been closed with 1000.
+watchers have had the result's view and been closed with 1000, or once `REMATCH_OFFER_TTL_MS` has passed
+since its end (R3694000).
 
 A watcher, of a 1v1 match or a co-op game, throws emotes from the sidelines (R2990000). As it attaches, after
 `loadouts` and before any view, it alone is sent `spectatorHand {emotes}`: `SPECTATOR_EMOTE_HAND_SIZE` distinct
@@ -464,16 +550,23 @@ Each signed-in tab holds one socket at `/ws/social` (`social::live`, R3214000), 
 what changed instead of the tab polling `GET /api/social` every `SOCIAL_POLL_MS` and an open conversation every
 `CHAT_POLL_MS`; the tab polls only while it is down, and older tabs poll as before. It signs in as `/ws/match`
 does (the subprotocol, R1379000; one request against the account's budget, 4429 past it, R2478000; §9.4's gate,
-4403), with every refusal one `error forbidden` frame and a close. It is sent three frames, each only what its own
+4403), with every refusal one `error forbidden` frame and a close. It is sent six frames, each only what its own
 account may read:
 
-- `social {incoming, outgoing, unread}`: exactly what that account's `GET /api/social` answers (`reads::
-  social_snapshot`), first as it opens, then after each change to its challenges or unread counts, a lapse among
-  them, and in answer to a `hello`;
+- `social {incoming, outgoing, unread, dailyWaiting, notificationsUnread}`: exactly what that account's `GET
+  /api/social` answers (`reads::social_snapshot`; `dailyWaiting` is how many daily games wait on its move, #3727,
+  `notificationsUnread` how many of its feed's rows are unread, R4039000), first as it opens, then after each
+  change to its challenges, unread counts, daily games or feed, a lapse among them, and in answer to a `hello`;
 - `chat {friendId}`: a message between it and that friend was sent, either way; no body rides it, and the tab
   reads the conversation itself;
 - `friends`: its friends list changed; the tab reads `GET /api/friends` itself. A friend's status is not pushed:
   the list keeps its own `FRIENDS_POLL_MS` read on the screens that show it.
+- `lobby {code}`: a private lobby it is in, or was just in, changed (a seat filled or freed, a pick, a Ready, a
+  setting, the Start, the lobby closed; R3730000); the tab reads `GET /api/lobbies/:code` itself;
+- `lobbyInvite {code, format, from}`: a friend invites it into their lobby's empty seat (R3730005), a toast; the
+  feed keeps a `lobbyInvite` row of it too;
+- `notification {notification}`: a row of its notification feed, as `GET /api/notifications` lists it, as it is
+  written (R4039000), with a `social` frame after it.
 
 The pushes, each after its handler's commit and only on success: a challenge made (both, and both again when it
 lapses, `CHALLENGE_TTL_MS` later), declined or canceled (both), and accepted (both, once the room's game or
@@ -481,7 +574,8 @@ series has started, so the challenger's follow finds it); a message sent (`chat`
 recipient) and a read that marked one (`social` to the reader alone); a friend request made, accepted, declined
 or canceled (`friends` to both); a friendship ended (`friends` and `social` to both); a block (`friends` to the
 blocker, and to the blocked with a `social` to both only when the block ended a friendship, a request or a
-challenge between them, so a blocked stranger is told nothing) and an unblock (`friends` to the blocker). An
+challenge between them, so a blocked stranger is told nothing) and an unblock (`friends` to the blocker); a feed
+row written (`notification` and `social` to its recipient) and a read of the feed marked (`social` to the reader). An
 account with no social socket costs no read; a read that fails is logged as `social.live.read_failed` and
 dropped.
 
@@ -538,7 +632,9 @@ used, and its figures (`createdPlayed`, `createdNotPlayed` and the used ones spl
 card's `card_totals` row beside the deck's, empty ones left out of its `stats`, so no migration and no
 back-fill: a record written before them adds none. `stats-cards` prints them as a second table after
 the deck's, `--json` as `created`, `--card` filtering both, and `GET /api/stats/cards` answers them as
-`created` (R2089000).
+`created` (R2089000), each row only its games, an adjusted win rate, its range and a tier (R4083000), read
+against the other Created cards (`created_field`, answered as `tiers.created`), or against the average deck for The Coin, Glitch and
+the Dormant Starship, which a rule makes (R4082000).
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it
@@ -683,9 +779,12 @@ from public.duos_matches m where m.id = '<match id>';
 
 An alert is an error log line marked `alert = true`: `api::http::log_alert`'s (`api.rejections.unusual`,
 `match.rejections.unusual`, `ranked.profile_missing`, `game_records.fold_poison`, `bug.found`,
-`bug.reports.refused`) and `loops.rs`'s (`loop.crashed`, `loop.returned`). `alerts.rs` (#3595) tells people
+`bug.reports.refused`, `api.route.failing`, and `client.error`, a crash in a player's browser sent to `POST /api/client-errors`, #3619) and `loops.rs`'s (`loop.crashed`, `loop.returned`, and a sweep step's `<step>.failing`). `alerts.rs` (#3595) tells people
 of each, from a tracing layer beside the JSON log, at most once an hour per event in a process
-(`ALERT_WINDOW_MS`; the rest are logged as `alert.held`, and the next notice says how many):
+(`ALERT_WINDOW_MS`; the rest are logged as `alert.held`, and the next notice says how many). `alerts::meaning`
+explains each event in its issue and its email, and `alerts.rs`'s test `every_alert_the_server_raises_says_what_it_means`
+scans the server's source for each `FailingStreak::new` step, `log_alert` event and `alert = true` line and
+fails on one that has no text:
 
 - **A GitHub issue**, with `CREATE_ISSUES_TOKEN`, titled `Patch: alert <event> on <site>` (the site being the
   first of `PUBLIC_ORIGINS`) and labelled `ALERT_ISSUE_LABELS` (`architecture`, `human`: triage assigns both
@@ -702,8 +801,118 @@ of each, from a tracing layer beside the JSON log, at most once an hour per even
 
 Either alone works. The boot logs `alerts.ready` (`issues`, and how many addresses) or `alerts.off`; a notice
 that fails logs `alert.issue.failed` or `alert.email.failed`, never another alert. The end-to-end server tells
-nobody. A server that cannot boot cannot tell anyone, nor can one the Worker cannot reach: those are #3595's
-next steps, in the Worker.
+nobody. A server that cannot boot cannot tell anyone, nor can one the Worker cannot reach, so the Worker raises
+`server.unreachable` itself, with the same issue and email (`apps/edge/README.md`, #3618).
+
+A sweep that keeps failing (#3770). Each sweep catches its own failure and tries again on the next pass, so
+a step that failed on every pass was a warning an hour or a few seconds apart and nobody told. `loops.rs`'s
+`FailingStreak`, one per step and fed each pass's result, raises one alert, `<step>.failing`, once the step
+has failed on at least `LOOP_FAILING_ALERT_PASSES` passes in a row over at least `LOOP_FAILING_ALERT_MS`
+(both must hold, so the 3 s matchmaker alerts after five minutes and the hourly purge on its third failed
+pass), with the failure's text in the line's `message` (the issue shows only the event name, the email every
+field); `ALERT_WINDOW_MS` then holds the event to one notice an hour. The steps are `matchmaker`,
+`matches.reaper`, `matches.open_reaper`, `seats.reconcile`, `series.sweeper`, `duos.sweeper`, `challenges.sweeper`, `daily.sweeper` and the retention
+purge's ten, `game_records.fold`, `game_records.refile`, `retention.purge`, `shares.purge`, `chat.purge`, `duos.logs.purge`,
+`idempotency.sweep`, `lobbies.sweep`, `practice.sweep` and `practice.prune`. Each step's text in `alerts::meaning` names its job and what
+players notice while it fails (for the matchmaker, that nobody who queues gets a game), and says that the
+email's `message` field holds the error. A reaper pass in which any match would not reap counts as failed,
+so one wedged match is reported while the others reap; a co-op pass in which any match would not end
+(`duos::sweep` answers the ids, #3826) counts as failed too, and the open-room reap (R1450) is a step of its
+own. The first good pass after an alert logs
+`<step>.recovered` at info, and a later streak alerts again. A step that fails only now and then raises
+nothing, and the per-match and per-series warnings stay as they were. The count lives in the loop's future,
+so a restart of the loop or the process starts it afresh.
+
+A route that keeps failing (#3826). An internal error answers "something went wrong" and wrote a
+`handler.threw` warning per request, so a route broken for every player (opening packs, joining the queue,
+after a bad migration) told nobody. `api::http::RouteHealth`, one per `App`, holds one run per `(method,
+pattern)`: the route's own pattern, never the request's path, so ids cannot grow the map, and `GET` and `PUT`
+of one pattern are two routes. The four socket upgrades (`/ws/match`, `/ws/watch`, `/ws/social`, `/ws/duos`)
+have one each, under the method `WS`. An internal error is a failure and any other answer, a 4xx refusal
+included, ends the run; a route that matches no request counts for nothing. Once a run has at least
+`ROUTE_FAILING_ALERT_COUNT` internal errors over at least `ROUTE_FAILING_ALERT_MS` (both must hold), it
+raises one alert, `api.route.failing`, with `method`, `pattern`, `failures`, `failingForMs` and `message` in
+the line's `data`, which reaches only the email (the issue shows the event name, never the pattern or an
+id); the route's next good answer logs `api.route.recovered` at info and drops its run, and a later run
+alerts again. All routes share one event name, so two broken routes in an hour are one notice, whose email
+names the pattern it was raised for. The count is in memory, per process, as the sweeps' is.
+
+## Daily games (§9.13, #3727)
+
+A daily game is a 1v1 game of Best of 1 or All Random with 1, 3, 7 or 14 days per move
+(`DAILY_TIME_PER_MOVE_DAYS`), played over the routes [above](#http-surface). Nothing of it stays in memory:
+it is its `matches` row (unranked, its catalog version frozen, R3727005), its `match_actions` log, a
+`match_checkpoints` row every `MATCH_CHECKPOINT_MIN_ACTIONS`, and a `daily_games` row holding its clock
+(`jackioh_shared::host::daily::DailyClock`: who holds the move and until when) and a board summary for the
+list. Each request loads and folds the game (`daily::games::load`, as a rebuild folds), and an action is
+reduced, appended and the clock stored in one transaction, the next `seq` the log's own key, so of two
+requests at once one lands and the other is `stale`. It never has a match actor: `Registry::rebuild` refuses
+a daily id, `app.live_matches()` and the fake's `matches_live` leave daily games out of the reaper's ceiling,
+and its start takes no seat of the ledger and sets no in-match flag (R3727004), so its result clears no live
+game's flag and cancels no live queue ticket.
+
+**Deadlines.** Who holds the move and its deadline are `jackioh_shared`'s, pure: the player whose turn it
+is, the player a prompt waits on with a fresh window (R3727001), both seats at the mulligan (R3727002), and
+the other player while a draw offer stands (R3727006). A move past its deadline loses for its holder
+(R3727000): `daily::games::settle` logs the server's own `disconnectExpired` under the nonce
+`srv-daily-<seq>` and records the result. Every read settles a game first, and the sweep settles every game
+due: `daily::notify::sweep`, every `DAILY_SWEEP_MINUTES` while the server is awake (`daily.sweeper`) and
+on the Worker's hourly cron (`POST /daily-sweep`) while it sleeps, one at a time (`DailyState::begin_sweep`:
+one that lands while another runs does nothing). The sweep also deletes every invite past its `expires_at`,
+whatever became of it; the game it started stays (R4390000). A game over whose result's write failed (its match still
+`live`) is due too, so the sweep writes it; a Glitch's void (R679) goes through `results::void_match`. A
+game is written in the transaction that accepts its challenge, so a start that fails leaves the challenge
+open; a seek's claim commits first, and a start that fails puts the claimed seek back where it stood.
+R3727004's cap is read once before the choice is frozen, for a quick `daily_full`, and again in the
+transaction that writes the challenge, the seek or the game, under the account's daily lock
+(`Tx::daily_lock_account`: a transaction-level advisory lock in Postgres; the fake runs one transaction at a
+time), so of requests at once only those that fit are written (#3842); a claimed seek whose claimer is full
+that way goes back too.
+
+**Telling a player.** What to send is `jackioh_shared::notify::decide_notify`'s (a game newly waiting, and
+once `DAILY_REMINDER_HOURS` before a deadline; an email at most every `DAILY_EMAIL_MIN_GAP_HOURS`, and none
+to an account with the setting off or no address). The sweep decides for every player a game waits on, and
+each move decides for both players. A move is answered first: `daily::notify::after_move` queues both players for
+one task (`NotifyQueue`, `DAILY_NOTIFY_QUEUE` deep, a profile already waiting is not queued twice) that decides
+for each in turn, so a slow mail or push service never holds a move; a profile the full queue refused, or the
+server dropped at a stop, is decided for by the next sweep (#3856). An email goes through Resend under
+`PLAYER_RESEND_API_KEY`, one per decision, listing every game waiting with a link to its board, with
+`List-Unsubscribe` and `List-Unsubscribe-Post`; Resend's free plan's 100 a day is shared with the alerts and
+the sign-in mail, so the player mail is held to `DAILY_PLAYER_EMAILS_PER_DAY` (50, half) a UTC day (#3843):
+before each send `notify_one` takes one from migration 0092's `daily_email_days` (`Tx::daily_email_claim`, one
+conditional upsert, so the sweep and the queue together, and a restart, never pass it) and gives it back when
+the send fails (`daily_email_release`). Past it no email goes that day, logged once a day as
+`daily.email.capped`, and the push still goes; nothing is marked sent, so the email goes the next day.
+`tests/sql/56_daily_email_days.sql` checks the table.
+**The notification feed** (`notifications/`, R4039000, issue #4039) is the channel that is always on; email and
+push are extras while their keys are set. Each event's handler, after its own commit, calls
+`notifications::notify`, which writes its rows in a transaction of its own (a notice its own actor would get, or
+one across a block either way, writes nothing), sends each unread row to its recipient's social sockets and logs a
+failure as `notifications.write_failed` without failing the event. The kinds: `dailyMove` (a hold that began with
+an action, `daily::games::apply`, and the waiting seeker of a paired seek), `dailyEnded` (both players, on time and
+by concession included, a void excepted), `dailyChallenge`, `dailyAnswered` (accept and decline; a cancel tells
+nobody), `friendRequest`, `friendAccepted` (an accept and a mutual request), `lobbyInvite` and `replayShared`. A new
+row replaces its recipient's unread row of the same kind, actor and subject (`Tx::notifications_add`), each
+account keeps its newest `NOTIFICATIONS_KEEP`, and the sweep deletes rows older than `NOTIFICATIONS_KEEP_DAYS`
+(`notifications_purge`). R4233000 (issue #4233): a row counts as seen once its owner opens or answers what it is
+about. Reading a daily board (or acting there) marks that game's `dailyMove`/`dailyEnded` rows read inside the
+read's own transaction (`daily::games::game_json`, `expired_json`); accepting or declining a daily challenge or a
+friend request, entering a lobby and a friend's read of a shared replay each mark that subject's row read after
+their own commit (`notifications::mark_subject`, which pushes the owner's social frame when it changed a row and
+logs a failure as `notifications.mark_failed` without failing the act). The sender's own `dailyEnded` row is
+written already read (`Notice::read`) but still listed. `Tx::notifications_unread` leaves out a `lobbyInvite`
+whose lobby is gone, started or expired, the same test the page reads by, in one statement. Migration 0093 adds
+`public.notifications`, the server's alone (RLS on, no policy, no grant), and `tests/sql/57_notifications.sql`
+checks it.
+A push goes to each of the account's subscriptions (`daily::webpush`: RFC 8291's aes128gcm and RFC 8292's
+VAPID, with `ring`), and a subscription its push service answers 404, 410 or 403 is deleted (403 is what a
+push service answers after the VAPID pair changes, #3844). A subscription is kept only at a browser's push
+service (`webpush::is_push_service`, `PUSH_SERVICE_HOSTS`), and the push client follows no redirect, so no
+player can aim the server's requests elsewhere. With a key unset its channel is off, and the end-to-end
+server sends neither. A block or an unfriending cancels the open daily challenges between the two
+(R3727007); a game already running goes on. `DELETE /api/account` settles the caller's overdue daily games
+and is refused (409 `conflict`) while one still runs, since 0012's `matches_seats_filled_unless_over_check`
+would refuse it in Postgres, and the in-memory store refuses it alike (R3727008).
 
 ## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000, R747000)
 
@@ -949,7 +1158,8 @@ the result) and `duos_match_actions` (the log, unique by seq and by nonce); the 
 the server's alone, as a 1v1 match's are: a room's host and guest may read it (but its frozen deck
 choices), and no client role reads a co-op match or its log (no grant, no policy). The retention
 loop deletes a co-op match's log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a 1v1
-match's (`duos::purge_expired_logs`); the match row and its result stay.
+match's (`duos::purge_expired_logs`); the match row and its result stay. The loop also deletes a replay
+share whose match's log is gone (`shares.purge`, R4390001).
 
 Migration 0041 adds the card statistics' totals (R1044000): `record_totals`, `card_totals` and
 `decklist_totals`, server-only like `game_records` (RLS on, no policy, no grant), and
@@ -962,8 +1172,9 @@ store folds under a transaction-level advisory lock per patch and source, so two
 rows never interleave.
 
 Migration 0042 adds `match_checkpoints` (#1169): at most one row per live match, the state, play
-telemetry and bot turns its actor held after one log row, written by the restart drain and read by
-the next rebuild. It holds both hands and both libraries, so it is server-only like `matches` (RLS
+telemetry and bot turns its actor held after one log row, written by the restart drain and, since
+#4224, after every `MATCH_CHECKPOINT_MIN_ACTIONS`-th row as the match is played, and read by the next
+rebuild. It holds both hands and both libraries, so it is server-only like `matches` (RLS
 on, no policy, no grant). It is written only while the match is live and its log holds that row,
 replaced only by a later seq, deleted by `matches_finish` and with a voided match (on delete
 cascade); the retention purge never meets one.
@@ -993,7 +1204,7 @@ and the catalog version), when it was issued and when it was claimed. It is serv
 with its account (on delete cascade). A claim burns its seed in one transaction, then
 `economy::practice::verify` steps the practice session's machine (`jackioh_shared::host::practice`, #3099) over the log off the runtime, at most
 `PRACTICE_VERIFY_CONCURRENCY` at once, in a task that outlives the request, and a second
-transaction pays and keeps the board, tried again up to `PRACTICE_PAY_ATTEMPTS` times when the store fails it (R1688000). An issue counts the account's seeds issued within `PRACTICE_SEED_TTL_SECONDS` that are unclaimed or claimed and not yet settled (a claim waiting for its check keeps its place, R3500001) under its economy lock and refuses past `PRACTICE_SEEDS_OPEN_MAX` (R1483000); `practice_seeds_profile_issued` leads that count and the prune, so it needs no migration. Measured in release before #2560 took the AI re-run out (2026-10-20): the recorded game, 46 actions
+transaction pays and keeps the board, tried again up to `PRACTICE_PAY_ATTEMPTS` times when the store fails it (R1688000). An issue counts the account's seeds issued within `PRACTICE_SEED_TTL_SECONDS` that are unclaimed or claimed and not yet settled (a claim waiting for its check keeps its place, R3500001) under its economy lock and refuses past `PRACTICE_SEEDS_OPEN_MAX` (R1483000); `practice_seeds_profile_issued` leads that count and the prune, so it needs no migration. An issue deals the game before its transaction opens (R4317000), so a row's setup holds at most `DECK_SIZE` catalog ids, and the retention loop's `practice.prune` deletes every account's lapsed unclaimed or settled seeds each pass (R4317001), a delete by `issued_at` that the hour's few honest rows keep cheap: no new index, no migration. Measured in release before #2560 took the AI re-run out (2026-10-20): the recorded game, 46 actions
 of which 29 the AI's, verified in 680–700 ms, about 20–45 ms per AI move; the fold alone remains.
 
 Migration 0048 holds the shape of a game record's `build` (R1367000): absent, or the commit that
@@ -1273,6 +1484,35 @@ match from before it, which folds against its version's frozen table (R1266000).
 holds it to a jsonb object. `tests/sql/50_match_win_rates.sql` checks the column, the shapes refused and the
 re-apply.
 
+Migration 0088 widens the `cards` tag check once more, as 0083 did, with #3535's nine Stinkyscape+ tags
+(R3535002) — Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω, Automa-ζ and
+Paperclip — so `seed-catalog` can write the set's entries the day it ships (#3573, R3535000), and comments
+`cards.set_id` with the eight sets that ship.
+
+Migration 0096 widens `admin_actions_route_check` by the four moderation lever routes, each named exactly, as
+`check_route` holds them (`MODERATE_ROUTES`), so `jackioh-server moderate` writes its audit rows (#4141), and
+rewrites no row. `tests/sql/58_moderation_audit.sql` checks the routes taken, the near names refused and the
+re-apply.
+
+Migration 0097 adds `duos_match_checkpoints` (#4169), 0042's table for a co-op or 2v2 match: at most one
+row per live match, the `DuosState` its actor held after one log row, written by the restart drain and
+after every `MATCH_CHECKPOINT_MIN_ACTIONS`-th row while the match is played, and read by the next
+rebuild. A table of its own, since 0042's rows reference `matches`. It holds all four hands and
+libraries, so it is server-only like `duos_matches` (RLS on, no policy, no grant). It is written only
+while the match has no `ended_at` and its log holds that row, replaced only by a later seq, and deleted
+by `duos_matches_finish`; the retention purge never meets one. A catalog retcon leaves it on the old
+version, so the next rebuild refuses it as `catalog` and folds the whole log.
+
+Migration 0098 only adds three indexes (#4468). `player_stats_public_games_idx` is keyed on
+`player_stats_list_public`'s `order by`, expression for expression, and partial on `is_private = false`, so
+`GET /api/stats/players` walks it in order and stops after its page instead of sorting every public row
+(R654, R3911000); a change to that `order by` needs a migration that rebuilds it.
+`jlore_grants_profile_reason_at_idx` and `fleet_track_grants_profile_reason_at_idx` on
+`(profile_id, reason, at)` let `game_jlore_totals` and `fleet_get`, the payout's and the daily-cap reads' day
+sums (R1483000), read one day of the account's `game` rows, not its whole history.
+`tests/sql/01_schema_invariants.sql` CHECK 26 and CHECK 27 plan them with sequential scans off, and fail
+when the list sorts or a ledger filters the day.
+
 ## Tests
 
 ```
@@ -1300,8 +1540,8 @@ the helpers every file shares (the fake store: `fake`, `fake_ref`, `fake_lock`, 
 `fake_read`, its faults `fail_on` and `stop_failing`; one store call in its own transaction: `q!`, `store!`,
 `try_store!`; `to_json`, `from`, `uuid`, `hmac_sha256_hex`); time is `tokio::time::pause()` and that
 module's steps (`advance`, `advance_and_yield`, `sleep_settled`). `support/engine.rs` also gives the
-catalog's playable ids (`playable`). `crates/tools/tests/acceptance.rs` (`SHARED_TEST_HELPERS`, #2385)
-fails a file under `actor/`, `api/`, `bots/`, `loops/` or `support/` that defines its own copy of one.
+catalog's playable ids (`playable`). `tests/support/shared_helpers.rs` (#2385) fails a file under
+`actor/`, `api/`, `bots/`, `loops/` or `support/` that defines its own copy of one.
 The fake store is strict where Postgres is strict (a
 transaction restores every table when it fails, claims are single-shot). `tests/store/contract.rs`
 runs every case against `Db::Fake` always and against `Db::Pg` when `DATABASE_URL` is set, which is
@@ -1328,4 +1568,18 @@ the card and deck slot cosmetics, the full arts and the portraits, the registry 
   states a number (CLAUDE.md rule 9).
 - Logs are `tracing` JSON lines to stdout with stable `event` names (`server.listening`,
   `api.forwarded_for`, `match.fold.errors`, `game.record.failed`, …).
+- A socket's address carries no secret in a log: no line holds a request's query. The `?token=` fallback
+  (R1379000) logs `ws.upgrade.query_token` with the path alone, one line per use, which counts what is left
+  of the previous client (#4017).
 - Anything the spec does not decide is marked `// NOT IN SPEC:` where it is decided.
+- Symmetric encryption is an AEAD (AES-GCM or ChaCha20-Poly1305, through `ring`), never CBC or another
+  bare block mode, whose padding errors decrypt a ciphertext byte by byte; today Web Push's
+  `aes128gcm` (`daily/webpush.rs`) is the only one. Nothing parses XML from a player or another
+  service; a parser that ever does disables DTDs and external entities (XXE). `tests/api/dependencies.rs`
+  keeps both kinds of crate out of `Cargo.lock` (#4006, #4007).
+- A secret a caller sends (an invite code, an unsubscribe token, a key, a password, a bearer token) is compared in constant time
+  or looked up by its keyed hash, never compared with `==` or `!=`, which stop at the first wrong byte, so response times would
+  leak it byte by byte. In code that is `api::crypto::constant_time_eq` (`subtle`; `ring::constant_time` is deprecated) or
+  `hmac`'s `verify_slice`; otherwise the store looks it up in SQL (Comparing secrets lists each). The floor on a
+  redemption's response (`REDEMPTION_RESPONSE_FLOOR_MS`, R107) is a different thing: it hides how long a lookup took. `tests/api/secret_comparisons.rs` fails on `==` or
+  `!=` beside the name of a hash, token, pepper or password in `src/` (#4014).

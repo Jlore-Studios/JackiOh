@@ -5,13 +5,14 @@
 // The handshake is `/ws/match`'s (S6): the match id in the query string, the token as a subprotocol
 // (R1379000), never in the address. The token is the gate's (`setToken`), so a 4401 is final only for
 // the token it refused (R1115000). Drops and page wakes are handled as in `game/net.ts` (R1441); a
-// refusal or a voided match never reconnects. A ping past the server's limit is not sent (B39: the
-// server would drop it silently), and the seat's own is kept so the board marks it for the sender.
+// refusal, a voided match or a finished one past its window (R3694000) never reconnects. A ping past
+// the server's limit is not sent (B39: the server would drop it silently), and the seat's own is kept
+// so the board marks it for the sender.
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 
 import type { CombatForecast, EmojiEmoteId } from "@jackioh/shared";
-import { PING_RATE_LIMIT, PING_RATE_WINDOW_MS, PING_SHOW_MS } from "@jackioh/server-config";
+import { MATCH_OVER_CLOSE_CODE, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, PING_SHOW_MS, SEAT_TAKEN_CLOSE_CODE } from "@jackioh/server-config";
 
 import { economyField, type GameEconomy } from "../economy/xp.ts";
 import { forecastField } from "../game/attackOutcome.ts";
@@ -58,11 +59,14 @@ export function duosSocketUrl(base: string = matchSocketUrl()): string {
 
 // Frames (S6), parsed shallowly: the server shapes the view, the client only checks it is there.
 
-/** The round clock and the human seats' disconnect graces, as absolute server times (epoch ms). */
+/**
+ * The round clock and the human seats' disconnect graces, as absolute server times (epoch ms): team A's
+ * always, a 2v2's team B people's while one runs (R3731002), which the frame leaves out otherwise.
+ */
 export type DuosClockFrame = {
   now: number;
   roundDeadline: number | null;
-  graceDeadlines: { a1: number | null; a2: number | null };
+  graceDeadlines: { a1: number | null; a2: number | null; b1: number | null; b2: number | null };
 };
 
 /** A clock frame and the local monotonic reading it landed at, so countdowns never read wall time. */
@@ -135,11 +139,15 @@ export function parseDuosFrame(text: string): DuosServerFrame | null {
       const grace = parsed.graceDeadlines;
       if (typeof parsed.now !== "number" || !isNumberOrNull(parsed.roundDeadline) || !isRecord(grace)) return null;
       if (!isNumberOrNull(grace.a1) || !isNumberOrNull(grace.a2)) return null;
+      // R3731002: team B's graces are there only while one runs; absent is none.
+      const b1 = grace.b1 ?? null;
+      const b2 = grace.b2 ?? null;
+      if (!isNumberOrNull(b1) || !isNumberOrNull(b2)) return null;
       return {
         type: "clock",
         now: parsed.now,
         roundDeadline: parsed.roundDeadline,
-        graceDeadlines: { a1: grace.a1, a2: grace.a2 },
+        graceDeadlines: { a1: grace.a1, a2: grace.a2, b1, b2 },
       };
     }
     case "teammate":
@@ -168,7 +176,8 @@ export function parseDuosFrame(text: string): DuosServerFrame | null {
 
 // The client
 
-export type DuosConnection = "connecting" | "open" | "reconnecting" | "refused" | "closed";
+/** `elsewhere` (R3767000): another tab or device took this seat; no reconnect until `connect()` (Play here). */
+export type DuosConnection = "connecting" | "open" | "reconnecting" | "refused" | "closed" | "elsewhere";
 
 export type DuosSnapshot = {
   connection: DuosConnection;
@@ -312,6 +321,10 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
         // A new socket's first view clears an error from before it (a send while the socket was down).
         const fresh = awaitingFirstView;
         awaitingFirstView = false;
+        // R4250000: only a delivered view proves the server answered, so only it starts the
+        // backoff over; a socket refused after the upgrade climbs the steps, as one that never
+        // opened does.
+        if (fresh) backoff.reset();
         patch({
           view: frame.view,
           legal: frame.legal,
@@ -377,6 +390,8 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
       return;
     }
     socket = created;
+    // R1115000: a refusal is its handshake's; a socket opened since (Reconnect) is answered afresh.
+    refusedToken = null;
     awaitingFirstView = true;
     wakeProbe.hear();
     if (snapshot.connection !== "reconnecting") patch({ connection: "connecting" });
@@ -384,7 +399,6 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
     created.onopen = () => {
       if (socket !== created) return;
       wakeProbe.hear();
-      backoff.reset();
       patch({ connection: "open" });
       try {
         created.send(JSON.stringify({ type: "hello", matchId: options.matchId }));
@@ -405,8 +419,14 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
       if (socket !== created) return;
       socket = null;
       wakeProbe.cancel();
-      if (stopped || event.code === VOIDED_CLOSE_CODE) {
+      // R3694000: a finished game past its window is closed for good, as a voided one is (R679).
+      if (stopped || event.code === VOIDED_CLOSE_CODE || event.code === MATCH_OVER_CLOSE_CODE) {
         patch({ connection: "closed" });
+        return;
+      }
+      // R3767000: another tab or device holds the seat now, as in the 1v1 socket (`net.ts`): no backoff.
+      if (event.code === SEAT_TAKEN_CLOSE_CODE) {
+        patch({ connection: "elsewhere" });
         return;
       }
       if (REFUSAL_CLOSE_CODES.includes(event.code)) {

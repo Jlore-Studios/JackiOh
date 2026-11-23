@@ -3,4 +3,10 @@
 /**
  * An enemy as the map dealt it: what the fight's setup needs (`run_fight_setup`).
  */
-export type RunEnemy = { id: string, name: string, heroHealth: number, deck: Array<string>, artifacts: Array<string>, };
+export type RunEnemy = { id: string, name: string, 
+/**
+ * R3586000: its tier, from 1, set by its row: the row of `RUN_TIERS` (of `RUN_ELITE_TIERS` for
+ * an elite) its fight plays (R3586001). A fight kept before tiers (R3476000) holds none and reads
+ * 0, which no table holds; it resumes on its own kept setup.
+ */
+tier: number, deck: Array<string>, artifacts: Array<string>, };

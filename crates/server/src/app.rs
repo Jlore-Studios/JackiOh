@@ -45,12 +45,17 @@ pub struct App {
     /// SPEC §11 R2478000: the profile id each verified auth user was last resolved to, which refuses
     /// an account whose R109 budget is spent before the store is read.
     pub known_profiles: api::http::KnownProfiles,
+    /// #3826: each route's run of internal errors (`api::http::RouteHealth`), which raises
+    /// `api.route.failing`.
+    pub route_health: api::http::RouteHealth,
     /// R1443: sign-ins by username, counted per address and, apart, per username.
     pub sign_in_limiter: api::http::RateLimiter,
+    /// R4008000: the wrong room, co-op room and lobby codes each account and address has tried.
+    pub code_guesses: api::guesses::CodeGuesses,
     /// The catalog this build ships, its version and the deployed commit.
     pub catalog: api::catalog::Catalog,
-    /// §9.4's redemption circuit breaker (R106).
-    pub breaker: Mutex<api::codes::BreakerState>,
+    /// The operator's redemption pause, as this process mirrors it (§9.4, R4131000).
+    pub redemption_pause: Mutex<api::codes::PauseState>,
     /// R768: the opened replays and the replay routes' own allowance.
     pub replays: api::replays::Replays,
     /// SPEC §11 R978000: the public card statistics' computed per-patch reports and R1583000's play
@@ -70,6 +75,8 @@ pub struct App {
     // Social: friends, presence, challenges, chat (#937, #938, #941)
     /// SPEC S7: the friend requests' and chat's own allowances (B43, B53).
     pub social: crate::social::Social,
+    /// #3619: the allowances of `POST /api/client-errors`, per address and per account.
+    pub client_errors: api::client_errors::ClientErrors,
     /// #1035: the setup of the blocking job a whole-log fold runs in (`actor::engine::off_runtime`):
     /// `actor::engine::registered_thread` here; a test's carries its thread's cards over.
     pub engine_thread: actor::engine::EngineThread,
@@ -97,6 +104,9 @@ pub struct App {
     /// SPEC §14.13, R2875000: the news entries this build ships (`news.json`, checked at boot by
     /// `economy::news::parse`), oldest first. A field so a test can post its own.
     pub news: Vec<crate::economy::news::NewsEntry>,
+    /// SPEC §9.13 (#3727): the daily games' mail and push channels, each `None` while its keys are
+    /// unset, and the e2e mode's clock offset (`daily::DailyState`).
+    pub daily: crate::daily::DailyState,
 }
 
 // The clock
@@ -114,7 +124,12 @@ pub fn now_ms() -> i64 {
             .unwrap_or(0);
         (std::time::Instant::now(), wall)
     });
-    let now = tokio::time::Instant::now().into_std();
+    reading_at(at, epoch_ms, tokio::time::Instant::now().into_std())
+}
+
+/// `now_ms`'s reading at `now` for its anchor, `at` reading `epoch_ms`. `now` comes before `at` only
+/// on a test's paused clock, paused before the anchor was taken.
+fn reading_at(at: std::time::Instant, epoch_ms: i64, now: std::time::Instant) -> i64 {
     let nanos: i128 = match now.checked_duration_since(at) {
         Some(after) => after.as_nanos() as i128,
         None => -(at.duration_since(now).as_nanos() as i128),
@@ -816,6 +831,12 @@ pub static ROUTES: &[Route] = &[
         h!(crate::social::friends::get_friends),
     ),
     (
+        "GET",
+        "/api/friends/recent",
+        AuthLevel::Active,
+        h!(crate::social::recent::get_recent),
+    ),
+    (
         "POST",
         "/api/friends/requests",
         AuthLevel::Active,
@@ -868,6 +889,19 @@ pub static ROUTES: &[Route] = &[
         "/api/social",
         AuthLevel::Active,
         h!(crate::social::reads::get_social),
+    ),
+    // R4039000: the notification feed, the caller's own rows.
+    (
+        "GET",
+        "/api/notifications",
+        AuthLevel::Active,
+        h!(crate::notifications::list),
+    ),
+    (
+        "POST",
+        "/api/notifications/read",
+        AuthLevel::Active,
+        h!(crate::notifications::mark_read),
     ),
     (
         "POST",
@@ -969,6 +1003,181 @@ pub static ROUTES: &[Route] = &[
         h!(crate::duos::again::again_status),
     ),
     // end Duos co-op (#946)
+    // Private lobbies (#3730, #3731; R3730000 to R3730006, R3731000): lobby/mod.rs.
+    (
+        "POST",
+        "/api/lobbies",
+        AuthLevel::Active,
+        h!(crate::lobby::create),
+    ),
+    ("GET", "/api/lobbies", AuthLevel::Active, h!(crate::lobby::mine)),
+    (
+        "GET",
+        "/api/lobbies/:code",
+        AuthLevel::Active,
+        h!(crate::lobby::get_lobby),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/enter",
+        AuthLevel::Active,
+        h!(crate::lobby::enter),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/leave",
+        AuthLevel::Active,
+        h!(crate::lobby::leave),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/remove",
+        AuthLevel::Active,
+        h!(crate::lobby::remove),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/settings",
+        AuthLevel::Active,
+        h!(crate::lobby::settings),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/pick",
+        AuthLevel::Active,
+        h!(crate::lobby::pick),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/ready",
+        AuthLevel::Active,
+        h!(crate::lobby::ready),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/invite",
+        AuthLevel::Active,
+        h!(crate::lobby::invite),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/start",
+        AuthLevel::Active,
+        h!(crate::lobby::start),
+    ),
+    // R3731000: a 2v2's teams.
+    (
+        "POST",
+        "/api/lobbies/:code/team",
+        AuthLevel::Active,
+        h!(crate::lobby::team_switch),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/move",
+        AuthLevel::Active,
+        h!(crate::lobby::move_member),
+    ),
+    // daily/ (SPEC §9.13, #3727): daily games over plain HTTPS.
+    (
+        "GET",
+        "/api/daily",
+        AuthLevel::Active,
+        h!(crate::daily::games::list),
+    ),
+    (
+        "POST",
+        "/api/daily/challenges",
+        AuthLevel::Active,
+        h!(crate::daily::invites::challenge),
+    ),
+    (
+        "POST",
+        "/api/daily/challenges/:id/accept",
+        AuthLevel::Active,
+        h!(crate::daily::invites::accept),
+    ),
+    (
+        "POST",
+        "/api/daily/challenges/:id/decline",
+        AuthLevel::Active,
+        h!(crate::daily::invites::decline),
+    ),
+    (
+        "DELETE",
+        "/api/daily/challenges/:id",
+        AuthLevel::Active,
+        h!(crate::daily::invites::cancel),
+    ),
+    (
+        "POST",
+        "/api/daily/seeks",
+        AuthLevel::Active,
+        h!(crate::daily::invites::seek),
+    ),
+    (
+        "DELETE",
+        "/api/daily/seeks/:id",
+        AuthLevel::Active,
+        h!(crate::daily::invites::cancel_seek),
+    ),
+    (
+        "GET",
+        "/api/daily/games/:matchId",
+        AuthLevel::Active,
+        h!(crate::daily::games::read),
+    ),
+    (
+        "POST",
+        "/api/daily/games/:matchId/actions",
+        AuthLevel::Active,
+        h!(crate::daily::games::act),
+    ),
+    (
+        "GET",
+        "/api/daily/settings",
+        AuthLevel::Active,
+        h!(crate::daily::notify::get_settings),
+    ),
+    (
+        "PUT",
+        "/api/daily/settings",
+        AuthLevel::Active,
+        h!(crate::daily::notify::put_settings),
+    ),
+    (
+        "POST",
+        "/api/daily/push",
+        AuthLevel::Active,
+        h!(crate::daily::notify::add_push),
+    ),
+    (
+        "DELETE",
+        "/api/daily/push",
+        AuthLevel::User,
+        h!(crate::daily::notify::remove_push),
+    ),
+    // The email's own link and RFC 8058's one-click POST: the token is the key, no sign-in.
+    (
+        "GET",
+        "/api/daily/unsubscribe",
+        AuthLevel::None,
+        h!(crate::daily::notify::unsubscribe_page),
+    ),
+    (
+        "POST",
+        "/api/daily/unsubscribe",
+        AuthLevel::None,
+        h!(crate::daily::notify::unsubscribe_post),
+    ),
+    // The Worker's hourly cron (apps/edge `DAILY_SWEEP_PATH`): outside `/api` and `/ws`, which the
+    // Worker never forwards from the public, so only it reaches the sweep.
+    (
+        "POST",
+        crate::config::DAILY_SWEEP_PATH,
+        AuthLevel::None,
+        h!(crate::daily::notify::sweep_route),
+    ),
     // api/e2e.rs (R144): the reseed on demand, end-to-end mode only; anywhere else its handler
     // answers as a path nobody serves.
     (
@@ -976,6 +1185,20 @@ pub static ROUTES: &[Route] = &[
         api::e2e::E2E_RESEED_PATH,
         AuthLevel::None,
         h!(api::e2e::post_reseed),
+    ),
+    // #3727: the daily clock's offset, end-to-end mode only, so a spec can watch a move run out.
+    (
+        "POST",
+        api::e2e::E2E_DAILY_CLOCK_PATH,
+        AuthLevel::None,
+        h!(api::e2e::post_daily_clock),
+    ),
+    // api/client_errors.rs (#3619): a crash in a player's browser, told to the owners.
+    (
+        "POST",
+        "/api/client-errors",
+        AuthLevel::None,
+        h!(api::client_errors::post_client_error),
     ),
     // api/health.rs (#861): the Worker reads /healthz's commit, and its daily cron requests /readyz.
     ("GET", "/healthz", AuthLevel::None, h!(api::health::get_healthz)),
@@ -1033,6 +1256,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
     let bug_reports = crate::bug_reports::BugReports::from_env(&env);
     let ci_runs = api::ci_runs::CiRuns::from_env(&env);
     let news = crate::economy::news::shipped().map_err(|error| anyhow!("news.json: {error}"))?;
+    let daily = crate::daily::DailyState::from_env(&env);
     let app = Arc::new(App {
         env,
         db,
@@ -1043,12 +1267,14 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
             API_RATE_WINDOW_MS as _,
         ),
         known_profiles: api::http::KnownProfiles::default(),
+        route_health: api::http::RouteHealth::default(),
         sign_in_limiter: api::http::create_rate_limiter(
             crate::config::USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW,
             crate::config::USERNAME_SIGN_IN_WINDOW_MS,
         ),
+        code_guesses: api::guesses::CodeGuesses::default(),
         catalog,
-        breaker: Mutex::new(api::codes::create_breaker_state()),
+        redemption_pause: Mutex::new(api::codes::create_pause_state()),
         replays: api::replays::Replays::default(),
         card_stats: api::stats::KeptReports::default(),
         queue_presence: api::queue::QueuePresence::new(),
@@ -1059,6 +1285,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         // Social: friends, presence, challenges, chat (#937, #938, #941)
         // SPEC S7: B49's sweep that marks lapsed challenges expired.
         social: crate::social::Social::default(),
+        client_errors: Default::default(),
         engine_thread: actor::engine::registered_thread,
         bug_reports,
         ci_runs,
@@ -1068,6 +1295,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         practice_settling: Mutex::new(std::collections::BTreeSet::new()),
         spends: crate::economy::spend_slots::SpendSlots::default(),
         news,
+        daily,
     });
 
     if app.env.e2e {
@@ -1268,6 +1496,12 @@ fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
             loops::spawn_supervised("duos.sweeper", app.clone(), crate::duos::run_sweeper),
         ),
         // end Duos co-op (#946)
+        // SPEC §9.13 (#3727): the daily games' sweep while the server is awake; the Worker's hourly
+        // cron runs the same sweep through `POST /daily-sweep` while it sleeps.
+        (
+            "daily.sweeper",
+            loops::spawn_supervised("daily.sweeper", app.clone(), crate::daily::notify::run_sweeper),
+        ),
     ];
     // #3208: the store's heartbeat keeps the pool's warm connections open while the server is quiet.
     if let db::store::Db::Pg(pool) = &app.db {
@@ -1351,13 +1585,12 @@ where
     let drained = tokio::time::timeout(drain, async {
         stop_loops(running).await;
         let served = server.await;
-        let matches = app.matches.stop_all().await;
-        // #936: the co-op actors too, so none writes its log after the store closes; each match's
-        // log stays, and the next boot folds it back (`duos::registry`).
-        let duos = crate::duos::registry::registry(&app);
-        for match_id in duos.live() {
-            duos.stop(&match_id).await;
-        }
+        // #4114: `drain`, not `stop_all`, so a match started or rebuilt after it is stopped too.
+        let matches = app.matches.drain().await;
+        // #936, #4169: the co-op actors too, each checkpointed, then stopped, so none writes its log
+        // after the store closes; each match's log stays, and the next boot folds it back from the
+        // checkpoint (`duos::registry`).
+        crate::duos::registry::registry(&app).drain().await;
         actor::ws_server::close_all(&app);
         actor::ws_server::all_closed(&app).await;
         // R2422000: a claim's check and pay outlive its request, so they are waited for apart.
@@ -1449,4 +1682,29 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
         Duration::from_secs(u64::try_from(crate::config::SHUTDOWN_DRAIN_SECONDS).unwrap_or(0)),
     )
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    use super::reading_at;
+
+    /// `now_ms` floors on both sides of its anchor, so a clock moved by `n` ms always reads `n` ms
+    /// later, before the anchor (a test's runtime paused before the first reading) as after it.
+    #[test]
+    fn now_ms_reads_a_clock_moved_n_ms_n_ms_later_on_both_sides_of_its_anchor() {
+        let epoch_ms = 1_700_000_000_000;
+        let early = Instant::now();
+        // The anchor, 5.3 ms after `early`.
+        let at = early + Duration::from_micros(5_300);
+        let reading = |now: Instant| reading_at(at, epoch_ms, now);
+
+        assert_eq!(reading(at), epoch_ms);
+        assert_eq!(reading(early), epoch_ms - 6);
+        assert_eq!(reading(early + Duration::from_millis(1)), epoch_ms - 5);
+        assert_eq!(reading(early + Duration::from_millis(5)), epoch_ms - 1);
+        assert_eq!(reading(early + Duration::from_millis(6)), epoch_ms);
+        assert_eq!(reading(at + Duration::from_micros(2_500)), epoch_ms + 2);
+    }
 }

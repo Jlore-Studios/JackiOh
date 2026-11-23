@@ -14,7 +14,7 @@ use crate::brittle_count::active_brittle_count;
 use crate::layers::{card_keywords, has_stat_line, printed_keywords_of, stats_with_buffs, unit_view};
 use crate::script::{ActivationUses, Script};
 use crate::state::{CardInstance, GameState};
-use crate::wire::{AttackHealth, CardType, Keyword, KeywordKind, ParamBetter, has_keyword};
+use crate::wire::{AttackHealth, CardType, Keyword, KeywordKind, ParamBetter};
 
 /// B3.4 rule 3: the numbered keywords, by the tuning key each is read under (`tuning::tuned_count`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -105,8 +105,9 @@ fn in_unit_row(state: &GameState, card: &CardInstance) -> bool {
 }
 
 /// R65, B3.4 rule 3: the card's own cost, `costOverride` or its printed cost (an Embiggened version's
-/// own, R1181003) plus its `costMod`, with no player discount, since a Degrade changes the card and not
-/// a price for a play. `None` for an X-cost card, whose X is no cost a number may move.
+/// own, R1181003, the normal one with no Embiggen premium, R4350000) plus its `costMod`, with no player
+/// discount, since a Degrade changes the card and not a price for a play. `None` for an X-cost card,
+/// whose X is no cost a number may move.
 pub fn own_cost(state: &GameState, card: &CardInstance) -> Option<i32> {
     if crate::mana::is_x_cost(state, card) {
         return None;
@@ -216,7 +217,7 @@ pub fn numbered_keywords_on(state: &GameState, card: &CardInstance) -> Vec<Numbe
     add(
         &mut out,
         NumberedKey::Tribute,
-        flags.tribute.unwrap_or(0),
+        crate::play_choices::tribute_set_on(card).unwrap_or(flags.tribute.unwrap_or(0)),
         ParamBetter::Down,
     );
     out
@@ -304,7 +305,7 @@ pub fn numbers_on(state: &GameState, card: &CardInstance) -> Vec<NumberOnCard> {
     } else {
         card_keywords(state, card)
     };
-    if has_keyword(&keywords, KeywordKind::Immutable) {
+    if crate::layers::immutable_by(state, card, &keywords) {
         return Vec::new();
     }
     let mut out: Vec<NumberOnCard> = Vec::new();

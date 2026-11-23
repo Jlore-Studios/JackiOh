@@ -19,10 +19,13 @@ import { CATALOG } from "@jackioh/cards";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { unit } from "../test/fixtures.ts";
+import { manualFrames, type ManualFrames } from "../test/frames.ts";
 import { facePicture, wholePicture } from "../test/artPicture.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import { DIORAMAS, dioramaOf, dioramaSliceUri } from "./art/dioramas/index.ts";
-import { artPlaneUri } from "./art/pictures.ts";
+import { liftedSlice, sliceWindowUri } from "./art/dioramas/lift.ts";
+import { fmt } from "./art/hash.ts";
+import { artPlaneUri } from "./art/planes.ts";
 import { CardFace } from "./CardFace.tsx";
 import {
   CARD_DEPTH_STEP_CQW,
@@ -99,6 +102,20 @@ function uriOf(element: Element | null | undefined): string {
   return /^url\("(.*)"\)$/u.exec((element as HTMLElement | null | undefined)?.style.backgroundImage ?? "")?.[1] ?? "";
 }
 
+/** #3674: a window's lift layers (CardArt `liftChain`), outermost first; none where its slice draws as before. */
+function liftsOf(element: Element | null | undefined): HTMLElement[] {
+  const out: HTMLElement[] = [];
+  for (let lift = element?.querySelector<HTMLElement>(":scope > .cf-art-lift") ?? null; lift !== null; lift = lift.querySelector<HTMLElement>(":scope > .cf-art-lift")) {
+    out.push(lift);
+  }
+  return out;
+}
+
+/** #3674: the picture a window draws: its innermost lift layer's where its slice is lifted, else its own. */
+function windowUriOf(element: Element | null | undefined): string {
+  return uriOf(liftsOf(element).at(-1) ?? element);
+}
+
 /** The Mythic as a Unit on the board, in a `.card.cf-host` as Card.tsx sets it, every look owned: its `MinionFace`. */
 function boardMythic(attacking = false): HTMLElement {
   const printed = defOf(MYTHIC).base;
@@ -117,13 +134,18 @@ function boardMythic(attacking = false): HTMLElement {
   return cf;
 }
 
+let frames: ManualFrames;
+
 function pointer(target: EventTarget, type: string, x: number, y: number): void {
   act(() => {
     target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y }));
   });
+  // #3610: a move is written in its frame, which runs at once here.
+  if (type === "pointermove") frames.flush();
 }
 
 beforeEach(() => {
+  frames = manualFrames();
   localStorage.clear();
   resetCosmeticsForTests();
   resetMotionSlotsForTests();
@@ -132,6 +154,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  frames.restore();
   cleanup();
   setReducedMotion(false);
   resetFxSettingsForTests();
@@ -345,6 +368,50 @@ describe("R3350000 a Mythic's face draws its diorama", () => {
     expect(faceIn(MYTHIC, { lazyArt: true }).getAttribute("data-diorama-motion")).toBe("static");
   });
 
+  it("R3350000 a moving board Mythic draws its liftable slices on lift layers, the rest as before", () => {
+    const diorama = dioramaOf(MYTHIC);
+    if (diorama === null) throw new Error("no diorama");
+    const motion = artMotionOf(MYTHIC);
+    const art = boardMythic().querySelector<HTMLElement>(".cf-portrait > .cf-art");
+    expect(art?.getAttribute("data-art-lifted")).toBe("true");
+    // The farthest stays the window's own background.
+    expect(liftsOf(art)).toHaveLength(0);
+    expect(uriOf(art) === dioramaSliceUri(MYTHIC, false, 0, true, motion)).toBe(true);
+    const layers = [...(art?.querySelectorAll<HTMLElement>(":scope > .cf-art-slice") ?? [])];
+    expect(layers).toHaveLength(diorama.slices.length - 1);
+    let lifted = 0;
+    layers.forEach((layer, k) => {
+      const slice = `slice ${String(k + 1)}`;
+      const lift = liftedSlice(MYTHIC, false, k + 1, true, motion);
+      const chain = liftsOf(layer);
+      if (lift === null) {
+        expect(chain, slice).toHaveLength(0);
+        expect(uriOf(layer) === dioramaSliceUri(MYTHIC, false, k + 1, true, motion), slice).toBe(true);
+        return;
+      }
+      lifted += 1;
+      // A lifted slice's layer draws nothing itself: its lifts run its loops, outermost first, and the innermost its still picture.
+      expect(layer.style.backgroundImage, slice).toBe("");
+      expect(chain.map((el) => el.getAttribute("data-lift-move")), slice).toEqual(lift.moves.map((move) => move.move));
+      chain.forEach((el, i) => {
+        const move = lift.moves[i];
+        if (move === undefined) throw new Error(`${slice}: no move ${String(i)}`);
+        expect(el.style.getPropertyValue("--lift-seconds"), slice).toBe(`${fmt(move.seconds)}s`);
+        expect(el.style.getPropertyValue("--lift-origin"), slice).toBe(move.origin === null ? "50% 50%" : `${fmt(move.origin[0])}% ${fmt(move.origin[1])}%`);
+        expect(el.style.backgroundImage === "", slice).toBe(i < chain.length - 1);
+      });
+      expect(uriOf(chain.at(-1)) === lift.uri, slice).toBe(true);
+    });
+    expect(lifted).toBeGreaterThan(0);
+    cleanup();
+    resetMotionSlotsForTests();
+    // Held still, it draws no slice and lifts none.
+    writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, animatedFoil: false });
+    const still = boardMythic().querySelector<HTMLElement>(".cf-portrait > .cf-art");
+    expect(still?.hasAttribute("data-art-lifted")).toBe(false);
+    expect(still?.querySelector(".cf-art-lift")).toBeNull();
+  });
+
   it("R3350000 a board Mythic draws its slices while moving", () => {
     const diorama = dioramaOf(MYTHIC);
     if (diorama === null) throw new Error("no diorama");
@@ -359,7 +426,7 @@ describe("R3350000 a Mythic's face draws its diorama", () => {
     expect(uriOf(art) === dioramaSliceUri(MYTHIC, false, 0, true, motion)).toBe(true);
     const layers = [...(art?.querySelectorAll<HTMLElement>(":scope > .cf-art-slice") ?? [])];
     expect(layers.map((layer) => layer.getAttribute("data-slice"))).toEqual(diorama.slices.slice(1).map((_, k) => String(k + 1)));
-    layers.forEach((layer, k) => expect(uriOf(layer) === dioramaSliceUri(MYTHIC, false, k + 1, true, motion), `slice ${String(k + 1)}`).toBe(true));
+    layers.forEach((layer, k) => expect(windowUriOf(layer) === sliceWindowUri(MYTHIC, false, k + 1, true, motion), `slice ${String(k + 1)}`).toBe(true));
     expect(art?.querySelector(".cf-art-subject, .cf-art-motes")).toBeNull();
     // Together they are the moving picture.
     expect(facePicture(moving)).toBe(wholePicture(decodeURIComponent(artPlaneUri(MYTHIC, "whole", false, motion))));

@@ -279,7 +279,7 @@ pub static snake: LazyLock<CardDef> = LazyLock::new(|| plain_unit("snake", 4729,
 pub static bauble: LazyLock<CardDef> = LazyLock::new(|| def("bauble", 4730, "Field Spell", json!({})));
 /// A unit with a Death hook that notes itself, for R68's order beside a backrow Death.
 pub static rattle: LazyLock<CardDef> = LazyLock::new(|| plain_unit("rattle", 4731, 1, 1));
-/// A Unit with Reborn, to show R461: an exiled unit comes back from nothing.
+/// A Unit with Reborn, to show R4207000: a unit exiled as it dies comes back from exile.
 pub static phoenix: LazyLock<CardDef> = LazyLock::new(|| {
     unit(
         "phoenix",
@@ -348,6 +348,10 @@ pub static cancel_gambit: LazyLock<CardDef> = LazyLock::new(|| def("cancel-gambi
 /// whether the attacker survived, and the player it acts for (Training Grounds #31 Level Up!'s shape).
 pub static ally_noter: LazyLock<CardDef> =
     LazyLock::new(|| def("ally-noter", 4747, "Field Spell", json!({})));
+/// R3951000: "After one of your Units attacks": notes the attacker and whether that combat destroyed an
+/// enemy Unit with it the killer (Training Grounds #31 Level Up!'s base face's question).
+pub static ally_kill_noter: LazyLock<CardDef> =
+    LazyLock::new(|| def("ally-kill-noter", 4799, "Field Spell", json!({})));
 /// R2199000: the same, whose hook asks its controller before it finishes.
 pub static ally_asker: LazyLock<CardDef> =
     LazyLock::new(|| def("ally-asker", 4748, "Field Spell", json!({})));
@@ -446,6 +450,7 @@ pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         defender_asker.clone(),
         cancel_gambit.clone(),
         ally_noter.clone(),
+        ally_kill_noter.clone(),
         ally_asker.clone(),
         striker.clone(),
         striker_asker.clone(),
@@ -1120,6 +1125,20 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                         "ally:{attacker}:{forced}:{survived}:{}",
                         ctx.controller
                     ))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            ally_kill_noter.id.clone(),
+            both(Script {
+                ally_attack: Some(hook(|ctx| {
+                    let facts = ally_attack_of(&*ctx);
+                    let attacker = facts
+                        .as_ref()
+                        .map_or("?".to_string(), |facts| facts.attacker_id.clone());
+                    let destroyed = js_bool(facts.as_ref().map(|facts| facts.destroyed_enemy));
+                    vec![note(format!("kill:{attacker}:{destroyed}"))]
                 })),
                 ..Script::default()
             }),

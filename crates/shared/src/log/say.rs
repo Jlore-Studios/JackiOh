@@ -2,6 +2,7 @@
 //! the way the web's `t(english, params)` filled them (`i18n.ts`), and the capital the log's own words open a
 //! line with. A part is plain words, or spans (a glossary term), so a line can carry the term it is about.
 
+use crate::face::tuning::MINUS;
 use crate::face::types::{RichText, Span};
 use crate::face::words::Words;
 
@@ -34,6 +35,15 @@ impl From<i32> for Part {
 impl From<usize> for Part {
     fn from(number: usize) -> Part {
         Part::Text(number.to_string())
+    }
+}
+
+/// A change as a signed number for the log: "+2", "+0", "−5" (U+2212, the minus a card's text prints).
+pub fn signed(number: i32) -> String {
+    if number < 0 {
+        format!("{MINUS}{}", number.unsigned_abs())
+    } else {
+        format!("+{number}")
     }
 }
 
@@ -189,6 +199,18 @@ mod tests {
             &[("seat", Part::from("You"))],
         );
         assert_eq!(plain_words(&spans), "You did {what}");
+    }
+
+    /// As `i18n.ts`'s `fill` read a token (`\{(\w+)\}`): a brace pair with no name between, or a name whose
+    /// brace never closes, at the end or before a space, is no token, so it stays as written whatever the parts
+    /// name.
+    #[test]
+    fn an_empty_or_unclosed_brace_is_no_token() {
+        let parts = [("", Part::from("nothing")), ("card", Part::from("Pointmaster"))];
+        let said = |template: &str| plain_words(&sentence(Words::new(Locale::En), template, &parts));
+        assert_eq!(said("{} hit"), "{} hit");
+        assert_eq!(said("Hit {card"), "Hit {card");
+        assert_eq!(said("{card hit"), "{card hit");
     }
 
     #[test]

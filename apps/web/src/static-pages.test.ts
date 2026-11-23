@@ -41,8 +41,6 @@ import { releaseArtAssets, releaseArtPath } from "./patches/releaseArt.ts";
 import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups } from "./patches/releases.ts";
 import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, M1, M2, TIERED_PATCHES, TIERED_SNAPSHOTS, V1, V2, V3, fixtureDef } from "./patches/fixtures.ts";
 import type { Patch, Snapshot } from "./patches/source.ts";
-import AccessibilityRoute from "./routes/accessibility.tsx";
-import AiRoute from "./routes/ai.tsx";
 import CopyrightRoute from "./routes/copyright.tsx";
 import PrivacyRoute from "./routes/privacy.tsx";
 import TermsRoute from "./routes/terms.tsx";
@@ -356,13 +354,11 @@ describe("the static pages", () => {
     }
   });
 
-  it("quote /privacy, /terms, /accessibility, /ai and /copyright word for word from their own pages", () => {
+  it("quote /privacy, /terms and /copyright word for word from their own pages", () => {
     const page = build(CATALOG, REAL_PATCHES);
     const cases = [
       [PrivacyRoute, paths.privacy],
       [TermsRoute, paths.terms],
-      [AccessibilityRoute, paths.accessibility],
-      [AiRoute, paths.ai],
       [CopyrightRoute, paths.copyright],
     ] as const;
     for (const [Route, path] of cases) {
@@ -501,6 +497,15 @@ describe("R3127000 the 404 page", () => {
     expect(notFoundHtml(TEMPLATE, other)).toContain(`${other}/og.png`);
   });
 
+  it("#4222 static-pages.ts installs the scene tables its faces draw through", () => {
+    // The build renders outside every gate with no test setup: without this install `writeBundle`
+    // throws instead of writing 404.html (as it did before the install). The build itself proves the
+    // render; this pins the install in place, in the style of `net/first-load.test.ts`'s source tests.
+    const source = readFileSync(join(HERE, "../static-pages.ts"), "utf8");
+    expect(source).toContain("installSceneData({ SCENE_KIT, drawFigure, SCENE_RECIPES, ALT_SCENE_RECIPES })");
+    expect(source).toMatch(/from ["']\.\/src\/cards\/art\/sceneData\.ts["']/u);
+  });
+
   it("R3127000 the hand is three placeholder Spell faces named Error, Not, Found with cost gems 4, 0, 4", () => {
     const faces = [...page().doc.querySelectorAll("#root .cf")];
     expect(faces).toHaveLength(3);
@@ -606,7 +611,15 @@ describe("R3127000 the 404 page", () => {
     for (const name of ["nf-hand-deal", "nf-hand-fan", "nf-hand-flip"]) {
       const frames = block(`@keyframes ${name}`);
       expect(frames, name).toContain("from {");
-      expect(frames, name).not.toMatch(/\bto \{|^\s*\d+% \{/mu);
+      // No keyframe that rests (`to` or `00%`) outside the float (#4009: `/\bto \{|^\s*\d+% \{/mu`
+      // rescans from every position).
+      expect(frames, name).not.toMatch(/\bto \{/u);
+      expect(
+        frames
+          .split("\n")
+          .some((line) => /^\s*\d+% \{/u.test(line)),
+        name,
+      ).toBe(false);
     }
     expect(css).toContain("@keyframes nf-hand-float");
     expect(css).toMatch(/\.nf-hand__slot:nth-child\(1\) \{ --turn: -15deg;/u);

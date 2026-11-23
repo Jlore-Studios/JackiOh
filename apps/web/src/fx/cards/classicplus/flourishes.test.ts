@@ -9,16 +9,14 @@ import { describe, expect, it } from "vitest";
 import { animTestid, planEntries, type AnimationEntry } from "../../../game/animations.ts";
 import { LANES, testid } from "../../../game/contract.ts";
 import { fullBoardView, withEvents } from "../../../test/fixtures.ts";
+import { endOf, envOf } from "../../../test/signatures.ts";
 import {
-  FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_MOTIF_PHASES,
   FX_ROLLBACK_STEP,
 } from "../../constants.ts";
 import { planFx } from "../../cues.ts";
 import { FLAVOR_LOOKS, paletteLook } from "../../flavors.ts";
-import { createFxMemory } from "../../memory.ts";
 import { timesOf } from "../../motifs/build.ts";
 import { RECIPE_FIXTURES } from "../../motifs/gallery.ts";
 import type { FxCue, FxPlanEnv } from "../../types.ts";
@@ -36,10 +34,6 @@ const FLOURISHES: readonly (readonly [string, CardRecipeKey])[] = [
   [PAIN, "inkTear"],
 ];
 
-function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
-}
-
 /** Plans each entry of `events` in order, as FxLayer does on every `start`: remember, then plan. */
 function planAll(events: readonly GameEvent[], view: PlayerView, env: FxPlanEnv, D?: number): { entry: AnimationEntry; cues: FxCue[] }[] {
   const planned = planEntries(events, withEvents(view, [...events]), false);
@@ -48,21 +42,6 @@ function planAll(events: readonly GameEvent[], view: PlayerView, env: FxPlanEnv,
     env.memory.remember(entry.events);
     return { entry, cues: planFx(entry, entry.view, env) };
   });
-}
-
-/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS). */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
 }
 
 const played = (player: PlayerId, instanceId: string, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 1 });

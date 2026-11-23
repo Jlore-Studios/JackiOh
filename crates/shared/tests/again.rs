@@ -122,3 +122,47 @@ fn the_book_reads_back_from_json() {
         book
     );
 }
+
+/// R2092000: the book counts the finished matches it holds an entry for, and a sweep at the offers' own time keeps
+/// them.
+#[test]
+fn r2092000_the_book_counts_its_matches_and_a_fresh_offer_survives_a_sweep() {
+    let mut book = AgainBook::default();
+    assert!(book.is_empty());
+    book.claim("m1", A1, None, END);
+    book.claim("m2", A1, None, END);
+    assert_eq!((book.len(), book.is_empty()), (2, false));
+    assert_eq!(book.sweep(END, |_| false), 0);
+    assert_eq!(book.len(), 2);
+}
+
+/// R1398000, R2092000: an unanswered offer still pairs at exactly REMATCH_OFFER_TTL_MS, and has lapsed a
+/// millisecond later, so the teammate's offer starts afresh.
+#[test]
+fn r1398000_an_unanswered_offer_still_pairs_at_the_ttl() {
+    let mut book = AgainBook::default();
+    book.claim(FINISHED, A1, None, END);
+    let at_ttl = book.claim(FINISHED, A2, None, END + REMATCH_OFFER_TTL_MS);
+    assert!(matches!(at_ttl, AgainClaim::Make { .. }), "{at_ttl:?}");
+    let mut late = AgainBook::default();
+    late.claim(FINISHED, A1, None, END);
+    let past = late.claim(FINISHED, A2, None, END + REMATCH_OFFER_TTL_MS + 1);
+    assert!(matches!(past, AgainClaim::Done { answered: None }), "{past:?}");
+}
+
+/// R2092000: publishing the game a claim made keeps the entry that holds the claim; a create whose claim the entry
+/// no longer holds remakes it, at the publishing time.
+#[test]
+fn r2092000_made_keeps_the_entry_its_claim_holds_and_remakes_any_other() {
+    let entry_at =
+        |book: &AgainBook| serde_json::to_value(book).expect("a book")["entries"][FINISHED]["at"].clone();
+    for (offset, kept) in [(0, true), (1, false)] {
+        let mut book = AgainBook::default();
+        book.claim(FINISHED, A1, None, END);
+        let AgainClaim::Make { creating, .. } = book.claim(FINISHED, A2, None, END + 1) else {
+            panic!("the pair makes the game")
+        };
+        book.made(FINISHED, creating + offset, "g1", END + 2);
+        assert_eq!(entry_at(&book), if kept { END + 1 } else { END + 2 });
+    }
+}

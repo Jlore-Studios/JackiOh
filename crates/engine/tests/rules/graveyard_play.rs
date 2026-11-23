@@ -8,8 +8,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::harness::{Bench, act, act_result, events_json, ids, matches_object, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
     QUEST_REWARD_KEY, discover_spell, grave_spell, grave_trap, grave_unit, in_graveyard, lobbyist, monkey,
-    only, pb_playing, plantation, plays_of, quest_card, round_trip, second_wind, three_spell, titan,
-    zero_spell,
+    only, pb_playing, plantation, quest_card, round_trip, second_wind, three_spell, titan, zero_spell,
 };
 
 fn hero_health(state: &GameState, player: PlayerId) -> i32 {
@@ -17,7 +16,7 @@ fn hero_health(state: &GameState, player: PlayerId) -> i32 {
 }
 
 fn plays_json(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<Value> {
-    plays_of(state, instance_id, player)
+    plays_in(state, player, instance_id)
         .iter()
         .map(|play| serde_json::to_value(play).expect("a play serializes"))
         .collect()

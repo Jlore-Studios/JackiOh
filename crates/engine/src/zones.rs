@@ -212,7 +212,12 @@ pub fn card_at(state: &GameState, slot: impl Into<ZoneSlot>) -> Option<&CardInst
 
 pub fn is_empty(state: &GameState, slot: impl Into<ZoneSlot>) -> bool {
     let slot = slot.into();
-    card_at(state, slot).is_none() && (slot.row == Row::Units || carried_at(state, slot).is_none())
+    // R3546000: a zone a GIGA covers holds no card, but nothing enters it either.
+    // R3554002: nor does a zone the slash voided.
+    card_at(state, slot).is_none()
+        && (slot.row == Row::Units || carried_at(state, slot).is_none())
+        && crate::giga::covering(state, slot).is_none()
+        && !crate::geometry::is_void(state, slot)
 }
 
 // Backrow piles and carried Units (docs/classic-sets.md B5 E21, R446, R447)
@@ -356,6 +361,16 @@ pub fn accepts_stack_card(
     if options.move_ != Some(true) && is_locked(state, slot) {
         return false;
     }
+    // R3546000: nothing stacks onto a GIGA, covered zones included (`equip_host_at` reads this).
+    if crate::giga::covering(state, slot).is_some() {
+        return false;
+    }
+    // R3554002, R4221001: nor onto a zone the slash voided, which takes nothing (`place_on_field`): no Stack
+    // play is offered it, and a move stacking there (an animated card's return to its voided home) changes
+    // nothing.
+    if crate::geometry::is_void(state, slot) {
+        return false;
+    }
     slot.row == Row::Units || carried_at(state, slot).is_none()
 }
 
@@ -423,7 +438,7 @@ fn set_carried(side: &mut PlayerState, lane: i32, card: Option<CardInstance>) {
 
 /// Whether a card's own face is a Unit's (§5.2, B2.7), the one kind that stands on a carrier (R446).
 /// An animated card is a Unit in a unit zone (R383) but no Unit face, so it never lands on a carrier.
-fn is_unit_face(state: &GameState, instance: &CardInstance) -> bool {
+pub(crate) fn is_unit_face(state: &GameState, instance: &CardInstance) -> bool {
     // R1040: a Unit set face-down by its Cloaked stands in the backrow as a Field Trap.
     if instance.set_as.is_some() {
         return false;
@@ -436,7 +451,11 @@ fn is_unit_face(state: &GameState, instance: &CardInstance) -> bool {
 /// A zone a play, or a summon with no named zone, may take: empty, unlocked and unreserved (§3.2).
 pub fn is_open(state: &GameState, slot: impl Into<ZoneSlot>) -> bool {
     let slot = slot.into();
-    is_empty(state, slot) && !is_locked(state, slot) && !is_reserved(state, slot)
+    // R3554000: no play enters the hole.
+    is_empty(state, slot)
+        && !is_locked(state, slot)
+        && !is_reserved(state, slot)
+        && !crate::geometry::in_hole(state, slot)
 }
 
 /// R688: a zone a move may enter: empty and unreserved, Locked or not.
@@ -537,11 +556,26 @@ pub fn first_free_zone(state: &GameState, player: PlayerId, row: Row) -> Option<
 /// R64, R688: where a summon, a recruit or a move with no named zone enters: the leftmost open zone,
 /// else the leftmost empty Locked one. Plays and casts keep `first_free_zone`.
 pub fn first_entry_zone(state: &GameState, player: PlayerId, row: Row) -> Option<ZoneSlot> {
-    first_free_zone(state, player, row).or_else(|| {
-        slots_of(player, row)
-            .into_iter()
-            .find(|slot| takes_move(state, slot))
-    })
+    first_entry_zone_where(state, player, row, |_| true)
+}
+
+/// `first_entry_zone` where the zone must also pass `allow` (R3554003: a summon stays on its half).
+pub fn first_entry_zone_where(
+    state: &GameState,
+    player: PlayerId,
+    row: Row,
+    allow: impl Fn(i32) -> bool,
+) -> Option<ZoneSlot> {
+    // R3554000: the hole's lane is no entry zone, open or fallback alike.
+    let hole = |slot: &ZoneSlot| !crate::geometry::in_hole(state, *slot) && allow(slot.lane);
+    open_zones(state, player, row)
+        .into_iter()
+        .find(|slot| hole(slot))
+        .or_else(|| {
+            slots_of(player, row)
+                .into_iter()
+                .find(|slot| takes_move(state, slot) && hole(slot))
+        })
 }
 
 pub fn zone_of(slot: impl Into<ZoneSlot>) -> Zone {
@@ -676,6 +710,28 @@ fn place_with(
     if is_reserved(state, slot) {
         return false;
     }
+    // R3554002: a void zone takes nothing, whatever lands there.
+    if crate::geometry::is_void(state, slot) {
+        return false;
+    }
+    // R3546000: a GIGA's covered zones take nothing, whatever lands there.
+    if let Some(found) = crate::giga::covering(state, slot)
+        && found.id != instance.id
+    {
+        return false;
+    }
+    // R3546002: the size is stamped as the card enters the field — printed, granted in the hand or
+    // embiggened alike — and a move keeps the size it has.
+    let giga = if instance.zone.z() == ZoneName::Field {
+        crate::giga::is_giga(instance)
+    } else {
+        crate::giga::enters_giga(state, instance)
+    };
+    // R3546000: a GIGA lands only where all four zones are free (or made free by its own placement
+    // rules, as Crater does — the caller empties those first).
+    if giga && !crate::giga::fits(slot, |s| is_empty(state, s) && !is_reserved(state, s)) {
+        return false;
+    }
     let Some(index) = lane_index(slot.lane) else {
         return false;
     };
@@ -745,11 +801,14 @@ fn place_with(
     }
     // B3.3 rule 1, R385, R638: a printed Brittle starts as its card enters the field, and a held count starts ticking.
     start_brittle_on_field(state, instance, from_off_field);
-    // R1839000: a Unit printing Dormant enters the field Dormant (a carried Unit included, R446).
+    // R1839000, R3556000: a Unit or a face-up Field Spell printing Dormant enters the field Dormant
+    // (a carried Unit included, R446).
     let as_unit = slot.row == Row::Units || is_unit_face(state, instance);
-    crate::slumber::start_slumber_on_field(state, instance, from_off_field, as_unit);
+    crate::slumber::start_slumber_on_field(state, instance, from_off_field);
     // R1852000: and a Starship's hull starts its memory as it does.
     crate::starship::start_starship_on_field(state, instance, from_off_field, as_unit);
+    // R3546000: stamp the size the checks above read, so the stored card carries it.
+    instance.giga = giga.then_some(true);
 
     let placed = instance.clone();
     match landing {
@@ -901,6 +960,8 @@ pub fn replace_in_zone(state: &mut GameState, old: &CardInstance, replacement: &
 
     replacement.controller = player;
     replacement.zone = old.zone.clone();
+    // R3546002: a Transform keeps the size (Flicker does too, `flicker_in_place`).
+    replacement.giga = old.giga;
     if (row == Row::Units || is_unit_face(state, replacement)) && replacement.position.is_none() {
         replacement.position = Some(Position::Atk);
     }
@@ -1194,26 +1255,39 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.divine_shield_spent = None;
     instance.marked_destroyed = None;
     instance.marked_exiled = None;
+    instance.unpreventable_destroy = None;
     instance.reborn_spent = None;
     // B5 E35: Berserk is a status of the unit on the field, lost as it leaves (R78).
     instance.berserk = None;
+    // R3536000: so is Evolved; a card back after leaving the field may evolve again.
+    instance.evolved = None;
+    // R3546000: so is GIGA; a card back after leaving the field enters at its new size.
+    instance.giga = None;
     // R1174000: so is Frozen, which a Bounce, a death or an exile takes off with it.
     instance.frozen = None;
+    // R3548001: so is the Tipsy stamp; a card back after leaving the field is stamped again.
+    instance.tipsy = None;
     // R1839000: and so is Dormant; a card printing it starts it again as it next enters the field.
     instance.slumber = None;
     // R1852000: and so is a Starship's memory, which its hull starts again as it next enters the field.
     instance.starship = None;
     // R1040, R1045: a card set face-down as a Trap is its printed card again once it leaves the field.
     instance.set_as = None;
+    // R3554003, R3554007: so are its slash half and its damage chains.
+    instance.half = None;
+    instance.shared_chain = None;
+    instance.split_chain = None;
 }
 
 /// R766 (#473): a card that reaches a graveyard or exile costs its printed cost again (R65), a
-/// fused card its fused definition's (R77): `costMod`, `costOverride` and the Embiggened price
-/// (R1181003) go. Radiant, `tuning`, counts, enchantments and tags (R1300, R923) stay.
+/// fused card its fused definition's (R77): `costMod`, `costOverride`, the Embiggened price
+/// (R1181003) and the no-premium mark (R4350000) go. Radiant, `tuning`, counts, enchantments and tags
+/// (R1300, R923) stay.
 pub fn reset_price(instance: &mut CardInstance) {
     instance.cost_mod = 0;
     instance.cost_override = None;
     instance.embiggen_cost_override = None;
+    instance.no_embiggen_premium = None;
     // R1848003: and so does a set X, which is the card's price.
     instance.fixed_x = None;
 }
@@ -1310,6 +1384,9 @@ fn left_the_field(state: &mut GameState, instance_id: &str) {
 fn end_play_choices(instance: &mut CardInstance) {
     instance.x = None;
     instance.embiggened = None;
+    // R3554003: a Spell leaving the resolving zone drops the half its cast chose, as R78's reset
+    // does for a permanent leaving the field.
+    instance.half = None;
 }
 
 /// What `move_to_zone` did. `Replaced` (B5 E5, R460): a replacement sent a card bound for a graveyard
@@ -1410,10 +1487,12 @@ pub enum LibraryPosition {
     At(i32),
 }
 
-/// `move_to_zone`'s options: where in a library, and `keep_state` to skip R78's reset.
+/// `move_to_zone`'s options: where in a library, `hand_left` to put a card at the left end of a
+/// hand (R3558000), and `keep_state` to skip R78's reset.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct MoveToZoneOptions {
     pub position: Option<LibraryPosition>,
+    pub hand_left: Option<bool>,
     pub keep_state: Option<bool>,
 }
 
@@ -1488,7 +1567,12 @@ pub fn move_to_zone(
     let to_graveyard_or_exile = zone == OffFieldZone::Graveyard || zone == OffFieldZone::Exile;
     let pile_to_pile = (from == ZoneName::Hand || from == ZoneName::Library) && to_graveyard_or_exile;
     let landed = from == ZoneName::Resolving;
-    if (was_on_field || pile_to_pile || landed) && options.keep_state != Some(true) {
+    // R3920000: a card that evolved in a pile (R3566004) and goes on to a hand or a library leaves the
+    // Evolve behind: what arrives is the printed card.
+    let evolved_back = (from == ZoneName::Graveyard || from == ZoneName::Exile)
+        && (zone == OffFieldZone::Hand || zone == OffFieldZone::Library)
+        && instance.evolved == Some(true);
+    if (was_on_field || pile_to_pile || landed || evolved_back) && options.keep_state != Some(true) {
         reset_instance(instance);
     }
     // R766 (#473): and a card that reaches a graveyard or an exile pile from elsewhere costs its printed
@@ -1535,6 +1619,8 @@ pub fn move_to_zone(
             pile.insert(index, placed);
         }
         (OffFieldZone::Library, _) => pile.insert(0, placed),
+        // R3558000: a card its effect sends to the left end goes first, ahead of the hand's order.
+        (OffFieldZone::Hand, _) if options.hand_left == Some(true) => pile.insert(0, placed),
         _ => pile.push(placed),
     }
     MoveResult::Moved
@@ -1708,7 +1794,7 @@ pub fn acts_on_field(state: &GameState, instance: &CardInstance) -> bool {
 pub fn fill_board_zones(state: &GameState, player: PlayerId) -> Vec<ZoneSlot> {
     slots_of(player, Row::Units)
         .into_iter()
-        .filter(|slot| takes_move(state, slot))
+        .filter(|slot| takes_move(state, slot) && !crate::geometry::in_hole(state, *slot))
         .collect()
 }
 
@@ -1727,6 +1813,10 @@ pub fn slot_of(_state: &GameState, instance: &CardInstance) -> Option<ZoneSlot> 
 pub fn step_into_unit_zone(state: &mut GameState, card: &CardInstance, to: impl Into<ZoneSlot>) -> bool {
     let to = to.into();
     let mut moving = live_or(state, card);
+    // R3546003: a GIGA never steps rows; it moves only whole.
+    if crate::giga::is_giga(&moving) {
+        return false;
+    }
     let Some(from) = slot_of(state, &moving) else {
         return false;
     };
@@ -1762,6 +1852,10 @@ pub fn step_into_backrow(
 ) -> bool {
     let to = to.into();
     let mut moving = live_or(state, card);
+    // R3546003: a GIGA never steps rows; it moves only whole.
+    if crate::giga::is_giga(&moving) {
+        return false;
+    }
     let Some(from) = slot_of(state, &moving) else {
         return false;
     };
@@ -1816,6 +1910,8 @@ pub fn flicker_in_place(state: &mut GameState, card: &CardInstance) -> bool {
     if let Some(live) = find_instance_mut(state, &current.id) {
         forget_set_stats(live);
         reset_instance(live);
+        // R3546002: Flicker keeps the size R78's reset takes off.
+        live.giga = current.giga;
         if let Some(face) = token_face {
             live.stats_override = face.stats_override;
             live.armor_override = face.armor_override;

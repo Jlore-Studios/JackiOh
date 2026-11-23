@@ -25,7 +25,7 @@ var PriorityTiers = map[string]int{config.LabelPriorityHigh: 0, config.LabelPrio
 var NoPriority int = 2
 
 // GATE_TITLES: the issues super.yml's `report` opens when the super run production waits on fails
-// (#3275): the daily run on `staging`, and a promotion pull request's
+// (#3275): the daily run on `_staging`, and a promotion pull request's
 // (scripts/promote-production.sh's SUPER_TITLE). Production moves only once that run passes, so
 // the queue takes such an issue's build before every priority tier, `priority:high` included.
 var GateTitles = map[string]bool{"CI: daily super run failed": true,

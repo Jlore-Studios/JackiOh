@@ -65,4 +65,4 @@ runs:
       with:
         cache-directories: .cache/bin
         key: ${{ inputs.cache-key }}
-        save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging' }}
+        save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/_staging' }}

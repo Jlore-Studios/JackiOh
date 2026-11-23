@@ -4,4 +4,4 @@
  * Which badge a state is (SPEC §10.8): the rail draws what ends the card first, then what it is doing,
  * then the rest.
  */
-export type StateBadgeKind = "brittle" | "temporary" | "quest" | "questStage" | "tuned" | "returnAfterResolve" | "castOnDraw" | "targetEnemies" | "swapsBook" | "animated" | "berserk" | "frozen" | "dormant" | "starship" | "created";
+export type StateBadgeKind = "brittle" | "temporary" | "quest" | "questStage" | "tuned" | "returnAfterResolve" | "castOnDraw" | "targetEnemies" | "swapsBook" | "animated" | "berserk" | "frozen" | "dormant" | "starship" | "created" | "evolved";

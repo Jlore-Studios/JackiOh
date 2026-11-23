@@ -235,14 +235,11 @@ func usageText(provider *providers.Provider, entry *pyjson.Object, ctx *hctx.Con
 	return "no reading yet"
 }
 
-// Record is status._record: the state record of a lane: an item's, or the suggestion survey's
-// (number 0). A missing record reads as an empty one.
+// Record is status._record: the state record of a lane: an item's, or a suggestion survey's
+// (a lane of 0 or less, `plan.IsSurveyLane`, #4026). A missing record reads as an empty one.
 func Record(state *pyjson.Object, number int) *pyjson.Object {
-	if number == 0 {
-		if survey := state.Obj("suggest"); survey.Len() > 0 {
-			return survey
-		}
-		return pyjson.New()
+	if plan.IsSurveyLane(number) {
+		return plan.SurveyRecord(state, number)
 	}
 	// A record that is there but not an object reads as empty too; the Python's `.get` on it
 	// raised AttributeError.
@@ -255,7 +252,8 @@ func Record(state *pyjson.Object, number int) *pyjson.Object {
 // RecordOf is status.record_of (= _record).
 var RecordOf = Record
 
-// LanesNow is the lanes the state file says are held (item number, 0 for a survey -> provider),
+// LanesNow is the lanes the state file says are held (item number, or a survey's lane of 0 or
+// less, -> provider),
 // and those of them whose run GitHub has not seen end.
 func LanesNow(ctx *hctx.Context, state *pyjson.Object) (*pyjson.Object, *pyjson.Object) {
 	held := pyjson.New()
@@ -264,9 +262,8 @@ func LanesNow(ctx *hctx.Context, state *pyjson.Object) (*pyjson.Object, *pyjson.
 		held.Set(strconv.Itoa(issue.Int("number")),
 			py.Str(py.Or(record.Get("provider"), providers.LegacyProvider)))
 	}
-	survey := state.Obj("suggest")
-	if survey.Truthy("provider") {
-		held.Set("0", py.Str(survey.Get("provider")))
+	for _, survey := range plan.Surveys(state) {
+		held.Set(strconv.Itoa(survey.Lane), py.Str(survey.Record.Get("provider")))
 	}
 	return held, LiveLanes(ctx, state, held)
 }
@@ -289,7 +286,7 @@ func RunningLines(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object) 
 	lanes := cfg.Pool.MaxParallel
 
 	planningRun := func(number int) bool {
-		return number != 0 && Record(state, number).Get("action") == "plan"
+		return !plan.IsSurveyLane(number) && Record(state, number).Get("action") == "plan"
 	}
 	planning := 0
 	for _, key := range live.Keys() {
@@ -344,11 +341,14 @@ func RunningLines(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object) 
 		record := Record(state, number)
 		var what string
 		var since time.Time
-		if number != 0 {
+		if !plan.IsSurveyLane(number) {
 			what = fmt.Sprintf("%s #%d", DoingOf(record), number)
 			since = clock.ParseISOValue(record.Get("started_at"))
 		} else {
 			what = "a suggestion survey"
+			if area := record.Str("area"); area != "" {
+				what += " of `" + area + "`" // #4026
+			}
 			since = clock.ParseISOValue(record.Get("last_run"))
 		}
 		provider := cfg.Pool.Get(providerID)
@@ -409,7 +409,7 @@ func ProviderLines(ctx *hctx.Context, state *pyjson.Object, held *pyjson.Object)
 		var nowDoing string
 		if number, ok := busy[provider.ID]; ok {
 			nowDoing = "**running a survey**"
-			if number != 0 {
+			if !plan.IsSurveyLane(number) {
 				nowDoing = fmt.Sprintf("**working on #%d**", number)
 			}
 		} else if reason == "" {
@@ -485,7 +485,7 @@ func Report(ctx *hctx.Context) string {
 	lines = append(lines, ProviderLines(ctx, state, live)...)
 	var gone []int
 	for _, key := range held.Keys() {
-		if n := laneNumber(key); n != 0 && !live.Has(key) {
+		if n := laneNumber(key); !plan.IsSurveyLane(n) && !live.Has(key) {
 			gone = append(gone, n)
 		}
 	}
@@ -588,12 +588,16 @@ func Report(ctx *hctx.Context) string {
 	}
 	idleText := ""
 	if pyjson.Truthy(idle) {
-		idleText = fmt.Sprintf(" (idle since %s)", py.Str(idle))
+		idleText = fmt.Sprintf(" (spare since %s)", py.Str(idle))
+	}
+	stood := "at the sweep's next tick"
+	if cfg.SuggestionsIdleMinutes > 0 {
+		stood = fmt.Sprintf("for %d minutes", cfg.SuggestionsIdleMinutes)
 	}
 	lines = append(lines, fmt.Sprintf("- Suggestions open: %d of %d"+
-		"%s; a survey "+
-		"once a free lane has had nothing to start for %d "+
-		"minutes", len(suggestions), cfg.SuggestionsMaxOpen, asked, cfg.SuggestionsIdleMinutes)+idleText+"; "+
+		"%s; a survey once %d or more lanes are spare (the excess compute: free on a subscription "+
+		"that may start a build or a plan, with nothing queued it can start), still spare %s",
+		len(suggestions), cfg.SuggestionsMaxOpen, asked, cfg.SuggestionsSpareLanes, stood)+idleText+"; "+
 		fmt.Sprintf("%d that came to nothing are never offered again.", len(declined.Entries(state))))
 	last := state.Obj("last_run")
 	if last.Truthy("url") {

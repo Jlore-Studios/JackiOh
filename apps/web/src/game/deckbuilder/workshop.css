@@ -7,13 +7,17 @@
    for a <button> is scoped `.deckbuilder.app-shell …`, which outranks index.css's `.app-shell
    button` without touching it.
 
-   THE HALVES. From 1101 px up the rail and the open item sit side by side. Below that they take
-   turns (`data-view="list|editor"` on the root): the editor gets the whole width, which the pool
-   and the deck's sidebar need, and "← All decks" goes back. Both halves stay mounted either way. */
+   THE HALVES. From 601 px up (an upright iPad, issue #3734, R3734001) the rail and the open item sit side by side:
+   the rail 208 px wide, 148 px from 601 to 1024 px, where the shell's rail has gone to icons and the editor
+   needs the room. At 600 px and under they take turns (`data-view="list|editor"` on the root): the editor gets
+   the whole width, which the pool and the deck's sidebar need, and "← All decks" goes back. Both halves stay
+   mounted either way. */
 
 /* --- colors of state -------------------------------------------------------------------------- */
 
 .workshop {
+  /* The rail's width: 208 px, and 148 px from 601 to 1024 (widths, below). */
+  --ws-rail-w: 208px;
   --ws-amber: #e0a93b;
   --ws-clash: #ffb45c;
   --ws-panel: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
@@ -23,7 +27,7 @@
 
 .ws-layout {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-columns: var(--ws-rail-w) minmax(0, 1fr);
   gap: 14px;
   align-items: start;
   min-width: 0;
@@ -227,11 +231,14 @@
 }
 
 .ws-row-name {
+  display: -webkit-box;
   overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow-wrap: anywhere;
   color: var(--text);
   font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .ws-row-meta {
@@ -523,7 +530,7 @@
   position: relative;
 }
 
-@media (min-width: 761px) {
+@media (min-width: 601px) {
   .ws-editor--deck .ws-name {
     flex-basis: 150px;
   }
@@ -889,27 +896,83 @@
 
 /* --- widths -------------------------------------------------------------------------------------- */
 
-/* Side by side, the rail and the deck's sidebar each give up some width, so the filters stay on two
-   rows at 1280 px and the pool keeps two whole rows of cards on a 720 px screen. The status toast
-   centers on the pool, between the rail (208 px and a 14 px gap) and the sidebar (300 px and a
-   14 px gap). */
-@media (min-width: 1101px) {
+/* Issue #3734 (R3734001): side by side from 601 px, the rail and the open item both drawn. From 1025 px the
+   rail and the deck's sidebar each give up some width, so the filters stay on two rows at 1280 px and the pool
+   keeps two whole rows of cards on a 720 px screen. The status toast centers on the pool, between the rail
+   (208 px and a 14 px gap) and the sidebar (300 px and a 14 px gap), and the menus' shell's rail beside them
+   (`--shell-start`, deckbuilder.css). */
+@media (min-width: 601px) {
   .ws-layout {
-    grid-template-columns: 208px minmax(0, 1fr);
+    grid-template-columns: var(--ws-rail-w) minmax(0, 1fr);
   }
+}
 
+@media (min-width: 1025px) {
   .workshop .db-layout {
     grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
   }
 
   .db-deck-status {
     left: calc(50% - 47px);
-    max-width: calc(100vw - 600px);
+    max-width: calc(100vw - var(--shell-start, 0px) - 600px);
   }
 }
 
-/* One half at a time: the list, or the open item across the whole width. */
-@media (max-width: 1100px) {
+/* An upright iPad (601 to 1024 px): the shell's rail is icons, so the workshop's is 148 px, its buttons stack
+   and a row drops its status chip (the status stays in the row's words, for a reader). The toast centers on the
+   pool between the rail (148 px and a gap of 14) and the sidebar (280 px and a gap of 14). */
+@media (min-width: 601px) and (max-width: 1024px) {
+  .workshop {
+    --ws-rail-w: 148px;
+    --bar-line-display: contents;
+    --bar-extras-order: 2;
+    --bar-extras-flex: 1 0 100%;
+  }
+
+  .ws-group-actions {
+    flex-direction: column;
+  }
+
+  .ws-rail .ws-chip {
+    display: none;
+  }
+
+  /* A deck's name wraps in a 148 px rail, so the rail and its rows give up padding to the name's column:
+     60 px at 744 and 76 px at 820, from 44 and 60 (R3956000). The unsaved dot keeps its 16 px. */
+  .ws-rail {
+    padding: var(--space-3);
+  }
+
+  .deckbuilder.app-shell .ws-row {
+    padding: var(--space-3) var(--space-7) var(--space-3) var(--space-4);
+  }
+
+  /* The title sits beside Back (R3956000): with the bar's three custom properties above (routes/top-bar.css
+     places the bar's slots) the line dissolves into the bar, so Back, the title and the end group share the
+     first row and the extras (Undo, Redo, the cosmetics button, the save status) take the second, at its end.
+     The title takes the room between Back and the end group. */
+  .workshop .screen-nav .page-title {
+    flex: 1 1 0;
+    min-width: 3.5em;
+  }
+
+  .workshop .db-deck-status {
+    left: calc(50% - 66px);
+    max-width: calc(100vw - var(--shell-start, 0px) - 456px);
+  }
+}
+
+/* The sidebar is 232 px from 601 to 760 px (deckbuilder.css, R3956000), so the toast centers on a pool
+   between the rail (148 px and a gap of 14) and that sidebar (232 px and a gap of 14). */
+@media (min-width: 601px) and (max-width: 760px) {
+  .workshop .db-deck-status {
+    left: calc(50% - 42px);
+    max-width: calc(100vw - var(--shell-start, 0px) - 408px);
+  }
+}
+
+/* A phone: one half at a time, the list, or the open item across the whole width. */
+@media (max-width: 600px) {
   .ws-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -932,8 +995,9 @@
 
 /* Desktop: the page is one screen tall (deckbuilder.css), so the grid hands its height down to the
    deck editor, whose pool and deck list scroll inside it; the rail, a trio and the import scroll
-   inside their own column. */
-@media (min-width: 761px) and (min-height: 501px) {
+   inside their own column. From 601 px, as the pool and the deck sit side by side from there
+   (R3956000). */
+@media (min-width: 601px) and (min-height: 501px) {
   .ws-layout {
     flex: 1 1 auto;
     min-height: 0;
@@ -958,11 +1022,12 @@
     flex-direction: column;
   }
 
-  /* The deck keeps its head, its curve and about six tiles however much sits under it (the
-     comparison, the verdict, a code, a confirm): past that the sidebar scrolls, rather than the
-     list being squeezed to a sliver. */
+  /* The deck keeps its head, its curve and a tile or two however much sits under it (the
+     comparison, the verdict, a code, a confirm), so the sidebar's last action row is on a 720 px
+     screen (R3956000): past that the sidebar scrolls, rather than the list being squeezed to a
+     sliver. */
   .ws-editor--deck .db-deck {
-    min-height: 360px;
+    min-height: 200px;
   }
 
   .ws-editor--deck .db-sidebar > :not(.db-deck) {
@@ -998,30 +1063,8 @@
     white-space: nowrap;
   }
 
-  .ws-editor-head {
-    align-items: center;
-    flex-wrap: nowrap;
-  }
-
-  .ws-name {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  /* "Back to decks" (#3380) keeps to one line, so the head stays one control tall; the name field gives up the width. */
-  .deckbuilder.app-shell .ws-back {
-    flex: none;
-    white-space: nowrap;
-  }
-
   .deckbuilder.app-shell .portrait-current {
     padding: 0;
-  }
-
-  /* #3218's two-row top bar made the header taller on a phone; a tighter padding keeps the pool's
-     first row on the first screen (deckbuilder-layout.cy.tsx). */
-  .deckbuilder.workshop .db-header {
-    padding: 0 var(--space-1) var(--space-2);
   }
 
   .ws-compare-pick {
@@ -1044,6 +1087,67 @@
   .ws-import-input,
   .ws-code-input {
     font-size: 16px;
+  }
+}
+
+/* #4349 (R4349000): an iPad mini held upright (744 px) leaves the picker 210 px, where "Compare with" beside a
+   16 px select cut "Another deck or a trio…" to a few letters, and that text needs 218 px even alone. From 601
+   to 760 px, on a screen taller than a phone on its side, the label sits over the select (as from 761 px) and
+   the select takes the body's 13 px (as at 820 px). A phone on its side keeps the row and its 16 px, which
+   stops a phone zooming into the field. */
+@media (min-width: 601px) and (min-height: 501px) and (max-width: 760px) {
+  .ws-compare-pick {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .ws-compare-pick .ws-select {
+    font-size: var(--type-md);
+  }
+}
+
+/* A phone (the one-column editor, R3956000): the head is one row, so the name field takes what
+   Back, the portrait and History leave. */
+@media (max-width: 600px) {
+  .ws-editor-head {
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+
+  .ws-name {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* "Back to decks" (#3380) keeps to one line, so the head stays one control tall. */
+  .deckbuilder.app-shell .ws-back {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  /* The editor's Back shows its arrow alone (the words stay for a screen reader), so the name field gains
+     about 85 px and shows a whole name on a 390 px phone (R3956000). The trio's and the import's Back
+     have no span and keep their words. */
+  .ws-editor--deck .ws-back-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .deckbuilder.app-shell .ws-editor--deck .ws-back {
+    justify-content: center;
+    min-width: var(--hit-min);
+    padding-inline: 0;
+  }
+
+  /* #3218's two-row top bar made the header taller on a phone; a tighter padding keeps the pool's
+     first row on the first screen (deckbuilder-layout.cy.tsx). */
+  .deckbuilder.workshop .db-header {
+    padding: 0 var(--space-1) var(--space-2);
   }
 }
 
@@ -1110,7 +1214,7 @@
 
 /* R1581000: on a phone the page is the window's height (deckbuilder.css), and this is its one
    region: what is taller than the room scrolls here, with the top staying put. */
-@media (max-width: 760px) and (min-height: 501px) {
+@media (max-width: 600px) and (min-height: 501px) {
   .ws-layout {
     flex: 1 1 auto;
     min-height: 0;

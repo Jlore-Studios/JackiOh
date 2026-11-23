@@ -1,6 +1,7 @@
-//! #14 Jlockeed's Weapons (SPEC §8.1): Field Spell, cost 4. Base "Aura: your units have +2 attack,
-//! Rush, First Strike", radiant "+4 attack": only the number changes (§8 Conventions). The aura was
-//! +3 and +6 until issue #3136.
+//! #14 Jlockeed's Weapons (SPEC §8.1): Field Spell, cost 4. Base "Aura: your units have +1 attack,
+//! Rush, First Strike", radiant "+3 attack": only the number changes (§8 Conventions). The aura was
+//! +2 and +4 until issue #4440, a declared number the shipped catalogs keep, and +3 and +6 until issue
+//! #3136.
 //!
 //! An aura is §10.4 layer 5, recomputed on every read (`aura_mods`, `engine/src/layers.rs`), so it
 //! covers units summoned later (BUILD M3-T2) and vanishes with its source. `applies` reads instance
@@ -14,7 +15,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-014";
 
 /// +`attack` attack, Rush and First Strike to the controller's units on the field (§10.4 layer 5);
-/// `attack` is the declared number (R386), 2 and 4 on the Radiant face.
+/// `attack` is the declared number (R386), 1 and 3 on the Radiant face.
 fn weapons_aura() -> AuraHook {
     aura_hook(|args: HookArgs<'_>| {
         let attack = param(&args, "attack");
@@ -51,6 +52,8 @@ mod tests {
 
     use crate::scenario;
 
+    const SPECIESIST: &str = "stand-in (2) 4/1 R8/2";
+
     fn lane(s: &Scenario, player: PlayerId, at: i32) -> CardInstance {
         match s.unit(player, at) {
             Some(unit) => unit,
@@ -65,27 +68,27 @@ mod tests {
             use super::*;
 
             #[test]
-            fn gives_allied_units_2_attack_while_it_is_on_the_field() {
+            fn gives_allied_units_1_attack_while_it_is_on_the_field() {
                 let mut s = scenario(json!({
                     "p1": { "backrow": ["core-014"], "field": ["core-008"], "hand": ["core-005"], "library": ["core-005"] },
-                    "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
+                    "p2": { "field": [SPECIESIST], "hand": ["core-005"], "library": ["core-005"] }
                 }));
 
                 // Mr. Vanilla is printed 4/4.
-                s.expect_stats("core-008", json!({ "attack": 6, "health": 4, "maxHealth": 4 }));
+                s.expect_stats("core-008", json!({ "attack": 5, "health": 4, "maxHealth": 4 }));
                 // "Your units": the enemy's Speciesist (4/1) is untouched.
-                s.expect_stats("core-002", json!({ "attack": 4, "health": 1, "maxHealth": 1 }));
+                s.expect_stats(SPECIESIST, json!({ "attack": 4, "health": 1, "maxHealth": 1 }));
             }
 
             #[test]
             fn grants_first_strike_so_a_4_health_ally_kills_speciesist_and_takes_nothing_back_s4_3() {
                 let mut s = scenario(json!({
                     "p1": { "backrow": ["core-014"], "field": ["core-008"], "hand": ["core-005"], "library": ["core-005"] },
-                    "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
+                    "p2": { "field": [SPECIESIST], "hand": ["core-005"], "library": ["core-005"] }
                 }));
-                let speciesist = s.card("core-002").clone();
+                let speciesist = s.card(SPECIESIST).clone();
 
-                s.attack("core-008", "core-002");
+                s.attack("core-008", SPECIESIST);
 
                 s.expect_in_zone(&speciesist, "graveyard");
                 // Without the granted First Strike the exchange is simultaneous and Speciesist's 4 kills the ally.
@@ -96,19 +99,19 @@ mod tests {
             fn covers_a_unit_summoned_after_it_rush_included_s10_4_layer_5_r83() {
                 let mut s = scenario(json!({
                     "p1": { "backrow": ["core-014"], "hand": ["core-015", "core-005"], "library": ["core-005"] },
-                    "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
+                    "p2": { "field": [SPECIESIST], "hand": ["core-005"], "library": ["core-005"] }
                 }));
 
                 // #15 Me and Mr Token (1/1) and its Cry's 3/3 Rush Token both land after the aura.
                 s.play("core-015", json!({}));
                 let first = lane(&s, PlayerId::P1, 1);
                 let second = lane(&s, PlayerId::P1, 2);
-                s.expect_stats(&first, json!({ "attack": 3, "health": 1 }));
-                s.expect_stats(&second, json!({ "attack": 5, "health": 3 }));
+                s.expect_stats(&first, json!({ "attack": 2, "health": 1 }));
+                s.expect_stats(&second, json!({ "attack": 4, "health": 3 }));
 
                 // Summoning sick this turn, and it attacks a unit anyway: that is the granted Rush.
-                let speciesist = s.card("core-002").clone();
-                s.attack("core-015", "core-002");
+                let speciesist = s.card(SPECIESIST).clone();
+                s.attack("core-015", SPECIESIST);
 
                 s.expect_in_zone(&speciesist, "graveyard");
                 s.expect_stats("core-015", json!({ "health": 1 })); // and the granted First Strike kept it alive
@@ -123,10 +126,10 @@ mod tests {
                         "hand": ["core-036", "core-005"],
                         "library": ["core-005"]
                     },
-                    "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
+                    "p2": { "field": [SPECIESIST], "hand": ["core-005"], "library": ["core-005"] }
                 }));
                 let weapons = s.card("core-014").clone();
-                s.expect_stats("core-008", json!({ "attack": 6 }));
+                s.expect_stats("core-008", json!({ "attack": 5 }));
 
                 // #36 Magic Jammed, aimed at the ally Field Spell (see the header).
                 s.play("core-036", json!({ "targets": [{ "pick": "instance", "instanceId": weapons.id }] }));
@@ -135,7 +138,7 @@ mod tests {
                 s.expect_stats("core-008", json!({ "attack": 4, "health": 4, "maxHealth": 4 }));
                 // The keywords went with it: with no First Strike, Speciesist's 4 now kills the ally.
                 let ally = s.card("core-008").clone();
-                s.attack("core-008", "core-002");
+                s.attack("core-008", SPECIESIST);
                 s.expect_in_zone(&ally, "graveyard");
             }
         }
@@ -144,7 +147,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn gives_4_attack_and_keeps_both_keywords_s8_conventions_only_the_number_changes() {
+            fn gives_3_attack_and_keeps_both_keywords_s8_conventions_only_the_number_changes() {
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [{ "def": "core-014", "radiant": true }],
@@ -152,55 +155,52 @@ mod tests {
                         "hand": ["core-005"],
                         "library": ["core-005"]
                     },
-                    "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
+                    "p2": { "field": [SPECIESIST], "hand": ["core-005"], "library": ["core-005"] }
                 }));
 
-                s.expect_stats("core-008", json!({ "attack": 8, "health": 4, "maxHealth": 4 }));
+                s.expect_stats("core-008", json!({ "attack": 7, "health": 4, "maxHealth": 4 }));
 
-                let speciesist = s.card("core-002").clone();
-                s.attack("core-008", "core-002");
+                let speciesist = s.card(SPECIESIST).clone();
+                s.attack("core-008", SPECIESIST);
 
                 s.expect_in_zone(&speciesist, "graveyard");
                 s.expect_stats("core-008", json!({ "health": 4 })); // First Strike still granted
             }
 
             #[test]
-            fn covers_a_unit_summoned_after_it_at_4_rush_included() {
+            fn covers_a_unit_summoned_after_it_at_3_rush_included() {
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [{ "def": "core-014", "radiant": true }],
                         "hand": ["core-015", "core-005"],
                         "library": ["core-005"]
                     },
-                    "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
+                    "p2": { "field": [SPECIESIST], "hand": ["core-005"], "library": ["core-005"] }
                 }));
 
                 s.play("core-015", json!({}));
 
                 let first = lane(&s, PlayerId::P1, 1);
                 let second = lane(&s, PlayerId::P1, 2);
-                s.expect_stats(&first, json!({ "attack": 5, "health": 1 }));
-                s.expect_stats(&second, json!({ "attack": 7, "health": 3 }));
-                let speciesist = s.card("core-002").clone();
-                s.attack("core-015", "core-002");
+                s.expect_stats(&first, json!({ "attack": 4, "health": 1 }));
+                s.expect_stats(&second, json!({ "attack": 6, "health": 3 }));
+                let speciesist = s.card(SPECIESIST).clone();
+                s.attack("core-015", SPECIESIST);
                 s.expect_in_zone(&speciesist, "graveyard");
                 assert!(s.unit(PlayerId::P2, 1).is_none());
             }
         }
 
+        /// Issue #4440: +1 is its `min`, so an Upgrade gives 2 and no Degrade is offered.
         #[test]
-        fn r386_an_upgrade_gives_3_attack_and_a_degrade_1() {
-            for (upgrade, attack) in [(true, 3), (false, 1)] {
-                let mut s = scenario(json!({ "p1": { "backrow": ["core-014"], "field": ["core-008"] } }));
-                let moved = if upgrade {
-                    crate::upgrade_number(&mut s, "core-014", "attack")
-                } else {
-                    crate::degrade_number(&mut s, "core-014", "attack")
-                };
-                assert_eq!(moved, attack);
-                // Mr. Vanilla is a 4/4.
-                s.expect_stats("core-008", json!({ "attack": 4 + attack, "health": 4 }));
-            }
+        fn r386_an_upgrade_gives_2_attack_and_no_degrade_goes_below_1() {
+            let mut s = scenario(json!({ "p1": { "backrow": ["core-014"], "field": ["core-008"] } }));
+            assert!(!crate::can_degrade_number(&s, "core-014", "attack"));
+            assert_eq!(crate::upgrade_number(&mut s, "core-014", "attack"), 2);
+            // Mr. Vanilla is a 4/4.
+            s.expect_stats("core-008", json!({ "attack": 6, "health": 4 }));
+            assert_eq!(crate::degrade_number(&mut s, "core-014", "attack"), 1);
+            s.expect_stats("core-008", json!({ "attack": 5, "health": 4 }));
         }
     }
 
@@ -212,7 +212,7 @@ mod tests {
         }));
         let vanilla = s.card("core-008").id.clone();
         crate::stand_in_backrow(&mut s, &vanilla, 2);
-        s.expect_stats(vanilla.as_str(), json!({ "attack": 6, "health": 4 }));
+        s.expect_stats(vanilla.as_str(), json!({ "attack": 5, "health": 4 }));
         assert!(s.stats(vanilla.as_str()).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Rush));
     }
 }

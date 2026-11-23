@@ -1,15 +1,16 @@
 //! SPEC §8.10 Stinkyscape 173 Abandoned Spice Tower, a card of the Stinkyscape set.
 //!   Base:    "Can't attack\nCan't be in Defense Position.\nDeath: Add {spices|Spice|Spices} to your
-//!            hand.\nActivate: Take {selfDamage} damage. Tribute this." (0/8; 3, 4)
+//!            hand.\nActivate: Take {selfDamage} damage. Tribute this." (0/8; 5, 2)
 //!   Radiant: "… Death: Add {spices|Radiant Spice|Radiant Spices} to your hand.\nActivate: Take
-//!            {selfDamage} damage. Tribute this." (0/16; 3, 4)
+//!            {selfDamage} damage. Tribute this." (0/16; 5, 2)
 //!
 //! R1840006's mining node, paying Spice: Can't attack is printed, and Can't Defend (R2657000) keeps
 //! it out of Defense Position (§4.1). Activate (§6.2, R384), once a turn: its controller's hero takes
 //! `selfDamage` (§4.4), then a Sacrifice of it (§6.3), a death, so its Death runs: `spices` fresh Spices
 //! (S #89) to the hand, hand cards, never Resources, a full hand burning the rest (§2.4). Any other
 //! death pays too. Radiant: Radiant Spices; the Activate keeps its damage, as the list prints it. The
-//! numbers are declared (R386).
+//! numbers are declared (R386): 5 Spices since issue #3951 (3 before), 2 damage since issue #4440 (4
+//! before), on both faces.
 
 use jackioh_engine::effects::{add_to_hand, damage, sacrifice};
 use jackioh_engine::prelude::*;
@@ -103,10 +104,10 @@ mod tests {
     fn activate_damages_and_death_adds_spices() {
         let mut s = tower(false, 1);
         s.activate(ID, json!({ "ability": MINE }));
-        s.expect_health(P1, 26);
+        s.expect_health(P1, 28);
         s.expect_in_zone(ID, "graveyard");
         let added = spices(&s);
-        assert_eq!(added.len(), 3);
+        assert_eq!(added.len(), 5);
         assert!(added.iter().all(|card| !card.radiant));
         assert!(crate::resources_in_hand(&s, P1).is_empty(), "hand cards, never Resources");
     }
@@ -121,7 +122,7 @@ mod tests {
             .iter()
             .filter(|card| card.def_id == SPICE)
             .count();
-        assert_eq!(burned, 2);
+        assert_eq!(burned, 4);
     }
 
     #[test]
@@ -137,9 +138,9 @@ mod tests {
     fn spices_and_self_damage_read_through_param() {
         let mut s = tower(false, 1);
         set_param(s.card_mut(ID), "spices", 1);
-        set_param(s.card_mut(ID), "selfDamage", 2);
+        set_param(s.card_mut(ID), "selfDamage", 3);
         s.activate(ID, json!({ "ability": MINE }));
-        s.expect_health(P1, 28);
+        s.expect_health(P1, 27);
         assert_eq!(spices(&s).len(), 1);
     }
 
@@ -147,9 +148,9 @@ mod tests {
     fn radiant_damage_kept_radiant_spices() {
         let mut s = tower(true, 1);
         s.activate(ID, json!({ "ability": MINE }));
-        s.expect_health(P1, 26);
+        s.expect_health(P1, 28);
         let added = spices(&s);
-        assert_eq!(added.len(), 3);
+        assert_eq!(added.len(), 5);
         assert!(added.iter().all(|card| card.radiant));
     }
 }

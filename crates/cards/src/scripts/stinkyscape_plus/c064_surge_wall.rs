@@ -1,0 +1,161 @@
+//! SPEC §8.12 S+ #64 Surge Wall, a card of the Stinkyscape+ set (R1420, R3535000). Built by S08 (#3555).
+//! 0/6 embiggen 0/24  
+//! **Can’t attack**  
+//! **Can’t defend**  
+//! **End of turn** deal 1 embiggen 2 damage to all enemies  
+//! **Embiggen: GIGA**  
+//! \~\~\~  
+//! 0/12 embiggen 0/48  
+//! **Can’t attack**  
+//! **Can’t defend**  
+//! **End of turn** deal 2 embiggen 4 damage to all enemies  
+//! **Embiggen: GIGA**
+//!
+//! The Walls' shared embiggened text (R3555001) plus an end-of-turn hit on every enemy (R62): `damage`
+//! unembiggened, `embiggenedDamage` embiggened, both declared. Issue #4292 took the Radiant face's
+//! Pierce and Armor 2, catalog data (R767000), so its hits stop at Armor as the base face's do (R346).
+
+use jackioh_engine::effects::damage_all;
+use jackioh_engine::prelude::*;
+
+pub const ID: &str = "stinkyscapeplus-064";
+
+fn surge_wall(text: Script) -> Script {
+    Script {
+        end_of_turn: Some(hook(|ctx| {
+            let key = if ctx.live_self().and_then(|me| me.embiggened) == Some(true) {
+                "embiggenedDamage"
+            } else {
+                "damage"
+            };
+            vec![damage_all(json_as(json!({
+                "side": "enemy",
+                "amount": param(&*ctx, key),
+                "heroes": true,
+            })))]
+        })),
+        ..text
+    }
+}
+
+pub fn script() -> CardScripts {
+    // The Radiant face's keywords are catalog data (its Pierce and Armor 2 went in issue #4292).
+    CardScripts {
+        base: surge_wall(super::c065_thorium_wall::embiggened_wall()),
+        radiant: surge_wall(super::c065_thorium_wall::embiggened_wall()),
+    }
+}
+
+/// R767000: the scripts through v0.6.5c, whose Walls' bonus a set or a Buff multiplied (issue #3935).
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_5c() -> CardScripts {
+    CardScripts {
+        base: surge_wall(super::c065_thorium_wall::embiggened_wall_v0_6_5c()),
+        radiant: surge_wall(super::c065_thorium_wall::embiggened_wall_v0_6_5c()),
+    }
+}
+
+// S+ #64 Surge Wall — SPEC §8.12 row S+ 64 (R62, R346, R3555001, R3935000).
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jackioh_engine::testkit::*;
+
+    use crate::weapon_board;
+
+    const P2: PlayerId = PlayerId::P2;
+
+    const WALL: &str = "stand-in (1) 1/30";
+    const ARMORED: &str = "stand-in (0) 1/9 Armor 5";
+
+    /// The wall standing for p1, enemies standing for p2.
+    fn standing(radiant: bool, seed: &str, enemies: Value) -> Scenario {
+        weapon_board(
+            seed,
+            json!({ "field": [{ "def": ID, "radiant": radiant }] }),
+            json!({ "field": enemies }),
+        )
+    }
+
+    /// The wall in p1's hand with mana to play it either way.
+    fn holding(radiant: bool, seed: &str) -> Scenario {
+        weapon_board(
+            seed,
+            json!({ "hand": [{ "def": ID, "radiant": radiant }], "mana": 10 }),
+            json!({}),
+        )
+    }
+
+    #[test]
+    fn r3935000_a_set_stands_at_the_stats_it_sets() {
+        super::super::c065_thorium_wall::fixture::assert_a_set_stands_at_its_stats(ID);
+    }
+
+    #[test]
+    fn r3935000_a_buff_counts_once() {
+        super::super::c065_thorium_wall::fixture::assert_a_buff_counts_once(ID, [6, 12]);
+    }
+
+    mod base {
+        use super::*;
+
+        #[test]
+        fn r62_end_of_turn_deals_1_to_every_enemy_and_the_hero() {
+            let mut s = standing(false, "s64-base", json!([WALL, WALL]));
+            s.end_turn();
+            assert_eq!(s.stats(&s.unit_at(P2, 1).id).health, 30 - 1);
+            assert_eq!(s.stats(&s.unit_at(P2, 2).id).health, 30 - 1);
+            s.expect_health(P2, 30 - 1);
+        }
+
+        #[test]
+        fn r3555001_embiggened_it_deals_2() {
+            let mut s = holding(false, "s64-embiggened");
+            s.play(ID, json!({ "zone": 1, "embiggen": true }));
+            assert_eq!(s.card(ID).giga, Some(true));
+            s.expect_stats(ID, json!({ "attack": 0, "maxHealth": 24 }));
+            s.end_turn();
+            s.expect_health(P2, 30 - 2);
+        }
+
+        #[test]
+        fn cant_attack() {
+            let mut s = standing(false, "s64-cant", json!([WALL]));
+            let wall = s.unit_at(P2, 1).id;
+            s.expect_refused(|s| s.attack(ID, wall.as_str()));
+        }
+    }
+
+    mod radiant {
+        use super::*;
+
+        #[test]
+        fn r62_end_of_turn_deals_2_to_every_enemy_and_the_hero() {
+            let mut s = standing(true, "s64-radiant", json!([WALL, WALL]));
+            s.end_turn();
+            assert_eq!(s.stats(&s.unit_at(P2, 1).id).health, 30 - 2);
+            assert_eq!(s.stats(&s.unit_at(P2, 2).id).health, 30 - 2);
+            s.expect_health(P2, 30 - 2);
+        }
+
+        #[test]
+        fn r3555001_embiggened_it_deals_4() {
+            let mut s = holding(true, "s64-radiant-embiggened");
+            s.play(ID, json!({ "zone": 1, "embiggen": true }));
+            assert_eq!(s.card(ID).giga, Some(true));
+            s.expect_stats(ID, json!({ "attack": 0, "maxHealth": 48 }));
+            s.end_turn();
+            s.expect_health(P2, 30 - 4);
+        }
+
+        #[test]
+        fn r346_its_hits_pierce_no_armor_since_issue_4292() {
+            let mut s = standing(true, "s64-pierce", json!([ARMORED]));
+            // The face prints neither Pierce nor Armor since issue #4292.
+            assert_eq!(s.stats(ID).armor, 0);
+            s.end_turn();
+            // Pierce reads off the source (R346), which has none: Armor 5 takes the whole 2.
+            assert_eq!(s.stats(&s.unit_at(P2, 1).id).health, 9);
+        }
+    }
+}

@@ -77,10 +77,11 @@ fn vote_if_floated(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
 }
 
 /// R963: the enemy Units an Allure may take, in R68's order, by id.
-fn enemy_units(ctx: &EffectContext<'_>) -> Vec<String> {
+fn enemy_units(ctx: &EffectContext<'_>, slash_aware: bool) -> Vec<String> {
     active_units_of(ctx.state, opponent_of(ctx.controller))
         .into_iter()
         .filter(|unit| !is_carried(ctx.state, unit))
+        .filter(|unit| !slash_aware || reaches(ctx.state, ctx.self_.as_ref(), unit))
         .map(|unit| unit.id.clone())
         .collect()
 }
@@ -95,9 +96,9 @@ fn enemy_hand_units(ctx: &EffectContext<'_>) -> Vec<String> {
 }
 
 /// R1866004: one random enemy Unit, and on the Radiant face then one random Unit card of their hand.
-fn allure(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
+fn allure(ctx: &mut EffectContext<'_>, radiant: bool, slash_aware: bool) -> Vec<Effect> {
     let mut effects = Vec::new();
-    let units = enemy_units(ctx);
+    let units = enemy_units(ctx, slash_aware);
     if let Some(target_id) = ctx.rng.pick(&units).cloned() {
         effects.push(delay(json_as(json!({
             "at": { "phase": "start", "player": "self" },
@@ -124,14 +125,13 @@ fn allure(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     effects
 }
 
-/// R1045000: the picked Unit stolen, or destroyed with no open zone in its row.
+/// R1045000: the picked Unit stolen, or destroyed with no open zone in its row (R4205000).
 fn steal_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(target_id) = ctx.data.get(TARGET_KEY).and_then(Value::as_str) else {
         return vec![];
     };
     vec![steal(StealTarget {
         instance_id: Some(target_id.to_string()),
-        otherwise: Some(StealOtherwise::Destroy),
         ..StealTarget::default()
     })]
 }
@@ -150,7 +150,7 @@ fn hand_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![give_from_hand(json_as(json!({ "from": "enemy", "ids": ids })))]
 }
 
-fn casper(radiant: bool) -> Script {
+fn casper(radiant: bool, slash_aware: bool) -> Script {
     let activate = ActivationDecl {
         id: "allure".to_string(),
         label: if radiant {
@@ -164,7 +164,7 @@ fn casper(radiant: bool) -> Script {
         modes: vec![],
         can_activate: None,
         has: None,
-        run: hook(move |ctx| allure(ctx, radiant)),
+        run: hook(move |ctx| allure(ctx, radiant, slash_aware)),
     };
     let mut resume = IndexMap::from([(ALLURE_STEP, hook(steal_step))]);
     if radiant {
@@ -182,8 +182,17 @@ fn casper(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: casper(false),
-        radiant: casper(true),
+        base: casper(false, true),
+        radiant: casper(true, true),
+    }
+}
+
+/// v0.6.9k and before: Activate drew among every enemy Unit, across a slash too (R3554003);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9j() -> CardScripts {
+    CardScripts {
+        base: casper(false, false),
+        radiant: casper(true, false),
     }
 }
 
@@ -394,6 +403,28 @@ mod tests {
             allure(&mut s);
             assert!(s.state().delayed.iter().all(|entry| entry.hand_watch.is_none()));
             assert_eq!(s.view(P1).opponent.hand_marked, None);
+        }
+
+        /// R3554003: a Field Spell's Activate stops at the slash, so its pick is among the Units on its
+        /// own half only, and the steal a turn later lands on the one it picked.
+        #[test]
+        fn r3554003_activate_allures_only_a_unit_of_its_own_half() {
+            for cursor in 0..16u32 {
+                let mut s = table(
+                    false,
+                    json!([{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 4 }]),
+                    json!([FILLER]),
+                );
+                s.state_mut().slashed_lane = Some(3);
+                s.state_mut().rng_cursor = cursor;
+                let near = s.unit(P2, 1).expect("the Unit on Casper's half").id;
+                allure(&mut s);
+                assert_eq!(allured(&s), near, "cursor {cursor}");
+
+                s.end_turn();
+                until_active(&mut s, P1);
+                assert_eq!(s.card(near.as_str()).controller, P1, "cursor {cursor}");
+            }
         }
     }
 

@@ -1,5 +1,7 @@
 //! `jackioh_engine::testkit` (feature `testkit`, SURFACE §8): `scenario` (the harness), `invariants` (the
-//! I1–I4 monitor `cargo jackioh fuzz` runs) and `glow`, plus the whole engine (`pub use crate::*`).
+//! I1–I22 monitor `cargo jackioh fuzz` runs) and `glow`, plus the whole engine (`pub use crate::*`).
+//! `played_attack.rs` (#4111) is the one reading of what an attack did, which I18 and the combat
+//! forecast's rules tests both hold `combat_forecast` to (R3100000).
 //!
 //! `register_scripts` and `register_catalog` (`scenario.rs`) set the thread-local override that
 //! `catalog::registered_catalog()` and `scripts::script_of()` consult first under this feature, so they win
@@ -9,35 +11,43 @@
 //! place, so a test that pins where a roll lands fails; `with_pool_shift(0, …)` reads a pool as it is.
 //! `seed_search.rs` is #848's seed search: `seed_where` and `cursor_where` find the seed or rng cursor where
 //! a pool's roll lands as a test needs. `preview.rs` is R1420's preview of a set that does not ship yet,
-//! `duos_scenario.rs` #936's begun Duos game. `golden.rs` (§13.3, #1641) and `pick.rs` (the one-instance pick
-//! builders, #1826) are not globbed in: callers name the module (`golden::<item>`). `must` (#2023) comes in
-//! with the glob, the effects library (its verbs share names with engine functions) does not.
+//! `duos_scenario.rs` #936's begun Duos game. `golden.rs` (§13.3, #1641) and `pick.rs` (the one-pick
+//! builders and the `targets` wrapper, #1826, #3827) are not globbed in: callers name the module
+//! (`golden::<item>`). `must` (#2023), `nonempty` (#3914), and `plays_in` and `is_play_of` (one card's plays
+//! in a state or one action, #3913) come in with the glob, the effects library (its verbs share names with
+//! engine functions) does not.
 //! `stand_in.rs` (#3486) builds the card a `stand-in …` id spells out; no catalog lists it.
+//! `unique_draws.rs` (R3563000) switches `UNIQUE_RANDOM_DRAWS` on for one call, which is on since the
+//! Stinkyscape+ release (#3573).
 
 pub mod duos_scenario;
 pub mod glow;
 pub mod golden;
 pub mod invariants;
+pub mod loop_peak;
 pub mod pick;
+pub mod played_attack;
 pub mod pool_probe;
 pub mod preview;
 pub mod scenario;
 pub mod seams;
 pub mod seed_search;
 pub mod stand_in;
+pub mod unique_draws;
 
 pub use crate::*;
 
 pub use duos_scenario::*;
 pub use glow::*;
 pub use invariants::*;
+pub use played_attack::*;
 pub use pool_probe::*;
 pub use preview::*;
 pub use scenario::*;
 pub use seams::*;
 pub use seed_search::*;
 pub use stand_in::*;
-
+pub use unique_draws::*;
 // The thread-local override wins over the production registries `crate::*` re-exports.
 pub use scenario::{register_catalog, register_scripts, register_shipped};
 

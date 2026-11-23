@@ -81,6 +81,8 @@ describe("R1838000 the Trade bar on a 1v1 board", () => {
     expect(screen.getByTestId(testid.tradeBar)).toBeTruthy();
     const control = screen.getByTestId(testid.trade("h1")) as HTMLButtonElement;
     expect(control.disabled).toBe(false);
+    expect(control).not.toHaveAttribute("aria-disabled");
+    expect(control).not.toHaveAttribute("aria-describedby");
     expect(control.textContent).toContain("Trade");
     expect(control.textContent).toContain("1 Trades left");
     expect(control.textContent).not.toContain("mana");
@@ -124,14 +126,20 @@ describe("R1838000 the Trade bar on a 1v1 board", () => {
     expect(passButton.textContent).toContain("1 mana · 1 left");
   });
 
-  it("R1838000 a card the engine refuses is greyed with its reason and sends nothing", () => {
+  it("R3768000 a card the engine refuses is greyed, focusable, described by its reason; a press shows the notice and sends no trade", () => {
     const onAction = renderGame(holding({ left: 0, reason: REASON }), [END_TURN]);
     pointAt("h1");
     const control = screen.getByTestId(testid.trade("h1")) as HTMLButtonElement;
-    expect(control.disabled).toBe(true);
+    expect(control.disabled).toBe(false);
+    expect(control.getAttribute("aria-disabled")).toBe("true");
     expect(control.getAttribute("data-legal")).toBe("false");
     expect(control.title).toBe(REASON);
+    control.focus();
+    expect(document.activeElement).toBe(control);
+    expect(document.getElementById(control.getAttribute("aria-describedby") ?? "")?.textContent).toBe(REASON);
+    expect(screen.queryByTestId("attack-reason")).toBeNull();
     fireEvent.click(control);
+    expect(screen.getByTestId("attack-reason")).toHaveTextContent(REASON);
     expect(onAction).not.toHaveBeenCalledWith(expect.objectContaining({ type: "trade" }));
   });
 

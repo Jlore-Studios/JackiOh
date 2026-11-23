@@ -2,7 +2,7 @@
 
 /**
  * R1853002, R1853003, R1861000: a card in the viewer's hand that sells from there, and what it sells
- * for this turn.
+ * for this turn. None since issue #4410 (R4410000): `MarketplaceView.sales` is always empty.
  */
 export type MarketSaleView = { instanceId: string, defId: string, 
 /**

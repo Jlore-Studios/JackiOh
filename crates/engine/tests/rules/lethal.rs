@@ -10,8 +10,15 @@ use jackioh_engine::testkit::*;
 
 use jackioh_engine::subsystems::lethal::{defending_hero, is_lethal, projected_damage};
 
-use crate::rules::fixtures::combat::{armored, big_body, indestructible, plain, shielded, trampler};
-use crate::rules::fixtures::harness::{live, new_game, put, slot};
+use crate::rules::fixtures::board_geometry::{FUSE, register_geometry_fixtures};
+use crate::rules::fixtures::burn_toxic::{
+    BOTH, FRAIL, NOXIOUS, PLAIN as BT_PLAIN, STONE, VOLCANIC, add_burn_toxic_fixtures,
+};
+use crate::rules::fixtures::combat::{
+    armored, big_body, cleaver, first_striker, indestructible, lifestealer, plain, shielded, trampler,
+};
+use crate::rules::fixtures::combat_reactions::{POOL, POOL_SIZE, register_e6_fixtures};
+use crate::rules::fixtures::harness::{act_ok, live, new_game, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
 /// p1's main phase on turn 4, so nothing placed with `put` is summoning sick (§4.1).
@@ -274,5 +281,206 @@ mod r44_lethal_projection_m3_t7 {
         assert_eq!(live(&state, &blocker).damage, 0);
         assert_eq!(live(&state, &shield).divine_shield_spent, None);
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH);
+    }
+}
+
+/// `board` with the E6 fixtures (`e6-pool`'s damage pool) and the Burn and Toxic ones registered on
+/// top, after `new_game` has registered the engine's own.
+fn pool_board(seed: &str) -> GameState {
+    let state = board(seed);
+    register_e6_fixtures();
+    add_burn_toxic_fixtures();
+    state
+}
+
+/// A damage pool of `POOL_SIZE` in `player`'s backrow, face up and unspent.
+fn put_pool(state: &mut GameState, player: PlayerId) -> CardInstance {
+    let pool = put(state, POOL, slot(player, Row::Backrow, 1), json!({}));
+    assert_eq!(damage_pool_left(state, &live(state, &pool)), Some(POOL_SIZE));
+    pool
+}
+
+fn attack_of(attacker: &CardInstance, target_id: &str) -> Value {
+    json!({ "type": "attack", "playerId": "p1", "attackerId": attacker.id, "targetId": target_id })
+}
+
+mod r4032000_lethal_after_conversion_and_the_pool {
+    use super::*;
+
+    #[test]
+    fn r4032000_the_pool_comes_off_the_blow_before_lethal_is_judged() {
+        let mut state = pool_board("r4032000-blow");
+        let attacker = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), json!({}));
+        edit(&mut state, &attacker, |card| card.buffs.attack = 1); // 6/10
+        put_pool(&mut state, P2);
+        state.players.p2.hero.health = 4;
+
+        // §4.4 step 3b: 6 less the pool's 5 leaves 1, short of 4, and the projection spends nothing.
+        let before = serde_json::to_string(&state).expect("serializes");
+        assert_eq!(projected(&state, &attacker, &on_hero()), 1);
+        assert!(!lethal(&state, &attacker, &on_hero()));
+        assert_eq!(serde_json::to_string(&state).expect("serializes"), before);
+        let after = act_ok(&state, attack_of(&attacker, "hero-p2"));
+        assert_eq!(after.state.players.p2.hero.health, 3);
+
+        state.players.p2.hero.health = 1;
+        assert!(lethal(&state, &attacker, &on_hero()));
+
+        // Armor first ("after Armor", R3550004): 6 less 2 is 4, which the pool soaks whole.
+        state.players.p2.hero.armor = 2;
+        assert_eq!(projected(&state, &attacker, &on_hero()), 0);
+        assert!(!lethal(&state, &attacker, &on_hero()));
+    }
+
+    #[test]
+    fn r4032000_the_hits_of_one_attack_share_the_one_pool() {
+        let mut state = pool_board("r4032000-trample");
+        let attacker = put(&mut state, &trampler.id, slot(P1, Row::Units, 1), json!({})); // 6/4 Trample
+        let blocker = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({})); // 3/3
+        put_pool(&mut state, P2);
+
+        // The pool soaks 5 of the 6, so the 1 left stops on the 3-health unit.
+        assert_eq!(projected(&state, &attacker, &unit_now(&state, &blocker)), 0);
+        // 11 less 5 is 6 into the unit, 3 past its health; the pool is spent, so all 3 land.
+        edit(&mut state, &attacker, |card| card.buffs.attack = 5);
+        assert_eq!(projected(&state, &attacker, &unit_now(&state, &blocker)), 3);
+        let after = act_ok(&state, attack_of(&attacker, &blocker.id));
+        assert_eq!(after.state.players.p2.hero.health, HERO_HEALTH - 3);
+
+        // Cleave (§4.4 step 10): the blow's 8 leaves 3 for a 3-health unit after the pool, no excess;
+        // each neighbour's 8, the pool spent, tramples 5 on to the hero.
+        let mut cleaving = pool_board("r4032000-cleave");
+        let cleaver_unit = put(&mut cleaving, &cleaver.id, slot(P1, Row::Units, 2), json!({})); // 3/8 Cleave
+        edit(&mut cleaving, &cleaver_unit, |card| {
+            card.buffs.attack = 5;
+            card.granted_keywords.push(Keyword::Trample);
+        });
+        let middle = put(&mut cleaving, &plain.id, slot(P2, Row::Units, 2), json!({}));
+        put(&mut cleaving, &plain.id, slot(P2, Row::Units, 1), json!({}));
+        put(&mut cleaving, &plain.id, slot(P2, Row::Units, 3), json!({}));
+        put_pool(&mut cleaving, P2);
+        assert_eq!(
+            projected(&cleaving, &cleaver_unit, &unit_now(&cleaving, &middle)),
+            10
+        );
+        let after = act_ok(&cleaving, attack_of(&cleaver_unit, &middle.id));
+        assert_eq!(after.state.players.p2.hero.health, HERO_HEALTH - 10);
+    }
+
+    #[test]
+    fn r4032000_a_blow_that_burns_or_is_toxic_projects_nothing() {
+        // §4.4 step 3a (R3540003): the hit is its target's Burn or Toxic, not damage.
+        for def in [VOLCANIC, NOXIOUS, BOTH] {
+            let mut state = pool_board(&format!("r4032000-{def}"));
+            let attacker = put(&mut state, def, slot(P1, Row::Units, 1), json!({})); // 4/8
+            state.players.p2.hero.health = 2;
+            assert_eq!(projected(&state, &attacker, &on_hero()), 0, "{def}");
+            assert!(!lethal(&state, &attacker, &on_hero()), "{def}");
+        }
+
+        let mut state = pool_board("r4032000-volcanic-trample");
+        let attacker = put(&mut state, VOLCANIC, slot(P1, Row::Units, 1), json!({})); // 4/8
+        edit(&mut state, &attacker, |card| {
+            card.granted_keywords.push(Keyword::Trample)
+        });
+        let frail = put(&mut state, FRAIL, slot(P2, Row::Units, 1), json!({})); // 2/2
+        let control = put(&mut state, &big_body.id, slot(P1, Row::Units, 2), json!({})); // 5/10
+        state.players.p2.hero.health = 2;
+        // A 4 into a 2-health unit would trample 2, but a converted hit has no excess.
+        assert_eq!(projected(&state, &attacker, &unit_now(&state, &frail)), 0);
+        assert!(!lethal(&state, &attacker, &unit_now(&state, &frail)));
+        // The same hero falls to a blow that is damage.
+        assert!(lethal(&state, &control, &on_hero()));
+
+        let after = act_ok(&state, attack_of(&attacker, "hero-p2"));
+        assert_eq!(after.state.players.p2.hero.health, 2);
+        assert!(after.state.result.is_none());
+    }
+
+    #[test]
+    fn r4032000_conversion_and_an_indestructible_unit_leave_the_pool_unspent() {
+        let mut state = pool_board("r4032000-unspent");
+        let body = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), json!({}));
+        let volcanic = put(&mut state, VOLCANIC, slot(P1, Row::Units, 2), json!({}));
+        let stone = put(&mut state, STONE, slot(P2, Row::Units, 1), json!({})); // 2/20 Indestructible
+        let wall = put(&mut state, BT_PLAIN, slot(P2, Row::Units, 2), json!({})); // 2/20
+        let pool = put_pool(&mut state, P2);
+        let (body, volcanic) = (live(&state, &body), live(&state, &volcanic));
+        let hero = DamageTarget::Hero { player: P2 };
+        let unit = |card: &CardInstance| DamageTarget::Unit {
+            instance: live(&state, card),
+        };
+
+        // A converted hit deals nothing, so the pool is whole for the next.
+        let mut pools = ProjectedPools::default();
+        assert_eq!(project_hit(&state, Some(&volcanic), &hero, 4, &mut pools), 0);
+        assert_eq!(project_hit(&state, Some(&body), &hero, 9, &mut pools), 4);
+
+        // Step 4 read first: an Indestructible unit takes nothing and spends no pool.
+        let mut pools = ProjectedPools::default();
+        assert_eq!(project_hit(&state, Some(&body), &unit(&stone), 9, &mut pools), 0);
+        assert_eq!(project_hit(&state, Some(&body), &hero, 9, &mut pools), 4);
+
+        // A unit's hit spends its side's pool, which the hero's hit then finds 3 short.
+        let mut pools = ProjectedPools::default();
+        assert_eq!(project_hit(&state, Some(&body), &unit(&wall), 3, &mut pools), 0);
+        assert_eq!(project_hit(&state, Some(&body), &hero, 9, &mut pools), 7);
+
+        // The pool covers its own side only.
+        let mut pools = ProjectedPools::default();
+        let own = DamageTarget::Hero { player: P1 };
+        assert_eq!(project_hit(&state, Some(&body), &own, 3, &mut pools), 3);
+
+        // A projection writes nothing.
+        assert_eq!(damage_pool_left(&state, &live(&state, &pool)), Some(POOL_SIZE));
+    }
+
+    #[test]
+    fn r4032000_the_strike_back_is_projected_through_the_attacker_s_pool() {
+        // A First Strike defender's 4 destroys the 4-health attacker first (§4.3 step 1)...
+        let mut state = pool_board("r4032000-first-strike");
+        let attacker = put(&mut state, &trampler.id, slot(P1, Row::Units, 1), json!({})); // 6/4 Trample
+        let striker = put(&mut state, &first_striker.id, slot(P2, Row::Units, 1), json!({})); // 4/4
+        assert_eq!(projected(&state, &attacker, &unit_now(&state, &striker)), 0);
+        // ...unless the attacker's own pool soaks it: then 6 into 4 health tramples 2.
+        put_pool(&mut state, P1);
+        assert_eq!(projected(&state, &attacker, &unit_now(&state, &striker)), 2);
+        let after = act_ok(&state, attack_of(&attacker, &striker.id));
+        assert_eq!(after.state.players.p2.hero.health, HERO_HEALTH - 2);
+
+        // A Lifesteal strike back the attacker's pool soaks heals nothing (§4.4 step 8).
+        let mut state = pool_board("r4032000-lifesteal");
+        let attacker = put(&mut state, &trampler.id, slot(P1, Row::Units, 1), json!({})); // 6/4 Trample
+        let leech = put(&mut state, &lifestealer.id, slot(P2, Row::Units, 1), json!({})); // 3/3
+        state.players.p2.hero.health = 3;
+        // 3 tramples through, and the 3 struck back heals it all.
+        assert!(!lethal(&state, &attacker, &unit_now(&state, &leech)));
+        put_pool(&mut state, P1);
+        assert!(lethal(&state, &attacker, &unit_now(&state, &leech)));
+        let after = act_ok(&state, attack_of(&attacker, &leech.id));
+        assert!(after.state.result.is_some());
+    }
+}
+
+mod r4156000_a_first_strike_sweeper_projects_its_plain_strike_back {
+    use super::*;
+
+    /// R4156000, §4.3 step 1: a First Strike sweeper that is attacked strikes first with its plain attack,
+    /// so R44's projection lets an attacker that survives it land its blow and trample on.
+    #[test]
+    fn r4156000_a_trampler_into_a_first_strike_sweeper_still_tramples_to_lethal() {
+        let mut state = board("r4156000-trample");
+        register_geometry_fixtures();
+        let attacker = put(&mut state, &trampler.id, slot(P1, Row::Units, 1), json!({})); // 6/4 Trample
+        let fuse = put(&mut state, FUSE, slot(P2, Row::Units, 1), json!({})); // 2/20
+        edit(&mut state, &fuse, |card| {
+            card.damage = 18;
+            card.granted_keywords.push(Keyword::FirstStrike);
+        });
+        // 2 first leaves the trampler standing (weighted, 10 would have destroyed it first): its 6 meets
+        // the Fuse's 2 health left and the other 4 trample through.
+        assert_eq!(projected(&state, &attacker, &unit_now(&state, &fuse)), 4);
+        state.players.p2.hero.health = 4;
+        assert!(lethal(&state, &attacker, &unit_now(&state, &fuse)));
     }
 }

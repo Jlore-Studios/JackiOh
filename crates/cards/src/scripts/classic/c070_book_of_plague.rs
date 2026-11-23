@@ -175,11 +175,11 @@ mod tests {
         fn r81_it_offers_two_modes_place_counters_or_add_plague_cards_on_both_faces() {
             for radiant in [false, true] {
                 let s = adding("book-modes", radiant);
-                let held = s.card(BOOK).id.clone();
-                let offered: Vec<Vec<String>> = legal_actions(s.state(), P1)
+                let offered: Vec<Vec<String>> = s
+                    .plays_of(BOOK)
                     .iter()
                     .filter_map(|action| match action {
-                        ActionBody::Play { instance_id, modes, .. } if *instance_id == held => modes.clone(),
+                        ActionBody::Play { modes, .. } => modes.clone(),
                         _ => None,
                     })
                     .collect();
@@ -221,10 +221,11 @@ mod tests {
             }
         }
 
-        /// R380, R387, R60: the pool is the non-token Plague cards but this one; over many seeds every one is
-        /// offered, never a token, never Book of Plague itself, and picks may repeat.
+        /// R380, R387, R3563000: the pool is the non-token Plague cards but this one; over many seeds every one
+        /// is offered, never a token, never Book of Plague itself, and the three picks are distinct (the pool
+        /// holds many more than three, so none repeats).
         #[test]
-        fn r380_r387_r60_the_pool_is_the_other_non_token_plague_cards_and_picks_may_repeat() {
+        fn r380_r387_r3563000_the_pool_is_the_other_non_token_plague_cards_and_the_picks_are_distinct() {
             let pool = plague_pool();
             assert!(!pool.is_empty());
             assert!(!pool.iter().any(|id| id == ID), "never itself");
@@ -234,7 +235,7 @@ mod tests {
                 assert!(def.tags.contains(&Tag::Plague), "{id}");
             }
             let mut seen: IndexSet<String> = IndexSet::new();
-            let mut repeated = false;
+            assert!(pool.len() > 3, "the pool outlasts the three picks");
             for n in 0..150 {
                 for radiant in [false, true] {
                     let mut s = adding(&format!("book-pool-{n}"), radiant);
@@ -242,12 +243,11 @@ mod tests {
                     let added = added_to_hand(&s);
                     assert_eq!(added.len(), 3);
                     let defs: IndexSet<&str> = added.iter().map(|card| card.def_id.as_str()).collect();
-                    repeated |= defs.len() < 3;
+                    assert_eq!(defs.len(), 3, "a pick never repeats a card while the pool lasts (seed {n}, radiant {radiant})");
                     seen.extend(added.iter().map(|card| card.def_id.clone()));
                 }
             }
             assert_eq!(seen, pool.iter().cloned().collect::<IndexSet<String>>(), "every Plague card is offered");
-            assert!(repeated, "a pick may repeat a card");
         }
 
         /// R74: the Radiant face adds Radiant Plague cards.
@@ -471,6 +471,50 @@ mod tests {
                 }
             }
             assert!(counters && cards, "the thief's random mode took both: counters {counters}, cards {cards}");
+        }
+
+        /// R4453000: a Spell can't target a Unit Immune to Spells (§6.1), so its placement never offers one
+        /// (the targeting point's filter, R450, and the placement's own pool both leave it out).
+        #[test]
+        fn r4453000_the_chosen_placement_offers_no_immune_unit() {
+            let mut s = board(false);
+            let menace = s.card(MENACE).id.clone();
+            s.card_mut(menace.as_str()).granted_keywords.push(Keyword::ImmuneToSpells);
+            let others = vec![s.card(VANILLA).id.clone(), s.card(MANA_WELL).id.clone(), s.card(PAWN).id.clone()];
+
+            s.play(BOOK, json!({ "modes": [COUNTERS] }));
+
+            assert_eq!(sorted(option_ids(&s)), sorted(others));
+        }
+
+        /// R4453000: the thief's random placement (R452) draws only among the permanents the Spell reaches,
+        /// and with none it places nothing (R129).
+        #[test]
+        fn r4453000_a_random_placement_never_lands_on_an_immune_unit() {
+            let stolen = |seed: String, field: Value| {
+                let mut s = scenario(json!({
+                    "seed": seed,
+                    "p1": { "hand": [{ "def": BOOK, "costMod": 1 }, ANCHOR], "field": field, "mana": 4 },
+                    "p2": { "hand": [ANCHOR], "backrow": [PALANTIR] },
+                }));
+                let warded = s.card(VANILLA).id.clone();
+                s.card_mut(warded.as_str()).granted_keywords.push(Keyword::ImmuneToSpells);
+                let book = s.card(BOOK).clone();
+                s.play(&book, json!({ "modes": [COUNTERS] }));
+                s.expect_in_zone(PALANTIR, "graveyard");
+                assert!(s.state().pending.is_none());
+                assert_eq!(s.card(warded.as_str()).counters.plague.unwrap_or(0), 0);
+                s
+            };
+            let mut landed = false;
+            for n in 0..24 {
+                let s = stolen(format!("book-immune-{n}"), json!([VANILLA, MENACE]));
+                landed |= s.card(MENACE).counters.plague == Some(5);
+            }
+            assert!(landed, "some seed's random mode placed the counters, all on the Menace");
+            for n in 0..24 {
+                stolen(format!("book-immune-alone-{n}"), json!([VANILLA]));
+            }
         }
 
         /// §9.3 the open prompt survives a JSON round trip and finishes as the live one does

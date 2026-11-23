@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::BERSERK_MARK;
 use crate::restrictions::can_go_berserk;
 use crate::script::Effect;
-use crate::state::{Exertion, find_instance_mut};
+use crate::state::{Exertion, Slumber, find_instance_mut};
 use crate::wire::GameEvent;
 
 use crate::wire::TargetAim;
@@ -170,6 +170,46 @@ pub fn awaken(args: AwakenArgs) -> Effect {
         };
         if let Some(id) = id {
             crate::slumber::awaken_card(&mut ctx.sink, &id);
+        }
+    })
+}
+
+/// `dormantTarget`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct DormantTargetArgs {
+    pub target: TargetSpec,
+    /// "Dormant for N turns" (R1839001): it awakens at the start of its controller's Nth turn from now.
+    pub turns: i32,
+}
+
+/// R3557002 (Stinkyscape+ #51 Chains Bind Me): "Dormant a permanent for N turns" — the Unit `target`
+/// names (in a unit zone, or standing in a backrow zone, R1081000) turns Dormant at once, its countdown
+/// `turns` of its controller's turns (R1839001), the same status a card that prints Dormant enters
+/// with, so it fills its zone and nothing reaches it until it awakens (R1839000). A Unit already
+/// Dormant is passed by (`instance_of`, R1839000), a card beneath a Stack pile is not Dormanted
+/// (R1839003), a countdown below 1 is none (R1839001) and a card off the field is left alone (R129).
+/// The mark an earlier awakening wrote (R3039000) bars only a printed Dormant from starting again: an
+/// effect makes any Unit Dormant.
+pub fn dormant_target(args: DormantTargetArgs) -> Effect {
+    Effect::new("dormantTarget", move |ctx| {
+        if args.turns <= 0 {
+            return;
+        }
+        let Some(unit) = instance_of(ctx, &args.target) else {
+            return;
+        };
+        if !crate::zones::in_units_row_or_standing(ctx.state, &unit)
+            || crate::zones::is_buried(ctx.state, &unit)
+            || crate::slumber::is_slumbering(&unit)
+        {
+            return;
+        }
+        if let Some(live) = find_instance_mut(ctx.state, &unit.id) {
+            live.slumber = Some(Slumber {
+                turns: Some(args.turns),
+            });
         }
     })
 }

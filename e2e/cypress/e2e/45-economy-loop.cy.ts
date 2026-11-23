@@ -9,7 +9,7 @@
 // `build:e2e`, the only builds that read `FULL_ART_GATED_KEY`). Daily only, as every spec outside
 // scripts/shard-specs.mjs's SMOKE.
 
-import { newestShippedSet, SHIPPED_SETS } from "../../../apps/web/src/wire/catalog.ts";
+import { newestShippedSet } from "../../../apps/web/src/wire/catalog.ts";
 import { VERSION_FULL_ART_ID } from "../../../apps/web/src/cards/versions.ts";
 import { COSMETICS, COSMETIC_OFFERS } from "../../../apps/web/src/wire/generated/cosmetics.ts";
 import {
@@ -24,6 +24,7 @@ import {
   STARTER_CARDS,
   XP_WIN_BONUS,
 } from "../../../apps/web/src/wire/serverConfig.ts";
+import { openQueuePanel } from "../../support/play.ts";
 import {
   E2E_RESEED_PATH,
   FULL_ART_GATED_KEY,
@@ -62,18 +63,17 @@ import {
   SHOP_WALLET,
   TOKEN_HELD_CARD,
   collectionCardId,
-  collectionSetToggleId,
   collectionTokenOfferConfirmId,
   collectionTokenOfferId,
   collectionTrackId,
   collectionTrackLevelId,
   collectionTrackXpId,
   deckRowId,
+  filterOwnershipId,
   heroId,
   packSlotId,
   packSlotOutcomeId,
   packsOpenId,
-  playModeId,
   poolCardId,
   shopBuyId,
   ts,
@@ -309,8 +309,7 @@ function winALadderGame(loop: Loop): void {
   });
 
   cy.visitAs(econ(), routes.play());
-  cy.get(ts(playModeId("bo1")), { timeout: timeouts.view }).check();
-  cy.get(ts(playModeId("bo1"))).should("be.checked");
+  openQueuePanel("bo1");
   cy.then(() => {
     cy.get(ts(PLAY_DECK_SELECT), { timeout: timeouts.view }).select(loop.deckId);
     cy.get(ts(PLAY_DECK_SELECT)).should("have.value", loop.deckId);
@@ -343,8 +342,9 @@ function winALadderGame(loop: Loop): void {
   });
   cy.expectResult("Win");
 
-  // The result's transaction pays (api/results.rs), so the next screen reads what it paid.
-  cy.visitAs(econ(), routes.collectionCards());
+  // The result's transaction pays (api/results.rs), so the next screen reads what it paid: the wallet and the tracks are
+  // the Collection's Progress tab (R3734000).
+  cy.visitAs(econ(), routes.collectionProgress());
   cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
   cy.then(() => {
     read<WalletBody>(econ(), "/api/wallet").then((wallet) => {
@@ -461,9 +461,9 @@ function redeemACardToken(loop: Loop): void {
   });
   cy.intercept("POST", "**/api/tokens/redeem-card").as("redeemCard");
   let picked = "";
-  // The Collection's grid holds the locked cards: open Core, whose starters are only half of it.
+  // The Collection's grid holds the locked cards: its Missing view shows only them (R3734000).
   cy.visitAs(econ(), routes.collectionCards());
-  cy.get(ts(collectionSetToggleId(SHIPPED_SETS[0])), { timeout: timeouts.view }).click();
+  cy.get(ts(filterOwnershipId("missing")), { timeout: timeouts.view }).click();
   cy.get(COLLECTION_LOCKED_CARDS, { timeout: timeouts.view })
     .first()
     .invoke("attr", "data-testid")
@@ -489,8 +489,12 @@ function redeemACardToken(loop: Loop): void {
       expect(owned.size, "and nothing else").to.eq(loop.owned.size + 1);
       loop.owned = owned;
     });
-    // The preview and the grid read the unlocked card as owned.
+    // The preview reads the unlocked card as owned. The grid's Missing view has dropped it: Escape closes the
+    // preview, which covers the filters, and All brings the card's tile back.
     cy.get(ts(COLLECTION_PREVIEW)).should("have.attr", "data-owned", "true");
+    cy.get("body").type("{esc}");
+    cy.get(ts(COLLECTION_PREVIEW)).should("not.exist");
+    cy.get(ts(filterOwnershipId("all"))).click();
     cy.get(ts(collectionCardId(picked))).should("have.attr", "data-owned", "true");
   });
 }
@@ -510,7 +514,7 @@ function receiveAQuest(): void {
     read<QuestsBody>(econ(), "/api/quests").then((body) => {
       expect(body.quests.map((quest) => quest.questId), "§14.10: the dev tool gave the account that quest").to.deep.eq([given]);
     });
-    cy.visitAs(econ(), routes.collectionCards());
+    cy.visitAs(econ(), routes.collectionProgress());
     cy.get(ts(QUESTS_QUEST), { timeout: timeouts.view }).should("have.length", [given].length).and("have.attr", "data-quest-id", given);
   });
 }

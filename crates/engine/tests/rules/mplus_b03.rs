@@ -1,7 +1,8 @@
 // Meditative+ batch 03 (issue #1181): the engine systems of M+ #4 Supply Drop, #22 Mountaintop Garden
 // and #23 Enormous Elderberry, each through a fixture script: R1181000's effect made "in N turns" with
 // its countdown badge (`delay`'s `turns` and `label`), R1181002's aura over embiggen prices (the
-// `embiggenGarden` flag) and R1181003's price for the Embiggened version alone (`embiggenCostOverride`).
+// `embiggenGarden` flag), R1181003's price for the Embiggened version alone (`embiggenCostOverride`, M+
+// #23's through v0.6.8d) and R4350000's no Embiggen premium (`noEmbiggenPremium`, M+ #23's since #4350).
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -9,8 +10,8 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::mplus_b03::{
-    CASTER, ELDER, ELDER_COST, GARDEN, GARDEN_PREMIUM, GARDEN_PREMIUM_RADIANT, LATER, LATER_DAMAGE,
-    LATER_LABEL, LATER_TURNS, SWELL, SWELL_BASE, SWELL_EMBIGGEN, register_b03_fixtures,
+    CASTER, ELDER, ELDER_COST, ELDER_LIVE, GARDEN, GARDEN_PREMIUM, GARDEN_PREMIUM_RADIANT, LATER,
+    LATER_DAMAGE, LATER_LABEL, LATER_TURNS, SWELL, SWELL_BASE, SWELL_EMBIGGEN, register_b03_fixtures,
 };
 
 /// `p1`'s turn 9, its main phase (or `active`'s); each side's setup as given, with plain cards to
@@ -71,15 +72,14 @@ fn shown(s: &Scenario, id: &str) -> CardView {
 
 /// The `embiggen` flags `legalActions` offers the card's plays at.
 fn offered(s: &Scenario, id: &str) -> Vec<Option<bool>> {
-    let mut flags: Vec<Option<bool>> = legal_actions(s.state(), P1)
+    let mut flags: Vec<Option<bool>> = plays_in(s.state(), P1, id)
         .into_iter()
         .filter_map(|action| match action {
             ActionBody::Play {
-                instance_id,
                 embiggen,
                 face_down: None,
                 ..
-            } if instance_id == id => Some(embiggen),
+            } => Some(embiggen),
             _ => None,
         })
         .collect();
@@ -521,5 +521,142 @@ mod r1181003_a_price_for_the_embiggened_version_alone {
         s.play(id.as_str(), json!({ "zone": 2, "embiggen": true }));
         assert_eq!(played(&s), (ELDER_COST, Some(true)));
         assert!(s.card(id.as_str()).radiant, "Radiant and Embiggened for (0)");
+    }
+}
+
+mod r4350000_an_added_card_with_no_embiggen_premium {
+    use super::*;
+
+    /// R4350000: the card has no Embiggen premium: its Embiggened version costs its normal price, not
+    /// its printed dearer one and not (0), and both versions are offered.
+    #[test]
+    fn r4350000_the_embiggened_version_costs_the_normal_price() {
+        let mut s = board(
+            "r4350000-elder",
+            json!({ "hand": [ELDER_LIVE.id, ELDER_LIVE.id, plain.id], "mana": 10 }),
+            json!({}),
+        );
+        s.play(ELDER_LIVE.id.as_str(), json!({}));
+        s.play(ELDER_LIVE.id.as_str(), json!({}));
+        let ids = swells_in_hand(&s);
+        assert_eq!(ids.len(), 2);
+        let added = s.card(ids[0].as_str());
+        assert_eq!(added.no_embiggen_premium, Some(true));
+        assert_eq!((added.embiggen_cost_override, added.cost_override), (None, None));
+        let card = shown(&s, &ids[0]);
+        assert_eq!((card.cost, card.embiggen_cost), (SWELL_BASE, Some(SWELL_BASE)));
+        assert_eq!(offered(&s, &ids[0]), vec![Some(false), Some(true)]);
+
+        s.play(ids[0].as_str(), json!({ "zone": 1 }));
+        assert_eq!(
+            played(&s),
+            (SWELL_BASE, Some(false)),
+            "the normal version keeps its price"
+        );
+        s.play(ids[1].as_str(), json!({ "zone": 2, "embiggen": true }));
+        assert_eq!(
+            played(&s),
+            (SWELL_BASE, Some(true)),
+            "the Embiggened version at the normal price"
+        );
+    }
+
+    /// R4350000, R65: the Embiggened price is read live from the normal one, so a `costMod` and a
+    /// `costOverride` move both alike, whenever they come.
+    #[test]
+    fn r4350000_every_change_to_the_normal_price_moves_the_embiggened_price_r65() {
+        let mut s = board(
+            "r4350000-modifiers",
+            json!({ "hand": [
+                { "def": SWELL.id, "costMod": -1 },
+                { "def": SWELL.id, "costOverride": 3 },
+                plain.id,
+            ], "mana": 10 }),
+            json!({}),
+        );
+        let ids = swells_in_hand(&s);
+        for id in &ids {
+            s.card_mut(id.as_str()).no_embiggen_premium = Some(true);
+        }
+        let card = shown(&s, &ids[0]);
+        assert_eq!(
+            (card.cost, card.embiggen_cost),
+            (SWELL_BASE - 1, Some(SWELL_BASE - 1))
+        );
+        s.card_mut(ids[0].as_str()).cost_mod = -2;
+        let card = shown(&s, &ids[0]);
+        assert_eq!(
+            (card.cost, card.embiggen_cost),
+            (SWELL_BASE - 2, Some(SWELL_BASE - 2))
+        );
+
+        let card = shown(&s, &ids[1]);
+        assert_eq!((card.cost, card.embiggen_cost), (3, Some(3)));
+        s.play(ids[1].as_str(), json!({ "zone": 1, "embiggen": true }));
+        assert_eq!(played(&s), (3, Some(true)));
+    }
+
+    /// R4350000, R766: the mark is price-like, so a card that reaches a graveyard or an exile pile
+    /// loses it, and costs its printed prices again.
+    #[test]
+    fn r4350000_a_graveyard_or_an_exile_pile_takes_it_off_r766() {
+        for (zone, at) in [
+            (zones::OffFieldZone::Graveyard, "graveyard"),
+            (zones::OffFieldZone::Exile, "exile"),
+        ] {
+            let mut s = board(
+                &format!("r4350000-reset-{at}"),
+                json!({ "hand": [ELDER_LIVE.id, plain.id] }),
+                json!({}),
+            );
+            s.play(ELDER_LIVE.id.as_str(), json!({}));
+            let id = swells_in_hand(&s)[0].clone();
+            let mut card = s.card(id.as_str()).clone();
+            assert_eq!(card.no_embiggen_premium, Some(true));
+            zones::move_to_zone(s.state_mut(), &mut card, zone, Default::default());
+            assert_eq!(s.card(id.as_str()).no_embiggen_premium, None, "{at}");
+        }
+    }
+
+    /// R4350000, R1181002: under a Garden the mark zeroes the dearer choice's premium too: the
+    /// normal price plays the card Embiggened, and the dearer choice plays it Radiant and Embiggened
+    /// for that same normal price.
+    #[test]
+    fn r4350000_under_the_garden_the_dearer_choice_costs_the_normal_price() {
+        let mut s = board(
+            "r4350000-garden",
+            json!({ "hand": [ELDER_LIVE.id, ELDER_LIVE.id, plain.id], "backrow": [GARDEN.id], "mana": 10 }),
+            json!({}),
+        );
+        s.play(ELDER_LIVE.id.as_str(), json!({}));
+        s.play(ELDER_LIVE.id.as_str(), json!({}));
+        let ids = swells_in_hand(&s);
+        assert_eq!(ids.len(), 2);
+        let card = shown(&s, &ids[0]);
+        assert_eq!((card.cost, card.embiggen_cost), (SWELL_BASE, Some(SWELL_BASE)));
+        assert_eq!(offered(&s, &ids[0]), vec![Some(false), Some(true)]);
+
+        s.play(ids[0].as_str(), json!({ "zone": 2 }));
+        assert_eq!(
+            played(&s),
+            (SWELL_BASE, Some(true)),
+            "the Garden plays the normal price Embiggened"
+        );
+        assert!(!s.card(ids[0].as_str()).radiant);
+
+        s.play(ids[1].as_str(), json!({ "zone": 3, "embiggen": true }));
+        assert_eq!(
+            played(&s),
+            (SWELL_BASE, Some(true)),
+            "no premium on the dearer choice"
+        );
+        assert!(
+            s.card(ids[1].as_str()).radiant,
+            "the dearer choice still plays it Radiant"
+        );
+        assert!(s.last_events().iter().any(|event| matches!(
+            event,
+            GameEvent::RadiantSet { instance_id, .. } if *instance_id == ids[1]
+        )));
     }
 }

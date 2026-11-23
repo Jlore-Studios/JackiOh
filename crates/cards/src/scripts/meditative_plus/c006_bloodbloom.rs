@@ -50,7 +50,7 @@ mod tests {
     }
     const SUPER_VIRUS: &str = "core-090-1";
     const FULLSEND: &str = "core-078";
-    const TWINSPELL: &str = "core-079";
+    const FIELD_SPELL: &str = "stand-in (2) Field Spell";
     const MY_PAWN: &str = "core-096";
     const JELLY_BEAN: &str = "core-027";
     const FILLER: &str = "core-008";
@@ -135,10 +135,10 @@ mod tests {
 
     #[test]
     fn r1180004_a_field_spell_and_a_trap_do_not_use_it() {
-        let mut s = game("m+006-permanents", json!({ "hand": [ID, TWINSPELL, MY_PAWN, FILLER], "mana": 9 }));
+        let mut s = game("m+006-permanents", json!({ "hand": [ID, FIELD_SPELL, MY_PAWN, FILLER], "mana": 9 }));
         s.play(ID, json!({}));
         let before = mana(&s);
-        s.play(TWINSPELL, json!({}));
+        s.play(FIELD_SPELL, json!({}));
         s.play(MY_PAWN, json!({}));
         assert_eq!(mana(&s), before - 3);
         assert_eq!(health(&s, P1), 30);

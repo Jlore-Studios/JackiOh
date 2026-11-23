@@ -14,10 +14,10 @@ fn eval(state: &GameState, seat: PlayerId) -> f64 {
     evaluate(state, seat, NextSwing::Enemy, &AI_EVAL)
 }
 
-/// A complete line's score where TS's `terminalScore` called `evaluate`: `line_score`, the same as
-/// `eval` while the switch is off and at any reach short of `Lines` (R1012002).
+/// A complete line's score where TS's `terminalScore` called `evaluate`: the hand eval, unpriced, the
+/// same as `eval` (R4159000).
 fn line(state: &GameState, seat: PlayerId) -> f64 {
-    line_score(state, seat, NextSwing::Enemy, Prices::NONE)
+    evaluate_priced(state, seat, NextSwing::Enemy, &AI_EVAL, Prices::NONE)
 }
 
 /// p1's main phase on turn 9: one attacker, a 1-drop in hand (so an attack alone does not leave the
@@ -460,6 +460,7 @@ mod surface_sweep_cards_clock {
                 tier: None,
                 banned: None,
                 setup: None,
+                face: None,
             },
         );
         let result = js(&result);

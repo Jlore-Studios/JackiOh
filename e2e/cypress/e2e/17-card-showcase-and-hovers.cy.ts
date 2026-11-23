@@ -2,6 +2,8 @@
 // #32 Prem Panther is the inspected card-reference fixture; the page-side recorder measures showcase duration.
 // Run it against a built client (`pnpm build:e2e`, then `vite preview`) with `--browser chrome`.
 
+import catalogJson from "../../../crates/cards/catalog.json";
+
 import { CARD_NAMES } from "../../support/cards.ts";
 import { CARD_SETTINGS_KEY, seedFor, timeouts } from "../../support/config.ts";
 import {
@@ -51,6 +53,9 @@ const TRAP_NAME = "Sheepish";
 const LIVE_SEED = seedFor("17-live-48");
 const LIVE_DECK_A = "17-live-a";
 const LIVE_DECK_B = "08-do-nothing-b";
+
+/** #98 Heroic Power's printed cost, read off the catalog: a balance patch moves it (#4044 made it 1) without restating it here. */
+const HEROIC_POWER_COST = String((catalogJson as unknown as Record<string, { cost: number }>)["core-098"]?.cost);
 
 /** Choice-free Unit and Spell ids in the fixtures. */
 const UNIT_DEF_IDS: ReadonlySet<string> = new Set([
@@ -519,13 +524,13 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
     });
 
     // R3134002: in the hand it holds no power yet (its Cry Discovers one when it is played), so it prints
-    // as it is printed, the Cry first; R752: once it holds one, the card shows that power, not all thirteen.
-    cy.get(`${inHand("core-098")} .cost-gem`).should("have.text", "0");
-    cy.get(`${inHand("core-098")} .card-text`).should("contain.text", "Cry: Discover one of 13 powers");
+    // as it is printed, the Cry first; R752: once it holds one, the card shows that power, not all fourteen.
+    cy.get(`${inHand("core-098")} .cost-gem`).should("have.text", HEROIC_POWER_COST);
+    cy.get(`${inHand("core-098")} .card-text`).should("contain.text", "Cry: Discover one of 14 powers");
     cy.get(inHand("core-098")).trigger("pointerover", { pointerType: "mouse" });
     cy.get(ts(INSPECT_HOVER), { timeout: timeouts.view })
       .should("be.visible")
-      .and("contain.text", "Discover one of 13 powers");
+      .and("contain.text", "Discover one of 14 powers");
     cy.get(inHand("core-098")).trigger("pointerout", { pointerType: "mouse" });
     cy.get(ts(INSPECT_HOVER)).should("not.exist");
 
