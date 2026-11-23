@@ -16336,17 +16336,8 @@
       "taken_asks": []
     },
     "4610": {
-      "action": "plan",
-      "asks": [
-        "c:7111393291"
-      ],
-      "build_next": {
-        "from_run": "45252133988",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-23T19:53:04Z",
-        "until": "2026-11-23T20:23:04Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-23T19:52:53Z",
         "difficulty": "medium",
@@ -16365,28 +16356,29 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd crates/shared && cat Cargo.toml && ls tests && wc -l tests/*.rs | tail -40 && ls tests/*/ 2>/dev/null | head; grep -n \\\"host_fuzz\\\\|--test\\\" README.md\"}\n- Bash: {\"command\": \"cat .github/ci/rust-test.toml | head -80; grep -n \\\"tools, wasm\\\" -A12 scripts/ci-shards.toml | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4610 && cat .github/ci/rust-test.toml | head -80; grep -n \\\"tools, wasm\\\" -B2 -A12 scripts/ci-shards.toml | head -40\"}\n- Bash: {\"command\": \"grep -rn \\\"crates/shared/tests\\\\|shared/tests/\\\" --include=*.rs --include=*.toml --include=*.sh --include=*.yml --include=*.go --include=*.py . -l 2>/dev/null | grep -v target | head -20\u2026\n- Bash: {\"command\": \"grep -n \\\"shared\\\" .github/ci/rust-test.toml | head -30; grep -n \\\"crates/shared/tests\\\" scripts/ci-scope.sh crates/server/tests/bots/*.rs crates/shared/tests/*.rs | head; sed -n 2075,21\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4610; sed -n 2030,2075p crates/tools/tests/acceptance.rs; grep -n \\\"^fn repo\\\\b\\\\|^fn repo()\\\\|struct Scratch\\\\|static SCRATCH\\\" -A8 crates/tools/tes\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4610/crates/shared/tests; grep -n \\\"^#!\\\\[\\\\|^mod \\\\|^pub mod \\\\|^ mod \\\\|^use crate\\\\|include!\\\\|include_str\\\\|#\\\\[path\\\\|CARGO_MANIFEST\\\\|file!()\\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4610; grep -n \\\"fuzz\\\\|selfplay\\\\|positions\\\" crates/shared/tests/{board,ladder,daily_invariants}.rs | grep -n \\\"mod \\\\|fn \\\\|::\\\" | head -20; grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4610; sed -n 30,62p crates/engine/Cargo.toml; sed -n 55,75p crates/server/Cargo.toml; grep -n \\\"autotests\\\" crates/*/Cargo.toml; grep -n \\\"cfg(featur\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4610; grep -n \\\"set_var\\\\|remove_var\\\\|current_dir\\\\|temp_dir\\\" crates/shared/tests/*.rs | head; sed -n 776,800p crates/shared/README.md; grep -rn \\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4610; echo \\\"Plan draft: see final message. Findings: 29 files, 663 #[test], host_fuzz->host_soak, guard in crates/tools/tests/acceptance.rs, README \u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"No line of the rule holds: the change is a test-target layout in the pure shared crate, one new guard in the tools' acceptance test, and docs; no engine rules, AI, cross-crate design, migration or 40+ files.\"} --> ## Goal The 29 files directly under `crate\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-6",
-      "owner_since": "2026-11-23T19:44:51Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "gpt",
+      "owner_since": "2026-11-23T20:32:43Z",
+      "owner_why": "handed off from `claude-6`: `claude-6` 5-hour usage is 65%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-23T23:20:00Z; it can start again only in 2h 47m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "planned_at": "2026-11-23T19:52:56Z",
       "planned_by": "`claude-6` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-6",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-6",
+      "provider": "gpt",
       "queued_at": "2026-11-23T19:38:50Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45252133988",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-23T19:44:51Z",
+      "run_id": "pending:5ebf3de3-1795465933",
+      "runs_on": "night-vm-gpt",
+      "started_at": "2026-11-23T20:32:43Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7111393291"
+      ]
     },
     "4614": {
       "action": "build",
@@ -17138,9 +17130,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T20:31:58Z",
+    "at": "2026-11-23T20:32:43Z",
     "url": "",
-    "what": "build #4608 on claude-8"
+    "what": "build #4610 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-23T20:04:45Z",
