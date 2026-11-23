@@ -19809,7 +19809,16 @@
       "feedback_since": "2026-11-23T19:41:57Z",
       "issue": 4622,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "gpt",
+        "built_by": "gpt",
+        "rejections": [],
+        "reviews": [],
+        "sha": "ea86718cc015fe55559daf04fd29f42e02ddfa5e",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
