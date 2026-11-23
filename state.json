@@ -39639,6 +39639,12 @@
         "number": 4537,
         "title": "Patch: changing an audit filter cannot mix in an older page from the previous filter",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T01:24:51Z",
+        "number": 4536,
+        "title": "Patch: Recently played reads its opponents in one query",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
