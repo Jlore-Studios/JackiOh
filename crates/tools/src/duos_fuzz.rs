@@ -115,6 +115,7 @@ fn duos_wave_size(raw: Option<u32>) -> u32 {
 }
 
 /// `duos_decks_for_handicaps` with no handicap: the decks `cargo test`'s co-op games deal.
+#[cfg(test)]
 pub fn duos_decks_for_seed(seed: u32) -> DuosDecks {
     duos_decks_for_handicaps(seed, &DuosHandicaps::default())
 }
@@ -209,11 +210,23 @@ fn duos_setup_for_seed(seed: u32) -> DuosSetup {
     }
 }
 
+/// `duos_decks_for_seed` dealt from `pool` instead of `FUZZ_POOL`: `perf`'s corpus deals the sets that
+/// ship (`SHIPPED_FUZZ_POOL`, R1420), as its 1v1 games do, so a held set's cards never reach a game it
+/// creates unpreviewed (R4577000).
+pub fn duos_decks_for_seed_from(seed: u32, pool: &[String]) -> DuosDecks {
+    duos_decks_from(seed, &DuosHandicaps::default(), pool)
+}
+
 /// One seeded shuffle of the pool dealt in seat order (A1, A2, B1, B2), each seat its handicap's
 /// deck size (R184) or DECK_SIZE, so no card is in two decks.
 fn duos_decks_for_handicaps(seed: u32, handicaps: &DuosHandicaps) -> DuosDecks {
+    duos_decks_from(seed, handicaps, FUZZ_POOL.as_slice())
+}
+
+/// `duos_decks_for_handicaps` over `pool`.
+fn duos_decks_from(seed: u32, handicaps: &DuosHandicaps, pool: &[String]) -> DuosDecks {
     let mut rng = Rng::new(&format!("jackioh-duos-fuzz-decks-{seed}"), 0);
-    let mut rest = rng.shuffle(FUZZ_POOL.as_slice()).into_iter();
+    let mut rest = rng.shuffle(pool).into_iter();
     let mut deal = |seat: DuosSeat| -> Vec<String> {
         let size = handicaps
             .get(seat)

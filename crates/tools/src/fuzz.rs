@@ -7311,6 +7311,8 @@ pub(crate) mod tests {
         #[test]
         fn r2511001_a_core_card_and_its_legacy_card_are_forced_together() {
             register_all();
+            // A dealt deck may hold a held set's card (R4577000), which fuzz previews as it deals.
+            let _preview = preview_every_set();
             let forced: Vec<String> = ["core-002", "traininggrounds-041"]
                 .into_iter()
                 .map(str::to_string)

@@ -61,7 +61,7 @@ const MEDITATIVE_PREVIEWED: [&str; 2] = ["meditative-008", "meditative-040"];
 /// R2476000: the cards that show what they remember, each proved in its own script file (issue #2476's
 /// pass over the catalog). Palantir's base face Tributes on its first steal, so only its Radiant face
 /// counts; Memory Leak's Radiant face chooses no mode, so only its base face marks one.
-const REMEMBERED: [&str; 37] = [
+const REMEMBERED: [&str; 38] = [
     "core-022",
     "core-039",
     "classic-004",
@@ -101,6 +101,9 @@ const REMEMBERED: [&str; 37] = [
     "stinkyscapeplus-t-warhero-token",
     "traininggrounds-025",
     "traininggrounds-057",
+    // The held Infinite Assault (R4577000): IA #14 Overflow Error's count of the opponent's plays this
+    // turn, C+ T-AI-8 Rate Limit's.
+    "infiniteassault-014",
 ];
 /// R2476000: of `REMEMBERED`, the one whose base face alone previews, and the one whose Radiant face alone does.
 const BASE_FACE_ONLY: &str = "classicplus-034";
