@@ -19613,21 +19613,23 @@
     "what": "plan #4610 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-23T19:22:52Z",
+    "at": "2026-11-23T19:37:58Z",
     "notes": [
-      "#4608 needs a plan",
-      "#4609 needs a plan",
-      "#4619 needs a plan",
-      "#4622 needs a plan",
-      "#4578: its parts have all closed; queued its reconcile",
-      "delivered build #4614 on muse (run 45233498671): built",
-      "started review #4626 on muse (run 45248786696)",
-      "started revise #4620 on muse (run 45248921461)",
-      "started plan #4619 on agy (run 45249038713)",
-      "started build #4578 on claude-3 (run 45249163568)",
-      "started plan #4622 on gpt (run 45249303316)",
-      "started plan #4608 on claude-4 (run 45249434440)",
-      "started plan #4609 on claude-4 (run 45249562377)",
+      "answered a comment on #4623 that was never answered",
+      "answered a comment on #4621 that was never answered",
+      "answered a comment on #4613 that was never answered",
+      "answered a comment on #4612 that was never answered",
+      "answered a comment on #4610 that was never answered",
+      "#4610 needs a plan",
+      "#4621 needs a plan",
+      "#4623 needs a plan",
+      "delivered plan #4608 on claude-4 (run 45249434440): planned",
+      "delivered plan #4622 on gpt (run 45249303316): planned",
+      "started build #4622 on gpt (run 45251639913)",
+      "started plan #4621 on claude-4 (run 45251763324)",
+      "started plan #4623 on claude-8 (run 45251885264)",
+      "started plan #4608 on claude-8 (run 45252006606)",
+      "started plan #4610 on claude-6 (run 45252133988)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -20334,7 +20336,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T19:22:52Z",
+  "loop_tick": "2026-11-23T19:37:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
