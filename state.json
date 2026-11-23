@@ -41489,14 +41489,6 @@
         "provider": "muse",
         "run_id": "45162947593",
         "taken_asks": []
-      },
-      "2": {
-        "area": "tests",
-        "count": 1,
-        "last_run": "2026-11-23T11:12:16Z",
-        "provider": "muse",
-        "run_id": "45163033486",
-        "taken_asks": []
       }
     },
     "taken_asks": []
