@@ -208,6 +208,18 @@ pub fn exile_zone(sink: &mut EngineSink<'_>, slot: ZoneSlot) -> bool {
     true
 }
 
+/// R4524000: whether the hole passes the pile `top` heads by: a Dormant card in it, on top or beneath a
+/// Stack card (R1839003), keeps the whole pile where it is, since nothing reaches a Dormant card
+/// (R1839000) and a pile steps or goes whole.
+fn passes_by(state: &GameState, top: &CardInstance) -> bool {
+    crate::slumber::is_slumbering(top)
+        || crate::zones::slot_of(state, top).is_some_and(|at| {
+            crate::zones::zone_contents(state, at)
+                .iter()
+                .any(crate::slumber::is_slumbering)
+        })
+}
+
 /// Count one swallowed permanent toward the hole's capacity, closing it at its `closes_at`.
 /// False once the hole is closed.
 fn count_swallowed(state: &mut GameState) -> bool {
@@ -225,8 +237,8 @@ fn count_swallowed(state: &mut GameState) -> bool {
 }
 
 /// R3554000: exile everything standing in the open hole's lane — each side's Units row, then its
-/// backrow — a pile counting once, a Dormant top passed by, a GIGA met once, in `active_first`
-/// order. Closes the hole at its `closes_at`. True when it swallowed anything.
+/// backrow — a pile counting once, a pile holding a Dormant card passed by (R4524000), a GIGA met
+/// once, in `active_first` order. Closes the hole at its `closes_at`. True when it swallowed anything.
 pub fn swallow_standing(sink: &mut EngineSink<'_>) -> bool {
     if sink.state.black_hole.is_none() {
         return false;
@@ -244,8 +256,8 @@ pub fn swallow_standing(sink: &mut EngineSink<'_>) -> bool {
             let Some(top) = crate::giga::occupant_at(sink.state, slot).cloned() else {
                 continue;
             };
-            // The hole passes Dormant cards by, and meets a GIGA once.
-            if crate::slumber::is_slumbering(&top) || met.contains(&top.id) {
+            // The hole passes a pile holding a Dormant card by (R4524000), and meets a GIGA once.
+            if passes_by(sink.state, &top) || met.contains(&top.id) {
                 continue;
             }
             met.push(top.id.clone());
@@ -310,7 +322,7 @@ pub fn pull_at_turn_end(sink: &mut EngineSink<'_>, player: PlayerId) {
 /// Each row walks the lanes nearest the hole first; a card whose shifted lanes reach the hole is
 /// exiled and counted as in `swallow_standing`, one whose newly entered slots all take a move (or
 /// are covered by the card itself) steps whole, and any other stays. Nothing here runs the state
-/// check. Dormant tops and covered zones are passed by.
+/// check. Piles holding a Dormant card (R4524000) and covered zones are passed by.
 fn pull(sink: &mut EngineSink<'_>, player: PlayerId) {
     if sink.state.result.is_some() {
         return;
@@ -342,7 +354,7 @@ fn pull(sink: &mut EngineSink<'_>, player: PlayerId) {
             let Some(top) = crate::giga::occupant_at(sink.state, slot).cloned() else {
                 continue;
             };
-            if crate::slumber::is_slumbering(&top) || met.contains(&top.id) {
+            if passes_by(sink.state, &top) || met.contains(&top.id) {
                 continue;
             }
             met.push(top.id.clone());

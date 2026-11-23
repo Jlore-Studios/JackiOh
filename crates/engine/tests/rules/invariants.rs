@@ -2922,6 +2922,63 @@ mod i19 {
         );
     }
 
+    /// R4524001: after a restore, a card that stood Dormant on a restored side may be reached for the rest
+    /// of the step, since the snapshot may hold it awake (R4454002): the fuzz's handicapped seed 1573 shot
+    /// one awake with the same activation's next damage. One reached before the restore, or on the side
+    /// no restore rebuilt, is still a finding.
+    #[test]
+    fn r4524001_after_a_restore_its_sides_dormant_cards_may_be_reached_for_the_rest_of_the_step() {
+        let (before, id) = dormant_board("r4524001");
+        let restored: GameEvent = json_as(json!({
+            "type": "rolledBack", "player": "p2", "turnsAgo": 3, "sides": ["p2"],
+        }));
+        let shot: GameEvent = json_as(json!({
+            "type": "damage", "sourceId": "c1", "targetId": id, "amount": 3, "combat": false,
+        }));
+        assert_eq!(
+            i19(&before, &[restored.clone(), shot.clone()], &before),
+            Vec::<String>::new()
+        );
+        only(
+            &i19(&before, &[shot.clone(), restored], &before),
+            &id,
+            &["I19 reached Dormant", "damage"],
+        );
+        let elsewhere: GameEvent = json_as(json!({
+            "type": "rolledBack", "player": "p1", "turnsAgo": 3, "sides": ["p1"],
+        }));
+        only(&i19(&before, &[elsewhere, shot], &before), &id, &["damage"]);
+    }
+
+    /// R4524002: a Unit that runs a copied board sweep's text (Stinkyscape #20 Tnack Trav, R1850000)
+    /// sweeps as the card it copies, Dormant cards included (R3539002), though the sweep exiles the
+    /// copier with its copy (R78), so I19 reads each field card's copy as the step begins. A copy of no
+    /// sweep, or none, is no sweep. (Read alone: the copied card is no fixture, and the other invariants
+    /// would read its text.)
+    #[test]
+    fn r4524002_a_unit_running_a_copied_board_sweep_is_read_as_a_sweep_as_the_step_begins() {
+        let (mut state, _) = dormant_board("r4524002");
+        let copier = put(&mut state, "fx-22", slot(P2, Row::Units, 2), json!({})).id;
+        let copying = |state: &mut GameState, copy: Option<&str>| -> bool {
+            let card = find_instance_mut(state, &copier).expect("the copier");
+            card.memory.clear();
+            if let Some(def_id) = copy {
+                card.memory.insert(
+                    jackioh_engine::subsystems::unit_text::UNIT_TEXT_KEY.to_string(),
+                    json!({ "defId": def_id, "radiant": false }),
+                );
+            }
+            let card = find_instance(state, &copier).expect("the copier").clone();
+            runs_a_copied_sweep(state, &card)
+        };
+        assert!(!copying(&mut state, None), "no copy");
+        assert!(
+            copying(&mut state, Some("stinkyscapeplus-081")),
+            "S+ #81 Doomsayer's sweep"
+        );
+        assert!(!copying(&mut state, Some("fx-21")), "a copy of no sweep");
+    }
+
     #[test]
     fn r4454003_a_fuse_passes_a_dormant_ingredient_or_target_by() {
         let (before, dormant) = dormant_board("r4454003");

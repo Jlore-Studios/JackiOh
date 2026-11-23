@@ -633,6 +633,11 @@ pub fn why_cannot_activate_ability(
     if card.zone.z() != ZoneName::Field {
         return Err("that card is not on the field".into());
     }
+    // R4524003: a carried Unit (R446) uses no Activate, a Dormant Starship's launch among them: the
+    // listing walks only each zone's own card, so the reducer takes no ability of one either.
+    if crate::zones::is_carried(state, card) {
+        return Err("a carried Unit uses no ability".into());
+    }
     // R783006: a card set by its Cloaked is face-down and still has its Reveal to use.
     if !is_acting_on_field(state, card) && !reveals_cloaked(state, card) {
         return Err(if is_face_down(state, card) {
