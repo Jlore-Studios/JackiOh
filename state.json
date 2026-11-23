@@ -18597,14 +18597,9 @@
     "what": "build #4581 on gpt"
   },
   "last_sweep": {
-    "at": "2026-11-23T09:05:35Z",
+    "at": "2026-11-23T09:15:34Z",
     "notes": [
-      "delivered plan #4581 on muse (run 45142902551): planned",
-      "delivered plan #4580 on muse (run 45142822291): planned",
-      "started build #4580 on agy (run 45144288085)",
-      "started build #4581 on gpt (run 45144373253)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered review #4575 on muse (run 45141522006): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19310,7 +19305,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T09:05:35Z",
+  "loop_tick": "2026-11-23T09:15:34Z",
   "machine_disk": {
     "issue": null,
     "reading": {
