@@ -1,0 +1,21 @@
+{
+  "title": "Spells pass a Unit Immune to Spells by in more places",
+  "sources": "#4599",
+  "notes": "S #150 Call to Chaos (Stinky Edition)'s switch to Attack passes an enemy Unit Immune to Spells by, as its Freeze did (R4599000); a lethal guard Immune to Spells (M #92 Unan's, the Shield Layer's) takes no Spell's hit on itself, which stays on its target (R4599005); a Spell's hit on a chained Unit echoes onto no member Immune to Spells and a split one is divided among the members it may reach (S+ #7 Churnwalker, R4599006); the fuzz monitor's I21 allows the game's own rules inside a Spell's run (R4599001-R4599004, R4599007-R4599009).",
+  "player": {
+    "title": "Immune to Spells holds against more Spells",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "Call to Chaos (Stinky Edition) no longer switches an enemy Unit Immune to Spells to Attack Position.",
+      "Unan and the Shield Layer no longer take a Spell's lethal damage on themselves while they are Immune to Spells: it stays where the Spell dealt it.",
+      "A Spell's damage to a Unit Churnwalker chained no longer spreads to a chained Unit Immune to Spells; a split hit is shared among the others."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "stinkyscape-150"
+  ]
+}

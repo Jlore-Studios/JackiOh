@@ -97,14 +97,20 @@
 //!      field Unit immune by its layered keywords; `after` fails an event that changes one and names it
 //!      (`reached_ids`, I19's) while the card running is a Spell: its face's printed type in the catalog,
 //!      from its `hookResolving` (or the prompt its answer continues) to the next marker, trap, AI turn or
-//!      turn edge, a play nested in it being its own until its `cardResolved`, and a card set face-down
-//!      running as a Trap (M #99's row, R3806000). Lawful: anything inside an attack (R4508002), a
-//!      `controlChanged` or `bounced` after a board `swapped`, a `rotated` or a `rolledBack` and a
-//!      restore's `radiantSet` (R4508001), an exile in a `LANE_TAKERS` card's run (R4508004), a
-//!      `radiantSet` under Tears of the Kwzki Tree's world (R4508003), and the state check's switch out of
-//!      a barred Defense and a Burn or Toxic tick (R4508005). A Unit is judged only while still on the
-//!      field and immune after the step, or gone from it with its own keywords immune. Reads the events
-//!      and the catalog, never `restrictions::unaffected_by`; I14's branches and each Duos duel run it.
+//!      turn edge, a play nested in it being its own until its `cardResolved`, a run begun before the step
+//!      ending at its own `cardResolved` (R4599003), and a card set face-down, or announced face-down in the
+//!      step, running as a Trap (M #99's row, R3806000, R4599002). Lawful: anything inside an attack
+//!      (R4508002), a `controlChanged` or `bounced` after a board `swapped`, a `rotated` or a `rolledBack`
+//!      and a restore's `radiantSet` (R4508001), an exile in a `LANE_TAKERS` card's run (R4508004), a
+//!      `radiantSet` under Tears of the Kwzki Tree's world (R4508003), the state check's switch out of a
+//!      barred Defense and a Burn or Toxic tick (R4508005), a `destroyed` naming a killer or after a tick on
+//!      it (R4599001), an exile while a lasting board rule exiles (R4599004), a Burn's removal after its tick
+//!      or on an Indestructible Unit and a shield the Burn took (R4599007), a killerless death its damage or
+//!      a kill deadline explains (R4599008, R4599012), and an `evolved` (R4599011). A Unit is judged only
+//!      while still on the field and immune after the step, or gone from it with its own keywords immune and
+//!      no `controlChanged` naming it (R4599009), and not on a side a `rolledBack` named (R4599010). Reads
+//!      the events and the catalog, never `restrictions::unaffected_by`; I14's branches and each Duos duel
+//!      run it.
 //!   I22 every `target` pick is one its source may aim at (§10.5 step 1, R450; #4540): no Dormant card,
 //!      whatever the source or none (R1839000); no face-up Evasive card in play from a Spell or Field
 //!      Spell, the source read as R781001 reads it (R4353002); no face-up card Immune to Spells from a
@@ -1357,6 +1363,10 @@ struct ImmuneMark {
     /// Whether its own keywords hold the immunity (`layers::card_keywords` and its conditional ones), so
     /// it is still judged once the step takes it off the field, where no aura reaches it.
     own: bool,
+    /// R4599008: the damage it holds as the step begins.
+    damage: i32,
+    /// R4599010: the side it stands on as the step begins.
+    side: PlayerId,
 }
 
 /// I21: the Units Immune to Spells a step begins with, by instance id; the cards then set face-down on
@@ -1368,6 +1378,22 @@ struct ImmuneStep {
     set: IndexSet<String>,
     pending_def: Option<String>,
     pending_instance: Option<String>,
+    /// R4599004: whether a lasting board rule exiles as the step begins (`board_exiles`).
+    board_exiles: bool,
+}
+
+/// I21 (R4599004): whether a lasting board rule stands that exiles at the state check, with no marker of
+/// its own and whatever card is running: an open Black Hole (S+ #77, R3554000) or a field card's exile
+/// aura whose lasting text is on (S #115 Scornboi, R1850002).
+fn board_exiles(state: &GameState) -> bool {
+    state.black_hole.is_some()
+        || placed_cards(state).into_iter().any(|placed| {
+            matches!(placed.zone, Zone::Field { .. })
+                && !crate::preview::lasting_text_off(state, placed.card)
+                && !crate::scripts::script_of(state, placed.card)
+                    .exile_auras
+                    .is_empty()
+        })
 }
 
 /// I21: the state a step begins on, as I21 reads it: every Unit on either field (`zones::active_units_of`,
@@ -1389,6 +1415,8 @@ fn immune_step(state: &GameState) -> ImmuneStep {
             let mark = ImmuneMark {
                 label: name_of(unit),
                 own,
+                damage: unit.damage,
+                side: unit.controller,
             };
             (unit.id.clone(), mark)
         })
@@ -1404,6 +1432,7 @@ fn immune_step(state: &GameState) -> ImmuneStep {
         set,
         pending_def: resume.map(|resume| resume.def_id.clone()),
         pending_instance: resume.and_then(|resume| resume.instance_id.clone()),
+        board_exiles: board_exiles(state),
     }
 }
 
@@ -1472,6 +1501,8 @@ enum ImmuneWindow {
 #[derive(Clone, Copy, Debug)]
 struct ImmuneRun<'e> {
     running: Option<&'e str>,
+    /// The instance whose run it is, when known (R4599003): its `cardResolved` ends the run.
+    source: Option<&'e str>,
     spell: bool,
     takes_lane: bool,
     window: Option<ImmuneWindow>,
@@ -1480,6 +1511,7 @@ struct ImmuneRun<'e> {
 impl ImmuneRun<'_> {
     const NONE: ImmuneRun<'static> = ImmuneRun {
         running: None,
+        source: None,
         spell: false,
         takes_lane: false,
         window: None,
@@ -1516,6 +1548,24 @@ fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, id: &str) -> bool {
         ) && previous.is_some_and(tick)
 }
 
+/// I21 (R4599007): whether `event` is a Divine Shield the Burn tick took off `id`: its `divineShieldLost`
+/// with the Burn's removal on it as the `next` event, which the tick writes right after its hit whatever
+/// the hit did (`afflictions::tick_burn_at_turn_end`, R4154000). A shield's hit leaves no other event.
+fn shield_ticks(event: &GameEvent, next: Option<&GameEvent>, id: &str) -> bool {
+    matches!(event, GameEvent::DivineShieldLost { instance_id } if instance_id == id)
+        && next.is_some_and(|next| {
+            matches!(
+                next,
+                GameEvent::CounterChanged {
+                    instance_id,
+                    counter: crate::wire::CounterKind::Burn,
+                    value: 0,
+                    ..
+                } if instance_id == id
+            )
+        })
+}
+
 /// I21 (§6.1 Immune to Spells, R4453000): no Spell changes a Unit Immune to Spells on the field. The
 /// step's events are walked in order, tracking the card running (`hookResolving`, a trap, a turn edge
 /// and the AI's turn; a play nested in a run is its own from its `cardPlayed` to its `cardResolved`,
@@ -1530,12 +1580,28 @@ fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, id: &str) -> bool {
 /// - a `radiantSet` while Tears of the Kwzki Tree's world holds every card Radiant (R4508003, R4454001);
 /// - the game's own rules that run inside the Spell's run with no marker (R4508005): §4.5 step 1's
 ///   switch out of Defense of a Unit the board bars from it (`forbidden_defense`, I17's), and a Burn or
-///   Toxic tick (`ticks_on`).
+///   Toxic tick (`ticks_on`);
+/// - a `destroyed` that names a killer, whose lethal hit was judged where it landed (a destroy effect
+///   clears the credit, R42), or that follows a tick on the Unit earlier in the step (R4599001);
+/// - an `exiled` while a lasting board rule exiles at the state check (`board_exiles`: an exile aura, an
+///   open Black Hole) as the step begins or ends, or once a card with an exile aura arrived in it
+///   (R4599004);
+/// - a Burn's removal after a tick on the Unit earlier in the step, or on an Indestructible Unit, whose
+///   tick leaves no event, and a Divine Shield the Burn tick took (`shield_ticks`; R4599007);
+/// - a `destroyed` with no killer whose max health its damage already met, the layers' (R4599008), or
+///   right after its kill deadline's mark comes off, a delayed effect's (R4599012);
+/// - an `evolved`, the Unit's own text (R4599011).
+///
+/// A card announced face-down in the step runs as a Trap once it is played (R4599002), and a run begun
+/// before the step (a cast on draw's, the answer a prompt continues) ends at its own `cardResolved`
+/// (R4599003).
 ///
 /// A Unit is judged only when it is still on the field and still immune after the step (an aura that
 /// dropped mid-step, or a step that first took its immunity away, makes no finding), or when it is gone
-/// from the field and its own keywords held the immunity. A Spell's delayed effect, and its run after a
-/// nested marker, carry no marker of the Spell's, so I21 cannot see them. Draws nothing.
+/// from the field and its own keywords held the immunity, until a `controlChanged` names it (R4599009);
+/// a `rolledBack` releases the Units of the sides it names for the rest of the step (R4599010). A
+/// Spell's delayed effect, and its run after a nested marker, carry no marker of the Spell's, so I21
+/// cannot see them. Draws nothing.
 fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameState) -> Vec<String> {
     let mut found: Vec<String> = Vec::new();
     if step.marks.is_empty() {
@@ -1558,11 +1624,21 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
     }
     let barred = crate::restrictions::defense_barred(after);
     let mut released: IndexSet<&str> = IndexSet::new();
+    // R4599009: the judged Units gone from the field by the step's end, judged by their own keywords as
+    // the step began, and those of them a `controlChanged` has named so far, whose keywords a change of
+    // hands may have changed since.
+    let gone: IndexSet<&str> = judged
+        .iter()
+        .copied()
+        .filter(|id| find_instance(after, id).is_none_or(|card| !matches!(card.zone, Zone::Field { .. })))
+        .collect();
+    let mut handed: IndexSet<&str> = IndexSet::new();
     // The ids a `trapFired` named so far: a card set face-down whose trap fires runs as a Trap.
     let mut fired: IndexSet<&str> = IndexSet::new();
     let pending = step.pending_instance.as_deref();
     let mut run = ImmuneRun {
         running: step.pending_def.as_deref(),
+        source: pending,
         spell: step
             .pending_def
             .as_deref()
@@ -1578,13 +1654,77 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
     let mut nested: Vec<(&str, ImmuneRun<'_>)> = Vec::new();
     // R4508003: under Tears of the Kwzki Tree every card is Radiant (R3569000).
     let radiant_world = after.radiant_world == Some(true);
+    // R4599001: the Units an affliction ticked on so far in the step.
+    let mut ticked: IndexSet<&str> = IndexSet::new();
+    // R4599002: the cards announced face-down in the step, each set as it is played.
+    let mut set_now: IndexSet<&str> = IndexSet::new();
+    // R4599004: a lasting board rule that exiles stood as the step began or stands as it ends, or a
+    // card with an exile aura arrived on the field during it.
+    let mut board_exile = step.board_exiles || board_exiles(after);
+    // R4599008: the damage each marked Unit holds so far in the step, by its `damage` and `healed`.
+    let mut hurt: IndexMap<&str, i32> = step
+        .marks
+        .iter()
+        .map(|(id, mark)| (id.as_str(), mark.damage))
+        .collect();
     for (at, event) in events.iter().enumerate() {
+        let previous = at.checked_sub(1).and_then(|before| events.get(before));
+        if let Some(GameEvent::ControlChanged { instance_id, .. }) = previous
+            && gone.contains(instance_id.as_str())
+        {
+            handed.insert(instance_id);
+        }
+        let next = events.get(at + 1);
+        // R4599001: every affliction tick of the step, in a Spell's run or not, a shield the Burn took
+        // among them (R4599007).
+        for id in reached_ids(event) {
+            if ticks_on(event, previous, id) || shield_ticks(event, next, id) {
+                ticked.insert(id);
+            }
+        }
         match event {
+            GameEvent::Damage {
+                target_id, amount, ..
+            } => {
+                if let Some(held) = hurt.get_mut(target_id.as_str()) {
+                    *held = held.saturating_add(*amount);
+                }
+            }
+            GameEvent::Healed {
+                target_id, amount, ..
+            } => {
+                if let Some(held) = hurt.get_mut(target_id.as_str()) {
+                    *held = (*held - *amount).max(0);
+                }
+            }
+            _ => {}
+        }
+        // R4599004: a card with an exile aura arrives on the field, its aura exiling at the next state
+        // check, though it may be gone again by the step's end.
+        if let GameEvent::Summoned { def_id, .. } | GameEvent::CardPlayed { def_id, .. } = event
+            && !crate::scripts::script_of(after, def_id)
+                .base
+                .exile_auras
+                .is_empty()
+        {
+            board_exile = true;
+        }
+        match event {
+            // R4599002: a card announced face-down is set as it is played, and its run is a Trap's.
+            GameEvent::CardAnnounced {
+                instance_id,
+                face_down: Some(true),
+                ..
+            } => {
+                set_now.insert(instance_id);
+                continue;
+            }
             GameEvent::HookResolving {
                 source_id, def_id, ..
             } => {
                 run = ImmuneRun {
                     running: Some(def_id),
+                    source: Some(source_id),
                     spell: runs_a_spell(after, def_id, Some(source_id), &step.set, &fired),
                     takes_lane: takes_a_lane(after, def_id) || copies_a_lane_taker(after, source_id),
                     window: None,
@@ -1609,15 +1749,38 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
             }
             // A play begins its own run (its `onPlayHook`s and its arrival are no Spell's), and the run it
             // interrupted goes on once it resolves.
-            GameEvent::CardPlayed { instance_id, .. } => {
+            GameEvent::CardPlayed {
+                instance_id,
+                former_id,
+                ..
+            } => {
+                // R4599002: the card announced face-down in the step (under its former id when the play
+                // gave it a new one) runs as a Trap, though it leaves the field as it resolves.
+                if set_now.contains(instance_id.as_str())
+                    || former_id
+                        .as_deref()
+                        .is_some_and(|former| set_now.contains(former))
+                {
+                    fired.insert(instance_id);
+                }
                 nested.push((instance_id, run));
                 run = ImmuneRun::NONE;
                 continue;
             }
-            GameEvent::CardResolved { instance_id, .. } => {
+            GameEvent::CardResolved {
+                instance_id, def_id, ..
+            } => {
                 if let Some(at) = nested.iter().rposition(|(played, _)| played == instance_id) {
                     run = nested[at].1;
                     nested.truncate(at);
+                }
+                // R4599003: a card's run ends at its own `cardResolved`, the one an answer continued
+                // (a cast on draw's target, asked before its play) included: what follows is no longer
+                // its.
+                if run.source == Some(instance_id.as_str())
+                    || (run.source.is_none() && run.running == Some(def_id.as_str()))
+                {
+                    run = ImmuneRun::NONE;
                 }
                 continue;
             }
@@ -1628,8 +1791,16 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 run.window = Some(ImmuneWindow::Carry);
                 continue;
             }
-            GameEvent::RolledBack { .. } => {
+            GameEvent::RolledBack { sides, .. } => {
                 run.window = Some(ImmuneWindow::Restore);
+                // R4599010: a restored side stands as its snapshot holds it, so for the rest of the step
+                // what stood there is no longer the immune Unit the step began with (R4524001's I19).
+                released.extend(
+                    step.marks
+                        .iter()
+                        .filter(|(_, mark)| sides.contains(&mark.side))
+                        .map(|(id, _)| id.as_str()),
+                );
                 continue;
             }
             GameEvent::AttackDeclared { .. } => {
@@ -1646,21 +1817,58 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 continue;
             };
             let id = id.as_str();
-            if released.contains(id) || !judged.contains(id) {
+            if released.contains(id) || handed.contains(id) || !judged.contains(id) {
                 continue;
             }
             let lawful = match event {
                 // R4508002: an attack, the Spell's forced one included.
                 _ if run.window == Some(ImmuneWindow::Combat) => true,
                 // R4508005: an affliction's tick.
-                _ if ticks_on(event, at.checked_sub(1).and_then(|before| events.get(before)), id) => true,
+                _ if ticks_on(event, previous, id) => true,
+                // R4599007: a Burn's removal after its tick, other hits between (a chain's echoes), or on
+                // an Indestructible Unit, whose tick leaves no event (§4.4 step 4).
+                GameEvent::CounterChanged {
+                    counter: crate::wire::CounterKind::Burn,
+                    value: 0,
+                    ..
+                } => {
+                    ticked.contains(id)
+                        || find_instance(after, id)
+                            .is_some_and(|card| table.unit_has(card, KeywordKind::Indestructible))
+                }
+                // R4599007: a Divine Shield the Burn tick took, the Burn removed right after its hit.
+                GameEvent::DivineShieldLost { .. } => shield_ticks(event, next, id),
+                // R4599011: it evolves by its own text, a standing condition the state check reads or
+                // its own trigger; a Spell's `evolve` passes it by where it aims.
+                GameEvent::Evolved { .. } => true,
+                // R4599001: a death naming a killer is its lethal hit's, judged where it landed (a
+                // destroy effect clears the credit, R42), and one after a tick on it is the tick's;
+                // R4599008: one whose max health the damage it holds already met is a layer's (an aura
+                // that left or changed), whose cause is judged as its own event.
+                GameEvent::Destroyed {
+                    killer_id,
+                    max_health,
+                    ..
+                } => {
+                    killer_id.is_some()
+                        || ticked.contains(id)
+                        || hurt.get(id).is_some_and(|held| *max_health <= *held)
+                        // R4599012: a kill deadline's destroy, a delayed effect made before the step,
+                        // its mark taken off right before it (S+ #94 PIP, R3550006).
+                        || matches!(
+                            previous,
+                            Some(GameEvent::Marked { instance_id, mark, added: false, .. })
+                                if instance_id == id && mark == crate::effects::delay::DEADLINE_MARK
+                        )
+                }
                 // R4508001: a board move carries it whole, or bounces it on the way.
                 GameEvent::ControlChanged { .. } | GameEvent::Bounced { .. } => run.window.is_some(),
                 // R4508001: Bogos Binted's Radiant face rebuilds its side Radiant (R4454002); R4508003:
                 // Tears of the Kwzki Tree's world.
                 GameEvent::RadiantSet { .. } => run.window == Some(ImmuneWindow::Restore) || radiant_world,
-                // R4508004: a lane the board loses.
-                GameEvent::Exiled { .. } => run.takes_lane,
+                // R4508004: a lane the board loses; R4599004: a lasting board rule's exile at the state
+                // check (an exile aura, an open Black Hole).
+                GameEvent::Exiled { .. } => run.takes_lane || board_exile,
                 // R4508005: §4.5 step 1 switches it out of a Defense Position the board bars it from.
                 GameEvent::PositionSwitched {
                     position: Position::Atk,
