@@ -41660,7 +41660,8 @@
       "2026-11-23T10:10:49Z,45152079986,claude-4,opus,suggest,,,interrupted,5-hour cap,7.3,25,12777,875286,8.3998,43,70,,,,,none,,1",
       "2026-11-23T10:10:52Z,45149691428,claude-4,opus,build,4577,hard,interrupted,5-hour cap,23,0,0,0,,0,70,,,51.3,claude-7,fresh,cap,1",
       "2026-11-23T10:16:04Z,45147122751,claude-8,opus,plan,4599,hard,interrupted,5-hour cap,45.8,0,0,0,,12,87,,,2.3,,fresh,,1",
-      "2026-11-23T10:20:33Z,45152366233,claude-1,opus,suggest,,,suggested,,15.3,25,18125,2107555,17.7912,47,86,,,,,none,,1"
+      "2026-11-23T10:20:33Z,45152366233,claude-1,opus,suggest,,,suggested,,15.3,25,18125,2107555,17.7912,47,86,,,,,none,,1",
+      "2026-11-23T10:23:48Z,45152171569,claude-6,opus,suggest,,,suggested,,20.8,4,6366,317549,16.7308,0,62,,,,,none,,1"
     ]
   },
   "version": 1
