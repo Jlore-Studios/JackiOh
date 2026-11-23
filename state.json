@@ -16644,13 +16644,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "gpt"
+        ],
         "builder": "gpt",
         "built_by": "gpt",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "gpt",
+            "provider": "gpt",
+            "run": "45086029586",
+            "tier": "medium"
+          }
+        ],
         "sha": "dfdbf99d91185e7e8d45309c6af6cb0f0f06bc80",
-        "tiers": {}
+        "tiers": {
+          "gpt": "medium"
+        }
       }
     },
     "4531": {
