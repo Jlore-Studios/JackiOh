@@ -16380,6 +16380,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "gpt",
       "owner_since": "2026-11-23T20:32:43Z",
@@ -16390,9 +16391,12 @@
       "planned_by_id": "claude-6",
       "planned_model": "sonnet",
       "planned_tier": "medium",
+      "pr": 4635,
       "provider": "gpt",
+      "question": "",
       "queued_at": "2026-11-23T19:38:50Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "medium",
       "run_id": "45260481178",
       "runs_on": "night-vm-gpt",
       "started_at": "2026-11-23T20:32:43Z",
@@ -16400,7 +16404,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:7111393291"
-      ]
+      ],
+      "verdict_rounds": 0
     },
     "4614": {
       "action": "build",
