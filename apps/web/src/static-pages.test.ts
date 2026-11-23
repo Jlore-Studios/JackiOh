@@ -24,10 +24,12 @@ import {
   NOT_FOUND_HAND,
   PAGE_TEXT,
   PUBLIC_PAGES,
+  VERSION_FILE,
   connectSources,
   notFoundHtml,
   sitemapXml,
   staticPages,
+  versionEntryOf,
   writeStaticPages,
 } from "../static-pages.ts";
 import { CardFace } from "./cards/CardFace.tsx";
@@ -235,6 +237,18 @@ describe("the static pages", () => {
     const locs = [...sitemap.matchAll(/<loc>([^<]*)<\/loc>/gu)].map((match) => match[1]);
     expect(locs).toEqual(PUBLIC_PAGES.map((page) => `${SITE_ORIGIN}${page.path}`));
     expect(sitemap).not.toMatch(/lastmod|changefreq|priority/u);
+  });
+
+  it("R4605000 writes version.json naming the entry script of index.html", () => {
+    const outDir = writeAll({}, []);
+    const version = JSON.parse(readFileSync(join(outDir, VERSION_FILE), "utf8")) as { entry: string };
+    const template = new DOMParser().parseFromString(TEMPLATE, "text/html");
+    expect(version.entry).toBe(template.querySelector('script[type="module"]')?.getAttribute("src"));
+    expect(version.entry).toBe(versionEntryOf(TEMPLATE));
+    expect(version.entry).toBe("/src/main.tsx");
+    expect(() => {
+      versionEntryOf("<html><head></head><body></body></html>");
+    }).toThrow(/has no entry script/u);
   });
 
   it("name the host each build is served from in every address and in its CSP: jackioh.com in production, staging.jackioh.com on staging", () => {
