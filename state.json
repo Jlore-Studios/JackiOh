@@ -17634,15 +17634,10 @@
     "what": "plan #4550 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-23T02:44:11Z",
+    "at": "2026-11-23T02:54:07Z",
     "notes": [
       "#4508 is held for `claude-4` until 21:00 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
-      "delivered build #4516 on claude-3 (run 45092422898): built",
-      "started review #4549 on claude-3 (run 45102109119)",
-      "started plan #4550 on claude-1 (run 45102163097)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is idle, but nothing queued is for it; `claude-8` is idle, but nothing queued is for it; `claude-1` is busy; `claude-4` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-23T04:00:00Z; it can start a build or a plan again in 12m; `claude-6` is idle, but nothing queued is for it; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` is idle, but nothing queued is for it; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4508 held for `claude-4` until 21:00 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
-      "pruned 5 plan file(s) older than 7 days",
-      "#4550: typed it Task"
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18348,7 +18343,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T02:44:11Z",
+  "loop_tick": "2026-11-23T02:54:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
