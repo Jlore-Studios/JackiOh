@@ -18,7 +18,8 @@ import { glossaryFor } from "../../test/faceWords.ts";
 import { faceModel, type FaceModel } from "../model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { CLICK_SUPPRESS_MS, HOVER_DELAY_MS, LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./constants.ts";
-import { CardDetail, closeInspect, isInspectKey, useInspectTrigger, type InspectOptions, type InspectSubject } from "./index.ts";
+import { closeInspect, isInspectKey, useInspectTrigger, type InspectOptions, type InspectSubject } from "./index.ts";
+import { CardDetail } from "./CardDetail.tsx";
 import {
   INSPECT_CLOSE,
   INSPECT_DETAIL,

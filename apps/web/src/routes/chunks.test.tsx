@@ -16,7 +16,7 @@ vi.doMock("../cards/art/sceneLoader.ts", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   loadSceneData,
 }));
-const { resetRoutePrefetchForTests, routeChunk, routeChunks, watchRouteIntent } = await import("./chunks.tsx");
+const { resetRoutePrefetchForTests, routeChunk, routeChunks, startScreen, watchRouteIntent } = await import("./chunks.tsx");
 
 function Stub(): ReactElement {
   return <p data-testid="stub-screen">stub</p>;
@@ -88,13 +88,11 @@ describe("R2116000 prefetching a screen on intent", () => {
       <>
         <a href="https://example.com/privacy">Elsewhere</a>
         <a href="/">Home</a>
-        <a href="/account">Account</a>
       </>,
     );
 
     fireEvent.pointerEnter(screen.getByText("Elsewhere"));
     fireEvent.pointerEnter(screen.getByText("Home"));
-    fireEvent.pointerEnter(screen.getByText("Account"));
 
     for (const load of loads) expect(load).not.toHaveBeenCalled();
     expect(loadWasm).not.toHaveBeenCalled();
@@ -225,6 +223,17 @@ describe("R2116000 prefetching a screen on intent", () => {
     expect(loadSceneData).toHaveBeenCalledTimes(5);
   });
 
+  it("#4517 intent toward /account loads its chunk and starts loadWasm() and loadSceneData()", () => {
+    const account = vi.spyOn(routeChunks.account, "load").mockResolvedValue(stubModule);
+    render(<a href="/account">Account</a>);
+
+    fireEvent.pointerEnter(screen.getByText("Account"));
+
+    expect(account).toHaveBeenCalledTimes(1);
+    expect(loadWasm).toHaveBeenCalledTimes(1);
+    expect(loadSceneData).toHaveBeenCalledTimes(1);
+  });
+
   it("R2116000 intent toward Together and the leaderboard starts loadWasm() and loadSceneData()", () => {
     const together = vi.spyOn(routeChunks.together, "load").mockResolvedValue(stubModule);
     const leaderboard = vi.spyOn(routeChunks.leaderboard, "load").mockResolvedValue(stubModule);
@@ -285,5 +294,23 @@ describe("R2116000 prefetching a screen on intent", () => {
     // R2784000: the motif gallery too.
     expect(production.routeChunks.fxGallery).toBeNull();
     expect(() => production.prefetchRoute("/dev/hotseat")).not.toThrow();
+  });
+});
+
+describe("R2630001 starting a gated screen", () => {
+  it("#4517 startScreen(\"/account\", true) asks for the account chunk beside the engine", () => {
+    const account = vi.spyOn(routeChunks.account, "load").mockResolvedValue(stubModule);
+    startScreen("/account", true);
+    expect(account).toHaveBeenCalledTimes(1);
+    expect(loadWasm).toHaveBeenCalledTimes(1);
+    expect(loadSceneData).toHaveBeenCalledTimes(1);
+  });
+
+  it("#4517 startScreen(\"/privacy\", false) loads only its chunk", () => {
+    const privacy = vi.spyOn(routeChunks.privacy, "load").mockResolvedValue(stubModule);
+    startScreen("/privacy", false);
+    expect(privacy).toHaveBeenCalledTimes(1);
+    expect(loadWasm).not.toHaveBeenCalled();
+    expect(loadSceneData).not.toHaveBeenCalled();
   });
 });

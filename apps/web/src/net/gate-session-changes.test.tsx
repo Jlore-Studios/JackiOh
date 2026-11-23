@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AUTH_SESSION_REFRESH_MARGIN_SECONDS } from "@jackioh/server-config";
 import { inviteTestid, shellTestid } from "../auth/testids.ts";
-import { signOut } from "../routes/account.tsx";
+import { signOut } from "../auth/signOut.ts";
 import InviteRoute from "../routes/invite.tsx";
 import { jsonResponse } from "../test/stubServer.ts";
 import { ApiRequestError } from "./api.ts";

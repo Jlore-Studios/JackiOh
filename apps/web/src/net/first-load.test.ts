@@ -79,8 +79,14 @@ const SOURCE = join(SRC, "patches/source.ts");
  * entry chunk. `vite build --mode development`, as CI builds it, measured 413,393 bytes
  * (6,988 less). The budget is now 51 × 8192 (417,792), about 4 KB (1.1%)
  * over that: putting the drawer panels back would cross it.
+ *
+ * #4517 lowered it: the card detail dialog (its patch history and win-rate box) rides its own
+ * lazy chunk behind the landing's fan cards, and the account screen rides `routeChunks.account`
+ * while only its sign-out helpers stay in the entry. `vite build --mode development`, as CI
+ * builds it, measured 384,276 bytes (29,117 less). The budget is now 48 × 8192 (393,216),
+ * about 9 KB (2.3%) over that: putting either module back would cross it.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 417_792;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 393_216;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -202,6 +208,66 @@ it("#4444 no non-test module statically imports the friends drawer panels", () =
   const dynamicDrawer = /import\(\s*["'][^"']*FriendsDrawer\.tsx["']\s*\)/u;
   const holders = files.filter((path) => dynamicDrawer.test(readFileSync(path, "utf8")));
   expect(holders.map((path) => relative(SRC, path))).toEqual(["together/friendsDrawerChunk.ts"]);
+});
+
+it("#4517 no lazy chunk is already in the entry's static graph", () => {
+  // A `lazy()` or `routeChunk` `import()` that resolves to code the entry already loads
+  // statically is dead weight in disguise: the bundler keeps the module in the entry chunk
+  // and the dynamic import fetches nothing new (#4517: the landing's `lazy()` CardDetail rode
+  // in through the `cards/` barrels). Walk the static import graph from `main.tsx` (value
+  // imports and re-exports; `import type` and `export type` lines emit no bytes, and test
+  // files are never the entry's) and fail on any non-test `import()` target inside it.
+  // Regexes over source, like this file's other checks: they cannot see a specifier built at
+  // runtime, and the client uses none outside `import.meta.glob`.
+  const entry = join(SRC, "main.tsx");
+  const staticFrom = /from\s+["']([^"']+)["']/gu;
+  const dynamicTo = /import\(\s*["']([^"']+)["']/gu;
+  const resolveRelative = (importer: string, specifier: string): string | null => {
+    if (!specifier.startsWith(".")) return null;
+    const base = join(dirname(importer), specifier);
+    const candidates = [base, `${base}.ts`, `${base}.tsx`, join(base, "index.ts"), join(base, "index.tsx")];
+    return candidates.find((candidate) => existsSync(candidate) && statSync(candidate).isFile()) ?? null;
+  };
+  const valueTextOf = (path: string): string =>
+    readFileSync(path, "utf8")
+      .split("\n")
+      .filter((line) => !/^\s*import\s+type\b/u.test(line) && !/^\s*export\s+type\b/u.test(line))
+      .join("\n");
+  const reachable = new Set<string>([entry]);
+  const queue = [entry];
+  while (queue.length > 0) {
+    const current = queue.pop() as string;
+    if (/\.test\.tsx?$/u.test(current)) continue;
+    for (const match of valueTextOf(current).matchAll(staticFrom)) {
+      const next = resolveRelative(current, match[1] ?? "");
+      if (next !== null && !reachable.has(next)) {
+        reachable.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  expect(reachable.size).toBeGreaterThan(100);
+  // The only loaders allowed in the entry's static graph, each with its reason: their payloads
+  // sit behind lazy globs or lazy imports this file already guards.
+  const allowed = new Map<string, string>([
+    // Payload rides its lazy glob beside the engine; the small loader sits in the entry on purpose.
+    ["cards/chinese.ts", "payload rides its lazy glob beside the engine"],
+    // Recipes ride its lazy import; the small loader sits in the entry on purpose.
+    ["audio/sfxLoader.ts", "recipes ride its lazy import"],
+  ]);
+  const offenders: string[] = [];
+  for (const importer of [...reachable].sort()) {
+    if (/\.test\.tsx?$/u.test(importer)) continue;
+    for (const match of readFileSync(importer, "utf8").matchAll(dynamicTo)) {
+      const target = resolveRelative(importer, match[1] ?? "");
+      if (target === null || !reachable.has(target)) continue;
+      const rel = relative(SRC, target);
+      if (allowed.has(rel)) continue;
+      offenders.push(`${relative(SRC, importer)} → ${rel}`);
+    }
+  }
+  expect(offenders.sort()).toEqual([]);
+  expect([...allowed.keys()].sort()).toEqual(["audio/sfxLoader.ts", "cards/chinese.ts"]);
 });
 
 it("#4435 no non-test module names flavour.json except cards/flavour.ts, which never imports it statically", () => {
@@ -346,6 +412,32 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     // figure pose, and a figure item each a recipe places.
     const sceneProbes = ["bone-scarecrow", "pose-genuflect", "item-trunk-club"];
     for (const probe of sceneProbes) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4517 the entry chunk and its preloads hold no card-history text", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    // Each probe is a runtime string, so minification keeps it, and each occurs in `src` only in
+    // the card history view, its tests, or comments: the history's loading line, its failure
+    // line, and its line for a card no patch recorded.
+    const historyProbes = ["Loading this card's history…", "This card's history didn't load.", "No patch has recorded this card."];
+    for (const probe of historyProbes) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4517 the entry chunk and its preloads hold no account-screen text", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    // Each probe is a runtime string, so minification keeps it, and each occurs in `src` only in
+    // the account screen or its tests: the sign-out note, the screen's loading line, and the
+    // profile header's member line. Never the sign-out buttons' own words: those stay in the entry.
+    const accountProbes = [
+      "Signing out forgets this session on this device and revokes it.",
+      "Loading your account…",
+      "Member since",
+    ];
+    for (const probe of accountProbes) {
       for (const text of texts) expect(text).not.toContain(probe);
     }
   });
