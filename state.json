@@ -17131,15 +17131,8 @@
       }
     },
     "4544": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45093645053",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-23T01:26:55Z",
-        "until": "2026-11-23T01:56:55Z"
-      },
       "difficulty_by": {
         "at": "2026-11-23T01:26:46Z",
         "difficulty": "medium",
@@ -17158,10 +17151,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- ## Files to touch\n- | File | New / change | What changes there |\n- |---|---|---|\n- | [apps/web/src/game/PromptCards.test.tsx](/apps/web/src/game/PromptCards.test.tsx) | change | Only the `#4511` test at line 534: build a fresh JSX element for the `rerender` call instead of reusing the `tree` object (lines 536-549) |\n- Do not touch anything else: not [Prompt.tsx](/apps/web/src/game/Prompt.tsx) (`CardOption`'s `useMemo`), not [faces.ts](/apps/web/src/game/faces.ts), not the collection hover test, not the stats keystroke test, not any crate, spec, or ruling. No spec section or ruling governs this change; it is a te\u2026\n- ## Steps\n- 1. In [PromptCards.test.tsx](/apps/web/src/game/PromptCards.test.tsx), open the test `it(\"#4511 a board re-render ...\", ...)` (line 534) and read lines 535-550: `view` from `discoverView()`, `tree` built once, `render(tree)`, `faceCalls.length = 0`, then the broken `rerender(tree)`.\n- 2. Replace only line 549, `rerender(tree);`, with a fresh element that re-renders `Prompt` with the same `view` and unchanged options but a new `onAction` identity so `Prompt` and its options render again (copy the fresh-element shape from the passing scroll test in [OwnedCards.render.test.tsx](/ap\u2026\n- ```tsx\n- rerender(\n- <CatalogContext.Provider value={lookup}>\n- <Prompt view={view} onAction={vi.fn()} />\n- </CatalogContext.Provider>,\n- );\n- ```\n- Keep `view` the same object, `lookup` the same provider value, `faceCalls.length = 0` before it, and the existing `expect(faceCalls.filter((request) => request.call === \"card\")).toHaveLength(0);` after it unchanged. Delete or stop using the now-unneeded `tree` variable (either inline the first `ren\u2026\n- 3. Leave the rest of the test untouched: the `DISCOVER` option presence checks, the `optionCalls` helper, and the `await act(async () => { await setLocale(\"zh-CN\"); })` block with its rebuild assertions.\n- 4. Negative control (local check only, not committed): temporarily revert the memo in `CardOption` in [Prompt.tsx](/apps/web/src/game/Prompt.tsx) (lines 931-954, the `useMemo` wrapping `liveFace`/`faceModel` plus `pricedFace`) to a direct per-render computation, run the test file, and confirm the b\u2026\n- ## Tests\n- - Test file: [apps/web/src/game/PromptCards.test.tsx](/apps/web/src/game/PromptCards.test.tsx), existing test `#4511 a board re-render that leaves the picker's options unchanged builds no option's face, and a language switch rebuilds every face`. No new test names; the fixed test is the test. It as\u2026\n- - Negative control: same file with the `useMemo` in `CardOption` temporarily reverted (step 4) \u2014 the zero-face-calls assertion must fail, proving the test exercises the memo.\n- - Commands (in this order, from the repo root):\n- - `pnpm --dir apps/web test src/game/PromptCards.test.tsx` (rebuilds the WASM module the web tests load, then runs the file; all tests in it pass, including the negative-control failure while the memo is reverted and the pass once restored)\n- - `cargo jackioh spec check` is not affected (no ruling added or cited); run it only if anything outside the test file changed, which should not happen.\n- ## Done when\n- - [ ] The `#4511` board re-render assertion uses a fresh JSX element in `rerender`, not the reused `tree` object.\n- - [ ] The fixed test passes with the `useMemo` in place and was observed to fail with the `useMemo` temporarily reverted (memo reverted only for the check, fully restored after).\n- - [ ] The language-switch half of the same test is unchanged and passing.\n- - [ ] `pnpm --dir apps/web test src/game/PromptCards.test.tsx` is green; no test skipped, ignored, weakened, or deleted to get there.\n- - [ ] `git status --porcelain` shows changes only under `apps/web/src/game/PromptCards.test.tsx` (plus no committed changes at all; the harness commits).\n- ## Risks\n- - Reusing any part of the old element (same `onAction` closure, same `tree`) could still bail out the render; the fix avoids this by constructing brand-new JSX with a new `vi.fn()` each time, so `Prompt` props always change identity while option contents stay equal.\n- - Touching `CardOption`'s dependency array or `liveFace`/`faceModel` wiring would risk face staleness (wrong language, cost, or field power) for a test-only issue; the builder changes no production code, so this risk is avoided by construction.\n- - Locale leakage between tests (`setLocale(\"zh-CN\")`) is already handled by the file's `afterEach` (`resetLocaleForTests`), which stays untouched.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4544 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4544/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-23T01:16:36Z",
       "owner_why": "it plans it",
@@ -17174,19 +17166,19 @@
       "provider": "muse",
       "queued_at": "2026-11-23T01:14:31Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "45093645053",
+      "run_id": "pending:b25c8ad1-1795397244",
       "runs_on": "night-vm-muse",
       "spot_check_of": 4531,
-      "started_at": "2026-11-23T01:16:36Z",
+      "started_at": "2026-11-23T01:27:48Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T01:17:43Z",
+    "at": "2026-11-23T01:27:48Z",
     "url": "",
-    "what": "plan #4542 on muse"
+    "what": "build #4544 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T01:13:38Z",
