@@ -31,6 +31,7 @@ import {
   getWallet,
   keptPaths,
   type CollectionResponse,
+  type DecksResponse,
 } from "../net/api.ts";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { DECK_SIZE } from "../game/deckbuilder/deckSize.ts";
@@ -39,7 +40,7 @@ import { DB_EMPTY, DB_SEARCH, DB_SORT, filterOwnershipId, filterRarityId } from 
 import { decksResponse, savedDeck } from "../game/deckbuilder/testkit.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { deckPath, newDeckPath, paths } from "../net/navigate.ts";
-import { rememberRead } from "../net/readCache.ts";
+import { forgetRead, rememberRead, updateCachedRead } from "../net/readCache.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { SETTINGS_GROUPS } from "../settings/groups.ts";
 import { cosmeticPacksInfo, ownedCosmeticsOf, tokenBars, walletInfo } from "../shop/fixtures.ts";
@@ -514,6 +515,75 @@ describe("R3734000 the Collection's tabs", () => {
       await screen.findByTestId(T.screen);
       cleanup();
     }
+  });
+});
+
+describe("R4568000 the Decks tab follows the kept decks", () => {
+  it("R4568000 the Decks tab drops a deleted deck and refreshes a completed deck with no remount", async () => {
+    window.history.replaceState(null, "", paths.collectionSection("decks"));
+    const kept = decksOf();
+    rememberRead(TOKEN, keptPaths.decks, kept);
+    answerAll();
+    vi.mocked(getDecks).mockResolvedValue(kept);
+    render(<CollectionRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId(T.deckTile("d-legal"))).toHaveAttribute("data-status", "ready");
+    expect(screen.getByTestId(T.deckTile("d-short"))).toHaveAttribute("data-status", "incomplete");
+    expect(getDecks).toHaveBeenCalledTimes(1);
+
+    // A landed deletion folds into the kept decks as syncDecks folds one (withoutDeck, with no trios
+    // here to empty): the tab drops the tile with no new read.
+    act(() => {
+      updateCachedRead<DecksResponse>(TOKEN, keptPaths.decks, (before) => ({
+        ...before,
+        decks: before.decks.filter((deck) => deck.id !== "d-legal"),
+      }));
+    });
+    expect(screen.queryByTestId(T.deckTile("d-legal"))).toBeNull();
+    expect(screen.getByTestId(T.deckTile("d-short"))).toBeInTheDocument();
+    expect(getDecks).toHaveBeenCalledTimes(1);
+
+    // A landed save that completes the short deck flips its tile to ready with its full count.
+    act(() => {
+      updateCachedRead<DecksResponse>(TOKEN, keptPaths.decks, (before) => ({
+        ...before,
+        decks: before.decks.map((deck) => (deck.id === "d-short" ? { ...deck, cards: legalCards() } : deck)),
+      }));
+    });
+    const short = screen.getByTestId(T.deckTile("d-short"));
+    expect(short).toHaveAttribute("data-status", "ready");
+    expect(short).toHaveTextContent(`${String(DECK_SIZE)}/${String(DECK_SIZE)}`);
+    expect(getDecks).toHaveBeenCalledTimes(1);
+  });
+
+  it("R4568000 a forgotten decks answer leaves the drawn tiles, and an unmounted tab is not called", async () => {
+    window.history.replaceState(null, "", paths.collectionSection("decks"));
+    const kept = decksOf();
+    rememberRead(TOKEN, keptPaths.decks, kept);
+    answerAll();
+    vi.mocked(getDecks).mockResolvedValue(kept);
+    const { unmount } = render(<CollectionRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId(T.deckTile("d-legal"))).toBeInTheDocument();
+
+    act(() => {
+      forgetRead(TOKEN, keptPaths.decks);
+    });
+    expect(screen.getByTestId(T.deckTile("d-legal"))).toBeInTheDocument();
+    expect(screen.getByTestId(T.deckTile("d-short"))).toBeInTheDocument();
+
+    unmount();
+    // While nothing is mounted a save lands as the server's new word; no listener is left to call.
+    const landed = { ...kept, decks: kept.decks.filter((deck) => deck.id !== "d-short") };
+    act(() => {
+      rememberRead(TOKEN, keptPaths.decks, landed);
+    });
+
+    // A fresh mount draws the folded answer.
+    vi.mocked(getDecks).mockResolvedValue(landed);
+    render(<CollectionRoute token={TOKEN} />);
+    expect(await screen.findByTestId(T.deckTile("d-legal"))).toBeInTheDocument();
+    expect(screen.queryByTestId(T.deckTile("d-short"))).toBeNull();
   });
 });
 
