@@ -25,8 +25,8 @@ fn card(id: &str, set: &str, index: &str, token: bool) -> CardDef {
     }))
 }
 
-/// Core cards on each side of both thresholds, a long Core token and a long card of each single-player
-/// set.
+/// Core cards on each side of both thresholds, a long Core token, a long card of each single-player
+/// set and one of the held single-player set (R4577000).
 fn defs() -> CardDefs {
     [
         card("core-001", "Core", "1", false),
@@ -37,6 +37,7 @@ fn defs() -> CardDefs {
         card("core-005-1", "Core", "5.1", true),
         card("boss-001", "Boss", "1", false),
         card("bossx-001", "Boss-X", "1", false),
+        card("infiniteassault-001", "Infinite Assault", "1", false),
     ]
     .into_iter()
     .map(|def| (def.id.clone(), def))
@@ -53,6 +54,7 @@ fn code_lines() -> Vec<(&'static str, usize)> {
         ("core-005-1", BUSTED_CODE_LINES * 2),
         ("boss-001", BUSTED_CODE_LINES * 2),
         ("bossx-001", BUSTED_CODE_LINES * 2),
+        ("infiniteassault-001", BUSTED_CODE_LINES * 2),
     ]
 }
 
@@ -169,6 +171,35 @@ fn r1846001_every_set_adds_the_single_player_sets() {
     // A set a thread previews is open, so it joins without `everySet` (R1420).
     let _preview = preview_sets(&[SetName::Boss]);
     assert_eq!(pool(json!({ "busted": true })), vec!["core-001", "boss-001"]);
+    clear_overrides();
+}
+
+/// R4577000: a single-player set held while it is built is in no pool but one that names it or its
+/// cards, `everySet` included, until a thread previews it.
+#[test]
+fn r4577000_a_held_single_player_set_is_in_no_pool_but_one_that_names_it() {
+    setup();
+    assert_eq!(HELD_SINGLE_PLAYER_SETS, [SetName::InfiniteAssault]);
+    assert_eq!(
+        pool(json!({ "busted": true, "everySet": true })),
+        vec!["core-001", "boss-001", "bossx-001"]
+    );
+    assert!(!pool(json!({})).contains(&"infiniteassault-001".to_string()));
+    assert!(!pool(json!({ "everySet": true })).contains(&"infiniteassault-001".to_string()));
+    assert_eq!(
+        pool(json!({ "busted": true, "set": "Infinite Assault" })),
+        vec!["infiniteassault-001"]
+    );
+    assert_eq!(
+        pool(json!({ "defId": ["infiniteassault-001"] })),
+        vec!["infiniteassault-001"]
+    );
+    {
+        // The testkit's every-set preview opens it, as it opens a held set (R1420).
+        let _preview = preview_every_set();
+        assert!(pool(json!({ "busted": true })).contains(&"infiniteassault-001".to_string()));
+    }
+    assert_eq!(pool(json!({ "busted": true })), vec!["core-001"]);
     clear_overrides();
 }
 

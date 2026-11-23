@@ -57,8 +57,13 @@ pub struct ClimbedPrice {
 
 // Matching
 
-/// Whether a rule's type list reaches this card (all types when it names none).
+/// Whether a rule's type list reaches this card (all types when it names none), and, for a rule of
+/// Created cards, whether the card is Created (R4577003).
 pub fn rule_reaches(state: &GameState, rule: &CostRule, card: &CardInstance) -> bool {
+    // R4577003: a rule for Created cards passes a dealt one by.
+    if rule.created == Some(true) && !crate::query::is_created(card) {
+        return false;
+    }
     match &rule.types {
         None => true,
         Some(types) if types.is_empty() => true,
@@ -160,12 +165,12 @@ pub fn climb_price_rules(price: i32, rules: &PriceRules, curvature: impl Fn(i32)
         all.push((&aura.rule, None));
     }
     let mut cost = price;
-    // Flat rungs: every add with no threshold.
+    // Flat rungs: every add with no threshold and no floor.
     for (rule, id) in &all {
         let Some(amount) = rule.amount else {
             continue;
         };
-        if rule.min_cost.is_some() {
+        if rule.min_cost.is_some() || rule.floor.is_some() {
             continue;
         }
         cost += amount;
@@ -187,6 +192,21 @@ pub fn climb_price_rules(price: i32, rules: &PriceRules, curvature: impl Fn(i32)
         if let Some(id) = id {
             used.insert((*id).to_string());
         }
+    }
+    // R4577003: floored rungs ("but not less than (N)"), each on the number the rungs before it
+    // left, in the walk's order, so a second one stops at the same floor; a card already below its
+    // floor keeps its price.
+    for (rule, id) in &all {
+        let (Some(floor), Some(amount)) = (rule.floor, rule.amount) else {
+            continue;
+        };
+        let after = (cost + amount).max(cost.min(floor));
+        if after != cost
+            && let Some(id) = id
+        {
+            used.insert((*id).to_string());
+        }
+        cost = after;
     }
     // "Costs (N)": the lowest set wins over every add.
     let mut set: Option<i32> = None;
@@ -305,9 +325,10 @@ pub fn cost_rule_text(rule: &CostRule, next: bool) -> String {
         Some(min_cost) => format!("({min_cost})+ Cost "),
     };
     let subject = format!(
-        "{}{}{}",
+        "{}{}{}{}",
         if next { "Your next " } else { "Your " },
         threshold,
+        if rule.created == Some(true) { "Created " } else { "" },
         types_text(rule.types.as_deref(), plural)
     );
     let verb = if plural { "cost" } else { "costs" };
@@ -315,10 +336,14 @@ pub fn cost_rule_text(rule: &CostRule, next: bool) -> String {
         return format!("{subject} {verb} ({set_to})");
     }
     let amount = rule.amount.unwrap_or(0);
+    let floor = rule
+        .floor
+        .map(|floor| format!(", but not less than ({floor})"))
+        .unwrap_or_default();
     if amount < 0 {
-        return format!("{subject} {verb} ({}) less", -amount);
+        return format!("{subject} {verb} ({}) less{floor}", -amount);
     }
-    format!("{subject} {verb} ({amount}) more")
+    format!("{subject} {verb} ({amount}) more{floor}")
 }
 
 /// An `enchantNextSpell` modifier's badge caption.

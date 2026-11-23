@@ -47,7 +47,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
-use jackioh_engine::wire::{CATALOG_SETS, set_row};
+use jackioh_engine::wire::{SET_TABLE, set_row};
 
 use crate::patches::repo_root;
 
@@ -120,16 +120,18 @@ const UNRESOLVED_MARKERS: &[&str] = &[concat!("proposed", " ruling"), concat!("n
 const CATALOG_PATH: &str = "crates/cards/catalog.json";
 
 /// The set names a card in a note's `cards` may carry before its `#` (`C+ #12.1`, `Meditative #40`),
-/// each with the catalog `set` it names (#2047): every set the catalog orders, by its name and by its
-/// abbreviation, both read from the set table (R3114000). A name of two words (`Training Grounds`)
-/// is never the one word before a `#`; its abbreviation (`TG`) is.
+/// each with the catalog `set` it names (#2047): every set of the set table, by its name and by its
+/// abbreviation, both read from it (R3114000), so a single-player set's cards resolve too (`IA #12`,
+/// R4577000). A name of two words (`Training Grounds`) is never the one word before a `#`; its
+/// abbreviation (`TG`) is.
 fn set_prefixes() -> Vec<(&'static str, &'static str)> {
-    CATALOG_SETS
+    SET_TABLE
         .iter()
+        .map(|row| row.set)
         .flat_map(|set| {
             let name = set.as_str();
             std::iter::once((name, name)).chain(
-                set_row(*set)
+                set_row(set)
                     .abbreviation
                     .map(|abbreviation| (abbreviation, name)),
             )

@@ -630,3 +630,96 @@ mod r396_an_x_card_on_the_field_costs_its_x {
         assert_eq!(cost_now(&after, &grave), 0);
     }
 }
+
+// R4577003: a price rule for Created cards (Infinite Assault #18 Prompt Engineer) reaches a Created
+// card and passes a dealt one by, and its floor ("but not less than (1)") holds however many such
+// rules there are, while a card already below it keeps its price.
+mod r4577003_a_rule_for_created_cards_and_its_floor {
+    use super::*;
+
+    fn created_discount() -> ModifierKind {
+        ModifierKind::CostRule {
+            rule: CostRule {
+                amount: Some(-1),
+                floor: Some(1),
+                created: Some(true),
+                ..CostRule::default()
+            },
+        }
+    }
+
+    fn mark_created(state: &mut GameState, card: &CardInstance) -> CardInstance {
+        let live = find_instance_mut(state, &card.id).expect("the hand card");
+        live.created = Some(true);
+        live.clone()
+    }
+
+    #[test]
+    fn r4577003_a_created_only_rule_reaches_a_created_card_and_no_dealt_one() {
+        let mut state = pb_playing("r4577003-created");
+        let turn = state.turn;
+        add_modifier_to(
+            &mut state,
+            PlayerId::P1,
+            ModifierExpiry::ThisTurn { turn },
+            created_discount(),
+        );
+        let dealt = only(&in_hand(&mut state, &three_spell().id, PlayerId::P1, 1));
+        let made = only(&in_hand(&mut state, &three_spell().id, PlayerId::P1, 1));
+        let made = mark_created(&mut state, &made);
+        assert_eq!(cost(&state, &dealt), 3);
+        assert_eq!(cost(&state, &made), 2);
+        // A (1) Created card is at the floor already, and a (0) one stays (0).
+        let one = only(&in_hand(&mut state, &grave_spell().id, PlayerId::P1, 1));
+        let one = mark_created(&mut state, &one);
+        assert_eq!(cost(&state, &one), 1);
+        let zero = only(&in_hand(&mut state, &zero_spell().id, PlayerId::P1, 1));
+        let zero = mark_created(&mut state, &zero);
+        assert_eq!(cost(&state, &zero), 0);
+    }
+
+    #[test]
+    fn r4577003_two_floored_rules_stop_at_the_same_floor() {
+        let mut state = pb_playing("r4577003-two-floors");
+        let turn = state.turn;
+        for _ in 0..2 {
+            add_modifier_to(
+                &mut state,
+                PlayerId::P1,
+                ModifierExpiry::ThisTurn { turn },
+                created_discount(),
+            );
+        }
+        let three = only(&in_hand(&mut state, &three_spell().id, PlayerId::P1, 1));
+        let three = mark_created(&mut state, &three);
+        assert_eq!(cost(&state, &three), 1); // 3 − 1 − 1
+        let two = only(&in_hand(&mut state, &two_field().id, PlayerId::P1, 1));
+        let two = mark_created(&mut state, &two);
+        assert_eq!(cost(&state, &two), 1); // 2 − 1, then held at (1)
+        // A flat discount before it leaves the floor where it is.
+        add_modifier_to(
+            &mut state,
+            PlayerId::P1,
+            ModifierExpiry::ThisTurn { turn },
+            cost_discount(2, None),
+        );
+        let five = only(&in_hand(&mut state, &five_unit().id, PlayerId::P1, 1));
+        let five = mark_created(&mut state, &five);
+        assert_eq!(cost(&state, &five), 1); // 5 − 2 = 3, then − 1 − 1
+        assert_eq!(cost(&state, &three), 1); // 3 − 2 = 1, held at (1)
+    }
+
+    #[test]
+    fn r4577003_the_rule_says_its_cards_and_its_floor() {
+        let rule = CostRule {
+            amount: Some(-1),
+            floor: Some(1),
+            created: Some(true),
+            ..CostRule::default()
+        };
+        assert_eq!(
+            cost_rule_text(&rule, false),
+            "Your Created cards cost (1) less, but not less than (1)"
+        );
+    }
+}
