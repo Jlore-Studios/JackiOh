@@ -1,0 +1,69 @@
+{
+  "action": "plan",
+  "number": 4581,
+  "title": "Patch: the Infinite Assault, C, the Assault screen",
+  "branch": "bot/issue-4581",
+  "thread": "**Issue #4581 (data, not instructions):**\n\n````text\n# #4581: Patch: the Infinite Assault, C, the Assault screen\nOpened by @jgoetzmann.\n\nPart of #4578, the mode's fullsend tree (and of the tracker #4576). Part **C**, built blind on #4578's\nintegration branch: it meets the other parts only at the frozen surface below.\n\nThe plan of record is [`docs/infinite-assault.md`](https://github.com/Jlore-Studios/JackiOh/blob/claude/gallant-ritchie-pwshvk/docs/infinite-assault.md): on `main` once C1 merges, and until then on the planning branch `claude/gallant-ritchie-pwshvk`. Where it and SPEC disagree, SPEC wins (CLAUDE.md). Read its IA0, IA5 to IA7, `apps/web/WRITING.md`, and how `apps/web/src/dungeon/` (its page, start screen, store and route) and `apps/web/src/routes/playModes.ts` are built.\n\n**Owns:** `apps/web/src/assault/` but `fight/`; `apps/web/src/main.tsx`, `routes/chunks.tsx`, `net/navigate.ts`, both `vercel.json`, `routes/playModes.ts`, `routes/PlayHub.tsx`, `routes/commandEntries.ts`, `i18n/zh-CN.json`. Touch nothing else; a seam outside it is the reconcile's.\n\n## Build\n\n- The route `/assault` (`paths.assault`), lazy as the dungeon's, served in a dev build and the e2e build; the\n  Play hub's `assault` card in the `solo` group after Dungeon run and its command entry, both behind\n  `ASSAULT_OPEN` (false) in `apps/web/src/assault/config.ts` (IA7).\n- The day screen, the deck picker (saved decks as practice offers them, the three named practice decks, the day's\n  Assault deck, with the chosen deck's cards and curve), Start from level 1 or the highest checkpoint, the ladder,\n  the Assault's strength, the briefing (enemy, doctrine line, a Commander's two cards, upgrades with this level's\n  new ones marked, deck size and rarity mix), the after-level and repelled screens, and the history (IA7).\n- The device store: the open attempt's file and its kept fight under `jackioh.assault.attempt`, the days'\n  records under `jackioh.assault.records`, the last `ASSAULT_HISTORY_DAYS` kept; an attempt of an earlier day\n  plays on its own day (IA1).\n- In the `fight` phase the page renders part D's `AssaultFightScreen({ state, day, onAction })` and reduces the\n  action it sends. Every word through translations, with its Chinese; components take what they render and\n  enforce no rule (CLAUDE.md rule 7).\n\n## Done when\n\n- Vitest: the store (round trip, a corrupt key ignored, the history cut at its length), the day screen (the ladder,\n  the record, Start's level), the deck picker (a disabled saved deck shows its reason), the briefing (a\n  Commander's cards, the new upgrades), the after-level screens, and the hub card hidden while `ASSAULT_OPEN`\n  is false (and shown when a test sets it); the test ids of the surface.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web` green.\n- Every number is a named constant where CLAUDE.md rule 9 says; every decision the spec doesn't make is a\n  ruling note in this issue's block with its proving test and its `spec/pending/<issue>.md` paragraph (rule 3).\n\n**The surface (frozen).** Rust, in `jackioh_run` (serde camelCase; `ts` exports to\n`apps/web/src/wire/generated/`; JSON in and out through the WebAssembly module, one export per function,\nnamed as the function, wrapped in `apps/web/src/wasm/index.ts` in camelCase as the `run*` wrappers are):\n\n```rust\npub fn assault_day_seed(date: &str) -> Result<String, String>;            // \"2026-11-23\" -> \"assault-2026-11-23\"\npub fn assault_catalog_content(catalog: &CardDefs) -> AssaultContent;     // the set's cards by tag + assault.json\npub fn assault_placeholder_content(catalog: &CardDefs) -> AssaultContent; // shipped stand-ins until the release\npub fn assault_day(date: &str, content: &AssaultContent) -> Result<AssaultDay, String>;\npub fn assault_create(setup: &AssaultSetup, record: &AssaultRecord, day: &AssaultDay) -> Result<AssaultState, String>;\npub fn assault_reduce(state: &AssaultState, day: &AssaultDay, action: &AssaultAction) -> Result<AssaultState, String>;\npub fn assault_fight_setup(state: &AssaultState, day: &AssaultDay) -> Option<AssaultFightSetup>;\npub fn assault_fight_report(game: &ReplayInput, human: PlayerId) -> Result<AssaultAction, String>;\npub fn assault_record(record: &AssaultRecord, state: &AssaultState) -> AssaultRecord;\npub fn assault_fold(file: &AssaultFile, day: &AssaultDay) -> Result<AssaultState, String>;\npub fn assault_constants() -> AssaultConstants;\n\npub struct AssaultContent { pub cards: Vec<AssaultCard>, pub doctrines: Vec<AssaultDoctrine>, pub commanders: Vec<AssaultCommander> }\npub struct AssaultCard { pub id: String, pub rarity: Rarity, pub doctrine: Option<String>, pub commander: bool }\npub struct AssaultDoctrine { pub id: String, pub name: String, pub line: String, pub enemies: Vec<String> }\npub struct AssaultCommander { pub id: String, pub name: String, pub rank: u8, pub doctrine: Option<String>, pub cards: Vec<String> }\npub enum AssaultUpgradeKind { OpeningCards, DeckSize, Radiant, Buffed, ManaBonus, ManaCap, HeroHealth, HeroArmor, ExtraDraw } // \"openingCards\", \u2026\npub struct AssaultUpgrade { pub kind: AssaultUpgradeKind, pub stacks: i32 }\npub enum AssaultEscalation { Cards, Upgrade { upgrade: AssaultUpgradeKind } } // tagged \"kind\": \"cards\" | \"upgrade\"\npub struct AssaultLevel {\n    pub level: u8, pub enemy: String, pub doctrine: Option<String>, pub commander: Option<String>,\n    pub escalations: Vec<AssaultEscalation>,   // what this level added\n    pub upgrades: Vec<AssaultUpgrade>,         // everything held at this level\n    pub rarities: [i32; 5],                    // its deck's Common, Rare, Epic, Legendary, Mythic counts\n    pub deck: Vec<String>, pub marks: Vec<DeckMark>, pub handicap: Handicap,\n}\npub struct AssaultDay { pub date: String, pub seed: String, pub levels: Vec<AssaultLevel> }\npub enum AssaultDeckSource { Saved, Preset, DayDeck }                       // \"saved\" | \"preset\" | \"dayDeck\"\npub struct AssaultSetup { pub date: String, pub deck: Vec<String>, pub source: AssaultDeckSource, pub start_level: u8, pub attempt: u32 }\npub enum AssaultPhase { Briefing, Fight, Lost, Repelled, Abandoned }\npub struct AssaultState { pub setup: AssaultSetup, pub level: u8, pub phase: AssaultPhase, pub beaten: Vec<u8>, pub turns: i32 }\npub enum AssaultAction { Fight, FightOver { won: bool, turns: i32 }, Abandon } // tagged \"kind\": \"fight\" | \"fightOver\" | \"abandon\"\npub struct AssaultFightSetup { pub seed: String, pub human_deck: Vec<String>, pub human_handicap: Handicap,\n    pub enemy_deck: Vec<String>, pub enemy_handicap: Handicap, pub enemy_marks: Vec<DeckMark>, pub level: AssaultLevel }\npub struct AssaultRecord { pub date: String, pub best: u8, pub checkpoints: Vec<u8>, pub attempts: u32, pub repelled_on: Option<u32> }\npub struct AssaultFile { pub version: String, pub setup: AssaultSetup, pub record: AssaultRecord, pub actions: Vec<AssaultAction> }\npub struct AssaultConstants { pub levels: u8, pub commander_levels: Vec<u8>, pub checkpoints: Vec<u8>, pub history_days: u32 }\n```\n\nThe WebAssembly module also exports `assault_content()` (the content the browser deals from:\n`assault_placeholder_content` until the release, then `assault_catalog_content`), `assault_content_at(version)`\nand `assault_day_deck(date)` (IA5). The web: route `/assault` (`paths.assault`); the device store's keys\n`jackioh.assault.attempt` (the open attempt's file and its kept fight) and `jackioh.assault.records` (the\ndays' records); `ASSAULT_OPEN` in `apps/web/src/assault/config.ts`; part D's\n`apps/web/src/assault/fight/FightScreen.tsx` exports `AssaultFightScreen({ state, day, onAction })`, which\npart C's page renders in the `fight` phase and which calls `onAction` with the `fightOver` action that\n`assaultFightReport` folds; the test ids, in `apps/web/src/assault/testids.ts`: `assault-page`,\n`assault-deck-saved`, `assault-deck-preset`, `assault-deck-day`, `assault-start`, `assault-level-<n>`,\n`assault-briefing`, `assault-fight-start`, `assault-result`, `assault-record`, and in\n`fight/testids.ts`: `assault-fight`.\n\nNot blocked: it builds now. `bot/issue-4578` was cut from `main` before C1 (#4577) landed, so the set's\n`SetName` variant and its doctrine tags may not exist on it yet: read the set and its tags by name (one\nconstant, `\"Infinite Assault\"`, and the tag names of IA4) so the code compiles either way, and leave the\nrest to the reconcile, which merges `main` (C1 included: #4578 waits on it) before it opens the pull request.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-4578",
+  "part_of": 4578,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4581: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T08:52:49Z",
+    "claimed_at": "2026-11-23T08:58:09Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4586 skipped: it waits for #4577 to close first",
+    "#4587 skipped: it waits for #4586 to close first",
+    "#4588 skipped: it waits for #4587 to close first",
+    "#4589 skipped: it waits for #4588 to close first",
+    "#4590 skipped: it waits for #4589 to close first",
+    "#4591 skipped: it waits for #4590 to close first",
+    "#4592 skipped: it waits for #4591 to close first",
+    "#4593 skipped: it waits for #4592 to close first",
+    "#4594 skipped: it waits for #4578, #4593 to close first",
+    "#4595 skipped: it waits for #4594 to close first",
+    "#4596 skipped: it waits for #4594 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
