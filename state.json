@@ -18756,6 +18756,13 @@
     "4607": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-23T17:55:22Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: no engine rules, no AI decisions, one crate (jackioh-tools) plus docs/spec, no migration, ~8 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
