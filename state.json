@@ -41687,7 +41687,7 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": null,
+    "idle_since": "2026-11-23T18:08:37Z",
     "last_area": "tests",
     "last_run": "2026-11-23T11:12:16Z",
     "provider": null,
