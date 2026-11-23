@@ -16183,6 +16183,13 @@
     "4513": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45092477152",
+        "model": "gemini-3.8-flash-high",
+        "provider": "agy",
+        "since": "2026-11-23T01:15:11Z",
+        "until": "2026-11-23T01:45:11Z"
+      },
       "difficulty_by": {
         "at": "2026-11-23T01:15:02Z",
         "difficulty": "medium",
