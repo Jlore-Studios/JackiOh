@@ -16612,6 +16612,7 @@
       "run_id": "45086029586",
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
+      "spot_check_n": 461,
       "started_at": "2026-11-22T23:57:46Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -38810,7 +38811,7 @@
         "verdict": "clean"
       }
     ],
-    "count": 460
+    "count": 461
   },
   "statistics": {
     "at": "2026-11-23T00:16:34Z"
