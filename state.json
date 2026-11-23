@@ -16981,11 +16981,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-23T01:37:49Z",
+        "at": "2026-11-23T02:04:53Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "rule line 1: the change rewrites draw paths in the resolution loop (crates/engine/src/prompts.rs, play_steps.rs, cry_trigger.rs)."
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "Engine rules line: it adds testkit record calls inside crates/engine/src (prompts.rs, play_steps.rs, cry_trigger.rs, play_choices.rs) and a new invariant in the engine's testkit"
       },
       "failures": 0,
       "forced": false,
