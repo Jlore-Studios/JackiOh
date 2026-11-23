@@ -106,12 +106,28 @@ func Reason(state *pyjson.Object, number int, text string) bool {
 		return false
 	}
 	entry.Set("reason", text)
+	onDecision(state, number, text)
+	return true
+}
+
+// ApprovalReason puts a person's reason for approving suggestion `number` on its decision, once,
+// so the judge reads why a suggestion was approved as well as why one was rejected (`Reason`).
+// True when it kept it. Blank text, or a suggestion with no decision, changes nothing.
+func ApprovalReason(state *pyjson.Object, number int, text string) bool {
+	text = py.SliceTo(strings.Join(py.Split(text), " "), ReasonChars)
+	return text != "" && onDecision(state, number, text)
+}
+
+// onDecision puts `text` on each of suggestion `number`'s decisions that has no reason yet.
+func onDecision(state *pyjson.Object, number int, text string) bool {
+	kept := false
 	for _, d := range DecidedEntries(state) {
 		if py.MustInt(py.Or(d.Get("number"), 0)) == number && d.Str("reason") == "" {
 			d.Set("reason", text)
+			kept = true
 		}
 	}
-	return true
+	return kept
 }
 
 // DecidedEntries is the log of decisions, newest last.

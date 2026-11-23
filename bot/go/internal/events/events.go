@@ -568,12 +568,20 @@ func OpenSuggestion(ctx *hctx.Context, number int) bool {
 // AnswerVote is answer_vote: a person's vote on one of my suggestions (#760): `approve` queues it
 // to build, which takes `bot:suggestion` off (`queue_build`), as `bot:build` does; `reject` closes
 // it as not planned, which frees its place under `suggestions.max_open` for the next survey, and
-// goes into the log of suggestions that came to nothing (`declined`, #797), with the rest of the
-// vote's comment as its reason when it gives one. A rejected one keeps its label, so it still
-// reads as a suggestion, and reopened it can be approved.
+// goes into the log of suggestions that came to nothing (`declined`, #797). Either way the rest of
+// the vote's comment, when it gives one, is kept as the decision's reason, which the judge reads.
+// A rejected one keeps its label, so it still reads as a suggestion, and reopened it can be
+// approved.
 func AnswerVote(ctx *hctx.Context, vote string, number int, by string, ask *asks.Ask /* = None */, reason string) string {
 	if vote == "approve" {
-		return queueBuild(ctx, number, by, false, false, ask, nil)
+		answer := queueBuild(ctx, number, by, false, false, ask, nil)
+		if reason != "" {
+			ctx.Store.Update(func(s *pyjson.Object) any {
+				declined.ApprovalReason(s, number, reason)
+				return nil
+			}, fmt.Sprintf("suggestion #%d's reason", number))
+		}
+		return answer
 	}
 	issue := ctx.GH.GetIssue(number)
 	if issue.Get("state") != "open" {
