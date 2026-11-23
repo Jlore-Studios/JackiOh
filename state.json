@@ -19543,6 +19543,13 @@
     "4623": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-23T20:06:18Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Rule 1: it changes the engine's rules in crates/engine/src (state_check.rs's death collect step and combat.rs's forced-attack path)."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
