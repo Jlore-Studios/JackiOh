@@ -16183,6 +16183,13 @@
     "4513": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-23T01:15:02Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "touches no engine rules, AI decisions/search, cross-crate designs beyond call sites, migrations, or 40+ files; otherwise it is medium"
+      },
       "failures": 1,
       "forced": false,
       "handoff": {
