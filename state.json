@@ -18668,9 +18668,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T09:43:57Z",
+    "at": "2026-11-23T09:59:34Z",
     "url": "",
-    "what": "build #4577 on claude-4"
+    "what": "suggestions (tests) on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-23T09:51:44Z",
@@ -41384,13 +41384,22 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-23T09:52:24Z",
-    "last_area": "client",
-    "last_run": "2026-11-23T06:01:39Z",
+    "idle_since": "2026-11-23T09:59:34Z",
+    "last_area": "tests",
+    "last_run": "2026-11-23T09:59:34Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {},
+    "running": {
+      "1": {
+        "area": "tests",
+        "count": 2,
+        "last_run": "2026-11-23T09:59:34Z",
+        "provider": "claude-6",
+        "run_id": "pending:56c244b3-1795427951",
+        "taken_asks": []
+      }
+    },
     "taken_asks": []
   },
   "usage": null,
