@@ -40717,7 +40717,8 @@
       "2026-11-23T23:48:54Z,claude-6,stream,call,45288712094,22,2026-11-24T04:20:00Z,,,allowed,50,,"
     ],
     "runs": [
-      "2026-11-23T23:49:03Z,45291412371,muse,muse-spark-1.3-contributor,plan,4652,medium,planned,,2.5,0,0,0,,3,3,24,24,1.3,,none,,1"
+      "2026-11-23T23:49:03Z,45291412371,muse,muse-spark-1.3-contributor,plan,4652,medium,planned,,2.5,0,0,0,,3,3,24,24,1.3,,none,,1",
+      "2026-11-23T23:48:55Z,45288712094,claude-6,opus,plan,4586,hard,planned,,19.9,13,12355,2042831,11.2334,0,22,,,250.6,claude-3,fresh,other,1"
     ]
   },
   "version": 1
