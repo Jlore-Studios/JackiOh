@@ -17636,6 +17636,8 @@
       "taken_asks": []
     },
     "4554": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-23T02:37:01Z",
@@ -17649,8 +17651,11 @@
         "trail": "h: {\"command\": \"grep -n \\\"^## \\\\|^### \\\\|A screen\\\" training/improve.md | head -40\", \"description\": \"Map training/improve.md sections\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4448/training/improve.md\", \"offset\": 122, \"limit\": 72}\n- Bash: {\"command\": \"ls training/; git ls-files | grep -i attempts; grep -rn \\\"4447\\\\|2928\\\" training/ | cut -c1-250 | head\", \"description\": \"Look for attempts.md and prior screen records\"}\n- Bash: {\"command\": \"grep -rn \\\"attempts.md\\\" training/*.md training/README.md | cut -c1-250 | head; ls training/history | head\", \"description\": \"Find where attempts.md lives\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4448/.bot-notes.md\", \"content\": \"# #4448 notes\\n\\n## State\\n\\n- Plan: the planner's Part P/Part B plan (on the issue, and in `.bot-journal.md`, run 20\u2026\n- Bash: {\"command\": \"grep -rn \\\"turn_hook\\\\|\\\\.activation\\\\b\\\" --include=*.md . 2>/dev/null | grep -v node_modules | grep -v \\\"^./.bot\\\" | cut -c1-220 | head -20\", \"description\": \"Find docs naming the two kn\u2026\n- said: Both fork screens came back reverted (the maintainer's comment on the issue). So both knobs stay at 0.5, and this run only records the screens. Editing `config.rs` now.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4448/crates/ai/src/config.rs\", \"old_string\": \" // R2477000: an untuned start for the training lanes, as R2424000's is. At 0.5 th\u2026\n- Bash: {\"command\": \"awk 'NR>=769 && NR<=779 { print length($0) \\\": \\\" substr($0,1,40) }' crates/ai/src/config.rs\", \"description\": \"Check the edited lines fit 110 columns\"}\n- Bash: {\"command\": \"sed -n '1,40p' crates/tools/src/fork_screen.rs | cut -c1-200; grep -n \\\"eprintln\\\\|println\\\" crates/tools/src/fork_screen.rs | head\", \"description\": \"Read the fork screen's header and ou\u2026\n- Bash: {\"command\": \"sed -n '660,690p' crates/tools/src/fork_screen.rs\", \"description\": \"Read where the fork screen prints its lines\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4448/training/improve.md\", \"old_string\": \" whose gain compounds across moves reads low on it, never high (R4397000).\\n4.\", \"new_\u2026\n- Bash: {\"command\": \"grep -n \\\"call_timeout_minutes\\\\|job_timeout\\\" .harness/config.json; awk 'NR>=164 && NR<=178 { print length($0) }' training/improve.md | tr '\\\\n' ' '; echo; git diff --stat\", \"descriptio\u2026\n- Bash: {\"command\": \"grep -rln \\\"ai/src/config.rs\\\" crates/*/tests crates/tools/src 2>/dev/null | head; grep -rn \\\"improve.md\\\" crates/*/tests crates/tools/src 2>/dev/null | cut -c1-200 | head -5\", \"descript\u2026\n- Bash: {\"command\": \"grep -n \\\"ai/src/config.rs\\\" crates/tools/src/trace.rs | head -3\", \"description\": \"See how trace.rs reads config.rs\"}\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M): edits done (config.rs comments, improve.md step 3). Running fmt, clippy -p jackioh-ai, spec check, cargo test -p jackioh-ai.\\\" >> .bot-notes.md; cargo fmt --c\u2026\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -3\", \"description\": \"Run the spec check\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo test -p jackioh-ai 2>&1 | grep -E \\\"^test result|FAILED|panicked|error\\\" | tail -12\", \"description\": \"Run the AI crate's tests\", \"timeout\": 600000, \"run_in_background\": true}\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -8\", \"description\": \"Read what classify does per the tools README\"}\n- Bash: {\"command\": \"sleep 240; cat /tmp/claude-1001/-home-runner-work--temp-work-item-4448/723d9d16-da17-43b9-bf32-6cf28f350f2c/tasks/bf09ocomp.output | tail -5\", \"description\": \"Wait briefly, then check th\u2026\n- tool error: <tool_use_error>Blocked: sleep 240 followed by: cat /tmp/claude-1001/-home-runner-work--temp-work-item-4448/723d9d16-da17-43b9-bf32-6cf28f350f2c/tasks/bf09ocomp.output tail -5. To wait for a conditio\u2026\n- said: The AI tests are still running in the background. I'll wait for them to finish before running `classify`, since both commands lock the same build directory.\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-4448/723d9d16-da17-43b9-bf32-6cf28f350f2c/tasks/bf09ocomp.output; until ! pgrep -f \\\"cargo test -p jackioh-ai\\\" >/dev/null; do sleep \u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4448/723d9d16-da17-43b9-bf32-6cf28f350f2c/tasks/bf09ocomp.output | tail -12\", \"description\": \"Show the AI test results\"}\n- Bash: {\"command\": \"grep \\\"^test result\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4448/723d9d16-da17-43b9-bf32-6cf28f350f2c/tasks/bf09ocomp.output; grep -c \\\"FAILED\\\" /tmp/claude-1001/-home-runne\u2026\n- said: The AI crate's tests all pass (69 + 993 + 102; 15 are daily tests that were already marked to skip). Next is `classify`, to confirm a comment-only change is read as changing no play.\n- Bash: {\"command\": \"pkill -f \\\"until ! pgrep\\\" 2>/dev/null; git rev-parse --verify -q origin/main >/dev/null && echo has-origin-main; timeout 550 cargo jackioh classify --base origin/main --claims 2>&1 | ta\u2026\n- tool error: Exit code 144\n- Bash: {\"command\": \"git rev-parse --verify -q origin/main >/dev/null && echo has-origin-main; timeout 550 cargo jackioh classify --base origin/main --claims 2>&1 | tail -8\", \"description\": \"Classify the bra\u2026\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M): fmt ok, clippy -p jackioh-ai ok, spec check ok, cargo test -p jackioh-ai ok (69+993+102, 15 daily ignored), classify --claims: Internal. Done; only the final \u2026\n- Bash: {\"command\": \"grep -n -i \\\"resume\\\\|checkpoint\\\" crates/tools/src/fork_screen.rs crates/tools/src/arena.rs | head -5; echo \\\"---\\\"; grep -n \\\"forks\\\" crates/tools/src/arena.rs | grep -i \\\"flag\\\\|long\\\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI's turn-hook and Activate shares are fork-screened at a whole use and set where the screen keeps them\"} --> Both fork screens came back **reverted**, so the AI plays exactly as before. `AI_EVAL.turn_hook` and `AI_EVAL.activation` stay at 0.5. This\u2026"
       },
       "issue": 4448,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-23T03:36:42Z",
         "from_run": "45101241479",
         "gates": [
           {
@@ -17742,7 +17747,11 @@
         "source": "build",
         "until": "2026-11-23T04:05:50Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-23T03:35:50Z",
+      "run_id": "pending:3a880a97-1795404982",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17761,6 +17770,9 @@
         "provider": "claude-7",
         "run": "45101241479"
       },
+      "started_at": "2026-11-23T03:36:42Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17774,9 +17786,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T03:27:58Z",
+    "at": "2026-11-23T03:36:42Z",
     "url": "",
-    "what": "build #4513 on agy"
+    "what": "review #4554 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-23T03:26:42Z",
