@@ -3453,14 +3453,14 @@ fn dev_dependency_missing_duos(manifest: &str) -> bool {
         let line = raw.split('#').next().unwrap_or("").trim();
         if line.starts_with('[') {
             in_dev = line == "[dev-dependencies]";
-        } else if in_dev && !line.is_empty() {
-            if line
+        } else if in_dev
+            && !line.is_empty()
+            && line
                 .strip_prefix("jackioh-wasm-core")
                 .and_then(|rest| rest.trim_start().strip_prefix('='))
                 .is_some_and(|rest| rest.contains("features") && rest.contains("\"duos\""))
-            {
-                return false;
-            }
+        {
+            return false;
         }
     }
     true
