@@ -14,7 +14,7 @@
 //!   4. FAILURE DETAIL: every card id in the failing seed's two decks is named in the report, because
 //!      a bare seed number is useless against a 100-card pool.
 //!
-//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I20 and I22 hold on every applicable state or action
+//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I22 hold on every applicable state or action
 //! (stage "invariant"); I11 finds Unit tokens left in the graveyards, exile piles or held cards (R11), I12
 //! shadows chosen switches and declared attacks through each turn and stint (R49, R636), I13 holds every
 //! hand card and admitted graveyard card `legalActions` lists no play of to a `playReason` (§10.8, R979000,
@@ -35,6 +35,8 @@
 //! on the played path, on I14's branches and in each Duos duel.
 //! I20 holds each field card's stored `damage` to the stream's `damage` and `healed` events (§4.4, §10.3, R78;
 //! #4478), on the played path and in each Duos duel.
+//! I21 fails a step in which a Spell changes a Unit Immune to Spells on the field (§6.1, R4453000; #4508), on
+//! the played path, on I14's branches and in each Duos duel.
 //! I22 holds every random `target` draw, listed `target` declaration and open `target` prompt to what its
 //! source may aim at (R450, R452, R1200, R1839000, R4353002; #4540), on the played path and in each Duos duel.
 //! I9 holds the wire to the state: each `turnStarted`, `turnEnded`, `gameOver` and `manaChanged` to the

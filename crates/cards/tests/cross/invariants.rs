@@ -1,5 +1,6 @@
 //! Invariants I2 (R44, R386, R636, #874), I6 hidden information (SPEC §10.8, issue #348, R177, R227,
-//! R312, R466), I8 (issues #1192, #1574) and I14 (#3062). Test paths: SURFACE §4.1, §8.
+//! R312, R466), I8 (issues #1192, #1574) and I14 (#3062), and I21's Spell sweep (#4508). Test paths:
+//! SURFACE §4.1, §8.
 
 use jackioh_engine::testkit::*;
 
@@ -3426,5 +3427,330 @@ mod i19_the_board_sweeps_of_s_plus_78_to_81 {
         swept(echo, PlayerId::P1, 1, |s| {
             s.play(ECHO, json!({}));
         });
+    }
+}
+
+// I21 (#4508): every shipped Spell and Spell token, on each face that is a Spell, cast at a board with a
+// Unit Immune to Spells on each side, passes it by (§6.1, R4453000): no I21 from the monitor, and no
+// change to the immune stand-in's view in a step only Spells ran.
+mod i21_every_spell_passes_a_unit_immune_to_spells_by {
+    use super::*;
+    use jackioh_engine::faces::card_type_of_face;
+    use jackioh_engine::layers::{UnitView, unit_view};
+    use jackioh_engine::wire::{CardType, SwapWhat};
+
+    const IMMUNE: &str = "stand-in (1) 4/4 Immune to Spells";
+    const PLAIN: &str = "stand-in (1) 4/4";
+    /// The most prompts one play's run is answered through.
+    const ANSWER_CAP: usize = 8;
+    /// Where each side's immune stand-in stands.
+    const IMMUNE_LANE: i32 = 2;
+
+    /// Every shipped definition, with each face that is a Spell (base `false`, Radiant `true`), in id
+    /// order: a card or token that joins the catalog joins the sweep.
+    fn spell_faces() -> Vec<(String, bool)> {
+        let mut ids: Vec<&String> = jackioh_cards::CATALOG
+            .iter()
+            .filter(|(_, def)| set_ships(def.set))
+            .map(|(id, _)| id)
+            .collect();
+        ids.sort();
+        ids.into_iter()
+            .flat_map(|id| {
+                let def = &jackioh_cards::CATALOG[id];
+                [(false, &def.base), (true, &def.radiant)]
+                    .into_iter()
+                    .filter(|(_, face)| face.type_.unwrap_or(def.type_) == CardType::Spell)
+                    .map(|(radiant, _)| (id.clone(), radiant))
+                    .collect::<Vec<_>>()
+            })
+            .collect()
+    }
+
+    /// p1's main phase with `spell` in hand on `radiant`'s face at full mana; on each side a 1/4 in lane 1,
+    /// the immune stand-in in lane 2 and a 9/4 in lane 3 (p2's first two Radiant), and plain stand-ins to
+    /// draw. No card on it has text but the Spell.
+    fn board(spell: &str, radiant: bool) -> Scenario {
+        let library = json!([PLAIN, PLAIN, PLAIN, PLAIN, PLAIN, PLAIN]);
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [{ "def": spell, "radiant": radiant }],
+                "mana": 10,
+                "field": [
+                    { "def": "stand-in (1) 1/4", "lane": 1 },
+                    { "def": IMMUNE, "lane": IMMUNE_LANE },
+                    { "def": "stand-in (1) 9/4", "lane": 3 },
+                ],
+                "library": library,
+            },
+            "p2": {
+                "field": [
+                    { "def": "stand-in (1) 1/4", "lane": 1, "radiant": true },
+                    { "def": IMMUNE, "lane": IMMUNE_LANE, "radiant": true },
+                    { "def": "stand-in (1) 9/4", "lane": 3 },
+                ],
+                "library": library,
+            },
+        }));
+        for player in [PlayerId::P1, PlayerId::P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        s
+    }
+
+    /// What the hold keeps of an immune stand-in: its controller, its zone and its layered view.
+    fn held(state: &GameState, id: &str) -> Option<(PlayerId, Zone, UnitView)> {
+        let card = find_instance(state, id)?;
+        matches!(card.zone, Zone::Field { .. })
+            .then(|| (card.controller, card.zone.clone(), unit_view(state, card)))
+    }
+
+    /// Whether `def_id` on `source_id`'s face is a Spell, as the catalog prints it.
+    fn is_spell(state: &GameState, def_id: &str, source_id: &str) -> bool {
+        let radiant = find_instance(state, source_id).is_some_and(|card| card.radiant);
+        jackioh_engine::catalog::find_def(Some(state), def_id).is_some()
+            && card_type_of_face(state, def_id, radiant) == CardType::Spell
+    }
+
+    /// Whether a step's view of an immune stand-in may lawfully change with no event naming it: a run
+    /// that is no Spell's (a card the Spell made, a trap), an attack (R4508002), a board move (R4508001),
+    /// the AI's turn, a turn edge, the Radiant world (R4508003), or a card with an aura on the field.
+    fn hold_skipped(
+        state: &GameState,
+        events: &[GameEvent],
+        scripts: &IndexMap<String, CardScripts>,
+    ) -> bool {
+        let others = events.iter().any(|event| match event {
+            GameEvent::HookResolving {
+                source_id, def_id, ..
+            } => !is_spell(state, def_id, source_id),
+            GameEvent::TrapFired { .. }
+            | GameEvent::AttackDeclared { .. }
+            | GameEvent::Swapped {
+                what: SwapWhat::Board,
+            }
+            | GameEvent::Rotated { .. }
+            | GameEvent::RolledBack { .. }
+            | GameEvent::AutopilotEngaged { .. }
+            | GameEvent::TurnStarted { .. }
+            | GameEvent::TurnEnded { .. } => true,
+            _ => false,
+        });
+        let aura = [PlayerId::P1, PlayerId::P2].into_iter().any(|player| {
+            let side = &state.players[player];
+            side.units
+                .iter()
+                .flatten()
+                .flatten()
+                .chain(side.backrow.iter().flatten())
+                .filter(|card| !card.def_id.starts_with("stand-in"))
+                .any(|card| {
+                    scripts
+                        .get(&card.def_id)
+                        .is_none_or(|script| script.base.aura.is_some() || script.radiant.aura.is_some())
+                })
+        });
+        others || aura || state.radiant_world == Some(true)
+    }
+
+    #[test]
+    fn i21_every_spell_and_spell_token_on_both_faces_passes_the_immune_stand_ins_by() {
+        jackioh_cards::register_all();
+        let scripts = jackioh_cards::scripts_of();
+        let faces = spell_faces();
+        assert!(
+            faces.len() > 300,
+            "the sweep reads the catalog's Spells: {}",
+            faces.len()
+        );
+        let mut failures: Vec<String> = Vec::new();
+        for (spell, radiant) in &faces {
+            let face = if *radiant { "Radiant" } else { "base" };
+            let s = board(spell, *radiant);
+            let base = s.state().clone();
+            let card = base.players[PlayerId::P1].hand[0].id.clone();
+            let immune: Vec<String> = [PlayerId::P1, PlayerId::P2]
+                .into_iter()
+                .map(|player| s.unit_at(player, IMMUNE_LANE).id)
+                .collect();
+            let plays: Vec<ActionBody> = legal_actions(&base, PlayerId::P1)
+                .into_iter()
+                .filter(
+                    |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card),
+                )
+                .collect();
+            if plays.is_empty() {
+                failures.push(format!(
+                    "{spell} ({face}): no play of it is listed on the sweep's board"
+                ));
+                continue;
+            }
+            let spread: Vec<&ActionBody> = if plays.len() <= I14_ACTION_CAP {
+                plays.iter().collect()
+            } else {
+                (0..I14_ACTION_CAP)
+                    .map(|k| &plays[k * plays.len() / I14_ACTION_CAP])
+                    .collect()
+            };
+            for play in spread {
+                let mut state = base.clone();
+                let mut monitor = create_invariant_monitor(&state);
+                let mut body = play.clone();
+                let mut player = PlayerId::P1;
+                for n in 0..=ANSWER_CAP {
+                    let kept: Vec<_> = immune.iter().map(|id| held(&state, id)).collect();
+                    monitor.before(&state, player, &body);
+                    let result = reduce(
+                        &state,
+                        &Action::new(body.clone(), player, format!("i21-sweep-{n}")),
+                    );
+                    if result.error.is_some() {
+                        break;
+                    }
+                    let sent = serde_json::to_string(&body).unwrap_or_default();
+                    failures.extend(
+                        monitor
+                            .after(&result.events, &result.state)
+                            .into_iter()
+                            .filter(|finding| finding.starts_with("I21"))
+                            .map(|finding| format!("{spell} ({face}), {sent}: {finding}")),
+                    );
+                    if !hold_skipped(&result.state, &result.events, &scripts) {
+                        for (id, kept) in immune.iter().zip(&kept) {
+                            let (Some(kept), Some(now)) = (kept, held(&result.state, id)) else {
+                                continue;
+                            };
+                            if *kept != now {
+                                failures.push(format!(
+                                    "{spell} ({face}), {sent}: the immune stand-in {id} went from {kept:?} to {now:?} \
+                                     with only Spells running (§6.1, R4453000)"
+                                ));
+                            }
+                        }
+                    }
+                    state = result.state;
+                    let Some(pending) = state.pending.as_ref().filter(|_| state.result.is_none()) else {
+                        break;
+                    };
+                    player = pending.player_id;
+                    let Some(next) = legal_actions(&state, player)
+                        .into_iter()
+                        .find(|action| !matches!(action, ActionBody::Concede))
+                    else {
+                        break;
+                    };
+                    body = next;
+                }
+            }
+        }
+        assert_eq!(failures, no_violations());
+    }
+}
+
+// R4508004 (#4508): a lane the board loses takes a Unit Immune to Spells with all it holds: S+ #78's slash
+// and S+ #77's Black Hole, on the real cards through the monitor as the fuzz runs it.
+mod r4508004_a_lane_the_board_loses_takes_an_immune_unit_with_it {
+    use super::*;
+
+    const HOLE: &str = "stinkyscapeplus-077";
+    const SLASH: &str = "stinkyscapeplus-078";
+    const GLIMPSE: &str = "stinkyscapeplus-079";
+    const IMMUNE: &str = "stand-in (1) 4/4 Immune to Spells";
+
+    /// p1's main phase with `spell` in hand on `radiant`'s face; p2's immune stand-in in `lane`, and its id.
+    fn board(spell: &str, radiant: bool, lane: i32) -> (Scenario, String) {
+        let library = json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA]);
+        let mut s = scenario(json!({
+            "p1": { "hand": [{ "def": spell, "radiant": radiant }], "mana": 10, "library": library },
+            "p2": { "field": [{ "def": IMMUNE, "lane": lane }], "library": library },
+        }));
+        for player in [PlayerId::P1, PlayerId::P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        let id = s.unit_at(PlayerId::P2, lane).id;
+        (s, id)
+    }
+
+    /// The I21 findings of the step `act` takes on `s`, through a fresh monitor.
+    fn i21_of(s: &mut Scenario, act: impl FnOnce(&mut Scenario)) -> Vec<String> {
+        let before = s.state().clone();
+        let mut monitor = create_invariant_monitor(&before);
+        monitor.before(&before, before.active, &ActionBody::EndTurn);
+        act(s);
+        monitor
+            .after(s.last_events(), s.state())
+            .into_iter()
+            .filter(|finding| finding.starts_with("I21"))
+            .collect()
+    }
+
+    fn exiled(s: &Scenario, id: &str) -> bool {
+        s.state().players[PlayerId::P2]
+            .exile
+            .iter()
+            .any(|card| card.id == id)
+    }
+
+    #[test]
+    fn r4508004_the_slash_and_the_black_hole_take_an_immune_unit_with_their_lane_and_i21_allows_it() {
+        // The slash's base face: lane 3 (R3554002).
+        let (mut s, id) = board(SLASH, false, 3);
+        assert_eq!(
+            i21_of(&mut s, |s| {
+                s.play(SLASH, json!({}));
+            }),
+            no_violations()
+        );
+        assert!(exiled(&s, &id), "the base face's slash takes lane 3");
+        // Its Radiant face: the lane its caster picks.
+        let (mut s, id) = board(SLASH, true, 2);
+        assert_eq!(
+            i21_of(&mut s, |s| {
+                s.play(SLASH, json!({}));
+            }),
+            no_violations()
+        );
+        assert_eq!(
+            i21_of(&mut s, |s| {
+                s.answer(json!("2"));
+            }),
+            no_violations()
+        );
+        assert!(exiled(&s, &id), "the Radiant face's slash takes lane 2");
+        // The Black Hole swallows what stands in its lane (R3554000).
+        let (mut s, id) = board(HOLE, false, 3);
+        assert_eq!(
+            i21_of(&mut s, |s| {
+                s.play(HOLE, json!({}));
+            }),
+            no_violations()
+        );
+        assert!(exiled(&s, &id), "the hole swallows lane 3");
+        // Another Spell's exile is a reach: only a lane the board loses is exempt.
+        let (s, id) = board(SLASH, false, 3);
+        let state = s.state().clone();
+        let mut monitor = create_invariant_monitor(&state);
+        monitor.before(&state, PlayerId::P1, &ActionBody::EndTurn);
+        let events = [
+            event(json!({
+                "type": "hookResolving",
+                "sourceId": "r4508004-source",
+                "defId": GLIMPSE,
+                "controller": "p1",
+                "hook": "cry",
+            })),
+            event(json!({ "type": "exiled", "instanceId": id, "defId": IMMUNE, "owner": "p2" })),
+        ];
+        let found: Vec<String> = monitor
+            .after(&events, &state)
+            .into_iter()
+            .filter(|finding| finding.starts_with("I21"))
+            .collect();
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].contains(&id) && found[0].contains(GLIMPSE),
+            "{}",
+            found[0]
+        );
     }
 }

@@ -1314,7 +1314,7 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ),
         // R1859007: Stinkyscape's War Doctrines' "for the rest of the game, your Units have X". R1870004:
         // #4.4 Last Word's "your Units have Charge during it", the turn named until it comes.
-        ModifierKind::UnitsHaveKeyword { keyword } => format!(
+        ModifierKind::UnitsHaveKeyword { keyword, .. } => format!(
             "Your Units have {}{}",
             crate::wire::keyword_key(keyword),
             if crate::mana::modifier_is_live(state, modifier) {

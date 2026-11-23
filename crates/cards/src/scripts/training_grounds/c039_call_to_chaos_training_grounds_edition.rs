@@ -476,7 +476,7 @@ mod tests {
                 .mods
                 .iter()
                 .filter_map(|held| match &held.kind {
-                    ModifierKind::UnitsHaveKeyword { keyword } => Some(keyword.clone()),
+                    ModifierKind::UnitsHaveKeyword { keyword, .. } => Some(keyword.clone()),
                     _ => None,
                 })
                 .collect();
