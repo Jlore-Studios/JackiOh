@@ -17503,6 +17503,8 @@
       "taken_asks": []
     },
     "4649": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-23T19:57:05Z",
@@ -17516,8 +17518,11 @@
         "trail": "scratch tools are gone, so I'm rebuilding them.\n- Bash: {\"command\": \"set -e; W=/home/runner/work/_temp/work/item-4599; mkdir -p /tmp/x /tmp/tools; rm -rf /tmp/x/crates; cp -r $W/crates /tmp/x/crates; cp $W/Cargo.toml $W/Cargo.lock $W/rust-toolchain.toml $\u2026\n- Bash: {\"command\": \"cd /tmp/x && CARGO_TARGET_DIR=/tmp/x/target cargo build --release -p jackioh-tools 2>&1 | tail -1 && JK_NOHOLE=1 JK_DIAG=1 /tmp/x/target/release/jackioh fuzz --from 2614 --seeds 1 > /tmp\u2026\n- Bash: {\"command\": \"cp /tmp/x/target/release/jackioh /tmp/jk-merged; rm -rf /tmp/y && mkdir -p /tmp/y && git archive b12fcc363b crates Cargo.toml Cargo.lock rust-toolchain.toml rustfmt.toml .cargo | tar -x \u2026\n- Bash: {\"command\": \"JK_NOHOLE=1 /tmp/jk-old fuzz --from 2260 --seeds 1 > /tmp/p2260.log 2>&1; echo $?; grep \\\"I21\\\" /tmp/p2260.log | head -2\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -n \\\"Black Hole\\\\|black_hole\\\\|BlackHole\\\" crates/engine/src/testkit/invariants.rs | sed -n 1,40p; grep -n \\\"fn r4599004\\\" -A 60 crates/engine/tests/rules/invariants.rs | grep -n \\\"\u2026\n- Bash: {\"command\": \"sed -n 4195,4260p crates/engine/tests/rules/invariants.rs; sed -n 1386,1402p crates/engine/src/testkit/invariants.rs; sed -n 1612,1620p crates/engine/src/testkit/invariants.rs; grep -n \\\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/engine/src/testkit/invariants.rs'\\ns=open(p).read()\\ndef rep(old,new,n=1):\\n global s\\n assert s.count(old)==n,(old,s.count(old))\\n s=s.replace(old,new)\\nrep\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/engine/src/testkit/invariants.rs'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1,old\\n s=s.replace(old,new)\\nrep(\\\"\\\"\\\" // R4599004\u2026\n- said: Now the ruling note and pending paragraph for R4599004.\n- Bash: {\"command\": \"sed -n 9p spec/pending/4599.md; grep -o \\\"R4577008[^|]\\\\{0,80\\\\}\\\" crates/tools/README.md | head -3\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R4599004.md'\\ns=open(p).read()\\ns=s.replace('title: \\\"An exile aura\\\\'s exile and an open Black Hole\\\\'s swallow reach a Unit Immune to Spells inside a\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-engine --features testkit --test 'rules*' -- i21 r4508 r4524 r4577 r4599 2>&1 | grep -E \\\"^test result|FAILED|panicked|^error\\\" | head; cargo test -p jackioh-cards \u2026\n- Bash: {\"command\": \"grep -n \\\"fn pulls_at_end\\\\|pub fn lanes_of\\\" /tmp/y/crates/engine/src/geometry.rs /tmp/y/crates/engine/src/giga.rs 2>&1 | head\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/tmp/tools/diag.py'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"assert s.count(old) == 1\\ns = s.replace(old, \\\\\\\"\\\\\\\"\\\\\\\" (state.black_hole\\\"\\\"\\\",\\\"\\\"\\\"if s.count(old) == \u2026\n- said: Seed 2614 on the old deal is clean with the final I21, so R4577008 covers it. Checking R4599004's other seeds on the same binary:\n- Bash: {\"command\": \"B=/tmp/x/target/release/jackioh; $B fuzz --from 2260 --seeds 1 >/dev/null 2>&1; echo \\\"p2260 $?\\\"; $B fuzz --from 11304 --seeds 1 --handicap >/dev/null 2>&1; echo \\\"h11304 $?\\\"; $B fuzz \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index(\\\"## Log\\\")\\nstate=\\\"\\\"\\\"## State\\n\\n- Pass 1 (0e30d7566d) + pass 2 (b12fcc363b) committed. Resumed 2026-11-23 after the\u2026\n- Bash: {\"command\": \"cargo test --workspace --no-fail-fast --features jackioh-engine/testkit,jackioh-engine/ts > /tmp/wstest.log 2>&1; echo \\\"exit $?\\\"; grep -E \\\"^test result|FAILED|panicked\\\" /tmp/wstest.l\u2026\n- Bash: {\"command\": \"cat > /tmp/tools/waves.sh <<'EOF'\\n#!/bin/sh\\n# Every quarter's plain, handicapped and Duos waves, as super.yml's fuzz job runs them, the quarters in parallel.\\nBIN=$1\\nOUT=$2\\nmkdir -p \u2026\n- said: Waiting for the workspace tests.\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4599/76a705cb-b560-4bc7-abb3-48b5af3c9900/tasks/ba024iztn.output; grep -c \\\"^test result: ok\\\" /tmp/wstest.log; git diff --stat -- \u2026\n- said: The full workspace suite passes (exit 0). The only wire-file changes are main's, staged by the merge; the tests rewrote nothing. Building the merged code for the waves:\n- Bash: {\"command\": \"W=/home/runner/work/_temp/work/item-4599; rm -rf /tmp/x/crates && cp -r $W/crates /tmp/x/crates && cp $W/Cargo.toml $W/Cargo.lock /tmp/x/ && python3 /tmp/tools/diag.py /tmp/x && cd /tmp/\u2026\n- Bash: {\"command\": \"echo \\\"- $(date +%H:%M) full cargo test ok; waves on merged binary: sh /tmp/tools/waves.sh /tmp/jk-merged /tmp/waves3\\\" >> .bot-notes.md; sh /tmp/tools/waves.sh /tmp/jk-merged /tmp/waves\u2026\n- Bash: {\"command\": \"nice -n 19 cargo jackioh spec check 2>&1 | tail -2; nice -n 19 cargo jackioh patches check 2>&1 | tail -1\", \"timeout\": 1800000}\n- said: While the waves run, `spec check` and `patches check` are going in the background.\n- said: The niced build was starved by the waves and timed out. The scratch binary is built from the same crates, so I'll run the checks with it from the worktree.\n- Bash: {\"command\": \"/tmp/jk-merged spec check 2>&1 | tail -2; /tmp/jk-merged patches check 2>&1 | tail -1; /tmp/jk-merged catalog check 2>&1 | head -1\", \"timeout\": 600000}\n- Bash: {\"command\": \"W=/home/runner/work/_temp/work/item-4599; for d in spec apps e2e; do [ -e /tmp/x/$d ] || ln -s $W/$d /tmp/x/$d; done; /tmp/jk-merged spec check 2>&1 | tail -3\", \"timeout\": 600000}\n- said: `spec check`, `patches check` and `catalog check` all pass. CI's `cargo jackioh classify --claims` is still unchecked: it builds the parent commit, so I'll run it once the waves finish.\n- Bash: {\"command\": \"cat /tmp/waves3/status 2>/dev/null; tail -c 300 /tmp/waves3/q1-plain.log\"}\n- Bash: {\"command\": \"grep -h \\\"^seed [0-9]*:\\\\|I[0-9]* \\\" /tmp/waves3/*.log | grep -v \\\"^\\\\[\\\" | cut -c1-250 | head\"}\n- Bash: {\"command\": \"until grep -q \\\"all done\\\" /tmp/waves3/status 2>/dev/null || grep -qh \\\"^seed [0-9]*:\\\" /tmp/waves3/*.log 2>/dev/null; do sleep 60; done; cat /tmp/waves3/status; grep -h \\\"^seed [0-9]*:\\\u2026\n- said: The waves are running; plain takes about an hour per quarter on this machine. A watcher will tell me when they finish or when a seed fails."
       },
       "issue": 4599,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-23T23:12:00Z",
         "from_run": "45254244480",
         "gates": [
           {
@@ -17609,7 +17614,11 @@
         "source": "build",
         "until": "2026-11-23T23:40:41Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-23T23:10:41Z",
+      "run_id": "pending:c5ae8a60-1795475479",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17628,6 +17637,9 @@
         "provider": "claude-7",
         "run": "45254244480"
       },
+      "started_at": "2026-11-23T23:12:00Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17641,9 +17653,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T23:03:01Z",
+    "at": "2026-11-23T23:12:00Z",
     "url": "",
-    "what": "plan #4648 on muse"
+    "what": "review #4649 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-23T23:00:49Z",
