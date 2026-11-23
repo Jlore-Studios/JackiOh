@@ -18754,18 +18754,29 @@
       ]
     },
     "4607": {
-      "asks": [
-        "c:7109055788"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-23T17:47:25Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-23T17:42:44Z",
       "requested_by": "MaxGoetzmann",
+      "run_id": "pending:5fbfd42a-1795456022",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-23T17:47:25Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:7109055788"
+      ]
     },
     "4614": {
       "action": "plan",
@@ -18855,9 +18866,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T17:46:48Z",
+    "at": "2026-11-23T17:47:25Z",
     "url": "",
-    "what": "plan #4605 on muse"
+    "what": "plan #4607 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T17:37:10Z",
