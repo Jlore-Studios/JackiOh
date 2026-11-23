@@ -19659,13 +19659,13 @@
   "machine_disk": {
     "issue": null,
     "reading": {
-      "at": "2026-11-23T17:51:40Z",
-      "free": 46914576384,
-      "percent": 54,
-      "total": 102888095744
+      "at": "2026-11-23T18:31:49Z",
+      "free": 61492441088,
+      "percent": 50,
+      "total": 123690532864
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45231221107",
-    "runner": "night-vm-muse-2-b2",
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45233716796",
+    "runner": "night-vm-muse",
     "shown": null
   },
   "machine_memory": [
