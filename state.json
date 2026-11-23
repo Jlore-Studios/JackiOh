@@ -18711,16 +18711,21 @@
     "what": "plan #4604 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-23T10:15:59Z",
+    "at": "2026-11-23T10:25:59Z",
     "notes": [
-      "delivered suggest on claude-8 (run 45152271813): interrupted",
-      "delivered suggest on claude-4 (run 45152079986): interrupted",
-      "delivered build #4577 on claude-4 (run 45149691428): interrupted",
-      "delivered plan #4599 on claude-8 (run 45147122751): interrupted",
-      "started plan #4599 on claude-1 (run 45154929894)",
-      "started build #4577 on claude-3 (run 45155021062)",
+      "#4604 needs a plan",
+      "delivered suggest on claude-1 (run 45152366233): suggested",
+      "delivered suggest on claude-6 (run 45152171569): suggested",
+      "delivered suggest on claude-6 (run 45151989125): suggested",
+      "delivered build #4581 on gpt (run 45144373253): part",
+      "started plan #4604 on claude-6 (run 45156452897)",
       "nothing more to start: nothing is queued",
-      "#4604: typed it Bug"
+      "#4610: typed it Task",
+      "#4609: typed it Bug",
+      "#4608: typed it Task",
+      "#4607: typed it Feature",
+      "#4606: typed it Feature",
+      "#4605: typed it Bug"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19426,7 +19431,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T10:15:59Z",
+  "loop_tick": "2026-11-23T10:25:59Z",
   "machine_disk": {
     "issue": null,
     "reading": {
