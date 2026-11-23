@@ -39272,17 +39272,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-22T23:57:50Z,muse,usage-command,before,45085990073,9,2026-11-23T01:56:00Z,83,2026-11-23T00:00:00Z,allowed,100,100,",
-      "2026-11-23T00:08:10Z,muse,usage-command,call,45085990073,10,2026-11-23T01:56:00Z,0,2026-11-30T00:00:00Z,allowed,100,100,",
-      "2026-11-23T00:18:17Z,muse,usage-command,call,45085990073,11,2026-11-23T01:56:00Z,0,2026-11-30T00:00:00Z,allowed,100,100,",
-      "2026-11-23T00:27:11Z,muse,usage-command,after,45085990073,12,2026-11-23T01:56:00Z,0,2026-11-30T00:00:00Z,allowed,100,100,",
-      "2026-11-23T00:37:20Z,muse,usage-command,call,45085990073,14,2026-11-23T01:56:00Z,1,2026-11-30T00:00:00Z,allowed,100,100,"
-    ],
-    "runs": [
-      "2026-11-23T00:52:38Z,45085990073,muse,muse-spark-1.3-contributor,review,4532,medium,approved,,52.6,0,0,0,,9,14,83,1,1.3,,none,,3"
-    ]
-  },
   "version": 1
 }
