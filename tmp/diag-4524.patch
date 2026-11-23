@@ -1,0 +1,51 @@
+--- a/crates/engine/src/testkit/invariants.rs
++++ b/crates/engine/src/testkit/invariants.rs
+@@ -1262,13 +1262,21 @@
+                 // R4454001: Tears of the Kwzki Tree's world.
+                 GameEvent::RadiantSet { .. } if radiant_world => {}
+                 _ => {
++                    let trace: String = events
++                        .iter()
++                        .enumerate()
++                        .map(|(i, e)| format!("#{i} {}", serde_json::to_string(e).unwrap_or_default()))
++                        .collect::<Vec<_>>()
++                        .join(" | ");
+                     found.push(format!(
+                         "I19 reached Dormant: {} names {} on turn {} while it is Dormant, in {}'s run (§6.1 \
+-                         Dormant, R1839000)",
++                         Dormant, R1839000) DIAG at #{at} marks={:?} TRACE[{}]",
+                         event.event_type().as_str(),
+                         mark.label,
+                         after.turn,
+-                        running.unwrap_or("no card")
++                        running.unwrap_or("no card"),
++                        step.marks.keys().collect::<Vec<_>>(),
++                        trace.chars().take(20000).collect::<String>()
+                     ));
+                     released.insert(id);
+                 }
+@@ -2148,12 +2156,22 @@
+     for card in &field {
+         for (forged, listed) in forged_activations(state, player, card) {
+             if accepts_as(forged.clone(), &listed) {
++                let listed_err = crate::reduce::reduce(&probed, &Action::new(listed.clone(), player, PROBE_NONCE)).error;
++                let mine: Vec<String> = legal
++                    .iter()
++                    .filter(|body| serde_json::to_string(body).unwrap_or_default().contains(&format!("\"{}\"", card.id)))
++                    .map(|body| serde_json::to_string(body).unwrap_or_default())
++                    .collect();
+                 found.push(format!(
+                     "I8 unlisted activation accepted: {player} may send {} for {} on turn {}, though \
+-                     legalActions does not list it (§10.2, R384)",
++                     legalActions does not list it (§10.2, R384) DIAG listed={} listed_err={:?} legal_for_card={:?} card={}",
+                     serde_json::to_string(&forged).unwrap_or_default(),
+                     name_of(card),
+-                    state.turn
++                    state.turn,
++                    serde_json::to_string(&listed).unwrap_or_default(),
++                    listed_err,
++                    mine,
++                    serde_json::to_string(card).unwrap_or_default().chars().take(6000).collect::<String>()
+                 ));
+             }
+         }
