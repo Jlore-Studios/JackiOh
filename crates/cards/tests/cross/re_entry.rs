@@ -360,14 +360,14 @@ mod c7_r41_r57_what_a_copy_keeps {
             .filter(|card| {
                 card.def_id == BREAD
                     && card.radiant
-                    && card.stats_override.map(|stats| stats.attack) == Some(3)
+                    && card.stats_override.map(|stats| stats.attack) == Some(4)
             })
             .map(|card| card.id.clone())
             .collect();
         assert_eq!(copies.len(), 2);
         for copy in &copies {
-            g.expect_stats(copy.as_str(), json!({ "attack": 3, "health": 3 }));
-            assert_eq!(g.stats(copy.as_str()).armor, 3);
+            g.expect_stats(copy.as_str(), json!({ "attack": 4, "health": 4 }));
+            assert_eq!(g.stats(copy.as_str()).armor, 4);
         }
     }
 }
@@ -468,7 +468,7 @@ mod r77_r175_fusing_onto_a_token_summoned_x_x {
             "p2": { "hand": [SEVEN_SEVEN, STOCKPILE], "library": LIBRARY },
         }));
         let bread = g.unit_at(PlayerId::P1, 1).id;
-        g.expect_stats(bread.as_str(), json!({ "attack": 4, "maxHealth": 4 }));
+        g.expect_stats(bread.as_str(), json!({ "attack": 3, "maxHealth": 3 }));
 
         g.play(SEVEN_SEVEN, json!({ "zone": 1 }));
 
@@ -476,7 +476,7 @@ mod r77_r175_fusing_onto_a_token_summoned_x_x {
         let fused = g.card(bread.as_str()).clone();
         assert_ne!(fused.def_id, BREAD);
         assert!(g.unit(PlayerId::P2, 1).is_none());
-        g.expect_stats(fused.id.as_str(), json!({ "attack": 11, "maxHealth": 11 }));
+        g.expect_stats(fused.id.as_str(), json!({ "attack": 10, "maxHealth": 10 }));
     }
 
     #[test]
