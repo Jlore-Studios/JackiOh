@@ -654,6 +654,13 @@ mod r4577003_a_rule_for_created_cards_and_its_floor {
         live.clone()
     }
 
+    /// A card minted mid-game is Created (R943); this one is put back as one the deck dealt.
+    fn mark_dealt(state: &mut GameState, card: &CardInstance) -> CardInstance {
+        let live = find_instance_mut(state, &card.id).expect("the hand card");
+        live.created = None;
+        live.clone()
+    }
+
     #[test]
     fn r4577003_a_created_only_rule_reaches_a_created_card_and_no_dealt_one() {
         let mut state = pb_playing("r4577003-created");
@@ -665,6 +672,7 @@ mod r4577003_a_rule_for_created_cards_and_its_floor {
             created_discount(),
         );
         let dealt = only(&in_hand(&mut state, &three_spell().id, PlayerId::P1, 1));
+        let dealt = mark_dealt(&mut state, &dealt);
         let made = only(&in_hand(&mut state, &three_spell().id, PlayerId::P1, 1));
         let made = mark_created(&mut state, &made);
         assert_eq!(cost(&state, &dealt), 3);

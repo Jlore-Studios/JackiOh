@@ -16,7 +16,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import { SHIPPED_SETS } from "@jackioh/shared";
+import { SHIPPED_SETS, setShips } from "@jackioh/shared";
 
 import { COSMETICS, COSMETIC_LEVELS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
 import { FULL_ARTS_OF_CARD, FULL_ART_CARDS, tierOfLook } from "./fullArt.ts";
@@ -102,7 +102,12 @@ const PAIRS = [
   [VERSION_WOODCUT_ID, VERSION_TAROT_ID],
 ] as const;
 
-const COLLECTIBLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.includes("Token"));
+/**
+ * The cards a look is offered on: every non-token card of a set that ships. A held set's cards take no offer until
+ * it ships (the server's `shipped_defs`, R1420), the Infinite Assault's among them, a single-player set held while
+ * it is built (R4577000).
+ */
+const COLLECTIBLE = Object.values(CATALOG).filter((def) => setShips(def.set) && !def.token && !def.tags.includes("Token"));
 const isLegacy = (card: string): boolean => CATALOG[card]?.tags.includes("Legacy") === true;
 
 describe("R2725000 a card's look", () => {

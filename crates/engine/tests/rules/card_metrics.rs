@@ -131,6 +131,9 @@ fn r1846001_every_set_adds_the_single_player_sets() {
     setup();
     assert_eq!(SINGLE_PLAYER_SETS, [SetName::Boss, SetName::BossX]);
     assert!(SINGLE_PLAYER_SETS.iter().all(|set| !set_ships(*set)));
+    // R4577000: a single-player set held while it is built (the Infinite Assault) is not one of them
+    // until its release opens its row; `everySet` passes it by (r4577000_… below).
+    assert!(!SINGLE_PLAYER_SETS.contains(&SetName::InfiniteAssault));
     // "Every BUSTED card the catalog holds, the single-player sets' included": the sets that ship,
     // then Boss and Boss-X, in `query`'s order.
     assert_eq!(

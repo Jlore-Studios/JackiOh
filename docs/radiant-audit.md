@@ -1192,3 +1192,29 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | stinkyscapeplus-t-ai-05 | Lantern Distiller | Meets | Stats double 1/2 → 2/4 and each Evolve gains +4/+4 instead of +2/+2 (2×), so both halves meet R275. |
 | stinkyscapeplus-t-ai-06 | Abacus Optimizer | Meets | The leftmost and rightmost cards in your hand cost (2) less instead of (1) less (2×), so it meets R275. |
 | stinkyscapeplus-t-ai-07 | KY's Line Search Bot | Meets | Stats double 2/2 → 4/4, and the Cry's damage to every Unit on the line between it and the chosen enemy tile rises 2 → 4 (2×), so both halves meet R275. |
+| infiniteassault-001 | Seed Drone | Meets | Stats double 2/2 → 4/4, and the Cry's random card is a Rare one instead of a Common one, a rider-level raise. |
+| infiniteassault-002 | Scrap Prototype | Meets | Stats double 1/2 → 2/4, and the Death shuffles two copies instead of one (2×), each with +2/+2 instead of +1/+1 (2×), so both halves meet R275. |
+| infiniteassault-003 | Assault Trooper | Meets | Stats double 3/2 → 6/4, and the Radiant face adds First Strike to Rush: one keyword more on a keyword-only unit, which meets R275. |
+| infiniteassault-004 | Wave Spawner | Meets | Stats double 3/4 → 6/8, and the End of turn summons two Drones instead of one (2×) after a Created play, so both halves meet R275. |
+| infiniteassault-004-1 | Drone | Designer's word (effect half) | A textless token: its stats double 1/1 → 2/2, the stat half exactly, but it has no text to scale and its Radiant face adds no keyword, so the effect half is the designer's printed word. |
+| infiniteassault-005 | Generated Filler | Meets | The same two (1)-Cost Temporary Units, which the Radiant face makes cost (0): a tangential rider, free bodies instead of (1) ones. |
+| infiniteassault-006 | Hotfix | Meets | The buff rises +2/+2 → +4/+4 (2×) and the Radiant face adds Divine Shield; the draw for a Created Unit is the same, so it meets R275. |
+| infiniteassault-007 | Bulk Order | Meets | Three Radiant Drones (twice the stats) with Rush instead of three plain ones: about 2× the bodies plus a rider. |
+| infiniteassault-008 | Firing Solution | Meets | The damage rises 3 → 6 (2×); the Spell it adds on a kill is the same on both faces, and the larger hit makes the kill likelier. |
+| infiniteassault-009 | Heavy Lifter Mk.II | Meets | Stats double 5/7 → 10/14, Taunt on both, and the Cry's buff to your other Created Units rises +1/+1 → +2/+2 (2×), so both halves meet R275. |
+| infiniteassault-010 | Assault Carrier | Meets | Stats double 7/8 → 14/16, and the Death summons two Radiant Drone Escorts (6/6 each) instead of two plain ones (3/3), so both halves meet R275. |
+| infiniteassault-010-1 | Drone Escort | Designer's word (effect half) | A textless token: its stats double 3/3 → 6/6, the stat half exactly, but it has no text to scale and its Radiant face adds no keyword, so the effect half is the designer's printed word. |
+| infiniteassault-011 | Quickgen Turret | Meets | Stats double 2/5 → 4/10, Ranged on both, and the Start of turn's damage per Created card in your hand rises 1 → 2 (2×), so both halves meet R275. |
+| infiniteassault-012 | Recompile | Meets | The step rises (1) → (2) (2×): the friendly Unit becomes a random Infinite Assault Unit two costs dearer instead of one. |
+| infiniteassault-013 | Training Run | Meets | It Discovers twice instead of once (2×), each find at the same (2) less, so it meets R275. |
+| infiniteassault-014 | Overflow Error | Meets | The damage to their hero rises 3 → 6 (2×) and they discard two random cards instead of one (2×); the third-card condition is the same on both faces. |
+| infiniteassault-015 | Drone Foundry | Meets | It summons two Drones each start of turn instead of one (2×), so it reaches its four-Drone buff sooner; the threshold and the +1/+1 are the same on both faces. |
+| infiniteassault-016 | Benchmark Run | Meets | The same copy of the highest enemy Attack and Health, and the Radiant face adds Rush, so the copied body can trade the turn it is set: an added rider. |
+| infiniteassault-017 | Cluster Drone | Meets | Stats double 3/2 → 6/4, and the Death's damage to every enemy Unit rises 2 → 4 (2×), so both halves meet R275. |
+| infiniteassault-018 | Prompt Engineer | Meets | Stats double 2/4 → 4/8; the Aura's (1) cut on Created cards, floored at (1), is the same, and the Radiant face adds +1/+1 to your Created Units: an added rider. |
+| infiniteassault-019 | Infinite Scroll | Meets | The draw rises 3 → 4 and the copy it shuffles costs (1) less, a tangential rider that compounds each loop, so together it meets R275. |
+| infiniteassault-020 | Synthetic Data | Meets | The same full hand of Temporary Infinite Assault cards, which the Radiant face makes cost (1) less: a tangential rider on every card it makes. |
+| infiniteassault-021 | Endless Production Line | Meets | It summons two random (2) Cost or less Infinite Assault Units each end of turn instead of one (2×), so it meets R275. |
+| infiniteassault-022 | Assault Mainframe | Meets | Stats double 6/10 → 12/20, Taunt on both, and the Aura on your Created Units rises +2/+2 → +4/+4 (2×), so both halves meet R275. |
+| infiniteassault-023 | The Generator | Meets | Stats double 4/6 → 8/12, and the Start of turn adds two free Infinite Assault cards instead of one (2×), so both halves meet R275. |
+| infiniteassault-024 | Mass Deployment | Meets | The same three Units, one of each Cost from (1) to (3), with Rush, are Radiant ones (twice the stats) instead of plain ones: about 2×. |
