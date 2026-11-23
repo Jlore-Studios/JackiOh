@@ -17511,6 +17511,14 @@
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
+    },
+    "4649": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-23T19:57:05Z",
+      "issue": 4599,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
