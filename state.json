@@ -18737,9 +18737,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T11:11:43Z",
+    "at": "2026-11-23T11:12:16Z",
     "url": "",
-    "what": "suggestions (client) on muse"
+    "what": "suggestions (tests) on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T11:03:34Z",
@@ -41479,9 +41479,9 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-23T11:11:43Z",
-    "last_area": "client",
-    "last_run": "2026-11-23T11:11:43Z",
+    "idle_since": "2026-11-23T11:12:16Z",
+    "last_area": "tests",
+    "last_run": "2026-11-23T11:12:16Z",
     "provider": null,
     "requested": false,
     "run_id": null,
@@ -41492,6 +41492,14 @@
         "last_run": "2026-11-23T11:11:43Z",
         "provider": "muse",
         "run_id": "45162947593",
+        "taken_asks": []
+      },
+      "2": {
+        "area": "tests",
+        "count": 1,
+        "last_run": "2026-11-23T11:12:16Z",
+        "provider": "muse",
+        "run_id": "pending:7897b767-1795432316",
         "taken_asks": []
       }
     },
