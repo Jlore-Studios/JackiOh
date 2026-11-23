@@ -17678,9 +17678,15 @@
       }
     },
     "4651": {
+      "ci_early": false,
+      "ci_fixes": 1,
+      "ci_on_head": true,
+      "ci_run_id": 45288390127,
+      "ci_sha": "8d39f912256268c00aa1901aae63baa97c237645",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-23T21:08:16Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-23T23:14:12Z",
         "family": "claude",
@@ -17690,9 +17696,12 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "ess.run(['git','diff','origin/main','--','apps/web/src/i18n/zh-CN.json'],capture_output=True,text=True).stdout\\nf\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json\\np='apps/web/src/i18n/zh-CN.json'\\nlines=open(p).read().splitlines(True)\\ndrop={\\\"Echo-1, First Hallucination\\\",\\\"Redline, the Overclocked\\\",\\\"Loopback, Wh\u2026\n- Bash: {\"command\": \"git show origin/main:apps/web/src/i18n/zh-CN.json | tail -2; sed -n 1,30p apps/web/src/writing.test.ts | grep -n import\", \"description\": \"Check main's zh-CN tail and writing test imports\u2026\n- Bash: {\"command\": \"grep -n 'loadWasm\\\\|wasm' apps/web/src/test/setup.ts | head; grep -n 'crates/run\\\\|assault\\\\|glossary' scripts/ci-scope.sh | head\", \"description\": \"Check test setup's WASM and ci-scope's\u2026\n- said: Wasm is loaded in setup; I'll read the Assault's names from the module rather than a new file.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/writing.test.ts'\\ns=open(p).read()\\nreps=[\\n('''import { CATALOG } from \\\"@jackioh/cards\\\";\\n''','''import { CATALOG } from \\\"@jackioh/cards\\\";\\nimport\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/wasm/assault.test.ts'\\ns=open(p).read()\\na=' expect(hash).toBe(\\\"aa9004f7\\\");'\\nassert s.count(a)==1\\ns=s.replace(a,''' // The deal of 2026-11-23 on th\u2026\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) web: big --changed run 509/514 files ok; fixed zh-CN (D strings, dropped 4 unused), writing allowlist (Assault names via module), hash pin; rerun of the 5 + ne\u2026\n- Bash: {\"command\": \"files=$(git diff --name-only origin/main -- apps/web e2e | grep -E '\\\\.(ts|tsx)$' | grep -v '/wire/generated/'; git ls-files --others --exclude-standard apps/web | grep -E '\\\\.(ts|tsx)$'\u2026\n- Bash: {\"command\": \"grep -n 'classify' crates/tools/README.md | head -20\", \"description\": \"Read how classify runs\"}\n- Bash: {\"command\": \"git diff origin/main --stat | grep -vE 'apps/web/src/(assault|practice|wire/generated|wasm|routes|i18n|net)|crates/(run|wasm|shared)|spec/' ; git status --short | grep -v '^ M\\\\|^M \\\\|^D\u2026\n- Bash: {\"command\": \"grep -rln 'SURFACE.md' crates/*/tests crates/*/src apps/web/src --include=*.rs --include=*.ts 2>/dev/null | head; grep -n 'run_daily_seed\\\\|runDailySeed' docs/v0.3.0/SURFACE.md | head -3\u2026\n- Bash: {\"command\": \"until grep -q '^EXIT' .fullsend/clippy.txt 2>/dev/null; do sleep 15; done; grep -E '^(warning|error)' .fullsend/clippy.txt | sort | uniq -c | head; tail -3 .fullsend/clippy.txt\", \"descri\u2026\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) clippy --workspace --all-targets -D warnings: clean. eslint changed files: clean. shared + wasm-core full tests running.\\\" >> .bot-notes.md; until grep -q '^EX\u2026\n- Bash: {\"command\": \"grep -cE '^test result: ok' .fullsend/shared.txt; grep -E 'FAILED|panicked|^EXIT' .fullsend/shared.txt | head; until grep -q '^EXIT' .fullsend/wcore.txt 2>/dev/null; do sleep 15; done; g\u2026\n- said: Now classify, catalog and patches checks.\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) shared full: 31 binaries ok; wasm-core full: 43 ok. Running classify --claims, catalog check, patches check.\\\" >> .bot-notes.md; git fetch -q origin main 2>/de\u2026\n- Bash: {\"command\": \"cargo jackioh catalog check 2>&1 | tail -3; cargo jackioh patches check 2>&1 | tail -3\", \"description\": \"Run the catalog and patches checks\", \"timeout\": 1200000}\n- Bash: {\"command\": \"grep -rln '15-dungeon-run.md' crates/*/tests crates/*/src 2>/dev/null | head; cargo test -p jackioh-run --features ts export_bindings 2>&1 | grep 'test result' | head -2; git status --po\u2026\n- Bash: {\"command\": \"grep -n '15-dungeon-run' crates/tools/tests/acceptance.rs | head -5\", \"description\": \"Find the acceptance test reading the dungeon spec\"}\n- Bash: {\"command\": \"grep -n 'fn [a-z0-9_]*' crates/tools/tests/acceptance.rs | sed -n 1,400p | grep -n -i 'dungeon\\\\|b33\\\\|rule_4\\\\|constants' | head; \", \"description\": \"Find the B33 and rule 4 test names\"}\n- Bash: {\"command\": \"sed -n 1179,1230p crates/tools/tests/acceptance.rs | head -60; grep -n 'unread_constants(' crates/tools/tests/acceptance.rs | head\", \"description\": \"Read the unread-constants acceptance \u2026\n- Bash: {\"command\": \"timeout 2400 cargo test -p jackioh-tools --test acceptance 2>&1 | grep -E '^test result|FAILED|panicked' | head -20\", \"description\": \"Run the tools acceptance tests\", \"timeout\": 2500000}\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) classify: App; catalog/patches check ok; tools acceptance 52 ok. Running the C wasm module build.\\\" >> .bot-notes.md; JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 ti\u2026\n- Bash: {\"command\": \"(timeout 2400 cargo test -p jackioh-server practice > .fullsend/server.txt 2>&1; echo EXIT $? >> .fullsend/server.txt)\", \"description\": \"Run the server's practice-related tests\", \"timeou\u2026\n- Bash: {\"command\": \"sed -n 330,380p scripts/ci-scope.sh\", \"description\": \"Read ci-scope's crate-to-job map\"}\n- Bash: {\"command\": \"sed -n 380,400p scripts/ci-scope.sh\", \"description\": \"Read the rest of ci-scope's web triggers\"}\n- Bash: {\"command\": \"cat > .fullsend/notes/cull-report.md <<'EOF'\\n## Deleted\\napps/web/src/assault/bindings.ts \\u2014 loser of collision 1 \\u2014 117\\napps/web/src/assault/types.ts \\u2014 loser of collision\u2026\n- Bash: {\"command\": \"git diff origin/main -- crates/shared/src/host/practice/deal.rs | head -90\", \"description\": \"Review the shared deal diff\"}\n- Bash: {\"command\": \"until grep -q '^EXIT' .fullsend/server.txt 2>/dev/null; do sleep 15; done; grep -E '^test result|FAILED|panicked|^EXIT|^error' .fullsend/server.txt | sort | uniq -c | head\", \"description\u2026\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) server practice-filtered tests: 76 passed. Writing the final report.\\\" >> .bot-notes.md; git status --short | wc -l\", \"description\": \"Log the server result\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the Infinite Assault, M, the mode\"} --> This makes the four parts of the Infinite Assault (A rules, B WebAssembly, C screen, D fights) into one working mode at `/assault`. Each part built what its sub-issue asked, so none was sent back. The trouble was \u2026"
       },
+      "interruptions": 0,
       "issue": 4578,
       "kind": "revise",
-      "queued_at": "2026-11-23T23:24:38Z",
+      "pending_request": false,
+      "queued_at": "2026-11-23T23:41:25Z",
+      "requested_by": "jgoetzmann-bot",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17711,6 +17720,8 @@
         "provider": "claude-3",
         "run": "45266564596"
       },
+      "source": "ci",
+      "stop_requested": false,
       "votes": {
         "approvals": [],
         "builder": "claude",
