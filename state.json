@@ -17926,9 +17926,12 @@
     "what": "revise #4556 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-23T05:14:06Z",
+    "at": "2026-11-23T05:21:34Z",
     "notes": [
-      "#4549: green and waiting for a person to merge it, so `claude-3` gives up its claim on it"
+      "delivered plan #4555 on claude-7 (run 45107953647): planned",
+      "started build #4555 on claude-7 (run 45117473043)",
+      "started revise #4556 on claude-4 (run 45117537416)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18634,7 +18637,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T05:14:06Z",
+  "loop_tick": "2026-11-23T05:21:34Z",
   "machine_disk": {
     "issue": null,
     "reading": {
