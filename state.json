@@ -16690,6 +16690,7 @@
       "run_id": "45085949973",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 465,
       "started_at": "2026-11-22T23:56:46Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -38830,9 +38831,33 @@
         "title": "Patch: remove the accessibility statement page (/accessibility)",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "44053250070ea3be8056627af504316eb2422afd",
+        "issue": 4511,
+        "merged_at": "2026-11-23T01:05:13Z",
+        "n": 465,
+        "pr": 4531,
+        "queued_at": "2026-11-23T01:05:13Z",
+        "sha": "25c463cc105ad4808b499c6395fbbe80b54f42f2",
+        "status": "queued",
+        "title": "Patch: the landing fan checks a few cards instead of all 800, and the collection, the stats grid and card prompts stop rebuilding every card face on each hover, scroll or keystroke",
+        "tries": 0
       }
     ],
-    "count": 464
+    "count": 465
   },
   "statistics": {
     "at": "2026-11-23T00:52:01Z"
