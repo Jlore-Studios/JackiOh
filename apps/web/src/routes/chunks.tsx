@@ -48,6 +48,9 @@ export const routeChunks = {
   leaderboard: routeChunk(() => import("./leaderboard.tsx")),
   collection: routeChunk(() => import("./collection.tsx")),
   shop: routeChunk(() => import("./shop.tsx")),
+  // #4517: `/account` draws inside `EngineGate`, so its screen rides this chunk while the gate's
+  // Sign out stays entry-static (`auth/signOut.ts`).
+  account: routeChunk(() => import("./account.tsx")),
   stats: routeChunk(() => import("./stats.tsx")),
   together: routeChunk(() => import("../together/TogetherRoute.tsx").then((module) => ({ default: module.TogetherRoute }))),
   watch: routeChunk(() => import("../together/WatchRoute.tsx").then((module) => ({ default: module.WatchRoute }))),
@@ -80,6 +83,8 @@ const ENGINE_CHUNKS: ReadonlySet<RouteChunkName> = new Set<RouteChunkName>([
   "patchNotes",
   "together",
   "leaderboard",
+  // #4517: `/account` draws inside `EngineGate`, like the catalog screens.
+  "account",
 ]);
 
 /** The chunk drawing `path` (query ignored), or null. */

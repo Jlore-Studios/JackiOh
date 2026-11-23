@@ -25,6 +25,7 @@ import { accountTestid } from "./account.tsx";
 import { playTestid } from "./play.tsx";
 
 const { App } = await import("../main.tsx");
+const { routeChunks } = await import("./chunks.tsx");
 
 const API = "http://localhost:8787";
 const SLOW = { timeout: 5_000 } as const;
@@ -203,6 +204,30 @@ describe("B40 one gate per screen", () => {
 });
 
 describe("B40 a check that runs long", () => {
+  it("#4517 the gate's Sign out signs out when the account chunk fails to load", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok" }));
+    stubFetch(() => "hang");
+    // The URL first: the stubbed location below is a copy, which reads the path as it is now.
+    at(paths.decks);
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    // The account screen's code never arrives here: Sign out still leaves at once.
+    const load = vi.spyOn(routeChunks.account, "load").mockRejectedValue(new Error("chunk failed"));
+    try {
+      render(<App />);
+      await flushMicrotasks();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(GATE_SLOW_NOTICE_SECONDS * 1000);
+      });
+      fireEvent.click(screen.getByTestId(shellTestid.signOut));
+      expect(assign).toHaveBeenCalledWith(paths.landing);
+      expect(load).not.toHaveBeenCalled();
+    } finally {
+      load.mockRestore();
+    }
+  });
+
   it("B40 'Checking your account…' offers home and sign-out once it has taken a while, and says why", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok" }));
@@ -264,7 +289,7 @@ describe("B40 the gate's error panel", () => {
     );
     at(paths.account);
     render(<App />);
-    // /account is in the entry chunk and the stub answers at once: flushing settles it, no wall clock.
+    // The stub answers at once: flushing settles it, no wall clock.
     await flushMicrotasks();
     expect(screen.getByTestId(shellTestid.error)).toBeInTheDocument();
     expect(screen.getByTestId(shellTestid.retry)).toBeDisabled();

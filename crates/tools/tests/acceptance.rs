@@ -1281,7 +1281,7 @@ mod tests {
 }
 
 /// One family of test helpers defined once, in its home, which every test under its trees takes
-/// rather than copying (#1777, #1826, #1997, #2023, #2385, #2160, #2930, #3913).
+/// rather than copying (#1777, #1826, #1997, #2023, #2160, #2930, #3913).
 struct SharedHelpers {
     /// The file that defines them, from the repository's root.
     home: &'static str,
@@ -1322,16 +1322,6 @@ const PICK_READERS: &[&str] = &[
     "crates/cards/src/scripts",
     "crates/cards/tests",
     "crates/ai/tests",
-];
-
-/// The server test trees `tests/server.rs` compiles with `tests/support/`, where no file but a
-/// helper's home may define one (#2385). `tests/store/` builds into `server_store` without them.
-const SERVER_SUPPORT_READERS: &[&str] = &[
-    "crates/server/tests/actor",
-    "crates/server/tests/api",
-    "crates/server/tests/bots",
-    "crates/server/tests/loops",
-    "crates/server/tests/support",
 ];
 
 /// The card scripts, each a card's script with its tests (CLAUDE.md rule 6).
@@ -1437,47 +1427,6 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
         structs: &[],
         dirs: &["crates/ai/tests"],
         more_than: 40,
-    },
-    SharedHelpers {
-        home: "crates/server/tests/support/store.rs",
-        names: &[
-            "fake",
-            "fake_ref",
-            "fake_lock",
-            "to_json",
-            "from",
-            "uuid",
-            "advance",
-            "advance_and_yield",
-            "sleep_settled",
-            "table",
-            "fake_read",
-            "fail_on",
-            "stop_failing",
-            "hmac_sha256_hex",
-            "befriend",
-            "named_cards",
-        ],
-        statics: &[],
-        structs: &[],
-        dirs: SERVER_SUPPORT_READERS,
-        more_than: 80,
-    },
-    SharedHelpers {
-        home: "crates/server/tests/support/socket.rs",
-        names: &["read_frame_now"],
-        statics: &[],
-        structs: &[],
-        dirs: SERVER_SUPPORT_READERS,
-        more_than: 80,
-    },
-    SharedHelpers {
-        home: "crates/server/tests/support/engine.rs",
-        names: &["playable"],
-        statics: &[],
-        structs: &[],
-        dirs: SERVER_SUPPORT_READERS,
-        more_than: 80,
     },
 ];
 
@@ -1819,7 +1768,7 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
     let homes: Vec<&str> = SHARED_TEST_HELPERS.iter().map(|row| row.home).collect();
     assert!(
         copies.is_empty(),
-        "a test defines its own copy of a shared helper, nonce counter or sink bench, looks a card up in a state under a name of its own, or reads a prompt's Mode options by hand (#1777, #1826, #1997, #2023, #2024, #2385, #3796, #3827, #3913): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
+        "a test defines its own copy of a shared helper, nonce counter or sink bench, looks a card up in a state under a name of its own, or reads a prompt's Mode options by hand (#1777, #1826, #1997, #2023, #2024, #3796, #3827, #3913): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
     );
 }
 
@@ -2016,40 +1965,6 @@ fn helpers_the_check_refuses_a_copy_in_each_covered_directory() {
     copies.sort();
     expected.sort();
     assert_eq!(copies, expected);
-}
-
-#[test]
-fn helpers_the_check_refuses_a_copy_in_the_server_tests() {
-    let scratch = Scratch(std::env::temp_dir().join(format!(
-        "jackioh-server-helpers-{}-{}",
-        std::process::id(),
-        SCRATCH.fetch_add(1, Ordering::Relaxed)
-    )));
-    let root = scratch.0.as_path();
-    let _ = fs::remove_dir_all(root);
-    let write = |path: &str, text: &str| {
-        let path = root.join(path);
-        fs::create_dir_all(path.parent().expect("a parent")).expect("its directory");
-        fs::write(path, text).expect("the file");
-    };
-    let from = "fn from<T: DeserializeOwned>(value: Value) -> T {\n    serde_json::from_value(value).expect(\"a value\")\n}\n";
-    write("crates/server/tests/api/planted.rs", from);
-    // tests/store/ builds without tests/support/, so its own copy is not one.
-    write("crates/server/tests/store/planted.rs", from);
-    write(
-        "crates/server/tests/bots/planted.rs",
-        "use super::*;\nfn playable() -> Vec<String> {\n    Vec::new()\n}\n",
-    );
-    let mut copies = shared_helper_copies(root);
-    drop(scratch);
-    copies.sort();
-    assert_eq!(
-        copies,
-        [
-            "crates/server/tests/api/planted.rs:1",
-            "crates/server/tests/bots/planted.rs:2"
-        ]
-    );
 }
 
 /// The 1-based lines of `text` that call `register_all();` on the line above one that calls a
@@ -3443,6 +3358,59 @@ fn ts_the_generated_types_are_written_by_the_ci_test_build() {
         "crates/wasm/core/Cargo.toml's [dev-dependencies] no longer turn on `ts` for {missing:?}: CI no longer \
          holds `Run*.ts` and the shared types to the Rust (#4426); restore the `features = [\"ts\"]` lines"
     );
+}
+
+/// Whether the manifest's `[dev-dependencies]` turn `jackioh-wasm-core`'s `duos` feature on (#4542):
+/// without it no test build compiles the real Duos bodies.
+fn dev_dependency_missing_duos(manifest: &str) -> bool {
+    let mut in_dev = false;
+    for raw in manifest.lines() {
+        let line = raw.split('#').next().unwrap_or("").trim();
+        if line.starts_with('[') {
+            in_dev = line == "[dev-dependencies]";
+        } else if in_dev
+            && !line.is_empty()
+            && line
+                .strip_prefix("jackioh-wasm-core")
+                .and_then(|rest| rest.trim_start().strip_prefix('='))
+                .is_some_and(|rest| rest.contains("features") && rest.contains("\"duos\""))
+        {
+            return false;
+        }
+    }
+    true
+}
+
+/// #4542: the C crate's dev-dependency turns `jackioh-wasm-core`'s `duos` feature on, so every
+/// test build compiles the real Duos bodies while the shipped modules keep their stubs.
+#[test]
+fn duos_the_c_test_build_compiles_the_duos_bodies() {
+    let path = repo().join("crates/wasm/c/Cargo.toml");
+    let manifest = fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+    assert!(
+        !dev_dependency_missing_duos(&manifest),
+        "crates/wasm/c/Cargo.toml's [dev-dependencies] no longer turn on `duos` for \
+         jackioh-wasm-core: no test build compiles the real Duos bodies (#4542); restore the \
+         `features = [\"duos\"]` line"
+    );
+}
+
+#[test]
+fn duos_the_dev_dependency_scan_finds_a_dropped_feature() {
+    let ok = "[dependencies]\njackioh-wasm-core = { path = \"../core\" }\n\n[dev-dependencies]\n\
+              # a comment\njackioh-wasm-core = { path = \"../core\", features = [\"duos\"] }\n";
+    assert!(!dev_dependency_missing_duos(ok));
+    let no_features = "[dev-dependencies]\njackioh-wasm-core = { path = \"../core\" }\n";
+    assert!(dev_dependency_missing_duos(no_features));
+    let other_feature =
+        "[dev-dependencies]\njackioh-wasm-core = { path = \"../core\", features = [\"serde\"] }\n";
+    assert!(dev_dependency_missing_duos(other_feature));
+    let commented =
+        "[dev-dependencies]\n# jackioh-wasm-core = { path = \"../core\", features = [\"duos\"] }\n";
+    assert!(dev_dependency_missing_duos(commented));
+    let linked = "[dependencies]\njackioh-wasm-core = { path = \"../core\", features = [\"duos\"] }\n\n[dev-dependencies]\n";
+    assert!(dev_dependency_missing_duos(linked));
+    assert!(dev_dependency_missing_duos("[package]\nname = \"x\"\n"));
 }
 
 #[test]

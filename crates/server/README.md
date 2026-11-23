@@ -1540,8 +1540,8 @@ the helpers every file shares (the fake store: `fake`, `fake_ref`, `fake_lock`, 
 `fake_read`, its faults `fail_on` and `stop_failing`; one store call in its own transaction: `q!`, `store!`,
 `try_store!`; `to_json`, `from`, `uuid`, `hmac_sha256_hex`); time is `tokio::time::pause()` and that
 module's steps (`advance`, `advance_and_yield`, `sleep_settled`). `support/engine.rs` also gives the
-catalog's playable ids (`playable`). `crates/tools/tests/acceptance.rs` (`SHARED_TEST_HELPERS`, #2385)
-fails a file under `actor/`, `api/`, `bots/`, `loops/` or `support/` that defines its own copy of one.
+catalog's playable ids (`playable`). `tests/support/shared_helpers.rs` (#2385) fails a file under
+`actor/`, `api/`, `bots/`, `loops/` or `support/` that defines its own copy of one.
 The fake store is strict where Postgres is strict (a
 transaction restores every table when it fails, claims are single-shot). `tests/store/contract.rs`
 runs every case against `Db::Fake` always and against `Db::Pg` when `DATABASE_URL` is set, which is

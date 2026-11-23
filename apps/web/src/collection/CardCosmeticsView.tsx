@@ -20,7 +20,8 @@ import { MAX_COPIES } from "@jackioh/engine/config";
 import type { CardDef } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
-import { CardDetail, CardFace, INSPECT_KEY_SHORTCUT, faceModel, useCardSettings } from "../cards/index.ts";
+import { CardFace, INSPECT_KEY_SHORTCUT, faceModel, useCardSettings } from "../cards/index.ts";
+import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import {
   DEFAULT_CARD_COSMETICS,
   OwnershipContext,

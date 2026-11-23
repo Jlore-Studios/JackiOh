@@ -8,7 +8,7 @@ import { useState, type ReactElement } from "react";
 import { t } from "../i18n/i18n.ts";
 import { skipUsernamePrompt } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
-import { signOut, signOutLabel, useSigningOut } from "../routes/account.tsx";
+import { signOut, signOutLabel, useSigningOut } from "./signOut.ts";
 import { PageTitle } from "../routes/PageTitle.tsx";
 import { Wordmark } from "../routes/Wordmark.tsx";
 import { tokenMetadata } from "./claims.ts";

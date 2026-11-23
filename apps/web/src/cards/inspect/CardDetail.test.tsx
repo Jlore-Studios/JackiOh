@@ -15,7 +15,8 @@ import type { AudioEngine } from "../../audio/types.ts";
 import { locWords } from "./locWords.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { detailMetaLine } from "./CardDetail.tsx";
-import { CardDetail, closeInspect } from "./index.ts";
+import { CardDetail } from "./CardDetail.tsx";
+import { closeInspect } from "./index.ts";
 import {
   INSPECT_CLOSE,
   INSPECT_DETAIL,

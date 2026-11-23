@@ -18,7 +18,8 @@ import { setShips, type CardDef } from "@jackioh/shared";
 import type { CatalogSnapshot } from "@jackioh/validator";
 
 import { readerName } from "../cards/chinese.ts";
-import { useCanOpenFullScreen, CardDefsProvider, CardDetail, CardFace, closeInspect, INSPECT_KEY_SHORTCUT, openFullScreenArt } from "../cards/index.ts";
+import { useCanOpenFullScreen, CardDefsProvider, CardFace, closeInspect, INSPECT_KEY_SHORTCUT, openFullScreenArt } from "../cards/index.ts";
+import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { useFaceModel } from "../game/faces.ts";
 import FilterBar from "../game/deckbuilder/FilterBar.tsx";
 import { FILTER_KEYWORDS, collectionPool } from "../game/deckbuilder/filters.ts";
