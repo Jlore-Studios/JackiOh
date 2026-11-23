@@ -15631,11 +15631,6 @@
       "owner": "claude-3",
       "owner_since": "2026-11-23T19:27:32Z",
       "owner_why": "it took it up",
-      "paused": {
-        "at": "2026-11-23T19:54:35Z",
-        "interrupt": "usage",
-        "provider": "claude-3"
-      },
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-23T19:23:33Z",
