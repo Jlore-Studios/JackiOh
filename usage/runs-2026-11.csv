@@ -3409,3 +3409,4 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-23T15:17:13Z,45188580454,claude-3,opus,review,4574,hard,infra,infra,,,,,,,,,,323.1,claude-3,none,,
 2026-11-23T15:09:24Z,45179018259,claude-1,opus,build,4604,hard,interrupted,5-hour cap,129.4,0,0,0,,3,40,,,156.6,claude-3,fresh,other,1
 2026-11-23T15:16:22Z,45155021062,claude-3,opus,build,4577,hard,built,,219.3,197,38636,13713203,7.8491,63,68,,,86.6,claude-4,fresh,cap,2
+2026-11-23T17:07:17Z,45204248055,claude-3,opus,review,4616,hard,approved,,60.7,93,24191,4155724,12.5782,70,17,,,2.3,,fresh,,3
