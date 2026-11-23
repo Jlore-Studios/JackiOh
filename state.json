@@ -18757,17 +18757,8 @@
       "taken_asks": []
     },
     "4606": {
-      "action": "plan",
-      "asks": [
-        "c:7109034059"
-      ],
-      "build_next": {
-        "from_run": "45231221107",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-23T17:57:21Z",
-        "until": "2026-11-23T18:27:21Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-23T17:57:12Z",
         "difficulty": "medium",
@@ -18786,10 +18777,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "mber>()` and export `rotationForKey(key: object): number` with the same body as `rotationFor` (return the stored value, else `nextRotation()`, store, return). Add `const startedMusicKeys = \u2026\n- 2. Same file, `createMusicDirector`: add `const key = options.musicKey;` and `const rotationOf = options.rotation ?? (key !== undefined ? () => rotationForKey(key) : rotationFor);` replacing the current `rotationOf` line. In `onView`'s `if (viewer === null)` branch, compute `const fresh = key === u\u2026\n- 3. `apps/web/src/audio/musicScene.ts`: add `let applyQueued = false;` and `function scheduleApply(): void { if (applyQueued) return; applyQueued = true; queueMicrotask(() => { applyQueued = false; apply(); }); }`. In `leave()`, replace the trailing `apply()` with `scheduleApply()`. Leave `request()\u2026\n- 4. `apps/web/src/audio/useGameAudio.ts`: change the signature to `export function useGameAudio(runner: AnimationQueue, view: PlayerView, silent = false, musicKey?: object): void` and change the director creation to `musicRef.current = createMusicDirector({ sink, musicKey });` (passing `musicKey: un\u2026\n- 5. `apps/web/src/game/Game.tsx`: add to `GameProps` after `silent?: boolean;` the field `/** R4606000: one object per match; remounts under the same key keep the match's music. Absent, every mount is a new match. */ musicKey?: object;`, add `musicKey` to the destructuring, and change the line 571 c\u2026\n- 6. `apps/web/src/replay/ReplayPlayer.tsx`: add `const musicKey = useMemo(() => ({}), [source]);` next to the `cache` memo (same dependency, so a different replay is a different key), and pass `musicKey={musicKey}` to the `Game` element. Do not change the `key={at.board}` logic.\n- 7. `apps/web/src/duos/DuosBoard.tsx`: add `const musicKey = useMemo(() => ({}), []);` near the other state (one key per mounted co-op match), and pass `musicKey={musicKey}` to every `Game` it renders (both-layout own board, single-board own branch, single-board teammate branch; the silent teammate \u2026\n- 8. `apps/web/src/audio/music-ui.test.tsx`: existing tests assert the menu theme synchronously after `unmount()`. After step 3 they must flush the microtask first: make those tests `async` and insert `await act(async () => {});` between `unmount()` and the menu-theme assertion (`act` is already impo\u2026\n- 9. Ruling docs: write `spec/rulings/R4606000.md` (front matter `id: R4606000`, title naming the replay/portal remount rule, `cards: \"\u00a710.11, R631, issue #4606\"`, `proven_in` listing the four test files from the table; body: a replay step that remounts and a co-op portal flip are the same match \u2014 sa\u2026\n- ## Tests\n- - `apps/web/src/audio/musicDirector.test.ts`: extend `rig` options with `musicKey?: object` and build the director with `...(options.musicKey === undefined ? { rotation: () => options.rotation ?? 0 } : { musicKey: options.musicKey })`. Add `it(\"R4606000 a remount under the same music key keeps the \u2026\n- - `apps/web/src/audio/music-ui.test.tsx`: add `it(\"R4606000 two boards of one match in a single commit never ask for the menu theme\", \u2026)`: render `<Game \u2026 musicKey={key}/>`, unmount, synchronously render `<Game \u2026 musicKey={key}/>`, flush microtasks, assert no request after the first game request ha\u2026\n- - `apps/web/src/replay/ReplayPlayer.test.tsx`: add `it(\"R4606000 stepping back, scrubbing and jumping turns keeps the rotation and the wanted track\", \u2026)`: copy the file's `recordingPlayer` pattern from `music-ui.test.tsx` with `setMusicPlayerForTests`, top-level `await loadSoundTables()`, `localSto\u2026\n- - `apps/web/src/duos/DuosBoard.test.tsx`: add `it(\"R4606000 flipping the portal back and forth keeps the rotation and the wanted track\", \u2026)`: same recording-player setup; `renderDuosBoard()` default single-board view; record rotation and wanted track; call the file's `flipPortal()` twice; assert ro\u2026\n- - Commands: `pnpm --dir apps/web test src/audio/musicDirector.test.ts`, `pnpm --dir apps/web test src/audio/music-ui.test.tsx`, `pnpm --dir apps/web test src/replay/ReplayPlayer.test.tsx`, `pnpm --dir apps/web test src/duos/DuosBoard.test.tsx`, then `pnpm --dir apps/web typecheck`, `pnpm exec eslin\u2026\n- ## Done when\n- - [ ] Backward replay moves and portal flips keep rotation, wanted track, resume point; sting at most once; no menu request between boards.\n- - [ ] A different replay and a new match each advance the rotation once.\n- - [ ] A real exit to a menu still requests the menu theme; hotseat hand-over (no remount) unchanged.\n- - [ ] Keyless live/practice/hotseat boards behave as before; all touched web test files pass.\n- - [ ] `R4606000` proving tests exist in all four `proven_in` files and `cargo jackioh spec check` passes.\n- ## Risks\n- - Deferred `leave()` touches every board's exit: the updated `R631` hand-back tests plus the new real-exit test pin it; a missed sync-unmount assertion shows up as a menu request one microtask late, fixed by flushing, never by dropping the assertion.\n- - The new director keeps no per-key station map: a remount recomputes from settings, so a mid-match station switch made by a cast event is forgotten by the remount. Acceptable here because the proving cases hold the station constant; note it as a rejected alternative (persisting stations per key) t\u2026\n- - Object-identity keys rely on `ReplayPlayer` staying mounted across steps (true: only `Game`'s key changes) and `DuosBoard` remounting per match via its route; `useMemo(..., [source])` ties the replay key to the replay the route keys the player by.\n- ## Open questions\n- None. All choices are settled by the issue's proposal and the repo's conventions.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4606 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4606/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-23T17:46:10Z",
       "owner_why": "it plans it",
@@ -18802,12 +18792,14 @@
       "provider": "muse",
       "queued_at": "2026-11-23T17:41:51Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45231221107",
+      "run_id": "pending:e84e38f4-1795456763",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-23T17:46:10Z",
+      "started_at": "2026-11-23T17:59:43Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7109034059"
+      ]
     },
     "4607": {
       "action": "plan",
@@ -18970,9 +18962,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T17:59:10Z",
+    "at": "2026-11-23T17:59:43Z",
     "url": "",
-    "what": "build #4614 on muse"
+    "what": "build #4606 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T17:44:20Z",
