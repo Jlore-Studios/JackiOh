@@ -1287,7 +1287,7 @@ mod tests {
     fn r4552001_a_thin_sample_is_shrunk_toward_the_typical_card_and_a_thick_one_is_not() {
         let moves = [0.05, -0.45, 0.25, -0.35, 0.15, -0.3, 0.4];
         let mut records: Vec<GameRecord> = (0..3).map(|n| one_swing(n, "thin", moves[n])).collect();
-        records.extend((0..2000).map(|n| one_swing(n, "thick", moves[n % moves.len()])));
+        records.extend((0..8000).map(|n| one_swing(n, "thick", moves[n % moves.len()])));
         let (_, report) = report_of(&totals_of(&records));
         let typical = report.deck_field.typical;
         assert_eq!(report.deck_field, DecisivenessField::PRIOR);
@@ -1300,6 +1300,33 @@ mod tests {
         let (thin, thick) = (kept("thin"), kept("thick"));
         assert!(thin < 0.5, "thin keeps {thin}");
         assert!(thick > 0.95, "thick keeps {thick}");
+    }
+
+    #[test]
+    fn r4552001_a_dozen_plays_keep_little_of_their_distance_from_the_typical_card() {
+        // A plain stat-stick's dozen plays read 17 points raw against the typical card's 12: real cards'
+        // RMS spread about 2 points, so a dozen plays' noise is most of what they show (issue #4552's
+        // 4-mana 7/7 kept 0.6 of it under a 4.5-point prior spread, and read clearly decisive).
+        let records: Vec<GameRecord> = (0..12)
+            .map(|n| {
+                let delta = if n % 2 == 0 { 0.17 } else { -0.17 };
+                let p1 = seat(
+                    &["dozen"],
+                    true,
+                    &[(0.5, vec!["dozen"], vec![]), (0.5 + delta, vec![], vec![])],
+                );
+                let p2 = seat(&["other"], false, &[(0.5, vec![], vec![])]);
+                record(&format!("dozen-{n:04}"), Winner::Draw, p1, p2)
+            })
+            .collect();
+        let (_, report) = report_of(&totals_of(&records));
+        assert_eq!(report.deck_field, DecisivenessField::PRIOR);
+        let typical = report.deck_field.typical;
+        let dozen = figures(&report, "dozen");
+        let rms = dozen.rms.unwrap();
+        assert!((rms - 0.17).abs() < 0.005, "{dozen:?}");
+        let kept = (dozen.decisiveness.unwrap() - typical) / (rms - typical);
+        assert!(kept > 0.0 && kept < 0.35, "keeps {kept}: {dozen:?}");
     }
 
     #[test]

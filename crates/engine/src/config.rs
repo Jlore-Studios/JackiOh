@@ -2468,10 +2468,12 @@ pub const SWING_PRIOR_BOARD_SPREAD: f64 = 0.01;
 /// forced games each of S #120 Wild System and S+ #61 Jayaad).
 pub const DECISIVENESS_PRIOR_CENTER: f64 = 0.12;
 
-/// R4552001: the spread of real cards' Decisiveness assumed below `ADJUSTED_FIELD_MIN_CARDS` read cards:
-/// the same 90 cards' raw RMS spread 5.1 points, of which about 2.4 is the sampling noise of 10 to 20
-/// plays, which leaves about 4.5.
-pub const DECISIVENESS_PRIOR_SPREAD: f64 = 0.045;
+/// R4552001: the spread of real cards' Decisiveness assumed below `ADJUSTED_FIELD_MIN_CARDS` read cards,
+/// ±2 points: what a card's raw RMS on odd games shares with its raw RMS on even games, their covariance
+/// across cards (issue #4552's 360 development games: 3.7 points² over the 435 cards played 3 times or
+/// more in each half, 0.0 over the 221 played 5 times, 3.6 over the 45 played 8 times). The raw RMS
+/// spread about 5 points between cards, but nearly all of that was the sampling noise of a few plays.
+pub const DECISIVENESS_PRIOR_SPREAD: f64 = 0.02;
 
 // ---------------------------------------------------------------------------------------------
 // The weapon kit (#1841, R1841000–R1841003; SPEC §4.4, §6.2, §6.3)
