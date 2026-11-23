@@ -16845,6 +16845,8 @@
       }
     },
     "4543": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T23:38:38Z",
@@ -16858,8 +16860,11 @@
         "trail": "_schema_invariants.sql'\\ns=open(p).read()\\nblock='''rollback;\\n\\n\\\\\\\\echo '=== CHECK 28 (#4510)\u2026\n- Bash: {\"command\": \"sed -n 428,445p /tmp/sql.log\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; python3 - <<'EOF'\\np='crates/server/tests/sql/01_schema_invariants.sql'\\ns=open(p).read()\\ns=s.replace(\\\"where id = any(array[gen_random_uuid()\u2026\n- Bash: {\"command\": \"sed -n 385,396p /tmp/sql.log\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510/crates/server/tests/sql; grep -n \\\"insert into public.matches\\\" *.sql | head; grep -n \\\"CHECK 26\\\" 01_schema_invariants.sql | head -3\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510/crates/server/tests/sql; sed -n 20,32p 07_retention_purge.sql; sed -n 1481,1500p 01_schema_invariants.sql; sed -n 1536,1545p 01_schema_invariant\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510/crates/server; sed -n 1,100p migrations/0089_daily_games.sql | sed -n 55,100p; grep -n \\\"primary key\\\" migrations/0004_matches.sql | head -3\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; python3 - <<'EOF'\\np='crates/server/tests/sql/01_schema_invariants.sql'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"-- as literals (the portraits' ids\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; python3 - <<'EOF'\\np='crates/server/tests/sql/01_schema_invariants.sql'\\ns=open(p).read()\\na=s.index(\\\"insert into public.matches (id, status, \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; f=crates/server/tests/sql/01_schema_invariants.sql; cp $f /tmp/inv.bak; python3 - <<'EOF'\\np='crates/server/tests/sql/01_schema_invariants.sql'\u2026\n- said: Old query fails, restored. Now the Postgres contract suite and the rest.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; docker rm -f jackioh-pg-test >/dev/null 2>&1; sh crates/server/tests/db/run.sh > /tmp/db.log 2>&1; echo exit $?; grep -n \\\"matches_portraits\\\\|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; cargo fmt --check && echo fmt ok; cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | tail -5; cargo test -p jackioh-server 2>&1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; cargo clippy -p jackioh-server --lib 2>&1 | grep -E \\\"^(error|warning)\\\" -A6 | head -30; grep -n \\\"^pub type\\\" crates/server/src/db/store.rs | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | grep -B3 -A12 \\\"type_complexity\\\" | head -40\", \"timeout\": 900000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510/crates/server; python3 - <<'EOF'\\nimport re\\np='src/db/store.rs'\\ns=open(p).read()\\ns=s.replace(\\\"pub type TrioSlots =\\\",\\\"/// #4510: a match id\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510/crates/server; python3 - <<'EOF'\\np='src/db/fake.rs'\\ns=open(p).read()\\ns=s.replace(\\\"{PLAYER_IDS, PlayerId, PortraitId}\\\",\\\"{PLAYER_IDS, Player\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510/crates/server; grep -n \\\"MatchPortraits\\\\|MatchPhase\\\" src/db/fake.rs | head -4; grep -n \\\"db::store::{\\\" -A6 src/db/pg.rs | head -14\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510/crates/server; sed -i '49s/MatchClocks, MatchRow/MatchClocks, MatchPortraits, MatchRow/' src/db/pg.rs; sed -i 's/portraits_of(p1: Option<&str>, \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | grep -A12 \\\"useless\\\" | head -20\", \"timeout\": 900000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; sed -i '14107s/vec!\\\\[/[/' crates/server/tests/store/contract.rs; cargo fmt; cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 |\u2026\n- said: Now the full server tests (background-safe), spec/patches/classify checks.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; cargo test -p jackioh-server > /tmp/t.log 2>&1; grep -E \\\"^test result|FAILED|panicked\\\" /tmp/t.log | head; cargo jackioh spec check 2>&1 | tai\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; cat > .bot-notes.md.new <<'EOF'\\n## State\\nAll plan steps implemented (store/pg/fake `matches_portraits` + `MatchPortraits` alias, `daily_games\u2026\n- Bash: {\"command\": \"sleep 240; cat /tmp/claude-1001/-home-runner-work--temp-work-item-4510/f293f172-daf2-4851-9a69-3d6d9202294c/tasks/besdvr7i7.output\", \"timeout\": 300000}\n- tool error: <tool_use_error>Blocked: sleep 240 followed by: cat /tmp/claude-1001/-home-runner-work--temp-work-item-4510/f293f172-daf2-4851-9a69-3d6d9202294c/tasks/besdvr7i7.output. To wait for a condition, use M\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4510/f293f172-daf2-4851-9a69-3d6d9202294c/tasks/besdvr7i7.output ]; do sleep 5; done; cat /tmp/claude-1001/-home-runner-work\u2026\n- Monitor: {\"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4510/f293f172-daf2-4851-9a69-3d6d9202294c/tasks/besdvr7i7.output ]; do sleep 5; done; echo done\", \"description\": \"wait for t\u2026\n- said: Waiting on the full server test run and the spec, patches and classify checks. They're still running in the background.\n- Bash: {\"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4510/f293f172-daf2-4851-9a69-3d6d9202294c/tasks/besdvr7i7.output ]; do sleep 5; done; cat /tmp/claude-1001/-home-runner-work\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; cargo jackioh spec check 2>&1 | tail -3; cargo jackioh patches check 2>&1 | tail -3; cargo jackioh classify --base origin/main --claims 2>&1 | \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the Daily list reads its games' portraits in one query, and the daily sweep finds the games due through its index instead of reading every daily game\"} --> ## What changed `GET /api/daily` now reads every listed game's portraits in one query. The hourly\u2026"
       },
       "issue": 4510,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-23T01:03:39Z",
         "from_run": "45084353816",
         "gates": [
           {
@@ -16951,7 +16956,11 @@
         "source": "build",
         "until": "2026-11-23T01:32:02Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-23T01:02:02Z",
+      "run_id": "pending:ac0b236e-1795395796",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16970,6 +16979,9 @@
         "provider": "claude-6",
         "run": "45084353816"
       },
+      "started_at": "2026-11-23T01:03:39Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16983,9 +16995,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T00:33:19Z",
+    "at": "2026-11-23T01:03:39Z",
     "url": "",
-    "what": "suggestions (rules) on muse"
+    "what": "review #4543 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-23T00:57:02Z",
