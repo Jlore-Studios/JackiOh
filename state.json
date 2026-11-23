@@ -18875,9 +18875,11 @@
     "what": "build #4604 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-23T16:47:53Z",
+    "at": "2026-11-23T16:55:57Z",
     "notes": [
-      "#4604 is held for `claude-1` until 10:50 (5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+      "#4604: `claude-1` can start again, so its hold is lifted",
+      "started build #4604 on claude-1 (run 45222365252)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19583,7 +19585,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T16:47:53Z",
+  "loop_tick": "2026-11-23T16:55:57Z",
   "machine_disk": {
     "issue": null,
     "reading": {
