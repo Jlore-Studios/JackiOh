@@ -26,6 +26,15 @@ import type { WinRateTable } from "../wire/generated/WinRateTable.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type { CombatForecast } from "../wire/generated/CombatForecast.ts";
 import type {
+  AssaultAction,
+  AssaultConstants,
+  AssaultContent,
+  AssaultDay,
+  AssaultFightSetup,
+  AssaultFile,
+  AssaultRecord,
+  AssaultSetup,
+  AssaultState,
   RunAction,
   RunConstants,
   RunContent,
@@ -434,6 +443,130 @@ export function runSeed(source: string): string {
 /** The daily run's seed: the date's and the day's run number. */
 export function runDailySeed(date: string, n: number): string {
   return call("runDailySeed", () => parsed<string>(normal.run_daily_seed(json(date), json(n))));
+}
+
+// The Infinite Assault (docs/infinite-assault.md IA1, IA5, IA9)
+
+/**
+ * `assaultCreate`, `assaultReduce` and `assaultFold`'s answer: the state, or the refusal, never thrown
+ * (only malformed JSON throws, as everywhere else here).
+ */
+export type AssaultResult = { state: AssaultState } | { error: string };
+
+/** "2026-11-23" -> "assault-2026-11-23", or throws if invalid date. */
+export function assaultDaySeed(date: string): string {
+  return call("assaultDaySeed", () => parsed<string>(normal.assault_day_seed(json(date))));
+}
+
+/** The set's cards by tag + assault.json. */
+export function assaultCatalogContent(catalog: CardDefs): AssaultContent {
+  return call("assaultCatalogContent", () =>
+    parsed<AssaultContent>(normal.assault_catalog_content(json(catalog))),
+  );
+}
+
+/** Shipped stand-ins until the release. */
+export function assaultPlaceholderContent(catalog: CardDefs): AssaultContent {
+  return call("assaultPlaceholderContent", () =>
+    parsed<AssaultContent>(normal.assault_placeholder_content(json(catalog))),
+  );
+}
+
+/** The Assault's content for the browser: `assault_placeholder_content` until the release. */
+export function assaultContent(): AssaultContent {
+  return call("assaultContent", () => parsed<AssaultContent>(normal.assault_content()));
+}
+
+/** R3496000: `AssaultContent` for a catalog version: the build's own, a carried version's, or null. */
+export function assaultContentAt(version: string): AssaultContent | null {
+  return call("assaultContentAt", () =>
+    parsed<AssaultContent | null>(normal.assault_content_at(json(version))),
+  );
+}
+
+/** The day's deal: 20 levels and their escalations. */
+export function assaultDay(date: string, content: AssaultContent): AssaultDay {
+  return call("assaultDay", () =>
+    parsed<AssaultDay>(normal.assault_day(json(date), json(content))),
+  );
+}
+
+/** Start an attempt: its state, or the setup's refusal. */
+export function assaultCreate(
+  setup: AssaultSetup,
+  record: AssaultRecord,
+  day: AssaultDay,
+): AssaultResult {
+  return call("assaultCreate", () =>
+    parsed<AssaultResult>(normal.assault_create(json(setup), json(record), json(day))),
+  );
+}
+
+/** The attempt after one action, or the action's refusal. */
+export function assaultReduce(
+  state: AssaultState,
+  day: AssaultDay,
+  action: AssaultAction,
+): AssaultResult {
+  return call("assaultReduce", () =>
+    parsed<AssaultResult>(normal.assault_reduce(json(state), json(day), json(action))),
+  );
+}
+
+/** The fight being played, or null outside one. */
+export function assaultFightSetup(
+  state: AssaultState,
+  day: AssaultDay,
+): AssaultFightSetup | null {
+  return call("assaultFightSetup", () =>
+    parsed<AssaultFightSetup | null>(normal.assault_fight_setup(json(state), json(day))),
+  );
+}
+
+/** The `FightOver` a finished fight sends, or why the game reports none. */
+export function assaultFightReport(
+  game: ReplayInput,
+  human: PlayerId,
+): { action: AssaultAction } | { error: string } {
+  return call("assaultFightReport", () =>
+    parsed<{ action: AssaultAction } | { error: string }>(
+      normal.assault_fight_report(json(game), json(human)),
+    ),
+  );
+}
+
+/** The day's record folded with the attempt's progress. */
+export function assaultRecord(
+  record: AssaultRecord,
+  state: AssaultState,
+): AssaultRecord {
+  return call("assaultRecord", () =>
+    parsed<AssaultRecord>(normal.assault_record(json(record), json(state))),
+  );
+}
+
+/** An attempt file folded from its start, or the first refused step. */
+export function assaultFold(
+  file: AssaultFile,
+  day: AssaultDay,
+): AssaultResult {
+  return call("assaultFold", () =>
+    parsed<AssaultResult>(normal.assault_fold(json(file), json(day))),
+  );
+}
+
+/** The Assault's numbers the screens show, so the client states none (CLAUDE.md rule 9). */
+export function assaultConstants(): AssaultConstants {
+  return call("assaultConstants", () =>
+    parsed<AssaultConstants>(normal.assault_constants()),
+  );
+}
+
+/** The day's Assault deck: practice's fresh random deck for a human, seeded `{day seed}-deck`. */
+export function assaultDayDeck(date: string): string[] {
+  return call("assaultDayDeck", () =>
+    parsed<string[]>(normal.assault_day_deck(json(date))),
+  );
 }
 
 // Duos co-op (#936 S4, S8): the wrapper over two duels, for `/dev/duos`'s four-seat hotseat

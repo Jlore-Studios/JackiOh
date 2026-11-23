@@ -17,10 +17,13 @@ use std::str::FromStr;
 
 use jackioh_engine::replay::ReplayInput;
 use jackioh_engine::{
-    self as engine, Action, CardDefs, CraftRecipe, CreateGameArgs, FoldArgs, GameState, PlayerId,
+    self as engine, Action, CardDefs, CraftRecipe, CreateGameArgs, DECK_SIZE, FoldArgs, GameState, PlayerId,
     ReduceResult, ReplayCheckpoints, ReplayRecord, Rng, SetupKind,
 };
-use jackioh_run::{RunAction, RunContent, RunFile, RunSetup, RunState, RunUnlocks};
+use jackioh_run::{
+    AssaultAction, AssaultContent, AssaultDay, AssaultFile, AssaultRecord, AssaultSetup, AssaultState,
+    RunAction, RunContent, RunFile, RunSetup, RunState, RunUnlocks,
+};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -309,6 +312,134 @@ pub fn run_daily_seed(date_json: &str, n_json: &str) -> Result<String, String> {
     let date: String = parse("runDailySeed: the date", date_json)?;
     let n: u32 = parse("runDailySeed: the run number", n_json)?;
     to_json(&jackioh_run::run_daily_seed(&date, n))
+}
+
+// The Infinite Assault (docs/infinite-assault.md IA1, IA5, IA9)
+
+/// "2026-11-23" -> "assault-2026-11-23", or refused.
+pub fn assault_day_seed(date_json: &str) -> Result<String, String> {
+    let date: String = parse("assaultDaySeed: the date", date_json)?;
+    to_json(&jackioh_run::assault_day_seed(&date)?)
+}
+
+/// The set's cards by tag + assault.json.
+pub fn assault_catalog_content(catalog_json: &str) -> Result<String, String> {
+    let catalog: CardDefs = parse("assaultCatalogContent: the catalog", catalog_json)?;
+    to_json(&jackioh_run::assault_catalog_content(&catalog))
+}
+
+/// Shipped stand-ins until the release.
+pub fn assault_placeholder_content(catalog_json: &str) -> Result<String, String> {
+    let catalog: CardDefs = parse("assaultPlaceholderContent: the catalog", catalog_json)?;
+    to_json(&jackioh_run::assault_placeholder_content(&catalog))
+}
+
+/// The Assault's content for the browser: `assault_placeholder_content` until the release.
+pub fn assault_content() -> Result<String, String> {
+    to_json(&jackioh_run::assault_placeholder_content(
+        engine::registered_catalog(),
+    ))
+}
+
+/// R3496000: `AssaultContent` for a catalog version: the build's own answers `assault_content()`; a
+/// carried version answers `assault_placeholder_content` over its carried shipped catalog; any other
+/// version answers `null`.
+pub fn assault_content_at(version_json: &str) -> Result<String, String> {
+    let version: String = parse("assaultContentAt: the version", version_json)?;
+    if version == jackioh_cards::catalog_version() {
+        return assault_content();
+    }
+    match jackioh_cards::shipped_catalog(&version) {
+        Some(shipped) => to_json(&jackioh_run::assault_placeholder_content(shipped.defs())),
+        None => Ok("null".to_owned()),
+    }
+}
+
+/// The day's deal: 20 levels and their escalations, or refused.
+pub fn assault_day(date_json: &str, content_json: &str) -> Result<String, String> {
+    let date: String = parse("assaultDay: the date", date_json)?;
+    let content: AssaultContent = parse("assaultDay: the content", content_json)?;
+    to_json(&jackioh_run::assault_day(&date, &content)?)
+}
+
+/// `{ state }` for an attempt started, `{ error }` for a setup the attempt refuses.
+pub fn assault_create(setup_json: &str, record_json: &str, day_json: &str) -> Result<String, String> {
+    let setup: AssaultSetup = parse("assaultCreate: the setup", setup_json)?;
+    let record: AssaultRecord = parse("assaultCreate: the record", record_json)?;
+    let day: AssaultDay = parse("assaultCreate: the day", day_json)?;
+    match jackioh_run::assault_create(&setup, &record, &day) {
+        Ok(state) => to_json(&json!({ "state": state })),
+        Err(refusal) => to_json(&json!({ "error": refusal })),
+    }
+}
+
+/// `{ state }` after one action, `{ error }` for an action the attempt refuses.
+pub fn assault_reduce(state_json: &str, day_json: &str, action_json: &str) -> Result<String, String> {
+    let state: AssaultState = parse("assaultReduce: the state", state_json)?;
+    let day: AssaultDay = parse("assaultReduce: the day", day_json)?;
+    let action: AssaultAction = parse("assaultReduce: the action", action_json)?;
+    match jackioh_run::assault_reduce(&state, &day, &action) {
+        Ok(state) => to_json(&json!({ "state": state })),
+        Err(refusal) => to_json(&json!({ "error": refusal })),
+    }
+}
+
+/// The fight being played (`AssaultFightSetup`), or `null` outside one.
+pub fn assault_fight_setup(state_json: &str, day_json: &str) -> Result<String, String> {
+    let state: AssaultState = parse("assaultFightSetup: the state", state_json)?;
+    let day: AssaultDay = parse("assaultFightSetup: the day", day_json)?;
+    to_json(&jackioh_run::assault_fight_setup(&state, &day))
+}
+
+/// `{ action }` for the `FightOver` a finished fight sends, `{ error }` for a game that reports none.
+pub fn assault_fight_report(game_json: &str, human_json: &str) -> Result<String, String> {
+    let game: ReplayInput = parse("assaultFightReport: the game", game_json)?;
+    let human: PlayerId = parse("assaultFightReport: the human", human_json)?;
+    match jackioh_run::assault_fight_report(&game, human) {
+        Ok(action) => to_json(&json!({ "action": action })),
+        Err(refusal) => to_json(&json!({ "error": refusal })),
+    }
+}
+
+/// The day's record folded with the attempt's progress.
+pub fn assault_record(record_json: &str, state_json: &str) -> Result<String, String> {
+    let record: AssaultRecord = parse("assaultRecord: the record", record_json)?;
+    let state: AssaultState = parse("assaultRecord: the state", state_json)?;
+    to_json(&jackioh_run::assault_record(&record, &state))
+}
+
+/// `{ state }` for an attempt file folded, `{ error }` naming the first refused step.
+pub fn assault_fold(file_json: &str, day_json: &str) -> Result<String, String> {
+    let file: AssaultFile = parse("assaultFold: the file", file_json)?;
+    let day: AssaultDay = parse("assaultFold: the day", day_json)?;
+    match jackioh_run::assault_fold(&file, &day) {
+        Ok(state) => to_json(&json!({ "state": state })),
+        Err(refusal) => to_json(&json!({ "error": refusal })),
+    }
+}
+
+/// The Assault's numbers the screens show, so the client states none (CLAUDE.md rule 9).
+pub fn assault_constants() -> Result<String, String> {
+    to_json(&jackioh_run::assault_constants())
+}
+
+/// The day's Assault deck: practice's fresh random deck for a human (R258's draw, `banned: []`),
+/// seeded `{day seed}-deck`, no lean (IA5).
+pub fn assault_day_deck(date_json: &str) -> Result<String, String> {
+    let date: String = parse("assaultDayDeck: the date", date_json)?;
+    let day_seed = jackioh_run::assault_day_seed(&date)?;
+    let seed = format!("{day_seed}-deck");
+    let mut rng = Rng::new(&seed, 0);
+    let deck = jackioh_ai::build_ai_deck(
+        &mut rng,
+        DECK_SIZE,
+        &jackioh_ai::AiDeckOptions {
+            banned: Some(Vec::new()),
+            gated_sets: Some(Vec::new()),
+            ..Default::default()
+        },
+    );
+    to_json(&deck)
 }
 
 // The engine (SURFACE §6.1)
@@ -1437,6 +1568,143 @@ mod run_body_tests {
             serde_json::from_str::<String>(&text).unwrap(),
             jackioh_run::run_daily_seed("2026-11-01", 2)
         );
+    }
+}
+
+#[cfg(test)]
+mod assault_body_tests {
+    use super::*;
+
+    fn json_of<T: serde::Serialize>(value: &T) -> String {
+        to_json(value).unwrap()
+    }
+
+    #[derive(serde::Deserialize)]
+    struct AssaultStateAnswer {
+        state: Option<AssaultState>,
+        error: Option<String>,
+    }
+
+    #[test]
+    fn assault_day_seed_prefixes_the_date() {
+        let text = assault_day_seed("\"2026-11-23\"").unwrap();
+        assert_eq!(
+            serde_json::from_str::<String>(&text).unwrap(),
+            "assault-2026-11-23"
+        );
+        assert!(assault_day_seed("\"not-a-date\"").is_err());
+    }
+
+    #[test]
+    fn assault_day_is_deterministic_and_dates_differ() {
+        let content = assault_content().unwrap();
+        let d1 = assault_day("\"2026-11-23\"", &content).unwrap();
+        let d2 = assault_day("\"2026-11-23\"", &content).unwrap();
+        assert_eq!(d1, d2);
+        let d3 = assault_day("\"2026-11-24\"", &content).unwrap();
+        assert_ne!(d1, d3);
+    }
+
+    #[test]
+    fn assault_day_deck_is_a_stable_human_random_deck() {
+        jackioh_cards::register_all();
+        let text1 = assault_day_deck("\"2026-11-23\"").unwrap();
+        let text2 = assault_day_deck("\"2026-11-23\"").unwrap();
+        assert_eq!(text1, text2);
+        let deck: Vec<String> = serde_json::from_str(&text1).unwrap();
+        assert_eq!(deck.len(), DECK_SIZE as usize);
+        let set: std::collections::BTreeSet<_> = deck.iter().collect();
+        assert_eq!(set.len(), DECK_SIZE as usize);
+        let catalog = engine::registered_catalog();
+        for id in &deck {
+            let def = catalog
+                .get(id)
+                .unwrap_or_else(|| panic!("card {id} not in catalog"));
+            assert!(engine::catalog::deckable(def), "card {id} is not deckable");
+        }
+    }
+
+    #[test]
+    fn assault_attempt_folds_from_create_through_record() {
+        jackioh_cards::register_all();
+        let content = assault_content().unwrap();
+        let day_text = assault_day("\"2026-11-23\"", &content).unwrap();
+        let day_deck_text = assault_day_deck("\"2026-11-23\"").unwrap();
+        let deck: Vec<String> = serde_json::from_str(&day_deck_text).unwrap();
+
+        let setup = AssaultSetup {
+            date: "2026-11-23".into(),
+            deck: deck.clone(),
+            source: jackioh_run::AssaultDeckSource::DayDeck,
+            start_level: 1,
+            attempt: 1,
+        };
+        let record = AssaultRecord {
+            date: "2026-11-23".into(),
+            best: 0,
+            checkpoints: vec![],
+            attempts: 1,
+            repelled_on: None,
+        };
+        let created_text = assault_create(&json_of(&setup), &json_of(&record), &day_text).unwrap();
+        let created: AssaultStateAnswer = serde_json::from_str(&created_text).unwrap();
+        let state = created.state.unwrap();
+        assert_eq!(state.level, 1);
+        assert!(created.error.is_none());
+
+        let fight_setup_text = assault_fight_setup(&json_of(&state), &day_text).unwrap();
+        let fight_setup: Option<jackioh_run::AssaultFightSetup> =
+            serde_json::from_str(&fight_setup_text).unwrap();
+        assert_eq!(fight_setup.as_ref().unwrap().human_deck, deck);
+
+        let fight_action = AssaultAction::Fight;
+        let fighting_text = assault_reduce(&json_of(&state), &day_text, &json_of(&fight_action)).unwrap();
+        let fighting: AssaultStateAnswer = serde_json::from_str(&fighting_text).unwrap();
+        let fighting_state = fighting.state.unwrap();
+
+        let file = AssaultFile {
+            version: jackioh_cards::catalog_version().to_string(),
+            setup: setup.clone(),
+            record: record.clone(),
+            actions: vec![fight_action],
+        };
+        let folded_text = assault_fold(&json_of(&file), &day_text).unwrap();
+        let folded: AssaultStateAnswer = serde_json::from_str(&folded_text).unwrap();
+        assert_eq!(folded.state.unwrap(), fighting_state);
+
+        let updated_record_text = assault_record(&json_of(&record), &json_of(&fighting_state)).unwrap();
+        let _updated_record: AssaultRecord = serde_json::from_str(&updated_record_text).unwrap();
+
+        let bad_setup = AssaultSetup {
+            start_level: 6,
+            ..setup
+        };
+        let bad_create_text = assault_create(&json_of(&bad_setup), &json_of(&record), &day_text).unwrap();
+        let bad_create: AssaultStateAnswer = serde_json::from_str(&bad_create_text).unwrap();
+        assert!(bad_create.state.is_none());
+        assert!(bad_create.error.is_some());
+
+        let ended_state = AssaultState {
+            phase: jackioh_run::AssaultPhase::Lost,
+            ..state
+        };
+        let bad_action_text =
+            assault_reduce(&json_of(&ended_state), &day_text, &json_of(&AssaultAction::Fight)).unwrap();
+        let bad_action: AssaultStateAnswer = serde_json::from_str(&bad_action_text).unwrap();
+        assert!(bad_action.state.is_none());
+        assert!(bad_action.error.is_some());
+    }
+
+    // R3496000: content_at for the current version answers assault_content(); unknown version answers null.
+    #[test]
+    fn assault_content_at_answers_current_and_null_for_unknown() {
+        let current = assault_content().unwrap();
+        let version = serde_json::to_string(jackioh_cards::catalog_version()).unwrap();
+        let at_current = assault_content_at(&version).unwrap();
+        assert_eq!(at_current, current);
+        let unknown = "\"v0.0.0-unknown\"";
+        let at_unknown = assault_content_at(unknown).unwrap();
+        assert_eq!(at_unknown, "null");
     }
 }
 
