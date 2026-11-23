@@ -64,7 +64,8 @@ export async function checkForUpdate(now: number = Date.now(), mode: string = im
 /**
  * R4605000: remembers that a failure already reloaded for `entry`. True when it did, so the
  * boundary shows its panel instead of reloading again; false the first time. A storage error
- * fails closed to false, so the panel shows and nothing loops.
+ * fails closed to true (the panel), since nothing can be recorded: false is the reload path,
+ * so returning it here would reload a tab whose storage is broken on every failure with no recourse.
  */
 export function noteReloadedEntry(entry: string): boolean {
   try {
@@ -72,7 +73,7 @@ export function noteReloadedEntry(entry: string): boolean {
     window.sessionStorage.setItem(UPDATE_RELOAD_KEY, entry);
     return false;
   } catch {
-    return false;
+    return true;
   }
 }
 

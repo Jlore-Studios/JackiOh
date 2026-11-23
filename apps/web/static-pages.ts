@@ -287,9 +287,14 @@ export const VERSION_FILE = "version.json";
  * Vite names it by its content hash in a production build, so a build's entry differs from every other's.
  */
 export function versionEntryOf(template: string): string {
-  const entry = /<script type="module" src="([^"]+)"/u.exec(template)?.[1];
-  if (entry === undefined || entry.length === 0) throw new Error("static-pages.ts: index.html has no entry script");
-  return entry;
+  // Vite's build writes extra attributes into the entry tag (`crossorigin`), so the tag is
+  // matched whole and `src` read from it, whatever order the attributes come in.
+  for (const tag of template.matchAll(/<script\b[^>]*>/gu)) {
+    if (!/\btype="module"/u.test(tag[0])) continue;
+    const entry = /\bsrc="([^"]+)"/u.exec(tag[0])?.[1];
+    if (entry !== undefined && entry.length > 0) return entry;
+  }
+  throw new Error("static-pages.ts: index.html has no entry script");
 }
 
 /**

@@ -246,6 +246,10 @@ describe("the static pages", () => {
     expect(version.entry).toBe(template.querySelector('script[type="module"]')?.getAttribute("src"));
     expect(version.entry).toBe(versionEntryOf(TEMPLATE));
     expect(version.entry).toBe("/src/main.tsx");
+    // Vite's build adds `crossorigin` to the entry tag (check-production-bundle.test.ts `ENTRY_TAG`).
+    expect(versionEntryOf('<script type="module" crossorigin src="/assets/index-test.js"></script>')).toBe(
+      "/assets/index-test.js",
+    );
     expect(() => {
       versionEntryOf("<html><head></head><body></body></html>");
     }).toThrow(/has no entry script/u);

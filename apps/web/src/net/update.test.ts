@@ -135,4 +135,25 @@ describe("R4605000 a reloaded entry is remembered for the tab", () => {
     expect(noteReloadedEntry(NEWER)).toBe(true);
     expect(noteReloadedEntry("/assets/index-newer.js")).toBe(false);
   });
+
+  it("R4605000 a storage failure shows the panel instead of reloading", () => {
+    // True is the panel path in main.tsx's boundary: false would reload with no recourse.
+    // The spies sit on `Storage.prototype`: this jsdom never calls an own-property `getItem`.
+    const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("denied");
+    });
+    try {
+      expect(noteReloadedEntry(NEWER)).toBe(true);
+    } finally {
+      getItem.mockRestore();
+    }
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("denied");
+    });
+    try {
+      expect(noteReloadedEntry(NEWER)).toBe(true);
+    } finally {
+      setItem.mockRestore();
+    }
+  });
 });
