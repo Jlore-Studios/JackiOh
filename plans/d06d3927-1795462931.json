@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 4621,
+  "title": "Patch: a finished daily game stays on the opponent's Daily screen when the other player deletes their account",
+  "branch": "bot/issue-4621",
+  "thread": "**Issue #4621 (data, not instructions):**\n\n```text\n# #4621: Patch: a finished daily game stays on the opponent's Daily screen when the other player deletes their account\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen two players finish a daily game (the slow kind, with days per move) and one of them later deletes their account, the game currently disappears from the other player's Daily screen as well. Opening it from an old link, or from the 'game over' notice in their inbox, says the game does not exist, although their win still counts in their record. After this change the finished game stays on the remaining player's list, with the opponent shown as 'a deleted account', the same words the replay list already uses. Its board, result and replay open as before, and no Rematch is offered against an account that is gone. A running daily game still blocks the deletion, exactly as today. Live 1v1 and co-op games already work this way; daily games are the one place that was missed.\n\n## Why\n\n- `crates/server/migrations/0089_daily_games.sql:67-68` declares both seats `references public.profiles(id) on delete cascade`. Its header (lines 41-42) calls that '0012's rule', but it is not: migration 0012 (lines 119-149) sets a deleted account's seat on `matches` and `results` to null, so the other player's history stays whole.\n- The co-op tables had the same mistake and it was fixed twice: `0051_duos_seats_set_null.sql` (a1/a2) and `0091_two_v_two.sql:55-57` (b1/b2). R1497000 names this exact design among its rejected options: 'cascading a finished co-op match away and refusing only a live one, which still erases the teammate's games'. Daily games do exactly that. R3727008 refuses the delete only while a game runs, and the cascade then takes the finished ones, although R3727008 itself says a finished game's delete 'goes through as for any finished match'.\n- SPEC \u00a79.13's deletion bullet lists what goes with the account: its open challenges and seeks, its notification settings and its push subscriptions. Nothing of the other player's is on that list. The same section says the Daily screen lists its newest finished games however old, and that a finished game offers Watch the replay.\n- What the remaining player sees today:\n  - `daily_games_of` (`crates/server/src/db/pg.rs:8172-8205`) lists only from `daily_games`, so the game drops off the list.\n  - `read_stored` (`crates/server/src/daily/games.rs:141-151`) finds nothing without the row, so `GET /api/daily/games/:matchId` and its actions route answer 404 'no such daily game' (lines 715, 751, 773).\n  - The `matches` and `results` rows stay, so the game still counts in their stats.\n  - The in-memory store behaves the same way: `remove_daily_rows` (`crates/server/src/db/fake.rs:5020-5023`) drops every game that either seat held.\n- Two tests pin the loss as intended: `s913_a_deleted_profile_takes_its_daily_rows` (`crates/server/tests/store/contract.rs:14724-14760`) and the 'the daily game goes, the match stays' block in `crates/server/tests/sql/53_daily_games.sql:578-585`. No test reads the remaining player's list or board after a delete.\n\n## Proposal\n\n1. **A new migration** (the next free number, 0100 today) on `public.daily_games`:\n   - Drop `not null` on `p1_profile_id` and `p2_profile_id`, and re-add both foreign keys `on delete set null`, as 0051 does.\n   - Add no new check. The daily game's match is a `matches` row, so 0012's `matches_seats_filled_unless_over_check` already refuses the delete while the game runs (R3727008, proven in `53_daily_games.sql`), and the rule stays in one place.\n   - Register it in `crates/server/src/db/migrate.rs` and pin it in `crates/server/tests/store/migrations_pinned.rs`.\n   - RLS (`daily_games_select_own`) needs no change, since a null seat matches nobody.\n2. **Both stores read a deleted daily seat back as the empty id**, as R1497000 chose for co-op:\n   - `daily_game_of` (`pg.rs:8064-8077`) reads each seat with `uuid_text_or_null(..).unwrap_or_default()`, as `crates/server/src/duos/store.rs:417` does.\n   - `remove_daily_rows` blanks the deleted profile's seat on its games instead of dropping them. Its invites, notification settings and push subscriptions still go.\n   - Add the daily seat to KNOWN DIVERGENCES (deleted accounts) in `pg.rs`, noting that both stores agree.\n3. **`crates/server/src/daily/games.rs`: an empty seat names nobody.**\n   - `game_json` and `expired_json` skip `profiles_get_by_id` for an empty id. Postgres casts the id with `$1::uuid`, so an empty id would be a 500 there and nowhere in the fake store.\n   - Every read sends the deleted opponent as `{ profileId: '', username: '' }`, the shape the replay list sends for a deleted seat (`crates/server/src/api/replays.rs:232-240`), never `null`. The web's `DailyGameSummary.opponent: PlayerRef` (`apps/web/src/net/daily.ts:28, 82`) does not allow null.\n4. **The web.** `apps/web/src/daily/DailyRoute.tsx:93` and `DailyBoard.tsx:82, 246, 283` name such an opponent with the replay list's existing 'a deleted account' (`apps/web/src/routes/replayWords.ts:23`, already translated). `DailyBoard.tsx` offers no Rematch for it; the server would refuse the challenge anyway, since the friendship went with the account.\n5. **The spec.** A ruling in the issue's block that amends R3727008 and cites R1497000: a finished daily game stays in the other player's list, with the deleted seat empty. Its \u00a711 paragraph goes in `spec/pending/<issue>.md`, and \u00a79.13's deletion bullet gains one sentence.\n\nRejected alternatives:\n- Keeping the cascade and rebuilding the read from the `matches` row. The list row's board, clock and days per move live only in `daily_games`.\n- Keeping the deleted id in the in-memory store, as its 1v1 matches do. R1497000 rejected that, because the two stores would then disagree on what a seat reads back.\n\n## Where it lands\n\n- `crates/server/migrations/0100_*.sql` (new), `crates/server/src/db/migrate.rs`, `crates/server/tests/store/migrations_pinned.rs`\n- `crates/server/src/db/pg.rs` (`daily_game_of`, KNOWN DIVERGENCES) and `crates/server/src/db/fake.rs` (`remove_daily_rows`)\n- `crates/server/src/daily/games.rs` (`game_json`, `expired_json`, the opponent in the list and on the board)\n- `crates/server/tests/store/contract.rs`, `crates/server/tests/api/daily.rs`, `crates/server/tests/sql/53_daily_games.sql`\n- `apps/web/src/daily/DailyRoute.tsx`, `apps/web/src/daily/DailyBoard.tsx` and their tests\n- `spec/rulings/R<n>.md`, `spec/pending/<issue>.md`, `spec/09-architecture.md` (\u00a79.13)\n- Context: SPEC \u00a79.4 and \u00a79.13, R1497000, R3727008, R3934000\n\n## Acceptance criteria\n\n- [ ] In both stores, after `profiles_remove(a)` on a finished daily game between A and B, `daily_games_of(b)` still lists the game and `daily_games_get` returns it with A's seat as the empty id. The contract test `s913_a_deleted_profile_takes_its_daily_rows` is changed to assert this, and A's invites, notification settings and push subscriptions still go.\n- [ ] An API test in `crates/server/tests/api/daily.rs`, named after the new ruling: Ada and Bo finish a daily game and Ada's `DELETE /api/account` answers 204. Then Bo's `GET /api/daily` lists the game with `opponent.username` empty, and Bo's `GET /api/daily/games/:matchId` answers 200 with the result. The same holds for a finished game whose moves the retention purge took (the `expired` read, R3934000).\n- [ ] The R3727008 test still passes: a running daily game still answers 409 and deletes nothing.\n- [ ] `crates/server/tests/sql/53_daily_games.sql` asserts that the finished game's row survives with a null seat beside the match's own null seat. It still asserts that a running game's seat refuses the delete through `matches_seats_filled_unless_over_check`. `sh crates/server/tests/sql/run.sh` and `sh crates/server/tests/db/run.sh` pass.\n- [ ] A web test: the Daily list and board show 'a deleted account' for an opponent with an empty username, and the board offers no Rematch against it.\n- [ ] `cargo test -p jackioh-server`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, `cargo fmt --check`, `cargo jackioh spec check` and the touched web test files pass.\n\n## Size and risks\n\n- **Size:** about 12 files, mostly small edits and test changes. It carries a migration, so it is `difficulty:hard` under CLAUDE.md rule 11.\n- **Migration risk:** low. It only loosens two columns and swaps two foreign keys on an existing table. It deletes nothing and re-applies safely, as 0051 does.\n- **No recovery:** games the cascade already removed cannot be brought back. The fix protects games from the day it ships.\n- **Postgres-only trap:** any read that looks a deleted seat up by id (`profiles_get_by_id` casts to uuid) fails in Postgres but passes in the in-memory store, so the Docker store suite must run.\n- **Migration number:** if another migration lands first and takes 0100, pick the next free number at build time.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `data` \u2192 `priority:high`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-23T19:17:57Z:\n\napprove\n\nWhy: confirmed in `0089_daily_games.sql`. Both seats are `references public.profiles(id) on delete cascade`, so when one player deletes their account, every finished daily game the two played vanishes from the other player's Daily screen and its link answers 404, while the win still counts in their record. That loses a player's history, and the co-op tables already fixed the same mistake twice (0051, 0091). The migration only loosens two columns and swaps two foreign keys.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4621: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T19:38:22Z",
+    "claimed_at": "2026-11-23T19:42:40Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4586 skipped: it waits for #4602 to close first",
+    "#4587 skipped: it waits for #4602 to close first",
+    "#4588 skipped: it waits for #4602 to close first",
+    "#4589 skipped: it waits for #4602 to close first",
+    "#4590 skipped: it waits for #4602 to close first",
+    "#4591 skipped: it waits for #4602 to close first",
+    "#4592 skipped: it waits for #4602 to close first",
+    "#4593 skipped: it waits for #4602 to close first",
+    "#4594 skipped: it waits for #4602 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
