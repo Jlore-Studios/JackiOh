@@ -17349,7 +17349,16 @@
       "feedback_since": "2026-11-23T01:40:06Z",
       "issue": 4541,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "gpt",
+        "built_by": "gpt",
+        "rejections": [],
+        "reviews": [],
+        "sha": "2264f665794a2cf78d1005343d12a642cb4e54e9",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
