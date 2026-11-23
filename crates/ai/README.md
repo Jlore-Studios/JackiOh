@@ -646,6 +646,7 @@ cargo test -p jackioh-ai --test ai_slow       # one binary: CI gives each its ow
 cargo jackioh gate                            # the three gates and the perf gate at smoke size
 cargo jackioh gate --full                     # at full size (the daily super run plays it in shards)
 cargo jackioh gate --duos                     # the Duos gate: the Easy AI team against a random team and a greedy team (--games N)
+cargo jackioh gate --measure                  # measure the AI's win rates across all matchups on fresh tuning deals (--games N)
 cargo jackioh gate --full --shard 1/4 --out ai-gate-shards && cargo jackioh gate merge ai-gate-shards
 cargo jackioh trace ai-vs-greedy 3            # one gate game, turn by turn
 cargo jackioh sweep core-011 classic-020      # the shadow-ban sweep over these ids (no ids: every card)
