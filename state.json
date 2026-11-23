@@ -18711,7 +18711,7 @@
       "owner_why": "handed off from `claude-6`: `claude-6` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-23T15:00:00Z; it can start again only in 3h 03m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "provider": "claude-3",
-      "run_id": "pending:db946a1c-1795431374",
+      "run_id": "45160642635",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
