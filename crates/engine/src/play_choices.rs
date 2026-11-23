@@ -866,7 +866,8 @@ pub fn tribute_value_of(state: &GameState, unit: &CardInstance) -> i32 {
 }
 
 /// §6.3, R1282: your own units, plus the enemy's for a card that says so (#55), plus cheap permanents
-/// of either row and side for a wide Tribute (#97.4, R1282: up to 20 permanents). Dormant cards never.
+/// of either row and side for a wide Tribute (#97.4, R1282: up to 20 permanents). Never a card dormant
+/// beneath a Stack pile (R13), nor a Dormant one (R1839000, R4555000).
 pub fn legal_tribute_units<'a>(
     state: &'a GameState,
     player: PlayerId,
@@ -904,6 +905,7 @@ pub fn legal_tribute_units<'a>(
             for slot in crate::zones::slots_of(side, Row::Backrow) {
                 if let Some(c) = crate::zones::card_at(state, slot)
                     && c.id != card.id
+                    && !crate::slumber::is_slumbering(c)
                     && !out.iter().any(|existing| existing.id == c.id)
                     && !crate::query::is_untributable(state, c)
                     && crate::mana::cost_now(state, c) <= cheap
