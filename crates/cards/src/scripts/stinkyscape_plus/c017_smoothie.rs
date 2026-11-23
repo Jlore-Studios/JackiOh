@@ -152,7 +152,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn r4440006_added_to_a_hand_it_stays_a_smoothie_gains_two_fruits_text_and_keeps_its_price() {
+    fn r3566001_r4440006_added_to_a_hand_it_stays_itself_gains_two_fruits_text_and_keeps_its_price() {
         for n in 0..8 {
             let (s, card) = handed(&format!("r3566001-smoothie-{n}"), ID, false);
             let fruits = fruits_in(&s, &card, ID);
@@ -167,7 +167,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn r4440006_radiant_it_gains_its_fruits_radiant_text() {
+    fn r3566001_r4440006_radiant_it_gains_its_fruits_radiant_text() {
         for n in 0..4 {
             let (s, card) = handed(&format!("r3566001-smoothie-radiant-{n}"), ID, true);
             assert!(card.radiant);

@@ -48,7 +48,7 @@ mod tests {
     };
 
     #[test]
-    fn r4440006_added_to_a_hand_it_stays_a_large_smoothie_gains_three_fruits_text_and_keeps_its_price() {
+    fn r3566001_r4440006_added_to_a_hand_it_stays_itself_gains_three_fruits_text_and_keeps_its_price() {
         for n in 0..8 {
             let (s, card) = handed(&format!("r3566001-large-{n}"), ID, false);
             let fruits = fruits_in(&s, &card, ID);
@@ -59,7 +59,7 @@ mod tests {
     }
 
     #[test]
-    fn r4440006_radiant_its_three_fruits_go_in_radiant() {
+    fn r3566001_r4440006_radiant_its_three_fruits_go_in_radiant() {
         let (s, card) = handed("r3566001-large-radiant", ID, true);
         assert!(card.radiant);
         let fruits = fruits_in(&s, &card, ID);
