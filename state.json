@@ -17727,15 +17727,8 @@
       }
     },
     "4652": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45291412371",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-23T23:53:41Z",
-        "until": "2026-11-24T00:23:41Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17747,10 +17740,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "d Flashback row, change `([[\u00a76.3]] Play)` to `([[\u00a710.5]])`. Verify `Combat keyword` still tokenizes as a term.\n- 3. `spec/02-core-systems.md`: at the \u00a72.1 setup sentence (stable partition, `R3558006`), append that it is a setup fact, never a trigger. At the \u00a72.2 end-of-turn paragraph, add the End-the-turn mechanics (`turnCutShort`, one-more-action count from `R415`, `R456` action counting) and one `trigger_tu\u2026\n- 4. `spec/04-combat.md`: at the top of \u00a74.4 add the Damage verb paragraph: `damage(source, target, x)` is one instance through the pipeline; `halfToHeroes` halves hero hits rounded down before Armor (`R1841001`); split-damage is N hits of 1 to random standing enemies; `keywordInstead` replaces the a\u2026\n- 5. `spec/10-engine-guide.md`: fold the Play row's non-tautological sentences (graveyard permission plays, Flashback once with the (1) floor, Cloaked face-down play, `graveyardPrice`, Resource credit on play) into the \u00a710.5 step list, and the Win-on-play sentence (`WIN_ON_PLAY_KEY` taken off at step\u2026\n- 6. Ruling notes and catalog: apply the R0512, R1384, R910000, R1859010, R0065, R0766, R0404, R0393, R0001, R0584, R0415 edits from the table (first confirm `spec/08-catalog.md` is hand-edited, i.e. not in the spec-fold generated list, then apply its row repoints).\n- 7. Code comments: apply the script-header repoints from the table. Change no identifier, string, or logic.\n- 8. Data: remove the three entries from `glossary.json`, the three keys from `chinese-terms.json`'s `glossary` table, and the orphaned `\"End the turn\"` key from `apps/web/src/i18n/zh-CN.json` (run the i18n test first to confirm no non-test source reads it). Remove the three ids from `GlossaryTermId`\u2026\n- 9. Web tests: in `rules.test.ts` remove the six deleted rows from `RULES_ONLY_ROWS` (bottom-of-deck from \u00a76.2; Play, Damage, Trigger End of turn effects, Win the game, Win on play from \u00a76.3 \u2014 deleted rows belong in neither list), remove the three terms from `VERBS_6_3`, the alias map, and the `fres\u2026\n- 10. Run `cargo jackioh classify --base origin/main --claims` and confirm it holds fragments to none (no card data changed).\n- ## Tests\n- - `cargo jackioh spec check`: ruling notes, proving tests, and code-cited R-ids agree; every removed row's R-id is still cited (R3558006 in \u00a72.1, R1143 in \u00a72.4, R1841001 in \u00a74.4, R3559000 in its note and Scatter files, R1870000 in `play_steps.rs`, R850/R415/R456/R821/R824 in surviving rows and note\u2026\n- - `pnpm --dir apps/web test src/cards/rules.test.ts`: B11 glossary-against-\u00a76 agreement, alias map, R512-cases, R1384 rows, lossless tokenization over every catalog text.\n- - `pnpm --dir apps/web test src/cards/chinese.test.tsx`: Chinese glossary entries for played faces.\n- - `pnpm --dir apps/web test src/i18n/i18n.test.ts`: no orphaned or missing `zh-CN.json` key.\n- - `pnpm --dir apps/web test src/wording.test.ts`: tutorial vocabulary guard, unchanged behavior.\n- - `cargo test -p jackioh-shared`: face tokenizer and glossary tests including the Chinese-entry test.\n- - `cargo test -p jackioh-cards --test cross card_text`: card-wording lints, unchanged.\n- - `cargo test -p jackioh-cards <each touched script id>`: scripts whose header comments changed.\n- - Greps returning empty: `[[\u00a76.3]]` followed by any removed row name across `spec/`, `crates/`, `apps/`, `e2e/`; the three removed ids in `glossary.json`; the three keys in `chinese-terms.json` and (for `End the turn`) `zh-CN.json`.\n- - `cargo fmt --check`; `cargo clippy -p jackioh-shared -p jackioh-cards --all-targets -- -D warnings`; `cargo jackioh golden check`.\n- ## Done when\n- - [ ] None of the nine rows is in `spec/06-keywords.md`; `Combat keyword` is still there and still a term.\n- - [ ] Each removed row's surviving rule text lives in its owning section (\u00a72.1, \u00a72.2, \u00a72.4 by existing text, \u00a74.4, \u00a710.5, \u00a710.8, game-end point).\n- - [ ] No `[[\u00a76.3]] <removed row>` link remains in `spec/` or code comments; `spec check` passes.\n- - [ ] `glossary.json` has no entry or alias for any of the nine; `zh-CN.json` and `chinese-terms.json` have no orphaned strings for them.\n- - [ ] The web `rules.test.ts` glossary-against-\u00a76 suite passes, with the three terms removed from its term lists.\n- - [ ] Scoped Rust and web tests above pass; `fmt`, scoped `clippy`, and `golden check` pass; `classify --claims` needs no fragment.\n- - [ ] Full-workspace tests, the 200-seed fuzz gate, and web typecheck/eslint go to CI; note that no engine code changed, so replay cannot move.\n- ## Risks\n- - Tokenizer drift: removing glossary entries turns card words like \"End the turn\" into plain text. This is the requested outcome; the lossless-token tests cover it, and badges come from the same table, so no hidden-information or view contract changes. Rejected alternative: keeping alias-only entri\u2026\n- - Orphaned R-ids failing `spec check`: all nine rows' R-ids were verified to survive in owning sections, notes, or code comments (step 10's check is the backstop, not a first discovery).\n- - Editing a generated file: `spec/08-catalog.md` looks hand-maintained but verify against `spec/README.md` before touching; the generated `11-rulings`/`INDEX`/`CARDS` stay untouched regardless.\n- - Scope creep into card wording: the `card_text.rs` \"End your turn\" lint and tutorial prose intentionally still say those words; do not \"fix\" them.\n- ## Open questions\n- None for a person; no secret, dashboard, or forbidden-path change is needed. Difficulty stays medium under the rule: no engine-rules, AI, cross-crate design, or migration work, and roughly twenty files, well under the forty-file bar.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4652 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4652/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-23T23:44:31Z",
       "owner_why": "it plans it",
@@ -17763,9 +17755,9 @@
       "provider": "muse",
       "queued_at": "2026-11-23T23:43:14Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45291412371",
+      "run_id": "pending:361a06b2-1795478154",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-23T23:44:31Z",
+      "started_at": "2026-11-23T23:56:22Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17782,9 +17774,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T23:44:31Z",
+    "at": "2026-11-23T23:56:22Z",
     "url": "",
-    "what": "plan #4652 on muse"
+    "what": "build #4652 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T23:43:04Z",
