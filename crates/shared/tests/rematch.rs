@@ -250,6 +250,71 @@ fn the_book_reads_back_from_json() {
     assert_eq!(back, book);
 }
 
+/// R672, R1372: a seat that offers again is held to its latest offer, its lean among it: the pair's game
+/// is made from the leans of the offers that met (#4550, docs/implicit-states.md §14 O6).
+#[test]
+fn a_seat_that_offers_again_is_held_to_its_latest_lean() {
+    let mut book = RematchBook::default();
+    book.offer(
+        "m1",
+        Some(END),
+        P1,
+        STAKE_NORMAL,
+        Some(LeanPick::Newest),
+        END + 1,
+        "g1",
+    );
+    let again = book.offer("m1", Some(END), P1, STAKE_NORMAL, None, END + 2, "g2");
+    assert_eq!(again, OfferOutcome::Waiting { answered: None });
+    let met = book.offer(
+        "m1",
+        Some(END),
+        P2,
+        STAKE_NORMAL,
+        Some(LeanPick::Set(SetName::Core)),
+        END + 3,
+        "g3",
+    );
+    let OfferOutcome::Claimed { match_id, leans, .. } = met else {
+        panic!("{met:?}")
+    };
+    assert_eq!(match_id, "g3");
+    assert_eq!(leans, (None, Some(LeanPick::Set(SetName::Core))));
+}
+
+/// R2685000: a read counts staleness from the latest offer, not from the finished match's end, so a seat
+/// polling just past the window still sees an offer nothing can meet any more, until an offer past the
+/// window lapses and drops the entry (#4550, docs/implicit-states.md §14 O10; what such a read should show
+/// is unspecified).
+#[test]
+fn a_read_past_the_window_still_shows_an_unmet_offer_until_an_offer_lapses() {
+    let mut book = book_with(&[(P1, STAKE_NORMAL)], END + 5);
+    let past = END + REMATCH_OFFER_TTL_MS + 1;
+    let seen = book.seen("m1", P2, past);
+    assert_eq!(
+        (seen.you_offered, seen.opponent_offer, seen.match_id),
+        (None, Some(STAKE_NORMAL), None)
+    );
+    assert_eq!(
+        book.offer("m1", Some(END), P2, STAKE_NORMAL, None, past, "g2"),
+        OfferOutcome::Lapsed { answered: None }
+    );
+    assert!(book.is_empty());
+    assert_eq!(book.seen("m1", P2, past).opponent_offer, None);
+}
+
+/// R3694000: a game the pair made in the window's last moment survives the sweep that runs as the window
+/// ends, so the one status read the result screen makes after its socket closes still finds it (#4550,
+/// docs/implicit-states.md §14 O14).
+#[test]
+fn r3694000_a_game_claimed_at_the_windows_last_moment_survives_the_sweep_at_its_end() {
+    let last = END + REMATCH_OFFER_TTL_MS;
+    let mut book = book_with(&[(P1, STAKE_NORMAL), (P2, STAKE_NORMAL)], last);
+    assert_eq!(book.sweep(last + 1, |_| false), 0);
+    assert_eq!(book.seen("m1", P1, last + 1).match_id.as_deref(), Some("g1"));
+    assert_eq!(book.seen("m1", P2, last + 1).match_id.as_deref(), Some("g1"));
+}
+
 fn finished() -> FinishedSeats {
     let slots = |name: &str| DeckSlots {
         table: Some(format!("table-{name}")),

@@ -1061,6 +1061,25 @@ describe("reconnect", () => {
     h.runTimers();
     expect(h.delays().at(-1)).toBe(RECONNECT_DELAYS_MS[0]);
   });
+
+  it("R4250000 a frame before the first view does not start the backoff over", () => {
+    const h = harness();
+    h.client.connect();
+    for (let round = 0; round < 2; round += 1) {
+      h.socket().open();
+      h.socket().deliver({ type: "watchers", count: 1 });
+      h.socket().drop(1006);
+      h.runTimers();
+    }
+    expect(h.client.snapshot().watchers).toBe(1);
+    expect(h.delays()).toEqual(RECONNECT_DELAYS_MS.slice(0, 2));
+
+    h.socket().open();
+    h.socket().deliver({ type: "watchers", count: 1 });
+    h.socket().deliver({ type: "view", view: baseView() });
+    h.socket().drop(1006);
+    expect(h.delays().at(-1)).toBe(RECONNECT_DELAYS_MS[0]);
+  });
 });
 
 const HELLO = { type: "hello", token: "tok", matchId: "m-1" };

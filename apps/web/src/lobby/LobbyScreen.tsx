@@ -36,11 +36,12 @@ import { navigate, paths } from "../net/navigate.ts";
 import { lobbyLinkUrl, sendRoomLink } from "../net/roomLink.ts";
 import { getFriends, type Friend } from "../net/social.ts";
 import { attempt, messageOf } from "../net/errors.ts";
-import { QUEUE_MODES, Verdict, choiceFor, defaultDeck, defaultTrio, useLobbyData, verdictFor, type LobbyData } from "../routes/play.tsx";
+import { QUEUE_MODES, Verdict, useLobbyData, verdictFor, type LobbyData } from "../routes/play.tsx";
 import { BackLink, followInApp } from "../routes/nav.tsx";
 import { PAGE_TITLE_ID } from "../routes/PageTitle.tsx";
 import { onFriendsPush, onLobbyPush, useSocialPoll } from "../together/socialPoll.ts";
 import { STATUS_WORDS } from "../together/words.tsx";
+import { choiceOf, firstDeck, firstTrio } from "../together/challengeChoice.ts";
 import {
   enterLobby,
   getLobby,
@@ -678,9 +679,9 @@ function startingPick(view: LobbyView, data: LobbyData | null): LocalPick {
   const sent = view.yourPick;
   const decks = data?.decks ?? [];
   const lean = sent?.mode === "random" ? (sent.leanSet ?? null) : readPlayLean();
-  const fallback = view.settings.format !== "duel" && sent === null ? coopStartingDeck(decks) : defaultDeck(decks, null);
+  const fallback = view.settings.format !== "duel" && sent === null ? coopStartingDeck(decks) : firstDeck(decks);
   const deckId = sent?.mode === "bo1" ? sent.deckId : (fallback?.id ?? null);
-  const trioId = sent?.mode === "bo3" ? sent.trioId : (defaultTrio(data?.trios ?? [], null)?.id ?? null);
+  const trioId = sent?.mode === "bo3" ? sent.trioId : (firstTrio(data?.trios ?? [])?.id ?? null);
   const random = view.settings.format === "duel" ? view.settings.mode === "random" : sent?.mode === "random" || (sent === null && deckId === null);
   return { deckId, trioId, random, lean };
 }
@@ -693,7 +694,7 @@ function pickBody(view: LobbyView, pick: LocalPick, data: LobbyData | null): Mod
   }
   const deck = data?.decks.find((each) => each.id === pick.deckId) ?? null;
   const trio = data?.trios.find((each) => each.id === pick.trioId) ?? null;
-  return choiceFor(view.settings.mode, deck, trio, pick.lean);
+  return choiceOf(view.settings.mode, deck?.id ?? null, trio?.id ?? null, pick.lean);
 }
 
 /** A co-op pick, a 2v2's among them, is remembered on the device (R2094000); a duel's is not. */
@@ -964,8 +965,8 @@ function RoomJoinCard({ token, room }: { token: string; room: RoomView | CoopRoo
   // `deckId` is the select's value once touched (RANDOM for a random deal); untouched, the default.
   const decks = data?.decks ?? [];
   const deck =
-    deckId === RANDOM ? null : (decks.find((each) => each.id === deckId) ?? (room.kind === "room" ? defaultDeck(decks, null) : coopStartingDeck(decks)));
-  const trio = data?.trios.find((each) => each.id === trioId) ?? defaultTrio(data?.trios ?? [], null);
+    deckId === RANDOM ? null : (decks.find((each) => each.id === deckId) ?? (room.kind === "room" ? firstDeck(decks) : coopStartingDeck(decks)));
+  const trio = data?.trios.find((each) => each.id === trioId) ?? firstTrio(data?.trios ?? []);
   const random = room.kind === "coopRoom" ? deck === null : mode === "random";
 
   const join = (event: FormEvent): void => {
@@ -980,7 +981,7 @@ function RoomJoinCard({ token, room }: { token: string; room: RoomView | CoopRoo
         navigate(paths.duos(joined.matchId), { force: true });
         return;
       }
-      const choice = choiceFor(mode, deck, trio, lean);
+      const choice = choiceOf(mode, deck?.id ?? null, trio?.id ?? null, lean);
       if (choice === null) throw new Error(t("Pick a deck first."));
       const joined = await joinRoom(token, room.code, choice);
       const board = joined.seriesId !== null ? paths.series(joined.seriesId) : joined.matchId !== null ? paths.match(joined.matchId) : paths.play;

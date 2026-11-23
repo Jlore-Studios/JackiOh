@@ -646,6 +646,16 @@ pub fn bool(body: &Value, key: &str) -> Result<bool, ApiError> {
     }
 }
 
+/// A JSON number that is a whole, non-negative safe integer (at most 2^53 − 1), or `None`.
+pub(crate) fn whole_number(value: &Value) -> Option<u64> {
+    const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
+    let number = value.as_f64()?;
+    if number.fract() != 0.0 || !(0.0..=MAX_SAFE_INTEGER).contains(&number) {
+        return None;
+    }
+    Some(number as u64)
+}
+
 fn strings_of(value: &Value) -> Option<Vec<String>> {
     value
         .as_array()?

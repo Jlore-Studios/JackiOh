@@ -36,7 +36,7 @@ export function pickTrio(trios: readonly SavedTrio[], id: string | null): SavedT
   return trios.find((trio) => trio.id === id) ?? firstTrio(trios);
 }
 
-/** What a room is made with, or null while its pick is missing (`choiceFor` in `routes/play.tsx`; R924000). */
+/** What a room is made with, or null while its pick is missing (R924000). */
 export function choiceOf(
   mode: QueueMode,
   deckId: string | null,
