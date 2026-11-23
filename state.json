@@ -16700,9 +16700,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "gpt",
-      "owner_since": "2026-11-23T22:49:24Z",
-      "owner_why": "a person answered its question, so the lane that asked carries the answer out",
+      "owner": "muse",
+      "owner_since": "2026-11-23T22:53:50Z",
+      "owner_why": "handed off from `gpt`: `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z",
       "pending_request": false,
       "planned_at": "2026-11-23T19:40:43Z",
       "planned_by": "`gpt` (codex, `gpt-5.6-sol`, medium)",
@@ -16904,7 +16904,7 @@
       }
     },
     "4628": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "decision": {
         "answer": "1",
@@ -16952,16 +16952,16 @@
       "interruptions": 0,
       "issue": 4622,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
-      "provider": "gpt",
+      "provider": "muse",
       "question": "How should the required observed timings be obtained?",
       "queued_at": "2026-11-23T22:49:24Z",
-      "run_id": "45256697884",
-      "runs_on": "night-vm-gpt",
+      "run_id": "pending:628b58ed-1795474403",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "decision",
-      "started_at": "2026-11-23T20:11:01Z",
+      "started_at": "2026-11-23T22:53:50Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17433,9 +17433,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T22:53:11Z",
+    "at": "2026-11-23T22:53:50Z",
     "url": "",
-    "what": "plan #4587 on claude-3"
+    "what": "revise #4628 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T22:40:54Z",
