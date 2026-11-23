@@ -34072,5 +34072,37 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.6.11",
+    "date": "2026-11-23",
+    "title": "Patch: the daily patch, rolling up v0.6.10b to v0.6.10d",
+    "source": "patches cut at 84e1400b225797cf9d6e8bb8d1dce5c34681c662: v0.6.10b, v0.6.10c, v0.6.10d",
+    "notes": "The day's patch (R3944000): it rolls up the micros shipped since v0.6.10, each a snapshot of its own: v0.6.10b (The card detail view loads when first opened); v0.6.10c (Spells give no keyword to a Unit Immune to Spells); v0.6.10d (The card back's attribute test drops a redundant check).",
+    "player": {
+      "title": "Immune to Spells holds against more Spells, and 2 more changes",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Card backs look exactly as before; a check behind how they pick their design was simplified."
+      ],
+      "text": [],
+      "fixes": [
+        "The home page no longer downloads the card detail view before it can start, so the first screen is ready sooner on slow connections.",
+        "The War Doctrines and Call to Chaos (Training-Grounds Edition) no longer give their keyword to a Unit Immune to Spells; your other Units, and the ones you play later, still get it.",
+        "Call to Chaos (Stinky Edition)'s Allure no longer reaches a Unit Immune to Spells."
+      ]
+    },
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "traininggrounds-039"
+    ],
+    "includes": [
+      "v0.6.10b",
+      "v0.6.10c",
+      "v0.6.10d"
+    ],
+    "changes": []
   }
 ]
