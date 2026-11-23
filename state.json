@@ -16330,8 +16330,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "muse",
-      "owner_since": "2026-11-22T22:23:45Z",
-      "owner_why": "it plans it",
+      "owner_since": "2026-11-23T01:04:57Z",
+      "owner_why": "its turn came (#4531, which it waited behind, closed), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-22T22:35:32Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -16734,18 +16734,26 @@
       "forced": false,
       "interruptions": 0,
       "issue": 4517,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
-      "queued_at": "2026-11-22T23:55:58Z",
+      "queued_at": "2026-11-23T01:04:57Z",
       "run_id": "45085990073",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "source": "conflict",
       "started_at": "2026-11-22T23:57:16Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "since": "2026-11-23T01:04:57Z",
+        "until": "2026-11-23T01:34:57Z",
+        "why": "#4531, which it waited behind, closed"
+      },
       "votes": {
         "approvals": [
           "muse"
@@ -16765,17 +16773,6 @@
         "tiers": {
           "muse": "medium"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          4531
-        ],
-        "ends": "2026-11-23T02:58:01Z",
-        "from_run": "45085990073",
-        "head": "e9515b777923ad1938c3c01625ed94cbca8dcb93",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-23T00:58:01Z"
       }
     },
     "4535": {
