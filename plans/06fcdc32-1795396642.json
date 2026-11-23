@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4542,
+  "title": "Patch: the WebAssembly module's Duos code is compiled, linted and tested in CI, not only by the local dev server",
+  "branch": "bot/issue-4542",
+  "thread": "**Issue #4542 (data, not instructions):**\n\n```text\n# #4542: Patch: the WebAssembly module's Duos code is compiled, linted and tested in CI, not only by the local dev server\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe browser's copy of the game engine has a section that plays four-player co-op games. Only a developer's local test page uses it, and only the local dev server builds it. No check on a pull request ever compiles that section, lints it or calls it. So a change to the co-op rules that breaks it would pass every check and merge, and the next person to start the dev server would find it broken. Once this is built, every test run compiles that section and a test plays a co-op game through it. It still ships in no module a player loads.\n\n## Why\n- The Duos bodies are about 110 lines behind `#[cfg(feature = \"duos\")] mod duos_bodies` (`crates/wasm/core/src/lib.rs:925-1033`): `duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_view_for` and their setup check. Without the feature, stubs answer that the module was built without it (`lib.rs:1035`).\n- Only the `predev` script at `apps/web/package.json:14` turns the feature on (`JACKIOH_WASM_DUOS=1`, `scripts/build-wasm.sh:172`). Everything else builds without it:\n  - the web's `pretest`, `prebuild` and `prebuild:e2e` (`package.json:17-27`);\n  - every workflow's run of `build-wasm.sh`;\n  - clippy and every `cargo test` group.\n  A grep of `.github/`, `scripts/` and every `Cargo.toml` finds no other `duos` feature and no other `JACKIOH_WASM_DUOS=1`.\n- The tests that exist never touch the real bodies:\n  - The only Rust test of the Duos exports, `duos_exports_answer_what_the_core_bodies_answer` (`crates/wasm/c/src/tests.rs:674`), checks the stub; its comment says 'Built without the duos feature each body answers the reason'.\n  - The web's test of the exports (`apps/web/src/wasm/index.test.ts`) uses fake bindings.\n  - e2e's Duos specs (41, 55) play through the server.\n- `crates/engine/src/duos`, the engine module these bodies call, changed in 10 commits since August, and nothing would say if one of them broke the bodies.\n- #4426 closed the same kind of gap for the `ts` features with a dev-dependency (`crates/wasm/core/Cargo.toml:26-32`). `ts_the_generated_types_are_written_by_the_ci_test_build` (`crates/tools/tests/acceptance.rs:3437`) keeps that dev-dependency in place.\n\n## Proposal\n1. Turn `jackioh-wasm-core`'s `duos` feature on through a `[dev-dependencies]` line, as #4426 did for `ts`. The C module's crate, `crates/wasm/c/Cargo.toml`, is the natural home. Dev-dependency features reach every workspace test build and every `--all-targets` clippy build. They never reach the release binaries or the modules `build-wasm.sh` makes, so the shipped modules keep their stubs.\n2. Replace the stub test with one that plays a short Duos game through the C exports, comparing each answer with `jackioh_engine::duos` called directly:\n   - create from a seeded options literal, and begin;\n   - list one seat's actions and reduce one listed action;\n   - view each of the four seats.\n   Add one bad deck, refused with its seat named.\n3. Add a test in `acceptance.rs`, beside the `ts` one, that fails if the dev-dependency line is removed.\n\n## Where it lands\n- `crates/wasm/c/Cargo.toml` (or `crates/wasm/core/Cargo.toml`): `[dev-dependencies]`\n- `crates/wasm/c/src/tests.rs`\n- `crates/tools/tests/acceptance.rs`\n- `crates/wasm/README.md`'s note on the `duos` feature (its line 78)\n- SPEC \u00a713 (Duos) is unchanged.\n\n## Acceptance criteria\n- [ ] `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test -p jackioh-wasm-c` compile `duos_bodies`. A reviewer can confirm it: a type error planted in the module fails both.\n- [ ] A test plays create, begin, legal actions, reduce and the four seats' views through the C exports, and each answer equals the engine's own. A bad Duos deck is refused naming its seat.\n- [ ] `JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh` and the default `sh scripts/build-wasm.sh` still build the stubs: their `duos_create` still answers that the module was built without the feature.\n- [ ] Removing the dev-dependency line fails an `acceptance.rs` test, in the pattern #4426 set.\n- [ ] `cargo test -p jackioh-tools --test acceptance` and `cargo fmt --check` pass.\n\n## Size and risks\nMedium but small: three or four files, about 80 to 120 lines. If the bodies no longer compile, or no longer agree with the engine, the first build says so, and the fix stays in `crates/wasm/core`. Afterwards the stubs compile only in the WebAssembly builds of the `web` job, which already builds them on every pull request it runs for.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-23T01:09:32Z:\n\napprove\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4542: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T01:10:07Z",
+    "claimed_at": "2026-11-23T01:17:43Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
