@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 4588,
+  "title": "Patch: the Infinite Assault, C4, Batch",
+  "branch": "bot/issue-4588",
+  "thread": "**Issue #4588 (data, not instructions):**\n\n```text\n# #4588: Patch: the Infinite Assault, C4, Batch\nOpened by @jgoetzmann.\n\nPart of #4601, the cards' fullsend tree (and of the tracker #4576). Card part **C4**: replace the stub scripts\nCF (#4602) wrote for the cards below with their scripts and tests, base and Radiant, as cards of a held\nsingle-player set. It builds beside the other card parts on the tree's integration branch; players see nothing\nuntil the release (R).\n\nThe plan of record is [`docs/infinite-assault.md`](https://github.com/Jlore-Studios/JackiOh/blob/claude/gallant-ritchie-pwshvk/docs/infinite-assault.md): on `main` once C1 (#4577) merges, and until then on the planning branch `claude/gallant-ritchie-pwshvk`. Where it and SPEC disagree, SPEC wins (CLAUDE.md). Read its IA11 (the set, its ids, its hold, its tags and the design rules) and the comment CF leaves on\n#4601 listing the verbs the set lacks.\n\nRead `docs/ADDING_CARDS.md` first (CLAUDE.md rule 10), its rows for a card of a set that has not shipped above\nall, and `spec/README.md` with the sections and rulings the cards touch (rule 1).\n\n**Owns:** its cards' script files (`crates/cards/src/scripts/infinite_assault/cNNN_slug.rs`, IA-73 to IA-96\nand their tokens), each entry's `loc` (`cargo jackioh catalog loc <path>`), and its own cards' rows in the\nshared tables only where its build decides otherwise. CF wrote every other row. A verb, keyword or board fact the\nengine lacks goes in the engine by `docs/ADDING_CARDS.md` \u00a76, in a file of its own where it can, with as few lines\nin the shared engine files (`effects/mod.rs`, `script.rs`, `query.rs`, `wire/events.rs`) as possible, and its\ntest; the reconcile settles a seam with another part's.\n\n## The cards\n\nCard numbers are written `IA-n` here; in the spec and the catalog they are the set's own (`IA #25`,\n`infiniteassault-025`, its tokens `infiniteassault-025-1`).\n\n#### IA12.4 Batch, IA-73\u2013IA-96\n\nGo wide, then wider: copies of itself, Instances, Workers and auras that pay for every body. The player\nwins with sweepers and by killing the buffer first.\n\n- **IA-73 Worker Thread** \u2014 (1) Unit, Common, 1/1. Cry: Summon a copy of this. *Radiant:* 2/2. Cry: Summon two copies of this.\n- **IA-74 Parallel Instance** \u2014 (2) Unit, Common, 2/2. Cry: Summon an Instance. *Radiant:* 4/4. Cry: Summon a Radiant Instance.\n  - **IA-74.1 Instance** \u2014 token, (1) Unit, 2/2.\n- **IA-75 Load Balancer** \u2014 (2) Unit, Common, 2/4. Aura: Your other Units have +1 Health. *Radiant:* 4/8. \u2026 +2 Health.\n- **IA-76 Mob Mentality** \u2014 (1) Spell, Common. Give your Units +1/+1. *Radiant:* +2/+2.\n- **IA-77 Swarm Node** \u2014 (1) Unit, Common, 2/3. Death: Give a random friendly Unit +2/+2. *Radiant:* 4/6. \u2026 +4/+4.\n- **IA-78 Batch Job** \u2014 (3) Spell, Common. Summon four Workers. *Radiant:* Summon four Radiant Workers.\n  - **IA-78.1 Worker** \u2014 token, (1) Unit, 1/2.\n- **IA-79 Thread Pool** \u2014 (3) Unit, Common, 4/4. Cry: Summon a Drone (IA-4.1) for each other Unit you control. *Radiant:* 8/8. \u2026 a Radiant Drone \u2026\n- **IA-80 Hive Ganger** \u2014 (2) Unit, Common, 3/3. Has +1 Attack for each other friendly Unit. *Radiant:* 6/6. \u2026 +2 Attack \u2026\n- **IA-81 Overprovision** \u2014 (2) Spell, Common. Summon two Instances. If you control 4 or more Units, draw a card. *Radiant:* \u2026 two Radiant Instances \u2026 draw two cards.\n- **IA-82 Fork Bomb** \u2014 (2) Unit, Rare, 2/2. Death: Summon two Forks. *Radiant:* 4/4. Death: Summon two Radiant Forks. They have Rush.\n  - **IA-82.1 Fork** \u2014 token, (1) Unit, 1/1.\n- **IA-83 Swarm Logic** \u2014 (2) Spell, Rare. Your Units have +2 Attack and Rush this turn. *Radiant:* \u2026 +4 Attack \u2026\n- **IA-84 Distributed Mind** \u2014 (3) Unit, Rare, 3/5. Once per turn, when another friendly Unit dies, draw a card. *Radiant:* 6/10. Twice per turn \u2026\n- **IA-85 Merge Conflict** \u2014 (2) Spell, Rare. Fuse two friendly Units. *Radiant:* \u2026 The result has Rush and Divine Shield.\n- **IA-86 Replica Hatchery** \u2014 (2) Field Spell, Rare. End of turn: Summon a copy of your cheapest Unit. It has Brittle 1. *Radiant:* \u2026 a copy of your cheapest Unit.\n- **IA-87 Swarm Shield** \u2014 (1) Trap, Rare. Reveals when an enemy Unit attacks: Summon three Workers with Taunt. *Radiant:* \u2026 three Radiant Workers with Taunt.\n- **IA-88 Scale Out** \u2014 (2) Spell, Rare. Summon an Instance for each enemy Unit. *Radiant:* \u2026 a Radiant Instance \u2026\n- **IA-89 Queen of the Cluster** \u2014 (4) Unit, Epic, 6/8. Aura: Your other Units have +2/+2. End of turn: Summon a Drone. *Radiant:* 12/16. \u2026 +4/+4 \u2026 a Radiant Drone.\n- **IA-90 Mass Production** \u2014 (4) Spell, Epic. Summon a copy of each friendly Unit. *Radiant:* \u2026 They have Rush.\n- **IA-91 Flood the Zone** \u2014 (3) Spell, Epic. Fill your empty unit zones with Drones. They have Rush. *Radiant:* \u2026 Radiant Drones \u2026\n- **IA-92 Hive Overseer** \u2014 (3) Unit, Epic, 2/8. Taunt. Whenever a friendly Unit dies, summon a Drone. *Radiant:* 4/16. \u2026 a Radiant Drone.\n- **IA-93 Gestalt** \u2014 (4) Unit, Epic, 2/2. Cry: Fuse every other friendly Unit into this. *Radiant:* 4/4. \u2026 Then it gains Rush and Divine Shield.\n- **IA-94 Batch Monarch** \u2014 (3) Unit, Legendary, 4/6. Start of turn: Summon a copy of your highest-Attack Unit with Brittle 1. *Radiant:* 8/12. \u2026 a copy of your highest-Attack Unit.\n- **IA-95 The Botnet** \u2014 (4) Field Spell, Legendary. Your Units have +1/+1 for each other friendly Unit. *Radiant:* \u2026 and Rush.\n- **IA-96 Exponential Growth** \u2014 (2) Spell, Mythic. Summon a copy of each friendly Unit. Then double the Attack and Health of your Units. *Radiant:* \u2026 The copies have Rush. \u2026\n\n## The design rules (IA11)\n\n**The design rules every card part keeps.**\n\n1. **Real cards.** Each card is legal in an ordinary game and plays the same in any mode; none reads the\n   mode or its level. Commons to Legendaries of the doctrines and the Core sit on JackiOh's curve (costs\n   (0) to (4); about 4 stats at (1), 8 at (2), 12 at (3), 16 at (4) for a Unit with little text, less with\n   more), so they can be reused. Commander cards are boss cards, above the curve on purpose.\n2. **Spicy, never unfair.** Swingy and rule-bending is the point, but every threat has an answer the player\n   can see coming: a countdown is shown, a wall can be killed, a bluff can be called. Nothing makes the\n   player lose with no counterplay, and nothing locks them out of playing for a turn they can't foresee\n   (Kill Switch, IA-140, fires on a third card, which the player may choose not to play).\n3. **Expressible.** The text uses verbs, keywords and filters the engine has (\u00a76); where a card needs a new\n   one, its part adds it by `docs/ADDING_CARDS.md` \u00a76, with its test. Numbers are `params` (`{damage}`),\n   never literals (CLAUDE.md rule 9).\n4. **Radiant is about twice the base face** (R275): doubled stats and a better line, never stats alone for\n   a Unit with text. Each part writes its `docs/radiant-audit.md` rows.\n5. **\"Infinite Assault card\"** in a card's text is a pool that names the set, which reaches the set while\n   it is held (R1846001: a pool that names its set keeps to it). \"Created\" is the engine's Created mark.\n6. **The AI must pilot it.** A card whose prompt the AI can't answer well is fixed or redesigned in its\n   part, not shipped hoping.\n7. **The part may tune.** A part may change a number, a word or a Radiant line where the engine or balance\n   asks, keeping the card's role and its spice, and says so in its pull request; a bigger change goes in a\n   ruling note.\n\n## Done when\n\n- Every card's script plays its base and Radiant faces by its \u00a78.13 row, with tests in the same file for both\n  (CLAUDE.md rule 6), and its `STUB (#4602)` header is gone; its entry's `loc` is the script's.\n- Each decision the spec doesn't make has a ruling note in this issue's block, a test named after it, and a\n  paragraph in `spec/pending/<this issue>.md` (rule 3).\n- Every new prompt is answered by the AI, the random policy and the timeout; `cargo jackioh fuzz --seeds 200\n  --cards <each of its ids>` is green; `cargo test -p jackioh-cards` passes for its cards.\n- Every number is a named constant or a card `param` (rule 9).\n\nBlocked by #4602\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-4601",
+  "part_of": 4601,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4588: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T19:15:04Z",
+    "claimed_at": "2026-11-23T23:57:46Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
