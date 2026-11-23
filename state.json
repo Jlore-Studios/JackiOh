@@ -19802,6 +19802,14 @@
         "sha": "5e2fa06c7466480c461d4c4a4cc38a3c0d704941",
         "tiers": {}
       }
+    },
+    "4628": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-23T19:41:57Z",
+      "issue": 4622,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
