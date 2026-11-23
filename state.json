@@ -17391,13 +17391,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "gpt"
+        ],
         "builder": "gpt",
         "built_by": "gpt",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "gpt",
+            "provider": "gpt",
+            "run": "45100204728",
+            "tier": "medium"
+          }
+        ],
         "sha": "2264f665794a2cf78d1005343d12a642cb4e54e9",
-        "tiers": {}
+        "tiers": {
+          "gpt": "medium"
+        }
       }
     },
     "4548": {
