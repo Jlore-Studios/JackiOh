@@ -16056,7 +16056,7 @@
     "4604": {
       "action": "build",
       "asks": [],
-      "failures": 1,
+      "failures": 0,
       "handoff": {
         "at": "2026-11-23T15:09:24Z",
         "family": "claude",
@@ -16079,7 +16079,9 @@
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 4629,
       "provider": "claude-1",
+      "question": "",
       "round_tier": "strong",
       "run_id": "45222365252",
       "runs_on": "ubuntu-latest",
