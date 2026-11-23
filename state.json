@@ -16369,17 +16369,8 @@
       "waiting_comment": 7113460647
     },
     "4609": {
-      "action": "plan",
-      "asks": [
-        "c:7111392854"
-      ],
-      "build_next": {
-        "from_run": "45288601761",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-23T23:55:17Z",
-        "until": "2026-11-24T00:25:17Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-23T23:55:07Z",
         "difficulty": "hard",
@@ -16398,10 +16389,9 @@
         "reason": "planned on opus",
         "trail": "0007 4154202 4353000 4353001 4353003 4440006 4454002 4508001 4524001 2783000 1020; do f=$(printf 'spec/rulings/R%04d.md' \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"content\": \"# Draft plan #4609 (opus planner, run 3) \\u2014 working notes\\n\\nStarting point: sonnet's plan in the issue body / .bo\u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/tools/src/claims.rs | grep -v \\\"^use\\\" | head -50\", \"description\": \"Read claims.rs header\"}\n- Bash: {\"command\": \"sed -n 1255,1300p crates/tools/src/classify.rs; grep -n \\\"fn patch_stop\\\" -A 12 crates/tools/src/classify.rs | head -16\", \"description\": \"Read stage 2 play-code handling\"}\n- Bash: {\"command\": \"grep -rln \\\"tune_once(\\\" crates/cards/src/scripts | head; grep -rn \\\"tune_once(\\\" crates/cards/src/scripts | head -3\", \"description\": \"Find scripts calling tune_once\"}\n- Bash: {\"command\": \"cd crates/cards/src/scripts && python3 -I - <<'EOF'\\nimport re,glob\\nfor f in sorted(glob.glob('**/*.rs',recursive=True)):\\n src=open(f).read()\\n code=[]\\n for line in src.split('\\\\n'):\\\u2026\n- Bash: {\"command\": \"grep -h \\\"pub const ID\\\" core/c083_transmogulate.rs meditative/c024_polymorph.rs core/c008*.rs classic_plus/c009_silence.rs stinkyscape_plus/t_supernova.rs 2>/dev/null; ls core/c008* \", \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4609 && grep -n \\\"build.rs\\\" crates/cards/README.md | cut -c1-200\", \"description\": \"Find build.rs mentions in cards README\"}\n- Bash: {\"command\": \"sed -n 27,31p crates/cards/README.md\", \"description\": \"Read cards README tree entry for build.rs\"}\n- Bash: {\"command\": \"grep -n \\\"pub use \\\\(transform\\\\|tune\\\\|fuse\\\\|hidden_nerfs\\\\)\\\" crates/engine/src/effects/mod.rs; grep -n \\\"fn playing\\\\b\\\\|pub fn playing\\\" crates/engine/tests/rules/*.rs crates/engine\u2026\n- Bash: {\"command\": \"grep -rl \\\"4508\\\\|4454\\\" crates/cards/patches/ 2>/dev/null | head -5; ls crates/cards/patches/pending | head\", \"description\": \"Find patch fragments from I19/I21 PRs\"}\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nd=json.load(open('crates/cards/patches/patches.json'))\\nimport sys\\ndef walk(o):\\n if isinstance(o,dict):\\n s=json.dumps(o)\\n if '4508' in s and len(s)<150\u2026\n- said: Design is settled. Writing the final plan to the draft file, then returning it.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Engine rules line: it adds an oracle in crates/engine/src/testkit, may\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Engine rules line: an oracle in crates/engine/src/testkit plus likely \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"old_string\": \"- **Replace off the field.** A replacing `transformed` (`newInstanceId != instanceId`) is law\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"old_string\": \"- **Verb reader.** It needs a call, `verb(`. Whole words hit about 133 scripts through `\\\"van\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"old_string\": \"- **Cost.** `immutable_step` walks every hand, library and field card each step. Keep it to k\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"old_string\": \"- `i23_the_engines_own_refusals_leave_each_immutable_card_clean`: real `vanilla`, `transform`\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"old_string\": \"2. **`fn immutable_by_keywords(state, card, keywords) -> bool`.** True on the `Immutable` key\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"old_string\": \"- **Late red.** Daily waves may fail past seed 200, as they did after I19.\\n\\n## Open questio\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"old_string\": \"- [ ] I23 runs in `before`/`after`, on I14's branches and in Duos. Every doc in the table say\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -c \\\"\\\" .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"old_string\": \"| `crates/engine/src/testkit/invariants.rs` | change | header, `TextRecord`, `kept_grants_onl\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"old_string\": \" - `Fused` naming the card as `result_instance_id` is a finding.\\n - `Flickered` and `Summone\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"old_string\": \"- The issue's \\\"transformed on a hand card\\\" is read as an in-place change, which keeps R35's\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4609/.bot-plan.md\", \"old_string\": \"- **Noise.** A lawful text change this plan missed fails games. Make each one a named conditi\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Engine rules line: an oracle in crates/engine/src/testkit plus likely refusal fixes in crates/engine/src/effects, across the engine, the cards build script and the tools docs\"} --> ## Goal Add **I23** to the fuzz monitor. It fails a step that changes the tex\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-23T19:29:55Z",
       "owner_why": "it plans it",
@@ -16414,12 +16404,14 @@
       "provider": "claude-4",
       "queued_at": "2026-11-23T19:18:47Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45288601761",
+      "run_id": "pending:ada93fbe-1795478196",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-23T23:24:51Z",
+      "started_at": "2026-11-23T23:57:04Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7111392854"
+      ],
       "waiting_comment": 7114343759
     },
     "4610": {
@@ -17774,9 +17766,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T23:56:22Z",
+    "at": "2026-11-23T23:57:04Z",
     "url": "",
-    "what": "build #4652 on muse"
+    "what": "build #4609 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-23T23:43:04Z",
