@@ -187,6 +187,31 @@ mod tests {
         s.expect_in_zone(ship.as_str(), "graveyard");
     }
 
+    /// R4508000: the Doctrine's lend passes a Unit Immune to Spells by, on either face, and still reaches
+    /// a Unit of its caster's that arrives later.
+    #[test]
+    fn r4508000_land_doctrine_gives_no_trample_to_a_unit_immune_to_spells_but_does_to_a_later_unit() {
+        for radiant in [false, true] {
+            let mut s = crate::scenario(json!({
+                "p1": {
+                    "hand": [{ "def": ID, "radiant": radiant }, VANILLA],
+                    "field": [{ "def": "stand-in (1) 4/4 Immune to Spells", "lane": 1 }],
+                },
+                "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+            }));
+            s.state_mut().players.p1.mana.current = 10;
+            let immune = s.unit_at(P1, 1).id;
+            s.play(ID, json!({}));
+            assert!(!has_trample(&s, &immune), "radiant {radiant}: the Spell passes it by");
+            s.play(VANILLA, json!({ "zone": 2 }));
+            assert!(
+                has_trample(&s, s.unit_at(P1, 2).id.as_str()),
+                "radiant {radiant}: a Unit played later has it"
+            );
+            assert!(!has_trample(&s, &immune), "radiant {radiant}");
+        }
+    }
+
     #[test]
     fn r1859007_with_no_launched_starship_only_the_keyword() {
         let (mut s, _ship) = built_starship(

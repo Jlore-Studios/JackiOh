@@ -787,8 +787,14 @@ pub enum ModifierKind {
     /// a Vanilla, Dormant or buried one (`layers::lent_by_player`). Expiry `never`; it outlasts the
     /// War Doctrine that gave it. R1870004: Stinkyscape #4.4 Last Word's "your Units have Charge during
     /// it" is the same modifier with expiry `nextTurnOf`, lending only while live (`mana::modifier_is_live`).
+    /// R4508000: one a Spell made lends nothing to a Unit Immune to Spells (§6.1, R4453000).
     UnitsHaveKeyword {
         keyword: Keyword,
+        /// R4508000: set when a Spell made it (`restrictions::effect_is_from_spell`), so it passes a Unit
+        /// Immune to Spells by (§6.1, R4453000). Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        from_spell: Option<bool>,
     },
     // ---- Stinkyscape+ Balance Changes V (issue #4353) ----
     /// R4353020 (Stinkyscape+ #79 A Glimpse into the Endless Sea, "You are immune to fatigue damage"):
