@@ -20813,10 +20813,6 @@
       "refused_until": "2026-11-23T07:50:00Z",
       "spent": [
         {
-          "at": "2026-11-08T00:08:16Z",
-          "minutes": 3.5
-        },
-        {
           "at": "2026-11-08T01:33:03Z",
           "minutes": 47.0
         },
@@ -21611,16 +21607,13 @@
         {
           "at": "2026-11-23T03:45:43Z",
           "minutes": 46.8
+        },
+        {
+          "at": "2026-11-23T08:22:02Z",
+          "minutes": 1.3
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-06T18:51:05Z",
-          "cache": 1974658,
-          "cost": 1.2484,
-          "input": 44,
-          "output": 9673
-        },
         {
           "at": "2026-11-07T03:54:56Z",
           "cache": 125274,
@@ -23013,16 +23006,22 @@
           "cost": 34.884,
           "input": 179,
           "output": 122240
+        },
+        {
+          "at": "2026-11-23T08:22:02Z",
+          "cache": 726940,
+          "cost": 0.7885,
+          "input": 22,
+          "output": 7168
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-23T07:50:00Z",
-          "utilization": 1.01
+          "resets_at": "2026-11-23T12:50:00Z",
+          "utilization": 0.15
         },
-        "observed_at": "2026-11-23T03:45:43Z",
-        "rejected_resets_at": "2026-11-23T07:50:00Z",
-        "status": "rejected"
+        "observed_at": "2026-11-23T08:22:02Z",
+        "status": "allowed"
       }
     },
     "claude-2": {
@@ -40798,7 +40797,9 @@
   },
   "usage_spool": {
     "readings": [
-      "2026-11-23T08:16:41Z,muse,usage-command,before,45136974333,1,2026-11-23T13:00:00Z,3,2026-11-30T00:00:00Z,allowed,100,100,"
+      "2026-11-23T08:16:41Z,muse,usage-command,before,45136974333,1,2026-11-23T13:00:00Z,3,2026-11-30T00:00:00Z,allowed,100,100,",
+      "2026-11-23T08:16:33Z,claude-1,ping,before,45136912573,14,2026-11-23T12:50:00Z,,,allowed,100,,",
+      "2026-11-23T08:17:06Z,claude-1,stream,call,45136912573,15,2026-11-23T12:50:00Z,,,allowed,100,,"
     ],
     "runs": [
       "2026-11-23T08:19:06Z,45136974333,muse,muse-spark-1.3-contributor,plan,4568,medium,planned,,2.3,0,0,0,,1,1,3,3,1.7,,none,,1"
