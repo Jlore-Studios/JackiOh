@@ -17439,7 +17439,16 @@
       "feedback_since": "2026-11-23T01:28:25Z",
       "issue": 4542,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "10d769b9d9c0f8cb800c866d928ceea00828ecfe",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
