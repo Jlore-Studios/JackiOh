@@ -88,6 +88,13 @@ export function useFlavour(): FlavourTable | null {
   return useSyncExternalStore(subscribe, flavourNow, () => null);
 }
 
+/** Install or clear the table. Tests only. */
+export function setFlavourForTests(table: FlavourTable | null): void {
+  cached = table;
+  pendingLoad = table !== null ? Promise.resolve(table) : null;
+  notify();
+}
+
 /** A held flavour load, settled by the test. */
 export type DeferredFlavour = {
   /** Install the table and let the held load resolve. */
