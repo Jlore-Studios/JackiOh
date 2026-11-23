@@ -18703,9 +18703,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T10:45:10Z",
+    "at": "2026-11-23T10:45:47Z",
     "url": "",
-    "what": "suggestions (rules) on claude-6"
+    "what": "suggestions (ai) on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T10:35:32Z",
@@ -41442,9 +41442,9 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-23T10:45:10Z",
-    "last_area": "rules",
-    "last_run": "2026-11-23T10:45:10Z",
+    "idle_since": "2026-11-23T10:45:47Z",
+    "last_area": "ai",
+    "last_run": "2026-11-23T10:45:47Z",
     "provider": null,
     "requested": false,
     "run_id": null,
@@ -41463,6 +41463,14 @@
         "last_run": "2026-11-23T10:45:10Z",
         "provider": "claude-6",
         "run_id": "45158952792",
+        "taken_asks": []
+      },
+      "3": {
+        "area": "ai",
+        "count": 1,
+        "last_run": "2026-11-23T10:45:47Z",
+        "provider": "muse",
+        "run_id": "pending:d34bf55c-1795430723",
         "taken_asks": []
       }
     },
