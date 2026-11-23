@@ -16534,6 +16534,7 @@
       "owner_why": "it plans it",
       "pending_request": false,
       "provider": "claude-8",
+      "round_tier": "",
       "run_id": "45080597766",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-22T22:57:47Z",
@@ -16542,7 +16543,8 @@
         "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "4528": {
       "action": "review",
