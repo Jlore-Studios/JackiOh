@@ -128,13 +128,56 @@ func (x *Worker) suggest() {
 	result := x.Call("suggest", prompt, wt.Cwd, true,
 		"propose improvements while a lane has nothing to start", false)
 	found := verdicts.Suggestions(result.Text, n)
+	judged := x.judge(found, wt.Cwd)
 	suggestions := []any{}
-	for _, s := range found {
-		suggestions = append(suggestions, pyjson.New("title", s.Title, "body", s.Body, "class", s.Kind))
+	for i, s := range found {
+		entry := pyjson.New("title", s.Title, "body", s.Body, "class", s.Kind)
+		if j := judged[i+1]; j != nil {
+			entry.Set("judge", pyjson.New("approve", j.Approve, "why", j.Why))
+		}
+		suggestions = append(suggestions, entry)
 	}
 	x.Result.Set("status", "suggested")
 	x.Result.Set("reason", fmt.Sprintf("%d suggestion(s)", len(found)))
 	x.Result.Set("suggestions", suggestions)
+}
+
+// judge is a survey's second look at its suggestions (`suggestions.auto_approve`,
+// `prompts/judge.md`): a fresh call that reads them against the latest decisions people made on
+// suggestions and says, of each, whether it would approve it. Its word, by each suggestion's number
+// from 1; none when auto-approval is off or there is nothing to judge. The suggestions matter more
+// than the judge's word on them, so a judge call that fails or stops (a cap, an infra error)
+// leaves every one to a person instead of losing the survey.
+func (x *Worker) judge(found []*verdicts.Suggestion, cwd string) map[int]*verdicts.Judgement {
+	judged := map[int]*verdicts.Judgement{}
+	if !x.Cfg.AutoApprove.Enabled || len(found) == 0 {
+		return judged
+	}
+	var listed []string
+	for i, s := range found {
+		kind := s.Kind
+		if kind == "" {
+			kind = "none"
+		}
+		listed = append(listed, fmt.Sprintf("### Suggestion %d: %s\n\nClass: `%s`\n\n%s", i+1, s.Title, kind, s.Body))
+	}
+	decided := x.Plan.Get("decided")
+	if !pyjson.Truthy(decided) {
+		decided = prompts.Data("(none)", "Recent decisions on suggestions")
+	}
+	prompt := x.Render("judge", pyjson.New("repo", x.Cfg.Repo, "count", len(found),
+		"suggestions", prompts.Data(strings.Join(listed, "\n\n"), "The suggestions to judge"),
+		"decided", decided))
+	if err := herr.Try(func() {
+		result := x.Call("judge", prompt, cwd, true, "judge the survey's suggestions", false)
+		if result.OK {
+			judged = verdicts.Judgements(result.Text, len(found))
+		}
+	}); err != nil {
+		x.Step("judge", "the judge did not answer: "+py.SliceTo(err.Error(), 200), pyjson.New())
+		return map[int]*verdicts.Judgement{}
+	}
+	return judged
 }
 
 // SurveyArea is the survey prompt's `$area` (#4026): the one part of the repository the survey

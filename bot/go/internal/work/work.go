@@ -610,6 +610,13 @@ func (x *Worker) SeatFor(role string) *providers.Seat {
 		return x.BuildSeat
 	case "suggest":
 		return x.MainSeat
+	case "judge":
+		// A second look at a survey's suggestions (`suggestions.auto_approve`): the review seat
+		// where the subscription has one, so another model judges where it can.
+		if x.ReviewSeat != nil {
+			return x.ReviewSeat
+		}
+		return x.MainSeat
 	}
 	return x.BuildSeat // build, fix, revise, and the builder's own self check
 }

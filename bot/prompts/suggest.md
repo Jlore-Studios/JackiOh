@@ -1,4 +1,4 @@
-<!-- version: 6 -->
+<!-- version: 7 -->
 # Suggest improvements to JackiOh
 
 A lane of the night bot of `$repo` has had nothing it could start for a while. Your job is to propose up to $count
@@ -32,6 +32,26 @@ $area
 - **Not accessibility**: the maintainer has asked for no accessibility suggestions (#4384), so
   propose none about screen readers, ARIA, axe or other accessibility audits, keyboard-only reach,
   focus handling, colour contrast or colour-blind modes, or reduced motion, whatever its class.
+
+## What gets rejected
+
+The maintainers approve most suggestions, but they reject these, whatever the class. Don't offer
+one unless it has the evidence that answers the objection:
+
+- **Guarding against something that hasn't happened**: a new fuzz wave, regression corpus,
+  invariant harness or check with no bug, failing seed or incident it would have caught. They add
+  these the first time such a bug gets past the tests they have.
+- **A speed-up nobody measured**: fewer queries, a smaller bundle, lazy loading or caching, with no
+  measurement of a cost a player or the maintainer feels at the game's current size, in exchange
+  for rewriting code whose order or behaviour has to stay exactly as it is.
+- **A report nothing acts on**: telemetry, counters or totals that change no decision. Wins, and
+  what players see, are the measures that matter.
+- **Upkeep for every future change**: a check, lint or rule that every later card, spec or test
+  has to satisfy, costing more over time than the mistakes it would catch.
+- **A design or roadmap call**: a new mode, an economy or reward change, how decks are dealt or a
+  card's rules. Propose these only when the spec or an issue already asks for them.
+
+The reasons people gave for the suggestions that came to nothing (below, after "Why:") say more.
 
 Use subagents to survey different parts of your area in parallel, then keep only the strongest ideas. Fewer,
 better suggestions beat $count weak ones; zero is a fine answer.

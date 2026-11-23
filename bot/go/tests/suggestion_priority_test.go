@@ -165,7 +165,7 @@ func TestSuggestionPriority_TheSurveyListsEveryClass(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := template.Template
-	assertTrue(t, strings.HasPrefix(text, "<!-- version: 6 -->"), text[:min(len(text), 40)])
+	assertTrue(t, strings.HasPrefix(text, "<!-- version: 7 -->"), text[:min(len(text), 40)])
 	for _, kind := range config.SuggestionClasses {
 		assertIn(t, "- `"+kind+"`: ", text)
 	}

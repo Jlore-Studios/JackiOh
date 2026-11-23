@@ -26,6 +26,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/asks"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/declined"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
@@ -569,9 +570,13 @@ func QueueBuild(ctx *hctx.Context, number int, by string, force bool /* = False 
 	if labelSuggestion := config.LabelSuggestion; names[labelSuggestion] {
 		// A person queued one of my suggestions, which is their yes to it (#664). Its record
 		// remembers it was one, so if it comes to nothing it is logged as such (#797).
+		// It joins the log of decisions the judge reads (`declined.Approved`); queued by the bot
+		// itself, it went ahead with no one's vote (`plan.AutoApprove`).
 		ctx.GH.RemoveLabel(number, labelSuggestion)
 		ctx.Store.Update(func(s *pyjson.Object) any {
 			stateItem(s, number).Set("suggestion", true)
+			declined.Approved(s, number, py.OrStr(issue.Get("title"), ""), by,
+				strings.EqualFold(by, strings.TrimLeft(ctx.Cfg.BotLogin, "@")), clock.ISO(ctx.Now()))
 			return nil
 		}, fmt.Sprintf("suggestion #%d approved", number))
 	}

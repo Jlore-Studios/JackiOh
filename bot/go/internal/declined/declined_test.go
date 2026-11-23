@@ -8,7 +8,8 @@ import (
 )
 
 // testdata.json holds what Python 3.13 answered (bot/harness/declined.py) for a run of operations
-// on one state.
+// on one state, but for the final state's log of decisions (`suggest.decided`), which came after
+// the Python: one `came to nothing` entry for each suggestion logged, in the same order.
 func TestMatchesPython(t *testing.T) {
 	raw, err := os.ReadFile("testdata.json")
 	if err != nil {
