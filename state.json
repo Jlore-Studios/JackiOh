@@ -16685,13 +16685,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-3",
       "queued_at": "2026-11-22T23:55:03Z",
-      "run_id": "45085949973",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:9450c479-1795395940",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 465,
-      "started_at": "2026-11-22T23:56:46Z",
+      "started_at": "2026-11-23T01:05:59Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16982,9 +16983,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T01:05:28Z",
+    "at": "2026-11-23T01:05:59Z",
     "url": "",
-    "what": "revise #4532 on muse"
+    "what": "spot-check #4531 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-23T00:57:02Z",
@@ -38844,7 +38845,15 @@
         "n": 465,
         "pr": 4531,
         "queued_at": "2026-11-23T01:05:13Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:9450c479-1795395940",
         "sha": "25c463cc105ad4808b499c6395fbbe80b54f42f2",
+        "started_at": "2026-11-23T01:05:59Z",
         "status": "queued",
         "title": "Patch: the landing fan checks a few cards instead of all 800, and the collection, the stats grid and card prompts stop rebuilding every card face on each hover, scroll or keystroke",
         "tries": 0
