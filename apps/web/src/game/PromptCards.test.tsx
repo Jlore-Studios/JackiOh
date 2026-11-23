@@ -546,7 +546,11 @@ describe("#4511 an open picker builds no option's face twice", () => {
     faceCalls.length = 0;
 
     // A board re-render that leaves the picker's options unchanged (a hover, an animation step).
-    rerender(tree);
+    rerender(
+      <CatalogContext.Provider value={lookup}>
+        <Prompt view={view} onAction={vi.fn()} />
+      </CatalogContext.Provider>,
+    );
     expect(faceCalls.filter((request) => request.call === "card")).toHaveLength(0);
 
     await act(async () => {
