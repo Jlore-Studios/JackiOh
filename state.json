@@ -18297,14 +18297,8 @@
     "what": "review #4574 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-23T08:29:30Z",
-    "notes": [
-      "delivered build #4562 on muse (run 45135876952): built",
-      "delivered build #4552 on claude-3 (run 45114746329): built",
-      "started review #4573 on muse (run 45139396508)",
-      "started review #4574 on claude-3 (run 45139460859)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-11-23T08:39:29Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -19009,7 +19003,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T08:29:30Z",
+  "loop_tick": "2026-11-23T08:39:29Z",
   "machine_disk": {
     "issue": null,
     "reading": {
