@@ -443,9 +443,10 @@ pub struct SavedDeck {
     pub updated_at: i64,
 }
 
-/// A trio's three slots, in order. `None` is an empty slot, which a saved trio may have (R252).
 /// #4510: a match id and its portrait pair, `None` when the match carries none (`matches_portraits`).
 pub type MatchPortraits = (String, Option<(PortraitId, PortraitId)>);
+
+/// A trio's three slots, in order. `None` is an empty slot, which a saved trio may have (R252).
 pub type TrioSlots = (Option<String>, Option<String>, Option<String>);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
