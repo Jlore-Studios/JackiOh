@@ -23236,12 +23236,8 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-23T21:00:00Z",
+      "refused_until": "2026-11-24T02:10:00Z",
       "spent": [
-        {
-          "at": "2026-11-12T08:10:49Z",
-          "minutes": 17.3
-        },
         {
           "at": "2026-11-12T14:14:23Z",
           "minutes": 5.7
@@ -24037,16 +24033,13 @@
         {
           "at": "2026-11-23T21:30:10Z",
           "minutes": 9.8
+        },
+        {
+          "at": "2026-11-23T23:09:44Z",
+          "minutes": 10.4
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-11T18:04:34Z",
-          "cache": 5150259,
-          "cost": 1.3848,
-          "input": 119,
-          "output": 39498
-        },
         {
           "at": "2026-11-11T18:37:10Z",
           "cache": 1390745,
@@ -25439,15 +25432,23 @@
           "cost": 5.2925,
           "input": 194,
           "output": 54824
+        },
+        {
+          "at": "2026-11-23T23:09:44Z",
+          "cache": 18385665,
+          "cost": 6.6643,
+          "input": 200,
+          "output": 52553
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-24T02:10:00Z",
-          "utilization": 0.19
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-23T21:30:10Z",
-        "status": "allowed"
+        "observed_at": "2026-11-23T23:09:44Z",
+        "rejected_resets_at": "2026-11-24T02:10:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -40415,7 +40416,40 @@
   "usage_spool": {
     "readings": [
       "2026-11-23T23:03:28Z,muse,usage-command,before,45285336280,0,2026-11-24T03:49:00Z,22,2026-11-30T00:00:00Z,allowed,100,100,",
-      "2026-11-23T23:07:53Z,muse,usage-command,after,45285336280,1,2026-11-24T03:49:00Z,23,2026-11-30T00:00:00Z,allowed,100,100,"
+      "2026-11-23T23:07:53Z,muse,usage-command,after,45285336280,1,2026-11-24T03:49:00Z,23,2026-11-30T00:00:00Z,allowed,100,100,",
+      "2026-11-23T22:56:29Z,claude-3,stream,call,45283872902,39,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T22:56:44Z,claude-3,stream,call,45283872902,41,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T22:57:29Z,claude-3,stream,call,45283872902,43,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T22:57:59Z,claude-3,stream,call,45283872902,45,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T22:58:14Z,claude-3,stream,call,45283872902,46,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T22:58:29Z,claude-3,stream,call,45283872902,49,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T22:58:44Z,claude-3,stream,call,45283872902,51,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T22:58:59Z,claude-3,stream,call,45283872902,52,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T22:59:14Z,claude-3,stream,call,45283872902,54,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T22:59:29Z,claude-3,stream,call,45283872902,57,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T22:59:59Z,claude-3,stream,call,45283872902,59,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T23:00:29Z,claude-3,stream,call,45283872902,64,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T23:00:44Z,claude-3,stream,call,45283872902,65,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T23:00:59Z,claude-3,stream,call,45283872902,67,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T23:01:14Z,claude-3,stream,call,45283872902,69,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T23:01:29Z,claude-3,stream,call,45283872902,70,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T23:01:44Z,claude-3,stream,call,45283872902,72,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T23:01:59Z,claude-3,stream,call,45283872902,74,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T23:02:14Z,claude-3,stream,call,45283872902,76,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T23:02:29Z,claude-3,stream,call,45283872902,78,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T23:03:44Z,claude-3,stream,call,45283872902,86,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T23:03:59Z,claude-3,stream,call,45283872902,88,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T23:04:14Z,claude-3,stream,call,45283872902,89,2026-11-24T02:10:00Z,,,allowed,,,",
+      "2026-11-23T23:04:29Z,claude-3,stream,call,45283872902,90,2026-11-24T02:10:00Z,,,allowed_warning,,,",
+      "2026-11-23T23:04:44Z,claude-3,stream,call,45283872902,91,2026-11-24T02:10:00Z,,,allowed_warning,,,",
+      "2026-11-23T23:04:59Z,claude-3,stream,call,45283872902,92,2026-11-24T02:10:00Z,,,allowed_warning,,,",
+      "2026-11-23T23:05:14Z,claude-3,stream,call,45283872902,94,2026-11-24T02:10:00Z,,,allowed_warning,,,",
+      "2026-11-23T23:05:29Z,claude-3,stream,call,45283872902,95,2026-11-24T02:10:00Z,,,allowed_warning,,,",
+      "2026-11-23T23:05:44Z,claude-3,stream,call,45283872902,96,2026-11-24T02:10:00Z,,,allowed_warning,,,",
+      "2026-11-23T23:05:59Z,claude-3,stream,call,45283872902,97,2026-11-24T02:10:00Z,,,allowed_warning,,,",
+      "2026-11-23T23:06:14Z,claude-3,stream,call,45283872902,98,2026-11-24T02:10:00Z,,,allowed_warning,,,",
+      "2026-11-23T23:06:29Z,claude-3,stream,call,45283872902,99,2026-11-24T02:10:00Z,,,allowed_warning,,,",
+      "2026-11-23T23:06:39Z,claude-3,refusal,call,45283872902,100,2026-11-24T02:10:00Z,,,rejected,,,2026-11-24T02:10:00Z"
     ],
     "runs": [
       "2026-11-23T23:07:53Z,45285336280,muse,muse-spark-1.3-contributor,plan,4648,medium,planned,,4.3,0,0,0,,0,1,22,23,5.5,,none,,1"
