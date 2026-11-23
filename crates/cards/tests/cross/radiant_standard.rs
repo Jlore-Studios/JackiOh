@@ -21,16 +21,10 @@ fn entries() -> Vec<&'static CardDef> {
 const STAT_FACTOR: i32 = 2;
 
 /// R275's named exceptions to the stat half, by id, with the reason.
-const STAT_EXCEPTIONS: &[(&str, &str)] = &[
-    (
-        "stinkyscape-083",
-        "R4285006: S #83 Halo's Radiant 6/1 on its 3/1 base, the designer's printed numbers (Stinkyscape+ Balance Changes IV)",
-    ),
-    (
-        "stinkyscapeplus-153",
-        "R4440005: S+ #153 Noxious Rounds' Radiant 6/1 on its 3/1 base, the designer's printed numbers (Stinkyscape+ Balance Changes VI)",
-    ),
-];
+const STAT_EXCEPTIONS: &[(&str, &str)] = &[(
+    "stinkyscape-083",
+    "R4285006: S #83 Halo's Radiant 6/1 on its 3/1 base, the designer's printed numbers (Stinkyscape+ Balance Changes IV)",
+)];
 
 /// `docs/radiant-audit.md`, the card-by-card record of R275's effect half.
 const AUDIT: &str = include_str!("../../../../docs/radiant-audit.md");
@@ -160,13 +154,13 @@ mod r275_the_radiant_power_standard_spec_5_2 {
         }
         assert_eq!(
             STAT_EXCEPTIONS.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
-            vec!["stinkyscape-083", "stinkyscapeplus-153"]
+            vec!["stinkyscape-083"]
         );
     }
 
-    /// R4440005: Noxious Rounds doubles its attack and keeps its health, 3/1 → 6/1, as Halo does.
+    /// R4440005: Noxious Rounds doubles both stats, 3/1 → 6/2, so it is no exception (v0.6.11d's 6/1 was).
     #[test]
-    fn r4440005_noxious_rounds_is_the_second_named_exception_a_6_1_on_a_3_1() {
+    fn r4440005_noxious_rounds_is_no_exception_its_radiant_6_2_doubles_its_3_1() {
         let card = CATALOG.get("stinkyscapeplus-153").expect("Noxious Rounds");
         assert_eq!(
             (
@@ -180,7 +174,7 @@ mod r275_the_radiant_power_standard_spec_5_2 {
         assert!(is_exception(&card.id));
     }
 
-    /// R4285006: Halo doubles its attack and keeps its health, 3/1 → 6/1, the first exception.
+    /// R4285006: Halo doubles its attack and keeps its health, 3/1 → 6/1, the one exception.
     #[test]
     fn r4285006_halo_is_the_named_exception_a_6_1_on_a_3_1() {
         let card = CATALOG.get("stinkyscape-083").expect("Halo");
@@ -191,9 +185,9 @@ mod r275_the_radiant_power_standard_spec_5_2 {
                 card.radiant.attack,
                 card.radiant.health
             ),
-            (Some(3), Some(1), Some(6), Some(1))
+            (Some(3), Some(1), Some(6), Some(2))
         );
-        assert!(is_exception(&card.id));
+        assert!(!is_exception(&card.id));
     }
 
     #[test]
