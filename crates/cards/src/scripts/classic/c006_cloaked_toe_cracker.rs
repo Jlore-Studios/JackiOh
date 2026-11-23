@@ -4,7 +4,7 @@
 //!
 //! Issue #4440 (Stinkyscape+ Balance Changes VI) made it 3/6 (Radiant 6/12), from 3/4 (Radiant 6/8),
 //! its base Aura (2) less, from (0), and took the Radiant face's "After you play a Trap, gain {mana}
-//! mana." `script_v0_6_11b` keeps the script before it for the replays of v0.6.11b and before (R767000).
+//! mana." `script_v0_6_11c` keeps the script before it for the replays of v0.6.11c and before (R767000).
 //!
 //! CLOAKED is printed on both faces (since patch v0.3.7): it may be set face-down from hand at its own
 //! (2) and revealed by its Reveal (`alt_play`, R783004–R783006). Set, it is a Field Trap whose text is
@@ -69,7 +69,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// Through v0.6.11b: after you play a Trap or a Field Trap (a cast is a play, R70), the Radiant face
+/// Through v0.6.11c: after you play a Trap or a Field Trap (a cast is a play, R70), the Radiant face
 /// gained the card's mana. A permanent's trigger reads its condition in `run` (a `when` predicate is a
 /// trap's, R99): any other play answers with nothing. The play is read as it counts (`played_type_of`),
 /// so a Cloaked card's face-down play, a Trap play (R783005), answered it; the `manaChanged` it made
@@ -90,9 +90,9 @@ fn after_you_play_a_trap() -> TriggerDef {
     })
 }
 
-/// R767000: through v0.6.11b both faces' Traps cost (0) and the Radiant face gained its mana after a
+/// R767000: through v0.6.11c both faces' Traps cost (0) and the Radiant face gained its mana after a
 /// Trap (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_11b() -> CardScripts {
+pub fn script_v0_6_11c() -> CardScripts {
     CardScripts {
         base: Script {
             cost_aura: Some(free_aura()),
@@ -358,26 +358,26 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for v0.6.11b, with the `mana` its Radiant face declared then.
-        mod kept_v0_6_11b {
+        /// R767000: the script kept for v0.6.11c, with the `mana` its Radiant face declared then.
+        mod kept_v0_6_11c {
             use super::*;
 
             fn kept<T>(run: impl FnOnce() -> T) -> T {
                 crate::under_kept_as(
                     CRACKER,
-                    script_v0_6_11b(),
+                    script_v0_6_11c(),
                     |def| {
                         def.params = serde_json::from_value(json!([
                             { "key": "mana", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }
                         ]))
-                        .expect("the v0.6.11b params");
+                        .expect("the v0.6.11c params");
                     },
                     run,
                 )
             }
 
             #[test]
-            fn r767000_through_v0_6_11b_the_base_face_s_traps_cost_0() {
+            fn r767000_through_v0_6_11c_the_base_face_s_traps_cost_0() {
                 kept(|| {
                     let s = scenario(json!({
                         "p1": { "hand": [THREE_TRAP, STOCKPILE], "field": [CRACKER] },
@@ -388,7 +388,7 @@ mod tests {
             }
 
             #[test]
-            fn r767000_through_v0_6_11b_a_radiant_one_gained_1_mana_after_a_trap_or_a_field_trap() {
+            fn r767000_through_v0_6_11c_a_radiant_one_gained_1_mana_after_a_trap_or_a_field_trap() {
                 kept(|| {
                     let mut s = scenario(json!({
                         "p1": { "hand": [TESLA, SHEEPISH, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },

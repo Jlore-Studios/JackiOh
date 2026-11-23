@@ -1325,13 +1325,13 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     // before it.
     (
         c131_tetrative_reconstructor::ID,
-        "v0.6.11b",
-        c131_tetrative_reconstructor::script_v0_6_11b,
+        "v0.6.11c",
+        c131_tetrative_reconstructor::script_v0_6_11c,
     ),
     (
         c006_cloaked_toe_cracker::ID,
-        "v0.6.11b",
-        c006_cloaked_toe_cracker::script_v0_6_11b,
+        "v0.6.11c",
+        c006_cloaked_toe_cracker::script_v0_6_11c,
     ),
 ];
 
@@ -2008,16 +2008,16 @@ mod tests {
         );
     }
 
-    /// Issue #4440's second part: v0.6.11b was the newest shipped version as it was built, so its rows are
-    /// keyed there; each script they keep ran through it, v0.6.10 to v0.6.11b among the versions.
+    /// Issue #4440's second part: v0.6.11c shipped while it sat in the merge queue, so its rows are keyed
+    /// there, the newest version that ran the scripts they keep (v0.6.10 to v0.6.11c among them).
     #[test]
-    fn r767000_issue_4440_part_2_scripts_are_kept_through_v0_6_11b_the_newest_version_that_ran_them() {
+    fn r767000_issue_4440_part_2_scripts_are_kept_through_v0_6_11c_the_newest_version_that_ran_them() {
         assert_kept_through(
             &[c131_tetrative_reconstructor::ID, c006_cloaked_toe_cracker::ID],
             &[
-                "v0.6.10", "v0.6.10b", "v0.6.10c", "v0.6.10d", "v0.6.11", "v0.6.11b",
+                "v0.6.10", "v0.6.10b", "v0.6.10c", "v0.6.10d", "v0.6.11", "v0.6.11b", "v0.6.11c",
             ],
-            "v0.6.11c",
+            "v0.6.11d",
         );
     }
 
