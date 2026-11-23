@@ -84,4 +84,38 @@ describe("#4614 the hook that keeps the mounted lines", () => {
     rerender(harness(KEYS, null));
     expect(mountedKeys(container)).not.toContain(KEYS[0]);
   });
+
+  it("#4614 settles when measured heights jitter across passes, instead of cascading", () => {
+    layout.viewport = { scrollTop: 0, clientHeight: 400 };
+    // Subpixel layout dust: every measure reads a different uniform height, as
+    // fractional scroll offsets and rasterization shift rects between passes in a
+    // real browser. A layout effect that re-measures on every window it places
+    // cascades into React's maximum update depth under sustained arrivals (the e2e
+    // smoke crash on this change's first pass).
+    let reads = 0;
+    const rect = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      reads += 1;
+      return { height: Math.floor(reads / 40) % 2 === 0 ? 25 : 23 } as DOMRect;
+    });
+    let renders = 0;
+    const counting = (keys: readonly string[], held: string | null): ReactElement => {
+      renders += 1;
+      return harness(keys, held);
+    };
+    try {
+      const { container, getByTestId } = render(counting(KEYS, null));
+      renders = 0;
+      for (let top = 0; top <= 2000; top += 400) {
+        layout.viewport = { scrollTop: top, clientHeight: 400 };
+        fireEvent.scroll(getByTestId("log"));
+      }
+      // Settled, not cascaded: a bounded render count and a bounded window.
+      expect(renders).toBeLessThan(60);
+      const mounted = mountedKeys(container);
+      expect(mounted.length).toBeLessThan(KEYS.length);
+      expect(mounted.length).toBeGreaterThan(0);
+    } finally {
+      rect.mockRestore();
+    }
+  });
 });

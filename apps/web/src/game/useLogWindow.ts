@@ -121,8 +121,16 @@ export function useLogWindow(
   const last = keys.length === 0 ? "" : (keys[keys.length - 1] ?? "");
   const windowKey = view === null || view === "all" ? view : `${String(view.first)}:${String(view.last)}`;
 
+  // Measuring and observing are separate effects: no layout effect here both reads the
+  // window and writes it, so a measure that moves the window cannot re-trigger itself in
+  // the same commit (#4614: the combined effect cascaded into React's maximum update depth
+  // under sustained arrivals, red in e2e smoke).
   useLayoutEffect(() => {
     measure(true);
+    // The keys stand in through their ends and length, so new rows measure as they arrive.
+  }, [ref, measure, keys.length, first, last, heldKey]);
+
+  useLayoutEffect(() => {
     if (typeof ResizeObserver === "undefined") return undefined;
     const observer = new ResizeObserver(() => {
       measure(true);
@@ -134,8 +142,8 @@ export function useLogWindow(
     return () => {
       observer.disconnect();
     };
-    // The keys stand in through their ends and length; the window through its range, so new
-    // rows are observed as they mount.
+    // The window through its range, so rows that mount as it moves are observed; the
+    // observer's own callbacks re-measure asynchronously, never in this effect.
   }, [ref, measure, keys.length, first, last, heldKey, windowKey]);
 
   useLayoutEffect(() => {
