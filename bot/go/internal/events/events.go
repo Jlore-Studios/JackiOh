@@ -265,7 +265,8 @@ func OnComment(ctx *hctx.Context, payload *pyjson.Object, reviewComment bool /* 
 	if voted != "" && OpenSuggestion(ctx, py.MustInt(py.Or(thread.Get("number"), 0))) {
 		// A vote on one of my suggestions (#760). `@bot reject` would otherwise read as a request
 		// to build it, so the vote is what its line means.
-		rest := []*commands.Command{{Verb: voted, Args: "", Force: false, Line: voteLine}}
+		rest := []*commands.Command{{Verb: voted, Args: "", Force: false, Line: voteLine,
+			Reason: commands.VoteReason(body, voteLine)}}
 		for _, c := range found {
 			if c.Line != voteLine {
 				rest = append(rest, c)
@@ -280,6 +281,9 @@ func OnComment(ctx *hctx.Context, payload *pyjson.Object, reviewComment bool /* 
 			// once, with the reply as the decision (`plan.SyncDecisionsOn` reads who wrote it).
 			if notes := plan.SyncDecisionsOn(ctx, py.MustInt(py.Or(thread.Get("number"), 0))); len(notes) > 0 {
 				return notes
+			}
+			if note := rejectReason(ctx, py.MustInt(py.Or(thread.Get("number"), 0)), comment, body); note != "" {
+				return []string{note}
 			}
 		}
 		return []string{"no command"}
@@ -471,7 +475,7 @@ func Execute(ctx *hctx.Context, command *commands.Command, thread *pyjson.Object
 		return fmt.Sprintf("`%s` needs an issue or a pull request to act on.", verb)
 	}
 	if slices.Contains(commands.Votes, verb) {
-		return AnswerVote(ctx, verb, number, by, ask)
+		return AnswerVote(ctx, verb, number, by, ask, command.Reason)
 	}
 	if verb == "stop" {
 		answer := queue.Stop(ctx, number, by)
@@ -564,9 +568,10 @@ func OpenSuggestion(ctx *hctx.Context, number int) bool {
 // AnswerVote is answer_vote: a person's vote on one of my suggestions (#760): `approve` queues it
 // to build, which takes `bot:suggestion` off (`queue_build`), as `bot:build` does; `reject` closes
 // it as not planned, which frees its place under `suggestions.max_open` for the next survey, and
-// goes into the log of suggestions that came to nothing (`declined`, #797). A rejected one keeps
-// its label, so it still reads as a suggestion, and reopened it can be approved.
-func AnswerVote(ctx *hctx.Context, vote string, number int, by string, ask *asks.Ask /* = None */) string {
+// goes into the log of suggestions that came to nothing (`declined`, #797), with the rest of the
+// vote's comment as its reason when it gives one. A rejected one keeps its label, so it still
+// reads as a suggestion, and reopened it can be approved.
+func AnswerVote(ctx *hctx.Context, vote string, number int, by string, ask *asks.Ask /* = None */, reason string) string {
 	if vote == "approve" {
 		return queueBuild(ctx, number, by, false, false, ask, nil)
 	}
@@ -578,10 +583,38 @@ func AnswerVote(ctx *hctx.Context, vote string, number int, by string, ask *asks
 	// Logged, so no survey offers it again however long ago it was (#797).
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		declined.Note(s, number, py.OrStr(issue.Get("title"), ""), "rejected by @"+by, clock.ISO(ctx.Now()))
+		declined.Reason(s, number, reason)
 		return nil
 	}, fmt.Sprintf("suggestion #%d rejected", number))
 	return fmt.Sprintf("Rejected: I closed #%d without building it. Reopen it and comment `approve` ", number) +
 		"to change that."
+}
+
+// rejectReason keeps a trusted person's comment on a suggestion that came to nothing as the
+// reason for it, when its entry has none yet: people often reject first and say why after
+// (`declined.Reason`), and the survey and the judge read the reasons. "" when it kept nothing.
+func rejectReason(ctx *hctx.Context, number int, comment *pyjson.Object, body string) string {
+	if number == 0 || !config.Identity.Suggestions {
+		return ""
+	}
+	entry := declined.Entry(ctx.Store.Load(), number)
+	if entry == nil || entry.Str("reason") != "" {
+		return ""
+	}
+	user := comment.Obj("user")
+	if FromOtherBot(user, body) || level(ctx, user, comment.Get("author_association")) <= 0 {
+		return ""
+	}
+	text := commands.VoteReason(body, "")
+	kept := false
+	ctx.Store.Update(func(s *pyjson.Object) any {
+		kept = declined.Reason(s, number, text)
+		return nil
+	}, fmt.Sprintf("suggestion #%d's reason", number))
+	if !kept {
+		return ""
+	}
+	return fmt.Sprintf("kept the reason for #%d coming to nothing", number)
 }
 
 // notMine is _not_mine: the reply to a verb this bot does not have, naming the bot that does
