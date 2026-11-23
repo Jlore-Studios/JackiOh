@@ -40753,6 +40753,12 @@
         "number": 4565,
         "title": "Patch: the matchmaker pairs from light ticket stubs and reads the full tickets only for the pair it starts",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T07:55:36Z",
+        "number": 4563,
+        "title": "Patch: the Duos host builds each seat's view once per change, as the 1v1 host already does",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": "2026-11-23T07:42:49Z",
