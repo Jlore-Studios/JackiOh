@@ -16078,7 +16078,7 @@
       "pr": 4629,
       "provider": "claude-1",
       "question": "",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "45222365252",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-23T16:57:48Z",
