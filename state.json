@@ -18282,6 +18282,8 @@
       }
     },
     "4575": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-23T08:22:47Z",
@@ -18295,8 +18297,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the Collection's Decks tab redraws when a deck's deletion or save lands\"} -->\n- ## What changed\n- The Decks tab now redraws from the kept `/api/decks` answer as soon as this device's own deck write folds into it, with no remount and no new read.\n- - [readCache.ts](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4568/apps/web/src/net/readCache.ts): new `subscribeKept(path, listener)` with one listener set per kept path (keyed by path string, not account). `keepRead`, `rememberRead`, `updateCachedRead` (only when an entry was folded) a\u2026\n- - [collection.tsx](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4568/apps/web/src/routes/collection.tsx): `useRead` takes an optional `followedPath`. Only the Decks tab's decks read passes `keptPaths.decks`; while mounted it subscribes and draws each new kept answer as its ready value, i\u2026\n- - Ruling [R4568000](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4568/spec/rulings/R4568000.md) (amends R3206000) plus the \u00a711 paragraph in [spec/pending/4568.md](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4568/spec/pending/4568.md).\n- ## How I tested\n- - `pnpm --dir apps/web test src/net/readCache.test.ts src/routes/collection.test.tsx`: 59 passed, including the 3 new `R4568000` tests (listener keep/fold/forget/clear/expire/unsubscribe semantics; tile drop on a `syncDecks`-shaped deletion fold and flip to ready on a completing save with `getDecks\u2026\n- - `pnpm --dir apps/web typecheck`: passes. Note: it OOMs under this box's default ~2 GB Node heap, so I ran it with `NODE_OPTIONS=--max-old-space-size=6144` (6.3 GB free on the machine); unrelated to the change.\n- - `cargo jackioh spec check`: `2403 rulings, 6029 proofs, 74422 citations ... ok`.\n- - `cargo fmt --check` and eslint on the four touched web files: clean. Working tree holds only the six intended files.\n- ## Decisions\n- No departures from the plan; the three settled decisions (per-path listeners, redraw from the kept answer, wait for the server fold) are recorded in the ruling note with their rejected alternatives.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4568 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4568/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4568,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-23T08:47:47Z",
         "from_run": "45138151014",
         "gates": [
           {
@@ -18355,8 +18360,15 @@
         "source": "build",
         "until": "2026-11-23T09:17:01Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-23T08:47:01Z",
+      "run_id": "pending:1c6ab8e9-1795423649",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-23T08:47:47Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -18370,9 +18382,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T08:32:32Z",
+    "at": "2026-11-23T08:47:47Z",
     "url": "",
-    "what": "review #4574 on claude-3"
+    "what": "review #4575 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T08:39:29Z",
