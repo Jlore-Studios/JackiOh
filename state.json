@@ -16174,6 +16174,7 @@
     "4515": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-22T23:05:48Z",
         "difficulty": "hard",
