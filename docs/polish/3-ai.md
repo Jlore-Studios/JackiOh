@@ -722,9 +722,11 @@ The rule, one step at a time, each step one `reduce` (one node):
    turn), each play and standing still are judged after it ends its turn (`known_play`, R3696001).
 2. **Visible activations.** An Activate of a card face-up on the field that is not in `hidden` (The
    Power to Punish, a Heroic Power's rolled Ping) is information too. The opponent tries up to
-   `AI_REPLY.visibleActivations` of them, those aimed at the seat's hero first, then at a card the
-   seat controls, and takes the one its own `evaluate` likes best, if that beats standing still
-   (#1036). A face-down card's Reveal is never tried: its card is a sample.
+   `AI_REPLY.visibleActivations` of them, those aimed at the seat's hero first, then those aimed at
+   a card the seat controls, one per pick, dealt out over every source and ability in turn, each
+   one's best target by the seat's `unitWorth` first (R4515000; `AI_REPLY.spreadActivations` off
+   gives back the first ones listed), and takes the one its own `evaluate` likes best, if that
+   beats standing still (#1036). A face-down card's Reveal is never tried: its card is a sample.
 3. **Trades.** Otherwise it takes the legal attack of highest static value, when that value is
    positive: an attack that kills the seat's hero is worth `AI_EVAL.win`; so is every attack on the
    hero while the attacks the opponent has left would reach it together past the seat's Taunts

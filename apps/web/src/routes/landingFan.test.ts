@@ -6,7 +6,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { PORTRAITS, type CardDef } from "@jackioh/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { nameTier, textTier } from "../cards/fit.ts";
 import { FULL_ART_CARDS, isFullArtCard } from "../cards/fullArt.ts";
@@ -14,12 +14,14 @@ import { faceModel } from "../cards/model.ts";
 import { faceLines, overLimit } from "../cards/fit.ts";
 import { FEATURE_WEIGHT_DENSE, FEATURE_WEIGHT_PLAIN, FULL_ART_WEIGHT_FACTOR } from "../stats/config.ts";
 import { seeded } from "../test/random.ts";
+import type { FaceCall } from "../wire/generated/FaceCall.ts";
 import {
   EVEN,
   FAN_CARD_MAX_PX,
   FAN_FACES,
   FAN_RADIANT_AT,
   FAN_TEXT_LIMIT,
+  LANDING_DEAL_FACE_BUDGET,
   corePool,
   dealLandingFan,
   fanPool,
@@ -27,10 +29,26 @@ import {
   featureWeight,
   fitsTheFan,
   pickWeighted,
+  resetLandingFanCachesForTests,
   rotateFan,
   rotationPool,
+  sampleFittingCard,
   shippedPool,
 } from "./landingFan.ts";
+
+/** Every `face` call the fan's deals made since the calls were last cleared, in order. */
+const faceCalls = vi.hoisted(() => [] as FaceCall[]);
+
+vi.mock("../wasm/index.ts", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../wasm/index.ts")>();
+  return {
+    ...real,
+    face: (request: FaceCall) => {
+      faceCalls.push(request);
+      return real.face(request);
+    },
+  };
+});
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 const CATALOG = JSON.parse(readFileSync(resolve(REPO, "crates/cards/catalog.json"), "utf8")) as Record<string, CardDef>;
@@ -216,10 +234,11 @@ describe("R704 swaps below the threshold", () => {
         expect(new Set(next.map(({ def }) => def.id)).size).toBe(next.length);
       }
     }
-    // Evenly: every Core card of the slot's rarity arrives, about as often as every other.
+    // Evenly: every Core card of the slot's rarity that fits the fan arrives, about as often
+    // as every other (#4511: the sampler never deals a card that does not fit).
     const hand = dealLandingFan(seeded(5));
     const rarity = hand[0]?.def.rarity;
-    const pool = corePool().filter((def) => def.rarity === rarity);
+    const pool = corePool().filter((def) => def.rarity === rarity && fitsTheFan(def, false));
     expect(pool.length).toBeGreaterThan(1);
     const arrivals = new Map<string, number>();
     const random = seeded(6);
@@ -318,12 +337,70 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
         }
       }
       for (const seed of SEEDS) {
-        const hand = dealLandingFan(seeded(seed), fanPool(fullArt), favoringFullArt(EVEN, fullArt));
+        const hand = dealLandingFan(seeded(seed), fanPool(fullArt), favoringFullArt(EVEN, fullArt), fullArt);
         expect(hand).toHaveLength(FAN_FACES);
         for (const { def } of hand) expect(fitsTheFan(def, fullArt), def.id).toBe(true);
       }
     }
   });
+
+describe("#4511 the sampler deals from a few draws, not every card's faces", () => {
+  it("#4511 the sampler deals each fitting card with its weighted share and never deals an unfitting one", () => {
+    const fitting = shippedPool()
+      .filter((def) => fitsTheFan(def, false))
+      .slice(0, 5);
+    expect(fitting).toHaveLength(5);
+    const unfitting = shippedPool().find((def) => !fitsTheFan(def, false));
+    if (unfitting === undefined) throw new Error("the pool holds a card that does not fit");
+    const pool = [...fitting, unfitting];
+    // Alternating weights 1 and 3 over maxWeight 4; the unfitting card would weigh 1, like today's draws.
+    const weighs = [1, 3, 1, 3, 1];
+    const weigh = (def: CardDef): number => weighs[fitting.indexOf(def)] ?? 1;
+    const random = seeded(77);
+    const seen = new Map<string, number>();
+    const DRAWS = 20_000;
+    for (let i = 0; i < DRAWS; i += 1) {
+      const def = sampleFittingCard(pool, random, weigh, false, 4);
+      if (def === undefined) throw new Error("a pool with fitting cards always deals one");
+      seen.set(def.id, (seen.get(def.id) ?? 0) + 1);
+    }
+    expect(seen.has(unfitting.id)).toBe(false);
+    // A uniform proposal with weight/maxWeight acceptance deals each fitting card its weight over
+    // the fitting cards' summed weights (R374, R639, R704, R1017002, as `pickWeighted` has it).
+    const total = weighs.reduce((sum, weight) => sum + weight, 0);
+    for (const [at, def] of fitting.entries()) {
+      const share = (weighs[at] ?? 1) / total;
+      const frequency = (seen.get(def.id) ?? 0) / DRAWS;
+      expect(Math.abs(frequency - share), def.id).toBeLessThan(share * 0.15);
+    }
+  });
+
+  it("#4511 without an acceptance the sampler falls back to today's full filter", () => {
+    const commons = shippedPool().filter((def) => def.rarity === "Common");
+    const fitting = commons.filter((def) => fitsTheFan(def, false));
+    expect(fitting.length).toBeGreaterThan(1);
+    // A source at its edge accepts nothing, so every draw misses and the fallback deals.
+    const stuck = (): number => 0.999999999;
+    expect(sampleFittingCard(commons, stuck, featureWeight, false)).toEqual(pickWeighted(fitting, stuck, featureWeight));
+    // A rarity with no fitting card deals nothing, as today's filter does.
+    const bare = commons.filter((def) => !fitsTheFan(def, false));
+    expect(bare.length).toBeGreaterThan(0);
+    expect(sampleFittingCard(bare, seeded(3), featureWeight, false)).toBeUndefined();
+  });
+
+  it("#4511 dealing a returning player's fan costs at most LANDING_DEAL_FACE_BUDGET face calls", () => {
+    for (const seed of [7, 8, 9]) {
+      // From cold caches, as a fresh page load deals: today's full filter would cross for every
+      // shipped card's two faces, the sampler only for the cards it draws.
+      resetLandingFanCachesForTests();
+      faceCalls.length = 0;
+      const hand = dealLandingFan(seeded(seed), shippedPool(), favoringFullArt(featureWeight, true), true);
+      expect(hand, `seed ${String(seed)}`).toHaveLength(FAN_FACES);
+      for (const { def } of hand) expect(fitsTheFan(def, true), def.id).toBe(true);
+      expect(faceCalls.length, `seed ${String(seed)}`).toBeLessThanOrEqual(LANDING_DEAL_FACE_BUDGET);
+    }
+  });
+});
 
   it("R1017002 a full-art card weighs FULL_ART_WEIGHT_FACTOR times as much while full art is on, and as any card while it is off", () => {
     expect(FULL_ART_WEIGHT_FACTOR).toBeGreaterThan(1);

@@ -41,7 +41,6 @@ import { releaseArtAssets, releaseArtPath } from "./patches/releaseArt.ts";
 import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups } from "./patches/releases.ts";
 import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, M1, M2, TIERED_PATCHES, TIERED_SNAPSHOTS, V1, V2, V3, fixtureDef } from "./patches/fixtures.ts";
 import type { Patch, Snapshot } from "./patches/source.ts";
-import AccessibilityRoute from "./routes/accessibility.tsx";
 import CopyrightRoute from "./routes/copyright.tsx";
 import PrivacyRoute from "./routes/privacy.tsx";
 import TermsRoute from "./routes/terms.tsx";
@@ -355,12 +354,11 @@ describe("the static pages", () => {
     }
   });
 
-  it("quote /privacy, /terms, /accessibility and /copyright word for word from their own pages", () => {
+  it("quote /privacy, /terms and /copyright word for word from their own pages", () => {
     const page = build(CATALOG, REAL_PATCHES);
     const cases = [
       [PrivacyRoute, paths.privacy],
       [TermsRoute, paths.terms],
-      [AccessibilityRoute, paths.accessibility],
       [CopyrightRoute, paths.copyright],
     ] as const;
     for (const [Route, path] of cases) {

@@ -45,7 +45,7 @@ mod tests {
 
     const DINO: &str = "traininggrounds-034";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +2 Attack.
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +1 Attack.
     const MENACE: &str = "core-019"; // Midrange Menace: Immutable on its Radiant face.
 
     fn board(radiant: bool, mine: Value, my_backrow: Value, theirs: Value) -> Scenario {
@@ -81,7 +81,7 @@ mod tests {
             s.card_mut(&unit).buffs = AttackHealth { attack: 2, health: 2 };
             s.play(DINO, pick::targets(pick::instance(&unit)));
             assert_eq!(s.card(&unit).buffs, AttackHealth { attack: 0, health: 0 });
-            s.expect_stats(&unit, json!({ "attack": 12, "health": 10 }));
+            s.expect_stats(&unit, json!({ "attack": 11, "health": 10 }));
         }
 
         #[test]

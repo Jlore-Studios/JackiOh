@@ -5770,4 +5770,99 @@ mod seat_states_3678 {
         h.idle().await;
         assert!(!h.clocks().await["graceDeadline"]["p1"].is_null());
     }
+
+    /// A dropped socket for a seat with a running grace takes no seat: the grace keeps running (§9.5),
+    /// and the absent player loses when it runs out.
+    #[tokio::test(start_paused = true)]
+    async fn a_dropped_socket_for_a_seat_with_a_running_grace_leaves_the_grace_running() {
+        let h = harness(Options::default()).await;
+        h.p1.drop_transport();
+        h.idle().await;
+        assert!(!h.clocks().await["graceDeadline"]["p1"].is_null());
+
+        let doomed = Client::new();
+        doomed.drop_transport();
+        settle().await;
+        h.actor.attach(P1, doomed.socket());
+        h.idle().await;
+
+        assert!(!h.clocks().await["graceDeadline"]["p1"].is_null());
+        assert!(views(&doomed).is_empty());
+        assert!(!h.actor.presence()[P1]);
+    }
+
+    /// After a restart, a seat's socket that dropped before `attach` is not counted as present: the
+    /// other seat's attach starts its absent grace (R744), and the match ends as a no-show's does.
+    #[tokio::test(start_paused = true)]
+    async fn a_dropped_socket_rebuilt_after_a_restart_takes_no_seat_so_the_other_seats_attach_starts_its_absent_grace()
+     {
+        let h = harness(Options {
+            attach: false,
+            ..Options::default()
+        })
+        .await;
+        h.app.matches.stop(MATCH_ID).await;
+
+        let doomed = Client::new();
+        doomed.drop_transport();
+        settle().await;
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-1", doomed.socket())
+            .await
+            .expect("profile-1 attaches");
+        let actor = h
+            .app
+            .matches
+            .actor_for(&h.app, MATCH_ID)
+            .await
+            .expect("the rebuilt actor");
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        assert!(views(&doomed).is_empty());
+        assert!(!actor.presence()[P1]);
+
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-2", h.p2.socket())
+            .await
+            .expect("profile-2 attaches");
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        let clocks = serde_json::to_value(actor.clocks()).expect("MatchClocks serializes");
+        assert!(!clocks["graceDeadline"]["p1"].is_null());
+        assert!(clocks["graceDeadline"]["p2"].is_null());
+
+        sleep_settled(grace_ms()).await;
+        actor.idle().await;
+        assert_eq!(
+            actor.snapshot().result,
+            result_of(Winner::P2, GameOverReason::Disconnect)
+        );
+    }
+
+    /// A dropped second socket for a held seat closes nothing: the open socket hears no
+    /// `SEAT_TAKEN_CLOSE_CODE` and keeps getting its views (R3767000).
+    #[tokio::test(start_paused = true)]
+    async fn a_dropped_second_socket_for_a_held_seat_closes_nothing_and_the_open_socket_keeps_its_views() {
+        let h = harness(Options::default()).await;
+        let late = Client::new();
+        late.drop_transport();
+        settle().await;
+        h.actor.attach(P1, late.socket());
+        h.idle().await;
+
+        assert_eq!(h.p1.close_code(), None);
+        assert!(h.p1.is_open());
+        assert_eq!(views(&h.p1).len(), 1);
+        assert!(views(&late).is_empty());
+        let presence = h.actor.presence();
+        assert!(presence[P1] && presence[P2]);
+        assert_eq!(
+            h.clocks().await["graceDeadline"],
+            json!({ "p1": null, "p2": null })
+        );
+    }
 }

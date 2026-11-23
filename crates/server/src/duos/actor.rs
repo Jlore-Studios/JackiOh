@@ -1072,6 +1072,13 @@ impl DuosActor {
             socket.close(Some(CLOSE_NORMAL), Some("that seat is the AI's"));
             return;
         };
+        // A socket that went before its handler was in has no close left to run: it takes no seat,
+        // steps nothing and closes nothing. The seat keeps what it held and the co-op grace and the
+        // AI keep playing the seat as they were, and `Task::Attach` is left alone. An empty seat
+        // stays empty, so R744's absent grace starts as the other seat attaches (R744, R3767000).
+        if !socket.is_open() {
+            return;
+        }
         let previous = {
             let mut core = self.lock();
             if core.host.is_stopped() {
@@ -1112,6 +1119,12 @@ impl DuosActor {
                 }
             }),
         });
+        // The socket may have dropped while it was being seated; its close handler was not in yet, so
+        // nothing will report it. `on_socket_gone` acts only when the seat holds a closed socket, so
+        // this starts the grace exactly as any other drop does (B37).
+        if !socket.is_open() {
+            self.on_socket_gone(seat);
+        }
         if let Some(previous) = previous
             && previous != socket
         {

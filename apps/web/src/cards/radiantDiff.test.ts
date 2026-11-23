@@ -110,8 +110,8 @@ describe("R277 the word diff", () => {
     }).map((card) => card.id);
     // Faces with no marks: Core #55 Lava Golem's is its base text less the drawback, a pure deletion by design (its
     // doubled stats carry its marks, R277), as are Classic #60 Pile On's and Classic+ #5 Guy Att's, the brief's own
-    // Radiant texts (docs/classic-sets.md, B6, B7), Classic+ #34 Memory Leak's (less "Choose one.") and Classic #28
-    // Second Wind's (less "exile": the deck it discards lands in the graveyard, issue #3951). The designer's own:
+    // Radiant texts (docs/classic-sets.md, B6, B7), and Classic+ #34 Memory Leak's (less "Choose one."); Classic #28
+    // Second Wind's was one (less "exile", issue #3951) until issue #4440's "+2 mana per turn" marked it. The designer's own:
     // Meditative #89 Jlarna's (less the end-of-turn Tribute, R1225), #22.1 Fortify Mind's (R862), #47 饕餮's (less
     // "then Freeze this.", issue #3996), #48 Tranquility's (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's Living potions (less the Tribute they
     // activate with) and Stinkyscape #9 Ticketed's (less Brittle 3, R1857000), and Training Grounds #31 Level Up!'s (less "if it destroyed an enemy Unit",
@@ -125,7 +125,6 @@ describe("R277 the word diff", () => {
     expect(silent).toEqual([
       "core-055",
       "core-079",
-      "classic-028",
       "classic-029",
       "classic-060",
       "classicplus-005",

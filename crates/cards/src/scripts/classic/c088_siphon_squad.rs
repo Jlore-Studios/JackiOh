@@ -150,7 +150,7 @@ mod tests {
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const MENACE: &str = "core-019"; // Midrange Menace: Taunt
     const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
-    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: Aura: your Units have +2 attack, Rush and First Strike.
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: Aura: your Units have +1 attack, Rush and First Strike.
     const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
     const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
     const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell (§2.5).
@@ -382,16 +382,16 @@ mod tests {
             assert_eq!(attack_of(&s, P2, 2), 0);
         }
 
-        /// §10.4 the 0 is set after every other layer: a buffed Unit under a +2 attack aura still reads 0
+        /// §10.4 the 0 is set after every other layer: a buffed Unit under a +1 attack aura still reads 0
         #[test]
-        fn s10_4_the_0_is_set_after_every_other_layer_a_buffed_unit_under_a_2_attack_aura_still_reads_0() {
+        fn s10_4_the_0_is_set_after_every_other_layer_a_buffed_unit_under_an_attack_aura_still_reads_0() {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": SIPHON, "radiant": true }, ANCHOR] },
                 "p2": { "hand": [ANCHOR], "field": [MENACE], "backrow": [WEAPONS] }
             }));
             let menace = s.card(MENACE).id.clone();
             must(find_instance_mut(s.state_mut(), &menace), "the Menace").buffs.attack += 5;
-            assert_eq!(attack_of(&s, P2, 1), 9 + 5 + 2);
+            assert_eq!(attack_of(&s, P2, 1), 9 + 5 + 1);
 
             s.play(SIPHON, json!({}));
             reveal_siphon(&mut s);

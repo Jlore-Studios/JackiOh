@@ -252,17 +252,16 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
 
   it("R277 every catalog radiant face prints its catalog text and marks at least one stretch the base text lacks", () => {
     // #55 Lava Golem's Radiant face is its base text less the drawback, so its text adds nothing to
-    // mark; its doubled stats are what R277 marks on it. Classic #60, Classic+ #5, Classic+ #34 and
-    // Classic #28 drop words too, as do Meditative #89 Jlarna's (R1225), #22.1 Fortify Mind's (R862),
+    // mark; its doubled stats are what R277 marks on it. Classic #60, Classic+ #5 and Classic+ #34
+    // drop words too (Classic #28 did until issue #4440's "+2 mana per turn" gave it a mark), as do Meditative #89 Jlarna's (R1225), #22.1 Fortify Mind's (R862),
     // #47 饕餮's (less "then Freeze this.", issue #3996) and #48 Tranquility's (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's
     // Living Potions, the Stinkyscape set's #9 Ticketed and Core #79 Twinspell, whose Radiant face drops
     // "Then this goes to the graveyard." (R3044000), Stinkyscape+ #31, #72, #73 and #85 (§8.12) and
-    // Classic+ #73.1 Classic Golem, less "Radiant" since issue #4292 (radiantDiff.test.ts names all twenty-one;
+    // Classic+ #73.1 Classic Golem, less "Radiant" since issue #4292 (radiantDiff.test.ts names all twenty;
     // #149 Wildar's Radiant face adds "It costs (0)." (#2657), a mark, no deletion).
     const pureDeletions = new Set([
       "core-055",
       "core-079",
-      "classic-028",
       "classic-029",
       "classic-060",
       "classicplus-005",

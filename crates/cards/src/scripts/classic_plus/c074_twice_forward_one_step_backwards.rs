@@ -76,7 +76,7 @@ mod tests {
     const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
     const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: End of turn: deal 2 damage to each enemy.
     const FELINORS: &str = "core-012"; // Duplicating Felinors: Cry: Summon a copy of this.
-    const TIGER_DOJO: &str = "core-014"; // Jlockeed's Weapons: Aura: your Units have +2 attack, Rush and First Strike.
+    const TIGER_DOJO: &str = "core-014"; // Jlockeed's Weapons: Aura: your Units have +1 attack, Rush and First Strike.
     const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
     const HINDER: &str = "core-021"; // Hinder: a Spell, cast on draw
     const TIMMY: &str = "core-011"; // Tempo Timmy
@@ -465,7 +465,7 @@ mod tests {
             }
 
             #[test]
-            fn r102_a_fused_aura_covers_your_side_a_fused_tiger_dojo_gives_your_units_plus_2_attack() {
+            fn r102_a_fused_aura_covers_your_side_a_fused_tiger_dojo_gives_your_units_plus_1_attack() {
                 let mut s = set_then_their_turn(
                     false,
                     json!({ "field": [TIMMY] }),
@@ -475,7 +475,7 @@ mod tests {
                 let before = s.stats(id_or_empty(s.unit(P1, 1)).as_str()).attack;
                 s.play(RAPID, json!({})).play(TIGER_DOJO, json!({ "zone": 1 }));
                 assert_eq!(s.backrow(P2, 1).map(|card| card.def_id), Some(TIGER_DOJO.to_string()));
-                assert_eq!(s.stats(id_or_empty(s.unit(P1, 1)).as_str()).attack, before + 2);
+                assert_eq!(s.stats(id_or_empty(s.unit(P1, 1)).as_str()).attack, before + 1);
             }
 
             #[test]

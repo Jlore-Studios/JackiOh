@@ -1,7 +1,7 @@
 // The serious and critical axe violations spec 38 accepts (issue #757), each with its reason: a known
 // shortfall written down, never a way to quiet the check. A flagged element no entry covers still
-// fails, and spec 38 fails on an entry that no longer fires. `/accessibility` lists the same gaps for
-// players (apps/web/src/routes/accessibility.tsx).
+// fails, and spec 38 fails on an entry that no longer fires. The gaps below are the known design
+// decisions (card-face naming, deck-tile naming, phone pile targets).
 
 export type AxeException = {
   /** The route label spec 38 checks, as its tests name it (`"/almanac"`; at 390x844 `"/almanac (phone)"`). */

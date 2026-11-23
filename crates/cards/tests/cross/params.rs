@@ -380,9 +380,10 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             }
         }
         // The thirteen numbers issue #556 marked and issue #1748's two (#21's discards and #42's chance,
-        // R1748003), and the Meditative set's own, which §8.8 tunes "on the base face only": M #10's price
-        // (issue #4154, R4154211), M #14's draws, M #37's surcharge (R1748003), M #49.1's picks (#529) and
-        // M #76's marks. The held sets join batch by batch (Meditative+, R1178000; Stinkyscape, R1857000;
+        // R1748003), C #37's `flashback`, the base face's alone since issue #4440 (R4154202), and the
+        // Meditative set's own, which §8.8 tunes "on the base face only": M #14's draws, M #37's surcharge
+        // (R1748003), M #49.1's picks (#529) and M #76's marks (and M #10's price from issue #4154,
+        // R4154211, until issue #4440 took it away). The held sets join batch by batch (Meditative+, R1178000; Stinkyscape, R1857000;
         // Training Grounds, R2194000, its snapshots' among them, R2195003): each number is held to the rule
         // above; the pinned lists are the shipped.
         base_only.retain(|entry| {
@@ -396,11 +397,10 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             .partition(|entry| entry.starts_with("meditative-"));
         // #2657's Bear Honeypot `tokens`, the base face's "Summon 2" (its Radiant face fills the board), and
         // #3140's C+ #16 Conjure Rush Token+ `tails`, the base face's coin flip, "2 on tails".
-        assert_eq!(shipped.len(), 17, "{shipped:#?}");
+        assert_eq!(shipped.len(), 18, "{shipped:#?}");
         assert_eq!(
             meditative,
             vec![
-                "meditative-010 price".to_string(),
                 "meditative-014 draws".to_string(),
                 "meditative-037 surcharge".to_string(),
                 "meditative-049-1 picks".to_string(),
@@ -463,8 +463,9 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         }
         // Core, Classic and Classic+: the thirty-one numbers issue #824 marked and the thirteen before
         // (C #46's and C #54's among them, R749), less C #59's tokens and C #75's draw, which both faces
-        // print (#2020), and C+ #68's `setCost`, which both faces print since issue #3951, with C #37's
-        // `flashback`, the Radiant face's alone since issue #4154 (R4154201); and the Meditative set's
+        // print (#2020), and C+ #68's `setCost`, which both faces print since issue #3951, and C #37's
+        // `flashback`, the Radiant face's alone from issue #4154 (R4154201) until issue #4440 made it the
+        // base face's; and the Meditative set's
         // nineteen (twenty until issue #4154 took M #1's Cry and its `mana` away, R4154207; twenty-three
         // until #3140 made M #81's draw both faces', twenty-two until issue #3951 made M #19.1's `mana`
         // both faces', twenty-one until issue #3996 took M #78's `discount` away), less M #1's draw (both
@@ -488,7 +489,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         // M #49.1's `radiants`, gone with its start-of-turn text.
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
-            (43, 19),
+            (42, 19),
             "{radiant_only:#?}"
         );
     }
