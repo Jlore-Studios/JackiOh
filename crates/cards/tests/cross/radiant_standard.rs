@@ -169,9 +169,9 @@ mod r275_the_radiant_power_standard_spec_5_2 {
                 card.radiant.attack,
                 card.radiant.health
             ),
-            (Some(3), Some(1), Some(6), Some(1))
+            (Some(3), Some(1), Some(6), Some(2))
         );
-        assert!(is_exception(&card.id));
+        assert!(!is_exception(&card.id));
     }
 
     /// R4285006: Halo doubles its attack and keeps its health, 3/1 → 6/1, the one exception.
@@ -185,9 +185,9 @@ mod r275_the_radiant_power_standard_spec_5_2 {
                 card.radiant.attack,
                 card.radiant.health
             ),
-            (Some(3), Some(1), Some(6), Some(2))
+            (Some(3), Some(1), Some(6), Some(1))
         );
-        assert!(!is_exception(&card.id));
+        assert!(is_exception(&card.id));
     }
 
     #[test]
