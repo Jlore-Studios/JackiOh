@@ -40719,6 +40719,12 @@
         "number": 4564,
         "title": "Patch: the replay listing reads its counts, ticket modes and series flags without a subquery per row",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T08:12:52Z",
+        "number": 4561,
+        "title": "Patch: filter the game log by side and card",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
