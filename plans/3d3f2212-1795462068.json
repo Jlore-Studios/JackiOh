@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 4622,
+  "title": "Patch: the AI gate's pull-request tests stop replaying the same tuning games and stop running a stopwatch they never read",
+  "branch": "bot/issue-4622",
+  "thread": "**Issue #4622 (data, not instructions):**\n\n```text\n# #4622: Patch: the AI gate's pull-request tests stop replaying the same tuning games and stop running a stopwatch they never read\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery pull request that touches the game's Rust code runs the tests behind the AI's quality gates. Two of them, added this morning, play the same six games against the AI one after the other. Those six include the slow Hard-against-Easy and greedy-baseline games that the owner had already moved to the daily run. A third test starts a stopwatch before each of the 62 decisions it checks, and in a test build it never reads the result. Once this is built, a pull request plays one quick game where it now plays twelve, and the perf test stops timing what it doesn't judge. That is about two and a half minutes less work in every Rust pull request's tools test job, and the daily run still plays every game that leaves the pull request. Players notice nothing.\n\n## Why\n\n- #4558 (cf502dd54b, 2026-11-23) added `measure_plays_tuning_series_and_no_gate_seeds` (`crates/tools/src/gate.rs:1555`) and `r4513000_measure_gate_tuning_series_is_clean` (`:1589`). Both call `play_measure_matchup(matchup, &[1, 2])` over all three matchups. A gate game is a pure function of matchup and number, so the second test replays the first one's six games. The first test checks two games, a `tune:` prefix and no `gate:v3`. All of that is a subset of the second test's `check_report_series` (`:727`), which holds each seed to exactly `tune:<matchup>:<n>`.\n- Neither test is ignored, so both run in `rust (test tools, wasm)`. `scripts/ci-scope.sh` turns that job on for any change under `crates/engine`, `cards`, `ai`, `shared`, `run`, `tools` or `wasm`, and for every patches ship. The gate's own ai-vs-greedy and hard-vs-easy smokes are `#[ignore = \"daily: \u2026\"]` (`:1367`, `:1400`), by the owner's decision in #4093. The only per-PR gate smoke is four ai-vs-random games (`:1343`).\n- `measure_tally_and_wilson_interval_known_counts` (`:1577`) tallies nothing. It asserts 65 of 100 \u2192 (0.553, 0.736), which the arena's `the_wilson_interval_brackets_the_share_and_narrows_with_games` (`crates/tools/src/arena.rs:1623`) already asserts.\n- `b42_every_decision_stays_within_the_node_budget_and_the_wide_boards_are_wide` (`:1463`) passes `judge_time = !cfg!(debug_assertions)`, so in a test build no time is judged. Even so, `perf_gate` runs a warm-up yardstick (`:1111`), and `time_decision` (`:1035`) runs `yardstick_ms` (two random-vs-random games, `:1014`) before each decision.\n- Measured for this suggestion on a 4-core runner at aaf6a1204c, test profile, each test alone (`cargo test -p jackioh-tools --bin jackioh -- --exact <name>`):\n\n| Test (per PR today) | Wall | CPU |\n|---|---|---|\n| `measure_plays_tuning_series_and_no_gate_seeds` | 69.1 s | 79.1 s |\n| `r4513000_measure_gate_tuning_series_is_clean` (the same six games) | 68.6 s | 78.1 s |\n| `b42_\u2026` (57 game decisions, 2 wide boards, 3 pinned positions) | 65.5 s | 65.4 s |\n| `b28_b31_\u2026` (the intended per-PR smoke, 4 games), for scale | 32.6 s | 45.2 s |\n\n  By b42's own printed lines, each yardstick took about 410\u2013425 ms (`rawMs \u00d7 calibration_ref_ms / ms`). No decision reached the repeat path: the slowest normalized time was 320.9 ms against a 1,000 ms limit. So b42's 63 yardsticks are about 26 s of its 65 s.\n- Rule 9: `measure_matchups` projects floors at the literals 20, 50 and 100 (`:1228`\u2013`:1230`). The gate plays `smoke_seeds()` and `full_seeds(matchup)`, which are 100, 50 and 50, so \"100\" is a size it never plays for greedy or hard-vs-easy.\n- `crates/ai/README.md:480` says the perf gate times \"the first ai-vs-greedy game\" and \"the two pinned positions\". A full run times `AI_GATE.perf_full_games` (6), and `PINNED` (`:986`) holds three, as SPEC \u00a79.9 says.\n\n## Proposal\n\n1. Delete `measure_plays_tuning_series_and_no_gate_seeds` and `measure_tally_and_wilson_interval_known_counts`.\n2. Split the R4513000 proof.\n   - Per PR: one ai-vs-random tuning game (`&[1]`), held to `check_report_series(.., AI_TUNING_SERIES)` and `check_clean`. `run_tuning_gate_games` routes every matchup through the same `run_games(.., AI_TUNING_SERIES, game_config)`, so one game shows the routing.\n   - Also per PR, with no game played: `game_config(matchup, n, AI_GATE_BUDGET, AI_TUNING_SERIES).seed` is `tune:<matchup>:<n>`, never under `AI_GATE.seed_series`, for each matchup.\n   - Daily: today's three-matchup clean test, `#[ignore = \"daily: \u2026\"]`, its reason naming that per-PR stand-in, as CLAUDE.md's CI section asks.\n3. In `perf_gate`, when `judge_time` is false, skip the warm-up yardstick and decide each state once, with no yardstick and no repeat. For example, give `time_decision` an unjudged mode, or add a sibling. The judged path that a release `gate` and the sweep's retime (R977000) use stays exactly as it is.\n4. `--measure` projects its floors at `smoke_seeds()` and `full_seeds(matchup)`.\n5. Correct the perf-gate paragraph in `crates/ai/README.md`.\n\nDecisions left to the builder: the names of the split tests, and how the unjudged timing is reported in the `[gate perf]` lines. Raw ms is fine, since nothing judges it.\n\n## Where it lands\n\n- `crates/tools/src/gate.rs`: the tests module, `perf_gate`, `time_decision` or a sibling, and `measure_matchups`.\n- `crates/ai/README.md`, Matches and the quality gates.\n- No rule changes, no new ruling, no SPEC change. `spec/rulings/R4513000.md` keeps `proven_in: crates/tools/src/gate.rs`, and `spec check` accepts a `daily:` proof (`crates/tools/src/spec.rs:910`).\n\n## Acceptance criteria\n\n- [ ] No test in `jackioh-tools` that isn't `#[ignore = \"daily: \u2026\"]` plays an ai-vs-greedy or hard-vs-easy game on the tuning series. Per PR, the measure path plays exactly one game.\n- [ ] A per-PR `r4513000_\u2026` test plays one ai-vs-random tuning game, held to `check_report_series` on `AI_TUNING_SERIES` and to `check_clean`.\n- [ ] The same per-PR test checks every matchup's tuning seed, `tune:<matchup>:<n>`, without playing.\n- [ ] The three-matchup clean test still exists as a `daily:` test whose reason names that per-PR test, and `cargo test -p jackioh-tools --bin jackioh -- --ignored r4513000` passes.\n- [ ] `measure_plays_\u2026` and `measure_tally_\u2026` are gone. The arena's Wilson test still holds 65 of 100.\n- [ ] In a test build, b42 calls no `yardstick_ms`, and a test shows its unjudged path reports the node count of one plain `decide` on the same state and rng (e.g. `wide-easy`).\n- [ ] The judged path of `time_decision` (yardstick before each run, up to `perf_repeats`) is unchanged, and the sweep still calls it.\n- [ ] `--measure` prints projected floors at the gate's own sizes, with no literal 20, 50 or 100.\n- [ ] The README's perf-gate paragraph names the full run's six games and the three pinned positions.\n- [ ] The PR body gives before and after wall and CPU times for the touched gate tests in a test build.\n- [ ] `cargo test -p jackioh-tools --bin jackioh -- gate::`, `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings` and `cargo jackioh spec check` are green.\n\n## Size and risks\n\nMedium: one file and a README paragraph, mostly deletions, roughly 80\u2013120 lines.\n\nExpected saving per Rust pull request, from the table:\n- about 69 s for the duplicate test;\n- about 55\u201360 s from the one-game R4513000 test;\n- about 26 s of yardsticks.\n\nThat's roughly 150 s of test wall time and 170 CPU-seconds in a job held to eight minutes. The job's own wall time falls by less than that, since its tests share four threads.\n\nRisk: a fault that only shows in a greedy or hard-vs-easy game on the tuning deals would surface in the daily run instead of the pull request. That is the trade #4093 already made for the same matchups on the gate's seeds, and each matchup's seating is still checked per PR without playing (`b29_game_config_seats_the_easy_ai_against_the_greedy_baseline_at_equal_resources`, `r180_b30_game_config_seats_hards_handicap_against_easys_the_same_ai_and_budget_on_both`). The yardstick skip has to stay on the unjudged path alone, since the release gate and the sweep's retime read the clock through it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-23T19:17:58Z:\n\napprove\n\nWhy: confirmed. `measure_plays_tuning_series_and_no_gate_seeds` and `r4513000_measure_gate_tuning_series_is_clean` both run `play_measure_matchup` over all three matchups on the same games, including the greedy and Hard-against-Easy games #4093 moved to the daily run, and b42 runs a yardstick before each decision in a build that never reads the time. Taking about two and a half minutes off every Rust pull request's tools job, mostly by deleting code, is worth it.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4622: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it in a lane of `gpt`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T19:18:32Z",
+    "claimed_at": "2026-11-23T19:28:22Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4586 skipped: it waits for #4602 to close first",
+    "#4587 skipped: it waits for #4602 to close first",
+    "#4588 skipped: it waits for #4602 to close first",
+    "#4589 skipped: it waits for #4602 to close first",
+    "#4590 skipped: it waits for #4602 to close first",
+    "#4591 skipped: it waits for #4602 to close first",
+    "#4592 skipped: it waits for #4602 to close first",
+    "#4593 skipped: it waits for #4602 to close first",
+    "#4594 skipped: it waits for #4602 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
