@@ -459,9 +459,12 @@ fn land(
     };
 
     // R1849000: a Spell's hit on a Unit immune to Spell Damage is no damage instance at all — before
-    // Divine Shield, which stays, and with no Trample excess to send on.
+    // Divine Shield, which stays, and with no Trample excess to send on. R4604001: nor is its hit on a
+    // Unit Immune to Spells, which reaches one only when another card's rule carries it there (a damage
+    // chain's echo or share).
     if let Some(live) = &unit
-        && crate::restrictions::spell_damage_cannot_reach(sink.state, source, live)
+        && (crate::restrictions::spell_damage_cannot_reach(sink.state, source, live)
+            || crate::restrictions::spell_cannot_reach(sink.state, source, live))
     {
         return Landed::default();
     }
@@ -827,8 +830,7 @@ fn lethal_replaced(
     if !lethal {
         return None;
     }
-    let source_id = args.source.as_ref().map(|card| card.id.clone());
-    crate::replacements::lethal_hit_window(sink, &args.target, amount, source_id, caught)
+    crate::replacements::lethal_hit_window(sink, &args.target, amount, args.source.as_ref(), caught)
 }
 
 /// §4.4 step 9: a Trample excess goes on as a new instance of the same hit (not raised again, keeping

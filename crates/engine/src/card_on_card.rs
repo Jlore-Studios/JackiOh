@@ -111,6 +111,20 @@ fn standing_rules(state: &GameState) -> (Vec<String>, Vec<(String, i32)>) {
     (exilers, risers)
 }
 
+/// R4604004: whether an exile aura stands on the field (R1850002), which the fuzz monitor's I21 reads.
+#[cfg(feature = "testkit")]
+pub(crate) fn exile_aura_stands(state: &GameState) -> bool {
+    !standing_rules(state).0.is_empty()
+}
+
+/// R4604004: whether `def_id`'s text, on either face, carries an exile aura (R1850002), which the fuzz
+/// monitor's I21 reads off a card arriving on the field.
+#[cfg(feature = "testkit")]
+pub(crate) fn carries_exile_aura(state: &GameState, def_id: &str) -> bool {
+    let scripts = crate::scripts::script_of(state, def_id);
+    !scripts.base.exile_auras.is_empty() || !scripts.radiant.exile_auras.is_empty()
+}
+
 /// R1850002, R1850005: the standing rules of every permanent's text, exile auras first; true when one
 /// changed something.
 pub fn standing_text(sink: &mut EngineSink<'_>) -> bool {

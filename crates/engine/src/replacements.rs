@@ -347,13 +347,15 @@ pub enum LethalHitTo {
 /// ME-LETHALGUARD) a Unit, to 0 or less. Returns where the hit now goes (dealt there as a new instance
 /// from the same source, through that destination's Armor, divisor and caps), that it was canceled
 /// (R1704001), or `None`. Only the target's controller's cards answer: "you would take lethal damage".
+/// R4604000: a `self` guard a Spell's hit cannot reach (Immune to Spells, §6.1) catches none of it.
 pub fn lethal_hit_window(
     sink: &mut EngineSink<'_>,
     target: &DamageTarget,
     amount: i32,
-    source_id: Option<String>,
+    source: Option<&CardInstance>,
     caught: &[String],
 ) -> Option<LethalHitTo> {
+    let source_id = source.map(|card| card.id.clone());
     let controller = match target {
         DamageTarget::Hero { player } => *player,
         DamageTarget::Unit { instance } => instance.controller,
@@ -411,9 +413,12 @@ pub fn lethal_hit_window(
                 if cand.card.id == target_id || caught.contains(&cand.card.id) {
                     continue;
                 }
-                DamageTarget::Unit {
-                    instance: live_or(sink.state, &cand.card),
+                // R4604000: a guard Immune to Spells takes no Spell's hit (§6.1), so it catches none.
+                let guard = live_or(sink.state, &cand.card);
+                if crate::restrictions::spell_cannot_reach(sink.state, source, &guard) {
+                    continue;
                 }
+                DamageTarget::Unit { instance: guard }
             } else {
                 if !matches!(target, DamageTarget::Hero { .. }) {
                     continue;

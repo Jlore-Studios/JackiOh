@@ -151,7 +151,8 @@ fn build_acclaimed() -> Effect {
 }
 
 /// 5. R1882003: every enemy Unit active on the field switched to Attack Position (an effect's switch,
-///    R20: no exertion), then Frozen (§6.3, R1174000); a hero is never touched.
+///    R20: no exertion), then Frozen (§6.3, R1174000); a hero is never touched. R4604002: a Unit
+///    Immune to Spells is neither switched nor Frozen.
 fn build_freeze() -> Effect {
     entry("freeze", |_ctx| {
         vec![
@@ -162,6 +163,10 @@ fn build_freeze() -> Effect {
                     .cloned()
                     .collect();
                 for unit in units {
+                    // R4604002: a Spell's switch passes a Unit Immune to Spells by (§6.1, R4453000).
+                    if crate::restrictions::unaffected_by(ctx, &unit) {
+                        continue;
+                    }
                     let _ = switch_position(
                         ctx,
                         &unit,

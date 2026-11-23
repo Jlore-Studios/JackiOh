@@ -139,6 +139,37 @@ mod r1882003_the_freeze {
         }
         assert_eq!(find_instance(&state, &own.id).and_then(|card| card.frozen), None);
     }
+
+    #[test]
+    fn r4604002_the_switch_passes_an_enemy_unit_immune_to_spells_by() {
+        let mut state = game("stinky-freeze-immune");
+        let immune = put(
+            &mut state,
+            "stand-in (1) 4/4 Immune to Spells",
+            slot(P2, Row::Units, 1),
+            json!({}),
+        );
+        find_instance_mut(&mut state, &immune.id)
+            .expect("on the field")
+            .position = Some(Position::Def);
+        let enemy = put(&mut state, VANGUARD, slot(P2, Row::Units, 2), json!({}));
+        find_instance_mut(&mut state, &enemy.id)
+            .expect("on the field")
+            .position = Some(Position::Def);
+        let events = run(&mut state, entry("freeze"));
+        // The Spell neither switches nor Freezes the immune Unit (§6.1), and does both to the other.
+        let kept = find_instance(&state, &immune.id).expect("on the field");
+        assert_eq!(kept.position, Some(Position::Def));
+        assert_eq!(kept.frozen, None);
+        let told = serde_json::to_string(&events).expect("events are JSON");
+        assert!(
+            !told.contains(&immune.id),
+            "no event names the immune Unit: {told}"
+        );
+        let card = find_instance(&state, &enemy.id).expect("on the field");
+        assert_eq!(card.position, Some(Position::Atk));
+        assert!(card.frozen.is_some());
+    }
 }
 
 mod r1882004_the_death_watch {

@@ -838,6 +838,38 @@ fn r1204_a_lethal_hit_reaches_the_guard_through_its_armor() {
 }
 
 #[test]
+fn r4604000_a_guard_immune_to_spells_catches_no_spells_lethal_hit() {
+    let mut state = playing("mb22-immune-guard");
+    let guard = put(&mut state, &fx::guard.id, slot(P1, Row::Units, 1), json!({}));
+    find_instance_mut(&mut state, &guard.id)
+        .expect("the guard")
+        .granted_keywords
+        .push(Keyword::ImmuneToSpells);
+    let ally = put(&mut state, &fx::ally.id, slot(P1, Row::Units, 2), json!({}));
+    let bolt = in_hand(&mut state, &fx::bolt.id, P2, 1).remove(0);
+
+    state = act(&state, end_turn(P1));
+    let result = act_result(
+        &state,
+        json!({
+            "type": "play",
+            "instanceId": bolt.id,
+            "playerId": "p2",
+            "targets": [{ "pick": "instance", "instanceId": ally.id }],
+        }),
+    );
+    assert!(result.error.is_none(), "{:?}", result.error);
+    // The Spell's 10 cannot reach the guard (§6.1), so it catches none of it and the ally takes it all.
+    assert_eq!(redirected(&result.events), Vec::<(String, String)>::new());
+    assert_eq!(damaged(&result.events), vec![(ally.id.clone(), 10)]);
+    let told = serde_json::to_string(&result.events).expect("events are JSON");
+    assert!(!told.contains(&guard.id), "no event names the guard: {told}");
+    let kept = find_instance(&result.state, &guard.id).expect("the guard");
+    assert_eq!(kept.damage, 0);
+    assert!(on_field(&result.state, &guard.id));
+}
+
+#[test]
 fn r1204_shield_indestructible_and_survivable_hits_are_not_caught() {
     // A Divine Shield takes the hit first: no window opens.
     let mut state = playing("mb22-screen");
