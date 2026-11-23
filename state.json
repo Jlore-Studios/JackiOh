@@ -17833,6 +17833,7 @@
         "by": "`gemini` (medium)",
         "sha": "1ec764eed0267be6590594a8b5e68f103771dcce"
       },
+      "closed_at": "2026-11-23T06:13:40Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -17843,6 +17844,7 @@
       "kind": "review",
       "live": "reviewing",
       "merge_owner": "agy",
+      "merged": true,
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-11-23T05:06:13Z",
