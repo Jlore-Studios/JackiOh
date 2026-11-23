@@ -40321,6 +40321,12 @@
         "number": 4637,
         "title": "Patch: the fuzz gate fails a wave that leaves too many dealt cards unplayed",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T22:57:11Z",
+        "number": 4638,
+        "title": "Patch: a pull request replays the pinned fuzz failures its cards appear in",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
