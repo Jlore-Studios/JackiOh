@@ -40372,6 +40372,12 @@
         "number": 4644,
         "title": "Patch: every condition hook is held to what its controller may see",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T23:07:54Z",
+        "number": 4641,
+        "title": "Patch: a static check that every game-playing e2e spec sets its seed",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
