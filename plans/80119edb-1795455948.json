@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4606,
+  "title": "Patch: stepping back in a replay or flipping the co-op portal keeps the match's music, instead of starting the next track as if a new match began",
+  "branch": "bot/issue-4606",
+  "thread": "**Issue #4606 (data, not instructions):**\n\n```text\n# #4606: Patch: stepping back in a replay or flipping the co-op portal keeps the match's music, instead of starting the next track as if a new match began\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn a replay, stepping back one move, dragging the scrubber or jumping to an earlier turn makes the music act as if a brand-new match had started. The in-game track fades out, the menu theme often plays for a few seconds, and then a different in-game track starts from its beginning. Near the start of a game the match-start fanfare plays again. In a co-op game on a phone, where one board shows at a time, every flip between your board and your teammate's does the same. Each of these moves also advances the device's track rotation, so the next real match plays an arbitrary track. Stepping forward one move is already fine.\n\nOnce this is built, the music carries on across those moves as it does on a step forward. Opening another replay, or starting a new match, still moves on to the next track.\n\n## Why\n\n- **Backward replay moves remount the board.** Any move that is not one step forward gives the board a new key (`apps/web/src/replay/ReplayPlayer.tsx:129-132`). `<Game key={at.board}>` then mounts afresh (`ReplayPlayer.tsx:274`).\n- **Portal flips remount too.** The co-op single-board layout swaps `key=\"board-own\"` and `key=\"board-teammate\"` on each flip (`duos/DuosBoard.tsx:599-629`).\n- **Each mount starts music as a new match.** Every mount enters the game music and builds a new music director (`audio/useGameAudio.ts:156-170`). Every unmount's `leave()` hands the music back, and `apply()` asks for the menu theme while a menu screen holds it (`audio/musicScene.ts:15-27`, `79-84`).\n- **The rotation is keyed on a view object.** `rotationFor(first)` (`audio/musicDirector.ts:63-73`) looks the rotation up in a `WeakMap` by the first view object. A remount brings a new view object, so `nextRotation()` advances the stored counter `jackioh.music.rotation.v1` (`audio/musicData.ts:125-128`) and picks the next track.\n- **The first view resets the track.** The director's first `onView` clears the resume points and, at `turn <= 1`, asks for the match-start sting (`musicDirector.ts:182-191`). If the new track is not decoded yet, the menu theme keeps playing until it is (`audio/music.ts:490-501`).\n- **The guard covers a different case.** The `WeakMap` only guards React's StrictMode double mount on the same view (its comment, `musicDirector.ts:66-67`).\n- **It breaks the spec.** SPEC \u00a710.11 (R631) rotates the in-game tracks \"from match to match\". A replay step and a portal flip are not new matches.\n- **No test catches it.** The director's tests never mount a second board of the same match.\n\n## Proposal\n\n1. **Hold one music key per match.** `ReplayPlayer` and `DuosBoard` each hold a key for their whole life: one replay, or one co-op match. Each passes it through a new optional `Game` prop to `useGameAudio`.\n2. **Reuse the existing seam.** `useGameAudio` passes the key to `createMusicDirector`, which already takes a `rotation` option. The rotation comes from the key, so a remount under the same key gets the same rotation. The director clears the resume points and asks for the start sting only on the key's first mount. A remount continues the track it was playing.\n3. **No menu theme between two boards.** When one board leaves and another enters in the same commit, the music passes from one to the other without requesting the menu theme in between. For example, `leave()` can defer its `apply()` until after the entering board has made its claim. A board leaving with nothing after it still brings the menu theme back.\n4. **Boards without a key are unchanged.** Live match, practice, daily, dungeon and hotseat boards behave exactly as today.\n\n## Where it lands\n\n- `apps/web/src/replay/ReplayPlayer.tsx`, `apps/web/src/duos/DuosBoard.tsx` (hold and pass the key)\n- `apps/web/src/game/Game.tsx` (one optional prop to `useGameAudio`)\n- `apps/web/src/audio/useGameAudio.ts`, `audio/musicDirector.ts`, `audio/musicScene.ts`\n- Tests: `replay/ReplayPlayer.test.tsx`, a DuosBoard test, `audio/musicDirector.test.ts`, `audio/musicScene` (or `wiring.test.tsx`)\n- SPEC \u00a710.11: a ruling note in the issue's block, amending R631 (a replay or a co-op match is one match however often its board remounts). Its \u00a711 paragraph goes in `spec/pending/<issue>.md`, and the note lists its proving test.\n\n## Acceptance criteria\n\n- [ ] Replay: open a replay, step forward, back, jump with the scrubber and by turn. Afterwards `jackioh.music.rotation.v1` is where opening the replay left it, and the music player's wanted track is the same throughout.\n- [ ] Replay: the menu theme is never requested between those moves, the track's resume point is kept, and the match-start sting plays at most once.\n- [ ] Co-op: in a single-board DuosBoard test, flipping the portal back and forth leaves the rotation and the wanted track as they were.\n- [ ] A different replay, or a new match, still moves the rotation on once.\n- [ ] A board leaving to a menu with no board after it still brings the menu theme back.\n- [ ] Live match, practice and hotseat boards behave as before, and the existing audio tests pass.\n- [ ] The ruling note's proving test is named after it, and `cargo jackioh spec check` passes.\n\n## Size and risks\n\nMedium: about six source files and four test files in `apps/web/src`, plus one ruling note and its pending paragraph. No engine, server or wire change; presentation only (CLAUDE.md rule 7). The main risk is in point 3: deferring the hand-back touches every board's exit. A test should hold that a real exit still plays the menu theme, and that a hotseat hand-over (no remount) is unchanged.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-23T17:41:28Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4606: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T17:41:51Z",
+    "claimed_at": "2026-11-23T17:46:10Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
