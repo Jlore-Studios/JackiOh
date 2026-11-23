@@ -7,6 +7,7 @@ use jackioh_engine::config::{
 };
 use jackioh_engine::wire::PrintedRarity;
 
+use crate::assault::AssaultUpgradeKind;
 use crate::{RunByFight, RunNodeKind, RunTier};
 
 /// DR2: the letters of a seed.
@@ -340,6 +341,61 @@ pub const RUN_SCORE_FINAL_BOSS_PERCENT: i64 = 200;
 pub const RUN_SCORE_CURSE_POINT_PERCENT: i64 = 10;
 /// DR9, a strawman: the score one Ember is worth.
 pub const RUN_SCORE_PER_EMBER: i64 = 100;
+
+// The Infinite Assault (docs/infinite-assault.md IA1 to IA6): every number a strawman to tune
+// against assault-sim (IA10).
+
+/// IA4: the set the Assault deals (read by name, so the mode compiles before C1 lands it).
+pub const ASSAULT_SET: &str = "Infinite Assault";
+/// IA4: the tag a Commander's cards carry (read by name, as `ASSAULT_SET` is).
+pub const ASSAULT_COMMANDER_TAG: &str = "Commander";
+/// IA1: the prefix of a day's seed (`assault_day_seed`).
+pub const ASSAULT_SEED_PREFIX: &str = "assault-";
+/// IA2: the Assault's levels a day; a strawman.
+pub const ASSAULT_LEVELS: u8 = 20;
+/// IA2: the Commander levels, ranks I to IV in order; a strawman.
+pub const ASSAULT_COMMANDER_LEVELS: [u8; 4] = [5, 10, 15, 20];
+/// IA6: the days of records the device keeps; a strawman.
+pub const ASSAULT_HISTORY_DAYS: u32 = 30;
+/// IA2: the resources every level starts from: Easy's, the human's opening draw included.
+pub const ASSAULT_BASE_HANDICAP: Handicap = AI_DIFFICULTY.easy;
+/// IA2: a normal level's hero health, `(base, per level)`; a strawman.
+pub const ASSAULT_HERO_HEALTH: (i32, i32) = (20, 1);
+/// IA2: a Commander level's hero health, `(base, per level)`; a strawman.
+pub const ASSAULT_COMMANDER_HEALTH: (i32, i32) = (30, 2);
+/// IA2: the cards fewer in the opening draw on the first levels; a strawman.
+pub const ASSAULT_FEWER_OPENING: i32 = 1;
+/// IA2: the last level dealing fewer opening cards; a strawman.
+pub const ASSAULT_FEWER_OPENING_LEVELS: u8 = 3;
+/// IA2: the deck's size before Bigger Dataset; a strawman.
+pub const ASSAULT_DECK_SIZE: i32 = DECK_SIZE;
+/// IA2: level 1's deck as Common, Rare, Epic, Legendary and Mythic slots; a strawman.
+pub const ASSAULT_START_SLOTS: [i32; 5] = [19, 6, 0, 0, 0];
+/// IA2: the slots a card step promotes; a strawman.
+pub const ASSAULT_CARD_STEP: i32 = 4;
+/// IA2: the rarest slot a level may hold, each `(from level, rarest slot)`; a strawman.
+pub const ASSAULT_RARITY_CEILING: [(u8, PrintedRarity); 4] = [
+    (1, PrintedRarity::Rare),
+    (4, PrintedRarity::Epic),
+    (8, PrintedRarity::Legendary),
+    (14, PrintedRarity::Mythic),
+];
+/// IA2: the chance, in percent, that a normal level's escalation is a card step; a strawman.
+pub const ASSAULT_CARD_STEP_PERCENT: i32 = 50;
+/// IA2: the percent of a deck dealt from its doctrine; a strawman.
+pub const ASSAULT_DOCTRINE_SHARE: i32 = 60;
+/// IA3: the upgrades, each `(kind, per stack, most stacks, from level, weight)`; strawmen.
+pub const ASSAULT_UPGRADES: [(AssaultUpgradeKind, i32, i32, u8, i32); 9] = [
+    (AssaultUpgradeKind::OpeningCards, 1, 3, 4, 3),
+    (AssaultUpgradeKind::DeckSize, 5, 3, 2, 2),
+    (AssaultUpgradeKind::Radiant, 3, 5, 2, 4),
+    (AssaultUpgradeKind::Buffed, 3, 5, 2, 3),
+    (AssaultUpgradeKind::ManaBonus, 1, 2, 8, 2),
+    (AssaultUpgradeKind::ManaCap, 1, 3, 6, 2),
+    (AssaultUpgradeKind::HeroHealth, 10, 3, 2, 3),
+    (AssaultUpgradeKind::HeroArmor, 5, 3, 2, 3),
+    (AssaultUpgradeKind::ExtraDraw, 1, 1, 12, 1),
+];
 
 /// Tests only: the whole-run walks' tuning (`walk_tests`). Each is `#[cfg(test)]`, so the shipped
 /// crate and the spec's constants table (B33's check reads only the lines before the first

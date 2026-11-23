@@ -81,3 +81,57 @@ cargo test -p jackioh-run
 cargo test -p jackioh-run --features ts
 cargo clippy -p jackioh-run --all-targets -- -D warnings
 ```
+
+## The Infinite Assault
+
+The Infinite Assault (`docs/infinite-assault.md` IA0 to IA6, module `src/assault/`): a daily
+20-level gauntlet beside the dungeon run, sharing its seeds, its `Rng` use and its fight report.
+Every UTC day deals 20 levels, Commanders on 5, 10, 15 and 20, each one game against the AI.
+
+| Function | Answers |
+| --- | --- |
+| `assault_day_seed(date)` | the day's seed (`assault-YYYY-MM-DD`), or why the date is refused (IA1) |
+| `assault_catalog_content(&CardDefs)` | the content the mode deals from: the set's cards by set and tag, with `src/assault.json`'s doctrines and Commanders (IA4) |
+| `assault_placeholder_content(&CardDefs)` | the content dealt until the release: legal decks from shipped cards standing in for each doctrine, with `assault.json`'s twelve stand-in Commanders (IA4) |
+| `assault_day(date, &AssaultContent)` | the day's deal: its 20 levels, each with its enemy, doctrine, escalations, upgrades, slots, deck, marks and handicap (IA1, IA2, IA4) |
+| `assault_create(&AssaultSetup, &AssaultRecord, &AssaultDay)` | an attempt at its start: the setup checked against the day and the record, or why it is refused (IA6) |
+| `assault_reduce(&AssaultState, &AssaultDay, &AssaultAction)` | the attempt after one action, or why it is refused, the state unchanged (IA6) |
+| `assault_record(&AssaultRecord, &AssaultState)` | the day's record folded with a finished or running attempt: attempts, best, checkpoints and the first repel (IA6) |
+| `assault_fold(&AssaultFile, &AssaultDay)` | an attempt file replayed from its start, the error naming the first refused step (IA6) |
+| `assault_fight_setup(&AssaultState, &AssaultDay)` | in `Fight`, the game to start: its seed (`{day seed}-L{level}-A{attempt}`), both decks, the human's `HUMAN_HANDICAP` and the level's handicap and marks (IA6) |
+| `assault_fight_report(&ReplayInput, PlayerId)` | the `AssaultAction::FightOver` a finished game sends for that seat, folded from its record: a draw at the turn cap is a loss (IA6, IA15) |
+| `assault_constants()` | the numbers the screens show (rule 9) |
+
+What the caller does:
+
+- **Content.** Deal from the placeholder (`assault_placeholder_content`) until the release, when
+  the browser deals from the catalog's content instead. The file's set and tags are read by name,
+  so the mode compiles before C1 lands them.
+- **Records.** Start a day's first record as `AssaultRecord { date, ..Default::default() }`, with
+  no attempts yet. Fold the state into the record after create and after each action, with
+  `assault_record`. Keep the last `ASSAULT_HISTORY_DAYS` days on the device.
+- **Attempts.** An attempt starts at level 1 or at a checkpoint the record holds (6, 11 or 16),
+  one higher than each beaten Commander. Its deck is chosen per attempt and kept for the whole
+  attempt. Leave mid-fight keeps the fight, as a dungeon fight does.
+- **Fights.** In `Fight` the caller starts the game from `assault_fight_setup` (the human P1, the
+  enemy P2, the enemy marks as P2's), plays it, and sends the `AssaultAction::FightOver` that
+  `assault_fight_report` folds from the finished game.
+- **Files.** Keep the `AssaultFile` with the catalog version the caller folds under, as a dungeon
+  run's file does: nothing here reads it.
+
+What is not built yet (Open question 1): the set's cards cannot start a game yet. `createGame`
+refuses cards of a held or single-player set in any deck, so the decks dealt from
+`assault_catalog_content` cannot start one until an engine change (C1, the AI part or the
+release) lets an Assault enemy's seat hold them. Part A tests `createGame` only on the
+placeholder.
+
+The tests and the commands: `src/assault/tests.rs`, on synthetic content, holds the seed, the
+determinism, the shape over a year of days, the escalation, the attempt and the fold
+([[R4579000]], [[R4579001]], [[R4579002]]); `src/assault/fight_tests.rs`, on the real catalog,
+holds the placeholder, the set read by name, every level of a year on `createGame`, every level
+of a week folding back to its hash, and the draw reporting a loss ([[R4579001]], [[R4579002]]).
+
+```
+cargo test -p jackioh-run assault
+cargo test -p jackioh-run --features ts
+```
