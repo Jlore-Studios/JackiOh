@@ -16266,11 +16266,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-23T19:39:51Z",
+        "at": "2026-11-23T20:27:22Z",
         "difficulty": "hard",
-        "provider": "claude-4",
-        "tier": "medium",
-        "why": "Rule 2: it changes how crates/ai/src/decide.rs ranks the beam's finalists, so the AI's decisions."
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule line 2, the AI: it changes how decide (crates/ai/src/decide.rs) ranks its search's finalists"
       },
       "failures": 0,
       "forced": false,
