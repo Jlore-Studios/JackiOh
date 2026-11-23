@@ -17366,6 +17366,18 @@
     "4547": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "gpt",
+          "model": "gpt-5.6-sol",
+          "provider": "gpt",
+          "tier": "medium"
+        },
+        "at": "2026-11-23T02:35:16Z",
+        "built_by": "gpt",
+        "by": "`gpt` (medium)",
+        "sha": "2264f665794a2cf78d1005343d12a642cb4e54e9"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-23T01:40:06Z",
@@ -17381,6 +17393,7 @@
       "issue": 4541,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "gpt",
       "pending_request": false,
       "provider": "gpt",
       "queued_at": "2026-11-23T02:24:28Z",
