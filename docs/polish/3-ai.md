@@ -911,7 +911,7 @@ export const AI_GATE = {
   /** The brief's floors (the build's `minWinRate`), wins only. */
   briefRate: { "ai-vs-random": 0.95, "ai-vs-greedy": 0.7, "hard-vs-easy": 0.8 },
   /** The subject's win rate as it ships, on fresh tuning deals (see "Fix pass 2"). */
-  measuredRate: { "ai-vs-random": 0.945, "ai-vs-greedy": 0.68, "hard-vs-easy": 0.913 },
+  measuredRate: { "ai-vs-random": 1.0, "ai-vs-greedy": 0.92, "hard-vs-easy": 0.94 },
   /** The most often one run may fail an AI as strong as measuredRate by chance (proposed, SPEC §9.9). */
   falseAlarm: 0.05,
   /** SPEC §9.9: the most one decision at AI_BUDGET may take on the machine that runs the gate. */

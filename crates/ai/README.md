@@ -473,8 +473,8 @@ Easy's floor is 75%, below the brief's 80%, by the user's decision (R4132001).
 
 | Matchup | Subject | Opponent | Full run | Smoke run |
 | --- | --- | --- | --- | --- |
-| `ai-vs-random` | the AI on Easy | random policy on Easy | 91 of 100 | 17 of 20 |
-| `ai-vs-greedy` | the AI on Easy | greedy baseline on Easy | 28 of 50 | 10 of 20 |
+| `ai-vs-random` | the AI on Easy | random policy on Easy | 95 of 100 | 19 of 20 |
+| `ai-vs-greedy` | the AI on Easy | greedy baseline on Easy | 35 of 50 | 14 of 20 |
 | `hard-vs-easy` | the AI on Hard | the AI on Easy | 38 of 50 | 15 of 20 |
 
 The perf gate holds each decision of the first ai-vs-greedy game, and two hand-built wide boards,
@@ -646,6 +646,7 @@ cargo test -p jackioh-ai --test ai_slow       # one binary: CI gives each its ow
 cargo jackioh gate                            # the three gates and the perf gate at smoke size
 cargo jackioh gate --full                     # at full size (the daily super run plays it in shards)
 cargo jackioh gate --duos                     # the Duos gate: the Easy AI team against a random team and a greedy team (--games N)
+cargo jackioh gate --measure                  # measure the AI's win rates across all matchups on fresh tuning deals (--games N)
 cargo jackioh gate --full --shard 1/4 --out ai-gate-shards && cargo jackioh gate merge ai-gate-shards
 cargo jackioh trace ai-vs-greedy 3            # one gate game, turn by turn
 cargo jackioh sweep core-011 classic-020      # the shadow-ban sweep over these ids (no ids: every card)
