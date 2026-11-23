@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 4608,
+  "title": "Patch: the AI goes for a lethal that only its searched world shows once another sampled world confirms it",
+  "branch": "bot/issue-4608",
+  "thread": "**Issue #4608 (data, not instructions):**\n\n```text\n# #4608: Patch: the AI goes for a lethal that only its searched world shows once another sampled world confirms it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the computer opponent picks a move, it imagines three versions of what it cannot see: your hand, your face-down cards, the order of its own deck, and how a random effect will land. It then searches its turn in the first version. If it finds a winning line there, that one imagined win today outweighs everything else. It plays toward the win even when the same line fails in the other two versions and costs it its board.\n\nTwo examples:\n- It throws a random-damage spell at you because, in its first guess, the spell rolled lethal. It does this instead of the strong board play it would otherwise make.\n- It swings everything into a face-down card that only its first guess assumed was harmless.\n\nAfter this change, a win seen only in the version it searched counts once one of the other two versions confirms it. A win that holds up in two versions out of three is still played at once, and a sure lethal is untouched. Players at the practice table, against the ladder bots and against the co-op AI team see fewer reckless all-in turns, and no change when the AI really has lethal.\n\n## Why\n\n- **The lethal solver demands a win on every world.** It keeps a line only when it also wins on every other determinization (`crates/ai/src/lethal.rs:219-224`, `wins_on(dets[1..])`). Otherwise the line is `Dead`. \u00a79.9 says the same: \"a line that wins this turn on every determinization\".\n- **The beam then plays what the solver refused:**\n  - The beam runs on determinization 0 alone (`crates/ai/src/decide.rs:566-598`).\n  - A won game scores `AI_EVAL.win \u2212 turn` (`evaluate.rs:3383`), and `AI_EVAL.win` is 1,000,000 (`config.rs:643`).\n  - `reply_score` keeps a won line's static score (`reply.rs:1013`).\n  - Each finalist's mean is the plain average of its scores over the worlds scored (`decide.rs:691-720`).\n\n  So a line that wins on world 0 alone averages about 333,000. It beats every line that wins nowhere, however much it loses on the other two worlds. The code already knows the scale: \"The beam scores a won game far above anything else\" (`decide.rs:308-309`).\n- **World 0's win is no evidence.** The beam searched world 0, so a line it found winning there was found *because* it won there. The other worlds are the only independent test. Take a line whose true chance to win is p. Today it is played whenever world 0's sample favours it. With this change it needs one of the two other worlds to win as well, which happens with chance 1 \u2212 (1 \u2212 p)\u00b2:\n  - 75% at p = \u00bd;\n  - 36% at p = 0.2;\n  - 0% for a win only world 0's own sample made possible.\n- **Where it bites.** Lines whose outcome a sampled world decides:\n  - a random effect's roll (S #11.2 Arcane Missiles, \"Deal 1 damage to a random enemy\", with Echo);\n  - a card the line drew, since each world shuffles the seat's own library (R4447000's cut);\n  - a face-down card that world 0 dealt as a trap that stops nothing (R762).\n- **Not a rewording of #1283.** That issue asked the solver to prove lethal against every trap a card could be. This one leaves the solver alone and stops the beam's average from overriding the solver's own rule.\n\n## Proposal\n\n- **The rule.** In `decide`'s finalist means (`decide.rs:691-720`), take a finalist whose world-0 line ended in the seat's win and whose replay won on none of the other worlds scored. Before the means are taken, replace its world-0 score by its mean on those other worlds.\n- **What stays as today:**\n  - a finalist that wins on world 0 and on at least one other world, so a likely lethal still averages about 666,000 and is played at once;\n  - a decision that scored only world 0 (the counter or the clock stopped the rest, `worldsScored` 1), since there is nothing to confirm with;\n  - losses, since a line that loses on one world stays far below the rest, which errs toward caution.\n- **A switch.** A named `bool` in `crates/ai/src/config.rs` (`AI_SEARCH` derives `Eq`, so a bool fits there), on as shipped. Off gives today's means exactly.\n- **Testability.** The means become a pure function over rows of world scores, so a unit test can hand it rows.\n- **Docs.** \u00a79.9's Search bullet gains a sentence, the crate README's `decide` section gains one, and a ruling in the issue's block records the rule.\n- **Rejected alternatives:**\n  - Capping a won world at the best position plus a margin: an untuned scale, and at a small margin the AI would pass up a free 50% lethal.\n  - Dropping world 0 from every finalist's mean: it throws away the one world every finalist is replied on.\n  - Requiring every world to win: that is the solver's rule already, and the AI would never take a likely lethal it cannot prove.\n\n## Where it lands\n\n- `crates/ai/src/decide.rs` (the means), `crates/ai/src/config.rs` (the switch).\n- `crates/ai/tests/ai/decide.rs`, or a new test module, for the scenes.\n- `crates/ai/README.md` (`decide` reads only `redact`), `spec/09-architecture.md` \u00a79.9 (Search).\n- `spec/rulings/R<issue>000.md` and its paragraph in `spec/pending/<issue>.md`.\n- If the practice claim game plays differently: `crates/server/tests/fixtures/practice-claim.json`, recorded again as `training/README.md` describes (R1303002).\n\n## Acceptance criteria\n\n- [ ] A unit test of the means, named after the ruling:\n  - finalist A wins on world 0 only, and finalist B scores better than A on the other worlds: B ranks first;\n  - A wins on worlds 0 and 1: A ranks first;\n  - only world 0 was scored: today's order;\n  - with the switch off: today's means exactly.\n- [ ] A `scenario()` test, named after the ruling, where a random-damage play is lethal on world 0's roll but not on the others', and a board play scores better on those: the AI makes the board play on every seed tried.\n- [ ] A second `scenario()` test where the lethal holds on two of the three worlds: the AI still goes for it.\n- [ ] Every existing AI test passes, or a moved pinned decision is pinned again with its reason in the test's comment, as R4159000 did.\n- [ ] `cargo jackioh gate` passes at its smoke floors. `cargo jackioh spec check` passes.\n- [ ] The switch's comment records a screen if one was played (`training/improve.md`, A screen). An inconclusive one is settled by the scene tests (R4319000).\n\n## Size and risks\n\nHard by CLAUDE.md rule 11 (the AI), but small in code: a few dozen lines in `decide.rs`, plus the tests, the ruling and the docs.\n\nRisks:\n- It changes decisions only where a finalist wins on world 0 alone, which is rare and mostly late in a game.\n- The AI will sometimes pass up a gamble that was right: a truly even lethal is confirmed three times in four.\n- The ladder bots and the Duos AI team share `decide`, so they change too. Their calibration (`docs/bot-calibration.md`) may want a re-run afterwards, by a person or a later issue.\n- The lethal solver, the lethal hint and the ladder bots' concession check are untouched.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-23T19:17:50Z:\n\napprove\n\nWhy: the reasoning holds up on `main`. The lethal solver keeps a line only when it also wins on every other world (`lethal.rs`, `wins_on(dets[1..])`), but the beam searches world 0 alone and a won game scores 1,000,000, so a line that wins on world 0 only still averages far above every real board play. A win found on the world it was searched on is no evidence on its own, so asking one other world to confirm it removes reckless all-in turns without touching a real lethal. A few dozen lines, with a switch that gives back today's means.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4608: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T19:18:35Z",
+    "claimed_at": "2026-11-23T19:29:07Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4586 skipped: it waits for #4602 to close first",
+    "#4587 skipped: it waits for #4602 to close first",
+    "#4588 skipped: it waits for #4602 to close first",
+    "#4589 skipped: it waits for #4602 to close first",
+    "#4590 skipped: it waits for #4602 to close first",
+    "#4591 skipped: it waits for #4602 to close first",
+    "#4592 skipped: it waits for #4602 to close first",
+    "#4593 skipped: it waits for #4602 to close first",
+    "#4594 skipped: it waits for #4602 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
