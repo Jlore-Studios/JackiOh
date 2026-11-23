@@ -19744,24 +19744,16 @@
     "what": "build #4602 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-23T19:37:58Z",
+    "at": "2026-11-23T19:51:57Z",
     "notes": [
-      "answered a comment on #4623 that was never answered",
-      "answered a comment on #4621 that was never answered",
-      "answered a comment on #4613 that was never answered",
-      "answered a comment on #4612 that was never answered",
-      "answered a comment on #4610 that was never answered",
-      "#4610 needs a plan",
-      "#4621 needs a plan",
-      "#4623 needs a plan",
-      "delivered plan #4608 on claude-4 (run 45249434440): planned",
-      "delivered plan #4622 on gpt (run 45249303316): planned",
-      "started build #4622 on gpt (run 45251639913)",
-      "started plan #4621 on claude-4 (run 45251763324)",
-      "started plan #4623 on claude-8 (run 45251885264)",
-      "started plan #4608 on claude-8 (run 45252006606)",
-      "started plan #4610 on claude-6 (run 45252133988)",
-      "nothing more to start: nothing is queued"
+      "delivered plan #4610 on claude-6 (run 45252133988): planned",
+      "delivered plan #4609 on claude-4 (run 45249562377): planned",
+      "delivered build #4578 on claude-3 (run 45249163568): interrupted",
+      "delivered plan #4602 on claude-3 (run 45247138322): planned",
+      "delivered build #4599 on claude-7 (run 45191694993): interrupted",
+      "started build #4599 on claude-7 (run 45254244480)",
+      "started build #4602 on claude-4 (run 45254371975)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-23T21:00:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` 5-hour usage is 65%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-23T23:20:00Z; it takes reviews only; it can start a build or a plan again in 3h 21m; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` is busy; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4578 held for `claude-3` until 15:00 (it refused a call)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -20467,7 +20459,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T19:37:58Z",
+  "loop_tick": "2026-11-23T19:51:57Z",
   "machine_disk": {
     "issue": null,
     "reading": {
