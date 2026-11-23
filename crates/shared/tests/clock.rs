@@ -640,6 +640,27 @@ mod match_clock {
         assert_eq!(h.expiries, vec![ClockExpiry::Prompt { player: P2 }]);
     }
 
+    /// R79, R268: a question a card asks the first seat during setup, before the mulligans open, is the active
+    /// player's, so the turn clock times it from full and no prompt clock runs (#4550,
+    /// docs/implicit-states.md §13 T5; R268 calls setup nobody's turn, so which clock should time it is
+    /// unspecified).
+    #[test]
+    fn a_setup_question_the_first_seat_holds_is_timed_by_its_turn_clock() {
+        let mut h = Sim::new(0);
+        h.sync(&ClockView {
+            turn: 0,
+            active: P1,
+            pending_for: Some(P1),
+            ..view()
+        });
+        assert_eq!(h.deadline("promptDeadline"), None);
+        assert_eq!(h.deadline("turnDeadline"), Some(h.now + h.turn_ms));
+        h.sleep(h.turn_ms - 1);
+        assert_eq!(h.expiries, vec![]);
+        h.sleep(1);
+        assert_eq!(h.expiries, vec![ClockExpiry::Turn { player: P1 }]);
+    }
+
     #[test]
     fn r268_stop_cancels_a_running_mulligan_clock() {
         let mut h = Sim::new(0);

@@ -1082,7 +1082,7 @@ describe("reconnect", () => {
   });
 });
 
-const HELLO ={ type: "hello", token: "tok", matchId: "m-1" };
+const HELLO = { type: "hello", token: "tok", matchId: "m-1" };
 
 describe("a silent socket", () => {
   it("R1441 a silent socket is replaced when the tab turns visible, and the new socket sends hello", () => {
