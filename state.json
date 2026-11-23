@@ -18437,7 +18437,7 @@
       "taken_asks": []
     },
     "4581": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -18452,11 +18452,11 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "onto": "bot/issue-4578",
-      "owner": "muse",
-      "owner_since": "2026-11-23T08:58:09Z",
-      "owner_why": "it plans it",
+      "owner": "gpt",
+      "owner_since": "2026-11-23T09:08:30Z",
+      "owner_why": "handed off from `muse`: it could not take it",
       "part_of": 4578,
       "pending_request": false,
       "planned_at": "2026-11-23T09:06:24Z",
@@ -18464,12 +18464,12 @@
       "planned_by_id": "muse",
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
-      "provider": "muse",
+      "provider": "gpt",
       "queued_at": "2026-11-23T08:52:49Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45142902551",
-      "runs_on": "night-vm-muse",
-      "started_at": "2026-11-23T08:58:09Z",
+      "run_id": "pending:1391e4ef-1795424885",
+      "runs_on": "night-vm-gpt",
+      "started_at": "2026-11-23T09:08:30Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18630,9 +18630,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T09:07:53Z",
+    "at": "2026-11-23T09:08:30Z",
     "url": "",
-    "what": "build #4580 on agy"
+    "what": "build #4581 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-23T08:54:21Z",
