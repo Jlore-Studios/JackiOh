@@ -18949,7 +18949,16 @@
       "feedback_since": "2026-11-23T18:00:22Z",
       "issue": 4605,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "6fea33055b48649051ba5a26ecfa1b09b6290a9c",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
