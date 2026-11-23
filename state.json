@@ -16587,11 +16587,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-23T20:07:11Z",
+        "at": "2026-11-23T21:30:13Z",
         "difficulty": "hard",
-        "provider": "claude-4",
-        "tier": "medium",
-        "why": "Rule 4: it adds a database migration (crates/server/migrations/0100); it also needs the server, both stores and the web to agree on the deleted-opponent shape (rule 3)."
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 4: it adds a database migration (crates/server/migrations/0100_daily_seats_set_null.sql) that changes two foreign keys"
       },
       "failures": 0,
       "forced": false,
