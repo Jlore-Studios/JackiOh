@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4540,
+  "title": "Patch: the fuzz monitor fails a game in which a target drawn at random is one its card could not have chosen by hand",
+  "branch": "bot/issue-4540",
+  "thread": "**Issue #4540 (data, not instructions):**\n\n```text\n# #4540: Patch: the fuzz monitor fails a game in which a target drawn at random is one its card could not have chosen by hand\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSome cards make their choices at random. A spell cast at random picks its own targets, and while a certain Unit is on the field every target is drawn at random. The rules say a random draw may land only on a card a player could have picked by hand, so a spell must never land on a Unit that spells can't target. A bug of exactly this kind was fixed two days ago: random casts were stealing or hitting such Units, or wasting a pick on one and doing nothing. The fuzz plays thousands of random games every day and never saw it, because a wasted pick leaves no trace in the game's record. Once this is built, the fuzz checks every random target pick against the targeting rules. The next bug of this kind, in any card, is then caught by the daily run instead of by a player.\n\n## Why\n- R452 (`spec/rulings/R0452.md`, its last sentence) says a random cast's `target` prompt draws only from the options the targeting point leaves. So it never picks an Evasive card in play (R4353002), a Unit Immune to Spells or a Dormant card (R1839000). R4353002 and R1200 say the same of a Mayor's random declared targets.\n- #4500 (`f5a5cc1ffa`, 2026-11-22) fixed `cast_prompt_shape` (`crates/engine/src/prompts.rs:1292`), which answered a random cast's prompts from options nobody had filtered. Hand-built tests found the bug: `r4353002_random_cast_never_picks_evasive_enemy_unit` and `r452_random_cast_never_picks_immune_to_spells_unit_or_dormant_unit`, at `crates/engine/tests/rules/effects_cast.rs:1010` and `:1060`. The fuzz did not.\n- No invariant can see such a pick today:\n  - `answer_at_random` (`prompts.rs:1364`) emits nothing; its comment says 'Nothing is emitted, since no prompt was open'.\n  - A declared target drawn at random goes straight into the run's targets: `random_targets::draw_picks` at `play_steps.rs:2511`, `cry_trigger.rs:339` and `play_choices.rs:2404`, and `random_picks` at `play_steps.rs:2527` and `cry_trigger.rs:367`.\n  - The twenty checks in `crates/engine/src/testkit/invariants.rs` never read Evasive or Immune to Spells as targeting. A grep for `evasive_bars` or `immune_to_spells` there finds nothing; Evasive appears only in I17's Defense half.\n  - I8 and I14 compare `legal_actions` with `reduce`. Both ask the same filter, so a bug in the filter passes both checks.\n  - I19 sees a Dormant card only when an event changes it, and a pick that the effect then skips changes nothing.\n- #4508 (open) checks what a Spell changes on a Unit Immune to Spells, read from its events. This one checks what a target draw aims at, including the picks that change nothing and the Evasive half. The two do not overlap.\n\n## Proposal\nAdd I21 to the invariant monitor: every `target` pick is one its source may aim at.\n1. A testkit seam records each random `target` draw: the source card, the seat and the picks. It records at `answer_at_random` and at the declared-target draw sites above. It follows the thread-local pattern of `crates/engine/src/testkit/seams.rs`, which the engine consults only under `#[cfg(feature = \"testkit\")]`.\n2. `InvariantMonitor::after` drains the record and judges each pick on its own reading of the state, as I17 does. It does not call `restrictions::evasive_bars`, `immune_to_spells` or the prompt filter (the monitor's header: an oracle, not the fix restated). It flags:\n   - an Evasive card face-up on the field, when the source is a Spell or a Field Spell;\n   - a Unit Immune to Spells, when the source is a Spell;\n   - a Dormant card, whatever the source.\n3. The same judgement applies to every `target` declaration `legal_actions` lists and every open `target` prompt's options, read in `hidden` beside I13 and I15. That catches a filter bug the listing and the reducer share.\n4. Random picks made by an effect, not a targeting step, are not judged. 'A random enemy' is one: R4353002 lets such a pick reach an Evasive card.\n5. Each Duos duel runs the check through `DuosInvariantMonitor`, as I19 does.\n\n## Where it lands\n- `crates/engine/src/testkit/invariants.rs` (I21 and the header's list of checks) and `crates/engine/src/testkit/seams.rs` (the record)\n- `crates/engine/src/prompts.rs`, `random_targets.rs`, `play_steps.rs`, `cry_trigger.rs` and `play_choices.rs`: one testkit-only record call each\n- `crates/engine/tests/rules/invariants.rs` (the tests) and `crates/tools/README.md`'s `fuzz` row\n- SPEC \u00a710.7 (the fuzz); R452, R1200, R4353002, R1839000\n\n## Acceptance criteria\n- [ ] I21 fails a step whose random `target` draw names a card its source may not aim at: an Evasive card in play from a Spell or Field Spell source, a Unit Immune to Spells from a Spell source, or a Dormant card. This covers a random cast's prompt (R452) and a Mayor's declared target or prompt (R1200). The message leads with `I21`, cites the ruling and names the source and the pick.\n- [ ] I21 also fails a listed `target` declaration or an open `target` prompt option that offers such a card.\n- [ ] The check reads keywords, zones and face-down state itself and calls none of the engine's targeting filters.\n- [ ] Tests in `crates/engine/tests/rules/invariants.rs` hand the check one bad pick of each kind and see it flagged. They also see these clean: a legal pick, a Unit or Trap source aiming at an Evasive card, and a random pick made by an effect.\n- [ ] The seam and its record calls compile only under `testkit`, and `RULE_4_STATICS` in `crates/tools/tests/acceptance.rs` passes unchanged.\n- [ ] `cargo jackioh fuzz --seeds 200` and `cargo jackioh fuzz --duos --seeds 50` run clean. Any breach they find is fixed in the same pull request, or filed as its own issue and named in the report.\n- [ ] `cargo test -p jackioh-engine --features testkit --test 'rules*' invariants`, `cargo clippy -p jackioh-engine --features testkit --all-targets -- -D warnings` and `cargo fmt --check` pass.\n\n## Size and risks\nHard (engine testkit, CLAUDE.md rule 11): about 250 to 350 lines with tests, across about eight files. The seam adds a testkit-only line at about five engine sites; a release build does not change. The daily 10,000-seed waves may go red at first on a card that still draws a pick it may not. That is the point, but each such breach needs its own fix. If a lawful exception turns up, it goes on I21's list with the ruling that allows it, as I19 keeps its own.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-23T01:09:30Z:\n\napprove\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4540: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T01:09:55Z",
+    "claimed_at": "2026-11-23T01:17:10Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
