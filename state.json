@@ -17578,15 +17578,8 @@
       }
     },
     "4550": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45108008377",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-23T04:27:04Z",
-        "until": "2026-11-23T04:57:04Z"
-      },
       "handoff": {
         "at": "2026-11-23T04:20:47Z",
         "family": "claude",
@@ -17596,9 +17589,8 @@
         "reason": "planned on opus",
         "trail": "tes/server/src | cut -c1-180 | head\", \"description\": \"Check how the server uses the clock notes\"}\n- Bash: {\"command\": \"sed -n '893,905p' crates/server/src/actor/match_actor.rs\", \"description\": \"Show the server's handling of the clock notes\"}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'PLANEOF'\\n\\n### AGENT RESULT recheck tests (run 2; unverified by compile)\\n- E11 loop_cap.rs: new fixture `lc-dusk` (fn dusk() -> def(\\\"dusk\\\",\\\"Unit\\\",9257,1,5); \u2026\n- Bash: {\"command\": \"f=crates/server/tests/actor/social_live.rs; for h in 'fn empty_test_app\\\\|empty_test_app' 'async fn account' 'fn serve\\\\|serve(&app)' 'async fn connected' 'async fn next_social' '\\\\.rece\u2026\n- Bash: {\"command\": \"grep -n 'fn account\\\\|fn api\\\\b\\\\|async fn api' crates/server/tests/actor/social_live.rs | head; grep -n 'owed_work\\\\|END_OF_TURN_WORK\\\\|act_ok' crates/engine/tests/rules/loop_cap.rs | h\u2026\n- Bash: {\"command\": \"grep -n 'account(&app\\\\|let ana = \\\\|^use \\\\|^ use ' crates/server/tests/actor/social_live.rs | head -8; grep -rn 'pub async fn account\\\\|pub(crate) async fn account\\\\|async fn account('\u2026\n- Bash: {\"command\": \"timeout 300 bash -c 'while true; do sleep 15; done'; echo waited\", \"description\": \"Wait five minutes for the clock agent\", \"timeout\": 320000}\n- said: I found one real mismatch to fix (T4), one that has no source and should be named only (T16), and none in the rematch book. The scratch worktree is removed and the repo is untouched. The whole change is saved as `/tmp/wt4550-final.patch` (applies with `git apply` at ee62186ec2). One side effect: `C\u2026\n- Bash: {\"command\": \"ls -la /tmp/wt4550-final.patch && wc -l /tmp/wt4550-final.patch && cp /tmp/wt4550-final.patch /tmp/claude-1001/; grep -n '^diff\\\\|^+ fn \\\\|^+fn \\\\|^+ fn \\\\|^+ async fn ' /tmp/wt4550-fina\u2026\n- Bash: {\"command\": \"sed -n 1,35p /tmp/wt4550-final.patch; sed -n 225,277p /tmp/wt4550-final.patch\", \"description\": \"Read the fix and the T4 and T16 tests\"}\n- Bash: {\"command\": \"grep -rn -i 'stays over\\\\|is over it\\\\|finished match' spec/09*.md crates/shared/README.md | cut -c1-300 | head -12; sed -n 352,362p crates/shared/src/host/clock.rs\", \"description\": \"Loo\u2026\n- Bash: {\"command\": \"sed -n 195,224p /tmp/wt4550-final.patch; sed -n 34,37p crates/shared/README.md | cut -c1-300; sed -n 272,279p crates/shared/README.md | cut -c1-400; grep -n 'fn on_arm' -A25 crates/share\u2026\n- Bash: {\"command\": \"sed -n 36,194p /tmp/wt4550-final.patch | grep -v '^ ' | grep -v '^+$' | cut -c1-150\", \"description\": \"Read the remaining clock tests in the patch\"}\n- Bash: {\"command\": \"sed -n 278,350p /tmp/wt4550-final.patch | grep -v '^+$' | cut -c1-150; grep -n 'fn playing\\\\|fn mulligan_ms\\\\|fn grace_ms' crates/shared/tests/duel.rs | head\", \"description\": \"Read the r\u2026\n- Bash: {\"command\": \"grep -n 'pickDeck\\\\|firstDeck\\\\|choiceOf' apps/web/src --include=*.test.* -r | head -5; grep -n 'fn through_the_mulligans\\\\|fn of(\\\\|holding_appends' crates/shared/tests/duel.rs | head -\u2026\n- Bash: {\"command\": \"grep -n 'through_the_mulligans' crates/shared/tests/duel.rs | head -3; grep -n 'fn turn_ms\\\\|fn opening(\\\\|fn setup(\\\\|fn initial_clocks\\\\|fn answer(' crates/shared/tests/duel.rs | head\"\u2026\n- Write: {\"file_path\": \"/tmp/claude-1001/final.md\", \"content\": \"## Goal\\n\\nThe 2026-11-23 code audit as one pull request a person reviews:\\n- **Dead code:** remove three dead TypeScript items. Rust and Python\u2026\n- Bash: {\"command\": \"wc -w -c /tmp/claude-1001/final.md\", \"description\": \"Count the plan's words and characters\"}\n- Bash: {\"command\": \"cd /tmp/claude-1001 && python3 - <<'EOF'\\nimport re\\ns=open('final.md').read()\\nfor h in ['## Goal','## Files to touch','## Steps','**Batch 1','**Batch 2','**Batch 3','**Batch 4','15. **\u2026\n- Write: {\"file_path\": \"/tmp/claude-1001/final.md\", \"content\": \"## Goal\\n\\nThe 2026-11-23 code audit, in one pull request that a person reviews. It:\\n- removes three dead TypeScript items (Rust and Python hav\u2026\n- Bash: {\"command\": \"wc -w -c /tmp/claude-1001/final.md\", \"description\": \"Count the trimmed plan\"}\n- Bash: {\"command\": \"cd /tmp/claude-1001 && python3 - <<'EOF'\\nimport re\\ns=open('final.md').read()\\nsecs=re.split(r'(?m)^(?=## |\\\\*\\\\*Batch |1[4-7]\\\\. | \\\\*\\\\*\\u00a71[345])',s)\\nfor x in secs: print(len(x.s\u2026\n- Bash: {\"command\": \"cd /tmp/claude-1001 && python3 - <<'EOF'\\ns=open('final.md').read()\\na=s.index('## Tests'); b=s.index('## Done when')\\ntests='''## Tests\\n\\nCopy each file's helpers (`Table`, `playing`, \u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/final.md\", \"offset\": 1, \"limit\": 5}\n- Write: {\"file_path\": \"/tmp/claude-1001/final.md\", \"content\": \"## Goal\\n\\nThe 2026-11-23 code audit, as one pull request a person reviews. It does seven things:\\n- Removes three dead TypeScript items. Rust a\u2026\n- Bash: {\"command\": \"wc -w -c /tmp/claude-1001/final.md\", \"description\": \"Count the rewritten plan\"}\n- Bash: {\"command\": \"cd /tmp/claude-1001 && python3 - <<'EOF'\\ns=open('final.md').read()\\na=s.index(' - Rows by their ruling-named test')\\nb=s.index('16. \\\"For a person\\\"')\\nnew=''' - **\\u00a713, the match c\u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/final.md\", \"offset\": 60, \"limit\": 110}\n- Bash: {\"command\": \"git worktree list | grep -v jackioh-wt | head; git status --porcelain | head; python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\na=s.index('=====FINAL (run 2')\\nfinal=open('/tmp/clau\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\na=s.index('### AGENT RESULT \\u00a715')\\nb=s.index('=====FINAL (run 2, complete')\\ns=s[:a]+'(Agent results for \\u00a713\\u\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nb=s.index('=====FINAL (run 2, complete')\\nhead='''# Planner draft #4550 \\u2014 run 2 finished the plan (below). Base ee62186ec2. Sc\u2026\n- said: **Goal** The 2026-11-23 code audit, as one pull request a person reviews. It does seven things: - **Dead code:** removes three dead TypeScript items. Rust and Python have none (Step 4). - **Duplicates:** merges five duplicates that give the same output for every input (A\u2013E). - **Zombie routes:** li\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-23T03:47:06Z",
       "owner_why": "handed off from `claude-1`: `claude-1` it refused a call; its limit resets at 2026-11-23T07:50:00Z; it can start again only in 4h 02m, more than the 120 minutes an item waits for its owner",
@@ -17609,9 +17601,9 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-8",
-      "run_id": "45108008377",
+      "run_id": "pending:54d2d5dc-1795408147",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-23T03:47:06Z",
+      "started_at": "2026-11-23T04:29:27Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17877,9 +17869,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T04:28:53Z",
+    "at": "2026-11-23T04:29:27Z",
     "url": "",
-    "what": "review #4556 on claude-4"
+    "what": "build #4550 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-23T04:17:34Z",
