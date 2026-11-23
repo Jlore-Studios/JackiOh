@@ -4196,7 +4196,7 @@ mod i21 {
     }
 
     #[test]
-    fn r4599004_an_exile_aura_s_and_an_open_black_hole_s_exile_are_no_spell_s_and_i21_allows_them() {
+    fn r4599004_an_exile_aura_s_exile_is_no_spell_s_and_i21_allows_it() {
         let (state, id) = immune_board("r4599004");
         register_card_on_card();
         let mut aura = state.clone();
@@ -4230,7 +4230,8 @@ mod i21 {
             ),
             Vec::<String>::new()
         );
-        // S+ #77 Black Hole stands open (R3554000).
+        // An open S+ #77 Black Hole is no exile aura: only its pull at a turn's end is the hole's
+        // (R4577008), and a Spell's exile while it stands is still a reach.
         let mut hole = state.clone();
         hole.black_hole = Some(BlackHole {
             lane: 3,
@@ -4239,9 +4240,10 @@ mod i21 {
             capacity: None,
             at_end: None,
         });
-        assert_eq!(
-            i21(&hole, &events, &moved(&hole, &id, OffFieldZone::Exile)),
-            Vec::<String>::new()
+        only(
+            &i21(&hole, &events, &moved(&hole, &id, OffFieldZone::Exile)),
+            &id,
+            &["I21", "exiled"],
         );
         // With no rule that exiles, the exile is the Spell's.
         only(

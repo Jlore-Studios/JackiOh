@@ -474,8 +474,9 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             .iter()
             .filter(|entry| entry.starts_with("meditative-"))
             .count();
-        // The held sets (Meditative+, R1178000; Stinkyscape, R1857000; Training Grounds, R2194000) join the
-        // count batch by batch: each number is held to the rule above; the pinned counts are the shipped.
+        // The held sets (Meditative+, R1178000; Stinkyscape, R1857000; Training Grounds, R2194000; the
+        // single-player Infinite Assault, R4577000) join the count batch by batch: each number is held to
+        // the rule above; the pinned counts are the shipped.
         let held = radiant_only
             .iter()
             .filter(|entry| {
@@ -483,6 +484,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                     || entry.starts_with("stinkyscape-")
                     || entry.starts_with("traininggrounds-")
                     || entry.starts_with("stinkyscapeplus-")
+                    || entry.starts_with("infiniteassault-")
             })
             .count();
         // #2657's Anti-oneshot Armor `armor`, its Radiant face's "Your hero has Armor 1", and less
@@ -654,6 +656,11 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscapeplus-142", PRICE),
         ("stinkyscapeplus-155", PRICE),
         ("stinkyscapeplus-166", PRICE),
+        // R4577000: the held Infinite Assault's set-named pools by price, IA #5's (1) Cost Units,
+        // #21's (2) Cost or less and #24's Costs from (1) to (3).
+        ("infiniteassault-005", PRICE),
+        ("infiniteassault-021", PRICE),
+        ("infiniteassault-024", PRICE),
         ("core-038", ENGINE),
         ("core-093", ENGINE),
         ("core-095", ENGINE),

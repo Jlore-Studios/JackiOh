@@ -1513,6 +1513,12 @@ sums (R1483000), read one day of the account's `game` rows, not its whole histor
 `tests/sql/01_schema_invariants.sql` CHECK 26 and CHECK 27 plan them with sequential scans off, and fail
 when the list sorts or a ledger filters the day.
 
+Migration 0099 widens the `cards` tag check once more, as 0088 did, with #4577's nine Infinite Assault tags
+(R4577001) — the eight doctrine tags Hallucination, Overclock, Batch, Recursion, Jailbreak, Firewall, Scraper
+and Singularity, and Commander — so the check names the engine's whole `Tag` union again. The set is a
+single-player set held while it is built (R4577000), so `seed-catalog` writes none of its cards yet; the day
+it does, nothing fails. It rewrites no row. `tests/sql/01_schema_invariants.sql` CHECK 18 probes every tag.
+
 ## Tests
 
 ```

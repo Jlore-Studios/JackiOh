@@ -41,6 +41,7 @@ import type { EntranceKey } from "./recipe.ts";
 import rawClassic from "./classic.json5?raw";
 import rawClassicPlus from "./classicplus.json5?raw";
 import rawCore from "./core.json5?raw";
+import rawInfiniteAssault from "./infiniteassault.json5?raw";
 import rawMeditative from "./meditative.json5?raw";
 import rawMeditativePlus from "./meditativeplus.json5?raw";
 import rawStinkyscape1 from "./stinkyscape-1.json5?raw";
@@ -62,6 +63,7 @@ export const FX_CARD_FILES: readonly FxCardFile[] = [
   { file: "stinkyscape-2.json5", set: "Stinkyscape", source: rawStinkyscape2 },
   { file: "traininggrounds.json5", set: "Training Grounds", source: rawTrainingGrounds },
   { file: "stinkyscapeplus.json5", set: "Stinkyscape+", source: rawStinkyscapePlus },
+  { file: "infiniteassault.json5", set: "Infinite Assault", source: rawInfiniteAssault },
 ];
 
 /** The first card of Stinkyscape's second file. */

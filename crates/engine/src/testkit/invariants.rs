@@ -101,17 +101,17 @@
 //!      ending at its own `cardResolved` (R4599003), and a card set face-down, or announced face-down in the
 //!      step, running as a Trap (M #99's row, R3806000, R4599002). Lawful: anything inside an attack
 //!      (R4508002), a `controlChanged` or `bounced` after a board `swapped`, a `rotated` or a `rolledBack`
-//!      and a restore's `radiantSet` (R4508001), an exile in a `LANE_TAKERS` card's run (R4508004), a
-//!      `radiantSet` under Tears of the Kwzki Tree's world (R4508003), the state check's switch out of a
-//!      barred Defense and a Burn or Toxic tick (R4508005), a `destroyed` naming a killer or after a tick on
-//!      it (R4599001), an exile while a lasting board rule exiles (R4599004), a Burn's removal after its tick
-//!      or on an Indestructible Unit and a shield the Burn took (R4599007), a killerless death its damage or
-//!      a kill deadline explains (R4599008, R4599012) or one after a Death hook ran since the last card
-//!      resolved (R4599013), and an `evolved` (R4599011). A Unit is judged only while still on the field
-//!      and immune after the step, or gone from it with its own keywords immune, no `controlChanged` naming
-//!      it (R4599009) and its side not named by a `rolledBack` (R4599010). Reads
-//!      the events and the catalog, never `restrictions::unaffected_by`; I14's branches and each Duos duel
-//!      run it.
+//!      and a restore's `radiantSet` (R4508001), an exile in a `LANE_TAKERS` card's run (R4508004) or by the
+//!      Black Hole's pull at a turn's end (R4577008), a `radiantSet` under Tears of the Kwzki Tree's world
+//!      (R4508003), the state check's switch out of a barred Defense and a Burn or Toxic tick (R4508005), a
+//!      `destroyed` naming a killer or after a tick on it (R4599001), an exile while an exile aura stands
+//!      (R4599004), a Burn's removal after its tick or on an Indestructible Unit and a shield the Burn
+//!      took (R4599007), a killerless death its damage or a kill deadline explains (R4599008, R4599012) or
+//!      one after a Death hook ran since the last card resolved (R4599013), and an `evolved` (R4599011). A
+//!      Unit is judged only while still on the field and immune after the step, or gone from it with its own
+//!      keywords immune, no `controlChanged` naming it (R4599009) and its side not named by a `rolledBack`
+//!      (R4599010). Reads the events and the catalog, never `restrictions::unaffected_by`; I14's branches
+//!      and each Duos duel run it.
 //!   I22 every `target` pick is one its source may aim at (§10.5 step 1, R450; #4540): no Dormant card,
 //!      whatever the source or none (R1839000); no face-up Evasive card in play from a Spell or Field
 //!      Spell, the source read as R781001 reads it (R4353002); no face-up card Immune to Spells from a
@@ -1366,8 +1366,10 @@ struct ImmuneMark {
     own: bool,
     /// R4599008: the damage it holds as the step begins.
     damage: i32,
-    /// R4599010: the side it stands on as the step begins.
+    /// R4577008, R4599010: the side it stands on and the lanes it covers as the step begins, which the
+    /// Black Hole's pull at a turn's end and a board restore read.
     side: PlayerId,
+    lanes: Vec<i32>,
 }
 
 /// I21: the Units Immune to Spells a step begins with, by instance id; the cards then set face-down on
@@ -1377,6 +1379,8 @@ struct ImmuneMark {
 struct ImmuneStep {
     marks: IndexMap<String, ImmuneMark>,
     set: IndexSet<String>,
+    /// R4577008: the Black Hole the step begins with, when it pulls at a turn's end (R4440050).
+    hole: Option<crate::geometry::BlackHole>,
     pending_def: Option<String>,
     pending_instance: Option<String>,
     /// R4599004: whether a lasting board rule exiles as the step begins (`board_exiles`).
@@ -1384,17 +1388,16 @@ struct ImmuneStep {
 }
 
 /// I21 (R4599004): whether a lasting board rule stands that exiles at the state check, with no marker of
-/// its own and whatever card is running: an open Black Hole (S+ #77, R3554000) or a field card's exile
-/// aura whose lasting text is on (S #115 Scornboi, R1850002).
+/// its own and whatever card is running: a field card's exile aura whose lasting text is on (S #115
+/// Scornboi, R1850002). The Black Hole's pull at a turn's end is `pulled_into_the_hole`'s (R4577008).
 fn board_exiles(state: &GameState) -> bool {
-    state.black_hole.is_some()
-        || placed_cards(state).into_iter().any(|placed| {
-            matches!(placed.zone, Zone::Field { .. })
-                && !crate::preview::lasting_text_off(state, placed.card)
-                && !crate::scripts::script_of(state, placed.card)
-                    .exile_auras
-                    .is_empty()
-        })
+    placed_cards(state).into_iter().any(|placed| {
+        matches!(placed.zone, Zone::Field { .. })
+            && !crate::preview::lasting_text_off(state, placed.card)
+            && !crate::scripts::script_of(state, placed.card)
+                .exile_auras
+                .is_empty()
+    })
 }
 
 /// I21: the state a step begins on, as I21 reads it: every Unit on either field (`zones::active_units_of`,
@@ -1417,7 +1420,11 @@ fn immune_step(state: &GameState) -> ImmuneStep {
                 label: name_of(unit),
                 own,
                 damage: unit.damage,
-                side: unit.controller,
+                side: match unit.zone {
+                    Zone::Field { player, .. } => player,
+                    _ => unit.controller,
+                },
+                lanes: crate::giga::lanes_of(unit),
             };
             (unit.id.clone(), mark)
         })
@@ -1431,6 +1438,7 @@ fn immune_step(state: &GameState) -> ImmuneStep {
     ImmuneStep {
         marks,
         set,
+        hole: state.black_hole.filter(crate::geometry::BlackHole::pulls_at_end),
         pending_def: resume.map(|resume| resume.def_id.clone()),
         pending_instance: resume.and_then(|resume| resume.instance_id.clone()),
         board_exiles: board_exiles(state),
@@ -1567,6 +1575,23 @@ fn shield_ticks(event: &GameEvent, next: Option<&GameEvent>, id: &str) -> bool {
         })
 }
 
+/// I21, R4577008: whether an `exiled` of `mark`'s Unit may be the Black Hole's pull at the end of `ended`'s
+/// turn (R4440050, `geometry::pull_at_turn_end`): the step began with a hole that pulls at a turn's end and
+/// pulls that player's permanents, the turn has ended, and the Unit stood on that player's side one lane
+/// from the hole, where one step toward it reaches it (R3554001). The hole is the board's, not the Spell's.
+fn pulled_into_the_hole(
+    hole: Option<crate::geometry::BlackHole>,
+    ended: Option<PlayerId>,
+    mark: &ImmuneMark,
+) -> bool {
+    let (Some(hole), Some(player)) = (hole, ended) else {
+        return false;
+    };
+    mark.side == player
+        && hole.pulls.is_none_or(|pulls| pulls == player)
+        && mark.lanes.iter().any(|lane| (lane - hole.lane).abs() == 1)
+}
+
 /// I21 (§6.1 Immune to Spells, R4453000): no Spell changes a Unit Immune to Spells on the field. The
 /// step's events are walked in order, tracking the card running (`hookResolving`, a trap, a turn edge
 /// and the AI's turn; a play nested in a run is its own from its `cardPlayed` to its `cardResolved`,
@@ -1577,16 +1602,17 @@ fn shield_ticks(event: &GameEvent, next: Option<&GameEvent>, id: &str) -> bool {
 ///   §6.1's immunity is no restriction on attacks, and the attacking Unit is what reaches its target;
 /// - a `controlChanged` or a `bounced` after a board `swapped`, a `rotated` or a `rolledBack`, and a
 ///   board restore's `radiantSet` (R4508001; R4454000, R4454002): the board move carries it whole;
-/// - an `exiled` in a `LANE_TAKERS` card's run (R4508004): the lane goes with all it holds;
+/// - an `exiled` in a `LANE_TAKERS` card's run (R4508004): the lane goes with all it holds; and one of
+///   a Unit the Black Hole's pull swallows at a turn's end (R4577008, `pulled_into_the_hole`), a stage of
+///   the turn's end with no marker of its own, which follows whatever Spell's trigger ran last (R4440050);
 /// - a `radiantSet` while Tears of the Kwzki Tree's world holds every card Radiant (R4508003, R4454001);
 /// - the game's own rules that run inside the Spell's run with no marker (R4508005): §4.5 step 1's
 ///   switch out of Defense of a Unit the board bars from it (`forbidden_defense`, I17's), and a Burn or
 ///   Toxic tick (`ticks_on`);
 /// - a `destroyed` that names a killer, whose lethal hit was judged where it landed (a destroy effect
 ///   clears the credit, R42), or that follows a tick on the Unit earlier in the step (R4599001);
-/// - an `exiled` while a lasting board rule exiles at the state check (`board_exiles`: an exile aura, an
-///   open Black Hole) as the step begins or ends, or once a card with an exile aura arrived in it
-///   (R4599004);
+/// - an `exiled` while a lasting board rule exiles at the state check (`board_exiles`: an exile aura) as
+///   the step begins or ends, or once a card with an exile aura arrived in it (R4599004);
 /// - a Burn's removal after a tick on the Unit earlier in the step, or on an Indestructible Unit, whose
 ///   tick leaves no event, and a Divine Shield the Burn tick took (`shield_ticks`; R4599007);
 /// - a `destroyed` with no killer whose max health its damage already met, the layers' (R4599008), or
@@ -1672,6 +1698,8 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
         .iter()
         .map(|(id, mark)| (id.as_str(), mark.damage))
         .collect();
+    // R4577008: whose turn has ended in this step, so the Black Hole's pull may follow.
+    let mut ended: Option<PlayerId> = None;
     for (at, event) in events.iter().enumerate() {
         let previous = at.checked_sub(1).and_then(|before| events.get(before));
         if let Some(GameEvent::ControlChanged { instance_id, .. }) = previous
@@ -1750,9 +1778,14 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 };
                 continue;
             }
-            GameEvent::TurnStarted { .. }
-            | GameEvent::TurnEnded { .. }
-            | GameEvent::AutopilotEngaged { .. } => {
+            GameEvent::TurnEnded { player, .. } => {
+                ended = Some(*player);
+                run = ImmuneRun::NONE;
+                death_marks = false;
+                continue;
+            }
+            GameEvent::TurnStarted { .. } | GameEvent::AutopilotEngaged { .. } => {
+                ended = None;
                 run = ImmuneRun::NONE;
                 death_marks = false;
                 continue;
@@ -1884,9 +1917,11 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 // R4508001: Bogos Binted's Radiant face rebuilds its side Radiant (R4454002); R4508003:
                 // Tears of the Kwzki Tree's world.
                 GameEvent::RadiantSet { .. } => run.window == Some(ImmuneWindow::Restore) || radiant_world,
-                // R4508004: a lane the board loses; R4599004: a lasting board rule's exile at the state
-                // check (an exile aura, an open Black Hole).
-                GameEvent::Exiled { .. } => run.takes_lane || board_exile,
+                // R4508004: a lane the board loses; R4577008: or the hole's pull at a turn's end;
+                // R4599004: an exile aura's exile at the state check.
+                GameEvent::Exiled { .. } => {
+                    run.takes_lane || pulled_into_the_hole(step.hole, ended, mark) || board_exile
+                }
                 // R4508005: §4.5 step 1 switches it out of a Defense Position the board bars it from.
                 GameEvent::PositionSwitched {
                     position: Position::Atk,
