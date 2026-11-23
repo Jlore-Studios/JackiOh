@@ -39840,7 +39840,7 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-23T01:49:01Z",
+    "idle_since": null,
     "last_area": "rules",
     "last_run": "2026-11-23T00:33:19Z",
     "provider": null,
