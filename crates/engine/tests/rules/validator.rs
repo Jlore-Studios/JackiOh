@@ -14,8 +14,8 @@ use indexmap::IndexSet;
 use jackioh_engine::config::{DECK_SIZE, MAX_COPIES};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::validator::{
-    CardId, LOADOUT_DECKS, LoadoutDeck, LoadoutError, LoadoutInput, LoadoutResult, LoadoutRule,
-    validate_loadout,
+    CardId, DeckInput, LOADOUT_DECKS, LoadoutDeck, LoadoutError, LoadoutInput, LoadoutResult, LoadoutRule,
+    validate_deck, validate_deck_in, validate_loadout, validate_loadout_in,
 };
 
 use super::fixtures::validator_loadouts::{
@@ -310,6 +310,43 @@ mod one_violation_reports_one_rule_s9_4 {
                 injection.label
             );
         }
+    }
+}
+
+#[test]
+fn borrowed_entry_points_match_owned_inputs_for_legal_and_every_l1_l6_result() {
+    let legal = legal_loadout();
+    let deck_input = DeckInput {
+        deck: legal.decks[0].clone(),
+        catalog: legal.catalog.clone(),
+        collection: legal.collection.clone(),
+    };
+    assert_eq!(
+        validate_deck(&deck_input),
+        validate_deck_in(
+            &deck_input.deck,
+            &deck_input.catalog.version,
+            &deck_input.catalog.cards,
+            deck_input.catalog.banned.as_deref().unwrap_or_default(),
+            &deck_input.collection,
+        )
+    );
+
+    let assert_loadout_matches = |input: &LoadoutInput| {
+        assert_eq!(
+            validate_loadout(input),
+            validate_loadout_in(
+                &input.decks,
+                &input.catalog.version,
+                &input.catalog.cards,
+                input.catalog.banned.as_deref().unwrap_or_default(),
+                &input.collection,
+            )
+        );
+    };
+    assert_loadout_matches(&legal);
+    for injection in INJECTIONS {
+        assert_loadout_matches(&(injection.apply)(&legal));
     }
 }
 

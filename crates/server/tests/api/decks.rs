@@ -11,9 +11,11 @@ use serde_json::{Value, json};
 
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::validator::{
-    DeckDraftInput, check_deck_draft, check_import_room, check_trio_draft, normalize_name, validate_deck,
+    DeckDraftInput, DeckInput, LoadoutDeck, LoadoutInput, LoadoutResult, check_deck_draft, check_import_room,
+    check_trio_draft, normalize_name, validate_deck, validate_loadout,
 };
 use jackioh_engine::wire::emotes::{DEFAULT_PORTRAIT, PORTRAIT_IDS, PortraitId, is_portrait_id};
+use jackioh_server::api::catalog::Catalog;
 use jackioh_server::api::decks::{assert_free_to_play, freeze_choice, read_mode_choice};
 use jackioh_server::api::http::{ApiError, ApiErrorCode, AuthLevel};
 use jackioh_server::app::{self, App, now_ms};
@@ -25,7 +27,7 @@ use jackioh_server::cosmetics::portrait_cosmetic_id;
 use jackioh_server::db::store::{CollectionEntry, DeckVersion, SavedDeck, SavedTrio, SeriesRow, StoreError};
 use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
 
-use crate::support::deps::{add_user, call, test_app};
+use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
 use crate::support::store::{fake_lock, from, q, to_json, uuid};
 
 const PROFILE: &str = "p1";
@@ -2311,6 +2313,17 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         q!(app, collection_upsert_quantities(profile_id, &entries));
     }
 
+    async fn own_counts(app: &App, profile_id: &str, owned: &IndexMap<String, i64>) {
+        let entries: Vec<CollectionEntry> = owned
+            .iter()
+            .map(|(card_id, quantity)| CollectionEntry {
+                card_id: card_id.clone(),
+                quantity: *quantity,
+            })
+            .collect();
+        q!(app, collection_upsert_quantities(profile_id, &entries));
+    }
+
     async fn save(app: &App, deck: SavedDeck) {
         q!(app, decks_upsert(&deck, MAX_SAVED_DECKS as i64));
     }
@@ -2329,6 +2342,293 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
             .and_then(Value::as_array)
             .map(|issues| issues.iter().map(|issue| issue["rule"].clone()).collect())
             .unwrap_or_default()
+    }
+
+    fn owned_for(decks: &[&[String]]) -> IndexMap<String, i64> {
+        let mut owned = IndexMap::new();
+        for card_id in decks.iter().flat_map(|deck| deck.iter()) {
+            *owned.entry(card_id.clone()).or_insert(0) += 1;
+        }
+        owned
+    }
+
+    fn validator_collection(owned: &IndexMap<String, i64>) -> IndexMap<String, i32> {
+        owned
+            .iter()
+            .map(|(card_id, quantity)| (card_id.clone(), i32::try_from(*quantity).unwrap_or(i32::MAX)))
+            .collect()
+    }
+
+    fn validator_deck(deck: &SavedDeck) -> LoadoutDeck {
+        LoadoutDeck {
+            name: Some(deck.name.clone()),
+            cards: deck.cards.clone(),
+        }
+    }
+
+    fn expected_deck_result(app: &App, deck: &SavedDeck, owned: &IndexMap<String, i64>) -> LoadoutResult {
+        validate_deck(&DeckInput {
+            deck: validator_deck(deck),
+            catalog: app.catalog.snapshot(),
+            collection: validator_collection(owned),
+        })
+    }
+
+    fn expected_trio_result(app: &App, decks: &[SavedDeck], owned: &IndexMap<String, i64>) -> LoadoutResult {
+        validate_loadout(&LoadoutInput {
+            decks: decks.iter().map(validator_deck).collect(),
+            catalog: app.catalog.snapshot(),
+            collection: validator_collection(owned),
+        })
+    }
+
+    fn assert_refusal_matches(error: ApiError, expected: &LoadoutResult) {
+        assert!(!expected.ok, "the owned validator must refuse the fixture");
+        let first = expected.errors.first().expect("a refusal says why");
+        assert_eq!(error.status(), 422);
+        assert!(matches!(error.code, ApiErrorCode::LoadoutInvalid));
+        assert_eq!(error.message, first.message);
+        assert_eq!(error.details, Some(to_json(&expected.errors)));
+    }
+
+    async fn setup_with_catalog(catalog: Catalog) -> Ctx {
+        let app = test_app_with(TestAppOptions {
+            catalog: Some(catalog),
+            ..TestAppOptions::default()
+        })
+        .await;
+        let token = active_profile(&app, PROFILE).await;
+        let other_token = active_profile(&app, OTHER).await;
+        Ctx {
+            app,
+            token,
+            other_token,
+        }
+    }
+
+    async fn assert_deck_refusal(app: &App, cards: Vec<String>, owned: IndexMap<String, i64>) {
+        let deck = saved_deck(&uuid(1), "Deck case", &cards, PROFILE, 0);
+        own_counts(app, PROFILE, &owned).await;
+        save(app, deck.clone()).await;
+        let expected = expected_deck_result(app, &deck, &owned);
+        let error = freeze(app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) }))
+            .await
+            .expect_err("the deck is illegal");
+        assert_refusal_matches(error, &expected);
+    }
+
+    async fn assert_trio_refusal(
+        app: &App,
+        cards: Vec<Vec<String>>,
+        slots: [Option<usize>; 3],
+        owned: IndexMap<String, i64>,
+    ) {
+        let decks: Vec<SavedDeck> = cards
+            .iter()
+            .enumerate()
+            .map(|(index, cards)| {
+                saved_deck(
+                    &uuid(index + 1),
+                    &format!("Trio deck {}", index + 1),
+                    cards,
+                    PROFILE,
+                    0,
+                )
+            })
+            .collect();
+        own_counts(app, PROFILE, &owned).await;
+        for deck in &decks {
+            save(app, deck.clone()).await;
+        }
+        let deck_ids: Vec<Value> = slots
+            .iter()
+            .map(|slot| match slot {
+                Some(index) => Value::String(decks[*index].id.clone()),
+                None => Value::Null,
+            })
+            .collect();
+        let trio: SavedTrio = from(json!({
+            "id": uuid(9),
+            "profileId": PROFILE,
+            "name": "Trio case",
+            "deckIds": deck_ids,
+            "createdAt": 0,
+            "updatedAt": 0,
+        }));
+        q!(app, trios_upsert(&trio, MAX_SAVED_TRIOS as i64));
+        let filled: Vec<SavedDeck> = slots
+            .iter()
+            .flatten()
+            .map(|index| decks[*index].clone())
+            .collect();
+        let expected = expected_trio_result(app, &filled, &owned);
+        let error = freeze(app, PROFILE, json!({ "mode": "bo3", "trioId": uuid(9) }))
+            .await
+            .expect_err("the trio is illegal");
+        assert_refusal_matches(error, &expected);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r253_borrowed_validation_preserves_legal_choices_and_every_l1_l6_refusal() {
+        let playable = cards(3 * DECK_SIZE as usize, 0);
+        assert_eq!(playable.len(), 3 * DECK_SIZE as usize);
+        let first = playable[..DECK_SIZE as usize].to_vec();
+        let second = playable[DECK_SIZE as usize..2 * DECK_SIZE as usize].to_vec();
+        let third = playable[2 * DECK_SIZE as usize..].to_vec();
+
+        let ctx = setup().await;
+        let legal_owned = owned_for(&[&first, &second, &third]);
+        own_counts(&ctx.app, PROFILE, &legal_owned).await;
+        for (index, deck) in [&first, &second, &third].into_iter().enumerate() {
+            save(
+                &ctx.app,
+                saved_deck(
+                    &uuid(index + 1),
+                    &format!("Legal {}", index + 1),
+                    deck,
+                    PROFILE,
+                    0,
+                ),
+            )
+            .await;
+        }
+        let trio: SavedTrio = from(json!({
+            "id": uuid(9),
+            "profileId": PROFILE,
+            "name": "Legal trio",
+            "deckIds": [uuid(1), uuid(2), uuid(3)],
+            "createdAt": 0,
+            "updatedAt": 0,
+        }));
+        q!(ctx.app, trios_upsert(&trio, MAX_SAVED_TRIOS as i64));
+        freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) }))
+            .await
+            .expect("a legal deck freezes");
+        freeze(&ctx.app, PROFILE, json!({ "mode": "bo3", "trioId": uuid(9) }))
+            .await
+            .expect("a legal trio freezes");
+
+        let ctx = setup().await;
+        let mut short = first.clone();
+        short.pop();
+        assert_deck_refusal(&ctx.app, short.clone(), owned_for(&[&short])).await;
+
+        let ctx = setup().await;
+        let mut duplicate = first.clone();
+        duplicate[1] = duplicate[0].clone();
+        assert_deck_refusal(&ctx.app, duplicate.clone(), owned_for(&[&duplicate])).await;
+
+        let ctx = setup().await;
+        let mut unowned = owned_for(&[&first]);
+        unowned.shift_remove(&first[0]);
+        assert_deck_refusal(&ctx.app, first.clone(), unowned).await;
+
+        let ctx = setup().await;
+        let mut unknown = first.clone();
+        unknown[0] = "unknown-4518".to_string();
+        assert_deck_refusal(&ctx.app, unknown.clone(), owned_for(&[&unknown])).await;
+
+        let base = test_app().await;
+        let banned_id = first[0].clone();
+        let ctx = setup_with_catalog(Catalog {
+            banned: vec![banned_id],
+            ..base.catalog.clone()
+        })
+        .await;
+        assert_deck_refusal(&ctx.app, first.clone(), owned_for(&[&first])).await;
+
+        let ctx = setup().await;
+        assert_trio_refusal(
+            &ctx.app,
+            vec![first.clone()],
+            [Some(0), None, None],
+            owned_for(&[&first]),
+        )
+        .await;
+
+        let ctx = setup().await;
+        let mut short = first.clone();
+        short.pop();
+        assert_trio_refusal(
+            &ctx.app,
+            vec![short.clone(), second.clone(), third.clone()],
+            [Some(0), Some(1), Some(2)],
+            owned_for(&[&short, &second, &third]),
+        )
+        .await;
+
+        let ctx = setup().await;
+        let mut duplicate = first.clone();
+        duplicate[1] = duplicate[0].clone();
+        assert_trio_refusal(
+            &ctx.app,
+            vec![duplicate.clone(), second.clone(), third.clone()],
+            [Some(0), Some(1), Some(2)],
+            owned_for(&[&duplicate, &second, &third]),
+        )
+        .await;
+
+        let ctx = setup().await;
+        let mut shared = second.clone();
+        shared[0] = first[0].clone();
+        assert_trio_refusal(
+            &ctx.app,
+            vec![first.clone(), shared.clone(), third.clone()],
+            [Some(0), Some(1), Some(2)],
+            owned_for(&[&first, &shared, &third]),
+        )
+        .await;
+
+        let ctx = setup().await;
+        let mut unowned = owned_for(&[&first, &second, &third]);
+        unowned.shift_remove(&first[0]);
+        assert_trio_refusal(
+            &ctx.app,
+            vec![first.clone(), second.clone(), third.clone()],
+            [Some(0), Some(1), Some(2)],
+            unowned,
+        )
+        .await;
+
+        let ctx = setup().await;
+        let mut unknown = first.clone();
+        unknown[0] = "unknown-4518".to_string();
+        assert_trio_refusal(
+            &ctx.app,
+            vec![unknown.clone(), second.clone(), third.clone()],
+            [Some(0), Some(1), Some(2)],
+            owned_for(&[&unknown, &second, &third]),
+        )
+        .await;
+
+        let base = test_app().await;
+        let banned_id = first[0].clone();
+        let ctx = setup_with_catalog(Catalog {
+            banned: vec![banned_id],
+            ..base.catalog.clone()
+        })
+        .await;
+        assert_trio_refusal(
+            &ctx.app,
+            vec![first.clone(), second.clone(), third.clone()],
+            [Some(0), Some(1), Some(2)],
+            owned_for(&[&first, &second, &third]),
+        )
+        .await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn owned_counts_above_i32_max_saturate_for_validation() {
+        let ctx = setup().await;
+        let deck = legal(0);
+        let mut owned = owned_for(&[&deck]);
+        owned.insert(deck[0].clone(), i64::from(i32::MAX) + 1);
+        own_counts(&ctx.app, PROFILE, &owned).await;
+        save(&ctx.app, saved_deck(&uuid(1), "Overflow", &deck, PROFILE, 0)).await;
+
+        freeze(&ctx.app, PROFILE, json!({ "mode": "bo1", "deckId": uuid(1) }))
+            .await
+            .expect("a count above i32::MAX owns every copy the validator can ask for");
     }
 
     #[tokio::test(start_paused = true)]
