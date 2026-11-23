@@ -17134,11 +17134,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-23T01:14:31Z",
+        "at": "2026-11-23T01:26:46Z",
         "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4531, a medium change"
+        "provider": "muse",
+        "tier": "medium",
+        "why": "single web test-file fix (one rerender call); none of the hard-rule lines (engine loop, AI, cross-crate design, migration, ~40 files) holds"
       },
       "failures": 0,
       "forced": false,
