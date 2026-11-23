@@ -4208,12 +4208,100 @@ mod i21 {
             .expect("the immune Unit")
             .damage = 3;
         only(&i21(&before, &death, &gone), &id, &["I21", "destroyed"]);
+        // Dead at a max health of 0 or less, which only a stat change brings (C #42 Transmutable Toxins
+        // made Radiant by a Spell: −2/−2 a Plague Counter on an enemy Unit), the state check's death.
+        let starved: GameEvent = json_as(json!({
+            "type": "destroyed",
+            "instanceId": id,
+            "defId": IMMUNE,
+            "owner": "p2",
+            "controller": "p2",
+            "attack": 0,
+            "maxHealth": -2,
+        }));
+        assert_eq!(
+            i21(&before, &[marker(SPELL), starved], &gone),
+            Vec::<String>::new()
+        );
         // With 4 it stands only on an aura's health (C #42 Transmutable Toxins' +1/+1 a Plague Counter):
         // the Spell destroys the aura's card, and the state check the Unit.
         find_instance_mut(&mut before, &id)
             .expect("the immune Unit")
             .damage = 4;
         assert_eq!(i21(&before, &death, &gone), Vec::<String>::new());
+    }
+
+    #[test]
+    fn r4604007_a_unit_evolving_by_its_own_evolves_when_is_no_spell_s_and_i21_allows_it() {
+        use crate::rules::fixtures::evolution::{PINGER, ZERO, register_evolution_fixtures};
+
+        let mut state = playing("r4604007");
+        register_evolution_fixtures();
+        let zero = put(&mut state, ZERO, slot(P2, Row::Units, 1), json!({})).id;
+        let pinger = put(&mut state, PINGER, slot(P2, Row::Units, 2), json!({})).id;
+        for id in [&zero, &pinger] {
+            find_instance_mut(&mut state, id)
+                .expect("on the field")
+                .granted_keywords
+                .push(Keyword::ImmuneToSpells);
+        }
+        let evolved = |id: &str, def_id: &str| -> GameEvent {
+            json_as(json!({ "type": "evolved", "player": "p2", "instanceId": id, "defId": def_id }))
+        };
+        // A Spell fills its controller's hand with (0) cards, and the settled state check evolves the
+        // Unit by its own "Evolves when your hand holds 3 (0) cards" (C+ #49 Jay Fungus's shape).
+        assert_eq!(
+            i21(&state, &[marker(SPELL), evolved(&zero, ZERO)], &state),
+            Vec::<String>::new()
+        );
+        // A Unit with no such condition evolves only by a verb: in a Spell's run, a reach.
+        only(
+            &i21(&state, &[marker(SPELL), evolved(&pinger, PINGER)], &state),
+            &pinger,
+            &["I21", "evolved"],
+        );
+    }
+
+    #[test]
+    fn r4604008_a_burn_s_removal_at_a_turn_s_end_is_its_tick_s_and_i21_allows_it() {
+        let (state, id) = immune_board("r4604008");
+        let cleared: GameEvent =
+            json_as(json!({ "type": "counterChanged", "instanceId": id, "counter": "burn", "value": 0 }));
+        let turn_ended: GameEvent =
+            json_as(json!({ "type": "turnEnded", "player": "p1", "turn": 1, "unspentMana": 0 }));
+        let turn_started: GameEvent = json_as(json!({ "type": "turnStarted", "player": "p2", "turn": 2 }));
+        // After the turn's `turnEnded`, inside a hand Spell's "whenever" run, the Burn's removal with no
+        // hit of its own before it (a tick of 0 shows nothing; a damage chain's echoes may come between).
+        assert_eq!(
+            i21(
+                &state,
+                &[turn_ended.clone(), marker(SPELL), cleared.clone()],
+                &state
+            ),
+            Vec::<String>::new()
+        );
+        // A step that resumes a turn's end, its `turnEnded` an earlier step's.
+        let mut ending = state.clone();
+        ending.phase = Phase::End;
+        assert_eq!(
+            i21(&ending, &[marker(SPELL), cleared.clone()], &ending),
+            Vec::<String>::new()
+        );
+        // Once the next turn has started, or outside a turn's end, the removal is the Spell's.
+        only(
+            &i21(
+                &state,
+                &[turn_ended, turn_started, marker(SPELL), cleared.clone()],
+                &state,
+            ),
+            &id,
+            &["I21", "counterChanged"],
+        );
+        only(
+            &i21(&state, &[marker(SPELL), cleared], &state),
+            &id,
+            &["I21", "counterChanged"],
+        );
     }
 
     #[test]

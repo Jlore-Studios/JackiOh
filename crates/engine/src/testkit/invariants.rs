@@ -105,10 +105,11 @@
 //!      (R4508004), a `radiantSet` under Tears of the Kwzki Tree's world (R4508003), the state check's
 //!      switch out of a barred Defense and a Burn or Toxic tick (R4508005), the state check's `destroyed`
 //!      in a run after another of the step, an `exiled` while an exile aura stands or a Black Hole is
-//!      open and a Burn tick a Divine Shield takes (R4604004), and the `destroyed` of a Unit only an
-//!      aura's health held up as the step began (R4604006). A Unit is judged only while still on the
-//!      field and immune after the step, or gone from it with its own keywords immune until a
-//!      `rolledBack` restores its side (R4604005). Reads the events and the catalog, never
+//!      open and a Burn tick a Divine Shield takes (R4604004), the `destroyed` of a Unit an aura's change
+//!      kills (R4604006), the `evolved` of a Unit by its own "Evolves when …" (R4604007), and a Burn's
+//!      removal anywhere in a turn's end (R4604008). A Unit is judged only while still on the field and
+//!      immune after the step, or gone from it with its own keywords immune until a `rolledBack` restores
+//!      its side (R4604005). Reads the events, the catalog and the scripts' standing rules, never
 //!      `restrictions::unaffected_by`; I14's branches and each Duos duel run it.
 //!   I22 every `target` pick is one its source may aim at (§10.5 step 1, R450; #4540): no Dormant card,
 //!      whatever the source or none (R1839000); no face-up Evasive card in play from a Spell or Field
@@ -1383,6 +1384,9 @@ struct ImmuneStep {
     hole: bool,
     /// R4604004: an exile aura standing as the step begins (R1850002), which exiles at each state check.
     exile_aura: bool,
+    /// R4604008: the step begins inside a turn's end (`Phase::End`: an answer step resuming it), where the
+    /// Burn tick may still come.
+    ending: bool,
 }
 
 /// I21: the state a step begins on, as I21 reads it: every Unit on either field (`zones::active_units_of`,
@@ -1423,6 +1427,7 @@ fn immune_step(state: &GameState) -> ImmuneStep {
         pending_instance: resume.and_then(|resume| resume.instance_id.clone()),
         hole: state.black_hole.is_some(),
         exile_aura: crate::card_on_card::exile_aura_stands(state),
+        ending: state.phase == Phase::End,
     }
 }
 
@@ -1568,13 +1573,17 @@ fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, next: Option<&GameE
 /// - a `radiantSet` while Tears of the Kwzki Tree's world holds every card Radiant (R4508003, R4454001);
 /// - the game's own rules that run inside the Spell's run with no marker (R4508005): §4.5 step 1's
 ///   switch out of Defense of a Unit the board bars from it (`forbidden_defense`, I17's), and a Burn or
-///   Toxic tick (`ticks_on`), a Burn tick a Divine Shield takes among them (R4604004);
+///   Toxic tick (`ticks_on`), a Burn tick a Divine Shield takes among them (R4604004), and a Burn's
+///   removal anywhere in a turn's end, from its `turnEnded` to the next `turnStarted` (R4604008), where
+///   its tick's hit may show nothing (a hit of 0) or a damage chain's echoes may come between;
 /// - the state check's other rules (R4604004): a `destroyed` in a run that began after another marker
 ///   of the step, or that the step resumed (`ImmuneRun::inherited`: an earlier run may have doomed it),
 ///   and an `exiled` while an exile aura stands (R1850002: as the step begins or ends, or once a card
-///   carrying one arrives) or a Black Hole is open (R4440050); and a `destroyed` of a Unit that only an
-///   aura's health held up as the step began (`ImmuneMark::propped`, R4604006), which dies at the state
-///   check once the aura goes, whatever took it away.
+///   carrying one arrives) or a Black Hole is open (R4440050); a `destroyed` of a Unit that only an
+///   aura's health held up as the step began (`ImmuneMark::propped`), which dies at the state check once
+///   the aura goes, whatever took it away, or that died at a max health of 0 or less, which only a stat
+///   change brings and a Spell's change to it would show in an event of its own (R4604006); and an
+///   `evolved` of a Unit whose own text holds an "Evolves when …" condition (R4604007, R3536001).
 ///
 /// A `cardResolved` whose `cardPlayed` the step never saw ends the run, and a card announced face-down
 /// runs as a Trap under the id it is played as (R4604003). A `rolledBack` releases the Units of the sides
@@ -1617,6 +1626,9 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
     // R4604004: the markers met so far, `Some(source)` for a hook or a trap and `None` for an attack, a
     // turn edge, the AI's turn or a resumed run: a run after another's may meet the deaths it doomed.
     let mut marked: Vec<Option<&str>> = Vec::new();
+    // R4604008: inside a turn's end, from its `turnEnded` (or a step resuming it) to the next turn's
+    // `turnStarted`, where every Burn ticks and is removed (`afflictions::tick_burn_at_turn_end`).
+    let mut turn_end = step.ending;
     if step.pending_def.is_some() {
         marked.push(None);
     }
@@ -1674,6 +1686,12 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
             GameEvent::TurnStarted { .. }
             | GameEvent::TurnEnded { .. }
             | GameEvent::AutopilotEngaged { .. } => {
+                // R4604008: from a `turnEnded` to the next `turnStarted` is the turn's end.
+                match event {
+                    GameEvent::TurnEnded { .. } => turn_end = true,
+                    GameEvent::TurnStarted { .. } => turn_end = false,
+                    _ => {}
+                }
                 marked.push(None);
                 run = ImmuneRun::NONE;
                 continue;
@@ -1768,6 +1786,12 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 {
                     true
                 }
+                // R4604008: a Burn's removal at a turn's end is its tick's, whatever the tick's hit showed.
+                GameEvent::CounterChanged {
+                    counter: crate::wire::CounterKind::Burn,
+                    value: 0,
+                    ..
+                } if turn_end => true,
                 // R4508001: a board move carries it whole, or bounces it on the way.
                 GameEvent::ControlChanged { .. } | GameEvent::Bounced { .. } => run.window.is_some(),
                 // R4508001: Bogos Binted's Radiant face rebuilds its side Radiant (R4454002); R4508003:
@@ -1776,8 +1800,12 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 // R4508004: a lane the board loses; R4604004: an exile aura's or a Black Hole's exile.
                 GameEvent::Exiled { .. } => run.takes_lane || hole || exile_aura,
                 // R4604004: the state check's death of a Unit an earlier run of the step doomed;
-                // R4604006: or of one an aura's health held up, whatever took the aura away.
-                GameEvent::Destroyed { .. } => run.inherited || mark.propped,
+                // R4604006: or of one an aura's health held up, whatever took the aura away, or one an
+                // aura's change brought to a max health of 0 or less.
+                GameEvent::Destroyed { max_health, .. } => run.inherited || mark.propped || *max_health <= 0,
+                // R4604007: the settled state check evolving a Unit by its own "Evolves when …".
+                GameEvent::Evolved { .. } => find_instance(after, id)
+                    .is_some_and(|card| crate::scripts::script_of(after, card).evolves_when.is_some()),
                 // R4508005: §4.5 step 1 switches it out of a Defense Position the board bars it from.
                 GameEvent::PositionSwitched {
                     position: Position::Atk,
@@ -3111,10 +3139,6 @@ pub fn listed_refused(
                         .chain(slumber_reach_findings(&slumber, &result.events, &result.state))
                         .chain(immune_reach_findings(&immune, &result.events, &result.state));
                     for finding in branch {
-                        eprintln!(
-                            "TMPDEBUG4604 {}",
-                            serde_json::to_string(&result.events).unwrap_or_default()
-                        );
                         found.push(format!(
                             "I14 branch: after {player} sent {sent} (listed, not played) on turn {} (seed {}): {finding}",
                             state.turn, state.seed

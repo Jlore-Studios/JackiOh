@@ -662,10 +662,6 @@ where
             broken.extend(monitor.hidden(&state));
         }
         if let Some(first) = broken.first() {
-            eprintln!(
-                "TMPDEBUG4604 {}",
-                serde_json::to_string(&result.events).unwrap_or_default()
-            );
             return Err(format!("at step {}: {first}", log.len()));
         }
 

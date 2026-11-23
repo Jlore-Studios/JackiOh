@@ -1620,10 +1620,6 @@ fn play_game_with_options(
             broken.extend(monitor.listed(&state, probe));
         }
         if let Some(first) = broken.first() {
-            eprintln!(
-                "TMPDEBUG4604 {}",
-                serde_json::to_string(&result.events).unwrap_or_default()
-            );
             return Err(FuzzFailure::new(
                 FailureStage::Invariant,
                 first.clone(),
