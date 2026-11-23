@@ -17102,19 +17102,18 @@
     "what": "plan #4542 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-23T01:00:52Z",
+    "at": "2026-11-23T01:13:38Z",
     "notes": [
-      "#4516: `claude-3` can start again, so its hold is lifted",
-      "delivered build #4510 on claude-6 (run 45084353816): built",
-      "delivered plan #4513 on agy (run 45077612973): failed",
-      "started review #4543 on claude-6 (run 45092370872)",
-      "started build #4516 on claude-3 (run 45092422898)",
-      "started plan #4513 on agy (run 45092477152)",
-      "started revise #4532 on muse (run 45092546905)",
-      "started review #4531 on claude-3 (run 45092593831)",
+      "#4540 needs a plan",
+      "#4542 needs a plan",
+      "delivered review #4531 on claude-3 (run 45092593831): reviewed",
+      "delivered plan #4513 on agy (run 45092477152): planned",
+      "started build #4513 on agy (run 45093596438)",
+      "started plan #4544 on muse (run 45093645053)",
+      "started plan #4540 on muse (run 45093699708)",
+      "started plan #4542 on muse (run 45093755555)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
+      "#4544: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17820,7 +17819,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T01:00:52Z",
+  "loop_tick": "2026-11-23T01:13:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
