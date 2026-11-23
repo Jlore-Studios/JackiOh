@@ -19473,6 +19473,13 @@
     "4621": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-23T20:07:11Z",
+        "difficulty": "hard",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Rule 4: it adds a database migration (crates/server/migrations/0100); it also needs the server, both stores and the web to agree on the deleted-opponent shape (rule 3)."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
