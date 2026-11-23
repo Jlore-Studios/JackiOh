@@ -18865,6 +18865,13 @@
     "4614": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-23T17:58:07Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "medium for the rest: one app's presentation-only list windowing, no engine rules, AI, cross-crate design, migration, or 40-file scale"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
