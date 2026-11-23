@@ -40572,6 +40572,9 @@
   "usage_spool": {
     "readings": [
       "2026-11-23T05:51:49Z,muse,usage-command,before,45120386011,3,2026-11-23T06:59:00Z,2,2026-11-30T00:00:00Z,allowed,100,100,"
+    ],
+    "runs": [
+      "2026-11-23T05:57:08Z,45120386011,muse,muse-spark-1.3-contributor,suggest,,,suggested,,5.2,0,0,0,,3,3,2,2,,,none,,1"
     ]
   },
   "version": 1
