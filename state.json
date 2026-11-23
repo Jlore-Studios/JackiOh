@@ -40351,6 +40351,12 @@
         "number": 4640,
         "title": "Patch: every daily-only test's named per-PR stand-in must exist",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T22:57:23Z",
+        "number": 4639,
+        "title": "Patch: a fused-pair skip that stops failing fails the sweep",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
