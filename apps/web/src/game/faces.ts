@@ -14,6 +14,7 @@ import { useMemo } from "react";
 import type { CardDef, CardType, CardView, PlayerView } from "@jackioh/shared";
 
 import { faceModel, type FaceModel, type RolledPower } from "../cards/index.ts";
+import type { FaceSource } from "../cards/model.ts";
 import type { NamedTally } from "../cards/tallies.ts";
 import { getLocale, useLocale } from "../i18n/i18n.ts";
 import { face } from "../wasm/index.ts";
@@ -60,6 +61,31 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   });
   if (answer.answer !== "face") throw new Error(`the face model answered ${answer.answer} for a card`);
   return answer.face;
+}
+
+/**
+ * #4511: `faceModel` for a printed card memoized on exactly the inputs it takes, as `useLiveFace`
+ * does for a card in play: a `FaceSource` is a fresh object per render, so the memo keys on its
+ * stable contents (`def` from the module catalog, scalar fields, the small `live`/`inPlay` objects
+ * by value, `tags` by value) and the reader's language (R711000), never on `def` by value. A hover,
+ * scroll or keystroke re-render reuses the same face object, so `memo(CardFace)` skips; a language
+ * switch rebuilds every face.
+ */
+export function useFaceModel(source: FaceSource): FaceModel {
+  const { defId, def, name, type, radiant, liveCost, liveEmbiggenCost, fixedX, live, inPlay, chinese, tags } = source;
+  // A language change recomputes the face, as CardFace's labels redraw.
+  const locale = useLocale();
+  const tagsKey = (tags ?? []).join("\n");
+  const liveKey = JSON.stringify(live ?? null);
+  const inPlayKey = JSON.stringify(inPlay ?? null);
+  return useMemo(
+    () => faceModel({ defId, def, name, type, radiant, liveCost, liveEmbiggenCost, fixedX, live, inPlay, chinese, tags }),
+    // `source` and the `tags` array are fresh objects per render; the deps key on their stable
+    // contents instead, so an unchanged card never crosses again. The callback still reads them
+    // through `source`/`tags`, which is sound because a dep change always recomputes with the
+    // latest render's values.
+    [def, defId, name, type, radiant, liveCost, liveEmbiggenCost, fixedX, liveKey, inPlayKey, chinese, tagsKey, locale],
+  );
 }
 
 /**

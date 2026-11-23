@@ -18,7 +18,7 @@
 // Cards and Tokens tabs' "Plain text" button prints each card they list, and the drill-down's text and its
 // Reference cards, as readable text, no face (PlainText.tsx).
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { KEYWORD_KINDS, SHIPPED_SETS, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
 import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
@@ -30,6 +30,7 @@ import { useCardSettings } from "../cards/settings.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { Dialog } from "../game/Dialog.tsx";
 import { currentCatalog } from "../game/currentCatalog.ts";
+import { useFaceModel } from "../game/faces.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   cardStatsPath,
@@ -140,15 +141,39 @@ function plainCardOf(id: string): ReactElement | null {
   return def === undefined ? null : <PlainCard def={def} />;
 }
 
-/** R4083000: a Created card's face in the Grid, as the deck grid draws a deck card's; null for an id the catalog holds no card of. */
-function gridFaceOf(id: string): ReactElement | null {
-  const def = catalog()[id];
+/**
+ * #4511: one grid card's face, built once per card (the deck builder's `PoolCard`, #2266): the memo
+ * holds it across the search box's keystrokes, and the hook rebuilds it on a language switch
+ * (R711000). Null for an id the catalog holds no card of.
+ */
+const StatsGridFace = memo(function StatsGridFace({ defId }: { defId: string }): ReactElement | null {
+  const def = catalog()[defId];
   if (def === undefined) return null;
+  return <StatsGridFaceInner defId={defId} def={def} />;
+});
+
+function StatsGridFaceInner({ defId, def }: { defId: string; def: CardDef }): ReactElement {
+  const face = useFaceModel({ defId, def, radiant: false });
   return (
     <div className="stats-grid-face">
-      <CardFace face={faceModel({ defId: id, def, radiant: false })} layout="full" lazyArt />
+      <CardFace face={face} layout="full" lazyArt />
     </div>
   );
+}
+
+/** #4511: a drill-down token's face, built once per token, as the grid card's face is. */
+const StatsDrillDownTokenFace = memo(function StatsDrillDownTokenFace({ def }: { def: CardDef }): ReactElement {
+  const face = useFaceModel({ defId: def.id, def, radiant: false });
+  return (
+    <span className="stats-drilldown-token-face">
+      <CardFace face={face} layout="full" lazyArt />
+    </span>
+  );
+});
+
+/** R4083000: a Created card's face in the Grid, as the deck grid draws a deck card's; null for an id the catalog holds no card of. */
+function gridFaceOf(id: string): ReactElement | null {
+  return <StatsGridFace defId={id} />;
 }
 
 /**
@@ -660,9 +685,16 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
 
   const drillDownDef = cardDrillDownId ? catalog()[cardDrillDownId] : undefined;
-  const drillDownFace = drillDownDef ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: false }) : null;
-  const drillDownRadiantFace =
-    drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null;
+  // #4511: built once per card, so a keystroke elsewhere on the page never rebuilds the open drill-down's faces.
+  const drillDownFace = useMemo(
+    () => (drillDownDef ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: false }) : null),
+    [drillDownDef, locale],
+  );
+  const drillDownRadiantFace = useMemo(
+    () =>
+      drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null,
+    [drillDownDef, drillDownRadiant, locale],
+  );
   const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
   // R3887000: every card its text names, for the breakdown's Reference cards while Plain text is on.
   const drillDownRefs = drillDownDef ? referencesOf(drillDownDef) : [];
@@ -984,9 +1016,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
             ) : view === "grid" ? (
               <ul className={`stats-grid${plain.shown ? " stats-grid--plain" : ""}`} data-testid={statsTestid.cardsGrid}>
                 {filteredCards.map((card) => {
-                  const def = catalog()[card.id];
                   const plainCard = plain.shown ? plainCardOf(card.id) : null;
-                  const face = def && plainCard === null ? faceModel({ defId: card.id, def, radiant: false }) : null;
 
                   return (
                     <li key={card.id} className="stats-grid-item" data-card-id={card.id}>
@@ -996,12 +1026,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         onClick={(e) => openDrillDown(card.id, e.currentTarget)}
                         aria-label={shownName(card.id, card.name)}
                       >
-                        {plainCard ??
-                          (face && (
-                            <div className="stats-grid-face">
-                              <CardFace face={face} layout="full" lazyArt />
-                            </div>
-                          ))}
+                        {plainCard ?? <StatsGridFace defId={card.id} />}
                       </button>
                       <dl className="stats-grid-figures">
                         <dt>{t("Tier")}</dt>
@@ -1630,9 +1655,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                                 onClick={followInApp(paths.almanacCard(token.id))}
                                 aria-label={t("View {name} in the Almanac", { name: readerName(token) })}
                               >
-                                <span className="stats-drilldown-token-face">
-                                  <CardFace face={faceModel({ defId: token.id, def: token, radiant: false })} layout="full" lazyArt />
-                                </span>
+                                <StatsDrillDownTokenFace def={token} />
                                 <span className="stats-drilldown-token-name">{readerName(token)}</span>
                               </a>
                             </li>

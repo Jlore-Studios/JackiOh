@@ -28,14 +28,13 @@ import { MenuShell } from "../shell/MenuShell.tsx";
 import LandingRoute from "./landing.tsx";
 import {
   EVEN,
+  corePool,
   shippedPool,
   dealLandingFan,
-  fanPool,
   favoringFullArt,
   featureWeight,
   fitsTheFan,
   rotateFan,
-  rotationPool,
   type FanFace,
   type RandomSource,
 } from "./landingFan.ts";
@@ -48,9 +47,9 @@ const { App } = await import("../main.tsx");
 const FAN_CARDS = 5;
 
 /** R1017002: the page's deal and swap below R639's threshold, with full art on (the default). */
-const coreDeal = (random: RandomSource): FanFace[] => dealLandingFan(random, fanPool(true), favoringFullArt(EVEN, true));
+const coreDeal = (random: RandomSource): FanFace[] => dealLandingFan(random, corePool(), favoringFullArt(EVEN, true), true);
 const coreSwap = (hand: readonly FanFace[], slot: number, random: RandomSource): FanFace[] =>
-  rotateFan(hand, slot, random, fanPool(true), favoringFullArt(EVEN, true));
+  rotateFan(hand, slot, random, corePool(), favoringFullArt(EVEN, true), true);
 
 /** A stubbed round trip can outrun the 1 s default under load. */
 const SLOW = { timeout: 5_000 } as const;
@@ -528,7 +527,7 @@ describe("R639 the homescreen rotation", () => {
     render(<LandingRoute random={seeded(5)} />);
 
     const mirror = seeded(5);
-    let expected = dealLandingFan(mirror, rotationPool(true), favoringFullArt(featureWeight, true));
+    let expected = dealLandingFan(mirror, shippedPool(), favoringFullArt(featureWeight, true), true);
     expect(shownIds()).toEqual(expected.map(({ def }) => def.id));
 
     for (const slot of [0, 1, 2, 3, 0]) {
@@ -536,7 +535,7 @@ describe("R639 the homescreen rotation", () => {
       act(() => {
         vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
       });
-      expected = rotateFan(expected, slot, mirror, rotationPool(true), favoringFullArt(featureWeight, true));
+      expected = rotateFan(expected, slot, mirror, shippedPool(), favoringFullArt(featureWeight, true), true);
       const after = shownIds();
       expect(after).toEqual(expected.map(({ def }) => def.id));
       expect(after.filter((id, at) => id !== before[at])).toHaveLength(1);

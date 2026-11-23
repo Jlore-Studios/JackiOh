@@ -34,7 +34,7 @@ mod tests {
     const MENACE: &str = "core-019"; // Midrange Menace: Taunt. End of turn: heal to full. Radiant: Immutable.
     const SURGERY: &str = "core-063"; // Plastic Surgery: Give target Unit +attack/+health and 1 random keyword.
     const VANILLA: &str = "core-008"; // Mr. Vanilla
-    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +2 attack, Rush and First Strike.
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +1 attack, Rush and First Strike.
     const SHEEPISH: &str = "core-041"; // Sheepish: transforms the opponent's played Unit
     const TESLA: &str = "classic-005"; // Tesla: Animated Field Trap: fires when the opponent summons a Unit
     const FROSTSPATULA: &str = "classicplus-012-8"; // Frostspatula: Field Spell token: Animated on your turn, Rush.
@@ -192,7 +192,7 @@ mod tests {
         fn r407_a_vanilla_field_spell_s_aura_stops() {
             crate::register_all();
             let mut s = setup(json!({ "field": [VANILLA], "backrow": [WEAPONS] }), json!({}), true);
-            s.expect_stats(VANILLA, json!({ "attack": 6 }));
+            s.expect_stats(VANILLA, json!({ "attack": 5 }));
 
             let weapons = s.card(WEAPONS).id.clone();
             s.play(SILENCE, json!({ "targets": pick::id(&weapons) }));

@@ -1,8 +1,8 @@
 //! Board geometry: the Black Hole and the slashed board (Stinkyscape+, issue #3554,
 //! R3554000–R3554004). The Black Hole occupies the middle lane on both sides: anything standing
-//! there is exiled, and at the start of each player's turn their permanents step one lane toward
-//! it. The slashed board voids one lane and halves the rest, and a rule reaching across the slash
-//! stops there.
+//! there is exiled, and at the start of each player's turn (or, for a hole opened `at_end`, at the
+//! end of it, R4440050) their permanents step one lane toward it. The slashed board voids one lane and
+//! halves the rest, and a rule reaching across the slash stops there.
 
 use serde::{Deserialize, Serialize};
 
@@ -66,6 +66,10 @@ pub struct BlackHole {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub capacity: Option<i32>,
+    /// R4440050: it pulls at the end of each pulled player's turn, not the start. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub at_end: Option<bool>,
 }
 
 impl BlackHole {
@@ -76,7 +80,13 @@ impl BlackHole {
             swallowed: None,
             pulls,
             capacity: None,
+            at_end: None,
         }
+    }
+
+    /// R4440050: whether it pulls at the end of a turn rather than the start.
+    pub fn pulls_at_end(&self) -> bool {
+        self.at_end == Some(true)
     }
 
     /// How many permanents the hole has swallowed.
@@ -280,12 +290,28 @@ fn place_contents(state: &mut GameState, cards: &[CardInstance], carried: Option
     }
 }
 
-/// R3554001: at the start of `player`'s turn the hole draws their permanents one lane toward it.
+/// R3554001: at the start of `player`'s turn the hole draws their permanents one lane toward it,
+/// unless it pulls at the end of turns (`pull_at_turn_end`).
+pub fn pull_at_turn_start(sink: &mut EngineSink<'_>, player: PlayerId) {
+    if sink.state.black_hole.is_some_and(|hole| !hole.pulls_at_end()) {
+        pull(sink, player);
+    }
+}
+
+/// R4440050: at the end of `player`'s turn a hole opened `at_end` draws their permanents one lane
+/// toward it, as `pull_at_turn_start` does at the start for any other.
+pub fn pull_at_turn_end(sink: &mut EngineSink<'_>, player: PlayerId) {
+    if sink.state.black_hole.is_some_and(|hole| hole.pulls_at_end()) {
+        pull(sink, player);
+    }
+}
+
+/// R3554001: the hole draws `player`'s permanents one lane toward it, when it pulls theirs.
 /// Each row walks the lanes nearest the hole first; a card whose shifted lanes reach the hole is
 /// exiled and counted as in `swallow_standing`, one whose newly entered slots all take a move (or
 /// are covered by the card itself) steps whole, and any other stays. Nothing here runs the state
 /// check. Dormant tops and covered zones are passed by.
-pub fn pull_at_turn_start(sink: &mut EngineSink<'_>, player: PlayerId) {
+fn pull(sink: &mut EngineSink<'_>, player: PlayerId) {
     if sink.state.result.is_some() {
         return;
     }

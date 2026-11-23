@@ -5,8 +5,9 @@
 //!
 //! It is no Resource (`paysCredits`, R4410000): played or discarded from its owner's hand, it pays its
 //! quote in Credits as a Resource does (R2250001), the Marketplace's this turn while it is open (quoted
-//! after the Resources', R1853002), else one draw in `HAND_SALE_PRICE`, 4–13, Radiant 8–25 (since issue
-//! #4154's "~25% more", R4154206; 3–10 and 6–20 before, a Rare Resource's), shown in braces on it in
+//! after the Resources', R1853002), else one draw in `HAND_SALE_PRICE`, 5–15, Radiant 9–29 (since issue
+//! #4440's "~15% more", R4440001; 4–13 and 8–25 from issue #4154's "~25% more", R4154206; 3–10 and 6–20
+//! before, a Rare Resource's), shown in braces on it in
 //! hand while the Marketplace is open (R3047004); a cast by an effect pays nothing. Until issue #4410 it
 //! sold from the hand instead (R1861000). Played, it Discovers (§6.3) a non-token Stinkyscape card: the
 //! pool names the set, so R1420's gate would not empty it were the set held (R380), and the Discover
@@ -75,6 +76,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
     const OPENING_CREDITS: i32 = 10;
+    /// A Rare Resource, whose range Spice's was until issue #4154 (R1861000).
+    const GELLIUM: &str = "stinkyscape-t-gellium"; // Gellium
 
     fn spice(seed: &str, radiant: bool) -> Scenario {
         scenario(json!({
@@ -281,12 +284,25 @@ mod tests {
         assert_eq!(def.rarity, Rarity::Rare);
     }
 
-    /// R4154206: issue #4154's "~25% more": a Rare Resource's 3 to 10 (Radiant 6 to 20), each end a
-    /// quarter higher, rounded to the nearest Credit.
+    /// `percent` of `credits`, rounded to the nearest Credit, a half up, as R4154206 and R4440001 round.
+    fn raised(credits: i32, percent: i32) -> i32 {
+        (credits * percent + 50) / 100
+    }
+
+    /// R4154206, R4440001: issue #4154's "~25% more" took a Rare Resource's 3 to 10 (Radiant 6 to 20) to 4
+    /// to 13 (8 to 25), each end a quarter higher, rounded to the nearest Credit, a half up; issue #4440's
+    /// "~15% more" raises each end of that by 15%, rounded the same way: 5 to 15 (Radiant 9 to 29).
     #[test]
-    fn r4154206_it_sells_for_a_quarter_more_than_a_rare_resource() {
-        assert_eq!((HAND_SALE_PRICE.sell_min, HAND_SALE_PRICE.sell_max), (4, 13));
-        assert_eq!((HAND_SALE_RADIANT_PRICE.sell_min, HAND_SALE_RADIANT_PRICE.sell_max), (8, 25));
+    fn r4440001_r4154206_it_pays_15_percent_more_than_the_quarter_above_a_rare_resource() {
+        let gellium = card_def(GELLIUM).resource.expect("Gellium's prices");
+        let ends = |price: ResourcePrice| [price.sell_min, price.sell_max];
+        let quarter = |price: ResourcePrice| ends(price).map(|end| raised(end, 125));
+        assert_eq!(quarter(gellium.base), [4, 13]);
+        assert_eq!(quarter(gellium.radiant), [8, 25]);
+        assert_eq!(ends(HAND_SALE_PRICE), quarter(gellium.base).map(|end| raised(end, 115)));
+        assert_eq!(ends(HAND_SALE_RADIANT_PRICE), quarter(gellium.radiant).map(|end| raised(end, 115)));
+        assert_eq!(ends(HAND_SALE_PRICE), [5, 15]);
+        assert_eq!(ends(HAND_SALE_RADIANT_PRICE), [9, 29]);
     }
 
     #[test]

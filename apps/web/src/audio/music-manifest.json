@@ -2366,6 +2366,18 @@
       "loopEnd": null,
       "handoff": 5.496183
     },
+    "intro-stinkyscapeplus-004-1": {
+      "hash": "cf77157513df7c7e",
+      "bytes": 73049,
+      "bpm": 122,
+      "beatsPerBar": 4,
+      "loop": false,
+      "intro": 5.901639,
+      "duration": 7.101639,
+      "loopStart": null,
+      "loopEnd": null,
+      "handoff": 5.901639
+    },
     "intro-stinkyscapeplus-005": {
       "hash": "71dd597276b0dd0c",
       "bytes": 73023,

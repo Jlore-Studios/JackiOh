@@ -3233,7 +3233,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "10",
         "Double Counting",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[],
         R::Epic,
@@ -5001,7 +5001,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "12",
         "Otherworldly Nightmare",
-        c(3),
+        c(4),
         T::Spell,
         &[G::Otherworldly],
         R::Epic,
@@ -5651,8 +5651,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Rare,
-        st(4, 6),
-        st(8, 12),
+        st(2, 5),
+        st(4, 10),
     ),
     row("77", "Yuma", c(2), T::Unit, &[], R::Epic, st(1, 8), st(2, 16)),
     row("78", "Ozark", c(3), T::Unit, &[], R::Epic, st(4, 4), st(8, 8)),
@@ -6210,8 +6210,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Legendary,
-        st(9, 9),
-        st(18, 18),
+        st(7, 7),
+        st(14, 14),
     ),
     row(
         "137.1",
@@ -7553,12 +7553,23 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "4",
         "Profe Yates",
-        c(4),
+        c(2),
         T::Unit,
         &[G::Human, G::Felinor, G::Catalyst, G::Acclaimed],
         R::Legendary,
-        st(7, 7),
-        st(14, 14),
+        st(3, 7),
+        st(6, 14),
+    ),
+    // R4440004: its Prime, which its Death shuffles in since issue #4440.
+    row(
+        "4.1",
+        "Profe Yates Prime",
+        c(2),
+        T::Unit,
+        &[G::Human, G::Felinor, G::Acclaimed, G::Prime, G::Token],
+        R::Token,
+        st(6, 6),
+        st(12, 12),
     ),
     row(
         "5",
@@ -8509,7 +8520,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "97",
         "Selective Enrollment",
-        c(5),
+        c(6),
         T::Spell,
         &[],
         R::Common,
@@ -8743,8 +8754,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Mindustrial, G::AutomaGamma],
         R::Common,
-        st(3, 1),
-        st(6, 2),
+        st(2, 1),
+        st(4, 2),
     ),
     row(
         "121",
@@ -8989,7 +9000,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "139",
         "Operation Omega",
-        emb(2, 4),
+        emb(1, 3),
         T::Spell,
         &[G::Mindustrial],
         R::Legendary,
@@ -9159,7 +9170,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "154",
         "Chaos Accelerator",
-        c(2),
+        c(3),
         T::Unit,
         &[],
         R::Epic,
@@ -9206,7 +9217,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         NO_STATS,
         NO_STATS,
     ),
-    row("159", "Raven", c(0), T::Unit, &[], R::Rare, st(1, 1), st(2, 2)),
+    row("159", "Raven", c(0), T::Unit, &[], R::Rare, st(2, 2), st(4, 4)),
     row(
         "160",
         "Icarus",
@@ -11106,7 +11117,8 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                 landed(&["meditativeplus-016"]),
                 // R1857000: Stinkyscape #147 IN33DH3.
                 landed(&["stinkyscape-147"]),
-                // R3535000: Stinkyscape+ #4 Profe Yates (no Prime token: its Death makes none).
+                // R3535000: Stinkyscape+ #4 Profe Yates, whose Death shuffles in its #4.1 Prime since issue
+                // #4440 (R4440004).
                 landed(&["stinkyscapeplus-004"])
             ]
             .concat()
@@ -11127,7 +11139,9 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                 ]),
                 landed(&["meditativeplus-016-1"]),
                 // R1857000: Stinkyscape #147.1 IN33DH3 Prime.
-                landed(&["stinkyscape-147-1"])
+                landed(&["stinkyscape-147-1"]),
+                // R4440004: Stinkyscape+ #4.1 Profe Yates Prime.
+                landed(&["stinkyscapeplus-004-1"])
             ]
             .concat()
         );
@@ -11208,9 +11222,11 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                     "stinkyscape-111",
                     "stinkyscape-115",
                 ]),
-                // R3535000: the Stinkyscape+ set's three, #4 Profe Yates, #5 and #61.
+                // R3535000: the Stinkyscape+ set's three, #4 Profe Yates, #5 and #61, and since issue #4440
+                // #4.1 Profe Yates Prime (R4440004).
                 landed(&[
                     "stinkyscapeplus-004",
+                    "stinkyscapeplus-004-1",
                     "stinkyscapeplus-005",
                     "stinkyscapeplus-061"
                 ])

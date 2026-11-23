@@ -1368,5 +1368,17 @@
     "commit": "e21cea61d46617c1b5a10df6f50ba078c8e2a44e",
     "blob": "42d08aae5d71260715a4a474d0c0151c5ccbbfd6",
     "cardMetricsBlob": "5286cd36d52fb7cf77025c7f8fc4bbf5e6dc9b7d"
+  },
+  {
+    "version": "v0.6.9o",
+    "commit": "8af3d865f00bd01f3c5a567b68a667dbe1acdc04",
+    "blob": "22f32caa61af06acbf1496dfb1e9cf5088d3981a",
+    "cardMetricsBlob": "814d1c74352f7733c172adedbdbbd8da4eea0021"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "05a9f04b0d6f0ccde900729137307b72797ee7fe",
+    "blob": "22f32caa61af06acbf1496dfb1e9cf5088d3981a",
+    "cardMetricsBlob": "814d1c74352f7733c172adedbdbbd8da4eea0021"
   }
 ]

@@ -24,8 +24,8 @@ const SIGNATURE_PENDING: readonly string[] = [
   "stinkyscape-t-propagation-layer", "stinkyscape-t-meltdown-layer",
   "stinkyscape-t-anomaly-found",
   // Stinkyscape+
-  "stinkyscapeplus-003", "stinkyscapeplus-004", "stinkyscapeplus-005", "stinkyscapeplus-007", "stinkyscapeplus-010",
-  "stinkyscapeplus-033", "stinkyscapeplus-045", "stinkyscapeplus-052", "stinkyscapeplus-056", "stinkyscapeplus-064",
+  "stinkyscapeplus-003", "stinkyscapeplus-004", "stinkyscapeplus-004-1", "stinkyscapeplus-005", "stinkyscapeplus-007",
+  "stinkyscapeplus-010", "stinkyscapeplus-033", "stinkyscapeplus-045", "stinkyscapeplus-052", "stinkyscapeplus-056", "stinkyscapeplus-064",
   "stinkyscapeplus-072", "stinkyscapeplus-075", "stinkyscapeplus-075-1", "stinkyscapeplus-077", "stinkyscapeplus-078",
   "stinkyscapeplus-079", "stinkyscapeplus-080", "stinkyscapeplus-081", "stinkyscapeplus-082", "stinkyscapeplus-084",
   "stinkyscapeplus-089", "stinkyscapeplus-090", "stinkyscapeplus-095", "stinkyscapeplus-098", "stinkyscapeplus-106",

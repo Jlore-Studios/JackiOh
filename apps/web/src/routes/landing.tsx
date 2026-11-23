@@ -14,8 +14,8 @@ import { CardBack } from "../cards/CardBack.tsx";
 import { cardDetailChunk, prefetchCardDetail } from "../cards/inspect/cardDetailChunk.ts";
 import { CardFace } from "../cards/CardFace.tsx";
 import { useInspectTrigger } from "../cards/inspect/useInspectTrigger.tsx";
-import { faceModel } from "../cards/model.ts";
 import { readerName } from "../cards/chinese.ts";
+import { useFaceModel } from "../game/faces.ts";
 import { useCardSettings } from "../cards/settings.ts";
 import JlorePill from "../economy/JlorePill.tsx";
 import LanguageButton from "../i18n/LanguageButton.tsx";
@@ -36,12 +36,12 @@ import { PlayerStatsCard } from "../stats/PlayerStatsCard.tsx";
 import { readPlayerStats, usePlayerStats } from "../stats/store.ts";
 import {
   EVEN,
+  corePool,
   dealLandingFan,
-  fanPool,
   favoringFullArt,
   featureWeight,
   rotateFan,
-  rotationPool,
+  shippedPool,
   type FanFace,
   type RandomSource,
 } from "./landingFan.ts";
@@ -173,18 +173,23 @@ function LandingFanSlot({ face, index, onOpen, onHold }: {
   return (
     <div className="landing-fan-slot">
       <LandingFanCard key={face.def.id} def={face.def} radiant={face.radiant} index={index} swapped={leaving !== null} onOpen={onOpen} onHold={onHold} />
-      {leaving === null ? null : (
-        <div
-          key={leaving.def.id}
-          className="landing-fan-card landing-fan-card--leaving"
-          data-testid={landingTestid.fanLeaving}
-          data-def-id={leaving.def.id}
-          data-radiant={leaving.radiant ? "true" : undefined}
-          aria-hidden="true"
-        >
-          <CardFace face={faceModel({ defId: leaving.def.id, def: leaving.def, radiant: leaving.radiant })} />
-        </div>
-      )}
+      {leaving === null ? null : <LeavingGhost key={leaving.def.id} face={leaving} />}
+    </div>
+  );
+}
+
+/** R704's outgoing card as a decorative, inert ghost; its face is built once, as the fan card's is. */
+function LeavingGhost({ face }: { face: FanFace }): ReactElement {
+  const model = useFaceModel({ defId: face.def.id, def: face.def, radiant: face.radiant });
+  return (
+    <div
+      className="landing-fan-card landing-fan-card--leaving"
+      data-testid={landingTestid.fanLeaving}
+      data-def-id={face.def.id}
+      data-radiant={face.radiant ? "true" : undefined}
+      aria-hidden="true"
+    >
+      <CardFace face={model} />
     </div>
   );
 }
@@ -205,7 +210,8 @@ function LandingFanCard({
   onOpen: (def: CardDef) => void;
   onHold: (held: boolean) => void;
 }): ReactElement {
-  const face = faceModel({ defId: def.id, def, radiant });
+  // #4511: built once per card, so hovering or swapping elsewhere never rebuilds it.
+  const face = useFaceModel({ defId: def.id, def, radiant });
   const inspect = useInspectTrigger(
     { key: `landing-fan-${def.id}`, face },
     { hover: false, prefer: "above" },
@@ -618,18 +624,19 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
   // for (#778): the fan is dealt once it is in.
   const engineReady = useEngineReady();
   const [dealt, setHand] = useState<readonly FanFace[] | null>(() =>
+    // #4511: the deal samples the raw pool, checking only the cards it draws, not every card's faces.
     !engineReady
       ? null
       : readPlayerStats().games >= ROTATION_MIN_GAMES
-        ? dealLandingFan(random, rotationPool(fullArt), favoringFullArt(featureWeight, fullArt))
-        : dealLandingFan(random, fanPool(fullArt), favoringFullArt(EVEN, fullArt)),
+        ? dealLandingFan(random, shippedPool(), favoringFullArt(featureWeight, fullArt), fullArt)
+        : dealLandingFan(random, corePool(), favoringFullArt(EVEN, fullArt), fullArt),
   );
   useEffect(() => {
     if (dealt !== null || !engineReady) return;
     setHand(
       readPlayerStats().games >= ROTATION_MIN_GAMES
-        ? dealLandingFan(random, rotationPool(fullArt), favoringFullArt(featureWeight, fullArt))
-        : dealLandingFan(random, fanPool(fullArt), favoringFullArt(EVEN, fullArt)),
+        ? dealLandingFan(random, shippedPool(), favoringFullArt(featureWeight, fullArt), fullArt)
+        : dealLandingFan(random, corePool(), favoringFullArt(EVEN, fullArt), fullArt),
     );
   }, [dealt, engineReady, fullArt, random]);
   const hand = dealt ?? NO_FAN;
@@ -649,8 +656,8 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
         current === null
           ? current
           : fullPool
-          ? rotateFan(current, at, random, rotationPool(fullArt), favoringFullArt(featureWeight, fullArt))
-          : rotateFan(current, at, random, fanPool(fullArt), favoringFullArt(EVEN, fullArt)),
+          ? rotateFan(current, at, random, shippedPool(), favoringFullArt(featureWeight, fullArt), fullArt)
+          : rotateFan(current, at, random, corePool(), favoringFullArt(EVEN, fullArt), fullArt),
       );
     }, ROTATION_INTERVAL_MS);
     return () => {

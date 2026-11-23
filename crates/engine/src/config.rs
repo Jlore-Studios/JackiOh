@@ -1653,19 +1653,20 @@ pub const MARKETPLACE_FIXED_LOT_STOCK: i32 = 1;
 /// (`paysCredits`, Stinkyscape #89 Spice) draws each turn, its base face's, and of the draw its play or
 /// discard makes while the Marketplace is closed: "its price is determined like all other Resources", a
 /// Rare Resource's (Gellium's 3 to 10) through v0.6.6h, and since issue #4154 ("sells for ~25% more")
-/// that range's ends a quarter higher, rounded to the nearest Credit, a half up. Named for the hand sale
-/// it priced until issue #4410 (R1861000). `buy` is never read: such a card is no Resource and its lot,
-/// if any, is priced as a card.
+/// that range's ends a quarter higher, rounded to the nearest Credit, a half up (4 to 13 through
+/// v0.6.9n); since issue #4440 ("sells for ~15% more", R4440001) each end of that 15% higher, rounded the
+/// same way: 5 to 15. Named for the hand sale it priced until issue #4410 (R1861000). `buy` is never
+/// read: such a card is no Resource and its lot, if any, is priced as a card.
 pub const HAND_SALE_PRICE: ResourcePrice = ResourcePrice {
-    sell_min: 4,
-    sell_max: 13,
+    sell_min: 5,
+    sell_max: 15,
     buy: 0,
 };
-/// R4410000, R4154206: `HAND_SALE_PRICE` on the Radiant face, a Radiant Rare Resource's 6 to 20 a quarter
-/// higher.
+/// R4410000, R4154206, R4440001: `HAND_SALE_PRICE` on the Radiant face, a Radiant Rare Resource's 6 to 20
+/// a quarter higher (8 to 25), and that 15% higher: 9 to 29.
 pub const HAND_SALE_RADIANT_PRICE: ResourcePrice = ResourcePrice {
-    sell_min: 8,
-    sell_max: 25,
+    sell_min: 9,
+    sell_max: 29,
     buy: 0,
 };
 

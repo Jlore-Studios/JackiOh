@@ -476,6 +476,7 @@ export const COSMETIC_DEFAULT_LOOKS: Readonly<Record<string, string>> = {
   "stinkyscape-t-shield-layer": "version-full-art",
   "stinkyscapeplus-003": "version-extended-art",
   "stinkyscapeplus-004": "version-extended-art",
+  "stinkyscapeplus-004-1": "version-extended-art",
   "stinkyscapeplus-005": "version-extended-art",
   "stinkyscapeplus-007": "version-extended-art",
   "stinkyscapeplus-010": "version-extended-art",

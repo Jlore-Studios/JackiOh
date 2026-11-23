@@ -10,7 +10,10 @@ use jackioh_ai::*;
 use jackioh_engine::config::{AI_DIFFICULTY, AI_TUTORIAL, DIFFICULTIES};
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, act, all_out_attack, in_graveyard, is_legal, on_field, run_puzzle, trace};
+use super::support::{
+    AI, HUMAN, TWO_GUNS, act, all_out_attack, in_graveyard, install_two_guns, is_legal, on_field, row,
+    run_puzzle, trace,
+};
 
 const TURN: i32 = 9;
 const LIBRARY: &[&str] = &["core-008", "core-011", "core-008", "core-011"];
@@ -604,6 +607,86 @@ mod visible_activations {
         )
         .expect("a reply");
         assert_eq!(winner(&reply), Some(Winner::from(HUMAN)));
+    }
+
+    /// #8 Mr. Vanilla, a vanilla 4/4.
+    const VANILLA: &str = "core-008";
+    /// S #52 Cannon v3: "Activate: Deal 5 damage to an enemy Unit."
+    const CANNON_V3: &str = "stinkyscape-052";
+    /// S #56 Cannon v4: "Activate: Deal 7 damage to an enemy Unit."
+    const CANNON_V4: &str = "stinkyscape-056";
+
+    /// The reply on `state` at the seat, given room for every step.
+    fn replied(state: &GameState) -> GameState {
+        simulate_reply(
+            state,
+            AI,
+            &create_node_counter(60, None),
+            &hidden_card_ids(state, AI),
+            Prices::NONE,
+        )
+        .expect("a reply")
+    }
+
+    /// R4515000: the four tries were the Cannon's first four targets, lanes 1 to 4, so the Greaser in
+    /// lane 5 read as out of its reach; now its best target comes first.
+    #[test]
+    fn r4515000_a_cannon_v4_facing_five_units_destroys_the_most_valuable_in_lane_5() {
+        let state = handed_over(json!({
+            "p1": { "field": row(json!(VANILLA), GREASER) },
+            "p2": { "field": [CANNON_V4] },
+        }));
+        let reply = replied(&state);
+        assert!(
+            in_graveyard(&reply, AI, GREASER),
+            "{:?}",
+            reply.players[AI].graveyard
+        );
+    }
+
+    /// R4515000: facing four 3/6s, the first Cannon's (v3, 5 damage) targets filled every try, so the
+    /// v4 behind it was never tried at lane 5; now each Cannon's best target is tried in turn, and the
+    /// v4's 7 damage on the Greaser is the opponent's best move.
+    #[test]
+    fn r4515000_of_two_cannons_the_reply_fires_the_second_at_the_lane_5_unit() {
+        let state = handed_over(json!({
+            "p1": { "field": row(json!({ "def": VANILLA, "statsOverride": { "attack": 3, "health": 6 } }), GREASER) },
+            "p2": { "field": [{ "def": CANNON_V3, "lane": 1 }, { "def": CANNON_V4, "lane": 2 }] },
+        }));
+        let reply = replied(&state);
+        assert!(
+            in_graveyard(&reply, AI, GREASER),
+            "{:?}",
+            reply.players[AI].graveyard
+        );
+    }
+
+    /// R4515000: a card with two Activates (as a launched Starship or a fused card) had only its first
+    /// tried at four targets; now each ability's best target is, and its 7-damage gun destroys the
+    /// Greaser.
+    #[test]
+    fn r4515000_a_card_with_two_activates_has_both_tried_in_the_reply() {
+        install_two_guns();
+        let state = handed_over(json!({
+            "p1": { "field": row(json!(VANILLA), GREASER) },
+            "p2": { "field": [TWO_GUNS] },
+        }));
+        let abilities: Vec<Option<String>> = legal_actions(&state, HUMAN)
+            .into_iter()
+            .filter_map(|action| match action {
+                ActionBody::Activate { ability, .. } => Some(ability),
+                _ => None,
+            })
+            .collect();
+        for gun in ["ping", "snipe"] {
+            assert!(abilities.contains(&Some(gun.to_string())), "{gun}: {abilities:?}");
+        }
+        let reply = replied(&state);
+        assert!(
+            in_graveyard(&reply, AI, GREASER),
+            "{:?}",
+            reply.players[AI].graveyard
+        );
     }
 
     #[test]

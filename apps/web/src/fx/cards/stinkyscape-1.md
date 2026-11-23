@@ -59,7 +59,7 @@ the Terminus tokens and the Dormant Starship are not in its table and stay on th
 | `stinkyscape-011-1` | Frostbolt | Spell | cast bolt Spirit | 0.97 | bolt | cast: the census agrees (bolt), in Spirit's cold for the Freeze |
 | `stinkyscape-011-2` | Arcane Missiles | Spell | cast barrage Nerd | 0.90 | bolt | cast: its Echo fires a random enemy again and again, hits landing one after another, so barrage over the census's bolt, in Nerd's arcane |
 | `stinkyscape-011-3` | Flame Strike | Spell | cast nova | 1.04 | volley | cast: it hits every enemy Unit at once, one blast over their side, so nova over the census's volley |
-| `stinkyscape-012` | Otherworldly Nightmare | Spell | cast send | 1.55 | none: no motif reads addedToHand | cast: it adds three cards to the hand, which send reads; the census predates send |
+| `stinkyscape-012` | Otherworldly Nightmare | Spell | cast send | 1.65 | none: no motif reads addedToHand | cast: it adds three cards to the hand, which send reads; the census predates send |
 | `stinkyscape-012-1` | Shadow Word Death | Spell | cast bolt Dark/shadow | 0.97 | bolt | cast: the census agrees (bolt), in Dark's shadow |
 | `stinkyscape-012-2` | Shadow Word Pain | Spell | cast scorch Dark/shadow | 0.90 | bolt | cast: the census says bolt; scorch keeps it apart from its pair Shadow Word Death, its target burning down where it stood, in Dark's shadow |
 | `stinkyscape-012-3` | Psychic Scream | Spell | cast wipe | 1.19 | none: no motif reads shuffledIn | unchanged: #2784 gave it wipe, every permanent leaving the board at once; the census's families read damage, removals, counters, costs and returns only |

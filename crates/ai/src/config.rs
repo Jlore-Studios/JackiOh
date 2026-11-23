@@ -486,6 +486,12 @@ pub struct EvalWeights {
     /// puts it back in the deck, so holding it is worth less than a card the seat can play. At 0 nothing
     /// is read.
     pub dead_tradable_discount: f64,
+    /// R4440002: the share of its worth an own hand card that pays Credits as a Resource does as it is
+    /// played or discarded (`pays_credits_like_a_resource`, Stinkyscape #89 Spice, R4410000) loses: it is
+    /// Credits waiting to be cashed, so holding it is worth less than a card kept for its play, and its
+    /// play, the sale, gains the difference (issue #4440, "AI likes to sell spice more often"). The seat's
+    /// own hand only, which it reads. At 0 nothing is read.
+    pub credits_card_discount: f64,
     /// R961, R962: per step a Jade Counter has climbed toward the next threshold it has not crossed. A
     /// crossing's worth is the Jade Beauty it summons or ascends, which `unit_worth` prices.
     pub jade_step: f64,
@@ -713,6 +719,11 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // R4154400: an untuned start, as Temporary's. At a half a dead (5) card (2.5) holds 1.25, under the
     // 1.6 an unseen card is priced at (`opponent_hand_cost`), so the Trade that swaps it reads as a gain.
     dead_tradable_discount: 0.5,
+    // R4440002: an untuned start, as Temporary's and a dead Tradable card's. At a half a Spice in hand
+    // (1.3) holds 0.65, so a cast with a crystal to spare gains 0.65 more than it did, and one that brings
+    // only its Credits (8 of them, 0.24) gains where it lost: 0.24 + 0.8 (the crystal unspent_mana
+    // prices) against 0.65, where it was against 1.3.
+    credits_card_discount: 0.5,
     jade_step: 1.5,
     marked_share: 0.5,
     extra_turn: 5.0,
@@ -823,6 +834,8 @@ const _: () = assert!(AI_EVAL.unit_doomed >= 0.0 && AI_EVAL.unit_doomed <= 1.0);
 const _: () = assert!(AI_EVAL.feng_shui_outlook >= 0.0 && AI_EVAL.feng_shui_outlook <= 1.0);
 // R4154400: a share, so a dead Tradable card is never worth less than nothing.
 const _: () = assert!(AI_EVAL.dead_tradable_discount >= 0.0 && AI_EVAL.dead_tradable_discount <= 1.0);
+// R4440002: a share, so a card that pays Credits is never worth less than nothing in hand.
+const _: () = assert!(AI_EVAL.credits_card_discount >= 0.0 && AI_EVAL.credits_card_discount <= 1.0);
 
 /// R4154402: the cards whose turn hooks destroy every permanent with a Plague Counter that the player whose
 /// turn starts controls (Classic #62 Living Bomb, R400): its start-of-turn hook its controller's, its
@@ -951,6 +964,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     hand_cost_delta: 0.0,
     temporary_discount: 0.0,
     dead_tradable_discount: 0.0,
+    credits_card_discount: 0.0,
     jade_step: 0.0,
     marked_share: 0.0,
     extra_turn: 0.0,
@@ -1008,9 +1022,13 @@ pub struct AiReply {
     pub reserve_steps: i32,
     /// Plays of cards the line put in the opponent's hand that one reply step tries, in move order.
     pub known_plays: i32,
-    /// Activations of cards the seat can see on the field that one reply step tries, those aimed at the
-    /// seat's hero first, then at a card it controls (reply.rs `aim_of`).
+    /// Activations of cards the seat can see on the field that one reply step tries, in reply.rs
+    /// `ordered_tries`' order.
     pub visible_activations: i32,
+    /// R4515000: the tries aimed at a card of the seat's are dealt out one per pick over every visible
+    /// source and ability, each one's at the seat's most valuable Unit first (reply.rs `ordered_tries`);
+    /// false sorts them by `aim_of` alone, the first ones `legal_actions` lists.
+    pub spread_activations: bool,
     /// The opponent's value per point of damage its attack would deal the seat's hero.
     pub face_per_damage: f64,
     /// Per point an attack deals a unit it does not kill.
@@ -1045,6 +1063,9 @@ pub const AI_REPLY: AiReply = AiReply {
     reserve_steps: 5,
     known_plays: 8,
     visible_activations: 4,
+    // R4515000: on. No screen was played; its scene tests settle it, as R4433000's were. false gives back
+    // the order before it.
+    spread_activations: true,
     face_per_damage: 1.0,
     chip_per_damage: 0.3,
     cleave_share: 1.0,

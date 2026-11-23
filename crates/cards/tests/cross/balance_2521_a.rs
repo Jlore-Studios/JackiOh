@@ -141,12 +141,12 @@ const NOT_PIECES: [&str; 15] = [
 // B17–B20: the weapons.
 /// B17, B18: the weapons that aim at one enemy Unit — id, name, damage on the base and Radiant faces.
 /// #4154 moved the three Beams' damage down: 5, 7 and 9 (Radiant 10, 14 and 18) to 4, 6 and 8 (Radiant 8,
-/// 12 and 16), and #4353 to 3, 5 and 7 (Radiant 6, 10 and 14), and Repeater v5's from 3 (Radiant 6) to 2
-/// (Radiant 4).
+/// 12 and 16), #4353 to 3, 5 and 7 (Radiant 6, 10 and 14), and Repeater v5's from 3 (Radiant 6) to 2
+/// (Radiant 4), and #4440 the Beams' to 2, 4 and 6 (Radiant 4, 8 and 12).
 const AIMED_WEAPONS: [(&str, &str, i32, i32); 9] = [
-    ("stinkyscape-050", "Beam v3", 3, 6),
-    ("stinkyscape-054", "Beam v4", 5, 10),
-    ("stinkyscape-058", "Beam v5", 7, 14),
+    ("stinkyscape-050", "Beam v3", 2, 4),
+    ("stinkyscape-054", "Beam v4", 4, 8),
+    ("stinkyscape-058", "Beam v5", 6, 12),
     (CANNON_V3, "Cannon v3", 5, 10),
     ("stinkyscape-056", "Cannon v4", 7, 14),
     ("stinkyscape-060", "Cannon v5", 9, 18),
@@ -511,6 +511,46 @@ fn b2_korrelite_prices_its_credits_2_to_5_and_radiant_4_to_10_and_a_card_with_no
         "{prices}"
     );
     assert!(card_def(VANILLA).resource.is_none());
+}
+
+/// R4440000: issue #4440's "Axnit sells for 1 less", "Narcor sells for 2 less" and "Red Narcor sells for 2
+/// less": each end of the base face's sell range that much lower, its `buy` (the range's top) with it, and
+/// the Radiant face's prices twice the base face's, as every Resource's are.
+#[test]
+fn r4440000_axnit_narcor_and_red_narcor_sell_for_less_and_every_radiant_price_is_twice_the_base_one() {
+    let price = |sell_min: i32, sell_max: i32| ResourcePrice {
+        sell_min,
+        sell_max,
+        buy: sell_max,
+    };
+    for (id, base) in [
+        (AXNIT, price(3, 13)),
+        (NARCOR, price(8, 19)),
+        (RED_NARCOR, price(14, 30)),
+    ] {
+        let resource = card_def(id).resource.expect("a Resource carries its prices");
+        assert_eq!(resource.base, base, "{id}");
+    }
+    for id in RESOURCES {
+        let resource = card_def(id).resource.expect("a Resource carries its prices");
+        let doubled = ResourcePrice {
+            sell_min: 2 * resource.base.sell_min,
+            sell_max: 2 * resource.base.sell_max,
+            buy: 2 * resource.base.buy,
+        };
+        assert_eq!(resource.radiant, doubled, "{id}");
+    }
+    // With the Marketplace closed a play pays one draw in the lowered range (R1840001, R2250001).
+    for n in 0..8 {
+        let mut s = game(json!({
+            "seed": format!("r4440000-narcor-{n}"),
+            "p1": { "hand": [NARCOR, ANCHOR], "library": filler(3) },
+            "p2": { "hand": [ANCHOR], "library": filler(3) },
+        }));
+        s.play(NARCOR, json!({}));
+        let paid = s.state().players[P1].market_credits.unwrap_or(0);
+        assert!((8..=19).contains(&paid), "{n}: {paid}");
+    }
 }
 
 #[test]

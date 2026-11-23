@@ -12,14 +12,16 @@ use jackioh_engine::testkit::golden::HOTSEAT;
 const BIN: &str = env!("CARGO_BIN_EXE_jackioh");
 
 /// The report's measures, in its order.
-const MEASURES: [&str; 10] = [
+const MEASURES: [&str; 12] = [
     "reduce",
     "view_for",
+    "combat_forecast",
     "legal_actions",
     "hash_state",
     "fold",
     "duos_reduce",
     "duos_view_for",
+    "duos_combat_forecast",
     "duos_legal_actions",
     "duos_fold",
     "view_for bytes",
@@ -39,6 +41,8 @@ fn stderr(output: &Output) -> String {
 
 #[test]
 fn perf_smoke_times_the_corpus_once() {
+    const MIN_FORECAST_ATTACKS: u64 = 10;
+
     let output = jackioh(&["perf", "--smoke", "--json"]);
     assert!(output.status.success(), "{}{}", stdout(&output), stderr(&output));
     let report: Value = serde_json::from_str(&stdout(&output)).expect("--json prints one JSON object");
@@ -55,6 +59,12 @@ fn perf_smoke_times_the_corpus_once() {
     assert!(corpus["handicapped"].as_u64() >= Some(1), "{report:#}");
     assert!(corpus["runStart"].as_u64() >= Some(1), "{report:#}");
     assert!(corpus["coop"].as_u64() >= Some(1), "{report:#}");
+    assert!(corpus["forecastAttacks"].as_u64().is_some(), "{report:#}");
+    assert!(corpus["duosForecastAttacks"].as_u64().is_some(), "{report:#}");
+    assert!(
+        corpus["maxForecastAttacks"].as_u64() >= Some(MIN_FORECAST_ATTACKS),
+        "{report:#}"
+    );
     assert!(report["fold"]["actions"].as_u64() >= Some(1), "{report:#}");
     assert!(report["duosFold"]["actions"].as_u64() >= Some(1), "{report:#}");
 

@@ -83,8 +83,9 @@ mod tests {
         "stinkyscapeplus-142",
     ];
     /// The Prime tokens of the sets that ship (R1421): C+ #38.1, C+ #46.1, M #45.1, M #49.1 (#831), M #91.1,
-    /// M+ #16.1 Jazakus Prime (#1187) and Stinkyscape's #147.1 IN33DH3 Prime (#1884).
-    const PRIME_TOKENS: [&str; 7] = [
+    /// M+ #16.1 Jazakus Prime (#1187), Stinkyscape's #147.1 IN33DH3 Prime (#1884) and Stinkyscape+'s #4.1
+    /// Profe Yates Prime (issue #4440, R4440004).
+    const PRIME_TOKENS: [&str; 8] = [
         "classicplus-038-1",
         "classicplus-046-1",
         "meditative-045-1",
@@ -92,6 +93,7 @@ mod tests {
         "meditative-091-1",
         "meditativeplus-016-1",
         "stinkyscape-147-1",
+        "stinkyscapeplus-004-1",
     ];
     const JADE_BEAUTY: &str = "meditative-039-5";
     const GOLEM: &str = "meditative-095-1";
