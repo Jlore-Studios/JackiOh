@@ -18736,10 +18736,9 @@
     "what": "plan #4604 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-23T12:29:53Z",
+    "at": "2026-11-23T12:38:24Z",
     "notes": [
-      "#4599 is held for `claude-1` until 06:50 (it refused a call)",
-      "delivered plan #4604 on claude-3 (run 45173685611): planned"
+      "#4599 is held for `claude-1` until 06:50 (it refused a call)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19445,7 +19444,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T12:29:53Z",
+  "loop_tick": "2026-11-23T12:38:24Z",
   "machine_disk": {
     "issue": null,
     "reading": {
