@@ -30,6 +30,41 @@ let owner: string | null = null;
 const entries = new Map<string, Entry>();
 
 /**
+ * R4568000: who redraws from what is kept: one listener set per kept path, keyed by the path string
+ * exactly as passed (so `keptPaths.decks` matches), not by account; each listener re-reads its own
+ * token's entry, so one path serves every account. Every cache write runs in a promise callback or an
+ * event handler, never during render.
+ */
+const keptListeners = new Map<string, Set<() => void>>();
+
+/**
+ * R4568000: hears the next change to `path`'s kept answer (`keepRead`, `rememberRead`,
+ * `updateCachedRead`, `forgetRead`, `clearReadCache`; never `expireRead`). Answers the function that
+ * stops hearing it; a stopped listener is never called again.
+ */
+export function subscribeKept(path: string, listener: () => void): () => void {
+  let listeners = keptListeners.get(path);
+  if (listeners === undefined) {
+    listeners = new Set();
+    keptListeners.set(path, listeners);
+  }
+  listeners.add(listener);
+  return () => {
+    const current = keptListeners.get(path);
+    if (current === undefined) return;
+    current.delete(listener);
+    if (current.size === 0) keptListeners.delete(path);
+  };
+}
+
+/** R4568000: calls a snapshot of `path`'s listeners, once, after its kept answer changed. */
+function notifyKept(path: string): void {
+  const listeners = keptListeners.get(path);
+  if (listeners === undefined) return;
+  for (const listener of [...listeners]) listener();
+}
+
+/**
  * R3206000: counts the writes: a change to what is kept (a write's answer, a fold, a drop, a sign-out) and
  * a spend that settled (`noteWrite`). A read that finished after it moved is not kept, and a read asked
  * after it never joins one sent before it. A heartbeat or a chat message does not move it: a read that
@@ -92,6 +127,7 @@ function store(token: string | null, path: string, value: unknown, at: number): 
 export function rememberRead(token: string | null, path: string, value: unknown): void {
   epoch += 1;
   store(token, path, value, Date.now());
+  notifyKept(path);
 }
 
 /**
@@ -100,6 +136,7 @@ export function rememberRead(token: string | null, path: string, value: unknown)
  */
 export function keepRead(token: string | null, path: string, value: unknown): void {
   store(token, path, value, Date.now());
+  notifyKept(path);
 }
 
 /** Folds a write's answer into the kept answer for `path`, keeping its age; nothing when none is kept. */
@@ -111,12 +148,16 @@ export function updateCachedRead<T>(token: string | null, path: string, update: 
   const key = `${accountOf(token)}\n${path}`;
   entries.delete(key);
   entries.set(key, { value: update(before.value as T), at: before.at });
+  notifyKept(path);
 }
 
 /** Drops `token`'s account's kept answer for `path` (R2630000: the gate's, when the account changes). */
 export function forgetRead(token: string | null, path: string): void {
   epoch += 1;
   entries.delete(`${accountOf(token)}\n${path}`);
+  // R4568000: the answer is now undefined, and the hook leaves what is drawn alone; still heard, so a
+  // screen that forgets on purpose (a spend's drop) redraws nothing stale.
+  notifyKept(path);
 }
 
 /**
@@ -133,6 +174,9 @@ export function clearReadCache(): void {
   epoch += 1;
   entries.clear();
   owner = null;
+  // R4568000: every path's listeners hear it; the subscriptions stay, and each hook re-reads its own
+  // token's entry (now undefined, so what is drawn is left alone).
+  for (const path of [...keptListeners.keys()]) notifyKept(path);
 }
 
 /** Test support: how many answers are kept. */

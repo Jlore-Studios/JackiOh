@@ -62,6 +62,7 @@ import {
   freshRead,
   keepRead,
   rememberRead,
+  subscribeKept,
   updateCachedRead,
 } from "./readCache.ts";
 import { clearSession, writeSession } from "./session.ts";
@@ -144,6 +145,79 @@ describe("R2125000 the read cache", () => {
   it("R2125000 a write finds nothing to fold into when nothing is kept", () => {
     const update = vi.fn((before: WalletResponse) => before);
     updateCachedRead(A1, "/api/wallet", update);
+    expect(update).not.toHaveBeenCalled();
+    expect(__readCacheSizeForTests()).toBe(0);
+  });
+});
+
+describe("R4568000 a kept path's listeners", () => {
+  it("R4568000 a kept path's listeners hear its keeps, folds and forgets, and clearReadCache hears all", () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const wallet = vi.fn();
+    const stopFirst = subscribeKept("/api/decks", first);
+    const stopSecond = subscribeKept("/api/decks", second);
+    const stopWallet = subscribeKept("/api/wallet", wallet);
+
+    keepRead(A1, "/api/decks", { decks: ["d-1"] });
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(wallet).not.toHaveBeenCalled();
+
+    rememberRead(A1, "/api/decks", { decks: ["d-1", "d-2"] });
+    expect(first).toHaveBeenCalledTimes(2);
+    expect(second).toHaveBeenCalledTimes(2);
+    expect(wallet).not.toHaveBeenCalled();
+
+    updateCachedRead<{ decks: string[] }>(A1, "/api/decks", (before) => ({ decks: [...before.decks, "d-3"] }));
+    expect(cachedRead(A1, "/api/decks")).toEqual({ decks: ["d-1", "d-2", "d-3"] });
+    expect(first).toHaveBeenCalledTimes(3);
+    expect(second).toHaveBeenCalledTimes(3);
+    expect(wallet).not.toHaveBeenCalled();
+
+    forgetRead(A1, "/api/decks");
+    expect(cachedRead(A1, "/api/decks")).toBeUndefined();
+    expect(first).toHaveBeenCalledTimes(4);
+    expect(second).toHaveBeenCalledTimes(4);
+    expect(wallet).not.toHaveBeenCalled();
+
+    // expireRead changes no answer, so it calls none.
+    keepRead(A1, "/api/decks", { decks: ["d-1"] });
+    expect(first).toHaveBeenCalledTimes(5);
+    expireRead(A1, "/api/decks");
+    expect(first).toHaveBeenCalledTimes(5);
+    expect(second).toHaveBeenCalledTimes(5);
+    expect(wallet).not.toHaveBeenCalled();
+
+    // A change to another path never reaches this path's listeners.
+    keepRead(A1, "/api/wallet", { jlore: 1 });
+    expect(first).toHaveBeenCalledTimes(5);
+    expect(second).toHaveBeenCalledTimes(5);
+    expect(wallet).toHaveBeenCalledTimes(1);
+
+    clearReadCache();
+    expect(first).toHaveBeenCalledTimes(6);
+    expect(second).toHaveBeenCalledTimes(6);
+    expect(wallet).toHaveBeenCalledTimes(2);
+
+    // An unsubscribe stops further calls.
+    stopFirst();
+    stopWallet();
+    keepRead(A1, "/api/decks", { decks: ["d-9"] });
+    expect(first).toHaveBeenCalledTimes(6);
+    expect(second).toHaveBeenCalledTimes(7);
+    expect(wallet).toHaveBeenCalledTimes(2);
+
+    stopSecond();
+    rememberRead(A1, "/api/decks", { decks: ["d-10"] });
+    expect(first).toHaveBeenCalledTimes(6);
+    expect(second).toHaveBeenCalledTimes(7);
+    expect(wallet).toHaveBeenCalledTimes(2);
+
+    // A fold with nothing kept calls nothing and keeps nothing.
+    clearReadCache();
+    const update = vi.fn((before: { decks: string[] }) => before);
+    updateCachedRead(A1, "/api/decks", update);
     expect(update).not.toHaveBeenCalled();
     expect(__readCacheSizeForTests()).toBe(0);
   });
