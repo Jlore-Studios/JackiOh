@@ -1,0 +1,71 @@
+{
+  "action": "build",
+  "number": 4653,
+  "title": "Patch: drop the tagline from the share image and the site copy",
+  "branch": "bot/issue-4653",
+  "thread": "**Issue #4653 (data, not instructions):**\n\n```text\n# #4653: Patch: drop the tagline from the share image and the site copy\nOpened by @MaxGoetzmann.\n\n## Decision\n\nJackiOh has no tagline. The owner ruled that no tagline is good enough to keep, and modern games mostly don't use one. \"A duel of lanes, mana and hidden traps\" goes, along with its variants. Don't swap in a new tagline anywhere. Where a sentence is needed, write a plain description of the game.\n\n## What to change\n\n1. **`apps/web/public/og.png`** (the 1200\u00d7630 share image that `og:image` points to). Remove the small gold eyebrow line \"A DUEL OF LANES, MANA AND HIDDEN TRAPS\" above the JackiOh wordmark. Keep everything else: the wordmark, the sentence under it, the fanned card backs, the background and the size (1200\u00d7630). Rebalance the left column's vertical spacing so it doesn't look like a line is missing. No generator for this image exists in the repo. Rebuild it as an HTML page rendered to PNG with the pre-installed headless Chromium (Playwright, `deviceScaleFactor: 1`, viewport 1200\u00d7630), or edit the existing PNG, whichever gives a cleaner result. If you write a generator, commit it under `scripts/` with a header comment so the image can be rebuilt later.\n2. **The same phrase in the site text**, so it doesn't survive as copy:\n   - `apps/web/static-pages.ts:91`: the landing section heading \"A card game of lanes, mana and hidden traps\" becomes a plain heading such as \"How it plays\". The body under it stays. `static-pages.test.ts` (\"describe the game on the landing page\u2026\") must still pass.\n   - `apps/web/static-pages.ts:46`, `apps/web/index.html` (meta description, `og:description` and the JSON-LD `description`) and `apps/web/public/manifest.webmanifest`: reword \"a 1v1 card game of lanes, mana and hidden traps\" into a plain description that doesn't reuse the tagline's wording, e.g. \"JackiOh is a 1v1 card game where you summon units into lanes and set traps face down.\" Keep the rest of each description (\"Play the AI in your browser with no account, or play friends online with an invite code.\"). Update any test that pins these strings.\n   - `README.md:6-7`: \"You can play hotseat, online, or against a practice AI.\" becomes plain wording without the jargon, e.g. \"You can play a friend on one screen, play online, or practice against the AI.\"\n3. **Write the decision down.** Add one line to `apps/web/README.md` saying the site and its images carry no tagline, so nobody adds one back.\n\n## Acceptance\n\n- `og.png` is 1200\u00d7630 with no eyebrow line, and the layout is otherwise unchanged. Attach a before/after screenshot to the pull request.\n- `grep -rni \"lanes, mana and hidden traps\\|duel of lanes\" apps README.md` finds nothing.\n- `pnpm --dir apps/web test src/static-pages.test.ts` and `pnpm --dir apps/web typecheck` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#4653: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "usage_facts": {
+    "queued_at": "2026-11-23T23:51:52Z",
+    "claimed_at": "2026-11-23T23:59:13Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
