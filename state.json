@@ -18137,6 +18137,8 @@
       }
     },
     "4574": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-23T04:56:16Z",
@@ -18150,8 +18152,11 @@
         "trail": "force061.log; do sleep 10; done; tail -1 /tmp/swing4552/force061.log; wc -l /tmp/swing4552/force061.jsonl\", \"description\": \"Wait for the Jayaad for\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4552/3862783f-7754-4a68-bf15-be607ba6b3ff/tasks/bu5cc2ix9.output | head -80\", \"description\": \"Read clippy output\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/win_probability.rs'\\ns=open(p).read()\\nold=\\\"\\\"\\\" for row in column + 1..n {\\n let factor = a[row][column] / head;\\n for k in column..n {\\n a[row][\u2026\n- said: Now the swing report over all 200 development records for the PR (using the binary built before the variance-floor fix would be stale, so I rebuild it).\n- Bash: {\"command\": \"timeout 2400 cargo jackioh stats report /tmp/swing4552/calib.jsonl /tmp/swing4552/force120.jsonl /tmp/swing4552/force061.jsonl --source dev --swing > /tmp/swing4552/report.txt 2>/tmp/swi\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\"- RUNNING: forced runs 40 games each, stinkyscape-120 then stinkyscapeplus-061 -> /tmp/swing4552/force*.jsonl.\\n Then `c\u2026\n- Bash: {\"command\": \"until ! pgrep -f \\\"cargo clippy\\\" >/dev/null; do sleep 10; done; cat /tmp/claude-1001/-home-runner-work--temp-work-item-4552/3862783f-7754-4a68-bf15-be607ba6b3ff/tasks/br7f0b8qh.output |\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4552/3862783f-7754-4a68-bf15-be607ba6b3ff/tasks/br7f0b8qh.output | head -60; tail -2 /tmp/swing4552/report.err\", \"description\": \"Re\u2026\n- Bash: {\"command\": \"sed -i '1064s/let won = n % 2 == 0;/let won = n.is_multiple_of(2);/; 1080s/let sign = if (n + i) % 2 == 0 { 1.0 } else { -1.0 };/let sign = if (n + i).is_multiple_of(2) { 1.0 } else { -1\u2026\n- Bash: {\"command\": \"grep -n \\\"typical card\\\\|Split-half\\\\|Swing:\\\\|Board swing:\\\\|Decisiveness:\\\\|against their adjusted\\\" /tmp/swing4552/report.txt | head -12; grep -n \\\"stinkyscape-120 \\\\|stinkyscapeplus-\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re,statistics\\nlines=open('/tmp/swing4552/report.txt').read().split('\\\\n')\\nstart=[i for i,l in enumerate(lines) if l.startswith('Card ') and 'Decisiveness' in \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/engine/src/config.rs'\\ns=open(p).read()\\nold_c=s[s.index(\\\"/// R4552001: the typical card's Decisiveness assumed below\\\"):s.index(\\\"pub const DECISIVENESS_PR\u2026\n- Bash: {\"command\": \"until ! pgrep -f \\\"cargo clippy\\\" >/dev/null; do sleep 10; done; cat /tmp/claude-1001/-home-runner-work--temp-work-item-4552/3862783f-7754-4a68-bf15-be607ba6b3ff/tasks/ba58w7p7k.output |\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4552/3862783f-7754-4a68-bf15-be607ba6b3ff/tasks/ba58w7p7k.output | head -60\", \"description\": \"Read clippy output\"}\n- Bash: {\"command\": \"grep -rln \\\"SeatSummary {\\\\|CardStats {\\\\|CreatedStats {\\\\|GameTotal {\\\\|PublicStatsTiers {\\\\|PublicCreatedTiers {\\\\|CardStatsOptions {\\\\|ReportArgs {\\\" crates --include=*.rs | grep -v \\\u2026\n- Bash: {\"command\": \"grep -n \\\"SeatSummary {\\\\|CardStats {\\\\|CreatedStats {\\\\|GameTotal {\\\" -A3 crates/shared/src/economy/quests.rs crates/shared/src/economy/fleet.rs crates/cards/tests/cross/game_summary.rs\u2026\n- Bash: {\"command\": \"sed -n 933,945p crates/shared/src/economy/quests.rs; sed -n 987,1000p crates/shared/src/economy/quests.rs | grep -n \\\"\\\\.\\\\.\\\" ; sed -n 241,260p crates/shared/src/economy/fleet.rs | grep\u2026\n- Bash: {\"command\": \"timeout 2400 cargo jackioh stats report /tmp/swing4552/calib.jsonl /tmp/swing4552/force120.jsonl /tmp/swing4552/force061.jsonl --source dev --swing > /tmp/swing4552/report2.txt 2>/tmp/sw\u2026\n- Bash: {\"command\": \"timeout 3000 cargo test -p jackioh-engine --features testkit --lib --color never -- r4552 2>&1 | grep -E \\\"^error|panicked|test result|FAILED\\\" | head; timeout 3000 cargo test -p jackioh\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R4552004.md'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"proven_in:\\n - apps/web/src/stats/CreatedPanel.test.tsx\\n - crates/server/tests/api/stats.rs\\n\\\"\\\"\\\",\u2026\n- Bash: {\"command\": \"for r in R0943 R1088 R0345 R1183002 R0376 R0378 R1367000 R1843004 R0654 R1044000 R2777000 R3022000 R3184000 R3184002 R4155000 R3185000 R4083000 R4082000 R2089000 R3070000; do [ -f spec/r\u2026\n- Bash: {\"command\": \"until grep -q \\\"report exit\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4552/3862783f-7754-4a68-bf15-be607ba6b3ff/tasks/bg1f58bmd.output 2>/dev/null; do sleep 10; done; grep -n \u2026\n- Bash: {\"command\": \"grep -n \\\"made_acting\\\" crates/engine/src/wire/stats/swing.rs | head -20\", \"description\": \"Find made_acting uses\"}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4552/3862783f-7754-4a68-bf15-be607ba6b3ff/tasks/bg1f58bmd.output | tail -8; sed -n 150,182p crates/engine/src/wire/stats/swing.rs; \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/engine/src/wire/stats/swing.rs'\\ns=open(p).read()\\ndef rep(old,new,count=1):\\n global s\\n assert s.count(old)==count,(old,s.count(old))\\n s=s.replace(old,new\u2026\n- Bash: {\"command\": \"sed -n 845,885p crates/engine/src/wire/stats/swing.rs\", \"description\": \"Read the figures closure and its callers\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/engine/src/wire/stats/swing.rs'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1,old\\n s=s.replace(old,new)\\nrep(\\\"\\\"\\\" let figures =\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/engine/src/wire/stats/swing.rs'\\ns=open(p).read()\\nold=\\\"\\\"\\\" // A token no hand held reads the turns it acts.\\n assert!(token.decisiveness.is_some());\\n }\\n\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4552/3862783f-7754-4a68-bf15-be607ba6b3ff/tasks/b9ghs9x6p.output\", \"description\": \"Check the earlier engine+server test job\"}\n- Bash: {\"command\": \"until ! pgrep -f \\\"cargo test -p jackioh-server\\\" >/dev/null; do sleep 10; done; cat /tmp/claude-1001/-home-runner-work--temp-work-item-4552/3862783f-7754-4a68-bf15-be607ba6b3ff/tasks/b9\u2026\n- tool error: Exit code 137"
       },
       "issue": 4552,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-23T08:32:32Z",
         "from_run": "45114746329",
         "gates": [
           {
@@ -18243,7 +18248,11 @@
         "source": "build",
         "until": "2026-11-23T09:01:18Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-23T08:31:18Z",
+      "run_id": "pending:14d87d47-1795422737",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -18262,6 +18271,9 @@
         "provider": "claude-3",
         "run": "45114746329"
       },
+      "started_at": "2026-11-23T08:32:32Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18275,9 +18287,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T08:32:03Z",
+    "at": "2026-11-23T08:32:32Z",
     "url": "",
-    "what": "review #4573 on muse"
+    "what": "review #4574 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-23T08:20:38Z",
