@@ -17809,6 +17809,13 @@
     "4562": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-23T08:04:13Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "no hard-line holds: client-only wiring of one countdown into an existing planner, 8 files, no engine/AI/cross-crate/migration/bulk change"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
