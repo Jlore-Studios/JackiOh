@@ -6496,5 +6496,2826 @@
     "pr": 3641,
     "title": "bot: build pass 1 for #3630",
     "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9c2f729e92c8096a83368488e21949d3782877eb",
+    "pr": 3660,
+    "title": "bot: the status issue opens with the excess compute, and a survey waits for 3 spare lanes (#3659)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "11274b4844e06c6b65ae83dfc0845a578029beca",
+    "pr": 3657,
+    "title": "the shared crate's third and fourth shards, a test or a reason for every survivor",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "f2be0ce872ba11e8032bdb3120f84bbf37138df7",
+    "pr": 3662,
+    "title": "bot: build pass 1 for #3658",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3e9351661d936f3859715542faa11662f12240c9",
+    "pr": 3656,
+    "title": "staging holds still while the super run on it is red, until the night bot's fix lands, and each fix is tested at once",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "22cbfaf5a939607874783acd706d51d2d917017f",
+    "pr": 3663,
+    "title": "bot: build pass 1 for #3606",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4a736901f9fa02ddd3a8538e6a01a7b5ddb11b1a",
+    "pr": 3645,
+    "title": "bot: build pass 1 for #3583",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "cc029ed3a93dbc359f785c75c40ce7b61ef4adf6",
+    "pr": 3665,
+    "title": "crates/shared's fourth shard: the last four survivors of the bots' cosmetic draws (#3513)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "544136a2f81aa5470c85803eef38701f203bf231",
+    "pr": 3661,
+    "title": "gather and the learn lane file their games into the stats an hour at a time",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "13bd66f47171bae53e02f1acd87752d11448ff79",
+    "pr": 3655,
+    "title": "the long-lived branches take a leading underscore (_production, _staging, _bot-state, …) so they list first",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b9485e0299dae33f6fc1a72d8ac3df997552f007",
+    "pr": 3668,
+    "title": "patches ship: v0.5.12al",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e4f70ffd2f669be6239bd70584e66b98da9b9d3d",
+    "pr": 3673,
+    "title": "the shared crate's fifth and sixth shards, a test or a reason for every survivor",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "18920bf69741a98138fa3efdaa92043cc42e4db1",
+    "pr": 3677,
+    "title": "workflows hand their automatic issues to the night bot, never Squishy (#3676)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "22a9436e15a678273c226d2cfc4aaf8fe0c6e9a0",
+    "pr": 3603,
+    "title": "a push to main runs the deploy rehearsal even when the queue's build already did",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "226fdeeab4a91afe27a4408da757b1f6e65dc692",
+    "pr": 3680,
+    "title": "patches log: 2ec4467..4327b2b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3a3de664a2af7671dffa0eea43e6384963564a3c",
+    "pr": 3682,
+    "title": "bot: build pass 1 for #3667",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "6fd3c7c3f81941dff8b4d1df5c3157d8411bd6d7",
+    "pr": 3685,
+    "title": "patches ship: v0.5.12am",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "c4fbb5d7aee732cc7f933532d60c8d9900685849",
+    "pr": 3689,
+    "title": "crates/shared's seventh shard: a test for every survivor of the economy's bars, pity, forced slots and level skips (#3513)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "29b72d3bd7b15ad74942bf576bdb465dfa22b91d",
+    "pr": 3681,
+    "title": "the status issue is rewritten every two minutes, apart from the sweep, and says why each free lane is idle (#3675)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "07663177ac5e948714265f7871eab34aaf82ea96",
+    "pr": 3690,
+    "title": "bot: build pass 1 for #3666",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "f65478fb798bf6a388b9e5cbd6c254c34eed3b64",
+    "pr": 3703,
+    "title": "crates/shared's eighth shard: a test for every survivor of track levels, payouts, quests and pack cosmetics (#3513)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "2820d7500508a96fadfacae0fa461e4a186478f5",
+    "pr": 3704,
+    "title": "bot: build pass 1 for #3699",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7c02e07e6ea32decb0d17c7e0a7fe7260f80efd7",
+    "pr": 3687,
+    "title": "dungeon enemies get stronger tier by tier: 15 tiers and an elite table in place of Presence",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "8c3b4ccc282e8e59bbedda0f43150352fe0138e6",
+    "pr": 3686,
+    "title": "the dungeon map drawn as a climbing path map",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e41b3d174c840f99153a7c970efbfccdd54b3fdf",
+    "pr": 3707,
+    "title": "crates/shared's ninth shard: tests for the survivors its interrupted run reached (#3513)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "bd47844434802e8cd027231065535a60c3ddaef4",
+    "pr": 3708,
+    "title": "mutants.sh: cap a test binary's memory, so a runaway mutant fails its test instead of the runner (#3513)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d5141ee719f795ff6d5a21d0c1307a9bcec4f9a4",
+    "pr": 3709,
+    "title": "crates/shared's ninth shard under the memory cap: its last three survivors (#3513)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b1140bd63a64b288183283563dbd57477a878c11",
+    "pr": 3692,
+    "title": "bot: build pass 1 for #3672",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "f803f1b56d61d4f406e745ccbb606919b5f666fb",
+    "pr": 3684,
+    "title": "squishy: build pass 1 for #3670",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d0f7305317b3f0037c3b9b782fe34d0a80b410aa",
+    "pr": 3688,
+    "title": "map the code's implicit states and check each behaves as expected",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "bcc440bb3e4c2a6c2bc4d7c5dbce1ff980c78373",
+    "pr": 3711,
+    "title": "a runbook for restoring production's database from Supabase's daily backups (#3611)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "eb59ecbd78453c34afeb19f078780f4f6dedc5ca",
+    "pr": 3713,
+    "title": "crates/shared's tenth shard: a test or a reason for every survivor (#3513)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "ee1678a83aebfe870254d819a8630764056bcbac",
+    "pr": 3715,
+    "title": "bot: build pass 1 for #3700",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "eaca9b790cb592ff31c3a91a941ce86bc67eb24a",
+    "pr": 3716,
+    "title": "bot: build pass 1 for #3698",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "05c5af54623b8c3d0d5192105062699649ec31d7",
+    "pr": 3717,
+    "title": "bot: build pass 1 for #3697",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "951a8c644864f2ed51dff78bb249cface2da79ae",
+    "pr": 3718,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a98affd22bdf08e45699804769de86f6748a2659",
+    "pr": 3702,
+    "title": "the mutation audit of the dungeon run and the shared logic (crates/run, crates/shared)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "65935ee84326a4fd4fe6aae3dd45680596e191dc",
+    "pr": 3721,
+    "title": "patches ship opens its promotion without the bot's REST quota, and a failure outside the ship goes to people",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "558548dd9ef33f1b3abcf4839a0b18fd2c344317",
+    "pr": 3723,
+    "title": "the learn lane plays two shards at a time and keeps the export's build until the export ends",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "562883049a334d6b2a90770e65dc5be64233428a",
+    "pr": 3720,
+    "title": "the shared crate's eleventh shard, a test or a reason for every survivor",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a488aab6e05e58316fd5f8f024db8c0ddcf2aed9",
+    "pr": 3738,
+    "title": "bot: build pass 1 for #3701",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b824f6b07b445a8444180703b5f3c94827a0a173",
+    "pr": 3719,
+    "title": "Code audit: a fourth part that maps implicit states and checks their behaviour",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "6cbaca4f25e76c2aa9cf4de00ab08c9fdc952c46",
+    "pr": 3724,
+    "title": "bot: build pass 1 for #3712",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4fcb89c748d986067a6e4af0323d93740dcf9fde",
+    "pr": 3741,
+    "title": "patches ship: v0.5.12an",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7a3e9a18d590bc25cc862c36a81e255515c66d33",
+    "pr": 3743,
+    "title": "bot: build pass 1 for #3736",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "ee9d85afeeac8a347a078119bb11aa29b2d2d58d",
+    "pr": 3742,
+    "title": "bot: build pass 1 for #3694",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "f6b03c6ce8e88f5dc0e3311c8953eb26f7f9855d",
+    "pr": 3747,
+    "title": "a mutation score floor beside the coverage floor",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "db28caaa66d03f1fe574396f006d44370ad2c941",
+    "pr": 3745,
+    "title": "bot: build pass 1 for #3696",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "466f3a3fd427816249c2c86b58e83e3f1a51214b",
+    "pr": 3748,
+    "title": "patches ship: v0.5.12ao",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "63d7b1a28646056e1d4d9d76fe5e6a34ab538b6e",
+    "pr": 3749,
+    "title": "the shared crate's shards 12–14, a test, a rewrite or a reason for every survivor",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "31a2dde526bcb9a32526c74049e6e190ebcde54e",
+    "pr": 3746,
+    "title": "the fuzz monitor checks that each card's recorded place, owner and controller match the pile it sits in",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e8dfc7a2b73e5f3ac8a3e04173470a2e2a62f309",
+    "pr": 3752,
+    "title": "bot: build pass 1 for #3609",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "737c3906be4839ad295c31b8453fa84fbab99560",
+    "pr": 3753,
+    "title": "Raise the bots' GitHub runner pool to 16 and the dashboard's hosted runners to 60 (#3740)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "30d84d83cb8d6a01d933f6052acc8a7d962baf95",
+    "pr": 3756,
+    "title": "bot: build pass 1 for #3751",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9230e2fad627d48895f6bb3409e6133a6b737508",
+    "pr": 3757,
+    "title": "ci-duration.yml: leave artifact transfers out of a job's time (#3737)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "86ce66c87891c7c01ea00e72a8e8b50c442d9d9d",
+    "pr": 3754,
+    "title": "the shared crate's shards 15–16, tests for 78 of their 140 survivors",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "adb8b9bb938650eaae87a0c51e75918b361ce013",
+    "pr": 3750,
+    "title": "one app shell for the menus, laid out for desktop and iPad first: a nav rail, a phone tab bar, a friends drawer, safe areas and the iPad sizes in every layout spec",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "13d4b9117c34d52ec679fbc78a49e7678e3a2559",
+    "pr": 3755,
+    "title": "CLAUDE.md on ownership, finishing and the usage limit; the rules at a glance; §3 streamlined",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "73305e8bbb9f79278ace545a0a7774998f351a9b",
+    "pr": 3759,
+    "title": "the training lanes on GitHub's runners, gather without a pause, and a suggestion survey at any spare lane",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "38671824590327624747d3b73b3f50f0dc6d7f85",
+    "pr": 3766,
+    "title": "patches ship: v0.5.12ap",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "6a1d86fe8480777846536d27b88ae640df1ad1ba",
+    "pr": 3782,
+    "title": "bot: build pass 1 for #3770",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3d347d9e7893e8e6319cd16ba3a922c1f4645fb8",
+    "pr": 3758,
+    "title": "The living game logs its frame times and fails only on its beats; the component job in three shards (#3744)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "eef28c32407180ca2149841930585f812bb64c09",
+    "pr": 3765,
+    "title": "split e2e smoke into four shards",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4d5581724fd7adf47cc3cb971bbfedb6d68f39fb",
+    "pr": 3787,
+    "title": "ci-duration.yml: alert past 10 minutes, target 8, for the larger runners (#3785)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4ff211a4e351ba4b22b8f6ffceb52a3ec47a61d6",
+    "pr": 3784,
+    "title": "the shared crate's shards 17–21, a test or a reason for every survivor",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "92edb467f6c52457633c0144dd58f96ee0d80759",
+    "pr": 3789,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "87fd1e82e87d495a0be712a1b015c4de22142197",
+    "pr": 3780,
+    "title": "the Worker asks again after a failed version check, and a failed retire of the old server no longer fails every request",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1d108b9acc0690320a6dfff5156876777337838a",
+    "pr": 3805,
+    "title": "The learn lane's shards and gather's batches sized for GitHub's measured speed (#3740)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "acbb4a92b5d31149bce2714b532fc32fd8e0df92",
+    "pr": 3801,
+    "title": "bot: build pass 1 for #3772",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a14ae0d610c4cae461c12279eea74e89941dbcae",
+    "pr": 3783,
+    "title": "bot: build pass 1 for #3767",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "11d28bac30b07aa18411dd7aed23a13667bd7a0e",
+    "pr": 3775,
+    "title": "a collection you can search: one card grid with filters and sort across the full width, and a deck builder that drags by touch and splits on an upright iPad",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "424f1a9f6ff01d2466305a5d3e235a1bbae0cab9",
+    "pr": 3807,
+    "title": "bot: build pass 1 for #3803",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d412e3fd9fc32d7c2b86f10c329de8101cf00582",
+    "pr": 3809,
+    "title": "bot: build pass 1 for #3792",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "6ff5ded90ea6e08cb33f1cce5b7962667227c4bb",
+    "pr": 3781,
+    "title": "a greyed Activate or Trade button says why when tapped, as a greyed hand card and a unit already do",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "ee88955cf7fb165092d8f94d270607894262fce8",
+    "pr": 3816,
+    "title": "card tests read an open prompt's Mode options through one testkit helper, in place of a dozen local copies (#3796)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "237787ff51e51b0be5c54e244f19d9f6eb87b777",
+    "pr": 3829,
+    "title": "the status loop reads REST's limit apart from GraphQL's and charts the training lanes on GitHub's runners",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "293a3273ecc54cd3b591da532cd785c200b2df15",
+    "pr": 3762,
+    "title": "daily games, a move every 1, 3, 7 or 14 days, by challenge or the daily queue, with an email or a push when it's your move",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e439669a48aacbcaf329b622b4a6807afba7f30e",
+    "pr": 3830,
+    "title": "patches ship: v0.6.0, v0.6.0b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "2d07027ad119b04ce3c75427708b4f48a63463ab",
+    "pr": 3833,
+    "title": "CI and CD runs a few at a time, the merge queue first, and the training lanes on GitHub's runners alone",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "196400411208276be38ea6385fad6f92b10427a3",
+    "pr": 3834,
+    "title": "fold the pending §11 paragraphs, the rulings index and the card index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d3d92bea52c773c8c837e8abb00fb9a85f2a3f4b",
+    "pr": 3812,
+    "title": "the result screen says when the opponent has left, instead of its rematch buttons vanishing without a word",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "40265a66d7ae6218e1043d0eb17d17e1106356e9",
+    "pr": 3799,
+    "title": "bot: build pass 1 for #3773",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b6ff5a9dffadc5e7f4ef1ef0130459d73dc6fe84",
+    "pr": 3848,
+    "title": "the owner's PC no longer runs the training lanes: its runner, its labels and its heartbeat go",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "007204a0efe6f42c2dcc61273acb92de2cd929fa",
+    "pr": 3814,
+    "title": "bot: build pass 1 for #3793",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "2f41eae5c75fc495f8772cc89c8d035618bfdeab",
+    "pr": 3850,
+    "title": "patches ship: v0.6.0c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "5ab816ceda4e2544431aeb105e480f2cc9d896de",
+    "pr": 3797,
+    "title": "Magic Jammed targets any face-down backrow card, a Cloaked one included",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a058d5604e397e9ffff4c40222fbf678771c242f",
+    "pr": 3851,
+    "title": "bot: build pass 1 for #3735",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "6c0aed010f869124d9beced1c508b636d468737b",
+    "pr": 3852,
+    "title": "bot: build pass 1 for #3846",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9357eb48a7b27b33e7fba43910478203f9d0ad1d",
+    "pr": 3853,
+    "title": "patches ship: v0.6.0d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "8efea1c955851180eaccad199ea3616c60279271",
+    "pr": 3860,
+    "title": "bot: build pass 1 for #3822",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4203afb6614a9a65babb4752520cecd779a1f733",
+    "pr": 3862,
+    "title": "Stinkyscape+ fullsend 2: the AI deals itself the set, its sweep of record banning 4 of 166",
+    "kind": "ai",
+    "player": "The AI now builds its own decks with Stinkyscape+ cards."
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "44133b263728bd7d699e6233aa44690bfeff2eb3",
+    "pr": 3779,
+    "title": "a private lobby screen for 1v1 rooms and co-op rooms: seats, invites, each player's deck and Ready, and the host's Start",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "54966768d9e4332c61aef3fbecb34d7f7c564d95",
+    "pr": 3866,
+    "title": "bot: build pass 1 for #3827",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4f9fdea2b64ec118c12e4f65aadd4dc51959c74c",
+    "pr": 3871,
+    "title": "patches ship: v0.6.0e, v0.6.0f, v0.6.0g",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a2ff29326cfbfb7975083721087370748e0d9f6f",
+    "pr": 3875,
+    "title": "Stinkyscape+ fullsend 3: the AI deals itself the whole set, no card shadow banned",
+    "kind": "ai",
+    "player": "The AI now builds its own decks with every Stinkyscape+ card."
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "ca72a5d0ae748b8fde4be7afd550c32e877b7d8b",
+    "pr": 3877,
+    "title": "fold the pending §11 paragraphs, the rulings index and the card index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7196011a175320ab419c9ec2f9181c6446c8e1f1",
+    "pr": 3878,
+    "title": "bot: build pass 1 for #3865",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "376b8ad082d2fa474612dc156ace0ef619705f2b",
+    "pr": 3876,
+    "title": "bot: build pass 1 for #3855",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "5ab53afb65670eb352f185945675cc9aa3f33b82",
+    "pr": 3861,
+    "title": "the account screen as a profile and a settings list: a profile header, match history, and sign-in, notifications and privacy each in its own section",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "8799056f65869f554ffd58411e79d694e9077e40",
+    "pr": 3873,
+    "title": "pick a zone by tapping the board, with no zone menu",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "dba7addea0ac5c36eaa9d37d2a7b6712b53984ed",
+    "pr": 3883,
+    "title": "bot: build pass 1 for #3874",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "8d6a199056e2cfec252bd3fc57c4b6cdbc1892eb",
+    "pr": 3889,
+    "title": "bot: build pass 1 for #3856",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1757c3626085ea2487ee8dfc0f7c617462fdf79a",
+    "pr": 3892,
+    "title": "patches ship: v0.6.1",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e978901f29fb6574b80fc338976b28dbe8130e0b",
+    "pr": 3890,
+    "title": "bot: build pass 1 for #3858",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "dc4efc236bf77b912f06ccaa3452eb968e77ef20",
+    "pr": 3813,
+    "title": "the mutation audit, shard 0 of every area: a test or a reason for every surviving mutant (#3490)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "8413ace2feb9cc490839b021b1e081f6c69b0ca9",
+    "pr": 3895,
+    "title": "patches ship: v0.6.1b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "656a2238acf5ec59f2093aa4d13609437f2611e7",
+    "pr": 3891,
+    "title": "a friends list you can read at a glance: grouped by status, one action a row, and a Friends page with tabs",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e1787794d902f0ffe9d9cefcc3e0309c94fa4d70",
+    "pr": 3900,
+    "title": "bot: build pass 1 for #3887",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "0926adb4668e7c2548580ae40cd007537cb92341",
+    "pr": 3905,
+    "title": "patches ship: v0.6.2, v0.6.2b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "6b457de6f4c131ebe96586c9844b4ddabf42d76e",
+    "pr": 3901,
+    "title": "bot: build pass 1 for #3859",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9889adcf9b1b1c8a39fb6494f1d4d9040b8bf476",
+    "pr": 3896,
+    "title": "2v2 between people in a private lobby: Duos with team B played by two players instead of the AI team",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "fa6d2f2f88116d6a01ff2c53f852dba545166ce1",
+    "pr": 3884,
+    "title": "a hero's Armor gain is announced with an event, a game-log line and a cue, so Tank Up and the cards that give Armor no longer change the badge in silence",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "8c533c645646263d99b54de1c76f87f6f9a2828f",
+    "pr": 3918,
+    "title": "bot: build pass 1 for #3917",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "88b1df6f055036f89432a83f6c2d32350fb36242",
+    "pr": 3902,
+    "title": "a Play hub that explains every way to play, and one inbox for everything waiting on you",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e7edaeffcf7ad9a25b0b19762223fab27680f251",
+    "pr": 3923,
+    "title": "fold the pending §11 paragraphs, the rulings index and the card index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b91f8a80ee6d5a4f4e4977a462314e2899722d01",
+    "pr": 3922,
+    "title": "board notices draw in an overlay over the board, not in the control rail's flow",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e5efaf1e6f7575fea4e1c74c823891eba8c5823f",
+    "pr": 3926,
+    "title": "bot: build pass 1 for #3911",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "bfed6e9415f7880cd5a4132804649d984acaa18c",
+    "pr": 3931,
+    "title": "bot: build pass 1 for #3914",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1ddbe8cc2f6d716f3982bbec83c658144199a5f7",
+    "pr": 3906,
+    "title": "bot: build pass 1 for #3899",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9ec55ba2da5f8e96e2c5edfe07b1e5134b00738f",
+    "pr": 3940,
+    "title": "Show card text inside the Statistics page's card breakdown, below View in Almanac",
+    "kind": "app",
+    "player": "The Statistics page's card details have their own Show card text button, so a full-art card's words can be read there."
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "68f1c3dd29554cecdfdded2fc29ea954363fbc93",
+    "pr": 3930,
+    "title": "the AI's count of next turn's damage to its hero leaves out Scorch's swings, which can never hit a hero, and lets no Taunt wall Toxopid",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1c6a763abcc8ddb9a05e5ddb48784a786caacfd0",
+    "pr": 3943,
+    "title": "the CI duration alert leaves out the checkout step, as it does artifact steps",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "ed8dafbec6f00eebd9133e24d04cdac2a3c6a1c4",
+    "pr": 3947,
+    "title": "patches ship: v0.6.2c, v0.6.3, v0.6.3b, v0.6.3c, v0.6.4",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1b3c3439752d5caddc2afdbc087f734d7e5b3776",
+    "pr": 3929,
+    "title": "bot: build pass 1 for #3910",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "eac748225098b3ef52e6f19b8e44b76c3c368936",
+    "pr": 3949,
+    "title": "bot: build pass 1 for #3912",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d7851b0b47a20132209cdbe6116d17bb29f219a8",
+    "pr": 3938,
+    "title": "the state check judges the board again after Tears of the Kwzki Tree turns every card Radiant, and the fuzz monitor checks that no settled unit stands in a Defense it can't hold",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "257e8c638dd3dd525e59d56280f49eedf14acbcb",
+    "pr": 3950,
+    "title": "a card's play rate on /stats is how often it was played when seen",
+    "kind": "app",
+    "player": "The Statistics page's Play rate now shows how often a card is played when it is drawn."
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d4474d92405adefd5a082003dc4857eac5534c5d",
+    "pr": 3953,
+    "title": "the tier cards and KPIs read win rates refreshed once per patch from production's figures",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "55b4a119e9c2e2fbac579d231bd406ad8b31cc59",
+    "pr": 3959,
+    "title": "bot: build pass 1 for #3932",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e3dbd4c61a0409aa8613055ec2bb6ccac9ff3e94",
+    "pr": 3961,
+    "title": "bot: build pass 1 for #3839",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b8f15de0cdeb1114a00b4d6d01a5cbc0fce56026",
+    "pr": 3948,
+    "title": "one patch a day: the day's micros roll up into a daily patch",
+    "kind": "app",
+    "player": "The Patch notes page shows one patch a day, with the day's changes inside it as snapshots."
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d356065934d06a2307db82fddb24ee16a256001a",
+    "pr": 3964,
+    "title": "patches ship: v0.6.4b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b53e5fcabb3f1eca532f09874833d9b5def97ae4",
+    "pr": 3962,
+    "title": "bot: build pass 1 for #3844",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "f239459ae6160e379ef50081ed9ad7008c5ef6ad",
+    "pr": 3967,
+    "title": "bot: build pass 1 for #3842",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "02c6e48aa19144d900a4e3d1fc7548354a28ee5e",
+    "pr": 3972,
+    "title": "bot: build pass 1 for #3957",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "cf9c6f7545f25fe7d94580c76f1543de8a7d834f",
+    "pr": 3960,
+    "title": "the daily board holds \"End turn automatically\" until the mulligan is over, so the other player's keep never fails as stale",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "420720e596f81407126e3df47373fcbf6bea4fa1",
+    "pr": 3974,
+    "title": "bot: build pass 1 for #3956",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a5bee5537992be81ce5c0513fd99f97bcd2b3413",
+    "pr": 3963,
+    "title": "bot: build pass 1 for #3840",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9076a3e245552ccfe62f0c9f1cb5063af7247ce6",
+    "pr": 3969,
+    "title": "the friends drawer and Friends page fit a phone: tabs that scroll or wrap, themed 44-pixel inputs, no overlapping tap areas",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d3fa50d3a98f6df9ba2446ed1f58729352727552",
+    "pr": 3966,
+    "title": "bot: build pass 1 for #3843",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "0f40c5f6b1e92b75adcfba5122e195c0a0d5b8c7",
+    "pr": 3970,
+    "title": "the private lobby keeps Ready and Start in view on a phone and at 1280×720, for 1v1, co-op and 2v2",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9e84f41e4cdd773b82345495f5d01e0786aa2c14",
+    "pr": 3978,
+    "title": "the tier cards and KPIs read the newest win rates",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "184f5bd0187685c4fc0872156dea16bff0990768",
+    "pr": 3980,
+    "title": "bot: build pass 1 for #3936",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "0aca1c96444e4b7b18dd37adf2fd6f0bc4bc5226",
+    "pr": 3979,
+    "title": "bot: build pass 1 for #3977",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4ad7f70ae27ffc345c28200a2aa556a5937c9a00",
+    "pr": 3981,
+    "title": "patches ship: v0.6.4c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "901978f722833336f56ddbc946bce91982cd5ec8",
+    "pr": 3965,
+    "title": "the mutation audit's build-script cap and classifier fix, and its first remaining shards sorted",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "752b74fd07d6560717ce4174353465325dd755d2",
+    "pr": 3983,
+    "title": "patches ship: v0.6.4d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "671e2a6a989401e815928e3a84196dbf80b20700",
+    "pr": 3984,
+    "title": "the mutation audit's code_lines.rs walk, and engine shards 8 to 10 sorted",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7706b22f3b115d7a3576f857c5f19d50280c8b8e",
+    "pr": 3985,
+    "title": "fold the pending §11 paragraphs, the rulings index and the card index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7ecd0f2c102feb90250437082feb24b5873da22b",
+    "pr": 3987,
+    "title": "the newest entry's cards are its basis's, so a daily patch reads its micros' (R3944002, #3944)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "51b12424e25f57873599be11ea7110d9986bd7f4",
+    "pr": 3988,
+    "title": "patches cut: v0.6.5",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "817694766132fa7f9a5a856c641180f2969877d5",
+    "pr": 3991,
+    "title": "bot: build pass 1 for #3933",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "560b5878eb283884689c5db696e0162715c56e5c",
+    "pr": 3993,
+    "title": "bot: build pass 1 for #3934",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "eae06c65934fc69d5d914c26d80ce397d28b51e9",
+    "pr": 3990,
+    "title": "bot: build pass 1 for #3618",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "ff38380a54cf428ad747d5b378b8bed495aef7f9",
+    "pr": 3995,
+    "title": "bot: build pass 1 for #3976",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "074cc508dfcb801848280ca64184c33564f88a68",
+    "pr": 3997,
+    "title": "R3910000's note reads \"The client\", not \"The the client\"",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "5c59fd2535bbc52ada3bd5bdd6a99ef4976c731c",
+    "pr": 3992,
+    "title": "the mutation audit's batch 1 finished, catalog.rs and auth.rs's windows held",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "ff4e6dbbfb97183723a83fc34c627e53e5c40cf4",
+    "pr": 3968,
+    "title": "the inbox's Play and Open look like buttons, Home's bookmarks are 44 pixels across, and the Play hub shows its Solo row at 1280×720",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "acd3d1e2897032b23631e1724bfb5ced56d90fb6",
+    "pr": 4027,
+    "title": "mutants.sh: a timed-out test binary is killed outright (#3836)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7767d9815aa7d5e6e56350837287d64d41dc6012",
+    "pr": 3924,
+    "title": "daily super run failed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "bcfdf800f6200f9c6f49d1932cf7f8eb3b683f95",
+    "pr": 4029,
+    "title": "bot: suggestion surveys run on spare subscriptions, several at once on separate areas (#4026)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3ca6783c0b3fb1eb9c2f4e888d4eaf38da02b840",
+    "pr": 4030,
+    "title": "patches ship: v0.6.5b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3f318442148e2ad0a0a43925622076e93b7c0941",
+    "pr": 3989,
+    "title": "bot: build pass 1 for #3619",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "411011f9e309e65f07d357be57dc96c95a9b0e40",
+    "pr": 4028,
+    "title": "card tests read one card's offered plays and targets through testkit helpers, in place of 28 local copies and 130-odd hand-written filters",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "43eea36894de0c7ab0b8d953d39450c74dcc0c9f",
+    "pr": 4031,
+    "title": "bot: build pass 1 for #3937",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9cea15006dbbd3f395f6995eab6b51a455a901a2",
+    "pr": 3994,
+    "title": "bot: build pass 1 for #3826",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9c20dddc7d40b16d72c0eb4d6128e215231dd632",
+    "pr": 4036,
+    "title": "bot: build pass 1 for #3975",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "ecd19f1a2c2ba2d1a5385e28a81fd0d15c11cb2e",
+    "pr": 4042,
+    "title": "the people's checks of #3897's web attacks, held in tests and docs where code can hold them",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "97470196df569c096bb751e2fd9968f76fc20294",
+    "pr": 4045,
+    "title": "patches ship: v0.6.5c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "6440e59ffa8b7605d076a6908bcbc9b7bb7cde6b",
+    "pr": 4043,
+    "title": "remove the \"How JackiOh uses AI\" page (/ai)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b8093a6f3fc21dd1093b36b27f3c4367d528d8f6",
+    "pr": 4051,
+    "title": "bot: build pass 1 for #4025",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1b9d272c9a8b47dcf4533b1065c850dae78ba784",
+    "pr": 4049,
+    "title": "bot: build pass 1 for #4019",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "5fa7d217b3fe74022c352929a3408a01b39a0e28",
+    "pr": 4048,
+    "title": "bot: build pass 1 for #4020",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "969a8039f93e216d5221e71f8cef782711274b01",
+    "pr": 4046,
+    "title": "Efficiency Dividend's heal choice names the heal the card gives, and choice words take a card's tunable numbers from the card",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "97361acd355d669cf83b51309c6d981757fe5c4e",
+    "pr": 4052,
+    "title": "bot: build pass 1 for #4023",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7a6bf1ead84756f5fa603be913dffe316c417397",
+    "pr": 4053,
+    "title": "bot: build pass 1 for #4022",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "03f79ecfeb8edc8ae22a3b443b8987cc4360b9b4",
+    "pr": 4056,
+    "title": "Drone Assembler v5's attack voice line names its Interceptor",
+    "kind": "app",
+    "player": "Drone Assembler v5 now calls for its Interceptor when it attacks."
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "0fee92df13aa08c5c00c07f3478f1a3141e06663",
+    "pr": 4050,
+    "title": "every Field guide entry can be found in the lessons: The Coin when the opponent gets it, Tribes and Tribute from a lesson's deck",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "05b0bbc8399ac94cb980f8b02b66f93ee8635b2b",
+    "pr": 4047,
+    "title": "a private lobby stays on screen when one refresh fails, instead of turning into an error card",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9c510fb4529c7c764376ba18e34677b57b6651cc",
+    "pr": 4060,
+    "title": "every GET the night bot sends is conditional, and the state file's blob is read once a version (#4059)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a222fb95ef9858f3de754a376ea857e5427d78b5",
+    "pr": 4054,
+    "title": "every route that checks a guessable value holds a per-account and per-IP limit, with a test",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "029a6bbf6d735d0facdc6ad50640807da71af5ed",
+    "pr": 4068,
+    "title": "in-game notifications that are kept until read: a feed in the inbox, toasts, the tab title and desktop notifications while JackiOh is open, in place of email",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "aff47bfbe3b05f812e6622c8f921b1bc551b71f5",
+    "pr": 4073,
+    "title": "patches ship: v0.6.5d; patches cut: v0.6.6",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d68da6058ba3df975186b3b894e44ce71e02f165",
+    "pr": 4055,
+    "title": "bot: build pass 1 for #4032",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "140ff2d97512d36fc0dbcf03cbd587633a452d74",
+    "pr": 4075,
+    "title": "the AI prices each side's copy of a card's Death and turn hooks on its own board, as it already does Activates",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d9f6d0c37b386996fb3790356c4ab9456e4ce2db",
+    "pr": 4076,
+    "title": "daily super run failed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "36c66c0e357f53bac853abc76bfbf885bc60e6f7",
+    "pr": 4077,
+    "title": "the tier cards and KPIs read the newest win rates",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4f529c23767c1fdbae700ad6db16f3932d834945",
+    "pr": 4078,
+    "title": "patches ship: v0.6.6b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "cbfc5d595b54937f103f76a7c997b48eb17cd91e",
+    "pr": 4080,
+    "title": "patches ship: v0.6.6c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9e44c54efcd041a8c807cf5a816137cf8904b444",
+    "pr": 4087,
+    "title": "bot: build pass 1 for #4084",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "244f9f87772e222d62f485961705cca818dabac3",
+    "pr": 4088,
+    "title": "bot: build pass 1 for #4082",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "f94a31821fcdf7c240554163c1c849baf0519abc",
+    "pr": 4089,
+    "title": "patches ship: v0.6.6d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "97d4aa4e69d2429822cf2437e4c0ff5d6d66aa44",
+    "pr": 4091,
+    "title": "bot: build pass 1 for #4010",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7dbfb6252f543a5b1a0357491a1b5393d5fc11a3",
+    "pr": 4095,
+    "title": "bot: build pass 1 for #4070",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "062d4672261f6b859a9128913891b234284d6660",
+    "pr": 4096,
+    "title": "bot: build pass 1 for #4066",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "bf62b3656e7113d19c6b63722032e64af46eb874",
+    "pr": 4100,
+    "title": "bot: build pass 1 for #4094",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a040a62718931ad21bde31fc266e6b88ff5f8d96",
+    "pr": 4097,
+    "title": "a dungeon run refuses a curse taken twice, and a mini-boss dealt no relic rolls its replacement at its Gold floor",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "699914740f4aafe20dc68457ba8fb3d6b4b21a6d",
+    "pr": 4102,
+    "title": "bot: build pass 1 for #4064",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a1317054e12df3f6111ece31e9d71844c3fb013b",
+    "pr": 4106,
+    "title": "bot: build pass 1 for #4058",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "ef594eca7f4275aabd34a2b5197534da2fef3cfa",
+    "pr": 4099,
+    "title": "e2e smoke drops specs 46 and 47 to the daily run",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b0e998a29bebc1b019936c4010deb4897cbadc4d",
+    "pr": 4101,
+    "title": "bot: build pass 1 for #4065",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "cf80f62323a72e441c8c28e522b8a56ac77c9f28",
+    "pr": 4105,
+    "title": "the `tools fuzz` and `ai slow` test groups move to the daily run",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "80a4d311655bbc0a77850f0b9ec7baa2860dfd86",
+    "pr": 4113,
+    "title": "bot: build pass 1 for #4057",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a5d9d4864f12d1d31da6e5cabefdf280434c0b8d",
+    "pr": 4098,
+    "title": "the fuzz regression corpus keeps the start its seed drew, not only its decks",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "17a5360b71c4dc5910b65a39aff2ef2165463eaf",
+    "pr": 4103,
+    "title": "bot: build pass 1 for #4011",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "87bd279557f994b382c52a2dff56dea276f7f757",
+    "pr": 4119,
+    "title": "audit the codebase for dead code, duplicates and zombie routes, 2026-11-17",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "211836e0309b8bde4f1067d32852f8cb5c4e1e9a",
+    "pr": 4121,
+    "title": "bot: build pass 1 for #4120",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "62b356cfdec1d39fe8e35010a0beea35d969fff9",
+    "pr": 4123,
+    "title": "the schema invariants refuse a view that bypasses RLS and a SECURITY DEFINER function left open",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "c1588e23b7d56867201b7a87c434aeb818de290f",
+    "pr": 4125,
+    "title": "switch off claude-2 and claude-5, keeping their wake ping",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7f5cfef5af9f4c5787591eb6b450320cef59cd69",
+    "pr": 4129,
+    "title": "fold the pending §11 paragraphs, the rulings index and the card index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "094e51ea835b3dcc7d3168aa5605eb981aeb79b0",
+    "pr": 4128,
+    "title": "bot: build pass 1 for #4013",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1cecc7f13be287391a484c96e8cd1f1d2eb1a51f",
+    "pr": 4133,
+    "title": "bot: build pass 1 for #4112",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "c6354ffe176735f7a725b53adf8a09f085681262",
+    "pr": 4135,
+    "title": "bot: build pass 1 for #4108",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "99ebd1aef83a26c090bc5526d70db445efcc43c0",
+    "pr": 4134,
+    "title": "the learned evaluation's fit gives each feature a smallest spread, so one rare keyword can't outweigh the board, and its report shows each feature's pull",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d6d35deb743f8697cc71c9cd4ef651e091662cb1",
+    "pr": 4138,
+    "title": "bot: build pass 1 for #4116",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "f4afbb8a9c71d756d915299b4345b451980ef5ba",
+    "pr": 4148,
+    "title": "patches ship: v0.6.6e",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "5b50078f4c6b9825a441dbda6f13be9b8f488617",
+    "pr": 4147,
+    "title": "bot: build pass 1 for #4014",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "96f1e90ded9e154ec994a8bcd784ba957180db02",
+    "pr": 4137,
+    "title": "bot: build pass 1 for #4118",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "6854b4c55b8e03c013bdd511b2ee657eb9d80559",
+    "pr": 4150,
+    "title": "bot: build pass 1 for #4149",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "740661ed6120859c0151a5c7d6ab34257129387b",
+    "pr": 4152,
+    "title": "the AI's mulligan stops reading a table measured on three old sets: it keeps its one-drops by its own price of them, and keeps no card above its cost bound",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e73836296f2c4221af02c775c072170b740f219d",
+    "pr": 4151,
+    "title": "bot: build pass 1 for #4111",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "254b7862576b26fa0d81d5945ce1f51d36f6d0cf",
+    "pr": 4160,
+    "title": "bot: build pass 1 for #4140",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "2a23a7948bd45e09e38c52365afdf3eef5f6f06f",
+    "pr": 4165,
+    "title": "bot: build pass 1 for #4144",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "afb994522bdb980ffbbc4993658faa875c4f3c72",
+    "pr": 4172,
+    "title": "bot: build pass 1 for #4143",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7fce1ce4e652eb39a8fbaa4549c126eb908a29ec",
+    "pr": 4175,
+    "title": "bot: build pass 1 for #4145",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "f870ac82aab9a5002d3b5fde749695b9889001d1",
+    "pr": 4162,
+    "title": "/stats' Tokens and Other created cards match the deck table, rows open the card, and the page loses its explanatory paragraphs",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "071e8e62fc9c990efc488ae7eff6f950b8c55287",
+    "pr": 4177,
+    "title": "bot: build pass 1 for #4174",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1fd0162fbf018b3113e38d97a58a1a2ad723f4e3",
+    "pr": 4176,
+    "title": "bot: build pass 1 for #4131",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b51979ea827b7ec1d236f9c6e145bd8eb27ddc01",
+    "pr": 4179,
+    "title": "patches ship: v0.6.6f",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "fc5372f2d9c6c89b5d97cb3cb4ee325ccd340d84",
+    "pr": 4182,
+    "title": "patches ship: v0.6.6g",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "8c6074f25bb06052b38a688d49a8e4065f45e76a",
+    "pr": 4183,
+    "title": "bot: build pass 1 for #4168",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b764d8769d86eecb8ae249727e97ed3827ffc1b6",
+    "pr": 4191,
+    "title": "bot: build pass 1 for #4157",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "ba7a755b2895a77d08a8c1bbd6eb40e1e36223f8",
+    "pr": 4192,
+    "title": "bot: build pass 1 for #4161",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b59e26eef168e3f481da9a563103f7982c08c684",
+    "pr": 4199,
+    "title": "bot: build pass 1 for #4156",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d08623ba35d0eebec2a5125c9cb681211bd5a74b",
+    "pr": 4201,
+    "title": "patches ship: v0.6.6h",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "320e811c8e494ccd4417096ceeab2006af788797",
+    "pr": 4195,
+    "title": "after the opponent's reply, the AI counts no attack this turn from its own unit that is still Frozen or just arrived, as the engine allows none",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "928e68ba56d61fcde3fa010912a8cd4929c74f0a",
+    "pr": 4200,
+    "title": "bot: build pass 1 for #4171",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "284c7680b17cff25cddab929930b730262765118",
+    "pr": 4164,
+    "title": "bot: build pass 1 for #4141",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e97d3774e9ef0d422908ea8ae3c8d2e1a585f67f",
+    "pr": 4184,
+    "title": "weekly hygiene of the agent instructions, 2026-11-18",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "177e2c215a1d96e0a22c19bbfe324614f4dd06be",
+    "pr": 4178,
+    "title": "bot: build pass 1 for #4166",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "f1e2ca070bdc463512fd189ff5b4ede7e809dfad",
+    "pr": 4193,
+    "title": "bot: build pass 1 for #4016",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "da0ca24dba771b1e4ec9c8ac14dbffd88439f205",
+    "pr": 4204,
+    "title": "bot: build pass 1 for #4185",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "17e34d081571bff7ab20579027925a1b855d0278",
+    "pr": 4198,
+    "title": "bot: build pass 1 for #4169",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "fa2e2f383a473c9fee268fd1b14f0c67180acb29",
+    "pr": 4214,
+    "title": "xxFreshJack's Tribute test reads the play, not where the card stands (#4154)",
+    "kind": "internal",
+    "player": "None: test only."
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "f3f2d6b6bcf138a278e28206fb92f09feb31aefd",
+    "pr": 4212,
+    "title": "bot: build pass 1 for #4017",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "8fa1cdc146bca1b03bd10fee2ae8e5a174175338",
+    "pr": 4217,
+    "title": "pull_request_target only where an Actions event policy allows it",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "fbd70909c39e8e3a4c30cd212ead05e037216ccc",
+    "pr": 4226,
+    "title": "xxFreshJack's Tribute test reads the Tribute off the event order (#4154)",
+    "kind": "internal",
+    "player": "None: test only."
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "c040adf45e9814c6cd7d3c4524f6e73851927ff4",
+    "pr": 4208,
+    "title": "bot: build pass 1 for #4203",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "68cb352eddfd8dfbd5d79f4d19a3a1c53a0034c3",
+    "pr": 4227,
+    "title": "bot: build pass 1 for #4218",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d24b42fa97625f5e07ed619621b4ad593307577a",
+    "pr": 4228,
+    "title": "fold the pending §11 paragraphs, the rulings index and the card index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "28bf8d2c8b5559e8bc598b501720583eeb599e68",
+    "pr": 4229,
+    "title": "patches ship: v0.6.6i; patches cut: v0.6.7",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1c61ba6de9c40f948a701d63b03ec924b847b91d",
+    "pr": 4232,
+    "title": "bot: build pass 1 for #4018",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "c33b1e97b9b87464238293fa9eb3c87cafc8ed94",
+    "pr": 4236,
+    "title": "patches ship: v0.6.7b, v0.6.7c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "6bb1b7218bdfb6637032f7782007f1063c6124d7",
+    "pr": 4230,
+    "title": "bot: build pass 1 for #4197",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1ddaeb4fb03f789480c9e040d514eaae7e1d960c",
+    "pr": 4173,
+    "title": "the AI's search stops filling its four lines with one play set in different lanes: a backrow card's lane, and which side of a standing unit a new one goes, are lane variants too",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "98cb53242fcdf2a6f0ccd7f6857609745d2d3e04",
+    "pr": 4210,
+    "title": "the AI expects an opponent facing lethal to switch a unit to Defense Position, not to swing it at the face",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b3a420a390b4994c52562bbee974a50b023ccac2",
+    "pr": 4243,
+    "title": "bot: build pass 1 for #4181",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "88e5e2e794da47d719f92e1e407e4744018b9c28",
+    "pr": 4242,
+    "title": "bot: build pass 1 for #4216",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "14e3fd964e9c198680f0ebf671d33311631ca666",
+    "pr": 4239,
+    "title": "a live 1v1 match checkpoints every 32 actions as it is played",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "5e61cd0a12a9456f00579255aca335e8b8bd7480",
+    "pr": 4244,
+    "title": "an AI Duos seat counts what its teammate's enemy is about to take off the shared pool when it judges whether the team faces lethal",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7749cffeb496783538bab2ff9a0dcd16bb9eebb6",
+    "pr": 4252,
+    "title": "patches ship: v0.6.7d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "012af0a416d0d571ab1ebca5b473b773e3622987",
+    "pr": 4256,
+    "title": "patches ship: v0.6.7e",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "47478580a90c023ec3705c65bf8ad07696bd718c",
+    "pr": 4240,
+    "title": "the bell's dot stops lighting for what the player already dealt with: a notification is read once its daily game, challenge, friend request, lobby or shared replay is opened or answered",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1955aebdce4029480ef70656832fe9618c4a32b2",
+    "pr": 4258,
+    "title": "bot: build pass 1 for #4251",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "5d04d395d96214eb771abb090bc91bc17dc41c9b",
+    "pr": 4104,
+    "title": "bot: build pass 1 for #4072",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "087a371898ce240ca3c8d75afe9f23fceb7b5ee4",
+    "pr": 4254,
+    "title": "a Unit revealed from Cloaked is summoning sick on its reveal turn",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7d2cf6960b0060bd642827baa5fb4a52de7a082a",
+    "pr": 4260,
+    "title": "bot: build pass 1 for #4259",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d40d3a457dd560394e15cb3cc263782c4564dae6",
+    "pr": 4209,
+    "title": "bot: work in progress (`claude-3` reached its usage limit)",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a5ff1f2cb14df49fc0222d952ece6ce5ef6282be",
+    "pr": 4231,
+    "title": "Death and Reborn still fire when a dying card is exiled instead of going to the graveyard (Voidwalker, Disintegrex)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "947bae6c115450fc84e2313e17837f77c3fbbbd9",
+    "pr": 4264,
+    "title": "patches ship: v0.6.7f, v0.6.7g, v0.6.7h, v0.6.7i, v0.6.7j",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "2472e7ca1dd0e494b7605089b7083010c92719aa",
+    "pr": 4266,
+    "title": "bot: build pass 1 for #4196",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "978ccfcedad3cb8044aa38d1be7d636baec9ccbd",
+    "pr": 4267,
+    "title": "bot: build pass 1 for #4265",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "2de57a9a2334e34c614260de1447ce7f8a846f2d",
+    "pr": 4268,
+    "title": "the tier cards and KPIs read the newest win rates",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b3602864894832f8c33c0f092e0dfa96aaedaf97",
+    "pr": 4271,
+    "title": "fold the pending §11 paragraphs, the rulings index and the card index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "8ac04a31eb369dd9a34e42bf4b12f9b5197a15ed",
+    "pr": 4277,
+    "title": "bot: build pass 1 for #4272",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e1adea85a8dfa023230d50024e59bec57c877263",
+    "pr": 4276,
+    "title": "resume claude-3 40 hours after its suspension, then disable the workflow",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "5da0a6d9463b2d51fc785c509740100d4bb71ae0",
+    "pr": 4280,
+    "title": "patches ship: v0.6.7k",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3271750b6976d62a7e50e200f68ecf434b17396f",
+    "pr": 4278,
+    "title": "bot: build pass 1 for #4274",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b24900c411bf1456677a4bbdea7b193ea2ed47fa",
+    "pr": 4279,
+    "title": "card stats count cards cast on draw or put into play from the deck, and /stats gets clearer tabs and a Tokens tab",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "8f57b06c3f8061024a19d1146295bcc5f019409c",
+    "pr": 4282,
+    "title": "bot: build pass 1 for #4273",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "642ab3464b9a96374a089c1bdb1859072c5961ac",
+    "pr": 4281,
+    "title": "daily super run failed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d70de4becb35cf3fb22f2f9cfa0d67e915d8fefc",
+    "pr": 4283,
+    "title": "a smaller build of the C module for ports",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "968d1cbde62f7d3a1516a07e6ed4f6c61c9ac53e",
+    "pr": 4295,
+    "title": "bot: build pass 1 for #4249",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "5f78ac3f0e59a8b3d53393376631cef3e0376b6e",
+    "pr": 4299,
+    "title": "bot: build pass 1 for #4288",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "ae977ece3e9cd80138ca5b8856cb85d553551faf",
+    "pr": 4301,
+    "title": "bot: build pass 1 for #4287",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e1ebe4257fa49fa8e7b6dbf7f42351cb1f5691a7",
+    "pr": 4304,
+    "title": "bot: work in progress (`claude-8` stops mid-call: 5-hour usage is 86%, at or over its 85% cap; it resets at 2026-11-20T07:00:00Z)",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "2475b9114fee3cf92a30ccdd7464f29bfbbebab0",
+    "pr": 4305,
+    "title": "bot: build pass 1 for #4294",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "095640be39d72a24aa36a9395003b06e83e5f48a",
+    "pr": 4306,
+    "title": "bot: build pass 1 for #4286",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4b1ce2f0daa8d0ea273077f0d02aa470560f11c1",
+    "pr": 4311,
+    "title": "bot: build pass 1 for #4310",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "bcdc70af1daf6a77aef397dc9ff2c4a4fdffca70",
+    "pr": 4308,
+    "title": "audit the codebase for dead code, duplicates and zombie routes, 2026-11-20",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a6912366aee255ac169c22fde505a3afefa3993b",
+    "pr": 4302,
+    "title": "bot: work in progress (`claude-7` reached its usage limit)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9c122c401ffaf2dea6601adf5fc12a4dc73b27cb",
+    "pr": 4315,
+    "title": "bot: build pass 1 for #4313",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b09d13ead547ef6ae766d640624d6dc67d6f3080",
+    "pr": 4323,
+    "title": "bot: build pass 1 for #4298",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "2c51e9304ad10d60ab14239c11ddb623e4490678",
+    "pr": 4329,
+    "title": "bot: build pass 1 for #4316",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7cb033f608afc66214985fd6537402e713f73101",
+    "pr": 4325,
+    "title": "bot: build pass 1 for #4319",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "dd0f3b2d73c74534b520bf24024ff512af63d9ac",
+    "pr": 4330,
+    "title": "bot: build pass 1 for #4300",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "2f3bceb3905ed94fcadbcd9c56c17466c32ffe92",
+    "pr": 4335,
+    "title": "/stats' tabs show their names alone, and the tab row shows on the page",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "872c63036fff0d75b2ae78a31ba97e0be9adcb4c",
+    "title": "Merge remote-tracking branch 'origin/main' into claude/stats-page-subtext-removal-njts3t",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a3527a87060498009f4555983b6bea38a3d1fd6b",
+    "pr": 4320,
+    "title": "bot: build pass 1 for #4297",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3a9d59cf22de02f732fbdaf685b4805b8b34b907",
+    "pr": 4336,
+    "title": "patches ship: v0.6.7l, v0.6.7m; patches cut: v0.6.8",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e545e5fd01b98967f3154bba53e4e55d9ce75690",
+    "pr": 4340,
+    "title": "spec 46 fails a clipped tab row, and the tab rows' local flex: none goes (#4339)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "373bd1521212cdfc69be303b00ef6005c1b873a2",
+    "pr": 4324,
+    "title": "the game log's card buttons meet the 24-pixel target on a mouse too",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a868d55e83ff3c52168f9377b0ac47911cd5583b",
+    "pr": 4341,
+    "title": "bot: build pass 1 for #4083",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4224de56cd9dfe803fa83d43177f61f2752429c8",
+    "pr": 4343,
+    "title": "the weekly mutation run files its own sorting issue, and week 2967's survivors are sorted",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "6b9d92dea2086576e569748a1c2ee83af1a07f06",
+    "pr": 4307,
+    "title": "the aimed-attack preview names a Cleave attack's splash and a Trample attack's overflow",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "baa7cdb93fca5ac072681f49707f6a842d18b533",
+    "pr": 4347,
+    "title": "patches ship: v0.6.8b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "00ab6e90025b5b275fccb2ae1fbe8c13008c1e00",
+    "pr": 4354,
+    "title": "patches ship: v0.6.8c, v0.6.8d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "092735a12721e7e42623d225b2eac6ebaa98dd48",
+    "pr": 4358,
+    "title": "delete resume-claude-3.yml, its one-off job done by hand",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "82c4704f41e92f820d86aaadee08c063469e1ed4",
+    "pr": 4351,
+    "title": "bot: build pass 1 for #4041",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d5f68be2ec5cdb9d79723076626857b0c0673204",
+    "pr": 4346,
+    "title": "daily super run failed",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "c4bc8bd2a8e10d3a4b9f10c29b5f5ccd1b22432b",
+    "pr": 4355,
+    "title": "bot: build pass 1 for #4250",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "f1ddc391cf2be11fc6025668f848b09fc290eeea",
+    "pr": 4360,
+    "title": "bot: build pass 1 for #4247",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d85e7838304dcddc08890c7d15d82963506fa152",
+    "pr": 4359,
+    "title": "bot: build pass 1 for #4117",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "39b96f82dcea86d9c6d713d3ae8749f5a798e65f",
+    "pr": 4362,
+    "title": "bot: build pass 1 for #4219",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "2ec55d822b50ab7721dc0d8341eb75c95f53f7d4",
+    "pr": 4366,
+    "title": "bot: build pass 1 for #4225",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e41f3eb9e9971aae870924fdc37fdd03cba3b8cc",
+    "pr": 4368,
+    "title": "bot: build pass 1 for #4246",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "70a1730b468250b4d47263281e7d3f7b055a94b8",
+    "pr": 4367,
+    "title": "bot: build pass 1 for #4348",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "fc37bd3ad74b4e57370c94d253bdf83bf8bdd5dc",
+    "pr": 4376,
+    "title": "bot: build pass 1 for #4374",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1a46b42f91691d55cfe0fc039830cf3ce3b05af4",
+    "pr": 4373,
+    "title": "bot: build pass 1 for #4317",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "8fc2bec80eb997ee37a6feb12ec8464fe2dcc142",
+    "pr": 4372,
+    "title": "the deck builder's Compare with picker reads in full at 744×1133",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "2303b794e481422e7327a9c5f105807a272df446",
+    "pr": 4383,
+    "title": "patches ship: v0.6.8e; patches cut: v0.6.9",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4ea48c39e4d64e0d599883781701b2a4373e48d5",
+    "pr": 4385,
+    "title": "bot: build pass 1 for #4363",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "65fb3d11dff87d9defcf39ec6716e8243177a7da",
+    "pr": 4389,
+    "title": "bot: build pass 1 for #4371",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4ca6323aa32b5486f806ef3535f5f42490c408a1",
+    "pr": 4386,
+    "title": "bot: build pass 1 for #4332",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "aada4130004fa11ea7aa59d1b4d8687934c3454e",
+    "pr": 4387,
+    "title": "bot: build pass 1 for #4369",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "5e5e5b025f8d528fb462ddffbda8b7f1a2738ebc",
+    "pr": 4388,
+    "title": "the hourly retention purge reaps expired private lobbies",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "0cd6b9dfb369a9785e4f84ad7d5c75f9e3cf8598",
+    "pr": 4398,
+    "title": "bot: build pass 1 for #4379",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "16ea1844332c56823716ea92e5f8dcb07a92707d",
+    "pr": 4401,
+    "title": "patches ship: v0.6.9b, v0.6.9c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "30a48a9caf6d411bfb7f9d330e99495d7cf1f6ac",
+    "pr": 4405,
+    "title": "patches ship: v0.6.9d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "65538df6caa3485bbcccde3a72851c6a1f4c1b13",
+    "pr": 4404,
+    "title": "no more than 100 game events between two player interactions: one cap that ends every endless resolution loop",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b8a5f4407b5997c7c83fa88be431c0a7bbc6e7bd",
+    "pr": 4406,
+    "title": "the tier cards and KPIs read the newest win rates",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7938b7b79d6d7d42c8748bec690a6112bc063ffc",
+    "pr": 4407,
+    "title": "patches ship: v0.6.9e",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "90cb03f196c766bd7e79c0b552a6f6db3b40c4e4",
+    "pr": 4409,
+    "title": "the night bot stops suggesting accessibility work",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4256b427443a7c9d3198374daf189096f95c9cbc",
+    "pr": 4415,
+    "title": "bot: build pass 1 for #4391",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9ae0556bb1d657604c619b46679265cfbb23a200",
+    "pr": 4412,
+    "title": "bot: build pass 1 for #4394",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4521cdf8a4a379d1d24a25443d34bd60dab5b024",
+    "pr": 4411,
+    "title": "bot: build pass 1 for #4403",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "21e7a8b04bb9643946344ec7d482720b45f69c2f",
+    "pr": 4414,
+    "title": "the online match host is fuzzed with random disconnects, clock expiries, failed writes and restarts, and its log always rebuilds the game it holds",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4091f55a60ef2ecea9c910f56092187c0884656d",
+    "pr": 4420,
+    "title": "patches ship: v0.6.9f",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "d4505a0276a7aa7b93337de163c1bb9e9048ee7d",
+    "pr": 4421,
+    "title": "bot: build pass 1 for #4402",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "0b6703d0cd86c71dac0119ebb1651796e042dba8",
+    "pr": 4416,
+    "title": "bot: build pass 1 for #4390",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "73fe3958cd6fae33ce028f56c978d933b5b7dd95",
+    "pr": 4429,
+    "title": "bot: build pass 1 for #4418",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7201a2687e58eda99e83e0a8ccb4d7a626f3b683",
+    "pr": 4422,
+    "title": "an AI tuning screen measures a change at the moves it changes, each played out both ways from where it was made",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "a4d45851dfcd0cfc3bc5853b6bfa0033e8da8f9a",
+    "pr": 4413,
+    "title": "bot: build pass 1 for #4393",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4a7e988aae963d975fc947b57017682a6ec9c32d",
+    "pr": 4437,
+    "title": "patches ship: v0.6.9g",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3d51084892a861ee536edf960d49fdf903a48644",
+    "pr": 4434,
+    "title": "a job ran over 10 minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1dcd5b65a679630912d339b09671d638efac46ce",
+    "pr": 4439,
+    "title": "bot: build pass 1 for #4430",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "09f91ab710ab04f396c95a193465470e94dd9d22",
+    "pr": 4408,
+    "title": "fold the pending §11 paragraphs, the rulings index and the card index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "7d283f7f29852c4b97067623e4ce5d4fdee41f2c",
+    "pr": 4442,
+    "title": "bot: build pass 1 for #4431",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3656fca06a29a485e1f0b7aab1ac021823abcf87",
+    "pr": 4443,
+    "title": "e2e: spec 51's R109 note keeps the account turns where 51 runs alone (#3982)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3df987d48ca7c03e129153c9e7d246fb3c82cf61",
+    "pr": 4452,
+    "title": "patches ship: v0.6.9h",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "6459c02cd6b5d37decde8776076510c1d520fb6e",
+    "pr": 4451,
+    "title": "bot: build pass 1 for #4426",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "709c303c0a4be5f75edf4b3857777f0c511057d9",
+    "pr": 4457,
+    "title": "bot: build pass 1 for #4441",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3af82963008ac47ebffb4e9903f8f93fc41da15d",
+    "pr": 4460,
+    "title": "bot: build pass 1 for #4433",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "81abc3232634775f471448c08416144435270cc2",
+    "pr": 4461,
+    "title": "patches ship: v0.6.9i",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "26a963264f85b18ccaa2c56fd889fb37ed707e07",
+    "pr": 4438,
+    "title": "the daily super run's red jobs, and daily tests in three legs",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "59c8529162a1918db28ec1fa883ce19ebb0c0c9e",
+    "pr": 4458,
+    "title": "bot: build pass 1 for #4428",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "0cbf13009a9293c7ce0734b0e28c4f91cfbacb1f",
+    "pr": 4474,
+    "title": "bot: build pass 1 for #4445",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "69c9b15494dc9d77de8d2da03dd38d97f1460ebb",
+    "pr": 4475,
+    "title": "bot: build pass 1 for #4470",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "8f32230a36113086b3ce87f72a4a450963f649c3",
+    "pr": 4473,
+    "title": "a job ran over 10 minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "96448b77eea160474e65f99fe26144c13d415d44",
+    "pr": 4482,
+    "title": "bot: build pass 1 for #4468",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "27433e5db4d8375ba6d1fb117a94746820183451",
+    "pr": 4483,
+    "title": "bot: build pass 1 for #4447",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1a51cecb641054e727cef7b4254e6f550a999a51",
+    "pr": 4481,
+    "title": "bot: build pass 1 for #4466",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "77e6ef9230ea211df04b826b19911fb95b818017",
+    "pr": 4487,
+    "title": "the fuzz monitor fails a game in which anything reaches a Dormant card",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "256dda5a8dce6a3b8f905cdb1f1ece91c9bcc707",
+    "pr": 4488,
+    "title": "patches ship: v0.6.9j",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "5c7f0683834d29294a95dee4fead3e107d613fda",
+    "pr": 4490,
+    "title": "bot: build pass 1 for #4427",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3de2d02ce519dd27590d14371b55d27034b6b5e8",
+    "pr": 4476,
+    "title": "a Spell's effects on every card and its random picks pass a Unit Immune to Spells by, as its aimed ones already do, and Meteor's spill skips a Dormant neighbour",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9df476a14a2148e96a980b92f5de36cbb4210194",
+    "pr": 4491,
+    "title": "patches ship: v0.6.9k",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "99a9c84d7f2a19a97f614643d202e409089b7838",
+    "pr": 4492,
+    "title": "patches ship: v0.6.9l",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "ec9ad81d4f7fd9b4913e317d9406560b3cabe954",
+    "pr": 4495,
+    "title": "patches ship: v0.6.9m",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "824df283f137dbe81b3df44b64e59f37eb1cf3e8",
+    "pr": 4497,
+    "title": "fold the pending §11 paragraphs, the rulings index and the card index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "0e27ef36865908ca62554fb6dec44825853d7c86",
+    "pr": 4494,
+    "title": "bot: build pass 1 for #4449",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b375f040e1879677282ed877b1c0c4f77667b681",
+    "pr": 4498,
+    "title": "bot: build pass 1 for #4485",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "62524c24810210f67935dfa47f32795a17bf5387",
+    "pr": 4499,
+    "title": "bot: build pass 1 for #4477",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3ba8d951521983844e746e7edd7992345a65192e",
+    "pr": 4504,
+    "title": "bot: build pass 1 for #4478",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "cd440dcb0ff9deabc49681ecea0107b33d2f91f3",
+    "pr": 4506,
+    "title": "big set pieces fit a phone's memory, and a layer budget keeps every future animation inside it",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "26f418bd27e30db8df79f621e34d506a5ef4db04",
+    "pr": 4503,
+    "title": "bot: build pass 1 for #4479",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "35540a53803a7bd76b6540c5243226f97561731f",
+    "pr": 4505,
+    "title": "bot: build pass 1 for #4496",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "9155d8b6adcd20514169e581824dd43d378d0f5b",
+    "pr": 4502,
+    "title": "the friends drawer and chat panels load on first open, not in the first page load",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "f5a5cc1ffaaa6795f4e957a56e54743a9b33201f",
+    "pr": 4500,
+    "title": "a random cast's prompts pick only targets its caster could have chosen, so it never steals or hits an Evasive Unit and never wastes a pick on one Immune to Spells",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "349bfa1af5a3967863d0de3b918b9a35d08cbe9d",
+    "pr": 4464,
+    "title": "follow-up to #4419 from the after-merge spot-check",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "efa922936ffd1ac97445e13d369cc45099f49b74",
+    "pr": 4519,
+    "title": "patches ship: v0.6.9n",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "561d6943d5f42d6edda04c8a1ba3c4c3e529b2e5",
+    "pr": 4520,
+    "title": "bot: build pass 1 for #4507",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "98bb182320733de39581fec1b44076e1f4efc4d3",
+    "pr": 4501,
+    "title": "the perf check times the combat forecast that every host computes beside each view",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "44c33d937406983d774d29cbfa1341a1f936bba6",
+    "pr": 4526,
+    "title": "patches ship: v0.6.9o; patches cut: v0.6.10",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "af27372ba8745a5a88c51844ec8355100dedc59e",
+    "pr": 4527,
+    "title": "hold the perf check's time budgets to GitHub's runners as they are now",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "187b45b30f8952e1823ef3d3be37b46632f214dd",
+    "pr": 4530,
+    "title": "bot: build pass 1 for #4518",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "6b9da9911fdbc18db02d09a59c34b9086cf03bd2",
+    "pr": 4528,
+    "title": "bot: build pass 1 for #4512",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "4bc32f259fa5b16d00ae10e7c9e57a3b1a38c698",
+    "pr": 4529,
+    "title": "bot: build pass 1 for #4509",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "1e58d39c8a58b42f27e250c603bd4673bc8dadc2",
+    "pr": 4535,
+    "title": "bot: build pass 1 for #4515",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "25c463cc105ad4808b499c6395fbbe80b54f42f2",
+    "pr": 4531,
+    "title": "the landing fan checks a few cards instead of all 800, and the collection, the stats grid and card prompts stop rebuilding every card face on each hover, scroll or keystroke",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "5c99ba450162bf4b393536c216989b80330bd70c",
+    "pr": 4545,
+    "title": "the daily super run's red jobs: Black Hole passes a pile holding a Dormant card, and the fuzz monitor reads restores and copied sweeps as they are",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "37774db5914876fcb62898d4565162c92ed6fc2c",
+    "pr": 4543,
+    "title": "the Daily list reads its games' portraits in one query, and the daily sweep finds the games due through its index instead of reading every daily game",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "3469db6b32c88a006eea7e9972e39bd35c7ae891",
+    "pr": 4546,
+    "title": "bot: build pass 1 for #4544",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "e938837723dbb68d264b90c282d6a309113e763f",
+    "pr": 4547,
+    "title": "bot: build pass 1 for #4541",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "51e857f863772c2d6966dd8478d09b79c4dcd74e",
+    "pr": 4551,
+    "title": "patches ship: v0.6.10b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "ee62186ec2e6ef748d29de9b3b2a36ac8dae5600",
+    "pr": 4548,
+    "title": "the WebAssembly module's Duos code is compiled, linted and tested in CI, not only by the local dev server",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "09a3c6851054f8550f11e33a59a18a593a5cec29",
+    "pr": 4553,
+    "title": "sweep.yml: run a sweep of record as shard jobs (#4486)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "0bf5057480fd2f1280fe772f17537b00d233e833",
+    "pr": 4554,
+    "title": "bot: build pass 1 for #4448",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "32dec5b59f1d501c8cb4fad78786f1c40adc30da",
+    "pr": 4557,
+    "title": "bot: build pass 1 for #4540",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "cf502dd54bf6a080f9cbd77ac4d97478dbbbf4de",
+    "pr": 4558,
+    "title": "the AI's quality gates are held to win rates measured on today's AI, so the daily run notices when it gets weaker",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "b567407a24d225a0e6287b71a0510845e1f7edfc",
+    "pr": 4556,
+    "title": "bot: work in progress (`claude-4` stops mid-call: 5-hour usage is 50%, at or over its 50% cap outside its hours; it resets at 2026-11-23T04:00:00Z)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "717acfa35a06db466db28768a3a4b4d698f0a404",
+    "pr": 4570,
+    "title": "patches ship: v0.6.10c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.10",
+    "commit": "44439387fb6afa3242ffb440cd1fca510d73ed71",
+    "pr": 4571,
+    "title": "bot: build pass 1 for #4555",
+    "kind": "internal"
   }
 ]
