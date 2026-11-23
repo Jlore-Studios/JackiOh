@@ -17872,17 +17872,8 @@
       ]
     },
     "4568": {
-      "action": "plan",
-      "asks": [
-        "c:7094842421"
-      ],
-      "build_next": {
-        "from_run": "45136974333",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-23T08:21:34Z",
-        "until": "2026-11-23T08:51:34Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-23T08:21:25Z",
         "difficulty": "medium",
@@ -17901,10 +17892,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- ## Goal\n- The Decks tab redraws from the kept `/api/decks` answer as soon as this device's own deck write (delete or save via `syncDecks`) folds into it, with no remount. `net/readCache.ts` gains a per-path listener set (`subscribeKept`) notified by every change to that path's answer; `routes/collection.tsx`\u2026\n- ## Files to touch\n- | Path | New/change | What changes |\n- |---|---|---|\n- | `apps/web/src/net/readCache.ts` | change | `subscribeKept(path, listener)` plus notify calls in `keepRead`, `rememberRead`, `updateCachedRead`, `forgetRead`, `clearReadCache`; not in `expireRead` |\n- | `apps/web/src/net/readCache.test.ts` | change | New `R4568000` listener tests |\n- | `apps/web/src/routes/collection.tsx` | change | `useRead` takes optional followed path; `DecksSection` passes `keptPaths.decks`, all other reads pass nothing |\n- | `apps/web/src/routes/collection.test.tsx` | change | New `R4568000` Decks-tab redraw / forget / unmount tests |\n- | `spec/rulings/R4568000.md` | new | Ruling note, first free number in issue #4568's block (4568000\u20134568999; verified empty) |\n- | `spec/pending/4568.md` | new | One \u00a711 paragraph for R4568000 |\n- Do not touch: anything under `.github/`, `.harness/`, `.squishy/`, `bot/`; `crates/*`, `apps/edge`, `apps/admin`, `e2e`; `spec/11-rulings.md`, `spec/INDEX.md`, `spec/CARDS.md` (the daily fold owns them); `routes/play.tsx`, `routes/practice.tsx` deck pickers (explicitly out of scope). Governing: SPE\u2026\n- ## Steps\n- 1. Write `spec/rulings/R4568000.md`. Front matter: `id: R4568000`; `title` naming the redraw on this device's own folded deck write (amends R3206000); `cards: \"\u00a710.10, R2119000, R2125000, R3206000, R3734000, issue #4568\"`; `proven_in` listing `apps/web/src/net/readCache.test.ts` and `apps/web/src/r\u2026\n- 2. In `apps/web/src/net/readCache.ts`, add a module-level `Map<string, Set<() => void>>` keyed by path (not by account; each listener re-reads its own token's entry). Export `subscribeKept(path: string, listener: () => void): () => void` adding to the set and returning an unsubscribe that removes i\u2026\n- 3. In `apps/web/src/routes/collection.tsx`, extend `useRead` to `useRead(token, load, kept, followedPath?: string)`. Keep the existing fetch `useEffect` byte-identical. Add a second `useEffect` that returns early when `followedPath === undefined`, else returns `subscribeKept(followedPath, handler)`\u2026\n- 4. Add `readCache.test.ts` tests (see Tests). Seed with `keepRead`/`rememberRead`, subscribe, mutate, assert call counts; assert `expireRead` and other-path writes never call; assert unsubscribe stops calls.\n- 5. Add `collection.test.tsx` tests (see Tests). Seed the kept decks with `rememberRead(TOKEN, keptPaths.decks, \u2026)`, render on `?section=decks` with `getDecks` mocked resolved (so the hook is mounted and subscribed), then `act(() => updateCachedRead(\u2026))` exactly as `syncDecks` folds (delete via the \u2026\n- 6. Write `spec/pending/4568.md` as one paragraph in the style of `spec/pending/4555.md`: `**[[R4568000]] \u2026 (issue #4568, 2026-11-23)**: \u2026` describing the redraw, the amend of R3206000, and the \u00a710.10 edit. Do not append anything to `spec/11-rulings.md`.\n- 7. Run the checks in Tests and fix honestly; never add `#[ignore]`/`.skip`/lint suppressions or touch forbidden paths to reach green.\n- ## Tests\n- - `apps/web/src/net/readCache.test.ts`: `it(\"R4568000 a kept path's listeners hear its keeps, folds and forgets, and clearReadCache hears all\")` \u2014 subscribe two listeners on `/api/decks` and one on another path; `keepRead`, `rememberRead`, `updateCachedRead` (with an entry), `forgetRead` each call \u2026\n- - `apps/web/src/routes/collection.test.tsx`: `it(\"R4568000 the Decks tab drops a deleted deck and refreshes a completed deck with no remount\")` \u2014 keep decks A (legal, `data-status=\"ready\"`) and B (short, `data-status=\"incomplete\"`), mount `?section=decks`, `act(() => updateCachedRead(TOKEN, keptPat\u2026\n- - Commands: `pnpm --dir apps/web test src/net/readCache.test.ts src/routes/collection.test.tsx`, `pnpm --dir apps/web typecheck`, `cargo jackioh spec check`. Existing `collection.test.tsx` tests must pass unchanged (loading/error/Cards/Progress behavior).\n- ## Done when\n- - [ ] `subscribeKept` semantics exactly as above, including the `expireRead`/other-path/unsubscribe negatives.\n- - [ ] Decks tab drops a landed deletion's tile and refreshes a completed deck's tile with no remount; `forgetRead` leaves tiles; unmounted tab is not called.\n- - [ ] Cards/Progress tabs and loading/error states behave as before (existing tests unchanged).\n- - [ ] Ruling note, `proven_in`, and `spec/pending/4568.md` paragraph in place; `cargo jackioh spec check` passes.\n- - [ ] The two web test files and `typecheck` pass.\n- ## Risks\n- - Listener firing during render: avoided because every cache write runs in a promise callback or event handler, and the hook unsubscribes on unmount; the subscription effect must not call the handler synchronously on subscribe.\n- - Cross-account noise: a write for another account notifies the path, but the handler re-reads its own token's entry and bails on `undefined`/`Object.is`-identical, so no wrong redraw; account-switch clearing plus token-prop change remounts the hook from the new kept answer.\n- - Offline/refused writes: the kept answer stays the server's (per R2119000 the refused item returns in the server's words), so the tab keeps showing it until the next visit's merge, matching today.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4568 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4568/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-23T08:14:08Z",
       "owner_why": "it plans it",
@@ -17917,12 +17907,14 @@
       "provider": "muse",
       "queued_at": "2026-11-23T08:12:28Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45136974333",
+      "run_id": "pending:c4ac25e7-1795422148",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-23T08:14:08Z",
+      "started_at": "2026-11-23T08:22:47Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7094842421"
+      ]
     },
     "4569": {
       "action": "review",
@@ -18064,9 +18056,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T08:14:08Z",
+    "at": "2026-11-23T08:22:47Z",
     "url": "",
-    "what": "plan #4568 on muse"
+    "what": "build #4568 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T08:12:20Z",
