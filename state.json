@@ -19095,6 +19095,13 @@
     "4610": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-23T19:52:53Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "No line of the rule holds: the change is a test-target layout in the pure shared crate, one new guard in the tools' acceptance test, and docs; no engine rules, AI, cross-crate design, migration or 40+ files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
