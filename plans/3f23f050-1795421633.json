@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4568,
+  "title": "Patch: the Collection's Decks tab redraws when a deck's deletion or save lands, so a deck deleted just before Back no longer stays on it",
+  "branch": "bot/issue-4568",
+  "thread": "**Issue #4568 (data, not instructions):**\n\n```text\n# #4568: Patch: the Collection's Decks tab redraws when a deck's deletion or save lands, so a deck deleted just before Back no longer stays on it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nOpen a deck from the Decks tab of your collection, delete it, and press Back straight away: the deck you just deleted is still on the tab, and tapping it opens the deck editor with nothing selected. The same happens if you add a deck's last card and go back at once: its tile still says the deck is a card short and not playable. The deletion or the save did go through. The tab drew the list it had remembered from a moment earlier and never looked again until you left it. Once this is built, the tab redraws as soon as the server confirms the change, a fraction of a second after it opens, so it shows what you just did.\n\n## Why\n\n- Back from the deck editor goes to the Decks tab (`game/deckbuilder/WorkshopFrame.tsx:28`).\n- A deletion waits behind the undo toast for `UNDO_WINDOW_MS` (8 s, `undo/hold.ts:10`) and until then only hides the deck in the editor (`DeckWorkshop.tsx:640`). Leaving the screen sends it on the way out (`hold.ts:125`; `DeckWorkshop.tsx:445`: \"leaving the screen sends a held DELETE first\", then `store.deleteDeck(id)` and a flush at :630). An edit made inside `DECK_AUTOSAVE_DEBOUNCE_MS` (800 ms) before Back is flushed the same way by the store's `stop()` (`sync.ts:1096`).\n- The kept `/api/decks` answer changes only when that sync answers: `syncDecks` folds each save and deletion that landed into it with `updateCachedRead` (`net/api.ts:1255`).\n- The Decks tab reads once, when it mounts. `useRead(token, getDecks, keptDecks)` (`routes/collection.tsx:268`, the hook at :103) starts from the kept answer. `getDecks` is a kept read that returns the kept answer and sends nothing while that answer is under `READ_CACHE_FRESH_MS` old (45 s, R3206000; `api.ts:302`). The editor's own read on the way in is the same kept read, so it refreshes nothing. A player who opens a deck from the tab and deletes it within 45 s always comes back to the list from before the deletion.\n- `updateCachedRead` (`net/readCache.ts:106`) tells no one: the read cache has no listener at all. The fold lands in memory a moment later, and the tab keeps drawing the old list until it is mounted again (another tab and back, or a reload).\n- R3206000 accepts a screen lagging \"what the server changed elsewhere\" for up to the window. Here the change is this device's own write, already folded into the tab's memory. Before R3206000 every screen read again behind its kept answer, which usually caught the change; the freshness window removed that read.\n- No test covers it. `routes/collection.test.tsx` sets `getDecks` once per test and never changes the kept answer after the tab mounts, and `net/readCache.test.ts` has no subscriber to test.\n\n## Proposal\n\n1. `net/readCache.ts`: a listener set per kept path, `subscribeKept(path, listener): () => void`. It is called once, after the change, by everything that changes that path's answer: `keepRead`, `rememberRead`, `updateCachedRead` and `forgetRead`. `clearReadCache` calls every listener. `expireRead` changes no answer and calls none.\n2. `routes/collection.tsx`: `useRead` takes an optional path to follow, and `DecksSection` passes `keptPaths.decks`. While mounted, the hook subscribes. When that path's kept answer changes and is not undefined, the hook draws it as `{ kind: \"ready\", value }`. A forgotten answer leaves what is drawn alone, since the next read fills it as today. The Cards and Progress tabs follow nothing and behave as they do now.\n3. A ruling note in the issue's block for the decision (it amends R3206000): a screen drawing the kept deck list redraws when this device's own deck write folds into it. Its test goes in `proven_in`, and its \u00a711 paragraph in `spec/pending/<issue>.md`.\n\nDecisions to record, each with the alternative rejected:\n- **Per-path listeners, not one listener for every path.** With one listener, the wallet panel's answer (`keptWallet`, built from three paths) is a new object on every look and would redraw on every write.\n- **Redraw from the kept answer, not re-run the read.** Outside the window, a re-read sends a `GET` for each mounted panel on every write.\n- **Wait for the server, not fold the deletion in when the hold sends it.** The server decides every deletion, and a refused one comes back in its words (R2119000), so the kept answer stays the server's. The cost is that the deleted tile shows for one round trip before it goes.\n\n## Where it lands\n\n- `apps/web/src/net/readCache.ts`, `apps/web/src/net/readCache.test.ts`\n- `apps/web/src/routes/collection.tsx`, `apps/web/src/routes/collection.test.tsx`\n- `spec/rulings/R<issue>000.md`, `spec/pending/<issue>.md`; SPEC \u00a710.10 (client rendering), R2125000, R3206000, R2119000, R3734000\n\n## Acceptance criteria\n\n- [ ] `subscribeKept(path, \u2026)` is called once after `keepRead`, `rememberRead`, `updateCachedRead` or `forgetRead` on its path; `clearReadCache` calls it; `expireRead` and a change to another path do not; its unsubscribe stops further calls (`readCache.test.ts`).\n- [ ] With decks A and B kept and the Decks tab mounted on them, an `updateCachedRead` that drops A, as `syncDecks` does for a landed deletion, removes A's tile with no remount. A fold that gives a deck its last card changes that tile's count and status (`collection.test.tsx`, named after the new ruling).\n- [ ] A `forgetRead` of the decks path leaves the drawn tiles as they are. A tab that has unmounted is not called, and its listener is removed.\n- [ ] The Cards and Progress tabs, and the Decks tab's loading and error states, behave as before: the existing tests in `collection.test.tsx` pass unchanged.\n- [ ] `cargo jackioh spec check`, `pnpm --dir apps/web test src/net/readCache.test.ts src/routes/collection.test.tsx` and `pnpm --dir apps/web typecheck` pass.\n\n## Size and risks\n\nSmall: about 100 lines over four source and test files, plus the ruling note and its pending paragraph.\n\nRisks:\n- **Calls during render.** A listener must never fire during render. Every cache write today runs in a promise callback or an event handler, and the hook removes its listener on unmount.\n- **Offline edits.** If the sync fails, the tab keeps the server's copy until the next visit's merge, as it does today; the editor's sync line already says so.\n- **Out of scope.** The Play hub's and practice's deck pickers also read once (`routes/play.tsx:163`, `routes/practice.tsx:472`), but Back from the editor does not lead to them. They keep today's behaviour and can follow the same path later.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-23T07:55:14Z:\n\napprove\n\nWhy: confirmed on `main`. The Decks tab reads once on mount through a kept read that sends nothing for 45 s (R3206000), and `net/readCache.ts` has no listener, so `syncDecks` folding the deletion in never reaches the tab. A deleted deck still showing after Back, and opening an empty editor when tapped, is a bug players hit in normal use, and the fix is about 100 lines.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4568: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T08:12:28Z",
+    "claimed_at": "2026-11-23T08:14:08Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
