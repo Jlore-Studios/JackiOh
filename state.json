@@ -17750,16 +17750,30 @@
         ],
         "builder": "claude",
         "built_by": "claude-4",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/engine/README.md",
+            "crates/engine/src/testkit/invariants.rs",
+            "crates/engine/src/testkit/mod.rs",
+            "crates/engine/tests/rules/invariants.rs",
+            "crates/tools/README.md",
+            "crates/tools/src/fuzz.rs",
+            "crates/tools/src/main.rs"
+          ],
+          "from": "aa8b4b5212cd4594fad2bff5d1d96c65b1cbe863",
+          "main": "32dec5b59f1d501c8cb4fad78786f1c40adc30da"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-4",
-            "run": "45112102315",
+            "run": "45117537416",
             "tier": "strong"
           }
         ],
-        "sha": "aa8b4b5212cd4594fad2bff5d1d96c65b1cbe863",
+        "sha": "eb24e90996cfb90357a07138ddaff5fa22ad01d6",
         "tiers": {
           "claude": "strong"
         }
