@@ -1,6 +1,6 @@
 // R4582000, R4582001 (issue #4582): an Infinite Assault fight in the practice driver. A config with
-// `assault` plays on while the machine learns it (until then the worker deals it as its seed, deck
-// and difficulty name, the AI at the other seat); it brings no last board and leaves none, is kept
+// `assault` is dealt by the machine from its setup (`crates/shared`'s `deal.rs`: the seed, both decks
+// and handicaps, the enemy's marks at the AI's seat); it brings no last board and leaves none, is kept
 // in its own save slot while in progress, and once over answers `assaultReport` with what the
 // Assault reads off the machine's setup and log. The mock below stands in for part B's
 // `assaultFightReport`, as the dungeon's part tests mocked `runFightSetup`.

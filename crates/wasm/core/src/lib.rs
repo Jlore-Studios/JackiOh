@@ -1597,6 +1597,7 @@ mod assault_body_tests {
 
     #[test]
     fn assault_day_is_deterministic_and_dates_differ() {
+        jackioh_cards::register_all();
         let content = assault_content().unwrap();
         let d1 = assault_day("\"2026-11-23\"", &content).unwrap();
         let d2 = assault_day("\"2026-11-23\"", &content).unwrap();
@@ -1643,7 +1644,8 @@ mod assault_body_tests {
             date: "2026-11-23".into(),
             best: 0,
             checkpoints: vec![],
-            attempts: 1,
+            // R4579002: the day's record at the attempt's start, before it counts.
+            attempts: 0,
             repelled_on: None,
         };
         let created_text = assault_create(&json_of(&setup), &json_of(&record), &day_text).unwrap();
@@ -1652,15 +1654,16 @@ mod assault_body_tests {
         assert_eq!(state.level, 1);
         assert!(created.error.is_none());
 
-        let fight_setup_text = assault_fight_setup(&json_of(&state), &day_text).unwrap();
-        let fight_setup: Option<jackioh_run::AssaultFightSetup> =
-            serde_json::from_str(&fight_setup_text).unwrap();
-        assert_eq!(fight_setup.as_ref().unwrap().human_deck, deck);
-
         let fight_action = AssaultAction::Fight;
         let fighting_text = assault_reduce(&json_of(&state), &day_text, &json_of(&fight_action)).unwrap();
         let fighting: AssaultStateAnswer = serde_json::from_str(&fighting_text).unwrap();
         let fighting_state = fighting.state.unwrap();
+
+        // The fight being played: only once the attempt is in its fight.
+        let fight_setup_text = assault_fight_setup(&json_of(&fighting_state), &day_text).unwrap();
+        let fight_setup: Option<jackioh_run::AssaultFightSetup> =
+            serde_json::from_str(&fight_setup_text).unwrap();
+        assert_eq!(fight_setup.as_ref().unwrap().human_deck, deck);
 
         let file = AssaultFile {
             version: jackioh_cards::catalog_version().to_string(),
@@ -1698,6 +1701,7 @@ mod assault_body_tests {
     // R3496000: content_at for the current version answers assault_content(); unknown version answers null.
     #[test]
     fn assault_content_at_answers_current_and_null_for_unknown() {
+        jackioh_cards::register_all();
         let current = assault_content().unwrap();
         let version = serde_json::to_string(jackioh_cards::catalog_version()).unwrap();
         let at_current = assault_content_at(&version).unwrap();

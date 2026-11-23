@@ -718,7 +718,8 @@ fn assault_exports_answer_what_the_core_bodies_answer() {
         "date": "2026-11-23",
         "best": 0,
         "checkpoints": [],
-        "attempts": 1,
+        // R4579002: the day's record at the attempt's start, before it counts.
+        "attempts": 0,
         "repelledOn": null,
     })
     .to_string();

@@ -69,7 +69,8 @@ describe("assault WebAssembly exports", () => {
       date: "2026-11-23",
       best: 0,
       checkpoints: [],
-      attempts: 1,
+      // R4579002: the day's record at the attempt's start, before it counts.
+      attempts: 0,
       repelledOn: null,
     };
 
@@ -137,7 +138,9 @@ describe("assault WebAssembly exports", () => {
     expect(day1).not.toBe(otherDay);
 
     const hash = fnv1a(day1);
-    expect(hash).toBe("aa9004f7");
+    // The deal of 2026-11-23 on this build's stand-ins, as the module answered it; a change to the
+    // catalog's deckable cards or to the deal moves it.
+    expect(hash).toBe("88d6c333");
   });
 
   it("the day deck has DECK_SIZE distinct ids, is equal twice, and every id is in the catalog", () => {

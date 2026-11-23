@@ -167,12 +167,7 @@ fn the_catalog_content_reads_the_set_by_name_and_assault_json() {
     let content = assault_catalog_content(catalog);
     // Every card is of `ASSAULT_SET`, C1's set.
     for card in &content.cards {
-        assert_eq!(
-            catalog[&card.id].set,
-            crate::config::ASSAULT_SET,
-            "{}",
-            card.id
-        );
+        assert_eq!(catalog[&card.id].set, crate::config::ASSAULT_SET, "{}", card.id);
     }
     // The doctrines are the file's eight.
     assert_eq!(content.doctrines, content_file().doctrines);
