@@ -16932,6 +16932,13 @@
     "4542": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-23T01:26:01Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "none of the five hard lines holds: test-only wiring in 4 files following the #4426 pattern, no engine rules, AI, cross-crate design, migration, or 40-file scope"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
