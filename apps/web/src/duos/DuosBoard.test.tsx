@@ -7,6 +7,36 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi, type M
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { PING_SHOW_MS } from "@jackioh/server-config";
+import { MUSIC_ROTATION_KEY } from "../audio/constants.ts";
+import { setMusicPlayerForTests, type MusicPlayer, type MusicRequest } from "../audio/music.ts";
+import { loadSoundTables } from "../audio/soundTablesLoader.ts";
+
+// The sound tables load lazily; the music assertions read the shipped ones.
+await loadSoundTables();
+
+/** A player that records what it is asked for and plays nothing. */
+function recordingPlayer(): MusicPlayer & { requests: MusicRequest[] } {
+  const requests: MusicRequest[] = [];
+  return {
+    requests,
+    request: (r: MusicRequest) => {
+      requests.push(r);
+    },
+    playIntro: () => undefined,
+    stopIntro: () => undefined,
+    playSting: () => undefined,
+    preloadIntros: () => undefined,
+    intro: () => null,
+    resetResume: () => undefined,
+    preload: () => undefined,
+    setBusy: () => undefined,
+    current: () => null,
+    wanted: () => requests.at(-1)?.track ?? null,
+    opponentTurn: () => requests.at(-1)?.opponentTurn ?? false,
+    log: () => [],
+    dispose: () => undefined,
+  };
+}
 
 import { closeInspect } from "../cards/index.ts";
 import { createSoundDirector } from "../audio/director.ts";
@@ -290,9 +320,12 @@ beforeEach(() => {
   vi.useFakeTimers();
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   closeInspect();
+  // R4606000: run a leaving board's deferred hand-back now, so none leaks into the next test.
+  await act(async () => {});
+  setMusicPlayerForTests(null);
   vi.useRealTimers();
   window.localStorage.clear();
   __resetSettingsForTests();
@@ -507,6 +540,41 @@ describe("B63 the portal", () => {
       "waiting",
     );
     expect(screen.getByTestId(ID.round)).toHaveTextContent(/your team's turn/i);
+  });
+
+  it("R4606000 flipping the portal back and forth keeps the rotation and the wanted track", async () => {
+    const player = recordingPlayer();
+    setMusicPlayerForTests(player);
+    try {
+      renderDuosBoard();
+      await act(async () => {});
+      const rotation = (): string | null => localStorage.getItem(MUSIC_ROTATION_KEY);
+      const baseline = rotation();
+      expect(baseline, "mounting the co-op match moves the rotation on").not.toBeNull();
+      const wanted = player.wanted();
+      expect(wanted, "the co-op board wants a track").not.toBeNull();
+      const checkKept = (): void => {
+        expect(rotation(), "the rotation after the flip").toBe(baseline);
+        expect(player.wanted(), "the wanted track after the flip").toBe(wanted);
+      };
+      flipPortal();
+      await act(async () => {});
+      expect(screen.getByTestId(testid.handCard("t1"))).toBeInTheDocument();
+      checkKept();
+      flipPortal();
+      await act(async () => {});
+      expect(screen.getByTestId(testid.handCard("h1"))).toBeInTheDocument();
+      checkKept();
+      const firstGame = player.requests.findIndex((r) => r.track !== null && r.track !== "menu");
+      expect(firstGame).toBeGreaterThanOrEqual(0);
+      expect(player.requests.slice(firstGame).some((r) => r.track === "menu"), "no menu theme between the flips").toBe(false);
+      expect(
+        player.requests.filter((r) => r.intro !== null && r.intro !== undefined).length,
+        "the match-start sting plays at most once",
+      ).toBeLessThanOrEqual(1);
+    } finally {
+      setMusicPlayerForTests(null);
+    }
   });
 });
 
