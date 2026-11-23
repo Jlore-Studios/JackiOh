@@ -2416,6 +2416,57 @@ pub const TIER_A_FROM: f64 = (ADJUSTED_WIN_RATE_CENTER + TIER_BAND_HIGH) / 2.0;
 /// game (`ADJUSTED_WIN_RATE_CENTER`) to tier A's floor, and tier D is below tier C's.
 pub const TIER_C_FROM: f64 = (TIER_BAND_LOW + ADJUSTED_WIN_RATE_CENTER) / 2.0;
 
+/// R4552000: the win probability's intercept, `β₀` of `P = σ(β₀ + β₁·eval + β₂·turn + β₃·first)`, fit by
+/// `cargo jackioh stats calibrate` over development records against `WIN_PROBABILITY_AI_GENERATION`'s
+/// evaluation.
+pub const WIN_PROBABILITY_INTERCEPT: f64 = 0.0;
+
+/// R4552000: `β₁`, the weight of the seat's evaluation less its opponent's, in the AI's own units (a
+/// record keeps it in thousandths, `SWING_EVAL_SCALE`).
+pub const WIN_PROBABILITY_EVAL: f64 = 0.001;
+
+/// R4552000: `β₂`, the weight of the turn counter (§2.5) at the turn's start.
+pub const WIN_PROBABILITY_TURN: f64 = 0.0;
+
+/// R4552000: `β₃`, the weight of having taken the first turn.
+pub const WIN_PROBABILITY_FIRST: f64 = 0.0;
+
+/// R4552000: the AI generation (`crates/ai/generation.json`, R1367000) whose evaluation the four weights
+/// above were fit against. A change to the AI's evaluation moves the raw scale a record keeps, so a refit
+/// names its generation here.
+pub const WIN_PROBABILITY_AI_GENERATION: i32 = 13;
+
+/// R4552000: a turn row keeps the evaluation difference times this, rounded, so the record is whole
+/// numbers (thousandths of the AI's units).
+pub const SWING_EVAL_SCALE: f64 = 1000.0;
+
+/// R4552001: a turn's change in win probability is tallied in parts of this (thousandths of win chance),
+/// rounded, so the totals are whole numbers that add the same in any order.
+pub const SWING_PERMILLE: f64 = 1000.0;
+
+/// R4552001: an ordinary turn's gain (`α`) is read per own turn of the seat, from its first to this one;
+/// every later turn shares the last bucket. The seat that went first and the other are read apart.
+pub const SWING_TURN_BUCKETS: i32 = 10;
+
+/// R4552001: the fewest turns a card's term is read over before it counts toward its field's spread, as
+/// `CARD_STATS_MIN_SAMPLE` does for the adjusted win rate's field.
+pub const SWING_FIELD_MIN_ROWS: i64 = 20;
+
+/// R4552001: the spread (one standard deviation) of real cards' play terms assumed below
+/// `ADJUSTED_FIELD_MIN_CARDS` read cards, as a fraction of win chance.
+pub const SWING_PRIOR_PLAY_SPREAD: f64 = 0.02;
+
+/// R4552001: the spread of real cards' per-turn board terms (Board swing) assumed below
+/// `ADJUSTED_FIELD_MIN_CARDS` read cards, as a fraction of win chance.
+pub const SWING_PRIOR_BOARD_SPREAD: f64 = 0.01;
+
+/// R4552001: the typical card's Decisiveness assumed below `ADJUSTED_FIELD_MIN_CARDS` read cards, as a
+/// fraction of win chance (±8 points).
+pub const DECISIVENESS_PRIOR_CENTER: f64 = 0.08;
+
+/// R4552001: the spread of real cards' Decisiveness assumed below `ADJUSTED_FIELD_MIN_CARDS` read cards.
+pub const DECISIVENESS_PRIOR_SPREAD: f64 = 0.03;
+
 // ---------------------------------------------------------------------------------------------
 // The weapon kit (#1841, R1841000–R1841003; SPEC §4.4, §6.2, §6.3)
 // ---------------------------------------------------------------------------------------------

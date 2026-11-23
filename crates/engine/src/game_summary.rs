@@ -515,6 +515,8 @@ fn seat_summary(reading: &Reading, deck: Vec<String>, player: PlayerId) -> SeatS
         // R3335001: absent when none, so a game without a Starship keeps its record's shape.
         starship_pieces_fused: Some(reading.starship_pieces_fused[player]).filter(|n| *n > 0),
         starships_launched: Some(reading.starships_launched[player]).filter(|n| *n > 0),
+        // R4552000: the AI's fold writes the turn rows (`jackioh_ai::attach_swing_turns`).
+        swing_turns: None,
     }
 }
 

@@ -29,7 +29,9 @@ use crate::wire::codes::utf16_len;
 use crate::wire::events::{GameOverReason, Winner};
 use crate::wire::string_union;
 
+pub mod swing;
 pub mod window;
+pub use swing::*;
 pub use window::*;
 
 // ---------------------------------------------------------------------------
@@ -173,6 +175,12 @@ pub struct SeatSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub starships_launched: Option<i32>,
+    /// R4552000: one row per turn the seat took, read at its start (`SwingTurn`), which the AI's fold
+    /// writes (`crates/ai/src/swing_turns.rs`). Absent from every record written before it. No client
+    /// reads it, so the web's types leave it out.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    pub swing_turns: Option<Vec<SwingTurn>>,
 }
 
 /// R2089000: one use of a Created card: its catalog id, the turn (§2.5's counter) and whether it was
@@ -480,6 +488,17 @@ pub struct CardStats {
     #[serde(default, skip_serializing_if = "Tally::is_empty")]
     #[cfg_attr(feature = "ts", ts(as = "Option<Tally>", optional))]
     pub created_played_normal: Tally,
+    /// R4552001: the turns of the seats that held the card it was played on, acted on their field and
+    /// acted against the other's, which its Swing and Decisiveness are read off. Absent while empty, and
+    /// sent to no client.
+    #[serde(default, skip_serializing_if = "SwingTally::is_empty")]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    pub swing: SwingTally,
+    /// R4552002: the same of the card's Created copies, kept beside the deck's as the four Created tallies
+    /// are and read apart from them (`CreatedStats::of`).
+    #[serde(default, skip_serializing_if = "SwingTally::is_empty")]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    pub created_swing: SwingTally,
 }
 
 /// R2089000: a Created card's figures, by its catalog id: over the seats that made a Created copy of
@@ -499,6 +518,10 @@ pub struct CreatedStats {
     pub created_not_played: Tally,
     pub created_played_radiant: Tally,
     pub created_played_normal: Tally,
+    /// R4552002: the turns of the Created copies (`CardStats.created_swing`).
+    #[serde(default, skip_serializing_if = "SwingTally::is_empty")]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    pub swing: SwingTally,
 }
 
 impl CreatedStats {
@@ -510,6 +533,7 @@ impl CreatedStats {
             created_not_played: stats.created_not_played,
             created_played_radiant: stats.created_played_radiant,
             created_played_normal: stats.created_played_normal,
+            swing: stats.created_swing.clone(),
         }
     }
 
@@ -589,6 +613,8 @@ fn empty_stats(card: &str) -> CardStats {
         created_not_played: empty_tally(),
         created_played_radiant: empty_tally(),
         created_played_normal: empty_tally(),
+        swing: SwingTally::default(),
+        created_swing: SwingTally::default(),
     }
 }
 
@@ -805,6 +831,10 @@ pub struct GameTotal {
     pub traps_fired: i64,
     pub position_switches: i64,
     pub radiant_upgrades: i64,
+    /// R4552001: every turn of the games whose records carry turn rows, per bucket (`swing_bucket`): the
+    /// turns, `Σq` and `Σq²`, which an ordinary turn's gain is read off. Absent while empty.
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub swing: SwingRows,
 }
 
 /// R1256000's counts of one game, both seats added.
@@ -871,6 +901,7 @@ impl GameTotal {
         self.traps_fired += other.traps_fired;
         self.position_switches += other.position_switches;
         self.radiant_upgrades += other.radiant_upgrades;
+        add_swing_rows(&mut self.swing, &other.swing);
     }
 }
 
@@ -910,6 +941,8 @@ pub fn add_stats(into: &mut CardStats, other: &CardStats) {
     add_tally(&mut into.created_not_played, &other.created_not_played);
     add_tally(&mut into.created_played_radiant, &other.created_played_radiant);
     add_tally(&mut into.created_played_normal, &other.created_played_normal);
+    into.swing.add(&other.swing);
+    into.created_swing.add(&other.created_swing);
 }
 
 /// R2089000: one Created card's figures added into another's.
@@ -918,6 +951,7 @@ pub fn add_created(into: &mut CreatedStats, other: &CreatedStats) {
     add_tally(&mut into.created_not_played, &other.created_not_played);
     add_tally(&mut into.created_played_radiant, &other.created_played_radiant);
     add_tally(&mut into.created_played_normal, &other.created_played_normal);
+    into.swing.add(&other.swing);
 }
 
 /// A seat's place in `PLAYER_IDS`, as `FirstMet` and `FirstSeen` keep it.
@@ -1171,6 +1205,8 @@ impl StatsTotals {
                 }
             }
         }
+        // R4552000: the turn rows, when the record carries them.
+        self.fold_swing(record);
     }
 
     /// R1044000: adds `other`'s totals into these.
@@ -1351,6 +1387,7 @@ pub fn card_stats_of(totals: &StatsTotals, filter: &CardStatsFilter) -> CardStat
             stats.created_not_played = Tally::default();
             stats.created_played_radiant = Tally::default();
             stats.created_played_normal = Tally::default();
+            stats.created_swing = SwingTally::default();
             cards.push(stats);
         }
     }
@@ -2416,6 +2453,13 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
             record.get("starshipsLaunched"),
             &format!("{at}.starshipsLaunched"),
         )?,
+        swing_turns: match record.get("swingTurns") {
+            None | Some(Value::Null) => None,
+            Some(value) => Some(
+                serde_json::from_value::<Vec<SwingTurn>>(value.clone())
+                    .map_err(|_| EngineError::new(format!("{at}.swingTurns is not a list of turn rows")))?,
+            ),
+        },
     };
     if let Some(Value::Array(turns)) = record.get("playedTurns") {
         let mut out: Vec<i32> = Vec::with_capacity(turns.len());
@@ -2570,6 +2614,7 @@ mod tests {
             cast_or_summoned: None,
             starship_pieces_fused: None,
             starships_launched: None,
+            swing_turns: None,
         }
     }
 
@@ -2786,6 +2831,8 @@ mod tests {
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(0, 0, 0),
+                swing: SwingTally::default(),
+                created_swing: SwingTally::default(),
             };
             assert_eq!(win_rate(&stats.played), Some(0.75));
             assert_eq!(win_rate(&stats.drawn_not_played), Some(0.4));
@@ -2820,6 +2867,8 @@ mod tests {
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(0, 0, 0),
+                swing: SwingTally::default(),
+                created_swing: SwingTally::default(),
             };
             assert_eq!(not_drawn(&stats), tally(8, 2, 1));
             let delta = drawn_delta(&stats).unwrap();
@@ -2859,6 +2908,8 @@ mod tests {
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(0, 0, 0),
+                swing: SwingTally::default(),
+                created_swing: SwingTally::default(),
             }
         }
 
@@ -3140,6 +3191,7 @@ mod tests {
                 created_not_played: tally(games - games / 2, wins - wins / 2, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(games / 2, wins / 2, 0),
+                swing: SwingTally::default(),
             }
         }
 
@@ -3725,6 +3777,7 @@ mod tests {
                 cast_or_summoned: None,
                 starship_pieces_fused: None,
                 starships_launched: None,
+                swing_turns: None,
             }
         }
 
@@ -3996,6 +4049,7 @@ mod tests {
                             created_not_played: Tally::default(),
                             created_played_radiant: Tally::default(),
                             created_played_normal: Tally::default(),
+                            swing: SwingTally::default(),
                         });
                         let of_card: Vec<&CreatedUse> =
                             uses.iter().filter(|used| used.card == card).collect();
