@@ -16831,13 +16831,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-6",
       "queued_at": "2026-11-23T19:14:00Z",
-      "run_id": "45247007267",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:06891b51-1795466554",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 480,
-      "started_at": "2026-11-23T19:15:18Z",
+      "started_at": "2026-11-23T20:43:20Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17185,9 +17186,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T20:32:43Z",
+    "at": "2026-11-23T20:43:20Z",
     "url": "",
-    "what": "build #4610 on gpt"
+    "what": "spot-check #4625 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-23T20:24:03Z",
@@ -39296,7 +39297,15 @@
         "n": 480,
         "pr": 4625,
         "queued_at": "2026-11-23T20:38:39Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:06891b51-1795466554",
         "sha": "d6a44a6e78916ace38fd67b56560887c58df620b",
+        "started_at": "2026-11-23T20:43:20Z",
         "status": "queued",
         "title": "Patch: stepping back in a replay or flipping the co-op portal keeps the match's music, instead of starting the next track as if a new match began",
         "tries": 0
