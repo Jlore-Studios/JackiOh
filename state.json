@@ -18794,17 +18794,8 @@
       ]
     },
     "4607": {
-      "action": "plan",
-      "asks": [
-        "c:7109055788"
-      ],
-      "build_next": {
-        "from_run": "45231445005",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-23T17:55:31Z",
-        "until": "2026-11-23T18:25:31Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-23T17:55:22Z",
         "difficulty": "medium",
@@ -18823,10 +18814,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "0, R850001, R43190\u2026\n- ## Steps\n- 1. `crates/tools/src/arena.rs`, `Args`: add `#[arg(long)] pub save: Option<PathBuf>` with doc comment \"R4607000: the fork screen's save file\". At the top of `run()`, before the `forks` dispatch, bail when `args.save.is_some() && !args.forks` (`\"arena: --save resumes only the fork screen, so it need\u2026\n- 2. `crates/tools/src/fork_screen.rs`, types: add `pub(crate) const FORK_SAVE_VERSION: u32 = 1` (CLAUDE.md rule 9). Add `SaveHeader { v, set: String, games: i32, extend: bool, budget: SearchBudget, fork_rollouts: usize, fork_max_per_game: usize, catalog: String, a_label, b_label: String, a_info, b_i\u2026\n- 3. Same file, `play_deal(game: &ArenaGame, probe: Probe) -> anyhow::Result<DealLine>`: run `play_game_probed`, build the one deal's jobs, run existing `play_forks` (keeps `(deal, fork, pair, arm)` assembly), flatten outcomes to `SavedArm` in slot order, then `duel: duel_line(outcome, replays(outcom\u2026\n- 4. Same file, file I/O: `append_deal_line(path, line)` opens with append+create, writes one JSON line, flushes. `load_save(path)` reads the header plus deal lines into a `BTreeMap<i32, DealLine>`; a last line that fails to parse is dropped with an `eprintln` warning (the torn line); a failing non-l\u2026\n- 5. Same file, resume core: `identity_check(game, probe, saved)` plays the first saved deal's trunk and bails naming `trunk hash` or `forks` unless hash and every fork's seat, `at_move`, and both actions' `fork_key` match. `edges_of(lines in deal order) -> Vec<ForkEdge>` recomputes edges from saved \u2026\n- 6. Same file, `resume_save(path, expected: &SaveHeader, base: &str, b: &Entrant, initial_deals, extend, make_probe: &dyn Fn(&ArenaGame) -> anyhow::Result<Probe>) -> anyhow::Result<SaveReport>`: load, `check_header`, finished check (every target deal present, and with `extend` also `screen_done`), r\u2026\n- 7. Same file, `run()`: after the existing arg checks and entrant setup, branch on `args.save`. `None`: today's loop verbatim. `Some(path)`: build the expected header (budget = `AI_GATE_BUDGET`, the trunk setups' budget; deals = requested count), create-or-resume the file (write header when creating\u2026\n- 8. Ruling + docs: write `spec/rulings/R4607000.md` (`cards: \"\u00a79.9, R4397000, R850001, R4319000, R1489000, issue #4607\"`, Hearthstone-has-no-counterpart line as R4397000 does) and `spec/pending/4607.md` (the `**[[R4607000]] \u2026 (issue #4607, \u2026)**` paragraph). `training/improve.md` `### A screen`, afte\u2026\n- ## Tests\n- All in `crates/tools/src/fork_screen.rs` tests mod, scripted probe differing only at `at_move == 1` (a late fork, cheap) at `TEST_BUDGET` over 1\u20132 `trunk_game` deals, driving the factored fns (never the CLI):\n- - `r4607000_resume_after_cut_prints_the_same_tally`: uninterrupted header+2 lines vs cut file (header+deal 1) resumed through `resume_save`; assert tally strings byte-equal and sorted deal lines equal.\n- - `r4607000_a_torn_last_line_is_played_again`: deal-1 line plus a truncated fragment; resume replays deal 2 and the tally equals the uninterrupted one.\n- - `r4607000_resume_refuses_a_changed_header_before_any_game`: mutate each of set, games, extend, budget, catalog, labels, infos, fork constants; each errors naming the field, file bytes unchanged, probe factory called zero times.\n- - `r4607000_a_different_candidate_fails_the_identity_game`: same header, probe differing at another move; exactly one trunk game played, error names `forks`.\n- - `r4607000_a_finished_save_plays_nothing_and_reprints_its_tally`: full file resumed; zero games, same tally, file unchanged.\n- - `r4607000_extend_counts_saved_and_new_live_forks_together`: pure `next_batch` cases (saved 200 games/19 live continues at 201; 20 live stops; cap respected).\n- - `crates/tools/src/arena.rs`: `save_needs_forks`: `Args` with `save` and `forks: false` errors on `--forks`.\n- Commands: `cargo test -p jackioh-tools fork_screen`, `cargo test -p jackioh-tools arena`, `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`, `cargo jackioh spec check`. Existing `fork_screen.rs`/`arena.rs` tests must pass unchanged; the daily thread-count test is not\u2026\n- ## Done when\n- - [ ] Cut-resume prints a byte-identical tally with the same deal lines; torn tail replayed; header mismatches refused by field before any game; behaviorally different candidate refused after exactly one identity game; finished save replays nothing and reprints.\n- - [ ] `--extend` batches stop on saved plus new live forks together; no-`--save` output and all existing tests unchanged.\n- - [ ] New tests fail without the change (cut-resume has no resume path; refusal/identity paths missing).\n- - [ ] Docs above describe flag and resume; `cargo jackioh spec check`, fmt, and clippy pass.\n- ## Risks\n- - Per-deal units can idle cores at a batch tail (long deals block the batch); accepted per the issue, batches stay at today's sizes and arms still use rayon's pool inside `play_forks`.\n- - File line order is completion order, hence insignificant: every read sorts by deal, and tests compare sorted lines; only tally/duel/record output (deal-ordered) is byte-compared.\n- - Finished save skips the identity game, trusting the header: required by R850001's no-second-reads rule; the header's labels, infos, budget, and constants still bind the file to its agents.\n- - `duel_line` strings are stored, not recomputed, because they carry decision times; tally faults need saved `probe_faults` plus arm faults, both in the line, since the trunk is not replayed.\n- ## Open questions\n- None; every behavior above is settled by the issue text.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4607 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4607/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-23T17:47:25Z",
       "owner_why": "it plans it",
@@ -18839,12 +18829,14 @@
       "provider": "muse",
       "queued_at": "2026-11-23T17:42:44Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45231445005",
+      "run_id": "pending:6d6aafc7-1795456837",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-23T17:47:25Z",
+      "started_at": "2026-11-23T18:01:00Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7109055788"
+      ]
     },
     "4614": {
       "action": "build",
@@ -18954,9 +18946,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T18:00:22Z",
+    "at": "2026-11-23T18:01:00Z",
     "url": "",
-    "what": "build #4605 on muse"
+    "what": "build #4607 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T17:44:20Z",
