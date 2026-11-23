@@ -19462,12 +19462,21 @@
     "what": "plan #4609 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-23T19:11:48Z",
+    "at": "2026-11-23T19:22:52Z",
     "notes": [
-      "delivered review #4620 on muse (run 45239907884): approved",
-      "delivered build #4606 on muse (run 45233592055): built",
-      "started review #4625 on muse (run 45247007267)",
-      "started plan #4602 on claude-3 (run 45247138322)",
+      "#4608 needs a plan",
+      "#4609 needs a plan",
+      "#4619 needs a plan",
+      "#4622 needs a plan",
+      "#4578: its parts have all closed; queued its reconcile",
+      "delivered build #4614 on muse (run 45233498671): built",
+      "started review #4626 on muse (run 45248786696)",
+      "started revise #4620 on muse (run 45248921461)",
+      "started plan #4619 on agy (run 45249038713)",
+      "started build #4578 on claude-3 (run 45249163568)",
+      "started plan #4622 on gpt (run 45249303316)",
+      "started plan #4608 on claude-4 (run 45249434440)",
+      "started plan #4609 on claude-4 (run 45249562377)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -20174,7 +20183,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T19:11:48Z",
+  "loop_tick": "2026-11-23T19:22:52Z",
   "machine_disk": {
     "issue": null,
     "reading": {
