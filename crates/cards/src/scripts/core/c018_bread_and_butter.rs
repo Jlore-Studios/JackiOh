@@ -1,7 +1,7 @@
 //! #18 Bread and Butter (SPEC §8.1, §5.1, §7, R37, R52, R62, R1563000, R2657006): "Reveals when any
 //! player Floats: Summon an X/X Bread Token for you. X = the Float + {bonus}." (Radiant: "X =
 //! {multiplier} × the Float + {bonus}"; §6.2, §8 Conventions). The `bonus` since issue #4440 (1, Radiant
-//! 3), read with `param_or` so a replay of v0.6.11b or before, whose definition declares none, adds 0.
+//! 3), read with `param_or` so a replay of v0.6.11c or before, whose definition declares none, adds 0.
 //! End-of-turn trap window (§4.2 step 4, R68, R175; unspentMana Float, R195, #1563, §10.8).
 //! Summons token (R64; full board fails, §3.2); Radiant grants stats (R78).
 
@@ -223,7 +223,7 @@ mod tests {
         }
 
         /// R2657006, R767000: a definition that declares no `bonus` (the shipped catalogs through
-        /// v0.6.11b) adds 0, so a replay of those versions makes the Float's X/X alone.
+        /// v0.6.11c) adds 0, so a replay of those versions makes the Float's X/X alone.
         #[test]
         fn r2657006_a_definition_declaring_no_bonus_makes_the_float_alone() {
             crate::under_kept_as(

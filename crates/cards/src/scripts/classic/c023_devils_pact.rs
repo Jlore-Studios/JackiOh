@@ -10,7 +10,7 @@
 //! through a destroy, as it keeps any Field Spell (§6.1), and its Spell Damage is its controller's,
 //! summed with their Units' (R1563002), so each Book of Flame it makes is raised too. Tradable since
 //! issue #4440 (R1838000) is catalog data the engine reads in the hand (`trade.rs`), so nothing here runs
-//! for it, and the shipped catalogs keep it off through v0.6.11b (R767000).
+//! for it, and the shipped catalogs keep it off through v0.6.11c (R767000).
 //!
 //! The Cry discards {discards} random cards (R682); a hand holding that many or fewer all goes, a
 //! discard all the same, so C #64 sees each card. Activate (R384), once per turn, installs a this-turn

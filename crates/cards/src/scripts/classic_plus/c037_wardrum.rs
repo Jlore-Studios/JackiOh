@@ -1,6 +1,6 @@
 //! C+ #37 Wardrum (SPEC §8.7 row 37): (2) Unit ((3) and 5/5 → 10/10 until issue #3951, (4) until issue
 //! #3837, (5) until issue #3138), Quickdraw, Legendary, 4/4 → 8/8, no Divine Shield since issue #4440
-//! (both faces printed it from issue #3138 through v0.6.11b, catalog data the shipped catalogs keep).
+//! (both faces printed it from issue #3138 through v0.6.11c, catalog data the shipped catalogs keep).
 //!   Base:    "While in your hand or deck: After you play {threshold} non-Units in a turn, summon this.
 //!            End of turn: Cast a copy of a random non-Unit you played this turn."
 //!   Radiant: "… End of turn: Cast a copy of each non-Unit you played this turn."

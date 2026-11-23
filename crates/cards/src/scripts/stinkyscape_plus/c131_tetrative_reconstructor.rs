@@ -5,8 +5,8 @@
 //!   Radiant: "Tribute 3
 //!            Start of turn: Add a random Radiant Automa-Ω card to your hand, it has no Tribute condition."
 //!
-//! Tribute 3 since issue #4440 (Tribute 4 before it, which `script_v0_6_11b` keeps for the replays of
-//! v0.6.11b and before, R767000) is the play validator's (§6.3, R101), read off `staticFlags.tribute`:
+//! Tribute 3 since issue #4440 (Tribute 4 before it, which `script_v0_6_11c` keeps for the replays of
+//! v0.6.11c and before, R767000) is the play validator's (§6.3, R101), read off `staticFlags.tribute`:
 //! three Units of its player's destroyed to pay it. At the start of its controller's turn (R62), before their draw, one
 //! `addRandomFromCatalog` from the Stinkyscape+ cards tagged Automa-Ω (R3565001), tokens out (§5.1, R382:
 //! no Reignclipse), the pool naming its set so that it reaches them while the set is held (R1420): Reign, Eclipse, Oct, Omura and Corvus.
@@ -20,8 +20,8 @@ pub const ID: &str = "stinkyscapeplus-131";
 
 /// "Tribute 3" (R101), since issue #4440.
 const TRIBUTE: i32 = 3;
-/// "Tribute 4", through v0.6.11b.
-const TRIBUTE_V0_6_11B: i32 = 4;
+/// "Tribute 4", through v0.6.11c.
+const TRIBUTE_V0_6_11C: i32 = 4;
 /// R3565000: "it has no Tribute condition".
 const NO_TRIBUTE: i32 = 0;
 
@@ -54,11 +54,11 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.11b it was Tribute 4 (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_11b() -> CardScripts {
+/// R767000: through v0.6.11c it was Tribute 4 (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_11c() -> CardScripts {
     CardScripts {
-        base: reconstructor(false, TRIBUTE_V0_6_11B),
-        radiant: reconstructor(true, TRIBUTE_V0_6_11B),
+        base: reconstructor(false, TRIBUTE_V0_6_11C),
+        radiant: reconstructor(true, TRIBUTE_V0_6_11C),
     }
 }
 
@@ -166,22 +166,22 @@ mod tests {
         }
     }
 
-    /// R767000: through v0.6.11b four Units paid it (issue #4440), and three are refused.
+    /// R767000: through v0.6.11c four Units paid it (issue #4440), and three are refused.
     #[test]
-    fn r767000_the_script_kept_for_v0_6_11b_needs_tribute_4() {
-        crate::under_kept(ID, script_v0_6_11b(), || {
+    fn r767000_the_script_kept_for_v0_6_11c_needs_tribute_4() {
+        crate::under_kept(ID, script_v0_6_11c(), || {
             let mut s = weapon_board(
                 "s131-kept",
                 json!({
                     "hand": [ID],
                     "library": filler(6),
-                    "field": vec![VANILLA; TRIBUTE_V0_6_11B as usize],
+                    "field": vec![VANILLA; TRIBUTE_V0_6_11C as usize],
                     "mana": 10,
                 }),
                 json!({ "hand": [FILLER], "library": filler(6) }),
             );
-            assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_11B);
-            let fodder: Vec<String> = (1..=TRIBUTE_V0_6_11B).map(|lane| s.unit_at(P1, lane).id).collect();
+            assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_11C);
+            let fodder: Vec<String> = (1..=TRIBUTE_V0_6_11C).map(|lane| s.unit_at(P1, lane).id).collect();
             s.expect_refused(|s| s.play(ID, json!({ "zone": 5, "tributes": fodder[1..].to_vec() })));
             s.play(ID, json!({ "zone": 5, "tributes": fodder }));
             s.expect_in_zone(ID, "field");
