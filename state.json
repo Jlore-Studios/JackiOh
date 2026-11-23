@@ -17724,6 +17724,7 @@
       "run_id": "45107005625",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 470,
       "started_at": "2026-11-23T03:36:42Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -39696,9 +39697,33 @@
         "title": "Patch: the landing fan checks a few cards instead of all 800, and the collection, the stats grid and card prompts stop rebuilding every card face on each hover, scroll or keystroke",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "afc2cae8afc8626d9f650f5eb6408e70f58ecd06",
+        "issue": 4448,
+        "merged_at": "2026-11-23T03:59:48Z",
+        "n": 470,
+        "pr": 4554,
+        "queued_at": "2026-11-23T03:59:48Z",
+        "sha": "0bf5057480fd2f1280fe772f17537b00d233e833",
+        "status": "queued",
+        "title": "Patch: the AI's turn-hook and Activate shares are fork-screened at a whole use and set where the screen keeps them",
+        "tries": 0
       }
     ],
-    "count": 469
+    "count": 470
   },
   "statistics": {
     "at": "2026-11-23T03:58:47Z"
