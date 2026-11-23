@@ -1941,6 +1941,39 @@ fn r4221004_i18_an_attack_on_a_reflector_into_the_attacker_s_pool_is_not_judged(
     assert!(found[0].contains("I18 forecast drift"), "{}", found[0]);
 }
 
+/// R4555001 (fuzz seed 4338): an attacker that reflects what it takes onto the enemy hero (Reflective
+/// Plating, either face, R1849003) deals its strike back again to the target's hero, after any Trample
+/// excess, which the forecast does not project, so I18 does not judge its attack on a Unit.
+#[test]
+fn r4555001_i18_an_attack_on_a_unit_by_a_reflector_is_not_judged() {
+    let (state, attacker, defender) = i18_board("r4555001-i18-reflecting-attacker");
+    register_i18_script(
+        &plain.id,
+        Script {
+            static_flags: Some(StaticFlags {
+                reflects_damage: Some(true),
+                ..StaticFlags::default()
+            }),
+            ..Script::default()
+        },
+    );
+    let (_, result) = i18_attack(&state, &attacker, &defender);
+    assert!(
+        result.events.iter().any(|event| matches!(
+            event,
+            GameEvent::Damage { source_id: Some(source), target_id, combat: false, .. }
+                if *source == attacker && target_id == "hero-p2"
+        )),
+        "the attacker reflects its strike back onto p2's hero: {:?}",
+        result.events
+    );
+    assert_eq!(
+        judged_drift(&state, &attacker, &defender),
+        (0, Vec::new()),
+        "the reflection onto the target's hero is not projected"
+    );
+}
+
 /// R4318000, R4379000: a Unit the state check after the combat takes off with a card dormant beneath it
 /// (R1829000) brings that card in, which may act on a combatant by its aura, and the forecast is not
 /// shown it (R13), so I18 does not judge the attack; a sweep's other hit here, since a Cleave

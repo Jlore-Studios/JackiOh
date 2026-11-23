@@ -3097,7 +3097,11 @@ fn card_label(state: &GameState, id: &str) -> String {
 /// - a Unit the state check after the combat takes off, as the forecast settles it (R4379000; a Cleave
 ///   neighbour, §4.4 step 10, a sweep's other hit, R3554008, or one an aura no longer holds up), with a
 ///   card dormant beneath it or held by it (R4221002's reason, R4318000): its leaving brings that card
-///   in, which the forecast is not shown.
+///   in, which the forecast is not shown;
+/// - for a Unit target, an attacker that reflects what it takes onto the enemy hero (Stinkyscape #104
+///   Reflective Plating, either face, R1849003): its strike back is dealt again to the target's hero
+///   after any Trample excess and may end the game, and the forecast projects no reflection (R4555001;
+///   fuzz seed 4338).
 fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> bool {
     let Some(attacker) = find_instance(state, attacker_id) else {
         return false;
@@ -3164,6 +3168,10 @@ fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> 
         .filter_map(|id| find_instance(state, id))
         .any(brings_in)
     {
+        return false;
+    }
+    // R4555001: an attacker that reflects what it takes onto the enemy hero (Reflective Plating, R1849003).
+    if target.is_some() && crate::scripts::flags_of(state, attacker).reflects_damage == Some(true) {
         return false;
     }
     let pool_soaks_reflection = crate::query::damage_pool_of(state, attacker.controller, false) > 0;
