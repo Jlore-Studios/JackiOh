@@ -170,13 +170,27 @@ mod b3_4_params_the_numbers_a_card_declares {
 
     #[test]
     fn r482_reads_the_numbers_lines_as_the_brief_writes_them_on_cards_that_show_one_of_each_kind() {
-        // A Radiant-only number: Cloaked Toe Cracker's "gain 1 mana" exists on its Radiant face only, so it
-        // is tuned there alone (R824000).
+        // A Radiant-only number: Bread and Butter's multiplier ("X = 3 × the Float") exists on its Radiant
+        // face only, so it is tuned there alone (R824000). (Cloaked Toe Cracker's "gain 1 mana" was the
+        // example until issue #4440 took it.)
+        let multiplier = card_def("core-018")
+            .params
+            .into_iter()
+            .flatten()
+            .find(|param| param.key == "multiplier")
+            .expect("Bread and Butter declares its multiplier");
+        assert_eq!(
+            serde_json::to_value(&multiplier).expect("params serialize"),
+            json!({ "key": "multiplier", "base": 1, "radiant": 3, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" })
+        );
+        assert!(!card_def("core-018").base.text.contains("{multiplier}"));
+        // A base-only number: Cloaked Toe Cracker's discount since issue #4440, its Radiant face's Traps
+        // costing (0).
         assert_eq!(
             serde_json::to_value(&card_def("classic-006").params).expect("params serialize"),
-            json!([{ "key": "mana", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }])
+            json!([{ "key": "discount", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }])
         );
-        assert!(!card_def("classic-006").base.text.contains("{mana}"));
+        assert!(!card_def("classic-006").radiant.text.contains("{discount}"));
         assert!(matches_object(
             &first_param("classic-083"),
             &json!({ "key": "damage", "base": 10, "radiant": 20, "step": 2 })

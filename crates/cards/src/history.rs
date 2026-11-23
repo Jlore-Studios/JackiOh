@@ -28,8 +28,8 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
-    c001_curse_of_the_forgotten_classic, c004_palantir, c008_pickle, c009_income_tax,
-    c013_boots_on_the_ground, c014_shadowstep, c020_the_power_to_punish, c023_devils_pact,
+    c001_curse_of_the_forgotten_classic, c004_palantir, c006_cloaked_toe_cracker, c008_pickle,
+    c009_income_tax, c013_boots_on_the_ground, c014_shadowstep, c020_the_power_to_punish, c023_devils_pact,
     c024_book_of_knowledge, c027_pestilent_slime, c028_second_wind, c032_felinor_feelings, c035_prep,
     c037_last_hurrah, c039_outbreak, c040_mc_tech, c047_recurring_felinor, c052_final_gambit, c057_echo,
     c062_living_bomb, c064_malzahars_recycler, c070_book_of_plague, c088_siphon_squad, c090_in_too_deep,
@@ -90,7 +90,8 @@ use crate::scripts::stinkyscape_plus::{
     c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage,
     c082_endless_expedition, c093_recessive_replicators, c097_selective_enrollment,
     c104_tireless_cultivation, c119_eclipse, c120_crawler, c121_1_toxopid_leg, c121_toxopid,
-    c145_fire_beam_v5, c155_the_far_vagabond, c159_raven, c166_mindustrial_revolution,
+    c131_tetrative_reconstructor, c145_fire_beam_v5, c155_the_far_vagabond, c159_raven,
+    c166_mindustrial_revolution,
 };
 use crate::scripts::training_grounds::{
     c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
@@ -1319,6 +1320,19 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.9n",
         c009_joint_filing::script_v0_6_9n,
     ),
+    // #4440 Stinkyscape+ Balance Changes VI, its second part (the cards the first left out): Tetrative
+    // Reconstructor's Tribute 4 and Cloaked Toe Cracker's free Traps and Radiant mana, the last scripts
+    // before it.
+    (
+        c131_tetrative_reconstructor::ID,
+        "v0.6.11b",
+        c131_tetrative_reconstructor::script_v0_6_11b,
+    ),
+    (
+        c006_cloaked_toe_cracker::ID,
+        "v0.6.11b",
+        c006_cloaked_toe_cracker::script_v0_6_11b,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -1991,6 +2005,17 @@ mod tests {
                 "v0.6.9j", "v0.6.9k", "v0.6.9l", "v0.6.9m", "v0.6.9n",
             ],
             "v0.6.9o",
+        );
+    }
+
+    /// Issue #4440's second part: v0.6.11b was the newest shipped version as it was built, so its rows are
+    /// keyed there; each script they keep ran through it, v0.6.10 to v0.6.11b among the versions.
+    #[test]
+    fn r767000_issue_4440_part_2_scripts_are_kept_through_v0_6_11b_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[c131_tetrative_reconstructor::ID, c006_cloaked_toe_cracker::ID],
+            &["v0.6.10", "v0.6.10b", "v0.6.10c", "v0.6.10d", "v0.6.11", "v0.6.11b"],
+            "v0.6.11c",
         );
     }
 
