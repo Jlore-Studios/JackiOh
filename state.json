@@ -17645,6 +17645,13 @@
     "4552": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45108057450",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-23T04:18:27Z",
+        "until": "2026-11-23T04:48:27Z"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
