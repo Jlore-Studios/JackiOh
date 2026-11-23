@@ -34072,5 +34072,91 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.6.11",
+    "date": "2026-11-23",
+    "title": "Patch: the daily patch, rolling up v0.6.10b to v0.6.10d",
+    "source": "patches cut at 84e1400b225797cf9d6e8bb8d1dce5c34681c662: v0.6.10b, v0.6.10c, v0.6.10d",
+    "notes": "The day's patch (R3944000): it rolls up the micros shipped since v0.6.10, each a snapshot of its own: v0.6.10b (The card detail view loads when first opened); v0.6.10c (Spells give no keyword to a Unit Immune to Spells); v0.6.10d (The card back's attribute test drops a redundant check).",
+    "player": {
+      "title": "Immune to Spells holds against more Spells, and 2 more changes",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Card backs look exactly as before; a check behind how they pick their design was simplified."
+      ],
+      "text": [],
+      "fixes": [
+        "The home page no longer downloads the card detail view before it can start, so the first screen is ready sooner on slow connections.",
+        "The War Doctrines and Call to Chaos (Training-Grounds Edition) no longer give their keyword to a Unit Immune to Spells; your other Units, and the ones you play later, still get it.",
+        "Call to Chaos (Stinky Edition)'s Allure no longer reaches a Unit Immune to Spells."
+      ]
+    },
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "traininggrounds-039"
+    ],
+    "includes": [
+      "v0.6.10b",
+      "v0.6.10c",
+      "v0.6.10d"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.11b",
+    "date": "2026-11-23",
+    "title": "Patch: the Infinite Assault, C1, the set, its tags and the Assault Core",
+    "source": "#4577",
+    "notes": "Issue #4577 (part of #4576): the held single-player Infinite Assault set (R4577000), its nine tags (R4577001) and its Assault Core, IA #1-#24 with the tokens #4.1 Drone and #10.1 Drone Escort. No pool deals the set while it is held, so no card players can reach plays differently. Claims --visual because the change touches apps/web/src/cards/ (R2529000): the set's mark in setMark.ts and placeholder scene and motion recipes keyed to infiniteassault- ids only (R4577009); no shipped card's picture moves.",
+    "player": {
+      "title": "Behind the scenes",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Groundwork for future content. No card you can play looks or plays any differently."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "8fea5765571c1259a5b1f90fe260d6e9fa729ab5"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.6.11c",
+    "date": "2026-11-23",
+    "title": "Patch: the tier cards and KPIs read the newest win rates",
+    "source": "winrates-refresh.yml: production's windowed card figures at v0.6.11b (R3882000)",
+    "notes": "The win rates of record refresh from the card statistics at v0.6.11b: 799 cards with at least 20 games over their own windows (provisional figures). The tier pools and KPIs read them from this version on (R3538000, R3538001); earlier versions keep theirs, and CN Tech and NA Tech still read each game's snapshot (R3049000).",
+    "player": {
+      "title": "Win rates refreshed",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "xxFreshJack, JC Backed, Open Enrollment, Selective Enrollment and KPIs now read the win rates of this patch's games."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "0df408bb60279e27f2071adcc97e3ea60d45d4ea"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-109",
+      "stinkyscapeplus-095",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-164"
+    ],
+    "changes": []
   }
 ]

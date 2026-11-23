@@ -16,7 +16,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import { SHIPPED_SETS } from "@jackioh/shared";
+import { SHIPPED_SETS, setShips } from "@jackioh/shared";
 
 import { COSMETICS, COSMETIC_LEVELS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
 import { FULL_ARTS_OF_CARD, FULL_ART_CARDS, tierOfLook } from "./fullArt.ts";
@@ -102,7 +102,12 @@ const PAIRS = [
   [VERSION_WOODCUT_ID, VERSION_TAROT_ID],
 ] as const;
 
-const COLLECTIBLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.includes("Token"));
+/**
+ * The cards a look is offered on: every non-token card of a set that ships. A held set's cards take no offer until
+ * it ships (the server's `shipped_defs`, R1420), the Infinite Assault's among them, a single-player set held while
+ * it is built (R4577000).
+ */
+const COLLECTIBLE = Object.values(CATALOG).filter((def) => setShips(def.set) && !def.token && !def.tags.includes("Token"));
 const isLegacy = (card: string): boolean => CATALOG[card]?.tags.includes("Legacy") === true;
 
 describe("R2725000 a card's look", () => {
@@ -728,7 +733,9 @@ describe("R3343000 default looks", () => {
   it("R3343000 a Mythic's Default draws Full art and a Legendary's Extended art, a token by its printed rarity, as the server exports it", () => {
     const counts = { full: 0, extended: 0, tokens: 0 };
     for (const id of Object.keys(CATALOG)) {
-      const rarity = faceRarityOf(id);
+      // R3535000: none on a card of a held set, whose cards the server's `shipped_defs` leaves out (R4577000).
+      const def = CATALOG[id];
+      const rarity = def !== undefined && setShips(def.set) ? faceRarityOf(id) : null;
       const expected = rarity === "Mythic" ? VERSION_FULL_ART_ID : rarity === "Legendary" ? VERSION_EXTENDED_ART_ID : null;
       expect(defaultLookOf(id), id).toBe(expected);
       if (expected === VERSION_FULL_ART_ID) counts.full += 1;
@@ -741,6 +748,9 @@ describe("R3343000 default looks", () => {
     expect(defaultLookOf("meditative-049-1")).toBe(VERSION_FULL_ART_ID);
     expect(defaultLookOf("classicplus-073-1")).toBe(VERSION_EXTENDED_ART_ID);
     expect(defaultLookOf("core-999")).toBeNull();
+    // IA #23 The Generator, a Legendary of the held Infinite Assault set, draws its normal face until the set ships.
+    expect(faceRarityOf("infiniteassault-023")).toBe("Legendary");
+    expect(defaultLookOf("infiniteassault-023")).toBeNull();
     // The registry marks the two first levels, and nothing else.
     const marked = Object.entries(COSMETIC_LEVELS).filter(([, level]) => (level.defaultOn ?? []).length > 0);
     expect(marked).toEqual([

@@ -27,5 +27,9 @@
  * Issue #3535 adds Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω,
  * Automa-ζ and Paperclip (the Stinkyscape+ set's family tags, R3535002), which the server
  * admits from migration 0087.
+ * Issue #4577 adds the Infinite Assault set's eight doctrine tags, Hallucination, Overclock,
+ * Batch, Recursion, Jailbreak, Firewall, Scraper and Singularity, and Commander (its boss
+ * cards): family tags no rule reads, declared before their cards for the set's later parts,
+ * which the server admits from migration 0099 (R4577001).
  */
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Starship" | "Mindustrial" | "Mineral" | "Automa-α" | "Automa-β" | "Automa-γ" | "Automa-δ" | "Automa-Ω" | "Automa-ζ" | "Paperclip" | "Token";
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Starship" | "Mindustrial" | "Mineral" | "Automa-α" | "Automa-β" | "Automa-γ" | "Automa-δ" | "Automa-Ω" | "Automa-ζ" | "Paperclip" | "Hallucination" | "Overclock" | "Batch" | "Recursion" | "Jailbreak" | "Firewall" | "Scraper" | "Singularity" | "Commander" | "Token";
