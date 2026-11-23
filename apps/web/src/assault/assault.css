@@ -1,0 +1,112 @@
+/* The Infinite Assault's day, briefing and result screens. Values come from the shared palette,
+   spacing, type, surface and hit-target tokens. */
+
+.assault {
+  display: contents;
+}
+
+.tavern.app-shell.assault-screen .assault-panel {
+  width: min(100%, 64rem);
+}
+
+.assault-panel,
+.assault-picker,
+.assault-block,
+.assault-deck-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.assault-block {
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+}
+
+.assault-block > :where(h2, h3, p),
+.assault-panel > :where(h2, p) {
+  margin: 0;
+}
+
+.assault-ladder,
+.assault-history,
+.assault-card-list,
+.assault-upgrades {
+  margin: 0;
+  padding-inline-start: var(--space-8);
+}
+
+.assault-ladder > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, auto);
+  gap: var(--space-4);
+  padding-block: var(--space-2);
+}
+
+.assault-ladder > li[data-beaten="true"]::marker,
+.assault-upgrades > li[data-new="true"]::marker {
+  color: var(--selected);
+}
+
+.assault-start-levels,
+.assault-deck-options,
+.assault-actions,
+.assault-curve {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.assault-deck-option {
+  display: flex;
+  flex: 1 1 14rem;
+  gap: var(--space-3);
+  align-items: flex-start;
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+}
+
+.assault-deck-option > span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.assault-deck-option[data-disabled="true"],
+.assault-deck-reason {
+  color: var(--text-dim);
+}
+
+.assault-card-list {
+  columns: 2;
+}
+
+.assault-curve > span {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: var(--space-3);
+  text-align: center;
+  border-block-end: var(--space-2) solid var(--selected);
+}
+
+.app-shell .assault-start {
+  align-self: flex-start;
+}
+
+@media (max-width: 600px) {
+  .assault-ladder > li {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .assault-card-list {
+    columns: 1;
+  }
+}

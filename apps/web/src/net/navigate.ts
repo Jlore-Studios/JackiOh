@@ -277,6 +277,8 @@ export const paths = {
   dungeon: "/dungeon",
   /** #2705: the Sandbox's stats and leaderboards, on the device. */
   dungeonStats: "/dungeon/stats",
+  /** #4581: the daily Infinite Assault, played offline against the AI. */
+  assault: "/assault",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games. */

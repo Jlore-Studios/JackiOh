@@ -4,6 +4,7 @@
 
 import type { CardDefs } from "@jackioh/shared";
 
+import { ASSAULT_OPEN } from "../assault/config.ts";
 import { readerName } from "../cards/chinese.ts";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { almanacShelf } from "../game/deckbuilder/shelf.ts";
@@ -51,6 +52,9 @@ export function commandActions(): CommandEntry[] {
     { id: "action-practice", kind: "action", label: t("Practice"), path: paths.practice },
     { id: "action-play", kind: "action", label: t("Play"), path: paths.play },
     { id: "action-dungeon", kind: "action", label: t("Dungeon run"), path: paths.dungeon },
+    ...(ASSAULT_OPEN
+      ? [{ id: "action-assault", kind: "action" as const, label: t("Infinite Assault"), path: paths.assault }]
+      : []),
   ];
 }
 
