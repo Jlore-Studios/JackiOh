@@ -4293,6 +4293,19 @@ pub(crate) mod tests {
             assert_eq!(origin_of(None), "");
         }
 
+        /// A token's id holds letters where a card's holds digits (`core-t-rush`), and the signature blanks
+        /// it whole, so two seeds that deal different tokens twice share one signature.
+        #[test]
+        fn a_failure_signature_blanks_a_tokens_id_whole() {
+            assert_eq!(
+                signature_of(
+                    FailureStage::Play,
+                    "core-t-rush and core-t-sheep were dealt twice"
+                ),
+                "[play] <card> and <card> were dealt twice"
+            );
+        }
+
         #[test]
         fn r679_a_glitch_that_voids_the_match_is_a_real_ending() {
             register_all();

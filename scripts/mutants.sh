@@ -53,7 +53,9 @@ ROOT=$(pwd)
 # 20 now, the server's tested one at a time (JOBS_SERVER, below). A card set's mutant took about 1.5
 # minutes, two at a time (Stinkyscape's first shard reached 198 of its 225 in the five hours, the
 # others 200 to 230 in about three, #3813's branch, 2026-11-13), so a card shard holds 150. The tools'
-# are an estimate until a weekly run times them: about four minutes.
+# take 17.6 minutes each, two at a time: shard 19/50 reached 34 of its 120 before the step's five hours
+# ended (mutants.yml run 45016483906, week 2968), since the `jackioh` binary's 619 unit tests take
+# about 7.5 of the suite's 8 minutes, so a tools shard holds 30.
 SIZE_ENGINE=40
 SIZE_CARDS=150
 # cards-lib's mutants one at a time (JOBS_CARDS_LIB, below), at about 3 minutes each.
@@ -62,7 +64,7 @@ SIZE_AI=70
 SIZE_RUN=1000
 SIZE_SHARED=250
 SIZE_SERVER=20
-SIZE_TOOLS=120
+SIZE_TOOLS=30
 SIZE_WASM=200
 # Source lines per Stryker shard. Stryker runs each mutant against only the tests that cover it, but a
 # layer the board imports relates most of the web's tests, so a mutant takes about 10 s whatever its
@@ -94,6 +96,14 @@ TEST_MEMORY=${MUTANTS_TEST_MEMORY:-4294967296}
 # branch, 2026-11-13, with the Stinkyscape+ catalog): under the 4 GiB cap every baseline aborted
 # (mutants.yml run 43376574076), so no server mutant could be tested. It takes 8 GiB.
 TEST_MEMORY_SERVER=${MUTANTS_TEST_MEMORY:-8589934592}
+# The engine's `rules` test binary runs its 3,014 tests in one process, and each test's testkit
+# registers its catalog and scripts afresh (tests/rules/fixtures/harness.rs, setup_catalog) and leaks
+# them (testkit/scenario.rs), so its data grows past 4 GiB though its resident peak is 3.4 GB: under the
+# 4 GiB cap every baseline aborted, and shard 120/407 tested none of its 40 (mutants.yml run 45016483906,
+# week 2968). Under 6 GiB it passes in a minute (main, 2026-11-22, with mutants.toml's flags). Two
+# binaries at 6 GiB, two mutants at a time, beside a build stay under the runner's 16 GB, where 8 GiB
+# each would not.
+TEST_MEMORY_ENGINE=${MUTANTS_TEST_MEMORY:-6442450944}
 host=
 if command -v prlimit >/dev/null 2>&1; then
   host=$(rustc -vV 2>/dev/null | sed -n 's/^host: //p' | tr 'a-z-' 'A-Z_')
@@ -131,8 +141,17 @@ export CARGO_INCREMENTAL=0
 # tilt.ts, main, 2026-11-15). Nothing else of a web shard comes near the runner's 16 GB: a narrowed run
 # of that shard on four cores peaked at 2 GB. So, as TEST_MEMORY does for a Rust test binary, a process
 # whose mutant allocates without end runs out of heap and fails on its own, with its log, while
-# Stryker and its three runners at their usual size leave it room under the 16.
-WEB_HEAP_MB=${MUTANTS_WEB_HEAP_MB:-6144}
+# Stryker and its runners at their usual size leave it room under the 16.
+# WEB_RUNNERS is Stryker's --concurrency, the test runners it starts; left to itself it starts one a
+# core, four. web-settings' shard 1/4 (ChangeEmail.tsx, SettingsButton.tsx, SettingsPanel.tsx; the
+# panel's re-export in settings/index.ts relates 5,299 tests to its mutants) left no artifact, its
+# runner lost (mutants.yml run 45016483906, week 2968). Run by hand, at a 6144 MiB heap one runner
+# reached 5.4 GB and the four together 14.1 GB resident, 448 MB short of the runner's 15 GB; at 3072
+# MiB the first test run still passed (14 minutes, its runner at 4.6 GB), each runner stayed under
+# 3.8 GB, and the shard scored the same (213 killed, 96 survived), but four together still reached
+# 14.4 GB. Three runners under 3.8 GB come to about 11 GB.
+WEB_HEAP_MB=${MUTANTS_WEB_HEAP_MB:-3072}
+WEB_RUNNERS=${MUTANTS_WEB_RUNNERS:-3}
 # `$@`, under prlimit with AREA_MEMORY bytes of data for every process it starts when the area sets it.
 capped() {
   if [ -n "$host" ] && [ -n "$AREA_MEMORY" ]; then
@@ -183,7 +202,10 @@ rust_area() {
   AREA_JOBS=$JOBS AREA_MEMORY=
   cap_tests "$TEST_MEMORY"
   case "$1" in
-    engine) FILTER="-p jackioh-engine" SIZE=$SIZE_ENGINE ;;
+    engine)
+      FILTER="-p jackioh-engine" SIZE=$SIZE_ENGINE
+      cap_tests "$TEST_MEMORY_ENGINE"
+      ;;
     ai) FILTER="-p jackioh-ai" SIZE=$SIZE_AI ;;
     run) FILTER="-p jackioh-run" SIZE=$SIZE_RUN ;;
     shared) FILTER="-p jackioh-shared" SIZE=$SIZE_SHARED ;;
@@ -316,7 +338,8 @@ run_web() {
   echo "mutants: $area shard $label, of the area's $total files:" $mine
   mutate=$(echo "$mine" | sed "s|^$app/||" | paste -sd, -)
   (cd "$app" && NODE_OPTIONS="--max-old-space-size=$WEB_HEAP_MB${NODE_OPTIONS:+ $NODE_OPTIONS}" \
-    MUTANTS_OUT=$out pnpm exec stryker run stryker.config.mjs --mutate "$mutate" "$@")
+    MUTANTS_OUT=$out pnpm exec stryker run stryker.config.mjs --mutate "$mutate" \
+    --concurrency "$WEB_RUNNERS" "$@")
 }
 
 run_area() {
@@ -359,7 +382,11 @@ in_diff() {
     return 0
   fi
   dir=
-  # A changed server line is tested by the server's test binary, which takes its own cap (above).
+  # A changed engine line is tested by the engine's `rules` binary, which takes its own cap (above), and
+  # a changed server line by the server's, whose cap is higher still.
+  if grep -q '^+++ b/crates/engine/' "$out/diff.patch"; then
+    cap_tests "$TEST_MEMORY_ENGINE"
+  fi
   if grep -q '^+++ b/crates/server/' "$out/diff.patch"; then
     JOBS=$JOBS_SERVER
     cap_tests "$TEST_MEMORY_SERVER"

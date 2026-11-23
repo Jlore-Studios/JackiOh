@@ -309,6 +309,9 @@ the chunk, not behind silence. The recipe contract, which tests B14 and B15 chec
   use `createDynamicsCompressor`, `decodeAudioData`, `resume`, `close` and `state`.
 
 The recipe sketches below are the designer's intent; builders tune them by ear within `durationMs`.
+What each recipe builds once tuned is a golden in `apps/web/src/audio/sfxGraphs.test.ts` (#4516): a sound
+tuned on purpose updates its golden with `pnpm --dir apps/web exec vitest run src/audio/sfxGraphs.test.ts -u`,
+and the diff shows what moved.
 
 | SfxId | durationMs | gain | sketch |
 |---|---|---|---|

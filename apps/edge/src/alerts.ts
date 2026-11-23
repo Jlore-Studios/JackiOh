@@ -103,7 +103,7 @@ export function canTell(settings: AlertSettings): boolean {
 
 function nonEmpty(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
-  return trimmed === undefined || trimmed === "" ? undefined : trimmed;
+  return trimmed === "" ? undefined : trimmed;
 }
 
 /**
@@ -111,13 +111,16 @@ function nonEmpty(value: string | undefined): string | undefined {
  */
 function stripTrailingSlashes(host: string): string {
   let end = host.length;
+  // Stryker disable next-line ConditionalExpression,EqualityOperator: charCodeAt(-1) is NaN, never a slash, so the loop stops at 0 either way; the bound stays so no slip in the slash test can spin the Worker.
   while (end > 0 && host.charCodeAt(end - 1) === 0x2f) end--;
   return host.slice(0, end);
 }
 
 /** The site a notice names: the host of the first browser origin (`jackioh.com`, `staging.jackioh.com`; `alerts.rs`' `site_of`). */
 export function siteOf(origins: string | undefined): string {
-  const first = (origins ?? "").split(",")[0]?.trim() ?? "";
+  const entries = (origins ?? "").split(",");
+  // Stryker disable next-line OptionalChaining,StringLiteral: split answers one item at least, so [0] is a string; the ?. and the ?? "" are there for noUncheckedIndexedAccess.
+  const first = entries[0]?.trim() ?? "";
   if (first === "") return UNNAMED_SITE;
   const at = first.indexOf("://");
   const host = at === -1 ? first : first.slice(at + 3);
@@ -208,6 +211,7 @@ async function github(token: string, path: string, body?: unknown): Promise<unkn
       "x-github-api-version": "2022-11-28",
       ...(body === undefined ? {} : { "content-type": "application/json" }),
     },
+    // Stryker disable next-line ConditionalExpression: JSON.stringify(undefined) is undefined, and fetch takes an undefined body as none.
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     signal: AbortSignal.timeout(ALERT_TIMEOUT_MS),
   });
@@ -232,6 +236,7 @@ async function fileIssue(token: string, site: string, build: string | undefined,
       per_page: "10",
     });
     const found = await github(token, `/search/issues?${query.toString()}`);
+    // Stryker disable next-line ArrayDeclaration: an item that is no record is never the open issue, so a fallback holding a string finds none, as [] does.
     const items = isRecord(found) && Array.isArray(found.items) ? (found.items as unknown[]) : [];
     // The search matches words, so only an issue with exactly this title is the event's.
     const open = items.find((item) => isRecord(item) && item.title === title);
