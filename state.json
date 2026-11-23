@@ -16955,7 +16955,7 @@
       }
     },
     "4628": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "died": 0,
@@ -16974,10 +16974,12 @@
       },
       "interruptions": 0,
       "issue": 4622,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-23T23:35:07Z",
         "from_run": "45283972037",
         "gates": [
           {
@@ -17041,11 +17043,11 @@
       "question": "",
       "queued_at": "2026-11-23T23:34:07Z",
       "round_tier": "medium",
-      "run_id": "45283972037",
+      "run_id": "pending:59096143-1795476880",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-23T22:53:50Z",
+      "started_at": "2026-11-23T23:35:07Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17717,9 +17719,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T23:25:35Z",
+    "at": "2026-11-23T23:35:07Z",
     "url": "",
-    "what": "plan #4586 on claude-6"
+    "what": "review #4628 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T23:21:18Z",
