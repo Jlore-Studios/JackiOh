@@ -40348,6 +40348,12 @@
         "number": 4645,
         "title": "Patch: a fuzz rotation offers and answers draws",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T23:07:38Z",
+        "number": 4646,
+        "title": "Patch: run-sim writes its per-run rows as machine-readable JSONL",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
