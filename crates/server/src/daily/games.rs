@@ -19,7 +19,9 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 
-use jackioh_engine::{Action, ActionBody, CombatForecast, GameOverReason, PlayerId, Winner, opponent_of};
+use jackioh_engine::{
+    Action, ActionBody, CombatForecast, GameOverReason, PlayerId, PortraitId, Winner, opponent_of,
+};
 use jackioh_shared::host::SERVER_NONCE_PREFIX;
 use jackioh_shared::host::daily::{
     DailyBoard, DailyClock, daily_allows, daily_board, daily_expired, daily_legal, daily_sync,
@@ -742,7 +744,7 @@ async fn expired_json(app: &Arc<App>, stored: &Stored, me: &str) -> Result<Value
     }
     let mut game = summary_json(
         &stored.daily,
-        Some(&stored.match_row),
+        stored.match_row.portraits,
         me,
         opponent.as_ref().map(PlayerRef::of),
     )
@@ -864,22 +866,14 @@ pub async fn act(app: &Arc<App>, req: Req) -> ApiResult {
 /// One game's row in the caller's list.
 fn summary_json(
     row: &DailyGameRow,
-    match_row: Option<&MatchRow>,
+    portraits: Option<(PortraitId, PortraitId)>,
     me: &str,
     opponent: Option<PlayerRef>,
 ) -> Option<Value> {
     let seat = seat_now(row, me)?;
     let other = opponent_of(seat);
     let home = home_of(row, me)?;
-    let portrait = |at: PlayerId| {
-        match_row.and_then(|m| m.portraits.as_ref()).map(|portraits| {
-            if at == PlayerId::P1 {
-                portraits.0
-            } else {
-                portraits.1
-            }
-        })
-    };
+    let portrait = |at: PlayerId| portraits.map(|pair| if at == PlayerId::P1 { pair.0 } else { pair.1 });
     let mine = row.clock.hold_of(seat).map(|hold| hold.deadline);
     let theirs = row.clock.hold_of(other).map(|hold| hold.deadline);
     let result = row
@@ -934,12 +928,9 @@ pub async fn list(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(Some(&me)).await?;
     let rows = tx.daily_games_of(&me, recent).await?;
     let invites = tx.daily_invites_open_of(&me, now).await?;
-    let mut matches = indexmap::IndexMap::new();
-    for row in &rows {
-        if let Some(match_row) = tx.matches_get(&row.match_id).await? {
-            matches.insert(row.match_id.clone(), match_row);
-        }
-    }
+    let ids: Vec<String> = rows.iter().map(|row| row.match_id.clone()).collect();
+    let portraits: indexmap::IndexMap<String, Option<(PortraitId, PortraitId)>> =
+        tx.matches_portraits(&ids).await?.into_iter().collect();
     let mut named: Vec<String> = rows
         .iter()
         .flat_map(|row| [row.players.0.clone(), row.players.1.clone()])
@@ -963,7 +954,7 @@ pub async fn list(app: &Arc<App>, req: Req) -> ApiResult {
             };
             summary_json(
                 row,
-                matches.get(&row.match_id),
+                portraits.get(&row.match_id).copied().flatten(),
                 &me,
                 people.get(opponent_id).map(PlayerRef::of),
             )

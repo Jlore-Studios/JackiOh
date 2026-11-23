@@ -3579,6 +3579,54 @@ mod matches {
         assert!(q!(harness, t => t.matches_get("not-a-uuid")).is_none());
     }
 
+    /// #4510: the portraits of the asked `live` and `over` matches in one read; an unknown id, a non-uuid
+    /// and an open room's reserved id are left out, and a match that carries none answers `null`.
+    async fn s913_matches_portraits_answers_the_asked_live_and_over_matches_only(harness: &StoreHarness) {
+        let p1 = active_profile(harness, None).await;
+        let p2 = active_profile(harness, None).await;
+        let dealt = match_row(&id(), &p1.id, &p2.id, harness, harness.now());
+        let dealt: MatchRow = from(spread(j(&dealt), json!({ "portraits": ["gary", "timmy"] })));
+        q!(harness, t => t.matches_create(&dealt));
+        let bare = live_match(harness).await;
+        let over = {
+            let row = match_row(&id(), &p1.id, &p2.id, harness, harness.now());
+            from::<MatchRow>(spread(j(&row), json!({ "portraits": ["dfender", "vanilla"] })))
+        };
+        q!(harness, t => t.matches_create(&over));
+        q!(harness, t => t.matches_finish(&over.id, harness.now()));
+
+        let host = active_profile(harness, None).await;
+        q!(harness, t => t.rooms_create(&super::rooms::room(harness, "ABC234", &host.id, json!({}))));
+        let open_id = id();
+        must(
+            q!(harness, t => t.rooms_claim("ABC234", &p1.id, &open_id, harness.now())),
+            "the claim",
+        );
+
+        let asked = vec![
+            dealt.id.clone(),
+            bare.id.clone(),
+            over.id.clone(),
+            id(),
+            "not-a-uuid".to_string(),
+            open_id,
+        ];
+        let mut answer: Vec<(String, Value)> = q!(harness, t => t.matches_portraits(&asked))
+            .iter()
+            .map(|(match_id, portraits)| (match_id.clone(), j(portraits)))
+            .collect();
+        answer.sort_by(|a, b| a.0.cmp(&b.0));
+        let mut expected = vec![
+            (dealt.id.clone(), json!(["gary", "timmy"])),
+            (bare.id.clone(), Value::Null),
+            (over.id.clone(), json!(["dfender", "vanilla"])),
+        ];
+        expected.sort_by(|a, b| a.0.cmp(&b.0));
+        assert_eq!(answer, expected, "{}", harness.name);
+        assert!(q!(harness, t => t.matches_portraits(&[])).is_empty());
+        assert!(q!(harness, t => t.matches_portraits(&["not-a-uuid".to_string()])).is_empty());
+    }
+
     async fn refuses_a_second_match_with_the_same_id(harness: &StoreHarness) {
         let row = live_match(harness).await;
         let again: MatchRow = from(spread(j(&row), json!({ "seed": "other" })));
@@ -4049,6 +4097,7 @@ mod matches {
         r768_records_a_final_hash_once,
         round_trips_a_match_row_clocks_included,
         a_malformed_match_id_is_no_match,
+        s913_matches_portraits_answers_the_asked_live_and_over_matches_only,
         refuses_a_second_match_with_the_same_id,
         appends_actions_in_order_and_reads_them_back,
         reads_a_log_of_ten_or_more_actions_back_in_seq_order,
@@ -14010,11 +14059,28 @@ mod daily {
         );
         // Its result landed: the match is over, and nothing is left to write.
         q!(harness, t => t.matches_finish(&finished.match_id, now));
+        // #4510: a game over whose match is still `live` is due from its end on; one whose match is `over`
+        // is not; and a running game is due from its deadline on, not before.
+        let unwritten = daily_game(harness, &b.id, &a.id, now - 300, None).await;
+        assert!(
+            q!(harness, t => t.daily_games_put(&unwritten.match_id, 0, &DailyClock::new(DAYS), &board(3), None, Some(now - 25)))
+        );
+        let written = daily_game(harness, &a.id, &b.id, now - 200, None).await;
+        assert!(
+            q!(harness, t => t.daily_games_put(&written.match_id, 0, &DailyClock::new(DAYS), &board(3), None, Some(now - 5)))
+        );
+        q!(harness, t => t.matches_finish(&written.match_id, now));
+        let unwritten_later = daily_game(harness, &b.id, &a.id, now - 100, None).await;
+        assert!(
+            q!(harness, t => t.daily_games_put(&unwritten_later.match_id, 0, &DailyClock::new(DAYS), &board(3), None, Some(now + 60_000)))
+        );
+        let next = daily_game(harness, &a.id, &b.id, now - 50, Some(now + 1)).await;
 
         assert_eq!(
             q!(harness, t => t.daily_games_due(now)),
             vec![
                 latest.match_id.clone(),
+                unwritten.match_id.clone(),
                 late.match_id.clone(),
                 ended.match_id.clone(),
                 at_now.match_id.clone()
@@ -14024,8 +14090,28 @@ mod daily {
         );
         assert!(q!(harness, t => t.daily_games_due(now - 1_000)).is_empty());
         assert_eq!(
+            q!(harness, t => t.daily_games_due(now + 1)),
+            vec![
+                latest.match_id.clone(),
+                unwritten.match_id.clone(),
+                late.match_id.clone(),
+                ended.match_id.clone(),
+                at_now.match_id.clone(),
+                next.match_id.clone()
+            ],
+            "{}",
+            harness.name
+        );
+        // At its end the `live` game over is due, and the match id breaks the tie with the running game
+        // whose deadline falls on the same millisecond.
+        let mut tied = [unwritten_later.match_id.clone(), later.match_id.clone()];
+        tied.sort();
+        let due_late = q!(harness, t => t.daily_games_due(now + 60_000));
+        assert_eq!(due_late.len(), 8, "{}", harness.name);
+        assert_eq!(due_late[6..], tied[..], "{}", harness.name);
+        assert_eq!(
             match_ids(&q!(harness, t => t.daily_games_running())),
-            match_ids(&[late, later, unheld, latest, at_now]),
+            match_ids(&[late, later, unheld, latest, at_now, next]),
             "{}",
             harness.name
         );

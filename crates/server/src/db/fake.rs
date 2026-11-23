@@ -42,12 +42,12 @@ use crate::db::store::{
     CollectionEntry, CollectionGrant, ConsentRow, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow,
     FavoriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode,
     LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks,
-    MatchPhase, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
-    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
-    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult,
-    ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck,
-    SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
+    MatchPhase, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode,
+    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
+    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
+    RedeemResult, ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
+    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
     StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
     TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
     UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step,
@@ -1301,6 +1301,21 @@ pub fn matches_loadout_samples(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<Loa
 pub fn matches_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<MatchRow>, StoreError> {
     call(f, "matches.get")?;
     Ok(f.tables().matches.iter().find(|row| row.id == match_id).cloned())
+}
+
+/// #4510: the portrait pairs of the asked matches, as Postgres answers them (`live` and `over` rows only;
+/// the fake holds no `open` reservation, and a non-uuid matches nothing).
+pub fn matches_portraits(
+    f: &mut FakeTx<'_>,
+    match_ids: &[String],
+) -> Result<Vec<MatchPortraits>, StoreError> {
+    call(f, "matches.portraits")?;
+    Ok(f.tables()
+        .matches
+        .iter()
+        .filter(|row| match_ids.contains(&row.id))
+        .map(|row| (row.id.clone(), row.portraits))
+        .collect())
 }
 
 /// Append-only (§9.3), as `app.append_match_action` is (R776000): a nonce already logged at the row's
@@ -5196,6 +5211,7 @@ pub fn daily_games_put(
     Ok(true)
 }
 
+// Postgres reads the running games and the finished ones apart (#4510) and merges them in this order.
 pub fn daily_games_due(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<String>, StoreError> {
     call(f, "dailyGames.due")?;
     let tables = f.tables();

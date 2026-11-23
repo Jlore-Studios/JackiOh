@@ -38,7 +38,9 @@ use crate::support::deps::{
     TestAppOptions, add_user, call, json_request, record_logs, send as send_request, test_app_with,
 };
 use crate::support::engine::{TEST_GLITCH_VOID, fake_deck, install_test_cards};
-use crate::support::store::{Account, account, befriend, fail_on, fake, fake_lock, stop_failing};
+use crate::support::store::{
+    Account, account, befriend, fail_on, fake, fake_lock, record_calls, stop_failing,
+};
 
 // Helpers
 
@@ -3509,5 +3511,67 @@ mod r4233000_read_on_open {
             "{:?}",
             logs.entries()
         );
+    }
+}
+
+/// #4510: the list reads every game's portraits in one match read, not one whole match per game.
+#[tokio::test]
+async fn list_reads_every_games_portraits_in_one_match_read() {
+    use jackioh_engine::wire::PortraitId;
+    let (app, ada, bo) = two_friends().await;
+    let first = daily_game(&app, &ada, &bo, 1).await;
+    let second = daily_game(&app, &bo, &ada, 1).await;
+    let dealt = [
+        (&first, (PortraitId::Gary, PortraitId::Timmy)),
+        (&second, (PortraitId::Dfender, PortraitId::Shredder)),
+    ];
+    {
+        let mut data = fake_lock(&app).await;
+        for (match_id, pair) in dealt {
+            let row = data
+                .tables
+                .matches
+                .iter_mut()
+                .find(|row| &row.id == match_id)
+                .expect("the game's match");
+            row.portraits = Some(pair);
+        }
+    }
+
+    let calls = record_calls(&app).await;
+    let (status, ada_list) = api(&app, "GET", "/api/daily", &ada.token, Value::Null).await;
+    assert_eq!(status, 200, "{ada_list}");
+    let seen = calls.lock().expect("call log").clone();
+    stop_failing(&app).await;
+    assert_eq!(
+        seen.iter()
+            .filter(|call| call.as_str() == "matches.portraits")
+            .count(),
+        1,
+        "{seen:?}"
+    );
+    assert!(!seen.iter().any(|call| call == "matches.get"), "{seen:?}");
+
+    let (_, bo_list) = api(&app, "GET", "/api/daily", &bo.token, Value::Null).await;
+    for (match_id, pair) in dealt {
+        let pick = |list: &Value| {
+            let game = list["games"]
+                .as_array()
+                .and_then(|games| games.iter().find(|game| game["matchId"] == json!(match_id)))
+                .unwrap_or_else(|| panic!("{match_id} in {list}"))
+                .clone();
+            (game["portraits"]["me"].clone(), game["portraits"]["them"].clone())
+        };
+        let (mine, theirs) = pick(&ada_list);
+        let (bo_mine, bo_theirs) = pick(&bo_list);
+        assert_eq!((&mine, &theirs), (&bo_theirs, &bo_mine), "{match_id}");
+        let mut both = vec![
+            mine.as_str().expect("a portrait").to_string(),
+            theirs.as_str().expect("a portrait").to_string(),
+        ];
+        both.sort();
+        let mut want = vec![pair.0.as_str().to_string(), pair.1.as_str().to_string()];
+        want.sort();
+        assert_eq!(both, want, "{match_id}");
     }
 }

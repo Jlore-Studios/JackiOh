@@ -1608,4 +1608,79 @@ begin
 end $$;
 rollback;
 
+\echo '=== CHECK 28 (#4510): the daily list reads its games'' portraits and the daily sweep its due games, each through an index ==='
+-- daily::games::list reads the portraits of every game it lists in one query on matches_pkey
+-- (db/pg.rs matches_portraits), and the hourly sweep reads its due games in two (daily_games_due): the
+-- running games past their deadline through daily_games_due_idx, and the finished games whose match is
+-- still live from the live matches, through matches_status_created_at_idx and daily_games_pkey. One
+-- `or` over both left the finished arm (`ended_at <= $1`) without an index, so Postgres read every
+-- daily game ever played, and no row is deleted. With sequential scans priced out, no plan may read
+-- daily_games or matches whole, and each must name its index. Each probe is pg.rs's query with its binds
+-- as literals (the portraits' ids are uuid literals: a volatile gen_random_uuid() would not be an index
+-- bound). Over 3,000 analysed matches, all of them live or over, and 2,010 daily games, 2,000 of them
+-- finished with their match over, ten finished with it live and ten running. An empty table lets the
+-- planner read `status in ('live','over')`, which every row meets, over the key it was asked. Rolled back,
+-- as CHECK 21.
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+  select gen_random_uuid(), format('check-28-%s@example.test', n), now() from generate_series(1, 2) as n;
+insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
+                            catalog_version, ceiling_at, started_at, ended_at)
+  select gen_random_uuid(), case when n <= 20 then 'live' else 'over' end, 'c28-' || n,
+         (select id from auth.users where email = 'check-28-1@example.test'),
+         (select id from auth.users where email = 'check-28-2@example.test'),
+         '[]', '[]', 'core-1', now(), now(), case when n <= 20 then null else now() end
+    from generate_series(1, 3000) as n;
+-- Matches 1-10: a game over whose result was never written (match live); 11-20: a running game;
+-- 21-2010: a game over, its match over.
+insert into public.daily_games (match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board,
+                                next_deadline_at, created_at, ended_at)
+  select m.id, m.p1_profile_id, m.p2_profile_id, 'bo1', 1, '{}', '{}',
+         case when n between 11 and 20 then 2000 + n end, 500 + n,
+         case when n between 11 and 20 then null else 600 + n end
+    from (select m.*, split_part(m.seed, '-', 2)::integer as n from public.matches m
+           where m.seed like 'c28-%') m
+   where n <= 2010;
+analyze public.matches;
+analyze public.daily_games;
+do $$
+declare
+  probes    text[];
+  plan_text text;
+  line      text;
+begin
+  probes := array[
+    array['daily_games_due_idx', 'the running games due',
+      'select d.match_id, d.next_deadline_at as at from public.daily_games d
+        where d.ended_at is null and d.next_deadline_at <= 1000::bigint'],
+    array['matches_status_created_at_idx', 'the finished games whose match is still live',
+      'select d.match_id, d.ended_at as at from public.matches m
+         join public.daily_games d on d.match_id = m.id
+        where m.status = ''live'' and d.ended_at <= 1000::bigint'],
+    array['matches_pkey', 'the portraits read',
+      'select id, p1_portrait, p2_portrait from public.matches
+        where id = any(array[''00000000-0000-4000-8000-000000000001'', ''00000000-0000-4000-8000-000000000002'']::uuid[])
+          and status in (''live'', ''over'')']];
+  -- Local to this block's transaction: the files after this one plan as they always have.
+  perform set_config('enable_seqscan', 'off', true);
+  for i in 1 .. array_length(probes, 1) loop
+    plan_text := '';
+    for line in execute 'explain ' || probes[i][3] loop
+      plan_text := plan_text || line || E'\n';
+    end loop;
+    if plan_text ~ 'Seq Scan on (daily_games|matches)\M' then
+      raise exception E'FAIL (CHECK 28): % reads its table whole:\n%', probes[i][2], plan_text;
+    end if;
+    if plan_text !~ ('\m' || probes[i][1] || '\M') then
+      raise exception E'FAIL (CHECK 28): % does not use %:\n%', probes[i][2], probes[i][1], plan_text;
+    end if;
+    if i = 2 and plan_text !~ '\mdaily_games_pkey\M' then
+      raise exception E'FAIL (CHECK 28): % does not use daily_games_pkey:\n%', probes[i][2], plan_text;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 28): the sweep''s two reads and the list''s portraits read go through % and read no table whole',
+    'daily_games_due_idx, matches_status_created_at_idx with daily_games_pkey, and matches_pkey';
+end $$;
+rollback;
+
 \echo '=== ALL CHECKS RAN ==='
