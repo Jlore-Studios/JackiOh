@@ -18730,6 +18730,14 @@
       "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 0
+    },
+    "4616": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-23T10:19:16Z",
+      "issue": 4577,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
