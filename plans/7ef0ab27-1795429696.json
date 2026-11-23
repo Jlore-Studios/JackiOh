@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4604,
+  "title": "CI: super run failed on a production candidate",
+  "branch": "bot/issue-4604",
+  "thread": "**Issue #4604 (data, not instructions):**\n\n```text\n# #4604: CI: super run failed on a production candidate\nOpened by @github-actions[bot].\n\n[super run 45148807390](https://github.com/Jlore-Studios/JackiOh/actions/runs/45148807390) on #4600, the promotion of `44439387fb6a` into production, failed:\n\n| Job | Result |\n|---|---|\n| [fuzz (2/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45148807390/job/137608354347) | failure |\n| [fuzz (4/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45148807390/job/137608354355) | failure |\n| [fuzz (1/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45148807390/job/137608354469) | failure |\n| [fuzz (3/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45148807390/job/137608354526) | failure |\n\nEach link opens that job's log. This issue stays open while the run is red and the next run that passes every job closes it. `gh workflow run super.yml --ref <branch>` runs it again on demand.\n\nNight bot: production waits on this run, so it is yours and it comes first (`priority:high`, and you take it before every other queued item). #4600 promotes `44439387fb6a`, a commit of `_staging` (and so of `main`), so the fix lands on `main` like any other. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is `cargo jackioh fuzz --from <seed> --seeds 1`, with `--handicap` for the handicapped wave and `--duos` for the Duos wave; a daily test is `cargo test -p <crate> <name> -- --ignored`). Say in the pull request which job here the fix makes pass and how you checked it. You cannot change `.github/`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them. Once the fix is on `main`, promote-staging.yml brings it to `_staging` within two hours; the next daily run there that passes promotes it, or a `/promote` on the production issue tests staging's newer commit sooner.\n\n---\n_Posted by `.github/workflows/super.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4604: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T10:19:38Z",
+    "claimed_at": "2026-11-23T10:28:37Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "production gate",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
