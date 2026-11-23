@@ -40553,14 +40553,6 @@
         "run_id": "45120324680",
         "taken_asks": []
       },
-      "2": {
-        "area": "server",
-        "count": 1,
-        "last_run": "2026-11-23T05:51:29Z",
-        "provider": "muse",
-        "run_id": "45120386011",
-        "taken_asks": []
-      },
       "5": {
         "area": "rules",
         "count": 2,
