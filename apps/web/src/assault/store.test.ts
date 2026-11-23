@@ -3,14 +3,15 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { ASSAULT_ATTEMPT_KEY, ASSAULT_RECORDS_KEY } from "./config.ts";
-import { __resetAssaultForTests, useAssault, writeAssaultFight, type Assault } from "./store.ts";
-import { CONSTANTS, DAY, RECORD, bindingFixtures, resetBindings, setupOf } from "./test/fixtures.ts";
-import type { AssaultFile, AssaultRecord } from "./types.ts";
+import type { AssaultFile, AssaultRecord } from "@jackioh/run";
 
-vi.mock("./bindings.ts", async () => (await import("./test/fixtures.ts")).bindingFixtures);
+import { ASSAULT_ATTEMPT_KEY, ASSAULT_RECORDS_KEY } from "./config.ts";
+import { __resetAssaultForTests, useAssault, type Assault } from "./store.ts";
+import { CONSTANTS, DAY, RECORD, bindingFixtures, resetBindings, setupOf } from "./test/fixtures.ts";
+
 vi.mock("../wasm/index.ts", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
+  ...(await import("./test/fixtures.ts")).bindingFixtures,
   catalogVersion: (): string => "test-catalog",
 }));
 
@@ -49,30 +50,26 @@ afterEach(() => {
 it("R4581000 an attempt of an earlier day plays on its own day", () => {
   const setup = setupOf({ date: "2026-11-22" });
   const file: AssaultFile = { version: "test-catalog", setup, record: { ...RECORD, date: setup.date }, actions: [] };
-  window.localStorage.setItem(ASSAULT_ATTEMPT_KEY, JSON.stringify({ v: 1, file, fight: { turn: 3 } }));
+  window.localStorage.setItem(ASSAULT_ATTEMPT_KEY, JSON.stringify({ v: 1, file }));
 
   const assault = mount();
 
   expect(assault.current.day.date).toBe("2026-11-22");
   expect(bindingFixtures.assaultDay).toHaveBeenCalledWith("2026-11-22", expect.anything());
   expect(bindingFixtures.assaultFold).toHaveBeenCalledWith(file, expect.objectContaining({ date: "2026-11-22" }));
-  expect(assault.current.fight).toEqual({ turn: 3 });
 });
 
 it("R4581001 round trip: start, act and reload fold the kept file", () => {
   const assault = mount();
   expect(press(() => assault.current.start({ date: DAY.date, deck: ["core-001"], source: "dayDeck", startLevel: 1 }))).toBeNull();
   expect(press(() => assault.current.act({ kind: "fight" }))).toBeNull();
-  press(() => { writeAssaultFight({ turn: 2 }); });
 
-  const kept = JSON.parse(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY) ?? "null") as { file: AssaultFile; fight: unknown };
+  const kept = JSON.parse(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY) ?? "null") as { file: AssaultFile };
   expect(kept.file.actions).toEqual([{ kind: "fight" }]);
-  expect(kept.fight).toEqual({ turn: 2 });
 
   const again = reload();
   expect(bindingFixtures.assaultFold).toHaveBeenLastCalledWith(kept.file, expect.objectContaining({ date: DAY.date }));
   expect(again.current.state?.phase).toBe("fight");
-  expect(again.current.fight).toEqual({ turn: 2 });
 });
 
 it("R4581001 a corrupt attempt key and a corrupt records key are ignored", () => {

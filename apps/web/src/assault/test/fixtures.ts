@@ -12,7 +12,7 @@ import type {
   AssaultRecord,
   AssaultSetup,
   AssaultState,
-} from "../types.ts";
+} from "@jackioh/run";
 
 const HANDICAP = {
   deckSize: 25,

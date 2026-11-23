@@ -22,15 +22,15 @@ pub(super) fn content_file() -> ContentFile {
     serde_json::from_str(include_str!("../assault.json")).expect("assault.json is valid content")
 }
 
-/// IA4: the set's cards, read by set name (`ASSAULT_SET`) and by tag name: a card's doctrine is
-/// the first of the file's doctrines whose id one of its tags names, and a card is a Commander's
-/// when one of its tags names `ASSAULT_COMMANDER_TAG`. A token never deals. The Commanders are
+/// IA4: the set's cards (`ASSAULT_SET`) by tag: a card's doctrine is the first of the file's
+/// doctrines whose id one of its tags names, and a card is a Commander's when it carries
+/// `ASSAULT_COMMANDER_TAG`. A token never deals. The Commanders are
 /// the file's whose every card is a Commander card here, so no Commander ships half its cards.
 pub fn assault_catalog_content(catalog: &CardDefs) -> AssaultContent {
     let file = content_file();
     let mut cards = Vec::new();
     for def in catalog.values() {
-        if def.set.as_str() != ASSAULT_SET || def.is_token() {
+        if def.set != ASSAULT_SET || def.is_token() {
             continue;
         }
         let doctrine = file
@@ -38,7 +38,7 @@ pub fn assault_catalog_content(catalog: &CardDefs) -> AssaultContent {
             .iter()
             .find(|doctrine| def.tags.iter().any(|tag| tag.as_str() == doctrine.id))
             .map(|doctrine| doctrine.id.clone());
-        let commander = def.tags.iter().any(|tag| tag.as_str() == ASSAULT_COMMANDER_TAG);
+        let commander = def.tags.contains(&ASSAULT_COMMANDER_TAG);
         cards.push(AssaultCard {
             id: def.id.clone(),
             rarity: def.rarity,

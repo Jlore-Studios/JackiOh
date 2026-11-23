@@ -4,6 +4,7 @@
 import { useMemo, type ReactElement } from "react";
 
 import { DECK_SIZE } from "@jackioh/engine/config";
+import type { AssaultDeckSource } from "@jackioh/run";
 
 import { readerName } from "../../cards/chinese.ts";
 import { printedPrice } from "../../game/deckbuilder/filters.ts";
@@ -15,10 +16,8 @@ import {
   type PracticeSavedDeck,
 } from "../../practice/decks.ts";
 import type { SavedDecks } from "../../practice/PracticeSetup.tsx";
-import { aiConstants, registeredCatalog } from "../../wasm/index.ts";
-import { assaultDayDeck } from "../bindings.ts";
+import { aiConstants, assaultDayDeck, registeredCatalog } from "../../wasm/index.ts";
 import { assaultTestid } from "../testids.ts";
-import type { AssaultDeckSource } from "../types.ts";
 
 export type AssaultDeckChoice = {
   key: string;

@@ -5,7 +5,7 @@
 use jackioh_engine::config::{
     AI_DIFFICULTY, DECK_SIZE, DRAW_EVERY_TURN, HERO_HEALTH, HUMAN_HANDICAP, Handicap, LIBRARY_CAP,
 };
-use jackioh_engine::wire::PrintedRarity;
+use jackioh_engine::wire::{PrintedRarity, SetName, Tag};
 
 use crate::assault::AssaultUpgradeKind;
 use crate::{RunByFight, RunNodeKind, RunTier};
@@ -345,10 +345,10 @@ pub const RUN_SCORE_PER_EMBER: i64 = 100;
 // The Infinite Assault (docs/infinite-assault.md IA1 to IA6): every number a strawman to tune
 // against assault-sim (IA10).
 
-/// IA4: the set the Assault deals (read by name, so the mode compiles before C1 lands it).
-pub const ASSAULT_SET: &str = "Infinite Assault";
-/// IA4: the tag a Commander's cards carry (read by name, as `ASSAULT_SET` is).
-pub const ASSAULT_COMMANDER_TAG: &str = "Commander";
+/// IA4: the set the Assault deals (C1's, R4577000).
+pub const ASSAULT_SET: SetName = SetName::InfiniteAssault;
+/// IA4: the tag a Commander's cards carry (C1's, R4577001).
+pub const ASSAULT_COMMANDER_TAG: Tag = Tag::Commander;
 /// IA1: the prefix of a day's seed (`assault_day_seed`).
 pub const ASSAULT_SEED_PREFIX: &str = "assault-";
 /// IA2: the Assault's levels a day; a strawman.

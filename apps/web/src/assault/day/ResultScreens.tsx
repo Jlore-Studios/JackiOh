@@ -3,12 +3,13 @@
 
 import type { ReactElement } from "react";
 
+import type { AssaultRecord } from "@jackioh/run";
+
 import { t } from "../../i18n/i18n.ts";
 import { paths } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import { Wordmark } from "../../routes/Wordmark.tsx";
 import { assaultTestid } from "../testids.ts";
-import type { AssaultRecord } from "../types.ts";
 
 type ResultFrameProps = { children: ReactElement | ReactElement[] };
 

@@ -22,7 +22,12 @@ import type { Assault } from "../store.ts";
 import { assaultTestid } from "../testids.ts";
 import { DeckPicker, dayDeckChoice, type AssaultDeckChoice } from "./DeckPicker.tsx";
 
-type DayScreenProps = { assault: Assault; saved: SavedDecks };
+type DayScreenProps = {
+  assault: Assault;
+  saved: SavedDecks;
+  /** R4582001: the open attempt's fight was left by its Menu; Resume picks it up where it stood. */
+  onResume?: () => void;
+};
 
 function highestCheckpoint(checkpoints: readonly number[]): number {
   return checkpoints.length === 0 ? ASSAULT_FIRST_LEVEL : Math.max(...checkpoints);
@@ -45,7 +50,7 @@ function countdownWords(seconds: number): string {
   return `${String(hours)}:${two(minutes)}:${two(rest)}`;
 }
 
-export function DayScreen({ assault, saved }: DayScreenProps): ReactElement {
+export function DayScreen({ assault, saved, onResume }: DayScreenProps): ReactElement {
   useLocale();
   const { constants, content, day, record, records } = assault;
   const checkpoint = highestCheckpoint(record.checkpoints);
@@ -99,54 +104,65 @@ export function DayScreen({ assault, saved }: DayScreenProps): ReactElement {
           </ol>
         </section>
 
-        <section className="assault-block">
-          <h2>{t("Start level")}</h2>
-          <div className="assault-start-levels">
-            {starts.map((level) => (
-              <label key={level}>
-                <input
-                  type="radio"
-                  name="assault-start-level"
-                  checked={startLevel === level}
-                  data-testid={assaultTestid.startLevel(level)}
-                  onChange={() => {
-                    setStartLevel(level);
-                  }}
-                />
-                {t("Level {level}", { level: String(level) })}
-              </label>
-            ))}
-          </div>
-          {strength === undefined ? null : (
-            <div className="assault-strength">
-              <h3>{t("Assault strength at level {level}", { level: String(strength.level) })}</h3>
-              <p>
-                {ASSAULT_RARITIES.map((rarity, index) =>
-                  t("{rarity}: {count}", { rarity: t(rarity), count: String(strength.rarities[index] ?? 0) }),
-                ).join(t(" · "))}
-              </p>
-              <p>{t("{count} upgrades", { count: String(strength.upgrades.length) })}</p>
-            </div>
-          )}
-        </section>
+        {onResume === undefined || assault.state === null ? (
+          <>
+            <section className="assault-block">
+              <h2>{t("Start level")}</h2>
+              <div className="assault-start-levels">
+                {starts.map((level) => (
+                  <label key={level}>
+                    <input
+                      type="radio"
+                      name="assault-start-level"
+                      checked={startLevel === level}
+                      data-testid={assaultTestid.startLevel(level)}
+                      onChange={() => {
+                        setStartLevel(level);
+                      }}
+                    />
+                    {t("Level {level}", { level: String(level) })}
+                  </label>
+                ))}
+              </div>
+              {strength === undefined ? null : (
+                <div className="assault-strength">
+                  <h3>{t("Assault strength at level {level}", { level: String(strength.level) })}</h3>
+                  <p>
+                    {ASSAULT_RARITIES.map((rarity, index) =>
+                      t("{rarity}: {count}", { rarity: t(rarity), count: String(strength.rarities[index] ?? 0) }),
+                    ).join(t(" · "))}
+                  </p>
+                  <p>{t("{count} upgrades", { count: String(strength.upgrades.length) })}</p>
+                </div>
+              )}
+            </section>
 
-        <DeckPicker date={day.date} saved={saved} choice={choice} onChange={setChoice} />
-        {refusal === null ? null : <p className="notice" role="alert">{refusal}</p>}
-        <button
-          type="button"
-          className="button-primary assault-start"
-          data-testid={assaultTestid.start}
-          onClick={() => {
-            setRefusal(assault.start({
-              date: day.date,
-              deck: choice.cards,
-              source: choice.source,
-              startLevel,
-            }));
-          }}
-        >
-          {t("Start at level {level}", { level: String(startLevel) })}
-        </button>
+            <DeckPicker date={day.date} saved={saved} choice={choice} onChange={setChoice} />
+            {refusal === null ? null : <p className="notice" role="alert">{refusal}</p>}
+            <button
+              type="button"
+              className="button-primary assault-start"
+              data-testid={assaultTestid.start}
+              onClick={() => {
+                setRefusal(assault.start({
+                  date: day.date,
+                  deck: choice.cards,
+                  source: choice.source,
+                  startLevel,
+                }));
+              }}
+            >
+              {t("Start at level {level}", { level: String(startLevel) })}
+            </button>
+          </>
+        ) : (
+          <section className="assault-block">
+            <p>{t("Your attempt waits at level {level}.", { level: String(assault.state.level) })}</p>
+            <button type="button" className="button-primary assault-start" data-testid={assaultTestid.resume} onClick={onResume}>
+              {t("Resume the fight")}
+            </button>
+          </section>
+        )}
 
         <section className="assault-block" data-testid={assaultTestid.history}>
           <h2>{t("History")}</h2>

@@ -6,6 +6,8 @@ export const assaultTestid = {
   deckPreset: "assault-deck-preset",
   deckDay: "assault-deck-day",
   start: "assault-start",
+  /** R4582001: on the day screen, back to the fight its Menu left. */
+  resume: "assault-resume",
   level: (level: number): string => `assault-level-${String(level)}`,
   briefing: "assault-briefing",
   fightStart: "assault-fight-start",

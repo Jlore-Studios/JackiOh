@@ -1,19 +1,8 @@
-// `/assault`: the screen selected solely by the Assault state. Part D supplies the fight screen;
-// this part loads it by the frozen named export without making its absent source a build dependency.
+// `/assault`: the screen selected solely by the Assault state. In the `fight` phase it is part D's
+// fight screen, whose Menu comes back here to the day screen, the attempt still on its fight
+// (IA7, R4582001), until Resume picks the fight up where it stood.
 
-import {
-  Component,
-  Suspense,
-  lazy,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ComponentType,
-  type ErrorInfo,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
 import { t } from "../i18n/i18n.ts";
 import { getDecks, type DecksResponse } from "../net/api.ts";
@@ -27,35 +16,10 @@ import {
   LostScreen,
   RepelledScreen,
 } from "./day/ResultScreens.tsx";
+import { AssaultFightScreen } from "./fight/FightScreen.tsx";
 import { useAssault } from "./store.ts";
 import { assaultTestid } from "./testids.ts";
-import type { AssaultAction, AssaultDay, AssaultState } from "./types.ts";
 import "./assault.css";
-
-type FightProps = { state: AssaultState; day: AssaultDay; onAction(action: AssaultAction): void };
-
-const fightPath = "./fight/FightScreen.tsx";
-const FightScreen = lazy(async (): Promise<{ default: ComponentType<FightProps> }> => {
-  const loaded = await import(/* @vite-ignore */ fightPath) as { AssaultFightScreen: ComponentType<FightProps> };
-  return { default: loaded.AssaultFightScreen };
-});
-
-class FightBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  override state = { failed: false };
-
-  static getDerivedStateFromError(): { failed: boolean } {
-    return { failed: true };
-  }
-
-  override componentDidCatch(_error: Error, _info: ErrorInfo): void {
-    // The reconcile supplies part D. A failed chunk is reported in place and leaves the attempt kept.
-  }
-
-  override render(): ReactNode {
-    if (this.state.failed) return <p role="alert">{t("The fight screen did not load. Reload to try again.")}</p>;
-    return this.props.children;
-  }
-}
 
 function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<DecksResponse> = getDecks): SavedDecks {
   const [loaded, setLoaded] = useState<{ token: string; saved: SavedDecks } | null>(null);
@@ -122,28 +86,31 @@ export default function AssaultPage(): ReactElement {
   const saved = useSavedDecks(useAccount());
   const [afterLevel, setAfterLevel] = useState<number | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
+  /** R4582001: the fight its Menu left (`attempt-level`), which waits where it stood until Resume. */
+  const [away, setAway] = useState<string | null>(null);
   const { state } = assault;
+  const fight = state === null ? null : `${String(state.setup.attempt)}-${String(state.level)}`;
 
   let screen: ReactElement;
   if (state === null) {
     screen = <DayScreen assault={assault} saved={saved} />;
+  } else if (state.phase === "fight" && away === fight) {
+    screen = <DayScreen assault={assault} saved={saved} onResume={() => { setAway(null); }} />;
   } else if (state.phase === "fight") {
     screen = (
-      <FightBoundary key={`${String(state.setup.attempt)}-${String(state.level)}`}>
-        <Suspense fallback={<p>{t("Loading the fight…")}</p>}>
-          <FightScreen
-            state={state}
-            day={assault.day}
-            onAction={(action) => {
-              const result = assault.act(action);
-              setRefusal(result);
-              if (result === null && action.kind === "fightOver" && action.won && state.level < assault.constants.levels) {
-                setAfterLevel(state.level);
-              }
-            }}
-          />
-        </Suspense>
-      </FightBoundary>
+      <AssaultFightScreen
+        key={fight}
+        state={state}
+        day={assault.day}
+        onAction={(action) => {
+          const result = assault.act(action);
+          setRefusal(result);
+          if (result === null && action.kind === "fightOver" && action.won && state.level < assault.constants.levels) {
+            setAfterLevel(state.level);
+          }
+        }}
+        onLeave={() => { setAway(fight); }}
+      />
     );
   } else if (state.phase === "lost") {
     screen = (

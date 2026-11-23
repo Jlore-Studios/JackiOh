@@ -8,7 +8,10 @@ import { __resetAssaultForTests } from "./store.ts";
 import { assaultTestid } from "./testids.ts";
 import { bindingFixtures, resetBindings } from "./test/fixtures.ts";
 
-vi.mock("./bindings.ts", async () => (await import("./test/fixtures.ts")).bindingFixtures);
+vi.mock("../wasm/index.ts", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  ...(await import("./test/fixtures.ts")).bindingFixtures,
+}));
 
 const { App } = await import("../main.tsx");
 

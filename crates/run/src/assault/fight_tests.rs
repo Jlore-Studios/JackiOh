@@ -165,10 +165,10 @@ fn the_catalog_content_reads_the_set_by_name_and_assault_json() {
     jackioh_cards::register_all();
     let catalog = registered_catalog();
     let content = assault_catalog_content(catalog);
-    // Every card is of `ASSAULT_SET`: before C1 lands, the set holds none yet.
+    // Every card is of `ASSAULT_SET`, C1's set.
     for card in &content.cards {
         assert_eq!(
-            catalog[&card.id].set.as_str(),
+            catalog[&card.id].set,
             crate::config::ASSAULT_SET,
             "{}",
             card.id

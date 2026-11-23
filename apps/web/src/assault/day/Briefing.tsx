@@ -3,6 +3,8 @@
 
 import { useMemo, useState, type ReactElement } from "react";
 
+import type { AssaultContent, AssaultLevel } from "@jackioh/run";
+
 import { readerName } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { paths } from "../../net/navigate.ts";
@@ -10,8 +12,8 @@ import { BackLink } from "../../routes/nav.tsx";
 import { Wordmark } from "../../routes/Wordmark.tsx";
 import { registeredCatalog } from "../../wasm/index.ts";
 import { ASSAULT_COMMANDER_CARDS_SHOWN, ASSAULT_RARITIES } from "../config.ts";
+import { upgradeName } from "../fight/UpgradeTray.tsx";
 import { assaultTestid } from "../testids.ts";
-import type { AssaultContent, AssaultLevel, AssaultUpgradeKind } from "../types.ts";
 
 type BriefingProps = {
   content: AssaultContent;
@@ -19,29 +21,6 @@ type BriefingProps = {
   onFight(): void;
   onAbandon(): void;
 };
-
-function upgradeName(kind: AssaultUpgradeKind): string {
-  switch (kind) {
-    case "openingCards":
-      return t("Expanded Context");
-    case "deckSize":
-      return t("Bigger Dataset");
-    case "radiant":
-      return t("Fine-Tuned");
-    case "buffed":
-      return t("Reinforced Weights");
-    case "manaBonus":
-      return t("Overclocked");
-    case "manaCap":
-      return t("Raised Ceiling");
-    case "heroHealth":
-      return t("Redundancy");
-    case "heroArmor":
-      return t("Hardened Shell");
-    case "extraDraw":
-      return t("Parallel Inference");
-  }
-}
 
 export function Briefing({ content, level, onFight, onAbandon }: BriefingProps): ReactElement {
   useLocale();

@@ -33,8 +33,8 @@ pub fn assault_create(
     }
     if setup.attempt != record.attempts + 1 {
         return Err(format!(
-            "attempt {} follows {} attempts, not {}",
-            setup.attempt, record.attempts, record.attempts
+            "attempt {} does not follow the day's {} attempts",
+            setup.attempt, record.attempts
         ));
     }
     if setup.start_level != 1

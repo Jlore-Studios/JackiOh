@@ -1,32 +1,9 @@
-// The Infinite Assault's device store: one open, versioned attempt and its kept fight, plus the
-// recent days' records. The pure Assault bindings decide every transition (CLAUDE.md rule 7).
+// The Infinite Assault's device store: one open, versioned attempt, plus the recent days' records. A
+// fight in progress is kept by the practice worker in a slot of its own (R4582001), never here. The
+// Assault's rules, through the WebAssembly module, decide every transition (CLAUDE.md rule 7).
 
 import { useMemo, useSyncExternalStore } from "react";
 
-import { t } from "../i18n/i18n.ts";
-import { messageOf } from "../net/errors.ts";
-import { getStored, removeStored, setStored } from "../net/storage.ts";
-import { catalogVersion } from "../wasm/index.ts";
-import { isRecord, isStringArray } from "../wire/json.ts";
-import {
-  assaultConstants,
-  assaultContent,
-  assaultContentAt,
-  assaultCreate,
-  assaultDay,
-  assaultFold,
-  assaultRecord,
-  assaultReduce,
-} from "./bindings.ts";
-import {
-  ASSAULT_ATTEMPT_KEY,
-  ASSAULT_ATTEMPT_STEP,
-  ASSAULT_DATE_FORMAT,
-  ASSAULT_FIRST_ATTEMPT,
-  ASSAULT_FIRST_LEVEL,
-  ASSAULT_RECORDS_KEY,
-  ASSAULT_STORAGE_VERSION,
-} from "./config.ts";
 import type {
   AssaultAction,
   AssaultConstants,
@@ -37,7 +14,32 @@ import type {
   AssaultRecord,
   AssaultSetup,
   AssaultState,
-} from "./types.ts";
+} from "@jackioh/run";
+
+import { t } from "../i18n/i18n.ts";
+import { messageOf } from "../net/errors.ts";
+import { getStored, removeStored, setStored } from "../net/storage.ts";
+import {
+  assaultConstants,
+  assaultContent,
+  assaultContentAt,
+  assaultCreate,
+  assaultDay,
+  assaultFold,
+  assaultRecord,
+  assaultReduce,
+  catalogVersion,
+} from "../wasm/index.ts";
+import { isRecord, isStringArray } from "../wire/json.ts";
+import {
+  ASSAULT_ATTEMPT_KEY,
+  ASSAULT_ATTEMPT_STEP,
+  ASSAULT_DATE_FORMAT,
+  ASSAULT_FIRST_ATTEMPT,
+  ASSAULT_FIRST_LEVEL,
+  ASSAULT_RECORDS_KEY,
+  ASSAULT_STORAGE_VERSION,
+} from "./config.ts";
 
 export type AssaultStart = {
   date: string;
@@ -53,8 +55,6 @@ export type Assault = {
   state: AssaultState | null;
   record: AssaultRecord;
   records: Readonly<Record<string, AssaultRecord>>;
-  /** Part D's opaque kept fight, stored beside the open attempt. */
-  fight: unknown | null;
   /** The refusal, word for word, or null. */
   start(start: AssaultStart): string | null;
   /** The refusal, word for word, or null. */
@@ -63,15 +63,12 @@ export type Assault = {
   dismiss(): void;
 };
 
-type KeptAttempt = { file: AssaultFile; fight: unknown | null };
-
 type Core = {
   constants: AssaultConstants;
   content: AssaultContent;
   day: AssaultDay;
   state: AssaultState | null;
   file: AssaultFile | null;
-  fight: unknown | null;
   records: Record<string, AssaultRecord>;
   record: AssaultRecord;
 };
@@ -140,14 +137,12 @@ function readJson(key: string): { present: boolean; value: unknown } {
   }
 }
 
-function parseAttempt(raw: unknown): KeptAttempt | null {
+function parseAttempt(raw: unknown): AssaultFile | null {
   if (!isRecord(raw) || raw.v !== ASSAULT_STORAGE_VERSION) return null;
-  const file = parseFile(raw.file);
-  if (file === null) return null;
-  return { file, fight: raw.fight ?? null };
+  return parseFile(raw.file);
 }
 
-function readAttempt(): KeptAttempt | null {
+function readAttempt(): AssaultFile | null {
   const stored = readJson(ASSAULT_ATTEMPT_KEY);
   if (!stored.present) return null;
   const attempt = parseAttempt(stored.value);
@@ -197,8 +192,8 @@ function persistRecords(records: Readonly<Record<string, AssaultRecord>>): void 
   writeJson(ASSAULT_RECORDS_KEY, { v: ASSAULT_STORAGE_VERSION, days: records });
 }
 
-function persistAttempt(file: AssaultFile, fight: unknown | null): void {
-  writeJson(ASSAULT_ATTEMPT_KEY, { v: ASSAULT_STORAGE_VERSION, file, fight });
+function persistAttempt(file: AssaultFile): void {
+  writeJson(ASSAULT_ATTEMPT_KEY, { v: ASSAULT_STORAGE_VERSION, file });
 }
 
 function terminal(state: AssaultState): boolean {
@@ -206,16 +201,16 @@ function terminal(state: AssaultState): boolean {
 }
 
 /** R4581000: an open attempt is folded on the content version and UTC day it started on. */
-function foldAttempt(attempt: KeptAttempt, currentContent: AssaultContent): {
+function foldAttempt(file: AssaultFile, currentContent: AssaultContent): {
   content: AssaultContent;
   day: AssaultDay;
   state: AssaultState;
 } | null {
   try {
-    const content = attempt.file.version === catalogVersion() ? currentContent : assaultContentAt(attempt.file.version);
+    const content = file.version === catalogVersion() ? currentContent : assaultContentAt(file.version);
     if (content === null) return null;
-    const day = assaultDay(attempt.file.setup.date, content);
-    const folded = assaultFold(attempt.file, day);
+    const day = assaultDay(file.setup.date, content);
+    const folded = assaultFold(file, day);
     return "error" in folded ? null : { content, day, state: folded.state };
   } catch {
     return null;
@@ -228,11 +223,11 @@ function loadCore(): Core {
   const storedRecords = readRecords();
   let records = trimRecords(storedRecords, constants);
   if (Object.keys(records).length !== Object.keys(storedRecords).length) persistRecords(records);
-  const attempt = readAttempt();
-  if (attempt !== null) {
-    const folded = foldAttempt(attempt, currentContent);
+  const file = readAttempt();
+  if (file !== null) {
+    const folded = foldAttempt(file, currentContent);
     if (folded !== null) {
-      const before = records[attempt.file.setup.date] ?? attempt.file.record;
+      const before = records[file.setup.date] ?? file.record;
       const record = assaultRecord(before, folded.state);
       records = trimRecords({ ...records, [record.date]: record }, constants);
       persistRecords(records);
@@ -242,8 +237,7 @@ function loadCore(): Core {
         content: folded.content,
         day: folded.day,
         state: folded.state,
-        file: attempt.file,
-        fight: terminal(folded.state) ? null : attempt.fight,
+        file,
         records,
         record,
       };
@@ -258,7 +252,6 @@ function loadCore(): Core {
     day,
     state: null,
     file: null,
-    fight: null,
     records,
     record: records[date] ?? emptyRecord(date),
   };
@@ -316,9 +309,9 @@ function startAttempt(start: AssaultStart): string | null {
     const file: AssaultFile = { version: catalogVersion(), setup, record, actions: [] };
     const nextRecord = assaultRecord(record, created.state);
     const records = trimRecords({ ...from.records, [start.date]: nextRecord }, from.constants);
-    persistAttempt(file, null);
+    persistAttempt(file);
     persistRecords(records);
-    commit({ ...from, day, state: created.state, file, fight: null, records, record: nextRecord });
+    commit({ ...from, day, state: created.state, file, records, record: nextRecord });
     return null;
   } catch (cause) {
     return messageOf(cause);
@@ -335,11 +328,10 @@ function actOn(action: AssaultAction): string | null {
     const file: AssaultFile = { ...from.file, actions: [...from.file.actions, action] };
     const record = assaultRecord(from.record, reduced.state);
     const records = trimRecords({ ...from.records, [record.date]: record }, from.constants);
-    const fight = action.kind === "fightOver" || action.kind === "abandon" ? null : from.fight;
     persistRecords(records);
     if (terminal(reduced.state)) removeStored(ASSAULT_ATTEMPT_KEY);
-    else persistAttempt(file, fight);
-    commit({ ...from, state: reduced.state, file, fight, records, record });
+    else persistAttempt(file);
+    commit({ ...from, state: reduced.state, file, records, record });
     return null;
   } catch (cause) {
     return messageOf(cause);
@@ -358,7 +350,6 @@ function dismissResult(): void {
     day,
     state: null,
     file: null,
-    fight: null,
     record: from.records[date] ?? emptyRecord(date),
   });
 }
@@ -377,26 +368,12 @@ export function useAssault(): Assault {
       state: value.state,
       record: value.record,
       records: value.records,
-      fight: value.fight,
       start: startAttempt,
       act: actOn,
       dismiss: dismissResult,
     }),
     [value],
   );
-}
-
-/** Part D: keep or clear its opaque fight inside the open attempt's one device value. */
-export function writeAssaultFight(fight: unknown | null): void {
-  const from = current();
-  if (from.file === null || from.state === null || terminal(from.state)) return;
-  persistAttempt(from.file, fight);
-  commit({ ...from, fight });
-}
-
-/** Part D: the fight the current open attempt kept, if any. */
-export function readAssaultFight(): unknown | null {
-  return current().fight;
 }
 
 /** Tests: forget every in-memory read; storage is left exactly as the test set it. */

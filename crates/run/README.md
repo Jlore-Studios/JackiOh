@@ -105,8 +105,8 @@ Every UTC day deals 20 levels, Commanders on 5, 10, 15 and 20, each one game aga
 What the caller does:
 
 - **Content.** Deal from the placeholder (`assault_placeholder_content`) until the release, when
-  the browser deals from the catalog's content instead. The file's set and tags are read by name,
-  so the mode compiles before C1 lands them.
+  the browser deals from the catalog's content instead: C1's set (`SetName::InfiniteAssault`), its
+  `Commander` tag, and each doctrine by the tag its `assault.json` id names.
 - **Records.** Start a day's first record as `AssaultRecord { date, ..Default::default() }`, with
   no attempts yet. Fold the state into the record after create and after each action, with
   `assault_record`. Keep the last `ASSAULT_HISTORY_DAYS` days on the device.

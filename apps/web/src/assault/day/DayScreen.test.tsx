@@ -7,7 +7,10 @@ import { assaultTestid } from "../testids.ts";
 import { CONSTANTS, CONTENT, DAY, RECORD, bindingFixtures } from "../test/fixtures.ts";
 import { DayScreen } from "./DayScreen.tsx";
 
-vi.mock("../bindings.ts", async () => (await import("../test/fixtures.ts")).bindingFixtures);
+vi.mock("../../wasm/index.ts", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  ...(await import("../test/fixtures.ts")).bindingFixtures,
+}));
 
 const NO_SAVED: SavedDecks = { kind: "none" };
 

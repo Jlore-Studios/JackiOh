@@ -9,7 +9,10 @@ import { assaultTestid } from "../testids.ts";
 import { DAY, bindingFixtures } from "../test/fixtures.ts";
 import { DeckPicker, dayDeckChoice, type AssaultDeckChoice } from "./DeckPicker.tsx";
 
-vi.mock("../bindings.ts", async () => (await import("../test/fixtures.ts")).bindingFixtures);
+vi.mock("../../wasm/index.ts", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  ...(await import("../test/fixtures.ts")).bindingFixtures,
+}));
 
 afterEach(() => {
   cleanup();

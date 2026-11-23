@@ -69,8 +69,8 @@ Every value is a constant of `crates/run/src/config.rs`. One the plan marks a st
 | `RUN_SCORE_FINAL_BOSS_PERCENT` | Beating the final boss multiplies the score by this percent | [[§15.10]] |
 | `RUN_SCORE_CURSE_POINT_PERCENT` | Each curse point adds this percent to the score; a strawman | [[§15.9]], [[§15.10]] |
 | `RUN_SCORE_PER_EMBER` | The score one Ember is worth; a strawman | [[§15.10]] |
-| `ASSAULT_SET` | The set the Infinite Assault deals, read by name | [[R4579001]] |
-| `ASSAULT_COMMANDER_TAG` | The tag a Commander's cards carry, read by name | [[R4579001]] |
+| `ASSAULT_SET` | The set the Infinite Assault deals | [[R4579001]] |
+| `ASSAULT_COMMANDER_TAG` | The tag a Commander's cards carry | [[R4579001]] |
 | `ASSAULT_SEED_PREFIX` | The prefix of a day's seed | [[R4579002]] |
 | `ASSAULT_LEVELS` | The Infinite Assault's levels a day; a strawman | [[R4579000]] |
 | `ASSAULT_COMMANDER_LEVELS` | The Commander levels, ranks I to IV in order; a strawman | [[R4579000]] |
