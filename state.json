@@ -18704,17 +18704,8 @@
       "waiting_comment": 7105402244
     },
     "4605": {
-      "action": "plan",
-      "asks": [
-        "c:7109044217"
-      ],
-      "build_next": {
-        "from_run": "45231328338",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-23T17:56:30Z",
-        "until": "2026-11-23T18:26:30Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-23T17:56:20Z",
         "difficulty": "medium",
@@ -18733,10 +18724,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "()` with no request; else \u2026\n- - `export function noteReloadedEntry(entry: string): boolean`: try `sessionStorage`: if the stored value equals `entry`, return true (already reloaded for it); else store `entry` and return false. Any storage error \u2192 return false.\n- - `export function installUpdateCheck(): () => void`: `return pageWake(() => { void checkForUpdate(); });` importing `pageWake` from `../game/net.ts`.\n- - `export function resetUpdateForTests(): void`: clear `waiting` and `lastCheckMs`.\n- 4. `apps/web/src/game/boardShown.ts`: add `export function boardShownNow(): boolean { return boards > 0; }` beside `shown()`; leave the hook untouched.\n- 5. `apps/web/src/net/navigate.ts`: in `go()`, first line after computing nothing: `if (updateWaiting() && !boardShownNow()) { if (replace) window.location.replace(path); else window.location.assign(path); return; }`. Import from `./update.ts` and `../game/boardShown.ts`. Do not touch the guard in `\u2026\n- 6. `apps/web/src/main.tsx`: extend `LoadFailedState` to `{ failed: boolean; updated: boolean }`; `getDerivedStateFromError` returns `{ failed: true, updated: false }`. In `componentDidCatch`, after the existing `console.error` and `reportClientError` lines: if `isChunkLoadFailure(error)` (import fr\u2026\n- 7. `apps/web/src/i18n/zh-CN.json`: add `\"JackiOh was just updated. Loading the new version\u2026\": \"JackiOh \u521a\u521a\u66f4\u65b0\u4e86\u3002\u6b63\u5728\u52a0\u8f7d\u65b0\u7248\u672c\u2026\"`.\n- 8. Ruling (rule 3): write `spec/rulings/R4605000.md` (issue #4605 owns R4605000\u2013R4605999; lowest free is R4605000) with front matter (`id`, `title`, `cards` naming \u00a710.10, R2117000, R2125000, R1754000, and `proven_in` listing the three test files below) and the ruling: check-on-wake at most every `\u2026\n- 9. Docs: `apps/web/README.md`, after the cross-fade paragraph (the one starting \"A move between two menus cross-fades\"): one paragraph \u2014 with an update waiting the move is a full page load to the target instead (cross-fade skipped, tab-memory read cache starts empty: one extra read per screen once)\u2026\n- ## Tests\n- - `apps/web/src/static-pages.test.ts`: `it(\"writes version.json naming the entry script of index.html\")` \u2014 `writeAll({}, [])`, read `dist/version.json`, expect `{ entry }` to equal the template's `script[type=\"module\"]` src; also assert the file exists for a fixture write. Command: `pnpm --dir apps\u2026\n- - `apps/web/src/net/cloudflare-config.test.ts`: update the \"four blocks\" test to five (`[\"/*\", \"/fonts/*\", \"/assets/*\", \"/audio/*\", \"/version.json\"]`); add `it(\"sends /version.json with no-cache so a stale tab sees the next build\")`. Command: `pnpm --dir apps/web test src/net/cloudflare-config.test\u2026\n- - `apps/web/src/net/update.test.ts` (new), each `it(\"R4605000 \u2026\")`: newer entry on wake sets waiting; same entry does not; failed fetch / non-ok / bad JSON / missing file does not; second check inside `UPDATE_CHECK_MIN_MS` sends no request (stub `fetch`, count calls); different `mode` (`\"developmen\u2026\n- - `apps/web/src/net/navigate.test.ts`, new `describe(\"R4605000 an update waiting\")`: waiting + no board \u2192 `navigate(paths.shop)` calls `location.assign` (spy on `window.location.assign`; restore after) and leaves `history`/`pathname` untouched; `{ replace: true }` \u2192 `location.replace`; no waiting \u2192\u2026\n- - `apps/web/src/routes/shell-load-failed.test.tsx`, new `describe(\"R4605000 a screen that fails on a stale build\")`: stub `fetch` to return a newer `{ entry }` \u2192 renders \"JackiOh was just updated. Loading the new version\u2026\" and `location.reload` called once (spy; `sessionStorage.clear()` first); re-\u2026\n- - Regression (no new tests; must stay green): `pnpm --dir apps/web test src/i18n/i18n.test.ts`, `pnpm --dir apps/web test src/wording.test.ts`, `pnpm --dir apps/web test src/in-app-links.test.ts`, `pnpm --dir apps/web typecheck`.\n- - Spec gate: `cargo jackioh spec check` (new ruling + `proven_in` + `R4605000` cites + `pending/4605.md`).\n- ## Done when\n- - [ ] Production build writes `dist/version.json` naming `dist/index.html`'s entry script; `static-pages.test.ts` holds it.\n- - [ ] `/version.json` is served `no-cache`; `cloudflare-config.test.ts` holds it.\n- - [ ] Newer `version.json` on wake sets waiting; same entry, failed fetch, or a check inside the interval does not, sending no request.\n- - [ ] Waiting + no board: `navigate()` full-loads (assign, replace for `replace`); not waiting: in place as before.\n- - [ ] Waiting + board up: in place, nothing reloads.\n- - [ ] Leave guard still holds the move before any full load.\n- - [ ] Chunk failure + newer build reloads once; repeat entry shows today's panel; same build shows today's panel and wording.\n- - [ ] New sentence has its zh-CN entry; `i18n.test.ts` and `wording.test.ts` pass.\n- - [ ] Dev server and `build:e2e` previews never self-reload (no file, or unchanged).\n- - [ ] `cargo jackioh spec check`, typecheck, and every listed test file pass.\n- ## Risks\n- - Reload loop: bounded by `sessionStorage` per entry \u2014 a second failure for the same entry shows today's panel, never another reload. Storage errors fail closed to today's panel.\n- - Reload at a bad moment: only on a menu move or an already-failed screen, never with a board up (`boardShownNow()`); practice resumes (R668) and a live match is rejoined (R765) as after any reload.\n- - The reloading move skips its cross-fade (R2117000) and starts with an empty tab-memory read cache (R2125000): one extra read per screen, once. No hidden state or rules logic enters the client (rule 7).\n- ## Open questions\n- None. No person-only step: no dashboard, secret, or account setting is needed, and every touched file is one the bot may change.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4605 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4605/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-23T17:46:48Z",
       "owner_why": "it plans it",
@@ -18749,12 +18739,14 @@
       "provider": "muse",
       "queued_at": "2026-11-23T17:42:15Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45231328338",
+      "run_id": "pending:0e718749-1795456798",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-23T17:46:48Z",
+      "started_at": "2026-11-23T18:00:22Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7109044217"
+      ]
     },
     "4606": {
       "action": "build",
@@ -18962,9 +18954,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T17:59:43Z",
+    "at": "2026-11-23T18:00:22Z",
     "url": "",
-    "what": "build #4606 on muse"
+    "what": "build #4605 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T17:44:20Z",
