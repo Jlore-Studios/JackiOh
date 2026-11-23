@@ -39529,6 +39529,12 @@
         "number": 4539,
         "title": "Patch: the settings panel loads when the gear is first opened, not in the first page load",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T01:10:13Z",
+        "number": 4534,
+        "title": "Patch: pin probe-heavy AI positions as node-budget regression tests",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
