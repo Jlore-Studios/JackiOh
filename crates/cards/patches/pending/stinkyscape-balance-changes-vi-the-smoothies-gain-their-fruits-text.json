@@ -1,0 +1,21 @@
+{
+  "title": "Stinkyscape+ Balance Changes VI: the Smoothies gain their Fruits' text",
+  "sources": "#4440",
+  "notes": "The last item of the designer's sixth Stinkyscape+ balance pass (#4440): \"Rework such that the fruits aren't fused into them, rather it gains the effect of the fruits.\" S+ #17 Smoothie and #18 Large Smoothie draw their two (three) random Fruits as before, but `fuseRandomInto`'s new `asText` mints the Fruits' fusion as a definition kept by no card and gives the Smoothie its text through R1850000's record (`subsystems::fuse::mint_text_def`): it stays a Smoothie, no fusion, its name, price, rarity and art its own; played, it does each Fruit's effect in turn and plays no Fruit; its owner's view shows the Fruits' text (`CardView.copies`), the opponent's nothing (R4440006). Their fusing scripts are kept through v0.6.11d (R767000). Ruling R4440006.",
+  "player": {
+    "title": "Stinkyscape+ Balance Changes VI, the Smoothies",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Smoothie and Large Smoothie no longer fuse their Fruits in: each stays a Smoothie, shows its Fruits' text, and when played does each Fruit's effect in turn.",
+      "Playing a Smoothie is not a play of its Fruits."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "stinkyscapeplus-017",
+    "stinkyscapeplus-018"
+  ]
+}

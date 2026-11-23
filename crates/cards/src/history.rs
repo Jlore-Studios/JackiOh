@@ -84,14 +84,14 @@ use crate::scripts::stinkyscape::{
     t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
-    c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
-    c025_snom_bunny, c037_scorch, c039_mindustrial_cross_over, c041_mend_projector, c046_phase_fabric,
-    c061_1_shawarma_law, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall, c067_phase_wall,
-    c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage,
-    c082_endless_expedition, c093_recessive_replicators, c097_selective_enrollment,
-    c104_tireless_cultivation, c119_eclipse, c120_crawler, c121_1_toxopid_leg, c121_toxopid,
-    c131_tetrative_reconstructor, c145_fire_beam_v5, c155_the_far_vagabond, c159_raven,
-    c166_mindustrial_revolution,
+    c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie, c018_large_smoothie,
+    c021_jlockeed_shredder_12, c025_snom_bunny, c037_scorch, c039_mindustrial_cross_over,
+    c041_mend_projector, c046_phase_fabric, c061_1_shawarma_law, c064_surge_wall, c065_thorium_wall,
+    c066_plastanium_wall, c067_phase_wall, c076_ayys_lmao, c077_black_hole,
+    c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition,
+    c093_recessive_replicators, c097_selective_enrollment, c104_tireless_cultivation, c119_eclipse,
+    c120_crawler, c121_1_toxopid_leg, c121_toxopid, c131_tetrative_reconstructor, c145_fire_beam_v5,
+    c155_the_far_vagabond, c159_raven, c166_mindustrial_revolution,
 };
 use crate::scripts::training_grounds::{
     c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
@@ -1333,6 +1333,13 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.11c",
         c006_cloaked_toe_cracker::script_v0_6_11c,
     ),
+    // #4440's last part (R4440006): the Smoothies' Fruits fused into them, before they gained their text.
+    (c017_smoothie::ID, "v0.6.11d", c017_smoothie::script_v0_6_11d),
+    (
+        c018_large_smoothie::ID,
+        "v0.6.11d",
+        c018_large_smoothie::script_v0_6_11d,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -2018,6 +2025,17 @@ mod tests {
                 "v0.6.10", "v0.6.10b", "v0.6.10c", "v0.6.10d", "v0.6.11", "v0.6.11b", "v0.6.11c",
             ],
             "v0.6.11d",
+        );
+    }
+
+    /// Issue #4440's last part: v0.6.11d was the newest shipped version as it was built, so the Smoothies'
+    /// rows are keyed there, the newest version that fused their Fruits into them.
+    #[test]
+    fn r767000_issue_4440_part_3_the_smoothies_are_kept_through_v0_6_11d_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[c017_smoothie::ID, c018_large_smoothie::ID],
+            &["v0.6.11", "v0.6.11b", "v0.6.11c", "v0.6.11d"],
+            "v0.6.11e",
         );
     }
 
