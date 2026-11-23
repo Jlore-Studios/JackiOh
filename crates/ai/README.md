@@ -88,7 +88,8 @@ R1563005); the greedy baseline's simulation does not.
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
-it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
+it can see on the field (the AI's hero first, then dealt over every card and ability at its most valuable
+cards, R4515000), then its attacks, a kill priced at what it removes (a unit with Reborn unspent
 less the body it comes back as, #1796, and less what its Death leaves behind, R2424000; plus a Trample
 attacker's excess on the hero and a Lifesteal attacker's heal, #1820, which its hit on the hero counts
 too, #3858; an attacker a First Strike defender destroys first earning no chip and no shield pop, since

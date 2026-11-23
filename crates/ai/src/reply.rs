@@ -4,7 +4,8 @@
 //! Rule order:
 //! 1. Play handed cards (e.g. bounced units); one drawn guess at a secret of the seat's, and every play
 //!    judged after the turn's end while a handed card would be discarded there (R3696001).
-//! 2. Face-up activations (up to AI_REPLY.visible_activations).
+//! 2. Face-up activations (up to AI_REPLY.visible_activations): the seat's hero first, then dealt over
+//!    every source and ability at the seat's most valuable cards (R4515000).
 //! 3. Static trades: best value attack (lethal, kill, trade up, face; Deft trials R49).
 //! 4. Defense switches up to AI_REPLY.defense_switches (#1696), and switches back to Attack of units
 //!    without Deft up to AI_REPLY.attack_switches (R4433000); facing lethal, walls weighed against the
@@ -16,13 +17,13 @@
 use std::cmp::Ordering;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::afflictions::Affliction;
 use jackioh_engine::{
     Action, ActionBody, AttackTarget, CardInstance, DelayedAt, GameState, KeywordKind, Phase, PlayerId,
-    Position, Rng, SECRET_KEY, Selection, burn_on, card_keywords, converts_to, effective_life, find_instance,
-    has_countdown, has_keyword, legal_actions, pierces, reduce_unpiloted, secret_of, subsystems,
-    takes_strike_back, temporary_number, toxic_on, unit_view,
+    Position, Rng, SECRET_KEY, Selection, active_units_of, burn_on, card_keywords, converts_to,
+    effective_life, find_instance, has_countdown, has_keyword, legal_actions, pierces, reduce_unpiloted,
+    secret_of, subsystems, takes_strike_back, temporary_number, toxic_on, unit_view,
 };
 
 use crate::candidates::{
@@ -559,14 +560,19 @@ enum Aim {
     Other,
 }
 
-/// Where `action` aims, read off the targets it carries.
-fn aim_of(state: &GameState, seat: PlayerId, action: &ActionBody) -> Aim {
-    let targets: &[Selection] = match action {
+/// The targets `action` carries.
+fn targets_of(action: &ActionBody) -> &[Selection] {
+    match action {
         ActionBody::Activate { targets, .. } | ActionBody::ActivatePower { targets, .. } => {
             targets.as_deref().unwrap_or(&[])
         }
         _ => &[],
-    };
+    }
+}
+
+/// Where `action` aims, read off the targets it carries.
+fn aim_of(state: &GameState, seat: PlayerId, action: &ActionBody) -> Aim {
+    let targets = targets_of(action);
     if targets
         .iter()
         .any(|target| matches!(target, Selection::Hero { player } if *player == seat))
@@ -591,10 +597,140 @@ fn visible_source(state: &GameState, hidden: &IndexSet<String>, action: &ActionB
         && find_instance(state, instance_id).is_some_and(|card| subsystems::is_acting_on_field(state, card))
 }
 
-/// Step 2: the best of the opponent's activations whose source the seat can see, by the opponent's own
-/// evaluation, when it beats standing still. At most AI_REPLY.visible_activations are tried, ordered by
-/// `aim_of`: `legal_actions` lists the activating side's own targets first, so the seat's hero would
-/// otherwise come last. R2564000: the root's activation probes try each unit's uses through it too.
+/// R4515000: the pick `action` makes (its source, ability, modes and targets), without the Tribute set
+/// that pays for it.
+fn pick_of(action: &ActionBody) -> ActionBody {
+    let mut pick = action.clone();
+    if let ActionBody::Activate { tributes, .. } = &mut pick {
+        *tributes = None;
+    }
+    pick
+}
+
+/// R4515000: a card's id and the ability of it a try uses (`None` for a Heroic Power's).
+type Source = (String, Option<String>);
+
+/// R4515000: the card and ability `action` uses.
+fn source_of(action: &ActionBody) -> Source {
+    match action {
+        ActionBody::Activate {
+            instance_id, ability, ..
+        } => (instance_id.clone(), ability.clone()),
+        ActionBody::ActivatePower { instance_id, .. } => (instance_id.clone(), None),
+        _ => (String::new(), None),
+    }
+}
+
+/// R4515000: the highest of `worths` (each of the seat's Units' `unit_worth`) among the cards `action`
+/// targets; `f64::NEG_INFINITY` when it targets none of them (another card of the seat's), so it ranks
+/// last.
+fn aimed_worth(worths: &[(&str, f64)], action: &ActionBody) -> f64 {
+    targets_of(action)
+        .iter()
+        .filter_map(|target| match target {
+            Selection::Instance { instance_id } => worths
+                .iter()
+                .find(|(id, _)| *id == instance_id.as_str())
+                .map(|(_, worth)| *worth),
+            _ => None,
+        })
+        .fold(f64::NEG_INFINITY, f64::max)
+}
+
+/// The order a reply step tries `tries` (the visible activations, in `legal_actions` order) in, before
+/// the cut. `legal_actions` lists the activating side's own targets first and each source's targets
+/// lane by lane, so a cut of that order would leave the seat's hero, its fifth lane and a second source
+/// or ability out of reach. R4515000, with `spread`:
+/// 1. every try aimed at the seat's hero, in legal order, each of its Tribute sets included;
+/// 2. then the tries aimed at a card of the seat's, one per pick (`pick_of`), dealt round-robin over
+///    each source and ability (`source_of`) in legal order: each one's best target, then each one's
+///    second, and so on, its targets ranked by `aimed_worth`, the seat's `unit_worth` of the Unit aimed
+///    at, highest first (ties, and the seat's other cards after its Units, keep legal order);
+/// 3. then the later Tribute sets of those picks, in legal order;
+/// 4. then every other try, in legal order.
+///
+/// Without `spread` they are sorted by `aim_of` alone, as before R4515000. Either reads only the tries'
+/// targets and the seat's own Units (R185).
+fn ordered_tries(
+    state: &GameState,
+    seat: PlayerId,
+    mut tries: Vec<ActionBody>,
+    spread: bool,
+    prices: &Prices,
+) -> Vec<ActionBody> {
+    if !spread {
+        // Stable, so each aim keeps legal_actions order.
+        tries.sort_by_key(|action| aim_of(state, seat, action));
+        return tries;
+    }
+    // Built at the first try aimed at a card of the seat's, so a step with none reads no unit.
+    let mut worths: Option<Vec<(&str, f64)>> = None;
+    let mut ordered: Vec<ActionBody> = Vec::with_capacity(tries.len());
+    let mut groups: IndexMap<Source, Vec<(f64, ActionBody)>> = IndexMap::new();
+    let mut picked: IndexSet<ActionBody> = IndexSet::new();
+    let mut waiting: Vec<ActionBody> = Vec::new();
+    let mut rest: Vec<ActionBody> = Vec::new();
+    for action in tries {
+        match aim_of(state, seat, &action) {
+            Aim::SeatHero => ordered.push(action),
+            Aim::Other => rest.push(action),
+            // A pick already dealt, paid by an earlier Tribute set, waits; a new one is noted here.
+            Aim::SeatCard if !picked.insert(pick_of(&action)) => waiting.push(action),
+            Aim::SeatCard => {
+                let table = worths.get_or_insert_with(|| {
+                    active_units_of(state, seat)
+                        .into_iter()
+                        .map(|unit| (unit.id.as_str(), unit_worth(state, unit, &AI_EVAL, prices)))
+                        .collect()
+                });
+                let worth = aimed_worth(table, &action);
+                groups
+                    .entry(source_of(&action))
+                    .or_default()
+                    .push((worth, action));
+            }
+        }
+    }
+    for picks in groups.values_mut() {
+        // Highest worth first; `sort_by` is stable, so equal worths keep legal_actions order.
+        picks.sort_by(|a, b| b.0.total_cmp(&a.0));
+    }
+    let deepest = groups.values().map(Vec::len).max().unwrap_or(0);
+    for round in 0..deepest {
+        ordered.extend(
+            groups
+                .values()
+                .filter_map(|picks| picks.get(round))
+                .map(|(_, pick)| pick.clone()),
+        );
+    }
+    ordered.extend(waiting);
+    ordered.extend(rest);
+    ordered
+}
+
+/// Step 2's tries: `legal`'s activations whose source the seat can see (`visible_source`), in
+/// `ordered_tries`' order, cut to AI_REPLY.visible_activations.
+fn visible_tries(
+    state: &GameState,
+    seat: PlayerId,
+    legal: &[ActionBody],
+    hidden: &IndexSet<String>,
+    spread: bool,
+    prices: &Prices,
+) -> Vec<ActionBody> {
+    let tries: Vec<ActionBody> = legal
+        .iter()
+        .filter(|action| visible_source(state, hidden, action))
+        .cloned()
+        .collect();
+    let mut tries = ordered_tries(state, seat, tries, spread, prices);
+    tries.truncate(AI_REPLY.visible_activations.max(0) as usize);
+    tries
+}
+
+/// Step 2: the best of `visible_tries` by the opponent's own evaluation, when it beats standing still
+/// (R4515000's order). R2564000: the root's activation probes try each card's uses through it too.
 pub(crate) fn visible_activation(
     state: &GameState,
     seat: PlayerId,
@@ -603,14 +739,7 @@ pub(crate) fn visible_activation(
     counter: &dyn NodeCounter,
     prices: &Prices,
 ) -> Known {
-    let mut tries: Vec<ActionBody> = legal
-        .iter()
-        .filter(|action| visible_source(state, hidden, action))
-        .cloned()
-        .collect();
-    // Stable, so each aim keeps legal_actions order.
-    tries.sort_by_key(|action| aim_of(state, seat, action));
-    tries.truncate(AI_REPLY.visible_activations.max(0) as usize);
+    let tries = visible_tries(state, seat, legal, hidden, AI_REPLY.spread_activations, prices);
     best_try(state, seat.opponent(), &tries, false, counter, prices)
 }
 
@@ -1536,5 +1665,234 @@ mod tests {
             vec![switch(VANILLA), switch(GREASER)]
         );
         assert_eq!(defense_switch_tries(state, &legal, 0, 4), vec![switch(GREASER)]);
+    }
+
+    /// S #52 Cannon v3: "Activate: Deal 5 damage to an enemy Unit."
+    const CANNON_V3: &str = "stinkyscape-052";
+    /// S #56 Cannon v4: "Activate: Deal 7 damage to an enemy Unit."
+    const CANNON_V4: &str = "stinkyscape-056";
+    /// C #21 Turtinator: "Activate: Tribute another Unit. Deal damage equal to its Attack" to a Unit or
+    /// hero.
+    const TURTINATOR: &str = "classic-021";
+
+    /// p1's row: four copies of `unit` in lanes 1 to 4 and a Greaser in lane 5.
+    fn row(unit: Value) -> Value {
+        let unit = if unit.is_string() {
+            json!({ "def": unit })
+        } else {
+            unit
+        };
+        let mut row: Vec<Value> = (1..=4)
+            .map(|lane| {
+                let mut copy = unit.clone();
+                copy["lane"] = json!(lane);
+                copy
+            })
+            .collect();
+        row.push(json!({ "def": GREASER, "lane": 5 }));
+        Value::Array(row)
+    }
+
+    /// p2's turn with `p1`'s and `p2`'s sides, the seat p1.
+    fn p2_to_act(p1: Value, p2: Value) -> Scenario {
+        jackioh_cards::register_all();
+        scenario(json!({ "active": "p2", "p1": p1, "p2": p2 }))
+    }
+
+    /// p1's unit in `lane`'s id.
+    fn seat_unit(s: &Scenario, lane: i32) -> String {
+        s.unit(PlayerId::P1, lane).expect("p1 holds a unit there").id
+    }
+
+    /// The one Activate in `legal` of `source` at `target` paid by `tributes`.
+    fn aimed(
+        legal: &[ActionBody],
+        source: &str,
+        target: Selection,
+        tributes: Option<&[String]>,
+    ) -> ActionBody {
+        legal
+            .iter()
+            .find(|action| {
+                matches!(action, ActionBody::Activate { instance_id, targets: Some(targets), tributes: paid, .. }
+                    if instance_id == source && *targets == [target.clone()] && paid.as_deref() == tributes)
+            })
+            .cloned()
+            .unwrap_or_else(|| panic!("{source} at {target:?} paid by {tributes:?} is legal: {legal:?}"))
+    }
+
+    /// `p2`'s visible tries at the seat p1, `spread` or not.
+    fn tries_of(state: &GameState, spread: bool) -> Vec<ActionBody> {
+        visible_tries(
+            state,
+            PlayerId::P1,
+            &legal_actions(state, PlayerId::P2),
+            &hidden_card_ids(state, PlayerId::P1),
+            spread,
+            Prices::NONE,
+        )
+    }
+
+    /// R4515000: two Cannons facing four 3/6s and a Greaser in lane 5. Before it, the four tries were
+    /// the first Cannon's at lanes 1 to 4; now each Cannon's is at the Greaser first, then each one's at
+    /// lane 1 (equal worths keep legal order).
+    #[test]
+    fn r4515000_spread_deals_both_cannons_at_the_lane_5_unit_and_off_keeps_the_first_cannons_lanes() {
+        let s = p2_to_act(
+            json!({ "field": row(json!({ "def": VANILLA, "statsOverride": { "attack": 3, "health": 6 } })) }),
+            json!({ "field": [{ "def": CANNON_V3, "lane": 1 }, { "def": CANNON_V4, "lane": 2 }] }),
+        );
+        let state = s.state();
+        let worth = |lane: i32| {
+            let unit = s.unit(PlayerId::P1, lane).expect("p1 holds a unit there");
+            unit_worth(state, &unit, &AI_EVAL, Prices::NONE)
+        };
+        for lane in 2..=4 {
+            assert!((worth(lane) - worth(1)).abs() < 1e-9, "lane {lane}");
+        }
+        assert!(worth(5) > worth(1), "{} against {}", worth(5), worth(1));
+        let legal = legal_actions(state, PlayerId::P2);
+        let (v3, v4) = (s.card(CANNON_V3).id.clone(), s.card(CANNON_V4).id.clone());
+        let at = |source: &str, lane: i32| {
+            aimed(
+                &legal,
+                source,
+                Selection::Instance {
+                    instance_id: seat_unit(&s, lane),
+                },
+                None,
+            )
+        };
+        assert_eq!(
+            tries_of(state, false),
+            vec![at(&v3, 1), at(&v3, 2), at(&v3, 3), at(&v3, 4)]
+        );
+        assert_eq!(
+            tries_of(state, true),
+            vec![at(&v3, 5), at(&v4, 5), at(&v3, 1), at(&v4, 1)]
+        );
+    }
+
+    /// R4515000: Turtinator, with two Units to tribute, hits the seat's hero once per Tribute set, and
+    /// both hits come first; its hits on the seat's Units follow once each, the Greaser's first, paid by
+    /// the first set, and the same hits paid by the second set wait behind them.
+    #[test]
+    fn r4515000_every_hero_try_comes_first_and_a_second_tribute_set_of_a_pick_waits() {
+        let s = p2_to_act(
+            json!({ "field": [
+                { "def": VANILLA, "statsOverride": { "attack": 1, "health": 2 }, "lane": 1 },
+                { "def": VANILLA, "lane": 2 },
+                { "def": GREASER, "lane": 3 },
+            ] }),
+            json!({ "field": [
+                { "def": TURTINATOR, "lane": 1 },
+                { "def": VANILLA, "lane": 2 },
+                { "def": VANILLA, "lane": 3 },
+            ] }),
+        );
+        let state = s.state();
+        let worth = |lane: i32| {
+            let unit = s.unit(PlayerId::P1, lane).expect("p1 holds a unit there");
+            unit_worth(state, &unit, &AI_EVAL, Prices::NONE)
+        };
+        assert!(worth(1) < worth(2) && worth(2) < worth(3));
+        let legal = legal_actions(state, PlayerId::P2);
+        let hidden = hidden_card_ids(state, PlayerId::P1);
+        let tries: Vec<ActionBody> = legal
+            .iter()
+            .filter(|action| visible_source(state, &hidden, action))
+            .cloned()
+            .collect();
+        let at_hero: Vec<ActionBody> = tries
+            .iter()
+            .filter(|action| aim_of(state, PlayerId::P1, action) == Aim::SeatHero)
+            .cloned()
+            .collect();
+        let paid_by = |action: &ActionBody| match action {
+            ActionBody::Activate {
+                tributes: Some(tributes),
+                ..
+            } => tributes.clone(),
+            other => panic!("a Tribute is paid: {other:?}"),
+        };
+        let [first, second] = at_hero.as_slice() else {
+            panic!("one hit on p1's hero per Tribute set: {at_hero:?}");
+        };
+        let (first, second) = (paid_by(first), paid_by(second));
+        assert_ne!(first, second);
+        let turtinator = s.card(TURTINATOR).id.clone();
+        let at = |lane: i32, tributes: &[String]| {
+            aimed(
+                &legal,
+                &turtinator,
+                Selection::Instance {
+                    instance_id: seat_unit(&s, lane),
+                },
+                Some(tributes),
+            )
+        };
+
+        let ordered = ordered_tries(state, PlayerId::P1, tries, true, Prices::NONE);
+        assert_eq!(ordered[..2], at_hero[..]);
+        assert_eq!(ordered[2..5], [at(3, &first), at(2, &first), at(1, &first)]);
+        let waits = ordered
+            .iter()
+            .position(|action| *action == at(3, &second))
+            .expect("the second set's hit on the Greaser is still tried");
+        assert!(waits > 4, "{waits}");
+
+        assert_eq!(tries_of(state, true), ordered[..4]);
+        let mut off = at_hero.clone();
+        off.extend([at(1, &first), at(2, &first)]);
+        assert_eq!(tries_of(state, false), off);
+    }
+
+    /// R4515000: a Cannon v4 facing four 4/4s and a Greaser in lane 5 is tried four times either way, one
+    /// node each; only the spread tries the lane-5 Greaser, so only then does the reply destroy it.
+    #[test]
+    fn r4515000_a_step_spends_the_same_nodes_on_and_off_and_only_the_spread_reaches_the_lane_5_unit() {
+        let s = p2_to_act(
+            json!({ "field": row(json!(VANILLA)) }),
+            json!({ "field": [CANNON_V4] }),
+        );
+        let state = s.state();
+        let greaser = s.card(GREASER).id.clone();
+        let mut spent: Vec<usize> = Vec::new();
+        for spread in [true, false] {
+            let tries = tries_of(state, spread);
+            assert_eq!(tries.len(), AI_REPLY.visible_activations as usize, "{spread}");
+            let counter = create_node_counter(20, None);
+            let Known::Played(after) = best_try(state, PlayerId::P2, &tries, false, &counter, Prices::NONE)
+            else {
+                panic!("{spread}: the Cannon fires");
+            };
+            spent.push(counter.used());
+            let left = active_units_of(&after, PlayerId::P1);
+            let stands = left.iter().any(|unit| unit.id == greaser);
+            if spread {
+                assert!(!stands, "the spread destroys the Greaser");
+            } else {
+                assert!(stands, "the first four lanes leave the Greaser");
+                assert_eq!(left.len(), 4);
+            }
+        }
+        assert_eq!(spent[0], spent[1]);
+    }
+
+    /// R4515000, R185: the tries read only the visible sources and the seat's own Units, so a hand card
+    /// of the opponent's the seat cannot see changes none of them.
+    #[test]
+    fn r4515000_the_tries_read_nothing_the_seat_cannot_see() {
+        let s = p2_to_act(
+            json!({ "field": row(json!(VANILLA)) }),
+            json!({ "hand": [VANILLA], "field": [CANNON_V4] }),
+        );
+        let state = s.state();
+        let mut twin = state.clone();
+        twin.players[PlayerId::P2].hand[0].def_id = CANNON_V3.to_string();
+        assert!(hidden_card_ids(state, PlayerId::P1).contains(&state.players[PlayerId::P2].hand[0].id));
+        for spread in [true, false] {
+            assert_eq!(tries_of(state, spread), tries_of(&twin, spread), "{spread}");
+        }
     }
 }
