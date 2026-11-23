@@ -17881,6 +17881,8 @@
       }
     },
     "4569": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-23T04:55:41Z",
@@ -17894,8 +17896,11 @@
         "trail": "onError|Error:' /tmp/w\u2026\n- Bash: {\"command\": \"grep -c '\\u2713' /tmp/web-tests.log; grep -n 'timed out\\\\|Timeout\\\\|timeout' /tmp/web-tests.log | head -10; wc -l /tmp/web-tests.log\", \"description\": \"Look for timeout markers in the web\u2026\n- Bash: {\"command\": \"grep -n 'testTimeout\\\\|hookTimeout' apps/web/vite*.ts apps/web/vitest*.ts vitest*.ts 2>/dev/null | head; cat /tmp/web-tests.log | head -12\", \"description\": \"Find the vitest timeout confi\u2026\n- Bash: {\"command\": \"ls apps/web/ | grep -i 'vite\\\\|vitest'; ls | grep -i vitest; grep -rn 'testTimeout' apps/web/vite.config.ts vitest.config.ts 2>/dev/null | head\", \"description\": \"Locate the vitest config\u2026\n- Bash: {\"command\": \"grep -n 'Timeout\\\\|timeout' apps/web/vitest.config.ts vitest.config.ts | head\", \"description\": \"Read timeout settings in the vitest configs\"}\n- Bash: {\"command\": \"cd apps/web && ls src/cards/settings.test.ts* src/haptics/*.test.* src/cards/cosmetics*.test.* src/game/deckbuilder/savedBrowse*.test.* src/routes/dev/hotseat*.test.* src/settings/accoun\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4550 && echo \\\"- web --changed run killed at 30 min (huge set); 4 files failed under load (collection, versionLooks4, pictures, FriendsButton) - reru\u2026\n- Bash: {\"command\": \"ls apps/web/src/fx/*settings*.test.* 2>/dev/null; pnpm exec vitest run --project web apps/web/src/collection/collection.test.tsx apps/web/src/cards/versionLooks4.test.tsx apps/web/src/ca\u2026\n- Bash: {\"command\": \"echo \\\"- targeted web: 17 files 467 passed; 4 load-failed files + fx/settings rerun alone: 5 files 192 passed. Now T4 before/after rerun.\\\" >> .bot-notes.md; cp crates/shared/src/host/du\u2026\n- Bash: {\"command\": \"grep -n 'a run still owing timeouts' crates/shared/src/host/duel.rs; cargo test -p jackioh-shared --features jackioh-engine/testkit --test duel r268_a_grace_running_out 2>&1 | grep -E 't\u2026\n- Bash: {\"command\": \"echo \\\"- T4 before (fix removed, my rerun): FAILED duel.rs:2067 left: [] right: [\\\\\\\"srv-mulligan-2\\\\\\\"]; after: ok. Fix restored.\\\" >> .bot-notes.md; cargo fmt --check 2>&1 | head -20; \u2026\n- Bash: {\"command\": \"(cargo clippy --workspace --all-targets -- -D warnings > /tmp/clippy.log 2>&1; echo \\\"clippy exit $?\\\" >> /tmp/clippy.log; cargo test -p jackioh-server --test server -- actor:: api::sett\u2026\n- Bash: {\"command\": \"grep -n '^| E11\\\\|^| E12\\\\|^| S15\\\\|^| S16\\\\|^| N18\\\\|^| F30\\\\|^| F31' docs/implicit-states.md | cut -c1-140; sed -n 7p docs/implicit-states.md | cut -c1-400\", \"description\": \"Spot-check\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='docs/implicit-states.md'\\ns=open(p).read()\\nold=\\\"Reachable: a turn's end whose end-of-turn chain trips the cap while `END_OF_TURN_WORK` is owed behind an answered \u2026\n- Bash: {\"command\": \"for r in '/api/auth/signin' '/api/catalog/' '/api/rooms' '/api/stats/ci' '/api/stats/player' '/api/challenges\\\"' '/api/chat/unread' '/api/duos/rooms\\\"' '/api/trios/' '/api/e2e/reseed' '/\u2026\n- Bash: {\"command\": \"git grep -n -F -e '/api/stats/player' -e '/api/chat/unread' -e '\\\"/api/challenges\\\"' -e '/api/auth/signin' -- apps/web/src/net/api.ts apps/web/src/stats/sync.ts apps/web/src/net/social.t\u2026\n- Bash: {\"command\": \"echo \\\"- doc E11/S15 text tightened. Zombie list: planner's, spot-checked (catalog/:version, duos/rooms POST, stats/ci, e2e routes none in src; GET stats/player, chat/unread, challenges \u2026\n- Bash: {\"command\": \"until grep -q '^tools exit' /tmp/tools-tests.log 2>/dev/null || grep -q 'clippy exit [1-9]' /tmp/clippy.log 2>/dev/null; do sleep 15; done; tail -3 /tmp/clippy.log; grep -E 'test result|\u2026\n- Bash: {\"command\": \"tail -3 /tmp/clippy.log; grep -E 'test result|FAILED|^server exit' /tmp/server-tests.log | tail -5; grep -E 'test result: ok. [1-9]|FAILED|^tools exit|error' /tmp/tools-tests.log | head\"\u2026\n- Bash: {\"command\": \"grep -E '^test .*r4397000' /tmp/tools-tests.log | head; grep -E '^test .*(r4348000|whole|epoch|settings::|stats::)' /tmp/server-tests.log | wc -l; grep -c '^test api::settings::\\\\|^test \u2026\n- Bash: {\"command\": \"echo \\\"- clippy workspace exit 0; server actor/settings/stats/rematch 569 passed; tools r4397000 7 passed. Running engine r3925000 subset.\\\" >> .bot-notes.md; cargo test -p jackioh-engin\u2026\n- Bash: {\"command\": \"grep -E 'r4348000_block_push|seat_states_3678::a_dropped' /tmp/server-tests.log | head -4; git status --short; git diff --stat 0bf5057480 | tail -1\", \"description\": \"Confirm the server t\u2026\n- Bash: {\"command\": \"grep -c 'r4348000_block_push' /tmp/server-tests.log; grep 'r4348000_block_push' /tmp/server-tests.log\", \"description\": \"Check the block-push test in the server log\"}\n- Bash: {\"command\": \"ls crates/tools/src | grep -i classif; grep -n 'shared\\\\|engine/src\\\\|fragment' crates/tools/src/classify*.rs 2>/dev/null | head -20\", \"description\": \"Check what classify asks of a share\u2026\n- Bash: {\"command\": \"sed -n 270,310p crates/tools/src/classify.rs\", \"description\": \"Read classify's path areas\"}\n- Bash: {\"command\": \"sed -n 240,270p crates/tools/src/classify.rs; grep -n 'Area::Rules =>\\\\|Area::App =>\\\\|Area::Engine =>\\\\|fn claims_need\\\\|Area::Rules' crates/tools/src/classify.rs | head\", \"description\"\u2026\n- Bash: {\"command\": \"sed -n 1845,1870p crates/tools/src/classify.rs; grep -n 'diff.app' crates/tools/src/classify.rs | head\", \"description\": \"Check whether an app change needs a fragment\"}\n- Bash: {\"command\": \"sed -n 650,672p crates/tools/src/classify.rs; grep -n 'fn check_claims\\\\|fn hold_claims' -A25 crates/tools/src/claims.rs | grep -n 'app\\\\|kind\\\\|Kind' | head\", \"description\": \"Read how a\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Plan (from the issue)')\\nstate='''## State\\n\\nBuild pass 2 (opus) 2026-11-23: DONE, report written. All batches and \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: audit the codebase for dead code, duplicates and zombie routes, 2026-11-23\"} --> ## Summary This is the 2026-11-23 code audit, built from the plan on #4550. It does five things: - **Dead code:** removes three dead TypeScript items. No Rust or Python is \u2026"
       },
       "issue": 4550,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-23T06:54:41Z",
         "from_run": "45114690627",
         "gates": [
           {
@@ -17987,7 +17992,11 @@
         "source": "build",
         "until": "2026-11-23T07:23:53Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-23T06:53:53Z",
+      "run_id": "pending:34cdee0f-1795416864",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -18006,6 +18015,9 @@
         "provider": "claude-6",
         "run": "45114690627"
       },
+      "started_at": "2026-11-23T06:54:41Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18019,9 +18031,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T06:01:39Z",
+    "at": "2026-11-23T06:54:41Z",
     "url": "",
-    "what": "suggestions (client) on claude-3"
+    "what": "review #4569 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-23T06:45:58Z",
