@@ -18685,13 +18685,30 @@
       "started_at": "2026-11-23T10:18:43Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "4604": {
+      "action": "plan",
+      "asks": [],
+      "in_lane": true,
+      "kind": "build",
+      "live": "planning",
+      "owner": "claude-6",
+      "owner_since": "2026-11-23T10:28:37Z",
+      "owner_why": "it plans it",
+      "pending_request": false,
+      "provider": "claude-6",
+      "run_id": "pending:7ef0ab27-1795429696",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-23T10:28:37Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T10:19:16Z",
+    "at": "2026-11-23T10:28:37Z",
     "url": "",
-    "what": "build #4577 on claude-3"
+    "what": "plan #4604 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-23T10:15:59Z",
