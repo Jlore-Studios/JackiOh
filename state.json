@@ -17143,6 +17143,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-23T21:33:08Z",
@@ -17153,15 +17154,19 @@
       "planned_by_id": "claude-3",
       "planned_model": "sonnet",
       "planned_tier": "medium",
+      "pr": 4647,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-11-23T20:51:14Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "medium",
       "run_id": "45270836310",
       "runs_on": "night-vm-muse",
       "spot_check_of": 4625,
       "started_at": "2026-11-23T21:33:08Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "4634": {
       "action": "review",
