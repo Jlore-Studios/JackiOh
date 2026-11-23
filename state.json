@@ -16351,7 +16351,9 @@
     "4516": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-23T00:36:17Z",
         "family": "claude",
