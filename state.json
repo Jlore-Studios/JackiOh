@@ -19601,17 +19601,6 @@
   },
   "machine_memory": [
     {
-      "at": "2026-11-22T22:15:13Z",
-      "box": "b2",
-      "high_swap": 454438912,
-      "low_available": 7108214784,
-      "runner": "night-vm-muse-3-b2",
-      "stall_full": 2.7,
-      "stall_some": 3.6,
-      "swapped": 208288,
-      "total": 8153960448
-    },
-    {
       "at": "2026-11-22T22:30:50Z",
       "box": "b2",
       "high_swap": 280809472,
@@ -20232,6 +20221,16 @@
       "stall_some": 0.0,
       "swapped": 41,
       "total": 8153948160
+    },
+    {
+      "at": "2026-11-23T17:51:24Z",
+      "high_swap": 0,
+      "low_available": 6724562944,
+      "runner": "night-vm-muse",
+      "stall_full": 0.0,
+      "stall_some": 0.0,
+      "swapped": 0,
+      "total": 8153960448
     }
   ],
   "needs_decision_synced": "d4c5f9 A bot asks a person to decide: its comment explains the problem and suggests; a reply revises it",
