@@ -17922,7 +17922,11 @@
       "issue": 4550,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "claude-6",
+      "merge_owner_gave_up": {
+        "at": "2026-11-23T08:21:03Z",
+        "provider": "claude-6",
+        "sha": "b1dd7b66b04bee52c277a7cd94420bfdba3cd0a2"
+      },
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-11-23T06:53:53Z",
