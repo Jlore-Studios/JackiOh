@@ -17698,10 +17698,12 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "at": "2026-11-23T05:05:18Z",
+        "at": "2026-11-23T06:53:11Z",
         "built_by": "claude-4",
         "by": "`claude` (strong)",
-        "sha": "aa8b4b5212cd4594fad2bff5d1d96c65b1cbe863"
+        "carried_from": "aa8b4b5212cd4594fad2bff5d1d96c65b1cbe863",
+        "resolved_by": "`claude` (strong)",
+        "sha": "eb24e90996cfb90357a07138ddaff5fa22ad01d6"
       },
       "died": 0,
       "difficulty": "hard",
