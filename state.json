@@ -16847,8 +16847,11 @@
       "audit_tier": "",
       "ci_early": false,
       "ci_fixed_head": "e9515b777923ad1938c3c01625ed94cbca8dcb93",
-      "ci_fixes": 2,
+      "ci_fixes": 1,
       "ci_on_head": true,
+      "ci_reruns": {
+        "48a52ee9cd32cba2150bd6b713e93d4e49ad9dd0": 1
+      },
       "ci_run_id": 45095716871,
       "ci_sha": "48a52ee9cd32cba2150bd6b713e93d4e49ad9dd0",
       "cleared": {
