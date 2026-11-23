@@ -18652,14 +18652,6 @@
         "reason": "`claude-1` stops mid-call: 5-hour usage is 100%, at or over its 100% cap; it resets at 2026-11-23T12:50:00Z",
         "trail": "head -150\", \"description\": \"Engine config/mana/turn diffs from the bala\u2026\n- Bash: {\"command\": \"tail -1 /tmp/cargo-build.log; grep -c Compiling /tmp/cargo-build.log; uptime\", \"description\": \"Check build progress\"}\n- Bash: {\"command\": \"cat > /tmp/jk/diag.sh <<'EOF'\\n#!/bin/sh\\n# usage: diag.sh <seed> [extra fuzz flags]\\nseed=$1; shift\\ncd /tmp/jk && JK_DIAG=1 /tmp/diag/target/release/jackioh fuzz --from \\\"$seed\\\" --see\u2026\n- Bash: {\"command\": \"ps aux --sort=-%cpu | head -15 | cut -c1-200\", \"description\": \"See what consumes the CPU\"}\n- Bash: {\"command\": \"ls crates/cards/src/scripts/stinkyscape/ | grep -i \\\"no_no\\\\|nono\\\"; grep -n \\\"^//!\\\" crates/cards/src/scripts/stinkyscape/c102_book_of_nono_words.rs | head -20\", \"description\": \"Read Bo\u2026\n- Bash: {\"command\": \"cd e2e && grep -n 'routes\\\\.\\\\|cy.visit' cypress/e2e/{09-deckbuilder,10-invite-gate,42-together,23-tutorial-path,17-card-showcase-and-hovers}.cy.ts | grep -o 'routes\\\\.[a-zA-Z]*\\\\|cy.vis\u2026\n- Bash: {\"command\": \"grep -n \\\"^//!\\\" crates/cards/src/scripts/stinkyscape/c099_no_no_words.rs | head -20\", \"description\": \"Read No-No Words header\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4599/e2e/cypress/e2e/10-invite-gate.cy.ts\", \"offset\": 140, \"limit\": 243}\n- Bash: {\"command\": \"tail -1 /tmp/diag-build.log | cut -c1-120; tail -c 300 /tmp/jk/s2-plain.log\", \"description\": \"Check diag build and fuzz progress\"}\n- Monitor: {\"command\": \"until grep -q '^web exit=' /tmp/web-build.log 2>/dev/null; do if grep -q 'wasm exit=[1-9]' /tmp/wasm-build.log 2>/dev/null; then echo \\\"wasm build failed\\\"; exit 1; fi; if grep -q '^exit\u2026\n- tool error: Permission to use Monitor has been denied. IMPORTANT: You *may* attempt to accomplish this action using other tools that might naturally be used to accomplish this goal, e.g. using head instead of ca\u2026\n- Bash: {\"command\": \"grep -n \\\"fn reached_ids\\\" -A60 crates/engine/src/testkit/invariants.rs | head -80\", \"description\": \"Read reached_ids\"}\n- Bash: {\"command\": \"grep -n \\\"fn r4508\\\\|fn i21\\\\|fn r4524\\\" crates/engine/tests/rules/invariants.rs | head -30\", \"description\": \"List I21 rules tests\"}\n- Bash: {\"command\": \"grep -n '53\\\\b\\\\|51\\\\b\\\\|42\\\\b\\\\|flak' e2e/README.md | head -30\", \"description\": \"Look for notes on these specs in the e2e README\"}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^exit=\\\" /tmp/cargo-build.log; do sleep 15; done'; tail -1 /tmp/cargo-build.log; grep -c Compiling /tmp/cargo-build.log\", \"description\": \"Wait up to \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4599/crates/engine/tests/rules/invariants.rs\", \"offset\": 3370, \"limit\": 130}\n- Bash: {\"command\": \"grep -n \\\"I21\\\" crates/engine/README.md crates/tools/README.md spec/*.md | cut -c1-250 | head\", \"description\": \"Find I21 mentions in docs\"}\n- Bash: {\"command\": \"grep -n \\\"Immune to Spells\\\" spec/10-engine-guide.md | cut -c1-200 | head -5; grep -o \\\"I21[^.]*\\\\.\\\" spec/10-engine-guide.md | head -3 | cut -c1-600\", \"description\": \"Find I21 in engine\u2026\n- Bash: {\"command\": \"grep -n \\\"no Spell changes a Unit\\\\|I21 no\\\" spec/10-engine-guide.md crates/tools/README.md | cut -c1-120\", \"description\": \"Find invariant list in spec\"}\n- Bash: {\"command\": \"until [ -x /tmp/diag/target/release/jackioh ] || grep -q \\\"^error\\\" /tmp/diag-build.log; do sleep 5; done; tail -3 /tmp/diag-build.log\", \"description\": \"Wait for diag binary\", \"timeout\":\u2026\n- Bash: {\"command\": \"until grep -q \\\"Finished\\\\|^error\\\" /tmp/diag-build.log; do sleep 5; done; tail -3 /tmp/diag-build.log\", \"description\": \"Wait for diag build to finish\", \"timeout\": 2400000}\n- Bash: {\"command\": \"sed -n 1,80p e2e/scripts/shard-specs.mjs\", \"description\": \"Read the sharding script\"}\n- Bash: {\"command\": \"git diff --name-status e21cea61d4 4443938 -- e2e/ | head; git diff --name-status 4443938 HEAD -- e2e/ apps/web/src | head\", \"description\": \"e2e and web changes across the range and since\u2026\n- Bash: {\"command\": \"git diff --stat 4443938 HEAD -- apps/web/src crates/server/src crates/shared/src e2e | tail -40\", \"description\": \"Web/server/shared changes between failing commit and HEAD\"}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^exit=\\\" /tmp/cargo-build.log; do sleep 15; done'; tail -1 /tmp/cargo-build.log; grep -c Compiling /tmp/cargo-build.log; uptime\", \"description\": \"Wai\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport json\\ncat=json.load(open('crates/cards/catalog.json'))\\ncards = cat['cards'] if isinstance(cat,dict) and 'cards' in cat else cat\\nfor c in cards:\\n for f in \u2026\n- tool error: Exit code 1 Traceback (most recent call last): File \"<stdin>\", line 6, in <module> TypeError: string indices must be integers, not 'str'\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport json\\ncat=json.load(open('crates/cards/catalog.json'))\\ncards = cat['cards'] if isinstance(cat,dict) and 'cards' in cat else cat\\ncards = cards.values() if i\u2026\n- Bash: {\"command\": \"for s in 2 3 4; do tail -c 250 /tmp/jk/s$s-plain.log; echo; done; uptime\", \"description\": \"Check fuzz shards progress\"}\n- Bash: {\"command\": \"grep -rn \\\"cast_on_draw\\\\|CastOnDraw\\\" crates/engine/src --include=*.rs -l | head; grep -rn \\\"fn cast_on_draw\\\\|fn run_cast_on_draw\\\\|fn cast_drawn\\\" crates/engine/src | head\", \"descript\u2026\n- Bash: {\"command\": \"until grep -q \\\"Finished\\\\|^error\\\" /tmp/diag-build.log; do sleep 5; done; tail -3 /tmp/diag-build.log\", \"description\": \"Wait for diag build to finish\", \"timeout\": 600000, \"run_in_backgr\u2026\n- Bash: {\"command\": \"grep -n \\\"anomaly\\\\|replace_board\\\\|Anomaly\\\" crates/engine/src/subsystems/call_to_chaos_scape.rs | head -20\", \"description\": \"Find anomaly entry in Call to Chaos Scape\"}\n- Bash: {\"command\": \"sed -n 1,80p crates/engine/src/subsystems/call_to_chaos_scape.rs\", \"description\": \"Read Call to Chaos Scape subsystem\"}\n- Bash: {\"command\": \"until grep -q \\\"Finished\\\\|^error\\\" /tmp/diag-build.log; do sleep 5; done; tail -2 /tmp/diag-build.log\", \"description\": \"Wait for diag build\", \"timeout\": 600000}\n- said: You've hit your 5-hour limit \u00b7 resets 12:50pm (UTC)\n- tool error: Exit code 137"
       },
-      "hold": {
-        "ends": "2026-11-23T12:56:27Z",
-        "lifted": "2026-11-23T12:54:33Z",
-        "owner": "claude-1",
-        "since": "2026-11-23T10:56:27Z",
-        "until": "2026-11-23T12:50:00Z",
-        "why": "it refused a call"
-      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
@@ -18668,7 +18660,7 @@
       "owner_why": "handed off from `claude-8`: `claude-8` 5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-23T13:50:00Z; it can start again only in 3h 31m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "provider": "claude-1",
-      "run_id": "45154929894",
+      "run_id": "pending:48bbec13-1795438502",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -18687,7 +18679,7 @@
         "provider": "claude-1",
         "run": "45154929894"
       },
-      "started_at": "2026-11-23T10:18:43Z",
+      "started_at": "2026-11-23T12:55:32Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7098754289
@@ -18732,9 +18724,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T12:22:23Z",
+    "at": "2026-11-23T12:55:32Z",
     "url": "",
-    "what": "plan #4604 on claude-3"
+    "what": "plan #4599 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-23T12:46:04Z",
