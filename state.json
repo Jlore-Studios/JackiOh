@@ -42269,6 +42269,12 @@
         "number": 4613,
         "title": "Patch: the daily pair, era, run and gate sweeps name the unit they stall on, as the fuzz waves do",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T19:38:39Z",
+        "number": 4612,
+        "title": "Patch: fuzz private lobbies with random operations and invariant checks",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
