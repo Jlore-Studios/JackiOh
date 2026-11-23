@@ -18411,16 +18411,27 @@
       "taken_asks": []
     },
     "4581": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
       "onto": "bot/issue-4578",
+      "owner": "muse",
+      "owner_since": "2026-11-23T08:58:09Z",
+      "owner_why": "it plans it",
       "part_of": 4578,
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-23T08:52:49Z",
       "requested_by": "jgoetzmann",
-      "stop_requested": false
+      "run_id": "pending:013279a1-1795424266",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-23T08:58:09Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "4582": {
       "action": "plan",
@@ -18579,9 +18590,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T08:57:33Z",
+    "at": "2026-11-23T08:58:09Z",
     "url": "",
-    "what": "plan #4580 on muse"
+    "what": "plan #4581 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T08:46:07Z",
