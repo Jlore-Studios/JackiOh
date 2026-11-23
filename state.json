@@ -40305,16 +40305,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "1": {
-        "area": "ai",
-        "count": 1,
-        "last_run": "2026-11-23T22:42:07Z",
-        "provider": "muse",
-        "run_id": "45282171895",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
