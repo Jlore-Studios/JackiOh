@@ -17092,11 +17092,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-23T20:51:14Z",
+        "at": "2026-11-23T21:29:32Z",
         "difficulty": "medium",
-        "provider": "claude-6",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4625, a medium change"
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Test-only change in the web app's audio code (one new test file and one `proven_in` line), with no engine, AI, cross-crate, migration or 40-file change."
       },
       "failures": 0,
       "forced": false,
