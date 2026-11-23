@@ -3336,3 +3336,5 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-23T02:21:31Z,45094767817,muse,muse-spark-1.3-contributor,build,4542,medium,built,,40.2,0,0,0,,15,0,1,1,18.3,muse,none,,1
 2026-11-23T02:30:41Z,45100204728,gpt,gpt-5.6-sol,review,4547,medium,approved,,3.7,1289273,7368,0,,,,64,64,1.8,,none,,1
 2026-11-23T02:33:13Z,45099185023,muse,muse-spark-1.3-contributor,review,4546,medium,approved,,16.6,0,0,0,,0,0,1,2,1.8,,none,,1
+2026-11-23T02:40:39Z,45092422898,claude-3,opus,build,4516,hard,built,,38.6,34,19311,7712584,18.3254,0,8,,,292.3,claude-3,resumed,,1
+2026-11-23T02:58:35Z,45100260491,muse,muse-spark-1.3-contributor,review,4548,medium,approved,,21.8,0,0,0,,0,0,2,2,1.5,,none,,3
