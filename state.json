@@ -18648,18 +18648,8 @@
     "what": "build #4579 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-23T09:23:36Z",
-    "notes": [
-      "delivered plan #4577 on claude-7 (run 45142986939): planned",
-      "delivered plan #4579 on claude-8 (run 45142739802): planned",
-      "delivered plan #4582 on claude-7 (run 45142656779): planned",
-      "started build #4577 on claude-7 (run 45147038824)",
-      "started plan #4599 on claude-8 (run 45147122751)",
-      "started build #4582 on muse (run 45147209333)",
-      "started build #4579 on muse (run 45147309111)",
-      "nothing more to start: nothing is queued",
-      "#4599: typed it Bug"
-    ],
+    "at": "2026-11-23T09:35:33Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -19364,7 +19354,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T09:23:36Z",
+  "loop_tick": "2026-11-23T09:35:33Z",
   "machine_disk": {
     "issue": null,
     "reading": {
