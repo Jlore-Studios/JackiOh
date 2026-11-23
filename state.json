@@ -16264,7 +16264,9 @@
     },
     "4608": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7111392406"
+      ],
       "build_next": {
         "from_run": "45252006606",
         "model": "opus",
@@ -16311,9 +16313,7 @@
       "started_at": "2026-11-23T19:44:06Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7111392406"
-      ]
+      "taken_asks": []
     },
     "4609": {
       "action": "plan",
