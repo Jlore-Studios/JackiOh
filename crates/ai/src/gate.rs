@@ -117,9 +117,10 @@ pub const AI_GATE: AiGate = AiGate {
         hard_vs_easy: 0.75,
     },
     measured_rate: ByMatchup {
-        ai_vs_random: 0.945,
-        ai_vs_greedy: 0.68,
-        hard_vs_easy: 0.913,
+        // R4513000: measured on 50 fresh tuning deals per matchup.
+        ai_vs_random: 1.0,
+        ai_vs_greedy: 0.92,
+        hard_vs_easy: 0.94,
     },
     false_alarm: 0.05,
     max_decision_ms: 1500.0,

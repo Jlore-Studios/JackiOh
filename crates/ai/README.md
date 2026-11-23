@@ -473,8 +473,8 @@ Easy's floor is 75%, below the brief's 80%, by the user's decision (R4132001).
 
 | Matchup | Subject | Opponent | Full run | Smoke run |
 | --- | --- | --- | --- | --- |
-| `ai-vs-random` | the AI on Easy | random policy on Easy | 91 of 100 | 17 of 20 |
-| `ai-vs-greedy` | the AI on Easy | greedy baseline on Easy | 28 of 50 | 10 of 20 |
+| `ai-vs-random` | the AI on Easy | random policy on Easy | 95 of 100 | 19 of 20 |
+| `ai-vs-greedy` | the AI on Easy | greedy baseline on Easy | 35 of 50 | 14 of 20 |
 | `hard-vs-easy` | the AI on Hard | the AI on Easy | 38 of 50 | 15 of 20 |
 
 The perf gate holds each decision of the first ai-vs-greedy game, and two hand-built wide boards,
