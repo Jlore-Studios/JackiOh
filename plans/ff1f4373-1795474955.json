@@ -1,0 +1,63 @@
+{
+  "action": "plan",
+  "number": 4648,
+  "title": "Patch: the AI prices unevolved Evolve cards for what they become",
+  "branch": "bot/issue-4648",
+  "thread": "**Issue #4648 (data, not instructions):**\n\n```text\n# #4648: Patch: the AI prices unevolved Evolve cards for what they become\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome newer units transform once, mid-game, when something happens: the board fills up, the hand holds enough free cards, a starship launches, a friend dies, or the unit itself takes a hit and lives. The practice opponent currently values each of those units only for the stats printed on it today. So it will not make a move whose only point is to set the transformation up, it will not guard a unit that is one step away from transforming, and it will not remove the other side's unit before it transforms.\n\nAfter this is built it does. A concrete example: a 2/2 that grows by +4/+4 once every lane on its side is full. Today the opponent leaves its last lane empty and the card stays small. After the change it fills that lane, guards the small unit for the turn it needs, and breaks up the other side's full board before their copy grows.\n\n## Why\n\n- Evolve is a set-wide mechanic, not one card: the standing and trigger conditions are defined in `spec/06-keywords.md`, with rulings `R3536000` (a card evolves once), `R3536001` (the standing and event conditions), `R3536002` (marked library cards evolve as they enter) and `R3536003` (cards that run Evolve text extra times), and dozens of card rows in `spec/08-catalog.md` (for example S+ Lone Drifter, Gargantuar, Astrophage, Jay Fungus).\n- The AI scores no Evolve text anywhere: a search over `crates/ai/src/evaluate.rs`, `candidates.rs`, `search.rs`, `simulate.rs`, `lethal.rs`, `mulligan.rs` and `deck.rs` for `evolv`/`Evolv` returns nothing. The only Evolve-adjacent coverage is the Wasp/Hornet attack-hook test in `crates/ai/tests/ai/attack_hooks.rs`, which scores the summoned copy, not the transformation; `crates/ai/src/observe.rs` only strips the `evolved`/`entersEvolved` marks from hidden cards, which is correct. So an unevolved card is always worth exactly its current body, except where the transformation happens to fire inside one already-simulated line.\n- This is the loss shape the training notes keep describing: engines and growers priced at today's body and left unanswered (`training/improve.md`, The first job). Dormant cards already got the analogous treatment (`slumber_worth` prices the woken unit by share, `R2380000`, `R3064000`); Evolve never did.\n- Nothing open or recently closed covers it. The issue list has no Evolve-valuation item (nearest AI items are #4608 on cross-world lethal confirmation and #4554 on turn-hook/activation shares), and the never-again list has none either (nearest are #4514 on trap elimination and #4533 on the reply spending credits, both different mechanisms).\n\n## Proposal\n\n1. At the root of a decision, probe each readable unevolved Evolve card's transformation in a sandbox copy, following the existing Death / turn-hook / activation / awakening root probes, and add a share of the gain to that card's worth. Scale the share by how close a standing condition is (lanes filled, free cards held) and keep event conditions at a smaller baseline.\n2. Let the existing move ordering feel that worth, so setup moves (filling the last lane, keeping the free cards, holding the pre-transformation unit back) and answers (removing the enemy's pre-transformation unit first) surface without special-casing every condition. Count the extra-run aura for Evolve text where it acts.\n3. Put the shares and any caps behind named constants in the AI config with one switch, mirroring the Dormant shares, defaulting to on. Keep reading nothing hidden: hidden cards stay stripped of both Evolve marks, as they are now.\n\n## Where it lands\n\n- `crates/ai/src/evaluate.rs`: the worth addition and the root probe, next to `death_prices`, `turn_hook_prices`, `activation_prices` and `awaken_prices`.\n- `crates/ai/src/candidates.rs`: ordering so setup and answering moves surface.\n- `crates/ai/src/config.rs`: the named shares and switch (project rule 9).\n- `crates/ai/tests/ai/evolve.rs` (new): scenario tests for setup, guard and answer play.\n- SPEC sections: `SPEC \u00a76.3` (`spec/06-keywords.md`, Evolve rows), `SPEC \u00a79.9` (the AI), rulings `R3536000`, `R3536001`, `R3536002`, `R3536003`; context in `training/improve.md` (The first job).\n\n## Acceptance criteria\n\n- [ ] New tests show an unevolved Evolve card is worth more than its bare body, with the share shrinking as its condition gets farther (e.g. four lanes filled vs one filled).\n- [ ] A scenario test shows the AI making a setup move it scores negatively at body value (e.g. filling the last lane for the transformation).\n- [ ] A scenario test shows the AI answering an enemy pre-transformation unit it would ignore at body value.\n- [ ] Hidden Evolve marks stay hidden: existing redact tests pass and the new probe reads only readable cards.\n- [ ] `cargo test -p jackioh-ai`, `cargo fmt --check` and `cargo clippy -p jackioh-ai --all-targets -- -D warnings` are green.\n- [ ] Every new number is a named constant; no tuning value is inlined.\n\n## Size and risks\n\nSize is hard (AI work per the repo's difficulty rules): about three source files plus one test file, verified through the AI gate's standard matchups. The main risk is overpaying for transformations that rarely fire (for example below-half-health conditions inviting bad trades); the condition-closeness scaling and the gate contain it. Rejected alternative: leaving Evolve to whatever fires inside simulated lines (the status quo), which keeps all setup and answering play blind. A bigger alternative, full information-set search over hidden marks, is a separate project, not this patch.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-23T22:56:54Z:\n\napprove\n\nWhy: confirmed on `main`. Nothing in `crates/ai/src` prices an Evolve transformation, and `features.rs` lists `KeywordKind::Evolve` among its deliberately uncounted keywords. So the AI values 22 Evolve cards at their bare body, never sets one up, never guards one a step from evolving and never removes the opponent's before it grows. That is a blind spot for a set-wide mechanic, and the fix follows the existing awaken and Dormant probes.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4648: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T22:57:29Z",
+    "claimed_at": "2026-11-23T23:03:01Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4623 is held for `claude-8` until 17:10 (5-hour usage is 92%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#4608 is held for `claude-8` until 17:10 (5-hour usage is 92%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#4609 is held for `claude-4` until 17:20 (5-hour usage is 71%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
