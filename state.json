@@ -17719,13 +17719,14 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-6",
       "queued_at": "2026-11-23T03:35:50Z",
-      "run_id": "45107005625",
+      "run_id": "pending:451cbf4c-1795406557",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 470,
-      "started_at": "2026-11-23T03:36:42Z",
+      "started_at": "2026-11-23T04:02:59Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17769,9 +17770,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T03:47:39Z",
+    "at": "2026-11-23T04:02:59Z",
     "url": "",
-    "what": "plan #4552 on claude-8"
+    "what": "spot-check #4554 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-23T03:54:41Z",
@@ -39720,7 +39721,15 @@
         "n": 470,
         "pr": 4554,
         "queued_at": "2026-11-23T03:59:48Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:451cbf4c-1795406557",
         "sha": "0bf5057480fd2f1280fe772f17537b00d233e833",
+        "started_at": "2026-11-23T04:02:59Z",
         "status": "queued",
         "title": "Patch: the AI's turn-hook and Activate shares are fork-screened at a whole use and set where the screen keeps them",
         "tries": 0
