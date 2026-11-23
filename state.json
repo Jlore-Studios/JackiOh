@@ -17450,6 +17450,8 @@
       }
     },
     "4548": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-23T01:28:25Z",
@@ -17463,8 +17465,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"#4542: Patch: the WebAssembly module's Duos code is compiled, linted and tested in CI, not only by the local dev server\"} -->\n- ## What changed\n- Four files, following the plan exactly:\n- - [crates/wasm/c/Cargo.toml](/home/agent-muse/actions-runner/_work/_temp/work/item-4542/crates/wasm/c/Cargo.toml): new `[dev-dependencies]` line `jackioh-wasm-core = { path = \"../core\", features = [\"duos\"] }` with a `#4542` comment. Dev-dependency features reach every test/`--all-targets` build but\u2026\n- - [crates/wasm/c/src/tests.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4542/crates/wasm/c/src/tests.rs): replaced `duos_exports_answer_what_the_core_bodies_answer` (stub test) with `duos_exports_play_a_game_through_the_core_bodies`, which builds four AI decks, plays create \u2192 begin \u2192 l\u2026\n- - [crates/tools/tests/acceptance.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4542/crates/tools/tests/acceptance.rs): `dev_dependency_missing_duos` scanner plus `duos_the_c_test_build_compiles_the_duos_bodies` (reads the real manifest) and `duos_the_dev_dependency_scan_finds_a_dropped_\u2026\n- - [crates/wasm/README.md](/home/agent-muse/actions-runner/_work/_temp/work/item-4542/crates/wasm/README.md): one sentence noting test/lint builds compile the real bodies via the dev-dependency.\n- No changes to `crates/wasm/core`, the engine, or the spec \u2014 the bodies compiled and agreed with the engine on the first build, and there is no rules decision to record.\n- ## How it was tested\n- - `cargo test -p jackioh-wasm-c duos_exports_play_a_game_through_the_core_bodies` \u2014 passes; proves the real `duos_bodies` compile in test builds (on stubs, `duos_create` would refuse valid options).\n- - `cargo test -p jackioh-wasm-c` \u2014 18 passed.\n- - `cargo test -p jackioh-tools --test acceptance -- duos_the ts_the` \u2014 4 passed.\n- - `cargo test -p jackioh-wasm --test export_parity` \u2014 4 passed.\n- - `cargo clippy -p jackioh-wasm-c --all-targets -- -D warnings` \u2014 clean.\n- - `cargo build -p jackioh-wasm-c` \u2014 still compiles the stubs (ignores dev-dependencies); the only `features = [\"duos\"]` line sits under `[dev-dependencies]`, so no `build-wasm.sh` output changes.\n- - Negative control: temporarily removed the dev-dependency line and confirmed `duos_the_c_test_build_compiles_the_duos_bodies` fails, then restored the file and re-verified green plus `cargo fmt --check` clean.\n- ## Decisions the issue did not settle\n- - The scanner returns `bool` rather than the `ts` scanner's `Vec<...>` of missing crates, since there is only one crate to hold; rejected mirroring the `Vec` shape as needless generality.\n- - Both new acceptance tests sit together after `ts_the_generated_types_are_written_by_the_ci_test_build` rather than interleaved with the `ts` pair, keeping the diff in one hunk; test order is irrelevant to the runner.\n- - `cargo fmt` reflowed a few of my new long lines; accepted its output, no hand-formatting.\n- A reviewer should look twice at: the `DuosAction` construction in the new test (`{\"seat\", \"nonce\", \"body\"}` with a listed body passed straight through \u2014 it asserts equality with the core body, never hand-written expectations, so it cannot leak or invent semantics); and the fact that feature unifica\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4542 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4542/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4542,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-23T02:26:49Z",
         "from_run": "45094767817",
         "gates": [
           {
@@ -17534,8 +17539,15 @@
         "source": "build",
         "until": "2026-11-23T02:55:19Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-23T02:25:19Z",
+      "run_id": "pending:68498488-1795400787",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-23T02:26:49Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -17549,9 +17561,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T02:26:13Z",
+    "at": "2026-11-23T02:26:49Z",
     "url": "",
-    "what": "review #4547 on gpt"
+    "what": "review #4548 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T02:12:49Z",
