@@ -41942,6 +41942,12 @@
         "number": 4561,
         "title": "Patch: filter the game log by side and card",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T19:18:15Z",
+        "number": 4611,
+        "title": "Patch: the generations notebook shows a dash past the gate's retired random leg",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
