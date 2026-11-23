@@ -40695,6 +40695,12 @@
         "number": 4567,
         "title": "Patch: the run fuzz fails a run that holds a card, artifact, blessing or curse its content does not know",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T08:12:39Z",
+        "number": 4566,
+        "title": "Patch: the arena reports the AI's search health beside its wins",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
