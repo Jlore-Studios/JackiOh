@@ -279,6 +279,24 @@ function strip(html: string, pattern: RegExp): string {
 /** The page Cloudflare serves, with a 404 status, for a path no rule routes (`wrangler.jsonc` `not_found_handling`). */
 export const NOT_FOUND_FILE = "404.html";
 
+/** R4605000: the file beside `404.html` naming the build's entry script, so a stale tab sees the next build. */
+export const VERSION_FILE = "version.json";
+
+/**
+ * R4605000: the `src` of the template's `<script type="module">`: the entry script this build runs.
+ * Vite names it by its content hash in a production build, so a build's entry differs from every other's.
+ */
+export function versionEntryOf(template: string): string {
+  // Vite's build writes extra attributes into the entry tag (`crossorigin`), so the tag is
+  // matched whole and `src` read from it, whatever order the attributes come in.
+  for (const tag of template.matchAll(/<script\b[^>]*>/gu)) {
+    if (!/\btype="module"/u.test(tag[0])) continue;
+    const entry = /\bsrc="([^"]+)"/u.exec(tag[0])?.[1];
+    if (entry !== undefined && entry.length > 0) return entry;
+  }
+  throw new Error("static-pages.ts: index.html has no entry script");
+}
+
 /**
  * #3127, R3127000: the fallback's hand, left to right. The gems read 4, 0, 4. The ids are in no catalog: these are
  * placeholder Spells with no set, rarity, attack, health or rules text, nothing a player could take for a real card.
@@ -510,6 +528,7 @@ export function writeStaticPages({
     writeFileSync(file, pageHtml(template, page, pages, extra, origin));
   }
   writeFileSync(join(outDir, NOT_FOUND_FILE), notFoundHtml(template, origin));
+  writeFileSync(join(outDir, VERSION_FILE), `${JSON.stringify({ entry: versionEntryOf(template) })}\n`);
   writeFileSync(join(outDir, "sitemap.xml"), sitemapXml(pages, origin));
   if (snapshot !== undefined) {
     mkdirSync(join(outDir, RELEASE_ART_FOLDER), { recursive: true });

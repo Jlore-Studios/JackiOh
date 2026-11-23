@@ -31,3 +31,8 @@
 # The audio (voice lines and music tracks): every fetch carries its manifest's hash (?v=), so a browser keeps it a year (#4393).
 /audio/*
   Cache-Control: public, max-age=31536000, immutable
+
+# R4605000: the build's entry name, which a stale tab polls for the next build: never cached, so it sees the new one.
+# The file is written beside 404.html by the build (static-pages.ts `VERSION_FILE`).
+/version.json
+  Cache-Control: no-cache
