@@ -18643,6 +18643,13 @@
     "4599": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45178900691",
+        "model": "opus",
+        "provider": "claude-1",
+        "since": "2026-11-23T14:11:07Z",
+        "until": "2026-11-23T14:41:07Z"
+      },
       "handoff": {
         "at": "2026-11-23T10:49:19Z",
         "draft": "# Draft plan for #4599 (planner notes, run 2)\n\n## Found so far\n- Super run on `_staging` 4443938 (= 44439387fb), failed: fuzz 1-4/4, e2e 8/8. No GitHub access: logs unreadable.\n- HEAD 84e1400b22 differs from 44439387fb in patch-ship data, server/shared, engine test loop_cap.rs only;\n  catalog.json unchanged, so seeds deal the same at HEAD.\n- `jackioh fuzz` is single-threaded: run shards as parallel processes (4 cores).\n- Since the previous red run (e21cea61d4) new monitor invariants landed: I21 (#4508) and I22 (#4540).\n- Run 1 found, shard 1 plain (seeds 1..3125): 7 failures, ALL I21 (`immune_reach_findings`,\n  crates/engine/src/testkit/invariants.rs ~1539):\n  - 267: destroyed Fortress (S+112) in stinkyscape-034 Drone Core VIII's run\n  - 337: destroyed core-054 Straaza in meditative-036 CN Peptides' run\n  - 637: exiled Reign (S+114) in stinkyscape-t-anomaly-found's run\n  - 1140: damageAbsorbed Reign in meditative-030-1 Love Bomb's run (cast on draw)\n  - 2071: positionSwitched Mace (S+111) in stinkyscape-150 Call to Chaos (Stinky) run\n  - 2260 (I14 branch): exiled Megabase (S116) in stinkyscape-151 Call to Chaos (Scape) run\n  - 2614: exiled classicplus-004 in stinkyscape-102 Book of Nono-Words' run\n- replace_board (effects/anomaly.rs:97) already uses cards_in_scope_aimed(Harm), which should skip immune.\n- e2e shard 8 = specs 09,10,12,16,17,23,30,42,51,53; delegated to a subagent to reproduce.\n\n## Scratch (lost if the machine changes)\n- /tmp/diag: git archive of crates with an eprintln of the 40 events before each I21 finding (JK_DIAG=1).\n\n## TODO\n- diag each seed; classify engine bug vs I21 monitor gap.\n- shards 2-4 plain, all handicap, all duos.",
