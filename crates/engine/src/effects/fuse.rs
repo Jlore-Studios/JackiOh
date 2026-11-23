@@ -603,6 +603,7 @@ pub fn equip_picks(args: EquipPicksArgs) -> Effect {
                         keep_cost: Some(false),
                         count: None,
                         unfused_only: None,
+                        as_text: None,
                     });
                     (random.apply)(ctx);
                 }
