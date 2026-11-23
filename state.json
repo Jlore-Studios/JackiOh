@@ -39268,7 +39268,8 @@
       "2026-11-23T00:02:44Z,muse,usage-command,call,45082831483,10,2026-11-23T01:56:00Z,0,2026-11-30T00:00:00Z,allowed,100,100,"
     ],
     "runs": [
-      "2026-11-23T00:10:14Z,45086029586,gpt,gpt-5.6-sol,review,4530,medium,approved,,12,5497781,10694,0,,,,41,41,3.6,,none,,1"
+      "2026-11-23T00:10:14Z,45086029586,gpt,gpt-5.6-sol,review,4530,medium,approved,,12,5497781,10694,0,,,,41,41,3.6,,none,,1",
+      "2026-11-23T00:07:03Z,45082831483,muse,muse-spark-1.3-contributor,review,4528,medium,approved,,44.5,0,0,0,,7,10,82,0,0.8,,none,,1"
     ]
   },
   "version": 1
