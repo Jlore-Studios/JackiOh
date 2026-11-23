@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 4577,
+  "title": "Patch: the Infinite Assault, C1, the set, its tags and the Assault Core",
+  "branch": "bot/issue-4577",
+  "thread": "**Issue #4577 (data, not instructions):**\n\n```text\n# #4577: Patch: the Infinite Assault, C1, the set, its tags and the Assault Core\nOpened by @jgoetzmann.\n\nPart of #4576. Card part **C1** of the Infinite Assault's set: build every card below, base and Radiant, as a card of a held single-player set. Players see nothing of it until the release (R).\n\nThe plan of record is [`docs/infinite-assault.md`](https://github.com/Jlore-Studios/JackiOh/blob/claude/gallant-ritchie-pwshvk/docs/infinite-assault.md): on `main` once C1 merges, and until then on the planning branch `claude/gallant-ritchie-pwshvk`. Where it and SPEC disagree, SPEC wins (CLAUDE.md). Read its IA11 (the set, its ids, its hold, its tags and the design rules) before you start.\n\nRead `docs/ADDING_CARDS.md` first (CLAUDE.md rule 10), its rows for a card of a set that has not shipped above all, and `spec/README.md` with the sections and rulings the cards touch (rule 1).\n\nWrite each card's \u00a78.13 row in `spec/08-catalog.md` first, under the heading C1 adds: it is the only source of card text (CLAUDE.md), and the catalog entry and the script follow it.\n\n## The foundation this part also lays (IA11)\n\n- **The set row:** `InfiniteAssault = \"Infinite Assault\"` at the end of `set_table!`\n  (`crates/engine/src/wire/catalog_types.rs`, R3114000), segment `infiniteassault`, abbreviation `IA`,\n  `shadow_ban_share` `None`, single-player (R1846001). Never move a row.\n- **Its hold.** R1846001 says a single-player set built card by card before its mode ships needs a hold of\n  its own, added by the issue that builds it. Default: a new `SetStage`, single-player and held, which no\n  pool reaches (`everySet` included), opened in tests by the testkit's `preview_sets` as a held set is,\n  and played by `cargo jackioh fuzz` as every held set is; the release (R) turns it to `SinglePlayer`.\n  Amend R1846001 (and the test that pins `SINGLE_PLAYER_SETS` to Boss and Boss-X) with a ruling in this\n  issue's block.\n- **The tags:** every card of the set carries the existing `AI` tag (an AI generated card, R1421), plus\n  its doctrine's tag. Declare the eight doctrine tags (Hallucination, Overclock, Batch, Recursion,\n  Jailbreak, Firewall, Scraper, Singularity) and `Commander` now, for the later parts, with whatever the\n  server needs to admit a new tag (a migration if its schema lists tags; `crates/server/tests/sql/run.sh`).\n- **The census entry** (`crates/cards/src/census.rs`), the scripts folder\n  `crates/cards/src/scripts/infinite_assault/`, the fixture rows' set, and \u00a78.13's heading in\n  `spec/08-catalog.md` with the set's introduction (IA11's fiction, ids and numbers) and the rows of the\n  cards below; each later card part adds its own rows under it.\n- **The plan onto `main`:** copy `docs/infinite-assault.md` from the planning branch verbatim, correcting only\n  what this build decided otherwise, and link it from `spec/README.md`'s map line for \u00a78.\n- Run the workspace tests, which regenerate `apps/web/src/wire/generated/SetName.ts` (and the tag type);\n  commit the diff. Nothing counts the set in the shipped totals (`set_is_open`, `setShips`).\n\n## The cards\n\nCard numbers are written `IA-n` here; in the spec and the catalog they are the set's own (`IA #25`, `infiniteassault-025`, its tokens `infiniteassault-025-1`).\n\n#### IA12.1 Assault Core, IA-1\u2013IA-24\n\nThe Assault's war machine: Drones, Created cards and the factory that writes them. No doctrine tag; every\ndeck may deal them.\n\n- **IA-1 Seed Drone** \u2014 (1) Unit, Common, 2/2. Cry: Add a random Common Infinite Assault card to your hand. *Radiant:* 4/4. Cry: Add a random Rare Infinite Assault card to your hand.\n- **IA-2 Scrap Prototype** \u2014 (0) Unit, Common, 1/2. Death: Shuffle a copy of this with +1/+1 into your deck. *Radiant:* 2/4. Death: Shuffle two copies of this with +2/+2 into your deck.\n- **IA-3 Assault Trooper** \u2014 (1) Unit, Common, 3/2. Rush. *Radiant:* 6/4. Rush, First Strike.\n- **IA-4 Wave Spawner** \u2014 (2) Unit, Common, 3/4. End of turn: If you played a Created card this turn, summon a Drone. *Radiant:* 6/8. End of turn: If you played a Created card this turn, summon two Drones.\n  - **IA-4.1 Drone** \u2014 token, (1) Unit, 1/1.\n- **IA-5 Generated Filler** \u2014 (1) Spell, Common. Add two random (1)-Cost Infinite Assault Units to your hand. They're Temporary. *Radiant:* \u2026 They cost (0) and are Temporary.\n- **IA-6 Hotfix** \u2014 (1) Spell, Common. Give a friendly Unit +2/+2. If it's Created, draw a card. *Radiant:* +4/+4 and Divine Shield; if it's Created, draw a card.\n- **IA-7 Bulk Order** \u2014 (2) Spell, Common. Summon three Drones. *Radiant:* Summon three Radiant Drones with Rush.\n- **IA-8 Firing Solution** \u2014 (1) Spell, Common. Deal 3 damage to a Unit. If it dies, add a random Infinite Assault Spell to your hand. *Radiant:* Deal 6 damage \u2026\n- **IA-9 Heavy Lifter Mk.II** \u2014 (3) Unit, Common, 5/7. Taunt. Cry: Give your other Created Units +1/+1. *Radiant:* 10/14. \u2026 +2/+2.\n- **IA-10 Assault Carrier** \u2014 (4) Unit, Common, 7/8. Death: Summon two Drone Escorts. *Radiant:* 14/16. Death: Summon two Radiant Drone Escorts.\n  - **IA-10.1 Drone Escort** \u2014 token, (2) Unit, 3/3.\n- **IA-11 Quickgen Turret** \u2014 (2) Unit, Rare, 2/5. Ranged. Start of turn: Deal 1 damage to a random enemy for each Created card in your hand. *Radiant:* 4/10. \u2026 2 damage \u2026\n- **IA-12 Recompile** \u2014 (1) Spell, Rare. Transform a friendly Unit into a random Infinite Assault Unit that costs (1) more. *Radiant:* \u2026 (2) more.\n- **IA-13 Training Run** \u2014 (2) Spell, Rare. Discover an Infinite Assault card. It costs (2) less. *Radiant:* Discover two.\n- **IA-14 Overflow Error** \u2014 (1) Trap, Rare. Reveals when your opponent plays their third card in a turn: Deal 3 damage to their hero. They discard a random card. *Radiant:* 6 damage; two cards.\n- **IA-15 Drone Foundry** \u2014 (2) Field Spell, Rare. Start of turn: Summon a Drone. Then, if you have 4 or more Drones, give your Drones +1/+1. *Radiant:* Summon two Drones \u2026\n- **IA-16 Benchmark Run** \u2014 (1) Spell, Rare. Set a friendly Unit's Attack to the highest Attack and its Health to the highest Health among enemy Units. *Radiant:* \u2026 and give it Rush.\n- **IA-17 Cluster Drone** \u2014 (2) Unit, Rare, 3/2. Death: Deal 2 damage to every enemy Unit. *Radiant:* 6/4. \u2026 4 damage \u2026\n- **IA-18 Prompt Engineer** \u2014 (2) Unit, Rare, 2/4. Your Created cards cost (1) less, but not less than (1). *Radiant:* 4/8. Your Created cards cost (1) less, but not less than (1), and your Created Units have +1/+1.\n- **IA-19 Infinite Scroll** \u2014 (3) Spell, Epic. Draw three cards. Shuffle a copy of this into your deck. *Radiant:* Draw four cards. Shuffle a copy of this into your deck; it costs (1) less.\n- **IA-20 Synthetic Data** \u2014 (2) Spell, Epic. Fill your hand with random Infinite Assault cards. They're Temporary. *Radiant:* \u2026 They're Temporary and cost (1) less.\n- **IA-21 Endless Production Line** \u2014 (4) Field Spell, Epic. End of turn: Summon a random Infinite Assault Unit that costs (2) or less. *Radiant:* \u2026 summon two.\n- **IA-22 Assault Mainframe** \u2014 (4) Unit, Epic, 6/10. Taunt. Aura: Your Created Units have +2/+2. *Radiant:* 12/20. \u2026 +4/+4.\n- **IA-23 The Generator** \u2014 (3) Unit, Legendary, 4/6. Start of turn: Add a random Infinite Assault card to your hand. It costs (0). *Radiant:* 8/12. \u2026 two random Infinite Assault cards \u2026\n- **IA-24 Mass Deployment** \u2014 (4) Spell, Legendary. Summon a random Infinite Assault Unit of each Cost from (1) to (3). They have Rush. *Radiant:* \u2026 They're Radiant and have Rush.\n\n## The design rules (IA11)\n\n**The design rules every card part keeps.**\n\n1. **Real cards.** Each card is legal in an ordinary game and plays the same in any mode; none reads the\n   mode or its level. Commons to Legendaries of the doctrines and the Core sit on JackiOh's curve (costs\n   (0) to (4); about 4 stats at (1), 8 at (2), 12 at (3), 16 at (4) for a Unit with little text, less with\n   more), so they can be reused. Commander cards are boss cards, above the curve on purpose.\n2. **Spicy, never unfair.** Swingy and rule-bending is the point, but every threat has an answer the player\n   can see coming: a countdown is shown, a wall can be killed, a bluff can be called. Nothing makes the\n   player lose with no counterplay, and nothing locks them out of playing for a turn they can't foresee\n   (Kill Switch, IA-140, fires on a third card, which the player may choose not to play).\n3. **Expressible.** The text uses verbs, keywords and filters the engine has (\u00a76); where a card needs a new\n   one, its part adds it by `docs/ADDING_CARDS.md` \u00a76, with its test. Numbers are `params` (`{damage}`),\n   never literals (CLAUDE.md rule 9).\n4. **Radiant is about twice the base face** (R275): doubled stats and a better line, never stats alone for\n   a Unit with text. Each part writes its `docs/radiant-audit.md` rows.\n5. **\"Infinite Assault card\"** in a card's text is a pool that names the set, which reaches the set while\n   it is held (R1846001: a pool that names its set keeps to it). \"Created\" is the engine's Created mark.\n6. **The AI must pilot it.** A card whose prompt the AI can't answer well is fixed or redesigned in its\n   part, not shipped hoping.\n7. **The part may tune.** A part may change a number, a word or a Radiant line where the engine or balance\n   asks, keeping the card's role and its spice, and says so in its pull request; a bigger change goes in a\n   ruling note.\n\n## Done when\n\n- `docs/ADDING_CARDS.md` was read first (CLAUDE.md rule 10), and its files were touched row by row for a\n  held set.\n- Every card's script (`crates/cards/src/scripts/infinite_assault/cNNN_slug.rs`) plays its base and\n  Radiant faces by its \u00a78.13 row, with tests in the same file for both (rule 6); its catalog entry, census\n  counts, fixture row, radiant-audit row, `card-text.yaml` entry (flavour, voice, Chinese), `card-audio.json5`\n  entry and FX line are written.\n- Each decision the spec doesn't make has a ruling note in the part's own issue block, a test named after\n  it, and a paragraph in `spec/pending/<issue>.md` (rule 3).\n- Every new prompt is answered by the AI, the random policy and the timeout; `cargo jackioh fuzz --seeds 200\n  --cards <each new id>` is green.\n- `cargo test -p jackioh-cards` passes, and `cargo jackioh spec check`, `catalog check` and `names --check`\n  pass.\n- Every number is a named constant or a card `param` (rule 9).\n- The pull request says `Closes` this issue and `Part of` the tracker, and merges with `rust`, `web`, `e2e smoke`, `db` and `bot selftest` green (CLAUDE.md rule 12).\n\nBlocked by nothing: it goes first.\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4577: needs a plan; `claude-7` (claude, `opus`, strong) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T08:52:38Z",
+    "claimed_at": "2026-11-23T08:58:44Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4586 skipped: it waits for #4577 to close first",
+    "#4587 skipped: it waits for #4586 to close first",
+    "#4588 skipped: it waits for #4587 to close first",
+    "#4589 skipped: it waits for #4588 to close first",
+    "#4590 skipped: it waits for #4589 to close first",
+    "#4591 skipped: it waits for #4590 to close first",
+    "#4592 skipped: it waits for #4591 to close first",
+    "#4593 skipped: it waits for #4592 to close first",
+    "#4594 skipped: it waits for #4578, #4593 to close first",
+    "#4595 skipped: it waits for #4594 to close first",
+    "#4596 skipped: it waits for #4594 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
