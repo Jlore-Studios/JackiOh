@@ -18951,18 +18951,8 @@
     "what": "build #4607 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-23T17:54:21Z",
-    "notes": [
-      "delivered plan #4607 on muse (run 45231445005): planned",
-      "delivered plan #4605 on muse (run 45231328338): planned",
-      "delivered plan #4606 on muse (run 45231221107): planned",
-      "delivered plan #4614 on muse (run 45231104871): planned",
-      "started build #4614 on muse (run 45233498671)",
-      "started build #4606 on muse (run 45233592055)",
-      "started build #4605 on muse (run 45233716796)",
-      "started build #4607 on muse (run 45233836151)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-11-23T18:07:57Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -19667,7 +19657,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T17:54:21Z",
+  "loop_tick": "2026-11-23T18:07:57Z",
   "machine_disk": {
     "issue": null,
     "reading": {
