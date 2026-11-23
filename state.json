@@ -16330,7 +16330,7 @@
       "last_findings": [],
       "live": "building",
       "owner": "muse",
-      "owner_since": "2026-11-23T01:04:57Z",
+      "owner_since": "2026-11-23T01:05:02Z",
       "owner_why": "its turn came (#4531, which it waited behind, closed), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-22T22:35:32Z",
@@ -16739,7 +16739,7 @@
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
-      "queued_at": "2026-11-23T01:04:57Z",
+      "queued_at": "2026-11-23T01:05:02Z",
       "run_id": "45085990073",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
@@ -16750,8 +16750,8 @@
       "turn": {
         "model": "muse-spark-1.3-contributor",
         "provider": "muse",
-        "since": "2026-11-23T01:04:57Z",
-        "until": "2026-11-23T01:34:57Z",
+        "since": "2026-11-23T01:05:02Z",
+        "until": "2026-11-23T01:35:02Z",
         "why": "#4531, which it waited behind, closed"
       },
       "votes": {
