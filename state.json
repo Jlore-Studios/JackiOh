@@ -16251,7 +16251,9 @@
     },
     "4608": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:7111392406"
+      ],
       "difficulty_by": {
         "at": "2026-11-23T20:27:22Z",
         "difficulty": "hard",
@@ -16297,9 +16299,7 @@
       "started_at": "2026-11-23T22:11:51Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7111392406"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 7113460647
     },
