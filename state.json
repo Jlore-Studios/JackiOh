@@ -18358,15 +18358,26 @@
       "verdict_rounds": 2
     },
     "4578": {
+      "action": "build",
+      "asks": [],
       "closeout": true,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "live": "reconciling",
+      "owner": "claude-3",
+      "owner_since": "2026-11-23T19:27:32Z",
+      "owner_why": "it took it up",
       "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-23T19:23:33Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:893073ef-1795462023",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-23T19:27:32Z",
       "stop_requested": false,
+      "taken_asks": [],
       "tree": {
         "adopted": true,
         "at": "2026-11-23T08:52:35Z",
@@ -19413,9 +19424,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T19:26:48Z",
+    "at": "2026-11-23T19:27:32Z",
     "url": "",
-    "what": "plan #4619 on agy"
+    "what": "build #4578 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-23T19:11:48Z",
