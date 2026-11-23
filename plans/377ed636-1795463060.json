@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 4610,
+  "title": "Patch: the shared crate's tests build as one test program, as every other crate's do",
+  "branch": "bot/issue-4610",
+  "thread": "**Issue #4610 (data, not instructions):**\n\n```text\n# #4610: Patch: the shared crate's tests build as one test program, as every other crate's do\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery time the project's checks run on a change, they build the shared crate's tests as 29 separate programs. Each one is linked against the whole game: the rules engine, every card, the AI and the dungeon run. The project's own design notes say a crate's tests should be one program, because each extra one costs its own build and link, and the engine, the cards, the AI and the server already work that way. Once this is built, the same tests (none added, none lost) build as one program, or as a few if that measures faster. Changes that reach the shared crate then wait less for their checks. The weekly mutation runs, which rebuild these tests once for every mutant, also get through more of their work in the same five hours. Only the maintainer and the bot notice; players see nothing.\n\n## Why\n\n- **The rule:** `docs/v0.3.0/SURFACE.md` says \"Integration tests are one binary per crate... Each file directly under `tests/` is its own binary and its own link step\". The engine (`tests/rules.rs` with `tests/rules/`), the cards (`tests/cards.rs` with `tests/cross/`), the AI and the server follow it.\n- **The crate that doesn't:** `crates/shared/tests/` holds 29 files at its top level, so Cargo builds 29 test binaries. Ten of them hold 10 tests or fewer: `boundary.rs` 5, `bots_pick.rs` 6, `season.rs` 6, `again.rs` 10, and so on. `jackioh-shared` builds on the engine, the cards, the AI and the run, so each binary links all of them.\n- **How often it's paid:** they build in the `tools, wasm` group, which runs as 4 shards (`scripts/ci-shards.toml`). Each shard compiles and links everything again (\"A count splits a job's run, not its compile\"). `scripts/ci-scope.sh` turns that group on for any change under `crates/engine`, `crates/cards`, `crates/ai`, `crates/shared`, `crates/run`, `crates/tools` or `crates/wasm`.\n- **Mutation testing:** `scripts/mutants.sh` records a shared-crate mutant at \"about a minute (243 mutants in 1 h 46 min)\", where a mutant's time \"is mostly compiling its package and its tests again\". Every mutant relinks all 29 binaries.\n- **No timing on record:** nothing in the repository times those 29 links, so the pull request measures them (see Acceptance criteria).\n\n## Proposal\n\n- **The test target:** in `crates/shared/Cargo.toml`, set `autotests = false` and declare one `[[test]]`, named `shared`, at `tests/shared.rs`. That file pulls each existing file in as a module with `#[path = \"<file>.rs\"]`.\n  - The files stay where they are, so the 104 ruling notes whose `proven_in` cites `crates/shared/tests/<file>.rs` stay valid, along with `spec/INDEX.md` and the docs.\n  - Test function names are unchanged, so every `r<n>` token stays where `spec check` finds it.\n- **Module names:** a module name must not put `fuzz::`, `selfplay::` or `positions::` into a test's path. `.github/ci/rust-test.toml`'s `tools, wasm` group skips those names, and the two groups that run them run only the `jackioh` binary. A module named `host_fuzz` would therefore make `host_fuzz.rs`'s 15 tests silently run nowhere, so give it another name (for example `host_soak`).\n- **A guard:** a check in `crates/tools/tests/acceptance.rs`, with its planted-file self-test as the file's other scans have. It fails on a `.rs` file directly under `crates/shared/tests/` that `tests/shared.rs` does not declare, since `autotests = false` would otherwise leave a new file there unbuilt without a word.\n- **Measure first:** before settling on one binary, the builder times both layouts. If one crate's front end turns out to be the bottleneck, the tests split into two or three binaries instead, as the engine's rules split into `rules`, `rules_2` and `rules_3` to compile side by side. The guard covers whichever entry files result.\n- **The rerun command:** update `crates/shared/README.md`'s `--test host_fuzz repro` to the new binary and module path.\n\n## Where it lands\n\n- `crates/shared/Cargo.toml`\n- `crates/shared/tests/shared.rs` (new)\n- `crates/tools/tests/acceptance.rs`\n- `crates/shared/README.md`\n- No `.github/` change: the group's command already runs every test target of the workspace's other crates.\n\n## Acceptance criteria\n\n- [ ] The tests `cargo test -p jackioh-shared` lists are the same before and after: the same count, the ignored daily ones included, and the same names apart from their new module prefix. The pull request quotes both counts.\n- [ ] The tests the `tools, wasm` group's skip filters let through from `jackioh-shared` are the same count before and after, so no test fell into the `fuzz::`, `selfplay::` or `positions::` filters.\n- [ ] The pull request gives two pairs of wall times, before and after, measured on the same machine:\n  - rebuilding the shared crate's tests after a one-line change under `crates/shared/src` (what each mutant pays);\n  - building them from a clean `jackioh-shared` with its dependencies already built.\n  \n  The first is lower after.\n- [ ] The new acceptance check fails on a planted undeclared file, and passes on the tree.\n- [ ] `cargo jackioh spec check`, `cargo fmt --check` and `cargo clippy --workspace --all-targets -- -D warnings` pass, and so do the shared and tools tests.\n\n## Size and risks\n\n**Size:** medium, about five files and no behaviour change.\n\n**Risks:**\n- The silent-skip trap on module names, which the second acceptance item guards.\n- A test that leaned on running in a process of its own. The crate is pure (CLAUDE.md rule 4) and its tests share only the `OnceLock` registries, so none is expected, and a full run shows it.\n- The measured saving may be smaller than hoped. Then the pull request says so with its numbers, and stops at the layout that measured fastest.\n\nThe tools crate's six test binaries are left alone: they spawn the built `jackioh` and run `cargo` itself, which is a separate call.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-23T19:17:52Z:\n\napprove\n\nWhy: `crates/shared/tests/` has 29 top-level files and no `autotests = false`, so Cargo links 29 test binaries, each against the engine, every card, the AI and the run, in every shard of `tools, wasm` and again for every shared-crate mutant. `docs/v0.3.0/SURFACE.md` already says one binary per crate, and every other crate follows it. No behaviour changes, and the issue covers the `fuzz::` module-name trap and asks for timings before and after.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4610: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T19:38:50Z",
+    "claimed_at": "2026-11-23T19:44:51Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4586 skipped: it waits for #4602 to close first",
+    "#4587 skipped: it waits for #4602 to close first",
+    "#4588 skipped: it waits for #4602 to close first",
+    "#4589 skipped: it waits for #4602 to close first",
+    "#4590 skipped: it waits for #4602 to close first",
+    "#4591 skipped: it waits for #4602 to close first",
+    "#4592 skipped: it waits for #4602 to close first",
+    "#4593 skipped: it waits for #4602 to close first",
+    "#4594 skipped: it waits for #4602 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
