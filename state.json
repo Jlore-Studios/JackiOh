@@ -40371,6 +40371,12 @@
         "number": 4639,
         "title": "Patch: a fused-pair skip that stops failing fails the sweep",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T22:57:32Z",
+        "number": 4645,
+        "title": "Patch: a fuzz rotation offers and answers draws",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
