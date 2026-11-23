@@ -17595,10 +17595,16 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-23T03:47:06Z",
       "owner_why": "handed off from `claude-1`: `claude-1` it refused a call; its limit resets at 2026-11-23T07:50:00Z; it can start again only in 4h 02m, more than the 120 minutes an item waits for its owner",
+      "paused": {
+        "at": "2026-11-23T04:53:27Z",
+        "interrupt": "usage",
+        "provider": "claude-8"
+      },
       "pending_request": false,
       "planned_at": "2026-11-23T04:26:57Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -17606,11 +17612,13 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-8",
+      "round_tier": "strong",
       "run_id": "45112158542",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-23T04:29:27Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "4552": {
       "action": "build",
