@@ -24,11 +24,26 @@
                      ));
                      released.insert(id);
                  }
-@@ -2148,12 +2156,22 @@
+@@ -2148,12 +2156,38 @@
      for card in &field {
          for (forged, listed) in forged_activations(state, player, card) {
              if accepts_as(forged.clone(), &listed) {
 +                let listed_err = crate::reduce::reduce(&probed, &Action::new(listed.clone(), player, PROBE_NONCE)).error;
++                let lane_ix = match card.zone { Zone::Field { lane, .. } => (lane - 1).max(0) as usize, _ => 0 };
++                let side = &state.players[card.controller];
++                let slot_ids = format!(
++                    "backrow={:?} pile={:?} carried={:?} units={:?} buried={} acts_to_awaken={} acting={} abilities={:?} offered={:?} why={:?}",
++                    side.backrow.get(lane_ix).and_then(|c| c.as_ref()).map(|c| c.id.clone()),
++                    side.backrow_piles.as_ref().and_then(|p| p.get(lane_ix)).map(|p| p.iter().map(|c| c.id.clone()).collect::<Vec<_>>()),
++                    side.carried.as_ref().and_then(|c| c.get(lane_ix)).and_then(|c| c.as_ref()).map(|c| c.id.clone()),
++                    side.units.get(lane_ix).and_then(|p| p.as_ref()).map(|p| p.iter().map(|c| c.id.clone()).collect::<Vec<_>>()),
++                    crate::zones::is_buried(state, card),
++                    crate::slumber::acts_to_awaken(state, card),
++                    crate::subsystems::activate::is_acting_on_field(state, card),
++                    crate::subsystems::activate::abilities_of(state, card).iter().map(|d| d.id.clone()).collect::<Vec<_>>(),
++                    crate::subsystems::activate::activate_actions_for(state, player, card).len(),
++                    crate::subsystems::activate::why_cannot_activate_ability(state, player, &card.id, None).err(),
++                );
 +                let mine: Vec<String> = legal
 +                    .iter()
 +                    .filter(|body| serde_json::to_string(body).unwrap_or_default().contains(&format!("\"{}\"", card.id)))
@@ -37,7 +52,7 @@
                  found.push(format!(
                      "I8 unlisted activation accepted: {player} may send {} for {} on turn {}, though \
 -                     legalActions does not list it (§10.2, R384)",
-+                     legalActions does not list it (§10.2, R384) DIAG listed={} listed_err={:?} legal_for_card={:?} card={}",
++                     legalActions does not list it (§10.2, R384) DIAG listed={} listed_err={:?} legal_for_card={:?} slot={} card={}",
                      serde_json::to_string(&forged).unwrap_or_default(),
                      name_of(card),
 -                    state.turn
@@ -45,6 +60,7 @@
 +                    serde_json::to_string(&listed).unwrap_or_default(),
 +                    listed_err,
 +                    mine,
++                    slot_ids,
 +                    serde_json::to_string(card).unwrap_or_default().chars().take(6000).collect::<String>()
                  ));
              }

@@ -34,7 +34,7 @@ jobs:
         run: cargo build --release -p jackioh-tools
       - name: replay the seeds
         run: |
-          for args in "--from 3775 --seeds 1" "--from 1186 --seeds 1 --handicap" "--from 1573 --seeds 1 --handicap" "--from 2334 --seeds 1 --handicap"; do
+          for args in "--from 1186 --seeds 1 --handicap"; do
             echo "=== fuzz $args"
             target/release/jackioh fuzz $args 2>&1 | grep -E "message:|example:|DIAG|seeds .*passed" | cut -c1-40000 || true
           done
