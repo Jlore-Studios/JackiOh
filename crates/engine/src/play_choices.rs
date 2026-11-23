@@ -2401,7 +2401,7 @@ pub fn with_drawn_target_picks(
             } else {
                 low
             };
-            out.extend(crate::random_targets::draw_picks(
+            let drawn = crate::random_targets::draw_picks(
                 state,
                 rng,
                 player,
@@ -2409,7 +2409,17 @@ pub fn with_drawn_target_picks(
                 low,
                 high,
                 crate::targeting::target_aim(decl),
-            ));
+            );
+            // I22 (#4540): the fuzz monitor holds this draw to the targeting rules (`testkit::seams`).
+            #[cfg(feature = "testkit")]
+            crate::testkit::seams::record_target_draw(
+                state,
+                Some(card),
+                player,
+                crate::testkit::seams::TargetDrawBy::Mayor,
+                &drawn,
+            );
+            out.extend(drawn);
             continue;
         }
         let rest = &given[at.min(given.len())..];

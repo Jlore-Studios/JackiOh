@@ -2517,6 +2517,15 @@ fn ask_repeat_targets(
                 decl.max,
                 crate::targeting::target_aim(decl),
             );
+            // I22 (#4540): the fuzz monitor holds this draw to the targeting rules (`testkit::seams`).
+            #[cfg(feature = "testkit")]
+            crate::testkit::seams::record_target_draw(
+                sink.state,
+                Some(card),
+                run.player,
+                crate::testkit::seams::TargetDrawBy::Mayor,
+                &picks,
+            );
             if let Some(repeat) = run.repeat.as_mut() {
                 repeat.targets.extend(picks);
             }
@@ -2525,6 +2534,17 @@ fn ask_repeat_targets(
         // R452: a random cast makes this pick itself, at random, and asks nobody.
         if run.random == Some(true) || random_cast_of(sink.state, run.player).is_some() {
             let picks = random_picks(sink.rng, &options, decl.min, decl.max);
+            // I22 (#4540): a `target` pick only; a Tribute or a hand pick is no targeting.
+            #[cfg(feature = "testkit")]
+            if decl.kind == PromptKind::Target {
+                crate::testkit::seams::record_target_draw(
+                    sink.state,
+                    Some(card),
+                    run.player,
+                    crate::testkit::seams::TargetDrawBy::RandomCast,
+                    &picks,
+                );
+            }
             if let Some(repeat) = run.repeat.as_mut() {
                 repeat.targets.extend(picks);
             }

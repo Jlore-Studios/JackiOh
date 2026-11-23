@@ -336,7 +336,7 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
         }
         // R1200: while a Mayor acts a `target` Cry pick is drawn at random, and nobody is asked.
         if decl.kind == PromptKind::Target && crate::random_targets::targets_random(sink.state) {
-            run.targets.extend(crate::random_targets::draw_picks(
+            let picks = crate::random_targets::draw_picks(
                 sink.state,
                 &mut *sink.rng,
                 run.controller,
@@ -344,7 +344,17 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
                 decl.min,
                 decl.max,
                 crate::targeting::target_aim(decl),
-            ));
+            );
+            // I22 (#4540): the fuzz monitor holds this draw to the targeting rules (`testkit::seams`).
+            #[cfg(feature = "testkit")]
+            crate::testkit::seams::record_target_draw(
+                sink.state,
+                Some(card),
+                run.controller,
+                crate::testkit::seams::TargetDrawBy::Mayor,
+                &picks,
+            );
+            run.targets.extend(picks);
             continue;
         }
         // R452: a random cast's caster is never asked; its picks are drawn at random, each aimed by its
@@ -363,8 +373,19 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
             } else {
                 options
             };
-            run.targets
-                .extend(random_picks(sink.rng, &pool, decl.min, decl.max));
+            let picks = random_picks(sink.rng, &pool, decl.min, decl.max);
+            // I22 (#4540): a `target` pick only; a hand or zone pick is no targeting.
+            #[cfg(feature = "testkit")]
+            if decl.kind == PromptKind::Target {
+                crate::testkit::seams::record_target_draw(
+                    sink.state,
+                    Some(card),
+                    run.controller,
+                    crate::testkit::seams::TargetDrawBy::RandomCast,
+                    &picks,
+                );
+            }
+            run.targets.extend(picks);
             continue;
         }
         run.awaiting = Some(CryAwaiting::Target);
