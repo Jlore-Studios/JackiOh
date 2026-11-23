@@ -16874,7 +16874,7 @@
       "issue": 4517,
       "kind": "revise",
       "last_findings": [],
-      "live": "resolving",
+      "live": "fixing-ci",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
@@ -16882,11 +16882,11 @@
       "queued_at": "2026-11-23T01:52:02Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "45092546905",
+      "run_id": "pending:dcf5aa86-1795398989",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-11-23T01:05:28Z",
+      "started_at": "2026-11-23T01:56:54Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -17307,9 +17307,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T01:40:40Z",
+    "at": "2026-11-23T01:56:54Z",
     "url": "",
-    "what": "plan #4540 on claude-3"
+    "what": "revise #4532 on muse"
   },
   "last_sweep": {
     "at": "2026-11-23T01:47:37Z",
