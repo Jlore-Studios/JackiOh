@@ -17948,6 +17948,7 @@
       "run_id": "45132273311",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 475,
       "started_at": "2026-11-23T07:35:51Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -39969,9 +39970,33 @@
         "title": "Patch: the AI's turn-hook and Activate shares are fork-screened at a whole use and set where the screen keeps them",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "87012745949d1710da6fb17be0b0a0c7ca905371",
+        "issue": 4555,
+        "merged_at": "2026-11-23T08:09:36Z",
+        "n": 475,
+        "pr": 4571,
+        "queued_at": "2026-11-23T08:09:36Z",
+        "sha": "44439387fb6afa3242ffb440cd1fca510d73ed71",
+        "status": "queued",
+        "title": "Patch: daily super run failed",
+        "tries": 0
       }
     ],
-    "count": 474
+    "count": 475
   },
   "statistics": {
     "at": "2026-11-23T08:06:23Z"
