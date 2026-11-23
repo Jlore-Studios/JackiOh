@@ -17874,6 +17874,13 @@
     "4568": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-23T08:21:25Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "no hard line holds: client-only change over six files, not engine/AI/cross-crate/migration/big, so medium for the rest"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
