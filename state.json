@@ -18520,6 +18520,8 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "onto": "bot/issue-4601",
+      "part_of": 4601,
       "pending_request": false,
       "queued_at": "2026-11-23T08:52:55Z",
       "requested_by": "jgoetzmann",
@@ -18530,6 +18532,8 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "onto": "bot/issue-4601",
+      "part_of": 4601,
       "pending_request": false,
       "queued_at": "2026-11-23T08:53:00Z",
       "requested_by": "jgoetzmann",
@@ -18540,6 +18544,8 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "onto": "bot/issue-4601",
+      "part_of": 4601,
       "pending_request": false,
       "queued_at": "2026-11-23T08:53:06Z",
       "requested_by": "jgoetzmann",
@@ -18550,6 +18556,8 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "onto": "bot/issue-4601",
+      "part_of": 4601,
       "pending_request": false,
       "queued_at": "2026-11-23T08:52:51Z",
       "requested_by": "jgoetzmann",
@@ -18560,16 +18568,24 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "onto": "bot/issue-4601",
+      "part_of": 4601,
       "pending_request": false,
       "queued_at": "2026-11-23T08:52:57Z",
       "requested_by": "jgoetzmann",
       "stop_requested": false
+    },
+    "4591": {
+      "onto": "bot/issue-4601",
+      "part_of": 4601
     },
     "4592": {
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "onto": "bot/issue-4601",
+      "part_of": 4601,
       "pending_request": false,
       "queued_at": "2026-11-23T08:53:03Z",
       "requested_by": "jgoetzmann",
@@ -18580,10 +18596,16 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "onto": "bot/issue-4601",
+      "part_of": 4601,
       "pending_request": false,
       "queued_at": "2026-11-23T08:53:14Z",
       "requested_by": "jgoetzmann",
       "stop_requested": false
+    },
+    "4594": {
+      "onto": "bot/issue-4601",
+      "part_of": 4601
     },
     "4595": {
       "failures": 0,
@@ -18645,6 +18667,31 @@
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7098754289
+    },
+    "4601": {
+      "closeout": false,
+      "tree": {
+        "adopted": true,
+        "at": "2026-11-23T19:14:52Z",
+        "children": [
+          4602,
+          4586,
+          4587,
+          4588,
+          4589,
+          4590,
+          4591,
+          4592,
+          4593,
+          4594
+        ],
+        "mode": "fullsend",
+        "onto": "bot/issue-4601"
+      }
+    },
+    "4602": {
+      "onto": "bot/issue-4601",
+      "part_of": 4601
     },
     "4604": {
       "action": "build",
