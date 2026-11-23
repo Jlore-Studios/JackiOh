@@ -17358,6 +17358,7 @@
           }
         ],
         "head": "b90f6352f9ebeb3a1177cff0e919dd0ee2c9cae9",
+        "interruptions": 0,
         "kind": "build",
         "model": "gpt-5.6-sol",
         "provider": "gpt",
