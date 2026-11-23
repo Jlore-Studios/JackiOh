@@ -41801,14 +41801,6 @@
         "provider": "claude-8",
         "run_id": "45236550597",
         "taken_asks": []
-      },
-      "2": {
-        "area": "ai",
-        "count": 1,
-        "last_run": "2026-11-23T18:16:41Z",
-        "provider": "claude-4",
-        "run_id": "45236669682",
-        "taken_asks": []
       }
     },
     "taken_asks": []
