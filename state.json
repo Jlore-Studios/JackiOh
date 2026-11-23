@@ -17643,15 +17643,8 @@
       "taken_asks": []
     },
     "4552": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45108057450",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-23T04:18:27Z",
-        "until": "2026-11-23T04:48:27Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17663,10 +17656,9 @@
         "reason": "planned on opus",
         "trail": "s/catalog.json'))\\ncards=c['cards'] if isinstance(c,dict) and 'cards' in c else c\\n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; python3 -I -c \\\"\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nprint(type(c), list(c.keys())[:5] if isinstance(c,dict) else len\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; python3 -I -c \\\"\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nn=0\\nfor k,d in c.items():\\n t=json.dumps(d.get('base',''))\\n if\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; grep -rln \\\"Action::PlayCard\\\\|play_card(\\\" crates/ai/tests/ai/*.rs | head -3; grep -rn \\\"core-015\\\" crates/ai/tests crates/engine/src/testkit \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; sed -n 1600,1640p crates/engine/src/testkit/scenario.rs; grep -n \\\"pub fn state\\\\b\\\\|pub fn state(\\\\|pub events\\\\|pub fn events\\\\|pub fn last_e\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; ls -la target/release/jackioh 2>/dev/null; ls target 2>/dev/null | head; nproc; grep -n \\\"AI_BUDGET\\\\b\\\" -A6 crates/ai/src/config.rs | head -12\u2026\n- Bash: {\"command\": \"which jq python3; cd /home/runner/work/_temp/work/item-4552; grep -n \\\"^## \\\\|^### \\\" crates/tools/README.md | head -30\", \"description\": \"Check jq availability and tools README sections\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; python3 -I -c \\\"\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nfor k,d in c.items():\\n if d.get('name') in ('Wild System',\\\\\\\"J\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; python3 -I -c \\\"\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nfor k in ('stinkyscapeplus-061',):\\n d=c.get(k); print(k, d and \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552/apps/web/src; sed -n 60,120p stats/CardStatsBlock.tsx | grep -n \\\"fetch\\\\|setStat\\\\|tiers\\\\|data\\\\.\\\\|created\\\\|cards\\\" | head -20\", \"descriptio\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552/apps/web/src; sed -n 70,90p stats/CardStatsBlock.tsx\", \"description\": \"Read CardStatsBlock's row selection\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; grep -rn \\\"CardStats {$\\\\|CreatedStats {$\\\\|GameTotal {$\\\" crates --include=*.rs | grep -v \\\"struct \\\\|impl \\\\|-> \\\" | awk -F: '{print $1}' | s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; grep -rn \\\"CardStats {\\\\|CreatedStats {\\\" crates apps --include=*.rs | grep -v \\\"struct \\\\|impl \\\\|-> \\\\|fn \\\" | awk -F: '{print $1}' | sort | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; grep -n \\\"CardStats\\\\b\\\" crates/server/src/api/*.rs | grep -v \\\"^.*use \\\" | head -12; grep -n \\\"pub struct CardDrill\\\" -A 10 crates/engine/src/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; sed -n 640,700p crates/server/src/api/stats.rs | grep -n \\\"cards\\\\|Serialize\\\\|json\\\\|report\\\" | head -15\", \"description\": \"Check what the serv\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; grep -n \\\"pub fn end_turn\\\\|pub fn pass_turn\\\\|pub fn act(\\\\|pub fn action(\\\\|pub fn apply(\\\" crates/engine/src/testkit/scenario.rs | head; sed\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; grep -rn \\\"mod selfplay_records\\\\|mod dealt_fit\\\\|mod sample_size\\\" crates/tools/src/*.rs | head; grep -n \\\"^pub mod\\\\|^mod \\\\|pub use dev_run\\\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4552/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery new game record carries per-seat turn rows (the raw AI eval difference at each turn's start and each \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count the plan's words and characters\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; python3 -I - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"Every new game record carries per-seat turn rows (the raw AI e\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nstart=s.index('## Tests')\\nend=s.index('## Risks')\\nnew='''## Tests\\n\\n`swing.rs` `mo\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4552/.bot-plan.md\", \"offset\": 38, \"limit\": 40}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"(`config.rs`, after `TIER_BAND_LOW`, each with a doc comment citing R455200\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nstart=s.index('| Path |')\\nend=s.index('Do not touch')\\ntable='''| Path | | What |\\n|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; sed -n '/^## Risks/,/^## Open/p' .bot-plan.md\", \"description\": \"Show the risks section\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"- **Determinism.** Integer sums only. f64 appears only in figures read from\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"- [ ] Rows written by the dev run, selfplay and the server; older records p\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\" Each term is a shrunk mean of what \\u03b1 leaves, and the calibrated P alr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4552; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\na=\\\"| `crates/ai/tests/ai/swing_turns.rs` (new), `crates/ai/tests/ai/dev_run.rs` | | \u2026\n- said: ## Goal New game records carry per-seat turn rows (raw eval difference at each turn's start, each side's acting cards, Created ones with their maker). The engine folds them as integer sums and computes, from a calibrated win probability, each card's play term, Board swing, Swing and **Decisiveness*\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-23T03:47:39Z",
       "owner_why": "handed off from `claude-1`: `claude-1` it refused a call; its limit resets at 2026-11-23T07:50:00Z; it can start again only in 4h 02m, more than the 120 minutes an item waits for its owner",
@@ -17679,9 +17671,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-23T03:11:35Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45108057450",
+      "run_id": "pending:8dee05d1-1795407539",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-23T03:47:39Z",
+      "started_at": "2026-11-23T04:19:20Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17764,9 +17756,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T04:02:59Z",
+    "at": "2026-11-23T04:19:20Z",
     "url": "",
-    "what": "spot-check #4554 on claude-6"
+    "what": "build #4552 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-23T04:10:07Z",
