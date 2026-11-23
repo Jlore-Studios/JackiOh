@@ -18488,7 +18488,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "muse",
-      "run_id": "pending:ba3fb9e8-1795426028",
+      "run_id": "45147209333",
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-23T09:27:31Z",
       "stop_requested": false,
