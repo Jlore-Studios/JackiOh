@@ -40707,6 +40707,12 @@
         "number": 4566,
         "title": "Patch: the arena reports the AI's search health beside its wins",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T08:12:45Z",
+        "number": 4564,
+        "title": "Patch: the replay listing reads its counts, ticket modes and series flags without a subquery per row",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
