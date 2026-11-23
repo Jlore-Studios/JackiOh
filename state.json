@@ -16245,17 +16245,8 @@
       ]
     },
     "4608": {
-      "action": "plan",
-      "asks": [
-        "c:7111392406"
-      ],
-      "build_next": {
-        "from_run": "45252006606",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-23T20:27:31Z",
-        "until": "2026-11-23T20:57:31Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-23T20:27:22Z",
         "difficulty": "hard",
@@ -16274,10 +16265,9 @@
         "reason": "planned on opus",
         "trail": "opy4608 && CARGO_TARGET_DIR=/tmp/probe-fix-target timeout 1700 cargo test -p jackioh-ai --lib --test ai_slow 2>&1 | grep -v \\\"^test .* ok$\\\" | grep -v \\\"^$\\\" | tail -30 > /tmp/p\u2026\n- Bash: {\"command\": \"git log --oneline -300 | grep -i \\\"4447\\\\|R4447\\\" | head -3; h=$(git log --format=%h -300 --grep=\\\"4447\\\" | head -1); git show --stat --format=\\\"%h %s\\\" $h | head -30\", \"description\": \"I\u2026\n- Bash: {\"command\": \"git show --stat --format=\\\"%h %s\\\" 27433e5db4 | head -30; git log --oneline -400 | grep -i \\\"#4159\\\\|R4159\\\\|4319\\\" | head -3\", \"description\": \"Show the #4447 build commit's files\"}\n- Bash: {\"command\": \"grep -n \\\"best mean\\\\|finalist\\\" docs/v0.3.0/SURFACE.md | head -8\", \"description\": \"Check SURFACE for finalist means text\"}\n- Bash: {\"command\": \"grep -rn \\\"pick_finalist\\\" docs/ crates/ai/README.md apps/web/src 2>/dev/null | grep -v \\\"^crates/ai/src\\\" | head\", \"description\": \"Check whether pick_finalist is documented as a surface\u2026\n- Bash: {\"command\": \"cat /tmp/probe4608/fix-ai-slow.txt 2>/dev/null | tail -12 | cut -c1-250\", \"description\": \"Check AI lib and slow suite results\"}\n- Bash: {\"command\": \"grep -n \\\"test result\\\\|FAILED\\\\|panicked\\\\|Running\\\" /tmp/probe4608/fix-ai-slow.txt | head\", \"description\": \"Summarize lib and slow results\"}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n- DONE: patched copy passes the whole AI crate: lib 69, tests/ai 993, ai_slow 102 (15 daily-ignored). No moved pin in crates/ai.\\n- Not checked by me: crates\u2026\n- said: I'll compile the exact test file I'm about to plan inside the scratch probe, against both the patched copy and the base, to confirm it passes with the fix and fails without it.\n- Bash: {\"command\": \"mkdir -p /tmp/probe4608fix/tests/lw && cat > /tmp/probe4608fix/tests/lw/support.rs <<'EOF'\\n// Probe-only stand-ins for crates/ai/tests/ai/support.rs's helpers of the same names.\\n#![all\u2026\n- Write: {\"file_path\": \"/tmp/probe4608fix/tests/lw/lone_win.rs\", \"content\": \"//! R4608000 (issue #4608): `decide` ranks a finalist whose line won on determinization 0, the world the\\n//! beam searched, and on\u2026\n- Bash: {\"command\": \"cd /tmp/probe4608fix && CARGO_TARGET_DIR=/tmp/probe-fix-target timeout 900 cargo test --test lw_main -- --nocapture 2>&1 | grep -v \\\"^\\\\s*Compiling\\\" | tail -30\", \"description\": \"Run the\u2026\n- Bash: {\"command\": \"cd /tmp/copy4608/crates/ai/src && sed -i 's/ confirm_lone_win: true,/ confirm_lone_win: false,/' config.rs && grep -n \\\"confirm_lone_win:\\\" config.rs && cd /tmp/probe4608fix && CARGO_TAR\u2026\n- Bash: {\"command\": \"cd /tmp/probe4608fix && python3 -I - <<'EOF'\\np='tests/lw/lone_win.rs'; s=open(p).read()\\nold='''#[test]\\nfn r4608000_the_switch_ships_on() {\\n const { assert!(AI_SEARCH.confirm_lone_win\u2026\n- Bash: {\"command\": \"cd /tmp/probe4608fix && CARGO_TARGET_DIR=/tmp/probe-fix-target timeout 900 cargo clippy --test lw_main -- -D warnings 2>&1 | grep -v \\\"^\\\\s*\\\\(Compiling\\\\|Checking\\\\)\\\" | head -40\", \"des\u2026\n- Bash: {\"command\": \"cd /tmp/copy4608 && CARGO_TARGET_DIR=/tmp/probe-fix-target timeout 900 cargo clippy -p jackioh-ai --all-targets -- -D warnings 2>&1 | grep -v \\\"^\\\\s*\\\\(Compiling\\\\|Checking\\\\)\\\" | head -\u2026\n- Bash: {\"command\": \"cd /tmp/probe4608fix && rustfmt --edition 2024 --config max_width=110 --check tests/lw/lone_win.rs 2>&1 | head -60\", \"description\": \"Format-check the planned test file\"}\n- Bash: {\"command\": \"ls spec/rulings/R2660000.md spec/rulings/R2102000.md; grep -n \\\"any other legal action\\\\. A line that waits\\\" spec/09-architecture.md | cut -c1-80; grep -n \\\"as it always has\\\\.$\\\" crate\u2026\n- Read: {\"file_path\": \"/tmp/probe4608fix/tests/lw/lone_win.rs\", \"offset\": 80, \"limit\": 40}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4608/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule line 2, the AI: it changes how decide (crates/ai/src/decide.rs) r\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md; git status --porcelain | head\", \"description\": \"Count plan words and confirm the tree is clean\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'; s=open(p).read()\\ndef rep(old,new):\\n global s\\n assert old in s, old[:60]\\n s=s.replace(old,new,1)\\nrep(\\\"\\\"\\\"Today `decide` ranks finalists by t\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'; s=open(p).read()\\ndef rep(old,new):\\n global s\\n assert old in s, old[:70]\\n s=s.replace(old,new,1)\\nrep(\\\"\\\"\\\" /// R4608000: a finalist whose lin\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4608/.bot-plan.md\", \"limit\": 60}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4608/.bot-plan.md\", \"offset\": 60, \"limit\": 90}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'; s=open(p).read()\\ndef rep(old,new):\\n global s\\n assert old in s, old[:70]\\n s=s.replace(old,new,1)\\nrep(\\\"\\\"\\\"**Departures from the earlier plan:\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4608/.bot-plan.md\", \"offset\": 128, \"limit\": 120}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'; s=open(p).read()\\ndef rep(old,new):\\n global s\\n assert old in s, old[:70]\\n s=s.replace(old,new,1)\\nrep(\\\"\\\"\\\"The solver, the lethal hint and the\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'; s=open(p).read()\\ndef rep(old,new):\\n global s\\n assert old in s, old[:70]\\n s=s.replace(old,new,1)\\nrep(\\\"\\\"\\\"**Departures from the earlier plan:\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'; s=open(p).read()\\ndef rep(old,new):\\n global s\\n assert old in s, old[:70]\\n s=s.replace(old,new,1)\\nrep(\\\"\\\"\\\"- [ ] Every command is green, with \u2026\n- Bash: {\"command\": \"rm -rf /tmp/probe-fix-target /tmp/copy4608 /tmp/probe4608fix /tmp/probe4608; cat .bot-plan.md\", \"description\": \"Remove scratch dirs and print the final plan\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule line 2, the AI: it changes how decide (crates/ai/src/decide.rs) ranks its search's finalists\"} --> ## Goal A finalist whose line won on determinization 0 (the world the beam searched) and on none of the other scored worlds is ranked by its mean on those\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-23T19:44:06Z",
       "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
@@ -16290,12 +16280,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-23T19:18:35Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45252006606",
+      "run_id": "pending:9afc6230-1795465888",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-23T19:44:06Z",
+      "started_at": "2026-11-23T20:31:58Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7111392406"
+      ]
     },
     "4609": {
       "action": "plan",
@@ -17146,9 +17138,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-23T20:31:14Z",
+    "at": "2026-11-23T20:31:58Z",
     "url": "",
-    "what": "review #4620 on muse"
+    "what": "build #4608 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-23T20:04:45Z",
