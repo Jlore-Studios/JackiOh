@@ -39296,7 +39296,10 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-23T20:51:13Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 4632,
         "head": "5325fc7123aa5e19e53e810df0764ad8b6df290b",
         "issue": 4606,
         "merged_at": "2026-11-23T20:38:39Z",
@@ -39309,12 +39312,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:06891b51-1795466554",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45262298713",
         "sha": "d6a44a6e78916ace38fd67b56560887c58df620b",
         "started_at": "2026-11-23T20:43:20Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: stepping back in a replay or flipping the co-op portal keeps the match's music, instead of starting the next track as if a new match began",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 480
