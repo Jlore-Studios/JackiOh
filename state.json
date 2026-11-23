@@ -18690,8 +18690,16 @@
       }
     },
     "4602": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
       "onto": "bot/issue-4601",
-      "part_of": 4601
+      "part_of": 4601,
+      "pending_request": false,
+      "queued_at": "2026-11-23T19:14:55Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false
     },
     "4604": {
       "action": "build",
