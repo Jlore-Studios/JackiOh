@@ -18694,6 +18694,7 @@
     "4604": {
       "action": "plan",
       "asks": [],
+      "failures": 1,
       "handoff": {
         "at": "2026-11-23T10:50:48Z",
         "draft": "# Draft plan for #4604 (super run fuzz 1-4/4 failed on 44439387fb6a)\n\n## Found so far\n- super.yml fuzz shard k: `jackioh fuzz --from F --seeds 3125` then `--handicap`, then `fuzz --duos --from F2 --seeds 500`\n  (F = (k-1)*3125+1, F2 = (k-1)*500+1).\n- Base 84e1400b22 contains 44439387fb (promoted commit). No fuzz-relevant commit after it.\n- Suspects landed 2026-11-23: I21 (b567407a24, #4508), I22 (32dec5b59f, #4540), #4571 (#4555: play_choices.rs + invariants.rs).\n- Building `cargo build --release -p jackioh-tools` to reproduce.\n\n## Next\n- Run each shard's waves, collect failing seeds + stage + message.",
