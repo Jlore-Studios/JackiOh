@@ -70,6 +70,7 @@ export const keyRing: Entrance = ({ D, tgt, intensity: i, view, landing, leadMs 
   const span = D - lead;
   const slam = lead + frac(FX_SLAM_AT, span);
   const side = view === undefined || landing === undefined ? {} : { side: sideOf(view, landing.player) };
+  // Stryker disable next-line StringLiteral: no unit's id is "" nor Stryker's text, so either finds no unit and turns KEENUS_KEYS.
   const n = keysOf(view, landing?.instanceId ?? "");
   return [
     figureCue("keyRing", at, tint, lead, D - lead + TIMING.tailMs, side),
@@ -99,5 +100,6 @@ export const keenusKeys: CardRecipe = (event, p, play) => {
 /** R3405001: his Equip play as `player` sees it: fused into `player`'s first Unit. */
 export const keenusKeysFixture: RecipeFixture = (view, instanceId, player: PlayerId): GameEvent[] => {
   const host = (player === view.viewer ? view.you : view.opponent).units.find((unit) => unit !== null);
-  return host === undefined || host === null ? [] : [{ type: "fused", instanceIds: [host.instanceId, instanceId], resultInstanceId: host.instanceId, defId: host.defId }];
+  // `find` answers a Unit or undefined, never one of the empty zones' nulls it skips.
+  return host === undefined ? [] : [{ type: "fused", instanceIds: [host.instanceId, instanceId], resultInstanceId: host.instanceId, defId: host.defId }];
 };

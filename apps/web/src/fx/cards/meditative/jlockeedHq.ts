@@ -90,5 +90,5 @@ export const jlockeedHq: CardRecipe = (event, p, play) => {
 export const jlockeedHqFixture: RecipeFixture = (view, _instanceId, player: PlayerId): GameEvent[] => {
   const side = player === view.viewer ? view.you : view.opponent;
   const open = side.units.findIndex((unit) => unit === null);
-  return [{ type: "summoned", player, instanceId: "fx-jlockeed", defId: GALLERY_UNIT, row: "units", lane: open < 0 ? 1 : open + 1 }];
+  return [{ type: "summoned", player, instanceId: "fx-jlockeed", defId: GALLERY_UNIT, row: "units", lane: Math.max(open, 0) + 1 }];
 };

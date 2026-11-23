@@ -3150,6 +3150,7 @@ const tillRattle: SfxRecipe = (ctx, out, at) => {
   run(k, motor, 0, 0.34);
   // The ball rattles round the wheel, slowing as it settles.
   const bounces: number[] = [];
+  // Stryker disable next-line EqualityOperator: the bounces land at 0.4 plus a growing gap (0.973, then 1.106), never on 1.0.
   for (let t = 0.4, gap = 0.03; t < 1.0; gap *= 1.18) {
     bounces.push(t);
     t += gap;
@@ -3356,6 +3357,7 @@ const kazooRatchet: SfxRecipe = (ctx, out, at) => {
   chain(squelch, gut, envelope(k, 0, 0.01, 0.48, 0.24), out);
   run(k, squelch, 0, 0.24);
   const ratchet: number[] = [];
+  // Stryker disable next-line EqualityOperator: t steps from 0.728 to 0.756, never onto 0.74.
   for (let t = 0.28; t < 0.74; t += 0.028) ratchet.push(t);
   clickTrain(k, out, ratchet, 1700, 6, 0.72, 0.018);
   // The kazoo's buzz: each note's saw through one nasal band, chopped by a fast square.

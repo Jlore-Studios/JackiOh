@@ -14,7 +14,7 @@ import "./cosmetics.css";
 
 export function CardBack({ back }: { back?: string } = {}): ReactElement {
   return (
-    <span className="cf-back" data-card-back={back === undefined || back === DEFAULT_CARD_COSMETICS.cardBack ? undefined : back} aria-hidden="true">
+    <span className="cf-back" data-card-back={back === DEFAULT_CARD_COSMETICS.cardBack ? undefined : back} aria-hidden="true">
       <svg className="cf-back-emblem" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
         <circle cx="50" cy="50" r="44" fill="none" stroke="#d4af37" strokeOpacity="0.7" strokeWidth="3" />
         <circle cx="50" cy="50" r="36" fill="none" stroke="#d4af37" strokeOpacity="0.4" strokeWidth="1.5" strokeDasharray="4 3" />

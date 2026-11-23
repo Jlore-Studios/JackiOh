@@ -95,7 +95,9 @@ export const knowledgeBreaker: CardRecipe = (event, p, play) => {
 /** The Cry as `player` sees it: the first enemy Unit and the viewer's own first hand card Nerfed (an opponent's hand card would be hidden). */
 export const knowledgeBreakerFixture: RecipeFixture = (view, _instanceId, player) => {
   const foe = (player === view.viewer ? view.opponent : view.you).units.find((unit) => unit !== null);
-  const hand = player === view.viewer && Array.isArray(view.you.hand) ? view.you.hand[0] : undefined;
-  const nerfed = [foe, hand].flatMap((card) => (card === undefined || card === null ? [] : [card]));
+  const own = player === view.viewer ? view.you.hand : [];
+  const hand = Array.isArray(own) ? own[0] : undefined;
+  // `find` answers a Unit or undefined, never one of the empty zones' nulls it skips.
+  const nerfed = [foe, hand].flatMap((card) => (card === undefined ? [] : [card]));
   return nerfed.map((card): GameEvent => ({ type: "degraded", instanceId: card.instanceId, defId: card.defId, change: FIXTURE_NERF }));
 };
