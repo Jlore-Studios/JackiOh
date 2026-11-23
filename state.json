@@ -38910,7 +38910,10 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-23T01:14:30Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 4544,
         "head": "44053250070ea3be8056627af504316eb2422afd",
         "issue": 4511,
         "merged_at": "2026-11-23T01:05:13Z",
@@ -38923,12 +38926,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:9450c479-1795395940",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45092593831",
         "sha": "25c463cc105ad4808b499c6395fbbe80b54f42f2",
         "started_at": "2026-11-23T01:05:59Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the landing fan checks a few cards instead of all 800, and the collection, the stats grid and card prompts stop rebuilding every card face on each hover, scroll or keystroke",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 465
