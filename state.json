@@ -16878,6 +16878,32 @@
     "4628": {
       "action": "review",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-23T20:26:50Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-24T20:26:50Z",
+        "hours": 24,
+        "kind": "revise",
+        "model": "gpt-5.6-sol",
+        "options": [
+          {
+            "change": "Rerun this pass on a worker with the locked Cargo dependencies installed or crates.io DNS available, then warm and time both exact tests.",
+            "tradeoff": "Requires another automated pass, but produces the required reproducible evidence without changing code."
+          },
+          {
+            "change": "Have a maintainer run the two exact `/usr/bin/time` commands and provide their output for the PR body.",
+            "tradeoff": "Avoids another bot environment attempt, but requires manual work."
+          }
+        ],
+        "problem": "The sole review finding holds: the PR still lacks observed after wall and CPU timings for the replacement R4513000 test and B42.\n\nThe test binary cannot be built in this environment. Cargo exhausted its retries downloading `ryu 1.0.23` because `static.crates.io` could not be resolved. No reusable dependency archive, source tree, target directory, or test binary exists locally; offline resolution also found `ts-rs 12.0.1` missing. Reporting estimated timings would invent evidence.",
+        "provider": "gpt",
+        "question": "How should the required observed timings be obtained?",
+        "why": "the branch implementation is already complete and verified statically; only two observed measurements remain"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-23T19:41:57Z",
@@ -16895,6 +16921,7 @@
       "live": "reviewing",
       "pending_request": false,
       "provider": "gpt",
+      "question": "How should the required observed timings be obtained?",
       "queued_at": "2026-11-23T20:08:14Z",
       "run_id": "45256697884",
       "runs_on": "night-vm-gpt",
