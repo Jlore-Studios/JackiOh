@@ -40545,14 +40545,6 @@
     "requested": false,
     "run_id": null,
     "running": {
-      "1": {
-        "area": "ai",
-        "count": 1,
-        "last_run": "2026-11-23T05:50:53Z",
-        "provider": "muse",
-        "run_id": "45120324680",
-        "taken_asks": []
-      },
       "5": {
         "area": "rules",
         "count": 2,
