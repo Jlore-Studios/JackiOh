@@ -28,8 +28,8 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use jackioh_engine::wire::{
-    CardTotal, CoCount, DrillCount, FirstMet, FirstSeen, GameEventType, GameRecord, ListTotal, RecordsKey,
-    StatsTotals, TotalsKey, parse_game_record, portrait_or_default, sources_of,
+    CardTotal, CoCount, DrillCount, FirstMet, FirstSeen, GameEventType, GameRecord, ListTotal, PortraitId,
+    RecordsKey, StatsTotals, TotalsKey, parse_game_record, portrait_or_default, sources_of,
 };
 use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId, WinRateTable};
 use jackioh_shared::host::daily::{DailyBoard, DailyClock};
@@ -46,16 +46,16 @@ use crate::db::store::{
     CollectionGrant, ConsentRow, DailyGameRow, DailyInviteKind, DailyInviteRow, DailyInviteState,
     DailyNotifyRow, DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck, FrozenTrio,
     GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample, MatchActionRow,
-    MatchCheckpointRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
-    PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
-    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
-    ProfileRecord, ProfileStatus, PublicPlayerSummary, PushSubRow, QueueMode, RatedGameRow, RatedSide,
-    RedeemInviteCodeInput, RedeemResult, ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput,
-    RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow,
-    SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket,
-    TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
-    UsernameClaimOutcome, deck_version_step,
+    MatchCheckpointRow, MatchClocks, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode,
+    PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
+    PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
+    ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, PushSubRow,
+    QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow, ReplayWithMode,
+    ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding,
+    SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow,
+    TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice,
+    TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome,
+    UsernameClaim, UsernameClaimOutcome, deck_version_step,
 };
 use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
@@ -676,6 +676,16 @@ fn last_board_of(value: &Value) -> Result<Vec<LastBoardEntry>, StoreError> {
         .collect())
 }
 
+/// R642: absent when neither seat carried a portrait; both then read as `vanilla`. The one reading of
+/// the two columns, shared by `to_match` and `matches_portraits` (#4510).
+fn portraits_of(p1: Option<&str>, p2: Option<&str>) -> Option<(PortraitId, PortraitId)> {
+    if p1.is_some() || p2.is_some() {
+        Some((portrait_or_default(p1), portrait_or_default(p2)))
+    } else {
+        None
+    }
+}
+
 fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
     let status = from_literal(if row.status == "over" { "finished" } else { "live" })?;
     let boards = (
@@ -687,15 +697,7 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
         last_board_of(&row.p2_glitch_board)?,
     );
     let p2_deck = row.p2_deck.unwrap_or(Value::Null);
-    // R642: absent when neither seat carried a portrait; both then read as `vanilla`.
-    let portraits = if row.p1_portrait.is_some() || row.p2_portrait.is_some() {
-        Some((
-            portrait_or_default(row.p1_portrait.as_deref()),
-            portrait_or_default(row.p2_portrait.as_deref()),
-        ))
-    } else {
-        None
-    };
+    let portraits = portraits_of(row.p1_portrait.as_deref(), row.p2_portrait.as_deref());
     Ok(MatchRow {
         id: row.id,
         seed: row.seed,
@@ -3070,6 +3072,34 @@ pub async fn matches_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<Matc
     .map_err(db_error)?;
     row.map(|row| MatchDbRow::read(&row).and_then(to_match))
         .transpose()
+}
+
+/// #4510: through `matches_pkey`. The answer holds the `live` and `over` matches among the asked ids, in
+/// no order; an id that is not a uuid names no match and Postgres would refuse it, so it is left out.
+pub async fn matches_portraits(
+    t: &mut PgTx<'_>,
+    match_ids: &[String],
+) -> Result<Vec<MatchPortraits>, StoreError> {
+    let ids: Vec<String> = match_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select id, p1_portrait, p2_portrait from public.matches
+          where id = any($1::uuid[]) and status in ('live', 'over')",
+    )
+    .bind(ids)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| {
+            let p1 = get::<Option<String>>(row, "p1_portrait")?;
+            let p2 = get::<Option<String>>(row, "p2_portrait")?;
+            Ok((uuid_text(row, "id")?, portraits_of(p1.as_deref(), p2.as_deref())))
+        })
+        .collect()
 }
 
 /// §9.3's append-only log, written by `app.append_match_action` (migration 0004) and nothing else: it assigns
@@ -8208,21 +8238,37 @@ pub async fn daily_games_put(
     Ok(done.rows_affected() == 1)
 }
 
-/// Through `daily_games_due_idx`.
+/// #4510: two reads, merged here. The running games due go through `daily_games_due_idx`; the finished
+/// games whose match is still `live` are driven from the live matches, through
+/// `matches_status_created_at_idx` and the `daily_games` primary key. One `or` over both left the second
+/// arm without an index, so Postgres read every daily game ever played. Merged by that deadline or end,
+/// the match id breaking a tie (a match id is lower-case uuid text, so its string order is the uuid's).
 pub async fn daily_games_due(t: &mut PgTx<'_>, now: i64) -> Result<Vec<String>, StoreError> {
     run_as(t, None).await?;
-    let rows = sqlx::query(
-        "select d.match_id from public.daily_games d
-          where (d.ended_at is null and d.next_deadline_at <= $1::bigint)
-             or (d.ended_at <= $1::bigint
-                 and exists (select 1 from public.matches m where m.id = d.match_id and m.status = 'live'))
-          order by case when d.ended_at is null then d.next_deadline_at else d.ended_at end, d.match_id",
+    let running = sqlx::query(
+        "select d.match_id, d.next_deadline_at as at from public.daily_games d
+          where d.ended_at is null and d.next_deadline_at <= $1::bigint",
     )
     .bind(now)
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
-    rows.iter().map(|row| uuid_text(row, "match_id")).collect()
+    let unwritten = sqlx::query(
+        "select d.match_id, d.ended_at as at from public.matches m
+           join public.daily_games d on d.match_id = m.id
+          where m.status = 'live' and d.ended_at <= $1::bigint",
+    )
+    .bind(now)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut due: Vec<(i64, String)> = running
+        .iter()
+        .chain(unwritten.iter())
+        .map(|row| Ok((get::<i64>(row, "at")?, uuid_text(row, "match_id")?)))
+        .collect::<Result<_, StoreError>>()?;
+    due.sort();
+    Ok(due.into_iter().map(|(_, match_id)| match_id).collect())
 }
 
 pub async fn daily_games_running(t: &mut PgTx<'_>) -> Result<Vec<DailyGameRow>, StoreError> {

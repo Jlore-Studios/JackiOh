@@ -444,6 +444,8 @@ pub struct SavedDeck {
 }
 
 /// A trio's three slots, in order. `None` is an empty slot, which a saved trio may have (R252).
+/// #4510: a match id and its portrait pair, `None` when the match carries none (`matches_portraits`).
+pub type MatchPortraits = (String, Option<(PortraitId, PortraitId)>);
 pub type TrioSlots = (Option<String>, Option<String>, Option<String>);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -1795,6 +1797,13 @@ impl Tx<'_> {
 
     pub async fn matches_get(&mut self, match_id: &str) -> StoreResult<Option<MatchRow>> {
         dispatch!(self, matches_get(match_id))
+    }
+
+    /// #4510: the portrait pair of each asked `live` or `over` match, in one read, through the primary key.
+    /// An unknown id, a non-uuid and an `open` reservation are left out. The order is unspecified. A match
+    /// that carries no portrait has `None`, as `MatchRow::portraits` does.
+    pub async fn matches_portraits(&mut self, match_ids: &[String]) -> StoreResult<Vec<MatchPortraits>> {
+        dispatch!(self, matches_portraits(match_ids))
     }
 
     /// Append-only (§9.3). Rejects a seq that already exists.
@@ -3178,7 +3187,9 @@ impl Tx<'_> {
 
     /// §9.13, the sweep: the running games whose earliest deadline is at or before `now`, and the
     /// games that ended by `now` whose match is still `live` (their result's write failed, so the
-    /// sweep writes it again), by that deadline or end (the match id breaking a tie).
+    /// sweep writes it again), by that deadline or end (the match id breaking a tie). #4510: the
+    /// first kind is read through `daily_games_due_idx`, the second from the live matches, so the
+    /// finished games a store holds do not cost the sweep a read.
     pub async fn daily_games_due(&mut self, now: i64) -> StoreResult<Vec<String>> {
         dispatch!(self, daily_games_due(now))
     }
