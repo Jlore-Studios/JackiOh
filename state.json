@@ -17931,15 +17931,14 @@
     "what": "review #4558 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-23T04:52:32Z",
+    "at": "2026-11-23T05:03:36Z",
     "notes": [
-      "delivered build #4550 on claude-8 (run 45112158542): interrupted",
-      "delivered build #4552 on claude-8 (run 45111143571): interrupted",
-      "delivered review #4549 on claude-3 (run 45102109119): approved",
-      "started build #4550 on claude-6 (run 45114690627)",
-      "started build #4552 on claude-3 (run 45114746329)",
+      "delivered review #4557 on claude-3 (run 45113758023): approved",
+      "delivered review #4556 on claude-4 (run 45112102315): approved",
+      "delivered build #4513 on agy (run 45106143481): built",
+      "started review #4558 on agy (run 45115779152)",
       "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18645,7 +18644,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T04:52:32Z",
+  "loop_tick": "2026-11-23T05:03:36Z",
   "machine_disk": {
     "issue": null,
     "reading": {
