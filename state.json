@@ -18092,6 +18092,7 @@
     "4574": {
       "action": "review",
       "asks": [],
+      "died": 1,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-23T04:56:16Z",
@@ -18204,7 +18205,7 @@
       },
       "pending_request": false,
       "provider": "claude-3",
-      "queued_at": "2026-11-23T08:31:18Z",
+      "queued_at": "2026-11-23T15:16:59Z",
       "run_id": "45188580454",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
