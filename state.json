@@ -40574,14 +40574,6 @@
         "run_id": "45119211690",
         "taken_asks": []
       },
-      "4": {
-        "area": "tests",
-        "count": 2,
-        "last_run": "2026-11-23T05:40:37Z",
-        "provider": "muse",
-        "run_id": "45119278783",
-        "taken_asks": []
-      },
       "5": {
         "area": "rules",
         "count": 2,
