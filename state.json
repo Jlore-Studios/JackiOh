@@ -19070,6 +19070,13 @@
     "4609": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-23T19:53:48Z",
+        "difficulty": "hard",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Rule 1 (engine rules): the check lands in crates/engine/src/testkit/invariants.rs and its first waves will likely force fixes in crates/engine/src/effects/; rule 3 too (engine monitor, cards build list, tools docs agree); the issue itself is sized hard."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
