@@ -19320,6 +19320,13 @@
     "4622": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-23T19:40:40Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "No hard-rule line applies: this is a two-file tools-test and README change, not engine rules, AI decisions/search, cross-crate design, a migration, or about 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
