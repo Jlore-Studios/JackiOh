@@ -47,7 +47,7 @@
       "enabled": true,
       "wait_hours": 24,
       "per_day": 3,
-      "window": 50
+      "window": 100
     },
     "priorities": {
       "fuzz": "low",

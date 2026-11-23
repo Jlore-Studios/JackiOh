@@ -319,7 +319,7 @@ waiting for a person, and keeps the rest for one:
    measured, a report nothing acts on, upkeep for every future change, a design call).
 2. **A judge reads each new suggestion.** After a survey, a second model call
    (`prompts/judge.md`; the subscription's review seat where it has one, else the survey's) reads
-   the survey's suggestions against the latest `window` (50) decisions on suggestions, newest
+   the survey's suggestions against the latest `window` (100) decisions on suggestions, newest
    first, with their reasons (`suggest.decided`: each one a person approved, and each that came to
    nothing, rejected, closed unbuilt, handed to people or failed for good, as it ended). Those
    decisions are its rolling window of what people want now: where they disagree with the prompt's

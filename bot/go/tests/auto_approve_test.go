@@ -199,9 +199,10 @@ func TestAutoApprove_TheConfigDefaultsToOff(t *testing.T) {
 	raw := testsupport.RawConfig()
 	raw.Obj("suggestions").Pop("auto_approve")
 	cfg := config.Parse(raw, config.RepoRoot, map[string]string{}, nil)
-	assertEqual(t, cfg.AutoApprove, config.AutoApprove{Enabled: false, WaitHours: 24, PerDay: 3, Window: 50})
+	assertEqual(t, cfg.AutoApprove, config.AutoApprove{Enabled: false, WaitHours: 24, PerDay: 3, Window: 100})
 	committed := config.Parse(testsupport.RawConfig(), config.RepoRoot, map[string]string{}, nil)
 	assertTrue(t, committed.AutoApprove.Enabled)
+	assertEqual(t, committed.AutoApprove.Window, 100)
 }
 
 // ---------------------------------------------------------------------------- SweepTests

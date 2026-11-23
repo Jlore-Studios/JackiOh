@@ -207,7 +207,7 @@ func autoApprove(raw any) AutoApprove {
 		Enabled:   pyjson.Truthy(o.GetOr("enabled", false)),
 		WaitHours: py.MustInt(o.GetOr("wait_hours", 24)),
 		PerDay:    py.MustInt(o.GetOr("per_day", 3)),
-		Window:    py.MustInt(o.GetOr("window", 50)),
+		Window:    py.MustInt(o.GetOr("window", 100)),
 	}
 	if out.WaitHours < 0 || out.PerDay < 0 || out.Window < 0 {
 		raiseConfig("suggestions.auto_approve: wait_hours, per_day and window can't be negative")
