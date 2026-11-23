@@ -113,8 +113,10 @@
 #    spec/08-catalog.md (radiant_stats.rs, a row's two Radiant stats cells, #3804) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
 #    crates/server/.env.example and apps/web/.env.production (the catalog version's sites, which the
 #    tools' patches tests read; the ship case above takes precedence) tools, wasm, the first as well as server; crates/server/tests/'s
-#    actor/, api/, bots/, loops/ and support/ (acceptance.rs holds their helpers to support/'s,
-#    #2385) tools, wasm as well as server; crates/server/migrations/0068_v0_5_retcon.sql and
+#    actor/, api/, bots/, loops/ and support/ run server only because the server binary checks their
+#    shared helpers itself (#2385). If a later acceptance.rs scan reads those trees, its added lines
+#    must match a reader call, `CARGO_MANIFEST_DIR`, `#[ignore` or `preview_sets(` in the grep below
+#    before tools, wasm may remain off. crates/server/migrations/0068_v0_5_retcon.sql and
 #    0087_v0_5_13_retcon.sql (the tools' r2532000 and r3631001 retcon tests read them through
 #    repo_root().join(MIGRATIONS_REL), #4157) tools, wasm as well as server; and
 #    packages/, apps/server/ and ladder/ (acceptance.rs's V28) tools, wasm; training/history/sweep-*.md
@@ -346,8 +348,6 @@ for file in $files; do
     crates/server/.env.example) on rust_server rust_tools_wasm ;;
     crates/engine/* | crates/cards/*) on $RUST ;;
     crates/ai/*) on rust_ai rust_ai_slow rust_server rust_tools_wasm ;;
-    crates/server/tests/actor/* | crates/server/tests/api/* | crates/server/tests/bots/* | crates/server/tests/loops/* | \
-      crates/server/tests/support/*) on rust_server rust_tools_wasm ;;
     crates/server/migrations/*) on rust_server rust_tools_wasm ;;
     crates/server/*) on rust_server ;;
     crates/shared/* | crates/run/*) on rust_server rust_tools_wasm ;;
