@@ -34021,5 +34021,32 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.6.10c",
+    "date": "2026-11-23",
+    "title": "Spells give no keyword to a Unit Immune to Spells",
+    "source": "#4508",
+    "notes": "A Spell's \"your Units have X\" (the War Doctrines, TG #39's army) now passes a Unit Immune to Spells by, read live, while a later Unit still takes the keyword (R4508000); S #150's Allure passes it by (R4453000); the fuzz monitor's I21 and a sweep of every Spell hold it.",
+    "player": {
+      "title": "Immune to Spells holds against more Spells",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "The War Doctrines and Call to Chaos (Training-Grounds Edition) no longer give their keyword to a Unit Immune to Spells; your other Units, and the ones you play later, still get it.",
+        "Call to Chaos (Stinky Edition)'s Allure no longer reaches a Unit Immune to Spells."
+      ]
+    },
+    "commits": [
+      "b567407a24d225a0e6287b71a0510845e1f7edfc"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "traininggrounds-039"
+    ],
+    "changes": []
   }
 ]
