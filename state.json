@@ -18423,8 +18423,16 @@
       "part_of": 4578
     },
     "4584": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
       "onto": "bot/issue-4578",
-      "part_of": 4578
+      "part_of": 4578,
+      "pending_request": false,
+      "queued_at": "2026-11-23T08:56:36Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false
     },
     "4585": {
       "failures": 0,
