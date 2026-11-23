@@ -39503,6 +39503,12 @@
         "number": 4533,
         "title": "Patch: the AI's reply spends the opponent's Credits and Trades away its dead Tradables",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-23T01:10:02Z",
+        "number": 4539,
+        "title": "Patch: the settings panel loads when the gear is first opened, not in the first page load",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
