@@ -39774,6 +39774,9 @@
   "usage_spool": {
     "readings": [
       "2026-11-23T20:20:04Z,claude-4,ping,before,45257674855,71,2026-11-23T23:20:00Z,,,allowed,70,,"
+    ],
+    "runs": [
+      "2026-11-23T20:20:04Z,45257674855,claude-4,opus,plan,4609,hard,interrupted,5-hour cap,0,0,0,0,,71,71,,,57.7,claude-4,none,,0"
     ]
   },
   "version": 1
