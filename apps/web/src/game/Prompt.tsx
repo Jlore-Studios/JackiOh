@@ -28,6 +28,7 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -913,7 +914,8 @@ function CardOption(props: {
   readOnly?: boolean;
   onPick: () => void;
 }) {
-  useLocale();
+  // A language change rebuilds the face, as CardFace's labels redraw (R711000).
+  const locale = useLocale();
   const info = useCardInfo(props.item.defId ?? "", props.item.radiant === true);
   const fieldPower = useFieldPower(props.item.card?.instanceId);
   const copied = useCopiedDef(props.item.card);
@@ -922,25 +924,34 @@ function CardOption(props: {
   const name = props.item.defId === undefined ? props.item.label : nameOf(props.item.defId, info, drawnInChinese(flagged));
   const radiant = props.item.radiant === true;
   const cost = props.item.cost;
-  const drawn =
-    props.item.defId === undefined
-      ? null
-      : props.item.card !== undefined
-        ? liveFace(info, props.item.card, {
-            ...(fieldPower === undefined ? {} : { fieldPower }),
-            ...(copied === undefined ? {} : { copied }),
-          })
-        : faceModel({
-            defId: props.item.defId,
-            def: info.def,
-            name: info.name,
-            radiant,
-            chinese: flagged,
-            ...(cost === undefined ? {} : { liveCost: cost }),
-            inPlay: {},
-          });
-  const face =
-    drawn === null || props.item.price === undefined ? drawn : pricedFace(drawn, props.item.price, props.item.card, info.def);
+  // #4511: the face (with its embiggen price) memoized on exactly the inputs it takes, as
+  // `useLiveFace` does: a board re-render that leaves the options unchanged builds no face.
+  const { defId, card, price } = props.item;
+  const { def: infoDef, name: infoName } = info;
+  const face = useMemo(() => {
+    const drawn =
+      defId === undefined
+        ? null
+        : card !== undefined
+          ? liveFace(info, card, {
+              ...(fieldPower === undefined ? {} : { fieldPower }),
+              ...(copied === undefined ? {} : { copied }),
+            })
+          : faceModel({
+              defId,
+              def: infoDef,
+              name: infoName,
+              radiant,
+              chinese: flagged,
+              ...(cost === undefined ? {} : { liveCost: cost }),
+              inPlay: {},
+            });
+    return drawn === null || price === undefined ? drawn : pricedFace(drawn, price, card, infoDef);
+    // `info` is a fresh object per render; the deps key on its stable contents (`infoDef`/
+    // `infoName`) instead, so an unchanged option never crosses again. The callback still reads
+    // through `info` for `liveFace`, which is sound because a dep change always recomputes with the
+    // latest render's values, and unchanged deps mean unchanged contents.
+  }, [infoDef, infoName, card, fieldPower, copied, radiant, cost, flagged, price, defId, locale]);
   const caption = face === null ? undefined : props.item.caption;
   const pays = face === null || props.item.price === undefined ? undefined : priceLine(face);
   // R247: a number names no card here, so it is drawn on a card back and nothing opens it.
