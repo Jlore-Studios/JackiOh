@@ -1360,7 +1360,8 @@ fn cast_prompt_shape(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<
 /// match rng, and re-enter its step as `answer_prompt` does, inside the effect that asked: the step runs
 /// first and the rest of that effect's list after it, the order a parked tail would have kept (R113). Nothing
 /// is emitted, since no prompt was open. R1201: `luck` rolls again and keeps the answer with more picks on
-/// the prompt's aim side (Mayor Medinamogger's Radiant face).
+/// the prompt's aim side (Mayor Medinamogger's Radiant face). The step runs as the prompt's owner
+/// (`OpenPromptArgs.owner`), else the player asked (R4814000).
 fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32) {
     let max = clamp(args.max.unwrap_or(1), 0, args.options.len() as i32);
     let probe = PendingChoice {
@@ -1439,7 +1440,9 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32)
         sink,
         &resume_of(&probe.resume),
         ResumeOptions {
-            controller: Some(args.player),
+            // R4814000: the pick is the holder's; the step continues the asking card's sequence as its
+            // controller, as `continue_answer` runs an answered prompt's (B5 E18).
+            controller: Some(args.owner.unwrap_or(args.player)),
             targets: Some(targets),
             modes: None,
             chosen_from: Some(chosen_from),
