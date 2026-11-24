@@ -9317,5 +9317,103 @@
     "pr": 4571,
     "title": "bot: build pass 1 for #4555",
     "kind": "internal"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "aa919cf4921dcdfee8e191afc4765c8977696a1e",
+    "pr": 4572,
+    "title": "patches ship: v0.6.10d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "fdcbbcf1bd509e2082e9f6983233e4c7028bf323",
+    "pr": 4573,
+    "title": "bot: build pass 1 for #4562",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "35993a84f68e58dcc28dd39b0687607692598f3f",
+    "pr": 4569,
+    "title": "audit the codebase for dead code, duplicates and zombie routes, 2026-11-23",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "a8f000748022e291bfa61589e279cb38c35ff57a",
+    "pr": 4575,
+    "title": "bot: build pass 1 for #4568",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "84e1400b225797cf9d6e8bb8d1dce5c34681c662",
+    "pr": 4603,
+    "title": "patches log: 4327b2b..4443938",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "c74ebe02d30f1566e650b00a1a1b9ee35879503d",
+    "pr": 4615,
+    "title": "patches cut: v0.6.11",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "aaf6a1204cc58526ff9d4bda674a0e319c4f092b",
+    "pr": 4617,
+    "title": "patches ship: v0.6.11b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "0df408bb60279e27f2071adcc97e3ea60d45d4ea",
+    "pr": 4618,
+    "title": "the tier cards and KPIs read the newest win rates",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "97d7fe0d40767240468103980e025d1a078ba00d",
+    "pr": 4624,
+    "title": "patches ship: v0.6.11c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "d6a44a6e78916ace38fd67b56560887c58df620b",
+    "pr": 4625,
+    "title": "stepping back in a replay or flipping the co-op portal keeps the match's music, instead of starting the next track as if a new match began",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "a7688a04c630dee65ca35a1297151173b325caad",
+    "pr": 4631,
+    "title": "patches ship: v0.6.11d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "abd5bdbed734ffc6ca0414c98ee18d3979952328",
+    "pr": 4626,
+    "title": "the game log renders only the lines near the view",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "712333860072050f95bc58225bd1d13e61fd0402",
+    "pr": 4635,
+    "title": "the shared crate's tests build as one test program, as every other crate's do",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.12",
+    "commit": "a296c51baa46a870241ac38b5fa16e508ffe01ae",
+    "pr": 4643,
+    "title": "patches ship: v0.6.11e; patches cut: v0.6.12",
+    "kind": "app"
   }
 ]

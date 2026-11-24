@@ -316,6 +316,11 @@ and a softmax
 best. Each takes one draw from `options.rng` when it is above zero and none at zero, so `decide`,
 which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinizations, as it always has.
 
+R4608000: a finalist whose line won on determinization 0, the one searched, and on no other scored world
+(a score above `AI_WON_SCORE_SHARE` of `AI_EVAL.win`) takes its mean on those others (`finalist_means`).
+Every other finalist keeps the plain mean, which `AI_SEARCH.confirm_lone_win` off restores bit for bit.
+The solver, the hint and the concession check never read the means.
+
 ## The lethal hint (R2102000, R2291000)
 
 ```rust
@@ -477,12 +482,12 @@ Easy's floor is 75%, below the brief's 80%, by the user's decision (R4132001).
 | `ai-vs-greedy` | the AI on Easy | greedy baseline on Easy | 35 of 50 | 14 of 20 |
 | `hard-vs-easy` | the AI on Hard | the AI on Easy | 38 of 50 | 15 of 20 |
 
-The perf gate holds each decision of the first ai-vs-greedy game, and two hand-built wide boards,
-within the node budget and under `AI_GATE.max_decision_ms`, and the two pinned positions
-(`tests/fixtures/pinned-improve-dev-*.json`, #1240) under `AI_GATE.pinned_decision_ms`. Tuning
-changes the weights in `src/config.rs`, never the floors, the seed counts or the brief's rates. The
-gates see only a broken AI; whether a change made it stronger is the training lanes' question
-(`training/README.md`, `cargo jackioh promote`).
+The perf gate times every decision of one ai-vs-greedy game in a smoke run and six in a full run;
+both also time two hand-built wide boards. It holds them within the node budget and under
+`AI_GATE.max_decision_ms`, and all three pinned fixtures (`tests/fixtures/pinned-*.json`, #1240)
+under `AI_GATE.pinned_decision_ms`. Tuning changes the weights in `src/config.rs`, never the floors,
+the seed counts or the brief's rates. The gates see only a broken AI; whether a change made it
+stronger is the training lanes' question (`training/README.md`, `cargo jackioh promote`).
 
 Every gate game is clean (B31): nothing refused or thrown, no fallback, a result, a log that folds to
 its hash, and no panic caught in an AI's search (`SearchStats.sim_panics`, summed in `MatchRecord`,

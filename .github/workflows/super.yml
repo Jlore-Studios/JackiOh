@@ -81,8 +81,10 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  # The fuzz wave's size (README §7); `fuzz` splits it evenly over its matrix.
-  FUZZ_SEEDS: "12500"
+  # The fuzz wave's size (README §7); `fuzz` splits it evenly over its matrix. 13200 since the pool
+  # reached 823 cards (the held Infinite Assault set's landing, which the fuzz previews), when the daily
+  # top-up test asked for at least 12839: it covers about 846; each shard ran about 20 of its 90 minutes.
+  FUZZ_SEEDS: "13200"
   # The Duos wave's (§13, #936 B25), ten times `fuzz --duos`'s 200: a Duos game is four seats and a
   # pool, several times a 1v1 game's work. Split the same way.
   DUOS_FUZZ_SEEDS: "2000"

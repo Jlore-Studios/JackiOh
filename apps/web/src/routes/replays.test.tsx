@@ -15,6 +15,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { consentTestid } from "../auth/testids.ts";
+import { INSPECT_SHEET } from "../cards/inspect/testids.ts";
 import { testid } from "../game/contract.ts";
 import type { SeatPortraits } from "../game/contract.ts";
 import type { DuosReplaySteps } from "../duos/DuosReplay.tsx";
@@ -37,6 +38,7 @@ import { REPLAY_JSON_FORMAT, REPLAY_JSON_VERSION, practiceGame, replayJsonFile }
 import type { ReplayJson } from "../replay/download.ts";
 import { expectEmptyState } from "../test/empty.ts";
 import { duosView } from "../test/fixtures.ts";
+import { pressBack } from "../test/history.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
@@ -122,6 +124,12 @@ function heroPortraits(): (string | null)[] {
   return (["you", "opponent"] as const).map(
     (side) => screen.getByTestId(testid.hero(side)).querySelector(".hero-portrait")?.getAttribute("data-portrait") ?? null,
   );
+}
+
+/** R4619000: `/replays` with `/play` the page before it, where a Back off the list lands. */
+function arriveFromPlay(): void {
+  window.history.replaceState(null, "", paths.play);
+  window.history.pushState(null, "", paths.replays);
 }
 
 beforeEach(() => {
@@ -342,6 +350,56 @@ describe("R768000 /replays", () => {
     const root = expectEmptyState(await screen.findByTestId(replaysTestid.noOnline));
     const link = within(root).getByText("Find a match");
     expect(link).toHaveAttribute("href", paths.play);
+  });
+});
+
+describe("R4619000 Back closes a replay open on /replays", () => {
+  /** The device's practice game, opened by its row's Watch from a `/replays` that `/play` is under. */
+  async function watchPractice(): Promise<HTMLElement> {
+    arriveFromPlay();
+    renderRoute(await storeWithGame());
+    const row = await screen.findByTestId(replaysTestid.practice(1));
+    fireEvent.click(within(row).getByRole("button", { name: "Watch" }));
+    const player = await screen.findByTestId(replayTestid.player);
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "0"));
+    return player;
+  }
+
+  it("R4619000 one Back closes a practice row's replay and keeps the list and the address; a second Back leaves /replays", async () => {
+    await watchPractice();
+
+    await pressBack();
+    expect(await screen.findByTestId(replaysTestid.practice(1))).toBeInTheDocument();
+    expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+    expect(window.location.pathname).toBe(paths.replays);
+
+    await pressBack();
+    expect(window.location.pathname).toBe(paths.play);
+  });
+
+  it("R4619000 one Back closes an online row's replay", async () => {
+    arriveFromPlay();
+    signIn();
+    serveSteps();
+    vi.mocked(getReplays).mockResolvedValue({ replays: [listing()], nextOffset: null });
+    renderRoute(memorySaveStore());
+    const row = await screen.findByTestId(replaysTestid.online("m-1"));
+    fireEvent.click(within(row).getByRole("button", { name: "Watch" }));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+
+    await pressBack();
+    expect(await screen.findByTestId(replaysTestid.online("m-1"))).toBeInTheDocument();
+    expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+    expect(window.location.pathname).toBe(paths.replays);
+  });
+
+  it("R4619000 a replay closed by its corner arrow leaves no extra step: one Back then leaves /replays", async () => {
+    await watchPractice();
+    fireEvent.click(screen.getByTestId(replayTestid.back));
+    expect(await screen.findByTestId(replaysTestid.practice(1))).toBeInTheDocument();
+
+    await pressBack();
+    expect(window.location.pathname).toBe(paths.play);
   });
 });
 
@@ -650,6 +708,42 @@ describe("R1141000 Open replay JSON", () => {
     expect(await screen.findByTestId(replaysTestid.root)).toBeInTheDocument();
     expect(screen.queryByTestId(duosTestid.replay)).toBeNull();
     expect(screen.getByTestId<HTMLInputElement>(replaysTestid.openFile).value).toBe("");
+  });
+
+  it("R4619000 one Back closes a co-op replay opened from a file", async () => {
+    arriveFromPlay();
+    const input = await openInput();
+    choose(input, duosReplayJsonFile(DUOS_STEPS));
+    await screen.findByTestId(duosTestid.replay);
+
+    await pressBack();
+    expect(await screen.findByTestId(replaysTestid.root)).toBeInTheDocument();
+    expect(screen.queryByTestId(duosTestid.replay)).toBeNull();
+    expect(window.location.pathname).toBe(paths.replays);
+  });
+
+  it("R4619000 a card's sheet open over a replay closes on the first Back, and the replay on the next", async () => {
+    arriveFromPlay();
+    const input = await openInput();
+    choose(input, await downloaded());
+    const player = await screen.findByTestId(replayTestid.player);
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "0"));
+    fireEvent.click(screen.getByTestId(replayTestid.forwardTurn));
+    await waitFor(() => expect(player).not.toHaveAttribute("data-step", "0"));
+
+    const face = screen.getByTestId("hand-you").querySelector<HTMLElement>('[data-testid^="hand-card-"][aria-keyshortcuts]');
+    if (face === null) throw new Error("the replay's hand shows no card to inspect");
+    fireEvent.keyDown(face, { key: "i" });
+    expect(await screen.findByTestId(INSPECT_SHEET)).toBeInTheDocument();
+
+    await pressBack();
+    expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
+    expect(screen.getByTestId(replayTestid.player)).toBeInTheDocument();
+
+    await pressBack();
+    expect(await screen.findByTestId(replaysTestid.root)).toBeInTheDocument();
+    expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+    expect(window.location.pathname).toBe(paths.replays);
   });
 
   it("R1242000 malformed, wrong-version, wrong-catalog, oversized and over-step co-op files refuse before mounting", async () => {

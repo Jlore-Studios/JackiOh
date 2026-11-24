@@ -2,7 +2,7 @@
 //!   Base:    "Cry: Place {tokens|Plague Counter|Plague Counters} on this.
 //!             Activate: Play a Unit from your graveyard, spending at least 1 Plague Counter as mana."
 //!             — 2 tokens; Radiant: 4.
-//!   Engine:  Play from graveyard (§6.3) for a Unit, armed by the Activate. Token payment spends at least 1
+//!   Engine:  Play from graveyard (§10.5) for a Unit, armed by the Activate. Token payment spends at least 1
 //!            counter, rest in mana; (0) cost cannot use it; choices as from hand; R65 player discounts apply.
 //!
 //! Patch v0.3.10 (#831): the Cry places {tokens} (R386; the once-a-turn Activate did before), and the
@@ -65,7 +65,7 @@ pub fn script() -> CardScripts {
             })))]
         })),
         activations: vec![plant()],
-        // A Unit from your graveyard, paid with Plague Counters (§6.3 Play), while armed.
+        // A Unit from your graveyard, paid with Plague Counters (§10.5), while armed.
         graveyard_play: Some(read_hook(|args| {
             if !is_this_turn(args.state, args.self_.memory.get(ARMED)) {
                 return vec![];

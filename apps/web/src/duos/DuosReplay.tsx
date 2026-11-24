@@ -8,7 +8,7 @@
 // outside the board, so a remount never takes the scrubber from under the pointer, and the scrubber
 // held moves the board only when it is let go (#2025). Download JSON (R1242000) waits for the steps.
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 
 import { useFxSettings } from "../fx/settings.ts";
 import { scaleForSpeed } from "../game/animations.ts";
@@ -100,6 +100,9 @@ export function DuosReplayPlayer({ steps, back, actions }: { steps: DuosReplaySt
   const [fx] = useFxSettings();
   const busy = useBoardBusy(root);
   const view = steps[shown.at] ?? steps[0];
+  // R4606000: one music key per replay, so steps that remount the board keep the match's music; a
+  // different replay is a different key, so it moves the rotation on.
+  const musicKey = useMemo(() => ({}), [steps]);
 
   /** Shows step `index`, clamped to the replay; only the next step carries the board on. */
   const show = useCallback(
@@ -179,7 +182,7 @@ export function DuosReplayPlayer({ steps, back, actions }: { steps: DuosReplaySt
       />
       <DuosChromeContext.Provider value={{ back }}>
         {/* Replay steps carry no economy: no seat is ever capped. */}
-        <DuosBoard key={shown.board} view={view} legal={NOTHING} onAction={ignore} pings={NO_PINGS} onPing={ignore} jloreCapped={false} replay />
+        <DuosBoard key={shown.board} view={view} legal={NOTHING} onAction={ignore} pings={NO_PINGS} onPing={ignore} jloreCapped={false} replay musicKey={musicKey} />
       </DuosChromeContext.Provider>
     </div>
   );

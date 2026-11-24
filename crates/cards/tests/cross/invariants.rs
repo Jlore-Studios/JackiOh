@@ -3861,3 +3861,260 @@ mod r4577008_the_black_hole_s_turn_end_pull_is_no_spell_s_reach {
         }
     }
 }
+
+// I23 (#4609, R4609000): every shipped card whose script calls a verb that rewrites a card's text
+// (`TEXT_REWRITERS`), on both faces, played at a board of Immutable stand-ins: a Unit with the keyword and
+// an Indestructible Unit on each side, and an Indestructible Unit card in each hand and each library
+// (R4353000). Each play aims at each stand-in it may, its prompts answered toward it, and each Activate
+// of the card runs once it has resolved. No I23 from the monitor, and each stand-in's text is as it was.
+mod r4609000_every_text_rewriting_card_leaves_an_immutable_card_as_it_is {
+    use super::*;
+    use jackioh_engine::subsystems::unit_text::UNIT_TEXT_KEY;
+
+    const KEYWORD: &str = "stand-in (1) 4/4 Immutable";
+    const INDESTRUCTIBLE: &str = "stand-in (1) 4/4 Indestructible";
+    const PLAIN: &str = "stand-in (1) 4/4";
+    /// The most prompts one run is answered through.
+    const ANSWER_CAP: usize = 8;
+
+    /// The faces of `TEXT_REWRITERS` the sweep's board lists no play of, each with why: a card that
+    /// joins the list is played, or says here why it cannot be.
+    const UNPLAYED: &[(&str, bool, &str)] = &[
+        (
+            "stinkyscape-086",
+            false,
+            "Tribute 5 on a board of three Units of its side's; its Cry Equips its Weapons into itself, no stand-in",
+        ),
+        (
+            "stinkyscape-086",
+            true,
+            "Tribute 5 on a board of three Units of its side's; its Cry Equips its Weapons into itself, no stand-in",
+        ),
+    ];
+
+    /// Every shipped text rewriter on both faces (base `false`, Radiant `true`), in id order.
+    fn faces() -> Vec<(String, bool)> {
+        jackioh_cards::TEXT_REWRITERS
+            .iter()
+            .filter(|id| set_ships(jackioh_cards::CATALOG[**id].set))
+            .flat_map(|id| [(id.to_string(), false), (id.to_string(), true)])
+            .collect()
+    }
+
+    /// p1's main phase with `card` on `radiant`'s face in hand at full mana. On each side the keyword's
+    /// stand-in in lane 1, the Indestructible one in lane 2 and a plain one in lane 3; an Indestructible
+    /// one in each hand (p1's beside the card) and at the bottom of each library of plain ones.
+    fn board(card: &str, radiant: bool) -> Scenario {
+        let library = json!([PLAIN, PLAIN, PLAIN, PLAIN, PLAIN, INDESTRUCTIBLE]);
+        let field = json!([
+            { "def": KEYWORD, "lane": 1 },
+            { "def": INDESTRUCTIBLE, "lane": 2 },
+            { "def": PLAIN, "lane": 3 },
+        ]);
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [{ "def": card, "radiant": radiant }, INDESTRUCTIBLE],
+                "mana": 10,
+                "field": field,
+                "library": library,
+            },
+            "p2": { "hand": [INDESTRUCTIBLE], "mana": 10, "field": field, "library": library },
+        }));
+        for player in [PlayerId::P1, PlayerId::P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        s
+    }
+
+    /// The Immutable stand-ins on `state`, by id: every card of the keyword's or the Indestructible one.
+    fn stand_ins(state: &GameState) -> Vec<String> {
+        [PlayerId::P1, PlayerId::P2]
+            .into_iter()
+            .flat_map(|player| {
+                let side = &state.players[player];
+                side.units
+                    .iter()
+                    .flatten()
+                    .flatten()
+                    .chain(&side.hand)
+                    .chain(&side.library)
+                    .filter(|card| card.def_id == KEYWORD || card.def_id == INDESTRUCTIBLE)
+                    .map(|card| card.id.clone())
+                    .collect::<Vec<_>>()
+            })
+            .collect()
+    }
+
+    /// What the hold keeps of a stand-in: the zone it is in and its text (I23's `TextRecord`'s fields).
+    type Text = (
+        ZoneName,
+        String,
+        bool,
+        Option<Tuning>,
+        Option<i32>,
+        Option<AttackHealth>,
+        Option<Value>,
+    );
+
+    fn text_of(state: &GameState, id: &str) -> Option<Text> {
+        let card = find_instance(state, id)?;
+        Some((
+            card.zone.z(),
+            card.def_id.clone(),
+            card.vanilla,
+            card.tuning.clone(),
+            card.hidden_nerfs,
+            card.stats_override,
+            card.memory.get(UNIT_TEXT_KEY).cloned(),
+        ))
+    }
+
+    /// The first listed answer naming `aim`, else the first that is no concession.
+    fn answer(state: &GameState, player: PlayerId, aim: Option<&str>) -> Option<ActionBody> {
+        let answers: Vec<ActionBody> = legal_actions(state, player)
+            .into_iter()
+            .filter(|action| !matches!(action, ActionBody::Concede))
+            .collect();
+        aim.and_then(|id| {
+            let quoted = format!("\"{id}\"");
+            answers
+                .iter()
+                .find(|action| serde_json::to_string(action).is_ok_and(|json| json.contains(&quoted)))
+                .cloned()
+        })
+        .or_else(|| answers.into_iter().next())
+    }
+
+    /// One run from `state`: `body` sent as p1's and each prompt it opens answered (toward `aim`), each
+    /// step judged by the monitor's I23 and by the hold of every stand-in's text. The state it settles
+    /// on with no prompt open, if it does.
+    fn run(
+        state: &GameState,
+        body: ActionBody,
+        aim: Option<&str>,
+        label: &str,
+        failures: &mut Vec<String>,
+    ) -> Option<GameState> {
+        let ids = stand_ins(state);
+        let mut state = state.clone();
+        let mut monitor = create_invariant_monitor(&state);
+        let mut body = body;
+        let mut player = PlayerId::P1;
+        for n in 0..=ANSWER_CAP {
+            let kept: Vec<Option<Text>> = ids.iter().map(|id| text_of(&state, id)).collect();
+            monitor.before(&state, player, &body);
+            let result = reduce(
+                &state,
+                &Action::new(body.clone(), player, format!("i23-sweep-{n}")),
+            );
+            if result.error.is_some() {
+                return None;
+            }
+            let sent = serde_json::to_string(&body).unwrap_or_default();
+            failures.extend(
+                monitor
+                    .after(&result.events, &result.state)
+                    .into_iter()
+                    .filter(|finding| finding.starts_with("I23"))
+                    .map(|finding| format!("{label}, {sent}: {finding}")),
+            );
+            // R4609002: a restore and a Glitch re-deal what they reach.
+            let restored = result
+                .events
+                .iter()
+                .any(|event| matches!(event, GameEvent::RolledBack { .. } | GameEvent::Glitched { .. }));
+            for (id, kept) in ids.iter().zip(&kept) {
+                let (Some(kept), Some(now)) = (kept, text_of(&result.state, id)) else {
+                    continue;
+                };
+                // R4609003: a keyword kept for good is a grant, which rides the tuning.
+                let granted = result.events.iter().any(
+                    |event| matches!(event, GameEvent::KeywordGranted { instance_id, .. } if instance_id == id),
+                );
+                let same = kept.0 != now.0
+                    || (kept.1 == now.1
+                        && kept.2 == now.2
+                        && (granted || kept.3 == now.3)
+                        && kept.4 == now.4
+                        && kept.5 == now.5
+                        && kept.6 == now.6);
+                if !restored && !same {
+                    failures.push(format!(
+                        "{label}, {sent}: the Immutable stand-in {id} went from {kept:?} to {now:?} (§6.1, R23, \
+                         R4353000)"
+                    ));
+                }
+            }
+            state = result.state;
+            let Some(pending) = state.pending.as_ref().filter(|_| state.result.is_none()) else {
+                return Some(state);
+            };
+            player = pending.player_id;
+            body = answer(&state, player, aim)?;
+        }
+        None
+    }
+
+    #[test]
+    fn r4609000_every_text_rewriting_card_on_both_faces_leaves_the_immutable_stand_ins_as_they_are() {
+        jackioh_cards::register_all();
+        let faces = faces();
+        assert!(
+            faces.len() > 100,
+            "the sweep reads the cards that rewrite text: {}",
+            faces.len()
+        );
+        let mut failures: Vec<String> = Vec::new();
+        let mut unplayed: Vec<(String, bool)> = Vec::new();
+        for (id, radiant) in &faces {
+            let label = format!("{id} ({})", if *radiant { "Radiant" } else { "base" });
+            let base = board(id, *radiant).state().clone();
+            let card = base.players[PlayerId::P1].hand[0].id.clone();
+            let plays: Vec<ActionBody> = legal_actions(&base, PlayerId::P1)
+                .into_iter()
+                .filter(
+                    |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card),
+                )
+                .collect();
+            if plays.is_empty() {
+                unplayed.push((id.clone(), *radiant));
+                continue;
+            }
+            // Per stand-in, the first play aimed at it (else the first play), its prompts answered toward
+            // it; then the listing spread as I14 spreads it, answered as the listing comes.
+            let mut runs: Vec<(ActionBody, Option<String>)> = Vec::new();
+            for stand_in in stand_ins(&base) {
+                let quoted = format!("\"{stand_in}\"");
+                let play = plays
+                    .iter()
+                    .find(|play| serde_json::to_string(play).is_ok_and(|json| json.contains(&quoted)))
+                    .unwrap_or(&plays[0]);
+                runs.push((play.clone(), Some(stand_in)));
+            }
+            let spread = plays.len().min(I14_ACTION_CAP);
+            runs.extend((0..spread).map(|k| (plays[k * plays.len() / spread].clone(), None)));
+            let mut seen: IndexSet<String> = IndexSet::new();
+            runs.retain(|run| seen.insert(serde_json::to_string(run).unwrap_or_default()));
+            for (play, aim) in runs {
+                let Some(played) = run(&base, play, aim.as_deref(), &label, &mut failures) else {
+                    continue;
+                };
+                if played.result.is_some() {
+                    continue;
+                }
+                // Each Activate of the card, once its play has resolved.
+                for activate in legal_actions(&played, PlayerId::P1).into_iter().filter(
+                    |action| matches!(action, ActionBody::Activate { instance_id, .. } if *instance_id == card),
+                ) {
+                    run(&played, activate, aim.as_deref(), &label, &mut failures);
+                }
+            }
+        }
+        assert_eq!(failures, no_violations());
+        let listed: Vec<(String, bool)> = UNPLAYED
+            .iter()
+            .map(|(id, radiant, _)| (id.to_string(), *radiant))
+            .collect();
+        assert_eq!(unplayed, listed, "the faces the sweep's board lists no play of");
+    }
+}

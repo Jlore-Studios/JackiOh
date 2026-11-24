@@ -2049,6 +2049,33 @@ pub fn rebuild_fused_def(state: &mut GameState, def_id: &str, owner: PlayerId) -
     Some(def)
 }
 
+/// R4440006 (Stinkyscape+ #17 Smoothie and #18 Large Smoothie since issue #4440): the definition
+/// `ingredients` make fused with no card kept, minted into the state's transient definitions (scripts
+/// composed, R179) for a card to run as its text (`subsystems::unit_text`), its id returned. Each
+/// ingredient wears its Radiant face where `forced` says so (R469). `None` with fewer than
+/// FUSE_MIN_INGREDIENTS or past FUSED_CARDS_CAP cards (R874000), as a Fuse would refuse it.
+pub fn mint_text_def(state: &mut GameState, ingredients: &[CardInstance], forced: &[bool]) -> Option<String> {
+    if ingredients.len() < FUSE_MIN_INGREDIENTS {
+        return None;
+    }
+    let held: usize = ingredients
+        .iter()
+        .map(|card| fused_card_count(state, &card.def_id))
+        .sum();
+    if held > FUSED_CARDS_CAP {
+        return None;
+    }
+    let defs: Vec<CardDef> = ingredients
+        .iter()
+        .map(|card| crate::catalog::def_of(Some(&*state), &card.def_id).clone())
+        .collect();
+    let def = build_def(state, ingredients, &defs, None, forced, None, None);
+    let id = def.id.clone();
+    state.transient_defs.insert(id.clone(), def);
+    crate::scripts::sync_fused_scripts(state);
+    Some(id)
+}
+
 // The result.
 
 /// R77's keep-the-instance path. The fused card *is* the target: only its def id, summed buffs and united

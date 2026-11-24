@@ -170,13 +170,27 @@ mod b3_4_params_the_numbers_a_card_declares {
 
     #[test]
     fn r482_reads_the_numbers_lines_as_the_brief_writes_them_on_cards_that_show_one_of_each_kind() {
-        // A Radiant-only number: Cloaked Toe Cracker's "gain 1 mana" exists on its Radiant face only, so it
-        // is tuned there alone (R824000).
+        // A Radiant-only number: Bread and Butter's multiplier ("X = 3 × the Float") exists on its Radiant
+        // face only, so it is tuned there alone (R824000). (Cloaked Toe Cracker's "gain 1 mana" was the
+        // example until issue #4440 took it.)
+        let multiplier = card_def("core-018")
+            .params
+            .into_iter()
+            .flatten()
+            .find(|param| param.key == "multiplier")
+            .expect("Bread and Butter declares its multiplier");
+        assert_eq!(
+            serde_json::to_value(&multiplier).expect("params serialize"),
+            json!({ "key": "multiplier", "base": 1, "radiant": 3, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" })
+        );
+        assert!(!card_def("core-018").base.text.contains("{multiplier}"));
+        // A base-only number: Cloaked Toe Cracker's discount since issue #4440, its Radiant face's Traps
+        // costing (0).
         assert_eq!(
             serde_json::to_value(&card_def("classic-006").params).expect("params serialize"),
-            json!([{ "key": "mana", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }])
+            json!([{ "key": "discount", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }])
         );
-        assert!(!card_def("classic-006").base.text.contains("{mana}"));
+        assert!(!card_def("classic-006").radiant.text.contains("{discount}"));
         assert!(matches_object(
             &first_param("classic-083"),
             &json!({ "key": "damage", "base": 10, "radiant": 20, "step": 2 })
@@ -395,9 +409,10 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         let (meditative, shipped): (Vec<String>, Vec<String>) = base_only
             .into_iter()
             .partition(|entry| entry.starts_with("meditative-"));
-        // #2657's Bear Honeypot `tokens`, the base face's "Summon 2" (its Radiant face fills the board), and
-        // #3140's C+ #16 Conjure Rush Token+ `tails`, the base face's coin flip, "2 on tails".
-        assert_eq!(shipped.len(), 18, "{shipped:#?}");
+        // #2657's Bear Honeypot `tokens`, the base face's "Summon 2" (its Radiant face fills the board),
+        // #3140's C+ #16 Conjure Rush Token+ `tails`, the base face's coin flip, "2 on tails", and C #6's
+        // `discount`, the base face's "(2) less" since issue #4440 (its Radiant face's Traps cost (0)).
+        assert_eq!(shipped.len(), 19, "{shipped:#?}");
         assert_eq!(
             meditative,
             vec![
@@ -488,10 +503,11 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             })
             .count();
         // #2657's Anti-oneshot Armor `armor`, its Radiant face's "Your hero has Armor 1", and less
-        // M #49.1's `radiants`, gone with its start-of-turn text.
+        // M #49.1's `radiants`, gone with its start-of-turn text, and C #6's `mana`, gone with its Radiant
+        // face's gain since issue #4440.
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
-            (42, 19),
+            (41, 19),
             "{radiant_only:#?}"
         );
     }

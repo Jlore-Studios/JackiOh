@@ -37,6 +37,7 @@ pub mod hidden_nerfs;
 pub mod ky_competition;
 pub mod lethal_hint;
 pub mod living_bomb;
+pub mod lone_win;
 pub mod lost_mana;
 pub mod marketplace;
 pub mod match_refusal;

@@ -189,11 +189,11 @@ core-018: # Bread and Butter
     cast: Waste not, want toast.
   zh:
     name: 黄油面包
-    base: 当任意一名玩家结余时揭示：为你召唤一个X/X的面包衍生物。X=结余值。
-    radiant: 当任意一名玩家结余时揭示：为你召唤一个X/X的面包衍生物。X={multiplier}×结余值。
+    base: 当任意一名玩家结余时揭示：为你召唤一个X/X的面包衍生物。X=结余值+{bonus}。
+    radiant: 当任意一名玩家结余时揭示：为你召唤一个X/X的面包衍生物。X={multiplier}×结余值+{bonus}。
     previews:
-      X = the Float: X=结余值
-      X = {multiplier} × the Float: X={multiplier}×结余值
+      X = the Float + {bonus}: X=结余值+{bonus}
+      X = {multiplier} × the Float + {bonus}: X={multiplier}×结余值+{bonus}
 core-019: # Midrange Menace
   flavour: Not too early, not too late. Just annoyingly in the middle.
   voice:
@@ -446,8 +446,8 @@ core-046: # Suppressive Aura
     cast: Everybody calm down. Forever.
   zh:
     name: 压制光环
-    base: "光环：所有单位拥有−{debuff}/−{debuff}。\n加码(4)：改为−{paidDebuff}/−{paidDebuff}。"
-    radiant: "光环：敌方单位拥有−{debuff}/−{debuff}。\n加码(4)：改为−{paidDebuff}/−{paidDebuff}。"
+    base: "光环：所有单位拥有−{debuff}/−{debuff}。\n加码(3)：改为−{paidDebuff}/−{paidDebuff}。"
+    radiant: "光环：敌方单位拥有−{debuff}/−{debuff}。\n加码(3)：改为−{paidDebuff}/−{paidDebuff}。"
 core-047: # Fig of Life
   flavour: One fig a day keeps the healer away.
   voice:
@@ -1077,8 +1077,8 @@ classic-006: # Cloaked Toe Cracker
     death: My toes, my poor toes!
   zh:
     name: 斗篷掰趾客
-    base: "隐匿\n光环：你的陷阱的法力值消耗为(0)。"
-    radiant: "隐匿\n光环：你的陷阱的法力值消耗为(0)。\n在你打出一张陷阱后，获得{mana}点法力值。"
+    base: "隐匿\n光环：你的陷阱的法力值消耗减少({discount})点。"
+    radiant: "隐匿\n光环：你的陷阱的法力值消耗为(0)。"
 classic-007: # InfiniScepter
   flavour: A sceptre that keeps a spell in its pocket for later.
   voice:
@@ -1228,8 +1228,8 @@ classic-023: # Devil's Pact
     cast: Sign here. Your soul, please.
   zh:
     name: 恶魔契约
-    base: "不可摧毁，法术伤害+1\n战吼：随机弃掉{discards}张牌。\n激活：在本回合中，你打出的每张牌都会被替换为一张烈焰之书。"
-    radiant: "不可摧毁，法术伤害+2\n战吼：随机弃掉{discards}张牌。\n激活：在本回合中，你打出的每张牌都会被替换为一张烈焰之书。"
+    base: "不可摧毁，法术伤害+1，可交易\n战吼：随机弃掉{discards}张牌。\n激活：在本回合中，你打出的每张牌都会被替换为一张烈焰之书。"
+    radiant: "不可摧毁，法术伤害+2，可交易\n战吼：随机弃掉{discards}张牌。\n激活：在本回合中，你打出的每张牌都会被替换为一张烈焰之书。"
 classic-024: # Book of Knowledge
   flavour: Knowledge is power. Power is more cards.
   voice:
@@ -2318,8 +2318,8 @@ classicplus-037: # Wardrum
     death: The drum falls silent.
   zh:
     name: 战鼓
-    base: "圣盾\n当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：随机施放一张你在本回合打出的法术、场地法术或陷阱的复制。"
-    radiant: "圣盾\n当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：施放你在本回合打出的每张法术、场地法术和陷阱的复制。"
+    base: "当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：随机施放一张你在本回合打出的法术、场地法术或陷阱的复制。"
+    radiant: "当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：施放你在本回合打出的每张法术、场地法术和陷阱的复制。"
     previews:
       non-Units in a turn: 在你一个回合内打出的法术、场地法术和陷阱
       non-Unit you played this turn: 你在本回合打出的
@@ -8293,8 +8293,8 @@ stinkyscapeplus-131: # Tetrative Reconstructor
     cast: Four times over. And again!
   zh:
     name: 迭幂重构器
-    base: "献祭4\n回合开始时：将一张随机自动机-Ω牌置入你的手牌，它没有献祭条件。"
-    radiant: "献祭4\n回合开始时：将一张随机光辉自动机-Ω牌置入你的手牌，它没有献祭条件。"
+    base: "献祭3\n回合开始时：将一张随机自动机-Ω牌置入你的手牌，它没有献祭条件。"
+    radiant: "献祭3\n回合开始时：将一张随机光辉自动机-Ω牌置入你的手牌，它没有献祭条件。"
 stinkyscapeplus-132: # Great Paperclip Theory II
   flavour: Part two of the legendary lecture series. Attendance mandatory, clips optional.
   voice:

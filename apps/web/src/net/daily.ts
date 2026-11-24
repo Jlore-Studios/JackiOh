@@ -25,6 +25,7 @@ export type DailyGameSummary = {
   perMoveDays: number;
   /** The caller's seat now (R677). */
   seat: PlayerId;
+  /** Empty `profileId` and `username` once that account is deleted (R4621000). */
   opponent: PlayerRef;
   portraits: { me: PortraitId; them: PortraitId };
   turn: number;
@@ -79,6 +80,7 @@ export type DailyGame = {
   catalogVersion: string;
   /** R3727005: the game plays on the card version it started on, an older one than today's. */
   olderCatalog: boolean;
+  /** Empty `profileId` and `username` once that account is deleted (R4621000). */
   opponent: PlayerRef;
   over: boolean;
   /** The game ended because a move ran out of time (R3727000). */

@@ -1,5 +1,5 @@
 -- Daily games: a 1v1 match played at days per move, its invites, its notice settings and the
--- browsers' push subscriptions (migration 0089, SPEC §9.13, §9.1; issue #3727). Runs after
+-- browsers' push subscriptions (migrations 0089 and 0100, SPEC §9.13, §9.1; issues #3727 and #4621). Runs after
 -- 52_v0_5_13_retcon.sql; profiles 1 and 2 (11111111-…, 22222222-…) are active by then (03 activated
 -- them).
 \set ON_ERROR_STOP on
@@ -10,7 +10,7 @@
 -- inside a transaction that is rolled back. Nothing here selects into the log: the do blocks raise
 -- or say OK.
 
-\echo '### §9.13: 0089''s four tables have RLS on, their columns, and foreign keys that cascade ###'
+\echo '### §9.13: 0089''s four tables have RLS on, their columns, and foreign keys that cascade but for a daily game''s two seats, which empty (0100) ###'
 do $$
 declare
   t      text;
@@ -25,7 +25,7 @@ begin
 
   -- The columns, as the store reads and writes them: every time a bigint of epoch ms.
   for r in select * from (values
-      ('daily_games', 'match_id uuid NO, p1_profile_id uuid NO, p2_profile_id uuid NO, mode text NO, '
+      ('daily_games', 'match_id uuid NO, p1_profile_id uuid YES, p2_profile_id uuid YES, mode text NO, '
                       'per_move_days integer NO, clock jsonb NO, board jsonb NO, next_deadline_at bigint YES, '
                       'seq bigint NO, created_at bigint NO, ended_at bigint YES'),
       ('daily_invites', 'id uuid NO, kind text NO, from_profile uuid NO, to_profile uuid YES, mode text NO, '
@@ -44,10 +44,11 @@ begin
     end if;
   end loop;
 
-  -- Every row goes with its account (0012's rule), a daily game with its match too; an invite's
-  -- match is no foreign key (the claim names the match its transaction creates next).
+  -- Every row goes with its account, but a daily game's seats, which empty as a 1v1 match's do
+  -- (0012's rule; 0100, R4621000), and a daily game goes with its match; an invite's match is no
+  -- foreign key (the claim names the match its transaction creates next).
   for r in select * from (values
-      ('daily_games', 'matches(match_id) c, profiles(p1_profile_id) c, profiles(p2_profile_id) c'),
+      ('daily_games', 'matches(match_id) c, profiles(p1_profile_id) n, profiles(p2_profile_id) n'),
       ('daily_invites', 'profiles(from_profile) c, profiles(to_profile) c'),
       ('daily_notify', 'profiles(profile_id) c'),
       ('push_subscriptions', 'profiles(profile_id) c')) as x(tbl, fks) loop
@@ -70,7 +71,7 @@ begin
     raise exception 'FAIL (§9.13): a daily table has a trigger, but the server updates every row';
   end if;
 
-  raise notice 'OK (§9.13): the four tables have RLS on, their columns, cascading foreign keys and no trigger';
+  raise notice 'OK (§9.13): the four tables have RLS on, their columns, foreign keys (a daily game''s seats set null, the rest cascade) and no trigger';
 end $$;
 
 \echo '### §9.13, §9.1: a player reads their own games and invites (never an invite''s choice), nothing of the notices or the push keys, and writes none ###'
@@ -476,7 +477,7 @@ begin
 end $$;
 rollback;
 
-\echo '### §9.13, 0012: a deleted account takes its daily rows with it, and nobody else''s ###'
+\echo '### R4621000: a deleted account empties its seat on its finished daily games, which stay, and takes its own daily rows, and nobody else''s ###'
 begin;
 insert into auth.users (id, email, email_confirmed_at)
 values ('e3727000-0000-4000-8000-000000000004', 'r3727-leaver@example.test', now());
@@ -495,7 +496,7 @@ declare
   p2   constant uuid := '22222222-2222-2222-2222-222222222222';
 begin
   if not exists (select 1 from public.profiles where id = gone) then
-    raise exception 'FAIL (§9.13): the leaver has no profile; the cascade below would prove nothing';
+    raise exception 'FAIL (R4621000): the leaver has no profile; the delete below would prove nothing';
   end if;
   insert into public.daily_games (match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board, created_at, ended_at)
   values ('e3727000-0000-4000-8000-0000000000e1', gone, p1, 'bo1', 3, '{}', '{}', 1, 2),
@@ -512,13 +513,24 @@ begin
   if exists (select 1 from public.profiles where id = gone) then
     raise exception 'FAIL (§9.13): the leaver''s profile outlived its auth.users row';
   end if;
-  if exists (select 1 from public.daily_games where match_id = 'e3727000-0000-4000-8000-0000000000e1')
-     or exists (select 1 from public.daily_invites where from_profile = gone or to_profile = gone)
+  -- R4621000: the finished game stays for the other player, the leaver's seat emptied beside its
+  -- match's own (0012).
+  if not exists (select 1 from public.daily_games
+                  where match_id = 'e3727000-0000-4000-8000-0000000000e1'
+                    and p1_profile_id is null and p2_profile_id = p1 and ended_at = 2)
+     or not exists (select 1 from public.matches
+                     where id = 'e3727000-0000-4000-8000-0000000000e1'
+                       and p1_profile_id is null and p2_profile_id = p1) then
+    raise exception 'FAIL (R4621000): the leaver''s finished daily game did not stay with its seat emptied beside its match''s';
+  end if;
+  if exists (select 1 from public.daily_invites where from_profile = gone or to_profile = gone)
      or exists (select 1 from public.daily_notify where profile_id = gone)
      or exists (select 1 from public.push_subscriptions where profile_id = gone) then
     raise exception 'FAIL (§9.13): a deleted account''s daily rows outlived it';
   end if;
-  if not exists (select 1 from public.daily_games where match_id = 'e3727000-0000-4000-8000-0000000000e2')
+  if not exists (select 1 from public.daily_games
+                  where match_id = 'e3727000-0000-4000-8000-0000000000e2'
+                    and p1_profile_id = p2 and p2_profile_id = p1)
      or (select count(*) from public.daily_invites where from_profile = p2 and to_profile = p1) <> 1
      or not exists (select 1 from public.daily_notify where profile_id = p1)
      or not exists (select 1 from public.push_subscriptions where profile_id = p1) then
@@ -529,7 +541,7 @@ begin
   if exists (select 1 from public.daily_games where match_id = 'e3727000-0000-4000-8000-0000000000e2') then
     raise exception 'FAIL (§9.13): a daily game outlived its match';
   end if;
-  raise notice 'OK (§9.13): deleting an account deletes its daily games, invites, notices and subscriptions and no other account''s, and a game goes with its match';
+  raise notice 'OK (R4621000): deleting an account empties its seat on its finished daily game beside its match''s, deletes its invites, notices and subscriptions and no other account''s, and a game goes with its match';
 end $$;
 rollback;
 
@@ -575,16 +587,18 @@ begin
       raise exception 'FAIL (R3727008): the refused delete (seat %) changed the profile, the match or its daily game', seat;
     end if;
   end loop;
-  -- Once the match is over, the same delete goes through: the daily game goes, the match stays.
+  -- Once the match is over, the same delete goes through: the daily game stays, its seat emptied as
+  -- the match's is (R4621000). The loop's last pass seated the player at p2.
   update public.daily_games set ended_at = 2 where match_id = mid;
   update public.matches set status = 'over', ended_at = now() where id = mid;
   delete from public.profiles where id = gone;
   if exists (select 1 from public.profiles where id = gone)
-     or exists (select 1 from public.daily_games where match_id = mid)
+     or not exists (select 1 from public.daily_games
+                     where match_id = mid and ended_at = 2 and p1_profile_id = mate and p2_profile_id is null)
      or not exists (select 1 from public.matches where id = mid and p2_profile_id is null and p1_profile_id = mate) then
     raise exception 'FAIL (R3727008): a profile on a finished daily game was not deleted as a finished match''s is';
   end if;
-  raise notice 'OK (R3727008): a running daily game''s seat refuses its profile''s delete (matches_seats_filled_unless_over_check), from either seat, and a finished one''s does not';
+  raise notice 'OK (R3727008): a running daily game''s seat refuses its profile''s delete (matches_seats_filled_unless_over_check), from either seat, and a finished one''s empties';
 end $$;
 rollback;
 
@@ -615,6 +629,43 @@ begin
     raise exception 'FAIL (§9.13): re-applying 0089 granted a client an invite''s choice';
   end if;
   raise notice 'OK (§9.13): 0089 re-applies over its own rows and changes none';
+end $$;
+rollback;
+
+\echo '### R4621000: 0100 re-applies over a finished game whose seat it emptied and changes neither the game nor its seats'' keys ###'
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+values ('e4621000-0000-4000-8000-000000000001', 'r4621-leaver@example.test', now());
+insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
+                            catalog_version, ceiling_at, started_at, ended_at)
+values ('e4621000-0000-4000-8000-0000000000a1', 'over', 'seed-4621-a1',
+        '11111111-1111-1111-1111-111111111111', 'e4621000-0000-4000-8000-000000000001',
+        '[]', '[]', 'core-1', now(), now(), now());
+insert into public.daily_games (match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board, created_at, ended_at)
+values ('e4621000-0000-4000-8000-0000000000a1', '11111111-1111-1111-1111-111111111111',
+        'e4621000-0000-4000-8000-000000000001', 'bo1', 3, '{}', '{}', 1, 2);
+delete from auth.users where id = 'e4621000-0000-4000-8000-000000000001';
+set local client_min_messages = warning;
+\i /tmp/0100_daily_seats_set_null.sql
+set local client_min_messages = notice;
+do $$
+declare
+  v_text text;
+begin
+  if not exists (select 1 from public.daily_games
+                  where match_id = 'e4621000-0000-4000-8000-0000000000a1'
+                    and p1_profile_id = '11111111-1111-1111-1111-111111111111' and p2_profile_id is null) then
+    raise exception 'FAIL (R4621000): re-applying 0100 changed the finished game whose seat it had emptied';
+  end if;
+  select string_agg(format('%s %s', a.attname, c.confdeltype), ', ' order by a.attname)
+    into v_text
+    from pg_constraint c
+    join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+   where c.conrelid = 'public.daily_games'::regclass and c.contype = 'f' and c.confrelid = 'public.profiles'::regclass;
+  if v_text is distinct from 'p1_profile_id n, p2_profile_id n' then
+    raise exception 'FAIL (R4621000): after re-applying 0100 the seats'' keys are [%], expected both set null', coalesce(v_text, '(none)');
+  end if;
+  raise notice 'OK (R4621000): 0100 re-applies over a game whose seat it emptied and keeps both seats'' keys set null';
 end $$;
 rollback;
 

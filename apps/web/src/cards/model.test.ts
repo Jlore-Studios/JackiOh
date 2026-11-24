@@ -342,8 +342,8 @@ describe("B8: faceModel cost", () => {
   });
 
   it("B8 an embiggen card shows its base price, with alt set to the embiggen price", () => {
-    expect(face("core-046", false).cost).toEqual({ text: "2", value: "2", tone: "base", alt: "4" });
-    expect(face("core-046", false, { liveCost: 2 }).cost).toEqual({ text: "2", value: "2", tone: "base", alt: "4" });
+    expect(face("core-059", false).cost).toEqual({ text: "2", value: "2", tone: "base", alt: "4" });
+    expect(face("core-059", false, { liveCost: 2 }).cost).toEqual({ text: "2", value: "2", tone: "base", alt: "4" });
     expect(face("core-084", true).cost.alt).toBe("4");
   });
 
@@ -352,8 +352,8 @@ describe("B8: faceModel cost", () => {
     // #4350 the normal price, R4350000), and Mountaintop Garden's dearer price: the view prices the
     // Embiggened version.
     expect(face("core-084", false, { liveCost: 2, liveEmbiggenCost: 0 }).cost).toEqual({ text: "2", value: "2", tone: "base", alt: "0" });
-    expect(face("core-046", false, { liveCost: 2, liveEmbiggenCost: 4 }).cost.alt).toBe("4");
-    expect(face("core-046", false, { liveEmbiggenCost: 6 }).cost.alt).toBe("6");
+    expect(face("core-059", false, { liveCost: 2, liveEmbiggenCost: 4 }).cost.alt).toBe("4");
+    expect(face("core-059", false, { liveEmbiggenCost: 6 }).cost.alt).toBe("6");
   });
 
   it("B8 an embiggen card's gem shows the view's live number, toned against its base price, and drops the embiggen price", () => {
@@ -365,7 +365,7 @@ describe("B8: faceModel cost", () => {
 
   it("B8 an embiggen card on the field that was paid its embiggen price shows that price, neutral", () => {
     // Played at 4 into the backrow, CardView.cost is 4: the gem says 4 in the base tone, never a red 2.
-    expect(face("core-046", false, { liveCost: 4 }).cost).toEqual({ text: "4", value: "4", tone: "base", alt: null });
+    expect(face("core-059", false, { liveCost: 4 }).cost).toEqual({ text: "4", value: "4", tone: "base", alt: null });
     expect(face("core-059", true, { liveCost: 4 }).cost).toEqual({ text: "4", value: "4", tone: "base", alt: null });
   });
 

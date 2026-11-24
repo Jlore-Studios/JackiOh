@@ -610,6 +610,17 @@ fn hand_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> C
 /// hand and the resolving zone.
 fn with_copies(mut view: CardView, state: &GameState, card: &CardInstance) -> CardView {
     let Some(copy) = copied_text_of(state, card) else {
+        // R4440006: a card that gained a fused text off the field (a Smoothie's Fruits) shows that text
+        // where a copier shows its copy, with its numbers as its text reads them.
+        if card.zone.z() != ZoneName::Field
+            && let Some(gained) = crate::subsystems::unit_text::unit_text_of(card)
+        {
+            view.copies = Some(CopiedTextView {
+                params: params_view(state, card),
+                def_id: gained.def_id,
+                radiant: gained.radiant,
+            });
+        }
         return view;
     };
     let face: CardInstance = text_face_of(state, card).clone();

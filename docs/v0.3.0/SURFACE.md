@@ -117,8 +117,8 @@ Rules that follow from the tree:
   it never edits those files. A dependency or module it wishes existed goes under `GAPS` in its notes
   (§16) and part 31 adds it.
 - Integration tests are one binary per crate (`tests/rules.rs`, `tests/cards.rs`, `tests/ai.rs`,
-  `tests/server.rs`, plus `tests/golden.rs`). Each file directly under `tests/` is its own binary
-  and its own link step, so 300 of them would cost minutes per `cargo test`. The engine's rules
+  `tests/server.rs`, `tests/shared.rs`, plus `tests/golden.rs`). Each file directly under `tests/` is its
+  own binary and its own link step, so 300 of them would cost minutes per `cargo test`. The engine's rules
   are three, `tests/rules.rs`, `tests/rules_2.rs` and `tests/rules_3.rs`, which CI compiles side by
   side (#2090, #2957).
 - Data files are **copied** by part 1, not moved: the TypeScript engine must keep working on
@@ -1224,7 +1224,7 @@ must share an engine version: an `ai/*` branch differs from `main` only under `c
 ### 14.2 `arena` and `promote`
 
 ```
-cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> (--set improve-dev [--games N] [--extend] [--forks] | --seed <base> --games N [--paired]) [--out <dir>]
+cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> (--set improve-dev [--games N] [--extend] [--forks [--save <path>]] | --seed <base> --games N [--paired]) [--out <dir>]
 cargo jackioh promote --lane improve|unban --parent-bin <path to main's jackioh> [--dry-run] [--verify]
 ```
 
@@ -1255,7 +1255,12 @@ control's seat got, never the true state. When its action differs that decision 
 once after each action, both arms on to the end with the control on both seats. The tally adds
 `trunkGames`, `forks`, `liveForks`, `forksPerGame`, `rollouts` and `forkEdge` with its 95% interval
 `forkEdgeLow` and `forkEdgeHigh`, keeps a change when `forkEdgeLow` is above 0, and reads
-`inconclusive: true` below `SCREEN_MIN_DECIDED` live forks.
+`inconclusive: true` below `SCREEN_MIN_DECIDED` live forks. `--save <path>` (R4607000) appends
+each finished deal to the file as soon as it is done: one header line naming the set, `--games`,
+`--extend`, the budget, `FORK_ROLLOUTS`, `FORK_MAX_PER_GAME`, the catalog version and each agent's
+label and `info` answer, then one JSON line a deal. A rerun of the same command refuses a foreign
+file by field name, replays the first saved deal's trunk once as an identity check, and plays only
+the deals still missing; a finished save, run again, plays nothing and prints its tally again.
 
 `promote` plays the lane's deals against the parent, seeds `"<lane>:<tree>:<d>"` where `<tree>` is
 `git rev-parse HEAD:crates/ai/src` (so committing `generation.json` does not change the seeds), each

@@ -28,6 +28,7 @@ import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { gifTestid } from "../replay/ShareGif.tsx";
 import { writeSettings } from "../settings/index.ts";
 import { sidelineTestid } from "../sideline/testids.ts";
+import { pressBack } from "../test/history.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 import { settle } from "../test/settle.ts";
 import { navTestid } from "./nav.tsx";
@@ -1771,13 +1772,17 @@ describe("Reconnect now", () => {
 describe("R768000 a finished match's replay from its result panel", () => {
   const steps = foldedReplaySteps();
 
-  /** `GET /api/replays/m-1?from=&count=` answers the folded game's steps; anything else the catalog. */
-  function stubReplayFetch(ranks?: unknown): string[] {
+  /**
+   * `GET /api/replays/m-1?from=&count=` answers the folded game's steps, or never when `pages` is
+   * `"pending"`; anything else the catalog.
+   */
+  function stubReplayFetch(ranks?: unknown, pages: "served" | "pending" = "served"): string[] {
     const asked: string[] = [];
     vi.stubGlobal(
       "fetch",
       vi.fn((url: string) => {
         const address = new URL(String(url), "http://localhost");
+        if (pages === "pending" && address.pathname === "/api/replays/m-1") return new Promise<Response>(() => undefined);
         const body = address.pathname === "/api/replays/m-1"
           ? (() => {
               asked.push(address.search);
@@ -1841,6 +1846,50 @@ describe("R768000 a finished match's replay from its result panel", () => {
     fireEvent.click(await screen.findByTestId(matchTestid.shareLastTurn));
     await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", String(steps.length - 1)));
     await waitFor(() => expect(screen.getByTestId(gifTestid.toggle)).toHaveAttribute("aria-expanded", "true"));
+  });
+
+  /** R4619000: the finished match at `/match/m-1`, with `/play` the page before it. */
+  function finishedFromPlay(): void {
+    window.history.replaceState(null, "", paths.play);
+    window.history.pushState(null, "", paths.match("m-1"));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+  }
+
+  it("R4619000 one Back on a finished match's replay returns to its result, with no leave question", async () => {
+    stubReplayFetch();
+    finishedFromPlay();
+    fireEvent.click(await screen.findByTestId(matchTestid.watchReplay));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+
+    await pressBack();
+    expect(await screen.findByTestId(matchTestid.watchReplay)).toBeInTheDocument();
+    expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+    expect(screen.queryByTestId(leaveMatchTestid.dialog)).toBeNull();
+    expect(window.location.pathname).toBe(paths.match("m-1"));
+  });
+
+  it("R4619000 Back closes a replay that is still loading", async () => {
+    stubReplayFetch(undefined, "pending");
+    finishedFromPlay();
+    fireEvent.click(await screen.findByTestId(matchTestid.watchReplay));
+    await screen.findByTestId(replayTestid.loading);
+
+    await pressBack();
+    expect(await screen.findByTestId(matchTestid.watchReplay)).toBeInTheDocument();
+    expect(screen.queryByTestId(replayTestid.loading)).toBeNull();
+    expect(window.location.pathname).toBe(paths.match("m-1"));
+  });
+
+  it("R4619000 the Share as GIF row is no layer: with it open, one Back closes the replay", async () => {
+    stubReplayFetch();
+    finishedFromPlay();
+    fireEvent.click(await screen.findByTestId(matchTestid.shareLastTurn));
+    await waitFor(() => expect(screen.getByTestId(gifTestid.toggle)).toHaveAttribute("aria-expanded", "true"));
+
+    await pressBack();
+    expect(await screen.findByTestId(matchTestid.watchReplay)).toBeInTheDocument();
+    expect(screen.queryByTestId(replayTestid.player)).toBeNull();
   });
 
   it("R768000 a game still being played offers neither", () => {

@@ -2806,6 +2806,19 @@ button.modifier-badge[data-open="true"] {
   border-top: 1px solid var(--line);
 }
 
+/* #4614: a windowed log mounts only the rows near the viewport; the class marks it for tests and changes no layout. */
+.log--virtual {
+  /* Marker only: the windowing is the mounted rows and the spacers below. */
+}
+
+/* #4614: the blank place of the unmounted head and tail; `display: block` keeps it out of the numbering, as the divider. */
+.log-spacer {
+  display: block;
+  list-style: none;
+  padding: 0;
+  border: 0;
+}
+
 /* R745: where two views' windows could not be joined. */
 .log-line[data-event="gap"] {
   font-style: italic;

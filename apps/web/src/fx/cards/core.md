@@ -65,7 +65,7 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-043` | Big Felinor | Unit | cry wipe Beast/felinor | 1.45 | wipe | cry: the census agrees (wipe) |
 | `core-044` | True Strike | Spell | cast bolt | 1.08 | bolt | cast: the census agrees (bolt) |
 | `core-045` | Deft Duelist | Unit | none: vanilla | — | none: vanilla | keywords only, which the keyword beats and the attack rows draw |
-| `core-046` | Suppressive Aura | Field Spell | cast bolt; aura void board | 1.28 | bolt | cast: the census agrees (bolt) |
+| `core-046` | Suppressive Aura | Field Spell | cast bolt; aura void board | 1.19 | bolt | cast: the census agrees (bolt) |
 | `core-047` | Fig of Life | Spell | cast mend | 1.24 | none: no motif reads healed | cast: no census family reads healed, which mend (#2793) reads |
 | `core-048` | 5pek Controller | Spell | cast shift | 1.00 | none: no motif reads positionSwitched | cast: no census family reads swapped, rotated, positionSwitched and flickered, which shift (#2786) reads |
 | `core-049` | Snom Bunny Mind Control | Spell | cast tether Dark/curse | 1.63 | none: no motif reads controlChanged | cast: no census family reads stolen, controlChanged and held, which tether (#2786) reads |

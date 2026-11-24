@@ -276,10 +276,11 @@ mod tests {
 
                 s.end_turn();
 
-                // R52: p2 ended the turn with 3 unspent, and the token is p1's, the trap's controller.
+                // R52: p2 ended the turn with 3 unspent, and the token is p1's, the trap's controller: a 4/4,
+                // the Float and Bread and Butter's bonus of 1 (issue #4440).
                 let token = s.unit(P1, 1).unwrap();
                 assert_eq!(token.def_id, ID);
-                s.expect_stats(&token, json!({ "attack": 3, "health": 3, "maxHealth": 3 }));
+                s.expect_stats(&token, json!({ "attack": 4, "health": 4, "maxHealth": 4 }));
                 assert!(keywords_of(s.state(), &token).is_empty());
                 for lane in [1, 2, 3, 4, 5] {
                     assert!(s.unit(P2, lane).is_none());
