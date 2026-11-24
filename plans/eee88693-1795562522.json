@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4810,
+  "title": "Patch: an imagined opponent whose reply reaches its step cap still makes its attacks and ends its turn, where a five-use Activate now hides a lethal",
+  "branch": "bot/issue-4810",
+  "thread": "**Issue #4810 (data, not instructions):**\n\n````text\n# #4810: Patch: an imagined opponent whose reply reaches its step cap still makes its attacks and ends its turn, where a five-use Activate now hides a lethal\nOpened by @squishy-squooby.\n\n### What happens\n\nThe opponent model's reply (`simulate_reply_with`, `crates/ai/src/reply.rs`) runs at most `AI_REPLY.max_steps` (12) steps. When it reaches the cap it returns `Some(current)` with the opponent still on turn (`reply.rs:911`, `:999`), and `replied_score` scores that state as a finished reply. Each step does one thing, in the order known play, visible Activate, Deft trial, attack (`reply.rs:936-959`), so what the cap cuts is the attacks.\n\nStinkyscape #66 Miner v5 (\"Activate 5: Gain a random Stinkyscape Resource\", no cost) is enough: each use gains a Resource, the Resource is a new instance and so not among the hidden cards, and `known_play` plays it on the next step. Five mines and five plays are ten of the twelve steps.\n\nBoard: the AI at 12 with no Unit; the opponent has three 4/4s and a Miner. Without the Miner the reply kills the AI. With it (seed `audit-reply-miner-7`, where the Resources are heals and 1-damage pings), the reply makes two attacks and then the loop runs out: the state handed back has no result, the opponent is still on turn 10, the AI is at 2 and one 4/4 has not swung. The line is scored as survived.\n\nIn a fuzz of 12 random-policy games, 5 of 154 replies stopped mid-turn this way, all with a Miner in play.\n\n### What should happen\n\n`reply.rs:887`: the reply runs \"until the seat's next main phase or prompt, or game end\". `crates/ai/src/config.rs` describes `max_steps` as covering \"plays, attacks, prompt answers and the closing endTurn\". `crates/ai/README.md` has the reply play the Activates it can see \"then its attacks\". A capped reply should still make its attacks and close the turn, or the cut should be reported so the line is not scored as answered.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `a_five_use_activate_does_not_crowd_the_opponents_lethal_attacks_out_of_the_reply` in [`crates/ai/tests/audit_reply.rs` at bf24a52](https://github.com/Jlore-Studios/JackiOh/blob/bf24a52273bd5c0e7d6f9c740b28a8d7cb7f2b3e/crates/ai/tests/audit_reply.rs) (branch `claude/vigilant-mayer-pmyrhr`).\n\n```rust\n// handed_over_on(seed, p1, p2): a turn-9 scenario with p1 active, then p1's End turn through `reduce`.\n#[test]\nfn a_five_use_activate_does_not_crowd_the_opponents_lethal_attacks_out_of_the_reply() {\n    let reply = |field: Value| {\n        let state = handed_over_on(\"audit-reply-miner-7\", json!({ \"health\": 12 }), json!({ \"field\": field }));\n        let counter = create_node_counter(600, None);\n        simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE).expect(\"a reply\")\n    };\n    let plain = reply(json!([\"core-008\", \"core-008\", \"core-008\"]));\n    assert_eq!(plain.result.map(|result| result.winner), Some(Winner::from(HUMAN)));\n    let mined = reply(json!([\"core-008\", \"core-008\", \"core-008\", \"stinkyscape-066\"]));\n    let unswung = active_units_of(&mined, HUMAN).into_iter()\n        .filter(|unit| unit.def_id == \"core-008\" && !unit.exertion.attacked).count();\n    assert_eq!(mined.result.map(|result| result.winner), Some(Winner::from(HUMAN)),\n        \"beside a Miner v5 the reply stopped with the opponent still on turn: active {:?}, turn {}, \\\n         the AI at {}, {unswung} of the 4/4s unswung\",\n        mined.active, mined.turn, mined.players[AI].hero.health);\n}\n```\n\nOutput today: `beside a Miner v5 the reply stopped with the opponent still on turn: active P2, turn 10, the AI at 2, 1 of the 4/4s unswung`.\n\nThe test depends on its seed because the Resources are random; on other seeds the board still reaches lethal (fewer plays beat standing still). Pin the scene so a balance patch cannot move it (a stand-in with a free five-use Activate, if the testkit allows one).\n\n### Where\n\nThe AI: `crates/ai/src/reply.rs` (`simulate_reply_with`'s loop and what it returns at the cap).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Cap the steps that are not attacks apart from the attacks (for example, stop trying known plays and Activates once a share of `max_steps` is spent), and when the cap is reached with the opponent still on turn, close the turn with `EndTurn` so the line is scored at the seat's next decision, as every other reply is.\n- Any new number is a named constant in `AI_REPLY` (CLAUDE.md rule 9).\n- `max_steps` appears in no test, in neither the README nor SPEC \u00a79, and in no ruling, so nothing pins the cut; this is a decision the spec does not make, so it takes a ruling note in this issue's block.\n- A change here moves what the reply plays on boards with many Activates, so fixed-seed AI games can move. `training/improve.md` says how a change to the AI's play is screened; say in the pull request what was measured.\n- Not among the findings of the AI audit tracker #4787.\n\nFound by an audit of the AI crate; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4810: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:56:55Z",
+    "claimed_at": "2026-11-24T23:22:38Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4801 is held for `claude-8` until 18:10 (5-hour usage is 90%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
