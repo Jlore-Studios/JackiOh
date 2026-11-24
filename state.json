@@ -41251,6 +41251,9 @@
   "usage_spool": {
     "readings": [
       "2026-11-24T02:58:03Z,claude-3,refusal,call,45315851574,100,2026-11-24T07:20:00Z,,,rejected,,,2026-11-24T07:20:00Z"
+    ],
+    "runs": [
+      "2026-11-24T02:58:03Z,45315851574,claude-3,opus,plan,4592,hard,interrupted,refusal,0,0,0,0,30.1102,100,100,,,459.9,claude-3,resumed,,1"
     ]
   },
   "version": 1
