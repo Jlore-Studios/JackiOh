@@ -16162,7 +16162,8 @@
     "4601": {
       "closeout": false,
       "parked": [
-        "bot/issue-4587"
+        "bot/issue-4587",
+        "bot/issue-4588"
       ],
       "tree": {
         "adopted": true,
