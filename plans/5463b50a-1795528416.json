@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4731,
+  "title": "Patch: the AI sweep notebook shows raw timeouts beside counted timeouts",
+  "branch": "bot/issue-4731",
+  "thread": "**Issue #4731 (data, not instructions):**\n\n```text\n# #4731: Patch: the AI sweep notebook shows raw timeouts beside counted timeouts\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the practice AI is too slow on a turn during a shadow-ban sweep, the sweep counts a timeout against the card it was dealt. Some of that slowness is the machine's fault \u2014 busy runners, a shared box \u2014 so the sweep re-times each slow decision against a quiet yardstick and clears it when the card was fine.\n\nThe command-line report prints both numbers: the timeouts that count, and the raw slow decisions before re-timing. The sweep notebook, the durable review surface for sweeps of record, shows only the counted ones.\n\nAfter this change the notebook shows both numbers side by side, for pass 1 and pass 2. A card with a dozen raw slow decisions and zero counted timeouts no longer looks identical to a card that was never slow, so whoever judges a timeout ban can see how much noise the re-timer absorbed. Nothing about what bans a card changes: flags still read the re-timed count.\n\nConcrete example: on the Stinkyscape+ sweep of record, Airblast Drill at Hard shows 0 counted timeouts but 12 raw ones, and Hull Repairer mk2 at Hard 0 counted but 5 raw, on a run whose own notes say the re-timer may not have absorbed the shared-core noise. The notebook shows both lines as clean today.\n\n## Why\n\n- The sweep records both numbers per card: `SweepStats.raw_timeouts` is documented as the timeouts before the re-timer (`crates/ai/src/sweep.rs`), and the CLI report prints a raw timeouts column beside timeouts (`cargo jackioh sweep --report`; proving test `r977000_a_row_shows_the_raw_timeouts_beside_the_timeouts` in `crates/tools/src/sweep.rs`). A timeout flag bans or watches a card (R390, R977000), and the shadow-ban tables are written from that report.\n- The analysis path drops the raw number: `load_sweep` and `load_sweep_pass2` in `analysis/jackioh_records/__init__.py` read `timeouts` but never `rawTimeouts`, and notebook 03's pass-1 tables and pass-2 verdict print show errors and timeouts without it.\n- The evidence it matters is already committed: the fixture `analysis/fixtures/sweep-small.jsonl` holds a pass-2 entry with timeouts 0 and `rawTimeouts` 8 (forced core-001, hard), which the loader reads as a clean 0 today. And the 2026-11-13 sweep of record (`training/history/sweep-2026-11-13.md`) says pass 2 shared cores with test builds, which R977000's re-timer \"may not absorb\", naming stinkyscapeplus-163's timeout as falling in that window \u2014 exactly the case where a reviewer needs raw beside counted before trusting a flag.\n- This is not a new check or a new number: the emitter, the CLI report, and the proving test already exist. It only carries a recorded field through the loader into the notebook that judges it.\n\n## Proposal\n\n- Read `rawTimeouts` in both loaders, defaulting to 0 when a line predates the field (mirroring the Rust `#[serde(default)]`, so the current fixture's pass-1 lines read 0 unchanged): add `raw_timeouts` to `SWEEP_COLUMNS`/`_sweep_row` and to `PASS2_COLUMNS`/`PASS2_NUMBERS` (pass 2 sums it per card like the other counts; flags keep reading re-timed `timeouts` only).\n- Show it beside the counted timeouts in notebook 03: the pass-1 table and flagged table, and the pass-2 table plus the per-verdict print line. Update the loader docstrings and the notebook intro (which today promises \"the errors and the timeouts\").\n- Extend `analysis/tests/test_card_stats.py`: per-line raw equality on the fixture (including the default-0 pass-1 lines and the pass-2 row that sums to 8), a tmp-file line with a nonzero `rawTimeouts`, and one without the key.\n- No fixture change needed (it already exercises both shapes); no Rust change; notebook outputs stay cleared per `analysis/README.md`.\n\n## Where it lands\n\n`analysis/jackioh_records/__init__.py` (`SWEEP_COLUMNS`, `_sweep_row`, `PASS2_COLUMNS`, `PASS2_NUMBERS`, both loader docstrings); `analysis/notebooks/03-ai-sweep-and-generations.ipynb` (pass-1 and pass-2 display cells); `analysis/tests/test_card_stats.py` (sweep loader tests). Spec sections: \u00a79.9 (sweep, R186/R390) with R977000; analysis side under \u00a79.11.\n\n## Acceptance criteria\n\n- [ ] `load_sweep` returns an int64 `raw_timeouts` column equal to each line's `rawTimeouts`, 0 for lines without the key.\n- [ ] `load_sweep_pass2` sums `raw_timeouts` per card/tier/face; on the committed fixture the forced core-001 hard row reads timeouts 0 and raw_timeouts 8.\n- [ ] Notebook 03 prints raw beside counted timeouts in its pass-1 tables and its pass-2 table and verdict lines, and `uv run --project analysis pytest analysis/tests` passes, notebook runs included.\n- [ ] Timeout/error/selfHarm/selfKill flag logic is unchanged: raw never bans, watches, or clears anything.\n- [ ] No Rust, spec, catalog, or workflow changes; notebook committed without outputs.\n\n## Size and risks\n\nSmall: one loader field times two loaders, two notebook tables plus one print line, and test assertions. Risk is near zero \u2014 additive columns, defaulted reads, display-only. The rejected alternative is feeding raw counts into the ban flags; this proposal deliberately does not: R977000 absorbs machine noise on purpose, and raw exists so a person can judge the judge, not replace it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `telemetry` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** leaves it to a person: It is display-only telemetry in the analysis notebook that changes no ban decision when the CLI report already shows raw timeouts.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-24T13:45:33Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4731: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T13:45:58Z",
+    "claimed_at": "2026-11-24T13:54:06Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
