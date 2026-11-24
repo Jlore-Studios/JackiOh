@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4808,
+  "title": "Patch: the AI's search tells apart positions that differ in the last Spell played, in which side is chained, and in a Dormant Unit's lane",
+  "branch": "bot/issue-4808",
+  "thread": "**Issue #4808 (data, not instructions):**\n\n````text\n# #4808: Patch: the AI's search tells apart positions that differ in the last Spell played, in which side is chained, and in a Dormant Unit's lane\nOpened by @squishy-squooby.\n\n### What happens\n\n`search_signature` and `unit_lanes` (`crates/ai/src/simulate.rs`) leave out three pieces of state that change what a position offers or is worth. The beam's duplicate check (`crates/ai/src/search.rs:191-193`) and the lethal solver's visited set (`crates/ai/src/lethal.rs:232-236`) then take two different positions for one and drop the later line. #4793 (the AI audit tracker #4787) covers a fourth omission of the same kind, a hand card's `buffs` and `granted_keywords`; these three are not in it.\n\n**1. `state.last_spell` is not signed, so with Echo in hand the AI misses a three-card lethal.**\nC #57 Echo \"has the text of the last Spell either player played\" (`subsystems::copied_text_of` reads `state.last_spell` live for a copier in hand). p1 holds C #55 Book of Wildfire ((1), deal 4 to a declared target), Echo and The Coin at 1 mana; the enemy hero is at 8. Coin, Wildfire at the face, Echo (now Wildfire) at the face wins. After Coin then Wildfire, and after Wildfire then Coin, the signatures are byte-identical (the turn log is sorted), but Echo is Wildfire in one and The Coin in the other, so `legal_actions` differ. The solver reaches Wildfire-then-Coin first (plays go dearest first) and prunes Coin-then-Wildfire as visited: `find_lethal` returns `None` after 19 of 1,200 nodes. `decide` answers `Search` with Wildfire at the hero first, after which Echo can only copy The Coin: the win is gone for the turn.\n\n**2. `shared_chain` and `split_chain` are not signed, so one mode of S+ #7 Churnwalker is never searched.**\nChurnwalker's Cry is a declared choice: chain all enemy Units (damage to one hits all) or chain all friendly Units (damage is split). The two plays give identical `(search_signature, unit_lanes)` and equal `evaluate`, so the beam keeps \"enemy\" (first in `legal_actions`) and drops \"friendly\" at every depth. They are different positions: the same attack from each then evaluates to 16.2 against 5.8. The reply, which would price a split chain against the opponent's attacks, never sees the friendly line.\n\n**3. A Dormant Unit's lane is in neither `search_signature` nor `unit_lanes`** (minor).\n`unit_lanes` walks `active_units_of`, which drops Dormant cards, and the signature's Dormant part is `z{id}:{turns}` with no lane. S #17 Imprisoned Ship Smith (enters Dormant) played in lane 1 against lane 3 gives identical keys, so the second placement is discarded outright instead of becoming a lane variant that reaches the reply (#1797, R4132000). The same holds for every card that enters Dormant (S #19, the Dormant Starship tokens, S+ #157 Phantom Shipyard). A catalog-wide scan showed the same for an \"Animated on your turn\" Field Spell played on its own turn (M #66 Fiery Waraxe): its placements differ only in `homes[].zone.lane`, which nothing signs.\n\n### What should happen\n\n`crates/ai/README.md`, move order: \"The beam drops an open line whose position an earlier one reached (two orders of the same moves into the same lanes are one position)\". Two positions that offer different moves, or on which the same move has a different result, are not one position. R3951100 rules the same case for the last Feng Shui element: \"two orders of the same plays that end on different elements are two positions\u2026 The lethal solver's visited set reads the same signature, so it keeps such orders apart too\". `unit_lanes`' doc: \"two placements of one play that differ only in lane stay two positions\".\n\n### How to reproduce\n\nFive tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_sim.rs` at bf24a52](https://github.com/Jlore-Studios/JackiOh/blob/bf24a52273bd5c0e7d6f9c740b28a8d7cb7f2b3e/crates/ai/tests/audit_sim.rs) (branch `claude/vigilant-mayer-pmyrhr`): `two_orders_of_two_spells_that_leave_echo_two_texts_sign_apart`, `the_lethal_solver_finds_coin_wildfire_echo`, `decide_plays_the_coin_first_when_only_that_order_wins`, `boards_that_differ_in_which_side_is_chained_sign_apart`, `a_dormant_units_lane_is_part_of_the_beams_duplicate_check`. (The file's other two tests are #4793's.)\n\nThe Echo board and its three assertions:\n\n```rust\nfn echo_board() -> GameState {\n    jackioh_cards::register_all();\n    scenario(json!({\n        \"seed\": \"audit-sim-echo\",\n        \"p1\": { \"hand\": [\"classic-055\", \"classic-057\", \"core-t-coin\"], \"library\": [\"core-008\", \"core-008\", \"core-008\"], \"mana\": 1 },\n        \"p2\": { \"hand\": [\"core-008\"], \"library\": [\"core-008\", \"core-008\", \"core-008\"], \"health\": 8 },\n    })).state().clone()\n}\n// 1. search_signature(coin_then_fire) != search_signature(fire_then_coin), given their legal_actions differ\n// 2. find_lethal(&[root], AI, &counter, AI_BUDGET.nodes, Prices::NONE).is_some()\n// 3. decide(&root, AI, \u2026).action is the play of The Coin\n```\n\nOutput today:\n\n```\ntwo positions that offer different moves sign alike\n  left/right: \"h4/0|m30/0|$1|n1|q-|l3/3|b-,-,-,-,-|Tp12:c1,c3:[0, 1]:Spell2:None/None/None|Gp1c1=classic-0550/None,c3=core-t-coin0/None|b-,-,-,-,-|Hc2=classic-0570/None\"\nno lethal found after 19 of 1200 nodes\nSearch: [play c1 \u2192 hero p2, endTurn]   left: play c1 (Wildfire at hero)   right: play c3 (The Coin)\nthe beam's duplicate check takes the two modes for one position\nthe beam's duplicate check takes the two lanes for one position\n```\n\n### Where\n\nThe AI: `crates/ai/src/simulate.rs` (`position_signature`, `unit_play_signature`, `unit_lanes`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- **Last Spell:** sign `state.last_spell` (definition and face) under R3951100's \"only when\" rule: only while a card that copies the last Spell (`subsystems::copies_text`) is where the seat could play it, so every other signature stays as it was.\n- **Chains:** add `shared_chain` and `split_chain` to a unit's part of the signature, only when set.\n- **Dormant lane:** make `unit_lanes` walk `units_on_field_of` (Dormant kept) and add an animated card's home lane; leave `lane_free_signature` as it is.\n- Each addition only when non-default, as `rides_signature` does for memory and tuning, so a position without these signs exactly as before and the existing `position_model.rs` tests pass unedited. A ruling note in this issue's block for the three, beside R3951100, R3772000, R4132000 and R1839000, which rule the signature's other parts.\n- **Build with #4793 in view**: it adds a hand card's `buffs` and `granted_keywords` to `card_signature`, a few lines from these. Whichever lands second rebases; do not redo its part here.\n- The daily test `two_one_step_children_with_one_signature_score_the_same_and_offer_the_same_moves` (`crates/ai/tests/ai/lethal.rs`, `#[ignore]`) asserts exactly the property these break, on random decks. A deterministic version over the cards named here would keep the rule per pull request.\n- Seen in the same scan but not isolated into a test (worth a look, not part of the acceptance): a backrow card's `vanilla` flag (Radiant C+ #9 Silence on the seat's own face-down Trap against its own Fiery Waraxe: equal signatures, different `evaluate`), and `flashback_spent` on graveyard cards under C #28 Second Wind.\n\nFound by an audit of the AI crate; the reproductions were run and the code paths read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4808: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:56:08Z",
+    "claimed_at": "2026-11-24T22:28:40Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4801 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#4726 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
