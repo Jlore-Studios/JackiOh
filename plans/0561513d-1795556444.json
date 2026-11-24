@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4848,
+  "title": "Patch: every question for the player not on turn gets its own 30-second clock, so a silent seat can no longer hold a match until the two-hour ceiling",
+  "branch": "bot/issue-4848",
+  "thread": "**Issue #4848 (data, not instructions):**\n\n````text\n# #4848: Patch: every question for the player not on turn gets its own 30-second clock, so a silent seat can no longer hold a match until the two-hour ceiling\nOpened by @squishy-squooby.\n\n### What happens\n\nIn a live 1v1 match, after the prompt clock of the player who is not on turn runs out once, that player's **next** prompt has no clock at all. Nothing moves the game on but the 120-minute ceiling. A silent seat holds the match, and a losing player can do it on purpose: stop answering, and the loss becomes a ceiling draw unless the opponent concedes.\n\n`MatchClock::sync` (`crates/shared/src/host/clock.rs:393-403`) arms the prompt clock only when the holder changes:\n\n```rust\nSome(holder) => {\n    if Some(holder) != self.holder {\n        self.arm_prompt(holder, now, fx);\n    }\n}\n```\n\nand `holder` \"outlives the timer\" (`clock.rs:172`): `fire` leaves it set (`:503-510`).\n\nA concrete game, all shipped cards:\n\n1. p2 has a face-down S #22 Gatinsir. p1's Unit attacks, and Gatinsir reveals.\n2. It summons two S #82 Phalanxes, whose Cries ask p2, who is not on turn, four \"Discover a card to Equip\" questions in a row (R2176000).\n3. p2 does not answer. After 30 seconds the prompt clock fires; `srv-prompt-2` (`timeout`) is logged and answers the first Discover.\n4. The engine opens the second Discover for p2. `sync` runs: the holder is still p2 and the spent timer is gone, so nothing is armed.\n5. The turn clock stays paused, because a prompt is open for the player not on turn.\n\nThe only timer left is the ceiling. p1's only legal action is Concede. `clocks().prompt_deadline` is `None`, so neither client shows a countdown. Both sockets stay open, so no disconnect grace runs either. The server's actor feeds the machine its timers and its `Logged` exactly as the test below does and has no other watchdog (that half is by reading).\n\nThe same shape arises after the turn clock's own timeout stops at the other seat's prompt. In a random-play search over the real catalog with both seats silent at a probe each step, the state turned up in roughly one game in fifteen (2 of the first 40, then 9 more across 130). Cards seen: Gatinsir with Phalanx, and a \"Place 3 Plague Counters on a permanent\" chain.\n\n### What should happen\n\n- SPEC \u00a79.5 (`spec/09-architecture.md`): \"A prompt held by the non-active player has its own 30 s clock.\"\n- R79: the turn clock \"pauses while a prompt is open for the non-active player (a trap firing on the opponent's turn), which runs its own prompt clock of 30 s. `timeout` answers only the prompts of the player whose clock ran out \u2026 if a prompt is still open after that many, the timeout stops with the turn still running and the next expiry carries on\".\n\nFor the turn clock a next expiry does exist (`arm_turn` re-arms with nothing remaining). For the prompt clock there is none.\n\n### How to reproduce\n\nTwo tests fail on `main` (3a83bd7), in [`crates/tools/tests/audit_server_actors.rs` at 202e7e0](https://github.com/Jlore-Studios/JackiOh/blob/202e7e0/crates/tools/tests/audit_server_actors.rs) (branch `claude/vigilant-mayer-pmyrhr`; the file sits in the tools crate's tests because `crates/shared` declares its own tests by hand). Run there with `cargo test -p jackioh-tools --features jackioh-engine/testkit --test audit_server_actors`.\n\nThe file drives `DuelHost` as a table: outputs in, timers kept in a list, `Append` answered with `Logged { Written }`, time advanced by firing the due timers. The two tests, with the board they share:\n\n```rust\nfn gatinsir_asks_p2() -> Table {\n    jackioh_cards::register_all();\n    let filler = json!([\"core-008\", \"core-008\", \"core-008\", \"core-008\"]);\n    let mut built = scenario(json!({\n        \"seed\": \"audit-r79-second-prompt\",\n        \"active\": \"p1\",\n        \"p1\": { \"field\": [{ \"def\": \"core-008\", \"lane\": 1 }], \"library\": filler },\n        \"p2\": { \"backrow\": [{ \"def\": \"stinkyscape-022\", \"lane\": 5 }], \"library\": filler },\n    }));\n    // Gatinsir's 30% roll is the match rng's next draw: the cursor is put where it reveals.\n    let seed = built.state().seed.clone();\n    built.state_mut().rng_cursor = cursor_where(&seed, |cursor| Rng::new(&seed, cursor).next() < 0.30);\n    let attacker = built.unit(P1, 1).expect(\"p1's Mr. Vanilla\").id;\n    let mut table = Table::new(setup(built.state().clone()));\n    table.feed(DuelEvent::Arm);\n    table.connect(P1);\n    table.connect(P2);\n    let attack = table.host.legal(P1).into_iter()\n        .find(|body| matches!(body, ActionBody::Attack { attacker_id, .. } if *attacker_id == attacker))\n        .expect(\"Mr. Vanilla may attack\");\n    table.feed(DuelEvent::Action { by: ActionBy::Home { home: P1 }, nonce: \"attack\".to_string(), body: attack });\n    table\n}\n\n#[test]\nfn r79_a_question_that_follows_a_timed_out_one_for_the_seat_not_on_turn_has_a_prompt_clock() {\n    let mut table = gatinsir_asks_p2();\n    let first = asked_of_p2(&table);   // asserts a prompt is open for p2 on p1's turn\n    assert_eq!(table.timer(TimerKey::Prompt), Some(table.now + PROMPT_CLOCK_SECONDS * SECOND));\n    table.sleep(PROMPT_CLOCK_SECONDS * SECOND);\n    let (_, last) = table.log.last().expect(\"the timeout is logged\");\n    assert_eq!((last.player_id, &last.body), (P2, &ActionBody::Timeout));\n    let second = asked_of_p2(&table);\n    assert_ne!(first, second, \"PREMISE: the timeout answered the first Discover and the second asks p2\");\n    assert!(table.timer(TimerKey::Prompt).is_some() && table.host.clocks().prompt_deadline.is_some(),\n        \"\u00a79.5, R79: no prompt clock runs for p2's second question\");\n}\n\n#[test]\nfn r79_a_silent_seat_not_on_turn_cannot_hold_the_match_past_its_prompt_clocks() {\n    let mut table = gatinsir_asks_p2();\n    asked_of_p2(&table);\n    let turn = table.host.game().turn;\n    table.sleep(10 * 60 * SECOND);\n    let game = table.host.game();\n    assert!(game.result.is_some() || game.turn != turn,\n        \"R79: ten minutes on, the turn is still p1's and waits on p2's question\");\n}\n```\n\nOutput today:\n\n```\n\u00a79.5, R79: no prompt clock runs for p2's second question; timers armed: [(Ceiling, 1, 1700007200000)], clocks: MatchClocks { turn_deadline: None, prompt_deadline: None, grace_deadline: PerPlayer { p1: None, p2: None }, ceiling_at: 1700007200000 }\n\nR79: ten minutes on, turn 9 is still p1's and waits on p2's question Some((P2, \"Discover a card to Equip\")); rows [\"1:p1:attack\", \"2:p2:srv-prompt-2\"]; timers [(Ceiling, 1, 1700007200000)]\n```\n\n### Where\n\nThe shared host: `crates/shared/src/host/clock.rs` (`MatchClock::sync`, `arm_prompt`, `fire`), with `snapshot.rs` (`clock_view_for`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Key the prompt clock by the open prompt's id, not by the holder alone: add the pending prompt's id to `ClockView` and arm a fresh `PROMPT_CLOCK_SECONDS` clock in `sync` whenever that id differs from the one the clock was armed for. The co-op host already does this (`crates/shared/src/host/duos.rs:977-999`: `prompt_clocks` keyed by choice id, `prompt_expired` remembering the id that ran out), so R776000's \"an expired clock for the same prompt is re-armed only by the retry\" is kept.\n- **This also decides T8**, which `docs/implicit-states.md` \u00a713 lists as Unspecified: a second prompt for the same holder keeps the first one's still-running deadline (with Gatinsir's four Discovers, a player answering each within 8 seconds still has the fourth auto-answered when the shared 30 seconds runs out). Keying by prompt id gives each question its own 30 seconds, which is R79's wording. The test `a_second_prompt_for_the_same_non_active_holder_keeps_the_first_ones_deadline` (`crates/shared/tests/clock.rs`) and T8's row change with it. That is a ruling note in this issue's block (CLAUDE.md rule 3), proved by the two tests above moved into `crates/shared/tests/` and declared in `shared.rs`.\n- Consider a bound on a chain of questions for one seat within one turn (four Discovers at 30 seconds each is two minutes of the opponent's turn), and say in the ruling what it is or that there is none.\n- The comments at `clock.rs:172` and `:405-406` are about the same prompt while its timeout row is being written or retried (R776000), not a new prompt; keep that behaviour.\n- The engine is as ruled: `timeout` for a seat not on turn answers \"that one prompt of theirs\" (`crates/engine/src/reduce.rs`), and R2176000 puts Phalanx's Cries on Gatinsir's controller. A bot at that seat is not stuck (`drive_bots` answers after every change).\n- The host fuzz (`crates/shared/tests/host_fuzz.rs`, #4392) should have met this: add a liveness property to it (with every seat silent, some timer other than the ceiling is always armed while the game is not over), which is the probe that found it. With the missing expiry emulated, 130 random games under that probe, with failed writes and disconnects, showed no other state that fails to move on.\n- The clients read `prompt_deadline` for the countdown; check the view shows the new clock for each question (`apps/web`'s clock reads the generated wire types).\n\nFound by an audit of live 1v1 play (the pure host, the server's actor, the lobby and spectating); the reproductions were run and the code paths read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4848: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:33:49Z",
+    "claimed_at": "2026-11-24T21:41:18Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4801 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#4726 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
