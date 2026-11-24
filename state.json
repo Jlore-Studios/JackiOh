@@ -21285,13 +21285,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-8",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-8",
+            "run": "45432133493",
+            "tier": "strong"
+          }
+        ],
         "sha": "800d6c3519d319c9e7ad0aaaec3c83c4b5d97c93",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "4757": {
