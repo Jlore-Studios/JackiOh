@@ -19831,6 +19831,9 @@
       "stop_requested": false,
       "suggestion": true
     },
+    "4723": {
+      "suggestion": true
+    },
     "4724": {
       "action": "review",
       "asks": [],
@@ -42992,6 +42995,13 @@
         "at": "2026-11-24T13:44:37Z",
         "number": 4722,
         "title": "Patch: rematch status refuses daily games and stale catalogs like rematch offers do",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-24T13:45:03Z",
+        "number": 4723,
+        "title": "Patch: co-op Play again status reports when Play again cannot work",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
