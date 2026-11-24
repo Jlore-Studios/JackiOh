@@ -17561,10 +17561,16 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-24T05:27:35Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
+      "paused": {
+        "at": "2026-11-24T06:14:42Z",
+        "interrupt": "usage",
+        "provider": "claude-1"
+      },
       "pending_request": false,
       "planned_at": "2026-11-24T06:02:15Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -17574,6 +17580,7 @@
       "provider": "claude-1",
       "queued_at": "2026-11-23T22:57:29Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "",
       "run_id": "45337846902",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-24T06:05:17Z",
@@ -17581,7 +17588,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:7116370803"
-      ]
+      ],
+      "verdict_rounds": 0
     },
     "4649": {
       "action": "review",
