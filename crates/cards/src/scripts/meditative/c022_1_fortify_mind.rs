@@ -2,7 +2,7 @@
 //! (printed Epic).
 //!   Base:    "Temporary. Guess their Mind Games. Win: cancel their reward. Lose: take your penalty. When
 //!            you discard this, take all three penalties. Attack beats Greed, Greed beats Defend, Defend
-//!            beats Attack. A tie does nothing. Greed: You have {mana} less mana next turn. Discard
+//!            beats Attack. A tie does nothing. Greed: Overload ({mana}). Discard
 //!            {discards} random cards. Attack: Deal {damage} damage to your hero and each of your
 //!            Units. Defend: Heal your opponent's hero and each of their Units {heal}. They gain
 //!            +{armor} Armor."
@@ -363,7 +363,7 @@ mod tests {
                 event,
                 GameEvent::Discarded { def_id, .. } if def_id == FORTIFY
             )));
-            // Greed: 2 less mana next turn, and 2 random discards (the link, a draw, then 2 of 4).
+            // Greed: Overload (2), and 2 random discards (the link, a draw, then 2 of 4).
             assert_eq!(s.state().players[P2].mana.next_turn_mod, -2);
             assert_eq!(s.hand(P2).len(), 2);
             s.expect_health(P2, 30 - 8);

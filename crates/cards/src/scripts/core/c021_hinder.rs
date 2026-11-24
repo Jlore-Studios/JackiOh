@@ -1,5 +1,5 @@
-//! #21 Hinder (SPEC §8.2): "Cast on draw: Your opponent has 1 less mana next turn. Discard 1 random card.",
-//! radiant "Cast on draw: Your opponent has 2 less mana next turn." Only the base face discards (R431).
+//! #21 Hinder (SPEC §8.2): "Cast on draw: Overload your opponent (1). Discard 1 random card.",
+//! radiant "Cast on draw: Overload your opponent (2)." Only the base face discards (R431).
 //! Tunes: mana 1 ↑ (Radiant 2); discards 1 ↓, on the base face only (R1431, R1748003).
 //! staticFlags.castOnDraw casts on draw up to CAST_ON_DRAW_CHAIN_CAP (R58); no card played (R40, R2179002, R70, R81).
 //! Modifies nextTurnMod (§2.3). Base face discards 1 random card from hand (R431, R682).
