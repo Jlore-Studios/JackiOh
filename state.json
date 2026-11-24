@@ -15408,6 +15408,8 @@
     "4574": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "died": 1,
       "difficulty": "hard",
       "failures": 0,
@@ -15422,11 +15424,31 @@
         "trail": ""
       },
       "issue": 4552,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The issue's acceptance asks the pull request to report the split-half reliability, the correlation of deck cards' Swing with their adjusted win rate, the field's typical Decisiveness, and sanity figures (The Coin and plain stat-sticks near or below typical; S #120 Wild System and S+ #61 Jayaad clearly above), and none of them is reported.",
+          "evidence": "The PR #4574 body and the builder's report contain only the harness's gate table. `git diff base...HEAD | grep -i 'split-half|Wild System|Jayaad|correlation'` finds the command that prints these figures (crates/tools/src/stats.rs, `--swing`) and a config.rs doc comment saying forced Wild System and Jayaad games were run (DECISIVENESS_PRIOR_CENTER), but no result for any sanity card and no reliability or correlation number. The plan's Done-when also lists this. Without it nobody has shown that the figure singles out the cards the owner built it to find.",
+          "severity": "blocking",
+          "where": "task"
+        },
+        {
+          "claim": "The determinism acceptance test cannot fail on the one way the figures could become order-dependent: an f64 sum over an IndexMap iterated in insertion order. Its fold orders produce the same insertion order, so removing the sorts it should protect still passes.",
+          "evidence": "Every `swing_game(n, \u2026)` record has the same bucket set (p1 1..3, p2 \u22121..\u221210), so the records key's `swing` map and every card's `buckets` map get identical insertion order in forward, reverse and halves. Each card lands in a single bucket, so the per-card bucket loop has one term. No Created card is in the data, and `report.created` / `created_field` are never compared. `assert_eq!(forward, reverse)` compares IndexMaps, whose equality ignores order. So deleting the sort in `swing_baseline` (~480), in `Read::of` (~524) or on `made_acting` (~803) keeps the test green. Fix: records with different turn counts, cards spread over several buckets in different orders, a Created card and a made token, with `created` figures compared by `to_bits`.",
+          "severity": "blocking",
+          "where": "crates/engine/src/wire/stats/swing.rs:1365"
+        },
+        {
+          "claim": "No test folds a non-empty `facing` row or a play off the seat's own turn. The facing sign, its routing to the opponent's key, and the play-to-row assignment are unpinned, yet they feed Board swing, and Board swing is the public Decisiveness of an effect-made token.",
+          "evidence": "The `seat()` helper builds every folded record with `facing: Vec::new()` and puts every play on the seat's own turn. The only non-empty `facing` is in the round-trip parse test (~1167), which never folds. Flipping the `-` in the board read (~572), routing facing to `game[seat]` instead of `game[opponent]` (~374), or dropping a play with no earlier row (~296) passes every test. For a Created card with no play rows, RMS reads its acting rows with `a` in place of `b` (R4552001), so `a` reaches `GET /api/stats/cards`. Add a fold test with facing entries under an opponent pilot, a reply-turn play and a `castOrSummoned` play, and one that pins `n_eff` with more than one row per game.",
+          "severity": "blocking",
+          "where": "crates/engine/src/wire/stats/swing.rs:1014"
+        }
+      ],
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-6",
-      "queued_at": "2026-11-24T03:23:48Z",
+      "queued_at": "2026-11-24T04:37:29Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "45325860963",
@@ -15449,6 +15471,7 @@
         "provider": "claude-3",
         "run": "45266435249"
       },
+      "source": "cross-review",
       "started_at": "2026-11-24T04:21:43Z",
       "stop_requested": false,
       "taken_asks": [],
