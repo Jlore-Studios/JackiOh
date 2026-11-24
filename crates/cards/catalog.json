@@ -38773,7 +38773,7 @@
           "n": 1
         }
       ],
-      "text": "Rush, Brittle 1"
+      "text": "Brittle 1, Rush"
     },
     "radiant": {
       "attack": 6,
@@ -38787,7 +38787,7 @@
           "n": 1
         }
       ],
-      "text": "Rush, Brittle 1"
+      "text": "Brittle 1, Rush"
     }
   },
   "infiniteassault-042": {
@@ -39764,7 +39764,7 @@
           "n": 1
         }
       ],
-      "text": "Charge, Windfury, Brittle 1"
+      "text": "Brittle 1, Charge, Windfury"
     },
     "radiant": {
       "attack": 16,
@@ -39784,7 +39784,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Charge, Windfury, Brittle 1, First Strike"
+      "text": "Brittle 1, Charge, Windfury, First Strike"
     }
   },
   "infiniteassault-067": {
@@ -40900,7 +40900,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Reborn, Rush"
+      "text": "Rush, Reborn"
     }
   },
   "infiniteassault-098": {
@@ -41070,7 +41070,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Taunt, Reborn, Divine Shield"
+      "text": "Taunt, Divine Shield, Reborn"
     }
   },
   "infiniteassault-103": {
@@ -41126,7 +41126,7 @@
           "kind": "Flashback"
         }
       ],
-      "text": "Flashback, Echo 1\nDraw a card."
+      "text": "Echo 1, Flashback\nDraw a card."
     }
   },
   "infiniteassault-105": {
@@ -42580,7 +42580,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Taunt, Can't attack"
+      "text": "Can't attack, Taunt"
     },
     "radiant": {
       "attack": 6,
@@ -42593,7 +42593,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Taunt, Can't attack\nAfter this is attacked: Deal {damage} damage to the attacker."
+      "text": "Can't attack, Taunt\nAfter this is attacked: Deal {damage} damage to the attacker."
     }
   },
   "infiniteassault-151": {
@@ -42718,7 +42718,7 @@
           "kind": "Immune to Spells"
         }
       ],
-      "text": "Taunt, Armor 6, Immune to Spells"
+      "text": "Immune to Spells, Taunt, Armor 6"
     }
   },
   "infiniteassault-154": {
@@ -43071,7 +43071,7 @@
           "kind": "Immune to Spells"
         }
       ],
-      "text": "Taunt, Immune to Spells\nAfter this survives an attack, your hero gains {armor} Armor."
+      "text": "Immune to Spells, Taunt\nAfter this survives an attack, your hero gains {armor} Armor."
     },
     "radiant": {
       "attack": 10,
@@ -43084,7 +43084,7 @@
           "kind": "Immune to Spells"
         }
       ],
-      "text": "Taunt, Immune to Spells\nAfter this survives an attack, your hero gains {armor} Armor."
+      "text": "Immune to Spells, Taunt\nAfter this survives an attack, your hero gains {armor} Armor."
     }
   },
   "infiniteassault-163": {
@@ -43123,7 +43123,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Taunt, Can't attack\nStart of turn: Your hero gains {armor} Armor."
+      "text": "Can't attack, Taunt\nStart of turn: Your hero gains {armor} Armor."
     },
     "radiant": {
       "attack": 0,
@@ -43136,7 +43136,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Taunt, Can't attack\nStart of turn: Your hero gains {armor} Armor."
+      "text": "Can't attack, Taunt\nStart of turn: Your hero gains {armor} Armor."
     }
   },
   "infiniteassault-164": {
@@ -44917,7 +44917,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Taunt, Can't attack\nIn {turns|turn|turns}: If this is still on the field, you win the game."
+      "text": "Can't attack, Taunt\nIn {turns|turn|turns}: If this is still on the field, you win the game."
     },
     "radiant": {
       "attack": 0,
@@ -44930,7 +44930,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Taunt, Can't attack\nIn {turns|turn|turns}: If this is still on the field, you win the game."
+      "text": "Can't attack, Taunt\nIn {turns|turn|turns}: If this is still on the field, you win the game."
     }
   },
   "infiniteassault-217": {
@@ -45477,7 +45477,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Taunt, Can't attack\nStart of turn: Exile a random enemy permanent. This gains +5 Health."
+      "text": "Can't attack, Taunt\nStart of turn: Exile a random enemy permanent. This gains +5 Health."
     },
     "radiant": {
       "attack": 0,
@@ -45490,7 +45490,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Taunt, Can't attack\nStart of turn: Exile two random enemy permanents. This gains +5 Health."
+      "text": "Can't attack, Taunt\nStart of turn: Exile two random enemy permanents. This gains +5 Health."
     }
   },
   "infiniteassault-232": {

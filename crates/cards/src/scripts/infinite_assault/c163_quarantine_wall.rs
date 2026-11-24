@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #163 Quarantine Wall ((4) Unit, Epic, 0/20 → 0/40), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Taunt, Can't attack. Start of turn: Your hero gains {armor} Armor." (armor 3)
-//!   Radiant: "Taunt, Can't attack. Start of turn: Your hero gains {armor} Armor." (armor 6)
+//!   Base:    "Can't attack, Taunt. Start of turn: Your hero gains {armor} Armor." (armor 3)
+//!   Radiant: "Can't attack, Taunt. Start of turn: Your hero gains {armor} Armor." (armor 6)
 //!
 //! Engine: at the start of its controller's turn, the controller's hero gains the declared {armor}
 //! Armor (§4.4 step 2). One script: the Radiant face's 6 is its declared param; Taunt, Can't attack

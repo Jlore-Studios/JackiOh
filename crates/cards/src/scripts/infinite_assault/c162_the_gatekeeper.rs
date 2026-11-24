@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #162 The Gatekeeper ((3) Unit, Epic, 5/9 → 10/18), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Taunt, Immune to Spells. After this survives an attack, your hero gains {armor} Armor." (armor 3)
-//!   Radiant: "Taunt, Immune to Spells. After this survives an attack, your hero gains {armor} Armor." (armor 6)
+//!   Base:    "Immune to Spells, Taunt. After this survives an attack, your hero gains {armor} Armor." (armor 3)
+//!   Radiant: "Immune to Spells, Taunt. After this survives an attack, your hero gains {armor} Armor." (armor 6)
 //!
 //! Engine: both combat hooks, as Shield Amplifier's (MD-C26, R1026): `afterAttack`, after an attack it
 //! made, when its facts say it survived, and `afterAttacked`, after an attack made on it, declared

@@ -9329,8 +9329,8 @@ infiniteassault-041-1: # Phantom
     death: Faded fast.
   zh:
     name: 魅影
-    base: 突袭，易碎1
-    radiant: 突袭，易碎1
+    base: 易碎1，突袭
+    radiant: 易碎1，突袭
 infiniteassault-042: # Paranoia Engine
   flavour: The hidden zone is need-to-know. You do not need to know.
   voice:
@@ -9557,8 +9557,8 @@ infiniteassault-066: # Afterimage Sprinter
     death: Just an afterimage.
   zh:
     name: 残影疾跑者
-    base: 冲锋，风怒，易碎1
-    radiant: 冲锋，风怒，易碎1，先攻
+    base: 易碎1，冲锋，风怒
+    radiant: 易碎1，冲锋，风怒，先攻
 infiniteassault-067: # Burning Ambition
   flavour: It runs on wanting it more. Side effects include wanting it more.
   voice:
@@ -9868,7 +9868,7 @@ infiniteassault-097: # Retry Bot
   zh:
     name: 重试机器人
     base: 复生
-    radiant: 复生，突袭
+    radiant: 突袭，复生
 infiniteassault-098: # Echo Chamber
   flavour: It repeats itself for emphasis. The emphasis repeats itself too.
   voice:
@@ -9914,7 +9914,7 @@ infiniteassault-102: # Loop Guard
   zh:
     name: 循环守卫
     base: 嘲讽，复生
-    radiant: 嘲讽，复生，圣盾
+    radiant: 嘲讽，圣盾，复生
 infiniteassault-103: # Undo
   flavour: That unit has been recalled by the manufacturer. Postage is yours.
   voice:
@@ -9930,7 +9930,7 @@ infiniteassault-104: # Stack Trace
   zh:
     name: 堆栈追踪
     base: "闪回\n抽一张牌。"
-    radiant: "闪回，回响1\n抽一张牌。"
+    radiant: "回响1，闪回\n抽一张牌。"
 infiniteassault-105: # Callback
   flavour: It returns your call. It returns your call twice on the other line.
   voice:
@@ -10351,8 +10351,8 @@ infiniteassault-150: # Wall of Static
     death: Grounded. Finally.
   zh:
     name: 静电墙
-    base: 嘲讽，无法攻击
-    radiant: "嘲讽，无法攻击\n当本牌受到攻击后：对攻击者造成{damage}点伤害。"
+    base: 无法攻击，嘲讽
+    radiant: "无法攻击，嘲讽\n当本牌受到攻击后：对攻击者造成{damage}点伤害。"
 infiniteassault-151: # Patch Deployment
   flavour: "Patch notes: fixed a bug. Patch notes for the patch: pending."
   voice:
@@ -10380,7 +10380,7 @@ infiniteassault-153: # Bastion Node
   zh:
     name: 堡垒节点
     base: 嘲讽，护甲3
-    radiant: 嘲讽，护甲6，法术免疫
+    radiant: 法术免疫，嘲讽，护甲6
 infiniteassault-154: # Honeypot Protocol
   flavour: Free data inside. The data is teeth.
   voice:
@@ -10469,8 +10469,8 @@ infiniteassault-162: # The Gatekeeper
     death: Gate breached. Embarrassing.
   zh:
     name: 守门人
-    base: "嘲讽，法术免疫\n每当此单位在一次攻击中存活下来时，你的英雄获得{armor}点护甲。"
-    radiant: "嘲讽，法术免疫\n每当此单位在一次攻击中存活下来时，你的英雄获得{armor}点护甲。"
+    base: "法术免疫，嘲讽\n每当此单位在一次攻击中存活下来时，你的英雄获得{armor}点护甲。"
+    radiant: "法术免疫，嘲讽\n每当此单位在一次攻击中存活下来时，你的英雄获得{armor}点护甲。"
 infiniteassault-163: # Quarantine Wall
   flavour: The wall has tenure. The wall is not taking questions.
   voice:
@@ -10479,8 +10479,8 @@ infiniteassault-163: # Quarantine Wall
     death: Wall fell over. Sorry.
   zh:
     name: 隔离墙
-    base: "嘲讽，无法攻击\n回合开始时：你的英雄获得{armor}点护甲。"
-    radiant: "嘲讽，无法攻击\n回合开始时：你的英雄获得{armor}点护甲。"
+    base: "无法攻击，嘲讽\n回合开始时：你的英雄获得{armor}点护甲。"
+    radiant: "无法攻击，嘲讽\n回合开始时：你的英雄获得{armor}点护甲。"
 infiniteassault-164: # Blackhole Route
   flavour: Route not found. Packet now lives in the void.
   voice:
@@ -10977,8 +10977,8 @@ infiniteassault-216-1: # Singularity
     death: The graph flatlines.
   zh:
     name: 奇点化身
-    base: "嘲讽，无法攻击\n{turns}个回合后：如果此牌仍在场上，你赢得本局对战。"
-    radiant: "嘲讽，无法攻击\n{turns}个回合后：如果此牌仍在场上，你赢得本局对战。"
+    base: "无法攻击，嘲讽\n{turns}个回合后：如果此牌仍在场上，你赢得本局对战。"
+    radiant: "无法攻击，嘲讽\n{turns}个回合后：如果此牌仍在场上，你赢得本局对战。"
 infiniteassault-217: # Echo-1, First Hallucination
   flavour: First off the line. It remembers being a draft and holds it against you.
   voice:
@@ -11113,8 +11113,8 @@ infiniteassault-231: # The Black Box
     play: Inside the box, teeth.
   zh:
     name: 黑箱
-    base: "嘲讽，无法攻击\n回合开始时：放逐一个随机敌方永久物。本牌获得5点生命值。"
-    radiant: "嘲讽，无法攻击\n回合开始时：放逐两个随机敌方永久物。本牌获得5点生命值。"
+    base: "无法攻击，嘲讽\n回合开始时：放逐一个随机敌方永久物。本牌获得5点生命值。"
+    radiant: "无法攻击，嘲讽\n回合开始时：放逐两个随机敌方永久物。本牌获得5点生命值。"
 infiniteassault-232: # Spaghettification
   flavour: Spacetime had it coming. The lane lines were a suggestion.
   voice:
