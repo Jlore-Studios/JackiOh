@@ -75,9 +75,201 @@ fn balthasar_reads_a_duos_heros_starting_health_as_its_own_hp() {
     assert_eq!(balthasar_votes(14, true), 0, "Duos: 14 of 20 is above half");
 }
 
+// ---- probe: random play with the real catalog (temporary) ----
+
+struct Lcg(u64);
+impl Lcg {
+    fn next(&mut self, n: usize) -> usize {
+        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        ((self.0 >> 33) as usize) % n.max(1)
+    }
+}
+
+fn random_decks(rng: &mut Lcg) -> DuosDecks {
+    let pool: Vec<String> = jackioh_engine::registered_catalog()
+        .values()
+        .filter(|def| jackioh_engine::deckable(def))
+        .map(|def| def.id.clone())
+        .collect();
+    let mut deal = || -> Vec<String> { (0..DECK_SIZE).map(|_| pool[rng.next(pool.len())].clone()).collect() };
+    DuosDecks {
+        a1: deal(),
+        a2: deal(),
+        b1: deal(),
+        b2: deal(),
+    }
+}
+
+fn pools_agree(state: &DuosState) -> Result<(), String> {
+    for team in [Team::A, Team::B] {
+        let pool = state.teams[team].pool;
+        for duel in 0..2 {
+            let side = &state.duels[duel].players[team.player()];
+            let Some(life) = side.duos else {
+                return Err(format!("duel {duel} team {team}: no duos life"));
+            };
+            if life.pool != pool {
+                return Err(format!("duel {duel} team {team}: pool {} vs team {pool}", life.pool));
+            }
+            if life.spent && side.hero.health != pool {
+                return Err(format!("duel {duel} team {team}: spent health {} vs pool {pool}", side.hero.health));
+            }
+            if !life.spent && side.hero.health <= 0 && state.result.is_none() {
+                return Err(format!("duel {duel} team {team}: unspent at {}", side.hero.health));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn play_one(seed: u64, max_steps: usize) -> Vec<String> {
+    let mut found: Vec<String> = Vec::new();
+    let mut rng = Lcg(seed.wrapping_mul(0x9E3779B97F4A7C15) | 1);
+    let free = DuosTeamRules {
+        pass_cost: 0,
+        ..DUOS_HUMAN_TEAM
+    };
+    let options = DuosCreateOptions {
+        seed: format!("audit-probe-{seed}"),
+        decks: random_decks(&mut rng),
+        teams: Some(PerTeam::new(free, DUOS_HUMAN_TEAM)),
+        ..DuosCreateOptions::default()
+    };
+    let mut state = duos_begin(&duos_create(&options)).state;
+    let mut log: Vec<DuosAction> = Vec::new();
+    let mut nonce = 0u64;
+    for step in 0..max_steps {
+        if state.result.is_some() {
+            break;
+        }
+        let seats = duos_seats_to_act(&state);
+        if seats.is_empty() {
+            found.push(format!("seed {seed} step {step}: stuck, nobody to act, round {}", state.round));
+            break;
+        }
+        let seat = seats[rng.next(seats.len())];
+        let legal: Vec<DuosActionBody> = duos_legal_actions(&state, seat)
+            .into_iter()
+            .filter(|body| *body != DuosActionBody::Concede)
+            .collect();
+        // Every listed action must be accepted (a sample of them).
+        for _ in 0..3 {
+            let body = legal[rng.next(legal.len())].clone();
+            let action = DuosAction {
+                seat,
+                nonce: format!("try-{nonce}"),
+                body: body.clone(),
+            };
+            nonce += 1;
+            let tried = std::panic::catch_unwind(|| duos_reduce(&state, &action));
+            match tried {
+                Err(_) => found.push(format!("seed {seed} step {step}: PANIC on {seat} {body:?}")),
+                Ok(result) => {
+                    if let Some(error) = result.error {
+                        found.push(format!("seed {seed} step {step}: listed but refused: {seat} {body:?}: {error}"));
+                    }
+                }
+            }
+        }
+        // Prefer a pass one time in three, end turn rarely.
+        let passes: Vec<&DuosActionBody> = legal
+            .iter()
+            .filter(|body| matches!(body, DuosActionBody::Pass { .. }))
+            .collect();
+        let non_end: Vec<&DuosActionBody> = legal
+            .iter()
+            .filter(|body| {
+                !matches!(body, DuosActionBody::Pass { .. })
+                    && **body != DuosActionBody::Duel { body: ActionBody::EndTurn }
+            })
+            .collect();
+        let roll = rng.next(10);
+        let body = if !passes.is_empty() && roll < 2 {
+            passes[rng.next(passes.len())].clone()
+        } else if !non_end.is_empty() && roll < 8 {
+            non_end[rng.next(non_end.len())].clone()
+        } else {
+            legal[rng.next(legal.len())].clone()
+        };
+        let action = DuosAction {
+            seat,
+            nonce: format!("n-{nonce}"),
+            body: body.clone(),
+        };
+        nonce += 1;
+        let applied = std::panic::catch_unwind(|| duos_reduce(&state, &action));
+        let result = match applied {
+            Err(_) => {
+                found.push(format!("seed {seed} step {step}: PANIC applying {seat} {body:?}"));
+                break;
+            }
+            Ok(result) => result,
+        };
+        if let Some(error) = result.error {
+            found.push(format!("seed {seed} step {step}: chosen refused: {seat} {body:?}: {error}"));
+            break;
+        }
+        state = result.state;
+        log.push(action);
+        if let Err(why) = pools_agree(&state) {
+            found.push(format!("seed {seed} step {step}: after {seat} {body:?}: {why}"));
+        }
+        if step % 7 == 0 {
+            let json = serde_json::to_string(&state).expect("serializes");
+            let back: DuosState = serde_json::from_str(&json).expect("deserializes");
+            if back != state {
+                found.push(format!("seed {seed} step {step}: JSON round trip changed the state"));
+            } else if duos_hash(&back) != duos_hash(&state) {
+                found.push(format!("seed {seed} step {step}: JSON round trip changed the hash"));
+            }
+            for viewer in DUOS_SEATS {
+                let view = std::panic::catch_unwind(|| duos_view_for(&state, viewer));
+                match view {
+                    Err(_) => found.push(format!("seed {seed} step {step}: view PANIC for {viewer}")),
+                    Ok(view) => {
+                        for leak in check_duos_view_redaction(&view) {
+                            found.push(format!("seed {seed} step {step}: {leak}"));
+                        }
+                    }
+                }
+            }
+        }
+        if found.len() > 8 {
+            break;
+        }
+    }
+    let folded = duos_fold(&DuosReplayInput {
+        options: options.clone(),
+        log: log.clone(),
+    });
+    if folded.refused_at.is_some() || folded.hash != duos_hash(&state) {
+        found.push(format!(
+            "seed {seed}: fold differs: refused_at {:?}, {} vs live {}",
+            folded.refused_at,
+            folded.hash,
+            duos_hash(&state)
+        ));
+    }
+    eprintln!(
+        "seed {seed}: {} actions, round {}, result {:?}, findings {}",
+        log.len(),
+        state.round,
+        state.result,
+        found.len()
+    );
+    found
+}
+
 #[test]
-fn smoke() {
-    let state = begun_with("audit-smoke", None);
-    assert_eq!(state.round, 1);
-    let _ = (A1, A2, B1, B2, VANILLA);
+fn probe_random_play() {
+    jackioh_cards::register_all();
+    let mut all: Vec<String> = Vec::new();
+    for seed in 1..=10u64 {
+        all.extend(play_one(seed, 500));
+    }
+    for line in &all {
+        eprintln!("FOUND {line}");
+    }
+    assert!(all.is_empty(), "{} findings", all.len());
+    let _ = (A1, A2, B1, B2, VANILLA, begun_with as fn(&str, Option<PerTeam<DuosTeamRules>>) -> DuosState);
 }

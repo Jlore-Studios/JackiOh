@@ -682,3 +682,155 @@ fn explore_card_sweep() {
 fn diffs_into(a: &[Value], b: &[Value], out: &mut Vec<(String, String, String)>) {
     diff_paths(&Value::from(a.to_vec()), &Value::from(b.to_vec()), "new", out);
 }
+
+#[test]
+fn debug_card() {
+    jackioh_cards::register_all();
+    let pool = pool();
+    let pick = |offset: usize, n: usize| -> Vec<String> {
+        let stride = pool.len() / n;
+        (0..n).map(|k| pool[(offset + k * stride) % pool.len()].clone()).collect()
+    };
+    let (lib1, lib2) = (pick(3, 12), pick(41, 12));
+    let (hand1, hand2) = (pick(17, 3), pick(29, 4));
+    let def = std::env::var("AUDIT_CARD").unwrap();
+    let which = std::env::var("AUDIT_TWIN").unwrap_or("opp-hand".to_string());
+    let viewer = if std::env::var("AUDIT_VIEWER").ok().as_deref() == Some("p1") { PlayerId::P1 } else { PlayerId::P2 };
+    let mut hand = vec![def.clone()];
+    hand.extend(hand1.clone());
+    let base = scenario(json!({
+        "seed": format!("sweep-{def}"),
+        "turn": 9,
+        "p1": { "hand": hand, "mana": 10, "library": lib1, "field": ["core-008", "core-019"], "graveyard": ["core-025", "core-005"] },
+        "p2": { "hand": hand2, "library": lib2, "field": ["core-025", "core-011"], "graveyard": ["core-008", "core-020"],
+                "backrow": [{ "def": "core-096", "faceUp": false }] },
+    }))
+    .state()
+    .clone();
+    let me = PlayerId::P1;
+    println!("p1 hand {:?}", base.players[me].hand.iter().map(|c| (&c.id, &c.def_id)).collect::<Vec<_>>());
+    println!("p1 lib {:?}", base.players[me].library.iter().map(|c| (&c.id, &c.def_id)).collect::<Vec<_>>());
+    let card_id = base.players[me].hand[0].id.clone();
+    let play = legal_actions(&base, me)
+        .into_iter()
+        .find(|b| matches!(b, ActionBody::Play { instance_id, .. } if *instance_id == card_id))
+        .unwrap();
+    let mut twin = base.clone();
+    let hidden_side = if which == "own-library" { viewer } else { opponent_of(viewer) };
+    if which == "opp-hand" {
+        twin.players[hidden_side].hand.reverse();
+    } else {
+        twin.players[hidden_side].library.reverse();
+    }
+    for (name, s) in [("base", &base), ("twin", &twin)] {
+        let r = reduce(s, &Action::new(play.clone(), me, "x".to_string()));
+        println!("== {name} raw");
+        for e in &r.events {
+            println!("   {}", js(e).to_string().chars().take(260).collect::<String>());
+        }
+        println!("== {name} as {viewer} sees");
+        let view = view_for(&r.state, viewer);
+        let shown = viewed_of_newest(&r.state, viewer, r.events.len());
+        for e in &view.events[view.events.len() - shown..] {
+            println!("   {}", js(e).to_string().chars().take(260).collect::<String>());
+        }
+    }
+}
+
+/// R2739000: the count the other seat sees on a picker must not move with the chooser's hidden zones.
+#[test]
+fn explore_option_counts() {
+    jackioh_cards::register_all();
+    std::panic::set_hook(Box::new(|_| {}));
+    let pool = pool();
+    let pick = |offset: usize, n: usize| -> Vec<String> {
+        let stride = pool.len() / n;
+        (0..n).map(|k| pool[(offset + k * stride) % pool.len()].clone()).collect()
+    };
+    let (lib1, lib2) = (pick(3, 12), pick(41, 12));
+    let (hand1, hand2) = (pick(17, 3), pick(29, 4));
+    let mut seen: IndexMap<String, (String, usize)> = IndexMap::new();
+    let build = |def: &str, hand_rest: &[String], library: &[String], opp_hand: &[String], opp_library: &[String]| {
+        let mut hand = vec![def.to_string()];
+        hand.extend(hand_rest.iter().cloned());
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            scenario(json!({
+                "seed": format!("sweep-{def}"),
+                "turn": 9,
+                "p1": { "hand": hand, "mana": 10, "library": library, "field": ["core-008", "core-019"], "graveyard": ["core-025", "core-005"] },
+                "p2": { "hand": opp_hand, "library": opp_library, "field": ["core-025", "core-011"], "graveyard": ["core-008", "core-020"],
+                        "backrow": [{ "def": "core-096", "faceUp": false }] },
+            }))
+            .state()
+            .clone()
+        }))
+        .ok()
+    };
+    let vanillas: Vec<String> = vec!["core-008".to_string(); 12];
+    let spells: Vec<String> = vec!["core-005".to_string(); 12];
+    for def in &pool {
+        let Some(base) = build(def, &hand1, &lib1, &hand2, &lib2) else { continue };
+        let twins: Vec<(&str, Option<GameState>)> = vec![
+            ("own-library-1", build(def, &hand1, &lib1[..1], &hand2, &lib2)),
+            ("own-library-vanillas", build(def, &hand1, &vanillas, &hand2, &lib2)),
+            ("own-library-spells", build(def, &hand1, &spells, &hand2, &lib2)),
+            ("own-library-other", build(def, &hand1, &pick(100, 12), &hand2, &lib2)),
+            ("own-hand-alone", build(def, &[], &lib1, &hand2, &lib2)),
+            ("own-hand-vanillas", build(def, &vanillas[..3], &lib1, &hand2, &lib2)),
+            ("own-hand-spells", build(def, &spells[..3], &lib1, &hand2, &lib2)),
+        ];
+        let me = PlayerId::P1;
+        let plays: Vec<ActionBody> = legal_actions(&base, me)
+            .into_iter()
+            .filter(|b| matches!(b, ActionBody::Play { instance_id, .. } if instance_id == "c1"))
+            .collect();
+        let stride = (plays.len() / 4).max(1);
+        for play in plays.iter().step_by(stride) {
+            // The pickers p1 holds along the way, as p2 sees each.
+            let walk = |start: &GameState| -> Option<Vec<Value>> {
+                let r = try_reduce(start, play, me).ok()?;
+                if r.error.is_some() {
+                    return None;
+                }
+                let mut state = r.state;
+                let mut out = Vec::new();
+                for step in 0..4 {
+                    let Some(holder) = state.pending.as_ref().map(|p| p.player_id) else { break };
+                    if holder != me || state.result.is_some() {
+                        break;
+                    }
+                    let kind = state.pending.as_ref().map(|p| p.kind.as_str().to_string()).unwrap_or_default();
+                    out.push(json!({ "kind": kind, "seen": js(&view_for(&state, PlayerId::P2))["pending"] }));
+                    let legal = legal_actions(&state, holder);
+                    let first = legal.iter().find(|b| matches!(b, ActionBody::Answer { .. }))?;
+                    let r = try_reduce(&state, first, holder).ok()?;
+                    if r.error.is_some() {
+                        break;
+                    }
+                    let _ = step;
+                    state = r.state;
+                }
+                Some(out)
+            };
+            let Some(base_seen) = walk(&base) else { continue };
+            for seen_prompt in &base_seen {
+                let counted = !seen_prompt["seen"]["optionCount"].is_null();
+                let key = format!("STAT prompts kind={} counted={counted}", seen_prompt["kind"]);
+                seen.entry(key).or_insert_with(|| (def.clone(), 0)).1 += 1;
+            }
+            for (name, twin) in &twins {
+                let Some(twin) = twin else { continue };
+                let Some(twin_seen) = walk(twin) else { continue };
+                for (at, (a, b)) in base_seen.iter().zip(&twin_seen).enumerate() {
+                    if a["kind"] == b["kind"] && a["seen"] != b["seen"] {
+                        let key = format!("COUNT {def} prompt#{at} {} {name}", a["kind"]);
+                        seen.entry(key).or_insert_with(|| (format!("{} | {} for {}", a["seen"], b["seen"], js(play)), 0)).1 += 1;
+                    }
+                }
+            }
+        }
+    }
+    for (key, (example, count)) in &seen {
+        println!("OPT {key} x{count}\n     {example}");
+    }
+}
