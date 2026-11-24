@@ -17651,7 +17651,7 @@
       }
     },
     "4651": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -17676,16 +17676,16 @@
       },
       "interruptions": 0,
       "issue": 4578,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "reviewing",
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-4",
       "question": "",
       "queued_at": "2026-11-24T06:41:09Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "45330532203",
+      "run_id": "pending:79db6e63-1795503952",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17706,7 +17706,7 @@
         "run": "45330532203"
       },
       "source": "",
-      "started_at": "2026-11-24T05:02:43Z",
+      "started_at": "2026-11-24T07:06:17Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18454,9 +18454,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T06:56:22Z",
+    "at": "2026-11-24T07:06:17Z",
     "url": "",
-    "what": "suggestions (rules) on agy"
+    "what": "review #4651 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-24T06:54:41Z",
