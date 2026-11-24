@@ -1596,7 +1596,8 @@ is this binary's only daily test: a second `#[ignore = "daily: …"]` here would
 `tests/export_config.rs` writes `apps/web/src/wire/serverConfig.ts`, the constants the client and e2e
 read; CI fails when a run changes it.
 `tests/export_cosmetics.rs` writes `apps/web/src/wire/generated/cosmetics.ts` from `cosmetics.json`,
-the card and deck slot cosmetics, the full arts and the portraits, the registry `crates/shared/src/cosmetics.rs` checks (R1295000, R1297000, R1313000, R1827000); CI fails when a run changes it too.
+the card and deck slot cosmetics, the full arts and the portraits, the registry `crates/shared/src/cosmetics.rs` checks (R1295000, R1297000, R1313000, R1827000), and beside it
+`cosmeticOffers.ts`, each version's offered cards (R2725001), a module of its own so the client loads it after its first paint (#4714); CI fails when a run changes either.
 
 ## Conventions
 

@@ -6,6 +6,9 @@ import { Suspense, type ReactElement, type ReactNode } from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { clearCosmeticOffersForTests, cosmeticOffersReady, installCosmeticOffers } from "../cards/versions.ts";
+import { COSMETIC_OFFERS } from "../wire/generated/cosmeticOffers.ts";
+
 const loadWasm = vi.fn((): Promise<void> => Promise.resolve());
 vi.doMock("../wasm/index.ts", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -312,5 +315,18 @@ describe("R2630001 starting a gated screen", () => {
     expect(privacy).toHaveBeenCalledTimes(1);
     expect(loadWasm).not.toHaveBeenCalled();
     expect(loadSceneData).not.toHaveBeenCalled();
+  });
+});
+
+describe("#4714 the shop's chunk", () => {
+  it("#4714 arrives with the cosmetic offers its chase choice reads, though the shop draws no gate", async () => {
+    clearCosmeticOffersForTests();
+    try {
+      const shop = await routeChunks.shop.load();
+      expect(typeof shop.default).toBe("function");
+      expect(cosmeticOffersReady()).toBe(true);
+    } finally {
+      installCosmeticOffers(COSMETIC_OFFERS);
+    }
   });
 });

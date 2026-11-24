@@ -6,19 +6,24 @@
 // for both before a face is drawn. `scene.ts` keeps its API and reads the tables from the slot this
 // fills; before it does, `sceneRecipeOf` throws, so a face drawn too early fails a test instead of
 // caching the painter's picture. A failed download is not cached; the next call tries again.
+//
+// #4714: the cosmetic offers a face's look reads (`offeredOn`, versions.ts) load in the same step, from a
+// chunk of their own (`loadCosmeticOffers`), and the scene tables are installed only once both are in, so
+// whatever waits for this, the gates, `main.tsx`'s boot and the component specs' support, waits for both.
 
+import { cosmeticOffersReady, loadCosmeticOffers } from "../versions.ts";
 import { clearSceneDataForTests, installSceneData, sceneDataReady, type SceneTables } from "./scene.ts";
 
 export { sceneDataReady };
 
 let pendingLoad: Promise<void> | null = null;
 
-/** Fill the tables a scene is drawn from once, from the one data module. Idempotent. */
+/** Fill the tables a scene is drawn from once, from the one data module, and the offers beside them. Idempotent. */
 export function loadSceneData(): Promise<void> {
-  if (sceneDataReady()) return Promise.resolve();
+  if (sceneDataReady() && cosmeticOffersReady()) return Promise.resolve();
   if (pendingLoad !== null) return pendingLoad;
-  pendingLoad = import("./sceneData.ts")
-    .then((mod) => {
+  pendingLoad = Promise.all([import("./sceneData.ts"), loadCosmeticOffers()])
+    .then(([mod]) => {
       const tables: SceneTables = {
         SCENE_KIT: mod.SCENE_KIT,
         drawFigure: mod.drawFigure,
@@ -60,7 +65,7 @@ export function deferSceneDataForTests(): DeferredSceneData {
   });
   return {
     async resolve(): Promise<void> {
-      const mod = await import("./sceneData.ts");
+      const [mod] = await Promise.all([import("./sceneData.ts"), loadCosmeticOffers()]);
       installSceneData({
         SCENE_KIT: mod.SCENE_KIT,
         drawFigure: mod.drawFigure,
