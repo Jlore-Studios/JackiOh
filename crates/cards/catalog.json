@@ -38090,7 +38090,7 @@
     "refs": [
       "infiniteassault-025-1"
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "attack": 1,
       "health": 3,
@@ -38137,7 +38137,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 45,
     "base": {
       "keywords": [],
       "text": "Set at a random cost from ({low}) to ({high}).\nReveals when an enemy Unit attacks: Nothing happens."
@@ -38171,7 +38171,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 46,
     "base": {
       "attack": 4,
       "health": 3,
@@ -38210,7 +38210,7 @@
     "refs": [
       "infiniteassault-025-1"
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "attack": 0,
       "health": 7,
@@ -38249,7 +38249,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 49,
     "base": {
       "keywords": [],
       "text": "Summon a copy of a random enemy Unit. It has Brittle 1."
@@ -38276,7 +38276,7 @@
     "refs": [
       "infiniteassault-025-1"
     ],
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks: Cancel the attack and Freeze the attacker."
@@ -38303,7 +38303,7 @@
     "refs": [
       "infiniteassault-025-1"
     ],
-    "loc": 6,
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Set two Figments. Draw a card."
@@ -38327,7 +38327,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 29,
     "base": {
       "attack": 3,
       "health": 4,
@@ -38355,7 +38355,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 19,
     "base": {
       "attack": 3,
       "health": 1,
@@ -38398,7 +38398,7 @@
         "read": "cry"
       }
     ],
-    "loc": 6,
+    "loc": 19,
     "base": {
       "attack": 5,
       "health": 6,
@@ -38429,7 +38429,7 @@
     "refs": [
       "infiniteassault-034-1"
     ],
-    "loc": 6,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "Transform every enemy (1) Cost or less Unit into a Husk."
@@ -38486,7 +38486,7 @@
       "infiniteassault-025-1",
       "infiniteassault-035-1"
     ],
-    "loc": 6,
+    "loc": 33,
     "base": {
       "attack": 3,
       "health": 5,
@@ -38551,7 +38551,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Choose an enemy Unit. Summon a copy of it for yourself with Brittle 2."
@@ -38578,7 +38578,7 @@
     "refs": [
       "infiniteassault-025-1"
     ],
-    "loc": 6,
+    "loc": 44,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Spell: Counter it."
@@ -38605,7 +38605,7 @@
     "refs": [
       "infiniteassault-025-1"
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "attack": 2,
       "health": 2,
@@ -38644,7 +38644,7 @@
     "refs": [
       "infiniteassault-025-1"
     ],
-    "loc": 6,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "Set a Figment. Then draw a card for each face-down card you have, up to three."
@@ -38671,7 +38671,7 @@
     "refs": [
       "infiniteassault-040-1"
     ],
-    "loc": 6,
+    "loc": 38,
     "base": {
       "keywords": [],
       "text": "Whenever you set a card face-down, summon a Reflection."
@@ -38735,7 +38735,7 @@
     "refs": [
       "infiniteassault-041-1"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Fill your board with Phantoms."
@@ -38807,7 +38807,7 @@
     "refs": [
       "infiniteassault-025-1"
     ],
-    "loc": 6,
+    "loc": 17,
     "base": {
       "attack": 2,
       "health": 6,
@@ -38845,7 +38845,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 49,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Unit: After it resolves, transform it into a random Unit whose Cost is ({step}) lower."
@@ -38872,7 +38872,7 @@
     "refs": [
       "infiniteassault-025-1"
     ],
-    "loc": 6,
+    "loc": 47,
     "base": {
       "attack": 4,
       "health": 8,
@@ -38900,7 +38900,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 43,
     "base": {
       "keywords": [],
       "text": "Summon a copy of every enemy Unit for yourself. They have Brittle 1."
@@ -38927,7 +38927,7 @@
     "refs": [
       "infiniteassault-025-1"
     ],
-    "loc": 6,
+    "loc": 54,
     "base": {
       "attack": 6,
       "health": 6,
@@ -38974,7 +38974,7 @@
         "max": 100
       }
     ],
-    "loc": 6,
+    "loc": 50,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks: {chance}% chance to cancel the attack."
@@ -39013,7 +39013,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Swap hands with your opponent. The cards you get cost ({discount}) less."
@@ -39047,7 +39047,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 11,
     "base": {
       "attack": 2,
       "health": 1,
@@ -39101,7 +39101,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 14,
     "base": {
       "keywords": [],
       "text": "Gain {mana} mana this turn. Lose ({loss}) mana next turn."
@@ -39135,7 +39135,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "attack": 5,
       "health": 2,
@@ -39184,7 +39184,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Give a friendly Unit +{attack} Attack and Rush. Give it Brittle 1."
@@ -39219,7 +39219,7 @@
         "read": "cry"
       }
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "attack": 4,
       "health": 3,
@@ -39298,7 +39298,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 2,
       "health": 6,
@@ -39353,7 +39353,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to the enemy hero. Deal {selfDamage} damage to your hero."
@@ -39443,7 +39443,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 46,
     "base": {
       "attack": 1,
       "health": 5,
@@ -39498,7 +39498,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 26,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to an enemy. If your hero has {health} or less Health, deal {empowered} instead."
@@ -39533,7 +39533,7 @@
         "read": "cry"
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 2,
       "health": 3,
@@ -39572,7 +39572,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to both heroes and all Units. Repeat once for each mana you have left."
@@ -39596,7 +39596,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent's turn ends with unspent mana: Deal twice that much damage to their hero."
@@ -39631,7 +39631,7 @@
         "read": "cry"
       }
     ],
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 3,
       "health": 3,
@@ -39669,7 +39669,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 13,
     "base": {
       "attack": 1,
       "health": 6,
@@ -39724,7 +39724,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 34,
     "base": {
       "keywords": [],
       "text": "Gain {mana} mana this turn.\nEnd of turn: Deal {damage} damage to your hero for each mana you didn't spend."
@@ -39820,7 +39820,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Start of turn: Deal {damage} damage to your hero and gain {mana} mana this turn."
@@ -39844,7 +39844,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 54,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks: Destroy it. Deal damage equal to its Attack to your hero."
@@ -39886,7 +39886,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 7,
       "health": 7,
@@ -39940,7 +39940,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "attack": 6,
       "health": 6,
@@ -39986,7 +39986,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 3,
       "health": 6,
@@ -40025,7 +40025,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "keywords": [],
       "text": "Your cards cost (0) this turn.\nEnd of turn: Deal {damage} damage to your hero."
@@ -41087,7 +41087,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 29,
+    "loc": 26,
     "base": {
       "keywords": [],
       "text": "Bounce an enemy Unit. It costs (1) more."
@@ -41642,7 +41642,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "attack": 2,
       "health": 2,
@@ -41670,7 +41670,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 1,
       "health": 3,
@@ -41698,7 +41698,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "The cards in your opponent's hand cost (1) more during their next turn."
@@ -41722,7 +41722,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 33,
     "base": {
       "keywords": [],
       "text": "Destroy an enemy face-down card. Draw a card."
@@ -41746,7 +41746,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 43,
     "base": {
       "keywords": [],
       "text": "Lock an empty enemy unit zone. Draw a card."
@@ -41770,7 +41770,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 24,
     "base": {
       "attack": 3,
       "health": 4,
@@ -41798,7 +41798,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Transform a random card in your opponent's hand into a random Common Infinite Assault card."
@@ -41833,7 +41833,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 24,
     "base": {
       "attack": 4,
       "health": 5,
@@ -41871,7 +41871,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "attack": 2,
       "health": 5,
@@ -41899,7 +41899,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Your opponent's next Spell has its targets chosen randomly."
@@ -41923,7 +41923,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Steal a (2) Cost or less enemy Unit."
@@ -41957,7 +41957,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 34,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Unit: Freeze it. They lose ({mana}) mana next turn."
@@ -41981,7 +41981,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Spell: Steal a random card from their hand."
@@ -42005,7 +42005,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 3,
       "health": 3,
@@ -42041,7 +42041,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 17,
     "base": {
       "attack": 2,
       "health": 4,
@@ -42081,7 +42081,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Freeze every enemy Unit."
@@ -42105,7 +42105,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Nerf every card in your opponent's hand."
@@ -42129,7 +42129,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 38,
     "base": {
       "attack": 4,
       "health": 6,
@@ -42157,7 +42157,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "Steal an enemy Unit."
@@ -42192,7 +42192,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 33,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays their third card in a turn: End their turn."
@@ -42226,7 +42226,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 46,
     "base": {
       "attack": 0,
       "health": 6,
@@ -42262,7 +42262,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 5,
       "health": 7,
@@ -42293,7 +42293,7 @@
     "refs": [
       "infiniteassault-143-1"
     ],
-    "loc": 6,
+    "loc": 55,
     "base": {
       "keywords": [],
       "text": "Transform two enemy Units into Corrupted Processes."
@@ -42354,7 +42354,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 37,
     "base": {
       "keywords": [],
       "text": "Steal every (2) Cost or less enemy Unit. Your opponent's cards cost (1) more during their next turn."
@@ -42417,7 +42417,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 30,
     "base": {
       "attack": 1,
       "health": 2,
@@ -42499,7 +42499,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 48,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks: Cancel the attack. The attacker has {attack} Attack this turn."
@@ -42533,7 +42533,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 34,
     "base": {
       "keywords": [],
       "text": "Give a friendly Unit Divine Shield and +{health} Health."
@@ -42568,7 +42568,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 24,
     "base": {
       "attack": 3,
       "health": 10,
@@ -42628,7 +42628,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Give your Units +{attack}/+{health}."
@@ -42652,7 +42652,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 3,
       "health": 5,
@@ -42738,7 +42738,7 @@
     "refs": [
       "infiniteassault-154-1"
     ],
-    "loc": 6,
+    "loc": 45,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks: Summon a Decoy Server. Redirect the attack to it."
@@ -42799,7 +42799,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 25,
     "base": {
       "attack": 3,
       "health": 6,
@@ -42838,7 +42838,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 26,
     "base": {
       "attack": 2,
       "health": 8,
@@ -42874,7 +42874,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "An enemy Unit can't attack or be attacked until your next turn."
@@ -42909,7 +42909,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Spell that targets: Counter it."
@@ -42945,7 +42945,7 @@
         "read": "cry"
       }
     ],
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 2,
       "health": 5,
@@ -42983,7 +42983,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Aura: Your Units in Defense Position have +{health} Health and are Immune to Spells."
@@ -43025,7 +43025,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Your hero gains {armor} Armor. If you control a Taunt Unit, your hero gains {extra} more Armor."
@@ -43059,7 +43059,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 30,
     "base": {
       "attack": 5,
       "health": 9,
@@ -43111,7 +43111,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 0,
       "health": 20,
@@ -43153,7 +43153,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 55,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks your hero: Exile it."
@@ -43187,7 +43187,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 40,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks: Deal {damage} damage to it."
@@ -43211,7 +43211,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 6,
       "health": 12,
@@ -43257,7 +43257,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 43,
     "base": {
       "keywords": [],
       "text": "Switch your Units to Defense Position. Give them +{health} Health and Divine Shield."
@@ -43300,7 +43300,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Your hero and Units are immune to damage until your next turn. Draw {draw|card|cards}."
@@ -43336,7 +43336,7 @@
         "read": "cry"
       }
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "attack": 2,
       "health": 2,
@@ -43364,7 +43364,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 57,
     "base": {
       "keywords": [],
       "text": "Discover a card from your opponent's deck."
@@ -43388,7 +43388,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 17,
     "base": {
       "attack": 3,
       "health": 3,
@@ -43416,7 +43416,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Add copies of the last two cards your opponent played to your hand."
@@ -43440,7 +43440,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 32,
     "base": {
       "attack": 2,
       "health": 3,
@@ -43468,7 +43468,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Add copies of two random cards in your opponent's graveyard to your hand."
@@ -43492,7 +43492,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 44,
     "base": {
       "attack": 1,
       "health": 3,
@@ -43520,7 +43520,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 43,
     "base": {
       "attack": 4,
       "health": 6,
@@ -43548,7 +43548,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 31,
     "base": {
       "keywords": [],
       "text": "Draw two cards. If your opponent has more cards in hand than you, draw one more."
@@ -43572,7 +43572,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 4,
       "health": 5,
@@ -43600,7 +43600,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 52,
     "base": {
       "keywords": [],
       "text": "Transform a friendly Unit into a copy of an enemy Unit."
@@ -43624,7 +43624,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 33,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a card: Add a copy of it to your hand."
@@ -43648,7 +43648,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 57,
     "base": {
       "attack": 3,
       "health": 3,
@@ -43676,7 +43676,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "keywords": [],
       "text": "Choose an enemy Unit. Summon a copy of it for yourself."
@@ -43700,7 +43700,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Start of turn: Add a copy of a random card your opponent played last turn to your hand."
@@ -43724,7 +43724,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 122,
     "base": {
       "keywords": [],
       "text": "Look at the top three cards of your opponent's deck. Add a copy of one to your hand and exile another."
@@ -43748,7 +43748,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 57,
     "base": {
       "attack": 5,
       "health": 7,
@@ -43776,7 +43776,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 33,
     "base": {
       "keywords": [],
       "text": "Shuffle copies of the cards in your opponent's hand into your deck. Draw two cards."
@@ -43810,7 +43810,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "attack": 3,
       "health": 4,
@@ -43838,7 +43838,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 61,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Unit: Summon a copy of it for yourself with +2/+2."
@@ -43862,7 +43862,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 39,
     "base": {
       "keywords": [],
       "text": "End of turn: Summon a copy of a random enemy Unit. Give it Brittle 2."
@@ -43898,7 +43898,7 @@
         "read": "cry"
       }
     ],
-    "loc": 6,
+    "loc": 26,
     "base": {
       "attack": 6,
       "health": 8,
@@ -43937,7 +43937,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 31,
     "base": {
       "attack": 3,
       "health": 5,
@@ -43965,7 +43965,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Swap decks with your opponent. Draw two cards."
@@ -43999,7 +43999,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 1,
       "health": 2,
@@ -44037,7 +44037,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 41,
     "base": {
       "attack": 0,
       "health": 3,
@@ -44076,7 +44076,7 @@
         "read": "cry"
       }
     ],
-    "loc": 6,
+    "loc": 22,
     "base": {
       "attack": 2,
       "health": 2,
@@ -44114,7 +44114,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "Give a friendly Unit +{buff}/+{buff} for each turn you've started this game."
@@ -44150,7 +44150,7 @@
         "read": "cry"
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 3,
       "health": 3,
@@ -44196,7 +44196,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 58,
     "base": {
       "keywords": [],
       "text": "Give a friendly Unit +{buff}/+{buff}. It gains +{gain}/+{gain} at the end of each of your turns."
@@ -44232,7 +44232,7 @@
         "read": "awaken"
       }
     ],
-    "loc": 6,
+    "loc": 30,
     "base": {
       "attack": 5,
       "health": 6,
@@ -44263,7 +44263,7 @@
     "refs": [
       "infiniteassault-200-1"
     ],
-    "loc": 6,
+    "loc": 32,
     "base": {
       "attack": 1,
       "health": 1,
@@ -44330,7 +44330,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 34,
     "base": {
       "attack": 6,
       "health": 6,
@@ -44358,7 +44358,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 34,
     "base": {
       "attack": 2,
       "health": 2,
@@ -44396,7 +44396,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Start of turn: Your Units gain +{buff}/+{buff}."
@@ -44430,7 +44430,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "The Units in your hand cost ({discount}) less."
@@ -44472,7 +44472,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 45,
     "base": {
       "attack": 0,
       "health": 8,
@@ -44520,7 +44520,7 @@
         "read": "cry"
       }
     ],
-    "loc": 6,
+    "loc": 34,
     "base": {
       "attack": 2,
       "health": 4,
@@ -44566,7 +44566,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 43,
     "base": {
       "keywords": [],
       "text": "Give a friendly Unit +{buff}/+{buff}. Shuffle a copy of this into your deck that gives +{more}/+{more} more."
@@ -44608,7 +44608,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent's turn starts, if you control {units} or more Units: Give your Units +{buff}/+{buff}."
@@ -44632,7 +44632,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 42,
     "base": {
       "keywords": [],
       "text": "Double a friendly Unit's Attack and Health."
@@ -44701,7 +44701,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 38,
     "base": {
       "attack": 1,
       "health": 1,
@@ -44739,7 +44739,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "End of turn: Give your Units +{buff}/+{buff} for each turn this has been on the field."
@@ -44763,7 +44763,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 31,
     "base": {
       "attack": 8,
       "health": 8,
@@ -44801,7 +44801,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 30,
     "base": {
       "attack": 4,
       "health": 4,
@@ -44839,7 +44839,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 44,
     "base": {
       "attack": 3,
       "health": 6,
@@ -44870,7 +44870,7 @@
     "refs": [
       "infiniteassault-216-1"
     ],
-    "loc": 6,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Summon a Singularity."
@@ -44905,7 +44905,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 38,
     "base": {
       "attack": 0,
       "health": 30,

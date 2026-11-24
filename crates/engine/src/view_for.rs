@@ -2311,15 +2311,29 @@ fn redact_event(
         | GameEventType::Discarded
         | GameEventType::Drawn
         // R1843000: a vote names its card as the card itself is named, a face-down voter hidden.
-        | GameEventType::VoteCast
-        // R2734000 (amending R154, R763): a fired trap is named as the card itself is, on both seats. It is
-        // face-up from its firing until it leaves the field (`traps::fire_trap`, `replacements::fire`), so it
-        // reads wherever it lies public. `row`, `lane` and `controller` always travel (§10.10).
-        | GameEventType::TrapFired => {
+        | GameEventType::VoteCast => {
             if !hidden(&instance) {
                 return event.clone();
             }
             hide(&mut shown, &["instanceId", "defId"]);
+            rebuild(shown)
+        }
+        // R2734000 (amending R154, R763): a fired trap is named as the card itself is, on both seats. It is
+        // face-up from its firing until it leaves the field (`traps::fire_trap`, `replacements::fire`), so it
+        // reads wherever it lies public. `row`, `lane` and `controller` always travel (§10.10). R4586007:
+        // the attacker it answered is named as that card itself is, so one a bounce took into a hand
+        // reads as a card back.
+        GameEventType::TrapFired => {
+            let attacker_hidden = nullable_at(&shown, "attackerId").is_some_and(|id| hidden(&id));
+            if !hidden(&instance) && !attacker_hidden {
+                return event.clone();
+            }
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId", "defId"]);
+            }
+            if attacker_hidden {
+                hide(&mut shown, &["attackerId"]);
+            }
             rebuild(shown)
         }
         // As above; R2089000's `creator` is the game record's bookkeeping, which no view forwards.

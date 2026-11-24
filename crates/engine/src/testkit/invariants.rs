@@ -1561,6 +1561,22 @@ fn evolves_standing(after: &GameState, id: &str) -> bool {
     })
 }
 
+/// I21, R4601000: whether a card acting on the field after the step lays an exile aura (R1850002,
+/// Stinkyscape #115 Scornboi). Its standing exile at the state check is the board's rule, not a Spell's,
+/// and runs with no marker of its own, so an `exiled` in a Spell's run may be its: a Spell's summon of
+/// Scornboi exiles an immune Unit that is neither Human nor a Starship (fuzz `--duos`, seed 3 with IA
+/// #45 to #54 forced).
+fn exile_aura_stands(after: &GameState) -> bool {
+    PLAYER_IDS.into_iter().any(|player| {
+        crate::zones::acting_on(after, player, crate::zones::StandingAt::ItsLane)
+            .into_iter()
+            .any(|card| {
+                !crate::preview::lasting_text_off(after, card)
+                    && !crate::scripts::script_of(after, card).exile_auras.is_empty()
+            })
+    })
+}
+
 /// I21, R4577008: whether an `exiled` of `mark`'s Unit may be the Black Hole's pull at the end of `ended`'s
 /// turn (R4440050, `geometry::pull_at_turn_end`): the step began with a hole that pulls at a turn's end and
 /// pulls that player's permanents, the turn has ended, and the Unit stood on that player's side one lane
@@ -1594,8 +1610,10 @@ fn pulled_into_the_hole(
 /// - a `radiantSet` while Tears of the Kwzki Tree's world holds every card Radiant (R4508003, R4454001);
 /// - the game's own rules that run inside the Spell's run with no marker (R4508005): §4.5 step 1's
 ///   switch out of Defense of a Unit the board bars from it (`forbidden_defense`, I17's), and a Burn or
-///   Toxic tick (`ticks_on`); and the settled state check's `evolved` of a Unit whose "Evolves when" holds
-///   after the step (R4623000, `evolves_standing`).
+///   Toxic tick (`ticks_on`); the settled state check's `evolved` of a Unit whose "Evolves when" holds
+///   after the step (R4623000, `evolves_standing`); and an `exiled` while a card laying an exile aura
+///   stands after the step (R4601000, `exile_aura_stands`: Stinkyscape #115 Scornboi, which a Spell's
+///   summon may bring in).
 ///
 /// A Unit is judged only when it is still on the field and still immune after the step (an aura that
 /// dropped mid-step, or a step that first took its immunity away, makes no finding), or when it is gone
@@ -1731,7 +1749,10 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 // Tears of the Kwzki Tree's world.
                 GameEvent::RadiantSet { .. } => run.window == Some(ImmuneWindow::Restore) || radiant_world,
                 // R4508004: a lane the board loses; R4577008: or the hole's pull at a turn's end.
-                GameEvent::Exiled { .. } => run.takes_lane || pulled_into_the_hole(step.hole, ended, mark),
+                // R4601000: or a standing exile aura's at the state check.
+                GameEvent::Exiled { .. } => {
+                    run.takes_lane || pulled_into_the_hole(step.hole, ended, mark) || exile_aura_stands(after)
+                }
                 // R4508005: §4.5 step 1 switches it out of a Defense Position the board bars it from.
                 // R4623000: the state check evolves it by its own standing condition (R3536001).
                 GameEvent::Evolved { .. } => evolves_standing(after, id),

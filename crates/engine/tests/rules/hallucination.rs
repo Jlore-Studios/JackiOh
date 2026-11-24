@@ -4,7 +4,7 @@
 //! which needs a real attack.
 
 use jackioh_engine::effects::{
-    choose_pick, destroy, destroy_all, give_units_attack, put_on_library_bottom, reveal,
+    bounce, choose_pick, destroy, destroy_all, give_units_attack, put_on_library_bottom, reveal,
     set_cost_override_random, swap_hands,
 };
 use jackioh_engine::modifiers::expire_modifiers;
@@ -15,7 +15,7 @@ use crate::rules::fixtures::damage_combat::{
     anime_armor, gambit, grunt, playing, recorder, veteran, voidwalker, wall, watcher,
 };
 use crate::rules::fixtures::harness::{
-    Bench, by, ids, in_hand, input, live, put, run_effect, set_library, sink_for, slot,
+    Bench, by, ids, in_hand, input, json_of, live, put, run_effect, set_library, sink_for, slot,
 };
 
 /// A Unit whose static flags carry the face-down ward (Infinite Assault #42 Paranoia Engine's
@@ -300,6 +300,53 @@ fn r4586007_a_game_with_no_infinite_assault_card_names_no_attacker() {
             }
         ),
         "no attacker named: {fired:?}"
+    );
+}
+
+#[test]
+fn r4586007_a_view_names_the_attacker_as_it_names_that_card() {
+    // R97: an attacker a bounce took into its owner's hand reads to the other seat as a card back, so
+    // the firing's `attackerId` is withheld from it (fuzz I6, seed 24 of the Infinite Assault's cards).
+    let mut state = playing("hx-attacker-view");
+    state.players[P1].recursion = Some(Default::default());
+    put(&mut state, &watcher.id, slot(P2, Row::Backrow, 1), json!({}));
+    let striker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), json!({}));
+    let mut game = recorder(&state);
+    let result = game.play(input(json!({
+        "type": "attack", "attackerId": striker.id, "targetId": "hero-p2", "playerId": "p1"
+    })));
+    assert!(result.error.is_none(), "the attack resolves: {:?}", result.error);
+    let fired_attacker = |state: &GameState, viewer: PlayerId| -> Vec<Value> {
+        json_of(view_for(state, viewer))["events"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|event| event["type"] == json!("trapFired"))
+            .map(|event| event["attackerId"].clone())
+            .collect()
+    };
+    let mut after = game.state().clone();
+    // On the field the attacker is public, so both seats read its id.
+    assert_eq!(fired_attacker(&after, P2), vec![json!(striker.id)]);
+    run_effect(
+        &mut after,
+        bounce(json_as(
+            json!({ "target": { "of": "instance", "instanceId": striker.id } }),
+        )),
+        P2,
+    );
+    assert!(
+        after.players[P1].hand.iter().any(|card| card.id == striker.id),
+        "the bounce took the attacker into p1's hand"
+    );
+    // Its owner still reads it; the other seat reads no id where a card back stands.
+    assert_eq!(fired_attacker(&after, P1), vec![json!(striker.id)]);
+    let withheld = fired_attacker(&after, P2);
+    assert_eq!(withheld.len(), 1, "the firing still reaches p2: {withheld:?}");
+    assert_ne!(
+        withheld[0],
+        json!(striker.id),
+        "p2 reads no hidden attacker: {withheld:?}"
     );
 }
 
