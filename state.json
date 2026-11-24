@@ -18349,6 +18349,7 @@
       "planned_at": "2026-11-24T06:01:16Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
+      "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
       "provider": "muse",
       "queued_at": "2026-11-24T05:51:43Z",
