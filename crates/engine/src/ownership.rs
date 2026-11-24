@@ -41,6 +41,7 @@ pub fn change_owner(sink: &mut EngineSink<'_>, card: &CardInstance, thief: Playe
     let readable_from = readers_where_it_lies(sink.state, &card);
     let from = card.owner;
     if let Some(taken) = find_instance_mut(sink.state, &card.id) {
+        crate::origin::note_origin(taken);
         taken.owner = thief;
         taken.controller = thief;
         hide_from_owner(taken);

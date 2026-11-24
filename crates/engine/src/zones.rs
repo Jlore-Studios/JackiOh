@@ -1562,6 +1562,7 @@ pub fn move_to_zone(
     // (R87) carries no link of its chain (R28) into a play of its own.
     // R2618000: it lands as its keeper's own card, before R78's reset hands control back to its owner.
     if let Some(keeper) = keeper {
+        crate::origin::note_origin(instance);
         instance.owner = keeper;
     }
     let to_graveyard_or_exile = zone == OffFieldZone::Graveyard || zone == OffFieldZone::Exile;

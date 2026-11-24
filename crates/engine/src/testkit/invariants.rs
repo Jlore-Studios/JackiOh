@@ -2085,7 +2085,7 @@ fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
             }
         };
     let rival = opponent_of(viewer);
-    if state.result.is_none() {
+    if state.result.is_none() && !crate::revealed_hand::hand_revealed_to(state, rival, viewer) {
         for card in &state.players[rival].hand {
             hide(&mut ids, &card.id, &card.def_id, format!("{rival}'s hand"), true);
         }

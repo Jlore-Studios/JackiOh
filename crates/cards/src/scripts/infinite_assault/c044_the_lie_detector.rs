@@ -105,7 +105,6 @@ mod tests {
             .iter()
             .filter_map(|slot| slot.clone())
             .filter(|card| card.def_id == FIGMENT)
-            .cloned()
             .collect()
     }
 

@@ -1418,7 +1418,10 @@ fn reserved_mask(state: &GameState, player: PlayerId) -> RowFlags {
 
 /// R1141: how many cards of the opponent's hand carry a mark, while that hand is a count.
 fn hand_marked_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> Option<i32> {
-    if player == viewer || state.result.is_some() {
+    if player == viewer
+        || state.result.is_some()
+        || crate::revealed_hand::hand_revealed_to(state, player, viewer)
+    {
         return None;
     }
     let marked = state.players[player]
@@ -1506,7 +1509,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                 })
                 .collect(),
         )
-    } else if state.result.is_some() {
+    } else if state.result.is_some() || crate::revealed_hand::hand_revealed_to(state, player, viewer) {
         HandView::Cards(
             side.hand
                 .iter()

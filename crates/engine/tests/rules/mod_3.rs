@@ -7,6 +7,7 @@
 #[allow(dead_code)]
 pub mod fixtures;
 pub mod sandbox;
+pub mod scraper;
 pub mod scorer;
 pub mod secrets;
 pub mod self_tribute;

@@ -769,6 +769,10 @@ pub struct StaticFlags {
     /// run by an effect the opponent controls pass over them (`face_down::face_down_warded`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub face_down_ward: Option<bool>,
+    /// R4592003 (Infinite Assault #191 Ground Truth): while this card acts on its controller's
+    /// field, the opponent plays with their hand revealed to this card's controller (`revealed_hand::hand_revealed_to`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reveals_opponents_hand: Option<bool>,
     // Stinkyscape (issue #1844)
     /// R1844000 (Stinkyscape #46 Circadian Halfcycler): while this card acts on the field, the
     /// autopilot plays the first this-many R456 actions of each of its controller's turns, then hands

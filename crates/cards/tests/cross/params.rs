@@ -671,6 +671,7 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("infiniteassault-034", PRICE),
         ("infiniteassault-036", KEYWORD),
         ("infiniteassault-045", KEYWORD),
+        ("infiniteassault-189", KEYWORD),
         ("core-038", ENGINE),
         ("core-093", ENGINE),
         ("core-095", ENGINE),

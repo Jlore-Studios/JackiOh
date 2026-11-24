@@ -185,6 +185,7 @@ const PASSED_MEMORY: &[&str] = &[RETURN_PRICE_KEY, POWER_KEY];
 pub fn passed_card(card: CardInstance, id: String, receiver: PlayerId) -> CardInstance {
     let mut moved = card;
     moved.id = id;
+    crate::origin::note_origin(&mut moved);
     moved.owner = receiver;
     moved.controller = receiver;
     moved.zone = Zone::Hand { player: receiver };

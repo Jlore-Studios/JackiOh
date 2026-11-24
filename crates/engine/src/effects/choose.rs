@@ -1003,6 +1003,8 @@ pub struct ChoosePickArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub except: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub data: StepData,
 }
 
@@ -1013,6 +1015,11 @@ pub struct ChoosePickArgs {
 pub fn choose_pick(args: ChoosePickArgs) -> Effect {
     Effect::new("choosePick", move |ctx| {
         let filter = args.filter.clone().unwrap_or_default();
+        let except: IndexSet<String> = args
+            .except
+            .as_ref()
+            .map(|list| list.iter().cloned().collect())
+            .unwrap_or_default();
         let mut seen: IndexSet<String> = IndexSet::new();
         let mut options: Vec<PromptOption> = Vec::new();
         let reader: &EffectContext<'_> = &*ctx;
@@ -1020,7 +1027,7 @@ pub fn choose_pick(args: ChoosePickArgs) -> Effect {
         for pile in &args.from {
             let player = player_of(reader, pile.player.unwrap_or(PlayerSpec::SelfSide));
             for card in pile_cards(state, player, pile.zone, pile.top) {
-                if seen.contains(&card.id) || !pickable(state, card, &filter) {
+                if seen.contains(&card.id) || except.contains(&card.id) || !pickable(state, card, &filter) {
                     continue;
                 }
                 seen.insert(card.id.clone());

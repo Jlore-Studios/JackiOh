@@ -48,6 +48,7 @@ pub fn shuffle_card_into(args: ShuffleCardIntoArgs) -> Effect {
         if let Some(spec) = args.player {
             let owner = player_of(ctx, spec);
             if let Some(live) = find_instance_mut(ctx.state, &args.instance_id) {
+                crate::origin::note_origin(live);
                 live.owner = owner;
                 live.controller = owner;
             }

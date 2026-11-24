@@ -1157,6 +1157,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 reveal_chance: numbers(|f| f.reveal_chance),
                 // R4586004: the ward fuses as one flag, like the other auras.
                 face_down_ward: flags(|f| f.face_down_ward),
+                reveals_opponents_hand: flags(|f| f.reveals_opponents_hand),
                 pilots_actions: numbers(|f| f.pilots_actions),
                 pilots_turn: flags(|f| f.pilots_turn),
                 hints_plays: flags(|f| f.hints_plays),

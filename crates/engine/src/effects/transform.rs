@@ -671,6 +671,68 @@ pub fn transform_beneath(args: TransformBeneathArgs) -> Effect {
     })
 }
 
+/// R4592007 (Infinite Assault #179 Style Transfer): transforms a unit into an R57 copy of another unit.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct TransformIntoCopyArgs {
+    pub target: TargetSpec,
+    pub of: TargetSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
+}
+
+pub fn transform_into_copy(args: TransformIntoCopyArgs) -> Effect {
+    Effect::new("transformIntoCopy", move |ctx| {
+        let Some(DamageTarget::Unit { instance: old }) = resolve_target(ctx, &args.target) else {
+            return;
+        };
+        let Some(DamageTarget::Unit { instance: source }) = resolve_target(ctx, &args.of) else {
+            return;
+        };
+        if crate::layers::is_immutable(ctx.state, &old) || crate::slumber::is_slumbering(&old) {
+            return;
+        }
+        let mut copy = clone_of(
+            ctx,
+            &source,
+            old.owner,
+            &json_as(json!({ "of": { "of": "instance", "instanceId": source.id } })),
+        );
+        if args.radiant == Some(true) {
+            copy.radiant = true;
+        }
+        if old.position.is_some() {
+            copy.position = old.position;
+        }
+        copy.summoned_turn = Some(ctx.state.turn);
+        let hidden_from = unreadable_by(ctx, &old);
+        let copy_id = copy.id.clone();
+        let copy_def_id = copy.def_id.clone();
+        if !replace_in_zone(&mut *ctx.state, &old, &mut copy) {
+            return;
+        }
+        if let Some(live) = find_instance_mut(ctx.state, &copy_id) {
+            live.controller = old.controller;
+        }
+        let mut retired = old.clone();
+        cease_to_exist(&mut *ctx.state, &mut retired);
+        ctx.events.push(GameEvent::Transformed {
+            instance_id: old.id.clone(),
+            from_def_id: old.def_id.clone(),
+            to_def_id: copy_def_id,
+            new_instance_id: copy_id.clone(),
+            hidden_from: if hidden_from.is_empty() {
+                None
+            } else {
+                Some(hidden_from)
+            },
+            creator: None,
+        });
+        crate::generators::credit_creator(ctx, &copy_id);
+    })
+}
+
 /// `swapBook`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
