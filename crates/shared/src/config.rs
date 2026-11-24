@@ -3,7 +3,6 @@
 //! `jackioh-wasm-core` read them from its `constants` export, so none restates one.
 
 use jackioh_engine::EmoteId;
-use jackioh_engine::wire::KeywordKind;
 use jackioh_engine::wire::PrintedRarity;
 use serde::{Deserialize, Serialize};
 
@@ -2024,96 +2023,3 @@ pub const DAILY_EMAIL_MIN_GAP_HOURS: i64 = 6;
 pub const DAILY_URGENT_HOURS: i64 = 12;
 /// §9.13: how many finished daily games the Daily screen lists, the newest of them.
 pub const DAILY_RECENT_FINISHED: i32 = 10;
-
-/// SPEC §6.1 R4747000: the one fixed display order of a card's keyword line, in three tiers:
-/// economy, then powerful effects and drawbacks, then combat. Tribute X and Echo X are not keywords
-/// (they already share the line, R366) and are placed by the text sort as items 1 and 2, so they are
-/// not listed here; Evolve never prints as a bare word and the retired Immune to tribal tag based
-/// hate is left out, so neither is listed either. The only place the order is stated (CLAUDE.md
-/// rule 9): the face model sorts by [`keyword_line_rank`], the fused line too, and
-/// `crates/cards/tests/cross/card_text.rs` restates the sequence as display names because that pure
-/// crate may not depend on this one (CLAUDE.md rule 4).
-pub const KEYWORD_LINE_ORDER: &[KeywordKind] = &[
-    KeywordKind::Tradable,
-    KeywordKind::Flashback,
-    KeywordKind::Temporary,
-    KeywordKind::Cloaked,
-    KeywordKind::Equip,
-    KeywordKind::Stack,
-    KeywordKind::Flexible,
-    KeywordKind::Giga,
-    KeywordKind::Tipsy,
-    KeywordKind::SpellDamage,
-    KeywordKind::Lucky,
-    KeywordKind::Indestructible,
-    KeywordKind::Immutable,
-    KeywordKind::ImmuneToSpells,
-    KeywordKind::Untributable,
-    KeywordKind::Evasive,
-    KeywordKind::CantAttack,
-    KeywordKind::CantDefend,
-    KeywordKind::Brittle,
-    KeywordKind::Crater,
-    KeywordKind::Animated,
-    KeywordKind::AnimatedOnYourTurn,
-    KeywordKind::StarshipPiece,
-    KeywordKind::Starship,
-    KeywordKind::Charge,
-    KeywordKind::Rush,
-    KeywordKind::Windfury,
-    KeywordKind::Frenzy,
-    KeywordKind::Deft,
-    KeywordKind::Taunt,
-    KeywordKind::Flying,
-    KeywordKind::Ranged,
-    KeywordKind::FirstStrike,
-    KeywordKind::Pierce,
-    KeywordKind::Trample,
-    KeywordKind::Cleave,
-    KeywordKind::Poisonous,
-    KeywordKind::Toxic,
-    KeywordKind::Burn,
-    KeywordKind::Lifesteal,
-    KeywordKind::DivineShield,
-    KeywordKind::Armor,
-    KeywordKind::Reborn,
-];
-
-/// SPEC §6.1 R4747000: `kind`'s place in [`KEYWORD_LINE_ORDER`], lowest first. A kind with no place
-/// (Evolve, the retired ones) sorts after every listed kind, in kind order, so it never collides.
-pub fn keyword_line_rank(kind: KeywordKind) -> usize {
-    KEYWORD_LINE_ORDER
-        .iter()
-        .position(|listed| *listed == kind)
-        .unwrap_or(KEYWORD_LINE_ORDER.len())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use jackioh_engine::wire::KEYWORD_KINDS;
-
-    /// SPEC §6.1 R4747000: the order lists every `KeywordKind` except Evolve (which never prints as
-    /// a bare word) and the retired ones, exactly once, so a new keyword fails here until it is
-    /// given a place.
-    #[test]
-    fn r4747000_the_keyword_line_order_lists_every_live_keyword_kind_once() {
-        let retired: Vec<KeywordKind> = KeywordKind::RETIRED.to_vec();
-        let mut want: Vec<KeywordKind> = KEYWORD_KINDS
-            .iter()
-            .copied()
-            .filter(|kind| *kind != KeywordKind::Evolve && !retired.contains(kind))
-            .collect();
-        want.sort();
-        want.dedup();
-        let mut listed: Vec<KeywordKind> = KEYWORD_LINE_ORDER.to_vec();
-        listed.sort();
-        listed.dedup();
-        assert_eq!(listed, want);
-        assert_eq!(
-            KEYWORD_LINE_ORDER.len(),
-            listed.len(),
-            "R4747000: the order lists a kind twice"
-        );
-    }
-}

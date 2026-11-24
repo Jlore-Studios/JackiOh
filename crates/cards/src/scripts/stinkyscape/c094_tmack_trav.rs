@@ -1,7 +1,7 @@
 //! S #94 Tmack Trav (SPEC §8.10 row 94): (3) Unit, Human, Epic, 7/7 → 14/14 (8/8 → 16/16 until issue #4154), of the Stinkyscape
 //! set. Not Tnack Trav, S #20 (ST9).
 //!   Base:    "Rush, Frenzy"
-//!   Radiant: "Rush, Frenzy, Pierce"
+//!   Radiant: "Rush, Pierce, Frenzy"
 //!   Through v0.5.13g: "Rush / After this destroys a Unit, it may attack again" (Radiant: "Rush,
 //!   Pierce" and the same), `tmack`'s `after_attack` (`script_v0_5_13g`, kept, R767000).
 //! Engine: Rush, Pierce (its hits ignore Armor, R346) and Frenzy (S01, R3551004: "after this kills a
@@ -94,7 +94,7 @@ mod frenzy_r3551004 {
             crate::js(&def.radiant.keywords),
             json!([{ "kind": "Rush" }, { "kind": "Pierce" }, { "kind": "Frenzy" }]),
         );
-        assert_eq!(def.radiant.text, "Rush, Frenzy, Pierce");
+        assert_eq!(def.radiant.text, "Rush, Pierce, Frenzy");
         // No script at all: Frenzy is the catalog's keyword now.
         for face in [&script().base, &script().radiant] {
             assert!(face.activations.is_empty());

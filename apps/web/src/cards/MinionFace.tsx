@@ -335,8 +335,7 @@ function MinionFace({ face, unit, className, worn = false, keywordsOffFace = fal
           )}
         </span>
 
-        {/* R4747000: the icons run in the face's sorted order, with the face's words (`keywordWords` follows `face.keywords`). */}
-        {keywordsOffFace ? null : <KeywordIcons keywords={face.keywords} words={face.keywordWords} join={face.keywordJoin} armor={unit.armor} />}
+        {keywordsOffFace ? null : <KeywordIcons keywords={unit.keywords} words={face.keywordWords} join={face.keywordJoin} armor={unit.armor} />}
 
         {/* #2435, R1839000: a Dormant card greyed and bound, under the state rail (DormantSeal.tsx). */}
         {dormant === undefined ? null : <DormantSeal />}

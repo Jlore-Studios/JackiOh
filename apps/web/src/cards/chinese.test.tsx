@@ -186,8 +186,7 @@ describe("R1301 a Chinese card in a match", () => {
     const chinese = glossaryOf(inPlay(card({ defId: "core-003", cost: 4, radiant: true, chinese: true })));
     // The terms are found in the English text.
     expect(chinese.map((entry) => entry.id)).toEqual(english.map((entry) => entry.id));
-    // R4747000: core-003's keyword line prints Can't Defend first, in both locales.
-    expect(chinese.map((entry) => entry.id)).toEqual(["Can't Defend", "Taunt", "Divine Shield", "Reborn", "Death"]);
+    expect(chinese.map((entry) => entry.id)).toEqual(["Taunt", "Divine Shield", "Reborn", "Can't Defend", "Death"]);
     for (const entry of chinese) {
       expect({ label: entry.label, rule: entry.rule }, entry.id).toEqual(CHINESE_TERMS.glossary[entry.id]);
     }
@@ -264,10 +263,9 @@ describe("R1301 a Chinese card in a match", () => {
     // R469: an ingredient fused on its Radiant face puts that face into the base form too.
     const forced = { ...fused, ingredients: [{ defId: "core-011", radiant: true as const }, { defId: "core-089" }] };
     expect(chineseDef(forced).base.text).toBe(`${zh("core-011").radiant}\n${zh("core-089").base}`);
-    // The English of the same fusion, its keyword lines as one (R3941002) in the fixed line order
-    // (R4747000), is what the glossary reads.
+    // The English of the same fusion, its keyword lines as one (R3941002), is what the glossary reads.
     const [, ...corpseEater] = def("core-089").base.text.split("\n");
-    expect(base.englishText).toBe(["Brittle 1, Rush, First Strike", ...corpseEater].join("\n"));
+    expect(base.englishText).toBe(["Rush, First Strike, Brittle 1", ...corpseEater].join("\n"));
   });
 
   it("R3045000 a fused Dormant Starship is named for the hull in Chinese, a launched one for its drawn name", () => {

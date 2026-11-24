@@ -662,7 +662,6 @@ function Card(props: CardProps): ReactElement {
         <FieldBadges
           card={unit ?? card}
           unit={unit}
-          keywords={face.keywords}
           words={face.keywordWords}
           join={face.keywordJoin}
           highlight={props.highlight}

@@ -72,10 +72,9 @@ describe("#2932 a phone's field unit stands its Activate control and keyword mar
     expect(badges?.parentElement, "a sibling of the card, not inside it").toBe(zone);
     expect(card.contains(badges ?? null)).toBe(false);
     expect(badges?.querySelector(".activate-control"), "the Activate control is in the stack").not.toBeNull();
-    // R4747000: the marks run in the face's fixed line order (Can't Defend before Rush), not the view's arrival order.
     expect([...(badges?.querySelectorAll(".keyword-icon") ?? [])].map((mark) => mark.getAttribute("data-keyword"))).toEqual([
-      "Can't Defend",
       "Rush",
+      "Can't Defend",
     ]);
     expect(card.querySelector(".activate-controls, .activate-control"), "none on the face").toBeNull();
     expect(card.querySelector(".keywords, .keyword-icon"), "no marks on the face").toBeNull();
@@ -187,8 +186,7 @@ describe("#3257 the marks that do not fit above the name plate fold into the +n"
     restore = stubPhonePortrait(true);
     stubLayout("60px");
     renderGame();
-    // R4747000: the face's fixed line order.
-    expect(keywordsOf()).toEqual(["Can't Defend", "Rush"]);
+    expect(keywordsOf()).toEqual(["Rush", "Can't Defend"]);
     expect(more(), "nothing folded").toBeNull();
   });
 
