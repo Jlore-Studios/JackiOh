@@ -18481,14 +18481,6 @@
         "reason": "`claude-7` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-24T10:30:00Z",
         "trail": "lude=*.css | head; grep -n 'segmented__item\\\\b\\\\|\\\\.segmented__item {' -A12 apps/web/src/tabs/*.css | he\u2026\n- Write: {\"file_path\": \"/tmp/parts-4673.js\", \"content\": \"() => {\\n // Each options-row group's parts: their widths, and the gaps between them.\\n const row = document.querySelector('.stats-options');\\n const p\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=w4673 eval \\\"$(cat /tmp/parts-4673.js)\\\" --raw 2>&1 | tail -40\", \"description\": \"Measure options row parts\", \"timeout\": 120000}\n- Bash: {\"command\": \"grep -rn 'padding' apps/web/src/auth/tavern.css | head -20; grep -n 'button' apps/web/src/auth/tavern.css | head -20\", \"description\": \"Find tavern button padding rule\"}\n- Bash: {\"command\": \"sed -n 348,364p apps/web/src/auth/tavern.css; grep -n 'tavern\\\\|stats-view-btn\\\\|stats-drilldown-action' apps/web/src/routes/stats.css | head -30\", \"description\": \"Read tavern size rule \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/routes/stats.css'\\ns=open(p).read()\\na=\\\"\\\"\\\".stats-options {\\n display: flex;\\n flex-wrap: wrap;\\n align-items: center;\\n gap: var(--space-6) var(--sp\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=w4673 eval \\\"$(cat /tmp/rows-4673.js)\\\" --raw 2>&1 | tail -40\", \"description\": \"Re-measure options row at 1280\", \"timeout\": 120000}\n- Bash: {\"command\": \"sh scripts/browse.sh -s=w4673 screenshot \\\".stats-options\\\" --filename=w4673-options-1280.png 2>&1 | tail -2\", \"description\": \"Screenshot options row at 1280\", \"timeout\": 120000}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4673/.cache/browse/w4673-options-1280.png\"}\n- Bash: {\"command\": \"sh scripts/browse.sh -s=w4673 click \\\"getByTestId('stats-face-radiant')\\\" 2>&1 | grep -iE 'error|url' | head -3; sh scripts/browse.sh -s=w4673 eval \\\"async () => { await new Promise((r) \u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=w4673 click \\\"getByTestId('stats-face-normal')\\\" 2>&1 | grep -iE 'error' | head -3; sh scripts/browse.sh -s=w4673 eval \\\"async () => { await new Promise((r) => se\u2026\n- tool error: Permission to use Bash with command tail -10; curl -s 'http://localhost:8787/api/stats/cards?patch=v0.6.11e&face=normal' has been denied.\n- Bash: {\"command\": \"sh scripts/browse.sh -s=w4673 click \\\"getByTestId('stats-face-normal')\\\" 2>&1 | grep -iE 'error' | head -3; sh scripts/browse.sh -s=w4673 eval \\\"async () => { await new Promise((r) => se\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=w4673 click \\\"getByTestId('stats-face-radiant')\\\" 2>&1 | grep -iE 'error' | head -2; sh scripts/browse.sh -s=w4673 eval \\\"async () => { await new Promise((r) => s\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=w4673 screenshot \\\"getByTestId('stats-drill-down-modal')\\\" --filename=w4673-drill-1280.png 2>&1 | grep -i error | head -2\", \"description\": \"Screenshot drill-down \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4673/.cache/browse/w4673-drill-1280.png\"}\n- Bash: {\"command\": \"sh scripts/browse.sh -s=w4673 click \\\"getByTestId('stats-drill-down-close')\\\" 2>&1 | grep -i error | head -2; sh scripts/browse.sh -s=w4673 resize 390 844 2>&1 | grep -i error | head -2;\u2026\n- Write: {\"file_path\": \"/tmp/before-4673.js\", \"content\": \"() => {\\n // The options row as it stood before #4673: no Face group, the tavern's 18px button sides and the 12px/20px gaps.\\n const row = document.qu\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=w4673 eval \\\"$(cat /tmp/before-4673.js)\\\" --raw 2>&1 | tail -8; sh scripts/browse.sh -s=w4673 screenshot \\\".stats-options\\\" --filename=w4673-options-390.png 2>&1 \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4673/.cache/browse/w4673-options-390.png\"}\n- Bash: {\"command\": \"sh scripts/browse.sh -s=w4673 eval \\\"async () => { document.querySelector('[data-testid=stats-cards-table] tbody tr').click(); const until = Date.now() + 15000; while (!document.querySel\u2026\n- Bash: {\"command\": \"grep -n 'stats\\\\|Stats' e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts | head -20; ls ~/.cache/Cypress 2>/dev/null | head -3 || echo no-cypress\", \"description\": \"Read spec 46 stats parts;\u2026\n- Bash: {\"command\": \"sed -n 75,110p e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts; sed -n 320,345p e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts\", \"description\": \"Read spec 46 stats test\"}\n- Bash: {\"command\": \"grep -n 'MENU_SIZES\\\\|MenuSize\\\\b.*=\\\\|width:.*height:' e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts | head -10; grep -rn 'MENU_SIZES\\\\s*[:=]' e2e/support e2e/cypress | head -3\", \"descr\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=w4673 eval \\\"() => ({ vp: innerWidth + 'x' + innerHeight, scrollHeight: document.documentElement.scrollHeight, scrollWidth: document.documentElement.scrollWidth }\u2026\n- Bash: {\"command\": \"sed -n 140,165p e2e/support/config.ts\", \"description\": \"Read MENU_SIZES\"}\n- Bash: {\"command\": \"pnpm --dir e2e exec cypress run --spec cypress/e2e/46-menus-fit-one-screen.cy.ts > /tmp/spec46-4673.log 2>&1; echo \\\"exit $?\\\" >> /tmp/spec46-4673.log\", \"description\": \"Run Cypress spec \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R4673001.md'\\ns=open(p).read()\\na=\\\"It is kept in the address as `face` (absent means All, an unknown one reads All), one state for both tabs, as `view\u2026\n- Bash: {\"command\": \"cargo clippy --workspace --all-targets -- -D warnings 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -E '^(error|warning)|Finished' -A8 | head -40\", \"description\": \"Run workspace clippy\", \"ti\u2026\n- Bash: {\"command\": \"sh -c 'i=0; while [ $i -lt 190 ] && ! grep -q \\\"^exit\\\" /tmp/spec46-4673.log; do i=$((i+1)); sleep 3; done'; grep -E 'passing|failing|pending|exit|\\u2716|Error' /tmp/spec46-4673.log | he\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4673/3c9f6de7-0a37-4f58-8507-3f47a6abb2c9/tasks/bhwlypb7l.output | tail -5; tail -c 1500 /tmp/spec46-4673.log\", \"description\": \"Che\u2026\n- Bash: {\"command\": \"sh -c 'i=0; while [ $i -lt 190 ] && ! grep -q \\\"^exit\\\" /tmp/spec46-4673.log; do i=$((i+1)); sleep 3; done'; grep -aE 'passing|failing|pending|^exit|stats' /tmp/spec46-4673.log | sed 's/\u2026\n- tool error: Exit code 137"
       },
-      "hold": {
-        "ends": "2026-11-24T11:50:35Z",
-        "lifted": "2026-11-24T10:30:33Z",
-        "owner": "claude-7",
-        "since": "2026-11-24T09:50:35Z",
-        "until": "2026-11-24T10:30:00Z",
-        "why": "5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -18511,7 +18503,7 @@
       "queued_at": "2026-11-24T05:55:21Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "45366932050",
+      "run_id": "pending:56d3a926-1795516202",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -18530,7 +18522,7 @@
         "provider": "claude-7",
         "run": "45350134495"
       },
-      "started_at": "2026-11-24T09:37:13Z",
+      "started_at": "2026-11-24T10:30:45Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -19368,9 +19360,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T10:29:49Z",
+    "at": "2026-11-24T10:30:45Z",
     "url": "",
-    "what": "review #4629 on claude-6"
+    "what": "build #4673 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-24T10:13:45Z",
