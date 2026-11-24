@@ -40661,42 +40661,6 @@
     "checks": [
       {
         "approver": {
-          "family": "muse",
-          "model": "muse-spark-1.3-contributor",
-          "provider": "muse",
-          "tier": "medium"
-        },
-        "builder": {
-          "family": "muse",
-          "provider": "muse"
-        },
-        "difficulty": "medium",
-        "done_at": "2026-11-03T13:42:03Z",
-        "every": 5,
-        "findings": 0,
-        "head": "94ea09a516e3e3fc482b6abf4efcdf366c1ccee0",
-        "issue": 2877,
-        "last_why": "stopped: #2916 was closed",
-        "merged_at": "2026-11-03T12:52:05Z",
-        "n": 10,
-        "pr": 2916,
-        "queued_at": "2026-11-03T12:52:05Z",
-        "reason": "stopped: #2916 was closed",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-6",
-          "tier": "strong"
-        },
-        "sha": "4817b81cd04fcff94f04cc81dcc380120edb18c2",
-        "started_at": "2026-11-03T13:34:27Z",
-        "status": "done",
-        "title": "Patch: hero plates keep one size however many effects they carry",
-        "tries": 3,
-        "verdict": "failed"
-      },
-      {
-        "approver": {
           "family": "claude",
           "model": "sonnet",
           "provider": "claude-7",
@@ -44195,7 +44159,9 @@
           "provider": "claude-4"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-24T19:02:10Z",
         "every": 5,
+        "findings": 0,
         "head": "a4d54c35cf6033002d6a4b9a16e9039d2b2dee9f",
         "issue": 4673,
         "merged_at": "2026-11-24T18:29:02Z",
@@ -44208,12 +44174,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:a07a515e-1795546417",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45464466779",
         "sha": "2c81129d1d1391cef86ca272b5231c961d594776",
         "started_at": "2026-11-24T18:54:01Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: deeper card stats, S1, Radiant and Normal faces read on their own scales",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 511
