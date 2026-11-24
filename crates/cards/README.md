@@ -388,7 +388,8 @@ Every change to card data is a patch, and every patch is kept.
   where a change line moves a field other than `WORDING_FIELDS` and `PLAY_VERSION_QUIET_FIELDS` (`loc`)
   or the version's own `plays` claim its family; no tier ends one, and a day's cut restates its micros.
   `deck_play_versions()` keeps a deck's cards, which the engine's `play_version_figures` reads
-  (`GET /api/stats/versions`, R4675001).
+  (`GET /api/stats/versions`, R4675001); a card `catalog.json` holds before the history does, one a
+  branch adds or of a set a branch releases, has none until `patches ship`.
 - Every shipped version but the newest is carried for replays (R767000): its definitions rebuilt
   from its snapshot, its scripts the build's own, and the win-rate table it shipped with (R1266000:
   its `win_rates/<version>.json`, or the empty table with no file, R1329000). A patch
