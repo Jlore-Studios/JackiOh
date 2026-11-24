@@ -20828,24 +20828,18 @@
     "what": "plan #4747 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-24T14:03:04Z",
+    "at": "2026-11-24T14:23:06Z",
     "notes": [
-      "delivered plan #4731 on claude-3 (run 45408240066): planned",
-      "delivered plan #4725 on claude-7 (run 45408116320): planned",
-      "delivered plan #4742 on claude-4 (run 45407997496): planned",
-      "delivered plan #4737 on claude-1 (run 45407876332): planned",
-      "delivered plan #4723 on muse (run 45407649955): planned",
-      "delivered plan #4722 on muse (run 45407520148): planned",
-      "delivered plan #4733 on muse (run 45407415298): planned",
-      "delivered suggest on claude-4 (run 45404306841): suggested",
-      "started build #4733 on muse (run 45411051089)",
-      "started build #4722 on muse (run 45411190805)",
-      "started build #4723 on muse (run 45411329374)",
-      "started build #4742 on claude-4 (run 45411463928)",
-      "started build #4731 on claude-3 (run 45411601714)",
-      "started plan #4737 on claude-1 (run 45411739182)",
-      "started plan #4745 on claude-8 (run 45411892354)",
-      "started plan #4725 on claude-7 (run 45412033733)",
+      "#4743 needs a plan",
+      "#4747 needs a plan",
+      "delivered plan #4745 on claude-8 (run 45411892354): planned",
+      "delivered plan #4732 on claude-3 (run 45408405137): planned",
+      "delivered review #4741 on muse (run 45405908379): approved",
+      "started build #4745 on claude-8 (run 45414210832)",
+      "started build #4732 on claude-3 (run 45414349489)",
+      "started plan #4743 on muse (run 45414488685)",
+      "started revise #4724 on claude-4 (run 45414629741)",
+      "started plan #4747 on claude-3 (run 45414762279)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -21552,7 +21546,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T14:03:04Z",
+  "loop_tick": "2026-11-24T14:23:06Z",
   "machine_disk": {
     "issue": null,
     "reading": {
