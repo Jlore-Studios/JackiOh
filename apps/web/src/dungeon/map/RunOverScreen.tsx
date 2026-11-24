@@ -8,8 +8,9 @@ import type { ReactElement } from "react";
 
 import type { RunContent, RunState, RunStats } from "@jackioh/run";
 
+import { MainMenuButton } from "../../game/MainMenuButton.tsx";
 import { t } from "../../i18n/i18n.ts";
-import { paths } from "../../net/navigate.ts";
+import { navigate, paths } from "../../net/navigate.ts";
 import { followInApp } from "../../routes/nav.tsx";
 import { runEmbers, runScore } from "../../wasm/index.ts";
 import { formatRunTime } from "../fight/RunTimer.tsx";
@@ -135,6 +136,13 @@ export function RunOverScreen({ dungeon, run, content, won }: RunOverScreenProps
         <a href={paths.dungeonStats} data-testid={dungeonMapTestid.statsLink} onClick={followInApp(paths.dungeonStats)}>
           {t("Statistics")}
         </a>
+        {/* #4742, R4742000: out to the Play menu; the run stays saved, as only Start a new run abandons it. */}
+        <MainMenuButton
+          testid={dungeonMapTestid.mainMenu}
+          onClick={() => {
+            navigate(paths.play);
+          }}
+        />
       </div>
     </section>
   );

@@ -976,6 +976,40 @@ describe("R2092000 Play again on the result panel", () => {
   });
 });
 
+// #4742: Main menu on the result panel
+describe("R4742000 Main menu on the result panel", () => {
+  const OVER: DuosView = { ...duosView(), result: CONCEDED };
+  const HERE = { youOffered: false, teammateOffered: false, teammateHere: true, matchId: null };
+
+  it("R4742000 the result panel's Main menu follows Back to Play together when the route hangs onMenu, and is absent without it", () => {
+    const onMenu = vi.fn<() => void>();
+    const onLeave = vi.fn<() => void>();
+    const playAgain: DuosPlayAgain = { status: HERE, offering: false, refusal: null, offer: vi.fn<() => void>() };
+    renderDuosBoard({ view: OVER }, { onWatchReplay: vi.fn(), onLeave, playAgain, onMenu });
+    const buttons = within(screen.getByTestId("duos-result")).getAllByRole("button");
+    expect(buttons.map((button) => button.getAttribute("data-testid"))).toEqual([
+      "duos-result-board",
+      "duos-result-replay",
+      "duos-result-again",
+      "duos-result-back",
+      "duos-result-menu",
+    ]);
+    const menu = screen.getByTestId("duos-result-menu");
+    expect(menu).toHaveTextContent("Main menu");
+    // The first way still takes the focus, and Play again stays the one primary answer.
+    expect(screen.getByTestId("duos-result-board")).toHaveFocus();
+    expect(menu).not.toHaveClass("button-primary");
+    fireEvent.click(menu);
+    expect(onMenu).toHaveBeenCalledTimes(1);
+    expect(onLeave).not.toHaveBeenCalled();
+    cleanup();
+
+    renderDuosBoard({ view: OVER }, { onWatchReplay: vi.fn(), onLeave, playAgain });
+    expect(screen.getByTestId("duos-result-back")).toBeInTheDocument();
+    expect(screen.queryByTestId("duos-result-menu")).toBeNull();
+  });
+});
+
 // #1146: the team's result waits for the own duel's last burst
 describe("#1146 the team result waits for the own duel's lethal burst", () => {
   const START: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 5 }];

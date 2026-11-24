@@ -31,6 +31,7 @@ import "../../auth/tavern.css";
 import Game from "../../game/Game.tsx";
 import { reducedMotionNow } from "../../game/animations.ts";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
+import { MainMenuButton } from "../../game/MainMenuButton.tsx";
 import { ModifierList } from "../../game/ModifierList.tsx";
 import { t } from "../../i18n/i18n.ts";
 import { PRACTICE_PACING, PRACTICE_PACING_REDUCED, type PracticePacing } from "../../practice/config.ts";
@@ -285,6 +286,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
           {t("Continue")}
         </button>
       )}
+      {/* #4742, R4742000: after Continue, which keeps the focus and the primary look: the board's Menu, once the fight is over. */}
+      <MainMenuButton testid={fightTestid.resultMenu} onClick={onMenu} />
       {answer === null || answer.refusal === null ? null : (
         <p className="result-overlay__note" data-testid={fightTestid.actRefusal} role="alert">
           {t(answer.refusal)}

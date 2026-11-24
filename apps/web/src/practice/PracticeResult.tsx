@@ -10,6 +10,7 @@ import type { GameOverReason, PlayerId, PlayerView } from "@jackioh/shared";
 
 import XpReveal from "../economy/XpReveal.tsx";
 import { Dialog } from "../game/Dialog.tsx";
+import { mainMenuAction } from "../game/MainMenuButton.tsx";
 import { seatOutcome } from "../game/outcome.ts";
 import { t } from "../i18n/i18n.ts";
 import { PRACTICE_RESULT_PARTICLES } from "./config.ts";
@@ -84,6 +85,8 @@ type PracticeResultProps = {
   difficulty: Difficulty;
   onPlayAgain(): void;
   onChangeSetup(): void;
+  /** #4742: the board's Menu control once the game is over (`routes/practice.tsx`'s `onMenu`). */
+  onMenu(): void;
   onViewBoard(): void;
   /** R768000: the kept game's replay from step 0; absent for a game that was not kept. */
   onWatchReplay?: () => void;
@@ -99,6 +102,7 @@ export function PracticeResult({
   difficulty,
   onPlayAgain,
   onChangeSetup,
+  onMenu,
   onViewBoard,
   onWatchReplay,
   onShareLastTurn,
@@ -134,6 +138,7 @@ export function PracticeResult({
       actions={[
         { label: t("Play again"), kind: "primary", onClick: onPlayAgain, testid: practiceTestid.playAgain },
         { label: t("Change setup"), kind: "secondary", onClick: onChangeSetup, testid: practiceTestid.changeSetup },
+        mainMenuAction(onMenu, practiceTestid.mainMenu),
       ]}
       footer={
         <>
