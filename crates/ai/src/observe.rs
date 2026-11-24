@@ -204,8 +204,10 @@ pub fn hidden_instance_ids(state: &GameState, seat: PlayerId) -> IndexSet<String
     let opp = seat.opponent();
     let mut hidden: IndexSet<String> = IndexSet::new();
 
-    for card in &state.players[opp].hand {
-        hidden.insert(card.id.clone());
+    if !jackioh_engine::revealed_hand::hand_revealed_to(state, opp, seat) {
+        for card in &state.players[opp].hand {
+            hidden.insert(card.id.clone());
+        }
     }
     for card in &state.players[opp].library {
         hidden.insert(card.id.clone());
@@ -290,6 +292,7 @@ fn to_placeholder(card: &mut CardInstance) {
     card.tuning = None;
     card.brittle = None;
     card.enchantments = None;
+    card.started_in = None;
 }
 
 /// `to_placeholder` on a card held as loose JSON (setup's owed mulligan record), as TS ran it on a
@@ -335,6 +338,8 @@ fn to_placeholder_json(card: &mut Value) {
         // R3536002, CLAUDE.md rule 7: a hidden card carries neither Evolve mark.
         "evolved",
         "entersEvolved",
+        // R4592002: deck of origin is hidden.
+        "startedIn",
     ] {
         object.remove(key);
     }

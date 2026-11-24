@@ -187,6 +187,7 @@ fn swap_board_now(ctx: &mut EffectContext<'_>) {
 /// control follows ownership (R78).
 fn claim_library(cards: &mut [CardInstance], player: PlayerId) {
     for card in cards {
+        crate::origin::note_origin(card);
         card.owner = player;
         card.controller = player;
         card.zone = Zone::Library { player };

@@ -81,6 +81,10 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
                 .as_ref()
                 .and_then(|log| log.last_face_up_play.clone()),
             last_element: side.game_log.as_ref().and_then(|log| log.last_element),
+            face_up_plays: side
+                .game_log
+                .as_ref()
+                .and_then(|log| log.face_up_plays.clone()),
         };
         side.game_log = Some(log);
     }
@@ -93,6 +97,25 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
     };
     if type_ == CardType::Spell {
         state.last_spell = Some(record.clone());
+    }
+    // R4592000: face-up play history, recorded as the card was played before R451's AI-tag skip.
+    if !played_face_down(type_) {
+        let chinese = if record.def_id == card.def_id {
+            card.chinese
+        } else {
+            None
+        };
+        crate::play_history::record_face_up_play(
+            state,
+            player,
+            crate::play_history::FaceUpPlay {
+                def_id: record.def_id.clone(),
+                radiant: record.radiant,
+                type_,
+                chinese,
+                turn: state.turn,
+            },
+        );
     }
     // R451, R1121000: the last face-up card, passing over Traps (so nothing hidden is recorded) and
     // the `LAST_FACE_UP_SKIPPED_TAGS` (the AI generated cards), on the recorded card's printed tags as

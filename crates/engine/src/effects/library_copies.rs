@@ -1,7 +1,7 @@
 //! T-AI-3 Hallucination's verb (SPEC §8.7 row T-AI-3; R57, R60, R129, R385): copies of `count`
 //! different random cards of a player's deck, added to the running card's controller's hand as new
 //! cards they own, each carrying its source's definition, radiant flag, `statsOverride` and `tuning`
-//! (R57's copy, R386) — never a Brittle count or a cost rider — the source staying where it is. A copy
+//! (R57's copy, R386) — never a Brittle count or a cost rider (only the text's own costMod rides) — the source staying where it is. A copy
 //! that reaches the hand is given Brittle `brittle` (B3.3); one the hand cap burns is not (§2.4, R586).
 //!
 //! R586: the copies go to the hand in the order drawn, never the deck's, so their order says nothing of
@@ -30,6 +30,8 @@ pub struct AddLibraryCopiesArgs {
     pub count: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub brittle: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_mod: Option<i32>,
 }
 
 pub fn add_library_copies(args: AddLibraryCopiesArgs) -> Effect {
@@ -70,6 +72,9 @@ pub fn add_library_copies(args: AddLibraryCopiesArgs) -> Effect {
                 copy.tuning = Some(tuning);
             }
             crate::generators::record_generator(ctx, &copy);
+            if let Some(cost_mod) = args.cost_mod {
+                copy.cost_mod += cost_mod;
+            }
             let landed = add_to_hand(ctx, &mut copy);
             if matches!(landed, AddToHandOutcome::Hand)
                 && let Some(brittle) = args.brittle

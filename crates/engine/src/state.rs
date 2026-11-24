@@ -481,6 +481,11 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub split_chain: Option<u32>,
+    /// R4592002: the player whose deck this card started in (before any steal, swap or keeper).
+    /// Kept in every zone and through resets; a copy is a new card without it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub started_in: Option<PlayerId>,
 }
 
 /// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
@@ -606,6 +611,11 @@ pub struct CostRule {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub floor: Option<i32>,
+    /// R4592002 (Infinite Assault #187 Fine-Tuner, "your cards that started in your opponent's deck"):
+    /// the rule reaches only a card that started in the opponent's deck.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub from_opponents_deck: Option<bool>,
 }
 
 /// What a player modifier does, discriminated on `kind` (TS: the union half of `PlayerModifier`).
@@ -2341,6 +2351,11 @@ pub struct GameLog {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub last_element: Option<CardElement>,
+    /// R4592000: the player's face-up plays this game, in play order, written only while Infinite
+    /// Assault is open.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub face_up_plays: Option<Vec<crate::play_history::FaceUpPlay>>,
 }
 
 fn empty_row<T: Clone>(size: i32) -> Vec<Option<T>> {
@@ -2925,6 +2940,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         half: None,
         shared_chain: None,
         split_chain: None,
+        started_in: None,
     };
     *next_id += 1;
     // R3548002: minting a Warhero Token starts its worth at 0, wherever the card is minted; R3538002:

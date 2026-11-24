@@ -71,6 +71,7 @@ pub mod replay_versions;
 pub mod replays;
 pub mod reply;
 pub mod scorer_casts;
+pub mod scraper;
 pub mod search;
 pub mod secrets;
 pub mod sim_memo;

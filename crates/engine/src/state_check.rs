@@ -520,6 +520,7 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
 /// graveyard does (R2618000).
 fn reborn_token(snapshot: &CardInstance) -> CardInstance {
     let mut body = snapshot.clone();
+    crate::origin::note_origin(&mut body);
     body.owner = body.controller;
     crate::zones::reset_instance(&mut body);
     body

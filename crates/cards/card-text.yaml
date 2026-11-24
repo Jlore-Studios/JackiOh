@@ -10587,7 +10587,7 @@ infiniteassault-175: # Fingerprinter
     play: Papers, please. All of them.
   zh:
     name: 指纹采集器
-    base: 战吼：查看你对手的手牌。将其中一张随机法术的复制置入你的手牌。
+    base: 战吼：将你对手手牌中一张随机法术的复制置入你的手牌。
     radiant: 战吼：查看你对手的手牌。将其中一张你选择的牌的复制置入你的手牌。
 infiniteassault-176: # Imitation Engine
   flavour: Benchmark says your biggest unit is now its biggest unit.
