@@ -1723,9 +1723,11 @@ pub fn in_units_row_or_standing(state: &GameState, card: &CardInstance) -> bool 
 
 /// R1081000: whether `neighbour` is adjacent to `origin` in the sense an effect or a Cleave reads: beside a
 /// Unit standing in the backrow, only another Unit standing there, never a Trap or a Field Spell (§3.1
-/// Adjacent, §4.4 step 10 hit "units adjacent"). `adjacent` itself only names the zones.
+/// Adjacent, §4.4 step 10 hit "units adjacent"). R4665000: and never a card lying on a unit zone, which is
+/// no Unit. `adjacent` itself only names the zones.
 pub fn is_adjacent_card(state: &GameState, origin: &CardInstance, neighbour: &CardInstance) -> bool {
-    !stands_in_backrow(state, origin) || is_standing_unit(state, neighbour)
+    !lies_on_unit_zone(state, neighbour)
+        && (!stands_in_backrow(state, origin) || is_standing_unit(state, neighbour))
 }
 
 /// R1081000: the Units standing in `player`'s backrow zones, in lane order; every walk of the
@@ -1739,6 +1741,16 @@ pub fn standing_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstan
                 .and_then(Option::as_ref)
         })
         .filter(|top| is_standing_unit(state, top))
+        .collect()
+}
+
+/// R4665000: the cards lying on `player`'s unit zones, in lane order: backrow cards (Field Spells) there,
+/// no Units, which every backrow walk reads after the side's backrow lanes.
+pub fn lying_on_unit_zones_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
+    slots_of(player, Row::Units)
+        .into_iter()
+        .filter_map(|slot| card_at(state, slot))
+        .filter(|top| lies_on_unit_zone(state, top))
         .collect()
 }
 

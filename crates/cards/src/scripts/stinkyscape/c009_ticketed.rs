@@ -104,6 +104,11 @@ mod tests {
     const COLLATERAL: &str = "core-034"; // Collateral Damage: "Exile a permanent and a random card …"
     const TRAP: &str = "core-041"; // Sheepish: a Trap, to set face-down
     const CORE_SYSTEM: &str = "stinkyscape-117"; // Core System: "Bounce all permanents. …"
+    const PAWN: &str = "core-096"; // My Pawn: a Trap that fires only on a lethal attack, never on a play
+    const PLAGUE_NUKE: &str = "classic-043"; // Plague Nuke: "Destroy all Units. …"
+    const GUY_ATT: &str = "classicplus-005"; // Guy Att: Radiant "Cry: Destroy every backrow card."
+    const FIRE: &str = "classicplus-t-ai-06"; // Datacenter Fire: "Destroy all Field Spells. Deal 1 damage …"
+    const CLEAVER: &str = "stand-in (1) 4/9 Cleave";
 
     fn board(radiant: bool, hand: Value, field: Value, backrow: Value) -> Scenario {
         let mut cards = vec![json!({ "def": ID, "radiant": radiant }), json!(FILLER)];
@@ -162,6 +167,43 @@ mod tests {
             s.state_mut().players[player].auto_end_turn = Some(false);
         }
         s
+    }
+
+    /// R4665000: p2 holds a Vanilla in unit lanes 1 and 3 and a set My Pawn in backrow lane 1; p1 stacks
+    /// Ticketed on the lane-3 Vanilla. The ids: the lane-1 Vanilla, My Pawn, Ticketed, the Vanilla beneath.
+    fn stacked(hand: Value) -> (Scenario, [String; 4]) {
+        let mut s = board(
+            false,
+            hand,
+            json!([{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 3 }]),
+            json!([{ "def": PAWN, "faceUp": false, "lane": 1 }]),
+        );
+        let left = s.unit_at(P2, 1).id;
+        let under = s.unit_at(P2, 3).id;
+        let pawn = s.backrow(P2, 1).expect("the set My Pawn").id;
+        stack_on(&mut s, &under);
+        let ticketed = s.unit(P2, 3).expect("Ticketed").id;
+        (s, [left, pawn, ticketed, under])
+    }
+
+    /// The ids a board scope walks now, read under a context p1 controls (R68's order).
+    fn scope_ids(s: &mut Scenario, scope: Value) -> Vec<String> {
+        let scope: jackioh_engine::effects::BoardScope = json_as(scope);
+        let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
+        let mut events: Vec<GameEvent> = Vec::new();
+        let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+        let ctx = make_context(
+            &mut sink,
+            None,
+            HookOptions {
+                controller: Some(P1),
+                ..HookOptions::default()
+            },
+        );
+        jackioh_engine::effects::cards_in_scope(&ctx, &scope)
+            .into_iter()
+            .map(|card| card.id)
+            .collect()
     }
 
     mod base {
@@ -274,6 +316,110 @@ mod tests {
             s.play(JAMMED, json!({ "targets": pick::id(&ticketed) }));
             s.expect_in_zone(ticketed.as_str(), "graveyard");
             assert_eq!(s.unit(P2, 3).map(|top| top.id), Some(enemy));
+        }
+
+        /// R4665000: a board scope reads it as the backrow card it is: a unit scope passes it by, and a
+        /// backrow scope, or one of both rows, meets it once, after that side's backrow lanes.
+        #[test]
+        fn r4665000_a_scope_reads_it_as_a_backrow_card_after_that_sides_backrow_lanes() {
+            let (mut s, [left, pawn, ticketed, _]) = stacked(json!([]));
+            assert_eq!(scope_ids(&mut s, json!({ "side": "enemy" })), vec![left.clone()]);
+            assert_eq!(
+                scope_ids(&mut s, json!({ "side": "enemy", "rows": ["backrow"] })),
+                vec![pawn.clone(), ticketed.clone()]
+            );
+            assert_eq!(
+                scope_ids(&mut s, json!({ "side": "enemy", "rows": ["units", "backrow"] })),
+                vec![left, pawn, ticketed]
+            );
+        }
+
+        /// R4665000: "Destroy all Units" (Plague Nuke) passes it by, so the Unit beneath stays beneath.
+        #[test]
+        fn r4665000_a_unit_sweep_passes_it_by_and_the_unit_beneath_stays_beneath() {
+            let (mut s, [left, _, ticketed, under]) = stacked(json!([PLAGUE_NUKE]));
+            s.play(PLAGUE_NUKE, json!({}));
+            s.expect_in_zone(left.as_str(), "graveyard");
+            assert_eq!(s.unit(P2, 3).map(|top| top.id), Some(ticketed));
+            assert_eq!(beneath(&s, P2, Row::Units, 3), vec![under]);
+        }
+
+        /// R4665000: "Destroy every backrow card" (Radiant Guy Att) destroys it on its unit zone, with the
+        /// set Trap; the Unit beneath resumes.
+        #[test]
+        fn r4665000_a_backrow_sweep_destroys_it_and_the_unit_beneath_resumes() {
+            let (mut s, [_, pawn, ticketed, under]) = stacked(json!([{ "def": GUY_ATT, "radiant": true }]));
+            s.play(GUY_ATT, json!({ "zone": 1 }));
+            s.expect_in_zone(pawn.as_str(), "graveyard");
+            s.expect_in_zone(ticketed.as_str(), "graveyard");
+            assert_eq!(s.unit(P2, 3).map(|top| top.id), Some(under));
+        }
+
+        /// R4665000, T-AI-6: "Destroy all Field Spells" (Datacenter Fire) destroys it, the one Field Spell
+        /// (My Pawn is a Trap), and counts it: 1 damage to each hero.
+        #[test]
+        fn r4665000_a_field_spell_sweep_destroys_and_counts_it() {
+            let (mut s, [_, _, ticketed, under]) = stacked(json!([FIRE]));
+            s.play(FIRE, json!({}));
+            s.expect_in_zone(ticketed.as_str(), "graveyard");
+            assert_eq!(s.unit(P2, 3).map(|top| top.id), Some(under));
+            s.expect_health(P1, HERO_HEALTH - 1).expect_health(P2, HERO_HEALTH - 1);
+        }
+
+        /// R4665000, §4.4 step 10: Cleave strikes the Units beside its target, and a card lying on the
+        /// zone beside it is none: neither the attack nor its projection (`cleave_struck`) reaches it.
+        #[test]
+        fn r4665000_cleave_neither_strikes_nor_projects_onto_it() {
+            let mut s = crate::scenario(json!({
+                "seed": "ticketed-cleave",
+                "p1": {
+                    "hand": [ID, FILLER],
+                    "field": [{ "def": CLEAVER, "lane": 1 }],
+                    "library": crate::filler(8),
+                    "mana": 10,
+                },
+                "p2": {
+                    "hand": [FILLER],
+                    "field": [
+                        { "def": VANILLA, "lane": 1 },
+                        { "def": VANILLA, "lane": 2 },
+                        { "def": VANILLA, "lane": 3 },
+                    ],
+                    "library": crate::filler(8),
+                },
+            }));
+            for player in [P1, P2] {
+                s.state_mut().players[player].auto_end_turn = Some(false);
+            }
+            let cleaver = s.unit_at(P1, 1).id;
+            let left = s.unit_at(P2, 1).id;
+            let defender = s.unit_at(P2, 2).id;
+            let under = s.unit_at(P2, 3).id;
+            stack_on(&mut s, &under);
+            let ticketed = s.unit(P2, 3).expect("Ticketed").id;
+            let struck: Vec<String> =
+                jackioh_engine::query::cleave_struck(s.state(), &s.unit_at(P1, 1), &s.unit_at(P2, 2))
+                    .into_iter()
+                    .map(|card| card.id)
+                    .collect();
+            assert_eq!(struck, vec![defender.clone(), left.clone()]);
+            s.attack(cleaver.as_str(), defender.as_str());
+            s.expect_in_zone(left.as_str(), "graveyard");
+            assert_eq!(s.card(ticketed.as_str()).damage, 0);
+            assert_eq!(s.card(under.as_str()).damage, 0);
+            assert_eq!(s.unit(P2, 3).map(|top| top.id), Some(ticketed));
+        }
+
+        /// R3550009, R4665000: every enemy permanent lists it after their backrow, and never the Unit
+        /// beneath it.
+        #[test]
+        fn r4665000_enemy_permanents_lists_it_after_their_backrow() {
+            let (s, [left, pawn, ticketed, _]) = stacked(json!([]));
+            let permanents: Vec<String> = jackioh_engine::query::enemy_permanents(s.state(), P1)
+                .into_iter()
+                .map(|card| card.id)
+                .collect();
+            assert_eq!(permanents, vec![left, pawn, ticketed]);
         }
 
         /// R90, R138, R4665000: with no permanent on the field to stack on, it lands in its graveyard.
