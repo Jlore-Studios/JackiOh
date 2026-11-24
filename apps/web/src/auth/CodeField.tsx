@@ -36,6 +36,7 @@ import {
   codeProblemMessage,
   codeProgressText,
   groupCount,
+  isTotpCodeFormat,
   pastedText,
   placeholderFor,
 } from "./codeInput.ts";
@@ -56,6 +57,11 @@ export type CodeFieldProps = {
   disabled?: boolean;
   /** Extra `aria-describedby` ids. */
   describedBy?: string;
+  /** R4669000: the two-step code asks for the numeric keyboard and the one-time-code autofill. */
+  inputMode?: "text" | "numeric";
+  autoComplete?: string;
+  name?: string;
+  autoFocus?: boolean;
 };
 
 function codeCharacterCount(text: string): number {
@@ -92,7 +98,19 @@ type SegmentState = "empty" | "partial" | "complete";
 export default function CodeField(props: CodeFieldProps): ReactElement {
   const format = props.format ?? INVITE_CODE_FORMAT;
   const testId = props.testId ?? inviteTestid.input;
-  const { id, value, onChange, disabled = false, describedBy } = props;
+  const {
+    id,
+    value,
+    onChange,
+    disabled = false,
+    describedBy,
+    inputMode = "text",
+    autoComplete = "off",
+    name = "code",
+    autoFocus = false,
+  } = props;
+  /** R4669000: a two-step code draws one box per digit, with no separators between them. */
+  const digits = isTotpCodeFormat(format);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const segmentsRef = useRef<HTMLDivElement>(null);
@@ -381,7 +399,7 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
 
   return (
     <div
-      className="code-field"
+      className={digits ? "code-field code-field--digits" : "code-field"}
       data-testid={codeFieldTestid.root}
       data-complete={reading.complete ? "true" : "false"}
       {...(problem === null ? {} : { "data-problem": problem.kind })}
@@ -397,10 +415,11 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
           id={id}
           className="code-field__input"
           data-testid={testId}
-          name="code"
+          name={name}
           type="text"
-          inputMode="text"
-          autoComplete="off"
+          inputMode={inputMode}
+          autoComplete={autoComplete}
+          autoFocus={autoFocus}
           autoCapitalize="characters"
           autoCorrect="off"
           spellCheck={false}
