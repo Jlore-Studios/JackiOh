@@ -17716,10 +17716,14 @@
         "approvals": [],
         "builder": "claude",
         "built_by": "claude-7",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "40355a6121f665209119ce33bf5599886f0e7fa1",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "4652": {
