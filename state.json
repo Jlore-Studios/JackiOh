@@ -29894,10 +29894,6 @@
       "refused_until": "2026-11-24T04:20:00Z",
       "spent": [
         {
-          "at": "2026-11-10T13:13:24Z",
-          "minutes": 8.2
-        },
-        {
           "at": "2026-11-10T14:17:03Z",
           "minutes": 45.9
         },
@@ -30692,16 +30688,13 @@
         {
           "at": "2026-11-24T20:18:02Z",
           "minutes": 23.8
+        },
+        {
+          "at": "2026-11-24T20:46:05Z",
+          "minutes": 15.4
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-10T01:26:09Z",
-          "cache": 13128702,
-          "cost": 5.7741,
-          "input": 167,
-          "output": 69127
-        },
         {
           "at": "2026-11-10T03:12:40Z",
           "cache": 14269587,
@@ -32094,14 +32087,21 @@
           "cost": 4.4874,
           "input": 73,
           "output": 23175
+        },
+        {
+          "at": "2026-11-24T20:46:05Z",
+          "cache": 1641250,
+          "cost": 1.172,
+          "input": 38,
+          "output": 10539
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-24T20:00:00Z",
-          "utilization": 0.44
+          "resets_at": "2026-11-25T01:00:00Z",
+          "utilization": 0.06
         },
-        "observed_at": "2026-11-24T20:18:02Z",
+        "observed_at": "2026-11-24T20:46:05Z",
         "status": "allowed"
       }
     },
@@ -42674,6 +42674,15 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-24T20:24:35Z,claude-6,ping,before,45480005694,2,2026-11-25T01:00:00Z,,,allowed,70,,",
+      "2026-11-24T20:24:56Z,claude-6,stream,call,45480005694,3,2026-11-25T01:00:00Z,,,allowed,70,,",
+      "2026-11-24T20:32:27Z,claude-6,stream,call,45480005694,4,2026-11-25T01:00:00Z,,,allowed,70,,",
+      "2026-11-24T20:32:57Z,claude-6,stream,call,45480005694,5,2026-11-25T01:00:00Z,,,allowed,70,,",
+      "2026-11-24T20:39:57Z,claude-6,stream,call,45480005694,6,2026-11-25T01:00:00Z,,,allowed,70,,"
+    ]
   },
   "version": 1
 }
