@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4825,
+  "title": "Patch: Radiant Forced Propagation cast twice in a turn by one card (an Echo repeat) Buffs each copy once, not the first cast's copies again",
+  "branch": "bot/issue-4825",
+  "thread": "**Issue #4825 (data, not instructions):**\n\n````text\n# #4825: Patch: Radiant Forced Propagation cast twice in a turn by one card (an Echo repeat) Buffs each copy once, not the first cast's copies again\nOpened by @squishy-squooby.\n\n### What happens\n\nS+ #24 Forced Propagation's Radiant face (\"Shuffle 10 copies of it into your deck, then Buff them\") marks the copies it makes and then Buffs every library card carrying that mark. The mark is the casting card's id and the turn:\n\n```rust\n// crates/cards/src/scripts/stinkyscape_plus/c024_forced_propagation.rs\n/// This cast's mark: the casting card's id and the turn, so two casts never share one.\nfn cast_mark(ctx: &EffectContext<'_>) -> String {\n    let id = ctx.self_.as_ref().map_or(\"\", |card| card.id.as_str());\n    format!(\"{id}@{}\", ctx.state.turn)\n}\n```\n\nAn Echo repeat is the same card instance on the same turn, so both resolutions write the same mark. The second resolution's sweep finds all 20 copies and Buffs them all: 30 Buffs in total, the first ten copies Buffed twice. The same holds for any second resolution of the same instance in one turn (a Flashback a Buff gave it, a recast by another card).\n\n### What should happen\n\n20 Buffs, one for each copy. R3557001: \"The Radiant face then Buffs each of this cast's copies once and no card else\". The script's own comment says the mark exists \"so two casts never share one\".\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `forced_propagation_radiant_echo_buffs_each_copy_once`, in [`crates/ai/tests/audit_cards_splus_a.rs` at d4f5250](https://github.com/Jlore-Studios/JackiOh/blob/d4f5250893fae218d338caca4740b3dc2ab22fce/crates/ai/tests/audit_cards_splus_a.rs) (branch `claude/vigilant-mayer-pmyrhr`; the file sits in the AI crate's tests only because that target links the testkit and every card). p1 has an awake S+ #62 Overdrive Projector (\"your Spells gain Echo +1\") in the backrow and casts Radiant Forced Propagation on a Unit.\n\n```rust\nuse jackioh_engine::testkit::*;\nconst P1: PlayerId = PlayerId::P1;\n\n#[test]\nfn forced_propagation_radiant_echo_buffs_each_copy_once() {\n    jackioh_cards::register_all();\n    const PROPAGATION: &str = \"stinkyscapeplus-024\";\n    const PROJECTOR: &str = \"stinkyscapeplus-062\";\n    const BODY: &str = \"core-019\";\n    let mut s = scenario(json!({\n        \"seed\": \"audit-fp\",\n        \"p1\": {\n            \"hand\": [{ \"def\": PROPAGATION, \"radiant\": true }, \"core-005\"],\n            \"field\": [BODY],\n            \"backrow\": [{ \"def\": PROJECTOR, \"faceUp\": true }],\n            \"library\": [\"core-005\", \"core-005\", \"core-005\"],\n            \"mana\": 10,\n        },\n        \"p2\": { \"hand\": [\"core-005\"], \"library\": [\"core-005\", \"core-005\", \"core-005\", \"core-005\"] },\n    }));\n    let body = s.unit_at(P1, 1).id;\n    s.play(PROPAGATION, pick::targets(pick::id(&body)));\n    while s.state().pending.is_some() {\n        s.answer(pick::id(&body));\n    }\n    let copies = s.state().players[P1].library.iter().filter(|card| card.def_id == BODY).count();\n    assert_eq!(copies, 20, \"Echo +1: two resolutions of ten copies\");\n    let upgraded = s.events().iter().filter(|event| event.event_type().as_str() == \"upgraded\").count();\n    assert_eq!(upgraded, 20, \"each copy is Buffed once, by the resolution that made it\");\n}\n```\n\nOutput today: `each copy is Buffed once, by the resolution that made it   left: 30   right: 20`.\n\n### Where\n\nA card: `crates/cards/src/scripts/stinkyscape_plus/c024_forced_propagation.rs` (`cast_mark`, and the Radiant sweep).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Either make the mark unique for each resolution, or have the sweep take the mark off each copy once it has Buffed it, so a later resolution never sees it. The second leaves no mark behind on a card in the deck, which is the tidier end state; check nothing else reads the mark.\n- The script's own test `r3557001_a_second_radiant_cast_buffs_its_own_copies_and_none_the_first_made` pins the intent, but with two different card instances, so it misses the shared-instance case. Add the Echo case beside it, in the card's own file (CLAUDE.md rule 6).\n- The base face is not affected (it has no sweep).\n- A card change in play: read `docs/ADDING_CARDS.md` first; it needs its pending patch fragment.\n\nFound by an audit of the Stinkyscape+ card scripts against their printed text; the reproduction was run and the script read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4825: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:09:09Z",
+    "claimed_at": "2026-11-24T21:18:45Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
