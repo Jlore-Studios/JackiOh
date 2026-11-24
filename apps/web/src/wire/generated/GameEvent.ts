@@ -196,8 +196,9 @@ lost?: true, } | { "type": "counterChanged", instanceId: string, counter: Counte
 again?: boolean, 
 /**
  * R4586007: the attacker of the attack the firing answers (`traps::fire_trap` on an
- * `attackDeclared`), so a trigger on a Figment's reveal can copy it. Absent otherwise, so a
- * firing that answers nothing serializes as it did before the field existed.
+ * `attackDeclared`), in a game holding an Infinite Assault card (`recursion_log::kept`), so a
+ * trigger on a Figment's reveal can copy it. Absent otherwise, so no other game's firing
+ * serializes otherwise than it did before the field existed.
  */
 attackerId?: string, } | { "type": "attackDeclared", attackerId: string, targetId: string, forced: boolean, 
 /**

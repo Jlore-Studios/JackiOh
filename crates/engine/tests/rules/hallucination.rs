@@ -252,9 +252,13 @@ fn r4586006_units_attack_reaches_later_units_and_expires_at_the_next_turn() {
     assert_eq!(unit_view(&state, &live(&state, &later.id)).attack, 4);
 }
 
-#[test]
-fn r4586007_trap_fired_names_the_attacker_of_the_attack_it_answered() {
-    let mut state = playing("hx-attacker");
+/// The watcher's firing on `striker`'s attack on the enemy hero, in a game that keeps the recursion
+/// log (R4589000: one holding an Infinite Assault card) or not.
+fn watcher_fired(seed: &str, kept: bool) -> (String, GameEvent) {
+    let mut state = playing(seed);
+    if kept {
+        state.players[P1].recursion = Some(Default::default());
+    }
     put(&mut state, &watcher.id, slot(P2, Row::Backrow, 1), json!({}));
     let striker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), json!({}));
     let mut game = recorder(&state);
@@ -262,19 +266,40 @@ fn r4586007_trap_fired_names_the_attacker_of_the_attack_it_answered() {
         "type": "attack", "attackerId": striker.id, "targetId": "hero-p2", "playerId": "p1"
     })));
     assert!(result.error.is_none(), "the attack resolves: {:?}", result.error);
-    let fired: Vec<&GameEvent> = result
+    let fired: Vec<GameEvent> = result
         .events
-        .iter()
+        .into_iter()
         .filter(|event| matches!(event, GameEvent::TrapFired { .. }))
         .collect();
     assert_eq!(fired.len(), 1, "the watcher fired once");
+    (striker.id, fired[0].clone())
+}
+
+#[test]
+fn r4586007_trap_fired_names_the_attacker_of_the_attack_it_answered() {
+    let (striker, fired) = watcher_fired("hx-attacker", true);
     assert!(
         matches!(
-            fired[0],
-            GameEvent::TrapFired { attacker_id: Some(attacker), .. } if *attacker == striker.id
+            &fired,
+            GameEvent::TrapFired { attacker_id: Some(attacker), .. } if *attacker == striker
         ),
-        "the firing names its attacker: {:?}",
-        fired[0]
+        "the firing names its attacker: {fired:?}"
+    );
+}
+
+#[test]
+fn r4586007_a_game_with_no_infinite_assault_card_names_no_attacker() {
+    // No other game's events move (D14): a shipped trap's firing serializes as it always did.
+    let (_, fired) = watcher_fired("hx-attacker-shipped", false);
+    assert!(
+        matches!(
+            &fired,
+            GameEvent::TrapFired {
+                attacker_id: None,
+                ..
+            }
+        ),
+        "no attacker named: {fired:?}"
     );
 }
 
