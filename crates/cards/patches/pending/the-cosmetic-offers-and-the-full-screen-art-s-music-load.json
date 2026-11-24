@@ -1,0 +1,19 @@
+{
+  "title": "Patch: the cosmetic offers and the full-screen art's music load after the first page",
+  "sources": "#4714",
+  "notes": "The first page load no longer ships the cosmetic offers or the music player (#4714, part 6 of #4691). COSMETIC_OFFERS moved to its own generated module, wire/generated/cosmeticOffers.ts, which cards/versions.ts loads with loadSceneData() (EngineGate, useEngineReady and the shop's route chunk wait for it), and cards/FullScreenArt.tsx loads the music player when the full-screen view opens; the engine module's boot fetch goes at low priority. First load: 383,498 to 366,513 B gzip. Nothing visible changes. Claims --visual because the change touches apps/web/src/cards/ (R2529000), a micro of no family.",
+  "player": {
+    "title": "A lighter first load, same cards",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "A tab you leave open without touching it for ten minutes now shows you offline to friends, as a hidden tab does, and catches up the moment you come back."
+    ],
+    "text": [],
+    "fixes": [
+      "The first page downloads less before it shows, with the same cards and art."
+    ]
+  },
+  "cards": [],
+  "visual": true
+}

@@ -623,7 +623,7 @@ row moved. Checked before at `ae977ece3e`, plus #4291's pull request.
 
 **Files:** `apps/web/src/together/socialSocket.ts` (`openSocialSocket`: `open`, `replace`, `afterClose`, `retry`,
 `close`), `apps/web/src/together/socialPoll.ts` (`start`, `stop`, `tick`, `onLive`, `onQuiet`, `openSocket`),
-`apps/web/src/game/net.ts` (`createBackoff`, `createWakeProbe`, `letGo`, `quietWhileHidden`). `net/social.ts`
+`apps/web/src/game/net.ts` (`createBackoff`, `createWakeProbe`, `letGo`, `quietWhileAway`). `net/social.ts`
 is REST only.
 
 **Fields:** the poll's `pollers` (screens mounted that poll), its `socket` (the client, or none), `reads.live`,

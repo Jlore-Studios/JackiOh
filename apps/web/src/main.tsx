@@ -29,9 +29,11 @@
 // every screen but `/play`, and takes a paired player to the game (`QueueFound`).
 //
 // THE ENGINE LOADS ALONGSIDE (#778): the landing, sign-in, reset, code and legal screens never call
-// its 2.31 MB module, so EngineGate holds only the other screens. `<Gated engine>` asks for it and
-// the screen's code as its gate mounts (R2630001); intent toward a control starts them before the
-// click (`routes/chunks.tsx`, #2116, R2116000).
+// its module, the largest file the site serves (the build prints its `.br`'s size), so EngineGate
+// holds only the other screens. The boot starts its download on every route at a low Fetch Priority
+// (#4714, `startWasmLoad`), so the route's own chunks come first; `<Gated engine>` asks for it and
+// the screen's code as its gate mounts (R2630001), sharing that download; intent toward a control
+// starts them before the click (`routes/chunks.tsx`, #2116, R2116000).
 //
 // The presence heartbeat and the challenge toast (#936, B47, B57) are this file's, so neither waits
 // on a screen's gate nor restarts with it. Ctrl+K opens the command menu (R2118000) on every menu
@@ -111,7 +113,7 @@ import { Skeleton, useShownAfterDelay, type SkeletonVariant } from "./skeleton/S
 import { loadSceneData, sceneDataReady } from "./cards/art/sceneLoader.ts";
 import { loadCardTables } from "./cards/chinese.ts";
 import { loadFlavour } from "./cards/flavour.ts";
-import { loadWasm, wasmLoaded } from "./wasm/index.ts";
+import { loadWasm, startWasmLoad, wasmLoaded } from "./wasm/index.ts";
 
 import "./index.css";
 import "./auth/tavern.css";
@@ -1005,8 +1007,10 @@ if (import.meta.env.MODE !== "test") {
   // #778: see THE ENGINE LOADS ALONGSIDE above. #4222: the scene tables start beside it, so the
   // first cards wait on both in `EngineGate` and `useEngineReady`, never on the entry chunk's bytes.
   // #4435: the flavour sidecar starts beside it too, best-effort, as the Chinese card tables do (#4180):
-  // no screen waits on it, and a failed load shows no flavour and breaks nothing.
-  void loadWasm().catch(() => undefined);
+  // no screen waits on it, and a failed load shows no flavour and breaks nothing. #4714: the module's download asks
+  // for a low priority, so it never competes with the route's own chunks, and the cosmetic offers start with
+  // the scene tables (`loadSceneData`).
+  startWasmLoad();
   void loadSceneData().catch(() => undefined);
   void loadFlavour().catch(() => undefined);
   void localeReady.then(() => {

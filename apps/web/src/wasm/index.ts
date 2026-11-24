@@ -74,8 +74,8 @@ import type { LogCall } from "../wire/generated/LogCall.ts";
  * `Content-Encoding: br` with no type) is given the type. A body that arrives still compressed (no
  * `Content-Encoding`: the request missed the Worker) cannot be compiled, and says why.
  */
-async function moduleResponse(url: URL): Promise<Response> {
-  const fetched = await fetch(url);
+async function moduleResponse(url: URL, priority: RequestPriority): Promise<Response> {
+  const fetched = await fetch(url, { priority });
   if (!fetched.ok || fetched.body === null) {
     throw new Error(`failed to fetch the engine: ${String(fetched.status)} ${fetched.statusText} fetching '${url.href}'`);
   }
@@ -111,15 +111,23 @@ export function whenWasmLoaded(run: () => void): void {
 }
 
 /**
- * Idempotent: a second call, or a call after `loadWasmSync`, resolves at once. A failed fetch is not
- * cached; the next call tries again.
+ * #4714: the Fetch Priority the boot's download of the module asks for (`startWasmLoad`): low, so the route's own
+ * chunks, which draw its first screen, come first.
  */
-export function loadWasm(): Promise<void> {
+export const BOOT_MODULE_FETCH_PRIORITY: RequestPriority = "low";
+
+/**
+ * Idempotent: a second call, or a call after `loadWasmSync`, resolves at once. A failed fetch is not
+ * cached; the next call tries again. `priority` is the download's Fetch Priority, which only the call that
+ * starts the download sets: a call while the module is already on its way waits on that download, at the
+ * priority it was asked at, and never fetches it twice (#4714).
+ */
+export function loadWasm(priority: RequestPriority = "auto"): Promise<void> {
   if (loaded) return Promise.resolve();
   if (loading === null) {
     // The literal `new URL(…, import.meta.url)` is what Vite recognizes and emits as an asset, in
     // the page's bundle and in the practice worker's alike: the .br, and no .wasm (#3183).
-    loading = initWasm({ module_or_path: moduleResponse(new URL("./pkg/jackioh_wasm_bg.wasm.br", import.meta.url)) })
+    loading = initWasm({ module_or_path: moduleResponse(new URL("./pkg/jackioh_wasm_bg.wasm.br", import.meta.url), priority) })
       .then(() => {
         ready();
       })
@@ -129,6 +137,16 @@ export function loadWasm(): Promise<void> {
       });
   }
   return loading;
+}
+
+/**
+ * #778, #4714: the boot's start of the module's download (`main.tsx`), on every route, at BOOT_MODULE_FETCH_PRIORITY.
+ * A priority orders the downloads in flight and holds none back, so a screen that waits on the engine (`EngineGate`,
+ * `useEngineReady`) waits on this one download, never a second one asked louder, and has it once the bytes ahead of
+ * it, its own code first, are in. A failed download is forgotten, so the next `loadWasm()` asks again, at its own priority.
+ */
+export function startWasmLoad(): void {
+  void loadWasm(BOOT_MODULE_FETCH_PRIORITY).catch(() => undefined);
 }
 
 /** Instantiate the module from its bytes (jsdom tests, `test/setup.ts`). Idempotent. */

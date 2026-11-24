@@ -173,6 +173,12 @@ impl Tx<'_> {
         notifications_dispatch!(self, purge(before))
     }
 
+    /// R4691000: when the oldest row was written, which the purge above deletes once it is
+    /// `NOTIFICATIONS_KEEP_DAYS` old; `None` while the feed is empty.
+    pub async fn notifications_oldest_at(&mut self) -> StoreResult<Option<i64>> {
+        notifications_dispatch!(self, oldest_at())
+    }
+
     /// R4348000: deletes every row whose recipient is one of `x`, `y` and whose actor is the
     /// other, either way, read or not: how many. No third party's row is touched, and none with
     /// no actor.
@@ -391,6 +397,15 @@ mod pg {
         Ok(done.rows_affected())
     }
 
+    /// R4691000: the least `created_at`.
+    pub async fn oldest_at(t: &mut PgTx<'_>) -> Result<Option<i64>, StoreError> {
+        run_as(t, None).await?;
+        let row = sqlx::query("select min(created_at) as oldest from public.notifications")
+            .fetch_one(&mut **t)
+            .await?;
+        Ok(row.try_get::<Option<i64>, _>("oldest")?)
+    }
+
     /// R4348000: the rows between the two accounts, either way; a row with no actor never
     /// matches.
     pub async fn delete_between(t: &mut PgTx<'_>, x: &str, y: &str) -> Result<u64, StoreError> {
@@ -553,6 +568,12 @@ mod fake {
         let held = tables.rows.len();
         tables.rows.retain(|row| row.created_at >= before);
         Ok((held - tables.rows.len()) as u64)
+    }
+
+    /// R4691000: the least `created_at`.
+    pub fn oldest_at(f: &mut FakeTx<'_>) -> Result<Option<i64>, StoreError> {
+        let tables = call(f, "notifications.oldestAt")?;
+        Ok(tables.rows.iter().map(|row| row.created_at).min())
     }
 
     /// R4348000: the rows between the two accounts, either way; a row with no actor never
