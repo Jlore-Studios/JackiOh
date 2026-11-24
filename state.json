@@ -45099,14 +45099,6 @@
         "run_id": "45459927513",
         "taken_asks": []
       },
-      "3": {
-        "area": "tests",
-        "count": 2,
-        "last_run": "2026-11-24T18:29:17Z",
-        "provider": "muse",
-        "run_id": "45460076355",
-        "taken_asks": []
-      },
       "4": {
         "area": "rules",
         "count": 2,
