@@ -19117,6 +19117,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-24T21:04:58Z",
@@ -19127,9 +19128,12 @@
       "planned_by_id": "claude-3",
       "planned_model": "sonnet",
       "planned_tier": "medium",
+      "pr": 4857,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-11-24T20:42:23Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "medium",
       "run_id": "45487423721",
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-24T21:04:58Z",
@@ -19137,7 +19141,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:7143929397"
-      ]
+      ],
+      "verdict_rounds": 0
     },
     "4781": {
       "action": "build",
