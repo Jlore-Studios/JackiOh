@@ -215,7 +215,7 @@ export function watermarkOf(set: string | null): Watermark | null {
 
 /**
  * R4596000: the accent a face of `set` wears over its frame (`data-set-accent`, setmark.css), the Infinite
- * Assault's "glitch" (a machine-written card's split red and cyan edge and scanlines); no other set has one.
+ * Assault's "glitch" (a machine-written card's name split red and cyan, and a red and a cyan edge on its window); no other set has one.
  */
 export type SetAccent = "glitch";
 

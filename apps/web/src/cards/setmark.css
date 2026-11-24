@@ -87,24 +87,22 @@
 
 /*
  * R4596000: the Infinite Assault's accent (setMark.ts `setAccentOf`), a face the Assault wrote: its name split
- * into red and cyan as a glitching screen splits it, and faint scanlines with a red and cyan edge over its
- * picture's window. It never moves, so reduced motion needs nothing; a full-art, art-first or extended-art face keeps its own.
+ * into red and cyan as a glitching screen splits it, and a red and a cyan edge either side of its picture's
+ * window. It never moves, so reduced motion needs nothing; a full-art, art-first or extended-art face keeps its own.
  */
 .cf[data-set-accent="glitch"] .card-name {
   text-shadow:
-    0.25cqw 0 0 rgb(255 74 58 / 0.7),
-    -0.25cqw 0 0 rgb(34 211 238 / 0.7);
+    0.25cqw 0 0 color-mix(in srgb, var(--pal-red-400) 70%, transparent),
+    -0.25cqw 0 0 color-mix(in srgb, var(--pal-cyan-400) 70%, transparent);
 }
 
 .cf[data-set-accent="glitch"]:not([data-full-art="true"], [data-art-first="true"], [data-version="version-extended-art"]) .cf-art-frame::after {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: var(--z-content);
   border-radius: inherit;
-  background: repeating-linear-gradient(to bottom, rgb(0 0 0 / 0.14) 0 1px, transparent 1px 3px);
-  box-shadow:
-    inset 0.35cqw 0 0 rgb(255 74 58 / 0.55),
-    inset -0.35cqw 0 0 rgb(34 211 238 / 0.55);
+  border-left: 0.35cqw solid color-mix(in srgb, var(--pal-red-400) 55%, transparent);
+  border-right: 0.35cqw solid color-mix(in srgb, var(--pal-cyan-400) 55%, transparent);
   pointer-events: none;
 }
