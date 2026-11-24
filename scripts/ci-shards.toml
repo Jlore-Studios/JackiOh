@@ -39,7 +39,13 @@
 "tools duos, selfplay" = 1
 # `tools, wasm` ran 14m 8s at 1 (#4441, 18m 24s in #4432) and runs in 4 shards (#4434). One test of the jackioh
 # binary, fork_screen's r4397000 cap test, ran 477 s alone (the group's other 487 tests, 490 s on four
-# threads together), and a count cannot split a test: #4441 cut that test's rollouts instead. Any count
+# threads together), and a count cannot split a test: #4441 cut that test's rollouts instead. #4634's
+# R4607000 save tests then put shards 1/4 and 4/4 past ten minutes again (13m 43s and 14m 33s on
+# bot/issue-4607, #4690): fork_screen's r4607000_resume_after_cut (810 s alone on two threads here)
+# and r4607000_a_torn_last_line_is_played_again (517 s) each replay whole deals, while their shards'
+# other tests sum to two to three minutes. #4690 daily-moved those two, each with a hand-written
+# keeper that reprints without playing a game, and left the count at 4: each shard's remaining tests
+# run in about three minutes at most here, so every shard should finish well under eight. Any count
 # other than 4 needs bot/tests/test_ci_matrix.py's pin changed.
 "tools, wasm" = 4
 

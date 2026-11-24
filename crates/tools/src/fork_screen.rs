@@ -1555,7 +1555,98 @@ mod tests {
         value
     }
 
+    /// A finished deal line as a save file holds it, without playing anything: one fork with
+    /// `cand` candidate-arm wins and `ctl` control-arm wins of `FORK_ROLLOUTS` pairs, so its
+    /// edge is (`cand` − `ctl`) over `FORK_ROLLOUTS`. The duel line and hash are opaque strings:
+    /// the tally reads only the wins, the faults and the line order.
+    fn hand_line(deal: i32, cand: usize, ctl: usize) -> DealLine {
+        let mut arms = Vec::with_capacity(FORK_ROLLOUTS * 2);
+        for pair in 0..FORK_ROLLOUTS {
+            arms.push(SavedArm {
+                won: pair < cand,
+                fault: None,
+            });
+            arms.push(SavedArm {
+                won: pair < ctl,
+                fault: None,
+            });
+        }
+        DealLine {
+            deal,
+            duel: format!("duel {deal}"),
+            record: None,
+            hash: format!("hash{deal}"),
+            forks: vec![SavedFork {
+                seat: PlayerId::P1,
+                at_move: 1,
+                candidate: None,
+                control: None,
+            }],
+            probe_faults: Vec::new(),
+            arms,
+            rollouts: FORK_ROLLOUTS * 2,
+        }
+    }
+
+    /// R4607000's tally from saved lines is the live tally over the same lines: a hand-written
+    /// finished save reprints without playing a game, so the daily run holds
+    /// `r4607000_resume_after_cut_prints_the_same_tally` (a live cut and resume, several
+    /// minutes) while this keeps the saved-lines-to-tally wiring on every pull request.
     #[test]
+    fn r4607000_a_hand_written_save_reprints_its_tally_without_playing() {
+        jackioh_cards::register_all();
+        let control = entrant(&AgentSpec::SelfAi).unwrap();
+        let header = test_header(2);
+        let base = "r4607000-hand";
+        let path = save_path("hand");
+        let _ = std::fs::remove_file(&path);
+
+        // Deal 1's fork reads +0.5 (6 candidate arms to 2), deal 2's reads 0: the tally means
+        // each deal first, so the edge is 0.25 over 2 forks and 32 rollouts.
+        let lines = vec![hand_line(1, 6, 2), hand_line(2, 0, 0)];
+        write_save(&path, &header, &lines);
+        let file = std::fs::read(&path).unwrap();
+
+        let calls = std::sync::atomic::AtomicUsize::new(0);
+        let report = resume_save(
+            &path,
+            &header,
+            base,
+            &control,
+            2,
+            false,
+            &scripted_factory(&calls, late_fork),
+        )
+        .unwrap();
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
+        assert_eq!(report.duels, vec!["duel 1".to_string(), "duel 2".to_string()]);
+        // The saved path prints what the live tally reads over the same lines, byte for byte.
+        let refs: Vec<&DealLine> = lines.iter().collect();
+        let expected = serde_json::to_string(&fork_tally(
+            "self",
+            "self",
+            2,
+            &edges_of(&refs),
+            lines.iter().map(|line| line.rollouts).sum(),
+            Vec::new(),
+        ))
+        .unwrap();
+        assert_eq!(report.tally, expected);
+        assert!(report.tally.contains("\"forks\":2"), "{}", report.tally);
+        assert!(report.tally.contains("\"forkEdge\":0.25"), "{}", report.tally);
+        assert!(report.tally.contains("\"rollouts\":32"), "{}", report.tally);
+        // A finished save is never written a second time: the file is byte-identical.
+        assert_eq!(std::fs::read(&path).unwrap(), file);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// R4607000's tally over a cut file resumed: a live two-deal run cut back to its first deal
+    /// prints the uninterrupted tally, several minutes, so the daily run holds it (#4690) while
+    /// `r4607000_a_hand_written_save_reprints_its_tally_without_playing` keeps the
+    /// saved-lines-to-tally wiring on every pull request.
+    #[test]
+    #[ignore = "daily: a live two-deal run plus the identity game and the replayed deal, 810 s on two threads here; r4607000_a_hand_written_save_reprints_its_tally_without_playing keeps the saved-lines-to-tally wiring per pull request"]
     fn r4607000_resume_after_cut_prints_the_same_tally() {
         jackioh_cards::register_all();
         let control = entrant(&AgentSpec::SelfAi).unwrap();
@@ -1618,7 +1709,57 @@ mod tests {
         let _ = std::fs::remove_file(&cut);
     }
 
+    /// R4607000 drops a killed run's torn tail and heals the file: a hand-written save with one
+    /// whole line and a torn fragment reprints without playing a game, so the daily run holds
+    /// `r4607000_a_torn_last_line_is_played_again` (a live torn tail and its replay, several
+    /// minutes) while this keeps the torn-tail drop and heal on every pull request.
     #[test]
+    fn r4607000_a_hand_written_torn_tail_is_dropped_and_reprinted() {
+        jackioh_cards::register_all();
+        let control = entrant(&AgentSpec::SelfAi).unwrap();
+        let header = test_header(1);
+        let base = "r4607000-hand-torn";
+        let path = save_path("hand-torn");
+        let _ = std::fs::remove_file(&path);
+
+        write_save(&path, &header, &[hand_line(1, 6, 2)]);
+        let mut text = std::fs::read_to_string(&path).unwrap();
+        text.push_str("{\"deal\":1,\"duel\":\"torn");
+        std::fs::write(&path, &text).unwrap();
+
+        let calls = std::sync::atomic::AtomicUsize::new(0);
+        let report = resume_save(
+            &path,
+            &header,
+            base,
+            &control,
+            1,
+            false,
+            &scripted_factory(&calls, late_fork),
+        )
+        .unwrap();
+        // The torn tail is dropped, not played: no game, and the whole line's tally reprinted.
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
+        assert_eq!(report.duels, vec!["duel 1".to_string()]);
+        assert!(report.tally.contains("\"forks\":1"), "{}", report.tally);
+        assert!(report.tally.contains("\"forkEdge\":0.5"), "{}", report.tally);
+        // The file is healed to the header and the one whole line.
+        let healed = read_lines(&path);
+        assert_eq!(healed.len(), 1);
+        assert_eq!(
+            line_without_duel(&healed[0]),
+            line_without_duel(&hand_line(1, 6, 2))
+        );
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// R4607000's torn tail replayed: a live two-deal run with its last line torn plays that deal
+    /// again and prints the uninterrupted tally, several minutes, so the daily run holds it
+    /// (#4690) while `r4607000_a_hand_written_torn_tail_is_dropped_and_reprinted` keeps the
+    /// torn-tail drop and heal on every pull request.
+    #[test]
+    #[ignore = "daily: a live two-deal run plus the identity game and the replayed torn deal, 517 s on two threads here; r4607000_a_hand_written_torn_tail_is_dropped_and_reprinted keeps the torn-tail drop and heal per pull request"]
     fn r4607000_a_torn_last_line_is_played_again() {
         jackioh_cards::register_all();
         let control = entrant(&AgentSpec::SelfAi).unwrap();
