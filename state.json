@@ -20200,7 +20200,16 @@
       "feedback_since": "2026-11-24T21:05:44Z",
       "issue": 4781,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "754c7691a046c62eb789f48480bf2c13682a90b4",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
