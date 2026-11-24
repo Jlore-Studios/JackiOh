@@ -19366,6 +19366,14 @@
       "queued_at": "2026-11-24T10:17:42Z",
       "requested_by": "jgoetzmann",
       "stop_requested": false
+    },
+    "4715": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-24T09:50:46Z",
+      "issue": 4683,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
