@@ -41205,6 +41205,7 @@
       {
         "at": "2026-11-24T09:18:09Z",
         "number": 4682,
+        "reason": "the alarm exists to reach a player who looked away, and on a desktop switching tabs is the usual way of looking away. Today `accepting()` in `audio/engine.ts` drops every sound while the page is hidden, the alarm's beats included, and `Clock.tsx` leaves the mulligan silent on purpose, so a missed prompt is answered by the AI policy (R79) with no sound at all. Exempting only the viewer's own alarm keeps everything else quiet, as #4528 wanted. The Audio settings hint (\"Sound effects and voices sta",
         "title": "Patch: the clock alarm covers the mulligan and background tabs",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
