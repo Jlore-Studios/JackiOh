@@ -65,13 +65,13 @@
       "attack": 4,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Destroy an enemy non-Human Unit. You have {mana} less mana next turn."
+      "text": "Cry: Destroy an enemy non-Human Unit. Overload ({mana})."
     },
     "radiant": {
       "attack": 8,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Destroy all enemy non-Human Units. You have {mana} less mana next turn."
+      "text": "Cry: Destroy all enemy non-Human Units. Overload ({mana})."
     }
   },
   "core-003": {
@@ -789,11 +789,11 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Your opponent has {mana} less mana next turn. Discard {discards|random card|random cards}."
+      "text": "Cast on draw: Overload your opponent ({mana}). Discard {discards|random card|random cards}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: Your opponent has {mana} less mana next turn."
+      "text": "Cast on draw: Overload your opponent ({mana})."
     }
   },
   "core-022": {
@@ -12417,7 +12417,7 @@
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Lose ({loss}) mana next turn. Make a card in your hand Radiant."
+      "text": "Overload ({loss}). Make a card in your hand Radiant."
     },
     "radiant": {
       "keywords": [
@@ -12425,7 +12425,7 @@
           "kind": "Cleave"
         }
       ],
-      "text": "Cleave\nLose ({loss}) mana next turn. Make a card in your hand Radiant."
+      "text": "Cleave\nOverload ({loss}). Make a card in your hand Radiant."
     }
   },
   "meditative-019": {
@@ -12473,11 +12473,11 @@
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Your hero gains {armor} Armor. Add a Temporal Rift to your hand."
+      "text": "Overload ({loss}), then ({lossAfter}) the turn after. Your hero gains {armor} Armor. Add a Temporal Rift to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Your hero gains {armor} Armor. Add a Radiant Temporal Rift to your hand."
+      "text": "Overload ({loss}), then ({lossAfter}) the turn after. Your hero gains {armor} Armor. Add a Radiant Temporal Rift to your hand."
     }
   },
   "meditative-019-1": {
@@ -12791,7 +12791,7 @@
           "kind": "Temporary"
         }
       ],
-      "text": "Temporary\nGuess their Mind Games. Win: cancel their reward. Lose: take your penalty.\nWhen you discard this, take all three penalties.\nAttack beats Greed, Greed beats Defend, Defend beats Attack. A tie does nothing.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor."
+      "text": "Temporary\nGuess their Mind Games. Win: cancel their reward. Lose: take your penalty.\nWhen you discard this, take all three penalties.\nAttack beats Greed, Greed beats Defend, Defend beats Attack. A tie does nothing.\nGreed: Overload ({mana}). Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor."
     },
     "radiant": {
       "keywords": [
@@ -12799,7 +12799,7 @@
           "kind": "Temporary"
         }
       ],
-      "text": "Temporary\nGuess their Mind Games. Win: cancel their reward. Lose: take your penalty.\nAttack beats Greed, Greed beats Defend, Defend beats Attack. A tie does nothing.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor."
+      "text": "Temporary\nGuess their Mind Games. Win: cancel their reward. Lose: take your penalty.\nAttack beats Greed, Greed beats Defend, Defend beats Attack. A tie does nothing.\nGreed: Overload ({mana}). Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor."
     }
   },
   "meditative-023": {
@@ -15480,13 +15480,13 @@
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Buff every card in your hand. You have {mana} less mana next turn."
+      "text": "Cry: Buff every card in your hand. Overload ({mana})."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Buff every card in your hand {times|time|times}. You have {mana} less mana next turn."
+      "text": "Cry: Buff every card in your hand {times|time|times}. Overload ({mana})."
     }
   },
   "meditative-083": {
@@ -15740,11 +15740,11 @@
     "loc": 46,
     "base": {
       "keywords": [],
-      "text": "Aura: Credit line {credit}: spend up to {credit} mana you don't have. Repay it in {instalments|instalment|instalments}, one each start of turn.\nEnd of turn: Tribute this if you didn't use it this turn."
+      "text": "Aura: Credit line {credit}: spend up to {credit} mana you don't have. Repay it as Overload over your next {instalments|turn|turns}.\nEnd of turn: Tribute this if you didn't use it this turn."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Credit line {credit}: spend up to {credit} mana you don't have. Repay it in {instalments|instalment|instalments}, one each start of turn."
+      "text": "Aura: Credit line {credit}: spend up to {credit} mana you don't have. Repay it as Overload over your next {instalments|turn|turns}."
     }
   },
   "meditative-090": {
@@ -23210,11 +23210,11 @@
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Bounce all permanents. Lose {loss} mana next turn."
+      "text": "Bounce all permanents. Overload ({loss})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Bounce all enemy permanents. Lose {loss} mana next turn."
+      "text": "Bounce all enemy permanents. Overload ({loss})."
     }
   },
   "stinkyscape-118": {
@@ -23241,11 +23241,11 @@
     "loc": 29,
     "base": {
       "keywords": [],
-      "text": "Set all Units' Attack to 0. Lose {loss} mana next turn."
+      "text": "Set all Units' Attack to 0. Overload ({loss})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Set all enemy Units' Attack to 0. Lose {loss} mana next turn."
+      "text": "Set all enemy Units' Attack to 0. Overload ({loss})."
     }
   },
   "stinkyscape-119": {
@@ -28517,11 +28517,11 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Steal an enemy Unit. Next turn, lose ({loss}) mana."
+      "text": "Steal an enemy Unit. Overload ({loss})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal an enemy Unit. Next turn, lose ({loss}) mana."
+      "text": "Steal an enemy Unit. Overload ({loss})."
     }
   },
   "traininggrounds-053": {
@@ -29640,7 +29640,7 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Flip a coin for the whole effect. Randomly either Buff or Nerf every card on the field and in both hands."
+      "text": "Cast on draw: Flip a coin. Heads: Buff every card on the field and in both hands. Tails: Nerf them."
     },
     "radiant": {
       "keywords": [
@@ -29649,7 +29649,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nCast on draw: Flip a coin for the whole effect. Randomly either Buff or Nerf every card on the field and in both hands."
+      "text": "Lucky 1\nCast on draw: Flip a coin. Heads: Buff every card on the field and in both hands. Tails: Nerf them."
     }
   },
   "stinkyscapeplus-021": {
@@ -30999,7 +30999,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nCry: Lose {mana} mana next turn, and {mana2} mana the turn after.\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
+      "text": "GIGA\nCry: Overload ({mana}), then ({mana2}) the turn after.\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
     },
     "radiant": {
       "keywords": [
@@ -31007,7 +31007,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nCry: Lose {mana} mana next turn, and {mana2} mana the turn after.\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
+      "text": "GIGA\nCry: Overload ({mana}), then ({mana2}) the turn after.\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
     },
     "params": [
       {
@@ -31718,7 +31718,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Tribute 5, Flexible, Indestructible, Immutable, Immune to Spells, Can't attack, Can't Defend, Ranged\nWhen an enemy Unit is summoned, attack it and lose {mana} mana next turn."
+      "text": "Tribute 5, Flexible, Indestructible, Immutable, Immune to Spells, Can't attack, Can't Defend, Ranged\nWhen an enemy Unit is summoned, attack it and Overload ({mana})."
     },
     "radiant": {
       "attack": 40,
@@ -31743,7 +31743,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Tribute 5, Flexible, Indestructible, Immutable, Immune to Spells, Can't Defend, Ranged\nWhen an enemy Unit is summoned, attack it and lose {mana} mana next turn."
+      "text": "Tribute 5, Flexible, Indestructible, Immutable, Immune to Spells, Can't Defend, Ranged\nWhen an enemy Unit is summoned, attack it and Overload ({mana})."
     },
     "params": [
       {

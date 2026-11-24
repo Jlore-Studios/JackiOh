@@ -513,7 +513,9 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     cy.get(ts(PRACTICE_MENU)).click();
     cy.get(ts(PRACTICE_LEAVE)).should("be.visible");
     cy.get(ts(PRACTICE_LEAVE_CONFIRM)).click();
-    cy.location("pathname").should("eq", "/");
+    // #4742: the main menu is the Play hub's Solo group.
+    cy.location("pathname").should("eq", "/play");
+    cy.location("hash").should("eq", "#solo");
     visitPractice("/practice?pace=fast");
     cy.get(ts(PRACTICE_SETUP), { timeout: BOOT_TIMEOUT }).should("be.visible");
     cy.get(ts(PRACTICE_RESUME_BANNER)).should("not.exist");

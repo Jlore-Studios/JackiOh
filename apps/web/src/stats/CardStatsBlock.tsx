@@ -1,9 +1,9 @@
 // Compact card statistics block for CardDetail view (SPEC §9.11, R654). It names no data source (R661). It shows
-// the four figures that read a card, Tier, Adjusted win rate, Win rate and Play rate, with Games as their sample,
+// the five figures that read a card, Tier, Adjusted win rate, Decisiveness, Win rate and Play rate, with Games as their sample,
 // as /stats prints them, and nothing else of the server's (R3185000) but the patch they were collected on, the
 // patch before while a newer one gathers its games (R3447000). R4082000: a card no deck holds, a token, reads its
 // Created figures the same way: the seats that made one, read against the other Created cards. R4083000: such a
-// card shows its Games, Tier and Adjusted win rate alone, as /stats' Created tables do: no Win rate or Play rate.
+// card shows its Games, Tier, Adjusted win rate and Decisiveness alone, as /stats' Created tables do: no Win rate or Play rate.
 
 import { useEffect, useState, type ReactElement } from "react";
 import { INSPECT_STATS } from "../cards/inspect/testids.ts";
@@ -19,7 +19,7 @@ import { winPercent } from "./model.ts";
 import { collectedOn } from "./patches.ts";
 import { usePlayerStats } from "./store.ts";
 import { statsTestid } from "./testids.ts";
-import { TierChip, adjustedText } from "./TierChip.tsx";
+import { TierChip, adjustedText, decisivenessText } from "./TierChip.tsx";
 
 export type CardStatsBlockProps = {
   cardId: string;
@@ -29,7 +29,7 @@ export type CardStatsBlockProps = {
  * The figures the block shows: a deck card's row, or a Created card's read the same way. `rates` are a deck card's
  * Win rate and Play rate, null for a card no deck holds (R4083000).
  */
-type ShownStat = Pick<PublicCardStat, "games" | "tier" | "adjustedWinRate" | "hasEnoughGames" | "window"> & {
+type ShownStat = Pick<PublicCardStat, "games" | "tier" | "adjustedWinRate" | "decisiveness" | "hasEnoughGames" | "window"> & {
   rates: Pick<PublicCardStat, "winRate" | "playRate"> | null;
 };
 
@@ -42,6 +42,7 @@ export function createdShown(card: PublicCreatedStat): ShownStat {
     games: card.games,
     tier: card.tier,
     adjustedWinRate: card.adjustedWinRate,
+    decisiveness: card.decisiveness,
     hasEnoughGames: card.hasEnoughGames,
     window: card.window,
     rates: null,
@@ -51,6 +52,8 @@ export function createdShown(card: PublicCreatedStat): ShownStat {
 export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
   const [loading, setLoading] = useState(true);
   const [stat, setStat] = useState<ShownStat | null>(null);
+  /** R4552003: the typical card's decisiveness the card is read beside: a deck card's, or a Created card's. */
+  const [typical, setTypical] = useState<number | undefined>(undefined);
   /** R3447000: the patch the card's figures were collected on, or null when the server names no window. */
   const [collected, setCollected] = useState<string | null>(null);
   const [minSample, setMinSample] = useState<number>(CARD_STATS_MIN_SAMPLE);
@@ -80,6 +83,7 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
             ? createdShown(made)
             : null;
         setStat(match);
+        setTypical(deck ? res.tiers?.decisiveness : res.tiers?.created?.decisiveness);
         setCollected(collectedOn(res.patches ?? [], match?.window?.counted));
         setLoading(false);
       })
@@ -151,6 +155,21 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
           <span className="inspect-stats-metric-label">{t("Adjusted win rate")}</span>
           <span className="inspect-stats-metric-value" data-testid={statsTestid.cardStatsAdjusted}>
             {stat.hasEnoughGames ? adjustedText(stat.adjustedWinRate) : "—"}
+          </span>
+        </div>
+        {/* R4552003: how far playing the card typically moves its player's chance of winning; the ± is the swing, no margin of error */}
+        <div className="inspect-stats-metric">
+          <span
+            className="inspect-stats-metric-label"
+            title={t(
+              "Decisiveness: playing this card typically moves your chance of winning by {value}, one way or the other; ± is the swing itself, not a margin of error. A typical card: {typical}.",
+              { value: decisivenessText(stat.decisiveness), typical: decisivenessText(typical) },
+            )}
+          >
+            {t("Decisiveness")}
+          </span>
+          <span className="inspect-stats-metric-value" data-testid={statsTestid.cardStatsDecisiveness}>
+            {stat.hasEnoughGames ? decisivenessText(stat.decisiveness) : t("not enough games")}
           </span>
         </div>
         {/* R4083000: a card no deck holds shows no Win rate or Play rate */}

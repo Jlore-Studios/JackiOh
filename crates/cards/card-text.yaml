@@ -43,8 +43,8 @@ core-002: # Speciesist
     death: Tolerance wins. Again.
   zh:
     name: 物种歧视者
-    base: 战吼：消灭一个敌方非人类单位。你在下个回合少{mana}点法力值。
-    radiant: 战吼：消灭所有敌方非人类单位。你在下个回合少{mana}点法力值。
+    base: 战吼：消灭一个敌方非人类单位。过载({mana})。
+    radiant: 战吼：消灭所有敌方非人类单位。过载({mana})。
 core-003: # Right-house defender
   flavour: Wrong house? Impossible. He checked the address twice.
   voice:
@@ -220,8 +220,8 @@ core-021: # Hinder
     cast: Oops! Did I trip you?
   zh:
     name: 阻碍
-    base: 抽到时施放：你的对手在下个回合少{mana}点法力值。随机弃掉{discards}张牌。
-    radiant: 抽到时施放：你的对手在下个回合少{mana}点法力值。
+    base: 抽到时施放：使你的对手过载({mana})。随机弃掉{discards}张牌。
+    radiant: 抽到时施放：使你的对手过载({mana})。
 core-022: # Carnivorous Cube
   flavour: It eats your friends, then gives two of them back. Mostly intact.
   voice:
@@ -3026,16 +3026,16 @@ meditative-018: # Expedition12
     cast: Sacrifice now, shine later.
   zh:
     name: 远征12
-    base: 在下个回合失去({loss})点法力值。使你手牌中的一张牌变为光辉。
-    radiant: "顺劈\n在下个回合失去({loss})点法力值。使你手牌中的一张牌变为光辉。"
+    base: 过载({loss})。使你手牌中的一张牌变为光辉。
+    radiant: "顺劈\n过载({loss})。使你手牌中的一张牌变为光辉。"
 meditative-019: # Expedition123
   flavour: Four days out, the map started drawing itself.
   voice:
     cast: The long road it is.
   zh:
     name: 远征123
-    base: 在下个回合失去({loss})点法力值，再下个回合失去({lossAfter})点法力值。你的英雄获得{armor}点护甲。将一张时空裂隙置入你的手牌。
-    radiant: 在下个回合失去({loss})点法力值，再下个回合失去({lossAfter})点法力值。你的英雄获得{armor}点护甲。将一张光辉时空裂隙置入你的手牌。
+    base: 过载({loss})，再下个回合过载({lossAfter})。你的英雄获得{armor}点护甲。将一张时空裂隙置入你的手牌。
+    radiant: 过载({loss})，再下个回合过载({lossAfter})。你的英雄获得{armor}点护甲。将一张光辉时空裂隙置入你的手牌。
 meditative-019-1: # Temporal Rift
   flavour: Time folds once for everyone. Spend your fold well.
   voice:
@@ -3074,8 +3074,8 @@ meditative-022-1: # Fortify Mind
     cast: I can read you like a book.
   zh:
     name: 坚定心智
-    base: "临时\n猜测你对手的心理博弈。获胜：取消其奖励。落败：承受你的惩罚。\n当你弃掉这张牌时，承受全部三种惩罚。\n攻击克制贪婪，贪婪克制防御，防御克制攻击。平局则无事发生。\n贪婪：你在下个回合少{mana}点法力值。随机弃掉{discards}张牌。\n攻击：对你的英雄和你的每个单位造成{damage}点伤害。\n防御：为你对手的英雄及其每个单位恢复{heal}点生命值。它们获得+{armor}点护甲。"
-    radiant: "临时\n猜测你对手的心理博弈。获胜：取消其奖励。落败：承受你的惩罚。\n攻击克制贪婪，贪婪克制防御，防御克制攻击。平局则无事发生。\n贪婪：你在下个回合少{mana}点法力值。随机弃掉{discards}张牌。\n攻击：对你的英雄和你的每个单位造成{damage}点伤害。\n防御：为你对手的英雄及其每个单位恢复{heal}点生命值。它们获得+{armor}点护甲。"
+    base: "临时\n猜测你对手的心理博弈。获胜：取消其奖励。落败：承受你的惩罚。\n当你弃掉这张牌时，承受全部三种惩罚。\n攻击克制贪婪，贪婪克制防御，防御克制攻击。平局则无事发生。\n贪婪：过载({mana})。随机弃掉{discards}张牌。\n攻击：对你的英雄和你的每个单位造成{damage}点伤害。\n防御：为你对手的英雄及其每个单位恢复{heal}点生命值。它们获得+{armor}点护甲。"
+    radiant: "临时\n猜测你对手的心理博弈。获胜：取消其奖励。落败：承受你的惩罚。\n攻击克制贪婪，贪婪克制防御，防御克制攻击。平局则无事发生。\n贪婪：过载({mana})。随机弃掉{discards}张牌。\n攻击：对你的英雄和你的每个单位造成{damage}点伤害。\n防御：为你对手的英雄及其每个单位恢复{heal}点生命值。它们获得+{armor}点护甲。"
 meditative-023: # Golly Bob Howdy
   flavour: Every neighbor he greets ends up a little woollier.
   voice:
@@ -3731,8 +3731,8 @@ meditative-082: # Medina Outfitter
     death: Out of thread.
   zh:
     name: 麦迪纳装备商
-    base: 战吼：强化你手牌中的每张牌。你在下个回合少{mana}点法力值。
-    radiant: 战吼：强化你手牌中的每张牌{times}次。你在下个回合少{mana}点法力值。
+    base: 战吼：强化你手牌中的每张牌。过载({mana})。
+    radiant: 战吼：强化你手牌中的每张牌{times}次。过载({mana})。
 meditative-083: # Medina Enforcer
   flavour: He doesn't ask what you're holding. He improves it.
   voice:
@@ -3799,8 +3799,8 @@ meditative-089: # Jlarna
     cast: Four easy payments. No refunds.
   zh:
     name: 贾娜
-    base: "光环：信用额度{credit}：你可以花费你没有的法力值，最多欠{credit}点，分{instalments}期偿还，每期在你接下来的一个回合开始时偿还。\n回合结束时：如果你在本回合中没有使用你的信用额度，献祭这张牌。"
-    radiant: 光环：信用额度{credit}：你可以花费你没有的法力值，最多欠{credit}点，分{instalments}期偿还，每期在你接下来的一个回合开始时偿还。
+    base: "光环：信用额度{credit}：你可以花费你没有的法力值，最多欠{credit}点，以过载的形式在你接下来的{instalments}个回合中偿还。\n回合结束时：如果你在本回合中没有使用你的信用额度，献祭这张牌。"
+    radiant: 光环：信用额度{credit}：你可以花费你没有的法力值，最多欠{credit}点，以过载的形式在你接下来的{instalments}个回合中偿还。
 meditative-090: # Spell Basket
   flavour: Some assembly required.
   voice:
@@ -5621,16 +5621,16 @@ stinkyscape-117: # Core System
     cast: Rebooting all systems.
   zh:
     name: 核心系统
-    base: 弹回所有永久物。在下个回合失去{loss}点法力值。
-    radiant: 弹回所有敌方永久物。在下个回合失去{loss}点法力值。
+    base: 弹回所有永久物。过载({loss})。
+    radiant: 弹回所有敌方永久物。过载({loss})。
 stinkyscape-118: # Secure System
   flavour: Every port closed, every weapon disarmed, every user annoyed.
   voice:
     cast: Firewall up. Weapons down.
   zh:
     name: 安全系统
-    base: 将所有单位的攻击力变为0。在下个回合失去{loss}点法力值。
-    radiant: 将所有敌方单位的攻击力变为0。在下个回合失去{loss}点法力值。
+    base: 将所有单位的攻击力变为0。过载({loss})。
+    radiant: 将所有敌方单位的攻击力变为0。过载({loss})。
 stinkyscape-119: # Unsecure System
   flavour: Someone turned off the firewall to make it go faster. It did.
   voice:
@@ -6933,8 +6933,8 @@ traininggrounds-052: # Legacy: Snom Bunny Mind Control
     cast: Hop along. You're mine now.
   zh:
     name: 传统：Snom兔精神控制
-    base: 夺取一个敌方单位。在下个回合失去({loss})点法力值。
-    radiant: 夺取一个敌方单位。在下个回合失去({loss})点法力值。
+    base: 夺取一个敌方单位。过载({loss})。
+    radiant: 夺取一个敌方单位。过载({loss})。
 traininggrounds-053: # Legacy: Prejudiced Postdoc
   flavour: Six years of research and one strongly held belief about who counts.
   voice:
@@ -7223,8 +7223,8 @@ stinkyscapeplus-020: # B-Patch
     cast: Roll the dice, ship the patch.
   zh:
     name: B补丁
-    base: 抽到时施放：抛一枚硬币决定整个效果。随机强化或削弱场上和双方手牌中的每张牌。
-    radiant: "幸运1\n抽到时施放：抛一枚硬币决定整个效果。随机强化或削弱场上和双方手牌中的每张牌。"
+    base: 抽到时施放：抛一枚硬币。正面：强化场上和双方手牌中的每张牌。反面：削弱它们。
+    radiant: "幸运1\n抽到时施放：抛一枚硬币。正面：强化场上和双方手牌中的每张牌。反面：削弱它们。"
 stinkyscapeplus-021: # Jlockeed Shredder-12
   flavour: It shreds the enemy twice before lunch and files the paperwork twice after.
   voice:
@@ -7553,8 +7553,8 @@ stinkyscapeplus-056: # Impact Reactor
     cast: Brace for impact. Everyone, brace!
   zh:
     name: 冲击反应堆
-    base: "巨型\n战吼：下个回合失去{mana}点法力值，再下个回合失去{mana2}点法力值。\n休眠{dormant}个回合。\n苏醒时：获得无限法力值。"
-    radiant: "巨型\n战吼：下个回合失去{mana}点法力值，再下个回合失去{mana2}点法力值。\n休眠{dormant}个回合。\n苏醒时：获得无限法力值。"
+    base: "巨型\n战吼：过载({mana})，再下个回合过载({mana2})。\n休眠{dormant}个回合。\n苏醒时：获得无限法力值。"
+    radiant: "巨型\n战吼：过载({mana})，再下个回合过载({mana2})。\n休眠{dormant}个回合。\n苏醒时：获得无限法力值。"
 stinkyscapeplus-057: # Phase Weaver
   flavour: She knits scarves out of light. They are very warm and slightly late.
   voice:
@@ -7713,8 +7713,8 @@ stinkyscapeplus-072: # Foreshadow
     death: Nobody saw that coming.
   zh:
     name: 先兆
-    base: "献祭5，灵活，不可摧毁，不可变，法术免疫，无法攻击，无法守备，远程\n当一个敌方单位被召唤时，攻击它，并在下个回合失去{mana}点法力值。"
-    radiant: "献祭5，灵活，不可摧毁，不可变，法术免疫，无法守备，远程\n当一个敌方单位被召唤时，攻击它，并在下个回合失去{mana}点法力值。"
+    base: "献祭5，灵活，不可摧毁，不可变，法术免疫，无法攻击，无法守备，远程\n当一个敌方单位被召唤时，攻击它，并过载({mana})。"
+    radiant: "献祭5，灵活，不可摧毁，不可变，法术免疫，无法守备，远程\n当一个敌方单位被召唤时，攻击它，并过载({mana})。"
 stinkyscapeplus-073: # Ripple
   flavour: Calm as a pond until somebody steps in.
   voice:

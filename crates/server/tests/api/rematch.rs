@@ -10,7 +10,7 @@ use std::time::Duration;
 use serde::Serialize;
 use serde_json::{Value, json};
 
-use jackioh_engine::{ActionBody, PlayerId, newest_shipped_set};
+use jackioh_engine::{ActionBody, PerPlayer, PlayerId, newest_shipped_set};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::actor::ws_server::Socket;
 use jackioh_server::api::ranked::rate_ranked_game;
@@ -19,7 +19,8 @@ use jackioh_server::api::results::record_result;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::REMATCH_OFFER_TTL_MS;
 use jackioh_server::db::fake::{CallOutcome, FakeTables};
-use jackioh_server::db::store::{MatchSeat, StartMatchInput, StoreError};
+use jackioh_server::db::store::{DailyGameRow, MatchSeat, QueueMode, StartMatchInput, StoreError};
+use jackioh_shared::host::daily::{DailyBoard, DailyClock};
 
 use crate::support::deps::{add_user, call, test_app};
 use crate::support::store::{fake_lock, from, q, to_json};
@@ -970,6 +971,43 @@ mod rematch_refusals {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn a_daily_matchs_status_is_409_daily() {
+        let app = test_app().await;
+        let (a, b, finished) = names("daily-status");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished, &a, &b, json!({})).await;
+        let now = now_ms();
+        q!(
+            app,
+            daily_games_create(&DailyGameRow {
+                match_id: finished.clone(),
+                players: (a.clone(), b.clone()),
+                mode: QueueMode::Bo1,
+                per_move_days: 3,
+                clock: DailyClock::new(3),
+                board: DailyBoard {
+                    turn: 1,
+                    life: PerPlayer::new(30, 30),
+                    seats_swapped: false,
+                    result: None,
+                },
+                next_deadline_at: None,
+                seq: 0,
+                created_at: now,
+                ended_at: Some(now),
+            })
+        );
+        let (code, body) = status(&app, &token_a, &finished).await;
+        assert_eq!(code, 409, "{body}");
+        assert_eq!(body["error"]["code"], "daily");
+        assert_eq!(
+            body["error"]["message"],
+            "A daily game's rematch is a new daily challenge."
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn a_bad_stakes_value_is_a_400() {
         let app = test_app().await;
         let (a, b, finished) = names("bad-stakes");
@@ -1472,6 +1510,19 @@ mod r1638000_a_rematch_across_a_patch {
         );
 
         assert_nothing_made(&app, &a, &b).await;
+        clear_overrides();
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1638000_get_on_a_match_on_an_earlier_catalog_is_409_update_required() {
+        let app = test_app().await;
+        carry_played_on();
+        let (a, b, finished) = names("patched-get");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished, &a, &b, json!({ "catalogVersion": PLAYED_ON })).await;
+        let (code, body) = status(&app, &token_a, &finished).await;
+        assert_cards_changed(&app, code, &body);
         clear_overrides();
     }
 }

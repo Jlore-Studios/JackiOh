@@ -526,6 +526,20 @@ async fn rematch_status_route(app: &App, req: Req) -> ApiResult {
     if is_series_game(app, &match_row.id).await? {
         return Err(series_game());
     }
+    // §9.13 (#3727): a daily game's rematch is a new daily challenge, never a live rematch.
+    if one_tx!(app.db, |t| t.daily_games_get(&match_row.id).await?)?.is_some() {
+        return Ok(json(
+            409,
+            serde_json::json!({ "error": {
+                "code": "daily",
+                "message": "A daily game's rematch is a new daily challenge.",
+            } }),
+        ));
+    }
+    // R1638000: refused before the book is read, as an offer is refused before it is recorded.
+    if match_row.catalog_version != app.catalog.version {
+        return Err(cards_changed(app, &match_row.catalog_version));
+    }
 
     let seen = offers(app).seen(&match_row.id, seat, now_ms());
     let presence = app.matches.presence_of(&match_row.id);

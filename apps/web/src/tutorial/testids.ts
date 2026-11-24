@@ -52,4 +52,6 @@ export const tutorialTestid = {
   /** After the last lesson: "What's next". */
   whatsNext: "tutorial-whats-next",
   viewBoard: "tutorial-view-board",
+  /** #4742, in the result dialog: out to the main menu, after Back to lessons. */
+  mainMenu: "tutorial-main-menu",
 } as const;

@@ -61,8 +61,8 @@
 # when `full` does. The other docs are
 # not: `spec check` reads spec/, the radiant-standard test reads docs/radiant-audit.md, the catalog
 # test reads spec/07-tokens.md's table of tokens, radiant_stats.rs reads spec/08-catalog.md, web tests
-# read two spec/ notes (06-keywords.md and 05-card-types.md), and the `training gate` job reads
-# training/history/, and the tools' test of shadow_ban.rs reads its sweep-*.md reports. A
+# read two spec/ notes (06-keywords.md and 05-card-types.md), and the tools' test of shadow_ban.rs
+# reads training/history/'s sweep-*.md reports. A
 # `full=false` diff prints every other line false too.
 #
 # Past the skip list, each changed file turns lines on, and a line no file turned on is false:

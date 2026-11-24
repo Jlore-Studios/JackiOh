@@ -35110,5 +35110,177 @@
       "v0.6.12f"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.13b",
+    "date": "2026-11-24",
+    "title": "Patch: clearer rules text for S+ #20 B-Patch",
+    "source": "#4745",
+    "notes": "Reworded B-Patch's printed text so the coin's two sides are spelled out: Heads Buffs every card on the field and in both hands, Tails Nerfs them. Words only: one coin for the whole effect (R3557000), Lucky 1's second flip keeps heads (R1440) and the Immune-to-Spells skip (R4453000) are unchanged.",
+    "player": {
+      "title": "B-Patch reads clearer",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "B-Patch's text now spells out the coin: Heads Buffs every card on the field and in both hands, Tails Nerfs them."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "1eee3d7a672496579b936bf6dc3f242ae5c03d7a"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": [
+      {
+        "id": "stinkyscapeplus-020",
+        "name": "B-Patch",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.13c",
+    "date": "2026-11-24",
+    "title": "Overload",
+    "source": "issue #4751",
+    "notes": "Overload (X) is the printed name of the next-turn rider of -X (spec 6.3 Overload X, R1848004); wording only, no script or number changed.",
+    "player": {
+      "title": "Overload",
+      "new": [
+        "Overload (X) is a new keyword: you have X less mana next turn."
+      ],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Speciesist, Medina Outfitter, Expedition12, Expedition123 and Fortify Mind print their next-turn loss as Overload.",
+        "Core System, Secure System, Legacy: Snom Bunny Mind Control, Impact Reactor and Foreshadow do too.",
+        "Hinder reads \"Overload your opponent\".",
+        "Jlarna's credit line is repaid as Overload over the next turns."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "d96d7a8f286ad0cda085ff22a87476bde1ad57cb"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": [
+      {
+        "id": "core-002",
+        "name": "Speciesist",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-021",
+        "name": "Hinder",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-018",
+        "name": "Expedition12",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-019",
+        "name": "Expedition123",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-022-1",
+        "name": "Fortify Mind",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-082",
+        "name": "Medina Outfitter",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-089",
+        "name": "Jlarna",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-117",
+        "name": "Core System",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-118",
+        "name": "Secure System",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-052",
+        "name": "Legacy: Snom Bunny Mind Control",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-056",
+        "name": "Impact Reactor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-072",
+        "name": "Foreshadow",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]

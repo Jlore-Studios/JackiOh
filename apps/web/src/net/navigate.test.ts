@@ -6,7 +6,7 @@ import { act, render, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useMarkBoardShown } from "../game/boardShown.ts";
-import { guardLeaving, loginPath, navigate, paths, usePathname } from "./navigate.ts";
+import { guardLeaving, loginPath, navigate, paths, playSoloPath, usePathname } from "./navigate.ts";
 import { UPDATE_CHECK_MIN_MS, checkForUpdate, fullLoadPage, resetUpdateForTests } from "./update.ts";
 
 // jsdom's `location.assign` and `location.replace` are non-writable own properties, so the full
@@ -97,6 +97,33 @@ describe("#1756 navigate opens a new screen at the top", () => {
     await traverse(() => window.history.forward());
     expect(result.current).toBe(paths.replays);
     expect(scrolledAt).toEqual([paths.replays]);
+  });
+});
+
+describe("R4742000 a target with a fragment", () => {
+  it("R4742000 playSoloPath is the Play hub's Solo anchor, and a move to it lands on /play with the fragment, scrolled to the top once", () => {
+    expect(playSoloPath()).toBe("/play#solo");
+    navigate(playSoloPath());
+    expect(window.location.pathname).toBe(paths.play);
+    expect(window.location.hash).toBe("#solo");
+    expect(window.location.search).toBe("");
+    expect(scrolledAt).toEqual([paths.play]);
+  });
+
+  it("R4742000 a move to the fragment the page already has stacks no entry, while a plain target at the same screen is the same address as before", () => {
+    navigate(playSoloPath());
+    const entries = window.history.length;
+    expect(navigate(playSoloPath())).toBe(true);
+    expect(navigate(paths.play)).toBe(true);
+    expect(window.history.length).toBe(entries);
+    expect(window.location.hash).toBe("#solo");
+    // The same screen with the fragment added is a move: one more entry, no scroll to the top.
+    window.history.replaceState(null, "", paths.play);
+    scrolledAt = [];
+    navigate(playSoloPath());
+    expect(window.location.hash).toBe("#solo");
+    expect(window.history.length).toBe(entries + 1);
+    expect(scrolledAt).toEqual([]);
   });
 });
 

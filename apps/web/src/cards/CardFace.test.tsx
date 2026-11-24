@@ -460,7 +460,7 @@ describe("B10: RulesText marks terms in bold", () => {
     const term = one(cry, ".card-text strong.cf-term");
     expect(term.getAttribute("data-term")).toBe("Cry");
     expect(term.textContent).toBe("Cry:");
-    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: Destroy an enemy non-Human Unit. You have 1 less mana next turn.");
+    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: Destroy an enemy non-Human Unit. Overload (1).");
     cleanup();
 
     const start = one(catalogFace("core-040"), '.card-text strong.cf-term[data-term="Start of turn"]');
@@ -704,7 +704,7 @@ describe("B14: the radiant face", () => {
 
   it("B14 a clause the radiant cell restates is printed once, in its radiant form (core-002, core-046)", () => {
     const speciesist = one(catalogFace("core-002", true), ".card-text");
-    expect(speciesist.textContent).toBe("Cry: Destroy all enemy non-Human Units. You have 1 less mana next turn.");
+    expect(speciesist.textContent).toBe("Cry: Destroy all enemy non-Human Units. Overload (1).");
     expect(speciesist.querySelectorAll('strong.cf-term[data-term="Cry"]')).toHaveLength(1);
     cleanup();
     expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nEmbiggened (3): −4/−4 instead.");

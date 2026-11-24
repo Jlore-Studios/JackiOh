@@ -51,11 +51,19 @@ export const statsTestid = {
   /** R4082000, R4155000: a Created row's tier and adjusted win rate. */
   createdTierCell: "stats-created-tier-cell",
   createdAdjustedCell: "stats-created-adjusted-cell",
+  /** R4552001: a Created row's, a card row's and the card detail's decisiveness. */
+  createdDecisivenessCell: "stats-created-decisiveness-cell",
+  decisivenessCell: "stats-decisiveness-cell",
+  cardStatsDecisiveness: "inspect-stats-decisiveness",
   /** R3324003: the Columns toggles. */
   columnGames: "stats-column-games",
   columnPlayRate: "stats-column-play-rate",
   viewTable: "stats-view-table",
   viewGrid: "stats-view-grid",
+  /** R4673001: the Cards and Tokens tabs' Face control. */
+  faceAll: "stats-face-all",
+  faceNormal: "stats-face-normal",
+  faceRadiant: "stats-face-radiant",
   sortSelect: "stats-sort-select",
   sortDir: "stats-sort-dir",
   modeSelect: "stats-mode-select",
@@ -84,6 +92,12 @@ export const statsTestid = {
   drillDownRadiantFace: "stats-drill-down-radiant-face",
   drillDownAlmanac: "stats-drill-down-almanac",
   drillDownTokens: "stats-drill-down-tokens",
+  /** R4673001: the drill-down's Normal, Radiant and gap line, its three parts, and the face its details read. */
+  drillDownFaceLine: "stats-drill-down-face-line",
+  drillDownFaceNormal: "stats-drill-down-face-normal",
+  drillDownFaceRadiant: "stats-drill-down-face-radiant",
+  drillDownFaceGap: "stats-drill-down-face-gap",
+  drillDownFaceShown: "stats-drill-down-face-shown",
   /** R3887000: the Cards tab's Plain text button, a card as plain text, and the breakdown's plain text and Reference cards. */
   plainTextToggle: "stats-plain-text-toggle",
   plainCard: "stats-plain-card",

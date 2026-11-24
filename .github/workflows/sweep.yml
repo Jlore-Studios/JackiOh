@@ -61,8 +61,7 @@ env:
   # once, of the organization's hosted runners that CI and the bots share. Lower it if CI waits.
   SWEEP_IDS_PER_SHARD: "24"
   SWEEP_SHARDS_MAX: "10"
-  # The branch every sweep's pull request comes from: never under ai/, whose pull requests CI holds to a
-  # training lane's promotion (ci.yml's `rust (training gate)`).
+  # The branch every sweep's pull request comes from.
   SWEEP_BRANCH: sweep/shadow-ban
 
 # One sweep at a time, never cancelled: a push that queues behind a running sweep sweeps after it.

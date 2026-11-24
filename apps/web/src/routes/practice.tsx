@@ -47,7 +47,7 @@ import { BackLayer } from "../net/backLayers.ts";
 import { PRACTICE_EARNING_API, type PracticeEarningApi } from "../net/practice.ts";
 import { readFailureOf, useAccount, type Account } from "../net/gate.ts";
 import { useLiveGame } from "../net/liveGame.ts";
-import { navigate, paths } from "../net/navigate.ts";
+import { navigate, paths, playSoloPath } from "../net/navigate.ts";
 import { GameBanner, LiveGameBanner, gameBannerTestid } from "./GameBanner.tsx";
 import { BackLink } from "./nav.tsx";
 import { PageTitle } from "./PageTitle.tsx";
@@ -718,10 +718,11 @@ function PracticeScreen({
     setGame(null);
   }, []);
 
+  /** #4742, R4742000: the main menu is the Play hub's Solo group, where Practice and the Tutorial are; every exit to it ends here. */
   const onMenu = useCallback(() => {
     setLeaveAskedFor(null);
     clearPracticeResume();
-    navigate(paths.landing);
+    navigate(playSoloPath());
   }, []);
 
   /**
@@ -734,7 +735,7 @@ function PracticeScreen({
     setLeaveAskedFor(null);
     writePracticeResume(left, { saved: true });
     if (to === "menu") {
-      navigate(paths.landing);
+      navigate(playSoloPath());
       return;
     }
     setSavedGame(left);
@@ -1225,6 +1226,7 @@ function PracticeScreen({
           }}
           onBack={onNewGame}
           onPlayPractice={onPlayPractice}
+          onMenu={onMenu}
           onViewBoard={onViewBoard}
         />
       ) : (
@@ -1234,6 +1236,7 @@ function PracticeScreen({
           difficulty={config.difficulty}
           onPlayAgain={onPlayAgain}
           onChangeSetup={onNewGame}
+          onMenu={onMenu}
           onViewBoard={onViewBoard}
           {...(replaySource === null ? {} : { onWatchReplay, onShareLastTurn })}
           {...(earning === null || earning.game !== game ? {} : { earning: earning.earning })}

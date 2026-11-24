@@ -13,7 +13,7 @@ import { practiceTestid } from "./testids.ts";
 afterEach(cleanup);
 
 function renderResult() {
-  const handlers = { onPlayAgain: vi.fn(), onChangeSetup: vi.fn(), onViewBoard: vi.fn() };
+  const handlers = { onPlayAgain: vi.fn(), onChangeSetup: vi.fn(), onMenu: vi.fn(), onViewBoard: vi.fn() };
   render(<PracticeResult result={{ winner: "p2", reason: "concede" }} viewer="p1" difficulty="easy" {...handlers} />);
   return handlers;
 }
@@ -51,5 +51,30 @@ describe("R3220000 the practice result is a dialog", () => {
     expect(onViewBoard).toHaveBeenCalledTimes(1);
     expect(onPlayAgain).not.toHaveBeenCalled();
     expect(window.location.pathname).toBe("/practice");
+  });
+});
+
+describe("R4742000 the practice result offers Main menu", () => {
+  it("R4742000 the practice result offers Main menu last, after Play again and Change setup", () => {
+    const { onPlayAgain, onChangeSetup, onMenu, onViewBoard } = renderResult();
+    const row = screen.getByTestId(practiceTestid.result).querySelector(".dialog__actions");
+    if (row === null) throw new Error("no answers");
+    expect(Array.from(row.querySelectorAll("button"), (button) => button.dataset.testid)).toEqual([
+      practiceTestid.playAgain,
+      practiceTestid.changeSetup,
+      practiceTestid.mainMenu,
+    ]);
+    const menu = screen.getByTestId(practiceTestid.mainMenu);
+    expect(menu).toHaveClass("button-secondary");
+    expect(menu).toHaveTextContent("Main menu");
+    // Play again still takes the focus and the primary look.
+    expect(screen.getByTestId(practiceTestid.playAgain)).toHaveFocus();
+    expect(screen.getByTestId(practiceTestid.playAgain)).toHaveClass("button-primary");
+
+    fireEvent.click(menu);
+    expect(onMenu).toHaveBeenCalledTimes(1);
+    expect(onPlayAgain).not.toHaveBeenCalled();
+    expect(onChangeSetup).not.toHaveBeenCalled();
+    expect(onViewBoard).not.toHaveBeenCalled();
   });
 });
