@@ -142,12 +142,15 @@ const runsFiling = (text: string): boolean => /\bsh "?\S*training\/file-records\
 
 /** The retired training lanes' workflows (R4701000), which #4701 removed. */
 const RETIRED = ["learn.yml", "learn-set.yml", "selfplay.yml", "selfplay-shards.yml"];
+/** The scripts that ran them, by bare name: a path with its directory would read to ci-scope.test.ts
+ * as a file this test opens, and none of them is opened or exists. */
+const RETIRED_SCRIPTS = ["loop.sh", "retrain.sh", "learn-promote.sh"];
 
 describe("R4701000 no workflow runs a retired training lane", () => {
-  it("leaves gather.yml the one development lane: no learn or self-play workflow, and none names one or training/loop.sh", () => {
+  it("leaves gather.yml the one development lane: no learn or self-play workflow, and none names one or the scripts that ran them", () => {
     for (const gone of RETIRED) expect(workflowFiles, gone).not.toContain(gone);
     for (const file of workflowFiles) {
-      for (const name of [...RETIRED, "training/loop.sh", "training/ml/"]) {
+      for (const name of [...RETIRED, ...RETIRED_SCRIPTS]) {
         expect(workflowText(file), `${file} names ${name}`).not.toContain(name);
       }
     }
