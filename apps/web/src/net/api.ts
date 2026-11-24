@@ -7,7 +7,7 @@
 // is `{ error: { code, message, details? } }` from `crates/server/src/api/http.rs`.
 
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
-import type { GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, SetName } from "@jackioh/shared";
+import type { CardDefs, GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, SetName } from "@jackioh/shared";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
@@ -1943,6 +1943,14 @@ export type PublicStatsVersionsResponse = {
 export function getStatsVersions(options: { mode?: string; signal?: AbortSignal } = {}): Promise<PublicStatsVersionsResponse> {
   const query = options.mode ? `?${new URLSearchParams({ mode: options.mode }).toString()}` : "";
   return apiRequest<PublicStatsVersionsResponse>(`/api/stats/versions${query}`, { signal: options.signal });
+}
+
+/**
+ * R388, R4680000: `GET /api/catalog/:version`, the catalog a shipped patch left, open to everyone and kept by the
+ * Worker's edge cache (R4691002); 404 for a version the server has none of.
+ */
+export function getCatalogAt(version: string): Promise<{ version: string; defs: CardDefs }> {
+  return apiRequest<{ version: string; defs: CardDefs }>(`/api/catalog/${encodeURIComponent(version)}`);
 }
 
 /**
