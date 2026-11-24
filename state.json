@@ -20059,11 +20059,11 @@
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "45401089286",
+            "run": "45434617785",
             "tier": "strong"
           }
         ],
-        "sha": "77fcddbe186ea5a6f3c44b9ce74839b3bc2235ba",
+        "sha": "9dd66071efcae758221bb8fd50d88ef151a11997",
         "tiers": {
           "claude": "strong"
         }
