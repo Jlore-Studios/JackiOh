@@ -29,9 +29,10 @@ from typing import Any, Callable
 from urllib.parse import quote
 
 STALE_DAYS = 14
-#: Branches no sweep touches, whatever their age: the deploy and the bots' state, each named with a
-#: leading `_` so GitHub lists them first (#3652).
-KEEP = {"_production", "_staging", "_bot-state", "_bot-journal", "_bot-usage", "_squishy-state",
+#: Branches no sweep touches, whatever their age: the deploy, the bots' state and the brag skill's
+#: launch videos (`_brag`, no pull request), each named with a leading `_` so GitHub lists them first
+#: (#3652).
+KEEP = {"_production", "_staging", "_brag", "_bot-state", "_bot-journal", "_bot-usage", "_squishy-state",
         "_squishy-journal"}
 #: Prefixes no sweep touches: the AI's training lanes.
 KEEP_PREFIXES = ("ai/",)

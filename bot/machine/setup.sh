@@ -51,7 +51,7 @@ fi
 # Ubuntu 24.04's needrestart restarts every service whose libraries an apt run replaced, at the end
 # of that run, unattended upgrades (06:00 to 07:00 UTC) and this script's own included. A runner
 # restarted in the middle of a job kills the job ("received a shutdown signal": 2026-10-22 07:00,
-# 10-24 06:20, and 10-28 when this script installed zram; reviews/2026-10-27-muse-usage.md, finding
+# 10-24 06:20, and 10-28 when this script installed zram; #2272's audit, finding
 # 6). Written before the first apt run here, so the runners and the training lanes are never among
 # them: they take the new libraries at their next restart.
 mkdir -p /etc/needrestart/conf.d
@@ -65,7 +65,7 @@ apt-get install -y -qq git curl unzip zip jq build-essential ca-certificates gnu
   python3-venv python3-pip bubblewrap util-linux cloud-guest-utils >/dev/null
 # Compressed swap in memory (zram), taken before the swapfile: three building jobs overrun the 8 GB
 # of an m7i-flex.large, and paging to the swapfile on EBS stalled a box for 766 s on 2026-10-27
-# (reviews/2026-10-27-muse-usage.md, finding 4). The cloud kernel keeps its module in the extras.
+# (#2272's audit, finding 4). The cloud kernel keeps its module in the extras.
 modprobe zram 2>/dev/null \
   || apt-get install -y -qq "linux-modules-extra-$(uname -r)" >/dev/null 2>&1 || true
 if apt-get install -y -qq zram-tools >/dev/null 2>&1; then

@@ -10,4 +10,4 @@ and keywords on Yu-Gi-Oh-style lanes with a hidden trap backrow.
 - **Issues, pull requests and commits** follow `CONTRIBUTING.md` (its short form) and
   `docs/issues-and-patches.md` (in full): titles, labels, the pull request template, patch and ruling numbers.
 - **Skills** are in `.claude/skills/`, one folder each. An agent without skill support may read a `SKILL.md`
-  as plain instructions. `GEMINI.md` and `.github/copilot-instructions.md` point here.
+  as plain instructions. `GEMINI.md` points here.

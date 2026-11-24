@@ -519,7 +519,7 @@ func (x *GitHub) GetFile(path string, ref string) (string, string) {
 	if big {
 		// Over 1 MB the contents API leaves `content` empty (`encoding: "none"`); the blob API
 		// serves up to 100 MB. Read as empty, state.json was wiped on 2026-10-25
-		// (reviews/2026-10-27-muse-usage.md, finding 5). A blob never changes: one read or
+		// (#2272's audit, finding 5). A blob never changes: one read or
 		// written before costs no call (`Blobs`, #4059).
 		if text, ok := Blobs.get(sha); ok {
 			return text, sha

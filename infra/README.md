@@ -23,7 +23,7 @@ personal data in a public repository, so `var.staging_team_emails` and `var.admi
 does not apply them: `cutover.yml`'s `email-links` step writes a project's, and refuses while its site
 runs a commit without them.
 
-`docs/deploy-cloudflare.md` §4 Steps 2, 3, 4 and 6 point here for the settings above.
+`docs/deploy-cloudflare.md` §4 points here for the settings above.
 
 `versions.tf` pins Terraform and the three providers, exactly, and `.terraform.lock.hcl` holds their
 checksums for Linux, macOS (Apple silicon and Intel) and Windows; both are committed. Bumping a
@@ -108,7 +108,7 @@ from.
    drops all but the Site URL, the Redirect URLs and leaked-password protection from it, and turns
    that protection on in both. Production's sends the URLs its project was set up with; staging's moves its project's Site URL from `https://jackioh.com` to
    `https://staging.jackioh.com` and takes `https://jackioh.com/login` off its list, so apply it only
-   once production runs on its own project (`docs/deploy-cloudflare.md` section 4, step 6). Any other change
+   once production runs on its own project, as it has since 2026-11-03. Any other change
    means a file differs from the host. Make the file say what the host says, and when the host is the one that is wrong,
    say so on the pull request and let a person decide: a Redirect URL the list lacks (local
    development's `http://localhost:5173/login`, say), or `strict` on `main`'s protection, which
