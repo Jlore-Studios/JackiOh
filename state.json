@@ -19979,7 +19979,7 @@
         "kind": "build",
         "model": "opus",
         "provider": "claude-8",
-        "round_tier": "strong",
+        "round_tier": "",
         "rounds_on": 4672,
         "rounds_used": 0,
         "since": "2026-11-24T12:09:58Z",
