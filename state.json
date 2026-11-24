@@ -18114,6 +18114,7 @@
         "provider": "claude-8",
         "run": "45324645702"
       },
+      "spot_check_n": 489,
       "started_at": "2026-11-24T04:11:25Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -40849,7 +40850,7 @@
         "verdict": "clean"
       }
     ],
-    "count": 488
+    "count": 489
   },
   "statistics": {
     "at": "2026-11-24T06:18:14Z"
