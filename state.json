@@ -29001,10 +29001,6 @@
     "claude-6": {
       "spent": [
         {
-          "at": "2026-11-09T20:26:04Z",
-          "minutes": 4.7
-        },
-        {
           "at": "2026-11-10T00:15:48Z",
           "minutes": 1.9
         },
@@ -29799,6 +29795,10 @@
         {
           "at": "2026-11-24T00:39:57Z",
           "minutes": 3.0
+        },
+        {
+          "at": "2026-11-24T03:44:21Z",
+          "minutes": 7.8
         }
       ],
       "tokens_spent": [
@@ -31206,10 +31206,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-24T04:20:00Z",
-          "utilization": 0.5
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-24T00:39:57Z",
-        "status": "allowed"
+        "observed_at": "2026-11-24T03:44:21Z",
+        "rejected_resets_at": "2026-11-24T04:20:00Z",
+        "status": "rejected"
       }
     },
     "claude-7": {
@@ -41324,6 +41325,39 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-24T03:27:40Z,claude-6,ping,before,45319332989,50,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:27:58Z,claude-6,stream,call,45319332989,51,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:28:28Z,claude-6,stream,call,45319332989,52,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:28:43Z,claude-6,stream,call,45319332989,53,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:29:13Z,claude-6,stream,call,45319332989,54,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:29:28Z,claude-6,stream,call,45319332989,55,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:29:58Z,claude-6,stream,call,45319332989,59,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:30:13Z,claude-6,stream,call,45319332989,60,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:30:28Z,claude-6,stream,call,45319332989,61,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:30:43Z,claude-6,stream,call,45319332989,63,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:30:58Z,claude-6,stream,call,45319332989,65,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:31:13Z,claude-6,stream,call,45319332989,68,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:31:28Z,claude-6,stream,call,45319332989,71,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:31:43Z,claude-6,stream,call,45319332989,73,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:31:58Z,claude-6,stream,call,45319332989,75,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:32:13Z,claude-6,stream,call,45319332989,77,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:32:28Z,claude-6,stream,call,45319332989,79,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:32:43Z,claude-6,stream,call,45319332989,81,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:32:58Z,claude-6,stream,call,45319332989,83,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:33:13Z,claude-6,stream,call,45319332989,85,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:33:28Z,claude-6,stream,call,45319332989,87,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:33:43Z,claude-6,stream,call,45319332989,89,2026-11-24T04:20:00Z,,,allowed,100,,",
+      "2026-11-24T03:33:58Z,claude-6,stream,call,45319332989,91,2026-11-24T04:20:00Z,,,allowed_warning,100,,",
+      "2026-11-24T03:34:13Z,claude-6,stream,call,45319332989,92,2026-11-24T04:20:00Z,,,allowed_warning,100,,",
+      "2026-11-24T03:34:28Z,claude-6,stream,call,45319332989,94,2026-11-24T04:20:00Z,,,allowed_warning,100,,",
+      "2026-11-24T03:34:43Z,claude-6,stream,call,45319332989,96,2026-11-24T04:20:00Z,,,allowed_warning,100,,",
+      "2026-11-24T03:34:58Z,claude-6,stream,call,45319332989,97,2026-11-24T04:20:00Z,,,allowed_warning,100,,",
+      "2026-11-24T03:35:13Z,claude-6,stream,call,45319332989,99,2026-11-24T04:20:00Z,,,allowed_warning,100,,",
+      "2026-11-24T03:35:28Z,claude-6,stream,call,45319332989,100,2026-11-24T04:20:00Z,,,rejected,100,,"
+    ]
   },
   "version": 1
 }
