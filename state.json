@@ -19059,14 +19059,14 @@
     "what": "suggestions (tests) on muse"
   },
   "last_sweep": {
-    "at": "2026-11-24T20:28:21Z",
+    "at": "2026-11-24T20:35:59Z",
     "notes": [
-      "delivered suggest on claude-8 (run 45475905277): suggested",
-      "delivered suggest on claude-7 (run 45475787652): suggested",
-      "#4781: typed it Task",
-      "#4780: typed it Task",
-      "#4779: typed it Task",
-      "runner gate: started 0 of 6 waiting run(s); 6 wait for a slot"
+      "started suggest on claude-8 (run 45482711987)",
+      "started suggest on muse (run 45482824431)",
+      "started suggest on muse (run 45482941789)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days",
+      "runner gate: started 0 of 5 waiting run(s); 5 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19772,7 +19772,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T20:28:21Z",
+  "loop_tick": "2026-11-24T20:35:59Z",
   "machine_disk": {
     "issue": null,
     "reading": {
