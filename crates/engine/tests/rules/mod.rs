@@ -152,6 +152,7 @@ pub mod feng_shui;
 pub mod tune_live;
 pub mod tutorial_cards;
 // A fixture only the other binary's modules use is dead code in this one.
+pub mod firewall;
 #[allow(dead_code)]
 pub mod fixtures;
 pub mod flashback;

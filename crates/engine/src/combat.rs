@@ -452,6 +452,8 @@ pub fn why_cannot_declare_in(auras: &AuraTable<'_>, attacker: &CardInstance) -> 
     if has_keyword(&view.keywords, KeywordKind::CantAttack) {
         return Err(EngineError::new("that unit cannot attack"));
     }
+    // R4591002: an attack-count limit (IA #152 Rate Limiter) refuses declared attacks past it.
+    crate::effects::firewall::attack_limit_refusal(state, attacker)?;
     Ok(())
 }
 
@@ -1188,8 +1190,7 @@ fn fight_declared(sink: &mut EngineSink<'_>, open: DeclaredAttack, since: u32, b
 
     // R1203: the Prime's joiners attack first; anything else fights at once, a substitute's bounce after.
     if crate::scripts::flags_of(sink.state, &attacker).attack_joiners != Some(true) {
-        resolve_combat(sink, &attacker, &target);
-        close_combat(sink, &attacker, &target, false, open.copies_for);
+        fight(sink, &attacker, &target, false, open.copies_for);
         if bounce {
             crate::attack_summon::bounce_after(sink, &attacker.id, since);
         }
@@ -1237,8 +1238,7 @@ pub(crate) fn prime_combat(sink: &mut EngineSink<'_>, owed: &crate::attack_summo
             let attacker = find_instance(sink.state, &open.attacker_id).cloned();
             let target = attack_target_of(sink.state, &open.target_id);
             if let (Some(attacker), Some(target)) = (attacker, target) {
-                resolve_combat(sink, &attacker, &target);
-                close_combat(sink, &attacker, &target, false, open.copies_for);
+                fight(sink, &attacker, &target, false, open.copies_for);
             }
         } else {
             sink.events.push(GameEvent::AttackCancelled {
@@ -1354,6 +1354,8 @@ pub fn declare_attack(
             live.exertion.attacks = Some(attacks);
         }
     }
+    // R4591002: count the attack toward an attack-count limit acting against its side.
+    crate::effects::firewall::note_limited_attacker(sink.state, &attacker);
 
     // R1202, R831006: a random Unit summoned from its controller's hand makes Windfast's attack instead.
     match crate::attack_summon::replace_attacker(sink, &attacker) {
@@ -1592,8 +1594,7 @@ pub(crate) fn force_attack_instead(
 /// a run that made this attack owes its own rest behind it.
 fn forced_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: &AttackTarget) {
     if !has_when_attacks(sink.state, attacker) {
-        resolve_combat(sink, attacker, target);
-        close_combat(sink, attacker, target, true, None);
+        fight(sink, attacker, target, true, None);
         return;
     }
     let owed = OwedWhenAttacks {
@@ -1621,8 +1622,7 @@ fn fight_forced_after(sink: &mut EngineSink<'_>, owed: &OwedWhenAttacks) {
     {
         return;
     }
-    resolve_combat(sink, &attacker, &target);
-    close_combat(sink, &attacker, &target, true, None);
+    fight(sink, &attacker, &target, true, None);
 }
 
 /// §4.2 step 2: an attack is made on an enemy unit or the enemy hero, forced or not (R173).
@@ -2314,12 +2314,27 @@ pub fn run_owed_combat_copies(sink: &mut EngineSink<'_>, item: &WorkItem) {
 ///
 /// MD-D20, R1123: when `copies_for` names a player, that player's fresh copies of what the two
 /// combatants destroyed come first, right after the check and before `afterAttack`.
+/// R4591003: a combat fought through one call — `resolve_combat`, then `close_combat` reading the
+/// same event window, so the defender's `afterAttacked` facts sum the hits this combat landed.
+fn fight(
+    sink: &mut EngineSink<'_>,
+    attacker: &CardInstance,
+    target: &AttackTarget,
+    forced: bool,
+    copies_for: Option<PlayerId>,
+) {
+    let fought_from = sink.events.len();
+    resolve_combat(sink, attacker, target);
+    close_combat(sink, attacker, target, forced, copies_for, fought_from);
+}
+
 fn close_combat(
     sink: &mut EngineSink<'_>,
     attacker: &CardInstance,
     target: &AttackTarget,
     forced: bool,
     copies_for: Option<PlayerId>,
+    fought_from: usize,
 ) {
     let snapshot = live_or(sink.state, attacker);
     // MD-C26: the defender as it fought, before the closing check; a pure read (no rng), so replays hold.
@@ -2355,7 +2370,16 @@ fn close_combat(
         destroyed_enemy: destroyed_an_enemy(sink, &snapshot, from).then_some(true),
         check_only: None,
     };
-    combatant_hooks(sink, snapshot, defender_snapshot, target, forced, since, from);
+    combatant_hooks(
+        sink,
+        snapshot,
+        defender_snapshot,
+        target,
+        forced,
+        since,
+        from,
+        fought_from,
+    );
     if !allies.holders.is_empty() && sink.state.result.is_none() {
         if is_paused(sink) {
             owe_engine_hook(sink, &allies);
@@ -2363,6 +2387,23 @@ fn close_combat(
             answer_ally_attack(sink, allies, None);
         }
     }
+}
+
+/// R4591003 (IA #156 Mirror Firewall): the damage the defender took in its combat — the sum of the
+/// `Damage` amounts this combat's window landed on it, after Armor (0 when Divine Shield took the
+/// hit, which lands no `Damage`). `None` when nothing landed, so a combat with no such hit owes no
+/// new JSON (D14).
+fn damage_taken_in(sink: &EngineSink<'_>, defender_id: &str, fought_from: usize, from: usize) -> Option<i32> {
+    let taken: i32 = sink.events[fought_from.min(sink.events.len())..from.min(sink.events.len())]
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::Damage {
+                target_id, amount, ..
+            } if target_id == defender_id => Some(*amount),
+            _ => None,
+        })
+        .sum();
+    (taken > 0).then_some(taken)
 }
 
 /// MD-C26: the attacker's `afterAttack`, then the defender's `afterAttacked`, each when it has one.
@@ -2374,6 +2415,7 @@ fn combatant_hooks(
     forced: bool,
     since: u32,
     from: usize,
+    fought_from: usize,
 ) {
     let attacker_id = snapshot.id.clone();
     let hooked = crate::scripts::script_of(sink.state, &snapshot)
@@ -2416,6 +2458,7 @@ fn combatant_hooks(
             .after_attacked
             .is_some()
     {
+        let damage_taken = damage_taken_in(sink, &defender.id, fought_from, from);
         let owed = OwedAfterAttacked {
             defender_id: defender.id.clone(),
             attacker_id,
@@ -2424,6 +2467,7 @@ fn combatant_hooks(
             since,
             defender_survived: None,
             attacker_survived: None,
+            damage_taken,
             check_only: None,
         };
         if is_paused(sink) {
@@ -2532,14 +2576,16 @@ pub fn run_owed_after_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
 pub const AFTER_ATTACKED_WORK: &str = "@afterAttacked";
 
 /// The facts a combat hands its defender's `afterAttacked` hook, in its `ctx.data`
-/// (`after_attacked_of` reads them back): the attacker's id, whether the attack was forced (R53), and
-/// whether the attacker survived the closing check. The attacker's hook runs first (MD-C26).
+/// (`after_attacked_of` reads them back): the attacker's id, whether the attack was forced (R53),
+/// whether the attacker survived the closing check, and the damage the defender took in that combat
+/// (R4591003, 0 when nothing landed). The attacker's hook runs first (MD-C26).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AfterAttackedFacts {
     pub attacker_id: String,
     pub forced: bool,
     pub attacker_survived: bool,
+    pub damage_taken: i32,
 }
 
 /// The combat facts an `afterAttacked` hook was handed, or `None` outside one.
@@ -2548,10 +2594,12 @@ pub fn after_attacked_of(ctx: &crate::script::EffectContext<'_>) -> Option<After
     let attacker_id = data.get("attackerId")?.as_str()?.to_string();
     let forced = data.get("forced")?.as_bool()?;
     let attacker_survived = data.get("attackerSurvived")?.as_bool()?;
+    let damage_taken = data.get("damageTaken").and_then(Value::as_i64).unwrap_or(0) as i32;
     Some(AfterAttackedFacts {
         attacker_id,
         forced,
         attacker_survived,
+        damage_taken,
     })
 }
 
@@ -2572,6 +2620,10 @@ struct OwedAfterAttacked {
     /// Judged once, beside it: whether the attacker is still on the field it attacked from.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     attacker_survived: Option<bool>,
+    /// R4591003: the damage the defender took in the combat, judged as the hook first runs. Set
+    /// only when above 0, so a combat with no such hit owes no new JSON (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    damage_taken: Option<i32>,
     /// The hook is done and only the state check that follows it is owed. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     check_only: Option<bool>,
@@ -2626,6 +2678,9 @@ fn run_after_attacked(sink: &mut EngineSink<'_>, owed: &OwedAfterAttacked, pause
     data.insert("attackerId".to_string(), json!(owed.attacker_id));
     data.insert("forced".to_string(), json!(owed.forced));
     data.insert("attackerSurvived".to_string(), json!(attacker_survived));
+    if let Some(damage_taken) = owed.damage_taken {
+        data.insert("damageTaken".to_string(), json!(damage_taken));
+    }
     if !defender_survived {
         data.insert(crate::prompts::SELF_KEY.to_string(), to_json(&owed.snapshot));
     }

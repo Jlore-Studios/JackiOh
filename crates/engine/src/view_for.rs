@@ -1286,6 +1286,8 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ModifierKind::HeroArmor { amount } => format!("Your hero has {amount} Armor until your next turn"),
         // MD-C21: Tranquility's immunity badge.
         ModifierKind::HeroImmune => "Your hero is immune to damage until your next turn".to_string(),
+        // R4591004: Impenetrable's immunity badge.
+        ModifierKind::UnitsImmune => "Your Units are immune to damage until your next turn".to_string(),
         // R4353020: S+ #79 A Glimpse into the Endless Sea's, for the rest of the game.
         ModifierKind::FatigueImmune => "You are immune to fatigue damage".to_string(),
         ModifierKind::ReplacePlays { def_id, radiant } => {

@@ -187,6 +187,40 @@ pub struct StarshipPieceRecord {
     pub radiant: Option<bool>,
 }
 
+/// R4591000 (IA #148 Quarantine): a set Attack this turn (`CardInstance.attack_this_turn`,
+/// `effects::firewall::set_attack_this_turn`): the Attack `layers` reads instead of every other
+/// layer while `turn` is the game's. A status, never text: R78's reset takes it off as the card
+/// leaves the field. Absent on every other card, so a game nothing sets an Attack in serializes
+/// and hashes as before (D14).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnAttack {
+    pub turn: i32,
+    pub attack: i32,
+}
+
+/// R4591001 (IA #157 Containment Field): a timed "can't attack or be attacked"
+/// (`CardInstance.contained`, `effects::firewall::contain_until_next_turn`): the bars
+/// `restrictions::cannot_attack` and `cannot_be_attacked` read. It ends as its caster's next turn
+/// begins — the turn stamped as it lands, never worked out later (as the thaw is stamped, R49) —
+/// or when the Unit leaves the field. A status, never text: R78's reset takes it off with the card
+/// leaving the field. Absent on every other card (D14).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct ContainedUntil {
+    pub until_turn: i32,
+}
+
 /// B3.3, R385, R638: a card's Brittle count and the turn it started (`CardInstance.brittle`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
@@ -506,6 +540,16 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub started_in: Option<PlayerId>,
+    /// R4591000: this Unit's Attack is set to `attack` while the game's turn is `turn`
+    /// (`effects::firewall::attack_set_this_turn`), read after every other Attack layer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub attack_this_turn: Option<TurnAttack>,
+    /// R4591001: this Unit can't attack or be attacked until its caster's next turn begins
+    /// (`effects::firewall::is_contained`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub contained: Option<ContainedUntil>,
 }
 
 /// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
@@ -759,6 +803,11 @@ pub enum ModifierKind {
     /// damage instance to it is 0 (a cap of 0 `damage::hero_damage_cap` reads at §4.4 step 3).
     /// Expiry is R757's Armor Up expiry, so it is gone as this player's next turn begins.
     HeroImmune,
+    /// R4591004 (IA #168 Impenetrable): this player's Units are immune to damage — every damage
+    /// instance to one of them is no damage instance at all, so Divine Shield stays (as in
+    /// R1849000). Expiry is R757's Armor Up expiry, so it is gone as this player's next turn
+    /// begins. Covers every Unit the player controls while it holds, summoned later ones included.
+    UnitsImmune,
     // ---- Meditative+ (docs/meditative-plus-set.md MP5, issue #1180) ----
     /// R1180001 (Meditative+ #11 Living Mana Potion): "You have Spell Damage +N this turn" — added to
     /// this player's Spell Damage, the one sum §4.4 step 0 reads (`damage::spell_damage_of`), while it
@@ -1230,6 +1279,13 @@ pub struct TurnLog {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub played_before_end: Option<i32>,
+    /// R4591002 (IA #152 Rate Limiter): the ids of the Units that attacked on this turn while an
+    /// attack limit acted, in the order they first attacked — beside `played_before_end`. A Unit
+    /// that attacked and then left the field still counts, and one already counted may attack
+    /// again. Written only while a limit acts, so a game with no limit serializes as before (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub attackers: Option<Vec<String>>,
 }
 
 /// `PlayerState.hero`.
@@ -2988,6 +3044,8 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         shared_chain: None,
         split_chain: None,
         started_in: None,
+        attack_this_turn: None,
+        contained: None,
     };
     *next_id += 1;
     // R3548002: minting a Warhero Token starts its worth at 0, wherever the card is minted; R3538002:

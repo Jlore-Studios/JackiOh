@@ -573,6 +573,12 @@ pub struct StaticFlags {
     /// B5 E35: this unit neither attacks nor is attacked, declared or forced.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cant_attack_or_be_attacked: Option<bool>,
+    /// R4591002 (IA #152 Rate Limiter): while this card acts on the field, its controller's
+    /// opponent can't attack with more than this many Units each turn — declared attacks only,
+    /// counted in turn order across the field, so a Unit already counted may attack again. With
+    /// several limits, the lowest holds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opponent_attack_limit: Option<i32>,
     /// MD-B1, R940: while this card acts on the field, harmful effects whose card filter names a tribal tag
     /// can neither pick it nor reach it through scopes; combat bonuses against defender tags do not apply.
     #[serde(default, skip_serializing_if = "Option::is_none")]

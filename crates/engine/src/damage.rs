@@ -466,6 +466,14 @@ fn land(
         return Landed::default();
     }
 
+    // R4591004: a hit on a Unit immune to damage is no damage instance at all — before Divine
+    // Shield, which stays, and with no Trample excess to send on (as in R1849000).
+    if let Some(live) = &unit
+        && crate::effects::firewall::units_immune_now(sink.state, live)
+    {
+        return Landed::default();
+    }
+
     // R1849004, step 0a: on its controller's own turn, a hero's hit goes to the opponent's hero, up to
     // each own-turn redirect's cap this turn; what no cap takes lands here as the rest of the same hit.
     if let DamageTarget::Hero { player } = target

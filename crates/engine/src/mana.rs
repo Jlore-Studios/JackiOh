@@ -326,7 +326,10 @@ pub fn modifier_is_live(state: &GameState, modifier: &PlayerModifier) -> bool {
     // MD-C21: Tranquility's immunity holds the same way.
     if matches!(
         modifier.kind,
-        ModifierKind::HeroArmor { .. } | ModifierKind::HeroImmune | ModifierKind::UnitsAttack { .. }
+        ModifierKind::HeroArmor { .. }
+            | ModifierKind::HeroImmune
+            | ModifierKind::UnitsImmune
+            | ModifierKind::UnitsAttack { .. }
     ) {
         return true;
     }
