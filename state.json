@@ -44433,6 +44433,14 @@
         "title": "Patch: seedGame checks the route resolved its fixture decks",
         "verdict": "came to nothing",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-24T18:57:51Z",
+        "number": 4769,
+        "reason": "the blur is cosmetic (R3548001), hides one field of a card in its owner's view alone, and the card's other fields usually still name it, so a player who knows the cards reads through it as the AI does. No player can see the AI read past its own blur, and the issue says self-play can't measure any gain. That leaves a hard change to `redact` and `determinize`, with new sampling in every decision, for nothing anyone would notice.",
+        "title": "Patch: the AI reads its Tipsy-blurred cards as blurred",
+        "verdict": "came to nothing",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "declined": [
@@ -45219,6 +45227,13 @@
         "number": 4767,
         "title": "Patch: seedGame checks the route resolved its fixture decks",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-24T18:57:51Z",
+        "number": 4769,
+        "reason": "the blur is cosmetic (R3548001), hides one field of a card in its owner's view alone, and the card's other fields usually still name it, so a player who knows the cards reads through it as the AI does. No player can see the AI read past its own blur, and the issue says self-play can't measure any gain. That leaves a hard change to `redact` and `determinize`, with new sampling in every decision, for nothing anyone would notice.",
+        "title": "Patch: the AI reads its Tipsy-blurred cards as blurred",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
