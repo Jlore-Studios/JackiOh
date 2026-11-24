@@ -1685,6 +1685,8 @@ export type PublicCardStat = {
   winRateHigh?: number | null;
   adjustedLow?: number | null;
   adjustedHigh?: number | null;
+  /** R4552001: how far playing the card typically moves its player's chance of winning, a fraction; null with no data. */
+  decisiveness?: number | null;
   /**
    * R3022000: the card's balance tier from its adjusted rate and range: S above the band and sure of it (a nerf
    * candidate), F below it and sure of it (a buff candidate), A to D the band's quarters. Null below the sample
@@ -1723,6 +1725,8 @@ export type PublicCreatedStat = {
   adjustedWinRate?: number | null;
   adjustedLow?: number | null;
   adjustedHigh?: number | null;
+  /** R4552001: how far playing the card typically moves its player's chance of winning, a fraction; null with no data. */
+  decisiveness?: number | null;
   /** R4082000: the card's balance tier from its adjusted rate and range (R3022000); null below the floor. */
   tier?: CardTier | null;
   hasEnoughGames: boolean;
@@ -1739,6 +1743,8 @@ type PublicCreatedTiers = {
   cards: number;
   /** The win rate of the seats that make an average Created card, which reads 50%. */
   baseline: number;
+  /** R4552001: the typical Created card's decisiveness, a fraction. */
+  decisiveness?: number;
 };
 
 /** R3022000: what the tiers are read against: the field of every card in the report, and the band, as fractions. */
@@ -1755,6 +1761,8 @@ export type PublicStatsTiers = {
   bandHigh: number;
   /** R4082000: the field the Created cards are read against; absent from a server deployed before it. */
   created?: PublicCreatedTiers;
+  /** R4552001: the typical deck card's decisiveness, a fraction. */
+  decisiveness?: number;
 };
 
 /** R654, R1367000: which records a window's figures count. */

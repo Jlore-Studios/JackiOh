@@ -19,6 +19,11 @@ export function adjustedText(rate: number | null | undefined): string {
   return typeof rate === "number" ? `${(rate * 100).toFixed(1)}%` : "—";
 }
 
+/** R4552001: a card's decisiveness as the plain swing it is, to a tenth of a point ("±14.2%"); "—" when there is none. */
+export function decisivenessText(value: number | null | undefined): string {
+  return typeof value === "number" ? `±${(value * 100).toFixed(1)}%` : "—";
+}
+
 /** R3022000: a card's tier chip, or "—" below the floor or from a server deployed before tiers. */
 export function TierChip({ tier, testid }: { tier: CardTier | null | undefined; testid: string }): ReactElement {
   if (!tier) return <span data-testid={testid}>—</span>;

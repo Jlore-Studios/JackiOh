@@ -88,6 +88,7 @@ pub mod strike_back;
 pub mod style;
 pub mod support;
 pub mod surface;
+pub mod swing_turns;
 pub mod tradable;
 pub mod training_grounds;
 pub mod turn_hooks;
