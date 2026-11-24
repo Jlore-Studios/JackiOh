@@ -18298,11 +18298,6 @@
       "owner": "claude-7",
       "owner_since": "2026-11-24T07:15:45Z",
       "owner_why": "it plans it",
-      "paused": {
-        "at": "2026-11-24T09:20:22Z",
-        "interrupt": "usage",
-        "provider": "claude-7"
-      },
       "pending_request": false,
       "planned_at": "2026-11-24T07:42:00Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
