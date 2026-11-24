@@ -20722,6 +20722,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-24T14:28:26Z",
@@ -20732,9 +20733,12 @@
       "planned_by_id": "muse",
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
+      "pr": 4754,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-11-24T14:20:57Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "medium",
       "run_id": "45417384096",
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-24T14:43:55Z",
@@ -20742,7 +20746,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:7134218218"
-      ]
+      ],
+      "verdict_rounds": 0
     },
     "4745": {
       "action": "build",
