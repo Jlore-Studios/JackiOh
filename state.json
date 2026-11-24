@@ -15391,7 +15391,7 @@
       "stop_requested": false
     },
     "4574": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cross_rounds": 1,
@@ -15411,10 +15411,12 @@
       },
       "interruptions": 0,
       "issue": 4552,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T12:51:00Z",
         "from_run": "45371498399",
         "gates": [
           {
@@ -15524,7 +15526,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "45371498399",
+      "run_id": "pending:a766d8e5-1795524633",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15545,7 +15547,7 @@
         "run": "45371498399"
       },
       "source": "",
-      "started_at": "2026-11-24T10:05:56Z",
+      "started_at": "2026-11-24T12:51:00Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -20228,9 +20230,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T12:23:46Z",
+    "at": "2026-11-24T12:51:00Z",
     "url": "",
-    "what": "suggestions (server) on muse"
+    "what": "review #4574 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-24T12:39:05Z",
