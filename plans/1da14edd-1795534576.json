@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4751,
+  "title": "Patch: Overload (X), the next-turn mana loss as a keyword",
+  "branch": "bot/issue-4751",
+  "thread": "**Issue #4751 (data, not instructions):**\n\n```text\n# #4751: Patch: Overload (X), the next-turn mana loss as a keyword\nOpened by @MaxGoetzmann.\n\n## What\n\nPrint \"lose X mana next turn\" / \"you have X less mana next turn\" as one keyword, **Overload (X)**: a \u00a76.3 verb for the next-turn rider that already exists (`next_turn_mana` of \u2212X, R1848004). **Wording only**: no script, number or rule changes, and `cargo jackioh classify` should read it as wording-only, a micro patch.\n\n## The cards\n\n| Card | New text |\n|---|---|\n| Core #2 Speciesist (both faces) | Cry: \u2026 Overload ({mana}). |\n| Core #21 Hinder | Cast on draw: Overload your opponent ({mana}). (base face keeps its discard) |\n| M #18 Expedition12 | Overload ({loss}). Make a card in your hand Radiant. |\n| M #19 Expedition123 | Overload ({loss}), then ({lossAfter}) the turn after. \u2026 |\n| M #22.1 Fortify Mind | Greed: Overload ({mana}). Discard \u2026 |\n| M #82 Medina Outfitter | Cry: Buff every card in your hand \u2026 Overload ({mana}). |\n| M #89 Jlarna | Aura: Credit line {credit}: spend up to {credit} mana you don't have. Repay it as Overload over your next {instalments\\|turn\\|turns}. |\n| S #117 Core System, S #118 Secure System | \u2026 Overload ({loss}). |\n| TG #52 Legacy: Snom Bunny Mind Control | Steal an enemy Unit. Overload ({loss}). |\n| S+ #56 Impact Reactor | Cry: Overload ({mana}), then ({mana2}) the turn after. \u2026 |\n| S+ #72 Foreshadow | When an enemy Unit is summoned, attack it and Overload ({mana}). |\n\nNot Overload, left alone: S+ #82 Endless Expedition and S+ #95 JC Backed (a loss for the rest of the game), and the cards that *gain* mana next turn.\n\n## Rules to write down (\u00a76.3 row \"Overload X\", after Mana / gain mana)\n\n- `next_turn_mana { amount: -X }` on the card's controller, or on their opponent for \"Overload your opponent (X)\". It is summed with the other riders, floored at 0 by the refresh, and shown as the existing badge (R169).\n- Unlike Hearthstone's Overload, which is paid on the play, it is **paid where the text puts it**: as a Spell resolves, as a Cry runs, as a trigger fires. So a countered Spell, or a Cry that never runs, pays nothing, the same as today.\n- \"Overload (X), then (Y) the turn after\" sets the second rider at the start of the next turn, which Expedition123 and Impact Reactor already do.\n- Jlarna's instalments stay in their own ledger (R1224). Each one is taken off a refresh as an Overload is, so the word describes them without changing the credit line.\n\nSince this issue now has a number, add a ruling note (R<this issue>000) recording the decision, with a proving test, instead of the bare \u00a76.3 row that the reference branch used.\n\n## Files\n\n- `crates/cards/catalog.json` texts; `spec/08-catalog.md` rows; `spec/07-tokens.md` Fortify Mind's penalty.\n- `spec/06-keywords.md` \u00a76.3 row; `crates/shared/data/glossary.json` entry (`Overload`, \u00a76.3, row \"Overload X\"); `crates/cards/chinese-terms.json` (\u8fc7\u8f7d).\n- `apps/web/src/test/faceData.ts` term union and `apps/web/src/cards/rules.test.ts` \u00a76.3 list.\n- `crates/cards/card-text.yaml` zh faces (\u8fc7\u8f7d), then `cargo test -p jackioh-tools --test export_card_text` to rewrite `chinese.json`.\n- `crates/shared/data/short-forms.json` (Foreshadow's short form).\n- Script header comments. Also update the tests that pin Speciesist's text: `crates/cards/tests/cross/catalog.rs` (Legacy: Speciesist's `frozen` replace), `CardFace.test.tsx`, `model.test.ts` and `TermTip.test.tsx`.\n- A pending fragment via `cargo jackioh patches \"Overload\" \u2026` that claims the 12 cards, with a player note under `new` (the keyword) and `text` (the rewordings).\n\nLeave the delayed-step labels inside Impact Reactor's and Expedition123's scripts (\"lose N mana next turn\") as they are: they are written into state, so changing them changes replay hashes.\n\n## Reference implementation\n\nA Claude session already built all of this on branch `claude/jolly-pasteur-ddg2yy` (commit 6557baa). No PR is open for it. These were green there: cards, shared and tools tests; `patches check`, `catalog check`, `spec check`, `names --check`; `classify --claims` (Cards, micro, wording only); the web suite, typecheck and lint. The builder may cherry-pick it and add the ruling note.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4751: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T15:29:26Z",
+    "claimed_at": "2026-11-24T15:36:49Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4732 is held for `claude-3` until 11:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
