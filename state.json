@@ -18666,13 +18666,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
-        "sha": "52343d75d505518c5ad7f7c5ef9bbf2c6ab68715",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "45353770308",
+            "tier": "medium"
+          }
+        ],
+        "sha": "32472c55854f5a0e1e55a94e65c3e9c0e7b67da8",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "4695": {
