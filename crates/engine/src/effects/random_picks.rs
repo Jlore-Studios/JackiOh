@@ -6,13 +6,29 @@ use serde_json::{Map, Value, json};
 
 use crate::draw::add_to_hand as put_in_hand;
 use crate::prelude::json_as;
-use crate::script::Effect;
+use crate::script::{Effect, EffectContext};
 use crate::state::CardInstance;
 use crate::zones::active_units_of;
 
 use super::buff::{buff, grant_keyword};
-use super::targets::{PlayerSpec, player_of};
-use crate::wire::Keyword;
+use super::targets::{BoardScope, PlayerSpec, ScopeSide, cards_in_scope, player_of};
+use crate::wire::{Keyword, Row};
+
+/// The pool every "random enemy permanent" draws from (#4763): `ctx.controller`'s opponent's
+/// permanents through `cards_in_scope`, in R68 order: each unit pile's top (a card under it is not on
+/// the field, R13), carried and standing Units (R446, R1081000), then each backrow card, face-down
+/// ones included. A Dormant card is passed by (R4322000), as is a Unit immune to a Spell's effects
+/// when a Spell draws (R4424000), and a card across a slash from the source (R3554003). It only reads:
+/// the caller draws from it inside its own effect, distinct cards (R60), and an empty pool draws
+/// nothing (R129).
+pub fn enemy_permanent_pool(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
+    let scope = BoardScope {
+        side: Some(ScopeSide::Enemy),
+        rows: Some(vec![Row::Units, Row::Backrow]),
+        ..BoardScope::default()
+    };
+    cards_in_scope(ctx, &scope)
+}
 
 /// `buffRandomUnit`'s argument: `{ player? } & BuffAmount`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
