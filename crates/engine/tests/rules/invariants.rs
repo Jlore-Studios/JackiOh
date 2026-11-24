@@ -4015,6 +4015,50 @@ mod i21 {
     }
 
     #[test]
+    fn r4623000_the_state_check_s_evolution_of_an_immune_unit_is_no_spell_s_and_i21_allows_it() {
+        use crate::rules::fixtures::evolution::{FULL, register_evolution_fixtures};
+
+        // p1's "Evolves when all your unit zones are full" Unit, Immune to Spells, one zone short of full.
+        let mut state = playing("r4623000");
+        register_evolution_fixtures();
+        let id = put(&mut state, FULL, slot(P1, Row::Units, 1), json!({})).id;
+        find_instance_mut(&mut state, &id)
+            .expect("the evolving Unit")
+            .granted_keywords
+            .push(Keyword::ImmuneToSpells);
+        let beside = put(&mut state, PLAIN, slot(P1, Row::Units, 2), json!({})).id;
+        for lane in 3..UNIT_ZONES {
+            put(&mut state, PLAIN, slot(P1, Row::Units, lane), json!({}));
+        }
+        // A Spell's summon fills the row, and the settled state check evolves the Unit by its own
+        // condition (R3536001): its `evolved` lands in the Spell's run, before any marker of its own.
+        let mut after = state.clone();
+        let mut events = vec![marker(SPELL)];
+        events.extend(settled(
+            &mut after,
+            effects::summon(json_as(json!({ "defId": PLAIN }))),
+        ));
+        assert_eq!(
+            find_instance(&after, &id).and_then(|card| card.evolved),
+            Some(true)
+        );
+        let evolved = events
+            .iter()
+            .position(|event| matches!(event, GameEvent::Evolved { instance_id, .. } if *instance_id == id))
+            .expect("the state check evolved it");
+        assert!(
+            !events[1..evolved]
+                .iter()
+                .any(|event| matches!(event, GameEvent::HookResolving { .. })),
+            "{events:?}"
+        );
+        assert_eq!(i21(&state, &events, &after), Vec::<String>::new());
+        // With its condition not holding after the step, the `evolved` is the Spell's (its `evolve` verb).
+        let opened = moved(&after, &beside, OffFieldZone::Graveyard);
+        only(&i21(&state, &events, &opened), &id, &["I21", "evolved"]);
+    }
+
+    #[test]
     fn r4508003_tears_of_the_kwzki_tree_s_world_makes_an_immune_unit_radiant_and_i21_allows_it() {
         let (before, id) = immune_board("r4508003");
         let mut after = before.clone();

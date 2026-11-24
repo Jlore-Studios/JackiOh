@@ -8,7 +8,7 @@
 
 use std::sync::LazyLock;
 
-use jackioh_engine::effects::{damage, destroy};
+use jackioh_engine::effects::{damage, destroy, forced_attacks_on};
 use jackioh_engine::testkit::*;
 
 use super::damage_combat::note;
@@ -181,6 +181,9 @@ pub static flier: LazyLock<CardDef> = LazyLock::new(|| {
         json!([{ "kind": "Flying" }]),
     )
 });
+/// Moths to the Flame's shape with E35's lane lock: a 1/4 only a Unit in its lane may attack; at its
+/// controller's start of turn every enemy Unit attacks it (R53).
+pub static lane_lure: LazyLock<CardDef> = LazyLock::new(|| plain_unit("lane_lure", 9219, 1, 4));
 /// A 2/2 Divine Shield: the shield takes the hit first, so no window opens.
 pub static screen: LazyLock<CardDef> = LazyLock::new(|| {
     unit(
@@ -248,6 +251,7 @@ pub static MB22_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         ram.clone(),
         lane_locked.clone(),
         flier.clone(),
+        lane_lure.clone(),
     ]
 });
 
@@ -362,6 +366,21 @@ pub static MB22_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
                     attacked_only_from_lane: Some(true),
                     ..Default::default()
                 }),
+                ..Script::default()
+            }),
+        ),
+        (
+            lane_lure.id.clone(),
+            both(Script {
+                static_flags: Some(StaticFlags {
+                    attacked_only_from_lane: Some(true),
+                    ..Default::default()
+                }),
+                start_of_turn: Some(hook(|_ctx| {
+                    vec![forced_attacks_on(json_as(
+                        json!({ "target": { "of": "self" }, "attackers": "enemy" }),
+                    ))]
+                })),
                 ..Script::default()
             }),
         ),

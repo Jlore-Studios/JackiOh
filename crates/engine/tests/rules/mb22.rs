@@ -614,6 +614,117 @@ fn r1202_a_substitute_barred_from_its_lane_spends_with_no_declaration_and_the_mo
     assert_eq!(monitor.after(&result.events, &result.state), Vec::<String>::new());
 }
 
+/// The `summoned` lane and the `bounced` count of `id` among `events`: where a substitute landed, and
+/// whether it went home.
+fn summoned_and_bounced(events: &[GameEvent], id: &str) -> (Option<i32>, usize) {
+    let lane = events.iter().find_map(|event| match event {
+        GameEvent::Summoned {
+            instance_id, lane, ..
+        } if instance_id == id => Some(*lane),
+        _ => None,
+    });
+    let bounced = events
+        .iter()
+        .filter(|event| matches!(event, GameEvent::Bounced { instance_id, .. } if instance_id == id))
+        .count();
+    (lane, bounced)
+}
+
+#[test]
+fn r1202_a_forced_substitute_barred_from_its_lane_declares_nothing_and_goes_home() {
+    // R1849005, E35: Windfast in the lure's lane may be forced at it, but its substitute lands in the
+    // leftmost open zone, lane 1, from which the lure cannot be attacked: no attack, and home it goes.
+    let mut state = playing("mb22-forced-lane");
+    state = act(&state, end_turn(P1));
+    clear_hands(&mut state);
+    let windfast = put(&mut state, &fx::windfast.id, slot(P2, Row::Units, 2), json!({}));
+    let lure = put(&mut state, &fx::lane_lure.id, slot(P1, Row::Units, 2), json!({}));
+    let offered = in_hand(&mut state, &fx::ally.id, P2, 1).remove(0);
+
+    let mut monitor = create_invariant_monitor(&state);
+    // I3 names the cards `put` placed with no entry event; nothing else may be found.
+    let found: Vec<String> = monitor
+        .before(&state, P2, &json_as(end_turn(P2)))
+        .into_iter()
+        .filter(|finding| !finding.starts_with("I3"))
+        .collect();
+    assert_eq!(found, Vec::<String>::new());
+    let result = act_result(&state, end_turn(P2));
+    assert!(result.error.is_none(), "{:?}", result.error);
+    assert_eq!(
+        summoned_and_bounced(&result.events, &offered.id),
+        (Some(1), 1),
+        "the substitute was summoned into lane 1 and bounced"
+    );
+    assert_eq!(
+        declared_attacks(&result.events),
+        Vec::new(),
+        "no attack is declared"
+    );
+    let struck: Vec<(String, i32)> = damaged(&result.events)
+        .into_iter()
+        .filter(|(id, _)| [&lure.id, &offered.id, &windfast.id].contains(&id))
+        .collect();
+    assert_eq!(struck, Vec::new(), "no combat is fought");
+    assert!(!on_field(&result.state, &offered.id));
+    assert!(
+        result.state.players[P2]
+            .hand
+            .iter()
+            .any(|card| card.id == offered.id),
+        "the base face bounced the substitute"
+    );
+    assert_eq!(monitor.after(&result.events, &result.state), Vec::<String>::new());
+}
+
+#[test]
+fn r1202_a_declared_substitute_barred_from_its_lane_goes_home_on_the_base_face() {
+    // The base face bounces its substitute "whether or not it fought": one barred from its target's
+    // lane goes home too.
+    let mut state = playing("mb22-declared-lane");
+    clear_hands(&mut state);
+    let windfast = put(&mut state, &fx::windfast.id, slot(P1, Row::Units, 2), json!({}));
+    let target = put(
+        &mut state,
+        &fx::lane_locked.id,
+        slot(P2, Row::Units, 2),
+        json!({}),
+    );
+    let offered = in_hand(&mut state, &fx::ally.id, P1, 1).remove(0);
+
+    let mut monitor = create_invariant_monitor(&state);
+    let action = attack_action(P1, &windfast.id, &target.id);
+    let found: Vec<String> = monitor
+        .before(&state, P1, &json_as(action.clone()))
+        .into_iter()
+        .filter(|finding| !finding.starts_with("I3"))
+        .collect();
+    assert_eq!(found, Vec::<String>::new());
+    let result = act_result(&state, action);
+    assert!(result.error.is_none(), "{:?}", result.error);
+    assert_eq!(
+        summoned_and_bounced(&result.events, &offered.id),
+        (Some(1), 1),
+        "the substitute was summoned into lane 1 and bounced"
+    );
+    assert_eq!(
+        declared_attacks(&result.events),
+        Vec::new(),
+        "no attack is declared"
+    );
+    assert!(!on_field(&result.state, &offered.id));
+    assert!(
+        result.state.players[P1]
+            .hand
+            .iter()
+            .any(|card| card.id == offered.id),
+        "the base face bounced the substitute"
+    );
+    let spent = find_instance(&result.state, &windfast.id).expect("Windfast still on the field");
+    assert!(spent.exertion.attacked, "Windfast's attack is spent");
+    assert_eq!(monitor.after(&result.events, &result.state), Vec::<String>::new());
+}
+
 #[test]
 fn r1202_r2248000_a_flying_unit_in_hand_makes_the_attack_from_the_backrow_of_a_full_unit_row() {
     let mut state = playing("mb22-flier");
