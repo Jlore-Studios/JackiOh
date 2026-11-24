@@ -18492,6 +18492,7 @@
       "run_id": "45337691603",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 490,
       "started_at": "2026-11-24T06:04:02Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -40751,9 +40752,33 @@
         "title": "Patch: the AI goes for a lethal that only its searched world shows once another sampled world confirms it",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "b247d2a98407e0ae8e0d3ac09aa04cc4a57c3eb5",
+        "issue": 4619,
+        "merged_at": "2026-11-24T06:29:49Z",
+        "n": 490,
+        "pr": 4684,
+        "queued_at": "2026-11-24T06:29:49Z",
+        "sha": "e361b8a82fa23a640986a50472252408e66ccd7b",
+        "status": "queued",
+        "title": "Patch: the browser's Back and the phone's back swipe close an open replay, as its corner arrow does, instead of leaving the screen",
+        "tries": 0
       }
     ],
-    "count": 489
+    "count": 490
   },
   "statistics": {
     "at": "2026-11-24T06:18:14Z"
