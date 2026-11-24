@@ -21642,9 +21642,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T18:17:37Z",
+    "at": "2026-11-24T18:27:37Z",
     "url": "",
-    "what": "build #4761 on claude-3"
+    "what": "suggestions (server) on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-24T18:13:57Z",
@@ -45065,13 +45065,22 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-24T18:04:46Z",
-    "last_area": "ai",
-    "last_run": "2026-11-24T18:04:46Z",
+    "idle_since": "2026-11-24T18:27:37Z",
+    "last_area": "server",
+    "last_run": "2026-11-24T18:27:37Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {},
+    "running": {
+      "1": {
+        "area": "server",
+        "count": 2,
+        "last_run": "2026-11-24T18:27:37Z",
+        "provider": "claude-4",
+        "run_id": "pending:bf159f43-1795544821",
+        "taken_asks": []
+      }
+    },
     "taken_asks": []
   },
   "usage": null,
