@@ -2416,6 +2416,40 @@ pub const TIER_A_FROM: f64 = (ADJUSTED_WIN_RATE_CENTER + TIER_BAND_HIGH) / 2.0;
 /// game (`ADJUSTED_WIN_RATE_CENTER`) to tier A's floor, and tier D is below tier C's.
 pub const TIER_C_FROM: f64 = (TIER_BAND_LOW + ADJUSTED_WIN_RATE_CENTER) / 2.0;
 
+/// R4673000: the Normal face's balance band top, tier S above it among the cards' normal faces: its own
+/// lever, starting at All's (`TIER_BAND_HIGH`). The face's rate already sits on its own field's spread, so
+/// the band is not widened by it.
+pub const NORMAL_TIER_BAND_HIGH: f64 = TIER_BAND_HIGH;
+
+/// R4673000: the Normal face's balance band bottom, tier F below it: its own lever, starting at All's
+/// (`TIER_BAND_LOW`).
+pub const NORMAL_TIER_BAND_LOW: f64 = TIER_BAND_LOW;
+
+/// R4673000: the Normal face's tier A floor, halfway from an even game to its band's top: its own lever,
+/// starting at All's (`TIER_A_FROM`).
+pub const NORMAL_TIER_A_FROM: f64 = (ADJUSTED_WIN_RATE_CENTER + NORMAL_TIER_BAND_HIGH) / 2.0;
+
+/// R4673000: the Normal face's tier C floor, halfway from its band's bottom to an even game: its own lever,
+/// starting at All's (`TIER_C_FROM`).
+pub const NORMAL_TIER_C_FROM: f64 = (NORMAL_TIER_BAND_LOW + ADJUSTED_WIN_RATE_CENTER) / 2.0;
+
+/// R4673000: the Radiant face's balance band top, tier S above it among the cards' Radiant faces: its own
+/// lever, starting at All's (`TIER_BAND_HIGH`). The face's rate already sits on its own field's spread, so
+/// the band is not widened by it.
+pub const RADIANT_TIER_BAND_HIGH: f64 = TIER_BAND_HIGH;
+
+/// R4673000: the Radiant face's balance band bottom, tier F below it: its own lever, starting at All's
+/// (`TIER_BAND_LOW`).
+pub const RADIANT_TIER_BAND_LOW: f64 = TIER_BAND_LOW;
+
+/// R4673000: the Radiant face's tier A floor, halfway from an even game to its band's top: its own lever,
+/// starting at All's (`TIER_A_FROM`).
+pub const RADIANT_TIER_A_FROM: f64 = (ADJUSTED_WIN_RATE_CENTER + RADIANT_TIER_BAND_HIGH) / 2.0;
+
+/// R4673000: the Radiant face's tier C floor, halfway from its band's bottom to an even game: its own
+/// lever, starting at All's (`TIER_C_FROM`).
+pub const RADIANT_TIER_C_FROM: f64 = (RADIANT_TIER_BAND_LOW + ADJUSTED_WIN_RATE_CENTER) / 2.0;
+
 // ---------------------------------------------------------------------------------------------
 // The weapon kit (#1841, R1841000–R1841003; SPEC §4.4, §6.2, §6.3)
 // ---------------------------------------------------------------------------------------------

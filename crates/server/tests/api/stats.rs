@@ -3255,3 +3255,326 @@ mod cache_poisoning {
         assert_same_bytes(&responses, PLAYER_STATS_CACHE_TTL_SECONDS);
     }
 }
+
+// R4673000, R4673001: `?face=` on both card routes: each face read against its own field and band, the
+// drill-down's history and drills following it, and its face line.
+mod r4673000_card_faces {
+    use super::*;
+    use jackioh_engine::config::{RADIANT_TIER_BAND_HIGH, RADIANT_TIER_BAND_LOW, STATS_INTERVAL_Z};
+
+    /// Forty Core cards, the field the test reads.
+    const FIELD: [&str; 40] = [
+        "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-007", "core-008",
+        "core-009", "core-010", "core-011", "core-012", "core-013", "core-014", "core-015", "core-016",
+        "core-017", "core-018", "core-019", "core-020", "core-021", "core-022", "core-023", "core-024",
+        "core-025", "core-026", "core-027", "core-028", "core-029", "core-030", "core-031", "core-032",
+        "core-033", "core-034", "core-035", "core-036", "core-037", "core-038", "core-039", "core-040",
+    ];
+
+    /// How p1 met the forty in a game.
+    #[derive(Clone, Copy)]
+    enum Met {
+        /// Played every one, Radiant, and used a Created core-050, Radiant.
+        Radiant,
+        /// Played every one, normal, and used a Created core-050, normal.
+        Normal,
+        /// Never drew one.
+        Unseen,
+    }
+
+    /// `count` live Best of 1 games of p1's forty met as `met`, p1 winning the first `won`; p2 holds core-100
+    /// and plays nothing.
+    fn games(tag: &str, met: Met, won: usize, count: usize) -> Vec<Value> {
+        (0..count)
+            .map(|i| {
+                let (hand, played, radiant): (Vec<&'static str>, Vec<&'static str>, Option<bool>) = match met
+                {
+                    Met::Radiant => (FIELD.to_vec(), FIELD.to_vec(), Some(true)),
+                    Met::Normal => (FIELD.to_vec(), FIELD.to_vec(), Some(false)),
+                    Met::Unseen => (Vec::new(), Vec::new(), None),
+                };
+                make_game_record(
+                    &format!("faces-{tag}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        mode: Some("bo1"),
+                        p1_deck: Some(FIELD.to_vec()),
+                        p1_hand: Some(hand),
+                        p1_played: Some(played),
+                        p1_played_radiant: radiant.map(|flag| vec![flag; FIELD.len()]),
+                        p1_created_used: radiant
+                            .map(|flag| json!([{ "card": "core-050", "turn": 3, "radiant": flag }])),
+                        p2_deck: Some(vec!["core-100"]),
+                        p2_played: Some(Vec::new()),
+                        winner: Some(if i < won { "p1" } else { "p2" }),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    fn card<'a>(data: &'a Value, id: &str) -> &'a Value {
+        find(&data["cards"], "id", &json!(id)).expect("the card is listed")
+    }
+
+    fn close(a: f64, b: f64) -> bool {
+        (a - b).abs() < 1e-9
+    }
+
+    #[tokio::test]
+    async fn r4673000_each_face_reads_its_own_field_and_band() {
+        let app = test_app().await;
+        // Every card: played Radiant in 30 games (24 won), normal in 30 (18 won), never drawn in 30 (12 won).
+        // Its Radiant face is 40 points above its never-drawn games, its normal face 20, as every card's is.
+        let mut records = games("radiant", Met::Radiant, 24, 30);
+        records.extend(games("normal", Met::Normal, 18, 30));
+        records.extend(games("unseen", Met::Unseen, 12, 30));
+        insert_records(&app, records).await;
+
+        let (status, _, all) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
+        assert_eq!(status, 200);
+        let (status, _, radiant) =
+            get_public(&app, "/api/stats/cards?source=live&mode=bo1&face=radiant").await;
+        assert_eq!(status, 200);
+        let (_, _, normal) = get_public(&app, "/api/stats/cards?source=live&mode=bo1&face=normal").await;
+
+        // Each face's field: its own centre, every card alike so its spread is the floor; the bands are its own.
+        let floor = jackioh_engine::config::ADJUSTED_FIELD_SPREAD_FLOOR;
+        for (page, center) in [(&radiant, 0.4), (&normal, 0.2)] {
+            let tiers = &page["tiers"];
+            assert_eq!(tiers["cards"], json!(40), "{tiers}");
+            assert!(close(tiers["center"].as_f64().unwrap(), center), "{tiers}");
+            assert!(close(tiers["spread"].as_f64().unwrap(), floor), "{tiers}");
+            assert_eq!(tiers["baseline"], all["tiers"]["baseline"]);
+        }
+        assert_eq!(
+            (
+                radiant["tiers"]["bandLow"].as_f64(),
+                radiant["tiers"]["bandHigh"].as_f64()
+            ),
+            (Some(RADIANT_TIER_BAND_LOW), Some(RADIANT_TIER_BAND_HIGH))
+        );
+        // All's field reads every card's seen games, both faces together: 30 points over the never-drawn.
+        assert!(
+            close(all["tiers"]["center"].as_f64().unwrap(), 0.3),
+            "{}",
+            all["tiers"]
+        );
+
+        // Each card reads an even game on each face, over that face's 30 games, its win rate and range that
+        // face's; its play rate is All's.
+        let noise = 0.25 * (1.0 / 30.0 + 1.0 / 30.0);
+        let weight = floor * floor / (floor * floor + noise);
+        let half = STATS_INTERVAL_Z * (weight * noise).sqrt();
+        for (page, rate) in [(&radiant, 0.8), (&normal, 0.6)] {
+            let row = card(page, "core-001");
+            assert_eq!(row["games"], json!(30), "{row}");
+            assert_eq!(row["hasEnoughGames"], json!(true));
+            assert!(close(row["winRate"].as_f64().unwrap(), rate), "{row}");
+            let adjusted = row["adjustedWinRate"].as_f64().unwrap();
+            assert!(close(adjusted, 0.5), "{row}");
+            assert!(
+                close(row["adjustedHigh"].as_f64().unwrap(), adjusted + half),
+                "{row}"
+            );
+            assert_eq!(row["tier"], json!(if adjusted >= 0.5 { "B" } else { "C" }));
+            assert_eq!(row["playRate"], card(&all, "core-001")["playRate"]);
+        }
+        assert_eq!(card(&all, "core-001")["games"], json!(90));
+        // p2's card, never played, has no games and no tier on a face.
+        for page in [&radiant, &normal] {
+            let unplayed = card(page, "core-100");
+            assert_eq!(unplayed["games"], json!(0), "{unplayed}");
+            assert_eq!(unplayed["adjustedWinRate"], Value::Null);
+            assert_eq!(unplayed["tier"], Value::Null);
+            assert_eq!(unplayed["hasEnoughGames"], json!(false));
+        }
+
+        // A Created card's faces are the seats that used a copy on each.
+        let created = |page: &Value| {
+            find(&page["created"], "id", &json!("core-050"))
+                .expect("listed")
+                .clone()
+        };
+        assert_eq!(created(&all)["games"], json!(60));
+        assert_eq!(created(&radiant)["games"], json!(30));
+        assert_eq!(created(&normal)["games"], json!(30));
+        assert_ne!(
+            created(&radiant)["adjustedWinRate"],
+            created(&normal)["adjustedWinRate"]
+        );
+    }
+
+    #[tokio::test]
+    async fn r4673001_face_all_and_no_face_answer_the_same_bytes_and_an_unknown_face_reads_all() {
+        let app = test_app().await;
+        let mut records = games("radiant", Met::Radiant, 24, 30);
+        records.extend(games("unseen", Met::Unseen, 12, 30));
+        insert_records(&app, records).await;
+
+        for base in [
+            "/api/stats/cards?source=live&mode=bo1",
+            "/api/stats/cards/core-001?mode=bo1",
+        ] {
+            let (_, _, plain) = get_public(&app, base).await;
+            for face in ["all", "ALL", "sideways", ""] {
+                let (status, _, asked) = get_public(&app, &format!("{base}&face={face}")).await;
+                assert_eq!(status, 200);
+                assert_eq!(asked, plain, "{base} face={face}");
+            }
+            // A face is read whatever its case and spaces.
+            let (_, _, radiant) = get_public(&app, &format!("{base}&face=Radiant")).await;
+            let (_, _, lower) = get_public(&app, &format!("{base}&face=radiant")).await;
+            assert_eq!(radiant, lower, "{base}");
+            assert_ne!(radiant, plain, "{base}");
+        }
+        // The default answer's rows carry no new field.
+        let (_, _, page) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
+        let keys: Vec<&String> = card(&page, "core-001").as_object().unwrap().keys().collect();
+        assert!(
+            !keys.iter().any(|key| key.to_lowercase().contains("face")),
+            "{keys:?}"
+        );
+        assert!(page.get("face").is_none());
+        let (_, _, drill) = get_public(&app, "/api/stats/cards/core-001").await;
+        assert_eq!(drill["face"], json!("all"));
+    }
+
+    #[tokio::test]
+    async fn r4673001_the_drill_down_follows_the_face_and_a_drill_with_no_face_split_reads_empty() {
+        let app = test_app().await;
+        let radiant_games = count(PUBLIC_STATS_MIN_LIVE_GAMES) / 2;
+        let normal_games = count(PUBLIC_STATS_MIN_LIVE_GAMES) - radiant_games;
+        let played = |id: String, turn: usize, radiant: Option<bool>, winner: &'static str| {
+            make_game_record(
+                &id,
+                RecordOptions {
+                    source: Some("live"),
+                    mode: Some("bo1"),
+                    p1_played_turns: Some(vec![turn, turn]),
+                    p1_played_radiant: radiant.map(|flag| vec![flag, flag]),
+                    winner: Some(winner),
+                    ..RecordOptions::default()
+                },
+            )
+        };
+        // p1 plays core-001 and core-002: Radiant on turn 2 and wins, normal on turn 3 and loses, or with no
+        // face flags on turn 4 and wins. p2's plays of core-003 and core-004 carry no flags.
+        let mut records: Vec<Value> = (0..radiant_games)
+            .map(|i| played(format!("drill-radiant-{i}"), 2, Some(true), "p1"))
+            .collect();
+        records.extend((0..normal_games).map(|i| played(format!("drill-normal-{i}"), 3, Some(false), "p2")));
+        records.extend((0..10).map(|i| played(format!("drill-flagless-{i}"), 4, None, "p1")));
+        insert_records(&app, records).await;
+        let current = current_patch();
+
+        let turn =
+            |turn: i32, games: usize, rate: f64| json!({ "turn": turn, "games": games, "winRate": rate });
+        let (_, _, all) = get_public(&app, "/api/stats/cards/core-001").await;
+        let name = all["coPlayed"][0]["name"].clone();
+        let co = |games: usize, rate: f64| json!([{ "id": "core-002", "name": name, "games": games, "winRate": rate }]);
+        let patch =
+            |games: usize, rate: Value| json!([{ "patch": current, "games": games, "winRate": rate }]);
+
+        let (status, _, radiant) = get_public(&app, "/api/stats/cards/core-001?face=radiant").await;
+        assert_eq!(status, 200);
+        assert_eq!(radiant["face"], json!("radiant"));
+        assert_eq!(radiant["patches"], patch(radiant_games, json!(1.0)));
+        assert_eq!(radiant["byTurn"], json!([turn(2, radiant_games, 1.0)]));
+        assert_eq!(radiant["coPlayed"], co(radiant_games, 1.0));
+
+        let (_, _, normal) = get_public(&app, "/api/stats/cards/core-001?face=normal").await;
+        assert_eq!(normal["face"], json!("normal"));
+        assert_eq!(normal["patches"], patch(normal_games, json!(0.0)));
+        assert_eq!(normal["byTurn"], json!([turn(3, normal_games, 0.0)]));
+        assert_eq!(normal["coPlayed"], co(normal_games, 0.0));
+
+        // All holds every seat, the flagless ones among them.
+        let every = radiant_games + normal_games + 10;
+        let won = radiant_games + 10;
+        assert_eq!(all["patches"][0]["games"], json!(every));
+        assert_eq!(
+            all["byTurn"],
+            json!([
+                turn(2, radiant_games, 1.0),
+                turn(3, normal_games, 0.0),
+                turn(4, 10, 1.0)
+            ])
+        );
+        assert_eq!(all["coPlayed"][0]["games"], json!(every));
+        assert!(close(
+            all["coPlayed"][0]["winRate"].as_f64().unwrap(),
+            won as f64 / every as f64
+        ));
+
+        // A card whose plays never carried a face reads empty on each face, never All's figures.
+        let (_, _, unsplit) = get_public(&app, "/api/stats/cards/core-003?face=radiant").await;
+        assert_eq!(unsplit["byTurn"], json!([]));
+        assert_eq!(unsplit["coPlayed"], json!([]));
+        assert_eq!(unsplit["patches"], patch(0, Value::Null));
+        let (_, _, unsplit_all) = get_public(&app, "/api/stats/cards/core-003").await;
+        assert_ne!(unsplit_all["byTurn"], json!([]));
+
+        // The face line, on every face: each face's games; no never-drawn games, so no rate and no gap.
+        for page in [&all, &radiant, &normal] {
+            let faces = &page["faces"];
+            assert_eq!(faces["radiant"]["games"], json!(radiant_games), "{faces}");
+            assert_eq!(faces["normal"]["games"], json!(normal_games), "{faces}");
+            assert_eq!(faces["radiant"]["adjustedWinRate"], Value::Null, "{faces}");
+            assert_eq!(faces["normal"]["tier"], Value::Null, "{faces}");
+            assert_eq!(faces["gap"], Value::Null, "{faces}");
+        }
+    }
+
+    #[tokio::test]
+    async fn r4673001_the_face_line_reads_each_faces_rate_and_the_gap_at_the_page_s_patch() {
+        let app = test_app().await;
+        let mut records = games("radiant", Met::Radiant, 24, 30);
+        records.extend(games("normal", Met::Normal, 18, 30));
+        records.extend(games("unseen", Met::Unseen, 12, 30));
+        insert_records(&app, records).await;
+
+        // Every card is the field's on each face: both rates an even game, their gap about 0, its range the two
+        // ranges' half-widths summed in quadrature.
+        let (_, _, drill) = get_public(&app, "/api/stats/cards/core-001?mode=bo1").await;
+        let (_, _, radiant) = get_public(&app, "/api/stats/cards?source=live&mode=bo1&face=radiant").await;
+        let (_, _, normal) = get_public(&app, "/api/stats/cards?source=live&mode=bo1&face=normal").await;
+        let faces = &drill["faces"];
+        for (face, page) in [("radiant", &radiant), ("normal", &normal)] {
+            let row = card(page, "core-001");
+            for key in [
+                "games",
+                "adjustedWinRate",
+                "adjustedLow",
+                "adjustedHigh",
+                "tier",
+                "hasEnoughGames",
+            ] {
+                assert_eq!(faces[face][key], row[key], "{face} {key}");
+            }
+        }
+        let gap = &faces["gap"];
+        let half = |face: &str| {
+            (faces[face]["adjustedHigh"].as_f64().unwrap() - faces[face]["adjustedLow"].as_f64().unwrap())
+                / 2.0
+        };
+        let spread = half("normal").hypot(half("radiant"));
+        let value = gap["gap"].as_f64().expect("a gap");
+        assert!(close(value, 0.0), "{gap}");
+        assert!(close(gap["low"].as_f64().unwrap(), value - spread), "{gap}");
+        assert!(close(gap["high"].as_f64().unwrap(), value + spread), "{gap}");
+
+        // At a patch with none of these games, each face is below the floor: no rates and no gap.
+        let past = jackioh_server::api::catalog::load_patch_versions()
+            .await
+            .into_iter()
+            .find(|version| *version != current_patch())
+            .expect("a past patch");
+        let (_, _, before) =
+            get_public(&app, &format!("/api/stats/cards/core-001?mode=bo1&patch={past}")).await;
+        assert_eq!(before["faces"]["radiant"]["games"], json!(0));
+        assert_eq!(before["faces"]["gap"], Value::Null);
+        assert_eq!(before["byTurn"], drill["byTurn"]);
+    }
+}

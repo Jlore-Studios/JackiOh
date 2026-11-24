@@ -28,8 +28,9 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use jackioh_engine::wire::{
-    CardTotal, CoCount, DrillCount, FirstMet, FirstSeen, GameEventType, GameRecord, ListTotal, PortraitId,
-    RecordsKey, StatsTotals, TotalsKey, parse_game_record, portrait_or_default, sources_of,
+    CardTotal, CoCount, DrillCount, FaceDrills, FirstMet, FirstSeen, GameEventType, GameRecord, ListTotal,
+    PortraitId, RecordsKey, StatsFace, StatsTotals, TotalsKey, parse_game_record, portrait_or_default,
+    sources_of,
 };
 use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId, WinRateTable};
 use jackioh_shared::host::daily::{DailyBoard, DailyClock};
@@ -4797,73 +4798,157 @@ pub async fn game_records_unfiled(
     rows.iter().map(|row| uuid_text(row, "id")).collect()
 }
 
-/// `card_totals.co` as stored: each other card's `[games, wins, record, seat, index]`.
-fn co_json(co: &IndexMap<String, CoCount>) -> Value {
+/// R4673001: the faces whose drills `card_totals.turns` and `.co` carry after a card's own counts, in order.
+const STORED_FACES: [StatsFace; 2] = [StatsFace::Radiant, StatsFace::Normal];
+
+/// R4673001: one turn's or co-played card's counts on each stored face, `[games, wins]` per face in
+/// `STORED_FACES`' order, or none when no face counted it (as every total folded before R4673001).
+fn face_counts(total: &CardTotal, count: impl Fn(&FaceDrills) -> Option<DrillCount>) -> Vec<i64> {
+    let counts: Vec<Option<DrillCount>> = STORED_FACES
+        .iter()
+        .map(|face| total.face(*face).and_then(&count))
+        .collect();
+    if counts.iter().all(Option::is_none) {
+        return Vec::new();
+    }
+    counts
+        .into_iter()
+        .flat_map(|count| {
+            let count = count.unwrap_or_default();
+            [count.games, count.wins]
+        })
+        .collect()
+}
+
+/// R4673001: adds what a stored entry says each face counted, `[games, wins]` per face in `STORED_FACES`'
+/// order; a face that counted no game gets no entry.
+fn add_face_counts(total: &mut CardTotal, counts: &[i64], mut add: impl FnMut(&mut FaceDrills, DrillCount)) {
+    for (face, pair) in STORED_FACES.iter().zip(counts.chunks(2)) {
+        if let ([games, wins], Some(drills)) = (pair, total.face_mut(*face))
+            && *games > 0
+        {
+            add(
+                drills,
+                DrillCount {
+                    games: *games,
+                    wins: *wins,
+                },
+            );
+        }
+    }
+}
+
+/// `card_totals.co` as stored: each other card's `[games, wins, record, seat, index]`, R4673001: followed by
+/// `[radiant games, radiant wins, normal games, normal wins]` when a face counted it.
+fn co_json(total: &CardTotal) -> Value {
     Value::Object(
-        co.iter()
+        total
+            .co
+            .iter()
             .map(|(card, count)| {
-                (
-                    card.clone(),
-                    json!([
-                        count.games,
-                        count.wins,
-                        count.first.record,
-                        count.first.seat,
-                        count.first.index
-                    ]),
-                )
+                let mut entry = vec![
+                    json!(count.games),
+                    json!(count.wins),
+                    json!(count.first.record),
+                    json!(count.first.seat),
+                    json!(count.first.index),
+                ];
+                entry.extend(
+                    face_counts(total, |drills| drills.co.get(card).copied())
+                        .into_iter()
+                        .map(Value::from),
+                );
+                (card.clone(), Value::Array(entry))
             })
             .collect(),
     )
 }
 
-fn co_of(value: Value) -> Result<IndexMap<String, CoCount>, StoreError> {
+/// One `card_totals.co` entry as stored, before R4673001 or after it.
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+enum StoredCo {
+    All((i64, i64, String, u8, u32)),
+    Faced((i64, i64, String, u8, u32, i64, i64, i64, i64)),
+}
+
+/// Reads `card_totals.co` into `total`: its co-played counts and (R4673001) each face's.
+fn co_of(value: Value, total: &mut CardTotal) -> Result<(), StoreError> {
     let bad = || {
-        StoreError::from("card_totals.co: expected { card: [games, wins, record, seat, index] }".to_string())
+        StoreError::from(
+            "card_totals.co: expected { card: [games, wins, record, seat, index] or [games, wins, record, seat, \
+             index, radiant games, radiant wins, normal games, normal wins] }"
+                .to_string(),
+        )
     };
     let Value::Object(entries) = value else {
         return Err(bad());
     };
-    entries
-        .into_iter()
-        .map(|(card, entry)| {
-            let (games, wins, record, seat, index): (i64, i64, String, u8, u32) =
-                serde_json::from_value(entry).map_err(|_| bad())?;
-            Ok((
-                card,
-                CoCount {
-                    games,
-                    wins,
-                    first: FirstMet { record, seat, index },
-                },
-            ))
-        })
-        .collect()
+    for (card, entry) in entries {
+        let ((games, wins, record, seat, index), faces) =
+            match serde_json::from_value::<StoredCo>(entry).map_err(|_| bad())? {
+                StoredCo::All(all) => (all, Vec::new()),
+                StoredCo::Faced((games, wins, record, seat, index, rg, rw, ng, nw)) => {
+                    ((games, wins, record, seat, index), vec![rg, rw, ng, nw])
+                }
+            };
+        add_face_counts(total, &faces, |drills, count| {
+            drills.co.insert(card.clone(), count);
+        });
+        total.co.insert(
+            card,
+            CoCount {
+                games,
+                wins,
+                first: FirstMet { record, seat, index },
+            },
+        );
+    }
+    Ok(())
 }
 
-/// `card_totals.turns` as stored: each turn's `[games, wins]`.
-fn turns_json(turns: &IndexMap<i32, DrillCount>) -> Value {
+/// `card_totals.turns` as stored: each turn's `[games, wins]`, R4673001: followed by `[radiant games,
+/// radiant wins, normal games, normal wins]` when a face counted it.
+fn turns_json(total: &CardTotal) -> Value {
     Value::Object(
-        turns
+        total
+            .turns
             .iter()
-            .map(|(turn, count)| (turn.to_string(), json!([count.games, count.wins])))
+            .map(|(turn, count)| {
+                let mut entry = vec![count.games, count.wins];
+                entry.extend(face_counts(total, |drills| drills.turns.get(turn).copied()));
+                (turn.to_string(), json!(entry))
+            })
             .collect(),
     )
 }
 
-fn turns_of(value: Value) -> Result<IndexMap<i32, DrillCount>, StoreError> {
-    let bad = || StoreError::from("card_totals.turns: expected { turn: [games, wins] }".to_string());
+/// Reads `card_totals.turns` into `total`: its turn counts and (R4673001) each face's.
+fn turns_of(value: Value, total: &mut CardTotal) -> Result<(), StoreError> {
+    let bad = || {
+        StoreError::from(
+            "card_totals.turns: expected { turn: [games, wins] or [games, wins, radiant games, radiant wins, \
+             normal games, normal wins] }"
+                .to_string(),
+        )
+    };
     let Value::Object(entries) = value else {
         return Err(bad());
     };
-    entries
-        .into_iter()
-        .map(|(turn, entry)| {
-            let turn: i32 = turn.parse().map_err(|_| bad())?;
-            let (games, wins): (i64, i64) = serde_json::from_value(entry).map_err(|_| bad())?;
-            Ok((turn, DrillCount { games, wins }))
-        })
-        .collect()
+    for (turn, entry) in entries {
+        let turn: i32 = turn.parse().map_err(|_| bad())?;
+        let counts: Vec<i64> = serde_json::from_value(entry).map_err(|_| bad())?;
+        let (games, wins, faces) = match counts.as_slice() {
+            [games, wins] => (*games, *wins, &[][..]),
+            [games, wins, faces @ ..] if faces.len() == 2 * STORED_FACES.len() => (*games, *wins, faces),
+            _ => return Err(bad()),
+        };
+        add_face_counts(total, faces, |drills, count| {
+            drills.turns.insert(turn, count);
+        });
+        total.turns.insert(turn, DrillCount { games, wins });
+    }
+    Ok(())
 }
 
 /// R1044000, R1994000: the record counts are added in SQL, the rest read, added to in Rust
@@ -4955,11 +5040,12 @@ async fn stats_totals_add(t: &mut PgTx<'_>, delta: &StatsTotals) -> Result<(), S
             pilot: from_literal(&get::<String>(row, "pilot")?)?,
         };
         let card: String = get(row, "card")?;
-        let total = CardTotal {
+        let mut total = CardTotal {
             stats: from_json(get::<Value>(row, "stats")?)?,
-            turns: turns_of(get::<Value>(row, "turns")?)?,
-            co: co_of(get::<Value>(row, "co")?)?,
+            ..CardTotal::new(&card)
         };
+        turns_of(get::<Value>(row, "turns")?, &mut total)?;
+        co_of(get::<Value>(row, "co")?, &mut total)?;
         stored.cards.entry(key).or_default().insert(card, total);
     }
 
@@ -5033,8 +5119,8 @@ async fn stats_totals_add(t: &mut PgTx<'_>, delta: &StatsTotals) -> Result<(), S
             columns[3].push(literal(&key.pilot)?);
             columns[4].push(card.clone());
             columns[5].push(json(&total.stats)?);
-            columns[6].push(turns_json(&total.turns).to_string());
-            columns[7].push(co_json(&total.co).to_string());
+            columns[6].push(turns_json(total).to_string());
+            columns[7].push(co_json(total).to_string());
         }
     }
     let [patches, sources, modes, pilots, cards, stats, turns, co] = columns;
@@ -5229,17 +5315,16 @@ pub async fn stats_totals_load(
             pilot: from_literal(&get::<String>(row, "pilot")?)?,
         };
         let card: String = get(row, "card")?;
-        let total = CardTotal {
+        let mut total = CardTotal {
             stats: from_json(get::<Value>(row, "stats")?)?,
-            turns: get::<Option<Value>>(row, "turns")?
-                .map(turns_of)
-                .transpose()?
-                .unwrap_or_default(),
-            co: get::<Option<Value>>(row, "co")?
-                .map(co_of)
-                .transpose()?
-                .unwrap_or_default(),
+            ..CardTotal::new(&card)
         };
+        if let Some(turns) = get::<Option<Value>>(row, "turns")? {
+            turns_of(turns, &mut total)?;
+        }
+        if let Some(co) = get::<Option<Value>>(row, "co")? {
+            co_of(co, &mut total)?;
+        }
         totals.cards.entry(key).or_default().insert(card, total);
     }
     Ok(totals)

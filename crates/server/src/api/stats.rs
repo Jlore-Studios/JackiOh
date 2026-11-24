@@ -20,6 +20,12 @@
 //! R1994000: `GET /api/stats/games` is the patch's game figures (R1256000's counts) over the window every
 //! card shares, read through the engine's `windowed_game_figures` off `StatsTotals.game_totals` (which
 //! outlive R1044001's purge), kept with the cards' windowed report and cached as long.
+//!
+//! R4673000, R4673001: both card routes take `?face=all|normal|radiant`, All when missing or unrecognized:
+//! on Normal or Radiant each card's figures are the seats that played it on that face, read against that
+//! face's own field and band (`face_fields`, `card_figures`), and the drill-down's history and drills follow
+//! the face. The drill-down also answers the card's Normal and Radiant rates and the gap between them, at
+//! the page's `?patch=`.
 
 use std::cmp::Ordering;
 use std::hash::Hash;
@@ -34,15 +40,15 @@ use serde_json::{Map, Value, json};
 use tokio::sync::OnceCell;
 
 use jackioh_cards::patch_history;
-use jackioh_engine::config::{TIER_BAND_HIGH, TIER_BAND_LOW};
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardTier, CardWindow, CreatedStats, GameFigures,
     GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter,
-    StatsField, StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated,
-    WindowedGames, WindowedReport, add_created, add_stats, adjusted_interval, adjusted_win_rate,
-    card_drills_of, card_family, card_stats_of, card_window, collapse_gameless, created_adjusted,
-    created_field, held_adjusted, patch_windows, seen, sources_of, stats_field, tier_of, wilson_interval,
-    win_rate, windowed_card_stats, windowed_game_figures,
+    StatsFace, StatsField, StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource,
+    WindowedCreated, WindowedGames, WindowedReport, add_created, add_stats, card_family, card_stats_of,
+    card_window, collapse_gameless, created_face_adjusted, created_face_field, created_face_side,
+    face_adjusted, face_drills_of, face_side, face_stats_field, held_adjusted, patch_windows, radiant_gap,
+    seen, sources_of, stats_field, tier_in, wilson_interval, win_rate, windowed_card_stats,
+    windowed_game_figures,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -111,7 +117,8 @@ pub struct PublicCreatedStat {
     pub set: String,
     pub games: i64,
     /// R4082000: the made games' win rate read against the Created cards (`created_adjusted`): an
-    /// average Created card reads an even game.
+    /// average Created card reads an even game. R4673000: on a face, the seats that used a copy on it,
+    /// against that face's Created field.
     pub adjusted_win_rate: Option<f64>,
     /// R4082000: the 95% range of `adjusted_win_rate`, R2895000's.
     pub adjusted_low: Option<f64>,
@@ -124,17 +131,19 @@ pub struct PublicCreatedStat {
 }
 
 impl PublicCreatedStat {
-    /// `created` the Created field and `deck` the deck cards' (R4082000).
+    /// `created` the Created field and `deck` the deck cards' (R4082000). R4673000: on `face`, the seats
+    /// that used a copy on it (`created_face_side`), `created` that face's Created field.
     fn of(
         def: &CardDef,
         row: &WindowedCreated,
+        face: StatsFace,
         created: &StatsField,
         deck: &StatsField,
     ) -> PublicCreatedStat {
         let stats = &row.stats;
-        let games = i64::from(stats.games());
+        let games = i64::from(created_face_side(stats, face).games);
         let has_enough_games = games >= CARD_STATS_MIN_SAMPLE;
-        let adjusted = created_adjusted(stats, created, deck);
+        let adjusted = created_face_adjusted(stats, face, created, deck);
         PublicCreatedStat {
             id: stats.card.clone(),
             name: def.name.clone(),
@@ -147,7 +156,7 @@ impl PublicCreatedStat {
             adjusted_high: adjusted.map(|(_, (_, high))| high),
             tier: adjusted
                 .filter(|_| has_enough_games)
-                .map(|(rate, (low, high))| tier_of(rate, low, high)),
+                .map(|(rate, (low, high))| tier_in(rate, low, high, face.band())),
             has_enough_games,
             window: PublicCardWindow::of(&row.window),
         }
@@ -329,6 +338,23 @@ impl PublicStatsMode {
             _ => stats.in_deck,
         }
     }
+
+    /// R4673000: the games a card's own figures count on `face`: All's `counted`, or on Normal or Radiant
+    /// the seats that played it on that face (`face_side`), in every mode.
+    pub fn counted_on(self, stats: &CardStats, face: StatsFace) -> Tally {
+        match face {
+            StatsFace::All => self.counted(stats),
+            StatsFace::Normal | StatsFace::Radiant => face_side(stats, face),
+        }
+    }
+}
+
+/// R4673001: `?face=`: one face of each card, or All when missing or unrecognized.
+fn face_of(req: &Req) -> StatsFace {
+    req.query
+        .get("face")
+        .and_then(|value| value.trim().to_lowercase().parse().ok())
+        .unwrap_or(StatsFace::All)
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -388,10 +414,108 @@ pub struct PublicStatsCardsResponse {
 }
 
 /// R3070000: the seats that made a copy of `id` during their games, used or not (R2089000): the games of a
-/// card only a rule makes. `None` when no counted seat made one.
-fn made_games(report: &WindowedReport, id: &str) -> Option<Tally> {
+/// card only a rule makes. R4673000: on a face, those that used one on it. `None` when no counted seat made
+/// one.
+fn made_games(report: &WindowedReport, id: &str, face: StatsFace) -> Option<Tally> {
     let row = report.created.iter().find(|row| row.stats.card == id)?;
-    Some(row.stats.made())
+    Some(created_face_side(&row.stats, face))
+}
+
+/// R3022000, R4082000, R4673000: the fields a face's figures are read against: All's deck field (`all`,
+/// whose average deck a card a rule makes is read against on every face), the face's deck field (`deck`,
+/// All's on All) and the face's Created field (`created`). Each reads every card of the report the catalog
+/// holds, whatever the page's filters show, so a set's page reads its cards as the whole page does.
+struct FaceFields {
+    all: StatsField,
+    deck: StatsField,
+    created: StatsField,
+}
+
+fn face_fields(app: &App, report: &WindowedReport, face: StatsFace) -> FaceFields {
+    // R3022000: every deckable card of the report, its centre and spread from the cards whose drawn delta
+    // the page shows (R2427000's floor on both its sides). R3070000: every card counts toward the average
+    // deck's win rate, which a card with fewer never-drawn games than the floor is read against.
+    let floor = i32::try_from(CARD_STATS_MIN_SAMPLE).unwrap_or(i32::MAX);
+    let deck_cards = || {
+        app.catalog
+            .defs
+            .iter()
+            .filter(|(_, def)| !def.token)
+            .filter_map(|(id, _)| report.card(id))
+            .map(|card| &card.stats)
+    };
+    let all = stats_field(deck_cards(), floor);
+    let deck = match face {
+        StatsFace::All => all,
+        StatsFace::Normal | StatsFace::Radiant => face_stats_field(deck_cards(), face, floor),
+    };
+    // R4082000: every Created card of the report the catalog holds.
+    let created = created_face_field(
+        report
+            .created
+            .iter()
+            .filter(|row| app.catalog.defs.contains_key(&row.stats.card))
+            .map(|row| &row.stats),
+        face,
+        &all,
+    );
+    FaceFields { all, deck, created }
+}
+
+/// One deck card's figures on one face, as its row shows them.
+struct CardFigures {
+    games: i64,
+    win_rate: Option<f64>,
+    /// R2895000: the 95% Wilson interval of `win_rate`.
+    win_range: Option<(f64, f64)>,
+    /// R2777000, R2895000: the adjusted win rate and its 95% range.
+    adjusted: Option<(f64, (f64, f64))>,
+    tier: Option<CardTier>,
+    has_enough_games: bool,
+}
+
+/// R654, R2777000, R3022000, R4673000: a deck card's figures on `face` over the windowed report, read
+/// against `fields` (`face_fields` of the same face).
+fn card_figures(
+    report: &WindowedReport,
+    id: &str,
+    def: &CardDef,
+    mode: PublicStatsMode,
+    face: StatsFace,
+    fields: &FaceFields,
+) -> CardFigures {
+    let stat = report.card(id).map(|card| &card.stats);
+    // R3070000: a card only a rule makes, the Dormant Starship (R1857001), is in no deck: its row reads
+    // the seats that made one, its Created games (R2089000).
+    let made = made_by_a_rule(def)
+        .then(|| made_games(report, id, face))
+        .flatten();
+    // R2777002: the games the card's own figures count: under All Random, the decks that saw it.
+    let counted = made.unwrap_or_else(|| stat.map(|stat| mode.counted_on(stat, face)).unwrap_or_default());
+    let (games, wins) = tally_of(&counted);
+    let rate = win_rate(&counted);
+    // R2895000: the rate's 95% range, over the same games.
+    let win_range = rate.map(|_| wilson_interval(wins, games));
+    let has_enough_games = games >= CARD_STATS_MIN_SAMPLE;
+    // R2777000: shrunk by its own games, so it needs no floor of its own; the page shows it from R654's.
+    // R3022000: read against the field. R3070000: a card a rule makes, against the average deck, as its
+    // Created row reads it (R4082000).
+    let adjusted = match made {
+        Some(made) => held_adjusted(&made, &fields.all),
+        None => stat.and_then(|stat| face_adjusted(stat, face, &fields.deck)),
+    };
+    // R3022000: the tier, from R654's floor as the rate is shown.
+    let tier = adjusted
+        .filter(|_| has_enough_games)
+        .map(|(rate, (low, high))| tier_in(rate, low, high, face.band()));
+    CardFigures {
+        games,
+        win_rate: rate,
+        win_range,
+        adjusted,
+        tier,
+        has_enough_games,
+    }
 }
 
 /// R3950000: a card's play rate, how often it was played when seen: its played games over its seen
@@ -430,7 +554,8 @@ pub struct PublicStatsTiers {
     /// R3070000: the average deck's win rate, which a card with too few never-drawn games, and the Dormant
     /// Starship, is read against.
     pub baseline: f64,
-    /// The band: tier S is above `band_high`, tier F below `band_low` (`TIER_BAND_HIGH`, `TIER_BAND_LOW`).
+    /// The band: tier S is above `band_high`, tier F below `band_low` (`TIER_BAND_HIGH`, `TIER_BAND_LOW`;
+    /// R4673000: on a face, that face's own band and field).
     pub band_low: f64,
     pub band_high: f64,
     /// R4082000: the field the Created cards a card's text makes are read against.
@@ -507,6 +632,46 @@ pub struct CoPlayedRate {
     pub win_rate: Option<f64>,
 }
 
+/// R4673000: a card's figures on one face, as the drill-down's face line reads them.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicFaceFigures {
+    pub games: i64,
+    pub adjusted_win_rate: Option<f64>,
+    pub adjusted_low: Option<f64>,
+    pub adjusted_high: Option<f64>,
+    pub tier: Option<CardTier>,
+    pub has_enough_games: bool,
+}
+
+impl PublicFaceFigures {
+    /// The rate and its range, `(rate, (low, high))`, from R654's floor, as the page shows it.
+    fn shown(&self) -> Option<(f64, (f64, f64))> {
+        let rate = self.adjusted_win_rate.filter(|_| self.has_enough_games)?;
+        Some((rate, (self.adjusted_low?, self.adjusted_high?)))
+    }
+}
+
+/// R4673000: the Radiant gap, the card's Radiant adjusted rate less its Normal one (`radiant_gap`), and its
+/// 95% range.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicRadiantGap {
+    pub gap: f64,
+    pub low: f64,
+    pub high: f64,
+}
+
+/// R4673001: the drill-down's face line: the card's Normal and Radiant figures, each read against its own
+/// face's field, and the gap between them; null when either face is below R654's floor.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicCardFaces {
+    pub normal: PublicFaceFigures,
+    pub radiant: PublicFaceFigures,
+    pub gap: Option<PublicRadiantGap>,
+}
+
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CardDrillDownResponse {
@@ -514,6 +679,10 @@ pub struct CardDrillDownResponse {
     pub patches: Vec<PatchRate>,
     pub by_turn: Vec<TurnRate>,
     pub co_played: Vec<CoPlayedRate>,
+    /// R4673001: the face `patches`, `byTurn` and `coPlayed` read.
+    pub face: StatsFace,
+    /// R4673001: the card's Normal and Radiant figures and their gap, at the page's patch, on every face.
+    pub faces: PublicCardFaces,
 }
 
 /// A `public, max-age=…` answer for a route that knows nothing about its caller.
@@ -702,8 +871,8 @@ struct PatchReport {
     report: CardStatsReport,
     /// Each card's drill-down over the same records, by card id, at most `CARD_STATS_CO_PLAYED_TOP`
     /// co-played cards each. Only the current patch's report for the default source has them: it is
-    /// the one `get_card` reads them from.
-    drills: IndexMap<String, CardDrill>,
+    /// the one `get_card` reads them from. R4673001: one set per face.
+    drills: IndexMap<StatsFace, IndexMap<String, CardDrill>>,
 }
 
 /// What a kept report was computed from: the patch, `?source=`, `?pilot=` and `?mode=`.
@@ -735,8 +904,9 @@ pub struct KeptReports {
     entries: Kept<ReportKey, Arc<PatchReport>>,
     /// R1367000: the windowed reports `GET /api/stats/cards` reads, kept as the per-patch ones are.
     windows: Kept<ReportKey, Arc<KeptWindow>>,
-    /// R2491000: the card drill-downs' patch histories, one per `?pilot=` and `?mode=`.
-    histories: Kept<(PublicStatsPilot, PublicStatsMode), Arc<KeptHistory>>,
+    /// R2491000: the card drill-downs' patch histories, one per `?pilot=` and `?mode=` (R4673001: and
+    /// `?face=`).
+    histories: Kept<(PublicStatsPilot, PublicStatsMode, StatsFace), Arc<KeptHistory>>,
     /// R3067000: every patch's totals, which every kept window and history is cut from, with when they
     /// were first asked for.
     totals: Mutex<Option<(i64, KeptTotalsCell)>>,
@@ -772,7 +942,7 @@ impl KeptReports {
         kept_cell(&self.windows, key, now)
     }
 
-    fn history_cell(&self, key: (PublicStatsPilot, PublicStatsMode), now: i64) -> KeptHistoryCell {
+    fn history_cell(&self, key: (PublicStatsPilot, PublicStatsMode, StatsFace), now: i64) -> KeptHistoryCell {
         kept_cell(&self.histories, key, now)
     }
 
@@ -992,16 +1162,22 @@ fn patch_report(
     let report = public_report(totals, counted, patch, live_pilot, mode);
     let drills = if with_drills {
         let sources = sources_of(counted);
-        card_drills_of(
-            totals,
-            |key: &TotalsKey| {
-                key.patch == patch
-                    && sources.contains(&key.source)
-                    && mode.counts(key.mode)
-                    && seat_counted(key.source, key.pilot, live_pilot)
-            },
-            CARD_STATS_CO_PLAYED_TOP,
-        )
+        let counts = |key: &TotalsKey| {
+            key.patch == patch
+                && sources.contains(&key.source)
+                && mode.counts(key.mode)
+                && seat_counted(key.source, key.pilot, live_pilot)
+        };
+        // R4673001: each face's drills, over the same keys.
+        StatsFace::ALL
+            .iter()
+            .map(|&face| {
+                (
+                    face,
+                    face_drills_of(totals, counts, CARD_STATS_CO_PLAYED_TOP, face),
+                )
+            })
+            .collect()
     } else {
         IndexMap::new()
     };
@@ -1051,7 +1227,8 @@ async fn kept_report(
 
 /// R2491000: one `?pilot=` and `?mode=`'s patch history, which every card's drill-down reads: each
 /// shipped patch whose live games clear R654's gate, in `patches.json`'s order, with each card's
-/// in-deck tally there as `patch_report` counts it (R2777002: under All Random, its seen tally).
+/// in-deck tally there as `patch_report` counts it (R2777002: under All Random, its seen tally;
+/// R4673001: on a face, the seats that played it on that face).
 struct KeptHistory {
     patches: Vec<(String, IndexMap<String, Tally>)>,
 }
@@ -1065,6 +1242,7 @@ fn history_over(
     versions: &[String],
     pilot: PublicStatsPilot,
     mode: PublicStatsMode,
+    face: StatsFace,
 ) -> KeptHistory {
     let patches = versions
         .iter()
@@ -1084,7 +1262,7 @@ fn history_over(
                     .cards
                     .into_iter()
                     .map(|stat| {
-                        let counted = mode.counted(&stat);
+                        let counted = mode.counted_on(&stat, face);
                         (stat.card, counted)
                     })
                     .collect();
@@ -1103,12 +1281,19 @@ async fn kept_history(
     versions: &[String],
     pilot: PublicStatsPilot,
     mode: PublicStatsMode,
+    face: StatsFace,
 ) -> Result<Arc<KeptHistory>, ApiError> {
     let snapshot = kept_snapshot(app).await?;
-    let cell = app.card_stats.history_cell((pilot, mode), snapshot.made_at);
+    let cell = app.card_stats.history_cell((pilot, mode, face), snapshot.made_at);
     let kept = cell
         .get_or_try_init(|| async {
-            Ok::<_, ApiError>(Arc::new(history_over(&snapshot.totals, versions, pilot, mode)))
+            Ok::<_, ApiError>(Arc::new(history_over(
+                &snapshot.totals,
+                versions,
+                pilot,
+                mode,
+                face,
+            )))
         })
         .await?;
     Ok(Arc::clone(kept))
@@ -1119,6 +1304,8 @@ async fn kept_history(
 /// R2777001: `?mode=constructed` reads Best of 1 and Conquest together. R2777002: under `random` a card's
 /// games, rate and floor read the decks that saw it. R3950000: its play rate is its played games over its
 /// seen ones in every mode. R2777000: each card carries its adjusted win rate, and the cards are listed by it.
+/// R4673000: `?face=normal|radiant` reads every figure but the play rate on that face, against its own field
+/// and band.
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;
     let current_patch = app.catalog.version.clone();
@@ -1126,6 +1313,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let source_param = SourceParam::parse(req.query.get("source").map(String::as_str));
     let pilot = PublicStatsPilot::parse(req.query.get("pilot").map(String::as_str));
     let mode = PublicStatsMode::parse(req.query.get("mode").map(String::as_str));
+    let face = face_of(&req);
     let patch_index = versions.iter().position(|version| *version == requested_patch);
     let previous_patch = match patch_index {
         Some(index) if index > 0 => versions.get(index - 1).cloned(),
@@ -1184,30 +1372,9 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         true
     };
 
-    // R3022000: the field every card's adjusted rate is read against: every deckable card of the report,
-    // whatever the filters show, so a set's page reads its cards as the whole page does, its centre and
-    // spread from the cards whose drawn delta the page shows (R2427000's floor on both its sides).
-    // R3070000: every card counts toward the average deck's win rate, which a card with fewer never-drawn
-    // games than the floor is read against.
-    let field = stats_field(
-        app.catalog
-            .defs
-            .iter()
-            .filter(|(_, def)| !def.token)
-            .filter_map(|(id, _)| report.card(id))
-            .map(|card| &card.stats),
-        i32::try_from(CARD_STATS_MIN_SAMPLE).unwrap_or(i32::MAX),
-    );
-    // R4082000: the field every Created card is read against, from every Created card of the report the
-    // catalog holds, whatever the filters show, as the deck cards' is read.
-    let made_field = created_field(
-        report
-            .created
-            .iter()
-            .filter(|row| app.catalog.defs.contains_key(&row.stats.card))
-            .map(|row| &row.stats),
-        &field,
-    );
+    // R3022000, R4082000: the fields every card's adjusted rate is read against, whatever the filters show;
+    // R4673000: the face's own.
+    let fields = face_fields(app, report, face);
 
     let mut cards: Vec<PublicCardStat> = Vec::new();
     for (id, def) in &app.catalog.defs {
@@ -1219,37 +1386,14 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         }
         let cost = numeric_cost(def);
 
-        let held = report.card(id);
-        let stat = held.map(|card| &card.stats);
+        let stat = report.card(id).map(|card| &card.stats);
         let window = kept.window_of(id, request);
-        // R3070000: a card only a rule makes, the Dormant Starship (R1857001), is in no deck: its row reads
-        // the seats that made one, its Created games (R2089000).
-        let made = made_by_a_rule(def).then(|| made_games(report, id)).flatten();
-        // R2777002: the games the card's own figures count: under All Random, the decks that saw it.
-        let counted = made.unwrap_or_else(|| stat.map(|stat| mode.counted(stat)).unwrap_or_default());
-        let (counted_games, counted_wins) = tally_of(&counted);
-        let rate = win_rate(&counted);
-        // R2895000: the rate's 95% range, over the same games.
-        let rate_range = rate.map(|_| wilson_interval(counted_wins, counted_games));
+        let figures = card_figures(report, id, def, mode, face, &fields);
+        // R3950000: the play rate, All's on every face (R4673000).
+        let made = made_by_a_rule(def)
+            .then(|| made_games(report, id, StatsFace::All))
+            .flatten();
         let play_rate = play_rate_of(report, id, stat, made.as_ref());
-        let has_enough_games = counted_games >= CARD_STATS_MIN_SAMPLE;
-        // R2777000: shrunk by its own games, so it needs no floor of its own; the page shows it from R654's.
-        // R3022000: read against the field. R3070000: a card a rule makes, against the average deck, as its
-        // Created row reads it (R4082000).
-        let (adjusted, adjusted_range) = match made {
-            Some(made) => {
-                held_adjusted(&made, &field).map_or((None, None), |(rate, range)| (Some(rate), Some(range)))
-            }
-            None => (
-                stat.and_then(|stat| adjusted_win_rate(stat, &field)),
-                stat.and_then(|stat| adjusted_interval(stat, &field)),
-            ),
-        };
-        // R3022000: the tier, from R654's floor as the rate is shown.
-        let tier = adjusted
-            .zip(adjusted_range)
-            .filter(|_| has_enough_games)
-            .map(|(rate, (low, high))| tier_of(rate, low, high));
 
         cards.push(PublicCardStat {
             id: id.clone(),
@@ -1257,16 +1401,16 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             cost,
             rarity: def.rarity.as_str().to_string(),
             set: def.set.as_str().to_string(),
-            games: counted_games,
-            win_rate: rate,
-            adjusted_win_rate: adjusted,
-            win_rate_low: rate_range.map(|(low, _)| low),
-            win_rate_high: rate_range.map(|(_, high)| high),
-            adjusted_low: adjusted_range.map(|(low, _)| low),
-            adjusted_high: adjusted_range.map(|(_, high)| high),
-            tier,
+            games: figures.games,
+            win_rate: figures.win_rate,
+            adjusted_win_rate: figures.adjusted.map(|(rate, _)| rate),
+            win_rate_low: figures.win_range.map(|(low, _)| low),
+            win_rate_high: figures.win_range.map(|(_, high)| high),
+            adjusted_low: figures.adjusted.map(|(_, (low, _))| low),
+            adjusted_high: figures.adjusted.map(|(_, (_, high))| high),
+            tier: figures.tier,
             play_rate,
-            has_enough_games,
+            has_enough_games: figures.has_enough_games,
             window: PublicCardWindow::of(&window),
         });
     }
@@ -1316,7 +1460,8 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         .iter()
         .filter_map(|row| {
             let def = app.catalog.defs.get(&row.stats.card)?;
-            shown(&row.stats.card, def).then(|| PublicCreatedStat::of(def, row, &made_field, &field))
+            shown(&row.stats.card, def)
+                .then(|| PublicCreatedStat::of(def, row, face, &fields.created, &fields.all))
         })
         .collect();
     created.sort_by(|a, b| {
@@ -1345,17 +1490,17 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         cards,
         created,
         tiers: PublicStatsTiers {
-            center: field.center,
-            spread: field.spread,
-            cards: field.cards,
-            baseline: field.baseline,
-            band_low: TIER_BAND_LOW,
-            band_high: TIER_BAND_HIGH,
+            center: fields.deck.center,
+            spread: fields.deck.spread,
+            cards: fields.deck.cards,
+            baseline: fields.deck.baseline,
+            band_low: face.band().low,
+            band_high: face.band().high,
             created: PublicCreatedTiers {
-                center: made_field.center,
-                spread: made_field.spread,
-                cards: made_field.cards,
-                baseline: made_field.baseline,
+                center: fields.created.center,
+                spread: fields.created.spread,
+                cards: fields.created.cards,
+                baseline: fields.created.baseline,
             },
         },
         patches: kept.patches.clone(),
@@ -1406,7 +1551,9 @@ pub async fn get_games(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(cached_ok(to_json(&response)?, CARD_STATS_CACHE_TTL_SECONDS))
 }
 
-/// GET /api/stats/cards/:id: win rate by cleared patch and by turn played, and co-played cards.
+/// GET /api/stats/cards/:id: win rate by cleared patch and by turn played, and co-played cards. R4673001: on
+/// `?face=`, of the seats that played the card on that face; and on every face the card's Normal and Radiant
+/// figures and their gap at the page's `?patch=` (the current patch when missing).
 pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     let card_id = req.params.get("id").cloned().unwrap_or_default();
     let def = if card_id.is_empty() {
@@ -1423,11 +1570,14 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
 
     let pilot = PublicStatsPilot::parse(req.query.get("pilot").map(String::as_str));
     let mode = PublicStatsMode::parse(req.query.get("mode").map(String::as_str));
+    let face = face_of(&req);
+    let steps = patch_history();
+    let patch = query_trimmed(&req, "patch").unwrap_or_else(|| app.catalog.version.clone());
 
     // R2491000: every shipped patch's history reads one kept history, and R978000: the current
     // patch's turn and co-played figures read its kept report.
     let versions = load_patch_versions().await;
-    let history = kept_history(app, &versions, pilot, mode).await?;
+    let history = kept_history(app, &versions, pilot, mode, face).await?;
     let patch_history: Vec<PatchRate> = history
         .patches
         .iter()
@@ -1450,7 +1600,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         mode,
     )
     .await?;
-    let drill = current.drills.get(&card_id);
+    let drill = current.drills.get(&face).and_then(|drills| drills.get(&card_id));
 
     let by_turn: Vec<TurnRate> = drill
         .map(|drill| drill.by_turn.as_slice())
@@ -1488,6 +1638,11 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         })
         .collect();
 
+    // R4673001: the card's Normal and Radiant figures at the page's patch, read off the window its row is
+    // (R3067000: cut from the snapshot the history read, so it loads nothing more).
+    let window = kept_window(app, &steps, &patch, SourceParam::Default, pilot, mode).await?;
+    let faces = card_faces(app, &window.report, &card_id, def, mode);
+
     let body = CardDrillDownResponse {
         card: DrillDownCard {
             id: def.id.clone(),
@@ -1498,8 +1653,62 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         patches: patch_history,
         by_turn,
         co_played,
+        face,
+        faces,
     };
     Ok(cached_ok(to_json(&body)?, CARD_STATS_CACHE_TTL_SECONDS))
+}
+
+/// R4673000: a card's figures on a face as its row on that face shows them: a Created card no deck held
+/// (a token, say) by its Created row, any other card by its deck row (`card_figures`).
+fn face_figures(
+    app: &App,
+    report: &WindowedReport,
+    id: &str,
+    def: &CardDef,
+    mode: PublicStatsMode,
+    face: StatsFace,
+) -> PublicFaceFigures {
+    let fields = face_fields(app, report, face);
+    let created = report.created.iter().find(|row| row.stats.card == id);
+    if let Some(row) = created.filter(|_| report.card(id).is_none() && !made_by_a_rule(def)) {
+        let stat = PublicCreatedStat::of(def, row, face, &fields.created, &fields.all);
+        return PublicFaceFigures {
+            games: stat.games,
+            adjusted_win_rate: stat.adjusted_win_rate,
+            adjusted_low: stat.adjusted_low,
+            adjusted_high: stat.adjusted_high,
+            tier: stat.tier,
+            has_enough_games: stat.has_enough_games,
+        };
+    }
+    let figures = card_figures(report, id, def, mode, face, &fields);
+    PublicFaceFigures {
+        games: figures.games,
+        adjusted_win_rate: figures.adjusted.map(|(rate, _)| rate),
+        adjusted_low: figures.adjusted.map(|(_, (low, _))| low),
+        adjusted_high: figures.adjusted.map(|(_, (_, high))| high),
+        tier: figures.tier,
+        has_enough_games: figures.has_enough_games,
+    }
+}
+
+/// R4673001: the drill-down's face line: the card's Normal and Radiant figures and, when both are shown
+/// (R654's floor), the Radiant gap between them.
+fn card_faces(
+    app: &App,
+    report: &WindowedReport,
+    id: &str,
+    def: &CardDef,
+    mode: PublicStatsMode,
+) -> PublicCardFaces {
+    let normal = face_figures(app, report, id, def, mode, StatsFace::Normal);
+    let radiant = face_figures(app, report, id, def, mode, StatsFace::Radiant);
+    let gap = normal.shown().zip(radiant.shown()).map(|(normal, radiant)| {
+        let (gap, (low, high)) = radiant_gap(normal, radiant);
+        PublicRadiantGap { gap, low, high }
+    });
+    PublicCardFaces { normal, radiant, gap }
 }
 
 /// R1583000: one card's play rate: the share of the counted seats that played it from hand.

@@ -20,7 +20,9 @@ use serde_json::{Map, Value};
 use crate::catalog::RULE_MADE_DEF_IDS;
 use crate::config::{
     ADJUSTED_FIELD_MIN_CARDS, ADJUSTED_FIELD_SPREAD_FLOOR, ADJUSTED_WIN_RATE_CENTER,
-    ADJUSTED_WIN_RATE_PRIOR_SPREAD, COIN_DEF_ID, STATS_INTERVAL_Z, STATS_SHARE_PRECISION, TIER_A_FROM,
+    ADJUSTED_WIN_RATE_PRIOR_SPREAD, COIN_DEF_ID, NORMAL_TIER_A_FROM, NORMAL_TIER_BAND_HIGH,
+    NORMAL_TIER_BAND_LOW, NORMAL_TIER_C_FROM, RADIANT_TIER_A_FROM, RADIANT_TIER_BAND_HIGH,
+    RADIANT_TIER_BAND_LOW, RADIANT_TIER_C_FROM, STATS_INTERVAL_Z, STATS_SHARE_PRECISION, TIER_A_FROM,
     TIER_BAND_HIGH, TIER_BAND_LOW, TIER_C_FROM,
 };
 use crate::state::EngineError;
@@ -689,13 +691,50 @@ pub struct CoCount {
     pub first: FirstMet,
 }
 
+/// R4673001: one face's share of a card's drills: the games of the seats that played the card on that
+/// face (R1147000's split, `playedRadiant` or `playedNormal`) by the turn it was played on and with each
+/// card that shared its deck. Where two cards first met is the card's own (`CardTotal::co`), so a face
+/// keeps counts alone. Folded from R4673001 on: totals folded before it hold none.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+pub struct FaceDrills {
+    pub turns: IndexMap<i32, DrillCount>,
+    pub co: IndexMap<String, DrillCount>,
+}
+
+impl FaceDrills {
+    /// No turn and no co-played card counted.
+    pub fn is_empty(&self) -> bool {
+        self.turns.is_empty() && self.co.is_empty()
+    }
+
+    /// Adds `other`'s counts.
+    fn add(&mut self, other: &FaceDrills) {
+        for (turn, count) in &other.turns {
+            self.turns.entry(*turn).or_default().add(count);
+        }
+        for (card, count) in &other.co {
+            match self.co.get_mut(card) {
+                None => {
+                    self.co.insert(card.clone(), *count);
+                }
+                Some(held) => held.add(count),
+            }
+        }
+    }
+}
+
 /// R1044000: one card's totals under one key: R377's breakdowns, and the drill-down's games by the
-/// turn the card was played on and with each card that shared its deck.
+/// turn the card was played on and with each card that shared its deck. R4673001: the same drills of
+/// the seats that played it Radiant, and of those that played it normal.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct CardTotal {
     pub stats: CardStats,
     pub turns: IndexMap<i32, DrillCount>,
     pub co: IndexMap<String, CoCount>,
+    #[serde(default, skip_serializing_if = "FaceDrills::is_empty")]
+    pub radiant: FaceDrills,
+    #[serde(default, skip_serializing_if = "FaceDrills::is_empty")]
+    pub normal: FaceDrills,
 }
 
 impl CardTotal {
@@ -704,12 +743,34 @@ impl CardTotal {
             stats: empty_stats(card),
             turns: IndexMap::new(),
             co: IndexMap::new(),
+            radiant: FaceDrills::default(),
+            normal: FaceDrills::default(),
+        }
+    }
+
+    /// R4673001: a face's drills; `None` for All, whose drills are `turns` and `co`.
+    pub fn face(&self, face: StatsFace) -> Option<&FaceDrills> {
+        match face {
+            StatsFace::All => None,
+            StatsFace::Normal => Some(&self.normal),
+            StatsFace::Radiant => Some(&self.radiant),
+        }
+    }
+
+    /// R4673001: a face's drills, to count into; `None` for All.
+    pub fn face_mut(&mut self, face: StatsFace) -> Option<&mut FaceDrills> {
+        match face {
+            StatsFace::All => None,
+            StatsFace::Normal => Some(&mut self.normal),
+            StatsFace::Radiant => Some(&mut self.radiant),
         }
     }
 
     /// Adds `other`'s counts, each pair keeping its earlier first meeting.
     pub fn add(&mut self, other: &CardTotal) {
         add_stats(&mut self.stats, &other.stats);
+        self.radiant.add(&other.radiant);
+        self.normal.add(&other.normal);
         for (turn, count) in &other.turns {
             self.turns.entry(*turn).or_default().add(count);
         }
@@ -1069,6 +1130,19 @@ impl StatsTotals {
                 if !drills {
                     continue;
                 }
+                // R4673001: the face the seat played the card on, as R1147000 counts it above: Radiant at
+                // least once, or never. A seat that did not play it, or whose plays carry no face flags,
+                // counts in neither face's drills.
+                let face = played_radiant
+                    .as_ref()
+                    .filter(|_| played.contains(card))
+                    .map(|radiant| {
+                        if radiant.contains(card) {
+                            StatsFace::Radiant
+                        } else {
+                            StatsFace::Normal
+                        }
+                    });
 
                 // Each turn the card was played on counts the game once, a cast or summon's (R4279000)
                 // among them.
@@ -1086,6 +1160,26 @@ impl StatsTotals {
                 for cast in cast_or_summoned {
                     if cast.card == card && cast.turn > 0 {
                         turns_played_in_game.insert(cast.turn);
+                    }
+                }
+                if let Some(faced) = face.and_then(|face| total.face_mut(face)) {
+                    let game = DrillCount {
+                        games: 1,
+                        wins: i64::from(won),
+                    };
+                    for &turn in &turns_played_in_game {
+                        faced.turns.entry(turn).or_default().add(&game);
+                    }
+                    for &other in &deck {
+                        if other == card {
+                            continue;
+                        }
+                        match faced.co.get_mut(other) {
+                            None => {
+                                faced.co.insert(other.to_string(), game);
+                            }
+                            Some(held) => held.add(&game),
+                        }
                     }
                 }
                 for turn in turns_played_in_game {
@@ -1241,6 +1335,8 @@ impl StatsTotals {
                                 stats: total.stats.clone(),
                                 turns: IndexMap::new(),
                                 co: IndexMap::new(),
+                                radiant: FaceDrills::default(),
+                                normal: FaceDrills::default(),
                             }
                         };
                         (card.clone(), total)
@@ -1384,6 +1480,18 @@ pub fn card_drills_of(
     counts: impl Fn(&TotalsKey) -> bool,
     top: usize,
 ) -> IndexMap<String, CardDrill> {
+    face_drills_of(totals, counts, top, StatsFace::All)
+}
+
+/// R4673001: `card_drills_of` on one face: on All the card's drills, on Normal or Radiant those of the seats
+/// that played it on that face (`CardTotal::face`), a tie among the co-played cards listed in the order the
+/// card first met them on any face. Totals folded before R4673001 give a face no drills.
+pub fn face_drills_of(
+    totals: &StatsTotals,
+    counts: impl Fn(&TotalsKey) -> bool,
+    top: usize,
+    face: StatsFace,
+) -> IndexMap<String, CardDrill> {
     type Merged<'a> = (
         IndexMap<i32, DrillCount>,
         IndexMap<&'a str, (DrillCount, FirstMet)>,
@@ -1395,13 +1503,20 @@ pub fn card_drills_of(
         }
         for (card, total) in cards {
             let (turns, co) = merged.entry(card.as_str()).or_default();
-            for (turn, count) in &total.turns {
+            let faced = total.face(face);
+            for (turn, count) in faced.map_or(&total.turns, |faced| &faced.turns) {
                 turns.entry(*turn).or_default().add(count);
             }
             for (other, count) in &total.co {
-                let pair = DrillCount {
-                    games: count.games,
-                    wins: count.wins,
+                let pair = match faced {
+                    None => DrillCount {
+                        games: count.games,
+                        wins: count.wins,
+                    },
+                    Some(faced) => match faced.co.get(other) {
+                        Some(pair) => *pair,
+                        None => continue,
+                    },
                 };
                 match co.get_mut(other.as_str()) {
                     None => {
@@ -1479,6 +1594,87 @@ pub fn seen(stats: &CardStats) -> Tally {
     seen
 }
 
+string_union! {
+    /// R4673000: which of a card's faces its figures read, each against a field of its own:
+    ///  - `all`: every seat, as R2777000 and R3022000 read the card (its seen games against its never-drawn);
+    ///  - `normal`: the seats that played it and never on its Radiant face (R1147000's `playedNormal`);
+    ///  - `radiant`: the seats that played it Radiant at least once (`playedRadiant`).
+    ///
+    /// A Created card's faces are its used copies' (R2089000's `createdPlayedNormal` and
+    /// `createdPlayedRadiant`).
+    pub enum StatsFace {
+        All = "all",
+        Normal = "normal",
+        Radiant = "radiant",
+    }
+}
+
+/// R3022000, R4673000: a face's balance band and its quarters, the floors `tier_in` reads.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TierBand {
+    pub low: f64,
+    pub high: f64,
+    pub a_from: f64,
+    pub c_from: f64,
+}
+
+impl TierBand {
+    /// R3022000: All's band.
+    pub const ALL: TierBand = TierBand {
+        low: TIER_BAND_LOW,
+        high: TIER_BAND_HIGH,
+        a_from: TIER_A_FROM,
+        c_from: TIER_C_FROM,
+    };
+
+    /// R4673000: the normal faces' band, its own constants.
+    pub const NORMAL: TierBand = TierBand {
+        low: NORMAL_TIER_BAND_LOW,
+        high: NORMAL_TIER_BAND_HIGH,
+        a_from: NORMAL_TIER_A_FROM,
+        c_from: NORMAL_TIER_C_FROM,
+    };
+
+    /// R4673000: the Radiant faces' band, its own constants.
+    pub const RADIANT: TierBand = TierBand {
+        low: RADIANT_TIER_BAND_LOW,
+        high: RADIANT_TIER_BAND_HIGH,
+        a_from: RADIANT_TIER_A_FROM,
+        c_from: RADIANT_TIER_C_FROM,
+    };
+}
+
+impl StatsFace {
+    /// R4673000: the band the face's tiers are read in.
+    pub fn band(self) -> TierBand {
+        match self {
+            StatsFace::All => TierBand::ALL,
+            StatsFace::Normal => TierBand::NORMAL,
+            StatsFace::Radiant => TierBand::RADIANT,
+        }
+    }
+}
+
+/// R4673000: the games a face reads as the card's seen side: on All its seen games (`seen`), on Normal the
+/// seats that played it normal, on Radiant those that played it Radiant (R1147000).
+pub fn face_side(stats: &CardStats, face: StatsFace) -> Tally {
+    match face {
+        StatsFace::All => seen(stats),
+        StatsFace::Normal => stats.played_normal,
+        StatsFace::Radiant => stats.played_radiant,
+    }
+}
+
+/// R4673000: the games a face reads of a Created card: on All every seat that made a copy
+/// (`CreatedStats::made`), on Normal or Radiant the seats that used one on that face (R2089000).
+pub fn created_face_side(stats: &CreatedStats, face: StatsFace) -> Tally {
+    match face {
+        StatsFace::All => stats.made(),
+        StatsFace::Normal => stats.created_played_normal,
+        StatsFace::Radiant => stats.created_played_radiant,
+    }
+}
+
 /// R3022000: what a card's adjusted win rate is read against: the field of cards it is measured beside.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -1525,13 +1721,26 @@ impl StatsField {
 /// R3070000: only a card with `drawn_floor` games on both sides (at least 1) gives a delta, and every card
 /// given counts toward `baseline`, the average card's in-deck win rate (an even game when none has a game).
 pub fn stats_field<'a>(cards: impl IntoIterator<Item = &'a CardStats>, drawn_floor: i32) -> StatsField {
+    face_stats_field(cards, StatsFace::All, drawn_floor)
+}
+
+/// R4673000: `stats_field` over one face: each card's delta is its face's win rate (`face_side`) less its
+/// never-drawn games', from the cards with `drawn_floor` games on both sides, so the face has a centre and a
+/// spread of its own. The centre takes in what every card's face shares: a play's selection over a mere
+/// draw and, on Radiant, the seat's having upgraded. Below `ADJUSTED_FIELD_MIN_CARDS` such cards it keeps
+/// `StatsField::PRIOR`'s centre and spread, as All does; `baseline` is the average deck's either way.
+pub fn face_stats_field<'a>(
+    cards: impl IntoIterator<Item = &'a CardStats>,
+    face: StatsFace,
+    drawn_floor: i32,
+) -> StatsField {
     let drawn_floor = drawn_floor.max(1);
     let mut held = Tally::default();
     let lifts: Vec<(f64, f64)> = cards
         .into_iter()
         .filter_map(|stats| {
             add_tally(&mut held, &stats.in_deck);
-            let seen = seen(stats);
+            let seen = face_side(stats, face);
             let never = not_drawn(stats);
             if seen.games < drawn_floor || never.games < drawn_floor {
                 return None;
@@ -1616,10 +1825,20 @@ pub fn adjusted_interval(stats: &CardStats, field: &StatsField) -> Option<(f64, 
 /// R2777000, R2895000, R3022000: the posterior of a card's lift read from an even game, `(mean, variance)`.
 /// R3070000: with fewer than `field.drawn_floor` never-drawn games, `held_posterior` of its seen games.
 fn adjusted_posterior(stats: &CardStats, field: &StatsField) -> Option<(f64, f64)> {
-    let seen = seen(stats);
+    face_posterior(stats, StatsFace::All, field)
+}
+
+/// R4673000: `adjusted_posterior` on one face, its seen side `face_side` and `field` that face's
+/// (`face_stats_field`). A face with fewer than `field.drawn_floor` never-drawn games has no posterior:
+/// R3070000's reading against the average deck would read the play's selection as the face's strength.
+fn face_posterior(stats: &CardStats, face: StatsFace, field: &StatsField) -> Option<(f64, f64)> {
+    let seen = face_side(stats, face);
     let never = not_drawn(stats);
     if never.games < field.drawn_floor.max(1) {
-        return held_posterior(&seen, field);
+        return match face {
+            StatsFace::All => held_posterior(&seen, field),
+            StatsFace::Normal | StatsFace::Radiant => None,
+        };
     }
     let delta = win_rate(&seen)? - win_rate(&never)?;
     let noise = delta_noise(&seen, &never);
@@ -1661,6 +1880,28 @@ pub fn held_adjusted(games: &Tally, field: &StatsField) -> Option<(f64, (f64, f6
     Some((mean, (mean - half, mean + half)))
 }
 
+/// R4673000: a card's adjusted win rate on one face and its 95% range, `(rate, (low, high))`, read as
+/// R2777000 reads the card against that face's field (`face_stats_field`): `ADJUSTED_WIN_RATE_CENTER +
+/// τ²/(τ² + SE²) · (delta − center)`, the range R2895000's. On All it is `adjusted_win_rate` and
+/// `adjusted_interval`. `None` when the face has no games, or (on a face) too few never-drawn games.
+pub fn face_adjusted(stats: &CardStats, face: StatsFace, field: &StatsField) -> Option<(f64, (f64, f64))> {
+    let (mean, variance) = face_posterior(stats, face, field)?;
+    let half = STATS_INTERVAL_Z * variance.sqrt();
+    Some((mean, (mean - half, mean + half)))
+}
+
+/// R4673000: the Radiant gap, a card's Radiant adjusted win rate less its Normal one, each `(rate, (low,
+/// high))` on its own face's centred scale, with its 95% range: the gap `± √(h_n² + h_r²)`, each `h` the
+/// half-width of a face's range. Above 0, the card's Radiant face gains more over its normal face than a
+/// typical card's does. The two variances are summed as if the faces were independent; they share the
+/// card's never-drawn games, so the range is a little wide, never narrow.
+pub fn radiant_gap(normal: (f64, (f64, f64)), radiant: (f64, (f64, f64))) -> (f64, (f64, f64)) {
+    let gap = radiant.0 - normal.0;
+    let half = |(_, (low, high)): (f64, (f64, f64))| (high - low) / 2.0;
+    let spread = half(normal).hypot(half(radiant));
+    (gap, (gap - spread, gap + spread))
+}
+
 string_union! {
     /// R3022000: a card's balance tier, from its adjusted win rate and that rate's 95% range:
     ///  - `S`: above the band (`TIER_BAND_HIGH`), its range wholly above an even game: a nerf candidate;
@@ -1680,15 +1921,20 @@ string_union! {
 
 /// R3022000: the tier of an adjusted win rate and its 95% range.
 pub fn tier_of(rate: f64, low: f64, high: f64) -> CardTier {
-    if rate > TIER_BAND_HIGH && low > ADJUSTED_WIN_RATE_CENTER {
+    tier_in(rate, low, high, TierBand::ALL)
+}
+
+/// R4673000: `tier_of` in a face's band (`StatsFace::band`): S and F mean S or F among that face's cards.
+pub fn tier_in(rate: f64, low: f64, high: f64, band: TierBand) -> CardTier {
+    if rate > band.high && low > ADJUSTED_WIN_RATE_CENTER {
         CardTier::S
-    } else if rate < TIER_BAND_LOW && high < ADJUSTED_WIN_RATE_CENTER {
+    } else if rate < band.low && high < ADJUSTED_WIN_RATE_CENTER {
         CardTier::F
-    } else if rate >= TIER_A_FROM {
+    } else if rate >= band.a_from {
         CardTier::A
     } else if rate >= ADJUSTED_WIN_RATE_CENTER {
         CardTier::B
-    } else if rate >= TIER_C_FROM {
+    } else if rate >= band.c_from {
         CardTier::C
     } else {
         CardTier::D
@@ -1720,12 +1966,24 @@ pub fn created_field<'a>(
     created: impl IntoIterator<Item = &'a CreatedStats>,
     deck: &StatsField,
 ) -> StatsField {
+    created_face_field(created, StatsFace::All, deck)
+}
+
+/// R4673000: `created_field` over one face: each Created card's lift is the win rate of the seats that used
+/// a copy on that face (`created_face_side`) less the average deck's (`deck.baseline`, All's), so the face
+/// reads its own centre and spread. Below `ADJUSTED_FIELD_MIN_CARDS` such cards it is the deck field, as All's
+/// is.
+pub fn created_face_field<'a>(
+    created: impl IntoIterator<Item = &'a CreatedStats>,
+    face: StatsFace,
+    deck: &StatsField,
+) -> StatsField {
     let floor = deck.drawn_floor.max(1);
     let lifts: Vec<(f64, f64)> = created
         .into_iter()
         .filter(|stats| !made_by_the_rules(&stats.card))
         .filter_map(|stats| {
-            let made = stats.made();
+            let made = created_face_side(stats, face);
             if made.games < floor {
                 return None;
             }
@@ -1759,12 +2017,24 @@ pub fn created_adjusted(
     created: &StatsField,
     deck: &StatsField,
 ) -> Option<(f64, (f64, f64))> {
+    created_face_adjusted(stats, StatsFace::All, created, deck)
+}
+
+/// R4673000: `created_adjusted` on one face: the games of the seats that used a copy on that face
+/// (`created_face_side`) against that face's Created field (`created_face_field`), or for a card a rule
+/// makes against the average deck (`deck`, All's), as on All. `None` when no seat counts on the face.
+pub fn created_face_adjusted(
+    stats: &CreatedStats,
+    face: StatsFace,
+    created: &StatsField,
+    deck: &StatsField,
+) -> Option<(f64, (f64, f64))> {
     let field = if made_by_the_rules(&stats.card) {
         deck
     } else {
         created
     };
-    held_adjusted(&stats.made(), field)
+    held_adjusted(&created_face_side(stats, face), field)
 }
 
 /// R2089000: the Created played delta, R377's over a Created card's used and never-used seats.
@@ -4866,6 +5136,421 @@ mod tests {
                 refusal(json!("a"))
                     .contains("game.seats.p1.castOrSummoned is not a list of casts and summons")
             );
+        }
+    }
+
+    // R4673000, R4673001: each face of a card read against a field of its own, and its drills.
+    mod r4673000_faces {
+        use super::*;
+
+        fn close(a: f64, b: f64) -> bool {
+            (a - b).abs() < 1e-9
+        }
+
+        /// `games` seats a side: played Radiant won at `radiant`, played normal at `normal`, and never drawn at
+        /// `never`.
+        fn faced(games: i32, radiant: f64, normal: f64, never: f64) -> CardStats {
+            let wins = |rate: f64| (f64::from(games) * rate).round() as i32;
+            let won = wins(radiant) + wins(normal);
+            CardStats {
+                card: "a".to_string(),
+                in_deck: tally(3 * games, won + wins(never), 0),
+                opening_hand: tally(0, 0, 0),
+                going_first: tally(0, 0, 0),
+                going_second: tally(0, 0, 0),
+                played: tally(2 * games, won, 0),
+                drawn_not_played: tally(0, 0, 0),
+                played_radiant: tally(games, wins(radiant), 0),
+                played_normal: tally(games, wins(normal), 0),
+                created_played: tally(0, 0, 0),
+                created_not_played: tally(0, 0, 0),
+                created_played_radiant: tally(0, 0, 0),
+                created_played_normal: tally(0, 0, 0),
+            }
+        }
+
+        /// Forty cards of 1,000 seats a face: half Radiant at 71%, half at 57%, every normal face at 52%, every
+        /// never-drawn deck at 50%. A Radiant face is 14 points above its never-drawn games on average, a
+        /// normal face 2.
+        fn upgraded_field() -> Vec<CardStats> {
+            (0..40)
+                .map(|at| faced(1000, if at < 20 { 0.71 } else { 0.57 }, 0.52, 0.50))
+                .collect()
+        }
+
+        #[test]
+        fn r4673000_a_typical_radiant_face_reads_an_even_game_against_the_radiant_field() {
+            let cards = upgraded_field();
+            let radiant = face_stats_field(&cards, StatsFace::Radiant, 1);
+            // Equal games, so equal weights: the centre is the mean delta, τ² the deltas' sample variance less
+            // their sampling variance.
+            assert_eq!(radiant.cards, 40);
+            assert!(close(radiant.center, 0.14), "{}", radiant.center);
+            let noise: f64 = 0.25 * (2.0 / 1000.0);
+            assert!(
+                close(radiant.spread, (40.0 * 0.07 * 0.07 / 39.0 - noise).sqrt()),
+                "{}",
+                radiant.spread
+            );
+            // The normal faces are alike: their centre is their shared 2 points, their spread the floor.
+            let normal = face_stats_field(&cards, StatsFace::Normal, 1);
+            assert!(close(normal.center, 0.02), "{}", normal.center);
+            assert!(close(normal.spread, ADJUSTED_FIELD_SPREAD_FLOOR));
+            // Every face's baseline is the average deck's, as All's is.
+            let all = stats_field(&cards, 1);
+            assert!(close(radiant.baseline, all.baseline) && close(normal.baseline, all.baseline));
+
+            // A card whose Radiant face is exactly as much better as the field's reads an even game on Radiant,
+            // and on Normal too, its normal face the field's.
+            let typical = faced(1000, 0.64, 0.52, 0.50);
+            let (rate, (low, high)) = face_adjusted(&typical, StatsFace::Radiant, &radiant).unwrap();
+            assert!(close(rate, ADJUSTED_WIN_RATE_CENTER), "{rate}");
+            assert!(low < rate && rate < high);
+            assert!(close(
+                face_adjusted(&typical, StatsFace::Normal, &normal).unwrap().0,
+                ADJUSTED_WIN_RATE_CENTER
+            ));
+            // Read with no field of its own (R2777000's prior, centred on no lift), the same Radiant face would
+            // read above the band.
+            assert!(
+                face_adjusted(&typical, StatsFace::Radiant, &StatsField::PRIOR)
+                    .unwrap()
+                    .0
+                    > TIER_BAND_HIGH
+            );
+        }
+
+        #[test]
+        fn r4673000_a_radiant_face_above_the_field_reads_above_it_and_its_gap_clears_zero() {
+            let cards = upgraded_field();
+            let radiant_field = face_stats_field(&cards, StatsFace::Radiant, 1);
+            let normal_field = face_stats_field(&cards, StatsFace::Normal, 1);
+            // 24 points above its never-drawn games on Radiant, 10 above the field's 14; its normal face the
+            // field's own.
+            let strong = faced(4000, 0.74, 0.52, 0.50);
+            let radiant = face_adjusted(&strong, StatsFace::Radiant, &radiant_field).unwrap();
+            let normal = face_adjusted(&strong, StatsFace::Normal, &normal_field).unwrap();
+            assert!(radiant.0 > TIER_BAND_HIGH, "{radiant:?}");
+            assert!(close(normal.0, ADJUSTED_WIN_RATE_CENTER), "{normal:?}");
+            let weight = |field: &StatsField| {
+                let prior = field.spread * field.spread;
+                prior / (prior + 0.25 * (2.0 / 4000.0))
+            };
+            assert!(close(radiant.0, 0.5 + weight(&radiant_field) * 0.10));
+            assert_eq!(
+                tier_in(radiant.0, radiant.1.0, radiant.1.1, StatsFace::Radiant.band()),
+                CardTier::S
+            );
+
+            // The gap: Radiant less Normal, its range the two half-widths summed in quadrature, clear of 0.
+            let (gap, (low, high)) = radiant_gap(normal, radiant);
+            assert!(close(gap, radiant.0 - normal.0));
+            let half = |(_, (from, to)): (f64, (f64, f64))| (to - from) / 2.0;
+            let spread = (half(normal).powi(2) + half(radiant).powi(2)).sqrt();
+            assert!(close(gap - low, spread) && close(high - gap, spread));
+            assert!(low > 0.0, "{low}");
+            // A card whose faces are both the field's has a gap of about 0, its range across 0.
+            let typical = faced(4000, 0.64, 0.52, 0.50);
+            let (even, (from, to)) = radiant_gap(
+                face_adjusted(&typical, StatsFace::Normal, &normal_field).unwrap(),
+                face_adjusted(&typical, StatsFace::Radiant, &radiant_field).unwrap(),
+            );
+            assert!(close(even, 0.0) && from < 0.0 && to > 0.0, "{even} {from} {to}");
+        }
+
+        #[test]
+        fn r4673000_a_face_short_of_games_or_of_never_drawn_games_reads_none() {
+            let cards = upgraded_field();
+            let field = face_stats_field(&cards, StatsFace::Radiant, 20);
+            // Never played Radiant: no Radiant rate, while its normal face has one.
+            let never_radiant = CardStats {
+                played_radiant: tally(0, 0, 0),
+                ..faced(1000, 0.64, 0.52, 0.50)
+            };
+            assert_eq!(face_adjusted(&never_radiant, StatsFace::Radiant, &field), None);
+            let normal = face_stats_field(&cards, StatsFace::Normal, 20);
+            assert!(face_adjusted(&never_radiant, StatsFace::Normal, &normal).is_some());
+            // Ten never-drawn games, below the floor of 20: no face reads a rate, though All reads the card against
+            // the average deck (R3070000).
+            let rarely_undrawn = CardStats {
+                in_deck: tally(2010, 1165, 0),
+                ..faced(1000, 0.64, 0.52, 0.50)
+            };
+            assert_eq!(not_drawn(&rarely_undrawn), tally(10, 5, 0));
+            for face in [StatsFace::Normal, StatsFace::Radiant] {
+                assert_eq!(face_adjusted(&rarely_undrawn, face, &field), None, "{face}");
+            }
+            assert!(face_adjusted(&rarely_undrawn, StatsFace::All, &field).is_some());
+            assert_eq!(
+                face_adjusted(&rarely_undrawn, StatsFace::All, &field),
+                adjusted_win_rate(&rarely_undrawn, &field).zip(adjusted_interval(&rarely_undrawn, &field))
+            );
+
+            // A face's field reads only the cards with the floor on both sides: 19 Radiant seats give no delta, and
+            // too few cards keep the prior's centre and spread.
+            let mut few: Vec<CardStats> = cards[..ADJUSTED_FIELD_MIN_CARDS - 1].to_vec();
+            few.push(CardStats {
+                played_radiant: tally(19, 14, 0),
+                ..faced(1000, 0.71, 0.52, 0.50)
+            });
+            let prior = face_stats_field(&few, StatsFace::Radiant, 20);
+            assert_eq!(
+                (prior.center, prior.spread, prior.cards),
+                (
+                    StatsField::PRIOR.center,
+                    StatsField::PRIOR.spread,
+                    StatsField::PRIOR.cards
+                )
+            );
+            assert_eq!(
+                face_stats_field(&few, StatsFace::Normal, 20).cards,
+                ADJUSTED_FIELD_MIN_CARDS
+            );
+
+            // A Created card no seat used on a face reads none on it.
+            let made = CreatedStats {
+                card: "t".to_string(),
+                created_played: tally(40, 24, 0),
+                created_not_played: tally(40, 20, 0),
+                created_played_radiant: tally(0, 0, 0),
+                created_played_normal: tally(40, 24, 0),
+            };
+            let deck = StatsField {
+                baseline: 0.5,
+                ..StatsField::PRIOR
+            };
+            assert_eq!(
+                created_face_adjusted(&made, StatsFace::Radiant, &deck, &deck),
+                None
+            );
+            assert_eq!(
+                created_face_adjusted(&made, StatsFace::Normal, &deck, &deck),
+                held_adjusted(&tally(40, 24, 0), &deck)
+            );
+        }
+
+        #[test]
+        fn r4673000_all_reads_as_before() {
+            // R2777000's +20-point card over 4,000 games a side under the prior field: the very bits of its
+            // formula, `0.5 + τ²/(τ² + SE²) · delta`.
+            let card = CardStats {
+                in_deck: tally(8000, 4000, 0),
+                played: tally(4000, 2400, 0),
+                played_radiant: tally(0, 0, 0),
+                played_normal: tally(0, 0, 0),
+                ..faced(4000, 0.5, 0.5, 0.4)
+            };
+            let noise =
+                ADJUSTED_WIN_RATE_CENTER * (1.0 - ADJUSTED_WIN_RATE_CENTER) * (1.0 / 4000.0 + 1.0 / 4000.0);
+            let prior = ADJUSTED_WIN_RATE_PRIOR_SPREAD * ADJUSTED_WIN_RATE_PRIOR_SPREAD;
+            let weight = prior / (prior + noise);
+            let delta = 2400.0 / 4000.0 - 1600.0 / 4000.0;
+            let rate = ADJUSTED_WIN_RATE_CENTER + weight * (delta - 0.0);
+            let half = STATS_INTERVAL_Z * (weight * noise).sqrt();
+            let (all, (low, high)) = face_adjusted(&card, StatsFace::All, &StatsField::PRIOR).unwrap();
+            assert_eq!(all.to_bits(), rate.to_bits());
+            assert_eq!(low.to_bits(), (rate - half).to_bits());
+            assert_eq!(high.to_bits(), (rate + half).to_bits());
+            assert_eq!(
+                adjusted_win_rate(&card, &StatsField::PRIOR).map(f64::to_bits),
+                Some(rate.to_bits())
+            );
+
+            // On All the face functions are the card's own, field, Created field and tier alike.
+            let cards = upgraded_field();
+            for floor in [1, 20] {
+                let field = stats_field(&cards, floor);
+                assert_eq!(face_stats_field(&cards, StatsFace::All, floor), field);
+                for card in &cards {
+                    assert_eq!(
+                        face_adjusted(card, StatsFace::All, &field),
+                        adjusted_win_rate(card, &field).zip(adjusted_interval(card, &field))
+                    );
+                    assert_eq!(face_side(card, StatsFace::All), seen(card));
+                }
+            }
+            let created: Vec<CreatedStats> = (0..40)
+                .map(|at| CreatedStats {
+                    card: format!("t{at}"),
+                    created_played: tally(500, if at < 20 { 300 } else { 260 }, 0),
+                    created_not_played: tally(500, 280, 0),
+                    created_played_radiant: tally(200, 130, 0),
+                    created_played_normal: tally(300, if at < 20 { 170 } else { 130 }, 0),
+                })
+                .collect();
+            let deck = stats_field(&cards, 20);
+            let made = created_field(&created, &deck);
+            assert_eq!(created_face_field(&created, StatsFace::All, &deck), made);
+            assert_eq!(made.cards, 40);
+            for stats in &created {
+                assert_eq!(created_face_side(stats, StatsFace::All), stats.made());
+                assert_eq!(
+                    created_face_adjusted(stats, StatsFace::All, &made, &deck),
+                    created_adjusted(stats, &made, &deck)
+                );
+            }
+            // A Created face reads its own field: the normal uses differ, the Radiant ones are all alike.
+            let radiant = created_face_field(&created, StatsFace::Radiant, &deck);
+            assert_eq!(radiant.cards, 40);
+            assert!(close(radiant.spread, ADJUSTED_FIELD_SPREAD_FLOOR));
+            assert!(close(radiant.baseline, deck.baseline + radiant.center));
+            assert!(close(radiant.center, 0.65 - deck.baseline), "{}", radiant.center);
+
+            // All's band is R3022000's constants, each face's its own; a band moves the tiers read in it.
+            assert_eq!(
+                TierBand::ALL,
+                TierBand {
+                    low: TIER_BAND_LOW,
+                    high: TIER_BAND_HIGH,
+                    a_from: TIER_A_FROM,
+                    c_from: TIER_C_FROM
+                }
+            );
+            assert_eq!(
+                StatsFace::Normal.band(),
+                TierBand {
+                    low: NORMAL_TIER_BAND_LOW,
+                    high: NORMAL_TIER_BAND_HIGH,
+                    a_from: NORMAL_TIER_A_FROM,
+                    c_from: NORMAL_TIER_C_FROM
+                }
+            );
+            assert_eq!(
+                StatsFace::Radiant.band(),
+                TierBand {
+                    low: RADIANT_TIER_BAND_LOW,
+                    high: RADIANT_TIER_BAND_HIGH,
+                    a_from: RADIANT_TIER_A_FROM,
+                    c_from: RADIANT_TIER_C_FROM
+                }
+            );
+            assert_eq!(StatsFace::All.band(), TierBand::ALL);
+            for (rate, low, high) in [
+                (0.56, 0.51, 0.61),
+                (0.56, 0.49, 0.63),
+                (0.53, 0.4, 0.6),
+                (0.51, 0.4, 0.6),
+                (0.48, 0.4, 0.6),
+                (0.46, 0.4, 0.6),
+                (0.44, 0.39, 0.49),
+            ] {
+                assert_eq!(tier_in(rate, low, high, TierBand::ALL), tier_of(rate, low, high));
+            }
+            let wide = TierBand {
+                low: 0.40,
+                high: 0.60,
+                a_from: 0.55,
+                c_from: 0.45,
+            };
+            assert_eq!(tier_in(0.56, 0.51, 0.61, wide), CardTier::A);
+            assert_eq!(tier_in(0.53, 0.4, 0.6, wide), CardTier::B);
+            assert_eq!(tier_in(0.44, 0.39, 0.49, wide), CardTier::D);
+        }
+
+        /// A seat whose deck is a, b and c, which played `played` on turn 2 each, Radiant where `radiant` says, or
+        /// with no face flags at all when `radiant` is `None`.
+        fn played_seat(played: &[&str], radiant: Option<Vec<bool>>) -> SeatSummary {
+            SeatSummary {
+                played_turns: Some(vec![2; played.len()]),
+                played_radiant: radiant,
+                ..seat(&["a", "b", "c"], played, &[], played)
+            }
+        }
+
+        #[test]
+        fn r4673001_the_drills_are_folded_by_face_and_a_seat_without_face_flags_is_in_neither() {
+            let record = |id: &str, winner: Winner, p1: SeatSummary, p2: SeatSummary| GameRecord {
+                id: id.to_string(),
+                game: game(winner, GameOverReason::HeroDeath, 12, p1, p2),
+                ..record()
+            };
+            let records = [
+                // p1 plays a Radiant and wins; p2 plays a normal and loses.
+                record(
+                    "m1",
+                    Winner::P1,
+                    played_seat(&["a"], Some(vec![true])),
+                    played_seat(&["a"], Some(vec![false])),
+                ),
+                // a played twice, once Radiant: the seat counts on Radiant alone. p2's plays carry no flags.
+                record(
+                    "m2",
+                    Winner::P2,
+                    played_seat(&["a", "a"], Some(vec![false, true])),
+                    played_seat(&["a"], None),
+                ),
+                // p1 never plays a; p2 plays it normal and wins.
+                record(
+                    "m3",
+                    Winner::P2,
+                    played_seat(&["b"], Some(vec![true])),
+                    played_seat(&["a"], Some(vec![false])),
+                ),
+            ];
+            let mut totals = StatsTotals::default();
+            for record in &records {
+                totals.fold(record, true);
+            }
+            let mut a = CardTotal::new("a");
+            for cards in totals.cards.values() {
+                a.add(&cards["a"]);
+            }
+            let game = |games: i64, wins: i64| DrillCount { games, wins };
+            // R1147000's tallies and the face drills count the same seats.
+            assert_eq!(a.stats.played_radiant, tally(2, 1, 0));
+            assert_eq!(a.stats.played_normal, tally(2, 1, 0));
+            assert_eq!(a.radiant.turns, IndexMap::from([(2, game(2, 1))]));
+            assert_eq!(a.normal.turns, IndexMap::from([(2, game(2, 1))]));
+            assert_eq!(
+                a.radiant.co,
+                IndexMap::from([("b".to_string(), game(2, 1)), ("c".to_string(), game(2, 1))])
+            );
+            // All counts every seat that held it, the flagless one among them.
+            assert_eq!(a.turns, IndexMap::from([(2, game(5, 3))]));
+            assert_eq!(a.co["b"].games, 6);
+            assert_eq!(a.face(StatsFace::All), None);
+
+            // The drill-down reads each face's drills, its co-played ties in the order first met.
+            let drills = |face| face_drills_of(&totals, |_: &TotalsKey| true, 10, face);
+            assert_eq!(
+                drills(StatsFace::All),
+                card_drills_of(&totals, |_: &TotalsKey| true, 10)
+            );
+            let radiant = &drills(StatsFace::Radiant)["a"];
+            assert_eq!(radiant.by_turn, vec![(2, game(2, 1))]);
+            assert_eq!(
+                radiant.co_played,
+                vec![("b".to_string(), game(2, 1)), ("c".to_string(), game(2, 1))]
+            );
+            assert_eq!(drills(StatsFace::Normal)["a"].by_turn, vec![(2, game(2, 1))]);
+
+            // Totals folded before the faces were (or without drills) give a face none.
+            let mut old = totals.clone();
+            for cards in old.cards.values_mut() {
+                for total in cards.values_mut() {
+                    total.radiant = FaceDrills::default();
+                    total.normal = FaceDrills::default();
+                }
+            }
+            let empty = &face_drills_of(&old, |_: &TotalsKey| true, 10, StatsFace::Radiant)["a"];
+            assert!(empty.by_turn.is_empty() && empty.co_played.is_empty());
+            let selected = totals.select(&[GameSource::Live], None, None, false);
+            assert!(selected.cards.values().all(|cards| {
+                cards
+                    .values()
+                    .all(|total| total.radiant.is_empty() && total.normal.is_empty())
+            }));
+            assert_eq!(
+                totals.select(&[GameSource::Live], None, None, true).cards,
+                totals.cards
+            );
+
+            // A total with no face drills writes as before; one with them reads back the same.
+            let json = serde_json::to_value(&old.cards.values().next().unwrap()["a"]).unwrap();
+            assert!(json.get("radiant").is_none() && json.get("normal").is_none());
+            let written = &totals.cards.values().next().unwrap()["a"];
+            let back: CardTotal = serde_json::from_value(serde_json::to_value(written).unwrap()).unwrap();
+            assert_eq!(&back, written);
         }
     }
 

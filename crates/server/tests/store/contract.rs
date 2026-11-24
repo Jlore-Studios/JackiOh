@@ -13,8 +13,8 @@ use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
 use jackioh_engine::wire::{
-    CardStatsFilter, GAME_SOURCES, GameMode, GameReport, PilotFilter, SourceFilter, StatsTotals, card_stats,
-    card_stats_of, game_figures_of, game_report, parse_game_record, sources_of,
+    CardStatsFilter, CardTotal, DrillCount, GAME_SOURCES, GameMode, GameReport, PilotFilter, SourceFilter,
+    StatsTotals, card_stats, card_stats_of, game_figures_of, game_report, parse_game_record, sources_of,
 };
 use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::config::PersonaName;
@@ -5292,6 +5292,65 @@ mod game_records {
         assert!(card_stats(&before, &filter).created.is_empty());
     }
 
+    /// R4673001: a record whose plays carry their face is folded into each face's drills too, kept in the
+    /// same rows (`turns` and `co`) beside the card's own and loaded as the records give them, a later fold
+    /// adding to what an earlier one wrote; a record without face flags adds to neither face.
+    async fn r4673001_keeps_each_faces_drills_and_loads_them_as_the_records_give(harness: &StoreHarness) {
+        let deck = json!(["core-001", "core-002", "core-003"]);
+        let faced = |id: &str, winner: &str, radiant: Value, turns: Value| {
+            game_record(
+                id,
+                json!({ "game": { "first": "p1", "winner": winner, "reason": "hero-death", "turns": 6, "seats": {
+                    "p1": { "deck": deck, "opening": ["core-001", "core-002"], "drawn": [],
+                            "played": ["core-001", "core-002"], "playedTurns": turns, "playedRadiant": radiant },
+                    "p2": { "deck": deck, "opening": ["core-001"], "drawn": [], "played": ["core-001"],
+                            "playedTurns": [3] },
+                } } }),
+            )
+        };
+        let first = vec![
+            faced("m-face-1", "p1", json!([true, false]), json!([2, 2])),
+            faced("m-face-2", "p2", json!([false, false]), json!([3, 4])),
+        ];
+        let mut second = mixed_records();
+        second.push(faced("m-face-3", "p1", json!([true, true]), json!([2, 5])));
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&first)),
+            vec![true; first.len()]
+        );
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&second)),
+            vec![true; second.len()]
+        );
+        let records: Vec<GameRecord> = first.into_iter().chain(second).collect();
+        let totals = q!(harness, t => t.stats_totals_load(&every_total()));
+        assert_eq!(totals, loaded(&records));
+
+        // core-001 was played Radiant twice (won both) and normal once (lost), on turns 2, 2 and 3; p2's plays,
+        // without flags, are in neither face.
+        let mut card = CardTotal::new("core-001");
+        for cards in totals.cards.values() {
+            if let Some(total) = cards.get("core-001") {
+                card.add(total);
+            }
+        }
+        let game = |games: i64, wins: i64| DrillCount { games, wins };
+        assert_eq!(card.radiant.turns.get(&2), Some(&game(2, 2)));
+        assert_eq!(card.normal.turns.get(&3), Some(&game(1, 0)));
+        assert_eq!(card.radiant.co.get("core-003"), Some(&game(2, 2)));
+        assert_eq!(card.normal.co.get("core-002"), Some(&game(1, 0)));
+        assert!(card.turns[&3].games > card.normal.turns[&3].games);
+        // Without drills, no face's either.
+        let lean =
+            q!(harness, t => t.stats_totals_load(&StatsTotalsQuery { drills: false, ..every_total() }));
+        assert!(
+            lean.cards
+                .values()
+                .flat_map(|cards| cards.values())
+                .all(|total| total.radiant.is_empty() && total.normal.is_empty() && total.turns.is_empty())
+        );
+    }
+
     /// R1044000: a record written before the totals (migration 0041) is folded by
     /// `game_records_fold_pending`, a batch at a time, the first in id order, and never twice.
     async fn r1044000_folds_the_records_written_before_the_totals_once_a_batch_at_a_time(
@@ -5595,6 +5654,7 @@ mod game_records {
         r1976000_folds_a_batch_once_with_no_record_and_leaves_out_the_ids_the_table_holds,
         r1994000_a_records_game_figures_read_the_same_once_the_purge_empties_its_detail,
         r2089000_folds_the_created_figures_and_loads_them_as_the_records_give,
+        r4673001_keeps_each_faces_drills_and_loads_them_as_the_records_give,
     );
 }
 

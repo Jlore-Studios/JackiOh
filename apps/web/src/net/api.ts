@@ -14,6 +14,7 @@ import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 import type { CardTier } from "../wire/generated/CardTier.ts";
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import type { FleetTrackView } from "../wire/generated/FleetTrackView.ts";
+import type { StatsFace } from "../wire/generated/StatsFace.ts";
 import { stripTrailingSlashes } from "./navigate.ts";
 import {
   forgetRead,
@@ -1805,9 +1806,32 @@ export type CardDrillDownResponse = {
     cost: number;
     rarity: string;
   };
+  /** R4673001: these three read the face's games alone on Normal or Radiant, none over totals kept before the drills were split by face. */
   patches: { patch: string; games: number; winRate: number | null }[];
   byTurn: { turn: number; games: number; winRate: number | null }[];
   coPlayed: { id: string; name: string; games: number; winRate: number | null }[];
+  /** R4673001: the face the details answered, `all` when none was asked; absent from a server deployed before it. */
+  face?: StatsFace;
+  /** R4673001: the card's Normal and Radiant figures and the gap between them, on every face; absent from an older server. */
+  faces?: CardFaces;
+};
+
+/** R4673000: one face's figures in the drill-down, read against that face's own field and band. */
+export type PublicFaceFigures = {
+  games: number;
+  adjustedWinRate: number | null;
+  adjustedLow: number | null;
+  adjustedHigh: number | null;
+  tier: CardTier | null;
+  hasEnoughGames: boolean;
+};
+
+/** R4673000, R4673001: a card's Normal and Radiant figures, and Radiant's adjusted rate minus Normal's with its 95% range. */
+export type CardFaces = {
+  normal: PublicFaceFigures;
+  radiant: PublicFaceFigures;
+  /** Null when either face is short of games. */
+  gap: { gap: number; low: number; high: number } | null;
 };
 
 export type CardStatsOptions = {
@@ -1819,6 +1843,8 @@ export type CardStatsOptions = {
   cost?: number;
   card?: string;
   mode?: string;
+  /** R4673001: one face's figures; left out on All, so All's path and its kept read stay as before. */
+  face?: StatsFace;
   signal?: AbortSignal;
 };
 
@@ -1833,6 +1859,7 @@ export function cardStatsPath(options: CardStatsOptions = {}): string {
   if (options.cost !== undefined) params.set("cost", String(options.cost));
   if (options.card) params.set("card", options.card);
   if (options.mode) params.set("mode", options.mode);
+  if (options.face) params.set("face", options.face);
   const query = params.toString();
   return `/api/stats/cards${query ? `?${query}` : ""}`;
 }
@@ -1841,14 +1868,22 @@ export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStat
   return keptGet<PublicStatsCardsResponse>(cardStatsPath(options), null, options.signal);
 }
 
-export function getCardDrillDown(
-  cardId: string,
-  mode?: string,
-  signal?: AbortSignal,
-): Promise<CardDrillDownResponse> {
-  const query = mode ? `?mode=${encodeURIComponent(mode)}` : "";
-  return apiRequest<CardDrillDownResponse>(`/api/stats/cards/${encodeURIComponent(cardId)}${query}`, {
-    signal,
+/** R4673001: a card's details on a match type, a face and a patch, each asked only when given (none is the newest patch's All). */
+export type CardDrillDownOptions = {
+  mode?: string;
+  face?: StatsFace;
+  patch?: string;
+  signal?: AbortSignal;
+};
+
+export function getCardDrillDown(cardId: string, options: CardDrillDownOptions = {}): Promise<CardDrillDownResponse> {
+  const params = new URLSearchParams();
+  if (options.mode) params.set("mode", options.mode);
+  if (options.face) params.set("face", options.face);
+  if (options.patch) params.set("patch", options.patch);
+  const query = params.toString();
+  return apiRequest<CardDrillDownResponse>(`/api/stats/cards/${encodeURIComponent(cardId)}${query ? `?${query}` : ""}`, {
+    signal: options.signal,
   });
 }
 

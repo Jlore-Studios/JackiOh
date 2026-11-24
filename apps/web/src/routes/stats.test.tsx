@@ -2972,3 +2972,377 @@ describe("#4511 the statistics grid builds each card's face once", () => {
     for (const id of listed) expect(gridCalls(id)).toBeGreaterThan(0);
   });
 });
+
+describe("R4673000 R4673001 the Face control", () => {
+  /** The mock cards with each face's figures over them, read against `tiers`, with `created` for the Tokens tab. */
+  function faced(rows: Record<string, object>, tiers: object, created: object[]) {
+    return {
+      ...MOCK_CARD_STATS_PROVISIONAL,
+      cards: MOCK_CARD_STATS_PROVISIONAL.cards.map((card) => ({ ...card, ...rows[card.id] })),
+      tiers,
+      created,
+    };
+  }
+
+  /** Rush Token, a Created card, on one face: `games` seats used a copy of it. */
+  function rush(games: number, tier: string, adjustedWinRate: number) {
+    return {
+      id: "core-t-rush",
+      name: "Rush Token",
+      cost: 1,
+      rarity: "Token",
+      set: "Core",
+      games,
+      tier,
+      adjustedWinRate,
+      hasEnoughGames: true,
+      window: { from: "0.2.0", liveGames: 412, source: "provisional", counted: ["0.2.0"] },
+    };
+  }
+
+  // All: Spark Pup A and Aqua Warden C on the band 45% to 55%.
+  const ALL = faced(
+    {
+      "core-001": { adjustedWinRate: 0.534, adjustedLow: 0.53, adjustedHigh: 0.538, tier: "A" },
+      "core-003": { adjustedWinRate: 0.486, adjustedLow: 0.48, adjustedHigh: 0.49, tier: "C" },
+    },
+    { center: 0.02, spread: 0.03, cards: 40, baseline: 0.5, bandLow: 0.45, bandHigh: 0.55 },
+    [rush(55, "B", 0.521)],
+  );
+  // Radiant, on a band of its own (40% to 60%): Aqua Warden S over Spark Pup A, Lava Hound still short of games.
+  const RADIANT = faced(
+    {
+      "core-001": { games: 20, winRate: 0.7, adjustedWinRate: 0.58, adjustedLow: 0.56, adjustedHigh: 0.6, tier: "A" },
+      "core-002": { games: 4, winRate: 0.75, hasEnoughGames: false },
+      "core-003": { games: 25, winRate: 0.72, adjustedWinRate: 0.62, adjustedLow: 0.61, adjustedHigh: 0.63, tier: "S" },
+    },
+    { center: 0.14, spread: 0.05, cards: 40, baseline: 0.5, bandLow: 0.4, bandHigh: 0.6 },
+    [rush(20, "S", 0.61)],
+  );
+  // Normal: Lava Hound B over Spark Pup C, Aqua Warden short of games.
+  const NORMAL = faced(
+    {
+      "core-001": { games: 30, winRate: 0.5, adjustedWinRate: 0.49, adjustedLow: 0.47, adjustedHigh: 0.51, tier: "C" },
+      "core-002": { games: 25, winRate: 0.56, adjustedWinRate: 0.52, adjustedLow: 0.5, adjustedHigh: 0.54, tier: "B", hasEnoughGames: true },
+      "core-003": { games: 5, winRate: 0.4, hasEnoughGames: false },
+    },
+    { center: 0.02, spread: 0.03, cards: 40, baseline: 0.5, bandLow: 0.45, bandHigh: 0.55 },
+    [rush(35, "C", 0.49)],
+  );
+
+  /** A card's Normal and Radiant figures and the gap between them, both faces over the floor. */
+  const FACES_SEEN = {
+    normal: { games: 30, adjustedWinRate: 0.512, adjustedLow: 0.48, adjustedHigh: 0.544, tier: "B", hasEnoughGames: true },
+    radiant: { games: 25, adjustedWinRate: 0.58, adjustedLow: 0.552, adjustedHigh: 0.608, tier: "A", hasEnoughGames: true },
+    gap: { gap: 0.068, low: 0.012, high: 0.124 },
+  };
+  /** Radiant below the floor: the server's rate is not shown, and there is no gap. */
+  const FACES_FEW = {
+    normal: { games: 40, adjustedWinRate: 0.495, adjustedLow: 0.47, adjustedHigh: 0.52, tier: "C", hasEnoughGames: true },
+    radiant: { games: 4, adjustedWinRate: 0.7, adjustedLow: 0.4, adjustedHigh: 0.9, tier: null, hasEnoughGames: false },
+    gap: null,
+  };
+
+  /**
+   * Answers the card statistics with the face asked for (All when none is), and a card's details with that face's
+   * turn (All 1, Normal 2, Radiant 3); Spark Pup's faces are both seen, Aqua Warden's Radiant is short of games, and
+   * Lava Hound's details come from a server that sends no faces.
+   */
+  function serveFaces(): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        const face = url.searchParams.get("face");
+        const json = (body: unknown): Promise<Response> => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+        if (url.pathname === "/api/stats/cards") return json(face === "radiant" ? RADIANT : face === "normal" ? NORMAL : ALL);
+        if (url.pathname.startsWith("/api/stats/cards/")) {
+          const id = decodeURIComponent(url.pathname.slice("/api/stats/cards/".length));
+          const turn = face === "radiant" ? 3 : face === "normal" ? 2 : 1;
+          const details = { ...MOCK_DRILL_DOWN, byTurn: [{ turn, games: 25, winRate: 0.64 }] };
+          if (id === "core-002") return json(details);
+          return json({ ...details, face: face ?? "all", faces: id === "core-003" ? FACES_FEW : FACES_SEEN });
+        }
+        return json({});
+      }),
+    );
+  }
+
+  const faceButtons = (): HTMLElement[] =>
+    [statsTestid.faceAll, statsTestid.faceNormal, statsTestid.faceRadiant].map((id) => screen.getByTestId(id));
+  const pressed = (): (string | null)[] => faceButtons().map((button) => button.getAttribute("aria-pressed"));
+  const facesAsked = (): (string | null)[] => requested("/api/stats/cards").map((url) => url.searchParams.get("face"));
+  /** The cards table as it stands: a face with no kept answer draws a skeleton while it loads, then a new table. */
+  const cardsTable = (): HTMLElement => screen.getByTestId(statsTestid.cardsTable);
+  const order = (): (string | null)[] =>
+    [...cardsTable().querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-card-id"));
+  const tiersOf = (scope: HTMLElement): (string | null)[] =>
+    within(scope).getAllByTestId(statsTestid.tierCell).map((cell) => cell.textContent);
+
+  it("R4673001 the Face control sits beside View, opens on All asking for no face, and asks for and keeps the face pressed", async () => {
+    serveFaces();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+
+    // One group named Face in the options row, right after View's, its buttons in the Segmented's look with their words alone.
+    const group = screen.getByRole("group", { name: "Face" });
+    expect(document.querySelector(".stats-options")).toContainElement(group);
+    expect(screen.getByRole("group", { name: "View" }).parentElement!.nextElementSibling).toBe(group.parentElement);
+    expect(within(group).getAllByRole("button")).toEqual(faceButtons());
+    expect(faceButtons().map((button) => button.textContent)).toEqual(["All", "Normal", "Radiant"]);
+    for (const button of faceButtons()) {
+      expect(button).toHaveClass("stats-view-btn");
+      expect(button).toHaveClass("segmented__item");
+      expect(button).not.toHaveAttribute("aria-label");
+    }
+
+    // All: pressed, and no read asks for a face, so its path is the one it always was.
+    expect(pressed()).toEqual(["true", "false", "false"]);
+    expect(facesAsked().length).toBeGreaterThan(0);
+    expect(facesAsked().every((face) => face === null)).toBe(true);
+    expect(requested("/api/stats/cards").map((url) => url.pathname + url.search)).toContain(cardStatsPath({ mode: "all" }));
+    expect(window.location.search).not.toContain("face=");
+
+    fireEvent.click(screen.getByTestId(statsTestid.faceNormal));
+    await waitFor(() => expect(facesAsked()).toContain("normal"), SLOW);
+    expect(pressed()).toEqual(["false", "true", "false"]);
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("face")).toBe("normal"), SLOW);
+
+    fireEvent.click(screen.getByTestId(statsTestid.faceRadiant));
+    await waitFor(() => expect(facesAsked()).toContain("radiant"), SLOW);
+    expect(pressed()).toEqual(["false", "false", "true"]);
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("face")).toBe("radiant"), SLOW);
+
+    // One state for both tabs: the Tokens tab opens on the face pressed, and the address keeps it.
+    fireEvent.click(screen.getByTestId(statsTestid.tabTokens));
+    await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    expect(pressed()).toEqual(["false", "false", "true"]);
+    expect(new URLSearchParams(window.location.search).get("face")).toBe("radiant");
+
+    // Back to All: the address drops the face, and a read after the kept one's window asks for none.
+    expireRead(null, cardStatsPath({ mode: "all" }));
+    vi.mocked(fetch).mockClear();
+    fireEvent.click(screen.getByTestId(statsTestid.faceAll));
+    await waitFor(() => expect(facesAsked().length).toBeGreaterThan(0), SLOW);
+    expect(facesAsked().every((face) => face === null)).toBe(true);
+    expect(pressed()).toEqual(["true", "false", "false"]);
+    await waitFor(() => expect(window.location.search).not.toContain("face="), SLOW);
+  });
+
+  it("R4673001 face=radiant in the address opens Radiant on the Cards and Tokens tabs, and an unknown face reads All", async () => {
+    serveFaces();
+    at("/stats?face=radiant");
+    const { unmount } = render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(pressed()).toEqual(["false", "false", "true"]);
+    expect(facesAsked().length).toBeGreaterThan(0);
+    expect(facesAsked().every((face) => face === "radiant")).toBe(true);
+    expect(new URLSearchParams(window.location.search).get("face")).toBe("radiant");
+    unmount();
+
+    at("/stats?tab=tokens&face=radiant");
+    const tokens = render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    expect(pressed()).toEqual(["false", "false", "true"]);
+    expect(within(table).getByTestId(statsTestid.createdTierCell)).toHaveTextContent("S");
+    tokens.unmount();
+
+    vi.mocked(fetch).mockClear();
+    for (const address of ["/stats?face=nonsense", "/stats?face=all"]) {
+      at(address);
+      const { unmount: leave } = render(<StatsRoute />);
+      await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+      expect(pressed()).toEqual(["true", "false", "false"]);
+      await waitFor(() => expect(window.location.search).not.toContain("face="), SLOW);
+      leave();
+    }
+    // All's table was asked for, and never with a face.
+    expect(facesAsked().length).toBeGreaterThan(0);
+    expect(facesAsked().every((face) => face === null)).toBe(true);
+  });
+
+  it("R4673000 R4673001 the table and the grid show each face's rows and tiers", async () => {
+    serveFaces();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const row = (id: string): HTMLElement => cardsTable().querySelector<HTMLElement>(`tbody tr[data-card-id="${id}"]`)!;
+    const games = (): (string | null)[] =>
+      [...cardsTable().querySelectorAll("tbody tr")].map((tr) => tr.querySelectorAll("td")[2]?.textContent ?? null);
+    const adjusted = (): (string | null)[] =>
+      within(cardsTable()).getAllByTestId(statsTestid.adjustedCell).map((cell) => cell.textContent);
+    const tierHeader = (): HTMLElement => within(cardsTable()).getByRole("columnheader", { name: /^Tier/ });
+    expect(order()).toEqual(["core-001", "core-003", "core-002"]);
+    expect(tiersOf(cardsTable())).toEqual(["A", "C", "—"]);
+
+    // Radiant: its rows, sorted by its adjusted rates, with its games and tiers; Lava Hound still last.
+    fireEvent.click(screen.getByTestId(statsTestid.faceRadiant));
+    await waitFor(() => expect(order()).toEqual(["core-003", "core-001", "core-002"]), SLOW);
+    expect(tiersOf(cardsTable())).toEqual(["S", "A", "—"]);
+    expect(adjusted()).toEqual(["62.0%", "58.0%", "—"]);
+    expect(games()).toEqual(["25", "20", "4"]);
+
+    // Its ranges and tier fit read its own band: Spark Pup's 56% to 60% is all inside Radiant's A (55% to 60%),
+    // where All's A (52.5% to 55%) would hold none of it.
+    fireEvent.click(screen.getByTestId(statsTestid.rangesToggle));
+    expect(within(row("core-001")).getByTestId(statsTestid.tierFit)).toHaveTextContent("100%");
+    expect(within(row("core-001")).getByTestId(statsTestid.adjustedRange)).toHaveTextContent("56.0–60.0%");
+
+    // The sort by tier follows the face's tiers.
+    fireEvent.click(tierHeader());
+    expect(order()).toEqual(["core-003", "core-001", "core-002"]);
+    fireEvent.click(tierHeader());
+    expect(order()).toEqual(["core-001", "core-003", "core-002"]);
+
+    // Normal: its own rows and tiers, Aqua Warden now short of games.
+    fireEvent.click(screen.getByTestId(statsTestid.faceNormal));
+    await waitFor(() => expect(tiersOf(cardsTable())).toContain("B"), SLOW);
+    fireEvent.click(within(cardsTable()).getByRole("columnheader", { name: /^Adjusted/ }));
+    expect(order()).toEqual(["core-002", "core-001", "core-003"]);
+    expect(tiersOf(cardsTable())).toEqual(["B", "C", "—"]);
+    expect(games()).toEqual(["25", "30", "5"]);
+
+    // The grid shows the face's tiers too.
+    fireEvent.click(screen.getByTestId(statsTestid.viewGrid));
+    await screen.findByTestId(statsTestid.cardsGrid, undefined, SLOW);
+    const gridTier = (id: string): HTMLElement =>
+      within(screen.getByTestId(statsTestid.cardsGrid).querySelector<HTMLElement>(`[data-card-id="${id}"]`)!).getByTestId(
+        statsTestid.tierCell,
+      );
+    expect(gridTier("core-002")).toHaveTextContent("B");
+    expect(gridTier("core-003")).toHaveTextContent("—");
+    fireEvent.click(screen.getByTestId(statsTestid.faceRadiant));
+    await waitFor(() => expect(gridTier("core-003")).toHaveTextContent("S"), SLOW);
+    expect(gridTier("core-001")).toHaveTextContent("A");
+
+    // The Tokens tab's Created rows follow it as well.
+    fireEvent.click(screen.getByTestId(statsTestid.viewTable));
+    fireEvent.click(screen.getByTestId(statsTestid.tabTokens));
+    await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    const rushCells = (): (string | null)[] =>
+      [...screen.getByTestId(statsTestid.tokensTable).querySelectorAll('tr[data-card-id="core-t-rush"] td')].map((td) => td.textContent);
+    expect(rushCells()).toEqual(["1", "Rush Token", "20", "S", "61.0%"]);
+    fireEvent.click(screen.getByTestId(statsTestid.faceAll));
+    await waitFor(() => expect(rushCells()).toEqual(["1", "Rush Token", "55", "B", "52.1%"]), SLOW);
+  });
+
+  it("R4673001 a row opens the drill-down on the page's face and patch, with the Normal, Radiant and gap line on every face, not enough games below the floor", async () => {
+    serveFaces();
+    at("/stats?patch=0.1.0");
+    const { unmount } = render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const asked = (id: string): Record<string, string> => Object.fromEntries(requested(`/api/stats/cards/${id}`).at(-1)!.searchParams);
+    const open = async (id: string): Promise<HTMLElement> => {
+      fireEvent.click(cardsTable().querySelector<HTMLElement>(`tbody tr[data-card-id="${id}"]`)!);
+      const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+      await within(modal).findByText("Win rate by turn played", undefined, SLOW);
+      return modal;
+    };
+    const close = (): void => {
+      fireEvent.click(screen.getByTestId(statsTestid.drillDownClose));
+    };
+    const line = (modal: HTMLElement): string[] =>
+      [statsTestid.drillDownFaceNormal, statsTestid.drillDownFaceRadiant, statsTestid.drillDownFaceGap].map(
+        (id) => within(modal).getByTestId(id).textContent ?? "",
+      );
+    const seen = ["Normal 51.2%", "Radiant 58.0%", "Radiant gap +6.8% (+1.2% to +12.4%)"];
+
+    // All: asked for the page's patch and no face; the line under the faces, before the actions, and no face named.
+    let modal = await open("core-001");
+    expect(asked("core-001")).toEqual({ mode: "all", patch: "0.1.0" });
+    const faceLine = within(modal).getByTestId(statsTestid.drillDownFaceLine);
+    expect(faceLine.previousElementSibling).toHaveClass("stats-drilldown-faces");
+    expect(faceLine.nextElementSibling).toHaveClass("stats-drilldown-actions");
+    expect(line(modal)).toEqual(seen);
+    expect(within(modal).getByText("Turn 1:")).toBeInTheDocument();
+    expect(within(modal).queryByTestId(statsTestid.drillDownFaceShown)).toBeNull();
+    close();
+
+    // Radiant: the row opens on Radiant and the patch, its details that face's alone, the same line.
+    fireEvent.click(screen.getByTestId(statsTestid.faceRadiant));
+    await waitFor(() => expect(order()).toEqual(["core-003", "core-001", "core-002"]), SLOW);
+    modal = await open("core-001");
+    expect(asked("core-001")).toEqual({ mode: "all", face: "radiant", patch: "0.1.0" });
+    expect(within(modal).getByText("Turn 3:")).toBeInTheDocument();
+    expect(within(modal).getByTestId(statsTestid.drillDownFaceShown)).toHaveTextContent("Radiant faces only");
+    expect(line(modal)).toEqual(seen);
+    close();
+
+    // Normal, on a card whose Radiant face is short of games: no Radiant rate though the server sent one, and no gap.
+    fireEvent.click(screen.getByTestId(statsTestid.faceNormal));
+    await waitFor(() => expect(order()).toEqual(["core-002", "core-001", "core-003"]), SLOW);
+    modal = await open("core-003");
+    expect(asked("core-003")).toEqual({ mode: "all", face: "normal", patch: "0.1.0" });
+    expect(within(modal).getByText("Turn 2:")).toBeInTheDocument();
+    expect(within(modal).getByTestId(statsTestid.drillDownFaceShown)).toHaveTextContent("Normal faces only");
+    expect(line(modal)).toEqual(["Normal 49.5%", "Radiant not enough games", "Radiant gap not enough games"]);
+    close();
+
+    // A server that sends no faces draws no line.
+    modal = await open("core-002");
+    expect(within(modal).queryByTestId(statsTestid.drillDownFaceLine)).toBeNull();
+    close();
+    unmount();
+
+    // On the newest patch the details ask for no patch.
+    at("/stats?face=radiant");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.click(screen.getByText("Spark Pup"));
+    modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    await within(modal).findByTestId(statsTestid.drillDownFaceLine, undefined, SLOW);
+    expect(asked("core-001")).toEqual({ mode: "all", face: "radiant" });
+  });
+
+  it("R4673001 the Sets tab reads the face", async () => {
+    const card = (id: string, name: string, set: string, wins: number, games: number) => ({
+      ...MOCK_CARD_STATS_PROVISIONAL.cards[0]!,
+      id,
+      name,
+      set,
+      games,
+      winRate: wins / games,
+      hasEnoughGames: true,
+    });
+    // All: Classic ahead at 52%; Radiant: Core ahead at 70%.
+    const sets = { ...MOCK_CARD_STATS_PROVISIONAL, patch: "0.2.0", previousPatch: "0.1.0" };
+    const allSets = { ...sets, cards: [card("core-001", "Spark Pup", "Core", 500, 1000), card("classic-001", "Palantir", "Classic", 520, 1000)] };
+    const radiantSets = { ...sets, cards: [card("core-001", "Spark Pup", "Core", 700, 1000), card("classic-001", "Palantir", "Classic", 400, 1000)] };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        const body = url.pathname !== "/api/stats/cards" ? {} : url.searchParams.get("face") === "radiant" ? radiantSets : allSets;
+        return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+      }),
+    );
+    at("/stats?set=core&mode=bo1&face=radiant");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+
+    fireEvent.click(screen.getByTestId(statsTestid.tabSets));
+    let table = await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    const setsAsked = (): (string | null)[][] =>
+      requested("/api/stats/cards")
+        .filter((url) => !url.searchParams.has("set"))
+        .map((url) => [url.searchParams.get("patch"), url.searchParams.get("mode"), url.searchParams.get("face")]);
+    await waitFor(() => expect(setsAsked()).toHaveLength(2), SLOW);
+    expect(setsAsked()).toEqual([
+      [null, "bo1", "radiant"],
+      ["0.1.0", "bo1", "radiant"],
+    ]);
+    const setsShown = (): (string | null)[] => within(table).getAllByRole("row").slice(1).map((r) => r.getAttribute("data-set"));
+    expect(setsShown()).toEqual(["Core", "Classic"]);
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent("70.0%");
+
+    // All, pressed on the Cards tab: the Sets tab asks for no face and sums All's figures.
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    fireEvent.click(await screen.findByTestId(statsTestid.faceAll, undefined, SLOW));
+    vi.mocked(fetch).mockClear();
+    fireEvent.click(screen.getByTestId(statsTestid.tabSets));
+    table = await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    await waitFor(() => expect(setsShown()).toEqual(["Classic", "Core"]), SLOW);
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent("52.0%");
+    expect(setsAsked().length).toBeGreaterThan(0);
+    expect(setsAsked().every(([, , face]) => face === null)).toBe(true);
+  });
+});

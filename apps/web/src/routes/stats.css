@@ -115,7 +115,14 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-6) var(--space-8);
+  gap: var(--space-6);
+}
+
+/* R4673001: Sort, View, Face, the ranges, Plain text and Columns stay one row at 1280 wide: the row's buttons keep
+   the tavern's bare-button height and face (tavern.css) with narrower sides, nearer the Segmented's own. As heavy as
+   that rule, and later, so it wins. */
+.tavern.app-shell.stats-page .stats-options button.segmented__item.stats-view-btn {
+  padding-inline: var(--space-5);
 }
 
 .stats-sort,
@@ -520,6 +527,20 @@
 
 .stats-drilldown-action {
   flex: 1 1 auto;
+}
+
+/* R4673001: the Normal and Radiant rates and the Radiant gap under the faces, wrapping inside the column, whose
+   gap spaces it; and the face the details read, at their top. */
+.stats-drilldown-face-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+  font-size: var(--type-sm);
+}
+
+.stats-drilldown-details > .stats-sample-hint {
+  margin: 0;
 }
 
 /* Pressed, it wears the Radiant gold. As long as the tavern's bare-button size rule, and later, so it wins. */

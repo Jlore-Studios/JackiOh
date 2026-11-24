@@ -16,7 +16,9 @@
 // the Full-art cards setting is on, R3011000), patch history, turn curve and co-played synergy. R3838000: its
 // "Show card text" button, the Almanac's, prints every face's words, no full art (cardText.tsx). R3887000: the
 // Cards and Tokens tabs' "Plain text" button prints each card they list, and the drill-down's text and its
-// Reference cards, as readable text, no face (PlainText.tsx).
+// Reference cards, as readable text, no face (PlainText.tsx). R4673000, R4673001: their Face control (All, Normal
+// or Radiant, kept in the address) reads every figure they and the Sets tab show on one face, against that face's
+// own field and band, and the drill-down on the page's face and patch, with each face's rate and the Radiant gap.
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { KEYWORD_KINDS, SHIPPED_SETS, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
@@ -38,7 +40,9 @@ import {
   getCardStats,
   getPublicPlayers,
   type CardDrillDownResponse,
+  type CardFaces,
   type CardStatsOptions,
+  type PublicFaceFigures,
   type PublicPlayerSummary,
   type PublicStatsCardsResponse,
 } from "../net/api.ts";
@@ -72,6 +76,7 @@ import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
 import { TierChip, adjustedText, tierRank } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
+import type { StatsFace } from "../wire/generated/StatsFace.ts";
 import { CardTextButton, CardTextFaces, cardTextTestid, useCardText, type CardText } from "./cardText.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import { Segmented, Tabs } from "../tabs/index.ts";
@@ -255,15 +260,81 @@ function modeOf(params: URLSearchParams): StatsMode {
   return MODES.find((known) => known === asked) ?? DEFAULT_MODE;
 }
 
+/** R4673001: the faces the Cards and Tokens tabs read. All, every seat as before, comes first and is what the page opens on. */
+const FACES: readonly StatsFace[] = ["all", "normal", "radiant"];
+const DEFAULT_FACE: StatsFace = "all";
+
+/** R4673001: the face an address asks for; none, or one the page does not offer, is All. */
+function faceOf(params: URLSearchParams): StatsFace {
+  const asked = params.get("face");
+  return FACES.find((known) => known === asked) ?? DEFAULT_FACE;
+}
+
+/** R4673001: the face a read asks for: none on All, so All's requests and their kept answers stay as they were. */
+function askedFace(face: StatsFace): StatsFace | undefined {
+  return face === DEFAULT_FACE ? undefined : face;
+}
+
 /** The Cards tab's read for these filters; an empty filter asks for nothing, as `fetchCardStats` always did. */
-function cardStatsOptionsOf(patch: string, set: string, rarity: string, cost: string, mode: string): CardStatsOptions {
+function cardStatsOptionsOf(
+  patch: string,
+  set: string,
+  rarity: string,
+  cost: string,
+  mode: string,
+  face: StatsFace,
+): CardStatsOptions {
   return {
     patch: patch ? patch : undefined,
     set: set ? set : undefined,
     rarity: rarity ? rarity : undefined,
     cost: cost ? Number(cost) : undefined,
     mode: mode ? mode : undefined,
+    face: askedFace(face),
   };
+}
+
+/** R4673001: a face's adjusted rate on the drill-down's face line, as Adjusted reads; not enough games below its floor. */
+function faceRateText(figures: PublicFaceFigures): string {
+  return figures.hasEnoughGames && typeof figures.adjustedWinRate === "number"
+    ? adjustedText(figures.adjustedWinRate)
+    : t("not enough games");
+}
+
+/** R4673000: one end of the Radiant gap, signed, to a tenth of a point as Adjusted reads. */
+function gapPercent(share: number): string {
+  return formatNumber(share, {
+    style: "percent",
+    minimumFractionDigits: ADJUSTED_RANGE_DIGITS,
+    maximumFractionDigits: ADJUSTED_RANGE_DIGITS,
+    signDisplay: "exceptZero",
+  });
+}
+
+/**
+ * R4673001: the drill-down's line under the faces, on every face: the card's Normal and Radiant adjusted rates,
+ * each read against its own face's field, and Radiant's minus Normal's with its 95% range.
+ */
+function FaceLine({ faces }: { faces: CardFaces }): ReactElement {
+  const { gap } = faces;
+  return (
+    <p className="stats-drilldown-face-line" data-testid={statsTestid.drillDownFaceLine}>
+      <span data-testid={statsTestid.drillDownFaceNormal}>{t("Normal {rate}", { rate: faceRateText(faces.normal) })}</span>
+      <span data-testid={statsTestid.drillDownFaceRadiant}>{t("Radiant {rate}", { rate: faceRateText(faces.radiant) })}</span>
+      <span data-testid={statsTestid.drillDownFaceGap}>
+        {t("Radiant gap {gap}", {
+          gap:
+            gap === null
+              ? t("not enough games")
+              : t("{gap} ({low} to {high})", {
+                  gap: gapPercent(gap.gap),
+                  low: gapPercent(gap.low),
+                  high: gapPercent(gap.high),
+                }),
+        })}
+      </span>
+    </p>
+  );
 }
 
 /**
@@ -327,6 +398,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // R2895000: the 95% ranges under Win rate and Adjusted, off by default.
   const [showRanges, setShowRanges] = useState(initialParams.get("ranges") === "1");
   const [mode, setMode] = useState<StatsMode>(() => modeOf(initialParams));
+  // R4673001: the face the Cards and Tokens tabs read, one state for both, as the view and the ranges are.
+  const [face, setFace] = useState<StatsFace>(() => faceOf(initialParams));
 
   const [visibleCols, setVisibleCols] = useState({
     thumbnail: true,
@@ -339,7 +412,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const [cardStatsKept] = useState(() =>
     cachedRead<PublicStatsCardsResponse>(
       null,
-      cardStatsPath(cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode)),
+      cardStatsPath(cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode, face)),
     ),
   );
   const [cardStatsLoading, setCardStatsLoading] = useState(cardStatsKept === undefined);
@@ -389,12 +462,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     if (view !== "table") params.set("view", view);
     if (cardDrillDownId) params.set("card", cardDrillDownId);
     if (mode !== DEFAULT_MODE) params.set("mode", mode);
+    if (face !== DEFAULT_FACE) params.set("face", face);
     if (showRanges) params.set("ranges", "1");
 
     const query = params.toString();
     const target = query ? `${paths.stats}?${query}` : paths.stats;
     navigate(target, { replace: true });
-  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode, showRanges]);
+  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode, face, showRanges]);
 
   useEffect(() => {
     updateUrl();
@@ -402,7 +476,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
   const fetchCardStats = useCallback(
     () => {
-      const options = cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode);
+      const options = cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode, face);
       // R2125000: a table kept for these filters draws at once; only a first visit to them waits behind a skeleton.
       const kept = cachedRead<PublicStatsCardsResponse>(null, cardStatsPath(options));
       if (kept === undefined) {
@@ -430,7 +504,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
       return () => controller.abort();
     },
-    [patch, setFilter, rarityFilter, costFilter, mode],
+    [patch, setFilter, rarityFilter, costFilter, mode, face],
   );
 
   useEffect(() => {
@@ -494,13 +568,19 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       : shownPatchName;
 
   // R1966000: the Sets tab reads the patch's every card, whatever the Cards tab filters, then the previous
-  // patch's for each set's change; a previous patch that fails to load only leaves the change out.
+  // patch's for each set's change; a previous patch that fails to load only leaves the change out. R4673001:
+  // both on the page's face.
   useEffect(() => {
     // R3324000: a patch still collecting its data has no sets to read.
     if (tab !== "sets" || collecting) return;
     setSetsError(false);
     const controller = new AbortController();
-    getCardStats({ patch: patch ? patch : undefined, mode: mode ? mode : undefined, signal: controller.signal })
+    getCardStats({
+      patch: patch ? patch : undefined,
+      mode: mode ? mode : undefined,
+      face: askedFace(face),
+      signal: controller.signal,
+    })
       .then((res) => {
         if (controller.signal.aborted) return;
         setSetsData(res);
@@ -508,7 +588,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         // R1973002: the patch before, not the version before, which may be a micro of the same patch.
         const before = previousPatchOf(res);
         if (!before) return;
-        getCardStats({ patch: before.target, mode: mode ? mode : undefined, signal: controller.signal })
+        getCardStats({ patch: before.target, mode: mode ? mode : undefined, face: askedFace(face), signal: controller.signal })
           .then((previous) => {
             if (!controller.signal.aborted) setSetsPrevious(previous);
           })
@@ -519,8 +599,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         setSetsError(true);
       });
     return () => controller.abort();
-  }, [tab, patch, mode, setsAttempt, collecting]);
+  }, [tab, patch, mode, face, setsAttempt, collecting]);
 
+  // R4673001: a card's details on the page's match type, face and patch (none asked for the newest patch).
   useEffect(() => {
     if (!cardDrillDownId) {
       setDrillDownData(null);
@@ -529,7 +610,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     setDrillDownLoading(true);
     setDrillDownError(false);
     const controller = new AbortController();
-    getCardDrillDown(cardDrillDownId, mode ? mode : undefined, controller.signal)
+    getCardDrillDown(cardDrillDownId, {
+      mode: mode ? mode : undefined,
+      face: askedFace(face),
+      patch: patch ? patch : undefined,
+      signal: controller.signal,
+    })
       .then((data) => {
         if (controller.signal.aborted) return;
         setDrillDownData(data);
@@ -542,7 +628,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       });
 
     return () => controller.abort();
-  }, [cardDrillDownId, mode, drillDownAttempt]);
+  }, [cardDrillDownId, mode, face, patch, drillDownAttempt]);
 
   // The drill-down is a modal like the client's others (docs/polish/6-cards.md, B25), drawn through
   // Dialog.tsx (R3221000), whose keys close it and keep Tab inside, and Back too (R2127000). The control
@@ -695,6 +781,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null,
     [drillDownDef, drillDownRadiant, locale],
   );
+  // R4673001: the open card's face line, never the card before's while its details load or after they fail;
+  // none from a server deployed before it.
+  const drillDownFaces = drillDownLoading || drillDownError ? undefined : drillDownData?.faces;
   const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
   // R3887000: every card its text names, for the breakdown's Reference cards while Plain text is on.
   const drillDownRefs = drillDownDef ? referencesOf(drillDownDef) : [];
@@ -839,6 +928,23 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
             options={[
               { value: "table", label: t("Table"), testId: statsTestid.viewTable, className: "stats-view-btn" },
               { value: "grid", label: t("Grid"), testId: statsTestid.viewGrid, className: "stats-view-btn" },
+            ]}
+          />
+        </div>
+
+        {/* R4673001: the face every figure of both tabs reads, kept in the address; its buttons carry their words alone (R3184000) */}
+        <div className="stats-view-toggle">
+          <span className="stats-sort-label" aria-hidden="true">
+            {t("Face")}
+          </span>
+          <Segmented
+            label={t("Face")}
+            value={face}
+            onChange={setFace}
+            options={[
+              { value: "all", label: t("All"), testId: statsTestid.faceAll, className: "stats-view-btn" },
+              { value: "normal", label: t("Normal"), testId: statsTestid.faceNormal, className: "stats-view-btn" },
+              { value: "radiant", label: t("Radiant"), testId: statsTestid.faceRadiant, className: "stats-view-btn" },
             ]}
           />
         </div>
@@ -1617,6 +1723,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         </div>
                       </FullArtShown>
                     </OwnCopy>
+                    {drillDownFaces && <FaceLine faces={drillDownFaces} />}
                     <div className="stats-drilldown-actions">
                       <button
                         type="button"
@@ -1667,6 +1774,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 )}
 
                 <div className="stats-drilldown-details">
+                  {/* R4673001: on Normal or Radiant, the details read that face's games alone */}
+                  {face !== DEFAULT_FACE && (
+                    <p className="stats-sample-hint" data-testid={statsTestid.drillDownFaceShown}>
+                      {face === "normal" ? t("Normal faces only") : t("Radiant faces only")}
+                    </p>
+                  )}
                   {/* R3887000: with Plain text on, the card's base and Radiant text, then every card it names */}
                   {plain.shown && drillDownDef && (
                     <>
