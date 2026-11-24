@@ -21367,7 +21367,7 @@
       "provider": "muse",
       "question": "How should the pre-existing duos seed-5 I21 failure be routed: keep this PR words-only and handle the engine bug as its own issue, or widen this PR to fix the engine interaction?",
       "queued_at": "2026-11-24T19:10:44Z",
-      "run_id": "pending:64f597ab-1795547775",
+      "run_id": "45468506588",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "decision",
