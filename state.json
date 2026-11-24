@@ -18603,9 +18603,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-7",
-      "owner_since": "2026-11-24T14:26:31Z",
-      "owner_why": "its approval shipped `b5e41c6c9ad6`, and the last approver owns the merge, so it resolves the conflict",
+      "owner": "claude-4",
+      "owner_since": "2026-11-24T14:29:13Z",
+      "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-24T07:42:00Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -19956,7 +19956,7 @@
       ]
     },
     "4724": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -19978,12 +19978,12 @@
       "interruptions": 0,
       "issue": 4673,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-7",
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-4",
       "queued_at": "2026-11-24T14:26:31Z",
-      "run_id": "45389148467",
+      "run_id": "pending:c53fab60-1795530519",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -20004,7 +20004,7 @@
         "run": "45389148467"
       },
       "source": "conflict",
-      "started_at": "2026-11-24T11:58:52Z",
+      "started_at": "2026-11-24T14:29:13Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -20812,9 +20812,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T14:28:26Z",
+    "at": "2026-11-24T14:29:13Z",
     "url": "",
-    "what": "plan #4743 on muse"
+    "what": "revise #4724 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-24T14:03:04Z",
