@@ -21314,7 +21314,7 @@
       }
     },
     "4759": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "decision": {
         "answer": "1",
@@ -21362,16 +21362,16 @@
       "interruptions": 0,
       "issue": 4747,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
       "provider": "muse",
       "question": "How should the pre-existing duos seed-5 I21 failure be routed: keep this PR words-only and handle the engine bug as its own issue, or widen this PR to fix the engine interaction?",
       "queued_at": "2026-11-24T19:10:44Z",
-      "run_id": "45442010678",
+      "run_id": "pending:64f597ab-1795547775",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "decision",
-      "started_at": "2026-11-24T16:51:36Z",
+      "started_at": "2026-11-24T19:16:42Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -21818,9 +21818,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T19:16:03Z",
+    "at": "2026-11-24T19:16:42Z",
     "url": "",
-    "what": "revise #4760 on claude-6"
+    "what": "revise #4759 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T19:01:07Z",
