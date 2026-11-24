@@ -234,6 +234,25 @@ describe("R506 the turn clock's alarm through the engine", () => {
     expect(log.filter((c) => c.id === "clockTick").map((c) => c.params?.amount)).toEqual(Array.from({ length: SHARP_S }, (_, i) => i + 1));
   });
 
+  it("R506 a hidden countdown stepping once a second sounds all thirty beats through the engine", () => {
+    const factory = fakeContextFactory({ state: "running", resumeMode: "run" });
+    const clock = new FakeClock(10_000);
+    engine = createAudioEngine({ createContext: factory.create, speech: fakeSpeech().port, now: clock.now, visibility: () => "hidden" });
+    engine.unlock();
+    const audio = factory.last();
+    let memory: ClockAlarmMemory = CLOCK_ALARM_IDLE;
+    // Phase 0: the first hidden reading plans seconds 30 and 29 in one tick, which the
+    // send-time retrigger guard used to drop to 29 beats; the alarm's sounds-time guard keeps both.
+    for (let ms = 30_000; ms >= 0; ms -= 1_000) {
+      memory = stepClockAlarm(engine, DEFAULT_AUDIO_SETTINGS, memory, ms, true, true);
+      clock.advance(1_000);
+      audio.advance(1);
+    }
+    const log = sfxLog(engine);
+    expect(log.filter((c) => c.id === "heartbeat")).toHaveLength(FROM_S - SHARP_S);
+    expect(log.filter((c) => c.id === "clockTick").map((c) => c.params?.amount)).toEqual(Array.from({ length: SHARP_S }, (_, i) => i + 1));
+  });
+
   it("R506 the alarm's own beats keep sounding in a hidden tab while other clockTick cues stay silent", () => {
     const factory = fakeContextFactory({ state: "running", resumeMode: "run" });
     const clock = new FakeClock(10_000);
