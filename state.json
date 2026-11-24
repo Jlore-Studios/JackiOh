@@ -18146,18 +18146,12 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "g 2>&1; echo \\\"fuzz exit\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-engine --features testkit --test 'rules*' 2>&1 | grep -E '^test result|FAILED|panicked' | head -20\", \"description\": \"Rerun the engine rules suites\", \"timeout\": 2400\u2026\n- Bash: {\"command\": \"grep -E 'seeds [0-9]+\\\\.\\\\.[0-9]+:|failed|fuzz exit|changed cards|wave' /tmp/fuzz200b.log | cut -c1-250 | head -30\", \"description\": \"Read the rerun fuzz summary\"}\n- said: All green: 200/200 main wave, 20/20 changed-cards wave, Radiant, Duos, fused pairs, carried eras. Next, the fuzz corpus regression and classify.\n- Bash: {\"command\": \"cargo jackioh fuzz --regress 2>&1 | grep -v 'Compiling\\\\|Finished\\\\|Running' | grep -E 'passed|failed|regress|error|record' | head -10; echo \\\"exit ${PIPESTATUS[0]}\\\"\", \"description\": \"R\u2026\n- Bash: {\"command\": \"cargo jackioh fuzz --regress 2>&1 | grep -c ': passed'; cargo jackioh fuzz --regress 2>&1 | grep -E 'failed|mismatch' | head -5; git fetch -q origin main 2>/dev/null; git rev-parse origi\u2026\n- Bash: {\"command\": \"grep -n 'parent-bin\\\\|classify' .github/workflows/ci.yml | head -20\", \"description\": \"See how CI runs classify\"}\n- Bash: {\"command\": \"sed -n 661,720p .github/workflows/ci.yml\", \"description\": \"Read the rust-classify job\"}\n- Bash: {\"command\": \"echo \\\"CARGO_TARGET_DIR=$CARGO_TARGET_DIR\\\"; sed -n 1,40p scripts/worktree.sh | grep -v '^$' | head -40\", \"description\": \"Check the target dir and the worktree script\"}\n- Bash: {\"command\": \"echo \\\"- classify stage 2 locally: building base binary (3 engine src files reverted temporarily; copies /tmp/*_fixed.rs) -> /tmp/base-jackioh/jackioh.\\\" >> .bot-notes.md\\ncp crates/engi\u2026\n- said: Base binary saved and my files restored. Now the head build and the temporary commit object.\n- Bash: {\"command\": \"cargo build --release -p jackioh-tools 2>&1 | tail -1\\nrm -f /tmp/classify-idx; export GIT_INDEX_FILE=/tmp/classify-idx\\ngit read-tree HEAD && git add -A && tree=$(git write-tree) && com\u2026\n- said: No git identity is configured; I'll pass a throwaway one through environment variables for this one command rather than touch git config.\n- Bash: {\"command\": \"export GIT_INDEX_FILE=/tmp/classify-idx\\ntree=$(git write-tree) && commit=$(GIT_AUTHOR_NAME=local GIT_AUTHOR_EMAIL=local@localhost GIT_COMMITTER_NAME=local GIT_COMMITTER_EMAIL=local@loca\u2026\n- said: Commit object `681bc67` holds exactly the 13 changed files; HEAD and the working tree are unchanged. Running classify with claims in the background.\n- Bash: {\"command\": \"echo \\\"- classify: head=dangling 681bc67 (git commit-tree, temp index /tmp/classify-idx; no ref), base a3ff340dff, parent /tmp/base-jackioh/jackioh; log /tmp/classify.log\\\" >> .bot-notes\u2026\n- said: While classify runs, the AI and tools crates' tests, since they play the engine too.\n- Bash: {\"command\": \"cargo test -p jackioh-ai -p jackioh-tools --features jackioh-engine/testkit 2>&1 | grep -E '^test result|FAILED|panicked|^error' | head -30\", \"description\": \"Run the AI and tools crates'\u2026\n- Bash: {\"command\": \"tail -40 /tmp/classify.log | cut -c1-400\", \"description\": \"Read the classify result\"}\n- said: Classify insists the checkout sits at the head revision. I'll add a detached worktree at `681bc67` (no branch) and run the same binary from inside it, then remove it.\n- Bash: {\"command\": \"git worktree add --detach ../jackioh-wt/classify 681bc6757779c5bfb9103d5e0c00e063e9b7dc54 2>&1 | tail -1; echo \\\"- classify: detached worktree ../jackioh-wt/classify at 681bc67 (REMOVE b\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/classify && \\\"$CARGO_TARGET_DIR/release/jackioh\\\" classify --base a3ff340dff3b31f27162b5e42e53db33d564503a --parent-bin /tmp/base-jackioh/jacki\u2026\n- said: While classify and the AI/tools tests run, I'll check the tests' interim output.\n- Bash: {\"command\": \"grep -E '^test result|FAILED|panicked|^error|Running' /tmp/claude-1001/-home-runner-work--temp-work-item-4623/62635f84-eac0-4d2d-935a-d1f1e6749375/tasks/b91j9278f.output | tail -8; tail \u2026\n- Bash: {\"command\": \"cat /tmp/classify.log | cut -c1-500 | head -40\", \"description\": \"Read the full classify output\"}\n- said: \"Internal\" with exit 0 came back too fast to have played stage 2. Rerunning with `--json` to see what it judged.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/classify && timeout 1200 \\\"$CARGO_TARGET_DIR/release/jackioh\\\" classify --base a3ff340dff3b31f27162b5e42e53db33d564503a --json 2>&1 | head -c 3\u2026\n- said: Stage 1 rated the change \"internal\" with nothing unchecked, so stage 2 never ran and no claims were tested. Engine rule changes should count as play code, so I'll look at how stage 1 sorts paths.\n- Bash: {\"command\": \"grep -n 'fn area' -A40 crates/tools/src/classify.rs | head -60\", \"description\": \"Read classify's path area function\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/classify && timeout 600 \\\"$CARGO_TARGET_DIR/release/jackioh\\\" classify --base a3ff340dff3b31f27162b5e42e53db33d564503a --head 681bc6757779c5bfb\u2026\n- said: With an explicit `--head` it sees the engine change as unchecked play code, as CI will. Running stage 2 with claims that way.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/classify && \\\"$CARGO_TARGET_DIR/release/jackioh\\\" classify --base a3ff340dff3b31f27162b5e42e53db33d564503a --head 681bc6757779c5bfb9103d5e0c00e\u2026\n- Bash: {\"command\": \"sleep 5; cat /tmp/classify.err | tail -5 | cut -c1-300; grep -E '^test result|FAILED|panicked|^error' /tmp/claude-1001/-home-runner-work--temp-work-item-4623/62635f84-eac0-4d2d-935a-d1f1\u2026\n- said: The checkout check reads a repository other than the cwd. Finding how classify locates it.\n- Bash: {\"command\": \"grep -n 'checkout is not at' -B12 crates/tools/src/classify.rs | head -30; grep -rn 'fn repo_root\\\\|fn workspace_root' crates/tools/src/*.rs | head -3\", \"description\": \"Read the checkout\u2026\n- Bash: {\"command\": \"sed -n 50,70p crates/tools/src/patches.rs; grep -n 'fn rev(' -A10 crates/tools/src/classify.rs | head -14\", \"description\": \"Read repo_root and rev helpers\"}"
       },
-      "hold": {
-        "ends": "2026-11-24T04:44:15Z",
-        "owner": "claude-8",
-        "since": "2026-11-24T02:44:15Z",
-        "until": "2026-11-24T03:10:00Z",
-        "why": "5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "issue": 4623,
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-24T02:31:20Z",
+        "claimed": true,
+        "claimed_at": "2026-11-24T03:10:05Z",
         "from_run": "45286823845",
         "gates": [
           {
@@ -18253,7 +18247,7 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-24T02:30:11Z",
-      "run_id": "45313003909",
+      "run_id": "pending:6e4a5e12-1795489775",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -18273,7 +18267,7 @@
         "provider": "claude-8",
         "run": "45286823845"
       },
-      "started_at": "2026-11-24T02:31:20Z",
+      "started_at": "2026-11-24T03:10:05Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18438,9 +18432,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T03:09:20Z",
+    "at": "2026-11-24T03:10:05Z",
     "url": "",
-    "what": "review #4634 on muse"
+    "what": "review #4662 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-24T02:52:23Z",
