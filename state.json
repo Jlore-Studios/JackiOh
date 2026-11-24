@@ -17540,6 +17540,13 @@
     "4648": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45333469775",
+        "model": "opus",
+        "provider": "claude-1",
+        "since": "2026-11-24T06:02:21Z",
+        "until": "2026-11-24T06:32:21Z"
+      },
       "difficulty_by": {
         "at": "2026-11-24T06:02:13Z",
         "difficulty": "hard",
