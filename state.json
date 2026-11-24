@@ -19746,6 +19746,7 @@
     "4722": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-24T14:07:30Z",
         "difficulty": "medium",
