@@ -268,7 +268,7 @@ jobs:
                 # Its counts are pinned by bot/tests/test_ci_matrix.py, so a count it changes is
                 # held there on the pull request, not first on main (#3585, #3764).
                 scripts/ci-shards.toml) bot=true ;;
-                training/loop.sh | training/file-records.sh | training/*.md | docs/issues-and-patches.md) bot=true ;;
+                training/file-records.sh | training/*.md | docs/issues-and-patches.md) bot=true ;;
                 rust-toolchain.toml | .cargo/*) bot=true ;;
               esac
             done

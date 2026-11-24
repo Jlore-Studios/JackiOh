@@ -136,14 +136,28 @@ const WORKFLOWS = join(ROOT, ".github/workflows");
 const workflowText = (file: string): string => readFileSync(join(WORKFLOWS, file), "utf8");
 const workflowFiles = readdirSync(WORKFLOWS).filter((file) => file.endsWith(".yml"));
 
-/** training/file-records.sh: every development filing, gather's, the learn lane's shards' and its import's. */
+/** training/file-records.sh: every development filing, gather's. */
 const FILING = join(ROOT, "training/file-records.sh");
 const runsFiling = (text: string): boolean => /\bsh "?\S*training\/file-records\.sh"? /u.test(text);
+
+/** The retired training lanes' workflows (R4701000), which #4701 removed. */
+const RETIRED = ["learn.yml", "learn-set.yml", "selfplay.yml", "selfplay-shards.yml"];
+
+describe("R4701000 no workflow runs a retired training lane", () => {
+  it("leaves gather.yml the one development lane: no learn or self-play workflow, and none names one or training/loop.sh", () => {
+    for (const gone of RETIRED) expect(workflowFiles, gone).not.toContain(gone);
+    for (const file of workflowFiles) {
+      for (const name of [...RETIRED, "training/loop.sh", "training/ml/"]) {
+        expect(workflowText(file), `${file} names ${name}`).not.toContain(name);
+      }
+    }
+  });
+});
 
 describe("R1933001 the development lanes file into both projects' card statistics", () => {
   it("files development records only from the development lanes, through staging's and production's import logins", () => {
     const importers = workflowFiles.filter((file) => workflowText(file).includes("jackioh-server stats-import") || runsFiling(workflowText(file)));
-    expect(importers.sort()).toEqual(["gather.yml", "learn.yml", "selfplay-shards.yml"]);
+    expect(importers.sort()).toEqual(["gather.yml"]);
     for (const file of importers) {
       const secrets = [...workflowText(file).matchAll(/DATABASE_URL: \$\{\{ secrets\.([A-Z_]+) \}\}/gu)].map((match) => match[1]);
       expect(new Set(secrets), file).toEqual(new Set(["STATS_IMPORT_DATABASE_URL", "PRODUCTION_STATS_IMPORT_DATABASE_URL"]));

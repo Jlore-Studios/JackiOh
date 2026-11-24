@@ -102,7 +102,7 @@ crates/
   tools/                   package jackioh-tools (bin "jackioh") ← packages/*/scripts, ladder/, scripts/catalog-version.mjs
     src/main.rs            clap dispatch (§12), written by part 1
     src/<command>.rs       one per subcommand
-training/                  the AI training lanes (§14): README.md, improve.md, unban.md, loop.sh, history/
+training/                  the AI's training (§14): README.md, improve.md, gather.md, file-records.sh, history/
 spec/                      SPEC.md split into notes (§15)
 apps/web/src/wasm/         the TS wrapper over the WASM module (§10); pkg/ is generated and gitignored
 apps/web/src/wire/         the client's wire layer (§10.4): generated types and constants, hand-kept helpers
@@ -1279,7 +1279,7 @@ it fails. A promotion's `vsParent` is the wins out of the games of the deals it 
 |---|---|---|
 | `improve` | the test passes | — |
 | `unban` | the test passes | strictly fewer than the parent's |
-| `learn` | the test passes, on deals of its own (R1012000); retired with the learned evaluation by #4159 (R4159000), kept while `learn.yml` runs it | — |
+| `learn` | the test passes, on deals of its own (R1012000); retired with the learned evaluation by #4159 (R4159000); no workflow runs it since #4701 (R4701000) | — |
 
 The improve lane's bar was 65 of 100 until issue #850 (R732001), then 220 of 400 paired games until
 issue #1679 (R850000), and the unban lane's 60 of 100 unpaired games.
@@ -1307,8 +1307,8 @@ points of the games.
 Every run that plays its games, in any mode and whether or not it passes, rewrites
 `$JACKIOH_TRAINING_OUT/last-pass.md` when that directory is set: the pass in Markdown (the games the
 candidate won, lost and drew against the parent and those without a result, as `p1`, as `p2` and in
-all, and one square per game), which `training/loop.sh` puts at the top of the lane's draft pull
-request.
+all, and one square per game), which `training/loop.sh` put at the top of the lane's draft pull
+request until #4701 removed the lanes.
 
 ### 14.3 `crates/ai/generation.json`
 

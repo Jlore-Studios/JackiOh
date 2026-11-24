@@ -489,7 +489,7 @@ Each site has a Supabase project of its own, both in the jlore-studios organizat
 | --- | --- | --- |
 | Project | JackiOh-Staging, `exmjdaswedxhnzmpzqrq`: the original project, which production used until the move | JackiOh-Production, `fuzpvmjdejvbjcarypyi`, made on 2026-11-01 |
 | Named in | `apps/web/.env.staging`, `wrangler.jsonc` `env.staging`, `infra/supabase.tf` | `apps/web/.env.production`, `wrangler.jsonc`'s top level, `infra/supabase.tf` |
-| Card statistics | the development lanes' (`gather.yml`, `learn.yml`'s import, through `STATS_IMPORT_DATABASE_URL`) and staging's own games | the same development lanes' (through `PRODUCTION_STATS_IMPORT_DATABASE_URL`) and players' games (R1933001) |
+| Card statistics | the development lane's (`gather.yml`, through `STATS_IMPORT_DATABASE_URL`) and staging's own games | the same development lanes' (through `PRODUCTION_STATS_IMPORT_DATABASE_URL`) and players' games (R1933001) |
 | Read by | `db-size.yml` through `STATS_IMPORT_DATABASE_URL` | `winrates-refresh.yml` and `db-size.yml` through `STATS_DATABASE_URL`, the read-only login `stats_reader` |
 
 `apps/web/src/net/env-production.test.ts` fails when the two builds name one project, or when a

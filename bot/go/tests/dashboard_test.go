@@ -1071,8 +1071,8 @@ func newDashboardRunners(t *testing.T) *dashboardRunners {
 		"103", pyjson.New("id", 103, "status", "in_progress", "path", ".github/workflows/ci.yml",
 			"display_title", "Patch: a Sets tab", "event", "pull_request",
 			"pull_requests", []any{pyjson.New("number", 1966)}, "created_at", ago(4)),
-		"104", pyjson.New("id", 104, "status", "queued", "path", ".github/workflows/learn.yml",
-			"display_title", "learn", "event", "schedule", "created_at", ago(90)),
+		"104", pyjson.New("id", 104, "status", "queued", "path", ".github/workflows/sweep.yml",
+			"display_title", "sweep", "event", "schedule", "created_at", ago(90)),
 	))
 	doing := pyjson.New("name", "Build, check and review", "status", "in_progress")
 	gh.Jobs["101"] = []*pyjson.Object{
@@ -1163,7 +1163,7 @@ func TestDashboard_TheRunnersAsBoxes(t *testing.T) {
 	assertNotIn(t, "subgraph nj[", diagram) // every machine subscription has its box
 	// The queued jobs by label, each with its longest wait and the job that waited it.
 	assertIn(t, `    subgraph qu["Queued for a runner: 3 jobs"]`, diagram)
-	assertIn(t, `qu0["<b>ubuntu-latest</b><br/>⏳ 3 jobs<br/>the longest 1h 30m<br/>learn · `+
+	assertIn(t, `qu0["<b>ubuntu-latest</b><br/>⏳ 3 jobs<br/>the longest 1h 30m<br/>sweep · `+
 		`plan"]:::next`, diagram)
 	assertIn(t, `    subgraph ga["The gather workflow"]`, diagram)
 	assertIn(t, "    gh ~~~ nb ~~~ mb ~~~ ga ~~~ qu\n", diagram)
@@ -1183,7 +1183,7 @@ func TestDashboard_TheRunnersAsBoxes(t *testing.T) {
 	assertIn(t, `qu0["<b>ubuntu-latest</b><br/>⏳ 2 jobs<br/>the longest 4m<br/>ci · web `+
 		`(unit 2/4)"]:::next`, diagram)
 	assertIn(t, `qu1["<b>night-vm-gpt</b><br/>⏳ 1 job<br/>the longest 1h 30m`+
-		`<br/>learn · plan"]:::next`, diagram)
+		`<br/>sweep · plan"]:::next`, diagram)
 }
 
 // Muse's fill-in runners take gpt's or agy's slot while it has no job of its own (#2028); the weak
