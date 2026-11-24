@@ -18476,6 +18476,13 @@
     "4690": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T07:41:25Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "no hard line holds: CI sharding plus at most a single-crate test trim, not engine rules, AI, cross-crate design, a migration, or ~40 files"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
