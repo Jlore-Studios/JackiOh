@@ -20073,28 +20073,17 @@
     "what": "plan #4838 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-24T21:34:46Z",
+    "at": "2026-11-24T21:48:34Z",
     "notes": [
-      "#4768: `bot selftest` red in CI run 45484345388; its other early jobs have until 2026-11-24T21:36:47Z to report",
-      "#4844 needs a plan",
-      "#4845 needs a plan",
-      "#4846 needs a plan",
-      "#4847 needs a plan",
-      "#4848 needs a plan",
-      "#4849 needs a plan",
-      "#4850 needs a plan",
-      "delivered build #4801 on claude-8 (run 45491214572): interrupted",
-      "delivered review #4726 on claude-8 (run 45490967939): interrupted",
-      "delivered plan #4786 on muse (run 45489941009): planned",
-      "delivered plan #4825 on muse (run 45489819555): planned",
-      "delivered plan #4827 on claude-3 (run 45489695124): planned",
-      "delivered plan #4784 on claude-6 (run 45484627881): planned",
-      "started build #4825 on muse (run 45493361884)",
-      "started build #4786 on muse (run 45493485011)",
-      "started plan #4848 on claude-3 (run 45493610348)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-25T00:10:00Z; it can start a build or a plan again in 1h 27m; `claude-1` 5-hour usage is 49%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-24T23:50:00Z; it can start a build or a plan again in 2h 07m; `claude-4` 5-hour usage is 72%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-25T01:00:00Z; it can start a build or a plan again in 3h 17m; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4726 held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%)); #4801 held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "#4801 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "#4726 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "delivered build #4780 on muse (run 45487423721): built",
+      "delivered plan #4734 on agy (run 45467999862): failed",
+      "started review #4857 on muse (run 45495298254)",
+      "started plan #4838 on agy (run 45495441056)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-25T00:10:00Z; it can start a build or a plan again in 1h 16m; `claude-1` 5-hour usage is 49%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-24T23:50:00Z; it can start a build or a plan again in 1h 56m; `claude-4` 5-hour usage is 72%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-25T01:00:00Z; it can start a build or a plan again in 3h 06m; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4726 held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%)); #4801 held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
       "pruned 3 plan file(s) older than 7 days",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
+      "runner gate: started 0 of 3 waiting run(s); 3 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -20800,7 +20789,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T21:34:46Z",
+  "loop_tick": "2026-11-24T21:48:34Z",
   "machine_disk": {
     "issue": null,
     "reading": {
