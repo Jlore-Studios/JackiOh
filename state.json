@@ -18318,15 +18318,8 @@
       "verdict_rounds": 0
     },
     "4672": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45353865840",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-24T08:33:51Z",
-        "until": "2026-11-24T09:03:51Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -18338,18 +18331,9 @@
         "reason": "planned on opus",
         "trail": "b use stats\\\\|stats::\\\" crates/engine/src/wire/mod.rs | head -3; sed -n 1128,1250p crates\u2026\n- Bash: {\"command\": \"sed -n 835,848p crates/engine/src/effects/choose.rs; grep -n \\\"fn resume_at\\\" -A 20 crates/engine/src/prompts.rs | grep -n \\\"hook\\\" | head -5\", \"description\": \"Read choose_reward doc and\u2026\n- Bash: {\"command\": \"grep -n \\\"add_stats\\\\|\\\\.stats\\\\.clone()\\\\|total.stats\\\\|card_stats_of\\\" crates/engine/src/wire/stats/window.rs | head -20\", \"description\": \"Check window.rs use of card totals\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4672/crates/engine/src/wire/stats.rs\", \"offset\": 2110, \"limit\": 155}\n- Bash: {\"command\": \"grep -rln \\\"\\\\\\\"generators\\\\\\\"\\\\|\\\\.generators\\\\b\\\" crates apps/web/src --include=*.rs --include=*.ts | grep -v \\\"^crates/engine/src/generators.rs\\\" | head; grep -rn \\\"generators: IndexM\u2026\n- Bash: {\"command\": \"grep -n \\\"generators\\\" crates/tools/src/fuzz.rs crates/ai/src/observe.rs crates/engine/src/testkit/invariants.rs | head -12\", \"description\": \"See how fuzz, AI observe and invariants trea\u2026\n- Bash: {\"command\": \"sed -n 1775,1870p crates/tools/src/fuzz.rs; grep -n \\\"generators\\\" crates/ai/src/observe.rs | head -5\", \"description\": \"Read the fuzz's unhashed-field fold checks\"}\n- Bash: {\"command\": \"sed -n 565,592p crates/ai/src/observe.rs\", \"description\": \"Read AI observe generators redaction\"}\n- Bash: {\"command\": \"grep -n \\\"generators\\\" crates/ai/tests/ai/observe.rs crates/engine/src/testkit/invariants.rs crates/engine/src/wire/view.rs | head; grep -rn \\\"\\\\\\\"radianceLends\\\\\\\"\\\\|\\\\\\\"radiantWorld\\\\\\\u2026\n- Bash: {\"command\": \"grep -n \\\"generators\\\" crates/engine/src/testkit/invariants.rs crates/engine/tests/rules/rule_benders.rs | head -5\", \"description\": \"Check invariants generators mention\"}\n- Bash: {\"command\": \"grep -n \\\"coin\\\\|Coin\\\\|COIN\\\" crates/cards/tests/cross/game_summary.rs | head -10; grep -rln \\\"choose_mode(\\\" crates/cards/src/scripts | head -8; python3 -I -c \\\"\\nimport json\\nc=json.l\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nprint(type(c), list(c.keys())[:5] if isinstance(c,dict) else len(c))\\n\\\" ; sed -n 670,760p crates/cards/tes\u2026\n- Bash: {\"command\": \"sed -n 500,566p crates/cards/tests/cross/game_summary.rs; grep -n \\\"^mod \\\\|^ fn \\\\|^fn \\\" crates/cards/tests/cross/game_summary.rs | head -60\", \"description\": \"Read the Coin oracle and \u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nfor k in ['core-024','core-074','classic-087']:\\n d=c[k]; print(k, d.get('name'), d.get('type'), json.dumps\u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/cards/src/scripts/core/c024_efficiency_dividend.rs; sed -n 1,25p crates/cards/src/scripts/core/c056_jilliax.rs; sed -n 1,40p crates/cards/src/scripts/classic/c008_pic\u2026\n- Bash: {\"command\": \"for f in crates/cards/src/scripts/meditative/c085_playtester.rs crates/cards/src/scripts/stinkyscape/c018_1_melchior.rs crates/cards/src/scripts/stinkyscape_plus/c121_toxopid.rs crates/c\u2026\n- Bash: {\"command\": \"sed -n 1,12p crates/cards/src/scripts/classic/c035_prep.rs 2>/dev/null || ls crates/cards/src/scripts/classic | grep c035; grep -n \\\"fn r\\\\|#\\\\[test\\\\]\\\" crates/cards/src/scripts/core/c0\u2026\n- Bash: {\"command\": \"sed -n 150,250p crates/cards/src/scripts/core/c051_kys_private_tutor.rs | grep -n \\\"const\\\\|options\\\\|\\\\\\\"step\\\\\\\"\\\\|prompt\\\" | head -20; sed -n 413,470p crates/cards/src/scripts/core/c0\u2026\n- Bash: {\"command\": \"grep -n \\\"PromptAnswered {\\\" -B 6 -A 14 crates/engine/src/wire/events.rs | head -40; grep -n \\\"PromptOpened {\\\" -A 10 crates/engine/src/wire/events.rs | head -14\", \"description\": \"Read P\u2026\n- Bash: {\"command\": \"grep -n \\\"Scenario {$\\\\|Scenario {\\\" crates/engine/src/testkit/scenario.rs | head; grep -n \\\"refused: false\\\" crates/engine/src/testkit/*.rs | head\", \"description\": \"Find Scenario constr\u2026\n- Bash: {\"command\": \"grep -rn \\\"as_rules_read()\\\" crates/engine/src --include=*.rs | grep -v testkit | head; grep -rn \\\"pub .*: Vec<GameEvent>\\\\|pub .*: Option<Vec<GameEvent>>\\\\|pub .*: Vec<QueuedEvent>\\\" cr\u2026\n- Bash: {\"command\": \"sed -n 1685,1696p crates/engine/src/state.rs; sed -n 1990,2015p crates/engine/src/wire/events.rs\", \"description\": \"Read state events field and as_rules_read test\"}\n- Bash: {\"command\": \"ls apps/web/src/wire/generated | head -5; ls apps/web/src/wire/generated | wc -l; ls apps/web/src/wire/generated | grep -i \\\"index\\\\|CreatedUse\\\\|SeatSummary\\\"; grep -rn \\\"generated/\\\" s\u2026\n- Bash: {\"command\": \"grep -n \\\"generators\\\\|creator\\\\|createdUsed\\\\|SeatSummary\\\" docs/v0.3.0/SURFACE.md crates/engine/README.md | head -10\", \"description\": \"Check SURFACE and engine README mentions\"}\n- Bash: {\"command\": \"sed -n 368,380p docs/v0.3.0/SURFACE.md\", \"description\": \"Read SURFACE hash exclusion line\"}\n- Bash: {\"command\": \"grep -rln \\\"\\\\\\\"generators\\\\\\\"\\\\|'generators'\\\" apps/web/src apps/edge/src e2e 2>/dev/null | head\", \"description\": \"Check web for a TS hash reimplementation\"}\n- Bash: {\"command\": \"grep -n \\\" modes:\\\\| modes:\\\" crates/engine/src/wire/events.rs | head; grep -n \\\"pub fn find_def\\\" crates/engine/src/catalog.rs; grep -n \\\"Answer {\\\" -A 4 crates/engine/src/wire/actions.\u2026\n- Bash: {\"command\": \"grep -rn \\\"fn r1956001\\\" crates/engine/src crates/engine/tests | head -5; sed -n 250,270p crates/ai/tests/ai/observe.rs\", \"description\": \"Find R1956001 hash test and AI observe test\"}\n- Bash: {\"command\": \"sed -n 1406,1458p crates/cards/tests/cross/game_summary.rs\", \"description\": \"Read the Coin not-played oracle\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4672/.bot-plan.md\", \"content\": \"# Plan draft for #4672 \\u2014 design settled, writing final plan\\n\\nDecisions (see final message for full plan):\\n- Re\u2026\n- said: I've finished the plan. It needs no migration, and no state hash or golden trace should move. **Goal.** Each play the record keeps gets its variant: the Choose One options, any other card-fixed `mode`, `number` or `direction` answer, the X paid and Embiggened or not. Each Created card names the car\u2026"
       },
-      "hold": {
-        "ends": "2026-11-24T10:35:33Z",
-        "lifted": "2026-11-24T09:11:04Z",
-        "owner": "claude-8",
-        "since": "2026-11-24T08:35:33Z",
-        "until": "2026-11-24T09:10:00Z",
-        "why": "5-hour usage is 95%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-24T06:05:54Z",
       "owner_why": "it plans it",
@@ -18362,9 +18346,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-24T05:55:13Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45353865840",
+      "run_id": "pending:4931eff0-1795511488",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T08:10:43Z",
+      "started_at": "2026-11-24T09:11:54Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7123919831
@@ -18942,9 +18926,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T09:03:56Z",
+    "at": "2026-11-24T09:11:54Z",
     "url": "",
-    "what": "review #4651 on claude-4"
+    "what": "build #4672 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-24T09:02:39Z",
