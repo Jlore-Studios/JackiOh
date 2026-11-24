@@ -20903,6 +20903,8 @@
       }
     },
     "4749": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T14:12:54Z",
@@ -20916,8 +20918,13 @@
         "trail": "nfrom pathlib import Path\\np = Path(\\\"analysis/jackioh_records/__init__.py\\\")\\nt = p.read_text()\\ndef sub(old, new):\\n global t\\n assert t.count(old) == 1, old\\n t = t.\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nfrom pathlib import Path\\np = Path(\\\"analysis/jackioh_records/__init__.py\\\")\\nt = p.read_text()\\nold = ''' playable_turns, plays, errors, timeouts, raw_timeouts, eval_\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nfrom pathlib import Path\\np = Path(\\\"analysis/jackioh_records/__init__.py\\\")\\nt = p.read_text()\\nold = '''# An older slice has no playableTurns, losingPlays or rawTime\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nfrom pathlib import Path\\np = Path(\\\"analysis/notebooks/03-ai-sweep-and-generations.ipynb\\\")\\nt = p.read_text()\\ndef sub(old, new):\\n global t\\n assert t.count(old) ==\u2026\n- Bash: {\"command\": \"sed -n 12,30p analysis/notebooks/03-ai-sweep-and-generations.ipynb | cut -c1-200; git diff analysis/notebooks | grep '^[-+]' | cut -c1-200\", \"description\": \"View intro edit\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nfrom pathlib import Path\\np = Path(\\\"analysis/notebooks/03-ai-sweep-and-generations.ipynb\\\")\\nt = p.read_text()\\nold = '''per play. A card is flagged `error` (an error\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nfrom pathlib import Path\\np = Path(\\\"analysis/notebooks/03-ai-sweep-and-generations.ipynb\\\")\\nt = p.read_text()\\ndef sub(old, new):\\n global t\\n assert t.count(old) ==\u2026\n- Bash: {\"command\": \"sed -n 348,372p analysis/notebooks/03-ai-sweep-and-generations.ipynb; sed -n 390,415p analysis/notebooks/03-ai-sweep-and-generations.ipynb; sed -n 436,452p analysis/notebooks/03-ai-sweep\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nfrom pathlib import Path\\np = Path(\\\"analysis/notebooks/03-ai-sweep-and-generations.ipynb\\\")\\nt = p.read_text()\\ndef sub(old, new):\\n global t\\n assert t.count(old) ==\u2026\n- Bash: {\"command\": \"sed -n 60,95p analysis/README.md\", \"description\": \"Read README loader paragraphs\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nfrom pathlib import Path\\np = Path(\\\"analysis/README.md\\\")\\nt = p.read_text()\\ndef sub(old, new):\\n global t\\n assert t.count(old) == 1, (old, t.count(old))\\n t = t.re\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nfrom pathlib import Path\\np = Path(\\\"analysis/README.md\\\")\\nt = p.read_text()\\nold = '''`plays`, `errors`, `timeouts`, `raw_timeouts` (as in pass 1: only `timeouts` ra\u2026\n- Bash: {\"command\": \"cat analysis/tests/test_card_stats.py | grep -n \\\"def \\\\|^import\\\\|^from\\\" | head -80\", \"description\": \"List test functions\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nfrom pathlib import Path\\np = Path(\\\"analysis/README.md\\\")\\nt = p.read_text()\\nold = '''`half_flags` the same at half strength, and `status` reads them: `banned` (a fl\u2026\n- Bash: {\"command\": \"grep -n rawTimeouts analysis/fixtures/sweep-small.jsonl | cut -c1-250; sed -n 417,560p analysis/tests/test_card_stats.py\", \"description\": \"Check fixture and read pass-2 tests\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nfrom pathlib import Path\\np = Path(\\\"analysis/tests/test_card_stats.py\\\")\\nt = p.read_text()\\ndef sub(old, new):\\n global t\\n assert t.count(old) == 1, (old, t.count(o\u2026\n- Bash: {\"command\": \"sed -n 375p analysis/tests/test_card_stats.py; sed -n 435p analysis/tests/test_card_stats.py; git blame -s -L648,648 analysis/tests/test_card_stats.py | cut -c1-40; grep -n \\\"line-length\u2026\n- tool error: Exit code 2 assert [(sweep.loc[key, \"timeouts\"], sweep.loc[key, \"raw_timeouts\"]) for key in sweep.index] == [(0, 12), (2, 5), (0, 0)] with pytest.raises(ValueError, match=r\"again\\.jsonl: line 3: a at\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nfrom pathlib import Path\\np = Path(\\\"analysis/tests/test_card_stats.py\\\")\\nt = p.read_text()\\nold = ''' assert [(sweep.loc[key, \\\"timeouts\\\"], sweep.loc[key, \\\"raw_tim\u2026\n- Bash: {\"command\": \"sed -n 60,150p analysis/tests/test_notebooks.py; sed -n 190,230p analysis/tests/test_notebooks.py; sed -n 270,282p analysis/tests/test_notebooks.py\", \"description\": \"Read notebook test d\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nfrom pathlib import Path\\np = Path(\\\"analysis/tests/test_notebooks.py\\\")\\nt = p.read_text()\\ndef sub(old, new):\\n global t\\n assert t.count(old) == 1, (old, t.count(ol\u2026\n- said: Now set up and run the tests.\n- Bash: {\"command\": \"export PATH=$HOME/.local/bin:$PATH; (python3 -m uv --version || python3 -m pip install --user --break-system-packages uv==0.13.0 2>&1 | tail -2); UV_PROJECT_ENVIRONMENT=/tmp/anvenv pytho\u2026\n- Bash: {\"command\": \"export PATH=$HOME/.local/bin:$PATH; UV_PROJECT_ENVIRONMENT=/tmp/anvenv python3 -m uv run --frozen --project analysis pytest analysis/tests/test_card_stats.py -q 2>&1 | tail -20\", \"descri\u2026\n- Bash: {\"command\": \"export PATH=$HOME/.local/bin:$PATH; UV_PROJECT_ENVIRONMENT=/tmp/anvenv python3 -m uv run --frozen --project analysis pytest analysis/tests -q 2>&1 | tail -30\", \"description\": \"Run the wh\u2026\n- Bash: {\"command\": \"export PATH=$HOME/.local/bin:$PATH; git status --short; grep -n \\\"ruff\\\\|line-length\\\" analysis/pyproject.toml | head; UV_PROJECT_ENVIRONMENT=/tmp/anvenv python3 -m uv run --frozen --pro\u2026\n- Bash: {\"command\": \"ls spec/rulings/R977000.md; grep -rn \\\"977000\\\" analysis --include=*.py --include=*.md --include=*.ipynb -l; git diff analysis/notebooks | grep '^[-+]' | cut -c1-170\", \"description\": \"Co\u2026\n- Bash: {\"command\": \"grep -rn '\\\"analysis\\\"\\\\|analysis/' crates/tools/src/spec*.rs crates/tools/src/spec/ 2>/dev/null | head -5; ls target/release/jackioh 2>/dev/null\", \"description\": \"Check whether spec che\u2026\n- tool error: Exit code 2\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n\\n## Log\\n\\n- Ran `pytest analysis/tests/test_card_stats.py`: 27 passed; `pytest analysis/tests`: 63 passed (94s). git status: only the five planned files.\\\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI sweep notebook shows raw timeouts beside counted timeouts\"} --> The sweep notebook now shows the raw timeouts beside the counted ones. This covers pass 1 and pass 2. Only the analysis side changed. Nothing in `crates/`, `spec/`, the catalog, the \u2026"
       },
       "issue": 4731,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-24T15:05:18Z",
+      "run_id": "pending:1aca77b7-1795533226",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -20936,6 +20943,9 @@
         "provider": "claude-3",
         "run": "45411601714"
       },
+      "started_at": "2026-11-24T15:14:22Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -20949,9 +20959,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T14:46:43Z",
+    "at": "2026-11-24T15:14:22Z",
     "url": "",
-    "what": "build #4747 on muse"
+    "what": "review #4749 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-24T15:03:02Z",
