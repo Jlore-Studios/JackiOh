@@ -3475,3 +3475,9 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-23T23:48:25Z,45288601761,claude-4,opus,plan,4609,hard,planned,,20.2,257,119324,28536131,10.7015,0,20,,,246.1,claude-4,fresh,,1
 2026-11-24T00:00:38Z,45290205765,claude-7,opus,plan,4587,hard,planned,,21.3,38,28611,5472026,10.7077,13,36,,,260.9,claude-3,fresh,other,1
 2026-11-23T23:53:20Z,45290094426,muse,muse-spark-1.3-contributor,review,4628,medium,approved,,17.4,0,0,0,,2,3,23,24,1,muse,none,,1
+2026-11-24T00:20:58Z,45293211844,claude-6,opus,plan,4588,hard,planned,,20.7,260,119350,27325405,10.3556,22,41,,,282.7,,fresh,,1
+2026-11-24T00:25:04Z,45286941283,claude-8,opus,build,4608,hard,built,,52.1,136,33251,6571945,2.843,1,10,,,235.1,claude-8,fresh,,1
+2026-11-24T00:36:36Z,45297679457,claude-6,opus,plan,4590,hard,interrupted,5-hour cap,3,0,0,0,,42,50,,,315,,fresh,,1
+2026-11-24T00:37:54Z,45294957169,claude-7,opus,plan,4589,hard,failed,,23.7,287,132076,30014576,25.1531,40,7,,,295.1,,fresh,,1
+2026-11-24T00:32:53Z,45275620473,agy,gemini-3.8-flash-high,plan,4619,medium,failed,,150.3,392347,26086,0,,0,2,0,1,163.1,agy,none,,1
+2026-11-24T00:27:50Z,45266435249,claude-3,opus,review,4574,hard,interrupted,refusal,141.7,1,1883,202183,5.455,29,100,,,756.2,claude-3,fresh,,2
