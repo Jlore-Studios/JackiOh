@@ -18,10 +18,12 @@ import type { AudioEngine } from "../audio/types.ts";
 import { modifierListTestid } from "../game/ModifierList.tsx";
 import { formatDateTime } from "../i18n/i18n.ts";
 import type { DailyExpiredGame, DailyGame } from "../net/daily.ts";
+import { paths } from "../net/navigate.ts";
 import { clearReadCache } from "../net/readCache.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { resetSettings, writeSettings } from "../settings/store.ts";
 import { baseView, card, emptySide, opponentModifiers, pendingFor, unit, yourModifiers } from "../test/fixtures.ts";
+import { pressBack } from "../test/history.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { at, refusal, signIn, stubServer, type Call, type Reply } from "../test/stubServer.ts";
@@ -524,6 +526,26 @@ describe("R3855000 a daily board shows what every table shows", () => {
       fireEvent.click(screen.getByTestId(replayTestid.back));
       expect(await screen.findByTestId(dailyTestid.watchReplay, undefined, SLOW)).toBeInTheDocument();
       expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+    });
+
+    it("R4619000 one Back on a finished daily game's replay returns to its result on /daily/:id", async () => {
+      at(paths.daily);
+      window.history.pushState(null, "", paths.dailyGame("g-1"));
+      serve(finished, (call) => {
+        if (call.method !== "GET" || call.path !== "/api/replays/g-1") return undefined;
+        const from = Number(call.query.get("from") ?? "0");
+        const count = Number(call.query.get("count") ?? "1");
+        return { status: 200, body: { matchId: "g-1", from, steps: steps.slice(from, from + count), total: steps.length } };
+      });
+      render(<DailyBoard matchId="g-1" />);
+      await screen.findByTestId("result-overlay", undefined, SLOW);
+      fireEvent.click(screen.getByTestId(dailyTestid.watchReplay));
+      expect(await screen.findByTestId(replayTestid.player, undefined, SLOW)).toHaveAttribute("data-step", "0");
+
+      await pressBack();
+      expect(await screen.findByTestId(dailyTestid.watchReplay, undefined, SLOW)).toBeInTheDocument();
+      expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+      expect(window.location.pathname).toBe(paths.dailyGame("g-1"));
     });
 
     it("R3855000 a voided game's result offers no replay", async () => {

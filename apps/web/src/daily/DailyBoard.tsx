@@ -41,6 +41,7 @@ import { outcomeFor } from "../game/Result.tsx";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { Loading, ShellPanel } from "../main.tsx";
 import { ApiRequestError } from "../net/api.ts";
+import { BackLayer } from "../net/backLayers.ts";
 import { getDailyGame, sendDailyAction, type DailyExpiredGame, type DailyGame } from "../net/daily.ts";
 import { attempt, messageOf } from "../net/errors.ts";
 import { withSession } from "../net/gate.ts";
@@ -241,6 +242,12 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
   if (watching && game.view.result !== null) {
     return (
       <CatalogContext.Provider value={lookup}>
+        {/* R4619000: Back means the replay's corner arrow; first, so what the replay opens is a layer above it. */}
+        <BackLayer
+          onClose={() => {
+            setWatching(false);
+          }}
+        />
         <OpenedReplay
           load={() => withSession((token) => openOnlineMatchReplay(token, game.matchId))}
           opponentLabel={game.opponent.username}
