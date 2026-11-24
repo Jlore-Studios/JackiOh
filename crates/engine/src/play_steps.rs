@@ -622,9 +622,10 @@ pub fn validate_play(
 
     // R1200: while a Mayor acts the action carries no targets, so draw each at random before anything
     // is checked or paid; the targeting point, costs and Joro's replacements meet the drawn target
-    // (MD-E9). A face-down play (ME-ALTPLAY, R1044) declares nothing, so draws nothing.
+    // (MD-E9). A face-down play (ME-ALTPLAY, R1044) declares nothing, so draws nothing. R4590001:
+    // a Spell played under a random-targets modifier or a Jailbreaker's aura draws the same way.
     let mut owned = action.clone();
-    if crate::random_targets::targets_random(sink.state) && owned.face_down.is_none() {
+    if crate::random_targets::play_targets_random(sink.state, player, &card) && owned.face_down.is_none() {
         let face = crate::play_choices::face_for_action(sink.state, player, &card, &owned);
         let given = owned.targets.clone().unwrap_or_default();
         let modes = owned.modes.clone().unwrap_or_default();
@@ -1802,7 +1803,38 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     // R1848002: "your next Spell this turn has Poisonous" is had as it is played, as Forever&'s is.
     let card = live_or(sink.state, &card);
     give_next_spell_keywords(sink, &card, run.player);
+    // R4590001: a Spell played with its targets drawn at random spends one of those modifiers.
+    let card = live_or(sink.state, &card);
+    spend_random_targets_next_spell(sink, &card, run.player, run.cast == Some(true));
     true
+}
+
+/// R4590001 (IA #130 Prompt Injection): spend one live `RandomTargetsNextSpell` for the Spell played
+/// face-up, whose declared targets were drawn at random. A cast takes none (R70), a face-down set
+/// leaves it waiting (R783005), and a countered play spends none (R90).
+fn spend_random_targets_next_spell(
+    sink: &mut EngineSink<'_>,
+    card: &CardInstance,
+    player: PlayerId,
+    cast: bool,
+) {
+    if cast {
+        return;
+    }
+    if card_type_of(sink.state, card) != CardType::Spell || card.set_as.is_some() {
+        return;
+    }
+    let id = sink.state.players[player]
+        .mods
+        .iter()
+        .find(|modifier| {
+            matches!(modifier.kind, ModifierKind::RandomTargetsNextSpell)
+                && modifier_is_live(sink.state, modifier)
+        })
+        .map(|modifier| modifier.id.clone());
+    if let Some(id) = id {
+        remove_modifier(sink, player, &id);
+    }
 }
 
 /// E11, R454, §10.5 step 4: take the played card out of its hand or graveyard (E1's announce too);

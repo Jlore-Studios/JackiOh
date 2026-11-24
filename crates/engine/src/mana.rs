@@ -85,6 +85,45 @@ pub fn move_mana_crystals(
     (lost, gained)
 }
 
+/// R4590002 (IA #135 Mana Leech): `thief` steals `count` of `victim`'s mana crystals, counted
+/// from the capped maximum: the victim's own crystals first (up to `held`, their count inside the
+/// cap), then crystals they had stolen. The victim's count drops to `held - own` inside the cap, so
+/// their own crystals come back one a turn (§2.3); the thief holds what they lost past the cap
+/// (`CrystalGain::PastTheCap`, R4331001). Returns the max mana the victim lost and the crystals the
+/// thief gained; the caller reports each side whose mana changed (`mana_event`).
+pub fn move_some_mana_crystals(
+    state: &mut GameState,
+    thief: PlayerId,
+    victim: PlayerId,
+    count: i32,
+) -> (i32, i32) {
+    let cap = handicap_of(&state.players[victim]).mana_cap;
+    let side = &mut state.players[victim];
+    let held = mana_crystal_count(side).min(cap).max(0);
+    let own = count.clamp(0, held);
+    let offset = side.mana_crystals.unwrap_or(0);
+    side.mana_crystals = Some(offset - (mana_crystal_count(side) - held) - own).filter(|moved| *moved != 0);
+    let from_stolen = (count - own).clamp(0, stolen_mana_crystals_of(side));
+    if from_stolen > 0 {
+        side.stolen_mana_crystals =
+            Some(stolen_mana_crystals_of(side) - from_stolen).filter(|left| *left != 0);
+    }
+    let before = side.mana.max;
+    side.mana.max = max_mana_for(side);
+    let lost = (before - side.mana.max).max(0);
+    side.mana.current = (side.mana.current - lost).max(0);
+
+    let side = &mut state.players[thief];
+    let gained = lost;
+    if gained > 0 {
+        let held = side.mana.max;
+        side.stolen_mana_crystals = Some(stolen_mana_crystals_of(side) + gained);
+        side.mana.max = max_mana_for(side);
+        side.mana.current += side.mana.max - held;
+    }
+    (lost, gained)
+}
+
 /// R169: the id the next refresh's rider (`mana.nextTurnMod`, §6.3 Mana: "'next turn' mana is stored
 /// as a modifier for the next refresh") travels under — one badge per player, which `modifierChanged`
 /// names as it appears, changes and is spent, and which the view lists while the rider is not 0.

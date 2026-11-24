@@ -755,6 +755,10 @@ pub enum ModifierKind {
     KeywordNextSpell {
         keyword: Keyword,
     },
+    /// R4590001 (IA #130 Prompt Injection): the next Spell this player plays face-up has its declared
+    /// targets drawn at random (`random_targets::play_targets_random`), spent at §10.5 step 4. A
+    /// countered play spends none (R90); a cast never carries one (R70). Expiry `used`.
+    RandomTargetsNextSpell,
     // ---- Stinkyscape's Starship (issue #1852) ----
     /// R1852006: "Your Starship launch costs (N)": this player's next launch by the Activate costs
     /// `cost` (`starship::launch_cost`), the least of several, until a launch it prices spends it

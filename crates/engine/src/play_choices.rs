@@ -2520,8 +2520,12 @@ pub fn priced_play_actions(
                             face_down: None,
                         };
                         // R1200: while a Mayor acts the reducer draws the targets, so collapsed
-                        // choices list one action, not one per target set.
-                        if *random.get_or_insert_with(|| crate::random_targets::targets_random(state)) {
+                        // choices list one action, not one per target set. R4590001: a Spell
+                        // played under a random-targets modifier or a Jailbreaker's aura lists
+                        // the same way.
+                        if *random.get_or_insert_with(|| {
+                            crate::random_targets::play_targets_random(state, player, card)
+                        }) {
                             pushed.targets = without_target_picks(
                                 state,
                                 player,

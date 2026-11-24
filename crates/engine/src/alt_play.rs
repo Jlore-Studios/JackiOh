@@ -334,6 +334,25 @@ pub fn fire_cloaked_reveal(sink: &mut EngineSink<'_>, card: &CardInstance, event
     crate::traps::fire_trap(sink, &reveal, event, Some(card.controller));
 }
 
+/// R4590000 (IA #134 Rootkit Runner): a revealed Unit's "When this is revealed" hook, run once it
+/// has come out and its Cry has run, as its controller. Resumable like `prompts::run_evolve`.
+/// Returns true when the whole hook ran. It never runs on a face-up play: only this reveal path
+/// calls it.
+pub fn run_revealed(sink: &mut EngineSink<'_>, card: &CardInstance, controller: PlayerId) -> bool {
+    if crate::scripts::script_of(sink.state, card).revealed.is_none() {
+        return true;
+    }
+    crate::prompts::run_hook_resumable(
+        sink,
+        card,
+        "revealed",
+        crate::prompts::HookResumableOptions {
+            controller: Some(controller),
+            ..crate::prompts::HookResumableOptions::default()
+        },
+    )
+}
+
 /// ME-ALTPLAY: the one effect a reveal runs — a Unit animates then cries, a Spell resolves. A Field
 /// Spell set by its Cloaked (R783006) runs its Cry from where it stands, as a Spell's text runs, and
 /// the firing's end turns it into its own card there (`traps::consume_trap`).
@@ -372,6 +391,12 @@ fn reveal_effect() -> Effect {
                 return;
             };
             crate::cry_trigger::trigger_cry_of(ctx, &live, controller);
+            // R4590000: after the Cry, "When this is revealed" runs once. When the Cry paused on a
+            // question, the hook does not run: the reveal resumes, and no C6 card has both a Cry
+            // and this hook.
+            if !crate::work::paused(ctx) {
+                run_revealed(ctx, &live, controller);
+            }
         } else {
             // R1045: the Echo stamped as it was set, and Radiant Paranoia's while one acts on its
             // controller's field now.

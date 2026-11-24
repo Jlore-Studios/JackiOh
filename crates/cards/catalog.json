@@ -41879,11 +41879,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Steal an enemy Unit that costs (2) or less."
+      "text": "Steal a (2) Cost or less enemy Unit."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal an enemy Unit that costs (3) or less."
+      "text": "Steal a (3) Cost or less enemy Unit."
     }
   },
   "infiniteassault-132": {
@@ -42310,11 +42310,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Steal every enemy Unit that costs (2) or less. Your opponent's cards cost (1) more during their next turn."
+      "text": "Steal every (2) Cost or less enemy Unit. Your opponent's cards cost (1) more during their next turn."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal every enemy Unit that costs (3) or less. Your opponent's cards cost (1) more during their next turn."
+      "text": "Steal every (3) Cost or less enemy Unit. Your opponent's cards cost (1) more during their next turn."
     }
   },
   "infiniteassault-145": {
