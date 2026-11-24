@@ -19,12 +19,16 @@ const MINER: &str = "stinkyscape-066";
 
 /// p1's turn 9 ended through the reducer: p2's turn 10, where `simulate_reply` plays p2's reply.
 fn handed_over(p1: Value, p2: Value) -> GameState {
+    handed_over_on("audit-reply", p1, p2)
+}
+
+fn handed_over_on(seed: &str, p1: Value, p2: Value) -> GameState {
     jackioh_cards::register_all();
     let mut p1 = p1;
     let mut p2 = p2;
     p1["library"] = json!(LIBRARY);
     p2["library"] = json!(LIBRARY);
-    let s = scenario(json!({ "seed": "audit-reply", "active": "p1", "turn": TURN, "p1": p1, "p2": p2 }));
+    let s = scenario(json!({ "seed": seed, "active": "p1", "turn": TURN, "p1": p1, "p2": p2 }));
     let ended = reduce(s.state(), &Action::new(ActionBody::EndTurn, AI, "audit-end".to_string()));
     assert!(ended.error.is_none(), "{:?}", ended.error);
     assert_eq!(ended.state.active, HUMAN);
@@ -98,11 +102,20 @@ fn a_five_use_activate_does_not_crowd_the_opponents_lethal_attacks_out_of_the_re
         Some(Winner::from(HUMAN)),
         "three 4/4s at the open face of a hero at 12 are lethal"
     );
-    let mined = reply(json!([VANILLA, VANILLA, VANILLA, MINER]));
-    for entry in mined.applied.iter() {
-        let kinds: Vec<String> = entry.events.iter().map(|e| format!("{e:?}").chars().take(110).collect()).collect();
-        println!("  {} -> {kinds:#?}", entry.nonce);
+    for n in 0..8 {
+        let seed = format!("audit-reply-miner-{n}");
+        let state = handed_over_on(&seed, json!({ "health": 12 }), json!({ "field": [VANILLA, VANILLA, VANILLA, MINER] }));
+        let counter = create_node_counter(600, None);
+        let r = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE).expect("a reply");
+        let played: Vec<String> = r.applied.iter().flat_map(|a| a.events.iter()).filter_map(|e| match e {
+            GameEvent::CardPlayed { def_id, .. } => Some(def_id.clone()),
+            GameEvent::AttackDeclared { attacker_id, target_id, .. } => Some(format!("ATTACK {attacker_id}->{target_id}")),
+            GameEvent::Activated { ability, .. } => Some(format!("act {ability}")),
+            _ => None,
+        }).collect();
+        println!("{seed}: result {:?} active {:?} hp {} used {} :: {played:?}", r.result.map(|x| x.winner), r.active, r.players[AI].hero.health, counter.used());
     }
+    let mined = reply(json!([VANILLA, VANILLA, VANILLA, MINER]));
     assert_eq!(
         mined.result.map(|result| result.winner),
         Some(Winner::from(HUMAN)),

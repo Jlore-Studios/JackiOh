@@ -1,24 +1,18 @@
-//! Audit (decide): exploratory.
+//! Audit of the decision loop (decide.rs, search.rs, skill.rs, baselines.rs): each test asserts the
+//! documented behaviour and fails on the code as it stands.
 
 use jackioh_ai::{
-    AI_BUDGET, AiOptions, Decision, DecisionReason, Prices, SearchBudget, action_key, candidate_actions,
-    decide, greedy_action,
+    AI_BUDGET, AiOptions, Decision, DecisionReason, GREEDY_EVAL, NextSwing, Prices, SearchBudget, action_key,
+    candidate_actions, decide, evaluate, greedy_action, one_ply_scores,
 };
 use jackioh_engine::testkit::{
-    Action, ActionBody, GameState, PlayerId, create_rng, json, legal_actions, reduce, scenario, subsystems,
+    Action, ActionBody, GameState, PlayerId, create_rng, json, reduce, scenario, subsystems,
 };
 
 const AI: PlayerId = PlayerId::P1;
 
 fn register_cards() {
     jackioh_cards::register_all();
-}
-
-fn is_legal(state: &GameState, seat: PlayerId, action: &ActionBody) -> bool {
-    let key = action_key(action);
-    legal_actions(state, seat)
-        .iter()
-        .any(|legal| action_key(legal) == key)
 }
 
 fn mid_board() -> GameState {
@@ -98,7 +92,6 @@ fn a_small_budget_still_leaves_the_beam_its_nodes() {
     let alone = decided(&state, SearchBudget { nodes: 30, lethal_nodes: 0, ..AI_BUDGET });
     assert_eq!(alone.reason, DecisionReason::Search, "PREMISE: 30 nodes search this board");
     let small = decided(&state, SearchBudget { nodes: 30, lethal_nodes: 7, ..AI_BUDGET });
-    println!("small: {:?} lines={} nodes={}", small.reason, small.stats.lines, small.stats.nodes);
     assert!(small.stats.lines > 0, "7 of 30 nodes were the solver's, yet the beam searched no line");
     assert_ne!(small.reason, DecisionReason::Fallback);
 }
@@ -159,67 +152,80 @@ fn a_wrap_up_fired_before_the_beam_still_leaves_a_line_when_the_first_root_move_
         decide(state, AI, &mut options).expect("a decision")
     };
     let plain = wrapped(&one_card("core-008"));
-    println!("plain: {:?} lines={} stop={:?}", plain.reason, plain.stats.lines, plain.stats.stopped_by);
     assert!(plain.stats.lines > 0, "PREMISE: an ordinary root is expanded under a fired wrap-up");
     let state = one_card(ZEPHRYS);
-    let cands = candidate_actions(&state, AI, Prices::NONE);
-    println!("cands: {:?}", cands.iter().map(action_key).collect::<Vec<_>>());
     let unclocked = decided(&state, AI_BUDGET);
-    println!("unclocked: {:?} {} lines={}", unclocked.reason, action_key(&unclocked.action), unclocked.stats.lines);
+    assert_eq!(unclocked.reason, DecisionReason::Search, "PREMISE: with no clock the root is searched");
     let d = wrapped(&state);
-    println!("wrapped: {:?} {} lines={} nodes={} stop={:?}", d.reason, action_key(&d.action), d.stats.lines, d.stats.nodes, d.stats.stopped_by);
-    assert!(d.stats.lines > 0, "the beam was left no line");
+    assert!(
+        d.stats.lines > 0,
+        "the beam was left no line: {:?} {} after {} nodes, stopped by {:?} (no clock: {})",
+        d.reason,
+        action_key(&d.action),
+        d.stats.nodes,
+        d.stats.stopped_by,
+        action_key(&unclocked.action)
+    );
     assert_ne!(d.reason, DecisionReason::Fallback);
 }
 
-// ---- exploration, to delete ----
-
-#[test]
-fn explore_greedy_pareto() {
+/// The AI at 4 mana holding Flood, Twisting Nether, Genn's Greed, a second Flood (each (4), one variant)
+/// and True Strike (1), which wins on the enemy hero at 4 health, while the enemy's Pareto Optimality
+/// (M #71) judges its plays: each Play is surcharged `AI_SEARCH.judged_card_nodes` (3) per hand card
+/// (#1240), 16 nodes here. crates/ai/tests/ai/match_.rs's B27 scene with one card more in hand.
+fn judged_hand() -> (GameState, Vec<ActionBody>, usize) {
     register_cards();
-    for hand in [
-        json!(["core-017", "core-088", "core-094", "core-044"]),
-        json!(["core-017", "core-088", "core-094", "core-017", "core-044"]),
-        json!(["core-017", "core-088", "core-094", "core-088", "core-044"]),
-        json!(["core-017", "core-088", "core-094", "core-094", "core-044"]),
-    ] {
-        let state = scenario(json!({
-            "seed": "audit-pareto",
-            "active": AI,
-            "turn": 9,
-            "p1": { "hand": hand, "mana": 4, "library": ["core-008", "core-011", "core-020"] },
-            "p2": { "health": 4, "backrow": [{ "def": "meditative-071", "faceUp": true }], "library": ["core-008", "core-011", "core-020"] },
-        }))
-        .state()
-        .clone();
-        let cands = candidate_actions(&state, AI, Prices::NONE);
-        let g = greedy_action(&state, AI, &mut create_rng("audit-pareto", 0));
-        let won = g.as_ref().map(|a| {
-            let r = reduce(&state, &Action::new(a.clone(), AI, "g"));
-            r.state.result.is_some()
-        });
-        println!("hand {hand}: watching={} cands={} greedy={:?} won={won:?}", subsystems::watching(&state, AI), cands.len(), g.as_ref().map(action_key));
-        for c in &cands { println!("    {}", action_key(c)); }
-    }
+    let state = scenario(json!({
+        "seed": "audit-pareto",
+        "active": AI,
+        "turn": 9,
+        "p1": { "hand": ["core-017", "core-088", "core-094", "core-017", "core-044"], "mana": 4,
+                "library": ["core-008", "core-011", "core-020"] },
+        "p2": { "health": 4, "backrow": [{ "def": "meditative-071", "faceUp": true }],
+                "library": ["core-008", "core-011", "core-020"] },
+    }))
+    .state()
+    .clone();
+    assert!(subsystems::watching(&state, AI), "PREMISE: the AI's plays are judged");
+    let candidates = candidate_actions(&state, AI, Prices::NONE);
+    let strike = candidates
+        .iter()
+        .position(|action| action_key(action).contains(r#""pick":"hero","player":"p2""#))
+        .expect("True Strike on the enemy hero is a candidate");
+    let won = reduce(&state, &Action::new(candidates[strike].clone(), AI, "audit-strike"));
+    assert_eq!(
+        won.state.result.and_then(|result| result.winner.player()),
+        Some(AI),
+        "PREMISE: the strike wins the game"
+    );
+    (state, candidates, strike)
 }
 
+/// skill.rs `one_ply_scores` (the ladder bots' skill miss, R2214000): "each candidate's greedy-baseline
+/// score on `det` one ply ahead". Its counter holds `candidates × (1 + max_auto_answers)` nodes, 63 here,
+/// and `simulate` takes each Play's surcharge from it: three Plays spend 48, and the fourth and the strike
+/// are refused ("the step's surcharge does not fit the budget's slice") and read as standing still.
 #[test]
-fn explore_stop_at_prompt() {
-    register_cards();
-    let mut s = scenario(json!({
-        "seed": "audit-prompt",
-        "p1": { "hand": ["core-072"], "graveyard": ["core-008", "core-011"], "library": ["core-011"] },
-        "p2": { "hand": ["core-005"] },
-    }));
-    s.play("core-072", json!({}));
-    let state = s.state().clone();
-    println!("pending: {:?}", state.pending.as_ref().map(|p| (p.player_id, p.options.len())));
-    let stop = || true;
-    for (name, st, wr) in [("stop", true, false), ("wrap", false, true), ("none", false, false)] {
-        let mut options = AiOptions::with_budget(create_rng("audit-prompt", 0), AI_BUDGET);
-        if st { options.should_stop = Some(&stop); }
-        if wr { options.wrap_up = Some(&stop); }
-        let d = decide(&state, AI, &mut options).expect("d");
-        println!("{name}: {:?} {} legal={} lines={} nodes={} stop={:?}", d.reason, action_key(&d.action), is_legal(&state, AI, &d.action), d.stats.lines, d.stats.nodes, d.stats.stopped_by);
-    }
+fn the_skill_miss_scores_a_winning_play_one_ply_ahead_while_its_plays_are_judged() {
+    let (state, candidates, strike) = judged_hand();
+    let standing = evaluate(&state, AI, NextSwing::Enemy, &GREEDY_EVAL);
+    let scores = one_ply_scores(&state, AI, &candidates);
+    assert!(
+        scores[strike] > standing,
+        "the winning strike scored {} one ply ahead, standing still {standing}: {scores:?}",
+        scores[strike]
+    );
+}
+
+/// baselines.rs `greedy_action`: "the candidate (not endTurn) with the highest `evaluate` ... after
+/// `simulate_first_answers`", and "Every candidate gets its one simulation" (its own comment, and B27's in
+/// crates/ai/tests/ai/match_.rs: "its surcharge included"). On the same counter the strike is never
+/// simulated, so the baseline plays a (4) card and does not win.
+#[test]
+fn the_greedy_baseline_takes_the_one_ply_win_while_its_plays_are_judged() {
+    let (state, candidates, strike) = judged_hand();
+    assert_eq!(
+        greedy_action(&state, AI, &mut create_rng("audit-pareto", 0)).as_ref().map(action_key),
+        Some(action_key(&candidates[strike]))
+    );
 }

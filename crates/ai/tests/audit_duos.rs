@@ -186,6 +186,29 @@ fn explore_nonce() {
         let (state, two) = nonce_state(filled);
         println!("filled {filled}: A1 plays {:?} passes {:?}", plays_in(&state.duels[0], PlayerId::P1, &two).len(), duos_passes(&state, A1));
     }
+    for hand in [[ONE_DROP, BIG], [BIG, ONE_DROP]] {
+        let (mut state, _) = nonce_state(3);
+        set_hand(&mut state, A2, &hand);
+        println!("hand {hand:?}: passes {:?}", duos_passes(&state, A1));
+    }
+}
+
+#[test]
+fn explore_stale() {
+    let mut state = round_two("audit-duos-stale", DUOS_HUMAN_TEAM);
+    let two = set_hand(&mut state, B1, &[TWO_DROP]).remove(0);
+    set_mana(&mut state, B1, DUOS_PASS_COST);
+    set_hand(&mut state, B2, &[BIG]);
+    set_mana(&mut state, B2, cost(BIG) - 1);
+    let d1 = duos_decide(&state, B1, &mut opts("s1"));
+    let d2 = duos_decide(&state, B2, &mut opts("s2"));
+    println!("two={two} d1={} d2={}", json_of(&d1), json_of(&d2));
+    let after_d2 = apply(&state, B2, d2.clone().unwrap());
+    println!("fresh B1 after B2 ended: {}", json_of(&duos_decide(&after_d2, B1, &mut opts("s1"))));
+    println!("stale d1 on it: {:?}", try_apply(&after_d2, B1, d1.clone().unwrap()).map(|s| (s.round, s.ended.clone())));
+    let after_d1 = apply(&state, B1, d1.unwrap());
+    println!("fresh B2 after the pass: {}", json_of(&duos_decide(&after_d1, B2, &mut opts("s2"))));
+    println!("stale d2 on it: {:?}", try_apply(&after_d1, B2, d2.unwrap()).map(|s| (s.round, s.ended.clone())));
 }
 
 fn baseline_state(own_unit: bool) -> (DuosState, String) {
