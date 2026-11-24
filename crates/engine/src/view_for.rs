@@ -1286,6 +1286,8 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ModifierKind::HeroArmor { amount } => format!("Your hero has {amount} Armor until your next turn"),
         // MD-C21: Tranquility's immunity badge.
         ModifierKind::HeroImmune => "Your hero is immune to damage until your next turn".to_string(),
+        // R4591004: Impenetrable's immunity badge.
+        ModifierKind::UnitsImmune => "Your Units are immune to damage until your next turn".to_string(),
         // R4353020: S+ #79 A Glimpse into the Endless Sea's, for the rest of the game.
         ModifierKind::FatigueImmune => "You are immune to fatigue damage".to_string(),
         ModifierKind::ReplacePlays { def_id, radiant } => {
@@ -1323,6 +1325,9 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
             "Your next Spell this turn has {}",
             crate::wire::keyword_key(keyword)
         ),
+        // R4590001: IA #130 Prompt Injection's "your opponent's next Spell has its targets chosen
+        // randomly", read from the affected side.
+        ModifierKind::RandomTargetsNextSpell => "Your next Spell has its targets chosen randomly".to_string(),
         // R1859007: Stinkyscape's War Doctrines' "for the rest of the game, your Units have X". R1870004:
         // #4.4 Last Word's "your Units have Charge during it", the turn named until it comes.
         ModifierKind::UnitsHaveKeyword { keyword, .. } => format!(
@@ -1334,6 +1339,9 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
                 " during your next turn"
             }
         ),
+        // R4586006: Infinite Assault #33 Uncanny Valley's "Enemy Units have −N Attack until your
+        // next turn", read from the affected side.
+        ModifierKind::UnitsAttack { amount, .. } => format!("Your Units have {amount:+} Attack"),
     }
 }
 
@@ -1426,7 +1434,10 @@ fn reserved_mask(state: &GameState, player: PlayerId) -> RowFlags {
 
 /// R1141: how many cards of the opponent's hand carry a mark, while that hand is a count.
 fn hand_marked_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> Option<i32> {
-    if player == viewer || state.result.is_some() {
+    if player == viewer
+        || state.result.is_some()
+        || crate::revealed_hand::hand_revealed_to(state, player, viewer)
+    {
         return None;
     }
     let marked = state.players[player]
@@ -1514,7 +1525,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                 })
                 .collect(),
         )
-    } else if state.result.is_some() {
+    } else if state.result.is_some() || crate::revealed_hand::hand_revealed_to(state, player, viewer) {
         HandView::Cards(
             side.hand
                 .iter()

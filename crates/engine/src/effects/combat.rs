@@ -282,30 +282,36 @@ pub struct RedirectAttackArgs {
 /// firing on a later dispatch cannot re-aim a combat already fought.
 pub fn redirect_attack(args: RedirectAttackArgs) -> Effect {
     Effect::new("redirectAttack", move |ctx| {
-        let Some(by_instance_id) = ctx.self_.as_ref().map(|card| card.id.clone()) else {
-            return;
-        };
-        let controller = ctx.controller;
-        let Some(open) = ctx.state.declared_attack.as_mut() else {
-            return;
-        };
-        if open.cancelled {
-            return;
-        }
-
-        let from_id = open.target_id.clone();
-        open.target_id = args.to.clone();
-        open.redirected = Some(true);
-        if args.copy_destroyed == Some(true) {
-            open.copies_for = Some(controller);
-        }
-        ctx.events.push(GameEvent::Redirected {
-            what: RedirectWhat::Attack,
-            from_id,
-            to_id: args.to.clone(),
-            by_instance_id: Some(by_instance_id),
-        });
+        redirect_open_attack(ctx, &args.to, args.copy_destroyed);
     })
+}
+
+/// `redirect_attack`'s body, shared with summons that take the open attack (R4591005): re-aim the
+/// open `declaredAttack` at `to`. `by_instance_id` is the running card's, for the event.
+pub(crate) fn redirect_open_attack(ctx: &mut EffectContext<'_>, to: &str, copy_destroyed: Option<bool>) {
+    let Some(by_instance_id) = ctx.self_.as_ref().map(|card| card.id.clone()) else {
+        return;
+    };
+    let controller = ctx.controller;
+    let Some(open) = ctx.state.declared_attack.as_mut() else {
+        return;
+    };
+    if open.cancelled {
+        return;
+    }
+
+    let from_id = open.target_id.clone();
+    open.target_id = to.to_string();
+    open.redirected = Some(true);
+    if copy_destroyed == Some(true) {
+        open.copies_for = Some(controller);
+    }
+    ctx.events.push(GameEvent::Redirected {
+        what: RedirectWhat::Attack,
+        from_id,
+        to_id: to.to_string(),
+        by_instance_id: Some(by_instance_id),
+    });
 }
 
 /// `ai_plays_out_turn`'s arguments (TS's inline object).

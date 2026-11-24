@@ -44,4 +44,233 @@
   "infiniteassault-022": "none: its Aura is a standing stat bonus, with no moment to draw", // Assault Mainframe
   "infiniteassault-023": { trigger: { motif: "send", palette: "Tech/glitch" } }, // The Generator
   "infiniteassault-024": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Mass Deployment
+  "infiniteassault-025": { cry: { motif: "conjure", palette: "Tech/glitch" } }, // Mirage Weaver
+  "infiniteassault-025-1": none: token, its reveal does nothing, // Figment
+  "infiniteassault-026": { trigger: { motif: "bolt", palette: "Tech/laser" } }, // Phantom Lancer
+  "infiniteassault-027": { cry: { motif: "conjure", palette: "Tech/glitch" } }, // Decoy Projector
+  "infiniteassault-028": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Doppelganger Protocol
+  "infiniteassault-029": { cast: { motif: "seal", palette: "Tech/glitch" } }, // False Positive
+  "infiniteassault-030": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Smoke and Mirrors
+  "infiniteassault-031": { cry: { motif: "send", palette: "Tech/glitch" } }, // Unreliable Narrator
+  "infiniteassault-032": none: its Evasive is conditional text, with no moment to draw, // Glitch Specter
+  "infiniteassault-033": { cry: { motif: "curse", palette: "Tech/glitch" } }, // Uncanny Valley
+  "infiniteassault-034": { cast: { motif: "transmute", palette: "Tech/glitch" } }, // Mass Hallucination
+  "infiniteassault-034-1": none: token, vanilla, // Husk
+  "infiniteassault-035": { trigger: { motif: "conjure", palette: "Tech/glitch" } }, // Fata Morgana
+  "infiniteassault-035-1": none: token, keywords only, // Mirage
+  "infiniteassault-036": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Deepfake
+  "infiniteassault-037": { cast: { motif: "negate" } }, // Bluff Called
+  "infiniteassault-038": { death: { motif: "conjure", palette: "Tech/glitch" } }, // Imaginary Friend
+  "infiniteassault-039": { cast: { motif: "deal", palette: "Tech/glitch" } }, // Shell Game
+  "infiniteassault-040": { cast: { motif: "conjure" }, trigger: { motif: "conjure", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Hall of Mirrors
+  "infiniteassault-040-1": none: token, keywords only, // Reflection
+  "infiniteassault-041": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Phantom Army
+  "infiniteassault-041-1": none: token, keywords only, // Phantom
+  "infiniteassault-042": { trigger: { motif: "conjure", palette: "Tech/glitch" } }, // Paranoia Engine
+  "infiniteassault-043": { cast: { motif: "transmute", palette: "Tech/glitch" } }, // Cognitive Dissonance
+  "infiniteassault-044": { cry: { motif: "wipe", palette: "Tech/glitch" } }, // The Lie Detector
+  "infiniteassault-045": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Dream Within a Dream
+  "infiniteassault-046": { trigger: { motif: "conjure", palette: "Tech/glitch" } }, // Mirage Sovereign
+  "infiniteassault-047": { cast: { motif: "negate", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Unreal Estate
+  "infiniteassault-048": { cast: { motif: "deal", palette: "Tech/glitch" } }, // Ego Death
+  "infiniteassault-049": { death: { motif: "mana", palette: "Tech/glitch" } }, // Spark Plug
+  "infiniteassault-050": { cast: { motif: "mana", palette: "Tech/glitch" } }, // Burst Clock
+  "infiniteassault-051": { trigger: { motif: "drain", palette: "Tech/glitch" } }, // Redline Racer
+  "infiniteassault-052": { cast: { motif: "bless" } }, // Thermal Paste
+  "infiniteassault-053": { cry: { motif: "drain", palette: "Tech/glitch" } }, // Overvolt Grunt
+  "infiniteassault-054": none: keywords only, // Fan Failure
+  "infiniteassault-055": { trigger: { motif: "bless", palette: "Tech/glitch" } }, // Heat Sink
+  "infiniteassault-056": { cast: { motif: "bolt", palette: "Tech/laser" } }, // Afterburner
+  "infiniteassault-057": none: keywords only, // Speed Demon
+  "infiniteassault-058": { trigger: { motif: "drain", palette: "Tech/glitch" } }, // Overclocked Core
+  "infiniteassault-059": { cast: { motif: "bolt", palette: "Tech/laser" } }, // Voltage Spike
+  "infiniteassault-060": { cry: { motif: "bless", palette: "Tech/glitch" } }, // Pit Crew
+  "infiniteassault-061": { cast: { motif: "nova", palette: "Tech/laser" } }, // Meltdown Charge
+  "infiniteassault-062": { cast: { motif: "snap", palette: "Tech/glitch" } }, // Burnout
+  "infiniteassault-063": { cry: { motif: "bless", palette: "Tech/glitch" } }, // Nitrous Injector
+  "infiniteassault-064": { death: { motif: "bolt", palette: "Tech/laser" } }, // Crash Test Dummy
+  "infiniteassault-065": { cast: { motif: "mana", palette: "Tech/glitch" } }, // Overdrive
+  "infiniteassault-066": none: keywords only, // Afterimage Sprinter
+  "infiniteassault-067": { cast: { motif: "mana", palette: "Tech/glitch" }, trigger: { motif: "drain", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Burning Ambition
+  "infiniteassault-068": { cast: { motif: "vanish", palette: "Tech/glitch" } }, // Short Circuit
+  "infiniteassault-069": { trigger: { motif: "bless", palette: "Tech/glitch" } }, // Rev Limiter
+  "infiniteassault-070": none: its Aura is a standing conditional bonus, with no moment to draw, // Redline Overlord
+  "infiniteassault-071": { trigger: { motif: "mana", palette: "Tech/glitch" } }, // Thermal Throttler
+  "infiniteassault-072": { cast: { motif: "mana", palette: "Tech/glitch" } }, // Overclock to Infinity
+  "infiniteassault-073": { cry: { motif: "conjure", palette: "Tech/glitch" } }, // Worker Thread
+  "infiniteassault-074": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Parallel Instance
+  "infiniteassault-074-1": none: token, vanilla, // Instance
+  "infiniteassault-075": none: its Aura is a standing stat bonus, with no moment to draw, // Load Balancer
+  "infiniteassault-076": { cast: { motif: "bless" } }, // Mob Mentality
+  "infiniteassault-077": { death: { motif: "bless" } }, // Swarm Node
+  "infiniteassault-078": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Batch Job
+  "infiniteassault-078-1": none: token, vanilla, // Worker
+  "infiniteassault-079": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Thread Pool
+  "infiniteassault-080": none: its scaling is continuous, with no moment to draw, // Hive Ganger
+  "infiniteassault-081": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Overprovision
+  "infiniteassault-082": { death: { motif: "conjure", palette: "Tech/rocket" } }, // Fork Bomb
+  "infiniteassault-082-1": none: token, vanilla, // Fork
+  "infiniteassault-083": { cast: { motif: "bless" } }, // Swarm Logic
+  "infiniteassault-084": { trigger: { motif: "send", palette: "Tech/glitch" } }, // Distributed Mind
+  "infiniteassault-085": { cast: { motif: "transmute", palette: "Tech/glitch" } }, // Merge Conflict
+  "infiniteassault-086": { cast: { motif: "conjure" }, trigger: { motif: "conjure", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Replica Hatchery
+  "infiniteassault-087": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Swarm Shield
+  "infiniteassault-088": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Scale Out
+  "infiniteassault-089": { trigger: { motif: "conjure", palette: "Tech/rocket" } }, // Queen of the Cluster
+  "infiniteassault-090": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Mass Production
+  "infiniteassault-091": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Flood the Zone
+  "infiniteassault-092": { trigger: { motif: "conjure", palette: "Tech/rocket" } }, // Hive Overseer
+  "infiniteassault-093": { cry: { motif: "transmute", palette: "Tech/glitch" } }, // Gestalt
+  "infiniteassault-094": { trigger: { motif: "conjure", palette: "Tech/glitch" } }, // Batch Monarch
+  "infiniteassault-095": none: its Aura is a standing stat bonus, with no moment to draw, // The Botnet
+  "infiniteassault-096": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Exponential Growth
+  "infiniteassault-097": none: keywords only, // Retry Bot
+  "infiniteassault-098": { cast: { motif: "bolt", palette: "Tech/laser" } }, // Echo Chamber
+  "infiniteassault-099": { cast: { motif: "send", palette: "Tech/glitch" } }, // Recall
+  "infiniteassault-100": { death: { motif: "send", palette: "Tech/glitch" } }, // Iterator
+  "infiniteassault-101": { cry: { motif: "recall", palette: "Tech/glitch" } }, // Rewind Drone
+  "infiniteassault-102": none: keywords only, // Loop Guard
+  "infiniteassault-103": { cast: { motif: "send", palette: "Tech/glitch" } }, // Undo
+  "infiniteassault-104": { cast: { motif: "flight" } }, // Stack Trace
+  "infiniteassault-105": { death: { motif: "send", palette: "Tech/glitch" } }, // Callback
+  "infiniteassault-106": { death: { motif: "mend", palette: "Tech/glitch" } }, // Checkpoint Daemon
+  "infiniteassault-107": { cast: { motif: "bolt", palette: "Tech/laser" } }, // Recursive Call
+  "infiniteassault-108": { cast: { motif: "deal", palette: "Tech/glitch" } }, // Second Draft
+  "infiniteassault-109": { trigger: { motif: "bless" } }, // Revenant Process
+  "infiniteassault-110": { cast: { motif: "conjure" }, trigger: { motif: "conjure", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Infinite Loop
+  "infiniteassault-111": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Redundant Copy
+  "infiniteassault-112": { trigger: { motif: "bless", palette: "Tech/glitch" } }, // Evolutionary Loop
+  "infiniteassault-113": { cast: { motif: "send", palette: "Tech/glitch" } }, // Rerun
+  "infiniteassault-114": { death: { motif: "send", palette: "Tech/glitch" } }, // Ouroboros Engine
+  "infiniteassault-115": { cry: { motif: "bless" } }, // Phoenix Protocol
+  "infiniteassault-116": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Groundhog Day
+  "infiniteassault-117": { cast: { motif: "send", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Core Dump
+  "infiniteassault-118": none: its doubling is a standing effect, with no moment to draw, // The Recursionist
+  "infiniteassault-119": { cry: { motif: "snap", palette: "Tech/glitch" } }, // Snapshot Lich
+  "infiniteassault-120": { cast: { motif: "send", palette: "Tech/glitch" } }, // Eternal Return
+  "infiniteassault-121": { cry: { motif: "send", palette: "Tech/glitch" } }, // Packet Sniffer
+  "infiniteassault-122": { cry: { motif: "bind", palette: "Tech/glitch" } }, // Freeze Ray Drone
+  "infiniteassault-123": { cast: { motif: "tithe", palette: "Tech/glitch" } }, // Cost Injection
+  "infiniteassault-124": { cast: { motif: "wipe", palette: "Tech/glitch" } }, // Firewall Breach
+  "infiniteassault-125": { cast: { motif: "bind", palette: "Tech/glitch" } }, // Zone Lock
+  "infiniteassault-126": { cry: { motif: "curse", palette: "Tech/glitch" } }, // Exploit Grunt
+  "infiniteassault-127": { cast: { motif: "transmute", palette: "Tech/glitch" } }, // Bad Prompt
+  "infiniteassault-128": { cry: { motif: "hex", palette: "Tech/glitch" } }, // Malware Injector
+  "infiniteassault-129": none: its Aura is a standing cost hike, with no moment to draw, // Signal Jammer
+  "infiniteassault-130": { cast: { motif: "hex", palette: "Tech/glitch" } }, // Prompt Injection
+  "infiniteassault-131": { cast: { motif: "shift", palette: "Tech/glitch" } }, // Privilege Escalation
+  "infiniteassault-132": { cast: { motif: "snap", palette: "Tech/glitch" } }, // Ransomware
+  "infiniteassault-133": { cast: { motif: "recall", palette: "Tech/glitch" } }, // Backdoor
+  "infiniteassault-134": { trigger: { motif: "recall", palette: "Tech/glitch" } }, // Rootkit Runner
+  "infiniteassault-135": { cry: { motif: "mana", palette: "Tech/glitch" } }, // Mana Leech
+  "infiniteassault-136": { cast: { motif: "nova", palette: "Tech/laser" } }, // DDoS
+  "infiniteassault-137": { cast: { motif: "curse", palette: "Tech/glitch" } }, // Patch Tuesday Exploit
+  "infiniteassault-138": { cry: { motif: "shift", palette: "Tech/glitch" } }, // Social Engineer
+  "infiniteassault-139": { cast: { motif: "shift", palette: "Tech/glitch" } }, // Admin Override
+  "infiniteassault-140": { cast: { motif: "snap", palette: "Tech/glitch" } }, // Kill Switch
+  "infiniteassault-141": { trigger: { motif: "wipe", palette: "Tech/glitch" } }, // Logic Bomb
+  "infiniteassault-142": { cry: { motif: "curse", palette: "Tech/glitch" } }, // The Jailbreaker
+  "infiniteassault-143": { cast: { motif: "transmute", palette: "Tech/glitch" } }, // Zero-Click
+  "infiniteassault-143-1": none: token, keywords only, // Corrupted Process
+  "infiniteassault-144": { cast: { motif: "shift", palette: "Tech/glitch" } }, // Total Compromise
+  "infiniteassault-145": none: keywords only, // Packet Filter
+  "infiniteassault-146": { cry: { motif: "bless" } }, // Shield Drone
+  "infiniteassault-147": none: keywords only, // Hardened Node
+  "infiniteassault-148": { cast: { motif: "seal", palette: "Tech/glitch" } }, // Quarantine
+  "infiniteassault-149": { cast: { motif: "bless" } }, // Encrypt
+  "infiniteassault-150": { trigger: { motif: "bolt", palette: "Tech/laser" } }, // Wall of Static
+  "infiniteassault-151": { cast: { motif: "bless" } }, // Patch Deployment
+  "infiniteassault-152": none: its attack cap is a standing restriction, with no moment to draw, // Rate Limiter
+  "infiniteassault-153": none: keywords only, // Bastion Node
+  "infiniteassault-154": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Honeypot Protocol
+  "infiniteassault-154-1": none: token, keywords only, // Decoy Server
+  "infiniteassault-155": { trigger: { motif: "bless" } }, // Two-Factor Gate
+  "infiniteassault-156": { trigger: { motif: "bolt", palette: "Tech/laser" } }, // Mirror Firewall
+  "infiniteassault-157": { cast: { motif: "bind", palette: "Tech/glitch" } }, // Containment Field
+  "infiniteassault-158": { cast: { motif: "negate" } }, // Access Denied
+  "infiniteassault-159": { cry: { motif: "wipe", palette: "Tech/laser" } }, // Antivirus
+  "infiniteassault-160": none: its Aura is a standing stat bonus, with no moment to draw, // Zero Trust
+  "infiniteassault-161": { cast: { motif: "bless" } }, // Defense in Depth
+  "infiniteassault-162": { trigger: { motif: "bless" } }, // The Gatekeeper
+  "infiniteassault-163": { trigger: { motif: "bless" } }, // Quarantine Wall
+  "infiniteassault-164": { cast: { motif: "vanish", palette: "Tech/glitch" } }, // Blackhole Route
+  "infiniteassault-165": { cast: { motif: "bolt", palette: "Tech/laser" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Iron Curtain
+  "infiniteassault-166": none: its Aura is a standing conditional bonus, with no moment to draw, // Aegis Prime
+  "infiniteassault-167": { cast: { motif: "transmute", palette: "Tech/glitch" } }, // Fortress Protocol
+  "infiniteassault-168": { cast: { motif: "seal", palette: "Tech/glitch" } }, // Impenetrable
+  "infiniteassault-169": { cry: { motif: "send", palette: "Tech/glitch" } }, // Spider Bot
+  "infiniteassault-170": { cast: { motif: "send", palette: "Tech/glitch" } }, // Data Point
+  "infiniteassault-171": { cry: { motif: "bless" } }, // Mimic Unit
+  "infiniteassault-172": { cast: { motif: "send", palette: "Tech/glitch" } }, // Training Data
+  "infiniteassault-173": { cry: { motif: "transmute", palette: "Tech/glitch" } }, // Copycat Drone
+  "infiniteassault-174": { cast: { motif: "send", palette: "Tech/glitch" } }, // Scrape the Graveyard
+  "infiniteassault-175": { cry: { motif: "send", palette: "Tech/glitch" } }, // Fingerprinter
+  "infiniteassault-176": { cry: { motif: "bless" } }, // Imitation Engine
+  "infiniteassault-177": { cast: { motif: "flight" } }, // Predictive Text
+  "infiniteassault-178": { cry: { motif: "recall", palette: "Tech/glitch" } }, // Dataset Thief
+  "infiniteassault-179": { cast: { motif: "transmute", palette: "Tech/glitch" } }, // Style Transfer
+  "infiniteassault-180": { cast: { motif: "send", palette: "Tech/glitch" } }, // Scraped Profile
+  "infiniteassault-181": { trigger: { motif: "send", palette: "Tech/glitch" } }, // Plagiarism Bot
+  "infiniteassault-182": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Model Theft
+  "infiniteassault-183": { trigger: { motif: "send", palette: "Tech/glitch" } }, // Shadow Library
+  "infiniteassault-184": { cast: { motif: "send", palette: "Tech/glitch" } }, // Pattern Recognition
+  "infiniteassault-185": { trigger: { motif: "send", palette: "Tech/glitch" } }, // Deep Crawler
+  "infiniteassault-186": { cast: { motif: "send", palette: "Tech/glitch" } }, // Identity Theft
+  "infiniteassault-187": none: its cost cut is standing, with no moment to draw, // Fine-Tuner
+  "infiniteassault-188": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Overfitting
+  "infiniteassault-189": { cast: { motif: "conjure" }, trigger: { motif: "conjure", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Clone Vat
+  "infiniteassault-190": { cry: { motif: "send", palette: "Tech/glitch" } }, // Total Recall
+  "infiniteassault-191": none: its hand reveal is standing, with no moment to draw, // Ground Truth
+  "infiniteassault-192": { cast: { motif: "deal", palette: "Tech/glitch" } }, // Become the Data
+  "infiniteassault-193": { trigger: { motif: "bless" } }, // Seedling Mind
+  "infiniteassault-194": { trigger: { motif: "send", palette: "Tech/glitch" } }, // Compute Shard
+  "infiniteassault-195": { cry: { motif: "bless" } }, // Power Law
+  "infiniteassault-196": { cast: { motif: "bless" } }, // Emergent Behavior
+  "infiniteassault-197": { cry: { motif: "send", palette: "Tech/glitch" } }, // Long Context
+  "infiniteassault-198": { cast: { motif: "bless" } }, // Growth Spurt
+  "infiniteassault-199": { trigger: { motif: "bolt", palette: "Tech/laser" } }, // Patient Machine
+  "infiniteassault-200": { trigger: { motif: "transmute", palette: "Tech/glitch" } }, // Superintelligence Seed
+  "infiniteassault-200-1": none: token, vanilla, // Ascendant
+  "infiniteassault-201": none: its cost cut is standing, with no moment to draw, // Overparameterized
+  "infiniteassault-202": { trigger: { motif: "bless" } }, // Exponent
+  "infiniteassault-203": { cast: { motif: "bless" }, trigger: { motif: "bless" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Compute Cluster
+  "infiniteassault-204": { cast: { motif: "send", palette: "Tech/glitch" } }, // Moore's Law
+  "infiniteassault-205": { trigger: { motif: "bolt", palette: "Tech/laser" } }, // Doomsday Clock
+  "infiniteassault-206": { cry: { motif: "bless" } }, // Thought Accelerator
+  "infiniteassault-207": { cast: { motif: "bless" } }, // Recursive Self-Improvement
+  "infiniteassault-208": { cast: { motif: "bless" } }, // Emergence
+  "infiniteassault-209": { cast: { motif: "bless" } }, // Takeoff
+  "infiniteassault-210": none: keywords only, // Matrioshka Brain
+  "infiniteassault-211": { trigger: { motif: "transmute", palette: "Tech/glitch" } }, // Grey Goo
+  "infiniteassault-212": { cast: { motif: "bless" }, trigger: { motif: "bless" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Inevitable
+  "infiniteassault-213": { trigger: { motif: "wipe", palette: "Tech/glitch" } }, // The Long Game
+  "infiniteassault-214": { trigger: { motif: "bless" } }, // Emergent Mind
+  "infiniteassault-215": { trigger: { motif: "transmute", palette: "Tech/glitch" } }, // The Optimizer
+  "infiniteassault-216": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // The Singularity
+  "infiniteassault-216-1": { trigger: { motif: "wipe", palette: "Tech/glitch" } }, // Singularity
+  "infiniteassault-217": { trigger: { motif: "bolt", palette: "Tech/laser" } }, // Echo-1, First Hallucination
+  "infiniteassault-218": { cast: { motif: "send", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Thousand Faces
+  "infiniteassault-219": { trigger: { motif: "mana", palette: "Tech/glitch" } }, // Redline, the Overclocked
+  "infiniteassault-220": { cast: { motif: "bless" } }, // Last Lap
+  "infiniteassault-221": { trigger: { motif: "conjure", palette: "Tech/rocket" } }, // Hivemaster Batch-01
+  "infiniteassault-222": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Swarm Uplink
+  "infiniteassault-223": { trigger: { motif: "bless" } }, // Loopback, Who Returns
+  "infiniteassault-224": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Rollback Point
+  "infiniteassault-225": { cry: { motif: "shift", palette: "Tech/glitch" } }, // Root Kit, the Exploiter
+  "infiniteassault-226": { cast: { motif: "shift", palette: "Tech/glitch" } }, // Escalated Privileges
+  "infiniteassault-227": none: its Aura is a standing hero ward, with no moment to draw, // Bastion.exe
+  "infiniteassault-228": { cast: { motif: "negate", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Firewall Rules
+  "infiniteassault-229": { cry: { motif: "recall", palette: "Tech/glitch" } }, // The Harvester
+  "infiniteassault-230": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Everything You've Ever Played
+  "infiniteassault-231": { trigger: { motif: "vanish", palette: "Tech/glitch" } }, // The Black Box
+  "infiniteassault-232": { cast: { motif: "vanish", palette: "Tech/glitch" } }, // Spaghettification
+  "infiniteassault-233": { trigger: { motif: "curse", palette: "Tech/glitch" } }, // Model Collapse
+  "infiniteassault-234": { cast: { motif: "transmute", palette: "Tech/glitch" } }, // Degenerate Output
+  "infiniteassault-235": { trigger: { motif: "send", palette: "Tech/glitch" } }, // The Prime Generator
+  "infiniteassault-235-1": { trigger: { motif: "conjure", palette: "Tech/glitch" } }, // The Prime Generator, Iteration Two
+  "infiniteassault-236": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Infinite Assault
+  "infiniteassault-237": { trigger: { motif: "nova", palette: "Tech/laser" } }, // Thermal Runaway
+  "infiniteassault-238": { trigger: { motif: "barrage", palette: "Tech/laser" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Critical Temperature
+  "infiniteassault-239": { cry: { motif: "shift", palette: "Tech/glitch" } }, // Zero-Day
+  "infiniteassault-240": { cast: { motif: "negate", palette: "Tech/glitch" } }, // Unpatched
 }

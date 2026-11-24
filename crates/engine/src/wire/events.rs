@@ -711,6 +711,13 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         again: Option<bool>,
+        /// R4586007: the attacker of the attack the firing answers (`traps::fire_trap` on an
+        /// `attackDeclared`), in a game holding an Infinite Assault card (`recursion_log::kept`), so a
+        /// trigger on a Figment's reveal can copy it. Absent otherwise, so no other game's firing
+        /// serializes otherwise than it did before the field existed.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        attacker_id: Option<String>,
     },
     AttackDeclared {
         attacker_id: String,

@@ -82,7 +82,8 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // (Stinkyscape 001 to 090's 97). Stinkyscape+'s 142 at its release (#3596): 131 cards and 11 tokens.
     // #4440: S+ #4.1 Profe Yates Prime. #4577: the held Infinite Assault set's first 21 (its 26 entries less
     // the five that are `none`), which the gallery plays as it plays every table entry.
-    expect(cards).toHaveLength(836);
+    // #4602: the foundation's 229, every one drawn, so the gallery plays 1065.
+    expect(cards).toHaveLength(1065);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
