@@ -17919,8 +17919,16 @@
     "what": "plan #4590 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-24T00:18:25Z",
-    "notes": [],
+    "at": "2026-11-24T00:26:24Z",
+    "notes": [
+      "delivered plan #4588 on claude-6 (run 45293211844): planned",
+      "delivered build #4608 on claude-8 (run 45286941283): built",
+      "started review #4656 on claude-8 (run 45297577157)",
+      "started plan #4590 on claude-6 (run 45297679457)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-24T02:10:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "pruned 4 plan file(s) older than 7 days",
+      "runner gate: started 1 of 2 waiting run(s) (run 45297742598 on promote/20261124-a296c51); 1 wait for a slot"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18625,7 +18633,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T00:18:25Z",
+  "loop_tick": "2026-11-24T00:26:24Z",
   "machine_disk": {
     "issue": null,
     "reading": {
