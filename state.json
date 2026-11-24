@@ -19905,17 +19905,17 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-7",
+        "built_by": "claude-4",
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "provider": "claude-7",
-            "run": "45389148467",
+            "provider": "claude-4",
+            "run": "45414629741",
             "tier": "strong"
           }
         ],
-        "sha": "b5e41c6c9ad674e887bb9cd75f571913ca4eade5",
+        "sha": "20848c9023eaa033fc17987bb7f156ccfb298dde",
         "tiers": {
           "claude": "strong"
         }
