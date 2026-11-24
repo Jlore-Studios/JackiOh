@@ -3569,3 +3569,13 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-24T09:56:53Z,45369291125,claude-1,opus,plan,4585,medium,failed,,0,0,0,0,,48,48,,,1495.7,,none,,0
 2026-11-24T09:48:37Z,45367327670,claude-4,opus,plan,4692,medium,planned,,4.8,54,38306,2836857,1.2178,0,4,,,9,,fresh,,1
 2026-11-24T09:56:37Z,45352561005,claude-3,opus,build,4601,hard,interrupted,refusal,111.8,0,0,0,30.7263,23,100,,,0.8,,fresh,,1
+2026-11-24T10:10:43Z,45371852671,claude-4,opus,plan,4583,medium,failed,,0,0,0,0,,4,4,,,1511.5,claude-6,none,other,0
+2026-11-24T10:11:16Z,45371736260,claude-1,opus,plan,4584,medium,failed,,0,0,0,0,,55,55,,,1510.9,claude-4,none,other,0
+2026-11-24T10:10:39Z,45371621615,claude-4,opus,plan,4585,medium,failed,,0,0,0,0,,4,4,,,1510.2,claude-1,none,other,0
+2026-11-24T10:03:49Z,45351422491,claude-3,opus,build,4675,hard,built,,91.5,251,102855,28892152,10.2083,16,97,,,117.3,claude-3,fresh,,1
+2026-11-24T10:22:20Z,45373591674,claude-4,opus,plan,4583,medium,failed,,0,0,0,0,,4,4,,,1522.2,claude-4,none,,0
+2026-11-24T10:22:17Z,45373482076,claude-1,opus,plan,4584,medium,failed,,0,0,0,0,,60,60,,,1521.5,claude-1,none,,0
+2026-11-24T10:19:48Z,45373365464,claude-4,opus,plan,4585,medium,failed,,0,0,0,0,,4,4,,,1520.8,claude-4,none,,0
+2026-11-24T10:20:45Z,45345578620,claude-6,opus,revise,4629,hard,built,,149.8,307,77283,26768782,8.7492,26,1,,,41.4,claude-1,fresh,,1
+2026-11-24T10:27:04Z,45369060926,agy,gemini-3.8-flash-high,build,4683,medium,built,,34.9,109727,14114,0,,2,3,18,19,32.2,agy,none,,1
+2026-11-24T10:30:21Z,45366818426,muse,muse-spark-1.3-contributor,build,4682,medium,built,,52.3,0,0,0,,0,3,45,46,18.3,muse,none,,1
