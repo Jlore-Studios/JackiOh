@@ -1337,6 +1337,14 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         // R4586006: Infinite Assault #33 Uncanny Valley's "Enemy Units have −N Attack until your
         // next turn", read from the affected side.
         ModifierKind::UnitsAttack { amount } => format!("Your Units have {amount:+} Attack"),
+        // R4588000: Infinite Assault #83 Swarm Logic's "your Units have +N Attack this turn".
+        ModifierKind::UnitsHaveAttack { amount, .. } => {
+            if *amount >= 0 {
+                format!("Your Units have +{amount} Attack")
+            } else {
+                format!("Your Units have −{} Attack", -amount)
+            }
+        }
     }
 }
 
