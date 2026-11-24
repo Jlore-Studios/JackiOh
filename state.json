@@ -20742,6 +20742,13 @@
     "4743": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T14:38:46Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard rule fires: the change is a one-line client presentation key plus tests and a doc row, with no engine, AI, cross-crate, migration or large-file work."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
