@@ -9,6 +9,10 @@ const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
 
 fn board(name: &str, tested: &str, radiant: bool) -> Option<Scenario> {
+    board_seeded(name, tested, radiant, "audit-plays")
+}
+
+fn board_seeded(name: &str, tested: &str, radiant: bool, seed: &str) -> Option<Scenario> {
     let t = json!({ "def": tested, "radiant": radiant });
     let lib = json!(["core-008", "core-005", "core-067", "core-030", "core-053", "core-005"]);
     let mixed_p2 = json!({
@@ -107,8 +111,55 @@ fn board(name: &str, tested: &str, radiant: bool) -> Option<Scenario> {
             },
             "p2": mixed_p2,
         }),
+        "gy" => json!({
+            "seed": "audit-plays",
+            "p1": {
+                "hand": ["core-008", "core-005"],
+                "field": [{ "def": "core-008", "lane": 1 }, { "def": "core-t-sheep", "lane": 2 }],
+                "backrow": [
+                    { "def": "classic-028", "lane": 1, "faceUp": true },
+                    { "def": "classic-074", "lane": 2, "faceUp": true, "counters": { "plague": 3 } },
+                ],
+                "library": lib,
+                "graveyard": [t, "core-008", "core-005"],
+                "mana": 10,
+            },
+            "p2": mixed_p2,
+        }),
+        "giga" => json!({
+            "seed": "audit-plays",
+            "p1": {
+                "hand": [t, "core-008", "core-005"],
+                "field": [{ "def": "core-008", "lane": 5 }],
+                "backrow": [{ "def": "stinkyscapeplus-053", "lane": 1, "faceUp": true }],
+                "library": lib,
+                "graveyard": ["core-008", "core-005"],
+                "mana": 10,
+            },
+            "p2": {
+                "hand": ["core-008", "core-005"],
+                "field": [{ "def": "stinkyscapeplus-t-ai-04", "lane": 1 }, { "def": "core-019", "lane": 5 }],
+                "backrow": [{ "def": "stinkyscapeplus-053", "lane": 3, "faceUp": true }],
+                "library": lib,
+                "graveyard": ["core-008"],
+            },
+        }),
+        "tyrant" | "tyrant-empty" => {
+            let mut p2 = mixed_p2.clone();
+            let mut p1 = mixed_p1(10);
+            p1["hand"] = json!(["classic-056", "core-008", "core-005"]);
+            p1["graveyard"] = json!([t]);
+            if name == "tyrant-empty" {
+                p1["field"] = json!([]);
+                p1["backrow"] = json!([]);
+                p2 = json!({ "hand": ["core-008"], "library": lib });
+            }
+            json!({ "seed": "audit-plays", "p1": p1, "p2": p2 })
+        }
         _ => return None,
     };
+    let mut opts = opts;
+    opts["seed"] = json!(seed);
     catch_unwind(AssertUnwindSafe(|| scenario(opts))).ok()
 }
 
@@ -291,7 +342,7 @@ fn explore() {
     let mut reduces = 0usize;
     for def_id in &defs {
         for radiant in [false, true] {
-            for name in ["mixed", "poor", "empty", "full", "mayor", "special"] {
+            for name in ["mixed", "poor", "empty", "full", "mayor", "special", "gy", "giga"] {
                 if !only_board.is_empty() && only_board != name {
                     continue;
                 }
@@ -301,7 +352,11 @@ fn explore() {
                 };
                 let mut state = s.state().clone();
                 state.applied = Vec::new();
-                let card = state.players[P1].hand[0].clone();
+                let card = if name == "gy" {
+                    state.players[P1].graveyard[0].clone()
+                } else {
+                    state.players[P1].hand[0].clone()
+                };
                 let legal = match catch_unwind(AssertUnwindSafe(|| legal_actions(&state, P1))) {
                     Ok(legal) => legal,
                     Err(_) => {
@@ -432,4 +487,278 @@ fn dump_decls() {
         }
     }
     std::fs::write(&out_path, text).unwrap();
+}
+
+fn short(text: &str) -> String {
+    let cut: String = text.chars().take(64).collect();
+    cut.chars().map(|c| if c.is_ascii_digit() { '#' } else { c }).collect()
+}
+
+fn walk(state: &GameState, depth: usize, what: &str, note: &mut dyn FnMut(String, String)) {
+    if state.result.is_some() || depth > 6 {
+        return;
+    }
+    let Some(pending) = &state.pending else { return };
+    for finding in offered_target_findings(state) {
+        note(format!("PROMPT {}", short(&finding)), format!("{what} :: {finding}"));
+    }
+    let who = pending.player_id;
+    let answers: Vec<ActionBody> = legal_actions(state, who)
+        .into_iter()
+        .filter(|action| matches!(action, ActionBody::Answer { .. }))
+        .collect();
+    if answers.is_empty() {
+        note("PROMPT NO ANSWER".to_string(), format!("{what} kind={:?} {}", pending.kind, pending.prompt));
+        return;
+    }
+    let stride = (answers.len() / 6).max(1);
+    for (at, answer) in answers.iter().enumerate().filter(|(at, _)| at % stride == 0).take(7) {
+        let action = Action::new(answer.clone(), who, format!("walk{depth}"));
+        let sent = serde_json::to_string(answer).unwrap_or_default();
+        match catch_unwind(AssertUnwindSafe(|| reduce(state, &action))) {
+            Err(payload) => {
+                let text = payload
+                    .downcast_ref::<String>()
+                    .cloned()
+                    .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
+                    .unwrap_or_default();
+                note(format!("ANSWER PANIC {}", short(&text)), format!("{what} -> {sent} :: {text}"));
+            }
+            Ok(result) => {
+                if let Some(error) = result.error {
+                    note(format!("ANSWER REFUSED {}", short(&error)), format!("{what} -> {sent} :: {error}"));
+                    continue;
+                }
+                for finding in branch_state_findings(&result.events, &result.state) {
+                    note(format!("BRANCH {}", short(&finding)), format!("{what} -> {sent} :: {finding}"));
+                }
+                if at == 0 || at + stride >= answers.len() {
+                    walk(&result.state, depth + 1, &format!("{what} -> {sent}"), note);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn explore_deep() {
+    jackioh_cards::register_all();
+    let filter = std::env::var("AUDIT_DEEP").unwrap_or_default();
+    let out_path = std::env::var("AUDIT_OUT").unwrap_or_default();
+    if filter.is_empty() {
+        return;
+    }
+    std::panic::set_hook(Box::new(|_| {}));
+    let defs: Vec<(String, bool)> = registered_catalog()
+        .iter()
+        .filter(|(id, _)| !id.starts_with("infiniteassault") && id.starts_with(&filter))
+        .map(|(id, def)| (id.clone(), def.token))
+        .collect();
+    let mut groups: BTreeMap<String, (usize, Vec<String>)> = BTreeMap::new();
+    let mut note = |key: String, example: String| {
+        let entry = groups.entry(key).or_insert((0, Vec::new()));
+        entry.0 += 1;
+        if entry.1.len() < 3 {
+            entry.1.push(example.chars().take(900).collect());
+        }
+    };
+    for (def_id, token) in &defs {
+        for radiant in [false, true] {
+            for name in ["mixed", "giga", "special", "gy", "full"] {
+                if name == "gy" && *token {
+                    continue;
+                }
+                let Some(s) = board(name, def_id, radiant) else { continue };
+                let mut state = s.state().clone();
+                state.applied = Vec::new();
+                let card = if name == "gy" {
+                    state.players[P1].graveyard[0].clone()
+                } else {
+                    state.players[P1].hand[0].clone()
+                };
+                let Ok(legal) = catch_unwind(AssertUnwindSafe(|| legal_actions(&state, P1))) else { continue };
+                let plays: Vec<PlayAction> = legal
+                    .iter()
+                    .filter_map(PlayAction::from_body)
+                    .filter(|play| play.instance_id == card.id)
+                    .collect();
+                let stride = (plays.len() / 14).max(1);
+                for play in plays.iter().step_by(stride).take(16) {
+                    let what = format!("{def_id} r={radiant} {name} {}", serde_json::to_string(play).unwrap());
+                    let Ok(result) = send(&state, play) else { continue };
+                    if result.error.is_some() {
+                        continue;
+                    }
+                    for finding in branch_state_findings(&result.events, &result.state) {
+                        note(format!("BRANCH {}", short(&finding)), format!("{what} :: {finding}"));
+                    }
+                    walk(&result.state, 0, &what, &mut note);
+                }
+            }
+        }
+    }
+    let mut text = format!("defs {}\n", defs.len());
+    for (key, (count, examples)) in &groups {
+        text.push_str(&format!("== {key} x{count}\n"));
+        for example in examples {
+            text.push_str(&format!("   {example}\n"));
+        }
+    }
+    if !out_path.is_empty() {
+        std::fs::write(&out_path, &text).unwrap();
+    }
+    println!("{}", text.chars().take(5000).collect::<String>());
+}
+
+fn diff(a: &Value, b: &Value, path: &str, out: &mut Vec<String>) {
+    if a == b || out.len() > 40 {
+        return;
+    }
+    match (a, b) {
+        (Value::Object(x), Value::Object(y)) => {
+            let mut keys: Vec<&String> = x.keys().chain(y.keys()).collect();
+            keys.sort();
+            keys.dedup();
+            for key in keys {
+                diff(x.get(key).unwrap_or(&Value::Null), y.get(key).unwrap_or(&Value::Null), &format!("{path}/{key}"), out);
+            }
+        }
+        (Value::Array(x), Value::Array(y)) if x.len() == y.len() => {
+            for (i, (p, q)) in x.iter().zip(y).enumerate() {
+                diff(p, q, &format!("{path}/{i}"), out);
+            }
+        }
+        _ => {
+            let cut = |v: &Value| v.to_string().chars().take(160).collect::<String>();
+            out.push(format!("{path}: {} != {}", cut(a), cut(b)));
+        }
+    }
+}
+
+#[test]
+fn probe_tribute_order() {
+    jackioh_cards::register_all();
+    if std::env::var("AUDIT_PROBE").unwrap_or_default() != "tribute" {
+        return;
+    }
+    let s = board("mixed", "stinkyscape-085", false).unwrap();
+    let mut state = s.state().clone();
+    state.applied = Vec::new();
+    let play = |tributes: &[&str]| PlayAction {
+        instance_id: "c1".to_string(),
+        zone: Some(ZoneChoice { row: Row::Units, lane: 1 }),
+        tributes: Some(tributes.iter().map(|s| s.to_string()).collect()),
+        ..Default::default()
+    };
+    let a = send(&state, &play(&["c5", "c7"])).unwrap();
+    let b = send(&state, &play(&["c7", "c5"])).unwrap();
+    println!("errors {:?} {:?}", a.error, b.error);
+    let mut out = Vec::new();
+    let (mut sa, mut sb) = (a.state.clone(), b.state.clone());
+    sa.applied = Vec::new();
+    sb.applied = Vec::new();
+    diff(&serde_json::to_value(&sa).unwrap(), &serde_json::to_value(&sb).unwrap(), "", &mut out);
+    for line in out {
+        println!("DIFF {line}");
+    }
+}
+
+#[test]
+fn probe_giga_setup() {
+    jackioh_cards::register_all();
+    if std::env::var("AUDIT_PROBE").unwrap_or_default() != "giga" {
+        return;
+    }
+    let s = scenario(json!({
+        "p1": { "hand": ["core-008"], "backrow": [{ "def": "stinkyscapeplus-053", "lane": 1, "faceUp": true }], "mana": 10 },
+        "p2": { "field": [{ "def": "stinkyscapeplus-t-ai-04", "lane": 1 }, { "def": "core-019", "lane": 4 }] },
+    }));
+    println!("{}", serde_json::to_string(&s.state().players[P2].units).unwrap().chars().take(600).collect::<String>());
+    println!("{}", serde_json::to_string(&s.state().players[P1].backrow).unwrap().chars().take(900).collect::<String>());
+}
+
+#[test]
+fn explore_casts() {
+    jackioh_cards::register_all();
+    let mode = std::env::var("AUDIT_CASTS").unwrap_or_default();
+    let out_path = std::env::var("AUDIT_OUT").unwrap_or_default();
+    if mode.is_empty() {
+        return;
+    }
+    std::panic::set_hook(Box::new(|_| {}));
+    let mut groups: BTreeMap<String, (usize, Vec<String>)> = BTreeMap::new();
+    let mut note = |key: String, example: String| {
+        let entry = groups.entry(key).or_insert((0, Vec::new()));
+        entry.0 += 1;
+        if entry.1.len() < 3 {
+            entry.1.push(example.chars().take(1200).collect());
+        }
+    };
+    let mut runs: Vec<(String, bool, &str, String)> = Vec::new();
+    if mode == "tyrant" {
+        for (id, def) in registered_catalog().iter() {
+            if id.starts_with("infiniteassault") || def.type_ != CardType::Spell {
+                continue;
+            }
+            for radiant in [false, true] {
+                for name in ["tyrant", "tyrant-empty"] {
+                    runs.push((id.clone(), radiant, name, "audit-plays".to_string()));
+                }
+            }
+        }
+    } else {
+        let seeds: usize = std::env::var("AUDIT_SEEDS").ok().and_then(|n| n.parse().ok()).unwrap_or(60);
+        for id in mode.split(',') {
+            for radiant in [false, true] {
+                for name in ["mixed", "giga", "full", "special", "empty"] {
+                    for seed in 0..seeds {
+                        runs.push((id.to_string(), radiant, name, format!("s{seed}")));
+                    }
+                }
+            }
+        }
+    }
+    for (def_id, radiant, name, seed) in &runs {
+        let Some(s) = board_seeded(name, def_id, *radiant, seed) else {
+            note(format!("SETUP {name}"), def_id.clone());
+            continue;
+        };
+        let mut state = s.state().clone();
+        state.applied = Vec::new();
+        let card = state.players[P1].hand[0].clone();
+        let Ok(legal) = catch_unwind(AssertUnwindSafe(|| legal_actions(&state, P1))) else { continue };
+        let plays: Vec<PlayAction> = legal
+            .iter()
+            .filter_map(PlayAction::from_body)
+            .filter(|play| play.instance_id == card.id)
+            .collect();
+        let stride = (plays.len() / 3).max(1);
+        for play in plays.iter().step_by(stride).take(4) {
+            let what = format!("{def_id} r={radiant} {name} seed={seed} {}", serde_json::to_string(play).unwrap());
+            match send(&state, play) {
+                Err(panic) => note(format!("PLAY PANIC {}", short(&panic)), format!("{what} :: {panic}")),
+                Ok(result) => {
+                    if let Some(error) = result.error {
+                        note(format!("PLAY REFUSED {}", short(&error)), format!("{what} :: {error}"));
+                        continue;
+                    }
+                    for finding in branch_state_findings(&result.events, &result.state) {
+                        note(format!("BRANCH {}", short(&finding)), format!("{what} :: {finding}"));
+                    }
+                    walk(&result.state, 0, &what, &mut note);
+                }
+            }
+        }
+    }
+    let mut text = format!("runs {}\n", runs.len());
+    for (key, (count, examples)) in &groups {
+        text.push_str(&format!("== {key} x{count}\n"));
+        for example in examples {
+            text.push_str(&format!("   {example}\n"));
+        }
+    }
+    if !out_path.is_empty() {
+        std::fs::write(&out_path, &text).unwrap();
+    }
+    println!("{}", text.chars().take(5000).collect::<String>());
 }

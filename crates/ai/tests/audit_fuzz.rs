@@ -1621,3 +1621,55 @@ fn f1c_two_ids_minted_unseen_do_not_change_the_action() {
     println!("turn {} seat {} next_id {}", state.turn, seat.as_str(), state.next_id);
     assert_eq!(decided(&state), decided(&minted));
 }
+
+#[test]
+fn diag_step() {
+    let Ok(what) = std::env::var("AF_DIAG") else {
+        return;
+    };
+    jackioh_cards::register_all();
+    let (family, rest) = what.split_once(':').expect("family:n:at");
+    let (n, at) = rest.split_once(':').expect("family:n:at");
+    let (n, at): (usize, usize) = (n.parse().expect("n"), at.parse().expect("at"));
+    let mut spec = spec_of(family, n);
+    spec.max_actions = at + 1;
+    let flags = Flags {
+        determinism_every: 0,
+        hints: false,
+        unstoppable: false,
+        twins: false,
+        window: 30,
+        bump: 0,
+    };
+    let played = play(&spec, &flags, &mut Tally::default(), &mut Vec::new());
+    let mut state = played.s0.clone();
+    for action in &played.log[..at] {
+        state = reduce(&state, action).state;
+    }
+    let action = &played.log[at];
+    println!("action {}", short(action));
+    if let ActionBody::Play { instance_id, .. } = &action.body {
+        for player in PLAYER_IDS {
+            for card in &state.players[player].hand {
+                if card.id == *instance_id {
+                    println!("plays {} radiant {}", card.def_id, card.radiant);
+                }
+            }
+        }
+    }
+    for player in PLAYER_IDS {
+        let side = &state.players[player];
+        let units: Vec<String> = side
+            .units
+            .iter()
+            .flatten()
+            .flatten()
+            .map(|card| format!("{}:{}", card.id, card.def_id))
+            .collect();
+        println!("{} hero {:?} units {:?}", player.as_str(), side.hero, units);
+    }
+    let result = reduce(&state, action);
+    for event in &result.events {
+        println!("  {}", short(event));
+    }
+}

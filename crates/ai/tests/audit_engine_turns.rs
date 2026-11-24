@@ -98,3 +98,43 @@ fn finding_1b_a_traded_unit_token_card_is_reported_shuffled_in_though_it_ceased(
          shuffled in: {reported:?}"
     );
 }
+
+/// Finding 1c. R1838002: "Fatigue cannot follow, since the deck holds at least the traded card", and
+/// R1838000: "a deck at R80's cap would turn the card away, so no Trade is offered into it". A unit-token
+/// card cannot go into the deck either (R11 ends it on the way), yet its Trade is offered and taken: with
+/// an empty deck (the state #75 Infinite Reserves' Rush Token cards come from) the Trade's draw is a
+/// fatigue draw, and the trader's hero is hit for a Trade the rules say can never fatigue.
+#[test]
+fn finding_1c_trading_a_unit_token_card_into_an_empty_deck_fatigues_the_trader() {
+    jackioh_cards::register_all();
+    let mut s = scenario(json!({
+        "p1": {
+            "hand": [RUSH, FILLER],
+            "field": [{ "def": SYNDICATE, "lane": 1 }],
+            "library": [],
+        },
+        "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+    }));
+    let token = s
+        .hand(P1)
+        .into_iter()
+        .find(|card| card.def_id == RUSH)
+        .map(|card| card.id)
+        .expect("a Rush Token card in p1's hand");
+    let health = s.state().players.p1.hero.health;
+    let fatigue = s.state().players.p1.fatigue_count;
+
+    s.trade(&token);
+
+    // R1838002: a Trade never fatigues: either the card is in the deck for the draw to find, or (as at
+    // R80's cap, R1838000) no Trade of it is offered.
+    assert_eq!(
+        (s.state().players.p1.fatigue_count, s.state().players.p1.hero.health),
+        (fatigue, health),
+        "a Trade fatigued its player: fatigue count {} -> {}, hero {} -> {}",
+        fatigue,
+        s.state().players.p1.fatigue_count,
+        health,
+        s.state().players.p1.hero.health,
+    );
+}
