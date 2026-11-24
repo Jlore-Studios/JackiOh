@@ -18763,6 +18763,15 @@
     },
     "4683": {
       "action": "build",
+      "archived": {
+        "at": "2026-11-24T11:57:11Z",
+        "branch": "bot/issue-4683",
+        "head": "939acc1f7e762b38e132f13711597875de13c3c4",
+        "issue": 4683,
+        "item": 4715,
+        "pr": 4715,
+        "why": "Please re-run the failed CI job `web (unit 6/8)` in run 45377047092 (https://github.com/Jlore-Studios/JackiOh/actions/runs/45377047092). The failure was a 5000ms Vitest timeout in `apps/web/src/cards/art/art.test.ts:62:3`, an untouched test under runner shard load that is out of scope for this change and forbidden from having its timeout raised or test skipped under CLAUDE.md rule 2."
+      },
       "asks": [],
       "died": 0,
       "difficulty_by": {
@@ -18772,8 +18781,6 @@
         "tier": "medium",
         "why": "the planner gave no rating line"
       },
-      "failures": 0,
-      "forced": false,
       "handoff": {
         "at": "2026-11-24T10:27:04Z",
         "family": "gemini",
@@ -18784,13 +18791,9 @@
         "trail": "- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\"}\n- said: \n- read_file: {\"EndLine\": 285, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\", \"StartLine\": 250}\n- said: \n- read_file: {\"EndLine\": 210, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\", \"StartLine\": 180}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"4583345f-8739-4e85-956a-ea0b4a705cce/task-20\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"4583345f-8739-4e85-956a-ea0b4a705cce/task-20\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/.bot-notes.md\"}\n- said: The test run (which compiles the WebAssembly engine before executing `HandHints.test.tsx`) is currently running in the background. I have applied the changes to [`HandHints.tsx`](file:///home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.tsx) and updated [`HandHint\u2026\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && pnpm --dir apps/web test src/i18n/i18n.test.ts\n- said: I have launched the `i18n.test.ts` suite to verify dictionary coverage and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && pnpm exec eslint apps/web/src/game/HandHints.tsx apps/web/src/game/HandHints.test.tsx\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo fmt --check\n- said: I have launched `cargo fmt --check` to verify Rust code formatting and will wait for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo jackioh catalog check\n- said: I have launched `cargo jackioh catalog check` and will wait for it to finish.\n- said: `cargo jackioh catalog check` is still compiling tools in the background; waiting for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo jackioh patches check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo jackioh spec check\n- said: I have launched `cargo jackioh spec check` and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && git diff\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: hand-hint pips name themselves on hover like field marks do\"} --> ## Summary of changes In [`HandHints.tsx`](file:///home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.tsx), added `title={pip.label}` to each rendered `.\u2026"
       },
       "interruptions": 0,
-      "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "agy",
-      "owner_since": "2026-11-24T09:22:47Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-24T09:49:26Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
       "planned_by_id": "agy",
@@ -18799,16 +18802,11 @@
       "pr": 4715,
       "provider": "agy",
       "question": "",
-      "queued_at": "2026-11-24T09:18:32Z",
-      "requested_by": "jgoetzmann",
-      "round_tier": "medium",
       "run_id": "45369060926",
       "runs_on": "night-vm-agy",
       "started_at": "2026-11-24T09:50:46Z",
-      "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
-      "verdict_rounds": 0
+      "taken_asks": []
     },
     "4684": {
       "action": "review",
@@ -19363,9 +19361,16 @@
     },
     "4715": {
       "action": "review",
+      "archived": {
+        "at": "2026-11-24T11:57:11Z",
+        "branch": "bot/issue-4683",
+        "head": "939acc1f7e762b38e132f13711597875de13c3c4",
+        "issue": 4683,
+        "pr": 4715,
+        "why": "Please re-run the failed CI job `web (unit 6/8)` in run 45377047092 (https://github.com/Jlore-Studios/JackiOh/actions/runs/45377047092). The failure was a 5000ms Vitest timeout in `apps/web/src/cards/art/art.test.ts:62:3`, an untouched test under runner shard load that is out of scope for this change and forbidden from having its timeout raised or test skipped under CLAUDE.md rule 2."
+      },
       "asks": [],
       "difficulty": "medium",
-      "failures": 0,
       "feedback_since": "2026-11-24T09:50:46Z",
       "handoff": {
         "at": "2026-11-24T10:27:04Z",
@@ -19377,16 +19382,13 @@
         "trail": "- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\"}\n- said: \n- read_file: {\"EndLine\": 285, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\", \"StartLine\": 250}\n- said: \n- read_file: {\"EndLine\": 210, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\", \"StartLine\": 180}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"4583345f-8739-4e85-956a-ea0b4a705cce/task-20\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"4583345f-8739-4e85-956a-ea0b4a705cce/task-20\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/.bot-notes.md\"}\n- said: The test run (which compiles the WebAssembly engine before executing `HandHints.test.tsx`) is currently running in the background. I have applied the changes to [`HandHints.tsx`](file:///home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.tsx) and updated [`HandHint\u2026\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && pnpm --dir apps/web test src/i18n/i18n.test.ts\n- said: I have launched the `i18n.test.ts` suite to verify dictionary coverage and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && pnpm exec eslint apps/web/src/game/HandHints.tsx apps/web/src/game/HandHints.test.tsx\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo fmt --check\n- said: I have launched `cargo fmt --check` to verify Rust code formatting and will wait for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo jackioh catalog check\n- said: I have launched `cargo jackioh catalog check` and will wait for it to finish.\n- said: `cargo jackioh catalog check` is still compiling tools in the background; waiting for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo jackioh patches check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo jackioh spec check\n- said: I have launched `cargo jackioh spec check` and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && git diff\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: hand-hint pips name themselves on hover like field marks do\"} --> ## Summary of changes In [`HandHints.tsx`](file:///home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.tsx), added `title={pip.label}` to each rendered `.\u2026"
       },
       "issue": 4683,
-      "kind": "review",
       "live": "reviewing",
-      "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-11-24T10:40:45Z",
+      "question": "Please re-run the failed CI job `web (unit 6/8)` in run 45377047092 (https://github.com/Jlore-Studios/JackiOh/actions/runs/45377047092). The failure was a 5000ms Vitest timeout in `apps/web/src/cards/art/art.test.ts:62:3`, an untouched test under runner shard load that is out of scope for this change and forbidden from having its timeout raised or test skipped under CLAUDE.md rule 2.",
       "run_id": "45377376728",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "started_at": "2026-11-24T10:42:45Z",
-      "stop_requested": false,
       "taken_asks": [],
       "votes": {
         "approvals": [],
