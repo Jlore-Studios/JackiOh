@@ -207,14 +207,14 @@ fn an_entry_whose_latest_offer_is_stale_is_dropped_when_read_but_one_with_a_game
     assert_eq!(made.len(), 1);
 }
 
-/// R2685000: an entry whose latest offer is exactly the TTL old is still read, and dropped a millisecond
-/// later; the book counts the matches it holds an entry for.
+/// R2685000: the window runs from the finished match's end to the TTL inclusive: an offer is
+/// still read at the window's last moment, and a read past it drops the unmet entry.
 #[test]
-fn r2685000_an_offer_exactly_the_ttl_old_is_still_read_and_the_book_counts_its_entries() {
-    let mut book = book_with(&[(P1, STAKE_NORMAL)], END + 1);
-    book.offer("m2", Some(END), P1, STAKE_NORMAL, None, END + 1, "g1");
+fn r2685000_an_offer_at_the_windows_end_is_still_read_and_dropped_after() {
+    let mut book = book_with(&[(P1, STAKE_NORMAL)], END);
+    book.offer("m2", Some(END), P1, STAKE_NORMAL, None, END, "g1");
     assert_eq!((book.len(), book.is_empty()), (2, false));
-    let edge = END + 1 + REMATCH_OFFER_TTL_MS;
+    let edge = END + REMATCH_OFFER_TTL_MS;
     assert!(book.seen("m1", P1, edge).you_offered.is_some());
     assert_eq!(book.len(), 2);
     assert!(book.seen("m1", P1, edge + 1).you_offered.is_none());
@@ -282,25 +282,18 @@ fn a_seat_that_offers_again_is_held_to_its_latest_lean() {
     assert_eq!(leans, (None, Some(LeanPick::Set(SetName::Core))));
 }
 
-/// R2685000: a read counts staleness from the latest offer, not from the finished match's end, so a seat
-/// polling just past the window still sees an offer nothing can meet any more, until an offer past the
-/// window lapses and drops the entry (#4550, docs/implicit-states.md §14 O10; what such a read should show
-/// is unspecified).
+/// R2685000: a read past the finished match's window drops an unmet entry, so no offer nothing
+/// can meet is ever shown (#4686, docs/implicit-states.md §14 O10).
 #[test]
-fn a_read_past_the_window_still_shows_an_unmet_offer_until_an_offer_lapses() {
+fn r2685000_a_read_past_the_window_drops_an_unmet_offer() {
     let mut book = book_with(&[(P1, STAKE_NORMAL)], END + 5);
     let past = END + REMATCH_OFFER_TTL_MS + 1;
     let seen = book.seen("m1", P2, past);
     assert_eq!(
         (seen.you_offered, seen.opponent_offer, seen.match_id),
-        (None, Some(STAKE_NORMAL), None)
-    );
-    assert_eq!(
-        book.offer("m1", Some(END), P2, STAKE_NORMAL, None, past, "g2"),
-        OfferOutcome::Lapsed { answered: None }
+        (None, None, None)
     );
     assert!(book.is_empty());
-    assert_eq!(book.seen("m1", P2, past).opponent_offer, None);
 }
 
 /// R3694000: a game the pair made in the window's last moment survives the sweep that runs as the window
