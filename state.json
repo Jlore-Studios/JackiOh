@@ -15960,7 +15960,7 @@
       "taken_asks": []
     },
     "4592": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 1,
       "forced": false,
@@ -15975,11 +15975,11 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "onto": "bot/issue-4601",
-      "owner": "claude-1",
-      "owner_since": "2026-11-24T03:10:54Z",
-      "owner_why": "handed off from `claude-3`: it could not take it",
+      "owner": "agy",
+      "owner_since": "2026-11-24T03:36:20Z",
+      "owner_why": "handed off from `claude-1`: it could not take it",
       "part_of": 4601,
       "pending_request": false,
       "planned_at": "2026-11-24T03:33:38Z",
@@ -15987,13 +15987,13 @@
       "planned_by_id": "claude-1",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-1",
+      "provider": "agy",
       "queued_at": "2026-11-23T19:15:22Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "45317690031",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T03:10:54Z",
+      "run_id": "pending:b46527c9-1795491345",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-11-24T03:36:20Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -18351,9 +18351,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T03:35:30Z",
+    "at": "2026-11-24T03:36:20Z",
     "url": "",
-    "what": "build #4621 on claude-1"
+    "what": "build #4592 on agy"
   },
   "last_sweep": {
     "at": "2026-11-24T03:26:37Z",
