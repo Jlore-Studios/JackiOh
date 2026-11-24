@@ -19365,6 +19365,7 @@
         "why": "Please re-run the failed CI job `web (unit 6/8)` in run 45377047092 (https://github.com/Jlore-Studios/JackiOh/actions/runs/45377047092). The failure was a 5000ms Vitest timeout in `apps/web/src/cards/art/art.test.ts:62:3`, an untouched test under runner shard load that is out of scope for this change and forbidden from having its timeout raised or test skipped under CLAUDE.md rule 2."
       },
       "asks": [],
+      "closed_at": "2026-11-24T16:57:35Z",
       "died": 0,
       "difficulty": "medium",
       "feedback_since": "2026-11-24T09:50:46Z",
@@ -19381,6 +19382,7 @@
       "interruptions": 0,
       "issue": 4683,
       "live": "reviewing",
+      "merged": true,
       "pending_request": false,
       "provider": "agy",
       "question": "Please re-run the failed CI job `web (unit 6/8)` in run 45377047092 (https://github.com/Jlore-Studios/JackiOh/actions/runs/45377047092). The failure was a 5000ms Vitest timeout in `apps/web/src/cards/art/art.test.ts:62:3`, an untouched test under runner shard load that is out of scope for this change and forbidden from having its timeout raised or test skipped under CLAUDE.md rule 2.",
