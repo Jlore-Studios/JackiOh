@@ -4681,11 +4681,15 @@ mod i23 {
         let before = granted(&before, &keyword, Keyword::Immutable);
         let before = granted(&before, &indestructible, Keyword::Indestructible);
         let before = granted(&before, &held, Keyword::Indestructible);
-        let edits: [(&str, Edit); 5] = [
+        let edits: [(&str, Edit); 6] = [
             ("defId", |card| card.def_id = "stand-in (1) 5/5".to_string()),
             ("vanilla", |card| card.vanilla = true),
             ("tuning", nerfed),
             ("hiddenNerfs", |card| card.hidden_nerfs = Some(1)),
+            // §6.3 Set stats: Immutable stops it (R23, R1185002).
+            ("statsOverride", |card| {
+                card.stats_override = Some(json_as(json!({ "attack": 1, "health": 1 })));
+            }),
             ("unitText", |card| {
                 card.memory.insert(
                     UNIT_TEXT_KEY.to_string(),
@@ -4947,7 +4951,7 @@ mod i23 {
     #[test]
     fn i23_the_engines_own_refusals_leave_each_immutable_card_clean() {
         let (state, ids) = holders("i23-refusals");
-        let verbs: [(&str, Verb); 4] = [
+        let verbs: [(&str, Verb); 5] = [
             ("vanilla", |id| {
                 effects::vanilla(json_as(json!({ "instanceId": id })))
             }),
@@ -4959,6 +4963,13 @@ mod i23 {
             }),
             ("upgrade", |id| {
                 effects::upgrade(json_as(json!({ "instanceId": id })))
+            }),
+            ("set_stats", |id| {
+                effects::set_stats(json_as(json!({
+                    "target": { "of": "instance", "instanceId": id },
+                    "attack": 1,
+                    "health": 1,
+                })))
             }),
         ];
         for (name, verb) in verbs {
@@ -4973,8 +4984,8 @@ mod i23 {
                 let card = find_instance(&after, id).expect("still there");
                 let was = find_instance(&state, id).expect("the card");
                 assert_eq!(
-                    (&card.def_id, card.vanilla, &card.tuning),
-                    (&was.def_id, was.vanilla, &was.tuning),
+                    (&card.def_id, card.vanilla, &card.tuning, card.stats_override),
+                    (&was.def_id, was.vanilla, &was.tuning, was.stats_override),
                     "{name} on {id}"
                 );
             }

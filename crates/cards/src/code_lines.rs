@@ -55,9 +55,10 @@ pub fn owes_extra_turn(source: &str) -> bool {
 
 /// #4609, R4609000: the engine's verbs that rewrite a card's text, the ones Immutable stops (§6.1, §6.3;
 /// R23, R386): a Transform's (a Replace, a random one, the cards beneath a Stack, a cost step, a book
-/// swap), a Vanilla's, a Nerf's and a Buff's (a hidden one, a keyword lost, a number set or picked), and
-/// a Fuse's onto a card (a Weapon Equipped from a pick among them, R1841002).
-const TEXT_REWRITE_VERBS: [&str; 17] = [
+/// swap), a Vanilla's, a Nerf's and a Buff's (a hidden one, a keyword lost, a number set or picked), a
+/// Set stats' (§6.3, R1185002: on one Unit or a board's) and a Fuse's onto a card (a Weapon Equipped from
+/// a pick among them, R1841002).
+const TEXT_REWRITE_VERBS: [&str; 19] = [
     "transform",
     "transform_random",
     "transform_beneath",
@@ -70,6 +71,8 @@ const TEXT_REWRITE_VERBS: [&str; 17] = [
     "lose_keyword",
     "set_number",
     "discover_number",
+    "set_stats",
+    "set_stats_all",
     "fuse_cards",
     "fuse_random_into",
     "fuse_generated",

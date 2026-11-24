@@ -3946,7 +3946,15 @@ mod r4609000_every_text_rewriting_card_leaves_an_immutable_card_as_it_is {
     }
 
     /// What the hold keeps of a stand-in: the zone it is in and its text (I23's `TextRecord`'s fields).
-    type Text = (ZoneName, String, bool, Option<Tuning>, Option<i32>, Option<Value>);
+    type Text = (
+        ZoneName,
+        String,
+        bool,
+        Option<Tuning>,
+        Option<i32>,
+        Option<AttackHealth>,
+        Option<Value>,
+    );
 
     fn text_of(state: &GameState, id: &str) -> Option<Text> {
         let card = find_instance(state, id)?;
@@ -3956,6 +3964,7 @@ mod r4609000_every_text_rewriting_card_leaves_an_immutable_card_as_it_is {
             card.vanilla,
             card.tuning.clone(),
             card.hidden_nerfs,
+            card.stats_override,
             card.memory.get(UNIT_TEXT_KEY).cloned(),
         ))
     }
@@ -4027,7 +4036,8 @@ mod r4609000_every_text_rewriting_card_leaves_an_immutable_card_as_it_is {
                         && kept.2 == now.2
                         && (granted || kept.3 == now.3)
                         && kept.4 == now.4
-                        && kept.5 == now.5);
+                        && kept.5 == now.5
+                        && kept.6 == now.6);
                 if !restored && !same {
                     failures.push(format!(
                         "{label}, {sent}: the Immutable stand-in {id} went from {kept:?} to {now:?} (§6.1, R23, \

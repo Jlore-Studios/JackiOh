@@ -122,7 +122,8 @@
 //!      in a hand or a library (its own, which a Nerf reads there), and its text (`TextRecord`); a Dormant
 //!      or face-down card is not read. `after` fails a `transformed` of one (a Vanilla's, a copied or fused
 //!      text's), a `degraded` or `upgraded` of it and a `fused` onto it, and a record whose text changed
-//!      with no event. Lawful: a Replace off the field and a `none` cue (R4609001), a Fuse onto a card the
+//!      with no event (a Set stats' `statsOverride` among it, R1185002, which reports only `numberChanged`).
+//!      Lawful: a Replace off the field and a `none` cue (R4609001), a Fuse onto a card the
 //!      step made (R4353003), a card `flickered` or `summoned` anew and a step with a `rolledBack` or a
 //!      Glitch's reset, for its record (R4609002), and a keyword kept for good (R4609003); Radiant is never
 //!      read (R23). A card is judged only while Immutable after the step with its starting text put back,
@@ -149,11 +150,11 @@ use crate::subsystems::activate::ActivateAction;
 use crate::testkit::played_attack::PlayedAttack;
 use crate::testkit::seams::{TargetDraw, TargetDrawBy};
 use crate::wire::{
-    Action, ActionBody, ActivationView, BackrowView, CardType, CardView, DUOS_DUELS, DUOS_SEATS,
-    DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment, GameEvent, GameResult, HandView, Keyword,
-    KeywordKind, PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId, PlayerView, Position, PromptKind,
-    RedirectWhat, RevealAt, Row, Selection, SwapWhat, Team, Tuning, TuningChange, Zone, ZoneChoice, ZoneName,
-    has_keyword, opponent_of,
+    Action, ActionBody, ActivationView, AttackHealth, BackrowView, CardType, CardView, DUOS_DUELS,
+    DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment, GameEvent, GameResult, HandView,
+    Keyword, KeywordKind, PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId, PlayerView, Position,
+    PromptKind, RedirectWhat, RevealAt, Row, Selection, SwapWhat, Team, Tuning, TuningChange, Zone,
+    ZoneChoice, ZoneName, has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -1740,14 +1741,16 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
 /// I23: what a card's text is made of in its record (§6.1, §6.3): the definition it wears (a Fuse onto
 /// a card keeps its id and gives it a new one, R77), a Vanilla's flag, the Nerfs and Buffs it keeps (`tuning`;
 /// a cost change is `costMod`, which every cost effect shares, and its `degraded` names it), its hidden
-/// Nerfs (R1845000) and the text it runs copied or fused in (`unit_text::UNIT_TEXT_KEY`: R1850000,
-/// R4440006).
+/// Nerfs (R1845000), the stats a Set stats gave it (`statsOverride`, §6.3: Immutable stops it, R1185002;
+/// a summon, Flicker or Reborn writes it anew, R78, R175) and the text it runs copied or fused in
+/// (`unit_text::UNIT_TEXT_KEY`: R1850000, R4440006).
 #[derive(Clone, Debug, PartialEq)]
 struct TextRecord {
     def_id: String,
     vanilla: bool,
     tuning: Option<Tuning>,
     hidden_nerfs: Option<i32>,
+    stats_override: Option<AttackHealth>,
     unit_text: Option<Value>,
 }
 
@@ -1758,6 +1761,7 @@ impl TextRecord {
             vanilla: card.vanilla,
             tuning: card.tuning.clone(),
             hidden_nerfs: card.hidden_nerfs,
+            stats_override: card.stats_override,
             unit_text: card
                 .memory
                 .get(crate::subsystems::unit_text::UNIT_TEXT_KEY)
@@ -1772,6 +1776,7 @@ impl TextRecord {
             vanilla: self.vanilla,
             tuning: self.tuning.clone(),
             hidden_nerfs: self.hidden_nerfs,
+            stats_override: self.stats_override,
             ..card.clone()
         };
         let key = crate::subsystems::unit_text::UNIT_TEXT_KEY;
@@ -1798,6 +1803,7 @@ impl TextRecord {
                 "tuning",
             ),
             (self.hidden_nerfs != now.hidden_nerfs, "hiddenNerfs"),
+            (self.stats_override != now.stats_override, "statsOverride"),
             (self.unit_text != now.unit_text, "unitText"),
         ])
     }
