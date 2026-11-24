@@ -41781,6 +41781,7 @@
       {
         "at": "2026-11-24T20:42:09Z",
         "number": 4779,
+        "reason": "the bug class is already here. Kept scripts have been re-keyed by hand six times in eight days, and two keys are stale on `main` today. #4356 (#4353's Balance Changes V) merged with v0.6.8c and v0.6.8d already in `patches.json`, yet its rows in `crates/cards/src/history.rs` stop at `v0.6.8b`, so a v0.6.8c or v0.6.8d replay where one of those six cards acted folds under today's script and is refused as `rules_changed`. No check can see this, since the merge queue ships versions under a PR that is",
         "title": "Patch: kept card scripts take their last version from the patch that ships them, so a patch shipped first never leaves one stale",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
