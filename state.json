@@ -40858,6 +40858,10 @@
       "4683": {
         "at": "2026-11-24T06:01:52Z",
         "why": "It fixes a real player-facing parity bug with file-and-line evidence, adding the existing label as hover text."
+      },
+      "4686": {
+        "at": "2026-11-24T06:24:17Z",
+        "why": "It fixes a real bug players hit when an unmet rematch offer outlives the match window, confirmed with the code and tests cited."
       }
     },
     "declined": [
