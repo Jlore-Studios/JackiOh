@@ -45282,16 +45282,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "4": {
-        "area": "rules",
-        "count": 2,
-        "last_run": "2026-11-24T18:30:06Z",
-        "provider": "muse",
-        "run_id": "45460220963",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
