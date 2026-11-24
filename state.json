@@ -21623,6 +21623,9 @@
         "tiers": {}
       }
     },
+    "4761": {
+      "suggestion": true
+    },
     "4762": {
       "difficulty": "medium",
       "failures": 0,
@@ -44339,6 +44342,13 @@
         "at": "2026-11-24T14:20:54Z",
         "number": 4743,
         "title": "Patch: a play still being built closes when the game ends on your turn, instead of covering the result",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-24T17:35:01Z",
+        "number": 4761,
+        "title": "Patch: the AI prices Evasive units for what the keyword protects",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
