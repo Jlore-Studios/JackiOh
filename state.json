@@ -45040,7 +45040,8 @@
       "2026-11-24T15:55:32Z,45414210832,claude-8,sonnet+opus,build,4745,medium,built,,33.9,51,6658,1266367,0.3719,1,7,,,12.5,claude-8,fresh,,1",
       "2026-11-24T16:00:09Z,45429709483,claude-7,opus,review,4753,hard,approved,,8.1,31,6683,862388,0.7187,1,3,,,1.3,,none,,1",
       "2026-11-24T15:57:07Z,45414629741,claude-4,opus,revise,4724,hard,approved,,29.6,131,30408,6850557,3.7553,4,13,,,2.7,claude-7,fresh,other,2",
-      "2026-11-24T16:01:05Z,45411463928,claude-4,sonnet+opus,build,4742,medium,built,,57.5,236,64507,19947426,3.5101,67,10,,,19.6,claude-4,fresh,,1"
+      "2026-11-24T16:01:05Z,45411463928,claude-4,sonnet+opus,build,4742,medium,built,,57.5,236,64507,19947426,3.5101,67,10,,,19.6,claude-4,fresh,,1",
+      "2026-11-24T16:05:09Z,45401089286,claude-8,opus,review,4726,hard,approved,,89.4,298,78030,16471149,8.8782,86,10,,,62.7,claude-8,fresh,,5"
     ]
   },
   "version": 1
