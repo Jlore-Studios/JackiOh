@@ -20415,6 +20415,13 @@
     "4737": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T14:06:06Z",
+        "difficulty": "hard",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Rule 1: changes engine rules code (`crates/engine/src/effects/targets.rs`, `zones.rs`, `query.rs`) that every board sweep, Cleave and adjacency read passes through."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
