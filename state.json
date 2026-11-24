@@ -18228,6 +18228,13 @@
     "4672": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45353865840",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-24T08:33:51Z",
+        "until": "2026-11-24T09:03:51Z"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
