@@ -20048,19 +20048,11 @@
       "failures": 0,
       "feedback_since": "2026-11-24T16:13:29Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-24T20:27:26Z",
-        "lifted": "2026-11-24T19:10:41Z",
-        "owner": "claude-8",
-        "since": "2026-11-24T18:27:26Z",
-        "until": "2026-11-24T19:10:00Z",
-        "why": "5-hour usage is 100%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "interruptions": 0,
       "issue": 4672,
       "kind": "revise",
       "last_findings": [],
-      "live": "resolving",
+      "live": "fixing-ci",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
@@ -20068,7 +20060,7 @@
       "queued_at": "2026-11-24T18:18:35Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "45434617785",
+      "run_id": "pending:2fa4c22b-1795547684",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -20089,7 +20081,7 @@
         "run": "45434617785"
       },
       "source": "ci",
-      "started_at": "2026-11-24T16:13:29Z",
+      "started_at": "2026-11-24T19:15:18Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -21826,9 +21818,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T19:14:32Z",
+    "at": "2026-11-24T19:15:18Z",
     "url": "",
-    "what": "build #4770 on muse"
+    "what": "revise #4726 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-24T19:01:07Z",
