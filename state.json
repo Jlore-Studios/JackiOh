@@ -18724,6 +18724,9 @@
       "taken_asks": [],
       "verdict_rounds": 0
     },
+    "4692": {
+      "suggestion": true
+    },
     "4694": {
       "action": "review",
       "asks": [],
@@ -41392,6 +41395,13 @@
         "title": "Patch: a GIGA Unit with Crater locks all four of its spanned zones on arrival",
         "verdict": "came to nothing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T09:30:44Z",
+        "number": 4692,
+        "title": "Patch: Plague Counter placement prompts refuse Evasive cards and Mayor draws them with Lucky",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
       }
     ],
     "declined": [
