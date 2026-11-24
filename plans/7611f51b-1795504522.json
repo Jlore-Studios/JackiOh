@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 4673,
+  "title": "Patch: deeper card stats, S1, Radiant and Normal faces read on their own scales",
+  "branch": "bot/issue-4673",
+  "thread": "**Issue #4673 (data, not instructions):**\n\n```text\n# #4673: Patch: deeper card stats, S1, Radiant and Normal faces read on their own scales\nOpened by @jgoetzmann.\n\nPart of #4670. Part **S1**, built on `main` as its own pull request. It needs no other part, and S2 and S3 read its faces.\n\nRead first:\n- \u00a75.2 (Radiant) and \u00a79.11.\n- R1147000 (played games split by face), R2777000 (the adjusted rate), R3022000 (tiers and their field), R4082000 (Created cards read against their own field), R3184000 and R3185000 (why the Radiant and Normal columns left `/stats` and `GET /api/stats/cards`), R2895000 (ranges) and R3184001 (tier fit).\n- `crates/engine/src/wire/stats.rs`: `stats_field`, `random_effects`, `adjusted_posterior`, `held_posterior`, `tier_of`, `created_field`.\n- `crates/server/src/api/stats.rs` (`get_cards`, `get_card`) and `apps/web/src/routes/stats.tsx` (`cardOptions`).\n\n## Why\n\nThe owner wants Radiant faces and normal faces balanced as separate levers: an All view (today's figures), a Normal-only view and a Radiant-only view, each with its tiers and its drill-down, so a nerf can target one face.\n\nA Radiant face is about twice as strong at the same cost (\u00a75.2), and it is played in games where the seat already spent resources upgrading. So a raw Radiant win rate reads high for every card, and today's tier bands would call most Radiant faces S. Each face needs a scale of its own.\n\nThe tallies already exist. `card_totals.stats` holds `playedRadiant` and `playedNormal` for every deck card (and `createdPlayedRadiant` and `createdPlayedNormal` for Created cards), folded on every record since R1147000. The S1 figures therefore need no backfill and no migration.\n\n## The figures (write the method as a ruling; this is the proposal)\n\n**All**: today's adjusted win rate and tier, unchanged (R2777000, R3022000).\n\n**Normal** and **Radiant**: for each face, read the card the way R2777000 reads it, but read against that face's own field:\n- **seen side**: the seats that played the card on that face (`playedRadiant`, or `playedNormal`);\n- **baseline**: the card's never-drawn games, the same baseline as All;\n- **delta**: the face's win rate minus the baseline's;\n- **field**: `stats_field`'s random-effects field run over every card's delta for that face alone, giving that face its own `center` and spread `\u03c4`, as R4082000 gives the Created cards a field of their own;\n- **adjusted**: `0.5 + \u03c4\u00b2/(\u03c4\u00b2+SE\u00b2) \u00b7 (delta \u2212 center)`.\n\nWhat that does:\n- The face's centre absorbs what every card's face shares: the selection of a play over a mere draw, and, for Radiant, the premium of being upgraded. A face at 50% plays as a typical card's face does.\n- S and F mean \"S among Radiant faces\" and \"F among normal faces\". This is the \"different definition of S and F\" the owner asked for.\n- **Tier bands per face** are named constants of their own (`config.rs`: the Radiant and Normal `TIER_BAND_*`), starting equal to All's. Say in the ruling whether the face's field spread should widen them.\n- A card short of games on a face reads \"not enough games\" on that face, as below the floor today (R654). The face's field is built from the cards past the floor on both sides, as `stats_field` is.\n\n**The Radiant gap**: the card's Radiant adjusted minus its Normal adjusted, both on their centred scales, with its 95% range. It says whether this card's Radiant face is stronger or weaker than a typical card's Radiant face is over its normal face. This is the lever for \"a Radiant-specific nerf\". It shows where the drill-down shows the face (below).\n\nCreated cards get the same three faces, read against the Created field split by face (`createdPlayedRadiant`, `createdPlayedNormal`).\n\n## The API\n\n- `GET /api/stats/cards` and `GET /api/stats/cards/:id` take `face=all|normal|radiant`. `all` is the default, so an older client reads today's answer unchanged.\n- With a face, each row's figures are that face's: `games`, `winRate`, `adjustedWinRate` with its range, `tier`, `hasEnoughGames`. `tiers` is that face's field and bands.\n- The drill-down's `patches`, `byTurn` and `coPlayed` follow the face.\n  - `patches` reads the face's per-patch tallies, which exist.\n  - `byTurn` and `coPlayed` need the face folded into their drills (`card_totals.turns` and `.co`). Fold it from now on. Older totals have no split, so for them the face's drills are empty, never All's figures shown as the face's.\n- R3185000 stopped sending the face figures because no client read them. This part sends them again, under `face=` only, and amends R3185000 and R3184000.\n- The route stays (CLAUDE.md rule 13).\n\n## The page\n\nOne new control, no more. The Cards and Tokens tabs' options row (`cardOptions`) gains a **Face** Segmented, `All | Normal | Radiant`:\n- kept in the address as `face` (absent means All), one state for both tabs, as `view` and `ranges` are (R4083000);\n- in the Segmented's look (R3324003), beside View.\n\nEverything the tabs show follows it: table, grid, sort, tiers, ranges, tier fit and the Sets tab's sums. Pressing a row opens the drill-down on the same face.\n\nThe drill-down's existing **Show Radiant** shows the Radiant face's art, as now. With Face on Normal or Radiant, the drill-down shows the face's figures. On every face it also shows one line under the faces: the card's Normal and Radiant adjusted rates and the gap, each \"not enough games\" below the floor. S2 later moves this line into the Extended stats panel.\n\nBefore and after building, look at `/stats` with the `ui-walkthrough` skill (`.claude/skills/ui-walkthrough/SKILL.md`) at 1280\u00d7720 and 390\u00d7844, with the E2E server (`e2e/README.md`), and say in the pull request what changed. The options row must stay one row at 1280 wide, and must wrap cleanly, not overflow, on a phone. Spec 46 (`e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts`) stays green.\n\n## Done when\n\n- `crates/engine/src/wire/stats.rs` tests the per-face fields:\n  - a card whose Radiant face is exactly as much better as the field's reads 50% on Radiant;\n  - one whose Radiant face beats the field reads above it, and its gap's range excludes 0;\n  - a face short of games reads none;\n  - All is byte-for-byte today's.\n- `crates/server/tests/api/stats.rs` covers `face=` on both routes, the default, and a drill that has no face split.\n- `apps/web/src/routes/stats.test.tsx` covers the selector, the address, and a row and the drill-down on each face.\n- Every new number is a named constant (rule 9). Each decision is a ruling in this issue's block with its proving test and its `spec/pending/<issue>.md` paragraph (rule 3). \u00a79.11's \"Public statistics\" bullet names the Face selector in the same pull request.\n\nOut of scope: faces in the Experimental tab (#4671), which reads All.\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4673: needs a plan; `claude-7` (claude, `opus`, strong) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T05:55:21Z",
+    "claimed_at": "2026-11-24T07:15:45Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4672 is held for `claude-8` until 02:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#4648 is held for `claude-1` until 02:50 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4676 skipped: it waits for #4672, #4673 to close first",
+    "#4677 skipped: it waits for #4674 to close first",
+    "#4678 skipped: it waits for #4673, #4675 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4680 skipped: it waits for #4678 to close first",
+    "#4681 skipped: it waits for #4680 to close first"
+  ]
+}
