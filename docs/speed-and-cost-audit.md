@@ -178,12 +178,15 @@ Measured on the production build (`pnpm --dir apps/web build`).
 
 | Measure | Before | After |
 |---|---|---|
-| Entry + modulepreloads, gzip (`FIRST_LOAD_GZIP_BUDGET_BYTES`) | 382,569 B of a 393,216 B budget | PART6_FIRST_LOAD |
-| Entry chunk raw / gzip | 336,421 / 102,902 B | PART6_ENTRY |
+| Entry + modulepreloads, gzip, concatenated as `first-load.test.ts` measures | 383,498 B of a 393,216 B budget | 366,513 B (−16,985 B, −4.4%), budget lowered to 376,832 B |
+| Entry + modulepreloads, raw | 1,399,714 B | 1,223,447 B (−176 KB to parse before first paint) |
+| The preloaded `cards-*.js` chunk, raw | 488,869 B | 325,862 B; the offers are a lazy 163,972 B chunk |
 
-- `COSMETIC_OFFERS` (184 KB raw) left the entry.
-- The music player left the modulepreloads.
-- The boot fetch of the engine module (3.41 MB stored brotli) goes at low priority, so a route's own chunks come first.
+- `COSMETIC_OFFERS` moved to its own generated module, `wire/generated/cosmeticOffers.ts` (the generator, `crates/server/tests/export_cosmetics.rs`, writes it). `cards/versions.ts` loads it with `loadSceneData()`, and the shop's route chunk loads it too.
+- `FullScreenArt` loads the music player when the full-screen view opens, so the player and its data are no longer modulepreloaded.
+- The boot starts the engine module's download (3.41 MB stored brotli) at low priority (`startWasmLoad`), so a route's own chunks come first. A screen waiting on the engine shares that download.
+- `first-load.test.ts` guards the offers and the music player out of the entry's graph and out of the built first load. `wasm/index.test.ts` holds the low-priority boot fetch.
+- The entry chunk itself barely moved (+224 B raw, the loaders): the offers had been in a preloaded chunk.
 
 **Audio:**
 - The library is 71 MB: voice is 21 MB in 1,908 files at about 48 kbps, music 51 MB in 255 files at about 82 kbps. Both rates suit a phone speaker, and static files cost nothing to serve.
