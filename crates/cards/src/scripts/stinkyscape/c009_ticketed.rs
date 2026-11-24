@@ -212,7 +212,7 @@ mod tests {
             s.expect_refused(|s| s.attack(ticketed.as_str(), "hero"));
             let listed = legal_actions(s.state(), P2);
             assert!(
-                !listed.iter().any(|action| crate::js(action).to_string().contains(ticketed.as_str())),
+                !listed.iter().any(|action| crate::js(action)["instanceId"] == json!(ticketed)),
                 "{listed:?}"
             );
         }
