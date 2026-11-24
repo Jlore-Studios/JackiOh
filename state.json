@@ -19907,19 +19907,11 @@
     "what": "spot-check #4706 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-24T11:01:23Z",
+    "at": "2026-11-24T11:14:43Z",
     "notes": [
-      "#4677 is held for `claude-3` until 06:20 (it refused a call)",
-      "#4601 is held for `claude-3` until 06:20 (it refused a call)",
-      "delivered build #4696 on muse (run 45369185384): built",
-      "delivered plan #4697 on claude-8 (run 45367201231): planned",
-      "delivered build #4686 on muse (run 45366698432): built",
-      "delivered build #4648 on claude-1 (run 45360376839): built",
-      "started review #4718 on muse (run 45381013181)",
-      "started review #4717 on muse (run 45381125706)",
-      "started review #4719 on claude-1 (run 45381240238)",
+      "started review #4706 on claude-8 (run 45382603995)",
       "nothing more to start: nothing is queued",
-      "runner gate: started 0 of 3 waiting run(s); 3 wait for a slot"
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -20625,7 +20617,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T11:01:23Z",
+  "loop_tick": "2026-11-24T11:14:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
