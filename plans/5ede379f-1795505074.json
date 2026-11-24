@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 4675,
+  "title": "Patch: deeper card stats, X0, each card's versions across patches and their figures",
+  "branch": "bot/issue-4675",
+  "thread": "**Issue #4675 (data, not instructions):**\n\n```text\n# #4675: Patch: deeper card stats, X0, each card's versions across patches and their figures\nOpened by @jgoetzmann.\n\nPart of #4671 (the Experimental tab), under #4670. Part **X0**, its own pull request on `main`. It needs no other part. It is the foundation for X1 to X3, and **players see nothing new**.\n\nRead first:\n- \u00a79.11, R1367000 (a card's window, `crates/engine/src/wire/stats/window.rs`), R1973001 and R1973002.\n- R3538002 (past versions: runs, ids `<card>@<version>`, `PAST`, `past_ids`, `past_def`) and R4382000 (`card_eras`, `crates/cards/src/history.rs`).\n- R3882000 (the frozen win rates of record, `crates/cards/patches/records/`, `win_rates/`).\n- `crates/cards/README.md` \u00a76 (the patch history), and `crates/cards/patches/patches.json` and `index.json`: 235 shipped versions, v0.1.0 to today, each with a full snapshot, `patches/<version>.json`.\n\n## Why\n\nThe owner wants statistics across patches:\n- each card's current version over every patch it has been live (X1);\n- every older version of each card as its own row, as it was (X2);\n- a Hall of Fame of the most broken, nerfed, buffed and changed cards (X3).\n\nThe totals are keyed by catalog version (`card_totals`, never pruned), and the snapshots hold every version's exact definitions. Nothing yet ties them together: a card's window restarts at every major or patch even when the card did not change, and `card_eras`, `PAST` and the stats are not connected.\n\n## Build\n\n### 1. A card's versions\n\nFor every card, its **versions**: the runs of shipped versions over which it plays the same. Each version has:\n- an id;\n- its first and last shipped version, the last open while it is live;\n- the shipped versions inside it.\n\nA new version starts where:\n- a field that changes how it plays changed: cost, stats, keywords, params, text that plays differently; not a rename, a wording-only change or `loc`;\n- or a version's `plays` claims it (a script change, R1366000).\n\nA `rule` change that every game meets starts none, or every card would restart at once.\n\nReuse what exists. `PAST`'s play-alike runs (R3538002) start at v0.3.0c, and `card_eras` (R4382000) counts wording. Extend or reconcile them, name the one you build on, and record why in the ruling. Keep the ids stable, and keep them apart from the cosmetic \"versions\" (R2725000) and from **\"Legacy\"**, which is a card name and tag in the Training Grounds set (R2511000). This tab is called **Experimental** for that reason.\n\nThis is pure data, built at compile time (`crates/cards/build.rs`, CLAUDE.md rule 4), readable by the server and, through the WebAssembly module or `GET /api/catalog/:version`, by the client.\n\n### 2. A version's figures\n\nA version's figures are the totals summed over the shipped versions it spans, per source, mode and pilot. The engine's figure functions (`adjusted_posterior`, `tier_of`, ranges) then read them, against a field of every version's figures, so X2 and X3 compare versions across time on one scale.\n- **Source**: read each version's sources as a card's window does (live past `STATS_PATCH_MIN_GAMES`, else live and development together), and never name a source on the page (R661).\n- **Before the records**: the records began about v0.3 (migration 0014, R376), so versions before it have no totals. Decide in the ruling whether the frozen figures in `crates/cards/patches/records/` and `win_rates/` (R3882000) fill a version the totals lack, and how they are marked. Count, per version kept, how many have enough games, and put that table in the pull request.\n\n### 3. Read it back\n\n- `GET /api/stats/versions?mode=&pilot=`, public, cached as `GET /api/stats/cards` is. For every version of every card, current ones marked live: `id`, `card`, `name`, `first`, `last`, `games`, the adjusted rate and its range, `tier`, `hasEnoughGames`, and the field. Keep it to one request the page can afford: send figures only, and let the client read definitions from the snapshots.\n- `jackioh-server stats-cards --versions` and `cargo jackioh stats report --versions` print the same table, and `--json` writes it.\n- The response's shape goes in `docs/v0.3.0/SURFACE.md` if that lists the stats routes.\n\n## Done when\n\n- `crates/cards` tests:\n  - the versions of a card changed twice in play and once in wording only (two breaks, not three);\n  - a script claimed through `plays`;\n  - a card added late;\n  - a `rule` version breaking none.\n- `crates/engine/src/wire/stats.rs` tests the sum over a version's span and its field.\n- `crates/server/tests/api/stats.rs` covers the route and an old version with no totals.\n- The route's cost holds within `ci.yml`'s budget with the whole history (a test that it reads the store once, say).\n- Named constants (rule 9). Rulings in this issue's block, with tests and `spec/pending/<issue>.md` (rule 3). \u00a79.11 gains a bullet for the versions.\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4675: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T05:55:32Z",
+    "claimed_at": "2026-11-24T07:24:58Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4672 is held for `claude-8` until 02:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#4648 is held for `claude-1` until 02:50 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4676 skipped: it waits for #4672, #4673 to close first",
+    "#4677 skipped: it waits for #4674 to close first",
+    "#4678 skipped: it waits for #4673, #4675 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4680 skipped: it waits for #4678 to close first",
+    "#4681 skipped: it waits for #4680 to close first"
+  ]
+}
