@@ -18720,6 +18720,7 @@
     "4682": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-24T09:32:34Z",
         "difficulty": "medium",
