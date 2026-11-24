@@ -21389,7 +21389,16 @@
       "feedback_since": "2026-11-24T14:46:43Z",
       "issue": 4747,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "6f40bd7ffe3cf896061f069bcb887c90f23eb75b",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
