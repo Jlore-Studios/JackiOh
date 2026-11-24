@@ -21854,6 +21854,8 @@
       "verdict_rounds": 0
     },
     "4776": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T19:26:08Z",
@@ -21867,8 +21869,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: on a phone the game board never scrolls the page while no picker or menu is open\"} -->\n- ## What changed and why\n- While a `Game` is mounted, the document can no longer scroll or overscroll on touch. `Game` sets a new `data-game-scroll-lock` attribute on `<html>` (set/cleared in the existing host `useLayoutEffect`, with the same \"another game remains\" guard) and [board.css](/home/agent-muse/actions-runner/_work\u2026\n- The lock stays on under menus (the simpler option the issue allows). Each menu scrolls inside itself: `.log` and `.match-menu` (which gained its own `max-height`/`overflow` scroller), `.prompt`, `.marketplace-panel`, and `.dialog-scrim`/`.dialog` each got `overscroll-behavior: contain` plus `touch-\u2026\n- Tests: `Game.test.tsx` proves the attribute is set while mounted and cleared on rerender-away and unmount. New [board-scroll-lock.cy.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-4773/e2e/cypress/component/board-scroll-lock.cy.tsx) (9 `it`s, all `R4773000`-titled) covers attacker aim a\u2026\n- ## Decisions the issue did not settle\n- - Lock stays on under menus rather than lifting: lifting needs menu-open state plumbed from `Board`/`Prompt`/`Dialog`/settings into `Game`; fragile beside one attribute the host effect already owns.\n- - The \"aim started from your hero\" test drags the hero *power* (`activatePower` with targets from the `power` button), not an attack: `planDrag` returns null for `{on: \"hero\"}` ([model.test.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4773/apps/web/src/game/drag/model.test.ts)), so a p\u2026\n- - Synthetic pointer events cannot move a real page, so the scroll-trail readings pin behavior while the computed-style assertions (`touch-action`, `overscroll-behavior`) are what fail without the fix; the spec header says so.\n- ## How it was tested\n- - `pnpm --dir apps/web test src/game/Game.test.tsx`: 44 passed.\n- - Drag suites (model, DragLayer, targets, landing, attack-pickup, drag-layer/continue/model/blocked): 208 passed. Game.render, Prompt, Log, Board, ActivateControl, Hero, hasSelectors, DeckDrag: 217 passed.\n- - `cargo jackioh spec check`: ok (2469 rulings, 6182 proofs). `cargo fmt --check`: clean. eslint on changed files: clean. `pnpm --dir e2e typecheck:component`: clean. `pnpm --dir apps/web typecheck`: clean (needs `NODE_OPTIONS=--max-old-space-size=5120`; the default-heap OOM is the container, not t\u2026\n- - Reviewer, please look twice: the `.match-menu` max-height cap is new layout behavior, and the Cypress spec has never executed \u2014 this machine has no Cypress binary and `CYPRESS_INSTALL_BINARY=0` forbids installing it, so CI must run `board-scroll-lock.cy.tsx` plus the existing drag, inspect and B4\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4773 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4773/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4773,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T20:09:49Z",
         "from_run": "45470186122",
         "gates": [
           {
@@ -21927,8 +21932,15 @@
         "source": "build",
         "until": "2026-11-24T20:38:46Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-24T20:08:46Z",
+      "run_id": "pending:71199fba-1795550960",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-24T20:09:49Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -21942,9 +21954,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T20:00:15Z",
+    "at": "2026-11-24T20:09:49Z",
     "url": "",
-    "what": "suggestions (ai) on claude-1"
+    "what": "review #4776 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T19:56:08Z",
