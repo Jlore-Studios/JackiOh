@@ -15567,9 +15567,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "reconciling",
-      "owner": "",
-      "owner_since": "2026-11-23T23:24:38Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-3` it refused a call; its limit resets at 2026-11-24T02:10:00Z; it can start again only in 2h 45m, more than the 120 minutes an item waits for its owner",
+      "owner": "claude-7",
+      "owner_since": "2026-11-24T05:02:43Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-3` it refused a call; its limit resets at 2026-11-24T02:10:00Z; it can start again only in 2h 45m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "pr": 4651,
       "provider": "claude-3",
@@ -17740,6 +17740,8 @@
       }
     },
     "4651": {
+      "action": "revise",
+      "asks": [],
       "ci_early": false,
       "ci_fixes": 1,
       "ci_on_head": true,
@@ -17761,9 +17763,13 @@
       "interruptions": 0,
       "issue": 4578,
       "kind": "revise",
+      "live": "fixing-ci",
       "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-23T23:41:25Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:42323a19-1795496531",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17783,7 +17789,9 @@
         "run": "45266564596"
       },
       "source": "ci",
+      "started_at": "2026-11-24T05:02:43Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18503,9 +18511,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T05:01:59Z",
+    "at": "2026-11-24T05:02:43Z",
     "url": "",
-    "what": "build #4619 on claude-8"
+    "what": "revise #4651 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-24T04:50:11Z",
