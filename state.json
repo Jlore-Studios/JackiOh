@@ -20169,6 +20169,9 @@
       },
       "waiting_comment": 7131309608
     },
+    "4731": {
+      "suggestion": true
+    },
     "4735": {
       "action": "review",
       "asks": [],
@@ -43046,6 +43049,13 @@
         "at": "2026-11-24T13:45:16Z",
         "number": 4725,
         "title": "Patch: the AI's Taunt walk reads the slash's halves",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-24T13:45:55Z",
+        "number": 4731,
+        "title": "Patch: the AI sweep notebook shows raw timeouts beside counted timeouts",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
