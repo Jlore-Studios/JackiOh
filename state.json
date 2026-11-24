@@ -20803,27 +20803,10 @@
     "what": "plan #4732 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-24T13:47:16Z",
+    "at": "2026-11-24T14:07:59Z",
     "notes": [
-      "#4722 needs a plan",
-      "#4723 needs a plan",
-      "#4725 needs a plan",
-      "#4731 needs a plan",
-      "#4732 needs a plan",
-      "#4733 needs a plan",
-      "#4734 needs a plan",
-      "#4737 needs a plan",
-      "delivered review #4724 on claude-7 (run 45389148467): approved",
-      "started plan #4733 on muse (run 45407415298)",
-      "started plan #4722 on muse (run 45407520148)",
-      "started plan #4723 on muse (run 45407649955)",
-      "started plan #4734 on agy (run 45407760471)",
-      "started plan #4737 on claude-1 (run 45407876332)",
-      "started plan #4742 on claude-4 (run 45407997496)",
-      "started plan #4725 on claude-7 (run 45408116320)",
-      "started plan #4731 on claude-3 (run 45408240066)",
-      "started plan #4732 on claude-3 (run 45408405137)",
-      "nothing more to start: nothing is queued"
+      "started a night run, as a lane was free: #4733 (medium) is queued to build, for `muse`: build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+      "#4743: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
