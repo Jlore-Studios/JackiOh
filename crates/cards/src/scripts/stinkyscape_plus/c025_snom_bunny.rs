@@ -18,11 +18,8 @@ fn snom_bunny(slash_aware: bool) -> Script {
     Script {
         death: Some(hook(move |ctx| {
             // R3554003: the kept v0.6.9j face draws across a slash, so it keeps the unchecked pool.
-            let enemies = if slash_aware {
-                enemy_permanent_pool(ctx)
-            } else {
-                enemy_permanents(ctx.state, ctx.controller)
-            };
+            let pool = slash_aware.then(|| enemy_permanent_pool(ctx));
+            let enemies = pool.unwrap_or_else(|| enemy_permanents(ctx.state, ctx.controller));
             if enemies.is_empty() {
                 return Vec::new();
             }

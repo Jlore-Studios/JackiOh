@@ -32,11 +32,8 @@ fn condition_met(c: ConditionContext) -> bool {
 /// R60: one of them at random, drawn as the Cry reaches the clause.
 fn random_permanent(c: &mut EffectContext, slash_aware: bool) -> Vec<String> {
     // R3554003: the kept face draws across a slash, so it keeps the unchecked pool.
-    let permanents = if slash_aware {
-        enemy_permanent_pool(c)
-    } else {
-        enemy_permanents(c.state, c.controller)
-    };
+    let pool = slash_aware.then(|| enemy_permanent_pool(c));
+    let permanents = pool.unwrap_or_else(|| enemy_permanents(c.state, c.controller));
     c.rng.shuffle(&permanents).into_iter().take(1).map(|card| card.id).collect()
 }
 
