@@ -21830,18 +21830,19 @@
     "what": "plan #4766 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-24T18:24:21Z",
+    "at": "2026-11-24T18:37:59Z",
     "notes": [
-      "delivered suggest on muse (run 45455991215): suggested",
-      "delivered suggest on claude-8 (run 45455861152): interrupted",
-      "delivered suggest on claude-8 (run 45455719427): interrupted",
-      "delivered review #4759 on muse (run 45442010678): blocked",
-      "started suggest on claude-4 (run 45459780831)",
-      "started suggest on claude-4 (run 45459927513)",
-      "started suggest on muse (run 45460076355)",
-      "started suggest on muse (run 45460220963)",
-      "started suggest on muse (run 45460354665)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 100%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-24T19:10:00Z; it can start a build or a plan again in 38m; `claude-1` 5-hour usage is 47%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-24T18:50:00Z; it can start a build or a plan again in 18m; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4726 held for `claude-8` until 13:10 (5-hour usage is 100%, too close to its 85% cap to start a long run (it starts under 80%))"
+      "#4726 is held for `claude-8` until 13:10 (5-hour usage is 100%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "delivered suggest on muse (run 45460076355): suggested",
+      "delivered suggest on claude-4 (run 45459927513): interrupted",
+      "delivered suggest on claude-4 (run 45459780831): interrupted",
+      "delivered build #4732 on claude-3 (run 45448528472): built",
+      "started review #4768 on claude-3 (run 45462235359)",
+      "started plan #4763 on muse (run 45462352200)",
+      "started plan #4766 on muse (run 45462465878)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 100%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-24T19:10:00Z; it can start a build or a plan again in 26m; `claude-1` 5-hour usage is 47%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-24T18:50:00Z; it can start a build or a plan again in 6m; `claude-4` 5-hour usage is 100%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-24T19:20:00Z; it can start a build or a plan again in 36m; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4726 held for `claude-8` until 13:10 (5-hour usage is 100%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "#4766: typed it Task",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22547,7 +22548,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T18:24:21Z",
+  "loop_tick": "2026-11-24T18:37:59Z",
   "machine_disk": {
     "issue": null,
     "reading": {
