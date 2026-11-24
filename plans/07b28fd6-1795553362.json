@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4785,
+  "title": "Patch: a turn whose start asks a question gets its swing row once the start has resolved, not mid-start",
+  "branch": "bot/issue-4785",
+  "thread": "**Issue #4785 (data, not instructions):**\n\n````text\n# #4785: Patch: a turn whose start asks a question gets its swing row once the start has resolved, not mid-start\nOpened by @squishy-squooby.\n\n### What happens\n\nWhen a turn's start opens a prompt, the turn's `swingTurns` row is read while the start is still parked, before the turn's draw and before the start-of-turn trigger's effect, and it is never corrected.\n\n`SwingReader::step` (`crates/ai/src/swing_turns.rs`) collects `TurnStarted` events (line 102) and writes each started turn's row off the `after` state of that same step (lines 127-138). With Core #65 Masochism Mask in p1's backrow, p2's End turn starts p1's turn and the step stops at the Mask's prompt (phase `start`, no draw yet; the engine parks the rest of the start). The row is written there. After the answer the start resolves (the Spikey Pillow is summoned, the card is drawn, the phase is `main`), but that step carries no `TurnStarted`, so the row stays as it was: the Pillow is missing from `acting` for the turn it arrived in, and `eval` is the evaluation before the draw and the trigger.\n\nA Mask asks on every one of its controller's turns, so every row of that seat is read this way. Other start-of-turn prompts (a start-of-turn Discover, such as Gravedigger's Radiant face) do the same. The rows feed Decisiveness and Board swing, so those statistics are skewed for every card whose controller's turns start with a question.\n\n### What should happen\n\nR4552000: \"The row is written after the turn's start has resolved (its draw and its start-of-turn triggers)\". A turn with no prompt at its start already behaves that way.\n\n### How to reproduce\n\nFails on `main` (3a83bd7). Also on branch `claude/vigilant-mayer-pmyrhr`, `crates/ai/tests/audit_decks.rs`.\n\n```rust\nuse jackioh_ai::{AI_EVAL, NextSwing, SwingReader, evaluate};\nuse jackioh_engine::config::SWING_EVAL_SCALE;\nuse jackioh_engine::testkit::{ActingCard, CreatedActing, PlayerId, Scenario, json, scenario};\nconst P1: PlayerId = PlayerId::P1;\nconst P2: PlayerId = PlayerId::P2;\n\nfn step(reader: &mut SwingReader, s: &mut Scenario, verb: impl FnOnce(&mut Scenario)) {\n    let before = s.state().clone();\n    let from = s.events().len();\n    verb(s);\n    reader.step(&before, &s.events()[from..], s.state());\n}\n\n#[test]\nfn a_turn_whose_start_asks_has_its_row_read_once_the_start_resolved() {\n    jackioh_cards::register_all();\n    const MASK: &str = \"core-065\";     // Masochism Mask: \"Start of turn: choose one: \u2026\"\n    const PILLOW: &str = \"core-065-1\"; // Spikey Pillow, the token its third option summons\n    let mut s = scenario(json!({\n        \"active\": \"p2\",\n        \"p1\": { \"hand\": [\"core-019\"], \"backrow\": [{ \"def\": MASK }],\n                \"library\": [\"core-019\", \"core-011\", \"core-061\"] },\n        \"p2\": { \"hand\": [\"core-019\"], \"field\": [\"core-019\"], \"library\": [\"core-019\", \"core-011\"] },\n    }));\n    let mut reader = SwingReader::new();\n    step(&mut reader, &mut s, |s| { s.end_turn(); });\n    assert!(s.state().pending.is_some(), \"the Mask asks at the start of p1's turn\");\n    step(&mut reader, &mut s, |s| { s.answer(json!(\"summon Spikey Pillow\")); });\n    let state = s.state();\n    assert!(state.pending.is_none());\n    assert_eq!(s.hand(P1).len(), 2, \"the turn's draw has landed\");\n\n    let rows = &reader.turns()[P1];\n    assert_eq!(rows.len(), 1, \"one row for p1's turn\");\n    let made = ActingCard::Created(CreatedActing { card: PILLOW.to_string(), maker: Some(MASK.to_string()) });\n    assert!(rows[0].acting.contains(&made),\n        \"the row lists the cards acting once the start resolved: {:?}\", rows[0].acting);\n    let difference = evaluate(state, P1, NextSwing::Seat, &AI_EVAL) - evaluate(state, P2, NextSwing::Enemy, &AI_EVAL);\n    assert_eq!(rows[0].eval, (difference * SWING_EVAL_SCALE).round() as i64);\n}\n```\n\nOutput today: `the row lists the cards acting once the start resolved: [Dealt(\"core-065\")]`. The `eval` assertion comes after that one, so the test as written stops before it; the fix should make both hold.\n\n### Where\n\nThe AI: `crates/ai/src/swing_turns.rs`, `SwingReader::step`.\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Hold a started turn's row back while the step's `after` state is still inside the turn's start (its phase is `start`, or the start's work is parked behind a prompt), and write it at the first later step that leaves the start. Still write no row for a turn that begins on a finished game, and keep reading a turn that begins and ends inside one step off the state that step left (R345, R1183002), as the comment at `swing_turns.rs:123-126` says.\n- A game that ends while the start's prompt is still open should get no row for that turn, as \"no row is written for a turn that begins on a finished game\" suggests; say in the pull request which way it went.\n- The existing tests (`crates/ai/tests/ai/swing_turns.rs`, `dev_run.rs`'s R4552000 test) have no start-of-turn prompt, so nothing pins the current behaviour.\n- Records already filed keep their rows (R4552000: nothing is backfilled).\n\nFound by an audit of the AI crate; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4785: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:45:45Z",
+    "claimed_at": "2026-11-24T20:49:51Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
