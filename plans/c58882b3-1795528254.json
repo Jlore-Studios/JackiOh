@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4734,
+  "title": "Patch: a finished game's board stops reading Enemy turn, and a board opened on a finished game shows its result at once",
+  "branch": "bot/issue-4734",
+  "thread": "**Issue #4734 (data, not instructions):**\n\n```text\n# #4734: Patch: a finished game's board stops reading Enemy turn, and a board opened on a finished game shows its result at once\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nTwo things go wrong on the board once a game is over.\n\nFirst, the End turn button reads \"Enemy turn\" after every game, even one the player has just won on their own turn. It sits right beside \"Game over\", and on a phone held upright it's the only turn wording left on screen. It will read \"Game over\".\n\nSecond, when a board opens on a game that is already over, the Victory or Defeat panel stays invisible and can't be clicked for nearly four seconds. It is waiting for a victory animation that never plays. One way to hit it: watch the replay straight after an online match, come back to the board to press Rematch, and nothing shows. After the fix it shows at once. A game that ends while the player is watching keeps its animation and the short wait before the panel.\n\n## Why\n\n- `apps/web/src/game/Board.tsx:632-633`: `ownTurn = view.result === null && view.active === view.viewer`, then `endTurnState = !ownTurn ? \"enemy\" : \u2026`. Every finished view is therefore `enemy`, and `:822` labels it `t(\"Enemy turn\")`. The turn plate beside it prints `t(\"Game over\")` (`:802-803`). The only test of the label (`game/Board.test.tsx:90-103`) covers the opponent's live turn, not a finished game.\n- `apps/web/src/game/Result.tsx:157-172`: the panel waits `resultRevealMs()` before it is revealed, and stays transparent and ignores the pointer until then. That is `FX_LETHAL_LEAD_MAX_MS` + `FX_RESULT_MS`, 600 + 3200 ms (`fx/constants.ts:13`, `:56`). The function's own comment says \"with no effects to watch, 0\".\n- The effects layer plays the killing blow and Victory/Defeat only when a result arrives on a board that is already mounted. `apps/web/src/fx/FxLayer.tsx:446` starts `lastResult` at `undefined`, and `:464` plays only `if (previousResult === null && view.result !== null)`. A board mounted on a finished view has nothing to watch, yet waits the full 3.8 s.\n- That mount happens in normal play. `apps/web/src/routes/match.tsx:440` replaces the board with the replay while it is watched, so Back from Watch the replay mounts a fresh board on the finished game. Rematch is hidden for those seconds. A page reloaded on a finished match does the same.\n- Two tests pin the wait in exactly the case where nothing plays. `game/Game.test.tsx:324-333` (\"waits out the effects layer's Victory / Defeat before it takes the pointer\") mounts a finished view first. `routes/match.test.tsx:1162` pushes `finished` as its first view and expects `data-revealed=\"false\"`.\n\n## Proposal\n\n1. **End turn after the game.** A view with a result gets its own End turn state, `over`. It is labelled `t(\"Game over\")` (already in `zh-CN.json`), stays disabled as today, and is styled as the `enemy` state is (`game/board.css:2623` takes `over` beside `enemy`). The opponent's live turn still reads \"Enemy turn\".\n2. **The result waits only for an animation that plays.** `Game` tells `GameResult` whether this result arrived on the mounted board: the shown view went from no result to a result, the condition `FxLayer` plays on. Only then does `GameResult` use `resultRevealMs()`; otherwise the wait is 0. Reduced motion and effects off stay 0, as today.\n3. **One ruling note**, `spec/rulings/R<N>000.md`, records both, with its \u00a711 paragraph in `spec/pending/<N>.md`.\n\nRejected: hiding End turn once the game is over. It would shift the rail's layout at the moment the result comes in.\n\n## Where it lands\n\n- `apps/web/src/game/Board.tsx`, `apps/web/src/game/board.css`, `apps/web/src/game/Game.tsx`, `apps/web/src/game/Result.tsx`.\n- Tests: `game/Board.test.tsx`, `game/Game.test.tsx`, `routes/match.test.tsx` (the two pinning tests push an unfinished view first, and new cases cover a finished mount).\n- `spec/rulings/R<N>000.md` and `spec/pending/<N>.md`. \u00a710.10 and R200 for the effects' timing, which stays as it is.\n\n## Acceptance criteria\n\n- [ ] A finished view's End turn reads \"Game over\", carries `data-turn-state=\"over\"` and is disabled. This holds for a win, a loss and a draw, whether the game ended on the viewer's turn or the opponent's.\n- [ ] The opponent's live turn still reads \"Enemy turn\", and the existing assertion passes.\n- [ ] A `Game` mounted on a finished view, effects on, shows its result panel with `data-revealed=\"true\"` at once and no animation delay.\n- [ ] A `Game` that receives its result while mounted still waits out the effects. The existing test is rewritten to mount an unfinished view and then rerender the finished one.\n- [ ] In `routes/match`, after Watch the replay and Back, the result panel and its Rematch are revealed with no wait.\n- [ ] Tests named `it(\"R<N>000 \u2026\")` sit in the note's `proven_in`, and `cargo jackioh spec check` passes.\n- [ ] `pnpm --dir apps/web test` passes on the touched test files.\n\n## Size and risks\n\nSmall: four source files, three test files and one ruling. Risk is low. A route that remounts its board at the moment the game ends now shows the panel at once, but nothing would have played there anyway. The e2e component specs that wait for `data-revealed=\"true\"` (e.g. `e2e/cypress/component/rematch-buttons.cy.tsx:108`) reach it sooner and still pass.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: Confirmed on main: End turn reads 'Enemy turn' on every finished view (Board.tsx:632-633, 822), and a board mounted on a finished game hides its result for 3.8 s waiting on an effect that FxLayer plays only on a null-to-result change (FxLayer.tsx:464), so these are small fixes to bugs players can see. With no vote, no comment and no \ud83d\udc4e on this issue by Wed 25 Nov 06:48 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-24T13:47:01Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4734: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T13:47:28Z",
+    "claimed_at": "2026-11-24T13:51:20Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
