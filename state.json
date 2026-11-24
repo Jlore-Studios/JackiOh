@@ -20159,6 +20159,13 @@
     "4731": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T14:04:07Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "No rule line holds: the change is confined to analysis/ (one Python loader, notebook 03, tests and a README), with no engine, AI, cross-crate, migration or size impact."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
