@@ -18533,9 +18533,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T06:16:14Z",
+    "at": "2026-11-24T06:25:44Z",
     "url": "",
-    "what": "build #4674 on muse"
+    "what": "suggestions (tests) on agy"
   },
   "last_sweep": {
     "at": "2026-11-24T06:13:14Z",
@@ -41531,13 +41531,22 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-24T06:25:03Z",
-    "last_area": "client",
-    "last_run": "2026-11-24T05:43:53Z",
+    "idle_since": "2026-11-24T06:25:44Z",
+    "last_area": "tests",
+    "last_run": "2026-11-24T06:25:44Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {},
+    "running": {
+      "1": {
+        "area": "tests",
+        "count": 6,
+        "last_run": "2026-11-24T06:25:44Z",
+        "provider": "agy",
+        "run_id": "pending:f85a60be-1795501506",
+        "taken_asks": []
+      }
+    },
     "taken_asks": []
   },
   "usage": null,
