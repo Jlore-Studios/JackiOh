@@ -18487,15 +18487,8 @@
       }
     },
     "4690": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45348958609",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-24T07:41:33Z",
-        "until": "2026-11-24T08:11:33Z"
-      },
       "difficulty_by": {
         "at": "2026-11-24T07:41:25Z",
         "difficulty": "medium",
@@ -18512,9 +18505,8 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "ge | What changes |\n- |---|---|---|\n- | `scripts/ci-shards.toml` | change | Refresh the `\"tools, wasm\"` comment with the new measurement; the `= 4` count stays |\n- | `crates/tools/src/<module the measurement names>.rs`, or `crates/tools/tests/<file>.rs` | change | Trim the dominant test's game/rollout counts (named constants, CLAUDE.md rule 9) or daily-move it with a cheaper keeper, copying the #4473 shape in `crates/tools/src/fork_screen.rs` (`r4397000_fork_\u2026\n- | Must not touch | \u2014 | `.github/`, `bot/`, `.harness/`, `.squishy/`, `crates/engine/src/`, `crates/ai/src/`; no spec file, since no game rule changes |\n- No spec section or ruling governs this change: it alters no rule, card, or engine behavior, so it needs no `spec/rulings/R<nnnn>.md` note and no `spec/pending/<issue>.md` paragraph.\n- ## Steps\n- 1. List the group's tests exactly as CI sees them: `cargo test --workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai -- --skip fuzz:: --skip selfplay:: --skip positions:: --list --format terse > /tmp/tools-wasm.txt`. Then split per shard: `python\u2026\n- 2. Time shard 1's and shard 4's subsets to find the dominant tests: build once with `cargo test --workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai --no-run`, then run each subset with `time cargo test --workspace --exclude jackioh-engine --exc\u2026\n- 3. Apply the mechanical rule from the numbers:\n- - If one test (or two tests in the same module) takes over about 240 s each while its shard's other tests sum to far less, fix that test, not the count. Prefer trimming its workload first (fewer games, rollouts, or seeds, via the module's existing named constants, as #4441 cut `fork_screen`'s rollo\u2026\n- - The name filter `--skip fuzz:: --skip selfplay:: --skip positions::` matches anywhere in a test path across all five crates in the group, so never name a new or renamed keeper test with `fuzz::`, `selfplay::`, or `positions::` in its path, or it runs in no group (`.github/ci/rust-test.toml`, tool\u2026\n- 4. Update the `\"tools, wasm\"` comment in `scripts/ci-shards.toml` (lines 40\u201344) with the new measurement: which test dominated, what the trim or daily-move changed, and the resulting local shard times. Leave `\"tools, wasm\" = 4` unchanged.\n- 5. Run the focused checks: `cargo test -p <crate> <touched test name>` for the trimmed test and its keeper, `cargo fmt --check`, `cargo clippy -p <crate> --all-targets -- -D warnings`, and `python3 .github/ci/matrix.py matrix` to confirm the matrix still expands (read-only run, no edit).\n- Fallbacks, only if the measurement contradicts the skew premise: (B) if many medium tests spread evenly and each shard's test time still exceeds ~6 minutes after any single-test fix, change `\"tools, wasm\" = 4` to `= 8` (the `MAX_SHARDS` cap in `.github/ci/matrix.py`) and stop: a person must update \u2026\n- ## Tests\n- - The trimmed test itself (path `crates/tools/src/<module>.rs` or `crates/tools/tests/<file>.rs`, exact name from step 2): must still pass and still assert the same property at reduced size. Command: `cargo test -p jackioh-tools --bin jackioh <test name>` (or `-p jackioh-shared` / `-p jackioh-run` \u2026\n- - The keeper test for a daily-move (name it `<same prefix>_at_the_cap` or equivalent, mirroring `r4397000_an_always_differing_candidate_forks_every_game_at_the_cap`): asserts the per-PR property (cap held, pair determinism) in seconds. Same command shape.\n- - No new test files and no changes to `bot/tests/test_ci_matrix.py` (bot-forbidden); confirm the matrix generator still accepts the file with `python3 .github/ci/matrix.py matrix` (stderr lists `rust (test tools, wasm 4/4)` among the jobs).\n- ## Done when\n- - [ ] The dominant test(s) hashing to shards 1/4 are identified with measured times recorded in the `scripts/ci-shards.toml` comment.\n- - [ ] The trim or daily-move plus keeper is in place; the touched test and keeper pass via `cargo test -p <crate> <name>`.\n- - [ ] `cargo fmt --check` and `cargo clippy -p <crate> --all-targets -- -D warnings` pass.\n- - [ ] Projected shard time (slowest shard's measured test seconds, scaled by the trim, plus its compile seconds) is under 8 minutes with headroom; CI on the pull request confirms the real times.\n- - [ ] If fallback B or C triggered instead, the count edit or the stop report is done and the exact person-side lines are in Open questions.\n- ## Risks\n- - Local timing is not CI timing (shared machine versus 4-core runners): mitigate by comparing relative dominance and compile-versus-test splits, not absolute seconds, and letting PR CI confirm.\n- - Trimming game/seed counts can weaken a statistical assertion or break the perf budgets last set in `af27372ba8`: keep the assertion's property identical at small size, and keep a daily full-size test wherever the property needs volume (the #4473 pattern).\n- - Renaming a test changes its shard hash and can move load between shards: after any rename, re-run step 1's shard listing and check no other shard inherits two heavy tests.\n- - Doc tests of the group run whole in shard 1 (`ci.yml` step `cargo test`, lines 436\u2013438): if shard 1 alone stays slow after the fix, suspect `--doc` output before raising the count.\n- ## Open questions\n- - None for the primary fix. If fallback B triggers: person, please update `bot/tests/test_ci_matrix.py` `JOBS` (lines 28\u201334) replacing `\"tools, wasm 1/4\", \"tools, wasm 2/4\", \"tools, wasm 3/4\", \"tools, wasm 4/4\"` with `\"tools, wasm 1/8\"` through `\"tools, wasm 8/8\"`, and the `test_the_committed_files\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4690 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4690/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-24T07:33:47Z",
       "owner_why": "it plans it",
@@ -18525,18 +18517,18 @@
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
       "provider": "muse",
-      "run_id": "45348958609",
+      "run_id": "pending:9a6a6144-1795506187",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-24T07:33:47Z",
+      "started_at": "2026-11-24T07:43:32Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T07:42:55Z",
+    "at": "2026-11-24T07:43:32Z",
     "url": "",
-    "what": "build #4673 on claude-7"
+    "what": "build #4690 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T07:32:12Z",
