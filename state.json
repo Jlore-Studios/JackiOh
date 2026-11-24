@@ -24172,12 +24172,11 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-24T08:50:00Z",
-          "utilization": 1.0
+          "resets_at": "2026-11-24T13:50:00Z",
+          "utilization": 0.48
         },
-        "observed_at": "2026-11-24T06:24:35Z",
-        "rejected_resets_at": "2026-11-24T08:50:00Z",
-        "status": "rejected"
+        "observed_at": "2026-11-24T10:03:31Z",
+        "status": "allowed"
       }
     },
     "claude-2": {
@@ -42325,7 +42324,8 @@
     "readings": [
       "2026-11-24T09:59:12Z,claude-3,refusal,call,45369625864,100,2026-11-24T12:20:00Z,,,rejected,,,2026-11-24T12:20:00Z",
       "2026-11-24T09:57:28Z,claude-6,ping,before,45369517024,2,2026-11-24T14:20:00Z,,,allowed,70,,",
-      "2026-11-24T09:55:53Z,claude-4,ping,before,45369397965,4,2026-11-24T14:20:00Z,,,allowed,70,,"
+      "2026-11-24T09:55:53Z,claude-4,ping,before,45369397965,4,2026-11-24T14:20:00Z,,,allowed,70,,",
+      "2026-11-24T09:56:53Z,claude-1,ping,before,45369291125,48,2026-11-24T13:50:00Z,,,allowed,100,,"
     ],
     "runs": [
       "2026-11-24T09:59:12Z,45369625864,claude-3,opus,plan,4677,hard,interrupted,refusal,0,0,0,0,,100,100,,,238.6,,fresh,,1",
