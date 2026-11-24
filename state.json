@@ -20182,18 +20182,29 @@
       ]
     },
     "4732": {
-      "asks": [
-        "c:7133312663"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-3",
+      "owner_since": "2026-11-24T13:55:02Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-24T13:46:47Z",
       "requested_by": "MaxGoetzmann",
+      "run_id": "pending:451cde27-1795528460",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-24T13:55:02Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:7133312663"
+      ]
     },
     "4733": {
       "action": "plan",
@@ -20612,9 +20623,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T13:54:06Z",
+    "at": "2026-11-24T13:55:02Z",
     "url": "",
-    "what": "plan #4731 on claude-3"
+    "what": "plan #4732 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-24T13:38:35Z",
