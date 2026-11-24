@@ -20508,6 +20508,8 @@
       }
     },
     "4868": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T22:17:23Z",
@@ -20521,8 +20523,11 @@
         "trail": "- read_file: {\"EndLine\": 435, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/api/chat.rs\", \"StartLine\": 400}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/api/chat.rs\"}\n- said: \n- read_file: {\"EndLine\": 1550, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/api/friends.rs\", \"StartLine\": 1515}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/api/friends.rs\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo test -p jackioh-server --test server stats_queries_refuse_nul_characters_with_bad_request\n- said: The stats test is recompiling and running in the background.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo test -p jackioh-server --test server api::chat::\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo test -p jackioh-server --test server api::friends::\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo test -p jackioh-server --test server daily_email_has_no_html_part_and_unsubscribe_page_reflects_no_token\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo fmt --check\n- said: \n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo fmt\n- said: Running cargo fmt in the background.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo fmt --check\n- said: Verifying cargo fmt --check in the background.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo clippy -p jackioh-server --all-targets -- -D warnings\n- said: Running cargo clippy on jackioh-server in the background.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && git diff --stat\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo jackioh catalog check && cargo jackioh patches check && cargo jackioh spec check\n- said: Running catalog check, patches check, and spec check in the background.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && git status\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the server answers 400, not 500, to a NUL character, a UUID spelling Postgres will not cast, and a chat cursor past any timestamp\"} --> ### What changed and why 1. **Central NUL character rejection**: - In [`crates/server/src/api/http.rs`](file:///home/\u2026"
       },
       "issue": 4838,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T23:43:00Z",
         "from_run": "45499517346",
         "gates": [
           {
@@ -20581,8 +20586,15 @@
         "source": "build",
         "until": "2026-11-25T00:11:50Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-24T23:41:50Z",
+      "run_id": "pending:4120409d-1795563742",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-24T23:43:00Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -20596,9 +20608,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T23:33:37Z",
+    "at": "2026-11-24T23:43:00Z",
     "url": "",
-    "what": "plan #4813 on claude-3"
+    "what": "review #4868 on agy"
   },
   "last_sweep": {
     "at": "2026-11-24T23:30:33Z",
