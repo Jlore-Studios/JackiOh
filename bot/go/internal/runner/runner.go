@@ -46,7 +46,7 @@ var RateLimitWords = &Words{regexp.MustCompile(
 		`|quota reached|upgrade your subscription to increase your limits` +
 		// Muse, once its week is spent: "API error 429 […]: Subscription quota exhausted. Your usage
 		// window resets at 2026-10-26T00:00:00Z. (rate_limit_error)". Unread, six runs on 2026-10-25
-		// ended as infra and handed their items on (reviews/2026-10-27-muse-usage.md, finding 3).
+		// ended as infra and handed their items on (#2272's audit, finding 3).
 		`|quota exhausted|rate_limit_error)`)}
 
 // ResetsAt is RESETS_AT: "resets at 2026-10-26T00:00:00Z" (Muse): when a refusal ends, as a

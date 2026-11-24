@@ -383,7 +383,7 @@ func TestUsage_TheBranchIsCreatedAsAnOrphan(t *testing.T) {
 	w.tick()
 	assertEqual(t, w.rec.Problem, "")
 	assertIn(t, "`_bot-usage` is not there yet: its first push makes it", strings.Join(w.logs, "\n"))
-	assertEqual(t, w.show("vercel.json"), "")
+	assertEqual(t, w.show("README.md"), "")
 	first := fakes.Git(w.origin, "rev-list", "--max-parents=0", "_bot-usage")
 	assertEqual(t, fakes.Git(w.origin, "log", "-1", "--format=%s", first), "usage: start [skip ci]")
 	_, failed := herr.Catch[*fakes.PyError](func() { fakes.Git(w.origin, "merge-base", "main", "_bot-usage") })

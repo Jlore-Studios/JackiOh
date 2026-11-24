@@ -2134,8 +2134,8 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
   define what the checks check or how the game deploys: `rust-toolchain.toml`, `rustfmt.toml`, the
   crates' `clippy.toml` (the pure crates' purity), `.cargo/`, the vitest, vite, eslint, TypeScript
   and Cypress configs, `wrangler.jsonc`, the Worker (`apps/edge/`), `apps/web/public/_headers`,
-  `.npmrc`, `.nvmrc`, `pnpm-workspace.yaml`, and the two scripts that deploy production
-  (`scripts/promote-production.sh`, `scripts/vercel-ignore.sh`).
+  `.npmrc`, `.nvmrc`, `pnpm-workspace.yaml`, and the two scripts that promote the sites
+  (`scripts/promote-production.sh`, `scripts/promote-staging.sh`).
 - **Some merge themselves only on a condition** (#2986, the owner's decision of 2026-11-04, amended
   the same day; `deliver/mergegate.go`, `internal/mergegate`). A database migration
   (`migration_paths`) merges itself unless it loses data (a statement that drops a table, schema
