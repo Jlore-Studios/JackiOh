@@ -22,7 +22,7 @@ use crate::config::{AI_EVAL, AI_GATE_BUDGET};
 use crate::deck::{AiDeckOptions, build_ai_deck};
 use crate::evaluate::{NextSwing, evaluate};
 use crate::match_::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match, seated};
-use crate::shadow_ban::SHADOW_BAN;
+use crate::shadow_ban::SHADOW_BAN_IDS;
 use crate::types::SearchBudget;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -494,10 +494,10 @@ fn sweep_config(
     }
 }
 
-fn empty_stats(def_id: &str) -> SweepStats {
+fn empty_face_stats(def_id: &str, face: SweepFace) -> SweepStats {
     SweepStats {
         def_id: def_id.to_string(),
-        face: SweepFace::Base,
+        face,
         games: 0,
         drawn_games: 0,
         affordable_turns: 0,
@@ -510,13 +510,6 @@ fn empty_stats(def_id: &str) -> SweepStats {
         eval_delta_count: 0,
         losing_plays: 0,
         winning_plays: 0,
-    }
-}
-
-fn empty_face_stats(def_id: &str, face: SweepFace) -> SweepStats {
-    SweepStats {
-        face,
-        ..empty_stats(def_id)
     }
 }
 
@@ -796,10 +789,9 @@ pub fn sweep_card(def_id: &str, options: &SweepOptions) -> SweepResult {
     let tier = options.tier.unwrap_or(Difficulty::Easy);
     let face = options.face.unwrap_or_default();
     let mut stats = empty_face_stats(def_id, face);
-    let banned: Vec<&str> = options.banned.map_or_else(
-        || SHADOW_BAN.iter().map(|(id, _)| *id).collect(),
-        <[&str]>::to_vec,
-    );
+    let banned: Vec<&str> = options
+        .banned
+        .map_or_else(|| SHADOW_BAN_IDS.to_vec(), <[&str]>::to_vec);
     let filler = Filler {
         banned: banned.into_iter().map(str::to_string).collect(),
         boost: None,

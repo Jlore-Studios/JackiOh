@@ -60,12 +60,7 @@ pub struct AiOptions<'a> {
 
 impl<'a> AiOptions<'a> {
     pub fn new(rng: Rng) -> AiOptions<'a> {
-        AiOptions {
-            rng,
-            budget: crate::config::AI_BUDGET,
-            should_stop: None,
-            wrap_up: None,
-        }
+        Self::with_budget(rng, crate::config::AI_BUDGET)
     }
 
     pub fn with_budget(rng: Rng, budget: SearchBudget) -> AiOptions<'a> {

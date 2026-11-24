@@ -2353,22 +2353,34 @@ fn spawn_hand_unit(
             (&cleared, slot)
         }
     };
+    spawn_at(room, seat, card, slot, counter)
+}
+
+/// `card` spawned on `slot` of `room`, a sandbox (one node, `sandbox_step`), and the card standing there.
+/// `None` when the counter is spent; `Some(None)` when the spawn is refused.
+fn spawn_at(
+    room: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    slot: jackioh_engine::ZoneSlot,
+    counter: &dyn NodeCounter,
+) -> Option<Option<(GameState, CardInstance)>> {
     let spawn = SandboxOp::Spawn {
         player: seat,
         def_id: card.def_id.clone(),
         radiant: card.radiant.then_some(true),
         to: SpawnZone::Field {
-            row: Row::Units,
+            row: slot.row,
             lane: slot.lane,
         },
     };
     let Some(placed) = sandbox_step(room, seat, spawn, counter)? else {
         return Some(None);
     };
-    let Some(unit) = card_at(&placed, slot).cloned() else {
+    let Some(standing) = card_at(&placed, slot).cloned() else {
         return Some(None);
     };
-    Some(Some((placed, unit)))
+    Some(Some((placed, standing)))
 }
 
 /// R923001, R2565000, R2687000: `card`, a Field Spell in `seat`'s hand, spawned into the backrow zone a
@@ -2384,22 +2396,7 @@ fn spawn_hand_field_spell(
     let Some(slot) = first_entry_zone(world, seat, Row::Backrow) else {
         return Some(None);
     };
-    let spawn = SandboxOp::Spawn {
-        player: seat,
-        def_id: card.def_id.clone(),
-        radiant: card.radiant.then_some(true),
-        to: SpawnZone::Field {
-            row: Row::Backrow,
-            lane: slot.lane,
-        },
-    };
-    let Some(placed) = sandbox_step(world, seat, spawn, counter)? else {
-        return Some(None);
-    };
-    let Some(set) = card_at(&placed, slot).cloned() else {
-        return Some(None);
-    };
-    Some(Some((placed, set)))
+    spawn_at(world, seat, card, slot, counter)
 }
 
 /// R2424000, R2687000: `death_probe` for a Unit or a Field Spell in `seat`'s hand, placed on its field
@@ -2787,11 +2784,12 @@ fn next_turn(before: &GameState, player: PlayerId, counter: &dyn NodeCounter) ->
     let Ok(next) = simulate(before, player, &ActionBody::EndTurn, counter, Prices::NONE)? else {
         return Some(None);
     };
-    let ready = next.pending.is_none()
-        && next.result.is_none()
-        && next.active == player.opponent()
-        && next.phase == Phase::Main;
-    Some(ready.then_some(next))
+    Some(in_own_main(&next, player.opponent()).then_some(next))
+}
+
+/// Whether `player` stands in its own main phase with no prompt open and the game on.
+fn in_own_main(state: &GameState, player: PlayerId) -> bool {
+    state.pending.is_none() && state.result.is_none() && state.active == player && state.phase == Phase::Main
 }
 
 /// R2564000: what the use of `unit`'s Activate that took `turn` to `after` gives its controller: the
@@ -2934,12 +2932,7 @@ fn root_prices<P>(
     nodes: usize,
     price: PriceTurn<P>,
 ) -> Vec<P> {
-    if weight == 0.0
-        || world.pending.is_some()
-        || world.result.is_some()
-        || world.active != seat
-        || world.phase != Phase::Main
-    {
+    if weight == 0.0 || !in_own_main(world, seat) {
         return Vec::new();
     }
     let own = has(world, seat);
@@ -2990,12 +2983,7 @@ fn rekeyed_activation_prices(
     counter: &dyn NodeCounter,
     priced: &mut Vec<ActivationPrice>,
 ) {
-    if AI_EVAL.activation == 0.0
-        || world.pending.is_some()
-        || world.result.is_some()
-        || world.active != seat
-        || world.phase != Phase::Main
-    {
+    if AI_EVAL.activation == 0.0 || !in_own_main(world, seat) {
         return;
     }
     // R3575404: the seat's own Dormant cards acting for their awakening, whose definition the probe's
@@ -3137,11 +3125,7 @@ pub fn prompt_activation_prices(
             Some(Err(_)) => continue,
             Some(Ok(answered)) => answered,
         };
-        if answered.pending.is_some()
-            || answered.result.is_some()
-            || answered.active != seat
-            || answered.phase != Phase::Main
-        {
+        if !in_own_main(&answered, seat) {
             continue;
         }
         let Some(now) = activate_sources(&answered, seat)

@@ -42,8 +42,6 @@ export const RANDOM_POLICY_AI_BUDGET: SearchBudget = {
 
 /** Full-lesson timeout; AI search dominates its runtime. */
 export const LESSON_GAME_TIMEOUT_MS = 180_000;
-/** Per-game budget for multi-game gate tests. */
-export const LESSON_GAME_MS = 90_000;
 /** Per-game budget for multi-game random-policy tests. */
 export const RANDOM_GAME_MS = 45_000;
 
