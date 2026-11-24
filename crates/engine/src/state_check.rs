@@ -106,16 +106,26 @@ fn hero_check(sink: &mut EngineSink<'_>) -> bool {
     true
 }
 
-/// Every backrow card in play for this player, in lane order (§3).
+/// Every backrow card in play for this player, in lane order (§3), then the cards lying on its unit zones,
+/// which are backrow cards there, no Units (R4665000).
 fn backrow_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let side = &state.players[player];
-    (1..=BACKROW_ZONES)
+    let mut cards: Vec<CardInstance> = (1..=BACKROW_ZONES)
         .filter_map(|lane| {
             side.backrow
                 .get((lane - 1) as usize)
                 .and_then(|card| card.clone())
         })
-        .collect()
+        .collect();
+    cards.extend(
+        side.units
+            .iter()
+            .flatten()
+            .filter_map(|pile| pile.first())
+            .filter(|top| crate::zones::lies_on_unit_zone(state, top))
+            .cloned(),
+    );
+    cards
 }
 
 /// R46: a marked Indestructible unit switches to Attack Position and loses Taunt for the turn; a backrow card
@@ -764,9 +774,11 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 at: crate::zones::slot_of(sink.state, &unit),
                 token: crate::zones::is_unit_token(sink.state, &unit),
                 standing: crate::zones::stands_in_backrow(sink.state, &unit),
+                // R4665000: a card lying on a unit zone dies as the backrow card it is, never animated.
                 animated: matches!(unit.zone, Zone::Field { row: Row::Units, .. })
                     && crate::faces::card_type_of_face(sink.state, &unit.def_id, unit.radiant)
-                        != crate::CardType::Unit,
+                        != crate::CardType::Unit
+                    && !crate::zones::lies_on_unit_zone(sink.state, &unit),
                 // R1849002: judged for every card before any moves, so the aura card dying beside them
                 // exiles itself and the rest; a Sacrifice is no destroy, so this aura leaves it alone.
                 exiled: cause == DeathCause::Collected
@@ -1092,11 +1104,13 @@ pub(crate) fn permanents_in_play(state: &GameState) -> Vec<CardInstance> {
     let mut out: Vec<CardInstance> = Vec::new();
     for player in [first, first.opponent()] {
         for lane in 1..=UNIT_ZONES {
+            // R4665000: a card lying on a unit zone comes with the backrow cards.
             if let Some(top) = state.players[player]
                 .units
                 .get((lane - 1) as usize)
                 .and_then(|pile| pile.as_ref())
                 .and_then(|pile| pile.first())
+                && !crate::zones::lies_on_unit_zone(state, top)
             {
                 out.push(top.clone());
             }
