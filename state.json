@@ -41384,6 +41384,9 @@
       "2026-11-24T03:34:58Z,claude-6,stream,call,45319332989,97,2026-11-24T04:20:00Z,,,allowed_warning,100,,",
       "2026-11-24T03:35:13Z,claude-6,stream,call,45319332989,99,2026-11-24T04:20:00Z,,,allowed_warning,100,,",
       "2026-11-24T03:35:28Z,claude-6,stream,call,45319332989,100,2026-11-24T04:20:00Z,,,rejected,100,,"
+    ],
+    "runs": [
+      "2026-11-24T03:35:29Z,45319332989,claude-6,opus,plan,4594,hard,interrupted,5-hour cap,7.8,0,0,0,,50,100,,,489.3,,fresh,,1"
     ]
   },
   "version": 1
