@@ -41254,6 +41254,7 @@
       {
         "at": "2026-11-24T09:18:21Z",
         "number": 4683,
+        "reason": "confirmed. `HandHints.tsx` gives each pip only an `aria-label`, while `FieldBadges.tsx` gives the same icon family a `title`. A new player meeting the altar-and-number pip has nothing that names it, and the fix is one attribute from labels that are already translated.",
         "title": "Patch: hand-hint pips name themselves on hover like field marks do",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
