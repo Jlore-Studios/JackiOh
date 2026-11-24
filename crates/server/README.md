@@ -847,7 +847,8 @@ it is its `matches` row (unranked, its catalog version frozen, R3727005), its `m
 list. Each request loads and folds the game (`daily::games::load`, as a rebuild folds), and an action is
 reduced, appended and the clock stored in one transaction, the next `seq` the log's own key, so of two
 requests at once one lands and the other is `stale`. It never has a match actor: `Registry::rebuild` refuses
-a daily id, `app.live_matches()` and the fake's `matches_live` leave daily games out of the reaper's ceiling,
+a daily id, `app.live_matches()` and both stores' `matches_live` and `matches_past_ceiling` leave daily games
+out of a restart's recovery and the reaper's ceiling,
 and its start takes no seat of the ledger and sets no in-match flag (R3727004), so its result clears no live
 game's flag and cancels no live queue ticket.
 
@@ -1528,6 +1529,25 @@ player's Daily screen, its board, result and replay opening as before. It adds n
 R3727008). Both stores read an emptied seat back as `""` (`remove_daily_rows` empties it in memory), and
 `daily::games` names such an opponent with empty fields and never looks it up.
 `tests/sql/53_daily_games.sql` checks the keys, the emptied seat and the running game's refusal.
+
+Migration 0101 only adds five indexes (#4712), for three reads that read rows they threw away, and the reaper
+gets a read of its own. `replays_list_with_modes` (`GET /api/replays`, `GET /api/friends/recent`) finds its page
+first, one arm per seat, each walking `matches_p1_over_ended_idx` or `matches_p2_over_ended_idx` (a seat, then
+the list's `order by`, partial on `status = 'over'`) in order and stopping after `limit + offset` rows, and joins
+only the page; it answers `ReplayListRow`, the seats, catalog version, ranked flag, portraits, result, log length
+and mode the two routes read, never a deck, board, loadout or win-rate snapshot (a change to that `order by`
+needs a migration that rebuilds both indexes). `results_record_for` (`GET /api/auth/me`) sums one count per seat,
+each read from `results_p1_record_idx` or `results_p2_record_idx` alone, the second leaving out a row that seats
+the player twice, as the `or` it replaces counted such a row once. `last_boards_sample_others` (every match
+start, R678) takes the boards from a random key on in profile order through `last_boards_server_sample_idx`,
+topped up from the lowest id, instead of sorting every board at random: a sample less even, which its doc
+comment weighs. The reaper reads `matches_past_ceiling`, the live matches past their ceiling through 0004's
+`matches_status_ceiling_at_idx`, rather than every live match and win-rate snapshot every
+`MATCH_REAPER_INTERVAL_SECONDS`; `matches_live` stays a restart's recovery. On synthetic data (300,000 finished
+matches, 11,000 of them one player's) the list's page went from about 150 ms to under 2 ms, the record from 8 ms
+to 2 ms, the sample from 4 ms to under 0.1 ms and the reaper's pass over 400 live matches from about 150 ms to 2 ms.
+`tests/sql/01_schema_invariants.sql` CHECK 29 holds each index to its shape and plans each read with sequential
+scans off.
 
 ## Tests
 
