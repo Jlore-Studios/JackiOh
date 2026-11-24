@@ -21478,6 +21478,14 @@
         "sha": "6f40bd7ffe3cf896061f069bcb887c90f23eb75b",
         "tiers": {}
       }
+    },
+    "4760": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-24T15:25:15Z",
+      "issue": 4737,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
