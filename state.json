@@ -41434,6 +41434,14 @@
         "title": "Patch: the fuzz monitor fails a game in which an attack targets a card barred by attack restrictions",
         "verdict": "came to nothing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T09:31:00Z",
+        "number": 4685,
+        "reason": "this undoes two decisions made on purpose. R2990003 rejected \"closing a watch whenever its watcher and anyone in the match stand blocked, which would let a rival end a friend's watch by blocking the watcher\", and R3731002 has a 2v2 watch refused by a block with the watched person's teammate only. Presence hiding Watch for a block with any of the four is the stricter half, also chosen. Opponents' blocks already keep their emotes apart (R2990003). Changing this is a design call for the maintainers",
+        "title": "Patch: 2v2 spectator authorization and live revocation check both teams' players against blocks",
+        "verdict": "came to nothing",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "declined": [
@@ -42200,6 +42208,13 @@
         "number": 4687,
         "reason": "one bug of this class has shipped (#4623's forced Windfast stand-in), and it is fixed now, with tests that fail without the fix. That is one case, not a recurring class. The proposal also has the monitor call `restrictions::attack_restriction` itself, which restates the engine's check rather than judging from events, against the monitor's own \"an oracle, not the fix restated\" rule, so a bug inside that function would pass it. Worth revisiting if a second attack-restriction bug gets through.",
         "title": "Patch: the fuzz monitor fails a game in which an attack targets a card barred by attack restrictions",
+        "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T09:31:00Z",
+        "number": 4685,
+        "reason": "this undoes two decisions made on purpose. R2990003 rejected \"closing a watch whenever its watcher and anyone in the match stand blocked, which would let a rival end a friend's watch by blocking the watcher\", and R3731002 has a 2v2 watch refused by a block with the watched person's teammate only. Presence hiding Watch for a block with any of the four is the stricter half, also chosen. Opponents' blocks already keep their emotes apart (R2990003). Changing this is a design call for the maintainers",
+        "title": "Patch: 2v2 spectator authorization and live revocation check both teams' players against blocks",
         "why": "rejected by @jgoetzmann"
       }
     ],
