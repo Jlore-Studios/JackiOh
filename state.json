@@ -20989,6 +20989,7 @@
       "run_id": "45425164185",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 504,
       "started_at": "2026-11-24T15:24:29Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -43955,7 +43956,7 @@
         "verdict": "findings"
       }
     ],
-    "count": 503
+    "count": 504
   },
   "statistics": {
     "at": "2026-11-24T16:00:35Z"
