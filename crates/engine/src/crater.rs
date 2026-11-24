@@ -8,6 +8,7 @@
 //! (`state_check`), Joro's summon (`replacements`), a Flicker (`effects/flicker`), a Cloaked reveal
 //! (`alt_play`). A control change, swap, rotation, animation, Transform or restored board is no
 //! arrival. Crater on a Spell does nothing; a Field Spell with it Locks its backrow zone (R1850006).
+//! A GIGA card Locks all four zones it fills, its anchor's and the three it covers (R4693000).
 
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState, find_instance};
@@ -27,10 +28,29 @@ fn lock(sink: &mut EngineSink<'_>, slot: ZoneSlot) {
     });
 }
 
+/// R4693000: the zones Crater Locks for `card` standing at `at`: the four a GIGA fills
+/// (`giga::spanned_slots`, R3546000), both rows of both lanes, and the one zone of any other card.
+fn crater_zones(card: &CardInstance, at: ZoneSlot) -> Vec<ZoneSlot> {
+    if crate::giga::is_giga(card)
+        && let Some(span) = crate::giga::spanned_slots(at)
+    {
+        span
+    } else {
+        vec![at]
+    }
+}
+
+/// Lock each of `zones` (R4693000's `crater_zones`), in order.
+fn lock_all(sink: &mut EngineSink<'_>, zones: Vec<ZoneSlot>) {
+    for slot in zones {
+        lock(sink, slot);
+    }
+}
+
 /// R783010: the card of this id, standing in a unit zone with Crater (read through the layers, §10.4),
 /// Locks that zone. Called as it arrives on the field, before its Cry. A Flying Unit standing in a
 /// backrow zone Locks that one (R1081000), and so does a face-up Field Spell entering a backrow zone
-/// (R1850006).
+/// (R1850006). A GIGA Locks the four zones it fills (R4693000).
 pub fn lock_on_arrival(sink: &mut EngineSink<'_>, id: &str) {
     let Some(card) = find_instance(sink.state, id) else {
         return;
@@ -39,7 +59,7 @@ pub fn lock_on_arrival(sink: &mut EngineSink<'_>, id: &str) {
         if crate::layers::unit_has(sink.state, card, KeywordKind::Crater)
             && let Some(at) = slot_of(sink.state, card)
         {
-            lock(sink, at);
+            lock_all(sink, crater_zones(card, at));
         }
         return;
     }
@@ -52,7 +72,7 @@ pub fn lock_on_arrival(sink: &mut EngineSink<'_>, id: &str) {
     let Some(at) = slot_of(sink.state, card) else {
         return;
     };
-    lock(sink, at);
+    lock_all(sink, crater_zones(card, at));
 }
 
 /// R1850006: a face-up Field Spell in a backrow zone of its own, not a Unit standing there.
@@ -71,7 +91,8 @@ fn field_spell_in_backrow(state: &GameState, card: &CardInstance) -> bool {
 /// R783011: a Trap or Field Trap with Crater Locks the backrow zone it stood in as it is revealed, as
 /// it fires face-down: `trap` as the firing matched it, `at` its zone then (`traps::fire_trap`, and
 /// `replacements` for one firing as it replaces, §5.1). A Field Trap firing again Locks nothing more,
-/// and a card set face-down by its Cloaked is not a Trap by its face.
+/// and a card set face-down by its Cloaked is not a Trap by its face. A GIGA Trap Locks the four
+/// zones it filled (R4693000).
 pub fn lock_on_firing(sink: &mut EngineSink<'_>, trap: &CardInstance, at: Option<ZoneSlot>) {
     let Some(at) = at else {
         return;
@@ -86,5 +107,5 @@ pub fn lock_on_firing(sink: &mut EngineSink<'_>, trap: &CardInstance, at: Option
     if !crate::layers::unit_has(sink.state, trap, KeywordKind::Crater) {
         return;
     }
-    lock(sink, at);
+    lock_all(sink, crater_zones(trap, at));
 }
