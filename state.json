@@ -41283,6 +41283,7 @@
       {
         "at": "2026-11-24T09:18:37Z",
         "number": 4697,
+        "reason": "this is a regression #4608 caused, and it's measured: the AI wins a draw-then-lethal scene on 13 of 40 seeds as shipped, and on 40 of 40 with `replay_fill_steps` at 3, while every `r4608000_` test still passes. The fill already exists and is tested (R4447000), so this turns it on rather than adding new search code. Hold its fork screen to `training/improve.md`'s own rule, not the issue's looser one: keep 3 only when `forkEdgeLow` is above 0, or, if the screen is inconclusive, by the scene tests ",
         "title": "Patch: the AI takes a lethal it reaches by drawing first, as it did before #4608, by finishing a cut-short replay's turn on each sampled world",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
