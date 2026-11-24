@@ -20159,6 +20159,13 @@
     "4731": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45408240066",
+        "model": "sonnet",
+        "provider": "claude-3",
+        "since": "2026-11-24T14:04:16Z",
+        "until": "2026-11-24T14:34:16Z"
+      },
       "difficulty_by": {
         "at": "2026-11-24T14:04:07Z",
         "difficulty": "medium",
