@@ -11,7 +11,7 @@ import { ANIMATIONS, HIDDEN_ID } from "./animations.ts";
 import { DAMAGE_FEEL, SLAM_LAND_AT, UNIT_SLAM } from "./damageFeel.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { testid, type Highlight } from "./contract.ts";
-import Game, { GAME_HOST_ATTRIBUTE, sameHighlight } from "./Game.tsx";
+import Game, { GAME_HOST_ATTRIBUTE, GAME_SCROLL_LOCK_ATTRIBUTE, sameHighlight } from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, pendingFor, unit, waitingPending, withEvents } from "../test/fixtures.ts";
@@ -188,6 +188,26 @@ describe("#3633 the game screen's host", () => {
     expect(host).toHaveAttribute(GAME_HOST_ATTRIBUTE, "true");
     unmount();
     expect(host).not.toHaveAttribute(GAME_HOST_ATTRIBUTE);
+  });
+
+  it("R4773000 Game locks the document against scroll while mounted and restores it on unmount", () => {
+    const shell = (showGame: boolean): ReactElement => (
+      <div className="app-shell app-shell--wide" data-testid="shell">
+        <nav className="screen-nav" />
+        {showGame ? <Game view={withEvents(baseView(), START)} legal={[]} onAction={vi.fn()} /> : null}
+      </div>
+    );
+    const { rerender, unmount } = render(shell(true));
+    const host = screen.getByTestId("shell");
+    expect(document.documentElement).toHaveAttribute(GAME_SCROLL_LOCK_ATTRIBUTE, "true");
+    // The route takes the game down and keeps its shell: the lock goes with the game.
+    rerender(shell(false));
+    expect(host).not.toHaveAttribute(GAME_HOST_ATTRIBUTE);
+    expect(document.documentElement).not.toHaveAttribute(GAME_SCROLL_LOCK_ATTRIBUTE);
+    rerender(shell(true));
+    expect(document.documentElement).toHaveAttribute(GAME_SCROLL_LOCK_ATTRIBUTE, "true");
+    unmount();
+    expect(document.documentElement).not.toHaveAttribute(GAME_SCROLL_LOCK_ATTRIBUTE);
   });
 });
 
