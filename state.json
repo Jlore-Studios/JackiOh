@@ -19065,6 +19065,13 @@
     "4779": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T20:58:43Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "CLAUDE.md rule 11 line 3 (design across crates): crates/tools (ship/check), crates/cards (build/history) and apps/web (Patch type) must agree on the new fragment field and its resolution"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
