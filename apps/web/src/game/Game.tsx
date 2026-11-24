@@ -44,7 +44,7 @@ import DragLayer from "./drag/DragLayer.tsx";
 import OpponentAim from "./aim/OpponentAim.tsx";
 import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
-import { IDLE, answerPlaguePlacement, boardKeyOf, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
+import { IDLE, answerPlaguePlacement, answerTargetPrompt, boardKeyOf, highlightFor, matchTargetOption, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import { attackOutcomes, hoveredAttack, withOutcomes, type HoveredAttack } from "./attackOutcome.ts";
 import {
   HIDDEN_ID,
@@ -778,18 +778,37 @@ export default function Game({
   // #3633: what a click reads, as the board last drew it. The handler reads it here rather than closing
   // over it, so it stays one function while the board shows one view, and the cards it is handed to
   // (Card.tsx, sameCardProps) are not drawn again whenever the shown view changes.
-  const clickReads = useRef({ shown, legal, interaction });
+  const clickReads = useRef({ shown, legal, interaction, replay });
   useLayoutEffect(() => {
-    clickReads.current = { shown, legal, interaction };
+    clickReads.current = { shown, legal, interaction, replay };
   });
+  // R4781000: the open several-pick `target` prompt's toggle, registered by its picker. A board
+  // click toggles through it and sends nothing until Confirm.
+  const targetPickRef = useRef<((key: string) => void) | null>(null);
   const handleClick = useCallback(
     (target: ClickTarget) => {
-      const { shown: board, legal: moves, interaction: building } = clickReads.current;
+      const { shown: board, legal: moves, interaction: building, replay: isReplay } = clickReads.current;
       // R821000: "Place N Plague Counters" is answered by a click on the board, not from a list.
       const placement = answerPlaguePlacement(board, moves, board.pending, target);
       if (placement !== null) {
         dispatch(placement);
         return;
+      }
+      // R4781000: an open `target` prompt is answered by a click on the board too. A prompt of one
+      // pick sends the engine's answer at once; a prompt of several toggles the picker's selection,
+      // so its Confirm still sends. Either way the click answers exactly once and never reaches the
+      // attack notice below. A replay answers nothing from a board click.
+      if (!isReplay) {
+        const single = answerTargetPrompt(board, moves, board.pending, target);
+        if (single !== null) {
+          dispatch(single);
+          return;
+        }
+        const matched = matchTargetOption(board, board.pending, target);
+        if (matched !== null) {
+          targetPickRef.current?.(matched.key);
+          return;
+        }
       }
       const next = onClickTarget(board, moves, building, target);
       setInteraction(next.interaction);
@@ -1091,6 +1110,7 @@ export default function Game({
           interaction={interaction}
           legal={legal}
           onAction={dispatch}
+          boardPickRef={targetPickRef}
           onInteraction={setInteraction}
           animating={animating.get(animTestid.prompt)}
           lesson={lesson}
