@@ -19321,6 +19321,7 @@
     "4706": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-24T07:52:52Z",
