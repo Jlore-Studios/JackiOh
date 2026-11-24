@@ -20336,6 +20336,8 @@
       }
     },
     "4741": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T13:14:39Z",
@@ -20349,8 +20351,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #4716 from the after-merge spot-check\"} -->\n- Both findings from the #4716 spot-check are fixed where pointed, following the plan with no departures.\n- **Hidden-tab alarm silence** ([clockAlarm.ts](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4736/apps/web/src/audio/clockAlarm.ts)): added `CLOCK_ALARM_HIDDEN_LOOKAHEAD_MS = 1_000` in [constants.ts](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4736/apps/web/src/audio/constants.\u2026\n- **Mulligan alarm after answering**: added optional `ClockProps.mulliganAnswered`, wired in [match.tsx](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4736/apps/web/src/routes/match.tsx) as `view.mulligan?.youReady === true`, gating the mulligan hook. The countdown still renders; only the b\u2026\n- **Tests** (all fail-without-fix sensitive): new R506 test steps a hidden countdown at 1000 ms across six phases and expects all 30 beats exactly once on time; new R268 test renders an answered viewer through a full 45 s mulligan and expects zero beats with the mulligan line still rendered; constant\u2026\n- **Verification** (commands run, output seen): `clockAlarm.test.ts` 20/20, `constants.test.ts` + `Clock.test.tsx` 58/58, `match.test.tsx` 85/85 (covers the `match.tsx` wiring), `cargo jackioh spec check` ok (2455 rulings, 6135 proofs), `pnpm typecheck` clean, `cargo fmt --check` clean, eslint clean \u2026\n- **Decisions**: none beyond the plan \u2014 no new ruling note, since both fixes are client timing/audio gating citing existing R-ids, not rules decisions. One environment note: `typecheck` exhausts the default 2 GB Node heap on this machine and passes with `NODE_OPTIONS=--max-old-space-size=6144`; unrel\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4736 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4736/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4736,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T13:40:38Z",
         "from_run": "45401423337",
         "gates": [
           {
@@ -20409,8 +20414,15 @@
         "source": "build",
         "until": "2026-11-24T14:09:41Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-24T13:39:41Z",
+      "run_id": "pending:142c7dc1-1795527612",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-24T13:40:38Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -20424,9 +20436,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T13:31:23Z",
+    "at": "2026-11-24T13:40:38Z",
     "url": "",
-    "what": "suggestions (client) on claude-4"
+    "what": "review #4741 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T13:29:23Z",
