@@ -15820,18 +15820,18 @@
       "kind": "build",
       "live": "planning",
       "onto": "bot/issue-4578",
-      "owner": "claude-1",
-      "owner_since": "2026-11-24T09:52:15Z",
-      "owner_why": "it plans it",
+      "owner": "claude-4",
+      "owner_since": "2026-11-24T10:06:46Z",
+      "owner_why": "handed off from `claude-1`: it could not take it",
       "part_of": 4578,
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-4",
       "queued_at": "2026-11-23T08:56:33Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "45369291125",
+      "run_id": "pending:797d9a48-1795514777",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T09:52:15Z",
+      "started_at": "2026-11-24T10:06:46Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the integration branch bot/issue-4578 is gone"
@@ -19184,9 +19184,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T10:05:56Z",
+    "at": "2026-11-24T10:06:46Z",
     "url": "",
-    "what": "revise #4574 on claude-6"
+    "what": "plan #4585 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-24T09:47:08Z",
