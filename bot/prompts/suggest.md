@@ -39,17 +39,31 @@ The maintainers approve most suggestions, but they reject these, whatever the cl
 one unless it has the evidence that answers the objection:
 
 - **Guarding against something that hasn't happened**: a new fuzz wave, regression corpus,
-  invariant harness or check with no bug, failing seed or incident it would have caught. They add
-  these the first time such a bug gets past the tests they have.
+  invariant harness or check with no bug, failing seed or incident it would have caught, or a check
+  over a list that is empty today. They add these the first time such a bug gets past the tests
+  they have.
 - **A speed-up nobody measured**: fewer queries, a smaller bundle, lazy loading or caching, with no
   measurement of a cost a player or the maintainer feels at the game's current size, in exchange
   for rewriting code whose order or behaviour has to stay exactly as it is.
-- **A report nothing acts on**: telemetry, counters or totals that change no decision. Wins, and
-  what players see, are the measures that matter.
+- **A report nothing acts on**: telemetry, counters or totals that change no decision, or an output
+  no tool or notebook reads yet. Wins, and what players see, are the measures that matter.
 - **Upkeep for every future change**: a check, lint or rule that every later card, spec or test
   has to satisfy, costing more over time than the mistakes it would catch.
-- **A design or roadmap call**: a new mode, an economy or reward change, how decks are dealt or a
-  card's rules. Propose these only when the spec or an issue already asks for them.
+- **A design or roadmap call**: a new mode, an economy or reward change, how decks are dealt, a
+  card's rules or a nice-to-have feature nobody asked for. Propose these only when the spec or an
+  issue already asks for them.
+- **Polish only the maintainer sees**: a cosmetic fix in an analysis notebook or the admin
+  dashboard.
+- **Undoing a decision made on purpose**: a test moved to the daily run, a check kept report-only,
+  unless you name the decision and what has changed since.
+- **Overlap**: one that an open suggestion or issue mostly covers already.
+
+A guard or a speed-up clears the bar with evidence. For a guard, that means the same class of bug
+fixed more than once lately, a rule change that just made many code paths newly reachable, a bug of
+its kind that just shipped where no check could see it, or code no check compiles at all. For a
+speed-up, it means a cost measured on a hot path or a CI job, or an optimisation that never worked as
+written. Put that evidence in the issue's **Why**, with its file and line. A small fix to a bug
+players hit in normal use needs no more than the bug.
 
 The reasons people gave for the suggestions that came to nothing (below, after "Why:") say more.
 

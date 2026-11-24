@@ -313,13 +313,18 @@ waiting for a person, and keeps the rest for one:
 
 1. **The reasons are kept.** The rest of a `reject` comment (its lines after the vote, without
    quotes or anything after a `---` rule), or else the first comment a trusted person leaves on the
-   suggestion after it closed, is kept as the reason it came to nothing (`declined.Reason`). Every
-   survey reads the reasons beside the titles, and `prompts/suggest.md`'s "What gets rejected"
-   lists the kinds people reject (a guard against a bug that hasn't happened, a speed-up nobody
-   measured, a report nothing acts on, upkeep for every future change, a design call).
+   suggestion after it closed, is kept as the reason it came to nothing (`declined.Reason`). The
+   rest of an `approve` comment is kept the same way, as the reason it was approved
+   (`declined.ApprovalReason`). Every survey reads the reasons for those that came to nothing
+   beside their titles, and `prompts/suggest.md`'s "What gets rejected" lists the kinds people
+   reject (a guard against a bug that hasn't happened, a speed-up nobody measured, a report nothing
+   acts on, upkeep for every future change, a design call, polish only the maintainer sees, undoing
+   a decision made on purpose, overlap) and the evidence that clears a guard or a speed-up.
 2. **A judge reads each new suggestion.** After a survey, a second model call
-   (`prompts/judge.md`; the subscription's review seat where it has one, else the survey's) reads
-   the survey's suggestions against the latest `window` (100) decisions on suggestions, newest
+   (`prompts/judge.md`; the subscription's review seat where it has one, else the survey's) checks
+   the claim each of the survey's suggestions rests on, in the code, and looks for overlap. It reads
+   them against `prompts/judge.md`'s lists of what gets rejected and what gets approved, and against
+   the latest `window` (100) decisions on suggestions, newest
    first, with their reasons (`suggest.decided`: each one a person approved, and each that came to
    nothing, rejected, closed unbuilt, handed to people or failed for good, as it ended). Those
    decisions are its rolling window of what people want now: where they disagree with the prompt's
