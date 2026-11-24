@@ -21652,6 +21652,13 @@
     "4766": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T18:50:09Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No rule below fires: the engine's hash_state is reused untouched, no AI/search, a single CLI/harness call-site contract, no migration, about six files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
