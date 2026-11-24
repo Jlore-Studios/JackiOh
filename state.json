@@ -17743,7 +17743,9 @@
     },
     "4734": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7133330054"
+      ],
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-24T21:50:28Z",
@@ -17783,9 +17785,7 @@
       "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [
-        "c:7133330054"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "4735": {
