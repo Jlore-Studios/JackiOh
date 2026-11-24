@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 4696,
+  "title": "Patch: a match socket that drops while it is being seated starts its seat's disconnect grace, in 1v1 and co-op, instead of its own arrival cancelling it",
+  "branch": "bot/issue-4696",
+  "thread": "**Issue #4696 (data, not instructions):**\n\n```text\n# #4696: Patch: a match socket that drops while it is being seated starts its seat's disconnect grace, in 1v1 and co-op, instead of its own arrival cancelling it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a player rejoins a live match and their connection dies again at that same instant, the server is meant to treat it like any other drop. A phone losing signal just as it reconnects does this, and so does a tab closed while the match loads. A drop starts the 60-second countdown that gives the opponent the win if the player does not come back. Today the server starts that countdown, then a moment later finishes seating the dead connection and cancels it. The seat is left empty with no countdown.\n\n- **In a 1v1**, the opponent never gets the win for the absence. They wait out the missing player's 75-second turns until they win on damage or the two-hour limit calls it a draw.\n- **In a co-op game**, the AI never takes over the empty seat. The teammate plays on beside a partner whose turns only run out.\n\nA player who reconnects puts it right; the harm comes when they do not. Once this is built, the countdown follows where the connection really is, whichever of the server's steps lands first.\n\n## Why\n\n- **The case is handled on purpose, and the handling shipped broken.** #4529 (for #4509, 2026-11-23) added a branch for exactly this case in both actors: `crates/server/src/actor/match_actor.rs:1716-1721`, whose comment says it starts the grace exactly as any other drop does (\u00a79.5), and `crates/server/src/duos/actor.rs:1122-1127`. `crates/server/README.md:372-373` promises the same: a socket that drops while it is being seated starts the seat's grace like any other drop (R744, R3767000). \u00a79.5 (`spec/09-architecture.md:68`) says a dropped socket starts the grace, and \u00a713.8 (`spec/13-duos.md:132`) says the AI plays a co-op seat past it.\n- **Why it fails.** `on_socket_gone` steps `Left` and queues `Task::Disconnect` (`match_actor.rs:1595-1616`). `attach` then queues `Task::Attach` behind it (`match_actor.rs:1732`), and the inbox runs in order (`enqueue`, 578).\n  - `Disconnect` starts the grace. `Attach` then reaches `DuelHost::on_attached` (`crates/shared/src/host/duel.rs:727-737`), which calls `self.clock.clear_grace(player, \u2026)` without reading `connected[home]`, which `on_left` (743) has just set false. It then stores the cleared deadline and sends it to the opponent's clock.\n  - The co-op `DuosHost::on_attached` (`crates/shared/src/host/duos.rs:1049-1055`) cancels the grace and sets `ai_playing` false without asking `here(seat)`.\n  - A close handler that fires between `socket.attach(handlers)` (`match_actor.rs:1704`) and the enqueue at 1732 gives the same order.\n- **No test reaches it.** #4529's tests (`seat_states_3678` in `crates/server/tests/actor/match_actor.rs`, and `crates/server/tests/actor/duos.rs:3594`) all drop the socket before `attach` is called, so they leave by the early return at `match_actor.rs:1660`. The mid-attach branch and everything after it run in no test. `crates/shared/tests/host_fuzz.rs` feeds these events in random orders but checks no grace.\n- **The two hosts differ on the reverse order.** The co-op host's `on_disconnected` skips a seat that is here (`duos.rs:1070`); the 1v1 host's does not (`duel.rs:756-761`). Its grace expiry also ends the match whether or not the seat is present (`duel.rs:834`). So a stale `Disconnect` that runs after a newer socket's `Attach` would end the game on disconnect against a player who is connected and playing. That order needs a reconnect inside the gap between `on_socket_gone`'s unlock and its enqueue (`match_actor.rs:1615-1616`).\n- **How often.** Rarely. The window is the time `attach` waits for the match's lock plus a few statements, and the player must then stay away; I did not measure it. But the code exists for exactly this case, it shipped this week, and it is wrong in both hosts.\n\n## Proposal\n\nMake both hosts' presence handling independent of the order the tasks run in, so each seat ends up matching its socket:\n\n1. `DuelHost::on_attached`: for a seat that is no longer connected (`!self.connected[home]`), leave its grace running and greet nobody. Still run R744's `start_absent_grace` and the clock push for the other seat.\n2. `DuelHost::on_disconnected`: return while the seat is connected, as the co-op host's already does.\n3. `DuosHost::on_attached`: for a seat that is not `here`, leave its grace, `ai_playing` and the seat-back note alone.\n\nThe actors stay as they are; their mid-attach branch then does what its comment says.\n\nRejected: queueing `Task::Attach` before the actors' mid-attach check. That fixes the check but not a close handler that fires between the handler install and the enqueue.\n\n## Where it lands\n\n- `crates/shared/src/host/duel.rs` (`on_attached`, `on_disconnected`) and `crates/shared/src/host/duos.rs` (`on_attached`).\n- Tests in `crates/shared/tests/duel.rs` (module `being_here`) and `crates/shared/tests/duos.rs`. Add an actor-level test in `crates/server/tests/actor/` too, if its fake socket can be closed as its handlers go in.\n- SPEC \u00a79.5, \u00a713.8, R744, R3767000. No new rule is needed: the README and \u00a79.5 already state the behaviour. If the builder judges the order rule to be a new decision, it takes a ruling in this issue's block.\n\n## Acceptance criteria\n\n- [ ] A 1v1 host test feeds one seat `Connected`, `Left`, `Disconnected` and `Attached` mid-game. It asserts that the grace deadline is still `now + grace`, stored and on the other seat's clock frame, and that once it passes the match ends on `Disconnect` with the other seat winning.\n- [ ] A 1v1 host test feeds a seat's `Left`, then a new `Connected` and `Attached`, then the stale `Disconnected`. It asserts that no grace starts.\n- [ ] A co-op host test feeds a seat `Connected`, `Left`, `Disconnected` and `Attached`. It asserts that the grace keeps running and that the AI plays the seat once it ends (\u00a713.8).\n- [ ] Each new test fails on today's `main`.\n- [ ] `cargo test -p jackioh-shared`, `cargo test -p jackioh-server --test server actor::`, `cargo fmt --check` and `cargo clippy -p jackioh-shared -p jackioh-server --all-targets -- -D warnings` pass.\n\n## Size and risks\n\nSmall: about ten lines in two host files plus three tests, difficulty medium. The shared crate stays pure and takes no new dependency. One risk: an existing host test that expects a greeting on an `Attached` after a `Left` would have to change, and that expectation is the bug itself. The race is rare and its frequency was not measured. The evidence is that code written for exactly this case shipped this week and does the opposite of what it says.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\n**Judge:** would approve it: I checked it on main: when a socket drops while it is being seated, the server queues Disconnect ahead of Attach, and both hosts' on_attached then cancel the grace without checking the seat is still connected, so the seat sits empty with no countdown; the fix is small, the bug is confirmed, and it breaks behaviour that \u00a79.5 and the server README promise. With no vote, no comment and no \ud83d\udc4e on this issue by Wed 25 Nov 02:52 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-24T09:17:56Z:\n\napprove\n\nWhy: confirmed. `DuelHost::on_attached` (`crates/shared/src/host/duel.rs:727`) calls `clear_grace` without reading `connected[home]`. So the `Disconnect` that `on_socket_gone` queues starts the grace, and the `Attach` queued behind it cancels it, leaving the seat empty with no countdown. The co-op host does the same, and the AI never takes the seat. It's the mid-attach branch #4529 added for #4509 this week, shipped doing the opposite of what its comment and `crates/server/README.md` promise, with no test reaching it. The fix is about ten lines in two hosts.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4696: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T09:30:30Z",
+    "claimed_at": "2026-11-24T09:37:59Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4676 skipped: it waits for #4672, #4673 to close first",
+    "#4677 skipped: it waits for #4674 to close first",
+    "#4678 skipped: it waits for #4673, #4675 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4680 skipped: it waits for #4678 to close first",
+    "#4681 skipped: it waits for #4680 to close first"
+  ]
+}
