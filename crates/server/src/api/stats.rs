@@ -692,6 +692,7 @@ fn public_report(
         decks,
         cards,
         created,
+        choices: Vec::new(),
     }
 }
 

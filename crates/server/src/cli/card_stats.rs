@@ -19,6 +19,9 @@
 //! The arithmetic is `card_stats_of` in `jackioh_engine::wire::stats`, which the AI's development run prints
 //! its own games with too, so a pre-release run and the live games after it compare figure for figure: run
 //! both with the same `--patch`.
+//!
+//! R4672003: with `--card`, the card's variants table and its outputs table follow its other tables
+//! (`format_card_choices`), and `--json` carries them as the report's `choices`.
 
 use anyhow::bail;
 use serde::Serialize;
@@ -26,7 +29,7 @@ use serde::Serialize;
 use jackioh_engine::wire::{
     CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, GAME_MODES, GameMode, ModeFilter,
     PILOT_FILTERS, PilotFilter, SOURCE_FILTERS, SourceFilter, WindowQuery, WindowRequest, WindowedReport,
-    card_stats_of, format_card_stats, windowed_card_stats,
+    card_stats_of, format_card_choices, format_card_stats, windowed_card_stats,
 };
 
 use crate::cli::{connect_one, database_url};
@@ -40,7 +43,7 @@ const USAGE: &str = "Usage: jackioh-server stats-cards [options]
   --patch=<version>          One patch, as patches.json names it. Default: every patch.
   --pilot=human|ai|unified   The seats counted. Default: unified, every counted seat;
                              human reads the people's sides only, ai the bots'.
-  --card=<id>                One card's row only.
+  --card=<id>                One card's row only, then its variants and its outputs.
   --json                     The report as JSON.
   --window[=<version>]       R1367000: every card over its own window at the version (default the
                              newest shipped), as GET /api/stats/cards reads it and a match's
@@ -208,8 +211,9 @@ pub async fn card_stats_report(db: &Db, options: &CardStatsOptions) -> Result<Ca
     let mut report = card_stats_of(&totals, &options.filter);
     if let Some(only) = &options.card {
         report.cards.retain(|stats| &stats.card == only);
-        // R2089000: the Created table is filtered as the deck's is.
+        // R2089000: the Created table is filtered as the deck's is, and R4672003's choices.
         report.created.retain(|stats| &stats.card == only);
+        report.choices.retain(|row| &row.card == only);
     }
     Ok(report)
 }
@@ -222,14 +226,15 @@ pub fn render_card_stats(
     if options.json {
         return serde_json::to_string_pretty(report).unwrap_or_default();
     }
-    let table = format_card_stats(report, name_of);
-    if let Some(card) = &options.card
-        && report.cards.is_empty()
-        && report.created.is_empty()
-    {
-        return format!("{table}\nNo deck the filter counts held {card}.");
+    let mut table = format_card_stats(report, name_of);
+    let Some(card) = &options.card else {
+        return table;
+    };
+    if report.cards.is_empty() && report.created.is_empty() {
+        table.push_str(&format!("\nNo deck the filter counts held {card}."));
     }
-    table
+    // R4672003: the card's variants and outputs, after its other tables.
+    format!("{table}\n\n{}", format_card_choices(report, card, name_of))
 }
 
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {

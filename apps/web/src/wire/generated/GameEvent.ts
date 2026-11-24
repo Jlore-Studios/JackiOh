@@ -33,7 +33,12 @@ import type { Winner } from "./Winner";
 import type { Zone } from "./Zone";
 import type { ZoneRef } from "./ZoneRef";
 
-export type GameEvent = { "type": "cardPlayed", player: PlayerId, instanceId: string, defId: string, costPaid: number, x?: number, embiggened?: boolean, formerId?: string, 
+export type GameEvent = { "type": "cardPlayed", player: PlayerId, instanceId: string, defId: string, costPaid: number, x?: number, embiggened?: boolean, 
+/**
+ * R4672000: the play's declared choices (R81) in its card's option order; the game record's,
+ * which no rule reads (`as_rules_read`) and no view forwards.
+ */
+modes?: Array<string>, formerId?: string, 
 /**
  * B5 E11, R454: the card was played from its player's graveyard, not the hand. Public.
  */

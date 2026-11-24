@@ -1109,7 +1109,7 @@ mod r2089000_created_cards {
         let before = s.state().clone();
         let from = s.events().len();
         verb(s);
-        reader.step(&before, &s.events()[from..], s.state());
+        reader.step(&before, s.last_action(), &s.events()[from..], s.state());
     }
 
     fn used(card: &str, turn: i32, radiant: bool) -> CreatedUse {
@@ -1117,6 +1117,19 @@ mod r2089000_created_cards {
             card: card.to_string(),
             turn,
             radiant,
+            variant: None,
+            source: None,
+        }
+    }
+
+    /// R4672001: a `createdUsed` entry, which names the card that made it (`None` for a rule's).
+    fn made(card: &str, turn: i32, radiant: bool, source: Option<(&str, bool)>) -> CreatedUse {
+        CreatedUse {
+            source: source.map(|(card, radiant)| MadeBy {
+                card: card.to_string(),
+                radiant,
+            }),
+            ..used(card, turn, radiant)
         }
     }
 
@@ -1144,7 +1157,10 @@ mod r2089000_created_cards {
 
         let p1 = reader.seat(P1, vec![TOKEN_MAKER.to_string()]);
         assert_eq!(p1.played, [TOKEN_MAKER]);
-        assert_eq!(p1.created_used, Some(vec![used(RUSH_TOKEN, turn, false)]));
+        assert_eq!(
+            p1.created_used,
+            Some(vec![made(RUSH_TOKEN, turn, false, Some((TOKEN_MAKER, false)))])
+        );
         assert_eq!(p1.created_played, None);
         assert_eq!(p1.created_unused, None);
         assert_eq!(reader.seat(P2, Vec::new()).created_used, None);
@@ -1181,7 +1197,10 @@ mod r2089000_created_cards {
         let p1 = reader.seat(P1, vec![RECYCLING.to_string(), VANILLA.to_string()]);
         assert_eq!(p1.played, [RECYCLING, VANILLA]);
         assert_eq!(p1.played_radiant, Some(vec![false, false]));
-        assert_eq!(p1.created_used, Some(vec![used(VANILLA, turn, false)]));
+        assert_eq!(
+            p1.created_used,
+            Some(vec![made(VANILLA, turn, false, Some((RECYCLING, false)))])
+        );
         assert_eq!(p1.created_played, Some(vec![used(VANILLA, turn, false)]));
         assert_eq!(p1.created_unused, None);
     }
@@ -1287,7 +1306,10 @@ mod r2089000_created_cards {
         );
         let turn = s.state().turn;
         let p1 = reader.seat(P1, Vec::new());
-        assert_eq!(p1.created_used, Some(vec![used(CURSE, turn, false)]));
+        assert_eq!(
+            p1.created_used,
+            Some(vec![made(CURSE, turn, false, Some((SHADE_IRIS, false)))])
+        );
         assert_eq!(p1.created_unused, None);
         // A cast is no play from the hand (§2.4, R70), and the Curse is neither a draw nor p2's.
         let p2 = reader.seat(P2, Vec::new());
@@ -1333,7 +1355,10 @@ mod r2089000_created_cards {
         let p1 = reader.seat(P1, Vec::new());
         assert_eq!(
             p1.created_used,
-            Some(vec![used(WELL, turn, false); wells(P1) + wells(P2)])
+            Some(vec![
+                made(WELL, turn, false, Some((FATE, false)));
+                wells(P1) + wells(P2)
+            ])
         );
         assert_eq!(p1.created_unused, None);
         let p2 = reader.seat(P2, Vec::new());
@@ -1402,8 +1427,8 @@ mod r2089000_created_cards {
         result.state
     }
 
-    #[test]
-    fn r2089000_the_coin_never_played_is_the_second_seat_s_created_card_not_used() {
+    /// A game whose seats both keep their opening hands and p1 concedes, The Coin never played.
+    pub(super) fn coin_game() -> GameSummary {
         register_all();
         let units: Vec<String> = pool()
             .into_iter()
@@ -1446,6 +1471,12 @@ mod r2089000_created_cards {
         }) else {
             panic!("a finished game has a summary");
         };
+        summary
+    }
+
+    #[test]
+    fn r2089000_the_coin_never_played_is_the_second_seat_s_created_card_not_used() {
+        let summary = coin_game();
         let p2 = &summary.seats.p2;
         assert_eq!(p2.created_unused, Some(vec![COIN_DEF_ID.to_string()]));
         assert_eq!(p2.created_used, None);
@@ -1475,7 +1506,7 @@ mod r4279000_cast_or_summoned {
         let before = s.state().clone();
         let from = s.events().len();
         verb(s);
-        reader.step(&before, &s.events()[from..], s.state());
+        reader.step(&before, s.last_action(), &s.events()[from..], s.state());
     }
 
     fn cast(card: &str, turn: i32) -> CreatedUse {
@@ -1483,6 +1514,8 @@ mod r4279000_cast_or_summoned {
             card: card.to_string(),
             turn,
             radiant: false,
+            variant: None,
+            source: None,
         }
     }
 
@@ -1624,5 +1657,348 @@ mod r4279000_cast_or_summoned {
             assert_eq!(p1.cast_or_summoned, Some(vec![cast(card, turn)]), "{card}");
             counted_as_played(&figures(p1, card));
         }
+    }
+}
+
+/// R4672000 to R4672002: each play's variant, each Created card's maker and each Discover-like pick, read
+/// off `scenario()` steps through `SummaryReader` (whose `step` reads a prompt's answer off the action the
+/// step sent, `Scenario::last_action`), one oracle per kind of variant and per kind of maker.
+mod r4672000_choices_and_makers {
+    use super::*;
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
+
+    const FILLER: &str = "core-005"; // Stockpile: a cheap Spell that keeps a library or a hand.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a cheap Spell.
+    const FLOOD: &str = "core-017"; // Flood: Radiant, Choose one of three (declared, R81).
+    const POCKET_CHAOS: &str = "core-087"; // Pocket Chaos: Radiant, a swap and a gift choice (declared).
+    const TUTOR: &str = "core-051"; // KY's Private Tutor: a type, then a bracket, then a reveal (prompts).
+    const DIVIDEND: &str = "core-024"; // Efficiency Dividend: X, and Choose one (declared).
+    const PREP: &str = "classic-035"; // Prep: an Embiggen Spell.
+    const MOTHER: &str = "classicplus-012"; // The Mother Pancake: end of turn, a random Pancake token.
+    const BLUEPRINTS: &str = "meditative-097"; // Jlockeed's Evil Blueprints: Discover a building.
+    const TOKEN_MAKER: &str = "core-015"; // Me and Mr Token: Cry: Summon a Rush Token.
+    const RUSH_TOKEN: &str = "core-t-rush";
+
+    fn step(reader: &mut SummaryReader, s: &mut Scenario, verb: impl FnOnce(&mut Scenario)) {
+        let before = s.state().clone();
+        let from = s.events().len();
+        verb(s);
+        reader.step(&before, s.last_action(), &s.events()[from..], s.state());
+    }
+
+    fn by(card: &str, radiant: bool) -> MadeBy {
+        MadeBy {
+            card: card.to_string(),
+            radiant,
+        }
+    }
+
+    fn modes(options: &[&str]) -> PlayVariant {
+        PlayVariant {
+            modes: options.iter().map(|option| option.to_string()).collect(),
+            ..PlayVariant::default()
+        }
+    }
+
+    /// Neither seat's view of the last step forwards a play's `modes` (CLAUDE.md rule 7).
+    fn no_view_names_modes(s: &Scenario) {
+        for seat in [P1, P2] {
+            let events = serde_json::to_string(&s.view(seat).events).expect("a view serializes");
+            assert!(events.contains("cardPlayed"), "{}'s view", seat.as_str());
+            assert!(
+                !events.contains("\"modes\""),
+                "{}'s view: {events}",
+                seat.as_str()
+            );
+        }
+    }
+
+    #[test]
+    fn r4672000_a_declared_choose_one_is_the_play_s_variant() {
+        register_all();
+        let mut s = scenario(json!({
+            "p1": { "mana": 10, "hand": [{ "def": FLOOD, "radiant": true }, ANCHOR], "library": [FILLER, FILLER] },
+            "p2": { "field": ["core-008"], "hand": [ANCHOR], "library": [FILLER, FILLER] },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        step(&mut reader, &mut s, |s| {
+            s.play(FLOOD, json!({ "modes": ["bounce all enemy units"] }));
+        });
+        assert!(s.events().iter().any(|event| matches!(
+            event,
+            GameEvent::CardPlayed { def_id, modes: Some(modes), .. }
+                if def_id == FLOOD && *modes == ["bounce all enemy units"]
+        )));
+        no_view_names_modes(&s);
+        step(&mut reader, &mut s, |s| {
+            s.play(ANCHOR, json!({}));
+        });
+
+        let p1 = reader.seat(P1, Vec::new());
+        assert_eq!(p1.played, [FLOOD, ANCHOR]);
+        assert_eq!(p1.played_radiant, Some(vec![true, false]));
+        assert_eq!(
+            p1.played_variants,
+            Some(vec![Some(modes(&["bounce all enemy units"])), None])
+        );
+        // A seat whose plays offered no choice keeps the record's shape.
+        assert_eq!(reader.seat(P2, Vec::new()).played_variants, None);
+    }
+
+    #[test]
+    fn r4672000_a_play_with_two_declared_choices_records_both_in_the_card_s_order() {
+        register_all();
+        let mut s = scenario(json!({
+            "p1": { "mana": 10, "health": 12, "hand": [{ "def": POCKET_CHAOS, "radiant": true }, FILLER] },
+            "p2": { "hand": [FILLER], "health": 25 },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        step(&mut reader, &mut s, |s| {
+            s.play(POCKET_CHAOS, json!({ "modes": ["health", "skip"] }));
+        });
+        let p1 = reader.seat(P1, Vec::new());
+        assert_eq!(p1.played_variants, Some(vec![Some(modes(&["health", "skip"]))]));
+    }
+
+    #[test]
+    fn r4672000_r4672002_choices_asked_as_the_card_resolves_join_its_variant_and_its_reveal_is_a_pick() {
+        register_all();
+        let library = [ANCHOR, FILLER, "core-016", ANCHOR, FILLER];
+        let mut s = scenario(json!({
+            "seed": "r4672000-tutor",
+            "p1": { "hand": [TUTOR, ANCHOR], "library": library },
+            "p2": { "hand": [ANCHOR], "library": library },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        step(&mut reader, &mut s, |s| {
+            s.play(TUTOR, json!({}));
+        });
+        step(&mut reader, &mut s, |s| {
+            s.answer(json!("Spell"));
+        });
+        step(&mut reader, &mut s, |s| {
+            s.answer(json!("0-1"));
+        });
+        let reveal = s.state().pending.clone().expect("the reveal is open");
+        assert_eq!(reveal.kind, PromptKind::Discover);
+        let revealed: Vec<(String, String)> = reveal
+            .options
+            .iter()
+            .filter_map(|option| match &option.selection {
+                Selection::Instance { instance_id } => {
+                    Some((instance_id.clone(), s.card(instance_id).def_id.clone()))
+                }
+                _ => None,
+            })
+            .collect();
+        let (picked, picked_card) = revealed.first().cloned().expect("a revealed card");
+        step(&mut reader, &mut s, |s| {
+            s.answer(json!(picked));
+        });
+        assert!(s.state().pending.is_none());
+
+        let p1 = reader.seat(P1, Vec::new());
+        assert_eq!(p1.played, [TUTOR]);
+        assert_eq!(p1.played_variants, Some(vec![Some(modes(&["Spell", "0-1"]))]));
+        assert_eq!(
+            p1.picks,
+            Some(vec![CardPick {
+                source: by(TUTOR, false),
+                offered: revealed.into_iter().map(|(_, card)| card).collect(),
+                picked: vec![picked_card],
+            }])
+        );
+        assert_eq!(reader.seat(P2, Vec::new()).picks, None);
+    }
+
+    /// The Radiant Tutor's Echo (§6.2) asks the type and the bracket again: the play's variant is its first
+    /// resolution's, and each reveal is a pick of its own.
+    #[test]
+    fn r4672000_r4672002_an_echo_repeat_adds_no_choice_to_the_variant_and_its_reveal_is_another_pick() {
+        register_all();
+        let library = [ANCHOR, FILLER, "core-016", ANCHOR, FILLER, ANCHOR, FILLER];
+        let mut s = scenario(json!({
+            "seed": "r4672000-echo",
+            "p1": { "hand": [{ "def": TUTOR, "radiant": true }, ANCHOR], "library": library },
+            "p2": { "hand": [ANCHOR], "library": library },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        step(&mut reader, &mut s, |s| {
+            s.play(TUTOR, json!({}));
+        });
+        for (kind, bracket) in [("Spell", "0-1"), ("Spell", "0-1")] {
+            step(&mut reader, &mut s, |s| {
+                s.answer(json!(kind));
+            });
+            step(&mut reader, &mut s, |s| {
+                s.answer(json!(bracket));
+            });
+            let reveal = s.state().pending.clone().expect("the reveal is open");
+            let picked = match reveal.options.first().map(|option| &option.selection) {
+                Some(Selection::Instance { instance_id }) => instance_id.clone(),
+                other => panic!("a revealed instance, not {other:?}"),
+            };
+            step(&mut reader, &mut s, |s| {
+                s.answer(json!(picked));
+            });
+        }
+        assert!(s.state().pending.is_none());
+
+        let p1 = reader.seat(P1, Vec::new());
+        assert_eq!(p1.played_radiant, Some(vec![true]));
+        assert_eq!(p1.played_variants, Some(vec![Some(modes(&["Spell", "0-1"]))]));
+        let picks = p1.picks.unwrap_or_default();
+        assert_eq!(picks.len(), 2, "{picks:?}");
+        assert!(
+            picks
+                .iter()
+                .all(|pick| pick.source == by(TUTOR, true) && pick.picked.len() == 1)
+        );
+    }
+
+    #[test]
+    fn r4672000_an_x_card_records_each_x_it_was_paid_at() {
+        register_all();
+        for x in [1, 2] {
+            let mut s = scenario(json!({
+                "p1": { "mana": 10, "hand": [DIVIDEND, ANCHOR], "library": [FILLER, FILLER] },
+                "p2": { "hand": [ANCHOR], "library": [FILLER, FILLER] },
+            }));
+            let mut reader = SummaryReader::new(s.state());
+            step(&mut reader, &mut s, |s| {
+                s.play(DIVIDEND, json!({ "x": x, "modes": ["mana"] }));
+            });
+            let p1 = reader.seat(P1, Vec::new());
+            assert_eq!(
+                p1.played_variants,
+                Some(vec![Some(PlayVariant {
+                    x: Some(x),
+                    ..modes(&["mana"])
+                })]),
+                "X={x}"
+            );
+        }
+    }
+
+    #[test]
+    fn r4672000_an_embiggen_card_records_whether_it_was_embiggened() {
+        register_all();
+        for embiggened in [false, true] {
+            let mut s = scenario(json!({
+                "p1": { "mana": 10, "hand": [PREP, ANCHOR], "library": [ANCHOR, FILLER] },
+                "p2": { "hand": [ANCHOR], "library": [FILLER, FILLER] },
+            }));
+            let mut reader = SummaryReader::new(s.state());
+            step(&mut reader, &mut s, |s| {
+                s.play(
+                    PREP,
+                    if embiggened {
+                        json!({ "embiggen": true })
+                    } else {
+                        json!({})
+                    },
+                );
+            });
+            let p1 = reader.seat(P1, Vec::new());
+            assert_eq!(
+                p1.played_variants,
+                Some(vec![Some(PlayVariant {
+                    embiggened: Some(embiggened),
+                    ..PlayVariant::default()
+                })]),
+                "embiggened: {embiggened}"
+            );
+        }
+    }
+
+    #[test]
+    fn r4672001_a_random_output_names_its_source() {
+        register_all();
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "p1": { "hand": [FILLER], "field": [{ "def": MOTHER, "radiant": radiant }], "library": [FILLER, FILLER] },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+            }));
+            let mut reader = SummaryReader::new(s.state());
+            step(&mut reader, &mut s, |s| {
+                s.end_turn();
+            });
+            let p1 = reader.seat(P1, Vec::new());
+            let made = p1.created_unused.clone().unwrap_or_default();
+            assert!(!made.is_empty(), "Radiant {radiant}: a Pancake was made");
+            assert!(
+                made.iter().all(|card| card.starts_with("classicplus-012-")),
+                "{made:?}"
+            );
+            assert_eq!(
+                p1.created_unused_sources,
+                Some(vec![Some(by(MOTHER, radiant)); made.len()]),
+                "Radiant {radiant}"
+            );
+        }
+    }
+
+    #[test]
+    fn r4672001_r4672002_a_discover_names_its_source_and_its_offer() {
+        register_all();
+        let mut s = scenario(json!({
+            "seed": "r4672001-blueprints",
+            "p1": { "hand": [BLUEPRINTS, ANCHOR], "library": [FILLER, FILLER] },
+            "p2": { "hand": [ANCHOR], "library": [FILLER, FILLER] },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        step(&mut reader, &mut s, |s| {
+            s.play(BLUEPRINTS, json!({}));
+        });
+        let offered = s.prompt_modes();
+        assert_eq!(offered.len(), 3);
+        let picked = offered[1].clone();
+        step(&mut reader, &mut s, |s| {
+            s.answer(json!(picked));
+        });
+
+        let p1 = reader.seat(P1, Vec::new());
+        assert_eq!(p1.played, [BLUEPRINTS]);
+        assert_eq!(p1.created_unused, Some(vec![picked.clone()]));
+        assert_eq!(p1.created_unused_sources, Some(vec![Some(by(BLUEPRINTS, false))]));
+        assert_eq!(
+            p1.picks,
+            Some(vec![CardPick {
+                source: by(BLUEPRINTS, false),
+                offered,
+                picked: vec![picked],
+            }])
+        );
+    }
+
+    #[test]
+    fn r4672001_a_summoned_token_names_its_source() {
+        register_all();
+        let mut s = scenario(json!({ "p1": { "hand": [TOKEN_MAKER] } }));
+        let mut reader = SummaryReader::new(s.state());
+        step(&mut reader, &mut s, |s| {
+            s.play(TOKEN_MAKER, json!({}));
+        });
+        let p1 = reader.seat(P1, Vec::new());
+        let used = p1.created_used.clone().unwrap_or_default();
+        assert_eq!(used.len(), 1);
+        assert_eq!(used[0].card, RUSH_TOKEN);
+        assert_eq!(used[0].source, Some(by(TOKEN_MAKER, false)));
+
+        // The engine's record of it is the game record's alone: no hash reads it.
+        assert!(!s.state().makers.is_empty());
+        let mut without = s.state().clone();
+        without.makers.clear();
+        assert_eq!(hash_state(&without), hash_state(s.state()));
+    }
+
+    #[test]
+    fn r4672001_the_coin_names_no_source() {
+        let summary = super::r2089000_created_cards::coin_game();
+        let p2 = &summary.seats.p2;
+        assert_eq!(p2.created_unused, Some(vec![COIN_DEF_ID.to_string()]));
+        assert_eq!(p2.created_unused_sources, None);
     }
 }

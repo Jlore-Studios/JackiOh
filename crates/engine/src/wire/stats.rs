@@ -117,6 +117,11 @@ pub struct SeatSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub played_radiant: Option<Vec<bool>>,
+    /// R4672000: what was chosen for each card in `played`, in the same order, `None` for a play whose
+    /// card offered no choice. Absent when no play had one, and from every record written before it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub played_variants: Option<Vec<Option<PlayVariant>>>,
     /// R1256000: draws from an empty library this seat took.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -152,6 +157,12 @@ pub struct SeatSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created_unused: Option<Vec<String>>,
+    /// R4672001: the card whose effect made each card in `created_unused`, in the same order, `None` for
+    /// one a rule made (The Coin). Absent when every entry is `None`, and from every record written
+    /// before it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub created_unused_sources: Option<Vec<Option<MadeBy>>>,
     /// R2089000: the Created cards this seat played from its hand, whoever made them, every play, as
     /// `played` keeps the dealt ones; the quests count them with `played` (§14.9). Absent when none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -173,6 +184,11 @@ pub struct SeatSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub starships_launched: Option<i32>,
+    /// R4672002: every Discover-like choice this seat's cards asked of it, in order: the cards it offered
+    /// and the ones picked. Absent when there were none, and from every record written before it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub picks: Option<Vec<CardPick>>,
 }
 
 /// R2089000: one use of a Created card: its catalog id, the turn (§2.5's counter) and whether it was
@@ -188,6 +204,98 @@ pub struct CreatedUse {
     pub card: String,
     pub turn: i32,
     pub radiant: bool,
+    /// R4672000: what was chosen for this play or cast, when its card offered a choice and the seat it
+    /// is listed under played it. Absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub variant: Option<PlayVariant>,
+    /// R4672001: the card whose effect made this Created card, on a `createdUsed` entry; absent for one
+    /// a rule made (The Coin), on the other lists, and on every record written before it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub source: Option<MadeBy>,
+}
+
+/// R4672000: what was chosen for one play of a card that offered a choice: the Choose One options and
+/// any other answer its own definition fixes (in the card's option order), the X paid (R65, R348), and
+/// whether an Embiggen card was Embiggened (§6). Each part is absent when the card offered none.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayVariant {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<String>>", optional))]
+    pub modes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub x: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub embiggened: Option<bool>,
+}
+
+/// R4672003: how a variant's options are joined in its label.
+pub const VARIANT_MODE_JOIN: &str = " + ";
+
+/// R4672003: how a variant's parts are joined in its label.
+pub const VARIANT_PART_JOIN: &str = ", ";
+
+impl PlayVariant {
+    /// R4672003: the key a variant is totalled under and the name it is printed with: its options, then
+    /// `X=<x>`, then whether it was Embiggened.
+    pub fn label(&self) -> String {
+        let mut parts: Vec<String> = Vec::new();
+        if !self.modes.is_empty() {
+            parts.push(self.modes.join(VARIANT_MODE_JOIN));
+        }
+        if let Some(x) = self.x {
+            parts.push(format!("X={x}"));
+        }
+        if let Some(embiggened) = self.embiggened {
+            parts.push(
+                if embiggened {
+                    "Embiggened"
+                } else {
+                    "Not Embiggened"
+                }
+                .to_string(),
+            );
+        }
+        parts.join(VARIANT_PART_JOIN)
+    }
+}
+
+/// R4672001: the card whose effect made a Created card: its catalog id and whether it ran its Radiant
+/// face.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct MadeBy {
+    pub card: String,
+    pub radiant: bool,
+}
+
+/// R4672002: one Discover-like choice a card asked: the card that asked, the catalog ids it offered in
+/// the order offered, and the ones picked.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct CardPick {
+    pub source: MadeBy,
+    pub offered: Vec<String>,
+    pub picked: Vec<String>,
 }
 
 /// R376: a finished game, read off its replay by the engine's `summarize_game`.
@@ -480,6 +588,121 @@ pub struct CardStats {
     #[serde(default, skip_serializing_if = "Tally::is_empty")]
     #[cfg_attr(feature = "ts", ts(as = "Option<Tally>", optional))]
     pub created_played_normal: Tally,
+    /// R4672003: the card's variants, what its copies made and what they offered, kept beside the deck's
+    /// tallies under the same key and read apart from them (`card_stats_of`'s `choices`). Absent while
+    /// empty, so a total written before it, or with none, reads and is stored as before; no report a
+    /// client reads carries it.
+    #[serde(default, skip_serializing_if = "CardChoices::is_empty")]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    pub choices: CardChoices,
+}
+
+/// R4672003: a tally split by a card's face: Radiant at that play (or when it made the card), or not.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct FaceTally {
+    #[serde(default, skip_serializing_if = "Tally::is_empty")]
+    pub radiant: Tally,
+    #[serde(default, skip_serializing_if = "Tally::is_empty")]
+    pub normal: Tally,
+}
+
+impl FaceTally {
+    /// The tally of one face.
+    pub fn face_mut(&mut self, radiant: bool) -> &mut Tally {
+        if radiant {
+            &mut self.radiant
+        } else {
+            &mut self.normal
+        }
+    }
+
+    /// Both faces added.
+    pub fn both(&self) -> Tally {
+        let mut both = self.radiant;
+        add_tally(&mut both, &self.normal);
+        both
+    }
+
+    pub fn add(&mut self, other: &FaceTally) {
+        add_tally(&mut self.radiant, &other.radiant);
+        add_tally(&mut self.normal, &other.normal);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.radiant.is_empty() && self.normal.is_empty()
+    }
+}
+
+/// R4672003: one card a Discover-like choice offered: the seat-games it was offered in, and those it
+/// was picked in, each by the asking card's face.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct OfferTally {
+    #[serde(default, skip_serializing_if = "FaceTally::is_empty")]
+    pub offered: FaceTally,
+    #[serde(default, skip_serializing_if = "FaceTally::is_empty")]
+    pub picked: FaceTally,
+}
+
+impl OfferTally {
+    pub fn add(&mut self, other: &OfferTally) {
+        self.offered.add(&other.offered);
+        self.picked.add(&other.picked);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.offered.is_empty() && self.picked.is_empty()
+    }
+}
+
+/// R4672003: one card's choices, each a seat once a game: the seats that played it with each variant
+/// (`PlayVariant::label`), the seats whose copy of it made each card, and the seat-games each card was
+/// offered and picked in by its Discover-like choices.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CardChoices {
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub variants: IndexMap<String, FaceTally>,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub outputs: IndexMap<String, FaceTally>,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub offers: IndexMap<String, OfferTally>,
+}
+
+impl CardChoices {
+    pub fn add(&mut self, other: &CardChoices) {
+        for (variant, tally) in &other.variants {
+            self.variants.entry(variant.clone()).or_default().add(tally);
+        }
+        for (card, tally) in &other.outputs {
+            self.outputs.entry(card.clone()).or_default().add(tally);
+        }
+        for (card, tally) in &other.offers {
+            self.offers.entry(card.clone()).or_default().add(tally);
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.variants.is_empty() && self.outputs.is_empty() && self.offers.is_empty()
+    }
+
+    /// Each list in key order, so two totals read back the same whatever order they were folded or
+    /// stored in (Postgres keeps a jsonb object's keys in its own order).
+    pub fn sort(&mut self) {
+        self.variants.sort_keys();
+        self.outputs.sort_keys();
+        self.offers.sort_keys();
+    }
+}
+
+/// R4672003: one card's choices in a report, by catalog id.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CardChoicesRow {
+    pub card: String,
+    #[serde(flatten)]
+    pub choices: CardChoices,
 }
 
 /// R2089000: a Created card's figures, by its catalog id: over the seats that made a Created copy of
@@ -564,6 +787,12 @@ pub struct CardStatsReport {
     /// from `cards`. Absent from a report written before it.
     #[serde(default)]
     pub created: Vec<CreatedStats>,
+    /// R4672003: one entry per card some counted seat played with a variant, or whose copies made or
+    /// offered a card, by catalog id. Absent when there is none; only the operators' CLIs fill it, so no
+    /// report a client reads carries it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    pub choices: Vec<CardChoicesRow>,
 }
 
 fn empty_tally() -> Tally {
@@ -589,6 +818,7 @@ fn empty_stats(card: &str) -> CardStats {
         created_not_played: empty_tally(),
         created_played_radiant: empty_tally(),
         created_played_normal: empty_tally(),
+        choices: CardChoices::default(),
     }
 }
 
@@ -910,6 +1140,7 @@ pub fn add_stats(into: &mut CardStats, other: &CardStats) {
     add_tally(&mut into.created_not_played, &other.created_not_played);
     add_tally(&mut into.created_played_radiant, &other.created_played_radiant);
     add_tally(&mut into.created_played_normal, &other.created_played_normal);
+    into.choices.add(&other.choices);
 }
 
 /// R2089000: one Created card's figures added into another's.
@@ -918,6 +1149,94 @@ pub fn add_created(into: &mut CreatedStats, other: &CreatedStats) {
     add_tally(&mut into.created_not_played, &other.created_not_played);
     add_tally(&mut into.created_played_radiant, &other.created_played_radiant);
     add_tally(&mut into.created_played_normal, &other.created_played_normal);
+}
+
+/// R4672003: one seat's choices in one game, each once: `(card, variant label, radiant)` for the cards
+/// it played with a variant, and `(source, card, radiant)` for what its source cards made, offered and
+/// picked, by the source's face. A record written before them has none.
+#[derive(Default)]
+struct SeatChoices<'a> {
+    variants: IndexSet<(&'a str, String, bool)>,
+    outputs: IndexSet<(&'a str, &'a str, bool)>,
+    offered: IndexSet<(&'a str, &'a str, bool)>,
+    picked: IndexSet<(&'a str, &'a str, bool)>,
+}
+
+impl<'a> SeatChoices<'a> {
+    fn of(summary: &'a SeatSummary) -> SeatChoices<'a> {
+        let mut choices = SeatChoices::default();
+        // A play from the hand's variant, read only when every play has an entry and a face flag.
+        if let (Some(variants), Some(flags)) = (&summary.played_variants, &summary.played_radiant)
+            && variants.len() == summary.played.len()
+            && flags.len() == summary.played.len()
+        {
+            for ((card, variant), radiant) in summary.played.iter().zip(variants).zip(flags) {
+                if let Some(variant) = variant {
+                    choices
+                        .variants
+                        .insert((card.as_str(), variant.label(), *radiant));
+                }
+            }
+        }
+        for uses in [
+            &summary.cast_or_summoned,
+            &summary.created_used,
+            &summary.created_played,
+        ] {
+            for used in uses.iter().flatten() {
+                if let Some(variant) = &used.variant {
+                    choices
+                        .variants
+                        .insert((used.card.as_str(), variant.label(), used.radiant));
+                }
+            }
+        }
+        for used in summary.created_used.iter().flatten() {
+            if let Some(source) = &used.source {
+                choices
+                    .outputs
+                    .insert((source.card.as_str(), used.card.as_str(), source.radiant));
+            }
+        }
+        // The unused cards' makers, read only when every one has an entry.
+        if let (Some(unused), Some(sources)) = (&summary.created_unused, &summary.created_unused_sources)
+            && unused.len() == sources.len()
+        {
+            for (card, source) in unused.iter().zip(sources) {
+                if let Some(source) = source {
+                    choices
+                        .outputs
+                        .insert((source.card.as_str(), card.as_str(), source.radiant));
+                }
+            }
+        }
+        for pick in summary.picks.iter().flatten() {
+            let source = (pick.source.card.as_str(), pick.source.radiant);
+            for card in &pick.offered {
+                choices.offered.insert((source.0, card.as_str(), source.1));
+            }
+            for card in &pick.picked {
+                choices.picked.insert((source.0, card.as_str(), source.1));
+            }
+        }
+        choices
+    }
+
+    fn is_empty(&self) -> bool {
+        self.variants.is_empty()
+            && self.outputs.is_empty()
+            && self.offered.is_empty()
+            && self.picked.is_empty()
+    }
+}
+
+/// R4672003: a card's choices among one key's cards, a total begun for it when it has none.
+fn choices_of<'a>(cards: &'a mut IndexMap<String, CardTotal>, card: &str) -> &'a mut CardChoices {
+    &mut cards
+        .entry(card.to_string())
+        .or_insert_with(|| CardTotal::new(card))
+        .stats
+        .choices
 }
 
 /// A seat's place in `PLAYER_IDS`, as `FirstMet` and `FirstSeen` keep it.
@@ -1027,9 +1346,10 @@ impl StatsTotals {
                 .map(String::as_str)
                 .filter(|card| !used.contains(card))
                 .collect();
+            let choices = SeatChoices::of(summary);
             // A seat with no cards adds no key, as the store keeps no row for it.
             let mut none = IndexMap::new();
-            let cards = if deck.is_empty() && used.is_empty() && unused.is_empty() {
+            let cards = if deck.is_empty() && used.is_empty() && unused.is_empty() && choices.is_empty() {
                 &mut none
             } else {
                 self.cards.entry(key).or_default()
@@ -1145,6 +1465,36 @@ impl StatsTotals {
                     .or_insert_with(|| CardTotal::new(card))
                     .stats;
                 count(&mut stats.created_not_played, outcome);
+            }
+            // R4672003: a played card's variants, and what a source card made and offered, each a seat
+            // once a game by the face it had.
+            for (card, variant, radiant) in &choices.variants {
+                let tally = choices_of(cards, card)
+                    .variants
+                    .entry(variant.clone())
+                    .or_default();
+                count(tally.face_mut(*radiant), outcome);
+            }
+            for (source, made, radiant) in &choices.outputs {
+                let tally = choices_of(cards, source)
+                    .outputs
+                    .entry(made.to_string())
+                    .or_default();
+                count(tally.face_mut(*radiant), outcome);
+            }
+            for (source, offered, radiant) in &choices.offered {
+                let tally = choices_of(cards, source)
+                    .offers
+                    .entry(offered.to_string())
+                    .or_default();
+                count(tally.offered.face_mut(*radiant), outcome);
+            }
+            for (source, picked, radiant) in &choices.picked {
+                let tally = choices_of(cards, source)
+                    .offers
+                    .entry(picked.to_string())
+                    .or_default();
+                count(tally.picked.face_mut(*radiant), outcome);
             }
 
             // R1454, R750000: the lists people took into live Best-of-1 games.
@@ -1341,7 +1691,17 @@ pub fn card_stats_of(totals: &StatsTotals, filter: &CardStatsFilter) -> CardStat
     // counted deck held has no deck row.
     let mut cards: Vec<CardStats> = Vec::new();
     let mut created: Vec<CreatedStats> = Vec::new();
+    let mut choices: Vec<CardChoicesRow> = Vec::new();
     for mut stats in by_card.into_values() {
+        // R4672003: the choices apart from both, and neither row with them.
+        let mut held = std::mem::take(&mut stats.choices);
+        if !held.is_empty() {
+            held.sort();
+            choices.push(CardChoicesRow {
+                card: stats.card.clone(),
+                choices: held,
+            });
+        }
         let made = CreatedStats::of(&stats);
         if made.games() > 0 {
             created.push(made);
@@ -1357,12 +1717,14 @@ pub fn card_stats_of(totals: &StatsTotals, filter: &CardStatsFilter) -> CardStat
     // A stable sort by id (SURFACE §4.4.1; ids are ASCII, so `str::cmp` is JS's `<`).
     cards.sort_by(|a, b| a.card.cmp(&b.card));
     created.sort_by(|a, b| a.card.cmp(&b.card));
+    choices.sort_by(|a, b| a.card.cmp(&b.card));
     CardStatsReport {
         filter: filter.clone(),
         games: i32::try_from(games).unwrap_or(i32::MAX),
         decks: i32::try_from(decks).unwrap_or(i32::MAX),
         cards,
         created,
+        choices,
     }
 }
 
@@ -2222,6 +2584,93 @@ pub fn format_card_stats(report: &CardStatsReport, name_of: impl Fn(&str) -> Opt
     lines.join("\n")
 }
 
+/// R4672003: one card's variants table and its outputs table, which `stats-cards --card` and `stats
+/// report --card` print after the card's other tables. Each cell is a win rate with its seat-games in
+/// brackets, as `format_card_stats`' are.
+pub fn format_card_choices(
+    report: &CardStatsReport,
+    card: &str,
+    name_of: impl Fn(&str) -> Option<String>,
+) -> String {
+    let named = |card: &str| match name_of(card) {
+        None => card.to_string(),
+        Some(name) => format!("{card} {name}"),
+    };
+    let none = CardChoices::default();
+    let choices = report
+        .choices
+        .iter()
+        .find(|row| row.card == card)
+        .map_or(&none, |row| &row.choices);
+    let mut lines: Vec<String> = vec![format!("Variants of {}:", named(card))];
+    if choices.variants.is_empty() {
+        lines.push("No variant recorded.".to_string());
+    } else {
+        lines.push(
+            "Each cell is the win rate of the seats that played the card with that variant at least once, by its face at that"
+                .to_string(),
+        );
+        lines.push(
+            "play, with those games in brackets; a seat that played two variants counts in both.".to_string(),
+        );
+        let header: Vec<String> = ["Variant", "Radiant", "Normal"].map(str::to_string).to_vec();
+        let rows: Vec<Vec<String>> = choices
+            .variants
+            .iter()
+            .map(|(variant, tally)| {
+                vec![
+                    variant.clone(),
+                    format_tally(&tally.radiant),
+                    format_tally(&tally.normal),
+                ]
+            })
+            .collect();
+        lines.extend(table(&header, &rows));
+    }
+    lines.push(String::new());
+    lines.push(format!("Outputs of {}:", named(card)));
+    let mut made: Vec<&str> = choices
+        .outputs
+        .keys()
+        .chain(choices.offers.keys())
+        .map(String::as_str)
+        .collect::<IndexSet<&str>>()
+        .into_iter()
+        .collect();
+    made.sort();
+    if made.is_empty() {
+        lines.push("No output recorded.".to_string());
+    } else {
+        lines.push(
+            "By Radiant and By normal are the win rates of the seats whose copy of the card made that card, by the copy's face;"
+                .to_string(),
+        );
+        lines.push(
+            "Offered and Picked those of the seats its choices offered the card to, and of those that picked it, both faces."
+                .to_string(),
+        );
+        let header: Vec<String> = ["Made", "By Radiant", "By normal", "Offered", "Picked"]
+            .map(str::to_string)
+            .to_vec();
+        let rows: Vec<Vec<String>> = made
+            .iter()
+            .map(|&made| {
+                let output = choices.outputs.get(made).copied().unwrap_or_default();
+                let offer = choices.offers.get(made).copied().unwrap_or_default();
+                vec![
+                    named(made),
+                    format_tally(&output.radiant),
+                    format_tally(&output.normal),
+                    format_tally(&offer.offered.both()),
+                    format_tally(&offer.picked.both()),
+                ]
+            })
+            .collect();
+        lines.extend(table(&header, &rows));
+    }
+    lines.join("\n")
+}
+
 /// A plain-text table: the first column padded on the right, the rest on the left, each as wide as
 /// its widest cell, two spaces between.
 fn table(header: &[String], rows: &[Vec<String>]) -> Vec<String> {
@@ -2365,11 +2814,16 @@ fn card_uses(
         let radiant = entry
             .and_then(|entry| entry.get("radiant"))
             .and_then(Value::as_bool);
-        match (card, turn, radiant) {
-            (Some(card), Some(turn), Some(radiant)) => uses.push(CreatedUse {
+        // R4672000, R4672001: the variant and the maker, each absent on a record written before them.
+        let variant = optional(entry.and_then(|entry| entry.get("variant")));
+        let source = optional(entry.and_then(|entry| entry.get("source")));
+        match (card, turn, radiant, variant, source) {
+            (Some(card), Some(turn), Some(radiant), Ok(variant), Ok(source)) => uses.push(CreatedUse {
                 card: card.to_string(),
                 turn,
                 radiant,
+                variant,
+                source,
             }),
             _ => {
                 return Err(EngineError::new(format!("{at}[{idx}] is not a {one}")));
@@ -2377,6 +2831,24 @@ fn card_uses(
         }
     }
     Ok(Some(uses))
+}
+
+/// R4672000 to R4672002: an optional field read with its type's own shape: absent (or null) reads as
+/// `None`, anything that is not one is refused.
+fn optional<T: serde::de::DeserializeOwned>(value: Option<&Value>) -> Result<Option<T>, ()> {
+    match value.filter(|value| !value.is_null()) {
+        None => Ok(None),
+        Some(value) => T::deserialize(value).map(Some).map_err(|_| ()),
+    }
+}
+
+/// `optional`, refused with `at` and what the field should be.
+fn optional_at<T: serde::de::DeserializeOwned>(
+    value: Option<&Value>,
+    at: &str,
+    what: &str,
+) -> Result<Option<T>, EngineError> {
+    optional(value).map_err(|()| EngineError::new(format!("{at} is not {what}")))
 }
 
 fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineError> {
@@ -2390,6 +2862,11 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
         played: ids(record.get("played"), &format!("{at}.played"))?,
         played_turns: None,
         played_radiant: None,
+        played_variants: optional_at(
+            record.get("playedVariants"),
+            &format!("{at}.playedVariants"),
+            "a list of play variants",
+        )?,
         fatigue_draws: seat_count(record.get("fatigueDraws"), &format!("{at}.fatigueDraws"))?,
         fatigue_damage: seat_count(record.get("fatigueDamage"), &format!("{at}.fatigueDamage"))?,
         traps_set: seat_count(record.get("trapsSet"), &format!("{at}.trapsSet"))?,
@@ -2401,6 +2878,11 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
             None => None,
             Some(value) => Some(ids(Some(value), &format!("{at}.createdUnused"))?),
         },
+        created_unused_sources: optional_at(
+            record.get("createdUnusedSources"),
+            &format!("{at}.createdUnusedSources"),
+            "a list of makers",
+        )?,
         created_played: created_uses(record.get("createdPlayed"), &format!("{at}.createdPlayed"))?,
         cast_or_summoned: card_uses(
             record.get("castOrSummoned"),
@@ -2416,6 +2898,7 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
             record.get("starshipsLaunched"),
             &format!("{at}.starshipsLaunched"),
         )?,
+        picks: optional_at(record.get("picks"), &format!("{at}.picks"), "a list of picks")?,
     };
     if let Some(Value::Array(turns)) = record.get("playedTurns") {
         let mut out: Vec<i32> = Vec::with_capacity(turns.len());
@@ -2570,6 +3053,9 @@ mod tests {
             cast_or_summoned: None,
             starship_pieces_fused: None,
             starships_launched: None,
+            played_variants: None,
+            created_unused_sources: None,
+            picks: None,
         }
     }
 
@@ -2786,6 +3272,7 @@ mod tests {
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(0, 0, 0),
+                choices: CardChoices::default(),
             };
             assert_eq!(win_rate(&stats.played), Some(0.75));
             assert_eq!(win_rate(&stats.drawn_not_played), Some(0.4));
@@ -2820,6 +3307,7 @@ mod tests {
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(0, 0, 0),
+                choices: CardChoices::default(),
             };
             assert_eq!(not_drawn(&stats), tally(8, 2, 1));
             let delta = drawn_delta(&stats).unwrap();
@@ -2859,6 +3347,7 @@ mod tests {
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(0, 0, 0),
+                choices: CardChoices::default(),
             }
         }
 
@@ -3547,6 +4036,7 @@ mod tests {
                 decks,
                 cards,
                 created: Vec::new(),
+                choices: Vec::new(),
             }
         }
 
@@ -3725,6 +4215,9 @@ mod tests {
                 cast_or_summoned: None,
                 starship_pieces_fused: None,
                 starships_launched: None,
+                played_variants: None,
+                created_unused_sources: None,
+                picks: None,
             }
         }
 
@@ -4037,6 +4530,8 @@ mod tests {
                             card: draws.pick(MADE).to_string(),
                             turn: 1 + i32::try_from(draws.below(9)).unwrap_or(0),
                             radiant: draws.below(3) == 0,
+                            variant: None,
+                            source: None,
                         });
                     }
                     let unused: Vec<String> = (0..draws.below(3))
@@ -4529,6 +5024,8 @@ mod tests {
                 card: card.to_string(),
                 turn,
                 radiant,
+                variant: None,
+                source: None,
             }
         }
 
@@ -4728,6 +5225,406 @@ mod tests {
         }
     }
 
+    /// R4672000 to R4672003: the variants, the makers and the picks a record carries, how the totals
+    /// count them (a seat once a game, by face) and how they read back.
+    mod r4672003_choices {
+        use super::*;
+
+        fn variant(modes: &[&str], x: Option<i32>, embiggened: Option<bool>) -> PlayVariant {
+            PlayVariant {
+                modes: list(modes),
+                x,
+                embiggened,
+            }
+        }
+
+        fn by(card: &str, radiant: bool) -> MadeBy {
+            MadeBy {
+                card: card.to_string(),
+                radiant,
+            }
+        }
+
+        fn used(
+            card: &str,
+            radiant: bool,
+            variant: Option<PlayVariant>,
+            source: Option<MadeBy>,
+        ) -> CreatedUse {
+            CreatedUse {
+                card: card.to_string(),
+                turn: 2,
+                radiant,
+                variant,
+                source,
+            }
+        }
+
+        fn choices_of<'a>(report: &'a CardStatsReport, card: &str) -> &'a CardChoices {
+            &report
+                .choices
+                .iter()
+                .find(|row| row.card == card)
+                .unwrap_or_else(|| panic!("no choices for {card}"))
+                .choices
+        }
+
+        fn face(radiant: Tally, normal: Tally) -> FaceTally {
+            FaceTally { radiant, normal }
+        }
+
+        /// p1 (who wins) played `a` three times, Choose One `one` Radiant twice and normal once, and `b` at
+        /// X=1 and X=2; it cast `c` with `two` and played a Created `d` it made, Embiggened. p2 (who
+        /// loses) played `a` with `one`, normal.
+        fn variant_game() -> GameRecord {
+            let mut p1 = seat(&["a", "b", "c"], &[], &[], &["a", "a", "a", "b", "b"]);
+            p1.played_radiant = Some(vec![true, true, false, false, false]);
+            p1.played_variants = Some(vec![
+                Some(variant(&["one"], None, None)),
+                Some(variant(&["one"], None, None)),
+                Some(variant(&["one"], None, None)),
+                Some(variant(&[], Some(1), None)),
+                Some(variant(&[], Some(2), None)),
+            ]);
+            p1.cast_or_summoned = Some(vec![used("c", false, Some(variant(&["two"], None, None)), None)]);
+            let embiggened = Some(variant(&[], None, Some(true)));
+            p1.created_used = Some(vec![used("d", false, embiggened.clone(), Some(by("s", false)))]);
+            p1.created_played = Some(vec![used("d", false, embiggened, None)]);
+            let mut p2 = seat(&["a"], &[], &[], &["a"]);
+            p2.played_radiant = Some(vec![false]);
+            p2.played_variants = Some(vec![Some(variant(&["one"], None, None))]);
+            GameRecord {
+                game: game(Winner::P1, GameOverReason::HeroDeath, 9, p1, p2),
+                ..record()
+            }
+        }
+
+        /// p1 (who wins) used two `t`s its Radiant `s` made, kept a `u` its normal `s` made and The Coin,
+        /// and its normal `s` Discovered twice: `y` of `x y z`, then `x` of `x w y`. p2 (who loses) kept a
+        /// `u` its normal `s` made.
+        fn output_game() -> GameRecord {
+            let mut p1 = seat(&["s"], &[], &[], &[]);
+            p1.created_used = Some(vec![
+                used("t", false, None, Some(by("s", true))),
+                used("t", true, None, Some(by("s", true))),
+            ]);
+            p1.created_unused = Some(list(&["u", COIN_DEF_ID]));
+            p1.created_unused_sources = Some(vec![Some(by("s", false)), None]);
+            p1.picks = Some(vec![
+                CardPick {
+                    source: by("s", false),
+                    offered: list(&["x", "y", "z"]),
+                    picked: list(&["y"]),
+                },
+                CardPick {
+                    source: by("s", false),
+                    offered: list(&["x", "w", "y"]),
+                    picked: list(&["x"]),
+                },
+            ]);
+            let mut p2 = seat(&["s"], &[], &[], &[]);
+            p2.created_unused = Some(list(&["u"]));
+            p2.created_unused_sources = Some(vec![Some(by("s", false))]);
+            GameRecord {
+                game: game(Winner::P1, GameOverReason::HeroDeath, 9, p1, p2),
+                ..record()
+            }
+        }
+
+        /// The record as one written before the variants, the makers and the picks.
+        fn without_choices(mut record: GameRecord) -> GameRecord {
+            for seat in PLAYER_IDS {
+                let summary = &mut record.game.seats[seat];
+                summary.played_variants = None;
+                summary.created_unused_sources = None;
+                summary.picks = None;
+                for uses in [
+                    &mut summary.created_used,
+                    &mut summary.created_played,
+                    &mut summary.cast_or_summoned,
+                ] {
+                    for one in uses.iter_mut().flatten() {
+                        one.variant = None;
+                        one.source = None;
+                    }
+                }
+            }
+            record
+        }
+
+        #[test]
+        fn r4672003_a_variant_s_label_names_its_parts_in_order() {
+            assert_eq!(variant(&["mana"], Some(1), None).label(), "mana, X=1");
+            assert_eq!(variant(&["health", "skip"], None, None).label(), "health + skip");
+            assert_eq!(variant(&[], None, Some(false)).label(), "Not Embiggened");
+            assert_eq!(variant(&[], None, Some(true)).label(), "Embiggened");
+        }
+
+        #[test]
+        fn r4672003_a_seat_counts_once_a_game_per_variant_and_face() {
+            let report = card_stats(&[variant_game()], &live());
+            // p1 played `one` Radiant twice: one Radiant game, won; normal once, as did p2: two games.
+            let a = choices_of(&report, "a");
+            assert_eq!(
+                a.variants,
+                IndexMap::from([("one".to_string(), face(tally(1, 1, 0), tally(2, 1, 0)))])
+            );
+            assert!(a.outputs.is_empty() && a.offers.is_empty());
+            // A cast's variant and a Created card's are counted as a play's are.
+            assert_eq!(
+                choices_of(&report, "c").variants,
+                IndexMap::from([("two".to_string(), face(tally(0, 0, 0), tally(1, 1, 0)))])
+            );
+            assert_eq!(
+                choices_of(&report, "d").variants,
+                IndexMap::from([("Embiggened".to_string(), face(tally(0, 0, 0), tally(1, 1, 0)))])
+            );
+            // The deck rows read as they did, and carry none of it.
+            assert_eq!(
+                report.cards,
+                card_stats(&[without_choices(variant_game())], &live()).cards
+            );
+            let json = serde_json::to_value(&report.cards).unwrap();
+            assert!(!json.to_string().contains("choices"), "{json}");
+        }
+
+        #[test]
+        fn r4672003_a_seat_with_two_variants_counts_in_both() {
+            let report = card_stats(&[variant_game()], &live());
+            let b = choices_of(&report, "b");
+            assert_eq!(
+                b.variants,
+                IndexMap::from([
+                    ("X=1".to_string(), face(tally(0, 0, 0), tally(1, 1, 0))),
+                    ("X=2".to_string(), face(tally(0, 0, 0), tally(1, 1, 0))),
+                ])
+            );
+            // The two add up to more seats than played the card: each counts its own.
+            assert_eq!(stats_of(&report, "b").played, tally(1, 1, 0));
+        }
+
+        #[test]
+        fn r4672003_outputs_and_offers_count_a_seat_once_a_game_by_the_source_s_face() {
+            let report = card_stats(&[output_game()], &live());
+            let ids: Vec<&str> = report.choices.iter().map(|row| row.card.as_str()).collect();
+            assert_eq!(
+                ids,
+                ["s"],
+                "The Coin names no source, so no card is credited with it"
+            );
+            let s = choices_of(&report, "s");
+            assert!(s.variants.is_empty());
+            // Two `t`s, one game, by the Radiant `s` that made them (whatever the `t`s' own faces).
+            assert_eq!(s.outputs["t"], face(tally(1, 1, 0), tally(0, 0, 0)));
+            // A `u` made and never used counts as made, for both seats.
+            assert_eq!(s.outputs["u"], face(tally(0, 0, 0), tally(2, 1, 0)));
+            assert_eq!(s.outputs.len(), 2);
+            // `x` and `y` were offered twice and picked once each, one game each; `z` and `w` once,
+            // never picked.
+            let normal = |games: i32, wins: i32| face(tally(0, 0, 0), tally(games, wins, 0));
+            for (card, picked) in [("x", true), ("y", true), ("z", false), ("w", false)] {
+                let offer = s.offers[card];
+                assert_eq!(offer.offered, normal(1, 1), "{card}");
+                assert_eq!(
+                    offer.picked,
+                    if picked {
+                        normal(1, 1)
+                    } else {
+                        FaceTally::default()
+                    },
+                    "{card}"
+                );
+            }
+            assert_eq!(s.offers.len(), 4);
+            // The rows read back in key order.
+            let keys: Vec<&str> = s.offers.keys().map(String::as_str).collect();
+            assert_eq!(keys, ["w", "x", "y", "z"]);
+        }
+
+        #[test]
+        fn r4672003_a_record_without_the_fields_adds_nothing() {
+            for record in [variant_game(), output_game()] {
+                let plain = without_choices(record);
+                let report = card_stats(std::slice::from_ref(&plain), &live());
+                assert!(report.choices.is_empty(), "{:?}", report.choices);
+                let mut totals = StatsTotals::default();
+                totals.fold(&plain, true);
+                for total in totals.cards.values().flat_map(|cards| cards.values()) {
+                    assert!(total.stats.choices.is_empty(), "{total:?}");
+                    let json = serde_json::to_value(&total.stats).unwrap();
+                    assert!(json.get("choices").is_none(), "{json}");
+                }
+                assert!(serde_json::to_value(&report).unwrap().get("choices").is_none());
+            }
+            // A seat whose only cards are choices still adds its key, and one with none adds nothing.
+            let mut only = seat(&[], &[], &[], &[]);
+            only.picks = Some(vec![CardPick {
+                source: by("s", true),
+                offered: list(&["x"]),
+                picked: Vec::new(),
+            }]);
+            let mut totals = StatsTotals::default();
+            totals.fold(
+                &GameRecord {
+                    game: game(
+                        Winner::P1,
+                        GameOverReason::Concede,
+                        1,
+                        only,
+                        SeatSummary::default(),
+                    ),
+                    ..record()
+                },
+                false,
+            );
+            assert_eq!(totals.cards.len(), 1);
+        }
+
+        #[test]
+        fn r4672003_an_older_total_without_the_keys_reads_as_none_and_a_new_one_round_trips() {
+            let mut totals = StatsTotals::default();
+            totals.fold(&output_game(), true);
+            let stats = totals.cards.values().next().unwrap()["s"].stats.clone();
+            assert!(!stats.choices.is_empty());
+            let mut json = serde_json::to_value(&stats).unwrap();
+            assert_eq!(serde_json::from_value::<CardStats>(json.clone()).unwrap(), stats);
+            json.as_object_mut().unwrap().remove("choices");
+            let older: CardStats = serde_json::from_value(json).unwrap();
+            assert!(older.choices.is_empty());
+            assert_eq!(
+                older,
+                CardStats {
+                    choices: CardChoices::default(),
+                    ..stats
+                }
+            );
+            // An older total adds to a newer one as no data.
+            let mut newer = totals.clone();
+            let mut old_totals = StatsTotals::default();
+            old_totals.fold(&without_choices(output_game()), true);
+            newer.add(&old_totals);
+            let report = card_stats_of(&newer, &live());
+            assert_eq!(
+                choices_of(&report, "s").outputs["u"],
+                face(tally(0, 0, 0), tally(2, 1, 0))
+            );
+        }
+
+        #[test]
+        fn r4672000_parse_game_record_reads_the_new_fields_and_refuses_a_bad_one() {
+            for written in [variant_game(), output_game()] {
+                let json = serde_json::to_value(&written).unwrap();
+                assert_eq!(parse_game_record(&json).unwrap(), written);
+            }
+            let json = serde_json::to_value(output_game()).unwrap();
+            let p1 = &json["game"]["seats"]["p1"];
+            assert_eq!(
+                p1["createdUsed"][0],
+                json!({ "card": "t", "turn": 2, "radiant": false, "source": { "card": "s", "radiant": true } })
+            );
+            assert_eq!(
+                p1["createdUnusedSources"],
+                json!([{ "card": "s", "radiant": false }, null])
+            );
+            assert_eq!(
+                p1["picks"][0],
+                json!({ "source": { "card": "s", "radiant": false }, "offered": ["x", "y", "z"], "picked": ["y"] })
+            );
+            let json_v = serde_json::to_value(variant_game()).unwrap();
+            assert_eq!(
+                json_v["game"]["seats"]["p1"]["playedVariants"][3],
+                json!({ "x": 1 })
+            );
+            assert_eq!(
+                json_v["game"]["seats"]["p1"]["playedVariants"][0],
+                json!({ "modes": ["one"] })
+            );
+
+            let refusal = |json: &Value, key: &str, bad: Value| {
+                let mut bad_record = json.clone();
+                bad_record["game"]["seats"]["p1"][key] = bad;
+                parse_game_record(&bad_record).unwrap_err().message
+            };
+            assert!(
+                refusal(&json_v, "playedVariants", json!([{ "x": "one" }]))
+                    .contains("game.seats.p1.playedVariants is not a list of play variants")
+            );
+            assert!(
+                refusal(&json, "createdUnusedSources", json!(["s"]))
+                    .contains("game.seats.p1.createdUnusedSources is not a list of makers")
+            );
+            assert!(
+                refusal(&json, "picks", json!([{ "offered": [] }]))
+                    .contains("game.seats.p1.picks is not a list of picks")
+            );
+            assert!(
+                refusal(
+                    &json,
+                    "createdUsed",
+                    json!([{ "card": "t", "turn": 2, "radiant": false, "source": "s" }])
+                )
+                .contains("game.seats.p1.createdUsed[0] is not a Created card's use")
+            );
+            assert!(
+                refusal(
+                    &json_v,
+                    "castOrSummoned",
+                    json!([{ "card": "c", "turn": 2, "radiant": false, "variant": "two" }])
+                )
+                .contains("game.seats.p1.castOrSummoned[0] is not a cast or summon")
+            );
+        }
+
+        #[test]
+        fn r4672003_format_card_choices_prints_both_tables() {
+            let names: IndexMap<&str, &str> = [("s", "Source"), ("t", "Token")].into_iter().collect();
+            let name_of = |card: &str| names.get(card).map(|name| name.to_string());
+            let report = card_stats(&[variant_game(), output_game()], &live());
+
+            let text = format_card_choices(&report, "s", name_of);
+            let lines: Vec<&str> = text.split('\n').collect();
+            assert_eq!(lines[0], "Variants of s Source:");
+            assert_eq!(lines[1], "No variant recorded.");
+            assert_eq!(lines[2], "");
+            assert_eq!(lines[3], "Outputs of s Source:");
+            let heading = lines.iter().position(|line| line.starts_with("Made ")).unwrap();
+            assert_eq!(
+                split_wide(lines[heading]),
+                ["Made", "By Radiant", "By normal", "Offered", "Picked"]
+            );
+            let rows: Vec<Vec<String>> = lines[heading + 1..].iter().map(|line| split_wide(line)).collect();
+            assert_eq!(
+                rows,
+                [
+                    // `variant_game`'s `d`, made by a normal `s`.
+                    ["d", "— (0)", "100.0% (1)", "— (0)", "— (0)"],
+                    ["t Token", "100.0% (1)", "— (0)", "— (0)", "— (0)"],
+                    ["u", "— (0)", "50.0% (2)", "— (0)", "— (0)"],
+                    ["w", "— (0)", "— (0)", "100.0% (1)", "— (0)"],
+                    ["x", "— (0)", "— (0)", "100.0% (1)", "100.0% (1)"],
+                    ["y", "— (0)", "— (0)", "100.0% (1)", "100.0% (1)"],
+                    ["z", "— (0)", "— (0)", "100.0% (1)", "— (0)"],
+                ]
+                .map(|row| row.map(str::to_string).to_vec())
+                .to_vec()
+            );
+
+            let text = format_card_choices(&report, "b", name_of);
+            let lines: Vec<&str> = text.split('\n').collect();
+            assert_eq!(lines[0], "Variants of b:");
+            let heading = lines
+                .iter()
+                .position(|line| line.starts_with("Variant "))
+                .unwrap();
+            assert_eq!(split_wide(lines[heading]), ["Variant", "Radiant", "Normal"]);
+            assert_eq!(split_wide(lines[heading + 1]), ["X=1", "— (0)", "100.0% (1)"]);
+            assert_eq!(split_wide(lines[heading + 2]), ["X=2", "— (0)", "100.0% (1)"]);
+            assert_eq!(lines[heading + 3], "");
+            assert_eq!(lines[heading + 4], "Outputs of b:");
+            assert_eq!(lines[heading + 5], "No output recorded.");
+        }
+    }
+
     #[test]
     fn r1284000_forced_series_is_some_only_for_a_record_filed_under_a_forced_series() {
         let forced = GameRecord {
@@ -4768,6 +5665,8 @@ mod tests {
                 card: card.to_string(),
                 turn,
                 radiant,
+                variant: None,
+                source: None,
             }
         }
 

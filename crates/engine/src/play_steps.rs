@@ -1465,6 +1465,9 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
         cost_paid: run.cost_paid,
         x: card.x,
         embiggened: card.embiggened,
+        // R4672000: the declared choices for the game record, already one per declaration in the card's
+        // order (`play_choices::refuse_modes`, R81); `None` for a play with none.
+        modes: (!run.modes.is_empty()).then(|| run.modes.clone()),
         former_id: former_id.clone(),
         // R454: a play from the graveyard says so (public), for a client to animate it from there.
         from: run.source.map(|PlaySource::Graveyard| PlayedFrom::Graveyard),

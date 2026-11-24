@@ -848,11 +848,15 @@ mod tests {
                     card: TOKEN.to_string(),
                     turn: 2,
                     radiant: false,
+                    variant: None,
+                    source: None,
                 },
                 CreatedUse {
                     card: B.to_string(),
                     turn: 3,
                     radiant: true,
+                    variant: None,
+                    source: None,
                 },
             ]);
             record

@@ -97,14 +97,15 @@ pub fn seed_number(seed: &str) -> Option<u32> {
     seed.rsplit('-').next().and_then(|tail| tail.parse::<u32>().ok())
 }
 
-/// §5.2 step 1: the state's canonical text as `hash_state` hashes it, without `applied`, `opening`
-/// and `generators`.
+/// §5.2 step 1: the state's canonical text as `hash_state` hashes it, without `applied`, `opening`,
+/// `generators` and `makers`.
 pub fn hashed_state_text(state: &GameState) -> String {
     let mut value = serde_json::to_value(state).expect("a GameState serializes");
     if let Some(object) = value.as_object_mut() {
         object.remove("applied");
         object.remove("opening");
         object.remove("generators");
+        object.remove("makers");
     }
     canonical(&value)
 }
@@ -199,6 +200,8 @@ pub fn events_text(events: &[GameEvent]) -> String {
         for item in items {
             if let Value::Object(event) = item {
                 event.remove("creator");
+                // R4672000: the game record's, as `creator` is.
+                event.remove("modes");
                 event.remove("via");
                 event.remove("diedAs");
                 strip_destroyed_animated(item);

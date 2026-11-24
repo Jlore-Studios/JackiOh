@@ -18,6 +18,12 @@
 //! from the hand, is that seat's `castOrSummoned`: cast on its draw (§2.4, the draw's `cardPlayed` says
 //! `onDraw`) or from the deck (§6.3), or summoned from the deck or the hand (M #87 Tatches the Totem, a
 //! Recruit). A play's own `summoned` follows its `cardPlayed` and is that play, not another.
+//!
+//! R4672000: each play keeps its variant: the X and the Embiggen its `cardPlayed` names, the choices it
+//! declared (`cardPlayed.modes`), and the card-fixed `mode` and `number` prompts its own script asks
+//! between its `cardPlayed` and its `cardResolved`, read off the answering action (`step`'s `action`).
+//! R4672001: each Created card names the card whose effect made it (`GameState.makers`). R4672002: a
+//! card's `discover` or `pick` prompt is a pick, its offer and its answer as catalog ids.
 
 use indexmap::{IndexMap, IndexSet};
 
@@ -25,7 +31,8 @@ use crate::reduce::{begin_game, reduce};
 use crate::replay::FoldArgs;
 use crate::state::{CardInstance, CreateGameOptions, GameState, create_recorded_game, find_instance};
 use crate::wire::{
-    CounteredTo, CreatedUse, GameEvent, GameSummary, PLAYER_IDS, PerPlayer, PlayerId, SeatSummary, Zone,
+    Action, ActionBody, CardPick, CounteredTo, CreatedUse, GameEvent, GameSummary, MadeBy, PLAYER_IDS,
+    PerPlayer, PlayVariant, PlayerId, PromptKind, SeatSummary, Selection, Zone,
 };
 
 /// Each seat's hand as instance id → catalog id, in hand order.
@@ -33,6 +40,30 @@ type Hands = PerPlayer<IndexMap<String, String>>;
 
 /// R4279000: each seat's library by instance id.
 type Decks = PerPlayer<IndexSet<String>>;
+
+/// R2089000: a Created instance's maker: the seat it is credited to and its catalog id. R4672001: and the
+/// card whose effect made it, `None` for one a rule made.
+struct Made {
+    creator: PlayerId,
+    card: String,
+    source: Option<MadeBy>,
+}
+
+/// R4672000: a list entry a play pushed, whose variant the choices its card asks as it resolves extend.
+#[derive(Clone, Copy)]
+enum Slot {
+    Played(PlayerId, usize),
+    Cast(PlayerId, usize),
+    CreatedUsed(PlayerId, usize),
+    CreatedPlayed(PlayerId, usize),
+}
+
+/// R4672000: a play between its `cardPlayed` and its `cardResolved`: its entries, and the steps of its
+/// own script already answered, so an Echo repeat asking one again adds nothing.
+struct OpenPlay {
+    slots: Vec<Slot>,
+    answered: IndexSet<String>,
+}
 
 struct Reading {
     hands: Hands,
@@ -47,6 +78,12 @@ struct Reading {
     played: PerPlayer<Vec<String>>,
     played_turns: PerPlayer<Vec<i32>>,
     played_radiant: PerPlayer<Vec<bool>>,
+    /// R4672000: each play's variant, beside `played`.
+    played_variants: PerPlayer<Vec<Option<PlayVariant>>>,
+    /// R4672000: the plays still resolving, by the instance id their card's prompts name.
+    open: IndexMap<String, OpenPlay>,
+    /// R4672002: each seat's Discover-like picks.
+    picks: PerPlayer<Vec<CardPick>>,
     /// R1256000: the per-seat counts, read off the events both seats see.
     fatigue_draws: PerPlayer<i32>,
     fatigue_damage: PerPlayer<i32>,
@@ -61,7 +98,7 @@ struct Reading {
     radiant_seen: IndexSet<String>,
     current_turn: i32,
     /// R2089000: every Created instance seen, by instance id: the seat that made it and its catalog id.
-    made: IndexMap<String, (PlayerId, String)>,
+    made: IndexMap<String, Made>,
     /// R2089000: the Created instances already used, a fresh face-down id (R227) beside its former one.
     used: IndexSet<String>,
     created_used: PerPlayer<Vec<CreatedUse>>,
@@ -138,13 +175,156 @@ fn decks_of(state: &GameState, following: Option<&Decks>) -> Decks {
     PerPlayer::new(deck(PlayerId::P1), deck(PlayerId::P2))
 }
 
-/// R4279000: a dealt card of `player`'s an effect cast or summoned from its deck or hand.
-fn cast_or_summon(reading: &mut Reading, player: PlayerId, card: &str, radiant: bool) {
-    reading.cast_or_summoned[player].push(CreatedUse {
+/// R4279000: a dealt card of `player`'s an effect cast or summoned from its deck or hand, at the index it
+/// is listed at. R4672000: a cast keeps its variant.
+fn cast_or_summon(
+    reading: &mut Reading,
+    player: PlayerId,
+    card: &str,
+    radiant: bool,
+    variant: Option<PlayVariant>,
+) -> usize {
+    let cast = &mut reading.cast_or_summoned[player];
+    cast.push(CreatedUse {
         card: card.to_string(),
         turn: reading.current_turn,
         radiant,
+        variant,
+        source: None,
     });
+    cast.len() - 1
+}
+
+/// R4672000: what a `cardPlayed` says was chosen; `None` when its card offered no choice.
+fn play_variant(modes: Option<&[String]>, x: Option<i32>, embiggened: Option<bool>) -> Option<PlayVariant> {
+    let modes = modes.map(<[String]>::to_vec).unwrap_or_default();
+    if modes.is_empty() && x.is_none() && embiggened.is_none() {
+        return None;
+    }
+    Some(PlayVariant { modes, x, embiggened })
+}
+
+/// R4672000: the variant a list entry holds.
+fn variant_mut(reading: &mut Reading, slot: Slot) -> Option<&mut Option<PlayVariant>> {
+    match slot {
+        Slot::Played(player, at) => reading.played_variants[player].get_mut(at),
+        Slot::Cast(player, at) => reading.cast_or_summoned[player]
+            .get_mut(at)
+            .map(|cast| &mut cast.variant),
+        Slot::CreatedUsed(player, at) => reading.created_used[player]
+            .get_mut(at)
+            .map(|used| &mut used.variant),
+        Slot::CreatedPlayed(player, at) => reading.created_played[player]
+            .get_mut(at)
+            .map(|played| &mut played.variant),
+    }
+}
+
+/// R4672000: a play's entries, open until its `cardResolved`; a play that listed none is no open play.
+fn open(reading: &mut Reading, instance_id: &str, slots: Vec<Slot>) {
+    if slots.is_empty() {
+        reading.open.shift_remove(instance_id);
+    } else {
+        reading.open.insert(
+            instance_id.to_string(),
+            OpenPlay {
+                slots,
+                answered: IndexSet::new(),
+            },
+        );
+    }
+}
+
+/// R4672000, R4672002: an answer to a prompt a card's own script asked (`prompts::RESUME_HOOK`), read
+/// before the step's events. A `mode` or `number` answer joins the variant of the play still resolving
+/// whose card asked it, each of its steps once; a `discover` or `pick` answer is a pick of the seat the
+/// prompt's step runs as, when every option it offered is a card.
+fn answer(reading: &mut Reading, before: &GameState, action: &Action) {
+    let ActionBody::Answer { selection, .. } = &action.body else {
+        return;
+    };
+    let Some(pending) = before.pending.as_ref() else {
+        return;
+    };
+    let resume = &pending.resume;
+    if resume.hook != crate::prompts::RESUME_HOOK {
+        return;
+    }
+    // The options picked, in the prompt's (the card's) order.
+    let chosen: Vec<&Selection> = pending
+        .options
+        .iter()
+        .map(|option| &option.selection)
+        .filter(|option| selection.contains(option))
+        .collect();
+    match pending.kind {
+        PromptKind::Mode | PromptKind::Number => {
+            let Some(play) = resume
+                .instance_id
+                .as_ref()
+                .and_then(|id| reading.open.get_mut(id))
+            else {
+                return;
+            };
+            if !play.answered.insert(resume.step.clone()) {
+                return;
+            }
+            let modes: Vec<String> = chosen
+                .iter()
+                .filter_map(|option| match option {
+                    Selection::Mode { option } => Some(option.clone()),
+                    _ => None,
+                })
+                .collect();
+            if modes.is_empty() {
+                return;
+            }
+            for slot in play.slots.clone() {
+                if let Some(variant) = variant_mut(reading, slot) {
+                    variant
+                        .get_or_insert_with(PlayVariant::default)
+                        .modes
+                        .extend(modes.iter().cloned());
+                }
+            }
+        }
+        PromptKind::Discover | PromptKind::Pick => {
+            if resume.def_id.is_empty() {
+                return;
+            }
+            // A definition offered by its catalog id, or an instance by its card's; an index or a code
+            // offer (R247, R1183005) names no card, so it is no pick.
+            let card = |option: &Selection| -> Option<String> {
+                match option {
+                    Selection::Mode { option } => {
+                        crate::catalog::find_def(Some(before), option).map(|def| def.id.clone())
+                    }
+                    Selection::Instance { instance_id } => {
+                        find_instance(before, instance_id).map(|card| card.def_id.clone())
+                    }
+                    _ => None,
+                }
+            };
+            let Some(offered) = pending
+                .options
+                .iter()
+                .map(|option| card(&option.selection))
+                .collect::<Option<Vec<String>>>()
+            else {
+                return;
+            };
+            let picked: Vec<String> = chosen.iter().filter_map(|option| card(option)).collect();
+            reading.picks[crate::prompts::prompt_owner_of(pending)].push(CardPick {
+                source: MadeBy {
+                    card: resume.def_id.clone(),
+                    radiant: resume.radiant,
+                },
+                offered,
+                picked,
+            });
+        }
+        _ => {}
+    }
 }
 
 fn per_seat<T>() -> PerPlayer<Vec<T>> {
@@ -175,33 +355,58 @@ fn is_radiant(before: &GameState, after: &GameState, ids: &[&str]) -> bool {
     card_of(before, after, ids).is_some_and(|card| card.radiant)
 }
 
+/// R4672001: the card whose effect made the Created card one of `ids` names, as the step left the
+/// engine's record of it, else as the step found it.
+fn maker_of(before: &GameState, after: &GameState, ids: &[&str]) -> Option<MadeBy> {
+    ids.iter()
+        .find_map(|id| after.makers.get(*id))
+        .or_else(|| ids.iter().find_map(|id| before.makers.get(*id)))
+        .cloned()
+}
+
 /// R2089000: a Created instance's maker, kept the first time an event names it.
-fn make(reading: &mut Reading, id: &str, creator: PlayerId, card: &str) {
-    reading
-        .made
-        .entry(id.to_string())
-        .or_insert_with(|| (creator, card.to_string()));
+fn make(reading: &mut Reading, id: &str, creator: PlayerId, card: &str, source: Option<MadeBy>) {
+    reading.made.entry(id.to_string()).or_insert_with(|| Made {
+        creator,
+        card: card.to_string(),
+        source,
+    });
 }
 
 /// R2089000: a Created instance is used, counted once for the seat that made it (`maker` when no event
 /// has named it before). `ids` are its id now and, for a card set face-down, the one it had (R227).
-fn use_created(reading: &mut Reading, ids: &[&str], maker: PlayerId, card: &str, radiant: bool) {
-    let creator = ids
-        .iter()
-        .find_map(|id| reading.made.get(*id))
-        .map_or(maker, |(creator, _)| *creator);
+/// R4672001: its entry names the card that made it; R4672000: and keeps `variant` when `maker`, the seat
+/// that played it, made it. Hands back the entry it listed.
+fn use_created(
+    reading: &mut Reading,
+    ids: &[&str],
+    maker: PlayerId,
+    card: &str,
+    radiant: bool,
+    source: Option<MadeBy>,
+    variant: Option<PlayVariant>,
+) -> Option<(PlayerId, usize)> {
+    let (creator, source) = match ids.iter().find_map(|id| reading.made.get(*id)) {
+        Some(made) => (made.creator, made.source.clone().or(source)),
+        None => (maker, source),
+    };
     let first = !ids.iter().any(|id| reading.used.contains(*id));
     for id in ids {
-        make(reading, id, creator, card);
+        make(reading, id, creator, card, source.clone());
         reading.used.insert((*id).to_string());
     }
-    if first {
-        reading.created_used[creator].push(CreatedUse {
-            card: card.to_string(),
-            turn: reading.current_turn,
-            radiant,
-        });
+    if !first {
+        return None;
     }
+    let used = &mut reading.created_used[creator];
+    used.push(CreatedUse {
+        card: card.to_string(),
+        turn: reading.current_turn,
+        radiant,
+        variant: variant.filter(|_| creator == maker),
+        source,
+    });
+    Some((creator, used.len() - 1))
 }
 
 /// One step's events, in the order they happened.
@@ -261,7 +466,8 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 reading.hands[*player].insert(instance_id.clone(), def_id.clone());
                 mark_radiant(reading, after, instance_id);
                 if is_created(before, after, &[instance_id]) {
-                    make(reading, instance_id, creator.unwrap_or(*player), def_id);
+                    let source = maker_of(before, after, &[instance_id]);
+                    make(reading, instance_id, creator.unwrap_or(*player), def_id, source);
                 }
             }
             GameEvent::ShuffledIn {
@@ -274,7 +480,8 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 leave(&mut reading.hands, instance_id);
                 reading.decks[*player].insert(instance_id.clone());
                 if is_created(before, after, &[instance_id]) {
-                    make(reading, instance_id, creator.unwrap_or(*player), def_id);
+                    let source = maker_of(before, after, &[instance_id]);
+                    make(reading, instance_id, creator.unwrap_or(*player), def_id, source);
                 }
             }
             GameEvent::MarketBought {
@@ -284,7 +491,8 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 ..
             } => {
                 if is_created(before, after, &[instance_id]) {
-                    make(reading, instance_id, *player, def_id);
+                    let source = maker_of(before, after, &[instance_id]);
+                    make(reading, instance_id, *player, def_id, source);
                 }
             }
             GameEvent::Summoned {
@@ -311,7 +519,8 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                             .map_or(*player, |source| source.controller)
                     });
                     let radiant = is_radiant(before, after, &ids);
-                    use_created(reading, &ids, maker, def_id, radiant);
+                    let source = maker_of(before, after, &ids);
+                    use_created(reading, &ids, maker, def_id, radiant, source, None);
                 } else if !ids.iter().any(|id| announced.contains(*id)) {
                     // R4279000: a dealt card put onto its seat's field from that seat's deck or hand, by
                     // its own trigger (M #87) or another card's effect (a Recruit); a play's step-4
@@ -319,7 +528,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     let id = former_id.as_deref().unwrap_or(instance_id.as_str());
                     if reading.decks[*player].contains(id) || reading.hands[*player].contains_key(id) {
                         let radiant = is_radiant(before, after, &ids);
-                        cast_or_summon(reading, *player, def_id, radiant);
+                        cast_or_summon(reading, *player, def_id, radiant, None);
                     }
                 }
             }
@@ -359,6 +568,9 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 def_id,
                 former_id,
                 on_draw,
+                x,
+                embiggened,
+                modes,
                 ..
             } => {
                 // R227: a Trap set face-down took a fresh id; the hand knew it by the old one.
@@ -371,6 +583,9 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 let on_draw = *on_draw == Some(true);
                 announced.insert(instance_id.clone());
                 announced.insert(id.clone());
+                // R4672000: the play's variant, on each entry it lists, which its own prompts extend.
+                let variant = play_variant(modes.as_deref(), *x, *embiggened);
+                let mut slots: Vec<Slot> = Vec::new();
                 if created {
                     // R2089000: a play from anywhere and a cast use it alike. A card no event named
                     // before was made in this step for the seat that casts it.
@@ -379,41 +594,62 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     } else {
                         is_radiant(before, after, &ids)
                     };
-                    use_created(reading, &ids, *player, def_id, radiant);
+                    let source = maker_of(before, after, &ids);
+                    if let Some((creator, at)) =
+                        use_created(reading, &ids, *player, def_id, radiant, source, variant.clone())
+                        && creator == *player
+                    {
+                        slots.push(Slot::CreatedUsed(creator, at));
+                    }
                 }
                 if !from_hand || on_draw {
                     // R4279000: a dealt card cast on its draw, whichever deck it was drawn from (as
                     // `drawn` credits the drawer), or cast from its seat's own deck.
                     if !created && (on_draw || reading.decks[*player].contains(id)) {
                         let radiant = is_radiant(before, after, &ids);
-                        cast_or_summon(reading, *player, def_id, radiant);
+                        let at = cast_or_summon(reading, *player, def_id, radiant, variant);
+                        slots.push(Slot::Cast(*player, at));
                     }
                     if from_hand {
                         reading.hands[*player].shift_remove(id);
                     }
+                    open(reading, instance_id, slots);
                     continue;
                 }
                 if stolen.iter().any(|countered| countered == id) {
                     leave(&mut reading.hands, id);
+                    open(reading, instance_id, slots);
                     continue;
                 }
                 let turn = reading.current_turn;
                 if created {
-                    reading.created_played[*player].push(CreatedUse {
+                    let played = &mut reading.created_played[*player];
+                    played.push(CreatedUse {
                         card: def_id.clone(),
                         turn,
                         radiant: reading.radiant.contains(id),
+                        variant,
+                        source: None,
                     });
+                    slots.push(Slot::CreatedPlayed(*player, played.len() - 1));
                 } else {
                     reading.played[*player].push(def_id.clone());
                     reading.played_turns[*player].push(turn);
                     reading.played_radiant[*player].push(reading.radiant.contains(id));
+                    let variants = &mut reading.played_variants[*player];
+                    variants.push(variant);
+                    slots.push(Slot::Played(*player, variants.len() - 1));
                 }
                 // R1256000, R227: a play that put the card face-down set a Trap.
                 if former_id.is_some() {
                     reading.traps_set[*player] += 1;
                 }
                 reading.hands[*player].shift_remove(id);
+                open(reading, instance_id, slots);
+            }
+            // R4672000: the play has resolved; a prompt its card asks from here on is no part of it.
+            GameEvent::CardResolved { instance_id, .. } => {
+                reading.open.shift_remove(instance_id);
             }
             GameEvent::Transformed {
                 instance_id,
@@ -439,11 +675,12 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     && let Some(card) = card_of(before, after, &new)
                 {
                     let maker = creator.unwrap_or(card.controller);
+                    let source = maker_of(before, after, &new);
                     if matches!(card.zone, Zone::Field { .. }) {
                         let radiant = card.radiant;
-                        use_created(reading, &new, maker, to_def_id, radiant);
+                        use_created(reading, &new, maker, to_def_id, radiant, source, None);
                     } else {
-                        make(reading, new_instance_id, maker, to_def_id);
+                        make(reading, new_instance_id, maker, to_def_id, source);
                     }
                 }
             }
@@ -484,12 +721,16 @@ fn seat_summary(reading: &Reading, deck: Vec<String>, player: PlayerId) -> SeatS
     }
     // R2089000: the Created cards the seat made that no use reached, one per instance; a card set
     // face-down is one instance under both its ids, which `used` holds together.
-    let unused: Vec<String> = reading
+    let unused: Vec<&Made> = reading
         .made
         .iter()
-        .filter(|(id, (creator, _))| *creator == player && !reading.used.contains(*id))
-        .map(|(_, (_, card))| card.clone())
+        .filter(|(id, made)| made.creator == player && !reading.used.contains(*id))
+        .map(|(_, made)| made)
         .collect();
+    // R4672001: the makers beside them, absent when no card made any; R4672000: the variants likewise.
+    let unused_sources: Vec<Option<MadeBy>> = unused.iter().map(|made| made.source.clone()).collect();
+    let unused: Vec<String> = unused.iter().map(|made| made.card.clone()).collect();
+    let variants = &reading.played_variants[player];
     SeatSummary {
         deck,
         opening: reading
@@ -501,6 +742,7 @@ fn seat_summary(reading: &Reading, deck: Vec<String>, player: PlayerId) -> SeatS
         played: reading.played[player].clone(),
         played_turns: listed(&reading.played_turns[player]),
         played_radiant: listed(&reading.played_radiant[player]),
+        played_variants: Some(variants.clone()).filter(|variants| variants.iter().any(Option::is_some)),
         // R1256000: a fresh summary always knows the counts; `None` is for older records.
         fatigue_draws: Some(reading.fatigue_draws[player]),
         fatigue_damage: Some(reading.fatigue_damage[player]),
@@ -510,11 +752,13 @@ fn seat_summary(reading: &Reading, deck: Vec<String>, player: PlayerId) -> SeatS
         radiant_upgrades: Some(reading.radiant_upgrades[player]),
         created_used: listed(&reading.created_used[player]),
         created_unused: listed(&unused),
+        created_unused_sources: Some(unused_sources).filter(|sources| sources.iter().any(Option::is_some)),
         created_played: listed(&reading.created_played[player]),
         cast_or_summoned: listed(&reading.cast_or_summoned[player]),
         // R3335001: absent when none, so a game without a Starship keeps its record's shape.
         starship_pieces_fused: Some(reading.starship_pieces_fused[player]).filter(|n| *n > 0),
         starships_launched: Some(reading.starships_launched[player]).filter(|n| *n > 0),
+        picks: listed(&reading.picks[player]),
     }
 }
 
@@ -544,6 +788,9 @@ impl SummaryReader {
                 played: per_seat(),
                 played_turns: per_seat(),
                 played_radiant: per_seat(),
+                played_variants: per_seat(),
+                open: IndexMap::new(),
+                picks: per_seat(),
                 fatigue_draws: zero(),
                 fatigue_damage: zero(),
                 traps_set: zero(),
@@ -564,13 +811,23 @@ impl SummaryReader {
         }
     }
 
-    /// One step: the state as it began, the events it emitted, and the state it left.
-    pub fn step(&mut self, before: &GameState, events: &[GameEvent], after: &GameState) {
+    /// One step: the state as it began, the action `reduce` took it with (`None` for a step no action
+    /// made, the game's beginning), the events it emitted, and the state it left.
+    pub fn step(
+        &mut self,
+        before: &GameState,
+        action: Option<&Action>,
+        events: &[GameEvent],
+        after: &GameState,
+    ) {
         // The state's own hands as the step begins, so nothing the events do not spell out (a card
         // whose control changed, say) carries from one action into the next, but a play still in flight.
         self.reading.hands = hands_of(before, Some(&self.reading.hands));
         self.reading.decks = decks_of(before, Some(&self.reading.decks));
         self.reading.radiant = radiant_of(before, &self.reading.hands);
+        if let Some(action) = action {
+            answer(&mut self.reading, before, action);
+        }
         read(&mut self.reading, events, before, after);
     }
 
@@ -602,7 +859,7 @@ pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
     let mut reader = SummaryReader::new(&start);
 
     let begun = begin_game(&start);
-    reader.step(&start, &begun.events, &begun.state);
+    reader.step(&start, None, &begun.events, &begun.state);
     let mut state = begun.state;
 
     for action in &input.log {
@@ -610,7 +867,7 @@ pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
         if result.error.is_some() {
             continue;
         }
-        reader.step(&state, &result.events, &result.state);
+        reader.step(&state, Some(action), &result.events, &result.state);
         state = result.state;
     }
 
@@ -646,6 +903,9 @@ mod tests {
             played: per_seat(),
             played_turns: per_seat(),
             played_radiant: per_seat(),
+            played_variants: per_seat(),
+            open: IndexMap::new(),
+            picks: per_seat(),
             fatigue_draws: zero(),
             fatigue_damage: zero(),
             traps_set: zero(),

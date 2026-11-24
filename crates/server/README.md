@@ -635,6 +635,11 @@ the deck's, `--json` as `created`, `--card` filtering both, and `GET /api/stats/
 `created` (R2089000), each row only its games, an adjusted win rate, its range and a tier (R4083000), read
 against the other Created cards (`created_field`, answered as `tiers.created`), or against the average deck for The Coin, Glitch and
 the Dormant Starship, which a rule makes (R4082000).
+Each play also records what was chosen for it (its Choose One options, X and Embiggen, R4672000), each
+Created card the card whose effect made it (R4672001) and each Discover-like choice what it offered and
+picked (R4672002); the totals keep each card's `variants`, `outputs` and `offers` in the same row's `stats`,
+a seat once a game by face, no migration (R4672003). `stats-cards --card=<id>` prints its variants and
+outputs tables after its other tables, and `--json` writes them as `choices`; no public route reads them yet.
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it

@@ -462,6 +462,109 @@ mod stats_cards_report {
             json!({ "games": 1, "wins": 0, "draws": 0 })
         );
     }
+
+    /// R4672003: `stats-cards --card` prints the card's variants table and its outputs table after its other
+    /// tables, and `--json` writes both.
+    #[tokio::test]
+    async fn r4672003_stats_cards_card_prints_the_variants_and_outputs_tables_and_json_writes_them() {
+        let db = Db::fake();
+        // p1 wins having played its core-001 Radiant with one choice, used a Rush Token it made, and
+        // picked core-003 of the two cards it offered.
+        let mut game = game_record_json("x", json!({}))["game"].clone();
+        let made_by = json!({ "card": "core-001", "radiant": true });
+        game["seats"]["p1"]["playedRadiant"] = json!([true]);
+        game["seats"]["p1"]["playedVariants"] = json!([{ "modes": ["bounce all enemy units"] }]);
+        game["seats"]["p1"]["createdUsed"] =
+            json!([{ "card": "core-t-rush", "turn": 2, "radiant": false, "source": made_by }]);
+        game["seats"]["p1"]["picks"] =
+            json!([{ "source": made_by, "offered": ["core-003", "core-004"], "picked": ["core-003"] }]);
+        let mut tx = db.begin(None).await.expect("a transaction");
+        tx.game_records_insert(&game_record("live-choices", json!({ "game": game })))
+            .await
+            .expect("the record is written");
+        tx.commit().await.expect("the record commits");
+
+        let one = options(&["--card=core-001"]);
+        let report = card_stats_report(&db, &one).await.expect("a report");
+        assert_eq!(
+            report
+                .choices
+                .iter()
+                .map(|row| row.card.as_str())
+                .collect::<Vec<_>>(),
+            ["core-001"]
+        );
+        let names = |card: &str| (card == "core-001").then(|| "Big D Fender".to_owned());
+        let text = render_card_stats(&report, &one, &names);
+        let (tables, choices) = text
+            .split_once("\n\nVariants of core-001 Big D Fender:\n")
+            .expect("the variants follow the card's other tables");
+        assert!(
+            tables
+                .split('\n')
+                .any(|line| line.starts_with("core-001 Big D Fender"))
+        );
+        let lines: Vec<&str> = choices.split('\n').collect();
+        let variants = lines
+            .iter()
+            .position(|line| line.starts_with("Variant "))
+            .expect("a header");
+        assert_eq!(split_wide(lines[variants]), ["Variant", "Radiant", "Normal"]);
+        assert_eq!(
+            split_wide(lines[variants + 1]),
+            ["bounce all enemy units", "100.0% (1)", "— (0)"]
+        );
+        assert_eq!(
+            lines[variants + 2..variants + 4],
+            ["", "Outputs of core-001 Big D Fender:"]
+        );
+        let outputs = lines
+            .iter()
+            .position(|line| line.starts_with("Made "))
+            .expect("a header");
+        assert_eq!(
+            lines[outputs + 1..]
+                .iter()
+                .map(|line| split_wide(line))
+                .collect::<Vec<_>>(),
+            [
+                ["core-003", "— (0)", "— (0)", "100.0% (1)", "100.0% (1)"],
+                ["core-004", "— (0)", "— (0)", "100.0% (1)", "— (0)"],
+                ["core-t-rush", "100.0% (1)", "— (0)", "— (0)", "— (0)"],
+            ]
+        );
+
+        // A card nothing chose or made says so.
+        let other = options(&["--card=core-002"]);
+        let nobody = |_: &str| -> Option<String> { None };
+        let text = render_card_stats(
+            &card_stats_report(&db, &other).await.expect("a report"),
+            &other,
+            &nobody,
+        );
+        assert!(text.ends_with(
+            "\n\nVariants of core-002:\nNo variant recorded.\n\nOutputs of core-002:\nNo output recorded."
+        ));
+
+        let as_json = options(&["--card=core-001", "--json"]);
+        let parsed: Value =
+            serde_json::from_str(&render_card_stats(&report, &as_json, &names)).expect("--json prints JSON");
+        let won = json!({ "games": 1, "wins": 1, "draws": 0 });
+        assert_eq!(
+            parsed["choices"],
+            json!([{
+                "card": "core-001",
+                "variants": { "bounce all enemy units": { "radiant": won } },
+                "outputs": { "core-t-rush": { "radiant": won } },
+                "offers": {
+                    "core-003": { "offered": { "radiant": won }, "picked": { "radiant": won } },
+                    "core-004": { "offered": { "radiant": won } },
+                },
+            }])
+        );
+        // No row the public report reads carries them.
+        assert!(parsed["cards"][0].get("choices").is_none());
+    }
 }
 
 mod stats_import {

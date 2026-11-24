@@ -13,8 +13,8 @@ use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
 use jackioh_engine::wire::{
-    CardStatsFilter, GAME_SOURCES, GameMode, GameReport, PilotFilter, SourceFilter, StatsTotals, card_stats,
-    card_stats_of, game_figures_of, game_report, parse_game_record, sources_of,
+    CardStatsFilter, FaceTally, GAME_SOURCES, GameMode, GameReport, PilotFilter, SourceFilter, StatsTotals,
+    Tally, card_stats, card_stats_of, game_figures_of, game_report, parse_game_record, sources_of,
 };
 use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::config::PersonaName;
@@ -5292,6 +5292,67 @@ mod game_records {
         assert!(card_stats(&before, &filter).created.is_empty());
     }
 
+    /// R4672003: a record's variants, its Created cards' makers and its picks are folded into the same
+    /// rows by card, inside each card's stats, and the store loads them as the records give them, a
+    /// second record adding to the first; a record written without them adds none.
+    async fn r4672003_folds_the_choices_and_loads_them_as_the_records_give(harness: &StoreHarness) {
+        let mut records = mixed_records();
+        let deck = json!(["core-001", "core-002"]);
+        let made_by = json!({ "card": "core-001", "radiant": false });
+        for (id, winner) in [("m-g", "p1"), ("m-h", "p2")] {
+            records.push(game_record(
+                id,
+                json!({ "game": { "first": "p1", "winner": winner, "reason": "hero-death", "turns": 6, "seats": {
+                    "p1": { "deck": deck, "opening": ["core-001"], "drawn": [], "played": ["core-001", "core-002"],
+                            "playedRadiant": [true, false],
+                            "playedVariants": [{ "modes": ["one"] }, { "x": 2 }],
+                            "createdUsed": [{ "card": "core-t-rush", "turn": 3, "radiant": false, "source": made_by }],
+                            "createdUnused": ["core-t-rush", "core-t-coin"],
+                            "createdUnusedSources": [made_by, null],
+                            "picks": [{ "source": made_by, "offered": ["core-003", "core-004"], "picked": ["core-004"] }] },
+                    "p2": { "deck": deck, "opening": [], "drawn": [], "played": [] },
+                } } }),
+            ));
+        }
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+        let totals = q!(harness, t => t.stats_totals_load(&every_total()));
+        assert_eq!(totals, loaded(&records));
+        let filter = CardStatsFilter {
+            source: SourceFilter::Live,
+            mode: None,
+            patch: None,
+            pilot: PilotFilter::Unified,
+        };
+        let report = card_stats_of(&totals, &filter);
+        assert_eq!(report, card_stats(&records, &filter));
+        let cards: Vec<&str> = report.choices.iter().map(|row| row.card.as_str()).collect();
+        assert_eq!(cards, ["core-001", "core-002"]);
+        let one = &report.choices[0].choices;
+        let split = |radiant: (i32, i32), normal: (i32, i32)| FaceTally {
+            radiant: Tally {
+                games: radiant.0,
+                wins: radiant.1,
+                draws: 0,
+            },
+            normal: Tally {
+                games: normal.0,
+                wins: normal.1,
+                draws: 0,
+            },
+        };
+        assert_eq!(one.variants["one"], split((2, 1), (0, 0)));
+        assert_eq!(one.outputs["core-t-rush"], split((0, 0), (2, 1)));
+        assert_eq!(one.outputs.len(), 1, "The Coin names no maker");
+        assert_eq!(one.offers["core-003"].offered, split((0, 0), (2, 1)));
+        assert_eq!(one.offers["core-003"].picked, FaceTally::default());
+        assert_eq!(one.offers["core-004"].picked, split((0, 0), (2, 1)));
+        assert_eq!(report.choices[1].choices.variants["X=2"], split((0, 0), (2, 1)));
+        assert!(card_stats(&mixed_records(), &filter).choices.is_empty());
+    }
+
     /// R1044000: a record written before the totals (migration 0041) is folded by
     /// `game_records_fold_pending`, a batch at a time, the first in id order, and never twice.
     async fn r1044000_folds_the_records_written_before_the_totals_once_a_batch_at_a_time(
@@ -5595,6 +5656,7 @@ mod game_records {
         r1976000_folds_a_batch_once_with_no_record_and_leaves_out_the_ids_the_table_holds,
         r1994000_a_records_game_figures_read_the_same_once_the_purge_empties_its_detail,
         r2089000_folds_the_created_figures_and_loads_them_as_the_records_give,
+        r4672003_folds_the_choices_and_loads_them_as_the_records_give,
     );
 }
 
