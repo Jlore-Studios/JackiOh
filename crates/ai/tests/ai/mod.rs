@@ -77,6 +77,7 @@ pub mod secrets;
 pub mod sim_memo;
 pub mod sim_panics;
 pub mod skill;
+pub mod slash;
 pub mod slumber;
 pub mod starship;
 pub mod starship_equip;
