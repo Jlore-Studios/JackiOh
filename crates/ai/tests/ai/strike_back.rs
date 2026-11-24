@@ -52,7 +52,8 @@ fn board(seed: &str, p1: Value, p2: Value) -> GameState {
     state
 }
 
-/// `board` with the Projector awake in p2's backrow: every Unit has Windfury.
+/// `board` with the Projector awake in p2's backrow: p2's Units have Windfury (its controller's alone
+/// since issue #4665).
 fn projected(seed: &str, p1: Value, p2_field: Value) -> GameState {
     let state = board(
         seed,

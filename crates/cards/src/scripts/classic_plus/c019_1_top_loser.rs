@@ -1,6 +1,6 @@
-//! C+ #19.1 Top Loser (SPEC §8.7 row 19.1): a 3/3 with Armor 2 (Radiant: a 6/6 with Armor 2, the base
-//! face's since issue #4292 (4 before), and Immune to Spells; catalog keywords); never in Defense
-//! Position, and only a Unit in its lane may attack it (E35 static flags).
+//! C+ #19.1 Top Loser (SPEC §8.7 row 19.1): a 3/3 (Radiant: a 6/6, Immune to Spells, a catalog
+//! keyword), with no Armor since issue #4665 (Armor 2 on both faces before, the Radiant face's 4 until
+//! issue #4292); never in Defense Position, and only a Unit in its lane may attack it (E35 static flags).
 
 use jackioh_engine::prelude::*;
 
@@ -26,8 +26,8 @@ pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, true)
 }
 
-// SPEC §8.7 row 19.1: lane-only attacks (§4.2 step 2), never Defense, radiant Spell-immune. Its Armor is
-// a numbered keyword that B3.4's X change tunes (R386): an Upgrade of it proves "reads through param()".
+// SPEC §8.7 row 19.1: lane-only attacks (§4.2 step 2), never Defense, radiant Spell-immune, no Armor
+// since issue #4665.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -44,6 +44,8 @@ mod tests {
     const BODY: &str = "core-019"; // Midrange Menace: Taunt
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const STAND_IN: &str = "stand-in (1) 5/9";
+    /// Its 2 leaves the 3/3 at 1, with no Armor to take any of it.
+    const WEAK: &str = "stand-in (1) 2/4";
     const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
     const SORCERER: &str = "core-068"; // Twisted Sorcerer: Cry deal 4 damage to a target
     const SWITCH_ALL: &str = "core-048"; // 5pek Controller: switch the position of every Unit
@@ -132,30 +134,19 @@ mod tests {
         mod base {
             use super::*;
 
-            /// A 4/4's hit of 4 through Armor 2 deals 2: the 3/3 is left at 1.
+            /// Issue #4665: no Armor, so a 2/4's hit of 2 leaves the 3/3 at 1.
             #[test]
-            fn has_armor_2_a_4_damage_hit_leaves_it_at_1() {
-                let mut s = top_loser(json!({ "field": [{ "def": VANILLA, "lane": 3 }] }), false, json!({}));
-                assert_eq!(s.stats(top(&s)).armor, 2);
+            fn has_no_armor_since_issue_4665_a_2_damage_hit_leaves_it_at_1() {
+                let mut s = top_loser(json!({ "field": [{ "def": WEAK, "lane": 3 }] }), false, json!({}));
+                assert_eq!(s.stats(top(&s)).armor, 0);
+                let face = crate::card_def(TOP).base.keywords;
+                let armored = face.iter().any(|keyword| keyword.kind() == KeywordKind::Armor);
+                assert!(!armored, "{face:?}");
                 let attacker = unit_or_blank(&s, P1, 3);
                 let target = top(&s);
                 s.attack(attacker, &target);
                 let target = top(&s);
                 s.expect_stats(&target, json!({ "health": 1 }));
-            }
-
-            /// Armor 3 lets 1 of the 4/4's 4 through: the 3/3 is left at 2.
-            #[test]
-            fn r386_its_armor_is_tuned_as_a_numbered_keyword_an_upgrade_makes_it_armor_3() {
-                let mut s = top_loser(json!({ "field": [{ "def": VANILLA, "lane": 3 }] }), false, json!({}));
-                let tuning = tuning_of(top_mut(&mut s));
-                tuning.x = Some(add_step(tuning.x.as_ref(), "Armor", 1));
-                assert_eq!(s.stats(top(&s)).armor, 3);
-                let attacker = unit_or_blank(&s, P1, 3);
-                let target = top(&s);
-                s.attack(attacker, &target);
-                let target = top(&s);
-                s.expect_stats(&target, json!({ "health": 2 }));
             }
 
             #[test]
@@ -217,9 +208,8 @@ mod tests {
                 assert!(attack_targets(&s, &across.id).contains(&loser.id));
                 s.expect_refused_with(|s| s.attack(&beside, &loser), "lane");
                 s.attack(&across, &loser);
-                // 4 through Armor 2: the 3/3 is left at 1.
-                let loser = top(&s);
-                s.expect_stats(&loser, json!({ "health": 1 }));
+                // 4 on a 3/3 with no Armor since issue #4665: the token is destroyed and ceases to exist.
+                s.expect_in_zone(&loser, "gone");
             }
 
             #[test]
@@ -333,7 +323,8 @@ mod tests {
 
             #[test]
             fn s6_1_a_unit_still_reaches_it_a_cry_targets_it_and_a_unit_s_sweep_destroys_it() {
-                // Twisted Sorcerer's 4 through the Radiant Top Loser's Armor 2 deals 2: the 6/6 is left at 4.
+                // Twisted Sorcerer's 4 on the Radiant Top Loser, with no Armor since issue #4665: the 6/6 is
+                // left at 2.
                 let mut s = top_loser(json!({ "hand": [SORCERER, FILLER] }), true, json!({}));
                 let loser = top(&s);
                 s.play(
@@ -341,23 +332,24 @@ mod tests {
                     json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": loser.id }] }),
                 );
                 let loser = top(&s);
-                s.expect_stats(&loser, json!({ "health": 4 }));
+                s.expect_stats(&loser, json!({ "health": 2 }));
                 let mut felinor = top_loser(json!({ "hand": [BIG_FELINOR, FILLER] }), true, json!({}));
                 let loser = top(&felinor);
                 felinor.play(BIG_FELINOR, json!({ "zone": 1 }));
                 felinor.expect_in_zone(&loser, "gone");
             }
 
-            /// Issue #4292: the Radiant face prints the base face's Armor 2 (4 before) and keeps Immune to
-            /// Spells.
+            /// Issue #4665: the Radiant face prints no Armor (Armor 2 before, 4 until issue #4292) and
+            /// keeps Immune to Spells.
             #[test]
-            fn prints_armor_2_since_issue_4292_and_keeps_immune_to_spells() {
+            fn prints_no_armor_since_issue_4665_and_keeps_immune_to_spells() {
                 let s = top_loser(json!({}), true, json!({}));
                 let loser = top(&s);
-                assert_eq!(s.stats(&loser).armor, 2);
+                assert_eq!(s.stats(&loser).armor, 0);
                 assert!(unit_has(s.state(), &loser, KeywordKind::ImmuneToSpells));
                 let face = crate::card_def(TOP).radiant.keywords;
-                assert!(face.contains(&Keyword::Armor { n: 2 }), "{face:?}");
+                let armored = face.iter().any(|keyword| keyword.kind() == KeywordKind::Armor);
+                assert!(!armored, "{face:?}");
                 assert!(face.contains(&Keyword::ImmuneToSpells), "{face:?}");
             }
 
@@ -367,9 +359,9 @@ mod tests {
                 let attacker = unit_or_blank(&s, P1, 3);
                 let target = top(&s);
                 s.attack(attacker, &target);
-                // The stand-in's 5 through Armor 2 deals 3: the 6/6 is left at 3.
+                // The stand-in's 5, with no Armor since issue #4665: the 6/6 is left at 1.
                 let target = top(&s);
-                s.expect_stats(&target, json!({ "health": 3 }));
+                s.expect_stats(&target, json!({ "health": 1 }));
             }
 
             #[test]

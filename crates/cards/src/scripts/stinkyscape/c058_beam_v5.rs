@@ -1,10 +1,10 @@
 //! Stinkyscape #58 Beam v5 (SPEC §8.10 row 58). Unit 0/4 → 0/8, Weapon, cost 4, Legendary.
 //!   Base:    "Starship Piece
 //!            Activate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn
-//!            cooldown." — damage 6 (7 until issue #4440, 8 until issue #4353, 9 until issue #4154, 11 until
-//!            issue #3996, 12 until #2657)
-//!   Radiant: the same text — damage 12 (14 until issue #4440, 16 until issue #4353, 18 until issue #4154, 22
-//!            until issue #3996, 24 until #2657)
+//!            cooldown." — damage 5 (6 until issue #4665, 7 until issue #4440, 8 until issue #4353, 9 until
+//!            issue #4154, 11 until issue #3996, 12 until #2657)
+//!   Radiant: the same text — damage 10 (12 until issue #4665, 14 until issue #4440, 16 until issue #4353,
+//!            18 until issue #4154, 22 until issue #3996, 24 until #2657)
 //!
 //! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
@@ -139,8 +139,8 @@ mod tests {
     use crate::stinkyscape_family as fam;
 
     /// The printed `damage`, and the Radiant face's.
-    const DAMAGE: i32 = 6;
-    const RADIANT_DAMAGE: i32 = 12;
+    const DAMAGE: i32 = 5;
+    const RADIANT_DAMAGE: i32 = 10;
     mod base {
         use super::*;
 

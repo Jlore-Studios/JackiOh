@@ -140,13 +140,13 @@ mod tests {
             }
 
             #[test]
-            fn r1221_the_tribute_query_holds_the_forty_shipped_tribute_cost_cards() {
+            fn r1221_the_tribute_query_holds_the_forty_one_shipped_tribute_cost_cards() {
                 crate::register_all();
                 // A pool that names no set draws from the sets that ship (R1420), as SPEC §8.8 row 88
                 // lists them, M #25 and #91, S #74, #80, #85, #86, #113 and #115 (#1884), S #96 (#3837),
                 // S #26 (#3996), M #7, S #18 and S #109 (#4154),
                 // TG #25 and #54 (Core #66's snapshot, #2204), S+ #21, #52, #72, #112 to #114, #117 to
-                // #119, #122 to #127, #130, #131, #159 and #160 (#3573), and S+ #4 (#4440). Turtinator's Tribute is an
+                // #119, #122 to #127, #130, #131, #159 and #160 (#3573), S+ #4 (#4440) and S+ #7 (#4665). Turtinator's Tribute is an
                 // Activate's cost, not a play cost, M #97's Tribute buildings are tokens, and S+ #129's,
                 // #138's and #139's "Tribute" is the one a card they add has or lacks, so none of them is
                 // one of them.
@@ -184,6 +184,7 @@ mod tests {
                         "traininggrounds-025",
                         "traininggrounds-054",
                         "stinkyscapeplus-004",
+                        "stinkyscapeplus-007",
                         "stinkyscapeplus-021",
                         "stinkyscapeplus-052",
                         "stinkyscapeplus-072",

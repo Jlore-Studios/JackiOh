@@ -36,10 +36,11 @@ use crate::scripts::classic::{
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c019_2_jungle_loser,
-    c019_3_mid_loser, c023_dropshipping, c026_tommy_tempo, c029_portal_to_the_past, c030_felinor_fuser,
-    c033_ivory_tower, c037_wardrum, c040_appropriations, c042_kys_test, c043_ai_slop, c047_joggs_box,
-    c048_jlockeeds_lobbyist, c049_jay_fungus, c051_jlockeeds_j15_fighter, c053_book_of_tokens,
-    c062_kys_papaya, c068_organic_produce, c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
+    c019_3_mid_loser, c019_5_bot_loser, c023_dropshipping, c026_tommy_tempo, c029_portal_to_the_past,
+    c030_felinor_fuser, c033_ivory_tower, c037_wardrum, c040_appropriations, c042_kys_test, c043_ai_slop,
+    c047_joggs_box, c048_jlockeeds_lobbyist, c049_jay_fungus, c051_jlockeeds_j15_fighter,
+    c053_book_of_tokens, c062_kys_papaya, c068_organic_produce, c071_book_of_buff, c073_1_classic_golem,
+    c078_claudes_datacenter,
 };
 use crate::scripts::core::{
     c002_speciesist, c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther,
@@ -84,18 +85,20 @@ use crate::scripts::stinkyscape::{
     t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
-    c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie, c018_large_smoothie,
-    c021_jlockeed_shredder_12, c025_snom_bunny, c037_scorch, c039_mindustrial_cross_over,
-    c041_mend_projector, c046_phase_fabric, c061_1_shawarma_law, c064_surge_wall, c065_thorium_wall,
-    c066_plastanium_wall, c067_phase_wall, c076_ayys_lmao, c077_black_hole,
-    c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition,
-    c093_recessive_replicators, c097_selective_enrollment, c104_tireless_cultivation, c119_eclipse,
-    c120_crawler, c121_1_toxopid_leg, c121_toxopid, c131_tetrative_reconstructor, c145_fire_beam_v5,
-    c155_the_far_vagabond, c159_raven, c166_mindustrial_revolution,
+    c004_profe_yates, c007_churnwalker, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie,
+    c018_large_smoothie, c021_jlockeed_shredder_12, c025_snom_bunny, c037_scorch,
+    c039_mindustrial_cross_over, c041_mend_projector, c046_phase_fabric, c061_1_shawarma_law,
+    c062_overdrive_projector, c063_overdrive_dome, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall,
+    c067_phase_wall, c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea,
+    c080_the_last_voyage, c082_endless_expedition, c093_recessive_replicators, c097_selective_enrollment,
+    c104_tireless_cultivation, c119_eclipse, c120_crawler, c121_1_toxopid_leg, c121_toxopid,
+    c131_tetrative_reconstructor, c145_fire_beam_v5, c155_the_far_vagabond, c159_raven,
+    c166_mindustrial_revolution,
 };
 use crate::scripts::training_grounds::{
     c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
     c039_call_to_chaos_training_grounds_edition, c040_goetzmann_game_design, c045_jlockeeds_weapons,
+    c050_glowy_jelly_bean as c050_legacy_glowy_jelly_bean,
     c052_snom_bunny_mind_control as c052_legacy_snom_bunny_mind_control,
     c056_corpse_eater as c056_legacy_corpse_eater,
 };
@@ -1347,6 +1350,49 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c040_appropriations::ID,
         "v0.6.12b",
         c040_appropriations::script_v0_6_12b,
+    ),
+    // #4665 Stinkyscape+ Balance Changes VII: Mend Projector, Overdrive Projector and Overdrive Dome
+    // over both sides (R4665001, R4665002), Bot Loser's Attack on a kill (R4665003), the Flaks' 60/30/10
+    // (R4665004), the Legacy Glowy Jelly Bean's copy of Core #26 (R4665006) and Churnwalker with no
+    // Tribute, the last scripts before it.
+    // v0.6.8c and v0.6.8d declared no `health` yet: they ran v0.6.8b's script.
+    (
+        c041_mend_projector::ID,
+        "v0.6.8d",
+        c041_mend_projector::script_v0_6_8b,
+    ),
+    (
+        c041_mend_projector::ID,
+        "v0.6.12c",
+        c041_mend_projector::script_v0_6_12c,
+    ),
+    (
+        c062_overdrive_projector::ID,
+        "v0.6.12c",
+        c062_overdrive_projector::script_v0_6_12c,
+    ),
+    (
+        c063_overdrive_dome::ID,
+        "v0.6.12c",
+        c063_overdrive_dome::script_v0_6_12c,
+    ),
+    (
+        c019_5_bot_loser::ID,
+        "v0.6.12c",
+        c019_5_bot_loser::script_v0_6_12c,
+    ),
+    (c053_flak_v3::ID, "v0.6.12c", c053_flak_v3::script_v0_6_12c),
+    (c057_flak_v4::ID, "v0.6.12c", c057_flak_v4::script_v0_6_12c),
+    (c061_flak_v5::ID, "v0.6.12c", c061_flak_v5::script_v0_6_12c),
+    (
+        c050_legacy_glowy_jelly_bean::ID,
+        "v0.6.12c",
+        c050_legacy_glowy_jelly_bean::script_v0_6_12c,
+    ),
+    (
+        c007_churnwalker::ID,
+        "v0.6.12c",
+        c007_churnwalker::script_v0_6_12c,
     ),
 ];
 

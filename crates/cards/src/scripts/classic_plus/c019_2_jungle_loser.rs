@@ -492,8 +492,7 @@ mod tests {
             }
 
             #[test]
-            fn r412_the_kill_across_from_your_bot_loser_is_credited_to_it_the_destroyed_event_names_it_and_its_trigger_fires(
-            ) {
+            fn r412_r4665003_a_kill_across_from_your_bot_loser_is_credited_to_it_its_destroyed_names_it() {
                 let mut s = jungle(
                     json!([{ "def": BOT, "lane": 4 }]),
                     true,
@@ -507,8 +506,8 @@ mod tests {
                     matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == victim.id)
                 });
                 assert_eq!(killer_of(death), Some(bot.id.clone()));
-                // The 3/3 Bot Loser's +2 for the kill.
-                s.expect_stats(&bot, json!({ "attack": 5 }));
+                // R4665003: the credit gains the 3/3 Bot Loser nothing since issue #4665 (+2 through v0.6.12c).
+                s.expect_stats(&bot, json!({ "attack": 3 }));
                 assert_eq!(s.card(&bot).berserk, None);
             }
 
