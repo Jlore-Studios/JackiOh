@@ -15410,6 +15410,36 @@
       "asks": [],
       "audit_tier": "strong",
       "cross_rounds": 1,
+      "decision": {
+        "asked_at": "2026-11-24T07:03:45Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-25T07:03:45Z",
+        "hours": 24,
+        "kind": "revise",
+        "model": "opus",
+        "options": [
+          {
+            "change": "Merge as built. The report states that the sanity expectation for Wild System and Jayaad is not met at 368 games.",
+            "tradeoff": "Until live and development games pile up, /stats shows a Decisiveness column where nearly every card reads \u00b113 to 14%, and nothing yet shows it finds cheap game-altering cards. Rows only count from the deploy on (no backfill), so merging sooner starts collecting them sooner."
+          },
+          {
+            "change": "Hold the merge until a person runs a large development sample and posts `stats report --swing` over it, then merge if the two cards read clearly above typical. Roughly 3,000 swing-series games plus 500 forced games each of stinkyscape-120 and stinkyscapeplus-061, sharded across machines with --from: about 45 CPU-hours.",
+            "tradeoff": "This costs a delay and machine time that only a person can provide. Wild System's raw RMS is already below the median card's, so more data may only confirm it is not decisive, which leads to option 3."
+          },
+          {
+            "change": "Redesign before merging, as a new design pass. For example, a maker's Decisiveness could also read its made cards' acting turns: Jayaad's Law acted on 290 turns, but its single play from a hand makes the Law's own figure read that one play. Or the window could change.",
+            "tradeoff": "It departs from the issue's design (a maker reads its play turns, the Law its acting turns) and needs new rulings, code, and a sample to confirm it."
+          }
+        ],
+        "problem": "The second review asked for the issue's reliability and sanity figures in the pull request. I generated 368 AI development games (164 of the swing series, 108 with S #120 Wild System forced into a deck, 96 with S+ #61 Jayaad forced) and ran `stats report --swing` over them. The figures do not show what the issue expects. Wild System reads \u00b113.5% against a typical card's \u00b113.7%, 772nd of 775 deck cards; even its raw RMS (11.6%) is below the median card's. Jayaad reads \u00b113.9%, 94th, only 0.2 points above typical. The Coin reads below typical (\u00b111.5%) and the plain stat-sticks read near it (\u00b113.6% to \u00b114.0%), as the issue expects.\n\nAt this volume every deck card reads between \u00b113.4% and \u00b114.3%. Real cards' measured spread is 1 point, so a card needs far more plays than a bot run can produce before it moves away from typical. A game takes about 40 seconds on one core, so a run gets a few hundred.\n\nWhether to merge a figure that does not yet pick out the cards it was built to find, or to wait for more evidence or a redesign, is the owner's call, not mine. The review's two test findings are fixed and proven either way.",
+        "provider": "claude-6",
+        "question": "Should Decisiveness merge as built, with these figures reported, or be held?",
+        "why": "it is built as the issue designs it and never overclaims: with thin evidence a card reads the typical card's value. The model does pick up real signal (Swing correlates 0.46 with the adjusted win rate over 30 cards). The issue asks for the sanity figures to be reported in the pull request, and they now are. The volume that would settle Wild System is beyond any bot run, and rows accrue only after the deploy. A redesign is a new decision for the owner."
+      },
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -15441,6 +15471,7 @@
       "live": "revising",
       "pending_request": false,
       "provider": "claude-6",
+      "question": "Should Decisiveness merge as built, with these figures reported, or be held?",
       "queued_at": "2026-11-24T04:37:29Z",
       "review_floor": "",
       "review_notes": "",
