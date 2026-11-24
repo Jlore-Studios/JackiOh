@@ -17317,10 +17317,10 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-1",
+        "built_by": "claude-6",
         "rejections": [],
         "reviews": [],
-        "sha": "2f32bb4aacc1dd89483471228e116c6a995c6135",
+        "sha": "cc362c61b50af17358db2c9dc2cbdbcaffcb47b9",
         "tiers": {}
       },
       "waiting_comment": 7113455376
