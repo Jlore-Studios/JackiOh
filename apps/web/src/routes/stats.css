@@ -772,7 +772,8 @@
 
 .stats-patch-search-none,
 .stats-patch-search-devs,
-.stats-patch-refused {
+.stats-patch-refused,
+.stats-experimental-line {
   margin: 0;
   font-size: var(--type-sm);
   color: var(--text-dim);

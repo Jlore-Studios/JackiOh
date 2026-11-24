@@ -316,6 +316,10 @@ pub struct KeywordWeights {
     /// swing at the next turn's face; this is what the body is worth for it beyond that, in trades.
     #[serde(rename = "Windfury")]
     pub windfury: f64,
+    /// R3543002, R4353002: no attack may target it, nor a Spell or Field Spell while it is in play, its
+    /// controller's own included, and it never stands in Defense Position.
+    #[serde(rename = "Evasive")]
+    pub evasive: f64,
 }
 
 impl KeywordWeights {
@@ -344,6 +348,7 @@ impl KeywordWeights {
             KeywordKind::Crater => Some(self.crater),
             KeywordKind::Flashback => Some(self.flashback),
             KeywordKind::Windfury => Some(self.windfury),
+            KeywordKind::Evasive => Some(self.evasive),
             _ => None,
         }
     }
@@ -717,6 +722,12 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
         // #1602: off. At 1.0 its screen read 201-199, edge 0.005 (-0.005 to 0.015), which keeps nothing
         // (training/improve.md, A screen); inconclusive (R4319000): 1 decided of 200 (won 1, lost 0).
         windfury: 0.0,
+        // #4761: an untuned start, as Immune to Spells': removal can't reach it either, nor can any
+        // attack, though its owner's Spells can't buff it and it never defends. Its fork screen on
+        // improve-dev, 200 trunk games, 6 forks, 2 live, edge 0.0 (0.0 to 0.0), no faults, vs control
+        // 80415dd992: inconclusive (R4319000), 2 live forks; its scene tests
+        // (crates/ai/tests/ai/evasive.rs) settle it.
+        evasive: 1.0,
     },
     spell_damage: 0.5,
     brittle_discount: 0.5,
@@ -985,6 +996,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
         crater: 0.0,
         flashback: 0.0,
         windfury: 0.0,
+        evasive: 0.0,
     },
     spell_damage: 0.0,
     brittle_discount: 0.0,
