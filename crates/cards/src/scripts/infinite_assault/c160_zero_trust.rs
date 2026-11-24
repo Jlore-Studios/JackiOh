@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #160 Zero Trust ((3) Field Spell, Rare), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Aura: Your Units in Defense Position have +0/+{health} and are Immune to Spells." (health 3)
-//!   Radiant: "Aura: Your Units in Defense Position have +0/+{health} and are Immune to Spells." (health 6)
+//!   Base:    "Aura: Your Units in Defense Position have +{health} Health and are Immune to Spells." (health 3)
+//!   Radiant: "Aura: Your Units in Defense Position have +{health} Health and are Immune to Spells." (health 6)
 //!
 //! Engine: an aura keyed on `position == DEF` (§10.4 layer 5), read off the instance on every read:
 //! the controller's Units standing in Defense Position (R1081000: a Unit standing in the backrow is

@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #149 Encrypt ((1) Spell, Common), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Give a friendly Unit Divine Shield and +0/+{health}." (health 3)
-//!   Radiant: "Give a friendly Unit Divine Shield and +0/+{health} and Immune to Spells." (health 6)
+//!   Base:    "Give a friendly Unit Divine Shield and +{health} Health." (health 3)
+//!   Radiant: "Give a friendly Unit Divine Shield, +{health} Health and Immune to Spells." (health 6)
 //!
 //! Engine: the friendly Unit picked with the play (R656, aimed to help), granted Divine Shield and
 //! buffed +0/+{health} as it resolves; on the Radiant face, Immune to Spells last.

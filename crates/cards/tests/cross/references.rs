@@ -39,7 +39,9 @@ const RULES_WORDS: &[&str] = &["Exile", "Burn", "Echo", "Recycle", "Fuse", "Duo"
 /// holds "Fortify" (TG #12), and still names itself. R3535001: "Ocean Tsunami" (Stinkyscape #96) holds
 /// "Tsunami" (Stinkyscape+ #91), which Stinkyscape #95's list of cards to add does not name.
 /// R4602000: "Infinite Assault card", "Infinite Assault Unit" and "Infinite Assault Spell" hold
-/// "Infinite Assault" (IA #236), which names nothing inside them.
+/// "Infinite Assault" (IA #236), which names nothing inside them. IA #235.1's name, "The Prime
+/// Generator, Iteration Two", holds IA #235's, which IA #235's Death names only inside it (R2198004's
+/// shape: the token still names itself).
 const RULES_PHRASES: &[&str] = &[
     "Jade Counter",
     "Fortify Mind",
@@ -47,6 +49,7 @@ const RULES_PHRASES: &[&str] = &[
     "Infinite Assault card",
     "Infinite Assault Unit",
     "Infinite Assault Spell",
+    "The Prime Generator, Iteration Two",
 ];
 
 /// A match that is the whole phrase is not inside it (R2198004: the phrase may be a card's own name).
@@ -591,6 +594,10 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             }
             if card.id == "core-t-coin" {
                 expected.push("Coin".to_string());
+            }
+            // IA #143 names its token in the plural (`ALIASES`).
+            if card.id == "infiniteassault-143-1" {
+                expected.push("Corrupted Processes".to_string());
             }
             assert_eq!(names_of(card), expected, "{}", card.id);
         }

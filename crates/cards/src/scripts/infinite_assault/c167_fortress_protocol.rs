@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #167 Fortress Protocol ((4) Spell, Legendary), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Switch your Units to Defense Position. Give them +0/+{health} and Divine Shield." (health 4)
-//!   Radiant: "Switch your Units to Defense Position. Give them +0/+{health} and Divine Shield." (health 8)
+//!   Base:    "Switch your Units to Defense Position. Give them +{health} Health and Divine Shield." (health 4)
+//!   Radiant: "Switch your Units to Defense Position. Give them +{health} Health and Divine Shield." (health 8)
 //!
 //! Engine: each of the controller's Units in turn (as Felinor Feeler's Cry reads them once, R113)
 //! switches to Defense Position — spending no exertion (R20) — then one `buffAllUnits` gives them

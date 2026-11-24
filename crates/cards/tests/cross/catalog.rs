@@ -13767,7 +13767,8 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
         // M #49.1, the token M #49's Death puts in the deck, is YileGPT Prime (#831, #1563).
         let mut named: Vec<String> = entries()
             .into_iter()
-            .filter(|entry| entry.name.ends_with(" Prime"))
+            // IA #166 Aegis Prime names no card: a Unit of the Firewall doctrine, no Catalyst's token.
+            .filter(|entry| entry.name.ends_with(" Prime") && entry.id != "infiniteassault-166")
             .map(|entry| entry.id.clone())
             .collect();
         named.sort();

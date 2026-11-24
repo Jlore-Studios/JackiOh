@@ -10343,8 +10343,8 @@ infiniteassault-149: # Encrypt
     cast: Encrypting. Do not sneeze.
   zh:
     name: 加密
-    base: 使一个友方单位获得圣盾和+0/+{health}。
-    radiant: 使一个友方单位获得圣盾、+0/+{health}和法术免疫。
+    base: 使一个友方单位获得圣盾和+{health}生命值。
+    radiant: 使一个友方单位获得圣盾、+{health}生命值和法术免疫。
 infiniteassault-150: # Wall of Static
   flavour: Touch it and tingle. Tingle is the feature.
   voice:
@@ -10453,8 +10453,8 @@ infiniteassault-160: # Zero Trust
     cast: Trust nothing. Shield everything.
   zh:
     name: 零信任
-    base: 光环：你处于守备表示的单位拥有+0/+{health}，并具有法术免疫。
-    radiant: 光环：你处于守备表示的单位拥有+0/+{health}，并具有法术免疫。
+    base: 光环：你处于守备表示的单位拥有+{health}生命值，并具有法术免疫。
+    radiant: 光环：你处于守备表示的单位拥有+{health}生命值，并具有法术免疫。
 infiniteassault-161: # Defense in Depth
   flavour: Belt, suspenders, and a second pair of pants.
   voice:
@@ -10515,8 +10515,8 @@ infiniteassault-167: # Fortress Protocol
     cast: Everyone down. Shields up.
   zh:
     name: 要塞协议
-    base: 将你的单位切换为守备表示。使它们获得+0/+{health}和圣盾。
-    radiant: 将你的单位切换为守备表示。使它们获得+0/+{health}和圣盾。
+    base: 将你的单位切换为守备表示。使它们获得+{health}生命值和圣盾。
+    radiant: 将你的单位切换为守备表示。使它们获得+{health}生命值和圣盾。
 infiniteassault-168: # Impenetrable
   flavour: Pen-tested by everyone. Passed by no one. Still standing.
   voice:
@@ -10989,8 +10989,8 @@ infiniteassault-217: # Echo-1, First Hallucination
     play: First copy online. Listen up.
   zh:
     name: 回声一号
-    base: "隐匿\n回合开始时：放置一个幻象。每当你的一个幻象揭示时，对攻击者造成{damage}点伤害。"
-    radiant: "隐匿\n回合开始时：放置两个幻象。每当你的一个幻象揭示时，对攻击者造成{damage}点伤害。"
+    base: "隐匿\n回合开始时：放置一个幻象。\n每当你的一个幻象揭示时，对攻击者造成{damage}点伤害。"
+    radiant: "隐匿\n回合开始时：放置两个幻象。\n每当你的一个幻象揭示时，对攻击者造成{damage}点伤害。"
 infiniteassault-218: # Thousand Faces
   flavour: Every face is yours. Every back is also yours. Inventory is easy.
   voice:

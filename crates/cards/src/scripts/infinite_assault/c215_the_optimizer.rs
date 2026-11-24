@@ -1,9 +1,9 @@
 //! IA #215 The Optimizer (SPEC §8.13 row 215), a card of the held Infinite Assault set
 //! (R4577000).
 //!   Base:    "End of turn: Transform a random card in your hand into a random Infinite Assault
-//!            card that costs ({step}) more."
+//!            card whose Cost is ({step}) higher."
 //!   Radiant: "End of turn: Transform two random cards in your hand into random Infinite Assault
-//!            cards that cost ({step}) more."
+//!            cards whose Cost is ({step}) higher."
 //!
 //! Engine: an `end_of_turn` hook (its controller's, R68): one distinct hand card — two on the
 //! Radiant face — picked uniformly through the match rng, none drawn when the hand holds no

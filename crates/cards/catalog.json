@@ -42536,11 +42536,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Give a friendly Unit Divine Shield and +0/+{health}."
+      "text": "Give a friendly Unit Divine Shield and +{health} Health."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a friendly Unit Divine Shield and +0/+{health} and Immune to Spells."
+      "text": "Give a friendly Unit Divine Shield, +{health} Health and Immune to Spells."
     }
   },
   "infiniteassault-150": {
@@ -42986,11 +42986,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Units in Defense Position have +0/+{health} and are Immune to Spells."
+      "text": "Aura: Your Units in Defense Position have +{health} Health and are Immune to Spells."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Units in Defense Position have +0/+{health} and are Immune to Spells."
+      "text": "Aura: Your Units in Defense Position have +{health} Health and are Immune to Spells."
     }
   },
   "infiniteassault-161": {
@@ -43260,11 +43260,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Switch your Units to Defense Position. Give them +0/+{health} and Divine Shield."
+      "text": "Switch your Units to Defense Position. Give them +{health} Health and Divine Shield."
     },
     "radiant": {
       "keywords": [],
-      "text": "Switch your Units to Defense Position. Give them +0/+{health} and Divine Shield."
+      "text": "Switch your Units to Defense Position. Give them +{health} Health and Divine Shield."
     }
   },
   "infiniteassault-168": {
@@ -44844,13 +44844,13 @@
       "attack": 3,
       "health": 6,
       "keywords": [],
-      "text": "End of turn: Transform a random card in your hand into a random Infinite Assault card that costs ({step}) more."
+      "text": "End of turn: Transform a random card in your hand into a random Infinite Assault card whose Cost is ({step}) higher."
     },
     "radiant": {
       "attack": 6,
       "health": 12,
       "keywords": [],
-      "text": "End of turn: Transform two random cards in your hand into random Infinite Assault cards that cost ({step}) more."
+      "text": "End of turn: Transform two random cards in your hand into random Infinite Assault cards whose Cost is ({step}) higher."
     }
   },
   "infiniteassault-216": {
