@@ -19857,6 +19857,8 @@
       }
     },
     "4720": {
+      "action": "plan",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-24T11:23:58Z",
         "difficulty": "hard",
@@ -19866,20 +19868,30 @@
       },
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-4",
+      "owner_since": "2026-11-24T11:26:41Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-24T11:23:58Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:482f0a7d-1795519567",
+      "runs_on": "ubuntu-latest",
       "spot_check_of": 4706,
-      "stop_requested": false
+      "started_at": "2026-11-24T11:26:41Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T11:25:53Z",
+    "at": "2026-11-24T11:26:41Z",
     "url": "",
-    "what": "review #4649 on claude-7"
+    "what": "plan #4720 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-24T11:14:43Z",
