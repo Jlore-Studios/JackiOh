@@ -18850,6 +18850,15 @@
       "failures": 0,
       "feedback_since": "2026-11-24T21:17:18Z",
       "forced": false,
+      "handoff": {
+        "at": "2026-11-24T21:58:19Z",
+        "family": "claude",
+        "kind": "work",
+        "notes": "## State\n\n#4732 built (lib.rs deny(linker_messages), build-wasm.sh self-test, web test, README); real C build + both scratch failure checks passed earlier. CI run 45470210041 failed `web (unit 2/8)`: first-load.test.ts probed the one-word newest patch title \"Overload\"; main fixed it in c474345f8f (#4775). Head df5357c68d now contains #4775 (harness merged main). Now: rebuild wasm pkg + dist and rerun shard 2/8 with CI's command to confirm.\n\n## Log\n\n- run 5: building wasm pkg, dist (web vite build --mode development, admin build:e2e), then shard 2/8.\n- run 5: shard 2/8 on head df5357c68d with wasm pkg + dist built as CI builds them: 81 files, 1576 tests passed, 0 skipped. No change made; worktree clean.\n",
+        "provider": "claude-3",
+        "reason": "built and checked; its own review run, on this subscription, reviews it next",
+        "trail": "- Bash: {\"command\": \"git status --short | head -3; git fetch -q origin main; git log --oneline HEAD..origin/main | head -3; git diff HEAD origin/main --stat -- apps/web | tail -n 3; git log --oneline -1 --fo\u2026\n- Bash: {\"command\": \"cat > .bot-notes.md <<'EOF'\\n## State\\n\\n#4732 built (lib.rs deny(linker_messages), build-wasm.sh self-test, web test, README); real C build + both scratch failure checks passed earlier.\u2026\n- Bash: {\"command\": \"until grep -q '^exit ' /tmp/shard2c.log 2>/dev/null; do sleep 10; done; grep -h 'exit' /tmp/wasm-build.log /tmp/vite-web.log /tmp/vite-admin.log | tail -n 3; sed 's/\\\\x1b\\\\[[0-9;]*m//g' \u2026\n- Bash: {\"command\": \"git status --short; cat >> .bot-notes.md <<'EOF'\\n- run 5: shard 2/8 on head df5357c68d with wasm pkg + dist built as CI builds them: 81 files, 1576 tests passed, 0 skipped. No change ma\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the C module's build refuses an export named like a maths function again, now that it strips the names the old check read\", \"ci_local\": \"passed\"} --> I changed nothing this time. The failed check `web (unit 2/8)` now passes locally on this head, so the \u2026"
+      },
       "interruptions": 0,
       "issue": 4732,
       "kind": "revise",
