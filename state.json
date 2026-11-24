@@ -19003,19 +19003,28 @@
     "what": "plan #4692 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-24T09:18:38Z",
+    "at": "2026-11-24T09:30:21Z",
     "notes": [
-      "#4682 needs a plan",
-      "#4683 needs a plan",
-      "#4686 needs a plan",
-      "#4697 needs a plan",
-      "delivered review #4694 on muse (run 45353770308): approved",
-      "delivered build #4673 on claude-7 (run 45350134495): interrupted",
-      "started plan #4686 on muse (run 45364418903)",
-      "started plan #4682 on muse (run 45364523746)",
-      "started plan #4683 on agy (run 45364637512)",
-      "started plan #4697 on claude-8 (run 45364745131)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-24T10:30:00Z; it can start a build or a plan again in 5m; `claude-8` is busy; `claude-1` is idle, but nothing queued is for it; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4673 held for `claude-7` until 03:30 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))"
+      "answered a comment on #4693 that was never answered",
+      "answered a comment on #4692 that was never answered",
+      "answered a comment on #4687 that was never answered",
+      "answered a comment on #4685 that was never answered",
+      "#4692 needs a plan",
+      "#4696 needs a plan",
+      "#4673: `claude-7` can start again, so its hold is lifted",
+      "delivered plan #4697 on claude-8 (run 45364745131): planned",
+      "delivered plan #4682 on muse (run 45364523746): planned",
+      "delivered plan #4686 on muse (run 45364418903): planned",
+      "delivered review #4651 on claude-4 (run 45361645740): approved",
+      "delivered review #4695 on muse (run 45357495171): approved",
+      "started build #4686 on muse (run 45366698432)",
+      "started build #4682 on muse (run 45366818426)",
+      "started build #4673 on claude-7 (run 45366932050)",
+      "started plan #4696 on muse (run 45367052762)",
+      "started plan #4697 on claude-8 (run 45367201231)",
+      "started plan #4692 on claude-4 (run 45367327670)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19721,7 +19730,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T09:18:38Z",
+  "loop_tick": "2026-11-24T09:30:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
