@@ -20032,11 +20032,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-24T14:04:49Z",
+        "at": "2026-11-24T14:40:10Z",
         "difficulty": "hard",
         "provider": "claude-7",
-        "tier": "medium",
-        "why": "Rule line 2 (the AI): the issue as filed changes crates/ai/src's threat walk. The plan finds the walk already reads the slash and builds only tests and a README line, but nothing could be run here, and a failing pin test would mean a real AI fix, so it is rated hard when in doubt."
+        "tier": "strong",
+        "why": "Rule line 2 (the AI): the work pins how the AI's Taunt walk reads the slash; it was already rated hard and can't be rated lower"
       },
       "failures": 0,
       "forced": false,
