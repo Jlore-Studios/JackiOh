@@ -21612,6 +21612,9 @@
         }
       }
     },
+    "4763": {
+      "suggestion": true
+    },
     "4768": {
       "action": "review",
       "asks": [],
@@ -44431,6 +44434,13 @@
         "at": "2026-11-24T17:35:01Z",
         "number": 4761,
         "title": "Patch: the AI prices Evasive units for what the keyword protects",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-24T18:41:45Z",
+        "number": 4763,
+        "title": "Patch: one shared draw for every random enemy permanent",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
