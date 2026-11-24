@@ -2,7 +2,7 @@
 // window the cards share, a major or a patch with its micros and the patches no game was played on (R1973001).
 // R3324000: each offered patch is a tab, the newest always among them, and the newest short of games is
 // collecting. R3324001: the current patch is the newest version listed. R3447000: a card's figures name the patch
-// they were collected on.
+// they were collected on. R4677000: the list is the caller's patches alone; R4677001: the search groups them by line.
 
 // The client's own catalog version, without the catalog: the patch-meta virtual module holds just
 // the version and the added ids (`patch-meta.ts`), so the stats page's tabs do not bundle the
@@ -62,6 +62,36 @@ export function collectedOn(patches: readonly PatchWindow[], counted: readonly s
 export function currentVersion(patches: readonly PatchWindow[]): string {
   const newest = patches[0];
   return newest === undefined ? PATCH_VERSION : patchTarget(newest) || PATCH_VERSION;
+}
+
+/** R4677001: a patch's line, its name's `major.minor` (v0.6.12 is v0.6). */
+export function patchLine(patch: PatchWindow): string {
+  return patchName(patch).split(".").slice(0, 2).join(".");
+}
+
+/** A version as the search reads it: a leading `v` is nothing, and case is nothing. */
+function bareVersion(version: string): string {
+  return version.trim().toLowerCase().replace(/^v/, "");
+}
+
+/**
+ * R4677001: the patches the search lists for `query`, newest first, grouped by line: each patch one of whose
+ * versions, micros included, holds what is typed (a leading `v` read as nothing), every patch for an empty query.
+ */
+export function patchLines(
+  patches: readonly PatchWindow[],
+  query: string,
+): { line: string; patches: PatchWindow[] }[] {
+  const wanted = bareVersion(query);
+  const lines: { line: string; patches: PatchWindow[] }[] = [];
+  for (const patch of patches) {
+    if (!patch.versions.some((version) => bareVersion(version).includes(wanted))) continue;
+    const line = patchLine(patch);
+    const last = lines.at(-1);
+    if (last?.line === line) last.patches.push(patch);
+    else lines.push({ line, patches: [patch] });
+  }
+  return lines;
 }
 
 /** The patch before (older) and after (newer) the one at `shown`, where there is one. */
