@@ -469,13 +469,18 @@ describe("B5 the acceptance gate", () => {
     expect(r.engine.log()).toHaveLength(1);
   });
 
-  it("hidden: the clock alarm's heartbeat and clockTick are accepted while hidden, everything else refused", () => {
+  it("hidden: only the clock alarm's own beats (alarm flag) are accepted while hidden", () => {
     const r = rig();
     unlocked(r);
     r.page.visibility = "hidden";
 
-    expect(r.engine.playSfx("heartbeat")).toBe(true);
-    expect(r.engine.playSfx("clockTick", { amount: 3 })).toBe(true);
+    // The alarm's own beats carry the caller-scoped exemption (stepClockAlarm's `{ alarm: true }`).
+    expect(r.engine.playSfx("heartbeat", undefined, undefined, { alarm: true })).toBe(true);
+    expect(r.engine.playSfx("clockTick", { amount: 3 }, undefined, { alarm: true })).toBe(true);
+    // The same ids without the flag stay silent: a set-piece bed's `clockTick` (eventHorizon)
+    // through the director never carries it, so a hidden board clear stays silent.
+    expect(r.engine.playSfx("heartbeat")).toBe(false);
+    expect(r.engine.playSfx("clockTick", { amount: 5 })).toBe(false);
     expect(r.engine.playSfx("draw")).toBe(false);
     expect(r.engine.playVoice("core-004", "play")).toBe(false);
     expect(r.engine.log().map((c) => (c.kind === "sfx" ? c.id : c.kind))).toEqual(["heartbeat", "clockTick"]);
@@ -491,8 +496,8 @@ describe("B5 the acceptance gate", () => {
     writeAudioSettings({ muted: true });
     r.page.visibility = "hidden";
 
-    expect(r.engine.playSfx("heartbeat")).toBe(false);
-    expect(r.engine.playSfx("clockTick", { amount: 3 })).toBe(false);
+    expect(r.engine.playSfx("heartbeat", undefined, undefined, { alarm: true })).toBe(false);
+    expect(r.engine.playSfx("clockTick", { amount: 3 }, undefined, { alarm: true })).toBe(false);
     expect(r.engine.log()).toEqual([]);
   });
 

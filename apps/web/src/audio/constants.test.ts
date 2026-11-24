@@ -17,7 +17,6 @@ import {
   CLOCK_ALARM_FROM_MS,
   CLOCK_ALARM_LATE_MS,
   CLOCK_ALARM_LOOKAHEAD_MS,
-  CLOCK_ALARM_SFX,
   CLOCK_ALARM_SHARP_FROM_MS,
   DEATH_VOICE_DELAY_MS,
   EFFECT_PITCH_JITTER,
@@ -168,7 +167,6 @@ describe("audio constants", () => {
     expect(CLOCK_ALARM_BEAT_MS).toBe(1_000);
     expect(CLOCK_ALARM_LOOKAHEAD_MS).toBe(400);
     expect(CLOCK_ALARM_LATE_MS).toBe(250);
-    expect([...CLOCK_ALARM_SFX].sort()).toEqual(["clockTick", "heartbeat"]);
   });
 
   it("R631 pins the stations, the rotation key and the mix schedule", () => {

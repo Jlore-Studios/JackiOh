@@ -666,17 +666,20 @@ describe("R268 — the viewer's mulligan countdown sounds the clock alarm", () =
     resetAudioSettingsForTests();
   });
 
-  function recordingEngine(): AudioEngine & { beats: [string, number | undefined][] } {
+  function recordingEngine(): AudioEngine & { beats: [string, number | undefined][]; alarms: unknown[] } {
     const beats: [string, number | undefined][] = [];
+    const alarms: unknown[] = [];
     const fake = {
       beats,
+      alarms,
       state: () => "running" as const,
-      playSfx: (id: string, _params?: unknown, delayMs?: number) => {
+      playSfx: (id: string, _params?: unknown, delayMs?: number, options?: unknown) => {
         beats.push([id, delayMs]);
+        alarms.push(options);
         return true;
       },
     };
-    return fake as unknown as AudioEngine & { beats: [string, number | undefined][] };
+    return fake as unknown as AudioEngine & { beats: [string, number | undefined][]; alarms: unknown[] };
   }
 
   /** One fresh frame per step, so the Clock anchors each reading with no elapsed time. */
@@ -703,6 +706,8 @@ describe("R268 — the viewer's mulligan countdown sounds the clock alarm", () =
       ["heartbeat", 300],
       ["heartbeat", 300],
     ]);
+    // Caller-scoped: the mulligan beats carry the hidden-tab exemption flag.
+    expect(engine.alarms).toEqual([{ alarm: true }, { alarm: true }]);
   });
 
   it("R268 a whole 45-second mulligan logs thirty beats, twenty heartbeats then ticks 1 to 10", () => {

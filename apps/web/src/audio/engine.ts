@@ -8,7 +8,6 @@
 
 import {
   CARD_EFFECT_DELAY_MS,
-  CLOCK_ALARM_SFX,
   EFFECT_PITCH_JITTER,
   GAIN_SMOOTHING_S,
   HIDDEN_DEF_ID,
@@ -50,6 +49,7 @@ import type {
   CardAudioTable,
   CardHook,
   Persona,
+  PlaySfxOptions,
   PlayedCue,
   SfxId,
   SfxParams,
@@ -532,19 +532,22 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
   /* gate */
 
-  function accepting(id?: SfxId): boolean {
+  // #4682: the hidden-tab carve-out is caller-scoped, not id-scoped: only the clock alarm's
+  // own beats (`stepClockAlarm` passes `{ alarm: true }`) skip the hidden check, so a set-piece
+  // bed's `clockTick` (eventHorizon) through the director stays silent while hidden.
+  function accepting(alarm?: boolean): boolean {
     if (ctx === null || buses === null || disposed) return false;
     if (ctx.state === "closed") return false;
     if (readAudioSettings().muted) return false;
-    if (visibility() === "hidden" && (id === undefined || !CLOCK_ALARM_SFX.has(id))) return false;
+    if (visibility() === "hidden" && !alarm) return false;
     return true;
   }
 
   /* sfx */
 
-  function playSfx(id: SfxId, params?: SfxParams, delayMs?: number): boolean {
+  function playSfx(id: SfxId, params?: SfxParams, delayMs?: number, options?: PlaySfxOptions): boolean {
     try {
-      if (!accepting(id) || ctx === null || buses === null) return false;
+      if (!accepting(options?.alarm) || ctx === null || buses === null) return false;
       // #4428: before the recipes land the cue is skipped, never built or logged; the kick keeps
       // one tap behind the chunk, not behind silence. A late click is dropped, not queued: an sfx
       // is timed to an animation entry, so sounding late is worse than staying silent.

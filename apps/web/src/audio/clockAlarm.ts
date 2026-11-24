@@ -81,6 +81,7 @@ export function stepClockAlarm(
   own: boolean,
 ): ClockAlarmMemory {
   const plan = planClockAlarm(memory, { remainingMs, own, audible: alarmAudible(engine, settings) });
-  for (const beat of plan.beats) engine.playSfx(beat.id, beat.params, beat.delayMs);
+  // #4682: the alarm's own beats carry the caller-scoped hidden-tab exemption; nothing else does.
+  for (const beat of plan.beats) engine.playSfx(beat.id, beat.params, beat.delayMs, { alarm: true });
   return plan.memory;
 }

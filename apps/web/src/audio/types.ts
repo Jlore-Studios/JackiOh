@@ -324,10 +324,17 @@ export type MusicManifest = {
  */
 export type MusicCardEntry = { station?: MusicStation; intro?: string };
 
+/**
+ * #4682: caller-scoped carve-out for the clock alarm. Only clockAlarm.ts `stepClockAlarm` passes
+ * `{ alarm: true }`, so a hidden tab still sounds the viewer's own turn/prompt/mulligan beats;
+ * every other caller (director beds included) leaves it absent and stays silent while hidden.
+ */
+export type PlaySfxOptions = { alarm?: boolean };
+
 /** What the director and the UI need from an engine. */
 export type SoundSink = {
   /** true when accepted (and logged); false when refused. Never throws. */
-  playSfx(id: SfxId, params?: SfxParams, delayMs?: number): boolean;
+  playSfx(id: SfxId, params?: SfxParams, delayMs?: number, options?: PlaySfxOptions): boolean;
   /** `priority` defaults to VOICE_PRIORITY.play. `defId` may be an `emote-<portrait>` id (R644). */
   playVoice(defId: string, line: PlayableLineKind, delayMs?: number, priority?: VoicePriority): boolean;
   /** R655: the card's effect for `hook`, on the effects bus. false when it has none or it is refused. */

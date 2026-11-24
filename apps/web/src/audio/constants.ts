@@ -120,8 +120,6 @@ export const CLOCK_ALARM_BEAT_MS = 1_000;
 export const CLOCK_ALARM_LOOKAHEAD_MS = 400;
 /** A beat whose moment passed at most this long ago still plays, at once; an older one is skipped. */
 export const CLOCK_ALARM_LATE_MS = 250;
-/** #4682: the clock alarm's beats, the only sounds a hidden tab still accepts (engine.ts `accepting`). */
-export const CLOCK_ALARM_SFX: ReadonlySet<SfxId> = new Set<SfxId>(["heartbeat", "clockTick"]);
 
 // #51's music (SPEC §10.11 "Music", R631)
 /** The stations, in the order the picker lists them. */
