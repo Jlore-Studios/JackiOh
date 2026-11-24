@@ -21627,6 +21627,13 @@
     "4763": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T18:50:49Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "rule 1: the shared draw lives in crates/engine/src, plus a five-call-site contract across engine and cards"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
