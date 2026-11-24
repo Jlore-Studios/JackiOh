@@ -19422,6 +19422,23 @@
       },
       "queued_at": "2026-11-24T21:01:35Z",
       "self_check_findings": [],
+      "session": {
+        "action": "build",
+        "artifact": 14964107049,
+        "artifact_bytes": 345994,
+        "artifact_name": "work",
+        "at": "2026-11-24T21:01:45Z",
+        "bytes": 439172,
+        "cwd": "/home/runner/work/_temp/work/item-4761",
+        "ended": "built: built and checked; its own review run, on this subscription, reviews it next",
+        "head": "6ec561104e80fe32eb309c5a3f6837184cb0dade",
+        "id": "a9ea7003-0b52-4062-9ddf-78d432dcf426",
+        "kind": "build",
+        "model": "opus",
+        "project": "-home-runner-work--temp-work-item-4761",
+        "provider": "claude-3",
+        "run": "45457951084"
+      },
       "votes": {
         "approvals": [],
         "builder": "claude",
