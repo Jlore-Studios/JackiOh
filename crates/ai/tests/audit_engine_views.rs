@@ -834,3 +834,17 @@ fn explore_option_counts() {
         println!("OPT {key} x{count}\n     {example}");
     }
 }
+
+#[test]
+fn debug_traps() {
+    jackioh_cards::register_all();
+    for (id, def) in registered_catalog() {
+        if (def.type_ == CardType::Trap || def.type_ == CardType::FieldTrap) && set_ships(def.set) {
+            let kw = js(&def.base.keywords).to_string();
+            let rk = js(&def.radiant.keywords).to_string();
+            if kw != "[]" || rk != "[]" {
+                println!("{id} cost {:?} {:?} {} base {kw} radiant {rk}", def.cost, def.type_, def.name);
+            }
+        }
+    }
+}

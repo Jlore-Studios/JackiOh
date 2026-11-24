@@ -91,7 +91,10 @@ fn random_decks(rng: &mut Lcg) -> DuosDecks {
         .filter(|def| jackioh_engine::deckable(def))
         .map(|def| def.id.clone())
         .collect();
-    let mut deal = || -> Vec<String> { (0..DECK_SIZE).map(|_| pool[rng.next(pool.len())].clone()).collect() };
+    let mut deal = || -> Vec<String> {
+        let mut left = pool.clone();
+        (0..DECK_SIZE).map(|_| left.swap_remove(rng.next(left.len()))).collect()
+    };
     DuosDecks {
         a1: deal(),
         a2: deal(),
@@ -161,7 +164,7 @@ fn play_one(seed: u64, max_steps: usize) -> Vec<String> {
                 body: body.clone(),
             };
             nonce += 1;
-            let tried = std::panic::catch_unwind(|| duos_reduce(&state, &action));
+            let tried = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| duos_reduce(&state, &action)));
             match tried {
                 Err(_) => found.push(format!("seed {seed} step {step}: PANIC on {seat} {body:?}")),
                 Ok(result) => {
@@ -197,7 +200,7 @@ fn play_one(seed: u64, max_steps: usize) -> Vec<String> {
             body: body.clone(),
         };
         nonce += 1;
-        let applied = std::panic::catch_unwind(|| duos_reduce(&state, &action));
+        let applied = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| duos_reduce(&state, &action)));
         let result = match applied {
             Err(_) => {
                 found.push(format!("seed {seed} step {step}: PANIC applying {seat} {body:?}"));
@@ -223,7 +226,7 @@ fn play_one(seed: u64, max_steps: usize) -> Vec<String> {
                 found.push(format!("seed {seed} step {step}: JSON round trip changed the hash"));
             }
             for viewer in DUOS_SEATS {
-                let view = std::panic::catch_unwind(|| duos_view_for(&state, viewer));
+                let view = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| duos_view_for(&state, viewer)));
                 match view {
                     Err(_) => found.push(format!("seed {seed} step {step}: view PANIC for {viewer}")),
                     Ok(view) => {
@@ -264,7 +267,7 @@ fn play_one(seed: u64, max_steps: usize) -> Vec<String> {
 fn probe_random_play() {
     jackioh_cards::register_all();
     let mut all: Vec<String> = Vec::new();
-    for seed in 1..=10u64 {
+    for seed in 1..=14u64 {
         all.extend(play_one(seed, 500));
     }
     for line in &all {

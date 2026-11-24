@@ -75,7 +75,7 @@ fn probe_bard_cost_mod() {
 fn back_to(s: &mut Scenario, seat: PlayerId) {
     s.end_turn();
     let mut guard = 0;
-    while s.state().active != seat && s.state().winner.is_none() && guard < 4 {
+    while s.state().active != seat && s.state().result.is_none() && guard < 4 {
         s.end_turn();
         guard += 1;
     }
@@ -175,7 +175,7 @@ fn probe_alnilam() {
     s.play("stinkyscapeplus-t-supernova", json!({}));
     for lane in 1..=5 {
         if let Some(unit) = s.unit(P1, lane) {
-            println!("PROBE nova p1 lane {lane}: {} stats={:?} kw={:?}", unit.def_id, s.stats(&unit), unit.keywords);
+            println!("PROBE nova p1 lane {lane}: {} stats={:?}", unit.def_id, s.stats(&unit));
         }
         if let Some(unit) = s.unit(P2, lane) {
             println!("PROBE nova p2 lane {lane}: {}", unit.def_id);
@@ -183,7 +183,7 @@ fn probe_alnilam() {
     }
     for turn in 0..5 {
         back_to(&mut s, P1);
-        println!("PROBE nova turn {} winner={:?} turn={}", turn, s.state().winner, s.state().turn);
-        if s.state().winner.is_some() { break; }
+        println!("PROBE nova turn {} winner={:?} turn={}", turn, s.state().result, s.state().turn);
+        if s.state().result.is_some() { break; }
     }
 }

@@ -323,7 +323,7 @@ fn explore() {
     let filter = std::env::var("AUDIT_FILTER").unwrap_or_default();
     let only_board = std::env::var("AUDIT_BOARD").unwrap_or_default();
     let out_path = std::env::var("AUDIT_OUT").unwrap_or_default();
-    if filter.is_empty() && out_path.is_empty() {
+    if filter.is_empty() {
         return;
     }
     let defs: Vec<String> = registered_catalog()

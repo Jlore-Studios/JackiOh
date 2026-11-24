@@ -283,15 +283,56 @@ fn boards() -> Vec<(&'static str, Value)> {
     vec![("ships", ships), ("quests", quests)]
 }
 
+const POOL: &[&str] = &[
+    "stinkyscapeplus-157", "stinkyscape-049", "stinkyscape-101", "stinkyscape-040", "stinkyscape-137",
+    "stinkyscape-176", "stinkyscapeplus-155", "stinkyscapeplus-080", "stinkyscape-144", "stinkyscape-151",
+    "stinkyscape-133", "stinkyscape-090", "stinkyscape-106", "stinkyscape-136", "stinkyscapeplus-154",
+    "stinkyscapeplus-156", "stinkyscape-052", "stinkyscape-050", "stinkyscape-062", "stinkyscape-134",
+    "stinkyscape-017", "stinkyscape-019", "stinkyscape-131", "stinkyscape-125", "stinkyscape-130",
+    "stinkyscape-127", "stinkyscape-025", "stinkyscape-026", "stinkyscapeplus-075", "stinkyscapeplus-087",
+    "stinkyscapeplus-161", "stinkyscapeplus-011", "stinkyscapeplus-019",
+    "stinkyscape-112", "classic-090", "stinkyscape-007", "core-098", "stinkyscape-006",
+    "meditative-047", "classicplus-030", "classicplus-031", "meditative-075", "core-099", "core-085",
+    "classicplus-074", "stinkyscape-114", "classicplus-043", "meditativeplus-002", "stinkyscapeplus-005",
+    "meditative-095", "meditative-059", "meditative-017", "meditativeplus-026", "meditativeplus-016",
+    "meditative-040", "meditative-042", "classicplus-062", "classicplus-027", "classicplus-029",
+    "classicplus-035", "core-052", "classicplus-042", "meditativeplus-020", "meditativeplus-018", "core-096",
+    "classic-055", "classicplus-033", "stinkyscape-148", "meditative-071", "core-095", "classicplus-073",
+    "stinkyscape-150", "stinkyscapeplus-142", "classicplus-004", "classic-078", "classic-074", "classic-027",
+    "classic-043", "core-091", "classic-062", "classic-077", "classic-014", "classic-050", "core-049",
+    "classicplus-026", "core-061", "core-086", "classic-032", "classicplus-009", "meditative-024",
+    "meditative-023", "stinkyscapeplus-033", "stinkyscapeplus-085", "stinkyscapeplus-103",
+    "stinkyscapeplus-105", "stinkyscapeplus-025", "stinkyscape-117", "core-016", "traininggrounds-052",
+    "classic-015", "classic-021", "meditative-069", "meditative-083", "meditativeplus-011",
+    "meditativeplus-012", "meditativeplus-013", "stinkyscape-116", "stinkyscape-169", "stinkyscape-173",
+    "stinkyscapeplus-029", "stinkyscapeplus-035", "stinkyscapeplus-038", "classicplus-007",
+];
+
+fn dealt(salt: u64) -> Value {
+    let mut order: Vec<&str> = POOL.to_vec();
+    let mut x = lcg(salt.wrapping_mul(7919) ^ 0xdead_beef);
+    for at in (1..order.len()).rev() {
+        x = lcg(x);
+        order.swap(at, ((x >> 33) as usize) % (at + 1));
+    }
+    let take = |from: usize, count: usize| -> Vec<&str> { order.iter().cycle().skip(from).take(count).copied().collect() };
+    json!({
+        "p1": { "hand": take(0, 9), "library": take(9, 26), "mana": 10 },
+        "p2": { "hand": take(35, 9), "library": take(44, 26), "mana": 10 },
+    })
+}
+
 #[test]
 fn probe_walks() {
     jackioh_cards::register_all();
+    let from: u64 = std::env::var("WALK_FROM").ok().and_then(|v| v.parse().ok()).unwrap_or(0);
+    let count: u64 = std::env::var("WALK_COUNT").ok().and_then(|v| v.parse().ok()).unwrap_or(40);
     let mut found: Vec<String> = Vec::new();
-    for (name, setup) in boards() {
-        for salt in 0..10u64 {
+    for salt in from..from + count {
+        for (name, setup) in boards().into_iter().chain(std::iter::once(("dealt", dealt(salt)))) {
             let mut setup = setup.clone();
             setup["seed"] = json!(format!("audit-walk-{name}-{salt}"));
-            if let Some(finding) = walk(name, setup, salt, 220) {
+            if let Some(finding) = walk(name, setup, salt, 320) {
                 println!("FOUND {finding}\n");
                 found.push(finding);
             }

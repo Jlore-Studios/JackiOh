@@ -43,8 +43,13 @@ fn forced_propagation_radiant_echo_buffs_each_copy_once() {
     assert_eq!(upgraded(s.events()), 20, "each copy is Buffed once, by the resolution that made it");
 }
 
+/// S+ #74 Galaxia: "Aura: The first Unit you play each turn gets +{attack} Attack." R3568000: "the
+/// first Unit her controller plays each turn gets a permanent +3 Attack ... once its play resolves".
+/// TG #28 Occidental ("Cry: Destroy all permanents in the rightmost lane"), played into the rightmost
+/// lane, is the turn's first Unit play and dies to its own Cry. The Unit played after it is the turn's
+/// second and gets nothing.
 #[test]
-fn probe_galaxia_first_unit_dies_on_play() {
+fn galaxia_buffs_only_the_first_unit_played_each_turn() {
     const GALAXIA: &str = "stinkyscapeplus-074";
     const OCCIDENTAL: &str = "traininggrounds-028";
     const BODY: &str = "stand-in (1) 4/4";
@@ -58,31 +63,27 @@ fn probe_galaxia_first_unit_dies_on_play() {
         "p2": { "hand": ["core-005"], "library": ["core-005", "core-005", "core-005", "core-005"] },
     }));
     s.play(OCCIDENTAL, json!({ "zone": 5 }));
-    eprintln!("occidental zone: {:?}", s.card(OCCIDENTAL).zone);
+    s.expect_in_zone(OCCIDENTAL, "graveyard");
     s.play(BODY, json!({ "zone": 2 }));
-    let body = s.unit_at(P1, 2).id;
-    eprintln!("second unit attack: {}", s.stats(body.as_str()).attack);
+    let second = s.unit_at(P1, 2).id;
+    assert_eq!(s.stats(second.as_str()).attack, 4, "the second Unit played this turn is not the first");
 }
 
 #[test]
-fn probe_chiton_nullified_damage() {
-    const CHITON: &str = "stinkyscapeplus-092";
-    const PROJECTOR: &str = "stinkyscapeplus-042";
-    const HITTER: &str = "stand-in (1) 2/9 Rush";
+fn probe_gigaify_radiant_one_permanent() {
+    const GIGA: &str = "stinkyscapeplus-023";
+    const BODY: &str = "stand-in (1) 4/4";
     let mut s = scenario_with_cards(json!({
-        "active": "p2",
         "p1": {
-            "field": [{ "def": CHITON, "lane": 1 }],
-            "backrow": [{ "def": PROJECTOR, "faceUp": true }],
+            "hand": [{ "def": GIGA, "radiant": true }, BODY, "core-044"],
             "library": ["core-005", "core-005", "core-005"],
+            "mana": 10,
         },
-        "p2": { "field": [{ "def": HITTER, "lane": 1 }], "hand": ["core-005"], "library": ["core-005", "core-005", "core-005", "core-005"] },
+        "p2": { "hand": ["core-005"], "library": ["core-005", "core-005", "core-005", "core-005"] },
     }));
-    let chiton = s.unit_at(P1, 1).id;
-    let hitter = s.unit_at(PlayerId::P2, 1).id;
-    s.attack(hitter.as_str(), chiton.as_str());
-    let live = s.card(chiton.as_str()).clone();
-    eprintln!("chiton damage {} evolved {:?} jade {:?}", live.damage, live.evolved, s.state().players[P1].jade);
-    let dmg: Vec<_> = s.events().iter().filter(|e| e.event_type().as_str() == "damage").map(|e| format!("{e:?}")).collect();
-    eprintln!("{dmg:#?}");
+    eprintln!("can play: {}", s.can_play(GIGA));
+    eprintln!("plays: {:?}", s.plays_of(GIGA));
+    let body = s.card(BODY).id.clone();
+    s.play(GIGA, pick::targets(pick::id(&body)));
+    eprintln!("granted: {:?} pending {:?}", s.card(body.as_str()).granted_keywords, s.state().pending.is_some());
 }
