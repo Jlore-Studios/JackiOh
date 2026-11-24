@@ -1323,6 +1323,14 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
                 " during your next turn"
             }
         ),
+        // R4588000: Infinite Assault #83 Swarm Logic's "your Units have +N Attack this turn".
+        ModifierKind::UnitsHaveAttack { amount, .. } => {
+            if *amount >= 0 {
+                format!("Your Units have +{amount} Attack")
+            } else {
+                format!("Your Units have −{} Attack", -amount)
+            }
+        }
     }
 }
 

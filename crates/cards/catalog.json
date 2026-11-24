@@ -40002,7 +40002,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 19,
     "base": {
       "attack": 1,
       "health": 1,
@@ -40033,7 +40033,7 @@
     "refs": [
       "infiniteassault-074-1"
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 2,
       "health": 2,
@@ -40100,7 +40100,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 26,
     "base": {
       "attack": 2,
       "health": 4,
@@ -40138,7 +40138,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 12,
     "base": {
       "keywords": [],
       "text": "Give your Units +{buff}/+{buff}."
@@ -40172,7 +40172,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 12,
     "base": {
       "attack": 2,
       "health": 3,
@@ -40203,7 +40203,7 @@
     "refs": [
       "infiniteassault-078-1"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Summon four Workers."
@@ -40259,7 +40259,7 @@
     "refs": [
       "infiniteassault-004-1"
     ],
-    "loc": 6,
+    "loc": 29,
     "base": {
       "attack": 4,
       "health": 4,
@@ -40297,7 +40297,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 3,
       "health": 3,
@@ -40338,7 +40338,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 42,
     "base": {
       "keywords": [],
       "text": "Summon two Instances. If you control {units} or more Units, draw a card."
@@ -40365,7 +40365,7 @@
     "refs": [
       "infiniteassault-082-1"
     ],
-    "loc": 6,
+    "loc": 26,
     "base": {
       "attack": 2,
       "health": 2,
@@ -40432,7 +40432,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 14,
     "base": {
       "keywords": [],
       "text": "Your Units have +{attack} Attack and Rush this turn."
@@ -40456,7 +40456,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 60,
     "base": {
       "attack": 3,
       "health": 5,
@@ -40484,7 +40484,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 41,
     "base": {
       "keywords": [],
       "text": "Fuse two friendly Units."
@@ -40508,7 +40508,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 34,
     "base": {
       "keywords": [],
       "text": "End of turn: Summon a copy of your cheapest Unit. Give it Brittle 1."
@@ -40535,7 +40535,7 @@
     "refs": [
       "infiniteassault-078-1"
     ],
-    "loc": 6,
+    "loc": 43,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks: Summon three Workers. Give them Taunt."
@@ -40562,7 +40562,7 @@
     "refs": [
       "infiniteassault-074-1"
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Summon an Instance for each enemy Unit."
@@ -40599,7 +40599,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 39,
     "base": {
       "attack": 6,
       "health": 8,
@@ -40627,7 +40627,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 39,
     "base": {
       "keywords": [],
       "text": "Summon a copy of each friendly Unit."
@@ -40654,7 +40654,7 @@
     "refs": [
       "infiniteassault-004-1"
     ],
-    "loc": 6,
+    "loc": 26,
     "base": {
       "keywords": [],
       "text": "Fill your board with Drones. They have Rush."
@@ -40681,7 +40681,7 @@
     "refs": [
       "infiniteassault-004-1"
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 2,
       "health": 8,
@@ -40717,7 +40717,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 38,
     "base": {
       "attack": 2,
       "health": 2,
@@ -40745,7 +40745,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 34,
     "base": {
       "attack": 4,
       "health": 6,
@@ -40783,7 +40783,7 @@
         "min": 1
       }
     ],
-    "loc": 6,
+    "loc": 36,
     "base": {
       "keywords": [],
       "text": "Your Units have +{buff}/+{buff} for each other friendly Unit."
@@ -40807,7 +40807,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 52,
     "base": {
       "keywords": [],
       "text": "Summon a copy of each friendly Unit. Then double the Attack and Health of your Units."

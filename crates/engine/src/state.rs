@@ -807,6 +807,20 @@ pub enum ModifierKind {
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         from_spell: Option<bool>,
     },
+    // ---- Infinite Assault's Batch (issue #4588) ----
+    /// R4588000 (Infinite Assault #83 Swarm Logic, "your Units have +N Attack this turn"): every Unit
+    /// this player controls on the field has `amount` more Attack this turn (§10.4, beside the auras'
+    /// grants), those that arrive later too, but a Vanilla, Dormant or buried one
+    /// (`layers::takes_player_lends`). Expiry `thisTurn`; an aura that sets Attack still wins. R4508000:
+    /// one a Spell made lends nothing to a Unit Immune to Spells (§6.1, R4453000).
+    UnitsHaveAttack {
+        amount: i32,
+        /// R4508000: set when a Spell made it (`restrictions::effect_is_from_spell`), so it passes a Unit
+        /// Immune to Spells by (§6.1, R4453000). Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        from_spell: Option<bool>,
+    },
     // ---- Stinkyscape+ Balance Changes V (issue #4353) ----
     /// R4353020 (Stinkyscape+ #79 A Glimpse into the Endless Sea, "You are immune to fatigue damage"):
     /// this player's draws from an empty library still happen, counted and announced (`fatigue`, its
