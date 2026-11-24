@@ -17884,6 +17884,7 @@
       "run_id": "45297577157",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 485,
       "started_at": "2026-11-24T00:29:29Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -40167,9 +40168,33 @@
         "title": "Patch: stepping back in a replay or flipping the co-op portal keeps the match's music, instead of starting the next track as if a new match began",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "9fdfafeb762f9ddfc5ce4787f9e7048a452735b1",
+        "issue": 4608,
+        "merged_at": "2026-11-24T01:16:22Z",
+        "n": 485,
+        "pr": 4656,
+        "queued_at": "2026-11-24T01:16:22Z",
+        "sha": "6b3a6e17e6f12b35530df31cce4dedf79b77301e",
+        "status": "queued",
+        "title": "Patch: the AI goes for a lethal that only its searched world shows once another sampled world confirms it",
+        "tries": 0
       }
     ],
-    "count": 484
+    "count": 485
   },
   "statistics": {
     "at": "2026-11-24T01:11:33Z"
