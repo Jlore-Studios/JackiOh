@@ -40272,7 +40272,9 @@
           "provider": "claude-8"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-24T02:29:25Z",
         "every": 5,
+        "findings": 0,
         "head": "9fdfafeb762f9ddfc5ce4787f9e7048a452735b1",
         "issue": 4608,
         "merged_at": "2026-11-24T01:16:22Z",
@@ -40285,12 +40287,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:b8d9b210-1795486823",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45311702558",
         "sha": "6b3a6e17e6f12b35530df31cce4dedf79b77301e",
         "started_at": "2026-11-24T02:20:51Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the AI goes for a lethal that only its searched world shows once another sampled world confirms it",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 486
