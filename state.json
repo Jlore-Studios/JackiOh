@@ -45084,22 +45084,13 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-24T18:05:30Z",
+    "idle_since": "2026-11-24T18:04:46Z",
     "last_area": "ai",
-    "last_run": "2026-11-24T18:05:30Z",
+    "last_run": "2026-11-24T18:04:46Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "3": {
-        "area": "tests",
-        "count": 2,
-        "last_run": "2026-11-24T18:05:30Z",
-        "provider": "claude-8",
-        "run_id": "45455719427",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
