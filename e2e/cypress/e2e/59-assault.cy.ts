@@ -85,8 +85,9 @@ describe("59 Infinite Assault — the day's deck through level 1, kept over a re
     cy.get(ts(assaultTestid.deckPreset)).should("exist");
     cy.get(ts(assaultTestid.deckSaved)).should("exist");
     cy.get(ts(assaultTestid.level(SECOND_LEVEL))).should("exist").and("not.have.attr", "data-beaten");
+    // `have.attr` hands on the attribute, not the element, so the row is fetched again to read it.
+    cy.get(ts(assaultTestid.level(FIRST_LEVEL))).should("not.have.attr", "data-beaten");
     cy.get(ts(assaultTestid.level(FIRST_LEVEL)))
-      .should("not.have.attr", "data-beaten")
       .find("span")
       .first()
       .invoke("text")
