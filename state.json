@@ -18923,6 +18923,13 @@
     "4697": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T09:31:54Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Rule 2: the change turns on a search switch in `crates/ai/src/` (`AI_SEARCH.replay_fill_steps`) that alters the AI's decisions, plus a ruling and a re-pinned decision test."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
