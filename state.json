@@ -41410,6 +41410,7 @@
       {
         "at": "2026-11-24T09:30:44Z",
         "number": 4692,
+        "reason": "real rules bugs on shipped cards, confirmed in `crates/engine/src/effects/plague.rs`. The placement prompt itself is fine: it is a `PromptKind::Target` prompt, and `open_prompt` already filters its options through `targeting_point::targetable_options`, which asks `evasive_bars`. The random branch (a random cast, or while Mayor acts) skips that filter and draws with a plain `sink.rng.int`. So it can place a Spell's counter on an Evasive card (R452 and R1200: a random target draws from the legal o",
         "title": "Patch: Plague Counter placement prompts refuse Evasive cards and Mayor draws them with Lucky",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
