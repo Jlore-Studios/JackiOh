@@ -41553,6 +41553,10 @@
       "4779": {
         "at": "2026-11-24T20:29:11Z",
         "why": "Confirmed on main: #4353's six rows are keyed v0.6.8b and Elderberry's v0.6.8d, though v0.6.8d and v0.6.9 were the newest versions when they merged, so v0.6.8c/d and v0.6.8e/v0.6.9 replays fold under today's scripts and are refused; with four or more hand re-key PRs in eight days (#4061, #4090, #4521, #4630), this bug class is already here, and keying by fragment removes it."
+      },
+      "4780": {
+        "at": "2026-11-24T20:29:33Z",
+        "why": "Confirmed on main: when a paid result arrives, the client drops the wallet, quests, tracks, packs, tokens and ladders but not the owned cosmetics, and nothing calls forgetOwnedCosmetics() after a game, so a Fleet level's reward shows locked until a reload; the fix is a few lines in one place."
       }
     },
     "decided": [
