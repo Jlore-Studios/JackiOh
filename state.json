@@ -41368,6 +41368,7 @@
       {
         "at": "2026-11-24T09:30:28Z",
         "number": 4696,
+        "reason": "confirmed. `DuelHost::on_attached` (`crates/shared/src/host/duel.rs:727`) calls `clear_grace` without reading `connected[home]`. So the `Disconnect` that `on_socket_gone` queues starts the grace, and the `Attach` queued behind it cancels it, leaving the seat empty with no countdown. The co-op host does the same, and the AI never takes the seat. It's the mid-attach branch #4529 added for #4509 this week, shipped doing the opposite of what its comment and `crates/server/README.md` promise, with no",
         "title": "Patch: a match socket that drops while it is being seated starts its seat's disconnect grace, in 1v1 and co-op, instead of its own arrival cancelling it",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
