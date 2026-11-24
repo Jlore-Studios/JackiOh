@@ -45223,7 +45223,8 @@
     ],
     "runs": [
       "2026-11-24T17:56:42Z,45434464454,claude-4,sonnet+opus,review,4757,medium,approved,,18.2,123,25824,5683090,3.6175,13,29,,,2.1,,fresh,,4",
-      "2026-11-24T18:14:00Z,45455572378,claude-4,opus,suggest,,,interrupted,5-hour cap,6,32,9765,1064268,11.724,30,70,,,,,none,,1"
+      "2026-11-24T18:14:00Z,45455572378,claude-4,opus,suggest,,,interrupted,5-hour cap,6,32,9765,1064268,11.724,30,70,,,,,none,,1",
+      "2026-11-24T18:14:13Z,45455443927,claude-4,opus,suggest,,,interrupted,5-hour cap,6.5,0,0,0,,29,70,,,,,none,,1"
     ]
   },
   "version": 1
