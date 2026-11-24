@@ -42832,14 +42832,6 @@
         "run_id": "45482711987",
         "taken_asks": []
       },
-      "2": {
-        "area": "client",
-        "count": 2,
-        "last_run": "2026-11-24T20:37:54Z",
-        "provider": "muse",
-        "run_id": "45482824431",
-        "taken_asks": []
-      },
       "3": {
         "area": "tests",
         "count": 2,
