@@ -21019,9 +21019,11 @@
         "by": "`muse` (medium)",
         "sha": "136a8d58466c815f6afc8b5798e65014f90bdabe"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T14:11:25Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-24T15:27:41Z",
         "family": "muse",
@@ -21031,6 +21033,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: co-op Play again status reports when Play again cannot work\"} -->\n- `GET /api/duos/matches/:matchId/again` now reports the two unconditional refusals the offer already returns, so the co-op result panel stops offering Play again when pressing it can only fail.\n- What changed:\n- - [crates/server/src/duos/again.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4723/crates/server/src/duos/again.rs): `again_status` now returns 409 `\"that co-op game cannot be played again\"` when either seat is empty (R1497000) and 409 `update_required` with `{expected, received}` detai\u2026\n- - [crates/server/tests/api/duos_again.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4723/crates/server/tests/api/duos_again.rs): stale-catalog test tail now expects the 409 `update_required` from status; added `r2092000_status_on_an_emptied_seat_answers_conflict_and_makes_no_game` (both\u2026\n- How tested (commands I ran, what they printed):\n- - `cargo test -p jackioh-server --test server -- api::duos_again:: api::lobbies::r3731003` \u2014 15 passed, 0 failed, including the updated and both new tests plus the 2v2 `unavailable: true` contract.\n- - Fail-without-fix check: with the `again_status` blocks temporarily removed, the stale-catalog and emptied-seat status tests fail (status answers 200 instead of 409); the current-two-seat test passes, pinning unchanged behavior. Fix then restored.\n- - `cargo fmt --check` \u2014 clean (after `cargo fmt` joined two lines to fit); `cargo clippy -p jackioh-server --all-targets -- -D warnings` \u2014 no warnings; `cargo jackioh spec check` \u2014 ok (2455 rulings, 6137 proofs).\n- - `pnpm --dir apps/web test src/duos/DuosRoute.test.tsx` \u2014 25 passed, no client change needed.\n- - `git status` shows only the two intended files modified.\n- Decisions: one departure from the plan \u2014 it said to assert `seen[\"unavailable\"] == false`, but `AgainStatusBody.unavailable` carries `skip_serializing_if`, so `false` is omitted from the JSON and reads as Null. The test asserts the key is absent (Null), which still distinguishes the available shape\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4723 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4723/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4723,
       "kind": "review",
       "live": "reviewing",
