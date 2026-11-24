@@ -18529,17 +18529,8 @@
       ]
     },
     "4683": {
-      "action": "plan",
-      "asks": [
-        "c:7127219187"
-      ],
-      "build_next": {
-        "from_run": "45364637512",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-24T09:49:32Z",
-        "until": "2026-11-24T10:19:32Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-24T09:49:24Z",
         "difficulty": "medium",
@@ -18558,10 +18549,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && ls apps/web/src/i18n\n- said: \n- read_file: {\"EndLine\": 100, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/i18n/i18n.test.ts\", \"StartLine\": 1}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"00798563-c464-432d-8d80-bd4ae7c67088/task-46\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo jackioh spec check\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"00798563-c464-432d-8d80-bd4ae7c67088/task-46\"}\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"00798563-c464-432d-8d80-bd4ae7c67088/task-70\"}\n- said: I have launched the web test command for `HandHints.test.tsx` (which first compiles the WebAssembly engine in the background) and am waiting for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo jackioh spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && git check-ignore .bot-plan.md\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"00798563-c464-432d-8d80-bd4ae7c67088/task-79\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && pnpm exec eslint apps/web/src/game/HandHints.tsx apps/web/src/game/HandHints.test.tsx\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && pnpm --dir apps/web test src/i18n/i18n.test.ts\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"00798563-c464-432d-8d80-bd4ae7c67088/task-79\"}\n- said: \n- manage_task: {\"Action\": \"list\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"00798563-c464-432d-8d80-bd4ae7c67088/task-79\"}\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"00798563-c464-432d-8d80-bd4ae7c67088/task-79\"}\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"00798563-c464-432d-8d80-bd4ae7c67088/task-89\"}\n- said: \n- read_file: {\"EndLine\": 200, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/.bot-plan.md\", \"StartLine\": 1}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/.bot-plan.md\"}\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of lines 1\u20135 hold: client-only UI hover text addition in HandHints.tsx and HandHints.test.tsx.\"} --> ## Goal Every rendered hand-hint pip in [`HandHints.tsx`](file:///home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-24T09:22:47Z",
       "owner_why": "it plans it",
@@ -18574,12 +18564,14 @@
       "provider": "agy",
       "queued_at": "2026-11-24T09:18:32Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45364637512",
+      "run_id": "pending:957969ea-1795513808",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-24T09:22:47Z",
+      "started_at": "2026-11-24T09:50:46Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7127219187"
+      ]
     },
     "4684": {
       "action": "review",
@@ -19061,9 +19053,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T09:39:48Z",
+    "at": "2026-11-24T09:50:46Z",
     "url": "",
-    "what": "plan #4692 on claude-4"
+    "what": "build #4683 on agy"
   },
   "last_sweep": {
     "at": "2026-11-24T09:30:21Z",
