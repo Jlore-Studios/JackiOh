@@ -45199,7 +45199,8 @@
       "2026-11-24T18:06:31Z,45450338600,muse,muse-spark-1.3-contributor,review,4762,medium,approved,,28.6,0,0,0,,21,24,55,56,1.2,,none,,1",
       "2026-11-24T18:19:45Z,45455991215,muse,muse-spark-1.3-contributor,suggest,,,suggested,,12.3,0,0,0,,25,27,56,56,,,none,,1",
       "2026-11-24T18:16:07Z,45455861152,claude-8,opus,suggest,,,interrupted,5-hour cap,5,0,0,0,6.2564,68,100,,,,,none,,1",
-      "2026-11-24T18:15:54Z,45455719427,claude-8,opus,suggest,,,interrupted,5-hour cap,5.5,0,0,0,7.8684,67,100,,,,,none,,1"
+      "2026-11-24T18:15:54Z,45455719427,claude-8,opus,suggest,,,interrupted,5-hour cap,5.5,0,0,0,7.8684,67,100,,,,,none,,1",
+      "2026-11-24T18:16:26Z,45442010678,muse,muse-spark-1.3-contributor,review,4759,medium,blocked,,84,0,0,0,,19,26,54,56,1.1,,none,,2"
     ]
   },
   "version": 1
