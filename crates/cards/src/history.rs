@@ -124,8 +124,9 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// R4353021, R4353022, R4353024, R4353025, and Medina Enforcer's and Repeater v5's numbers of uses and
 /// hooks), #4350 (R4350000), #4395 (R4395000), #4469 (R3554003), #4382's sweep of the carried catalogs
 /// (R4382001: Adaptive UI's Rush Token through v0.1.0d), #4396 (R4396000), #4423 (R4423000), #4424
-/// (R4424000), and #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
-/// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price).
+/// (R4424000), #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
+/// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price),
+/// and #4666 (R4666000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c074_adaptive_ui::ID, "v0.1.0d", c074_adaptive_ui::script_v0_1_0d),
@@ -1343,42 +1344,55 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.11d",
         c018_large_smoothie::script_v0_6_11d,
     ),
+    // #4666 (R4666000): Appropriations' Military and Healthcare on the deck too, before they kept to the
+    // field and the hand, and its numbers before #4666 gave them back.
+    (
+        c040_appropriations::ID,
+        "v0.6.12b",
+        c040_appropriations::script_v0_6_12b,
+    ),
     // #4665 Stinkyscape+ Balance Changes VII: Mend Projector, Overdrive Projector and Overdrive Dome
     // over both sides (R4665001, R4665002), Bot Loser's Attack on a kill (R4665003), the Flaks' 60/30/10
     // (R4665004), the Legacy Glowy Jelly Bean's copy of Core #26 (R4665006) and Churnwalker with no
     // Tribute, the last scripts before it.
+    // v0.6.8c and v0.6.8d declared no `health` yet: they ran v0.6.8b's script.
     (
         c041_mend_projector::ID,
-        "v0.6.12b",
-        c041_mend_projector::script_v0_6_12b,
+        "v0.6.8d",
+        c041_mend_projector::script_v0_6_8b,
+    ),
+    (
+        c041_mend_projector::ID,
+        "v0.6.12c",
+        c041_mend_projector::script_v0_6_12c,
     ),
     (
         c062_overdrive_projector::ID,
-        "v0.6.12b",
-        c062_overdrive_projector::script_v0_6_12b,
+        "v0.6.12c",
+        c062_overdrive_projector::script_v0_6_12c,
     ),
     (
         c063_overdrive_dome::ID,
-        "v0.6.12b",
-        c063_overdrive_dome::script_v0_6_12b,
+        "v0.6.12c",
+        c063_overdrive_dome::script_v0_6_12c,
     ),
     (
         c019_5_bot_loser::ID,
-        "v0.6.12b",
-        c019_5_bot_loser::script_v0_6_12b,
+        "v0.6.12c",
+        c019_5_bot_loser::script_v0_6_12c,
     ),
-    (c053_flak_v3::ID, "v0.6.12b", c053_flak_v3::script_v0_6_12b),
-    (c057_flak_v4::ID, "v0.6.12b", c057_flak_v4::script_v0_6_12b),
-    (c061_flak_v5::ID, "v0.6.12b", c061_flak_v5::script_v0_6_12b),
+    (c053_flak_v3::ID, "v0.6.12c", c053_flak_v3::script_v0_6_12c),
+    (c057_flak_v4::ID, "v0.6.12c", c057_flak_v4::script_v0_6_12c),
+    (c061_flak_v5::ID, "v0.6.12c", c061_flak_v5::script_v0_6_12c),
     (
         c050_legacy_glowy_jelly_bean::ID,
-        "v0.6.12b",
-        c050_legacy_glowy_jelly_bean::script_v0_6_12b,
+        "v0.6.12c",
+        c050_legacy_glowy_jelly_bean::script_v0_6_12c,
     ),
     (
         c007_churnwalker::ID,
-        "v0.6.12b",
-        c007_churnwalker::script_v0_6_12b,
+        "v0.6.12c",
+        c007_churnwalker::script_v0_6_12c,
     ),
 ];
 

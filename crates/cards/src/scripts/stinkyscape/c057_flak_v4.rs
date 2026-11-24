@@ -15,7 +15,7 @@
 //! reads it (R1438, R987). Once a turn (R384). Both ends are declared numbers (R386), read through
 //! `param`.
 //! Issue #4665 made the top roll rarer: 60%, 33% and 7% (`ODDS`), 60%, 30% and 10% before, which
-//! `script_v0_6_12b` keeps (R4665004, R767000).
+//! `script_v0_6_12c` keeps (R4665004, R767000).
 
 use jackioh_engine::effects::{DamageOdds, after_state_check, damage_all};
 use jackioh_engine::prelude::*;
@@ -27,10 +27,10 @@ const ROUNDS: i32 = 2;
 
 /// R2521001, R4665004: "60%, 33%, 7%, lowest first" since issue #4665.
 const ODDS: [i32; 3] = [60, 33, 7];
-/// R767000, R4665004: "60%, 30%, 10%", the odds through v0.6.12b.
-const ODDS_V0_6_12B: [i32; 3] = [60, 30, 10];
+/// R767000, R4665004: "60%, 30%, 10%", the odds through v0.6.12c.
+const ODDS_V0_6_12C: [i32; 3] = [60, 30, 10];
 
-/// R2521001: `weights` (`ODDS`, or `ODDS_V0_6_12B` for a kept script) over `least..=most`, the low end
+/// R2521001: `weights` (`ODDS`, or `ODDS_V0_6_12C` for a kept script) over `least..=most`, the low end
 /// first; a value past the third is weighted as the third, and a Nerf that crossed the two ends rolls
 /// between them.
 fn odds(least: i32, most: i32, weights: [i32; 3]) -> Vec<DamageOdds> {
@@ -100,16 +100,16 @@ pub fn script() -> CardScripts {
     scripts(false, ODDS)
 }
 
-/// R767000, R4665004: through v0.6.12b its rolls were 60%, 30% and 10%; `KEPT_SCRIPTS` folds those
+/// R767000, R4665004: through v0.6.12c its rolls were 60%, 30% and 10%; `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_12b() -> CardScripts {
-    scripts(false, ODDS_V0_6_12B)
+pub fn script_v0_6_12c() -> CardScripts {
+    scripts(false, ODDS_V0_6_12C)
 }
 
 /// R767000: through v0.5.9f its rolls hit the enemy hero too, after each enemy Unit; `KEPT_SCRIPTS`
 /// folds those replays under it.
 pub fn script_v0_5_9f() -> CardScripts {
-    scripts(true, ODDS_V0_6_12B)
+    scripts(true, ODDS_V0_6_12C)
 }
 
 /// R767000: `left` rounds of "deal `amount` damage to all enemies", each after the last one's check.
@@ -162,8 +162,8 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r767000_r4665004_the_script_kept_for_v0_6_12b_rolls_60_30_10() {
-            fam::flak_kept_v12(ID, "s057", ROUNDS, SEEDS, script_v0_6_12b);
+        fn r767000_r4665004_the_script_kept_for_v0_6_12c_rolls_60_30_10() {
+            fam::flak_kept_v12(ID, "s057", ROUNDS, SEEDS, script_v0_6_12c);
         }
 
         #[test]

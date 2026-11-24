@@ -15,7 +15,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "meditative-082";
 
 /// R4665005: the Cry's "You have {mana} less mana next turn"; 0 under a definition that declares no
-/// `mana`, as every one through v0.6.12b (R2657006).
+/// `mana`, as every one through v0.6.12c (R2657006).
 const NO_LOSS: i32 = 0;
 
 fn outfitter() -> Script {
@@ -213,7 +213,7 @@ mod tests {
             }
         }
 
-        /// R2657006: a definition that declares no `mana`, as v0.6.12b's, loses none.
+        /// R2657006: a definition that declares no `mana`, as v0.6.12c's, loses none.
         #[test]
         fn r4665005_r2657006_under_a_definition_with_no_mana_the_cry_loses_none() {
             let kept = crate::under_kept_as(

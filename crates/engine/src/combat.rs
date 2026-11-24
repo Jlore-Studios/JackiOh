@@ -1369,8 +1369,9 @@ pub fn declare_attack(
 
 /// R1202: `declare_attack` after its exertion (the declaration, the trap window, the combat) for
 /// `attacker`, which a substitute may be. A substitute attacks only when the unit restrictions let it
-/// (`attack_restriction`); its declaration carries `bounce_after` and a post-summon `exits_from`, its
-/// event `instead_of` and `forced: false`, so it opens its trap window like any declared attack.
+/// (`attack_restriction`), and goes home on the base face when they bar it (`substitute_barred`); its
+/// declaration carries `bounce_after` and a post-summon `exits_from`, its event `instead_of` and
+/// `forced: false`, so it opens its trap window like any declared attack.
 pub(crate) fn declare_instead(
     sink: &mut EngineSink<'_>,
     attacker: &CardInstance,
@@ -1380,9 +1381,8 @@ pub(crate) fn declare_instead(
 ) -> CombatResult {
     let attacker = live_or(sink.state, attacker);
     let target = live_target_or_given(sink.state, target);
-    if instead_of.is_some()
-        && crate::restrictions::attack_restriction(sink.state, &attacker, &target).is_err()
-    {
+    let since = crate::stays::exit_mark(sink.state);
+    if instead_of.is_some() && substitute_barred(sink, &attacker, &target, bounce, since) {
         return Ok(());
     }
 
@@ -1444,6 +1444,28 @@ pub(crate) fn declare_instead(
     }
     resolve_declared_attack(sink, &declared_id);
     Ok(())
+}
+
+/// R1202: a substitute attacks only if §4.2 step 2's restrictions let it attack `target`
+/// (`attack_restriction`), declared or forced. One they bar makes no attack (no `attackDeclared`, no
+/// combat; Windfast's attack is spent all the same), and the base face bounces it home all the same,
+/// "whether or not it fought". True when it was barred.
+fn substitute_barred(
+    sink: &mut EngineSink<'_>,
+    substitute: &CardInstance,
+    target: &AttackTarget,
+    bounce: bool,
+    since: u32,
+) -> bool {
+    let substitute = live_or(sink.state, substitute);
+    let target = live_target_or_given(sink.state, target);
+    if crate::restrictions::attack_restriction(sink.state, &substitute, &target).is_ok() {
+        return false;
+    }
+    if bounce {
+        crate::attack_summon::bounce_after(sink, &substitute.id, since);
+    }
+    true
 }
 
 /// A forced attack (Moths to the Flame, Bear Honeypot; §4.2's last paragraph, R53): it skips steps 1
@@ -1508,6 +1530,11 @@ fn force_attack_with(
     let (attacker, instead_of, bounce) = match crate::attack_summon::replace_attacker(sink, &attacker) {
         crate::attack_summon::Replaced::By(unit) => {
             let bounce = crate::scripts::flags_of(sink.state, &attacker).bounce_attacker == Some(true);
+            // R1202, R1849005: the substitute is held to §4.2 step 2 as Windfast was, before a Prime
+            // substitute's joiners, so the combat `prime_combat` resumes is only ever a checked one's.
+            if substitute_barred(sink, &unit, &target, bounce, since) {
+                return;
+            }
             (*unit, Some(attacker.id.clone()), bounce)
         }
         crate::attack_summon::Replaced::No => (attacker, None, false),

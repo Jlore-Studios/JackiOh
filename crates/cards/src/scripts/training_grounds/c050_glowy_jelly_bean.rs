@@ -24,7 +24,7 @@
 //! a card in your hand Radiant. It costs ({surcharge}) more." (base) and "Make a card in your hand
 //! Radiant." (Radiant). The base face's pick takes `setCostMod` of the declared `surcharge` (1, R386)
 //! after it is made Radiant, as #72 Reminisce prices a chosen hand card; the Radiant face picks one
-//! card, from two, and adds no surcharge. `script_v0_6_12b` keeps the copy as it was (R767000).
+//! card, from two, and adds no surcharge. `script_v0_6_12c` keeps the copy as it was (R767000).
 
 use jackioh_engine::effects::set_cost_mod;
 use jackioh_engine::prelude::*;
@@ -59,9 +59,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000, R4665006: through v0.6.12b the copy of Core #26 as it was: one pick on the base face,
+/// R767000, R4665006: through v0.6.12c the copy of Core #26 as it was: one pick on the base face,
 /// two on the Radiant one, and no surcharge; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_12b() -> CardScripts {
+pub fn script_v0_6_12c() -> CardScripts {
     CardScripts {
         base: glowy_jelly_bean(1, false),
         radiant: glowy_jelly_bean(2, false),
@@ -258,13 +258,13 @@ mod tests {
         }
     }
 
-    /// R767000, R4665006: the scripts kept for v0.6.12b.
-    mod kept_v0_6_12b {
+    /// R767000, R4665006: the scripts kept for v0.6.12c.
+    mod kept_v0_6_12c {
         use super::*;
 
         #[test]
         fn r767000_r4665006_the_kept_radiant_face_chooses_2_and_neither_face_adds_a_surcharge() {
-            crate::under_kept(super::super::ID, super::super::script_v0_6_12b(), || {
+            crate::under_kept(super::super::ID, super::super::script_v0_6_12c(), || {
                 let mut s = glowy(json!([{ "def": "traininggrounds-050", "radiant": true }, "core-005", "core-016"]));
                 let first = hand_id_of(s.state(), "core-005");
                 let second = hand_id_of(s.state(), "core-016");

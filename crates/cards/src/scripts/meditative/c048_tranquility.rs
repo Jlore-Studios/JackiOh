@@ -20,7 +20,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "meditative-048";
 
 /// R4665007: the Radiant face's Replenish under a definition that declares no `refresh`, as every one
-/// through v0.6.12b (R2657006).
+/// through v0.6.12c (R2657006).
 const NO_REFRESH: i32 = 0;
 
 /// One face: the Radiant face's Replenish since issue #4665 (`refreshes`), the turn's end on the base
@@ -364,7 +364,7 @@ mod tests {
                 assert_eq!(side.mana.current, 4);
             }
 
-            /// R2657006: under a definition with no `refresh`, as v0.6.12b's, it replenishes nothing.
+            /// R2657006: under a definition with no `refresh`, as v0.6.12c's, it replenishes nothing.
             #[test]
             fn r4665007_r2657006_under_a_definition_with_no_refresh_it_replenishes_nothing() {
                 let current = crate::under_kept_as(

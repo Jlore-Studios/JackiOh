@@ -8,8 +8,8 @@
 //! issue #4665. While it acts awake (R3556008), every Unit of its controller's gains Rush and Windfury
 //! (as S #23 Warp Disruptor's aura), and every Spell its controller plays or casts resolves `spellEcho`
 //! more times (R3556001). Issue #4665 made it (3), from (1), and its base face its controller's alone
-//! (R4665002): through v0.6.12b that face reached every Unit on both sides and either player's Spells
-//! (`SpellEchoAura.both`), which `script_v0_6_12b` keeps (R767000).
+//! (R4665002): through v0.6.12c that face reached every Unit on both sides and either player's Spells
+//! (`SpellEchoAura.both`), which `script_v0_6_12c` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -20,13 +20,13 @@ pub const ID: &str = "stinkyscapeplus-062";
 const DORMANT_TURNS: i32 = 2;
 /// "Dormant for 1 turn" on the Radiant face.
 const RADIANT_DORMANT_TURNS: i32 = 1;
-/// R767000: the base face's countdown through v0.6.12b.
-const DORMANT_TURNS_V0_6_12B: i32 = 1;
+/// R767000: the base face's countdown through v0.6.12c.
+const DORMANT_TURNS_V0_6_12C: i32 = 1;
 /// "Spells gain Echo +1".
 const SPELL_ECHO: i32 = 1;
 
 /// R3556008, R4665002: Rush and Windfury on its controller's Units — every Unit on both sides with
-/// `everyone`, as the base face ran through v0.6.12b — read through the layers while it is awake.
+/// `everyone`, as the base face ran through v0.6.12c — read through the layers while it is awake.
 fn overdrive_aura(everyone: bool) -> AuraHook {
     aura_hook(move |args| {
         let controller = args.self_.controller;
@@ -43,7 +43,7 @@ fn overdrive_aura(everyone: bool) -> AuraHook {
     })
 }
 
-/// R4665002: `everyone`, both sides' Units and Spells, as the base face ran through v0.6.12b; `turns`,
+/// R4665002: `everyone`, both sides' Units and Spells, as the base face ran through v0.6.12c; `turns`,
 /// the printed countdown.
 fn overdrive(everyone: bool, turns: i32) -> Script {
     Script {
@@ -72,11 +72,11 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000, R4665002: through v0.6.12b the base face reached every Unit and both players' Spells, and
+/// R767000, R4665002: through v0.6.12c the base face reached every Unit and both players' Spells, and
 /// slept 1 turn; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_12b() -> CardScripts {
+pub fn script_v0_6_12c() -> CardScripts {
     CardScripts {
-        base: overdrive(true, DORMANT_TURNS_V0_6_12B),
+        base: overdrive(true, DORMANT_TURNS_V0_6_12C),
         radiant: overdrive(false, RADIANT_DORMANT_TURNS),
     }
 }
@@ -198,10 +198,10 @@ mod tests {
             only_p1_echoes(&mut s);
         }
 
-        /// R767000, R4665002: through v0.6.12b the base face reached both sides' Units and Spells.
+        /// R767000, R4665002: through v0.6.12c the base face reached both sides' Units and Spells.
         #[test]
-        fn r767000_r4665002_the_script_kept_for_v0_6_12b_reaches_both_sides() {
-            crate::under_kept(ID, script_v0_6_12b(), || {
+        fn r767000_r4665002_the_script_kept_for_v0_6_12c_reaches_both_sides() {
+            crate::under_kept(ID, script_v0_6_12c(), || {
                 let mut s = zaps(false, "s62-kept");
                 next_turn_of(&mut s, P1);
                 next_turn_of(&mut s, P1);

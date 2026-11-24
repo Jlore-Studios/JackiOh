@@ -1,15 +1,15 @@
 //! C+ #19.5 Bot Loser (SPEC §8.7 row 19.5): while Berserk it attacks its own hero at your start and
 //! end of turn; the Radiant face can't go Berserk (R412). Issue #4665 took its "After this destroys a
 //! Unit, it gains +{attackGain} Attack" away from both faces, and `attackGain` with it (R4665003):
-//! through v0.6.12b it gained that much each time it was R42's killer and still stood on the field as
+//! through v0.6.12c it gained that much each time it was R42's killer and still stood on the field as
 //! the kill was dispatched, so dying in that combat it gained nothing (R1245, R2396000), which
-//! `script_v0_6_12b` keeps (R767000); `attackGain` was 2, Radiant 4 (3, Radiant 6 until issue #3837).
+//! `script_v0_6_12c` keeps (R767000); `attackGain` was 2, Radiant 4 (3, Radiant 6 until issue #3837).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-019-5";
 
-/// Through v0.6.12b (R4665003): "After this destroys a Unit, it gains +{attackGain} Attack." (`when` is
+/// Through v0.6.12c (R4665003): "After this destroys a Unit, it gains +{attackGain} Attack." (`when` is
 /// read for traps only, so the test is in `run`.)
 fn on_kill() -> TriggerDef {
     TriggerDef::new("bot-loser-kill", &[GameEventType::Destroyed], |ctx, event| {
@@ -36,7 +36,7 @@ fn berserk_attack(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
 }
 
 /// Both faces; `kills`: whether each gains its declared `attackGain` after it destroys a Unit, as
-/// through v0.6.12b (R4665003).
+/// through v0.6.12c (R4665003).
 fn scripts(kills: bool) -> CardScripts {
     let kill: Vec<TriggerDef> = if kills { vec![on_kill()] } else { Vec::new() };
 
@@ -67,13 +67,13 @@ pub fn script() -> CardScripts {
     scripts(false)
 }
 
-/// R767000, R4665003: through v0.6.12b both faces gained their `attackGain` after each kill;
+/// R767000, R4665003: through v0.6.12c both faces gained their `attackGain` after each kill;
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_12b() -> CardScripts {
+pub fn script_v0_6_12c() -> CardScripts {
     scripts(true)
 }
 
-// SPEC §8.7 row 19.5: since issue #4665 a kill grants nothing (R4665003), and through v0.6.12b it
+// SPEC §8.7 row 19.5: since issue #4665 a kill grants nothing (R4665003), and through v0.6.12c it
 // granted permanent Attack (R42), not one it died making (R1245, R2396000); while Berserk (lost on leave, R78)
 // it forced-attacks its hero at start/end of turn (R53); conditionMet reflects Berserk (R195);
 // radiant can't go Berserk (R412).
@@ -314,19 +314,19 @@ mod tests {
             }
         }
 
-        /// R767000, R4665003: the scripts kept for v0.6.12b, with the `attackGain` they declared then.
-        mod kept_v0_6_12b {
+        /// R767000, R4665003: the scripts kept for v0.6.12c, with the `attackGain` they declared then.
+        mod kept_v0_6_12c {
             use super::*;
 
             fn kept<T>(run: impl FnOnce() -> T) -> T {
                 crate::under_kept_as(
                     BOT,
-                    script_v0_6_12b(),
+                    script_v0_6_12c(),
                     |def| {
                         def.params = serde_json::from_value(json!([
                             { "key": "attackGain", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 1 }
                         ]))
-                        .expect("the v0.6.12b params");
+                        .expect("the v0.6.12c params");
                     },
                     run,
                 )

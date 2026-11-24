@@ -18,6 +18,7 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 import { AccountError } from "../auth/AccountError.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { BackLayer } from "../net/backLayers.ts";
 import { withSession } from "../net/gate.ts";
 import { navigate, useSearch } from "../net/navigate.ts";
 import { cachedFriends, getFriends, type PlayerRef, type SharedReplay } from "../net/social.ts";
@@ -100,16 +101,19 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
   };
 
   if (watching !== null) {
+    const leaveReplay = (): void => {
+      setWatching(null);
+      // R3729002: a replay a link opened is done with the link, so a second Watch for it opens it again.
+      if (wanted !== null) navigate(sharedWithMePath(), { replace: true, force: true });
+    };
     return (
       <CatalogContext.Provider value={lookup}>
+        {/* R4619000: Back means the replay's corner arrow; first, so what the replay opens is a layer above it. */}
+        <BackLayer onClose={leaveReplay} />
         <OpenedReplay
           key={watching.matchId}
           load={() => withSession((token) => openOnlineMatchReplay(token, watching.matchId))}
-          onLeave={() => {
-            setWatching(null);
-            // R3729002: a replay a link opened is done with the link, so a second Watch for it opens it again.
-            if (wanted !== null) navigate(sharedWithMePath(), { replace: true, force: true });
-          }}
+          onLeave={leaveReplay}
         />
       </CatalogContext.Provider>
     );

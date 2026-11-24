@@ -9,7 +9,7 @@
 //! number (R386), a permanent Buff of its max and current Health (`buff`, §10.4 layer 4), so each stands
 //! at full after it (R4353024); the Radiant face then grants each of them Divine Shield (as S+ #13
 //! Shield Repairer's). Issue #4665 made it (3), from (1), and its controller's Units alone (R4665001):
-//! through v0.6.12b it mended the opponent's Units too, after its controller's, which `script_v0_6_12b`
+//! through v0.6.12c it mended the opponent's Units too, after its controller's, which `script_v0_6_12c`
 //! keeps, and through v0.6.8b it gave no Health, which `script_v0_6_8b` keeps (R767000).
 
 use jackioh_engine::prelude::*;
@@ -24,7 +24,7 @@ fn mend_projector(radiant: bool, health: bool, both: bool) -> Script {
             let controller = ctx.controller;
             let gain = if health { param(&*ctx, "health") } else { 0 };
             let mut effects = Vec::new();
-            // R3556003: the controller's Units, then (through v0.6.12b) the opponent's (R4665001).
+            // R3556003: the controller's Units, then (through v0.6.12c) the opponent's (R4665001).
             let sides = if both {
                 vec![controller, opponent_of(controller)]
             } else {
@@ -63,16 +63,16 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.12b it mended both sides' Units (issue #4665, R4665001); `KEPT_SCRIPTS`
+/// R767000: through v0.6.12c it mended both sides' Units (issue #4665, R4665001); `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_12b() -> CardScripts {
+pub fn script_v0_6_12c() -> CardScripts {
     CardScripts {
         base: mend_projector(false, true, true),
         radiant: mend_projector(true, true, true),
     }
 }
 
-/// R767000: through v0.6.8b it healed and (Radiant) shielded, giving no Health (issue #4353);
+/// R767000: through v0.6.8d it healed and (Radiant) shielded, giving no Health (issue #4353);
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_8b() -> CardScripts {
     CardScripts {
@@ -225,10 +225,10 @@ mod tests {
             assert_side_at(&s, P1, gain);
         }
 
-        /// R767000, R4665001: through v0.6.12b it mended both sides, its controller's Units first.
+        /// R767000, R4665001: through v0.6.12c it mended both sides, its controller's Units first.
         #[test]
-        fn r767000_r4665001_the_script_kept_for_v0_6_12b_mends_both_sides() {
-            crate::under_kept(ID, script_v0_6_12b(), || {
+        fn r767000_r4665001_the_script_kept_for_v0_6_12c_mends_both_sides() {
+            crate::under_kept(ID, script_v0_6_12c(), || {
                 let mut s = projected(false, "s41-kept-both");
                 wound_all(&mut s);
                 s.end_turn();
@@ -278,10 +278,10 @@ mod tests {
             assert_enemies_untouched(&s);
         }
 
-        /// R767000, R4665001: the Radiant face kept for v0.6.12b shields the enemies too.
+        /// R767000, R4665001: the Radiant face kept for v0.6.12c shields the enemies too.
         #[test]
-        fn r767000_r4665001_the_radiant_script_kept_for_v0_6_12b_shields_both_sides() {
-            crate::under_kept(ID, script_v0_6_12b(), || {
+        fn r767000_r4665001_the_radiant_script_kept_for_v0_6_12c_shields_both_sides() {
+            crate::under_kept(ID, script_v0_6_12c(), || {
                 let mut s = projected(true, "s41-kept-radiant");
                 wound_all(&mut s);
                 s.end_turn();

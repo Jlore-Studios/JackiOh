@@ -506,7 +506,7 @@ mod tests {
                     matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == victim.id)
                 });
                 assert_eq!(killer_of(death), Some(bot.id.clone()));
-                // R4665003: the credit gains the 3/3 Bot Loser nothing since issue #4665 (+2 through v0.6.12b).
+                // R4665003: the credit gains the 3/3 Bot Loser nothing since issue #4665 (+2 through v0.6.12c).
                 s.expect_stats(&bot, json!({ "attack": 3 }));
                 assert_eq!(s.card(&bot).berserk, None);
             }

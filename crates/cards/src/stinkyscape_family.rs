@@ -424,8 +424,8 @@ pub(crate) const FLAK_RADIANT_RANGE: (i32, i32) = (1, 3);
 pub(crate) const FLAK_RADIANT_LUCKY: i32 = 1;
 /// The printed odds as the test reads them, lowest first: 60, 33 and 7 since issue #4665 (R4665004).
 pub(crate) const FLAK_PRINTED: [i32; 3] = [60, 33, 7];
-/// R767000, R4665004: the odds through v0.6.12b, which the kept scripts roll.
-pub(crate) const FLAK_PRINTED_V0_6_12B: [i32; 3] = [60, 30, 10];
+/// R767000, R4665004: the odds through v0.6.12c, which the kept scripts roll.
+pub(crate) const FLAK_PRINTED_V0_6_12C: [i32; 3] = [60, 30, 10];
 
 /// A Menace no activation can bring down, so every round hits it.
 pub(crate) fn flak_wall() -> Value {
@@ -559,8 +559,8 @@ pub(crate) fn flak_over_the_seeds(
     seen
 }
 
-/// R767000, R4665004: the script kept for v0.6.12b rolls the odds printed until issue #4665
-/// (`FLAK_PRINTED_V0_6_12B`), and some seed's rolls tell them from today's.
+/// R767000, R4665004: the script kept for v0.6.12c rolls the odds printed until issue #4665
+/// (`FLAK_PRINTED_V0_6_12C`), and some seed's rolls tell them from today's.
 pub(crate) fn flak_kept_v12(id: &str, prefix: &str, rounds: i32, seeds: usize, kept: fn() -> CardScripts) {
     under_kept(id, kept(), || {
         let mut told = false;
@@ -571,10 +571,10 @@ pub(crate) fn flak_kept_v12(id: &str, prefix: &str, rounds: i32, seeds: usize, k
             let today: Vec<i32> = (0..2 * rounds)
                 .map(|_| flak_roll(&mut rng, FLAK_BASE_RANGE, FLAK_PRINTED))
                 .collect();
-            let got = flak_fire_at(&mut s, id, FLAK_BASE_RANGE, 0, rounds, FLAK_PRINTED_V0_6_12B);
+            let got = flak_fire_at(&mut s, id, FLAK_BASE_RANGE, 0, rounds, FLAK_PRINTED_V0_6_12C);
             told |= got.iter().map(|(_, amount)| *amount).collect::<Vec<i32>>() != today;
         }
-        assert!(told, "v0.6.12b's odds and today's differ on some seed");
+        assert!(told, "v0.6.12c's odds and today's differ on some seed");
     });
 }
 

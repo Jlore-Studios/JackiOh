@@ -8,7 +8,7 @@
 //! and the Cry chains every Unit of the chosen side: `chain_units` shared for the enemy,
 //! split for its controller's side (R3554007). Both faces choose (SP5); Armor is catalog data. Tribute 1
 //! (§6.3) is the static flag `play_choices.rs` validates, as #66 The Rock's: one of your Units, which
-//! the play action's `tributes` names (R81, R90); `script_v0_6_12b` keeps the free play before issue
+//! the play action's `tributes` names (R81, R90); `script_v0_6_12c` keeps the free play before issue
 //! #4665 (R767000).
 //! Its catalog row, sound, flavour and Chinese entries are already written.
 
@@ -50,9 +50,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.12b it had no Tribute (issue #4665); `KEPT_SCRIPTS` folds those replays
+/// R767000: through v0.6.12c it had no Tribute (issue #4665); `KEPT_SCRIPTS` folds those replays
 /// under it.
-pub fn script_v0_6_12b() -> CardScripts {
+pub fn script_v0_6_12c() -> CardScripts {
     CardScripts {
         base: churnwalker(false),
         radiant: churnwalker(false),
@@ -193,10 +193,10 @@ mod tests {
         }
     }
 
-    /// R767000: through v0.6.12b it was played with no Tribute.
+    /// R767000: through v0.6.12c it was played with no Tribute.
     #[test]
-    fn r767000_the_script_kept_for_v0_6_12b_plays_with_no_tribute() {
-        crate::under_kept(ID, script_v0_6_12b(), || {
+    fn r767000_the_script_kept_for_v0_6_12c_plays_with_no_tribute() {
+        crate::under_kept(ID, script_v0_6_12c(), || {
             let mut s = board(
                 "s007-kept",
                 false,
