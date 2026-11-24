@@ -1195,6 +1195,8 @@ fn r4582000_an_assault_fight_is_created_from_its_setup_a_game_of_its_own_kind() 
 /// AI's and the hint's determinizations read them; a fight that names none stores nothing
 #[test]
 fn r4595000_an_assault_fight_names_the_enemys_sets_at_the_ais_seat() {
+    // The set is held until its release (R4577000), so a test deals it under a preview.
+    let _preview = jackioh_engine::testkit::preview_sets(&[jackioh_engine::SetName::InfiniteAssault]);
     let mut setup = assault_config("practice-r4595000");
     let enemy_deck: Vec<String> = (1..=12).map(|n| format!("infiniteassault-{n:03}")).collect();
     let assault = setup.assault.as_mut().expect("an Assault fight");
