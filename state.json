@@ -21607,6 +21607,8 @@
       }
     },
     "4768": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T17:26:01Z",
@@ -21620,8 +21622,11 @@
         "trail": "- Bash: {\"command\": \"git status --short; git log --oneline -3; sed -n 60,200p .bot-notes.md; echo ----; tail -40 .bot-journal.md\"}\n- Bash: {\"command\": \"grep -n '^## ' .bot-notes.md; wc -l .bot-notes.md .bot-journal.md; sed -n 225,300p scripts/build-wasm.sh; sed -n 20,30p crates/wasm/c/src/lib.rs\"}\n- said: Nothing is built yet. Starting with the notes' State section, then the edits.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstate=\\\"\\\"\\\"## State\\n\\nRun 2 (resumed after run 1 was cut off before editing anything). Plan below is binding. Status: nothing ed\u2026\n- said: Now the edits: lib.rs, README, then the script.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/wasm/c/src/lib.rs'\\ns=open(p).read()\\nanchor=\\\"use std::cell::RefCell;\\\\n\\\"\\nassert s.count(anchor)==1\\nadd='''// #4732: an export named like a libm or host \u2026\n- bash: {\"command\": \"true\"}\n- tool error: <tool_use_error>Error: No such tool available: bash. Tool names are case-sensitive: call Bash instead.</tool_use_error>\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4732/scripts/build-wasm.sh\", \"old_string\": \" # #4275: the C module a port translates carries every byte, so it builds small. Sco\u2026\n- said: Now the self-test block replaces the grep.\n- Bash: {\"command\": \"python3 - <<'PYEOF'\\np='scripts/build-wasm.sh'\\ns=open(p).read()\\nold=''' # #4273: a `#[no_mangle]` export whose symbol collides with a libm/host symbol (as `log` did with\\n # libm's `lo\u2026\n- Bash: {\"command\": \"(JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh > /tmp/c-build.log 2>&1; echo \\\"exit $?\\\" >> /tmp/c-build.log) &\\nsleep 1; echo started; echo \\\"- run 2: edits to lib.rs,\u2026\n- Bash: {\"command\": \"sed -n 80,400p apps/web/src/net/build-wasm-cache.test.ts\"}\n- Bash: {\"command\": \"python3 - <<'PYEOF'\\np='apps/web/src/net/build-wasm-cache.test.ts'\\ns=open(p).read()\\n\\nold=''' copyFileSync(join(ROOT, \\\"scripts/build-wasm.sh\\\"), join(root, \\\"scripts/build-wasm.sh\\\"))\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo fmt ok; pnpm exec eslint apps/web/src/net/build-wasm-cache.test.ts && echo eslint ok; git status --short\"}\n- Bash: {\"command\": \"echo \\\"- run 2: web test edited (world() copies lib.rs, stand-in cargo, 3 new cases); fmt+eslint ok; waiting on real C build (/tmp/c-build.log), then web test, clippy/cargo tests, scratc\u2026\n- Bash: {\"command\": \"grep -inE 'warn|linker|signature|error' /tmp/c-build.log | head; echo \\\"CTD=$CARGO_TARGET_DIR\\\"; wc -l /tmp/c-build.log\"}\n- Bash: {\"command\": \"cargo clippy -p jackioh-wasm-c --all-targets -- -D warnings 2>&1 | tail -3; cargo test -p jackioh-wasm-c 2>&1 | grep -E 'test result|FAILED|error' | head; cargo test -p jackioh-wasm --te\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web test src/net/build-wasm-cache.test.ts 2>&1 | tail -25\", \"timeout\": 600000}\n- Bash: {\"command\": \"scratch=$(mktemp -d); echo \\\"$scratch\\\" > /tmp/scratch-path; tar --exclude=./.git --exclude=node_modules --exclude=./target -cf - . | tar -xf - -C \\\"$scratch\\\"\\ncd \\\"$scratch\\\" && grep -\u2026\n- Bash: {\"command\": \"sleep 270; tail -5 /tmp/check3.log\", \"timeout\": 300000}\n- tool error: <tool_use_error>Blocked: sleep 270 followed by: tail -5 /tmp/check3.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you st\u2026\n- Bash: {\"command\": \"until grep -q '^exit ' /tmp/check3.log; do sleep 5; done; tail -6 /tmp/check3.log\", \"timeout\": 600000}\n- said: Check 3 fails as intended, at the self-test and naming the missing line. Now check 2: restore the line and add an export named `log`.\n- Bash: {\"command\": \"scratch=$(cat /tmp/scratch-path); cd \\\"$scratch\\\" && cp /home/runner/work/_temp/work/item-4732/crates/wasm/c/src/lib.rs crates/wasm/c/src/lib.rs && echo '#[unsafe(no_mangle)] pub extern \u2026\n- Bash: {\"command\": \"until grep -q '^exit ' /tmp/check2.log; do sleep 5; done; tail -15 /tmp/check2.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g'\", \"timeout\": 600000}\n- Bash: {\"command\": \"rm -rf \\\"$(cat /tmp/scratch-path)\\\"; git status --short; git diff scripts/build-wasm.sh crates/ | head -150; ls -d /tmp/tmp.* 2>/dev/null | head -3\"}\n- tool error: Dangerous rm operation detected: the target is the output of a command substitution (`$(...)` or backticks) and cannot be checked before the command runs. This requires explicit approval and cannot b\u2026\n- Bash: {\"command\": \"cat /tmp/scratch-path\"}\n- Bash: {\"command\": \"rm -rf /tmp/tmp.tLua5GCyAT; git status --short; git diff crates/ scripts/build-wasm.sh | head -170\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4732/scripts/build-wasm.sh\", \"old_string\": \" # through `c_profile_env` (never exported: the browser module above is untouched). \u2026\n- Bash: {\"command\": \"sh -n scripts/build-wasm.sh && echo ok; pnpm --dir apps/web exec vitest run src/net/build-wasm-cache.test.ts 2>&1 | tail -6; cargo fmt --check && echo fmt ok; cargo jackioh spec check 2>\u2026\n- Bash: {\"command\": \"git fetch -q origin main 2>&1 | tail -1; cargo jackioh classify --base origin/main --claims 2>&1 | tail -5\", \"timeout\": 300000}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the C module's build refuses an export named like a maths function again, now that it strips the names the old check read\"} --> The C module's build now fails, naming the export, when a binding is named like a libm or host function (`log`, `round`). A s\u2026"
       },
       "issue": 4732,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T18:41:22Z",
         "from_run": "45448528472",
         "gates": [
           {
@@ -21713,7 +21718,11 @@
         "source": "build",
         "until": "2026-11-24T19:10:14Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-24T18:40:14Z",
+      "run_id": "pending:3e52aed2-1795545652",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -21732,6 +21741,9 @@
         "provider": "claude-3",
         "run": "45448528472"
       },
+      "started_at": "2026-11-24T18:41:22Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -21745,9 +21757,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T18:30:56Z",
+    "at": "2026-11-24T18:41:22Z",
     "url": "",
-    "what": "suggestions (ai) on muse"
+    "what": "review #4768 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-24T18:24:21Z",
