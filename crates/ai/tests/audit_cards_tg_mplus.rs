@@ -314,3 +314,62 @@ fn probe_autopilot_plays_prompt_cards() {
         println!("   p1 hand {:?}", s.hand(P1).iter().map(|c| c.def_id.clone()).collect::<Vec<_>>());
     }
 }
+
+const PALANTIR: &str = "classic-004";
+const MINE: &str = "stand-in (1) 3/3";
+const THEIRS: &str = "stand-in (1) 4/4";
+
+/// P2's Palantir ("When your opponent plays a (2) Cost Spell, Tribute this to steal and cast it") steals
+/// the (2) Cost Spell P1 plays at P1's own Unit and casts it for P2.
+fn stolen_by_palantir(spell: Value) -> (Scenario, String, String) {
+    let mut s = game(json!({
+        "seed": "audit-aim",
+        "p1": { "hand": [spell], "field": [{ "def": MINE, "lane": 1 }], "library": [FILLER, FILLER, FILLER], "mana": 10 },
+        "p2": {
+            "hand": [FILLER],
+            "field": [{ "def": THEIRS, "lane": 1 }],
+            "backrow": [{ "def": PALANTIR, "faceUp": true }],
+            "library": [FILLER, FILLER, FILLER],
+        },
+    }));
+    let mine = s.unit_at(P1, 1).id;
+    let theirs = s.unit_at(P2, 1).id;
+    let card = s.hand(P1)[0].id.clone();
+    s.play(card.as_str(), pick::targets(pick::id(&mine)));
+    (s, mine, theirs)
+}
+
+/// TG #12 Fortify: "Give a Unit +5 Health, +1 Armor and Taunt." A buff. R656: "Every target declaration
+/// says whether it harms ("harm") or helps ("help") ... a helpful one [narrows] to friends when one is
+/// legal"; Palantir's stolen cast is "aimed in your favor" (R831001, R452, R656).
+#[test]
+fn r656_fortify_cast_by_a_cast_that_targets_enemies_lands_on_its_casters_unit() {
+    const FORTIFY: &str = "traininggrounds-012";
+    let (s, mine, theirs) = stolen_by_palantir(json!({ "def": FORTIFY, "costMod": 1 }));
+    assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == FORTIFY), "P2 stole and cast it");
+    let (mine, theirs) = (unit_view(s.state(), s.card(mine.as_str())), unit_view(s.state(), s.card(theirs.as_str())));
+    println!("p1's unit {}/{} p2's unit {}/{}", mine.attack, mine.max_health, theirs.attack, theirs.max_health);
+    assert_eq!(theirs.max_health, 9, "the caster's own Unit takes the +5 Health");
+    assert_eq!(mine.max_health, 3, "the caster's enemy takes no buff");
+}
+
+/// TG #27 Hopeful Jelly Bean: "Make a permanent Radiant." A buff, aimed the same way.
+#[test]
+fn r656_hopeful_jelly_bean_cast_by_a_cast_that_targets_enemies_lands_on_its_casters_permanent() {
+    const BEAN: &str = "traininggrounds-027";
+    let (s, mine, theirs) = stolen_by_palantir(json!({ "def": BEAN, "costMod": -2 }));
+    assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == BEAN), "P2 stole and cast it");
+    println!("p1's unit radiant {} p2's unit radiant {}", s.card(mine.as_str()).radiant, s.card(theirs.as_str()).radiant);
+    assert!(s.card(theirs.as_str()).radiant, "the caster's own Unit becomes Radiant");
+    assert!(!s.card(mine.as_str()).radiant, "the caster's enemy does not");
+}
+
+/// Control: TG #59 Legacy: Fig of Life declares `aim: help`, and the same stolen cast heals the caster's side.
+#[test]
+fn control_fig_of_life_stolen_by_palantir_heals_the_casters_side() {
+    const FIG: &str = "traininggrounds-059";
+    let (s, _mine, _theirs) = stolen_by_palantir(json!({ "def": FIG, "costMod": -1 }));
+    assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == FIG), "P2 stole and cast it");
+    println!("p1 hp {} p2 hp {}", hp(&s, P1), hp(&s, P2));
+    assert_eq!(hp(&s, P1), 30, "never the caster's enemy");
+}
