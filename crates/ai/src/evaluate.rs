@@ -9,8 +9,9 @@
 //! backrow card's, either side's, and a hand Field Spell's, #2687), each turn hook by one firing
 //! (#2477, #2565; the start of the opponent's turn too, #2689), each Activate by one use (#2564; a
 //! face-up backrow card's, #2603), each attack hook by the unit's next attack against its hookless
-//! twin's (#2688) and each Dormant card's wake trigger by its awakening against its hookless twin's
-//! (#3064), and the rest read them (`Prices`), counting a start-of-turn or end-of-turn firing
+//! twin's (#2688), each Dormant card's wake trigger by its awakening against its hookless twin's
+//! (#3064) and each unevolved Evolve card by its evolution, counted by how close it stands (#4648), and
+//! the rest read them (`Prices`), counting a start-of-turn or end-of-turn firing
 //! once for each time its controller's turn runs it (Meditative #9 Joint Filing's extra runs, #2689).
 //! A passed line's Float is credited for what it took toward an own Float-discount card still out of
 //! reach (`float_credit`, #3695). The Burn and Toxic still to come on a unit or a hero count by the ticks
@@ -27,36 +28,38 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::afflictions::Affliction;
 use jackioh_engine::config::{
-    BRITTLE_TICK, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT,
-    JADE_BEAUTY_AT, MAX_MANA, TURN_CAP_PLAYER_TURNS,
+    BRITTLE_TICK, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HAND_CAP_MAX, HERO_HEALTH,
+    JADE_ASCEND_AT, JADE_BEAUTY_AT, MAX_MANA, TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
+use jackioh_engine::evolution::{can_evolve, evolve_now};
 use jackioh_engine::float::float_cuts_in_hand;
 use jackioh_engine::multipliers::{Multiplied, extra_runs};
 use jackioh_engine::{
     ActionBody, AltWinCondition, AttackHealth, AttackTarget, CardDef, CardInstance, CardType, CostOptions,
-    EngineSink, FengShuiOutcome, GameEvent, GameEventType, GameState, Grant, HookName, Keyword, KeywordKind,
-    ModifierKind, PLAYER_IDS, Phase, PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome,
-    SettleOptions, Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag,
-    active_brittle_count, active_units_of, acts_to_awaken, animated_with_stats, armor_of, attack_restriction,
-    attacks_per_turn, awaken_card, backrow_is_public, board_totals, brittle_due_by, burn_on, cannot_attack,
-    card_at, card_keywords, card_type_of_face, converts_to, credit_lapsing, damage_pool_of, death_hook_of,
-    effective_cost, effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut,
-    first_entry_zone, flags_of, frozen_next_turn, gauntlet_acts, has_keyword, heal_multiplier_of,
-    hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep, is_dormant_starship, is_extra_turn_card, is_giga,
-    is_sick, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card, is_tradable,
-    left_field_after, legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of,
-    own_cost, pays_credits_like_a_resource, pierces, pile_at, plague_on, playable_from_graveyard, query_cost,
-    queue_hook, reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems,
-    sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has,
-    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
+    EngineSink, FengShuiOutcome, GameEvent, GameEventType, GameState, Grant, HasHook, HookArgs, HookName,
+    Keyword, KeywordKind, ModifierKind, PLAYER_IDS, Phase, PlayerId, PlayerState, Position, Rng, Row,
+    SandboxOp, SeatOutcome, SettleOptions, Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView,
+    Zone, ZoneName, acting_with_flag, active_brittle_count, active_units_of, acts_to_awaken,
+    animated_with_stats, armor_of, attack_restriction, attacks_per_turn, awaken_card, backrow_is_public,
+    board_totals, brittle_due_by, burn_on, cannot_attack, card_at, card_keywords, card_type_of_face,
+    converts_to, credit_lapsing, damage_pool_of, death_hook_of, effective_cost, effective_life, exit_mark,
+    face_of, find_def, find_instance, find_instance_mut, first_entry_zone, flags_of, frozen_next_turn,
+    gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep,
+    is_dormant_starship, is_extra_turn_card, is_giga, is_sick, is_slumbering, is_standing_unit,
+    is_starship_piece, is_temporary_card, is_tradable, left_field_after, legal_actions, lost_refreshes_left,
+    modifier_is_live, outcome_for, owed_mana_of, own_cost, pays_credits_like_a_resource, pierces, pile_at,
+    plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
+    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook,
+    unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
+    yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, action_key, blow, cleaved_neighbours_with, side_of};
 use crate::config::{
     AI_ACTIVATION_PROBE_NODES, AI_AFFLICTION_TICKS, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES,
-    AI_DEATH_PROBE_NODES, AI_EVAL, AI_HAND_ACTIVATION_PROBE_NODES, AI_PLAGUE_BOMBS,
+    AI_DEATH_PROBE_NODES, AI_EVAL, AI_EVOLVE_PROBE_NODES, AI_HAND_ACTIVATION_PROBE_NODES, AI_PLAGUE_BOMBS,
     AI_PROMPT_ACTIVATION_PROBE_NODES, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
 };
 use crate::reply::{Known, hidden_card_ids, visible_activation};
@@ -383,9 +386,9 @@ impl TurnHookPrice {
     }
 }
 
-/// R2424000, R2477000, R2564000, R2688000, R3064000: the prices a decision's root probed, passed by
-/// reference from `decide` through the search to every scorer that reads them, and in a Duos duel the pool's
-/// coming loss (R4188000).
+/// R2424000, R2477000, R2564000, R2688000, R3064000, R4648000: the prices a decision's root probed, passed
+/// by reference from `decide` through the search to every scorer that reads them, and in a Duos duel the
+/// pool's coming loss (R4188000).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Prices {
     pub deaths: Vec<DeathPrice>,
@@ -393,6 +396,8 @@ pub struct Prices {
     pub activations: Vec<ActivationPrice>,
     pub attack_hooks: Vec<AttackHookPrice>,
     pub awakenings: Vec<AwakenPrice>,
+    /// R4648000: what one run of each unevolved Evolve card's text gives, and its road there.
+    pub evolutions: Vec<EvolvePrice>,
     /// R4188000: in a Duos duel, the deciding seat and what the enemy board of its teammate's duel is
     /// about to take off the team's shared pool next round (`duos_pool_loss`). None in every 1v1 decision.
     pub pool_loss: Option<(PlayerId, i32)>,
@@ -407,6 +412,7 @@ impl Prices {
         activations: Vec::new(),
         attack_hooks: Vec::new(),
         awakenings: Vec::new(),
+        evolutions: Vec::new(),
         pool_loss: None,
     };
 
@@ -574,6 +580,128 @@ fn awaken_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices:
     }
 }
 
+/// R4648000: how the root read an Evolve card's road to evolving (`evolve_condition`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EvolveCondition {
+    /// "Evolves when all your Unit zones are full" (S+ #2 Lone Drifter).
+    ZonesFull,
+    /// "… your hand has at least N (0) Cost cards" (C+ #49 Jay Fungus): N. The seat's own cards only.
+    FreeCards(i32),
+    /// A health condition: "… this falls below half health" (S+ #27 Gargantuar).
+    Damage,
+    /// Every other road: its own trigger, a Stack, or a hand the seat cannot see.
+    Event,
+}
+
+/// R4648000: what one run of an unevolved card's Evolve text gives its controller, as a decision's root
+/// priced it (`evolve_prices`), and how the root read its road there, keyed as `TurnHookPrice` is, its
+/// controller included since each copy evolves onto a different board.
+#[derive(Clone, Debug, PartialEq)]
+pub struct EvolvePrice {
+    pub def_id: String,
+    pub radiant: bool,
+    pub controller: PlayerId,
+    pub price: f64,
+    pub condition: EvolveCondition,
+}
+
+impl EvolvePrice {
+    /// The price `card` would hold, at 0 until it is probed.
+    fn key(card: &CardInstance) -> Self {
+        Self {
+            def_id: card.def_id.clone(),
+            radiant: card.radiant,
+            controller: card.controller,
+            price: 0.0,
+            condition: EvolveCondition::Event,
+        }
+    }
+
+    fn is_for(&self, card: &CardInstance) -> bool {
+        self.def_id == card.def_id && self.radiant == card.radiant && self.controller == card.controller
+    }
+}
+
+/// R3551000: what a free card costs, the cost C+ #49 Jay Fungus counts.
+const FREE_COST: i32 = 0;
+
+/// R4648000: the health the root's damage probe (`evolve_condition`) leaves a unit on.
+const PROBE_HEALTH: i32 = 1;
+
+/// R4648000: the share of `player`'s unit zones that are no room (`is_empty`, so a zone a GIGA covers or
+/// the slash voided counts as full, as S+ #2 Lone Drifter reads it); 0 with none.
+fn zones_filled(state: &GameState, player: PlayerId) -> f64 {
+    let slots = slots_of(player, Row::Units);
+    if slots.is_empty() {
+        return 0.0;
+    }
+    let filled = slots
+        .iter()
+        .filter(|slot| !jackioh_engine::is_empty(state, **slot))
+        .count();
+    filled as f64 / slots.len() as f64
+}
+
+/// R3551000: how many of `player`'s hand cards cost (0) now.
+fn free_cards_held(state: &GameState, player: PlayerId) -> i32 {
+    let held = state.players[player]
+        .hand
+        .iter()
+        .filter(|card| effective_cost(state, card, CostOptions::default()) == FREE_COST)
+        .count();
+    i32::try_from(held).unwrap_or(i32::MAX)
+}
+
+/// R4648000: how close `unit` stands to evolving by the road its root read (`condition`), from 0 to 1:
+/// the share of its side's unit zones filled, of the (0) Cost cards its hand holds of those it needs, or of
+/// its health lost (under ½ until "below half health" holds, so a hit toward it never looks cheap), and
+/// `evolve_event_share` when it waits on an event.
+fn evolve_closeness(
+    state: &GameState,
+    unit: &CardInstance,
+    view: &UnitView,
+    condition: EvolveCondition,
+    w: &EvalWeights,
+) -> f64 {
+    let share = match condition {
+        EvolveCondition::ZonesFull => zones_filled(state, unit.controller),
+        EvolveCondition::FreeCards(need) => {
+            f64::from(free_cards_held(state, unit.controller)) / f64::from(need.max(1))
+        }
+        EvolveCondition::Damage if view.max_health > 0 => {
+            f64::from(view.max_health - view.health) / f64::from(view.max_health)
+        }
+        EvolveCondition::Damage => 0.0,
+        EvolveCondition::Event => w.evolve_event_share,
+    };
+    share.clamp(0.0, 1.0)
+}
+
+/// R4648000, R3536003: what `unit`'s coming evolution gives its controller, by `prices`, while it can still
+/// evolve (`can_evolve`): one run's price, once for each time its Evolve text would run now (1 + its
+/// controller's evolution multiplier's extra runs, floored at 0), times how close it stands
+/// (`evolve_closeness`). 0 with `Prices::NONE`, for a card its root did not price, and at a zero `evolve`
+/// weight (no reading).
+fn evolve_price(
+    state: &GameState,
+    unit: &CardInstance,
+    view: &UnitView,
+    w: &EvalWeights,
+    prices: &Prices,
+) -> f64 {
+    if w.evolve == 0.0 {
+        return 0.0;
+    }
+    let Some(entry) = prices.evolutions.iter().find(|entry| entry.is_for(unit)) else {
+        return 0.0;
+    };
+    if !can_evolve(state, unit) {
+        return 0.0;
+    }
+    let runs = 1 + extra_runs(state, unit.controller, Multiplied::Evolutions).max(0);
+    entry.price * f64::from(runs) * evolve_closeness(state, unit, view, entry.condition, w)
+}
+
 /// R3540001: what one turn-start tick of `burn` and then `toxic` deals `view`'s unit, its own `cap` holding
 /// each hit (R2179005), and whether it spent the unit's Divine Shield: Burn's hit meets its Armor and Toxic's
 /// pierces it, an unspent `shield` negates the first hit it meets (and is spent), and its side's damage pools,
@@ -663,9 +791,9 @@ fn burning_at(burn: i32, tick: i32) -> i32 {
 
 /// One unit's worth on the board: its stats through the layers and its keywords (AI_EVAL), Spell
 /// Damage per point, `activation` of one use of its Activate (R2564000) and, while it may attack,
-/// `attack_hook` of its attack hooks (R2688000), all discounted by its Brittle count and by its Burn and
-/// Toxic (R3822000); then `death` of what its Death leaves behind (R2424000) and `turn_hook` of one
-/// firing of its turn hooks (R2565000).
+/// `attack_hook` of its attack hooks (R2688000) and `evolve` of its coming evolution by how close it stands
+/// (R4648000), all discounted by its Brittle count and by its Burn and Toxic (R3822000); then `death` of
+/// what its Death leaves behind (R2424000) and `turn_hook` of one firing of its turn hooks (R2565000).
 pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
     let view = unit_view(state, unit);
     let weights = &w.keyword;
@@ -716,6 +844,9 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, price
     if swings {
         value += w.attack_hook * attack_hook_price(state, unit, w, prices);
     }
+    // R4648000: what its coming evolution gives, by how close it stands, inside the Brittle share: a
+    // crumbled card never evolves.
+    value += w.evolve * evolve_price(state, unit, &view, w, prices);
     // §10.1: the counters on the card are worth their own, outside the Brittle share — Fed Fauci's Plague
     // Counters are mana it already banked. R2424000: so is what its Death leaves, since Brittle's end is a
     // death too. R2565000: and what one firing of its turn hooks gives, a firing that harms it a debt.
@@ -3342,6 +3473,219 @@ pub fn awaken_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounte
             None => break,
             Some(None) => {}
             Some(Some(price)) => priced.push(AwakenPrice { price, ..key }),
+        }
+    }
+    priced
+}
+
+/// R4648000: whether `card`'s own turn or attack text evolves it (S #91 the Propagation's Wasp, S+ #161
+/// Space Invader, S+ #T-AI-5 Lantern Distiller): its face prints no "Evolves when" and no trigger but a
+/// turn or an attack hook. Those prices (`turn_hook_prices`, `attack_hook_prices`) already fire the hook
+/// that evolves it, so the evolution probe leaves it to them.
+fn own_hook_evolves(state: &GameState, card: &CardInstance) -> bool {
+    let script = script_of(state, card);
+    script.evolves_when.is_none()
+        && script.triggers.is_empty()
+        && (has_turn_hook(state, card) || has_attack_hook(state, card))
+}
+
+/// R3536001: whether the "Evolves when" condition `when` holds for `card` on `state`.
+fn holds(when: &HasHook, state: &GameState, card: &CardInstance) -> bool {
+    when(HookArgs {
+        state,
+        self_: card,
+        radiant: card.radiant,
+    })
+}
+
+/// R4648000: the road `card` stands on toward evolving, read for `seat` on throwaway copies of `state`
+/// that are never settled nor kept: `ZonesFull` when its "Evolves when" holds once every empty unit zone
+/// of its side holds a Vanilla copy of it, `FreeCards(n)` when it holds once `seat`'s own hand gains
+/// enough (0) Cost Vanilla copies (n the free cards it then holds; never for an enemy card, whose hand the
+/// seat cannot see), `Damage` when it holds once the card itself is left on `PROBE_HEALTH`, and `Event`
+/// for a card with no "Evolves when", one whose condition already holds (something holds its text off),
+/// and every other road.
+fn evolve_condition(state: &GameState, seat: PlayerId, card: &CardInstance) -> EvolveCondition {
+    let script = script_of(state, card);
+    let Some(when) = script.evolves_when.as_ref() else {
+        return EvolveCondition::Event;
+    };
+    if holds(when, state, card) {
+        return EvolveCondition::Event;
+    }
+    let owner = card.controller;
+    let mut full = state.clone();
+    for (index, slot) in slots_of(owner, Row::Units).into_iter().enumerate() {
+        if !jackioh_engine::is_empty(state, slot) {
+            continue;
+        }
+        let mut filler = card.clone();
+        filler.id = format!("{}-evolve-zone-{}", card.id, slot.lane);
+        filler.zone = Zone::Field {
+            player: slot.player,
+            row: slot.row,
+            lane: slot.lane,
+        };
+        filler.vanilla = true;
+        if let Some(zone) = full.players[owner].units.get_mut(index) {
+            *zone = Some(vec![filler]);
+        }
+    }
+    if holds(when, &full, card) {
+        return EvolveCondition::ZonesFull;
+    }
+    if owner == seat {
+        let mut more = state.clone();
+        for added in 1..=HAND_CAP_MAX {
+            let mut filler = card.clone();
+            filler.id = format!("{}-evolve-free-{added}", card.id);
+            filler.zone = Zone::Hand { player: owner };
+            filler.cost_override = Some(FREE_COST);
+            filler.cost_mod = 0;
+            filler.vanilla = true;
+            more.players[owner].hand.push(filler);
+            if holds(when, &more, card) {
+                return EvolveCondition::FreeCards(free_cards_held(state, owner).saturating_add(added));
+            }
+        }
+    }
+    let view = unit_view(state, card);
+    let mut hurt = card.clone();
+    hurt.damage += view.health - PROBE_HEALTH;
+    if holds(when, state, &hurt) {
+        return EvolveCondition::Damage;
+    }
+    EvolveCondition::Event
+}
+
+/// R4648000, R1849001: `before` after its card `instance_id` evolves (`evolve_now`: its Evolve text's
+/// first run inline, the evolution multiplier's extra runs queued) and `settled_after` drains it. One node
+/// of `counter`: `None` when the counter refuses it; `Some(None)` when the evolution panics
+/// (`note_sim_panic`), or leaves a prompt open or the game over, which the probe neither answers nor
+/// prices.
+fn evolve_once(
+    before: &GameState,
+    instance_id: &str,
+    counter: &dyn NodeCounter,
+) -> Option<Option<GameState>> {
+    if !counter.take() {
+        return None;
+    }
+    let evolved = catch_unwind(AssertUnwindSafe(|| {
+        settled_after(before, |sink| {
+            if let Some(card) = find_instance(sink.state, instance_id).cloned() {
+                evolve_now(sink, &card);
+            }
+        })
+    }));
+    match evolved {
+        Ok(after) => Some((after.pending.is_none() && after.result.is_none()).then_some(after)),
+        Err(payload) => {
+            note_sim_panic(counter, payload.as_ref());
+            Some(None)
+        }
+    }
+}
+
+/// R4648000: what one run of `unit`'s Evolve text on `before`, a sandbox (R923000), gives its controller,
+/// and the road it stands on there (`evolve_condition`, read for `seat`): the controller's evaluation after
+/// it evolves less before it, plus `AI_EVAL.next_turn_mana` per crystal it gained, which the evaluation
+/// does not count, split evenly over the runs its text took (1 + the evolution multiplier's extra runs,
+/// R3536003). Signed: a costly evolution is a debt. One node; `None` when the counter is spent,
+/// `Some(None)` when the evolution is not priced (`evolve_once`).
+fn evolve_probe(
+    before: &GameState,
+    seat: PlayerId,
+    unit: &CardInstance,
+    counter: &dyn NodeCounter,
+) -> Option<Option<(f64, EvolveCondition)>> {
+    let Some(after) = evolve_once(before, &unit.id, counter)? else {
+        return Some(None);
+    };
+    let owner = unit.controller;
+    let runs = 1 + extra_runs(before, owner, Multiplied::Evolutions).max(0);
+    let gained = after.players[owner].mana.current - before.players[owner].mana.current;
+    let gain = evaluate(&after, owner, NextSwing::Enemy, &AI_EVAL)
+        - evaluate(before, owner, NextSwing::Enemy, &AI_EVAL)
+        + AI_EVAL.next_turn_mana * f64::from(gained);
+    Some(Some((
+        gain / f64::from(runs),
+        evolve_condition(before, seat, unit),
+    )))
+}
+
+/// R4648000, R923001: `evolve_probe` for `card`, a Unit in `seat`'s hand, placed on its field first
+/// (`spawn_hand_unit`). One that cannot evolve once placed (one that filled the row evolved as it entered)
+/// prices nothing.
+fn spawned_evolve_probe(
+    world: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    counter: &dyn NodeCounter,
+) -> Option<Option<(f64, EvolveCondition)>> {
+    let Some((placed, unit)) = spawn_hand_unit(world, seat, card, counter)? else {
+        return Some(None);
+    };
+    if !can_evolve(&placed, &unit) {
+        return Some(None);
+    }
+    evolve_probe(&placed, seat, &unit, counter)
+}
+
+/// R4648000: the evolution prices a decision of `seat`'s passes (`Prices`), probed on `world`, its probe
+/// world (R185), each card once: every unit acting on the seat's field that can still evolve
+/// (`can_evolve`), then every one on the enemy's, whose face and evolved mark are public, each as its
+/// controller's, then each Unit in the seat's own hand that can, placed first (R923001). It never reads the
+/// enemy's hand, and it leaves a card its own turn or attack text evolves to those prices
+/// (`own_hook_evolves`). Each evolution is priced against the state before it (`evolve_probe`). On a
+/// sandbox copy (R923000), automatic turn end off (R345), no price passed, at most
+/// `AI_EVOLVE_PROBE_NODES` nodes from `counter`, and none when no card can evolve.
+pub fn evolve_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Vec<EvolvePrice> {
+    if AI_EVAL.evolve == 0.0 || world.pending.is_some() || world.result.is_some() {
+        return Vec::new();
+    }
+    let field = active_units_of(world, seat)
+        .into_iter()
+        .chain(active_units_of(world, seat.opponent()))
+        .map(|unit| (unit, false));
+    let hand = world.players[seat]
+        .hand
+        .iter()
+        .filter(|card| card_type_of_face(world, &card.def_id, card.radiant) == CardType::Unit)
+        .map(|card| (card, true));
+    let mut candidates: Vec<(EvolvePrice, &CardInstance, bool)> = Vec::new();
+    for (card, in_hand) in field.chain(hand) {
+        if can_evolve(world, card)
+            && !own_hook_evolves(world, card)
+            && !candidates.iter().any(|(key, _, _)| key.is_for(card))
+        {
+            candidates.push((EvolvePrice::key(card), card, in_hand));
+        }
+    }
+    if candidates.is_empty() {
+        return Vec::new();
+    }
+    let mut sandbox = world.clone();
+    sandbox.sandbox = Some(true);
+    for player in PLAYER_IDS {
+        sandbox.players[player].auto_end_turn = Some(false);
+    }
+    let probes = create_sub_counter(counter, AI_EVOLVE_PROBE_NODES);
+    let mut priced = Vec::new();
+    for (key, card, in_hand) in candidates {
+        let probed = if in_hand {
+            spawned_evolve_probe(&sandbox, seat, card, &probes)
+        } else {
+            evolve_probe(&sandbox, seat, card, &probes)
+        };
+        match probed {
+            None => break,
+            Some(None) => {}
+            Some(Some((price, condition))) => priced.push(EvolvePrice {
+                price,
+                condition,
+                ..key
+            }),
         }
     }
     priced
