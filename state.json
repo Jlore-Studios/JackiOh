@@ -19325,7 +19325,8 @@
       "started_at": "2026-11-24T21:26:58Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 0,
+      "waiting_comment": 7145220394
     },
     "4802": {
       "failures": 0,
