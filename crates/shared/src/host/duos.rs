@@ -1048,10 +1048,15 @@ impl DuosHost {
 
     fn on_attached(&mut self, seat: DuosSeat, now: i64) {
         let Some(index) = self.person(seat) else { return };
-        let old = self.grace[index].take();
-        self.cancel(TimerKey::DuosGrace { seat }, old);
-        if std::mem::replace(&mut self.ai_playing[index], false) {
-            self.note(DuosNote::SeatBack { seat });
+        // B37, R744, R3767000: a socket that dropped while it was being seated is already gone
+        // (`Left` ran before this `Attached`), so its grace, `ai_playing` and the seat-back note
+        // are left alone.
+        if self.here(seat) {
+            let old = self.grace[index].take();
+            self.cancel(TimerKey::DuosGrace { seat }, old);
+            if std::mem::replace(&mut self.ai_playing[index], false) {
+                self.note(DuosNote::SeatBack { seat });
+            }
         }
         // B35: the seat's view and legal actions, its clock, and its teammate. R2881000: and the watcher
         // count, which a socket that was away missed.
