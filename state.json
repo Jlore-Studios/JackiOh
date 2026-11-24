@@ -19616,15 +19616,8 @@
       }
     },
     "4720": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45384237934",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-24T11:55:52Z",
-        "until": "2026-11-24T12:25:52Z"
-      },
       "difficulty_by": {
         "at": "2026-11-24T11:55:44Z",
         "difficulty": "hard",
@@ -19643,10 +19636,9 @@
         "reason": "planned on opus",
         "trail": "/src/patch_history.rs\"}\n- Bash: {\"command\": \"cat spec/rulings/R4675000.md spec/rulings/R4675001.md spec/pending/4675.md\", \"description\": \"Read the rulings from #4675\"}\n- Bash: {\"command\": \"sed -n 1,200p crates/cards/src/lib.rs\", \"description\": \"Read cards lib.rs top\"}\n- Bash: {\"command\": \"grep -n \\\"JACKIOH_CATALOG_VERSION\\\" -r crates/cards/build.rs | head; grep -n \\\"fn shipped_versions\\\" -A25 crates/cards/src/history.rs\", \"description\": \"Find catalog version source and sh\u2026\n- Bash: {\"command\": \"grep -n \\\"pending\\\\|unshipped\\\\|not yet shipped\\\\|newest snapshot\\\\|fn newest\\\\|lacked\\\\|fn past_ids\\\" crates/cards/src/history.rs | head -60\", \"description\": \"Search history.rs for hand\u2026\n- Bash: {\"command\": \"sed -n 1,120p crates/cards/src/history.rs\", \"description\": \"Read history.rs header\"}\n- Bash: {\"command\": \"sed -n 2800,2860p crates/cards/src/history.rs\", \"description\": \"Read history.rs test around pending patches\"}\n- Bash: {\"command\": \"ls crates/cards/patches | head -20; ls crates/cards/patches | wc -l; ls crates/cards/patches/pending 2>/dev/null | head; python3 -c \\\"\\nimport json\\np=json.load(open('crates/cards/patche\u2026\n- Grep: {\"pattern\": \"deck_play_versions|play_versions\\\\(\\\\)\", \"output_mode\": \"content\", \"path\": \"/home/runner/work/_temp/work/item-4720\", \"glob\": \"!**/target/**\"}\n- Bash: {\"command\": \"sed -n 1940,2000p crates/server/tests/api/stats.rs; echo ----; sed -n 270,330p crates/server/tests/store/card_stats.rs; echo ----; sed -n 1770,1820p crates/tools/src/stats.rs\", \"descript\u2026\n- Bash: {\"command\": \"sed -n 1584,1640p crates/cards/src/history.rs; grep -n \\\"lacks\\\\|lacked\\\\|missing\\\" crates/cards/build.rs | head -20\", \"description\": \"Read history build() and build.rs lacks logic\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json,collections\\nc=json.load(open('crates/cards/catalog.json'))\\ncards = c if isinstance(c,dict) else None\\nprint(type(c), len(c))\\nsets=collections.Counter()\\\u2026\n- Bash: {\"command\": \"ls -d patches* crates/cards/patches/*/ 2>/dev/null; ls patches 2>/dev/null | head; grep -rn \\\"pending\\\" docs/ADDING_CARDS.md | head -20\", \"description\": \"Locate pending patch fragments d\u2026\n- Bash: {\"command\": \"grep -n \\\"pending\\\" crates/cards/build.rs | head; grep -n \\\"pub type CardDefs\\\\|type CardDefs\\\" -r crates/engine/src | head -3; grep -n \\\"pub id:\\\" crates/engine/src/card*.rs crates/engi\u2026\n- Bash: {\"command\": \"grep -n -i \\\"amend\\\\|an existing note\\\\|edit.*note\\\\|note.*edit\\\\|correct.*ruling\\\" spec/README.md | head -20\", \"description\": \"Check spec README on editing existing ruling notes\"}\n- Bash: {\"command\": \"grep -n \\\"^#\\\" spec/README.md | head -40; grep -n -A30 \\\"Adding a ruling\\\" spec/README.md | head -60\", \"description\": \"Read spec README Adding a ruling section\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct CardDef\\\\b\\\\|pub struct CardDef {\\\" -A12 crates/engine/src/wire/catalog_types.rs | head -20; python3 -c \\\"\\nimport json;c=json.load(open('crates/cards/catalog.json')\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4720/.bot-plan.md\", \"content\": \"# Draft plan for #4720 (planner notes)\\n\\nFound:\\n- crates/cards/src/patch_history.rs:434-465 test counts deckable = C\u2026\n- Bash: {\"command\": \"timeout 1500 cargo test -p jackioh-cards --lib r4675000 2>&1 | tail -20\", \"description\": \"Run the existing R4675000 card tests as a baseline\", \"timeout\": 1600000, \"run_in_background\": tr\u2026\n- Bash: {\"command\": \"grep -n \\\"nonempty\\\" crates/tools/tests/acceptance.rs | head -20\", \"description\": \"Check acceptance scan for nonempty loop rule\"}\n- Bash: {\"command\": \"grep -rn \\\"fn nonempty\\\" crates/ | head; grep -n \\\"loop over nothing\\\\|for_over_expected\\\\|3914\\\" crates/tools/tests/acceptance.rs | head\", \"description\": \"Find nonempty helper and loop \u2026\n- Bash: {\"command\": \"sed -n 5,12p spec/rulings/R4675000.md | cut -c1-600 | head -3; grep -n \\\"deck_play_versions\\\" spec/rulings/R4675000.md\", \"description\": \"Locate the sentence to amend in R4675000\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4720/.bot-plan.md\", \"content\": \"# Draft plan for #4720 (planner notes)\\n\\nFound:\\n- crates/cards/src/patch_history.rs:434-465 test counts deckable = C\u2026\n- Monitor: {\"description\": \"baseline cards test run finishing\", \"command\": \"until grep -qE \\\"test result|error(\\\\[|:)|could not compile|Killed\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4720/c1a117b8-\u2026\n- Bash: {\"command\": \"sed -n 30,34p docs/ADDING_CARDS.md | cut -c1-400\", \"description\": \"Read ADDING_CARDS lines about patches.json\"}\n- Bash: {\"command\": \"tail -3 /tmp/claude-1001/-home-runner-work--temp-work-item-4720/c1a117b8-c3d5-46d2-bdba-bc32e47fc627/tasks/bw3xjul89.output; ls target/debug 2>/dev/null | head -3\", \"description\": \"Check\u2026\n- said: The baseline test run is still compiling, and I'll wait for it before finishing the plan.\n- Bash: {\"command\": \"until grep -qE \\\"test result|error|could not compile|Killed\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4720/c1a117b8-c3d5-46d2-bdba-bc32e47fc627/tasks/bw3xjul89.output 2>/dev/n\u2026\n- ToolSearch: {\"query\": \"select:TaskStop\", \"max_results\": 1}\n- TaskStop: {\"task_id\": \"b31udaipj\"}\n- Bash: {\"command\": \"for i in $(seq 1 55); do grep -qE \\\"test result|error|could not compile|Killed\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4720/c1a117b8-c3d5-46d2-bdba-bc32e47fc627/tasks/bw3xju\u2026\n- TaskStop: {\"task_id\": \"b7iyt5etq\"}\n- tool error: <tool_use_error>Task b7iyt5etq is not running (status: completed)</tool_use_error>\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4720/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"No line of the rule holds (a test and doc fix in crates/cards, 3 files\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"No line of the rule holds (a test and doc fix in crates/cards, 3 files), but the bot already rated it hard and a plan may not rate lower\"} --> ## Goal `r4675000_the_compiled_in_history_gives_every_shipped_card_contiguous_versions` in `crates/cards/src/patch_\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-24T11:26:41Z",
       "owner_why": "it plans it",
@@ -19659,10 +19651,10 @@
       "provider": "claude-4",
       "queued_at": "2026-11-24T11:23:58Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "45384237934",
+      "run_id": "pending:6726d403-1795521544",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 4706,
-      "started_at": "2026-11-24T11:26:41Z",
+      "started_at": "2026-11-24T11:59:31Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -19817,9 +19809,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T11:58:52Z",
+    "at": "2026-11-24T11:59:31Z",
     "url": "",
-    "what": "review #4724 on claude-7"
+    "what": "build #4720 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-24T11:41:13Z",
