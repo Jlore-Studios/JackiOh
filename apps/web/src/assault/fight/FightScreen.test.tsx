@@ -189,8 +189,11 @@ function renderFight(
   onAction: Mock<(action: AssaultAction) => void> = vi.fn(),
   onLeave?: () => void,
   pacing: PracticePacing = PRACTICE_PACING_FAST,
+  onHold: Mock<(action: AssaultAction) => void> = vi.fn(),
 ): void {
-  render(<AssaultFightScreen state={STATE} day={DAY} onAction={onAction} onLeave={onLeave} hostFactory={host.factory} pacing={pacing} />);
+  render(
+    <AssaultFightScreen state={STATE} day={DAY} onAction={onAction} onHold={onHold} onLeave={onLeave} hostFactory={host.factory} pacing={pacing} />,
+  );
 }
 
 /** Only the confirmation dialog's Concede sends the action. */
@@ -414,6 +417,61 @@ describe("R4582001 a kept fight is picked up, and Menu asks before leaving", () 
     expect(onAction).toHaveBeenCalledWith(LOST);
     expect(onLeave).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId(assaultFightTestid.leaveDialog)).toBeNull();
+  });
+});
+
+describe("R4733000 a finished fight keeps its result when the player leaves before Continue", () => {
+  it("R4733000 the report is held on arrival, before Continue", async () => {
+    const host = fightHost();
+    const onAction = vi.fn<(action: AssaultAction) => void>();
+    const onHold = vi.fn<(action: AssaultAction) => void>();
+    renderFight(host, onAction, undefined, PRACTICE_PACING_FAST, onHold);
+    await screen.findByTestId(assaultFightTestid.screen);
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(assaultFightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+
+    // Held the moment it arrived, sent to nothing yet: the board's end stays until Continue.
+    expect(onHold).toHaveBeenCalledTimes(1);
+    expect(onHold).toHaveBeenCalledWith(LOST);
+    expect(onAction).not.toHaveBeenCalled();
+    expect(proceed).toBeEnabled();
+  });
+
+  it("R4733000 unmounting after the report sends it once, without Continue", async () => {
+    const host = fightHost();
+    const onAction = vi.fn<(action: AssaultAction) => void>();
+    renderFight(host, onAction);
+    await screen.findByTestId(assaultFightTestid.screen);
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(assaultFightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+    expect(onAction).not.toHaveBeenCalled();
+
+    cleanup();
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(LOST);
+  });
+
+  it("R4733000 Continue then unmount sends nothing more", async () => {
+    const host = fightHost();
+    const onAction = vi.fn<(action: AssaultAction) => void>();
+    renderFight(host, onAction);
+    await screen.findByTestId(assaultFightTestid.screen);
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(assaultFightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+
+    fireEvent.click(proceed);
+    expect(onAction).toHaveBeenCalledTimes(1);
+    cleanup();
+    expect(onAction).toHaveBeenCalledTimes(1);
   });
 });
 

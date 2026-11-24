@@ -146,6 +146,10 @@ is the engine's `query::cleave_struck` less the target: a GIGA beside the target
 met once, and beside a Unit standing in the backrow only standing Units (R3546001, R1081000). Where such a
 splash through a GIGA meets a later Taunt, the walk tries a third order, that Cleave attacker first
 (`giga_cleave_read`, R4257000, #4257; off in `GREEDY_EVAL`, whose walk keeps the one-lane splash).
+On a slashed board a Taunt binds only the attackers on its own half: the walk asks `attack_restriction`,
+which refuses a Unit across the slash and lets a hero be attacked from either half, so a Taunt across the
+slash walls nothing in `face_threat`, `ready_gap` or `wall_switches` (R3554003, #4725; no flag, so
+`GREEDY_EVAL`'s walk reads it too).
 Each hit in the walk takes the Taunt's strike back (§4.3), read through the §4.4 steps that can stop it as a
 First Strike one is: an attacker it destroys still lands that hit but makes none of its later swings, a
 Windfury one's second included, and the wounds and popped shield it leaves carry to the attacker's next
@@ -539,6 +543,17 @@ seat's deck, p1's in odd games and p2's in even ones (R1284000). Both decks are 
 banned, and the holder's card at the slot `${seed}:force` picks is replaced by it.
 `DevRunOptions.setup` creates every game of a run with the same setup inputs (`dev_run_config`), so a
 record stays a pure function of its number.
+
+R4552000, R4552002: `swing_turns` (`src/swing_turns.rs`) replays a finished game's log from the engine's
+own start and steps (`recorded_start`, `read_steps`, as `summarize_game` does) and writes, at the start of
+every turn, one row for its seat: the turn counter, `evaluate` of the seat (`NextSwing::Seat`) less its
+opponent's (`NextSwing::Enemy`) in thousandths, read off the true state, and the cards acting on each
+field, a Created card with the card that made it (none when a hand held it; a copy an effect cast names
+the card that cast it). `attach_swing_turns` files the rows in the record (`SeatSummary.swing_turns`).
+The writers read the summary and the rows off one fold of the log (#2213), `summarize_with_swing_turns`
+(the engine's `summarize_game_with` with a `SwingReader` beside it): `dev_game_record`, `stats
+from-selfplay` and the server's record filing (`crates/server/src/api/game_records.rs`) all call it.
+Decisiveness is read off them (`crates/engine/src/wire/stats/swing.rs`).
 
 ## The features (#466, #1006)
 

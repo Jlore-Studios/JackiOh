@@ -120,6 +120,11 @@ export const CLOCK_ALARM_BEAT_MS = 1_000;
 export const CLOCK_ALARM_LOOKAHEAD_MS = 400;
 /** A beat whose moment passed at most this long ago still plays, at once; an older one is skipped. */
 export const CLOCK_ALARM_LATE_MS = 250;
+/**
+ * R506: a hidden tab repaints at most once a second, so a hidden reading schedules beats this far
+ * ahead; with CLOCK_ALARM_LATE_MS this covers one full CLOCK_ALARM_BEAT_MS.
+ */
+export const CLOCK_ALARM_HIDDEN_LOOKAHEAD_MS = 1_000;
 
 // #51's music (SPEC §10.11 "Music", R631)
 /** The stations, in the order the picker lists them. */

@@ -89,6 +89,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   const seed = setup?.seed ?? null;
   const setupRef = useRef(setup);
   setupRef.current = setup;
+  const dungeonRef = useRef(dungeon);
+  dungeonRef.current = dungeon;
 
   // Read when a fight starts, so a prop change mid-game does not tear it down.
   const factory = useRef(hostFactory ?? defaultHostFactory);
@@ -162,10 +164,35 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   /** What the run said to the report Continue sent it: its refusal, or null once it took it. */
   const [sent, setSent] = useState<{ controller: PracticeController; refusal: string | null } | null>(null);
   const answer = sent !== null && sent.controller === controller ? sent : null;
-  const onContinue = useCallback(() => {
-    if (action === null || controller === null) return;
-    setSent({ controller, refusal: dungeon.act(action) });
-  }, [action, controller, dungeon]);
+  // R4733000: the report goes to the run once per fight, however the player leaves: Continue, Menu
+  // or unmount. A refusal leaves the fight unsent, so Continue may be pressed again.
+  const sentRef = useRef<PracticeController | null>(null);
+  const sendOnce = useCallback(() => {
+    if (action === null || controller === null || sentRef.current === controller) return;
+    sentRef.current = controller;
+    const refusal = dungeonRef.current.act(action);
+    if (refusal !== null) sentRef.current = null;
+    setSent({ controller, refusal });
+  }, [action, controller]);
+  // R4733000: the report is held beside the kept run the moment it arrives, so leaving before
+  // Continue keeps the result. Holding changes no screen: the board keeps showing its end.
+  const heldFor = useRef<PracticeController | null>(null);
+  useEffect(() => {
+    if (action !== null && controller !== null && heldFor.current !== controller) {
+      heldFor.current = controller;
+      dungeonRef.current.holdReport(action);
+    }
+  }, [action, controller]);
+  // R4733000: leaving with a held report the screen never sent applies it, as Continue would.
+  const sendRef = useRef(sendOnce);
+  sendRef.current = sendOnce;
+  useEffect(
+    () => () => {
+      sendRef.current();
+    },
+    [controller],
+  );
+  const onContinue = sendOnce;
   const onRetryReport = useCallback(() => {
     setReport(null);
     setReportAttempt((attempt) => attempt + 1);
@@ -179,9 +206,12 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     },
     [controller],
   );
+  // R4733000 (amending R3932000): Menu still navigates to Play without asking once the fight has
+  // its result, but it sends the report first, so the result is kept however the player leaves.
   const onMenu = useCallback(() => {
+    if (action !== null) sendOnce();
     navigate(paths.play);
-  }, []);
+  }, [action, sendOnce]);
 
   const snapshot = state.snapshot;
 
@@ -296,7 +326,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     </>
   );
 
-  // R3932000: out to Play; mid-fight it asks first, and leaves once the fight has its result.
+  // R3932000, R4733000: out to Play; mid-fight it asks first, and leaves once the fight has its
+  // result, sending the report first.
   const menuButton = (
     <button
       type="button"

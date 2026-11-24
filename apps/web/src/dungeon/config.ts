@@ -9,6 +9,8 @@ export const DUNGEON_PROGRESS_KEY = "jackioh.dungeon.progress";
 export const DUNGEON_RUN_KEY = "jackioh.dungeon.run";
 /** DR14: every finished run's `RunRecord`, oldest first, which the stats page reads. */
 export const DUNGEON_HISTORY_KEY = "jackioh.dungeon.history";
+/** R4733000: a finished fight's held `fightOver`, kept beside the run until it is applied. */
+export const DUNGEON_HELD_KEY = "jackioh.dungeon.held";
 
 /** The shape of what the three keys hold; a record of another version reads as nothing stored. */
 export const DUNGEON_STORAGE_VERSION = 1;

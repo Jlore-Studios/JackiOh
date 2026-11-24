@@ -33,6 +33,7 @@ import { currentCatalog } from "../game/currentCatalog.ts";
 import { useFaceModel } from "../game/faces.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
+  ApiRequestError,
   cardStatsPath,
   getCardDrillDown,
   getCardStats,
@@ -44,6 +45,7 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
+import { readSession } from "../net/session.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import {
   ADJUSTED_RANGE_DIGITS,
@@ -55,6 +57,7 @@ import {
 } from "../stats/config.ts";
 import { CREATED_SORT_COLUMNS, CreatedPanel, createdSortOf, type CreatedSort } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
+import { FindPatchIcon, PatchSearch, olderPatchesLine } from "../stats/PatchSearch.tsx";
 import {
   currentVersion,
   isCollecting,
@@ -70,7 +73,7 @@ import { RangeText, TierFitText } from "../stats/RangeText.tsx";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
-import { TierChip, adjustedText, tierRank } from "../stats/TierChip.tsx";
+import { TierChip, adjustedText, decisivenessText, tierRank } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
 import { CardTextButton, CardTextFaces, cardTextTestid, useCardText, type CardText } from "./cardText.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -189,6 +192,14 @@ function previousPatchOf(res: PublicStatsCardsResponse): { name: string; target:
   return res.previousPatch ? { name: res.previousPatch, target: res.previousPatch } : null;
 }
 
+/** R4677000: the code the server refuses a patch past the caller's with, an older patch for dev accounts alone. */
+const PATCH_DEV_ONLY = "patch_dev_only";
+
+/** R4677000: the signed-in token the statistics reads carry, so the server can tell a dev account; none signed out. */
+function statsToken(): string | null {
+  return readSession()?.accessToken ?? null;
+}
+
 /** R1966000: a set's win rate, or its change, to `SET_STATS_DIGITS` places: sets differ by tenths of a point. */
 function setPercent(rate: number, signed = false): string {
   return formatNumber(rate, {
@@ -201,16 +212,17 @@ function setPercent(rate: number, signed = false): string {
 
 type TabKey = "cards" | "tokens" | "sets" | "players";
 type ViewKey = "table" | "grid";
-type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "winRate" | "playRate";
+type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness" | "winRate" | "playRate";
 type SortDirection = "asc" | "desc";
 
-const SORT_COLUMNS: readonly SortColumn[] = ["name", "games", "tier", "adjustedWinRate", "winRate", "playRate"] as const;
+const SORT_COLUMNS: readonly SortColumn[] = ["name", "games", "tier", "adjustedWinRate", "decisiveness", "winRate", "playRate"] as const;
 
 const SORT_LABELS: Record<SortColumn, string> = {
   name: "Name",
   games: "Games",
   tier: "Tier",
   adjustedWinRate: "Adjusted",
+  decisiveness: "Decisiveness",
   winRate: "Win rate",
   playRate: "Play rate",
 };
@@ -335,10 +347,11 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     playRate: true,
   });
 
-  // R2125000: a revisit starts on the table these filters last read and reads it again behind it.
+  // R2125000: a revisit starts on the table these filters last read and reads it again behind it, kept under the
+  // account that read it (R4677000).
   const [cardStatsKept] = useState(() =>
     cachedRead<PublicStatsCardsResponse>(
-      null,
+      statsToken(),
       cardStatsPath(cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode)),
     ),
   );
@@ -347,6 +360,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const [cardStatsData, setCardStatsData] = useState<PublicStatsCardsResponse | null>(cardStatsKept ?? null);
   // Bumped by Retry: the effect asks again, so its cleanup cancels a retry like any other request.
   const [cardStatsAttempt, setCardStatsAttempt] = useState(0);
+  // R4677001: the patch search's dialog; R4677000: the address named a patch the server keeps for dev accounts.
+  const [patchSearchOpen, setPatchSearchOpen] = useState(false);
+  const [patchRefused, setPatchRefused] = useState(false);
 
   const [playersLoading, setPlayersLoading] = useState(false);
   const [playersError, setPlayersError] = useState(false);
@@ -403,8 +419,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const fetchCardStats = useCallback(
     () => {
       const options = cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode);
+      const token = statsToken();
       // R2125000: a table kept for these filters draws at once; only a first visit to them waits behind a skeleton.
-      const kept = cachedRead<PublicStatsCardsResponse>(null, cardStatsPath(options));
+      const kept = cachedRead<PublicStatsCardsResponse>(token, cardStatsPath(options));
       if (kept === undefined) {
         setCardStatsLoading(true);
       } else {
@@ -414,14 +431,20 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       setCardStatsError(false);
       const controller = new AbortController();
 
-      getCardStats({ ...options, signal: controller.signal })
+      getCardStats({ ...options, token, signal: controller.signal })
         .then((res) => {
           if (controller.signal.aborted) return;
           setCardStatsData(res);
           setCardStatsLoading(false);
         })
-        .catch(() => {
+        .catch((cause: unknown) => {
           if (controller.signal.aborted) return;
+          // R4677000: a patch the server keeps for dev accounts opens the current patch, with a line saying so.
+          if (cause instanceof ApiRequestError && cause.code === PATCH_DEV_ONLY) {
+            setPatchRefused(true);
+            setPatch("");
+            return;
+          }
           // A read that fails behind a kept table leaves it and says nothing.
           if (kept !== undefined) return;
           setCardStatsError(true);
@@ -480,7 +503,10 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const shownPatch = cardStatsData ? patchIndex(patchList, cardStatsData.patch) : -1;
   const pickable = offeredPatches(patchList, shownPatch);
   const { previous: previousWindow, next: nextWindow } = neighbours(patchList, shownPatch);
-  const choosePatch = (window: PatchWindow): void => setPatch(patchList.indexOf(window) === 0 ? "" : patchTarget(window));
+  const choosePatch = (window: PatchWindow): void => {
+    setPatchRefused(false);
+    setPatch(patchList.indexOf(window) === 0 ? "" : patchTarget(window));
+  };
   // R3324000: the newest patch, short of games, shows no figures: its Cards and Sets tabs say it is collecting.
   const collecting = isCollecting(patchList, shownPatch);
   const shownPatchName = shownPatch >= 0 ? patchName(patchList[shownPatch]!) : (cardStatsData?.patch ?? "");
@@ -500,7 +526,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     if (tab !== "sets" || collecting) return;
     setSetsError(false);
     const controller = new AbortController();
-    getCardStats({ patch: patch ? patch : undefined, mode: mode ? mode : undefined, signal: controller.signal })
+    const token = statsToken();
+    getCardStats({ patch: patch ? patch : undefined, mode: mode ? mode : undefined, token, signal: controller.signal })
       .then((res) => {
         if (controller.signal.aborted) return;
         setSetsData(res);
@@ -508,7 +535,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         // R1973002: the patch before, not the version before, which may be a micro of the same patch.
         const before = previousPatchOf(res);
         if (!before) return;
-        getCardStats({ patch: before.target, mode: mode ? mode : undefined, signal: controller.signal })
+        getCardStats({ patch: before.target, mode: mode ? mode : undefined, token, signal: controller.signal })
           .then((previous) => {
             if (!controller.signal.aborted) setSetsPrevious(previous);
           })
@@ -529,7 +556,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     setDrillDownLoading(true);
     setDrillDownError(false);
     const controller = new AbortController();
-    getCardDrillDown(cardDrillDownId, mode ? mode : undefined, controller.signal)
+    getCardDrillDown(cardDrillDownId, mode ? mode : undefined, controller.signal, statsToken())
       .then((data) => {
         if (controller.signal.aborted) return;
         setDrillDownData(data);
@@ -641,12 +668,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         const aRate = a.adjustedWinRate ?? null;
         const bRate = b.adjustedWinRate ?? null;
         if (aRate !== null && bRate !== null && aRate !== bRate) return (aRate - bRate) * flip;
-      } else if (sortCol === "adjustedWinRate") {
-        // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one.
+      } else if (sortCol === "adjustedWinRate" || sortCol === "decisiveness") {
+        // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one;
+        // R4552001: Decisiveness sorts the same way.
         if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
         if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        const aRate = a.adjustedWinRate ?? null;
-        const bRate = b.adjustedWinRate ?? null;
+        const aRate = (sortCol === "decisiveness" ? a.decisiveness : a.adjustedWinRate) ?? null;
+        const bRate = (sortCol === "decisiveness" ? b.decisiveness : b.adjustedWinRate) ?? null;
         if (aRate !== null && bRate === null) return -1;
         if (aRate === null && bRate !== null) return 1;
         if (aRate !== null && bRate !== null && aRate !== bRate) {
@@ -955,7 +983,37 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
             >
               →
             </button>
+            {/* R4677001: one button at the bar's end opens the search through every patch the caller may read */}
+            <button
+              type="button"
+              className="stats-patch-step stats-patch-search"
+              data-testid={statsTestid.patchSearch}
+              aria-label={t("Find a patch")}
+              title={t("Find a patch")}
+              aria-haspopup="dialog"
+              onClick={() => setPatchSearchOpen(true)}
+            >
+              <FindPatchIcon />
+            </button>
           </nav>
+        )}
+        {/* R4677000: the address named a patch the server keeps for dev accounts; the page shows the current one */}
+        {patchRefused && (
+          <p className="stats-patch-refused" role="status" data-testid={statsTestid.patchRefused}>
+            {olderPatchesLine()}
+          </p>
+        )}
+        {patchSearchOpen && (
+          <PatchSearch
+            patches={patchList}
+            shown={shownPatch}
+            olderPatchesForDevs={cardStatsData?.olderPatchesForDevs === true}
+            onPick={(window) => {
+              setPatchSearchOpen(false);
+              choosePatch(window);
+            }}
+            onClose={() => setPatchSearchOpen(false)}
+          />
         )}
 
         {/* The summary: the patch's games alone (R661); R1646000 took the top and lowest card tiles off the fixed top;
@@ -1041,6 +1099,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                             <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
                           )}
                         </dd>
+                        <dt>{t("Decisiveness")}</dt>
+                        <dd>{card.hasEnoughGames ? decisivenessText(card.decisiveness) : t("not enough games")}</dd>
                         <dt>{t("Win rate")}</dt>
                         <dd>
                           {card.hasEnoughGames && card.winRate !== null
@@ -1130,6 +1190,25 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
+                        title={t(
+                          "Decisiveness: how far playing a card typically moves your chance of winning, one way or the other; ± is the swing itself, not a margin of error. A typical card: {typical}.",
+                          { typical: decisivenessText(tiers?.decisiveness) },
+                        )}
+                        aria-sort={sortCol === "decisiveness" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        onClick={() => handleSort("decisiveness")}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSort("decisiveness");
+                          }
+                        }}
+                        tabIndex={0}
+                      >
+                        {t("Decisiveness")} {sortCol === "decisiveness" && (sortDir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th
+                        scope="col"
+                        className="stats-th stats-th--sortable"
                         aria-sort={sortCol === "winRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("winRate")}
                         onKeyDown={(e) => {
@@ -1211,6 +1290,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                               </div>
                             ) : (
                               "—"
+                            )}
+                          </td>
+                          <td className="stats-td" data-testid={statsTestid.decisivenessCell}>
+                            {card.hasEnoughGames ? (
+                              decisivenessText(card.decisiveness)
+                            ) : (
+                              <span className="stats-not-enough">{t("not enough games")}</span>
                             )}
                           </td>
                           <td className="stats-td stats-td--winrate">

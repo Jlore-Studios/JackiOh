@@ -21,6 +21,12 @@
 //! card shares, read through the engine's `windowed_game_figures` off `StatsTotals.game_totals` (which
 //! outlive R1044001's purge), kept with the cards' windowed report and cached as long.
 //!
+//! R4677000: anyone but a dev account reads the newest patches alone (`public_patch_count`): a patch
+//! beyond them is 403 `patch_dev_only` on `GET /api/stats/cards` and `GET /api/stats/games`, and the
+//! patch list, the patch before and the drill-down's history stop at them. The kept figures are the same
+//! for every caller; only what an answer lists of them is the caller's (`Reader`), and a dev account's
+//! answer is kept by no cache (`reader_ok`).
+//!
 //! R4675001: `GET /api/stats/versions` is every play version's figures (R4675000), through the engine's
 //! `play_version_figures`, one table per `?pilot=` and `?mode=` cut from the same snapshot and cached as
 //! long. It sends figures only: a client reads a version's definition from its catalog at `last`.
@@ -42,12 +48,12 @@ use jackioh_engine::config::{TIER_BAND_HIGH, TIER_BAND_LOW};
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardTier, CardWindow, CreatedStats, GameFigures,
     GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures,
-    PlayVersionQuery, PlayVersionTable, SourceFilter, StatsField, StatsTotals, Tally, TotalsKey, WindowQuery,
-    WindowRequest, WindowSource, WindowedCreated, WindowedGames, WindowedReport, add_created, add_stats,
-    adjusted_interval, adjusted_win_rate, card_drills_of, card_family, card_stats_of, card_window,
-    collapse_gameless, created_adjusted, created_field, held_adjusted, patch_windows, play_version_figures,
-    seen, sources_of, stats_field, tier_of, wilson_interval, win_rate, windowed_card_stats,
-    windowed_game_figures,
+    PlayVersionQuery, PlayVersionTable, SourceFilter, StatsField, StatsTotals, SwingReport, SwingRows, Tally,
+    TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames, WindowedReport,
+    add_created, add_stats, adjusted_interval, adjusted_win_rate, card_drills_of, card_family, card_stats_of,
+    card_window, collapse_gameless, created_adjusted, created_field, held_adjusted, patch_windows,
+    play_version_figures, seen, sources_of, stats_field, swing_baseline, swing_report, tier_of,
+    wilson_interval, win_rate, windowed_card_stats, windowed_game_figures, windowed_swing_rows,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -55,16 +61,17 @@ use jackioh_engine::{
 
 use crate::api::catalog::load_patch_versions;
 use crate::api::collection::caller_profile;
+use crate::api::dev::is_dev;
 use crate::api::http::{
-    ApiError, ApiErrorCode, ApiResult, Req, bad_request, lock, now_ms, ok_of, query_trimmed, to_json,
-    whole_number,
+    ApiError, ApiErrorCode, ApiResult, Req, bad_request, lock, now_ms, ok_of, open_route_profile,
+    query_trimmed, to_json, whole_number,
 };
 use crate::app::App;
 use crate::config::{
     CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CO_PLAYED_TOP, CARD_STATS_CURVE_TOP, CARD_STATS_KEPT_REPORTS,
     CARD_STATS_MIN_SAMPLE, MS_PER_SECOND, PLAY_RATES_MIN_GAMES, PLAY_RATES_REFRESH_SECONDS,
     PLAYER_STATS_BYTES_MAX, PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT,
-    PUBLIC_STATS_MIN_LIVE_GAMES,
+    PUBLIC_STATS_MIN_LIVE_GAMES, PUBLIC_STATS_PATCHES_LINE_BEFORE, PUBLIC_STATS_PATCHES_NEWEST,
 };
 use crate::db::store::{PlayerStatsListOptions, StatsTotalsQuery};
 use crate::env::js_number;
@@ -91,6 +98,10 @@ pub struct PublicCardStat {
     /// R2895000: the 95% interval of `adjusted_win_rate` (`adjusted_interval`); null where it is.
     pub adjusted_low: Option<f64>,
     pub adjusted_high: Option<f64>,
+    /// R4552001, R4552003: how far a play of the card typically moves its player's chance of winning,
+    /// either way, as a fraction, shrunk toward the typical card's (`swing_report`); null with no turn
+    /// rows. The only figure of R4552001's a client reads: no Swing and no Board swing.
+    pub decisiveness: Option<f64>,
     /// R3022000: the card's balance tier (`tier_of` its adjusted rate and range); null below R654's
     /// floor, as its rate is shown only from it.
     pub tier: Option<CardTier>,
@@ -121,6 +132,8 @@ pub struct PublicCreatedStat {
     /// R4082000: the 95% range of `adjusted_win_rate`, R2895000's.
     pub adjusted_low: Option<f64>,
     pub adjusted_high: Option<f64>,
+    /// R4552002, R4552004: its Decisiveness, read against the Created cards' (`PublicCardStat`'s).
+    pub decisiveness: Option<f64>,
     /// R4082000: the card's balance tier (`tier_of` its adjusted rate and range, R3022000); null below
     /// R654's floor, as its rate is shown only from it.
     pub tier: Option<CardTier>,
@@ -135,6 +148,7 @@ impl PublicCreatedStat {
         row: &WindowedCreated,
         created: &StatsField,
         deck: &StatsField,
+        swing: &SwingReport,
     ) -> PublicCreatedStat {
         let stats = &row.stats;
         let games = i64::from(stats.games());
@@ -150,6 +164,10 @@ impl PublicCreatedStat {
             adjusted_win_rate: adjusted.map(|(rate, _)| rate),
             adjusted_low: adjusted.map(|(_, (low, _))| low),
             adjusted_high: adjusted.map(|(_, (_, high))| high),
+            decisiveness: swing
+                .created
+                .get(&stats.card)
+                .and_then(|figures| figures.decisiveness),
             tier: adjusted
                 .filter(|_| has_enough_games)
                 .map(|(rate, (low, high))| tier_of(rate, low, high)),
@@ -389,7 +407,11 @@ pub struct PublicStatsCardsResponse {
     pub tiers: PublicStatsTiers,
     /// R1973002: every patch the page can show, newest first: the window the cards share, its
     /// versions oldest first (ask for its figures at the last), its games and its live games.
+    /// R4677000: only those the caller may read.
     pub patches: Vec<PatchWindow>,
+    /// R4677000: the caller is no dev account, so the patches older than `patches` lists are for dev
+    /// accounts alone.
+    pub older_patches_for_devs: bool,
 }
 
 /// R3070000: the seats that made a copy of `id` during their games, used or not (R2089000): the games of a
@@ -438,6 +460,9 @@ pub struct PublicStatsTiers {
     /// The band: tier S is above `band_high`, tier F below `band_low` (`TIER_BAND_HIGH`, `TIER_BAND_LOW`).
     pub band_low: f64,
     pub band_high: f64,
+    /// R4552001: the typical deck card's Decisiveness (`DecisivenessField::typical`), which the page
+    /// names beside each card's.
+    pub decisiveness: f64,
     /// R4082000: the field the Created cards a card's text makes are read against.
     pub created: PublicCreatedTiers,
 }
@@ -456,6 +481,8 @@ pub struct PublicCreatedTiers {
     /// The win rate of the seats that make an average Created card, which reads an even game: the average
     /// deck's plus `center`.
     pub baseline: f64,
+    /// R4552002: the typical Created card's Decisiveness.
+    pub decisiveness: f64,
 }
 
 /// R1994000: `GET /api/stats/games`'s body: counts and shares only, naming no game and no player.
@@ -527,7 +554,8 @@ pub struct CardDrillDownResponse {
 /// `req.caller`, `caller_of`/`caller_profile`, `Authorization`, `Cookie`, `Accept-Language`,
 /// `X-Forwarded-*`, `X-Original-URL`/`X-Rewrite-URL`, or any other caller-carried header, and
 /// unknown query parameters must stay ignored. Shared caches key on the URL alone, so anything
-/// caller-shaped in the body would be served to every later caller (cache poisoning).
+/// caller-shaped in the body would be served to every later caller (cache poisoning). A route that
+/// reads whether its caller is a dev account answers through `reader_ok` instead (R4677000).
 pub(crate) fn cached_ok(body: Value, max_age_seconds: i64) -> Response {
     let mut response = Response::new(Body::from(body.to_string()));
     *response.status_mut() = StatusCode::OK;
@@ -539,6 +567,112 @@ pub(crate) fn cached_ok(body: Value, max_age_seconds: i64) -> Response {
     if let Ok(value) = HeaderValue::from_str(&format!("public, max-age={max_age_seconds}")) {
         headers.insert(header::CACHE_CONTROL, value);
     }
+    response
+}
+
+/// SPEC §11 R4677000: who asks for `/stats`' patches: a dev account (`api::dev::is_dev`) reads every patch
+/// back to v0.1.0, anyone else, signed in or not, the newest (`public_patch_count`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Reader {
+    Anyone,
+    Dev,
+}
+
+/// R4677000: the request's reader, a dev account when its token names one.
+async fn reader_of(app: &App, req: &Req) -> Result<Reader, ApiError> {
+    let profile = open_route_profile(app, &req.headers).await?;
+    Ok(if profile.is_some_and(|profile| is_dev(app, &profile)) {
+        Reader::Dev
+    } else {
+        Reader::Anyone
+    })
+}
+
+/// R4677000: a version's line, its `major.minor` (`v0.6.12d` is `v0.6`).
+fn patch_line(version: &str) -> &str {
+    match version.match_indices('.').nth(1) {
+        Some((at, _)) => &version[..at],
+        None => version,
+    }
+}
+
+/// SPEC §11 R4677000: how many of `patches`, newest first as `GET /api/stats/cards` lists them, anyone but
+/// a dev account may read: the longer of two newest-first runs, every patch of the newest patch's line
+/// and then the `PUBLIC_STATS_PATCHES_LINE_BEFORE` newest of the line before it, or the
+/// `PUBLIC_STATS_PATCHES_NEWEST` newest. Both are prefixes of the list, so the longer is their union.
+pub fn public_patch_count(patches: &[PatchWindow]) -> usize {
+    fn line(window: &PatchWindow) -> Option<&str> {
+        window.versions.first().map(|version| patch_line(version))
+    }
+    let run = |from: usize| match patches.get(from) {
+        Some(first) => patches[from..]
+            .iter()
+            .take_while(|window| line(window) == line(first))
+            .count(),
+        None => 0,
+    };
+    let current = run(0);
+    let before = run(current).min(PUBLIC_STATS_PATCHES_LINE_BEFORE);
+    (current + before)
+        .max(PUBLIC_STATS_PATCHES_NEWEST)
+        .min(patches.len())
+}
+
+/// R4677000: how many of `patches`, newest first, `reader` may read.
+fn readable_count(patches: &[PatchWindow], reader: Reader) -> usize {
+    match reader {
+        Reader::Dev => patches.len(),
+        Reader::Anyone => public_patch_count(patches),
+    }
+}
+
+/// R4677000: whether `version` is one of a listed patch's past the first `readable` of `patches`. A
+/// version no listed patch holds is no shipped patch, and reads its own totals as before (R3067000).
+fn past_readable(patches: &[PatchWindow], readable: usize, version: &str) -> bool {
+    patches
+        .iter()
+        .position(|window| window.versions.iter().any(|held| held == version))
+        .is_some_and(|at| at >= readable)
+}
+
+/// R4677000: what a patch past the caller's answers, 403 `patch_dev_only`, before any figure is read.
+const PATCH_DEV_ONLY_MESSAGE: &str = "Older patches are for dev accounts.";
+
+/// R4677000: `patch`, refused when it is past the first `readable` of `patches`.
+fn refuse_past_readable(patches: &[PatchWindow], readable: usize, patch: &str) -> Result<(), ApiError> {
+    if past_readable(patches, readable, patch) {
+        return Err(ApiError::new(ApiErrorCode::PatchDevOnly, PATCH_DEV_ONLY_MESSAGE));
+    }
+    Ok(())
+}
+
+/// R1973002: every patch the page can show, newest first: the current patch's kept window lists them, as
+/// every kept window does (`kept_window`).
+async fn listed_patches(app: &App, history: &[PatchStep]) -> Result<Arc<KeptWindow>, ApiError> {
+    shipped_window(
+        app,
+        history,
+        &app.catalog.version,
+        SourceParam::Default,
+        PublicStatsPilot::Merged,
+        PublicStatsMode::All,
+    )
+    .await
+}
+
+/// R4677000: a statistics answer that depends on who asks. Anyone's is `cached_ok`'s, public for
+/// `CARD_STATS_CACHE_TTL_SECONDS`; a dev account's is kept by no cache (`private, no-store`); and each
+/// varies by `Authorization`, so no cache hands one caller's answer to another.
+fn reader_ok(body: Value, reader: Reader) -> Response {
+    let mut response = cached_ok(body, CARD_STATS_CACHE_TTL_SECONDS);
+    let headers = response.headers_mut();
+    if reader == Reader::Dev {
+        headers.insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("private, no-store"),
+        );
+    }
+    headers.insert(header::VARY, HeaderValue::from_static("Authorization"));
     response
 }
 
@@ -820,6 +954,8 @@ impl KeptReports {
 struct KeptWindow {
     report: WindowedReport,
     games: WindowedGames,
+    /// R4552001: every turn of the counted records, which an ordinary turn's gain is read off.
+    swing_rows: SwingRows,
     live_games: IndexMap<String, i64>,
     history: Vec<PatchStep>,
     patches: Vec<PatchWindow>,
@@ -865,6 +1001,7 @@ fn window_over(
         },
     );
     let figures = windowed_game_figures(totals, history, at, mode.filter(), source.request());
+    let swing_rows = windowed_swing_rows(totals, history, at, mode.filter(), source.request());
     let mut live_games: IndexMap<String, i64> = IndexMap::new();
     for key in totals.records.keys() {
         live_games
@@ -875,6 +1012,7 @@ fn window_over(
     KeptWindow {
         report,
         games: figures,
+        swing_rows,
         live_games,
         history: collapse_gameless(history, games),
         patches: patch_windows(history, games, |version| totals.live_games(version)),
@@ -1197,8 +1335,16 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         _ => None,
     };
 
-    // R978000, R1367000: every card's figures over its own window at the patch, as kept.
+    // R4677000: the caller's patches; one past them is refused before its figures are read, and the
+    // patch before stops at them.
     let history = patch_history();
+    let reader = reader_of(app, &req).await?;
+    let listed = listed_patches(app, &history).await?;
+    let readable = readable_count(&listed.patches, reader);
+    refuse_past_readable(&listed.patches, readable, &requested_patch)?;
+    let previous_patch = previous_patch.filter(|version| !past_readable(&listed.patches, readable, version));
+
+    // R978000, R1367000: every card's figures over its own window at the patch, as kept.
     let request = source_param.request();
     let kept = kept_window(app, &history, &requested_patch, source_param, pilot, mode).await?;
     let report = &kept.report;
@@ -1273,6 +1419,22 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             .map(|row| &row.stats),
         &field,
     );
+    // R4552001, R4552002: every card's Decisiveness, read off the same cards as the two fields above,
+    // beside the turns of the records the window counts.
+    let swing = swing_report(
+        app.catalog
+            .defs
+            .iter()
+            .filter(|(_, def)| !def.token)
+            .filter_map(|(id, _)| report.card(id))
+            .map(|card| (card.stats.card.as_str(), &card.stats.swing)),
+        report
+            .created
+            .iter()
+            .filter(|row| app.catalog.defs.contains_key(&row.stats.card))
+            .map(|row| (row.stats.card.as_str(), &row.stats.swing)),
+        &swing_baseline(&kept.swing_rows),
+    );
 
     let mut cards: Vec<PublicCardStat> = Vec::new();
     for (id, def) in &app.catalog.defs {
@@ -1310,6 +1472,13 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
                 stat.and_then(|stat| adjusted_interval(stat, &field)),
             ),
         };
+        // R4552002: a card a rule makes reads its Created copies' turns, as its adjusted rate does.
+        let figures = if made.is_some() {
+            swing.created.get(id.as_str())
+        } else {
+            swing.cards.get(id.as_str())
+        };
+        let decisiveness = figures.and_then(|figures| figures.decisiveness);
         // R3022000: the tier, from R654's floor as the rate is shown.
         let tier = adjusted
             .zip(adjusted_range)
@@ -1329,6 +1498,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             win_rate_high: rate_range.map(|(_, high)| high),
             adjusted_low: adjusted_range.map(|(low, _)| low),
             adjusted_high: adjusted_range.map(|(_, high)| high),
+            decisiveness,
             tier,
             play_rate,
             has_enough_games,
@@ -1381,7 +1551,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         .iter()
         .filter_map(|row| {
             let def = app.catalog.defs.get(&row.stats.card)?;
-            shown(&row.stats.card, def).then(|| PublicCreatedStat::of(def, row, &made_field, &field))
+            shown(&row.stats.card, def).then(|| PublicCreatedStat::of(def, row, &made_field, &field, &swing))
         })
         .collect();
     created.sort_by(|a, b| {
@@ -1416,14 +1586,17 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             baseline: field.baseline,
             band_low: TIER_BAND_LOW,
             band_high: TIER_BAND_HIGH,
+            decisiveness: swing.deck_field.typical,
             created: PublicCreatedTiers {
                 center: made_field.center,
                 spread: made_field.spread,
                 cards: made_field.cards,
                 baseline: made_field.baseline,
+                decisiveness: swing.created_field.typical,
             },
         },
-        patches: kept.patches.clone(),
+        patches: listed.patches[..readable].to_vec(),
+        older_patches_for_devs: reader == Reader::Anyone,
         summary: PublicStatsSummary {
             total_games: report.games,
             live_games: live_games_count,
@@ -1436,7 +1609,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         },
     };
 
-    Ok(cached_ok(to_json(&response)?, CARD_STATS_CACHE_TTL_SECONDS))
+    Ok(reader_ok(to_json(&response)?, reader))
 }
 
 /// GET /api/stats/games (R1994000): game figures across windowed reports (R654, `PUBLIC_STATS_MIN_LIVE_GAMES`).
@@ -1446,6 +1619,10 @@ pub async fn get_games(app: &Arc<App>, req: Req) -> ApiResult {
     let source_param = SourceParam::parse(req.query.get("source").map(String::as_str));
     let mode = PublicStatsMode::parse(req.query.get("mode").map(String::as_str));
     let history = patch_history();
+    // R4677000: a patch past the caller's is refused before its figures are read.
+    let reader = reader_of(app, &req).await?;
+    let listed = listed_patches(app, &history).await?;
+    refuse_past_readable(&listed.patches, readable_count(&listed.patches, reader), &patch)?;
     let kept = kept_window(
         app,
         &history,
@@ -1468,7 +1645,7 @@ pub async fn get_games(app: &Arc<App>, req: Req) -> ApiResult {
         figures: games.figures.clone(),
         pairs: games.pairs.clone(),
     };
-    Ok(cached_ok(to_json(&response)?, CARD_STATS_CACHE_TTL_SECONDS))
+    Ok(reader_ok(to_json(&response)?, reader))
 }
 
 /// GET /api/stats/cards/:id: win rate by cleared patch and by turn played, and co-played cards.
@@ -1489,6 +1666,11 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     let pilot = PublicStatsPilot::parse(req.query.get("pilot").map(String::as_str));
     let mode = PublicStatsMode::parse(req.query.get("mode").map(String::as_str));
 
+    // R4677000: the history lists only the caller's patches, so the limit cannot be read around here.
+    let reader = reader_of(app, &req).await?;
+    let listed = listed_patches(app, &patch_history()).await?;
+    let readable = readable_count(&listed.patches, reader);
+
     // R2491000: every shipped patch's history reads one kept history, and R978000: the current
     // patch's turn and co-played figures read its kept report.
     let versions = load_patch_versions().await;
@@ -1496,6 +1678,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     let patch_history: Vec<PatchRate> = history
         .patches
         .iter()
+        .filter(|(patch, _)| !past_readable(&listed.patches, readable, patch))
         .map(|(patch, cards)| {
             let tally = cards.get(&card_id);
             PatchRate {
@@ -1564,7 +1747,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         by_turn,
         co_played,
     };
-    Ok(cached_ok(to_json(&body)?, CARD_STATS_CACHE_TTL_SECONDS))
+    Ok(reader_ok(to_json(&body)?, reader))
 }
 
 /// R1583000: one card's play rate: the share of the counted seats that played it from hand.
