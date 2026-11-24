@@ -18522,6 +18522,13 @@
     "4683": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T09:49:24Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "the planner gave no rating line"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
