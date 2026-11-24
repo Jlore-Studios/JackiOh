@@ -15453,12 +15453,16 @@
       "taken_asks": [],
       "votes": {
         "approvals": [],
-        "builder": "claude",
-        "built_by": "claude-3",
-        "rejections": [],
+        "builder": "",
+        "built_by": "",
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
-        "sha": "0e39fd03f023e18c36d758b58e61c51c52f86adf",
-        "tiers": {}
+        "sha": "4b1dd5341e9ed778cc07b7afa59693bc4af95304",
+        "tiers": {
+          "claude": "strong"
+        }
       },
       "waiting_comment": 7112684781
     },
