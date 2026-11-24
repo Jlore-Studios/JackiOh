@@ -2,7 +2,7 @@
 //! Embiggened (3): Equip." / radiant "Rush, Taunt, Lifesteal, Divine Shield, Reborn / Embiggened (3):
 //! Equip." (R1175000).
 //! Embiggen price (3) gives Equip (ME-EQUIP, R1086, #831; conditionalKeywords; R831013; §8).
-//! Printed keywords (§6.1, §10.4, §4.1; CLAUDE.md rule 5). Damage pipeline (§4.4, §4.5, §6.3, R46, R69). Play-time Equip target chosen when embiggened (R81, R90).
+//! Printed keywords (§6.1, §10.4, §4.1; CLAUDE.md rule 5). Damage pipeline (§4.4, §4.5, R46, R69). Play-time Equip target chosen when embiggened (R81, R90).
 
 use jackioh_engine::prelude::*;
 
