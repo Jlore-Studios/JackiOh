@@ -45,6 +45,7 @@ const SET_DIRS: Readonly<Record<string, string>> = {
   Stinkyscape: "stinkyscape",
   "Training Grounds": "traininggrounds",
   "Stinkyscape+": "stinkyscapeplus",
+  "Infinite Assault": "infiniteassault",
 };
 
 const FACES = [false, true] as const;

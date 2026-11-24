@@ -548,6 +548,14 @@
       "radiant": {
         "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Repeater v5, Ultra Capacitor and Healing Capsule."
       }
+    },
+    "infiniteassault-235": {
+      "base": {
+        "en": "Immune to Spells\nStart of turn: Get a random Radiant Infinite Assault card, costing ({setCost}).\nDeath: Summon The Prime Generator, Iteration Two."
+      },
+      "radiant": {
+        "en": "Immune to Spells\nStart of turn: Get two random Radiant Infinite Assault cards, costing ({setCost}).\nDeath: Summon The Prime Generator, Iteration Two."
+      }
     }
   },
   "long": [

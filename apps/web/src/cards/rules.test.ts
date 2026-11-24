@@ -229,6 +229,13 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Watch first plays",
     // R4353020: S+ #79 A Glimpse into the Endless Sea's line and its badge, plain words like Immune to damage's row.
     "Immune to fatigue damage",
+    // R4587000, R4588000, R4588001, R4588005: the Infinite Assault's verbs (§8.13, #4587, #4588), which its cards
+    // print in plain words ("this turn", "Double the Attack and Health", "your cheapest Unit").
+    "Buff this turn",
+    "Units attack this turn",
+    "Units keyword this turn",
+    "Double stats",
+    "Cheapest or highest-Attack Unit",
   ],
 };
 
@@ -792,12 +799,13 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       Activate: ["Activated", "Activates"],
       // R3572000: the Stinkyscape+ faces print these mid-sentence ("Burns 3", "then buff them", "lock the tile", "is countered",
       // "when it awakens", "is launched", "Evolved Swarm cards", "replenish 2 mana"); "Evolves" is the trigger's own verb.
-      Awaken: ["awakens"],
       Counter: ["countered"],
       Launch: ["launch", "launches", "launched"],
       Evolve: ["evolve", "Evolved", "Evolves"],
       Burn: ["Burns"],
       Replenish: ["replenish"],
+      // R4593011: the Infinite Assault's #206 Thought Accelerator prints "Your Dormant Units awaken." (§8.13).
+      Awaken: ["awaken", "awakens"],
     };
     for (const [key, entry] of Object.entries(GLOSSARY)) {
       expect(entry.aliases, key).toEqual(printed[key as GlossaryTermId] ?? []);

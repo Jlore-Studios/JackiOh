@@ -64,6 +64,10 @@ pub fn rule_reaches(state: &GameState, rule: &CostRule, card: &CardInstance) -> 
     if rule.created == Some(true) && !crate::query::is_created(card) {
         return false;
     }
+    // R4592002: a rule for cards that started in the opponent's deck passes others by.
+    if rule.from_opponents_deck == Some(true) && !crate::origin::started_in_opponents_deck(card) {
+        return false;
+    }
     match &rule.types {
         None => true,
         Some(types) if types.is_empty() => true,
@@ -324,8 +328,13 @@ pub fn cost_rule_text(rule: &CostRule, next: bool) -> String {
         None => String::new(),
         Some(min_cost) => format!("({min_cost})+ Cost "),
     };
+    let from_opp = if rule.from_opponents_deck == Some(true) {
+        " that started in your opponent's deck"
+    } else {
+        ""
+    };
     let subject = format!(
-        "{}{}{}{}",
+        "{}{}{}{}{}",
         if next { "Your next " } else { "Your " },
         threshold,
         if rule.created == Some(true) {
@@ -333,7 +342,8 @@ pub fn cost_rule_text(rule: &CostRule, next: bool) -> String {
         } else {
             ""
         },
-        types_text(rule.types.as_deref(), plural)
+        types_text(rule.types.as_deref(), plural),
+        from_opp
     );
     let verb = if plural { "cost" } else { "costs" };
     if let Some(set_to) = rule.set_to {

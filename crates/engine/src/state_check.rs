@@ -179,10 +179,12 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
             if card.marked_destroyed != Some(true) || card.unpreventable_destroy == Some(true) {
                 continue;
             }
+            // R4594001: a guarded face-down card keeps its mark off as an Indestructible one does.
             if !has_keyword(
                 &crate::layers::unit_view(sink.state, &card).keywords,
                 KeywordKind::Indestructible,
-            ) {
+            ) && !crate::face_down::face_down_indestructible(sink.state, &card)
+            {
                 continue;
             }
             if let Some(live_card) = find_instance_mut(sink.state, &card.id) {
@@ -264,6 +266,10 @@ pub struct DeathPass {
     pub pieces: Option<Vec<CardInstance>>,
 }
 
+/// R4589003 (IA #118 The Recursionist): a Reborn under its multiplier keeps Reborn once, so the
+/// Unit comes back twice. Only ever `Some(true)`.
+pub const REBORN_KEPT_KEY: &str = "@rebornKept";
+
 /// One of step 4's returns (`DeathPass.reborn`). `token` is the card as it left, for a unit token, which
 /// ceased to exist (R11) and cannot be found by id; `face` is the X/X a card was summoned with (§7), its
 /// printed face (§10.4 layer 1), which comes back with it (R175).
@@ -289,6 +295,10 @@ pub struct RebornEntry {
     /// R4207000: the body died into its exile pile, so step 4 returns it from there. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exiled: Option<bool>,
+    /// R4589003: this return keeps Reborn, so the body comes back Reborn and returns again. Only ever
+    /// `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keeps: Option<bool>,
 }
 
 /// One of step 5's reports (`DeathPass.collected`).
@@ -399,8 +409,11 @@ fn owe_deaths(sink: &mut EngineSink<'_>, pass: &DeathPass, step: Option<&PausedS
 /// What §4.5 step 4 and R175 do to a body on its way back: no Reborn, no Vanilla, and an X/X token's
 /// X/X kept as its printed face.
 fn prepare_body(card: &mut CardInstance, entry: &RebornEntry) {
-    card.granted_keywords
-        .retain(|keyword| keyword.kind() != KeywordKind::Reborn);
+    // R4589003: a kept Reborn stays, so the body comes back Reborn and returns again.
+    if entry.keeps != Some(true) {
+        card.granted_keywords
+            .retain(|keyword| keyword.kind() != KeywordKind::Reborn);
+    }
     card.vanilla = false;
     if let Some(face) = &entry.face {
         if let Some(stats) = face.stats_override {
@@ -438,7 +451,7 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
                 Some(card) => card.clone(),
                 None => continue,
             },
-            Some(token) => reborn_token(token),
+            Some(token) => reborn_token(crate::recursion_log::kept(sink.state), token),
         };
         // §4.5 step 4 returns it only from the pile it died into, its graveyard or, when a replacement
         // exiled it as it died, its exile pile (R4207000): one a Death hook moved on (exiled out of its
@@ -486,8 +499,17 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
         side.graveyard.retain(|card| card.id != id);
         side.exile.retain(|card| card.id != id);
         let turn = sink.state.turn;
+        // R4589003: a kept return marks itself and is granted Reborn again (R78's move to the
+        // graveyard cleared any granted Reborn), instead of spending it.
+        let keeps = entry.keeps == Some(true);
         if let Some(body) = find_instance_mut(sink.state, &id) {
-            body.reborn_spent = Some(true);
+            if keeps {
+                body.memory
+                    .insert(REBORN_KEPT_KEY.into(), serde_json::json!(true));
+                crate::effects::buff::grant_onto(body, &Keyword::Reborn);
+            } else {
+                body.reborn_spent = Some(true);
+            }
             body.summoned_turn = Some(turn);
         }
         back.push((id, entry.at));
@@ -530,8 +552,9 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
 /// damage, buffs, granted keywords, counters, memory, exertion and controller go, and `placeOnField` sets the
 /// zone. It comes back as the card of the player it died under, as a card the move took to that player's
 /// graveyard does (R2618000).
-fn reborn_token(snapshot: &CardInstance) -> CardInstance {
+fn reborn_token(kept: bool, snapshot: &CardInstance) -> CardInstance {
     let mut body = snapshot.clone();
+    crate::origin::note_origin(kept, &mut body);
     body.owner = body.controller;
     crate::zones::reset_instance(&mut body);
     body
@@ -821,12 +844,17 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
     }
     // R823 (Meditative #10 Double Counting): a Death runs again for each extra run its controller's
     // multiplier gives, on the same snapshot (R89), the multiplier read with the collected cards gone
-    // (R463), so one dying in this pass doubles nothing.
+    // (R463), so one dying in this pass doubles nothing. R4589003 reads the Death-only multiplier too.
     let mut extra: IndexMap<PlayerId, usize> = IndexMap::new();
     for player in PLAYER_IDS {
-        let runs =
-            crate::multipliers::extra_runs(sink.state, player, crate::multipliers::Multiplied::CryAndDeath);
+        let runs = crate::multipliers::death_runs(sink.state, player);
         extra.insert(player, runs.max(0) as usize);
+    }
+    // R4589003 (IA #118 The Recursionist): whose Reborns happen twice, read at the same point, after
+    // the dying cards are gone (R823).
+    let mut doubled: IndexMap<PlayerId, bool> = IndexMap::new();
+    for player in PLAYER_IDS {
+        doubled.insert(player, crate::multipliers::reborns_doubled(sink.state, player));
     }
 
     for mut card in read {
@@ -913,6 +941,10 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                     .and_then(|count| i32::try_from(count).ok()),
                 // R4207000: a body that died into its exile pile returns from there.
                 exiled: (card.unit.zone.z() == ZoneName::Exile).then_some(true),
+                // R4589003: a doubled Reborn whose snapshot kept no marker keeps Reborn once.
+                keeps: (doubled[&card.snapshot.controller]
+                    && !card.snapshot.memory.contains_key(REBORN_KEPT_KEY))
+                .then_some(true),
             });
         }
         sink.state.counters.destroyed += 1;
@@ -957,6 +989,12 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             died_as: card.died_as,
             via,
         });
+        // R4589000: the Unit deaths the Recursion cards read back, logged off the event just pushed.
+        if let Some(died) = sink.events.last().cloned()
+            && crate::query::is_unit_death(sink.state, &died)
+        {
+            crate::recursion_log::note_death(sink.state, &died);
+        }
         // R4207000: then where it went, as `zones::exile_to_pile` reports an exile (a unit token's
         // included) and B5 E5 a redirected landing.
         if card.exiled {
@@ -1038,12 +1076,7 @@ pub fn run_death_hooks(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
         if crate::grants::death_hook_of(sink.state, card).is_none() {
             continue;
         }
-        let extra = crate::multipliers::extra_runs(
-            sink.state,
-            card.controller,
-            crate::multipliers::Multiplied::CryAndDeath,
-        )
-        .max(0) as usize;
+        let extra = crate::multipliers::death_runs(sink.state, card.controller).max(0) as usize;
         for _ in 0..=extra {
             owed.push(card.clone());
         }

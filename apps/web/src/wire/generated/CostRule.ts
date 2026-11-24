@@ -20,4 +20,9 @@ created?: boolean,
  * every flat and threshold rung left, and never lifts a card already below it. Absent, the add
  * has no floor of its own.
  */
-floor?: number, };
+floor?: number, 
+/**
+ * R4592002 (Infinite Assault #187 Fine-Tuner, "your cards that started in your opponent's deck"):
+ * the rule reaches only a card that started in the opponent's deck.
+ */
+fromOpponentsDeck?: boolean, };

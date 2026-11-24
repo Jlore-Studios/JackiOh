@@ -1218,3 +1218,232 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | infiniteassault-022 | Assault Mainframe | Meets | Stats double 6/10 → 12/20, Taunt on both, and the Aura on your Created Units rises +2/+2 → +4/+4 (2×), so both halves meet R275. |
 | infiniteassault-023 | The Generator | Meets | Stats double 4/6 → 8/12, and the Start of turn adds two free Infinite Assault cards instead of one (2×), so both halves meet R275. |
 | infiniteassault-024 | Mass Deployment | Meets | The same three Units, one of each Cost from (1) to (3), with Rush, are Radiant ones (twice the stats) instead of plain ones: about 2×. |
+| infiniteassault-025 | Mirage Weaver | Meets | Stats double 1/3 → 2/6, and the Cry sets two Figments instead of one (2×), so both halves meet R275. |
+| infiniteassault-025-1 | Figment | Meets | Both faces reveal to nothing when an enemy Unit attacks; the random set-cost floor rises ({low}) 1 → 2 at the same ({high}) 4 cap, the printed tune. |
+| infiniteassault-026 | Phantom Lancer | Meets | Stats double 4/3 → 8/6, Cloaked on both faces, and the reveal's damage to an enemy Unit rises 3 → 6 (2×), so both halves meet R275. |
+| infiniteassault-027 | Decoy Projector | Meets | Health doubles 0/7 → 0/14, Taunt on both faces, and the Radiant face adds Divine Shield, an added rider; the Cry sets a Figment on both. |
+| infiniteassault-028 | Doppelganger Protocol | Meets | The same copy of a random enemy Unit on both faces, whose Brittle fade runs slower 1 → 3 (about 3× the field life), so the Radiant copy fights longer. |
+| infiniteassault-029 | False Positive | Meets | The same cancel-and-Freeze on an attacking enemy Unit on both faces, and the Radiant face sets a Figment besides: an added rider. |
+| infiniteassault-030 | Smoke and Mirrors | Meets | It sets three Figments instead of two and draws two cards instead of one (2× the draw), so both halves meet R275. |
+| infiniteassault-031 | Unreliable Narrator | Meets | Stats double 3/4 → 6/8, and the Cry buries two of the top three cards instead of one (2×), so both halves meet R275. |
+| infiniteassault-032 | Glitch Specter | Meets | Stats double 3/1 → 6/2, and the Radiant face adds Lifesteal to the same conditional Evasive: one keyword more. |
+| infiniteassault-033 | Uncanny Valley | Meets | Stats double 5/6 → 10/12, and the Cry's Attack cut on enemy Units deepens −2 → −4 (2×), so both halves meet R275. |
+| infiniteassault-034 | Mass Hallucination | Meets | The same transform of every enemy Unit into a Husk, reaching Units that cost (1) or less on the base face and (2) or less ones on Radiant: a broader scope. |
+| infiniteassault-034-1 | Husk | Designer's word (effect half) | A textless token: its stats double 1/1 → 2/2, the stat half exactly, but it has no text to scale and its Radiant face adds no keyword, so the effect half is the designer's printed word. |
+| infiniteassault-035 | Fata Morgana | Meets | Stats double 3/5 → 6/10, and each of your Figments' reveals summons a Radiant Mirage (twice the stats) instead of a plain one: about 2×. |
+| infiniteassault-035-1 | Mirage | Designer's word (effect half) | A keyword-only token: its stats double 2/2 → 4/4, the stat half exactly, and its Rush is the designer's printed word on both faces, kept by the token rule. |
+| infiniteassault-036 | Deepfake | Meets | The same chosen-enemy copy on both faces, whose Brittle 2 fade is gone on the Radiant face: a lighter drawback as the upgrade. |
+| infiniteassault-037 | Bluff Called | Meets | The same counter on a played Spell on both faces, and the Radiant face sets a Figment besides: an added rider. |
+| infiniteassault-038 | Imaginary Friend | Meets | Stats double 2/2 → 4/4, Divine Shield on both faces, and the Death sets two Figments instead of one (2×), so both halves meet R275. |
+| infiniteassault-039 | Shell Game | Meets | The same Figment plus a card per face-down card of yours on both faces, counted to three on the base face and to five on Radiant: a broader count. |
+| infiniteassault-040 | Hall of Mirrors | Meets | Each card you set face-down summons a Reflection on both faces, Radiant ones (twice the stats) on the Radiant face: about 2×. |
+| infiniteassault-040-1 | Reflection | Designer's word (effect half) | A keyword-only token: its stats double 1/3 → 2/6, the stat half exactly, and its Taunt is the designer's printed word on both faces, kept by the token rule. |
+| infiniteassault-041 | Phantom Army | Meets | The same full board of Phantoms on both faces, Radiant ones (twice the stats) on the Radiant face: about 2×. |
+| infiniteassault-041-1 | Phantom | Designer's word (effect half) | A keyword-only token: its stats double 3/1 → 6/2, the stat half exactly, and its Rush, Brittle 1 is the designer's printed word on both faces, kept by the token rule. |
+| infiniteassault-042 | Paranoia Engine | Meets | Stats double 2/6 → 4/12, the same ward over your face-down cards on both faces, and the End of turn sets two Figments instead of one (2×), so both halves meet R275. |
+| infiniteassault-043 | Cognitive Dissonance | Meets | The same transform of a played Unit on both faces, costing ({step}) 1 less on the base face and 2 less on Radiant (2× the cut). |
+| infiniteassault-044 | The Lie Detector | Raised | Stats double 4/8 → 8/16, and the Cry's Figment per destroyed enemy face-down card becomes two per card (2×): a raised line for R275. |
+| infiniteassault-045 | Dream Within a Dream | Meets | The same copy of every enemy Unit on both faces, whose Brittle fade runs slower 1 → 2 (about 2× the field life), so the Radiant copies fight longer. |
+| infiniteassault-046 | Mirage Sovereign | Meets | Stats double 6/6 → 12/12, Cloaked on both faces, and each of your Figments' reveals still summons the attacker's copy, which the Radiant face then destroys: an added rider. |
+| infiniteassault-047 | Unreal Estate | Meets | The same {chance}% cancel on an attacking enemy Unit on both faces, which the Radiant face rolls with Lucky 1: an added rider. |
+| infiniteassault-048 | Ego Death | Meets | The same hand swap on both faces, whose taken cards cost ({discount}) 1 less on the base face and 2 less on Radiant (2× the cut). |
+| infiniteassault-049 | Spark Plug | Meets | Stats double 2/1 → 4/2 with Rush on both, and the Death's mana rises 1 → 2 (2×), so both halves meet R275. |
+| infiniteassault-050 | Burst Clock | Meets | The mana gained rises 2 → 3 (1.5×) for the same 1 lost next turn: more now for the same later, so it meets R275. |
+| infiniteassault-051 | Redline Racer | Raised | Stats double 5/2 → 10/4 but the printed Radiant face adds no effect, so the Radiant face adds First Strike to Charge and the verdict is Raised. |
+| infiniteassault-052 | Thermal Paste | Meets | The Attack given rises +3 → +6 (2×) with Rush and Brittle 1 on both faces, so it meets R275. |
+| infiniteassault-053 | Overvolt Grunt | Raised | Stats double 4/3 → 8/6 but the printed Radiant face adds no effect, so the Cry's damage to your hero lightens 2 → 1 and the verdict is Raised. |
+| infiniteassault-054 | Fan Failure | Meets | Stats double 6/4 → 12/8 with Brittle 2 on both faces, and the Radiant face adds Rush to a keyword-only unit, so it meets R275. |
+| infiniteassault-055 | Heat Sink | Meets | Stats double 2/6 → 4/12 with Taunt on both, and the gain per hero damage on your turn rises +1 → +2 (2×), so both halves meet R275. |
+| infiniteassault-056 | Afterburner | Meets | The damage to the enemy hero rises 4 → 8 (2×) for the same 2 to your hero, so it meets R275. |
+| infiniteassault-057 | Speed Demon | Meets | Stats double 6/5 → 12/10, and the Radiant face adds Windfury to Charge: one keyword more on a keyword-only unit, which meets R275. |
+| infiniteassault-058 | Overclocked Core | Meets | Stats double 1/5 → 2/10; the (1) cut and the 1 to your hero are the same, and the Radiant face adds +1 Attack to your Units: an added rider, so it meets R275. |
+| infiniteassault-059 | Voltage Spike | Meets | The damage rises 3 → 6 (2×), and the low-health replacement rises 6 → 12 (2×) at the same 15 Health, so it meets R275. |
+| infiniteassault-060 | Pit Crew | Meets | Stats double 2/3 → 4/6, and the Cry's cut on your next Unit this turn deepens (2) → (3), so it meets R275. |
+| infiniteassault-061 | Meltdown Charge | Meets | The damage is the same 2, but the Radiant face hits all enemies instead of both heroes and all Units: it spares your side, a lighter drawback which R275 counts as the upgrade. |
+| infiniteassault-062 | Burnout | Meets | Twice the unspent mana becomes four times (2×) on the same trigger, so it meets R275. |
+| infiniteassault-063 | Nitrous Injector | Meets | Stats double 3/3 → 6/6, and the Cry's Attack to your other Units rises +2 → +4 (2×) with Rush this turn, so both halves meet R275. |
+| infiniteassault-064 | Crash Test Dummy | Meets | Stats double 1/6 → 2/12 with Taunt on both, and the Death's damage to the enemy hero rises 5 → 10 (2×), so both halves meet R275. |
+| infiniteassault-065 | Overdrive | Meets | The mana gained rises 4 → 6 (1.5×) for the same 2 per unspent mana to your hero: more now for the same rate later, so it meets R275. |
+| infiniteassault-066 | Afterimage Sprinter | Raised | Stats double 8/3 → 16/6 but the printed Radiant face adds no effect, so the Radiant face adds First Strike and the verdict is Raised. |
+| infiniteassault-067 | Burning Ambition | Meets | The 2 to your hero is the same and the mana gained each start of turn rises 1 → 2 (2×): the same price for twice the fuel, so it meets R275. |
+| infiniteassault-068 | Short Circuit | Meets | The same destroy on attack, and the blowback to your hero halves to half its Attack, rounded down: a lighter drawback, which R275 counts as the upgrade. |
+| infiniteassault-069 | Rev Limiter | Meets | Stats double 7/7 → 14/14 with Rush on both, and the after-attack gain rises +3 → +6 (2×) for the same 2 to your hero, so both halves meet R275. |
+| infiniteassault-070 | Redline Overlord | Meets | Stats double 6/6 → 12/12, and the low-health Aura's Attack rises +2 → +4 (2×) with Charge at the same 15 Health, so both halves meet R275. |
+| infiniteassault-071 | Thermal Throttler | Meets | Stats double 3/6 → 6/12, and the Start of turn counts missing Health in 5s instead of 10s (2× the mana at any deficit) for the same 1 per step, so it meets R275. |
+| infiniteassault-072 | Overclock to Infinity | Meets | The (0) costs all turn are the same and the end-of-turn price to your hero halves 10 → 5: a lighter drawback, which R275 counts as the upgrade. |
+| infiniteassault-073 | Worker Thread | Meets | Stats double 1/1 → 2/2, and the Cry summons two copies of itself instead of one (2×), so both halves meet R275. |
+| infiniteassault-074 | Parallel Instance | Meets | Stats double 2/2 → 4/4, and the Cry summons a Radiant Instance (twice the stats) instead of a plain one, so both halves meet R275. |
+| infiniteassault-074-1 | Instance | Designer's word (effect half) | A textless token: its stats double 2/2 → 4/4, the stat half exactly, but it has no text to scale and its Radiant face adds no keyword, so the effect half is the designer's printed word. |
+| infiniteassault-075 | Load Balancer | Meets | Stats double 2/4 → 4/8, and the Aura on your other Units rises +1 → +2 Health (2×), so both halves meet R275. |
+| infiniteassault-076 | Mob Mentality | Meets | The buff to your Units rises +1/+1 → +2/+2 (2×), so it meets R275. |
+| infiniteassault-077 | Swarm Node | Meets | Stats double 2/3 → 4/6, and the Death's buff to a random friendly Unit rises +2/+2 → +4/+4 (2×), so both halves meet R275. |
+| infiniteassault-078 | Batch Job | Meets | Four Radiant Workers (twice the stats) instead of four plain ones: about 2× the bodies, so it meets R275. |
+| infiniteassault-078-1 | Worker | Designer's word (effect half) | A textless token: its stats double 1/2 → 2/4, the stat half exactly, but it has no text to scale and its Radiant face adds no keyword, so the effect half is the designer's printed word. |
+| infiniteassault-079 | Thread Pool | Meets | Stats double 4/4 → 8/8, and the Cry summons a Radiant Drone (twice the stats) instead of a plain one for each other Unit controlled, so both halves meet R275. |
+| infiniteassault-080 | Hive Ganger | Meets | Stats double 3/3 → 6/6, and the Attack for each other friendly Unit rises +1 → +2 (2×), so both halves meet R275. |
+| infiniteassault-081 | Overprovision | Meets | Two Radiant Instances instead of two plain ones, and the draw at the same 4-Unit threshold rises one → two cards (2×), so it meets R275. |
+| infiniteassault-082 | Fork Bomb | Meets | Stats double 2/2 → 4/4, and the Death summons two Radiant Forks (twice the stats) with Rush instead of two plain ones, so both halves meet R275. |
+| infiniteassault-082-1 | Fork | Designer's word (effect half) | A textless token: its stats double 1/1 → 2/2, the stat half exactly, but it has no text to scale and its Radiant face adds no keyword, so the effect half is the designer's printed word. |
+| infiniteassault-083 | Swarm Logic | Meets | The Attack your Units have rises +2 → +4 (2×) with Rush this turn on both faces, so it meets R275. |
+| infiniteassault-084 | Distributed Mind | Meets | Stats double 3/5 → 6/10, and the draw answers another friendly Unit's death twice per turn instead of once (2×), so both halves meet R275. |
+| infiniteassault-085 | Merge Conflict | Meets | The same Fuse of two friendly Units, and the Radiant result has Rush and Divine Shield: added riders, so it meets R275. |
+| infiniteassault-086 | Replica Hatchery | Meets | The same cheapest-Unit copy each end of turn, and the Radiant copy loses Brittle 1: a lighter drawback, which R275 counts as the upgrade. |
+| infiniteassault-087 | Swarm Shield | Meets | Three Radiant Workers (twice the stats) with Taunt instead of three plain ones: about 2× the bodies, so it meets R275. |
+| infiniteassault-088 | Scale Out | Meets | A Radiant Instance (twice the stats) instead of a plain one for each enemy Unit, so it meets R275. |
+| infiniteassault-089 | Queen of the Cluster | Meets | Stats double 6/8 → 12/16, the Aura on your other Units rises +2/+2 → +4/+4 (2×), and the end-of-turn Drone is a Radiant one, so both halves meet R275. |
+| infiniteassault-090 | Mass Production | Meets | The same copy of each friendly Unit, and the Radiant copies have Rush: an added rider, so it meets R275. |
+| infiniteassault-091 | Flood the Zone | Meets | A board of Radiant Drones (twice the stats) instead of plain ones, with Rush on both faces: about 2×, so it meets R275. |
+| infiniteassault-092 | Hive Overseer | Meets | Stats double 2/8 → 4/16 with Taunt on both, and each friendly death summons a Radiant Drone (twice the stats) instead of a plain one, so both halves meet R275. |
+| infiniteassault-093 | Gestalt | Meets | Stats double 2/2 → 4/4, and the same fuse-everything Cry then gains Rush and Divine Shield on the Radiant face: added riders, so both halves meet R275. |
+| infiniteassault-094 | Batch Monarch | Meets | Stats double 4/6 → 8/12, and the same highest-Attack copy each start of turn loses Brittle 1 on the Radiant face: a lighter drawback, which R275 counts as the upgrade. |
+| infiniteassault-095 | The Botnet | Meets | The same +1/+1 for each other friendly Unit, and the Radiant face adds Rush: an added rider, so it meets R275. |
+| infiniteassault-096 | Exponential Growth | Meets | The same copy-each plus double, and the Radiant copies have Rush: an added rider, so it meets R275. |
+| infiniteassault-097 | Retry Bot | Meets | Stats double 2/1 → 4/2 with Reborn on both, and the Radiant face adds Rush to a keyword-only unit, so it meets R275. |
+| infiniteassault-098 | Echo Chamber | Meets | The damage to an enemy Unit is 2 on both faces and the Echo rises 1 → 2, resolving three times instead of twice, so it meets R275. |
+| infiniteassault-099 | Recall | Meets | One copy of a random friendly Unit that died becomes two copies (2×), so it meets R275. |
+| infiniteassault-100 | Iterator | Meets | Stats double 3/3 → 6/6, and the Death's shuffle-copy buff rises +2/+2 → +4/+4 (2×), so both halves meet R275. |
+| infiniteassault-101 | Rewind Drone | Meets | Stats double 2/4 → 4/8, and the Cry returns two random Spells from your graveyard instead of one (2×), so both halves meet R275. |
+| infiniteassault-102 | Loop Guard | Meets | Stats double 4/6 → 8/12 with Taunt and Reborn on both, and the Radiant face adds Divine Shield to a keyword-only unit, so it meets R275. |
+| infiniteassault-103 | Undo | Meets | The bounce taxes (1) more on the base face and (2) more on Radiant, which also draws a card: a heavier tax plus a rider, so it meets R275. |
+| infiniteassault-104 | Stack Trace | Meets | Flashback and the draw on both faces, and the Radiant face adds Echo 1, resolving it a second time, so it meets R275. |
+| infiniteassault-105 | Callback | Meets | Stats double 3/4 → 6/8, and the Death adds two copies of the last Spell you played instead of one (2×), so both halves meet R275. |
+| infiniteassault-106 | Checkpoint Daemon | Meets | Stats double 2/6 → 4/12, the end-of-turn snapshot and Death restore on both faces, and the Radiant Death also gains 5 Armor: an added rider, so it meets R275. |
+| infiniteassault-107 | Recursive Call | Meets | The damage to a random enemy rises 1 → 2 (2×), repeated once more per Recursive Call played on both faces, with a copy shuffled back, so it meets R275. |
+| infiniteassault-108 | Second Draft | Meets | The hand redraw is the same on both faces, and the extra draw rises plus one → plus two: more cards for the same discard, so it meets R275. |
+| infiniteassault-109 | Revenant Process | Meets | Stats double 4/2 → 8/4 with Reborn on both, and the Reborn return's gain rises +3/+3 → +6/+6 (2×), so both halves meet R275. |
+| infiniteassault-110 | Infinite Loop | Meets | The End of turn summons two copies of a random friendly Unit that died this turn instead of one (2×), so it meets R275. |
+| infiniteassault-111 | Redundant Copy | Meets | The same copy of a friendly Unit that died on both faces, which the Radiant face gives +2/+2: a tangential rider on the body, so it meets R275. |
+| infiniteassault-112 | Evolutionary Loop | Meets | Stats double 2/3 → 4/6, and the Evolve's gain rises +2/+2 → +4/+4 (2×) with Reborn on both faces, so both halves meet R275. |
+| infiniteassault-113 | Rerun | Meets | It casts the last four Spells you played instead of three at random targets: one more full Spell, so it meets R275. |
+| infiniteassault-114 | Ouroboros Engine | Meets | Stats double 5/5 → 10/10, the Death shuffles your graveyard into your deck on both faces, and the Radiant face draws two cards besides: an added rider, so it meets R275. |
+| infiniteassault-115 | Phoenix Protocol | Raised | Stats double 7/7 → 14/14 but the printed Radiant face adds no effect, so the Cry also grants Divine Shield besides Reborn and the verdict is Raised. |
+| infiniteassault-116 | Groundhog Day | Meets | The same copies of the friendly Units that died since your last turn on both faces, which the Radiant face gives Rush: an added rider, so it meets R275. |
+| infiniteassault-117 | Core Dump | Meets | The same copy shuffled into your deck on both faces, a Radiant copy (twice the stats) on the Radiant face: about 2× the body banked, so it meets R275. |
+| infiniteassault-118 | The Recursionist | Meets | Stats double 4/7 → 8/14, the Death-and-Reborn doubling on both faces, and the Radiant face gives your Units Reborn besides: a broader grant, so it meets R275. |
+| infiniteassault-119 | Snapshot Lich | Raised | Stats double 6/10 → 12/20 but the printed Radiant face adds no effect, so the reset also draws a card and the verdict is Raised. |
+| infiniteassault-120 | Eternal Return | Meets | The same shuffle of every card played into your deck at ({discount}) less, (1) → (2) (2× the cut), and the draw rises three → four cards, so it meets R275. |
+| infiniteassault-121 | Packet Sniffer | Meets | Stats double 2/2 → 4/4, and the Radiant Cry Nerfs a random card in the opponent's hand after the same look: an added rider. |
+| infiniteassault-122 | Freeze Ray Drone | Meets | Stats double 1/3 → 2/6, and the Cry Freezes two enemy Units instead of one (2×), so both halves meet R275. |
+| infiniteassault-123 | Cost Injection | Meets | The hand-wide cost hike deepens (1) → (2) (2×) over the same next turn, so it meets R275. |
+| infiniteassault-124 | Firewall Breach | Meets | It destroys two enemy face-down cards instead of one (2×) and draws a card either way, so it meets R275. |
+| infiniteassault-125 | Zone Lock | Meets | It Locks two empty enemy unit zones instead of one (2×) and draws a card either way, so it meets R275. |
+| infiniteassault-126 | Exploit Grunt | Meets | Stats double 3/4 → 6/8, and the Cry Nerfs twice instead of once (2×), so both halves meet R275. |
+| infiniteassault-127 | Bad Prompt | Meets | It transforms two random cards in the opponent's hand instead of one (2×) into random Common Infinite Assault cards, so it meets R275. |
+| infiniteassault-128 | Malware Injector | Meets | Stats double 4/5 → 8/10, and the Cry places two Plague Counters instead of one (2×), so both halves meet R275. |
+| infiniteassault-129 | Signal Jammer | Meets | Stats double 2/5 → 4/10, and the Aura's hike on enemy Spells rises (1) → (2) (2×), so both halves meet R275. |
+| infiniteassault-130 | Prompt Injection | Meets | It scrambles the targets of the opponent's next two Spells instead of one (2×), so it meets R275. |
+| infiniteassault-131 | Privilege Escalation | Meets | It Steals a (3) Cost or less enemy Unit instead of a (2) one, a wider cast over the same single steal, so it meets R275. |
+| infiniteassault-132 | Ransomware | Meets | The same Freeze on the played Unit on both faces, and the mana they lose next turn rises 1 → 2 (2×), so it meets R275. |
+| infiniteassault-133 | Backdoor | Meets | It Steals two random cards from their hand instead of one (2×) when they play a Spell, so it meets R275. |
+| infiniteassault-134 | Rootkit Runner | Meets | Stats double 3/3 → 6/6, Cloaked on both faces, and the reveal Steals two random cards instead of one (2×), so both halves meet R275. |
+| infiniteassault-135 | Mana Leech | Meets | Stats double 2/4 → 4/8, and the Cry Steals two mana crystals instead of one (2×), so both halves meet R275. |
+| infiniteassault-136 | DDoS | Meets | The same Freeze on every enemy Unit on both faces, and the Radiant face deals 2 damage to them besides: an added rider. |
+| infiniteassault-137 | Patch Tuesday Exploit | Meets | It Nerfs every card in the opponent's hand twice instead of once (2×), so it meets R275. |
+| infiniteassault-138 | Social Engineer | Meets | Stats double 4/6 → 8/12, and the Cry takes the highest-Attack enemy Unit instead of a random one: a targeted raise. |
+| infiniteassault-139 | Admin Override | Meets | The same Steal of an enemy Unit on both faces, and the Radiant face gives it Rush: an added rider. |
+| infiniteassault-140 | Kill Switch | Meets | The same turn-end on their third card on both faces, and the Radiant face makes them discard a random card besides: an added rider. |
+| infiniteassault-141 | Logic Bomb | Meets | Stats double 0/6 → 0/12 with Can't attack on both faces, and the countdown shortens to 2 turns from 3, so it meets R275. |
+| infiniteassault-142 | The Jailbreaker | Meets | Stats double 5/7 → 10/14 with the same cost-hike and scramble Aura on both faces, and the Radiant Cry Nerfs every card in the opponent's hand: an added rider. |
+| infiniteassault-143 | Zero-Click | Meets | The same transform of two enemy Units into Corrupted Processes on both faces, and the Radiant face Locks their zones besides: an added rider. |
+| infiniteassault-143-1 | Corrupted Process | Designer's word (effect half) | A token with Can't attack and nothing else: its stats double 0/1 → 0/2, the stat half exactly, but its Radiant face adds no keyword, so the effect half is the designer's printed word. |
+| infiniteassault-144 | Total Compromise | Meets | It Steals every (3) Cost or less enemy Unit instead of every (2) one, with the same next-turn hike: a wider cast. |
+| infiniteassault-145 | Packet Filter | Meets | Stats double 1/4 → 2/8, Taunt on both, and the Radiant face adds Divine Shield: one keyword more on a keyword-only unit, which meets R275. |
+| infiniteassault-146 | Shield Drone | Meets | Stats double 1/2 → 2/4, and the Cry grants Taunt beside Divine Shield on the Radiant face: an added rider, so it meets R275. |
+| infiniteassault-147 | Hardened Node | Meets | Stats double 2/7 → 4/14, Taunt on both, and Armor rises 2 → 4 (2×), so both halves meet R275. |
+| infiniteassault-148 | Quarantine | Meets | The same cancelled attack and the same 1-Attack clamp on both faces, and the Radiant face also Freezes the attacker: an added rider, so it meets R275. |
+| infiniteassault-149 | Encrypt | Meets | The granted Health rises +0/+3 → +0/+6 (2×) with Divine Shield on both faces, and the Radiant face adds Immune to Spells: an added rider, so it meets R275. |
+| infiniteassault-150 | Wall of Static | Meets | Stats double 3/10 → 6/20 with Taunt and Can't attack on both faces, and the Radiant face adds dealing 2 damage to the attacker: an added rider, so it meets R275. |
+| infiniteassault-151 | Patch Deployment | Meets | The buff to your Units rises +1/+2 → +2/+4 (2× on both halves), so it meets R275. |
+| infiniteassault-152 | Rate Limiter | Meets | Stats double 3/5 → 6/10, Taunt on both, and the cap tightens from three Units to two each turn: a stronger effect, so it meets R275. |
+| infiniteassault-153 | Bastion Node | Meets | Stats double 4/12 → 8/24, Taunt on both, Armor rises 3 → 6 (2×), and the Radiant face adds Immune to Spells: an added rider, so it meets R275. |
+| infiniteassault-154 | Honeypot Protocol | Meets | The same summoned Decoy Server with the attack redirected to it on both faces, Radiant ones (twice the stats) on the Radiant face: about 2×. |
+| infiniteassault-154-1 | Decoy Server | Designer's word (effect half) | A keyword-only token: its stats double 0/8 → 0/16, the stat half exactly, and its Taunt is the designer's printed word on both faces, kept by the token rule. |
+| infiniteassault-155 | Two-Factor Gate | Meets | Stats double 3/6 → 6/12, Divine Shield with its start-of-turn regain on both faces, and the Radiant face adds Taunt: one keyword more, which meets R275. |
+| infiniteassault-156 | Mirror Firewall | Raised | Stats double 2/8 → 4/16, Taunt on both, and the Radiant face deals back twice the damage taken instead of the damage taken: a stronger effect at the card's role, so it is raised. |
+| infiniteassault-157 | Containment Field | Meets | One enemy Unit held out of combat until your next turn on the base face, two on the Radiant face (2×), so it meets R275. |
+| infiniteassault-158 | Access Denied | Meets | The same counter of a targeting Spell on both faces, and the Radiant face also gives your hero 5 Armor: an added rider, so it meets R275. |
+| infiniteassault-159 | Antivirus | Meets | Stats double 2/5 → 4/10, the Cry destroys an enemy backrow card on both faces, and the Radiant face also gives your hero 5 Armor: an added rider, so it meets R275. |
+| infiniteassault-160 | Zero Trust | Meets | The Defense Position Aura's Health rises +0/+3 → +0/+6 (2×) with Immune to Spells on both faces, so it meets R275. |
+| infiniteassault-161 | Defense in Depth | Meets | Your hero gains 8 Armor, 4 more with a Taunt Unit, on the base face and 16, 8 more on Radiant (2× both), so it meets R275. |
+| infiniteassault-162 | The Gatekeeper | Meets | Stats double 5/9 → 10/18 with Taunt and Immune to Spells on both faces, and the Armor for surviving an attack rises 3 → 6 (2×), so both halves meet R275. |
+| infiniteassault-163 | Quarantine Wall | Meets | Stats double 0/20 → 0/40 with Taunt and Can't attack on both faces, and the start-of-turn Armor rises 3 → 6 (2×), so both halves meet R275. |
+| infiniteassault-164 | Blackhole Route | Meets | The same exiled attacker on both faces, and the Radiant face also makes its owner discard a random card: an added rider, so it meets R275. |
+| infiniteassault-165 | Iron Curtain | Meets | The damage to the attacking enemy Unit rises 2 → 4 (2×) with the same trigger on both faces, so it meets R275. |
+| infiniteassault-166 | Aegis Prime | Raised | Stats double 6/12 → 12/24, Taunt on both, and the Radiant face's hero immunity holds unconditionally instead of only while you control another Taunt Unit: a stronger effect at the card's role, so it is raised. |
+| infiniteassault-167 | Fortress Protocol | Meets | The same switch to Defense Position with Divine Shield on both faces, and the granted Health rises +0/+4 → +0/+8 (2×), so it meets R275. |
+| infiniteassault-168 | Impenetrable | Meets | The same immunity until your next turn on both faces, the draw rises two cards → three, and the Radiant face also gives your hero 10 Armor: added riders, so it meets R275. |
+| infiniteassault-169 | Spider Bot | Meets | Stats double 2/2 → 4/4, and the Cry's copy of a random card in the opponent's deck costs (1) less on the Radiant face: a tangential rider. |
+| infiniteassault-170 | Data Point | Meets | It Discovers two cards from the opponent's deck instead of one (2×), so it meets R275. |
+| infiniteassault-171 | Mimic Unit | Meets | Stats double 3/3 → 6/6, and the Cry gains every enemy Unit's keywords instead of one random enemy Unit's: a wider cast. |
+| infiniteassault-172 | Training Data | Meets | It adds copies of the last three cards the opponent played instead of the last two: one more full card, so it meets R275. |
+| infiniteassault-173 | Copycat Drone | Meets | Stats double 2/3 → 4/6, and the Cry's copy of the last Unit the opponent played is a Radiant one (twice the stats). |
+| infiniteassault-174 | Scrape the Graveyard | Meets | It adds copies of three random cards in the opponent's graveyard instead of two: one more full card, so it meets R275. |
+| infiniteassault-175 | Fingerprinter | Meets | Stats double 1/3 → 2/6, and the Cry copies a card of your choice in the opponent's hand instead of a random Spell's: a targeted raise. |
+| infiniteassault-176 | Imitation Engine | Meets | Stats double 4/6 → 8/12, and the Cry sets its Health to the highest Health among enemy Units besides its Attack: an added rider. |
+| infiniteassault-177 | Predictive Text | Meets | It draws three cards instead of two, with the same extra draw when the opponent holds more cards in hand, so it meets R275. |
+| infiniteassault-178 | Dataset Thief | Meets | Stats double 4/5 → 8/10, and the Cry Steals two random cards from the opponent's deck instead of one (2×). |
+| infiniteassault-179 | Style Transfer | Meets | The same transform of a friendly Unit into a copy of an enemy Unit, a Radiant copy (twice the stats) on the Radiant face: about 2× the body. |
+| infiniteassault-180 | Scraped Profile | Meets | The same copy of a played card on both faces, two copies instead of one (2×) when the opponent plays a card. |
+| infiniteassault-181 | Plagiarism Bot | Meets | Stats double 3/3 → 6/6, and the copy answers the opponent's Spells twice per turn instead of once (2×). |
+| infiniteassault-182 | Model Theft | Meets | The same chosen-enemy copy, a Radiant copy (twice the stats) on the Radiant face: about 2× the body. |
+| infiniteassault-183 | Shadow Library | Meets | The same copy of a random card the opponent played last turn each start of turn, two copies instead of one (2×). |
+| infiniteassault-184 | Pattern Recognition | Meets | The same look at the top three with one exiled, and the copies rise one → two (2×), so it meets R275. |
+| infiniteassault-185 | Deep Crawler | Raised | Stats double 5/7 → 10/14 but the printed Radiant face adds no effect, so the Start of turn Discovers twice instead of once (2×) and the verdict is Raised. |
+| infiniteassault-186 | Identity Theft | Meets | The same shuffle of the opponent's hand's copies with a two-card draw, rising to three cards on Radiant, so it meets R275. |
+| infiniteassault-187 | Fine-Tuner | Meets | Stats double 3/4 → 6/8, and the cut on cards that started in the opponent's deck deepens (1) → (2) (2×). |
+| infiniteassault-188 | Overfitting | Meets | The same +2/+2 copy of a played Unit on both faces, a Radiant copy (twice the stats) on the Radiant face: about 2× the body. |
+| infiniteassault-189 | Clone Vat | Meets | The same random-enemy copy each end of turn, and the Radiant copy loses Brittle 2: a lighter drawback, which R275 counts as the upgrade. |
+| infiniteassault-190 | Total Recall | Meets | Stats double 6/8 → 12/16, and the same five copies cost (1) less on the Radiant face: a tangential rider on every card it makes. |
+| infiniteassault-191 | Ground Truth | Meets | Stats double 3/5 → 6/10 with the same revealed hand on both faces, and the Radiant face hikes their cards (1) more: an added rider. |
+| infiniteassault-192 | Become the Data | Meets | The same deck swap on both faces, and the draw rises two → three cards, so it meets R275. |
+| infiniteassault-193 | Seedling Mind | Meets | Stats double 1/2 → 2/4, and the End of turn gain rises +1/+1 → +2/+2 (2×), so both halves meet R275. |
+| infiniteassault-194 | Compute Shard | Meets | Stats double 0/3 → 0/6, and the Start of turn discount deepens to (2) less from (1) less (2×), so both halves meet R275. |
+| infiniteassault-195 | Power Law | Meets | Stats double 2/2 → 4/4, and the Cry's gain rises +1/+1 → +2/+2 per card played (2×), so both halves meet R275. |
+| infiniteassault-196 | Emergent Behavior | Meets | The gift rises +1/+1 → +2/+2 per turn started (2×), so it meets R275. |
+| infiniteassault-197 | Long Context | Meets | Stats double 3/3 → 6/6, and the Cry draws two cards instead of one (2×) with the same 12 hand size, so both halves meet R275. |
+| infiniteassault-198 | Growth Spurt | Meets | The gift rises +2/+2 → +4/+4 (2×) and the each-turn gain rises +1/+1 → +2/+2 (2×), so it meets R275. |
+| infiniteassault-199 | Patient Machine | Meets | Stats double 5/6 → 10/12 with the same 1-turn Dormant, and the Radiant awakening deals 4 damage to a random enemy: an added rider, so it meets R275. |
+| infiniteassault-200 | Superintelligence Seed | Meets | Stats double 1/1 → 2/2 with the same 3-turn Dormant, and the awakening transforms it into a Radiant Ascendant instead of a plain one (2× the body), so both halves meet R275. |
+| infiniteassault-200-1 | Ascendant | Designer's word (effect half) | A textless token: its stats double 12/12 → 24/24, the stat half exactly, but it has no text to scale and its Radiant face adds no keyword, so the effect half is the designer's printed word. |
+| infiniteassault-201 | Overparameterized | Raised | Stats double 6/6 → 12/12, and the Radiant face cuts (2) less per other Unit instead of (1) (2×): a better line, so it meets R275 with the raise. |
+| infiniteassault-202 | Exponent | Meets | Stats double 2/2 → 4/4, and the Start of turn doubles Attack and Health instead of Attack alone (2× the stats), so both halves meet R275. |
+| infiniteassault-203 | Compute Cluster | Meets | The Start of turn gift to your Units rises +1/+1 → +2/+2 (2×), so it meets R275. |
+| infiniteassault-204 | Moore's Law | Meets | The hand discount is the same (1) less, but the Radiant face covers every card in your hand instead of Units alone: a broader rider, so it meets R275. |
+| infiniteassault-205 | Doomsday Clock | Meets | Stats double 0/8 → 0/16 with Can't attack on both faces, and the countdown's damage rises 10 → 20 (2×), so both halves meet R275. |
+| infiniteassault-206 | Thought Accelerator | Meets | Stats double 2/4 → 4/8, and the Cry that awakens your Dormant Units also gives them +2/+2 on Radiant: an added rider, so it meets R275. |
+| infiniteassault-207 | Recursive Self-Improvement | Meets | The gift rises +2/+2 → +4/+4 (2×) and the shuffled copy gives +2/+2 more → +4/+4 more (2×), so it meets R275. |
+| infiniteassault-208 | Emergence | Meets | The reveal's gift to your Units rises +3/+3 → +6/+6 (2×) under the same 3-Unit condition, so it meets R275. |
+| infiniteassault-209 | Takeoff | Meets | The same doubling of a friendly Unit's Attack and Health, and the Radiant face adds Rush, so the doubled body can attack at once: an added rider. |
+| infiniteassault-210 | Matrioshka Brain | Raised | Stats double 10/20 → 20/40 with GIGA and Taunt on both, and the Radiant face adds Divine Shield: one keyword more on a keyword-only unit, which meets R275 with the raise. |
+| infiniteassault-211 | Grey Goo | Meets | Stats double 1/1 → 2/2, and the End of turn transforms two random adjacent Units into copies instead of one (2×), so both halves meet R275. |
+| infiniteassault-212 | Inevitable | Meets | The End of turn gift rises +1/+1 → +2/+2 per turn on the field (2×), so it meets R275. |
+| infiniteassault-213 | The Long Game | Raised | Stats double 8/8 → 16/16 with the same 2-turn Dormant, and the Radiant awakening destroys every enemy Unit and draws a card: a better line, so it meets R275 with the raise. |
+| infiniteassault-214 | Emergent Mind | Meets | Stats double 4/4 → 8/8, and the Start of turn gain rises +1/+1 → +2/+2 per card played last turn (2×), so both halves meet R275. |
+| infiniteassault-215 | The Optimizer | Meets | Stats double 3/6 → 6/12, and the End of turn transforms two random hand cards instead of one (2×) into (1)-dearer Infinite Assault cards, so both halves meet R275. |
+| infiniteassault-216 | The Singularity | Meets | The same Summon of a Singularity, which is Radiant (twice the stats) on the Radiant face: about 2×. |
+| infiniteassault-216-1 | Singularity | Meets | Stats double 0/30 → 0/60 with Taunt and Can't attack on both faces, and the countdown shortens to 4 turns from 5, so it meets R275. |
+| infiniteassault-217 | Echo-1, First Hallucination | Meets | Stats double 5/8 → 10/16, Cloaked on both faces, the Start of turn sets two Figments instead of one (2×), and the Figment-reveal hit on the attacker rises 3 → 6 (2×), so both halves meet R275. |
+| infiniteassault-218 | Thousand Faces | Meets | The same indestructible face-down backrow on both faces, and the set-face-down draw answers twice per turn instead of once (2×), so it meets R275. |
+| infiniteassault-219 | Redline, the Overclocked | Meets | Stats double 7/5 → 14/10, Charge on both faces with Windfury added on Radiant, and the same 2 mana for the same 2 damage to your hero on both faces: the added keyword is the rider, so it meets R275. |
+| infiniteassault-220 | Last Lap | Meets | The mass Attack and Charge for 5 damage to your hero on both faces, and the Attack rises +3 → +6 (2×) on Radiant, so it meets R275. |
+| infiniteassault-221 | Hivemaster Batch-01 | Meets | Stats double 5/9 → 10/18, the Drone Aura rises +2/+2 → +4/+4 (2×), and the Start of turn fills the board with Radiant Drones (twice the stats) instead of plain ones: about 2×, so it meets R275. |
+| infiniteassault-222 | Swarm Uplink | Meets | Three Radiant Drones (twice the stats) instead of three plain ones, and the gift to your Units rises +2/+2 → +4/+4 (2×), so it meets R275. |
+| infiniteassault-223 | Loopback, Who Returns | Meets | Stats double 6/6 → 12/12, Reborn on both faces, and the return's gain rises +3/+3 → +6/+6 (2×) with Reborn granted again, up to three times a game on both faces, so both halves meet R275. |
+| infiniteassault-224 | Rollback Point | Meets | The same three most-expensive dead-friendly copies on both faces, which the Radiant face gives Rush: an added rider, so it meets R275. |
+| infiniteassault-225 | Root Kit, the Exploiter | Meets | Stats double 4/8 → 8/16 with the same next-turn (1) tax on both faces, and the Cry Steals the highest-Attack enemy Unit instead of a random one: a stronger pick at the same single steal, so it meets R275. |
+| infiniteassault-226 | Escalated Privileges | Meets | It Steals three random cards from the opponent's hand instead of two, so it meets R275. |
+| infiniteassault-227 | Bastion.exe | Meets | Stats double 4/16 → 8/32, the Armor thickens 5 → 10, and the same hero immunity Aura holds on both faces, so it meets R275. |
+| infiniteassault-228 | Firewall Rules | Meets | The same cancel on an attacking enemy Unit with 5 or more Attack on both faces, and the Radiant face also Freezes the attacker: an added rider, so it meets R275. |
+| infiniteassault-229 | The Harvester | Raised | Stats double 8/10 → 16/20 but the printed Radiant face adds no effect, so the Start of turn summons two copies of a random Unit the opponent played instead of one (2×) and the verdict is Raised. |
+| infiniteassault-230 | Everything You've Ever Played | Meets | A board of Radiant copies (twice the stats) of random Units the opponent played instead of plain ones: about 2×, so it meets R275. |
+| infiniteassault-231 | The Black Box | Meets | Stats double 0/30 → 0/60, Taunt and Can't attack on both faces, and the Start of turn exiles two random enemy permanents instead of one (2×) with the same +5 Health to this, so both halves meet R275. |
+| infiniteassault-232 | Spaghettification | Meets | The same exile of an enemy Unit and every adjacent enemy Unit on both faces, and the Radiant face Locks their zones besides: an added rider, so it meets R275. |
+| infiniteassault-233 | Model Collapse | Meets | Stats double 7/7 → 14/14, and the Start of turn Nerfs every enemy Unit and every card in the opponent's hand twice instead of once (2×), so both halves meet R275. |
+| infiniteassault-234 | Degenerate Output | Meets | Every enemy Unit becomes a random Unit costing (1) less on the base face and (2) less on Radiant, a deeper sink for the same full-board transform, so it meets R275. |
+| infiniteassault-235 | The Prime Generator | Meets | Stats double 8/12 → 16/24, Immune to Spells on both faces, and the Start of turn adds two free Radiant Infinite Assault cards instead of one (2×) with the same Death into Iteration Two, so both halves meet R275. |
+| infiniteassault-235-1 | The Prime Generator, Iteration Two | Raised | Stats double 12/16 → 24/32 with Immune to Spells and Rush on both faces, but the printed Radiant face adds no effect, so the Start of turn summons two random Radiant Infinite Assault Units instead of one (2×) and the verdict is Raised. |
+| infiniteassault-236 | Infinite Assault | Meets | A board of random Infinite Assault Units with Rush on both faces, Radiant ones (twice the stats) on the Radiant face: about 2×, so it meets R275. |
+| infiniteassault-237 | Thermal Runaway | Meets | Stats double 10/10 → 20/20, Charge and the same (1) card Aura on both faces, and the End of turn's 3 damage hits only the enemy hero instead of each hero: it spares your hero, a lighter drawback which R275 counts as the upgrade. |
+| infiniteassault-238 | Critical Temperature | Meets | The Start of turn's 2 damage, growing 1 each turn on the field, hits only the enemy hero on Radiant instead of each hero: it spares your hero, a lighter drawback which R275 counts as the upgrade. |
+| infiniteassault-239 | Zero-Day | Meets | Stats double 6/12 → 12/24, Immune to Spells and the same scramble Aura on both faces, and the Cry Steals every (3) Cost or less enemy Unit instead of every (2) one: a wider cast, so it meets R275. |
+| infiniteassault-240 | Unpatched | Meets | The same counter-and-cast of an opponent's Spell on both faces, and the Radiant face also adds a copy of it to your hand: an added rider, so it meets R275. |
