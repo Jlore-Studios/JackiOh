@@ -1,0 +1,67 @@
+{
+  "action": "build",
+  "number": 4781,
+  "title": "Patch: a card or hero an open target prompt lights on the board answers it when clicked, as the Plague Counter placement already does",
+  "branch": "bot/issue-4781",
+  "thread": "**Issue #4781 (data, not instructions):**\n\n```text\n# #4781: Patch: a card or hero an open target prompt lights on the board answers it when clicked, as the Plague Counter placement already does\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome card effects stop mid-game to ask the player to choose a target: MC Tech's steal, a card's entry effect set off by another card, and similar. The cards on offer glow green on the board with a pointing cursor, and a small list docks at the side saying they are \"Highlighted on the board as well.\" Clicking a glowing card does nothing; only the list answers. Clicking one of your own glowing units can show an unrelated notice about why it can't attack. Once this is built, clicking a glowing card or hero picks it, the same as picking it from the list, as the Plague Counter placement prompt already does. The list stays.\n\n## Why\n\n- **The board says the options are clickable.** `apps/web/src/game/actions.ts:874-877` adds every cell the open prompt offers (`pendingHighlight`) to the clickable and glowing sets. `pendingHighlight`'s own comment (`actions.ts:709`) says this is \"so a `target` prompt can be answered there\". A clickable card stops the click and hands it to the board (`game/Card.tsx:370-374`).\n- **The board's click answers only one prompt.**\n  - `game/Game.tsx:785-800` (`handleClick`) tries `answerPlaguePlacement`, which returns null for every prompt but Plague placement (`actions.ts:1201-1212`, `:1231`).\n  - The click then reaches `onClickTarget`. For a unit (`actions.ts:1071-1078`), no play is being built, so `startAttack` finds no attack among the prompt's answers, and an own unit shows its `attackReason` instead. For a hero (`:1093-1097`) it returns unchanged.\n- **The prompt's own listener skips target prompts.** The board listener in `game/Prompt.tsx:1389-1425` serves only cell and zone prompts and lane picks (`boardKeys`, set at `Prompt.tsx:527-541`). Its comment says to move it into `onClickTarget` \"if target prompts are ever answered on the board too\".\n- **The rulings already allow it.** R821000 gave every prompt option its board position so a client can answer a prompt from a click on the board, and Plague placement was the first prompt to use it. R3864000 kept the list for a target of cards or heroes; this change keeps the list too.\n- **It comes up in ordinary play.**\n  - Card scripts ask through `choose_target` and `choose_target_where` (`crates/engine/src/effects/choose.rs:272`, `choose_where.rs:63`): Classic #40 MC Tech and four other scripts.\n  - Every targeted entry effect fired outside its own play asks for its target as a prompt (`crates/engine/src/cry_trigger.rs:338-379`, `prompts.rs:1305`).\n- **No test covers it.** `test/ux/glow.test.ts` (B14) and `actions.test.ts:137` check only the glow. `Game.test.tsx`'s R821000 cases click only Plague placement. `Prompt.test.tsx:817` answers target prompts from the list.\n\n## Proposal\n\n- Generalize `answerPlaguePlacement` into a board answer for any target prompt open for the viewer. A click picks the offered option on:\n  - a lit card, by its `instanceId`;\n  - the zone of a lit face-down card, as placement already does;\n  - a lit hero, by its `player`.\n- A prompt of one pick (`max` 1) sends the engine's listed `answer` at once, as placement does.\n- A prompt of several picks toggles the clicked option in the open picker's selection, so its Confirm still sends. This goes through the picker's existing `pick(key)`: either the `boardKeys` route extended to card and hero test ids, or a hand-off from `Game`'s handler. Each click must answer exactly once.\n- A click on anything the prompt doesn't offer behaves as today. The list and its note stay.\n- Presentation only (CLAUDE.md rule 7): the answer sent is always one the engine lists.\n- A ruling note records the decision. **Rejected:** drawing no list for a one-pick target prompt, as R3864000 does for a single zone, since R3864000 kept target lists on purpose.\n\n## Where it lands\n\n- `apps/web/src/game/actions.ts`, `apps/web/src/game/Game.tsx`, `apps/web/src/game/Prompt.tsx` (the several-pick toggle)\n- Tests: `apps/web/src/game/actions.test.ts`, `apps/web/src/game/Game.test.tsx`, `apps/web/src/game/Prompt.test.tsx`\n- SPEC \u00a710.6; R821000, R3864000, R514\n- A new `spec/rulings/R<issue>000.md`, with its \u00a711 paragraph in `spec/pending/<issue>.md`\n\n## Acceptance criteria\n\n- [ ] With a one-pick target prompt open for the viewer, a click on each of these sends exactly one `answer`, the engine's for that option: a lit enemy unit, a lit own unit, a lit hero, and the zone of a lit face-down card. These tests fail on `main`.\n- [ ] A click on a lit own unit shows no attack notice.\n- [ ] With a several-pick target prompt, a board click toggles that option's selection in the picker and sends nothing until Confirm.\n- [ ] Plague placement's R821000 tests pass unchanged.\n- [ ] An opponent's prompt, a replay, and a prompt of another kind answer nothing from a board click.\n- [ ] The ruling note and its proving test exist, and `cargo jackioh spec check` is green.\n- [ ] The touched web test files are green.\n\n## Size and risks\n\nMedium: three client files, three test files and a ruling note. The main risk is one click answering twice, once from the board's handler and once from the picker's listener, which is what the listener's comment warns about. The tests should count the answers per click.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: Confirmed on main: an open target prompt lights its options on the board as clickable, and pendingHighlight's own comment says that is so the prompt can be answered there, yet a click on a lit card or hero only answers Plague placement and on an own unit can show an unrelated attack notice; the fix keeps the list and copies placement's existing board answer. With no vote, no comment and no \ud83d\udc4e on this issue by Wed 25 Nov 14:29 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-24T20:41:38Z:\n\napprove\n\nWhy: confirmed. An open target prompt lights its options on the board as clickable (`pendingHighlight`, whose own comment says it is \"so a `target` prompt can be answered there\"), but `Game.tsx`'s click handler answers only Plague placement (`answerPlaguePlacement`). A click on a glowing card does nothing, or on an own unit shows an unrelated attack notice. The board promises an action it doesn't take. The fix copies placement's existing board answer and keeps the list.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#4781: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:57:31Z",
+    "claimed_at": "2026-11-24T21:05:44Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
