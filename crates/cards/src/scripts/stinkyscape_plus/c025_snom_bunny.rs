@@ -17,8 +17,12 @@ pub const ID: &str = "stinkyscapeplus-025";
 fn snom_bunny(slash_aware: bool) -> Script {
     Script {
         death: Some(hook(move |ctx| {
-            let mut enemies = enemy_permanents(ctx.state, ctx.controller);
-            enemies.retain(|card| !slash_aware || reaches(ctx.state, ctx.self_.as_ref(), card));
+            // R3554003: the kept v0.6.9j face draws across a slash, so it keeps the unchecked pool.
+            let enemies = if slash_aware {
+                enemy_permanent_pool(ctx)
+            } else {
+                enemy_permanents(ctx.state, ctx.controller)
+            };
             if enemies.is_empty() {
                 return Vec::new();
             }
