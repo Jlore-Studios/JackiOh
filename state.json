@@ -19452,6 +19452,7 @@
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 500,
       "started_at": "2026-11-24T11:45:16Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -42395,9 +42396,33 @@
         "title": "Patch: deeper card stats, X0, each card's versions across patches and their figures",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "10ae5a8cc9fef19de0ab7344bca287c486015806",
+        "issue": 4682,
+        "merged_at": "2026-11-24T12:32:19Z",
+        "n": 500,
+        "pr": 4716,
+        "queued_at": "2026-11-24T12:32:19Z",
+        "sha": "f10180a05739cd1cfe4a4fe86805b809709645e9",
+        "status": "queued",
+        "title": "Patch: the clock alarm covers the mulligan and background tabs",
+        "tries": 0
       }
     ],
-    "count": 499
+    "count": 500
   },
   "statistics": {
     "at": "2026-11-24T12:27:42Z"
