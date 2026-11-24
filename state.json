@@ -18485,17 +18485,8 @@
       "stop_requested": false
     },
     "4682": {
-      "action": "plan",
-      "asks": [
-        "c:7127218797"
-      ],
-      "build_next": {
-        "from_run": "45364523746",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-24T09:32:42Z",
-        "until": "2026-11-24T10:02:42Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-24T09:32:34Z",
         "difficulty": "medium",
@@ -18514,10 +18505,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- Rewrite the lines 421\u2013424 comment to remove \"`side === \"you\"` \u2026 and the mulligan (side null), so those stay silent\" \u2014 it must now say only holderless non-mulligan prompts stay silent. Do not change `TICK_MS`; throttled hidden-tab repaints still land about one beat per reading (each reading's curren\u2026\n- 4. **`apps/web/src/audio/clockAlarm.ts`, `apps/web/src/audio/useTurnClockAlarm.ts`.** Header comments only: extend \"the viewer's own turn and prompt clocks (R439, R506, R4562000)\" with \"and shared mulligan countdown (R268)\". No logic change: `planClockAlarm` is kind-agnostic.\n- 5. **`apps/web/src/audio/AudioControls.tsx`.** Change the `playMusicInBackground` hint to exactly:\n- `\"Off: the music fades out when you switch to another tab or window, and back in when you return. Sound effects and voices stay quiet either way, except your own turn, prompt and mulligan countdown beats.\"`\n- In **`apps/web/src/i18n/zh-CN.json`**, replace the old-English-keyed entry with the new English string as key and value:\n- `\"\u5173\u95ed\uff1a\u5207\u6362\u5230\u5176\u4ed6\u6807\u7b7e\u9875\u6216\u7a97\u53e3\u65f6\u97f3\u4e50\u6de1\u51fa\uff0c\u56de\u6765\u65f6\u518d\u6de1\u5165\u3002\u65e0\u8bba\u5982\u4f55\uff0c\u97f3\u6548\u548c\u8bed\u97f3\u90fd\u4f1a\u4fdd\u6301\u9759\u97f3\uff0c\u53ea\u6709\u4f60\u81ea\u5df1\u7684\u56de\u5408\u3001\u63d0\u793a\u548cmulligan\u5012\u8ba1\u65f6\u7684\u63d0\u793a\u97f3\u4f8b\u5916\u3002\"`\n- 6. **Tests.** Add the tests in \u00a7Tests below, mirroring the named patterns (`promptProps` in `Clock.test.tsx`, `rig()`/`unlocked()` in `engine.test.ts`, `countdown()` in `clockAlarm.test.ts`).\n- ## Tests\n- - `apps/web/src/audio/engine.test.ts`, near the `\"B5 while the page is hidden\u2026\"` test, using `rig()` + `unlocked(r)` then `r.page.visibility = \"hidden\"`:\n- - `it(\"hidden: the clock alarm's heartbeat and clockTick are accepted while hidden, everything else refused\")` \u2014 `playSfx(\"heartbeat\")` and `playSfx(\"clockTick\", { amount: 3 })` return `true` and are logged; `playSfx(\"draw\")` and `playVoice(...)` return `false` with an otherwise empty log; back to \u2026\n- - `it(\"hidden: muted still refuses the alarm\")` \u2014 `writeAudioSettings({ muted: true })` plus hidden: `playSfx(\"heartbeat\")` is `false`, log empty.\n- - Run: `pnpm --dir apps/web test src/audio/engine.test.ts`\n- - `apps/web/src/game/Clock.test.tsx`, new `describe(\"R268 \u2014 the viewer's mulligan countdown sounds the clock alarm\")` with a `mulliganProps(at, ms)` helper mirroring `promptProps` plus `mulligan: true` and `turnDeadline: null`:\n- - `it(\"R268 the shared mulligan countdown beats like the turn hook\")` \u2014 12_300ms then 12_100/11_900/11_300 rerenders give `[[\"heartbeat\", 300], [\"heartbeat\", 300]]`.\n- - `it(\"R268 a whole 45-second mulligan logs thirty beats, twenty heartbeats then ticks 1 to 10\")` \u2014 loop `MULLIGAN_CLOCK_MS` down to 0 in 200ms steps; expect exactly 30 beats (proves the opponent side adds no second schedule).\n- - `it(\"R268 resolving resets the schedule, so the next mulligan counts down afresh\")` \u2014 mirror of the R4562000 reset test with `promptDeadline: null` between.\n- - Run: `pnpm --dir apps/web test src/game/Clock.test.tsx`\n- - `apps/web/src/audio/clockAlarm.test.ts`:\n- - `it(\"R268 a 45-second mulligan countdown plans beats only for its last 30 seconds\")` \u2014 `countdown(MULLIGAN_CLOCK_MS, REPAINT_MS)` yields 30 beats, first at second 30, landing on time. Import `MULLIGAN_CLOCK_MS` from `@jackioh/server-config`.\n- - Run: `pnpm --dir apps/web test src/audio/clockAlarm.test.ts`\n- - `apps/web/src/audio/constants.test.ts`: extend the `\"R439 pins the turn clock alarm's schedule\"` test with `expect([...CLOCK_ALARM_SFX].sort()).toEqual([\"clockTick\", \"heartbeat\"])`; add the import. Run: `pnpm --dir apps/web test src/audio/constants.test.ts`\n- - `apps/web/src/audio/AudioControls.test.tsx`: set `BACKGROUND_HINT` to the new string in \u00a7Steps 5 verbatim. Run: `pnpm --dir apps/web test src/audio/AudioControls.test.tsx`\n- - After all: `cargo jackioh spec check` (comments cite only existing R-ids).\n- ## Done when\n- - [ ] Viewer's mulligan countdown beats its last 30 seconds; no second per-side schedule.\n- - [ ] Hidden tab still sounds own turn/prompt/mulligan beats; crowd, effects, voices refused.\n- - [ ] Muted, pre-gesture, context-less states silent as today; no new lint suppressions.\n- - [ ] Late beats skipped, never stacked, on return (existing `CLOCK_ALARM_LATE_MS` path, covered by tests).\n- - [ ] The five vitest files above pass; `cargo jackioh spec check` passes.\n- ## Risks\n- - A browser may suspend a background `AudioContext`; then `playSfx` logs `suspended: true` and stays silent. Accepted: the tab-title \"Your turn\" (#1792) remains the fallback, same as every other background sound today.\n- - Hidden-tab repaint throttles to ~1 Hz, so most beats arrive at their second and play at once (`delayMs: 0`); beats more than `CLOCK_ALARM_LATE_MS` stale are skipped and never stack on return.\n- - `startNext`/`begin` keep the full gate, so no voice line or queued cue leaks through the alarm carve-out; only `heartbeat`/`clockTick` via `playSfx` are exempt.\n- - The zh-CN hint wording is mine; a follow-up may adjust phrasing without changing behavior.\n- ## Open questions\n- None. No person-only step exists: no forbidden paths, secrets, or dashboard settings are involved.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4682 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4682/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-24T09:22:05Z",
       "owner_why": "it plans it",
@@ -18530,12 +18520,14 @@
       "provider": "muse",
       "queued_at": "2026-11-24T09:18:11Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45364523746",
+      "run_id": "pending:a146739b-1795512957",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-24T09:22:05Z",
+      "started_at": "2026-11-24T09:36:29Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7127218797"
+      ]
     },
     "4683": {
       "action": "plan",
@@ -18992,9 +18984,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T09:35:45Z",
+    "at": "2026-11-24T09:36:29Z",
     "url": "",
-    "what": "build #4686 on muse"
+    "what": "build #4682 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T09:18:38Z",
