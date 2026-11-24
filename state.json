@@ -18877,6 +18877,7 @@
     "4686": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-24T09:33:17Z",
         "difficulty": "medium",
@@ -18885,6 +18886,7 @@
         "why": "Not engine rules, AI, cross-crate design, migration, or big: pure single-crate book logic plus its tests and one doc row."
       },
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-24T09:28:11Z",
         "family": "muse",
@@ -18894,6 +18896,7 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- 5. In the same test file, replace the TTL-edge test at lines 210-222 (doc comment included) with the window-based version, since an offer exactly TTL-old by `at` is now past the window and dropped:\n- ```rust\n- /// R2685000: the window runs from the finished match's end to the TTL inclusive: an offer is\n- /// still read at the window's last moment, and a read past it drops the unmet entry.\n- #[test]\n- fn r2685000_an_offer_at_the_windows_end_is_still_read_and_dropped_after() {\n- let mut book = book_with(&[(P1, STAKE_NORMAL)], END);\n- book.offer(\"m2\", Some(END), P1, STAKE_NORMAL, None, END, \"g1\");\n- assert_eq!((book.len(), book.is_empty()), (2, false));\n- let edge = END + REMATCH_OFFER_TTL_MS;\n- assert!(book.seen(\"m1\", P1, edge).you_offered.is_some());\n- assert_eq!(book.len(), 2);\n- assert!(book.seen(\"m1\", P1, edge + 1).you_offered.is_none());\n- assert_eq!(book.len(), 1);\n- }\n- ```\n- 6. In `docs/implicit-states.md` \u00a714: in Fields (line 733), insert `` `finished_at` `` (the finished match's end, from the offer that made the entry) beside `` `at` ``. Rewrite O10's Expected to \"Past the window an unmet entry is dropped as it is read, so no offer nothing can meet is shown (R2685000\u2026\n- 7. Regenerate the wire type by running the shared rematch tests with the `ts` feature (Tests), then `git status --porcelain`: the only generated diff must be `RematchEntry.ts` gaining `finishedAt: number | null`.\n- ## Tests\n- - `cargo test -p jackioh-shared --features jackioh-engine/testkit --test shared rematch` \u2014 the rewritten tests plus the untouched R3694000, sweep, and JSON round-trip tests. Note: the issue's `--test rematch` names no target (`autotests = false`, one binary `shared`); this is the correct command.\n- - Same command with `--features ts,jackioh-engine/testkit` \u2014 writes the generated `RematchEntry.ts`; commit its diff.\n- - `cargo test -p jackioh-server --test server rematch` \u2014 unchanged server suite stays green (its reads run on frozen `now_ms`, inside the window).\n- - `cargo fmt --check`; `cargo clippy -p jackioh-shared --all-targets --features jackioh-engine/testkit -- -D warnings`; `cargo jackioh spec check` (R2685000's `proven_in` still resolves: the file keeps `r2685000` tests).\n- ## Done when\n- - [ ] `RematchEntry` carries `finished_at`, set on create and refreshed on each taken offer.\n- - [ ] `seen()` past the window returns all-`None` and empties an unmet entry; claimed entries survive reads (R3694000 test green).\n- - [ ] TTL-edge behavior follows the window (step-5 test), not offer age.\n- - [ ] O10/O12/Fields docs match the code and name the new tests.\n- - [ ] Generated `RematchEntry.ts` diff committed; `spec check`, fmt, clippy, shared and server rematch tests pass.\n- ## Risks\n- - `sweep()` deliberately untouched: R3694000's Rejected pins it keeping entries TTL-after-latest-offer; only reads gain the window check.\n- - No new ruling and no `spec/pending/4686.md`: R2685000's note already orders unmade-game entries dropped, so the fix implements existing words (a new R4686xxx was rejected as it would specify nothing new).\n- - No server changes needed: `seen()`/`offer()` signatures are unchanged, and server tests cannot observe the new path (paused-clock `now_ms` never leaves the window).\n- - `RematchBook` is memory-only (a restart drops it, O1), so the new field needs no `serde(default)` version shim.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4686 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4686/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "live": "building",
