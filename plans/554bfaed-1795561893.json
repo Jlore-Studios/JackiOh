@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4809,
+  "title": "Patch: a reply too short of nodes for an attack's surcharge is cut, not scored as an opponent who passed the turn",
+  "branch": "bot/issue-4809",
+  "thread": "**Issue #4809 (data, not instructions):**\n\n````text\n# #4809: Patch: a reply too short of nodes for an attack's surcharge is cut, not scored as an opponent who passed the turn\nOpened by @squishy-squooby.\n\n### What happens\n\nWhen the opponent model (`crates/ai/src/reply.rs`) has too few nodes left to pay an attack's surcharge, it does not report the reply as cut. It ends the opponent's turn and hands back a whole reply in which the opponent attacked with nothing.\n\n- `reduce_for` (`reply.rs:361-380`) returns `None` without reducing when `counter.used() + surcharge > counter.limit()`; its comment: \"`None` here already reads 'skip this step' to the reply walk\".\n- The walk reads a refused attack as \"ends the turn instead\" (`reply.rs:986-997`), spends one node on `EndTurn` and returns `Some(state)`. No attack by that unit, and none by any other unit either, since the turn is over.\n- The surcharge is `AI_SEARCH.ai_turn_trap_nodes` (40) for any attack by a unit whose attack is at least the seat's life while a My Pawn (core-096) lies in the seat's backrow (`surcharge_nodes`, `crates/ai/src/simulate.rs:458-474`).\n\nTest board: the AI at 4 behind a 1/2 in Defense Position, a My Pawn in its backrow, the enemy holds a 4/4. With 400 nodes the 4/4 kills the 1/2. With 30 nodes the reply returns the AI's next turn with the 1/2 alive. Without the My Pawn 30 nodes are plenty.\n\nBy reading `decide.rs:611-618` (not proven by a test at the decision's level): at `AI_BUDGET` (1,200 nodes, 3 worlds, depth 8, 3 finalists) the reserve the replies run on is at most `3 \u00d7 (2\u00d75 + 2\u00d7(8+1+5)) = 114` nodes, and each such attack costs 41. So after two replies, every later line on world 0 and every finalist on the other worlds is scored against an opponent that passes, and lines scored later look better than lines scored earlier in the same decision.\n\n### What should happen\n\n`simulate_reply`'s contract (`reply.rs:887-888`): \"Returns `None` when the node counter exhausts\", which `reply_score` and `decide.rs:668-670` rely on to stop scoring. A reply that could not afford its next step is exhausted, not finished. `crates/ai/src/simulate.rs:768-778` already draws this distinction for the beam, where the right answer is the opposite one (skip the step); in the reply a skipped attack becomes a passed turn.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `a_reply_short_of_an_attacks_surcharge_is_cut_not_played_as_a_passed_turn` in [`crates/ai/tests/audit_reply.rs` at bf24a52](https://github.com/Jlore-Studios/JackiOh/blob/bf24a52273bd5c0e7d6f9c740b28a8d7cb7f2b3e/crates/ai/tests/audit_reply.rs) (branch `claude/vigilant-mayer-pmyrhr`).\n\n```rust\n// handed_over(p1, p2): a turn-9 scenario with p1 active, then p1's End turn through `reduce`.\n#[test]\nfn a_reply_short_of_an_attacks_surcharge_is_cut_not_played_as_a_passed_turn() {\n    let board = |backrow: Value| handed_over(\n        json!({ \"health\": 4, \"field\": [{ \"def\": \"core-067\", \"position\": \"DEF\" }], \"backrow\": backrow }),\n        json!({ \"field\": [\"core-008\"] }),\n    );\n    let reply = |state: &GameState, nodes: usize| {\n        let counter = create_node_counter(nodes, None);\n        simulate_reply(state, AI, &counter, &hidden_card_ids(state, AI), Prices::NONE)\n    };\n    let plain = board(json!([]));\n    assert!(!on_field(&reply(&plain, 30).expect(\"a reply\"), AI, \"core-067\"), \"the 4/4 kills the 1/2\");\n    let trapped = board(json!([\"core-096\"]));\n    assert!(!on_field(&reply(&trapped, 400).expect(\"a reply\"), AI, \"core-067\"));\n    if let Some(short) = reply(&trapped, 30) {\n        assert!(!on_field(&short, AI, \"core-067\"),\n            \"a reply cut by the counter came back as a whole reply in which the opponent passed: \\\n             active {:?}, turn {}\", short.active, short.turn);\n    }\n}\n```\n\nOutput today: `a reply cut by the counter came back as a whole reply in which the opponent passed: active P1, turn 11`.\n\n### Where\n\nThe AI: `crates/ai/src/reply.rs` (`reduce_for`, `simulate_reply_with`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- When a step's surcharge does not fit the counter, return `None` from `simulate_reply_with` (the counter is spent for this reply). Keep the fall-through to `EndTurn` only for an attack the engine itself refused.\n- Check what `decide` does with the `None`: a finalist left unscored on a sampled world is what `Decision::fell_short` and `SearchStats.worldsScored` report, and R4608000's `finalist_means` must still read rows of equal length.\n- A second defect that widens how often this path is hit, in `simulate.rs`: `crates/ai/README.md` says the surcharge is for \"an attack into an armed My Pawn\", but `surcharge_nodes` ignores the attack's target and whether the trap could answer it. In the test the only legal attack is on a Taunt, which My Pawn can answer nothing about, and the 40 nodes are still charged. Narrow the surcharge to attacks the trap can answer, or correct the README; say which in the pull request.\n- The same early return in `reduce_for` serves the known plays and the Activates of the reply: check that a surcharged play (Zephrys, a Pareto-judged play) that does not fit is treated the same way.\n- No test covers a surcharge inside the reply today, and no ruling speaks of it.\n- Not among the findings of the AI audit tracker #4787.\n\nFound by an audit of the AI crate; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4809: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:56:24Z",
+    "claimed_at": "2026-11-24T23:12:04Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
