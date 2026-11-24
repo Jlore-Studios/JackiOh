@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4720,
+  "title": "Patch: follow-up to #4706 from the after-merge spot-check",
+  "branch": "bot/issue-4720",
+  "thread": "**Issue #4720 (data, not instructions):**\n\n```text\n# #4720: Patch: follow-up to #4706 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #4706 -->\nThe after-merge spot-check of #4706 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/45382603995)) found 1 blocking problem(s) in the change as it merged (`863732844756`). `claude-8` (claude, `opus`, strong) reviewed it. #4706 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `crates/cards/src/patch_history.rs:449`: The test `r4675000_the_compiled_in_history_gives_every_shipped_card_contiguous_versions` requires every deckable card in the working `catalog.json` to have play versions in `patches.json`. That breaks the repository's normal card workflow: a new card, or a whole set's cards when the set ships, reach `catalog.json` in the PR but reach `patches.json` only at the post-merge `patches ship`. So this test fails on every PR that adds a non-token card to a shipped set or releases a set, and on `main` between that merge and the ship.\n  Evidence: The test computes `deckable` from `crate::CATALOG` (the parsed working `catalog.json`, lib.rs:117) filtered by `!def.token && set_ships(def.set)`, and asserts `by_card.len() == deckable`, where `by_card` comes from `deck_play_versions()`, which reads only `patches.json`. A card missing from `patches.json` becomes an empty list (`unwrap_or_default`), so `by_card.len()` is smaller than `deckable`. `docs/ADDING_CARDS.md:32` says `catalog.json` and `patches.json` themselves 'need no edit for a new card'. Lines 195-221 say the history moves only at the post-merge promotion (`patches-ship.yml`). Precedent: the Stinkyscape+ release, cefa23e20e (#3786), changed `catalog.json` (+8698 lines) and `catalog_types.rs` (the set ships) with no `patches.json` change; its cards entered the history only in the later ship commit e439669a48 (#3830). With this test in place, that PR would have been red. The held Infinite Assault set (tracker #4576) will hit this when it ships. Fix: count only the cards the shipped history holds (for example, catalog cards that appear in the newest snapshot or in an `added` line), or skip catalog cards that a pending fragment adds, while keeping the contiguity and one-live checks for every card that is in the history.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `claude-3` (`claude`) built #4706 and `claude-4` (`opus`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "bot",
+    "by": "claude-8"
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4720: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T11:23:58Z",
+    "claimed_at": "2026-11-24T11:26:41Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
