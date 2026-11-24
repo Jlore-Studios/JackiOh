@@ -382,17 +382,17 @@ pub struct EvalWeights {
     pub deft_defense_attacks: bool,
     /// R1849005, #3287: whether `face_threat` counts an attack only when `attack_restriction` lets its
     /// unit hit the hero. While The Gauntlet acts, a Unit in its lanes (`GAUNTLET_LANES`) never may, so
-    /// its attacks land nothing, and the threat and pressure terms, `wall_switches` and the learned
-    /// features count none of them. Off, every unit that may swing counts, as before.
+    /// its attacks land nothing, and the threat and pressure terms and `wall_switches` count none of
+    /// them. Off, every unit that may swing counts, as before.
     pub gauntlet_bars_face_attacks: bool,
     /// R3793000, #3793: whether `face_threat` and `could_attack_next_turn` (so the threat and pressure
-    /// terms, `wall_switches`, `stands_down` and the learned features) leave out a unit its own Brittle tick
+    /// terms, `wall_switches` and `stands_down`) leave out a unit its own Brittle tick
     /// destroys at the start of its controller's next turn, before it can attack (`crumbles_before_swing`).
     /// `unit_worth` is untouched: its Brittle share already discounts the unit. Off, every unit that may
     /// swing counts, as before.
     pub brittle_crumbles_before_swing: bool,
     /// R4065000, #4065: whether `face_threat` and `could_attack_next_turn` (so the threat and pressure terms,
-    /// `wall_switches`, `stands_down` and the learned features) leave out a unit the first tick of its own Burn
+    /// `wall_switches` and `stands_down`) leave out a unit the first tick of its own Burn
     /// and Toxic destroys before its controller's next attacks (a Burn at the end of the turn, R4154000; a
     /// Toxic at its controller's turn start), before it can attack
     /// (`afflicted_before_swing`). `unit_worth` is untouched: its affliction discount already prices the unit
@@ -412,7 +412,7 @@ pub struct EvalWeights {
     /// count as before.
     pub static_attack_flags_read: bool,
     /// R3937000, #3937: whether `damage_past_taunts_with` (so `face_threat`, the threat and pressure terms,
-    /// `wall_switches`, `ready_gap` and the learned features) walks the Taunts as the opponent would: an
+    /// `wall_switches` and `ready_gap`) walks the Taunts as the opponent would: an
     /// attacker a Taunt stops whole (Armor, or a First Strike that destroys it) waits until the Taunt falls,
     /// and the larger of two orders counts, smallest first and each Taunt broken first by the smallest
     /// attacker that destroys it alone. Off, the old order, and a stopped attacker is spent.
@@ -424,8 +424,8 @@ pub struct EvalWeights {
     /// with no Death left behind and no Reborn body back. Off, such a hit reads as plain damage, as before.
     pub exile_on_damage_read: bool,
     /// R4064000, R4064001, #4064: whether the static reads of a hit (the Taunt walk under
-    /// `damage_past_taunts_with`, so `face_threat`, the threat and pressure terms, `wall_switches`,
-    /// `ready_gap` and the learned features; `blow`, `kills_and_survives`, the reply's `fight`, `trade_value`
+    /// `damage_past_taunts_with`, so `face_threat`, the threat and pressure terms, `wall_switches` and
+    /// `ready_gap`; `blow`, `kills_and_survives`, the reply's `fight`, `trade_value`
     /// and `face_value`; `coming_hero_ticks` and `afflicted`) follow §4.4 steps 3a and 3b. A hit from a
     /// source whose damage Burns or is Toxic deals nothing and counts as the counter it adds, and each side's
     /// damage pools (S+ #42 Force Projector, S+ #123 Oct) soak what they have left, once across its hits in
@@ -441,7 +441,7 @@ pub struct EvalWeights {
     /// wide. Off, the one-lane splash and the two orders, as before.
     pub giga_cleave_read: bool,
     /// R4402000, #4402: whether the Taunt walk of `damage_past_taunts_with` (so `face_threat`, the threat and
-    /// pressure terms, `wall_switches_priced`, `ready_gap`, the Duos pool loss and the learned features) reads
+    /// pressure terms, `wall_switches_priced`, `ready_gap` and the Duos pool loss) reads
     /// each Taunt's strike back (§4.3), with the §4.4 steps that can stop it, as `falls_to_first_strike` reads
     /// a First Strike one. An attacker the strike back destroys still lands that hit (R59) but makes none of
     /// its later swings (R636), and the wounds and the popped shield a strike back leaves carry to its next
@@ -918,18 +918,6 @@ pub const AI_AWAKEN_PROBE_NODES: usize = 16;
 /// for each unevolved Evolve card on either field, and a spawn (one node, two on a full unit row) and an
 /// evolve for each own hand Unit with an Evolve text.
 pub const AI_EVOLVE_PROBE_NODES: usize = 16;
-
-/// R4070000: the most nodes a decision's root prices spend, every probe's cap above together: the counter
-/// `decide::decision_prices_at` prices a state on outside a decision (`cargo jackioh positions`), so each
-/// probe runs to its own cap, as it does in a decision whose budget leaves it that many.
-pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
-    + AI_TURN_HOOK_PROBE_NODES
-    + AI_ACTIVATION_PROBE_NODES
-    + AI_HAND_ACTIVATION_PROBE_NODES
-    + AI_PROMPT_ACTIVATION_PROBE_NODES
-    + AI_ATTACK_HOOK_PROBE_NODES
-    + AI_AWAKEN_PROBE_NODES
-    + AI_EVOLVE_PROBE_NODES;
 
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here, so tuning AI_EVAL changes the AI and never

@@ -61,10 +61,10 @@ deals against the parent until its sequential test decides (R1679000, `TRAINING_
   Every lane's gate is paired since #1679, the unban lane's too;
 - each seat's deck is `build_ai_deck` over every set that ships (Meditative included since
   generation 9) minus its own AI's shadow ban, with no handicap (Easy both). Both seats are dealt
-  by that one rule, and neither is shaped by the lane's dealt-quality table (`DEALT_Q`; the deck
-  builder's `shape` option, off), so the gate's decks are drawn as practice's and the daily gates'
-  are (R976000). Until issue #976 the builder shaped every seat whose ban list was this build's
-  own, so in the unban lane the candidate's seat was always shaped and the parent's never. Each AI
+  by that one rule, so the gate's decks are drawn as practice's and the daily gates' are (R976000).
+  Until issue #976 the builder shaped every seat whose ban list was this build's own by the unban
+  lane's dealt-quality table, so in that lane the candidate's seat was always shaped and the
+  parent's never; #4702 removed the table and its option (R4702000). Each AI
   mulligans by its own build's `mulligan_keep_curved`, which is part of how the AI plays;
 - the AI plays at `AI_GATE_BUDGET`, the browser's own budget, so the gate measures the AI that ships.
 

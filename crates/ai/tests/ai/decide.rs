@@ -13,7 +13,7 @@ use jackioh_ai::{
     AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AI_MULLIGAN_CURVE, AiMulliganCurve, AiOptions, Decision,
     DecisionReason, GREEDY_MULLIGAN, MatchHooks, Matchup, SeatController, ai_to_act, decide, game_config,
     mulligan_cost, mulligan_keep, mulligan_keep_bound, mulligan_keep_curved, mulligan_keep_plain, play_match,
-    shaped_weight, unanswered_draw_offer,
+    unanswered_draw_offer,
 };
 use jackioh_engine::float::TRIBUTE_LOWERED_KEY;
 use jackioh_engine::testkit::{
@@ -1105,9 +1105,6 @@ mod the_mulligans_curve {
         for id in [LATER, PROVEN_ONE] {
             assert_eq!(query_cost(def_of(None, id)), 1, "{id}");
         }
-        // The old table rated Mr. Vanilla below a card it has no row for, and Me and Mr Token above it.
-        assert!(shaped_weight(ONE) < shaped_weight(LATER));
-        assert!(shaped_weight(LATER) < shaped_weight(PROVEN_ONE));
         let seed = "decide-r4110000-later";
         // Equal prices keep hand order: the later set's card goes back where the table kept it.
         let mut state = seat_mulligan_with(seed, PlayerId::P1, &[ONE, ONE, LATER]);

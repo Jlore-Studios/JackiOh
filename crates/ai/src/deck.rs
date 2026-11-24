@@ -7,8 +7,8 @@
 //! leaning deck its set's `leanMinShare` (R1370; the leaned set goes before the theme before the units).
 //! Everything comes from the rng passed in, so the same seed deals the same deck in any process. The
 //! soft gate (R1390) never deals a card of a set in `gated_sets` (it held Stinkyscape from #1884 until
-//! #1885, Meditative until #732). The Quickdraw cap (R817000), a ladder bot's `strength` (#750, R1454)
-//! and the unban lane's `shape` (R976000, `shadow_ban.rs`) add no rng draw.
+//! #1885, Meditative until #732). The Quickdraw cap (R817000) and a ladder bot's `strength` (#750, R1454)
+//! add no rng draw.
 
 use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
@@ -21,7 +21,7 @@ use jackioh_engine::{
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::config::{AI_DECK_GATED_SETS, AI_WIN_RATE};
-use crate::shadow_ban::{SHADOW_BAN_IDS, shaped_weight};
+use crate::shadow_ban::SHADOW_BAN_IDS;
 
 /// `"0-1" | "2" | "3" | "4+"`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -141,10 +141,6 @@ pub struct AiDeckOptions {
     /// strength.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub win_rates: Option<WinRateTable>,
-    /// R976000: multiply each card's weight by `shaped_weight`, the unban lane's dealt-quality table
-    /// (`shadow_ban.rs`). Off by default, whatever `banned` holds, and no caller sets it.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub shape: bool,
 }
 
 /// R1390: the set a deck leans on under the gate `gated`: `lean` itself when the gate leaves it, else
@@ -709,9 +705,6 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         .filter(|strength| strength.is_finite())
         .unwrap_or(0.0)
         .clamp(0.0, 1.0);
-    // R976000: the unban lane's deck shaping (shadow_ban.rs) only when the caller asks for it, never
-    // because a ban list matches this AI's own, so a gate's two seats are dealt by one rule.
-    let shape = options.shape;
 
     let mut deck: Vec<&CardDef> = include_defs.clone();
     let mut tally = Tally {
@@ -784,9 +777,6 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
                 }
                 if boosted.contains(&def.id) {
                     weight *= boost_by;
-                }
-                if shape {
-                    weight *= shaped_weight(&def.id);
                 }
                 weight *= win_rate_weight(options.win_rates.as_ref(), &def.id, strength);
                 weight

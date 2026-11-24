@@ -24,9 +24,7 @@
 //! the game figures per patch, mode and source instead: the first seat's wins of the decided games with a
 //! 95% Wilson interval (unknown when every game was drawn, R2567000), endings, lengths and R1256000's
 //! counts, unknown (not zero) in a record older than them. A forced run files under `dev-force-<id>`, for
-//! `compare` and `report`, never `stats-import` (R1284000). `fit-dealt` refits `DEALT_Q` and
-//! `DEALT_Q_PRIOR` over arena records (`dealt_fit.rs`); `from-selfplay` files `selfplay` logs as
-//! development records (`selfplay_records.rs`, R1676000). `sample-size` prints the games a gather run needs at this build's deal pool (`sample_size.rs`, #2888).
+//! `compare` and `report`, never `stats-import` (R1284000). `sample-size` prints the games a gather run needs at this build's deal pool (`sample_size.rs`, #2888).
 //! `report --versions` prints every deck card's play versions with their figures (R4675000, R4675001), the
 //! table `GET /api/stats/versions` sends, over record files.
 
@@ -54,8 +52,12 @@ use jackioh_engine::{
 use serde::Serialize;
 
 use crate::arena::{paired_interval, wilson_interval};
-use crate::selfplay_records::SELFPLAY_SERIES_PREFIX;
-use crate::{dealt_fit, golden, sample_size, selfplay_records, win_probability};
+use crate::{golden, sample_size, win_probability};
+
+/// R1676000: the series the learn lane's self-play exports were filed under, ahead of each game's seed,
+/// until R4702000 removed `stats from-selfplay`. `--series` still refuses one that begins with it, so no
+/// run files an id those records hold.
+const SELFPLAY_SERIES_PREFIX: &str = "selfplay:";
 
 const SECONDS_DECIMALS: usize = 1;
 
@@ -132,12 +134,8 @@ pub struct Args {
 pub enum Command {
     /// R377's card win rates over record files, with no database, or with --games the game figures.
     Report(ReportArgs),
-    /// DEALT_Q's refit over arena record files, printed to paste into crates/ai/src/shadow_ban.rs.
-    FitDealt(dealt_fit::Args),
     /// R1284000: two forced runs compared: the holder's win rate before and after, and the paired difference.
     Compare(CompareArgs),
-    /// R1676000: selfplay logs filed as development records, one GameRecord per line.
-    FromSelfplay(selfplay_records::Args),
     /// #2888: the games a gather run needs for the card win rates at this build's deal pool.
     SampleSize(sample_size::Args),
     /// R4552000: the win probability's weights fit over record files' turn rows, to paste into
@@ -959,7 +957,7 @@ fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
         && series.starts_with(SELFPLAY_SERIES_PREFIX)
     {
         return Err(anyhow!(
-            "--series {series} is refused: a series beginning \"{SELFPLAY_SERIES_PREFIX}\" is the learn lane's exports' (stats from-selfplay), whose record ids a run under it would take (R1676000)"
+            "--series {series} is refused: a series beginning \"{SELFPLAY_SERIES_PREFIX}\" is the one the learn lane's exports were filed under, whose record ids a run under it would take (R1676000)"
         ));
     }
     let force = args.force.as_deref().map(golden::resolve_forced).transpose()?;
@@ -1035,9 +1033,7 @@ fn play_chunks(
 pub fn run(args: Args) -> Result<()> {
     match &args.command {
         Some(Command::Report(report)) => return run_report(report),
-        Some(Command::FitDealt(fit)) => return dealt_fit::run(fit),
         Some(Command::Compare(compared)) => return run_compare(compared),
-        Some(Command::FromSelfplay(from)) => return selfplay_records::run(from),
         Some(Command::SampleSize(sized)) => return sample_size::run(sized),
         Some(Command::Calibrate(calibrate)) => return win_probability::run(calibrate),
         None => {}
@@ -1584,18 +1580,6 @@ mod tests {
         assert!(render_games(&none, false).contains("No game the filter reads."));
     }
 
-    #[test]
-    fn fit_dealt_names_record_files_and_takes_no_run_option() {
-        assert_eq!(
-            parse(&["fit-dealt", "a.jsonl", "b.jsonl"]).unwrap().command,
-            Some(Command::FitDealt(dealt_fit::Args {
-                files: vec![PathBuf::from("a.jsonl"), PathBuf::from("b.jsonl")],
-            }))
-        );
-        assert!(parse(&["fit-dealt"]).is_err());
-        assert!(parse(&["fit-dealt", "a.jsonl", "--games=3"]).is_err());
-    }
-
     /// A game record as a line of JSON: the shape `--out` writes.
     fn record_line(id: &str, source: &str, mode: &str, winner: &str, deck_p2: &[&str]) -> String {
         let pilot = if source == "live" { "human" } else { "ai" };
@@ -2048,18 +2032,6 @@ mod tests {
         // A series that only starts like the prefix's base is a plain one, as is the gather lane's.
         assert_eq!(options_of(&["--series=gather"]).unwrap().series, "gather");
         assert_eq!(options_of(&["--series=selfplay"]).unwrap().series, "selfplay");
-
-        assert_eq!(
-            parse(&["from-selfplay", "a.jsonl", "--out", "r.jsonl"])
-                .unwrap()
-                .command,
-            Some(Command::FromSelfplay(selfplay_records::Args {
-                logs: vec![PathBuf::from("a.jsonl")],
-                out: PathBuf::from("r.jsonl"),
-            }))
-        );
-        assert!(parse(&["from-selfplay", "a.jsonl"]).is_err(), "no --out");
-        assert!(parse(&["from-selfplay", "--out", "r.jsonl"]).is_err(), "no log");
     }
 
     /// `compare`'s options as `main.rs` mounts the subcommand.

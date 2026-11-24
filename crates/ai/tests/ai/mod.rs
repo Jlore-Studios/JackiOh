@@ -27,7 +27,6 @@ pub mod evaluate_v020;
 pub mod even_trades;
 pub mod evolve;
 pub mod exile;
-pub mod features;
 pub mod feng_shui;
 pub mod float_discount;
 pub mod freeze;

@@ -3423,6 +3423,81 @@ fn r4159000_r1010000_r1010001_r1011000_r1171001_r3112001_the_ai_compiles_no_netw
     );
 }
 
+/// The names that only the retired training lanes' commands used (R4702000): the features and their
+/// layout, the prices `positions` read outside a decision, the unban lane's deck shaping and the two
+/// `stats` subcommands.
+const RETIRED_LANE_NAMES: [&str; 10] = [
+    "features_of",
+    "FEATURES_VERSION",
+    "dense_names",
+    "decision_prices_at",
+    "AI_DECISION_PRICE_NODES",
+    "shaped_weight",
+    "DEALT_Q",
+    "UNBANNED_PREFER",
+    "FromSelfplay",
+    "FitDealt",
+];
+
+/// R4702000, and the rulings it retires (R1006000, R1006003, R1006004, R1006006, R1012004, R3112000,
+/// R4070000; R1171000 and R3112002 were retired with the learned evaluation): `positions`, the features,
+/// `stats from-selfplay` and the deck shaping with `stats fit-dealt` are gone, and no source of the AI, the
+/// tools or the three WebAssembly crates names what only they used. `selfplay` stays, since `classify`
+/// plays its AI check with it.
+#[test]
+fn r4702000_r1006000_r1006003_r1006004_r1006006_r1012004_r1171000_r3112000_r3112002_r4070000_what_only_the_retired_lanes_read_is_gone()
+ {
+    let root = repo();
+    for gone in [
+        "crates/ai/src/features.rs",
+        "crates/ai/tests/ai/features.rs",
+        "crates/tools/src/positions.rs",
+        "crates/tools/src/selfplay_records.rs",
+        "crates/tools/src/dealt_fit.rs",
+        "docs/learned-eval.md",
+    ] {
+        assert!(!root.join(gone).exists(), "{gone} is back");
+    }
+    let mut files = Vec::new();
+    for dir in [
+        "crates/ai/src",
+        "crates/tools/src",
+        "crates/wasm/src",
+        "crates/wasm/c/src",
+        "crates/wasm/core/src",
+    ] {
+        sources(&root.join(dir), &mut files);
+    }
+    assert!(files.len() > 60, "only {} source files found", files.len());
+    let mut found: Vec<String> = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        for name in RETIRED_LANE_NAMES {
+            if text.contains(name) {
+                found.push(format!(
+                    "{}: `{name}`",
+                    file.strip_prefix(&root).unwrap_or(file).display()
+                ));
+            }
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "what only the retired lanes read is named again (R4702000): {found:?}"
+    );
+    let read =
+        |path: &str| fs::read_to_string(root.join(path)).unwrap_or_else(|error| panic!("{path}: {error}"));
+    let main = read("crates/tools/src/main.rs");
+    for module in ["mod positions", "mod selfplay_records", "mod dealt_fit"] {
+        assert!(!main.contains(module), "crates/tools/src/main.rs: `{module}`");
+    }
+    assert!(
+        main.contains("Selfplay(selfplay::Args)")
+            && read("crates/tools/src/classify.rs").contains("\"selfplay\""),
+        "`selfplay` stays while `classify` runs it for its AI check"
+    );
+}
+
 /// The crates among `jackioh-run` and `jackioh-shared` that the manifest's `[dev-dependencies]` do not
 /// name, on one line, with the `ts` feature (#4426).
 fn dev_dependencies_missing_ts(manifest: &str) -> Vec<&'static str> {

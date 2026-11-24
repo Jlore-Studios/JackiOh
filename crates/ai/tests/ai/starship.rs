@@ -1,7 +1,6 @@
 //! The Starship in the AI's reads (R1852000, R1852003): the launch is the engine's Activate, so it comes
 //! to the AI through `legal_actions` like any ability, and the prompts its fused Cries open are ordinary
-//! prompts, which `decide` and the random policy answer; the dense features leave the two new keyword
-//! kinds out, so the features `positions` writes keep their layout.
+//! prompts, which `decide` and the random policy answer.
 //!
 //! The file installs two test-only cards on top of the real catalog (Stinkyscape's shipped pieces are
 //! priced in `deaths.rs`, R2566000): the Dormant Starship under the id the engine summons, and a 1/1
@@ -181,14 +180,11 @@ fn launch(ship: &str) -> ActionBody {
 }
 
 #[test]
-fn r1852000_the_dense_features_keep_their_layout_with_a_starship_on_the_board() {
+fn r1852000_a_dormant_starship_is_no_unit_and_the_search_tells_its_position_apart() {
     let (state, ship) = built();
     // The Dormant Starship is no Unit (`active_units_of`), and the launched one carries the Starship
-    // tag (R3038000), which no dense feature counts, and so Flying and Ranged, which the keyword
-    // features count as any Unit's: the layout is the same either way. No card takes
-    // the Starship keyword any more (R3038001).
+    // tag (R3038000), and so Flying and Ranged. No card takes the Starship keyword any more (R3038001).
     assert!(active_units_of(&state, AI).iter().all(|unit| unit.id != ship));
-    assert_eq!(features_of(&state, AI).dense.len(), dense_len());
     let paused = apply(&state, launch(&ship), AI, "launch");
     let launched = find_instance(&paused, &ship).expect("the Starship");
     assert!(tags_of(&paused, launched).contains(&Tag::Starship));
@@ -199,11 +195,6 @@ fn r1852000_the_dense_features_keep_their_layout_with_a_starship_on_the_board() 
         .collect();
     assert!(kinds.contains(&KeywordKind::Flying) && kinds.contains(&KeywordKind::Ranged));
     assert!(!kinds.contains(&KeywordKind::Starship));
-    assert_eq!(features_of(&paused, AI).dense.len(), dense_len());
-    assert!(
-        !dense_names().iter().any(|name| name.contains("Starship")),
-        "no dense feature names a Starship keyword"
-    );
     // And the search tells a Dormant Starship's position apart from the board without it, standing in
     // the middle of the backrow (R2249000).
     let lane = STARSHIP_LANE_ORDER[0] as usize - 1;

@@ -16,9 +16,8 @@ caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
 R2477000, R2564000, R2688000, R3064000), and the evolution prices (R4648000), travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
-through the search to the scorers that read them. `decide` takes them from `decision_prices` on its `probe_world`, and
-`decision_prices_at` gives a caller outside a decision the same prices for a state, on `AI_DECISION_PRICE_NODES`:
-`cargo jackioh positions` scores its rows with them (R4070000). Any other call outside a decision passes
+through the search to the scorers that read them. `decide` takes them from `decision_prices` on its `probe_world`.
+Any call outside a decision passes
 `Prices::NONE` (plain `evaluate`, the probes, the baselines) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
@@ -444,11 +443,8 @@ gated card in by name. Emptying the list lifts the gate and deals every deck as 
 Stinkyscape set from its release (issue #1884) until issue #1885 measured the AI on it: gating a set that
 ships before the AI is trained on it is listing it there. It held the Stinkyscape+ set from its release
 (issue #3573) until fullsend 2's sweep of record measured the AI on it (issue #3574, R3574000), and is
-empty since. `shape`
-(R976000) multiplies each card's weight by `shaped_weight`, the unban lane's dealt-quality table in
-`src/shadow_ban.rs`; it is off unless a caller sets it, whatever `banned` holds, and no caller does, so
-practice, the quality gates and both seats of an arena or a promotion deal unshaped. Nothing else reads
-`shaped_weight`: the mulligan ranks by `hand_card_value` (R4110000).
+empty since. No deal is shaped: the unban lane's dealt-quality table and the `shape` option that read
+it are removed (R976000, R4702000), and the mulligan ranks by `hand_card_value` (R4110000).
 `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
 `SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand, and
 never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrites the file's header block
@@ -551,55 +547,17 @@ opponent's (`NextSwing::Enemy`) in thousandths, read off the true state, and the
 field, a Created card with the card that made it (none when a hand held it; a copy an effect cast names
 the card that cast it). `attach_swing_turns` files the rows in the record (`SeatSummary.swing_turns`).
 The writers read the summary and the rows off one fold of the log (#2213), `summarize_with_swing_turns`
-(the engine's `summarize_game_with` with a `SwingReader` beside it): `dev_game_record`, `stats
-from-selfplay` and the server's record filing (`crates/server/src/api/game_records.rs`) all call it.
+(the engine's `summarize_game_with` with a `SwingReader` beside it): `dev_game_record` and the server's
+record filing (`crates/server/src/api/game_records.rs`) both call it.
 Decisiveness is read off them (`crates/engine/src/wire/stats/swing.rs`).
-
-## The features (#466, #1006)
-
-`src/features.rs` turns a position into the rows `cargo jackioh positions` writes for the learn lane's
-exports (`docs/learned-eval.md` D3, D5, D10). The learned evaluation that read them in the search is
-retired (R4159000): no network reads them in this crate any more.
-
-```rust
-pub const FEATURES_VERSION: u32;
-pub fn features_of(state: &GameState, seat: PlayerId) -> Features;   // features(&redact(state, seat), seat)
-pub fn features(view: &GameState, seat: PlayerId) -> Features;       // view already redacted
-pub fn dense_names() -> Vec<String>;                                 // the dense layout, in order
-pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
-pub fn card_id_of_key(key: &str) -> Option<(&str, &str)>;           // a key's zone and card id, when it names one
-```
-
-- It reads only `redact` (R185, R1006000): two states that differ only in what the seat cannot see
-  give the same features. The projections that read card text (`unit_view`, `hero_armor_of`,
-  `face_threat`) run on the view less the backrow cards the seat cannot read, which are counted and
-  never read.
-- **dense**: integers, named by `dense_names`: the turn, who acts and whether the seat is p1; per
-  side, the seat's own first, its life (`effective_life`) and armor, mana, crystals and debt, its
-  hand, library, graveyard and backrow (and how much of the backrow the seat can read), its units in
-  aggregate (count, positions, attack, health, armor, damaged, Radiant), one count per keyword kind
-  (bar Tradable, a hand keyword newer than the layout, so the fitted weights still read it, R1838000),
-  the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost,
-  and how many of its cards are Radiant (R1012004).
-- **sparse**: `(key, count)`, sorted, the key `<zone>:<side>:<card id>` for each card the seat can
-  name: `board` (both sides), `hand` (its own) and `backrow` (its own, and the enemy's face-up ones),
-  and `hand_radiant` (its own) beside `hand` for a Radiant card in its hand (R1012004).
-  Ids stay strings, so a patch or a new card never moves an index; an id a network's weights do not
-  know is no input at all.
-- **sparse, what a card is** (R3112000): each card with an id key also has
-  `<zone>.<attribute>:<side>:<value>` keys for its running face's type, its printed cost (`query_cost`)
-  and tags, its running face's keywords (counted as the dense counts count them) and printed attack and
-  health, each number clamped at `ATTRIBUTE_TOP`, and `<zone>.face:<side>:Radiant` when it is Radiant.
-  A card a network has no id row for still moves it through the keys it shares with the cards it was
-  fitted on.
-- `FEATURES_VERSION` names the layout; any change bumps it.
 
 ## The learned evaluation and the policy prior (retired)
 
 The learned evaluation (#466, #1010) and the policy prior (#1171) are retired (#4159, R4159000): the
 search scores every line and finalist with the hand eval (`evaluate_priced` over `AI_EVAL`) and expands
 each line's moves in `candidate_actions`' order. The crate has no build script and compiles no weights.
-`docs/learned-eval.md` is the record.
+The features a network read (`src/features.rs`) and `cargo jackioh positions`, which wrote them as
+training rows, are removed too (#4702, R4702000). Git history holds `docs/learned-eval.md`, the record.
 
 ## Duos (§13.7)
 

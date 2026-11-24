@@ -1,16 +1,16 @@
-//! `cargo jackioh selfplay`: the learned evaluation's game logs (#466, #1006; `docs/learned-eval.md`
-//! D1, D3). The AI plays itself at `AI_GATE_BUDGET`, the browser's budget, on a development run's deals
-//! (R258: All Random decks, nothing banned), through `arena::play_game`, each seat seeing only `redact`
-//! (R185). Game `n`'s seed is `<base>:<n>`. It stores logs, not features (D3): a log replays exactly
-//! from its seed, so `positions` turns the same games into any version of the features.
+//! `cargo jackioh selfplay`: the AI's game logs (#1006). The AI plays itself at `AI_GATE_BUDGET`, the
+//! browser's budget, on a development run's deals (R258: All Random decks, nothing banned), through
+//! `arena::play_game`, each seat seeing only `redact` (R185). Game `n`'s seed is `<base>:<n>`. The
+//! learned evaluation these logs fed is retired (R4159000, R4702000); `classify`'s AI check plays the
+//! head and its base with the command and compares the logs (`classify::start_selfplay`, #2651).
 //!
 //! Each game is one JSON line (`SelfplayGame`) in game order, so the file is byte-identical for the
 //! same base and games whatever `RAYON_NUM_THREADS` says (R1006001). A turn over
 //! `SELFPLAY_TURN_ACTIONS` actions ends its game without a result (R1006005), and so does a search that
 //! runs a board to a settle cap (§10.3, R1006007). A game with a refused action, a fallback or a caught
-//! panic is marked with `faults`, which `positions` leaves out (R1489000). A base naming a training
-//! gate's hold-out deals (`promote::is_gate_seed_base`, R850001) or the improve lane's dev set is
-//! refused, so no screen plays a deal the network was fitted on (R1006002).
+//! panic is marked with `faults` (R1489000). A base naming a training gate's hold-out deals
+//! (`promote::is_gate_seed_base`, R850001) or the improve lane's dev set is refused, so no export plays
+//! a deal a screen or a gate measures on (R1006002).
 
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
@@ -41,20 +41,19 @@ pub struct Args {
     pub out: PathBuf,
 }
 
-/// One self-play game, as `positions` reads it back (`FoldArgs`' `seed`, `decks` and `log`, plus what
-/// checks and labels it).
+/// One self-play game: `FoldArgs`' `seed`, `decks` and `log`, plus what checks and labels it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SelfplayGame {
     pub seed: String,
     pub decks: (Vec<String>, Vec<String>),
     pub log: Vec<Action>,
-    /// `hash_state` of the final state: a log that no longer folds to it is dropped (R1006003).
+    /// `hash_state` of the final state.
     pub hash: String,
     /// `None` when the game ended without a result (the action ceiling, or a controller that threw).
     pub result: Option<GameResult>,
     pub turns: i32,
-    /// The catalog version the game was played on (R767000): `positions` folds it under that catalog.
+    /// The catalog version the game was played on (R767000).
     pub catalog: String,
     /// The commit the binary was built from, or `"unknown"`.
     pub commit: String,
@@ -67,17 +66,10 @@ pub struct SelfplayGame {
     /// `patches/aliases.json` too.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub versions: Option<u32>,
-    /// R1489000: the game's faults (`ArenaOutcome::faults`), which `positions` leaves it out for;
-    /// absent from a clean game and from one written before it.
+    /// R1489000: the game's faults (`ArenaOutcome::faults`); absent from a clean game and from one
+    /// written before it.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub faults: Vec<String>,
-}
-
-impl SelfplayGame {
-    /// R1371000: the catalog the game was played on, as it is named now.
-    pub fn catalog_now(&self) -> &str {
-        jackioh_cards::versions::version_name_from(self.versions.unwrap_or(1), &self.catalog)
-    }
 }
 
 /// R1006005: the most actions one turn of a self-play game may take. A whole game takes about 60, so
@@ -344,8 +336,8 @@ mod tests {
         }
     }
 
-    /// R1006005: a turn that passes the ceiling ends its game without a result, which `positions`
-    /// drops; the export's own ceiling is far above any real turn's.
+    /// R1006005: a turn that passes the ceiling ends its game without a result; the export's own
+    /// ceiling is far above any real turn's.
     #[test]
     fn r1006005_a_turn_past_the_ceiling_ends_the_game_without_a_result() {
         jackioh_cards::register_all();
@@ -362,14 +354,7 @@ mod tests {
         assert!(outcome.turns <= 2, "it ended in its first turn");
         assert!(game.stop_unsettled, "R1006007");
         let line = game_of(outcome, jackioh_cards::catalog_version(), "test");
-        assert_eq!(
-            crate::positions::fold_game(
-                &line,
-                crate::positions::Every::Turn,
-                jackioh_cards::catalog_version()
-            ),
-            Err(crate::positions::Dropped::NoResult)
-        );
+        assert_eq!(line.result, None);
     }
 
     /// R1006007: watched work gives its value, past any panic it catches that is not a settle cap's,
@@ -439,7 +424,7 @@ mod tests {
     }
 
     #[test]
-    fn r1489000_a_game_with_a_fallback_is_marked_and_positions_leaves_it_out() {
+    fn r1489000_a_game_with_a_fallback_is_marked_and_a_clean_one_writes_no_faults() {
         jackioh_cards::register_all();
         let mut game = setups("selfplay-starved", 1, 1).remove(0);
         game.self_budget = jackioh_ai::SearchBudget {
@@ -456,13 +441,8 @@ mod tests {
             "{:?}",
             line.faults
         );
-        assert_eq!(
-            crate::positions::fold_game(&line, crate::positions::Every::Turn, build),
-            Err(crate::positions::Dropped::Unclean)
-        );
         let mut clean = line.clone();
         clean.faults.clear();
-        assert!(crate::positions::fold_game(&clean, crate::positions::Every::Turn, build).is_ok());
         let text = serde_json::to_string(&clean).unwrap();
         assert!(!text.contains("\"faults\""), "{text}");
         assert_eq!(serde_json::from_str::<SelfplayGame>(&text).unwrap(), clean);
