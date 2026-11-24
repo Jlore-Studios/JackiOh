@@ -8,10 +8,12 @@
 //! that side's control (§3.2 Stack). The permanent lies beneath it as a card beneath a Stack does, out
 //! of play and keeping its damage, and resumes when Ticketed leaves the field, any way it leaves. On a
 //! unit zone it lies there, no Unit (`zones::lies_on_unit_zone`): it fills the zone, nothing attacks it,
-//! no health judges it, and an effect that names a backrow card may name it. With no permanent left to
-//! stack on it lands in its graveyard (R138). Radiant: no Brittle, so it stays until it leaves. Through
-//! v0.6.12c its Cry held another face-up permanent beneath it in its own zone (`hold_beneath`,
-//! R1850003, R1875001), which `script_v0_6_12c` keeps (R767000). Declares no numbers.
+//! no health judges it, and no Unit sweep, Cleave or other read of a Unit's neighbours reaches it
+//! (`zones::is_adjacent_card`); an effect that names a backrow card may name it, and a sweep of the
+//! backrow, of the Field Spells or of every permanent meets it after that side's backrow lanes. With no
+//! permanent left to stack on it lands in its graveyard (R138). Radiant: no Brittle, so it stays until it
+//! leaves. Through v0.6.12c its Cry held another face-up permanent beneath it in its own zone
+//! (`hold_beneath`, R1850003, R1875001), which `script_v0_6_12c` keeps (R767000). Declares no numbers.
 
 use jackioh_engine::effects::{HoldArgs, hold_beneath};
 use jackioh_engine::preview::is_face_down;

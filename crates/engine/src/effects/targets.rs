@@ -360,7 +360,8 @@ fn slots_in_scope(ctx: &EffectContext<'_>, scope: &BoardScope) -> Vec<ZoneSlot> 
 }
 
 /// Every card on the field a scope matches, in R68 order. Only the top card of a Stack pile is on the
-/// field, so a dormant card underneath is never matched (§3.2, R13).
+/// field, so a dormant card underneath is never matched (§3.2, R13). A card lying on a unit zone is a
+/// backrow card (R4665000).
 pub fn cards_in_scope(ctx: &EffectContext<'_>, scope: &BoardScope) -> Vec<CardInstance> {
     cards_in_scope_with(ctx, scope, TargetAim::Help)
 }
@@ -379,9 +380,12 @@ fn cards_in_scope_with(ctx: &EffectContext<'_>, scope: &BoardScope, aim: TargetA
     let mut out: Vec<CardInstance> = Vec::new();
     for slot in slots_in_scope(ctx, scope) {
         // R1081000: a Unit standing in a backrow zone is no backrow card, as an animated one is none
-        // (§6.1 Animated): a backrow scope passes it by, and a unit scope meets it below.
+        // (§6.1 Animated): a backrow scope passes it by, and a unit scope meets it below. R4665000: a card
+        // lying on a unit zone is a backrow card, so a unit scope passes it by and a backrow scope meets it
+        // below.
         if let Some(card) = card_at(ctx.state, slot)
             && !(slot.row == Row::Backrow && is_standing_unit(ctx.state, card))
+            && !(slot.row == Row::Units && crate::zones::lies_on_unit_zone(ctx.state, card))
             && matches_scope_aimed(ctx, card, scope, aim)
         {
             out.push(card.clone());
@@ -398,6 +402,15 @@ fn cards_in_scope_with(ctx: &EffectContext<'_>, scope: &BoardScope, aim: TargetA
             for unit in standing_units_of(ctx.state, slot.player) {
                 if matches_scope_aimed(ctx, unit, scope, aim) {
                     out.push(unit.clone());
+                }
+            }
+        }
+        // R4665000: a card lying on a unit zone is a backrow card there: a backrow scope meets it after that
+        // side's backrow lanes, as `state_check`'s backrow walk does, and a scope of both rows meets it once.
+        if slot.row == Row::Backrow && slot.lane == row_size(Row::Backrow) {
+            for card in crate::zones::lying_on_unit_zones_of(ctx.state, slot.player) {
+                if matches_scope_aimed(ctx, card, scope, aim) {
+                    out.push(card.clone());
                 }
             }
         }
