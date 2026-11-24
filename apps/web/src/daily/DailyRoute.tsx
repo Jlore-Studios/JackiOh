@@ -7,7 +7,8 @@
 // each of this screen's own changes and whenever the social read's `dailyWaiting` changes (a move passed
 // to the player, a game ended), and every `DAILY_REREAD_MS` while the tab shows and when it shows again
 // (R3840000: a game can end with the count unchanged). CLAUDE.md rule 7: who holds a move, its deadline and every refusal are the
-// server's; rule 9: the numbers are the WebAssembly module's (`dailyConstants`).
+// server's; rule 9: the numbers are the WebAssembly module's (`dailyConstants`). An opponent whose account was
+// deleted after a game ended is "a deleted account" (R4621000).
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
@@ -33,6 +34,7 @@ import { attempt, messageOf } from "../net/errors.ts";
 import { SITE_NAME, documentTitleFor } from "../net/head.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { BackLink, followInApp } from "../routes/nav.tsx";
+import { playerName } from "../routes/replayWords.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { usePolled } from "../together/session.ts";
 import { useSocialPoll } from "../together/socialPoll.ts";
@@ -90,7 +92,7 @@ function GameRow({ game, now }: { game: DailyGameSummary; now: number }): ReactE
         ) : null}
         <span className="daily-row__who">
           <span className="daily-row__name">
-            <Username name={game.opponent.username} />
+            <Username name={playerName(game.opponent.username)} />
           </span>
           <span className="daily-row__meta">
             {modeLine(game)} · {t("Turn {n}", { n: game.turn })}

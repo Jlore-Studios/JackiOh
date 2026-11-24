@@ -14722,10 +14722,13 @@ mod daily {
         );
     }
 
-    /// 0012's rule: a deleted account takes its daily rows (a game it held a seat in, once its match
-    /// is over, the invites it sent or received, its notice settings and subscriptions), and nobody
-    /// else's.
-    async fn s913_a_deleted_profile_takes_its_daily_rows(harness: &StoreHarness) {
+    /// R4621000: a deleted account empties its seat on a daily game it held, once its match is over
+    /// (0012's rule, migration 0100), and the game stays for the other player, read back the same but
+    /// for that seat; it takes the invites it sent or received, its notice settings and subscriptions,
+    /// and nobody else's.
+    async fn r4621000_a_deleted_profile_empties_its_daily_seats_and_takes_its_other_daily_rows(
+        harness: &StoreHarness,
+    ) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
         let c = active_profile(harness, None).await;
@@ -14748,17 +14751,30 @@ mod daily {
         q!(harness, t => t.daily_notify_get(&b.id));
         q!(harness, t => t.push_subs_add(&push_sub(&a.id, "https://push.example.test/a", now)));
         q!(harness, t => t.push_subs_add(&push_sub(&b.id, "https://push.example.test/b", now)));
+        let before = must(
+            q!(harness, t => t.daily_games_get(&gone.match_id)),
+            "the finished game",
+        );
 
         assert!(q!(harness, t => t.profiles_remove(&a.id)));
         assert_eq!(
             q!(harness, t => t.daily_games_get(&gone.match_id)),
-            None,
-            "{}",
+            Some(DailyGameRow {
+                players: (String::new(), b.id.clone()),
+                ..before
+            }),
+            "{}: the finished game stays, its deleted seat empty",
             harness.name
         );
-        assert_eq!(
-            match_ids(&q!(harness, t => t.daily_games_of(&b.id, 10))),
-            vec![stays.match_id.clone()]
+        let mut listed = match_ids(&q!(harness, t => t.daily_games_of(&b.id, 10)));
+        listed.sort();
+        let mut both = vec![gone.match_id.clone(), stays.match_id.clone()];
+        both.sort();
+        assert_eq!(listed, both, "{}", harness.name);
+        assert!(
+            q!(harness, t => t.daily_games_of(&a.id, 10)).is_empty(),
+            "{}",
+            harness.name
         );
         assert_eq!(q!(harness, t => t.daily_invites_get(&to_a.id)), None);
         assert_eq!(q!(harness, t => t.daily_invites_get(&from_a.id)), None);
@@ -15008,7 +15024,7 @@ mod daily {
         r4019000_banned_seeks_and_challenges_wait_out_the_ban,
         s913_daily_notify_defaults_settings_and_unsubscribe,
         s913_push_subscriptions_are_one_per_endpoint,
-        s913_a_deleted_profile_takes_its_daily_rows,
+        r4621000_a_deleted_profile_empties_its_daily_seats_and_takes_its_other_daily_rows,
         r3727008_a_profile_seated_in_a_running_daily_game_is_not_deleted,
         s913_a_voided_match_takes_its_daily_game,
         s913_daily_email_claims_stop_at_each_days_cap,
