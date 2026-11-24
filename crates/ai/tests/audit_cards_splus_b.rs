@@ -187,3 +187,83 @@ fn probe_alnilam() {
         if s.state().result.is_some() { break; }
     }
 }
+
+#[test]
+fn probe_crawler_graveyard_cheats() {
+    let s = game(json!({
+        "p1": { "mana": 10, "hand": ["core-005"], "graveyard": [CRAWLER, "stand-in (1) 9/9"], "library": filler() },
+        "p2": { "graveyard": [CRAWLER], "library": filler(), "hand": ["core-005"] },
+    }));
+    let mine = s.pile(P1, "graveyard");
+    let theirs = s.pile(P2, "graveyard");
+    for (who, id) in [("p1", theirs[0].id.clone()), ("p1", mine[1].id.clone()), ("p2", theirs[0].id.clone())] {
+        let action = json!({ "type": "play", "playerId": who, "instanceId": id, "zone": { "row": "units", "lane": 2 }, "nonce": format!("cheat-{who}-{id}") });
+        let result = reduce(s.state(), &json_as::<Action>(action));
+        println!("PROBE cheat {who} {id}: error={:?}", result.error.map(|e| format!("{e:?}").chars().take(120).collect::<String>()));
+    }
+    // A backrow lane for a non-Flexible Crawler from the graveyard.
+    let action = json!({ "type": "play", "playerId": "p1", "instanceId": mine[0].id, "zone": { "row": "backrow", "lane": 2 }, "nonce": "cheat-row" });
+    let result = reduce(s.state(), &json_as::<Action>(action));
+    println!("PROBE cheat backrow: error={:?}", result.error.map(|e| format!("{e:?}").chars().take(120).collect::<String>()));
+}
+
+#[test]
+fn probe_icarus_radi() {
+    let mut s = game(json!({
+        "p1": { "mana": 10, "hand": ["core-005"], "field": [{ "def": "stinkyscapeplus-160", "lane": 1 }], "library": filler() },
+        "p2": { "library": filler(), "hand": ["core-005"] },
+    }));
+    s.activate("stinkyscapeplus-160", json!({ "ability": "summonRadi" }));
+    println!("PROBE icarus pending={:?}", s.state().pending.as_ref().map(|p| (p.kind.as_str().to_string(), s.prompt_modes())));
+    if s.state().pending.is_some() {
+        let modes = s.prompt_modes();
+        s.answer(pick::mode(&modes[0]));
+    }
+    println!("PROBE icarus pending2={:?}", s.state().pending.as_ref().map(|p| (p.kind.as_str().to_string(), s.prompt_modes())));
+    for lane in 1..=5 {
+        if let Some(unit) = s.unit(P1, lane) {
+            println!("PROBE icarus lane {lane}: {}", unit.def_id);
+        }
+    }
+}
+
+#[test]
+fn probe_whelp_and_golems() {
+    let mut s = game(json!({
+        "p1": { "mana": 10, "hand": ["core-005"],
+                "field": [{ "def": "stinkyscapeplus-142-1", "lane": 1 }, { "def": "stinkyscapeplus-142-2", "lane": 2 }, { "def": "stinkyscapeplus-101", "lane": 3 }],
+                "library": filler() },
+        "p2": { "library": filler(), "hand": ["core-005"], "field": [{ "def": "stand-in (1) 0/30", "lane": 1 }, { "def": "stand-in (1) 0/1", "lane": 3 }] },
+    }));
+    let wall = s.unit_at(P2, 1);
+    s.attack("stinkyscapeplus-142-1", &wall);
+    s.attack("stinkyscapeplus-142-2", &wall);
+    let prey = s.unit_at(P2, 3);
+    s.attack("stinkyscapeplus-101", &prey);
+    for (seat, name) in [(P1, "p1"), (P2, "p2")] {
+        for lane in 1..=5 {
+            if let Some(unit) = s.unit(seat, lane) {
+                println!("PROBE golems {name} unit lane {lane}: {}{} {:?} evolved={:?}", unit.def_id, if unit.radiant { "*" } else { "" }, s.stats(&unit), unit.evolved);
+            }
+            if let Some(card) = s.backrow(seat, lane) {
+                println!("PROBE golems {name} backrow lane {lane}: {} faceUp={:?}", card.def_id, card.face_up);
+            }
+        }
+    }
+}
+
+#[test]
+fn probe_vagabond() {
+    for (radiant, mana) in [(false, 6), (false, 7), (true, 4)] {
+        let mut s = game(json!({
+            "p1": { "mana": mana, "hand": [{ "def": "stinkyscapeplus-155", "radiant": radiant }, "core-005"], "library": filler() },
+            "p2": { "library": filler(), "hand": ["core-005"], "field": [{ "def": "stand-in (1) 0/30", "lane": 1 }] },
+        }));
+        s.play("stinkyscapeplus-155", json!({}));
+        println!("PROBE vagabond events={:?}", s.last_events().iter().map(|e| format!("{:?}", e.type_())).collect::<Vec<_>>());
+        let ship = (1..=5).filter_map(|lane| s.unit(P1, lane).or_else(|| s.backrow(P1, lane))).next().expect("a ship");
+        println!("PROBE vagabond radiant={radiant} mana_left={} ship={}{} slumber={:?} acts={:?}", s.state().players[P1].mana.current, ship.def_id, if ship.radiant { "*" } else { "" }, ship.slumber, s.activations_of(&ship));
+        let offered: Vec<String> = s.offered(P1).iter().map(|a| format!("{a:?}").chars().take(90).collect()).collect();
+        println!("PROBE vagabond offered={offered:?}");
+    }
+}

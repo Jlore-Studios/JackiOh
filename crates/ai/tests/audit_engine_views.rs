@@ -848,3 +848,170 @@ fn debug_traps() {
         }
     }
 }
+
+#[test]
+fn debug_animated_face_down() {
+    jackioh_cards::register_all();
+    let catalog = registered_catalog();
+    let build = |def: &str, radiant: bool| {
+        scenario(json!({
+            "seed": "audit-face-down",
+            "turn": 9,
+            "p1": { "hand": ["core-016", "classic-070", "core-034", "core-002"], "mana": 10, "field": ["core-008", "core-019"],
+                    "library": ["core-020", "core-053", "core-005"] },
+            "p2": { "hand": ["core-008"], "field": ["core-025"], "library": ["core-020", "core-053", "core-005"],
+                    "backrow": [{ "def": def, "faceUp": false, "radiant": radiant }] },
+        }))
+        .state()
+        .clone()
+    };
+    for (special, radiant) in [("classic-005", false), ("classic-038", false), ("classicplus-074", false), ("meditative-068", false), ("meditative-068", true), ("stinkyscape-131", false), ("classicplus-001", false), ("traininggrounds-014", false), ("stinkyscape-144", false)] {
+        let def = &catalog[special];
+        let Some((plain, _)) = catalog.iter().find(|(id, other)| {
+            *id != special && other.type_ == def.type_ && other.cost == def.cost && set_ships(other.set)
+                && js(&other.base.keywords).to_string() == "[]" && js(&other.radiant.keywords).to_string() == "[]" && !other.is_token()
+        }) else {
+            println!("{special}: no plain twin");
+            continue;
+        };
+        let (a, b) = (build(special, radiant), build(plain, radiant));
+        for (stage, a, b) in [("now", a.clone(), b.clone())] {
+            let mut diffs = Vec::new();
+            diff_paths(&js(&view_for(&a, PlayerId::P1)), &js(&view_for(&b, PlayerId::P1)), "view", &mut diffs);
+            diff_paths(&js(&legal_actions(&a, PlayerId::P1)), &js(&legal_actions(&b, PlayerId::P1)), "legal", &mut diffs);
+            println!("{special} radiant={radiant} vs {plain} [{stage}]: {} diffs {:?}", diffs.len(), diffs.iter().take(4).collect::<Vec<_>>());
+        }
+        // A round of turns with nothing played: what p1 is shown must stay the same unless a trap fires.
+        let (mut a, mut b) = (a, b);
+        for step in 0..4 {
+            let seat = a.active;
+            let (ra, rb) = (
+                reduce(&a, &Action::new(ActionBody::EndTurn, seat, format!("e{step}"))),
+                reduce(&b, &Action::new(ActionBody::EndTurn, seat, format!("e{step}"))),
+            );
+            let fired = |r: &ReduceResult| r.events.iter().any(|e| matches!(e, GameEvent::TrapFired { .. }));
+            if ra.error.is_some() || rb.error.is_some() || fired(&ra) || fired(&rb) {
+                println!("   stop at {step}: {:?} {:?} fired {} {}", ra.error, rb.error, fired(&ra), fired(&rb));
+                break;
+            }
+            a = ra.state;
+            b = rb.state;
+            let mut diffs = Vec::new();
+            diff_paths(&js(&view_for(&a, PlayerId::P1)), &js(&view_for(&b, PlayerId::P1)), "view", &mut diffs);
+            diff_paths(&js(&legal_actions(&a, PlayerId::P1)), &js(&legal_actions(&b, PlayerId::P1)), "legal", &mut diffs);
+            println!("   after endTurn {step}: {} diffs {:?}", diffs.len(), diffs.iter().take(3).collect::<Vec<_>>());
+        }
+    }
+}
+
+/// Every Trap and Field Trap set face-down by a real play, then turns passed with nothing else done:
+/// until it fires, what the other seat is shown may tell traps of one cost apart by nothing.
+#[test]
+fn explore_set_traps() {
+    jackioh_cards::register_all();
+    std::panic::set_hook(Box::new(|_| {}));
+    let catalog = registered_catalog();
+    let mut groups: IndexMap<String, Vec<(String, Vec<String>)>> = IndexMap::new();
+    for (id, def) in catalog {
+        if !(def.type_ == CardType::Trap || def.type_ == CardType::FieldTrap) || def.is_token() || !set_ships(def.set) {
+            continue;
+        }
+        for radiant in [false, true] {
+            let traced = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let lib = vec!["core-008"; 8];
+                let mut state = scenario(json!({
+                    "seed": "audit-set-traps",
+                    "turn": 9,
+                    "p1": { "hand": [{ "def": id, "radiant": radiant }], "mana": 10, "library": lib, "field": ["core-025"] },
+                    "p2": { "hand": ["core-008", "core-005", "core-016", "core-019"], "library": lib, "field": ["core-019", "core-008"], "mana": 10 },
+                }))
+                .state()
+                .clone();
+                let card = state.players[PlayerId::P1].hand[0].id.clone();
+                let play = legal_actions(&state, PlayerId::P1).into_iter().find(|b| {
+                    let j = js(b);
+                    j["type"] == "play" && j["instanceId"] == card.as_str() && j["zone"]["lane"] == 1 && j["zone"]["row"] == "backrow"
+                        && j.as_object().unwrap().len() == 3
+                })?;
+                let mut trace: Vec<String> = Vec::new();
+                let r = reduce(&state, &Action::new(play, PlayerId::P1, "set".to_string()));
+                if r.error.is_some() {
+                    return None;
+                }
+                state = r.state;
+                let shown = |state: &GameState| js(&view_for(state, PlayerId::P2)).to_string();
+                let down = |state: &GameState| state.players[PlayerId::P1].backrow.iter().flatten().any(|c| !backrow_is_public(state, c, PlayerId::P2));
+                if !down(&state) || state.pending.is_some() {
+                    return Some(trace);
+                }
+                trace.push(shown(&state));
+                // p1 passes if the turn did not end by itself, then p2 runs the battery.
+                let p2_hand: Vec<(String, String)> = state.players[PlayerId::P2].hand.iter().map(|c| (c.def_id.clone(), c.id.clone())).collect();
+                let p2_units: Vec<String> = state.players[PlayerId::P2].units.iter().flatten().flatten().map(|c| c.id.clone()).collect();
+                let p1_unit = state.players[PlayerId::P1].units.iter().flatten().flatten().next().map(|c| c.id.clone()).unwrap_or_default();
+                let id_of = |def: &str| p2_hand.iter().find(|(d, _)| d == def).map(|(_, i)| i.clone()).unwrap_or_default();
+                let mut battery: Vec<(PlayerId, Value)> = Vec::new();
+                if state.active == PlayerId::P1 {
+                    battery.push((PlayerId::P1, json!({"type":"endTurn"})));
+                }
+                battery.push((PlayerId::P2, json!({"type":"play","instanceId":id_of("core-008"),"zone":{"row":"units","lane":5}})));
+                battery.push((PlayerId::P2, json!({"type":"play","instanceId":id_of("core-005")})));
+                battery.push((PlayerId::P2, json!({"type":"attack","attackerId":p2_units[0],"targetId":p1_unit})));
+                battery.push((PlayerId::P2, json!({"type":"attack","attackerId":p2_units[1],"targetId":"hero-p1"})));
+                battery.push((PlayerId::P2, json!({"type":"play","instanceId":id_of("core-016"),"targets":[{"pick":"instance","instanceId":p1_unit}]})));
+                battery.push((PlayerId::P2, json!({"type":"play","instanceId":id_of("core-019"),"zone":{"row":"units","lane":6}})));
+                battery.push((PlayerId::P2, json!({"type":"endTurn"})));
+                battery.push((PlayerId::P1, json!({"type":"endTurn"})));
+                battery.push((PlayerId::P2, json!({"type":"endTurn"})));
+                for (step, (seat, body)) in battery.into_iter().enumerate() {
+                    if state.pending.is_some() || state.result.is_some() {
+                        break;
+                    }
+                    let body: ActionBody = serde_json::from_value(body).unwrap();
+                    if state.active != seat {
+                        trace.push(format!("{{\"skipped\":{step}}}"));
+                        continue;
+                    }
+                    let r = reduce(&state, &Action::new(body, seat, format!("b{step}")));
+                    if r.error.is_some() {
+                        trace.push(format!("{{\"refused\":{}}}", js(&r.error)));
+                        continue;
+                    }
+                    let public = r.events.iter().any(|e| matches!(e, GameEvent::TrapFired { .. }));
+                    state = r.state;
+                    if public || !down(&state) {
+                        break;
+                    }
+                    trace.push(shown(&state));
+                }
+                Some(trace)
+            }));
+            if let Ok(Some(trace)) = traced {
+                let cost = js(&def.cost).to_string();
+                groups.entry(cost).or_default().push((format!("{id}{}", if radiant { "*" } else { "" }), trace));
+            }
+        }
+    }
+    for (cost, members) in &groups {
+        // The reference at each step: the commonest text.
+        let longest = members.iter().map(|(_, t)| t.len()).max().unwrap_or(0);
+        println!("cost {cost}: {} traps, up to {longest} steps", members.len());
+        for step in 0..longest {
+            let mut tally: IndexMap<&String, usize> = IndexMap::new();
+            for (_, trace) in members {
+                if let Some(text) = trace.get(step) {
+                    *tally.entry(text).or_default() += 1;
+                }
+            }
+            let Some((reference, _)) = tally.iter().max_by_key(|(_, n)| **n) else { continue };
+            for (id, trace) in members {
+                let Some(text) = trace.get(step) else { continue };
+                if text != *reference {
+                    let mut diffs = Vec::new();
+                    diff_paths(&serde_json::from_str(text).unwrap(), &serde_json::from_str(reference).unwrap(), "view", &mut diffs);
+                    println!("  TRAP {id} step {step}: {} diffs, first {:?}", diffs.len(), diffs.iter().take(2).collect::<Vec<_>>());
+                }
+            }
+        }
+    }
+}

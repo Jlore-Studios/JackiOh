@@ -762,3 +762,42 @@ fn explore_casts() {
     }
     println!("{}", text.chars().take(5000).collect::<String>());
 }
+
+#[test]
+fn probe_equip_hand_over() {
+    jackioh_cards::register_all();
+    if std::env::var("AUDIT_PROBE").unwrap_or_default() != "equip" {
+        return;
+    }
+    for tested in ["core-055", "core-052"] {
+        let s = scenario(json!({
+            "p1": { "hand": [tested], "field": [{ "def": "core-008", "lane": 5 }],
+                    "backrow": [{ "def": "stinkyscape-016", "lane": 1, "faceUp": true }], "mana": 10 },
+            "p2": { "field": [{ "def": "core-008", "lane": 1 }, { "def": "core-008", "lane": 2 }, { "def": "core-008", "lane": 3 }] },
+        }));
+        let state = s.state().clone();
+        let id = state.players[P1].hand[0].id.clone();
+        let plays: Vec<PlayAction> = legal_actions(&state, P1)
+            .iter()
+            .filter_map(PlayAction::from_body)
+            .filter(|play| play.instance_id == id && play.equip == Some(true))
+            .collect();
+        println!("{tested}: {} equip plays", plays.len());
+        let Some(play) = plays.iter().find(|p| tested != "core-055" || p.tributes.as_ref().is_some_and(|t| t.iter().all(|id| state.players[P2].units.iter().flatten().flatten().any(|u| u.id == *id)))) else { continue };
+        println!("play {}", serde_json::to_string(play).unwrap());
+        let result = send(&state, play).unwrap();
+        println!("error {:?} pending {:?}", result.error, result.state.pending.as_ref().map(|p| p.prompt.clone()));
+        for event in &result.events {
+            let text = serde_json::to_string(event).unwrap();
+            if ["cardPlayed", "summoned", "fused", "cardResolved", "destroyed", "controlChanged"].iter().any(|k| text.contains(&format!("\"type\":\"{k}\""))) {
+                println!("  EV {}", text.chars().take(260).collect::<String>());
+            }
+        }
+        for player in [P1, P2] {
+            let side = &result.state.players[player];
+            let units: Vec<String> = side.units.iter().map(|pile| pile.as_ref().map_or("-".to_string(), |p| p.iter().map(|c| format!("{}:{}", c.id, c.def_id)).collect::<Vec<_>>().join("+"))).collect();
+            let back: Vec<String> = side.backrow.iter().map(|c| c.as_ref().map_or("-".to_string(), |c| format!("{}:{}:ctl={}", c.id, c.def_id, c.controller))).collect();
+            println!("  {player} units {units:?} backrow {back:?}");
+        }
+    }
+}

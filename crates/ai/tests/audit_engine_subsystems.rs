@@ -228,6 +228,21 @@ fn walk(name: &str, setup: Value, salt: u64, steps: usize) -> Option<String> {
             .filter(|finding| !finding.starts_with("I3"))
             .collect();
         if !after.is_empty() {
+            if std::env::var("WALK_DEBUG").is_ok() {
+                for event in &result.events {
+                    let text = serde_json::to_string(event).unwrap_or_default();
+                    println!("EVENT {}", &text[..text.len().min(420)]);
+                }
+                if let Ok(id) = std::env::var("WALK_CARD") {
+                    for (label, st) in [("before", &state), ("after", &result.state)] {
+                        if let Some(card) = find_instance(st, &id) {
+                            let mut text = serde_json::to_value(card).unwrap_or_default();
+                            text["memory"] = json!(null);
+                            println!("CARD {label} {}", text);
+                        }
+                    }
+                }
+            }
             return Some(format!("{name}/{salt} step {step}: after {after:?}; trail {trail:?}"));
         }
         state = result.state;

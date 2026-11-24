@@ -139,6 +139,7 @@ fn play_one(seed: u64, max_steps: usize) -> Vec<String> {
         ..DuosCreateOptions::default()
     };
     let mut state = duos_begin(&duos_create(&options)).state;
+    let mut monitor = create_duos_invariant_monitor(&state);
     let mut log: Vec<DuosAction> = Vec::new();
     let mut nonce = 0u64;
     for step in 0..max_steps {
@@ -187,7 +188,7 @@ fn play_one(seed: u64, max_steps: usize) -> Vec<String> {
             })
             .collect();
         let roll = rng.next(10);
-        let body = if !passes.is_empty() && roll < 2 {
+        let body = if !passes.is_empty() && roll < 3 {
             passes[rng.next(passes.len())].clone()
         } else if !non_end.is_empty() && roll < 8 {
             non_end[rng.next(non_end.len())].clone()
@@ -200,6 +201,9 @@ fn play_one(seed: u64, max_steps: usize) -> Vec<String> {
             body: body.clone(),
         };
         nonce += 1;
+        for line in monitor.before(&state, seat, &body) {
+            found.push(format!("seed {seed} step {step}: before {seat} {body:?}: {line}"));
+        }
         let applied = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| duos_reduce(&state, &action)));
         let result = match applied {
             Err(_) => {
@@ -214,6 +218,14 @@ fn play_one(seed: u64, max_steps: usize) -> Vec<String> {
         }
         state = result.state;
         log.push(action);
+        for line in monitor.after(&result.events, &state) {
+            found.push(format!("seed {seed} step {step}: after {seat} {body:?}: {line}"));
+        }
+        if matches!(body, DuosActionBody::Pass { .. }) || step % 5 == 0 {
+            for line in monitor.hidden(&state) {
+                found.push(format!("seed {seed} step {step}: hidden after {seat} {body:?}: {line}"));
+            }
+        }
         if let Err(why) = pools_agree(&state) {
             found.push(format!("seed {seed} step {step}: after {seat} {body:?}: {why}"));
         }
@@ -267,7 +279,7 @@ fn play_one(seed: u64, max_steps: usize) -> Vec<String> {
 fn probe_random_play() {
     jackioh_cards::register_all();
     let mut all: Vec<String> = Vec::new();
-    for seed in 1..=14u64 {
+    for seed in 101..=112u64 {
         all.extend(play_one(seed, 500));
     }
     for line in &all {

@@ -68,22 +68,3 @@ fn galaxia_buffs_only_the_first_unit_played_each_turn() {
     let second = s.unit_at(P1, 2).id;
     assert_eq!(s.stats(second.as_str()).attack, 4, "the second Unit played this turn is not the first");
 }
-
-#[test]
-fn probe_gigaify_radiant_one_permanent() {
-    const GIGA: &str = "stinkyscapeplus-023";
-    const BODY: &str = "stand-in (1) 4/4";
-    let mut s = scenario_with_cards(json!({
-        "p1": {
-            "hand": [{ "def": GIGA, "radiant": true }, BODY, "core-044"],
-            "library": ["core-005", "core-005", "core-005"],
-            "mana": 10,
-        },
-        "p2": { "hand": ["core-005"], "library": ["core-005", "core-005", "core-005", "core-005"] },
-    }));
-    eprintln!("can play: {}", s.can_play(GIGA));
-    eprintln!("plays: {:?}", s.plays_of(GIGA));
-    let body = s.card(BODY).id.clone();
-    s.play(GIGA, pick::targets(pick::id(&body)));
-    eprintln!("granted: {:?} pending {:?}", s.card(body.as_str()).granted_keywords, s.state().pending.is_some());
-}
