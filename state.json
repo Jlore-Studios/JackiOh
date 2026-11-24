@@ -21853,7 +21853,16 @@
       "feedback_since": "2026-11-24T19:26:08Z",
       "issue": 4773,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "f71e2bdb13214627f00e9cd48646d5dd32f71d62",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
