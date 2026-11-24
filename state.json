@@ -41549,6 +41549,10 @@
       "4770": {
         "at": "2026-11-24T18:52:36Z",
         "why": "It adds the spec-required R280 preview Edwin is missing, mirroring Quickstriker's proven hook with no rules change."
+      },
+      "4779": {
+        "at": "2026-11-24T20:29:11Z",
+        "why": "Confirmed on main: #4353's six rows are keyed v0.6.8b and Elderberry's v0.6.8d, though v0.6.8d and v0.6.9 were the newest versions when they merged, so v0.6.8c/d and v0.6.8e/v0.6.9 replays fold under today's scripts and are refused; with four or more hand re-key PRs in eight days (#4061, #4090, #4521, #4630), this bug class is already here, and keying by fragment removes it."
       }
     },
     "decided": [
