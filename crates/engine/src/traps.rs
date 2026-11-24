@@ -346,6 +346,11 @@ pub fn fire_trap(
         row: at.map_or(Row::Backrow, |slot| slot.row),
         lane: at.map_or(0, |slot| slot.lane),
         again: fires_again(sink.state, trap),
+        // R4586007: the attacker of the attack this firing answers, if it answers one.
+        attacker_id: match event {
+            GameEvent::AttackDeclared { attacker_id, .. } => Some(attacker_id.clone()),
+            _ => None,
+        },
     });
 
     // §5.1: it has fired, and it is face-up from this moment (R33) — which also keeps it out of every

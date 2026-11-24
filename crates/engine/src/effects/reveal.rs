@@ -48,6 +48,10 @@ pub fn reveal(args: RevealArgs) -> Effect {
         ) {
             return;
         }
+        // R4586004: a warded face-down card is passed over.
+        if crate::face_down::face_down_warded(ctx.state, &card, ctx.controller) {
+            return;
+        }
         let Some(mut shown) = find_instance(ctx.state, &card.id).cloned() else {
             return;
         };

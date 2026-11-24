@@ -807,6 +807,13 @@ pub enum ModifierKind {
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         from_spell: Option<bool>,
     },
+    /// R4586006 (Infinite Assault #33 Uncanny Valley, "Enemy Units have −N Attack until your next
+    /// turn"): every Unit this player controls on the field has `amount` more Attack — below 0 a
+    /// cut — those that arrive later too (`layers::attack_lent_by_player`), gated as R1859007.
+    /// Attack is floored at 0 (§10.4). Expiry `nextTurnOf` the caster's turn (R757).
+    UnitsAttack {
+        amount: i32,
+    },
     // ---- Stinkyscape+ Balance Changes V (issue #4353) ----
     /// R4353020 (Stinkyscape+ #79 A Glimpse into the Endless Sea, "You are immune to fatigue damage"):
     /// this player's draws from an empty library still happen, counted and announced (`fatigue`, its

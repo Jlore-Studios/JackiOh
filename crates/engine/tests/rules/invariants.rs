@@ -1686,6 +1686,7 @@ fn r4111000_i18_a_step_that_ran_a_hook_met_a_trap_or_a_redirect_or_ended_the_tur
                 row: Row::Backrow,
                 lane: 1,
                 again: None,
+                attacker_id: None,
             },
         ),
         (

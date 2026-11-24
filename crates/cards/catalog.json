@@ -38385,11 +38385,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Transform every enemy Unit that costs (1) or less into a Husk."
+      "text": "Transform every enemy (1) Cost or less Unit into a Husk."
     },
     "radiant": {
       "keywords": [],
-      "text": "Transform every enemy Unit that costs (2) or less into a Husk."
+      "text": "Transform every enemy (2) Cost or less Unit into a Husk."
     }
   },
   "infiniteassault-034-1": {
@@ -38801,11 +38801,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a Unit: After it resolves, transform it into a random Unit that costs ({step}) less."
+      "text": "Reveals when your opponent plays a Unit: After it resolves, transform it into a random Unit whose Cost is ({step}) lower."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a Unit: After it resolves, transform it into a random Unit that costs ({step}) less."
+      "text": "Reveals when your opponent plays a Unit: After it resolves, transform it into a random Unit whose Cost is ({step}) lower."
     }
   },
   "infiniteassault-044": {

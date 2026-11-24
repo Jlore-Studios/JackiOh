@@ -1,9 +1,11 @@
-//! SPEC §8.13 IA #40.1 Reflection ((1) Unit, Token, 1/3 → 2/6), a token of the held Infinite Assault set
-//! (R4577000). STUB (#4602): no behaviour yet; C2 (#4586) writes its script and its tests (CLAUDE.md rule 6).
-//!   Base:    "Taunt"
-//!   Radiant: "Taunt"
+//! IA #40.1 Reflection (SPEC §8.13 row 40.1, §7), a token of the held Infinite Assault set
+//! (R4577000).
 //!
-//! Its catalog entry, sound, flavour, Chinese, FX, art and audit rows are already written.
+//! A (1) 1/3, Taunt → Radiant (1) 2/6, Taunt: Taunt is the designer's printed word on both
+//! faces, kept by the token rule, so both faces run the default script. Hall of Mirrors
+//! summons a plain Reflection on its base face and a Radiant one on its Radiant face.
+//!
+//! Built by C2 (#4586).
 
 use jackioh_engine::prelude::*;
 
@@ -15,16 +17,20 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// STUB (#4602): the card's part replaces this test with its script's tests.
+// IA #40.1 Reflection — SPEC §8.13 row 40.1.
 #[cfg(test)]
 mod tests {
+    use super::ID;
     use jackioh_engine::testkit::*;
 
     #[test]
-    fn the_stub_is_a_card_of_the_held_infinite_assault_set() {
+    fn taunt_both_faces_stats_double() {
         crate::register_all();
-        let def = catalog::def_of(None, super::ID);
-        assert_eq!(def.set, SetName::InfiniteAssault);
-        assert!(!set_ships(def.set));
+        let def = jackioh_engine::catalog::def_of(None, ID);
+        for face in [&def.base, &def.radiant] {
+            assert_eq!(face.keywords, vec![Keyword::Taunt], "the designer's printed word");
+        }
+        assert_eq!((def.base.attack, def.base.health), (Some(1), Some(3)));
+        assert_eq!((def.radiant.attack, def.radiant.health), (Some(2), Some(6)));
     }
 }

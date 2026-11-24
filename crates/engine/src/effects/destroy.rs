@@ -63,6 +63,10 @@ pub fn destroy(args: DestroyArgs) -> Effect {
         if card.zone.z() != ZoneName::Field {
             return;
         }
+        // R4586004: a warded face-down card is passed over.
+        if crate::face_down::face_down_warded(ctx.state, &card, ctx.controller) {
+            return;
+        }
         mark_destroyed(&mut *ctx.state, &card);
     })
 }
@@ -75,6 +79,10 @@ pub fn destroy_all(args: BoardScope) -> Effect {
     Effect::new("destroyAll", move |ctx| {
         // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
         for card in cards_in_scope_aimed(ctx, &args, TargetAim::Harm) {
+            // R4586004: a warded face-down card is passed over.
+            if crate::face_down::face_down_warded(ctx.state, &card, ctx.controller) {
+                continue;
+            }
             mark_destroyed(&mut *ctx.state, &card);
         }
     })

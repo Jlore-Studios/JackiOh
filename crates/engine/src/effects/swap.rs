@@ -263,3 +263,50 @@ pub fn swap_board() -> Effect {
 pub fn swap_library() -> Effect {
     Effect::new("swapLibrary", swap_library_now)
 }
+
+/// `swapHands`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SwapHandsArgs {
+    /// R4586008: the discount the cards the controller takes now carry (`costMod`, below 0 a
+    /// discount), on top of what they hold. Absent, the taken cards keep their price.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_mod: Option<i32>,
+}
+
+/// R4586008 (Infinite Assault #48 Ego Death): both hands change holders at once, each card owned
+/// and controlled by its new holder (`ownership::change_owner`, R466's readers judged in place),
+/// then each taken card of the controller's new hand carries `costMod` more. No hand cap burns a
+/// card (§2.4's cap is a draw's) and no `entersHand` hook runs: the hands move, nothing is drawn.
+pub fn swap_hands(args: SwapHandsArgs) -> Effect {
+    Effect::new("swapHands", move |ctx| {
+        let mine = ctx.controller;
+        let theirs = opponent_of(mine);
+        let was_mine: Vec<CardInstance> = ctx.state.players[mine].hand.clone();
+        let was_theirs: Vec<CardInstance> = ctx.state.players[theirs].hand.clone();
+        for card in was_mine.iter().chain(was_theirs.iter()) {
+            let thief = if card.owner == mine { theirs } else { mine };
+            crate::ownership::change_owner(&mut ctx.sink, card, thief);
+        }
+        let mut mine_hand = std::mem::take(&mut ctx.state.players[mine].hand);
+        let mut theirs_hand = std::mem::take(&mut ctx.state.players[theirs].hand);
+        std::mem::swap(&mut mine_hand, &mut theirs_hand);
+        ctx.state.players[mine].hand = mine_hand;
+        ctx.state.players[theirs].hand = theirs_hand;
+        for player in [mine, theirs] {
+            for card in ctx.state.players[player].hand.clone() {
+                if let Some(live) = crate::state::find_instance_mut(ctx.sink.state, &card.id) {
+                    live.zone = Zone::Hand { player };
+                }
+            }
+        }
+        if let Some(discount) = args.cost_mod {
+            for card in ctx.state.players[mine].hand.clone() {
+                if let Some(live) = crate::state::find_instance_mut(ctx.sink.state, &card.id) {
+                    live.cost_mod += discount;
+                }
+            }
+        }
+    })
+}

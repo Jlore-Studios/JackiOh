@@ -24,6 +24,7 @@ pub use crate::catalog::{
 pub use crate::combat::*;
 pub use crate::config::*;
 pub use crate::cost_rules::*;
+pub use crate::face_down::*;
 pub use crate::faces::*;
 pub use crate::float::*;
 pub use crate::geometry::{

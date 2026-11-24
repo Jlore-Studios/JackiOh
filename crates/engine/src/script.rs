@@ -764,6 +764,11 @@ pub struct StaticFlags {
     /// set (`traps::chance_admits`). The card's declared number `chance` where it declares it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reveal_chance: Option<i32>,
+    /// R4586004 (Infinite Assault #42 Paranoia Engine): while this card acts on its controller's
+    /// field, its controller's face-down cards are warded: `destroy`, `destroyAll` and `reveal`
+    /// run by an effect the opponent controls pass over them (`face_down::face_down_warded`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub face_down_ward: Option<bool>,
     // Stinkyscape (issue #1844)
     /// R1844000 (Stinkyscape #46 Circadian Halfcycler): while this card acts on the field, the
     /// autopilot plays the first this-many R456 actions of each of its controller's turns, then hands

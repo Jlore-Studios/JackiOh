@@ -661,6 +661,11 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("infiniteassault-005", PRICE),
         ("infiniteassault-021", PRICE),
         ("infiniteassault-024", PRICE),
+        // R4586009: Brittle counts; #34's price.
+        ("infiniteassault-028", KEYWORD),
+        ("infiniteassault-034", PRICE),
+        ("infiniteassault-036", KEYWORD),
+        ("infiniteassault-045", KEYWORD),
         ("core-038", ENGINE),
         ("core-093", ENGINE),
         ("core-095", ENGINE),

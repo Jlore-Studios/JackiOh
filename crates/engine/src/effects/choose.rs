@@ -890,6 +890,10 @@ pub struct PileSpec {
     pub zone: PileZone,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player: Option<PlayerSpec>,
+    /// R4586005: only the top N of a library, in library order (`library[0]` first). Other piles
+    /// read the whole pile; absent, a library does too.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub top: Option<i32>,
 }
 
 const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
@@ -906,9 +910,16 @@ fn creation_number(id: &str) -> f64 {
 
 /// A pile's cards in `pick` order. A library's are in creation order, since its own order is hidden
 /// from both players (§9.1). The field's are the unit piles' tops, then the backrow (R13: a dormant
-/// card is not on the field).
-fn pile_cards(state: &GameState, player: PlayerId, zone: PileZone) -> Vec<&CardInstance> {
+/// card is not on the field). With `top`, a library offers only its first N in library order,
+/// unsorted: the top of the deck as it lies.
+fn pile_cards(state: &GameState, player: PlayerId, zone: PileZone, top: Option<i32>) -> Vec<&CardInstance> {
     let side = &state.players[player];
+    if zone == PileZone::Library
+        && let Some(n) = top
+    {
+        let n = n.max(0) as usize;
+        return side.library.iter().take(n).collect();
+    }
     let pile = match zone {
         PileZone::Field => {
             let mut out: Vec<&CardInstance> = active_units_of(state, player);
@@ -1008,7 +1019,7 @@ pub fn choose_pick(args: ChoosePickArgs) -> Effect {
         let state: &GameState = &*reader.state;
         for pile in &args.from {
             let player = player_of(reader, pile.player.unwrap_or(PlayerSpec::SelfSide));
-            for card in pile_cards(state, player, pile.zone) {
+            for card in pile_cards(state, player, pile.zone, pile.top) {
                 if seen.contains(&card.id) || !pickable(state, card, &filter) {
                     continue;
                 }

@@ -109,6 +109,41 @@ pub struct SetCostOverrideArgs {
     pub in_hand_only: Option<bool>,
 }
 
+/// `setCostOverrideRandom`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SetCostOverrideRandomArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<TargetSpec>,
+    pub low: i32,
+    pub high: i32,
+}
+
+/// R4586000 (Infinite Assault #25.1 Figment): set this instance's `costOverride` to a uniform draw
+/// from `low` to `high`, clamped to 0 or more with `high` at least `low`. The draw happens when the
+/// effect applies, through the match rng, so one instance rolls once as it arrives.
+pub fn set_cost_override_random(args: SetCostOverrideRandomArgs) -> Effect {
+    Effect::new("setCostOverrideRandom", move |ctx| {
+        let spec = args.target.clone().unwrap_or(TargetSpec::SelfCard);
+        let Some(mut card) = card_of(ctx, &spec) else {
+            return;
+        };
+        if !priced(&card, None) {
+            return;
+        }
+        let low = args.low.max(0);
+        let high = args.high.max(low);
+        let cost = low + ctx.sink.rng.int(high - low + 1);
+        match find_instance_mut(ctx.sink.state, &card.id) {
+            Some(live) => live.cost_override = Some(cost),
+            None => card.cost_override = Some(cost),
+        }
+        let card = as_it_stands(ctx, card);
+        emit_cost(ctx, &card);
+    })
+}
+
 /// Set this instance's `costOverride` (#54 Straaza, #41r Sheepish, Craft a Card, R77): R65 starts
 /// from it in place of the printed cost, then still adds `costMod` and the player's discounts.
 pub fn set_cost_override(args: SetCostOverrideArgs) -> Effect {

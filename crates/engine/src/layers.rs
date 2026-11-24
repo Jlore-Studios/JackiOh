@@ -217,6 +217,31 @@ fn lent_by_player(state: &GameState, instance: &CardInstance, immune: bool) -> V
         .collect()
 }
 
+/// R4586006 (Infinite Assault #33 Uncanny Valley, "Enemy Units have −N Attack"): the Attack its
+/// controller's "your Units have N" lends it — the live `UnitsAttack` amounts on its controller's
+/// side added up — gated as `lent_by_player`, so Units arriving later read it as they land.
+fn attack_lent_by_player(state: &GameState, instance: &CardInstance) -> i32 {
+    if instance.vanilla
+        || is_dormant(state, instance)
+        || crate::slumber::is_slumbering(instance)
+        || !crate::zones::in_units_row_or_standing(state, instance)
+    {
+        return 0;
+    }
+    state.players[instance.controller]
+        .mods
+        .iter()
+        .filter(|modifier| {
+            matches!(&modifier.kind, ModifierKind::UnitsAttack { .. })
+                && crate::mana::modifier_is_live(state, modifier)
+        })
+        .map(|modifier| match modifier.kind {
+            ModifierKind::UnitsAttack { amount } => amount,
+            _ => 0,
+        })
+        .sum()
+}
+
 /// Every permanent whose aura is in play, in lane order per side (§10.4 layer 5): a face-down card's
 /// sleeps (R1487000).
 pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
@@ -518,6 +543,8 @@ fn compute_layers_on(
         attack += modifier.attack.unwrap_or(0);
         max_health += modifier.max_health.unwrap_or(0);
     }
+    // R4586006: the player-level Attack lend, a layer-5 aura beside the sources' own.
+    attack += attack_lent_by_player(state, instance);
     // §10.4: an aura that sets attack to a value (Classic #88's Radiant "0 Attack") applies after every
     // other layer, so nothing above lifts it; with several, the last in aura order holds.
     for modifier in &auras {

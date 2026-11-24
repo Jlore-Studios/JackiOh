@@ -253,3 +253,39 @@ pub fn give_units_keyword_next_turn(args: GiveUnitsKeywordArgs) -> Effect {
         );
     })
 }
+
+/// `giveUnitsAttack`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct GiveUnitsAttackArgs {
+    /// Whose Units take it, relative to the controller. Default "self".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+    pub amount: i32,
+}
+
+/// R4586006 (Infinite Assault #33 Uncanny Valley, "Enemy Units have −N Attack until your next
+/// turn"): `amount` more Attack — below 0 a cut — on every Unit the affected player controls,
+/// those arriving later too. R757's expiry read for the caster: made on their turn it lasts
+/// through the affected side's next turn; made elsewhere, this turn.
+pub fn give_units_attack(args: GiveUnitsAttackArgs) -> Effect {
+    Effect::new("giveUnitsAttack", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let turn = ctx.sink.state.turn;
+        let expiry = if ctx.sink.state.active == ctx.controller {
+            ModifierExpiry::NextTurnOf {
+                player,
+                from_turn: turn,
+            }
+        } else {
+            ModifierExpiry::ThisTurn { turn }
+        };
+        add_modifier(
+            ctx,
+            player,
+            expiry,
+            ModifierKind::UnitsAttack { amount: args.amount },
+        );
+    })
+}

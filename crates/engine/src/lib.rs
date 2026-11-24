@@ -44,6 +44,7 @@ pub mod echo;
 pub mod effects;
 pub mod enchantments;
 pub mod evolution;
+pub mod face_down;
 pub mod faces;
 pub mod float;
 pub mod freeze;

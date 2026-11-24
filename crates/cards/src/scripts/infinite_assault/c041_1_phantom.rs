@@ -1,9 +1,12 @@
-//! SPEC §8.13 IA #41.1 Phantom ((1) Unit, Token, 3/1 → 6/2), a token of the held Infinite Assault set
-//! (R4577000). STUB (#4602): no behaviour yet; C2 (#4586) writes its script and its tests (CLAUDE.md rule 6).
-//!   Base:    "Rush, Brittle 1"
-//!   Radiant: "Rush, Brittle 1"
+//! IA #41.1 Phantom (SPEC §8.13 row 41.1, §7), a token of the held Infinite Assault set
+//! (R4577000).
 //!
-//! Its catalog entry, sound, flavour, Chinese, FX, art and audit rows are already written.
+//! A (1) 3/1, Rush, Brittle 1 → Radiant (1) 6/2, Rush, Brittle 1: Rush and Brittle 1 are the
+//! designer's printed word on both faces, kept by the token rule, so both faces run the default
+//! script. Phantom Army fills with plain Phantoms on its base face and Radiant ones on its
+//! Radiant face.
+//!
+//! Built by C2 (#4586).
 
 use jackioh_engine::prelude::*;
 
@@ -15,16 +18,24 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// STUB (#4602): the card's part replaces this test with its script's tests.
+// IA #41.1 Phantom — SPEC §8.13 row 41.1.
 #[cfg(test)]
 mod tests {
+    use super::ID;
     use jackioh_engine::testkit::*;
 
     #[test]
-    fn the_stub_is_a_card_of_the_held_infinite_assault_set() {
+    fn rush_and_brittle_1_both_faces_stats_double() {
         crate::register_all();
-        let def = catalog::def_of(None, super::ID);
-        assert_eq!(def.set, SetName::InfiniteAssault);
-        assert!(!set_ships(def.set));
+        let def = jackioh_engine::catalog::def_of(None, ID);
+        for face in [&def.base, &def.radiant] {
+            assert_eq!(
+                face.keywords,
+                vec![Keyword::Rush, Keyword::Brittle { n: 1 }],
+                "the designer's printed word"
+            );
+        }
+        assert_eq!((def.base.attack, def.base.health), (Some(3), Some(1)));
+        assert_eq!((def.radiant.attack, def.radiant.health), (Some(6), Some(2)));
     }
 }
