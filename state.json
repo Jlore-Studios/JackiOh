@@ -17430,7 +17430,6 @@
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed": true,
         "claimed_at": "2026-11-23T21:21:18Z",
         "from_run": "45233836151",
         "gates": [
@@ -17488,7 +17487,7 @@
         "rounds_used": 0,
         "since": "2026-11-23T21:19:50Z",
         "source": "build",
-        "until": "2026-11-23T21:49:50Z"
+        "until": "2026-11-24T03:07:59Z"
       },
       "pending_request": false,
       "provider": "muse",
