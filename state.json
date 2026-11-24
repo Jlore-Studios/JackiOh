@@ -18522,6 +18522,7 @@
     "4761": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-24T18:15:34Z",
         "difficulty": "hard",
