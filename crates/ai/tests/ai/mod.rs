@@ -14,6 +14,7 @@ pub mod brittle;
 pub mod budget;
 pub mod cleave;
 pub mod combat_mods;
+pub mod commanders;
 pub mod deaths;
 pub mod decide;
 pub mod deck;

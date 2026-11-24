@@ -783,6 +783,12 @@ pub struct StaticFlags {
     /// field, the opponent plays with their hand revealed to this card's controller (`revealed_hand::hand_revealed_to`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reveals_opponents_hand: Option<bool>,
+    /// R4594001 (Infinite Assault #218 Thousand Faces): while this card acts on its controller's
+    /// field, its controller's face-down cards cannot be destroyed, by either side's effects
+    /// (`face_down::face_down_indestructible`); reveal, Exile, bounce, steal and transform are
+    /// not stopped. Read at §4.5 step 1 beside Indestructible.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub face_down_indestructible: Option<bool>,
     // Stinkyscape (issue #1844)
     /// R1844000 (Stinkyscape #46 Circadian Halfcycler): while this card acts on the field, the
     /// autopilot plays the first this-many R456 actions of each of its controller's turns, then hands

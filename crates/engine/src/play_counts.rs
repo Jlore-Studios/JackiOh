@@ -55,6 +55,11 @@ pub(crate) fn played_face_down(type_: CardType) -> bool {
 /// type as they stand after step 3 made it Radiant, if it did).
 pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance) {
     let type_ = card_type_of(state, card);
+    // R4594009: every resolved Unit play is logged for the history (casts count, R70; countered
+    // plays never get here, R448); a Cloaked set is a Trap, not a Unit (R451).
+    if type_ == CardType::Unit {
+        crate::history::record_unit_played(state, player, &card.def_id);
+    }
     // MD-B15, R923: a play is counted by the tags the card had as it was played, granted ones included.
     let tags: Vec<Tag> = crate::query::tags_of(state, card);
     // R4593000: the played card's single-player set, if it names one (held ones included).

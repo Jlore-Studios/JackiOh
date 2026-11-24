@@ -39,3 +39,18 @@ pub fn face_down_warded(state: &GameState, card: &CardInstance, by: PlayerId) ->
             && crate::scripts::flags_of(state, ward).face_down_ward == Some(true)
     })
 }
+
+/// Whether `card`, a face-down card of its controller, cannot be destroyed: the controller has
+/// a card acting on the field whose lasting text is on and whose static flags carry
+/// `face_down_indestructible` (R4594001). Either side's destroy is stopped, but only a
+/// face-down card is guarded — a face-up one dies.
+pub fn face_down_indestructible(state: &GameState, card: &CardInstance) -> bool {
+    if !is_face_down(state, card) {
+        return false;
+    }
+    crate::layers::aura_sources(state).iter().any(|guard| {
+        guard.controller == card.controller
+            && !lasting_text_off(state, guard)
+            && crate::scripts::flags_of(state, guard).face_down_indestructible == Some(true)
+    })
+}

@@ -56,6 +56,7 @@ pub mod giga;
 pub mod grants;
 pub mod graveyard_play;
 pub mod hand_order;
+pub mod history;
 pub mod hook_marks;
 pub mod instance_view;
 pub mod kill_credit;
