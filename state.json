@@ -23676,10 +23676,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-24T08:50:00Z",
-          "utilization": 0.81
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-24T06:02:10Z",
-        "status": "allowed"
+        "observed_at": "2026-11-24T06:14:38Z",
+        "rejected_resets_at": "2026-11-24T08:50:00Z",
+        "status": "rejected"
       }
     },
     "claude-2": {
@@ -41750,7 +41751,8 @@
       "2026-11-24T05:08:06Z,claude-8,stream,call,45330448235,70,2026-11-24T09:10:00Z,,,allowed,85,,",
       "2026-11-24T05:09:06Z,claude-8,stream,call,45330448235,71,2026-11-24T09:10:00Z,,,allowed,85,,",
       "2026-11-24T05:15:36Z,claude-8,stream,call,45330448235,72,2026-11-24T09:10:00Z,,,allowed,85,,",
-      "2026-11-24T06:07:01Z,muse,usage-command,before,45337995347,15,2026-11-24T08:49:00Z,42,2026-11-30T00:00:00Z,allowed,100,100,"
+      "2026-11-24T06:07:01Z,muse,usage-command,before,45337995347,15,2026-11-24T08:49:00Z,42,2026-11-30T00:00:00Z,allowed,100,100,",
+      "2026-11-24T06:09:33Z,claude-1,ping,before,45337846902,100,2026-11-24T08:50:00Z,,,rejected,100,,"
     ],
     "runs": [
       "2026-11-24T05:47:38Z,45324645702,claude-8,opus,review,4662,hard,approved,,58.7,168,37924,6870771,3.9697,0,75,,,101.2,claude-8,fresh,,3",
