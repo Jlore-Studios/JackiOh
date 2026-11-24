@@ -19666,6 +19666,13 @@
     "4721": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T12:07:58Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: no engine-rules, AI, cross-crate-design, migration, or ~40-file change, so a medium model builds it."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
