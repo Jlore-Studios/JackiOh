@@ -658,3 +658,80 @@ describe("R4562000 — the viewer's own prompt sounds the clock alarm", () => {
   });
 
 });
+
+describe("R268 — the viewer's mulligan countdown sounds the clock alarm", () => {
+  afterEach(() => {
+    setAudioEngineForTests(null);
+    localStorage.clear();
+    resetAudioSettingsForTests();
+  });
+
+  function recordingEngine(): AudioEngine & { beats: [string, number | undefined][] } {
+    const beats: [string, number | undefined][] = [];
+    const fake = {
+      beats,
+      state: () => "running" as const,
+      playSfx: (id: string, _params?: unknown, delayMs?: number) => {
+        beats.push([id, delayMs]);
+        return true;
+      },
+    };
+    return fake as unknown as AudioEngine & { beats: [string, number | undefined][] };
+  }
+
+  /** One fresh frame per step, so the Clock anchors each reading with no elapsed time. */
+  function mulliganProps(at: { ms: number }, promptMs: number | null): ClockProps {
+    return props({
+      frame: frame({
+        turnDeadline: null,
+        promptDeadline: promptMs === null ? null : NOW + promptMs,
+      }),
+      activePlayer: null,
+      mulligan: true,
+      viewer: "p1",
+      monotonic: monotonicAt(at),
+    });
+  }
+
+  it("R268 the shared mulligan countdown beats like the turn hook", () => {
+    const engine = recordingEngine();
+    setAudioEngineForTests(engine);
+    const at = { ms: 0 };
+    const view = render(<Clock {...mulliganProps(at, 12_300)} />);
+    for (const ms of [12_100, 11_900, 11_300]) view.rerender(<Clock {...mulliganProps(at, ms)} />);
+    expect(engine.beats).toEqual([
+      ["heartbeat", 300],
+      ["heartbeat", 300],
+    ]);
+  });
+
+  it("R268 a whole 45-second mulligan logs thirty beats, twenty heartbeats then ticks 1 to 10", () => {
+    const engine = recordingEngine();
+    setAudioEngineForTests(engine);
+    const at = { ms: 0 };
+    const view = render(<Clock {...mulliganProps(at, MULLIGAN_CLOCK_MS)} />);
+    for (let ms = MULLIGAN_CLOCK_MS - 200; ms >= 0; ms -= 200) {
+      view.rerender(<Clock {...mulliganProps(at, ms)} />);
+    }
+    // One schedule, not one per side: the shared countdown beats exactly thirty times.
+    expect(engine.beats).toHaveLength(30);
+    const ids = engine.beats.map(([id]) => id);
+    expect(ids.slice(0, 20)).toEqual(Array(20).fill("heartbeat"));
+    expect(ids.slice(20)).toEqual(Array(10).fill("clockTick"));
+  });
+
+  it("R268 resolving resets the schedule, so the next mulligan counts down afresh", () => {
+    const engine = recordingEngine();
+    setAudioEngineForTests(engine);
+    const at = { ms: 0 };
+    const view = render(<Clock {...mulliganProps(at, 12_300)} />);
+    expect(engine.beats).toEqual([["heartbeat", 300]]);
+    view.rerender(<Clock {...mulliganProps(at, null)} />);
+    expect(engine.beats, "resolving adds no stray beat").toEqual([["heartbeat", 300]]);
+    view.rerender(<Clock {...mulliganProps(at, 12_300)} />);
+    expect(engine.beats).toEqual([
+      ["heartbeat", 300],
+      ["heartbeat", 300],
+    ]);
+  });
+});

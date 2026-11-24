@@ -1,4 +1,4 @@
-// Audible final-30-second cues for the viewer's own turn and prompt clocks (R439, R506, R4562000),
+// Audible final-30-second cues for the viewer's own turn and prompt clocks and shared mulligan countdown (R439, R506, R4562000, R268),
 // from the server clock only (R79;
 // CLAUDE.md rule 7), for the viewer's running turn after audio unlock (§10.11 Autoplay). Each second is
 // scheduled once ahead of repainting; beats late beyond CLOCK_ALARM_LATE_MS are skipped; a clock moving

@@ -419,9 +419,12 @@ export default function Clock(props: ClockProps) {
   useTurnClockAlarm(turnRemaining, readout.turn !== null && readout.turn.side === "you" && readout.turn.kind === "turn" && !readout.turn.paused);
   const promptRemaining = readout.prompt?.remainingMs ?? null;
   // R4562000: the viewer's own open prompt counts down with the same beats. `side === "you"`
-  // is false for the opponent's prompt, for a holderless prompt and for the mulligan (side null),
-  // so those stay silent; a null prompt (answered, expired, left) resets the schedule.
+  // is false for the opponent's prompt and for a holderless non-mulligan prompt, so those stay
+  // silent; a null prompt (answered, expired, left) resets the schedule.
   useTurnClockAlarm(promptRemaining, readout.prompt !== null && readout.prompt.side === "you" && readout.prompt.kind === "prompt");
+  // R268: the shared mulligan countdown beats like the viewer's own (each client hears its own copy); there is no per-side line to gate on, so the armed mulligan prompt is the gate.
+  const mulliganRemaining = readout.prompt !== null && readout.prompt.kind === "mulligan" ? readout.prompt.remainingMs : null;
+  useTurnClockAlarm(mulliganRemaining, mulliganRemaining !== null);
   const fuseMs = !reduced && urgency.side === "you" && urgency.level !== "none" ? turnRemaining : null;
 
   return (

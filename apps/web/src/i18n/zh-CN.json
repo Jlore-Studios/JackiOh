@@ -2030,7 +2030,7 @@
   "Dynamic music": "动态音乐",
   "Lower music under voices and big moments": "在语音和关键时刻降低音乐音量",
   "Keep playing music when this tab is in the background": "此标签页在后台时继续播放音乐",
-  "Off: the music fades out when you switch to another tab or window, and back in when you return. Sound effects and voices stay quiet either way.": "关闭：切换到其他标签页或窗口时音乐淡出，回来时再淡入。无论如何，音效和语音都会保持静音。",
+  "Off: the music fades out when you switch to another tab or window, and back in when you return. Sound effects and voices stay quiet either way, except your own turn, prompt and mulligan countdown beats.": "关闭：切换到其他标签页或窗口时音乐淡出，回来时再淡入。无论如何，音效和语音都会保持静音，只有你自己的回合、提示和mulligan倒计时的提示音例外。",
   "No moves left": "无事可做",
   "Call to Chaos:": "混沌召唤：",
   "Turn cut short": "回合被提前结束",

@@ -1,5 +1,5 @@
-// The hook `game/Clock.tsx` calls for the viewer's own turn and prompt clocks' last 30 seconds
-// (R439, R506, R4562000; clockAlarm.ts has the schedule). Clock passes the clock as it shows it
+// The hook `game/Clock.tsx` calls for the viewer's own turn and prompt clocks' and shared mulligan countdown's last 30 seconds
+// (R439, R506, R4562000, R268; clockAlarm.ts has the schedule). Clock passes the clock as it shows it
 // on each repaint, `own` while it is the viewer's own clock and running.
 // It never throws: with no AudioContext (jsdom), or before the first gesture, it stays silent.
 

@@ -50,7 +50,7 @@ const MUSIC_FLAGS: readonly { key: MusicFlag; label: string; testid: string; hin
   { key: "dynamicMusic", label: "Dynamic music", testid: "audio-dynamic-music" },
   { key: "duckMusic", label: "Lower music under voices and big moments", testid: "audio-duck-music" },
   { key: "playMusicInBackground", label: "Keep playing music when this tab is in the background", testid: "audio-music-background",
-    hint: "Off: the music fades out when you switch to another tab or window, and back in when you return. Sound effects and voices stay quiet either way.",
+    hint: "Off: the music fades out when you switch to another tab or window, and back in when you return. Sound effects and voices stay quiet either way, except your own turn, prompt and mulligan countdown beats.",
   },
 ];
 

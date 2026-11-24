@@ -20,7 +20,7 @@ import {
   CLOCK_ALARM_LOOKAHEAD_MS,
   CLOCK_ALARM_SHARP_FROM_MS,
 } from "./constants.ts";
-import { PROMPT_CLOCK_MS } from "@jackioh/server-config";
+import { MULLIGAN_CLOCK_MS, PROMPT_CLOCK_MS } from "@jackioh/server-config";
 import { createAudioEngine, setAudioEngineForTests } from "./engine.ts";
 import { DEFAULT_AUDIO_SETTINGS, resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
 import { FakeClock, fakeContextFactory, fakeSpeech } from "./test/fakeAudio.ts";
@@ -111,6 +111,13 @@ describe("R506 the turn clock's alarm: the schedule (R439)", () => {
   it("R4562000 the prompt clock's 30 seconds cover the alarm's whole schedule", () => {
     const heard = countdown(PROMPT_CLOCK_MS, REPAINT_MS);
     expect(heard.map((b) => b.second)).toEqual(Array.from({ length: FROM_S }, (_, i) => FROM_S - i));
+  });
+
+  it("R268 a 45-second mulligan countdown plans beats only for its last 30 seconds", () => {
+    const heard = countdown(MULLIGAN_CLOCK_MS, REPAINT_MS);
+    expect(heard.map((b) => b.second)).toEqual(Array.from({ length: FROM_S }, (_, i) => FROM_S - i));
+    expect(heard[0]?.second).toBe(FROM_S);
+    for (const beat of heard) expect(beat.atMs, `second ${String(beat.second)}`).toBe(MULLIGAN_CLOCK_MS - beat.second * CLOCK_ALARM_BEAT_MS);
   });
 
   it("R506 a beat that cannot be heard is passed over, not saved up for when sound returns", () => {
