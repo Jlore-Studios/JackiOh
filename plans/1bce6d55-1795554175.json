@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4814,
+  "title": "Patch: Income Tax fired inside the drawer's random cast takes the drawer's hand, not its own controller's",
+  "branch": "bot/issue-4814",
+  "thread": "**Issue #4814 (data, not instructions):**\n\n````text\n# #4814: Patch: Income Tax fired inside the drawer's random cast takes the drawer's hand, not its own controller's\nOpened by @squishy-squooby.\n\n### What happens\n\nC #9 Income Tax does the reverse of its text when it fires while the drawing player's random cast is in force: the trap's **own controller** loses their whole hand to the opponent.\n\nP2 has Income Tax set. P1, on their own turn, plays C+ #47 Jogg's Box (8 random Spells). An early cast draws P1 up to the trap's count, and a later cast's step-4 window fires the trap while P1's random cast is in force (a cast's step 4 offers pending events to traps under the cast's mode: `crates/engine/src/play_steps.rs`, `dispatch_pending` inside `drive` \u2192 `with_cast_mode`). The trap's keep prompt is held by P1 (`by: \"enemy\"`) and owned by P2. R452 answers it at random, which is ruled. But the answered step is then re-entered as the **holder**, not the owner:\n\n```rust\n// crates/engine/src/prompts.rs, answer_at_random\nrun_resume(sink, &resume_of(&probe.resume), ResumeOptions {\n    controller: Some(args.player),\n```\n\nSo the step's `give_from_hand { from: \"enemy\", cards: \"unchosen\" }` reads \"enemy\" from P1's side: it takes P2's hand and gives all of it to P1. The ordinary path gets this right (`continue_answer`, same file: `controller: Some(prompt_owner_of(pending))`, with the comment \"a prompt the other player held continues the asking card's sequence, as its controller\").\n\nOver 60 seeds the trap fired this way often, and every such firing moved P2's cards to P1 (50 wrong moves). One trace: `cardAnnounced core-044` \u2192 `trapFired classic-009 controller p2` \u2192 `stolen c35 core-019 from p2 to p1` \u2192 `stolen c36 \u2026` \u2192 `stolen c37 \u2026` \u2192 `enteredGraveyard classic-009`.\n\nBy reading, the same happens under any random cast on the drawer's own turn that opens a window after the draw (Solarius Prime, Chaos Accelerator, Horizon Breaker and the like); only Jogg's Box was tested.\n\n### What should happen\n\nThe card: \"They keep one card of their choice and give you the rest of their hand.\" `OpenPromptArgs.owner` (`prompts.rs`): \"The answered step runs as this player, the card's controller, so 'you draw' is still the asking card's controller's draw.\" R452 says only that the caster's prompts are \"answered at once, so the caster is never asked\": the pick is random, and the step still belongs to the trap's controller.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `r452_income_tax_fired_inside_the_drawers_random_cast_takes_the_drawers_hand_not_its_own_controllers`, in [`crates/ai/tests/audit_engine_queue.rs` at 1bbcb71](https://github.com/Jlore-Studios/JackiOh/blob/1bbcb71ed6319d94421a157960124f0de94e9ac2/crates/ai/tests/audit_engine_queue.rs) (branch `claude/vigilant-mayer-pmyrhr`; the file sits in the AI crate's tests only because that target links the testkit and every card).\n\n```rust\nuse jackioh_engine::testkit::*;\nconst P1: PlayerId = PlayerId::P1;\nconst P2: PlayerId = PlayerId::P2;\n\n#[test]\nfn r452_income_tax_fired_inside_the_drawers_random_cast_takes_the_drawers_hand_not_its_own_controllers() {\n    jackioh_cards::register_all();\n    const TAX: &str = \"classic-009\";\n    const JOGG: &str = \"classicplus-047\";\n    let filler: Vec<&str> = vec[\"core-008\"; 30];\n    let mut fired = 0;\n    let mut wrong: Vec<String> = Vec::new();\n    for n in 0..60 {\n        let s = scenario(json!({\n            \"seed\": format!(\"audit-tax:{n}\"), \"active\": \"p1\", \"turn\": 9,\n            \"p1\": { \"hand\": [JOGG, \"core-008\", \"core-008\", \"core-008\"], \"mana\": 10, \"library\": filler },\n            \"p2\": { \"hand\": [\"core-019\", \"core-012\", \"core-025\"],\n                    \"backrow\": [{ \"def\": TAX, \"faceUp\": false }], \"library\": filler },\n        }));\n        let play = must(s.plays_of(JOGG).into_iter().next(), \"a play of Jogg's Box\");\n        let result = reduce(s.state(), &Action::new(play, P1, \"jogg\"));\n        assert_eq!(result.error, None);\n        let Some(from) = result.events.iter()\n            .position(|event| matches!(event, GameEvent::TrapFired { def_id, .. } if def_id == TAX))\n        else { continue; };\n        fired += 1;\n        // The firing's own events: from `trapFired` to the trap's consumption (\u00a73.2), or to the end.\n        let firing: Vec<&GameEvent> = result.events[from..].iter()\n            .take_while(|event| !matches!(event, GameEvent::EnteredGraveyard { def_id, .. } if def_id == TAX))\n            .collect();\n        for event in firing {\n            if let GameEvent::Stolen { from, to, def_id, .. } = event && (*from, *to) != (P1, P2) {\n                wrong.push(format!(\"seed {n}: Income Tax moved {def_id} from {from} to {to}\"));\n            }\n        }\n    }\n    assert!(fired > 0, \"no seed fired Income Tax inside the play: widen the seed range\");\n    assert!(wrong.is_empty(),\n        \"Income Tax (P2's) took its own controller's hand for the drawer in {} of its moves:\\n{}\",\n        wrong.len(), wrong.join(\"\\n\"));\n}\n```\n\nOutput today: `Income Tax (P2's) took its own controller's hand for the drawer in 50 of its moves: seed 16: Income Tax moved core-012 from p2 to p1 \u2026`\n\n### Where\n\nThe rules engine: `crates/engine/src/prompts.rs`, `answer_at_random` (reached from `cast_prompt_shape`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In `answer_at_random`, run the step as `args.owner.unwrap_or(args.player)`, as `continue_answer` does through `prompt_owner_of`. The random pick itself stays the holder's.\n- R452 and R1279000 say nothing about who the step runs as, so this needs a ruling note in this issue's block (CLAUDE.md rule 3), with a proving test in the engine's rule tests or in `c009_income_tax.rs`, whose tests have no random-cast case today. A pinned single seed is better than the 60-seed loop above.\n- Checked by reading and not affected: the other two opponent-held prompts (C #8 Pickle's and C #90 reward G's) never open for a player whose own random cast is in force; the Mayor's branch answers only `target` prompts, none of which sets an owner.\n- A card change in play: it needs its pending patch fragment (`cargo jackioh patches \u2026`, `docs/ADDING_CARDS.md`).\n\nFound by an audit of the engine's work queue and prompts; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4814: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:59:46Z",
+    "claimed_at": "2026-11-24T21:03:30Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
