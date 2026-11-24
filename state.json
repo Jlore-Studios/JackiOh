@@ -20288,7 +20288,16 @@
       "feedback_since": "2026-11-24T12:11:49Z",
       "issue": 4721,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "643bc9fe11c6afdd717d7280ab238726bb400b6b",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
