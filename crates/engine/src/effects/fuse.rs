@@ -489,9 +489,9 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
 
 /// R4440006: `card` runs the text of `ingredients` fused, each on its Radiant face with `radiant`
 /// (R469), through R1850000's record on its own memory, which R215's reset ends as it lands from a play
-/// (or R78's as it leaves the field). Reported by an in-place `transformed`, hidden as the card is: from
-/// the opponent in a hand, from both players in a library (§10.8). Nothing happens when the fusion would
-/// not be made (`mint_text_def`).
+/// (or R78's as it leaves the field). No event reports it: the card stays where it is as it was, and its
+/// owner's view shows the text it runs (`CardView.copies`). Nothing happens when the fusion would not be
+/// made (`mint_text_def`).
 fn gain_fused_text(
     ctx: &mut EffectContext<'_>,
     card: &CardInstance,
@@ -509,23 +509,6 @@ fn gain_fused_text(
         crate::subsystems::unit_text::UNIT_TEXT_KEY.to_string(),
         serde_json::json!({ "defId": def_id, "radiant": false }),
     );
-    let hidden_from = match card.zone {
-        Zone::Library { .. } => vec![PlayerId::P1, PlayerId::P2],
-        Zone::Hand { player } => vec![opponent_of(player)],
-        _ => Vec::new(),
-    };
-    ctx.sink.events.push(crate::wire::GameEvent::Transformed {
-        instance_id: card.id.clone(),
-        from_def_id: card.def_id.clone(),
-        to_def_id: card.def_id.clone(),
-        new_instance_id: card.id.clone(),
-        hidden_from: if hidden_from.is_empty() {
-            None
-        } else {
-            Some(hidden_from)
-        },
-        creator: None,
-    });
 }
 
 // The weapon kit: Equip from a pick (#1841, R1841002; SPEC §6.1 Equip).
