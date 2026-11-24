@@ -15481,16 +15481,12 @@
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
-        "builder": "",
-        "built_by": "",
-        "rejections": [
-          "claude"
-        ],
+        "builder": "claude",
+        "built_by": "claude-6",
+        "rejections": [],
         "reviews": [],
-        "sha": "4b1dd5341e9ed778cc07b7afa59693bc4af95304",
-        "tiers": {
-          "claude": "strong"
-        }
+        "sha": "e777ed78de357ce882d1a45d958eecec6187b593",
+        "tiers": {}
       },
       "waiting_comment": 7112684781
     },
