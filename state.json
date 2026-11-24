@@ -18485,6 +18485,8 @@
       "stop_requested": false
     },
     "4684": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-24T05:01:59Z",
@@ -18498,8 +18500,11 @@
         "trail": "Board s\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np = \\\"daily/DailyBoard.test.tsx\\\"\\ns = open(p).read()\\ndef rep(old, new):\\n global s\\n assert s.count(old) == 1, old\\n s = s.replace(old, new)\\nrep('import { clearRead\u2026\n- Bash: {\"command\": \"grep -n \\\"resultReplay\\\\|replay:\\\" duos/testids.ts; grep -n \\\"replay\\\" net/duos.ts | head -10; grep -n \\\"export function DuosReplay\\\\b\\\\|export default\\\\|function DuosReplay(\\\" -A 25 duo\u2026\n- Bash: {\"command\": \"sed -n 28,42p net/duos.ts; grep -n \\\"openDuosReplay\\\" -A8 duos/DuosReplay.tsx | head -14; grep -n \\\"E2E_SESSION_STORAGE_KEY\\\\|^beforeEach\\\\|^afterEach\\\" -A3 duos/DuosRoute.test.tsx | hea\u2026\n- Bash: {\"command\": \"grep -n \\\"vi.mock\\\" -A3 duos/DuosRoute.test.tsx | head; grep -n \\\"function latest\\\" -A3 duos/DuosRoute.test.tsx; grep -n \\\"^describe(\\\\\\\"R2092000\\\" duos/DuosRoute.test.tsx; awk 'NR>254 &\u2026\n- Bash: {\"command\": \"grep -n \\\"guardLeaving\\\" -B2 -A6 duos/DuosRoute.tsx | head -30; sed -n 460,470p duos/DuosRoute.test.tsx\", \"description\": \"Check duos leave guard\"}\n- Bash: {\"command\": \"sed -n 1,108p test/stubServer.ts | grep -n \\\"undefined\\\\|404\\\\|throw\\\\|export function stubServer\\\" \", \"description\": \"Check stubServer unanswered behavior\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np = \\\"duos/DuosRoute.test.tsx\\\"\\ns = open(p).read()\\ndef rep(old, new):\\n global s\\n assert s.count(old) == 1, old\\n s = s.replace(old, new)\\nrep('import { baseView, d\u2026\n- Bash: {\"command\": \"grep -n \\\"wanted\\\\|setWatching\\\\|sharedOpen\\\" together/TogetherRoute.tsx together/*.tsx | grep -v test | head -20; grep -n \\\"sharedOpen\\\\|sharedRow\\\" together/testids.ts together/*.ts 2>\u2026\n- Bash: {\"command\": \"grep -n \\\"popBackLayer\\\\|moveOverBackEntry\\\\|export function navigate\\\" -B3 -A25 net/navigate.ts | sed -n 1,140p\", \"description\": \"Read navigate.ts popstate and navigate\"}\n- Bash: {\"command\": \"grep -n \\\"^import.*test/\\\\|^const SLOW\\\\|^beforeEach\\\\|^afterEach\\\" -A2 together/TogetherRoute.test.tsx | head -30\", \"description\": \"Check Together test imports and setup\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np = \\\"together/TogetherRoute.test.tsx\\\"\\ns = open(p).read()\\ndef rep(old, new):\\n global s\\n assert s.count(old) == 1, old\\n s = s.replace(old, new)\\nrep('import { set\u2026\n- Bash: {\"command\": \"grep -n \\\"togetherTestid\\\\b\\\" together/TogetherRoute.test.tsx | head -3; grep -n \\\"sharedOpen\\\" together/TogetherRoute.test.tsx | head -3; cat >> /home/runner/work/_temp/work/item-4619/.\u2026\n- Bash: {\"command\": \"grep -rn \\\"sharedOpen\\\" --include=*.tsx . | grep -v test | head\", \"description\": \"Find sharedOpen render site\"}\n- Bash: {\"command\": \"grep -rn \\\"together-shared-open\\\\|sharedOpen\\\\|TESTID.sharedRow\\\\|sharedRow\\\" --include=*.ts --include=*.tsx . | grep -v \\\"\\\\.test\\\\.\\\" | head; sed -n 33,60p together/TogetherRoute.test.\u2026\n- Bash: {\"command\": \"sleep 60; tail -3 /tmp/wasm-build.log\", \"description\": \"Wait for wasm build progress\", \"timeout\": 120000}\n- tool error: <tool_use_error>Blocked: sleep 60 followed by: tail -3 /tmp/wasm-build.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4619 && git diff apps/web/src/together/TogetherRoute.tsx apps/web/src/routes/practice.tsx\", \"description\": \"Review source diff\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/wasm-build.log; do sleep 5; done; tail -4 /tmp/wasm-build.log\", \"description\": \"Wait for the wasm build to finish\", \"timeout\": 600000}\n- said: The WebAssembly is built. Running the new tests first (vitest directly, since pretest would rebuild).\n- Bash: {\"command\": \"cd apps/web && echo \\\"- Running the six web test files with -t R4619000.\\\" >> ../../.bot-notes.md && timeout 900 pnpm exec vitest run src/routes/replays.test.tsx src/routes/practice.test\u2026\n- Bash: {\"command\": \"timeout 900 pnpm exec vitest run src/routes/replays.test.tsx src/routes/practice.test.tsx src/routes/match.test.tsx src/daily/DailyBoard.test.tsx src/duos/DuosRoute.test.tsx src/together\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4619 && SRC=\\\"apps/web/src/routes/replays.tsx apps/web/src/routes/practice.tsx apps/web/src/routes/match.tsx apps/web/src/daily/DailyBoard.tsx apps/w\u2026\n- Bash: {\"command\": \"echo \\\"- New tests: 13 pass with the change; 12 fail without it (the arrow test passes either way: it guards no extra step). Running the full six files.\\\" >> .bot-notes.md && cd apps/web\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4619 && (cargo jackioh spec check > /tmp/spec-check.log 2>&1; echo \\\"exit $?\\\" >> /tmp/spec-check.log)\", \"description\": \"Run the spec check in the ba\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4619 && timeout 900 pnpm --dir apps/web typecheck 2>&1 | tail -15; echo \\\"typecheck exit ${PIPESTATUS[0]}\\\"\", \"description\": \"Typecheck the web app\",\u2026\n- Bash: {\"command\": \"timeout 900 pnpm exec eslint apps/web/src/routes/replays.tsx apps/web/src/routes/practice.tsx apps/web/src/routes/match.tsx apps/web/src/daily/DailyBoard.tsx apps/web/src/duos/DuosRoute.\u2026\n- Bash: {\"command\": \"grep -n \\\"prettier\\\" .github/workflows/ci.yml package.json apps/web/package.json 2>/dev/null | head -5; echo \\\"- typecheck and eslint on the 12 files: clean. Spec check running.\\\" >> .bo\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np = \\\".bot-notes.md\\\"\\ns = open(p).read()\\nold = \\\"- Build run 1 (opus, 2026-11-24): starting from the plan above; nothing built before this run.\\\\n\\\"\\nnew = \\\"\\\"\\\"- B\u2026\n- Bash: {\"command\": \"git status --short; echo \\\"- spec check: ok (2420 rulings). Done; writing the report.\\\" >> .bot-notes.md\", \"description\": \"Check working tree status\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the browser's Back and the phone's back swipe close an open replay, as its corner arrow does, instead of leaving the screen\"} --> ## What changed An open replay drawn in place is now a back layer of R2127000. The first browser Back or Android back swipe\u2026"
       },
       "issue": 4619,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T06:04:02Z",
         "from_run": "45330448235",
         "gates": [
           {
@@ -18591,7 +18596,11 @@
         "source": "build",
         "until": "2026-11-24T06:33:05Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-24T06:03:05Z",
+      "run_id": "pending:5318b4b2-1795500217",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -18610,6 +18619,9 @@
         "provider": "claude-8",
         "run": "45330448235"
       },
+      "started_at": "2026-11-24T06:04:02Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18623,9 +18635,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T05:53:10Z",
+    "at": "2026-11-24T06:04:02Z",
     "url": "",
-    "what": "plan #4669 on muse"
+    "what": "review #4684 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-24T05:50:37Z",
