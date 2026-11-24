@@ -20729,15 +20729,8 @@
       }
     },
     "4742": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45407997496",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-24T14:05:34Z",
-        "until": "2026-11-24T14:35:34Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20749,10 +20742,9 @@
         "reason": "planned on sonnet",
         "trail": "/duos/context.ts | head -60; grep -n \\\"^import\\\" apps/web/src/duos/DuosBoard.t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; grep -n \\\"button-secondary\\\" apps/web/src/buttons.css | head -5; grep -n \\\"shopLeave\\\\|shrineLeave\\\\|artifactLeave\\\\|extractNone\\\" -B3 apps/web\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; grep -n \\\"dungeon-run-actions\\\\|dungeonMapTestid.newRun\\\\|dungeon-run-new\\\\|statsLink\\\" -r e2e apps/web/src --include=*.ts --include=*.tsx | gr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; grep -rln \\\"duos-result\\\\|DUOS_RESULT\\\\|daily-back\\\\|DAILY_BACK\\\\|dungeon-fight\\\\|assault-fight\\\\|dungeon-run-over\\\\|DUNGEON_RUN\\\" e2e --includ\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; grep -n \\\"duos-result\\\\|DUOS_RESULT\\\" e2e/cypress/e2e/55-duos-2v2-lobby.cy.ts e2e/cypress/e2e/41-duos-coop.cy.ts e2e/support/testids.ts | head \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; grep -n \\\"practice-result\\\\|dialog__actions\\\\|Play again\\\\|Change setup\\\" e2e/cypress/component/*.tsx | head -20; grep -rn \\\"Play again\\\\|Chang\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; grep -rn \\\"PracticeResult\\\\|TutorialResult\\\\|RunOverScreen\\\\|DuosBoard\\\\b\\\" e2e --include=*.tsx --include=*.ts | grep -v node_modules | head; g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; sed -n 50,140p e2e/cypress/component/practice-table.cy.tsx; grep -n \\\"TutorialResult\\\" apps/web/src/tutorial/TutorialResult.test.tsx | head -5;\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; grep -rln \\\"support/testids\\\" --include=*.ts --include=*.tsx --include=*.rs --include=*.py --include=*.sh --include=*.md . 2>/dev/null | grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; grep -n \\\"describe(\\\\| it(\\\\\\\"\\\\|^function\\\\|^async function\\\\|tutorialTestid.back\\\\|tutorialTestid.result\\\" apps/web/src/routes/practice-tutor\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; sed -n 360,428p apps/web/src/routes/practice-tutorial.test.tsx; sed -n 165,210p apps/web/src/routes/practice-tutorial.test.tsx; grep -n \\\"readP\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; sed -n 1,60p apps/web/src/practice/resume.ts | head -70; grep -n \\\"R668\\\\|clearPracticeResume\\\" apps/web/src/routes/practice.test.tsx | head -2\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; sed -n 1686,1720p apps/web/src/routes/practice.test.tsx; sed -n 1975,1992p apps/web/src/routes/practice.test.tsx\", \"description\": \"Practice men\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; sed -n 1,50p apps/web/src/dungeon/fight/testids.ts; grep -n \\\"backToList\\\\|nextGame\\\\|rematch\\\\|watchReplay\\\\|expiredResult\\\" apps/web/src/dail\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; grep -rln \\\"Change setup\\\\|Back to lessons\\\\|View the board\\\" spec --include=*.md | head -20; ls spec/pending 2>/dev/null | head; ls spec/rulin\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; cat spec/rulings/R3220000.md | head -40; cat spec/rulings/R2211000.md | head -30; grep -n \\\"Change setup\\\" spec/rulings/R3230000.md spec/ruling\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; cat spec/rulings/R3932000.md; cat spec/rulings/R4582001.md | head -40; grep -n \\\"Adding a ruling\\\" -A45 spec/README.md | head -90\", \"descriptio\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; ls spec | head -40; ls spec/rulings/R3221000.md spec/rulings/R2972000.md spec/rulings/R1754000.md spec/rulings/R3727000.md 2>&1 | head; grep -n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; git show --stat 445ccaa547 | head -50; grep -n \\\"Patch:\\\" docs/issues-and-patches.md | head -10\", \"description\": \"See what a recent patch commi\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; git log --oneline -30 -- apps/web/src/practice/PracticeResult.tsx | head -5; git log -3 --format=%H -- spec/pending | head -3; git log --stat -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; c=$(git log --diff-filter=A --format=%h -1 -- spec/rulings/R3932000.md); git show --stat --format=\\\"%h %s\\\" $c | head -30; c2=$(git log --diff-\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; grep -n \\\"R3932000\\\" spec/*.md | grep -v \\\"11-rulings\\\\|INDEX\\\" | cut -c1-600; grep -n \\\"R4582001\\\" spec/15-dungeon-run.md | cut -c1-500; grep \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; sed -n 149,200p spec/09-architecture.md | cut -c1-700\", \"description\": \"Read spec 9.9 and 9.10 text\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; grep -n -i \\\"result panel\\\\|result dialog\\\\|Back to the lobby\\\\|resultActions\\\" apps/web/README.md docs/v0.3.0/SURFACE.md e2e/README.md 2>/dev/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; sed -n 658,664p apps/web/README.md | cut -c1-900\", \"description\": \"README anchor paragraph\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; grep -n \\\"typecheck\\\" e2e/package.json apps/web/package.json; grep -n \\\"R3221000\\\\|R2972000\\\" spec/rulings/R3221000.md | head -2; grep -rn \\\"no\u2026\n- said: Now I'll write the draft file and then the final plan.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4742/.bot-plan.md\", \"content\": \"# Draft plan for #4742 (planner notes)\\n\\nRead so far (all verified in code): PracticeResult.tsx / TutorialResult.tsx \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4742; sed -n 1,40p apps/web/src/buttons.test.ts | cut -c1-200; grep -n \\\"it(\\\\|describe(\\\" apps/web/src/buttons.test.ts | head -30\", \"description\": \"\u2026\n- said: ## Goal Every end-of-game result that lacks one gets a **Main menu** button. That covers: - The practice result dialog and the tutorial lesson result dialog (both reuse `onMenu` in `routes/practice.tsx`). - The dungeon run-over screen (goes to `paths.play`). - The dungeon fight and Infinite Assault\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-24T13:52:42Z",
       "owner_why": "it plans it",
@@ -20765,18 +20757,18 @@
       "provider": "claude-4",
       "queued_at": "2026-11-24T13:52:31Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45407997496",
+      "run_id": "pending:54e63dc7-1795529498",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T13:52:42Z",
+      "started_at": "2026-11-24T14:12:09Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T14:11:25Z",
+    "at": "2026-11-24T14:12:09Z",
     "url": "",
-    "what": "build #4723 on muse"
+    "what": "build #4742 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-24T14:07:59Z",
