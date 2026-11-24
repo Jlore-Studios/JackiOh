@@ -42711,6 +42711,10 @@
       "4734": {
         "at": "2026-11-24T12:48:36Z",
         "why": "Confirmed on main: End turn reads 'Enemy turn' on every finished view (Board.tsx:632-633, 822), and a board mounted on a finished game hides its result for 3.8 s waiting on an effect that FxLayer plays only on a null-to-result change (FxLayer.tsx:464), so these are small fixes to bugs players can see."
+      },
+      "4737": {
+        "at": "2026-11-24T13:00:28Z",
+        "why": "Confirmed rules bugs on a shipped card where board scopes, Cleave, and enemy permanents treat a card lying on a unit zone as a Unit rather than backrow, violating R4665000."
       }
     },
     "decided": [
