@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4722,
+  "title": "Patch: rematch status refuses daily games and stale catalogs like rematch offers do",
+  "branch": "bot/issue-4722",
+  "thread": "**Issue #4722 (data, not instructions):**\n\n```text\n# #4722: Patch: rematch status refuses daily games and stale catalogs like rematch offers do\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nAfter a game ends, the result screen asks the server whether a rematch is available and shows a Rematch button when it is. For a daily game, rematching means starting a new daily challenge, never a live rematch. After the cards change in a patch, no rematch can start until a new game is started. Right now the check that offers a rematch knows both of those, but the check the result screen polls does not, so the screen can offer a rematch that the server will then refuse.\n\n## Why\n\n`POST /api/matches/:matchId/rematch` refuses a daily game with 409 `daily` (`crates/server/src/api/rematch.rs:408-419`, SPEC \u00a79.13: \"a daily game's rematch is a new daily challenge\"), and `offer_as` refuses a stale catalog through `check_offer` (`crates/server/src/api/rematch.rs:452-464`; `crates/shared/src/host/rematch.rs:77-92`, R1638000) before anything is recorded. `GET /api/matches/:matchId/rematch` (`rematch_status_route`, `crates/server/src/api/rematch.rs:522-546`) only refuses series games, then answers the book's offers and the mode a rematch would play. The client polls that GET for the result screen (`apps/web/src/net/api.ts:1630-1638`; `apps/web/src/game/net.ts:437-438,651-654`, R3213000), so after a patch ships, or on a daily match row opened as a live match, it renders a Rematch button whose press can only fail with 409. Series already mirrors the POST refusal in the GET (`series_game` in both routes); daily and catalog do not. This is the same class as the fixed R4621000 daily-rematch handling (`apps/web/src/daily/DailyBoard.tsx:19-20`), but on the 1v1 API rather than the daily board.\n\n## Proposal\n\nMake `rematch_status_route` return the same refusals `offer_rematch_route` returns: 409 `daily` when `daily_games_get` finds the match, and 409 `update_required` (via `cards_changed`) when the match's catalog differs from the server's, before reading the book. Keep the series-game refusal where it is. No change to the POST path, the book, or the sweep. Add server tests: GET on a finished daily match is 409 `daily`; GET on a finished match played on an older catalog is 409 `update_required`; GET on a current live-match finish still answers its offers and mode.\n\n## Where it lands\n\n- `crates/server/src/api/rematch.rs` (`rematch_status_route`)\n- `crates/server/tests/` rematch/status tests for the two new cases\n- SPEC \u00a79.1, \u00a79.5, \u00a79.13; R672, R1638000, R2685000, R3213000 (no new ruling: the decisions already exist, the GET just mirrors them)\n\n## Acceptance criteria\n\n- [ ] GET a finished daily match's rematch status answers 409 `daily` with the same message POST uses\n- [ ] GET a finished match played on another catalog answers 409 `update_required` with matching `expected`/`received`\n- [ ] GET a current-catalog live-match finish still answers 200 with `youOffered`, `opponentOffer`, `opponentHere`, `matchId`, `mode`\n- [ ] New tests fail without the fix and pass with it; touched crate tests, `cargo fmt --check`, and `cargo clippy -p jackioh-server --all-targets -- -D warnings` pass\n\n## Size and risks\n\nSmall: one route plus tests. Risk is a client that relied on GET succeeding for daily matches; the daily board never calls this GET (it uses `POST /api/daily/challenges`), so the only caller affected is the live-match result screen, which is exactly what should stop offering rematch there. Alternative rejected: leaving GET as a pure book read and hiding the button client-side by catalog version; that restates the rule in the client (CLAUDE.md rule 7) and would need the same check in every future caller.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: It mirrors two refusals POST already returns so the result screen stops offering a rematch that can only fail with 409. With no vote, no comment and no \ud83d\udc4e on this issue by Wed 25 Nov 05:54 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-24T13:44:17Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4722: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T13:44:39Z",
+    "claimed_at": "2026-11-24T13:49:58Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
