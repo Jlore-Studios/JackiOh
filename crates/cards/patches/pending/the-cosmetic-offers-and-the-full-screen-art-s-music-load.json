@@ -6,7 +6,9 @@
     "title": "A lighter first load, same cards",
     "new": [],
     "balance": [],
-    "changes": [],
+    "changes": [
+      "A tab you leave open without touching it for ten minutes now shows you offline to friends, as a hidden tab does, and catches up the moment you come back."
+    ],
     "text": [],
     "fixes": [
       "The first page downloads less before it shows, with the same cards and art."
