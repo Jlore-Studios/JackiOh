@@ -15,10 +15,10 @@ trap backrow. This file binds every agent, not only Claude.
 - **Mind the usage limit.** Every session and bot run draws on a subscription's 5-hour and weekly limits
   (`bot/README.md`, Subscriptions), and either, or a run's time budget, can cut you off mid-task.
   - Spend on what moves the work. Run the subset that covers your change (Running a subset, below) before
-    any whole-workspace suite, and a slow suite once, at the end. Grep, and read long files by section:
-    `spec/11-rulings.md`, `spec/INDEX.md`, `spec/08-catalog.md`, `BUILD.md` and `bot/README.md` run to
-    hundreds or thousands of lines. Cut long output with `tail` or `grep` before it reaches your context.
-    Start a subagent only for work that needs one.
+    any whole-workspace suite, and a slow suite once, at the end. Grep, and read long files by section
+    (`BUILD.md`, `bot/README.md`), and look the spec up an entry at a time (`spec/README.md`, Looking
+    things up): one word searched in all of `spec/` returns hundreds of KB. Cut long output with `tail`
+    or `grep` before it reaches your context. Start a subagent only for work that needs one.
   - Keep the work resumable. In a session of your own, commit each step as it goes green, push at
     checkpoints (a cloud container's unpushed work dies with it) and keep your handoff current (rule 14). A
     bot run leaves committing and pushing to its harness, which keeps a cut-off run's work and continues it.

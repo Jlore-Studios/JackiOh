@@ -22,9 +22,27 @@ One note per top-level section, its subsections inside:
 - [[§13]] [13-duos.md](13-duos.md): Duos, two players against an AI team in two duels side by side: seats and pairing, setup, rounds, the shared life pool, passing, what each seat sees, the AI team, leaving, co-op rooms and pings.
 - [[§14]] [14-economy.md](14-economy.md): the collection economy: Jlore, cosmetics, card packs and the slot roll, pity, the token bars and the cosmetic token cycle, cosmetic packs and the Chase Shard, set tracks and XP, earning, daily quests, dev accounts, the ledger, going live, card proficiency.
 - [[§15]] [15-dungeon-run.md](15-dungeon-run.md): dungeon runs, the single-player mode against the AI: Sandbox and Campaign, seeds and the daily run, the starting deck, artifacts and blessings, the map, the fights, after a fight, the tiles, curses, the score, Embers and leaderboards, the extended campaign, what is built, the open questions.
-- [INDEX.md](INDEX.md): every ruling on one line: its id, title, note and the tests that prove it, rewritten on `main` daily (a ruling merged since is in [rulings/](rulings/) only).
+- [INDEX.md](INDEX.md): every ruling on one line: its id, title, note and what it touches (its `cards`), rewritten on `main` daily (a ruling merged since is in [rulings/](rulings/) only).
 - [CARDS.md](CARDS.md): every card and token by the keywords it prints, by its tags, and by the named random pools it is in with the cards that draw from each, written from the catalog by `cargo jackioh spec index` and rewritten on `main` daily, so the notes state a list's rule and link it (`[[CARDS#jlockeed]]`) rather than list its cards (#3804).
 - `pending/`, when a branch has merged since the last daily fold: the §11 paragraphs waiting for it, one file per issue ([Adding a ruling](#adding-a-ruling)).
+
+## Looking things up
+
+Read the entry a task touches and follow its links: never open a note whole to find it, and never search all of `spec/` for a word. The catalog, [[§11]] and the index are too long to open in one read, and [[§6]], [[§9]] and [[§10]] come back cut short. A paragraph or a table row is one line, often 1 to 3 KB, and a fact is written up to four times (its section, its ruling note, that note's [[§11]] paragraph, the index), so `grep -rn Reborn spec/` returns 206 KB where the titles of the 101 notes that mention it are 11 KB (measured 2026-11-24).
+
+- **Which section a question belongs to**: [[§1.1]], the rules at a glance, links the section each rule is in.
+- **A subsection**: `grep -n '^#' spec/10-engine-guide.md` gives each heading's line; read from that line to the next heading's.
+- **A keyword, a verb, a token or a card**: each is one table row, and the row is the whole entry. `grep -n '^| Dormant |' spec/06-keywords.md` is the keyword, and `grep -n '| Zoomerbin Oomen |' spec/08-catalog.md` the card, by the name its row prints. [CARDS.md](CARDS.md) lists the cards that print a keyword or a tag, or are in a named pool.
+- **A ruling an entry links**: `[[R113]]` is `rulings/R0113.md`, short enough to read whole. Its front matter names what it touches (`cards`) and the tests that prove it (`proven_in`).
+- **The past rulings on a point**, the search to make before a hard call and before a new ruling, since a point already ruled is not ruled again (#1243): list the notes that mention it by title, then open the few that bear on it.
+
+  ```sh
+  grep -rlF 'Reborn' spec/rulings | xargs grep -m1 '^title:'    # spec/rulings/R0008.md:title: Reborn and Death
+  grep -rlw -- '§4.4' spec/rulings | xargs grep -m1 '^title:'   # a section, or a card as `cards` writes it: -wF 'C #22'
+  ```
+
+  [INDEX.md](INDEX.md) holds each title beside what the ruling touches, in one file and as of the last daily fold, so `grep -w '§4.4' spec/INDEX.md` is the rulings filed against a section; the notes are the whole list.
+- **Why a ruling was made**: [[§11]] ([11-rulings.md](11-rulings.md), and `pending/` since the last fold) records where each came from, a paragraph an issue: `grep -n -m1 'R1878001' spec/11-rulings.md`. It restates the notes and decides nothing, so it is never where to look for a rule.
 
 ## Note format
 
