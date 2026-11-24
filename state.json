@@ -20671,9 +20671,11 @@
         "by": "`muse` (medium)",
         "sha": "447ba35a20573306fd30a2a25cbebf9a8ac77926"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T13:14:39Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-24T13:37:27Z",
         "family": "muse",
@@ -20683,6 +20685,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #4716 from the after-merge spot-check\"} -->\n- Both findings from the #4716 spot-check are fixed where pointed, following the plan with no departures.\n- **Hidden-tab alarm silence** ([clockAlarm.ts](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4736/apps/web/src/audio/clockAlarm.ts)): added `CLOCK_ALARM_HIDDEN_LOOKAHEAD_MS = 1_000` in [constants.ts](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4736/apps/web/src/audio/constants.\u2026\n- **Mulligan alarm after answering**: added optional `ClockProps.mulliganAnswered`, wired in [match.tsx](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4736/apps/web/src/routes/match.tsx) as `view.mulligan?.youReady === true`, gating the mulligan hook. The countdown still renders; only the b\u2026\n- **Tests** (all fail-without-fix sensitive): new R506 test steps a hidden countdown at 1000 ms across six phases and expects all 30 beats exactly once on time; new R268 test renders an answered viewer through a full 45 s mulligan and expects zero beats with the mulligan line still rendered; constant\u2026\n- **Verification** (commands run, output seen): `clockAlarm.test.ts` 20/20, `constants.test.ts` + `Clock.test.tsx` 58/58, `match.test.tsx` 85/85 (covers the `match.tsx` wiring), `cargo jackioh spec check` ok (2455 rulings, 6135 proofs), `pnpm typecheck` clean, `cargo fmt --check` clean, eslint clean \u2026\n- **Decisions**: none beyond the plan \u2014 no new ruling note, since both fixes are client timing/audio gating citing existing R-ids, not rules decisions. One environment note: `typecheck` exhausts the default 2 GB Node heap on this machine and passes with `NODE_OPTIONS=--max-old-space-size=6144`; unrel\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4736 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4736/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4736,
       "kind": "review",
       "live": "reviewing",
