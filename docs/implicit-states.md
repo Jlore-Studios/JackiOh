@@ -304,7 +304,7 @@ the view it was sent against); the motion and drag-to-play settings.
 **What moves it:** a click; a press, a move past `DRAG_THRESHOLD_PX`, a release, Escape, a right
 button, a lost pointer or a window blur; a new view (the same turn, another turn, seat or viewer); the
 runner's entries finishing, a drain (a hotseat hand-over, a hidden tab, Reduce motion) or a skip (a set
-piece, the opening deal); a prompt opening or answered; a setting changed. Its rows are G1 to G24, never
+piece, the opening deal); a prompt opening or answered; a setting changed. Its rows are G1 to G25, never
 `R<n>`.
 
 | # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
@@ -334,6 +334,7 @@ piece, the opening deal); a prompt opening or answered; a setting changed. Its r
 | G22 | the emote menu open, then a selection | Reachable: open the portrait's menu, pick up an attacker | The menu closes: targeting wins (R643) | `apps/web/src/game/emotes.test.tsx` › "R643 selecting an attacker shuts an open menu — targeting wins" |
 | G23 | a flight on a replay board | Unreachable: a replay board mounts no drag layer (`replay ? null : <DragLayer …/>`) | — | — |
 | G24 | a flight with drag to play off | Unreachable: a press does not arm while the setting is off | — | `drag-layer.test.tsx` › "B39 with drag to play off, a long move starts no drag and a release over a zone sends nothing" |
+| G25 | a selection or a flight, then the game ends on the same turn | Reachable: the opponent concedes (R211), times out, or accepts the draw on the viewer's turn | Dropped, as at the turn change (#4743, keyed on `shown`; §2.5, R216) | `Game.test.tsx` › "a half-built play or attack is dropped at the turn change (#2924)" › "closes a play's own picker when the game ends on the same turn (#4743)", › "drops the selected attacker when the game ends on the same turn (#4743)"; `drag-layer.test.tsx` › "layer states 3899" › "a game that ends mid-drag sends nothing on its release and leaves the board idle" (new; failed before the fix: the picker stayed open over the result and the release sent the attack) |
 
 ## 7. The web's match socket
 
