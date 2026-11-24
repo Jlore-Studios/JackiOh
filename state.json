@@ -41447,7 +41447,8 @@
       "2026-11-24T03:19:12Z,45317783529,claude-8,opus,plan,4593,hard,interrupted,refusal,5.1,0,0,0,5.5075,85,100,,,476.3,claude-3,fresh,other,1",
       "2026-11-24T03:20:47Z,45311448163,claude-3,opus,review,4574,hard,interrupted,refusal,0,0,0,0,,,,,,1067.5,claude-3,none,,0",
       "2026-11-24T03:14:41Z,45299430138,agy,gemini-3.8-flash-high,plan,4619,medium,failed,,150.3,331596,48649,0,,2,0,1,1,324.4,agy,none,,1",
-      "2026-11-24T03:30:05Z,45317690031,claude-1,opus,plan,4592,hard,planned,,14.4,232,80831,17151776,6.7908,25,40,,,475.5,claude-3,fresh,other,1"
+      "2026-11-24T03:30:05Z,45317690031,claude-1,opus,plan,4592,hard,planned,,14.4,232,80831,17151776,6.7908,25,40,,,475.5,claude-3,fresh,other,1",
+      "2026-11-24T03:22:22Z,45317592286,claude-8,opus,review,4662,hard,interrupted,refusal,7.9,0,0,0,1.4474,86,100,,,39.9,claude-8,none,,1"
     ]
   },
   "version": 1
