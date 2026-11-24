@@ -193,7 +193,14 @@ lost?: true, } | { "type": "counterChanged", instanceId: string, counter: Counte
  * plays no reveal and "when one of your Traps reveals" does not answer it. Only ever
  * `Some(true)`, so a first firing serializes and hashes as it did.
  */
-again?: boolean, } | { "type": "attackDeclared", attackerId: string, targetId: string, forced: boolean, 
+again?: boolean, 
+/**
+ * R4586007: the attacker of the attack the firing answers (`traps::fire_trap` on an
+ * `attackDeclared`), in a game holding an Infinite Assault card (`recursion_log::kept`), so a
+ * trigger on a Figment's reveal can copy it. Absent otherwise, so no other game's firing
+ * serializes otherwise than it did before the field existed.
+ */
+attackerId?: string, } | { "type": "attackDeclared", attackerId: string, targetId: string, forced: boolean, 
 /**
  * ME-ATTACKSUMMON (R1202): the id of the card whose attack this replaces — Windfast's —
  * when a summoned substitute makes it. Absent otherwise.

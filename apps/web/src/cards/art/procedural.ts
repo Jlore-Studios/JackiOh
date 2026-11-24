@@ -135,6 +135,27 @@ const STINKYSCAPE_PLUS_REDRAWS: Readonly<Record<string, number>> = {
   "stinkyscapeplus-153": 1,
   "stinkyscapeplus-t-ai-03": 4,
 };
+/**
+ * R503, R4577009: the held Infinite Assault cards whose variety stream is drawn again, as the Stinkyscape+ table's are, so
+ * none repeats another card's layout, backdrop, sky, emblem and motif in its theme; found the same way, card by card in
+ * catalog order. A card's scene recipe (`infiniteAssaultRecipes.ts`) draws over its spec, so no shipped picture moves.
+ */
+const INFINITE_ASSAULT_REDRAWS: Readonly<Record<string, number>> = {
+  "infiniteassault-028": 1,
+  "infiniteassault-100": 1,
+  "infiniteassault-109": 2,
+  "infiniteassault-128": 1,
+  "infiniteassault-147": 1,
+  "infiniteassault-153": 1,
+  "infiniteassault-154-1": 1,
+  "infiniteassault-155": 1,
+  "infiniteassault-159": 1,
+  "infiniteassault-200-1": 1,
+  "infiniteassault-202": 1,
+  "infiniteassault-204": 1,
+  "infiniteassault-221": 1,
+  "infiniteassault-239": 1,
+};
 /** What a redraw adds to the salt, per draw it moves. */
 const REDRAW_STEP = 0x9e3779b1;
 /** Salt the motif's and the family twist's own streams, so neither moves anything else. */
@@ -1644,7 +1665,8 @@ export function varietySalt(defId: string): number {
   const dash = defId.indexOf("-");
   const prefix = dash < 0 ? "" : defId.slice(0, dash);
   const salt = Object.hasOwn(SET_VARIETY_SALTS, prefix) ? (SET_VARIETY_SALTS[prefix] ?? VARIETY_SALT) : VARIETY_SALT;
-  const redraws = Object.hasOwn(STINKYSCAPE_PLUS_REDRAWS, defId) ? (STINKYSCAPE_PLUS_REDRAWS[defId] ?? 0) : 0;
+  const table = Object.hasOwn(STINKYSCAPE_PLUS_REDRAWS, defId) ? STINKYSCAPE_PLUS_REDRAWS : INFINITE_ASSAULT_REDRAWS;
+  const redraws = Object.hasOwn(table, defId) ? (table[defId] ?? 0) : 0;
   return redraws === 0 ? salt : (salt + Math.imul(redraws, REDRAW_STEP)) >>> 0;
 }
 

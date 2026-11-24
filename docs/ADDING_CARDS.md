@@ -34,7 +34,7 @@ before yours, so a pending-claimed card needs no edit there (R646). What stays h
 `src/census.rs`, each set's counts, rarities, tokens and tag counts written once and never computed from `catalog.json` (#108, #2581).
 BUILD's must-pass tables take no row for a new card; its own tests are the record (CLAUDE.md rule 6).
 
-**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; the Training Grounds set while tracker #2193 built it, until its release, issue #2204, R2194000; and the Stinkyscape+ set while tracker #3533 built it, until its release, issue #3573, R3535000; the single-player Infinite Assault set is held now, while tracker #4576 builds it, on a stage of its own, `HeldSinglePlayer`, R4577000) differs in five places, the Training Grounds paths below standing for any held set's (the Infinite Assault's foundation, issue #4577, wrote no stubs: each card part adds its own entries, scripts and rows under `docs/infinite-assault.md` IA11):
+**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; the Training Grounds set while tracker #2193 built it, until its release, issue #2204, R2194000; and the Stinkyscape+ set while tracker #3533 built it, until its release, issue #3573, R3535000; the single-player Infinite Assault set is held now, while tracker #4576 builds it, on a stage of its own, `HeldSinglePlayer`, R4577000) differs in five places, the Training Grounds paths below standing for any held set's (the Infinite Assault's foundation, issue #4602, wrote every entry, row and a stub script for #25–#240: each card part replaced its stubs with the scripts and their tests, and corrected its own rows where its build decided otherwise, under `docs/infinite-assault.md` IA11):
 - Its script goes in `src/scripts/training_grounds/` (id `traininggrounds-NNN`, a token's `traininggrounds-NNN-k`; Stinkyscape's
   had entries outside the numbers too, `stinkyscape-t-<name>`). The foundation (issue #2194) wrote a stub for every entry there,
   `STUB (#2194):` in its header (the snapshots #41–#60 are part 2's, #2195, which adds their entries and scripts): a card
@@ -53,8 +53,8 @@ BUILD's must-pass tables take no row for a new card; its own tests are the recor
 - Its `card-audio.json5` and `card-text.yaml` entries are written as for any card, but no voice file is expected for it until the set ships
   (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
   Its intro (row 10) is the release's too: the intros' totality test reads the sets that ship. (The Stinkyscape set's intros
-  came early, with its look-and-sound part, issue #1883, R1883000, and the Stinkyscape+ set's with its own, issue #3572,
-  R3572000, so neither's release owes any.)
+  came early, with its look-and-sound part, issue #1883, R1883000, the Stinkyscape+ set's with its own, issue #3572,
+  R3572000, and the single-player Infinite Assault set's with its own, issue #4596, R4596000, so no such release owes any.)
 - Its picture is not the release's: the web's art tests hold every catalog entry, a held set's included, to its rarity's
   detail floor (R3331001) and every Legendary and Mythic to a motion recipe of its own (R3340000), so a held set's cards draw
   placeholder scenes from the day they land (`apps/web/src/cards/art/infiniteAssaultRecipes.ts`, R4577009; Stinkyscape+'s,

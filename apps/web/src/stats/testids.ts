@@ -8,6 +8,12 @@ export const statsTestid = {
   tabSets: "stats-tab-sets",
   /** R4279001: the Tokens tab, the cards made during a game. */
   tabTokens: "stats-tab-tokens",
+  /** R4678000: the Experimental tab, the line above its panel, and R4678001 its Running table, grid and Since. */
+  tabExperimental: "stats-tab-experimental",
+  experimentalLine: "stats-experimental-line",
+  runningTable: "stats-running-table",
+  runningGrid: "stats-running-grid",
+  runningSince: "stats-running-since",
   setsLeaders: "stats-sets-leaders",
   setsTable: "stats-sets-table",
   setsOutliers: "stats-sets-outliers",
