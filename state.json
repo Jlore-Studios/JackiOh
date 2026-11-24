@@ -20778,6 +20778,13 @@
     "4745": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45411892354",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-24T14:24:09Z",
+        "until": "2026-11-24T14:54:09Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
