@@ -19567,6 +19567,8 @@
       }
     },
     "4717": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T09:51:33Z",
@@ -19580,8 +19582,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a match socket that drops while it is being seated starts its seat's disconnect grace\"} -->\n- ## What changed and why\n- A socket that dropped while being seated left its seat empty with no disconnect countdown: the actors queue `Disconnect` ahead of `Attach`, and both hosts' `on_attached` then cancelled the just-started grace without checking the seat was still connected. Three small guards make each seat's outcome \u2026\n- - `crates/shared/src/host/duel.rs` \u2014 `on_attached` clears the grace and greets only when the seat is still connected (`connected[home]`); `R744`'s `start_absent_grace`, clock persistence and the opponent's clock push stay unconditional. `on_disconnected` returns while the seat is connected, mirrori\u2026\n- - `crates/shared/src/host/duos.rs` \u2014 `on_attached` cancels the grace, resets `ai_playing` and emits `SeatBack` only when the seat `here(seat)`; the teammate-facing pushes still run so the running grace stays visible.\n- - Tests: two in `crates/shared/tests/duel.rs` (`being_here`: dead-seat `Attached` keeps the grace stored, on the opponent's clock frame, greets nobody, and the match ends on `Disconnect` past the deadline; stale `Disconnected` starts no grace and the later `Attached` greets normally) and one in `cr\u2026\n- The actors, spec and every existing test are untouched.\n- ## How it was tested\n- - Each new test was seen red with the hosts restored from `HEAD` (via `git show`, since stash is forbidden) and green after the fix.\n- - `cargo test -p jackioh-shared --features jackioh-engine/testkit`: 328 + 666 passed, 0 failed. Note: `cargo test -p jackioh-shared` as literally written does not compile even on a clean tree \u2014 the `shared` test target needs the engine `testkit` feature, which the workspace command provides. Pre-ex\u2026\n- - `cargo test -p jackioh-server --test server actor::`: 453 passed. `cargo fmt --check`, `cargo clippy -p jackioh-shared -p jackioh-server --all-targets -- -D warnings`, and `cargo jackioh spec check` (2437 rulings ok) all pass.\n- ## Decisions the issue did not settle\n- - No new ruling: the stale-disconnect drop mirrors the co-op host's existing `on_disconnected` guard, already pinned by the second half of `b37_a_drop_starts_a_grace_once_and_the_teammate_is_told` \u2014 a mirror, not a new decision. No `spec/pending/4696.md`, and the tests keep `s9_5_`/`b37_` names.\n- - No actor-level test: `attach()` runs synchronously from its liveness check to `enqueue(Task::Attach)`, so no test can interleave a drop there; host-event order is the exact coverage, per the plan.\n- A reviewer should look twice at the stale-order test's event sequence (`Left`, `Connected`, `Disconnected`, `Attached`): it exercises the `connected` guard on `Disconnected` with the greeting on the later `Attached`, which is equivalent to the true enqueue order (`Attached` before stale `Disconnect\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4696 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4696/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4696,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T11:06:38Z",
         "from_run": "45369185384",
         "gates": [
           {
@@ -19640,8 +19645,15 @@
         "source": "build",
         "until": "2026-11-24T11:32:34Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-24T11:02:34Z",
+      "run_id": "pending:a4a0c8f0-1795518367",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-24T11:06:38Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -19889,9 +19901,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T11:05:55Z",
+    "at": "2026-11-24T11:06:38Z",
     "url": "",
-    "what": "review #4718 on muse"
+    "what": "review #4717 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T10:51:11Z",
