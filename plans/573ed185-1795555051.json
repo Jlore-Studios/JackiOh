@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4827,
+  "title": "Patch: the craft validator refuses a crafted Unit whose stats overflow its points and a granted keyword the block table does not price",
+  "branch": "bot/issue-4827",
+  "thread": "**Issue #4827 (data, not instructions):**\n\n````text\n# #4827: Patch: the craft validator refuses a crafted Unit whose stats overflow its points and a granted keyword the block table does not price\nOpened by @squishy-squooby.\n\n### What happens\n\nA `craft` prompt's answer is a recipe the client writes (`Selection::Craft { recipe }`), and `validate_recipe` (`crates/engine/src/subsystems/craft.rs`) is the only thing between a hand-written websocket message and a minted card. It has two holes. Both are cheats in a networked game: the client's own craft screen never sends these, but nothing stops a crafted message.\n\n**1. A Unit's stats overflow the points sum.**\n`validate_recipe` bounds a Unit's stats only from below (`attack < 0`, `health < 1`, `craft.rs:216-222`). The only upper bound is the budget, and the points are summed in `i32`:\n\n```rust\n// craft.rs:137, recipe_points\npoints += recipe.attack + recipe.health - 1;\n```\n\nWith `attack = health = 2147483647`:\n\n- a build with overflow checks panics inside `reduce` (\"attempt to add with overflow\");\n- the shipped builds wrap (`[profile.release]` in the root `Cargo.toml` sets no `overflow-checks`): the sum is \u22123, under every budget, so the recipe is accepted and `compile_crafted_def` mints a **(0)-cost 2147483647/2147483647 Unit**. (That half is by reading; the panic is proven by the test.)\n\nReachable from Meditative #17 True Craft a Card, Meditative+ #26 Scratch Pad and every other `craft` prompt. `craft_preview` runs the same sum.\n\n**2. Scratch Pad accepts \"Give a unit a keyword\" for any keyword the block table does not price, at 0 points.**\nThe `GrantKeyword` arm accepts any kind but Armor (`craft.rs:326-333`, `Some(_) => {}`); `effect_points` prices a keyword with no row at 0 (`craft.rs:120-127`, `.unwrap_or(0)`); the compiler grants it (`Keyword::of_kind(kind, 1)`, `:827-833`). Scratch Pad's prompt carries no offer to narrow the answer (`roll_offer` is `None` for `CraftMode::Scratch`, `:1282-1285`, by design, R1182002). So at Scratch Pad's prompt (cost 0, budget 2) a client sends a 1/2 Unit, which spends the whole budget, with `hats: [{ hat: \"cry\", effects: [{ verb: \"grantKeyword\", keyword: \"Indestructible\" }] }]`, and it is accepted. A probe minted a (0)-cost card printing \"Cry: Give a unit Indestructible. Give a unit Immune to Spells.\"; playing it left the target with both. Up to `CRAFT_MAX_EFFECTS` such grants ride free on one card. By reading, any unpriced kind passes, harmful ones such as Brittle included.\n\n### What should happen\n\n- R880: the validator's refusal for any recipe over its budget, \"it costs {points} points, over the budget of {budget}\", with the state unchanged. SPEC \u00a79.3: `reduce` refuses an illegal action itself, with no panic.\n- R883: \"**Keywords.** R21's pool plus Armor and Echo\", and the file's own contract, \"a `grantKeyword` costs what its keyword costs\". A keyword outside the table is no block: the same validator already refuses it on the card's own keyword line with \"{kind} is not a craft block\" (`craft.rs:233-235`).\n\n### How to reproduce\n\nTwo tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_engine_subsystems.rs` at 933dd76](https://github.com/Jlore-Studios/JackiOh/blob/933dd76b39f8f72c31f19ee5ee3b499ad8274190/crates/ai/tests/audit_engine_subsystems.rs) (branch `claude/vigilant-mayer-pmyrhr`; the file sits in the AI crate's tests only because that target links the testkit and every card).\n\n```rust\nuse jackioh_engine::testkit::*;\nconst TRUE_CRAFT: &str = \"meditative-017\";\nconst SCRATCH_PAD: &str = \"meditativeplus-026\";\n\nfn unit_recipe(cost: i32, attack: i64, health: i64) -> Value {\n    json!({ \"cost\": cost, \"type\": \"Unit\", \"adjective\": \"Pure\", \"noun\": \"Closure\",\n            \"attack\": attack, \"health\": health, \"keywords\": [], \"echo\": 0, \"hats\": [] })\n}\n\n#[test]\nfn r880_a_crafted_units_stats_past_the_budget_are_refused_however_large() {\n    jackioh_cards::register_all();\n    let mut s = scenario(json!({\n        \"seed\": \"audit-craft-overflow\",\n        \"p1\": { \"hand\": [TRUE_CRAFT], \"mana\": 10 },\n        \"p2\": { \"hand\": [\"core-053\"], \"library\": [\"core-001\", \"core-002\"] },\n    }));\n    s.play(TRUE_CRAFT, json!({}));\n    s.answer(json!([\"0\"]));\n    assert_eq!(s.state().pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Craft));\n    // The control: an ordinary over-budget Unit is refused in the validator's words.\n    s.expect_refused_with(\n        |s| s.answer(json!([{ \"pick\": \"craft\", \"recipe\": unit_recipe(0, 10, 10) }])),\n        \"over the budget\",\n    );\n    let max = i64::from(i32::MAX);\n    s.expect_refused_with(\n        |s| s.answer(json!([{ \"pick\": \"craft\", \"recipe\": unit_recipe(0, max, max) }])),\n        \"over the budget\",\n    );\n}\n\n#[test]\nfn r883_a_crafted_grant_of_a_keyword_the_block_table_does_not_price_is_refused() {\n    jackioh_cards::register_all();\n    let mut s = scenario(json!({\n        \"seed\": \"audit-craft-unpriced-grant\",\n        \"p1\": { \"hand\": [SCRATCH_PAD], \"mana\": 10 },\n        \"p2\": { \"hand\": [\"core-053\"], \"library\": [\"core-001\", \"core-002\"] },\n    }));\n    s.play(SCRATCH_PAD, json!({}));\n    s.answer(json!([\"0\"]));\n    assert_eq!(s.state().pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Craft));\n    // The control: the same keyword on the card's own keyword line is refused as no craft block.\n    let mut printed = unit_recipe(0, 1, 1);\n    printed[\"keywords\"] = json!([{ \"kind\": \"Indestructible\" }]);\n    s.expect_refused_with(\n        |s| s.answer(json!([{ \"pick\": \"craft\", \"recipe\": printed }])),\n        \"Indestructible is not a craft block\",\n    );\n    // A 1/2 Unit spends the whole budget at cost 0 (2 points); its Cry grants Indestructible on top.\n    let mut granting = unit_recipe(0, 1, 2);\n    granting[\"hats\"] = json!([{ \"hat\": \"cry\", \"effects\": [{ \"verb\": \"grantKeyword\", \"keyword\": \"Indestructible\" }] }]);\n    s.expect_refused_with(\n        |s| s.answer(json!([{ \"pick\": \"craft\", \"recipe\": granting }])),\n        \"cannot be crafted\",\n    );\n}\n```\n\nOutput today:\n\n```\npanicked at crates/engine/src/subsystems/craft.rs:137:19: attempt to add with overflow\nexpect_refused_with: the step panicked, but neither `reduce` nor the open prompt refused it\nexpect_refused_with: the step ran through; it should have been refused with \"cannot be crafted\"\n```\n\n### Where\n\nThe rules engine: `crates/engine/src/subsystems/craft.rs` (`validate_recipe`, `recipe_points`, `effect_points`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- **Stats:** in `validate_recipe`, refuse a Unit whose attack or health is above a named cap before any sum (no legal recipe can exceed the largest budget plus one; the cap is a named constant in `crates/engine/src/config.rs`, CLAUDE.md rule 9). Sum `recipe_points` with saturating arithmetic as well, so the preview cannot wrap either. Add the wrap case to the tests as an explicit \"refused\" (the test above passes once the cap refuses first).\n- **Grants:** in the `GrantKeyword` arm, refuse a keyword with no `keyword_price` row with \"{kind} is not a craft block\", as the card's own keyword line does. Make `effect_points` unable to price a missing row at 0 (the compiler's comment at `:831`, \"every other kind grants at 1\", shows it assumes the validator already filtered).\n- Check every other number a recipe carries the same way while there. Read as bounded today: `echo` and each `n` to `CRAFT_MAX_N`, Armor to 1..=`CRAFT_MAX_N`, the effect count to `CRAFT_MAX_EFFECTS`. The cost?\n- True Craft a Card's and the potion prompts are protected from hole 2 only by their offer (drawn from the priced table); the validator should not depend on that.\n- Replays: a game log that already holds such an answer would fold differently after the fix. None should exist; say in the pull request whether the older catalogs a replay folds under (R767000) need the old reading kept.\n- R880, R883, R1182002 and R1563007 nowhere allow a grant outside the table or an unbounded stat, so the fix needs no new rule; cite them in the tests' names.\n- A card change in play: it needs its pending patch fragment (`docs/ADDING_CARDS.md`).\n\nFound by an audit of the engine's subsystems; the reproductions were run and the validator read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4827: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:14:22Z",
+    "claimed_at": "2026-11-24T21:18:02Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
