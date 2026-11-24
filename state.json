@@ -20650,6 +20650,13 @@
     "4742": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45407997496",
+        "model": "sonnet",
+        "provider": "claude-4",
+        "since": "2026-11-24T14:05:34Z",
+        "until": "2026-11-24T14:35:34Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
