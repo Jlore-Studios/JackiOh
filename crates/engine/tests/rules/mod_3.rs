@@ -55,6 +55,7 @@ pub mod trigger_multipliers;
 pub mod trigger_zones;
 pub mod triggers;
 pub mod turn;
+pub mod turn_buff;
 pub mod turn_cap;
 pub mod turn_wiring;
 pub mod twice_forward;

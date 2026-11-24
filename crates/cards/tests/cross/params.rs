@@ -661,6 +661,9 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("infiniteassault-005", PRICE),
         ("infiniteassault-021", PRICE),
         ("infiniteassault-024", PRICE),
+        // IA #52's Brittle 1 and IA #72's "cost (0)" (issue #4587).
+        ("infiniteassault-052", KEYWORD),
+        ("infiniteassault-072", PRICE),
         ("core-038", ENGINE),
         ("core-093", ENGINE),
         ("core-095", ENGINE),

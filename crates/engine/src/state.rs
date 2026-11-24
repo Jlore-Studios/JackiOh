@@ -203,6 +203,21 @@ pub struct BrittleCounter {
     pub printed: Option<bool>,
 }
 
+/// R4587000: "+N Attack and <keywords> this turn": holds while `turn` is `state.turn` (layers.rs).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnBuff {
+    pub turn: i32,
+    pub attack: i32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub keywords: Vec<Keyword>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "ts",
@@ -275,6 +290,10 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub taunt_suppressed_turn: Option<i32>,
+    /// R4587000: "+N Attack and <keywords> this turn" (layers.rs reads it while its turn is now).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub turn_buff: Option<TurnBuff>,
     /// A backrow card whose identity is public, e.g. a Field Trap that has fired (R33).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -618,11 +637,11 @@ pub struct CostRule {
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ModifierKind {
     /// `minCurrentCost`: R48, R363 — only a card whose cost is then this or more (#77, "Cost (4)+").
-    /// `onlyType` is only ever "Spell".
+    /// `onlyType` is "Spell" (§8.2 #35) or "Unit" (IA #60).
     CostDiscount {
         amount: i32,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        #[cfg_attr(feature = "ts", ts(optional, type = "\"Spell\""))]
+        #[cfg_attr(feature = "ts", ts(optional, type = "\"Spell\" | \"Unit\""))]
         only_type: Option<CardType>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
@@ -2881,6 +2900,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         armor_override: None,
         return_to_hand_at_end_of_turn: None,
         taunt_suppressed_turn: None,
+        turn_buff: None,
         face_up: None,
         revealed: None,
         last_damaged_by: None,

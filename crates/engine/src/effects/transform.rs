@@ -292,6 +292,10 @@ fn unreadable_by(ctx: &EffectContext<'_>, card: &CardInstance) -> Vec<PlayerId> 
 /// Radiant flag stay.
 pub(crate) fn to_printed_stats(card: &mut CardInstance) {
     card.buffs = AttackHealth { attack: 0, health: 0 };
+    // R4587000: a Vanilla takes its this-turn Attack, while its this-turn keywords stay.
+    if let Some(held) = card.turn_buff.as_mut() {
+        held.attack = 0;
+    }
     if let Some(tuning) = card.tuning.as_mut() {
         tuning.attack = None;
         tuning.health = None;

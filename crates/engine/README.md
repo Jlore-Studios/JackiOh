@@ -186,6 +186,9 @@ builds reads its own game's hold without the state (R2201001).
 - `scripts::script_of(state, def_id)` finds a card's script; a fused card's is composed from its
   ingredients on lookup (`subsystems::fuse::compose_fused_scripts`), and a crafted card's (Meditative
   #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).
+- `effects/turn_buff.rs` is "this turn" Attack and keywords (R4587000): `buff_this_turn`
+  (`buffThisTurn`) writes `CardInstance.turn_buff`, which layer 4 reads only while its `turn` is now.
+  It is absent until set, so old games hash the same.
 
 The engine never depends on `jackioh-cards` (only its tests do). An engine test that needs a card's
 behavior uses a test-only script in `tests/rules/fixtures/`, and the real card's test covers the

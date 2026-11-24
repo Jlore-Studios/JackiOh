@@ -9466,7 +9466,7 @@ infiniteassault-056: # Afterburner
   voice:
     cast: Afterburner lit. Hold on.
   zh:
-    name: 加力燃烧器
+    name: 后燃器
     base: 对敌方英雄造成{damage}点伤害。对你的英雄造成{selfDamage}点伤害。
     radiant: 对敌方英雄造成{damage}点伤害。对你的英雄造成{selfDamage}点伤害。
 infiniteassault-057: # Speed Demon
@@ -9576,7 +9576,7 @@ infiniteassault-068: # Short Circuit
   zh:
     name: 短路
     base: 当一个敌方单位攻击时揭示：消灭它。对你的英雄造成等同于其攻击力的伤害。
-    radiant: 当一个敌方单位攻击时揭示：消灭它。对你的英雄造成等同于其攻击力一半（向下取整）的伤害。
+    radiant: 当一个敌方单位攻击时揭示：消灭它。对你的英雄造成等同于其攻击力一半的伤害，向下取整。
 infiniteassault-069: # Rev Limiter
   flavour: It caps revs at nine thousand. It caps heroes at whatever is left.
   voice:
