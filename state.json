@@ -20047,7 +20047,19 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 7131309608
+      "waiting_comment": 7131309608,
+      "waiting_turn": {
+        "behind": [
+          4753,
+          4463
+        ],
+        "ends": "2026-11-24T18:11:26Z",
+        "from_run": "45401089286",
+        "head": "77fcddbe186ea5a6f3c44b9ce74839b3bc2235ba",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-24T16:11:26Z"
+      }
     },
     "4731": {
       "action": "build",
