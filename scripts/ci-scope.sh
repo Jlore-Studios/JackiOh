@@ -61,8 +61,8 @@
 # when `full` does. The other docs are
 # not: `spec check` reads spec/, the radiant-standard test reads docs/radiant-audit.md, the catalog
 # test reads spec/07-tokens.md's table of tokens, radiant_stats.rs reads spec/08-catalog.md, web tests
-# read two spec/ notes (06-keywords.md and 05-card-types.md), and the `training gate` job reads
-# training/history/, and the tools' test of shadow_ban.rs reads its sweep-*.md reports. A
+# read two spec/ notes (06-keywords.md and 05-card-types.md), and the tools' test of shadow_ban.rs
+# reads training/history/'s sweep-*.md reports. A
 # `full=false` diff prints every other line false too.
 #
 # Past the skip list, each changed file turns lines on, and a line no file turned on is false:
@@ -126,8 +126,9 @@
 #    wasm; apps/web/src/audio/voice-text.json (the
 #    tools' export_card_text.rs writes it from crates/cards/card-text.yaml, #2498) tools, wasm; and
 #    apps/web/src/game/cardModes.json (the tools' export_card_modes.rs writes it from the card
-#    scripts, #2646) tools, wasm; and spec/15-dungeon-run.md and spec/README.md (acceptance.rs holds
-#    the first's table of constants to crates/run/src/config.rs, and the second's map to it, B33)
+#    scripts, #2646) tools, wasm; and spec/15-dungeon-run.md, spec/16-infinite-assault.md and
+#    spec/README.md (acceptance.rs holds the first two's tables of constants to
+#    crates/run/src/config.rs, and the third's map to them, B33, #4584)
 #    tools, wasm. scripts/ci-shards.toml, the shard counts of ci.yml's sharded jobs (#3072), runs
 #    every Rust group, and web and e2e as any file outside the lists below does, so a count it
 #    changes is seen running.
@@ -363,7 +364,7 @@ for file in $files; do
     apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md) on rust_tools_wasm ;;
     apps/web/src/audio/voice-text.json) on rust_tools_wasm ;;
     apps/web/src/game/cardModes.json) on rust_tools_wasm ;;
-    spec/15-dungeon-run.md | spec/README.md) on rust_tools_wasm ;;
+    spec/15-dungeon-run.md | spec/16-infinite-assault.md | spec/README.md) on rust_tools_wasm ;;
     scripts/ci-shards.toml) on $RUST ;;
     analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) on rust_tools_wasm ;;
     analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) on rust_tools_wasm ;;
