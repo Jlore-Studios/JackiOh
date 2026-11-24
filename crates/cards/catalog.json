@@ -29640,7 +29640,7 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Flip a coin for the whole effect. Randomly either Buff or Nerf every card on the field and in both hands."
+      "text": "Cast on draw: Flip a coin. Heads: Buff every card on the field and in both hands. Tails: Nerf them."
     },
     "radiant": {
       "keywords": [
@@ -29649,7 +29649,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nCast on draw: Flip a coin for the whole effect. Randomly either Buff or Nerf every card on the field and in both hands."
+      "text": "Lucky 1\nCast on draw: Flip a coin. Heads: Buff every card on the field and in both hands. Tails: Nerf them."
     }
   },
   "stinkyscapeplus-021": {
