@@ -40709,7 +40709,9 @@
           "provider": "claude-8"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-24T07:14:59Z",
         "every": 5,
+        "findings": 0,
         "head": "b247d2a98407e0ae8e0d3ac09aa04cc4a57c3eb5",
         "issue": 4619,
         "merged_at": "2026-11-24T06:29:49Z",
@@ -40722,12 +40724,13 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "run_id": "pending:8f2a56e5-1795503989",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45345490278",
         "sha": "e361b8a82fa23a640986a50472252408e66ccd7b",
         "started_at": "2026-11-24T07:06:51Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the browser's Back and the phone's back swipe close an open replay, as its corner arrow does, instead of leaving the screen",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 490
