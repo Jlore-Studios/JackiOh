@@ -4066,6 +4066,65 @@ mod i21 {
     }
 
     #[test]
+    fn r4820000_an_exile_aura_a_spell_summons_exiles_an_immune_unit_and_i21_allows_it() {
+        use crate::rules::fixtures::card_on_card::{cheap_exiler, register_card_on_card, tag_exiler};
+
+        // p2's immune stand-in, no Human; a Spell summons p1's Scornboi-shaped exiler (S #150 Call to
+        // Chaos's Humans), and the settled state check's aura exiles the stand-in (R1850002) with no
+        // marker of its own, inside the Spell's run.
+        let (before, id) = immune_board("r4820000");
+        register_card_on_card();
+        let exiler_def = tag_exiler().id;
+        let mut after = before.clone();
+        let mut events = vec![marker(SPELL)];
+        events.extend(settled(
+            &mut after,
+            effects::summon(json_as(json!({ "defId": exiler_def }))),
+        ));
+        let exiler = events
+            .iter()
+            .find_map(|event| match event {
+                GameEvent::Summoned {
+                    instance_id, def_id, ..
+                } if *def_id == exiler_def => Some(instance_id.clone()),
+                _ => None,
+            })
+            .expect("the Spell summoned the exiler");
+        let exiled = events
+            .iter()
+            .position(|event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == id))
+            .expect("the aura exiled the immune Unit");
+        assert!(
+            !events[1..exiled]
+                .iter()
+                .any(|event| matches!(event, GameEvent::HookResolving { .. })),
+            "{events:?}"
+        );
+        assert_eq!(i21(&before, &events, &after), Vec::<String>::new());
+        // With no exile aura standing after the step, the same `exiled` is the Spell's.
+        let bare = moved(&after, &exiler, OffFieldZone::Graveyard);
+        only(&i21(&before, &events, &bare), &id, &["I21", "exiled"]);
+        // An aura of the enemy's alone (a Radiant face) reaches the other side only: p2's own does not
+        // excuse the exile of p2's Unit, and p1's does.
+        let mut own = bare.clone();
+        put(
+            &mut own,
+            &cheap_exiler().id,
+            slot(P2, Row::Units, 2),
+            json!({ "radiant": true }),
+        );
+        only(&i21(&before, &events, &own), &id, &["I21", "exiled"]);
+        let mut enemy = bare;
+        put(
+            &mut enemy,
+            &cheap_exiler().id,
+            slot(P1, Row::Units, 2),
+            json!({ "radiant": true }),
+        );
+        assert_eq!(i21(&before, &events, &enemy), Vec::<String>::new());
+    }
+
+    #[test]
     fn r4508003_tears_of_the_kwzki_tree_s_world_makes_an_immune_unit_radiant_and_i21_allows_it() {
         let (before, id) = immune_board("r4508003");
         let mut after = before.clone();

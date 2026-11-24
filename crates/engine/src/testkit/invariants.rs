@@ -1578,6 +1578,28 @@ fn pulled_into_the_hole(
         && mark.lanes.iter().any(|lane| (lane - hole.lane).abs() == 1)
 }
 
+/// I21, R4820000: whether an `exiled` of `mark`'s Unit may be an exile aura's (R1850002): a card acting on
+/// the field after the step, face-up and awake, holds one whose scope's side reaches the side the Unit
+/// stood on. The state check exiles with no marker of its own, so the exile follows whatever Spell's run
+/// came before it (S #150 Call to Chaos summons S #115 Scornboi); the aura is its card's, a Unit's or a
+/// Field Spell's, and Immune to Spells keeps out no Unit's text (R4453000).
+fn exiled_by_an_aura(after: &GameState, mark: &ImmuneMark) -> bool {
+    placed_cards(after).into_iter().any(|placed| {
+        let card = placed.card;
+        matches!(placed.zone, Zone::Field { .. })
+            && crate::zones::acts_on_field(after, card)
+            && !crate::preview::lasting_text_off(after, card)
+            && crate::scripts::script_of(after, card)
+                .exile_auras
+                .iter()
+                .any(|aura| match aura.scope.side {
+                    Some(crate::effects::ScopeSide::SelfSide) => card.controller == mark.side,
+                    Some(crate::effects::ScopeSide::Enemy) => card.controller != mark.side,
+                    Some(crate::effects::ScopeSide::Any) | None => true,
+                })
+    })
+}
+
 /// I21 (§6.1 Immune to Spells, R4453000): no Spell changes a Unit Immune to Spells on the field. The
 /// step's events are walked in order, tracking the card running (`hookResolving`, a trap, a turn edge
 /// and the AI's turn; a play nested in a run is its own from its `cardPlayed` to its `cardResolved`,
@@ -1591,6 +1613,8 @@ fn pulled_into_the_hole(
 /// - an `exiled` in a `LANE_TAKERS` card's run (R4508004): the lane goes with all it holds; and one of
 ///   a Unit the Black Hole's pull swallows at a turn's end (R4577008, `pulled_into_the_hole`), a stage of
 ///   the turn's end with no marker of its own, which follows whatever Spell's trigger ran last (R4440050);
+///   and one an exile aura standing after the step may make at the state check (R4820000,
+///   `exiled_by_an_aura`): the aura is its card's;
 /// - a `radiantSet` while Tears of the Kwzki Tree's world holds every card Radiant (R4508003, R4454001);
 /// - the game's own rules that run inside the Spell's run with no marker (R4508005): §4.5 step 1's
 ///   switch out of Defense of a Unit the board bars from it (`forbidden_defense`, I17's), and a Burn or
@@ -1731,7 +1755,12 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 // Tears of the Kwzki Tree's world.
                 GameEvent::RadiantSet { .. } => run.window == Some(ImmuneWindow::Restore) || radiant_world,
                 // R4508004: a lane the board loses; R4577008: or the hole's pull at a turn's end.
-                GameEvent::Exiled { .. } => run.takes_lane || pulled_into_the_hole(step.hole, ended, mark),
+                // R4820000: or an exile aura's at the state check.
+                GameEvent::Exiled { .. } => {
+                    run.takes_lane
+                        || pulled_into_the_hole(step.hole, ended, mark)
+                        || exiled_by_an_aura(after, mark)
+                }
                 // R4508005: §4.5 step 1 switches it out of a Defense Position the board bars it from.
                 // R4623000: the state check evolves it by its own standing condition (R3536001).
                 GameEvent::Evolved { .. } => evolves_standing(after, id),
