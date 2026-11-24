@@ -21117,6 +21117,7 @@
       "run_id": "45429709483",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 505,
       "started_at": "2026-11-24T15:48:07Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -43943,9 +43944,33 @@
         "title": "Patch: the clock alarm covers the mulligan and background tabs",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "069162579ec817911c22144dcb5278ed7a85a01d",
+        "issue": 4725,
+        "merged_at": "2026-11-24T16:25:50Z",
+        "n": 505,
+        "pr": 4753,
+        "queued_at": "2026-11-24T16:25:50Z",
+        "sha": "da18e1fcbb489d95202fcf1e061a6a58581b0b66",
+        "status": "queued",
+        "title": "Patch: the AI's Taunt walk reads the slash's halves",
+        "tries": 0
       }
     ],
-    "count": 504
+    "count": 505
   },
   "statistics": {
     "at": "2026-11-24T16:23:42Z"
