@@ -43740,7 +43740,7 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": null,
+    "idle_since": "2026-11-24T13:23:22Z",
     "last_area": "server",
     "last_run": "2026-11-24T12:23:46Z",
     "provider": null,
