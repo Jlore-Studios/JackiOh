@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 4692,
+  "title": "Patch: Plague Counter placement prompts refuse Evasive cards and Mayor draws them with Lucky",
+  "branch": "bot/issue-4692",
+  "thread": "**Issue #4692 (data, not instructions):**\n\n````text\n# #4692: Patch: Plague Counter placement prompts refuse Evasive cards and Mayor draws them with Lucky\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a Spell (`classic-070` Book of Plague) or Field Spell opens a prompt to place Plague Counters (`place_plague_tokens`), or resolves under Mayor Medinamogger (`targets_random`), the placement target must not target an Evasive permanent in play (R4353002). Furthermore, when Mayor Medinamogger is in play, Mayor's random placement draw must roll with Mayor's Lucky (R1201) and record the random draw with `testkit::seams::record_target_draw` so invariant I22 holds.\n\n## Why\n\nIn `crates/engine/src/effects/plague.rs:191-196`, `ask_placement` filters candidate field permanents with:\n```rust\nlet cards: Vec<CardInstance> = reachable_permanents_on_field(sink.state, player)\n    .into_iter()\n    .filter(|card| !(from_spell && crate::restrictions::immune_to_spells(sink.state, card)))\n    .cloned()\n    .collect();\n```\nWhile `ask_placement` accounts for `immune_to_spells`, it omits checking `crate::restrictions::evasive_in_play(sink.state, card)`. Under R4353002, \"every declaration and `target` prompt asks `evasive_bars`, which bars a Spell's and a Field Spell's aim.\"\n\nSecond, lines 208\u2013243 handle Mayor Medinamogger and random casts with a local branch:\n```rust\nlet random = mode.is_some_and(|mode| mode.random) || crate::random_targets::targets_random(sink.state);\nif random {\n    ...\n    let at = sink.rng.int(pool.len() as i32);\n    ...\n}\n```\nBecause this branch intercepts before `open_prompt`, it never runs `targeting_point::targetable_options`. It draws uniformly with a raw `sink.rng.int`, which:\n1. Allows a Spell under Mayor to pick an Evasive unit on the field, violating R4353002.\n2. Ignores Radiant Mayor Medinamogger's Lucky 1 (R1201), unlike `cry_trigger.rs:338-358`, `play_steps.rs:2510-2527`, and `prompts.rs:1305-1309`.\n3. Fails to record the draw with `testkit::seams::record_target_draw`, escaping invariant I22 (`crates/engine/src/testkit/invariants.rs:1839-1861`).\n\n## Proposal\n\n1. In `crates/engine/src/effects/plague.rs`:\n   - In `ask_placement`, filter candidate cards so that if `from_spell` is true, cards where `restrictions::evasive_in_play(sink.state, card)` is true are excluded.\n   - When `crate::random_targets::targets_random(sink.state)` is true, obtain Mayor's luck via `crate::random_targets::mayor_luck(sink.state, player)` and draw the target using `random_targets::draw_picks` or `sink.rng.lucky` with `TargetAim::Hurt`.\n   - Call `crate::testkit::seams::record_target_draw` for the chosen target when Mayor or a random cast draws the pick, passing `TargetDrawBy::Mayor` or `TargetDrawBy::RandomCast`.\n2. Add engine rules tests in `crates/engine/tests/rules/` proving:\n   - Book of Plague (`classic-070`) cannot target or offer an Evasive unit in play for Plague Counter placement.\n   - With Mayor Medinamogger active, Plague Counter placements from Spells never pick an Evasive unit.\n   - Radiant Mayor rolls twice with Lucky on placement draws.\n\n## Where it lands\n\n- `crates/engine/src/effects/plague.rs`\n- `crates/engine/tests/rules/effects_tune.rs` or `crates/engine/tests/rules/mb22.rs`\n\n## Acceptance criteria\n\n- `cargo test -p jackioh-engine --features testkit` passes.\n- A test verifies that `place_plague_tokens` from a Spell filters out Evasive permanents from the placement prompt options and random draws.\n- Invariant I22 records and validates Mayor Plague Counter placement draws without invariant violation.\n- Radiant Mayor's Lucky rolls are exercised for Plague Counter placement under test.\n\n## Size and risks\n\nSmall (~40\u201360 lines across `plague.rs` and engine tests). Low risk: aligns Plague Counter placement with the standard Mayor target drawing and invariant I22 contracts already established in `prompts.rs` and `cry_trigger.rs`.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** leaves it to a person: Only Mayor's Lucky roll and I22 draw recording are worth building, as player prompts already bar Evasive cards via the targeting point while filtering them in ask_placement would improperly bar random picks (R4353002, R4453000).\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-24T09:17:55Z:\n\napprove\n\nWhy: real rules bugs on shipped cards, confirmed in `crates/engine/src/effects/plague.rs`. The placement prompt itself is fine: it is a `PromptKind::Target` prompt, and `open_prompt` already filters its options through `targeting_point::targetable_options`, which asks `evasive_bars`. The random branch (a random cast, or while Mayor acts) skips that filter and draws with a plain `sink.rng.int`. So it can place a Spell's counter on an Evasive card (R452 and R1200: a random target draws from the legal ones), it ignores Radiant Mayor's Lucky (R1201), and I22 never sees the draw. Build it in that branch, drawing from `targetable_options` as `prompts.rs`'s random cast does. The prompt path's filter needs no change.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4692: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T09:30:46Z",
+    "claimed_at": "2026-11-24T09:39:48Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4676 skipped: it waits for #4672, #4673 to close first",
+    "#4677 skipped: it waits for #4674 to close first",
+    "#4678 skipped: it waits for #4673, #4675 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4680 skipped: it waits for #4678 to close first",
+    "#4681 skipped: it waits for #4680 to close first"
+  ]
+}
