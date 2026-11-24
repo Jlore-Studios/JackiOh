@@ -3,7 +3,7 @@
 // placeholder scenes"). Every entry
 // draws its scene through the procedural painter (`artSpec` reads a card's recipe by its id), so no dispatch site
 // changes and no painter of its own is written: each entry clears its rarity's detail floor (richness.ts), the two
-// Legendaries in every layer. A scene is its type's template (a unit's drone bay, a spell's or a trap's drone swarm,
+// Legendaries in every layer, and each Mythic its template's with drifts of motes over it (`setPiece`). A scene is its type's template (a unit's drone bay, a spell's or a trap's drone swarm,
 // a field's production line) built from the space, craft and gear kits, and `hashId(id)` varies its offsets, flips
 // and counts so no two are alike. No part turns (`rotate`) and no paint is gold. Presentation only (CLAUDE.md rule
 // 7): a recipe is read by the card's id alone, and only ids under `INFINITE_ASSAULT_PREFIX` are keys here, so no
@@ -17,8 +17,11 @@ export const INFINITE_ASSAULT_PREFIX = "infiniteassault-";
 /** The template a placeholder scene is drawn from, by the card's type: a Trap is drawn as a spell. */
 export type AssaultTemplate = "unit" | "swarm" | "factory";
 
-/** Every entry of Infinite Assault, its tokens included, with its template, in card order. */
-export const INFINITE_ASSAULT_SCENE_CARDS: readonly (readonly [string, AssaultTemplate])[] = [
+/**
+ * Every entry of Infinite Assault, its tokens included, with its template, in card order; a Mythic's with the drifts of
+ * motes its set piece adds (`setPiece`), as many as reach the Mythic floor and stay under the ceiling.
+ */
+export const INFINITE_ASSAULT_SCENE_CARDS: readonly (readonly [string, AssaultTemplate, number?])[] = [
   ["infiniteassault-001", "unit"], // Seed Drone
   ["infiniteassault-002", "unit"], // Scrap Prototype
   ["infiniteassault-003", "unit"], // Assault Trooper
@@ -73,7 +76,7 @@ export const INFINITE_ASSAULT_SCENE_CARDS: readonly (readonly [string, AssaultTe
   ["infiniteassault-045", "swarm"], // Dream Within a Dream
   ["infiniteassault-046", "unit"], // Mirage Sovereign
   ["infiniteassault-047", "factory"], // Unreal Estate
-  ["infiniteassault-048", "swarm"], // Ego Death
+  ["infiniteassault-048", "swarm", 4], // Ego Death
   ["infiniteassault-049", "unit"], // Spark Plug
   ["infiniteassault-050", "swarm"], // Burst Clock
   ["infiniteassault-051", "unit"], // Redline Racer
@@ -97,7 +100,7 @@ export const INFINITE_ASSAULT_SCENE_CARDS: readonly (readonly [string, AssaultTe
   ["infiniteassault-069", "unit"], // Rev Limiter
   ["infiniteassault-070", "unit"], // Redline Overlord
   ["infiniteassault-071", "unit"], // Thermal Throttler
-  ["infiniteassault-072", "swarm"], // Overclock to Infinity
+  ["infiniteassault-072", "swarm", 3], // Overclock to Infinity
   ["infiniteassault-073", "unit"], // Worker Thread
   ["infiniteassault-074", "unit"], // Parallel Instance
   ["infiniteassault-074-1", "unit"], // Instance
@@ -124,7 +127,7 @@ export const INFINITE_ASSAULT_SCENE_CARDS: readonly (readonly [string, AssaultTe
   ["infiniteassault-093", "unit"], // Gestalt
   ["infiniteassault-094", "unit"], // Batch Monarch
   ["infiniteassault-095", "factory"], // The Botnet
-  ["infiniteassault-096", "swarm"], // Exponential Growth
+  ["infiniteassault-096", "swarm", 6], // Exponential Growth
   ["infiniteassault-097", "unit"], // Retry Bot
   ["infiniteassault-098", "swarm"], // Echo Chamber
   ["infiniteassault-099", "swarm"], // Recall
@@ -148,7 +151,7 @@ export const INFINITE_ASSAULT_SCENE_CARDS: readonly (readonly [string, AssaultTe
   ["infiniteassault-117", "factory"], // Core Dump
   ["infiniteassault-118", "unit"], // The Recursionist
   ["infiniteassault-119", "unit"], // Snapshot Lich
-  ["infiniteassault-120", "swarm"], // Eternal Return
+  ["infiniteassault-120", "swarm", 3], // Eternal Return
   ["infiniteassault-121", "unit"], // Packet Sniffer
   ["infiniteassault-122", "unit"], // Freeze Ray Drone
   ["infiniteassault-123", "swarm"], // Cost Injection
@@ -173,7 +176,7 @@ export const INFINITE_ASSAULT_SCENE_CARDS: readonly (readonly [string, AssaultTe
   ["infiniteassault-142", "unit"], // The Jailbreaker
   ["infiniteassault-143", "swarm"], // Zero-Click
   ["infiniteassault-143-1", "unit"], // Corrupted Process
-  ["infiniteassault-144", "swarm"], // Total Compromise
+  ["infiniteassault-144", "swarm", 9], // Total Compromise
   ["infiniteassault-145", "unit"], // Packet Filter
   ["infiniteassault-146", "unit"], // Shield Drone
   ["infiniteassault-147", "unit"], // Hardened Node
@@ -198,7 +201,7 @@ export const INFINITE_ASSAULT_SCENE_CARDS: readonly (readonly [string, AssaultTe
   ["infiniteassault-165", "factory"], // Iron Curtain
   ["infiniteassault-166", "unit"], // Aegis Prime
   ["infiniteassault-167", "swarm"], // Fortress Protocol
-  ["infiniteassault-168", "swarm"], // Impenetrable
+  ["infiniteassault-168", "swarm", 5], // Impenetrable
   ["infiniteassault-169", "unit"], // Spider Bot
   ["infiniteassault-170", "swarm"], // Data Point
   ["infiniteassault-171", "unit"], // Mimic Unit
@@ -222,7 +225,7 @@ export const INFINITE_ASSAULT_SCENE_CARDS: readonly (readonly [string, AssaultTe
   ["infiniteassault-189", "factory"], // Clone Vat
   ["infiniteassault-190", "unit"], // Total Recall
   ["infiniteassault-191", "unit"], // Ground Truth
-  ["infiniteassault-192", "swarm"], // Become the Data
+  ["infiniteassault-192", "swarm", 5], // Become the Data
   ["infiniteassault-193", "unit"], // Seedling Mind
   ["infiniteassault-194", "unit"], // Compute Shard
   ["infiniteassault-195", "unit"], // Power Law
@@ -247,7 +250,7 @@ export const INFINITE_ASSAULT_SCENE_CARDS: readonly (readonly [string, AssaultTe
   ["infiniteassault-213", "unit"], // The Long Game
   ["infiniteassault-214", "unit"], // Emergent Mind
   ["infiniteassault-215", "unit"], // The Optimizer
-  ["infiniteassault-216", "swarm"], // The Singularity
+  ["infiniteassault-216", "swarm", 3], // The Singularity
   ["infiniteassault-216-1", "unit"], // Singularity
   ["infiniteassault-217", "unit"], // Echo-1, First Hallucination
   ["infiniteassault-218", "factory"], // Thousand Faces
@@ -261,18 +264,18 @@ export const INFINITE_ASSAULT_SCENE_CARDS: readonly (readonly [string, AssaultTe
   ["infiniteassault-226", "swarm"], // Escalated Privileges
   ["infiniteassault-227", "unit"], // Bastion.exe
   ["infiniteassault-228", "factory"], // Firewall Rules
-  ["infiniteassault-229", "unit"], // The Harvester
+  ["infiniteassault-229", "unit", 9], // The Harvester
   ["infiniteassault-230", "swarm"], // Everything You've Ever Played
-  ["infiniteassault-231", "unit"], // The Black Box
+  ["infiniteassault-231", "unit", 5], // The Black Box
   ["infiniteassault-232", "swarm"], // Spaghettification
-  ["infiniteassault-233", "unit"], // Model Collapse
+  ["infiniteassault-233", "unit", 4], // Model Collapse
   ["infiniteassault-234", "swarm"], // Degenerate Output
-  ["infiniteassault-235", "unit"], // The Prime Generator
+  ["infiniteassault-235", "unit", 9], // The Prime Generator
   ["infiniteassault-235-1", "unit"], // The Prime Generator, Iteration Two
   ["infiniteassault-236", "swarm"], // Infinite Assault
-  ["infiniteassault-237", "unit"], // Thermal Runaway
+  ["infiniteassault-237", "unit", 4], // Thermal Runaway
   ["infiniteassault-238", "factory"], // Critical Temperature
-  ["infiniteassault-239", "unit"], // Zero-Day
+  ["infiniteassault-239", "unit", 9], // Zero-Day
   ["infiniteassault-240", "swarm"], // Unpatched
 ];
 
@@ -412,19 +415,28 @@ const TEMPLATES: Readonly<Record<AssaultTemplate, Template>> = {
   },
 };
 
-/** The placeholder scene of `id`: its template, varied by `hashId(id)`, family `stinkyscape`, all seven layers. */
-export function assaultRecipe(id: string, template: AssaultTemplate): SceneRecipe {
+/**
+ * R4577009: what a Mythic draws over its template to reach the Mythic floor (richness.ts) within the ceiling:
+ * `drifts` drifts of motes across the frame, last of the last layer, so no draw of the template moves.
+ */
+function setPiece(drifts: number): ScenePlacement {
+  return { part: "motes", x: 50, y: 50, scale: 1, count: drifts, spread: [30, 34], paint: "cyan-400" };
+}
+
+/** The placeholder scene of `id`: its template, varied by `hashId(id)`, family `stinkyscape`, all seven layers; a Mythic's `drifts` of motes over it. */
+export function assaultRecipe(id: string, template: AssaultTemplate, drifts = 0): SceneRecipe {
   const { sky, light, layers } = TEMPLATES[template];
+  const drawn = layers(varyFor(id));
   return {
     family: "stinkyscape",
     sky,
     light,
     emblem: { x: hashId(id) % 2 === 0 ? EMBLEM_LEFT : EMBLEM_RIGHT, y: EMBLEM_TOP, size: EMBLEM_SIZE, rotate: 0 },
-    layers: layers(varyFor(id)),
+    layers: drifts > 0 ? { ...drawn, particles: [...drawn.particles, setPiece(drifts)] } : drawn,
   };
 }
 
 /** R4577009: every Infinite Assault entry's scene, by id. */
 export const INFINITE_ASSAULT_RECIPES: Readonly<Record<string, SceneRecipe>> = Object.fromEntries(
-  INFINITE_ASSAULT_SCENE_CARDS.map(([id, template]) => [id, assaultRecipe(id, template)] as const),
+  INFINITE_ASSAULT_SCENE_CARDS.map(([id, template, drifts]) => [id, assaultRecipe(id, template, drifts)] as const),
 );

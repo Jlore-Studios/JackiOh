@@ -24,15 +24,12 @@ mod golden;
 mod names;
 mod patches;
 mod perf;
-mod positions;
-mod promote;
 mod replay;
 mod retcon;
 mod run_sim;
 mod sample_size;
 mod seed_watch;
 mod selfplay;
-mod selfplay_records;
 mod spec;
 mod spec_cards;
 mod stats;
@@ -69,6 +66,8 @@ enum Command {
     Fx(fx_census::Args),
     /// Fold `{seed, decks, log, …}` from stdin; print `{"hash", "errors"}` (part 22).
     Replay(replay::Args),
+    /// Hash one state object from stdin by the engine's hash_state; print `{"hash"}` (#4766).
+    HashState(replay::HashStateArgs),
     /// Print one gate game turn by turn (part 22).
     Trace(trace::Args),
     /// Fold `{seed, decks, log, …}` to one position and print it and the AI's decision there (#834).
@@ -99,12 +98,8 @@ enum Command {
     Arena(arena::Args),
     /// The agent protocol on stdin and stdout (part 29).
     Agent(agent::Args),
-    /// The promotion gate (part 29).
-    Promote(promote::Args),
-    /// Self-play game logs (#1006; they fed the learned evaluation, retired by R4159000).
+    /// Self-play game logs (#1006), which `classify` compares across two builds (R1365000).
     Selfplay(selfplay::Args),
-    /// Self-play logs folded into training rows (#1006; they fed the learned evaluation, retired: R4159000).
-    Positions(positions::Args),
     /// `winrates --refresh <report.json>`: the win rates of record from production's windowed card figures, once per patch (R3882000).
     Winrates(winrates::Args),
 }
@@ -118,6 +113,7 @@ fn main() -> ExitCode {
         Command::RunSim(args) => run_sim::run(args),
         Command::Fx(args) => fx_census::run(args),
         Command::Replay(args) => replay::run(args),
+        Command::HashState(args) => replay::run_hash_state(args),
         Command::Trace(args) => trace::run(args),
         Command::Think(args) => think::run(args),
         Command::Catalog(args) => catalog::run(args),
@@ -133,9 +129,7 @@ fn main() -> ExitCode {
         Command::Names(args) => names::run(args),
         Command::Arena(args) => arena::run(args),
         Command::Agent(args) => agent::run(args),
-        Command::Promote(args) => promote::run(args),
         Command::Selfplay(args) => selfplay::run(args),
-        Command::Positions(args) => positions::run(args),
         Command::Winrates(args) => winrates::run(args),
     };
     // R3925000: the measurement behind `RESOLUTION_EVENT_CAP`, the most events one interaction emitted in

@@ -376,15 +376,22 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     return files;
   }
 
-  /** Three patch-notes strings no card catalog shares: the first and newest notes, the newest title. */
+  /**
+   * Three patch-notes strings no card catalog shares: the first and newest notes, and the newest title. A
+   * title of one word can be a term the client prints for its own sake (v0.6.13c's "Overload" is a glossary
+   * keyword, #4751), so the newest title probes only when it holds more than one word; the notes always do.
+   */
   function probes(): string[] {
     const patches = JSON.parse(readFileSync(PATCHES, "utf8")) as {
       readonly notes?: unknown;
       readonly player?: { readonly title?: unknown };
     }[];
     if (!Array.isArray(patches) || patches.length === 0) throw new Error("patches.json is not a list of patches");
-    const found = [patches[0]?.notes, patches.at(-1)?.notes, patches.at(-1)?.player?.title];
-    expect(found.every((probe) => typeof probe === "string" && probe.length > 0)).toBe(true);
+    const notes = [patches[0]?.notes, patches.at(-1)?.notes];
+    expect(notes.every((probe) => typeof probe === "string" && probe.length > 0)).toBe(true);
+    const title = patches.at(-1)?.player?.title;
+    expect(typeof title === "string" && title.length > 0).toBe(true);
+    const found = typeof title === "string" && /\s/u.test(title.trim()) ? [...notes, title] : notes;
     return found.filter((probe): probe is string => typeof probe === "string");
   }
 
