@@ -19249,10 +19249,16 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-24T21:26:58Z",
       "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
+      "paused": {
+        "at": "2026-11-24T21:35:55Z",
+        "interrupt": "usage",
+        "provider": "claude-8"
+      },
       "pending_request": false,
       "planned_at": "2026-11-24T21:23:06Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -19262,11 +19268,13 @@
       "provider": "claude-8",
       "queued_at": "2026-11-24T20:53:28Z",
       "requested_by": "squishy-squooby",
+      "round_tier": "",
       "run_id": "45491214572",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-24T21:26:58Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "4802": {
       "failures": 0,
