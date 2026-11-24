@@ -198,6 +198,25 @@ mod tests {
             s.expect_refused(|s| s.attack(attacker.as_str(), ticketed.as_str()));
         }
 
+        /// R4665000: lying on a unit zone it is no Unit: its controller can neither switch it nor attack
+        /// with it, and no switch or attack of it is listed.
+        #[test]
+        fn r4665000_a_lying_ticketed_neither_switches_nor_attacks() {
+            let mut s = board(false, json!([]), json!([{ "def": LAR, "lane": 2 }]), json!([]));
+            let lar = s.unit_at(P2, 2).id;
+            stack_on(&mut s, &lar);
+            let ticketed = s.unit(P2, 2).expect("Ticketed").id;
+            s.end_turn();
+            assert_eq!(s.state().active, P2);
+            s.expect_refused(|s| s.switch_position(ticketed.as_str()));
+            s.expect_refused(|s| s.attack(ticketed.as_str(), "hero"));
+            let listed = legal_actions(s.state(), P2);
+            assert!(
+                !listed.iter().any(|action| crate::js(action).to_string().contains(ticketed.as_str())),
+                "{listed:?}"
+            );
+        }
+
         /// R4665000: on a face-down Trap, which lies beneath it and cannot fire (§3.2).
         #[test]
         fn r4665000_it_stacks_on_an_enemy_face_down_trap() {

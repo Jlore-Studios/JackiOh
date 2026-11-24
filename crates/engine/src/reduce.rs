@@ -106,12 +106,13 @@ pub fn attack_target_id(target: &AttackTarget) -> String {
 /// a backrow zone.
 fn attacker_of(state: &GameState, player: PlayerId, instance_id: &str) -> Option<CardInstance> {
     // R446: a Unit a carrier holds is one of the player's units too, which `combat` refuses to attack.
+    // R4665000: a card lying on a unit zone is no Unit, so it neither attacks nor switches.
     let in_piles = state.players[player]
         .units
         .iter()
         .flatten()
         .flatten()
-        .find(|card| card.id == instance_id)
+        .find(|card| card.id == instance_id && !crate::zones::lies_on_unit_zone(state, card))
         .cloned();
     if in_piles.is_some() {
         return in_piles;
