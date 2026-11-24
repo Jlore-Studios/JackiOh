@@ -1,11 +1,11 @@
 //! M #82 Medina Outfitter (SPEC §8.8 row 82): (1) Unit, Common, 1/1 → 2/2.
 //!
-//! Base:    "Cry: Buff every card in your hand. You have {mana} less mana next turn."
-//! Radiant: "Cry: Buff every card in your hand {times|time|times}. You have {mana} less mana next turn."
+//! Base:    "Cry: Buff every card in your hand. Overload ({mana})."
+//! Radiant: "Cry: Buff every card in your hand {times|time|times}. Overload ({mana})."
 //! Engine: `upgrade({ scope: { side: "self", zones: ["hand"] }, times: param("times") })`: each card
 //! in the hand takes `times` separate Buffs (R386), each one draw (R442); an Immutable card is left
 //! alone; a hand is a pile the opponent cannot read, so every application is cued and none counted
-//! (R440). Issue #4665 gave both faces' Cry "You have {mana} less mana next turn" (R4665005), as
+//! (R440). Issue #4665 gave both faces' Cry "Overload ({mana})." (R4665005), as
 //! Core #2 Speciesist's (R4353021): `next_turn_mana` of the declared `mana` (1 on both faces, R386),
 //! read with `param_or` at 0, so a replay of a version that declared no `mana` loses none (R2657006)
 //! and needs no kept script.
@@ -14,7 +14,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-082";
 
-/// R4665005: the Cry's "You have {mana} less mana next turn"; 0 under a definition that declares no
+/// R4665005: the Cry's "Overload ({mana})."; 0 under a definition that declares no
 /// `mana`, as every one through v0.6.12c (R2657006).
 const NO_LOSS: i32 = 0;
 
@@ -179,7 +179,7 @@ mod tests {
         }
     }
 
-    /// R4665005: issue #4665's "You have {mana} less mana next turn", on both faces.
+    /// R4665005: issue #4665's "Overload ({mana}).", on both faces.
     mod m82_less_mana_next_turn_r4665005 {
         use super::*;
 

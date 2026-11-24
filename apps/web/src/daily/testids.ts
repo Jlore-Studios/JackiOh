@@ -69,6 +69,8 @@ export const dailyTestid = {
   /** Its result: `data-outcome` (`win|loss|draw|none`). */
   expiredResult: "daily-expired-result",
   backToList: "daily-back",
+  /** #4742: beside `backToList` in a finished or expired game's result: out to the Play menu. */
+  mainMenu: "daily-main-menu",
 } as const;
 
 /** One mode's option in the dialog's segmented control. */

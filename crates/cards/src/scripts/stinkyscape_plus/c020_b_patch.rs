@@ -1,6 +1,6 @@
 //! SPEC §8.12 S+ #20 B-Patch, a card of the Stinkyscape+ set (R1420, R3535000). (1) Spell, Epic.
-//!   Base:    "Cast on draw: Flip a coin for the whole effect. Randomly either Buff or Nerf every card on
-//!            the field and in both hands."
+//!   Base:    "Cast on draw: Flip a coin. Heads: Buff every card on the field and in both hands.
+//!            Tails: Nerf them."
 //!   Radiant: "Lucky 1" and the same.
 //!
 //! Cast on draw (§6.2, `StaticFlags.cast_on_draw`): the one coin is flipped in the Cry, so every card

@@ -27,6 +27,8 @@ export const fightTestid = {
   actRefusal: "dungeon-fight-act-refusal",
   /** R3932000: out to the Play menu: mid-fight it opens `leaveDialog`; once the fight has its result it leaves at once. */
   menu: "dungeon-fight-menu",
+  /** #4742, R4742000: in the result panel, after Continue: the same Menu, which leaves at once. */
+  resultMenu: "dungeon-fight-result-menu",
   /** R2972000: the question asked before a fight in progress is left. */
   leaveDialog: "dungeon-fight-leave",
   /** R2972000: stay in the fight. */

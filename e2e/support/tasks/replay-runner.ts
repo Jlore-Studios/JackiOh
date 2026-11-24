@@ -31,9 +31,18 @@ function canonical(value: unknown): string {
   return `{${entries.join(",")}}`;
 }
 
-/** Leaves out `applied`, a Glitch-redrawn opening (R676) and Created cards' generators (R1956001), as `replay::hash_state` does. */
+/**
+ * Leaves out `applied`, a Glitch-redrawn opening (R676), Created cards' generators (R1956001) and their makers
+ * (R4672001, the game record's), as `replay::hash_state` does.
+ */
 function hashState(state: unknown): string {
-  const { applied: _applied, opening: _opening, generators: _generators, ...rest } = state as Record<string, unknown>;
+  const {
+    applied: _applied,
+    opening: _opening,
+    generators: _generators,
+    makers: _makers,
+    ...rest
+  } = state as Record<string, unknown>;
   const text = canonical(rest);
   let hash = 0x811c9dc5;
   for (let i = 0; i < text.length; i += 1) {

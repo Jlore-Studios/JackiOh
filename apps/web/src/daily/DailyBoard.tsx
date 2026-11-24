@@ -36,6 +36,7 @@ import type { ActionBody } from "@jackioh/shared";
 
 import Game from "../game/Game.tsx";
 import { CatalogContext } from "../game/catalog.ts";
+import { MainMenuButton } from "../game/MainMenuButton.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { pollWhileVisible } from "../game/net.ts";
 import { outcomeFor } from "../game/Result.tsx";
@@ -93,6 +94,13 @@ function ExpiredGame({ game }: { game: DailyExpiredGame }): ReactElement {
         <button type="button" className="button-primary" data-testid={dailyTestid.backToList} data-route={paths.daily} onClick={() => navigate(paths.daily)}>
           {t("Back to daily games")}
         </button>
+        {/* #4742, R4742000: an expired game's result is an end of game too. */}
+        <MainMenuButton
+          testid={dailyTestid.mainMenu}
+          onClick={() => {
+            navigate(paths.play);
+          }}
+        />
       </div>
     </ShellPanel>
   );
@@ -344,6 +352,13 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
               <button type="button" data-testid={dailyTestid.backToList} data-route={paths.daily} onClick={() => navigate(paths.daily)}>
                 {t("Back to daily games")}
               </button>
+              {/* #4742, R4742000: beside Back to daily games, out to the Play menu. */}
+              <MainMenuButton
+                testid={dailyTestid.mainMenu}
+                onClick={() => {
+                  navigate(paths.play);
+                }}
+              />
             </>
           }
         />

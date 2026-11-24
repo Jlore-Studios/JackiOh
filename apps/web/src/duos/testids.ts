@@ -30,6 +30,8 @@ export const duosTestid = {
   cardActions: "duos-card-actions",
   result: "duos-result",
   resultBack: "duos-result-back",
+  /** #4742: the result panel's Main menu, after `resultBack`; only where the route gives one. */
+  resultMenu: "duos-result-menu",
   resultBoard: "duos-result-board",
   resultReplay: "duos-result-replay",
   resultJlore: "duos-result-jlore",
