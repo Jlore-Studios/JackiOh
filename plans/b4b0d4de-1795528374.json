@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4725,
+  "title": "Patch: the AI's Taunt walk reads the slash's halves",
+  "branch": "bot/issue-4725",
+  "thread": "**Issue #4725 (data, not instructions):**\n\n```text\n# #4725: Patch: the AI's Taunt walk reads the slash's halves\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome cards cut the board in two for the rest of the game. On a slashed board a Unit can only attack Units on its own half, while either half can still hit a hero, and a Taunt on the far half protects nothing on your half. The AI does not know that last part: its static reads count every enemy Taunt as a wall wherever it stands. So on a slashed board it thinks both heroes are safer than they are. A concrete game: your 6-attack unit stands on the left half, the enemy hero is at 6, and the enemy's only Taunt stands on the right half. The rules say your hit reaches the hero. The AI's threat count says it is walled, so it can miss the face hit, misjudge whether it must block, and rank its lines wrong. After this change a slashed board reads the way the rules read it.\n\n## Why\n\n- The spec already rules it: `spec/04-combat.md` \u00a74.2 step 2 says a Unit may attack only Units on its own half, never across the slash, heroes are attacked from either half, and a Taunt across the slash binds nothing (`R3554003`). Same rule in `spec/03-zones.md` (slash voids a lane and halves the rest), the Slash row of `spec/06-keywords.md`, and the S+ #78 row of `spec/08-catalog.md` (whose mode prompt the AI itself answers, so the AI reaches slashed boards through normal prompt answering).\n- The engine enforces it: `crates/engine/src/restrictions.rs` refuses cross-half Unit attacks (`SLASH_REFUSAL`, via `geometry::reaches`), while hero attacks pass from either half.\n- The AI never mirrors it: there is no slash/half handling anywhere in `crates/ai/src`. `face_threat_from` (`crates/ai/src/evaluate.rs`) asks `attack_restriction` only behind the Gauntlet and across-only checks, then `damage_past_taunts_from`/`soak_past_taunts` soaks every defender Taunt with no half check. Its readers all inherit the error: the threat and pressure terms, `wall_switches` (`crates/ai/src/candidates.rs`), the Duos pool loss (`crates/ai/src/duos.rs`), and `ready_gap` (`crates/ai/src/lethal.rs`, also read for move ordering and the reply's facing-lethal judgment in `crates/ai/src/reply.rs`). `may_hit_hero` is already right (heroes are shared), so only the Taunt walk is wrong.\n- It happens in normal play: S+ #78 Slashed Dream Cries in Red (a 4-cost Spell whose Cry slashes), S+ #77 Black Hole (slashes on arrival), Classic #40 MC Tech, and the S #18 Casper token. Slash used to be rare; the Stinkyscape+ set put it on ordinary plays, which is what changed.\n- It follows the established pattern: the sibling flags in `crates/ai/src/config.rs` (`gauntlet_bars_face_attacks`, `static_attack_flags_read`, `best_attack_order_past_taunts`, `pool_and_conversion_read`, `giga_cleave_read`, `strike_back_survival_read`) are each one engine restriction the static reads learned, with a screen and scene tests. This is the same class of change for the one restriction the walk still misses. No clean-up, guard, report, or design call is involved, and no open issue or rejected suggestion covers it.\n\n## Proposal\n\n- Add one `EvalWeights` flag (e.g. `slash_halves_read`) in `crates/ai/src/config.rs`, documented exactly like its siblings: what it reads (`R3554003`), which cards exercise it, and what off means (today's behavior, byte for byte).\n- Make the Taunt walk halve-aware in `crates/ai/src/evaluate.rs`: an attacker soaks only Taunts on its own half (read off the engine's `half_of_card`, no engine change, purity kept); a cross-half Taunt walls nothing; heroes stay hittable from either half. All current readers (`face_threat`, `ready_gap`, walls, pool loss) pick it up through the one walk function.\n- Add scene tests (`crates/ai/tests/ai/`): far-half Taunt does not wall (threat and gap equal the no-Taunt numbers), near-half Taunt still walls, heroes hittable from either half, a GIGA judged by its anchor lane, unslashed boards unchanged with the flag on and off. Each fails without the fix.\n- Screen on the fixed dev set per `training/improve.md` and record the tally in the flag's config comment. Slash rarely arises unforced, so an inconclusive screen neither keeps nor drops the change; then the scene tests settle it, as `R4319000` allows. Update the flag's docs in `crates/ai/README.md`.\n\n## Where it lands\n\n- `crates/ai/src/config.rs` (one flag plus its screen comment), `crates/ai/src/evaluate.rs` (the walk), `crates/ai/tests/ai/` (slashed-board scene tests), `crates/ai/README.md` (flag docs).\n- SPEC sections `\u00a74.2` (`spec/04-combat.md`), `\u00a73` (`spec/03-zones.md`), `\u00a76.1` and `\u00a78` already rule the behavior, so no spec change; ruling `R3554003` is cited, so no new ruling note and no `spec check` impact; no engine change (pure reads of the engine's public geometry).\n\n## Acceptance criteria\n\n- [ ] New tests: on a slashed board a far-half Taunt walls nothing (threat/gap equal the no-Taunt numbers) and a near-half Taunt still walls; each fails with the flag off.\n- [ ] Unslashed boards score exactly as before with the flag on and off (existing suite pins this).\n- [ ] `cargo test -p jackioh-ai`, `cargo fmt --check`, and `cargo clippy -p jackioh-ai --all-targets -- -D warnings` are green.\n- [ ] The config comment records the dev-set screen tally, or records it as inconclusive with the scene tests settling it.\n- [ ] No new ruling note, no spec edit, no engine edit.\n\n## Size and risks\n\nSmall-medium: one flag, one walk function, one test file, doc lines. The walk runs in every decision, so halves are read once per unit, not per soak step. Risk is bounded: with the flag off the numbers are byte-identical, and with it on only slashed boards change. The main risk is an inconclusive screen (slash is rare unforced on the dev set); the proposal handles that by letting the scene tests settle it instead of re-screening. Rejected alternative: folding cross-half Taunts into the existing order heuristics instead of a flag; a flag matches every sibling read and lets the screen decide cleanly.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** leaves it to a person: The claimed blind spot is not present because the Taunt walk already filters cross-half Taunts through attack_restriction.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-24T13:44:55Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4725: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T13:45:20Z",
+    "claimed_at": "2026-11-24T13:53:24Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
