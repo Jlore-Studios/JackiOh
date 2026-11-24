@@ -19174,11 +19174,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-24T09:31:54Z",
+        "at": "2026-11-24T11:03:04Z",
         "difficulty": "hard",
         "provider": "claude-8",
-        "tier": "medium",
-        "why": "Rule 2: the change turns on a search switch in `crates/ai/src/` (`AI_SEARCH.replay_fill_steps`) that alters the AI's decisions, plus a ruling and a re-pinned decision test."
+        "tier": "strong",
+        "why": "rule 2 (the AI): it changes the AI's decisions through AI_SEARCH in crates/ai/src, and its fallback changes decide.rs"
       },
       "failures": 0,
       "forced": false,
