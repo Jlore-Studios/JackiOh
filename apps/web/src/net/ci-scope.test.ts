@@ -194,7 +194,7 @@ describe("scripts/ci-scope.sh", () => {
     "scripts/build-wasm.sh",
     "apps/web/src/main.tsx",
     "e2e/cypress/e2e/01-hotseat-full-game.cy.ts",
-    // `spec check` reads the notes; the training gate reads the lanes' history.
+    // `spec check` reads the notes; training/history/ is no skip-list path.
     "spec/rulings/R0195.md",
     "spec/README.md",
     "training/history/improve.jsonl",
