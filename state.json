@@ -19775,9 +19775,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T11:43:52Z",
+    "at": "2026-11-24T11:44:33Z",
     "url": "",
-    "what": "suggestions (tests) on claude-1"
+    "what": "suggestions (rules) on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-24T11:33:34Z",
@@ -43001,9 +43001,9 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-24T11:43:52Z",
-    "last_area": "tests",
-    "last_run": "2026-11-24T11:43:52Z",
+    "idle_since": "2026-11-24T11:44:33Z",
+    "last_area": "rules",
+    "last_run": "2026-11-24T11:44:33Z",
     "provider": null,
     "requested": false,
     "run_id": null,
@@ -43022,6 +43022,14 @@
         "last_run": "2026-11-24T11:43:52Z",
         "provider": "claude-1",
         "run_id": "45386856929",
+        "taken_asks": []
+      },
+      "3": {
+        "area": "rules",
+        "count": 2,
+        "last_run": "2026-11-24T11:44:33Z",
+        "provider": "claude-1",
+        "run_id": "pending:eead85b8-1795520643",
         "taken_asks": []
       }
     },
