@@ -230,10 +230,9 @@ fn judge(
         return Some(Verdict::Dead);
     }
     let signature = search_signature(next, seat);
-    if visited.contains(&signature) {
+    if !visited.insert(signature) {
         return Some(Verdict::Dead);
     }
-    visited.insert(signature);
     Some(Verdict::Deeper)
 }
 

@@ -37,7 +37,7 @@ use crate::evaluate::{
 use crate::lethal::{deft_ready_switch, ready_gap};
 use crate::simulate::{
     AnswersTried, LineStatus, best_auto_answer, charge_announced, line_status, note_sim_panic, simulate,
-    static_score, surcharge_nodes,
+    surcharge_nodes,
 };
 use crate::types::NodeCounter;
 
@@ -1001,11 +1001,9 @@ pub fn reply_score(
     prices: &Prices,
 ) -> Option<f64> {
     let status = line_status(end, seat, root_turn);
-    if status == LineStatus::Over {
-        return Some(static_score(end, seat, root_turn, prices));
-    }
-    // A line that stopped on the seat's own prompt keeps its static score, the hand eval's.
-    if status == LineStatus::Open {
+    // A line that ended the game, or stopped on the seat's own prompt, keeps its static score, the
+    // hand eval's.
+    if matches!(status, LineStatus::Over | LineStatus::Open) {
         return Some(evaluate_priced(end, seat, NextSwing::Enemy, &AI_EVAL, prices));
     }
     let unspent = if status == LineStatus::Passed {
