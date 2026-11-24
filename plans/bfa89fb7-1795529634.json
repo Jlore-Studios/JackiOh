@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4745,
+  "title": "Patch: clearer rules text for S+ #20 B-Patch",
+  "branch": "bot/issue-4745",
+  "thread": "**Issue #4745 (data, not instructions):**\n\n```text\n# #4745: Patch: clearer rules text for S+ #20 B-Patch\nOpened by @MaxGoetzmann.\n\n## What\n\nS+ #20 B-Patch (`stinkyscapeplus-020`) has this printed text:\n\n> Cast on draw: Flip a coin for the whole effect. Randomly either Buff or Nerf every card on the field and in both hands.\n\nIt is hard to read because \"Flip a coin\" and \"Randomly either\" describe the same single 50/50 roll. Reword it so the coin's two sides are spelled out:\n\n- **Base:** `Cast on draw: Flip a coin. Heads: Buff every card on the field and in both hands. Tails: Nerf them.`\n- **Radiant:** `Lucky 1\\nCast on draw: Flip a coin. Heads: Buff every card on the field and in both hands. Tails: Nerf them.`\n\n## This changes the wording only\n\nHow the card plays stays exactly as it is now, under R3557000: one coin for the whole effect, heads Buffs every card, tails Nerfs every card, never a mix, and the Radiant face's Lucky 1 is a second flip that keeps heads (R1440). The R4453000 skip, which passes over field Units that are Immune to Spells, stays too. The script's behavior and the engine are untouched, and its tests should pass unchanged.\n\n## Where\n\n- `crates/cards/catalog.json`: the `base.text` and `radiant.text` of `stinkyscapeplus-020`.\n- `spec/08-catalog.md`: the text column of \u00a78.12 row 20.\n- `crates/cards/src/scripts/stinkyscape_plus/c020_b_patch.rs`: the header comment that quotes the text.\n- A pending patch fragment for the wording change: `cargo jackioh patches \"<title>\" --source \"<this issue>\" --notes \"...\"`. The player note is written by hand, per `docs/ADDING_CARDS.md`.\n\nRead `docs/ADDING_CARDS.md` first (CLAUDE.md rule 10).\n\n## Acceptance\n\n- `cargo jackioh catalog check`, `cargo jackioh patches check` and `cargo jackioh spec check` pass.\n- `cargo test -p jackioh-cards c020_b_patch` passes.\n- The cross-crate catalog tests (`crates/cards/tests/cross/`) pass.\n- `cargo jackioh classify --base origin/main --claims` passes. This change should classify as a words-only card change, `tier:micro`.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4745: needs a plan; `claude-8` (claude, `sonnet`, medium) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T14:13:54Z",
+    "claimed_at": "2026-11-24T14:14:30Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4745 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
