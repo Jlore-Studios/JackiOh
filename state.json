@@ -40809,6 +40809,10 @@
       "4686": {
         "at": "2026-11-24T06:24:17Z",
         "why": "It fixes a real bug players hit when an unmet rematch offer outlives the match window, confirmed with the code and tests cited."
+      },
+      "4688": {
+        "at": "2026-11-24T06:55:37Z",
+        "why": "It resolves an accidental spec prefix collision in e2e that omits the board notices overlay from documentation and risks duplicate-prefix sharding errors."
       }
     },
     "declined": [
