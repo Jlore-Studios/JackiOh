@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4838,
+  "title": "Patch: the server answers 400, not 500, to a NUL character, a UUID spelling Postgres will not cast, and a chat cursor past any timestamp",
+  "branch": "bot/issue-4838",
+  "thread": "**Issue #4838 (data, not instructions):**\n\n````text\n# #4838: Patch: the server answers 400, not 500, to a NUL character, a UUID spelling Postgres will not cast, and a chat cursor past any timestamp\nOpened by @squishy-squooby.\n\n### What happens\n\nThree kinds of crafted input pass the HTTP handlers, are refused by Postgres as a statement error, and come back as a 500 (`StoreError::Db` \u2192 `ApiError::internal`, `crates/server/src/api/http.rs:226-238`). The in-memory fake the tests run on accepts all three, so no `cargo test` sees them. Five 500s in a row on one route within 60 seconds raise `api.route.failing`, which opens a public issue and emails the owners (`http.rs:938-983`, `config.rs:492-497`): a stranger can trip that alarm with five requests to an unauthenticated route.\n\n**1. A NUL character (U+0000) in any client string.** Nothing refuses it on the way in: `read_body` (`http.rs:605-619`), `decode_form_component` and `parse_query` (`:748-788`), `decode_segment` (`:699-722`), `query_trimmed` (`:624-629`; `str::trim` does not strip NUL). Postgres refuses the bind (`22021` for text, `22P05` for jsonb).\n\n- Unauthenticated: `GET /api/stats/players?search=%00`; `GET /api/stats/cards?patch=%00` (and the same on `/api/stats/games` and `/api/stats/cards/:id`); `POST /api/auth/username-signin` with `{\"username\":\"a\\u0000\",\"password\":\"x\"}`.\n- Signed in: `POST /api/friends/requests` `{\"username\":\"a\\u0000\"}`; `POST /api/chat/:friendId` `{\"body\":\"a\\u0000\"}`; `POST /api/chat/messages/:id/report`; `PUT /api/settings` with a text value `\"\\u0000\"` (a `::jsonb` bind).\n\n**2. `is_uuid` accepts spellings Postgres does not cast, and handlers compare ids as text.** `is_uuid` is `uuid::Uuid::parse_str(id).is_ok()` (`crates/server/src/auth.rs:281-284`), which also accepts `urn:uuid:<uuid>`, braces, no hyphens and upper case.\n\n- (a) Postgres does not cast the URN form (`22P02`), so every guarded read or write answers 500. Unauthenticated: `POST /api/daily/unsubscribe?token=urn:uuid:67e55044-10b1-426f-9247-bb680e5fe0c8`. Signed in: `GET /api/replays/urn:uuid:\u2026`, and the same for friend-request, block, chat, share, challenge and series ids.\n- (b) `post_block` (`crates/server/src/social/friends.rs:456-468`) checks `target == me` as text. Sending your own id in upper case passes that check and `profiles_find`, then `blocks_add` hits `check (blocker <> blocked)` (`migrations/0038_social.sql:66`) and answers 500. The fake compares text too, so it stores a self-block instead: the fake and Postgres disagree.\n\n**3. A chat cursor with a time past what a timestamp holds.** `parse_cursor` (`crates/server/src/social/chat.rs:75-82`) accepts any `i64 >= 0`. `GET /api/chat/<a friend's id>?before=9223372036854775807_67e55044-10b1-426f-9247-bb680e5fe0c8` passes it, and Postgres fails on `to_timestamp($3::double precision / 1000.0)` (`22008`). The fake compares the two integers and answers the page.\n\n### What should happen\n\nA 400 in each case, as for any other malformed input. `crates/server/README.md` treats an internal error as \"a route broken for every player\", not as one client's bad input. The store's own comments say the same of ids: \"A token that is no uuid is no token: false, not the cast's error\" (`db/pg.rs:8825`); \"An id that is not a UUID names no row, as everywhere here\" (`:7058`); and of blocks, \"Blocking oneself is 400\" (`friends.rs:454`). For the cursor: 400 `\"before\" must be the nextCursor a page answered` (`chat.rs:93`), since no page ever answered that cursor.\n\n### How to reproduce\n\nAgainst a real Postgres 16 with `tests/sql/00_supabase_stub.sql` and every migration applied, the server's own statements with the crafted values as bind parameters answer:\n\n```\nplayers search NUL  : ERROR 22021 invalid byte sequence for encoding \"UTF8\": 0x00\nby username NUL     : ERROR 22021 invalid byte sequence for encoding \"UTF8\": 0x00\ntotals patch NUL    : ERROR 22021 invalid byte sequence for encoding \"UTF8\": 0x00\nsettings jsonb NUL  : ERROR 22P05 unsupported Unicode escape sequence\nunsubscribe urn     : ERROR 22P02 invalid input syntax for type uuid: \"urn:uuid:67e55044-\u2026\"\ninsert into public.blocks \u2026 ('67e5\u2026'::uuid, '67E5\u2026'::uuid, now())\n                    : ERROR new row for relation \"blocks\" violates check constraint \"blocks_check\"\nchat cursor time    : ERROR 22008 timestamp out of range: \"9.22337e+15\"\n```\n\nAgainst a running server: `curl '<host>/api/stats/players?search=%00'` answers 500.\n\nThe handler paths were traced by reading; the statements were run against Postgres (no test in the repository shows them, because the fake accepts every one of these inputs). Postgres does cast the braced and hyphenless UUID forms; only the URN form fails.\n\n### Where\n\nThe server: `crates/server/src/api/http.rs` (the request readers), `crates/server/src/auth.rs` (`is_uuid`), `crates/server/src/social/friends.rs` (`post_block`), `crates/server/src/social/chat.rs` (`parse_cursor`), and the fake in `crates/server/src/db/fake.rs`.\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- **NUL:** refuse U+0000 once, centrally, each as a 400: in `read_body` (walk the parsed value's strings and keys), in `parse_query`, and in `match_path` / `decode_segment`.\n- **UUIDs:** make `is_uuid` accept only the 36-character hyphenated form (as `is_uuid_shape` does, `api/decks.rs:49-56`), and have `social::param` and the readers of ids in a body lower-case an id before it is compared, keyed or stored (as `saved_id_of` does for decks, `decks.rs:58-63`).\n- **Cursor:** in `parse_cursor`, refuse a time above a named bound (now plus a day, say); the number is a named constant in `crates/server/src/config.rs` (CLAUDE.md rule 9).\n- **Make the fake refuse what Postgres refuses**, and pin each in the store contract (`crates/server/tests/store/contract.rs`, as the crate's architecture note asks of every store change), so the two cannot drift here again. The Docker suites (`sh crates/server/tests/db/run.sh`) are what check the real SQL.\n- Already safe, so no change needed there: deck and trio names (the validator's D1 refuses every control character), usernames (`normalize_username`), dev news posts (`char::is_control`), decks' and trios' ids (already canonicalised).\n- Nothing here harms another player: the rows in Postgres are always canonical. The cost is the 500s, the false alarm, and the fake's self-block.\n- The same audit read all 165 routes' auth levels, the ownership checks, row-level security, token checks and the username rules, and found them sound.\n- A latent neighbour, not part of this issue: `to_public_player_summary` (`db/fake.rs:3050-3075`, used by the Postgres store too) sums per-card counters of up to 2^53\u22121 into an `i64`, which wraps once one account's statistics hold 1,025 cards; the catalog has 1,005 ids today.\n\nFound by an audit of the server's HTTP API; the statements were run against Postgres and the handler paths read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4838: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) writes it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:22:13Z",
+    "claimed_at": "2026-11-24T21:52:30Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4801 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#4726 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
