@@ -42345,7 +42345,8 @@
       "2026-11-24T09:20:00Z,45357495171,muse,muse-spark-1.3-contributor,review,4695,medium,approved,,43.3,0,0,0,,23,0,45,45,1,,none,,1",
       "2026-11-24T09:40:52Z,45367052762,muse,muse-spark-1.3-contributor,plan,4696,medium,planned,,2.2,0,0,0,,0,1,45,45,7.5,,none,,1",
       "2026-11-24T09:40:38Z,45366932050,claude-7,opus,build,4673,hard,interrupted,5-hour cap,0,0,0,0,,73,73,,,221.9,claude-7,none,,0",
-      "2026-11-24T09:36:04Z,45364637512,agy,gemini-3.8-flash-high,plan,4683,medium,planned,,11.9,204852,26872,0,,0,1,17,17,4.2,,none,,1"
+      "2026-11-24T09:36:04Z,45364637512,agy,gemini-3.8-flash-high,plan,4683,medium,planned,,11.9,204852,26872,0,,0,1,17,17,4.2,,none,,1",
+      "2026-11-24T09:59:12Z,45369625864,claude-3,opus,plan,4677,hard,interrupted,refusal,0,0,0,0,,100,100,,,238.6,,fresh,,1"
     ]
   },
   "version": 1
