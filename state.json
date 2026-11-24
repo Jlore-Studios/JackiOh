@@ -41803,6 +41803,10 @@
       "4781": {
         "at": "2026-11-24T20:29:35Z",
         "why": "Confirmed on main: an open target prompt lights its options on the board as clickable, and pendingHighlight's own comment says that is so the prompt can be answered there, yet a click on a lit card or hero only answers Plague placement and on an own unit can show an unrelated attack notice; the fix keeps the list and copies placement's existing board answer."
+      },
+      "4818": {
+        "at": "2026-11-24T21:00:42Z",
+        "why": "It passes the landing bookmark's existing auto-reread into the quests page that already holds it, fixing a stale page that blocks Replace."
       }
     },
     "decided": [
