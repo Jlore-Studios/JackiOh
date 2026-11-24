@@ -2002,3 +2002,144 @@ mod r4672000_choices_and_makers {
         assert_eq!(p2.created_unused_sources, None);
     }
 }
+
+/// R4672000: which of a card's own `mode` prompts join its play's variant: one its player answers, a
+/// random offer included, and never one its opponent answers.
+mod r4672000_whose_choice {
+    use super::*;
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
+
+    const FILLER: &str = "core-005"; // Stockpile: a cheap Spell that keeps a library or a hand.
+    const TRIAL: &str = "core-082"; // KY's Trial: Discover one of 3 random sets, then a number in it.
+    const PICKLE: &str = "classic-008"; // Pickle: the opponent chooses, three times.
+    const MY_DECK: [&str; 4] = ["core-019", "core-025", "core-012", "core-020"];
+    const THEIR_DECK: [&str; 4] = ["core-006", "core-035", "core-048", "core-039"];
+
+    fn step(reader: &mut SummaryReader, s: &mut Scenario, verb: impl FnOnce(&mut Scenario)) {
+        let before = s.state().clone();
+        let from = s.events().len();
+        verb(s);
+        reader.step(&before, s.last_action(), &s.events()[from..], s.state());
+    }
+
+    /// Neither seat's record names a variant's modes.
+    fn no_modes_recorded(reader: &SummaryReader) {
+        for seat in [P1, P2] {
+            let summary =
+                serde_json::to_string(&reader.seat(seat, Vec::new())).expect("a summary serializes");
+            assert!(
+                !summary.contains("\"modes\""),
+                "{}'s record: {summary}",
+                seat.as_str()
+            );
+        }
+    }
+
+    /// The set KY's Trial's first prompt offers at random is a `mode` prompt its player answers: the set
+    /// taken is the play's variant, and its offer, which names no card, is no pick (R4672002).
+    #[test]
+    fn r4672000_a_random_offer_its_player_answers_is_the_play_s_variant_and_no_pick() {
+        register_all();
+        let mut s = scenario(json!({
+            "seed": "r4672000-trial",
+            "p1": { "hand": [TRIAL, FILLER], "library": [FILLER, FILLER] },
+            "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        step(&mut reader, &mut s, |s| {
+            s.play(TRIAL, json!({}));
+        });
+        let pending = s.state().pending.clone().expect("the set prompt is open");
+        assert_eq!(pending.kind, PromptKind::Mode);
+        let sets = s.prompt_modes();
+        assert_eq!(sets.len(), 3);
+        let set = sets[0].clone();
+        step(&mut reader, &mut s, |s| {
+            s.answer(json!(set));
+        });
+        let number = s
+            .prompt_modes()
+            .first()
+            .cloned()
+            .expect("the number Discover is open");
+        step(&mut reader, &mut s, |s| {
+            s.answer(json!(number));
+        });
+        assert!(s.state().pending.is_none());
+
+        let p1 = reader.seat(P1, Vec::new());
+        assert_eq!(p1.played, [TRIAL]);
+        assert_eq!(
+            p1.played_variants,
+            Some(vec![Some(PlayVariant {
+                modes: vec![set],
+                ..PlayVariant::default()
+            })])
+        );
+        assert_eq!(p1.picks, None);
+    }
+
+    /// Pickle's questions wait for the start of the opponent's next turn (R1279000), after the play has
+    /// resolved, and the opponent answers them: no part of the play's variant.
+    #[test]
+    fn r4672000_pickle_s_questions_asked_on_the_opponent_s_turn_are_no_part_of_its_variant() {
+        register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": [PICKLE, FILLER], "library": MY_DECK.to_vec() },
+            "p2": { "hand": ["core-008", "core-011", "core-015"], "library": THEIR_DECK.to_vec() },
+        }));
+        let mut reader = SummaryReader::new(s.state());
+        step(&mut reader, &mut s, |s| {
+            s.play(PICKLE, json!({}));
+        });
+        step(&mut reader, &mut s, |s| {
+            s.end_turn();
+        });
+        for answer in ["exile", "discard", "draw"] {
+            assert_eq!(
+                s.state().pending.as_ref().map(|pending| pending.player_id),
+                Some(P2)
+            );
+            step(&mut reader, &mut s, |s| {
+                s.answer(json!(answer));
+            });
+        }
+        assert!(s.state().pending.is_none());
+        assert_eq!(reader.seat(P1, Vec::new()).played, [PICKLE]);
+        no_modes_recorded(&reader);
+    }
+
+    /// On v0.4.0's kept script (R767000) Pickle asks at once, during its controller's turn and with its
+    /// play still open, and the opponent answers: still no part of its variant, as no seat but the one
+    /// that played it chooses for the play.
+    #[test]
+    fn r4672000_pickle_s_questions_its_opponent_answers_while_it_resolves_are_no_part_of_its_variant() {
+        register_all();
+        let shipped = jackioh_cards::shipped_catalog("v0.4.0").expect("v0.4.0 is carried");
+        jackioh_engine::with_shipped(Some(shipped), || {
+            let mut s = scenario(json!({
+                "p1": { "hand": [PICKLE, FILLER], "library": MY_DECK.to_vec() },
+                "p2": { "hand": ["core-008", "core-011", "core-015"], "library": THEIR_DECK.to_vec() },
+            }));
+            let mut reader = SummaryReader::new(s.state());
+            step(&mut reader, &mut s, |s| {
+                s.play(PICKLE, json!({}));
+            });
+            assert_eq!(s.state().active, P1);
+            for answer in ["draw", "draw", "draw"] {
+                assert_eq!(
+                    s.state().pending.as_ref().map(|pending| pending.player_id),
+                    Some(P2)
+                );
+                step(&mut reader, &mut s, |s| {
+                    s.answer(json!(answer));
+                });
+            }
+            assert!(s.state().pending.is_none());
+            assert_eq!(reader.seat(P1, Vec::new()).played, [PICKLE]);
+            no_modes_recorded(&reader);
+        });
+    }
+}

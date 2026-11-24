@@ -20,8 +20,9 @@
 //! Recruit). A play's own `summoned` follows its `cardPlayed` and is that play, not another.
 //!
 //! R4672000: each play keeps its variant: the X and the Embiggen its `cardPlayed` names, the choices it
-//! declared (`cardPlayed.modes`), and the card-fixed `mode` and `number` prompts its own script asks
-//! between its `cardPlayed` and its `cardResolved`, read off the answering action (`step`'s `action`).
+//! declared (`cardPlayed.modes`), and the `mode` and `number` prompts its own script asks between its
+//! `cardPlayed` and its `cardResolved` that the seat which played it answers, read off the answering
+//! action (`step`'s `action`).
 //! R4672001: each Created card names the card whose effect made it (`GameState.makers`). R4672002: a
 //! card's `discover` or `pick` prompt is a pick, its offer and its answer as catalog ids.
 
@@ -58,9 +59,11 @@ enum Slot {
     CreatedPlayed(PlayerId, usize),
 }
 
-/// R4672000: a play between its `cardPlayed` and its `cardResolved`: its entries, and the steps of its
-/// own script already answered, so an Echo repeat asking one again adds nothing.
+/// R4672000: a play between its `cardPlayed` and its `cardResolved`: the seat that played it, its
+/// entries, and the steps of its own script already answered, so an Echo repeat asking one again adds
+/// nothing.
 struct OpenPlay {
+    player: PlayerId,
     slots: Vec<Slot>,
     answered: IndexSet<String>,
 }
@@ -221,13 +224,14 @@ fn variant_mut(reading: &mut Reading, slot: Slot) -> Option<&mut Option<PlayVari
 }
 
 /// R4672000: a play's entries, open until its `cardResolved`; a play that listed none is no open play.
-fn open(reading: &mut Reading, instance_id: &str, slots: Vec<Slot>) {
+fn open(reading: &mut Reading, instance_id: &str, player: PlayerId, slots: Vec<Slot>) {
     if slots.is_empty() {
         reading.open.shift_remove(instance_id);
     } else {
         reading.open.insert(
             instance_id.to_string(),
             OpenPlay {
+                player,
                 slots,
                 answered: IndexSet::new(),
             },
@@ -236,8 +240,8 @@ fn open(reading: &mut Reading, instance_id: &str, slots: Vec<Slot>) {
 }
 
 /// R4672000, R4672002: an answer to a prompt a card's own script asked (`prompts::RESUME_HOOK`), read
-/// before the step's events. A `mode` or `number` answer joins the variant of the play still resolving
-/// whose card asked it, each of its steps once; a `discover` or `pick` answer is a pick of the seat the
+/// before the step's events. A `mode` or `number` answer by the seat that played it joins the variant
+/// of the play still resolving whose card asked it, each of its steps once; a `discover` or `pick` answer is a pick of the seat the
 /// prompt's step runs as, when every option it offered is a card.
 fn answer(reading: &mut Reading, before: &GameState, action: &Action) {
     let ActionBody::Answer { selection, .. } = &action.body else {
@@ -266,6 +270,10 @@ fn answer(reading: &mut Reading, before: &GameState, action: &Action) {
             else {
                 return;
             };
+            // A question another seat answers (Classic #8 Pickle's) is no choice of the play's.
+            if pending.player_id != play.player {
+                return;
+            }
             if !play.answered.insert(resume.step.clone()) {
                 return;
             }
@@ -613,12 +621,12 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     if from_hand {
                         reading.hands[*player].shift_remove(id);
                     }
-                    open(reading, instance_id, slots);
+                    open(reading, instance_id, *player, slots);
                     continue;
                 }
                 if stolen.iter().any(|countered| countered == id) {
                     leave(&mut reading.hands, id);
-                    open(reading, instance_id, slots);
+                    open(reading, instance_id, *player, slots);
                     continue;
                 }
                 let turn = reading.current_turn;
@@ -645,7 +653,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     reading.traps_set[*player] += 1;
                 }
                 reading.hands[*player].shift_remove(id);
-                open(reading, instance_id, slots);
+                open(reading, instance_id, *player, slots);
             }
             // R4672000: the play has resolved; a prompt its card asks from here on is no part of it.
             GameEvent::CardResolved { instance_id, .. } => {
