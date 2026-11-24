@@ -1,9 +1,7 @@
-//! SPEC §8.13 IA #200.1 Ascendant ((4) Unit, Token, 12/12 → 24/24), a token of the held Infinite Assault set
-//! (R4577000). STUB (#4602): no behaviour yet; C9 (#4593) writes its script and its tests (CLAUDE.md rule 6).
-//!   Base:    ""
-//!   Radiant: ""
+//! IA #200.1 Ascendant (SPEC §8.13 row 200.1), the token IA #200 Superintelligence Seed
+//! becomes when it awakens, a card of the held Infinite Assault set (R4577000).
 //!
-//! Its catalog entry, sound, flavour, Chinese, FX, art and audit rows are already written.
+//! A vanilla 12/12, 24/24 Radiant: no script. Built by C9 (#4593).
 
 use jackioh_engine::prelude::*;
 
@@ -15,16 +13,44 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// STUB (#4602): the card's part replaces this test with its script's tests.
+// IA #200.1 Ascendant — SPEC §8.13 row 200.1.
 #[cfg(test)]
 mod tests {
+    use jackioh_engine::testkit::PlayerId::P1;
     use jackioh_engine::testkit::*;
 
-    #[test]
-    fn the_stub_is_a_card_of_the_held_infinite_assault_set() {
-        crate::register_all();
-        let def = catalog::def_of(None, super::ID);
-        assert_eq!(def.set, SetName::InfiniteAssault);
-        assert!(!set_ships(def.set));
+    use super::ID;
+    use crate::scenario;
+
+    fn standing(radiant: bool, seed: &str) -> Scenario {
+        scenario(json!({
+            "seed": seed,
+            "p1": { "field": [{ "def": ID, "lane": 1, "radiant": radiant }] },
+            "p2": {},
+        }))
+    }
+
+    mod base {
+        use super::*;
+
+        #[test]
+        fn a_vanilla_12_12() {
+            let s = standing(false, "ascendant-base");
+            let unit = s.unit_at(P1, 1);
+            let view = unit_view(s.state(), &unit);
+            assert_eq!((view.attack, view.health), (12, 12));
+        }
+    }
+
+    mod radiant {
+        use super::*;
+
+        #[test]
+        fn a_vanilla_24_24() {
+            let s = standing(true, "ascendant-radiant");
+            let unit = s.unit_at(P1, 1);
+            let view = unit_view(s.state(), &unit);
+            assert_eq!((view.attack, view.health), (24, 24));
+        }
     }
 }

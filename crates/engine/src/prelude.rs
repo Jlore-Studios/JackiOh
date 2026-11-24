@@ -58,6 +58,7 @@ pub use crate::secrets::*;
 pub use crate::slumber::{is_slumbering, slumber_turns_of, when_this_awakens};
 // R1852000–R1852007: the Starship's reads and its "When launched" (the launch price is the effects');
 // R1859003: whether a card is a piece now.
+pub use crate::play_counts::played_this_game_from_set;
 pub use crate::starship::{
     STARSHIP_LAUNCH_ABILITY, building_a_ship, dormant_starship_of, dormant_starships_of, hand_launch_cost,
     hull_def_of, is_dormant_starship, is_launched_starship, is_starship_piece, launch_cost,

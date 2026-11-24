@@ -64,12 +64,12 @@ mod tests {
         #[test]
         fn r4586008_both_hands_change_holders_the_taken_cards_cost_1_less() {
             let s = swapped(false, "ego-base");
-            let p1_hand = s.hand(P1);
-            let mine: Vec<&str> = p1_hand.iter().map(|card| card.def_id.as_str()).collect();
+            let p1 = s.hand(P1);
+            let mine: Vec<&str> = p1.iter().map(|card| card.def_id.as_str()).collect();
             assert_eq!(mine, vec![THEIRS, THEIRS, THEIRS]);
-            let p2_hand = s.hand(P2);
+            let p2 = s.hand(P2);
             let theirs: Vec<&str> =
-                p2_hand.iter().map(|card| card.def_id.as_str()).collect();
+                p2.iter().map(|card| card.def_id.as_str()).collect();
             assert_eq!(theirs, vec![MINE, MINE, FILLER]);
             for card in s.hand(P1) {
                 assert_eq!(card.controller, P1);
@@ -112,10 +112,10 @@ mod tests {
         #[test]
         fn r4586008_the_taken_cards_cost_2_less() {
             let s = swapped(true, "ego-radiant");
-            let p1_hand = s.hand(P1);
-            let mine: Vec<&str> = p1_hand.iter().map(|card| card.def_id.as_str()).collect();
+            let p1 = s.hand(P1);
+            let mine: Vec<&str> = p1.iter().map(|card| card.def_id.as_str()).collect();
             assert_eq!(mine, vec![THEIRS, THEIRS, THEIRS]);
-            assert!(s.hand(P1).iter().all(|card| card.cost_mod == -2));
+            assert!(p1.iter().all(|card| card.cost_mod == -2));
         }
     }
 }

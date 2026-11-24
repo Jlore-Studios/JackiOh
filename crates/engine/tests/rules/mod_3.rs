@@ -16,6 +16,7 @@ pub mod setup;
 pub mod setup_aside;
 pub mod shuffle_random;
 pub mod sick_view;
+pub mod singularity;
 pub mod slumber;
 pub mod spell_power;
 pub mod spell_verbs;
