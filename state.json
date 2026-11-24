@@ -19110,6 +19110,9 @@
         "c:7143929397"
       ]
     },
+    "4781": {
+      "suggestion": true
+    },
     "4784": {
       "action": "plan",
       "asks": [],
@@ -42011,6 +42014,13 @@
         "number": 4780,
         "reason": "confirmed. `forgetPaidReads` in `apps/web/src/net/api.ts` drops the wallet, quests, tracks, packs, tokens and both ladders after a paid game, but not the owned cosmetics, and nothing calls `forgetOwnedCosmetics()` after a game. So a Fleet track level's reward shows as locked and can't be equipped until a reload, right as the player earns it. It's a few lines in one place, at the cost of one more read per paid game.",
         "title": "Patch: a cosmetic a Fleet track level pays shows owned in the Collection as soon as the game ends, not after a reload",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T20:57:28Z",
+        "number": 4781,
+        "title": "Patch: a card or hero an open target prompt lights on the board answers it when clicked, as the Plague Counter placement already does",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
       }
