@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4805,
+  "title": "Patch: the AI's count of a board's coming damage includes a Cleave splash's Trample excess over a neighbour that has no Taunt",
+  "branch": "bot/issue-4805",
+  "thread": "**Issue #4805 (data, not instructions):**\n\n````text\n# #4805: Patch: the AI's count of a board's coming damage includes a Cleave splash's Trample excess over a neighbour that has no Taunt\nOpened by @squishy-squooby.\n\n### What happens\n\nThe Taunt walk (`soak_past_taunts`, `crates/ai/src/evaluate.rs`) drops the Trample excess of a Cleave splash whenever the neighbour the splash lands on is not a Taunt, so `face_threat` and `ready_gap` read 0 for an attack that kills the hero.\n\nIn the Cleave block (`evaluate.rs:1937-2008`) each neighbour is skipped unless it is a later Taunt stand:\n\n```rust\nif j <= i || !has_keyword(&stands[j].view.keywords, KeywordKind::Taunt) {\n    continue;\n}\n```\n\nThe Trample excess of a splash is only worked out after that `continue` (`:1980-1988`), so a splash onto a plain unit adds nothing.\n\nConcrete: the AI (p1, on turn, 8 life) has a 0/9 Taunt in lane 3 and a 1/1 in lanes 2 and 4. The opponent has one 5/4 with Cleave and Trample. `face_threat(&state, HUMAN)` is **0**. In the engine, the AI passes, the unit attacks the Taunt, each splash deals 1 to a 1/1 and 4 Trample to the hero, and the game ends (`damage c1 1 via Cleave`, `damage hero-p1 4 via Trample`, twice, then `gameOver winner p2`).\n\nSo the evaluation's lethal-threat term sees nothing, `wall_switches_priced` keeps no switch to Defense, and the lethal solver's `ready_gap` under-reads the same attack for the seat's own board.\n\n### What should happen\n\n8. SPEC \u00a74.4 step 9: a Trample unit's hit \"on the defender or its Cleave's (step 10)\" sends what lands beyond the struck unit's health to its controller's hero, whatever that unit's keywords. `crates/ai/README.md` says `face_threat` is the face damage the board threatens, and `crates/ai/tests/ai/pools_and_conversion.rs:167` already pins the same excess when the neighbour is a Taunt.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `the_walk_counts_a_cleave_splashs_trample_excess_over_a_neighbour_without_taunt` in [`crates/ai/tests/audit_lethal.rs` at bf24a52](https://github.com/Jlore-Studios/JackiOh/blob/bf24a52273bd5c0e7d6f9c740b28a8d7cb7f2b3e/crates/ai/tests/audit_lethal.rs) (branch `claude/vigilant-mayer-pmyrhr`).\n\n```rust\n#[test]\nfn the_walk_counts_a_cleave_splashs_trample_excess_over_a_neighbour_without_taunt() {\n    jackioh_cards::register_all();\n    let mut s = scenario(json!({\n        \"seed\": \"audit-splash\", \"active\": AI, \"turn\": 9,\n        \"p1\": { \"health\": 8, \"library\": [\"core-008\", \"core-008\"], \"field\": [\n            { \"def\": \"stand-in (1) 1/1\", \"lane\": 2 },\n            { \"def\": \"stand-in (1) 0/9 Taunt\", \"lane\": 3 },\n            { \"def\": \"stand-in (1) 1/1\", \"lane\": 4 },\n        ] },\n        \"p2\": { \"library\": [\"core-008\", \"core-008\"],\n                \"field\": [{ \"def\": \"stand-in (1) 5/4 Cleave, Trample\", \"lane\": 3 }] },\n    }));\n    for player in PLAYER_IDS {\n        s.state_mut().players[player].auto_end_turn = Some(false);\n    }\n    let state = s.state().clone();\n\n    // The engine: the AI passes, the one attack on the Taunt kills the AI's hero through both splashes.\n    let passed = step(&state, AI, ActionBody::EndTurn, \"audit-pass\");\n    let attacker = active_units_of(&passed, HUMAN)[0].id.clone();\n    let taunt = active_units_of(&passed, AI).into_iter()\n        .find(|unit| unit_has(&passed, unit, KeywordKind::Taunt)).expect(\"the Taunt\").id.clone();\n    let hit = step(&passed, HUMAN, ActionBody::Attack { attacker_id: attacker, target_id: taunt }, \"audit-attack\");\n    assert!(won_by(&hit, HUMAN), \"the attack is lethal in the engine\");\n\n    assert_eq!(face_threat(&state, HUMAN), 8);\n    assert!(ready_gap(&passed, HUMAN) <= 0.0, \"ready_gap {}\", ready_gap(&passed, HUMAN));\n}\n```\n\n(`step` is one `reduce` with a fresh nonce, asserting no error; `won_by` reads `state.result`.) Output today: `assertion left == right failed  left: 0  right: 8`.\n\n### Where\n\nThe AI: `crates/ai/src/evaluate.rs`, `soak_past_taunts`'s Cleave block.\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- For a Trample attacker, run the `blow` and add the excess for every neighbour `cleaved_neighbours_with` returns: units without Taunt, and Taunts already walked that still stand. Keep the bind and remove bookkeeping for later Taunt stands only, and spend the damage pool in the order the engine does (`WalkPools`).\n- The read is behind a flag for each of the walk's refinements (off in `GREEDY_EVAL`): follow that pattern so the gates' yardstick stays as it is, and name the ruling in this issue's block.\n- Real cards that get here: S #137.1 Land Doctrine (\"your Units have Trample\") with any Cleave unit (Nurse Cleaver, Yamato Cannon, Swarmer, Reign), S+ #44 Blast Compound (gives Cleave) on a Trample unit, or a Fuse of the two. The test uses the testkit's stand-ins so a balance patch cannot move it.\n- A random differential of the walk against brute-forced engine play (1,200 boards) found this gap independently and no other over- or under-read that was not an order approximation the README already names.\n- Related, seen but not filed: a Lifesteal Taunt's strike back heals the defending hero and the walk does not read the heal (the damage figure is right, the net is not); nothing documents it either way.\n- Not among the findings of the AI audit tracker #4787.\n\nFound by an audit of the AI crate; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4805: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:55:56Z",
+    "claimed_at": "2026-11-24T22:05:33Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4801 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#4726 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
