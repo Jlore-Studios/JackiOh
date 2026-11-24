@@ -42141,6 +42141,10 @@
       "4722": {
         "at": "2026-11-24T11:54:22Z",
         "why": "It mirrors two refusals POST already returns so the result screen stops offering a rematch that can only fail with 409."
+      },
+      "4723": {
+        "at": "2026-11-24T11:54:24Z",
+        "why": "It mirrors two refusals the offer already returns so the co-op panel stops showing Play again when pressing it can only fail."
       }
     },
     "decided": [
