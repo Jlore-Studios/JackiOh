@@ -602,6 +602,15 @@ fn is_one_click_unsubscribe(headers: &HeaderMap, text: &str) -> bool {
         && text.lines().any(|line| line.trim() == "One-Click")
 }
 
+fn contains_nul(value: &Value) -> bool {
+    match value {
+        Value::String(s) => s.contains('\0'),
+        Value::Array(items) => items.iter().any(contains_nul),
+        Value::Object(map) => map.iter().any(|(k, v)| k.contains('\0') || contains_nul(v)),
+        _ => false,
+    }
+}
+
 async fn read_body(method: &Method, headers: &HeaderMap, body: Body) -> Result<Value, ApiError> {
     if *method == Method::GET || *method == Method::HEAD {
         return Ok(Value::Object(Map::new()));
@@ -614,6 +623,9 @@ async fn read_body(method: &Method, headers: &HeaderMap, body: Body) -> Result<V
         serde_json::from_str(&text).map_err(|_| bad_request("the request body must be JSON"))?;
     if !parsed.is_object() {
         return Err(bad_request("the request body must be a JSON object"));
+    }
+    if contains_nul(&parsed) {
+        return Err(bad_request("a request value may not contain a NUL character"));
     }
     Ok(parsed)
 }
@@ -717,30 +729,38 @@ fn decode_uri_component(raw: &str) -> Option<String> {
 /// A path segment decoded, or as it came when it is not valid percent-encoding (`%E0`, `%ZZ`, a lone
 /// `%`). Undecodable, the segment names nothing, and each handler already refuses a value that
 /// names nothing in its own words (a deck id that is not a UUID is a 400, an unknown series a 404).
-fn decode_segment(raw: &str) -> String {
-    decode_uri_component(raw).unwrap_or_else(|| raw.to_string())
+/// Refuses a NUL character (U+0000) as a 400 Bad Request.
+fn decode_segment(raw: &str) -> Result<String, ApiError> {
+    if raw.contains('\0') {
+        return Err(bad_request("a path segment may not contain a NUL character"));
+    }
+    let decoded = decode_uri_component(raw).unwrap_or_else(|| raw.to_string());
+    if decoded.contains('\0') {
+        return Err(bad_request("a path segment may not contain a NUL character"));
+    }
+    Ok(decoded)
 }
 
-fn match_path(pattern: &str, path: &str) -> Option<IndexMap<String, String>> {
+fn match_path(pattern: &str, path: &str) -> Result<Option<IndexMap<String, String>>, ApiError> {
     let want: Vec<&str> = pattern.split('/').collect();
     let got: Vec<&str> = path.split('/').collect();
     if want.len() != got.len() {
-        return None;
+        return Ok(None);
     }
     let mut params = IndexMap::new();
     for (segment, actual) in want.iter().zip(got.iter()) {
         if let Some(name) = segment.strip_prefix(':') {
             if actual.is_empty() {
-                return None;
+                return Ok(None);
             }
-            params.insert(name.to_string(), decode_segment(actual));
+            params.insert(name.to_string(), decode_segment(actual)?);
             continue;
         }
         if segment != actual {
-            return None;
+            return Ok(None);
         }
     }
-    Some(params)
+    Ok(Some(params))
 }
 
 /// `application/x-www-form-urlencoded` decoding of one name or value: `+` is a space, `%XX` a byte
@@ -771,8 +791,9 @@ fn decode_form_component(raw: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-/// URL search parameters, taking the first value of each name.
-fn parse_query(query: &str) -> IndexMap<String, String> {
+/// URL search parameters, taking the first value of each name. Refuses a NUL character (U+0000)
+/// in any name or value as a 400 Bad Request.
+fn parse_query(query: &str) -> Result<IndexMap<String, String>, ApiError> {
     let mut out = IndexMap::new();
     for pair in query.split('&') {
         if pair.is_empty() {
@@ -780,11 +801,15 @@ fn parse_query(query: &str) -> IndexMap<String, String> {
         }
         let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
         let name = decode_form_component(name);
+        let value = decode_form_component(value);
+        if name.contains('\0') || value.contains('\0') {
+            return Err(bad_request("a query parameter may not contain a NUL character"));
+        }
         if !out.contains_key(&name) {
-            out.insert(name, decode_form_component(value));
+            out.insert(name, value);
         }
     }
-    out
+    Ok(out)
 }
 
 /// Resolves the caller. A token that does not verify is 401; a verified user with no profile row
@@ -1230,10 +1255,20 @@ pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Res
     }
 
     let mut path_matched = false;
+    let mut bad_path_error = None;
     let mut body = Some(body);
     for (method, pattern, auth, handler) in routes {
-        let Some(params) = match_path(pattern, &path) else {
-            continue;
+        let params = match match_path(pattern, &path) {
+            Ok(Some(params)) => params,
+            Ok(None) => continue,
+            Err(error) => {
+                bad_path_error = Some((method, pattern, error.clone()));
+                if *method != parts.method.as_str() {
+                    continue;
+                }
+                app.route_health.answered(method, pattern);
+                return error_response(&error);
+            }
         };
         path_matched = true;
         if *method != parts.method.as_str() {
@@ -1267,6 +1302,11 @@ pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Res
                 error_response(&error)
             }
         };
+    }
+
+    if let Some((method, pattern, error)) = bad_path_error {
+        app.route_health.answered(method, pattern);
+        return error_response(&error);
     }
 
     if path_matched {
@@ -1361,7 +1401,7 @@ async fn run_route(
     let req = Req {
         caller,
         params,
-        query: parse_query(parts.uri.query().unwrap_or("")),
+        query: parse_query(parts.uri.query().unwrap_or(""))?,
         body: read_body(&parts.method, &parts.headers, body).await?,
         address,
         headers: parts.headers.clone(),

@@ -2057,6 +2057,18 @@ async fn daily_email_has_no_html_part_and_unsubscribe_page_reflects_no_token() {
     .await;
     assert_eq!(status, 200, "{body}");
     assert_eq!(body.as_str().expect("an HTML page"), not_ours, "{body}");
+
+    // #4838: Posting a URN UUID token unsubscribes nobody and answers not-ours page (200, not 500).
+    let (status, _headers, body) = call(
+        &app,
+        "POST",
+        "/api/daily/unsubscribe?token=urn:uuid:67e55044-10b1-426f-9247-bb680e5fe0c8",
+        None,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body.as_str().expect("an HTML page"), not_ours, "{body}");
 }
 
 /// A raw P-256 pair, base64url, as `daily::webpush`'s own tests cut it from a PKCS#8 document.

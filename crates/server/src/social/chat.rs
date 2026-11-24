@@ -24,7 +24,7 @@ use crate::api::http::{
 };
 use crate::api::queue::new_uuid;
 use crate::app::App;
-use crate::config::{CHAT_MAX_CHARS, CHAT_PAGE, CHAT_RETENTION_DAYS, MS_PER_DAY};
+use crate::config::{CHAT_CURSOR_FUTURE_MAX_MS, CHAT_MAX_CHARS, CHAT_PAGE, CHAT_RETENTION_DAYS, MS_PER_DAY};
 use crate::db::store::{ChatCursor, ChatMessageRow, ChatReportRow, StoreError, Tx};
 use crate::social::friends::are_friends;
 use crate::social::live::{nudge_chat, push_social};
@@ -70,12 +70,16 @@ fn cursor_text(cursor: &ChatCursor) -> String {
     format!("{}{CURSOR_SEPARATOR}{}", cursor.created_at, cursor.id)
 }
 
-/// R1384000: a cursor exactly as `cursor_text` writes one (a time of at least 0, a lowercase
-/// hyphenated uuid), or `None`.
-fn parse_cursor(text: &str) -> Option<ChatCursor> {
+/// R1384000: a cursor exactly as `cursor_text` writes one (a time of at least 0 and at most
+/// `now + CHAT_CURSOR_FUTURE_MAX_MS`, a lowercase hyphenated uuid), or `None`.
+fn parse_cursor(text: &str, now: i64) -> Option<ChatCursor> {
     let (time, id) = text.split_once(CURSOR_SEPARATOR)?;
+    let parsed_time = time.parse::<i64>().ok()?;
+    if parsed_time < 0 || parsed_time > now.saturating_add(CHAT_CURSOR_FUTURE_MAX_MS) {
+        return None;
+    }
     let cursor = ChatCursor {
-        created_at: time.parse::<i64>().ok().filter(|at| *at >= 0)?,
+        created_at: parsed_time,
         id: uuid::Uuid::parse_str(id).ok()?.to_string(),
     };
     (cursor_text(&cursor) == text).then_some(cursor)
@@ -86,14 +90,14 @@ fn parse_cursor(text: &str) -> Option<ChatCursor> {
 pub async fn get_messages(app: &Arc<App>, req: Req) -> ApiResult {
     let me = caller_profile(&req)?.id;
     let friend_id = param(&req, "friendId");
+    let now = now_ms();
     let before = match req.query.get("before").map(|text| text.trim()) {
         None | Some("") => None,
         Some(text) => Some(
-            parse_cursor(text)
+            parse_cursor(text, now)
                 .ok_or_else(|| bad_request("\"before\" must be the nextCursor a page answered"))?,
         ),
     };
-    let now = now_ms();
 
     let mut tx = app.db.begin(Some(&me)).await?;
     if !are_friends(&mut tx, &me, &friend_id).await? {
@@ -365,7 +369,7 @@ mod tests {
         };
         let text = "1760445296789_0f1e2d3c-4b5a-4968-8776-655443322110";
         assert_eq!(cursor_text(&cursor), text);
-        assert_eq!(parse_cursor(text), Some(cursor));
+        assert_eq!(parse_cursor(text, cursor.created_at), Some(cursor.clone()));
         for refused in [
             "",
             "garbage",
@@ -378,8 +382,9 @@ mod tests {
             "01_0f1e2d3c-4b5a-4968-8776-655443322110",
             "1_0F1E2D3C-4B5A-4968-8776-655443322110",
             "1_{0f1e2d3c-4b5a-4968-8776-655443322110}",
+            "9223372036854775807_0f1e2d3c-4b5a-4968-8776-655443322110",
         ] {
-            assert_eq!(parse_cursor(refused), None, "{refused:?}");
+            assert_eq!(parse_cursor(refused, cursor.created_at), None, "{refused:?}");
         }
     }
 
