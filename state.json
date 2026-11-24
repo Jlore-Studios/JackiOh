@@ -42031,6 +42031,7 @@
       {
         "at": "2026-11-24T20:57:28Z",
         "number": 4781,
+        "reason": "confirmed. An open target prompt lights its options on the board as clickable (`pendingHighlight`, whose own comment says it is \"so a `target` prompt can be answered there\"), but `Game.tsx`'s click handler answers only Plague placement (`answerPlaguePlacement`). A click on a glowing card does nothing, or on an own unit shows an unrelated attack notice. The board promises an action it doesn't take. The fix copies placement's existing board answer and keeps the list.",
         "title": "Patch: a card or hero an open target prompt lights on the board answers it when clicked, as the Plague Counter placement already does",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
