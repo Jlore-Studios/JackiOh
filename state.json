@@ -20031,6 +20031,13 @@
     "4725": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45412033733",
+        "model": "opus",
+        "provider": "claude-7",
+        "since": "2026-11-24T14:40:19Z",
+        "until": "2026-11-24T15:10:19Z"
+      },
       "difficulty_by": {
         "at": "2026-11-24T14:40:10Z",
         "difficulty": "hard",
