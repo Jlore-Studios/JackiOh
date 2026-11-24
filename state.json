@@ -18340,7 +18340,8 @@
       },
       "started_at": "2026-11-24T06:05:54Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 7123919831
     },
     "4673": {
       "failures": 0,
