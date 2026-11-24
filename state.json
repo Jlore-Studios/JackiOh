@@ -17139,11 +17139,11 @@
         "trail": ""
       },
       "issue": 4604,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-1",
-      "queued_at": "2026-11-24T06:25:28Z",
+      "queued_at": "2026-11-24T06:26:03Z",
       "run_id": "45329252913",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -17164,6 +17164,7 @@
         "provider": "claude-1",
         "run": "45222365252"
       },
+      "source": "conflict",
       "started_at": "2026-11-24T04:51:18Z",
       "stop_requested": false,
       "taken_asks": [],
