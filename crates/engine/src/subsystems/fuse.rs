@@ -1299,6 +1299,8 @@ fn combine_objects(records: &[Script]) -> Script {
         start_of_opponent_turn: hooks(|s| s.start_of_opponent_turn.clone(), "startOfOpponentTurn"),
         turn_hook_extra: None,
         cry_death_extra: None,
+        death_extra: None,
+        reborn_extra: None,
         // R3536001, R3536003, R3542000: a fusion drops "Evolves when", the evolution multiplier and a
         // stat line its text gave, as it drops `tributeWhen` (R403).
         evolves_when: None,
@@ -1413,6 +1415,8 @@ fn script_record(script: &Script, def_id: &str, radiant: bool, index: usize) -> 
         would_counter: None,
         turn_hook_extra: None,
         cry_death_extra: None,
+        death_extra: None,
+        reborn_extra: None,
         evolves_when: None,
         evolve_extra: None,
         stat_line_when: None,
@@ -1868,6 +1872,8 @@ fn fused_script(
     combined.echo_x = fused_echo_x(&scripts);
     combined.turn_hook_extra = fused_highest_extra(&scripts, |script| script.turn_hook_extra.clone());
     combined.cry_death_extra = fused_highest_extra(&scripts, |script| script.cry_death_extra.clone());
+    combined.death_extra = fused_highest_extra(&scripts, |script| script.death_extra.clone());
+    combined.reborn_extra = fused_highest_extra(&scripts, |script| script.reborn_extra.clone());
     combined
 }
 

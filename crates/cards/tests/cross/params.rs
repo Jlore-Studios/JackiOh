@@ -647,6 +647,11 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscapeplus-098", PRICE),
         ("stinkyscapeplus-103", PRICE),
         ("stinkyscapeplus-104", PRICE),
+        // R4589000: the held Infinite Assault set's numbered-keyword counts (IA #98's Echo,
+        // #104's Echo) and #103's tax (a price, R65).
+        ("infiniteassault-098", KEYWORD),
+        ("infiniteassault-104", KEYWORD),
+        ("infiniteassault-103", PRICE),
         ("stinkyscapeplus-128", PRICE),
         ("stinkyscapeplus-129", PRICE),
         ("stinkyscapeplus-130", PRICE),

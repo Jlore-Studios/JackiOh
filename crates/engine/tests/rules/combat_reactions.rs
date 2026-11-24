@@ -1030,3 +1030,59 @@ mod r3550009_take_control {
         assert_eq!(id_at(&s, P1, 1), plain);
     }
 }
+
+mod r4589006_a_reset_that_keeps_its_card_standing {
+    use super::*;
+
+    fn destroy(id: &str) -> Effect {
+        effects::destroy(json_as(
+            json!({ "target": { "of": "instance", "instanceId": id } }),
+        ))
+    }
+
+    fn lich_board(seed: &str, hand: Value) -> Scenario {
+        board(seed, json!({ "field": [PLAIN], "hand": hand }), json!({}))
+    }
+
+    #[test]
+    fn r4589006_the_reset_keeps_its_card_standing_with_its_note() {
+        let mut s = lich_board("r4589006-keep", json!([{ "def": LICH }, PLAIN]));
+        let lich = hand_id(&s, P1, LICH);
+        s.play(lich.as_str(), json!({ "zone": 2 }));
+        let lich = id_at(&s, P1, 2);
+        let extra = hand_id(&s, P1, PLAIN);
+        s.play(extra.as_str(), json!({ "zone": 3 }));
+        let first = id_at(&s, P1, 1);
+        apply_now(s.state_mut(), destroy(&first));
+        apply_now(s.state_mut(), destroy(&id_at(&s, P1, 3)));
+        // Only the Lich stands: its side shrank, so its next start of turn resets it.
+        s.end_turn();
+        s.end_turn();
+        assert_eq!(id_at(&s, P1, 2), lich, "the Lich never left its zone");
+        assert_eq!(s.card(&id_at(&s, P1, 1)).def_id, PLAIN, "its snapshot is back");
+        assert!(
+            s.card(&lich).memory.contains_key(effects::SIDE_SNAPSHOT_KEY),
+            "its note is kept, so it may reset again later"
+        );
+    }
+
+    #[test]
+    fn r4589006_no_reset_without_fewer_permanents() {
+        let mut s = lich_board("r4589006-keep", json!([{ "def": LICH }, PLAIN]));
+        let lich = hand_id(&s, P1, LICH);
+        s.play(lich.as_str(), json!({ "zone": 2 }));
+        let lich = id_at(&s, P1, 2);
+        let extra = hand_id(&s, P1, PLAIN);
+        s.play(extra.as_str(), json!({ "zone": 3 }));
+        // Only the extra leaves: the side still matches the snapshot.
+        apply_now(s.state_mut(), destroy(&id_at(&s, P1, 3)));
+        s.end_turn();
+        s.end_turn();
+        assert_eq!(id_at(&s, P1, 2), lich);
+        assert_eq!(s.card(&id_at(&s, P1, 1)).def_id, PLAIN);
+        assert!(
+            s.pile(P1, "graveyard").iter().any(|card| card.def_id == PLAIN),
+            "the extra stays dead: nothing reset"
+        );
+    }
+}

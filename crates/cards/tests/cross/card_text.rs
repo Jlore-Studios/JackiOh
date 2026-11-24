@@ -106,6 +106,9 @@ const RETURNS_OFF_THE_FIELD: &[&str] = &[
     // R3557004: S+ #104 returns from the graveyard at the end of the turn, as Core #23 does.
     "stinkyscapeplus-104 base",
     "stinkyscapeplus-104 radiant",
+    // R746: IA #101 returns Spells from its graveyard, never off the field.
+    "infiniteassault-101 base",
+    "infiniteassault-101 radiant",
 ];
 
 /// Whether `label`, found at `index` of `line`, is the tail of a longer label that opens the line ("Cry &

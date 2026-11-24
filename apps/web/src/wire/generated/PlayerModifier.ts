@@ -20,4 +20,4 @@ atEnd?: boolean, } | { "kind": "healToDamage", converterId: string, } | { "kind"
  * R4508000: set when a Spell made it (`restrictions::effect_is_from_spell`), so it passes a Unit
  * Immune to Spells by (§6.1, R4453000). Only ever `Some(true)`.
  */
-fromSpell?: true, } | { "kind": "fatigueImmune" });
+fromSpell?: true, } | { "kind": "unitsAttack", amount: number, } | { "kind": "fatigueImmune" });

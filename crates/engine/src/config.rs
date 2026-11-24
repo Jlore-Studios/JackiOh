@@ -2563,6 +2563,9 @@ pub const SLASH_BASE_LANE: i32 = 3;
 /// R3554002: the lanes the Radiant face may slash.
 pub const SLASH_LANES: [i32; 3] = [2, 3, 4];
 
+/// R4589001: "since your last turn" reaches back this many player-turns.
+pub const SINCE_LAST_TURN: i32 = 1;
+
 #[cfg(test)]
 mod tests {
     use super::*;

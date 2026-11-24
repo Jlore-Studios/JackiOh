@@ -911,6 +911,8 @@ as a comment on #4601 and each part's Table B rows on its own issue.
 | C4 (#4588) | #86, #94 | "Give it Brittle 1" (IA12 "It has"/"with Brittle 1") |
 | C4 (#4588) | #87 | "Summon three Workers. Give them Taunt." |
 | C4 (#4588) | #91 | "Fill your board with Drones" (IA12 "your empty unit zones") |
+| C5 (#4589) | #101 | "to hand" (R746) |
+| C5 (#4589) | #103 | "Bounce an enemy Unit" (R692) |
 | C5 (#4589) | #103 | Tax (1) → (2) literal, no param |
 | C5 (#4589) | #115 | Radiant Cry also grants Divine Shield (R275 raise; IA12 stats alone) |
 | C5 (#4589) | #117 | "Reveals when" (IA12 "whenever") |

@@ -79,6 +79,7 @@ pub mod prompts;
 pub mod query;
 pub mod random_cast;
 pub mod random_targets;
+pub mod recursion_log;
 pub mod reduce;
 pub mod replacements;
 pub mod replay;

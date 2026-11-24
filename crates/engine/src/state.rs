@@ -21,6 +21,7 @@ use crate::config::{
 };
 use crate::effects::tune::{TuneDirection, tune_once};
 use crate::geometry::{BlackHole, Half};
+use crate::recursion_log::RecursionLog;
 use crate::resolve::{HookOptions, make_context};
 use crate::rng::Rng;
 use crate::script::EngineSink;
@@ -1484,6 +1485,13 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub game_log: Option<GameLog>,
+    /// R4589000: what this player's plays and deaths leave for the Recursion cards to read back
+    /// (`recursion_log.rs`): every face-up play this game and every Unit that died under them.
+    /// Absent until the game holds an Infinite Assault card, so a game without one hashes as it did
+    /// before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub recursion: Option<RecursionLog>,
     // ---- v0.2.0 player fields, by workstream: activate and turn (E3, E4 draw counts, E10) ----
     /// B5 E3, E4, R457: how many draws this player has made on turn `turn`, whoever's turn it is — a
     /// fatigue draw included, a draw a limit stopped not. A count kept for an earlier turn reads as 0,
@@ -2390,6 +2398,7 @@ pub fn create_player_state() -> PlayerState {
         backrow_piles: None,
         carried: None,
         game_log: None,
+        recursion: None,
         draws: None,
         hand_cap: None,
         jade: None,

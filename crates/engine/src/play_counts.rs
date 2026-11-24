@@ -91,6 +91,11 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
     let Some(record) = play_record_of(state, card) else {
         return;
     };
+    // R4589000: every Infinite Assault Recursion card is an AI card, which the last-face-up record
+    // below passes over, so the recursion log is written first: face-down plays never log (R451).
+    if !played_face_down(type_) {
+        crate::recursion_log::note_play(state, player, &record, type_);
+    }
     if type_ == CardType::Spell {
         state.last_spell = Some(record.clone());
     }

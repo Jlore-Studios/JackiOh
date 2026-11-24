@@ -196,13 +196,19 @@ pub fn restore_board(
         turns_ago: back,
         sides: sides.clone(),
     });
-    rebuild_sides(sink, &snapshot, &sides);
+    rebuild_sides(sink, &snapshot, &sides, None);
     Some(back)
 }
 
 /// R419's three steps, each on every restored side before the next: unheld cards to hand (R78,
-/// §2.4, R11, R747), held ones back to their places, the Locks to the snapshot's.
-fn rebuild_sides(sink: &mut EngineSink<'_>, snapshot: &BoardSnapshot, sides: &[PlayerId]) {
+/// §2.4, R11, R747), held ones back to their places, the Locks to the snapshot's. `keep` is a card
+/// R4589006 leaves standing: step 1 passes it by with the held cards, and the rebuild never lifts it.
+fn rebuild_sides(
+    sink: &mut EngineSink<'_>,
+    snapshot: &BoardSnapshot,
+    sides: &[PlayerId],
+    keep: Option<&str>,
+) {
     // Step 1.
     let held: IndexSet<String> = sides
         .iter()
@@ -221,6 +227,9 @@ fn rebuild_sides(sink: &mut EngineSink<'_>, snapshot: &BoardSnapshot, sides: &[P
             .collect();
         for id in standing {
             if held.contains(&id) {
+                continue;
+            }
+            if keep.is_some_and(|kept| kept == id) {
                 continue;
             }
             if let Some(card) = find_instance(sink.state, &id).cloned() {
@@ -528,30 +537,73 @@ pub struct RestoreSideArgs {
     pub radiant: Option<bool>,
 }
 
-/// R3550007: "Reset your board to that state" (Stinkyscape+ #84 Bogos Binted's Death) — R419's
-/// restore on the controller's side alone: extras go to hand, the snapshot's cards return to their
-/// slots, no Cry. The Death hook's snapshot keeps memory, so the Cry's note is still read here.
-/// The Radiant face makes the rebuilt side Radiant.
-pub fn restore_side_snapshot(args: RestoreSideArgs) -> Effect {
-    Effect::new("restoreSideSnapshot", move |ctx: &mut EffectContext<'_>| {
+/// R3550007: the running card's note, `{ turn, side }`, as it keeps it.
+fn noted_side(card: &CardInstance) -> Option<(i32, SideSnapshot)> {
+    let note = card.memory.get(SIDE_SNAPSHOT_KEY)?;
+    let turn = note.get("turn").and_then(Value::as_i64)? as i32;
+    let side = note
+        .get("side")
+        .and_then(|side| serde_json::from_value::<SideSnapshot>(side.clone()).ok())?;
+    Some((turn, side))
+}
+
+/// R4589006: empty the snapshot's entries at one zone, so a card left standing there keeps its
+/// place: every entry `snapshot_zone` reads at that slot.
+fn clear_slot(side: &mut SideSnapshot, slot: &ZoneSlot) {
+    let Ok(i) = usize::try_from(slot.lane - 1) else {
+        return;
+    };
+    if slot.row == Row::Units {
+        if let Some(pile) = side.units.get_mut(i) {
+            *pile = None;
+        }
+        return;
+    }
+    if let Some(carried) = side.carried.as_mut()
+        && let Some(entry) = carried.get_mut(i)
+    {
+        *entry = None;
+    }
+    if let Some(top) = side.backrow.get_mut(i) {
+        *top = None;
+    }
+    if let Some(piles) = side.backrow_piles.as_mut()
+        && let Some(pile) = piles.get_mut(i)
+    {
+        pile.clear();
+    }
+}
+
+/// R4589006 (IA #119 Snapshot Lich): whether the running card's side shrank since its Cry: fewer
+/// cards on it now, itself not counted, than its note holds. False with no note.
+pub fn side_shrank(state: &GameState, card: &CardInstance) -> bool {
+    let Some((_, noted)) = noted_side(card) else {
+        return false;
+    };
+    let mut now = side_snapshot_of(state, card.controller);
+    side_without(&mut now, &card.id);
+    side_snapshot_instances(&now).len() < side_snapshot_instances(&noted).len()
+}
+
+/// R4589006 (IA #119 Snapshot Lich): "reset your board to it", as R3550007's restore, with the
+/// running card left standing: its slot holds no snapshot card, so the rebuild never lifts it,
+/// and its note is kept, so it may reset again later. No Radiant rebuild: the Lich's own script
+/// draws the Radiant card's draw instead.
+pub fn reset_side_keeping_self() -> Effect {
+    Effect::new("resetSideKeepingSelf", move |ctx: &mut EffectContext<'_>| {
         let player = ctx.controller;
-        let Some(note) = ctx
-            .self_
-            .as_ref()
-            .and_then(|card| card.memory.get(SIDE_SNAPSHOT_KEY))
-        else {
+        let Some(self_id) = ctx.self_.as_ref().map(|card| card.id.clone()) else {
             return;
         };
-        let Some(turn) = note.get("turn").and_then(Value::as_i64) else {
+        let Some(live) = find_instance(ctx.state, &self_id).cloned() else {
             return;
         };
-        let Some(side) = note
-            .get("side")
-            .and_then(|side| serde_json::from_value::<SideSnapshot>(side.clone()).ok())
-        else {
+        let Some((turn, mut side)) = noted_side(&live) else {
             return;
         };
-        let turn = turn as i32;
+        if let Some(slot) = crate::zones::slot_of(ctx.state, &live) {
+            clear_slot(&mut side, &slot);
+        }
         ctx.sink.events.push(GameEvent::RolledBack {
             player,
             turns_ago: ctx.sink.state.turn - turn,
@@ -563,7 +615,32 @@ pub fn restore_side_snapshot(args: RestoreSideArgs) -> Effect {
         };
         sides[player] = side;
         let snapshot = BoardSnapshot { turn, sides };
-        rebuild_sides(ctx, &snapshot, &[player]);
+        rebuild_sides(ctx, &snapshot, &[player], Some(&self_id));
+    })
+}
+
+/// R3550007: "Reset your board to that state" (Stinkyscape+ #84 Bogos Binted's Death) — R419's
+/// restore on the controller's side alone: extras go to hand, the snapshot's cards return to their
+/// slots, no Cry. The Death hook's snapshot keeps memory, so the Cry's note is still read here.
+/// The Radiant face makes the rebuilt side Radiant.
+pub fn restore_side_snapshot(args: RestoreSideArgs) -> Effect {
+    Effect::new("restoreSideSnapshot", move |ctx: &mut EffectContext<'_>| {
+        let player = ctx.controller;
+        let Some((turn, side)) = ctx.self_.as_ref().and_then(noted_side) else {
+            return;
+        };
+        ctx.sink.events.push(GameEvent::RolledBack {
+            player,
+            turns_ago: ctx.sink.state.turn - turn,
+            sides: vec![player],
+        });
+        let mut sides = PerPlayer {
+            p1: side_snapshot_of(ctx.state, PlayerId::P1),
+            p2: side_snapshot_of(ctx.state, PlayerId::P2),
+        };
+        sides[player] = side;
+        let snapshot = BoardSnapshot { turn, sides };
+        rebuild_sides(ctx, &snapshot, &[player], None);
         // The Radiant face's rebuild: every card standing on that side is made Radiant.
         if args.radiant == Some(true) {
             let ids: Vec<String> = zones_of(player)

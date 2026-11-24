@@ -40881,7 +40881,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Echo 1\nDeal {damage} damage to an enemy Unit."
@@ -40905,7 +40905,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "Add a copy of a random friendly Unit that died this game to your hand."
@@ -40939,7 +40939,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 3,
       "health": 3,
@@ -40967,18 +40967,18 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 2,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Return a random Spell from your graveyard to your hand."
+      "text": "Cry: Return a random Spell from your graveyard to hand."
     },
     "radiant": {
       "attack": 4,
       "health": 8,
       "keywords": [],
-      "text": "Cry: Return two random Spells from your graveyard to your hand."
+      "text": "Cry: Return two random Spells from your graveyard to hand."
     }
   },
   "infiniteassault-102": {
@@ -41040,14 +41040,14 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 29,
     "base": {
       "keywords": [],
-      "text": "Return an enemy Unit to its owner's hand. It costs (1) more."
+      "text": "Bounce an enemy Unit. It costs (1) more."
     },
     "radiant": {
       "keywords": [],
-      "text": "Return an enemy Unit to its owner's hand. It costs (2) more. Draw a card."
+      "text": "Bounce an enemy Unit. It costs (2) more. Draw a card."
     }
   },
   "infiniteassault-104": {
@@ -41064,7 +41064,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 19,
     "base": {
       "keywords": [
         {
@@ -41096,7 +41096,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 31,
     "base": {
       "attack": 3,
       "health": 4,
@@ -41135,7 +41135,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 34,
     "base": {
       "attack": 2,
       "health": 6,
@@ -41177,7 +41177,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 38,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage to a random enemy, once more for each Recursive Call you've played this game. Shuffle a copy of this into your deck."
@@ -41201,7 +41201,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 26,
     "base": {
       "keywords": [],
       "text": "Discard your hand. Draw that many cards, plus one."
@@ -41235,7 +41235,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 42,
     "base": {
       "attack": 4,
       "health": 2,
@@ -41271,7 +41271,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "End of turn: Summon a copy of a random friendly Unit that died this turn."
@@ -41306,7 +41306,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Reveals when a friendly Unit dies: Summon a copy of it."
@@ -41341,7 +41341,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 69,
     "base": {
       "attack": 2,
       "health": 3,
@@ -41369,7 +41369,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 40,
     "base": {
       "keywords": [],
       "text": "Cast the last three Spells you played this game, at random targets."
@@ -41393,7 +41393,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "attack": 5,
       "health": 5,
@@ -41421,7 +41421,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 37,
     "base": {
       "attack": 7,
       "health": 7,
@@ -41457,7 +41457,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Summon copies of the friendly Units that died since your last turn."
@@ -41481,7 +41481,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 34,
     "base": {
       "keywords": [],
       "text": "Reveals when a friendly Unit dies: Shuffle a copy of it into your deck."
@@ -41505,7 +41505,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 31,
     "base": {
       "attack": 4,
       "health": 7,
@@ -41533,7 +41533,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 6,
       "health": 10,
@@ -41571,7 +41571,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 33,
     "base": {
       "keywords": [],
       "text": "Shuffle every card you've played this game into your deck. They cost ({discount}) less. Draw three cards."

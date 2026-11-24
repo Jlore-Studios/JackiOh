@@ -13,7 +13,7 @@ use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated_unique, 
 use crate::query::HandSide;
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance, find_instance_mut, new_instance};
-use crate::wire::{AttackHealth, Keyword, Tuning, Zone, ZoneName};
+use crate::wire::{AttackHealth, CardType, Keyword, Tuning, Zone, ZoneName};
 
 /// The riders a card reaches a hand with. R65 starts the cost from `costOverride` in place of the
 /// printed cost, so a discount that must stack with other modifiers is a `costMod` (#7, #39), never a
@@ -480,6 +480,9 @@ pub struct AddRandomFromGraveyardArgs {
     pub count: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exile: Option<bool>,
+    /// R4589008 (IA #101 Rewind Drone): only cards of this type are drawn from.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_type: Option<CardType>,
 }
 
 /// `addMeetingPair`'s arguments.
@@ -560,6 +563,11 @@ pub fn add_random_from_graveyard(args: AddRandomFromGraveyardArgs) -> Effect {
             if args.exile == Some(true) {
                 pool.extend(side.exile.iter().cloned());
             }
+            // R4589008: a pick for Spells only draws the Spells.
+            pool.retain(|card| {
+                args.card_type
+                    .is_none_or(|t| crate::faces::card_type_of(ctx.state, card) == t)
+            });
             if pool.is_empty() {
                 return;
             }

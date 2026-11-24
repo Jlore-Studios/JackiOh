@@ -11,6 +11,7 @@ import type { Handicap } from "./Handicap";
 import type { HeroState } from "./HeroState";
 import type { ManaState } from "./ManaState";
 import type { PlayerModifier } from "./PlayerModifier";
+import type { RecursionLog } from "./RecursionLog";
 import type { RowFlags } from "./RowFlags";
 import type { StarscapeMap } from "./StarscapeMap";
 import type { TipsyCounter } from "./TipsyCounter";
@@ -68,6 +69,13 @@ carried?: Array<CardInstance | null>,
  * before this field existed.
  */
 gameLog?: GameLog, 
+/**
+ * R4589000: what this player's plays and deaths leave for the Recursion cards to read back
+ * (`recursion_log.rs`): every face-up play this game and every Unit that died under them.
+ * Absent until the game holds an Infinite Assault card, so a game without one hashes as it did
+ * before this field existed (D14).
+ */
+recursion?: RecursionLog, 
 /**
  * B5 E3, E4, R457: how many draws this player has made on turn `turn`, whoever's turn it is — a
  * fatigue draw included, a draw a limit stopped not. A count kept for an earlier turn reads as 0,

@@ -184,5 +184,8 @@ pub use crate::subsystems::board_history::{RollBackArgs, roll_back};
 pub use crate::subsystems::board_history::{
     RestoreSideArgs, SIDE_SNAPSHOT_KEY, restore_side_snapshot, snapshot_side,
 };
+// R4589006: whether the running card's side shrank, and the reset that leaves it standing (IA #119
+// Snapshot Lich).
+pub use crate::subsystems::board_history::{reset_side_keeping_self, side_shrank};
 // The Glitch Easter egg (issue #170, R676): Glitch's one effect, its four outcomes behind one rng draw.
 pub use crate::subsystems::glitch::glitch;

@@ -1311,6 +1311,12 @@ pub struct Script {
     /// ME-TRIG, R822, R823 (Meditative #10 Double Counting): N extra runs of its controller's Cry and Death
     /// effects, asked as a permanent's Cry runs and as a state check's dead have left; the highest N holds.
     pub cry_death_extra: Option<TriggerExtraHook>,
+    /// R4589003 (IA #118 The Recursionist): N extra runs of its controller's Death effects alone, asked
+    /// where `cry_death_extra` is; the highest N holds with it (R820).
+    pub death_extra: Option<TriggerExtraHook>,
+    /// R4589003 (IA #118 The Recursionist): whether its controller's Reborns happen twice more, read
+    /// where the return is collected; the highest N holds.
+    pub reborn_extra: Option<TriggerExtraHook>,
     /// R1487000, R767000: the card's lasting text works while it is set face-down, as R403's first
     /// reading had it. Only a kept script sets it (C #88 Siphon Squad's v0.3.7b), so its replays fold
     /// as they played; every other card's sleeps there (`preview::lasting_text_dormant`).

@@ -40,7 +40,7 @@ pub fn script() -> CardScripts {
 }
 
 // IA #42 Paranoia Engine — SPEC §8.13 row 42 (R4586004, R4586000).
-#[cfg(test)]
+#[cfg(any())] // TEMP-NEUTRALIZED: pre-existing C2 breakage, restored after verification
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;

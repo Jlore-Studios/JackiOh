@@ -9923,8 +9923,8 @@ infiniteassault-103: # Undo
     cast: That never happened. Forget it.
   zh:
     name: 撤销
-    base: 将一个敌方单位移回其拥有者的手牌。其法力值消耗增加(1)点。
-    radiant: 将一个敌方单位移回其拥有者的手牌。其法力值消耗增加(2)点。抽一张牌。
+    base: 弹回一个敌方单位。其法力值消耗增加(1)点。
+    radiant: 弹回一个敌方单位。其法力值消耗增加(2)点。抽一张牌。
 infiniteassault-104: # Stack Trace
   flavour: Trace complete. The bug was in the trace. Trace complete.
   voice:
