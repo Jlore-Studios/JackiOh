@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4773,
+  "title": "Patch: on a phone the game board never scrolls the page while no picker or menu is open",
+  "branch": "bot/issue-4773",
+  "thread": "**Issue #4773 (data, not instructions):**\n\n```text\n# #4773: Patch: on a phone the game board never scrolls the page while no picker or menu is open\nOpened by @MaxGoetzmann.\n\n## What's wrong\n\nOn a phone, swiping on the game board scrolls the page. That includes iOS Safari's rubber-band bounce, Chrome's pull-to-refresh and the browser toolbar collapsing or expanding, and it happens even though the board fits the screen.\n\n**Where it hurts most: drag to aim.** Dragging the targeting arrow from an attacker, or a target-only play, toward a target scrolls or bounces the page under your finger. The board shifts while you aim, so the arrow and the reticle drift off what you were aiming at, and the drop can land on the wrong thing or on nothing. This is the case to fix first and to prove with a test.\n\nThe layout already budgets the game screen to one viewport: `.app-shell.app-shell--wide[data-game-host]` is `100dvh` (`apps/web/src/game/board.css`, \"the game screen\"), and polish B46 (`docs/polish/7-mobile-ux.md`) says \"nothing scrolls either way\". But nothing stops the *document* from scrolling or overscrolling on touch:\n\n- `html`/`body` are never locked, and nothing sets `overscroll-behavior` on the document while a game is up.\n- `apps/web/src/game/drag/drag.css` puts `touch-action: none` only on `.hand-you .card`, on `.zone .card[data-legal=\"true\"]` and on selected zones, cards and heroes. Any other place a drag or aim starts, or a press on a card that isn't `data-legal` at that moment, lets the browser pan. Once a pan has started, `preventDefault` in `DragLayer.tsx` can't take it back. That covers your hero and hero power, the backrow and `ActivateControl`, the space between cards, and the field itself.\n\n## What it should do\n\nWhile a game is mounted (Game sets `data-game-host` on its parent, `GAME_HOST_ATTRIBUTE` in `Game.tsx`) **and no selection menu is open**, the page must not scroll or overscroll on touch:\n\n- no vertical or horizontal page scroll from a swipe anywhere on the board, the hands, the seats or the controls;\n- **no page movement at all during a drag or an aim** (`:root[data-dragging]`), wherever the press started and wherever the finger travels;\n- no rubber-band bounce and no pull-to-refresh;\n- taps, long presses (inspect), card drags and drag-to-attack keep working exactly as now.\n\nWhile a selection menu **is** open, its content scrolls as it does today. That covers a Discover and the other card pickers (`prompt-modal`), mulligan, `LanePick`, `MarketPrompt`/`Marketplace`, the pile browser, the match menu (`MatchMenu.tsx`), a `Dialog` (concede, leave match, draw offer) and the settings. A Discover or a picker with more options than fit must still scroll to the rest. R658's rule that a card option lifts on touch while list options keep the panel scrolling stays as it is. The lock may stay on the page itself as long as each menu scrolls inside itself (`overscroll-behavior: contain` on its own scroller), or it may lift while one is open. Pick whichever is simpler and say which in the PR.\n\nThings that scroll inside the board keep scrolling: the log (`Log.tsx`) and the phone hand fan if it scrolls (#4139).\n\n## Suggested approach (not binding)\n\n- Key it off what already exists: the `[data-game-host]` shell, `:root[data-dragging]`, and whatever `Game.tsx`/`Prompt.tsx` already know about an open prompt or dialog.\n- CSS first: `overscroll-behavior: none` and `overflow: hidden` on the document while a game is hosted (a `:root` attribute set and cleared by Game's effect, **not** a `:has()` on the shell, which #3633 showed restyles the whole board on every change). Use `touch-action: none` on the board as a whole while no menu is open, rather than chasing every drag source. The log keeps `pan-y`.\n- Phone landscape under 501 px tall: the menus' one-screen rule lets the page scroll there, but the game screen budgets itself at 844\u00d7390 too (B46), so the lock applies there as well.\n- Unmounting the game (back to menus, result screen) must restore normal page scrolling.\n\n## Acceptance\n\n- [ ] A Cypress spec at 390\u00d7844 and 844\u00d7390 (e2e or component, e.g. alongside `e2e/cypress/component/board-layout.cy.tsx`): **a touch drag-to-aim from an attacker across the field to an enemy minion leaves `window.scrollY`/`scrollX` at 0 the whole way and lands on that minion.** The same holds for an aim started from your hero.\n- [ ] Same spec: with a game mounted and no prompt open, a touch swipe on the board, including empty field space, leaves the page unscrolled, and the document's computed `overscroll-behavior` is `none`.\n- [ ] Same spec: a Discover or card picker whose options overflow still scrolls to its last option, and the match menu still scrolls.\n- [ ] The log still scrolls inside itself while the page is locked.\n- [ ] Leaving the game restores the document's normal scrolling (a unit test in `apps/web` on the effect's cleanup is fine).\n- [ ] Polish B46's wording in `docs/polish/7-mobile-ux.md` (or a new B-item) states the rule. If a client-layout ruling (e.g. R1581000's family) needs one, add a note (CLAUDE.md rule 3).\n- [ ] The existing drag, inspect and B45/B47 specs stay green.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4773: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T19:11:55Z",
+    "claimed_at": "2026-11-24T19:17:21Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
