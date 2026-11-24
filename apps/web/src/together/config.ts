@@ -21,6 +21,13 @@ export { SOCIAL_POLL_MS };
  */
 export const HIDDEN_QUIET_MS = 120_000;
 
+/**
+ * R4691001: how long a shown tab goes with no input (a pointer pressed or moved, a key, a wheel, a touch)
+ * before it goes quiet as a hidden one does, so a tab left open on a screen nobody uses lets its server
+ * sleep. Long enough that reading a screen, or watching a friend list, keeps it.
+ */
+export const IDLE_QUIET_MS = 600_000;
+
 /** The watch socket (B50): how long after an unexpected close it opens again, and how often it tries. */
 export const WATCH_RECONNECT_MS = 2_000;
 export const WATCH_RECONNECT_ATTEMPTS = 5;

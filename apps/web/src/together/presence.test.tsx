@@ -2,7 +2,7 @@
 // the server counts every signed-in request as presence. The server is a stubbed `fetch` (`test/stubServer.ts`)
 // and time is vitest's fake clock. R3576000: a tab hidden for HIDDEN_QUIET_MS sends none.
 
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PRESENCE_HEARTBEAT_MS } from "@jackioh/server-config";
@@ -13,7 +13,7 @@ import { settle } from "../test/settle.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { meBody, signIn, stubServer, type StubServer } from "../test/stubServer.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
-import { HIDDEN_QUIET_MS } from "./config.ts";
+import { HIDDEN_QUIET_MS, IDLE_QUIET_MS } from "./config.ts";
 import { usePresenceHeartbeat } from "./presence.ts";
 
 function serve(): StubServer {
@@ -155,5 +155,49 @@ describe("R3576000 a quiet tab sends no heartbeat", () => {
     setVisibility("hidden");
     await settle({ advance: HIDDEN_QUIET_MS - 1 });
     expect(beats(server)).toBe(Math.floor((2 * HIDDEN_QUIET_MS - 2) / PRESENCE_HEARTBEAT_MS));
+  });
+});
+
+describe("R4691001 an idle tab sends no heartbeat", () => {
+  it("R4691001 a shown tab with no input for IDLE_QUIET_MS stops beating, and beats again after its next input", async () => {
+    const server = serve();
+    render(<Heartbeat />);
+    await settle({ advance: 0 });
+
+    await settle({ advance: IDLE_QUIET_MS });
+    const quietAt = beats(server);
+    expect(quietAt, "it beats at its pace until it goes quiet").toBe(Math.floor(IDLE_QUIET_MS / PRESENCE_HEARTBEAT_MS));
+    await settle({ advance: 10 * PRESENCE_HEARTBEAT_MS });
+    expect(beats(server), "idle: no beat, so the server can sleep").toBe(quietAt);
+
+    fireEvent.pointerDown(document.body);
+    await settle({ advance: PRESENCE_HEARTBEAT_MS - 1 });
+    expect(beats(server)).toBe(quietAt);
+    await settle({ advance: 1 });
+    expect(beats(server), "used again: a heartbeat later it beats again").toBe(quietAt + 1);
+  });
+
+  it("R4691001 an idle tab that turns visible again is in use, as if touched", async () => {
+    const server = serve();
+    render(<Heartbeat />);
+    await settle({ advance: 0 });
+    setVisibility("hidden");
+    await settle({ advance: IDLE_QUIET_MS + HIDDEN_QUIET_MS });
+    const quietAt = beats(server);
+
+    setVisibility("visible");
+    await settle({ advance: PRESENCE_HEARTBEAT_MS });
+    expect(beats(server), "shown: it beats again, idle or not before").toBe(quietAt + 1);
+  });
+
+  it("R4691001 input inside IDLE_QUIET_MS keeps it beating", async () => {
+    const server = serve();
+    render(<Heartbeat />);
+    await settle({ advance: 0 });
+    for (let touch = 0; touch < 3; touch += 1) {
+      await settle({ advance: IDLE_QUIET_MS - 1 });
+      fireEvent.keyDown(document.body, { key: "a" });
+    }
+    expect(beats(server)).toBe(Math.floor((3 * IDLE_QUIET_MS - 3) / PRESENCE_HEARTBEAT_MS));
   });
 });

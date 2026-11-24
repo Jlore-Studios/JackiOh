@@ -22,7 +22,8 @@
 import { useEffect, useSyncExternalStore } from "react";
 
 import { dailyWaitingOf } from "../daily/order.ts";
-import { pollWhileVisible, quietWhileHidden } from "../game/net.ts";
+import { tabIdle } from "../game/idle.ts";
+import { pollWhileVisible, quietWhileAway } from "../game/net.ts";
 import { readSession } from "../net/session.ts";
 import type { FeedNotification } from "../net/notifications.ts";
 import { getSocial, type Challenge, type PlayerRef, type SocialRead } from "../net/social.ts";
@@ -162,11 +163,12 @@ function keepPolling(): boolean {
 
 /**
  * R3214000: the socket turned live or stopped being; down, the poll reads at once and goes on. R3205000:
- * a hidden tab's drop reads nothing (unless the poll would run hidden), since the poll reads when it shows.
+ * a hidden tab's drop reads nothing (unless the poll would run hidden), since the poll reads when it shows;
+ * R4691001: nor does an idle tab's, since the poll reads at its next input.
  */
 function onLive(live: boolean): void {
   publish({ ...reads, live });
-  if (!live && (document.visibilityState !== "hidden" || keepPolling())) tick();
+  if (!live && ((document.visibilityState !== "hidden" && !tabIdle()) || keepPolling())) tick();
 }
 
 function onPush(push: SocialPush): void {
@@ -201,7 +203,8 @@ function openSocket(): void {
 
 /**
  * R3576000: a tab hidden for `HIDDEN_QUIET_MS` lets its socket go, which is a drop to the poll (it runs
- * hidden only for a challenge of the player's own), and opens one again when it shows.
+ * hidden only for a challenge of the player's own), and opens one again when it shows. R4691001: so does
+ * a tab idle for `IDLE_QUIET_MS`, which opens one again at its next input.
  */
 function onQuiet(quiet: boolean): void {
   if (!quiet) {
@@ -218,7 +221,7 @@ function start(): void {
   openSocket();
   tick();
   stopPolling = pollWhileVisible(tick, SOCIAL_POLL_MS, keepPolling);
-  stopQuiet = quietWhileHidden(onQuiet, HIDDEN_QUIET_MS);
+  stopQuiet = quietWhileAway(onQuiet, HIDDEN_QUIET_MS);
 }
 
 function stop(): void {
