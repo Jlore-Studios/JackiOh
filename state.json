@@ -20999,19 +20999,20 @@
     "what": "build #4747 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-24T14:23:06Z",
+    "at": "2026-11-24T14:37:07Z",
     "notes": [
-      "#4743 needs a plan",
-      "#4747 needs a plan",
-      "delivered plan #4745 on claude-8 (run 45411892354): planned",
-      "delivered plan #4732 on claude-3 (run 45408405137): planned",
-      "delivered review #4741 on muse (run 45405908379): approved",
-      "started build #4745 on claude-8 (run 45414210832)",
-      "started build #4732 on claude-3 (run 45414349489)",
-      "started plan #4743 on muse (run 45414488685)",
-      "started revise #4724 on claude-4 (run 45414629741)",
-      "started plan #4747 on claude-3 (run 45414762279)",
-      "nothing more to start: nothing is queued"
+      "delivered plan #4747 on claude-3 (run 45414762279): interrupted",
+      "delivered plan #4743 on muse (run 45414488685): planned",
+      "delivered build #4732 on claude-3 (run 45414349489): interrupted",
+      "delivered plan #4725 on claude-7 (run 45412033733): planned",
+      "delivered plan #4737 on claude-1 (run 45411739182): planned",
+      "delivered build #4733 on muse (run 45411051089): built",
+      "started review #4748 on muse (run 45417237706)",
+      "started build #4743 on muse (run 45417384096)",
+      "started build #4737 on claude-1 (run 45417546279)",
+      "started build #4725 on claude-7 (run 45417732118)",
+      "started build #4747 on muse (run 45417909508)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-24T17:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -21717,7 +21718,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T14:23:06Z",
+  "loop_tick": "2026-11-24T14:37:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
