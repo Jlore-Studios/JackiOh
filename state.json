@@ -42458,6 +42458,10 @@
       "4730": {
         "at": "2026-11-24T12:40:00Z",
         "why": "Banned queue tickets still pair and strand an opponent today, and the fix extends decided R4019000 with cited code and tests."
+      },
+      "4732": {
+        "at": "2026-11-24T12:48:11Z",
+        "why": "Confirmed: the #4273 guard in build-wasm.sh greps for a name that the #4283 strip removes, so it can no longer fire; a scratch crate on the pinned toolchain built with the script's settings still traps with the grep finding nothing, the proposed deny(linker_messages) turns that into a link error, and the real C module builds today with no linker messages, so the fix won't break it."
       }
     },
     "decided": [
