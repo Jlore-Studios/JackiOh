@@ -21855,12 +21855,8 @@
     "what": "revise #4768 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-24T19:40:18Z",
-    "notes": [
-      "started revise #4768 on claude-3 (run 45472957245)",
-      "nothing more to start: nothing is queued",
-      "pruned 6 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-24T19:49:10Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -22565,7 +22561,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T19:40:18Z",
+  "loop_tick": "2026-11-24T19:49:10Z",
   "machine_disk": {
     "issue": null,
     "reading": {
