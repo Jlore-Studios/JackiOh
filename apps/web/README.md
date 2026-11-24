@@ -1508,7 +1508,9 @@ Every word the client shows a player follows [`WRITING.md`](WRITING.md), the cli
 client shows (a string or JSX text in a source that `src/i18n/zh-CN.json` translates), no curly
 apostrophe there or in a dictionary key, and no straight double quote there. Its glossary sets
 sentence case, one name per page, one verb per action, and bans arrow characters in translations,
-held by guards against Title Case labels outside their allowlist.
+held by guards against Title Case labels outside their allowlist. The site and its images carry
+no tagline (#4653): where a sentence is needed, write a plain description of the game, and do
+not add one back.
 
 ## Internationalisation
 

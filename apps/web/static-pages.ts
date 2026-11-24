@@ -43,7 +43,7 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
   {
     path: paths.landing,
     description:
-      "JackiOh is a 1v1 card game of lanes, mana and hidden traps. Play the AI in your browser with no account, or play friends online with an invite code.",
+      "JackiOh is a 1v1 card game where you summon units into lanes and set traps face down. Play the AI in your browser with no account, or play friends online with an invite code.",
   },
   {
     path: paths.practice,
@@ -88,7 +88,7 @@ const section = (heading: string, body: string): string => `<section><h2>${headi
 export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
   [paths.landing]:
     section(
-      "A card game of lanes, mana and hidden traps",
+      "How it plays",
       `<p>Each player brings a ${String(DECK_SIZE)}-card deck and a hero with ${String(HERO_HEALTH)} health. ` +
         `Mana grows each turn, up to ${String(MAX_MANA)}, and pays for Units that fight in shared lanes, ` +
         `Spells, and Traps set face down in the backrow, hidden from the opponent until they spring. ` +
