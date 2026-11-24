@@ -18276,15 +18276,8 @@
       "waiting_comment": 7123919831
     },
     "4673": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45346638888",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-24T07:42:05Z",
-        "until": "2026-11-24T08:12:05Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -18296,10 +18289,9 @@
         "reason": "planned on opus",
         "trail": "rns\\\\|co\\\\b\\\\|'co'\\\" crates/server/tests/sql/24_card_totals.sql | head -30; grep -n \\\"co\\\\|turns\\\" crates/server/tests/store/contract.rs | grep -in \\\"drill\\\\|tu\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4673/crates/server/tests/store/contract.rs\", \"offset\": 5020, \"limit\": 110}\n- Bash: {\"command\": \"grep -n \\\"loaded(&\\\\|mixed_records()\\\\|fn .*harness: &StoreHarness\\\\|both_stores!\\\\|mod stats_totals\\\\|^ mod \\\\|^mod \\\" crates/server/tests/store/contract.rs | awk -F: '$1>4900 && $1<550\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4673/crates/server/tests/store/contract.rs\", \"offset\": 5180, \"limit\": 95}\n- Bash: {\"command\": \"grep -n \\\"r2089000_folds_the_created_figures_and_loads_them_as_the_records_give\\\\|both_stores!\\\" crates/server/tests/store/contract.rs | head; grep -n \\\"pg_temp.retcon\\\\|retcon_3631(t.co\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4673/crates/server/tests/api/stats.rs\", \"offset\": 3144, \"limit\": 113}\n- Bash: {\"command\": \"ls apps/web/src/i18n/; grep -rn \\\"\\\\\\\"Show 95% ranges\\\\\\\"\\\" apps/web/src --include=*.ts --include=*.json | grep -v test | head\", \"description\": \"Check i18n catalogs for stats strings\"}\n- Bash: {\"command\": \"grep -n \\\"it(\\\\|describe(\\\" apps/web/src/i18n/i18n.test.ts | head -20; grep -n \\\"\\\\\\\"Normal\\\\\\\"\\\\|\\\\\\\"Radiant\\\\\\\"\\\\|\\\\\\\"All\\\\\\\"\\\\|\\\\\\\"Face\\\\\\\"\\\\|\\\\\\\"View\\\\\\\"\\\" apps/web/src/i18n/zh-CN.js\u2026\n- Bash: {\"command\": \"cat apps/web/src/stats/RangeText.tsx | head -60; grep -n \\\"export function adjustedText\\\" -A8 apps/web/src/stats/TierChip.tsx; cat apps/web/src/stats/config.ts | head -60\", \"description\"\u2026\n- Bash: {\"command\": \"grep -n \\\"stats-options\\\\|stats-view-toggle\\\\|stats-filter-bar\\\\|stats-sort\\\\b\\\\|stats-sort-label\\\" -A6 apps/web/src/routes/stats.css | head -80; grep -n \\\"stats-options\\\\|options\\\" e2e/\u2026\n- Bash: {\"command\": \"grep -n \\\"stats\\\" e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts | head -20; grep -rn \\\"stats-options\\\\|one row\\\" apps/web/src/routes/stats.test.tsx | head -10\", \"description\": \"Check spe\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4673/apps/web/src/routes/stats.test.tsx\", \"offset\": 731, \"limit\": 76}\n- Bash: {\"command\": \"head -c 1500 spec/pending/4666.md; echo; echo ----; ls spec/rulings | grep \\\"R4666\\\\|R4619\\\" ; head -12 spec/rulings/$(ls spec/rulings | grep \\\"R4666\\\" | head -1)\", \"description\": \"Read \u2026\n- Bash: {\"command\": \"grep -rln \\\"api/stats/cards\\\" --include=*.md . 2>/dev/null | grep -v \\\"^./spec/rulings\\\\|node_modules\\\\|^./reviews\\\" | head; grep -rn \\\"api/stats/cards\\\" crates/server/README.md apps/web\u2026\n- Bash: {\"command\": \"grep -rn \\\"stats\\\" apps/edge/src --include=*.ts | grep -v test | head -10; grep -rn \\\"\\\\\\\"mode\\\\\\\"\\\\|'mode'\\\" apps/edge/src --include=*.ts | head -5\", \"description\": \"Check edge Worker f\u2026\n- Bash: {\"command\": \"grep -n \\\"TIER_BAND\\\\|TIER_A_FROM\\\\|ADJUSTED_FIELD\\\" apps/web/src/wire/engineConfig.ts | head; grep -rn \\\"engineConfig.ts\\\" crates --include=*.rs | head -5\", \"description\": \"Check how en\u2026\n- Bash: {\"command\": \"head -30 apps/web/src/wire/engineConfig.ts; grep -rln \\\"engineConfig\\\" crates/engine/src crates/engine/tests crates/tools/src 2>/dev/null | head\", \"description\": \"Inspect engineConfig.ts\u2026\n- Bash: {\"command\": \"grep -n \\\"TIER\\\\|ADJUSTED\\\\|STATS_INTERVAL\\\" crates/engine/tests/export_config.rs | head; grep -c \\\"\\\" crates/engine/tests/export_config.rs; sed -n 2370,2420p crates/engine/src/config.rs\u2026\n- Bash: {\"command\": \"sed -n 1268,1345p crates/server/tests/api/stats.rs\", \"description\": \"Read the kept card history test setup\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4673/crates/server/tests/api/stats.rs\", \"offset\": 1345, \"limit\": 80}\n- Bash: {\"command\": \"grep -n \\\"^### 5.2\\\\|^### 9.11\\\" spec/05-card-types.md spec/09-architecture.md; grep -n \\\"\\\\\\\"not enough games\\\\\\\"\\\\|\\\\\\\"Normal face only\\\\\\\"\\\\|\\\\\\\"Face\\\\\\\"\\\" apps/web/src/i18n/zh-CN.jso\u2026\n- Bash: {\"command\": \"grep -n \\\"r2089000_folds_the_created_figures_and_loads_them_as_the_records_give\\\" crates/server/tests/store/contract.rs; awk 'NR>5490 && /both_stores!\\\\(/ {print NR\\\": \\\"$0; exit}' crate\u2026\n- Bash: {\"command\": \"grep -rn \\\"CardTier\\\" docs/v0.3.0/SURFACE.md crates/engine/README.md apps/web/README.md 2>/dev/null | head -5; grep -rn \\\"CardTier\\\" crates/engine/tests/*.rs crates/wasm 2>/dev/null | he\u2026\n- Bash: {\"command\": \"grep -n \\\"ADJUSTED_RANGE_DIGITS\\\\s*=\\\" apps/web/src/stats/config.ts; grep -n \\\"export function formatNumber\\\" apps/web/src/i18n/i18n.ts; grep -n \\\"export function Segmented\\\" -A12 apps/w\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4673/apps/web/src/routes/stats.test.tsx\", \"offset\": 643, \"limit\": 28}\n- Bash: {\"command\": \"sed -n 1,25p apps/web/src/tabs/Segmented.tsx; sed -n 60,110p apps/web/src/tabs/Segmented.tsx\", \"description\": \"Read Segmented props and render\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4673/.bot-plan.md\", \"content\": \"## Goal\\n\\n`/stats` reads every card on one of three faces: **All** (today's figures, unchanged), **Normal** (`playedN\u2026\n- Bash: {\"command\": \"ls crates/server/tests/ | head -30; grep -n \\\"^\\\\[\\\\[test\\\\]\\\\]\\\" -A3 crates/server/Cargo.toml | head -30; wc -w .bot-plan.md\", \"description\": \"Check server test binaries and plan word c\u2026\n- Bash: {\"command\": \"grep -n \\\"mod \\\\|path\\\" crates/server/tests/server_store.rs | head; grep -n \\\"mod api\\\\|mod store\\\" crates/server/tests/server.rs | head\", \"description\": \"Check which test binary holds t\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"Step 26's exact test guards it.\\\",\\\"`r4673000_all_reads_as_before` guards it.\\\")\\ns=s.replace(\\\"`cargo tes\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4673/.bot-plan.md\"}\n- said: ## Goal `/stats` reads every card on one of three faces: **All** (today's figures, unchanged), **Normal** (`playedNormal` seats) or **Radiant** (`playedRadiant` seats). Each face is read against its own random-effects field and has its own tier band, for deck cards and Created cards alike. - **The \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-24T07:15:45Z",
       "owner_why": "it plans it",
@@ -18312,9 +18304,9 @@
       "provider": "claude-7",
       "queued_at": "2026-11-24T05:55:21Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45346638888",
+      "run_id": "pending:01dcba6e-1795506152",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T07:15:45Z",
+      "started_at": "2026-11-24T07:42:55Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18542,9 +18534,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T07:33:47Z",
+    "at": "2026-11-24T07:42:55Z",
     "url": "",
-    "what": "plan #4690 on muse"
+    "what": "build #4673 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-24T07:32:12Z",
