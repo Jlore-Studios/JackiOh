@@ -17559,7 +17559,7 @@
           }
         ],
         "head": "88e233a60790ee599b4d5142dd762f302b75f972",
-        "interruptions": 0,
+        "interruptions": 1,
         "kind": "revise",
         "model": "opus",
         "provider": "claude-8",
