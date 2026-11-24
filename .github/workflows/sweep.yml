@@ -1,6 +1,5 @@
 # The shadow ban swept again (R1678000, issue #1678): a shadow ban (R186) is a measurement of one AI,
-# and the learn lane promotes a new one every few weeks with no one in the loop, so every push to main
-# that moves the AI's generation, or ships a set, starts a sweep of record here. By dispatch too
+# so every push to main that moves the AI's generation, or ships a set, starts a sweep of record here. By dispatch too
 # (`gh workflow run sweep.yml`, optionally `-f ids="meditative-011 …"`).
 #
 #   due       `cargo jackioh sweep --due <the push's base>` names the ids: when crates/ai/generation.json's
@@ -32,7 +31,7 @@
 #             `--write` refuses (more than half a set banned, or a ban of a set that may not hold bans yet,
 #             as a set that just shipped until a ruling adds it) opens an issue for a person instead.
 #
-# Pushing sweep/shadow-ban and opening its pull request take LEARN_LANE_TOKEN (training/learn.md, Setting it up):
+# Pushing sweep/shadow-ban and opening its pull request take LEARN_LANE_TOKEN (docs/repository-secrets.md):
 # a pull request opened with the run's own token would start no CI. Without it, a changed record stops
 # at its artifact (`sweep-<run>/record.patch`) and the run says so in red.
 name: shadow-ban sweep
@@ -59,7 +58,7 @@ env:
   # plays both faces since #4466, twice the games it played when this was 45.
   SWEEP_CARD_MINUTES: "90"
   # The ids each shard job takes (8 cards a lane at 3 lanes), and the most shard jobs a pass runs at
-  # once, of the organization's hosted runners that CI and the learn lane share. Lower it if CI waits.
+  # once, of the organization's hosted runners that CI and the bots share. Lower it if CI waits.
   SWEEP_IDS_PER_SHARD: "24"
   SWEEP_SHARDS_MAX: "10"
   # The branch every sweep's pull request comes from: never under ai/, whose pull requests CI holds to a
@@ -570,10 +569,10 @@ jobs:
           fi
           title="Patch: the shadow ban swept again after $WHY"
           remote="https://x-access-token:${LEARN_LANE_TOKEN}@github.com/${REPO}.git"
-          # Pushed as a new branch, as the learn lane pushes ai/learn: only the sweep's commit is new.
+          # Pushed as a new branch: only the sweep's commit is new.
           git push --quiet "$remote" --delete "$SWEEP_BRANCH" 2> /dev/null || true
           if ! git push "$remote" "HEAD:refs/heads/$SWEEP_BRANCH"; then
-            echo "::error::LEARN_LANE_TOKEN could not push $SWEEP_BRANCH: it may have expired (training/learn.md, Setting it up)"
+            echo "::error::LEARN_LANE_TOKEN could not push $SWEEP_BRANCH: it may have expired (docs/repository-secrets.md)"
             exit 1
           fi
           export GH_TOKEN="$LEARN_LANE_TOKEN"

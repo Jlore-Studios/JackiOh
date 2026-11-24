@@ -945,13 +945,9 @@ describe("R2657000: Can't Defend, the keyword that took over from the status Can
     expect(rowOf(entry)).toBe("Can't Defend");
     expect(KEYWORD_MARK["Can't Defend"]).toBe("CD");
     expect(KEYWORD_KINDS).toContain("Can't Defend");
-    // Top Loser, both faces, and Spikey Pillow print it on their keyword lines.
-    expect(termsOf(played("classicplus-019-1"))).toEqual(
-      expect.arrayContaining([
-        { text: "Armor 2", term: "Armor" },
-        { text: "Can't Defend", term: "Can't Defend" },
-      ]),
-    );
+    // Top Loser, both faces, and Spikey Pillow print it on their keyword lines (Top Loser's Armor 2 went with
+    // issue #4665).
+    expect(termsOf(played("classicplus-019-1"))).toEqual(expect.arrayContaining([{ text: "Can't Defend", term: "Can't Defend" }]));
     expect(termsIn(played("classicplus-019-1", "radiant"))).toEqual(expect.arrayContaining(["Immune to Spells", "Can't Defend"]));
     expect(termsIn(played("core-065-1"))).toEqual(expect.arrayContaining(["Can't Defend", "Aura"]));
     // Jlockeed's J15 Fighter printed it again on both faces from #3042 (part 5 of #3000) until R3551003 gave it

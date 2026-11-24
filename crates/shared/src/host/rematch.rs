@@ -110,6 +110,11 @@ pub struct RematchEntry {
     /// that from the finished match's `finished_at`, and an offer past it is not taken.
     #[cfg_attr(feature = "ts", ts(type = "number"))]
     pub at: i64,
+    /// The finished match's end, as the offer that made this entry named it. R2685000 counts
+    /// the offer window from it, so a read past it drops an unmet entry even while its latest
+    /// offer is still under the TTL.
+    #[cfg_attr(feature = "ts", ts(type = "number | null"))]
+    pub finished_at: Option<i64>,
     /// The game equal stakes made, once made.
     pub match_id: Option<String>,
     /// Which entry this is: a swept-and-remade entry must not be mistaken for it after a failed create.
@@ -187,13 +192,15 @@ impl RematchBook {
     }
 
     /// The live entry for a match, sweeping one whose offers went stale. An entry that already made a
-    /// game is never swept here: the id is how a late poller finds the game, until the sweep. This
-    /// reads the latest offer's `at`; the window an offer is taken in is the finished match's, which
-    /// [`RematchBook::offer`] checks first (R2685000).
+    /// game is never swept here: the id is how a late poller finds the game, until the sweep. An
+    /// unmet entry is stale past the finished match's window (R2685000) as well as past the TTL on
+    /// its latest offer's `at`; the window an offer is taken in is the finished match's, which
+    /// [`RematchBook::offer`] checks first.
     fn live_entry(&mut self, match_id: &str, now: i64) -> Option<&mut RematchEntry> {
         let stale = {
             let entry = self.entries.get(match_id)?;
-            entry.match_id.is_none() && now - entry.at > REMATCH_OFFER_TTL_MS
+            entry.match_id.is_none()
+                && (now - entry.at > REMATCH_OFFER_TTL_MS || !in_rematch_window(entry.finished_at, now))
         };
         if stale {
             self.entries.shift_remove(match_id);
@@ -256,6 +263,7 @@ impl RematchBook {
                     offers: IndexMap::new(),
                     leans: IndexMap::new(),
                     at: now,
+                    finished_at,
                     match_id: None,
                     generation,
                 },
@@ -265,6 +273,7 @@ impl RematchBook {
             return OfferOutcome::Waiting { answered: None };
         };
         entry.at = now;
+        entry.finished_at = finished_at;
         entry.offers.insert(seat, stakes);
         entry.leans.insert(seat, lean);
         if entry.offers.get(&seat.opponent()) == Some(&stakes) && entry.match_id.is_none() {

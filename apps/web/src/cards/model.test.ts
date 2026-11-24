@@ -254,7 +254,8 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // #55 Lava Golem's Radiant face is its base text less the drawback, so its text adds nothing to
     // mark; its doubled stats are what R277 marks on it. Classic #60, Classic+ #5 and Classic+ #34
     // drop words too (Classic #28 did until issue #4440's "+2 mana per turn" gave it a mark), as do Meditative #89 Jlarna's (R1225), #22.1 Fortify Mind's (R862),
-    // #47 饕餮's (less "then Freeze this.", issue #3996) and #48 Tranquility's (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's
+    // #47 饕餮's (less "then Freeze this.", issue #3996) (#48 Tranquility's did, R1021, until issue #4665's "Replenish 2
+    // mana" marked it), Training Grounds #50 Legacy: Glowy Jelly Bean's (issue #4665), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's
     // Living Potions, the Stinkyscape set's #9 Ticketed and Core #79 Twinspell, whose Radiant face drops
     // "Then this goes to the graveyard." (R3044000), Stinkyscape+ #31, #72, #73 and #85 (§8.12) and
     // Classic+ #73.1 Classic Golem, less "Radiant" since issue #4292 (radiantDiff.test.ts names all twenty;
@@ -269,13 +270,13 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
       "classicplus-073-1",
       "meditative-022-1",
       "meditative-047",
-      "meditative-048",
       "meditative-089",
       "meditativeplus-011",
       "meditativeplus-012",
       "meditativeplus-013",
       "stinkyscape-009",
       "traininggrounds-031",
+      "traininggrounds-050",
       "stinkyscapeplus-031",
       "stinkyscapeplus-072",
       "stinkyscapeplus-073",

@@ -33,6 +33,8 @@ pub mod swing;
 pub mod window;
 pub use swing::*;
 pub use window::*;
+pub mod play_versions;
+pub use play_versions::*;
 
 // ---------------------------------------------------------------------------
 // The record (R376)

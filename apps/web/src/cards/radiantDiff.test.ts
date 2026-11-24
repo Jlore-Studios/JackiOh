@@ -113,9 +113,10 @@ describe("R277 the word diff", () => {
     // Radiant texts (docs/classic-sets.md, B6, B7), and Classic+ #34 Memory Leak's (less "Choose one."); Classic #28
     // Second Wind's was one (less "exile", issue #3951) until issue #4440's "+2 mana per turn" marked it. The designer's own:
     // Meditative #89 Jlarna's (less the end-of-turn Tribute, R1225), #22.1 Fortify Mind's (R862), #47 饕餮's (less
-    // "then Freeze this.", issue #3996), #48 Tranquility's (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's Living potions (less the Tribute they
+    // "then Freeze this.", issue #3996), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's Living potions (less the Tribute they
     // activate with) and Stinkyscape #9 Ticketed's (less Brittle 3, R1857000), and Training Grounds #31 Level Up!'s (less "if it destroyed an enemy Unit",
-    // issue #3951). #149 Wildar's is marked (#2657): its
+    // issue #3951), and Training Grounds #50 Legacy: Glowy Jelly Bean's (less "It costs (1) more.", issue #4665). #48 Tranquility's
+    // was one (R1021) until issue #4665's "Replenish 2 mana" marked it. #149 Wildar's is marked (#2657): its
     // Radiant face keeps the opponent's Call to Chaos and makes its own cost (0) too. Core #79 Twinspell's is its base
     // text less "Then this goes to the graveyard.", so it stays on the field to serve each turn (R3044000). Stinkyscape+
     // (§8.12) adds four of the designer's: #31 Soul Read's (less the Tribute when another seen card comes first), #72
@@ -132,13 +133,13 @@ describe("R277 the word diff", () => {
       "classicplus-073-1",
       "meditative-022-1",
       "meditative-047",
-      "meditative-048",
       "meditative-089",
       "meditativeplus-011",
       "meditativeplus-012",
       "meditativeplus-013",
       "stinkyscape-009",
       "traininggrounds-031",
+      "traininggrounds-050",
       "stinkyscapeplus-031",
       "stinkyscapeplus-072",
       "stinkyscapeplus-073",

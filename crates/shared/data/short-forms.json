@@ -411,10 +411,10 @@
     },
     "stinkyscapeplus-007": {
       "base": {
-        "en": "Armor 4\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
+        "en": "Armor 4, Tribute 1\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
       },
       "radiant": {
-        "en": "Armor 8\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
+        "en": "Armor 8, Tribute 1\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
       }
     },
     "stinkyscapeplus-024": {

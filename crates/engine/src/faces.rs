@@ -26,7 +26,10 @@ pub fn running_face_of<'a>(state: &'a GameState, def_id: &str, radiant: bool) ->
 /// face's type says (an animated Field Trap keeps firing as a trap): the trap machinery reads the face's
 /// own type (`animated::face_type_of`), never this.
 pub fn card_type_of(state: &GameState, instance: &CardInstance) -> CardType {
-    if let Zone::Field { row: Row::Units, .. } = instance.zone {
+    // R4665000: a card lying on a unit zone (S #9 Ticketed on a Unit) keeps its own type.
+    if let Zone::Field { row: Row::Units, .. } = instance.zone
+        && !crate::zones::lies_on_unit_zone(state, instance)
+    {
         return CardType::Unit;
     }
     if let Some(set) = crate::alt_play::set_type_of(state, instance) {

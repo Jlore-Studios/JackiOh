@@ -351,7 +351,7 @@ jobs:
         run: |
           set -o pipefail
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::error::The CLOUDFLARE_API_TOKEN secret is not set, so production was built but not deployed. docs/deploy-cloudflare.md, section 4, step 2, says how to make one."
+            echo "::error::The CLOUDFLARE_API_TOKEN secret is not set, so production was built but not deployed. docs/deploy-cloudflare.md, section 4, says how to make one."
             exit 1
           fi
           if [ ! -f apps/edge/package.json ]; then

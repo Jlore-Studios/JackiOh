@@ -3,6 +3,8 @@
 //! ```text
 //! jackioh-server stats-cards [--source=live|dev|all] [--mode=bo1|bo3|random]
 //!   [--patch=<version>] [--pilot=human|ai|unified] [--card=<id>] [--json] [--swing]
+//! jackioh-server stats-cards --versions [--mode=bo1|bo3|random] [--pilot=human|ai|unified]
+//!   [--card=<id>] [--json]
 //! ```
 //!
 //! Reads the totals every record is folded into as it is written (R1044000, migration 0041) through the
@@ -19,6 +21,9 @@
 //! R4552001: `--swing` prints every card's play term, Board swing, Swing, raw RMS and Decisiveness after
 //! the table (`swing_report`), the figures `GET /api/stats/cards` keeps to itself but for Decisiveness.
 //!
+//! R4675001: `--versions` prints every deck card's play versions (R4675000) with their figures, the table
+//! `GET /api/stats/versions` sends, and with `--json` that table as JSON.
+//!
 //! The arithmetic is `card_stats_of` in `jackioh_engine::wire::stats`, which the AI's development run prints
 //! its own games with too, so a pre-release run and the live games after it compare figure for figure: run
 //! both with the same `--patch`.
@@ -28,9 +33,10 @@ use serde::Serialize;
 
 use jackioh_engine::wire::{
     CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, GAME_MODES, GameMode, ModeFilter,
-    PILOT_FILTERS, PilotFilter, SOURCE_FILTERS, SourceFilter, StatsTotals, WindowQuery, WindowRequest,
-    WindowedReport, card_stats_of, format_card_stats, format_swing, swing_baseline, swing_report,
-    swing_rows_of, windowed_card_stats,
+    PILOT_FILTERS, PilotFilter, PlayVersionQuery, PlayVersionTable, SOURCE_FILTERS, SourceFilter,
+    StatsTotals, WindowQuery, WindowRequest, WindowedReport, card_stats_of, format_card_stats,
+    format_play_versions, format_swing, play_version_figures, swing_baseline, swing_report, swing_rows_of,
+    windowed_card_stats,
 };
 
 use crate::cli::{connect_one, database_url};
@@ -51,7 +57,10 @@ const USAGE: &str = "Usage: jackioh-server stats-cards [options]
   --window[=<version>]       R1367000: every card over its own window at the version (default the
                              newest shipped), as GET /api/stats/cards reads it and a match's
                              win-rate snapshot is taken (R3049000), printed as JSON. Not with
-                             --source, --mode or --patch.";
+                             --source, --mode or --patch.
+  --versions                 R4675001: every play version of every deck card with its figures, as
+                             GET /api/stats/versions sends them; with --json, as JSON. Takes --mode,
+                             --pilot and --card; not with --source, --patch or --window.";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CardStatsOptions {
@@ -63,6 +72,8 @@ pub struct CardStatsOptions {
     pub window: Option<String>,
     /// R4552001: the Swing and Decisiveness figures after the table.
     pub swing: bool,
+    /// R4675001: every play version's figures, instead of the filter's report.
+    pub versions: bool,
 }
 
 /// The literal a string-union value serializes as (`"live"`, `"bo1"`, …): what the flag's value is
@@ -117,7 +128,9 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
     let mut swing = false;
     let mut pilot: Option<PilotFilter> = None;
     let mut window: Option<String> = None;
+    let mut versions = false;
     let mut filtered = false;
+    let mut sourced = false;
 
     for arg in argv {
         if arg == "--json" {
@@ -126,6 +139,10 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
         }
         if arg == "--swing" {
             swing = true;
+            continue;
+        }
+        if arg == "--versions" {
+            versions = true;
             continue;
         }
         if arg == "--window" {
@@ -139,6 +156,7 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
             "source" => {
                 filter.source = one_of::<SourceFilter>(name, raw, SOURCE_FILTERS, USAGE)?;
                 filtered = true;
+                sourced = true;
             }
             "mode" => {
                 filter.mode = Some(one_of::<GameMode>(name, raw, GAME_MODES, USAGE)?);
@@ -147,6 +165,7 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
             "patch" => {
                 filter.patch = Some(raw.to_owned());
                 filtered = true;
+                sourced = true;
             }
             "window" => window = Some(raw.to_owned()),
             "pilot" => pilot = Some(one_of::<PilotFilter>(name, raw, PILOT_FILTERS, USAGE)?),
@@ -163,6 +182,11 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
             "--window reads every source, mode and patch its windows hold; drop --source, --mode and --patch.\n\n{USAGE}"
         );
     }
+    if versions && (sourced || window.is_some()) {
+        bail!(
+            "--versions reads every patch each play version spans, live games or else live and development together; drop --source, --patch and --window.\n\n{USAGE}"
+        );
+    }
     // R807000: every counted seat merged unless the query names a side.
     filter.pilot = pilot.unwrap_or(PilotFilter::Unified);
     Ok(CardStatsOptions {
@@ -171,6 +195,7 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
         json,
         window,
         swing,
+        versions,
     })
 }
 
@@ -208,6 +233,38 @@ pub async fn card_stats_window(
         report.created.retain(|card| &card.stats.card == only);
     }
     Ok(report)
+}
+
+/// R4675001: every deck card's play versions' figures off every patch's totals, as
+/// `GET /api/stats/versions` reads them (`play_version_figures`, the play versions compiled in), the
+/// live seats `options`' pilot names and the mode it names, or every mode; `--card` keeps that card's.
+pub async fn card_stats_versions(
+    db: &Db,
+    options: &CardStatsOptions,
+) -> Result<PlayVersionTable, StoreError> {
+    let query = StatsTotalsQuery {
+        source: SourceFilter::All,
+        mode: None,
+        patch: None,
+        drills: false,
+    };
+    let mut tx = db.begin(None).await?;
+    let totals = tx.stats_totals_load(&query).await?;
+    tx.commit().await?;
+    let versions = jackioh_cards::deck_play_versions();
+    let mut table = play_version_figures(
+        &totals,
+        &PlayVersionQuery {
+            versions: &versions,
+            live_pilot: options.filter.pilot,
+            mode: options.filter.mode.map_or(ModeFilter::All, ModeFilter::Only),
+            min_sample: crate::config::CARD_STATS_MIN_SAMPLE,
+        },
+    );
+    if let Some(only) = &options.card {
+        table.versions.retain(|row| &row.card == only);
+    }
+    Ok(table)
 }
 
 /// The totals the options' filter reads (R1044000), the records folded as they were written.
@@ -295,6 +352,17 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
         let outcome = card_stats_window(&db, &options, at).await;
         db.close().await;
         println!("{}", serde_json::to_string_pretty(&outcome?)?);
+        return Ok(());
+    }
+    if options.versions {
+        let outcome = card_stats_versions(&db, &options).await;
+        db.close().await;
+        let table = outcome?;
+        if options.json {
+            println!("{}", serde_json::to_string_pretty(&table)?);
+        } else {
+            println!("{}", format_play_versions(&table));
+        }
         return Ok(());
     }
     let outcome = load_totals(&db, &options).await;

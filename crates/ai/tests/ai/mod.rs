@@ -25,6 +25,7 @@ pub mod endings;
 pub mod evaluate;
 pub mod evaluate_v020;
 pub mod even_trades;
+pub mod evolve;
 pub mod exile;
 pub mod features;
 pub mod feng_shui;

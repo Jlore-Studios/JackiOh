@@ -543,6 +543,8 @@ describe("window.__jackioh in a production build", () => {
       SCENE_RECIPES: sceneData.SCENE_RECIPES,
       ALT_SCENE_RECIPES: sceneData.ALT_SCENE_RECIPES,
     });
+    // #4714: and the cosmetic offers the faces' looks read, as setup.ts installs them.
+    await (await import("../../cards/versions.ts")).loadCosmeticOffers();
 
     const engine = await import("../../game/engine.ts");
     const route = await import("./hotseat.tsx");
