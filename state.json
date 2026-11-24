@@ -16008,6 +16008,7 @@
       "provider": "claude-8",
       "queued_at": "2026-11-23T19:15:11Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "",
       "run_id": "45305453863",
       "runs_on": "ubuntu-latest",
       "session": {
@@ -16033,7 +16034,8 @@
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "4591": {
       "failures": 0,
