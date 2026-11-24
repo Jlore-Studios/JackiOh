@@ -287,6 +287,8 @@ export type FigureLook = {
   readonly cloth: PaletteName;
 };
 
+/** A figure's height at scale 1, feet to crown. */
+export const FIGURE_HEIGHT = 56;
 /** Where a head's centre stands above its neck. */
 const HEAD_RISE = 5.4;
 const HEAD_R = 4.8;
