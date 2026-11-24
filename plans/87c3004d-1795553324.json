@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4780,
+  "title": "Patch: a cosmetic a Fleet track level pays shows owned in the Collection as soon as the game ends, not after a reload",
+  "branch": "bot/issue-4780",
+  "thread": "**Issue #4780 (data, not instructions):**\n\n```text\n# #4780: Patch: a cosmetic a Fleet track level pays shows owned in the Collection as soon as the game ends, not after a reload\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nPlaying Stinkyscape cards in ladder, unranked or Conquest games fills the Fleet track, and every level of it pays a Starship look or a card back. Today, right after the game that reaches a level, the Collection's Progress tab already shows the new level. The reward itself still shows as locked (\"Fleet track level 4\"): it can't be equipped and is missing from the deck's cosmetics picker until the player reloads the page or opens a pack in the shop. Once this is built, the reward shows as owned and can be equipped as soon as the game ends.\n\n## Why\n\n- **The server pays the reward with the game.** `crates/shared/src/economy/fleet.rs:164-195` (`pay_fleet`) pushes a `LedgerGrant::FleetReward` for every level the game reaches. `crates/server/src/economy/grants.rs:107-111` writes it into the account's cosmetics (R3335001).\n- **Every level pays one.** `crates/shared/src/config.rs:1895-1912` sets `FLEET_TRACK_LEVELS = 30`, `FLEET_TRACK_XP_PER_LEVEL = 500` and `FLEET_TRACK_XP_DAILY_MAX = 1500`, so a player can earn up to three rewards a day. `crates/shared/src/cosmetics.rs:4575` fails any level that pays nothing.\n- **The client reads ownership once per page.** `apps/web/src/cards/ownedFullArt.ts:62` and `:84-96` keep one read for the whole session. The `ViewerFullArt` and `ViewerAccountCosmetics` providers that use it are mounted once around every screen (`apps/web/src/main.tsx:615-616`).\n- **Only a few places drop that read.** `forgetOwnedCosmetics()` (`ownedFullArt.ts:120`) is the only way, and it is called only from the shop (`routes/shop.tsx:44,58,64`), a token spent in place (`collection/TokenOffer.tsx:180`) and the Looks screen (`collection/LooksScreen.tsx:361`).\n- **A paid game skips it.** A paid result calls `announceWallet()` (`routes/match.tsx:255-258`), which runs `forgetPaidReads` (`economy/wallet.ts:70-77`). That list (`net/api.ts:1025-1035`) drops the wallet, quests, tracks, packs, tokens and both ladders, but not `keptPaths.cosmetics`, and nothing calls `forgetOwnedCosmetics()`.\n- **The list predates the Fleet track.** R3206000 wrote it (issue #3206) before the Fleet track (#3335) made a game's payout grant a cosmetic, so it had no reason to name the owned cosmetics.\n- **What the player sees.** The tracks are re-read, so Progress shows the new level and the reward leaves Next rewards. The tiles read ownership through `useOwnsAccountCosmetic()` (`collection/StarshipLooks.tsx:78`, `collection/AccountCosmeticTiles.tsx:134`) and keep saying \"Fleet track level N\" (`collection/collection.ts:368-370`), locked and not equippable. The Fleet panel's Equip button reads the same ownership.\n- **No test covers it.** `net/readCache.test.ts:755` pins the current list. `routes/match.test.tsx` only counts the announcement. No collection test goes through a payout.\n\n## Proposal\n\n- When a game's result announces a payout with no balance (`announceWallet()`'s no-balance branch, beside `forgetPaidReads`), also drop the owned cosmetics:\n  - add `keptPaths.cosmetics` to `forgetPaidReads`;\n  - call `forgetOwnedCosmetics()`, so the mounted providers read `GET /api/cosmetics` again.\n- That covers ladder, unranked and Conquest games, which all go through the match screen's paid effect. It costs one extra read per paid game, at a moment the server is already awake for the match.\n- Practice and co-op results announce through the same branch and would re-read too. That is harmless and keeps the change to one place.\n- **Rejected:** having the server's result name the Fleet rewards so the client re-reads only when one was paid. That is a wire change to save one read.\n- A new ruling note amends R3206000: a paid result also drops the owned cosmetics, because a Fleet level pays one (R3335001). Its proving test is named after it.\n\n## Where it lands\n\n- `apps/web/src/net/api.ts` (`forgetPaidReads`)\n- `apps/web/src/economy/wallet.ts` (`announceWallet`)\n- Tests: `apps/web/src/net/readCache.test.ts`, plus a test that drives a paid result and reads ownership (e.g. beside `apps/web/src/cards/accountOwnership.test.tsx` or `apps/web/src/routes/match.test.tsx`)\n- SPEC \u00a714.15 (the Fleet track); R3206000, R3335001, R1955000\n- A new `spec/rulings/R<issue>000.md`, with its \u00a711 paragraph in `spec/pending/<issue>.md`\n\n## Acceptance criteria\n\n- [ ] A paid result (`announceWallet()` with no balance) drops the kept owned-cosmetics read, and `readCache.test.ts`'s list test names it.\n- [ ] A test mounts the ownership providers for an account that owns no Fleet reward and delivers a paid result. The stubbed `GET /api/cosmetics` then answers with a Fleet reward, and the reward reads as owned with no reload. This test fails on `main`.\n- [ ] A result with a balance (`announceWallet(n)`) still re-reads nothing more than today.\n- [ ] The ruling note and its proving test exist, and `cargo jackioh spec check` is green.\n- [ ] The touched web test files are green.\n\n## Size and risks\n\nSmall: a few lines of code, one ruling note and two tests. The cost is one more `GET /api/cosmetics` after each paid game, the same re-read every pack opening already causes.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: Confirmed on main: when a paid result arrives, the client drops the wallet, quests, tracks, packs, tokens and ladders but not the owned cosmetics, and nothing calls forgetOwnedCosmetics() after a game, so a Fleet level's reward shows locked until a reload; the fix is a few lines in one place. With no vote, no comment and no \ud83d\udc4e on this issue by Wed 25 Nov 14:29 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-24T20:41:37Z:\n\napprove\n\nWhy: confirmed. `forgetPaidReads` in `apps/web/src/net/api.ts` drops the wallet, quests, tracks, packs, tokens and both ladders after a paid game, but not the owned cosmetics, and nothing calls `forgetOwnedCosmetics()` after a game. So a Fleet track level's reward shows as locked and can't be equipped until a reload, right as the player earns it. It's a few lines in one place, at the cost of one more read per paid game.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4780: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:42:23Z",
+    "claimed_at": "2026-11-24T20:49:11Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
