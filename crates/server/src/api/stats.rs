@@ -54,12 +54,13 @@ use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardTier, CardWindow, CreatedStats, GameFigures,
     GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures,
     PlayVersionQuery, PlayVersionTable, SourceFilter, StatsFace, StatsField, StatsTotals, SwingReport,
-    SwingRows, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames,
-    WindowedReport, add_created, add_stats, card_family, card_stats_of, card_window, collapse_gameless,
-    created_face_adjusted, created_face_field, created_face_side, face_adjusted, face_drills_of, face_side,
-    face_stats_field, held_adjusted, patch_windows, play_version_figures, radiant_gap, seen, sources_of,
-    stats_field, swing_baseline, swing_report, tier_in, wilson_interval, win_rate, windowed_card_stats,
-    windowed_game_figures, windowed_swing_rows,
+    SwingRows, Tally, TotalsKey, VariantKind, WindowQuery, WindowRequest, WindowSource, WindowedCreated,
+    WindowedGames, WindowedReport, add_created, add_stats, card_family, card_stats_of, card_window,
+    collapse_gameless, created_face_adjusted, created_face_field, created_face_side, face_adjusted,
+    face_drills_of, face_side, face_stats_field, held_adjusted, not_drawn, patch_windows,
+    play_version_figures, radiant_gap, round_share, seen, sources_of, stats_field, swing_baseline,
+    swing_report, tier_in, variant_field, variant_figures, variant_rows, wilson_interval, win_rate,
+    windowed_card_stats, windowed_game_figures, windowed_swing_rows,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -736,6 +737,110 @@ pub struct CardDrillDownResponse {
     pub face: StatsFace,
     /// R4673001: the card's Normal and Radiant figures and their gap, at the page's patch, on every face.
     pub faces: PublicCardFaces,
+    /// R4676000: the card's choices at the page's patch on the face asked, one group per kind it has; empty
+    /// for a card that offers none.
+    pub variants: Vec<PublicVariantGroup>,
+}
+
+/// R4676000: one choice of a card, as Extended stats shows it.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicVariantRow {
+    pub key: String,
+    pub label: String,
+    pub games: i64,
+    /// The row's games over the card's played games on the face: how often players choose it.
+    pub share: f64,
+    pub adjusted_win_rate: Option<f64>,
+    pub adjusted_low: Option<f64>,
+    pub adjusted_high: Option<f64>,
+    pub tier: Option<CardTier>,
+    pub has_enough_games: bool,
+}
+
+/// R4676000: one kind of a card's choices, its rows by share, most chosen first.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicVariantGroup {
+    pub kind: VariantKind,
+    pub rows: Vec<PublicVariantRow>,
+}
+
+/// R4676000: a card's baseline, the games a variant is read against, and its played games on `face`, a
+/// variant's share's denominator: a deck card's never-drawn games and plays, or a Created card no deck held
+/// its copies made and never used (R2089000) and its used ones.
+fn variant_sides(report: &WindowedReport, id: &str, face: StatsFace) -> Option<(Tally, Tally)> {
+    if let Some(card) = report.card(id) {
+        let played = match face {
+            StatsFace::All => card.stats.played,
+            StatsFace::Normal => card.stats.played_normal,
+            StatsFace::Radiant => card.stats.played_radiant,
+        };
+        return Some((not_drawn(&card.stats), played));
+    }
+    let row = report.created.iter().find(|row| row.stats.card == id)?;
+    let used = match face {
+        StatsFace::All => row.stats.created_played,
+        StatsFace::Normal | StatsFace::Radiant => created_face_side(&row.stats, face),
+    };
+    Some((row.stats.created_not_played, used))
+}
+
+/// R4676000: the card's choices on `face` over the windowed report, each read against the variant field of
+/// every card of the report the catalog holds, whatever the page filters (`variant_field`). A row with no
+/// games on the face is left out, and so is a kind left with none.
+fn card_variants(app: &App, report: &WindowedReport, id: &str, face: StatsFace) -> Vec<PublicVariantGroup> {
+    let Some(choices) = report.choices.get(id) else {
+        return Vec::new();
+    };
+    let Some((never, played)) = variant_sides(report, id, face) else {
+        return Vec::new();
+    };
+    let floor = i32::try_from(CARD_STATS_MIN_SAMPLE).unwrap_or(i32::MAX);
+    let field = variant_field(
+        report
+            .choices
+            .iter()
+            .filter(|(card, _)| app.catalog.defs.contains_key(*card))
+            .filter_map(|(card, choices)| Some((choices, variant_sides(report, card, face)?.0))),
+        face,
+        floor,
+    );
+    let mut groups: Vec<PublicVariantGroup> = Vec::new();
+    for row in variant_rows(choices) {
+        let seen = row.games.on(face);
+        if seen.games == 0 {
+            continue;
+        }
+        let figures = variant_figures(&seen, &never, face, &field);
+        let public = PublicVariantRow {
+            key: row.key,
+            label: row.label,
+            games: i64::from(figures.games),
+            share: if played.games > 0 {
+                round_share(f64::from(seen.games) / f64::from(played.games))
+            } else {
+                0.0
+            },
+            adjusted_win_rate: figures.adjusted.map(|(rate, _)| rate),
+            adjusted_low: figures.adjusted.map(|(_, (low, _))| low),
+            adjusted_high: figures.adjusted.map(|(_, (_, high))| high),
+            tier: figures.tier,
+            has_enough_games: figures.has_enough_games,
+        };
+        match groups.last_mut() {
+            Some(group) if group.kind == row.kind => group.rows.push(public),
+            _ => groups.push(PublicVariantGroup {
+                kind: row.kind,
+                rows: vec![public],
+            }),
+        }
+    }
+    for group in &mut groups {
+        // A stable sort: rows of one share keep `variant_rows`' order.
+        group.rows.sort_by(|a, b| b.games.cmp(&a.games));
+    }
+    groups
 }
 
 /// A `public, max-age=…` answer for a route that knows nothing about its caller.
@@ -1915,6 +2020,8 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     // (R3067000: cut from the snapshot the history read, so it loads nothing more).
     let window = kept_window(app, &steps, &patch, SourceParam::Default, pilot, mode).await?;
     let faces = card_faces(app, &window.report, &card_id, def, mode);
+    // R4676000: its choices off the same window, on the face asked.
+    let variants = card_variants(app, &window.report, &card_id, face);
 
     let body = CardDrillDownResponse {
         card: DrillDownCard {
@@ -1928,6 +2035,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         co_played,
         face,
         faces,
+        variants,
     };
     Ok(reader_ok(to_json(&body)?, reader))
 }
