@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4813,
+  "title": "Patch: the Duos host decides an AI seat's pass or End turn again when the game moved on since it was asked, so the two AI seats stop wasting the pass between them",
+  "branch": "bot/issue-4813",
+  "thread": "**Issue #4813 (data, not instructions):**\n\n```text\n# #4813: Patch: the Duos host decides an AI seat's pass or End turn again when the game moved on since it was asked, so the two AI seats stop wasting the pass between them\nOpened by @squishy-squooby.\n\n### What happens\n\nIn a Duos game the host asks every AI seat that owes a move in the same step, each on the same state, and then plays each answer as it arrives whenever the engine still accepts it, however far the game has moved on. A pass crosses the two duels, so two such stale moves stay legal and undo each other:\n\n- B1's \"pass X, because B2 can play it this turn\" lands after B2's End turn, which was decided at the same moment. The card goes to a teammate that has ended its turn, and B1 has paid the crystal.\n- B2's End turn, decided before the pass arrived, lands after it. B2 ends with the card unplayed, though on the state it lands on `duos_decide(B2)` plays the card.\n\nBoth seats reaching \"nothing left to play\" in the same step is the ordinary end of a team B round, so this is the common case, not a rare one.\n\nThe trace, in `crates/shared/src/host/duos.rs` (by reading; high confidence):\n\n1. `drive_ai` (`:1499-1518`) arms the pause of every AI seat that owes a move in the same step.\n2. `start_job` (`:1531-1574`) emits a `Decide` for each with `version = next_seq`. The host's own test helper `asked()` (`crates/shared/tests/duos.rs:1021-1030`) asserts \"PREMISE: both asked on one state\".\n3. `spawn_search` (`crates/server/src/duos/actor.rs:893-927`) runs `duos_decide` on a clone of that state.\n4. `on_ai_move` (`:1600-1638`) applies the body with no check that `current == version`; it compares only the seat's hold mode.\n5. `resolve` (`:1375-1379`) decides again only when the move is **refused** and `current != version`. A stale move that is still legal is logged and applied.\n\n### What should happen\n\nSPEC \u00a713.7: a seat passes \"a hand card its teammate can play this turn: the teammate is a round seat that has not ended\", and \"when the search would end the turn, the seat first makes its passes and then ends it\". \u00a713.8 already drops a move whose hold mode changed before it applied; nothing does the same for a move whose state changed under it.\n\n### How to reproduce\n\nThe consequence is proven at the level of `duos_decide` and `duos_reduce`: `s13_7_two_ai_seats_asked_on_one_state_do_not_waste_the_pass_between_them` in [`crates/ai/tests/audit_duos.rs` at bf24a52](https://github.com/Jlore-Studios/JackiOh/blob/bf24a52273bd5c0e7d6f9c740b28a8d7cb7f2b3e/crates/ai/tests/audit_duos.rs) (branch `claude/vigilant-mayer-pmyrhr`) fails on `main` (3a83bd7).\n\n- Setup: round 2; B1 holds a 2-cost Unit at 1 mana; B2 holds a 4-cost Unit at 3 mana.\n- On one state, `duos_decide(B1)` is `Pass` and `duos_decide(B2)` is `EndTurn` (both asserted as premises).\n- Each applies without refusal after the other. The test asserts that the stale move equals the fresh decision on the state it lands on.\n- Output today: `B2's move decided before the pass is not the move it owes after it  left: endTurn  right: play c55 \u2192 units lane 1`. The other order (after B2 ends, B1's fresh decision is End turn, yet the stale pass is accepted) was confirmed in an exploratory run; the test stops at its first assertion.\n\nThere is no host-level test: `jackioh-ai` cannot depend on `jackioh-shared`, and `crates/shared` declares its tests in `tests/shared.rs` (`autotests = false`). The fix's own test belongs there, beside `r1452_a_refused_move_on_a_state_since_moved_on_is_decided_again` (`crates/shared/tests/duos.rs`), with the two seats asked on one state and the answers delivered in each order.\n\n### Where\n\nThe shared host: `crates/shared/src/host/duos.rs` (`on_ai_move`, `resolve`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In `on_ai_move`, when `current != version`, drop a move that crosses the duels and decide again: a `Pass`, and an `EndTurn` when the seat's hand has changed since the version it was decided on.\n- **Keep it narrow.** Dropping every stale move would starve the second seat while the first plays (each action of one seat would void the other's pending decision). A play or an attack inside the seat's own duel is not affected by the teammate's duel, except through the pool, which the search already prices (R4188000).\n- The AI's rng cursor is read back on every path today; a dropped move must keep that (the stream moves on, as for a refused move).\n- This is a decision the spec does not spell out (when a host may play a decision made on an older state), so it takes a ruling note in this issue's block, proved by the host test.\n- The Duos gate (`duos_gate_game_with`) drives the seats one at a time and so never sees this; no gate result should move.\n- Not among the findings of the AI audit tracker #4787. Related there: #4795 (the pass's \"after the teammate's best play\" trial is a silent no-op on a reused nonce), and its note on the pass baseline (R1723000's first-listed-play baseline can sit below standing still, which makes every pass look like a gain and so makes this waste more frequent).\n\nFound by an audit of the AI's Duos play and its host; the reproduction was run and the host's code path read before filing.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4813: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:57:43Z",
+    "claimed_at": "2026-11-24T23:33:37Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4801 is held for `claude-8` until 18:10 (it refused a call)",
+    "#4726 is held for `claude-8` until 18:10 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
