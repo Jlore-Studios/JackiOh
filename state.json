@@ -41724,6 +41724,9 @@
       "2026-11-24T08:19:43Z,claude-8,stream,call,45353865840,93,2026-11-24T09:10:00Z,,,allowed_warning,100,,",
       "2026-11-24T08:20:28Z,claude-8,stream,call,45353865840,94,2026-11-24T09:10:00Z,,,allowed_warning,100,,",
       "2026-11-24T08:23:13Z,claude-8,stream,call,45353865840,95,2026-11-24T09:10:00Z,,,allowed_warning,100,,"
+    ],
+    "runs": [
+      "2026-11-24T08:24:40Z,45353865840,claude-8,opus,plan,4672,hard,planned,,9.9,87,55596,11692561,9.8536,85,95,,,135.5,claude-8,resumed,,1"
     ]
   },
   "version": 1
