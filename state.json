@@ -18653,9 +18653,11 @@
         "by": "`muse` (medium)",
         "sha": "32472c55854f5a0e1e55a94e65c3e9c0e7b67da8"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T06:04:39Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-24T08:08:16Z",
         "family": "muse",
@@ -18665,6 +18667,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Status: implementation and all four test files are done; `cargo fmt` passes. Waiting on the background `export_config` test to regenerate `serverConfig.ts` before running the web tests and remaining checks.Still compiling \u2014 the export test's result will wake this session when it lands; web tests, t\u2026\n- Confirmed still progressing \u2014 it's now on the final `jackioh_server` crate build in this worktree. Waiting for its terminal result.Lint is clean. Web tests and clippy are both running in the background \u2014 their results will wake this session.\n- Both are alive and nearly through their crate graphs \u2014 the WASM build is on the engine/AI crates and clippy is on the final server test targets. Waiting for their terminal results.\n- Clippy is still compiling (fresh artifacts landing, driver active on the remaining targets). Waiting for both terminal results.\n- WASM build still compiling (AI crate for wasm32); clippy passed clean. Waiting on the web test result.\n- Dev predev is now running (lock cleared); waiting for the dev server, then the walkthrough.All builds are progressing in their own worktrees \u2014 contention is only on the shared cargo cache lock, which clears on its own. Waiting for the spec check and dev server.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the authenticator code as six boxes\"} -->\n- The two-step code (`/login` MFA step, `/account` enrolment) is now one `CodeField` input drawn as six one-digit boxes in the tavern skin, per new ruling R4669000. Typing, pasting `123456` / `123 456` / `123-456`, and Backspace fill or clear the boxes in order; a letter is refused with a digits sent\u2026\n- What changed: `TOTP_CODE_*` constants plus `TOTP_CODE_FORMAT` in `crates/server/src/config.rs`, exported to `serverConfig.ts`; `formattedCaret` early-return for an empty separator; digits branches in `codeInput.ts` (`isTotpCodeFormat`, digits refusal sentences); `CodeField` gains `inputMode`/`autoC\u2026\n- How it was tested: `export_config` test passes and regenerated the config; `CodeField.test.tsx` 116 pass (7 new R4669000), `TwoStepSettings` 9 pass (1 new), `login-methods`, `auth-methods`, `codes` (208, 1 new), `i18n` \u2014 312 tests over the five files, all green; `typecheck`, `eslint`, `cargo fmt --\u2026\n- Decisions the issue left open: constant lives in server config (TOTP is auth-side, not shared logic); only the format object is exported, not scalars; empty separator rather than a hidden dash (a dash would leak into the stored value); variant as a CSS class; submit behavior unchanged. Rejected: si\u2026\n- Reviewer notes: `pnpm typecheck` OOMs at the default 2 GB heap on a loaded box \u2014 rerun with `NODE_OPTIONS=--max-old-space-size=4096`. The authenticated MFA/enrolment screens need provider credentials, so the screenshots show the shared component mounted in both screens' layouts rather than the live\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4669 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4669/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4669,
       "kind": "review",
       "live": "reviewing",
