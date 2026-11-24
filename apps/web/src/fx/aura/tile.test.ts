@@ -262,7 +262,11 @@ describe("R3342000 tile aura planner", () => {
               ? TILE_PATTERN_OF_FAMILY.meditative
               : def.set === "Stinkyscape" || def.set === "Stinkyscape+"
                 ? TILE_PATTERN_OF_FAMILY.stinkyscape
-                : TILE_PATTERN_OF_FAMILY["training-grounds"];
+                : def.set === "Training Grounds"
+                  ? TILE_PATTERN_OF_FAMILY["training-grounds"]
+                  : // R4577000: a held set with no Set showcase look of its own (the Infinite Assault) wears the
+                    // planner's fallback.
+                    "runes";
       expect(aura?.pattern).toBe(expectedPattern);
     }
   });

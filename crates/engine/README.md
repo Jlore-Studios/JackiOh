@@ -108,6 +108,12 @@ builds reads its own game's hold without the state (R2201001).
   built with `hook(|ctx| …)`, and never writes the state itself (CLAUDE.md rule 5).
 - `query.rs` (with `zones`, `layers`, `mana`, `numbers`, `params`) is the read half: the board facts
   a card reads instead of `GameState` fields. `crates/cards/README.md` lists them.
+- `recursion_log.rs` (R4589000–R4589004) is the Infinite Assault's one game history: the face-up plays
+  (with their player-turn) and Unit deaths each side keeps once the game holds an Infinite Assault card,
+  read by the Recursion, Scraper (R4592000) and Commander (R4594005, R4594009) cards, and
+  `returned_by_reborn`; `origin.rs` stamps a card's deck of origin under the same gate (R4592002);
+  `Script.death_extra` and `Script.reborn_extra` are IA #118's Death-only and Reborn multipliers, and
+  `reset_side_keeping_self` is IA #119's reset that leaves its own card standing.
 - `prelude` is what a card file names: `use jackioh_engine::prelude::*;`.
 - `subsystems/` holds the card-specific systems (fuse, rotation, scorer, the random policy
   `ai_policy`, the scorer-driven `autopilot` that `reduce` drives through a turn, R1183002, heroic
@@ -189,6 +195,9 @@ builds reads its own game's hold without the state (R2201001).
 - `scripts::script_of(state, def_id)` finds a card's script; a fused card's is composed from its
   ingredients on lookup (`subsystems::fuse::compose_fused_scripts`), and a crafted card's (Meditative
   #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).
+- `effects/turn_buff.rs` is "this turn" Attack and keywords (R4587000): `buff_this_turn`
+  (`buffThisTurn`) writes `CardInstance.turn_buff`, which layer 4 reads only while its `turn` is now.
+  It is absent until set, so old games hash the same.
 
 The engine never depends on `jackioh-cards` (only its tests do). An engine test that needs a card's
 behavior uses a test-only script in `tests/rules/fixtures/`, and the real card's test covers the

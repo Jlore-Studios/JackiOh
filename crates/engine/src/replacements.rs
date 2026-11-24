@@ -266,6 +266,8 @@ fn fire(sink: &mut EngineSink<'_>, cand: &mut Candidate) -> bool {
         lane: at.map_or(0, |slot| slot.lane),
         // R2657001: a face-up Field Trap replacing again reveals nothing.
         again: crate::traps::fires_again(sink.state, &cand.card),
+        // R4586007: a replacement's firing answers no attack.
+        attacker_id: None,
     });
     // R783011: a Crater Trap Locks the backrow zone it is revealed in, as `traps::fire_trap` does.
     crate::crater::lock_on_firing(sink, &cand.card, at);

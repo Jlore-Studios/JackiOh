@@ -3969,13 +3969,14 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
         // The raw event names the trap, its controller and the zone it flipped in, and reveals it.
         assert!(matches!(
             &raw,
-            GameEvent::TrapFired { instance_id, def_id, controller, row, lane, again }
+            GameEvent::TrapFired { instance_id, def_id, controller, row, lane, again, attacker_id }
                 if *instance_id == trap.id
                     && *def_id == trap.def_id
                     && *controller == P1
                     && *row == Row::Backrow
                     && *lane == 3
                     && again.is_none()
+                    && attacker_id.is_none()
         ));
         // Both seats read it whole: the other seat its `instanceId` and `defId` as its controller does,
         // and `row`, `lane` and `controller` as they always travelled.
