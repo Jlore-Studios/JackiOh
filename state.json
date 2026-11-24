@@ -20193,6 +20193,14 @@
         "sha": "85d2c13fa8d9af9f67a4b0556c558eaa73f8f5a7",
         "tiers": {}
       }
+    },
+    "4859": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-24T21:05:44Z",
+      "issue": 4781,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
