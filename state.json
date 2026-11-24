@@ -19241,6 +19241,7 @@
     "4781": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-24T22:02:35Z",
         "difficulty": "medium",
