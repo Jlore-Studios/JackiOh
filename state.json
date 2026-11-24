@@ -20314,6 +20314,13 @@
     "4733": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T14:08:12Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "no hard line holds: no engine rules, AI, cross-crate design, migration, or ~40 files \u2014 a client-only change in apps/web plus one ruling note"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
