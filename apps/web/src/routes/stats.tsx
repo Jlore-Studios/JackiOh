@@ -906,17 +906,17 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
           </BackLink>
         </header>
 
-        {/* R1973002, R3324000: a tab for each offered patch, between the patch before and the patch after */}
+        {/* R1973002, R3324000, R4674000: a tab for each offered patch; the arrows follow the tabs: left steps newer, right steps older */}
         {patchList.length > 0 && (
           <nav className="stats-patch-bar" data-testid={statsTestid.patchBar} aria-label={t("Patches")}>
             <button
               type="button"
               className="stats-patch-step"
-              data-testid={statsTestid.patchPrevious}
-              disabled={previousWindow === null}
-              aria-label={previousWindow ? t("Previous patch ({patch})", { patch: patchName(previousWindow) }) : t("Previous patch")}
-              title={previousWindow ? t("Previous patch ({patch})", { patch: patchName(previousWindow) }) : t("Previous patch")}
-              onClick={() => previousWindow && choosePatch(previousWindow)}
+              data-testid={statsTestid.patchNext}
+              disabled={nextWindow === null}
+              aria-label={nextWindow ? t("Newer patch ({patch})", { patch: patchName(nextWindow) }) : t("Newer patch")}
+              title={nextWindow ? t("Newer patch ({patch})", { patch: patchName(nextWindow) }) : t("Newer patch")}
+              onClick={() => nextWindow && choosePatch(nextWindow)}
             >
               ←
             </button>
@@ -947,11 +947,11 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
             <button
               type="button"
               className="stats-patch-step"
-              data-testid={statsTestid.patchNext}
-              disabled={nextWindow === null}
-              aria-label={nextWindow ? t("Next patch ({patch})", { patch: patchName(nextWindow) }) : t("Next patch")}
-              title={nextWindow ? t("Next patch ({patch})", { patch: patchName(nextWindow) }) : t("Next patch")}
-              onClick={() => nextWindow && choosePatch(nextWindow)}
+              data-testid={statsTestid.patchPrevious}
+              disabled={previousWindow === null}
+              aria-label={previousWindow ? t("Older patch ({patch})", { patch: patchName(previousWindow) }) : t("Older patch")}
+              title={previousWindow ? t("Older patch ({patch})", { patch: patchName(previousWindow) }) : t("Older patch")}
+              onClick={() => previousWindow && choosePatch(previousWindow)}
             >
               →
             </button>

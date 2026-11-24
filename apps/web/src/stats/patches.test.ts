@@ -91,4 +91,12 @@ describe("R1973002 the patches /stats can show", () => {
     expect(neighbours(PATCHES, 7)).toEqual({ previous: null, next: PATCHES[6] });
     expect(neighbours(PATCHES, -1)).toEqual({ previous: null, next: null });
   });
+
+  it("R4674000 previous is the older patch and next is the newer patch", () => {
+    // The patch bar's right arrow renders `previous` (older, toward the older tabs) and its left
+    // arrow renders `next` (newer, toward the current patch), the tabs reading newest first.
+    expect(neighbours(PATCHES, 0)).toEqual({ previous: PATCHES[1], next: null });
+    expect(neighbours(PATCHES, 3)).toEqual({ previous: PATCHES[4], next: PATCHES[2] });
+    expect(neighbours(PATCHES, 7)).toEqual({ previous: null, next: PATCHES[6] });
+  });
 });
