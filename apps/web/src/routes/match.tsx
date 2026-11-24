@@ -579,6 +579,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           opponentMs={inMulligan ? mulliganMs : activeIsYou ? null : turnMs}
           graceMs={graceMs}
           mulligan={inMulligan}
+          mulliganAnswered={view.mulligan?.youReady === true}
           frame={clock}
           viewer={view.viewer}
           activePlayer={view.result === null ? view.active : null}
