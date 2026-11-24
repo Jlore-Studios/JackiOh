@@ -21638,6 +21638,8 @@
       "suggestion": true
     },
     "4762": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T15:48:55Z",
@@ -21651,8 +21653,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Overload (X), the next-turn mana loss as a keyword\"} -->\n- Print the existing next-turn mana-loss rider as the keyword **Overload (X)**: a new \u00a76.3 row, reworded faces on exactly 12 cards, no script, number, or rule change. Ruling note `R4751000` records the decision with its proving test.\n- What changed\n- - `catalog.json`: 24 face texts (12 cards \u00d7 base/radiant) swap the loss sentences for `Overload (X)` / `Overload your opponent (X)` / `Overload (X), then (Y) the turn after` / Jlarna's `Repay it as Overload over your next {instalments|turn|turns}`. Only `base.text`/`radiant.text` fields changed.\n- - `card-text.yaml` zh faces use \u8fc7\u8f7d; `chinese.json` regenerated via the export test (no other generated file changed).\n- - `chinese-terms.json` (`Overload`/\u8fc7\u8f7d), `glossary.json` (\u00a76.3, row `Overload X`), `short-forms.json` (Foreshadow).\n- - 12 script files: header/doc comments quote the new wording; no code, param, or effect touched. The `c056` delayed-step label and `c019` delay step are byte-identical (state-written, replay hashes).\n- - `spec/06-keywords.md`: \u00a76.3 row `Overload X` between Mana and Replenish X. `spec/rulings/R4751000.md` + `spec/pending/4751.md` (issue block R4751000\u2013R4751999, free). `spec/07-tokens.md` Fortify Mind row, `spec/08-catalog.md` Base/Radiant cells of the 12 rows.\n- - `crates/cards/tests/cross/catalog.rs`: Legacy frozen strip now removes ` Overload ({mana}).`; new `r4751000_overload_is_the_printed_name_of_the_next_turn_mana_loss` asserts all 24 faces print Overload and none keeps the old phrasing.\n- - `crates/cards/patches/pending/overload.json`: claims exactly the 12 differing ids, with hand-written player `new` + `text` note.\n- - Web: `GlossaryTermId` + `VERBS_6_3` gain `Overload`; Speciesist strings in `CardFace.test.tsx` (\u00d72), `model.test.ts`, `TermTip.test.tsx` comment.\n- How tested (commands run, output seen)\n- - `cargo fmt --check`: clean (after one rustfmt fix in the new test).\n- - `cargo jackioh catalog check`, `patches check` (every change claimed by exactly one fragment), `spec check` (2465 rulings ok), `names --check`: all pass.\n- - `cargo test -p jackioh-tools --test export_card_text`: green.\n- - `cargo test -p jackioh-cards --test cards r4751000` and `r2195001`: pass; full `--test cards`: 1249 passed, 0 failed.\n- - `cargo clippy -p jackioh-cards --all-targets -- -D warnings`: clean.\n- - Web: `rules.test.ts` 59 passed; `CardFace` + `model` + `TermTip` 174 passed; `typecheck` passes (needs `NODE_OPTIONS=--max-old-space-size=6144`; the default heap OOMs \u2014 machine has 7 GB, environmental).\n- - `classify --base origin/main --claims` cannot see uncommitted work (it diffs HEAD; committing is the harness's job), so CI will run it post-commit. Verified the equivalent by hand: the catalog diff touches only `WORDING_FIELDS` entries and every script hunk is comment-only, which `code_lines` str\u2026\n- Decisions not settled by the issue\n- - Quotes of reworded face text inside Engine/history cells (\u00a78 Legacy Speciesist row, Medina row) were updated to the Overload wording; pure mechanical descriptions there were left byte-identical. Same for a `c052` test-doc quote. The plan said byte-identical, but stale quotes would misquote cards.\n- - \u00a78 cells that paraphrased rather than quoted (Hinder, Jlarna) were reworded to print Overload with \u00a78's literal numbers: `Overload your opponent (1)/(2)`, `Repay it as Overload over your next {instalments|turn|turns}.`\n- - `cargo test -p jackioh-shared` without features fails to compile on `testkit` imports \u2014 pre-existing gating, unrelated (only JSON data changed there); with `--features jackioh-engine/testkit` its 328 tests pass.\n- - S+ #82, S+ #95, and mana-gain cards untouched, as instructed.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4751 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4751/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4751,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T17:35:51Z",
         "from_run": "45429868584",
         "gates": [
           {
@@ -21711,8 +21716,15 @@
         "source": "build",
         "until": "2026-11-24T18:04:41Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-24T17:34:41Z",
+      "run_id": "pending:1bccb2d9-1795541713",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-24T17:35:51Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -21726,9 +21738,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T17:26:01Z",
+    "at": "2026-11-24T17:35:51Z",
     "url": "",
-    "what": "build #4732 on claude-3"
+    "what": "review #4762 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T17:23:54Z",
