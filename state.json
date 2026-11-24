@@ -19980,14 +19980,26 @@
       "stop_requested": false
     },
     "4844": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-24T23:23:21Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-24T21:29:22Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "run_id": "pending:90058304-1795562570",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-24T23:23:21Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "4845": {
       "failures": 0,
@@ -20456,9 +20468,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T23:22:38Z",
+    "at": "2026-11-24T23:23:21Z",
     "url": "",
-    "what": "plan #4810 on claude-3"
+    "what": "plan #4844 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T23:07:14Z",
