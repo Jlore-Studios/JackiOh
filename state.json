@@ -20959,9 +20959,11 @@
         "by": "`muse` (medium)",
         "sha": "8f47fea4ae1a76ad08bfcbb18536db634eb03e4d"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T14:10:37Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-24T15:14:40Z",
         "family": "muse",
@@ -20971,6 +20973,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: rematch status refuses daily games and stale catalogs like rematch offers do\"} -->\n- ## What changed\n- `GET /api/matches/:matchId/rematch` (`rematch_status_route` in [crates/server/src/api/rematch.rs](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4722/crates/server/src/api/rematch.rs)) now returns the same refusals `POST` already returns, before reading the rematch book: 409 `daily` when t\u2026\n- Two tests in [crates/server/tests/api/rematch.rs](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4722/crates/server/tests/api/rematch.rs): `rematch_refusals::a_daily_matchs_status_is_409_daily` (GET on a finished daily match is 409 `daily` with POST's message) and `r1638000_a_rematch_acros\u2026\n- ## How it was tested\n- - Both new tests were added first and observed failing (GET answered 200), then the route fix was applied.\n- - `cargo test -p jackioh-server --test server -- api::rematch`: 44 passed, 0 failed. The 200 path is still pinned by existing tests (`upserts_one_seats_offer_and_reports_both_seats_offers_back`, the `r1372` mode assertions).\n- - `cargo fmt --check`: clean (one `cargo fmt` pass reformatted only the new test block and import order).\n- - `cargo clippy -p jackioh-server --all-targets -- -D warnings`: clean.\n- - `cargo jackioh spec check`: ok (2455 rulings, 6137 proofs, 75754 citations, 33739 links).\n- ## Decisions\n- None left open by the issue. Ordering (series, then daily, then catalog, then book read) and the daily response body were copied from the POST route exactly, per the plan; no shared helper was introduced and no finished/stakes checks were added to the GET. No new ruling: R1638000's note lists `prov\u2026\n- ## Reviewer notes\n- The daily GET test seeds a `DailyGameRow` directly beside a finished live match row, mirroring how `crates/server/tests/store/contract.rs` seeds daily games. The stale-catalog GET test reuses the module's `carry_played_on` / `assert_cards_changed` / `clear_overrides` helpers.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4722 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4722/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4722,
       "kind": "review",
       "live": "reviewing",
