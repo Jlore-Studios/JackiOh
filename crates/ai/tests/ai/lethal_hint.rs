@@ -196,3 +196,36 @@ fn r4595000_the_lethal_hint_against_an_assault_deck_reads_only_what_the_human_se
         }
     }
 }
+
+/// R4595000 (the sweep), R185: an Assault board whose Glitch Specter (IA #32) reads its controller's
+/// face-down cards, redacted for the human, counts the hidden card as face-down and determinizes
+/// without reading the placeholder's definition
+#[test]
+fn r4595000_a_redacted_face_down_card_counts_for_glitch_specter() {
+    register_cards();
+    let mut state = scenario(json!({
+        "seed": "assault-specter",
+        "active": PlayerId::P2,
+        "p1": {
+            "hand": ASSAULT_A.hand,
+            "library": ASSAULT_A.library,
+            "field": ["infiniteassault-032"],
+            "backrow": [{ "def": ASSAULT_A.trap, "faceUp": false }],
+        },
+        "p2": { "field": ["core-011"] },
+    }))
+    .state()
+    .clone();
+    state.players.p1.deck_sets = Some(vec![SetName::InfiniteAssault]);
+    let public = redact(&state, HUMAN);
+    assert_eq!(
+        jackioh_engine::face_down::face_down_count(&public, PlayerId::P1),
+        1
+    );
+    let mut rng = Rng::new("r4595000-specter", 0);
+    let world = determinize(&public, HUMAN, &mut rng, DeterminizeOptions::default());
+    assert_eq!(
+        jackioh_engine::face_down::face_down_count(&world, PlayerId::P1),
+        1
+    );
+}
