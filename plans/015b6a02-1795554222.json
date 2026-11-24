@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4801,
+  "title": "Patch: a wrap-up that fired before the beam still leaves the AI a line when its first root move carries a surcharge, so it does not end its turn by fallback",
+  "branch": "bot/issue-4801",
+  "thread": "**Issue #4801 (data, not instructions):**\n\n````text\n# #4801: Patch: a wrap-up that fired before the beam still leaves the AI a line when its first root move carries a surcharge, so it does not end its turn by fallback\nOpened by @squishy-squooby.\n\n### What happens\n\nWhen the host's wrap-up (`AiOptions::wrap_up`, R3498000) has already fired by the time the beam starts, and the first root move is one `simulate` surcharges, the beam is left with no line and the decision is `Fallback endTurn`: the AI passes a turn it had plays for.\n\n- `crates/ai/src/decide.rs:620-626` builds the beam's slice with `create_wrap_up_counter(counter, remaining - reserve, wrap_up, budget.root_branching + 1)`. The comment says the wrap-up \"is first polled once the root has been expanded (root_branching and endTurn): a wrap-up that fired before the beam would otherwise leave it no line and the decision would fall back.\" But that floor is counted in **nodes**, not root moves.\n- A surcharged step takes its extra nodes one at a time (`crates/ai/src/simulate.rs:779-783`): 100 for a play of #97 Zephrys, 40 for a lethal-size attack while a My Pawn lies in the backrow, `3 \u00d7 hand` for a play Pareto Optimality judges (`surcharge_nodes`).\n- So the first root `simulate` passes the floor inside its own surcharge, the counter polls `wrap_up` (`simulate.rs:171-177`), refuses, and `simulate` returns `None`. The beam reads `None` as \"stop the wave\" with no child yet.\n\nConcrete: the AI holds only Zephrys at 3 mana (candidates: play Zephrys, End turn), `wrap_up` answers true, `should_stop` is unset. Result: `Fallback {\"type\":\"endTurn\"} after 22 nodes, stopped by Clock`. With no clock the same state searches 9 lines and plays Zephrys. With an ordinary card in hand the same fired wrap-up gives lines, as intended. The weakest ladder bot's floor is only 11 nodes (`root_branching` 10), so a 16-node Pareto-judged play is enough there.\n\n### What should happen\n\n`crates/ai/README.md`, Budgets (R3498000): the wrap-up \"stops the beam's slice of the counter \u2026: the beam's open lines end their turn and the reply and the other determinizations run on until `should_stop`\". The comment at `decide.rs:620-623` states the floor exists so that a wrap-up fired before the beam never leaves it without a line. A surcharge inside the first root step should not defeat that.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): test `a_wrap_up_fired_before_the_beam_still_leaves_a_line_when_the_first_root_move_is_surcharged` in [`crates/ai/tests/audit_decide.rs` at bf24a52](https://github.com/Jlore-Studios/JackiOh/blob/bf24a52273bd5c0e7d6f9c740b28a8d7cb7f2b3e/crates/ai/tests/audit_decide.rs) (branch `claude/vigilant-mayer-pmyrhr`; `git show bf24a52:crates/ai/tests/audit_decide.rs`).\n\n```rust\nconst ZEPHRYS: &str = \"core-097\";\nfn one_card(def: &str) -> GameState {\n    jackioh_cards::register_all();\n    scenario(json!({\n        \"seed\": \"audit-wrap\", \"active\": AI, \"turn\": 9,\n        \"p1\": { \"hand\": [def], \"mana\": 3, \"library\": [\"core-008\", \"core-011\", \"core-020\"] },\n        \"p2\": { \"hand\": [\"core-011\"], \"field\": [\"core-008\"], \"library\": [\"core-008\", \"core-011\", \"core-020\"] },\n    })).state().clone()\n}\n#[test]\nfn a_wrap_up_fired_before_the_beam_still_leaves_a_line_when_the_first_root_move_is_surcharged() {\n    let fired = || true;\n    let wrapped = |state: &GameState| {\n        let mut options = AiOptions::with_budget(create_rng(\"audit-wrap\", 0), AI_BUDGET);\n        options.wrap_up = Some(&fired);\n        decide(state, AI, &mut options).expect(\"a decision\")\n    };\n    let plain = wrapped(&one_card(\"core-008\"));\n    assert!(plain.stats.lines > 0, \"PREMISE: an ordinary root is expanded under a fired wrap-up\");\n    let state = one_card(ZEPHRYS);\n    let unclocked = decide(&state, AI, &mut AiOptions::with_budget(create_rng(\"audit-decide\", 0), AI_BUDGET)).expect(\"a decision\");\n    assert_eq!(unclocked.reason, DecisionReason::Search, \"PREMISE: with no clock the root is searched\");\n    let d = wrapped(&state);\n    assert!(d.stats.lines > 0,\n        \"the beam was left no line: {:?} {} after {} nodes, stopped by {:?} (no clock: {})\",\n        d.reason, action_key(&d.action), d.stats.nodes, d.stats.stopped_by, action_key(&unclocked.action));\n    assert_ne!(d.reason, DecisionReason::Fallback);\n}\n```\n\nOutput today: `the beam was left no line: Fallback {\"type\":\"endTurn\"} after 22 nodes, stopped by Clock (no clock: {\"instanceId\":\"c1\",\"type\":\"play\"})`\n\n### Where\n\nThe AI: `crates/ai/src/decide.rs` (`plan`, the beam's wrap-up counter), `crates/ai/src/simulate.rs` (the wrap-up counter's poll and the surcharge loop).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Count the floor in root moves tried, not nodes: poll the wrap-up only between root expansions until the root's list is through. Or never let the wrap-up refuse inside one step's surcharge loop. Either way a wrap-up refusal inside a surcharge must not read as \"stop the wave\" before any child exists.\n- The hard stop (`should_stop`) is not involved and must keep stopping everything.\n- With no clock, or a wrap-up that never fires, a decision must stay node for node what it was (R3498000).\n- A related case seen by reading only, not proven: when the root's list costs more than `root_branching + 1` nodes (kept stand-downs, auto-answers), the root's own End turn, last in the list, is never simulated under an early wrap-up. Worth a look in the same change.\n- Not among the findings of the AI audit tracker #4787 (its #4791 is the budget-cut twin of this: lines left open when the slice runs out by budget).\n\nFound by an audit of the AI crate; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4801: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:53:28Z",
+    "claimed_at": "2026-11-24T21:04:13Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4823 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
