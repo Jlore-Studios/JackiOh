@@ -20235,6 +20235,9 @@
       "stop_requested": false,
       "suggestion": true
     },
+    "4734": {
+      "suggestion": true
+    },
     "4735": {
       "action": "review",
       "asks": [],
@@ -43154,6 +43157,13 @@
         "at": "2026-11-24T13:47:00Z",
         "number": 4733,
         "title": "Patch: a dungeon or Assault fight that has ended keeps its result when the player leaves before Continue",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-24T13:47:25Z",
+        "number": 4734,
+        "title": "Patch: a finished game's board stops reading Enemy turn, and a board opened on a finished game shows its result at once",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
