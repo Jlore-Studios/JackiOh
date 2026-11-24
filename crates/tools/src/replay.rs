@@ -18,11 +18,15 @@ use anyhow::{Context, Result, anyhow, bail};
 use serde_json::{Value, json};
 
 use jackioh_engine::replay::{FoldArgs, fold, hash_state};
-use jackioh_engine::{DuosReplayInput, ShippedCatalog, catalog_for, duos_fold, with_shipped};
+use jackioh_engine::{DuosReplayInput, GameState, ShippedCatalog, catalog_for, duos_fold, with_shipped};
 
 /// `cargo jackioh replay`: no options; the game comes on stdin.
 #[derive(clap::Args, Debug)]
 pub struct Args {}
+
+/// `cargo jackioh hash-state`: no options; one state object comes on stdin.
+#[derive(clap::Args, Debug)]
+pub struct HashStateArgs {}
 
 /// R767000: the shipped catalog `game` folds under, by its `catalogVersion`: `None` (this build's) for
 /// none or this build's own, the carried one when carried, else an `earlier_patch` error before any
@@ -86,6 +90,24 @@ pub fn run(_args: Args) -> Result<()> {
     let input: Value = serde_json::from_str(&text).context("stdin is not JSON")?;
     jackioh_cards::register_all();
     println!("{}", serde_json::to_string(&replay_json(input)?)?);
+    Ok(())
+}
+
+/// Hashes one state's JSON by the engine's own `hash_state`, the recipe `replay_json` folds to, so the
+/// e2e runner keeps no copy of it (#4766); answers `{"hash"}`. No script runs, so none is registered.
+pub(crate) fn hash_state_json(input: Value) -> Result<Value> {
+    let state: GameState = serde_json::from_value(input).context("the input is not a state object")?;
+    Ok(json!({ "hash": hash_state(&state) }))
+}
+
+/// `cargo jackioh hash-state`.
+pub fn run_hash_state(_args: HashStateArgs) -> Result<()> {
+    let mut text = String::new();
+    std::io::stdin()
+        .read_to_string(&mut text)
+        .context("reading stdin")?;
+    let input: Value = serde_json::from_str(&text).context("stdin is not JSON")?;
+    println!("{}", serde_json::to_string(&hash_state_json(input)?)?);
     Ok(())
 }
 
@@ -158,6 +180,79 @@ mod tests {
     );
     /// Its pinned hash.
     const HOTSEAT_HASH: &str = "512357ea";
+
+    /// One excluded field and how a test changes it.
+    type Change = (&'static str, fn(&mut Value));
+
+    /// The hotseat game folded: its state and that state's JSON.
+    fn folded_hotseat() -> (GameState, Value) {
+        jackioh_cards::register_all();
+        let input: Value = serde_json::from_str(&std::fs::read_to_string(HOTSEAT).unwrap()).unwrap();
+        let args: FoldArgs = serde_json::from_value(input).unwrap();
+        let state = fold(&args).state;
+        let value = serde_json::to_value(&state).unwrap();
+        (state, value)
+    }
+
+    #[test]
+    fn hash_state_mode_prints_hash_state_for_a_folded_game() {
+        let (state, value) = folded_hotseat();
+        assert_eq!(hash_state(&state), HOTSEAT_HASH);
+        assert_eq!(hash_state_json(value).unwrap(), json!({ "hash": HOTSEAT_HASH }));
+    }
+
+    #[test]
+    fn hash_state_mode_leaves_out_applied_opening_and_generators() {
+        let (_, value) = folded_hotseat();
+        let changed: [Change; 3] = [
+            ("applied", |v| {
+                v["applied"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(json!({ "nonce": "hash-state-test", "events": [] }));
+            }),
+            ("opening", |v| {
+                v["opening"] = json!({ "decks": [["c001"], ["c002"]] })
+            }),
+            ("generators", |v| {
+                v["generators"] = json!({ "hash-state-test": "c001" })
+            }),
+        ];
+        for (field, change) in changed {
+            let mut copy = value.clone();
+            change(&mut copy);
+            assert_ne!(copy, value, "{field} changed");
+            assert_eq!(
+                hash_state_json(copy).unwrap()["hash"],
+                HOTSEAT_HASH,
+                "{field} is left out"
+            );
+        }
+        let mut copy = value;
+        copy["turn"] = json!(copy["turn"].as_i64().unwrap() + 1);
+        assert_ne!(
+            hash_state_json(copy).unwrap()["hash"],
+            HOTSEAT_HASH,
+            "a game field counts"
+        );
+    }
+
+    #[test]
+    fn hash_state_mode_hashes_a_created_card_game_like_the_engine() {
+        let (_, mut value) = folded_hotseat();
+        value["generators"] = json!({ "created-1": "c001" });
+        let state: GameState = serde_json::from_value(value.clone()).unwrap();
+        assert_eq!(state.generators.len(), 1);
+        let answer = hash_state_json(value).unwrap();
+        assert_eq!(answer["hash"], hash_state(&state));
+        assert_eq!(answer["hash"], HOTSEAT_HASH);
+    }
+
+    #[test]
+    fn hash_state_mode_refuses_input_that_is_no_state() {
+        assert!(hash_state_json(json!([])).is_err());
+        assert!(hash_state_json(json!({ "seed": "x" })).is_err());
+    }
 
     #[test]
     fn folds_the_hotseat_game_to_its_pinned_hash_with_no_errors() {

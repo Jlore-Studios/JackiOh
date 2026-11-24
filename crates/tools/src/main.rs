@@ -66,6 +66,8 @@ enum Command {
     Fx(fx_census::Args),
     /// Fold `{seed, decks, log, …}` from stdin; print `{"hash", "errors"}` (part 22).
     Replay(replay::Args),
+    /// Hash one state object from stdin by the engine's hash_state; print `{"hash"}` (#4766).
+    HashState(replay::HashStateArgs),
     /// Print one gate game turn by turn (part 22).
     Trace(trace::Args),
     /// Fold `{seed, decks, log, …}` to one position and print it and the AI's decision there (#834).
@@ -111,6 +113,7 @@ fn main() -> ExitCode {
         Command::RunSim(args) => run_sim::run(args),
         Command::Fx(args) => fx_census::run(args),
         Command::Replay(args) => replay::run(args),
+        Command::HashState(args) => replay::run_hash_state(args),
         Command::Trace(args) => trace::run(args),
         Command::Think(args) => think::run(args),
         Command::Catalog(args) => catalog::run(args),
