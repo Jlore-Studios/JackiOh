@@ -2450,6 +2450,10 @@ pub const RADIANT_TIER_A_FROM: f64 = (ADJUSTED_WIN_RATE_CENTER + RADIANT_TIER_BA
 /// lever, starting at All's (`TIER_C_FROM`).
 pub const RADIANT_TIER_C_FROM: f64 = (RADIANT_TIER_BAND_LOW + ADJUSTED_WIN_RATE_CENTER) / 2.0;
 
+/// R4676000: the least X paid that Extended stats counts in one row with every higher X ("X ≥ 5"): few
+/// plays reach it, so each higher X alone would read "not enough games".
+pub const VARIANT_X_GROUP_FROM: i32 = 5;
+
 /// R4552000: the win probability's intercept, `β₀` of `P = σ(β₀ + β₁·eval + β₂·turn + β₃·first)`, fit by
 /// `cargo jackioh stats calibrate` over development records against `WIN_PROBABILITY_AI_GENERATION`'s
 /// evaluation: the four weights are the fit of `crates/tools/tests/fixtures/win_probability.txt`, the
