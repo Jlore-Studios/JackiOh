@@ -16879,6 +16879,11 @@
       "owner": "claude-3",
       "owner_since": "2026-11-24T02:32:49Z",
       "owner_why": "handed off from `claude-1`: `claude-1` is busy: its lanes are all taken",
+      "paused": {
+        "at": "2026-11-24T03:05:26Z",
+        "interrupt": "usage",
+        "provider": "claude-3"
+      },
       "pending_request": false,
       "planned_at": "2026-11-23T21:30:16Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -16888,7 +16893,7 @@
       "provider": "claude-3",
       "queued_at": "2026-11-23T19:38:22Z",
       "requested_by": "jgoetzmann",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "45313185097",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-24T02:32:49Z",
