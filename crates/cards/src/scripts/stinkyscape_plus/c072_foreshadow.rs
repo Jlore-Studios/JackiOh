@@ -7,7 +7,7 @@
 //! **Tribute 5**  
 //! **Ranged**  
 //! 20/20  
-//! When an enemy unit is summoned attack it and lose 1 mana next turn  
+//! When an enemy unit is summoned attack it and Overload (1)  
 //! \~\~\~  
 //! **Indestructable**  
 //! **Can’t defend**  
@@ -16,7 +16,7 @@
 //! **Tribute 5**  
 //! **Ranged**  
 //! 40/40  
-//! When an enemy unit is summoned attack it and lose 1 mana next turn
+//! When an enemy unit is summoned attack it and Overload (1)
 //!
 //! Tribute 5 is the script's `tribute` (R101); every other keyword is catalog data. An enemy summon is
 //! answered at once (R3550000) with one trigger's two effects: a forced attack on the arrival, then 1

@@ -325,6 +325,21 @@ describe("R2092000 Play again on the co-op result", () => {
     expect(screen.getByTestId(duosTestid.resultAgain)).not.toBeDisabled();
   });
 
+  it("R4742000 a live game's result offers Main menu after Back to Play together, which leaves for the Play menu", async () => {
+    serve(() => HERE);
+    finished();
+    await flush();
+
+    const back = screen.getByTestId(duosTestid.resultBack);
+    const menu = screen.getByTestId(duosTestid.resultMenu);
+    expect(menu).toHaveTextContent("Main menu");
+    expect(back.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(menu.parentElement).toBe(back.parentElement);
+
+    fireEvent.click(menu);
+    expect(window.location.pathname).toBe(paths.play);
+  });
+
   it("R2092000 with the teammate's offer read, the panel says the teammate wants to play again, and a press makes the offer", async () => {
     const server = serve(() => ({ ...HERE, teammateOffered: true }));
     finished();

@@ -1,7 +1,7 @@
 //! S #117 Core System (SPEC §8.10 row S 117; §2.4, §6.3 Bounce, R13, R78, R1839000, R1848004): (3)
 //! Spell, Epic.
-//!   Base:    "Bounce all permanents. Lose {loss} mana next turn." — 2.
-//!   Radiant: "Bounce all enemy permanents. Lose {loss} mana next turn." — 2.
+//!   Base:    "Bounce all permanents. Overload ({loss})." — 2.
+//!   Radiant: "Bounce all enemy permanents. Overload ({loss})." — 2.
 //!
 //! Engine: `bounce_all` over both rows of both sides (ST-S14-6): every permanent on the field, each
 //! pile's top and every backrow card, face-down ones included (R13), back to its controller's hand,

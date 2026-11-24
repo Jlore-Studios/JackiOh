@@ -734,6 +734,14 @@
       "row": "Replenish X"
     },
     {
+      "id": "Overload",
+      "label": "Overload",
+      "rule": "You have that much less mana next turn",
+      "section": "§6.3",
+      "aliases": [],
+      "row": "Overload X"
+    },
+    {
       "id": "Radiant",
       "label": "Radiant",
       "rule": "Raise a card to its Radiant form. In hand or deck: cost unchanged, stats and text swap to the radiant form.",

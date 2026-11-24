@@ -124,6 +124,7 @@ function GameOverPractice(): React.JSX.Element {
           difficulty="easy"
           onPlayAgain={() => undefined}
           onChangeSetup={() => undefined}
+          onMenu={() => undefined}
           onViewBoard={() => setViewingBoard(true)}
         />
       )}

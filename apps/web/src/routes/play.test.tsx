@@ -40,12 +40,12 @@ import {
   type SavedDeck,
   type SavedTrio,
 } from "../net/api.ts";
-import { navigate, paths } from "../net/navigate.ts";
+import { navigate, paths, playSoloPath } from "../net/navigate.ts";
 import { createLobby, getMyLobbies } from "../lobby/api.ts";
 import { getDuosLive } from "../net/duos.ts";
 import { lobbyTestid } from "../lobby/testids.ts";
 import { settle } from "../test/settle.ts";
-import { must } from "../test/stubServer.ts";
+import { at, must } from "../test/stubServer.ts";
 import { dialogTestid } from "../game/Dialog.tsx";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
 import { PLAY_GROUPS, playCards } from "./playModes.ts";
@@ -478,6 +478,55 @@ describe("R1578000 R3729000 the Play hub", () => {
     }
     fireEvent.click(screen.getByTestId(playTestid.signIn));
     expect(vi.mocked(navigate)).toHaveBeenCalledWith(paths.login);
+  });
+
+  describe("R4742000 /play#solo", () => {
+    /** Records the elements a scroll was asked for, as jsdom has no `scrollIntoView`. */
+    function recordScrolls(): string[] {
+      const targets: string[] = [];
+      Object.defineProperty(Element.prototype, "scrollIntoView", {
+        configurable: true,
+        writable: true,
+        value(this: Element) {
+          targets.push(this.id);
+        },
+      });
+      onTestFinished(() => {
+        Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+        at(paths.play);
+      });
+      return targets;
+    }
+
+    it("R4742000 arriving at /play#solo puts the Solo group in view and the Practice card in focus, signed in or out", async () => {
+      const scrolls = recordScrolls();
+      at(playSoloPath());
+      await renderLobby(null);
+      expect(scrolls).toEqual(["solo"]);
+      expect(screen.getByTestId(playGroupTestid("solo"))).toHaveAttribute("id", "solo");
+      expect(screen.getByTestId(playTestid.practice)).toHaveFocus();
+
+      cleanup();
+      scrolls.length = 0;
+      render(<PlayRoute token={null} />);
+      await screen.findByTestId(playTestid.hub);
+      expect(scrolls).toEqual(["solo"]);
+      expect(screen.getByTestId(playTestid.practice)).toHaveFocus();
+    });
+
+    it("R4742000 a plain /play scrolls nothing and focuses no card, and another fragment is no Solo anchor", async () => {
+      const scrolls = recordScrolls();
+      at(paths.play);
+      await renderLobby(null);
+      expect(scrolls).toEqual([]);
+      expect(screen.getByTestId(playTestid.practice)).not.toHaveFocus();
+
+      cleanup();
+      at(`${paths.play}#elsewhere`);
+      await renderLobby(null);
+      expect(scrolls).toEqual([]);
+      expect(screen.getByTestId(playTestid.practice)).not.toHaveFocus();
+    });
   });
 });
 
