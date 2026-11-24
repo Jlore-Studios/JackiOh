@@ -640,6 +640,43 @@ describe("a half-built play or attack is dropped at the turn change (#2924)", ()
     expect(screen.queryByTestId("prompt-scrim")).toBeNull();
   });
 
+  it("closes a play's own picker when the game ends on the same turn (#4743)", () => {
+    const onAction = vi.fn();
+    const mine = baseView({ you: emptySide("p1", { hand: [card({ instanceId: "h1" })] }) });
+    const plays: ActionBody[] = [
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 2 } },
+    ];
+    const { rerender } = render(<Game view={mine} legal={plays} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.handCard("h1")));
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-source", "play");
+
+    rerender(
+      <Game view={{ ...mine, result: { winner: "p2", reason: "concede" } }} legal={[]} onAction={onAction} />,
+    );
+    expect(screen.queryByTestId("prompt-scrim")).toBeNull();
+  });
+
+  it("drops the selected attacker when the game ends on the same turn (#4743)", () => {
+    const onAction = vi.fn();
+    const first = attacker();
+    const { rerender } = render(<Game view={first} legal={[attack]} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.card("u1")));
+    expect(screen.getByTestId(testid.card("u1"))).toHaveAttribute("data-selected", "true");
+
+    // The finished view still lists the attack: only the #4743 drop clears the selection, since
+    // `highlightFor` already hides it (and refuses the click) whenever `legal` is empty.
+    rerender(
+      <Game view={{ ...first, result: { winner: "p2", reason: "concede" } }} legal={[attack]} onAction={onAction} />,
+    );
+    expect(screen.getByTestId(testid.card("u1"))).not.toHaveAttribute("data-selected");
+
+    fireEvent.click(screen.getByTestId(testid.card("e1")));
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it("keeps the selected attacker through view updates within the same turn", () => {
     const onAction = vi.fn();
     const first = attacker();

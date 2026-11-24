@@ -32,8 +32,8 @@
 //! (R2195003): it steals an enemy Unit only.
 //!
 //! Since issue #3139 it is its own card in earnest, moving its own way where Core #49 moved another
-//! (R2195003). Since issue #3996 it costs (3) and both faces read "Steal an enemy Unit. Next turn, lose
-//! ({loss}) mana.", 2 on the base face and 1 on the Radiant: the target is an enemy Unit, and the loss is
+//! (R2195003). Since issue #3996 it costs (3) and both faces read "Steal an enemy Unit. Overload
+//! ({loss}).", 2 on the base face and 1 on the Radiant: the target is an enemy Unit, and the loss is
 //! `next_turn_mana` on its caster (R1848004), their next refresh giving their max mana less it, never below
 //! 0, a badge both seats read. Once the Spell resolves with its target, the loss is paid whatever the
 //! steal does (R3996101): both effects run in a list, so a steal that finds no free zone (R15), which
@@ -71,7 +71,7 @@ fn steal_chosen() -> Effect {
     steal(json_as(json!({ "target": { "of": "chosen" } })))
 }
 
-/// Issue #3996, both faces: "Steal an enemy Unit. Next turn, lose ({loss}) mana." (R1848004, R3996101).
+/// Issue #3996, both faces: "Steal an enemy Unit. Overload ({loss})." (R1848004, R3996101).
 fn steal_and_lose() -> Script {
     Script {
         targets: enemy_unit(),
@@ -242,7 +242,7 @@ mod tests {
             }
         }
 
-        /// Issue #3996, R1848004: "Next turn, lose (2) mana" (Radiant: 1) is its caster's next refresh,
+        /// Issue #3996, R1848004: "Overload (2)" (Radiant: 1) is its caster's next refresh,
         /// a badge until then, and the refresh after it is whole again.
         #[test]
         fn r3996101_next_turn_its_caster_has_2_mana_less_and_1_on_the_radiant_face() {

@@ -414,6 +414,16 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
     expect(screen.getByTestId(tutorialTestid.lesson(lesson(2).id))).toHaveAttribute("data-status", "unlocked");
   });
 
+  it("R4742000 Main menu in a lesson's result leaves for the Play menu's Solo group with the lesson kept completed", async () => {
+    await startLesson(1);
+    fireEvent.click(screen.getByTestId("end-turn"));
+    await settle({ ticks: 10 });
+    fireEvent.click(await screen.findByTestId(tutorialTestid.mainMenu));
+    expect(window.location.pathname).toBe("/play");
+    expect(window.location.hash).toBe("#solo");
+    expect(readTutorialProgress().completed).toEqual([lesson(1).id]);
+  });
+
   it("after the last lesson, Play a practice game goes back to the lobby", async () => {
     for (const each of TUTORIAL_LESSONS.slice(0, -1)) markLessonComplete(each.id);
     await startLesson(TUTORIAL_LESSONS.length);

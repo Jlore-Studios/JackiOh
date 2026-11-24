@@ -28,13 +28,17 @@ export function currentPath(): string {
   return stripTrailingSlashes(window.location.pathname) || "/";
 }
 
-function splitTarget(path: string): { pathname: string; search: string } {
-  const at = path.indexOf("?");
-  const rawPath = at === -1 ? path : path.slice(0, at);
-  const query = at === -1 ? "" : path.slice(at + 1);
+function splitTarget(path: string): { pathname: string; search: string; hash: string } {
+  const hashAt = path.indexOf("#");
+  const fragment = hashAt === -1 ? "" : path.slice(hashAt + 1);
+  const bare = hashAt === -1 ? path : path.slice(0, hashAt);
+  const at = bare.indexOf("?");
+  const rawPath = at === -1 ? bare : bare.slice(0, at);
+  const query = at === -1 ? "" : bare.slice(at + 1);
   return {
     pathname: stripTrailingSlashes(rawPath) || "/",
     search: query.length === 0 ? "" : `?${query}`,
+    hash: fragment.length === 0 ? "" : `#${fragment}`,
   };
 }
 
@@ -129,7 +133,9 @@ function go(path: string, replace: boolean): void {
 export function navigate(path: string, options: { replace?: boolean; force?: boolean } = {}): boolean {
   if (typeof window === "undefined") return true;
   const target = splitTarget(path);
-  if (currentPath() === target.pathname && window.location.search === target.search) return true;
+  // #4742: a target with a fragment (`playSoloPath`) is the same address only with that fragment too.
+  const sameFragment = target.hash === "" || window.location.hash === target.hash;
+  if (currentPath() === target.pathname && window.location.search === target.search && sameFragment) return true;
   const replace = options.replace === true;
   const guard = leaveGuard;
   if (guard !== null && options.force !== true) {
@@ -239,6 +245,9 @@ export function siteOrigin(): string {
   const configured: unknown = import.meta.env.VITE_SITE_ORIGIN;
   return originOf(configured);
 }
+
+/** #4742: the fragment that opens the Play hub at its Solo group, and the id of that group's section. */
+export const SOLO_ANCHOR = "solo";
 
 /**
  * Client routes live in one table. `public/_redirects` must serve every screen in it or
@@ -363,6 +372,15 @@ export function loginPath(options: { reason?: LoginReason; mode?: LoginEntryMode
   if (options.mode === "forgot") query.set("mode", "forgot");
   const search = query.toString();
   return search.length === 0 ? paths.login : `${paths.login}?${search}`;
+}
+
+/**
+ * #4742, R4742000: the Play hub at its Solo group, scrolled into view with the Practice card focused (`PlayHub.tsx`):
+ * where practice's Menu leaves for. A function and not a `paths` value, as `deckPath` is: a fragment is no route
+ * of its own, and the tables that read `paths`' strings (the Worker's redirects, the search index) hold routes.
+ */
+export function playSoloPath(): string {
+  return `${paths.play}#${SOLO_ANCHOR}`;
 }
 
 /**

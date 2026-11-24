@@ -11,6 +11,8 @@ export function setAssaultOpenForTests(open: boolean): void {
 
 /** The open attempt's `AssaultFile` and part D's kept fight. */
 export const ASSAULT_ATTEMPT_KEY = "jackioh.assault.attempt";
+/** R4733000: a finished fight's held `fightOver`, kept beside the attempt until it is applied. */
+export const ASSAULT_HELD_KEY = "jackioh.assault.held";
 /** The records of the days this device keeps. */
 export const ASSAULT_RECORDS_KEY = "jackioh.assault.records";
 /** The shape of both device values. Another version reads as nothing stored. */

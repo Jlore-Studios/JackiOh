@@ -301,6 +301,8 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Burn",
   "Toxic",
   "Replenish",
+  // R4751000: Overload (X) is the printed name of the next-turn mana loss (§6.3).
+  "Overload",
 ];
 
 /**

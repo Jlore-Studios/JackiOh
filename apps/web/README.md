@@ -668,6 +668,14 @@ The GIF code still loads on demand, never in the main bundle.
 Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
 row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved
 to the browser's downloads, for a bug report.
+Every mode's end-of-game result offers one **Main menu** button after its own ways on (R4742000, issue #4742):
+`game/MainMenuButton.tsx` draws it for the result panels and screens (the dungeon run-over screen and fights, the
+Infinite Assault fight, the daily game's result, the co-op result), and `mainMenuAction` is the same label as a
+`DialogAction` for the two Dialog results (practice's and a lesson's). The button decides nothing: each result's
+`onClick` is where it leaves for (a fight's is its board Menu's handler, so Assault's still reports the fight
+first; Duos' comes from `DuosChrome.onMenu`, and `/dev/duos` hangs none). Practice's Menu, its leave
+question's Save and leave and both Dialog results leave for `playSoloPath()` (`/play#solo`): `PlayHub` reads
+that fragment once on arrival, scrolls its Solo group into view and focuses the Practice card.
 A finished co-op game's result panel offers "Watch the replay" too (§13.9): `duos/DuosReplay.tsx` reads
 `GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
 with the player's controls, a round standing for a turn; it is never in `/replays`.
@@ -1291,8 +1299,8 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   `practice/aiTable.ts`; it has no `?pace=fast`. The controller's general form is `setHold(reason, held)`. The settings panel's "Reduce motion" gives the reduced pacing,
   as the media query does.
 - A lesson in progress asks before a reload or a closed tab ends it (`beforeunload`), and the HUD's
-  Menu leaves for the landing page, asking first (Save and leave, or Leave without saving) while the
-  game is on.
+  Menu leaves for the Play hub's Solo group (`/play#solo`, R4742000), asking first (Save and leave, or Leave
+  without saving) while the game is on.
 
 ## The tutorial
 

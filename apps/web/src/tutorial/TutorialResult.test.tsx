@@ -28,6 +28,7 @@ function handlers() {
     onRetry: vi.fn(),
     onBack: vi.fn(),
     onPlayPractice: vi.fn(),
+    onMenu: vi.fn(),
     onViewBoard: vi.fn(),
   };
 }
@@ -245,4 +246,37 @@ describe("R3221000 a lesson's result is a dialog", () => {
     expect(on.onBack).not.toHaveBeenCalled();
     expect(window.location.pathname).toBe("/practice");
   });
+});
+
+describe("R4742000 a lesson's result offers Main menu", () => {
+  const CASES = [
+    { name: "a win with a next lesson", result: { winner: "p1", reason: "hero-death" }, next: lesson(3), primary: tutorialTestid.next },
+    { name: "a concede", result: { winner: "p2", reason: "concede" }, next: lesson(3), primary: tutorialTestid.retry },
+    { name: "the last lesson", result: { winner: "p1", reason: "hero-death" }, next: undefined, primary: tutorialTestid.playPractice },
+  ] as const;
+
+  for (const { name, result, next, primary } of CASES) {
+    it(`R4742000 a lesson's result offers Main menu last, for ${name}`, () => {
+      const on = handlers();
+      render(<TutorialResult result={result} viewer="p1" lesson={lesson(2)} next={next} unlockedNow={false} {...on} />);
+      const row = screen.getByTestId(tutorialTestid.result).querySelector(".dialog__actions");
+      if (row === null) throw new Error("no answers");
+      expect(Array.from(row.querySelectorAll("button"), (button) => button.dataset.testid)).toEqual([
+        primary,
+        tutorialTestid.back,
+        tutorialTestid.mainMenu,
+      ]);
+      expect(screen.getByTestId(primary)).toHaveFocus();
+      const menu = screen.getByTestId(tutorialTestid.mainMenu);
+      expect(menu).toHaveTextContent("Main menu");
+      expect(menu).toHaveClass("button-secondary");
+
+      fireEvent.click(menu);
+      expect(on.onMenu).toHaveBeenCalledTimes(1);
+      expect(on.onBack).not.toHaveBeenCalled();
+      expect(on.onNext).not.toHaveBeenCalled();
+      expect(on.onRetry).not.toHaveBeenCalled();
+      expect(on.onPlayPractice).not.toHaveBeenCalled();
+    });
+  }
 });

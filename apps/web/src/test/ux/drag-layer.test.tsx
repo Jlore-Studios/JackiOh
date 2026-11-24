@@ -964,6 +964,17 @@ describe("layer states 3899", () => {
     expectBoardIdle();
   });
 
+  it("a game that ends mid-drag sends nothing on its release and leaves the board idle", () => {
+    const { onAction, rerender } = renderGame();
+    lift(el("card-u1"));
+    rerender(<Game view={{ ...dragView(), result: { winner: "p2", reason: "concede" } }} legal={[]} onAction={onAction} />);
+
+    releaseOnHero();
+    expect(onAction).not.toHaveBeenCalled();
+    expectNoDrag();
+    expectBoardIdle();
+  });
+
   it("a press while a burst holds the board lifts nothing, and lifts once it catches up", () => {
     vi.useFakeTimers();
     const onAction = vi.fn();
