@@ -19658,6 +19658,23 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "4721": {
+      "action": "plan",
+      "asks": [],
+      "in_lane": true,
+      "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-24T12:00:12Z",
+      "owner_why": "it plans it",
+      "pending_request": false,
+      "provider": "muse",
+      "run_id": "pending:17bfe679-1795521584",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-24T12:00:12Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "4724": {
       "action": "review",
       "asks": [],
@@ -19809,9 +19826,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T11:59:31Z",
+    "at": "2026-11-24T12:00:12Z",
     "url": "",
-    "what": "build #4720 on claude-4"
+    "what": "plan #4721 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T11:41:13Z",
