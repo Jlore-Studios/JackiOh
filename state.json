@@ -19984,6 +19984,13 @@
     "4725": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T14:04:49Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "Rule line 2 (the AI): the issue as filed changes crates/ai/src's threat walk. The plan finds the walk already reads the slash and builds only tests and a README line, but nothing could be run here, and a failing pin test would mean a real AI fix, so it is rated hard when in doubt."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
