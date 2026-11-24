@@ -1019,8 +1019,9 @@ const NEWS_REWARD_READS: Readonly<Record<NewsReward["kind"], readonly string[]>>
 
 /**
  * R3206000: what a game's payout (Jlore, XP, a level's or a quest's reward) and its ladder move change,
- * which no answer carries: the wallet, the quests, the tracks, the packs held, the tokens and both
- * ladders' boards. Dropped when a paid result arrives (`economy/wallet.ts` `announceWallet`).
+ * which no answer carries: the wallet, the quests, the tracks, the packs held, the tokens, the owned
+ * cosmetics (a Fleet level pays one, R3335001; R4780000) and both ladders' boards. Dropped when a paid
+ * result arrives (`economy/wallet.ts` `announceWallet`).
  */
 export function forgetPaidReads(token: string): void {
   forgetReads(token, [
@@ -1029,6 +1030,7 @@ export function forgetPaidReads(token: string): void {
     keptPaths.tracks,
     keptPaths.packs,
     keptPaths.tokens,
+    keptPaths.cosmetics,
     ladderPath(keptPaths.leaderboard, "constructed"),
     ladderPath(keptPaths.leaderboard, "random"),
   ]);
