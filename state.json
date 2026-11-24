@@ -44086,6 +44086,10 @@
       "4743": {
         "at": "2026-11-24T14:08:55Z",
         "why": "Confirmed on main: boardKeyOf (actions.ts:107-109) keys only on turn, active seat and viewer, so when the opponent concedes or times out on your turn, a play's own picker (Prompt.tsx's outstandingNeed branch, z-index 40) stays open over the Victory panel (z-index 39) and a drag release still sends; adding the result to the key is a one-line fix that reuses the existing #2924 drop."
+      },
+      "4761": {
+        "at": "2026-11-24T17:34:02Z",
+        "why": "It prices a live mechanic the evaluation scores at zero, with the missing arm confirmed and the value gated by a fork screen."
       }
     },
     "decided": [
