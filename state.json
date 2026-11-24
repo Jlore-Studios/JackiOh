@@ -20500,6 +20500,14 @@
         "sha": "8f60eeb6f464f3a889573235b4a8b2607be3effa",
         "tiers": {}
       }
+    },
+    "4868": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-24T22:17:23Z",
+      "issue": 4838,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
