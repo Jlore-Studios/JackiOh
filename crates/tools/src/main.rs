@@ -5,6 +5,7 @@
 
 mod agent;
 mod arena;
+mod assault_sim;
 mod board;
 mod card_lists;
 mod carried;
@@ -62,6 +63,8 @@ enum Command {
     Carried(carried::Args),
     /// Whole dungeon runs with the AI in the player's seat, and how each kind of fight goes (#3065).
     RunSim(run_sim::Args),
+    /// Whole Infinite Assault days with the AI in the player's seat, and how each level goes (#4583).
+    AssaultSim(assault_sim::Args),
     /// What each card's plays and hooks do on the board, from seeded games, with a suggested motif (#2788).
     Fx(fx_census::Args),
     /// Fold `{seed, decks, log, …}` from stdin; print `{"hash", "errors"}` (part 22).
@@ -111,6 +114,7 @@ fn main() -> ExitCode {
         Command::FusedPairs(args) => fused_pairs::run(args),
         Command::Carried(args) => carried::run(args),
         Command::RunSim(args) => run_sim::run(args),
+        Command::AssaultSim(args) => assault_sim::run(args),
         Command::Fx(args) => fx_census::run(args),
         Command::Replay(args) => replay::run(args),
         Command::HashState(args) => replay::run_hash_state(args),

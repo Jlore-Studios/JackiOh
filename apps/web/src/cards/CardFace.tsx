@@ -51,6 +51,8 @@
 // part of the normal face over it, its frame and rules box translucent (cards.css); Pixel and Comic restyle the normal
 // picture (`artPictureOf`), Pixel setting the name in its pixel face (pixelName.ts, `data-pixel-name`, the words
 // kept unseen) and Comic in a burst (cards.css). R2942002: Animated, a foil, a finish and a border layer on each.
+// R4596000: an Infinite Assault face wears its set's glitch accent (`data-set-accent`, setMark.ts `setAccentOf`,
+// setmark.css) under every look but Glitch's own.
 // R2943001: Set showcase draws the card in its set's own look (`data-showcase`, pictures.ts `showcaseFamilyOf`): the
 // picture in its set's treatment (`artPictureOf` by the face's set), and on a base face the set's edge, bezel and name
 // banner (cards.css). Out of frame draws the picture's backdrop in a smaller window and its subject cut out over the
@@ -150,7 +152,7 @@ import { foilFor, frameRarity } from "./frame.ts";
 import type { FaceModel, RichText } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { StarshipPieces } from "./StarshipPieces.tsx";
-import { setMarkOf, watermarkOf } from "./setMark.ts";
+import { setAccentOf, setMarkOf, watermarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
 import { pixelNameUri } from "./pixelName.ts";
 import { useCardTilt, type TiltBox, type TiltMode } from "./tilt.ts";
@@ -520,6 +522,7 @@ function CardFace({
       data-version={look.version ?? undefined}
       data-level={look.level ?? undefined}
       data-showcase={showcase ?? undefined}
+      data-set-accent={glitch ? undefined : setAccentOf(face.set)}
       data-full-art-motion={moving || signed ? (faceMotion.moving ? "animated" : "static") : undefined}
       data-art-motion={artMoves || engaged ? (faceMotion.moving ? "animated" : "static") : undefined}
       data-art-hover={board ? (live.hovered ? "true" : "false") : undefined}

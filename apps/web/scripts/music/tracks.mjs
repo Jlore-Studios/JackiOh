@@ -667,7 +667,8 @@ function draw() {
  *     then the tags the art has no family for (Jlockeed, Acclaimed), else its type;
  *   - its set lends a glint of its own into the cadence (Core a harp, Classic a dulcimer, Classic+ a
  *     celesta, Meditative a kalimba, Meditative+ a music box, Stinkyscape a crystal, Training Grounds
- *     a xylophone, Stinkyscape+ a glockenspiel), and a Mythic adds a prismatic shimmer over a soft choir.
+ *     a xylophone, Stinkyscape+ a glockenspiel, the Infinite Assault a digital bell), and a Mythic
+ *     adds a prismatic shimmer over a soft choir.
  * The melody is the JackiOh motif (MOTIF_CELL's contour, varied) and an answer that cadences on the
  * tonic: two bars of 4/4 or three of 3/4, whose music runs INTRO_SPAN_S.
  *
@@ -735,18 +736,20 @@ const TUTTI_CH = { brass: 11, choir: 12, tremolo: 13, hit: 14, trombone: 15 };
 /** Where in INTRO_SPAN_S a derived intro's tempo lands, by its family's feel. */
 const INTRO_FEELS = { slow: [4.2, 4.95], mid: [3.7, 4.6], fast: [3.2, 4.1] };
 const INTRO_TONICS = Object.keys(TONIC);
-const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"];
+const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+", "Infinite Assault"];
 /**
  * The set's glint into the cadence (a set not listed here takes Classic+'s). The Meditative set's is a
  * kalimba, a plucked run that rings like the set's East-Asian colors (compose.mjs's GM table names no
  * koto or shamisen); the Meditative+ set's is a music box, the kalimba's plucked comb wound up; the
  * Stinkyscape set's is a crystal, a glassy synth bell like a star's glint (R1883000); the Training
  * Grounds set's is a xylophone, wood struck like the yard's practice swords (R2202001); the
- * Stinkyscape+ set's is a glockenspiel, a bright steel chime over the Stinkyscape set's crystal (R3572000).
+ * Stinkyscape+ set's is a glockenspiel, a bright steel chime over the Stinkyscape set's crystal (R3572000);
+ * the single-player Infinite Assault set's is the synth "brightness", a glassy digital bell for the cards a
+ * machine writes (R4596000).
  */
 const INTRO_SET_GLINT = {
   Core: GM.harp, Classic: GM.dulcimer, "Classic+": GM.celesta, Meditative: GM.kalimba, "Meditative+": GM.musicBox, Stinkyscape: GM.crystal,
-  "Training Grounds": GM.xylophone, "Stinkyscape+": GM.glock,
+  "Training Grounds": GM.xylophone, "Stinkyscape+": GM.glock, "Infinite Assault": GM.brightness,
 };
 
 /**
@@ -2055,6 +2058,51 @@ const INTRO_CARDS = [
   { card: "stinkyscapeplus-t-terminus-starship-farthest-shore", name: "Farthest Shore", set: "Stinkyscape+", type: "Unit", tags: ["Starship", "Token"], rarity: "Legendary" },
   { card: "stinkyscapeplus-t-terminus-starship-nightfall-covenant", name: "Nightfall Covenant", set: "Stinkyscape+", type: "Unit", tags: ["Starship", "Token"], rarity: "Legendary" },
   { card: "stinkyscapeplus-t-terminus-starship-vacuum-psalm", name: "Vacuum Psalm", set: "Stinkyscape+", type: "Unit", tags: ["Starship", "Token"], rarity: "Legendary" },
+  // ---- Infinite Assault (R4596000): every card carries AI, so each takes the ai family ----
+  { card: "infiniteassault-023", name: "The Generator", set: "Infinite Assault", type: "Unit", tags: ["AI"], rarity: "Legendary" },
+  { card: "infiniteassault-024", name: "Mass Deployment", set: "Infinite Assault", type: "Spell", tags: ["AI"], rarity: "Legendary" },
+  { card: "infiniteassault-046", name: "Mirage Sovereign", set: "Infinite Assault", type: "Unit", tags: ["AI", "Hallucination"], rarity: "Legendary" },
+  { card: "infiniteassault-047", name: "Unreal Estate", set: "Infinite Assault", type: "Field Trap", tags: ["AI", "Hallucination"], rarity: "Legendary" },
+  { card: "infiniteassault-048", name: "Ego Death", set: "Infinite Assault", type: "Spell", tags: ["AI", "Hallucination"], rarity: "Mythic" },
+  { card: "infiniteassault-070", name: "Redline Overlord", set: "Infinite Assault", type: "Unit", tags: ["AI", "Overclock"], rarity: "Legendary" },
+  { card: "infiniteassault-071", name: "Thermal Throttler", set: "Infinite Assault", type: "Unit", tags: ["AI", "Overclock"], rarity: "Legendary" },
+  { card: "infiniteassault-072", name: "Overclock to Infinity", set: "Infinite Assault", type: "Spell", tags: ["AI", "Overclock"], rarity: "Mythic" },
+  { card: "infiniteassault-094", name: "Batch Monarch", set: "Infinite Assault", type: "Unit", tags: ["AI", "Batch"], rarity: "Legendary" },
+  { card: "infiniteassault-095", name: "The Botnet", set: "Infinite Assault", type: "Field Spell", tags: ["AI", "Batch"], rarity: "Legendary" },
+  { card: "infiniteassault-096", name: "Exponential Growth", set: "Infinite Assault", type: "Spell", tags: ["AI", "Batch"], rarity: "Mythic" },
+  { card: "infiniteassault-118", name: "The Recursionist", set: "Infinite Assault", type: "Unit", tags: ["AI", "Recursion"], rarity: "Legendary" },
+  { card: "infiniteassault-119", name: "Snapshot Lich", set: "Infinite Assault", type: "Unit", tags: ["AI", "Recursion"], rarity: "Legendary" },
+  { card: "infiniteassault-120", name: "Eternal Return", set: "Infinite Assault", type: "Spell", tags: ["AI", "Recursion"], rarity: "Mythic" },
+  { card: "infiniteassault-142", name: "The Jailbreaker", set: "Infinite Assault", type: "Unit", tags: ["AI", "Jailbreak"], rarity: "Legendary" },
+  { card: "infiniteassault-143", name: "Zero-Click", set: "Infinite Assault", type: "Spell", tags: ["AI", "Jailbreak"], rarity: "Legendary" },
+  { card: "infiniteassault-144", name: "Total Compromise", set: "Infinite Assault", type: "Spell", tags: ["AI", "Jailbreak"], rarity: "Mythic" },
+  { card: "infiniteassault-166", name: "Aegis Prime", set: "Infinite Assault", type: "Unit", tags: ["AI", "Firewall"], rarity: "Legendary" },
+  { card: "infiniteassault-167", name: "Fortress Protocol", set: "Infinite Assault", type: "Spell", tags: ["AI", "Firewall"], rarity: "Legendary" },
+  { card: "infiniteassault-168", name: "Impenetrable", set: "Infinite Assault", type: "Spell", tags: ["AI", "Firewall"], rarity: "Mythic" },
+  { card: "infiniteassault-190", name: "Total Recall", set: "Infinite Assault", type: "Unit", tags: ["AI", "Scraper"], rarity: "Legendary" },
+  { card: "infiniteassault-191", name: "Ground Truth", set: "Infinite Assault", type: "Unit", tags: ["AI", "Scraper"], rarity: "Legendary" },
+  { card: "infiniteassault-192", name: "Become the Data", set: "Infinite Assault", type: "Spell", tags: ["AI", "Scraper"], rarity: "Mythic" },
+  { card: "infiniteassault-214", name: "Emergent Mind", set: "Infinite Assault", type: "Unit", tags: ["AI", "Singularity"], rarity: "Legendary" },
+  { card: "infiniteassault-215", name: "The Optimizer", set: "Infinite Assault", type: "Unit", tags: ["AI", "Singularity"], rarity: "Legendary" },
+  { card: "infiniteassault-216", name: "The Singularity", set: "Infinite Assault", type: "Spell", tags: ["AI", "Singularity"], rarity: "Mythic" },
+  { card: "infiniteassault-217", name: "Echo-1, First Hallucination", set: "Infinite Assault", type: "Unit", tags: ["AI", "Hallucination", "Commander"], rarity: "Legendary" },
+  { card: "infiniteassault-219", name: "Redline, the Overclocked", set: "Infinite Assault", type: "Unit", tags: ["AI", "Overclock", "Commander"], rarity: "Legendary" },
+  { card: "infiniteassault-221", name: "Hivemaster Batch-01", set: "Infinite Assault", type: "Unit", tags: ["AI", "Batch", "Commander"], rarity: "Legendary" },
+  { card: "infiniteassault-223", name: "Loopback, Who Returns", set: "Infinite Assault", type: "Unit", tags: ["AI", "Recursion", "Commander"], rarity: "Legendary" },
+  { card: "infiniteassault-225", name: "Root Kit, the Exploiter", set: "Infinite Assault", type: "Unit", tags: ["AI", "Jailbreak", "Commander"], rarity: "Legendary" },
+  { card: "infiniteassault-227", name: "Bastion.exe", set: "Infinite Assault", type: "Unit", tags: ["AI", "Firewall", "Commander"], rarity: "Legendary" },
+  { card: "infiniteassault-229", name: "The Harvester", set: "Infinite Assault", type: "Unit", tags: ["AI", "Scraper", "Commander"], rarity: "Mythic" },
+  { card: "infiniteassault-230", name: "Everything You've Ever Played", set: "Infinite Assault", type: "Spell", tags: ["AI", "Scraper", "Commander"], rarity: "Legendary" },
+  { card: "infiniteassault-231", name: "The Black Box", set: "Infinite Assault", type: "Unit", tags: ["AI", "Singularity", "Commander"], rarity: "Mythic" },
+  { card: "infiniteassault-232", name: "Spaghettification", set: "Infinite Assault", type: "Spell", tags: ["AI", "Singularity", "Commander"], rarity: "Legendary" },
+  { card: "infiniteassault-233", name: "Model Collapse", set: "Infinite Assault", type: "Unit", tags: ["AI", "Recursion", "Commander"], rarity: "Mythic" },
+  { card: "infiniteassault-234", name: "Degenerate Output", set: "Infinite Assault", type: "Spell", tags: ["AI", "Recursion", "Commander"], rarity: "Legendary" },
+  { card: "infiniteassault-235", name: "The Prime Generator", set: "Infinite Assault", type: "Unit", tags: ["AI", "Commander"], rarity: "Mythic" },
+  { card: "infiniteassault-236", name: "Infinite Assault", set: "Infinite Assault", type: "Spell", tags: ["AI", "Commander"], rarity: "Legendary" },
+  { card: "infiniteassault-237", name: "Thermal Runaway", set: "Infinite Assault", type: "Unit", tags: ["AI", "Overclock", "Commander"], rarity: "Mythic" },
+  { card: "infiniteassault-238", name: "Critical Temperature", set: "Infinite Assault", type: "Field Spell", tags: ["AI", "Overclock", "Commander"], rarity: "Legendary" },
+  { card: "infiniteassault-239", name: "Zero-Day", set: "Infinite Assault", type: "Unit", tags: ["AI", "Jailbreak", "Commander"], rarity: "Mythic" },
+  { card: "infiniteassault-240", name: "Unpatched", set: "Infinite Assault", type: "Trap", tags: ["AI", "Jailbreak", "Commander"], rarity: "Legendary" },
 ];
 
 /* ------------------------------------------------------------------------------------------- *

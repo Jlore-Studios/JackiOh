@@ -1,0 +1,17 @@
+{
+  "title": "Patch: the Infinite Assault, L, the set's look and sound",
+  "sources": "#4596",
+  "notes": "Issue #4596 (part of #4576): the held single-player Infinite Assault set's look and sound (R4596000): a glitch accent on its faces, its doctrine and Commander chips in the Almanac, its twelve Commanders' entrances and eight doctrine Mythics' casts, its Mythics' tiles in circuitry, and intros for its 44 Legendaries and Mythics. Claims --visual because the change touches apps/web/src/cards/ (R2529000): the accent reaches only Infinite Assault faces, which no pool deals while the set is held (R4577000), so no shipped card looks or plays any differently.",
+  "player": {
+    "title": "Behind the scenes",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Groundwork for future content. No card you can play looks or plays any differently."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}
