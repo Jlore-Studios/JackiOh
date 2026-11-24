@@ -18959,17 +18959,8 @@
       "verdict_rounds": 3
     },
     "4692": {
-      "action": "plan",
-      "asks": [
-        "c:7127221036"
-      ],
-      "build_next": {
-        "from_run": "45375773224",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-24T10:52:09Z",
-        "until": "2026-11-24T11:22:09Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-24T10:52:01Z",
         "difficulty": "hard",
@@ -18988,10 +18979,9 @@
         "reason": "planned on opus",
         "trail": "mand\": \"grep -rln \\\"targeting_discards\\\\|target_discards\\\\|targetingDiscards\\\" crates/cards/src/scripts | head -5\", \"description\": \"Find cards with targeting discard costs\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct OpenPromptArgs\\\" -B 3 -A 20 crates/engine/src/prompts.rs; grep -n \\\"pub struct EngineSink\\\" -A 8 crates/engine/src/script.rs\", \"description\": \"Read OpenPromptArgs an\u2026\n- Bash: {\"command\": \"grep -n \\\"ask_placement\\\\|PLAGUE_PLACEMENT_HOOK\\\" -r crates/engine/src | head\", \"description\": \"Find ask_placement callers\"}\n- Bash: {\"command\": \"ls luau; head -30 luau/README.md 2>/dev/null\", \"description\": \"Check the luau port's README\"}\n- Bash: {\"command\": \"grep -rn \\\"record_target_draw\\\\|draw sites\\\\|I22\\\" crates/engine/README.md docs/architecture.md 2>/dev/null | head\", \"description\": \"Check engine README for I22 draw-site contract\"}\n- said: Writing the draft now, then I'll check a couple of remaining details (rustfmt width, the patch-note format).\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4692/.bot-plan.md\", \"content\": \"# Draft plan #4692 (opus planner, re-plan of the sonnet plan)\\n\\n## Found so far\\n- plague.rs `ask_placement` (L191-26\u2026\n- Bash: {\"command\": \"cat rustfmt.toml; grep -n \\\"Patch notes players read\\\" -A 25 docs/issues-and-patches.md | head -40\", \"description\": \"Read rustfmt config and patch note format\"}\n- Bash: {\"command\": \"sed -n 76,88p crates/engine/src/restrictions.rs\", \"description\": \"Read targeting_type_of body\"}\n- Bash: {\"command\": \"grep -n \\\"^#\\\" spec/06-keywords.md | head -20\", \"description\": \"List section headings of 06-keywords.md\"}\n- Bash: {\"command\": \"grep -n \\\"Book of Plague\\\" spec/08-catalog.md | head -5\", \"description\": \"Find Book of Plague catalog row\"}\n- Bash: {\"command\": \"grep -rn '\\\"type\\\": \\\"FieldSpell\\\"\\\\|\\\"type\\\": \\\"Field Spell\\\"' crates/engine/tests/rules/*.rs | head -3; grep -rn \\\"Row::Backrow, 1), json!({})\\\" crates/engine/tests/rules/invariants.rs\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn reachable_permanents_on_field\\\" -B 4 -A 25 crates/engine/src/plague.rs\", \"description\": \"Read reachable_permanents_on_field\"}\n- said: Plan shape is settled. Writing the full plan to the draft file now.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4692/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Engine rules: it changes the resolution of a target prompt's random an\u2026\n- Bash: {\"command\": \"grep -n \\\"pub const LANES\\\\|pub const LANE_COUNT\\\\|pub const UNIT_ZONES\\\" crates/engine/src/config.rs\", \"description\": \"Check the number of lanes\"}\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count words in draft plan\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4692/.bot-plan.md\", \"old_string\": \"When nobody is asked to place Plague Counters, the placement must follow the rules a chosen o\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4692/.bot-plan.md\", \"old_string\": \"- **The pool narrows a little more than Evasive.** `targetable_options` also drops a card who\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4692/.bot-plan.md\", \"old_string\": \"None block the build. The decisions taken, with the alternative rejected:\\n- **Evasive applie\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4692/.bot-plan.md\", \"old_string\": \"- **A random cast under a Mayor keeps its `friends_only` / `target_enemies` shaping** here, t\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4692/.bot-plan.md\", \"old_string\": \"- **The source.** `targetable_options` finds the source by `resume.instance_id`. A test sourc\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; sed -n 1,3p .bot-plan.md\", \"description\": \"Recount words and check first line\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4692/.bot-plan.md\"}\n- Bash: {\"command\": \"ls spec/rulings/R0129.md spec/rulings/R0452.md spec/rulings/R1200.md spec/rulings/R0450.md spec/rulings/R0656.md spec/rulings/R0767.md 2>&1 | head; grep -n \\\"^#\\\\[test\\\\]\\\\|fn r\\\" crates\u2026\n- Bash: {\"command\": \"ls spec/rulings/R767000.md spec/rulings/R4322000.md 2>&1\", \"description\": \"Verify R767000 note exists\"}\n- said: Small clarifications to the test table so nothing is left to guess.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4692/.bot-plan.md\", \"old_string\": \"| `r4353002_r1200_under_a_mayor_a_field_spells_placement_never_lands_on_an_evasive_permanent`\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4692/.bot-plan.md\", \"old_string\": \"| `r4353002_r452_a_random_casts_placement_draw_is_recorded_for_i22_and_lawful` | `start_targe\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4692/.bot-plan.md\", \"old_string\": \"Changes from the earlier plan:\\n- `seams.rs`'s module doc lists no sites, so it is left alone\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4692/.bot-plan.md\", \"old_string\": \"- **Purity (CLAUDE.md rule 4).** The draw uses only the match `Rng`. `IndexSet` is ordered. T\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4692/.bot-plan.md\", \"old_string\": \"- [ ] Classify with `--parent-bin --claims` passes, so it either needed no fragment or the fr\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -o \\\"|\\\" .bot-plan.md | wc -l\", \"description\": \"Recount words and table pipes\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Engine rules: it changes the resolution of a target prompt's random answer in crates/engine/src/effects/plague.rs (rule line 1)\"} --> ## Goal A Plague Counter placement nobody is asked for (a random cast, R452; any `target` prompt while a Mayor acts, R1200) \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-24T09:39:48Z",
       "owner_why": "it plans it",
@@ -19004,12 +18994,14 @@
       "provider": "claude-4",
       "queued_at": "2026-11-24T09:30:46Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45375773224",
+      "run_id": "pending:9448cca1-1795517645",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T10:32:32Z",
+      "started_at": "2026-11-24T10:54:36Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7127221036"
+      ]
     },
     "4694": {
       "action": "review",
@@ -19561,9 +19553,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T10:43:25Z",
+    "at": "2026-11-24T10:54:36Z",
     "url": "",
-    "what": "review #4716 on muse"
+    "what": "build #4692 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-24T10:39:35Z",
