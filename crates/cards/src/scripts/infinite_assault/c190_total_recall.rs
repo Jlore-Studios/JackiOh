@@ -60,7 +60,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn adds_copies_of_last_plays() {
+        fn r4592000_adds_copies_of_last_plays() {
             let mut s = board(false);
             s.play(SPELL, json!({}));
             s.play(SPELL, json!({}));
@@ -76,7 +76,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_12_16_and_copies_carry_discount() {
+        fn r4592000_is_12_16_and_copies_carry_discount() {
             let mut s = board(true);
             s.play(SPELL, json!({}));
             s.end_turn();

@@ -50,7 +50,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn gains_keywords_of_random_enemy_unit() {
+        fn r4592006_gains_keywords_of_random_enemy_unit() {
             let mut s = board(false, json!([{ "def": TAUNT_UNIT, "lane": 1 }]));
             s.play(ID, json!({ "zone": 1 }));
             let unit = s.unit_at(P1, 1);
@@ -70,7 +70,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_6_6_and_gains_keywords_of_every_enemy_unit() {
+        fn r4592006_is_6_6_and_gains_keywords_of_every_enemy_unit() {
             let mut s = board(true, json!([{ "def": TAUNT_UNIT, "lane": 1 }]));
             s.play(ID, json!({ "zone": 1 }));
             let unit = s.unit_at(P1, 1);

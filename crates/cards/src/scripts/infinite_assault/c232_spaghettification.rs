@@ -73,7 +73,7 @@ mod tests {
     use super::ID;
     use crate::scenario;
 
-    const VICTIM: &str = "core-008"; // Mr. Vanilla: a 4/4.
+    const VICTIM: &str = "core-008"; // Mr. Vanilla
     const IMMUNE: &str = "infiniteassault-235"; // The Prime Generator: Immune to Spells.
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
 

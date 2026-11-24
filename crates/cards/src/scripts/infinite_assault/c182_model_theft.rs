@@ -59,7 +59,7 @@ mod tests {
 
     use crate::scenario;
 
-    const TARGET_UNIT: &str = "core-019"; // 9/9 Taunt
+    const TARGET_UNIT: &str = "core-019"; // Midrange Menace
 
     fn board(radiant: bool) -> Scenario {
         scenario(json!({

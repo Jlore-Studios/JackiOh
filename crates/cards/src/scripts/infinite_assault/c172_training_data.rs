@@ -43,7 +43,7 @@ mod tests {
     const FILLER: &str = "core-005";
     const SPELL1: &str = "core-016"; // Hit Job
     const SPELL2: &str = "core-088"; // Twisting Nether
-    const SPELL3: &str = "core-014"; // Shield Slam
+    const SPELL3: &str = "core-014"; // Jlockeed's Weapons: Shield Slam
 
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
@@ -57,7 +57,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn adds_copies_of_last_two_cards_opponent_played() {
+        fn r4592000_adds_copies_of_last_two_cards_opponent_played() {
             let mut s = board(false);
             s.play(SPELL1, json!({}));
             s.play(SPELL2, json!({}));
@@ -83,7 +83,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn adds_copies_of_last_three_cards_opponent_played() {
+        fn r4592000_adds_copies_of_last_three_cards_opponent_played() {
             let mut s = board(true);
             s.play(SPELL1, json!({}));
             s.play(SPELL2, json!({}));

@@ -73,8 +73,8 @@ mod tests {
 
     use crate::scenario;
 
-    const SMALL_UNIT: &str = "core-005"; // 1/1
-    const BIG_UNIT: &str = "core-019"; // Midrange Menace 9/9 Taunt
+    const SMALL_UNIT: &str = "core-005"; // Stockpile
+    const BIG_UNIT: &str = "core-019"; // Midrange Menace
 
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
@@ -87,7 +87,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn transforms_friendly_unit_into_copy_of_enemy_unit() {
+        fn r4592007_transforms_friendly_unit_into_copy_of_enemy_unit() {
             let mut s = board(false);
             let ally = s.unit_at(P1, 1).id.clone();
             let enemy = s.unit_at(PlayerId::P2, 1).id.clone();
@@ -108,7 +108,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn transforms_friendly_unit_into_radiant_copy() {
+        fn r4592007_transforms_friendly_unit_into_radiant_copy() {
             let mut s = board(true);
             let ally = s.unit_at(P1, 1).id.clone();
             let enemy = s.unit_at(PlayerId::P2, 1).id.clone();

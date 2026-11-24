@@ -58,7 +58,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn cry_adds_a_copy_of_random_card_in_opponents_deck() {
+        fn r4592002_r4592005_cry_adds_a_copy_of_random_card_in_opponents_deck() {
             let mut s = board(false, json!([TARGET]));
             s.play(ID, json!({ "zone": 1 }));
             s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 2, "health": 2 }));
@@ -81,7 +81,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_4_4_and_adds_copy_with_discount() {
+        fn r4592005_is_4_4_and_adds_copy_with_discount() {
             let mut s = board(true, json!([TARGET]));
             s.play(ID, json!({ "zone": 1 }));
             s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 4, "health": 4 }));

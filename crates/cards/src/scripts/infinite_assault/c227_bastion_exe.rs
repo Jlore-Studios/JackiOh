@@ -44,7 +44,7 @@ mod tests {
 
     const LUNAR: &str = "core-035"; // Lunar Eclipse: deal 3 damage.
     const VITAL_KILL: &str = "classic-029"; // Book of Vital Kill: set a hero's health to 13.
-    const VANILLA: &str = "core-008"; // Mr. Vanilla: a 4/4.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
     const TECH: &str = "classic-040"; // MC Tech: steal a permanent with 5+ enemy permanents.
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
     const HIT_JOB: &str = "core-016"; // Hit Job: destroy the Bastion.

@@ -45,8 +45,8 @@ mod tests {
     use crate::scenario;
 
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
-    const BIG: &str = "core-008"; // Mr. Vanilla: a 4/4.
-    const SMALL: &str = "core-001"; // Big D-fender: a 0/7.
+    const BIG: &str = "core-008"; // Mr. Vanilla
+    const SMALL: &str = "core-001"; // Big D-fender
 
     fn played(radiant: bool, seed: &str) -> Scenario {
         let mut s = scenario(json!({

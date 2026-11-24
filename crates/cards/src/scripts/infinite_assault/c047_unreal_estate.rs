@@ -82,8 +82,8 @@ mod tests {
     use super::ID;
     use crate::scenario;
 
-    const ATTACKER: &str = "core-008"; // Mr. Vanilla: a 4/4.
-    const VANILLA: &str = "core-001"; // Big D-fender: a 0/7.
+    const ATTACKER: &str = "core-008"; // Mr. Vanilla
+    const VANILLA: &str = "core-001"; // Big D-fender
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
 
 

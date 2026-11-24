@@ -58,7 +58,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn swaps_decks_and_draws_two_from_new_deck() {
+        fn r4592002_swaps_decks_and_draws_two_from_new_deck() {
             let mut s = board(false);
             s.play(ID, json!({}));
             // P1 drew 2 cards from what was P2's deck

@@ -54,7 +54,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn steals_one_card_from_opponents_deck() {
+        fn r4592002_steals_one_card_from_opponents_deck() {
             let mut s = board(false, json!([TARGET1]));
             s.play(ID, json!({ "zone": 1 }));
             s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 4, "health": 5 }));

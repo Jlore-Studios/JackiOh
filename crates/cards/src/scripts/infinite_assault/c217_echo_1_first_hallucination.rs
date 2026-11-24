@@ -82,7 +82,7 @@ mod tests {
     use super::{FIGMENT, ID};
     use crate::scenario;
 
-    const ATTACKER: &str = "core-008"; // Mr. Vanilla: a 4/4.
+    const ATTACKER: &str = "core-008"; // Mr. Vanilla
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
     const BLOCKER: &str = "stand-in (3) 5/5"; // Kills the attacker in combat.
 

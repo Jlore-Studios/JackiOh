@@ -172,7 +172,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn copies_one_and_exiles_another() {
+        fn r4592004_copies_one_and_exiles_another() {
             let mut s = board(false, json!([CARD_A, CARD_B, CARD_C]));
             s.play(ID, json!({}));
             assert!(s.state().pending.is_some());
@@ -211,7 +211,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn copies_two_and_exiles_the_third() {
+        fn r4592004_copies_two_and_exiles_the_third() {
             let mut s = board(true, json!([CARD_A, CARD_B, CARD_C]));
             s.play(ID, json!({}));
             assert!(s.state().pending.is_some());

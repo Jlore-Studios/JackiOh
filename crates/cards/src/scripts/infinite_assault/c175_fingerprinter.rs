@@ -80,7 +80,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn adds_copy_of_random_spell_in_opponents_hand() {
+        fn r4592001_adds_copy_of_random_spell_in_opponents_hand() {
             let mut s = board(false, json!([SPELL, UNIT]));
             s.play(ID, json!({ "zone": 1 }));
             s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 1, "health": 3 }));
@@ -91,7 +91,7 @@ mod tests {
         }
 
         #[test]
-        fn with_no_spells_in_hand_adds_nothing() {
+        fn r4592001_with_no_spells_in_hand_adds_nothing() {
             let mut s = board(false, json!([UNIT]));
             s.play(ID, json!({ "zone": 1 }));
             assert_eq!(s.hand(P1).len(), 0);
@@ -102,7 +102,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn lets_player_choose_any_card_from_opponents_hand() {
+        fn r4592001_lets_player_choose_any_card_from_opponents_hand() {
             let mut s = board(true, json!([UNIT]));
             s.play(ID, json!({ "zone": 1 }));
             s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 2, "health": 6 }));

@@ -85,7 +85,7 @@ mod tests {
 
     use crate::scenario;
 
-    const UNIT: &str = "core-005"; // 1/1
+    const UNIT: &str = "core-005"; // Stockpile
 
     fn board(radiant: bool) -> Scenario {
         scenario(json!({

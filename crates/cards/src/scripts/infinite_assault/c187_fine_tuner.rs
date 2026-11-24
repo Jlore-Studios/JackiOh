@@ -40,8 +40,8 @@ mod tests {
 
     use crate::scenario;
 
-    const TARGET: &str = "core-019"; // (4) cost
-    const NORMAL: &str = "core-005"; // (1) cost
+    const TARGET: &str = "core-019"; // Midrange Menace
+    const NORMAL: &str = "core-005"; // Stockpile
 
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
@@ -58,7 +58,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn reduces_cost_of_cards_from_opponents_deck_by_one() {
+        fn r4592002_reduces_cost_of_cards_from_opponents_deck_by_one() {
             let mut s = board(false);
             s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 3, "health": 4 }));
             // Give p1 a card that started in p2's deck
@@ -80,7 +80,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_6_8_and_reduces_cost_by_two() {
+        fn r4592002_is_6_8_and_reduces_cost_by_two() {
             let mut s = board(true);
             s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 6, "health": 8 }));
             let mut stolen = new_instance(s.state_mut(), TARGET, P1, Zone::Hand { player: P1 });

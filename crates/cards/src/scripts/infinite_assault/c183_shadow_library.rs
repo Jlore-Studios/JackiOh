@@ -57,7 +57,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn adds_one_copy_of_card_played_last_turn_at_start_of_turn() {
+        fn r4592000_adds_one_copy_of_card_played_last_turn_at_start_of_turn() {
             let mut s = board(false);
             s.play(SPELL, json!({}));
             s.end_turn(); // p1's turn starts -> trigger fires
@@ -78,7 +78,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn adds_two_copies_at_start_of_turn() {
+        fn r4592000_adds_two_copies_at_start_of_turn() {
             let mut s = board(true);
             s.play(SPELL, json!({}));
             s.end_turn();

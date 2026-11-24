@@ -62,7 +62,7 @@ mod tests {
     use crate::scenario;
 
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
-    const ATTACKER: &str = "core-008"; // Mr. Vanilla: a 4/4.
+    const ATTACKER: &str = "core-008"; // Mr. Vanilla
 
     fn standing(radiant: bool, seed: &str) -> Scenario {
         scenario(json!({

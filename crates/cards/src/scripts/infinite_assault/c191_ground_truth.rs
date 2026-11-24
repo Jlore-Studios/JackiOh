@@ -49,7 +49,7 @@ mod tests {
 
     use crate::scenario;
 
-    const ENEMY_CARD: &str = "core-005"; // (1) cost
+    const ENEMY_CARD: &str = "core-005"; // Stockpile
 
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
@@ -68,7 +68,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn hand_is_revealed_to_opponent() {
+        fn r4592003_hand_is_revealed_to_opponent() {
             let mut s = board(false);
             s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 3, "health": 5 }));
             assert!(jackioh_engine::revealed_hand::hand_revealed_to(s.state(), P2, P1));

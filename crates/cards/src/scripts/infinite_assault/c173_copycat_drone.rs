@@ -53,7 +53,7 @@ mod tests {
     use crate::scenario;
 
     const FILLER: &str = "core-005";
-    const TARGET_UNIT: &str = "core-019"; // Midrange Menace 9/9 Taunt
+    const TARGET_UNIT: &str = "core-019"; // Midrange Menace
 
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
@@ -67,7 +67,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn transforms_into_copy_of_last_unit_opponent_played() {
+        fn r4592007_transforms_into_copy_of_last_unit_opponent_played() {
             let mut s = board(false);
             s.play(TARGET_UNIT, json!({ "zone": 1 }));
             s.end_turn();
@@ -92,7 +92,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn transforms_into_radiant_copy() {
+        fn r4592007_transforms_into_radiant_copy() {
             let mut s = board(true);
             s.play(TARGET_UNIT, json!({ "zone": 1 }));
             s.end_turn();

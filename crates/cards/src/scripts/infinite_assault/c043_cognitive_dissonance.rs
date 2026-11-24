@@ -87,8 +87,8 @@ mod tests {
     use crate::scenario;
 
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
-    const TWO: &str = "core-001"; // Big D-fender: (2).
-    const ONE: &str = "core-008"; // Mr. Vanilla: (1).
+    const TWO: &str = "core-001"; // Big D-fender: the dearer one
+    const ONE: &str = "core-008"; // Mr. Vanilla: the cheaper one
     const THREE: &str = "stand-in (3) 5/5";
 
     fn armed(radiant: bool, seed: &str) -> Scenario {

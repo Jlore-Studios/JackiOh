@@ -78,9 +78,9 @@ mod tests {
     use super::ID;
     use crate::scenario;
 
-    const SMALL: &str = "core-008"; // Mr. Vanilla: a 4/4, under the threshold.
+    const SMALL: &str = "core-008"; // Mr. Vanilla: under the threshold
     const BIG: &str = "stand-in (5) 5/5"; // At the threshold.
-    const HOTFIX: &str = "infiniteassault-006"; // Hotfix: give a friendly Unit +2/+2.
+    const HOTFIX: &str = "infiniteassault-006"; // Hotfix: the buff
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
 
     fn armed(radiant: bool, seed: &str, p2: Value) -> Scenario {

@@ -59,8 +59,8 @@ mod tests {
     use crate::scenario;
 
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
-    const CHEAP: &str = "core-008"; // Mr. Vanilla: (1).
-    const PRICEY: &str = "core-001"; // Big D-fender: (2).
+    const CHEAP: &str = "core-008"; // Mr. Vanilla: the cheap one
+    const PRICEY: &str = "core-001"; // Big D-fender: the dear one
 
     fn cast(radiant: bool, seed: &str) -> Scenario {
         let mut s = scenario(json!({

@@ -85,7 +85,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r4590005_steals_every_2_cost_or_less_enemy_unit_and_hikes_next_turn() {
+        fn r4590004_r4590005_steals_every_2_cost_or_less_enemy_unit_and_hikes_next_turn() {
             let mut s = board(false, "total-compromise");
             s.play(ID, json!({}));
             let cheap = s.unit_at(P1, 1);
@@ -103,7 +103,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r4590005_steals_every_3_cost_or_less_enemy_unit_and_hikes_next_turn() {
+        fn r4590004_r4590005_steals_every_3_cost_or_less_enemy_unit_and_hikes_next_turn() {
             let mut s = board(true, "total-compromise-radiant");
             s.play(ID, json!({}));
             let units = jackioh_engine::zones::units_on_field_of(s.state(), P1);

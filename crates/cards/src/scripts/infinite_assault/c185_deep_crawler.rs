@@ -111,7 +111,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn discovers_from_opponents_deck_at_start_of_turn() {
+        fn r4592005_discovers_from_opponents_deck_at_start_of_turn() {
             let mut s = board(false);
             s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 5, "health": 7 }));
             s.end_turn(); // p1 turn starts -> discover prompt opens

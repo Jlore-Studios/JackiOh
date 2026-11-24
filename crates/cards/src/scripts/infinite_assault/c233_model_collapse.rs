@@ -48,7 +48,7 @@ mod tests {
     use super::ID;
     use crate::scenario;
 
-    const VICTIM: &str = "core-008"; // Mr. Vanilla: a 4/4.
+    const VICTIM: &str = "core-008"; // Mr. Vanilla
     const FRIEND: &str = "core-008"; // Mr. Vanilla: untouched on its own side.
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
 

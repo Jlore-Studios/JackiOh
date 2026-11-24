@@ -60,7 +60,7 @@ mod tests {
     use super::{DRONE, ID};
     use crate::scenario;
 
-    const ESCORT: &str = "infiniteassault-010-1"; // Drone Escort: a 3/3, no Drone.
+    const ESCORT: &str = "infiniteassault-010-1"; // Drone Escort: no Drone
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
 
     fn stats(s: &Scenario, player: PlayerId, lane: i32) -> (i32, i32) {

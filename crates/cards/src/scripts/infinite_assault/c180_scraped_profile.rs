@@ -70,7 +70,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn reveals_and_adds_one_copy() {
+        fn r4592000_reveals_and_adds_one_copy() {
             let mut s = board(false);
             s.play(SPELL, json!({}));
             s.expect_in_zone(ID, "graveyard");
@@ -84,7 +84,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn reveals_and_adds_two_copies() {
+        fn r4592000_reveals_and_adds_two_copies() {
             let mut s = board(true);
             s.play(SPELL, json!({}));
             s.expect_in_zone(ID, "graveyard");

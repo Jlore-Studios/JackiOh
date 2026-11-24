@@ -105,7 +105,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn discover_adds_a_copy_and_original_stays() {
+        fn r4592005_discover_adds_a_copy_and_original_stays() {
             let mut s = board(false, json!([TARGET1, TARGET2]));
             s.play(ID, json!({}));
             assert!(s.state().pending.is_some());

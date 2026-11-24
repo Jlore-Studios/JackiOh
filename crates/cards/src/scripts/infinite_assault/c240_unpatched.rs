@@ -80,8 +80,8 @@ mod tests {
     use crate::scenario;
 
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
-    const STATS: &str = "classicplus-057"; // Book of Stats: give a Unit +3/+3.
-    const VANILLA: &str = "core-008"; // Mr. Vanilla: a 4/4.
+    const STATS: &str = "classicplus-057"; // Book of Stats: the Spell it counters
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
 
     fn trapped(radiant: bool, seed: &str, p1_extra: Value, p2_extra: Value) -> Scenario {
         scenario(json!({
