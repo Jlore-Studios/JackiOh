@@ -233,8 +233,8 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     max_auto_answers: 8,
     // R4697000: 3, the value R4447000's tests replay with. At 0 a replay cut where its world drew
     // other cards than the line's ended its turn there, which R4608000 read as evidence against a
-    // win every draw gives. Fork screen (3 against the control at 0, built from ad096cc; improve-dev,
-    // --forks --extend): playing.
+    // win every draw gives. Fork screen on improve-dev (3 against the control at 0; --forks --extend,
+    // 200 trunk games), 207 forks, 107 live, edge +0.038 (+0.007 to +0.070) vs control ad096cc: kept.
     replay_fill_steps: 3,
     max_auto_answer_options: 4,
     auto_answer_seed: "ai:answers",
