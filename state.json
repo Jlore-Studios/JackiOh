@@ -17709,10 +17709,10 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-3",
+        "built_by": "claude-7",
         "rejections": [],
         "reviews": [],
-        "sha": "8d39f912256268c00aa1901aae63baa97c237645",
+        "sha": "40355a6121f665209119ce33bf5599886f0e7fa1",
         "tiers": {}
       }
     },
