@@ -19653,7 +19653,16 @@
       "feedback_since": "2026-11-24T09:35:45Z",
       "issue": 4686,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "b4eea5f9bb57623b86e1922c5391829f2be52fd2",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
