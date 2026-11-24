@@ -43,18 +43,6 @@ fn by_score_desc(a: f64, b: f64) -> Ordering {
     b.partial_cmp(&a).unwrap_or(Ordering::Equal)
 }
 
-/// Best first; equal scores keep their order (`sort_by` is stable).
-fn best_first_open(mut lines: Vec<OpenLine>) -> Vec<OpenLine> {
-    lines.sort_by(|a, b| by_score_desc(a.score, b.score));
-    lines
-}
-
-/// Best first; equal scores keep their order (`sort_by` is stable).
-fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
-    lines.sort_by(|a, b| by_score_desc(a.score, b.score));
-    lines
-}
-
 /// The first `width` candidates that are not endTurn, then the first `AI_SEARCH.position_switches`
 /// stand-downs (`stands_down`) the cut left out (#1759, R1759000), then, while the opponent's board
 /// threatens lethal, the first `AI_SEARCH.position_switches` switches to Defense that lower that threat
@@ -223,7 +211,9 @@ pub fn beam_search(
             lane_variants.extend(variants.into_iter().map(|(_, state, actions)| (state, actions)));
             break;
         }
-        let mut next_frontier = best_first_open(children);
+        // Best first; equal scores keep their order (`sort_by` is stable).
+        let mut next_frontier = children;
+        next_frontier.sort_by(|a, b| by_score_desc(a.score, b.score));
         next_frontier.truncate(budget.beam_width.max(1));
         let kept: IndexSet<String> = next_frontier
             .iter()
@@ -272,7 +262,9 @@ pub fn beam_search(
         });
     }
 
-    best_first_lines(complete)
+    // Best first; equal scores keep their order (`sort_by` is stable).
+    complete.sort_by(|a, b| by_score_desc(a.score, b.score));
+    complete
 }
 
 /// R4447000: how a finalist's replay on another determinization plays on past the first step that world

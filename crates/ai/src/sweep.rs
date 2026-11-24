@@ -21,7 +21,7 @@ use serde_json::json;
 use crate::config::{AI_EVAL, AI_GATE_BUDGET};
 use crate::deck::{AiDeckOptions, build_ai_deck};
 use crate::evaluate::{NextSwing, evaluate};
-use crate::match_::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match};
+use crate::match_::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match, seated};
 use crate::shadow_ban::SHADOW_BAN;
 use crate::types::SearchBudget;
 
@@ -45,12 +45,6 @@ impl SweepFlag {
             SweepFlag::SelfHarm => "selfHarm",
             SweepFlag::SelfKill => "selfKill",
         }
-    }
-}
-
-impl std::fmt::Display for SweepFlag {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.as_str())
     }
 }
 
@@ -482,32 +476,18 @@ fn sweep_config(
         skill: None,
     };
     let greedy = SeatController::Greedy;
-    let p1_is_ai = ai_seat == PlayerId::P1;
+    let (p1_handicap, p2_handicap) = seated(ai_seat, handicap, easy);
+    let (p1, p2) = seated(ai_seat, ai, greedy);
     SweepSetup {
         ai_seat,
         config: MatchConfig {
             seed: seed.to_string(),
-            decks: if p1_is_ai {
-                (ai_deck, greedy_deck)
-            } else {
-                (greedy_deck, ai_deck)
-            },
-            handicaps: Some(if p1_is_ai {
-                PerPlayerOpt {
-                    p1: Some(handicap),
-                    p2: Some(easy),
-                }
-            } else {
-                PerPlayerOpt {
-                    p1: Some(easy),
-                    p2: Some(handicap),
-                }
+            decks: seated(ai_seat, ai_deck, greedy_deck),
+            handicaps: Some(PerPlayerOpt {
+                p1: Some(p1_handicap),
+                p2: Some(p2_handicap),
             }),
-            controllers: if p1_is_ai {
-                PerPlayer::new(ai, greedy)
-            } else {
-                PerPlayer::new(greedy, ai)
-            },
+            controllers: PerPlayer::new(p1, p2),
             max_actions: Some(AI_SWEEP.max_actions as _),
             setup,
         },

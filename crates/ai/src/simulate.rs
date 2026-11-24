@@ -15,7 +15,6 @@ use jackioh_engine::{
     opponent_of, owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, stop_answer, subsystems, unit_view,
     units_on_field_of,
 };
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::candidates::{action_key, plague_aims_first, plague_placement_open};
@@ -25,24 +24,12 @@ use crate::config::{
 use crate::evaluate::{NextSwing, Prices, evaluate_priced, feng_shui_acts, float_credit};
 use crate::types::{NodeCounter, StoppedBy};
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum LineStatus {
     Open,
     Passed,
     Yielded,
     Over,
-}
-
-impl LineStatus {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            LineStatus::Open => "open",
-            LineStatus::Passed => "passed",
-            LineStatus::Yielded => "yielded",
-            LineStatus::Over => "over",
-        }
-    }
 }
 
 /// What a `CountingNodeCounter` is: a root counter of its own, or a slice of a parent.
@@ -75,37 +62,6 @@ enum CounterKind<'a> {
 /// A NodeCounter that also tallies failed simulations for `SearchStats.simErrors`.
 pub struct CountingNodeCounter<'a> {
     kind: CounterKind<'a>,
-}
-
-impl CountingNodeCounter<'_> {
-    /// A sub-counter reads its parent's tally (0 when the parent keeps none).
-    pub fn sim_errors(&self) -> usize {
-        match &self.kind {
-            CounterKind::Root { sim_errors, .. } => sim_errors.get(),
-            CounterKind::Sub { parent, .. } => parent.sim_error_tally().unwrap_or(0),
-        }
-    }
-
-    /// A sub-counter writes its parent's tally, when it keeps one.
-    pub fn set_sim_errors(&self, value: usize) {
-        match &self.kind {
-            CounterKind::Root { sim_errors, .. } => sim_errors.set(value),
-            CounterKind::Sub { parent, .. } => {
-                if parent.sim_error_tally().is_some() {
-                    parent.set_sim_error_tally(value);
-                }
-            }
-        }
-    }
-
-    /// #1429: the panics of `sim_errors`; a sub-counter reads its parent's tally (0 when the parent
-    /// keeps none).
-    pub fn sim_panics(&self) -> usize {
-        match &self.kind {
-            CounterKind::Root { sim_panics, .. } => sim_panics.get(),
-            CounterKind::Sub { parent, .. } => parent.sim_panic_tally().unwrap_or(0),
-        }
-    }
 }
 
 impl NodeCounter for CountingNodeCounter<'_> {
@@ -212,16 +168,25 @@ impl NodeCounter for CountingNodeCounter<'_> {
         }
     }
 
-    fn sim_error_tally(&self) -> Option<usize> {
-        Some(self.sim_errors())
+    fn sim_errors(&self) -> usize {
+        match &self.kind {
+            CounterKind::Root { sim_errors, .. } => sim_errors.get(),
+            CounterKind::Sub { parent, .. } => parent.sim_errors(),
+        }
     }
 
-    fn set_sim_error_tally(&self, value: usize) {
-        self.set_sim_errors(value);
+    fn note_sim_error(&self) {
+        match &self.kind {
+            CounterKind::Root { sim_errors, .. } => sim_errors.set(sim_errors.get() + 1),
+            CounterKind::Sub { parent, .. } => parent.note_sim_error(),
+        }
     }
 
-    fn sim_panic_tally(&self) -> Option<usize> {
-        Some(self.sim_panics())
+    fn sim_panics(&self) -> usize {
+        match &self.kind {
+            CounterKind::Root { sim_panics, .. } => sim_panics.get(),
+            CounterKind::Sub { parent, .. } => parent.sim_panics(),
+        }
     }
 
     fn first_sim_panic(&self) -> Option<String> {
@@ -396,16 +361,10 @@ pub fn create_wrap_up_counter<'a>(
     }
 }
 
-fn note_sim_error(counter: &dyn NodeCounter) {
-    if let Some(errors) = counter.sim_error_tally() {
-        counter.set_sim_error_tally(errors + 1);
-    }
-}
-
 /// #1429: a caught panic is a failed simulation, counted apart too, its message kept when first;
 /// returns the message.
 pub(crate) fn note_sim_panic(counter: &dyn NodeCounter, payload: &(dyn std::any::Any + Send)) -> String {
-    note_sim_error(counter);
+    counter.note_sim_error();
     let message = panic_message(payload);
     counter.record_sim_panic(&message);
     message
@@ -569,7 +528,7 @@ pub(crate) fn best_auto_answer(
 ) -> Option<SimStep> {
     let answers = auto_answers(state, answerer, tried);
     if answers.is_empty() {
-        note_sim_error(counter);
+        counter.note_sim_error();
         return Some(Err("the prompt has no answer".to_string()));
     }
     let scored = answers.len() > 1;
@@ -588,7 +547,7 @@ pub(crate) fn best_auto_answer(
             }
         };
         if let Some(error) = next.error {
-            note_sim_error(counter);
+            counter.note_sim_error();
             failure = error;
             continue;
         }
@@ -672,7 +631,7 @@ fn step_answer(
     let action = Action::new(answer, seat, format!("{prefix}:{}", counter.used()));
     let next = reduce_unpiloted(state, &action);
     if let Some(error) = next.error {
-        note_sim_error(counter);
+        counter.note_sim_error();
         return Some(Err(error));
     }
     charge_announced(counter, state, &action.body, &next);
@@ -771,7 +730,7 @@ fn simulate_answering(
     // action instead (Some(Err): the beam's `continue`, reply's "skip this action").
     let surcharge = surcharge_nodes(state, seat, action);
     if counter.used() + surcharge > counter.limit() {
-        note_sim_error(counter);
+        counter.note_sim_error();
         return Some(Err(
             "the step's surcharge does not fit the budget's slice".to_string()
         ));
@@ -799,7 +758,7 @@ fn simulate_answering(
             }
         };
         if let Some(error) = first.error {
-            note_sim_error(counter);
+            counter.note_sim_error();
             return Some(Err(error));
         }
         charge_announced(counter, state, action, &first);
@@ -821,7 +780,7 @@ fn simulate_answering(
                     break;
                 };
                 if worked >= KY_COMPETITION_MAX as usize {
-                    note_sim_error(counter);
+                    counter.note_sim_error();
                     return Some(Err("too many worked answers in one step".to_string()));
                 }
                 current = match step_answer(&keyed, seat, answer, counter, "sim")? {
@@ -832,7 +791,7 @@ fn simulate_answering(
                 continue;
             }
             if answered >= AI_SEARCH.max_auto_answers as usize {
-                note_sim_error(counter);
+                counter.note_sim_error();
                 return Some(Err("too many opponent prompts in one step".to_string()));
             }
             current = match best_auto_answer(&current, other, tried, counter, "sim", prices)? {

@@ -36,17 +36,6 @@ pub enum CostBucket {
     FourPlus,
 }
 
-impl CostBucket {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            CostBucket::ZeroOne => "0-1",
-            CostBucket::Two => "2",
-            CostBucket::Three => "3",
-            CostBucket::FourPlus => "4+",
-        }
-    }
-}
-
 /// One value per cost bucket, serialized `{ "0-1": …, "2": …, "3": …, "4+": … }`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Default)]
 pub struct ByBucket<T> {
@@ -276,12 +265,7 @@ pub fn curve_targets(size: i32, mana_cap: i32) -> ByBucket<i32> {
         order: usize,
     }
     let shares = curve_shares(mana_cap);
-    let mut targets: ByBucket<i32> = ByBucket {
-        zero_one: 0,
-        two: 0,
-        three: 0,
-        four_plus: 0,
-    };
+    let mut targets: ByBucket<i32> = ByBucket::default();
     let mut remainders: Vec<Remainder> = Vec::new();
     let mut assigned = 0;
     for (order, bucket) in BUCKET_ORDER.into_iter().enumerate() {
@@ -708,12 +692,7 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
 
     let mut deck: Vec<&CardDef> = include_defs.clone();
     let mut tally = Tally {
-        counts: ByBucket {
-            zero_one: 0,
-            two: 0,
-            three: 0,
-            four_plus: 0,
-        },
+        counts: ByBucket::default(),
         units: 0,
         themed: 0,
         leaned: 0,

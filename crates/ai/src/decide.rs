@@ -400,6 +400,21 @@ enum Plan {
     },
 }
 
+impl Plan {
+    /// Step 7's plan: the fallback action alone, scored 0, with this stop reason when given.
+    fn fallback(candidates: &[ActionBody], stopped_by: Option<StoppedBy>) -> Plan {
+        let action = fallback_action(candidates);
+        Plan::Searched {
+            line: vec![action.clone()],
+            action,
+            reason: DecisionReason::Fallback,
+            score: 0.0,
+            stopped_by,
+            runners_up: Vec::new(),
+        }
+    }
+}
+
 /// A finalist the decision did not choose: its line and its mean score. `submitted` plays the first
 /// of them the true state accepts when it refuses the chosen action.
 struct RunnerUp {
@@ -425,6 +440,7 @@ fn runners_up_of(finalists: &[Scored<'_>], means: &[f64], chosen_index: usize) -
 }
 
 /// What the guarded body leaves behind for the fallback when it panics.
+#[derive(Default)]
 struct Scratch {
     candidates: Vec<ActionBody>,
     determinizations: usize,
@@ -586,15 +602,7 @@ fn plan(
     // 6. The beam on determinization 0, keeping enough nodes back to score the finalists after the
     // opponent's reply on every determinization.
     let Some(det0) = dets.first() else {
-        let action = fallback_action(&scratch.candidates);
-        return Plan::Searched {
-            line: vec![action.clone()],
-            action,
-            reason: DecisionReason::Fallback,
-            score: 0.0,
-            stopped_by: None,
-            runners_up: Vec::new(),
-        };
+        return Plan::fallback(&scratch.candidates, None);
     };
     let root_turn = det0.turn;
     let remaining = budget.nodes.saturating_sub(counter.used());
@@ -619,20 +627,12 @@ fn plan(
     scratch.lines = found.len();
 
     if found.is_empty() {
-        let action = fallback_action(&scratch.candidates);
         let stopped_by = if counter.stopped_by() != StoppedBy::Exhausted {
             counter.stopped_by()
         } else {
             beam_stopped_by
         };
-        return Plan::Searched {
-            line: vec![action.clone()],
-            action,
-            reason: DecisionReason::Fallback,
-            score: 0.0,
-            stopped_by: Some(stopped_by),
-            runners_up: Vec::new(),
-        };
+        return Plan::fallback(&scratch.candidates, Some(stopped_by));
     }
 
     let found = match &passed_over {
@@ -744,15 +744,7 @@ fn plan(
     let Some((chosen, action)) =
         chosen.and_then(|line| line.actions.first().map(|action| (line, action.clone())))
     else {
-        let fallback = fallback_action(&scratch.candidates);
-        return Plan::Searched {
-            line: vec![fallback.clone()],
-            action: fallback,
-            reason: DecisionReason::Fallback,
-            score: 0.0,
-            stopped_by: None,
-            runners_up: Vec::new(),
-        };
+        return Plan::fallback(&scratch.candidates, None);
     };
     let stopped_by = if counter.stopped_by() != StoppedBy::Exhausted {
         counter.stopped_by()
@@ -905,14 +897,7 @@ fn decide_in(
 
     let budget = options.budget;
     let counter = create_node_counter(budget.nodes, options.should_stop);
-    let mut scratch = Scratch {
-        candidates: Vec::new(),
-        determinizations: 0,
-        lines: 0,
-        replied: 0,
-        worlds_scored: 0,
-        replays_cut: 0,
-    };
+    let mut scratch = Scratch::default();
 
     let outcome = catch_unwind(AssertUnwindSafe(|| {
         plan(state, seat, style, options, &counter, &mut scratch, pool_loss)
@@ -931,16 +916,22 @@ fn decide_in(
         score,
     };
 
-    match outcome {
-        Ok(Plan::Immediate(action, reason)) => Some(submitted(state, seat, immediate(action, reason), &[])),
-        Ok(Plan::Searched {
+    // The plan's own panic is a failed simulation like the others (once in `sim_errors`, #1429), and a
+    // panic: the fallback, with the stats the counter holds.
+    let planned = outcome.unwrap_or_else(|payload| {
+        note_sim_panic(&counter, payload.as_ref());
+        Plan::fallback(&scratch.candidates, None)
+    });
+    match planned {
+        Plan::Immediate(action, reason) => Some(submitted(state, seat, immediate(action, reason), &[])),
+        Plan::Searched {
             action,
             reason,
             line,
             score,
             stopped_by,
             runners_up,
-        }) => Some(submitted(
+        } => Some(submitted(
             state,
             seat,
             Decision {
@@ -952,24 +943,6 @@ fn decide_in(
             },
             &runners_up,
         )),
-        Err(payload) => {
-            // The plan's own panic: a failed simulation like the others (once in `sim_errors`, #1429),
-            // and a panic.
-            note_sim_panic(&counter, payload.as_ref());
-            let action = fallback_action(&scratch.candidates);
-            Some(submitted(
-                state,
-                seat,
-                Decision {
-                    line: vec![action.clone()],
-                    action,
-                    reason: DecisionReason::Fallback,
-                    stats: stats(&counter, 0.0, None),
-                    first_sim_panic: counter.first_sim_panic(),
-                },
-                &[],
-            ))
-        }
     }
 }
 
@@ -1004,14 +977,7 @@ mod tests {
     /// What `decide` would submit, its runners-up beside it, as planned on `state`.
     fn planned(state: &GameState) -> (Decision, Vec<RunnerUp>) {
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let mut scratch = Scratch {
-            candidates: Vec::new(),
-            determinizations: 0,
-            lines: 0,
-            replied: 0,
-            worlds_scored: 0,
-            replays_cut: 0,
-        };
+        let mut scratch = Scratch::default();
         let mut options = AiOptions::with_budget(Rng::new("decide-1575", 0), AI_BUDGET);
         let Plan::Searched {
             action,

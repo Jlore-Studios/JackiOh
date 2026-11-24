@@ -933,26 +933,17 @@ pub fn simulate_reply_with(
         // One legal_actions serves the known-play try (its ordered candidates), the visible
         // activations, the Deft switches, the static trader's attack list and the position switches.
         let legal = legal_actions(&current, opp);
-        match known_play(&current, seat, &legal, hidden, counter, prices) {
+        let mut tried = known_play(&current, seat, &legal, hidden, counter, prices);
+        if matches!(tried, Known::Nothing) {
+            tried = visible_activation(&current, seat, &legal, hidden, counter, prices);
+        }
+        if matches!(tried, Known::Nothing) {
+            tried = deft_switch(&current, seat, &legal, counter, prices);
+        }
+        match tried {
             Known::Cut => return None,
             Known::Played(played) => {
                 current = *played;
-                continue;
-            }
-            Known::Nothing => {}
-        }
-        match visible_activation(&current, seat, &legal, hidden, counter, prices) {
-            Known::Cut => return None,
-            Known::Played(played) => {
-                current = *played;
-                continue;
-            }
-            Known::Nothing => {}
-        }
-        match deft_switch(&current, seat, &legal, counter, prices) {
-            Known::Cut => return None,
-            Known::Played(switched) => {
-                current = *switched;
                 continue;
             }
             Known::Nothing => {}

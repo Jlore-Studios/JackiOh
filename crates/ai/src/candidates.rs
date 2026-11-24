@@ -601,7 +601,7 @@ fn enemy_first(state: &GameState, seat: PlayerId, variants: Vec<ActionBody>) -> 
 /// What kind of play or activation a variant represents, so that different ways of being played
 /// (biggest/smallest X, Embiggen, Equip, face-down, Tribute sets) get their first candidate
 /// before any way repeats a second lane or target (#1778).
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 struct WayKey {
     x: Option<i32>,
     embiggen: Option<bool>,
@@ -612,6 +612,13 @@ struct WayKey {
 }
 
 fn way_key(action: &ActionBody) -> WayKey {
+    let sorted = |tributes: &Option<Vec<String>>| {
+        tributes.as_ref().map(|tributes| {
+            let mut sorted = tributes.clone();
+            sorted.sort();
+            sorted
+        })
+    };
     match action {
         ActionBody::Play {
             x,
@@ -625,35 +632,17 @@ fn way_key(action: &ActionBody) -> WayKey {
             embiggen: *embiggen,
             equip: *equip == Some(true),
             face_down: face_down.is_some(),
-            tributes: tributes.as_ref().map(|t| {
-                let mut sorted = t.clone();
-                sorted.sort();
-                sorted
-            }),
+            tributes: sorted(tributes),
             ability: None,
         },
         ActionBody::Activate {
             ability, tributes, ..
         } => WayKey {
-            x: None,
-            embiggen: None,
-            equip: false,
-            face_down: false,
-            tributes: tributes.as_ref().map(|t| {
-                let mut sorted = t.clone();
-                sorted.sort();
-                sorted
-            }),
+            tributes: sorted(tributes),
             ability: ability.clone(),
+            ..WayKey::default()
         },
-        _ => WayKey {
-            x: None,
-            embiggen: None,
-            equip: false,
-            face_down: false,
-            tributes: None,
-            ability: None,
-        },
+        _ => WayKey::default(),
     }
 }
 

@@ -34,6 +34,15 @@ const AI_MATCH: AiMatch = AiMatch { max_actions: 3000 };
 /// play_ai_turn's ceiling on actions in one turn.
 const AI_TURN_MAX_ACTIONS: usize = 60;
 
+/// `mine` and `theirs` in seat order: `(mine, theirs)` when `seat` is p1, else `(theirs, mine)`.
+pub(crate) fn seated<T>(seat: PlayerId, mine: T, theirs: T) -> (T, T) {
+    if seat == PlayerId::P1 {
+        (mine, theirs)
+    } else {
+        (theirs, mine)
+    }
+}
+
 /// Who plays a seat: the AI (at a budget, AI_BUDGET when none is given, and at a skill, full when
 /// none is given: R747000), the greedy baseline or the random policy.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
