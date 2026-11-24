@@ -16848,9 +16848,7 @@
       "started_at": "2026-11-24T03:35:30Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7111395530"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 7115230492
     },
