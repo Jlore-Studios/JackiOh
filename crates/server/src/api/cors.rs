@@ -125,15 +125,33 @@ where
     let mut response = handler(request).await;
     match origin {
         Some(origin) if allowed => {
-            for (name, value) in cors_headers(&origin) {
-                set_header(&mut response, name, &value);
-            }
+            set_header(
+                &mut response,
+                "access-control-allow-origin",
+                &canonical_origin(&origin),
+            );
+            vary_on_origin(&mut response);
         }
         _ => {
             // R162 again: the ordinary response an unlisted or origin-less caller gets also depended on the
             // origin; without `Vary` a shared cache could later hand it to an allowed origin.
-            set_header(&mut response, "vary", "Origin");
+            vary_on_origin(&mut response);
         }
     }
     response
+}
+
+/// R162's `Vary: Origin` on a handler's response, after whatever the handler varied it by already
+/// (R4677000: `/stats`' answers vary by `Authorization`), so neither is lost.
+fn vary_on_origin(response: &mut Response) {
+    let earlier = response
+        .headers()
+        .get("vary")
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| !value.is_empty())
+        .map(str::to_string);
+    match earlier {
+        Some(earlier) => set_header(response, "vary", &format!("{earlier}, Origin")),
+        None => set_header(response, "vary", "Origin"),
+    }
 }

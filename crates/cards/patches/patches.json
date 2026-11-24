@@ -34897,5 +34897,69 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.12e",
+    "date": "2026-11-24",
+    "title": "Stinkyscape+ Balance Changes VII: Ticketed",
+    "source": "#4665",
+    "notes": "The last item of the designer's seventh Stinkyscape+ balance pass (#4665): Ticketed's text is \"Stack this on a permanent anywhere.\" Its play takes no zone of its own; it names one permanent on the field, either side's, either row, face-down or not, and lands on top of that permanent's pile in its zone and that side's control. The permanent lies beneath it, out of play, and resumes when Ticketed leaves. On a unit zone it lies there with no position, no Unit: it fills the zone, nothing attacks it, no health judges it, and an effect that names a backrow card may name it (R4665000). Brittle 3 on the base face, none on the Radiant. Its v0.6.12c script, the Cry that held a permanent beneath it in its own zone, is kept (R767000).",
+    "player": {
+      "title": "Ticketed",
+      "new": [],
+      "balance": [
+        "Ticketed is now \"Stack this on a permanent anywhere\": play it on top of any permanent, yours or your opponent's, Unit or backrow.",
+        "The permanent beneath Ticketed is out of play until Ticketed leaves, and its zone stays filled. Normal Ticketed keeps Brittle 3."
+      ],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "cd5052586fcf43129c707d1eb96c9ca9fdb6a216"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-010",
+      "stinkyscapeplus-103"
+    ],
+    "changes": [
+      {
+        "id": "stinkyscape-009",
+        "name": "Ticketed",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.12f",
+    "date": "2026-11-24",
+    "title": "Patch: the cosmetic offers and the full-screen art's music load after the first page",
+    "source": "#4714",
+    "notes": "The first page load no longer ships the cosmetic offers or the music player (#4714, part 6 of #4691). COSMETIC_OFFERS moved to its own generated module, wire/generated/cosmeticOffers.ts, which cards/versions.ts loads with loadSceneData() (EngineGate, useEngineReady and the shop's route chunk wait for it), and cards/FullScreenArt.tsx loads the music player when the full-screen view opens; the engine module's boot fetch goes at low priority. First load: 383,498 to 366,513 B gzip. Nothing visible changes. Claims --visual because the change touches apps/web/src/cards/ (R2529000), a micro of no family.",
+    "player": {
+      "title": "A lighter first load, same cards",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A tab you leave open without touching it for ten minutes now shows you offline to friends, as a hidden tab does, and catches up the moment you come back."
+      ],
+      "text": [],
+      "fixes": [
+        "The first page downloads less before it shows, with the same cards and art."
+      ]
+    },
+    "commits": [
+      "445ccaa547ecb16ccfee2e2c5d64fa51ca6aea8b"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

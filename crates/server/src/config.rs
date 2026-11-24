@@ -1154,6 +1154,14 @@ pub const CARD_STATS_CURVE_TOP: i32 = 6;
 /// Cache-Control max-age in seconds for public card statistics endpoints.
 pub const CARD_STATS_CACHE_TTL_SECONDS: i64 = 300;
 
+/// SPEC §11 R4677000: after every patch of the newest patch's line (its `major.minor`), how many of the
+/// line before's newest patches anyone but a dev account may read on `/stats`.
+pub const PUBLIC_STATS_PATCHES_LINE_BEFORE: usize = 2;
+
+/// SPEC §11 R4677000: how many of the newest patches anyone but a dev account may always read on `/stats`,
+/// when that run is longer than the newest line's patches and `PUBLIC_STATS_PATCHES_LINE_BEFORE` more.
+pub const PUBLIC_STATS_PATCHES_NEWEST: usize = 5;
+
 /// SPEC §11 R978000, R2491000: how many computed reports each of the card statistics' kept stores
 /// (`api::stats::KeptReports`) holds at once, each for `CARD_STATS_CACHE_TTL_SECONDS`; keeping
 /// another drops the one kept longest ago. The card drill-down keeps at most 24 however many patches
@@ -1674,11 +1682,20 @@ pub use jackioh_shared::config::{
 
 /// §9.13: how often the daily sweep ends the games whose move ran out, lapses old challenges and
 /// seeks and sends the emails and pushes due, in minutes, while the server is awake. The Worker's
-/// hourly cron (`apps/edge`'s `DAILY_SWEEP_CRON`) wakes it for one while nobody else does.
+/// hourly cron (`apps/edge`'s `DAILY_SWEEP_CRON`) wakes it for one while nobody else does, once one
+/// has something due (R4691000, `DAILY_NEXT_PATH`).
 pub const DAILY_SWEEP_MINUTES: u64 = 60;
 /// §9.13: the route the Worker's cron posts the sweep to; outside `/api`, so the Worker's public
 /// `fetch` never forwards it.
 pub const DAILY_SWEEP_PATH: &str = "/daily-sweep";
+/// R4691002 (#4713): how long a shipped patch's catalog (`GET /api/catalog/:version`, R388) may be kept
+/// by a browser and by the Worker's edge cache, which then answers a repeat read without the server.
+/// A shipped version never reopens, but #1371 once renamed them all; a day bounds what a rename would
+/// leave stale without a purge.
+pub const CATALOG_SNAPSHOT_MAX_AGE_SECONDS: i64 = 86_400;
+/// R4691000: the route the Worker asks, as the server goes to sleep, when a sweep next has something
+/// due (`daily::notify::next_due`); outside `/api`, as the sweep's is.
+pub const DAILY_NEXT_PATH: &str = "/daily-next";
 /// §9.13: how many times a request ends a game on time when another request moved first and its
 /// log row clashed (R3727000), before it answers what it read.
 pub const DAILY_SETTLE_ATTEMPTS: usize = 3;

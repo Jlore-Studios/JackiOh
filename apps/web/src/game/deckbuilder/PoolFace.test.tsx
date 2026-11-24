@@ -30,7 +30,10 @@ async function engineAgain(): Promise<void> {
   fresh.loadWasmSync(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../wasm/pkg/jackioh_wasm_bg.wasm")));
 }
 
-/** A reset drops the modules, the scene tables with them: the fresh `scene.ts` is installed as setup.ts did. */
+/**
+ * A reset drops the modules, the scene tables and (#4714) the cosmetic offers with them: the fresh `scene.ts` and
+ * `versions.ts` are installed as setup.ts did.
+ */
 async function sceneAgain(): Promise<void> {
   const scene = await import("../../cards/art/scene.ts");
   const data = await import("../../cards/art/sceneData.ts");
@@ -40,6 +43,7 @@ async function sceneAgain(): Promise<void> {
     SCENE_RECIPES: data.SCENE_RECIPES,
     ALT_SCENE_RECIPES: data.ALT_SCENE_RECIPES,
   });
+  await (await import("../../cards/versions.ts")).loadCosmeticOffers();
 }
 
 afterEach(() => {

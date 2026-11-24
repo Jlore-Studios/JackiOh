@@ -24,6 +24,16 @@ export const statsTestid = {
   patchNext: "stats-patch-next",
   patchCollecting: "stats-patch-collecting",
   patchCollectingBack: "stats-patch-collecting-back",
+  /** R4677001: the patch bar's Find a patch button, its dialog, the dialog's box, lines, patches and closing words. */
+  patchSearch: "stats-patch-search",
+  patchSearchDialog: "stats-patch-search-dialog",
+  patchSearchInput: "stats-patch-search-input",
+  patchSearchLine: "stats-patch-search-line",
+  patchSearchOption: "stats-patch-search-option",
+  patchSearchNone: "stats-patch-search-none",
+  patchSearchDevs: "stats-patch-search-devs",
+  /** R4677000: the line under the bar when the address named a patch the server refused. */
+  patchRefused: "stats-patch-refused",
   /** R3324001: the header's current patch. */
   currentPatch: "stats-current-patch",
   summaryTotalGames: "stats-summary-total-games",

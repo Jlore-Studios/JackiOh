@@ -1,5 +1,6 @@
 // R1973002, R3324000: the patch tabs and the patches either side of the one shown, the newest patch collecting its
-// data, (R3324001) the current patch and (R3447000) the patch a card's figures were collected on (stats/patches.ts).
+// data, (R3324001) the current patch, (R3447000) the patch a card's figures were collected on and (R4677001) the
+// patch search's lines (stats/patches.ts).
 
 import { describe, expect, it } from "vitest";
 
@@ -12,6 +13,8 @@ import {
   neighbours,
   offeredPatches,
   patchIndex,
+  patchLine,
+  patchLines,
   patchName,
   patchTarget,
   type PatchWindow,
@@ -98,5 +101,36 @@ describe("R1973002 the patches /stats can show", () => {
     expect(neighbours(PATCHES, 0)).toEqual({ previous: PATCHES[1], next: null });
     expect(neighbours(PATCHES, 3)).toEqual({ previous: PATCHES[4], next: PATCHES[2] });
     expect(neighbours(PATCHES, 7)).toEqual({ previous: null, next: PATCHES[6] });
+  });
+});
+
+describe("R4677001 the patch search's lines", () => {
+  // Newest first, as the server lists the caller's patches: two of v0.6, three of v0.5 (one with its micros).
+  const LISTED = [
+    patch(["v0.6.1", "v0.6.1b"], STATS_PATCH_MIN_GAMES),
+    patch(["v0.6.0"], STATS_PATCH_MIN_GAMES),
+    patch(["v0.5.9"], STATS_PATCH_MIN_GAMES),
+    patch(["v0.5.7", "v0.5.8", "v0.5.8b"], STATS_PATCH_MIN_GAMES),
+    patch(["v0.5.6"], STATS_PATCH_MIN_GAMES),
+  ];
+
+  it("R4677001 groups every patch by its line, newest first, for an empty box", () => {
+    expect(patchLine(LISTED[0]!)).toBe("v0.6");
+    expect(patchLine(patch(["v0.10.2"], 0))).toBe("v0.10");
+    expect(patchLines(LISTED, "")).toEqual([
+      { line: "v0.6", patches: [LISTED[0], LISTED[1]] },
+      { line: "v0.5", patches: [LISTED[2], LISTED[3], LISTED[4]] },
+    ]);
+    expect(patchLines([], "")).toEqual([]);
+  });
+
+  it("R4677001 finds the patch holding a version, micros included, a leading v read as nothing", () => {
+    // v0.5.8 was folded into v0.5.7's patch (R1973001): typing it finds that patch.
+    expect(patchLines(LISTED, "0.5.8")).toEqual([{ line: "v0.5", patches: [LISTED[3]] }]);
+    expect(patchLines(LISTED, " V0.5.8b ")).toEqual([{ line: "v0.5", patches: [LISTED[3]] }]);
+    expect(patchLines(LISTED, "0.6.1b")).toEqual([{ line: "v0.6", patches: [LISTED[0]] }]);
+    // Part of a version narrows the list as it is typed.
+    expect(patchLines(LISTED, "0.6")).toEqual([{ line: "v0.6", patches: [LISTED[0], LISTED[1]] }]);
+    expect(patchLines(LISTED, "0.4")).toEqual([]);
   });
 });

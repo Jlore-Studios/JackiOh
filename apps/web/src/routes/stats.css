@@ -717,6 +717,67 @@
   color: var(--text-dim);
 }
 
+/* R4677001: the patch search: a magnifier at the bar's end, after the arrows, and its dialog's patches grouped by
+   line, newest first, each a button with its name over its games, the patch shown marked. The lines scroll inside
+   the dialog, so a dev account's every patch never pushes the box or the closing line off the screen. */
+.stats-patch-search-icon {
+  display: block;
+  width: 1em;
+  height: 1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+}
+
+.stats-patch-search-dialog .stats-patch-search-input {
+  width: 100%;
+}
+
+.stats-patch-search-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+  max-height: 50vh;
+  overflow-y: auto;
+  text-align: start;
+}
+
+.stats-patch-search-line-name {
+  margin: 0 0 var(--space-2);
+  font-size: var(--type-sm);
+  color: var(--text-dim);
+}
+
+.stats-patch-search-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stats-patch-search-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.stats-patch-search-option[aria-current="true"] {
+  border-color: var(--selected);
+}
+
+.stats-patch-search-none,
+.stats-patch-search-devs,
+.stats-patch-refused {
+  margin: 0;
+  font-size: var(--type-sm);
+  color: var(--text-dim);
+}
+
 /* R3324001: the current patch, beside the page's title. */
 .stats-current-patch {
   padding: var(--space-1) var(--space-5);

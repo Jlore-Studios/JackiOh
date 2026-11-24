@@ -1785,6 +1785,11 @@ export type PublicStatsCardsResponse = {
    * figures are asked for at the last). An older server omits it.
    */
   patches?: { versions: string[]; games: number; liveGames: number }[];
+  /**
+   * R4677000: the caller is no dev account, so `patches` lists the newest patches alone and the older ones are
+   * for dev accounts. An older server omits it.
+   */
+  olderPatchesForDevs?: boolean;
   /** R3022000: the field and band the cards' tiers are read against; absent from a server deployed before it. */
   tiers?: PublicStatsTiers;
   summary: {
@@ -1845,10 +1850,12 @@ export type CardStatsOptions = {
   mode?: string;
   /** R4673001: one face's figures; left out on All, so All's path and its kept read stay as before. */
   face?: StatsFace;
+  /** R4677000: the signed-in token, when there is one: a dev account reads every patch. */
+  token?: string | null;
   signal?: AbortSignal;
 };
 
-/** The path of one filter's table, query included; its kept answer is a public one. */
+/** The path of one filter's table, query included; its kept answer is kept under the token's account. */
 export function cardStatsPath(options: CardStatsOptions = {}): string {
   const params = new URLSearchParams();
   if (options.source) params.set("source", options.source);
@@ -1865,7 +1872,7 @@ export function cardStatsPath(options: CardStatsOptions = {}): string {
 }
 
 export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStatsCardsResponse> {
-  return keptGet<PublicStatsCardsResponse>(cardStatsPath(options), null, options.signal);
+  return keptGet<PublicStatsCardsResponse>(cardStatsPath(options), options.token ?? null, options.signal);
 }
 
 /** R4673001: a card's details on a match type, a face and a patch, each asked only when given (none is the newest patch's All). */
@@ -1873,6 +1880,8 @@ export type CardDrillDownOptions = {
   mode?: string;
   face?: StatsFace;
   patch?: string;
+  /** R4677000: the signed-in token, when there is one, lists a dev account every patch's win rate. */
+  token?: string | null;
   signal?: AbortSignal;
 };
 
@@ -1883,6 +1892,7 @@ export function getCardDrillDown(cardId: string, options: CardDrillDownOptions =
   if (options.patch) params.set("patch", options.patch);
   const query = params.toString();
   return apiRequest<CardDrillDownResponse>(`/api/stats/cards/${encodeURIComponent(cardId)}${query ? `?${query}` : ""}`, {
+    token: options.token,
     signal: options.signal,
   });
 }
@@ -1933,6 +1943,8 @@ export type PublicStatsGamesResponse = {
 export type GameStatsOptions = {
   patch?: string;
   mode?: string;
+  /** R4677000: the signed-in token, when there is one: a dev account reads every patch. */
+  token?: string | null;
   signal?: AbortSignal;
 };
 
@@ -1942,6 +1954,7 @@ export function getGameStats(options: GameStatsOptions = {}): Promise<PublicStat
   if (options.mode) params.set("mode", options.mode);
   const query = params.toString();
   return apiRequest<PublicStatsGamesResponse>(`/api/stats/games${query ? `?${query}` : ""}`, {
+    token: options.token,
     signal: options.signal,
   });
 }

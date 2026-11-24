@@ -35,6 +35,7 @@ import { currentCatalog } from "../game/currentCatalog.ts";
 import { useFaceModel } from "../game/faces.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
+  ApiRequestError,
   cardStatsPath,
   getCardDrillDown,
   getCardStats,
@@ -48,6 +49,7 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
+import { readSession } from "../net/session.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import {
   ADJUSTED_RANGE_DIGITS,
@@ -59,6 +61,7 @@ import {
 } from "../stats/config.ts";
 import { CREATED_SORT_COLUMNS, CreatedPanel, createdSortOf, type CreatedSort } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
+import { FindPatchIcon, PatchSearch, olderPatchesLine } from "../stats/PatchSearch.tsx";
 import {
   currentVersion,
   isCollecting,
@@ -192,6 +195,14 @@ function previousPatchOf(res: PublicStatsCardsResponse): { name: string; target:
     return before ? { name: patchName(before), target: patchTarget(before) } : null;
   }
   return res.previousPatch ? { name: res.previousPatch, target: res.previousPatch } : null;
+}
+
+/** R4677000: the code the server refuses a patch past the caller's with, an older patch for dev accounts alone. */
+const PATCH_DEV_ONLY = "patch_dev_only";
+
+/** R4677000: the signed-in token the statistics reads carry, so the server can tell a dev account; none signed out. */
+function statsToken(): string | null {
+  return readSession()?.accessToken ?? null;
 }
 
 /** R1966000: a set's win rate, or its change, to `SET_STATS_DIGITS` places: sets differ by tenths of a point. */
@@ -408,10 +419,11 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     playRate: true,
   });
 
-  // R2125000: a revisit starts on the table these filters last read and reads it again behind it.
+  // R2125000: a revisit starts on the table these filters last read and reads it again behind it, kept under the
+  // account that read it (R4677000).
   const [cardStatsKept] = useState(() =>
     cachedRead<PublicStatsCardsResponse>(
-      null,
+      statsToken(),
       cardStatsPath(cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode, face)),
     ),
   );
@@ -420,6 +432,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const [cardStatsData, setCardStatsData] = useState<PublicStatsCardsResponse | null>(cardStatsKept ?? null);
   // Bumped by Retry: the effect asks again, so its cleanup cancels a retry like any other request.
   const [cardStatsAttempt, setCardStatsAttempt] = useState(0);
+  // R4677001: the patch search's dialog; R4677000: the address named a patch the server keeps for dev accounts.
+  const [patchSearchOpen, setPatchSearchOpen] = useState(false);
+  const [patchRefused, setPatchRefused] = useState(false);
 
   const [playersLoading, setPlayersLoading] = useState(false);
   const [playersError, setPlayersError] = useState(false);
@@ -477,8 +492,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const fetchCardStats = useCallback(
     () => {
       const options = cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode, face);
+      const token = statsToken();
       // R2125000: a table kept for these filters draws at once; only a first visit to them waits behind a skeleton.
-      const kept = cachedRead<PublicStatsCardsResponse>(null, cardStatsPath(options));
+      const kept = cachedRead<PublicStatsCardsResponse>(token, cardStatsPath(options));
       if (kept === undefined) {
         setCardStatsLoading(true);
       } else {
@@ -488,14 +504,20 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       setCardStatsError(false);
       const controller = new AbortController();
 
-      getCardStats({ ...options, signal: controller.signal })
+      getCardStats({ ...options, token, signal: controller.signal })
         .then((res) => {
           if (controller.signal.aborted) return;
           setCardStatsData(res);
           setCardStatsLoading(false);
         })
-        .catch(() => {
+        .catch((cause: unknown) => {
           if (controller.signal.aborted) return;
+          // R4677000: a patch the server keeps for dev accounts opens the current patch, with a line saying so.
+          if (cause instanceof ApiRequestError && cause.code === PATCH_DEV_ONLY) {
+            setPatchRefused(true);
+            setPatch("");
+            return;
+          }
           // A read that fails behind a kept table leaves it and says nothing.
           if (kept !== undefined) return;
           setCardStatsError(true);
@@ -554,7 +576,10 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const shownPatch = cardStatsData ? patchIndex(patchList, cardStatsData.patch) : -1;
   const pickable = offeredPatches(patchList, shownPatch);
   const { previous: previousWindow, next: nextWindow } = neighbours(patchList, shownPatch);
-  const choosePatch = (window: PatchWindow): void => setPatch(patchList.indexOf(window) === 0 ? "" : patchTarget(window));
+  const choosePatch = (window: PatchWindow): void => {
+    setPatchRefused(false);
+    setPatch(patchList.indexOf(window) === 0 ? "" : patchTarget(window));
+  };
   // R3324000: the newest patch, short of games, shows no figures: its Cards and Sets tabs say it is collecting.
   const collecting = isCollecting(patchList, shownPatch);
   const shownPatchName = shownPatch >= 0 ? patchName(patchList[shownPatch]!) : (cardStatsData?.patch ?? "");
@@ -575,10 +600,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     if (tab !== "sets" || collecting) return;
     setSetsError(false);
     const controller = new AbortController();
+    const token = statsToken();
     getCardStats({
       patch: patch ? patch : undefined,
       mode: mode ? mode : undefined,
       face: askedFace(face),
+      token,
       signal: controller.signal,
     })
       .then((res) => {
@@ -588,7 +615,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         // R1973002: the patch before, not the version before, which may be a micro of the same patch.
         const before = previousPatchOf(res);
         if (!before) return;
-        getCardStats({ patch: before.target, mode: mode ? mode : undefined, face: askedFace(face), signal: controller.signal })
+        getCardStats({ patch: before.target, mode: mode ? mode : undefined, face: askedFace(face), token, signal: controller.signal })
           .then((previous) => {
             if (!controller.signal.aborted) setSetsPrevious(previous);
           })
@@ -614,6 +641,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       mode: mode ? mode : undefined,
       face: askedFace(face),
       patch: patch ? patch : undefined,
+      token: statsToken(),
       signal: controller.signal,
     })
       .then((data) => {
@@ -1061,7 +1089,37 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
             >
               →
             </button>
+            {/* R4677001: one button at the bar's end opens the search through every patch the caller may read */}
+            <button
+              type="button"
+              className="stats-patch-step stats-patch-search"
+              data-testid={statsTestid.patchSearch}
+              aria-label={t("Find a patch")}
+              title={t("Find a patch")}
+              aria-haspopup="dialog"
+              onClick={() => setPatchSearchOpen(true)}
+            >
+              <FindPatchIcon />
+            </button>
           </nav>
+        )}
+        {/* R4677000: the address named a patch the server keeps for dev accounts; the page shows the current one */}
+        {patchRefused && (
+          <p className="stats-patch-refused" role="status" data-testid={statsTestid.patchRefused}>
+            {olderPatchesLine()}
+          </p>
+        )}
+        {patchSearchOpen && (
+          <PatchSearch
+            patches={patchList}
+            shown={shownPatch}
+            olderPatchesForDevs={cardStatsData?.olderPatchesForDevs === true}
+            onPick={(window) => {
+              setPatchSearchOpen(false);
+              choosePatch(window);
+            }}
+            onClose={() => setPatchSearchOpen(false)}
+          />
         )}
 
         {/* The summary: the patch's games alone (R661); R1646000 took the top and lowest card tiles off the fixed top;

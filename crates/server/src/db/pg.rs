@@ -51,7 +51,7 @@ use crate::db::store::{
     PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
     PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
     ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, PushSubRow,
-    QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow, ReplayWithMode,
+    QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayListRow, ReplayRow,
     ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding,
     SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow,
     TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice,
@@ -3327,7 +3327,7 @@ pub async fn matches_finish(t: &mut PgTx<'_>, match_id: &str, at: i64) -> Result
     Ok(())
 }
 
-/// §9.5's crash recovery and the reaper's input, straight from `app.live_matches()`.
+/// Every live match, straight from `app.live_matches()` (§9.5).
 pub async fn matches_live(t: &mut PgTx<'_>) -> Result<Vec<MatchRow>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(concat!("select ", match_columns!(), " from app.live_matches()"))
@@ -3342,6 +3342,31 @@ pub async fn matches_live(t: &mut PgTx<'_>) -> Result<Vec<MatchRow>, StoreError>
         }
     }
     Ok(live)
+}
+
+/// The reaper's read (R112, #4712): the rows `matches_live` answers (`app.live_matches()`'s `live`
+/// matches that are not a daily game's, with both seats) whose ceiling is at or before `now`. Read from
+/// the table, not through the function (a SECURITY DEFINER function is not inlined, so it would hand
+/// over every live row first), so the scan goes through 0004's `matches_status_ceiling_at_idx`. Each
+/// row comes whole: the fold of a log that already ended and the ceiling's draw take a `MatchRow`, and
+/// the columns they read past its clocks, the decks, boards and win-rate snapshot, are the bulk of a
+/// row. What the reaper no longer reads is every match still in play, on every pass.
+pub async fn matches_past_ceiling(t: &mut PgTx<'_>, now: i64) -> Result<Vec<MatchRow>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        match_columns!(),
+        " from public.matches m
+          where m.status = 'live' and m.ceiling_at <= ",
+        ts!("$1"),
+        " and m.p2_profile_id is not null
+            and not exists (select 1 from public.daily_games d where d.match_id = m.id)"
+    ))
+    .bind(now)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(|row| to_match(MatchDbRow::read(row)?)).collect()
 }
 
 /// R376: a Conquest game is its series' (`series_with_game`). Otherwise a room's match is the row
@@ -3546,24 +3571,45 @@ pub async fn replays_list(
     Ok(replays)
 }
 
-/// R768: one query, the matches, their results and their action counts joined, with the mode
-/// derived in Rust by the same precedence `matches_mode_of` uses.
+/// R768: one query, the page of matches, their results and their action counts joined, with the mode
+/// derived in Rust by the same precedence `matches_mode_of` uses. #4712: the page is found first, one
+/// arm per seat, each walking its seat's index of finished matches (`matches_p1_over_ended_idx`,
+/// `matches_p2_over_ended_idx`, migration 0101) in the list's order and stopping after `limit + offset`
+/// rows; the two arms hold no match twice, since a match never seats one profile in both seats
+/// (`matches_players_differ_check`), so the first `limit + offset` of their union in that order are the
+/// list's. Only the page's rows are joined, and only the columns `ReplayListRow` holds are read.
 pub async fn replays_list_with_modes(
     t: &mut PgTx<'_>,
     profile_id: &str,
     limit: i64,
     offset: i64,
-) -> Result<Vec<ReplayWithMode>, StoreError> {
+) -> Result<Vec<ReplayListRow>, StoreError> {
     if !is_uuid(profile_id) {
         return Ok(Vec::new());
     }
     run_as(t, None).await?;
     let rows = sqlx::query(
-        "select m.id, m.status, m.seed, m.p1_profile_id, m.p2_profile_id, m.p1_deck, m.p2_deck,
-                m.catalog_version, m.turn_deadline_at, m.prompt_deadline_at, m.p1_disconnected_at,
-                m.p2_disconnected_at, m.ceiling_at, m.created_at, m.ended_at, m.p1_last_board,
-                m.p2_last_board, m.ranked, m.p1_portrait, m.p2_portrait, m.mode, m.stake,
-                m.p1_glitch_board, m.p2_glitch_board, m.final_hash, m.loadouts, m.win_rates,
+        "with page as (
+           select u.id, u.ended_at from (
+             (select m.id, m.ended_at from public.matches m
+               where m.status = 'over' and m.p1_profile_id = $1::uuid
+                 and exists (select 1 from public.results r where r.match_id = m.id)
+                 and exists (select 1 from public.match_actions a where a.match_id = m.id)
+               order by m.ended_at desc nulls last, m.id desc
+               limit $4::bigint)
+             union all
+             (select m.id, m.ended_at from public.matches m
+               where m.status = 'over' and m.p2_profile_id = $1::uuid
+                 and exists (select 1 from public.results r where r.match_id = m.id)
+                 and exists (select 1 from public.match_actions a where a.match_id = m.id)
+               order by m.ended_at desc nulls last, m.id desc
+               limit $4::bigint)
+           ) u
+           order by u.ended_at desc nulls last, u.id desc
+           limit $2::bigint offset $3::bigint
+         )
+         select m.id, m.p1_profile_id, m.p2_profile_id, m.catalog_version, m.ranked, m.p1_portrait,
+                m.p2_portrait, m.mode, m.room_code, m.room_mode,
                 r.match_id as r_match_id, r.p1_profile_id as r_p1_profile_id,
                 r.p2_profile_id as r_p2_profile_id, r.winner_profile_id as r_winner_profile_id,
                 r.reason as r_reason, r.turns as r_turns,
@@ -3571,46 +3617,27 @@ pub async fn replays_list_with_modes(
                 r.p2_rating_before as r_p2_rating_before, r.p2_rating_after as r_p2_rating_after,
                 r.ended_at as r_ended_at,
                 (select count(*) from public.match_actions a where a.match_id = m.id) as actions,
-                m.room_code, m.room_mode,
                 (select t.mode from public.tickets t where t.match_id = m.id
                   order by t.enqueued_at, t.id limit 1) as ticket_mode,
                 exists (select 1 from public.series s where s.state -> 'games'
                   @> jsonb_build_array(jsonb_build_object('matchId', m.id::text))) as in_series
-           from public.matches m
+           from page
+           join public.matches m on m.id = page.id
            join public.results r on r.match_id = m.id
-          where m.status = 'over'
-            and (m.p1_profile_id = $1::uuid or m.p2_profile_id = $1::uuid)
-            and exists (select 1 from public.results r where r.match_id = m.id)
-            and exists (select 1 from public.match_actions a where a.match_id = m.id)
-          order by m.ended_at desc nulls last, m.id desc
-          limit $2::bigint offset $3::bigint",
+          order by page.ended_at desc nulls last, page.id desc",
     )
     .bind(profile_id)
     .bind(limit)
     .bind(offset)
+    // Saturating, as `GET /api/replays` answers its next offset: an offset past every row lists nothing.
+    .bind(limit.saturating_add(offset))
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
     let mut replays = Vec::with_capacity(rows.len());
     for row in &rows {
-        let shape = MatchDbRow::read(row)?;
-        let replay = ReplayRow {
-            row: to_match(shape)?,
-            result: to_result(ResultDbRow {
-                match_id: uuid_text(row, "r_match_id")?,
-                p1_profile_id: uuid_text_or_null(row, "r_p1_profile_id")?,
-                p2_profile_id: uuid_text_or_null(row, "r_p2_profile_id")?,
-                winner_profile_id: uuid_text_or_null(row, "r_winner_profile_id")?,
-                reason: get(row, "r_reason")?,
-                turns: get(row, "r_turns")?,
-                p1_rating_before: get(row, "r_p1_rating_before")?,
-                p1_rating_after: get(row, "r_p1_rating_after")?,
-                p2_rating_before: get(row, "r_p2_rating_before")?,
-                p2_rating_after: get(row, "r_p2_rating_after")?,
-                ended_at: get(row, "r_ended_at")?,
-            })?,
-            actions: get(row, "actions")?,
-        };
+        let p1_portrait: Option<String> = get(row, "p1_portrait")?;
+        let p2_portrait: Option<String> = get(row, "p2_portrait")?;
         // R376, R672: the precedence `matches_mode_of` answers, in the same order.
         let own: Option<String> = get(row, "mode")?;
         let room_code: Option<String> = get(row, "room_code")?;
@@ -3628,7 +3655,33 @@ pub async fn replays_list_with_modes(
         } else {
             ticket_mode.as_deref().map(queue_mode_of).transpose()?
         };
-        replays.push(ReplayWithMode { replay, mode });
+        replays.push(ReplayListRow {
+            id: uuid_text(row, "id")?,
+            // As `to_match` reads them: a deleted seat is the empty id (KNOWN DIVERGENCES, deleted accounts),
+            // a false flag an absent one, and portraits absent when neither seat has one.
+            players: (
+                uuid_text_or_null(row, "p1_profile_id")?.unwrap_or_default(),
+                uuid_text_or_null(row, "p2_profile_id")?.unwrap_or_default(),
+            ),
+            catalog_version: get(row, "catalog_version")?,
+            ranked: get::<bool>(row, "ranked")?.then_some(true),
+            portraits: portraits_of(p1_portrait.as_deref(), p2_portrait.as_deref()),
+            result: to_result(ResultDbRow {
+                match_id: uuid_text(row, "r_match_id")?,
+                p1_profile_id: uuid_text_or_null(row, "r_p1_profile_id")?,
+                p2_profile_id: uuid_text_or_null(row, "r_p2_profile_id")?,
+                winner_profile_id: uuid_text_or_null(row, "r_winner_profile_id")?,
+                reason: get(row, "r_reason")?,
+                turns: get(row, "r_turns")?,
+                p1_rating_before: get(row, "r_p1_rating_before")?,
+                p1_rating_after: get(row, "r_p1_rating_after")?,
+                p2_rating_before: get(row, "r_p2_rating_before")?,
+                p2_rating_after: get(row, "r_p2_rating_after")?,
+                ended_at: get(row, "r_ended_at")?,
+            })?,
+            actions: get(row, "actions")?,
+            mode,
+        });
     }
     Ok(replays)
 }
@@ -4021,7 +4074,7 @@ pub async fn tickets_cancel(t: &mut PgTx<'_>, ticket_id: &str, _at: i64) -> Resu
 
 // Results (SPEC §2.5, §9.5)
 
-/// A profile's finished-match record, counted in one pass over `results`. A draw is a row with no winner
+/// A profile's finished-match record, counted over `results`. A draw is a row with no winner
 /// (§9.5), so the three counts partition every finished match. A row also has no winner when the winner
 /// deleted their account (migration 0012): a `DECISIVE_REASONS` ending always had a winner, so for the player
 /// left it is still a loss. R1843004: a `fled` row (`LOSER_DRAWS_REASONS`) is the winner's win and the other
@@ -4029,21 +4082,42 @@ pub async fn tickets_cancel(t: &mut PgTx<'_>, ticket_id: &str, _at: i64) -> Resu
 pub async fn results_record_for(t: &mut PgTx<'_>, profile_id: &str) -> Result<ProfileRecord, StoreError> {
     run_as(t, Some(profile_id)).await?;
     let decisive: Vec<String> = DECISIVE_REASONS.iter().map(|reason| reason.to_string()).collect();
+    // #4712: one count per seat, each read from its seat's index alone (`results_p1_record_idx`,
+    // `results_p2_record_idx`, migration 0101), summed; the second seat's count leaves out a row whose
+    // first seat is the player too, which one `or` over both seats counted once.
     let row = sqlx::query(
-        "select
-           count(*) filter (where winner_profile_id = $1::uuid)                         as wins,
-           count(*) filter (where winner_profile_id is distinct from $1::uuid
-                              and ((winner_profile_id is not null
-                                    and reason <> all($3::text[]))
-                                   or (winner_profile_id is null
-                                       and reason = any($2::text[]))))                   as losses,
-           count(*) filter (where (winner_profile_id is null
-                                   and reason <> all($2::text[]))
-                              or (winner_profile_id is distinct from $1::uuid
-                                  and winner_profile_id is not null
-                                  and reason = any($3::text[])))                         as draws
-         from public.results
-        where p1_profile_id = $1::uuid or p2_profile_id = $1::uuid",
+        "select sum(wins)::bigint as wins, sum(losses)::bigint as losses, sum(draws)::bigint as draws
+           from (
+             select
+               count(*) filter (where winner_profile_id = $1::uuid)                         as wins,
+               count(*) filter (where winner_profile_id is distinct from $1::uuid
+                                  and ((winner_profile_id is not null
+                                        and reason <> all($3::text[]))
+                                       or (winner_profile_id is null
+                                           and reason = any($2::text[]))))                   as losses,
+               count(*) filter (where (winner_profile_id is null
+                                       and reason <> all($2::text[]))
+                                  or (winner_profile_id is distinct from $1::uuid
+                                      and winner_profile_id is not null
+                                      and reason = any($3::text[])))                         as draws
+               from public.results
+              where p1_profile_id = $1::uuid
+             union all
+             select
+               count(*) filter (where winner_profile_id = $1::uuid),
+               count(*) filter (where winner_profile_id is distinct from $1::uuid
+                                  and ((winner_profile_id is not null
+                                        and reason <> all($3::text[]))
+                                       or (winner_profile_id is null
+                                           and reason = any($2::text[])))),
+               count(*) filter (where (winner_profile_id is null
+                                       and reason <> all($2::text[]))
+                                  or (winner_profile_id is distinct from $1::uuid
+                                      and winner_profile_id is not null
+                                      and reason = any($3::text[])))
+               from public.results
+              where p2_profile_id = $1::uuid and p1_profile_id is distinct from $1::uuid
+           ) seats",
     )
     .bind(profile_id)
     .bind(decisive)
@@ -4567,6 +4641,16 @@ pub async fn last_boards_put(
 }
 
 /// R678: random other players' non-empty server boards, one per profile (the primary key).
+///
+/// #4712: not `order by random()`, which read and sorted every non-empty server board at every match
+/// start, but the boards from a random key on, in profile order, through `last_boards_server_sample_idx`
+/// (migration 0101, partial on the same filters): the first `count` whose profile id is at or after a
+/// `gen_random_uuid()` drawn once for the statement, topped up from the lowest id when the key falls
+/// near the end, so a sample is short only when fewer boards than `count` are there to take. The price
+/// is a sample less even than `random()`'s: a board is first in proportion to the gap of ids before its
+/// profile's (profile ids are random v4 uuids, so the gaps differ, but none is ever left out), and the
+/// boards of one sample are neighbours in id order rather than drawn apart. A Glitch shows a board of
+/// some other player's last server game, which either draw gives.
 pub async fn last_boards_sample_others(
     t: &mut PgTx<'_>,
     exclude_profile_ids: &[String],
@@ -4583,11 +4667,24 @@ pub async fn last_boards_sample_others(
         .collect();
     run_as(t, None).await?;
     let rows = sqlx::query(
-        "select board from public.last_boards
-          where kind = 'server' and jsonb_array_length(board) > 0
-            and profile_id <> all($1::uuid[])
-          order by random()
-          limit $2::int",
+        "with pivot as materialized (select gen_random_uuid() as key)
+         select board from (
+           (select board, false as wrapped, profile_id from public.last_boards
+             where kind = 'server' and jsonb_array_length(board) > 0
+               and profile_id <> all($1::uuid[])
+               and profile_id >= (select key from pivot)
+             order by profile_id
+             limit $2::int)
+           union all
+           (select board, true, profile_id from public.last_boards
+             where kind = 'server' and jsonb_array_length(board) > 0
+               and profile_id <> all($1::uuid[])
+               and profile_id < (select key from pivot)
+             order by profile_id
+             limit $2::int)
+         ) sample
+         order by wrapped, profile_id
+         limit $2::int",
     )
     .bind(excluded)
     .bind(count)
@@ -8643,6 +8740,17 @@ pub async fn daily_invites_purge(t: &mut PgTx<'_>, now: i64) -> Result<i64, Stor
         .await
         .map_err(db_error)?;
     Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
+}
+
+/// R4691000: the least `expires_at` of any invite, the next the purge above deletes. A read of the
+/// table it keeps to about a week of invites.
+pub async fn daily_invites_next_lapse(t: &mut PgTx<'_>) -> Result<Option<i64>, StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query("select min(expires_at) as next from public.daily_invites")
+        .fetch_one(&mut **t)
+        .await
+        .map_err(db_error)?;
+    get::<Option<i64>>(&row, "next")
 }
 
 // daily notices

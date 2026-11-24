@@ -150,6 +150,8 @@ async function freshCardFace(): Promise<CardFaceModule> {
     SCENE_RECIPES: data.SCENE_RECIPES,
     ALT_SCENE_RECIPES: data.ALT_SCENE_RECIPES,
   });
+  // #4714: and the cosmetic offers the face's look reads, as setup.ts installs them.
+  await (await import("./versions.ts")).loadCosmeticOffers();
   return import("./CardFace.tsx");
 }
 
