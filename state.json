@@ -21558,17 +21558,8 @@
       }
     },
     "4761": {
-      "action": "plan",
-      "asks": [
-        "c:7139402756"
-      ],
-      "build_next": {
-        "from_run": "45452311689",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-24T18:15:43Z",
-        "until": "2026-11-24T18:45:43Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-24T18:15:34Z",
         "difficulty": "hard",
@@ -21587,10 +21578,9 @@
         "reason": "planned on opus",
         "trail": "te\\\\b\\\\|^pub fn evaluate(\\\" -A3 crates/ai/src/evaluate.rs; grep -n \\\"pub fn \\\\|pub \u2026\n- Bash: {\"command\": \"grep -n -i \\\"windfury\\\\|KeywordWeights\\\\|keyword weight\\\\|AI_EVAL.keyword\\\" crates/ai/README.md docs/v0.3.0/SURFACE.md spec/09*.md 2>/dev/null | head -20; ls spec | head -40\", \"descripti\u2026\n- Bash: {\"command\": \"grep -n \\\"AI_EVAL\\\\|keyword weights\\\\|Pierce 0.5\\\\|Taunt 1.5\\\\|taunt: 1.5\\\" spec/*.md | head -20; grep -n \\\"Evasive\\\" spec/06-keywords.md | head\", \"description\": \"Check spec for AI_EVAL \u2026\n- Bash: {\"command\": \"grep -n \\\"9.9\\\" spec/09-architecture.md | head -5; grep -n -i \\\"keyword\\\" spec/09-architecture.md | head -20\", \"description\": \"Check \\u00a79.9 for keyword weighting text\"}\n- Bash: {\"command\": \"grep -rn \\\"GREEDY_EVAL\\\" crates --include=*.rs | grep -v \\\"^crates/ai/tests/ai/evaluate.rs\\\" | grep -v \\\"&GREEDY_EVAL\\\" | head -20; grep -rn \\\"to_value(GREEDY_EVAL\\\\|to_string(&GREEDY_EV\u2026\n- Bash: {\"command\": \"git log --oneline -300 --stat -- crates/ai/src/config.rs | grep -B2 -A12 \\\"^[0-9a-f]\\\\{10\\\\}\\\" | head -120\", \"description\": \"Look at recent AI config commits and their files\"}\n- Bash: {\"command\": \"git show --stat --format='%h %s' d4505a0276 | head -30; git show --stat --format='%h %s' 6b3a6e17e6 | head -30; git show --stat --format='%h %s' 0bf5057480 | head -20\", \"description\": \"S\u2026\n- Bash: {\"command\": \"sed -n 1,30p spec/rulings/R1370000.md | cut -c1-900\", \"description\": \"Read R1370000 classify claims ruling\"}\n- Bash: {\"command\": \"sed -n 1100,1131p crates/tools/src/fork_screen.rs; nproc\", \"description\": \"Check fork screen default deal count and core count\"}\n- Bash: {\"command\": \"cat .gitignore | grep -v \\\"^#\\\" | grep -v \\\"^$\\\" | head -60; grep -rn \\\"save\\\" bot/README.md | grep -i \\\"fork\\\\|screen\\\\|R4607000\\\" | head\", \"description\": \"Check gitignore and bot docs \u2026\n- Bash: {\"command\": \"cat spec/rulings/R4607000.md | cut -c1-1500; grep -rn \\\"carr\\\\(y\\\\|ies\\\\).*save\\\\|save file\\\\|\\\\.screen\\\" bot/README.md bot/go/README.md 2>/dev/null | head\", \"description\": \"Read R460700\u2026\n- Bash: {\"command\": \"grep -n \\\"classicplus-051\\\\|meditative-039-5\\\\|t-ai-03\\\\|Evasive\\\" crates/ai/tests/ai/deck.rs crates/ai/tests/ai/evaluate.rs crates/ai/src/shadow_ban.rs | head; grep -rln \\\"classicplus-0\u2026\n- Bash: {\"command\": \"sed -n 690,780p crates/ai/tests/ai/evaluate.rs\", \"description\": \"Read the Jade Beauty evaluate test\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn clone\\\" -B3 -A6 crates/ai/tests/ai/support.rs; grep -n \\\"pub fn register_cards\\\" -A5 crates/ai/tests/ai/support.rs; grep -n \\\"pub fn active_units_of\\\\|pub fn find_instan\u2026\n- Bash: {\"command\": \"sed -n 1,34p crates/ai/tests/ai/support.rs; grep -rn \\\"fn active_units_of\\\\|fn find_instance_mut\\\" crates/engine/src | head\", \"description\": \"Read support.rs head and locate helpers\"}\n- Bash: {\"command\": \"grep -n \\\"refuses a copy\\\\|fn det\\\\b\\\\|\\\\\\\"fn det\\\\|fn ai_options\\\\|SHARED_HELPERS\\\\|support.rs\\\" crates/tools/tests/acceptance.rs | head -20\", \"description\": \"Find acceptance test refus\u2026\n- Bash: {\"command\": \"sed -n 1380,1500p crates/tools/tests/acceptance.rs\", \"description\": \"Read helper copy refusal in acceptance test\"}\n- Bash: {\"command\": \"grep -n \\\"^pub fn \\\\|^pub(crate) fn \\\" crates/ai/tests/ai/support.rs; grep -n \\\"pub fn unit\\\" -B4 -A12 crates/ai/tests/ai/support.rs\", \"description\": \"List support helpers including unit\u2026\n- Bash: {\"command\": \"cd crates/ai/tests/ai && for f in $(grep -l \\\"^use jackioh_engine::testkit::\\\\*;\\\" *.rs); do if grep -q \\\"^use jackioh_ai::\\\\*;\\\" $f && grep -q \\\"evaluate(&\\\\| evaluate(\\\" $f; then echo \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4761 && grep -n \\\"evaluate(\\\\|NextSwing\\\\|^use \\\" crates/ai/tests/ai/brittle.rs | head -12\", \"description\": \"Confirm evaluate call style in brittle.r\u2026\n- Bash: {\"command\": \"sed -n 1,40p scripts/worktree.sh\", \"description\": \"Read worktree.sh usage\"}\n- Bash: {\"command\": \"grep -n -i \\\"keyword\\\" crates/ai/README.md | head -20\", \"description\": \"Check AI README for keyword weight docs\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4761/.bot-plan.md\", \"content\": \"# Draft plan #4761 (planner, opus) \\u2014 in progress\\n\\n## Findings so far (verified in code)\\n- `KeywordWeights` cra\u2026\n- Bash: {\"command\": \"grep -rn \\\"keyword.of(\\\\|\\\\.of(KeywordKind\\\" crates/ai/tests crates/tools crates/server 2>/dev/null | head\", \"description\": \"Find tests calling KeywordWeights::of\"}\n- Bash: {\"command\": \"ls spec/rulings/ | grep -E \\\"^R(3543002|4353002|4319000|4397000|4607000|3551003|4110000)\\\\.md$\\\"\", \"description\": \"Confirm cited ruling notes exist\"}\n- Bash: {\"command\": \"cat rustfmt.toml; git rev-parse --verify origin/main 2>&1 | head -1; ls target/release/jackioh 2>&1 | head -1\", \"description\": \"Check rustfmt config, origin/main and existing build\"}\n- Bash: {\"command\": \"grep -n -i \\\"windfury\\\\|keyword weight\\\\|immune to spells\\\\|KeywordWeights\\\" docs/polish/3-ai.md docs/*.md 2>/dev/null | head\", \"description\": \"Check docs for keyword weight mentions\"}\n- Bash: {\"command\": \"grep -rn \\\"R4607000\\\\|fork screen\\\\|\\\\-\\\\-save\\\\|screen save\\\\|carries\\\" bot/README.md bot/go/README.md 2>/dev/null | head -10; grep -rln \\\"R4607000\\\\|save file\\\" bot/go --include=*.go 2\u2026\n- Bash: {\"command\": \"git show 7cb033f608 -- crates/ai/src/config.rs | grep -n -B2 -A3 \\\"1602\\\\|windfury\\\" | head -30\", \"description\": \"Check how #4319 annotated the windfury knob\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4761/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 2 (the AI): it changes AI_EVAL's keyword weights in crates/ai/src\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md; git status --porcelain\", \"description\": \"Check plan length and that no tracked files changed\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 2 (the AI): it changes AI_EVAL's keyword weights in crates/ai/src/config.rs, which steer the AI's trades and evaluation\"} --> ## Goal Give Evasive its own entry in the AI's keyword table, so `unit_worth` counts an Evasive unit's protection (SPEC \u00a76, R35\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-24T17:46:41Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
@@ -21603,12 +21593,14 @@
       "provider": "claude-3",
       "queued_at": "2026-11-24T17:35:04Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45452311689",
+      "run_id": "pending:f26ccc67-1795544226",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T17:46:41Z",
+      "started_at": "2026-11-24T18:17:37Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7139402756"
+      ]
     },
     "4762": {
       "action": "review",
@@ -21668,9 +21660,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T18:07:00Z",
+    "at": "2026-11-24T18:17:37Z",
     "url": "",
-    "what": "suggestions (ai) on muse"
+    "what": "build #4761 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-24T18:01:09Z",
