@@ -20162,11 +20162,6 @@
       "owner": "claude-3",
       "owner_since": "2026-11-24T13:55:02Z",
       "owner_why": "it plans it",
-      "paused": {
-        "at": "2026-11-24T14:39:36Z",
-        "interrupt": "usage",
-        "provider": "claude-3"
-      },
       "pending_request": false,
       "planned_at": "2026-11-24T14:24:44Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
