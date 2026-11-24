@@ -20527,11 +20527,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-24T14:06:06Z",
+        "at": "2026-11-24T14:40:55Z",
         "difficulty": "hard",
         "provider": "claude-1",
-        "tier": "medium",
-        "why": "Rule 1: changes engine rules code (`crates/engine/src/effects/targets.rs`, `zones.rs`, `query.rs`) that every board sweep, Cleave and adjacency read passes through."
+        "tier": "strong",
+        "why": "Rule 1, engine rules: it changes how crates/engine/src reads board scopes, adjacency (Cleave) and enemy permanents"
       },
       "failures": 0,
       "forced": false,
