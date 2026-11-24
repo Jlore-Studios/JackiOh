@@ -15461,6 +15461,7 @@
       "action": "review",
       "asks": [],
       "audit_tier": "",
+      "closed_at": "2026-11-24T15:00:37Z",
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "hard",
@@ -15481,6 +15482,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
+      "merged": true,
       "own_review": {
         "claimed": true,
         "claimed_at": "2026-11-24T12:51:00Z",
