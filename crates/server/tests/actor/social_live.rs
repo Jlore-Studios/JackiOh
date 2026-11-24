@@ -1069,3 +1069,72 @@ mod r4233000_push {
         );
     }
 }
+
+mod r4348000_block_push {
+    //! R4348000: a block deletes the notifications between the two accounts, either way, and each
+    //! one's open `/ws/social` sockets are sent its new unread count.
+    use super::*;
+
+    /// `from` sends `to` a friend request and cancels it: the request goes, its row stays unread.
+    async fn ask_and_cancel(app: &Arc<App>, from: &Account, to: &Account) {
+        let (status, body) = api(
+            app,
+            "POST",
+            "/api/friends/requests",
+            &from.token,
+            json!({ "username": to.name }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let request_id = body["requestId"].as_str().expect("a request id");
+        let (status, body) = api(
+            app,
+            "DELETE",
+            &format!("/api/friends/requests/{request_id}"),
+            &from.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+    }
+
+    /// R4348000: a block that removes only notifications (no friendship, request or challenge
+    /// between the two) still pushes both players' new unread count, and leaves a third party's
+    /// row counted (#4550, docs/implicit-states.md §11 F30).
+    #[tokio::test(start_paused = true)]
+    async fn r4348000_a_block_that_removes_only_notifications_pushes_both_the_new_count() {
+        let app = empty_test_app().await;
+        let ana = account(&app, 1, "Ana").await;
+        let bob = account(&app, 2, "Bob").await;
+        let cy = account(&app, 3, "Cy").await;
+        ask_and_cancel(&app, &ana, &bob).await;
+        ask_and_cancel(&app, &bob, &ana).await;
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/friends/requests",
+            &cy.token,
+            json!({ "username": ana.name }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+
+        let served = serve(&app);
+        let (ana_ws, bob_ws) = (connected(&served, &ana).await, connected(&served, &bob).await);
+        assert_eq!(next_social(&ana_ws, 0).await["notificationsUnread"], 2);
+        assert_eq!(next_social(&bob_ws, 0).await["notificationsUnread"], 1);
+
+        let (from_ana, from_bob) = (ana_ws.received(), bob_ws.received());
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/blocks",
+            &ana.token,
+            json!({ "profileId": bob.id }),
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        assert_eq!(next_social(&ana_ws, from_ana).await["notificationsUnread"], 1);
+        assert_eq!(next_social(&bob_ws, from_bob).await["notificationsUnread"], 0);
+    }
+}

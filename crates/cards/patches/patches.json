@@ -34048,5 +34048,498 @@
       "traininggrounds-039"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.10d",
+    "date": "2026-11-23",
+    "title": "The card back's attribute test drops a redundant check",
+    "source": "#4516",
+    "notes": "apps/web/src/cards/CardBack.tsx: data-card-back now tests only back === DEFAULT_CARD_COSMETICS.cardBack; the dropped back === undefined arm gave undefined either way, so it was an equivalent mutant Stryker could not kill (week 2968's web-cards survivor). How cards look only, and no back renders differently: no card plays differently.",
+    "player": {
+      "title": "Card backs tidied",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Card backs look exactly as before; a check behind how they pick their design was simplified."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "077254d4b1f5bad7d0814dbe9ce6d6562c228fb6"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.6.11",
+    "date": "2026-11-23",
+    "title": "Patch: the daily patch, rolling up v0.6.10b to v0.6.10d",
+    "source": "patches cut at 84e1400b225797cf9d6e8bb8d1dce5c34681c662: v0.6.10b, v0.6.10c, v0.6.10d",
+    "notes": "The day's patch (R3944000): it rolls up the micros shipped since v0.6.10, each a snapshot of its own: v0.6.10b (The card detail view loads when first opened); v0.6.10c (Spells give no keyword to a Unit Immune to Spells); v0.6.10d (The card back's attribute test drops a redundant check).",
+    "player": {
+      "title": "Immune to Spells holds against more Spells, and 2 more changes",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Card backs look exactly as before; a check behind how they pick their design was simplified."
+      ],
+      "text": [],
+      "fixes": [
+        "The home page no longer downloads the card detail view before it can start, so the first screen is ready sooner on slow connections.",
+        "The War Doctrines and Call to Chaos (Training-Grounds Edition) no longer give their keyword to a Unit Immune to Spells; your other Units, and the ones you play later, still get it.",
+        "Call to Chaos (Stinky Edition)'s Allure no longer reaches a Unit Immune to Spells."
+      ]
+    },
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "traininggrounds-039"
+    ],
+    "includes": [
+      "v0.6.10b",
+      "v0.6.10c",
+      "v0.6.10d"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.11b",
+    "date": "2026-11-23",
+    "title": "Patch: the Infinite Assault, C1, the set, its tags and the Assault Core",
+    "source": "#4577",
+    "notes": "Issue #4577 (part of #4576): the held single-player Infinite Assault set (R4577000), its nine tags (R4577001) and its Assault Core, IA #1-#24 with the tokens #4.1 Drone and #10.1 Drone Escort. No pool deals the set while it is held, so no card players can reach plays differently. Claims --visual because the change touches apps/web/src/cards/ (R2529000): the set's mark in setMark.ts and placeholder scene and motion recipes keyed to infiniteassault- ids only (R4577009); no shipped card's picture moves.",
+    "player": {
+      "title": "Behind the scenes",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Groundwork for future content. No card you can play looks or plays any differently."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "8fea5765571c1259a5b1f90fe260d6e9fa729ab5"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.6.11c",
+    "date": "2026-11-23",
+    "title": "Patch: the tier cards and KPIs read the newest win rates",
+    "source": "winrates-refresh.yml: production's windowed card figures at v0.6.11b (R3882000)",
+    "notes": "The win rates of record refresh from the card statistics at v0.6.11b: 799 cards with at least 20 games over their own windows (provisional figures). The tier pools and KPIs read them from this version on (R3538000, R3538001); earlier versions keep theirs, and CN Tech and NA Tech still read each game's snapshot (R3049000).",
+    "player": {
+      "title": "Win rates refreshed",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "xxFreshJack, JC Backed, Open Enrollment, Selective Enrollment and KPIs now read the win rates of this patch's games."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "0df408bb60279e27f2071adcc97e3ea60d45d4ea"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-109",
+      "stinkyscapeplus-095",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-164"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.11d",
+    "date": "2026-11-23",
+    "title": "Stinkyscape+ Balance Changes VI: the cards it left out",
+    "source": "#4440",
+    "notes": "The rest of the designer's sixth Stinkyscape+ balance pass (#4440), the eleven cards the first part (#4465) left out; its last item, the Smoothies' rework, is a part of its own. Devil's Pact is Tradable on both faces (R1838000); Bogos Binted (2); Bread and Butter's X adds a declared bonus, 1 (Radiant 3), to the Float's product once a Float springs it, a definition with none adding 0 (R2657006); Thorium Reactor's chance 12%; Noxious Rounds 3/1 (Radiant 6/1), the stat standard's second named exception (R4440005); Suppressive Aura (1), Embiggened (3); Tetrative Reconstructor Tribute 3; Cloaked Toe Cracker 3/6 (Radiant 6/12), its base Aura (2) less and its Radiant face's mana gone; Professor Curvature 4/5 (Radiant 8/10); Wardrum without Divine Shield. Tetrative Reconstructor's and Cloaked Toe Cracker's scripts keep their v0.6.11b ones (R767000). Ruling R4440005.",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes VI, the rest",
+      "new": [],
+      "balance": [
+        "Devil's Pact is Tradable.",
+        "Bogos Binted costs (2), down from (3).",
+        "Bread and Butter's Bread Token is X/X with X = the Float + 1 (Radiant 3 × the Float + 3), up from the Float (Radiant 3 × the Float).",
+        "Bread and Butter still makes nothing when a turn ends with no mana left.",
+        "Thorium Reactor blows up 12% of the time, down from 15%.",
+        "Noxious Rounds is 3/1 (Radiant 6/1), from 1/1 (Radiant 2/2).",
+        "Suppressive Aura costs (1), Embiggened (3), down from (2), Embiggened (4).",
+        "Tetrative Reconstructor has Tribute 3, down from Tribute 4.",
+        "Cloaked Toe Cracker is 3/6 (Radiant 6/12), up from 3/4 (Radiant 6/8).",
+        "Cloaked Toe Cracker's Aura makes your Traps cost (2) less (Radiant: (0)), and its Radiant face no longer gains mana after you play a Trap.",
+        "Professor Curvature is 4/5 (Radiant 8/10), up from 3/3 (Radiant 6/6).",
+        "Wardrum no longer has Divine Shield."
+      ],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "df9f93e01bb191d70ee2e95530ecd4393a969708"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-006",
+      "classic-007",
+      "classic-023",
+      "classicplus-019",
+      "classicplus-029",
+      "classicplus-037",
+      "classicplus-047",
+      "classicplus-051",
+      "classicplus-073",
+      "core-007",
+      "core-008",
+      "core-018",
+      "core-033",
+      "core-046",
+      "core-054",
+      "core-067",
+      "core-077",
+      "core-083",
+      "core-091",
+      "core-098",
+      "core-t-rush",
+      "meditative-011",
+      "meditative-023",
+      "meditative-039",
+      "meditative-051",
+      "meditative-091",
+      "meditative-092",
+      "meditative-100",
+      "meditative-101",
+      "meditativeplus-005",
+      "meditativeplus-009",
+      "stinkyscape-008",
+      "stinkyscape-033",
+      "stinkyscape-041",
+      "stinkyscape-046",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-112",
+      "stinkyscape-120",
+      "stinkyscape-134",
+      "stinkyscape-164",
+      "stinkyscape-t-gellium",
+      "stinkyscape-t-narcor",
+      "stinkyscapeplus-055",
+      "stinkyscapeplus-071",
+      "stinkyscapeplus-084",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-103",
+      "stinkyscapeplus-105",
+      "stinkyscapeplus-117",
+      "stinkyscapeplus-134",
+      "stinkyscapeplus-153",
+      "traininggrounds-011"
+    ],
+    "changes": [
+      {
+        "id": "core-018",
+        "name": "Bread and Butter",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-046",
+        "name": "Suppressive Aura",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-077",
+        "name": "Professor Curvature",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-006",
+        "name": "Cloaked Toe Cracker",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.health",
+          "base.text",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-023",
+        "name": "Devil's Pact",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-037",
+        "name": "Wardrum",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-055",
+        "name": "Thorium Reactor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-084",
+        "name": "Bogos Binted",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-131",
+        "name": "Tetrative Reconstructor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-153",
+        "name": "Noxious Rounds",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.11e",
+    "date": "2026-11-23",
+    "title": "Stinkyscape+ Balance Changes VI: the Smoothies gain their Fruits' text",
+    "source": "#4440",
+    "notes": "The last item of the designer's sixth Stinkyscape+ balance pass (#4440): \"Rework such that the fruits aren't fused into them, rather it gains the effect of the fruits.\" S+ #17 Smoothie and #18 Large Smoothie draw their two (three) random Fruits as before, but `fuseRandomInto`'s new `asText` mints the Fruits' fusion as a definition kept by no card and gives the Smoothie its text through R1850000's record (`subsystems::fuse::mint_text_def`): it stays a Smoothie, no fusion, its name, price, rarity and art its own; played, it does each Fruit's effect in turn and plays no Fruit; its owner's view shows the Fruits' text (`CardView.copies`), the opponent's nothing (R4440006). Their fusing scripts are kept through v0.6.11d (R767000). Ruling R4440006. Noxious Rounds' Radiant face is 6/2, from 6/1: the designer normalized it, so it is no exception to R275's stat half (R4440005 rewritten).",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes VI, the Smoothies",
+      "new": [],
+      "balance": [
+        "Noxious Rounds' Radiant face is 6/2, up from 6/1."
+      ],
+      "changes": [
+        "Smoothie and Large Smoothie no longer fuse their Fruits in: each stays a Smoothie, shows its Fruits' text, and when played does each Fruit's effect in turn.",
+        "Playing a Smoothie is not a play of its Fruits."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "9386dda432f95c9ca4fb424060fad365ebbf55c0"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-077",
+      "classicplus-011",
+      "classicplus-019",
+      "classicplus-058",
+      "classicplus-059",
+      "classicplus-062",
+      "classicplus-065",
+      "classicplus-066",
+      "classicplus-067",
+      "classicplus-073",
+      "core-059",
+      "core-t-coin",
+      "core-t-rush",
+      "meditative-004",
+      "meditative-025",
+      "meditative-055",
+      "meditative-078",
+      "meditativeplus-023",
+      "stinkyscape-088",
+      "stinkyscape-109",
+      "stinkyscape-137",
+      "stinkyscapeplus-001",
+      "stinkyscapeplus-017",
+      "stinkyscapeplus-018",
+      "stinkyscapeplus-070",
+      "stinkyscapeplus-120",
+      "stinkyscapeplus-125",
+      "stinkyscapeplus-153",
+      "traininggrounds-017"
+    ],
+    "changes": [
+      {
+        "id": "stinkyscapeplus-153",
+        "name": "Noxious Rounds",
+        "kind": "changed",
+        "fields": [
+          "radiant.health"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.12",
+    "date": "2026-11-23",
+    "title": "Patch: the daily patch, rolling up v0.6.11b to v0.6.11e",
+    "source": "patches cut at 9386dda432f95c9ca4fb424060fad365ebbf55c0: v0.6.11b, v0.6.11c, v0.6.11d, v0.6.11e",
+    "notes": "The day's patch (R3944000): it rolls up the micros shipped since v0.6.11, each a snapshot of its own: v0.6.11b (Patch: the Infinite Assault, C1, the set, its tags and the Assault Core); v0.6.11c (Patch: the tier cards and KPIs read the newest win rates); v0.6.11d (Stinkyscape+ Balance Changes VI: the cards it left out); v0.6.11e (Stinkyscape+ Balance Changes VI: the Smoothies gain their Fruits' text).",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes VI, the rest, and 3 more changes",
+      "new": [],
+      "balance": [
+        "Devil's Pact is Tradable.",
+        "Bogos Binted costs (2), down from (3).",
+        "Bread and Butter's Bread Token is X/X with X = the Float + 1 (Radiant 3 × the Float + 3), up from the Float (Radiant 3 × the Float).",
+        "Bread and Butter still makes nothing when a turn ends with no mana left.",
+        "Thorium Reactor blows up 12% of the time, down from 15%.",
+        "Noxious Rounds is 3/1 (Radiant 6/1), from 1/1 (Radiant 2/2).",
+        "Suppressive Aura costs (1), Embiggened (3), down from (2), Embiggened (4).",
+        "Tetrative Reconstructor has Tribute 3, down from Tribute 4.",
+        "Cloaked Toe Cracker is 3/6 (Radiant 6/12), up from 3/4 (Radiant 6/8).",
+        "Cloaked Toe Cracker's Aura makes your Traps cost (2) less (Radiant: (0)), and its Radiant face no longer gains mana after you play a Trap.",
+        "Professor Curvature is 4/5 (Radiant 8/10), up from 3/3 (Radiant 6/6).",
+        "Wardrum no longer has Divine Shield.",
+        "Noxious Rounds' Radiant face is 6/2, up from 6/1."
+      ],
+      "changes": [
+        "Groundwork for future content. No card you can play looks or plays any differently.",
+        "xxFreshJack, JC Backed, Open Enrollment, Selective Enrollment and KPIs now read the win rates of this patch's games.",
+        "Smoothie and Large Smoothie no longer fuse their Fruits in: each stays a Smoothie, shows its Fruits' text, and when played does each Fruit's effect in turn.",
+        "Playing a Smoothie is not a play of its Fruits."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-006",
+      "classic-007",
+      "classic-023",
+      "classic-077",
+      "classicplus-011",
+      "classicplus-019",
+      "classicplus-029",
+      "classicplus-037",
+      "classicplus-047",
+      "classicplus-051",
+      "classicplus-058",
+      "classicplus-059",
+      "classicplus-062",
+      "classicplus-065",
+      "classicplus-066",
+      "classicplus-067",
+      "classicplus-073",
+      "core-007",
+      "core-008",
+      "core-018",
+      "core-033",
+      "core-046",
+      "core-054",
+      "core-059",
+      "core-067",
+      "core-077",
+      "core-083",
+      "core-091",
+      "core-098",
+      "core-t-coin",
+      "core-t-rush",
+      "meditative-004",
+      "meditative-011",
+      "meditative-023",
+      "meditative-025",
+      "meditative-039",
+      "meditative-051",
+      "meditative-055",
+      "meditative-078",
+      "meditative-091",
+      "meditative-092",
+      "meditative-100",
+      "meditative-101",
+      "meditativeplus-005",
+      "meditativeplus-009",
+      "meditativeplus-023",
+      "stinkyscape-008",
+      "stinkyscape-033",
+      "stinkyscape-041",
+      "stinkyscape-046",
+      "stinkyscape-088",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-112",
+      "stinkyscape-120",
+      "stinkyscape-134",
+      "stinkyscape-137",
+      "stinkyscape-164",
+      "stinkyscape-t-gellium",
+      "stinkyscape-t-narcor",
+      "stinkyscapeplus-001",
+      "stinkyscapeplus-017",
+      "stinkyscapeplus-018",
+      "stinkyscapeplus-055",
+      "stinkyscapeplus-070",
+      "stinkyscapeplus-071",
+      "stinkyscapeplus-084",
+      "stinkyscapeplus-095",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-103",
+      "stinkyscapeplus-105",
+      "stinkyscapeplus-117",
+      "stinkyscapeplus-120",
+      "stinkyscapeplus-125",
+      "stinkyscapeplus-134",
+      "stinkyscapeplus-153",
+      "stinkyscapeplus-164",
+      "traininggrounds-011",
+      "traininggrounds-017"
+    ],
+    "includes": [
+      "v0.6.11b",
+      "v0.6.11c",
+      "v0.6.11d",
+      "v0.6.11e"
+    ],
+    "changes": []
   }
 ]

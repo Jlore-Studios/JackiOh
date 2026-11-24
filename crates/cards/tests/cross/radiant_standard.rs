@@ -158,6 +158,22 @@ mod r275_the_radiant_power_standard_spec_5_2 {
         );
     }
 
+    /// R4440005: Noxious Rounds doubles both stats, 3/1 → 6/2, so it is no exception (v0.6.11d's 6/1 was).
+    #[test]
+    fn r4440005_noxious_rounds_is_no_exception_its_radiant_6_2_doubles_its_3_1() {
+        let card = CATALOG.get("stinkyscapeplus-153").expect("Noxious Rounds");
+        assert_eq!(
+            (
+                card.base.attack,
+                card.base.health,
+                card.radiant.attack,
+                card.radiant.health
+            ),
+            (Some(3), Some(1), Some(6), Some(2))
+        );
+        assert!(!is_exception(&card.id));
+    }
+
     /// R4285006: Halo doubles its attack and keeps its health, 3/1 → 6/1, the one exception.
     #[test]
     fn r4285006_halo_is_the_named_exception_a_6_1_on_a_3_1() {

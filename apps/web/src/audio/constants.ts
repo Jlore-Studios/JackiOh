@@ -110,7 +110,7 @@ export const GOLD_BURST_DELAY_MS = 280;
 export const CHAOS_REVEAL_MAX = 3;
 /** Plays the director keeps open at once (a cast inside a play); the oldest is forgotten past it. */
 export const PLAY_STACK_MAX = 8;
-/** R439: the turn clock's alarm beats through the last this-many ms of the viewer's own turn clock. */
+/** R439, R4562000: the clock alarm beats through the last this-many ms of the viewer's own turn or prompt clock. */
 export const CLOCK_ALARM_FROM_MS = 30_000;
 /** Within the last this-many ms each beat is a sharper tick (clockTick), sharper every second. */
 export const CLOCK_ALARM_SHARP_FROM_MS = 10_000;

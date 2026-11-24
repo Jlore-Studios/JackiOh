@@ -52,6 +52,7 @@ use crate::api::catalog::load_patch_versions;
 use crate::api::collection::caller_profile;
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, Req, bad_request, lock, now_ms, ok_of, query_trimmed, to_json,
+    whole_number,
 };
 use crate::app::App;
 use crate::config::{
@@ -1591,21 +1592,11 @@ const ACCOUNT_STATS_TOTALS: [&str; 4] = ["games", "wins", "losses", "draws"];
 /// R1771000: the counters each card of the account copy keeps (R1142000), in `syncPayload`'s order.
 const ACCOUNT_STATS_CARD_COUNTERS: [&str; 4] = ["played", "playedAgainst", "destroyed", "defeated"];
 
-/// Checks whether a JSON value is a non-negative safe integer count.
-fn whole_count(value: &Value) -> Option<u64> {
-    const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
-    let number = value.as_f64()?;
-    if number.fract() != 0.0 || !(0.0..=MAX_SAFE_INTEGER).contains(&number) {
-        return None;
-    }
-    Some(number as u64)
-}
-
 /// R1771000, R1142000: keeps valid catalog card counters for account copy (R654).
 fn account_copy(stats: &Map<String, Value>, defs: &CardDefs) -> IndexMap<String, Value> {
     let mut copy = IndexMap::new();
     for key in ACCOUNT_STATS_TOTALS {
-        if let Some(count) = stats.get(key).and_then(whole_count) {
+        if let Some(count) = stats.get(key).and_then(whole_number) {
             copy.insert(key.to_string(), Value::from(count));
         }
     }
@@ -1617,7 +1608,11 @@ fn account_copy(stats: &Map<String, Value>, defs: &CardDefs) -> IndexMap<String,
             }
             let mut kept = Map::new();
             for key in ACCOUNT_STATS_CARD_COUNTERS {
-                if let Some(count) = counters.get(key).and_then(whole_count).filter(|count| *count > 0) {
+                if let Some(count) = counters
+                    .get(key)
+                    .and_then(whole_number)
+                    .filter(|count| *count > 0)
+                {
                     kept.insert(key.to_string(), Value::from(count));
                 }
             }

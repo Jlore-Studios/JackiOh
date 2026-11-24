@@ -177,7 +177,10 @@ builds reads its own game's hold without the state (R2201001).
   `queue_deck_casts` and `run_deck_cast` behind the hidden `@deckCast` entry; the verbs are
   `effects/add_to_hand.rs` (`addMeetingPair`, `at`), `effects/fuse.rs` (`count`, `unfusedOnly`,
   `untilCost`), `effects/cast.rs` (`cast_new_times`), the catalog's `nameContains` and
-  `StaticFlags.starts_at_bottom`.
+  `StaticFlags.starts_at_bottom`. `fuseRandomInto`'s `asText` (R4440006, the Smoothies since issue
+  #4440) gives the kept card the picks' fused text instead of fusing them in: `subsystems/fuse.rs`'s
+  `mint_text_def` mints the fusion kept by no card, the card runs it through `subsystems/unit_text.rs`'s
+  record, and `view_for.rs`'s `with_copies` shows it off the field as a copier's text.
 - `effects/anomaly.rs` is Stinkyscape's Anomalies and Scanning Probes (R1855000–R1855003):
   `replace_board` exiles what its card reaches of its caster's side, lays a preset as summons into
   their named zones with their riders in memory, then fires each laid Unit's Cry under R452's random

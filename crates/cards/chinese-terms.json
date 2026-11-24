@@ -46,6 +46,15 @@
     "Automa-ζ": "自动机-ζ",
     "Automa-Ω": "自动机-Ω",
     "Paperclip": "回形针",
+    "Hallucination": "幻觉",
+    "Overclock": "超频",
+    "Batch": "批处理",
+    "Recursion": "递归",
+    "Jailbreak": "越狱",
+    "Firewall": "防火墙",
+    "Scraper": "爬虫",
+    "Singularity": "奇点",
+    "Commander": "指挥官",
     "Token": "衍生物"
   },
   "rarities": {

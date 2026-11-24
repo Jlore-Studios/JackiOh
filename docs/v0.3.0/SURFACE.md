@@ -117,8 +117,8 @@ Rules that follow from the tree:
   it never edits those files. A dependency or module it wishes existed goes under `GAPS` in its notes
   (§16) and part 31 adds it.
 - Integration tests are one binary per crate (`tests/rules.rs`, `tests/cards.rs`, `tests/ai.rs`,
-  `tests/server.rs`, plus `tests/golden.rs`). Each file directly under `tests/` is its own binary
-  and its own link step, so 300 of them would cost minutes per `cargo test`. The engine's rules
+  `tests/server.rs`, `tests/shared.rs`, plus `tests/golden.rs`). Each file directly under `tests/` is its
+  own binary and its own link step, so 300 of them would cost minutes per `cargo test`. The engine's rules
   are three, `tests/rules.rs`, `tests/rules_2.rs` and `tests/rules_3.rs`, which CI compiles side by
   side (#2090, #2957).
 - Data files are **copied** by part 1, not moved: the TypeScript engine must keep working on

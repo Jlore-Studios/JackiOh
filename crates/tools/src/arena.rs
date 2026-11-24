@@ -1390,8 +1390,9 @@ pub(crate) fn diverged_of(outcomes: &[ArenaOutcome]) -> usize {
         .count()
 }
 
-/// R4319000: whether `--extend` stops with this many decided deals after this many games: at the
-/// floor, or at the cap. The stop looks at how many deals were decided, never which way they went.
+/// R4319000, R4397000: whether `--extend` stops with this many decided deals (or live forks) after
+/// this many games: at the floor, or at the cap. The stop looks at how many deals were decided (or
+/// forks are live), never which way they went.
 pub(crate) fn screen_done(decided: usize, games: i32) -> bool {
     decided >= SCREEN_MIN_DECIDED || games >= SCREEN_MAX_GAMES
 }

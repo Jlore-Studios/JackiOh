@@ -3,7 +3,6 @@
 // a refusal is the server's, thrown as the repo's `ApiRequestError` with its status and code. The
 // wrappers take no token (S8's signatures): `withSession` reads the tab's session at each call (R194).
 
-import type { Difficulty } from "@jackioh/engine/config";
 import type { LeanPick } from "@jackioh/shared";
 
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
@@ -18,11 +17,6 @@ import { withSession } from "./gate.ts";
  * from" pick for their own deck (`leanSet`, R924000, R2031000), absent for none.
  */
 export type DuosDeckChoice = { deckId?: string; random?: boolean; leanSet?: LeanPick };
-
-/** `POST /api/duos/rooms`. */
-export function createDuosRoom(body: { difficulty: Difficulty } & DuosDeckChoice): Promise<{ code: string }> {
-  return withSession((token) => apiRequest<{ code: string }>("/api/duos/rooms", { method: "POST", token, body }));
-}
 
 /** `POST /api/duos/rooms/:code/join`: the match it starts, or 404, or 409 `full` / `own_room`. */
 export function joinDuosRoom(code: string, body: DuosDeckChoice): Promise<{ matchId: string }> {

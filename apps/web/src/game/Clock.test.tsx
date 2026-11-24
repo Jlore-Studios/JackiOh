@@ -29,6 +29,9 @@ import Clock, {
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "./clockConstants.ts";
 import { NO_URGENCY, fuseGeometry, readUrgency, turnClockUrgency } from "./clockUrgency.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { setAudioEngineForTests } from "../audio/engine.ts";
+import { resetAudioSettingsForTests } from "../audio/settings.ts";
+import type { AudioEngine } from "../audio/types.ts";
 import { setReducedMotion } from "../test/setup.ts";
 
 afterEach(cleanup);
@@ -554,4 +557,104 @@ describe("R439 — the last 30 seconds of a turn clock", () => {
     expect(turnKeyOf({ active: "p2", turn: 4, result: { winner: "p1" } })).toBeNull();
     expect(turnKeyOf(null)).toBeNull();
   });
+});
+
+describe("R4562000 — the viewer's own prompt sounds the clock alarm", () => {
+  afterEach(() => {
+    setAudioEngineForTests(null);
+    localStorage.clear();
+    resetAudioSettingsForTests();
+  });
+
+  function recordingEngine(): AudioEngine & { beats: [string, number | undefined][] } {
+    const beats: [string, number | undefined][] = [];
+    const fake = {
+      beats,
+      state: () => "running" as const,
+      playSfx: (id: string, _params?: unknown, delayMs?: number) => {
+        beats.push([id, delayMs]);
+        return true;
+      },
+    };
+    return fake as unknown as AudioEngine & { beats: [string, number | undefined][] };
+  }
+
+  /** One fresh frame per step, so the Clock anchors each reading with no elapsed time. */
+  function promptProps(
+    at: { ms: number },
+    promptMs: number | null,
+    over: Partial<ClockProps> = {},
+  ): ClockProps {
+    return props({
+      frame: frame({
+        turnDeadline: null,
+        promptDeadline: promptMs === null ? null : NOW + promptMs,
+      }),
+      activePlayer: "p2",
+      promptHolder: "p1",
+      viewer: "p1",
+      monotonic: monotonicAt(at),
+      ...over,
+    });
+  }
+
+  it("R4562000 an own prompt on the opponent's turn beats exactly like the turn hook", () => {
+    const engine = recordingEngine();
+    setAudioEngineForTests(engine);
+    const at = { ms: 0 };
+    const view = render(<Clock {...promptProps(at, 12_300)} />);
+    for (const ms of [12_100, 11_900, 11_300]) view.rerender(<Clock {...promptProps(at, ms)} />);
+    expect(engine.beats).toEqual([
+      ["heartbeat", 300],
+      ["heartbeat", 300],
+    ]);
+  });
+
+  it("R4562000 the opponent's prompt plays nothing across a whole 30-second countdown", () => {
+    const engine = recordingEngine();
+    setAudioEngineForTests(engine);
+    const at = { ms: 0 };
+    const view = render(<Clock {...promptProps(at, PROMPT_CLOCK_MS, { promptHolder: "p2" })} />);
+    for (let ms = PROMPT_CLOCK_MS - 200; ms >= 0; ms -= 200) {
+      view.rerender(<Clock {...promptProps(at, ms, { promptHolder: "p2" })} />);
+    }
+    expect(engine.beats).toEqual([]);
+  });
+
+  it("R4562000 answering resets the schedule, so the next prompt counts down afresh", () => {
+    const engine = recordingEngine();
+    setAudioEngineForTests(engine);
+    const at = { ms: 0 };
+    const view = render(<Clock {...promptProps(at, 12_300)} />);
+    expect(engine.beats).toEqual([["heartbeat", 300]]);
+    view.rerender(<Clock {...promptProps(at, null)} />);
+    expect(engine.beats, "answering adds no stray beat").toEqual([["heartbeat", 300]]);
+    view.rerender(<Clock {...promptProps(at, PROMPT_CLOCK_MS)} />);
+    expect(engine.beats).toEqual([
+      ["heartbeat", 300],
+      ["heartbeat", 0],
+    ]);
+  });
+
+  it("R4562000 an own-turn prompt sounds once per second, never on both hooks", () => {
+    const engine = recordingEngine();
+    setAudioEngineForTests(engine);
+    const at = { ms: 0 };
+    const ownTurn = (ms: number | null): ClockProps =>
+      promptProps(at, ms, {
+        frame: frame({
+          turnDeadline: NOW + TURN_CLOCK_MS,
+          promptDeadline: ms === null ? null : NOW + ms,
+        }),
+        activePlayer: "p1",
+        promptHolder: "p1",
+      });
+    const view = render(<Clock {...ownTurn(12_300)} />);
+    for (const ms of [12_100, 11_900, 11_300]) view.rerender(<Clock {...ownTurn(ms)} />);
+    expect(engine.beats).toEqual([
+      ["heartbeat", 300],
+      ["heartbeat", 300],
+    ]);
+  });
+
 });

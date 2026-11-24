@@ -12,6 +12,7 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { setShips } from "@jackioh/shared";
 
 import { unit } from "../test/fixtures.ts";
 import { daily } from "../test/daily.ts";
@@ -38,8 +39,16 @@ function faceRarityOf(id: string): string | null {
   return def.rarity === "Token" ? (def.printedRarity ?? null) : def.rarity;
 }
 
-const MYTHICS = IDS.filter((id) => faceRarityOf(id) === "Mythic");
-const LEGENDARIES = IDS.filter((id) => faceRarityOf(id) === "Legendary");
+/**
+ * R3535000: a default look is drawn only on a card of a set that ships, as the server's `shipped_defs` exports it, so
+ * a held set's Mythics and Legendaries (the Infinite Assault's, R4577000) draw their normal face, among the cards below.
+ */
+const ships = (id: string): boolean => {
+  const def = CATALOG[id];
+  return def !== undefined && setShips(def.set);
+};
+const MYTHICS = IDS.filter((id) => ships(id) && faceRarityOf(id) === "Mythic");
+const LEGENDARIES = IDS.filter((id) => ships(id) && faceRarityOf(id) === "Legendary");
 const BELOW = IDS.filter((id) => !MYTHICS.includes(id) && !LEGENDARIES.includes(id));
 
 /** Two cards of each rarity of each set below Legendary, the pull request's sample; the daily run takes the rest. */

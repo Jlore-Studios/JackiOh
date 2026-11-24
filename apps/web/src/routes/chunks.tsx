@@ -8,7 +8,6 @@ import { loadSceneData } from "../cards/art/sceneLoader.ts";
 import { savingData } from "../net/saveData.ts";
 import { routeChunk } from "./routeChunk.tsx";
 
-export type { RouteChunk } from "./routeChunk.tsx";
 export { routeChunk };
 
 const DEV_ONLY = import.meta.env.MODE !== "production";

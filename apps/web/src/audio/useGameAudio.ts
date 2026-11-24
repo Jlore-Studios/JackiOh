@@ -47,7 +47,7 @@ export function cueCard(lookup: CardLookup | null, defId: string): CueCard | und
  * R2095000: `silent` feeds no audio at all, for the Duos both-boards view's teammate board, so two
  * mounted boards play only the own duel's cues. The hook is still called; only its effects return early.
  */
-export function useGameAudio(runner: AnimationQueue, view: PlayerView, silent = false): void {
+export function useGameAudio(runner: AnimationQueue, view: PlayerView, silent = false, musicKey?: object): void {
   const soundTables = useSoundTables();
   // Use a ref so the persistent director sees a catalog that arrives after it.
   const lookup = useContext(CatalogContext);
@@ -153,13 +153,14 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView, silent = 
   }, [view.result, silent]);
 
   // Enter board music before the first draw, then return control to the menu on unmount.
+  // R4606000: a new key is a new match even without a remount; a stable key never re-runs this.
   useLayoutEffect(() => {
     if (silent) return undefined;
     let leave: (() => void) | null = null;
     quietly(() => {
       const sink = enterGameMusic();
       leave = () => sink.leave();
-      musicRef.current = createMusicDirector({ sink });
+      musicRef.current = createMusicDirector({ sink, musicKey });
       musicRef.current.onView(viewRef.current);
     });
     return () => {
@@ -167,7 +168,7 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView, silent = 
       musicRef.current = null;
       quietly(() => leave?.());
     };
-  }, [silent]);
+  }, [silent, musicKey]);
 
   // Busy bursts hold preloads until the context runs and the burst ends.
   useEffect(() => {

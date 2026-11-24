@@ -35,7 +35,7 @@ use serde::Serialize;
 use crate::arena::{
     AgentSpec, ArenaGame, ArenaOutcome, Entrant, FinishCtx, Live, SCREEN_EXTEND_DEALS, SCREEN_MAX_GAMES,
     SCREEN_MIN_DECIDED, accept, append_records, choose_for, duel_line, entrant_at, finish_from, game_setup,
-    paired_interval, play_game_probed, records_of, records_path, replays, round_share, won_by,
+    paired_interval, play_game_probed, records_of, records_path, replays, round_share, screen_done, won_by,
 };
 
 /// R4397000: the most forks one trunk game keeps, its first ones.
@@ -513,12 +513,6 @@ pub(crate) struct ForkTally {
     pub inconclusive: Option<bool>,
 }
 
-/// R4397000: whether `--extend` stops with this many live forks after this many trunk games: at
-/// the floor, or at the cap. The stop looks at how many forks are live, never which way they went.
-pub(crate) fn fork_done(live_forks: usize, games: i32) -> bool {
-    live_forks >= SCREEN_MIN_DECIDED || games >= SCREEN_MAX_GAMES
-}
-
 pub(crate) fn fork_tally(
     a: &str,
     b: &str,
@@ -650,7 +644,7 @@ pub fn run(args: crate::arena::Args) -> anyhow::Result<()> {
         if !args.extend {
             break;
         }
-        if fork_done(edges.iter().filter(|edge| edge.edge != 0.0).count(), games_done) {
+        if screen_done(edges.iter().filter(|edge| edge.edge != 0.0).count(), games_done) {
             break;
         }
     }
@@ -917,10 +911,10 @@ mod tests {
 
     #[test]
     fn r4397000_extend_plays_on_until_live_forks() {
-        assert!(fork_done(SCREEN_MIN_DECIDED, FORK_TRUNK_DEALS));
-        assert!(!fork_done(SCREEN_MIN_DECIDED - 1, FORK_TRUNK_DEALS));
-        assert!(fork_done(0, SCREEN_MAX_GAMES));
-        assert!(!fork_done(0, SCREEN_MAX_GAMES - 2));
+        assert!(screen_done(SCREEN_MIN_DECIDED, FORK_TRUNK_DEALS));
+        assert!(!screen_done(SCREEN_MIN_DECIDED - 1, FORK_TRUNK_DEALS));
+        assert!(screen_done(0, SCREEN_MAX_GAMES));
+        assert!(!screen_done(0, SCREEN_MAX_GAMES - 2));
     }
 
     #[test]

@@ -3754,3 +3754,110 @@ mod r4508004_a_lane_the_board_loses_takes_an_immune_unit_with_it {
         );
     }
 }
+
+// R4577008 (#4577): the Black Hole's pull at a turn's end takes an immune Unit as the hole's, not as the
+// run of the Spell whose trigger ran last (S #33 Drone Core VII's Float, fuzz seed 1 with Core #90 forced).
+mod r4577008_the_black_hole_s_turn_end_pull_is_no_spell_s_reach {
+    use super::*;
+
+    const HOLE: &str = "stinkyscapeplus-077";
+    const DRONE_CORE_VII: &str = "stinkyscape-033";
+    const IMMUNE: &str = "stand-in (1) 4/4 Immune to Spells";
+
+    /// p1's main phase with the Black Hole played (its base face's hole in midlane, lane 3, pulling at each
+    /// turn's end, R4440050), Drone Core VII in hand, mana left to float, and p1's immune stand-in in `lane`.
+    fn board(lane: i32) -> (Scenario, String) {
+        let library = json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA]);
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [HOLE, DRONE_CORE_VII],
+                "field": [{ "def": IMMUNE, "lane": lane }],
+                "mana": 10,
+                "library": library,
+            },
+            "p2": { "library": library },
+        }));
+        for player in [PlayerId::P1, PlayerId::P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        let id = s.unit_at(PlayerId::P1, lane).id;
+        s.play(HOLE, json!({}));
+        (s, id)
+    }
+
+    /// The I21 findings of `events` on `state`'s step, through a fresh monitor.
+    fn i21_of(state: &GameState, events: &[GameEvent]) -> Vec<String> {
+        let mut monitor = create_invariant_monitor(state);
+        monitor.before(state, state.active, &ActionBody::EndTurn);
+        monitor
+            .after(events, state)
+            .into_iter()
+            .filter(|finding| finding.starts_with("I21"))
+            .collect()
+    }
+
+    #[test]
+    fn r4577008_the_pull_swallows_an_immune_unit_after_a_spell_s_float_and_i21_allows_it() {
+        let (mut s, id) = board(2);
+        let before = s.state().clone();
+        let mut monitor = create_invariant_monitor(&before);
+        monitor.before(&before, before.active, &ActionBody::EndTurn);
+        s.end_turn();
+        let found: Vec<String> = monitor
+            .after(s.last_events(), s.state())
+            .into_iter()
+            .filter(|finding| finding.starts_with("I21"))
+            .collect();
+        assert_eq!(found, no_violations());
+        let floated = s.last_events().iter().any(
+            |event| matches!(event, GameEvent::HookResolving { def_id, .. } if def_id == DRONE_CORE_VII),
+        );
+        assert!(floated, "Drone Core VII's Float ran at the turn's end");
+        assert!(
+            s.state().players[PlayerId::P1]
+                .exile
+                .iter()
+                .any(|card| card.id == id),
+            "the hole's pull swallows lane 2"
+        );
+    }
+
+    #[test]
+    fn r4577008_a_spell_s_exile_of_an_immune_unit_the_pull_cannot_reach_is_still_a_reach() {
+        // One lane from the hole on the side whose turn ended, the pull swallows it; two lanes away it only
+        // steps, and at the end of p1's turn p2's Unit is not pulled at all, so a Spell's exile of either is
+        // a reach.
+        for (lane, side, owner, reach) in [
+            (2, "p1", PlayerId::P1, false),
+            (1, "p1", PlayerId::P1, true),
+            (2, "p2", PlayerId::P2, true),
+        ] {
+            let library = json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA]);
+            let mut setup = json!({
+                "p1": { "hand": [HOLE], "mana": 10, "library": library },
+                "p2": { "library": library },
+            });
+            setup[side]["field"] = json!([{ "def": IMMUNE, "lane": lane }]);
+            let mut s = scenario(setup);
+            let id = s.unit_at(owner, lane).id;
+            s.play(HOLE, json!({}));
+            let state = s.state().clone();
+            let events = [
+                event(json!({ "type": "turnEnded", "player": "p1", "turn": state.turn, "unspentMana": 6 })),
+                event(json!({
+                    "type": "hookResolving",
+                    "sourceId": "r4577008-source",
+                    "defId": DRONE_CORE_VII,
+                    "controller": "p1",
+                    "hook": "whenever",
+                })),
+                event(json!({ "type": "exiled", "instanceId": id, "defId": IMMUNE, "owner": side })),
+            ];
+            let found = i21_of(&state, &events);
+            assert_eq!(found.len(), usize::from(reach), "lane {lane}, {side}: {found:?}");
+            if reach {
+                assert!(found[0].contains(DRONE_CORE_VII), "{}", found[0]);
+            }
+        }
+    }
+}

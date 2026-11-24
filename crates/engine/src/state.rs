@@ -595,6 +595,17 @@ pub struct CostRule {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub set_to: Option<i32>,
+    /// R4577003 (Infinite Assault #18 Prompt Engineer, "your Created cards"): the rule reaches only
+    /// a Created card (`query::is_created`, R943). Absent, it reaches dealt and Created cards alike.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub created: Option<bool>,
+    /// R4577003 ("but not less than (1)"): the rule's `amount` stops at this price, on the number
+    /// every flat and threshold rung left, and never lifts a card already below it. Absent, the add
+    /// has no floor of its own.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub floor: Option<i32>,
 }
 
 /// What a player modifier does, discriminated on `kind` (TS: the union half of `PlayerModifier`).

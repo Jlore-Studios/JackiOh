@@ -100,9 +100,9 @@
 //!      turn edge, a play nested in it being its own until its `cardResolved`, and a card set face-down
 //!      running as a Trap (M #99's row, R3806000). Lawful: anything inside an attack (R4508002), a
 //!      `controlChanged` or `bounced` after a board `swapped`, a `rotated` or a `rolledBack` and a
-//!      restore's `radiantSet` (R4508001), an exile in a `LANE_TAKERS` card's run (R4508004), a
-//!      `radiantSet` under Tears of the Kwzki Tree's world (R4508003), and the state check's switch out of
-//!      a barred Defense and a Burn or Toxic tick (R4508005). A Unit is judged only while still on the
+//!      restore's `radiantSet` (R4508001), an exile in a `LANE_TAKERS` card's run (R4508004) or by the
+//!      Black Hole's pull at a turn's end (R4577008), a `radiantSet` under Tears of the Kwzki Tree's world
+//!      (R4508003), and the state check's switch out of a barred Defense and a Burn or Toxic tick (R4508005). A Unit is judged only while still on the
 //!      field and immune after the step, or gone from it with its own keywords immune. Reads the events
 //!      and the catalog, never `restrictions::unaffected_by`; I14's branches and each Duos duel run it.
 //!   I22 every `target` pick is one its source may aim at (§10.5 step 1, R450; #4540): no Dormant card,
@@ -1357,6 +1357,10 @@ struct ImmuneMark {
     /// Whether its own keywords hold the immunity (`layers::card_keywords` and its conditional ones), so
     /// it is still judged once the step takes it off the field, where no aura reaches it.
     own: bool,
+    /// R4577008: the side it stands on and the lanes it covers as the step begins, which the Black Hole's
+    /// pull at a turn's end reads.
+    side: PlayerId,
+    lanes: Vec<i32>,
 }
 
 /// I21: the Units Immune to Spells a step begins with, by instance id; the cards then set face-down on
@@ -1366,6 +1370,8 @@ struct ImmuneMark {
 struct ImmuneStep {
     marks: IndexMap<String, ImmuneMark>,
     set: IndexSet<String>,
+    /// R4577008: the Black Hole the step begins with, when it pulls at a turn's end (R4440050).
+    hole: Option<crate::geometry::BlackHole>,
     pending_def: Option<String>,
     pending_instance: Option<String>,
 }
@@ -1389,6 +1395,11 @@ fn immune_step(state: &GameState) -> ImmuneStep {
             let mark = ImmuneMark {
                 label: name_of(unit),
                 own,
+                side: match unit.zone {
+                    Zone::Field { player, .. } => player,
+                    _ => unit.controller,
+                },
+                lanes: crate::giga::lanes_of(unit),
             };
             (unit.id.clone(), mark)
         })
@@ -1402,6 +1413,7 @@ fn immune_step(state: &GameState) -> ImmuneStep {
     ImmuneStep {
         marks,
         set,
+        hole: state.black_hole.filter(crate::geometry::BlackHole::pulls_at_end),
         pending_def: resume.map(|resume| resume.def_id.clone()),
         pending_instance: resume.and_then(|resume| resume.instance_id.clone()),
     }
@@ -1516,6 +1528,23 @@ fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, id: &str) -> bool {
         ) && previous.is_some_and(tick)
 }
 
+/// I21, R4577008: whether an `exiled` of `mark`'s Unit may be the Black Hole's pull at the end of `ended`'s
+/// turn (R4440050, `geometry::pull_at_turn_end`): the step began with a hole that pulls at a turn's end and
+/// pulls that player's permanents, the turn has ended, and the Unit stood on that player's side one lane
+/// from the hole, where one step toward it reaches it (R3554001). The hole is the board's, not the Spell's.
+fn pulled_into_the_hole(
+    hole: Option<crate::geometry::BlackHole>,
+    ended: Option<PlayerId>,
+    mark: &ImmuneMark,
+) -> bool {
+    let (Some(hole), Some(player)) = (hole, ended) else {
+        return false;
+    };
+    mark.side == player
+        && hole.pulls.is_none_or(|pulls| pulls == player)
+        && mark.lanes.iter().any(|lane| (lane - hole.lane).abs() == 1)
+}
+
 /// I21 (§6.1 Immune to Spells, R4453000): no Spell changes a Unit Immune to Spells on the field. The
 /// step's events are walked in order, tracking the card running (`hookResolving`, a trap, a turn edge
 /// and the AI's turn; a play nested in a run is its own from its `cardPlayed` to its `cardResolved`,
@@ -1526,7 +1555,9 @@ fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, id: &str) -> bool {
 ///   §6.1's immunity is no restriction on attacks, and the attacking Unit is what reaches its target;
 /// - a `controlChanged` or a `bounced` after a board `swapped`, a `rotated` or a `rolledBack`, and a
 ///   board restore's `radiantSet` (R4508001; R4454000, R4454002): the board move carries it whole;
-/// - an `exiled` in a `LANE_TAKERS` card's run (R4508004): the lane goes with all it holds;
+/// - an `exiled` in a `LANE_TAKERS` card's run (R4508004): the lane goes with all it holds; and one of
+///   a Unit the Black Hole's pull swallows at a turn's end (R4577008, `pulled_into_the_hole`), a stage of
+///   the turn's end with no marker of its own, which follows whatever Spell's trigger ran last (R4440050);
 /// - a `radiantSet` while Tears of the Kwzki Tree's world holds every card Radiant (R4508003, R4454001);
 /// - the game's own rules that run inside the Spell's run with no marker (R4508005): §4.5 step 1's
 ///   switch out of Defense of a Unit the board bars from it (`forbidden_defense`, I17's), and a Burn or
@@ -1578,6 +1609,8 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
     let mut nested: Vec<(&str, ImmuneRun<'_>)> = Vec::new();
     // R4508003: under Tears of the Kwzki Tree every card is Radiant (R3569000).
     let radiant_world = after.radiant_world == Some(true);
+    // R4577008: whose turn has ended in this step, so the Black Hole's pull may follow.
+    let mut ended: Option<PlayerId> = None;
     for (at, event) in events.iter().enumerate() {
         match event {
             GameEvent::HookResolving {
@@ -1601,9 +1634,13 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 };
                 continue;
             }
-            GameEvent::TurnStarted { .. }
-            | GameEvent::TurnEnded { .. }
-            | GameEvent::AutopilotEngaged { .. } => {
+            GameEvent::TurnEnded { player, .. } => {
+                ended = Some(*player);
+                run = ImmuneRun::NONE;
+                continue;
+            }
+            GameEvent::TurnStarted { .. } | GameEvent::AutopilotEngaged { .. } => {
+                ended = None;
                 run = ImmuneRun::NONE;
                 continue;
             }
@@ -1659,8 +1696,8 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 // R4508001: Bogos Binted's Radiant face rebuilds its side Radiant (R4454002); R4508003:
                 // Tears of the Kwzki Tree's world.
                 GameEvent::RadiantSet { .. } => run.window == Some(ImmuneWindow::Restore) || radiant_world,
-                // R4508004: a lane the board loses.
-                GameEvent::Exiled { .. } => run.takes_lane,
+                // R4508004: a lane the board loses; R4577008: or the hole's pull at a turn's end.
+                GameEvent::Exiled { .. } => run.takes_lane || pulled_into_the_hole(step.hole, ended, mark),
                 // R4508005: §4.5 step 1 switches it out of a Defense Position the board bars it from.
                 GameEvent::PositionSwitched {
                     position: Position::Atk,

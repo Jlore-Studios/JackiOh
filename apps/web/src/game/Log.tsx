@@ -15,11 +15,12 @@ import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { RulesText, useInspectTrigger } from "../cards/index.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { CatalogContext, withMatchDefs, type CardLookup } from "./catalog.ts";
-import { LOG_HISTORY_LIMIT } from "./config.ts";
+import { LOG_HISTORY_LIMIT, LOG_PIN_TOLERANCE_PX } from "./config.ts";
 import { testid } from "./contract.ts";
 import { namedFace } from "./faces.ts";
 import { logLines, type LogLine } from "./logLines.ts";
 import { useLogHistory, type KeptLine, type LoggedLine } from "./useLogHistory.ts";
+import { useLogWindow } from "./useLogWindow.ts";
 
 export type LogProps = {
   view: PlayerView;
@@ -60,14 +61,18 @@ export function keptLineFor(view: PlayerView, lookup: CardLookup | null): (event
 
 type Line = KeptLine;
 
-/** One line; a line about a card is a button that opens it (see the header). Kept lines are the same objects from render to render, so they do not redraw. */
-const LogItem = memo(function LogItem({ line }: { line: Line }): ReactElement {
+/**
+ * One line; a line about a card is a button that opens it (see the header). Kept lines are the
+ * same objects from render to render, so they do not redraw. `value` pins the line's number
+ * where rows above it are unmounted (#4614); elsewhere the list numbers it.
+ */
+const LogItem = memo(function LogItem({ line, value }: { line: Line; value?: number }): ReactElement {
   const face = line.face;
   // Lines of code is a hidden stat in matches.
   const inspect = useInspectTrigger(face === null ? null : { key: `log-${line.key}`, face }, { showLoc: false });
   if (face === null) {
     return (
-      <li className="log-line" data-event={line.type}>
+      <li className="log-line" data-event={line.type} data-log-key={line.key} value={value}>
         <RulesText rich={line.text} />
       </li>
     );
@@ -77,7 +82,7 @@ const LogItem = memo(function LogItem({ line }: { line: Line }): ReactElement {
     inspect.openSheet(event.currentTarget);
   };
   return (
-    <li className="log-line" data-event={line.type} data-inspectable="true">
+    <li className="log-line" data-event={line.type} data-log-key={line.key} data-inspectable="true" value={value}>
       <button
         {...inspect.handlers}
         type="button"
@@ -124,6 +129,26 @@ function Log({ view: newest, revealed = false }: LogProps): ReactElement {
     return [{ key: history.keys[index] ?? `${view.viewer}-window-${String(index)}`, type: line.event, text: line.text, face: faces[index] ?? null }];
   });
   const shown = [...history.kept, ...windowLines].slice(-LOG_HISTORY_LIMIT);
+  // #4614: only the rows near the viewport mount; the rest keep their place as blank
+  // spacers. Everything the log says is `shown` itself: the window only decides which of
+  // those same lines draw (CLAUDE.md rule 7).
+  const keys = shown.map((line) => line.key);
+  // A row with an open inspect sheet or focus stays mounted, as the collection's grid keeps
+  // its held card (#3734): unmounting it would drop the focus and close the sheet.
+  const [heldKey, setHeldKey] = useState<string | null>(null);
+  const windowing = useLogWindow(listRef, keys, heldKey);
+  const windowed = windowing !== null && windowing !== "all";
+  const first = windowed ? windowing.first : 0;
+  const last = windowed ? windowing.last : shown.length - 1;
+  const head = windowed ? windowing.head : 0;
+  const tail = windowed ? windowing.tail : 0;
+  // Whether the list sits at its newest line: arrivals re-pin only a pinned list, so one
+  // scrolled up is never yanked down.
+  const pinnedRef = useRef(true);
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (list !== null && pinnedRef.current) list.scrollTop = list.scrollHeight;
+  }, [windowing]);
   // #4140: the screen-reader announcer's words: the newest shown line's plain words (`RichText.full`,
   // never an instance id or a def id; CLAUDE.md rule 7). The ref primes silently on mount and on
   // hotseat hand-over, so history never replays; only a new newest key speaks.
@@ -143,14 +168,40 @@ function Log({ view: newest, revealed = false }: LogProps): ReactElement {
   });
   return (
     <>
-      <ol ref={listRef} className="log" data-testid={testid.log} aria-label={t("Game log")}>
-        {shown.map((line, index) => (
-          <Fragment key={line.key}>
-            {/* #757: drawn only; a list holds list items, and the turn's own line names the turn. */}
-            {index > 0 && line.type === "turnStarted" ? <li className="log-divider" aria-hidden="true" /> : null}
-            <LogItem line={line} />
-          </Fragment>
-        ))}
+      <ol
+        ref={listRef}
+        className={windowed ? "log log--virtual" : "log"}
+        data-testid={testid.log}
+        aria-label={t("Game log")}
+        onScroll={(event) => {
+          const list = event.currentTarget;
+          pinnedRef.current = list.scrollHeight - list.scrollTop - list.clientHeight <= LOG_PIN_TOLERANCE_PX;
+        }}
+        onFocus={(event) => {
+          const row = event.target instanceof Element ? event.target.closest<HTMLElement>("li[data-log-key]") : null;
+          setHeldKey(row?.dataset.logKey ?? null);
+        }}
+        onBlur={(event) => {
+          // Focus moving to another row of the log is the next row's focus to say.
+          if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) setHeldKey(null);
+        }}
+      >
+        {/* #4614: the unmounted head's blank place; out of the numbering, as the divider is. */}
+        {head > 0 ? <li className="log-spacer" aria-hidden="true" style={{ height: head }} /> : null}
+        {shown.slice(first, last + 1).map((line, at) => {
+          const whole = first + at;
+          return (
+            <Fragment key={line.key}>
+              {/* #757: drawn only; a list holds list items, and the turn's own line names the turn. */}
+              {whole > 0 && line.type === "turnStarted" ? (
+                <li className="log-divider" aria-hidden="true" data-log-divider={line.key} />
+              ) : null}
+              <LogItem line={line} value={windowed && at === 0 && whole > 0 ? whole + 1 : undefined} />
+            </Fragment>
+          );
+        })}
+        {/* #4614: the unmounted tail's blank place. */}
+        {tail > 0 ? <li className="log-spacer" aria-hidden="true" style={{ height: tail }} /> : null}
       </ol>
       {/* #4140: always in the tree (as the draw notices are) so an arriving line is read out; `said`
           only changes on arrival, so mount, reveal and re-render announce nothing. */}
