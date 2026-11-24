@@ -20271,6 +20271,13 @@
     "4732": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T14:24:41Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Build tooling only: one attribute in crates/wasm/c, a shell self-test, one web test file and a README line. No engine, AI, migration or cross-crate design, and about 4 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
