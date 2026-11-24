@@ -17,6 +17,7 @@
 // when the social read says the games waiting on the player changed (the opponent moved), and every
 // `DAILY_REREAD_MS` while the tab shows and when it shows again, which shows an end the count does not
 // (R3840000). Once the game is over, Rematch sends its opponent a new daily challenge at the same mode and time per move (§9.13).
+// An opponent whose account was deleted after the game reads "a deleted account" and gets no Rematch (R4621000).
 // A KY's Competition question shows no 60-second countdown here (R3727003): the move's deadline is its window.
 //
 // The board shows what every table shows (R3855000): its hero names the opponent, its rail lists the modifiers
@@ -48,6 +49,7 @@ import { navigate, paths } from "../net/navigate.ts";
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { BackLink } from "../routes/nav.tsx";
+import { playerName } from "../routes/replayWords.ts";
 import { useCatalogLookup } from "../together/catalog.ts";
 import { useSocialReads } from "../together/socialPoll.ts";
 import { DailyClockPill, resultLine, useNow } from "./DailyClockPill.tsx";
@@ -79,7 +81,7 @@ function ExpiredGame({ game }: { game: DailyExpiredGame }): ReactElement {
         {resultLine(game)}
       </h2>
       <p>
-        {t("vs {opponent}", { opponent: game.opponent.username })} · {t("Turn {n}", { n: game.turn })}
+        {t("vs {opponent}", { opponent: playerName(game.opponent.username) })} · {t("Turn {n}", { n: game.turn })}
       </p>
       <p>{t("You {me} – {them} Opponent", { me: game.life.me, them: game.life.them })}</p>
       {game.endedAt === null ? null : <p>{t("Ended {when}", { when: formatDateTime(game.endedAt) })}</p>}
@@ -238,12 +240,16 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
     return <Loading what="Loading your game…" slow skeleton="panel" />;
   }
 
+  const opponent = playerName(game.opponent.username);
+  // R4621000: an account deleted after the game ended has no account to challenge.
+  const opponentGone = game.opponent.username === "";
+
   if (watching && game.view.result !== null) {
     return (
       <CatalogContext.Provider value={lookup}>
         <OpenedReplay
           load={() => withSession((token) => openOnlineMatchReplay(token, game.matchId))}
-          opponentLabel={game.opponent.username}
+          opponentLabel={opponent}
           onLeave={() => {
             setWatching(false);
           }}
@@ -280,7 +286,7 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
           view={game.view}
           legal={game.legal}
           forecast={game.forecast}
-          enemyLabel={game.opponent.username}
+          enemyLabel={opponent}
           onAction={send}
           error={error}
           wearCosmetics
@@ -306,15 +312,17 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
           resultActions={
             <>
               {nextButton}
-              <button
-                type="button"
-                data-testid={dailyTestid.rematch}
-                onClick={() => {
-                  setRematching(true);
-                }}
-              >
-                {t("Rematch")}
-              </button>
+              {opponentGone ? null : (
+                <button
+                  type="button"
+                  data-testid={dailyTestid.rematch}
+                  onClick={() => {
+                    setRematching(true);
+                  }}
+                >
+                  {t("Rematch")}
+                </button>
+              )}
               {game.view.result?.reason === "voided" ? null : (
                 <button
                   type="button"
