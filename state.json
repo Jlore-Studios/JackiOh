@@ -41393,7 +41393,8 @@
       "2026-11-24T03:42:00Z,claude-4,stream,call,45319249665,66,2026-11-24T04:20:00Z,,,allowed,100,,"
     ],
     "runs": [
-      "2026-11-24T03:35:29Z,45319332989,claude-6,opus,plan,4594,hard,interrupted,5-hour cap,7.8,0,0,0,,50,100,,,489.3,,fresh,,1"
+      "2026-11-24T03:35:29Z,45319332989,claude-6,opus,plan,4594,hard,interrupted,5-hour cap,7.8,0,0,0,,50,100,,,489.3,,fresh,,1",
+      "2026-11-24T03:43:01Z,45319249665,claude-4,opus,plan,4593,hard,planned,,15.5,179,82766,12981185,8.6913,45,66,,,488.6,claude-8,fresh,other,1"
     ]
   },
   "version": 1
