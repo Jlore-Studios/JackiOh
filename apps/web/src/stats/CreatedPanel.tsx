@@ -17,7 +17,7 @@ import { RangeText, TierFitText } from "./RangeText.tsx";
 import { TableScroll } from "./TableScroll.tsx";
 import { statsTestid } from "./testids.ts";
 import { TierChip, adjustedText, decisivenessText, tierRank } from "./TierChip.tsx";
-import { cardTierFit } from "./tierFit.ts";
+import { cardTierFit, type TierFitCard } from "./tierFit.ts";
 
 /** Unit conversion, not configuration: a share of 0..1 as a percentage. */
 const PERCENT = 100;
@@ -42,13 +42,16 @@ export function createdSortOf(col: string, dir: "asc" | "desc"): CreatedSort {
   return { col: CREATED_SORT_COLUMNS.find((known) => known === col) ?? "adjustedWinRate", dir };
 }
 
+/** What a row sorts by: a Created card's, and R4678001 a Running row's, which has no Decisiveness. */
+export type SortedRow = TierFitCard & Pick<PublicCreatedStat, "id" | "name" | "games" | "adjustedWinRate" | "decisiveness">;
+
 /** R4082000: a card's adjusted win rate as the row shows it, null below the floor or from an older server. */
-function adjustedOf(card: PublicCreatedStat): number | null {
+function adjustedOf(card: SortedRow): number | null {
   return card.hasEnoughGames ? (card.adjustedWinRate ?? null) : null;
 }
 
 /** R4552004: a card's decisiveness as the row shows it, null below the floor or from an older server. */
-function decisivenessOf(card: PublicCreatedStat): number | null {
+function decisivenessOf(card: SortedRow): number | null {
   return card.hasEnoughGames ? (card.decisiveness ?? null) : null;
 }
 
@@ -57,13 +60,13 @@ function decisivenessOf(card: PublicCreatedStat): number | null {
  * either way, and rows that tie in the server's order. R4082000: by tier, S first descending, then by Adjusted;
  * R4083000: within a tier by tier fit first (R3184001), a card with none after, as the deck table sorts.
  */
-export function sortCreated(
-  created: readonly PublicCreatedStat[],
+export function sortCreated<Row extends SortedRow>(
+  created: readonly Row[],
   sort: CreatedSort,
-  tiers: Pick<PublicStatsTiers, "bandLow" | "bandHigh" | "created"> | undefined,
+  tiers: Pick<PublicStatsTiers, "bandLow" | "bandHigh"> | undefined,
   nameOf: (id: string, name: string) => string,
   language?: string,
-): PublicCreatedStat[] {
+): Row[] {
   const flip = sort.dir === "desc" ? -1 : 1;
   const { col } = sort;
   return [...created].sort((a, b) => {
@@ -84,8 +87,13 @@ export function sortCreated(
   });
 }
 
+/** R3184002: the sort a header's press asks for: its column descending (a name ascending), or the same flipped. */
+export function pressedSort(sort: CreatedSort, col: CreatedColumn): CreatedSort {
+  return sort.col === col ? { col, dir: sort.dir === "asc" ? "desc" : "asc" } : { col, dir: col === "name" ? "asc" : "desc" };
+}
+
 /** R3184002: a sortable header: the first press sorts descending (a name ascending), the next flips it. */
-function SortHeader({
+export function SortHeader({
   col,
   label,
   title,
@@ -163,12 +171,7 @@ export function CreatedPanel({
   const titleId = useId();
   if (created.length === 0) return null;
 
-  const pressed = (col: CreatedColumn): void =>
-    onSort(
-      sort.col === col
-        ? { col, dir: sort.dir === "asc" ? "desc" : "asc" }
-        : { col, dir: col === "name" ? "asc" : "desc" },
-    );
+  const pressed = (col: CreatedColumn): void => onSort(pressedSort(sort, col));
   const rows = sortCreated(created, sort, tiers, nameOf, locale === "en" ? undefined : locale);
   const header = { sort, onSort: pressed };
   const tokens = kind === "tokens";
