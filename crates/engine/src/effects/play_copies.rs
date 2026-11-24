@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::effects::targets::{PlayerSpec, player_of};
-use crate::play_history::{FaceUpPlay, last_plays, plays_last_turn};
 use crate::prelude::json_as;
+use crate::recursion_log::{FaceUpPlay, last_plays, plays_last_turn};
 use crate::script::Effect;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

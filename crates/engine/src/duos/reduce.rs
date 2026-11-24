@@ -144,6 +144,7 @@ fn pass(state: &mut DuosState, seat: DuosSeat, instance_id: &str, events: &mut V
     let mate = seat.teammate();
     let to = mate.duel();
     let cost = state.teams[seat.team()].rules.pass_cost;
+    let kept = crate::recursion_log::kept(&state.duels[from]);
 
     let side = &mut state.duels[from].players[seat.player()];
     let Some(at) = side.hand.iter().position(|card| card.id == instance_id) else {
@@ -163,7 +164,7 @@ fn pass(state: &mut DuosState, seat: DuosSeat, instance_id: &str, events: &mut V
     let new_instance_id = format!("c{}", target.next_id);
     target.next_id += 1;
     let receiver = mate.player();
-    let moved = passed_card(card, new_instance_id.clone(), receiver);
+    let moved = passed_card(kept, card, new_instance_id.clone(), receiver);
     target.players[receiver].hand.push(moved);
 
     state.passes[from] += 1;
@@ -182,10 +183,11 @@ const PASSED_MEMORY: &[&str] = &[RETURN_PRICE_KEY, POWER_KEY];
 
 /// B20, R1168000: `card` in `receiver`'s hand under `id`, keeping all but the memory that names the
 /// duel it left. The AI's pass model makes its copy here too, so the two cannot drift.
-pub fn passed_card(card: CardInstance, id: String, receiver: PlayerId) -> CardInstance {
+/// R4592002: `kept` is whether the duel it leaves keeps the recursion log (`recursion_log::kept`).
+pub fn passed_card(kept: bool, card: CardInstance, id: String, receiver: PlayerId) -> CardInstance {
     let mut moved = card;
     moved.id = id;
-    crate::origin::note_origin(&mut moved);
+    crate::origin::note_origin(kept, &mut moved);
     moved.owner = receiver;
     moved.controller = receiver;
     moved.zone = Zone::Hand { player: receiver };

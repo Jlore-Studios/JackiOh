@@ -109,8 +109,12 @@ mod tests {
             let decoy = decoy_of(&s);
             s.expect_stats(&decoy, json!({ "attack": 0, "health": 5 }));
             assert!(!decoy.radiant);
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "health": 5 }), "the first unit is untouched");
-            s.expect_stats(&s.unit_at(P2, 1), json!({ "health": 3 }), "the 0-attack decoy strikes nothing back");
+            // The first unit is untouched.
+            let p1_1 = s.unit_at(P1, 1);
+            s.expect_stats(&p1_1, json!({ "health": 5 }));
+            // The 0-attack decoy strikes nothing back.
+            let p2_1 = s.unit_at(P2, 1);
+            s.expect_stats(&p2_1, json!({ "health": 3 }));
             s.expect_in_zone(HONEYPOT, "graveyard");
         }
 
@@ -134,7 +138,9 @@ mod tests {
                 (1..=5).filter_map(|lane| s.unit(P1, lane)).all(|unit| unit.def_id != DECOY),
                 "nothing summoned"
             );
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "health": 2 }), "the attack goes on");
+            // The attack goes on.
+            let p1_1 = s.unit_at(P1, 1);
+            s.expect_stats(&p1_1, json!({ "health": 2 }));
         }
     }
 

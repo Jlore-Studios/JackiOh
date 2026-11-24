@@ -52,7 +52,6 @@ mod tests {
 
     use crate::scenario;
 
-    const FILLER: &str = "core-005";
     const TARGET: &str = "core-016";
 
     fn board(radiant: bool) -> Scenario {

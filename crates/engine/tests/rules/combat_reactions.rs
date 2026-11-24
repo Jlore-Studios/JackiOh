@@ -1054,7 +1054,8 @@ mod r4589006_a_reset_that_keeps_its_card_standing {
         s.play(extra.as_str(), json!({ "zone": 3 }));
         let first = id_at(&s, P1, 1);
         apply_now(s.state_mut(), destroy(&first));
-        apply_now(s.state_mut(), destroy(&id_at(&s, P1, 3)));
+        let third = id_at(&s, P1, 3);
+        apply_now(s.state_mut(), destroy(&third));
         // Only the Lich stands: its side shrank, so its next start of turn resets it.
         s.end_turn();
         s.end_turn();
@@ -1075,7 +1076,8 @@ mod r4589006_a_reset_that_keeps_its_card_standing {
         let extra = hand_id(&s, P1, PLAIN);
         s.play(extra.as_str(), json!({ "zone": 3 }));
         // Only the extra leaves: the side still matches the snapshot.
-        apply_now(s.state_mut(), destroy(&id_at(&s, P1, 3)));
+        let third = id_at(&s, P1, 3);
+        apply_now(s.state_mut(), destroy(&third));
         s.end_turn();
         s.end_turn();
         assert_eq!(id_at(&s, P1, 2), lich);

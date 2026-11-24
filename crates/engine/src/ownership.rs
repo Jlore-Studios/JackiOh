@@ -40,8 +40,9 @@ pub fn change_owner(sink: &mut EngineSink<'_>, card: &CardInstance, thief: Playe
     // R466: who could read the card where it lies, judged before anything about it changes.
     let readable_from = readers_where_it_lies(sink.state, &card);
     let from = card.owner;
+    let kept = crate::recursion_log::kept(sink.state);
     if let Some(taken) = find_instance_mut(sink.state, &card.id) {
-        crate::origin::note_origin(taken);
+        crate::origin::note_origin(kept, taken);
         taken.owner = thief;
         taken.controller = thief;
         hide_from_owner(taken);

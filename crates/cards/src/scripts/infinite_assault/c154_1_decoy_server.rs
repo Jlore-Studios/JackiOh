@@ -43,7 +43,7 @@ mod tests {
 
         #[test]
         fn a_0_8_taunt() {
-            let s = board(false);
+            let mut s = board(false);
             let decoy = s.unit_at(P1, 1);
             s.expect_stats(&decoy, json!({ "attack": 0, "health": 8 }));
             assert!(has(&s, &decoy, KeywordKind::Taunt));
@@ -55,7 +55,7 @@ mod tests {
 
         #[test]
         fn a_0_16_taunt() {
-            let s = board(true);
+            let mut s = board(true);
             let decoy = s.unit_at(P1, 1);
             s.expect_stats(&decoy, json!({ "attack": 0, "health": 16 }));
             assert!(has(&s, &decoy, KeywordKind::Taunt));

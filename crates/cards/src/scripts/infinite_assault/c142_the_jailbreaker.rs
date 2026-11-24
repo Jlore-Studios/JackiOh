@@ -63,7 +63,6 @@ mod tests {
     const JAILBREAKER: &str = ID;
     const BURN: &str = "classic-036"; // Burn: deal damage to any unit or hero
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-    const FILLER: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
 
     fn cost_of(s: &Scenario, card: &CardInstance) -> i32 {
         jackioh_engine::mana::effective_cost(s.state(), card, Default::default())

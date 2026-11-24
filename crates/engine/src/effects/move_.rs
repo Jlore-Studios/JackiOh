@@ -56,10 +56,11 @@ pub fn bounce_card(ctx: &mut EngineSink<'_>, card: &CardInstance) {
     let mut card = card.clone();
     // R747, R12: only a card on the field can have another controller; it is theirs before the R78 reset.
     if card.zone.z() == ZoneName::Field {
-        crate::origin::note_origin(&mut card);
+        let kept = crate::recursion_log::kept(ctx.state);
+        crate::origin::note_origin(kept, &mut card);
         card.owner = card.controller;
         if let Some(live) = find_instance_mut(ctx.state, &card.id) {
-            crate::origin::note_origin(live);
+            crate::origin::note_origin(kept, live);
             live.owner = live.controller;
         }
     }

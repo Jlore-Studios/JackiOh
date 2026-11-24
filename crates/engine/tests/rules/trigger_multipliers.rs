@@ -379,11 +379,8 @@ fn r4589003_one_dying_in_the_pass_doubles_nothing() {
             .contains_key(jackioh_engine::state_check::REBORN_KEPT_KEY),
         "a Recursionist dying in the same pass doubles nothing (R823)"
     );
-    // Its ordinary Reborn still spends itself: one more return, then dead.
+    // Its ordinary Reborn spent itself on that one return: the next death leaves it dead.
     s.play(BOLT, json!({ "targets": [instance(&body)] }));
-    assert!(s.unit(P1, 1).is_some_and(|unit| unit.def_id == REBORNER));
-    let again = s.unit(P1, 1).expect("the reborner");
-    s.play(BOLT, json!({ "targets": [instance(&again)] }));
     assert!(
         s.unit(P1, 1).filter(|unit| unit.def_id == REBORNER).is_none(),
         "no Reborn is left to spend"

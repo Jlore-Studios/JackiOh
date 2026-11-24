@@ -87,7 +87,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
             both(Script {
                 targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))],
                 cry: Some(hook(|_ctx| {
-                    vec![effects::double_stats(json_as(json!({ "target": { "of": "chosen" } })))]
+                    vec![effects::double_stats(json_as(
+                        json!({ "target": { "of": "chosen" } }),
+                    ))]
                 })),
                 ..Script::default()
             }),

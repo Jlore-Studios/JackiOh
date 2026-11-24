@@ -120,13 +120,12 @@ pub fn fnv1a32_utf16_u32(text: &str) -> u32 {
     hash
 }
 
-/// FNV-1a over the canonical state, minus the nonce log (bookkeeping) and three fields whose arrival moved
-/// no recorded game's hash: the opening a Glitch reset deals again (R676), the Created cards'
-/// generators (R1956001), and the game history (R4594005), which is written in every game.
-/// The text comes from `direct::canonical_text`, or the `Value` path for a shape it
+/// FNV-1a over the canonical state, minus the nonce log (bookkeeping) and two fields whose arrival moved
+/// no recorded game's hash: the opening a Glitch reset deals again (R676) and the Created cards'
+/// generators (R1956001). The text comes from `direct::canonical_text`, or the `Value` path for a shape it
 /// leaves alone, byte for byte the same, so the hash never depends on which path ran.
 pub fn hash_state(state: &GameState) -> String {
-    if let Some(text) = direct::canonical_text(state, &["applied", "opening", "generators", "history"]) {
+    if let Some(text) = direct::canonical_text(state, &["applied", "opening", "generators"]) {
         return fnv1a32_utf16(&text);
     }
     let mut value = match serde_json::to_value(state) {
@@ -137,7 +136,6 @@ pub fn hash_state(state: &GameState) -> String {
         map.remove("applied");
         map.remove("opening");
         map.remove("generators");
-        map.remove("history");
     }
     fnv1a32_utf16(&canonical(&value))
 }

@@ -41,7 +41,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::ID;
-    use jackioh_engine::testkit::PlayerId::P1;
+    use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
     use crate::scenario;

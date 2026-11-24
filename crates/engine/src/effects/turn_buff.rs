@@ -25,9 +25,7 @@ pub struct BuffThisTurnArgs {
 
 /// The live card's this-turn buff while its turn is now, else none.
 pub fn turn_buff_of<'a>(state: &GameState, card: &'a CardInstance) -> Option<&'a TurnBuff> {
-    card.turn_buff
-        .as_ref()
-        .filter(|buff| buff.turn == state.turn)
+    card.turn_buff.as_ref().filter(|buff| buff.turn == state.turn)
 }
 
 /// "+N Attack and <keywords> this turn" on one unit on the field: adds to the Attack held for this
@@ -47,10 +45,14 @@ pub fn buff_this_turn(args: BuffThisTurnArgs) -> Effect {
         }
         let now = ctx.state.turn;
         if let Some(live) = find_instance_mut(ctx.sink.state, &instance.id) {
-            let mut held = live.turn_buff.take().filter(|buff| buff.turn == now).unwrap_or(TurnBuff {
-                turn: now,
-                ..TurnBuff::default()
-            });
+            let mut held = live
+                .turn_buff
+                .take()
+                .filter(|buff| buff.turn == now)
+                .unwrap_or(TurnBuff {
+                    turn: now,
+                    ..TurnBuff::default()
+                });
             held.attack += attack;
             for keyword in &keywords {
                 if !held.keywords.iter().any(|held| held.kind() == keyword.kind()) {

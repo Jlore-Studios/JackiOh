@@ -57,7 +57,11 @@ fn zero_day_standing(seed: &str) -> GameState {
 
 fn answered(seed: &str, state: &GameState) {
     let decision = decide(state, AI, &mut ai_options(seed, AI_BUDGET)).expect("a decision");
-    assert!(is_legal(state, AI, &decision.action), "{seed}: {:?}", decision.action);
+    assert!(
+        is_legal(state, AI, &decision.action),
+        "{seed}: {:?}",
+        decision.action
+    );
     assert_ne!(decision.reason, DecisionReason::Fallback, "{seed}");
     assert_eq!(decision.stats.sim_panics, 0, "{seed}");
 }
@@ -98,9 +102,7 @@ fn r4594014_the_ai_casts_a_targeted_spell_against_zero_day() {
             .clone();
         let plays: Vec<ActionBody> = legal_actions(&state, AI)
             .into_iter()
-            .filter(|action| {
-                matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == lunar)
-            })
+            .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == lunar))
             .collect();
         assert_eq!(plays.len(), 1, "{k}: listed once");
         assert!(

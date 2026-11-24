@@ -77,7 +77,9 @@ mod tests {
             let hitter = s.unit_at(P2, 1);
             let unit = s.unit_at(P1, 1);
             s.attack(&hitter, &unit);
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "health": 3 }), "the unit takes nothing");
+            // The unit takes nothing.
+            let p1_1 = s.unit_at(P1, 1);
+            s.expect_stats(&p1_1, json!({ "health": 3 }));
             let second = s.unit_at(P2, 2);
             s.attack(&second, "hero");
             s.expect_health(P1, 30);

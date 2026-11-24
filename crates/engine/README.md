@@ -108,8 +108,10 @@ builds reads its own game's hold without the state (R2201001).
   built with `hook(|ctx| …)`, and never writes the state itself (CLAUDE.md rule 5).
 - `query.rs` (with `zones`, `layers`, `mana`, `numbers`, `params`) is the read half: the board facts
   a card reads instead of `GameState` fields. `crates/cards/README.md` lists them.
-- `recursion_log.rs` (R4589000–R4589004) is the Recursion cards' memory: the face-up plays and Unit
-  deaths each side keeps once the game holds an Infinite Assault card, and `returned_by_reborn`;
+- `recursion_log.rs` (R4589000–R4589004) is the Infinite Assault's one game history: the face-up plays
+  (with their player-turn) and Unit deaths each side keeps once the game holds an Infinite Assault card,
+  read by the Recursion, Scraper (R4592000) and Commander (R4594005, R4594009) cards, and
+  `returned_by_reborn`; `origin.rs` stamps a card's deck of origin under the same gate (R4592002);
   `Script.death_extra` and `Script.reborn_extra` are IA #118's Death-only and Reborn multipliers, and
   `reset_side_keeping_self` is IA #119's reset that leaves its own card standing.
 - `prelude` is what a card file names: `use jackioh_engine::prelude::*;`.

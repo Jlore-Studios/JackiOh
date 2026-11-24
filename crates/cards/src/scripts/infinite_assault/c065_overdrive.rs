@@ -68,7 +68,7 @@ mod tests {
 
     const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
 
-    fn board(radiant: bool, hand: Value) -> Scenario {
+    fn board(hand: Value) -> Scenario {
         scenario(json!({
             "p1": { "hand": hand, "library": crate::filler(4) },
             "p2": { "hand": [FILLER], "library": crate::filler(4) },
@@ -85,7 +85,7 @@ mod tests {
         #[test]
         fn r4587002_two_damage_for_each_mana_left_at_your_end_of_turn() {
             // 4 paid 3, then the gain: 1 + 4 = 5; one (2) Spell spent: 3 left, 6 to the hero.
-            let mut s = board(false, json!([overdrive(false), TWO]));
+            let mut s = board(json!([overdrive(false), TWO]));
             s.play(ID, json!({}));
             s.play(TWO, json!({}));
             s.end_turn();
@@ -95,7 +95,7 @@ mod tests {
 
         #[test]
         fn spending_it_all_costs_nothing() {
-            let mut s = board(false, json!([overdrive(false), TWO, TWO, ONE]));
+            let mut s = board(json!([overdrive(false), TWO, TWO, ONE]));
             s.play(ID, json!({}));
             s.play(TWO, json!({}));
             s.play(TWO, json!({}));
@@ -111,7 +111,7 @@ mod tests {
         #[test]
         fn r4587002_the_radiant_face_gains_6() {
             // 4 paid 3, then the gain: 1 + 6 = 7; one (2) Spell spent: 5 left, 10 to the hero.
-            let mut s = board(true, json!([overdrive(true), TWO]));
+            let mut s = board(json!([overdrive(true), TWO]));
             s.play(ID, json!({}));
             s.play(TWO, json!({}));
             s.end_turn();

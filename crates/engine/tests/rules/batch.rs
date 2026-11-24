@@ -83,7 +83,8 @@ mod r4588000_units_have_attack_and_keyword_this_turn {
                 &view.opponent.modifiers
             };
             assert!(
-                mods.iter().any(|badge| badge.label == "Your Units have +2 Attack"),
+                mods.iter()
+                    .any(|badge| badge.label == "Your Units have +2 Attack"),
                 "{viewer:?}: {mods:?}"
             );
         }
@@ -171,7 +172,11 @@ mod r4588001_cheapest_and_mightiest {
     fn r4588001_a_tie_is_broken_by_the_match_rng() {
         let first = seed_where("r4588001-tie", |seed| copied_def(seed) == CHEAP);
         let second = seed_where("r4588001-tie", |seed| copied_def(seed) == "stand-in (1) 3/3");
-        assert_ne!(copied_def(&first), copied_def(&second), "each tied Unit is copied on some seed");
+        assert_ne!(
+            copied_def(&first),
+            copied_def(&second),
+            "each tied Unit is copied on some seed"
+        );
     }
 
     #[test]

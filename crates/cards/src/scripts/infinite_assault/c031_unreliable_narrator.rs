@@ -55,9 +55,8 @@ pub fn script() -> CardScripts {
 }
 
 // IA #31 Unreliable Narrator — SPEC §8.13 row 31 (R4586005).
-#[cfg(any())] // TEMP-NEUTRALIZED: pre-existing C2 breakage, restored after verification
+#[cfg(test)]
 mod tests {
-    use jackioh_engine::testkit::PlayerId::P1;
     use jackioh_engine::testkit::*;
 
     use super::{ID, NARRATOR};

@@ -2029,12 +2029,6 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     #[cfg_attr(feature = "ts", ts(as = "Option<IndexMap<String, String>>", optional))]
     pub generators: IndexMap<String, String>,
-    /// R4594005, R4594009: every Unit played and every Unit that died this game (`history`), oldest
-    /// first. Written in every game, so the cards read what happened before they arrived; empty,
-    /// and absent from the JSON, until a Unit is played or dies. Never in a view, never hashed.
-    #[serde(default, skip_serializing_if = "crate::history::History::is_empty")]
-    #[cfg_attr(feature = "ts", ts(as = "Option<crate::history::History>", optional))]
-    pub history: crate::history::History,
     /// R3049000: the win-rate snapshot the game was handed (`CreateGameOptions.winRates`), as
     /// `win_rates::kept_for_game` keeps it, which M #50 CN Tech and M+ #2 NA Tech read
     /// (`win_rates::win_rates_of`). A `create_game` input, frozen with the game, so every pick reads
@@ -2456,11 +2450,6 @@ pub struct GameLog {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub last_element: Option<CardElement>,
-    /// R4592000: the player's face-up plays this game, in play order, written only while Infinite
-    /// Assault is open.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub face_up_plays: Option<Vec<crate::play_history::FaceUpPlay>>,
 }
 
 fn empty_row<T: Clone>(size: i32) -> Vec<Option<T>> {
@@ -3185,7 +3174,6 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         radiance_lends: None,
         radiant_world: None,
         generators: IndexMap::new(),
-        history: crate::history::History::default(),
         win_rates: None,
         fused_scripts: crate::scripts::FusedScripts::default(),
     };

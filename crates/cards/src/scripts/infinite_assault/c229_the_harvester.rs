@@ -7,7 +7,7 @@
 //!
 //! The Cry takes three random cards of the enemy library into its controller's hand (R60, R12),
 //! hidden per zone (R97); with fewer in the deck it takes what there is (R129). The Start of turn
-//! summons from the game history (`summonPlayedCopies`): one pick among the Units the opponent
+//! summons from the recursion log's Units played (`summonPlayedCopies`, R4589000): one pick among the Units the opponent
 //! played this game — every resolved Unit play (casts count, R70; countered plays and Cloaked sets
 //! never do, R451) — the Radiant face summoning the one pick twice (R4594009). With nothing played
 //! it draws nothing and the cursor stands.

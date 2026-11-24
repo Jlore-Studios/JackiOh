@@ -1,8 +1,9 @@
 //! Copies of Units the opponent played (R4594009): `summonPlayedCopies`, for Infinite Assault
 //! #229 The Harvester and #230 Everything You've Ever Played.
 //!
-//! The pool is the opponent's game history (`history::units_played_by`), each definition looked up
-//! through `find_def` — a missing definition is skipped — kept to Units. With `fill`, one
+//! The pool is the opponent's Units played, read off the recursion log (`recursion_log::units_played_by`,
+//! R4589000), each definition looked up through `find_def` — a missing definition is skipped — kept
+//! to Units. With `fill`, one
 //! `pick_generated_unique` per `fill_board_zones` slot, so the copies are distinct, uniform and
 //! balanced across the board (R4594009); otherwise one pick, summoned `copies` times (default 1),
 //! so the Harvester's Radiant face is one pick twice. `radiant` makes the copies Radiant. With
@@ -33,7 +34,7 @@ pub struct SummonPlayedCopiesArgs {
 }
 
 fn played_unit_pool(state: &crate::state::GameState, opponent: PlayerId) -> Vec<CardDef> {
-    crate::history::units_played_by(state, opponent)
+    crate::recursion_log::units_played_by(state, opponent)
         .iter()
         .filter_map(|def_id| find_def(Some(state), def_id))
         .filter(|def| def.type_ == CardType::Unit)
@@ -57,13 +58,16 @@ pub fn summon_played_copies(args: SummonPlayedCopiesArgs) -> Effect {
         }
         if args.fill == Some(true) {
             for slot in slots {
-                let Some(def_id) =
-                    pick_generated_unique(ctx.sink.rng, &pool_refs, None, &mut ctx.draw_tally)
-                        .map(|def| def.id.clone())
+                let Some(def_id) = pick_generated_unique(ctx.sink.rng, &pool_refs, None, &mut ctx.draw_tally)
+                    .map(|def| def.id.clone())
                 else {
                     return;
                 };
-                let at = SummonPlacement { lane: Some(slot.lane), radiant: args.radiant, ..Default::default() };
+                let at = SummonPlacement {
+                    lane: Some(slot.lane),
+                    radiant: args.radiant,
+                    ..Default::default()
+                };
                 summon_fresh(ctx, &def_id, player, &at);
             }
             return;
@@ -72,14 +76,16 @@ pub fn summon_played_copies(args: SummonPlayedCopiesArgs) -> Effect {
         if copies <= 0 {
             return;
         }
-        let Some(def_id) =
-            pick_generated_unique(ctx.sink.rng, &pool_refs, None, &mut ctx.draw_tally)
-                .map(|def| def.id.clone())
+        let Some(def_id) = pick_generated_unique(ctx.sink.rng, &pool_refs, None, &mut ctx.draw_tally)
+            .map(|def| def.id.clone())
         else {
             return;
         };
         for _ in 0..copies {
-            let at = SummonPlacement { radiant: args.radiant, ..Default::default() };
+            let at = SummonPlacement {
+                radiant: args.radiant,
+                ..Default::default()
+            };
             summon_fresh(ctx, &def_id, player, &at);
         }
     })

@@ -47,8 +47,9 @@ pub fn shuffle_card_into(args: ShuffleCardIntoArgs) -> Effect {
         // since the move refreshes its working copy from it and would drop a change made on a clone.
         if let Some(spec) = args.player {
             let owner = player_of(ctx, spec);
+            let kept = crate::recursion_log::kept(ctx.state);
             if let Some(live) = find_instance_mut(ctx.state, &args.instance_id) {
-                crate::origin::note_origin(live);
+                crate::origin::note_origin(kept, live);
                 live.owner = owner;
                 live.controller = owner;
             }

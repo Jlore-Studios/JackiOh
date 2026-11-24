@@ -439,7 +439,7 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
                 Some(card) => card.clone(),
                 None => continue,
             },
-            Some(token) => reborn_token(token),
+            Some(token) => reborn_token(crate::recursion_log::kept(sink.state), token),
         };
         // §4.5 step 4 returns it only from the pile it died into, its graveyard or, when a replacement
         // exiled it as it died, its exile pile (R4207000): one a Death hook moved on (exiled out of its
@@ -540,9 +540,9 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
 /// damage, buffs, granted keywords, counters, memory, exertion and controller go, and `placeOnField` sets the
 /// zone. It comes back as the card of the player it died under, as a card the move took to that player's
 /// graveyard does (R2618000).
-fn reborn_token(snapshot: &CardInstance) -> CardInstance {
+fn reborn_token(kept: bool, snapshot: &CardInstance) -> CardInstance {
     let mut body = snapshot.clone();
-    crate::origin::note_origin(&mut body);
+    crate::origin::note_origin(kept, &mut body);
     body.owner = body.controller;
     crate::zones::reset_instance(&mut body);
     body
@@ -865,9 +865,6 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
         // goes on below as any collected card; only step 5's `enteredGraveyard` is not its to report.
         let elsewhere = card.exiled || landed == MoveResult::Replaced;
         pass.owed.push(card.snapshot.clone());
-        // R4594005: one history record per death under the card's controller (R172), tokens in;
-        // a discard is no death, and only a Unit's death is logged.
-        crate::history::record_death(sink.state, &card.snapshot, card.died_as);
         // R1852000: a piece that died, which the pass's last step fuses into its owner's Starship.
         if card.piece {
             pass.pieces

@@ -99,16 +99,5 @@ mod tests {
             let view = unit_view(s.state(), &unit);
             assert_eq!((view.attack, view.health), (7, 8));
         }
-
-        #[test]
-        fn tmp_probe_accelerator_events() {
-            let s = accelerated(true, "accelerator-probe");
-            for event in s.events() {
-                eprintln!("EV: {:?}", event);
-            }
-            let unit = s.unit_at(P1, 1);
-            eprintln!("BUFFS: {:?}", unit.buffs);
-            panic!("probe");
-        }
     }
 }

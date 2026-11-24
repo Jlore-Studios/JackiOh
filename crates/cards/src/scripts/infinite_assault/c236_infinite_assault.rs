@@ -44,7 +44,7 @@ pub fn script() -> CardScripts {
 // IA #236 Infinite Assault — SPEC §8.13 row 236.
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::testkit::PlayerId::{P1, P2};
+    use jackioh_engine::testkit::PlayerId::P1;
     use jackioh_engine::testkit::*;
 
     use super::ID;

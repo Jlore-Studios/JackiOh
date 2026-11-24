@@ -82,7 +82,7 @@ mod tests {
 
         #[test]
         fn a_defense_position_ally_has_0_3_and_is_immune_to_spells() {
-            let s = board(false);
+            let mut s = board(false);
             let defended = s.unit_at(P1, 1);
             s.expect_stats(&defended, json!({ "attack": 2, "health": 8 }));
             assert!(immune(&s, &defended));
@@ -104,7 +104,7 @@ mod tests {
 
         #[test]
         fn a_defense_position_ally_has_0_6() {
-            let s = board(true);
+            let mut s = board(true);
             let defended = s.unit_at(P1, 1);
             s.expect_stats(&defended, json!({ "attack": 2, "health": 11 }));
             assert!(immune(&s, &defended));

@@ -3,7 +3,7 @@
 //!   Base:    "Fill your board with copies of random Units your opponent played this game."
 //!   Radiant: "Fill your board with Radiant copies of random Units your opponent played this game."
 //!
-//! The copies come from the game history (`summonPlayedCopies` with `fill`): one unique pick per
+//! The copies come from the recursion log's Units played (`summonPlayedCopies` with `fill`, R4589000): one unique pick per
 //! open unit zone among the Units the opponent played this game — distinct, uniform and balanced
 //! (R4594009) — fresh on their printed face, Radiant ones on the Radiant face. With nothing played
 //! or nowhere to go it draws nothing (R129).

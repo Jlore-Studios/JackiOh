@@ -75,9 +75,8 @@ pub fn script() -> CardScripts {
 }
 
 // IA #47 Unreal Estate — SPEC §8.13 row 47 (R4586010).
-#[cfg(any())] // TEMP-NEUTRALIZED: pre-existing C2 breakage, restored after verification
+#[cfg(test)]
 mod tests {
-    use jackioh_engine::testkit::PlayerId::P1;
     use jackioh_engine::testkit::*;
 
     use super::ID;

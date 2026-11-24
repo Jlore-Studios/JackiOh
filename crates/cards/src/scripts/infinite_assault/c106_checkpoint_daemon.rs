@@ -59,7 +59,6 @@ mod tests {
     use crate::scenario;
 
     const HIT_JOB: &str = "core-016"; // Hit Job: the kill
-    const FILLER: &str = "stand-in (0) Spell";
 
     /// p1 plays the Daemon, snaps at its end of turn, takes a hit, then p2 kills it.
     fn snapped(radiant: bool, health: i32) -> Scenario {

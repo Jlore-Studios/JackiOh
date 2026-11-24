@@ -806,9 +806,9 @@ with `rust`, `web`, `e2e smoke`, `db` and `bot selftest` green (rule 12).
 
 **Each card part is done when** (the Stinkyscape+ plan's SP10, for this set):
 
-CF (#4602) wrote every entry, row and `STUB (#4602)` script for #25–#240 first, so each card part
-replaces its own stubs with the scripts and their tests, and corrects its own rows where its build
-decided otherwise.
+CF (#4602) wrote every entry, row and a stub script for #25–#240 first, so each card part replaced
+its own stubs with the scripts and their tests, and corrected its own rows where its build decided
+otherwise; the reconcile (#4601) left no stub.
 
 - `docs/ADDING_CARDS.md` was read first (CLAUDE.md rule 10), and its files were touched row by row for a
   held set.

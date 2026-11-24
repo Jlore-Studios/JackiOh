@@ -24,7 +24,10 @@ pub fn give_units_attack_this_turn(args: GiveUnitsAttackArgs) -> Effect {
             ctx,
             player,
             ModifierExpiry::ThisTurn { turn },
-            ModifierKind::UnitsAttack { amount: args.amount, from_spell },
+            ModifierKind::UnitsAttack {
+                amount: args.amount,
+                from_spell,
+            },
         );
     })
 }
@@ -41,7 +44,10 @@ pub fn give_units_keyword_this_turn(args: GiveUnitsKeywordArgs) -> Effect {
             ctx,
             player,
             ModifierExpiry::ThisTurn { turn },
-            ModifierKind::UnitsHaveKeyword { keyword: args.keyword.clone(), from_spell },
+            ModifierKind::UnitsHaveKeyword {
+                keyword: args.keyword.clone(),
+                from_spell,
+            },
         );
     })
 }

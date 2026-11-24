@@ -17,9 +17,10 @@ fn buff(state: &mut GameState, bench: &mut Bench, id: &str, attack: i32, keyword
     let target = json!({ "of": "instance", "instanceId": id });
     bench.run(state, |sink| {
         let mut ctx = make_context(sink, None, by(PlayerId::P1));
-        (buff_this_turn(json_as(json!({ "target": target, "attack": attack, "keywords": keywords }))).apply)(
-            &mut ctx,
-        );
+        (buff_this_turn(json_as(
+            json!({ "target": target, "attack": attack, "keywords": keywords }),
+        ))
+        .apply)(&mut ctx);
     });
 }
 
@@ -59,13 +60,19 @@ fn r4587000_two_in_one_turn_add_up_and_an_older_one_is_replaced() {
     buff(&mut state, &mut bench, &unit.id, 2, rush());
     buff(&mut state, &mut bench, &unit.id, 3, rush());
     assert_eq!(attack_of(&state, &unit.id), 7);
-    assert_eq!(turn_buff_of(&state, &live(&state, &unit.id)).map(|held| held.keywords.len()), Some(1));
+    assert_eq!(
+        turn_buff_of(&state, &live(&state, &unit.id)).map(|held| held.keywords.len()),
+        Some(1)
+    );
 
     // An older record, made on a past turn, is replaced rather than added to.
     state.turn += 1;
     buff(&mut state, &mut bench, &unit.id, 3, rush());
     assert_eq!(attack_of(&state, &unit.id), 5);
-    assert_eq!(turn_buff_of(&state, &live(&state, &unit.id)).map(|held| held.turn), Some(state.turn));
+    assert_eq!(
+        turn_buff_of(&state, &live(&state, &unit.id)).map(|held| held.turn),
+        Some(state.turn)
+    );
 }
 
 #[test]
@@ -77,7 +84,7 @@ fn r4587000_leaving_the_field_clears_it() {
     assert!(live(&state, &unit.id).turn_buff.is_some());
     let mut copy = live(&state, &unit.id);
     jackioh_engine::zones::reset_instance(&mut copy);
-    *live_mut(&state, &unit.id) = copy;
+    *live_mut(&mut state, &unit.id) = copy;
     assert!(live(&state, &unit.id).turn_buff.is_none());
     assert_eq!(attack_of(&state, &unit.id), 2);
     assert!(!has_rush(&state, &unit.id));
@@ -91,9 +98,10 @@ fn r4587000_a_vanilla_takes_its_attack_and_leaves_its_keywords() {
     buff(&mut state, &mut bench, &unit.id, 2, rush());
     bench.run(&mut state, |sink| {
         let mut ctx = make_context(sink, None, by(PlayerId::P1));
-        (vanilla(json_as(json!({ "target": { "of": "instance", "instanceId": unit.id.clone() } }))).apply)(
-            &mut ctx,
-        );
+        (vanilla(json_as(
+            json!({ "target": { "of": "instance", "instanceId": unit.id.clone() } }),
+        ))
+        .apply)(&mut ctx);
     });
     assert_eq!(attack_of(&state, &unit.id), 2);
     assert!(has_rush(&state, &unit.id));
@@ -110,9 +118,10 @@ fn r4587000_a_copy_keeps_it() {
     buff(&mut state, &mut bench, &unit.id, 2, rush());
     bench.run(&mut state, |sink| {
         let mut ctx = make_context(sink, None, by(PlayerId::P1));
-        (summon_copy(json_as(json!({ "of": { "of": "instance", "instanceId": unit.id } }))).apply)(
-            &mut ctx,
-        );
+        (summon_copy(json_as(
+            json!({ "of": { "of": "instance", "instanceId": unit.id } }),
+        ))
+        .apply)(&mut ctx);
     });
     let lane_two = card_at(&state, slot(PlayerId::P1, Row::Units, 2))
         .expect("the copy in lane 2")

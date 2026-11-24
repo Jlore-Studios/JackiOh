@@ -26,11 +26,7 @@ pub enum UnitExtreme {
 
 /// R4588001: the tied best Units acting on `player`'s side (R13) — the cheapest by what each costs
 /// now (R396), the mightiest by shown Attack — in board order; none when they hold no Unit.
-pub fn extreme_units_of(
-    state: &GameState,
-    player: PlayerId,
-    extreme: UnitExtreme,
-) -> Vec<CardInstance> {
+pub fn extreme_units_of(state: &GameState, player: PlayerId, extreme: UnitExtreme) -> Vec<CardInstance> {
     let scored: Vec<(i32, CardInstance)> = active_units_of(state, player)
         .into_iter()
         .map(|unit| {

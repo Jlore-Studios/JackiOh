@@ -2452,6 +2452,8 @@ pub fn priced_play_actions(
 ) -> Vec<PlayAction> {
     let mut out: Vec<PlayAction> = Vec::new();
     let tribute_sets = legal_tribute_sets(state, player, card);
+    // R1200: read once, at the first action listed: no Tribute set, zone or choice changes it.
+    let mut random: Option<bool> = None;
 
     for PlayPrice {
         x,

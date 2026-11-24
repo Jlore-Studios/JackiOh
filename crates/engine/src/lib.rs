@@ -56,7 +56,6 @@ pub mod giga;
 pub mod grants;
 pub mod graveyard_play;
 pub mod hand_order;
-pub mod history;
 pub mod hook_marks;
 pub mod instance_view;
 pub mod kill_credit;
@@ -75,7 +74,6 @@ pub mod params;
 pub mod plague;
 pub mod play_choices;
 pub mod play_counts;
-pub mod play_history;
 pub mod play_steps;
 pub mod preview;
 pub mod prompts;
@@ -88,8 +86,8 @@ pub mod replacements;
 pub mod replay;
 pub mod resolve;
 pub mod resources;
-pub mod revealed_hand;
 pub mod restrictions;
+pub mod revealed_hand;
 pub mod rng;
 pub mod sandbox;
 pub mod script;
@@ -128,9 +126,6 @@ pub mod prelude;
 // `scenario()` and the invariant monitor, for tests and the fuzz CLI (SURFACE §8).
 #[cfg(feature = "testkit")]
 pub mod testkit;
-
-#[cfg(test)]
-mod tmp_debug;
 
 pub use wire::*;
 

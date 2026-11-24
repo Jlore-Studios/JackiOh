@@ -4,14 +4,14 @@
 //!   Radiant: "Summon copies of the three most expensive friendly Units that died this game. They
 //!            have Rush."
 //!
-//! The deaths are the game history's (`deaths_of`): one record per death under its controller
+//! The deaths are the recursion log's (`deaths_this_game`, R4589000): one record per death under its controller
 //! (R172), tokens in; a discard is no death. The three most expensive are read by printed cost
 //! (`query_cost`), the list stable-sorted highest first; a tie at the cut is drawn from the match
 //! rng, and with no tie no number is drawn (R129). Each is a fresh copy on its printed face, most
 //! expensive first, with Rush on the Radiant face. With nothing to summon, nothing is drawn and
 //! the cursor stands.
 //!
-//! Engine: `history::deaths_of`, `summon` (R4594005). Built by C10 (#4594).
+//! Engine: `recursion_log::deaths_this_game`, `summon` (R4594005). Built by C10 (#4594).
 
 use jackioh_engine::prelude::*;
 
@@ -25,7 +25,7 @@ fn rollback(radiant: bool) -> Script {
         cry: Some(hook(move |ctx| {
             // The controller's dead, highest printed cost first (a stable sort keeps the oldest of
             // equals first); defs the catalog has lost are passed by.
-            let mut scored: Vec<(i32, String)> = deaths_of(&*ctx.state, ctx.controller)
+            let mut scored: Vec<(i32, String)> = deaths_this_game(&*ctx.state, ctx.controller)
                 .iter()
                 .filter_map(|death| {
                     find_def(Some(&*ctx.state), &death.def_id)

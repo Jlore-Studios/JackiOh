@@ -1,22 +1,21 @@
 //! The Commanders' engine pieces (Infinite Assault #217–#240, R4594001, R4594002, R4594004,
 //! R4594005, R4594009, R4594014): the face-down destroy guard, the "this turn" lends, the
-//! Reborn-return read, the game history of Units played and deaths, and Zero-Day's scoped random
+//! Reborn-return read, the recursion log's Units played and deaths, and Zero-Day's scoped random
 //! Spell targets. Each is one verb or read under `run_effect`, except the guard and the history,
 //! which need a real settle, and the Spell-target read, which needs a real listing.
 
 use jackioh_engine::effects::{
     destroy, give_units_attack, give_units_attack_this_turn, give_units_keyword_this_turn,
 };
-use jackioh_engine::history::{deaths_of, units_played_by};
 use jackioh_engine::modifiers::expire_modifiers;
-use jackioh_engine::recursion_log::returned_by_reborn;
 use jackioh_engine::preview::is_face_down;
+use jackioh_engine::recursion_log::{RecursionLog, deaths_this_game, returned_by_reborn, units_played_by};
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 use jackioh_engine::{make_context, record_play};
 
 use crate::rules::fixtures::damage_combat::{bolt, gambit, grunt, playing, reborn_veteran};
-use crate::rules::fixtures::harness::{by, in_hand, live, put, run_effect, slot};
+use crate::rules::fixtures::harness::{by, in_hand, live, new_game, put, run_effect, slot};
 
 /// A Unit whose static flags guard its controller's face-down cards (Infinite Assault #218
 /// Thousand Faces' shape), registered beside the fixtures by the guard test.
@@ -88,7 +87,9 @@ fn with_sink<R>(state: &mut GameState, run: impl FnOnce(&mut EngineSink) -> R) -
 fn destroy_instance(state: &mut GameState, id: &str, controller: PlayerId) {
     run_effect(
         state,
-        destroy(json_as(json!({ "target": { "of": "instance", "instanceId": id } }))),
+        destroy(json_as(
+            json!({ "target": { "of": "instance", "instanceId": id } }),
+        )),
         controller,
     );
 }
@@ -116,10 +117,12 @@ fn r4594001_a_guarded_face_down_card_survives_any_destroy() {
     // A face-up card has no guard: it dies.
     destroy_instance(&mut state, &faceup.id, P2);
     settle(&mut state);
-    assert!(state.players[P1]
-        .graveyard
-        .iter()
-        .any(|card| card.id == faceup.id));
+    assert!(
+        state.players[P1]
+            .graveyard
+            .iter()
+            .any(|card| card.id == faceup.id)
+    );
 }
 
 #[test]
@@ -146,36 +149,38 @@ fn r4594002_a_spells_lend_passes_immune_to_spells_by() {
         .expect("on the field")
         .granted_keywords
         .push(Keyword::ImmuneToSpells);
-    let attack = || unit_view(&state, &live(&state, &immune.id)).attack;
-    // A lasting lend from no Spell stops at Immune to Spells (R4508000, untouched).
+    // A lend from no Spell reaches a Unit Immune to Spells (R4508000).
     run_effect(&mut state, give_units_attack(json_as(json!({ "amount": 2 }))), P1);
-    assert_eq!(attack(), 2);
+    assert_eq!(unit_view(&state, &live(&state, &immune.id)).attack, 2 + 2);
     // A Spell's this-turn lend passes it by.
-    let bolt = in_hand(&mut state, &bolt.id, P1, 1).remove(0);
+    let spell = in_hand(&mut state, &bolt.id, P1, 1).remove(0);
     with_sink(&mut state, |sink| {
-        let mut ctx = make_context(sink, Some(&bolt), by(P1));
+        let mut ctx = make_context(sink, Some(&spell), by(P1));
         (give_units_attack_this_turn(json_as(json!({ "amount": 3 }))).apply)(&mut ctx);
     });
-    assert_eq!(attack(), 2 + 3);
-    // And the keyword lend reaches too.
-    let bolt = in_hand(&mut state, &bolt.id, P1, 1).remove(0);
+    assert_eq!(unit_view(&state, &live(&state, &immune.id)).attack, 2 + 2);
+    // And so does a Spell's keyword lend.
+    let spell = in_hand(&mut state, &bolt.id, P1, 1).remove(0);
     with_sink(&mut state, |sink| {
-        let mut ctx = make_context(sink, Some(&bolt), by(P1));
-        (give_units_keyword_this_turn(json_as(json!({ "keyword": { "kind": "Charge" })))).apply)(
-            &mut ctx,
-        );
+        let mut ctx = make_context(sink, Some(&spell), by(P1));
+        (give_units_keyword_this_turn(json_as(json!({ "keyword": { "kind": "Charge" } }))).apply)(&mut ctx);
     });
-    assert!(unit_view(&state, &live(&state, &immune.id))
-        .keywords
-        .iter()
-        .any(|keyword| keyword.kind() == KeywordKind::Charge));
+    assert!(
+        !unit_view(&state, &live(&state, &immune.id))
+            .keywords
+            .iter()
+            .any(|keyword| keyword.kind() == KeywordKind::Charge)
+    );
 }
 
 #[test]
 fn r4594004_returned_by_reborn_reads_a_reborn_return() {
     let mut state = playing("hx-commanders-reborn");
     let veteran = put(&mut state, &reborn_veteran.id, slot(P1, Row::Units, 1), json!({}));
-    assert!(!returned_by_reborn(&live(&state, &veteran.id)), "a plain arrival is no return");
+    assert!(
+        !returned_by_reborn(&live(&state, &veteran.id)),
+        "a plain arrival is no return"
+    );
     destroy_instance(&mut state, &veteran.id, P2);
     settle(&mut state);
     let back = live(&state, &veteran.id);
@@ -185,7 +190,7 @@ fn r4594004_returned_by_reborn_reads_a_reborn_return() {
 
 #[test]
 fn r4594005_deaths_are_logged_by_controller() {
-    let mut state = playing("hx-commanders-deaths");
+    let mut state = assault(playing("hx-commanders-deaths"));
     register_guard();
     let mine = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), json!({}));
     let token = put(&mut state, &token_def().id, slot(P1, Row::Units, 2), json!({}));
@@ -195,24 +200,42 @@ fn r4594005_deaths_are_logged_by_controller() {
     destroy_instance(&mut state, &theirs.id, P1);
     settle(&mut state);
     // One record per death under the card's controller (R172), tokens in.
-    let mine_log = deaths_of(&state, P1);
+    let mine_log = deaths_this_game(&state, P1);
     assert_eq!(mine_log.len(), 2);
     assert_eq!(mine_log[0].def_id, grunt.id);
     assert_eq!(mine_log[0].turn, state.turn);
     assert_eq!(mine_log[1].def_id, token_def().id);
-    assert_eq!(deaths_of(&state, P2).len(), 1);
+    assert_eq!(deaths_this_game(&state, P2).len(), 1);
     // A discard is no death: straight to the graveyard, never collected.
     let hand = in_hand(&mut state, &grunt.id, P1, 1).remove(0);
     let player = &mut state.players[P1];
-    let at = player.hand.iter().position(|card| card.id == hand.id).expect("in hand");
+    let at = player
+        .hand
+        .iter()
+        .position(|card| card.id == hand.id)
+        .expect("in hand");
     let discarded = player.hand.remove(at);
     player.graveyard.push(discarded);
-    assert_eq!(deaths_of(&state, P1).len(), 2, "the discard logged nothing");
+    assert_eq!(
+        deaths_this_game(&state, P1).len(),
+        2,
+        "the discard logged nothing"
+    );
+}
+
+/// `state` keeping the recursion log, as a game holding an Infinite Assault card does (R4589000):
+/// the one history the Commanders read (R4594005, R4594009).
+fn assault(mut state: GameState) -> GameState {
+    state.players.p1.recursion = Some(RecursionLog::default());
+    state
 }
 
 /// A Unit into `state`'s hand.
 fn hold(state: &mut GameState, player: PlayerId, def_id: &str) -> CardInstance {
-    in_hand(state, def_id, player, 1).into_iter().next().expect("no card")
+    in_hand(state, def_id, player, 1)
+        .into_iter()
+        .next()
+        .expect("no card")
 }
 
 /// `body` with `playerId` and a nonce, reduced; a refusal panics.
@@ -232,14 +255,17 @@ fn pipeline_game(seed: &str) -> GameState {
     use crate::rules::fixtures::play_pipeline_a::with_play_a;
     let mut ready = begin_game(&with_play_a(new_game(seed, None))).state;
     for player in [P1, P2] {
-        let keep: Vec<String> =
-            ready.players[player].hand.iter().map(|card| card.id.clone()).collect();
+        let keep: Vec<String> = ready.players[player]
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
         ready = reduce_ok(&ready, player, json!({ "type": "mulligan", "keep": keep })).state;
     }
     for player in [P1, P2] {
         ready.players[player].mana.current = 8;
     }
-    ready
+    assault(ready)
 }
 
 #[test]
@@ -248,39 +274,40 @@ fn r4594009_units_played_are_logged() {
     // A resolved Unit play logs; a countered one never resolves, so nothing logs (R448).
     let mut state = pipeline_game("hx-commanders-plays");
     let crier = hold(&mut state, P1, &PA.crier.id);
-    let after =
-        reduce_ok(&state, P1, json!({ "type": "play", "instanceId": crier.id })).state;
+    let after = reduce_ok(&state, P1, json!({ "type": "play", "instanceId": crier.id })).state;
     assert_eq!(units_played_by(&after, P1), vec![PA.crier.id.clone()]);
     assert!(units_played_by(&after, P2).is_empty());
     // A countered Unit play never gets here (R448): nothing was resolved, nothing logs.
     let mut trapped = pipeline_game("hx-commanders-countered");
-    put(&mut trapped, &PA.counter_trap.id, slot(P2, Row::Backrow, 1), Default::default());
+    put(
+        &mut trapped,
+        &PA.counter_trap.id,
+        slot(P2, Row::Backrow, 1),
+        Default::default(),
+    );
     let crier = hold(&mut trapped, P1, &PA.crier.id);
-    let after =
-        reduce_ok(&trapped, P1, json!({ "type": "play", "instanceId": crier.id })).state;
+    let after = reduce_ok(&trapped, P1, json!({ "type": "play", "instanceId": crier.id })).state;
     assert!(units_played_by(&after, P1).is_empty());
 }
 
 #[test]
-fn r4594009_history_leaves_the_hash_unchanged() {
+fn r4594009_a_game_without_an_assault_card_logs_nothing() {
+    // No Infinite Assault card, no log (R4589000): the state, and so the hash, stays as it was.
     let mut state = playing("hx-commanders-hash");
     let unit = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), json!({}));
-    record_play(&mut state, P1, &live(&state, &unit.id));
+    let played = live(&state, &unit.id);
+    record_play(&mut state, P1, &played);
     destroy_instance(&mut state, &unit.id, P2);
     settle(&mut state);
-    // The history was written...
-    assert_eq!(units_played_by(&state, P1), vec![grunt.id.clone()]);
-    assert_eq!(deaths_of(&state, P1).len(), 1);
-    let with_history = hash_state(&state);
-    // ...and wiping it moves no recorded game's hash.
-    state.history = jackioh_engine::history::History::default();
-    assert_eq!(hash_state(&state), with_history);
+    assert!(units_played_by(&state, P1).is_empty());
+    assert!(deaths_this_game(&state, P1).is_empty());
+    assert!(state.players.p1.recursion.is_none() && state.players.p2.recursion.is_none());
 }
 
 #[test]
 fn r4594014_a_flagged_enemy_unit_randomizes_spell_targets() {
     jackioh_cards::register_all();
-    let mut s = jackioh_engine::testkit::scenario(json!({
+    let s = jackioh_engine::testkit::scenario(json!({
         "seed": "hx-commanders-zero-day",
         "active": "p1",
         "p1": {
@@ -301,6 +328,7 @@ fn r4594014_a_flagged_enemy_unit_randomizes_spell_targets() {
         matches!(&plays[0], ActionBody::Play { targets: None, .. }),
         "no declared targets"
     );
-    // Units keep theirs: the attack lists its target.
-    assert_eq!(s.attacks_of("core-008").len(), 1);
+    // Units keep theirs: the field unit's attacks list each target, the hero and Zero-Day.
+    let attacker = s.unit_at(P1, 1);
+    assert_eq!(s.attacks_of(&attacker).len(), 2);
 }

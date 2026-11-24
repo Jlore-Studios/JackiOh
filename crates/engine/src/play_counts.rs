@@ -55,11 +55,6 @@ pub(crate) fn played_face_down(type_: CardType) -> bool {
 /// type as they stand after step 3 made it Radiant, if it did).
 pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance) {
     let type_ = card_type_of(state, card);
-    // R4594009: every resolved Unit play is logged for the history (casts count, R70; countered
-    // plays never get here, R448); a Cloaked set is a Trap, not a Unit (R451).
-    if type_ == CardType::Unit {
-        crate::history::record_unit_played(state, player, &card.def_id);
-    }
     // MD-B15, R923: a play is counted by the tags the card had as it was played, granted ones included.
     let tags: Vec<Tag> = crate::query::tags_of(state, card);
     // R4593000: the played card's single-player set, if it names one (held ones included).
@@ -96,10 +91,6 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
                 .as_ref()
                 .and_then(|log| log.last_face_up_play.clone()),
             last_element: side.game_log.as_ref().and_then(|log| log.last_element),
-            face_up_plays: side
-                .game_log
-                .as_ref()
-                .and_then(|log| log.face_up_plays.clone()),
         };
         side.game_log = Some(log);
     }
@@ -112,30 +103,17 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
     };
     // R4589000: every Infinite Assault Recursion card is an AI card, which the last-face-up record
     // below passes over, so the recursion log is written first: face-down plays never log (R451).
-    if !played_face_down(type_) {
-        crate::recursion_log::note_play(state, player, &record, type_);
-    }
-    if type_ == CardType::Spell {
-        state.last_spell = Some(record.clone());
-    }
-    // R4592000: face-up play history, recorded as the card was played before R451's AI-tag skip.
+    // R4592000: the Scraper cards read the same log, a copy keeping the played card's Chinese.
     if !played_face_down(type_) {
         let chinese = if record.def_id == card.def_id {
             card.chinese
         } else {
             None
         };
-        crate::play_history::record_face_up_play(
-            state,
-            player,
-            crate::play_history::FaceUpPlay {
-                def_id: record.def_id.clone(),
-                radiant: record.radiant,
-                type_,
-                chinese,
-                turn: state.turn,
-            },
-        );
+        crate::recursion_log::note_play(state, player, &record, type_, chinese);
+    }
+    if type_ == CardType::Spell {
+        state.last_spell = Some(record.clone());
     }
     // R451, R1121000: the last face-up card, passing over Traps (so nothing hidden is recorded) and
     // the `LAST_FACE_UP_SKIPPED_TAGS` (the AI generated cards), on the recorded card's printed tags as

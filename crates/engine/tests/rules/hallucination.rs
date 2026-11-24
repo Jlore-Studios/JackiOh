@@ -150,7 +150,7 @@ fn r4586004_a_ward_stops_the_opponents_destroy_destroy_all_and_reveal_not_the_co
         reveal(json_as(
             json!({ "target": { "of": "instance", "instanceId": second.id } }),
         )),
-        P1,
+        P2,
     );
     assert!(is_face_down(&state, &live(&state, &second.id)));
     run_effect(
@@ -158,7 +158,7 @@ fn r4586004_a_ward_stops_the_opponents_destroy_destroy_all_and_reveal_not_the_co
         reveal(json_as(
             json!({ "target": { "of": "instance", "instanceId": second.id } }),
         )),
-        P2,
+        P1,
     );
     assert!(!is_face_down(&state, &live(&state, &second.id)));
 }

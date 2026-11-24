@@ -85,11 +85,7 @@ pub fn contain_until_next_turn(args: ContainArgs) -> Effect {
         }
         // The caster's next turn begins one turn on when cast on another's turn, two on their
         // own — stamped as the freeze's thaw is (R49), never worked out later.
-        let cleanups = if ctx.state.active == ctx.controller {
-            2
-        } else {
-            1
-        };
+        let cleanups = if ctx.state.active == ctx.controller { 2 } else { 1 };
         let until_turn = ctx.state.turn + cleanups;
         if let Some(live) = find_instance_mut(ctx.state, &unit.id) {
             live.contained = Some(ContainedUntil { until_turn });
@@ -100,8 +96,7 @@ pub fn contain_until_next_turn(args: ContainArgs) -> Effect {
 /// R4591001: whether `unit` is Contained now — stamped, and the game's turn still before its
 /// caster's next turn begins.
 pub fn is_contained(state: &GameState, unit: &CardInstance) -> bool {
-    unit.contained
-        .is_some_and(|held| state.turn < held.until_turn)
+    unit.contained.is_some_and(|held| state.turn < held.until_turn)
 }
 
 /// `makeUnitsImmune`'s argument (R4591004).

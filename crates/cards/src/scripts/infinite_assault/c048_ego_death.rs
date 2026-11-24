@@ -33,7 +33,7 @@ pub fn script() -> CardScripts {
 }
 
 // IA #48 Ego Death — SPEC §8.13 row 48 (R4586008).
-#[cfg(any())] // TEMP-NEUTRALIZED: pre-existing C2 breakage, restored after verification
+#[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;

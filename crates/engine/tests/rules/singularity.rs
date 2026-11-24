@@ -170,7 +170,10 @@ fn r4593007_transform_into_copy_makes_the_sources_copy_in_place() {
         let mut sink = sink_for(&mut run.state);
         run_with_self(
             &mut sink,
-            transform_into_copy(json_as(json!({ "instanceId": target.id }))),
+            transform_into_copy(json_as(json!({
+                "target": { "of": "instance", "instanceId": target.id },
+                "of": { "of": "self" },
+            }))),
             Some(&source),
         );
         sink.events.clone()
@@ -231,12 +234,18 @@ fn r4593007_transform_into_copy_passes_an_immutable_or_dormant_card_by() {
         let mut sink = sink_for(&mut run.state);
         run_with_self(
             &mut sink,
-            transform_into_copy(json_as(json!({ "instanceId": stone.id }))),
+            transform_into_copy(json_as(json!({
+                "target": { "of": "instance", "instanceId": stone.id },
+                "of": { "of": "self" },
+            }))),
             Some(&source),
         );
         run_with_self(
             &mut sink,
-            transform_into_copy(json_as(json!({ "instanceId": sleepy.id }))),
+            transform_into_copy(json_as(json!({
+                "target": { "of": "instance", "instanceId": sleepy.id },
+                "of": { "of": "self" },
+            }))),
             Some(&source),
         );
         sink.events.clone()

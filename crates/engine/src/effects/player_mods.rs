@@ -320,7 +320,10 @@ pub fn give_units_attack(args: GiveUnitsAttackArgs) -> Effect {
             ctx,
             player,
             expiry,
-            ModifierKind::UnitsAttack { amount: args.amount, from_spell: None },
+            ModifierKind::UnitsAttack {
+                amount: args.amount,
+                from_spell: None,
+            },
         );
     })
 }

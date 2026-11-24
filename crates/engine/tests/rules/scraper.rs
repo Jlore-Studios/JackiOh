@@ -7,15 +7,12 @@ use jackioh_engine::cost_rules::rule_reaches;
 use jackioh_engine::effects::choose::{PileSpec, PileZone};
 use jackioh_engine::effects::targets::{PlayerSpec, TargetSpec};
 use jackioh_engine::effects::{
-    AddLibraryCopiesArgs, AddPlayCopiesArgs, ChoosePickArgs, GainKeywordsOfArgs,
-    TransformIntoCopyArgs, add_library_copies, add_play_copies, choose_pick, gain_keywords_of,
-    transform_into_copy,
+    AddLibraryCopiesArgs, AddPlayCopiesArgs, ChoosePickArgs, GainKeywordsOfArgs, TransformIntoCopyArgs,
+    add_library_copies, add_play_copies, choose_pick, gain_keywords_of, transform_into_copy,
 };
 use jackioh_engine::ownership::change_owner;
 use jackioh_engine::play_counts::record_play;
-use jackioh_engine::play_history::{
-    face_up_plays, last_plays, last_unit_played, scraper_records_open,
-};
+use jackioh_engine::recursion_log::{RecursionLog, last_plays, last_unit_played, played_this_game};
 use jackioh_engine::state::CostRule;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -28,10 +25,17 @@ fn first(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("at least one card")
 }
 
+/// A game that keeps the recursion log, as one holding an Infinite Assault card does (R4589000):
+/// the one history the Scraper cards read (R4592000), and the gate of the origin stamp (R4592002).
+fn assault_game(seed: &str) -> GameState {
+    let mut state = playing(seed);
+    state.players.p1.recursion = Some(RecursionLog::default());
+    state
+}
+
 #[test]
 fn r4592000_the_history_keeps_face_up_plays_in_order_and_never_a_set_trap() {
-    let _open = preview_sets(&[SetName::InfiniteAssault]);
-    let mut state = playing("scraper-history");
+    let mut state = assault_game("scraper-history");
     state.turn = 1;
 
     let spell = first(in_hand(&mut state, &bolt.id, P1, 1));
@@ -43,7 +47,7 @@ fn r4592000_the_history_keeps_face_up_plays_in_order_and_never_a_set_trap() {
     let trap = first(in_hand(&mut state, &gambit.id, P1, 1));
     record_play(&mut state, P1, &trap);
 
-    let history = face_up_plays(&state, P1);
+    let history = played_this_game(&state, P1);
     assert_eq!(history.len(), 2, "Trap is never recorded face-up");
     assert_eq!(history[0].def_id, bolt.id);
     assert_eq!(history[0].type_, CardType::Spell);
@@ -61,28 +65,18 @@ fn r4592000_the_history_keeps_face_up_plays_in_order_and_never_a_set_trap() {
 }
 
 #[test]
-fn r4592000_nothing_is_recorded_while_the_set_is_held() {
-    assert!(!scraper_records_open());
+fn r4592000_nothing_is_recorded_in_a_game_without_an_assault_card() {
     let mut state = playing("scraper-held");
     let unit = first(in_hand(&mut state, &grunt.id, P1, 1));
     record_play(&mut state, P1, &unit);
 
-    assert!(
-        state
-            .players
-            .p1
-            .game_log
-            .as_ref()
-            .and_then(|l| l.face_up_plays.as_ref())
-            .is_none()
-    );
-    assert!(face_up_plays(&state, P1).is_empty());
+    assert!(state.players.p1.recursion.is_none());
+    assert!(played_this_game(&state, P1).is_empty());
 }
 
 #[test]
 fn r4592000_add_play_copies_takes_the_newest_in_order_and_one_of_last_turn() {
-    let _open = preview_sets(&[SetName::InfiniteAssault]);
-    let mut state = playing("scraper-play-copies");
+    let mut state = assault_game("scraper-play-copies");
     state.turn = 1;
     let spell = first(in_hand(&mut state, &bolt.id, P2, 1));
     record_play(&mut state, P2, &spell);
@@ -129,8 +123,7 @@ fn r4592000_add_play_copies_takes_the_newest_in_order_and_one_of_last_turn() {
 
 #[test]
 fn r4592002_a_stolen_or_swapped_card_started_in_the_other_deck_and_a_copy_never() {
-    let _open = preview_sets(&[SetName::InfiniteAssault]);
-    let mut state = playing("scraper-origin");
+    let mut state = assault_game("scraper-origin");
 
     // A dealt library card of P2
     let card = state.players.p2.library[0].clone();
@@ -154,8 +147,7 @@ fn r4592002_a_stolen_or_swapped_card_started_in_the_other_deck_and_a_copy_never(
 
 #[test]
 fn r4592002_a_rule_of_cards_from_the_opponents_deck_reaches_only_them() {
-    let _open = preview_sets(&[SetName::InfiniteAssault]);
-    let state = playing("scraper-cost-rule");
+    let state = assault_game("scraper-cost-rule");
 
     let rule = CostRule {
         from_opponents_deck: Some(true),
@@ -164,13 +156,13 @@ fn r4592002_a_rule_of_cards_from_the_opponents_deck_reaches_only_them() {
     };
 
     let mut from_opp = state.players.p2.library[0].clone();
-    jackioh_engine::origin::note_origin(&mut from_opp);
+    jackioh_engine::origin::note_origin(true, &mut from_opp);
     from_opp.owner = P1;
     from_opp.controller = P1;
     assert!(rule_reaches(&state, &rule, &from_opp));
 
     let mut own_card = state.players.p1.library[0].clone();
-    jackioh_engine::origin::note_origin(&mut own_card);
+    jackioh_engine::origin::note_origin(true, &mut own_card);
     assert!(!rule_reaches(&state, &rule, &own_card));
 }
 
@@ -219,8 +211,7 @@ fn r4592003_a_revealed_hand_is_in_the_view_and_breaks_no_invariant() {
         }
         HandView::Cards(_) => panic!("expected HandView::Count after spy is gone"),
     }
-    let violations_after =
-        hidden_information_violations(&state, P1, &view_after, &legal_actions(&state, P1));
+    let violations_after = hidden_information_violations(&state, P1, &view_after, &legal_actions(&state, P1));
     assert!(
         violations_after.is_empty(),
         "violations after: {violations_after:?}"
@@ -287,11 +278,7 @@ fn r4592006_keywords_copied_are_printed_and_granted_never_brittle_or_a_spent_shi
     let mut state = playing("scraper-keyword-copy");
     let enemy = put(&mut state, &grunt.id, slot(P2, Row::Units, 1), json!({}));
     let enemy_live = live_mut(&mut state, &enemy.id);
-    enemy_live.granted_keywords = vec![
-        Keyword::Taunt,
-        Keyword::DivineShield,
-        Keyword::Brittle { n: 2 },
-    ];
+    enemy_live.granted_keywords = vec![Keyword::Taunt, Keyword::DivineShield, Keyword::Brittle { n: 2 }];
     enemy_live.divine_shield_spent = Some(true);
 
     let friendly = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), json!({}));

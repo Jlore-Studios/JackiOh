@@ -33,7 +33,6 @@ pub use crate::geometry::{
 pub use crate::giga::{enters_giga, is_giga, lanes_of, occupant_at};
 pub use crate::grants::*;
 pub use crate::graveyard_play::*;
-pub use crate::history::{History, PlayedUnit, deaths_of, units_played_by};
 pub use crate::kill_credit::*;
 pub use crate::layers::*;
 pub use crate::mana::*;
@@ -41,13 +40,12 @@ pub use crate::numbers::*;
 pub use crate::origin::*;
 pub use crate::params::*;
 pub use crate::plague::*;
-pub use crate::play_history::*;
 pub use crate::preview::{NOTHING_REMEMBERED, card_preview, count_preview};
 pub use crate::prompts::*;
 pub use crate::query::*;
 pub use crate::recursion_log::{
-    DeathRecord, RecursionLog, deaths_since_last_turn, deaths_this_game, deaths_this_turn, played_this_game,
-    returned_by_reborn,
+    DeathRecord, FaceUpPlay, RecursionLog, deaths_since_last_turn, deaths_this_game, deaths_this_turn,
+    last_plays, last_unit_played, played_this_game, plays_last_turn, returned_by_reborn, units_played_by,
 };
 pub use crate::replacements::*;
 pub use crate::restrictions::*;

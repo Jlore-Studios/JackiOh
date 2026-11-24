@@ -185,9 +185,9 @@ fn swap_board_now(ctx: &mut EffectContext<'_>) {
 
 /// R12's one exception: a swapped library card belongs to the player holding it, and off the field
 /// control follows ownership (R78).
-fn claim_library(cards: &mut [CardInstance], player: PlayerId) {
+fn claim_library(kept: bool, cards: &mut [CardInstance], player: PlayerId) {
     for card in cards {
-        crate::origin::note_origin(card);
+        crate::origin::note_origin(kept, card);
         card.owner = player;
         card.controller = player;
         card.zone = Zone::Library { player };
@@ -207,8 +207,10 @@ fn swap_library_now(ctx: &mut EffectContext<'_>) {
     ctx.state.players[mine].library = was_theirs;
     ctx.state.players[theirs].library = was_mine;
 
-    claim_library(&mut ctx.state.players[mine].library, mine);
-    claim_library(&mut ctx.state.players[theirs].library, theirs);
+    // R4592002: the origin each card started the game in, before the claim changes its owner.
+    let kept = crate::recursion_log::kept(ctx.state);
+    claim_library(kept, &mut ctx.state.players[mine].library, mine);
+    claim_library(kept, &mut ctx.state.players[theirs].library, theirs);
 
     // §2.4: fatigue is a property of the player, not of the library, so `fatigueCount` is untouched.
     ctx.events.push(GameEvent::Swapped {

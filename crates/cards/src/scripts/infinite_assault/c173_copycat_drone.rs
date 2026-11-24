@@ -5,7 +5,7 @@
 //! Built by C8 (#4592). R4592000, R4592007.
 
 use jackioh_engine::effects::{TransformArgs, TransformTarget, transform};
-use jackioh_engine::play_history::last_unit_played;
+use jackioh_engine::recursion_log::last_unit_played;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "infiniteassault-173";

@@ -44,7 +44,7 @@ mod tests {
     const TWO: &str = "stand-in (2) 2/2";
     const SPELL: &str = "stand-in (1) Spell";
 
-    fn board(radiant: bool, hand: Value) -> Scenario {
+    fn board(hand: Value) -> Scenario {
         scenario(json!({
             "p1": { "hand": hand, "mana": 10 },
             "p2": { "library": crate::filler(2) },
@@ -60,7 +60,7 @@ mod tests {
 
         #[test]
         fn the_next_unit_costs_2_less_and_the_one_after_full_price() {
-            let mut s = board(false, hand(false));
+            let mut s = board(hand(false));
             s.play(ID, json!({ "zone": 1 }));
             s.expect_mana(P1, 9);
 
@@ -74,7 +74,7 @@ mod tests {
 
         #[test]
         fn a_spell_does_not_spend_it() {
-            let mut s = board(false, hand(false));
+            let mut s = board(hand(false));
             s.play(ID, json!({ "zone": 1 }));
             s.play(SPELL, json!({}));
             s.expect_mana(P1, 8);
@@ -89,7 +89,7 @@ mod tests {
 
         #[test]
         fn the_next_unit_costs_3_less_and_the_one_after_full_price() {
-            let mut s = board(true, hand(true));
+            let mut s = board(hand(true));
             s.play(ID, json!({ "zone": 1 }));
             s.play(TWO, json!({ "zone": 2 }));
             s.expect_mana(P1, 9);
@@ -100,7 +100,7 @@ mod tests {
 
         #[test]
         fn a_spell_does_not_spend_it() {
-            let mut s = board(true, hand(true));
+            let mut s = board(hand(true));
             s.play(ID, json!({ "zone": 1 }));
             s.play(SPELL, json!({}));
             s.expect_mana(P1, 8);

@@ -39,7 +39,10 @@ fn goo(picks: i32) -> Script {
                 }
             };
             ids.into_iter()
-                .map(|id| transform_into_copy(json_as(json!({ "instanceId": id }))))
+                .map(|id| transform_into_copy(json_as(json!({
+                "target": { "of": "instance", "instanceId": id },
+                "of": { "of": "self" },
+            }))))
                 .collect()
         })),
         ..Script::default()
@@ -66,7 +69,7 @@ mod tests {
     const RIGHT: &str = "stand-in (1) 4/5";
     const FILLER: &str = "core-005"; // Stockpile: a play always open, so no turn ends by itself.
 
-    fn spreading(radiant: bool, lanes: Vec<Value>, seed: &str) -> Scenario {
+    fn spreading(lanes: Vec<Value>, seed: &str) -> Scenario {
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {
@@ -94,9 +97,7 @@ mod tests {
 
         #[test]
         fn r4593007_one_neighbour_becomes_a_goo() {
-            let s = spreading(
-                false,
-                vec![
+            let s = spreading(vec![
                     json!(LEFT),
                     json!({ "def": ID, "lane": 2 }),
                     json!(RIGHT),
@@ -108,7 +109,7 @@ mod tests {
 
         #[test]
         fn r4593007_a_lone_goo_does_nothing() {
-            let s = spreading(false, vec![json!({ "def": ID, "lane": 2 })], "goo-lone");
+            let s = spreading(vec![json!({ "def": ID, "lane": 2 })], "goo-lone");
             assert_eq!(goo_count(&s), 1);
             assert!(
                 s.events()
@@ -124,9 +125,7 @@ mod tests {
 
         #[test]
         fn r4593007_both_neighbours_become_goos() {
-            let s = spreading(
-                true,
-                vec![
+            let s = spreading(vec![
                     json!(LEFT),
                     json!({ "def": ID, "lane": 2, "radiant": true }),
                     json!(RIGHT),

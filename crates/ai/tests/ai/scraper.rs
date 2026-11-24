@@ -1,7 +1,7 @@
 //! Scraper AI tests (C8 #4592, R4592003, R4592004, R4592005).
 
 use jackioh_ai::observe::hidden_instance_ids;
-use jackioh_ai::{DecisionReason, decide};
+use jackioh_ai::{AI_BUDGET, DecisionReason, decide};
 use jackioh_engine::testkit::PlayerId::P1;
 use jackioh_engine::testkit::*;
 
@@ -40,19 +40,25 @@ fn r4592004_the_ai_answers_pattern_recognitions_picks() {
     s.play(PATTERN_RECOGNITION, json!({}));
     assert!(s.state().pending.is_some());
 
-    let decision = decide(s.state(), AI, &mut ai_options("scraper-pattern-1", 100))
+    let decision = decide(s.state(), AI, &mut ai_options("scraper-pattern-1", AI_BUDGET))
         .expect("a decision on first pick");
     assert_eq!(decision.reason, DecisionReason::Prompt);
-    let ActionBody::Answer { target } = decision.action else {
+    let ActionBody::Answer {
+        selection: target, ..
+    } = decision.action
+    else {
         panic!("expected answer action");
     };
     s.answer(serde_json::to_value(&target).unwrap());
 
     assert!(s.state().pending.is_some());
-    let decision2 = decide(s.state(), AI, &mut ai_options("scraper-pattern-2", 100))
+    let decision2 = decide(s.state(), AI, &mut ai_options("scraper-pattern-2", AI_BUDGET))
         .expect("a decision on exile pick");
     assert_eq!(decision2.reason, DecisionReason::Prompt);
-    let ActionBody::Answer { target: target2 } = decision2.action else {
+    let ActionBody::Answer {
+        selection: target2, ..
+    } = decision2.action
+    else {
         panic!("expected answer action");
     };
     s.answer(serde_json::to_value(&target2).unwrap());
@@ -69,10 +75,13 @@ fn r4592005_the_ai_answers_data_points_discover() {
     s.play(DATA_POINT, json!({}));
     assert!(s.state().pending.is_some());
 
-    let decision = decide(s.state(), AI, &mut ai_options("scraper-data-point", 100))
+    let decision = decide(s.state(), AI, &mut ai_options("scraper-data-point", AI_BUDGET))
         .expect("a decision on discover");
     assert_eq!(decision.reason, DecisionReason::Prompt);
-    let ActionBody::Answer { target } = decision.action else {
+    let ActionBody::Answer {
+        selection: target, ..
+    } = decision.action
+    else {
         panic!("expected answer action");
     };
     s.answer(serde_json::to_value(&target).unwrap());
