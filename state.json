@@ -15419,7 +15419,6 @@
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed": true,
         "claimed_at": "2026-11-23T21:07:32Z",
         "from_run": "45114746329",
         "gates": [
@@ -15511,7 +15510,7 @@
         "rounds_used": 3,
         "since": "2026-11-23T08:31:18Z",
         "source": "build",
-        "until": "2026-11-23T20:09:49Z"
+        "until": "2026-11-24T00:41:57Z"
       },
       "pending_request": false,
       "provider": "claude-3",
