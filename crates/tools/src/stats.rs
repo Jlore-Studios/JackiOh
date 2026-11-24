@@ -27,6 +27,8 @@
 //! `compare` and `report`, never `stats-import` (R1284000). `fit-dealt` refits `DEALT_Q` and
 //! `DEALT_Q_PRIOR` over arena records (`dealt_fit.rs`); `from-selfplay` files `selfplay` logs as
 //! development records (`selfplay_records.rs`, R1676000). `sample-size` prints the games a gather run needs at this build's deal pool (`sample_size.rs`, #2888).
+//! `report --versions` prints every deck card's play versions with their figures (R4675000, R4675001), the
+//! table `GET /api/stats/versions` sends, over record files.
 
 use std::io::Write as _;
 use std::path::PathBuf;
@@ -41,10 +43,11 @@ use jackioh_ai::{AI_DEV_RUN, DevRunOptions, MatchSetup, SHADOW_BAN, SHADOW_WATCH
 use jackioh_engine::{
     CardStats, CardStatsFilter, CardStatsReport, CardWindow, CreatedStats, DEFAULT_CARD_STATS_FILTER,
     DEV_RECORD_ID_PREFIX, FORCED_SERIES_PREFIX, GAME_MODES, GameFigures, GameGroup, GameMode, GameRecord,
-    GameReport, ModeFilter, PILOT_FILTERS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals,
-    Tally, WindowQuery, WindowRequest, WindowedCard, WindowedCreated, WindowedReport, Winner, card_stats,
-    created_played_delta, describe_filter, drawn_delta, format_card_stats, format_delta, format_tally,
-    game_report, not_drawn, windowed_card_stats,
+    GameReport, ModeFilter, PILOT_FILTERS, PilotFilter, PlayVersionQuery, PlayVersionTable, PlayerId,
+    SOURCE_FILTERS, SourceFilter, StatsTotals, Tally, WindowQuery, WindowRequest, WindowedCard,
+    WindowedCreated, WindowedReport, Winner, card_stats, created_played_delta, describe_filter, drawn_delta,
+    format_card_stats, format_delta, format_play_versions, format_tally, game_report, not_drawn,
+    play_version_figures, windowed_card_stats,
 };
 use serde::Serialize;
 
@@ -186,6 +189,12 @@ pub struct ReportArgs {
     /// live game's seats counted. Not with --source, --mode, --patch or --games.
     #[arg(long, value_name = "VERSION", conflicts_with_all = ["source", "mode", "patch", "games"])]
     pub window: Option<String>,
+    /// R4675001: every deck card's play versions (R4675000) with their figures, as `/api/stats/versions`
+    /// sends them (`play_version_figures`): a version's live games once the live games on its span reach
+    /// `PUBLIC_STATS_MIN_LIVE_GAMES`, live and development games together otherwise. `--mode` and `--pilot`
+    /// name what it counts, `--card` one card's. Not with --source, --patch, --games or --window.
+    #[arg(long, conflicts_with_all = ["source", "patch", "games", "window"])]
+    pub versions: bool,
     /// The report as JSON, as `stats-cards --json` prints it.
     #[arg(long)]
     pub json: bool,
@@ -463,6 +472,29 @@ pub fn window_report(args: &ReportArgs, at: &str) -> Result<WindowedReport> {
     Ok(report)
 }
 
+/// R4675001: `stats report --versions`: every deck card's play versions' figures, through the function
+/// `/api/stats/versions` calls, over the records of the files named.
+pub fn versions_report(args: &ReportArgs) -> Result<PlayVersionTable> {
+    let mut totals = StatsTotals::default();
+    for record in read_records(&args.files)? {
+        totals.fold(&record, false);
+    }
+    let versions = jackioh_cards::deck_play_versions();
+    let mut table = play_version_figures(
+        &totals,
+        &PlayVersionQuery {
+            versions: &versions,
+            live_pilot: args.pilot.unwrap_or_else(|| default_pilot(args.source)),
+            mode: args.mode.map_or(ModeFilter::All, ModeFilter::Only),
+            min_sample: jackioh_shared::config::CARD_STATS_MIN_SAMPLE,
+        },
+    );
+    if let Some(only) = &args.card {
+        table.versions.retain(|row| &row.card == only);
+    }
+    Ok(table)
+}
+
 /// The windowed report as JSON, or as the table `stats report` prints with each card's window beside it.
 pub fn render_window(
     report: &WindowedReport,
@@ -526,6 +558,15 @@ pub fn render_window(
 }
 
 fn run_report(args: &ReportArgs) -> Result<()> {
+    if args.versions {
+        let table = versions_report(args)?;
+        if args.json {
+            println!("{}", serde_json::to_string_pretty(&table)?);
+        } else {
+            println!("{}", format_play_versions(&table));
+        }
+        return Ok(());
+    }
     if let Some(at) = &args.window {
         jackioh_cards::register_all();
         let report = window_report(args, at)?;
@@ -1062,6 +1103,7 @@ mod tests {
                 card: None,
                 games: false,
                 window: None,
+                versions: false,
                 json: false,
             }
         );
@@ -1717,6 +1759,78 @@ mod tests {
         assert!(render_window(&report, &args, |_| None).contains("classic-055: from v0.2.3b"));
         assert!(report_args(&["a.jsonl", "--window=v0.2.3b", "--patch=v0.2.3"]).is_err());
         assert!(report_args(&["a.jsonl", "--window=v0.2.3b", "--games"]).is_err());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn r4675001_report_versions_reads_record_files_as_the_route_reads_totals() {
+        let live = record_line("m1", "live", "bo1", "p1", &["core-003"]);
+        let dev = record_line("dev:v0.2.3:dev:1", "dev", "random", "p2", &["core-003"]);
+        let (dir, paths) = scratch(&[("a.jsonl", format!("{live}\n{dev}\n"))]);
+        let named: Vec<&str> = paths.iter().map(|path| path.to_str().unwrap()).collect();
+        let args = report_args(&[named.clone(), vec!["--versions", "--card", "core-001"]].concat()).unwrap();
+        assert!(args.versions);
+        let table = versions_report(&args).unwrap();
+
+        // The route's function over the same records folded, with the floor the route reads.
+        let mut totals = StatsTotals::default();
+        for record in read_records(&paths).unwrap() {
+            totals.fold(&record, false);
+        }
+        let versions = jackioh_cards::deck_play_versions();
+        let mut every = play_version_figures(
+            &totals,
+            &PlayVersionQuery {
+                versions: &versions,
+                live_pilot: PilotFilter::Unified,
+                mode: ModeFilter::All,
+                min_sample: jackioh_shared::config::CARD_STATS_MIN_SAMPLE,
+            },
+        );
+        every.versions.retain(|row| row.card == "core-001");
+        assert_eq!(
+            serde_json::to_value(&table).unwrap(),
+            serde_json::to_value(&every).unwrap()
+        );
+        assert_eq!(
+            table.versions.len(),
+            versions
+                .iter()
+                .filter(|version| version.card == "core-001")
+                .count()
+        );
+        // v0.2.3's one live game is short of the gate, so its development game counts beside it.
+        let spanning = versions
+            .iter()
+            .find(|version| version.card == "core-001" && version.versions.iter().any(|at| at == "v0.2.3"))
+            .unwrap();
+        let row = table.versions.iter().find(|row| row.id == spanning.id).unwrap();
+        assert_eq!((row.games, row.has_enough_games), (2, false));
+        assert!(format_play_versions(&table).contains(&format!("{} ", spanning.id)));
+        // `--mode` names what it counts: the development game is All Random's.
+        let bo1 = report_args(&[named.clone(), vec!["--versions", "--card=core-001", "--mode=bo1"]].concat())
+            .unwrap();
+        let bo1 = versions_report(&bo1).unwrap();
+        assert_eq!(
+            bo1.versions
+                .iter()
+                .find(|row| row.id == spanning.id)
+                .unwrap()
+                .games,
+            1
+        );
+
+        for refused in [
+            &["--patch", "v0.2.3"][..],
+            &["--source", "dev"],
+            &["--games"],
+            &["--window", "v0.2.3"],
+        ] {
+            assert!(
+                report_args(&[named.clone(), vec!["--versions"], refused.to_vec()].concat()).is_err(),
+                "{refused:?}"
+            );
+        }
         std::fs::remove_dir_all(dir).unwrap();
     }
 

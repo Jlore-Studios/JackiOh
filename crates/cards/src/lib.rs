@@ -64,10 +64,14 @@ pub use history::{
     shipped_catalog, shipped_versions,
 };
 
-/// R1367000: the card patch history as a card's stats window reads it.
+/// R1367000: the card patch history as a card's stats window reads it, and R4675000: as each card's
+/// play versions.
 mod patch_history;
 
-pub use patch_history::{PRE_TIER_MAJORS, WORDING_FIELDS, patch_history, patch_history_of};
+pub use patch_history::{
+    PLAY_VERSION_QUIET_FIELDS, PRE_TIER_MAJORS, WORDING_FIELDS, deck_play_versions, patch_history,
+    patch_history_of, play_versions, play_versions_of,
+};
 
 pub use query::*;
 

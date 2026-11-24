@@ -20,6 +20,10 @@
 //! R1994000: `GET /api/stats/games` is the patch's game figures (R1256000's counts) over the window every
 //! card shares, read through the engine's `windowed_game_figures` off `StatsTotals.game_totals` (which
 //! outlive R1044001's purge), kept with the cards' windowed report and cached as long.
+//!
+//! R4675001: `GET /api/stats/versions` is every play version's figures (R4675000), through the engine's
+//! `play_version_figures`, one table per `?pilot=` and `?mode=` cut from the same snapshot and cached as
+//! long. It sends figures only: a client reads a version's definition from its catalog at `last`.
 
 use std::cmp::Ordering;
 use std::hash::Hash;
@@ -33,16 +37,17 @@ use serde::Serialize;
 use serde_json::{Map, Value, json};
 use tokio::sync::OnceCell;
 
-use jackioh_cards::patch_history;
+use jackioh_cards::{deck_play_versions, patch_history};
 use jackioh_engine::config::{TIER_BAND_HIGH, TIER_BAND_LOW};
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardTier, CardWindow, CreatedStats, GameFigures,
-    GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter,
-    StatsField, StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated,
-    WindowedGames, WindowedReport, add_created, add_stats, adjusted_interval, adjusted_win_rate,
-    card_drills_of, card_family, card_stats_of, card_window, collapse_gameless, created_adjusted,
-    created_field, held_adjusted, patch_windows, seen, sources_of, stats_field, tier_of, wilson_interval,
-    win_rate, windowed_card_stats, windowed_game_figures,
+    GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures,
+    PlayVersionQuery, PlayVersionTable, SourceFilter, StatsField, StatsTotals, Tally, TotalsKey, WindowQuery,
+    WindowRequest, WindowSource, WindowedCreated, WindowedGames, WindowedReport, add_created, add_stats,
+    adjusted_interval, adjusted_win_rate, card_drills_of, card_family, card_stats_of, card_window,
+    collapse_gameless, created_adjusted, created_field, held_adjusted, patch_windows, play_version_figures,
+    seen, sources_of, stats_field, tier_of, wilson_interval, win_rate, windowed_card_stats,
+    windowed_game_figures,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -737,6 +742,8 @@ pub struct KeptReports {
     windows: Kept<ReportKey, Arc<KeptWindow>>,
     /// R2491000: the card drill-downs' patch histories, one per `?pilot=` and `?mode=`.
     histories: Kept<(PublicStatsPilot, PublicStatsMode), Arc<KeptHistory>>,
+    /// R4675001: the play versions' tables `GET /api/stats/versions` reads, one per `?pilot=` and `?mode=`.
+    versions: Kept<(PublicStatsPilot, PublicStatsMode), Arc<PlayVersionTable>>,
     /// R3067000: every patch's totals, which every kept window and history is cut from, with when they
     /// were first asked for.
     totals: Mutex<Option<(i64, KeptTotalsCell)>>,
@@ -774,6 +781,10 @@ impl KeptReports {
 
     fn history_cell(&self, key: (PublicStatsPilot, PublicStatsMode), now: i64) -> KeptHistoryCell {
         kept_cell(&self.histories, key, now)
+    }
+
+    fn versions_cell(&self, key: (PublicStatsPilot, PublicStatsMode), now: i64) -> KeptVersionsCell {
+        kept_cell(&self.versions, key, now)
     }
 
     /// R3067000: the cell of every patch's totals made less than `CARD_STATS_CACHE_TTL_SECONDS` before
@@ -1112,6 +1123,60 @@ async fn kept_history(
         })
         .await?;
     Ok(Arc::clone(kept))
+}
+
+type KeptVersionsCell = Arc<OnceCell<Arc<PlayVersionTable>>>;
+
+/// R4675001: every deck card's play versions' figures for `pilot` and `mode`, as kept: read off every
+/// patch's totals (R3067000: `kept_snapshot`, the one load the cards' windows and histories share), kept
+/// as long as that snapshot, once however many requests miss it together.
+async fn kept_versions(
+    app: &App,
+    pilot: PublicStatsPilot,
+    mode: PublicStatsMode,
+) -> Result<Arc<PlayVersionTable>, ApiError> {
+    let snapshot = kept_snapshot(app).await?;
+    let cell = app.card_stats.versions_cell((pilot, mode), snapshot.made_at);
+    let kept = cell
+        .get_or_try_init(|| async {
+            let versions = deck_play_versions();
+            Ok::<_, ApiError>(Arc::new(play_version_figures(
+                &snapshot.totals,
+                &PlayVersionQuery {
+                    versions: &versions,
+                    live_pilot: pilot.filter(),
+                    mode: mode.filter(),
+                    min_sample: CARD_STATS_MIN_SAMPLE,
+                },
+            )))
+        })
+        .await?;
+    Ok(Arc::clone(kept))
+}
+
+/// R4675001: `GET /api/stats/versions`' body: the query it answers and the table, figures only (R661: no
+/// source is named).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PublicStatsVersionsResponse<'a> {
+    pilot: PublicStatsPilot,
+    mode: PublicStatsMode,
+    #[serde(flatten)]
+    table: &'a PlayVersionTable,
+}
+
+/// GET /api/stats/versions (R4675001): every play version of every deck card (R4675000) with its figures,
+/// the live ones marked, over `?pilot=` (R807000) and `?mode=` (R377), read against one field.
+pub async fn get_versions(app: &Arc<App>, req: Req) -> ApiResult {
+    let pilot = PublicStatsPilot::parse(req.query.get("pilot").map(String::as_str));
+    let mode = PublicStatsMode::parse(req.query.get("mode").map(String::as_str));
+    let table = kept_versions(app, pilot, mode).await?;
+    let response = PublicStatsVersionsResponse {
+        pilot,
+        mode,
+        table: &table,
+    };
+    Ok(cached_ok(to_json(&response)?, CARD_STATS_CACHE_TTL_SECONDS))
 }
 
 /// GET /api/stats/cards: public card win rates (R654, R1367000).

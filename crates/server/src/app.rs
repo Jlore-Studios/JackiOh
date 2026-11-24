@@ -709,6 +709,12 @@ pub static ROUTES: &[Route] = &[
     ),
     (
         "GET",
+        "/api/stats/versions",
+        AuthLevel::None,
+        h!(api::stats::get_versions),
+    ),
+    (
+        "GET",
         "/api/stats/ci",
         AuthLevel::None,
         h!(api::ci_runs::get_ci_runs),
