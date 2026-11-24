@@ -3532,3 +3532,5 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-24T06:18:07Z,45337921859,claude-8,opus,plan,4672,hard,interrupted,5-hour cap,7.8,0,0,0,,77,85,,,10.7,,fresh,,1
 2026-11-24T06:15:17Z,45335288250,agy,gemini-3.8-flash-high,suggest,,,suggested,,31.2,1014613,124642,0,,25,39,8,12,,,none,,2
 2026-11-24T06:15:03Z,45329252913,claude-1,opus,review,4629,hard,interrupted,5-hour cap,80.8,101,18302,5299705,2.3088,1,100,,,502,claude-1,none,,1
+2026-11-24T06:38:10Z,45330532203,claude-7,opus,revise,4651,hard,built,,37.3,94,23151,4920765,2.2626,30,1,,,321.3,,fresh,,1
+2026-11-24T06:45:17Z,45324808960,muse,muse-spark-1.3-contributor,build,4593,hard,part,,150,0,0,0,,1,17,37,43,537.4,claude-4,none,other,1
