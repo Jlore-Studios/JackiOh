@@ -19110,6 +19110,13 @@
     "4780": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T20:59:21Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Client-only (apps/web) change of a few lines plus a ruling note, a spec sentence and two tests, about 9 files; none of rules 1\u20135 holds (no engine, AI, migration, cross-crate design or 40+ files)."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
