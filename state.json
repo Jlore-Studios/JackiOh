@@ -40704,6 +40704,12 @@
   },
   "suggest": {
     "asks": [],
+    "auto": {
+      "4683": {
+        "at": "2026-11-24T06:01:52Z",
+        "why": "It fixes a real player-facing parity bug with file-and-line evidence, adding the existing label as hover text."
+      }
+    },
     "declined": [
       {
         "at": "2026-10-25T13:04:17Z",
