@@ -19999,6 +19999,9 @@
         "tiers": {}
       }
     },
+    "4725": {
+      "suggestion": true
+    },
     "4726": {
       "action": "review",
       "asks": [],
@@ -43019,6 +43022,13 @@
         "at": "2026-11-24T13:45:03Z",
         "number": 4723,
         "title": "Patch: co-op Play again status reports when Play again cannot work",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-24T13:45:16Z",
+        "number": 4725,
+        "title": "Patch: the AI's Taunt walk reads the slash's halves",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
