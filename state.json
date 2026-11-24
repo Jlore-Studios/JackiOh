@@ -19879,7 +19879,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-24T11:23:58Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:482f0a7d-1795519567",
+      "run_id": "45384237934",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 4706,
       "started_at": "2026-11-24T11:26:41Z",
