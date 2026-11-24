@@ -116,15 +116,7 @@ export default function AssaultPage(): ReactElement {
     screen = (
       <LostScreen
         record={assault.record}
-        onTryAgain={() => {
-          const startLevel = assault.record.checkpoints.at(-1) ?? 1;
-          setRefusal(assault.start({
-            date: state.setup.date,
-            deck: state.setup.deck,
-            source: state.setup.source,
-            startLevel,
-          }));
-        }}
+        onTryAgain={() => { setRefusal(assault.tryAgain()); }}
         onBack={assault.dismiss}
       />
     );

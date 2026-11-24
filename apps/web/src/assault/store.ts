@@ -25,6 +25,7 @@ import {
   assaultContentAt,
   assaultCreate,
   assaultDay,
+  assaultDayDeck,
   assaultFold,
   assaultRecord,
   assaultReduce,
@@ -59,6 +60,8 @@ export type Assault = {
   start(start: AssaultStart): string | null;
   /** The refusal, word for word, or null. */
   act(action: AssaultAction): string | null;
+  /** A finished attempt's Try again (R4581000): the refusal, word for word, or null. */
+  tryAgain(): string | null;
   /** Leave a finished attempt's result for today's day screen. */
   dismiss(): void;
 };
@@ -295,7 +298,10 @@ function startAttempt(start: AssaultStart): string | null {
   const from = current();
   if (from.state !== null && !terminal(from.state)) return t("Finish or abandon the attempt in progress first.");
   try {
-    const day = from.day.date === start.date ? from.day : assaultDay(start.date, from.content);
+    // R4581000: a finished attempt may have been folded on an older catalog's content; the next one
+    // is dealt on the current content, the version its file names.
+    const content = from.state === null ? from.content : assaultContent();
+    const day = content === from.content && from.day.date === start.date ? from.day : assaultDay(start.date, content);
     const record = from.records[start.date] ?? emptyRecord(start.date);
     const setup: AssaultSetup = {
       date: start.date,
@@ -311,8 +317,28 @@ function startAttempt(start: AssaultStart): string | null {
     const records = trimRecords({ ...from.records, [start.date]: nextRecord }, from.constants);
     persistAttempt(file);
     persistRecords(records);
-    commit({ ...from, day, state: created.state, file, records, record: nextRecord });
+    commit({ ...from, content, day, state: created.state, file, records, record: nextRecord });
     return null;
+  } catch (cause) {
+    return messageOf(cause);
+  }
+}
+
+/** R4581000: Try again starts today's next attempt, even when the finished one was an earlier day's,
+ *  from the highest checkpoint today's record holds (IA7), with the finished attempt's deck, or today's
+ *  Assault deck when it played the day's. */
+function tryAgain(): string | null {
+  const from = current();
+  if (from.state === null) return t("No attempt is in progress.");
+  const { deck, source } = from.state.setup;
+  const date = assaultToday();
+  try {
+    return startAttempt({
+      date,
+      deck: source === "dayDeck" ? assaultDayDeck(date) : deck,
+      source,
+      startLevel: Math.max(ASSAULT_FIRST_LEVEL, ...(from.records[date]?.checkpoints ?? [])),
+    });
   } catch (cause) {
     return messageOf(cause);
   }
@@ -370,6 +396,7 @@ export function useAssault(): Assault {
       records: value.records,
       start: startAttempt,
       act: actOn,
+      tryAgain,
       dismiss: dismissResult,
     }),
     [value],
