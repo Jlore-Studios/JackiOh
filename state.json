@@ -17910,13 +17910,14 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-3",
       "queued_at": "2026-11-24T00:28:17Z",
-      "run_id": "45297577157",
+      "run_id": "pending:b8d9b210-1795486823",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 485,
-      "started_at": "2026-11-24T00:29:29Z",
+      "started_at": "2026-11-24T02:20:51Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18099,9 +18100,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T02:20:09Z",
+    "at": "2026-11-24T02:20:51Z",
     "url": "",
-    "what": "plan #4592 on claude-3"
+    "what": "spot-check #4656 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-24T02:06:19Z",
@@ -40281,7 +40282,15 @@
         "n": 485,
         "pr": 4656,
         "queued_at": "2026-11-24T01:16:22Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:b8d9b210-1795486823",
         "sha": "6b3a6e17e6f12b35530df31cce4dedf79b77301e",
+        "started_at": "2026-11-24T02:20:51Z",
         "status": "queued",
         "title": "Patch: the AI goes for a lethal that only its searched world shows once another sampled world confirms it",
         "tries": 0
