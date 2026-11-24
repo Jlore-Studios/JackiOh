@@ -46,7 +46,7 @@ use crate::db::store::{
     PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
     PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
     ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
-    RedeemResult, ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
+    RedeemResult, ReplayListRow, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
     SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
     StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
     TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
@@ -1454,6 +1454,22 @@ pub fn matches_live(f: &mut FakeTx<'_>) -> Result<Vec<MatchRow>, StoreError> {
         .collect())
 }
 
+/// The reaper's read: `matches_live`'s rows whose ceiling is at or before `now`, in the order made.
+pub fn matches_past_ceiling(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<MatchRow>, StoreError> {
+    call(f, "matches.pastCeiling")?;
+    let tables: &FakeTables = f.tables();
+    Ok(tables
+        .matches
+        .iter()
+        .filter(|row| {
+            row.status == MatchStatus::Live
+                && row.clocks.ceiling_at <= now
+                && !is_daily_match(tables, &row.id)
+        })
+        .cloned()
+        .collect())
+}
+
 pub fn matches_mode_of(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<QueueMode>, StoreError> {
     call(f, "matches.modeOf")?;
     Ok(match_mode_in(f.tables(), match_id))
@@ -1635,31 +1651,30 @@ pub fn replays_list_with_modes(
     profile_id: &str,
     limit: i64,
     offset: i64,
-) -> Result<Vec<ReplayWithMode>, StoreError> {
+) -> Result<Vec<ReplayListRow>, StoreError> {
     call(f, "replays.listWithModes")?;
     let tables: &FakeTables = f.tables();
-    let mut rows: Vec<ReplayWithMode> = tables
+    let mut rows: Vec<ReplayRow> = tables
         .matches
         .iter()
         .filter(|row| row.players.0 == profile_id || row.players.1 == profile_id)
         .filter_map(|row| replay_row_in(tables, row))
         .filter(|replay| replay.actions > 0)
-        .map(|replay| {
-            let mode = match_mode_in(tables, &replay.row.id);
-            ReplayWithMode { replay, mode }
-        })
         .collect();
     rows.sort_by(|a, b| {
-        b.replay
-            .row
+        b.row
             .finished_at
-            .cmp(&a.replay.row.finished_at)
-            .then_with(|| b.replay.row.id.cmp(&a.replay.row.id))
+            .cmp(&a.row.finished_at)
+            .then_with(|| b.row.id.cmp(&a.row.id))
     });
     Ok(rows
         .into_iter()
         .skip(usize::try_from(offset).unwrap_or(0))
         .take(usize::try_from(limit).unwrap_or(0))
+        .map(|replay| {
+            let mode = match_mode_in(tables, &replay.row.id);
+            ReplayListRow::of(replay, mode)
+        })
         .collect())
 }
 
@@ -5488,6 +5503,12 @@ pub fn daily_invites_purge(f: &mut FakeTx<'_>, now: i64) -> Result<i64, StoreErr
     call(f, "dailyInvites.purge")?;
     let gone = keep_only(&mut f.tables().daily.invites, |row| row.expires_at > now);
     Ok(gone as i64)
+}
+
+/// R4691000: the least `expires_at` of any invite.
+pub fn daily_invites_next_lapse(f: &mut FakeTx<'_>) -> Result<Option<i64>, StoreError> {
+    call(f, "dailyInvites.nextLapse")?;
+    Ok(f.tables().daily.invites.iter().map(|row| row.expires_at).min())
 }
 
 // daily notices

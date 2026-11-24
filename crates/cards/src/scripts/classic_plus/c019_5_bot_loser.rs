@@ -1,14 +1,16 @@
-//! C+ #19.5 Bot Loser (SPEC §8.7 row 19.5): "After this destroys a Unit", +{attackGain} Attack each time
-//! it is R42's killer and still stands on the field as the kill is dispatched, so dying in that combat
-//! it gains nothing (R1245, R2396000); while Berserk it attacks its own hero at your start and end of
-//! turn; the Radiant face can't go Berserk (R412). `attackGain` is 2, Radiant 4 (3, Radiant 6 until
-//! issue #3837).
+//! C+ #19.5 Bot Loser (SPEC §8.7 row 19.5): while Berserk it attacks its own hero at your start and
+//! end of turn; the Radiant face can't go Berserk (R412). Issue #4665 took its "After this destroys a
+//! Unit, it gains +{attackGain} Attack" away from both faces, and `attackGain` with it (R4665003):
+//! through v0.6.12c it gained that much each time it was R42's killer and still stood on the field as
+//! the kill was dispatched, so dying in that combat it gained nothing (R1245, R2396000), which
+//! `script_v0_6_12c` keeps (R767000); `attackGain` was 2, Radiant 4 (3, Radiant 6 until issue #3837).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-019-5";
 
-/// "After this destroys a Unit, it gains +{attackGain} Attack." (`when` is read for traps only, so the test is in `run`.)
+/// Through v0.6.12c (R4665003): "After this destroys a Unit, it gains +{attackGain} Attack." (`when` is
+/// read for traps only, so the test is in `run`.)
 fn on_kill() -> TriggerDef {
     TriggerDef::new("bot-loser-kill", &[GameEventType::Destroyed], |ctx, event| {
         let killed_by_me = match (event, ctx.self_.as_ref()) {
@@ -33,11 +35,13 @@ fn berserk_attack(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     }
 }
 
-pub fn script() -> CardScripts {
-    let kill = on_kill();
+/// Both faces; `kills`: whether each gains its declared `attackGain` after it destroys a Unit, as
+/// through v0.6.12c (R4665003).
+fn scripts(kills: bool) -> CardScripts {
+    let kill: Vec<TriggerDef> = if kills { vec![on_kill()] } else { Vec::new() };
 
     let base = Script {
-        triggers: vec![kill.clone()],
+        triggers: kill.clone(),
         start_of_turn: Some(hook(berserk_attack)),
         end_of_turn: Some(hook(berserk_attack)),
         condition_met: Some(condition_hook(|c| c.zone == ConditionZone::Field && is_berserk(c.self_))),
@@ -46,7 +50,7 @@ pub fn script() -> CardScripts {
 
     // "This can't go Berserk": no flag, and no Berserk attacks printed (R412).
     let radiant = Script {
-        triggers: vec![kill],
+        triggers: kill,
         static_flags: Some(StaticFlags {
             never_berserk: Some(true),
             ..StaticFlags::default()
@@ -59,8 +63,18 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.7 row 19.5: kills grant permanent Attack (R42), not one it dies making (R1245, R2396000);
-// while Berserk (lost on leave, R78)
+pub fn script() -> CardScripts {
+    scripts(false)
+}
+
+/// R767000, R4665003: through v0.6.12c both faces gained their `attackGain` after each kill;
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_12c() -> CardScripts {
+    scripts(true)
+}
+
+// SPEC §8.7 row 19.5: since issue #4665 a kill grants nothing (R4665003), and through v0.6.12c it
+// granted permanent Attack (R42), not one it died making (R1245, R2396000); while Berserk (lost on leave, R78)
 // it forced-attacks its hero at start/end of turn (R53); conditionMet reflects Berserk (R195);
 // radiant can't go Berserk (R412).
 #[cfg(test)]
@@ -81,7 +95,6 @@ mod tests {
     const PREY: &str = "stand-in (1) 4/3";
     /// The base Jungle Loser's 3 destroys it; it strikes back for 2.
     const SOFT: &str = "stand-in (1) 2/3";
-    const MOTHS: &str = "core-009"; // Moths to the Flame: start of turn: every enemy Unit attacks this
     const ANTI_ONESHOT: &str = "core-073"; // Anti-oneshot Armor: hits on the hero capped at 5
     const HIT_JOB: &str = "core-016"; // Hit Job: destroy a target Unit
     const FILLER: &str = "core-005";
@@ -151,49 +164,16 @@ mod tests {
         mod base {
             use super::*;
 
+            /// R4665003: since issue #4665 its First Strike 3 destroys the 4/3 and it gains nothing.
             #[test]
-            fn r42_whenever_it_destroys_a_unit_it_gets_2_attack_permanently() {
-                // Its First Strike 3 destroys the 4/3 before it strikes back: 3 + 2 attack, health untouched.
+            fn r4665003_a_unit_it_destroys_gives_it_no_attack() {
                 let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": PREY, "lane": 3 }] }));
                 let me = bot(&s, P1);
                 let target = unit_or_blank(&s, P2, 3);
-                s.attack(&me, target);
-                let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 5, "health": 3 }));
-                s.end_turn().end_turn();
-                let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 5 }));
-            }
-
-            #[test]
-            fn r42_a_kill_in_a_forced_attack_counts_moths_to_the_flame_s_compulsion() {
-                let mut s = scenario(json!({
-                    "active": "p2",
-                    "p1": { "hand": [FILLER], "field": [{ "def": BOT, "lane": 2 }], "library": DECK },
-                    // The 1/14 Moths at 3 health: the Bot Loser's First Strike 3 destroys it.
-                    "p2": { "hand": [FILLER], "field": [{ "def": MOTHS, "lane": 1, "damage": 11 }], "library": DECK },
-                }));
-                s.start_turn();
-                assert!(s.unit(P2, 1).is_none());
-                let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 5 }));
-            }
-
-            #[test]
-            fn r2396000_after_a_kill_it_dies_in_it_gains_nothing() {
-                // Tempo Timmy's First Strike meets its own: 3 kills the 3/3 as its 3 kills the 3/3 Bot Loser,
-                // 1 damage down already, and "After this destroys a Unit" asks that it still stands.
-                let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": TIMMY, "lane": 3 }] }));
-                let me = bot(&s, P1);
-                s.card_mut(&me.id).damage = 1;
-                let target = unit_or_blank(&s, P2, 3);
                 s.attack(&me, &target);
                 s.expect_in_zone(target.as_str(), "graveyard");
-                s.expect_in_zone(me.id.as_str(), "gone");
-                assert!(
-                    !s.last_events().iter().any(|event| matches!(event, GameEvent::Buffed { .. })),
-                    "no buff: it was off the field as the destroyed event was dispatched"
-                );
+                let me = bot(&s, P1);
+                s.expect_stats(&me, json!({ "attack": 3, "health": 3 }));
             }
 
             #[test]
@@ -245,7 +225,6 @@ mod tests {
                     json!({}),
                 );
                 let id = bot(&s, P1).id;
-                step_param(s.card_mut(&id), "attackGain", 0);
                 s.card_mut(&id).buffs.attack += 6;
                 let me = bot(&s, P1);
                 send_berserk(&mut s, &me);
@@ -293,31 +272,21 @@ mod tests {
                     Some(true)
                 );
             }
-
-            #[test]
-            fn r386_the_gain_reads_through_param_an_upgrade_makes_it_3() {
-                let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": PREY, "lane": 3 }] }));
-                let id = bot(&s, P1).id;
-                step_param(s.card_mut(&id), "attackGain", 1);
-                let target = unit_or_blank(&s, P2, 3);
-                s.attack(&id, target);
-                let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 6 }));
-            }
         }
 
         mod radiant {
             use super::*;
 
+            /// R4665003: its First Strike 6 destroys the 4/4 and it gains nothing either.
             #[test]
-            fn t_6_6_charge_first_strike_it_gets_4_attack_per_kill() {
-                // Its First Strike 6 destroys the 4/4 before it strikes back: 6 + 4 attack, health untouched.
+            fn r4665003_the_radiant_face_gains_no_attack_from_a_kill_either() {
                 let mut s = with_bot(json!({}), true, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
                 let me = bot(&s, P1);
                 let target = unit_or_blank(&s, P2, 3);
-                s.attack(&me, target);
+                s.attack(&me, &target);
+                s.expect_in_zone(target.as_str(), "graveyard");
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 10, "health": 6 }));
+                s.expect_stats(&me, json!({ "attack": 6, "health": 6 }));
             }
 
             #[test]
@@ -342,6 +311,82 @@ mod tests {
                 s.card_mut(&me.id).radiant = true;
                 s.end_turn().end_turn();
                 s.expect_health(P1, 30);
+            }
+        }
+
+        /// R767000, R4665003: the scripts kept for v0.6.12c, with the `attackGain` they declared then.
+        mod kept_v0_6_12c {
+            use super::*;
+
+            fn kept<T>(run: impl FnOnce() -> T) -> T {
+                crate::under_kept_as(
+                    BOT,
+                    script_v0_6_12c(),
+                    |def| {
+                        def.params = serde_json::from_value(json!([
+                            { "key": "attackGain", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 1 }
+                        ]))
+                        .expect("the v0.6.12c params");
+                    },
+                    run,
+                )
+            }
+
+            #[test]
+            fn r767000_r42_whenever_it_destroys_a_unit_it_gets_2_attack_permanently() {
+                kept(|| {
+                    // Its First Strike 3 destroys the 4/3 before it strikes back: 3 + 2 attack, health untouched.
+                    let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": PREY, "lane": 3 }] }));
+                    let me = bot(&s, P1);
+                    let target = unit_or_blank(&s, P2, 3);
+                    s.attack(&me, target);
+                    let me = bot(&s, P1);
+                    s.expect_stats(&me, json!({ "attack": 5, "health": 3 }));
+                    s.end_turn().end_turn();
+                    let me = bot(&s, P1);
+                    s.expect_stats(&me, json!({ "attack": 5 }));
+                });
+            }
+
+            #[test]
+            fn r767000_r2396000_after_a_kill_it_dies_in_it_gains_nothing() {
+                kept(|| {
+                    // Tempo Timmy's First Strike meets its own: 3 kills the 3/3 as its 3 kills the 3/3 Bot
+                    // Loser, 1 damage down already, and "After this destroys a Unit" asks that it still stands.
+                    let mut s = with_bot(
+                        json!({}),
+                        false,
+                        json!({ "field": [{ "def": TIMMY, "lane": 3 }] }),
+                    );
+                    let me = bot(&s, P1);
+                    s.card_mut(&me.id).damage = 1;
+                    let target = unit_or_blank(&s, P2, 3);
+                    s.attack(&me, &target);
+                    s.expect_in_zone(target.as_str(), "graveyard");
+                    s.expect_in_zone(me.id.as_str(), "gone");
+                    assert!(
+                        !s.last_events()
+                            .iter()
+                            .any(|event| matches!(event, GameEvent::Buffed { .. })),
+                        "no buff: it was off the field as the destroyed event was dispatched"
+                    );
+                });
+            }
+
+            #[test]
+            fn r767000_the_radiant_face_got_4_attack_per_kill() {
+                kept(|| {
+                    let mut s = with_bot(
+                        json!({}),
+                        true,
+                        json!({ "field": [{ "def": VANILLA, "lane": 3 }] }),
+                    );
+                    let me = bot(&s, P1);
+                    let target = unit_or_blank(&s, P2, 3);
+                    s.attack(&me, target);
+                    let me = bot(&s, P1);
+                    s.expect_stats(&me, json!({ "attack": 10, "health": 6 }));
+                });
             }
         }
 

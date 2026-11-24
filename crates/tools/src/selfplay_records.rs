@@ -395,6 +395,7 @@ mod tests {
             card: None,
             games: false,
             window: None,
+            versions: false,
             json: false,
         };
         let cards = report(&args).unwrap();

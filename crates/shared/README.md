@@ -464,7 +464,8 @@ step(host, event, now) -> (host, outputs)
 What the machine decides: how the game is dealt (`deal.rs`: the human's deck, a list or the random deck dealt
 on `"{seed}:human-deck"` leaning as asked and counted dealt, R433, R1373, R924000; the AI's on
 `"{seed}:ai-deck"`; the tier's handicap on the AI's seat alone, R180; a lesson's decks under
-`TUTORIAL_HUMAN` and `AI_TUTORIAL`, R290, R1705005; a run fight's setup, R2706000; the human's last board,
+`TUTORIAL_HUMAN` and `AI_TUTORIAL`, R290, R1705005; a run fight's setup, R2706000, and an Infinite Assault
+fight's, R4582000, the enemy's deck marks at the AI's seat; the human's last board,
 R508; a sandbox, R923000), the nonces (`h<n>`, `a<n>`, each counting only accepted actions, so a refused
 action spends nothing and the log folds exactly: R187, R433, R508), the seat each action is sent from, what
 the AI may never take (R188, R923000), the snapshot, the save and its resume, the kept game and its number,

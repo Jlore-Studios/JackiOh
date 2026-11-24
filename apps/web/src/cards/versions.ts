@@ -22,9 +22,11 @@
 // offered nowhere there and owned there by everyone, so its variant starts at the level above it (`isNextLevel`).
 // R3343001: the Default variant draws it (`lookOn`), the Full-art cards setting keeping a Mythic's normal face when off;
 // Prismatic's first level adds the full-art frame, so both its levels are full bleed.
+// #4714: the offers are most of the registry's bytes, so they ride a chunk of their own beside the engine module rather
+// than the entry chunk (`loadCosmeticOffers`).
 // Presentation only: nothing here reaches the engine, an action, `PlayerView` or the log (CLAUDE.md rule 7).
 
-import { COSMETICS, COSMETIC_DEFAULT_LOOKS, COSMETIC_LEVELS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
+import { COSMETICS, COSMETIC_DEFAULT_LOOKS, COSMETIC_LEVELS } from "../wire/generated/cosmetics.ts";
 import { showcaseFamilyOf, type ArtPart, type ArtPicture } from "./art/pictures.ts";
 
 /** R2715000: what an Animated art's registry id starts with, a `fullArt` entry too (migration 0075). */
@@ -318,18 +320,61 @@ export function lookOn(defId: string, id: string | null, fullArtCards: boolean):
   return { ...look, version: shown };
 }
 
-const OFFERS: ReadonlyMap<string, ReadonlySet<string>> = new Map(
-  Object.entries(COSMETIC_OFFERS).map(([id, cards]): [string, ReadonlySet<string>] => [id, new Set(cards)]),
-);
+/**
+ * #4714: each level's offered cards (`COSMETIC_OFFERS`, R2725001), filled from their own generated module
+ * (`wire/generated/cosmeticOffers.ts`) by `loadCosmeticOffers()`. `loadSceneData()` (art/sceneLoader.ts) loads them
+ * with the scene tables, so every gate that waits for a face's tables waits for them too; the shop's chunk
+ * (routes/chunks.tsx) and the ownership read (ownedFullArt.ts) await them themselves, and `test/setup.ts` installs
+ * them at once. Asked before they are in, the offer queries throw, as `sceneRecipeOf` does, rather than answer wrong.
+ */
+let OFFERS: ReadonlyMap<string, ReadonlySet<string>> | null = null;
+let offersLoad: Promise<void> | null = null;
+
+/** #4714: fill the offers from the generated table: `loadCosmeticOffers()` does, and `test/setup.ts` at once. */
+export function installCosmeticOffers(offers: Readonly<Record<string, readonly string[]>>): void {
+  OFFERS = new Map(Object.entries(offers).map(([id, cards]): [string, ReadonlySet<string>] => [id, new Set(cards)]));
+}
+
+/** #4714: whether the offers are in. */
+export function cosmeticOffersReady(): boolean {
+  return OFFERS !== null;
+}
+
+/** #4714: fetch the offers' chunk once and install it. Idempotent; a failed download is not kept, so the next call tries again. */
+export function loadCosmeticOffers(): Promise<void> {
+  if (OFFERS !== null) return Promise.resolve();
+  offersLoad ??= import("../wire/generated/cosmeticOffers.ts").then(
+    (module) => {
+      installCosmeticOffers(module.COSMETIC_OFFERS);
+      offersLoad = null;
+    },
+    (cause: unknown) => {
+      offersLoad = null;
+      throw cause;
+    },
+  );
+  return offersLoad;
+}
+
+/** #4714: empty the offers, back to before `loadCosmeticOffers()`. Tests only. */
+export function clearCosmeticOffersForTests(): void {
+  OFFERS = null;
+  offersLoad = null;
+}
+
+function offers(): ReadonlyMap<string, ReadonlySet<string>> {
+  if (OFFERS === null) throw new Error("the cosmetic offers are not loaded: await loadCosmeticOffers() before asking what a card is offered");
+  return OFFERS;
+}
 
 /** R2725001: whether the card `defId` is offered the level `cosmeticId`; false for any id with no offer (R3015000: a retired augment's among them). */
 export function offeredOn(cosmeticId: string, defId: string): boolean {
-  return OFFERS.get(cosmeticId)?.has(defId) === true;
+  return offers().get(cosmeticId)?.has(defId) === true;
 }
 
 /** R2725000: whether `cosmeticId` is a version's (R3015000: a level's), which only `COSMETIC_OFFERS` places. */
 export function isOfferedId(cosmeticId: string): boolean {
-  return OFFERS.has(cosmeticId);
+  return offers().has(cosmeticId);
 }
 
 /**

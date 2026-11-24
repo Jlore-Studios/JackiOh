@@ -22,10 +22,9 @@ import (
 
 // View is what both bots' views are drawn from, read from GitHub once per rewrite: the state, the
 // open threads, the live lanes, why nothing may start (halted) if so, the queue and the
-// subscriptions explained, the last runs and the full status text. `learn` is the learn lane's
-// section, and `runners` the runners' drawn from the runs `found`, read once per rewrite by
-// `update` (None: `render` reads them). In Go, None is a nil Learn, an empty Runners (a drawn
-// section is never empty) and a nil Found.
+// subscriptions explained, the last runs and the full status text. `runners` is the runners'
+// section drawn from the runs `found`, read once per rewrite by `update` (None: `render` reads
+// them). In Go, None is an empty Runners (a drawn section is never empty) and a nil Found.
 type View struct {
 	State     *pyjson.Object
 	Issues    []*pyjson.Object
@@ -34,9 +33,8 @@ type View struct {
 	Explained *waiting.Explained
 	Runs      []string
 	Report    string
-	Learn     []string // default: None
-	Runners   string   // default: None
-	Found     *Found   // default: None
+	Runners   string // default: None
+	Found     *Found // default: None
 }
 
 // Look is look.
@@ -183,13 +181,6 @@ func Render(ctx *hctx.Context, extra []string /* = () */, statistics string /* =
 		subscriptions)...)
 	lines = append(lines, "## 🏃 Last night-bot runs", "")
 	lines = append(lines, Fold(fmt.Sprintf("bot-night.yml's last %d runs", RunRows), view.Runs)...)
-	learn := view.Learn
-	if learn == nil {
-		learn = LearnLane(ctx)
-	}
-	lines = append(lines, upTo(learn, 2)...)
-	lines = append(lines, Fold("The AI on main, the lane's pull request and its last runs",
-		from(learn, 2))...)
 	if statistics != "" {
 		lines = append(lines, strings.TrimSpace(statistics), "")
 	}
@@ -360,7 +351,6 @@ func update(ctx *hctx.Context, extra []string /* = () */, withStats bool /* = Fa
 		defer Looked(ctx, view)
 	}
 	view.Found = ReadRunners(ctx)
-	view.Learn = LearnLane(ctx)
 	state := view.State
 	issue := Find(ctx, state)
 	if issue != nil {

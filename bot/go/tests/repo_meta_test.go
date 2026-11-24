@@ -60,9 +60,9 @@ var repoMetaAutomated = []string{
 	"patches log: 6d44be2..c9ca419",                          // promote-production.yml's technical log
 	"Promote main to production: 28 commit(s) up to 6d44be2", // scripts/promote-production.sh
 	"Promote main to production: 1 commit(s) up to c9ca419",
-	"AI gen 8 (improve): the opening plays its two-drops first",             // training/improve.md
-	"AI gen 12 (unban): Mirror Image is played again",                       // training/unban.md
-	"AI gen 14 (learn): the learned evaluation, retrained on 100,000 games", // learn.yml
+	"AI gen 8 (improve): the opening plays its two-drops first",             // the improve lane's, retired (#4701)
+	"AI gen 12 (unban): Mirror Image is played again",                       // the unban lane's, retired (#4701)
+	"AI gen 14 (learn): the learned evaluation, retrained on 100,000 games", // the learn lane's, retired (#4701)
 }
 
 // repoMetaConventional is PullTitleTests.CONVENTIONAL.
@@ -138,16 +138,8 @@ func TestRepoMeta_TheAutomatedTitlesAreTheOnesTheirToolsWrite(t *testing.T) {
 	assertIn(t, `range="${OLD:0:7}..${NEW:0:7}"`, workflowsRead(t, "promote-production.yml"))
 	promote := repoMetaRead(t, "scripts", "promote-production.sh")
 	assertIn(t, `--title "Promote main to production: $COUNT commit(s) up to ${cand:0:7}"`, promote)
-	loop := repoMetaRead(t, "training", "loop.sh")
-	assertIn(t, "title=$(git log -1 --format=%s)", loop)
-	assertIn(t, `gh pr create --base main --head "$branch" --title "$title"`, loop)
-	// The lane's draft, while a session works (training/README.md, How a lane runs).
-	assertIn(t, `title="AI gen $((generation + 1)) ($lane): in training, nothing promoted yet"`, loop)
+	// A retired training lane's draft (#4701).
 	assertTrue(t, triage.PullTitleOK("AI gen 2 (unban): in training, nothing promoted yet"))
-	for _, lane := range []string{"improve", "unban"} {
-		text := repoMetaRead(t, "training", lane+".md")
-		assertIn(t, `git commit -m "AI gen <N> (`+lane+`): <what changed>"`, text)
-	}
 }
 
 func TestRepoMeta_ABotTakesItsBuildersTitleWhenItPassesElseItsIssues(t *testing.T) {

@@ -42,6 +42,9 @@ class RuleTests(unittest.TestCase):
                      "_squishy-journal", "ai/improve"):
             self.assertEqual(bucket(branch(name, prs=[(1, "MERGED")]), ahead=0), "keep", name)
 
+    def test_the_brag_branch_is_kept_though_no_pull_request_ever_had_it(self):
+        self.assertEqual(bucket(branch("_brag"), ahead=6), "keep")
+
     def test_anything_live_or_recent_stays(self):
         self.assertEqual(bucket(branch("claude/x", prs=[(1, "OPEN"), (2, "CLOSED")])), "keep")
         self.assertEqual(bucket(branch("bot/issue-5", prs=[(9, "MERGED")], named_state="open")), "keep")

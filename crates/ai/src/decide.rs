@@ -36,8 +36,8 @@ use crate::config::{
 };
 use crate::determinize::{DetGround, DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{
-    Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, prompt_activation_prices,
-    turn_hook_prices,
+    Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, evolve_prices,
+    prompt_activation_prices, turn_hook_prices,
 };
 use crate::lethal::{find_lethal, trim_lethal};
 use crate::match_::replacements_for;
@@ -450,9 +450,9 @@ pub fn probe_world(public: &GameState, seat: PlayerId, ground: &DetGround) -> Ga
     )
 }
 
-/// R2424000, R2477000, R2564000, R2565000, R2603000, R2687000, R2688000, R3064000: every Death (a
-/// backrow card's and a hand Field Spell's among them), turn hook, Activate, attack hook and Dormant
-/// card's awakening the seat can read, priced once on the probe world (`probe_world` of `public`) for the
+/// R2424000, R2477000, R2564000, R2565000, R2603000, R2687000, R2688000, R3064000, R4648000: every Death
+/// (a backrow card's and a hand Field Spell's among them), turn hook, Activate, attack hook, Dormant card's
+/// awakening and Evolve card's evolution the seat can read, priced once on the probe world (`probe_world` of `public`) for the
 /// whole decision from `counter`'s nodes; all are priced before any is passed, so no probe reads a price.
 /// R4197000: and, at the seat's own prompt whose card can take a power, what each answer's power gives
 /// (`prompt_activation_prices`). R4070000: `decide` and `decision_prices_at` both take a decision's prices
@@ -466,12 +466,14 @@ pub fn decision_prices(probe: &GameState, seat: PlayerId, counter: &dyn NodeCoun
     activations.extend(prompt_activation_prices(probe, seat, counter));
     let attack_hooks = attack_hook_prices(probe, seat, counter);
     let awakenings = awaken_prices(probe, seat, counter);
+    let evolutions = evolve_prices(probe, seat, counter);
     Prices {
         deaths,
         turn_hooks,
         activations,
         attack_hooks,
         awakenings,
+        evolutions,
         pool_loss: None,
     }
 }
@@ -545,9 +547,9 @@ fn plan(
     let stage = create_sub_counter(counter, budget.nodes);
     let counter: &dyn NodeCounter = &stage;
 
-    // R2424000, R2477000, R2564000, R2688000, R3064000: the decision's prices (`decision_prices`), from
-    // the searched section's nodes, passed to every step below. R4188000: with the pool's coming loss
-    // `decide_with_pool_loss` was given.
+    // R2424000, R2477000, R2564000, R2688000, R3064000, R4648000: the decision's prices (`decision_prices`,
+    // each Evolve card's evolution among them), from the searched section's nodes, passed to every step
+    // below. R4188000: with the pool's coming loss `decide_with_pool_loss` was given.
     let prices = Prices {
         pool_loss: pool_loss.map(|loss| (seat, loss)),
         ..decision_prices(&probe, seat, counter)

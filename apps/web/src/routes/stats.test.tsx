@@ -42,7 +42,7 @@ import { statsTestid } from "../stats/testids.ts";
 import { expectEmptyState } from "../test/empty.ts";
 import { pressBack } from "../test/history.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
-import { at } from "../test/stubServer.ts";
+import { at, signIn } from "../test/stubServer.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { CARD_TEXT_KEY, cardTextTestid } from "./cardText.tsx";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
@@ -1843,7 +1843,7 @@ describe("R1973002 R3324000 the patch tabs", () => {
 
     // Back one patch: 0.6.0, asked for at its version.
     const previous = screen.getByTestId(statsTestid.patchPrevious);
-    expect(previous).toHaveAccessibleName("Previous patch (0.6.0)");
+    expect(previous).toHaveAccessibleName("Older patch (0.6.0)");
     await user.click(previous);
     await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
     expect(requested("/api/stats/cards").at(-1)?.searchParams.get("patch")).toBe("0.6.0");
@@ -1859,7 +1859,7 @@ describe("R1973002 R3324000 the patch tabs", () => {
 
     // Forward: the next patch, then the newest, which is the plain address.
     const next = screen.getByTestId(statsTestid.patchNext);
-    expect(next).toHaveAccessibleName("Next patch (0.6.0)");
+    expect(next).toHaveAccessibleName("Newer patch (0.6.0)");
     await user.click(next);
     await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
     await user.click(screen.getByTestId(statsTestid.patchNext));
@@ -1869,6 +1869,61 @@ describe("R1973002 R3324000 the patch tabs", () => {
     await user.click(screen.getAllByTestId(statsTestid.patchTab).find((tab) => nameOf(tab) === "0.4.0")!);
     await waitFor(() => expect(window.location.search).toBe("?patch=0.4.0b"), SLOW);
     await waitFor(() => expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.4.0"), SLOW);
+  });
+
+  it("R4674000 the left arrow steps newer and the right arrow steps older, each disabled at its end with its label", async () => {
+    servePatches();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    await screen.findAllByTestId(statsTestid.patchTab, undefined, SLOW);
+    // The arrows follow the tabs as drawn: the left arrow steps toward the current patch (newer),
+    // the right arrow toward the older tabs (older). The test ids stay tied to direction, not side.
+    const left = screen.getByTestId(statsTestid.patchNext);
+    const right = screen.getByTestId(statsTestid.patchPrevious);
+    expect(left).toHaveTextContent("←");
+    expect(right).toHaveTextContent("→");
+    expect(left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // On the newest patch there is nothing newer: the left arrow is disabled with no patch to name.
+    expect(left).toBeDisabled();
+    expect(left).toHaveAccessibleName("Newer patch");
+    expect(left).toHaveAttribute("title", "Newer patch");
+    expect(right).toBeEnabled();
+    expect(right).toHaveAccessibleName("Older patch (0.6.0)");
+    expect(right).toHaveAttribute("title", "Older patch (0.6.0)");
+    // Right steps older: 0.6.0, then 0.5.0.
+    await user.click(right);
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
+    expect(screen.getByTestId(statsTestid.patchNext)).toHaveAccessibleName("Newer patch (0.7.0)");
+    expect(screen.getByTestId(statsTestid.patchNext)).toHaveAttribute("title", "Newer patch (0.7.0)");
+    await user.click(screen.getByTestId(statsTestid.patchPrevious));
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.5.0"), SLOW);
+    expect(screen.getByTestId(statsTestid.patchNext)).toHaveAccessibleName("Newer patch (0.6.0)");
+    expect(screen.getByTestId(statsTestid.patchPrevious)).toHaveAccessibleName("Older patch (0.4.0)");
+    expect(screen.getByTestId(statsTestid.patchPrevious)).toHaveAttribute("title", "Older patch (0.4.0)");
+    // Left steps newer again: 0.6.0, then the newest, which is the plain address.
+    await user.click(screen.getByTestId(statsTestid.patchNext));
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
+    await user.click(screen.getByTestId(statsTestid.patchNext));
+    await waitFor(() => expect(window.location.search).toBe(""), SLOW);
+    expect(screen.getByTestId(statsTestid.patchNext)).toBeDisabled();
+    // Arrow keys still move along the tabs as drawn: right goes to the older tab beside it.
+    const drawn = screen.getAllByTestId(statsTestid.patchTab);
+    drawn[0]!.focus();
+    fireEvent.keyDown(drawn[0]!, { key: "ArrowRight" });
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
+    // On the oldest patch there is nothing older: the right arrow is disabled with no patch to name.
+    cleanup();
+    at("/stats?patch=0.0.9");
+    render(<StatsRoute />);
+    await screen.findAllByTestId(statsTestid.patchTab, undefined, SLOW);
+    const oldestRight = screen.getByTestId(statsTestid.patchPrevious);
+    expect(oldestRight).toBeDisabled();
+    expect(oldestRight).toHaveAccessibleName("Older patch");
+    expect(oldestRight).toHaveAttribute("title", "Older patch");
+    const oldestLeft = screen.getByTestId(statsTestid.patchNext);
+    expect(oldestLeft).toBeEnabled();
+    expect(oldestLeft).toHaveAccessibleName("Newer patch (0.1.0)");
+    expect(oldestLeft).toHaveAttribute("title", "Newer patch (0.1.0)");
   });
 
   it("R3324000 the newest patch short of games says its data is still being collected, on the Cards and Sets tabs, with no figures and no count", async () => {
@@ -1928,6 +1983,216 @@ describe("R1973002 R3324000 the patch tabs", () => {
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     expect(screen.queryByTestId(statsTestid.patchBar)).toBeNull();
     expect(screen.queryByTestId(statsTestid.patchCollecting)).toBeNull();
+  });
+});
+
+describe("R4677000 R4677001 the patch search, and older patches for dev accounts", () => {
+  /** The patches anyone may read, newest first: three of 0.6 and two of 0.5, 0.5.8 a micro folded into 0.5.7's patch. */
+  const LISTED = [
+    { versions: ["0.6.2", "0.6.2b"], games: 300, liveGames: 0 },
+    { versions: ["0.6.1"], games: 1500, liveGames: 0 },
+    { versions: ["0.6.0"], games: 2500, liveGames: 0 },
+    { versions: ["0.5.9"], games: 4000, liveGames: 0 },
+    { versions: ["0.5.7", "0.5.8", "0.5.8b"], games: 999, liveGames: 0 },
+  ];
+  /** A patch older than anyone but a dev account reads. */
+  const OLDER = { versions: ["0.4.0", "0.4.0b"], games: 6000, liveGames: 0 };
+
+  /**
+   * Answers as the server would (R4677000): anyone is listed `LISTED` and refused an older patch, 403
+   * `patch_dev_only`; a dev account, told by its token, is listed every patch.
+   */
+  function serveReader(devToken: string | null = null): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input), window.location.origin);
+        const dev = devToken !== null && new Headers(init?.headers).get("authorization") === `Bearer ${devToken}`;
+        const patch = url.searchParams.get("patch") ?? "0.6.2b";
+        if (!dev && OLDER.versions.includes(patch)) {
+          const refused = { error: { code: "patch_dev_only", message: "Older patches are for dev accounts." } };
+          return Promise.resolve(new Response(JSON.stringify(refused), { status: 403 }));
+        }
+        if (url.pathname === "/api/stats/cards/core-001") {
+          return Promise.resolve(new Response(JSON.stringify(MOCK_DRILL_DOWN), { status: 200 }));
+        }
+        if (url.pathname !== "/api/stats/cards") return Promise.resolve(new Response("{}", { status: 200 }));
+        const body = {
+          ...MOCK_CARD_STATS_PROVISIONAL,
+          patch,
+          previousPatch: null,
+          patches: dev ? [...LISTED, OLDER] : LISTED,
+          olderPatchesForDevs: !dev,
+        };
+        return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+      }),
+    );
+  }
+
+  /** Opens the search from the patch bar's end and answers its dialog. */
+  async function openSearch(user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> {
+    const button = await screen.findByTestId(statsTestid.patchSearch, undefined, SLOW);
+    await user.click(button);
+    return screen.findByRole("dialog", { name: "Find a patch" });
+  }
+
+  /** The dialog's lines as their names, and each patch's words. */
+  function lines(dialog: HTMLElement): { names: string[]; patches: string[] } {
+    return {
+      names: within(dialog)
+        .queryAllByTestId(statsTestid.patchSearchLine)
+        .map((line) => line.querySelector("h3")?.textContent ?? ""),
+      patches: within(dialog)
+        .queryAllByTestId(statsTestid.patchSearchOption)
+        .map((option) => option.textContent ?? ""),
+    };
+  }
+
+  it("R4677001 one search button at the patch bar's end opens a dialog of the patches by line, newest first, with their games", async () => {
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    const button = await screen.findByTestId(statsTestid.patchSearch, undefined, SLOW);
+    // One button, named for what it does, last in the bar, after the arrows.
+    expect(button).toHaveAccessibleName("Find a patch");
+    expect(button).toHaveAttribute("title", "Find a patch");
+    expect(screen.getByTestId(statsTestid.patchBar).lastElementChild).toBe(button);
+    expect(screen.getByTestId(statsTestid.patchPrevious).compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const dialog = await openSearch(user);
+    expect(lines(dialog)).toEqual({
+      names: ["0.6", "0.5"],
+      patches: ["0.6.2Collecting data", "0.6.11,500 games", "0.6.02,500 games", "0.5.94,000 games", "0.5.7999 games"],
+    });
+    // The patch shown is marked; the box has the focus.
+    const options = within(dialog).getAllByTestId(statsTestid.patchSearchOption);
+    expect(options[0]).toHaveAttribute("aria-current", "true");
+    expect(options.slice(1).every((option) => !option.hasAttribute("aria-current"))).toBe(true);
+    expect(within(dialog).getByTestId(statsTestid.patchSearchInput)).toHaveFocus();
+    // Escape closes it, and the patch is unchanged.
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Find a patch" })).toBeNull(), SLOW);
+    expect(window.location.search).toBe("");
+  });
+
+  it("R4677001 the box filters the patches by version, micros included, and says when none holds it", async () => {
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    const dialog = await openSearch(user);
+    const box = within(dialog).getByRole("searchbox", { name: "Patch version" });
+    // 0.5.8 is a micro of 0.5.7's patch: typing it finds that patch.
+    await user.type(box, "0.5.8");
+    expect(lines(dialog)).toEqual({ names: ["0.5"], patches: ["0.5.7999 games"] });
+    await user.clear(box);
+    await user.type(box, "v0.6");
+    expect(lines(dialog).patches).toEqual(["0.6.2Collecting data", "0.6.11,500 games", "0.6.02,500 games"]);
+    await user.clear(box);
+    await user.type(box, "9.9.9");
+    expect(lines(dialog)).toEqual({ names: [], patches: [] });
+    expect(within(dialog).getByTestId(statsTestid.patchSearchNone)).toHaveTextContent("No patch holds version 9.9.9.");
+  });
+
+  it("R4677001 picking a patch shows it as a tab does: in the address, and the bar's shown patch", async () => {
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    await screen.findAllByTestId(statsTestid.patchTab, undefined, SLOW);
+    // 0.5.7, short of games and not the newest, has no tab until it is shown.
+    expect(screen.getAllByTestId(statsTestid.patchTab).map((tab) => tab.querySelector(".stats-patch-tab-name")?.textContent)).toEqual([
+      "0.6.2",
+      "0.6.1",
+      "0.6.0",
+      "0.5.9",
+    ]);
+    let dialog = await openSearch(user);
+    await user.type(within(dialog).getByTestId(statsTestid.patchSearchInput), "0.5.8");
+    await user.click(within(dialog).getByTestId(statsTestid.patchSearchOption));
+    // Asked for at its newest version, the dialog closed, and pressed as a tab of its own.
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.5.8b"), SLOW);
+    expect(screen.queryByRole("dialog", { name: "Find a patch" })).toBeNull();
+    expect(requested("/api/stats/cards").at(-1)?.searchParams.get("patch")).toBe("0.5.8b");
+    await waitFor(
+      () =>
+        expect(
+          screen
+            .getAllByTestId(statsTestid.patchTab)
+            .filter((tab) => tab.getAttribute("aria-pressed") === "true")
+            .map((tab) => tab.querySelector(".stats-patch-tab-name")?.textContent),
+        ).toEqual(["0.5.7"]),
+      SLOW,
+    );
+    // Picking the newest is the plain address, as its tab is.
+    dialog = await openSearch(user);
+    await user.click(within(dialog).getAllByTestId(statsTestid.patchSearchOption)[0]!);
+    await waitFor(() => expect(window.location.search).toBe(""), SLOW);
+  });
+
+  it("R4677000 the dialog ends with older patches for dev accounts for anyone else, and a dev account's lists them with no such line", async () => {
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    let dialog = await openSearch(user);
+    const devs = within(dialog).getByTestId(statsTestid.patchSearchDevs);
+    expect(devs).toHaveTextContent("Older patches are for dev accounts.");
+    // The line comes after every patch, and no patch the server refuses is listed.
+    const options = within(dialog).getAllByTestId(statsTestid.patchSearchOption);
+    expect(options.at(-1)!.compareDocumentPosition(devs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(lines(dialog).names).not.toContain("0.4");
+    cleanup();
+
+    // The E2E dev fixture's session (R1310004): the server lists it every patch, and the dialog says nothing more.
+    signIn("dev-token");
+    serveReader("dev-token");
+    render(<StatsRoute />);
+    dialog = await openSearch(user);
+    expect(lines(dialog).names).toEqual(["0.6", "0.5", "0.4"]);
+    expect(within(dialog).queryByTestId(statsTestid.patchSearchDevs)).toBeNull();
+    await user.click(within(dialog).getAllByTestId(statsTestid.patchSearchOption).at(-1)!);
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.4.0b"), SLOW);
+  });
+
+  it("R4677000 an address naming a refused patch opens on the current patch with that same line, never an error page", async () => {
+    at("/stats?patch=0.4.0b");
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    const refused = await screen.findByTestId(statsTestid.patchRefused, undefined, SLOW);
+    expect(refused).toHaveTextContent("Older patches are for dev accounts.");
+    await waitFor(() => expect(window.location.search).toBe(""), SLOW);
+    expect(requested("/api/stats/cards").at(-1)?.searchParams.get("patch")).toBeNull();
+    // The current patch is shown, collecting its data, and nothing says the page failed.
+    expect(await screen.findByTestId(statsTestid.patchCollecting, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("The card statistics didn't load.")).toBeNull();
+    // Choosing a patch leaves the line behind.
+    await user.click(screen.getByTestId(statsTestid.patchPrevious));
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.1"), SLOW);
+    expect(screen.queryByTestId(statsTestid.patchRefused)).toBeNull();
+  });
+
+  it("R4677000 the page sends the signed-in token with its statistics reads, and none signed out", async () => {
+    const tokens = (): (string | null)[] =>
+      vi
+        .mocked(fetch)
+        .mock.calls.filter(([input]) => new URL(String(input), window.location.origin).pathname.startsWith("/api/stats/"))
+        .map(([, init]) => new Headers(init?.headers).get("authorization"));
+    serveReader();
+    render(<StatsRoute />);
+    await screen.findAllByTestId(statsTestid.patchTab, undefined, SLOW);
+    expect(tokens().length).toBeGreaterThan(0);
+    expect(tokens().every((token) => token === null)).toBe(true);
+    cleanup();
+
+    signIn("dev-token");
+    serveReader("dev-token");
+    at("/stats?patch=0.6.1&card=core-001");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    await waitFor(() => {
+      const asked = vi.mocked(fetch).mock.calls.map(([input]) => new URL(String(input), window.location.origin).pathname);
+      expect(asked).toEqual(expect.arrayContaining(["/api/stats/cards", "/api/stats/games", "/api/stats/cards/core-001"]));
+    }, SLOW);
+    expect(tokens().every((token) => token === "Bearer dev-token")).toBe(true);
   });
 });
 

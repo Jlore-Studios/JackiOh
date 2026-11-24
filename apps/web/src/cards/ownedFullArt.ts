@@ -13,7 +13,7 @@ import { getOwnedCosmetics, type OwnedCosmeticsResponse } from "../net/api.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { AccountCosmeticsOwned, CARD_SLOT_KINDS, type OwnedByCard } from "./cosmetics.ts";
 import { FULL_ART_GATED, FullArtOwned, NO_FULL_ART } from "./fullArt.ts";
-import { impliedBy, isOfferedId, offeredOn } from "./versions.ts";
+import { impliedBy, isOfferedId, loadCosmeticOffers, offeredOn } from "./versions.ts";
 
 /** The kinds a card carries (R2725000: a version and an augment too); the account's kinds are no card's. */
 const PER_CARD_KINDS: ReadonlySet<string> = new Set([...CARD_SLOT_KINDS, "fullArt", "version", "augment"]);
@@ -95,12 +95,15 @@ function readOwnedCosmetics(
   return entry.read;
 }
 
-/** The per-card cosmetics `token`'s account owns, by card, from the session's one read. */
+/**
+ * The per-card cosmetics `token`'s account owns, by card, from the session's one read. #4714: the answer is read
+ * against the offers (`ownedCardCosmetics`), which load after the first paint, so it waits for them too.
+ */
 export function readOwnedFullArt(
   token: string,
   fetchOwned: (token: string) => Promise<OwnedCosmeticsResponse> = getOwnedCosmetics,
 ): Promise<OwnedByCard> {
-  return readOwnedCosmetics(token, fetchOwned).then(ownedCardCosmetics);
+  return Promise.all([readOwnedCosmetics(token, fetchOwned), loadCosmeticOffers()]).then(([owned]) => ownedCardCosmetics(owned));
 }
 
 export function readOwnedAccountCosmetics(

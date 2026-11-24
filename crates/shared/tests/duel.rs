@@ -894,6 +894,107 @@ mod being_here {
         assert_eq!(table.records[0].outcome.winner, Winner::P1);
         assert_eq!(table.records[0].outcome.reason, GameOverReason::Disconnect);
     }
+
+    /// §9.5, R744, R3767000: a socket that drops while it is being seated starts its seat's grace
+    /// like any other drop. The re-seat's `Connected` already ran before the drop's `Left`, so the
+    /// dead `Attached` arrives with the seat gone: the grace keeps running, stored and on the other
+    /// seat's clock frame, nobody is greeted, and past the deadline the match ends on `Disconnect`.
+    #[test]
+    fn s9_5_a_socket_dropped_while_being_seated_leaves_the_grace_running() {
+        let mut table = Table::new(setup(opening("here-9")));
+        table.connect(P1);
+        table.connect(P2);
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        table.feed(DuelEvent::Left { home: P2 });
+        table.feed(DuelEvent::Disconnected { home: P2 });
+        let deadline = table.now + grace_ms();
+        assert_eq!(table.clocks_p2_grace(), Some(deadline));
+        let persisted = table.persisted.len();
+        let told = table.sent.p1.len();
+        let sent_p2 = table.sent.p2.len();
+        let greetings = table.greetings.len();
+        table.feed(DuelEvent::Attached { home: P2 });
+        assert_eq!(table.clocks_p2_grace(), Some(deadline));
+        assert_eq!(table.timer(TimerKey::Grace { player: P2 }), Some(deadline));
+        // The stored grace is untouched: no new row was written.
+        assert_eq!(table.persisted.len(), persisted);
+        assert_eq!(
+            table.persisted.last().expect("stored").grace_deadline.p2,
+            Some(deadline)
+        );
+        // The dead seat got nothing and nobody was greeted, while the other seat's newest clock
+        // frame still carries the running grace.
+        assert_eq!(table.sent.p2.len(), sent_p2);
+        assert_eq!(table.greetings.len(), greetings);
+        let clock = table.sent.p1[told..]
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                SeatMessage::Clock { clocks, .. } => Some(clocks.clone()),
+                _ => None,
+            })
+            .expect("p1 was sent the clock");
+        assert_eq!(clock.grace_deadline.p2, Some(deadline));
+        let seq = table.host.next_seq();
+        table.sleep(grace_ms());
+        let (_, action) = table.log.last().expect("the loss was logged");
+        assert_eq!(action.body, ActionBody::DisconnectExpired { player: P2 });
+        assert_eq!(action.player_id, P2);
+        assert_eq!(action.nonce, format!("srv-grace-{seq}"));
+        assert_eq!(table.records.len(), 1);
+        assert_eq!(table.records[0].outcome.winner, Winner::P1);
+        assert_eq!(table.records[0].outcome.reason, GameOverReason::Disconnect);
+    }
+
+    /// §9.5: a disconnect that runs after its seat's next socket attached is stale — the seat is
+    /// back, so no grace starts and the later `Attached` greets it normally.
+    #[test]
+    fn s9_5_a_stale_disconnect_after_a_reconnect_starts_no_grace() {
+        let mut table = Table::new(setup(opening("here-10")));
+        table.connect(P1);
+        table.connect(P2);
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        table.feed(DuelEvent::Left { home: P2 });
+        // The next socket arrives inside the gap, before the stale disconnect runs.
+        table.feed(DuelEvent::Connected { home: P2 });
+        table.feed(DuelEvent::Disconnected { home: P2 });
+        assert_eq!(table.clocks_p2_grace(), None);
+        assert_eq!(table.timer(TimerKey::Grace { player: P2 }), None);
+        table.greetings.clear();
+        let told = table.sent.p2.len();
+        table.feed(DuelEvent::Attached { home: P2 });
+        assert_eq!(table.clocks_p2_grace(), None);
+        // The greeting: the host's frames around the view, then the clock, then the watchers.
+        assert_eq!(
+            table.greetings,
+            vec![
+                (P2, GreetingPart::Before),
+                (P2, GreetingPart::After),
+                (P2, GreetingPart::Watchers)
+            ]
+        );
+        let kinds: Vec<&str> = table.sent.p2[told..]
+            .iter()
+            .map(|message| match message {
+                SeatMessage::View { .. } => "view",
+                SeatMessage::Clock { .. } => "clock",
+                _ => "other",
+            })
+            .collect();
+        assert_eq!(&kinds[..2], ["view", "clock"], "{kinds:?}");
+        table.sleep(grace_ms());
+        assert!(table.records.is_empty());
+        assert!(
+            table
+                .nonces()
+                .iter()
+                .all(|nonce| !nonce.starts_with("srv-grace-")),
+            "{:?}",
+            table.nonces()
+        );
+    }
 }
 
 mod relays {

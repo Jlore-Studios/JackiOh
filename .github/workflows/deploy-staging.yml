@@ -168,7 +168,7 @@ jobs:
           SHA: ${{ steps.sha.outputs.sha }}
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::error::The CLOUDFLARE_API_TOKEN secret is not set, so staging was built but not deployed. docs/deploy-cloudflare.md, section 4, step 2, says how to make one."
+            echo "::error::The CLOUDFLARE_API_TOKEN secret is not set, so staging was built but not deployed. docs/deploy-cloudflare.md, section 4, says how to make one."
             exit 1
           fi
           pnpm --dir apps/edge exec wrangler deploy --config ../../wrangler.jsonc --env staging --var "DEPLOYED_COMMIT:$SHA"

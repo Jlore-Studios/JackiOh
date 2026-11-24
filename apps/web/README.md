@@ -1192,14 +1192,15 @@ src/practice/
   controller.ts       one request in flight, and the pacing loop that plays the AI's turn one
                       visible action at a time (think indicator, gaps from config.ts)
   aiTable.ts          the hooks that pace the AI at a table (controller state, board busy, the voice and
-                      showcase holds), shared by the route and a dungeon fight's screen
+                      showcase holds), shared by the route, a dungeon fight's screen and an Infinite Assault fight's screen
   config.ts testids.ts PracticeSetup.tsx ThinkIndicator.tsx PracticeLeave.tsx PracticeResult.tsx practice.css
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
   saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
-                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and the last
-                      PRACTICE_REPLAYS_KEPT finished free games (R768)
+                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and a dungeon
+                      run's fight and an Infinite Assault fight each in a slot of its own (R3476000, R4582001),
+                      and the last PRACTICE_REPLAYS_KEPT finished free games (R768)
   resume.ts           the page's half (R668): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   todaysDeal.ts       today's deal (R2882000): the UTC day's seed daily-YYYY-MM-DD and seat, on a random deck
@@ -1466,7 +1467,14 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   the shop's pack reveal do; `routes/engine-gate.test.tsx` holds the landing to it with a played game's stats.
   The scene kits and both recipe tables load in a chunk beside the module (#4222:
   `src/cards/art/sceneLoader.ts`): `EngineGate` and `useEngineReady` wait for both before a face draws,
-  and `test/setup.ts` installs the tables synchronously. The sound-effect recipes load the same way
+  and `test/setup.ts` installs the tables synchronously. The cosmetic offers (`COSMETIC_OFFERS`, each
+  version's offered cards, `wire/generated/cosmeticOffers.ts`) load in the same step from a chunk of their
+  own (#4714, `loadCosmeticOffers` in `cards/versions.ts`, whose offer queries throw before they are in): the
+  shop's route chunk and the ownership read (`cards/ownedFullArt.ts`) await them too, and `test/setup.ts`
+  installs them. `main.tsx` starts the module's download at boot on every route with a low Fetch Priority
+  (`startWasmLoad`), so the route's own chunks come first; a screen that awaits the engine shares that one
+  download and never fetches it again. The full-screen art view imports the music player when it opens, never
+  with the faces that open it (`cards/FullScreenArt.tsx`). The sound-effect recipes load the same way
   (#4428: `src/audio/sfxLoader.ts`): `main.tsx` starts them off the first paint beside the page-wide
   sound, and the engine's `unlock()` is the backstop, never behind the module; a sound asked for
   before they land is skipped silently, and `test/setup.ts` installs them synchronously. The
@@ -1493,7 +1501,7 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `crates/cards` (the second and third generated from its `card-text.yaml`, #2498, each with a `"//"`
   entry that `flavour.ts` and `chinese.ts` drop).
 - The generated files (`src/wire/generated/`, `engineConfig.ts`, `serverConfig.ts`; among the first,
-  `generated/cosmetics.ts` is the server's cosmetics registry, the card slots, the deck slots and the full arts, R1295000, R1297000, R1313000) are written by
+  `generated/cosmetics.ts` is the server's cosmetics registry, the card slots, the deck slots and the full arts, R1295000, R1297000, R1313000, and `generated/cosmeticOffers.ts` beside it each version's offered cards, R2725001, #4714) are written by
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they
   differ from what is committed, so a Rust change that moves the wire commits them in the same change.
 - Three files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`

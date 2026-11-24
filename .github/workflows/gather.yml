@@ -2,13 +2,12 @@
 # played without a pause on GitHub's runners and filed as totals only into both projects' card
 # statistics, JackiOh-Staging's and JackiOh-Production's (R1933001, docs/deploy-cloudflare.md section
 # 8), so each site's figures always have fresh development games of the version that is live, beside
-# its live games and the learn lane's exports (learn.yml, `import`).
+# its live games.
 #
-# Since #3740 it runs all the time on two of GitHub's runners, the gather lane's two of the training
-# lanes' 12 (the learn lane's export takes the other 10, selfplay-shards.yml) of the organization's 60
-# hosted jobs; whatever the training lanes leave idle, CI and the bots take. A run is two parts side
-# by side, each playing GATHER_HOURS hours of `cargo jackioh stats --series gather` (AI against AI on
-# R258's All Random deals at the browser's budget) on main as it was when the run started,
+# Since #3740 it runs all the time on two of the organization's 60 hosted jobs; CI and the bots take
+# the rest. A run is two parts side by side, each playing GATHER_HOURS hours of `cargo jackioh stats
+# --series gather` (AI against AI on R258's All Random deals at the browser's budget) on main as it
+# was when the run started,
 # GATHER_FILE_GAMES games at a time (about an hour of a runner), each batch filed as it finishes with
 # `training/file-records.sh`: `jackioh-server stats-import --totals-only` over
 # STATS_IMPORT_DATABASE_URL (staging's) and then PRODUCTION_STATS_IMPORT_DATABASE_URL (no row per

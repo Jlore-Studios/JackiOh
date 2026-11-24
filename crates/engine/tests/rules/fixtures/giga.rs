@@ -1,6 +1,6 @@
 //! Test-only cards for GIGA (issue #3546, R3546000–R3546004): a GIGA Unit and Field Spell, a
-//! plain Unit, a Cleaver, a Stack Unit, a lane-locked Unit, a Reborn GIGA and an embiggen Unit that
-//! is GIGA only embiggened, so the engine never imports `crates/cards`. Ids are `giga-` from
+//! plain Unit, a Cleaver, a Stack Unit, a lane-locked Unit, a Reborn GIGA, a Crater one (R4693000)
+//! and an embiggen Unit that is GIGA only embiggened, so the engine never imports `crates/cards`. Ids are `giga-` from
 //! 35460, clear of every other fixture file's.
 
 use jackioh_engine::testkit::*;
@@ -25,6 +25,8 @@ pub const REBORN_GIGA: &str = "giga-reborn";
 pub const GROWER: &str = "giga-grower";
 /// A (0) Trap with GIGA, face-down in the backrow: the FaceDown view branch (R3546004).
 pub const GIGA_TRAP: &str = "giga-trap";
+/// A (0) 1/1 Unit with GIGA, Crater and Reborn: R4693000's Crater footprint.
+pub const CRATER_GIGA: &str = "giga-crater";
 /// A (1 embiggen 0) 2/2 Unit, GIGA only embiggened: its embiggened price is the cheaper, as a discount
 /// that reaches that price alone leaves it (R363).
 pub const CHEAP_GROWER: &str = "giga-cheap-grower";
@@ -113,6 +115,7 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
         STACKER,
         REBORN_GIGA,
         GIGA_TRAP,
+        CRATER_GIGA,
     ] {
         all.insert(id.to_string(), both(Script::default()));
     }
@@ -169,6 +172,14 @@ pub fn defs() -> Vec<CardDef> {
             "Unit",
             Some((1, 1)),
             json!([{ "kind": "GIGA" }, { "kind": "Reborn" }]),
+            json!(0),
+        ),
+        card(
+            35470,
+            CRATER_GIGA,
+            "Unit",
+            Some((1, 1)),
+            json!([{ "kind": "GIGA" }, { "kind": "Crater" }, { "kind": "Reborn" }]),
             json!(0),
         ),
         card(

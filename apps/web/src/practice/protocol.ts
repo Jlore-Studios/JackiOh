@@ -5,13 +5,14 @@
 // non-production build, for the e2e replay check. A kept game crosses as its summary and the human's
 // `viewFor` at each step (R768), never its log, seed or decks; the one log that crosses is a finished
 // game's on a server seed, as its claim (R1303000), once the game it could help with is over. A dungeon
-// run's fight answers the run's `FightOver` once it is over (R2706000), never its log.
+// run's fight answers the run's `FightOver` once it is over (R2706000), never its log, and an
+// Infinite Assault fight answers the attempt's `fightOver` the same way (R4582000).
 
 import { LEAN_NEWEST } from "@jackioh/shared";
 import type { ActionBody, CardDefs, DistributiveOmit, LeanPick, PlayerId, PortraitId } from "@jackioh/shared";
 import type { ReplayStep } from "@jackioh/engine";
 import type { Difficulty } from "@jackioh/engine/config";
-import type { RunAction, RunFightSetup } from "@jackioh/run";
+import type { AssaultAction, AssaultFightSetup, RunAction, RunFightSetup } from "@jackioh/run";
 
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { LastBoardEntry } from "../wire/generated/LastBoardEntry.ts";
@@ -79,7 +80,23 @@ export type PracticeStartConfig = {
    * progress but never kept for replay, and earns nothing.
    */
   run?: RunFightSetup;
+  /**
+   * R4582000, R4582001: an Infinite Assault level's fight (issue #4582). When set, it is the setup
+   * `assaultFightSetup` names: the seed, the player's deck and handicap at `humanSeat`, the
+   * enemy's deck, handicap and deck marks at the AI's seat. Like `run` it brings no last board
+   * and leaves none, leaves the free game's memory alone, earns nothing, and is kept in its own
+   * save slot while in progress but never kept for replay.
+   */
+  assault?: AssaultFightSetup;
 };
+
+/**
+ * R2706000, R4582000: a fight a mode writes (a dungeon run's or the Infinite Assault's): no last
+ * board, and the page's memory of the free game stays as it was.
+ */
+export function isModeFight(config: PracticeStartConfig): boolean {
+  return config.run !== undefined || config.assault !== undefined;
+}
 
 /**
  * What the machine tells the page, as `crates/shared`'s practice session writes it (#3099,
@@ -129,6 +146,12 @@ export type PracticeRequest =
    * game that is no fight. Only the run's action crosses, never the log (CLAUDE.md rule 7).
    */
   | { id: number; type: "runReport" }
+  /**
+   * R4582000: a finished Infinite Assault fight as the attempt reads it: `assaultFightReport` over
+   * the game's setup and log, for the seat the human ended in. Refused before the end and for a
+   * game that is no Assault fight. Only the attempt's action crosses, never the log.
+   */
+  | { id: number; type: "assaultReport" }
   /** R1563006: a timer the machine set came due (`timers` of an earlier answer); `timer` is its id. */
   | { id: number; type: "timerFired"; key: TimerKey; timer: number };
 
@@ -143,6 +166,9 @@ export type PracticeResponse =
   /** DR14, R2706000: the run's `FightOver`, or the run's refusal to read the fight. */
   | { id: number; type: "runReport"; action: RunAction }
   | { id: number; type: "runReport"; error: string }
+  /** R4582000: the attempt's `fightOver`, or the Assault's refusal to read the fight. */
+  | { id: number; type: "assaultReport"; action: AssaultAction }
+  | { id: number; type: "assaultReport"; error: string }
   | { id: number; type: "failed"; message: string };
 
 export type PracticeRequestBody = DistributiveOmit<PracticeRequest, "id">;

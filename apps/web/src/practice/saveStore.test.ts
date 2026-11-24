@@ -194,6 +194,51 @@ describe("R3476000 the run fight's slot is its own", () => {
   });
 });
 
+describe("R4582001 the Assault fight's slot is its own", () => {
+  const FIGHT: PracticeSave = { ...SAVE, hash: "assault" };
+
+  it("R4582001 the free game, the run fight and the Assault fight coexist, and each clear leaves the others", async () => {
+    const store = memorySaveStore();
+    await store.ready;
+    expect(store.readAssaultFight()).toBeNull();
+    store.write(SAVE);
+    store.writeRunFight({ ...SAVE, hash: "fight" });
+    store.writeAssaultFight(FIGHT);
+    expect(store.read(), "the free game's save").toEqual(SAVE);
+    expect(store.readRunFight(), "the run fight's save").toEqual({ ...SAVE, hash: "fight" });
+    expect(store.readAssaultFight(), "the Assault fight's save").toEqual(FIGHT);
+    store.write(null);
+    expect(store.read()).toBeNull();
+    expect(store.readRunFight(), "clearing the free game leaves the run fight").toEqual({ ...SAVE, hash: "fight" });
+    expect(store.readAssaultFight(), "clearing the free game leaves the Assault fight").toEqual(FIGHT);
+    store.write(SAVE);
+    store.writeRunFight(null);
+    expect(store.readRunFight()).toBeNull();
+    expect(store.read(), "clearing the run fight leaves the free game").toEqual(SAVE);
+    expect(store.readAssaultFight(), "clearing the run fight leaves the Assault fight").toEqual(FIGHT);
+    store.writeAssaultFight(null);
+    expect(store.readAssaultFight()).toBeNull();
+    expect(store.read(), "clearing the Assault fight leaves the free game").toEqual(SAVE);
+  });
+
+  it("R4582001 the Assault fight outlives the store beside the others", async () => {
+    const idb = fakeIndexedDb();
+    const first = indexedDbSaveStore(idb.factory);
+    await first.ready;
+    first.write(SAVE);
+    first.writeRunFight({ ...SAVE, hash: "fight" });
+    first.writeAssaultFight(FIGHT);
+    await macrotasks();
+
+    const second = indexedDbSaveStore(idb.factory);
+    await second.ready;
+    expect(second.read()).toEqual(SAVE);
+    expect(second.readRunFight()).toEqual({ ...SAVE, hash: "fight" });
+    expect(second.readAssaultFight(), "the Assault fight is read at boot beside the others").toEqual(FIGHT);
+    expect(idb.rows.get("assaultFight"), "the Assault fight has its own key").toEqual(FIGHT);
+  });
+});
+
 describe("R768 the finished games beside the save", () => {
   it("R768 memory keeps the finished games it is given and written, apart from the save", async () => {
     const store = memorySaveStore(SAVE, [REPLAY]);

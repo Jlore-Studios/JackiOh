@@ -1,4 +1,5 @@
-//! SPEC §8.12 S+ #16 Servo Surge (Unit 2/1 → 4/2, Starship Piece, Windfury, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #16 Servo Surge (Unit 5/3 → 10/6, 2/1 → 4/2 until issue #4665, Starship Piece, Windfury,
+//! cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base and Radiant: "Starship Piece, Windfury"
 //!
 //! Every word is a catalog keyword the engine plays, so there is nothing to run. Played onto one of your
