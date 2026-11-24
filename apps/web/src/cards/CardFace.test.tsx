@@ -470,8 +470,9 @@ describe("B10: RulesText marks terms in bold", () => {
     const golem = catalogFace("core-055");
     const terms = [...golem.querySelectorAll(".card-text strong.cf-term")];
     // R910000: "Can use enemy Units as Tributes" bolds its plural too.
-    expect(terms.map((strong) => strong.textContent)).toEqual(["Taunt", "Tribute 3", "Tributes"]);
-    expect(terms.map((strong) => strong.getAttribute("data-term"))).toEqual(["Taunt", "Tribute", "Tribute"]);
+    // R4747000: core-055's keyword line prints "Tribute 3, Taunt", in text order.
+    expect(terms.map((strong) => strong.textContent)).toEqual(["Tribute 3", "Taunt", "Tributes"]);
+    expect(terms.map((strong) => strong.getAttribute("data-term"))).toEqual(["Tribute", "Taunt", "Tribute"]);
   });
 
   it("B10 every catalog face, base and radiant, Classic and Classic+ too, draws each term its text names in bold, its keywords among them (#85)", () => {

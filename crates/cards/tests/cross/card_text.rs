@@ -360,6 +360,89 @@ fn your_turn_trigger(text: &str) -> bool {
     .any(|phrase| has_words(text, phrase, true))
 }
 
+/// R4747000: the one fixed display order of a card's keyword line (§6.1), as display names in
+/// `KEYWORD_LINE_ORDER`'s sequence. The canonical order is `KEYWORD_LINE_ORDER` in
+/// `jackioh-shared`'s config; this pure crate may not depend on it (CLAUDE.md rule 4), so the
+/// sequence is restated here, and `jackioh-shared`'s completeness test guards the constant.
+const EXPECTED_ORDER: &[&str] = &[
+    "Tradable",
+    "Flashback",
+    "Temporary",
+    "Cloaked",
+    "Equip",
+    "Stack",
+    "Flexible",
+    "GIGA",
+    "Tipsy",
+    "Spell Damage",
+    "Lucky",
+    "Indestructible",
+    "Immutable",
+    "Immune to Spells",
+    "Untributable",
+    "Evasive",
+    "Can't attack",
+    "Can't Defend",
+    "Brittle",
+    "Crater",
+    "Animated",
+    "Animated on your turn",
+    "Starship Piece",
+    "Starship",
+    "Charge",
+    "Rush",
+    "Windfury",
+    "Frenzy",
+    "Deft",
+    "Taunt",
+    "Flying",
+    "Ranged",
+    "First Strike",
+    "Pierce",
+    "Trample",
+    "Cleave",
+    "Poisonous",
+    "Toxic",
+    "Burn",
+    "Lifesteal",
+    "Divine Shield",
+    "Armor",
+    "Reborn",
+];
+
+/// R4747000: `item`'s place on the keyword line: a Tribute count first, an Echo count next, then
+/// its kind's place in `EXPECTED_ORDER`, looked up through the face's own labels (a numbered item
+/// ranks by its kind: "Armor 3" ranks as Armor, "Spell Damage +1" as Spell Damage). `is_count`
+/// says whether the item is a Tribute or an Echo count, and which tier it takes.
+fn keyword_line_rank(
+    item: &str,
+    keywords: &[Keyword],
+    labels: &[String],
+    is_count: impl Fn(&str) -> Option<u8>,
+) -> (u8, usize) {
+    if let Some(tier) = is_count(item) {
+        return (tier, 0);
+    }
+    let kind = keywords
+        .iter()
+        .zip(labels.iter())
+        .find(|(_, label)| label.as_str() == item)
+        .map(|(keyword, _)| keyword.kind());
+    match kind.and_then(|kind| EXPECTED_ORDER.iter().position(|name| *name == kind.as_str())) {
+        Some(rank) => (2, rank),
+        None => (2, usize::MAX),
+    }
+}
+
+/// R4747000: whether the keyword line's items already stand in the fixed order (non-decreasing
+/// ranks, so repeats of a numbered keyword stay together where they stand).
+fn keyword_line_ordered(rank: impl Fn(&str) -> (u8, usize), lead: &[&str]) -> bool {
+    let ranks: Vec<(u8, usize)> = lead.iter().map(|item| rank(item)).collect();
+    let mut sorted = ranks.clone();
+    sorted.sort();
+    ranks == sorted
+}
+
 /// `/^(Tribute \d+|Echo (\d+|X))$/`: a computed Echo X (R802) prints "Echo X".
 fn is_tribute_or_echo_count(item: &str) -> bool {
     if let Some(n) = item.strip_prefix("Echo ") {
@@ -477,6 +560,22 @@ fn failures(face: &Face) -> Vec<String> {
     let list_item = |item: &str| labels.iter().any(|label| label == item) || is_tribute_or_echo_count(item);
     let lead: Vec<&str> = lines.first().copied().unwrap_or("").split(", ").collect();
     let has_list = !lines.is_empty() && lead.iter().copied().all(list_item);
+    // R4747000: a face with a keyword list prints it in the one fixed order (§6.1).
+    if has_list
+        && !keyword_line_ordered(
+            |item| {
+                keyword_line_rank(item, keywords, &labels, |item| {
+                    is_tribute_or_echo_count(item).then_some(if item.starts_with("Tribute") { 0 } else { 1 })
+                })
+            },
+            &lead,
+        )
+    {
+        out.push(format!(
+            "prints its keyword line out of order: \"{}\"",
+            lines.first().copied().unwrap_or("")
+        ));
+    }
     for label in &labels {
         if !has_list || !lead.contains(&label.as_str()) {
             out.push(format!("does not lead with its keyword {label}"));
@@ -572,6 +671,27 @@ pub(super) fn cjk_failures(text: &str, keywords: &[Keyword]) -> Vec<String> {
         |item: &str| labels.iter().any(|label| label == item) || is_chinese_tribute_or_echo_count(item);
     let lead: Vec<&str> = lines.first().copied().unwrap_or("").split('，').collect();
     let has_list = !lines.is_empty() && lead.iter().copied().all(list_item);
+    // R4747000: a Chinese face with a keyword list prints it in the one fixed order (§6.1), as its
+    // English face does.
+    if has_list
+        && !keyword_line_ordered(
+            |item| {
+                keyword_line_rank(item, keywords, &labels, |item| {
+                    is_chinese_tribute_or_echo_count(item).then_some(if item.starts_with("献祭") {
+                        0
+                    } else {
+                        1
+                    })
+                })
+            },
+            &lead,
+        )
+    {
+        out.push(format!(
+            "prints its keyword line out of order: \"{}\"",
+            lines.first().copied().unwrap_or("")
+        ));
+    }
     for label in &labels {
         if !has_list || !lead.contains(&label.as_str()) {
             out.push(format!("does not lead with its keyword {label}"));
@@ -1557,6 +1677,103 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
 // R1175000 (issue #1175): a card with two prices is an embiggen card. Played at the cheaper price it is
 // its normal version; at the dearer one, its Embiggened cost, it is its Embiggened version, and its
 // text labels that version "Embiggened (N): …" where R366 wrote "Paid (N): …".
+
+mod r4747000_one_fixed_order_for_every_card_s_keyword_line {
+    use super::*;
+
+    fn out_of_order(face: &Face) -> Vec<String> {
+        failures(face)
+            .into_iter()
+            .filter(|why| why.contains("out of order"))
+            .collect()
+    }
+
+    #[test]
+    fn r4747000_a_keyword_line_out_of_order_fails_and_an_ordered_one_passes() {
+        let dummy_card = entries()[0];
+        let face = |text: &str, keywords: Vec<Keyword>| Face {
+            card: dummy_card,
+            face: FaceKind::Base,
+            text: text.to_string(),
+            keywords,
+        };
+        // Core #3 today: Taunt before Can't Defend is out of order (§6.1 prints Can't Defend first).
+        assert_eq!(
+            out_of_order(&face(
+                "Taunt, Divine Shield, Reborn, Can't Defend",
+                vec![
+                    Keyword::Taunt,
+                    Keyword::DivineShield,
+                    Keyword::Reborn,
+                    Keyword::CantDefend,
+                ],
+            )),
+            vec!["prints its keyword line out of order: \"Taunt, Divine Shield, Reborn, Can't Defend\""]
+        );
+        assert_eq!(
+            out_of_order(&face(
+                "Can't Defend, Taunt, Divine Shield, Reborn",
+                vec![
+                    Keyword::Taunt,
+                    Keyword::DivineShield,
+                    Keyword::Reborn,
+                    Keyword::CantDefend,
+                ],
+            )),
+            Vec::<String>::new()
+        );
+        // Tribute and Echo counts keep the head, in that order; numbered items rank by kind.
+        assert_eq!(
+            out_of_order(&face(
+                "Ranged, Flying, Can't Defend, Tribute 2",
+                vec![Keyword::Ranged, Keyword::Flying, Keyword::CantDefend,],
+            )),
+            vec!["prints its keyword line out of order: \"Ranged, Flying, Can't Defend, Tribute 2\""]
+        );
+        assert!(
+            out_of_order(&face(
+                "Tribute 2, Can't Defend, Flying, Ranged",
+                vec![Keyword::Ranged, Keyword::Flying, Keyword::CantDefend,],
+            ))
+            .is_empty()
+        );
+        // A face with no keyword list is not an order failure.
+        assert!(out_of_order(&face("Cry: Draw 1 card.", vec![Keyword::Rush])).is_empty());
+    }
+
+    #[test]
+    fn r4747000_a_chinese_keyword_line_out_of_order_fails_and_an_ordered_one_passes() {
+        // 飞行 (Flying) prints before 远程 (Ranged), as the English faces do.
+        assert_eq!(
+            cjk_failures("远程，飞行\n造成1点伤害。", &[Keyword::Ranged, Keyword::Flying]),
+            vec!["prints its keyword line out of order: \"远程，飞行\""]
+        );
+        assert_eq!(
+            cjk_failures("飞行，远程\n造成1点伤害。", &[Keyword::Ranged, Keyword::Flying]),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn r4747000_every_face_prints_its_keyword_line_in_the_fixed_order_in_english_and_chinese() {
+        let table: Value = serde_json::from_str(chinese_json()).expect("crates/cards/chinese.json is JSON");
+        let mut wrong: Vec<String> = Vec::new();
+        for face in faces_of(&entries()) {
+            for why in out_of_order(&face) {
+                wrong.push(format!("{} {} {why}: {}", face.card.id, face.face, face.text));
+            }
+            let chinese = table[face.card.id.as_str()][face.face.as_str()]
+                .as_str()
+                .unwrap_or_default();
+            for why in cjk_failures(chinese, &face.keywords) {
+                if why.contains("out of order") {
+                    wrong.push(format!("{} {} {why}: {chinese}", face.card.id, face.face));
+                }
+            }
+        }
+        assert_eq!(wrong, Vec::<String>::new());
+    }
+}
 
 mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
     use super::*;

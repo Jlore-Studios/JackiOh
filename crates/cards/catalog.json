@@ -108,7 +108,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Taunt, Divine Shield, Reborn, Can't Defend"
+      "text": "Can't Defend, Taunt, Divine Shield, Reborn"
     },
     "radiant": {
       "attack": 2,
@@ -127,7 +127,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Taunt, Divine Shield, Reborn, Can't Defend\nDeath: Summon a base Right-house defender."
+      "text": "Can't Defend, Taunt, Divine Shield, Reborn\nDeath: Summon a base Right-house defender."
     }
   },
   "core-004": {
@@ -354,7 +354,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Armor 1, Pierce\nStart of turn: Every enemy Unit attacks this."
+      "text": "Pierce, Armor 1\nStart of turn: Every enemy Unit attacks this."
     }
   },
   "core-010": {
@@ -707,7 +707,7 @@
           "kind": "Immutable"
         }
       ],
-      "text": "Taunt, Immutable\nEnd of turn: Heal this to full."
+      "text": "Immutable, Taunt\nEnd of turn: Heal this to full."
     }
   },
   "core-020": {
@@ -1603,7 +1603,7 @@
           "kind": "Deft"
         }
       ],
-      "text": "Charge, Armor 1, Deft"
+      "text": "Charge, Deft, Armor 1"
     }
   },
   "core-046": {
@@ -1940,7 +1940,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt, Tribute 3\nCan use enemy Units as Tributes. If any are used, summon this for your opponent."
+      "text": "Tribute 3, Taunt\nCan use enemy Units as Tributes. If any are used, summon this for your opponent."
     },
     "radiant": {
       "attack": 20,
@@ -1950,7 +1950,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt, Tribute 3\nCan use enemy Units as Tributes."
+      "text": "Tribute 3, Taunt\nCan use enemy Units as Tributes."
     }
   },
   "core-056": {
@@ -3271,7 +3271,7 @@
           "n": 1
         }
       ],
-      "text": "Rush, Brittle 1\nWhile this is in your hand, it gains the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
+      "text": "Brittle 1, Rush\nWhile this is in your hand, it gains the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
     },
     "radiant": {
       "attack": 4,
@@ -3285,7 +3285,7 @@
           "n": 3
         }
       ],
-      "text": "Rush, Brittle 3\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
+      "text": "Brittle 3, Rush\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
     }
   },
   "core-090": {
@@ -3610,7 +3610,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Rush, Lifesteal, Divine Shield, First Strike"
+      "text": "Rush, First Strike, Lifesteal, Divine Shield"
     },
     "radiant": {
       "attack": 20,
@@ -3629,7 +3629,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Charge, Lifesteal, Divine Shield, First Strike"
+      "text": "Charge, First Strike, Lifesteal, Divine Shield"
     }
   },
   "core-096": {
@@ -5017,7 +5017,7 @@
           "kind": "Tradable"
         }
       ],
-      "text": "Indestructible, Spell Damage +1, Tradable\nCry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
+      "text": "Tradable, Spell Damage +1, Indestructible\nCry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
     },
     "radiant": {
       "keywords": [
@@ -5032,7 +5032,7 @@
           "kind": "Tradable"
         }
       ],
-      "text": "Indestructible, Spell Damage +2, Tradable\nCry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
+      "text": "Tradable, Spell Damage +2, Indestructible\nCry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
     }
   },
   "classic-024": {
@@ -6623,7 +6623,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Pierce, Rush\nCry: Switch every enemy Unit to Defense Position."
+      "text": "Rush, Pierce\nCry: Switch every enemy Unit to Defense Position."
     }
   },
   "classic-068": {
@@ -7131,7 +7131,7 @@
           "kind": "Crater"
         }
       ],
-      "text": "Tribute 3, Rush, Trample, Indestructible, Crater"
+      "text": "Tribute 3, Indestructible, Crater, Rush, Trample"
     },
     "radiant": {
       "attack": 26,
@@ -7150,7 +7150,7 @@
           "kind": "Crater"
         }
       ],
-      "text": "Tribute 3, Charge, Trample, Indestructible, Crater"
+      "text": "Tribute 3, Indestructible, Crater, Charge, Trample"
     }
   },
   "classic-081": {
@@ -7734,7 +7734,7 @@
           "kind": "Poisonous"
         }
       ],
-      "text": "Rush, Lifesteal, Poisonous"
+      "text": "Rush, Poisonous, Lifesteal"
     },
     "radiant": {
       "attack": 2,
@@ -7753,7 +7753,7 @@
           "kind": "Reborn"
         }
       ],
-      "text": "Rush, Lifesteal, Poisonous, Reborn"
+      "text": "Rush, Poisonous, Lifesteal, Reborn"
     }
   },
   "classicplus-007": {
@@ -9049,7 +9049,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Taunt, Reborn, Divine Shield\nDeath: Heal your hero {heal}."
+      "text": "Taunt, Divine Shield, Reborn\nDeath: Heal your hero {heal}."
     }
   },
   "classicplus-029": {
@@ -9288,7 +9288,7 @@
           "kind": "Tradable"
         }
       ],
-      "text": "Indestructible, Tradable\nThe first Unit you stack onto this is fused into it.\nAura: Your Units have Flying and Stack."
+      "text": "Tradable, Indestructible\nThe first Unit you stack onto this is fused into it.\nAura: Your Units have Flying and Stack."
     },
     "radiant": {
       "keywords": [
@@ -9299,7 +9299,7 @@
           "kind": "Tradable"
         }
       ],
-      "text": "Indestructible, Tradable\nThe first Unit you stack onto this becomes Radiant and is fused into it.\nAura: Your Units have Flying and Stack."
+      "text": "Tradable, Indestructible\nThe first Unit you stack onto this becomes Radiant and is fused into it.\nAura: Your Units have Flying and Stack."
     }
   },
   "classicplus-034": {
@@ -10077,7 +10077,7 @@
           "kind": "Evasive"
         }
       ],
-      "text": "Ranged, Flying, Rush, Evasive"
+      "text": "Evasive, Rush, Flying, Ranged"
     },
     "radiant": {
       "attack": 14,
@@ -10099,7 +10099,7 @@
           "kind": "Evasive"
         }
       ],
-      "text": "Ranged, Flying, Rush, Divine Shield, Evasive"
+      "text": "Evasive, Rush, Flying, Ranged, Divine Shield"
     }
   },
   "classicplus-052": {
@@ -11142,7 +11142,7 @@
           "kind": "Frenzy"
         }
       ],
-      "text": "Rush, First Strike, Trample, Frenzy\nWhen this attacks a Unit, that Unit transforms into a random Radiant Classic or Classic+ Unit."
+      "text": "Rush, Frenzy, First Strike, Trample\nWhen this attacks a Unit, that Unit transforms into a random Radiant Classic or Classic+ Unit."
     },
     "radiant": {
       "attack": 20,
@@ -11161,7 +11161,7 @@
           "kind": "Frenzy"
         }
       ],
-      "text": "Rush, First Strike, Trample, Frenzy\nWhen this attacks a Unit, that Unit transforms into a random Classic or Classic+ Unit."
+      "text": "Rush, Frenzy, First Strike, Trample\nWhen this attacks a Unit, that Unit transforms into a random Classic or Classic+ Unit."
     }
   },
   "classicplus-074": {
@@ -11204,7 +11204,7 @@
           "n": 2
         }
       ],
-      "text": "Animated, Brittle 2\nEvery {plays|card|cards} your opponent plays, fuse a copy of the last into this and gain +{brittleGain} Brittle."
+      "text": "Brittle 2, Animated\nEvery {plays|card|cards} your opponent plays, fuse a copy of the last into this and gain +{brittleGain} Brittle."
     },
     "radiant": {
       "keywords": [
@@ -11216,7 +11216,7 @@
           "n": 4
         }
       ],
-      "text": "Animated, Brittle 4\nEvery {plays|card|cards} your opponent plays, fuse a Radiant copy of the last into this and gain +{brittleGain} Brittle."
+      "text": "Brittle 4, Animated\nEvery {plays|card|cards} your opponent plays, fuse a Radiant copy of the last into this and gain +{brittleGain} Brittle."
     }
   },
   "classicplus-075": {
@@ -11772,7 +11772,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "First Strike, Rush, Windfury\nWhenever this takes damage, discard {discards|random card|random cards}."
+      "text": "Rush, Windfury, First Strike\nWhenever this takes damage, discard {discards|random card|random cards}."
     }
   },
   "meditative-003": {
@@ -11900,7 +11900,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Echo X, Lifesteal, Pierce\nDeal {damage} damage to a Unit. X is {echo|time|times} your mana left after paying for this."
+      "text": "Echo X, Pierce, Lifesteal\nDeal {damage} damage to a Unit. X is {echo|time|times} your mana left after paying for this."
     }
   },
   "meditative-006": {
@@ -12159,7 +12159,7 @@
           "kind": "Tradable"
         }
       ],
-      "text": "Indestructible, Tradable\nThe first card you play each turn adds a copy of it to your hand. The copy isn't Radiant and costs ({setCost})."
+      "text": "Tradable, Indestructible\nThe first card you play each turn adds a copy of it to your hand. The copy isn't Radiant and costs ({setCost})."
     },
     "radiant": {
       "keywords": [
@@ -12170,7 +12170,7 @@
           "kind": "Tradable"
         }
       ],
-      "text": "Indestructible, Tradable\nThe first card you play each turn adds a Radiant copy of it to your hand. It costs ({setCost})."
+      "text": "Tradable, Indestructible\nThe first card you play each turn adds a Radiant copy of it to your hand. It costs ({setCost})."
     }
   },
   "meditative-012": {
@@ -13653,7 +13653,7 @@
           "kind": "Evasive"
         }
       ],
-      "text": "Can't attack, Evasive\nEnd of turn: Allure every enemy Unit.\nYou summon this when your Jade Counter reaches 5.\nAt the start of your next turn, steal the Units this charmed, or they die of heartbreak if you have no room."
+      "text": "Evasive, Can't attack\nEnd of turn: Allure every enemy Unit.\nYou summon this when your Jade Counter reaches 5.\nAt the start of your next turn, steal the Units this charmed, or they die of heartbreak if you have no room."
     },
     "radiant": {
       "attack": 40,
@@ -14808,7 +14808,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Animated on your turn, Rush, Pierce, First Strike"
+      "text": "Animated on your turn, Rush, First Strike, Pierce"
     }
   },
   "meditative-067": {
@@ -15072,7 +15072,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Animated on your turn, Indestructible, Pierce\nAlso Animated when Pareto Optimal."
+      "text": "Indestructible, Animated on your turn, Pierce\nAlso Animated when Pareto Optimal."
     },
     "radiant": {
       "attack": 6,
@@ -15091,7 +15091,7 @@
           "kind": "Trample"
         }
       ],
-      "text": "Animated on your turn, Indestructible, Pierce, Trample\nAlso Animated when Pareto Optimal."
+      "text": "Indestructible, Animated on your turn, Pierce, Trample\nAlso Animated when Pareto Optimal."
     }
   },
   "meditative-072": {
@@ -15384,7 +15384,7 @@
           "kind": "Immutable"
         }
       ],
-      "text": "Indestructible, Untributable, Immutable\nEnd of turn: Draw 3. They cost ({discount}) less."
+      "text": "Indestructible, Immutable, Untributable\nEnd of turn: Draw 3. They cost ({discount}) less."
     },
     "radiant": {
       "keywords": [
@@ -15960,7 +15960,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Sr."
+      "text": "Can't Defend, Rush\nDeath: Summon a Radiant Growing Felinor Sr."
     }
   },
   "meditative-093-1": {
@@ -16005,7 +16005,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Sr Sr."
+      "text": "Can't Defend, Rush\nDeath: Summon a Radiant Growing Felinor Sr Sr."
     }
   },
   "meditative-093-2": {
@@ -16049,7 +16049,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Super Senior."
+      "text": "Can't Defend, Rush\nDeath: Summon a Radiant Growing Felinor Super Senior."
     }
   },
   "meditative-093-3": {
@@ -16092,7 +16092,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Divine Shield, Rush, Can't Defend"
+      "text": "Can't Defend, Rush, Divine Shield"
     }
   },
   "meditative-094": {
@@ -16224,7 +16224,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Rush, Poisonous, Cleave, Pierce\nWhenever this destroys a Unit, shuffle {viruses|Super-Virus|Super-Viruses} into your opponent's deck."
+      "text": "Rush, Pierce, Cleave, Poisonous\nWhenever this destroys a Unit, shuffle {viruses|Super-Virus|Super-Viruses} into your opponent's deck."
     },
     "radiant": {
       "attack": 20,
@@ -16246,7 +16246,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Rush, Poisonous, Cleave, Pierce, Windfury\nWhenever this destroys a Unit, shuffle {viruses|Radiant Super-Virus|Radiant Super-Viruses} into your opponent's deck."
+      "text": "Rush, Windfury, Pierce, Cleave, Poisonous\nWhenever this destroys a Unit, shuffle {viruses|Radiant Super-Virus|Radiant Super-Viruses} into your opponent's deck."
     }
   },
   "meditative-096": {
@@ -16457,7 +16457,7 @@
           "n": 1
         }
       ],
-      "text": "Can't attack, Lucky 1\nActivate: {chance}% chance to add a random Radiant card to your hand."
+      "text": "Lucky 1, Can't attack\nActivate: {chance}% chance to add a random Radiant card to your hand."
     }
   },
   "meditative-097-3": {
@@ -16595,7 +16595,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Tribute 2, Armor 3, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
+      "text": "Tribute 2, Can't attack, First Strike, Armor 3\nThis strikes Units in its lane with {multiplier}× its Attack."
     },
     "radiant": {
       "attack": 10,
@@ -16612,7 +16612,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Tribute 2, Armor 6, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
+      "text": "Tribute 2, Can't attack, First Strike, Armor 6\nThis strikes Units in its lane with {multiplier}× its Attack."
     }
   },
   "meditative-097-6": {
@@ -16705,7 +16705,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Tribute 3, Immutable, Armor 2, Can't attack\nCry: Lock every unit zone on your side."
+      "text": "Tribute 3, Immutable, Can't attack, Armor 2\nCry: Lock every unit zone on your side."
     }
   },
   "meditative-097-8": {
@@ -19228,7 +19228,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Animated, Indestructible\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}."
+      "text": "Indestructible, Animated\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}."
     }
   },
   "stinkyscape-017": {
@@ -20691,7 +20691,7 @@
           "n": 1
         }
       ],
-      "text": "Starship Piece, Lucky 1\nActivate: Deal a random {least} to {most} damage to each enemy Unit."
+      "text": "Lucky 1, Starship Piece\nActivate: Deal a random {least} to {most} damage to each enemy Unit."
     }
   },
   "stinkyscape-054": {
@@ -20883,7 +20883,7 @@
           "n": 1
         }
       ],
-      "text": "Starship Piece, Lucky 1\nActivate: Deal a random {least} to {most} damage to each enemy Unit, twice."
+      "text": "Lucky 1, Starship Piece\nActivate: Deal a random {least} to {most} damage to each enemy Unit, twice."
     }
   },
   "stinkyscape-058": {
@@ -21075,7 +21075,7 @@
           "n": 1
         }
       ],
-      "text": "Starship Piece, Lucky 1\nActivate 3: Deal a random {least} to {most} damage to each enemy Unit, three times."
+      "text": "Lucky 1, Starship Piece\nActivate 3: Deal a random {least} to {most} damage to each enemy Unit, three times."
     }
   },
   "stinkyscape-062": {
@@ -21518,7 +21518,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Charge, Flying, Ranged, Divine Shield, Pierce"
+      "text": "Charge, Flying, Ranged, Pierce, Divine Shield"
     }
   },
   "stinkyscape-074": {
@@ -21556,7 +21556,7 @@
           "kind": "Immune to Spells"
         }
       ],
-      "text": "Tribute 2, Charge, Flying, Ranged, Divine Shield, Immutable, Immune to Spells"
+      "text": "Tribute 2, Immutable, Immune to Spells, Charge, Flying, Ranged, Divine Shield"
     },
     "radiant": {
       "attack": 20,
@@ -21584,7 +21584,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Tribute 2, Charge, Flying, Ranged, Divine Shield, Immutable, Immune to Spells, Pierce"
+      "text": "Tribute 2, Immutable, Immune to Spells, Charge, Flying, Ranged, Pierce, Divine Shield"
     }
   },
   "stinkyscape-075": {
@@ -21679,7 +21679,7 @@
           "n": 1
         }
       ],
-      "text": "Flying, Lucky 1\nCry: At the start of your opponent's next turn, make them a trade offer: you give them a card from your hand, then they Discover one of theirs to give you."
+      "text": "Lucky 1, Flying\nCry: At the start of your opponent's next turn, make them a trade offer: you give them a card from your hand, then they Discover one of theirs to give you."
     }
   },
   "stinkyscape-078": {
@@ -22307,7 +22307,7 @@
           "kind": "Frenzy"
         }
       ],
-      "text": "Rush, Pierce, Frenzy"
+      "text": "Rush, Frenzy, Pierce"
     }
   },
   "stinkyscape-095": {
@@ -22548,7 +22548,7 @@
           "kind": "Reborn"
         }
       ],
-      "text": "Starship Piece, Brittle 2, Reborn"
+      "text": "Brittle 2, Starship Piece, Reborn"
     },
     "radiant": {
       "attack": 10,
@@ -22565,7 +22565,7 @@
           "kind": "Reborn"
         }
       ],
-      "text": "Starship Piece, Brittle 4, Reborn"
+      "text": "Brittle 4, Starship Piece, Reborn"
     }
   },
   "stinkyscape-102": {
@@ -22825,7 +22825,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Starship Piece, Ranged, Windfury"
+      "text": "Starship Piece, Windfury, Ranged"
     },
     "radiant": {
       "attack": 14,
@@ -22844,7 +22844,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Starship Piece, Ranged, Rush, Windfury"
+      "text": "Starship Piece, Rush, Windfury, Ranged"
     }
   },
   "stinkyscape-109": {
@@ -23157,7 +23157,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack, Immune to Spells, Immutable, Untributable, Armor 15, Can't Defend\nActivate: Choose one: Both players gain 5, 10 or 15 Credits.\nDeath: Both players gain 100 Credits."
+      "text": "Immutable, Immune to Spells, Untributable, Can't attack, Can't Defend, Armor 15\nActivate: Choose one: Both players gain 5, 10 or 15 Credits.\nDeath: Both players gain 100 Credits."
     },
     "radiant": {
       "attack": 0,
@@ -23183,7 +23183,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack, Immune to Spells, Immutable, Untributable, Armor 30, Can't Defend\nActivate: Choose one: You gain 5, 10 or 15 Credits, and your opponent gains 5 fewer.\nDeath: Both players gain 200 Credits."
+      "text": "Immutable, Immune to Spells, Untributable, Can't attack, Can't Defend, Armor 30\nActivate: Choose one: You gain 5, 10 or 15 Credits, and your opponent gains 5 fewer.\nDeath: Both players gain 200 Credits."
     }
   },
   "stinkyscape-117": {
@@ -23596,7 +23596,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Ranged, Cleave, Rush\nEmbiggened (2): Starship Piece."
+      "text": "Rush, Ranged, Cleave\nEmbiggened (2): Starship Piece."
     }
   },
   "stinkyscape-129": {
@@ -23922,7 +23922,7 @@
           "n": 2
         }
       ],
-      "text": "Starship Piece, Spell Damage +2\nWhen launched, add {spells|random Spell that deals damage|random Spells that deal damage} to your hand."
+      "text": "Spell Damage +2, Starship Piece\nWhen launched, add {spells|random Spell that deals damage|random Spells that deal damage} to your hand."
     },
     "radiant": {
       "attack": 8,
@@ -23936,7 +23936,7 @@
           "n": 4
         }
       ],
-      "text": "Starship Piece, Spell Damage +4\nWhen launched, add {spells|random Spell that deals damage|random Spells that deal damage} to your hand."
+      "text": "Spell Damage +4, Starship Piece\nWhen launched, add {spells|random Spell that deals damage|random Spells that deal damage} to your hand."
     }
   },
   "stinkyscape-137": {
@@ -24657,7 +24657,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Flying, Ranged, Rush"
+      "text": "Rush, Flying, Ranged"
     },
     "radiant": {
       "attack": 20,
@@ -24673,7 +24673,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Flying, Ranged, Rush"
+      "text": "Rush, Flying, Ranged"
     }
   },
   "stinkyscape-151": {
@@ -24865,7 +24865,7 @@
           "n": 1
         }
       ],
-      "text": "Crater, Brittle 1\nDeath: Gain {resources|random Stinkyscape Resource|random Stinkyscape Resources}."
+      "text": "Brittle 1, Crater\nDeath: Gain {resources|random Stinkyscape Resource|random Stinkyscape Resources}."
     },
     "radiant": {
       "keywords": [
@@ -24877,7 +24877,7 @@
           "n": 1
         }
       ],
-      "text": "Crater, Brittle 1\nDeath: Gain {resources|random Radiant Stinkyscape Resource|random Radiant Stinkyscape Resources}."
+      "text": "Brittle 1, Crater\nDeath: Gain {resources|random Radiant Stinkyscape Resource|random Radiant Stinkyscape Resources}."
     }
   },
   "stinkyscape-156": {
@@ -25711,7 +25711,7 @@
           "kind": "Immutable"
         }
       ],
-      "text": "Starship Piece, Cloaked, Immutable"
+      "text": "Cloaked, Immutable, Starship Piece"
     },
     "radiant": {
       "attack": 4,
@@ -25730,7 +25730,7 @@
           "kind": "Immune to Spells"
         }
       ],
-      "text": "Starship Piece, Cloaked, Immutable, Immune to Spells"
+      "text": "Cloaked, Immutable, Immune to Spells, Starship Piece"
     }
   },
   "stinkyscape-t-dormant-starship": {
@@ -25811,7 +25811,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Ranged, Flying\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Flying, Ranged\nAura: Has {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "attack": 4,
@@ -25824,7 +25824,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Ranged, Flying\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Flying, Ranged\nAura: Has {keywords|random combat keyword|random combat keywords}."
     }
   },
   "stinkyscape-t-drone-corvette": {
@@ -25863,7 +25863,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Ranged, Flying\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Flying, Ranged\nAura: Has {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "attack": 16,
@@ -25876,7 +25876,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Ranged, Flying\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Flying, Ranged\nAura: Has {keywords|random combat keyword|random combat keywords}."
     }
   },
   "stinkyscape-t-shield-layer": {
@@ -25915,7 +25915,7 @@
           "n": 4
         }
       ],
-      "text": "Flying, Ranged, Can't attack, Taunt, Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Can't attack, Taunt, Flying, Ranged, Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
     },
     "radiant": {
       "attack": 24,
@@ -25938,7 +25938,7 @@
           "n": 8
         }
       ],
-      "text": "Flying, Ranged, Can't attack, Taunt, Armor 8\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Can't attack, Taunt, Flying, Ranged, Armor 8\nLethal damage your hero or your other Units would take is redirected to this."
     }
   },
   "stinkyscape-t-propagation-layer": {
@@ -25974,7 +25974,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Flying, Ranged, Can't attack\nActivate 2: Summon a Drone Interceptor.\nActivate: Summon a Drone Corvette."
+      "text": "Can't attack, Flying, Ranged\nActivate 2: Summon a Drone Interceptor.\nActivate: Summon a Drone Corvette."
     },
     "radiant": {
       "attack": 24,
@@ -25990,7 +25990,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Flying, Ranged, Can't attack\nActivate 2: Summon a Radiant Drone Interceptor.\nActivate: Summon a Radiant Drone Corvette."
+      "text": "Can't attack, Flying, Ranged\nActivate 2: Summon a Radiant Drone Interceptor.\nActivate: Summon a Radiant Drone Corvette."
     }
   },
   "stinkyscape-t-meltdown-layer": {
@@ -26042,7 +26042,7 @@
           "n": 3
         }
       ],
-      "text": "Flying, Ranged, Charge, Windfury, First Strike, Brittle 3\nEnd of turn: This takes {selfDamage} damage."
+      "text": "Brittle 3, Charge, Windfury, Flying, Ranged, First Strike\nEnd of turn: This takes {selfDamage} damage."
     },
     "radiant": {
       "attack": 24,
@@ -26068,7 +26068,7 @@
           "n": 6
         }
       ],
-      "text": "Flying, Ranged, Charge, Windfury, First Strike, Brittle 6\nEnd of turn: This takes {selfDamage} damage."
+      "text": "Brittle 6, Charge, Windfury, Flying, Ranged, First Strike\nEnd of turn: This takes {selfDamage} damage."
     }
   },
   "stinkyscape-t-reknite": {
@@ -27184,7 +27184,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Trample, Pierce\nReveals when your opponent plays a Unit: After it resolves, deal {damage} damage to it."
+      "text": "Pierce, Trample\nReveals when your opponent plays a Unit: After it resolves, deal {damage} damage to it."
     }
   },
   "traininggrounds-015": {
@@ -27242,7 +27242,7 @@
           "n": 3
         }
       ],
-      "text": "Divine Shield, Taunt, Armor 3\nCry: Summon a Chosen by the Sun to the left of this and a Chosen by the Moon to the right of this."
+      "text": "Taunt, Divine Shield, Armor 3\nCry: Summon a Chosen by the Sun to the left of this and a Chosen by the Moon to the right of this."
     },
     "radiant": {
       "attack": 6,
@@ -27259,7 +27259,7 @@
           "n": 6
         }
       ],
-      "text": "Divine Shield, Taunt, Armor 6\nCry: Summon a Radiant Chosen by the Sun to the left of this and a Radiant Chosen by the Moon to the right of this."
+      "text": "Taunt, Divine Shield, Armor 6\nCry: Summon a Radiant Chosen by the Sun to the left of this and a Radiant Chosen by the Moon to the right of this."
     }
   },
   "traininggrounds-017": {
@@ -28072,7 +28072,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Rush, Armor 10, Taunt, Divine Shield, Pierce"
+      "text": "Rush, Taunt, Pierce, Divine Shield, Armor 10"
     },
     "radiant": {
       "attack": 20,
@@ -28095,7 +28095,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Rush, Armor 20, Taunt, Divine Shield, Pierce"
+      "text": "Rush, Taunt, Pierce, Divine Shield, Armor 20"
     }
   },
   "traininggrounds-040": {
@@ -28348,7 +28348,7 @@
           "kind": "Immutable"
         }
       ],
-      "text": "Taunt, Immutable\nEnd of turn: Heal this to full."
+      "text": "Immutable, Taunt\nEnd of turn: Heal this to full."
     }
   },
   "traininggrounds-048": {
@@ -28835,7 +28835,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Cleave, Pierce\nDeal {damage} damage to a Unit."
+      "text": "Pierce, Cleave\nDeal {damage} damage to a Unit."
     },
     "radiant": {
       "keywords": [
@@ -28849,7 +28849,7 @@
           "kind": "Lifesteal"
         }
       ],
-      "text": "Cleave, Pierce, Lifesteal\nDeal {damage} damage to a Unit."
+      "text": "Pierce, Cleave, Lifesteal\nDeal {damage} damage to a Unit."
     },
     "params": [
       {
@@ -29177,7 +29177,7 @@
           "n": 4
         }
       ],
-      "text": "Armor 4, Tribute 1\nCry: Choose one.\nChain all enemy Units: when one takes damage, every other chained Unit takes it too.\nChain all friendly Units: damage one takes is split among them, rounded down."
+      "text": "Tribute 1, Armor 4\nCry: Choose one.\nChain all enemy Units: when one takes damage, every other chained Unit takes it too.\nChain all friendly Units: damage one takes is split among them, rounded down."
     },
     "radiant": {
       "attack": 6,
@@ -29188,7 +29188,7 @@
           "n": 8
         }
       ],
-      "text": "Armor 8, Tribute 1\nCry: Choose one.\nChain all enemy Units: when one takes damage, every other chained Unit takes it too.\nChain all friendly Units: damage one takes is split among them, rounded down."
+      "text": "Tribute 1, Armor 8\nCry: Choose one.\nChain all enemy Units: when one takes damage, every other chained Unit takes it too.\nChain all friendly Units: damage one takes is split among them, rounded down."
     }
   },
   "stinkyscapeplus-008": {
@@ -29901,7 +29901,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Ranged, Rush, Pierce"
+      "text": "Rush, Ranged, Pierce"
     }
   },
   "stinkyscapeplus-027": {
@@ -30284,7 +30284,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Flexible, Can't Defend, Ranged, Windfury"
+      "text": "Flexible, Can't Defend, Windfury, Ranged"
     },
     "radiant": {
       "attack": 4,
@@ -30306,7 +30306,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Flexible, Can't Defend, Ranged, Windfury, Pierce"
+      "text": "Flexible, Can't Defend, Windfury, Ranged, Pierce"
     }
   },
   "stinkyscapeplus-037": {
@@ -31515,7 +31515,7 @@
           "kind": "Immune to Spells"
         }
       ],
-      "text": "Can't attack, Taunt, Immutable, Immune to Spells\nEmbiggened (4): GIGA, 0/24."
+      "text": "Immutable, Immune to Spells, Can't attack, Taunt\nEmbiggened (4): GIGA, 0/24."
     },
     "radiant": {
       "attack": 0,
@@ -31538,7 +31538,7 @@
           "n": 2
         }
       ],
-      "text": "Can't attack, Taunt, Immutable, Immune to Spells, Armor 2\nEmbiggened (4): GIGA, 0/48."
+      "text": "Immutable, Immune to Spells, Can't attack, Taunt, Armor 2\nEmbiggened (4): GIGA, 0/48."
     }
   },
   "stinkyscapeplus-068": {
@@ -31718,7 +31718,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Tribute 5, Indestructible, Can't attack, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nWhen an enemy Unit is summoned, attack it and lose {mana} mana next turn."
+      "text": "Tribute 5, Flexible, Indestructible, Immutable, Immune to Spells, Can't attack, Can't Defend, Ranged\nWhen an enemy Unit is summoned, attack it and lose {mana} mana next turn."
     },
     "radiant": {
       "attack": 40,
@@ -31743,7 +31743,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Tribute 5, Indestructible, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nWhen an enemy Unit is summoned, attack it and lose {mana} mana next turn."
+      "text": "Tribute 5, Flexible, Indestructible, Immutable, Immune to Spells, Can't Defend, Ranged\nWhen an enemy Unit is summoned, attack it and lose {mana} mana next turn."
     },
     "params": [
       {
@@ -31787,7 +31787,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Can't attack, Can't Defend, Flexible, Ranged\nWhen an enemy Unit is summoned, attack it."
+      "text": "Flexible, Can't attack, Can't Defend, Ranged\nWhen an enemy Unit is summoned, attack it."
     },
     "radiant": {
       "attack": 8,
@@ -31803,7 +31803,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Can't Defend, Flexible, Ranged\nWhen an enemy Unit is summoned, attack it."
+      "text": "Flexible, Can't Defend, Ranged\nWhen an enemy Unit is summoned, attack it."
     }
   },
   "stinkyscapeplus-074": {
@@ -32452,7 +32452,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Flexible, Ranged, Can't Defend, Windfury\nWhen this attacks, gain +{attack} Attack and take {damage} damage.\nWhen this is Frozen, fully heal it."
+      "text": "Flexible, Can't Defend, Windfury, Ranged\nWhen this attacks, gain +{attack} Attack and take {damage} damage.\nWhen this is Frozen, fully heal it."
     },
     "radiant": {
       "attack": 4,
@@ -32468,7 +32468,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Flexible, Ranged, Windfury\nWhen this attacks, gain +{attack} Attack and take {damage} damage.\nWhen this is Frozen, fully heal it."
+      "text": "Flexible, Windfury, Ranged\nWhen this attacks, gain +{attack} Attack and take {damage} damage.\nWhen this is Frozen, fully heal it."
     },
     "params": [
       {
@@ -32517,7 +32517,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Flexible, Ranged, Can't Defend\nFreeze any Unit damaged by this."
+      "text": "Flexible, Can't Defend, Ranged\nFreeze any Unit damaged by this."
     },
     "radiant": {
       "attack": 6,
@@ -32536,7 +32536,7 @@
           "kind": "Cleave"
         }
       ],
-      "text": "Flexible, Ranged, Can't Defend, Cleave\nFreeze any Unit damaged by this."
+      "text": "Flexible, Can't Defend, Ranged, Cleave\nFreeze any Unit damaged by this."
     }
   },
   "stinkyscapeplus-092": {
@@ -33031,7 +33031,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Indestructible, GIGA, Windfury, Ranged, Pierce"
+      "text": "GIGA, Indestructible, Windfury, Ranged, Pierce"
     },
     "radiant": {
       "attack": 6,
@@ -33053,7 +33053,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Indestructible, GIGA, Windfury, Ranged, Pierce"
+      "text": "GIGA, Indestructible, Windfury, Ranged, Pierce"
     }
   },
   "stinkyscapeplus-107": {
@@ -33088,7 +33088,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Armor 3, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
+      "text": "Can't Defend, Ranged, Pierce, Armor 3\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
     },
     "radiant": {
       "attack": 4,
@@ -33108,7 +33108,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Armor 6, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
+      "text": "Can't Defend, Ranged, Pierce, Armor 6\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
     },
     "params": [
       {
@@ -33164,7 +33164,7 @@
           "kind": "Flexible"
         }
       ],
-      "text": "Armor 1, Can't Defend, Ranged, Cleave, Flexible"
+      "text": "Flexible, Can't Defend, Ranged, Cleave, Armor 1"
     },
     "radiant": {
       "attack": 4,
@@ -33190,7 +33190,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Armor 1, Can't Defend, Ranged, Cleave, Flexible, Pierce"
+      "text": "Flexible, Can't Defend, Ranged, Pierce, Cleave, Armor 1"
     }
   },
   "stinkyscapeplus-109": {
@@ -33225,7 +33225,7 @@
           "kind": "Flexible"
         }
       ],
-      "text": "Armor 2, Can't attack, Can't Defend, Flexible\nActivate: Discover an enemy tile, then deal {damage} Pierce damage to every Unit between that tile and this."
+      "text": "Flexible, Can't attack, Can't Defend, Armor 2\nActivate: Discover an enemy tile, then deal {damage} Pierce damage to every Unit between that tile and this."
     },
     "radiant": {
       "attack": 4,
@@ -33245,7 +33245,7 @@
           "kind": "Flexible"
         }
       ],
-      "text": "Armor 4, Can't attack, Can't Defend, Flexible\nActivate 2: Discover an enemy tile, then deal {damage} Pierce damage to every Unit between that tile and this."
+      "text": "Flexible, Can't attack, Can't Defend, Armor 4\nActivate 2: Discover an enemy tile, then deal {damage} Pierce damage to every Unit between that tile and this."
     },
     "params": [
       {
@@ -33475,7 +33475,7 @@
           "n": 3
         }
       ],
-      "text": "Tribute 2, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Armor 3"
+      "text": "Tribute 2, Immutable, Immune to Spells, Windfury, Ranged, Pierce, Armor 3"
     },
     "radiant": {
       "attack": 16,
@@ -33504,7 +33504,7 @@
           "n": 3
         }
       ],
-      "text": "Tribute 2, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Armor 3"
+      "text": "Tribute 2, Immutable, Immune to Spells, Rush, Windfury, Ranged, Pierce, Armor 3"
     }
   },
   "stinkyscapeplus-114": {
@@ -33550,7 +33550,7 @@
           "n": 4
         }
       ],
-      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4\nDamage also Burns {burns}."
+      "text": "Tribute 3, Immutable, Immune to Spells, Windfury, Ranged, Pierce, Cleave, Armor 4\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 24,
@@ -33579,7 +33579,7 @@
           "n": 4
         }
       ],
-      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4\nDamage also Burns {burns}."
+      "text": "Tribute 3, Immutable, Immune to Spells, Windfury, Ranged, Pierce, Cleave, Armor 4\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -33624,7 +33624,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Flying, Ranged, Rush, Can't Defend"
+      "text": "Can't Defend, Rush, Flying, Ranged"
     },
     "radiant": {
       "attack": 2,
@@ -33646,7 +33646,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Flying, Ranged, Rush, Reborn, Can't Defend"
+      "text": "Can't Defend, Rush, Flying, Ranged, Reborn"
     }
   },
   "stinkyscapeplus-116": {
@@ -33681,7 +33681,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Flying, Ranged, Rush, Can't Defend"
+      "text": "Can't Defend, Rush, Flying, Ranged"
     },
     "radiant": {
       "attack": 6,
@@ -33703,7 +33703,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Flying, Ranged, Rush, Reborn, Can't Defend"
+      "text": "Can't Defend, Rush, Flying, Ranged, Reborn"
     }
   },
   "stinkyscapeplus-117": {
@@ -33738,7 +33738,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 1, Flying, Ranged, Pierce, Can't Defend\nDamage also Burns {burns}."
+      "text": "Tribute 1, Can't Defend, Flying, Ranged, Pierce\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 10,
@@ -33757,7 +33757,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 1, Flying, Ranged, Pierce, Can't Defend\nDamage also Burns {burns}."
+      "text": "Tribute 1, Can't Defend, Flying, Ranged, Pierce\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -33803,7 +33803,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 2, Flying, Ranged, Pierce, Can't Defend\nDamage also Burns {burns}."
+      "text": "Tribute 2, Can't Defend, Flying, Ranged, Pierce\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 12,
@@ -33822,7 +33822,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 2, Flying, Ranged, Pierce, Can't Defend\nDamage also Burns {burns}."
+      "text": "Tribute 2, Can't Defend, Flying, Ranged, Pierce\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -33875,7 +33875,7 @@
           "n": 3
         }
       ],
-      "text": "Tribute 3, Flying, Ranged, Pierce, Can't Defend, Crater, Armor 3\nDamage also Burns {burns}."
+      "text": "Tribute 3, Can't Defend, Crater, Flying, Ranged, Pierce, Armor 3\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 18,
@@ -33901,7 +33901,7 @@
           "n": 6
         }
       ],
-      "text": "Tribute 3, Flying, Ranged, Pierce, Can't Defend, Crater, Armor 6\nDamage also Burns {burns}."
+      "text": "Tribute 3, Can't Defend, Crater, Flying, Ranged, Pierce, Armor 6\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -33984,7 +33984,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Crater, Immutable, Rush\nFloat reduces cost.\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} in random empty unit zones on the field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} in random empty unit zones on the field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "radiant": {
       "attack": 20,
@@ -34000,7 +34000,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Crater, Immutable, Rush\nFloat reduces cost.\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} in random empty unit zones on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} in random empty unit zones on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "params": [
       {
@@ -34057,7 +34057,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Crater, Can't attack, Taunt\nImmune to Toxic."
+      "text": "Can't attack, Crater, Taunt\nImmune to Toxic."
     },
     "radiant": {
       "attack": 4,
@@ -34073,7 +34073,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Crater, Can't attack, Taunt\nImmune to Toxic."
+      "text": "Can't attack, Crater, Taunt\nImmune to Toxic."
     }
   },
   "stinkyscapeplus-122": {
@@ -34238,7 +34238,7 @@
           "n": 5
         }
       ],
-      "text": "Tribute 2, Ranged, Taunt, Armor 5\nActivate: Deal {damage} Pierce Cleave damage."
+      "text": "Tribute 2, Taunt, Ranged, Armor 5\nActivate: Deal {damage} Pierce Cleave damage."
     },
     "radiant": {
       "attack": 10,
@@ -34255,7 +34255,7 @@
           "n": 10
         }
       ],
-      "text": "Tribute 2, Ranged, Taunt, Armor 10\nActivate 2: Deal {damage} Pierce Cleave damage."
+      "text": "Tribute 2, Taunt, Ranged, Armor 10\nActivate 2: Deal {damage} Pierce Cleave damage."
     },
     "params": [
       {
@@ -34298,7 +34298,7 @@
           "n": 8
         }
       ],
-      "text": "Tribute 3, Ranged, Taunt, Armor 8\nActivate: Deal {damage} Pierce Trample damage. Has a 3-turn cooldown."
+      "text": "Tribute 3, Taunt, Ranged, Armor 8\nActivate: Deal {damage} Pierce Trample damage. Has a 3-turn cooldown."
     },
     "radiant": {
       "attack": 14,
@@ -34315,7 +34315,7 @@
           "n": 16
         }
       ],
-      "text": "Tribute 3, Ranged, Taunt, Armor 16\nActivate: Deal {damage} Pierce Trample damage. Has a 3-turn cooldown."
+      "text": "Tribute 3, Taunt, Ranged, Armor 16\nActivate: Deal {damage} Pierce Trample damage. Has a 3-turn cooldown."
     },
     "params": [
       {
@@ -34622,7 +34622,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Immutable, Immune to Spells, Ranged, Flying, Rush, Can't Defend"
+      "text": "Immutable, Immune to Spells, Can't Defend, Rush, Flying, Ranged"
     },
     "radiant": {
       "attack": 6,
@@ -34650,7 +34650,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Immutable, Immune to Spells, Rush, Ranged, Flying, Reborn, Can't Defend"
+      "text": "Immutable, Immune to Spells, Can't Defend, Rush, Flying, Ranged, Reborn"
     }
   },
   "stinkyscapeplus-133-2": {
@@ -34696,7 +34696,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Immutable, Immune to Spells, Ranged, Pierce, Flying, Rush, Can't Defend\nDamage also Burns {burns}."
+      "text": "Immutable, Immune to Spells, Can't Defend, Rush, Flying, Ranged, Pierce\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 10,
@@ -34724,7 +34724,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Immutable, Immune to Spells, Ranged, Rush, Pierce, Flying, Can't Defend\nDamage also Burns {burns}."
+      "text": "Immutable, Immune to Spells, Can't Defend, Rush, Flying, Ranged, Pierce\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -34781,7 +34781,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Armor 2, Flying, Can't Defend\nDamage also Burns {burns}."
+      "text": "Tribute 1, Immutable, Immune to Spells, Can't Defend, Flying, Ranged, Pierce, Armor 2\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 22,
@@ -34810,7 +34810,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Armor 4, Flying, Can't Defend\nDamage also Burns {burns}."
+      "text": "Tribute 1, Immutable, Immune to Spells, Can't Defend, Flying, Ranged, Pierce, Armor 4\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -34871,7 +34871,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 2, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Armor 3, Flying, Can't Defend\nDamage also Burns {burns}."
+      "text": "Tribute 2, Immutable, Immune to Spells, Can't Defend, Windfury, Flying, Ranged, Pierce, Armor 3\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 28,
@@ -34903,7 +34903,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 2, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Armor 3, Flying, Can't Defend\nDamage also Burns {burns}."
+      "text": "Tribute 2, Immutable, Immune to Spells, Can't Defend, Windfury, Flying, Ranged, Pierce, Armor 3\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -34970,7 +34970,7 @@
           "kind": "Crater"
         }
       ],
-      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 7, Flying, Can't Defend, Crater\nDamage also Burns {burns}."
+      "text": "Tribute 3, Immutable, Immune to Spells, Can't Defend, Crater, Windfury, Flying, Ranged, Pierce, Cleave, Armor 7\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 38,
@@ -35008,7 +35008,7 @@
           "kind": "Crater"
         }
       ],
-      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 10, Flying, Can't Defend, Crater\nDamage also Burns {burns}."
+      "text": "Tribute 3, Immutable, Immune to Spells, Can't Defend, Crater, Windfury, Flying, Ranged, Pierce, Cleave, Armor 10\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -36398,7 +36398,7 @@
           "n": 3
         }
       ],
-      "text": "Indestructible, Untributable, Immune to Spells, Brittle 3\nDeath: Lose the game."
+      "text": "Indestructible, Immune to Spells, Untributable, Brittle 3\nDeath: Lose the game."
     },
     "radiant": {
       "attack": 20,
@@ -36418,7 +36418,7 @@
           "n": 5
         }
       ],
-      "text": "Indestructible, Untributable, Immune to Spells, Brittle 5\nDeath: Lose the game."
+      "text": "Indestructible, Immune to Spells, Untributable, Brittle 5\nDeath: Lose the game."
     }
   },
   "stinkyscapeplus-t-the-enigmata": {
