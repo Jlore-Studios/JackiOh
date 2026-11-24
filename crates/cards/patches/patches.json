@@ -34897,5 +34897,43 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.12e",
+    "date": "2026-11-24",
+    "title": "Stinkyscape+ Balance Changes VII: Ticketed",
+    "source": "#4665",
+    "notes": "The last item of the designer's seventh Stinkyscape+ balance pass (#4665): Ticketed's text is \"Stack this on a permanent anywhere.\" Its play takes no zone of its own; it names one permanent on the field, either side's, either row, face-down or not, and lands on top of that permanent's pile in its zone and that side's control. The permanent lies beneath it, out of play, and resumes when Ticketed leaves. On a unit zone it lies there with no position, no Unit: it fills the zone, nothing attacks it, no health judges it, and an effect that names a backrow card may name it (R4665000). Brittle 3 on the base face, none on the Radiant. Its v0.6.12c script, the Cry that held a permanent beneath it in its own zone, is kept (R767000).",
+    "player": {
+      "title": "Ticketed",
+      "new": [],
+      "balance": [
+        "Ticketed is now \"Stack this on a permanent anywhere\": play it on top of any permanent, yours or your opponent's, Unit or backrow.",
+        "The permanent beneath Ticketed is out of play until Ticketed leaves, and its zone stays filled. Normal Ticketed keeps Brittle 3."
+      ],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "cd5052586fcf43129c707d1eb96c9ca9fdb6a216"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-010",
+      "stinkyscapeplus-103"
+    ],
+    "changes": [
+      {
+        "id": "stinkyscape-009",
+        "name": "Ticketed",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]

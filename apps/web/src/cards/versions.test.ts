@@ -13,14 +13,16 @@
 // card between its two, so every card has at least `VARIANT_MIN_PER_CARD` variants besides the Default; R3017002: the
 // picture each draws.
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { SHIPPED_SETS, setShips } from "@jackioh/shared";
 
-import { COSMETICS, COSMETIC_LEVELS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
+import { COSMETIC_OFFERS } from "../wire/generated/cosmeticOffers.ts";
+import { COSMETICS, COSMETIC_LEVELS } from "../wire/generated/cosmetics.ts";
+import { loadSceneData, resetSceneDataForTests, sceneDataReady } from "./art/sceneLoader.ts";
 import { FULL_ARTS_OF_CARD, FULL_ART_CARDS, tierOfLook } from "./fullArt.ts";
-import { ownedCardCosmetics } from "./ownedFullArt.ts";
+import { ownedCardCosmetics, readOwnedFullArt, resetOwnedFullArtForTests } from "./ownedFullArt.ts";
 import { aiConstants } from "../wasm/index.ts";
 import {
   AUGMENT_ANIMATED_ID,
@@ -55,12 +57,16 @@ import {
   VERSION_WOODCUT_ID,
   artPartOf,
   artPictureOf,
+  clearCosmeticOffersForTests,
+  cosmeticOffersReady,
   impliedBy,
+  installCosmeticOffers,
   isFullBleed,
   defaultLookOf,
   isNextLevel,
   isOfferedId,
   ladderOf,
+  loadCosmeticOffers,
   levelOf,
   levelOfPick,
   levelsBelow,
@@ -814,5 +820,60 @@ describe("R3343000 default looks", () => {
     expect(artPictureOf(VERSION_PRISMATIC_ID)).toBe("prismatic");
     expect(artPictureOf(animated)).toBe("prismatic");
     expect(lookOfLevel(animated)).toEqual({ level: animated, version: VERSION_PRISMATIC_ID, animated: true, signed: false });
+  });
+});
+
+describe("#4714 the offers load in a chunk of their own", () => {
+  const offered = COSMETIC_OFFERS[VERSION_FULL_ART_ID]?.[0] ?? "";
+
+  afterEach(() => {
+    // As `test/setup.ts` left them, for every other test.
+    installCosmeticOffers(COSMETIC_OFFERS);
+  });
+
+  it("#4714 asked before the offers are in, the offer queries throw; loadCosmeticOffers installs them, with one import", async () => {
+    clearCosmeticOffersForTests();
+    expect(cosmeticOffersReady()).toBe(false);
+    expect(() => offeredOn(VERSION_FULL_ART_ID, offered)).toThrow("the cosmetic offers are not loaded");
+    expect(() => isOfferedId(VERSION_FULL_ART_ID)).toThrow("the cosmetic offers are not loaded");
+    expect(() => variantsOn(offered)).toThrow("the cosmetic offers are not loaded");
+
+    const first = loadCosmeticOffers();
+    expect(loadCosmeticOffers()).toBe(first);
+    await first;
+    expect(cosmeticOffersReady()).toBe(true);
+    expect(offered).not.toBe("");
+    expect(offeredOn(VERSION_FULL_ART_ID, offered)).toBe(true);
+    expect(isOfferedId(VERSION_FULL_ART_ID)).toBe(true);
+    await expect(loadCosmeticOffers()).resolves.toBeUndefined();
+  });
+
+  it("#4714 loadSceneData installs the offers with the scene tables, so a face's gate waits for both", async () => {
+    clearCosmeticOffersForTests();
+    resetSceneDataForTests();
+    await loadSceneData();
+    expect(sceneDataReady()).toBe(true);
+    expect(cosmeticOffersReady()).toBe(true);
+    expect(offeredOn(VERSION_FULL_ART_ID, offered)).toBe(true);
+  });
+
+  it("#4714 the ownership read waits for the offers before it reads the answer against them", async () => {
+    clearCosmeticOffersForTests();
+    resetOwnedFullArtForTests();
+    // A level the card is not offered is dropped (R2725001), which only the offers can say.
+    const unoffered = Object.keys(CATALOG).find((id) => !(COSMETIC_OFFERS[VERSION_FULL_ART_ID] ?? []).includes(id)) ?? "";
+    const owned = await readOwnedFullArt("token-4714", () =>
+      Promise.resolve({
+        cards: [
+          { cardId: offered, cosmeticId: VERSION_FULL_ART_ID },
+          { cardId: unoffered, cosmeticId: VERSION_FULL_ART_ID },
+        ],
+        account: [],
+      }),
+    );
+    resetOwnedFullArtForTests();
+    expect(cosmeticOffersReady()).toBe(true);
+    expect(owned.get(offered)?.has(VERSION_FULL_ART_ID)).toBe(true);
+    expect(owned.has(unoffered)).toBe(false);
   });
 });

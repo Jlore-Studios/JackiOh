@@ -15,7 +15,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import { SHIPPED_SETS } from "@jackioh/shared";
 
-import { COSMETICS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
+import { COSMETIC_OFFERS } from "../wire/generated/cosmeticOffers.ts";
+import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { CardFace } from "./CardFace.tsx";
 import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
 import {
