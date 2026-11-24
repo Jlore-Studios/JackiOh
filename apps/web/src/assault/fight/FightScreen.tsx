@@ -58,6 +58,8 @@ export type AssaultFightScreenProps = {
   state: AssaultState;
   day: AssaultDay;
   onAction: (action: AssaultAction) => void;
+  /** R4733000: the store's hold for a finished fight's report, called the moment it arrives. */
+  onHold: (action: AssaultAction) => void;
   /** R4582001: the page's way back to its day screen, the attempt still on its fight; absent, Menu leaves to the Play menu. */
   onLeave?: () => void;
   /** Tests: the worker's host; default `createPracticeHost`. */
@@ -83,7 +85,7 @@ function Shell({ variant, children }: { variant: "lobby" | "game"; children: Rea
   );
 }
 
-export function AssaultFightScreen({ state, day, onAction, onLeave, hostFactory, pacing }: AssaultFightScreenProps): ReactElement {
+export function AssaultFightScreen({ state, day, onAction, onHold, onLeave, hostFactory, pacing }: AssaultFightScreenProps): ReactElement {
   // R4582000: the Assault writes the game; null outside a fight. Every effect keys on its seed,
   // never on the object, which a new render of the attempt may build again.
   const setup = useMemo(() => assaultFightSetup(state, day), [state, day]);
@@ -98,6 +100,8 @@ export function AssaultFightScreen({ state, day, onAction, onLeave, hostFactory,
   pace.current = pacing ?? (reducedMotionNow() ? PRACTICE_PACING_REDUCED : PRACTICE_PACING);
   const onActionRef = useRef(onAction);
   onActionRef.current = onAction;
+  const onHoldRef = useRef(onHold);
+  onHoldRef.current = onHold;
 
   /** Bumped by the failure screen's Try again: the same fight, dealt again from its seed. */
   const [restart, setRestart] = useState(0);
@@ -163,12 +167,33 @@ export function AssaultFightScreen({ state, day, onAction, onLeave, hostFactory,
   const action = shownReport !== null && "action" in shownReport ? shownReport.action : null;
 
   // R4582000: Continue sends the report to the attempt once, and then no more.
+  // R4733000: the report goes once per fight, however the player leaves: Continue, Menu or unmount.
   const [sent, setSent] = useState<PracticeController | null>(null);
-  const send = useCallback(() => {
-    if (action === null || controller === null || sent === controller) return;
+  const sentRef = useRef<PracticeController | null>(null);
+  const sendOnce = useCallback(() => {
+    if (action === null || controller === null || sentRef.current === controller) return;
+    sentRef.current = controller;
     setSent(controller);
     onActionRef.current(action);
-  }, [action, controller, sent]);
+  }, [action, controller]);
+  // R4733000: the report is held beside the kept attempt the moment it arrives, so leaving before
+  // Continue keeps the result. Holding changes no screen: the board keeps showing its end.
+  const heldFor = useRef<PracticeController | null>(null);
+  useEffect(() => {
+    if (action !== null && controller !== null && heldFor.current !== controller) {
+      heldFor.current = controller;
+      onHoldRef.current(action);
+    }
+  }, [action, controller]);
+  // R4733000: leaving with a held report the screen never sent applies it, as Continue would.
+  const sendRef = useRef(sendOnce);
+  sendRef.current = sendOnce;
+  useEffect(
+    () => () => {
+      sendRef.current();
+    },
+    [controller],
+  );
   const onRetryReport = useCallback(() => {
     setReport(null);
     setReportAttempt((attempt) => attempt + 1);
@@ -211,10 +236,10 @@ export function AssaultFightScreen({ state, day, onAction, onLeave, hostFactory,
       setLeaving({ leave: onLeave });
       return;
     }
-    if (!atStake) send(); // R4582001: a finished fight's report goes to the attempt first
+    if (!atStake) sendOnce(); // R4582001: a finished fight's report goes to the attempt first
     if (onLeave === undefined) navigate(paths.play); // mid-fight the leave guard asks (R2972000)
     else onLeave();
-  }, [atStake, onLeave, send]);
+  }, [atStake, onLeave, sendOnce]);
 
   if (setup === null) {
     return (
@@ -281,7 +306,7 @@ export function AssaultFightScreen({ state, day, onAction, onLeave, hostFactory,
           data-testid={assaultFightTestid.continue}
           // Once the attempt took the report this screen is gone; until then Continue sends it once.
           disabled={action === null || sent === controller}
-          onClick={send}
+          onClick={sendOnce}
         >
           {t("Continue")}
         </button>

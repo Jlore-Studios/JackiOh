@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import type { AssaultFile, AssaultRecord } from "@jackioh/run";
 
-import { ASSAULT_ATTEMPT_KEY, ASSAULT_RECORDS_KEY } from "./config.ts";
+import { ASSAULT_ATTEMPT_KEY, ASSAULT_HELD_KEY, ASSAULT_RECORDS_KEY } from "./config.ts";
 import { __resetAssaultForTests, useAssault, type Assault } from "./store.ts";
 import { CONSTANTS, DAY, RECORD, bindingFixtures, resetBindings, setupOf } from "./test/fixtures.ts";
 
@@ -96,6 +96,83 @@ it("R4581001 a corrupt attempt key and a corrupt records key are ignored", () =>
   expect(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY)).not.toBeNull();
   expect(again.current.records).toEqual({ [DAY.date]: RECORD });
 });
+
+it("R4733000 a held won report applies on load, once", () => {
+  const assault = mount();
+  expect(press(() => assault.current.start({ date: DAY.date, deck: ["core-001"], source: "dayDeck", startLevel: 1 }))).toBeNull();
+  expect(press(() => assault.current.act({ kind: "fight" }))).toBeNull();
+  expect(assault.current.state?.phase).toBe("fight");
+
+  press(() => assault.current.hold({ kind: "fightOver", won: true, turns: 7 }));
+  expect(JSON.parse(window.localStorage.getItem(ASSAULT_HELD_KEY) ?? "null")).toEqual({
+    attempt: 1,
+    level: 1,
+    action: { kind: "fightOver", won: true, turns: 7 },
+  });
+
+  // A reload applies the held report as Continue would: the attempt briefs the next level.
+  const again = reload();
+  expect(again.current.state?.phase).toBe("briefing");
+  expect(again.current.state?.level).toBe(2);
+  expect(window.localStorage.getItem(ASSAULT_HELD_KEY)).toBeNull();
+  expect((JSON.parse(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY) ?? "null") as { file: AssaultFile }).file.actions).toEqual([
+    { kind: "fight" },
+    { kind: "fightOver", won: true, turns: 7 },
+  ]);
+
+  // A second reload applies nothing more.
+  const third = reload();
+  expect(third.current.state?.phase).toBe("briefing");
+  expect((JSON.parse(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY) ?? "null") as { file: AssaultFile }).file.actions).toHaveLength(2);
+});
+
+it("R4733000 a held lost report ends the attempt as after Continue", () => {
+  const assault = mount();
+  expect(press(() => assault.current.start({ date: DAY.date, deck: ["core-001"], source: "dayDeck", startLevel: 1 }))).toBeNull();
+  expect(press(() => assault.current.act({ kind: "fight" }))).toBeNull();
+  press(() => assault.current.hold({ kind: "fightOver", won: false, turns: 3 }));
+
+  const again = reload();
+  expect(again.current.state?.phase).toBe("lost");
+  expect(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY)).toBeNull();
+  expect(window.localStorage.getItem(ASSAULT_HELD_KEY)).toBeNull();
+
+  // A further reload finds no open attempt, recording nothing more.
+  expect(reload().current.state).toBeNull();
+});
+
+it("R4733000 a held report the attempt refuses is dropped and the fight is dealt fresh", () => {
+  const assault = mount();
+  expect(press(() => assault.current.start({ date: DAY.date, deck: ["core-001"], source: "dayDeck", startLevel: 1 }))).toBeNull();
+  expect(press(() => assault.current.act({ kind: "fight" }))).toBeNull();
+  press(() => assault.current.hold({ kind: "fightOver", won: true, turns: 7 }));
+
+  // The attempt refuses the held report once: the hold is dropped and the fight still stands.
+  bindingFixtures.assaultReduce.mockReturnValueOnce({ error: "there is no fight to report" });
+  const again = reload();
+  expect(again.current.state?.phase).toBe("fight");
+  expect(window.localStorage.getItem(ASSAULT_HELD_KEY)).toBeNull();
+  expect((JSON.parse(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY) ?? "null") as { file: AssaultFile }).file.actions).toEqual([
+    { kind: "fight" },
+  ]);
+});
+
+it("R4733000 Continue clears the hold, so a reload after it applies nothing more", () => {
+  const assault = mount();
+  expect(press(() => assault.current.start({ date: DAY.date, deck: ["core-001"], source: "dayDeck", startLevel: 1 }))).toBeNull();
+  expect(press(() => assault.current.act({ kind: "fight" }))).toBeNull();
+  press(() => assault.current.hold({ kind: "fightOver", won: true, turns: 7 }));
+
+  expect(press(() => assault.current.act({ kind: "fightOver", won: true, turns: 7 }))).toBeNull();
+  expect(window.localStorage.getItem(ASSAULT_HELD_KEY)).toBeNull();
+
+  const again = reload();
+  expect(again.current.state?.phase).toBe("briefing");
+  expect((JSON.parse(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY) ?? "null") as { file: AssaultFile }).file.actions).toHaveLength(2);
+});
+
+// A kept attempt written before this change holds no report: the R4581001 reload tests above load
+// such attempts, and every one still passes with the hold key absent.
 
 it("R4581001 the records keep the last history_days days", () => {
   const days: Record<string, AssaultRecord> = {};

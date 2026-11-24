@@ -12,6 +12,7 @@ files (`fixtures/games.report.json`, `fixtures/counts.report.json`).
 
 import json
 import math
+import re
 from pathlib import Path
 
 import nbformat
@@ -40,8 +41,10 @@ def sweep_line(
     delta=10.0,
     unswept=False,
     face="base",
+    raw_timeouts=None,
 ):
-    """A pass-1 line; a Radiant one names its face (#4466), a base one writes none, as the sweep does."""
+    """A pass-1 line; a Radiant one names its face (#4466), a base one writes none, as the sweep does. One with no
+    `raw_timeouts` writes no `rawTimeouts`, as a line that predates the field (R977000)."""
     line = {
         "defId": card,
         "games": games,
@@ -58,6 +61,8 @@ def sweep_line(
     }
     if face != "base":
         line["face"] = face
+    if raw_timeouts is not None:
+        line["rawTimeouts"] = raw_timeouts
     return line
 
 
@@ -73,6 +78,7 @@ def pass2_entry(
     timeouts=0,
     delta=2.0,
     losing=0,
+    raw_timeouts=None,
 ):
     """One card of a pass-2 line: the forced one first, then the at-risk cards dealt as filler."""
     entry = {
@@ -90,6 +96,8 @@ def pass2_entry(
     }
     if face != "base":
         entry["face"] = face
+    if raw_timeouts is not None:
+        entry["rawTimeouts"] = raw_timeouts
     return entry
 
 
@@ -108,9 +116,10 @@ def flagged_sweep(tmp_path):
     harm_plays = int(ai_sweep()["ban_harm_plays"])
     lines = [
         sweep_line("core-002", "easy", ["error"], errors=1),
-        sweep_line("core-002", "hard", ["timeout"], timeouts=2),
+        sweep_line("core-002", "hard", ["timeout"], timeouts=2, raw_timeouts=9),
         sweep_line("core-011", "easy", ["neverPlayed"], affordable=5, plays=0),
-        sweep_line("core-011", "hard"),
+        # Twelve slow decisions the re-timer cleared: counted 0, raw 12, and no flag.
+        sweep_line("core-011", "hard", raw_timeouts=12),
         sweep_line("classic-020", "easy", ["selfHarm"], plays=5, delta=-60.0),
         sweep_line("classic-020", "hard", ["selfHarm", "timeout"], plays=4, delta=-45.5, timeouts=1),
         sweep_line("classicplus-005", "easy", drawn=0, affordable=0, plays=0, unswept=True),
@@ -122,7 +131,7 @@ def flagged_sweep(tmp_path):
         pass2_line("core-011", "hard", pass2_entry("core-011", face="radiant", errors=1)),
         pass2_line("classic-020", "hard", pass2_entry("classic-020", plays=harm_plays, delta=-60.0)),
         pass2_line("core-002", "easy", pass2_entry("core-002", playable=ban_turns, plays=1)),
-        pass2_line("core-002", "hard", pass2_entry("core-002")),
+        pass2_line("core-002", "hard", pass2_entry("core-002", raw_timeouts=5)),
         pass2_line("classicplus-005", "easy", pass2_entry("classicplus-005", affordable=0, playable=0, plays=0)),
     ]
     path = tmp_path / "flagged.jsonl"
@@ -200,6 +209,13 @@ def test_the_sweep_notebook_runs_on_a_sweep_with_flags(monkeypatch, flagged_swee
     text = "".join(output.text for output in outputs if output.output_type == "stream")
     assert "11 lines: 5 cards at 2 tiers" in text
     assert "6 flagged, 2 unswept" in text
+    # Raw timeouts stand beside the counted ones in each table (R977000): the flagged table's and pass 2's headers
+    # read `timeouts raw_timeouts`, and the pass-1 table, the cell's value, holds the column.
+    assert re.search(r"errors\s+timeouts\s+raw_timeouts\s+eval_delta_mean", text)
+    assert re.search(r"plays\s+timeouts\s+raw_timeouts\s+eval_delta_mean", text)
+    assert any(
+        "raw_timeouts" in output.data["text/plain"] for output in outputs if output.output_type == "execute_result"
+    )
     assert "Never affordable at any swept tier (no evidence either way): Guy Att" in text
     assert "faces: base 9, radiant 2" in text
     assert "Tempo Timmy (hard): flagged on the Radiant face only" in text
@@ -221,6 +237,8 @@ def test_the_sweep_notebook_runs_on_a_sweep_with_flags(monkeypatch, flagged_swee
     assert "  Tempo Timmy (hard, Radiant): error;" in banned
     assert "  Speciesist (easy): neverPlayed;" in watched and "  Speciesist (easy)" not in banned
     assert "  Speciesist (hard):" in cleared
+    # Five slow decisions the re-timer cleared: shown beside the 0 counted, and the card stays cleared.
+    assert "0 timeouts (5 raw)" in cleared
 
 
 def test_the_win_rates_notebook_says_what_it_cannot_compare_with_one_patch_and_no_live_games(monkeypatch):
@@ -276,6 +294,8 @@ def test_the_sweep_notebook_shows_the_pass_2_table_on_the_committed_fixture(monk
     assert not [output for output in outputs_of(executed) if output.output_type == "error"]
     # Two tiers, each on both faces, for the one at-risk card the fixture replays.
     assert "4 pass-2 rows: 1 at-risk cards at 2 tiers" in streams(executed)
+    # The fixture's Radiant core-001 at hard was slow eight times and cleared by the re-timer every time.
+    assert "0 timeouts (8 raw)" in streams(executed)
 
 
 def test_the_sweep_notebook_says_so_when_a_sweep_has_no_pass_2_line(monkeypatch, tmp_path):

@@ -683,7 +683,7 @@ describe("R268 — the viewer's mulligan countdown sounds the clock alarm", () =
   }
 
   /** One fresh frame per step, so the Clock anchors each reading with no elapsed time. */
-  function mulliganProps(at: { ms: number }, promptMs: number | null): ClockProps {
+  function mulliganProps(at: { ms: number }, promptMs: number | null, over: Partial<ClockProps> = {}): ClockProps {
     return props({
       frame: frame({
         turnDeadline: null,
@@ -693,6 +693,7 @@ describe("R268 — the viewer's mulligan countdown sounds the clock alarm", () =
       mulligan: true,
       viewer: "p1",
       monotonic: monotonicAt(at),
+      ...over,
     });
   }
 
@@ -723,6 +724,21 @@ describe("R268 — the viewer's mulligan countdown sounds the clock alarm", () =
     const ids = engine.beats.map(([id]) => id);
     expect(ids.slice(0, 20)).toEqual(Array(20).fill("heartbeat"));
     expect(ids.slice(20)).toEqual(Array(10).fill("clockTick"));
+  });
+
+  it("R268 the answered viewer hears no mulligan alarm while the countdown still renders", () => {
+    const engine = recordingEngine();
+    setAudioEngineForTests(engine);
+    const at = { ms: 0 };
+    const view = render(<Clock {...mulliganProps(at, 12_300, { mulliganAnswered: true })} />);
+    for (const ms of [12_100, 11_900, 11_300]) {
+      view.rerender(<Clock {...mulliganProps(at, ms, { mulliganAnswered: true })} />);
+    }
+    for (let ms = MULLIGAN_CLOCK_MS; ms >= 0; ms -= 200) {
+      view.rerender(<Clock {...mulliganProps(at, ms, { mulliganAnswered: true })} />);
+    }
+    expect(engine.beats).toEqual([]);
+    expect(screen.getByTestId("prompt-clock")).toHaveAttribute("data-kind", "mulligan");
   });
 
   it("R268 resolving resets the schedule, so the next mulligan counts down afresh", () => {

@@ -2450,6 +2450,65 @@ pub const RADIANT_TIER_A_FROM: f64 = (ADJUSTED_WIN_RATE_CENTER + RADIANT_TIER_BA
 /// lever, starting at All's (`TIER_C_FROM`).
 pub const RADIANT_TIER_C_FROM: f64 = (RADIANT_TIER_BAND_LOW + ADJUSTED_WIN_RATE_CENTER) / 2.0;
 
+/// R4552000: the win probability's intercept, `β₀` of `P = σ(β₀ + β₁·eval + β₂·turn + β₃·first)`, fit by
+/// `cargo jackioh stats calibrate` over development records against `WIN_PROBABILITY_AI_GENERATION`'s
+/// evaluation: the four weights are the fit of `crates/tools/tests/fixtures/win_probability.txt`, the
+/// 1,990 turn rows of 120 development games (`stats --games 120 --series calibration`), whose Brier score
+/// is 0.216 against the turn and first player's 0.249.
+pub const WIN_PROBABILITY_INTERCEPT: f64 = 0.05715243020315099;
+
+/// R4552000: `β₁`, the weight of the seat's evaluation less its opponent's, in the AI's own units (a
+/// record keeps it in thousandths, `SWING_EVAL_SCALE`).
+pub const WIN_PROBABILITY_EVAL: f64 = 0.011583154111302998;
+
+/// R4552000: `β₂`, the weight of the turn counter (§2.5) at the turn's start.
+pub const WIN_PROBABILITY_TURN: f64 = 0.013101763295514636;
+
+/// R4552000: `β₃`, the weight of having taken the first turn.
+pub const WIN_PROBABILITY_FIRST: f64 = 0.1472779464267806;
+
+/// R4552000: the AI generation (`crates/ai/generation.json`, R1367000) whose evaluation the four weights
+/// above were fit against. A change to the AI's evaluation moves the raw scale a record keeps, so a refit
+/// names its generation here.
+pub const WIN_PROBABILITY_AI_GENERATION: i32 = 13;
+
+/// R4552000: a turn row keeps the evaluation difference times this, rounded, so the record is whole
+/// numbers (thousandths of the AI's units).
+pub const SWING_EVAL_SCALE: f64 = 1000.0;
+
+/// R4552001: a turn's change in win probability is tallied in parts of this (thousandths of win chance),
+/// rounded, so the totals are whole numbers that add the same in any order.
+pub const SWING_PERMILLE: f64 = 1000.0;
+
+/// R4552001: an ordinary turn's gain (`α`) is read per own turn of the seat, from its first to this one;
+/// every later turn shares the last bucket. The seat that went first and the other are read apart.
+pub const SWING_TURN_BUCKETS: i32 = 10;
+
+/// R4552001: the fewest turns a card's term is read over before it counts toward its field's spread, as
+/// `CARD_STATS_MIN_SAMPLE` does for the adjusted win rate's field.
+pub const SWING_FIELD_MIN_ROWS: i64 = 20;
+
+/// R4552001: the spread (one standard deviation) of real cards' play terms assumed below
+/// `ADJUSTED_FIELD_MIN_CARDS` read cards, as a fraction of win chance.
+pub const SWING_PRIOR_PLAY_SPREAD: f64 = 0.02;
+
+/// R4552001: the spread of real cards' per-turn board terms (Board swing) assumed below
+/// `ADJUSTED_FIELD_MIN_CARDS` read cards, as a fraction of win chance.
+pub const SWING_PRIOR_BOARD_SPREAD: f64 = 0.01;
+
+/// R4552001: the typical card's Decisiveness assumed below `ADJUSTED_FIELD_MIN_CARDS` read cards, as a
+/// fraction of win chance (±12 points): the median raw RMS of the 90 deck cards played 10 times or more
+/// in 200 development games (12.4 points; issue #4552's run, the calibration fixture's 120 games and 40
+/// forced games each of S #120 Wild System and S+ #61 Jayaad).
+pub const DECISIVENESS_PRIOR_CENTER: f64 = 0.12;
+
+/// R4552001: the spread of real cards' Decisiveness assumed below `ADJUSTED_FIELD_MIN_CARDS` read cards,
+/// ±2 points: what a card's raw RMS on odd games shares with its raw RMS on even games, their covariance
+/// across cards (issue #4552's 360 development games: 3.7 points² over the 435 cards played 3 times or
+/// more in each half, 0.0 over the 221 played 5 times, 3.6 over the 45 played 8 times). The raw RMS
+/// spread about 5 points between cards, but nearly all of that was the sampling noise of a few plays.
+pub const DECISIVENESS_PRIOR_SPREAD: f64 = 0.02;
+
 // ---------------------------------------------------------------------------------------------
 // The weapon kit (#1841, R1841000–R1841003; SPEC §4.4, §6.2, §6.3)
 // ---------------------------------------------------------------------------------------------

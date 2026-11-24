@@ -53,12 +53,13 @@ use jackioh_cards::{deck_play_versions, patch_history};
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardTier, CardWindow, CreatedStats, GameFigures,
     GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures,
-    PlayVersionQuery, PlayVersionTable, SourceFilter, StatsFace, StatsField, StatsTotals, Tally, TotalsKey,
-    WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames, WindowedReport, add_created,
-    add_stats, card_family, card_stats_of, card_window, collapse_gameless, created_face_adjusted,
-    created_face_field, created_face_side, face_adjusted, face_drills_of, face_side, face_stats_field,
-    held_adjusted, patch_windows, play_version_figures, radiant_gap, seen, sources_of, stats_field, tier_in,
-    wilson_interval, win_rate, windowed_card_stats, windowed_game_figures,
+    PlayVersionQuery, PlayVersionTable, SourceFilter, StatsFace, StatsField, StatsTotals, SwingReport,
+    SwingRows, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames,
+    WindowedReport, add_created, add_stats, card_family, card_stats_of, card_window, collapse_gameless,
+    created_face_adjusted, created_face_field, created_face_side, face_adjusted, face_drills_of, face_side,
+    face_stats_field, held_adjusted, patch_windows, play_version_figures, radiant_gap, seen, sources_of,
+    stats_field, swing_baseline, swing_report, tier_in, wilson_interval, win_rate, windowed_card_stats,
+    windowed_game_figures, windowed_swing_rows,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -103,6 +104,10 @@ pub struct PublicCardStat {
     /// R2895000: the 95% interval of `adjusted_win_rate` (`adjusted_interval`); null where it is.
     pub adjusted_low: Option<f64>,
     pub adjusted_high: Option<f64>,
+    /// R4552001, R4552003: how far a play of the card typically moves its player's chance of winning,
+    /// either way, as a fraction, shrunk toward the typical card's (`swing_report`); null with no turn
+    /// rows. The only figure of R4552001's a client reads: no Swing and no Board swing.
+    pub decisiveness: Option<f64>,
     /// R3022000: the card's balance tier (`tier_of` its adjusted rate and range); null below R654's
     /// floor, as its rate is shown only from it.
     pub tier: Option<CardTier>,
@@ -134,6 +139,8 @@ pub struct PublicCreatedStat {
     /// R4082000: the 95% range of `adjusted_win_rate`, R2895000's.
     pub adjusted_low: Option<f64>,
     pub adjusted_high: Option<f64>,
+    /// R4552002, R4552004: its Decisiveness, read against the Created cards' (`PublicCardStat`'s).
+    pub decisiveness: Option<f64>,
     /// R4082000: the card's balance tier (`tier_of` its adjusted rate and range, R3022000); null below
     /// R654's floor, as its rate is shown only from it.
     pub tier: Option<CardTier>,
@@ -150,25 +157,27 @@ impl PublicCreatedStat {
         face: StatsFace,
         created: &StatsField,
         deck: &StatsField,
+        swing: &SwingReport,
     ) -> PublicCreatedStat {
         let stats = &row.stats;
-        let games = i64::from(created_face_side(stats, face).games);
-        let has_enough_games = games >= CARD_STATS_MIN_SAMPLE;
-        let adjusted = created_face_adjusted(stats, face, created, deck);
+        let figures = PublicFaceFigures::created(stats, face, created, deck);
         PublicCreatedStat {
             id: stats.card.clone(),
             name: def.name.clone(),
             cost: numeric_cost(def),
             rarity: def.rarity.as_str().to_string(),
             set: def.set.as_str().to_string(),
-            games,
-            adjusted_win_rate: adjusted.map(|(rate, _)| rate),
-            adjusted_low: adjusted.map(|(_, (low, _))| low),
-            adjusted_high: adjusted.map(|(_, (_, high))| high),
-            tier: adjusted
-                .filter(|_| has_enough_games)
-                .map(|(rate, (low, high))| tier_in(rate, low, high, face.band())),
-            has_enough_games,
+            games: figures.games,
+            adjusted_win_rate: figures.adjusted_win_rate,
+            adjusted_low: figures.adjusted_low,
+            adjusted_high: figures.adjusted_high,
+            // R4673000: All's on every face, as a deck card's is.
+            decisiveness: swing
+                .created
+                .get(&stats.card)
+                .and_then(|figures| figures.decisiveness),
+            tier: figures.tier,
+            has_enough_games: figures.has_enough_games,
             window: PublicCardWindow::of(&row.window),
         }
     }
@@ -573,6 +582,9 @@ pub struct PublicStatsTiers {
     /// R4673000: on a face, that face's own band and field).
     pub band_low: f64,
     pub band_high: f64,
+    /// R4552001: the typical deck card's Decisiveness (`DecisivenessField::typical`), which the page
+    /// names beside each card's.
+    pub decisiveness: f64,
     /// R4082000: the field the Created cards a card's text makes are read against.
     pub created: PublicCreatedTiers,
 }
@@ -591,6 +603,8 @@ pub struct PublicCreatedTiers {
     /// The win rate of the seats that make an average Created card, which reads an even game: the average
     /// deck's plus `center`.
     pub baseline: f64,
+    /// R4552002: the typical Created card's Decisiveness.
+    pub decisiveness: f64,
 }
 
 /// R1994000: `GET /api/stats/games`'s body: counts and shares only, naming no game and no player.
@@ -660,6 +674,30 @@ pub struct PublicFaceFigures {
 }
 
 impl PublicFaceFigures {
+    /// R4082000, R4673000: a Created card's figures on `face`, the seats that used a copy on it
+    /// (`created_face_side`), read against `created`, that face's Created field, and `deck`, All's deck
+    /// field: its Created row's on that face (`PublicCreatedStat::of`) and the drill-down's face line alike.
+    fn created(
+        stats: &CreatedStats,
+        face: StatsFace,
+        created: &StatsField,
+        deck: &StatsField,
+    ) -> PublicFaceFigures {
+        let games = i64::from(created_face_side(stats, face).games);
+        let has_enough_games = games >= CARD_STATS_MIN_SAMPLE;
+        let adjusted = created_face_adjusted(stats, face, created, deck);
+        PublicFaceFigures {
+            games,
+            adjusted_win_rate: adjusted.map(|(rate, _)| rate),
+            adjusted_low: adjusted.map(|(_, (low, _))| low),
+            adjusted_high: adjusted.map(|(_, (_, high))| high),
+            tier: adjusted
+                .filter(|_| has_enough_games)
+                .map(|(rate, (low, high))| tier_in(rate, low, high, face.band())),
+            has_enough_games,
+        }
+    }
+
     /// The rate and its range, `(rate, (low, high))`, from R654's floor, as the page shows it.
     fn shown(&self) -> Option<(f64, (f64, f64))> {
         let rate = self.adjusted_win_rate.filter(|_| self.has_enough_games)?;
@@ -1107,6 +1145,8 @@ impl KeptReports {
 struct KeptWindow {
     report: WindowedReport,
     games: WindowedGames,
+    /// R4552001: every turn of the counted records, which an ordinary turn's gain is read off.
+    swing_rows: SwingRows,
     live_games: IndexMap<String, i64>,
     history: Vec<PatchStep>,
     patches: Vec<PatchWindow>,
@@ -1152,6 +1192,7 @@ fn window_over(
         },
     );
     let figures = windowed_game_figures(totals, history, at, mode.filter(), source.request());
+    let swing_rows = windowed_swing_rows(totals, history, at, mode.filter(), source.request());
     let mut live_games: IndexMap<String, i64> = IndexMap::new();
     for key in totals.records.keys() {
         live_games
@@ -1162,6 +1203,7 @@ fn window_over(
     KeptWindow {
         report,
         games: figures,
+        swing_rows,
         live_games,
         history: collapse_gameless(history, games),
         patches: patch_windows(history, games, |version| totals.live_games(version)),
@@ -1565,6 +1607,23 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     // R3022000, R4082000: the fields every card's adjusted rate is read against, whatever the filters show;
     // R4673000: the face's own.
     let fields = face_fields(app, report, face);
+    // R4552001, R4552002: every card's Decisiveness, read off the same cards as All's two fields, beside
+    // the turns of the records the window counts. R4673000: All's on every face, as the play rate is: a
+    // turn row names no face.
+    let swing = swing_report(
+        app.catalog
+            .defs
+            .iter()
+            .filter(|(_, def)| !def.token)
+            .filter_map(|(id, _)| report.card(id))
+            .map(|card| (card.stats.card.as_str(), &card.stats.swing)),
+        report
+            .created
+            .iter()
+            .filter(|row| app.catalog.defs.contains_key(&row.stats.card))
+            .map(|row| (row.stats.card.as_str(), &row.stats.swing)),
+        &swing_baseline(&kept.swing_rows),
+    );
 
     let mut cards: Vec<PublicCardStat> = Vec::new();
     for (id, def) in &app.catalog.defs {
@@ -1584,6 +1643,13 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             .then(|| made_games(report, id, StatsFace::All))
             .flatten();
         let play_rate = play_rate_of(report, id, stat, made.as_ref());
+        // R4552002: a card a rule makes reads its Created copies' turns, as its adjusted rate does.
+        let swung = if made.is_some() {
+            swing.created.get(id.as_str())
+        } else {
+            swing.cards.get(id.as_str())
+        };
+        let decisiveness = swung.and_then(|figures| figures.decisiveness);
 
         cards.push(PublicCardStat {
             id: id.clone(),
@@ -1598,6 +1664,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             win_rate_high: figures.win_range.map(|(_, high)| high),
             adjusted_low: figures.adjusted.map(|(_, (low, _))| low),
             adjusted_high: figures.adjusted.map(|(_, (_, high))| high),
+            decisiveness,
             tier: figures.tier,
             play_rate,
             has_enough_games: figures.has_enough_games,
@@ -1651,7 +1718,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         .filter_map(|row| {
             let def = app.catalog.defs.get(&row.stats.card)?;
             shown(&row.stats.card, def)
-                .then(|| PublicCreatedStat::of(def, row, face, &fields.created, &fields.all))
+                .then(|| PublicCreatedStat::of(def, row, face, &fields.created, &fields.all, &swing))
         })
         .collect();
     created.sort_by(|a, b| {
@@ -1686,11 +1753,13 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             baseline: fields.deck.baseline,
             band_low: face.band().low,
             band_high: face.band().high,
+            decisiveness: swing.deck_field.typical,
             created: PublicCreatedTiers {
                 center: fields.created.center,
                 spread: fields.created.spread,
                 cards: fields.created.cards,
                 baseline: fields.created.baseline,
+                decisiveness: swing.created_field.typical,
             },
         },
         patches: listed.patches[..readable].to_vec(),
@@ -1875,15 +1944,7 @@ fn face_figures(
     let fields = face_fields(app, report, face);
     let created = report.created.iter().find(|row| row.stats.card == id);
     if let Some(row) = created.filter(|_| report.card(id).is_none() && !made_by_a_rule(def)) {
-        let stat = PublicCreatedStat::of(def, row, face, &fields.created, &fields.all);
-        return PublicFaceFigures {
-            games: stat.games,
-            adjusted_win_rate: stat.adjusted_win_rate,
-            adjusted_low: stat.adjusted_low,
-            adjusted_high: stat.adjusted_high,
-            tier: stat.tier,
-            has_enough_games: stat.has_enough_games,
-        };
+        return PublicFaceFigures::created(&row.stats, face, &fields.created, &fields.all);
     }
     let figures = card_figures(report, id, def, mode, face, &fields);
     PublicFaceFigures {

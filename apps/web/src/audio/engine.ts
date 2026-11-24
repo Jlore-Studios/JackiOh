@@ -573,7 +573,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       // faster than the retrigger guard.
       const rapid = RAPID_SFX.has(id);
       // R3334000: a run's scheduled sound is guarded at the time it sounds; every other at the time it is sent.
-      const sounds = SCHEDULED_SFX.has(id) ? t + delay : t;
+      // R506: the clock alarm's own beats (`stepClockAlarm` passes `{ alarm: true }`) are sent up to
+      // two at once while hidden, each delayed to its own second, so they are guarded when each
+      // sounds too; caller-scoped like #4682's hidden exemption, so other `heartbeat`/`clockTick`
+      // callers keep the send-time guard.
+      const sounds = SCHEDULED_SFX.has(id) || options?.alarm === true ? t + delay : t;
       const last = lastSfxAt.get(id);
       if (!rapid && last !== undefined && Math.abs(sounds - last) < SFX_RETRIGGER_MS) return false;
       sfxEnds = sfxEnds.filter((end) => end > t);
