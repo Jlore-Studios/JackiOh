@@ -342,22 +342,16 @@ impl WindowedReport {
 }
 
 /// One version's figures from one source, as `card_stats_of` counts them.
-struct Part {
-    games: i64,
-    decks: i64,
-    cards: IndexMap<String, CardStats>,
-    created: IndexMap<String, CreatedStats>,
+pub(super) struct Part {
+    pub(super) games: i64,
+    pub(super) decks: i64,
+    pub(super) cards: IndexMap<String, CardStats>,
+    pub(super) created: IndexMap<String, CreatedStats>,
 }
 
-/// R1367000 (amends R654): every card's figures, each over its own window at `query.at`: R377's
-/// breakdowns summed over the versions and sources its window counts (`card_window`), with the
-/// games and decks of those records. Every caller of public card figures reads them here:
-/// `GET /api/stats/cards` (and the win-rate snapshot a match starts with, R3049000) and `cargo jackioh
-/// stats report --window`.
-pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> WindowedReport {
-    let collapsed = collapse_gameless(query.history, |version| totals.games(version));
-    let (history, at) = resolve(&collapsed, query.at);
-    // Each version's totals apart, so a version's figures read only its own keys.
+/// Each version's totals apart, so a version's figures read only its own keys: the records and the
+/// cards' breakdowns, by the version they are filed under.
+pub(super) fn split_by_version(totals: &StatsTotals) -> IndexMap<&str, StatsTotals> {
     let mut by_version: IndexMap<&str, StatsTotals> = IndexMap::new();
     for (key, records) in &totals.records {
         by_version
@@ -373,6 +367,71 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
             .cards
             .insert(key.clone(), cards.clone());
     }
+    by_version
+}
+
+/// One version's figures from one source over `held`, that version's totals (`split_by_version`):
+/// a live record's seats as `live_pilot` names them, a development record's both (R378, R1451), in
+/// the modes `mode` reads.
+pub(super) fn part_of(
+    held: &StatsTotals,
+    version: &str,
+    source: GameSource,
+    live_pilot: PilotFilter,
+    mode: ModeFilter,
+) -> Part {
+    let (filter_source, pilot) = match source {
+        GameSource::Live => (SourceFilter::Live, live_pilot),
+        GameSource::Dev => (SourceFilter::Dev, PilotFilter::Unified),
+    };
+    let mut part = Part {
+        games: 0,
+        decks: 0,
+        cards: IndexMap::new(),
+        created: IndexMap::new(),
+    };
+    // R2777001: each mode the query reads, summed, as one card's records in two modes are two decks.
+    for read in mode.modes() {
+        let report = card_stats_of(
+            held,
+            &CardStatsFilter {
+                source: filter_source,
+                mode: *read,
+                patch: Some(version.to_string()),
+                pilot,
+            },
+        );
+        part.games += i64::from(report.games);
+        part.decks += i64::from(report.decks);
+        for stats in report.cards {
+            match part.cards.get_mut(&stats.card) {
+                None => {
+                    part.cards.insert(stats.card.clone(), stats);
+                }
+                Some(held) => add_stats(held, &stats),
+            }
+        }
+        for stats in report.created {
+            match part.created.get_mut(&stats.card) {
+                None => {
+                    part.created.insert(stats.card.clone(), stats);
+                }
+                Some(held) => add_created(held, &stats),
+            }
+        }
+    }
+    part
+}
+
+/// R1367000 (amends R654): every card's figures, each over its own window at `query.at`: R377's
+/// breakdowns summed over the versions and sources its window counts (`card_window`), with the
+/// games and decks of those records. Every caller of public card figures reads them here:
+/// `GET /api/stats/cards` (and the win-rate snapshot a match starts with, R3049000) and `cargo jackioh
+/// stats report --window`.
+pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> WindowedReport {
+    let collapsed = collapse_gameless(query.history, |version| totals.games(version));
+    let (history, at) = resolve(&collapsed, query.at);
+    let by_version = split_by_version(totals);
     let live: IndexMap<&str, i64> = by_version
         .iter()
         .map(|(version, held)| (*version, held.live_games(version)))
@@ -380,47 +439,13 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
     let live_games = |version: &str| live.get(version).copied().unwrap_or(0);
     let empty = StatsTotals::default();
     let part = |version: &str, source: GameSource| {
-        let (filter_source, pilot) = match source {
-            GameSource::Live => (SourceFilter::Live, query.live_pilot),
-            GameSource::Dev => (SourceFilter::Dev, PilotFilter::Unified),
-        };
-        let mut part = Part {
-            games: 0,
-            decks: 0,
-            cards: IndexMap::new(),
-            created: IndexMap::new(),
-        };
-        // R2777001: each mode the query reads, summed, as one card's records in two modes are two decks.
-        for mode in query.mode.modes() {
-            let report = card_stats_of(
-                by_version.get(version).unwrap_or(&empty),
-                &CardStatsFilter {
-                    source: filter_source,
-                    mode: *mode,
-                    patch: Some(version.to_string()),
-                    pilot,
-                },
-            );
-            part.games += i64::from(report.games);
-            part.decks += i64::from(report.decks);
-            for stats in report.cards {
-                match part.cards.get_mut(&stats.card) {
-                    None => {
-                        part.cards.insert(stats.card.clone(), stats);
-                    }
-                    Some(held) => add_stats(held, &stats),
-                }
-            }
-            for stats in report.created {
-                match part.created.get_mut(&stats.card) {
-                    None => {
-                        part.created.insert(stats.card.clone(), stats);
-                    }
-                    Some(held) => add_created(held, &stats),
-                }
-            }
-        }
-        part
+        part_of(
+            by_version.get(version).unwrap_or(&empty),
+            version,
+            source,
+            query.live_pilot,
+            query.mode,
+        )
     };
     let mut parts: IndexMap<(String, GameSource), Part> = IndexMap::new();
     for step in &history[..=at] {

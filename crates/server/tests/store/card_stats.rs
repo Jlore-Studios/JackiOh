@@ -7,7 +7,8 @@ use serde_json::{Value, json};
 
 use jackioh_engine::wire::{GameRecord, GameSource, SourceFilter, StatsTotals, parse_game_record_lines};
 use jackioh_server::cli::card_stats::{
-    CardStatsOptions, card_stats_report, card_stats_window, parse_card_stats_args, render_card_stats,
+    CardStatsOptions, card_stats_report, card_stats_versions, card_stats_window, parse_card_stats_args,
+    render_card_stats,
 };
 use jackioh_server::cli::export_records::{
     ExportOptions, export_records, parse_export_args, read_claim_counts, read_records, render_claim_counts,
@@ -271,6 +272,60 @@ mod stats_cards_report {
         for refused in ["--patch=v0.2.3", "--source=dev", "--mode=bo1"] {
             assert!(
                 parse_card_stats_args(&args(&["--window", refused])).is_err(),
+                "{refused}"
+            );
+        }
+    }
+
+    /// R4675001: --versions sums each play version's span off the totals, as `GET /api/stats/versions` reads them.
+    #[tokio::test]
+    async fn r4675001_stats_cards_versions_sums_each_play_versions_span_off_the_totals() {
+        let db = seeded().await;
+        let one = options(&["--versions", "--card=core-001"]);
+        assert!(one.versions);
+        let table = card_stats_versions(&db, &one).await.expect("a table");
+        let versions = jackioh_cards::deck_play_versions();
+        let core: Vec<&jackioh_engine::wire::PlayVersion> = versions
+            .iter()
+            .filter(|version| version.card == "core-001")
+            .collect();
+        assert_eq!(
+            table
+                .versions
+                .iter()
+                .map(|row| row.id.as_str())
+                .collect::<Vec<_>>(),
+            core.iter().map(|version| version.id.as_str()).collect::<Vec<_>>()
+        );
+        let spanning = |at: &str| {
+            core.iter()
+                .find(|version| version.versions.iter().any(|version| version == at))
+                .map(|version| version.id.as_str())
+                .expect("a play version spans it")
+        };
+        let games = |table: &jackioh_engine::wire::PlayVersionTable, at: &str| {
+            table
+                .versions
+                .iter()
+                .find(|row| row.id == spanning(at))
+                .map(|row| row.games)
+                .expect("a row")
+        };
+        // v0.1.1 and v0.2.3 are one play version, a major apart: its two live games are short of the gate,
+        // so the two development games count beside them.
+        assert_eq!(spanning("v0.1.1"), spanning("v0.2.3"));
+        assert_eq!(games(&table, "v0.2.3"), 4);
+        assert_eq!(games(&table, jackioh_cards::catalog_version()), 0);
+        // `--mode` names what it counts: the development games are All Random's.
+        let bo1 = card_stats_versions(&db, &options(&["--versions", "--card=core-001", "--mode=bo1"]))
+            .await
+            .expect("a table");
+        assert_eq!(games(&bo1, "v0.2.3"), 2);
+        let text = jackioh_engine::wire::format_play_versions(&table);
+        assert!(text.contains(&format!("{} ", spanning("v0.2.3"))), "{text}");
+        for refused in ["--patch=v0.2.3", "--source=dev", "--window", "--window=v0.2.3"] {
+            assert!(
+                parse_card_stats_args(&args(&["--versions", refused])).is_err(),
                 "{refused}"
             );
         }

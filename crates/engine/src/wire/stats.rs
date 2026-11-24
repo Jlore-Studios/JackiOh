@@ -31,6 +31,8 @@ use crate::wire::string_union;
 
 pub mod window;
 pub use window::*;
+pub mod play_versions;
+pub use play_versions::*;
 
 // ---------------------------------------------------------------------------
 // The record (R376)
