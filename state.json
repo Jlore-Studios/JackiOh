@@ -21291,6 +21291,8 @@
       }
     },
     "4754": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T14:43:55Z",
@@ -21304,8 +21306,11 @@
         "trail": "- All edits for #4743 are in place and the two affected test files are running. I'll complete the fail-before-fix check, typecheck, and eslint once the run reports back.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: a play still being built closes when the game ends on your turn\"} -->\n- What changed and why: a same-turn game end (opponent's concede, disconnect, draw acceptance, match ceiling) no longer leaves a half-built play or attack on screen over the result panel. `boardKeyOf` in [actions.ts](apps/web/src/game/actions.ts) now appends `:over` when `view.result !== null`, so th\u2026\n- Tests: three new ones, each verified to fail on the old key and pass with the fix.\n- - [Game.test.tsx](apps/web/src/game/Game.test.tsx) (#2924 block): same-turn view with `result: { winner: \"p2\", reason: \"concede\" }` leaves no `prompt-scrim`; and the selected attacker is dropped and its old target sends nothing.\n- - [drag-layer.test.tsx](apps/web/src/test/ux/drag-layer.test.tsx) (layer states 3899): a flight lifted on the viewer's turn, then a same-turn `result`, then a release over its target never calls `onAction` (plus `expectNoDrag`, `expectBoardIdle`).\n- - Full runs: both files green, 103 passed, including all existing #2924/#3899 tests unchanged. `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web`, `cargo fmt --check` all clean. No ruling added, so no `spec check` run.\n- - [docs/implicit-states.md](docs/implicit-states.md) section 6 gains row G25 and now reads G1 to G25.\n- Decisions the issue did not settle: the attacker test rerenders the finished view with `legal={[attack]}` rather than the plan's `legal={[]}`. Reason: `highlightFor` ([actions.ts](apps/web/src/game/actions.ts)) already renders NO_HIGHLIGHT and refuses clicks whenever `legal` is empty, so the `[]` v\u2026\n- Reviewer, look twice at: the synthetic `legal={[attack]}`-with-`result` state in the attacker test (the server never sends it; it exists to isolate the drop mechanism) and the G25 row's failure-note wording.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4743 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4743/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4743,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T15:59:52Z",
         "from_run": "45417384096",
         "gates": [
           {
@@ -21364,8 +21369,15 @@
         "source": "build",
         "until": "2026-11-24T16:27:57Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-24T15:57:57Z",
+      "run_id": "pending:a7632390-1795535960",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-24T15:59:52Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -21515,9 +21527,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T15:48:55Z",
+    "at": "2026-11-24T15:59:52Z",
     "url": "",
-    "what": "build #4751 on muse"
+    "what": "review #4754 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T15:44:40Z",
