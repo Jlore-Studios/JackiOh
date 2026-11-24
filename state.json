@@ -20173,6 +20173,13 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- Bash: {\"command\": \"ls -a | head -50 && cat .bot-notes.md | head -60 && git status --short\"}\n- said: You've hit your 5-hour limit \u00b7 resets 5:20pm (UTC)"
       },
+      "hold": {
+        "ends": "2026-11-24T17:21:48Z",
+        "owner": "claude-3",
+        "since": "2026-11-24T15:21:48Z",
+        "until": "2026-11-24T17:20:00Z",
+        "why": "it refused a call"
+      },
       "interruptions": 1,
       "kind": "build",
       "last_findings": [],
