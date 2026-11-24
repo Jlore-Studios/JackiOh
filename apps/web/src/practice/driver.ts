@@ -24,6 +24,7 @@
 // is kept here so that going back to one folds it no second time.
 //
 // Claims (R1303000) and run fights (DR14, R2706000) are the machine's outputs, relayed as they are.
+// An Assault fight's report (R4582000) is asked here instead, over the machine's setup and log.
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 import { createRng, registeredCatalog, type GameState, type ReplayOpen, type ReplayRefusal } from "@jackioh/engine";
@@ -32,7 +33,7 @@ import type { ActionBody, PlayerId } from "@jackioh/shared";
 
 import { PRACTICE_REPLAYS_CACHED } from "./config.ts";
 import { lessonById } from "../tutorial/lessons.ts";
-import { practiceCall } from "../wasm/index.ts";
+import { assaultFightReport, practiceCall, seatPlayedBy } from "../wasm/index.ts";
 import { presetById } from "./decks.ts";
 import type { PracticeSaveStore } from "./saveStore.ts";
 import type { AiAsk } from "../wire/generated/AiAsk.ts";
@@ -72,6 +73,9 @@ export type PracticeDriverEnv = {
 export type PracticeDriver = {
   handle(request: PracticeRequest): PracticeResponse;
 };
+
+/** Which save slot the running game is kept in: R4582001's Assault fight in its own. */
+type SaveSlot = "free" | "run" | "assault";
 
 /** What a step's outputs hold for the answer. */
 type Carried = {
@@ -118,6 +122,14 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
   const budget = env.budget ?? AI_BUDGET;
   /** The one game, as the machine hands it back (JSON), or null before a start. */
   let machine: PracticeMachine | null = null;
+  /** R4582001: the running game is an Infinite Assault fight, as the page's config named it at its start or resume. */
+  let assault = false;
+
+  /** The slot the running game is kept in: the page's config names it, never the machine. */
+  function saveSlot(): SaveSlot {
+    if (assault) return "assault";
+    return machine?.config.run !== undefined ? "run" : "free";
+  }
   /** R768: each kept game's verdict by number: null when it folds, else part 1's refusal. */
   const verdicts = new Map<number, ReplayRefusal | null>();
   /** The last PRACTICE_REPLAYS_CACHED kept games opened, by number, the one opened longest ago first. */
@@ -144,7 +156,7 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
   }
 
   /** Carries out what the machine asked, in order, and gathers what the answer to the page holds. */
-  function carryOut(outputs: readonly PracticeOutput[], game: GameState, now: number, isRun: boolean): Carried {
+  function carryOut(outputs: readonly PracticeOutput[], game: GameState, now: number, slot: SaveSlot): Carried {
     const carried: Carried = { timers: [] };
     for (const output of outputs) {
       switch (output.output) {
@@ -152,8 +164,10 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
           carried.aiSeat = output.aiSeat;
           break;
         case "save":
-          // R668: the free game in its slot; R3476000: a run fight in its own, never the free game's.
-          if (isRun) env.saves?.writeRunFight(output.save);
+          // R668: the free game in its slot; R3476000: a run fight in its own, never the free
+          // game's. R4582001: an Assault fight in its own, never either's.
+          if (slot === "assault") env.saves?.writeAssaultFight(output.save);
+          else if (slot === "run") env.saves?.writeRunFight(output.save);
           else env.saves?.write(output.save);
           break;
         case "keep": {
@@ -207,7 +221,7 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
     const answer = practiceCall({ op: "step", host: current(), event, now });
     if (answer.reply !== "stepped") throw new Error(`the practice engine answered "${answer.reply}" unexpectedly`);
     machine = answer.host;
-    return carryOut(answer.outputs, answer.host.game, now, machine.config.run !== undefined);
+    return carryOut(answer.outputs, answer.host.game, now, saveSlot());
   }
 
   /** A start or a resume: the machine's refusal is the failure, and no game exists. */
@@ -215,7 +229,7 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
     if (answer.reply === "refused") throw new Error(answer.message);
     if (answer.reply !== "stepped") throw new Error(`the practice engine answered "${answer.reply}" unexpectedly`);
     machine = answer.host;
-    return carryOut(answer.outputs, answer.host.game, now, machine.config.run !== undefined);
+    return carryOut(answer.outputs, answer.host.game, now, saveSlot());
   }
 
   /** The timers an answer carries to the page, when it carries any. */
@@ -308,12 +322,28 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
     return { id, type: "replays", replays: answer.replays };
   }
 
+  /**
+   * R4582000: the finished Assault fight as the attempt reads it: `assaultFightReport` over the
+   * machine's setup and log, for the seat the human ended in (R677). Only the action crosses
+   * (CLAUDE.md rule 7).
+   */
+  function assaultReport(id: number): PracticeResponse {
+    const host = current();
+    if (!assault) throw new Error("this practice game is not an Infinite Assault fight");
+    if (host.game.result === null) throw new Error("a fight is reported only once it is over");
+    const report = assaultFightReport({ ...host.options, log: host.log }, seatPlayedBy(host.game, host.config.humanSeat));
+    return "action" in report
+      ? { id, type: "assaultReport", action: report.action }
+      : { id, type: "assaultReport", error: report.error };
+  }
+
   function handleUnsafe(request: PracticeRequest): PracticeResponse {
     switch (request.type) {
       case "start": {
         // A start replaces whatever was running, even when it fails: no request may land on the
         // previous game after the page asked for a new one.
         machine = null;
+        assault = request.config.assault !== undefined;
         const now = env.now();
         const carried = begin(
           practiceCall({
@@ -330,8 +360,14 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
       case "resume": {
         // Like a start, a resume replaces whatever was running, even when it fails.
         machine = null;
-        // R668: the free game from its slot; R3476000: a run fight from its own, never the free game's.
-        const saved = request.config.run !== undefined ? (env.saves?.readRunFight() ?? null) : (env.saves?.read() ?? null);
+        assault = request.config.assault !== undefined;
+        // R668: the free game from its slot; R3476000: a run fight from its own, never the free
+        // game's. R4582001: an Assault fight from its own, never either's.
+        const saved = assault
+          ? (env.saves?.readAssaultFight() ?? null)
+          : request.config.run !== undefined
+            ? (env.saves?.readRunFight() ?? null)
+            : (env.saves?.read() ?? null);
         const now = env.now();
         const carried = begin(
           practiceCall({
@@ -386,6 +422,8 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
           ? { id: request.id, type: "runReport", action: report.action }
           : { id: request.id, type: "runReport", error: report.error };
       }
+      case "assaultReport":
+        return assaultReport(request.id);
     }
   }
 

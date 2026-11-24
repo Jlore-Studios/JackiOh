@@ -1,9 +1,7 @@
-# What is left of the move from Render to Cloudflare (docs/deploy-cloudflare.md section 4), run by hand
+# The Supabase and Resend setup that needs a secret (docs/deploy-cloudflare.md section 4), run by hand
 # from Actions -> cutover, so no secret passes through anyone's machine: each value goes from where it
 # lives (this repository's secrets, a project's Management API) straight to where it is used, masked in
-# the log. Render's jackioh-server was deleted on 2026-11-03 (section 4, step 7), and with it the steps
-# that read it: staging-secrets, drop-ping, production-secrets, copy, after-cutover and delete-render
-# (they are in this file's history). The steps below still run.
+# the log. The name is from the move to Cloudflare, finished on 2026-11-03.
 #
 # Each run does one `step`:
 #   check-production    writes nothing: whether PRODUCTION_SUPABASE_SECRET_KEY is shaped like a secret
@@ -14,7 +12,7 @@
 #                       confirmations, SMTP, the email templates, rate limits, MFA, sessions, providers,
 #                       with production's own Site URL and Redirect URLs (infra/supabase.tf's) and
 #                       leaked-password protection on. It also adds https://staging.jackioh.com/login to
-#                       staging's Redirect URLs, keeping the rest (section 4, step 4). A value that names
+#                       staging's Redirect URLs, keeping the rest. A value that names
 #                       staging's project, and a secret the API does not hand back, stay out and are
 #                       named. With `dry_run` (the default) it lists what it would change and writes
 #                       nothing.

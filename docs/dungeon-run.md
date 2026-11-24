@@ -440,7 +440,7 @@ designer's content; and an e2e spec.
 | A | A deck's Radiant and buffed cards at a game's setup | `crates/engine/`, its ruling in its own block, the engine's regenerated `apps/web/src/wire/generated/` files | B1–B4 | hard |
 | B | The run plays real cards: catalog content, fight setup and fight report | `crates/run/`, `crates/tools/tests/acceptance.rs`, `CLAUDE.md`, `apps/web/src/wire/run.ts`, the run's generated types, `apps/web/tsconfig.json`, `apps/web/vite.config.ts` | B5–B11 | hard |
 | C | The run in the browser's WebAssembly modules | `crates/wasm/`, the root `Cargo.toml`, `scripts/build-wasm.sh`, `apps/web/src/wasm/` | B12 | medium |
-| D | The Dungeon Run screen: route, start, unlocks and the device store | `apps/web/src/dungeon/` (but `fight/`, `map/`, `stats/`), `main.tsx`, `routes/chunks.tsx`, `net/navigate.ts`, both `vercel.json`, `routes/play.tsx`, `routes/commandEntries.ts`, `i18n/zh-CN.json` | B13–B21 | medium |
+| D | The Dungeon Run screen: route, start, unlocks and the device store | `apps/web/src/dungeon/` (but `fight/`, `map/`, `stats/`), `main.tsx`, `routes/chunks.tsx`, `net/navigate.ts`, `apps/web/public/_redirects`, `routes/play.tsx`, `routes/commandEntries.ts`, `i18n/zh-CN.json` | B13–B21 | medium |
 | E | The run's fights: practice games, the artifact tray and the timer | `apps/web/src/dungeon/fight/`, `apps/web/src/practice/`, `game/Game.tsx`, `game/Board.tsx`, `game/Hero.tsx` | B22–B26 | hard |
 | F | The map, the tiles and the run's end | `apps/web/src/dungeon/map/` | B27–B31 | medium |
 | G | The run's leaderboards and stats on the device | `apps/web/src/dungeon/stats/` | B32 | medium |

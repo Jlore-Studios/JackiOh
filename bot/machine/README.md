@@ -25,7 +25,7 @@ bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse
 
 | | |
 |---|---|
-| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus compressed swap in memory and 8 GB of swapfile), the largest the project's Free plan allows: the move to `m7i-flex.xlarge` planned for 2026-10-26 never took (its jobs still read 7.6 GB of memory on 10-27, `reviews/2026-10-27-muse-usage.md`, finding 4); Ubuntu 24.04, 120 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
+| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus compressed swap in memory and 8 GB of swapfile), the largest the project's Free plan allows: the move to `m7i-flex.xlarge` planned for 2026-10-26 never took (its jobs still read 7.6 GB of memory on 10-27, #2272's audit, finding 4); Ubuntu 24.04, 120 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
 | Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`): a home only it can read, no `sudo`, no Docker |
 | Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user. Muse's fill-in runners ([The Muse box](#the-muse-box)) are `~agent-muse/actions-runner-fill` and `-fill-2`, `night-vm-muse-fill` and `night-vm-muse-fill-2`, labelled `night-vm-muse-fill` |
@@ -141,7 +141,7 @@ and CI's `training gate` re-runs its promotion before anything merges; the gathe
 
 | | |
 |---|---|
-| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus compressed swap in memory and 8 GB of swapfile), Ubuntu 24.04 x86_64, 100 GB gp3 encrypted, tagged `Name=jackioh-train-box`, in the project's Region (`us-east-2`). The plan was an `m7i.xlarge` (4 vCPUs, 16 GB); the project's Free plan refused instance types outside the Free Tier, so the box built on 2026-10-07 (`i-017d1843ea5e68cef`, #427) is an `m7i-flex.large`. The move to `m7i-flex.xlarge` planned for 2026-10-26 never took (finding 4 of `reviews/2026-10-27-muse-usage.md`) |
+| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus compressed swap in memory and 8 GB of swapfile), Ubuntu 24.04 x86_64, 100 GB gp3 encrypted, tagged `Name=jackioh-train-box`, in the project's Region (`us-east-2`). The plan was an `m7i.xlarge` (4 vCPUs, 16 GB); the project's Free plan refused instance types outside the Free Tier, so the box built on 2026-10-07 (`i-017d1843ea5e68cef`, #427) is an `m7i-flex.large`. The move to `m7i-flex.xlarge` planned for 2026-10-26 never took (finding 4 of #2272's audit) |
 | Way in | Session Manager only, like the night box: no inbound port, no key pair. It uses the night box's subnet and instance profile (`jackioh-night-vm`: `AmazonSSMManagedInstanceCore`, and `CloudWatchAgentServerPolicy`). IMDSv2 required. |
 | Users | `agent-train-improve`, `agent-train-unban` and `agent-train-gather`: a home only each can read, no `sudo`, no Docker |
 | In each home | `~/JackiOh`, the lane's checkout (`loop.sh` resets it to `main` every cycle; its `target/` stays, so builds after the first are incremental); Rust (rustup and the toolchain `rust-toolchain.toml` pins, with `rustfmt` and `clippy`); `~/training-out/<lane>/` (the games' records, `attempts.md`, the gate's reports); `~/logs/<lane>.log` (the loop's log) |
@@ -210,7 +210,7 @@ Running the lanes:
 ## The Muse box
 
 Since #1677 the training box also carries Muse's runners. Two builds at once on one 8 GB box swap
-(`reviews/2026-10-19-issue-383-muse.md`, finding 1): a Muse build that shared the box took a median
+(#1277's audit, finding 1): a Muse build that shared the box took a median
 57 minutes in its build call, against 34 alone, so each box held one Muse runner. Since 2026-10-26
 each box runs three of these jobs at most. That was set for `m7i-flex.xlarge` (4 vCPUs, 16 GB), but
 both boxes are still `m7i-flex.large` (2 vCPUs, 8 GB), so three building jobs overrun a box's

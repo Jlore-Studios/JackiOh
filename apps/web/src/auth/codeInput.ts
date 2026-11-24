@@ -4,10 +4,15 @@
 
 import { excludedCharacters, type CodeFormat, type CodeInputProblem, type CodeInputReading } from "@jackioh/shared";
 
-import { INVITE_CODE_FORMAT } from "@jackioh/server-config";
+import { INVITE_CODE_FORMAT, TOTP_CODE_FORMAT } from "@jackioh/server-config";
 import { t } from "../i18n/i18n.ts";
 
-export { INVITE_CODE_FORMAT } from "@jackioh/server-config";
+export { INVITE_CODE_FORMAT, TOTP_CODE_FORMAT } from "@jackioh/server-config";
+
+/** R4669000: the two-step code's digits shape, as opposed to the invite code's. */
+export function isTotpCodeFormat(format: CodeFormat): boolean {
+  return format.alphabet === TOTP_CODE_FORMAT.alphabet && format.length === TOTP_CODE_FORMAT.length;
+}
 
 /** §9.4's groups: `length / groupSize`, four for an invite code. */
 export const INVITE_CODE_GROUPS = groupCount(INVITE_CODE_FORMAT);
@@ -86,6 +91,29 @@ function isNonLatinLetter(character: string): boolean {
 
 /** The sentence `code-field-hint` shows for a refused keystroke or paste. */
 export function codeProblemMessage(problem: CodeInputProblem, format: CodeFormat = INVITE_CODE_FORMAT): string {
+  // R4669000: a two-step code is digits only, so a refusal names digits, never the invite alphabet's
+  // left-out characters.
+  if (isTotpCodeFormat(format)) {
+    switch (problem.kind) {
+      case "excluded":
+        return t("Two-step codes use only {alphabet}, so “{character}” can't be part of one. Check that character again.", {
+          alphabet: alphabetInWords(format),
+          character: visibleCharacter(problem.character),
+        });
+      case "foreign": {
+        const keyboard = isNonLatinLetter(problem.character)
+          ? ` ${t("Check that your keyboard is set to Latin letters.")}`
+          : "";
+        const refused = t("“{character}” isn't used in two-step codes. They use {alphabet}.", {
+          character: visibleCharacter(problem.character),
+          alphabet: alphabetInWords(format),
+        });
+        return `${refused}${keyboard}`;
+      }
+      case "tooLong":
+        return t("That's longer than a two-step code, which has {count} characters.", { count: String(format.length) });
+    }
+  }
   switch (problem.kind) {
     case "excluded": {
       const never = listInWords(excludedCharacters(format));

@@ -77,7 +77,7 @@ chalk (the set keeps blade for #18's knives and chalk for #38's teacher).
 | `traininggrounds-047` | Legacy: Midrange Menace | Unit | trigger mend | 1.24 | bolt | trigger: the census's bolt is noise in its end-of-turn window; its own effect, the heal on itself, the census leaves out and mend (#2793) reads |
 | `traininggrounds-048` | Legacy: Jlockeed Shredder-10 | Unit | trigger volley | 1.32 | volley | trigger: the census agrees (volley), damage to each enemy |
 | `traininggrounds-049` | Legacy: Reoccurring Dream | Spell | cast radiance; trigger send | 1.19 | bolt | cast: the census's bolt is its End of turn window's noise; its play's radiantSet, which radiance reads; trigger: its return to the hand (bounced, then addedToHand), which send reads |
-| `traininggrounds-050` | Legacy: Glowy Jelly Bean | Spell | cast radiance | 1.36 | none: no motif reads radiantSet | cast: no census family reads radiantSet, which radiance (#2793) reads |
+| `traininggrounds-050` | Legacy: Glowy Jelly Bean | Spell | cast radiance | 1.28 | none: no motif reads radiantSet | cast: no census family reads radiantSet, which radiance (#2793) reads |
 | `traininggrounds-051` | Legacy: Big Felinor | Unit | cry wipe Beast/felinor | 1.45 | wipe | cry: the census agrees (wipe), in Beast's felinor sub-look |
 | `traininggrounds-052` | Legacy: Snom Bunny Mind Control | Spell | cast tether | 1.36 | none: no motif reads controlChanged | cast: no census family reads stolen, controlChanged and held, which tether (#2786) reads |
 | `traininggrounds-053` | Legacy: Prejudiced Postdoc | Unit | cry conjure | 1.28 | none: no motif reads summoned | cry: no census family reads summoned, which conjure (#2786) reads |

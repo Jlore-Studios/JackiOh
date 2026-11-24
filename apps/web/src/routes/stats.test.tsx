@@ -1843,7 +1843,7 @@ describe("R1973002 R3324000 the patch tabs", () => {
 
     // Back one patch: 0.6.0, asked for at its version.
     const previous = screen.getByTestId(statsTestid.patchPrevious);
-    expect(previous).toHaveAccessibleName("Previous patch (0.6.0)");
+    expect(previous).toHaveAccessibleName("Older patch (0.6.0)");
     await user.click(previous);
     await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
     expect(requested("/api/stats/cards").at(-1)?.searchParams.get("patch")).toBe("0.6.0");
@@ -1859,7 +1859,7 @@ describe("R1973002 R3324000 the patch tabs", () => {
 
     // Forward: the next patch, then the newest, which is the plain address.
     const next = screen.getByTestId(statsTestid.patchNext);
-    expect(next).toHaveAccessibleName("Next patch (0.6.0)");
+    expect(next).toHaveAccessibleName("Newer patch (0.6.0)");
     await user.click(next);
     await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
     await user.click(screen.getByTestId(statsTestid.patchNext));
@@ -1869,6 +1869,61 @@ describe("R1973002 R3324000 the patch tabs", () => {
     await user.click(screen.getAllByTestId(statsTestid.patchTab).find((tab) => nameOf(tab) === "0.4.0")!);
     await waitFor(() => expect(window.location.search).toBe("?patch=0.4.0b"), SLOW);
     await waitFor(() => expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.4.0"), SLOW);
+  });
+
+  it("R4674000 the left arrow steps newer and the right arrow steps older, each disabled at its end with its label", async () => {
+    servePatches();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    await screen.findAllByTestId(statsTestid.patchTab, undefined, SLOW);
+    // The arrows follow the tabs as drawn: the left arrow steps toward the current patch (newer),
+    // the right arrow toward the older tabs (older). The test ids stay tied to direction, not side.
+    const left = screen.getByTestId(statsTestid.patchNext);
+    const right = screen.getByTestId(statsTestid.patchPrevious);
+    expect(left).toHaveTextContent("←");
+    expect(right).toHaveTextContent("→");
+    expect(left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // On the newest patch there is nothing newer: the left arrow is disabled with no patch to name.
+    expect(left).toBeDisabled();
+    expect(left).toHaveAccessibleName("Newer patch");
+    expect(left).toHaveAttribute("title", "Newer patch");
+    expect(right).toBeEnabled();
+    expect(right).toHaveAccessibleName("Older patch (0.6.0)");
+    expect(right).toHaveAttribute("title", "Older patch (0.6.0)");
+    // Right steps older: 0.6.0, then 0.5.0.
+    await user.click(right);
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
+    expect(screen.getByTestId(statsTestid.patchNext)).toHaveAccessibleName("Newer patch (0.7.0)");
+    expect(screen.getByTestId(statsTestid.patchNext)).toHaveAttribute("title", "Newer patch (0.7.0)");
+    await user.click(screen.getByTestId(statsTestid.patchPrevious));
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.5.0"), SLOW);
+    expect(screen.getByTestId(statsTestid.patchNext)).toHaveAccessibleName("Newer patch (0.6.0)");
+    expect(screen.getByTestId(statsTestid.patchPrevious)).toHaveAccessibleName("Older patch (0.4.0)");
+    expect(screen.getByTestId(statsTestid.patchPrevious)).toHaveAttribute("title", "Older patch (0.4.0)");
+    // Left steps newer again: 0.6.0, then the newest, which is the plain address.
+    await user.click(screen.getByTestId(statsTestid.patchNext));
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
+    await user.click(screen.getByTestId(statsTestid.patchNext));
+    await waitFor(() => expect(window.location.search).toBe(""), SLOW);
+    expect(screen.getByTestId(statsTestid.patchNext)).toBeDisabled();
+    // Arrow keys still move along the tabs as drawn: right goes to the older tab beside it.
+    const drawn = screen.getAllByTestId(statsTestid.patchTab);
+    drawn[0]!.focus();
+    fireEvent.keyDown(drawn[0]!, { key: "ArrowRight" });
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
+    // On the oldest patch there is nothing older: the right arrow is disabled with no patch to name.
+    cleanup();
+    at("/stats?patch=0.0.9");
+    render(<StatsRoute />);
+    await screen.findAllByTestId(statsTestid.patchTab, undefined, SLOW);
+    const oldestRight = screen.getByTestId(statsTestid.patchPrevious);
+    expect(oldestRight).toBeDisabled();
+    expect(oldestRight).toHaveAccessibleName("Older patch");
+    expect(oldestRight).toHaveAttribute("title", "Older patch");
+    const oldestLeft = screen.getByTestId(statsTestid.patchNext);
+    expect(oldestLeft).toBeEnabled();
+    expect(oldestLeft).toHaveAccessibleName("Newer patch (0.1.0)");
+    expect(oldestLeft).toHaveAttribute("title", "Newer patch (0.1.0)");
   });
 
   it("R3324000 the newest patch short of games says its data is still being collected, on the Cards and Sets tabs, with no figures and no count", async () => {

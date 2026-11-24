@@ -1329,7 +1329,7 @@ jobs:
   #                    settings, migrating as a role that is not a superuser, as Supabase's is not,
   #                    then a production boot held to the readiness probe and the container's
   #                    memory (V22). Migration 0013 passed every superuser suite and then failed
-  #                    Render's deploy: this is the suite that would have caught it.
+  #                    the production deploy: this is the suite that would have caught it.
   # Per pull request only when it touches what they test (scripts/ci-scope.sh's `db`); daily in
   # super.yml regardless. The rehearsal runs as jobs of its own, below.
   db-suite:

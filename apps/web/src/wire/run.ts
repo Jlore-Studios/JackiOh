@@ -1,10 +1,29 @@
-// `@jackioh/run` for the web client: the dungeon run's types (`crates/run`, docs/dungeon-run.md DR14),
-// as ts-rs writes them from the Rust into `generated/`. The run's rules stay the Rust crate's, which
+// `@jackioh/run` for the web client: the dungeon run's types (`crates/run`, docs/dungeon-run.md DR14)
+// and the Infinite Assault's (`crates/run/src/assault`, docs/infinite-assault.md IA9), as ts-rs writes
+// them from the Rust into `generated/`. The run's and the Assault's rules stay the Rust crate's, which
 // the browser reaches through `../wasm` (DR14 part C); this module names their shapes and nothing else.
 //
 // Regenerate them with `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` (or
 // `cargo test -p jackioh-run --features ts` alone) and commit the diff. CI's V20 step fails on any difference.
 
+export type { AssaultAction } from "./generated/AssaultAction.ts";
+export type { AssaultCard } from "./generated/AssaultCard.ts";
+export type { AssaultCommander } from "./generated/AssaultCommander.ts";
+export type { AssaultConstants } from "./generated/AssaultConstants.ts";
+export type { AssaultContent } from "./generated/AssaultContent.ts";
+export type { AssaultDay } from "./generated/AssaultDay.ts";
+export type { AssaultDeckSource } from "./generated/AssaultDeckSource.ts";
+export type { AssaultDoctrine } from "./generated/AssaultDoctrine.ts";
+export type { AssaultEscalation } from "./generated/AssaultEscalation.ts";
+export type { AssaultFightSetup } from "./generated/AssaultFightSetup.ts";
+export type { AssaultFile } from "./generated/AssaultFile.ts";
+export type { AssaultLevel } from "./generated/AssaultLevel.ts";
+export type { AssaultPhase } from "./generated/AssaultPhase.ts";
+export type { AssaultRecord } from "./generated/AssaultRecord.ts";
+export type { AssaultSetup } from "./generated/AssaultSetup.ts";
+export type { AssaultState } from "./generated/AssaultState.ts";
+export type { AssaultUpgrade } from "./generated/AssaultUpgrade.ts";
+export type { AssaultUpgradeKind } from "./generated/AssaultUpgradeKind.ts";
 export type { RunAction } from "./generated/RunAction.ts";
 export type { RunArtifact } from "./generated/RunArtifact.ts";
 export type { RunCard } from "./generated/RunCard.ts";

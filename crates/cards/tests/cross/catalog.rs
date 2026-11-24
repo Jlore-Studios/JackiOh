@@ -5262,7 +5262,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "33",
         "Drone Core VII",
-        c(5),
+        c(6),
         T::Spell,
         &[G::DroneCore],
         R::Epic,
@@ -5909,8 +5909,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Common,
-        st(7, 5),
-        st(14, 10),
+        st(7, 4),
+        st(14, 8),
     ),
     row(
         "109",
@@ -7406,7 +7406,7 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
     row(
         "50",
         "Legacy: Glowy Jelly Bean",
-        c(3),
+        c(2),
         T::Spell,
         &[G::JellyBean, G::Legacy],
         R::Rare,
@@ -7708,8 +7708,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Rare,
-        st(2, 1),
-        st(4, 2),
+        st(5, 3),
+        st(10, 6),
     ),
     row(
         "17",
@@ -7947,7 +7947,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "41",
         "Mend Projector",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[G::Mindustrial],
         R::Rare,
@@ -8138,12 +8138,12 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "61",
         "Jayaad",
-        c(2),
+        c(4),
         T::Unit,
         &[G::Human, G::Acclaimed],
         R::Epic,
-        st(2, 6),
-        st(4, 12),
+        st(9, 11),
+        st(18, 22),
     ),
     row(
         "61.1",
@@ -8158,7 +8158,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "62",
         "Overdrive Projector",
-        c(1),
+        c(3),
         T::FieldSpell,
         &[G::Mindustrial],
         R::Epic,
@@ -8168,7 +8168,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "63",
         "Overdrive Dome",
-        c(2),
+        c(4),
         T::FieldSpell,
         &[G::Mindustrial],
         R::Epic,

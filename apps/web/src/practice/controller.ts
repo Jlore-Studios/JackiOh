@@ -13,12 +13,13 @@
 // the audio layer needs no handle on this controller), and is timed from the idle.
 
 import { opponentOf, type ActionBody, type CardDefs, type PlayerId, type PlayerView } from "@jackioh/shared";
-import type { RunAction } from "@jackioh/run";
+import type { AssaultAction, RunAction } from "@jackioh/run";
 
 import type { PracticePacing } from "./config.ts";
 import type { PracticeHost } from "./host.ts";
 import { readLastBoard, writeLastBoard } from "./lastBoard.ts";
 import { clearPracticeResume, writePracticeResume } from "./resume.ts";
+import { isModeFight } from "./protocol.ts";
 import type {
   PracticeClaim,
   PracticeDebug,
@@ -72,6 +73,11 @@ export type PracticeController = {
    * while the game runs and for a game that is no fight, as the worker refuses them.
    */
   runReport(): Promise<RunAction>;
+  /**
+   * R4582000: a finished Assault fight's `fightOver`, for the attempt; rejected with the Assault's
+   * refusal, while the game runs and for a game that is no Assault fight, as the worker refuses them.
+   */
+  assaultReport(): Promise<AssaultAction>;
   /**
    * R768000: the replay of a game the worker kept (the finished game's snapshot names it, `replay`),
    * its pages asked behind any request already queued, as every request to the worker is; R3976000: with
@@ -217,9 +223,9 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
 
   function applySnapshot(snapshot: PracticeSnapshot, extra: Partial<PracticeControllerState> = {}): void {
     if (snapshot.view.result !== null) {
-      // R668: a finished game is not resumed. R2706000, R3476000: a run fight was never remembered,
-      // and the free game the page remembers is still there to resume.
-      if (state.config?.run === undefined) clearPracticeResume();
+      // R668: a finished game is not resumed. R2706000, R3476000, R4582000: a run or Assault fight
+      // was never remembered, and the free game the page remembers is still there to resume.
+      if (state.config === null || !isModeFight(state.config)) clearPracticeResume();
       // R508: a finished free game's board becomes the human's last practice board.
       if (snapshot.lastBoard !== undefined) writeLastBoard(snapshot.lastBoard);
       clearTimer();
@@ -303,14 +309,15 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
         if (!disposed && gen === generation) {
           if (response.type === "started") {
             // R668: a free game is remembered from its deal on; a lesson's start forgets any.
-            // R2706000, R3476000: a run fight leaves the page's memory of the free game as it was.
-            if (config.run === undefined) writePracticeResume(config);
+            // R2706000, R3476000, R4582000: a run or Assault fight leaves the page's memory of the
+            // free game as it was.
+            if (!isModeFight(config)) writePracticeResume(config);
             applyTimers(response.timers, gen);
             applySnapshot(response.snapshot, { aiSeat: response.aiSeat, defs: response.defs, failure: null });
           } else {
             // A save that does not fold is no game to come back to.
-            // R3476000: a missed run resume never clears the free game's page marker.
-            if (body.type === "resume" && config.run === undefined) clearPracticeResume();
+            // R3476000, R4582001: a missed run or Assault resume never clears the free game's marker.
+            if (body.type === "resume" && !isModeFight(config)) clearPracticeResume();
             set({ phase: "failed", thinking: false, failure: unexpected(response) });
           }
         }
@@ -336,10 +343,10 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
     start(config: PracticeStartConfig): Promise<void> {
       // R508: the human brings their last practice board (the worker ignores it for a lesson).
       // R1303003: a game on a server seed brings the one the server kept, already in its config.
-      // R2706000: a run fight brings none.
+      // R2706000, R4582000: a run or Assault fight brings none.
       // R2882000: today's deal brings none, so every device deals it alike.
       const board = readLastBoard();
-      const keep = config.earning === true || config.run !== undefined || config.dailyDeal !== undefined || board.length === 0;
+      const keep = config.earning === true || isModeFight(config) || config.dailyDeal !== undefined || board.length === 0;
       return begin(config, { type: "start", config: keep ? config : { ...config, lastBoard: board } });
     },
 
@@ -397,6 +404,20 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
         }
         send({ type: "runReport" }, (response) => {
           if (response.type !== "runReport") reject(new Error(unexpected(response)));
+          else if ("action" in response) resolve(response.action);
+          else reject(new Error(response.error));
+        });
+      });
+    },
+
+    assaultReport(): Promise<AssaultAction> {
+      return new Promise<AssaultAction>((resolve, reject) => {
+        if (disposed) {
+          reject(new Error(CLOSED_MESSAGE));
+          return;
+        }
+        send({ type: "assaultReport" }, (response) => {
+          if (response.type !== "assaultReport") reject(new Error(unexpected(response)));
           else if ("action" in response) resolve(response.action);
           else reject(new Error(response.error));
         });

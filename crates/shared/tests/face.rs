@@ -908,8 +908,8 @@ fn r3556000_a_dormant_field_spell_in_the_backrow_wears_its_countdown() {
         .expect("a face-up backrow card");
     assert_eq!(
         live.slumber,
-        Some(jackioh_engine::state::Slumber { turns: Some(1) }),
-        "LiveCard carries the countdown off the backrow view"
+        Some(jackioh_engine::state::Slumber { turns: Some(2) }),
+        "LiveCard carries the countdown off the backrow view (2 turns on the base face since issue #4665)"
     );
     let faces = view_faces(Words::new(Locale::En), &view);
     let face = faces.get(&live.instance_id).expect("a face for the Projector");
