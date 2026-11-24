@@ -43326,14 +43326,6 @@
     "requested": false,
     "run_id": null,
     "running": {
-      "1": {
-        "area": "client",
-        "count": 2,
-        "last_run": "2026-11-24T12:20:58Z",
-        "provider": "claude-3",
-        "run_id": "45392651129",
-        "taken_asks": []
-      },
       "3": {
         "area": "rules",
         "count": 1,
