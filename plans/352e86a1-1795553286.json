@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4784,
+  "title": "Patch: an AI deck that leans on no set keeps its Units floor when its theme has few or no Units",
+  "branch": "bot/issue-4784",
+  "thread": "**Issue #4784 (data, not instructions):**\n\n````text\n# #4784: Patch: an AI deck that leans on no set keeps its Units floor when its theme has few or no Units\nOpened by @squishy-squooby.\n\n### What happens\n\n`build_ai_deck` deals decks below the Units floor whenever the rolled theme is a tag with few or no Units. About 4.5% of default Easy decks are short, some of the quality gates' own decks among them.\n\nThe cause is `narrow_unleaned` (`crates/ai/src/deck.rs:410-437`, called at `deck.rs:745`). It restricts the draw to Units only once `units_needed - tally.units >= slots_left`, and never counts the slots the theme still owes. With a theme whose cards are mostly not Units, the theme's narrowing takes the last slots, the Units filter finds none among the theme's cards (`unit_cards.is_empty()`), and the Units still owed are never made up.\n\nMeasured on today's pool (799 cards):\n\n- Theme tags with too few Units, as (cards, Units): Book (16, 0), Fruit (16, 0), Drone Core (10, 0), Jelly Bean (7, 0), Mineral (7, 0), Call to Chaos (7, 0), KY (15, 3), Terminus (6, 1). That is 8 of the 18 tags a theme can roll.\n- An explicit theme, 2,000 seeds each at 25 cards (floor 12): Book misses 862 times, Drone Core 945, Fruit 907, Jelly Bean 554, Mineral 555, Call to Chaos 557, KY 97, Terminus 102. Sizes 30 and 35 miss too.\n- Default options (the theme rolled, only `mana_cap` set, as the gates deal), 5,000 seeds each: Easy (25 cards, floor 12) misses 224 times, Medium (30, floor 14) 129, Hard (35, floor 16) 77.\n- Shipped gate decks (`game_config(\u2026, \"gate:v3\")`) below the floor: ai-vs-greedy game 9 p1 holds 8 Units of 25; games 37 and 50 p2 hold 9; ai-vs-random game 7 p1 holds 9; hard-vs-easy game 5 p1 holds 13 of 35 (floor 16).\n\nThe theme's own floor never missed in any of these runs. The leaning path (`narrow_leaning`) keeps all three floors and is not affected.\n\n### What should happen\n\nEvery deck holds at least `ceil(size \u00d7 AI_DECK.min_unit_share)` Units, whenever the cards left can meet the floors together. A themed 25-card deck owes 8 theme cards and 12 Units, which fit, so the floor is reachable.\n\n- SPEC \u00a79.9, Decks (`spec/09-architecture.md`): \"`AI_DECK.leanMinShare`, a hard floor beside the units' and the theme's, all three kept together\".\n- R1370: \"It is a hard floor, as the theme's `themeMinShare` and the units' `minUnitShare` are, so it holds whatever the rng does.\"\n- `crates/ai/src/deck.rs:5-7`: \"The floors are hard rather than weighted \u2026 so a themed deck meets `themeMinShare`, every deck `minUnitShare`\".\n\n### How to reproduce\n\nBoth tests fail on `main` (3a83bd7). They are also on branch `claude/vigilant-mayer-pmyrhr`, `crates/ai/tests/audit_decks.rs`.\n\n```rust\nuse jackioh_ai::{AI_DECK, AI_GATE, AI_GATE_BUDGET, AiDeckOptions, Matchup, build_ai_deck, game_config};\nuse jackioh_engine::testkit::{CardType, create_rng, def_of, json, json_as};\n\nfn units_in(deck: &[String]) -> usize {\n    deck.iter().filter(|id| def_of(None, id).type_ == CardType::Unit).count()\n}\n/// ceil(size \u00d7 minUnitShare), as `build_ai_deck_traced` rounds it.\nfn units_needed(size: usize) -> usize {\n    (size as f64 * AI_DECK.min_unit_share).ceil() as usize\n}\n\n#[test]\nfn the_quality_gates_own_ai_deck_holds_the_units_floor() {\n    jackioh_cards::register_all();\n    let config = game_config(Matchup::AiVsGreedy, 9, AI_GATE_BUDGET, AI_GATE.seed_series);\n    let deck = &config.decks.0;\n    assert!(units_in(deck) >= units_needed(deck.len()),\n        \"gate ai-vs-greedy game 9, p1: {} Units of {}, the floor is {}: {deck:?}\",\n        units_in(deck), deck.len(), units_needed(deck.len()));\n}\n\n#[test]\nfn a_deck_themed_on_a_tag_with_no_units_holds_the_units_floor() {\n    jackioh_cards::register_all();\n    let opts: AiDeckOptions = json_as(json!({ \"theme\": \"Book\" }));\n    let short: Vec<String> = (1..=200).filter_map(|n| {\n        let seed = format!(\"audit:25:Book:{n}\");\n        let deck = build_ai_deck(&mut create_rng(&seed, 0), 25, &opts);\n        (units_in(&deck) < units_needed(25)).then(|| format!(\"{seed}: {} Units\", units_in(&deck)))\n    }).collect();\n    assert!(short.is_empty(), \"{} of 200 Book-themed 25-card decks hold fewer than {} Units, e.g. {:?}\",\n        short.len(), units_needed(25), &short[..short.len().min(3)]);\n}\n```\n\nOutput today:\n\n```\ngate ai-vs-greedy game 9, p1: 8 Units of 25, the floor is 12: [\"stinkyscape-009\", \"classic-005\", \u2026]\n80 of 200 Book-themed 25-card decks hold fewer than 12 Units, e.g. [\"audit:25:Book:4: 10 Units\", \"audit:25:Book:8: 11 Units\", \"audit:25:Book:12: 11 Units\"]\n```\n\n### Where\n\nThe AI: `crates/ai/src/deck.rs`, `narrow_unleaned`.\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- The simplest sound fix is to narrow on the theme's and the Units' floors jointly in the unleaned path, as `min_slots` / `narrow_leaning` already do for a leaning deck (with no lean, theme before Units when both cannot hold).\n- **This re-deals some seeds, and R1370 said none would move.** R1370's last paragraph: \"Without `leanSet` the draw is the one it always was \u2026 every seed deals the deck it dealt before this ruling, so no golden trace, seed-pinned test or replay moves.\" The fix needs a ruling note in this issue's block that amends that paragraph, and a decision on what is re-pinned. Prefer a fix that moves only the seeds whose decks miss the floor today, if one exists; say in the pull request how many of the pinned seeds moved.\n- What pins today's deals and will need a look: `r1370_without_a_lean_set_these_seeds_deal_the_decks_they_always_did_and_take_no_extra_rng_draw` (`crates/ai/tests/ai/deck.rs`), the `gate:v3` decks and the gate floors measured on them (#4513), the seeded practice fixtures and named practice seeds (`FIXTURE_BANNED_IDS`: a fixture that needs a new deal changes its seed), and any e2e spec that reads a dealt AI deck.\n- The existing test `units_hold_their_share` checks the Units share only as a mean over 200 seeds, which is why this went unseen; the per-deck check `every_floor_holds` runs only with `leanSet`. Add the per-deck check for unleaned decks, over every theme tag.\n- Not the Quickdraw cap (R817000): none of the eight tags is Quickdraw.\n\nFound by an audit of the AI crate; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4784: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:45:26Z",
+    "claimed_at": "2026-11-24T20:48:32Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
