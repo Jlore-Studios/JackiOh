@@ -44309,6 +44309,10 @@
       "4761": {
         "at": "2026-11-24T17:34:02Z",
         "why": "It prices a live mechanic the evaluation scores at zero, with the missing arm confirmed and the value gated by a fork screen."
+      },
+      "4770": {
+        "at": "2026-11-24T18:52:36Z",
+        "why": "It adds the spec-required R280 preview Edwin is missing, mirroring Quickstriker's proven hook with no rules change."
       }
     },
     "decided": [
