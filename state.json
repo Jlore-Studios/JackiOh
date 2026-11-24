@@ -20137,6 +20137,7 @@
     "4732": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-24T14:24:41Z",
         "difficulty": "medium",
@@ -20155,7 +20156,7 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- Bash: {\"command\": \"ls -a | head -50 && cat .bot-notes.md | head -60 && git status --short\"}\n- said: You've hit your 5-hour limit \u00b7 resets 5:20pm (UTC)"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "live": "building",
