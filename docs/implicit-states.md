@@ -304,7 +304,7 @@ the view it was sent against); the motion and drag-to-play settings.
 **What moves it:** a click; a press, a move past `DRAG_THRESHOLD_PX`, a release, Escape, a right
 button, a lost pointer or a window blur; a new view (the same turn, another turn, seat or viewer); the
 runner's entries finishing, a drain (a hotseat hand-over, a hidden tab, Reduce motion) or a skip (a set
-piece, the opening deal); a prompt opening or answered; a setting changed. Its rows are G1 to G24, never
+piece, the opening deal); a prompt opening or answered; a setting changed. Its rows are G1 to G25, never
 `R<n>`.
 
 | # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
@@ -334,6 +334,7 @@ piece, the opening deal); a prompt opening or answered; a setting changed. Its r
 | G22 | the emote menu open, then a selection | Reachable: open the portrait's menu, pick up an attacker | The menu closes: targeting wins (R643) | `apps/web/src/game/emotes.test.tsx` › "R643 selecting an attacker shuts an open menu — targeting wins" |
 | G23 | a flight on a replay board | Unreachable: a replay board mounts no drag layer (`replay ? null : <DragLayer …/>`) | — | — |
 | G24 | a flight with drag to play off | Unreachable: a press does not arm while the setting is off | — | `drag-layer.test.tsx` › "B39 with drag to play off, a long move starts no drag and a release over a zone sends nothing" |
+| G25 | a selection or a flight, then the game ends on the same turn | Reachable: the opponent concedes (R211), times out, or accepts the draw on the viewer's turn | Dropped, as at the turn change (#4743, keyed on `shown`; §2.5, R216) | `Game.test.tsx` › "a half-built play or attack is dropped at the turn change (#2924)" › "closes a play's own picker when the game ends on the same turn (#4743)", › "drops the selected attacker when the game ends on the same turn (#4743)"; `drag-layer.test.tsx` › "layer states 3899" › "a game that ends mid-drag sends nothing on its release and leaves the board idle" (new; failed before the fix: the picker stayed open over the result and the release sent the attack) |
 
 ## 7. The web's match socket
 
@@ -623,7 +624,7 @@ row moved. Checked before at `ae977ece3e`, plus #4291's pull request.
 
 **Files:** `apps/web/src/together/socialSocket.ts` (`openSocialSocket`: `open`, `replace`, `afterClose`, `retry`,
 `close`), `apps/web/src/together/socialPoll.ts` (`start`, `stop`, `tick`, `onLive`, `onQuiet`, `openSocket`),
-`apps/web/src/game/net.ts` (`createBackoff`, `createWakeProbe`, `letGo`, `quietWhileHidden`). `net/social.ts`
+`apps/web/src/game/net.ts` (`createBackoff`, `createWakeProbe`, `letGo`, `quietWhileAway`). `net/social.ts`
 is REST only.
 
 **Fields:** the poll's `pollers` (screens mounted that poll), its `socket` (the client, or none), `reads.live`,
@@ -731,8 +732,8 @@ T17 is also **representable when serialized**: a `DuelHost` read back holds time
 `crates/server/src/api/rematch.rs` (`RematchOffers`, `offer_as`, `rematch_seen`, `sweep_rematch_offers`).
 
 **Fields,** per finished match's id: `offers` (seat to stakes), `leans` (seat to its latest offer's pick), `at` (the
-latest offer's moment), `match_id` (the game claimed, or none) and `generation`; the book's `next_generation`; read
-with the match's `finished_at` and now.
+latest offer's moment), `finished_at` (the finished match's end, from the offer that made the entry), `match_id`
+(the game claimed, or none) and `generation`; the book's `next_generation`; read with the match's `finished_at` and now.
 
 **What moves it:** `offer` inside the window (an entry made or met; equal stakes claim one game) or past it (it
 lapses: an unclaimed entry dropped, a claimed one answers its game); `seen` (a stale unclaimed entry dropped as it is
@@ -751,9 +752,9 @@ Its rows are O1 to O16 (O for offer), never `R<n>`.
 | O7 | an offer past the window, no entry | Reachable: a late offer; a finished row with no end | It lapses silently, recording nothing (R2685000); a row with no end is outside the window (R1285000) | `crates/shared/tests/rematch.rs::r2685000_an_offer_past_the_finished_matchs_window_lapses_and_records_nothing` |
 | O8 | an offer past the window on an unclaimed entry | Reachable: p1 inside the window, p2 past it | No game, and the entry is dropped (R2685000) | `crates/shared/tests/rematch.rs::r2685000_an_old_offer_cannot_meet_a_new_one_but_a_game_made_inside_the_window_keeps_its_id` |
 | O9 | an offer past the window on a claimed entry | Reachable: the pair met inside the window, then a seat offers or polls late | It lapses but answers the game made, so the seat still learns where to go (R2685000) | the same test |
-| O10 | a read past the window of an unmet offer under the TTL old | Reachable: p1 offers 5 ms after the end; p2 reads just past the window | **Unspecified**: a read counts staleness from the latest offer, where R2685000 counts the offer window from the match's end, so it still shows an offer nothing can meet, until an offer lapses (dropping it) or the read comes a TTL after the offer | `crates/shared/tests/rematch.rs::a_read_past_the_window_still_shows_an_unmet_offer_until_an_offer_lapses` (new) |
+| O10 | a read past the window of an unmet offer under the TTL old | Reachable: p1 offers 5 ms after the end; p2 reads just past the window | Past the window an unmet entry is dropped as it is read, so no offer nothing can meet is shown (R2685000) | `crates/shared/tests/rematch.rs::r2685000_a_read_past_the_window_drops_an_unmet_offer` (new) |
 | O11 | an entry stale by its latest offer while the match's window is open | Unreachable: every offer is taken at or after `finished_at`, so inside the window no entry's latest offer is more than the TTL old. **Representable when serialized**: a book read back over the boundary can hold one | — | — |
-| O12 | an offer exactly the TTL old | Reachable | Still read, dropped a millisecond later; the window is the TTL inclusive (R2685000) | `crates/shared/tests/rematch.rs::r2685000_an_offer_exactly_the_ttl_old_is_still_read_and_the_book_counts_its_entries`, `…::the_rematch_window_runs_from_the_end_to_the_ttl_inclusive_and_never_without_an_end` |
+| O12 | an offer at the window's last moment | Reachable: an offer at `finished_at + REMATCH_OFFER_TTL_MS` | Still read at `finished_at + REMATCH_OFFER_TTL_MS`, dropped a millisecond later; the window is the TTL inclusive (R2685000) | `crates/shared/tests/rematch.rs::r2685000_an_offer_at_the_windows_end_is_still_read_and_dropped_after`, `…::the_rematch_window_runs_from_the_end_to_the_ttl_inclusive_and_never_without_an_end` |
 | O13 | a claimed game whose create failed | Reachable: the store fails the new match | That entry's claim cleared, so the seats offer again and meet; another entry's generation clears nothing (`release`'s doc) | `crates/shared/tests/rematch.rs::a_failed_create_clears_the_claim_of_that_entry_only` |
 | O14 | a game claimed at the window's last moment, the reaper's sweep as the window ends | Reachable: both offers at `finished_at + REMATCH_OFFER_TTL_MS`, the reaper's tick a millisecond later (`reap_finished` lets the actor go, then the sweep) | The game survives the sweep, so the one status read the result screen makes after its socket closes finds it (R3694000: "a rematch made in the window's last moment being found that way") | `crates/shared/tests/rematch.rs::r3694000_a_game_claimed_at_the_windows_last_moment_survives_the_sweep_at_its_end` (new) |
 | O15 | the sweep | Reachable: the reaper's tick | Drops each entry whose latest offer is past the TTL with no live actor, and keeps the rest (`sweep_rematch_offers`' doc) | `crates/shared/tests/rematch.rs::the_sweep_drops_old_entries_with_no_live_host_and_keeps_the_rest` |

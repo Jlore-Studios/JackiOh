@@ -1,6 +1,6 @@
 //! Meditative #18 Expedition12 (SPEC §8.8 row 18). (1) Spell, Quickdraw, Epic.
-//!   Base:    "Lose ({loss}) mana next turn. Make a card in your hand Radiant."
-//!   Radiant: "Cleave. Lose ({loss}) mana next turn. Make a card in your hand Radiant."
+//!   Base:    "Overload ({loss}). Make a card in your hand Radiant."
+//!   Radiant: "Cleave. Overload ({loss}). Make a card in your hand Radiant."
 //!
 //! The loss is a next-turn rider (§6.3 Mana, `next_turn_mana`, #1563): your next refresh gives `loss`
 //! less, never below 0, as #21 Hinder's does to the opponent's. The pick is a declared hand pick (R81,

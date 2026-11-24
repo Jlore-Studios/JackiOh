@@ -15,7 +15,7 @@ caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`
 `SweepOptions`'s `now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
-R2477000, R2564000, R2688000, R3064000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
+R2477000, R2564000, R2688000, R3064000), and the evolution prices (R4648000), travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
 through the search to the scorers that read them. `decide` takes them from `decision_prices` on its `probe_world`, and
 `decision_prices_at` gives a caller outside a decision the same prices for a state, on `AI_DECISION_PRICE_NODES`:
 `cargo jackioh positions` scores its rows with them (R4070000). Any other call outside a decision passes
@@ -146,6 +146,10 @@ is the engine's `query::cleave_struck` less the target: a GIGA beside the target
 met once, and beside a Unit standing in the backrow only standing Units (R3546001, R1081000). Where such a
 splash through a GIGA meets a later Taunt, the walk tries a third order, that Cleave attacker first
 (`giga_cleave_read`, R4257000, #4257; off in `GREEDY_EVAL`, whose walk keeps the one-lane splash).
+On a slashed board a Taunt binds only the attackers on its own half: the walk asks `attack_restriction`,
+which refuses a Unit across the slash and lets a hero be attacked from either half, so a Taunt across the
+slash walls nothing in `face_threat`, `ready_gap` or `wall_switches` (R3554003, #4725; no flag, so
+`GREEDY_EVAL`'s walk reads it too).
 Each hit in the walk takes the Taunt's strike back (§4.3), read through the §4.4 steps that can stop it as a
 First Strike one is: an attacker it destroys still lands that hit but makes none of its later swings, a
 Windfury one's second included, and the wounds and popped shield it leaves carry to the attacker's next
@@ -220,6 +224,18 @@ card with a wake trigger on either field, and each Unit with one in the seat's o
 prices the controller's evaluation after the one wake less after the other, each crystal gained at
 `next_turn_mana`; `slumber_worth` adds `AI_EVAL.awaken` of it for both sides' sleepers, inside the slumber
 share, and `GREEDY_EVAL` keeps 0.
+An unevolved card's Evolve text counts by its evolution (R4648000): `evolve_prices` evolves each unit on
+either field that can still evolve, and each such Unit in the seat's own hand, placed first (R923001), on a
+sandbox copy within `AI_EVOLVE_PROBE_NODES`, and prices the controller's evaluation after it less before
+it, each crystal gained at `next_turn_mana`, split over the runs its text took (R3536003). The same root
+reads the card's road there (`EvolveCondition`) on throwaway copies: its "Evolves when" holding once its
+side's empty unit zones are filled, once the seat's own hand gains (0) Cost cards, or once it is left on 1
+health, and an event otherwise (its own trigger, a Stack, an enemy's hand). `unit_worth` adds
+`AI_EVAL.evolve` of the price, once for each run its text would take now, times how close the card stands:
+the share of its side's zones filled, of the free cards it needs that the hand holds, or of its health
+lost, and `evolve_event_share` for an event, inside the Brittle share, for both sides' units. A card its
+own turn or attack text evolves (the Wasp, Space Invader, Lantern Distiller) counts through that text's
+price, the enemy's hand is never probed, and `GREEDY_EVAL` keeps 0.
 A passed line's Float counts toward the seat's own "Float reduces cost" cards (R3695000): the engine's
 `float_cuts_in_hand` reads what the Float took off each of them, and `float_credit` pays
 `AI_EVAL.float_discount` for each crystal that went toward one still above the seat's crystals (its
@@ -529,6 +545,17 @@ seat's deck, p1's in odd games and p2's in even ones (R1284000). Both decks are 
 banned, and the holder's card at the slot `${seed}:force` picks is replaced by it.
 `DevRunOptions.setup` creates every game of a run with the same setup inputs (`dev_run_config`), so a
 record stays a pure function of its number.
+
+R4552000, R4552002: `swing_turns` (`src/swing_turns.rs`) replays a finished game's log from the engine's
+own start and steps (`recorded_start`, `read_steps`, as `summarize_game` does) and writes, at the start of
+every turn, one row for its seat: the turn counter, `evaluate` of the seat (`NextSwing::Seat`) less its
+opponent's (`NextSwing::Enemy`) in thousandths, read off the true state, and the cards acting on each
+field, a Created card with the card that made it (none when a hand held it; a copy an effect cast names
+the card that cast it). `attach_swing_turns` files the rows in the record (`SeatSummary.swing_turns`).
+The writers read the summary and the rows off one fold of the log (#2213), `summarize_with_swing_turns`
+(the engine's `summarize_game_with` with a `SwingReader` beside it): `dev_game_record`, `stats
+from-selfplay` and the server's record filing (`crates/server/src/api/game_records.rs`) all call it.
+Decisiveness is read off them (`crates/engine/src/wire/stats/swing.rs`).
 
 ## The features (#466, #1006)
 

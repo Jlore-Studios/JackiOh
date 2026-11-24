@@ -15,6 +15,7 @@ import {
   CHAOS_REVEAL_MAX,
   CLOCK_ALARM_BEAT_MS,
   CLOCK_ALARM_FROM_MS,
+  CLOCK_ALARM_HIDDEN_LOOKAHEAD_MS,
   CLOCK_ALARM_LATE_MS,
   CLOCK_ALARM_LOOKAHEAD_MS,
   CLOCK_ALARM_SHARP_FROM_MS,
@@ -167,6 +168,8 @@ describe("audio constants", () => {
     expect(CLOCK_ALARM_BEAT_MS).toBe(1_000);
     expect(CLOCK_ALARM_LOOKAHEAD_MS).toBe(400);
     expect(CLOCK_ALARM_LATE_MS).toBe(250);
+    expect(CLOCK_ALARM_HIDDEN_LOOKAHEAD_MS).toBe(1_000);
+    expect(CLOCK_ALARM_HIDDEN_LOOKAHEAD_MS + CLOCK_ALARM_LATE_MS).toBeGreaterThanOrEqual(CLOCK_ALARM_BEAT_MS);
   });
 
   it("R631 pins the stations, the rotation key and the mix schedule", () => {

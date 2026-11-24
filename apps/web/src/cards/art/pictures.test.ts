@@ -17,7 +17,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import { SHIPPED_SETS } from "@jackioh/shared";
 
-import { COSMETIC_LEVELS, COSMETIC_OFFERS } from "../../wire/generated/cosmetics.ts";
+import { COSMETIC_OFFERS } from "../../wire/generated/cosmeticOffers.ts";
+import { COSMETIC_LEVELS } from "../../wire/generated/cosmetics.ts";
 import { artMotionOf } from "../fullArt.ts";
 import { VERSION_ALT_ART_ID, VERSION_FULL_ART_ID, VERSION_FULL_ART_SIGNED_ID, artPictureOf } from "../versions.ts";
 import { CardArt, hasArtParts, type CardArtProps } from "./CardArt.tsx";

@@ -66,6 +66,8 @@ pub enum ApiErrorCode {
     Forbidden,
     /// R2124000: a spend's `Idempotency-Key` came before with another route or body.
     IdempotencyKeyReused,
+    /// R4677000: a `/stats` patch older than anyone but a dev account may read.
+    PatchDevOnly,
 }
 
 impl ApiErrorCode {
@@ -96,6 +98,7 @@ impl ApiErrorCode {
             ApiErrorCode::Internal => 500,
             ApiErrorCode::Forbidden => 403,
             ApiErrorCode::IdempotencyKeyReused => 422,
+            ApiErrorCode::PatchDevOnly => 403,
         }
     }
 
@@ -126,6 +129,7 @@ impl ApiErrorCode {
             ApiErrorCode::Internal => "internal",
             ApiErrorCode::Forbidden => "forbidden",
             ApiErrorCode::IdempotencyKeyReused => "idempotency_key_reused",
+            ApiErrorCode::PatchDevOnly => "patch_dev_only",
         }
     }
 }
@@ -823,6 +827,28 @@ pub async fn resolve_caller(app: &App, headers: &HeaderMap, path: &str) -> Resul
     tx.commit().await?;
     app.known_profiles.remember(&user.user_id, &profile.id);
     Ok(Caller { profile, user })
+}
+
+/// SPEC §11 R4677000: the profile of an open route's signed-in caller, for a route whose answer depends
+/// on who asks (`/stats`' patches, which a dev account reads further back). `None` with no token, a token
+/// that does not verify or a user with no profile yet, each of whom the route serves as it serves anyone:
+/// it stays open, and nothing is created. A profile found counts as presence, as every signed-in request's
+/// does (R897000, R3210000).
+pub async fn open_route_profile(app: &App, headers: &HeaderMap) -> Result<Option<Profile>, ApiError> {
+    let Some(token) = bearer_token(headers) else {
+        return Ok(None);
+    };
+    let Ok(user) = app.auth.verify(&token).await else {
+        return Ok(None);
+    };
+    let mut tx = app.db.begin(Some(&user.user_id)).await?;
+    let profile = tx.profiles_get_by_user_id(&user.user_id).await?;
+    tx.commit().await?;
+    if let Some(profile) = &profile {
+        app.queue_presence.touch(&profile.id, now_ms());
+        crate::social::presence::touch_on_request(app, profile).await;
+    }
+    Ok(profile)
 }
 
 /// §9.4: the gate. Public so a non-HTTP caller (the WebSocket upgrade) uses the same rule.

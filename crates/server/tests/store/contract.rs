@@ -13,8 +13,8 @@ use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
 use jackioh_engine::wire::{
-    CardStatsFilter, GAME_SOURCES, GameMode, GameReport, PilotFilter, SourceFilter, StatsTotals, card_stats,
-    card_stats_of, game_figures_of, game_report, parse_game_record, sources_of,
+    CardStatsFilter, CardTotal, DrillCount, GAME_SOURCES, GameMode, GameReport, PilotFilter, SourceFilter,
+    StatsTotals, card_stats, card_stats_of, game_figures_of, game_report, parse_game_record, sources_of,
 };
 use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::config::PersonaName;
@@ -28,7 +28,7 @@ use jackioh_server::db::store::{
     DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
     MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
-    ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayWithMode, ResultRow,
+    ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayListRow, ResultRow,
     RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, StatsTotalsQuery,
     StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UnreadableGameRecord,
     UsernameClaim, UsernameClaimOutcome,
@@ -2993,9 +2993,14 @@ mod last_boards {
         q!(harness, t => t.last_boards_put(&f.id, board_kind("server"), &board_f, harness.now()));
 
         let excluded = [a.id.clone(), b.id.clone()];
-        let two = q!(harness, t => t.last_boards_sample_others(&excluded, 2));
-        assert_eq!(two.len(), 2);
-        assert!(two.contains(&board_c) && two.contains(&board_f));
+        // #4712: Postgres takes the boards from a random key on and tops up from the lowest id, so a
+        // draw of every board there is holds each once wherever its key fell, past both or between.
+        const DRAWS: usize = 16;
+        for _ in 0..DRAWS {
+            let two = q!(harness, t => t.last_boards_sample_others(&excluded, 2));
+            assert_eq!(two.len(), 2);
+            assert!(two.contains(&board_c) && two.contains(&board_f));
+        }
         assert_eq!(
             q!(harness, t => t.last_boards_sample_others(&excluded, 5)).len(),
             2
@@ -4087,6 +4092,73 @@ mod matches {
         assert!(q!(harness, t => t.matches_checkpoint(&id())).is_none());
     }
 
+    /// R112, #4712: the reaper's read, `matches_past_ceiling`, answers the live matches whose ceiling is at
+    /// or before its clock, each whole as `matches_get` reads it, and no match still in play, finished or
+    /// before its ceiling (a daily game's is left out too: `daily`'s case).
+    async fn r112_the_reaper_reads_the_live_matches_past_their_ceiling_whole_and_no_other(
+        harness: &StoreHarness,
+    ) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        // `match_row`'s ceiling is its start plus an hour (`clocks`).
+        let ceiling = j(&clocks(now))["ceilingAt"].as_i64().expect("a ceiling") - now;
+        let snapshot = json!({
+            "patch": "v-4712",
+            "source": "live",
+            "cards": [{ "id": "core-001", "wins": 1, "games": 2 }],
+        });
+        let board = json!([{ "defId": "core-025", "radiant": false }]);
+        // Every column a fold reads, so the read is held to the whole row.
+        let past: MatchRow = from(spread(
+            j(&match_row(&id(), &a.id, &b.id, harness, now - ceiling - 1)),
+            json!({
+                "lastBoards": [board, []],
+                "glitchBoards": [[], board],
+                "winRates": snapshot,
+                "ranked": true,
+            }),
+        ));
+        let at_ceiling = match_row(&id(), &a.id, &b.id, harness, now - ceiling);
+        let in_play = match_row(&id(), &a.id, &b.id, harness, now - ceiling + 1);
+        let finished = match_row(&id(), &a.id, &b.id, harness, now - ceiling - 1);
+        for row in [&past, &at_ceiling, &in_play, &finished] {
+            q!(harness, t => t.matches_create(row));
+        }
+        q!(harness, t => t.matches_finish(&finished.id, now - 1));
+
+        let mut due = q!(harness, t => t.matches_past_ceiling(now));
+        due.sort_by(|x, y| x.id.cmp(&y.id));
+        let mut expected = vec![
+            must(
+                q!(harness, t => t.matches_get(&past.id)),
+                "the match past its ceiling",
+            ),
+            must(
+                q!(harness, t => t.matches_get(&at_ceiling.id)),
+                "the match at its ceiling",
+            ),
+        ];
+        expected.sort_by(|x, y| x.id.cmp(&y.id));
+        assert_eq!(due, expected, "{}", harness.name);
+        assert_eq!(
+            j(must(
+                due.iter().find(|row| row.id == past.id),
+                "the match past its ceiling"
+            ))["winRates"],
+            snapshot
+        );
+        assert!(q!(harness, t => t.matches_past_ceiling(now - ceiling - 2)).is_empty());
+        let mut all: Vec<String> = q!(harness, t => t.matches_past_ceiling(now + ceiling))
+            .iter()
+            .map(|row| row.id.clone())
+            .collect();
+        all.sort();
+        let mut live = vec![past.id.clone(), at_ceiling.id.clone(), in_play.id.clone()];
+        live.sort();
+        assert_eq!(all, live, "{}", harness.name);
+    }
+
     both_stores!(
         checkpoint_round_trips_and_only_a_later_seq_replaces_it,
         checkpoint_is_stored_only_for_a_logged_row_of_a_live_match,
@@ -4112,6 +4184,7 @@ mod matches {
         r679_never_forgets_a_finished_match_or_one_with_a_result,
         finishes_a_match_and_drops_it_out_of_the_live_set,
         r1450_never_reaps_a_live_or_a_finished_match,
+        r112_the_reaper_reads_the_live_matches_past_their_ceiling_whole_and_no_other,
     );
 }
 
@@ -5292,6 +5365,65 @@ mod game_records {
         assert!(card_stats(&before, &filter).created.is_empty());
     }
 
+    /// R4673001: a record whose plays carry their face is folded into each face's drills too, kept in the
+    /// same rows (`turns` and `co`) beside the card's own and loaded as the records give them, a later fold
+    /// adding to what an earlier one wrote; a record without face flags adds to neither face.
+    async fn r4673001_keeps_each_faces_drills_and_loads_them_as_the_records_give(harness: &StoreHarness) {
+        let deck = json!(["core-001", "core-002", "core-003"]);
+        let faced = |id: &str, winner: &str, radiant: Value, turns: Value| {
+            game_record(
+                id,
+                json!({ "game": { "first": "p1", "winner": winner, "reason": "hero-death", "turns": 6, "seats": {
+                    "p1": { "deck": deck, "opening": ["core-001", "core-002"], "drawn": [],
+                            "played": ["core-001", "core-002"], "playedTurns": turns, "playedRadiant": radiant },
+                    "p2": { "deck": deck, "opening": ["core-001"], "drawn": [], "played": ["core-001"],
+                            "playedTurns": [3] },
+                } } }),
+            )
+        };
+        let first = vec![
+            faced("m-face-1", "p1", json!([true, false]), json!([2, 2])),
+            faced("m-face-2", "p2", json!([false, false]), json!([3, 4])),
+        ];
+        let mut second = mixed_records();
+        second.push(faced("m-face-3", "p1", json!([true, true]), json!([2, 5])));
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&first)),
+            vec![true; first.len()]
+        );
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&second)),
+            vec![true; second.len()]
+        );
+        let records: Vec<GameRecord> = first.into_iter().chain(second).collect();
+        let totals = q!(harness, t => t.stats_totals_load(&every_total()));
+        assert_eq!(totals, loaded(&records));
+
+        // core-001 was played Radiant twice (won both) and normal once (lost), on turns 2, 2 and 3; p2's plays,
+        // without flags, are in neither face.
+        let mut card = CardTotal::new("core-001");
+        for cards in totals.cards.values() {
+            if let Some(total) = cards.get("core-001") {
+                card.add(total);
+            }
+        }
+        let game = |games: i64, wins: i64| DrillCount { games, wins };
+        assert_eq!(card.radiant.turns.get(&2), Some(&game(2, 2)));
+        assert_eq!(card.normal.turns.get(&3), Some(&game(1, 0)));
+        assert_eq!(card.radiant.co.get("core-003"), Some(&game(2, 2)));
+        assert_eq!(card.normal.co.get("core-002"), Some(&game(1, 0)));
+        assert!(card.turns[&3].games > card.normal.turns[&3].games);
+        // Without drills, no face's either.
+        let lean =
+            q!(harness, t => t.stats_totals_load(&StatsTotalsQuery { drills: false, ..every_total() }));
+        assert!(
+            lean.cards
+                .values()
+                .flat_map(|cards| cards.values())
+                .all(|total| total.radiant.is_empty() && total.normal.is_empty() && total.turns.is_empty())
+        );
+    }
+
     /// R1044000: a record written before the totals (migration 0041) is folded by
     /// `game_records_fold_pending`, a batch at a time, the first in id order, and never twice.
     async fn r1044000_folds_the_records_written_before_the_totals_once_a_batch_at_a_time(
@@ -5595,6 +5727,7 @@ mod game_records {
         r1976000_folds_a_batch_once_with_no_record_and_leaves_out_the_ids_the_table_holds,
         r1994000_a_records_game_figures_read_the_same_once_the_purge_empties_its_detail,
         r2089000_folds_the_created_figures_and_loads_them_as_the_records_give,
+        r4673001_keeps_each_faces_drills_and_loads_them_as_the_records_give,
     );
 }
 
@@ -5704,11 +5837,61 @@ mod results {
         );
     }
 
+    /// #4712: the record counts a profile's results from either seat, each once: Postgres sums one
+    /// count per seat, and a game lands in the count of the seat the profile held.
+    async fn the_record_counts_each_result_once_from_either_seat(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let games = [
+            ((&a.id, &b.id), Some(&a.id), "concede"),
+            ((&b.id, &a.id), Some(&a.id), "hero-death"),
+            ((&b.id, &a.id), Some(&b.id), "concede"),
+            ((&a.id, &c.id), Some(&c.id), "hero-death"),
+            ((&c.id, &a.id), None, "match-ceiling"),
+            ((&c.id, &a.id), Some(&c.id), "fled"),
+            ((&a.id, &b.id), None, "both-voted-out"),
+        ];
+        for ((p1, p2), winner, reason) in games {
+            let match_id = id();
+            q!(harness, t => t.matches_create(&match_row(&match_id, p1, p2, harness, harness.now())));
+            let row: ResultRow = from(json!({
+                "matchId": match_id,
+                "players": [p1, p2],
+                "winnerProfileId": winner,
+                "reason": reason,
+                "turns": 7,
+                "endedAt": harness.now(),
+                "ratingBefore": [1000, 1000],
+                "ratingAfter": [1000, 1000],
+            }));
+            q!(harness, t => t.results_insert(&row));
+        }
+        for (profile, record) in [
+            (&a, json!({ "wins": 2, "losses": 2, "draws": 3 })),
+            (&b, json!({ "wins": 1, "losses": 2, "draws": 1 })),
+            (&c, json!({ "wins": 2, "losses": 0, "draws": 1 })),
+        ] {
+            assert_eq!(
+                j(&q!(harness, t => t.results_record_for(&profile.id))),
+                record,
+                "{}",
+                harness.name
+            );
+        }
+        let none = active_profile(harness, None).await;
+        assert_eq!(
+            j(&q!(harness, t => t.results_record_for(&none.id))),
+            json!({ "wins": 0, "losses": 0, "draws": 0 })
+        );
+    }
+
     both_stores!(
         writes_one_result_per_match_and_refuses_a_second,
         records_a_draw_as_a_null_winner,
         returns_null_for_a_match_that_has_not_ended,
         r1843004_the_new_endings_are_results_and_count_for_each_side,
+        the_record_counts_each_result_once_from_either_seat,
     );
 }
 
@@ -6714,7 +6897,8 @@ mod replays {
     /// The batched read answers what the per-row reads answer: the same rows in the same order for
     /// every limit and offset, each paired with its mode — a series' game, a rematch's own mode, a
     /// room, queue tickets, none — a deleted opponent's replay kept, and the resultless, logless,
-    /// live and foreign rows left out.
+    /// live and foreign rows left out. #4712: Postgres reads each seat's matches apart and merges
+    /// them, so a game in either seat lands in its place, the id breaking a tie across the seats.
     async fn replays_list_with_modes_matches_the_per_row_reads(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
@@ -6723,6 +6907,8 @@ mod replays {
         let now = harness.now();
 
         let plain = a_match(harness, (&a.id, &b.id), 2, Some(now - 9_000), true).await;
+        // The same end as `plain`, from the other seat.
+        let tied = a_match(harness, (&c.id, &a.id), 1, Some(now - 9_000), true).await;
 
         // A rematch states its own mode (R672).
         let rematch_id = id();
@@ -6814,16 +7000,29 @@ mod replays {
         let live = a_match(harness, (&a.id, &b.id), 1, None, false).await;
         let others = a_match(harness, (&b.id, &c.id), 1, Some(now - 1_000), true).await;
 
-        for (limit, offset) in [(10, 0), (3, 0), (3, 2), (2, 4), (10, 4), (2, 10)] {
+        for (limit, offset) in [
+            (10, 0),
+            (3, 0),
+            (3, 2),
+            (2, 4),
+            (10, 4),
+            (2, 10),
+            (7, 0),
+            (1, 5),
+            (1, 6),
+            (2, 5),
+            (0, 0),
+            (3, i64::MAX),
+        ] {
             let listed = q!(harness, t => t.replays_list(&a.id, limit, offset));
             let mut modes = Vec::with_capacity(listed.len());
             for replay in &listed {
                 modes.push(q!(harness, t => t.matches_mode_of(&replay.row.id)));
             }
-            let expected: Vec<ReplayWithMode> = listed
+            let expected: Vec<ReplayListRow> = listed
                 .into_iter()
                 .zip(modes)
-                .map(|(replay, mode)| ReplayWithMode { replay, mode })
+                .map(|(replay, mode)| ReplayListRow::of(replay, mode))
                 .collect();
             assert_eq!(
                 q!(harness, t => t.replays_list_with_modes(&a.id, limit, offset)),
@@ -6833,7 +7032,9 @@ mod replays {
         }
 
         let batched = q!(harness, t => t.replays_list_with_modes(&a.id, 10, 0));
-        let ids: Vec<&str> = batched.iter().map(|entry| entry.replay.row.id.as_str()).collect();
+        let ids: Vec<&str> = batched.iter().map(|entry| entry.id.as_str()).collect();
+        let mut ties = [plain.as_str(), tied.as_str()];
+        ties.sort_by(|x, y| y.cmp(x));
         assert_eq!(
             ids,
             [
@@ -6842,7 +7043,8 @@ mod replays {
                 queue_match.as_str(),
                 room_match.as_str(),
                 rematch_id.as_str(),
-                plain.as_str(),
+                ties[0],
+                ties[1],
             ]
         );
         for missing in [&no_result, &no_log, &live, &others] {
@@ -6851,7 +7053,7 @@ mod replays {
         let mode_of = |id: &str| {
             batched
                 .iter()
-                .find(|entry| entry.replay.row.id == id)
+                .find(|entry| entry.id == id)
                 .map(|entry| j(&entry.mode))
         };
         assert_eq!(mode_of(&plain), Some(Value::Null));
@@ -14120,6 +14322,13 @@ mod daily {
             .map(|row| row.id.clone())
             .collect();
         assert_eq!(live_ids, vec![live.id.clone()], "{}", harness.name);
+        // #4712: so does the reaper's own read, every daily match's row past its ceiling by then.
+        let ceiling = live.clocks.ceiling_at;
+        let due_ids: Vec<String> = q!(harness, t => t.matches_past_ceiling(ceiling))
+            .iter()
+            .map(|row| row.id.clone())
+            .collect();
+        assert_eq!(due_ids, vec![live.id.clone()], "{}", harness.name);
     }
 
     /// §9.13's cap: running games either seat, and the open seeks and challenges sent, unlapsed.
@@ -15006,9 +15215,22 @@ mod daily {
             "{}",
             harness.name
         );
+        // R4691000: the next to lapse, whatever its state, is what the sweep is next due for.
+        assert_eq!(
+            q!(harness, t => t.daily_invites_next_lapse()),
+            Some(now + 1),
+            "{}",
+            harness.name
+        );
         assert_eq!(
             q!(harness, t => t.daily_invites_purge(now + 1)),
             3,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.daily_invites_next_lapse()),
+            None,
             "{}",
             harness.name
         );
@@ -15273,7 +15495,20 @@ mod r4039000_notifications {
         }
         q!(harness, t => t.notifications_mark_read(&ana.id, None, at));
         q!(harness, t => t.notifications_add(&notice(&bo.id, NotificationKind::LobbyInvite, Some(&ana.id), "lobby-b", at - 10), 100));
+        // R4691000: the oldest row, whoever it tells, is what the purge is next due for.
+        assert_eq!(
+            q!(harness, t => t.notifications_oldest_at()),
+            Some(at - 10),
+            "{}",
+            harness.name
+        );
         assert_eq!(q!(harness, t => t.notifications_purge(at)), 3, "{}", harness.name);
+        assert_eq!(
+            q!(harness, t => t.notifications_oldest_at()),
+            Some(at),
+            "{}",
+            harness.name
+        );
         assert_eq!(
             subjects(&q!(harness, t => t.notifications_page(&ana.id, None, 10))),
             vec!["lobby-3", "lobby-2"],

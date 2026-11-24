@@ -1,12 +1,14 @@
-// Audible final-30-second cues for the viewer's own turn and prompt clocks (R439, R506, R4562000),
+// Audible final-30-second cues for the viewer's own turn and prompt clocks and shared mulligan countdown (R439, R506, R4562000, R268),
 // from the server clock only (R79;
 // CLAUDE.md rule 7), for the viewer's running turn after audio unlock (§10.11 Autoplay). Each second is
 // scheduled once ahead of repainting; beats late beyond CLOCK_ALARM_LATE_MS are skipped; a clock moving
-// up resets.
+// up resets. A hidden tab repaints at most once a second, so a hidden reading schedules a full
+// CLOCK_ALARM_BEAT_MS ahead (R506); the beats are timed on the AudioContext clock, which is not throttled.
 
 import {
   CLOCK_ALARM_BEAT_MS,
   CLOCK_ALARM_FROM_MS,
+  CLOCK_ALARM_HIDDEN_LOOKAHEAD_MS,
   CLOCK_ALARM_LATE_MS,
   CLOCK_ALARM_LOOKAHEAD_MS,
   CLOCK_ALARM_SHARP_FROM_MS,
@@ -23,6 +25,8 @@ export type ClockAlarmInput = {
   /** Viewer-owned, running clock (R79). */
   own: boolean;
   audible: boolean;
+  /** True while the page is hidden: schedule for a 1 s repaint gap. */
+  hidden?: boolean;
 };
 
 export type ClockAlarmBeat = {
@@ -51,12 +55,13 @@ export function planClockAlarm(
 ): { memory: ClockAlarmMemory; beats: ClockAlarmBeat[] } {
   const { remainingMs, own, audible } = input;
   if (!own || remainingMs === null || !Number.isFinite(remainingMs)) return { memory: CLOCK_ALARM_IDLE, beats: [] };
+  const lookahead = input.hidden === true ? CLOCK_ALARM_HIDDEN_LOOKAHEAD_MS : CLOCK_ALARM_LOOKAHEAD_MS;
 
   let last = memory.lastSecond;
-  if (last !== null && remainingMs > last * CLOCK_ALARM_BEAT_MS + CLOCK_ALARM_LOOKAHEAD_MS) last = null;
+  if (last !== null && remainingMs > last * CLOCK_ALARM_BEAT_MS + lookahead) last = null;
 
   const top = Math.min(FROM_SECONDS, Math.floor((remainingMs + CLOCK_ALARM_LATE_MS) / CLOCK_ALARM_BEAT_MS));
-  const bottom = Math.max(1, Math.ceil((remainingMs - CLOCK_ALARM_LOOKAHEAD_MS) / CLOCK_ALARM_BEAT_MS));
+  const bottom = Math.max(1, Math.ceil((remainingMs - lookahead) / CLOCK_ALARM_BEAT_MS));
   const beats: ClockAlarmBeat[] = [];
   for (let second = top; second >= bottom; second -= 1) {
     if (last !== null && second >= last) continue;
@@ -79,8 +84,10 @@ export function stepClockAlarm(
   memory: ClockAlarmMemory,
   remainingMs: number | null,
   own: boolean,
+  hidden: boolean = false,
 ): ClockAlarmMemory {
-  const plan = planClockAlarm(memory, { remainingMs, own, audible: alarmAudible(engine, settings) });
-  for (const beat of plan.beats) engine.playSfx(beat.id, beat.params, beat.delayMs);
+  const plan = planClockAlarm(memory, { remainingMs, own, audible: alarmAudible(engine, settings), hidden });
+  // #4682: the alarm's own beats carry the caller-scoped hidden-tab exemption; nothing else does.
+  for (const beat of plan.beats) engine.playSfx(beat.id, beat.params, beat.delayMs, { alarm: true });
   return plan.memory;
 }

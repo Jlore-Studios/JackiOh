@@ -103,9 +103,9 @@ export function isBuilding(interaction: Interaction): interaction is Building {
   return interaction.stage === "playing" || interaction.stage === "activating";
 }
 
-/** #2924: the shown turn, seat and viewer a half-built play or attack belongs to. */
+/** #2924, #4743: the shown turn, seat and viewer a half-built play or attack belongs to, plus a mark once the game is over, so a build lifted before the end is dropped on the render that shows the result. */
 export function boardKeyOf(view: PlayerView): string {
-  return `${String(view.turn)}:${view.active}:${view.viewer}`;
+  return `${String(view.turn)}:${view.active}:${view.viewer}${view.result === null ? "" : ":over"}`;
 }
 
 /** What is still unchosen about the play in flight, derived only from the candidates. */

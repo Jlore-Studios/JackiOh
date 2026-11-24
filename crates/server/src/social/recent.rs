@@ -50,12 +50,11 @@ pub async fn get_recent(app: &Arc<App>, req: Req) -> ApiResult {
     // walk stops at the cap.
     let mut seen: BTreeSet<String> = BTreeSet::new();
     let mut found: Vec<(String, i64)> = Vec::new();
-    for entry in games.iter().filter(|entry| entry.replay.row.ranked != Some(true)) {
-        let row = &entry.replay.row;
-        let opponent = if row.players.0 == me {
-            &row.players.1
+    for entry in games.iter().filter(|entry| entry.ranked != Some(true)) {
+        let opponent = if entry.players.0 == me {
+            &entry.players.1
         } else {
-            &row.players.0
+            &entry.players.0
         };
         if opponent.is_empty()
             || *opponent == me
@@ -67,7 +66,7 @@ pub async fn get_recent(app: &Arc<App>, req: Req) -> ApiResult {
         if tx.blocks_between(&me, opponent).await? {
             continue;
         }
-        found.push((opponent.clone(), entry.replay.result.ended_at));
+        found.push((opponent.clone(), entry.result.ended_at));
         if found.len() >= RECENT_OPPONENTS_MAX {
             break;
         }

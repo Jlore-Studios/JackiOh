@@ -10,7 +10,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 
-import { getMusicPlayer } from "../audio/music.ts";
+import type { MusicPlayer } from "../audio/music.ts";
 import { useSoundTables } from "../audio/soundTablesLoader.ts";
 import { DialogClose } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
@@ -111,6 +111,28 @@ export function fullscreenCoverScale(width: number, height: number, rxDeg: numbe
   return Math.ceil(high * unit) / unit;
 }
 
+/**
+ * #4714: the music player's module, asked for when a view first opens rather than with every face that can open one,
+ * as `main.tsx` brings the app's audio in after the first paint. A failed download is forgotten, so the next view asks
+ * again. Every call waits on the one import, so a stop asked after a play runs after it.
+ */
+let musicModule: Promise<typeof import("../audio/music.ts")> | null = null;
+
+/** #4714: `run` on the page's music player once its module is in; audio is never worth an error. */
+function withMusicPlayer(run: (player: MusicPlayer) => void): void {
+  musicModule ??= import("../audio/music.ts").catch((cause: unknown) => {
+    musicModule = null;
+    throw cause;
+  });
+  musicModule
+    .then((music) => {
+      run(music.getMusicPlayer());
+    })
+    .catch(() => {
+      // Audio is never worth an error
+    });
+}
+
 export type FullScreenArtProps = {
   defId: string;
   /** The catalog card the planes draw from, when the opener resolved it (`FullScreenState.artId`). */
@@ -138,22 +160,21 @@ export function FullScreenArt({ defId, artId: givenArtId, radiant = false, name,
   const maxDeg = diorama !== null ? DIORAMA_TURN_MAX_DEG : CARD_TILT_MAX_DEG;
   const turnsDiorama = diorama !== null;
 
-  // Audio: play intro sting/music on mount, stop on unmount or pause
+  // Audio: play intro sting/music on mount, stop on unmount or pause (#4714: once the player's module is in, and never
+  // after this run is over).
   useEffect(() => {
-    try {
-      const intro = tables?.musicCards[defId]?.intro;
-      if (intro && !paused) {
-        getMusicPlayer().playIntro(intro);
-      }
-    } catch {
-      // Audio is never worth an error
+    const intro = tables?.musicCards[defId]?.intro;
+    let live = true;
+    if (intro && !paused) {
+      withMusicPlayer((player) => {
+        if (live) player.playIntro(intro);
+      });
     }
     return () => {
-      try {
-        getMusicPlayer().stopIntro();
-      } catch {
-        // Audio is never worth an error
-      }
+      live = false;
+      withMusicPlayer((player) => {
+        player.stopIntro();
+      });
     };
   }, [defId, paused, tables]);
 

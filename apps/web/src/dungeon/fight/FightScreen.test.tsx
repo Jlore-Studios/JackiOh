@@ -181,6 +181,7 @@ function fightHost(
 function fakeDungeon(
   act: Mock<(action: RunAction) => string | null>,
   elapsedMs: number | null = 65_000,
+  holdReport: Mock<(action: RunAction) => void> = vi.fn(),
 ): Dungeon {
   return {
     content: CONTENT,
@@ -190,6 +191,7 @@ function fakeDungeon(
     resumedAt: null,
     start: vi.fn(() => null),
     act,
+    holdReport,
     abandon: vi.fn(),
     buyLevel: vi.fn(() => null),
   } as unknown as Dungeon;
@@ -608,6 +610,113 @@ describe("R3932000 a dungeon fight has a Menu button that asks before it leaves"
     fireEvent.click(menu);
     expect(window.location.pathname).toBe(paths.play);
     expect(screen.queryByTestId(fightTestid.leaveDialog)).toBeNull();
+    at("/");
+  });
+});
+
+describe("R4733000 a finished fight keeps its result when the player leaves before Continue", () => {
+  it("R4733000 the report is held on arrival, before Continue", async () => {
+    const host = fightHost();
+    const act = vi.fn<(action: RunAction) => string | null>(() => null);
+    const holdReport = vi.fn<(action: RunAction) => void>();
+    renderFight(host, fakeDungeon(act, 65_000, holdReport));
+    await screen.findByTestId(fightTestid.screen);
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(fightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+
+    // Held the moment it arrived, sent to nothing yet: the board's end stays until Continue.
+    expect(holdReport).toHaveBeenCalledTimes(1);
+    expect(holdReport).toHaveBeenCalledWith(LOST);
+    expect(act).not.toHaveBeenCalled();
+    expect(proceed).toBeEnabled();
+  });
+
+  it("R4733000 Menu after the report sends the report first, then goes to Play", async () => {
+    at(paths.dungeon);
+    const host = fightHost();
+    const act = vi.fn<(action: RunAction) => string | null>(() => null);
+    renderFight(host, fakeDungeon(act));
+    await screen.findByTestId(fightTestid.screen);
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(fightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByTestId(fightTestid.menu));
+    expect(act).toHaveBeenCalledTimes(1);
+    expect(act).toHaveBeenCalledWith(LOST);
+    expect(window.location.pathname).toBe(paths.play);
+    expect(screen.queryByTestId(fightTestid.leaveDialog)).toBeNull();
+    at("/");
+  });
+
+  it("R4733000 unmounting after the report applies it once, without Continue", async () => {
+    const host = fightHost();
+    const act = vi.fn<(action: RunAction) => string | null>(() => null);
+    renderFight(host, fakeDungeon(act));
+    await screen.findByTestId(fightTestid.screen);
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(fightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+    expect(act).not.toHaveBeenCalled();
+
+    cleanup();
+    expect(act).toHaveBeenCalledTimes(1);
+    expect(act).toHaveBeenCalledWith(LOST);
+  });
+
+  it("R4733000 Continue then unmount applies nothing more", async () => {
+    const host = fightHost();
+    const act = vi.fn<(action: RunAction) => string | null>(() => null);
+    renderFight(host, fakeDungeon(act));
+    await screen.findByTestId(fightTestid.screen);
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(fightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+
+    fireEvent.click(proceed);
+    expect(act).toHaveBeenCalledTimes(1);
+    cleanup();
+    expect(act).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("R4742000 the dungeon fight's result panel offers Main menu", () => {
+  it("R4742000 once the fight has its result, the panel's Main menu follows Continue and goes to Play without asking", async () => {
+    at(paths.dungeon);
+    const act = vi.fn(() => null);
+    const host = fightHost();
+    renderFight(host, fakeDungeon(act));
+    await screen.findByTestId(fightTestid.screen);
+    expect(screen.queryByTestId(fightTestid.resultMenu)).toBeNull();
+
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(fightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+    const menu = screen.getByTestId(fightTestid.resultMenu);
+    expect(menu).toHaveTextContent("Main menu");
+    // In Continue's own row, after it: Continue stays the first, primary answer.
+    expect(menu.parentElement).toBe(proceed.parentElement);
+    expect(proceed.parentElement?.firstElementChild).toBe(proceed);
+    expect(proceed).toHaveClass("button-primary");
+    expect(proceed.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(menu);
+    expect(window.location.pathname).toBe(paths.play);
+    expect(screen.queryByTestId(fightTestid.leaveDialog)).toBeNull();
+    // R4733000: leaving the finished fight sends its report first, once, as Continue would.
+    expect(act).toHaveBeenCalledTimes(1);
+    expect(act).toHaveBeenCalledWith(expect.objectContaining({ type: "fightOver", won: false }));
     at("/");
   });
 });

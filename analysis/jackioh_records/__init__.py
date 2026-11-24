@@ -260,6 +260,7 @@ SWEEP_COLUMNS = {
     "plays": "int64",
     "errors": "int64",
     "timeouts": "int64",
+    "raw_timeouts": "int64",
     "eval_delta_sum": "float64",
     "eval_delta_count": "int64",
     "eval_delta_mean": "float64",
@@ -283,6 +284,9 @@ def _sweep_row(line: dict) -> dict:
         "plays": line["plays"],
         "errors": line["errors"],
         "timeouts": line["timeouts"],
+        # R977000: the timeouts before the re-timer. A line that predates the field reads 0, as the Rust's
+        # `#[serde(default)]` does.
+        "raw_timeouts": line.get("rawTimeouts", 0),
         "eval_delta_sum": line["evalDeltaSum"],
         "eval_delta_count": count,
         # The mean change of the AI's evaluation per play; no plays, no mean (not a mean of zero).
@@ -296,12 +300,14 @@ def load_sweep(paths: str | Path | Iterable[str | Path]) -> pd.DataFrame:
     """A sweep's pass-1 lines (`cargo jackioh sweep --json`) as one row per card, tier and face.
 
     Columns: card, tier, face (`base` or `radiant`, the face the card was dealt on, #4466; `base` for a line
-    with none), games, drawn_games, affordable_turns, plays, errors, timeouts, eval_delta_sum,
+    with none), games, drawn_games, affordable_turns, plays, errors, timeouts, raw_timeouts, eval_delta_sum,
     eval_delta_count, eval_delta_mean (NaN with no plays), flags (a list of `error`, `timeout`, `neverPlayed`
     and `selfHarm`, as the sweep wrote them) and unswept (never once affordable in hand: no evidence either
-    way). A pass-2 line (`--pass2`'s, which names a `forced` card) is skipped, so the files of a whole sweep
-    may be named together. A blank line is skipped; a line that is not a result, or a card, tier and face an
-    earlier line holds, raises a ValueError naming its file and line.
+    way). `timeouts` is what flags a card (after the sweep re-timed each slow decision, R977000);
+    `raw_timeouts` is the slow decisions before that re-timing, shown beside it and read by no flag (0 for a
+    line that predates the field). A pass-2 line (`--pass2`'s, which names a `forced` card) is skipped, so
+    the files of a whole sweep may be named together. A blank line is skipped; a line that is not a result,
+    or a card, tier and face an earlier line holds, raises a ValueError naming its file and line.
     """
     if isinstance(paths, (str, Path)):
         paths = [paths]
@@ -369,6 +375,7 @@ PASS2_COLUMNS = {
     "plays": "int64",
     "errors": "int64",
     "timeouts": "int64",
+    "raw_timeouts": "int64",
     "eval_delta_sum": "float64",
     "eval_delta_count": "int64",
     "eval_delta_mean": "float64",
@@ -387,13 +394,14 @@ PASS2_NUMBERS = {
     "plays": "plays",
     "errors": "errors",
     "timeouts": "timeouts",
+    "raw_timeouts": "rawTimeouts",
     "eval_delta_sum": "evalDeltaSum",
     "eval_delta_count": "evalDeltaCount",
     "losing_plays": "losingPlays",
 }
 
-# An older slice has no playableTurns or losingPlays: read as 0, as the Rust's `#[serde(default)]` does.
-PASS2_OPTIONAL = ("playable_turns", "losing_plays")
+# An older slice has no playableTurns, losingPlays or rawTimeouts: read as 0, as the Rust's serde default does.
+PASS2_OPTIONAL = ("playable_turns", "losing_plays", "raw_timeouts")
 
 
 def _pass2_entry(tier: str, entry: dict) -> tuple[tuple[str, str, str], dict]:
@@ -445,11 +453,14 @@ def load_sweep_pass2(paths: str | Path | Iterable[str | Path]) -> pd.DataFrame:
     A pass-2 line forces one at-risk card and lists, in `cards`, that card first and every other at-risk
     card the AI was dealt as filler. A row sums a card's numbers over every pass-2 game it was dealt in,
     forced or filler, as `pass2_stats` does for the verdict, and `forced` is true when some line forced it
-    (a filler-only row is in the frame and was judged by no line of its own).
+    (a filler-only row is in the frame and was judged by no line of its own). `raw_timeouts` sums the slow
+    decisions before the re-timer (R977000) beside the re-timed `timeouts`; only `timeouts` raises the
+    `timeout` flag, and, like `timeouts`, it counts only the games the card was forced in, so a filler-only
+    row reads 0.
 
     Columns: card, tier, face (`base` or `radiant`), forced, games, drawn_games, affordable_turns,
-    playable_turns, plays, errors, timeouts, eval_delta_sum, eval_delta_count, eval_delta_mean (NaN with no
-    plays), losing_plays, flags (what pass 2's numbers raise at ban strength: `error`, `timeout`,
+    playable_turns, plays, errors, timeouts, raw_timeouts, eval_delta_sum, eval_delta_count, eval_delta_mean
+    (NaN with no plays), losing_plays, flags (what pass 2's numbers raise at ban strength: `error`, `timeout`,
     `neverPlayed`, `selfHarm`, `selfKill`, in the sweep's order), half_flags (the same at half strength,
     which keeps a card on the watch list) and status: `banned` (a flag), else `watched` (cleared of a ban,
     a half flag keeps it watched), else `unswept` (never affordable in these games: no evidence either

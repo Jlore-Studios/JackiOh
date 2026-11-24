@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
-import { COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
+import { COSMETIC_OFFERS } from "../wire/generated/cosmeticOffers.ts";
 import { readSheet } from "../test/setup.ts";
 import { unit } from "../test/fixtures.ts";
 import { CardFace } from "./CardFace.tsx";

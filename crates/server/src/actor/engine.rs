@@ -290,3 +290,10 @@ pub fn summarize_game(pinned: Pinned, args: &FoldArgs) -> Option<GameSummary> {
     registered();
     pinned.run(|| jackioh_engine::summarize_game(args))
 }
+
+/// R4552000: `summarize_game` with the game's turn rows filed in it (`jackioh_ai::summarize_with_swing_turns`),
+/// the data Decisiveness is read off, both from one fold under the pin (#2213); `None` without a result.
+pub fn summarize_with_swing_turns(pinned: Pinned, args: &FoldArgs) -> Option<GameSummary> {
+    registered();
+    pinned.run(|| jackioh_ai::summarize_with_swing_turns(args))
+}

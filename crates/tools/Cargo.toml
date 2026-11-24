@@ -17,6 +17,8 @@ jackioh-cards = { workspace = true }
 jackioh-ai = { workspace = true }
 # run-sim plays dungeon runs' fights to the end (#3065).
 jackioh-run = { workspace = true }
+# stats report --versions reads R654's floor, `CARD_STATS_MIN_SAMPLE`, where the server reads it (R4675001).
+jackioh-shared = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 indexmap = { workspace = true }

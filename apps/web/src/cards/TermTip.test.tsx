@@ -25,7 +25,7 @@ import { useInspectTrigger } from "./inspect/useInspectTrigger.tsx";
 import { standInCopy } from "../fx/dom.ts";
 import { must } from "../test/stubServer.ts";
 
-/** Speciesist (core-002): "Cry: Destroy an enemy non-Human Unit. You have {mana} less mana next turn." */
+/** Speciesist (core-002): "Cry: Destroy an enemy non-Human Unit. Overload ({mana})." */
 const SPECIESIST = "core-002";
 /** Shorter than any long-press: a tap. */
 const TAP_MS = 50;

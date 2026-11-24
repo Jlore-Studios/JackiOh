@@ -50,6 +50,7 @@ const SPARK_PUP = {
   adjustedWinRate: 0.5612,
   adjustedLow: 0.51,
   adjustedHigh: 0.61,
+  decisiveness: 0.142,
   tier: "A",
   playRate: 0.5,
   hasEnoughGames: true,
@@ -69,7 +70,7 @@ function figures(): [string, string][] {
 }
 
 describe("R3185000 CardStatsBlock", () => {
-  it("R3185000 shows Games, Tier, Adjusted win rate, Win rate and Play rate, and nothing else of the server's", async () => {
+  it("R3185000 shows Games, Tier, Adjusted win rate, Decisiveness, Win rate and Play rate, and nothing else of the server's", async () => {
     serve(SPARK_PUP);
     render(<CardStatsBlock cardId="core-001" />);
 
@@ -79,6 +80,7 @@ describe("R3185000 CardStatsBlock", () => {
       ["Tier", "A"],
       // To a tenth of a point, as /stats prints it (R2777000).
       ["Adjusted win rate", "56.1%"],
+      ["Decisiveness", "±14.2%"],
       ["Win rate", "60%"],
       ["Play rate", "50%"],
     ]);
@@ -90,6 +92,20 @@ describe("R3185000 CardStatsBlock", () => {
     for (const gone of ["When drawn", "Drawn vs not drawn", "not enough data"]) {
       expect(screen.queryByText(gone)).toBeNull();
     }
+  });
+
+  it("R4552003 the panel shows Decisiveness between Adjusted win rate and Win rate, its tooltip naming both values", async () => {
+    const body = { ...mockStatsResponse(SPARK_PUP), tiers: { center: 0, spread: 0.03, cards: 100, bandLow: 0.45, bandHigh: 0.55, decisiveness: 0.137 } };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 })));
+    render(<CardStatsBlock cardId="core-001" />);
+
+    await screen.findByText("Adjusted win rate", undefined, SLOW);
+    expect(figures().map(([label]) => label)).toEqual(["Games", "Tier", "Adjusted win rate", "Decisiveness", "Win rate", "Play rate"]);
+    expect(screen.getByTestId(statsTestid.cardStatsDecisiveness)).toHaveTextContent("±14.2%");
+    const title = screen.getByText("Decisiveness").getAttribute("title") ?? "";
+    expect(title).toContain("by ±14.2%");
+    expect(title).toContain("A typical card: ±13.7%.");
+    expect(title).toContain("not a margin of error");
   });
 
   it("#2115 a panel skeleton stands in for the figures while the read is pending", async () => {
@@ -126,6 +142,7 @@ describe("R3185000 CardStatsBlock", () => {
       ["Games", "10"],
       ["Tier", "—"],
       ["Adjusted win rate", "—"],
+      ["Decisiveness", "not enough games"],
       ["Win rate", "not enough games (< 20)"],
       ["Play rate", "10%"],
     ]);
@@ -157,6 +174,7 @@ describe("R4082000 a card no deck holds reads its Created figures", () => {
     adjustedWinRate: 0.4871,
     adjustedLow: 0.43,
     adjustedHigh: 0.54,
+    decisiveness: 0.088,
     tier: "C",
     hasEnoughGames: true,
     window: { from: "0.2.0", liveGames: 1200, source: "live", counted: ["0.2.0"] },
@@ -167,7 +185,7 @@ describe("R4082000 a card no deck holds reads its Created figures", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 })));
   }
 
-  it("R4083000 a token shows its games, tier and adjusted win rate alone, no Win rate or Play rate", async () => {
+  it("R4083000 a token shows its games, tier, adjusted win rate and decisiveness alone, no Win rate or Play rate", async () => {
     serveCreated(TOKEN);
     render(<CardStatsBlock cardId="core-t-sheep" />);
     await screen.findByText("Adjusted win rate", undefined, SLOW);
@@ -175,11 +193,28 @@ describe("R4082000 a card no deck holds reads its Created figures", () => {
       ["Games", "50"],
       ["Tier", "C"],
       ["Adjusted win rate", "48.7%"],
+      ["Decisiveness", "±8.8%"],
     ]);
     expect(screen.getByTestId(INSPECT_STATS)).not.toHaveTextContent(/Win rate|Play rate/);
   });
 
-  it("R4083000 below the floor a token reads its games and — for tier and adjusted", async () => {
+  it("R4552003 a card no deck holds shows Games, Tier, Adjusted win rate and Decisiveness", async () => {
+    const created = { center: 0, spread: 0.03, cards: 4, baseline: 0.5, decisiveness: 0.1 };
+    const body = {
+      ...mockStatsResponse(SPARK_PUP),
+      cards: [],
+      created: [TOKEN],
+      tiers: { center: 0, spread: 0.03, cards: 100, bandLow: 0.45, bandHigh: 0.55, decisiveness: 0.137, created },
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 })));
+    render(<CardStatsBlock cardId="core-t-sheep" />);
+    await screen.findByText("Adjusted win rate", undefined, SLOW);
+    expect(figures().map(([label]) => label)).toEqual(["Games", "Tier", "Adjusted win rate", "Decisiveness"]);
+    // The typical value is the Created cards', not the deck cards'.
+    expect(screen.getByText("Decisiveness").getAttribute("title")).toContain("A typical card: ±10.0%.");
+  });
+
+  it("R4083000 below the floor a token reads its games, — for tier and adjusted and not enough games for decisiveness", async () => {
     serveCreated({ ...TOKEN, games: 12, tier: null, hasEnoughGames: false });
     render(<CardStatsBlock cardId="core-t-sheep" />);
     await screen.findByText("Adjusted win rate", undefined, SLOW);
@@ -187,8 +222,9 @@ describe("R4082000 a card no deck holds reads its Created figures", () => {
       ["Games", "12"],
       ["Tier", "—"],
       ["Adjusted win rate", "—"],
+      ["Decisiveness", "not enough games"],
     ]);
-    expect(screen.getByTestId(INSPECT_STATS)).not.toHaveTextContent(/not enough games|Win rate|Play rate/);
+    expect(screen.getByTestId(INSPECT_STATS)).not.toHaveTextContent(/Win rate|Play rate/);
   });
 
   it("R4082000 a card a deck holds keeps its deck figures, Created copies or not", async () => {
@@ -198,7 +234,7 @@ describe("R4082000 a card no deck holds reads its Created figures", () => {
     expect(figures()[0]).toEqual(["Games", "60"]);
     expect(figures()[1]).toEqual(["Tier", "A"]);
     // R4083000: a deck card keeps its Win rate and Play rate.
-    expect(figures().slice(3)).toEqual([
+    expect(figures().slice(4)).toEqual([
       ["Win rate", "60%"],
       ["Play rate", "50%"],
     ]);
@@ -224,9 +260,9 @@ describe("R3447000 the panel names the patch its figures were collected on", () 
 
     const patch = await screen.findByTestId(statsTestid.cardStatsPatch, undefined, SLOW);
     expect(patch).toHaveTextContent("Collected on patch 0.6.0");
-    // Beside the title, above the same five figures, and with no word of where they come from (R661).
+    // Beside the title, above the same six figures, and with no word of where they come from (R661).
     expect(patch.closest(".inspect-stats-header")).toHaveTextContent("Statistics");
-    expect(figures().map(([label]) => label)).toEqual(["Games", "Tier", "Adjusted win rate", "Win rate", "Play rate"]);
+    expect(figures().map(([label]) => label)).toEqual(["Games", "Tier", "Adjusted win rate", "Decisiveness", "Win rate", "Play rate"]);
     expect(screen.getByTestId(INSPECT_STATS).textContent).not.toMatch(/previous|live games/i);
   });
 

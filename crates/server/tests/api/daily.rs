@@ -29,7 +29,8 @@ use jackioh_server::api::queue::try_pair;
 use jackioh_server::api::retention::purge_expired;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    DAILY_MAX_ACTIVE_GAMES, DAILY_PLAYER_EMAILS_PER_DAY, MATCH_ACTION_RETENTION_DAYS, MS_PER_DAY,
+    DAILY_MAX_ACTIVE_GAMES, DAILY_PLAYER_EMAILS_PER_DAY, DAILY_REMINDER_HOURS, MATCH_ACTION_RETENTION_DAYS,
+    MS_PER_DAY, MS_PER_HOUR, NOTIFICATIONS_KEEP_DAYS,
 };
 use jackioh_server::daily::notify::sweep;
 use jackioh_server::db::store::{DailyNotifyRow, MatchStatus, ProfileStatus, PushSubRow};
@@ -3664,4 +3665,110 @@ async fn list_reads_every_games_portraits_in_one_match_read() {
         want.sort();
         assert_eq!(both, want, "{match_id}");
     }
+}
+
+// R4691000: when a sweep next has something to do, which the Worker asks as the server goes to sleep
+
+/// `GET /daily-next`'s time, or `None`.
+async fn next_due_at(app: &Arc<App>) -> Option<i64> {
+    let (status, _headers, body) = call(app, "GET", "/daily-next", None, Value::Null).await;
+    assert_eq!(status, 200, "{body}");
+    body["nextDueAt"].as_i64()
+}
+
+/// The earliest deadline of `match_id` as the store holds it.
+async fn deadline_of(app: &Arc<App>, match_id: &str) -> i64 {
+    fake_lock(app)
+        .await
+        .tables
+        .daily
+        .games
+        .iter()
+        .find(|game| game.match_id == match_id)
+        .and_then(|game| game.next_deadline_at)
+        .expect("a running game's deadline")
+}
+
+/// Asserts `due` is the daily clock's now, read around the call that answered it.
+fn due_now(due: Option<i64>, before: i64, after: i64) {
+    let due = due.expect("something due");
+    assert!(before <= due && due <= after, "{before} <= {due} <= {after}");
+}
+
+#[tokio::test]
+async fn r4691000_next_due_is_the_first_deadline_lapse_or_purge_a_sweep_has() {
+    let empty = app_with(None, TestAppOptions::default()).await;
+    assert_eq!(next_due_at(&empty).await, None, "nothing stored, nothing due");
+    let (app, ada, bo) = two_friends().await;
+
+    // No mail key and no device: the game's deadline comes before the accepted challenge's lapse
+    // (a week) and the feed's oldest row's keep.
+    let match_id = daily_game(&app, &ada, &bo, 1).await;
+    let deadline = deadline_of(&app, &match_id).await;
+    assert_eq!(next_due_at(&app).await, Some(deadline));
+
+    // Past it, due at once; settled, the invite's lapse is next.
+    app.daily.set_offset(2 * MS_PER_DAY);
+    let before = app.daily.now();
+    let due = next_due_at(&app).await;
+    due_now(due, before, app.daily.now());
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!((status, swept["settled"].as_i64()), (200, Some(1)), "{swept}");
+    let lapse = fake_lock(&app)
+        .await
+        .tables
+        .daily
+        .invites
+        .iter()
+        .map(|invite| invite.expires_at)
+        .min();
+    assert!(lapse.is_some(), "the accepted challenge is kept to its lapse");
+    assert_eq!(next_due_at(&app).await, lapse);
+
+    // Purged, the feed's oldest row is next, a millisecond past its keep.
+    app.daily
+        .set_offset(jackioh_server::config::DAILY_CHALLENGE_TTL_DAYS * MS_PER_DAY + 1);
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!(status, 200, "{swept}");
+    let oldest = fake_lock(&app)
+        .await
+        .tables
+        .notifications
+        .rows
+        .iter()
+        .map(|row| row.created_at)
+        .min()
+        .expect("the game's feed rows");
+    assert_eq!(
+        next_due_at(&app).await,
+        Some(oldest + NOTIFICATIONS_KEEP_DAYS * MS_PER_DAY + 1)
+    );
+}
+
+#[tokio::test]
+async fn r4691000_next_due_counts_a_waiting_accounts_next_email() {
+    // The game starts on a server with no mail key, so nobody has been emailed of it.
+    let (quiet, ada, bo) = two_friends().await;
+    let match_id = daily_game(&quiet, &ada, &bo, 3).await;
+    let (mail_api, _seen) = fake_service(StatusCode::OK).await;
+    let app = app_with(
+        Some(quiet.db.clone()),
+        TestAppOptions {
+            mail_api: Some(format!("{mail_api}/emails")),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let before = app.daily.now();
+    let due = next_due_at(&app).await;
+    due_now(due, before, app.daily.now());
+
+    // Emailed: the next is the game's reminder, before its deadline.
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!((status, swept["emailed"].as_i64()), (200, Some(2)), "{swept}");
+    let deadline = deadline_of(&app, &match_id).await;
+    assert_eq!(
+        next_due_at(&app).await,
+        Some(deadline - DAILY_REMINDER_HOURS * MS_PER_HOUR)
+    );
 }
