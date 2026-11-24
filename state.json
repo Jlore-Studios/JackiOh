@@ -21806,21 +21806,33 @@
       ]
     },
     "4773": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-24T19:17:21Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-24T19:11:55Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:7c8d42d5-1795547814",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-24T19:17:21Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T19:16:42Z",
+    "at": "2026-11-24T19:17:21Z",
     "url": "",
-    "what": "revise #4759 on muse"
+    "what": "plan #4773 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T19:01:07Z",
