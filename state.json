@@ -19653,6 +19653,8 @@
       }
     },
     "4718": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T09:35:45Z",
@@ -19666,8 +19668,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: drop stale unmet rematch offers when match window expires to avoid phantom offers\"} -->\n- ## What changed\n- `RematchBook` now records each entry's `finished_at` and drops unmet entries on read once the finished match's 60-second window closes, so a late `seen()` returns all-`None` instead of a phantom opponent offer whose Accept would be rejected as `Lapsed`.\n- - [rematch.rs](crates/shared/src/host/rematch.rs): `RematchEntry` gains `finished_at: Option<i64>` (set on create, refreshed on each taken offer); `live_entry` treats an unmet entry as stale when past the TTL on its latest offer **or** outside `in_rematch_window(entry.finished_at, now)`. Claimed en\u2026\n- - [rematch.rs tests](crates/shared/tests/rematch.rs): replaced the phantom-read characterization test with `r2685000_a_read_past_the_window_drops_an_unmet_offer` (read past the window returns all-`None` and empties the entry), and reworked the TTL-edge test as `r2685000_an_offer_at_the_windows_end_\u2026\n- - [implicit-states.md](docs/implicit-states.md): \u00a714 Fields gains `finished_at`; O10 rewritten as specified behavior pointing at the new test; O12 rewritten around the window's last moment.\n- - [RematchEntry.ts](apps/web/src/wire/generated/RematchEntry.ts): regenerated (gains `finishedAt: number | null`); never hand-edited.\n- ## How I tested it\n- - `cargo test -p jackioh-shared --features jackioh-engine/testkit --test shared rematch` \u2192 22 passed, 0 failed.\n- - Same with `--features ts,jackioh-engine/testkit` \u2192 22 passed; then `cargo test -p jackioh-shared --features ts,jackioh-engine/testkit --lib` to emit the wire file (the `--test shared` filter alone skips the `export_bindings_*` lib tests, so the generated file was unchanged until the lib run).\n- - `cargo test -p jackioh-server --test server rematch` \u2192 50 passed (unchanged suite stays green).\n- - `cargo fmt --check` \u2192 clean (one rustfmt line-join fix applied, tests re-run after it); `cargo clippy -p jackioh-shared --all-targets --features jackioh-engine/testkit -- -D warnings` \u2192 clean; `cargo jackioh spec check` \u2192 ok (2428 rulings, 6082 proofs).\n- ## Decisions the issue did not settle\n- - No new ruling and no `spec/pending/4686.md`: R2685000's note already orders entries that made no game dropped, so this implements existing words rather than specifying anything new.\n- - `sweep()` deliberately untouched: R3694000's Rejected pins it to TTL-after-latest-offer; only reads gain the window check.\n- - No server changes: `seen()`/`offer()` signatures are unchanged and the server already passes `finished_at` through.\n- A reviewer should look twice at `live_entry`'s new stale condition: entries deserialized from older JSON have `finished_at: None`, which `in_rematch_window` treats as outside the window, so a stale-schema unmet entry is dropped on first read rather than kept to the TTL.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4686 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4686/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4686,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T11:05:55Z",
         "from_run": "45366698432",
         "gates": [
           {
@@ -19726,8 +19731,15 @@
         "source": "build",
         "until": "2026-11-24T11:34:01Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-24T11:04:01Z",
+      "run_id": "pending:9766adca-1795518322",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-24T11:05:55Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -19877,9 +19889,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T10:54:36Z",
+    "at": "2026-11-24T11:05:55Z",
     "url": "",
-    "what": "build #4692 on claude-4"
+    "what": "review #4718 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T10:51:11Z",
