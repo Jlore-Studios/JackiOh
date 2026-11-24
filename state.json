@@ -19945,6 +19945,14 @@
       "queued_at": "2026-11-24T21:36:07Z",
       "requested_by": "squishy-squooby",
       "stop_requested": false
+    },
+    "4857": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-24T21:04:58Z",
+      "issue": 4780,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
