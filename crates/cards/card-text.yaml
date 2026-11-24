@@ -7223,8 +7223,8 @@ stinkyscapeplus-020: # B-Patch
     cast: Roll the dice, ship the patch.
   zh:
     name: B补丁
-    base: 抽到时施放：抛一枚硬币决定整个效果。随机强化或削弱场上和双方手牌中的每张牌。
-    radiant: "幸运1\n抽到时施放：抛一枚硬币决定整个效果。随机强化或削弱场上和双方手牌中的每张牌。"
+    base: 抽到时施放：抛一枚硬币。正面：强化场上和双方手牌中的每张牌。反面：削弱它们。
+    radiant: "幸运1\n抽到时施放：抛一枚硬币。正面：强化场上和双方手牌中的每张牌。反面：削弱它们。"
 stinkyscapeplus-021: # Jlockeed Shredder-12
   flavour: It shreds the enemy twice before lunch and files the paperwork twice after.
   voice:

@@ -1,0 +1,18 @@
+{
+  "title": "Patch: clearer rules text for S+ #20 B-Patch",
+  "sources": "#4745",
+  "notes": "Reworded B-Patch's printed text so the coin's two sides are spelled out: Heads Buffs every card on the field and in both hands, Tails Nerfs them. Words only: one coin for the whole effect (R3557000), Lucky 1's second flip keeps heads (R1440) and the Immune-to-Spells skip (R4453000) are unchanged.",
+  "player": {
+    "title": "B-Patch reads clearer",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [
+      "B-Patch's text now spells out the coin: Heads Buffs every card on the field and in both hands, Tails Nerfs them."
+    ],
+    "fixes": []
+  },
+  "cards": [
+    "stinkyscapeplus-020"
+  ]
+}
