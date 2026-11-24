@@ -17,10 +17,9 @@
 
 use jackioh_engine::SHIPPED_SETS;
 use jackioh_engine::config::{
-    AI_DIFFICULTY, AI_TUTORIAL, COIN_DEF_ID, CRAFT_ADJECTIVES, CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES,
-    CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS, CRAFT_RETIRED_VERBS, CRAFT_VERB_PRICES, DECK_SIZE,
-    DIFFICULTIES, DRAWS_PER_TURN, DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_CAP, DUOS_PASS_COST,
-    DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, EARLIER_DECK_SIZE, EMOTE_COOLDOWN_MS, EMOTE_HAND_SIZE,
+    AI_DIFFICULTY, AI_TUTORIAL, CRAFT_ADJECTIVES, CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES, CRAFT_MAX_N,
+    CRAFT_NOUNS, CRAFT_RETIRED_VERBS, CRAFT_VERB_PRICES, DECK_SIZE, DIFFICULTIES, DRAWS_PER_TURN,
+    DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, EARLIER_DECK_SIZE, EMOTE_COOLDOWN_MS, EMOTE_HAND_SIZE,
     EMOTE_HAND_VOICE, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP,
     KY_COMPETITION_SECONDS, LIBRARY_CAP, LOADOUT_DECKS, LOSER_DRAWS_REASONS, MAX_COPIES, MAX_MANA,
     PROMPT_CARD_OPTION_LIMIT, RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, ROLL_HEADS,
@@ -87,7 +86,6 @@ fn engine_config_ts() -> String {
             &AI_DIFFICULTY,
         ),
         constant("AI_TUTORIAL", Some("Handicap"), &AI_TUTORIAL),
-        constant("COIN_DEF_ID", None, COIN_DEF_ID),
         constant("CRAFT_ADJECTIVES", Some("readonly string[]"), CRAFT_ADJECTIVES),
         constant(
             "CRAFT_HAT_PRICES",
@@ -99,7 +97,6 @@ fn engine_config_ts() -> String {
             Some("readonly CraftKeywordPrice[]"),
             CRAFT_KEYWORD_PRICES,
         ),
-        constant("CRAFT_MAX_EFFECTS", None, &CRAFT_MAX_EFFECTS),
         constant("CRAFT_MAX_N", None, &CRAFT_MAX_N),
         constant("CRAFT_NOUNS", Some("readonly string[]"), CRAFT_NOUNS),
         // R1563009: the verbs no craft prompt offers, which Scratch Pad's palette leaves out.
@@ -118,10 +115,6 @@ fn engine_config_ts() -> String {
         constant("DRAWS_PER_TURN", None, &DRAWS_PER_TURN),
         constant("DUOS_HUMAN_TEAM", Some("DuosTeamRules"), &DUOS_HUMAN_TEAM),
         constant("DUOS_OWN_HEALTH", None, &DUOS_OWN_HEALTH),
-        constant("DUOS_PASS_CAP", None, &DUOS_PASS_CAP),
-        constant("DUOS_PASS_COST", None, &DUOS_PASS_COST),
-        constant("DUOS_POOL_HEALTH", None, &DUOS_POOL_HEALTH),
-        constant("DUOS_POOL_HEALTH_HARD", None, &DUOS_POOL_HEALTH_HARD),
         // R1705003: the deck size a game made before #1705 holds to, which a saved draft may still have.
         constant("EARLIER_DECK_SIZE", None, &EARLIER_DECK_SIZE),
         // R1341, R643: the emote hand's size and voice lines and the rate limit, which the web's
@@ -211,7 +204,7 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    assert_eq!(text.matches("\nexport const ").count(), 54, "{text}");
+    assert_eq!(text.matches("\nexport const ").count(), 48, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

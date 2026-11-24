@@ -18,11 +18,9 @@ export type { Difficulty, Handicap, CraftHatPrice, CraftKeywordPrice, CraftVerbP
 
 export const AI_DIFFICULTY: Readonly<Record<Difficulty, Handicap>> = {"easy":{"deckSize":25,"manaBonus":0,"manaCap":4,"extraOpeningCards":0,"extraDrawsPerTurn":0},"medium":{"deckSize":30,"manaBonus":1,"manaCap":5,"extraOpeningCards":1,"extraDrawsPerTurn":0},"hard":{"deckSize":35,"manaBonus":1,"manaCap":7,"extraOpeningCards":1,"extraDrawsPerTurn":1}};
 export const AI_TUTORIAL: Handicap = {"deckSize":12,"manaBonus":0,"manaCap":3,"extraOpeningCards":0,"extraDrawsPerTurn":0,"heroHealth":20,"tutorialCardsOnly":true,"deckCopies":4};
-export const COIN_DEF_ID = "core-t-coin";
 export const CRAFT_ADJECTIVES: readonly string[] = ["Pure","Seeded","Async","Recursive","Generic","Static","Lazy","Mutable"];
 export const CRAFT_HAT_PRICES: readonly CraftHatPrice[] = [{"hat":"cry","lines":2,"multiplier":1,"types":["Unit","Field Spell"]},{"hat":"death","lines":2,"multiplier":1,"types":["Unit"]},{"hat":"startOfTurn","lines":2,"multiplier":2,"types":["Unit","Field Spell"]},{"hat":"endOfTurn","lines":2,"multiplier":2,"types":["Unit","Field Spell"]},{"hat":"whenCast","lines":2,"multiplier":1,"types":["Spell"]},{"hat":"opponentPlaysUnit","lines":4,"multiplier":1,"types":["Trap"]},{"hat":"opponentPlaysSpell","lines":4,"multiplier":1,"types":["Trap"]},{"hat":"opponentAttacks","lines":4,"multiplier":1,"types":["Trap"]},{"hat":"activate","lines":4,"multiplier":1,"types":[]}];
 export const CRAFT_KEYWORD_PRICES: readonly CraftKeywordPrice[] = [{"kind":"Taunt","points":2,"perN":0,"spell":false},{"kind":"Rush","points":2,"perN":0,"spell":false},{"kind":"First Strike","points":2,"perN":0,"spell":false},{"kind":"Cleave","points":2,"perN":0,"spell":false},{"kind":"Trample","points":2,"perN":0,"spell":false},{"kind":"Pierce","points":2,"perN":0,"spell":true},{"kind":"Lifesteal","points":2,"perN":0,"spell":true},{"kind":"Deft","points":1,"perN":0,"spell":false},{"kind":"Divine Shield","points":3,"perN":0,"spell":false},{"kind":"Reborn","points":3,"perN":0,"spell":false},{"kind":"Charge","points":4,"perN":0,"spell":false},{"kind":"Poisonous","points":4,"perN":0,"spell":false},{"kind":"Windfury","points":4,"perN":0,"spell":false},{"kind":"Armor","points":0,"perN":2,"spell":false}];
-export const CRAFT_MAX_EFFECTS = 8;
 export const CRAFT_MAX_N = 10;
 export const CRAFT_NOUNS: readonly string[] = ["Closure","Reducer","Iterator","Trait","Crate","Struct","Macro","Enum"];
 export const CRAFT_RETIRED_VERBS: readonly CraftVerb[] = ["gainArmor"];
@@ -32,10 +30,6 @@ export const DIFFICULTIES: readonly Difficulty[] = ["easy","medium","hard"];
 export const DRAWS_PER_TURN = 1;
 export const DUOS_HUMAN_TEAM: DuosTeamRules = {"ownHealth":20,"poolHealth":20,"passCost":1,"passCap":10};
 export const DUOS_OWN_HEALTH = 20;
-export const DUOS_PASS_CAP = 10;
-export const DUOS_PASS_COST = 1;
-export const DUOS_POOL_HEALTH = 20;
-export const DUOS_POOL_HEALTH_HARD = 30;
 export const EARLIER_DECK_SIZE = 20;
 export const EMOTE_COOLDOWN_MS = 1500;
 export const EMOTE_HAND_SIZE = 8;
