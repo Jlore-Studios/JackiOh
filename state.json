@@ -41275,6 +41275,14 @@
         "title": "Patch: the AI takes a lethal it reaches by drawing first, as it did before #4608, by finishing a cut-short replay's turn on each sampled world",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T09:18:40Z",
+        "number": 4688,
+        "reason": "nothing breaks today. `SMOKE` names neither 56 spec, the shared weight only nudges the nightly shards, and the miscount is in a README. A rename is polish only the maintainer sees, and it risks breaking whatever refers to the spec by its file name, for no change players or CI would notice. Fine to fold into the next change that touches these specs.",
+        "title": "Patch: spec 56's duplicate number in e2e resolves to spec 59 for board notices overlay",
+        "verdict": "came to nothing",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "declined": [
@@ -42020,6 +42028,13 @@
         "at": "2026-11-23T23:07:54Z",
         "number": 4641,
         "title": "Patch: a static check that every game-playing e2e spec sets its seed",
+        "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T09:18:40Z",
+        "number": 4688,
+        "reason": "nothing breaks today. `SMOKE` names neither 56 spec, the shared weight only nudges the nightly shards, and the miscount is in a README. A rename is polish only the maintainer sees, and it risks breaking whatever refers to the spec by its file name, for no change players or CI would notice. Fine to fold into the next change that touches these specs.",
+        "title": "Patch: spec 56's duplicate number in e2e resolves to spec 59 for board notices overlay",
         "why": "rejected by @jgoetzmann"
       }
     ],
