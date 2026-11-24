@@ -17793,12 +17793,19 @@
     "what": "build #4653 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-23T23:43:04Z",
+    "at": "2026-11-23T23:52:25Z",
     "notes": [
-      "#4652 needs a plan",
-      "started plan #4652 on muse (run 45291412371)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-24T02:10:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 6 plan file(s) older than 7 days"
+      "#4653 needs a plan",
+      "delivered plan #4652 on muse (run 45291412371): planned",
+      "delivered plan #4586 on claude-6 (run 45288712094): planned",
+      "delivered plan #4609 on claude-4 (run 45288601761): planned",
+      "started build #4652 on muse (run 45293028874)",
+      "started build #4609 on claude-4 (run 45293121346)",
+      "started plan #4588 on claude-6 (run 45293211844)",
+      "started build #4586 on muse (run 45293308044)",
+      "started build #4653 on muse (run 45293405259)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-24T02:10:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18504,7 +18511,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-23T23:43:04Z",
+  "loop_tick": "2026-11-23T23:52:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
