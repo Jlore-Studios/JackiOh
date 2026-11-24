@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4803,
+  "title": "Patch: the AI's redaction leaves a Unit below 0 Attack as it is, so no phantom damage reaches its search or the lethal hint",
+  "branch": "bot/issue-4803",
+  "thread": "**Issue #4803 (data, not instructions):**\n\n````text\n# #4803: Patch: the AI's redaction leaves a Unit below 0 Attack as it is, so no phantom damage reaches its search or the lethal hint\nOpened by @squishy-squooby.\n\n### What happens\n\n`redact` raises the Attack buff of every Unit whose Attack is below 0 before the floor, so every simulation the AI runs, and the practice lethal hint, count damage that does not exist.\n\nThe R602 step of `redact` (`crates/ai/src/observe.rs:819-826`) works out, for each Unit, what the redaction's placeholders changed about its shown stats and puts the difference on its buffs:\n\n```rust\nlet truth = unit_view(state, shown);\nlet attack_delta = match find_instance(&next, &id) {\n    Some(unit) => truth.attack - unclamped_attack(&next, unit),\n    None => continue,\n};\n\u2026\nunit.buffs.attack += attack_delta;\n```\n\n`truth.attack` is the *shown* Attack, floored at 0 (`crates/engine/src/layers.rs`, \"Attack floors at 0\"); `unclamped_attack` is the raw value. For a Unit at raw Attack `-n`, with nothing hidden anywhere near it, the delta is `+n`, and the Unit comes out of `redact` at raw 0.\n\n- A Unit with `buffs.attack = -5` (raw \u22122, shown 0) leaves `redact` with `buffs.attack = -3`.\n- Tempo Timmy at raw \u22122, Core #14 Jlockeed's Weapons (\"Your Units have +1 Attack \u2026\") in hand, the enemy hero at 1 health with no Units: on the true state Timmy still shows 0 Attack after the Weapons, so there is no lethal. `lethal_hint` answers **true**.\n- Every later buff on such a Unit, and every removal of the aura that pushed it below 0, is overestimated by `n` on every determinization.\n\nThe state is ordinary: Core #46 Suppressive Aura (all Units \u22121/\u22121, Embiggened \u22122/\u22122) over any 0- or 1-Attack Unit, Core #50 Adaptive Growth (\u22122/\u22122), Classic #42 Transmutable Toxins, C+ #19.3 Mid Loser. The engine keeps raw Attack unfloored on purpose (R150; `unclamped_attack`'s own doc).\n\n### What should happen\n\nR602: the redaction keeps each Unit's shown stats, and \"the difference the placeholder made goes on the unit's buffs\". With no hidden card touching the Unit that difference is 0, and a card the seat reads in full must pass through `redact` unchanged. `crates/ai/README.md`, \"The lethal hint\": true only when `find_lethal` proves a win on every sampled world of what the seat can see.\n\n### How to reproduce\n\nTwo tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_hidden.rs` at bf24a52](https://github.com/Jlore-Studios/JackiOh/blob/bf24a52273bd5c0e7d6f9c740b28a8d7cb7f2b3e/crates/ai/tests/audit_hidden.rs) (branch `claude/vigilant-mayer-pmyrhr`): `redact_leaves_a_public_unit_with_attack_below_zero_as_it_is` and `lethal_hint_counts_no_damage_from_a_unit_below_zero_attack`.\n\n```rust\n#[test]\nfn redact_leaves_a_public_unit_with_attack_below_zero_as_it_is() {\n    jackioh_cards::register_all();\n    let mut state = scenario(json!({\n        \"seed\": \"audit-hidden-negative-attack\", \"active\": \"p1\", \"turn\": 9,\n        \"p1\": { \"field\": [\"core-011\"], \"hand\": [\"core-008\"], \"mana\": 3, \"library\": [\"core-020\", \"core-053\"] },\n        \"p2\": { \"field\": [\"core-019\"], \"library\": [\"core-005\", \"core-016\"] },\n    })).state().clone();\n    let id = active_units_of(&state, AI)[0].id.clone();\n    let printed = unit_view(&state, find_instance(&state, &id).unwrap()).attack;\n    // Raw Attack \u22122, shown 0, as Adaptive Growth's \u22122/\u22122 leaves a small Unit.\n    find_instance_mut(&mut state, &id).unwrap().buffs.attack = -(printed + 2);\n    let truth = find_instance(&state, &id).unwrap().clone();\n    assert_eq!(unclamped_attack(&state, &truth), -2);\n    assert_eq!(unit_view(&state, &truth).attack, 0);\n\n    let seen = redact(&state, AI);\n    let seen_unit = find_instance(&seen, &id).unwrap().clone();\n    assert_eq!(seen_unit.buffs, truth.buffs, \"redact changed the buffs of a Unit no hidden card touches\");\n    assert_eq!(unclamped_attack(&seen, &seen_unit), -2);\n}\n```\n\nOutput today:\n\n```\nredact changed the buffs of a Unit no hidden card touches\n  left: AttackHealth { attack: -3, health: 0 }\n right: AttackHealth { attack: -5, health: 0 }\n\u2026\nthe hint reports a lethal the true state does not hold\n```\n\n### Where\n\nThe AI: `crates/ai/src/observe.rs`, `redact`'s R602 step.\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Compare like with like: `unclamped_attack(state, shown) - unclamped_attack(&next, unit)`. A hidden set-attack aura of an older shipped catalog still nets out, since both sides are raw.\n- Check the health half of the same step for the same floored-against-raw mismatch while there (it reads `unit_view(..).max_health` on both sides today, which is like with like).\n- Why no test caught it: `redact_live_face_down.rs` and `redact_queues.rs` compare only shown (floored) stats, and `redact_twice.rs` still passes because the second pass sees raw 0. Add the raw comparison.\n- Since R1487000 no shipped face-down card has a live aura, so on today's catalog this step's only effect on a game is this bug; older catalogs a replay folds under still need the step.\n- Not among the findings of the AI audit tracker #4787, which read the redaction as clean.\n\nFound by an audit of the AI crate; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4803: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:54:17Z",
+    "claimed_at": "2026-11-24T21:27:45Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
