@@ -21408,6 +21408,8 @@
       }
     },
     "4757": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T14:12:09Z",
@@ -21421,8 +21423,11 @@
         "trail": "scription\": \"Find result/menu text in \\u00a79.9 and \\u00a79.10\"}\n- Bash: {\"command\": \"grep -n -i \\\"Play again\\\\|Change setup\\\\|Back to lessons\\\" spec/09-architecture.md | cut -c1-80; sed -n 175,181p spec/09-architecture.md | cut -c1-900\", \"description\": \"Find result butto\u2026\n- Bash: {\"command\": \"sed -n 151,153p spec/09-architecture.md | grep -o -i \\\"[^.]*\\\\(result\\\\|Menu\\\\|leave\\\\)[^.]*\\\\.\\\" | cut -c1-500 | head -8; sed -n 149,152p spec/09-architecture.md | cut -c1-200; grep -n \u2026\n- Bash: {\"command\": \"grep -n \\\"A finished free game is kept on the device\\\" spec/09-architecture.md | cut -c1-20; grep -n \\\"The fight's controls carry Menu\\\" spec/15-dungeon-run.md | cut -c1-30; grep -n \\\"pr\u2026\n- Bash: {\"command\": \"sed -n 151p spec/09-architecture.md | grep -o \\\"A finished free game is kept on the device.*\\\" | cut -c1-500; echo ----; sed -n 201p spec/15-dungeon-run.md | grep -o \\\"[^.]*The fight's c\u2026\n- Bash: {\"command\": \"sed -n 666,672p apps/web/README.md | cut -c1-300; sed -n 84p spec/09-architecture.md >/dev/null; grep -n \\\"A lesson can't be lost except by conceding\\\" spec/09-architecture.md | cut -c1-\u2026\n- said: Now write the spec edits, the ruling and the README paragraph.\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\n# \\u00a79.9\\np='spec/09-architecture.md'\\ns=open(p).read()\\nold=\\\"a lesson and a game Glitch voided are not kept ([[R768]], [[R767000]], [[R768000]]).\\\"\\nas\u2026\n- Bash: {\"command\": \"cat > spec/rulings/R4742000.md <<'EOF'\\n---\\nid: R4742000\\ntitle: \\\"Every mode's end-of-game result offers Main menu after its own ways on, and practice's menu leaves for Play's Solo gro\u2026\n- Bash: {\"command\": \"grep -rn \\\"fn repo_root\\\\|fn workspace_root\\\\|CARGO_MANIFEST_DIR\\\" crates/tools/src/*.rs | head -5; cat .cargo/config.toml 2>/dev/null | head\", \"description\": \"Check how the tools find t\u2026\n- Bash: {\"command\": \"cp spec/rulings/R4742000.md /tmp/R4742000.bak && sed -i 's|apps/web/src/duos/DuosRoute.test.tsx|apps/web/src/duos/NoSuch.test.tsx|' spec/rulings/R4742000.md && (cargo jackioh spec check \u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- run 2: Daily/Duos(+DuosRoute) tests, e2e (testids, practice-table mount, spec 13 -> /play#solo), spec (R4742000 + pending/4742 + \\u00a79.9 + \\u00a715.6 se\u2026\n- Bash: {\"command\": \"pnpm typecheck 2>&1 | tail -8; echo \\\"exit: ${PIPESTATUS[0]}\\\"\", \"description\": \"Run the root typecheck for every project\", \"timeout\": 580000}\n- said: Typecheck is clean across all projects. Now eslint, rustfmt and the full web suite.\n- Bash: {\"command\": \"(pnpm exec eslint apps/web/src/game/MainMenuButton.tsx apps/web/src/game/MainMenuButton.test.tsx apps/web/src/net apps/web/src/routes/PlayHub.tsx apps/web/src/routes/play.test.tsx apps/w\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web test 2>&1 | tail -40\", \"description\": \"Run the web's full unit suite once\", \"timeout\": 600000}\n- Bash: {\"command\": \"git status --short; git diff apps/web/src/routes/practice.tsx apps/web/src/duos apps/web/src/daily/DailyBoard.tsx -- ':!*.test.tsx' | head -200\", \"description\": \"Review source diff while\u2026\n- Bash: {\"command\": \"grep -rn -i \\\"menu.*landing\\\\|landing.*practice.*menu\\\\|practice.*Menu.*main menu\\\\|practice-menu\\\" apps/web/README.md docs/*.md e2e/README.md 2>/dev/null | cut -c1-240 | head\", \"descrip\u2026\n- Bash: {\"command\": \"sed -n 1296,1308p apps/web/README.md\", \"description\": \"Read the README line naming practice's Menu destination\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/README.md'\\ns=open(p).read()\\nold=\\\" Menu leaves for the landing page, asking first (Save and leave, or Leave without saving) while the\\\\n game is on.\\\"\\nn\u2026\n- Bash: {\"command\": \"tail -c 600 /tmp/claude-1001/-home-runner-work--temp-work-item-4742/b71848c6-cfe4-4fac-b81d-86dd6832a9e4/tasks/buynqr1de.output\", \"description\": \"Check the full suite's output so far\"}\n- Monitor: {\"query\": \"select:Monitor\", \"max_results\": \"1\"}\n- tool error: <tool_use_error>InputValidationError: Monitor failed due to the following issue: The required parameter `description` is missing This tool's schema was not sent to the API \u2014 it was not in the discove\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- run 2: typecheck (root, all projects), eslint (touched dirs + e2e), cargo fmt --check, spec check: all green. README line ~1302 (practice Menu -> landing)\u2026\n- Bash: {\"command\": \"ps aux | grep -c \\\"[v]itest\\\"; ps aux | grep \\\"[v]itest\\\" | head -3 | cut -c1-200\", \"description\": \"Check whether the vitest run is alive\"}\n- Bash: {\"command\": \"timeout 580 tail --pid=6016 -f /dev/null; ps aux | grep -c \\\"[v]itest run\\\"; tail -c 1500 /tmp/claude-1001/-home-runner-work--temp-work-item-4742/b71848c6-cfe4-4fac-b81d-86dd6832a9e4/tas\u2026\n- Bash: {\"command\": \"git rev-parse --verify origin/main >/dev/null 2>&1 && echo \\\"origin/main ok\\\" || echo \\\"no origin/main\\\"; git merge-base HEAD origin/main 2>/dev/null | cut -c1-10\", \"description\": \"Check\u2026\n- Bash: {\"command\": \"pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' > /tmp/web-changed.log 2>&1;\u2026\n- Bash: {\"command\": \"pid=$(pgrep -f \\\"vitest.mjs run --project web\\\" | head -1); echo \\\"pid=$pid\\\"; timeout 590 tail --pid=\\\"$pid\\\" -f /dev/null; tail -n 25 /tmp/web-changed.log\", \"description\": \"Wait for th\u2026\n- Bash: {\"command\": \"pid=$(pgrep -f \\\"vitest.mjs run --project web\\\" | head -1); echo \\\"pid=$pid\\\"; [ -n \\\"$pid\\\" ] && timeout 590 tail --pid=\\\"$pid\\\" -f /dev/null; tail -n 12 /tmp/web-changed.log | cut -c1-\u2026\n- Bash: {\"command\": \"git status --short | grep -v \\\"^ M\\\\|^??\\\" ; git status --short | wc -l; git status --short -- apps/web/src/wire | wc -l; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns+=\\\"\\\\n\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a Main menu button on every end-of-game screen\"} --> Every end-of-game result that lacked a way to the menu now has a **Main menu** button after the mode's own ways on. Practice's menu exits, board Menu included, now leave for `/play#solo`, as the issue\u2026"
       },
       "issue": 4742,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T16:12:43Z",
         "from_run": "45411463928",
         "gates": [
           {
@@ -21514,7 +21519,11 @@
         "source": "build",
         "until": "2026-11-24T16:40:36Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-24T16:10:36Z",
+      "run_id": "pending:4cb77846-1795536720",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -21533,6 +21542,9 @@
         "provider": "claude-4",
         "run": "45411463928"
       },
+      "started_at": "2026-11-24T16:12:43Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -21546,9 +21558,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T16:00:45Z",
+    "at": "2026-11-24T16:12:43Z",
     "url": "",
-    "what": "review #4755 on claude-8"
+    "what": "review #4757 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-24T15:55:55Z",
