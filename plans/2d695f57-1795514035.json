@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 4677,
+  "title": "Patch: deeper card stats, P2, a patch search, and older patches for dev accounts only",
+  "branch": "bot/issue-4677",
+  "thread": "**Issue #4677 (data, not instructions):**\n\n```text\n# #4677: Patch: deeper card stats, P2, a patch search, and older patches for dev accounts only\nOpened by @jgoetzmann.\n\nPart of #4670. Part **P2**, its own pull request on `main`.\n\nBlocked by #4674\n\nIt changes the same patch bar.\n\nRead first:\n- \u00a79.11's \"Patches on `/stats`\" and \"Public statistics and the publication gate\" bullets.\n- R654, R661, R1973001, R1973002 and R3324000.\n- `crates/server/src/api/stats.rs` (`get_cards`, `get_card`, the `patches` list, the response cache) and `crates/server/src/api/dev.rs` (`is_dev`, `DEV_PROFILE_IDS`, R1300000).\n- `apps/web/src/stats/patches.ts`, and `apps/edge` for any cache it puts in front of `/api/stats`.\n\n## Why\n\nToday the patch bar offers only the newest patch and the five newest with enough games (`STATS_PATCHES_OFFERED`, `STATS_PATCH_MIN_GAMES`). Any other patch is reachable only by typing `?patch=` into the address. The owner wants:\n\n1. **A search** to look through every patch and open any one's stats.\n2. **A limit on how far back**, unless the caller is a dev account.\n\n## Who may query what\n\nA **patch** here is the page's patch: the window a major or a patch opens, with its micros (R1973001), as `GET /api/stats/cards`' `patches` lists them, newest first. A patch's **line** is its `major.minor` (v0.6.x).\n\n**Everyone else**, a signed-in account that is not a dev account, or no account at all, may query the longer of these two newest-first runs:\n- **A**: every patch of the current line (the newest patch's line, v0.6.x today), then the two newest patches of the line before it (the two highest v0.5.Y);\n- **B**: the five newest patches.\n\nBoth runs are prefixes of the newest-first list, so the longer one is also their union.\n- Today A is the longer: all of v0.6.x plus two of v0.5.x.\n- Just after a v0.7.0, A would be v0.7.0 and the two newest v0.6 patches, so B, five patches, is the longer.\n\nThe 2 and the 5 are named constants in `crates/server/src/config.rs`, re-exported to `serverConfig.ts` (rule 9).\n\n**A dev account** (`api::dev::is_dev`) may query every patch back to v0.1.0.\n\n**The server decides** (CLAUDE.md rule 7). The client only hides what the server refuses.\n- **`GET /api/stats/cards?patch=`** answers a patch outside the caller's set with 403 and a stable error code of its own, writing nothing.\n- **The `patches` list** it answers holds only the caller's set, so the bar, its arrows (P1) and the search never offer a patch the server refuses.\n- **The drill-down's \"Win rate by patch\"** (`GET /api/stats/cards/:id`, `patches`) lists only the caller's set too, so the limit cannot be read around through it. Record this decision in the ruling.\n- **No patch** (the current one) stays open to everyone, signed in or not (R654).\n- **What is left alone**: the Experimental tab's pooled views (#4671) are not a patch query and are not limited by this. Neither is the Sets tab's \"patch before\", which is always inside the set of the patch it follows.\n\n**Caching.** The server caches these answers for 300 s, and the site Worker may cache them too. A dev's answer must never be served to anyone else: key the cache on the caller's class, or skip the cache for a dev. Check the Worker (`apps/edge`) and its tests.\n\n**The client sends the session.** If the stats calls (`getCardStats`, `getCardDrillDown` in `apps/web/src/net/api.ts`) go without the signed-in token today, they send it when there is one, so the server can tell a dev.\n\n**Outside callers** (CLAUDE.md rule 13). The route stays. The deploy jobs poll it without `patch`, which stays open. `winrates-refresh.yml` reads the database, not the route. Check every other caller (`apps/admin`, `analysis/`, `crates/tools`, the workflows). If one needs an older patch without a dev session, stop and ask on this issue rather than break it.\n\n## The page\n\n**One button, no more**:\n- A **search** button (an icon with an accessible name, \"Find a patch\") at the patch bar's end opens a `Dialog`.\n- The dialog lists the caller's patches, newest first, grouped by line (v0.6, v0.5, \u2026), each with its name and games (\"Collecting data\" for the newest one short of games, R3324000).\n- A text box filters them by version. Typing `0.5.8` finds the patch holding v0.5.8, micros included (`patchIndex`).\n- Picking one shows it as a tab does: `?patch=` in the address, and the bar shows it as the shown patch (`offeredPatches`).\n- For anyone but a dev, the dialog ends with one line saying older patches are for dev accounts. It never lists the refused patches.\n- An address naming a refused patch opens on the current patch with that same line, never an error page.\n\nBefore and after, look at the bar and the dialog with the `ui-walkthrough` skill at 1280\u00d7720 and 390\u00d7844, signed out and as the E2E dev fixture (R1310004, `e2e/README.md`), and say in the pull request what you saw. The bar stays one row on a desktop.\n\n## Done when\n\n- `crates/server/tests/api/stats.rs` covers:\n  - the set for a normal caller, with A longer and with B longer (a fixture history where the current line has one patch);\n  - a dev's full list;\n  - the 403 on a refused `patch`, on both routes;\n  - the drill-down's limited `patches`;\n  - the cache never crossing classes.\n- `apps/edge` tests cover its cache, if it has one.\n- `apps/web` tests cover the dialog, its filter and its grouping, a pick, the refused address and the dev line.\n- Named constants (rule 9). Rulings in this issue's block, with tests and `spec/pending/<issue>.md` (rule 3). \u00a79.11's \"Patches on `/stats`\" bullet states the limit.\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4677: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T05:55:46Z",
+    "claimed_at": "2026-11-24T09:54:24Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4673 is held for `claude-7` until 04:30 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4595 skipped: it waits for #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4676 skipped: it waits for #4672, #4673 to close first",
+    "#4678 skipped: it waits for #4673, #4675 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4680 skipped: it waits for #4678 to close first",
+    "#4681 skipped: it waits for #4680 to close first"
+  ]
+}
