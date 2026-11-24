@@ -306,3 +306,60 @@ fn probe_cosmetic_packs_grant_only_what_a_store_and_the_rules_take() {
     }
     assert!(all.is_empty(), "{} problems, e.g. {:?}", all.len(), all.iter().take(12).collect::<Vec<_>>());
 }
+
+/// R1304001: "A game counts toward no quest that falls due after it ended": the hook tops the account up
+/// at the moment the game ended, "so a quest that fell due by then is held, and the whole game counts toward
+/// it, as toward every other quest held when the game ended". A quest the book already holds that arrived
+/// after `summary.at` (a top-up or a replace that committed between the game's end and its payout: a
+/// `GET /api/quests`, another game's payout, R2210000's replacement "dated when the replace ran") was not held
+/// when the game ended.
+#[test]
+fn r1304001_a_game_moves_no_quest_that_arrived_after_it_ended() {
+    use jackioh_engine::PlayerId;
+    use jackioh_shared::economy::fleet::{FleetPlay, FleetTrack};
+    use jackioh_shared::economy::ledger::{HeldQuest, QuestBook};
+    use jackioh_shared::economy::quests::{GameTally, quest_interval_ms};
+    use jackioh_shared::economy::rewards::{GameMode, GameRecords, GameSummary, pay_game};
+
+    jackioh_cards::register_all();
+    const ENDED_AT: i64 = 1_800_000_000_000;
+    let records = GameRecords {
+        paid_today: 0,
+        tracks: Vec::new(),
+        quests: QuestBook {
+            // "Win 3 games", which arrived one second after the game ended.
+            held: vec![HeldQuest {
+                quest_id: "win-3".to_string(),
+                progress: 0,
+                arrived_at: ENDED_AT + 1_000,
+            }],
+            // The top-up that brought it moved the schedule on: nothing is due at the game's end.
+            next_due_at: Some(ENDED_AT + 1_000 + quest_interval_ms()),
+        },
+        fleet: FleetTrack::default(),
+    };
+    let summary = GameSummary {
+        mode: GameMode::Ladder,
+        profile_id: "p".to_string(),
+        player: PlayerId::P1,
+        won: Some(true),
+        actions: 10,
+        match_id: "match-1".to_string(),
+        at: ENDED_AT,
+        bot: false,
+        tally: GameTally::default(),
+        proficiency: Vec::new(),
+        fleet: FleetPlay::default(),
+    };
+    let paid = pay_game(&records, &summary, "seed");
+    let moved: Vec<&LedgerGrant> = paid
+        .grants
+        .iter()
+        .filter(|grant| matches!(grant, LedgerGrant::Quest { quest_id, .. } if quest_id == "win-3"))
+        .collect();
+    assert!(
+        moved.is_empty(),
+        "a game that ended at {ENDED_AT} moved a quest that arrived at {}: {moved:?}",
+        ENDED_AT + 1_000
+    );
+}

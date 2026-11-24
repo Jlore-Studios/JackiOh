@@ -222,3 +222,95 @@ fn probe_trigor_radiant_chain() {
     let units: Vec<_> = active_units_of(s.state(), P1).into_iter().map(|c| { let v = unit_view(s.state(), c); (c.def_id.clone(), c.radiant, v.attack, v.health) }).collect();
     println!("same turn second death (chain mark): {units:?}");
 }
+
+const CTC_TG: &str = "traininggrounds-039";
+const ALTERNATE: &str =
+    "At the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand";
+
+fn rolled(s: &Scenario) -> Vec<String> {
+    s.events()
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::ChaosRolled { effects, .. } => Some(effects.clone()),
+            _ => None,
+        })
+        .flatten()
+        .collect()
+}
+
+fn ctc_game(seed: &str) -> Scenario {
+    let mut s = game(json!({
+        "seed": seed,
+        "p1": { "hand": [CTC_TG], "library": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER], "mana": 10 },
+        "p2": { "hand": [FILLER], "library": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER] },
+    }));
+    s.play(CTC_TG, json!({}));
+    s
+}
+
+/// Probe X1: R673 on the Training Grounds Call's ninth entry.
+#[test]
+fn probe_glitch_odds_reach_the_ninth_entrys_call() {
+    let seed = seed_where("audit-ctc-tg", |seed| rolled(&ctc_game(seed)) == vec![ALTERNATE.to_string()]);
+    let mut s = ctc_game(&seed);
+    println!("seed {seed} rolled {:?}", rolled(&s));
+    s.state_mut().system_plays = Some(10000);
+    s.end_turn();
+    s.end_turn();
+    println!("active {:?} hand {:?}", s.state().active, dump_hand(&s, P1));
+    let added: Vec<String> = s.hand(P1).iter().map(|c| c.def_id.clone()).filter(|d| d != FILLER).collect();
+    println!("added {added:?}");
+    assert_eq!(added, vec![GLITCH_DEF_ID.to_string()], "R673: every card generated into a hand, added from a pool");
+}
+
+/// Control for X1: Recruitment Posters' start-of-turn add under the same odds.
+#[test]
+fn probe_glitch_odds_reach_recruitment_posters() {
+    const POSTERS: &str = "traininggrounds-020";
+    let mut s = game(json!({
+        "seed": "audit-posters",
+        "p1": { "hand": [], "backrow": [{ "def": POSTERS, "faceUp": true }], "library": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER], "mana": 10 },
+        "p2": { "hand": [FILLER], "library": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER] },
+    }));
+    s.state_mut().system_plays = Some(10000);
+    s.end_turn();
+    s.end_turn();
+    let added: Vec<String> = s.hand(P1).iter().map(|c| c.def_id.clone()).filter(|d| d != FILLER).collect();
+    println!("posters added {added:?}");
+    assert_eq!(added, vec![GLITCH_DEF_ID.to_string()]);
+}
+
+/// Probe Y5: the autopilot plays a hand of prompt-heavy cards.
+#[test]
+fn probe_autopilot_plays_prompt_cards() {
+    const OFFLOADING: &str = "meditativeplus-018";
+    for (i, hand) in [
+        json!(["meditativeplus-020", "meditativeplus-026", "meditativeplus-016", "meditativeplus-025"]),
+        json!(["meditativeplus-001", "traininggrounds-055", "traininggrounds-050", "meditativeplus-004"]),
+        json!([{ "def": "meditativeplus-024", "radiant": true }, "meditativeplus-024", "traininggrounds-037", "meditativeplus-002"]),
+        json!([{ "def": "meditativeplus-020", "radiant": true }, "meditativeplus-016-1", "meditativeplus-006", "traininggrounds-039"]),
+        json!(["meditativeplus-019", "meditativeplus-010", "traininggrounds-057", "traininggrounds-049", "meditativeplus-017", "traininggrounds-058"]),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let mut s = game(json!({
+            "seed": format!("auto-{i}"),
+            "active": "p2",
+            "p1": { "hand": hand, "graveyard": ["stand-in (3) 9/9", FILLER], "field": ["stand-in (1) 4/4"],
+                    "library": [OFFLOADING, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER], "mana": 10 },
+            "p2": { "hand": [FILLER, FILLER], "field": ["stand-in (2) 2/2", "stand-in (1) 3/3 Rush, First Strike"], "library": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER] },
+        }));
+        s.end_turn();
+        let played: Vec<String> = s
+            .events()
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::CardPlayed { player, def_id, .. } if *player == P1 => Some(def_id.clone()),
+                _ => None,
+            })
+            .collect();
+        println!("game {i}: active {:?} turn {} pending {:?} result {:?} played {played:?}", s.state().active, s.state().turn, s.state().pending.as_ref().map(|p| (p.player_id, p.prompt.clone())), s.state().result.is_some());
+        println!("   p1 hand {:?}", s.hand(P1).iter().map(|c| c.def_id.clone()).collect::<Vec<_>>());
+    }
+}
