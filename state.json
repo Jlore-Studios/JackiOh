@@ -21043,15 +21043,8 @@
       }
     },
     "4751": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45427555140",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-24T15:46:03Z",
-        "until": "2026-11-24T16:16:03Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -21063,10 +21056,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "\n- Governing spec: [[\u00a76.3]] (new row), [[\u00a72.3]], [[\u00a78]] rows, [[\u00a77]] Fortify Mind; rulings [[R1848004]] (the rider), [[R169]] (badge), [[R1224]] (Jlarna ledger), [[R2195003]] (Legacy freeze).\n- ## Steps\n- 1. In `crates/cards/catalog.json`, apply these swaps on both faces of each listed card (verified present on this branch; each swap preserves the `{param}` keys): ` You have {mana} less mana next turn.` \u2192 ` Overload ({mana}).` (`core-002` \u00d72, `meditative-082` \u00d72, `meditative-022-1` \u00d72 as `Greed: \u2026`)\u2026\n- 2. In the 12 script files above, update only the header/doc comment's quoted text to the new wording (copy the catalog face text from step 1). Change no code, param, or effect; leave the `c056` label string and the `c019` delay step exactly as they are.\n- 3. In `crates/cards/card-text.yaml`, rewrite the 12 cards' `zh` base/radiant faces with \u8fc7\u8f7d, keeping every `{key}`: Speciesist `\u6218\u543c\uff1a\u2026\u8fc7\u8f7d({mana})\u3002`; Hinder `\u62bd\u5230\u65f6\u65bd\u653e\uff1a\u4f7f\u4f60\u7684\u5bf9\u624b\u8fc7\u8f7d({mana})\u3002\u2026`; Expedition12 `\u8fc7\u8f7d({loss})\u3002\u2026`; Expedition123 `\u8fc7\u8f7d({loss})\uff0c\u518d\u4e0b\u4e2a\u56de\u5408\u8fc7\u8f7d({lossAfter})\u3002\u2026`; Fortify Mind `\u8d2a\u5a6a\uff1a\u8fc7\u8f7d({mana})\u3002\u2026`; Medina O\u2026\n- 4. In `crates/cards/chinese-terms.json`, insert `\"Overload\": { \"label\": \"\u8fc7\u8f7d\", \"rule\": \"\u4f60\u5728\u4e0b\u4e2a\u56de\u5408\u5c11\u76f8\u5e94\u6570\u91cf\u7684\u6cd5\u529b\u503c\" },` after `\"Replenish\"`. In `crates/shared/data/glossary.json`, insert `{ \"id\": \"Overload\", \"label\": \"Overload\", \"rule\": \"You have that much less mana next turn\", \"section\": \"\u00a76.3\", \"aliases\": []\u2026\n- 5. In `spec/06-keywords.md`, insert the `| Overload X | You have X less mana next turn | \u2026 |` row between the \"Mana / gain mana\" and \"Replenish X\" rows: a [[\u00a76.3]] verb for the \u2212X next-turn rider (`next_turn_mana { amount: -X }`, [[R1848004]]) on the controller, or the opponent for \"Overload your o\u2026\n- 6. Write `spec/rulings/R4751000.md` (front matter `id: R4751000`, title naming Overload as the printed next-turn loss, `cards: \"\u00a72.3, \u00a76.3, Core #2, Core #21, M #18, M #19, M #22.1, M #82, M #89, S #117, S #118, TG #52, S+ #56, S+ #72; R169, R1224, R1848004\"`, `proven_in: [crates/cards/tests/cross/\u2026\n- 7. In `spec/07-tokens.md` Fortify Mind row, change the Greed clause to `Overload (2) and discard 2 random cards`. In `spec/08-catalog.md`, apply step 1's swaps to the Base and Radiant effect cells of the 12 rows only (Speciesist and Hinder use literal numbers there: `Overload ({mana})`, `Overload y\u2026\n- 8. In `crates/cards/tests/cross/catalog.rs`, change the `frozen` closure to strip `\" Overload ({mana}).\"` and update its comment to name \u00a76.3 Overload X. In the same file add `#[test] fn r4751000_overload_is_the_printed_name_of_the_next_turn_mana_loss()`: for each of the 12 ids (`core-002`, `core-0\u2026\n- 9. Run `cargo jackioh patches \"Overload\" --source \"issue #4751\" --notes \"Overload (X) is the printed name of the next-turn rider of -X (spec 6.3 Overload X, R1848004); wording only, no script or number changed.\"` (cards default to the 12 differing ids; creates `pending/overload.json`), then hand-wr\u2026\n- 10. Update the four web files (union entry, `VERBS_6_3` entry, two/\u200bone/\u200bcomment strings). Run `cargo fmt --check` and fix formatting before any check.\n- ## Tests\n- - `crates/cards/tests/cross/catalog.rs`: new `r4751000_overload_is_the_printed_name_of_the_next_turn_mana_loss` (all 24 faces print Overload, no old phrasing); updated Legacy frozen test still passes. Commands: `cargo test -p jackioh-cards --test cards r4751000`, `cargo test -p jackioh-cards --test\u2026\n- - `crates/tools/tests/export_card_text.rs`: `cargo test -p jackioh-tools --test export_card_text` (rewrites `chinese.json`; asserts the yaml/json agreement).\n- - Web (each builds the WASM module first): `pnpm --dir apps/web test src/cards/rules.test.ts` (B11 glossary/row agreement incl. new term), plus `src/cards/CardFace.test.tsx`, `src/cards/model.test.ts`, `src/cards/TermTip.test.tsx`.\n- - Gates: `cargo jackioh catalog check`, `cargo jackioh patches check`, `cargo jackioh spec check`, `cargo jackioh names --check`, `cargo jackioh classify --base origin/main --claims` (expect Cards, micro, wording-only; 12 cards play no differently), `cargo clippy -p jackioh-cards --all-targets -- -\u2026\n- ## Done when\n- - All 12 cards print Overload on both faces in `catalog.json`, `card-text.yaml`/`chinese.json`, scripts' comments, and `spec/08-catalog.md`; nothing else reworded.\n- - \u00a76.3 \"Overload X\" row, glossary (EN+ZH), short-forms, and web term union agree; B10/B11 green.\n- - `R4751000.md`, its proving test, and `spec/pending/4751.md` exist and `spec check` passes.\n- - The fragment claims exactly the 12 card ids with the player `new`+`text` note; `patches check` passes.\n- - Delayed-step labels, scripts, numbers, S+ #82/#95 and mana-gain cards untouched; `fmt`, `catalog check`, `names --check`, `classify --claims` all green.\n- ## Risks\n- - `chinese.json` is generated: hand-editing it instead of running the export test causes drift; always run the test and inspect `git status`.\n- - The `patches` command must run after the `catalog.json` edit so `cards` defaults to the 12 differing ids; running it before yields wrong claims.\n- - B10/B11 web tests couple spec rows, glossary rows, and `VERBS_6_3` exactly: the row name must stay `Overload X` with glossary `row: \"Overload X\"`, or the \"every row is a term\" test fails.\n- - Cherry-picking reference commit `6557baa` is allowed, but its fragment `sources` names another branch and it lacks the ruling; manual steps above are the primary path.\n- ## Open questions\n- None. No hard-item criterion fires (no engine-loop, AI, cross-crate design, migration, or ~40-file change: 30 files, wording-only), and every value above was read from the tree or the green reference commit.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4751 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4751/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-24T15:36:49Z",
       "owner_why": "it plans it",
@@ -21079,9 +21071,9 @@
       "provider": "muse",
       "queued_at": "2026-11-24T15:29:26Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45427555140",
+      "run_id": "pending:8612e5b5-1795535301",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-24T15:36:49Z",
+      "started_at": "2026-11-24T15:48:55Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -21334,9 +21326,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T15:48:07Z",
+    "at": "2026-11-24T15:48:55Z",
     "url": "",
-    "what": "review #4753 on claude-7"
+    "what": "build #4751 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T15:32:44Z",
