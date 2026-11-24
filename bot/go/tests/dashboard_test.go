@@ -12,7 +12,6 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -186,266 +185,6 @@ func TestDashboard_UnreadablePullRequestsDrawNoTrainingBox(t *testing.T) {
 	gh.Patch.ListPulls = nil
 }
 
-// ============================================================================ LearnLaneTests
-
-// The learn lane's section (#466): read from GitHub alone, since no harness runs the lane.
-
-// dashboardRun is LearnLaneTests.run_with's keyword arguments: Event defaults to "schedule",
-// Status to "completed", and nil Jobs to [].
-type dashboardRun struct {
-	Number int
-	Event  string
-	Status string
-	Jobs   []*pyjson.Object
-}
-
-// dashboardRunWith is LearnLaneTests.run_with.
-func dashboardRunWith(gh *fakes.FakeGitHub, runID int, o dashboardRun) {
-	event, status := o.Event, o.Status
-	if event == "" {
-		event = "schedule"
-	}
-	if status == "" {
-		status = "completed"
-	}
-	gh.Runs.Set(strconv.Itoa(runID), pyjson.New("id", runID, "workflow", dashboard.LearnWorkflow,
-		"event", event, "status", status, "conclusion", "success", "run_number", o.Number,
-		"created_at", clock.ISO(testsupport.Night.Add(-24*time.Hour)),
-		"html_url", fmt.Sprintf("https://github.com/x/y/actions/runs/%d", runID)))
-	jobs := o.Jobs
-	if len(jobs) == 0 {
-		jobs = []*pyjson.Object{}
-	}
-	gh.Jobs[strconv.Itoa(runID)] = jobs
-}
-
-// dashboardRetrain is LearnLaneTests.retrain: each step (its key, its conclusion), in order.
-func dashboardRetrain(steps ...[2]string) []*pyjson.Object {
-	names := map[string]string{"fit": "retrain and screen (training/ml/retrain.sh)",
-		"gate":    "the gate on main as it is now (training/ml/learn-promote.sh)",
-		"deliver": "deliver (push ai/learn, open its pull request, auto-merge)",
-		"moving":  "main kept moving, so another run on this export",
-		"waits":   "a promotion still open, so this one waits"}
-	list := []any{}
-	for _, s := range steps {
-		list = append(list, pyjson.New("name", names[s[0]], "conclusion", s[1]))
-	}
-	return []*pyjson.Object{pyjson.New("name", "plan", "conclusion", "success"),
-		pyjson.New("name", "export / plan the shards", "conclusion", "success"),
-		pyjson.New("name", "retrain, screen, gate", "conclusion", "success", "steps", list)}
-}
-
-func TestDashboard_EachWayARunEnds(t *testing.T) {
-	outcome := func(jobs []*pyjson.Object, status ...string) string {
-		s := "completed"
-		if len(status) > 0 {
-			s = status[0]
-		}
-		return dashboard.LearnOutcome(pyjson.New("status", s), jobs)
-	}
-	job := pyjson.New
-	assertEqual(t, outcome([]*pyjson.Object{}, "in_progress"), "🔄 running")
-	assertEqual(t, outcome([]*pyjson.Object{job("name", "plan", "conclusion", "success"),
-		job("name", "retrain, screen, gate", "conclusion", "skipped")}),
-		"⏭️ waited on its open pull request")
-	// Before the retrain went on with the shards that finished, a failed shard stopped the run.
-	assertEqual(t, outcome([]*pyjson.Object{job("name", "export / shard from 1", "conclusion", "failure",
-		"runner_name", "GitHub Actions 1021011405")}),
-		"❌ the export failed")
-	assertEqual(t, outcome(dashboardRetrain([2]string{"fit", "success"}, [2]string{"gate", "skipped"})),
-		"screened out")
-	assertEqual(t, outcome(dashboardRetrain([2]string{"fit", "success"}, [2]string{"gate", "success"},
-		[2]string{"deliver", "skipped"}, [2]string{"moving", "skipped"})), "gated out")
-	assertEqual(t, outcome(dashboardRetrain([2]string{"fit", "success"}, [2]string{"gate", "success"},
-		[2]string{"deliver", "success"})), "🎉 promoted")
-	assertIn(t, "LEARN_LANE_TOKEN", outcome(dashboardRetrain([2]string{"fit", "success"},
-		[2]string{"gate", "success"}, [2]string{"deliver", "failure"})))
-	assertEqual(t, outcome(dashboardRetrain([2]string{"fit", "success"}, [2]string{"gate", "success"},
-		[2]string{"deliver", "skipped"}, [2]string{"moving", "success"})),
-		"🔁 main kept moving: another run on the export")
-	// A pass while the lane's last promotion is still open waits behind it, as its artifact.
-	assertEqual(t, outcome(dashboardRetrain([2]string{"fit", "success"}, [2]string{"gate", "success"},
-		[2]string{"waits", "success"}, [2]string{"deliver", "skipped"}, [2]string{"moving", "skipped"})),
-		"⏸️ passed, behind a promotion still open: kept as its artifact")
-	assertEqual(t, outcome(dashboardRetrain([2]string{"fit", "success"}, [2]string{"gate", "success"},
-		[2]string{"waits", "skipped"}, [2]string{"deliver", "success"})), "🎉 promoted")
-	// A run from before the lane gated on the newest main ("the gate, once") reads the same.
-	old := dashboardRetrain([2]string{"fit", "success"})
-	old[2].Set("steps", append(old[2].List("steps"),
-		pyjson.New("name", "the gate, once (promote --lane learn)", "conclusion", "skipped")))
-	assertEqual(t, outcome(old), "screened out")
-}
-
-// GitHub fails a job no runner takes in 24 hours: a job that ended with no runner in a run nobody
-// stopped was never taken, not the lane broken.
-func TestDashboard_ARunNoRunnerTookOrTookInPart(t *testing.T) {
-	outcome := func(jobs []*pyjson.Object, conclusion ...string) string {
-		c := "failure"
-		if len(conclusion) > 0 {
-			c = conclusion[0]
-		}
-		return dashboard.LearnOutcome(pyjson.New("status", "completed", "conclusion", c), jobs)
-	}
-	never := func(name string) *pyjson.Object {
-		return pyjson.New("name", name, "conclusion", "cancelled", "runner_name", nil)
-	}
-	took := func(name string, conclusion ...string) *pyjson.Object {
-		c := "success"
-		if len(conclusion) > 0 {
-			c = conclusion[0]
-		}
-		return pyjson.New("name", name, "conclusion", c, "runner_name", "GitHub Actions 1021011405")
-	}
-	skipped := func() *pyjson.Object {
-		return pyjson.New("name", "retrain, screen, gate", "conclusion", "skipped")
-	}
-	assertEqual(t, outcome([]*pyjson.Object{never("plan"), skipped()}), dashboard.LearnNoRunner)
-	// The retrain goes on with the shards that finished; with none, the shards step stops it.
-	noneFinished := []*pyjson.Object{took("plan"), took("export / plan the shards"),
-		never("export / shard from 1"), never("export / shard from 5001"),
-		took("retrain, screen, gate", "failure").Set("steps", []any{
-			pyjson.New("name", "the export's shards", "conclusion", "failure")})}
-	assertEqual(t, outcome(noneFinished), dashboard.LearnNoRunner)
-	noneFinished[2] = took("export / shard from 1", "failure")
-	assertEqual(t, outcome(noneFinished), "❌ the export failed")
-	// Some shards lost, the rest retrained on: the run reads as the retrain ended.
-	some := dashboardRetrain([2]string{"fit", "success"}, [2]string{"gate", "skipped"})
-	some = slices.Insert(some, 1, never("export / shard from 5001"), took("export / shard from 1"))
-	assertEqual(t, outcome(some, "cancelled"), "screened out")
-	assertEqual(t, outcome([]*pyjson.Object{took("plan"), skipped()}, "cancelled"), "⏹️ cancelled")
-	// Stopped in its export, by a person or a new patch or set (learn-set.yml): cancelled, not lost.
-	stopped := []*pyjson.Object{took("plan"), took("export / round 1 / shard from 1"),
-		took("export / round 1 / shard from 5001", "cancelled"),
-		never("export / round 1 / shard from 10001")}
-	assertEqual(t, outcome(stopped, "cancelled"), "⏹️ cancelled")
-	// The jobs after the export end cancelled with no runner when the run is stopped, which leaves
-	// no job untaken (run 42657035876's retrain, 2026-11-13).
-	stopped = []*pyjson.Object{took("plan"), took("export / shards / shard from 1"),
-		took("export / shards / shard from 1251", "cancelled"), never("export / shards / shard from 2501"),
-		never("retrain, screen, gate")}
-	assertEqual(t, outcome(stopped, "cancelled"), "⏹️ cancelled")
-	assertEqual(t, outcome([]*pyjson.Object{never("plan"), never("retrain, screen, gate")}, "cancelled"),
-		"⏹️ cancelled")
-	assertEqual(t, outcome([]*pyjson.Object{took("plan"), never("retrain, screen, gate")}), dashboard.LearnNoRunner)
-}
-
-// Each run starts the next as it ends (#1976); the schedule, twice a day, starts the lane again.
-func TestDashboard_TheNextScheduledRunIsTheNext0623Or1823UTC(t *testing.T) {
-	isoformat := func(at time.Time) string { return at.Format("2006-01-02T15:04:05-07:00") }
-	before := testsupport.Night // 2026-09-30 03:00 UTC
-	assertEqual(t, isoformat(dashboard.NextLearnRun(before)), "2026-09-30T06:23:00+00:00")
-	after := time.Date(2026, 9, 30, 7, 0, 0, 0, time.UTC)
-	assertEqual(t, isoformat(dashboard.NextLearnRun(after)), "2026-09-30T18:23:00+00:00")
-	at := time.Date(2026, 9, 30, 6, 23, 0, 0, time.UTC)
-	assertEqual(t, isoformat(dashboard.NextLearnRun(at)), "2026-09-30T18:23:00+00:00")
-	evening := time.Date(2026, 9, 30, 18, 23, 0, 0, time.UTC)
-	assertEqual(t, isoformat(dashboard.NextLearnRun(evening)), "2026-10-01T06:23:00+00:00")
-}
-
-// dashboardLearnLane is "\n".join(dashboard.learn_lane(make_ctx(gh, at=NIGHT, cfg=make_config()))).
-func dashboardLearnLane(gh *fakes.FakeGitHub) string {
-	return strings.Join(dashboard.LearnLane(testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night,
-		Cfg: testsupport.MakeConfig()})), "\n")
-}
-
-func TestDashboard_TheSectionSaysWhatIsOnMainItsPullRequestAndItsRuns(t *testing.T) {
-	gh := fakes.NewFakeGitHub()
-	gh.Files[[2]string{"main", "crates/ai/generation.json"}] = [2]string{pyjson.Dumps(pyjson.New(
-		"generation", 13, "lane", "learn", "date", "2026-09-29", "vsParent", "220/400")), "sha1"}
-	pull := gh.AddPull(1477, "ai/learn", fakes.Pull{Title: "AI gen 14 (learn): the learned evaluation"})
-	pull.Update(pyjson.New("created_at", clock.ISO(testsupport.Night.Add(-2*time.Hour)),
-		"html_url", "https://github.com/x/y/pull/1477"))
-	dashboardRunWith(gh, 31, dashboardRun{Number: 20, Jobs: dashboardRetrain([2]string{"fit", "success"},
-		[2]string{"gate", "success"}, [2]string{"deliver", "success"})})
-	dashboardRunWith(gh, 32, dashboardRun{Number: 21, Event: "workflow_run"})
-	dashboardRunWith(gh, 33, dashboardRun{Number: 22, Status: "in_progress"})
-	body := dashboardLearnLane(gh)
-	assertIn(t, "## 🧠 The learn lane", body)
-	assertIn(t, "- **The AI on main:** gen 13 (learn), promoted 2026-09-29, 220/400 against its "+
-		"parent.", body)
-	assertIn(t, "▶️ [#1477](https://github.com/x/y/pull/1477) open since", body)
-	assertIn(t, "CI decides, and auto-merge lands it.", body)
-	assertIn(t, "- **Next scheduled run:** Wed Sep 30 01:23 (Central).", body)
-	assertIn(t, "| 🎉 promoted | [20](https://github.com/x/y/actions/runs/31) |", body)
-	assertIn(t, "| 🔄 running | [22]", body)
-	// A watch run (CI on the lane's pull request) is not one of the lane's runs.
-	assertNotIn(t, "[21]", body)
-	assertNotIn(t, "PC", body) // the lane runs on GitHub's runners alone (#3740)
-}
-
-// A scheduled run queued behind a running one is cancelled when the next schedule queues another
-// (the `learn` concurrency group holds one waiting): it never ran, so it is no row, and the table
-// still shows `LEARN_ROWS` runs. One cancelled after a job began is a row.
-func TestDashboard_AScheduledRunCancelledBeforeItRanIsLeftOut(t *testing.T) {
-	gh := fakes.NewFakeGitHub()
-	for n := 0; n < dashboard.LearnRows; n++ {
-		dashboardRunWith(gh, 40+n, dashboardRun{Number: 10 + n})
-	}
-	for n := 0; n < 3; n++ {
-		dashboardRunWith(gh, 50+n, dashboardRun{Number: 20 + n})
-		gh.Runs.Obj(strconv.Itoa(50+n)).Set("conclusion", "cancelled")
-	}
-	dashboardRunWith(gh, 60, dashboardRun{Number: 30, Jobs: []*pyjson.Object{pyjson.New("name", "plan",
-		"conclusion", "cancelled", "runner_name", "GitHub Actions 1")}})
-	gh.Runs.Obj("60").Set("conclusion", "cancelled")
-	// Newest first, as GitHub lists them.
-	keys := gh.Runs.Keys()
-	sort.SliceStable(keys, func(i, j int) bool {
-		a, _ := strconv.Atoi(keys[i])
-		b, _ := strconv.Atoi(keys[j])
-		return -a < -b
-	})
-	sorted := pyjson.New()
-	for _, k := range keys {
-		sorted.Set(k, gh.Runs.Get(k))
-	}
-	gh.Runs = sorted
-	body := dashboardLearnLane(gh)
-	assertIn(t, "| ⏹️ cancelled | [30]", body)
-	for _, number := range []int{20, 21, 22} {
-		assertNotIn(t, fmt.Sprintf("[%d]", number), body)
-	}
-	shown := 0
-	for n := 10; n < 10+dashboard.LearnRows; n++ {
-		if strings.Contains(body, fmt.Sprintf("[%d]", n)) {
-			shown++
-		}
-	}
-	assertEqual(t, shown, dashboard.LearnRows-1)
-}
-
-func TestDashboard_APromotionOpenTooLongIsOneTheNextRunCloses(t *testing.T) {
-	gh := fakes.NewFakeGitHub()
-	pull := gh.AddPull(1477, "ai/learn", fakes.Pull{Title: "AI gen 14 (learn): the learned evaluation"})
-	pull.Update(pyjson.New("created_at", clock.ISO(testsupport.Night.Add(-dashboard.LearnPRStale-time.Hour))))
-	body := dashboardLearnLane(gh)
-	assertIn(t, "⛔ [#1477]", body)
-	assertIn(t, "the next run closes it.", body)
-	assertIn(t, "- **The AI on main:** no generation.json.", body)
-	assertIn(t, "No runs yet.", body)
-}
-
-func TestDashboard_UnreadableGithubStillDrawsTheSection(t *testing.T) {
-	gh := fakes.NewFakeGitHub()
-	gh.Patch.ListPulls = func(string, string, int) []*pyjson.Object {
-		panic(dashboardGitHubError("down", 502))
-	}
-	gh.Patch.ListRuns = func(string, string, int, bool) []*pyjson.Object {
-		panic(dashboardGitHubError("down", 502))
-	}
-	body := dashboardLearnLane(gh)
-	gh.Patch.ListPulls, gh.Patch.ListRuns = nil, nil
-	assertIn(t, "- **Its pull request:** could not be read.", body)
-	assertIn(t, "Its runs could not be read.", body)
-}
-
-func TestDashboard_TheIssueCarriesItAfterTheNightBotsRuns(t *testing.T) {
-	ctx := testsupport.MakeCtx(fakes.NewFakeGitHub(), testsupport.Ctx{At: testsupport.Night,
-		Cfg: testsupport.MakeConfig()})
-	body := dashboardRender(ctx, nil, "")
-	assertLess(t, strIndex(t, body, "## 🏃 Last night-bot runs"), strIndex(t, body, "## 🧠 The learn lane"))
-}
-
 // ============================================================================ DashboardTests
 
 // dashboardSetUp is DashboardTests.setUp.
@@ -570,10 +309,10 @@ func TestDashboard_TheVisuals(t *testing.T) {
 	assertIn(t, museRow, body)
 	assertIn(t, claudeRow, body)
 	assertLess(t, strIndex(t, body, museRow), strIndex(t, body, claudeRow))
-	// The date first, then how far the training lanes have played (neither is playing here).
+	// The date first, then how far the gather lane has played (it is not playing here).
 	assertTrue(t, strings.HasPrefix(body, "**Last updated at 2026-09-29 22:00 CDT**\n\n"+
 		dashboard.ProgressStart+"\n```mermaid\n"), "the body's start")
-	assertIn(t, "<sub>Neither lane is playing on GitHub's runners now.</sub>", body)
+	assertIn(t, "<sub>Gather is not playing on GitHub's runners now.</sub>", body)
 	assertIn(t, dashboard.ProgressEnd+"\n\n# 🤖 ", body)
 	assertIn(t, "`bot-status` rewrites this issue every 2 minutes", body)
 	// A timeline of the runs going now: GitHub's runners, then the machine.
@@ -1489,8 +1228,7 @@ func TestDashboard_EachSectionFoldsAwayUnderItsHeading(t *testing.T) {
 	r := newDashboardRunners(t)
 	body := dashboardRender(r.ctx, []string{dashboard.Section(r.ctx)}, "")
 	for _, heading := range []string{"## ⚡ Running now", "## 🛣️ Lanes", "## 📋 Queue",
-		"## 🔋 Subscriptions", "## 🏃 Last night-bot runs", "## 🧠 The learn lane",
-		"## 🫧 " + py.Str(config.Title)} {
+		"## 🔋 Subscriptions", "## 🏃 Last night-bot runs", "## 🫧 " + py.Str(config.Title)} {
 		after := strings.TrimLeft(body[strIndex(t, body, heading)+len(heading):], "\n")
 		assertTrue(t, strings.HasPrefix(after, "<details open><summary>"), heading)
 	}
@@ -1534,7 +1272,7 @@ func TestDashboard_GatherOnGithubsRunners(t *testing.T) {
 		`<br/>for 12m"]:::busy`, r.gather())
 }
 
-// top is RunnersTests.top: the top of the issue: how far the training lanes have played.
+// top is RunnersTests.top: the top of the issue: how far the gather lane has played.
 func (r *dashboardRunners) top() string {
 	return dashboard.Progress(r.ctx, dashboard.ReadRunners(r.ctx))
 }
@@ -1561,30 +1299,11 @@ func (r *dashboardRunners) bars() (string, string, string) {
 	return labels, bars[1], note
 }
 
-// Under the issue's date, a Mermaid bar chart of the training lanes on GitHub's runners (#3740),
-// each in percent over a grey bar to 100: the learn lane's export as its shards played of all of
-// them, and each part of gather as its time so far of GATHER_HOURS; a lane playing nothing has a
-// bar at 0 that says so.
-func TestDashboard_TheTopOfTheIssueChartsTheTrainingLanesOnGithubsRunners(t *testing.T) {
+// Under the issue's date, a Mermaid bar chart of the gather lane on GitHub's runners (#3740), in
+// percent over a grey bar to 100: each part of gather as its time so far of GATHER_HOURS, or a bar
+// at 0 that says it is not playing.
+func TestDashboard_TheTopOfTheIssueChartsTheGatherLaneOnGithubsRunners(t *testing.T) {
 	r := newDashboardRunners(t)
-	r.gh.Runs.Set("400", pyjson.New("id", 400, "status", "in_progress", "event", "schedule",
-		"path", ".github/workflows/learn.yml", "display_title", "learn", "created_at", dashboardAgo(300)))
-	jobs := []*pyjson.Object{pyjson.New("name", "plan", "status", "completed", "conclusion", "success",
-		"labels", []any{"ubuntu-latest"})}
-	for i := 0; i < 80; i++ {
-		job := pyjson.New("name", fmt.Sprintf("export / round 1 / shard from %d", i*1250+1),
-			"labels", []any{"ubuntu-latest"}, "status", "queued")
-		switch {
-		case i < 3:
-			job.Update(pyjson.New("status", "completed", "conclusion", "success"))
-		case i == 3:
-			job.Update(pyjson.New("status", "completed", "conclusion", "failure"))
-		case i < 14:
-			job.Update(pyjson.New("status", "in_progress", "started_at", dashboardAgo(100)))
-		}
-		jobs = append(jobs, job)
-	}
-	r.gh.Jobs["400"] = jobs
 	r.gh.Runs.Set("401", pyjson.New("id", 401, "status", "in_progress", "event", "workflow_dispatch",
 		"path", ".github/workflows/gather.yml", "display_title", "gather", "created_at", dashboardAgo(131)))
 	r.gh.Jobs["401"] = []*pyjson.Object{
@@ -1595,26 +1314,19 @@ func TestDashboard_TheTopOfTheIssueChartsTheTrainingLanesOnGithubsRunners(t *tes
 		pyjson.New("name", "start the next run", "status", "queued", "labels", []any{"ubuntu-latest"})}
 	assertTrue(t, strings.HasPrefix(r.top(), dashboard.ProgressStart+"\n```mermaid\n"+
 		dashboard.ProgressChart+"\nxychart-beta horizontal\n"+
-		"    title \"How far the training lanes have played, %\"\n"), r.top())
-	assertIn(t, "    bar [100, 100, 100]\n", r.top())
+		"    title \"How far the gather lane has played, %\"\n"), r.top())
+	assertIn(t, "    bar [100, 100]\n", r.top())
 	labels, played, note := r.bars()
-	assertEqual(t, labels, `    x-axis ["learn: shard 3 of 80 played", "gather part 1: 1h 10m of 5h", `+
-		`"gather part 2: 2h 10m of 5h"]`)
-	assertEqual(t, played, "    bar [3.8, 23.3, 43.3]")
-	assertEqual(t, note, "<sub>Learn plays 10 shards at once on GitHub's runners · gather plays on "+
-		"GitHub's runners.</sub>")
+	assertEqual(t, labels, `    x-axis ["gather part 1: 1h 10m of 5h", "gather part 2: 2h 10m of 5h"]`)
+	assertEqual(t, played, "    bar [23.3, 43.3]")
+	assertEqual(t, note, "<sub>Gather plays on GitHub's runners.</sub>")
 	assertTrue(t, strings.HasSuffix(r.top(), note+"\n"+dashboard.ProgressEnd), r.top())
-	// Gather between runs: a bar at 0 beside learn's.
+	// Between runs: one bar at 0, and the line under it says so.
 	r.gh.Runs.Delete("401")
-	labels, _, note = r.bars()
-	assertEqual(t, labels, `    x-axis ["learn: shard 3 of 80 played", "gather: not playing"]`)
-	assertEqual(t, note, "<sub>Learn plays 10 shards at once on GitHub's runners.</sub>")
-	// Neither playing: two bars at 0, and the line under them says so.
-	r.gh.Runs = pyjson.New() // gh.runs.clear()
 	labels, played, note = r.bars()
-	assertEqual(t, labels, `    x-axis ["learn: not playing", "gather: not playing"]`)
-	assertEqual(t, played, "    bar [0.0, 0.0]")
-	assertEqual(t, note, "<sub>Neither lane is playing on GitHub's runners now.</sub>")
+	assertEqual(t, labels, `    x-axis ["gather: not playing"]`)
+	assertEqual(t, played, "    bar [0.0]")
+	assertEqual(t, note, "<sub>Gather is not playing on GitHub's runners now.</sub>")
 }
 
 func TestDashboard_GathersHoursAreGatherYmls(t *testing.T) {
@@ -1627,13 +1339,11 @@ func TestDashboard_GathersHoursAreGatherYmls(t *testing.T) {
 
 func TestDashboard_ARedrawKeepsTheTopLinesFresh(t *testing.T) {
 	r := newDashboardRunners(t)
-	r.gh.Runs.Set("400", pyjson.New("id", 400, "status", "in_progress", "event", "schedule",
-		"path", ".github/workflows/learn.yml", "display_title", "learn", "created_at", dashboardAgo(300)))
+	r.gh.Runs.Set("400", pyjson.New("id", 400, "status", "in_progress", "event", "workflow_dispatch",
+		"path", ".github/workflows/gather.yml", "display_title", "gather", "created_at", dashboardAgo(71)))
 	r.gh.Jobs["400"] = []*pyjson.Object{
-		pyjson.New("name", "export / round 1 / shard from 1", "status", "completed", "conclusion", "success",
-			"labels", []any{"ubuntu-latest"}),
-		pyjson.New("name", "export / round 1 / shard from 1251", "status", "in_progress",
-			"labels", []any{"ubuntu-latest"}, "started_at", dashboardAgo(100))}
+		pyjson.New("name", "gather the newest patch, part 1", "status", "in_progress",
+			"labels", []any{"ubuntu-latest"}, "started_at", dashboardAgo(70))}
 	r.gh.AddIssue(148, fakes.Issue{Title: dashboard.Title, Body: "x", User: fakes.Operator})
 	flowUpdate(r.ctx, func(s *pyjson.Object) { s.Set("dashboard", pyjson.New("issue", 148)) }, "state")
 	r.gh.Threads.Get(148).Set("body",
@@ -1642,7 +1352,7 @@ func TestDashboard_ARedrawKeepsTheTopLinesFresh(t *testing.T) {
 	assertEqual(t, dashboard.RefreshRunners(r.ctx), "redrew #148's runners")
 	body := r.gh.Threads.Get(148).Str("body")
 	assertTrue(t, strings.HasPrefix(body, "date\n\n"+dashboard.ProgressStart+"\n```mermaid\n"), body)
-	assertIn(t, `"learn: shard 1 of 2 played"`, body)
+	assertIn(t, `"gather part 1: 1h 10m of 5h"`, body)
 	assertNotIn(t, "old lines", body)
 	assertNotIn(t, "old runners", body)
 	assertTrue(t, strings.HasSuffix(body, dashboard.RunnersEnd+"\nbottom"), "its end")

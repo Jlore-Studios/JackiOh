@@ -864,36 +864,6 @@ func TestWorkflows_ItIsLinted(t *testing.T) {
 	assertTrue(t, workflowsLinted(t, "claude-wake.yml"))
 }
 
-// ---------------------------------------------------------------------------- LearnSetWorkflowTests
-//
-// A new patch or set stops a learn export still early on the version before (learn-set.yml); every
-// learn run plays the newest version, reading main as it is when it starts (learn.yml, plan).
-
-func TestWorkflows_AShippedPatchOnMainStartsItOnGithubsRunner(t *testing.T) {
-	text := workflowsRead(t, "learn-set.yml")
-	assertIn(t, "  push:\n    branches: [main]\n    paths: [\"crates/cards/patches/patches.json\"]\n", text)
-	assertNotIn(t, "schedule:", text)
-	stop := workflowsJob(t, text, "stop")
-	assertIn(t, "runs-on: ubuntu-latest", stop)
-	assertIn(t, "timeout-minutes:", stop)
-	assertIn(t, "cancel-in-progress: false", text)
-	assertTrue(t, workflowsLinted(t, "learn-set.yml"))
-}
-
-func TestWorkflows_OnlyAPatchOrSetStopsARunAndOnlyBeforeHalfItsShards(t *testing.T) {
-	text := workflowsRead(t, "learn-set.yml")
-	learn := workflowsRead(t, "learn.yml")
-	// A micro (v0.Z.Xb) stops nothing: its tier is the one left out.
-	assertIn(t, `select(.tier == "major" or .tier == "patch")`, text)
-	assertNotIn(t, `"micro"`, text)
-	keep := regexp.MustCompile(`LEARN_SET_KEEP_SHARDS: "(\d+)"`).FindStringSubmatch(text)
-	shards := regexp.MustCompile(`shards: \$\{\{ inputs\.shards \|\| '(\d+)' \}\}`).FindStringSubmatch(learn)
-	assertTrue(t, keep != nil, "unexpectedly None")
-	assertTrue(t, shards != nil, "unexpectedly None")
-	assertEqual(t, workflowsInt(t, keep[1])*2, workflowsInt(t, shards[1]))
-	assertIn(t, `[ "$finished" -ge "$LEARN_SET_KEEP_SHARDS" ]`, text)
-}
-
 // gather.yml plays without a pause (#3740): each run plays GATHER_HOURS on the commit that started
 // it, under GitHub's 6-hour job limit, so a rerun plays the same games, and as it ends it starts the
 // next run on main as it is then, with a schedule to start the chain again; no push starts it.
@@ -919,33 +889,23 @@ func TestWorkflows_GatherPlaysTheNewestMainWithoutAPause(t *testing.T) {
 	assertTrue(t, workflowsLinted(t, "gather.yml"))
 }
 
-// #3740: the training lanes hold 12 of the organization's 60 hosted jobs, the learn lane's export
-// 10 shards at a time and the gather lane's two parts, and every job of theirs runs on GitHub's
-// runners: the owner's PC no longer runs them.
-func TestWorkflows_TheTrainingLanesHoldTwelveOfGithubsRunners(t *testing.T) {
-	shards := workflowsJob(t, workflowsRead(t, "selfplay-shards.yml"), "shard")
-	assertIn(t, "max-parallel: 10\n", shards)
-	gather := workflowsJob(t, workflowsRead(t, "gather.yml"), "gather")
-	assertIn(t, "part: [1, 2]\n", gather)
-	assertEqual(t, strings.Count(workflowsRead(t, "learn.yml"), "    runs-on: ubuntu-latest\n"), 5)
-	assertEqual(t, strings.Count(workflowsRead(t, "selfplay.yml"), "    runs-on: ubuntu-latest\n"), 3)
-	for _, name := range []string{"learn.yml", "selfplay.yml", "selfplay-shards.yml", "gather.yml"} {
-		text := workflowsRead(t, name)
-		assertNotIn(t, "TRAINING_ON_PC", text)
-		assertNotIn(t, "jackioh-selfplay-local", text)
-		assertNotIn(t, "inputs.runner", text)
-		assertTrue(t, workflowsLinted(t, name))
-	}
+// #3740: the gather lane holds two of the organization's 60 hosted jobs, its two parts, and every
+// job of its runs on GitHub's runners: the owner's PC no longer runs it.
+func TestWorkflows_TheGatherLaneHoldsTwoOfGithubsRunners(t *testing.T) {
+	text := workflowsRead(t, "gather.yml")
+	assertIn(t, "part: [1, 2]\n", workflowsJob(t, text, "gather"))
+	assertNotIn(t, "TRAINING_ON_PC", text)
+	assertNotIn(t, "jackioh-selfplay-local", text)
+	assertNotIn(t, "inputs.runner", text)
 }
 
 // workflowsGatherPlay is the name of gather.yml's step that plays and files the games.
 const workflowsGatherPlay = "play and file, a batch at a time (cargo jackioh stats --series gather, stats-import --totals-only)"
 
-// gather.yml and the learn lane's shards file their games into the card statistics about an hour
-// at a time as they play them, each piece one file a database claims once, through
-// training/file-records.sh, so a rerun or learn.yml's import folds no game twice; a shard files a
-// piece only when selfplay finished it, and a dispatched export files nothing.
-func TestWorkflows_GatherAndTheLearnShardsFileTheirGamesAsTheyPlay(t *testing.T) {
+// gather.yml files its games into the card statistics about an hour at a time as it plays them,
+// each piece one file a database claims once, through training/file-records.sh, so a rerun folds no
+// game twice.
+func TestWorkflows_GatherFilesItsGamesAsItPlays(t *testing.T) {
 	assertTrue(t, isFile(filepath.Join(config.RepoRoot, "training", "file-records.sh")))
 	gather := workflowsRead(t, "gather.yml")
 	assertTrue(t, regexp.MustCompile(`(?m)^  GATHER_FILE_GAMES: "\d+"$`).MatchString(gather), "GATHER_FILE_GAMES")
@@ -953,36 +913,6 @@ func TestWorkflows_GatherAndTheLearnShardsFileTheirGamesAsTheyPlay(t *testing.T)
 	assertIn(t, `--from "$start" --games "$n"`, play)
 	assertIn(t, `sh training/file-records.sh target/release/jackioh-server "$file"`, play)
 	assertNotIn(t, "stats-import", play)
-
-	shard := workflowsScript(t, workflowsJob(t, workflowsRead(t, "selfplay-shards.yml"), "shard"), "play")
-	assertIn(t, `every=${FILE_EVERY:-$GAMES}`, shard)
-	assertIn(t, `played=${PIPESTATUS[0]}`, shard)
-	assertIn(t, `[ -n "$FILE_EVERY" ] && [ "$played" != 0 ]`, shard)
-	assertIn(t, `"$RUNNER_TEMP/training/file-records.sh" "$bin/jackioh-server" "$records"`, shard)
-
-	selfplay := workflowsRead(t, "selfplay.yml")
-	calls := workflowsJob(t, selfplay, "shards")
-	assertIn(t, "      file_every: ${{ inputs.file_every }}\n", calls)
-	assertIn(t, "      PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}\n", calls)
-	assertIn(t, "training/file-records.sh", workflowsJob(t, selfplay, "build"))
-
-	learn := workflowsRead(t, "learn.yml")
-	export := workflowsJob(t, learn, "export")
-	assertTrue(t, regexp.MustCompile(`(?m)^      file_every: "\d+"$`).MatchString(export), "file_every")
-	assertIn(t, "STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}", export)
-	imported := workflowsJob(t, learn, "import")
-	assertIn(t, `records-${name#selfplay-}`, workflowsScript(t, imported, "file the games (cargo jackioh stats from-selfplay)"))
-	assertIn(t, `sh training/file-records.sh target/release/jackioh-server "${files[@]}"`, imported)
-}
-
-func TestWorkflows_ALearnRunPlansAndBuildsMainAsItIsWhenItStarts(t *testing.T) {
-	learn := workflowsRead(t, "learn.yml")
-	plan := workflowsJob(t, learn, "plan")
-	assertIn(t, "- uses: actions/checkout@v4\n        with:\n          ref: main\n", plan)
-	assertIn(t, `echo "sha=$(git rev-parse HEAD)"`, plan)
-	assertIn(t, "ref: ${{ needs.plan.outputs.sha }}", workflowsJob(t, learn, "export"))
-	build := workflowsJob(t, workflowsRead(t, "selfplay.yml"), "build")
-	assertIn(t, "- uses: actions/checkout@v4\n        with:\n          ref: ${{ inputs.ref }}\n", build)
 }
 
 // ---------------------------------------------------------------------------- RequiredChecksTests
