@@ -19,6 +19,12 @@ leans: { [seat in string]?: string | null },
  */
 at: number, 
 /**
+ * The finished match's end, as the offer that made this entry named it. R2685000 counts
+ * the offer window from it, so a read past it drops an unmet entry even while its latest
+ * offer is still under the TTL.
+ */
+finishedAt: number | null, 
+/**
  * The game equal stakes made, once made.
  */
 matchId: string | null, 
