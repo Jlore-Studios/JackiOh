@@ -21700,6 +21700,15 @@
       "failures": 0,
       "feedback_since": "2026-11-24T19:03:01Z",
       "forced": false,
+      "handoff": {
+        "at": "2026-11-24T19:08:59Z",
+        "family": "claude",
+        "kind": "work",
+        "notes": "## State\n\n#4732 built (lib.rs deny(linker_messages), build-wasm.sh self-test, web test, README); real C build and both scratch failure checks passed in the earlier run. CI revision: web (unit 3/8) failed on `src/writing.test.ts` beforeAll hook timeout (10 s) on a loaded runner. Reran locally on this head: writing.test.ts 8 passed (5.3 s), build-wasm-cache.test.ts 9 passed. The branch touches no file that test reads (its source scan skips `*.test.ts`). Nothing changed: reported ci_local passed.\n\n## Log\n\n- run 3: reran writing.test.ts and build-wasm-cache.test.ts locally on the merged head: both green; no change made.\n",
+        "provider": "claude-3",
+        "reason": "the failing CI check passed locally and nothing needed changing, so CI runs again on the same head, with no commit",
+        "trail": "- Bash: {\"command\": \"git status --short | head; git log --oneline -3; grep -n '^## ' .bot-notes.md | head; sed -n 100,140p apps/web/src/writing.test.ts\"}\n- Bash: {\"command\": \"cd apps/web && ls src/wasm/pkg 2>/dev/null | head -2; time pnpm exec vitest run --project web src/writing.test.ts 2>&1 | tail -15\", \"timeout\": 300000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4768 && time pnpm --dir apps/web test src/writing.test.ts 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | tail -15\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -n \\\"function sources\\\" -A14 apps/web/src/writing.test.ts | head -30; pnpm --dir apps/web exec vitest run src/net/build-wasm-cache.test.ts 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | tail \u2026\n- Bash: {\"command\": \"cat > .bot-notes.md <<'EOF'\\n## State\\n\\n#4732 built (lib.rs deny(linker_messages), build-wasm.sh self-test, web test, README); real C build and both scratch failure checks passed in the\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the C module's build refuses an export named like a maths function again, now that it strips the names the old check read\", \"ci_local\": \"passed\"} --> I made no change this time. The failed CI job passes locally on this head, so the harness can run CI ag\u2026"
+      },
       "interruptions": 0,
       "issue": 4732,
       "kind": "revise",
