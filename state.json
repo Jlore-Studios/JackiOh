@@ -18472,13 +18472,30 @@
           "claude": "strong"
         }
       }
+    },
+    "4690": {
+      "action": "plan",
+      "asks": [],
+      "in_lane": true,
+      "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-24T07:33:47Z",
+      "owner_why": "it plans it",
+      "pending_request": false,
+      "provider": "muse",
+      "run_id": "pending:40c19b20-1795505602",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-24T07:33:47Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T07:24:58Z",
+    "at": "2026-11-24T07:33:47Z",
     "url": "",
-    "what": "plan #4675 on claude-3"
+    "what": "plan #4690 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T07:22:37Z",
