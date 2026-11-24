@@ -365,6 +365,19 @@ pub async fn again_status(app: &Arc<App>, req: Req) -> ApiResult {
         ));
     }
 
+    // R1497000: a seat emptied by a deleted account cannot be played again, as the offer is refused.
+    if match_row.a1.is_empty() || match_row.a2.is_empty() {
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "that co-op game cannot be played again",
+        ));
+    }
+    // R1638000: a match played on a catalog version other than the server's offers no Play again, as
+    // the offer is refused before anything is recorded.
+    if match_row.options.catalog_version != app.catalog.version {
+        return Err(cards_changed(app, &match_row.options.catalog_version));
+    }
+
     let seen = offers(app).book.seen(&match_row.id, seat, now_ms());
     // Gone whenever no live actor holds the match or the teammate's socket closed, and never
     // rebuilt: presence is about who is here now.
