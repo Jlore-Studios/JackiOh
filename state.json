@@ -20296,6 +20296,9 @@
       "taken_asks": [],
       "verdict_rounds": 0
     },
+    "4737": {
+      "suggestion": true
+    },
     "4739": {
       "action": "review",
       "asks": [],
@@ -43073,6 +43076,13 @@
         "at": "2026-11-24T13:45:55Z",
         "number": 4731,
         "title": "Patch: the AI sweep notebook shows raw timeouts beside counted timeouts",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-24T13:46:35Z",
+        "number": 4737,
+        "title": "Patch: board scopes and Cleave treat a card lying on a unit zone as backrow, not a Unit",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
