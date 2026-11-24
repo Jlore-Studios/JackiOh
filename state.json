@@ -20234,6 +20234,13 @@
     "4736": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45399169626",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "since": "2026-11-24T13:10:08Z",
+        "until": "2026-11-24T13:40:08Z"
+      },
       "difficulty_by": {
         "at": "2026-11-24T13:09:58Z",
         "difficulty": "medium",
