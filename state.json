@@ -18457,7 +18457,7 @@
       "question": "",
       "queued_at": "2026-11-24T05:55:13Z",
       "requested_by": "jgoetzmann",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "45362903275",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-24T09:11:54Z",
