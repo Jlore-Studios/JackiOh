@@ -20235,11 +20235,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-24T12:59:53Z",
+        "at": "2026-11-24T13:09:58Z",
         "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4716, a medium change"
+        "provider": "muse",
+        "tier": "medium",
+        "why": "medium because none of the five hard lines holds: web-client audio timing plus one prop, no engine rules, AI, cross-crate design, migration, or ~40 files"
       },
       "failures": 0,
       "forced": false,
