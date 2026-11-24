@@ -20684,13 +20684,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
-        "sha": "1330f6402711281d0064a64fac7909367ebfee76",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "45405908379",
+            "tier": "medium"
+          }
+        ],
+        "sha": "447ba35a20573306fd30a2a25cbebf9a8ac77926",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "4742": {
