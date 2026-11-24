@@ -42466,6 +42466,10 @@
       "4733": {
         "at": "2026-11-24T12:48:34Z",
         "why": "Confirmed on main: the practice host clears a finished fight's save (host.rs:468), the dungeon's Menu next to Continue only navigates (FightScreen.tsx:181), and the kept run has nothing marking the fight as played, so a lost or conceded fight gets a free retry, which breaks \u00a715's one lost fight ending the run."
+      },
+      "4734": {
+        "at": "2026-11-24T12:48:36Z",
+        "why": "Confirmed on main: End turn reads 'Enemy turn' on every finished view (Board.tsx:632-633, 822), and a board mounted on a finished game hides its result for 3.8 s waiting on an effect that FxLayer plays only on a null-to-result change (FxLayer.tsx:464), so these are small fixes to bugs players can see."
       }
     },
     "decided": [
