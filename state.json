@@ -18071,19 +18071,12 @@
         "reason": "`claude-8` reached its usage limit",
         "trail": ""
       },
-      "hold": {
-        "ends": "2026-11-24T05:35:19Z",
-        "lifted": "2026-11-24T04:11:15Z",
-        "owner": "claude-8",
-        "since": "2026-11-24T03:35:19Z",
-        "until": "2026-11-24T04:10:00Z",
-        "why": "it refused a call"
-      },
       "issue": 4623,
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-24T03:10:05Z",
+        "claimed": true,
+        "claimed_at": "2026-11-24T04:11:25Z",
         "from_run": "45286823845",
         "gates": [
           {
@@ -18179,7 +18172,7 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-24T02:30:11Z",
-      "run_id": "45317592286",
+      "run_id": "pending:7ad5233b-1795493452",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -18199,7 +18192,7 @@
         "provider": "claude-8",
         "run": "45286823845"
       },
-      "started_at": "2026-11-24T03:10:05Z",
+      "started_at": "2026-11-24T04:11:25Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18364,9 +18357,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T03:36:20Z",
+    "at": "2026-11-24T04:11:25Z",
     "url": "",
-    "what": "build #4592 on agy"
+    "what": "review #4662 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-24T04:00:22Z",
