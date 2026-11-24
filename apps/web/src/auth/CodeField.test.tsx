@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { useState, type ReactElement } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { findCodeInText, type CodeInputProblem } from "@jackioh/shared";
+import { findCodeInText, type CodeFormat, type CodeInputProblem } from "@jackioh/shared";
 
 import {
   CODE_ALPHABET,
@@ -15,6 +15,7 @@ import {
   INVITE_CODE_GROUP_SIZE,
   INVITE_CODE_LENGTH,
   INVITE_CODE_SEPARATOR,
+  TOTP_CODE_FORMAT,
 } from "@jackioh/server-config";
 import codeInputCases from "../../../../crates/engine/tests/fixtures/code-input-cases.json";
 import CodeField from "./CodeField.tsx";
@@ -82,10 +83,22 @@ type HarnessProps = {
   disabled?: boolean;
   testId?: string;
   log?: Change[];
+  format?: CodeFormat;
+  inputMode?: "text" | "numeric";
+  autoComplete?: string;
 };
 
 /** `CodeField` is controlled; this is the smallest parent that owns its value. */
-function Harness({ initial = "", describedBy, disabled, testId, log }: HarnessProps): ReactElement {
+function Harness({
+  initial = "",
+  describedBy,
+  disabled,
+  testId,
+  log,
+  format,
+  inputMode,
+  autoComplete,
+}: HarnessProps): ReactElement {
   const [value, setValue] = useState(initial);
   return (
     <div>
@@ -96,6 +109,9 @@ function Harness({ initial = "", describedBy, disabled, testId, log }: HarnessPr
         describedBy={describedBy}
         disabled={disabled}
         testId={testId}
+        format={format}
+        inputMode={inputMode}
+        autoComplete={autoComplete}
         onChange={(next) => {
           log?.push(next);
           setValue(next.formatted);
@@ -838,5 +854,109 @@ describe("R192 a stated wait in words", () => {
     expect(waitInWords(59 * 60_000)).toBe("about 59 minutes");
     expect(waitInWords(2 * 3_600_000)).toBe("about 2 hours");
     expect(`Wait ${waitInWords(CODE_ATTEMPT_WINDOW_SECONDS * 1000)}, then try again.`).not.toMatch(/60 minutes/);
+  });
+});
+
+// R4669000: the two-step code is one field drawn as six boxes, read as digits only
+describe("R4669000 the two-step code's digits field", () => {
+  const DIGITS_TESTID = "two-step-code-input";
+
+  function renderDigits(initial = "", log?: Change[]): HTMLInputElement {
+    render(
+      <Harness
+        initial={initial}
+        format={TOTP_CODE_FORMAT}
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        testId={DIGITS_TESTID}
+        log={log}
+      />,
+    );
+    return screen.getByTestId(DIGITS_TESTID) as HTMLInputElement;
+  }
+
+  it("R4669000 draws a digits field as six aria-hidden boxes over one one-time-code input", () => {
+    const { container } = render(
+      <Harness
+        format={TOTP_CODE_FORMAT}
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        testId={DIGITS_TESTID}
+      />,
+    );
+    expect(container.querySelectorAll("input")).toHaveLength(1);
+    expect(screen.queryByTestId(inviteTestid.input)).toBeNull();
+    const input = screen.getByTestId(DIGITS_TESTID);
+    expect(input).toHaveAttribute("type", "text");
+    expect(input).toHaveAttribute("inputmode", "numeric");
+    expect(input).toHaveAttribute("autocomplete", "one-time-code");
+    expect(root()).toHaveClass("code-field--digits");
+    for (let index = 0; index < TOTP_CODE_FORMAT.length; index += 1) {
+      const part = segment(index);
+      expect(part).toHaveAttribute("aria-hidden", "true");
+      expect(part).toHaveAttribute("data-state", "empty");
+    }
+    expect(screen.queryByTestId(codeFieldSegmentTestid(TOTP_CODE_FORMAT.length))).toBeNull();
+    expect(progress().textContent).toContain(`0 of ${String(TOTP_CODE_FORMAT.length)}`);
+  });
+
+  it("R4669000 typing fills the boxes in order and the seventh digit is refused as tooLong", async () => {
+    const user = userEvent.setup();
+    const input = renderDigits();
+    await user.type(input, "123456");
+    expect(input).toHaveValue("123456");
+    for (let index = 0; index < TOTP_CODE_FORMAT.length; index += 1) {
+      expect(segment(index)).toHaveAttribute("data-state", "complete");
+    }
+    expect(root()).toHaveAttribute("data-complete", "true");
+
+    await user.type(input, "7");
+    expect(input).toHaveValue("123456");
+    expect(hint()).toHaveAttribute("data-kind", "tooLong");
+    expect(hint()?.textContent).toBe(codeProblemMessage({ kind: "tooLong" }, TOTP_CODE_FORMAT));
+  });
+
+  it.each([["123456"], ["123 456"], ["123-456"]] as const)(
+    "R4669000 pasting %s fills all six boxes",
+    (text) => {
+      const log: Change[] = [];
+      const input = renderDigits("", log);
+      expect(paste(input, text), "the handler takes the paste over").toBe(false);
+      expect(input).toHaveValue("123456");
+      expect(root()).toHaveAttribute("data-complete", "true");
+      expect(log.at(-1)).toEqual({ formatted: "123456", complete: true });
+      expect(hint()).toBeNull();
+    },
+  );
+
+  it("R4669000 a letter is refused and named, with the digits sentence", async () => {
+    const user = userEvent.setup();
+    const input = renderDigits("12");
+    expect(input).toHaveValue("12");
+    await user.type(input, "a");
+    expect(input).toHaveValue("12");
+    const shown = hint();
+    expect(shown).toHaveAttribute("data-kind", "excluded");
+    expect(shown?.textContent).toBe(
+      codeProblemMessage({ kind: "excluded", character: "A" }, TOTP_CODE_FORMAT),
+    );
+    expect(shown?.textContent).toContain("digits");
+    expect(shown?.textContent).not.toContain("Invite codes never use");
+    expect(shown?.textContent).not.toContain("I and O");
+  });
+
+  it("R4669000 Backspace clears the boxes in order", async () => {
+    const user = userEvent.setup();
+    const input = renderDigits("123456");
+    input.focus();
+    input.setSelectionRange(6, 6);
+
+    await user.keyboard("{Backspace}");
+    expect(input).toHaveValue("12345");
+    expect(segment(5)).toHaveAttribute("data-state", "empty");
+
+    await user.keyboard("{Backspace}");
+    expect(input).toHaveValue("1234");
+    expect(progress().textContent).toContain(`4 of ${String(TOTP_CODE_FORMAT.length)}`);
   });
 });

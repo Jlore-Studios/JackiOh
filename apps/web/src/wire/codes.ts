@@ -111,6 +111,8 @@ export function canonicalCode(raw: string, format: CodeFormat): string | null {
 
 export function formattedCaret(characterCount: number, format: CodeFormat): number {
   const n = characterCount;
+  // R4669000: with no separator characters the caret sits after the nth character.
+  if (format.separator === "") return n;
   return n + (n > 0 ? Math.floor((n - 1) / Math.max(1, format.groupSize)) : 0);
 }
 

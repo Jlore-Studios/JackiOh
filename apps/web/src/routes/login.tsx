@@ -12,6 +12,8 @@ import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "
 
 import { AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, GATE_SLOW_NOTICE_SECONDS, TERMS_VERSION } from "@jackioh/server-config";
 import Address from "../auth/Address.tsx";
+import CodeField from "../auth/CodeField.tsx";
+import { TOTP_CODE_FORMAT } from "../auth/codeInput.ts";
 import OAuthButtons from "../auth/OAuthButtons.tsx";
 import { holdSignUpConsent, oldEnough, refuseSignUpHere, signUpRefusedHere } from "../auth/consent.ts";
 import {
@@ -1322,25 +1324,43 @@ export default function LoginRoute(): ReactElement {
                   <label htmlFor="login-code">
                     {secondFactor ? t("Code from your authenticator app") : t("Code from the email")}
                   </label>
-                  <input
-                    id="login-code"
-                    data-testid={loginTestid.code}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    // Focused when the step opens: it is the one thing to do there.
-                    autoFocus={secondFactor}
-                    value={code}
-                    aria-invalid={codeError !== null}
-                    aria-describedby={codeError !== null ? "login-code-error" : undefined}
-                    onChange={(event) => {
-                      setCode(event.target.value);
-                      setCodeError(null);
-                    }}
-                  />
+                  {secondFactor ? (
+                    // R4669000: the two-step code is one field drawn as six boxes; the email
+                    // code (R664, 6 to 10 digits) keeps the plain field below.
+                    <CodeField
+                      id="login-code"
+                      testId={loginTestid.code}
+                      format={TOTP_CODE_FORMAT}
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      // Focused when the step opens: it is the one thing to do there.
+                      autoFocus
+                      value={code}
+                      describedBy={codeError !== null ? "login-code-error" : undefined}
+                      onChange={(next) => {
+                        setCode(next.formatted);
+                        setCodeError(null);
+                      }}
+                    />
+                  ) : (
+                    <input
+                      id="login-code"
+                      data-testid={loginTestid.code}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      value={code}
+                      aria-invalid={codeError !== null}
+                      aria-describedby={codeError !== null ? "login-code-error" : undefined}
+                      onChange={(event) => {
+                        setCode(event.target.value);
+                        setCodeError(null);
+                      }}
+                    />
+                  )}
                   {codeError !== null ? (
                     <p id="login-code-error" className="auth-field-error" data-testid={loginTestid.codeError}>
                       {t(codeError)}
