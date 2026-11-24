@@ -19862,6 +19862,13 @@
     "4722": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T14:07:30Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "One route plus its test file in one crate; not engine rules, the AI, cross-crate design, a migration, or ~40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
