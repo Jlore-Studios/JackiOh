@@ -35,11 +35,11 @@ const SHARP_S = CLOCK_ALARM_SHARP_FROM_MS / CLOCK_ALARM_BEAT_MS;
 type Heard = ClockAlarmBeat & { atMs: number };
 
 /** Reads a clock from `startMs` left every `stepMs` down to 0; returns each beat at the moment it lands. */
-function countdown(startMs: number, stepMs: number, audible = true, own = true): Heard[] {
+function countdown(startMs: number, stepMs: number, audible = true, own = true, hidden = false): Heard[] {
   let memory: ClockAlarmMemory = CLOCK_ALARM_IDLE;
   const heard: Heard[] = [];
   for (let elapsed = 0; elapsed <= startMs; elapsed += stepMs) {
-    const plan = planClockAlarm(memory, { remainingMs: startMs - elapsed, own, audible });
+    const plan = planClockAlarm(memory, { remainingMs: startMs - elapsed, own, audible, hidden });
     memory = plan.memory;
     for (const beat of plan.beats) heard.push({ ...beat, atMs: elapsed + beat.delayMs });
   }
@@ -79,6 +79,23 @@ describe("R506 the turn clock's alarm: the schedule (R439)", () => {
     const heard = countdown(start, CLOCK_ALARM_LOOKAHEAD_MS - 50);
     expect(heard.map((b) => b.second)).toEqual(Array.from({ length: FROM_S }, (_, i) => FROM_S - i));
     for (const beat of heard) expect(beat.atMs).toBe(start - beat.second * CLOCK_ALARM_BEAT_MS);
+  });
+
+  it("R506 a hidden tab stepping once a second still sounds every second exactly once", () => {
+    for (const phase of [0, 150, 500, 600, 700, 800]) {
+      const start = 30_000 + phase;
+      const heard = countdown(start, 1_000, true, true, true);
+      expect(heard.map((b) => b.second), `phase ${String(phase)}`).toEqual(
+        Array.from({ length: FROM_S }, (_, i) => FROM_S - i),
+      );
+      for (const beat of heard) {
+        expect(beat.atMs, `phase ${String(phase)} second ${String(beat.second)}`).toBe(start - beat.second * CLOCK_ALARM_BEAT_MS);
+      }
+    }
+    // The visible schedule is unchanged: a 200 ms repaint still beats all 30.
+    expect(countdown(45_000, REPAINT_MS).map((b) => b.second)).toEqual(
+      Array.from({ length: FROM_S }, (_, i) => FROM_S - i),
+    );
   });
 
   it("R506 a beat whose moment has just passed plays at once; an older one is skipped, never played late", () => {
