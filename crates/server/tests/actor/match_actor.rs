@@ -4774,6 +4774,47 @@ mod the_result_says_what_the_daily_cap_held_back {
     }
 }
 
+// #4711 — a fresh result's caps come off its own payout, with no second read of the ledger
+
+mod a_fresh_results_caps_come_off_its_payout {
+    use super::*;
+    use std::sync::Mutex as StdMutex;
+
+    use jackioh_server::db::store::{Db, StoreError};
+
+    #[tokio::test(start_paused = true)]
+    async fn the_end_reads_each_persons_day_totals_once_and_never_the_series_again() {
+        let h = harness(Options {
+            economy_live: true,
+            ..Options::default()
+        })
+        .await;
+        let calls: Arc<StdMutex<Vec<String>>> = Arc::new(StdMutex::new(Vec::new()));
+        let sink = Arc::clone(&calls);
+        match &h.app.db {
+            Db::Fake(data) => {
+                data.lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
+                    sink.lock().expect("the call log").push(method.to_string());
+                    Ok(())
+                }));
+            }
+            Db::Pg(_) => panic!("the actor tests run on the fake store"),
+        }
+
+        send(&h, &h.p1, "resign", json!({ "type": "concede" })).await;
+        h.idle().await;
+        settle().await;
+
+        let calls = calls.lock().expect("the call log").clone();
+        let count = |method: &str| calls.iter().filter(|call| *call == method).count();
+        assert_eq!(count("results.insert"), 1, "{calls:?}");
+        // Once per person, in the write's own payout (R1483000's cap); before #4711 the actor read
+        // them again in a second transaction, with the result, the match and the series.
+        assert_eq!(count("economy.wallets.gameTotals"), 2, "{calls:?}");
+        assert_eq!(count("series.withGame"), 0, "{calls:?}");
+    }
+}
+
 // #1657 — a finished match's views carry what its result paid each seat
 
 mod the_result_s_views_carry_what_it_paid_each_seat {

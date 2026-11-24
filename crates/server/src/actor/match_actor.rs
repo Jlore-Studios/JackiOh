@@ -1161,14 +1161,25 @@ impl MatchActor {
         };
         // #1657: the write answers each seat by the engine seat it credited, the core keeps each
         // account's by home; `load_jlore_caps` sends it.
-        {
+        // #4711: a write that paid every person's seat says itself whether the daily cap held pay back
+        // (`GameEconomy::jlore_capped`, what `game_jlore_caps` reads back off the ledger), so its caps
+        // need no second transaction; a repeat, or an economy that is off, paid none and is read.
+        let paid = {
             let mut core = self.lock();
             for seat in PLAYERS {
                 let home = playing(&core, seat);
                 core.economy[home] = economy[seat].take();
             }
+            let capped = |home: PlayerId| core.economy[home].as_ref().map(|paid| paid.jlore_capped);
+            PLAYERS
+                .iter()
+                .all(|&home| self.shared.bots[home].is_some() || core.economy[home].is_some())
+                .then(|| PerPlayer::new(capped(PlayerId::P1), capped(PlayerId::P2)))
+        };
+        match paid {
+            Some(capped) => self.apply_jlore_caps(capped.map(|_, held| held.unwrap_or(false)), true),
+            None => self.load_jlore_caps(true).await,
         }
-        self.load_jlore_caps(true).await;
         // R1442: the play telemetry goes after the result, so its write can never cost it.
         // R1452: a bot home's rows are the AI's, so no human figure reads them unasked.
         let pilot = |home: PlayerId| {
@@ -1210,6 +1221,11 @@ impl MatchActor {
                 PerPlayer::new(false, false)
             }
         };
+        self.apply_jlore_caps(caps, announce);
+    }
+
+    /// R1483000: takes `caps`, keyed by home; with `announce`, capped or paid seats get fresh views.
+    fn apply_jlore_caps(&self, caps: PerPlayer<bool>, announce: bool) {
         let mut core = self.lock();
         if caps.p1 || caps.p2 {
             core.jlore_capped = caps;
