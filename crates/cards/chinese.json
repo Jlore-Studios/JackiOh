@@ -3999,7 +3999,7 @@
   },
   "traininggrounds-050": {
     "name": "传统：发光软糖豆",
-    "base": "使你手牌中的一张牌变为光辉，其法力值消耗增加({surcharge})点。",
+    "base": "使你手牌中的一张牌变为光辉。其法力值消耗增加({surcharge})点。",
     "radiant": "使你手牌中的一张牌变为光辉。"
   },
   "traininggrounds-051": {

@@ -15,8 +15,10 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-063";
 
-/// "Dormant for 2 turns", the printed countdown its declared `dormant` tunes (2, Radiant 1, R386).
+/// "Dormant for 2 turns", the printed countdown its declared `dormant` tunes (R386).
 const DORMANT_TURNS: i32 = 2;
+/// "Dormant for 1 turn" on the Radiant face since issue #4665 (2 before, `DORMANT_TURNS`).
+const RADIANT_DORMANT_TURNS: i32 = 1;
 /// "Spell gains Echo +2".
 const SPELL_ECHO: i32 = 2;
 
@@ -38,12 +40,13 @@ fn overdrive_aura(everyone: bool) -> AuraHook {
     })
 }
 
-/// R4665002: `everyone`, both sides' Units and Spells, as the base face ran through v0.6.12b.
-fn overdrive(everyone: bool) -> Script {
+/// R4665002: `everyone`, both sides' Units and Spells, as the base face ran through v0.6.12b; `turns`,
+/// the printed countdown.
+fn overdrive(everyone: bool, turns: i32) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             slumber: Some(SlumberText {
-                turns: Some(DORMANT_TURNS),
+                turns: Some(turns),
                 wakes_by: None,
             }),
             spell_echo_aura: Some(SpellEchoAura {
@@ -58,20 +61,20 @@ fn overdrive(everyone: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // R4665002: both faces reach only their controller's since issue #4665; their Dormant countdowns
-    // are their declared `dormant`.
+    // R4665002: both faces reach only their controller's since issue #4665, the Radiant face asleep 1
+    // turn.
     CardScripts {
-        base: overdrive(false),
-        radiant: overdrive(false),
+        base: overdrive(false, DORMANT_TURNS),
+        radiant: overdrive(false, RADIANT_DORMANT_TURNS),
     }
 }
 
-/// R767000, R4665002: through v0.6.12b the base face reached every Unit and both players' Spells;
-/// `KEPT_SCRIPTS` folds those replays under it.
+/// R767000, R4665002: through v0.6.12b the base face reached every Unit and both players' Spells, and
+/// the Radiant face slept 2 turns; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_12b() -> CardScripts {
     CardScripts {
-        base: overdrive(true),
-        radiant: overdrive(false),
+        base: overdrive(true, DORMANT_TURNS),
+        radiant: overdrive(false, DORMANT_TURNS),
     }
 }
 

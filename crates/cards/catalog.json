@@ -28445,7 +28445,7 @@
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Make a card in your hand Radiant, it costs ({surcharge}) more."
+      "text": "Make a card in your hand Radiant. It costs ({surcharge}) more."
     },
     "radiant": {
       "keywords": [],

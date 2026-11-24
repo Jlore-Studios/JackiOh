@@ -21,7 +21,7 @@
 //! in hand (§5.2); a card that is already Radiant is untouched (§6.3 Make Radiant).
 //!
 //! Issue #4665 patched the Legacy card itself, not the Core one (R4665006): (2), from (3), and "Make
-//! a card in your hand Radiant, it costs ({surcharge}) more." (base) and "Make a card in your hand
+//! a card in your hand Radiant. It costs ({surcharge}) more." (base) and "Make a card in your hand
 //! Radiant." (Radiant). The base face's pick takes `setCostMod` of the declared `surcharge` (1, R386)
 //! after it is made Radiant, as #72 Reminisce prices a chosen hand card; the Radiant face picks one
 //! card, from two, and adds no surcharge. `script_v0_6_12b` keeps the copy as it was (R767000).
@@ -304,6 +304,9 @@ mod tests {
                 assert!(!legacy_face.keywords.iter().any(|keyword| keyword.kind() == kind), "{kind:?}");
             }
         }
-        assert_eq!((core.cost, legacy.cost), (3, 2));
+        assert_eq!(
+            (core.cost, legacy.cost),
+            (jackioh_engine::CardCost::Fixed(3), jackioh_engine::CardCost::Fixed(2))
+        );
     }
 }

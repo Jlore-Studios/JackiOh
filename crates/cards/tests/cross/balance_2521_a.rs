@@ -1704,7 +1704,7 @@ fn b20_flak_never_deals_outside_least_to_most_nor_hits_its_own_side_over_many_se
 }
 
 #[test]
-fn b20_base_flak_weights_its_amounts_60_30_10_lowest_first() {
+fn b20_r4665004_base_flak_weights_its_amounts_60_33_7_lowest_first() {
     let rolled = amounts(FLAK_V5, false, "b20-weights", 150, &untuned);
     assert_eq!(rolled.len(), 150 * ENEMIES_A_ROUND * 3);
     let (ones, twos, threes) = (tally(&rolled, 1), tally(&rolled, 2), tally(&rolled, 3));
@@ -1713,14 +1713,15 @@ fn b20_base_flak_weights_its_amounts_60_30_10_lowest_first() {
         ones > twos + threes,
         "1 is 60%: {ones} 1s, {twos} 2s, {threes} 3s"
     );
-    assert!(twos > 2 * threes, "2 is 30%, 3 is 10%: {twos} 2s, {threes} 3s");
-    assert!(threes > 0, "3 is 10%, never left out");
+    assert!(twos > 2 * threes, "2 is 33%, 3 is 7%: {twos} 2s, {threes} 3s");
+    assert!(threes > 0, "3 is 7%, never left out");
 }
 
 #[test]
 fn b20_radiant_flak_s_lucky_1_rolls_twice_per_target_and_keeps_the_higher() {
-    // Over 1–3 at 60/30/10 (the base range since issue #4292; 2–4 before), the higher of two rolls is
-    // 1 at 36%, 2 at 45% and 3 at 19%; one roll alone would make 1 the most common and 3 a tenth.
+    // Over 1–3 at 60/33/7 (since issue #4665, R4665004; the base range since issue #4292, 2–4 before),
+    // the higher of two rolls is 1 at 36%, 2 at about 50% and 3 at about 13.5%; one roll alone would
+    // make 1 the most common and 3 a fourteenth.
     let rolled = amounts(FLAK_V5, true, "b20-lucky", 200, &untuned);
     assert_eq!(rolled.len(), 200 * ENEMIES_A_ROUND * 3);
     let (ones, twos, threes) = (tally(&rolled, 1), tally(&rolled, 2), tally(&rolled, 3));
@@ -1735,8 +1736,8 @@ fn b20_radiant_flak_s_lucky_1_rolls_twice_per_target_and_keeps_the_higher() {
     );
     assert!(ones > threes, "{ones} 1s, {threes} 3s");
     assert!(
-        threes * 100 > rolled.len() * 14,
-        "3 comes near 19%, not 10%: {threes} of {}",
+        threes * 100 > rolled.len() * 10,
+        "3 comes near 13.5%, not 7%: {threes} of {}",
         rolled.len()
     );
 }

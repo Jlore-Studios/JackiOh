@@ -15,8 +15,13 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-062";
 
-/// "Dormant for 1 turn", the printed countdown its declared `dormant` tunes (2, Radiant 1, R386).
-const DORMANT_TURNS: i32 = 1;
+/// "Dormant for 2 turns" on the base face since issue #4665, the printed countdown its declared
+/// `dormant` tunes (R386).
+const DORMANT_TURNS: i32 = 2;
+/// "Dormant for 1 turn" on the Radiant face.
+const RADIANT_DORMANT_TURNS: i32 = 1;
+/// R767000: the base face's countdown through v0.6.12b.
+const DORMANT_TURNS_V0_6_12B: i32 = 1;
 /// "Spells gain Echo +1".
 const SPELL_ECHO: i32 = 1;
 
@@ -38,12 +43,13 @@ fn overdrive_aura(everyone: bool) -> AuraHook {
     })
 }
 
-/// R4665002: `everyone`, both sides' Units and Spells, as the base face ran through v0.6.12b.
-fn overdrive(everyone: bool) -> Script {
+/// R4665002: `everyone`, both sides' Units and Spells, as the base face ran through v0.6.12b; `turns`,
+/// the printed countdown.
+fn overdrive(everyone: bool, turns: i32) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             slumber: Some(SlumberText {
-                turns: Some(DORMANT_TURNS),
+                turns: Some(turns),
                 wakes_by: None,
             }),
             spell_echo_aura: Some(SpellEchoAura {
@@ -58,20 +64,20 @@ fn overdrive(everyone: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // R4665002: both faces reach only their controller's since issue #4665; their Dormant countdowns
-    // are their declared `dormant`.
+    // R4665002: both faces reach only their controller's since issue #4665, the base face asleep 2
+    // turns and the Radiant face 1.
     CardScripts {
-        base: overdrive(false),
-        radiant: overdrive(false),
+        base: overdrive(false, DORMANT_TURNS),
+        radiant: overdrive(false, RADIANT_DORMANT_TURNS),
     }
 }
 
-/// R767000, R4665002: through v0.6.12b the base face reached every Unit and both players' Spells;
-/// `KEPT_SCRIPTS` folds those replays under it.
+/// R767000, R4665002: through v0.6.12b the base face reached every Unit and both players' Spells, and
+/// slept 1 turn; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_12b() -> CardScripts {
     CardScripts {
-        base: overdrive(true),
-        radiant: overdrive(false),
+        base: overdrive(true, DORMANT_TURNS_V0_6_12B),
+        radiant: overdrive(false, RADIANT_DORMANT_TURNS),
     }
 }
 

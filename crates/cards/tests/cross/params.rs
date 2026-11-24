@@ -574,9 +574,8 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
 
     const FIXED: &[(&str, &str)] = &[
         ("core-023", KEYWORD),
-        // R2195003: the snapshots of Core #23 and #26, TG #49 and #50.
+        // R2195003: the snapshot of Core #23, TG #49 (TG #50's numbers are declared since issue #4665).
         ("traininggrounds-049", KEYWORD),
-        ("traininggrounds-050", TARGETS),
         ("classic-023", KEYWORD),
         ("classic-057", KEYWORD),
         ("classicplus-025", KEYWORD),
