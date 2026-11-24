@@ -504,10 +504,11 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             .count();
         // #2657's Anti-oneshot Armor `armor`, its Radiant face's "Your hero has Armor 1", and less
         // M #49.1's `radiants`, gone with its start-of-turn text, and C #6's `mana`, gone with its Radiant
-        // face's gain since issue #4440.
+        // face's gain since issue #4440; M #48's `refresh` joins the Meditative set's, its Radiant face's
+        // "Replenish 2 mana" since issue #4665 (R4665007).
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
-            (41, 19),
+            (41, 20),
             "{radiant_only:#?}"
         );
     }

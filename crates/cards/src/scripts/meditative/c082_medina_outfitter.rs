@@ -1,23 +1,35 @@
 //! M #82 Medina Outfitter (SPEC §8.8 row 82): (1) Unit, Common, 1/1 → 2/2.
 //!
-//! Base:    "Cry: Buff every card in your hand."
-//! Radiant: "Cry: Buff every card in your hand {times|time|times}."
+//! Base:    "Cry: Buff every card in your hand. You have {mana} less mana next turn."
+//! Radiant: "Cry: Buff every card in your hand {times|time|times}. You have {mana} less mana next turn."
 //! Engine: `upgrade({ scope: { side: "self", zones: ["hand"] }, times: param("times") })`: each card
 //! in the hand takes `times` separate Buffs (R386), each one draw (R442); an Immutable card is left
 //! alone; a hand is a pile the opponent cannot read, so every application is cued and none counted
-//! (R440).
+//! (R440). Issue #4665 gave both faces' Cry "You have {mana} less mana next turn" (R4665005), as
+//! Core #2 Speciesist's (R4353021): `next_turn_mana` of the declared `mana` (1 on both faces, R386),
+//! read with `param_or` at 0, so a replay of a version that declared no `mana` loses none (R2657006)
+//! and needs no kept script.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-082";
 
+/// R4665005: the Cry's "You have {mana} less mana next turn"; 0 under a definition that declares no
+/// `mana`, as every one through v0.6.12b (R2657006).
+const NO_LOSS: i32 = 0;
+
 fn outfitter() -> Script {
     Script {
         cry: Some(hook(|ctx| {
-            vec![upgrade(json_as(json!({
+            let mut effects = vec![upgrade(json_as(json!({
                 "scope": { "side": "self", "zones": ["hand"] },
                 "times": param(&*ctx, "times"),
-            })))]
+            })))];
+            let loss = param_or(&*ctx, "mana", NO_LOSS);
+            if loss != 0 {
+                effects.push(next_turn_mana(json_as(json!({ "amount": -loss }))));
+            }
+            effects
         })),
         ..Script::default()
     }
@@ -164,6 +176,61 @@ mod tests {
                 radiant.hand(P1).iter().find(|card| card.def_id == VANILLA).expect("vanilla").id.clone();
             radiant.play(OUTFITTER, json!({}));
             assert_eq!(upgraded_for(radiant.events(), &vanilla).len(), 2);
+        }
+    }
+
+    /// R4665005: issue #4665's "You have {mana} less mana next turn", on both faces.
+    mod m82_less_mana_next_turn_r4665005 {
+        use super::*;
+
+        /// The declared `mana`, 1 on both faces.
+        const LOSS: i32 = 1;
+
+        fn board(radiant: bool) -> Scenario {
+            scenario(json!({
+                "p1": {
+                    "mana": 10,
+                    "hand": [{ "def": OUTFITTER, "radiant": radiant }, VANILLA],
+                    "library": filler(4),
+                },
+                "p2": { "hand": [FILLER], "library": filler(4) },
+            }))
+        }
+
+        #[test]
+        fn r4665005_both_faces_cry_loses_1_mana_next_turn_and_the_turn_after_is_whole() {
+            for radiant in [false, true] {
+                let mut s = board(radiant);
+                s.play(OUTFITTER, json!({}));
+                assert_eq!(s.state().players.p1.mana.next_turn_mod, -LOSS, "radiant {radiant}");
+                assert_eq!(s.state().players.p2.mana.next_turn_mod, 0, "radiant {radiant}: its own side");
+                crate::next_turn_of(&mut s, P1);
+                let side = &s.state().players.p1;
+                assert_eq!(side.mana.current, side.mana.max - LOSS, "radiant {radiant}");
+                crate::next_turn_of(&mut s, P1);
+                let side = &s.state().players.p1;
+                assert_eq!(side.mana.current, side.mana.max, "radiant {radiant}");
+            }
+        }
+
+        /// R2657006: a definition that declares no `mana`, as v0.6.12b's, loses none.
+        #[test]
+        fn r4665005_r2657006_under_a_definition_with_no_mana_the_cry_loses_none() {
+            let kept = crate::under_kept_as(
+                OUTFITTER,
+                script(),
+                |def| {
+                    if let Some(params) = def.params.as_mut() {
+                        params.retain(|param| param.key != "mana");
+                    }
+                },
+                || {
+                    let mut s = board(false);
+                    s.play(OUTFITTER, json!({}));
+                    s.state().players.p1.mana.next_turn_mod
+                },
+            );
+            assert_eq!(kept, 0);
         }
     }
 }

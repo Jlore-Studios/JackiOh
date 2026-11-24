@@ -1,12 +1,15 @@
 //! SPEC §8.12 S+ #7 Churnwalker, a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    3/15, Armor 4; "Cry: Choose one — Chain all enemy Units together, when one takes
+//!   Base:    3/15, Armor 4, Tribute 1 (since issue #4665); "Cry: Choose one — Chain all enemy Units together, when one takes
 //!            damage all other chained Units also take the damage; Chain all friendly Units
 //!            together, when one takes damage it is split between all allies (rounded down)."
-//!   Radiant: 6/30, Armor 8; "Cry:" the same choice.
+//!   Radiant: 6/30, Armor 8, Tribute 1; "Cry:" the same choice.
 //!
 //! Engine: the Cry's two modes are declared at play (R81), in the order the card prints them,
 //! and the Cry chains every Unit of the chosen side: `chain_units` shared for the enemy,
-//! split for its controller's side (R3554007). Both faces choose (SP5); Armor is catalog data.
+//! split for its controller's side (R3554007). Both faces choose (SP5); Armor is catalog data. Tribute 1
+//! (§6.3) is the static flag `play_choices.rs` validates, as #66 The Rock's: one of your Units, which
+//! the play action's `tributes` names (R81, R90); `script_v0_6_12b` keeps the free play before issue
+//! #4665 (R767000).
 //! Its catalog row, sound, flavour and Chinese entries are already written.
 
 use jackioh_engine::prelude::*;
@@ -17,8 +20,16 @@ pub const ID: &str = "stinkyscapeplus-007";
 const ENEMY: &str = "enemy";
 const FRIENDLY: &str = "friendly";
 
-fn churnwalker() -> Script {
+/// §6.3 "Tribute 1", since issue #4665.
+const TRIBUTE_COST: i32 = 1;
+
+/// Both faces; `tribute`: whether the play costs `TRIBUTE_COST`, as since issue #4665.
+fn churnwalker(tribute: bool) -> Script {
     Script {
+        static_flags: tribute.then(|| StaticFlags {
+            tribute: Some(TRIBUTE_COST),
+            ..StaticFlags::default()
+        }),
         modes: vec![ModeDecl {
             kind: PromptKind::Mode,
             options: vec![ENEMY.to_string(), FRIENDLY.to_string()],
@@ -34,8 +45,17 @@ fn churnwalker() -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: churnwalker(),
-        radiant: churnwalker(),
+        base: churnwalker(true),
+        radiant: churnwalker(true),
+    }
+}
+
+/// R767000: through v0.6.12b it had no Tribute (issue #4665); `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_6_12b() -> CardScripts {
+    CardScripts {
+        base: churnwalker(false),
+        radiant: churnwalker(false),
     }
 }
 
@@ -53,6 +73,10 @@ mod tests {
 
     /// A durable Unit: it survives the test's hits.
     const TOUGH: &str = "stand-in (1) 2/30";
+    /// The Unit its Tribute 1 takes.
+    const FODDER: &str = "stand-in (1) 1/1";
+    /// The Rock's refusal word for a play that names no Tribute.
+    const TRIBUTE_TEXT: &str = "ribute";
 
     fn hit(s: &mut Scenario, id: &str, amount: i32) {
         run_as(
@@ -79,10 +103,11 @@ mod tests {
             let mut s = board(
                 "s007-enemy",
                 radiant,
-                json!({ "mana": 10, "library": filler(4) }),
+                json!({ "mana": 10, "field": [FODDER], "library": filler(4) }),
                 json!({ "field": [TOUGH, TOUGH], "library": filler(4) }),
             );
-            s.play(ID, json!({ "zone": 1, "modes": [ENEMY] }));
+            let fodder = s.unit_at(P1, 1).id;
+            s.play(ID, json!({ "zone": 2, "modes": [ENEMY], "tributes": [fodder] }));
             let (first, second) = (s.unit_at(P2, 1).id, s.unit_at(P2, 2).id);
             hit(&mut s, &first, 5);
             assert_eq!(s.card(&first).damage, 5);
@@ -96,12 +121,13 @@ mod tests {
             let mut s = board(
                 "s007-friendly",
                 radiant,
-                json!({ "mana": 10, "field": [TOUGH, TOUGH], "library": filler(4) }),
+                json!({ "mana": 10, "field": [TOUGH, TOUGH, FODDER], "library": filler(4) }),
                 json!({ "library": filler(4) }),
             );
-            s.play(ID, json!({ "zone": 3, "modes": [FRIENDLY] }));
+            let fodder = s.unit_at(P1, 3).id;
+            s.play(ID, json!({ "zone": 4, "modes": [FRIENDLY], "tributes": [fodder] }));
             let tough = [s.unit_at(P1, 1).id, s.unit_at(P1, 2).id];
-            let churnwalker = s.unit_at(P1, 3).id;
+            let churnwalker = s.unit_at(P1, 4).id;
             hit(&mut s, &tough[0], 7);
             // 7 among the three chained friendlies is 2 each, rounded down: 2 — not 3 — on
             // the other Tough proves Churnwalker shares the chain.
@@ -120,6 +146,7 @@ mod tests {
                 json!({
                     "mana": 10,
                     "hand": [{ "def": ID, "radiant": radiant }],
+                    "field": [FODDER],
                     "library": filler(4),
                 }),
                 json!({}),
@@ -146,5 +173,39 @@ mod tests {
                 "the AI answers"
             );
         }
+    }
+
+    /// §6.3: Tribute 1 since issue #4665: a play that names none is refused, and the one it names dies.
+    #[test]
+    fn s6_3_tribute_1_a_play_must_name_a_unit_of_yours_which_dies() {
+        for radiant in [false, true] {
+            let mut s = board(
+                "s007-tribute",
+                radiant,
+                json!({ "mana": 10, "field": [FODDER], "library": filler(4) }),
+                json!({ "library": filler(4) }),
+            );
+            let fodder = s.unit_at(P1, 1).id;
+            s.expect_refused_with(|s| s.play(ID, json!({ "zone": 2, "modes": [ENEMY] })), TRIBUTE_TEXT);
+            s.play(ID, json!({ "zone": 2, "modes": [ENEMY], "tributes": [fodder.clone()] }));
+            s.expect_in_zone(fodder.as_str(), "graveyard");
+            assert_eq!(s.unit_at(P1, 2).def_id, ID);
+        }
+    }
+
+    /// R767000: through v0.6.12b it was played with no Tribute.
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_12b_plays_with_no_tribute() {
+        crate::under_kept(ID, script_v0_6_12b(), || {
+            let mut s = board(
+                "s007-kept",
+                false,
+                json!({ "mana": 10, "field": [FODDER], "library": filler(4) }),
+                json!({ "library": filler(4) }),
+            );
+            s.play(ID, json!({ "zone": 2, "modes": [ENEMY] }));
+            assert_eq!(s.unit_at(P1, 2).def_id, ID);
+            assert!(s.unit(P1, 1).is_some(), "no Tribute taken");
+        });
     }
 }

@@ -266,8 +266,8 @@ core-026: # Glowy Jelly Bean
     cast: Taste the glow!
   zh:
     name: 发光软糖豆
-    base: 使你手牌中的一张牌变为光辉。
-    radiant: 使你手牌中的2张牌变为光辉。
+    base: "可交易，闪回\n使你手牌中的一张牌变为光辉。"
+    radiant: "可交易，闪回\n使你手牌中的2张牌变为光辉。"
 core-027: # Blood Ridden Glowy Jelly Bean
   flavour: Still glowing. Mostly from the inside.
   voice:
@@ -1480,8 +1480,8 @@ classic-051: # Back Breaker
     death: My back! My back!
   zh:
     name: 后场粉碎者
-    base: "堆叠\n亡语：消灭所有后场牌。"
-    radiant: "堆叠\n亡语：消灭所有敌方后场牌。"
+    base: "堆叠，嘲讽\n亡语：消灭所有后场牌。"
+    radiant: "堆叠，嘲讽\n亡语：消灭所有敌方后场牌。"
 classic-052: # Final Gambit
   flavour: The last move turns the whole game around.
   voice:
@@ -2086,8 +2086,8 @@ classicplus-019-1: # Top Loser
     death: Ganked again?
   zh:
     name: 上路菜鸡
-    base: "护甲2，无法守备\n只有这一纵列的单位可以攻击这个单位。"
-    radiant: "护甲2，法术免疫，无法守备\n只有这一纵列的单位可以攻击这个单位。"
+    base: "无法守备\n只有这一纵列的单位可以攻击这个单位。"
+    radiant: "法术免疫，无法守备\n只有这一纵列的单位可以攻击这个单位。"
 classicplus-019-2: # Jungle Loser
   flavour: He ganks when he feels like it, which is rarely.
   voice:
@@ -2126,8 +2126,8 @@ classicplus-019-5: # Bot Loser
     death: My support left me.
   zh:
     name: 下路菜鸡
-    base: "突袭，先攻\n此单位消灭一个单位后，其获得+{attackGain}攻击力。\n处于狂暴状态时：回合开始时和回合结束时：此单位攻击你的英雄。"
-    radiant: "冲锋，先攻\n此单位消灭一个单位后，其获得+{attackGain}攻击力。\n此单位无法进入狂暴状态。"
+    base: "突袭，先攻\n处于狂暴状态时：回合开始时和回合结束时：此单位攻击你的英雄。"
+    radiant: "冲锋，先攻\n此单位无法进入狂暴状态。"
 classicplus-020: # Mushroom Power
   flavour: A little spore of encouragement for the neighbours.
   voice:
@@ -3373,8 +3373,8 @@ meditative-048: # Tranquility
     cast: Breathe in, breathe out, be still.
   zh:
     name: 宁静
-    base: 结束回合。你的英雄获得免疫，直到你的下个回合开始。放逐这张牌。
-    radiant: 你的英雄获得免疫，直到你的下个回合开始。放逐这张牌。
+    base: "可交易\n结束回合。你的英雄获得免疫，直到你的下个回合开始。放逐这张牌。"
+    radiant: "可交易\n复原{refresh}点法力值。你的英雄获得免疫，直到你的下个回合开始。放逐这张牌。"
 meditative-049: # YileGPT
   flavour: House-trained on classical poetry.
   voice:
@@ -3731,8 +3731,8 @@ meditative-082: # Medina Outfitter
     death: Out of thread.
   zh:
     name: 麦迪纳装备商
-    base: 战吼：强化你手牌中的每张牌。
-    radiant: 战吼：强化你手牌中的每张牌{times}次。
+    base: 战吼：强化你手牌中的每张牌。你在下个回合少{mana}点法力值。
+    radiant: 战吼：强化你手牌中的每张牌{times}次。你在下个回合少{mana}点法力值。
 meditative-083: # Medina Enforcer
   flavour: He doesn't ask what you're holding. He improves it.
   voice:
@@ -6917,8 +6917,8 @@ traininggrounds-050: # Legacy: Glowy Jelly Bean
     cast: Taste the glow!
   zh:
     name: 传统：发光软糖豆
-    base: 使你手牌中的一张牌变为光辉。
-    radiant: 使你手牌中的2张牌变为光辉。
+    base: 使你手牌中的一张牌变为光辉，其法力值消耗增加({surcharge})点。
+    radiant: 使你手牌中的一张牌变为光辉。
 traininggrounds-051: # Legacy: Big Felinor
   flavour: He loves every cat. He has opinions about everything else.
   voice:
@@ -7101,8 +7101,8 @@ stinkyscapeplus-007: # Churnwalker
     death: The knot comes undone.
   zh:
     name: 搅拌行者
-    base: "护甲4\n战吼：选择一项。\n将所有敌方单位锁链相连，当其中一个受到伤害时，其他所有被锁链相连的单位也受到相同的伤害。\n将所有友方单位锁链相连，当其中一个受到伤害时，伤害由所有友方单位平分，向下取整。"
-    radiant: "护甲8\n战吼：选择一项。\n将所有敌方单位锁链相连，当其中一个受到伤害时，其他所有被锁链相连的单位也受到相同的伤害。\n将所有友方单位锁链相连，当其中一个受到伤害时，伤害由所有友方单位平分，向下取整。"
+    base: "护甲4，献祭1\n战吼：选择一项。\n将所有敌方单位锁链相连，当其中一个受到伤害时，其他所有被锁链相连的单位也受到相同的伤害。\n将所有友方单位锁链相连，当其中一个受到伤害时，伤害由所有友方单位平分，向下取整。"
+    radiant: "护甲8，献祭1\n战吼：选择一项。\n将所有敌方单位锁链相连，当其中一个受到伤害时，其他所有被锁链相连的单位也受到相同的伤害。\n将所有友方单位锁链相连，当其中一个受到伤害时，伤害由所有友方单位平分，向下取整。"
 stinkyscapeplus-008: # Drone Assembler v3
   flavour: Version three still smells of the factory and ships with a manual made entirely of rumours.
   voice:
@@ -7433,8 +7433,8 @@ stinkyscapeplus-041: # Mend Projector
     cast: Everyone's fixed. You're welcome.
   zh:
     name: 修复投射器
-    base: 回合结束时：为所有单位恢复所有生命值，并使其获得+{health}点生命值。
-    radiant: 回合结束时：为所有单位恢复所有生命值，并使其获得+{health}点生命值和圣盾。
+    base: 回合结束时：为你的所有单位恢复所有生命值，并使其获得+{health}点生命值。
+    radiant: 回合结束时：为你的所有单位恢复所有生命值，并使其获得+{health}点生命值和圣盾。
 stinkyscapeplus-042: # Force Projector
   flavour: It hums, it glows, and it politely tells the first few hits to go home.
   voice:
@@ -7617,16 +7617,16 @@ stinkyscapeplus-062: # Overdrive Projector
     cast: Faster, everyone, faster!
   zh:
     name: 超载投影器
-    base: "休眠{dormant}个回合。\n所有单位获得突袭和风怒，所有法术获得回响+{spellEcho}。"
-    radiant: "休眠{dormant}个回合。\n你的单位获得突袭和风怒，法术获得回响+{spellEcho}。"
+    base: "休眠{dormant}个回合。\n你的单位获得突袭和风怒，你的法术获得回响+{spellEcho}。"
+    radiant: "休眠{dormant}个回合。\n你的单位获得突袭和风怒，你的法术获得回响+{spellEcho}。"
 stinkyscapeplus-063: # Overdrive Dome
   flavour: Bigger lamp, bigger hurry, bigger apology letter.
   voice:
     cast: Under the dome, move!
   zh:
     name: 超载穹顶
-    base: "休眠{dormant}个回合。\n所有单位获得冲锋和风怒，法术获得回响+{spellEcho}。"
-    radiant: "休眠{dormant}个回合。\n你的单位获得冲锋和风怒，法术获得回响+{spellEcho}。"
+    base: "休眠{dormant}个回合。\n你的单位获得冲锋和风怒，你的法术获得回响+{spellEcho}。"
+    radiant: "休眠{dormant}个回合。\n你的单位获得冲锋和风怒，你的法术获得回响+{spellEcho}。"
 stinkyscapeplus-064: # Surge Wall
   flavour: It never moves, never talks, and never stops humming at your enemies.
   voice:

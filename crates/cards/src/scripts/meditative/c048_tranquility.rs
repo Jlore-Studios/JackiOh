@@ -1,24 +1,42 @@
 //! M #48 Tranquility (SPEC §8.8 row 48): (2) Spell, Epic.
 //!
-//! Base:    "End the turn. Your hero is immune to damage until your next turn begins. Exile this."
-//! Radiant: "Your hero is immune to damage until your next turn begins. Exile this."
+//! Base:    "Tradable / End the turn. Your hero is immune to damage until your next turn begins. Exile
+//!          this."
+//! Radiant: "Tradable / Replenish {refresh} mana. Your hero is immune to damage until your next turn
+//!          begins. Exile this."
 //! Engine: the end of the turn is E10's `end_turn` (§6.3, R456) — the rest of the list resolves
 //! first, then every end-of-turn step runs; on the opponent's turn a cast has no turn of theirs to
 //! end. The immunity is ME-HERO-IMMUNE (MD-C21): a player modifier read as a cap of 0 at §4.4 step
 //! 3, expiring at the cleanup that ends the opponent's next turn (R757's Armor Up expiry), so it is
 //! gone as your next turn begins. "Exile this" (issue #2179) is the Spell's landing, as True
-//! Strike's is (§5.1, R178).
+//! Strike's is (§5.1, R178). Issue #4665 gave both faces Tradable, a catalog keyword, and the Radiant
+//! face "Replenish {refresh} mana" first (R4665007): `refresh_mana` of the declared `refresh` (2, the
+//! Radiant face's alone, R386), read with `param_or` at 0, so a replay of a version that declared no
+//! `refresh` replenishes nothing (R2657006) and needs no kept script.
 
 use jackioh_engine::effects::{end_turn, make_hero_immune};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-048";
 
-/// One face: the turn's end on the base face only, then the immunity, then "Exile this" since #2179.
-fn tranquility(ends_turn: bool, exiles: bool) -> Script {
+/// R4665007: the Radiant face's Replenish under a definition that declares no `refresh`, as every one
+/// through v0.6.12b (R2657006).
+const NO_REFRESH: i32 = 0;
+
+/// One face: the Radiant face's Replenish since issue #4665 (`refreshes`), the turn's end on the base
+/// face only, then the immunity, then "Exile this" since #2179.
+fn tranquility(ends_turn: bool, exiles: bool, refreshes: bool) -> Script {
     Script {
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(move |ctx| {
             let mut effects = Vec::new();
+            let refresh = if refreshes {
+                param_or(&*ctx, "refresh", NO_REFRESH)
+            } else {
+                NO_REFRESH
+            };
+            if refresh > 0 {
+                effects.push(refresh_mana(json_as(json!({ "amount": refresh }))));
+            }
             if ends_turn {
                 effects.push(end_turn(json_as(json!({}))));
             }
@@ -34,16 +52,16 @@ fn tranquility(ends_turn: bool, exiles: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: tranquility(true, true),
-        radiant: tranquility(false, true),
+        base: tranquility(true, true, false),
+        radiant: tranquility(false, true, true),
     }
 }
 
 /// R767000: through v0.5.2 it went to the graveyard; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
-        base: tranquility(true, false),
-        radiant: tranquility(false, false),
+        base: tranquility(true, false, false),
+        radiant: tranquility(false, false, false),
     }
 }
 
@@ -334,6 +352,28 @@ mod tests {
                 let mut s = cast("tranquility-radiant-exile", true);
                 s.expect_in_zone(TRANQUILITY, "exile");
                 assert!(s.state().players.p1.graveyard.iter().all(|card| card.def_id != TRANQUILITY));
+            }
+
+            /// R4665007: the Radiant face replenishes its declared 2 since issue #4665: of the 4 mana, 2
+            /// paid for it and 2 back.
+            #[test]
+            fn r4665007_radiant_replenishes_2_mana() {
+                let s = cast("tranquility-radiant-refresh", true);
+                let side = &s.state().players.p1;
+                assert_eq!(side.mana.current, (4 - 2 + 2).min(side.mana.max));
+                assert_eq!(side.mana.current, 4);
+            }
+
+            /// R2657006: under a definition with no `refresh`, as v0.6.12b's, it replenishes nothing.
+            #[test]
+            fn r4665007_r2657006_under_a_definition_with_no_refresh_it_replenishes_nothing() {
+                let current = crate::under_kept_as(
+                    TRANQUILITY,
+                    super::super::super::script(),
+                    |def| def.params = None,
+                    || cast("tranquility-radiant-old", true).state().players.p1.mana.current,
+                );
+                assert_eq!(current, 2);
             }
 
             #[test]

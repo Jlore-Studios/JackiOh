@@ -422,8 +422,10 @@ pub(crate) const FLAK_BASE_RANGE: (i32, i32) = (1, 3);
 /// The base range since issue #4292; (2, 4) before.
 pub(crate) const FLAK_RADIANT_RANGE: (i32, i32) = (1, 3);
 pub(crate) const FLAK_RADIANT_LUCKY: i32 = 1;
-/// The printed odds as the test reads them, lowest first.
-pub(crate) const FLAK_PRINTED: [i32; 3] = [60, 30, 10];
+/// The printed odds as the test reads them, lowest first: 60, 33 and 7 since issue #4665 (R4665004).
+pub(crate) const FLAK_PRINTED: [i32; 3] = [60, 33, 7];
+/// R767000, R4665004: the odds through v0.6.12b, which the kept scripts roll.
+pub(crate) const FLAK_PRINTED_V0_6_12B: [i32; 3] = [60, 30, 10];
 
 /// A Menace no activation can bring down, so every round hits it.
 pub(crate) fn flak_wall() -> Value {
@@ -444,10 +446,15 @@ pub(crate) fn flak_walls() -> Value {
     json!({ "field": [flak_wall(), flak_wall()] })
 }
 
-/// One roll over `lo..=hi` as the text reads: 60, 30 and 10 from the low end, a value past the
+/// One roll over `lo..=hi` as the text reads: `FLAK_PRINTED` from the low end, a value past the
 /// third weighted as the third.
-pub(crate) fn flak_printed_roll(rng: &mut Rng, (lo, hi): (i32, i32)) -> i32 {
-    let weight = |amount: i32| FLAK_PRINTED[((amount - lo) as usize).min(FLAK_PRINTED.len() - 1)];
+pub(crate) fn flak_printed_roll(rng: &mut Rng, range: (i32, i32)) -> i32 {
+    flak_roll(rng, range, FLAK_PRINTED)
+}
+
+/// One roll over `lo..=hi` at `odds` from the low end, a value past the third weighted as the third.
+pub(crate) fn flak_roll(rng: &mut Rng, (lo, hi): (i32, i32), odds: [i32; 3]) -> i32 {
+    let weight = |amount: i32| odds[((amount - lo) as usize).min(odds.len() - 1)];
     let mut at = rng.int((lo..=hi).map(weight).sum());
     for amount in lo..=hi {
         if at < weight(amount) {
@@ -468,6 +475,18 @@ pub(crate) fn flak_fire(
     lucky: i32,
     rounds: i32,
 ) -> Vec<(String, i32)> {
+    flak_fire_at(s, card, range, lucky, rounds, FLAK_PRINTED)
+}
+
+/// `flak_fire` with each roll at `odds`.
+pub(crate) fn flak_fire_at(
+    s: &mut Scenario,
+    card: &str,
+    range: (i32, i32),
+    lucky: i32,
+    rounds: i32,
+    odds: [i32; 3],
+) -> Vec<(String, i32)> {
     let targets: Vec<String> = (1..=UNIT_ZONES)
         .filter_map(|lane| s.unit(PlayerId::P2, lane))
         .map(|unit| unit.id)
@@ -478,7 +497,7 @@ pub(crate) fn flak_fire(
     let mut expected: Vec<(String, i32)> = Vec::new();
     for _ in 0..rounds {
         for target in &targets {
-            let amount = rng.lucky(lucky, |rng| flak_printed_roll(rng, range), Ord::max);
+            let amount = rng.lucky(lucky, |rng| flak_roll(rng, range, odds), Ord::max);
             expected.push((target.clone(), amount));
         }
     }
@@ -538,6 +557,25 @@ pub(crate) fn flak_over_the_seeds(
         }
     }
     seen
+}
+
+/// R767000, R4665004: the script kept for v0.6.12b rolls the odds printed until issue #4665
+/// (`FLAK_PRINTED_V0_6_12B`), and some seed's rolls tell them from today's.
+pub(crate) fn flak_kept_v12(id: &str, prefix: &str, rounds: i32, seeds: usize, kept: fn() -> CardScripts) {
+    under_kept(id, kept(), || {
+        let mut told = false;
+        for seed in 0..seeds {
+            let mut s = flak_on(id, &format!("{prefix}-kept-12-{seed}"), false, flak_walls());
+            let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+            // Two walls a round, each its own roll at today's odds.
+            let today: Vec<i32> = (0..2 * rounds)
+                .map(|_| flak_roll(&mut rng, FLAK_BASE_RANGE, FLAK_PRINTED))
+                .collect();
+            let got = flak_fire_at(&mut s, id, FLAK_BASE_RANGE, 0, rounds, FLAK_PRINTED_V0_6_12B);
+            told |= got.iter().map(|(_, amount)| *amount).collect::<Vec<i32>>() != today;
+        }
+        assert!(told, "v0.6.12b's odds and today's differ on some seed");
+    });
 }
 
 /// R767000: the script kept for the replays of v0.5.9f and before rolls for the enemy hero too,

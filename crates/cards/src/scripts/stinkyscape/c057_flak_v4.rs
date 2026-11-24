@@ -1,4 +1,4 @@
-//! Stinkyscape #57 Flak v4 (SPEC §8.10 row 57; R2521001). Unit 0/3 → 0/6, Weapon, cost 3, Epic.
+//! Stinkyscape #57 Flak v4 (SPEC §8.10 row 57; R2521001, R4665004). Unit 0/3 → 0/6, Weapon, cost 3, Epic.
 //!   Base:    "Starship Piece
 //!            Activate: Deal a random {least} to {most} damage to each enemy Unit, twice." — 1 to 3
 //!   Radiant: "Starship Piece, Lucky 1
@@ -14,6 +14,8 @@
 //! lands (R2521001). Lucky is the card's Lucky now plus its controller's Luck, as S #145 Fortify Flesh
 //! reads it (R1438, R987). Once a turn (R384). Both ends are declared numbers (R386), read through
 //! `param`.
+//! Issue #4665 made the top roll rarer: 60%, 33% and 7% (`ODDS`), 60%, 30% and 10% before, which
+//! `script_v0_6_12b` keeps (R4665004, R767000).
 
 use jackioh_engine::effects::{DamageOdds, after_state_check, damage_all};
 use jackioh_engine::prelude::*;
@@ -23,18 +25,21 @@ pub const ID: &str = "stinkyscape-057";
 /// "twice".
 const ROUNDS: i32 = 2;
 
-/// R2521001: "60%, 30%, 10%, lowest first".
-const ODDS: [i32; 3] = [60, 30, 10];
+/// R2521001, R4665004: "60%, 33%, 7%, lowest first" since issue #4665.
+const ODDS: [i32; 3] = [60, 33, 7];
+/// R767000, R4665004: "60%, 30%, 10%", the odds through v0.6.12b.
+const ODDS_V0_6_12B: [i32; 3] = [60, 30, 10];
 
-/// R2521001: `ODDS` over `least..=most`, the low end first; a value past the third is weighted as
-/// the third, and a Nerf that crossed the two ends rolls between them.
-fn odds(least: i32, most: i32) -> Vec<DamageOdds> {
+/// R2521001: `weights` (`ODDS`, or `ODDS_V0_6_12B` for a kept script) over `least..=most`, the low end
+/// first; a value past the third is weighted as the third, and a Nerf that crossed the two ends rolls
+/// between them.
+fn odds(least: i32, most: i32, weights: [i32; 3]) -> Vec<DamageOdds> {
     let (lo, hi) = if least <= most { (least, most) } else { (most, least) };
     (lo..=hi)
         .enumerate()
         .map(|(at, amount)| DamageOdds {
             amount,
-            weight: ODDS[at.min(ODDS.len() - 1)],
+            weight: weights[at.min(weights.len() - 1)],
         })
         .collect()
 }
@@ -42,23 +47,23 @@ fn odds(least: i32, most: i32) -> Vec<DamageOdds> {
 /// R1862001, R2521001: `left` rounds of "deal a random `least` to `most` damage to each enemy", each
 /// after the last one's check, every target rolling its own each round, `lucky` more kept at the
 /// highest. `heroes`: the enemy hero too, as `script_v0_5_9f` runs it.
-fn rounds(least: i32, most: i32, lucky: i32, left: i32, heroes: bool) -> Vec<Effect> {
+fn rounds(least: i32, most: i32, lucky: i32, left: i32, heroes: bool, weights: [i32; 3]) -> Vec<Effect> {
     let mut round = vec![damage_all(json_as(json!({
         "amount": least.min(most),
-        "odds": odds(least, most),
+        "odds": odds(least, most, weights),
         "lucky": lucky,
         "side": "enemy",
         "heroes": heroes,
     })))];
     if left > 1 {
         round.push(after_state_check(move |_ctx| {
-            rounds(least, most, lucky, left - 1, heroes)
+            rounds(least, most, lucky, left - 1, heroes, weights)
         }));
     }
     round
 }
 
-fn flak(heroes: bool) -> ActivationDecl {
+fn flak(heroes: bool, weights: [i32; 3]) -> ActivationDecl {
     ActivationDecl {
         id: "flak".into(),
         label: if heroes {
@@ -75,14 +80,15 @@ fn flak(heroes: bool) -> ActivationDecl {
         run: hook(move |ctx| {
             let lucky = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me))
                 + luck_of(&*ctx.state, ctx.controller);
-            rounds(param(&*ctx, "least"), param(&*ctx, "most"), lucky, ROUNDS, heroes)
+            let (least, most) = (param(&*ctx, "least"), param(&*ctx, "most"));
+            rounds(least, most, lucky, ROUNDS, heroes, weights)
         }),
     }
 }
 
-fn scripts(heroes: bool) -> CardScripts {
+fn scripts(heroes: bool, weights: [i32; 3]) -> CardScripts {
     let base = Script {
-        activations: vec![flak(heroes)],
+        activations: vec![flak(heroes, weights)],
         ..Script::default()
     };
     // The same script: the Radiant face's range and its printed Lucky 1 are its catalog data.
@@ -91,13 +97,19 @@ fn scripts(heroes: bool) -> CardScripts {
 }
 
 pub fn script() -> CardScripts {
-    scripts(false)
+    scripts(false, ODDS)
+}
+
+/// R767000, R4665004: through v0.6.12b its rolls were 60%, 30% and 10%; `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_6_12b() -> CardScripts {
+    scripts(false, ODDS_V0_6_12B)
 }
 
 /// R767000: through v0.5.9f its rolls hit the enemy hero too, after each enemy Unit; `KEPT_SCRIPTS`
 /// folds those replays under it.
 pub fn script_v0_5_9f() -> CardScripts {
-    scripts(true)
+    scripts(true, ODDS_V0_6_12B)
 }
 
 /// R767000: `left` rounds of "deal `amount` damage to all enemies", each after the last one's check.
@@ -150,6 +162,11 @@ mod tests {
         use super::*;
 
         #[test]
+        fn r767000_r4665004_the_script_kept_for_v0_6_12b_rolls_60_30_10() {
+            fam::flak_kept_v12(ID, "s057", ROUNDS, SEEDS, script_v0_6_12b);
+        }
+
+        #[test]
         fn r767000_the_script_kept_for_v0_5_9f_hits_the_enemy_hero_too() {
             fam::flak_kept_v9(ID, "s005-kept-9e", ROUNDS, script_v0_5_9f);
         }
@@ -172,7 +189,7 @@ mod tests {
                 counts.values().sum::<usize>(),
                 "1 to 3 only: {counts:?}"
             );
-            assert!(one > two && two > three && three > 0, "60/30/10: {counts:?}");
+            assert!(one > two && two > three && three > 0, "60/33/7: {counts:?}");
         }
 
         #[test]

@@ -19,19 +19,34 @@
 //!
 //! R74 makes the radiant flag the whole model, so the chosen card's stats and text swap while it sits
 //! in hand (§5.2); a card that is already Radiant is untouched (§6.3 Make Radiant).
+//!
+//! Issue #4665 patched the Legacy card itself, not the Core one (R4665006): (2), from (3), and "Make
+//! a card in your hand Radiant, it costs ({surcharge}) more." (base) and "Make a card in your hand
+//! Radiant." (Radiant). The base face's pick takes `setCostMod` of the declared `surcharge` (1, R386)
+//! after it is made Radiant, as #72 Reminisce prices a chosen hand card; the Radiant face picks one
+//! card, from two, and adds no surcharge. `script_v0_6_12b` keeps the copy as it was (R767000).
 
+use jackioh_engine::effects::set_cost_mod;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-050";
 
-/// The two faces differ only in how many cards the play picks.
-fn glowy_jelly_bean(picks: i32) -> Script {
+/// `picks` hand cards made Radiant; with `surcharges`, each then costs the declared `surcharge` more
+/// (R4665006).
+fn glowy_jelly_bean(picks: i32, surcharges: bool) -> Script {
     Script {
         targets: vec![TargetDecl::hand(picks, picks, json!({ "of": ["hand"] }))],
-        cry: Some(hook(move |_ctx| {
-            (0..picks)
-                .map(|index| set_radiant(json_as(json!({ "target": { "of": "chosen", "index": index } }))))
-                .collect()
+        cry: Some(hook(move |ctx| {
+            let surcharge = if surcharges { param(&*ctx, "surcharge") } else { 0 };
+            let mut effects = Vec::new();
+            for index in 0..picks {
+                let chosen = json!({ "of": "chosen", "index": index });
+                effects.push(set_radiant(json_as(json!({ "target": chosen }))));
+                if surcharge != 0 {
+                    effects.push(set_cost_mod(json_as(json!({ "target": chosen, "amount": surcharge }))));
+                }
+            }
+            effects
         })),
         ..Script::default()
     }
@@ -39,8 +54,17 @@ fn glowy_jelly_bean(picks: i32) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: glowy_jelly_bean(1),
-        radiant: glowy_jelly_bean(2),
+        base: glowy_jelly_bean(1, true),
+        radiant: glowy_jelly_bean(1, false),
+    }
+}
+
+/// R767000, R4665006: through v0.6.12b the copy of Core #26 as it was: one pick on the base face,
+/// two on the Radiant one, and no surcharge; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_12b() -> CardScripts {
+    CardScripts {
+        base: glowy_jelly_bean(1, false),
+        radiant: glowy_jelly_bean(2, false),
     }
 }
 
@@ -71,7 +95,8 @@ mod tests {
         }
     }
 
-    /// #26 costs 3 on both faces: R74 leaves the cost alone when a card becomes Radiant (§5.2).
+    /// It costs 2 on both faces since issue #4665 (3 before); R74 leaves a cost alone when a card
+    /// becomes Radiant (§5.2), and the base face's surcharge is the chosen card's `costMod`.
     fn glowy(hand: Value) -> Scenario {
         scenario(json!({ "p1": { "hand": hand, "mana": 3 } }))
     }
@@ -180,68 +205,105 @@ mod tests {
         }
     }
 
-    mod n26_glowy_jelly_bean_radiant {
+    /// R4665006: the base face's surcharge, the declared `surcharge` on the chosen card.
+    mod surcharge_r4665006 {
         use super::*;
 
         #[test]
-        fn chooses_2_and_both_cards_get_the_flag_from_one_play_r81() {
+        fn r4665006_the_card_it_makes_radiant_costs_1_more() {
             crate::register_all();
-            let mut s = glowy(json!([{ "def": "traininggrounds-050", "radiant": true }, "core-005", "core-016", "core-010"]));
-            let first = hand_id_of(s.state(), "core-005");
-            let second = hand_id_of(s.state(), "core-016");
-            let untouched = hand_id_of(s.state(), "core-010");
+            let mut s = glowy(json!(["traininggrounds-050", "core-005", "core-016"]));
+            let chosen = hand_id_of(s.state(), "core-005");
+            let other = hand_id_of(s.state(), "core-016");
 
-            s.play(
-                "traininggrounds-050",
-                json!({
-                    "targets": [
-                        { "pick": "instance", "instanceId": first },
-                        { "pick": "instance", "instanceId": second },
-                    ],
-                }),
-            );
+            s.play("traininggrounds-050", json!({ "targets": [{ "pick": "instance", "instanceId": chosen }] }));
 
-            assert!(s.state().pending.is_none());
-            let mut flagged = radiant_hand(s.state());
-            flagged.sort();
-            let mut wanted = vec![first.clone(), second.clone()];
-            wanted.sort();
-            assert_eq!(flagged, wanted);
-            assert!(!s.card(&untouched).radiant);
+            assert_eq!(radiant_hand(s.state()), vec![chosen.clone()]);
+            assert_eq!(s.card(&chosen).cost_mod, 1);
+            assert_eq!(s.card(&other).cost_mod, 0);
         }
 
+        /// R386: the surcharge reads through `param`: set to 2, the chosen card costs 2 more.
         #[test]
-        fn r90_takes_the_one_card_available_when_the_hand_holds_only_one_other() {
+        fn r386_r4665006_the_surcharge_is_declared() {
             crate::register_all();
-            let mut s = glowy(json!([{ "def": "traininggrounds-050", "radiant": true }, "core-005"]));
-            let only = hand_id_of(s.state(), "core-005");
+            let mut s = glowy(json!(["traininggrounds-050", "core-005"]));
+            let chosen = hand_id_of(s.state(), "core-005");
+            set_param(s.card_mut("traininggrounds-050"), "surcharge", 2);
 
-            // R90: "a declaration the board cannot satisfy does not refuse the play: the play is legal with
-            // the answers that exist and the effect fizzles on resolution". So one selection reaches a
-            // declaration that asks for two, and the second `setRadiant` finds nothing.
-            s.play("traininggrounds-050", json!({ "targets": [{ "pick": "instance", "instanceId": only }] }));
+            s.play("traininggrounds-050", json!({ "targets": [{ "pick": "instance", "instanceId": chosen }] }));
 
-            assert_eq!(radiant_hand(s.state()), vec![only.clone()]);
-            s.expect_in_zone("traininggrounds-050", "graveyard");
+            assert_eq!(radiant_hand(s.state()), vec![chosen.clone()]);
+            assert_eq!(s.card(&chosen).cost_mod, 2);
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-026, on both faces: the chosen hand cards become Radiant.
-    #[test]
-    fn r2195003_plays_exactly_as_core_026() {
-        for radiant in [false, true] {
-            crate::expect_plays_as(
-                "core-026",
-                super::ID,
-                |id| json!({ "p1": { "hand": [{ "def": id, "radiant": radiant }, "core-008", "core-025"] } }),
-                |s, id| {
-                    let first = s.card("core-008").id.clone();
-                    let second = s.card("core-025").id.clone();
-                    let picks: Vec<_> = if radiant { vec![first, second] } else { vec![first] };
-                    let targets: Vec<_> = picks.iter().map(|p| json!({ "pick": "instance", "instanceId": p })).collect();
-                    s.play(id, json!({ "targets": targets }));
-                },
-            );
+    mod n26_glowy_jelly_bean_radiant {
+        use super::*;
+
+        /// R4665006: the Radiant face picks one card since issue #4665 (two before) and adds no surcharge.
+        #[test]
+        fn r81_r4665006_chooses_1_and_adds_no_surcharge() {
+            crate::register_all();
+            let mut s = glowy(json!([{ "def": "traininggrounds-050", "radiant": true }, "core-005", "core-016"]));
+            let chosen = hand_id_of(s.state(), "core-005");
+            let other = hand_id_of(s.state(), "core-016");
+
+            s.play("traininggrounds-050", json!({ "targets": [{ "pick": "instance", "instanceId": chosen }] }));
+
+            assert!(s.state().pending.is_none());
+            assert_eq!(radiant_hand(s.state()), vec![chosen.clone()]);
+            assert!(!s.card(&other).radiant);
+            assert_eq!(s.card(&chosen).cost_mod, 0);
         }
+    }
+
+    /// R767000, R4665006: the scripts kept for v0.6.12b.
+    mod kept_v0_6_12b {
+        use super::*;
+
+        #[test]
+        fn r767000_r4665006_the_kept_radiant_face_chooses_2_and_neither_face_adds_a_surcharge() {
+            crate::under_kept(super::super::ID, super::super::script_v0_6_12b(), || {
+                let mut s = glowy(json!([{ "def": "traininggrounds-050", "radiant": true }, "core-005", "core-016"]));
+                let first = hand_id_of(s.state(), "core-005");
+                let second = hand_id_of(s.state(), "core-016");
+                s.play(
+                    "traininggrounds-050",
+                    json!({
+                        "targets": [
+                            { "pick": "instance", "instanceId": first },
+                            { "pick": "instance", "instanceId": second },
+                        ],
+                    }),
+                );
+                let mut flagged = radiant_hand(s.state());
+                flagged.sort();
+                let mut wanted = vec![first.clone(), second.clone()];
+                wanted.sort();
+                assert_eq!(flagged, wanted);
+                assert_eq!(s.card(&first).cost_mod, 0);
+
+                let mut s = glowy(json!(["traininggrounds-050", "core-005"]));
+                let chosen = hand_id_of(s.state(), "core-005");
+                s.play("traininggrounds-050", json!({ "targets": [{ "pick": "instance", "instanceId": chosen }] }));
+                assert_eq!(s.card(&chosen).cost_mod, 0);
+            });
+        }
+    }
+
+    /// R2195003: a Core patch does not move the snapshot: issue #4665 gave Core #26 Tradable and
+    /// Flashback and the Legacy card neither, and patched the Legacy card alone (R4665006).
+    #[test]
+    fn r2195003_r4665006_core_26_s_tradable_and_flashback_are_not_the_legacy_card_s() {
+        let core = crate::card_def("core-026");
+        let legacy = crate::card_def(super::ID);
+        for kind in [KeywordKind::Tradable, KeywordKind::Flashback] {
+            for (core_face, legacy_face) in [(&core.base, &legacy.base), (&core.radiant, &legacy.radiant)] {
+                assert!(core_face.keywords.iter().any(|keyword| keyword.kind() == kind), "{kind:?}");
+                assert!(!legacy_face.keywords.iter().any(|keyword| keyword.kind() == kind), "{kind:?}");
+            }
+        }
+        assert_eq!((core.cost, legacy.cost), (3, 2));
     }
 }
