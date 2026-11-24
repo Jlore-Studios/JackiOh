@@ -33759,10 +33759,6 @@
       "refused_until": "2026-11-24T04:10:00Z",
       "spent": [
         {
-          "at": "2026-11-13T08:26:36Z",
-          "minutes": 155.0
-        },
-        {
           "at": "2026-11-13T09:24:08Z",
           "minutes": 57.7
         },
@@ -34557,16 +34553,13 @@
         {
           "at": "2026-11-24T06:23:39Z",
           "minutes": 7.8
+        },
+        {
+          "at": "2026-11-24T08:33:42Z",
+          "minutes": 9.9
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-12T09:46:44Z",
-          "cache": 129354,
-          "cost": 13.274,
-          "input": 4,
-          "output": 5110
-        },
         {
           "at": "2026-11-12T10:41:40Z",
           "cache": 1892932,
@@ -35959,15 +35952,22 @@
           "cost": 1.0657,
           "input": 5,
           "output": 2406
+        },
+        {
+          "at": "2026-11-24T08:33:42Z",
+          "cache": 11692561,
+          "cost": 9.8536,
+          "input": 87,
+          "output": 55596
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-24T09:10:00Z",
-          "utilization": 0.85
+          "utilization": 0.95
         },
-        "observed_at": "2026-11-24T06:23:39Z",
-        "status": "allowed"
+        "observed_at": "2026-11-24T08:33:42Z",
+        "status": "allowed_warning"
       }
     },
     "devin": {
@@ -41717,6 +41717,20 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-24T08:14:38Z,claude-8,ping,before,45353865840,85,2026-11-24T09:10:00Z,,,allowed,100,,",
+      "2026-11-24T08:15:13Z,claude-8,stream,call,45353865840,88,2026-11-24T09:10:00Z,,,allowed,100,,",
+      "2026-11-24T08:15:28Z,claude-8,stream,call,45353865840,89,2026-11-24T09:10:00Z,,,allowed,100,,",
+      "2026-11-24T08:16:13Z,claude-8,stream,call,45353865840,90,2026-11-24T09:10:00Z,,,allowed,100,,",
+      "2026-11-24T08:17:13Z,claude-8,stream,call,45353865840,90,2026-11-24T09:10:00Z,,,allowed_warning,100,,",
+      "2026-11-24T08:17:58Z,claude-8,stream,call,45353865840,91,2026-11-24T09:10:00Z,,,allowed_warning,100,,",
+      "2026-11-24T08:18:58Z,claude-8,stream,call,45353865840,92,2026-11-24T09:10:00Z,,,allowed_warning,100,,",
+      "2026-11-24T08:19:43Z,claude-8,stream,call,45353865840,93,2026-11-24T09:10:00Z,,,allowed_warning,100,,",
+      "2026-11-24T08:20:28Z,claude-8,stream,call,45353865840,94,2026-11-24T09:10:00Z,,,allowed_warning,100,,",
+      "2026-11-24T08:23:13Z,claude-8,stream,call,45353865840,95,2026-11-24T09:10:00Z,,,allowed_warning,100,,"
+    ]
   },
   "version": 1
 }
