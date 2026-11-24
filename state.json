@@ -18832,6 +18832,9 @@
         "tiers": {}
       }
     },
+    "4697": {
+      "suggestion": true
+    },
     "4698": {
       "action": "review",
       "asks": [],
@@ -41263,6 +41266,13 @@
         "at": "2026-11-24T09:18:30Z",
         "number": 4686,
         "title": "Patch: drop stale unmet rematch offers when match window expires to avoid phantom offers",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T09:18:37Z",
+        "number": 4697,
+        "title": "Patch: the AI takes a lethal it reaches by drawing first, as it did before #4608, by finishing a cut-short replay's turn on each sampled world",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
       }
