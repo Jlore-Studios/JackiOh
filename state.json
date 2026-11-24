@@ -17744,6 +17744,7 @@
     "4734": {
       "action": "plan",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-24T21:50:28Z",
         "difficulty": "hard",
@@ -17751,7 +17752,7 @@
         "tier": "",
         "why": "failed 3 times at difficulty:medium"
       },
-      "failures": 2,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-11-24T19:02:56Z",
@@ -17772,7 +17773,7 @@
       "owner_why": "it plans it",
       "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-11-24T13:47:28Z",
+      "queued_at": "2026-11-24T21:50:28Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
       "run_id": "45467999862",
