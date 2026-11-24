@@ -15424,9 +15424,9 @@
       "kind": "review",
       "live": "reviewing",
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-6",
       "queued_at": "2026-11-24T03:23:48Z",
-      "run_id": "45311448163",
+      "run_id": "pending:acd631c8-1795490700",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15446,7 +15446,7 @@
         "provider": "claude-3",
         "run": "45266435249"
       },
-      "started_at": "2026-11-24T02:18:46Z",
+      "started_at": "2026-11-24T03:25:33Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18358,9 +18358,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T03:24:47Z",
+    "at": "2026-11-24T03:25:33Z",
     "url": "",
-    "what": "plan #4594 on claude-6"
+    "what": "review #4574 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-24T03:03:06Z",
