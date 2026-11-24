@@ -19811,6 +19811,9 @@
       "taken_asks": [],
       "verdict_rounds": 1
     },
+    "4722": {
+      "suggestion": true
+    },
     "4724": {
       "action": "review",
       "asks": [],
@@ -42967,6 +42970,13 @@
         "title": "Patch: 2v2 spectator authorization and live revocation check both teams' players against blocks",
         "verdict": "came to nothing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T13:44:37Z",
+        "number": 4722,
+        "title": "Patch: rematch status refuses daily games and stale catalogs like rematch offers do",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
       }
     ],
     "declined": [
