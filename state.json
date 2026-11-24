@@ -16670,17 +16670,8 @@
       "stop_requested": false
     },
     "4619": {
-      "action": "plan",
-      "asks": [
-        "c:7111395098"
-      ],
-      "build_next": {
-        "from_run": "45328033469",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-24T04:59:05Z",
-        "until": "2026-11-24T05:29:05Z"
-      },
+      "action": "build",
+      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-24T04:58:58Z",
@@ -16700,10 +16691,9 @@
         "reason": "planned on opus",
         "trail": "mand\": \"ls eslint.config.* 2>/dev/null; grep -n \\\"import/order\\\\|simple-import-sort\\\\|sort-imports\\\" eslint.config.* 2>/dev/null | head\", \"description\": \"Check eslint import ordering rules\"}\n- Bash: {\"command\": \"grep -n \\\"const subject\\\\|subject =\\\" apps/web/src/game/Card.tsx | head -5; grep -rn \\\"inspect\\\" apps/web/src/replay/ReplayPlayer.tsx | head -5; grep -rln \\\"INSPECT_SHEET\\\\|isInspectKey\\\u2026\n- Bash: {\"command\": \"sed -n 280,300p apps/web/src/game/Card.tsx\", \"description\": \"Read Card inspect subject logic\"}\n- Bash: {\"command\": \"grep -rn \\\"hand-card-\\\\|handCard:\\\" apps/web/src/game/contract.ts apps/web/src/game/Hand.tsx 2>/dev/null | head -5; grep -rn \\\"testId={testid.card(\\\" apps/web/src/game/*.tsx | head -8\", \u2026\n- Bash: {\"command\": \"sed -n 500,520p apps/web/src/game/Board.tsx; grep -n \\\"handCard(\\\" apps/web/src/game/*.tsx | head -5\", \"description\": \"See hand card render in Board\"}\n- Bash: {\"command\": \"for f in apps/web/src/routes/practice.test.tsx apps/web/src/daily/DailyBoard.test.tsx; do echo \\\"== $f\\\"; grep -n \\\"^import\\\" $f | grep -n \\\"navigate\\\\|stubServer\\\\|history\\\\|settle\\\\|re\u2026\n- Bash: {\"command\": \"grep -n \\\"vi.mock\\\" apps/web/src/daily/DailyBoard.test.tsx apps/web/src/routes/practice.test.tsx apps/web/src/duos/DuosRoute.test.tsx apps/web/src/together/TogetherRoute.test.tsx apps/we\u2026\n- said: Writing the updated draft now, before checking whether existing tests assert on history length.\n- Bash: {\"command\": \"grep -n \\\"history.length\\\\|history.state\\\" apps/web/src/routes/replays.test.tsx apps/web/src/routes/practice.test.tsx apps/web/src/routes/match.test.tsx apps/web/src/daily/DailyBoard.tes\u2026\n- Bash: {\"command\": \"grep -n \\\"export const replayTestid\\\" -A 30 apps/web/src/replay/ReplayPlayer.tsx | grep -n \\\"player\\\\|back:\\\\|loading\\\\|failure\\\\|forwardTurn\\\\|end:\\\" ; grep -n \\\"INSPECT_SHEET\\\\b\\\" apps\u2026\n- Bash: {\"command\": \"grep -n \\\"replayTestid = \\\" -A 30 apps/web/src/replay/ReplayPlayer.tsx | head -34\", \"description\": \"Print replayTestid map\"}\n- Bash: {\"command\": \"grep -rn \\\"replayTestid\\\\b.*=\\\\|export { replayTestid\\\\|export const replayTestid\\\" apps/web/src/replay/*.ts* | head -3\", \"description\": \"Locate replayTestid definition\"}\n- Bash: {\"command\": \"grep -n \\\"replayTestid\\\" apps/web/src/replay/ReplayPlayer.tsx | head -3; grep -rn \\\"replayTestid = {\\\" -A 28 apps/web/src/replay/ | grep -o \\\"^\\\\S*-\\\\s*[a-zA-Z]*:\\\" | head -30\", \"descrip\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4619/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"kept at the bot's hard rating, which a plan may not lower; by the rule\u2026\n- Bash: {\"command\": \"grep -rn '\\\"hand-you\\\"\\\\|`hand-${' apps/web/src/game/*.tsx | grep -v test | head -3; grep -n \\\"aria-keyshortcuts\\\" apps/web/src/game/Hand.tsx apps/web/src/game/Card.tsx | head\", \"descrip\u2026\n- Bash: {\"command\": \"grep -rn \\\"hand-you\\\\|testid.hand(\\\\|hand: (side\\\" apps/web/src/game/contract.ts apps/web/src/game/Hand.tsx apps/web/src/game/Board.tsx | head -5; grep -rn \\\"aria-keyshortcuts\\\" apps/web\u2026\n- Bash: {\"command\": \"grep -rn \\\"hand-\\\\${\\\\|\\\\\\\"hand-\\\\\\\" +\\\\|hand-opponent\\\\|handZone\\\\|data-testid={`hand\\\" apps/web/src/game --include=*.tsx | grep -v \\\"\\\\.test\\\\.\\\" | head -5; grep -n \\\"hand\\\" apps/web/s\u2026\n- tool error: Exit code 2 /bin/bash: eval: line 1: unexpected EOF while looking for matching ``'\n- Grep: {\"pattern\": \"hand-opponent|hand-you|testid\\\\.hand\\\\(|hand: \\\\(\", \"path\": \"apps/web/src/game\", \"glob\": \"!*.test.tsx\", \"output_mode\": \"content\", \"head_limit\": 10}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4619/.bot-plan.md\", \"old_string\": \"then expect `await screen.findByTestId(togetherTestid.root\\u2026 \\\"replay-back\\\", undefined, \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4619/.bot-plan.md\", \"old_string\": \"open `await downloaded()` the same way and wait for `replayTestid.player` at step `0`. Find t\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count plan words\"}\n- said: Draft is over the word limit (2,913 words). Trimming it without dropping any step or test.\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4619/.bot-plan.md\", \"offset\": 1, \"limit\": 10}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4619/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"kept at the bot's hard rating, which a plan may not lower; by the rule\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count plan words after trimming\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4619/.bot-plan.md\", \"old_string\": \"## Done when\\n\\n- [ ] Six hosts each mount one `BackLayer` before the replay, with the R46190\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4619/.bot-plan.md\", \"old_string\": \"An open replay drawn in place becomes a back layer (R2127000). That covers `/replays`, `/prac\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4619/.bot-plan.md\", \"old_string\": \"Do not touch:\\n- `apps/web/src/net/backLayers.ts`, which is used unchanged\\n- `apps/web/src/r\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4619/.bot-plan.md\", \"old_string\": \" - **Rejected:**\\n - A layer inside `ReplayPlayer`: `OpenedReplay` and the co-op player draw \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; git status --porcelain\", \"description\": \"Recount words and confirm no tracked changes\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4619/.bot-plan.md\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"kept at the bot's hard rating, which a plan may not lower; by the rule alone it is medium (apps/web call sites, their tests and spec/, 15 files, no engine, AI, cross-crate design or migration)\"} --> ## Goal An open replay drawn in place becomes a back layer \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-24T04:40:36Z",
       "owner_why": "handed off from `agy`: its owner `agy` has no strong seat, which it needs",
@@ -16717,14 +16707,16 @@
       "queued_at": "2026-11-24T03:22:49Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "45328033469",
+      "run_id": "pending:a52d26a4-1795496495",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T04:40:36Z",
+      "started_at": "2026-11-24T05:01:59Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7111395098"
+      ],
       "verdict_rounds": 0
     },
     "4620": {
@@ -18511,9 +18503,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T05:01:23Z",
+    "at": "2026-11-24T05:01:59Z",
     "url": "",
-    "what": "review #4664 on claude-1"
+    "what": "build #4619 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-24T04:50:11Z",
