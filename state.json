@@ -17563,7 +17563,7 @@
         "kind": "revise",
         "model": "opus",
         "provider": "claude-8",
-        "round_tier": "",
+        "round_tier": "strong",
         "rounds_on": 4726,
         "rounds_used": 0,
         "since": "2026-11-24T21:24:26Z",
