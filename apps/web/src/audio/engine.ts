@@ -49,6 +49,7 @@ import type {
   CardAudioTable,
   CardHook,
   Persona,
+  PlaySfxOptions,
   PlayedCue,
   SfxId,
   SfxParams,
@@ -531,19 +532,22 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
   /* gate */
 
-  function accepting(): boolean {
+  // #4682: the hidden-tab carve-out is caller-scoped, not id-scoped: only the clock alarm's
+  // own beats (`stepClockAlarm` passes `{ alarm: true }`) skip the hidden check, so a set-piece
+  // bed's `clockTick` (eventHorizon) through the director stays silent while hidden.
+  function accepting(alarm?: boolean): boolean {
     if (ctx === null || buses === null || disposed) return false;
     if (ctx.state === "closed") return false;
     if (readAudioSettings().muted) return false;
-    if (visibility() === "hidden") return false;
+    if (visibility() === "hidden" && !alarm) return false;
     return true;
   }
 
   /* sfx */
 
-  function playSfx(id: SfxId, params?: SfxParams, delayMs?: number): boolean {
+  function playSfx(id: SfxId, params?: SfxParams, delayMs?: number, options?: PlaySfxOptions): boolean {
     try {
-      if (!accepting() || ctx === null || buses === null) return false;
+      if (!accepting(options?.alarm) || ctx === null || buses === null) return false;
       // #4428: before the recipes land the cue is skipped, never built or logged; the kick keeps
       // one tap behind the chunk, not behind silence. A late click is dropped, not queued: an sfx
       // is timed to an animation entry, so sounding late is worse than staying silent.
@@ -569,7 +573,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       // faster than the retrigger guard.
       const rapid = RAPID_SFX.has(id);
       // R3334000: a run's scheduled sound is guarded at the time it sounds; every other at the time it is sent.
-      const sounds = SCHEDULED_SFX.has(id) ? t + delay : t;
+      // R506: the clock alarm's own beats (`stepClockAlarm` passes `{ alarm: true }`) are sent up to
+      // two at once while hidden, each delayed to its own second, so they are guarded when each
+      // sounds too; caller-scoped like #4682's hidden exemption, so other `heartbeat`/`clockTick`
+      // callers keep the send-time guard.
+      const sounds = SCHEDULED_SFX.has(id) || options?.alarm === true ? t + delay : t;
       const last = lastSfxAt.get(id);
       if (!rapid && last !== undefined && Math.abs(sounds - last) < SFX_RETRIGGER_MS) return false;
       sfxEnds = sfxEnds.filter((end) => end > t);

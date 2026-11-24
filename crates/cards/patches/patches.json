@@ -34897,5 +34897,218 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.12e",
+    "date": "2026-11-24",
+    "title": "Stinkyscape+ Balance Changes VII: Ticketed",
+    "source": "#4665",
+    "notes": "The last item of the designer's seventh Stinkyscape+ balance pass (#4665): Ticketed's text is \"Stack this on a permanent anywhere.\" Its play takes no zone of its own; it names one permanent on the field, either side's, either row, face-down or not, and lands on top of that permanent's pile in its zone and that side's control. The permanent lies beneath it, out of play, and resumes when Ticketed leaves. On a unit zone it lies there with no position, no Unit: it fills the zone, nothing attacks it, no health judges it, and an effect that names a backrow card may name it (R4665000). Brittle 3 on the base face, none on the Radiant. Its v0.6.12c script, the Cry that held a permanent beneath it in its own zone, is kept (R767000).",
+    "player": {
+      "title": "Ticketed",
+      "new": [],
+      "balance": [
+        "Ticketed is now \"Stack this on a permanent anywhere\": play it on top of any permanent, yours or your opponent's, Unit or backrow.",
+        "The permanent beneath Ticketed is out of play until Ticketed leaves, and its zone stays filled. Normal Ticketed keeps Brittle 3."
+      ],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "cd5052586fcf43129c707d1eb96c9ca9fdb6a216"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-010",
+      "stinkyscapeplus-103"
+    ],
+    "changes": [
+      {
+        "id": "stinkyscape-009",
+        "name": "Ticketed",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.12f",
+    "date": "2026-11-24",
+    "title": "Patch: the cosmetic offers and the full-screen art's music load after the first page",
+    "source": "#4714",
+    "notes": "The first page load no longer ships the cosmetic offers or the music player (#4714, part 6 of #4691). COSMETIC_OFFERS moved to its own generated module, wire/generated/cosmeticOffers.ts, which cards/versions.ts loads with loadSceneData() (EngineGate, useEngineReady and the shop's route chunk wait for it), and cards/FullScreenArt.tsx loads the music player when the full-screen view opens; the engine module's boot fetch goes at low priority. First load: 383,498 to 366,513 B gzip. Nothing visible changes. Claims --visual because the change touches apps/web/src/cards/ (R2529000), a micro of no family.",
+    "player": {
+      "title": "A lighter first load, same cards",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A tab you leave open without touching it for ten minutes now shows you offline to friends, as a hidden tab does, and catches up the moment you come back."
+      ],
+      "text": [],
+      "fixes": [
+        "The first page downloads less before it shows, with the same cards and art."
+      ]
+    },
+    "commits": [
+      "445ccaa547ecb16ccfee2e2c5d64fa51ca6aea8b"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.6.13",
+    "date": "2026-11-24",
+    "title": "Patch: the daily patch, rolling up v0.6.12b to v0.6.12f",
+    "source": "patches cut at c155282b67d7f0542db8cd353b4b4b404003409d: v0.6.12b, v0.6.12c, v0.6.12d, v0.6.12e, v0.6.12f",
+    "notes": "The day's patch (R3944000): it rolls up the micros shipped since v0.6.12, each a snapshot of its own: v0.6.12b (Stinkyscape+ Balance Changes VI: the Smoothie filling posts no event); v0.6.12c (Appropriations: Military and Healthcare reach only your field and hand); v0.6.12d (Stinkyscape+ Balance Changes VII); v0.6.12e (Stinkyscape+ Balance Changes VII: Ticketed); v0.6.12f (Patch: the cosmetic offers and the full-screen art's music load after the first page).",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes VII, and 4 more changes",
+      "new": [],
+      "balance": [
+        "Appropriations' Military gives +(2X−2) Attack and Rush, up from +(⌊5X/3⌋−2). Radiant: +(4X−3), up from +(⌊17X/5⌋−4).",
+        "Appropriations' Healthcare gives +(2X−2) Health and Armor X, up from +(⌊5X/3⌋−2) Health. Radiant: +(5X−1) Health and Armor 2X, up from +⌊17X/5⌋ Health.",
+        "Appropriations' Culture gives each card a 6X% chance to become Radiant, up from ⌊17X/4⌋%. Radiant: 16X%, up from 12X%.",
+        "Jayaad costs (4) and is 9/11 (Radiant 18/22), up from (2) 2/6 (Radiant 4/12).",
+        "Mend Projector costs (3), up from (1), and heals and grows only your Units.",
+        "Overdrive Projector costs (3), up from (1); both faces give Rush and Windfury to your Units and Echo to your Spells only, and it is Dormant for 2 turns (Radiant 1).",
+        "Overdrive Dome costs (4), up from (2); both faces give Charge and Windfury to your Units and Echo to your Spells only, and it is Dormant for 2 turns (Radiant 1, down from 2).",
+        "Top Loser no longer has Armor.",
+        "Bot Loser no longer gains Attack when it destroys a Unit.",
+        "Medina Outfitter's Cry also makes you have 1 less mana next turn.",
+        "Flak v3, v4 and v5 deal 3 damage less often: 7% of rolls, down from 10%.",
+        "Servo Surge is 5/3 (Radiant 10/6), up from 2/1 (Radiant 4/2).",
+        "Legacy: Glowy Jelly Bean costs (2), down from (3); the card it makes Radiant costs (1) more, and its Radiant face makes one card Radiant, with no extra cost.",
+        "Glowy Jelly Bean is Tradable and has Flashback.",
+        "Tranquility is Tradable, and its Radiant face replenishes 2 mana.",
+        "Back Breaker has Taunt.",
+        "Trila 3 is 7/4 (Radiant 14/8), down from 7/5 (Radiant 14/10).",
+        "Beam v5 deals 5 damage (Radiant 10), down from 6 (Radiant 12).",
+        "Drone Core VII costs (6), up from (5).",
+        "Churnwalker has Tribute 1.",
+        "Ticketed is now \"Stack this on a permanent anywhere\": play it on top of any permanent, yours or your opponent's, Unit or backrow.",
+        "The permanent beneath Ticketed is out of play until Ticketed leaves, and its zone stays filled. Normal Ticketed keeps Brittle 3."
+      ],
+      "changes": [
+        "Appropriations' Military and Healthcare now reach only your Units on the field and in your hand, no longer the ones in your deck.",
+        "A tab you leave open without touching it for ten minutes now shows you offline to friends, as a hidden tab does, and catches up the moment you come back."
+      ],
+      "text": [],
+      "fixes": [
+        "A Smoothie no longer sends a hidden card-change notice as it fills with its Fruits.",
+        "The first page downloads less before it shows, with the same cards and art."
+      ]
+    },
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-006",
+      "classic-051",
+      "classic-066",
+      "classic-077",
+      "classic-089",
+      "classicplus-003",
+      "classicplus-010",
+      "classicplus-011",
+      "classicplus-019",
+      "classicplus-023",
+      "classicplus-029",
+      "classicplus-030",
+      "classicplus-040",
+      "classicplus-046",
+      "classicplus-047",
+      "classicplus-055",
+      "classicplus-058",
+      "classicplus-060",
+      "classicplus-073",
+      "classicplus-075",
+      "core-004",
+      "core-007",
+      "core-017",
+      "core-026",
+      "core-059",
+      "core-088",
+      "core-t-coin",
+      "meditative-010",
+      "meditative-025",
+      "meditative-048",
+      "meditative-059",
+      "meditative-082",
+      "meditative-088",
+      "meditative-090",
+      "meditativeplus-002",
+      "meditativeplus-018",
+      "stinkyscape-033",
+      "stinkyscape-045",
+      "stinkyscape-053",
+      "stinkyscape-057",
+      "stinkyscape-058",
+      "stinkyscape-061",
+      "stinkyscape-063",
+      "stinkyscape-064",
+      "stinkyscape-065",
+      "stinkyscape-080",
+      "stinkyscape-081",
+      "stinkyscape-088",
+      "stinkyscape-090",
+      "stinkyscape-099",
+      "stinkyscape-108",
+      "stinkyscape-109",
+      "stinkyscape-116",
+      "stinkyscape-130",
+      "stinkyscape-131",
+      "stinkyscape-134",
+      "stinkyscape-137",
+      "stinkyscape-141",
+      "stinkyscape-143",
+      "stinkyscape-148",
+      "stinkyscape-155",
+      "stinkyscape-170",
+      "stinkyscape-171",
+      "stinkyscape-172",
+      "stinkyscape-177",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-drone-corvette",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscape-t-korrelite",
+      "stinkyscapeplus-003",
+      "stinkyscapeplus-011",
+      "stinkyscapeplus-013",
+      "stinkyscapeplus-016",
+      "stinkyscapeplus-017",
+      "stinkyscapeplus-018",
+      "stinkyscapeplus-029",
+      "stinkyscapeplus-035",
+      "stinkyscapeplus-041",
+      "stinkyscapeplus-061",
+      "stinkyscapeplus-062",
+      "stinkyscapeplus-063",
+      "stinkyscapeplus-069",
+      "stinkyscapeplus-071",
+      "stinkyscapeplus-075",
+      "stinkyscapeplus-080",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-099",
+      "stinkyscapeplus-102",
+      "stinkyscapeplus-103",
+      "stinkyscapeplus-120",
+      "stinkyscapeplus-121",
+      "stinkyscapeplus-125",
+      "traininggrounds-050"
+    ],
+    "includes": [
+      "v0.6.12b",
+      "v0.6.12c",
+      "v0.6.12d",
+      "v0.6.12e",
+      "v0.6.12f"
+    ],
+    "changes": []
   }
 ]

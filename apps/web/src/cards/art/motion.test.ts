@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
-import { COSMETIC_OFFERS } from "../../wire/generated/cosmetics.ts";
+import { COSMETIC_OFFERS } from "../../wire/generated/cosmeticOffers.ts";
 import { FULL_ART_CARDS, FULL_ART_TOKEN_PARENT, artMotionOf } from "../fullArt.ts";
 import { VERSION_ALT_FULL_ART_SIGNED_ID, VERSION_FULL_ART_SIGNED_ID, VERSION_SKETCH_FULL_ART_SIGNED_ID } from "../versions.ts";
 import { CardArt } from "./CardArt.tsx";

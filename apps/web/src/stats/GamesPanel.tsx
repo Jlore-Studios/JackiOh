@@ -7,6 +7,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import { getGameStats, type PublicStatsGamesResponse } from "../net/api.ts";
+import { readSession } from "../net/session.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { statsTestid } from "./testids.ts";
 
@@ -28,7 +29,9 @@ export function GamesPanel({ patch, mode }: { patch: string; mode: string }): Re
     setLoading(true);
     setError(false);
 
-    getGameStats({ patch: patch || undefined, mode: mode || undefined, signal: controller.signal })
+    // R4677000: the signed-in token, when there is one, so a dev account reads every patch.
+    const token = readSession()?.accessToken ?? null;
+    getGameStats({ patch: patch || undefined, mode: mode || undefined, token, signal: controller.signal })
       .then((res) => {
         if (canceled) return;
         setData(res);

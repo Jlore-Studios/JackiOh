@@ -24,6 +24,16 @@ export const statsTestid = {
   patchNext: "stats-patch-next",
   patchCollecting: "stats-patch-collecting",
   patchCollectingBack: "stats-patch-collecting-back",
+  /** R4677001: the patch bar's Find a patch button, its dialog, the dialog's box, lines, patches and closing words. */
+  patchSearch: "stats-patch-search",
+  patchSearchDialog: "stats-patch-search-dialog",
+  patchSearchInput: "stats-patch-search-input",
+  patchSearchLine: "stats-patch-search-line",
+  patchSearchOption: "stats-patch-search-option",
+  patchSearchNone: "stats-patch-search-none",
+  patchSearchDevs: "stats-patch-search-devs",
+  /** R4677000: the line under the bar when the address named a patch the server refused. */
+  patchRefused: "stats-patch-refused",
   /** R3324001: the header's current patch. */
   currentPatch: "stats-current-patch",
   summaryTotalGames: "stats-summary-total-games",
@@ -41,6 +51,10 @@ export const statsTestid = {
   /** R4082000, R4155000: a Created row's tier and adjusted win rate. */
   createdTierCell: "stats-created-tier-cell",
   createdAdjustedCell: "stats-created-adjusted-cell",
+  /** R4552001: a Created row's, a card row's and the card detail's decisiveness. */
+  createdDecisivenessCell: "stats-created-decisiveness-cell",
+  decisivenessCell: "stats-decisiveness-cell",
+  cardStatsDecisiveness: "inspect-stats-decisiveness",
   /** R3324003: the Columns toggles. */
   columnGames: "stats-column-games",
   columnPlayRate: "stats-column-play-rate",

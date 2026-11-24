@@ -118,6 +118,20 @@ pub fn targets_in_scope(ctx: &EffectContext<'_>, scope: Option<&TargetScope>) ->
                     instance_id: card.id.clone(),
                 });
             }
+            // R4665000: a card lying on a unit zone is a backrow card there, no Unit.
+            for slot in slots_of(player, Row::Units) {
+                let Some(card) = card_at(ctx.state, slot) else {
+                    continue;
+                };
+                if !crate::zones::lies_on_unit_zone(ctx.state, card)
+                    || (excludes_self && Some(card.id.as_str()) == self_id)
+                {
+                    continue;
+                }
+                out.push(Selection::Instance {
+                    instance_id: card.id.clone(),
+                });
+            }
         }
         if kinds.contains(&FilterOf::Hero) {
             out.push(Selection::Hero { player });

@@ -1685,6 +1685,8 @@ export type PublicCardStat = {
   winRateHigh?: number | null;
   adjustedLow?: number | null;
   adjustedHigh?: number | null;
+  /** R4552001: how far playing the card typically moves its player's chance of winning, a fraction; null with no data. */
+  decisiveness?: number | null;
   /**
    * R3022000: the card's balance tier from its adjusted rate and range: S above the band and sure of it (a nerf
    * candidate), F below it and sure of it (a buff candidate), A to D the band's quarters. Null below the sample
@@ -1723,6 +1725,8 @@ export type PublicCreatedStat = {
   adjustedWinRate?: number | null;
   adjustedLow?: number | null;
   adjustedHigh?: number | null;
+  /** R4552001: how far playing the card typically moves its player's chance of winning, a fraction; null with no data. */
+  decisiveness?: number | null;
   /** R4082000: the card's balance tier from its adjusted rate and range (R3022000); null below the floor. */
   tier?: CardTier | null;
   hasEnoughGames: boolean;
@@ -1739,6 +1743,8 @@ type PublicCreatedTiers = {
   cards: number;
   /** The win rate of the seats that make an average Created card, which reads 50%. */
   baseline: number;
+  /** R4552001: the typical Created card's decisiveness, a fraction. */
+  decisiveness?: number;
 };
 
 /** R3022000: what the tiers are read against: the field of every card in the report, and the band, as fractions. */
@@ -1755,6 +1761,8 @@ export type PublicStatsTiers = {
   bandHigh: number;
   /** R4082000: the field the Created cards are read against; absent from a server deployed before it. */
   created?: PublicCreatedTiers;
+  /** R4552001: the typical deck card's decisiveness, a fraction. */
+  decisiveness?: number;
 };
 
 /** R654, R1367000: which records a window's figures count. */
@@ -1784,6 +1792,11 @@ export type PublicStatsCardsResponse = {
    * figures are asked for at the last). An older server omits it.
    */
   patches?: { versions: string[]; games: number; liveGames: number }[];
+  /**
+   * R4677000: the caller is no dev account, so `patches` lists the newest patches alone and the older ones are
+   * for dev accounts. An older server omits it.
+   */
+  olderPatchesForDevs?: boolean;
   /** R3022000: the field and band the cards' tiers are read against; absent from a server deployed before it. */
   tiers?: PublicStatsTiers;
   summary: {
@@ -1819,10 +1832,12 @@ export type CardStatsOptions = {
   cost?: number;
   card?: string;
   mode?: string;
+  /** R4677000: the signed-in token, when there is one: a dev account reads every patch. */
+  token?: string | null;
   signal?: AbortSignal;
 };
 
-/** The path of one filter's table, query included; its kept answer is a public one. */
+/** The path of one filter's table, query included; its kept answer is kept under the token's account. */
 export function cardStatsPath(options: CardStatsOptions = {}): string {
   const params = new URLSearchParams();
   if (options.source) params.set("source", options.source);
@@ -1838,16 +1853,19 @@ export function cardStatsPath(options: CardStatsOptions = {}): string {
 }
 
 export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStatsCardsResponse> {
-  return keptGet<PublicStatsCardsResponse>(cardStatsPath(options), null, options.signal);
+  return keptGet<PublicStatsCardsResponse>(cardStatsPath(options), options.token ?? null, options.signal);
 }
 
+/** R4677000: `token`, when there is one, lists a dev account every patch's win rate. */
 export function getCardDrillDown(
   cardId: string,
   mode?: string,
   signal?: AbortSignal,
+  token?: string | null,
 ): Promise<CardDrillDownResponse> {
   const query = mode ? `?mode=${encodeURIComponent(mode)}` : "";
   return apiRequest<CardDrillDownResponse>(`/api/stats/cards/${encodeURIComponent(cardId)}${query}`, {
+    token,
     signal,
   });
 }
@@ -1898,6 +1916,8 @@ export type PublicStatsGamesResponse = {
 export type GameStatsOptions = {
   patch?: string;
   mode?: string;
+  /** R4677000: the signed-in token, when there is one: a dev account reads every patch. */
+  token?: string | null;
   signal?: AbortSignal;
 };
 
@@ -1907,6 +1927,7 @@ export function getGameStats(options: GameStatsOptions = {}): Promise<PublicStat
   if (options.mode) params.set("mode", options.mode);
   const query = params.toString();
   return apiRequest<PublicStatsGamesResponse>(`/api/stats/games${query ? `?${query}` : ""}`, {
+    token: options.token,
     signal: options.signal,
   });
 }

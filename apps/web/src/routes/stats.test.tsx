@@ -42,7 +42,7 @@ import { statsTestid } from "../stats/testids.ts";
 import { expectEmptyState } from "../test/empty.ts";
 import { pressBack } from "../test/history.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
-import { at } from "../test/stubServer.ts";
+import { at, signIn } from "../test/stubServer.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { CARD_TEXT_KEY, cardTextTestid } from "./cardText.tsx";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
@@ -377,9 +377,9 @@ describe("R654 public statistics route", () => {
     expect(screen.getByText("Spark Pup")).toBeInTheDocument();
     expect(screen.getByText("60%")).toBeInTheDocument();
 
-    // core-002 has 10 games (< 20) -> displays "not enough games"
+    // core-002 has 10 games (< 20) -> displays "not enough games" under Decisiveness and under Win rate
     expect(screen.getByText("Lava Hound")).toBeInTheDocument();
-    expect(screen.getByText("not enough games")).toBeInTheDocument();
+    expect(screen.getAllByText("not enough games")).toHaveLength(2);
   });
 
   it("R654 sorts cards by column on header click and keyboard activation", async () => {
@@ -655,16 +655,16 @@ describe("R654 public statistics route", () => {
     for (const figure of ["+25%", "(40 / 10)", "65%", "70%", "40%"]) {
       expect(within(pupRow).queryByText(figure)).toBeNull();
     }
-    // Lava Hound, below the floor, reads "—" for its Tier and Adjusted alone, and no "not enough data".
+    // Lava Hound, below the floor, reads "—" for its Tier and Adjusted alone (Decisiveness and Win rate read "not enough games"), and no "not enough data".
     const houndRow = within(table).getByText("Lava Hound").closest("tr")!;
     expect(within(houndRow).getAllByText("—")).toHaveLength(2);
     expect(screen.queryByText("not enough data")).toBeNull();
 
-    // The grid shows Tier, Adjusted, Win rate and Games, and no face rates.
+    // The grid shows Tier, Adjusted, Decisiveness, Win rate and Games, and no face rates.
     await user.click(screen.getByTestId(statsTestid.viewGrid));
     const grid = await screen.findByTestId(statsTestid.cardsGrid);
     const item = grid.querySelector<HTMLElement>('[data-card-id="core-001"]')!;
-    expect([...item.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual(["Tier", "Adjusted", "Win rate", "Games"]);
+    expect([...item.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual(["Tier", "Adjusted", "Decisiveness", "Win rate", "Games"]);
   });
 
   it("R654 keyword filter", async () => {
@@ -892,6 +892,92 @@ describe("R377 public statistics match type", () => {
     // The raw win rate is still a column, and sorting by it puts Spark Pup back on top.
     await user.click(within(table).getByRole("columnheader", { name: /^Win rate/ }));
     expect(order()).toEqual(["core-001", "core-003", "core-002"]);
+  });
+
+  /** R4552001: the provisional fixture with each card's decisiveness and the typical deck card's. */
+  function stubDecisiveness(): void {
+    const swing: Record<string, number> = { "core-001": 0.142, "core-002": 0.3, "core-003": 0.2 };
+    const cards = MOCK_CARD_STATS_PROVISIONAL.cards.map((card) => ({ ...card, decisiveness: swing[card.id] }));
+    const tiers = { center: 0.02, spread: 0.034, cards: 412, bandLow: 0.45, bandHigh: 0.55, decisiveness: 0.137 };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, cards, tiers }), { status: 200 })),
+      ),
+    );
+  }
+
+  it("R4552001 Decisiveness shows ±X.X% after Adjusted and before Win rate", async () => {
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const heads = within(table).getAllByRole("columnheader").map((th) => th.textContent?.replace(/[↑↓]/g, "").trim());
+    expect(heads.indexOf("Decisiveness")).toBe(heads.indexOf("Adjusted") + 1);
+    expect(heads.indexOf("Win rate")).toBe(heads.indexOf("Decisiveness") + 1);
+    const cells = within(table).getAllByTestId(statsTestid.decisivenessCell);
+    expect(cells.map((cell) => cell.textContent)).toEqual(["±14.2%", "±20.0%", "not enough games"]);
+  });
+
+  it("R4552001 Decisiveness sorts highest first and reads not enough games below the floor", async () => {
+    const user = userEvent.setup();
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const order = (): (string | null)[] =>
+      [...table.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-card-id"));
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("adjustedWinRate");
+    await user.selectOptions(screen.getByTestId(statsTestid.sortSelect), "decisiveness");
+    const header = within(table).getByRole("columnheader", { name: /^Decisiveness/ });
+    expect(header).toHaveAttribute("aria-sort", "descending");
+    // Lava Hound swings most but is below the floor: last, reading "not enough games".
+    expect(order()).toEqual(["core-003", "core-001", "core-002"]);
+    expect(within(table).getAllByTestId(statsTestid.decisivenessCell).map((cell) => cell.textContent)).toEqual([
+      "±20.0%",
+      "±14.2%",
+      "not enough games",
+    ]);
+    await user.click(header);
+    expect(order()).toEqual(["core-001", "core-003", "core-002"]);
+  });
+
+  it("R4552001 the Decisiveness header names the typical card", async () => {
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const title = within(table).getByRole("columnheader", { name: /^Decisiveness/ }).getAttribute("title") ?? "";
+    expect(title).toContain("±");
+    expect(title).toContain("not a margin of error");
+    expect(title).toContain("A typical card: ±13.7%.");
+  });
+
+  it("R4552001 the grid shows Decisiveness after Adjusted", async () => {
+    const user = userEvent.setup();
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    const grid = await screen.findByTestId(statsTestid.cardsGrid);
+    const item = grid.querySelector<HTMLElement>('[data-card-id="core-001"]')!;
+    const labels = [...item.querySelectorAll("dt")].map((dt) => dt.textContent);
+    expect(labels.indexOf("Decisiveness")).toBe(labels.indexOf("Adjusted") + 1);
+    const value = [...item.querySelectorAll("dt")].find((dt) => dt.textContent === "Decisiveness")!.nextElementSibling;
+    expect(value?.textContent).toBe("±14.2%");
+  });
+
+  it("R4552003 no Swing or Board swing is rendered", async () => {
+    const user = userEvent.setup();
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(document.body.textContent).not.toMatch(/swing/i);
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    await screen.findByTestId(statsTestid.cardsGrid);
+    expect(document.body.textContent).not.toMatch(/swing/i);
   });
 
   it("R3022000 R4155000 shows each enough-games card's tier and sorts by tier with S first, with no tiers note", async () => {
@@ -1986,6 +2072,216 @@ describe("R1973002 R3324000 the patch tabs", () => {
   });
 });
 
+describe("R4677000 R4677001 the patch search, and older patches for dev accounts", () => {
+  /** The patches anyone may read, newest first: three of 0.6 and two of 0.5, 0.5.8 a micro folded into 0.5.7's patch. */
+  const LISTED = [
+    { versions: ["0.6.2", "0.6.2b"], games: 300, liveGames: 0 },
+    { versions: ["0.6.1"], games: 1500, liveGames: 0 },
+    { versions: ["0.6.0"], games: 2500, liveGames: 0 },
+    { versions: ["0.5.9"], games: 4000, liveGames: 0 },
+    { versions: ["0.5.7", "0.5.8", "0.5.8b"], games: 999, liveGames: 0 },
+  ];
+  /** A patch older than anyone but a dev account reads. */
+  const OLDER = { versions: ["0.4.0", "0.4.0b"], games: 6000, liveGames: 0 };
+
+  /**
+   * Answers as the server would (R4677000): anyone is listed `LISTED` and refused an older patch, 403
+   * `patch_dev_only`; a dev account, told by its token, is listed every patch.
+   */
+  function serveReader(devToken: string | null = null): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input), window.location.origin);
+        const dev = devToken !== null && new Headers(init?.headers).get("authorization") === `Bearer ${devToken}`;
+        const patch = url.searchParams.get("patch") ?? "0.6.2b";
+        if (!dev && OLDER.versions.includes(patch)) {
+          const refused = { error: { code: "patch_dev_only", message: "Older patches are for dev accounts." } };
+          return Promise.resolve(new Response(JSON.stringify(refused), { status: 403 }));
+        }
+        if (url.pathname === "/api/stats/cards/core-001") {
+          return Promise.resolve(new Response(JSON.stringify(MOCK_DRILL_DOWN), { status: 200 }));
+        }
+        if (url.pathname !== "/api/stats/cards") return Promise.resolve(new Response("{}", { status: 200 }));
+        const body = {
+          ...MOCK_CARD_STATS_PROVISIONAL,
+          patch,
+          previousPatch: null,
+          patches: dev ? [...LISTED, OLDER] : LISTED,
+          olderPatchesForDevs: !dev,
+        };
+        return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+      }),
+    );
+  }
+
+  /** Opens the search from the patch bar's end and answers its dialog. */
+  async function openSearch(user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> {
+    const button = await screen.findByTestId(statsTestid.patchSearch, undefined, SLOW);
+    await user.click(button);
+    return screen.findByRole("dialog", { name: "Find a patch" });
+  }
+
+  /** The dialog's lines as their names, and each patch's words. */
+  function lines(dialog: HTMLElement): { names: string[]; patches: string[] } {
+    return {
+      names: within(dialog)
+        .queryAllByTestId(statsTestid.patchSearchLine)
+        .map((line) => line.querySelector("h3")?.textContent ?? ""),
+      patches: within(dialog)
+        .queryAllByTestId(statsTestid.patchSearchOption)
+        .map((option) => option.textContent ?? ""),
+    };
+  }
+
+  it("R4677001 one search button at the patch bar's end opens a dialog of the patches by line, newest first, with their games", async () => {
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    const button = await screen.findByTestId(statsTestid.patchSearch, undefined, SLOW);
+    // One button, named for what it does, last in the bar, after the arrows.
+    expect(button).toHaveAccessibleName("Find a patch");
+    expect(button).toHaveAttribute("title", "Find a patch");
+    expect(screen.getByTestId(statsTestid.patchBar).lastElementChild).toBe(button);
+    expect(screen.getByTestId(statsTestid.patchPrevious).compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const dialog = await openSearch(user);
+    expect(lines(dialog)).toEqual({
+      names: ["0.6", "0.5"],
+      patches: ["0.6.2Collecting data", "0.6.11,500 games", "0.6.02,500 games", "0.5.94,000 games", "0.5.7999 games"],
+    });
+    // The patch shown is marked; the box has the focus.
+    const options = within(dialog).getAllByTestId(statsTestid.patchSearchOption);
+    expect(options[0]).toHaveAttribute("aria-current", "true");
+    expect(options.slice(1).every((option) => !option.hasAttribute("aria-current"))).toBe(true);
+    expect(within(dialog).getByTestId(statsTestid.patchSearchInput)).toHaveFocus();
+    // Escape closes it, and the patch is unchanged.
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Find a patch" })).toBeNull(), SLOW);
+    expect(window.location.search).toBe("");
+  });
+
+  it("R4677001 the box filters the patches by version, micros included, and says when none holds it", async () => {
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    const dialog = await openSearch(user);
+    const box = within(dialog).getByRole("searchbox", { name: "Patch version" });
+    // 0.5.8 is a micro of 0.5.7's patch: typing it finds that patch.
+    await user.type(box, "0.5.8");
+    expect(lines(dialog)).toEqual({ names: ["0.5"], patches: ["0.5.7999 games"] });
+    await user.clear(box);
+    await user.type(box, "v0.6");
+    expect(lines(dialog).patches).toEqual(["0.6.2Collecting data", "0.6.11,500 games", "0.6.02,500 games"]);
+    await user.clear(box);
+    await user.type(box, "9.9.9");
+    expect(lines(dialog)).toEqual({ names: [], patches: [] });
+    expect(within(dialog).getByTestId(statsTestid.patchSearchNone)).toHaveTextContent("No patch holds version 9.9.9.");
+  });
+
+  it("R4677001 picking a patch shows it as a tab does: in the address, and the bar's shown patch", async () => {
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    await screen.findAllByTestId(statsTestid.patchTab, undefined, SLOW);
+    // 0.5.7, short of games and not the newest, has no tab until it is shown.
+    expect(screen.getAllByTestId(statsTestid.patchTab).map((tab) => tab.querySelector(".stats-patch-tab-name")?.textContent)).toEqual([
+      "0.6.2",
+      "0.6.1",
+      "0.6.0",
+      "0.5.9",
+    ]);
+    let dialog = await openSearch(user);
+    await user.type(within(dialog).getByTestId(statsTestid.patchSearchInput), "0.5.8");
+    await user.click(within(dialog).getByTestId(statsTestid.patchSearchOption));
+    // Asked for at its newest version, the dialog closed, and pressed as a tab of its own.
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.5.8b"), SLOW);
+    expect(screen.queryByRole("dialog", { name: "Find a patch" })).toBeNull();
+    expect(requested("/api/stats/cards").at(-1)?.searchParams.get("patch")).toBe("0.5.8b");
+    await waitFor(
+      () =>
+        expect(
+          screen
+            .getAllByTestId(statsTestid.patchTab)
+            .filter((tab) => tab.getAttribute("aria-pressed") === "true")
+            .map((tab) => tab.querySelector(".stats-patch-tab-name")?.textContent),
+        ).toEqual(["0.5.7"]),
+      SLOW,
+    );
+    // Picking the newest is the plain address, as its tab is.
+    dialog = await openSearch(user);
+    await user.click(within(dialog).getAllByTestId(statsTestid.patchSearchOption)[0]!);
+    await waitFor(() => expect(window.location.search).toBe(""), SLOW);
+  });
+
+  it("R4677000 the dialog ends with older patches for dev accounts for anyone else, and a dev account's lists them with no such line", async () => {
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    let dialog = await openSearch(user);
+    const devs = within(dialog).getByTestId(statsTestid.patchSearchDevs);
+    expect(devs).toHaveTextContent("Older patches are for dev accounts.");
+    // The line comes after every patch, and no patch the server refuses is listed.
+    const options = within(dialog).getAllByTestId(statsTestid.patchSearchOption);
+    expect(options.at(-1)!.compareDocumentPosition(devs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(lines(dialog).names).not.toContain("0.4");
+    cleanup();
+
+    // The E2E dev fixture's session (R1310004): the server lists it every patch, and the dialog says nothing more.
+    signIn("dev-token");
+    serveReader("dev-token");
+    render(<StatsRoute />);
+    dialog = await openSearch(user);
+    expect(lines(dialog).names).toEqual(["0.6", "0.5", "0.4"]);
+    expect(within(dialog).queryByTestId(statsTestid.patchSearchDevs)).toBeNull();
+    await user.click(within(dialog).getAllByTestId(statsTestid.patchSearchOption).at(-1)!);
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.4.0b"), SLOW);
+  });
+
+  it("R4677000 an address naming a refused patch opens on the current patch with that same line, never an error page", async () => {
+    at("/stats?patch=0.4.0b");
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    const refused = await screen.findByTestId(statsTestid.patchRefused, undefined, SLOW);
+    expect(refused).toHaveTextContent("Older patches are for dev accounts.");
+    await waitFor(() => expect(window.location.search).toBe(""), SLOW);
+    expect(requested("/api/stats/cards").at(-1)?.searchParams.get("patch")).toBeNull();
+    // The current patch is shown, collecting its data, and nothing says the page failed.
+    expect(await screen.findByTestId(statsTestid.patchCollecting, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("The card statistics didn't load.")).toBeNull();
+    // Choosing a patch leaves the line behind.
+    await user.click(screen.getByTestId(statsTestid.patchPrevious));
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.1"), SLOW);
+    expect(screen.queryByTestId(statsTestid.patchRefused)).toBeNull();
+  });
+
+  it("R4677000 the page sends the signed-in token with its statistics reads, and none signed out", async () => {
+    const tokens = (): (string | null)[] =>
+      vi
+        .mocked(fetch)
+        .mock.calls.filter(([input]) => new URL(String(input), window.location.origin).pathname.startsWith("/api/stats/"))
+        .map(([, init]) => new Headers(init?.headers).get("authorization"));
+    serveReader();
+    render(<StatsRoute />);
+    await screen.findAllByTestId(statsTestid.patchTab, undefined, SLOW);
+    expect(tokens().length).toBeGreaterThan(0);
+    expect(tokens().every((token) => token === null)).toBe(true);
+    cleanup();
+
+    signIn("dev-token");
+    serveReader("dev-token");
+    at("/stats?patch=0.6.1&card=core-001");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    await waitFor(() => {
+      const asked = vi.mocked(fetch).mock.calls.map(([input]) => new URL(String(input), window.location.origin).pathname);
+      expect(asked).toEqual(expect.arrayContaining(["/api/stats/cards", "/api/stats/games", "/api/stats/cards/core-001"]));
+    }, SLOW);
+    expect(tokens().every((token) => token === "Bearer dev-token")).toBe(true);
+  });
+});
+
 describe("R3324001 the current patch", () => {
   it("R3324001 the header names the newest version the server lists, whichever patch is shown", async () => {
     at("/stats?patch=0.5.0");
@@ -2405,6 +2701,7 @@ describe("R2446000 the Cards table's columns", () => {
       "Games",
       "Tier",
       "Adjusted",
+      "Decisiveness",
       "Win rate",
       "Play rate",
     ]);
@@ -2416,7 +2713,7 @@ describe("R2446000 the Cards table's columns", () => {
       within(screen.getByTestId(statsTestid.sortSelect))
         .getAllByRole("option")
         .map((option) => option.getAttribute("value")),
-    ).toEqual(["name", "games", "tier", "adjustedWinRate", "winRate", "playRate"]);
+    ).toEqual(["name", "games", "tier", "adjustedWinRate", "decisiveness", "winRate", "playRate"]);
   });
 
   it("R2446000 R2777000 R3184000 an old address's sort by cost, rarity, keyword, When drawn, Drawn vs not drawn, Radiant or Normal opens on the default sort, adjusted win rate descending", async () => {
@@ -2517,7 +2814,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     };
   }
 
-  const COLUMNS = ["Card", "Name", "Games", "Tier", "Adjusted ↓"];
+  const COLUMNS = ["Card", "Name", "Games", "Tier", "Adjusted ↓", "Decisiveness"];
 
   it("R3887000 the Tokens and Other created cards list a catalog card as plain text, The Coin among them", async () => {
     window.localStorage.setItem(PLAIN_TEXT_KEY, "1");
@@ -2578,15 +2875,15 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(rowsOf(tokenTable)).toEqual({
       ids: ["core-t-sheep", "core-t-rush", "core-t-coin", "core-t-ghoul"],
       cells: [
-        ["1", "Sheep Token", "40", "A", "53.3%"],
-        ["1", "Rush Token", "55", "B", "52.1%"],
-        ["0", "The Coin", "40", "D", "47.1%"],
-        ["1", "Ghoul Token", "12", "—", "—"],
+        ["1", "Sheep Token", "40", "A", "53.3%", "—"],
+        ["1", "Rush Token", "55", "B", "52.1%", "—"],
+        ["0", "The Coin", "40", "D", "47.1%", "—"],
+        ["1", "Ghoul Token", "12", "—", "—", "not enough games"],
       ],
     });
     expect(rowsOf(otherTable)).toEqual({
       ids: ["core-001"],
-      cells: [["1", "Spark Pup", "30", "C", "49.0%"]],
+      cells: [["1", "Spark Pup", "30", "C", "49.0%", "—"]],
     });
 
     // A header sorts both tables (R4083000). Rush has 55 games; Sheep and The Coin tie at 40 and
@@ -2759,8 +3056,8 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(headersOf(statsTestid.tokensTable)).toContain("Games");
 
     await user.click(screen.getByTestId(statsTestid.columnGames));
-    expect(headersOf(statsTestid.tokensTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓"]);
-    expect(headersOf(statsTestid.createdTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓"]);
+    expect(headersOf(statsTestid.tokensTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Decisiveness"]);
+    expect(headersOf(statsTestid.createdTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Decisiveness"]);
 
     await user.click(screen.getByTestId(statsTestid.columnGames));
     expect(headersOf(statsTestid.tokensTable)).toEqual(COLUMNS);
@@ -2782,6 +3079,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
       ["games", "Games"],
       ["tier", "Tier"],
       ["adjustedWinRate", "Adjusted"],
+      ["decisiveness", "Decisiveness"],
     ]);
     expect(select).toHaveValue("adjustedWinRate");
     expect(screen.getByTestId(statsTestid.sortDir)).toHaveTextContent("↓");

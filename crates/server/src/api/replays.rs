@@ -44,7 +44,7 @@ use crate::config::{
     MS_PER_SECOND, REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS, REPLAY_FOLD_RETRY_AFTER_MS,
     REPLAY_FOLD_WAIT_MS, REPLAY_FOLDS_RUNNING_MAX, REPLAY_LIST_PAGE, REPLAY_REQUESTS_PER_MINUTE,
 };
-use crate::db::store::{MatchPhase, Profile, QueueMode, ReplayRow, ResultRow};
+use crate::db::store::{MatchPhase, Profile, QueueMode, ReplayListRow, ReplayRow, ResultRow};
 use crate::loadout::{Loadout, SeatCards, SeatLoadout, cards_due, shown_defs};
 use crate::notifications::mark_subject;
 use crate::notifications::store::NotificationKind;
@@ -452,11 +452,11 @@ async fn open_replay(
 /// catalog version this build neither is nor carries (R767000), else the refusal of an opening
 /// still kept. Any other match lists as one to open, and opening it says why if it cannot be
 /// shown, as practice's list does.
-fn known_refusal(app: &App, replay: &ReplayRow, now: i64) -> Option<ReplayRefusal> {
-    if let Err(reason) = Pinned::of(&replay.row.catalog_version) {
+fn known_refusal(app: &App, listed: &ReplayListRow, now: i64) -> Option<ReplayRefusal> {
+    if let Err(reason) = Pinned::of(&listed.catalog_version) {
         return Some(reason);
     }
-    match app.replays.cache.get(&replay.row.id, now)?.as_ref() {
+    match app.replays.cache.get(&listed.id, now)?.as_ref() {
         ReplayOpen::Refused { reason } => Some(*reason),
         ReplayOpen::Ready { .. } => None,
     }
@@ -496,8 +496,8 @@ fn seat_run(
 }
 
 /// The seat `profile_id` began the match in (the row's players are the seats as it began).
-fn home_seat(replay: &ReplayRow, profile_id: &str) -> PlayerId {
-    if replay.row.players.0 == profile_id {
+fn home_seat(players: &(String, String), profile_id: &str) -> PlayerId {
+    if players.0 == profile_id {
         PlayerId::P1
     } else {
         PlayerId::P2
@@ -505,19 +505,16 @@ fn home_seat(replay: &ReplayRow, profile_id: &str) -> PlayerId {
 }
 
 /// R641, R642: the portraits a replay's seats were dealt, `vanilla` for a match from before them.
-fn portraits_of(replay: &ReplayRow) -> PerPlayer<PortraitId> {
-    let (p1, p2) = replay
-        .row
-        .portraits
-        .unwrap_or((DEFAULT_PORTRAIT, DEFAULT_PORTRAIT));
+fn portraits_of(portraits: Option<(PortraitId, PortraitId)>) -> PerPlayer<PortraitId> {
+    let (p1, p2) = portraits.unwrap_or((DEFAULT_PORTRAIT, DEFAULT_PORTRAIT));
     PerPlayer::new(p1, p2)
 }
 
 /// The profile id in the seat `profile_id` did not begin in.
-fn opponent_of<'a>(replay: &'a ReplayRow, profile_id: &str) -> &'a str {
-    match home_seat(replay, profile_id) {
-        PlayerId::P1 => &replay.row.players.1,
-        PlayerId::P2 => &replay.row.players.0,
+fn opponent_of<'a>(players: &'a (String, String), profile_id: &str) -> &'a str {
+    match home_seat(players, profile_id) {
+        PlayerId::P1 => &players.1,
+        PlayerId::P2 => &players.0,
     }
 }
 
@@ -540,7 +537,7 @@ pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
     // R1436: every read joins the username in, so a rename shows on past games too.
     let opponents: Vec<String> = entries
         .iter()
-        .map(|entry| opponent_of(&entry.replay, &profile.id))
+        .map(|entry| opponent_of(&entry.players, &profile.id))
         .filter(|opponent| !opponent.is_empty())
         .map(str::to_string)
         .collect();
@@ -549,17 +546,16 @@ pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
 
     let mut replays = Vec::with_capacity(entries.len());
     for entry in &entries {
-        let (replay, mode) = (&entry.replay, entry.mode);
-        let opponent = opponent_of(replay, &profile.id);
+        let opponent = opponent_of(&entry.players, &profile.id);
         replays.push(ReplayListing {
-            match_id: replay.row.id.clone(),
-            mode,
-            ended_at: replay.result.ended_at,
-            seat: home_seat(replay, &profile.id),
-            result: result_for(&replay.result, &profile.id),
-            turns: replay.result.turns,
-            steps: replay.actions + 1,
-            portraits: portraits_of(replay),
+            match_id: entry.id.clone(),
+            mode: entry.mode,
+            ended_at: entry.result.ended_at,
+            seat: home_seat(&entry.players, &profile.id),
+            result: result_for(&entry.result, &profile.id),
+            turns: entry.result.turns,
+            steps: entry.actions + 1,
+            portraits: portraits_of(entry.portraits),
             opponent: ReplayOpponent {
                 profile_id: opponent.to_string(),
                 username: profiles
@@ -568,7 +564,7 @@ pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
                     .map(Profile::username)
                     .unwrap_or_default(),
             },
-            unavailable: known_refusal(app, replay, now),
+            unavailable: known_refusal(app, entry, now),
         });
     }
     ok_of(&ReplayList {
@@ -642,7 +638,7 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
     let (seat, run) = seat_run(
         Pinned::of_checkpoints(checkpoints),
         checkpoints,
-        home_seat(&replay, &reader),
+        home_seat(&replay.row.players, &reader),
         from,
         count.min(REPLAY_PAGE_STEPS),
     );
@@ -683,7 +679,7 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
         total,
         loadouts: PerPlayer::new(loadouts.0.seat, loadouts.1.seat),
         card_loadouts,
-        portraits: portraits_of(&replay),
+        portraits: portraits_of(replay.row.portraits),
     })
 }
 

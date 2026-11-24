@@ -29,6 +29,7 @@ import {
   type Timers,
 } from "./net.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
+import { IDLE_QUIET_MS } from "../together/config.ts";
 
 /** #1664: what a result's write paid the account. */
 const ECONOMY = {
@@ -1436,6 +1437,49 @@ describe("awaitsYou (#1792)", () => {
     expect(awaitsYou(baseView(), false)).toBe(false);
     expect(awaitsYou(baseView({ active: "p2" }), true)).toBe(true);
     expect(awaitsYou(baseView({ pending: pendingFor("discover", []) }), false)).toBe(true);
+  });
+});
+
+describe("R4691001 pollWhileVisible on an idle tab", () => {
+  const PERIOD = 1000;
+
+  afterEach(() => {
+    vi.useRealTimers();
+    resetVisibility();
+  });
+
+  it("R4691001 skips its ticks once IDLE_QUIET_MS pass with no input, and reads once at the first input", () => {
+    vi.useFakeTimers();
+    const read = vi.fn();
+    const stop = pollWhileVisible(read, PERIOD);
+    try {
+      vi.advanceTimersByTime(IDLE_QUIET_MS - 1);
+      const idleAt = read.mock.calls.length;
+      expect(idleAt, "every tick before it goes idle").toBe(IDLE_QUIET_MS / PERIOD - 1);
+      vi.advanceTimersByTime(10 * PERIOD + 1);
+      expect(read, "idle: nothing sent").toHaveBeenCalledTimes(idleAt);
+
+      window.dispatchEvent(new Event("pointerdown"));
+      expect(read, "used again: one read at once").toHaveBeenCalledTimes(idleAt + 1);
+      vi.advanceTimersByTime(PERIOD - 1);
+      expect(read).toHaveBeenCalledTimes(idleAt + 1);
+      vi.advanceTimersByTime(1);
+      expect(read, "and the pace starts over").toHaveBeenCalledTimes(idleAt + 2);
+    } finally {
+      stop();
+    }
+  });
+
+  it("R4691001 a poll that may run hidden runs idle too", () => {
+    vi.useFakeTimers();
+    const read = vi.fn();
+    const stop = pollWhileVisible(read, PERIOD, () => true);
+    try {
+      vi.advanceTimersByTime(IDLE_QUIET_MS + 10 * PERIOD);
+      expect(read).toHaveBeenCalledTimes(IDLE_QUIET_MS / PERIOD + 10);
+    } finally {
+      stop();
+    }
   });
 });
 
