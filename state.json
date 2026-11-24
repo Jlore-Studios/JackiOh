@@ -17450,9 +17450,7 @@
     },
     "4648": {
       "action": "build",
-      "asks": [
-        "c:7116370803"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-24T06:02:13Z",
         "difficulty": "hard",
@@ -17470,14 +17468,6 @@
         "provider": "claude-1",
         "reason": "planned on opus",
         "trail": "):\\n cost=c['cost'] if isinstance(c['cost'],int) else None\\n if c['type']=='Spell' \u2026\n- Bash: {\"command\": \"grep -rn \\\"play_ai_turn(\\\" crates/ai/tests/ai/*.rs | head -5; grep -n \\\"pub fn play_ai_turn\\\" -A25 crates/ai/src/*.rs | head -40\", \"description\": \"Check play_ai_turn usage for whole-turn\u2026\n- Bash: {\"command\": \"sed -n 95,160p crates/ai/tests/ai/attack_hooks.rs; grep -n \\\"pub struct AiTurnResult\\\" -A10 crates/ai/src/*.rs\", \"description\": \"Read the attack-hook whole-turn test pattern\"}\n- Bash: {\"command\": \"sed -n 1,94p crates/ai/tests/ai/attack_hooks.rs\", \"description\": \"Read attack-hook test helpers\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4648/crates/ai/src/evaluate.rs\", \"offset\": 2110, \"limit\": 32}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4648/crates/ai/src/evaluate.rs\", \"offset\": 186, \"limit\": 20}\n- Bash: {\"command\": \"head -8 spec/rulings/R3536001.md; head -8 spec/rulings/R3536003.md; head -6 spec/rulings/R2688000.md | sed -n 1,5p\", \"description\": \"Check card citation format in Evolve rulings\"}\n- Bash: {\"command\": \"grep -h \\\"^cards:\\\" spec/rulings/*.md | grep -o \\\"Stinkyscape+ #[0-9.]*[^,;\\\\\\\"]*\\\" | head -5; grep -h \\\"^cards:\\\" spec/rulings/*.md | grep -o \\\"S+ #[0-9]*\\\" | head -3; grep -h \\\"^cards:\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn script_of\\\" -A6 crates/engine/src/scripts.rs; grep -n \\\"pub fn card_type_of_face\\\" crates/engine/src/*.rs; grep -n \\\"pub fn is_slumbering\\\\|pub fn first_entry_zone\\\" cra\u2026\n- Bash: {\"command\": \"grep -n \\\"impl ScriptKey for &CardInstance\\\\|impl<'a> ScriptKey for &'a CardInstance\\\\|ScriptKey for\\\" -A12 crates/engine/src/scripts.rs | head -40\", \"description\": \"Check what script_of\u2026\n- Bash: {\"command\": \"for f in stinkyscape/c091_the_propagations_wasp stinkyscape/c092_the_propagations_hornet stinkyscape_plus/c161_space_invader stinkyscape_plus/t_ai_05 stinkyscape_plus/c101_a_wee_whelp st\u2026\n- Bash: {\"command\": \"ls crates/cards/src/scripts/ | head -20; ls crates/cards/src/scripts/infinite_assault 2>/dev/null | head; grep -rln \\\"infiniteassault-006\\\" crates/cards/src/scripts | head -2\", \"descript\u2026\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -20\", \"description\": \"Check classify rules for AI-only changes\"}\n- Bash: {\"command\": \"git show --stat --format=\\\"%s\\\" 6b3a6e17e6 | head -20\", \"description\": \"See files a recent AI PR touched\"}\n- Bash: {\"command\": \"grep -n \\\"R3064000\\\\|R2688000\\\\|awaken\\\" docs/polish/3-ai.md | head -5; git show 6b3a6e17e6 -- docs/polish/3-ai.md | head -30\", \"description\": \"Check AI polish doc for price listings\"}\n- Bash: {\"command\": \"grep -n \\\"R2424000\\\\|R2477000\\\\|slumber\\\\|Dormant\\\" docs/polish/3-ai.md | head -8\", \"description\": \"Look for evaluation terms in AI polish doc\"}\n- Bash: {\"command\": \"grep -rn \\\"to_value(&\\\\?AI_EVAL\\\\|to_string(&\\\\?AI_EVAL\\\\|EvalWeights>\\\" crates --include=*.rs | head; grep -rln \\\"slumberTurnShare\\\\|slumber_turn_share\\\" --include=*.py --include=*.md -\u2026\n- Bash: {\"command\": \"sed -n 1180,1249p crates/ai/src/config.rs\", \"description\": \"Read config's own unit tests\"}\n- Bash: {\"command\": \"ls crates/tools/tests/; grep -ln \\\"positions\\\\|decision_prices\\\" crates/tools/tests/*.rs crates/tools/src/*.rs | head\", \"description\": \"Check tools tests touching AI positions\"}\n- Bash: {\"command\": \"grep -n \\\"Prices\\\\|awaken_prices\\\\|AwakenPrice\\\" docs/v0.3.0/SURFACE.md docs/architecture.md training/README.md training/improve.md 2>/dev/null | head\", \"description\": \"Check docs that l\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A4 crates/ai/Cargo.toml; ls crates/ai/tests/\", \"description\": \"Check AI crate test binary layout\"}\n- Bash: {\"command\": \"cat crates/ai/tests/ai.rs | head -20; grep -n \\\"testkit\\\" crates/ai/Cargo.toml\", \"description\": \"Check the ai test entry and testkit feature\"}\n- Bash: {\"command\": \"grep -n \\\"lints\\\" -A25 Cargo.toml | head -40; cat crates/ai/clippy.toml | head -30\", \"description\": \"Check workspace lint settings\"}\n- Bash: {\"command\": \"sed -n 310,330p crates/engine/src/script.rs; grep -rn \\\"HookArgs {\\\" crates/ai/src crates/cards/src | head -3\", \"description\": \"Check HookArgs is constructible outside engine\"}\n- said: Planning is far enough along to save a full draft, so let me write it before composing the final plan.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4648/.bot-plan.md\", \"content\": \"# Draft plan #4648 (Opus planner) \\u2014 near final; final message = the plan below\\n\\n## Found (verified in code)\\n- \u2026\n- Bash: {\"command\": \"grep -rn \\\"Zone::Hand {\\\" crates/ai/src/*.rs | head -3; grep -n \\\"use jackioh_engine\\\" crates/ai/src/candidates.rs | head -3; grep -n \\\"pub use catalog_types\\\\|pub use self::catalog_type\u2026\n- Bash: {\"command\": \"grep -rn \\\"ts(export\\\\|derive(TS\\\\|ts_rs\\\" crates/ai/src | head -3; grep -n \\\"^ts\\\\|ts-rs\\\" crates/ai/Cargo.toml\", \"description\": \"Confirm AI types are not exported to TypeScript\"}\n- Bash: {\"command\": \"grep -n \\\"fn hash_state\\\\|pub use.*hash_state\\\" -r crates/engine/src/testkit* crates/engine/src/lib.rs 2>/dev/null | head -3; grep -n \\\"AI_DIFFICULTY\\\" crates/ai/src/config.rs | head -2\"\u2026\n- Bash: {\"command\": \"grep -rn \\\"pub fn hash_state\\\" crates/engine/src | head -2; grep -rn \\\"pub const AI_DIFFICULTY\\\" crates/ai/src | head -2\", \"description\": \"Locate hash_state and AI_DIFFICULTY definitions\u2026\n- Bash: {\"command\": \"grep -rn \\\"AI_DIFFICULTY\\\" crates/ai/src/*.rs | head -3; grep -n \\\"^use\\\\|AI_DIFFICULTY\\\" crates/ai/tests/ai/slumber.rs | head -5\", \"description\": \"Find where AI_DIFFICULTY comes from\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4648/.bot-plan.md\", \"content\": \"# Draft plan #4648 (Opus planner) \\u2014 FINAL, identical to the final message\\n\\nSee the final message of this run (p\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 2, the AI: it changes the evaluation and the decision's root probes in crates/ai/src (evaluate.rs, decide.rs, config.rs).\"} --> ## Goal At each decision's root, the practice AI evolves every readable card that can still evolve, on a sandbox copy: - ever\u2026"
-      },
-      "hold": {
-        "ends": "2026-11-24T08:55:05Z",
-        "lifted": "2026-11-24T08:51:43Z",
-        "owner": "claude-1",
-        "since": "2026-11-24T06:55:05Z",
-        "until": "2026-11-24T08:50:00Z",
-        "why": "5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%)"
       },
       "interruptions": 0,
       "kind": "build",
@@ -17501,12 +17491,14 @@
       "queued_at": "2026-11-23T22:57:29Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "45337846902",
+      "run_id": "pending:34e1cc17-1795510500",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T06:05:17Z",
+      "started_at": "2026-11-24T08:55:31Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7116370803"
+      ],
       "verdict_rounds": 0,
       "waiting_comment": 7124424550
     },
@@ -18950,9 +18942,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T08:54:47Z",
+    "at": "2026-11-24T08:55:31Z",
     "url": "",
-    "what": "review #4698 on muse"
+    "what": "build #4648 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-24T08:42:36Z",
